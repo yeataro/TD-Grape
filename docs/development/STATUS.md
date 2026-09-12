@@ -14,4 +14,4 @@ Label 與來源資訊的節點呈現仍保留決策。TOX 發佈、Web 資源安
 
 本次已完成的實測與固定開檔入口限制見 [遷移驗證](MIGRATION_VALIDATION.md)。
 
-連線顯示已改用與節點共用的 HTML 畫布座標，避開舊版 WebKit 的 SVG 轉換差異；桌面及 WebKit 測試通過，實體 iPad 仍待回驗。完整觸控節點編輯另行處理。見 [連線定位與驗證](../ui/WIRE_GEOMETRY.md)。
+連線顯示已改用與節點共用的 HTML 畫布座標，避開舊版 WebKit 的 SVG 轉換差異；桌面及 WebKit 自動化測試通過；使用者於 2026-09-12 確認 iPad mini 6（iPadOS 18.7.8／Chrome 151）的接線顯示已正常。完整觸控節點編輯另行處理。見 [連線定位與驗證](../ui/WIRE_GEOMETRY.md)。

@@ -9,8 +9,8 @@ This avoids converting HTML socket positions through SVG `getScreenCTM()`.
 Older WebKit implementations can omit an ancestor CSS scale from that matrix
 ([WebKit issue 209220](https://bugs.webkit.org/show_bug.cgi?id=209220)). The
 reported iPad symptom is consistent with this failure. The reported device is
-iPad mini 6, iPadOS 18.7.8, Chrome 151.0.7922.112; the physical-device result
-after this fix remains unconfirmed.
+iPad mini 6, iPadOS 18.7.8, Chrome 151.0.7922.112. On 2026-09-12 the user
+confirmed that wire display now behaves normally on that physical device.
 
 Both completed wires and the temporary connection preview use the same
 conversion. Socket positions continue to follow actual layout, including node
@@ -48,5 +48,7 @@ test's obsolete preview-border assertion and single-favicon assumption were
 updated to match the current UI and multi-size icon setup. These checks use
 isolated fixture APIs and never connect to a user's TD graph.
 
-WebKit testing and tablet viewport emulation do not replace physical iPad
-Safari verification. Full touch dragging/editing is not claimed by this fix.
+The physical iPad Chrome result above is user-reported. The user has not
+separately checked desktop; desktop coverage is the Windows Chrome automation
+and live Editor checks described above. The report confirms wire display, not
+full touch dragging/editing or physical Safari/macOS testing.
