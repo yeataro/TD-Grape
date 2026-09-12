@@ -1,0 +1,2038 @@
+{
+  "defaultLanguage": "zh-Hant",
+  "languages": {
+    "zh-Hant": "繁體中文",
+    "en": "English"
+  },
+  "technicalTerms": [
+    "TD-Grape",
+    "TouchDesigner",
+    "GLSL",
+    "Vertex",
+    "Pixel",
+    "Uniform",
+    "sampler2D",
+    "TOP",
+    "MAT",
+    "UV",
+    "Graph"
+  ],
+  "messages": {
+    "export.title": {
+      "zh-Hant": "匯出 Shader 圖",
+      "en": "Export Shader graph"
+    },
+    "export.json": {
+      "zh-Hant": "JSON · 存到 TD 專案資料夾",
+      "en": "JSON · Save to TD project folder"
+    },
+    "png.download": {
+      "zh-Hant": "PNG · 下載節點圖與資料",
+      "en": "PNG · Download diagram with graph data"
+    },
+    "png.scope": {
+      "zh-Hant": "圖片顯示目前這一層的所有節點，內含完整 Shader（含 Function）的 Graph 資料，可透過「匯入」還原。外部 TOP 貼圖仍保留為參照。",
+      "en": "The image shows every node on this graph level. Embedded data contains the full Shader, including Functions, and can be restored through Import. External TOP textures remain references."
+    },
+    "png.metadata": {
+      "zh-Hant": "PNG 內的 Graph JSON",
+      "en": "Graph JSON inside PNG"
+    },
+    "png.footer": {
+      "zh-Hant": "完整 Shader Graph 資料已內嵌 · TD-Grape",
+      "en": "Full Shader Graph data embedded · TD-Grape"
+    },
+    "png.empty": {
+      "zh-Hant": "這一層還沒有節點",
+      "en": "No nodes on this graph level"
+    },
+    "png.encoding": {
+      "zh-Hant": "正在產生 PNG…",
+      "en": "Creating PNG…"
+    },
+    "png.reduced": {
+      "zh-Hant": "圖較大，圖片會縮小；完整 Graph 資料仍會保留。",
+      "en": "This diagram is large and will be scaled down. Complete Graph data is still retained."
+    },
+    "png.saved": {
+      "zh-Hant": "PNG 已下載，內含完整 Shader Graph 資料。",
+      "en": "PNG downloaded with complete Shader Graph data."
+    },
+    "png.fileSize": {
+      "zh-Hant": "PNG 檔案超過 16 MB 上限。",
+      "en": "PNG file exceeds the 16 MB limit."
+    },
+    "png.invalid": {
+      "zh-Hant": "PNG 結構不完整或不正確，已保留原始檔。",
+      "en": "PNG structure is incomplete or invalid. The original file is retained."
+    },
+    "png.corrupt": {
+      "zh-Hant": "PNG 完整性檢查失敗，檔案可能已損壞。",
+      "en": "PNG integrity check failed; the file may be damaged."
+    },
+    "png.missing": {
+      "zh-Hant": "這張 PNG 沒有 TD-Grape Graph 資料；有些圖片軟體會移除 metadata。",
+      "en": "This PNG has no TD-Grape Graph data. Some image tools remove metadata."
+    },
+    "png.duplicate": {
+      "zh-Hant": "PNG 含有多份 Graph 資料，無法確定應使用哪份。",
+      "en": "PNG contains multiple Graph records; the intended record is ambiguous."
+    },
+    "png.unsupported": {
+      "zh-Hant": "這份 PNG 使用尚未支援的 Graph 資料格式。",
+      "en": "This PNG uses an unsupported Graph metadata format."
+    },
+    "png.compressed": {
+      "zh-Hant": "目前只支援 TD-Grape 匯出的未壓縮 Graph metadata。",
+      "en": "Only uncompressed Graph metadata exported by TD-Grape is currently supported."
+    },
+    "png.invalidMetadata": {
+      "zh-Hant": "PNG 內的 Graph metadata 不是有效的 UTF-8 JSON。",
+      "en": "Graph metadata inside the PNG is not valid UTF-8 JSON."
+    },
+    "png.version": {
+      "zh-Hant": "這份 PNG 的 Graph metadata 版本尚未支援。",
+      "en": "This PNG Graph metadata version is not supported."
+    },
+    "png.layout": {
+      "zh-Hant": "目前的節點位置無法產生 PNG，仍可使用 JSON 匯出。",
+      "en": "This node layout cannot be rendered as PNG. JSON export remains available."
+    },
+    "png.encode": {
+      "zh-Hant": "無法產生 PNG，請重試或使用 JSON 匯出。",
+      "en": "PNG could not be created. Retry or use JSON export."
+    },
+    "ladder.hint": {
+      "en": "Hold middle mouse, Alt+right mouse, or long-press to adjust. Release to apply; Esc cancels.",
+      "zh-Hant": "按住中鍵、Alt＋右鍵，或長按數值來調整。放開套用，Esc 取消。"
+    },
+    "ladder.release": {
+      "zh-Hant": "放開套用 · Esc 取消",
+      "en": "Release · Esc cancels"
+    },
+    "switch.choose": {
+      "zh-Hant": "切換 TD Shader",
+      "en": "Switch TD Shader"
+    },
+    "switch.loading": {
+      "zh-Hant": "讀取可編輯的 Shader…",
+      "en": "Loading editable Shaders…"
+    },
+    "switch.empty": {
+      "zh-Hant": "目前沒有可切換的 Shader。",
+      "en": "No Shaders are available."
+    },
+    "switch.busy": {
+      "zh-Hant": "正在套用圖或參數，完成後即可切換。",
+      "en": "A graph or parameter update is in progress. Switch when it finishes."
+    },
+    "switch.title": {
+      "zh-Hant": "切換前處理未套用的編輯",
+      "en": "Handle pending edits before switching"
+    },
+    "switch.explanation": {
+      "zh-Hant": "可以先套用到 TD，或保留草稿後切換。草稿只留在此瀏覽器分頁，切回時可還原；關閉分頁會清除尚未套用的草稿。",
+      "en": "Apply to TD, or keep a draft before switching. Drafts stay in this browser tab and can be restored when you return; closing the tab removes unapplied drafts."
+    },
+    "switch.keep": {
+      "zh-Hant": "保留草稿並切換",
+      "en": "Keep draft and switch"
+    },
+    "switch.apply": {
+      "zh-Hant": "套用後切換",
+      "en": "Apply and switch"
+    },
+    "switch.storageFailed": {
+      "zh-Hant": "無法保存本分頁草稿，已留在目前 Shader。請先匯出圖或完成套用。",
+      "en": "The draft could not be retained. You remain on this Shader; export the graph or apply it first."
+    },
+    "draft.conflictConfirm": {
+      "zh-Hant": "這個 Shader 有未套用的分頁草稿，但 TD 中的圖已更新。要先檢查草稿嗎？目前 TD 的圖不會自動被覆寫。",
+      "en": "This Shader has a tab draft, but the graph in TD has changed. Review the draft? The current TD graph will not be overwritten automatically."
+    },
+    "panel.parameterTitle": {
+      "zh-Hant": "Parameter · 參數",
+      "en": "Parameter"
+    },
+    "panel.helpTitle": {
+      "zh-Hant": "Help · 說明",
+      "en": "Help"
+    },
+    "wire.release": {
+      "zh-Hant": "放開即可連接（已接線的 Input 將替換來源）",
+      "en": "Release to connect (replaces an existing input connection)"
+    },
+    "wire.cycle": {
+      "zh-Hant": "此連線會形成循環，無法連接。",
+      "en": "This connection would create a cycle."
+    },
+    "connection.failed": {
+      "zh-Hant": "連線失敗",
+      "en": "Connection failed"
+    },
+    "graph.readonly": {
+      "zh-Hant": "版本較新 · 唯讀",
+      "en": "Newer version · Read only"
+    },
+    "graph.pending": {
+      "zh-Hant": "● 尚未套用",
+      "en": "● Unapplied changes"
+    },
+    "graph.applied": {
+      "zh-Hant": "已套用 · r",
+      "en": "Applied · r"
+    },
+    "node.select": {
+      "zh-Hant": "選取一個節點以調整參數。",
+      "en": "Select a node to edit its parameters."
+    },
+    "wire.selected": {
+      "zh-Hant": "已選取連線。按 Delete 移除。",
+      "en": "Connection selected. Press Delete to remove."
+    },
+    "node.type": {
+      "zh-Hant": "輸出型別",
+      "en": "Output type"
+    },
+    "node.declaration": {
+      "zh-Hant": "宣告",
+      "en": "Declaration"
+    },
+    "select.placeholder": {
+      "zh-Hant": "選擇…",
+      "en": "Select…"
+    },
+    "wire.disconnect": {
+      "zh-Hant": "斷開 ",
+      "en": "Disconnect "
+    },
+    "node.delete": {
+      "zh-Hant": "刪除節點",
+      "en": "Delete node"
+    },
+    "texture.help": {
+      "zh-Hant": "沒有接 UV 時使用網格貼圖座標。預設使用 TD 內建香蕉，也可在宣告切換圖片。",
+      "en": "Unconnected UV uses mesh coordinates. The default is TD's bundled banana. Change the image in Declarations."
+    },
+    "declaration.name": {
+      "zh-Hant": "GLSL 名稱",
+      "en": "GLSL name"
+    },
+    "texture.banana": {
+      "zh-Hant": "TD 內建 · 香蕉",
+      "en": "TD sample · Banana"
+    },
+    "texture.jellybeans": {
+      "zh-Hant": "TD 內建 · 糖豆",
+      "en": "TD sample · Jellybeans"
+    },
+    "texture.white": {
+      "zh-Hant": "白色",
+      "en": "White"
+    },
+    "texture.black": {
+      "zh-Hant": "黑色",
+      "en": "Black"
+    },
+    "texture.custom": {
+      "zh-Hant": "指定 TOP…",
+      "en": "Choose TOP…"
+    },
+    "texture.source": {
+      "zh-Hant": "貼圖",
+      "en": "Texture"
+    },
+    "texture.path": {
+      "zh-Hant": "TOP 絕對路徑",
+      "en": "Absolute TOP path"
+    },
+    "declaration.value": {
+      "zh-Hant": "初始值",
+      "en": "Initial value"
+    },
+    "wire.connect": {
+      "zh-Hant": "選擇輸入端點 · Esc 取消",
+      "en": "Choose an input · Esc to cancel"
+    },
+    "node.add.help": {
+      "zh-Hant": "點擊新增，或拖到畫布指定位置",
+      "en": "Click to add, or drag to a position on the canvas"
+    },
+    "node.added": {
+      "zh-Hant": "已在指定位置新增 ",
+      "en": "Added at the drop position: "
+    },
+    "connection.ready": {
+      "zh-Hant": "已連線 · 修改後自動更新 TD Shader",
+      "en": "Connected · edits update the TD Shader automatically"
+    },
+    "material.compiling": {
+      "zh-Hant": "TD 正在檢查 Shader…",
+      "en": "TD is checking the Shader…"
+    },
+    "material.applied": {
+      "zh-Hant": "Shader 已更新",
+      "en": "Shader updated"
+    },
+    "material.skipped": {
+      "zh-Hant": " 個未連接節點略過",
+      "en": " disconnected nodes skipped"
+    },
+    "material.failed": {
+      "zh-Hant": "更新失敗，保留上次成功的 Shader：",
+      "en": "Update failed; the last successful Shader is preserved: "
+    },
+    "project.saved": {
+      "zh-Hant": "TD 工程已儲存",
+      "en": "TD project saved"
+    },
+    "project.draft": {
+      "zh-Hant": "。畫布還有尚未套用的修改。",
+      "en": "; the canvas still has unapplied changes."
+    },
+    "project.saveFailed": {
+      "zh-Hant": "工程儲存未完成",
+      "en": "Project was not saved"
+    },
+    "graph.reloadConfirm": {
+      "zh-Hant": "捨棄尚未套用的修改，載入 TD 中的圖？",
+      "en": "Discard unapplied changes and load the graph from TD?"
+    },
+    "graph.exampleConfirm": {
+      "zh-Hant": "以範例替換目前畫布？可使用復原還原。",
+      "en": "Replace the canvas with an example? Undo can restore it."
+    },
+    "graph.size": {
+      "zh-Hant": "圖檔上限 512 KB",
+      "en": "Graph files are limited to 512 KB"
+    },
+    "graph.stagesMissing": {
+      "zh-Hant": "圖的 Stage 與 Shader 類型不符。",
+      "en": "Graph stages do not match the Shader target."
+    },
+    "graph.newer": {
+      "zh-Hant": "此圖版本較新，已保留原始資料。可匯出，不能套用。",
+      "en": "This graph uses a newer version. Original data is retained; export is available but applying is disabled."
+    },
+    "graph.loaded": {
+      "zh-Hant": "已載入圖，即將檢查並更新 Shader。",
+      "en": "Graph loaded; the Shader will be checked and updated."
+    },
+    "graph.loadFailed": {
+      "zh-Hant": "無法載入：",
+      "en": "Could not load: "
+    },
+    "draft.restoreConfirm": {
+      "zh-Hant": "恢復這個分頁尚未套用的草稿？",
+      "en": "Restore the unapplied draft from this tab?"
+    },
+    "draft.restored": {
+      "zh-Hant": "已恢復草稿；TD Shader 仍保持上次套用結果。",
+      "en": "Draft restored; the TD Shader remains at its last applied state."
+    },
+    "draft.failed": {
+      "zh-Hant": "草稿無法恢復，已保留 TD 中的圖。",
+      "en": "The draft could not be restored. The graph in TD is preserved."
+    },
+    "action.import": {
+      "zh-Hant": "匯入圖",
+      "en": "Import graph"
+    },
+    "action.export": {
+      "zh-Hant": "匯出圖",
+      "en": "Export graph"
+    },
+    "action.save": {
+      "zh-Hant": "儲存 TD 工程",
+      "en": "Save TD project"
+    },
+    "action.apply": {
+      "zh-Hant": "套用 Shader",
+      "en": "Apply Shader"
+    },
+    "action.nodes": {
+      "zh-Hant": "＋ 節點",
+      "en": "＋ Nodes"
+    },
+    "connection.connecting": {
+      "zh-Hant": "正在連線",
+      "en": "Connecting"
+    },
+    "example.label": {
+      "zh-Hant": "範例",
+      "en": "Examples"
+    },
+    "example.select": {
+      "zh-Hant": "選擇範例…",
+      "en": "Choose example…"
+    },
+    "example.banana": {
+      "zh-Hant": "內建香蕉",
+      "en": "Bundled banana"
+    },
+    "example.tint": {
+      "zh-Hant": "香蕉 × 色彩",
+      "en": "Banana × Color"
+    },
+    "example.color": {
+      "zh-Hant": "純色",
+      "en": "Solid color"
+    },
+    "action.fit": {
+      "zh-Hant": "置中",
+      "en": "Frame all"
+    },
+    "action.details": {
+      "zh-Hant": "預覽 / 參數",
+      "en": "Preview / Parameters"
+    },
+    "node.searchPlaceholder": {
+      "zh-Hant": "搜尋節點…",
+      "en": "Search nodes…"
+    },
+    "node.searchLabel": {
+      "zh-Hant": "搜尋節點",
+      "en": "Search nodes"
+    },
+    "canvas.label": {
+      "zh-Hant": "節點畫布",
+      "en": "Node canvas"
+    },
+    "hint.add": {
+      "zh-Hant": "從清單拖曳節點到畫布。",
+      "en": "Drag nodes from the list onto the canvas."
+    },
+    "hint.connect": {
+      "zh-Hant": "拖線至連接點，或拖至空白處新增",
+      "en": "Drag a wire to a socket or empty space to create"
+    },
+    "hint.move": {
+      "zh-Hant": "拖動節點 · Shift 框選 · Ctrl 多選",
+      "en": "Drag nodes · Shift-drag to select · Ctrl-click to add"
+    },
+    "hint.navigate": {
+      "zh-Hant": "滾輪縮放 · 空白處拖動 · Tab 新增",
+      "en": "Wheel to zoom · drag background to pan · Tab to create"
+    },
+    "hint.delete": {
+      "zh-Hant": "選取連線後按 Delete 斷線。",
+      "en": "Select a connection and press Delete to remove it."
+    },
+    "canvas.caption": {
+      "zh-Hant": "由左至右，組合你的 Shader。",
+      "en": "Build your Shader from left to right."
+    },
+    "preview.alt": {
+      "zh-Hant": "TouchDesigner 實際 Shader 輸出預覽",
+      "en": "Actual TouchDesigner Shader output preview"
+    },
+    "connection.starting": {
+      "zh-Hant": "正在連接 TouchDesigner…",
+      "en": "Connecting to TouchDesigner…"
+    },
+    "action.reload": {
+      "zh-Hant": "重新載入已套用圖",
+      "en": "Reload applied graph"
+    },
+    "action.close": {
+      "zh-Hant": "關閉",
+      "en": "Close"
+    },
+    "locale.changed": {
+      "zh-Hant": "介面語言已切換；Graph 與 GLSL 保持不變。",
+      "en": "Interface language changed; Graph and GLSL are unchanged."
+    },
+    "export.saved": {
+      "zh-Hant": "圖檔已匯出：",
+      "en": "Graph exported: "
+    },
+    "export.failed": {
+      "zh-Hant": "匯出失敗：",
+      "en": "Export failed: "
+    },
+    "node.unknown": {
+      "zh-Hant": "未知節點",
+      "en": "Unknown node"
+    },
+    "panel.node": {
+      "zh-Hant": "節點參數",
+      "en": "NODE PARAMETERS"
+    },
+    "panel.parameters": {
+      "zh-Hant": "參數",
+      "en": "Parameters"
+    },
+    "panel.settings": {
+      "zh-Hant": "設定",
+      "en": "Settings"
+    },
+    "panel.declarations": {
+      "zh-Hant": "Shader 宣告",
+      "en": "Shader declarations"
+    },
+    "navigation.td": {
+      "zh-Hant": "TD 元件",
+      "en": "TD component"
+    },
+    "uniform.default": {
+      "zh-Hant": "預設值",
+      "en": "Default value"
+    },
+    "uniform.expose": {
+      "zh-Hant": "Expose · 顯示為 TD 參數",
+      "en": "Expose as TD parameter"
+    },
+    "uniform.publicName": {
+      "zh-Hant": "公開參數名稱",
+      "en": "Public parameter label"
+    },
+    "uniform.create": {
+      "zh-Hant": "建立 Float Uniform",
+      "en": "Create Float Uniform"
+    },
+    "uniform.tdValue": {
+      "zh-Hant": "預設值同步到 TD 參數的 Default，不覆蓋目前值。取消 Expose 會使用圖內預設值，並保留已停用的 TD 參數連結。",
+      "en": "The default updates the TD parameter default without overwriting its current value. Disabling Expose uses the graph default and preserves inactive TD parameter associations."
+    },
+    "input.implicitUV": {
+      "zh-Hant": "預設使用內插的 UV；可改用固定座標。",
+      "en": "Uses interpolated UV by default; a constant coordinate can override it."
+    },
+    "input.setUV": {
+      "zh-Hant": "設定固定 UV",
+      "en": "Set constant UV"
+    },
+    "input.restoreUV": {
+      "zh-Hant": "恢復內插 UV",
+      "en": "Restore interpolated UV"
+    },
+    "input.connected": {
+      "zh-Hant": "來源：",
+      "en": "Source: "
+    },
+    "help.select": {
+      "zh-Hant": "選取一個節點，查看參數、用途與官方文件。\n\n未接線的 Input 可以手動填值；接線後使用連線來源，原先填的值仍會保留。",
+      "en": "Select a node to explore its parameters, purpose and official documentation.\n\nUnconnected inputs use editable values. Connecting an input overrides its value without deleting it."
+    },
+    "help.float": {
+      "zh-Hant": "輸出一個固定的 `float` 數值。調整常數需要重新編譯；想從 TD 即時控制時可以使用 Uniform。\n\n[GLSL · Float values ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#floats)\n\n[The Book of Shaders：造型函數](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Outputs one constant `float`. Editing a constant recompiles the Shader; use a Uniform for live TD control.\n\n[GLSL · Float values ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#floats)\n\n[The Book of Shaders: Shaping functions](https://thebookofshaders.com/05/)"
+    },
+    "help.vec2": {
+      "zh-Hant": "輸出兩個分量的 `vec2`，常用於 UV 或平面座標。\n\n[GLSL · Vector types ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vectors)\n\n[The Book of Shaders：向量與色彩](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Outputs a two-component `vec2`, useful for UV or planar coordinates.\n\n[GLSL · Vector types ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vectors)\n\n[The Book of Shaders: Vectors and colors](https://thebookofshaders.com/06/)"
+    },
+    "help.vec3": {
+      "zh-Hant": "輸出三個分量的 `vec3`，可表示 RGB 或三維位置。\n\n[GLSL · Vector types ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vectors)\n\n[The Book of Shaders：向量與色彩](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Outputs a three-component `vec3`, useful for RGB or 3D positions.\n\n[GLSL · Vector types ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vectors)\n\n[The Book of Shaders: Vectors and colors](https://thebookofshaders.com/06/)"
+    },
+    "help.color": {
+      "zh-Hant": "輸出 `vec4(R, G, B, A)` 常數。Alpha 為 `1` 表示不透明。\n\n[GLSL · Vector constructors ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-constructors)\n\n[The Book of Shaders：色彩](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Outputs a constant `vec4(R, G, B, A)`. Alpha `1` means opaque.\n\n[GLSL · Vector constructors ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-constructors)\n\n[The Book of Shaders: Colors](https://thebookofshaders.com/06/)"
+    },
+    "help.add": {
+      "zh-Hant": "逐分量計算 `a + b`。未接線的輸入口可在參數卡中直接設定。\n\n`Type` 決定目前的運算型別。選為 `vec4` 時也可接入 `float`，該值會套用到四個分量。\n\n[GLSL · Addition and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations)\n\n[The Book of Shaders：造型函數](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Calculates `a + b` component by component. Set unconnected input values in this Parameter card.\n\n`Type` selects the operation’s current type. In `vec4` mode, a `float` input is applied to all four components.\n\n[GLSL · Addition and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations)\n\n[The Book of Shaders: Shaping functions](https://thebookofshaders.com/05/)"
+    },
+    "help.multiply": {
+      "zh-Hant": "逐分量計算 `a * b`。例如貼圖乘上 RGBA 色彩可用於乘色。\n\n[GLSL · Multiplication and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations)\n\n[The Book of Shaders：造型函數](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Calculates `a * b` component by component. Multiply a texture by an RGBA value to tint it.\n\n[GLSL · Multiplication and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations)\n\n[The Book of Shaders: Shaping functions](https://thebookofshaders.com/05/)"
+    },
+    "help.mix": {
+      "zh-Hant": "計算 `a * (1 - factor) + b * factor`。`factor = 0` 得到 a，`factor = 1` 得到 b；不會自動限制 factor 範圍。\n\n[官方文件 ↗](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mix.xhtml)\n\n[The Book of Shaders：混合色彩](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Calculates `a * (1 - factor) + b * factor`. A factor of `0` returns a; `1` returns b. The factor is not automatically clamped.\n\n[Official reference ↗](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mix.xhtml)\n\n[The Book of Shaders: Mixing colors](https://thebookofshaders.com/06/)"
+    },
+    "help.sin": {
+      "zh-Hant": "計算輸入的正弦值，角度單位是 **radians**。Vector 輸入會逐分量運算。\n\n[官方文件 ↗](https://registry.khronos.org/OpenGL-Refpages/gl4/html/sin.xhtml)\n\n[The Book of Shaders：Sine 與 Cosine](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Computes sine using angles in **radians**. Vector inputs are evaluated component by component.\n\n[Official reference ↗](https://registry.khronos.org/OpenGL-Refpages/gl4/html/sin.xhtml)\n\n[The Book of Shaders: Sine and cosine](https://thebookofshaders.com/05/)"
+    },
+    "help.rgba": {
+      "zh-Hant": "把 RGB 與 Alpha 組合成 `vec4`。Alpha 未接線時預設為 `1`。\n\n[GLSL · Vector constructors ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-constructors)\n\n[The Book of Shaders：向量與色彩](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Combines RGB and Alpha into a `vec4`. Unconnected Alpha defaults to `1`.\n\n[GLSL · Vector constructors ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-constructors)\n\n[The Book of Shaders: Vectors and colors](https://thebookofshaders.com/06/)"
+    },
+    "help.split": {
+      "zh-Hant": "取出 RGBA 的單一分量，或一次取出 RGB。GLSL 使用 swizzle 語法，例如 `.rgb`、`.a`。\n\n[GLSL · Swizzle ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-components)\n\n[The Book of Shaders：Swizzle 與色彩分量](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Extracts individual RGBA components or RGB together using GLSL swizzles such as `.rgb` and `.a`.\n\n[GLSL · Swizzle ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-components)\n\n[The Book of Shaders: Swizzles and color components](https://thebookofshaders.com/06/)"
+    },
+    "help.uniform": {
+      "zh-Hant": "Uniform 是由 TD 提供的數值，同一次 draw 中保持一致。\n\n**Expose** 會在此 Grape Shader 建立可控制的 TD 參數。同一宣告的所有節點共用數值；公開名稱可以修改而不更換參數身分。\n\n[GLSL MAT · Uniform Parameters ↗](https://docs.derivative.ca/GLSL_MAT#Parameters_-_Vectors_Page)\n\n[The Book of Shaders：Uniforms](https://thebookofshaders.com/03/?lan=ch)\n\n[GLSL TOP · Uniforms ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Uniforms)",
+      "en": "A Uniform is supplied by TD and stays constant within a draw.\n\n**Expose** creates a TD parameter on this Grape Shader. Nodes referencing the same declaration share its value. Renaming its label preserves parameter identity.\n\n[GLSL MAT · Uniform Parameters ↗](https://docs.derivative.ca/GLSL_MAT#Parameters_-_Vectors_Page)\n\n[The Book of Shaders: Uniforms](https://thebookofshaders.com/03/)\n\n[GLSL TOP · Uniforms ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Uniforms)"
+    },
+    "help.uv": {
+      "zh-Hant": "取得 TD 的第一組 Texture Coordinates，從 Vertex Stage 內插到 Pixel Stage。\n\n[TD Texture Coordinates ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Working_with_Geometry_Attributes)\n\n[The Book of Shaders：座標與 Uniforms](https://thebookofshaders.com/03/?lan=ch)",
+      "en": "Reads the first TD texture coordinates, interpolated from Vertex to Pixel Stage.\n\n[TD Texture Coordinates ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Working_with_Geometry_Attributes)\n\n[The Book of Shaders: Coordinates and uniforms](https://thebookofshaders.com/03/)"
+    },
+    "help.texture": {
+      "zh-Hant": "用 `sampler2D` 與 UV 取樣貼圖。可選 TD 內建圖片，或使用既有 TOP。\n\nUV 未接線時使用內插座標；固定 UV 會讓所有像素取樣同一位置。\n\n[官方文件 ↗](https://registry.khronos.org/OpenGL-Refpages/gl4/html/texture.xhtml)\n\n[The Book of Shaders：texture2D](https://thebookofshaders.com/glossary/?search=texture2D)\n\n這份教學使用較早期的 `texture2D()` 寫法；TD-Grape 的 GLSL 4.50 使用 `texture()`。\n\n**Expose** 讓 TOP 來源成為 TD Parameter，也能在此面板修改目前值。COMP 接線優先於預設來源；Expression／Bind 控制的值只顯示、不覆寫。相對路徑與 TD 相同，從 Shader 所在的外層網路解析。",
+      "en": "Samples a `sampler2D` at UV coordinates. Choose a built-in TD image or an existing TOP.\n\nUnconnected UV uses interpolated coordinates; constant UV samples the same position for every pixel.\n\n[Official reference ↗](https://registry.khronos.org/OpenGL-Refpages/gl4/html/texture.xhtml)\n\n[The Book of Shaders: texture2D](https://thebookofshaders.com/glossary/?search=texture2D)\n\nThis reference uses the older `texture2D()` spelling; TD-Grape uses `texture()` with GLSL 4.50.\n\n**Expose** makes the TOP source a TD parameter; its current value is also editable here. COMP wiring takes priority over the default source. Expression/Bind values are displayed without overwriting their control. Relative paths use the network containing the Shader, matching TD."
+    },
+    "help.position": {
+      "zh-Hant": "使用 `TDPos()` 取得頂點位置，作為 TD 變形流程的起點。\n\n[TDPos · Geometry Attributes ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Working_with_Geometry_Attributes)",
+      "en": "Uses `TDPos()` to read a vertex position before the TD deformation pipeline.\n\n[TDPos · Geometry Attributes ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Working_with_Geometry_Attributes)"
+    },
+    "help.deform": {
+      "zh-Hant": "使用 `TDDeform()` 把頂點位置帶入 TD 的變形流程，輸出 world space 位置。\n\n[TDDeform · Deforms ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Working_with_Deforms)",
+      "en": "Uses `TDDeform()` to transform a vertex through the TD deformation pipeline into world space.\n\n[TDDeform · Deforms ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Working_with_Deforms)"
+    },
+    "help.to_clip": {
+      "zh-Hant": "使用 `TDWorldToProj()` 把 world space 位置轉成投影座標，通常接到 Vertex Output。\n\n[TDWorldToProj · Vertex Functions ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Vertex_Shader_Only_Functions)",
+      "en": "Uses `TDWorldToProj()` to project a world-space position, normally connected to Vertex Output.\n\n[TDWorldToProj · Vertex Functions ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Vertex_Shader_Only_Functions)"
+    },
+    "help.vertex_out": {
+      "zh-Hant": "指定最終頂點位置。一般接收 World to Projection 的輸出。固定位置會把所有頂點放到同一處。\n\n[TD · gl_Position ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Outputting_gl_Position)",
+      "en": "Sets the final vertex position, normally from World to Projection. A constant position collapses all vertices to one point.\n\n[TD · gl_Position ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Outputting_gl_Position)"
+    },
+    "help.pixel_out": {
+      "en": "Writes 1–8 vec4 color buffers. Buffer 0 keeps TD color dithering and alpha testing; extra buffers use output swizzling without color dithering. Unconnected inputs default to transparent black (0, 0, 0, 0) and can be edited. Set the Render TOP color buffer count to receive the additional outputs.\n\n[GLSL MAT · Multiple Render Targets](https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Multiple_Render_Targets)",
+      "zh-Hant": "輸出 1–8 個 vec4 Color Buffer。Buffer 0 保留 TD 色彩抖動與 Alpha Test；額外 Buffer 套用輸出通道處理，不加色彩抖動。未連線預設為透明黑 (0, 0, 0, 0)，也可手動填值。接收額外輸出時，請在 Render TOP 開啟對應數量的 Color Buffers。\n\n[GLSL MAT · 多重輸出](https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Multiple_Render_Targets)"
+    },
+    "navigation.up": {
+      "zh-Hant": "圖內上一層",
+      "en": "Parent graph"
+    },
+    "function.group": {
+      "zh-Hant": "框選轉為 Subgraph",
+      "en": "Selection to Subgraph"
+    },
+    "function.new": {
+      "zh-Hant": "建立 Subgraph",
+      "en": "New Subgraph"
+    },
+    "function.local": {
+      "zh-Hant": "Shader 本地 Function · 共用定義",
+      "en": "Shader Function · shared definition"
+    },
+    "function.source": {
+      "zh-Hant": "函式庫來源 · 首次編修會建立本地版本",
+      "en": "Library source · creates a local version on first edit"
+    },
+    "function.cycle": {
+      "zh-Hant": "無法進入循環引用的 Function",
+      "en": "Cannot enter a recursive Function reference"
+    },
+    "function.open": {
+      "zh-Hant": "進入 Function",
+      "en": "Open Function"
+    },
+    "function.independent": {
+      "zh-Hant": "建立獨立副本",
+      "en": "Make Independent"
+    },
+    "function.name": {
+      "zh-Hant": "Function 名稱",
+      "en": "Function name"
+    },
+    "function.portName": {
+      "zh-Hant": "連接埠名稱",
+      "en": "Port name"
+    },
+    "function.portDefault": {
+      "zh-Hant": "預設值",
+      "en": "Default value"
+    },
+    "help.function": {
+      "zh-Hant": "**Function** 將可重用的子圖封裝為一次呼叫。雙擊可進入；同一個 Shader 內引用相同本地定義的節點會一起更新。\n\n函式庫來源在第一次編修時建立本地版本，保留原始來源。`Make Independent` 只為選取的呼叫建立獨立定義。",
+      "en": "A **Function** packages a reusable graph as a call. Double-click to enter. Calls sharing a local definition update together within this Shader.\n\nEditing a library source creates a local version and preserves the source. `Make Independent` creates a separate definition for the selected call."
+    },
+    "help.functionPorts": {
+      "zh-Hant": "**Function Input / Output** 定義子圖與呼叫節點之間的介面。每個連接埠都有型別與預設值；連線優先使用來源值。\n\n圖內的上一層只回到 Shader 或呼叫所在的 Function；TD 元件位置另行顯示。",
+      "en": "**Function Input / Output** define the interface between a subgraph and its call nodes. Each port has a type and a default; a wire takes precedence.\n\nParent navigation stays within this Shader. The TD component location is shown separately."
+    },
+    "wire.incompatible": {
+      "zh-Hant": "型別不相容",
+      "en": "Incompatible types"
+    },
+    "category.all": {
+      "zh-Hant": "全部",
+      "en": "All"
+    },
+    "category.math": {
+      "zh-Hant": "Math",
+      "en": "Math"
+    },
+    "category.constant": {
+      "zh-Hant": "Constants",
+      "en": "Constants"
+    },
+    "category.uniform": {
+      "zh-Hant": "Uniforms",
+      "en": "Uniforms"
+    },
+    "category.sampler": {
+      "zh-Hant": "Texture",
+      "en": "Texture"
+    },
+    "category.builtin": {
+      "zh-Hant": "TD Built-ins",
+      "en": "TD Built-ins"
+    },
+    "category.functions": {
+      "zh-Hant": "圖函式",
+      "en": "Graph Functions"
+    },
+    "create.title": {
+      "zh-Hant": "新增節點",
+      "en": "Create node"
+    },
+    "create.search": {
+      "zh-Hant": "搜尋可新增的節點",
+      "en": "Search available nodes"
+    },
+    "create.category": {
+      "zh-Hant": "節點分類",
+      "en": "Node category"
+    },
+    "create.type": {
+      "zh-Hant": "連接埠型別",
+      "en": "Port type"
+    },
+    "create.allTypes": {
+      "zh-Hant": "全部型別",
+      "en": "All types"
+    },
+    "create.empty": {
+      "zh-Hant": "沒有符合條件的節點",
+      "en": "No matching nodes"
+    },
+    "action.boxselect": {
+      "zh-Hant": "框選",
+      "en": "Box Select"
+    },
+    "function.removePort": {
+      "zh-Hant": "移除連接埠",
+      "en": "Remove port"
+    },
+    "function.addPort": {
+      "zh-Hant": "＋ 連接埠",
+      "en": "＋ Port"
+    },
+    "uniform.current": {
+      "zh-Hant": "目前值",
+      "en": "Current value"
+    },
+    "uniform.synced": {
+      "zh-Hant": "與 TD 參數同步；兩邊都可以修改目前值。",
+      "en": "Synced with TD; edit the current value in either interface."
+    },
+    "uniform.driven": {
+      "zh-Hant": "由 TD Expression / Export / Bind 控制的分量只顯示結果，其餘分量仍可編輯。",
+      "en": "Components driven by TD Expression / Export / Bind show evaluated values; other components remain editable."
+    },
+    "uniform.waiting": {
+      "zh-Hant": "等待已套用圖的 TD 參數；圖有變更時請先完成套用。",
+      "en": "Waiting for TD parameters of the applied graph; apply graph changes first."
+    },
+    "uniform.offline": {
+      "zh-Hant": "尚未取得 TD 目前值，正在重新連線。",
+      "en": "Current TD values are unavailable; reconnecting."
+    },
+    "uniform.updated": {
+      "zh-Hant": "目前值已同步至 TD",
+      "en": "Current value updated in TD"
+    },
+    "action.about": {
+      "zh-Hant": "關於",
+      "en": "About"
+    },
+    "panel.addNode": {
+      "zh-Hant": "新增節點",
+      "en": "ADD NODE"
+    },
+    "canvas.workspace": {
+      "zh-Hant": "Shader 圖編輯區",
+      "en": "Shader graph workspace"
+    },
+    "about.description": {
+      "zh-Hant": "在 TouchDesigner 中，以節點編輯 GLSL Shader。",
+      "en": "A node editor for GLSL Shaders in TouchDesigner."
+    },
+    "about.dedication": {
+      "zh-Hant": "For Yeh Ting-Hao (PUTA)",
+      "en": "For Yeh Ting-Hao (PUTA)"
+    },
+    "about.dates": {
+      "zh-Hant": "1981 — 2024",
+      "en": "1981 — 2024"
+    },
+    "help.subtract": {
+      "zh-Hant": "逐分量計算 `a − b`。可用來平移 UV 或以某個值為中心調整顏色。\n\n[GLSL · Subtraction and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Subtract `b` from `a` per component. Use it to offset UVs or center a color adjustment.\n\n[GLSL · Subtraction and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.divide": {
+      "zh-Hant": "逐分量計算 `a / b`。未連接的除數預設為 1；除數為 0 的結果不可靠，請先處理輸入範圍。\n\n[GLSL · Division and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Divide `a` by `b` per component. The default divisor is 1. Avoid zero divisors; results are not reliable.\n\n[GLSL · Division and component-wise operations ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-and-matrix-operations) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.min": {
+      "zh-Hant": "逐分量選取較小的值。可替數值設定上界。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/min.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Choose the smaller value in each component. Useful for an upper bound.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/min.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.max": {
+      "zh-Hant": "逐分量選取較大的值。可替數值設定下界。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/max.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Choose the larger value in each component. Useful for a lower bound.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/max.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.clamp": {
+      "zh-Hant": "把每個分量限制於 `min` 與 `max`，預設範圍 0–1。保持 `min ≤ max`。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/clamp.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Limit each component to `min`–`max`, initially 0–1. Keep `min ≤ max`.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/clamp.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.smoothstep": {
+      "zh-Hant": "從 `edge0` 到 `edge1` 建立平滑的 0–1 過渡。保持 `edge0 < edge1`；常用於柔和遮罩。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Build a smooth 0–1 transition from `edge0` to `edge1`. Keep `edge0 < edge1`; useful for soft masks.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.abs": {
+      "zh-Hant": "去掉每個分量的負號。可用來建立以零為中心的對稱效果。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/abs.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Remove each component’s negative sign. Useful for effects symmetric around zero.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/abs.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.fract": {
+      "zh-Hant": "取 `value − floor(value)`，可用來重複座標。負數也有非負的小數部分，例如 −0.25 得到 0.75。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/fract.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Use `value − floor(value)` to repeat coordinates. Negative values also wrap: −0.25 produces 0.75.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/fract.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.pow": {
+      "zh-Hant": "逐分量計算 `base` 的 `exponent` 次方。base 不可為負；base 為 0 時 exponent 必須大於 0。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/pow.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Raise `base` to `exponent` per component. Use nonnegative bases; a zero base requires a positive exponent.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/pow.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.cos": {
+      "zh-Hant": "逐分量計算 Cosine，輸入角度使用弧度。可搭配 Sine 製作週期變化。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/cos.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/?lan=ch)",
+      "en": "Evaluate Cosine per component, with angles in radians. Pair it with Sine for periodic effects.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/cos.xhtml) · [The Book of Shaders](https://thebookofshaders.com/05/)"
+    },
+    "help.dot": {
+      "zh-Hant": "將兩組對應分量相乘後加總，輸出一個 float。可用於方向比較或加權和。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/dot.xhtml) · [The Book of Shaders](https://thebookofshaders.com/glossary/?search=dot)",
+      "en": "Multiply matching components and sum them into one float. Useful for direction comparisons or weighted sums.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/dot.xhtml) · [The Book of Shaders](https://thebookofshaders.com/glossary/?search=dot)"
+    },
+    "help.length": {
+      "zh-Hant": "取得向量長度，輸出 float；float 輸入得到絕對值。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/length.xhtml) · [The Book of Shaders](https://thebookofshaders.com/glossary/?search=length)",
+      "en": "Measure a vector’s length as a float. A float input produces its absolute value.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/length.xhtml) · [The Book of Shaders](https://thebookofshaders.com/glossary/?search=length)"
+    },
+    "help.normalize": {
+      "zh-Hant": "將非零向量縮放至長度 1。請避免零向量；未連線預設使用非零值。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/normalize.xhtml) · [The Book of Shaders](https://thebookofshaders.com/glossary/?search=normalize)",
+      "en": "Scale a nonzero vector to unit length. Avoid zero vectors; the unconnected default is nonzero.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/normalize.xhtml) · [The Book of Shaders](https://thebookofshaders.com/glossary/?search=normalize)"
+    },
+    "help.filter.invert": {
+      "zh-Hant": "計算 `1 − RGB`，保留 alpha。雙擊查看 Function；首次修改內容才建立 Shader 本地副本。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Compute `1 − RGB` while preserving alpha. Double-click to inspect; the first content edit creates a Shader-local copy.\n\n[The Book of Shaders: Color](https://thebookofshaders.com/06/)"
+    },
+    "help.filter.contrast": {
+      "zh-Hant": "以 Pivot 為中心計算 `(RGB − Pivot) × Contrast + Pivot`，保留 alpha。Contrast = 1 保持原色，0 得到 Pivot。此 Function 不裁切 HDR 值，也不轉換色彩空間。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Compute `(RGB − Pivot) × Contrast + Pivot`, preserving alpha. Contrast 1 keeps the input; 0 gives Pivot. No HDR clipping or color-space conversion is applied.\n\n[The Book of Shaders: Color](https://thebookofshaders.com/06/)"
+    },
+    "help.filter.color_clamp": {
+      "zh-Hant": "只限制 RGB 至 Minimum／Maximum，保留 alpha。請保持 Minimum ≤ Maximum。這是可查看與本地編修的 Function。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Limit RGB to Minimum–Maximum and preserve alpha. Keep Minimum ≤ Maximum. This Function can be inspected and edited locally.\n\n[The Book of Shaders: Color](https://thebookofshaders.com/06/)"
+    },
+    "preview.top": {
+      "zh-Hant": "Output Preview",
+      "en": "Output Preview"
+    },
+    "preview.material": {
+      "zh-Hant": "Material Preview",
+      "en": "Material Preview"
+    },
+    "texture.input0": {
+      "zh-Hant": "TD 輸入 1 · 未接線時使用香蕉",
+      "en": "TD Input 1 · banana when disconnected"
+    },
+    "graph.targetMismatch": {
+      "zh-Hant": "請匯入與此元件相同的 MAT／TOP 圖。",
+      "en": "Import a graph for this component’s MAT/TOP target."
+    },
+    "help.top.uv": {
+      "zh-Hant": "目前輸出像素的 UV 座標，從左下角 `(0, 0)` 到右上角 `(1, 1)`。Grape TOP 使用 TD 預設的 `vUV.st`。\n\n[GLSL TOP · UV Coordinates ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Pixel_Shaders) · [The Book of Shaders](https://thebookofshaders.com/03/?lan=ch)",
+      "en": "UV coordinates of the output pixel, from `(0, 0)` at the bottom left to `(1, 1)` at the top right. Grape TOP uses TD’s default `vUV.st`.\n\n[GLSL TOP · UV Coordinates ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Pixel_Shaders) · [The Book of Shaders](https://thebookofshaders.com/03/)"
+    },
+    "help.top.texture": {
+      "zh-Hant": "用 UV 取樣 RGBA 貼圖。未連接 UV 時使用目前像素座標。`TD 輸入 1` 讀取此 Grape TOP 的原生輸入口；未接線時使用 Parameter 設定的預設來源，初始為 TD 內建香蕉。\n\n取樣保留來源通道值，不自動預乘或反預乘 alpha。邊界模式可在 TD 元件的 Output 頁調整，預設 Hold。\n\n[GLSL texture](https://registry.khronos.org/OpenGL-Refpages/gl4/html/texture.xhtml) · [GLSL TOP · Sampling Inputs ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Sampling_Inputs)\n\n**Expose** 讓 TOP 來源成為 TD Parameter，也能在此面板修改目前值。COMP 接線優先於預設來源；Expression／Bind 控制的值只顯示、不覆寫。相對路徑與 TD 相同，從 Shader 所在的外層網路解析。",
+      "en": "Sample RGBA with UV coordinates. An unconnected UV input uses the current pixel coordinates. `TD Input 1` reads this Grape TOP’s native input, using the default source configured in Parameters when disconnected (initially the bundled TD banana). Built-in images and external TOP paths are also supported.\n\nSource channels are preserved without automatic alpha premultiplication or unpremultiplication. Input Extend UV is available on the component’s Output page in TD, with Hold as the default.\n\n[GLSL texture](https://registry.khronos.org/OpenGL-Refpages/gl4/html/texture.xhtml) · [GLSL TOP · Sampling Inputs ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Sampling_Inputs)\n\n**Expose** makes the TOP source a TD parameter; its current value is also editable here. COMP wiring takes priority over the default source. Expression/Bind values are displayed without overwriting their control. Relative paths use the network containing the Shader, matching TD."
+    },
+    "help.top.pixel_out": {
+      "zh-Hant": "此圖的 RGBA 輸出會經過 `TDOutputSwizzle`，再從 Grape TOP 的原生輸出口送出。Output 頁可設定解析度與 Pixel Format。16／32-bit float 保留超過 0–1 的值；8-bit 與網頁預覽會限制顯示範圍。\n\n網頁預覽最多 512 像素寬高；開啟自動更新且窗格可見時約每秒更新，也可關閉後手動重新整理。TD 輸出維持原生尺寸與運作。\n\n[TDOutputSwizzle ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Output_Swizzle)",
+      "en": "RGBA output passes through `TDOutputSwizzle` to the Grape TOP’s native output connector. Resolution and Pixel Format are available on its Output page. 16/32-bit float preserves values outside 0–1; 8-bit and the browser preview limit the display range.\n\nThe browser preview is limited to 512 pixels per dimension. When Auto update is on, the visible TOP preview refreshes about once per second; turn it off to refresh manually. The TD output retains its native resolution and operation.\n\n[TDOutputSwizzle ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Output_Swizzle)"
+    },
+    "uniform.graphChanged": {
+      "zh-Hant": "此 Shader 已在 TD 或另一個編輯器更新；請按「重新載入已套用圖」查看最新狀態。",
+      "en": "This Shader changed in TD or another editor. Reload the applied graph to see the latest state."
+    },
+    "category.personal": {
+      "zh-Hant": "個人",
+      "en": "Personal"
+    },
+    "personal.save": {
+      "zh-Hant": "存入個人調色盤",
+      "en": "Save to Personal"
+    },
+    "personal.refresh": {
+      "zh-Hant": "重新讀取個人調色盤",
+      "en": "Refresh Personal"
+    },
+    "personal.refreshed": {
+      "zh-Hant": "已重新讀取個人 Function；現有 Shader 保留原快照。",
+      "en": "Personal Functions refreshed. Existing Shaders keep their snapshots."
+    },
+    "personal.saved": {
+      "zh-Hant": "已建立個人 Function 快照；目前 Shader 沒有改變。",
+      "en": "Personal Function snapshot saved. The current Shader is unchanged."
+    },
+    "personal.reused": {
+      "zh-Hant": "個人調色盤已有相同快照，已重用。",
+      "en": "An identical Personal snapshot already exists and was reused."
+    },
+    "personal.hint": {
+      "zh-Hant": "將一個 Function 拖到這裡保存，或使用右側的「存入個人調色盤」。",
+      "en": "Drop one Function here to save it, or use Save to Personal in its parameters."
+    },
+    "personal.location": {
+      "zh-Hant": "來源資料夾與讀取狀態",
+      "en": "Source folder and load status"
+    },
+    "personal.unavailable": {
+      "zh-Hant": "可在 TD-Grape 主元件設定 Personal Folder。",
+      "en": "Set Personal Folder on the TD-Grape main component."
+    },
+    "personal.partial": {
+      "zh-Hant": "部分個人檔案無法載入；展開「來源資料夾與讀取狀態」查看原因。",
+      "en": "Some Personal files could not be loaded. Expand Source folder and load status for details."
+    },
+    "personal.external": {
+      "zh-Hant": "這個 Function 引用了 Shader 的 Uniform 或貼圖。請把 Uniform／Texture 2D 放在 Function 外，經由 Function Input 傳入數值或顏色後再保存。",
+      "en": "This Function references Shader Uniforms or textures. Place Uniform / Texture 2D outside it and pass their values or colors through Function Input before saving."
+    },
+    "edit.failed": {
+      "zh-Hant": "未套用此操作，已保留原圖。",
+      "en": "This edit was not applied. The graph is unchanged. "
+    },
+    "function.limit": {
+      "zh-Hant": "每個 Shader 最多保留 64 個 Function 定義；本地化也需要保留來源快照。",
+      "en": "A Shader supports up to 64 Function definitions; local edits also retain source snapshots."
+    },
+    "import.title": {
+      "zh-Hant": "匯入前檢查",
+      "en": "Review Graph Import"
+    },
+    "import.checking": {
+      "zh-Hant": "正在檢查檔案…",
+      "en": "Checking the document…"
+    },
+    "import.valid": {
+      "zh-Hant": "檢查通過。接受後會取代目前的圖。",
+      "en": "The graph passed inspection. Accept to replace the current graph."
+    },
+    "import.repairable": {
+      "zh-Hant": "此圖需要修復。請先檢視以下變更，再決定是否接受。",
+      "en": "This graph needs repairs. Review the proposed changes before accepting."
+    },
+    "import.blocked": {
+      "zh-Hant": "目前無法匯入。原始內容與正在編輯的圖都已保留。",
+      "en": "This document cannot be imported yet. The original file and current graph are unchanged."
+    },
+    "import.newer": {
+      "zh-Hant": "這份圖來自較新的格式，目前只能檢視原始內容。",
+      "en": "This graph uses a newer format. You can view its original content."
+    },
+    "import.accept": {
+      "zh-Hant": "接受並匯入",
+      "en": "Accept Import"
+    },
+    "import.acceptRepair": {
+      "zh-Hant": "接受修復並匯入",
+      "en": "Accept Repairs and Import"
+    },
+    "import.original": {
+      "zh-Hant": "原始 JSON",
+      "en": "Original JSON"
+    },
+    "import.proposal": {
+      "zh-Hant": "修復後的 JSON 預覽",
+      "en": "Proposed JSON"
+    },
+    "import.download": {
+      "zh-Hant": "下載原始檔",
+      "en": "Download Original"
+    },
+    "import.invalidJSON": {
+      "zh-Hant": "檔案不是有效的 JSON。可在下方檢視或下載原始內容。",
+      "en": "The file is not valid JSON. View or download its original content below."
+    },
+    "import.changed": {
+      "zh-Hant": "檢查期間目前的圖已改變。請關閉此視窗，再次選取檔案以重新檢查。",
+      "en": "The current graph changed during inspection. Close this window and choose the file again."
+    },
+    "import.explanation": {
+      "zh-Hant": "檢查不會修改 TD 或原始檔。接受後會自動編譯；編譯失敗保留最後成功輸出，也可用 Undo 還原匯入前的圖。",
+      "en": "Inspection does not change TouchDesigner or the original file. After acceptance, compilation runs automatically. Failed compilation retains the last successful output; Undo restores the graph before import."
+    },
+    "import.archive": {
+      "zh-Hant": "此版本不支援執行內嵌 archive；內容只會保留為資料。",
+      "en": "This version does not execute embedded archives; their content is retained as data."
+    },
+    "import.repair.position": {
+      "zh-Hant": "重設無效的畫布位置",
+      "en": "Reset invalid canvas position"
+    },
+    "import.repair.edge": {
+      "zh-Hant": "移除找不到端點的連線",
+      "en": "Remove a connection with a missing endpoint"
+    },
+    "import.repair.declarations": {
+      "zh-Hant": "補上空的宣告清單",
+      "en": "Add an empty declaration list"
+    },
+    "import.more": {
+      "zh-Hant": "另有 {count} 項變更，可查看 JSON 預覽。",
+      "en": "{count} more changes are available in the proposed JSON."
+    },
+    "draft.reviewName": {
+      "zh-Hant": "恢復的草稿.json",
+      "en": "Recovered draft.json"
+    },
+    "contract.unsupported": {
+      "en": "The editor and type rules do not match. Reopen the editor from TouchDesigner.",
+      "zh-Hant": "編輯器與型別規則版本不一致，請從 TouchDesigner 重新開啟編輯器。"
+    },
+    "contract.invalid": {
+      "en": "The type rules could not be loaded. Reopen the editor from TouchDesigner.",
+      "zh-Hant": "無法讀取型別規則，請從 TouchDesigner 重新開啟編輯器。"
+    },
+    "function.create": {
+      "zh-Hant": "建立 Function",
+      "en": "Create Function"
+    },
+    "texture.current": {
+      "zh-Hant": "目前的 TOP 參數",
+      "en": "Current TOP parameter"
+    },
+    "texture.currentEmpty": {
+      "zh-Hant": "留空使用預設來源",
+      "en": "Leave empty for the default source"
+    },
+    "texture.effective": {
+      "zh-Hant": "實際使用來源",
+      "en": "Effective source"
+    },
+    "texture.invalid": {
+      "zh-Hant": "TOP 路徑無效，備援使用內建圖；請檢查來源。",
+      "en": "Invalid TOP path; using the bundled fallback. Check the source."
+    },
+    "texture.connected": {
+      "zh-Hant": "目前使用 COMP 接線；此參數作為拔線後的備援。",
+      "en": "Using the COMP connection; this parameter is the fallback when disconnected."
+    },
+    "texture.updated": {
+      "zh-Hant": "TOP 來源已更新",
+      "en": "TOP source updated"
+    },
+    "texture.mode": {
+      "zh-Hant": "來源方式",
+      "en": "Source mode"
+    },
+    "texture.filterMode": {
+      "zh-Hant": "COMP Input 1 ＋ 預設來源",
+      "en": "COMP Input 1 + default"
+    },
+    "texture.sourceMode": {
+      "zh-Hant": "指定貼圖來源",
+      "en": "Texture source"
+    },
+    "texture.default": {
+      "zh-Hant": "預設來源",
+      "en": "Default source"
+    },
+    "texture.filterHint": {
+      "zh-Hant": "外部接線優先，沒有接線時使用預設來源。同一 Input 1 的 Texture 節點共用這些設定與 TD 參數。",
+      "en": "External wiring takes priority. Otherwise the default source is used. Texture nodes using Input 1 share these settings and the TD parameter."
+    },
+    "texture.sourceHint": {
+      "zh-Hant": "Expose 後可在 TD 或此面板更改目前的 TOP 路徑；留空時使用預設來源。修改預設值不會覆寫已存在的 TD 目前值或 Expression。",
+      "en": "Expose lets TD or this panel change the current TOP path. An empty value uses the default source. Editing defaults preserves existing TD values and Expressions."
+    },
+    "texture.backupInvalid": {
+      "zh-Hant": "目前接線有效，但預設 TOP 路徑失效，請檢查備援來源。",
+      "en": "The connection is active, but the default TOP path is invalid. Check the fallback source."
+    },
+    "saved.locked": {
+      "zh-Hant": "資料需檢查",
+      "en": "Data needs review"
+    },
+    "saved.title": {
+      "zh-Hant": "已儲存的 Shader 資料需要檢查",
+      "en": "Saved Shader data needs review"
+    },
+    "saved.explanation": {
+      "zh-Hant": "編輯暫停，原始資料與 TD 輸出保留。請先下載原文，再從 TD 修復或還原工程。",
+      "en": "Editing is paused. The original data and TD output are preserved. Download the original text before repairing it in TD or restoring the project."
+    },
+    "saved.original": {
+      "zh-Hant": "state DAT 原文預覽",
+      "en": "Original state DAT text"
+    },
+    "saved.truncated": {
+      "zh-Hant": "此處只顯示前 12,000 字元，下載會保留完整原文。",
+      "en": "Only the first 12,000 characters are shown. The download preserves the complete original text."
+    },
+    "saved.download": {
+      "zh-Hant": "下載原始 state JSON",
+      "en": "Download original state JSON"
+    },
+    "saved.review": {
+      "zh-Hant": "檢查已儲存資料",
+      "en": "Review saved data"
+    },
+    "saved.stillLocked": {
+      "zh-Hant": "資料仍需要檢查；原始內容未變更。",
+      "en": "The data still needs review. Its original content is unchanged."
+    },
+    "saved.changed": {
+      "zh-Hant": "state DAT 已在 TD 中變更。請重新載入，再下載目前原文。",
+      "en": "The state DAT changed in TD. Reload before downloading its current original text."
+    },
+    "saved.downloaded": {
+      "zh-Hant": "已下載完整原文，TD 資料未變更。",
+      "en": "Complete original text downloaded. TD data is unchanged."
+    },
+    "saved.reading": {
+      "zh-Hant": "正在讀取原文…",
+      "en": "Reading original text…"
+    },
+    "saved.unavailable": {
+      "zh-Hant": "此入口無法讀取原文，請使用 TD 的本機 Open Editor。",
+      "en": "Original text is unavailable through this entry. Use Open Editor locally in TD."
+    },
+    "upgrade.title": {
+      "zh-Hant": "檢查 Shader 版本差異",
+      "en": "Review Shader version changes"
+    },
+    "upgrade.explanation": {
+      "zh-Hant": "這個 Shader 的節點行為或版本資料需要確認。確認前繼續使用上次成功的 TD 輸出；確認後先由 TD 編譯，成功才更新。",
+      "en": "This Shader needs a version review. Its last successful TD output continues until you accept and TD validates the upgrade."
+    },
+    "upgrade.review": {
+      "zh-Hant": "檢視差異",
+      "en": "Review changes"
+    },
+    "upgrade.checking": {
+      "zh-Hant": "正在比對版本…",
+      "en": "Comparing versions…"
+    },
+    "upgrade.blocked": {
+      "zh-Hant": "目前無法安全遷移這張圖。原始資料、接線與輸出保留；請先處理以下項目。",
+      "en": "This graph cannot be migrated safely yet. Original data, connections and output are preserved. Resolve the issues below first."
+    },
+    "upgrade.ready": {
+      "zh-Hant": "請檢查以下差異，再決定是否升級。",
+      "en": "Review the differences below before accepting."
+    },
+    "upgrade.unknownBaseline": {
+      "zh-Hant": "缺少可核對的舊版運算資料，無法保證新舊行為相同。",
+      "en": "The previous behavior baseline is missing or unverifiable; equivalent behavior cannot be guaranteed."
+    },
+    "upgrade.unknownRevision": {
+      "zh-Hant": "這個節點的舊 revision 未被識別；候選會使用目前定義。",
+      "en": "This node revision is unrecognized. The candidate uses the current definition."
+    },
+    "upgrade.behavior": {
+      "zh-Hant": "節點的介面、預設值或產碼版本已改變。展開可比較新舊資料。",
+      "en": "The node interface, defaults or emitter version changed. Expand to compare the recorded definitions."
+    },
+    "upgrade.missingDefinition": {
+      "zh-Hant": "目前找不到這個節點定義，無法自動遷移。",
+      "en": "This node definition is unavailable. Automatic migration is blocked."
+    },
+    "upgrade.emitterAbiVersion": {
+      "zh-Hant": "產碼介面版本不同，需重新確認運算行為。",
+      "en": "The emitter interface version changed; behavior needs review."
+    },
+    "upgrade.targetShellVersion": {
+      "zh-Hant": "Shader 輸出框架版本不同，需重新確認輸出行為。",
+      "en": "The Shader output framework version changed; output behavior needs review."
+    },
+    "upgrade.details": {
+      "zh-Hant": "新舊定義資料",
+      "en": "Recorded definitions"
+    },
+    "upgrade.old": {
+      "zh-Hant": "舊版",
+      "en": "Previous"
+    },
+    "upgrade.new": {
+      "zh-Hant": "目前版本",
+      "en": "Current"
+    },
+    "upgrade.unavailable": {
+      "zh-Hant": "無可核對資料",
+      "en": "No verifiable record"
+    },
+    "upgrade.revision": {
+      "zh-Hant": "節點 revision",
+      "en": "Node revision"
+    },
+    "upgrade.savedGraph": {
+      "zh-Hant": "目前儲存的圖",
+      "en": "Saved graph"
+    },
+    "upgrade.localize": {
+      "zh-Hant": "「{name}」會建立此 Shader 的本地版本，不回寫來源。",
+      "en": "“{name}” becomes a Shader-local copy; its source is unchanged."
+    },
+    "upgrade.backup": {
+      "zh-Hant": "成功升級後，前一份圖、GLSL 與版本資料會保存在此 Shader 的 upgrade_backup DAT，供復原時查閱。",
+      "en": "After a successful upgrade, the previous graph, GLSL and version data are retained in this Shader’s upgrade_backup DAT for recovery reference."
+    },
+    "upgrade.recheck": {
+      "zh-Hant": "重新檢查",
+      "en": "Review again"
+    },
+    "upgrade.accept": {
+      "zh-Hant": "確認並升級",
+      "en": "Accept and upgrade"
+    },
+    "upgrade.changed": {
+      "zh-Hant": "圖或版本資料已變更，請重新檢查差異。",
+      "en": "The graph or version data changed. Review the differences again."
+    },
+    "upgrade.localChanged": {
+      "zh-Hant": "TD 已完成升級，但本機草稿在等待時有變更，已保留草稿；請重新載入或檢查後再套用。",
+      "en": "TD upgraded successfully, but the local draft changed while waiting. The draft was preserved; reload or review it before applying."
+    },
+    "upgrade.applied": {
+      "zh-Hant": "升級成功，TD 已驗證並更新輸出。",
+      "en": "Upgrade applied after successful TD validation."
+    },
+    "library.tabs": {
+      "zh-Hant": "新增內容分類",
+      "en": "Library categories"
+    },
+    "library.sources": {
+      "zh-Hant": "圖函式來源",
+      "en": "Graph function sources"
+    },
+    "library.tab.nodes": {
+      "zh-Hant": "節點",
+      "en": "Nodes"
+    },
+    "library.tab.functions": {
+      "zh-Hant": "圖函式",
+      "en": "Graph Functions"
+    },
+    "library.tab.examples": {
+      "zh-Hant": "範例",
+      "en": "Examples"
+    },
+    "library.source.shader": {
+      "zh-Hant": "此 Shader",
+      "en": "This Shader"
+    },
+    "library.source.builtin": {
+      "zh-Hant": "內建",
+      "en": "Built-in"
+    },
+    "library.source.personal": {
+      "zh-Hant": "個人",
+      "en": "Personal"
+    },
+    "library.editable": {
+      "zh-Hant": "本地 · 可編修",
+      "en": "Local · editable"
+    },
+    "library.readonly": {
+      "zh-Hant": "來源 · 首次編修時本地化",
+      "en": "Source · local copy on edit"
+    },
+    "library.savedVersion": {
+      "zh-Hant": "此 Shader 儲存的來源版本",
+      "en": "Source version saved in this Shader"
+    },
+    "library.search.nodes": {
+      "zh-Hant": "搜尋節點…",
+      "en": "Search nodes…"
+    },
+    "library.search.functions": {
+      "zh-Hant": "搜尋圖函式…",
+      "en": "Search graph functions…"
+    },
+    "library.search.examples": {
+      "zh-Hant": "搜尋範例…",
+      "en": "Search examples…"
+    },
+    "library.searchAllSources": {
+      "zh-Hant": "搜尋全部圖函式來源",
+      "en": "Searching all graph function sources"
+    },
+    "library.exampleHint": {
+      "zh-Hant": "範例會載入整張 Shader 圖。未套用的變更會先詢問；載入後可 Undo。",
+      "en": "Examples replace the complete Shader graph. Pending edits require confirmation; loading can be undone."
+    },
+    "library.loadExample": {
+      "zh-Hant": "載入整張 Shader 圖",
+      "en": "Load complete Shader graph"
+    },
+    "library.newHint": {
+      "zh-Hant": "建立具有 Input／Output 的可重用子圖。",
+      "en": "Create a reusable graph with Input and Output."
+    },
+    "library.groupHint": {
+      "zh-Hant": "將已選節點封裝為可重用子圖。",
+      "en": "Wrap the selected nodes in a reusable graph."
+    },
+    "library.noLocal": {
+      "zh-Hant": "此 Shader 尚無本地圖函式。可建立空白圖函式，或從選取的節點建立。",
+      "en": "This Shader has no local graph functions. Create one or group selected nodes."
+    },
+    "library.empty": {
+      "zh-Hant": "這個來源目前沒有可加入的圖函式。",
+      "en": "No graph functions are available from this source."
+    },
+    "library.noResults": {
+      "zh-Hant": "沒有符合的項目。",
+      "en": "No matching items."
+    },
+    "diagnostic.failed": {
+      "en": "Compile failed · previous output retained",
+      "zh-Hant": "編譯失敗 · 保留上次成功輸出"
+    },
+    "diagnostic.locate": {
+      "en": "Go to node",
+      "zh-Hant": "前往節點"
+    },
+    "diagnostic.general": {
+      "zh-Hant": "無法對應特定節點，請展開錯誤詳情。",
+      "en": "No exact node location. Expand the error details."
+    },
+    "diagnostic.details": {
+      "zh-Hant": "錯誤詳情",
+      "en": "Error details"
+    },
+    "action.undo": {
+      "zh-Hant": "復原",
+      "en": "Undo"
+    },
+    "action.redo": {
+      "zh-Hant": "重做",
+      "en": "Redo"
+    },
+    "sidebar.resizeLibrary": {
+      "zh-Hant": "調整節點庫寬度；方向鍵微調，雙擊重設",
+      "en": "Resize node library; arrow keys adjust, double-click resets"
+    },
+    "sidebar.resizeParameters": {
+      "zh-Hant": "調整參數側欄寬度；方向鍵微調，雙擊重設",
+      "en": "Resize parameter sidebar; arrow keys adjust, double-click resets"
+    },
+    "ladder.available": {
+      "en": "Value Ladder: middle mouse / Alt+right mouse / long-press.",
+      "zh-Hant": "Value Ladder：中鍵／Alt＋右鍵／長按數值。"
+    },
+    "panel.resize.live": {
+      "zh-Hant": "調整 Live 上方分界：上下拖曳或按方向鍵，雙擊還原相鄰比例",
+      "en": "Resize the divider above Live: drag or use Up/Down; double-click to reset adjacent proportions"
+    },
+    "panel.resize.help": {
+      "zh-Hant": "調整 Help 上方分界：上下拖曳或按方向鍵，雙擊還原相鄰比例",
+      "en": "Resize the divider above Help: drag or use Up/Down; double-click to reset adjacent proportions"
+    },
+    "about.author": {
+      "zh-Hant": "作者",
+      "en": "Author"
+    },
+    "about.authorLinks": {
+      "zh-Hant": "作者連結",
+      "en": "Author links"
+    },
+    "about.releaseNotes": {
+      "zh-Hant": "更新記錄",
+      "en": "Release notes"
+    },
+    "about.releaseSummary": {
+      "zh-Hant": "目前工作版：可調整側欄寬度與窗格高度、單行向量參數、GLSL 語法高亮，以及分類色與 Create 分頁。完整發布記錄將於正式發布時提供。",
+      "en": "Current working build: adjustable sidebar widths and pane heights, single-row vector parameters, GLSL highlighting, category colors and Create tabs. Full release history will accompany publication."
+    },
+    "preview.refresh": {
+      "zh-Hant": "重新整理",
+      "en": "Refresh"
+    },
+    "preview.auto": {
+      "zh-Hant": "自動更新",
+      "en": "Auto update"
+    },
+    "preview.failed": {
+      "zh-Hant": "無法取得預覽，請稍後重試。",
+      "en": "Preview unavailable. Please try again."
+    },
+    "preview.updating": {
+      "en": "Updating preview…",
+      "zh-Hant": "正在更新預覽…"
+    },
+    "edit.menu": {
+      "en": "Graph actions",
+      "zh-Hant": "圖的操作"
+    },
+    "edit.copy": {
+      "en": "Copy",
+      "zh-Hant": "複製"
+    },
+    "edit.paste": {
+      "en": "Paste",
+      "zh-Hant": "貼上"
+    },
+    "edit.duplicate": {
+      "en": "Duplicate",
+      "zh-Hant": "複製副本"
+    },
+    "clipboard.copied": {
+      "en": "Selected nodes copied.",
+      "zh-Hant": "已複製選取的節點。"
+    },
+    "clipboard.localCopy": {
+      "en": "Nodes copied in this editor. Use Ctrl+C to copy between browsers.",
+      "zh-Hant": "已在此編輯器複製節點。跨瀏覽器複製請使用 Ctrl+C。"
+    },
+    "clipboard.useShortcut": {
+      "en": "Use Ctrl+V to paste from the system clipboard.",
+      "zh-Hant": "請使用 Ctrl+V 從系統剪貼簿貼上。"
+    },
+    "clipboard.pasted": {
+      "en": "Nodes pasted.",
+      "zh-Hant": "已貼上節點。"
+    },
+    "clipboard.invalid": {
+      "en": "Clipboard does not contain a valid TD-Grape node selection.",
+      "zh-Hant": "剪貼簿不是有效的 TD-Grape 節點選取資料。"
+    },
+    "clipboard.missing": {
+      "en": "The copied selection is missing a node, Function or declaration.",
+      "zh-Hant": "複製資料缺少節點、圖函式或宣告。"
+    },
+    "clipboard.size": {
+      "en": "The copied selection exceeds the supported graph size.",
+      "zh-Hant": "複製資料超過圖的容量限制。"
+    },
+    "clipboard.stage": {
+      "en": "This selection is not compatible with the current shader stage.",
+      "zh-Hant": "這些節點不相容於目前的 Shader 階段。"
+    },
+    "clipboard.boundary": {
+      "en": "Fixed graph outputs and Function boundaries cannot be pasted.",
+      "zh-Hant": "不能貼上固定輸出或圖函式邊界節點。"
+    },
+    "clipboard.revision": {
+      "en": "These nodes use a different definition version; use graph Import to review the differences.",
+      "zh-Hant": "節點定義版本不同；請透過匯入圖來檢視差異。"
+    },
+    "clipboard.cycle": {
+      "en": "Pasting here would make a Function call itself.",
+      "zh-Hant": "貼在這裡會造成圖函式遞迴呼叫。"
+    },
+    "parameter.node": {
+      "en": "Node",
+      "zh-Hant": "節點"
+    },
+    "parameter.exposed": {
+      "en": "Exposed",
+      "zh-Hant": "Exposed"
+    },
+    "parameter.scope": {
+      "en": "Parameter scope",
+      "zh-Hant": "參數範圍"
+    },
+    "parameter.exposedHint": {
+      "en": "Public parameters of this Shader, across all graphs.",
+      "zh-Hant": "這個 Shader 所有圖共用的公開參數。"
+    },
+    "parameter.exposedEmpty": {
+      "en": "No parameters are exposed yet. Select a Uniform or Texture 2D node to enable Expose.",
+      "zh-Hant": "目前沒有公開參數。選取 Uniform 或 Texture 2D 節點以開啟 Expose。"
+    },
+    "parameter.exposedSettings": {
+      "en": "Defaults and Expose settings",
+      "zh-Hant": "預設值與 Expose 設定"
+    },
+    "parameter.unused": {
+      "en": "Not used by the current output; no TD parameter is active yet.",
+      "zh-Hant": "目前輸出尚未使用此參數，因此還沒有啟用的 TD 參數。"
+    },
+    "function.nameInvalid": {
+      "en": "Use a Function name of 1–80 characters without control characters.",
+      "zh-Hant": "函式名稱需為 1–80 個字元，不可包含控制字元。"
+    },
+    "function.rename": {
+      "en": "Rename Function",
+      "zh-Hant": "重新命名圖函式"
+    },
+    "function.renameSource": {
+      "en": "Renaming creates a local version shared by this Shader’s calls. The library source stays unchanged.",
+      "zh-Hant": "改名會建立此 Shader 共用的本地版本，保留原函式庫來源。"
+    },
+    "preview.caption": {
+      "en": "Preview",
+      "zh-Hant": "Preview"
+    },
+    "preview.background": {
+      "en": "Background",
+      "zh-Hant": "背景"
+    },
+    "preview.backgroundDark": {
+      "en": "Dark gray background. Switch to checkerboard.",
+      "zh-Hant": "目前為深灰底。切換為棋盤格。"
+    },
+    "preview.backgroundChecker": {
+      "en": "Checkerboard background. Switch to dark gray.",
+      "zh-Hant": "目前為棋盤格。切換為深灰底。"
+    },
+    "preview.helpMaterial": {
+      "zh-Hant": "影像由 **TouchDesigner 渲染**，再以 PNG 快照傳到此處。網頁只顯示收到的影像。\n\n啟用「自動更新」後，套用 Shader 或偵測到參數變更時會更新；也可按「重新整理」手動更新。收合預覽或切到背景分頁時，會暫停新的預覽請求。",
+      "en": "**TouchDesigner renders** the image and sends a PNG snapshot here. The web page displays the received image.\n\nWith Auto update enabled, applying the Shader or detecting parameter changes refreshes the snapshot. Use Refresh for a manual update. Collapsing the preview or hiding this browser tab pauses new preview requests."
+    },
+    "preview.helpTop": {
+      "zh-Hant": "影像來自 **TouchDesigner 的 TOP 輸出**，以 PNG 快照傳到此處。網頁只顯示收到的影像。\n\n啟用「自動更新」且預覽可見時，約每秒更新一次；也可按「重新整理」手動更新。收合預覽或切到背景分頁時，會暫停新的預覽請求。",
+      "en": "The image comes from the **TouchDesigner TOP output** and arrives as a PNG snapshot. The web page displays the received image.\n\nWith Auto update enabled and the preview visible, it refreshes about once per second. Use Refresh for a manual update. Collapsing the preview or hiding this browser tab pauses new preview requests."
+    },
+    "node.label": {
+      "zh-Hant": "Label · 標籤",
+      "en": "Label"
+    },
+    "node.labelInvalid": {
+      "zh-Hant": "名稱須為 80 字以內的單行文字。",
+      "en": "Use a single-line label of up to 80 characters."
+    },
+    "color.choose": {
+      "zh-Hant": "選擇 RGB 顏色",
+      "en": "Choose RGB color"
+    },
+    "color.range": {
+      "zh-Hant": "色塊僅顯示 0–1 範圍；原始數值保留。選色器會設定 0–1 的 RGB，並保留 Alpha。",
+      "en": "The swatch displays the 0–1 range; original values are retained. The picker sets RGB within 0–1 and preserves Alpha."
+    },
+    "type.output": {
+      "zh-Hant": "輸出型別",
+      "en": "Output type"
+    },
+    "type.splat": {
+      "zh-Hant": "將來源的 {source} 數值複製到 {target} 的每個分量。輸出仍依節點設定的型別運算。",
+      "en": "The source {source} value is repeated in every component of {target}. The node keeps its selected operation type."
+    },
+    "type.incompatible": {
+      "zh-Hant": "{source} 無法轉換成 {target}。請調整連線或節點型別。",
+      "en": "{source} cannot convert to {target}. Adjust the connection or node type."
+    },
+    "library.searchCategory": {
+      "zh-Hant": "搜尋 {category} 節點…",
+      "en": "Search {category} nodes…"
+    },
+    "type.auto": {
+      "zh-Hant": "Auto",
+      "en": "Auto"
+    },
+    "type.autoHint": {
+      "zh-Hant": "依輸入接線決定型別；節點上顯示實際輸出型別。",
+      "en": "Input connections determine the type; the node shows its actual output type."
+    },
+    "type.lockedHint": {
+      "zh-Hant": "型別已鎖定，接線不會改變指定型別。",
+      "en": "Type is locked; connections do not change the selected type."
+    },
+    "type.autoInputs": {
+      "zh-Hant": "這些輸入型別沒有可共用的合法運算型別：",
+      "en": "These inputs have no shared legal operation type:"
+    },
+    "type.autoDownstream": {
+      "zh-Hant": "這次修改會讓接線型別不相容。請先調整或鎖定相關節點的型別：",
+      "en": "This edit would make a connection incompatible. Adjust or lock the affected node types first:"
+    },
+    "wire.autoConflict": {
+      "zh-Hant": "無法接線：型別不相容，或 Auto 推導會使既有接線失效。請先調整相關節點的 Type。",
+      "en": "Cannot connect: the types are incompatible, or Auto would invalidate an existing connection. Adjust the affected node types first."
+    },
+    "type.operation": {
+      "zh-Hant": "運算型別",
+      "en": "Operation Type"
+    },
+    "browser.tab.categories": {
+      "zh-Hant": "分類",
+      "en": "Categories"
+    },
+    "browser.tab.library": {
+      "zh-Hant": "資源庫",
+      "en": "Library"
+    },
+    "browser.tab.project": {
+      "zh-Hant": "此專案",
+      "en": "This Project"
+    },
+    "browser.search": {
+      "zh-Hant": "搜尋全部節點與 Subgraph…",
+      "en": "Search all nodes and Subgraphs…"
+    },
+    "browser.globalSearch": {
+      "zh-Hant": "搜尋全部分類與來源；下方依相關性排序。",
+      "en": "Searching all categories and views, ranked by relevance."
+    },
+    "browser.sourceFilter": {
+      "zh-Hant": "來源",
+      "en": "Source"
+    },
+    "browser.source.all": {
+      "zh-Hant": "全部來源",
+      "en": "All sources"
+    },
+    "browser.source.glsl": {
+      "zh-Hant": "GLSL",
+      "en": "GLSL"
+    },
+    "browser.source.td": {
+      "zh-Hant": "TouchDesigner",
+      "en": "TouchDesigner"
+    },
+    "browser.source.editor": {
+      "zh-Hant": "內建庫",
+      "en": "Editor"
+    },
+    "browser.source.personal": {
+      "zh-Hant": "個人",
+      "en": "Personal"
+    },
+    "browser.source.project": {
+      "zh-Hant": "此 Shader",
+      "en": "This Shader"
+    },
+    "browser.projectScope": {
+      "zh-Hant": "目前 Shader 的 Subgraph 定義與保存的來源版本。各 Shader 的定義分開保存。",
+      "en": "Subgraph definitions and saved source versions in this Shader. Definitions are stored separately for each Shader."
+    },
+    "browser.inspect": {
+      "zh-Hant": "查看說明與介面；拖曳、雙擊或按 + 新增",
+      "en": "Inspect description and ports; drag, double-click, or press + to add"
+    },
+    "browser.add": {
+      "zh-Hant": "新增",
+      "en": "Add"
+    },
+    "browser.closeDetails": {
+      "zh-Hant": "收合節點說明",
+      "en": "Close node details"
+    },
+    "browser.inputs": {
+      "zh-Hant": "輸入",
+      "en": "Inputs"
+    },
+    "browser.outputs": {
+      "zh-Hant": "輸出",
+      "en": "Outputs"
+    },
+    "browser.overloads": {
+      "zh-Hant": "支援多種型別；新增時依接線解析，Parameter 可手動指定。",
+      "en": "Supports multiple types. Connections resolve the type; Parameter also provides an explicit choice."
+    },
+    "browser.templates": {
+      "zh-Hant": "Shader 範例",
+      "en": "Shader templates"
+    },
+    "browser.category.math": {
+      "zh-Hant": "Math",
+      "en": "Math"
+    },
+    "browser.category.vector": {
+      "zh-Hant": "Vector",
+      "en": "Vector"
+    },
+    "browser.category.matrix": {
+      "zh-Hant": "Matrix",
+      "en": "Matrix"
+    },
+    "browser.category.logic": {
+      "zh-Hant": "Logic",
+      "en": "Logic"
+    },
+    "browser.category.color": {
+      "zh-Hant": "Color",
+      "en": "Color"
+    },
+    "browser.category.coordinate": {
+      "zh-Hant": "Coordinate",
+      "en": "Coordinate"
+    },
+    "browser.category.texture": {
+      "zh-Hant": "Texture",
+      "en": "Texture"
+    },
+    "browser.category.data": {
+      "zh-Hant": "Data",
+      "en": "Data"
+    },
+    "browser.category.shader": {
+      "zh-Hant": "Shader",
+      "en": "Shader"
+    },
+    "browser.category.uncategorized": {
+      "zh-Hant": "未分類",
+      "en": "Uncategorized"
+    },
+    "browser.branch.arithmetic": {
+      "en": "Arithmetic",
+      "zh-Hant": "Arithmetic"
+    },
+    "browser.branch.interpolation": {
+      "en": "Interpolation",
+      "zh-Hant": "Interpolation"
+    },
+    "browser.branch.range": {
+      "en": "Range",
+      "zh-Hant": "Range"
+    },
+    "browser.branch.trigonometry": {
+      "en": "Trigonometry",
+      "zh-Hant": "Trigonometry"
+    },
+    "browser.branch.exponential": {
+      "en": "Exponential",
+      "zh-Hant": "Exponential"
+    },
+    "browser.signatureExample": {
+      "en": "One supported signature; ports resolve from the connected types.",
+      "zh-Hant": "此處顯示一種支援的簽章；接口型別依接線決定。"
+    },
+    "browser.clearSearch": {
+      "en": "Clear search",
+      "zh-Hant": "清除搜尋"
+    },
+    "node.comment": {
+      "zh-Hant": "Comment · 註記",
+      "en": "Comment"
+    },
+    "node.commentHint": {
+      "en": "Emitted below this node’s GLSL; editing the note recompiles the shader. Ctrl+Enter commits.",
+      "zh-Hant": "放在此節點 GLSL 下方；修改註解會重新編譯。Ctrl+Enter 完成編輯。"
+    },
+    "node.commentInvalid": {
+      "zh-Hant": "註記最多 2000 字元，不能包含控制字元。",
+      "en": "Comments support up to 2000 characters without control characters."
+    },
+    "sidebar.showLeft": {
+      "zh-Hant": "展開左側欄",
+      "en": "Show left sidebar"
+    },
+    "sidebar.hideLeft": {
+      "zh-Hant": "收合左側欄",
+      "en": "Hide left sidebar"
+    },
+    "sidebar.showRight": {
+      "zh-Hant": "展開右側欄",
+      "en": "Show right sidebar"
+    },
+    "sidebar.hideRight": {
+      "zh-Hant": "收合右側欄",
+      "en": "Hide right sidebar"
+    },
+    "layout.title": {
+      "zh-Hant": "Layout",
+      "en": "Layout"
+    },
+    "layout.storageError": {
+      "zh-Hant": "無法儲存瀏覽器配置，請匯出備份。",
+      "en": "Cannot save browser preferences. Export a backup."
+    },
+    "layout.invalid": {
+      "zh-Hant": "這不是有效的 TD-Grape 面板配置。",
+      "en": "This is not a valid TD-Grape layout."
+    },
+    "layout.expand": {
+      "zh-Hant": "展開面板",
+      "en": "Expand panel"
+    },
+    "layout.collapse": {
+      "zh-Hant": "收合面板",
+      "en": "Collapse panel"
+    },
+    "layout.resize": {
+      "zh-Hant": "調整面板高度",
+      "en": "Resize panel heights"
+    },
+    "layout.empty": {
+      "zh-Hant": "將面板拖曳至此",
+      "en": "Drop a panel here"
+    },
+    "layout.dropTab": {
+      "zh-Hant": "合併為分頁",
+      "en": "Combine as tabs"
+    },
+    "layout.dropBefore": {
+      "zh-Hant": "放在上方",
+      "en": "Place above"
+    },
+    "layout.dropAfter": {
+      "zh-Hant": "放在下方",
+      "en": "Place below"
+    },
+    "layout.hint": {
+      "zh-Hant": "拖曳面板標題可調整位置：上／下緣排列，中央合併為分頁。也可以用下方選單調整。",
+      "en": "Drag a panel title: use the upper/lower edge to stack, or the center to combine as tabs. The controls below provide another way to arrange panels."
+    },
+    "layout.left": {
+      "zh-Hant": "左側欄",
+      "en": "Left sidebar"
+    },
+    "layout.right": {
+      "zh-Hant": "右側欄",
+      "en": "Right sidebar"
+    },
+    "layout.separate": {
+      "zh-Hant": "獨立面板",
+      "en": "Separate panel"
+    },
+    "layout.tabWith": {
+      "zh-Hant": "合併分頁：",
+      "en": "Tab with:"
+    },
+    "layout.moveUp": {
+      "zh-Hant": "往上移動",
+      "en": "Move up"
+    },
+    "layout.moveDown": {
+      "zh-Hant": "往下移動",
+      "en": "Move down"
+    },
+    "layout.name": {
+      "zh-Hant": "配置名稱",
+      "en": "Layout name"
+    },
+    "layout.save": {
+      "zh-Hant": "另存配置",
+      "en": "Save layout"
+    },
+    "layout.duplicate": {
+      "zh-Hant": "此名稱已存在，可用「更新」覆寫該配置。",
+      "en": "This name already exists. Use Update to replace that layout."
+    },
+    "layout.restore": {
+      "zh-Hant": "恢復預設",
+      "en": "Restore default"
+    },
+    "layout.default": {
+      "zh-Hant": "預設配置",
+      "en": "Default layout"
+    },
+    "layout.apply": {
+      "zh-Hant": "套用",
+      "en": "Apply"
+    },
+    "layout.update": {
+      "zh-Hant": "更新",
+      "en": "Update"
+    },
+    "layout.delete": {
+      "zh-Hant": "刪除",
+      "en": "Delete"
+    },
+    "layout.export": {
+      "zh-Hant": "匯出目前配置",
+      "en": "Export current layout"
+    },
+    "layout.import": {
+      "zh-Hant": "匯入配置",
+      "en": "Import layout"
+    },
+    "layout.local": {
+      "zh-Hant": "配置儲存在此瀏覽器，不會寫入 Shader 圖。可匯出配置，在其他裝置使用或提供作為預設配置。",
+      "en": "Layouts are saved in this browser, separately from Shader graphs. Export a layout to use it on another device or propose it as a default."
+    },
+    "project.unsaved": {
+      "zh-Hant": "未儲存專案",
+      "en": "Unsaved project"
+    },
+    "project.unavailable": {
+      "zh-Hant": "專案檔名未取得",
+      "en": "Project name unavailable"
+    },
+    "export.downloadJson": {
+      "zh-Hant": "JSON · 下載圖資料",
+      "en": "JSON · Download graph data"
+    },
+    "export.jsonDownloaded": {
+      "zh-Hant": "已下載完整 Shader 圖 JSON。",
+      "en": "Downloaded the complete Shader graph as JSON."
+    },
+    "pixel.bufferCount": {
+      "en": "Color Buffers",
+      "zh-Hant": "Color Buffer 數量"
+    },
+    "pixel.buffersConnected": {
+      "en": "Disconnect the buffers being removed first. Existing connections were kept.",
+      "zh-Hant": "請先移除即將關閉的 Buffer 接線；目前接線已保留。"
+    },
+    "pixel.buffersHint": {
+      "en": "One vec4 per buffer. Unconnected buffers default to (0, 0, 0, 0). Set the Render TOP color buffer count to receive additional outputs.",
+      "zh-Hant": "每個 Buffer 對應一個 vec4。未連線預設為 (0, 0, 0, 0)；接收額外輸出時，請在 Render TOP 開啟對應數量的 Color Buffers。"
+    },
+    "sources.title": {
+      "en": "Uniforms",
+      "zh-Hant": "Uniforms"
+    },
+    "sources.native": {
+      "en": "GLSL Parameters",
+      "zh-Hant": "GLSL 原生參數"
+    },
+    "sources.add": {
+      "en": "Add Uniform",
+      "zh-Hant": "新增 Uniform"
+    },
+    "sources.remove": {
+      "en": "Remove source",
+      "zh-Hant": "移除來源"
+    },
+    "sources.restore": {
+      "en": "Restore source",
+      "zh-Hant": "重建來源"
+    },
+    "sources.reference": {
+      "en": "Add reference to graph",
+      "zh-Hant": "在圖中新增引用"
+    },
+    "sources.empty": {
+      "en": "Create a Uniform here or in the native GLSL parameters.",
+      "zh-Hant": "可在這裡或 GLSL 原生參數新增 Uniform。"
+    },
+    "sources.missing": {
+      "en": "Source missing. References and wires are retained.",
+      "zh-Hant": "來源缺失，原有引用與接線仍保留。"
+    },
+    "sources.enable": {
+      "en": "Apply this Shader to enable native Uniform editing.",
+      "zh-Hant": "套用 Shader 後即可啟用原生 Uniform 編輯。"
+    },
+    "sources.pending": {
+      "en": "Apply or reload graph changes before editing sources.",
+      "zh-Hant": "先套用或重新載入圖的修改，再編輯來源。"
+    },
+    "sources.removeConfirm": {
+      "en": "Remove {name}? {count} graph references will remain and need reassignment or restoration.",
+      "zh-Hant": "移除 {name}？會保留 {count} 個圖中引用，可重新指定或重建來源。"
+    },
+    "sources.nodes": {
+      "en": "nodes",
+      "zh-Hant": "個節點"
+    },
+    "sources.connectionUnsupported": {
+      "en": "This connection does not support source editing yet. Use Open Editor in TouchDesigner.",
+      "zh-Hant": "此連線尚不支援來源編輯，請從 TouchDesigner 的 Open Editor 開啟。"
+    },
+    "controls.title": {
+      "en": "Custom Parameters",
+      "zh-Hant": "自訂參數"
+    },
+    "controls.page": {
+      "en": "Page",
+      "zh-Hant": "頁面"
+    },
+    "controls.newPage": {
+      "en": "New page",
+      "zh-Hant": "新增頁面"
+    },
+    "controls.editPage": {
+      "en": "Edit page",
+      "zh-Hant": "編輯頁面"
+    },
+    "controls.name": {
+      "en": "Control name",
+      "zh-Hant": "控制名稱"
+    },
+    "controls.style": {
+      "en": "Style",
+      "zh-Hant": "樣式"
+    },
+    "controls.add": {
+      "en": "Add control",
+      "zh-Hant": "新增控制"
+    },
+    "controls.value": {
+      "en": "Value",
+      "zh-Hant": "目前值"
+    },
+    "controls.default": {
+      "en": "Default",
+      "zh-Hant": "預設值"
+    },
+    "controls.defaults": {
+      "en": "Reset defaults",
+      "zh-Hant": "重設預設值"
+    },
+    "controls.linked": {
+      "en": "{count} Uniform source(s) linked",
+      "zh-Hant": "已連動 {count} 個 Uniform 來源"
+    },
+    "controls.unbound": {
+      "en": "Independent control",
+      "zh-Hant": "獨立控制"
+    },
+    "controls.detach": {
+      "en": "Detach",
+      "zh-Hant": "解除連動"
+    },
+    "controls.remove": {
+      "en": "Remove control",
+      "zh-Hant": "刪除控制"
+    },
+    "controls.removeConfirm": {
+      "en": "Remove {name}? Linked Uniforms keep their last value.",
+      "zh-Hant": "刪除 {name}？連動的 Uniform 會保留最後數值。"
+    },
+    "controls.empty": {
+      "en": "This page has no editable controls.",
+      "zh-Hant": "此頁尚無可編輯控制。"
+    },
+    "controls.save": {
+      "en": "Save",
+      "zh-Hant": "儲存"
+    },
+    "controls.removePage": {
+      "en": "Remove empty page",
+      "zh-Hant": "刪除空白頁面"
+    },
+    "controls.fromUniform": {
+      "en": "Add to custom parameters",
+      "zh-Hant": "加入自訂參數"
+    },
+    "controls.hint": {
+      "en": "Edit the COMP’s actual controls. Defaults remain separate from current values.",
+      "zh-Hant": "直接編輯 COMP 的控制參數。預設值與目前值分開保留。"
+    },
+    "connection.interrupted": {
+      "en": "Connection interrupted. Retrying; your draft is kept.",
+      "zh-Hant": "連線中斷，正在重試；編輯草稿已保留。"
+    },
+    "connection.restored": {
+      "en": "Reconnected. Your draft is kept.",
+      "zh-Hant": "已恢復連線，編輯草稿已保留。"
+    },
+    "help.sampler": {
+      "en": "References one shared sampler2D source. Connect it to multiple Texture 2D nodes. Deleting this reference does not delete the source.",
+      "zh-Hant": "引用同一份 sampler2D 來源，可連到多個 Texture 2D 節點。刪除這個引用節點不會刪除來源。"
+    },
+    "help.texture_sample": {
+      "en": "Samples a sampler2D at UV coordinates. An unconnected sampler uses a defined opaque-black texture. UV defaults to interpolated texture coordinates.",
+      "zh-Hant": "以 UV 座標取樣 sampler2D。Sampler 未接線時使用已定義的不透明黑貼圖；UV 預設為插值後的貼圖座標。"
+    },
+    "sampler.fallbackHint": {
+      "en": "Connect a Sampler source. An unconnected sampler uses opaque black; it has no numeric default.",
+      "zh-Hant": "連接 Sampler 來源。未接線時使用不透明黑，沒有數值預設欄位。"
+    },
+    "sampler.split": {
+      "en": "Separate Sampler",
+      "zh-Hant": "拆分 Sampler"
+    },
+    "sampler.missingDeclaration": {
+      "en": "Select a valid texture source before separating the Sampler.",
+      "zh-Hant": "請先指定有效的貼圖來源，再拆分 Sampler。"
+    },
+    "sampler.create": {
+      "en": "New Sampler Source",
+      "zh-Hant": "新增 Sampler 來源"
+    },
+    "viewer.open": {
+      "en": "Open Viewer",
+      "zh-Hant": "開啟 Viewer"
+    },
+    "viewer.description": {
+      "en": "Open this Grape COMP in a TouchDesigner floating viewer",
+      "zh-Hant": "在 TouchDesigner 浮動視窗中開啟此 Grape COMP 的 Viewer"
+    },
+    "viewer.opened": {
+      "en": "Grape COMP viewer opened in TouchDesigner.",
+      "zh-Hant": "已在 TouchDesigner 開啟 Grape COMP 的 Viewer。"
+    }
+  }
+}

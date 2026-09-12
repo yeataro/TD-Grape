@@ -1,0 +1,38 @@
+// Isolated fixture: node test_creator_palette.cjs SOURCE_DIR STATE_JSON REPORT_DIR [OVERLAY_DIR]
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');const{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const[source,snapshotFile,folder,overlay]=process.argv.slice(2),original=JSON.parse(fs.readFileSync(snapshotFile,'utf8'));let state=structuredClone(original);fs.mkdirSync(folder,{recursive:true});
+const server=http.createServer(async(req,res)=>{const name=new URL(req.url,'http://localhost').pathname;res.setHeader('Cache-Control','no-store');if(name.startsWith('/api/')){res.setHeader('Content-Type','application/json');let raw='';for await(const c of req)raw+=c;const body=raw?JSON.parse(raw):null,operation=name.split('/').at(-1);if(operation==='state')return res.end(JSON.stringify(state));if(operation==='apply'){state.state.graph=body.graph;state.state.revision++;return res.end(JSON.stringify(state));}if(operation==='uniforms')return res.end(JSON.stringify({revision:state.state.revision,uniforms:{},textures:{}}));if(operation==='preview'){res.statusCode=204;return res.end();}res.statusCode=404;return res.end('{}');}const filename=name==='/'?'index.html':path.basename(name),candidate=overlay&&path.join(overlay,filename),file=candidate&&fs.existsSync(candidate)?candidate:path.join(source,filename);if(!fs.existsSync(file)){res.statusCode=404;return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE}),checks=[],errors=[];try{const page=await browser.newPage({viewport:{width:1600,height:1040}});page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port+'/#fixture');await page.waitForSelector('.node');await page.evaluate(()=>{window.testInitial=clone(graph);});
+
+await page.selectOption('#language','en');
+await page.evaluate(()=>{
+ const source=clone(graph.stages.pixel.nodes.find(n=>definition(n)?.key==='texture'));source.id='source';source.ui={x:60,y:60};
+ const make=(key,id,type,x,y)=>({id,definitionUuid:catalog.find(d=>d.key===key).definitionUuid,params:{...clone(catalog.find(d=>d.key===key).defaults),...(type?{type}:{})},ui:{x,y}});
+ const scalar=make('float','scalar',null,60,280),multiply=make('multiply','multiply','vec4',400,80),length=make('length','length','vec4',700,80),out=make('pixel_out','pixel',null,1000,100);
+ graph.stages.pixel={nodes:[source,scalar,multiply,length,out],edges:[{from:['source','out'],to:['multiply','a']},{from:['scalar','out'],to:['multiply','b']},{from:['multiply','out'],to:['length','value']},{from:['multiply','out'],to:['pixel','color']}]};
+ // Use the catalog's actual Length input name.
+ const lengthPort=Object.keys(catalog.find(d=>d.key==='length').inputs)[0];graph.stages.pixel.edges[2].to[1]=lengthPort;
+ selected='multiply';selection=new Set(['multiply']);render();fit();
+});
+const before=await page.evaluate(()=>JSON.stringify(graph));
+assert.equal(await page.locator('[data-node="multiply"] .node-output-type').innerText(),'vec4');
+assert.equal(await page.locator('[data-node="multiply"] .input .port-type').nth(0).innerText(),'vec4');
+assert.equal((await page.locator('[data-node="multiply"] .input .port-type').nth(1).innerText()).replace(/\s/g,''),'float→vec4');checks.push('vec4 and float into locked Multiply show the actual source and explicit splat, with vec4 output');
+assert.match(await page.locator('[data-input="b"] .conversion-hint').innerText(),/repeated in every component/);checks.push('Parameter explains the scalar-to-vector conversion in plain language');
+assert.equal(await page.locator('[data-node="length"] .node-output-type').innerText(),'float');assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='length').params.type),'vec4');checks.push('Length on vec4 shows actual float output rather than its input operation type');
+assert.equal(await page.evaluate(()=>JSON.stringify(graph)),before);checks.push('rendering type information leaves all nodes and graph types unchanged');
+await page.evaluate(()=>{current().edges[0].from=['scalar','out'];render();});
+assert.equal(await page.locator('[data-node="multiply"] .input .has-conversion').count(),2);assert.equal(await page.locator('[data-node="multiply"] .node-output-type').innerText(),'vec4');checks.push('two float inputs still display two explicit conversions and a locked vec4 result');
+await page.evaluate(()=>{current().edges=current().edges.filter(e=>e.to[0]!=='multiply');render();});assert.equal(await page.locator('[data-node="multiply"] .input .has-conversion').count(),0);assert.deepEqual(await page.locator('[data-node="multiply"] .input .port-type').allTextContents(),['vec4','vec4']);checks.push('unconnected ports show their expected types, with no invented conversion');
+await page.evaluate(()=>{const src=current().nodes.find(n=>n.id==='source');src.definitionUuid=catalog.find(d=>d.key==='vec3').definitionUuid;src.params={value:[1,1,1]};current().edges.push({from:['source','out'],to:['multiply','a']});render();});assert.equal(await page.locator('[data-node="multiply"] [data-conversion="invalid"]').count(),1);assert.match(await page.locator('[data-input="a"] .conversion-hint').innerText(),/cannot convert/);checks.push('an invalid existing conversion is identified rather than described as a legal splat');
+await page.evaluate(()=>{current().edges=current().edges.filter(e=>e.to[0]!=='multiply');current().edges.push({from:['scalar','out'],to:['multiply','a']},{from:['scalar','out'],to:['multiply','b']});render();});
+await page.selectOption('#language','zh-Hant');assert.match(await page.locator('[data-input="a"] .conversion-hint').innerText(),/每個分量/);checks.push('conversion explanations localize in both languages');
+const alignment=await page.evaluate(()=>{
+ const failures=[];
+ for(const scaleValue of [.4,1,1.8]){scale=scaleValue;transform();wires();for(const edge of current().edges){const path=$('#wires').querySelector('[data-from="'+edge.from.join(':')+'"][data-to="'+edge.to.join(':')+'"]');if(!path)continue;
+ for(const [side,dist]of [['from',0],['to',path.getTotalLength()]]){const port=$('#cards').querySelector('[data-node="'+edge[side][0]+'"] [data-kind="'+(side==='from'?'outputs':'inputs')+'"][data-port="'+edge[side][1]+'"]');const p=path.getPointAtLength(dist),position=new DOMPoint(p.x,p.y).matrixTransform(path.getScreenCTM()),r=port.getBoundingClientRect();if(Math.hypot(position.x-r.left-r.width/2,position.y-r.top-r.height/2)>1)failures.push(edge);}}}return failures;
+});assert.equal(alignment.length,0);checks.push('wire endpoints remain aligned with sockets across three zoom levels');
+await page.evaluate(()=>{fit();});await page.screenshot({path:path.join(folder,'type-display.png')});
+fs.writeFileSync(path.join(folder,'display-graph.json'),await page.evaluate(()=>JSON.stringify(graph)));
+
+assert.deepEqual(errors,[]);fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify({passed:true,count:checks.length,checks},null,2));console.log(JSON.stringify({passed:true,count:checks.length}));}catch(e){fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify({passed:false,checks,errors,error:e.message},null,2));console.error(e.stack);throw e;}finally{await browser.close();await new Promise(r=>server.close(r));}})().catch(e=>{console.error(e.message);process.exitCode=1;});

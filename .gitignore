@@ -1,0 +1,19 @@
+# Generated local state, never product source.
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+.local/
+Backup/
+**/Backup/
+*.toe
+!src/td/TD-Grape-dev.toe
+*.tox
+*.zip
+dist/*
+!dist/README.md

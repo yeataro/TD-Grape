@@ -1,0 +1,14 @@
+# 文件索引
+
+目前狀態以 [STATUS.md](development/STATUS.md) 為準。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
+
+- [開發與更新內嵌程式](development/DEVELOPMENT.md)
+- [測試方式](development/TESTING.md)
+- [目錄與私人工作區](development/PROJECT_LAYOUT.md)
+- `architecture/`：編譯、型別、保存與升級契約。
+- `features/`：目前功能與相容行為。
+- `ui/`：UI 操作及設計。
+- `discussions/`：未完成或仍待取捨的設計討論。
+- `specs/`：原始規格與歷史背景。
+
+機器設定、逐輪對話整理、個人路徑、原始測試輸出及一次性遷移紀錄不在公開專案內。

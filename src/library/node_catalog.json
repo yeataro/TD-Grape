@@ -1,0 +1,1794 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": "0.6.5",
+  "emitterAbiVersion": 1,
+  "targetShellVersion": 2,
+  "definitions": [
+    {
+      "definition": {
+        "key": "float",
+        "label": "Float",
+        "inputs": {},
+        "outputs": {
+          "out": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": 0.5
+        },
+        "descriptionKey": "help.float",
+        "definitionUuid": "sgrape.builtin.float",
+        "revisionHash": "61df883534354ac44a35997e42d30db702f339fefe0767ea77ac6330431a553b"
+      },
+      "emitter": {
+        "id": "float",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "constant",
+          "scalar",
+          "常數",
+          "浮點"
+        ],
+        "glslName": "float",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "vec2",
+        "label": "Vector 2",
+        "inputs": {},
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": [
+            0.5,
+            0.5
+          ]
+        },
+        "descriptionKey": "help.vec2",
+        "definitionUuid": "sgrape.builtin.vec2",
+        "revisionHash": "3626d76bfc9b576e593300589c2dcd2c00bdfc79706bedad57f98d530a84cb37"
+      },
+      "emitter": {
+        "id": "vec2",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "constant",
+          "vec2",
+          "常數"
+        ],
+        "glslName": "vec2",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "vec3",
+        "label": "Vector 3",
+        "inputs": {},
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": [
+            1,
+            1,
+            1
+          ]
+        },
+        "descriptionKey": "help.vec3",
+        "definitionUuid": "sgrape.builtin.vec3",
+        "revisionHash": "f576162450abafdc51d9ff84531c9689c21236291f9ba65ad8d477366eb1372b"
+      },
+      "emitter": {
+        "id": "vec3",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "constant",
+          "vec3",
+          "常數"
+        ],
+        "glslName": "vec3",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "color",
+        "label": "Color RGBA",
+        "inputs": {},
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": [
+            0.55,
+            0.28,
+            0.9,
+            1
+          ]
+        },
+        "descriptionKey": "help.color",
+        "definitionUuid": "sgrape.builtin.color",
+        "revisionHash": "248cb1f0646af23e93597f4cb941fccd9fdc65cfb36ce816467635766ccddedc"
+      },
+      "emitter": {
+        "id": "color",
+        "version": 1
+      },
+      "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [
+          "constant",
+          "rgba",
+          "colour",
+          "顏色",
+          "色彩"
+        ],
+        "glslName": "color",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "add",
+        "label": "Add",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.add",
+        "definitionUuid": "sgrape.builtin.add",
+        "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf"
+      },
+      "emitter": {
+        "id": "add",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "+",
+          "加法"
+        ],
+        "glslName": "+",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "multiply",
+        "label": "Multiply",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec4"
+        },
+        "descriptionKey": "help.multiply",
+        "definitionUuid": "sgrape.builtin.multiply",
+        "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763"
+      },
+      "emitter": {
+        "id": "multiply",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "*",
+          "mul",
+          "乘法"
+        ],
+        "glslName": "*",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "mix",
+        "label": "Mix",
+        "inputs": {
+          "a": "T",
+          "b": "T",
+          "factor": "float"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec4"
+        },
+        "descriptionKey": "help.mix",
+        "definitionUuid": "sgrape.builtin.mix",
+        "revisionHash": "33e0787d3178b0d0c1b9aec86f8b4be0de679eaaace04caeb81392dcfe41589c"
+      },
+      "emitter": {
+        "id": "mix",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "lerp",
+          "interpolate",
+          "插值"
+        ],
+        "glslName": "mix",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "interpolation"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "sin",
+        "label": "Sine",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.sin",
+        "definitionUuid": "sgrape.builtin.sin",
+        "revisionHash": "265f711fce8e25ba2a3b0839fc4fb24ea98c6a458ee80b189d7efc417f75513c"
+      },
+      "emitter": {
+        "id": "sin",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "sin",
+          "sine",
+          "正弦"
+        ],
+        "glslName": "sin",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "subtract",
+        "label": "Subtract",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.subtract",
+        "definitionUuid": "sgrape.builtin.subtract",
+        "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405"
+      },
+      "emitter": {
+        "id": "subtract",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "-",
+          "sub",
+          "減法"
+        ],
+        "glslName": "-",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "divide",
+        "label": "Divide",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "b": 1
+        },
+        "descriptionKey": "help.divide",
+        "definitionUuid": "sgrape.builtin.divide",
+        "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81"
+      },
+      "emitter": {
+        "id": "divide",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "/",
+          "div",
+          "除法"
+        ],
+        "glslName": "/",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "min",
+        "label": "Minimum",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.min",
+        "definitionUuid": "sgrape.builtin.min",
+        "revisionHash": "ddf41b8ddddb86359a40b88f1215062b9b2d2d4c7cc1124f76db009e89ba6511"
+      },
+      "emitter": {
+        "id": "min",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "min",
+          "minimum",
+          "最小"
+        ],
+        "glslName": "min",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "max",
+        "label": "Maximum",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.max",
+        "definitionUuid": "sgrape.builtin.max",
+        "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b"
+      },
+      "emitter": {
+        "id": "max",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "max",
+          "maximum",
+          "最大"
+        ],
+        "glslName": "max",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "clamp",
+        "label": "Clamp",
+        "inputs": {
+          "value": "T",
+          "min": "T",
+          "max": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "max": 1
+        },
+        "descriptionKey": "help.clamp",
+        "definitionUuid": "sgrape.builtin.clamp",
+        "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9"
+      },
+      "emitter": {
+        "id": "clamp",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "clamp",
+          "限制"
+        ],
+        "glslName": "clamp",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "smoothstep",
+        "label": "Smoothstep",
+        "inputs": {
+          "edge0": "T",
+          "edge1": "T",
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "edge1": 1
+        },
+        "descriptionKey": "help.smoothstep",
+        "definitionUuid": "sgrape.builtin.smoothstep",
+        "revisionHash": "fea7bf812453b0b4b0bdacddd389843ddfd8a55ed3f17c2b76341bc5a89d8518"
+      },
+      "emitter": {
+        "id": "smoothstep",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "smoothstep",
+          "平滑"
+        ],
+        "glslName": "smoothstep",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "interpolation"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "abs",
+        "label": "Absolute",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.abs",
+        "definitionUuid": "sgrape.builtin.abs",
+        "revisionHash": "85df7ec01966ac06cf87685c8c93d8369744f133bdcbe18684b35397f3f141aa"
+      },
+      "emitter": {
+        "id": "abs",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "abs",
+          "absolute",
+          "絕對值"
+        ],
+        "glslName": "abs",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "fract",
+        "label": "Fraction",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.fract",
+        "definitionUuid": "sgrape.builtin.fract",
+        "revisionHash": "f2065cc5ddb317d3f47a2e0cd3f8815e25c05a6175001dd78ac70b746694b302"
+      },
+      "emitter": {
+        "id": "fract",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "fract",
+          "fraction",
+          "小數"
+        ],
+        "glslName": "fract",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "pow",
+        "label": "Power",
+        "inputs": {
+          "base": "T",
+          "exponent": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "exponent": 1
+        },
+        "descriptionKey": "help.pow",
+        "definitionUuid": "sgrape.builtin.pow",
+        "revisionHash": "2c680fcdde519d36921659604a29100853d1118e503732a049744be62cc15b18"
+      },
+      "emitter": {
+        "id": "pow",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "pow",
+          "power",
+          "次方"
+        ],
+        "glslName": "pow",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "cos",
+        "label": "Cosine",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.cos",
+        "definitionUuid": "sgrape.builtin.cos",
+        "revisionHash": "f105ae3d41c1b1399827394d808a6d878cff66de850968b789cb51773f927366"
+      },
+      "emitter": {
+        "id": "cos",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "cos",
+          "cosine",
+          "餘弦"
+        ],
+        "glslName": "cos",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "dot",
+        "label": "Dot Product",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec3"
+        },
+        "descriptionKey": "help.dot",
+        "definitionUuid": "sgrape.builtin.dot",
+        "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef"
+      },
+      "emitter": {
+        "id": "dot",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "dot",
+          "內積"
+        ],
+        "glslName": "dot",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "length",
+        "label": "Length",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec3"
+        },
+        "descriptionKey": "help.length",
+        "definitionUuid": "sgrape.builtin.length",
+        "revisionHash": "fbf3940f68e152a960896d6b69c48f7d81bb5e9ba81c4934e16316e370c145d4"
+      },
+      "emitter": {
+        "id": "length",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "length",
+          "magnitude",
+          "長度"
+        ],
+        "glslName": "length",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "normalize",
+        "label": "Normalize",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec3"
+        },
+        "inputDefaults": {
+          "value": 1
+        },
+        "descriptionKey": "help.normalize",
+        "definitionUuid": "sgrape.builtin.normalize",
+        "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d"
+      },
+      "emitter": {
+        "id": "normalize",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "normalize",
+          "unit",
+          "正規化"
+        ],
+        "glslName": "normalize",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "rgba",
+        "label": "Compose RGBA",
+        "inputs": {
+          "rgb": "vec3",
+          "alpha": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.rgba",
+        "definitionUuid": "sgrape.builtin.rgba",
+        "revisionHash": "0514299936663fa533dcc531be299ccd3a8707b2e32fd139225180056613932b"
+      },
+      "emitter": {
+        "id": "rgba",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "combine",
+          "compose",
+          "rgba",
+          "組合"
+        ],
+        "glslName": "rgba",
+        "secondaryCategories": [
+          "color"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "split",
+        "label": "Split RGBA",
+        "inputs": {
+          "color": "vec4"
+        },
+        "outputs": {
+          "rgb": "vec3",
+          "r": "float",
+          "g": "float",
+          "b": "float",
+          "a": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.split",
+        "definitionUuid": "sgrape.builtin.split",
+        "revisionHash": "d7814765c45269fe55b74659af5d55e41843a1ed87c8c3719aca4156bbe00d1a"
+      },
+      "emitter": {
+        "id": "split",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "split",
+          "swizzle",
+          "分量",
+          "拆分"
+        ],
+        "glslName": "split",
+        "secondaryCategories": [
+          "color"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "uniform",
+        "label": "Uniform",
+        "inputs": {},
+        "outputs": {
+          "out": "D"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "declarationId": ""
+        },
+        "descriptionKey": "help.uniform",
+        "definitionUuid": "sgrape.builtin.uniform",
+        "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5"
+      },
+      "emitter": {
+        "id": "uniform",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "source": "editor",
+        "aliases": [
+          "parameter",
+          "參數",
+          "公開"
+        ],
+        "glslName": "uniform",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "uv",
+        "label": "Texture Coordinates",
+        "inputs": {},
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.uv",
+        "definitionUuid": "sgrape.builtin.uv",
+        "revisionHash": "a1901d210b1fb69a2bd7ef8e3b2e2f57b1189a789f1b30a312837b5fe8ff2ff4"
+      },
+      "emitter": {
+        "id": "uv",
+        "version": 1
+      },
+      "browser": {
+        "category": "coordinate",
+        "source": "td",
+        "aliases": [
+          "uv",
+          "texture coordinates",
+          "貼圖座標"
+        ],
+        "glslName": "uv",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture",
+        "label": "Texture 2D",
+        "inputs": {
+          "uv": "vec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "declarationId": "texture_main"
+        },
+        "descriptionKey": "help.texture",
+        "definitionUuid": "sgrape.builtin.texture",
+        "revisionHash": "27675a6d735a088d2872623f2e7f0e25629da1c546385e626a6c5a5e350ea829"
+      },
+      "emitter": {
+        "id": "texture",
+        "version": 1
+      },
+      "browser": {
+        "category": "texture",
+        "source": "glsl",
+        "aliases": [
+          "texture",
+          "sample",
+          "貼圖",
+          "取樣"
+        ],
+        "glslName": "texture",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "position",
+        "label": "TD Position",
+        "inputs": {},
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.position",
+        "definitionUuid": "sgrape.builtin.position",
+        "revisionHash": "a8f6e28939535762aafc51e037a7955e38820196984d2084ae580e2fe57267ca"
+      },
+      "emitter": {
+        "id": "position",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "source": "td",
+        "aliases": [
+          "P",
+          "attribute",
+          "position",
+          "頂點位置"
+        ],
+        "glslName": "position",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "deform",
+        "label": "TD Deform",
+        "inputs": {
+          "position": "vec3"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.deform",
+        "definitionUuid": "sgrape.builtin.deform",
+        "revisionHash": "e1342e453626ff6e68766c387acd0ba91e2cd49350681e893fd5a478fa85fcd2"
+      },
+      "emitter": {
+        "id": "deform",
+        "version": 1
+      },
+      "browser": {
+        "category": "coordinate",
+        "source": "td",
+        "aliases": [
+          "TDDeform",
+          "world",
+          "變形"
+        ],
+        "glslName": "TDDeform",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "to_clip",
+        "label": "World to Projection",
+        "inputs": {
+          "world": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.to_clip",
+        "definitionUuid": "sgrape.builtin.to_clip",
+        "revisionHash": "e98b9a603c583000dc69373c52f7a30d281d9438fd814692cd3c6b1070be5217"
+      },
+      "emitter": {
+        "id": "to_clip",
+        "version": 1
+      },
+      "browser": {
+        "category": "coordinate",
+        "source": "td",
+        "aliases": [
+          "TDWorldToProj",
+          "projection",
+          "投影"
+        ],
+        "glslName": "TDWorldToProj",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "vertex_out",
+        "label": "Vertex Output",
+        "inputs": {
+          "position": "vec4"
+        },
+        "outputs": {},
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.vertex_out",
+        "definitionUuid": "sgrape.builtin.vertex_out",
+        "revisionHash": "146d1926bb6e08237503bfb773d5eaea21d327edcc0f45e41afb6898a0710e76"
+      },
+      "emitter": {
+        "id": "vertex_out",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "source": "td",
+        "aliases": [
+          "output",
+          "vertex",
+          "輸出"
+        ],
+        "glslName": "vertex_out",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "pixel_out",
+        "label": "Color Output",
+        "inputs": {
+          "color": "vec4"
+        },
+        "outputs": {},
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.pixel_out",
+        "definitionUuid": "sgrape.builtin.pixel_out",
+        "revisionHash": "b37335e4e2462dfa4c0e1cf4c3308f9d64d317ce0d916c5c596a1884a44e4f65"
+      },
+      "emitter": {
+        "id": "pixel_out",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "source": "td",
+        "aliases": [
+          "output",
+          "fragment",
+          "輸出"
+        ],
+        "glslName": "pixel_out",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "sampler",
+        "label": "Sampler 2D",
+        "inputs": {},
+        "outputs": {
+          "out": "sampler2D"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "declarationId": ""
+        },
+        "descriptionKey": "help.sampler",
+        "definitionUuid": "sgrape.builtin.sampler",
+        "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea"
+      },
+      "emitter": {
+        "id": "sampler",
+        "version": 1
+      },
+      "browser": {
+        "category": "texture",
+        "source": "glsl",
+        "aliases": [
+          "texture source"
+        ],
+        "descriptionKey": "help.sampler",
+        "glslName": "sampler2D",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_sample",
+        "label": "Texture 2D",
+        "inputs": {
+          "sampler": "sampler2D",
+          "uv": "vec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.texture_sample",
+        "definitionUuid": "sgrape.builtin.texture_sample",
+        "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e"
+      },
+      "emitter": {
+        "id": "texture_sample",
+        "version": 1
+      },
+      "browser": {
+        "category": "texture",
+        "source": "glsl",
+        "aliases": [
+          "sample"
+        ],
+        "descriptionKey": "help.texture_sample",
+        "glslName": "texture",
+        "secondaryCategories": []
+      }
+    }
+  ],
+  "history": [
+    {
+      "definition": {
+        "key": "float",
+        "label": "Float",
+        "inputs": {},
+        "outputs": {
+          "out": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": 0.5
+        },
+        "definitionUuid": "sgrape.builtin.float",
+        "revisionHash": "de78df74a9747779f740f6ab8f65a72597a809d51b55e68909013cec9b2f34b9"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "float",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "vec2",
+        "label": "Vector 2",
+        "inputs": {},
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": [
+            0.5,
+            0.5
+          ]
+        },
+        "definitionUuid": "sgrape.builtin.vec2",
+        "revisionHash": "f2d484641d23938ca3243cce05b9abba34cbd5da194386d92ee676d64b4ca342"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "vec2",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "vec3",
+        "label": "Vector 3",
+        "inputs": {},
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": [
+            1,
+            1,
+            1
+          ]
+        },
+        "definitionUuid": "sgrape.builtin.vec3",
+        "revisionHash": "708a9b0ab2132910d3319ef260d47253ae788aa1fdcbd2324b81a0bd2c00e504"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "vec3",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "color",
+        "label": "Color RGBA",
+        "inputs": {},
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": [
+            0.55,
+            0.28,
+            0.9,
+            1
+          ]
+        },
+        "definitionUuid": "sgrape.builtin.color",
+        "revisionHash": "29d4c7f4666484df7dda93414ba81f0140ae24b8f41f778a6074e19d43bc3ec5"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "color",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "add",
+        "label": "Add",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "definitionUuid": "sgrape.builtin.add",
+        "revisionHash": "f02e73f5f940b81cf5bea005eca44ee1ac26f6a142162849ff100c3ce5f7fc0c"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "add",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "multiply",
+        "label": "Multiply",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec4"
+        },
+        "definitionUuid": "sgrape.builtin.multiply",
+        "revisionHash": "970eda524889cb85c3542daf5fd06f89b1024984a1201f77de75dccd6ca42784"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "multiply",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "mix",
+        "label": "Mix",
+        "inputs": {
+          "a": "T",
+          "b": "T",
+          "factor": "float"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec4"
+        },
+        "definitionUuid": "sgrape.builtin.mix",
+        "revisionHash": "c75c13e1ecd55945781eb53907496ca2adbcd3ca0c6beb3b7fd40e37ba226f18"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "mix",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "sin",
+        "label": "Sine",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "definitionUuid": "sgrape.builtin.sin",
+        "revisionHash": "8cfda81c93d3c6011656db5a2fb07c6bc64094795baabc84357457af6e3afc33"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "sin",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "rgba",
+        "label": "Compose RGBA",
+        "inputs": {
+          "rgb": "vec3",
+          "alpha": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.rgba",
+        "revisionHash": "95db2406f2327d33f85212dce4ee4497561fbbb9fb1a89a87290d885cb1ff8c7"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "rgba",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "split",
+        "label": "Split RGBA",
+        "inputs": {
+          "color": "vec4"
+        },
+        "outputs": {
+          "rgb": "vec3",
+          "r": "float",
+          "g": "float",
+          "b": "float",
+          "a": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.split",
+        "revisionHash": "4528f6afe0f630dfd8eb9ca6b5f3a7ccc8bf3a57d358ef58fa107600c74cb5f4"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "split",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "uniform",
+        "label": "Uniform",
+        "inputs": {},
+        "outputs": {
+          "out": "D"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "declarationId": ""
+        },
+        "definitionUuid": "sgrape.builtin.uniform",
+        "revisionHash": "2bd89370a93e0334299dc462a92edd35c7354a448dcb67a370f2829a0543f354"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "uniform",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "uv",
+        "label": "Texture Coordinates",
+        "inputs": {},
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.uv",
+        "revisionHash": "9755d4eab7767b990e82e3bce6e788fa73d92fb26862303bc909413cd037e1f6"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "uv",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "texture",
+        "label": "Texture 2D",
+        "inputs": {
+          "uv": "vec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "declarationId": "texture_main"
+        },
+        "definitionUuid": "sgrape.builtin.texture",
+        "revisionHash": "e9d8189bbd8c0dce1492bf77684cf58b6853d4a2c44f8280faeb52181b6cefa8"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "texture",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "position",
+        "label": "TD Position",
+        "inputs": {},
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.position",
+        "revisionHash": "c85337e31bf92780057350dd745181a2870e3a51cde3459d9be1bf1973f76311"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "position",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "deform",
+        "label": "TD Deform",
+        "inputs": {
+          "position": "vec3"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.deform",
+        "revisionHash": "4fbc694a5b27de76cd72f272ad0846bf54aac1ec28a58ab63f9da2272911bc54"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "deform",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "to_clip",
+        "label": "World to Projection",
+        "inputs": {
+          "world": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.to_clip",
+        "revisionHash": "eb502c462ca9e49ff80458a8501edb3a73567e38d3a15267bf87b9069082dda8"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "to_clip",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "vertex_out",
+        "label": "Vertex Output",
+        "inputs": {
+          "position": "vec4"
+        },
+        "outputs": {},
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.vertex_out",
+        "revisionHash": "49fe4518d67be88c9d4a3c47a5c97c0708b8bfae0e87cda6765dee57050980ed"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "vertex_out",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "pixel_out",
+        "label": "Color Output",
+        "inputs": {
+          "color": "vec4"
+        },
+        "outputs": {},
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {},
+        "definitionUuid": "sgrape.builtin.pixel_out",
+        "revisionHash": "73093f728fb552502a3151bc7935081a8b2a5b573b8a540e0cb37b2ff24c52a6"
+      },
+      "observedIn": [
+        "v0.1.0",
+        "v0.1.1"
+      ],
+      "emitter": {
+        "id": "pixel_out",
+        "version": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TD-Grape · Shader Editor</title><link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16 32x32 48x48 64x64 128x128 256x256">
+<link rel="icon" href="/icons/icon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/icons/icon-48.png" type="image/png" sizes="48x48">
+<link rel="icon" href="/icons/icon-64.png" type="image/png" sizes="64x64">
+<link rel="icon" href="/icons/icon-128.png" type="image/png" sizes="128x128">
+<link rel="icon" href="/icons/icon-256.png" type="image/png" sizes="256x256">
+<link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#19181f"><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div class="brand"><!-- sgrape-brand:start --><svg class="brand-mark" data-brand-mark="true" viewBox="0 0 64 64" aria-hidden="true" focusable="false" width="28" height="28">
+  <circle cx="20" cy="23" r="11" fill="#bfa5f4"/>
+  <circle cx="44" cy="23" r="11" fill="#a98be2"/>
+  <circle cx="32" cy="44" r="11" fill="#b499ef"/>
+</svg><!-- sgrape-brand:end --><strong>TD-Grape</strong><small><span class="brand-tagline">A Shader Editor for TouchDesigner</span><span class="brand-version">0.8.5</span></small></div><div class="actions"><button id="about" data-i18n="action.about"></button><select id="language" aria-label="Language"></select><button id="import"><span data-i18n="action.import"></span></button><button id="export"><span data-i18n="action.export"></span></button><button id="save"><span data-i18n="action.save"></span></button><button id="apply" class="primary"><span data-i18n="action.apply"></span></button></div></header>
+<div class="location-bar"><button id="togglelibrary" type="button" class="sidebar-toggle" aria-controls="sidebar-left" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path class="sidebar-icon-fill" d="M6 4h3v16H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg></button><span id="projectfile" class="project-file"></span><div class="shader-selector">
+<button id="shaderpicker" aria-haspopup="menu" aria-expanded="false" aria-controls="shaderchoices" data-i18n-label="switch.choose" disabled><span id="target" class="target"></span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 10 5 5 5-5"/></svg></button>
+<div id="shaderchoices" role="menu" data-i18n-label="switch.choose" hidden></div>
+</div><span id="dirty" class="tag"><span data-i18n="connection.connecting"></span></span><div class="spacer"></div><button id="workspacelayout" type="button" data-i18n="layout.title">Layout</button><div class="sidebar-toggles">
+
+<button id="toggledetails" type="button" class="sidebar-toggle" aria-controls="parameter-sidebar" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/><path class="sidebar-icon-fill" d="M15 4h3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3Z"/></svg></button>
+</div></div>
+<main><aside class="library" id="sidebar-left"><section id="nodelibrary" class="browser-pane">
+  <div class="section-label"><span data-i18n="panel.addNode"></span></div>
+  <input id="search" data-i18n-placeholder="browser.search" data-i18n-label="node.searchLabel">
+  <div id="librarycontent" role="region" data-i18n-label="panel.addNode" tabindex="0">
+    <section id="browsersearchresults" hidden>
+      <div class="browser-search-heading"><small id="browsersearchscope" class="muted"></small><button id="browserclearsearch" data-i18n-label="browser.clearSearch">×</button></div>
+      <div id="browsersearchfilters"></div><div id="browsersearchitems"></div>
+    </section>
+    <div id="browsersections">
+      <details class="browser-section" data-browser-section="categories" id="browser-section-categories" open>
+        <summary><span data-i18n="browser.tab.categories"></span><span class="tree-chevron" aria-hidden="true"></span></summary>
+        <div class="browser-section-body"><div id="browsercategoryfilters">  <label id="browser-source-row" class="browser-source-filter"><span data-i18n="browser.sourceFilter"></span><select id="browsersource"><option value="all" data-i18n="browser.source.all"></option><option value="glsl" data-i18n="browser.source.glsl"></option><option value="td" data-i18n="browser.source.td"></option><option value="editor" data-i18n="browser.source.editor"></option><option value="personal" data-i18n="browser.source.personal"></option><option value="project" data-i18n="browser.source.project"></option></select></label></div><div id="nodes"></div></div>
+      </details>
+      <details class="browser-section" data-browser-section="library" id="browser-section-library">
+        <summary><span data-i18n="browser.tab.library"></span><span class="tree-chevron" aria-hidden="true"></span></summary>
+        <div class="browser-section-body">  <div id="functionsources" role="tablist" data-i18n-label="library.sources"><button role="tab" data-function-source="all" aria-selected="true" tabindex="0" data-i18n="browser.source.all"></button><button role="tab" data-function-source="editor" aria-selected="false" tabindex="-1" data-i18n="browser.source.editor"></button><button role="tab" data-function-source="personal" aria-selected="false" tabindex="-1" data-i18n="browser.source.personal"></button></div><div id="libraryentries"></div></div>
+      </details>
+      <details class="browser-section" data-browser-section="project" id="browser-section-project">
+        <summary><span data-i18n="browser.tab.project"></span><span class="tree-chevron" aria-hidden="true"></span></summary>
+        <div class="browser-section-body"><p id="libraryintro" class="muted"></p>    <section id="functiontools" class="function-tools">
+      <div class="function-action"><button id="newfunction" data-i18n="function.new"></button><small data-i18n="library.newHint"></small></div>
+      <div class="function-action"><button id="group" data-i18n="function.group"></button><small data-i18n="library.groupHint"></small></div>
+    </section><div id="projectentries"></div>    <details id="librarydeclarations" class="shader-declarations"><summary data-i18n="panel.declarations"></summary><div id="declarations"></div><button id="adduniform" class="wide">＋ Float Uniform</button></details></div>
+      </details>
+    </div>
+  </div>
+  <section id="browserdetail" aria-live="polite" hidden></section>
+</section></aside>
+<div id="libraryresize" class="side-divider" role="separator" aria-orientation="vertical" aria-controls="sidebar-left" tabindex="0" data-i18n-label="sidebar.resizeLibrary"></div>
+<section class="graph-workspace" data-i18n-label="canvas.workspace"><div class="toolbar"><nav><button class="stage" data-stage="vertex">Vertex</button><button class="stage active" data-stage="pixel">Pixel</button></nav><div class="spacer"></div><button id="undo" class="icon-button" title="Ctrl+Z" data-i18n-label="action.undo"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 4 10l5 5M4 10h9a6 6 0 0 1 6 6v3"/></svg></button><button id="redo" class="icon-button" title="Ctrl+Shift+Z" data-i18n-label="action.redo"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 5 5 5-5 5m5-5h-9a6 6 0 0 0-6 6v3"/></svg></button><button id="fit"><span data-i18n="action.fit"></span></button><button id="boxselect" aria-pressed="false" data-i18n="action.boxselect"></button><button id="code">GLSL</button></div><div class="graph-navigation"><span>Graph</span><button id="graphup" class="icon-button" data-i18n-label="navigation.up" title="Alt+↑"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V4m-6 6 6-6 6 6"/></svg></button><nav id="graphpath"></nav><small id="functionscope"></small></div><div id="diagnosticbar" hidden></div><div id="upgradenotice" hidden><strong data-i18n="upgrade.title"></strong><p data-i18n="upgrade.explanation"></p><button id="reviewupgrade" data-i18n="upgrade.review"></button></div><div id="savednotice" hidden><strong data-i18n="saved.title"></strong><p data-i18n="saved.explanation"></p><button id="reviewsaved" data-i18n="saved.review"></button></div><section id="canvas" data-i18n-label="canvas.label"><div id="marquee" hidden></div><div id="world"><svg id="wires"></svg><div id="cards"></div></div><div class="canvas-caption"><strong id="stagecaption">PIXEL STAGE</strong><span id="nodecount"></span><span><span data-i18n="canvas.caption"></span></span></div><div id="zoom">100%</div><div id="connection" hidden></div></section></section>
+<div id="detailsresize" class="side-divider" role="separator" aria-orientation="vertical" aria-controls="parameter-sidebar" tabindex="0" data-i18n-label="sidebar.resizeParameters"></div>
+<aside class="details" id="parameter-sidebar">
+  <section class="inspector-panel" id="pane-uniforms" data-panel="uniforms">
+    <button class="panel-heading" id="uniformstoggle"><span data-i18n="sources.title">Uniforms</span></button>
+    <div class="panel-scroll" id="uniformsbody" tabindex="0">
+      <button id="sourceparameters" data-i18n="sources.native">GLSL Parameters</button>
+      <p id="sourcestatus" class="muted" role="status"></p>
+      <div id="nativeuniforms"></div>
+      <form id="sourcecreate"><input id="sourcename" placeholder="uName" aria-label="Uniform name" required maxlength="48"><select id="sourcetype" aria-label="Uniform type"><option>float</option><option>vec2</option><option>vec3</option><option>vec4</option></select><button type="submit" data-i18n="sources.add">Add Uniform</button></form>
+    </div>
+  </section>
+  <section class="inspector-panel" id="pane-controls" data-panel="controls">
+    <button class="panel-heading" id="controlstoggle"><span data-i18n="controls.title">Custom Parameters</span></button>
+    <div class="panel-scroll" id="controlsbody" tabindex="0">
+      <p id="controlstatus" class="muted" role="status"></p>
+      <div class="custom-page-toolbar"><select id="custompage" data-i18n-label="controls.page"></select><button id="customnewpage" data-i18n="controls.newPage"></button><button id="custompageedit" data-i18n="controls.editPage"></button></div>
+      <div id="customcontrols"></div>
+      <form id="customcreate"><input id="customname" data-i18n-placeholder="controls.name" data-i18n-label="controls.name" maxlength="80" required><select id="customstyle" data-i18n-label="controls.style"><option value="float">Float</option><option value="vec2">Vector 2</option><option value="vec3">Vector 3</option><option value="vec4">Vector 4</option><option value="rgba">RGBA</option><option value="int">Integer</option><option value="toggle">Toggle</option><option value="text">Text</option></select><button type="submit" data-i18n="controls.add"></button></form>
+    </div>
+  </section>
+  <section class="inspector-panel parameter-panel" id="pane-parameters" data-panel="parameters">
+    <button class="panel-heading" id="parametertoggle" aria-expanded="true" aria-controls="parameterbody"><span data-i18n="panel.parameterTitle">Parameter</span></button>
+    <div class="panel-scroll" id="parameterbody" role="region" aria-labelledby="parametertoggle" tabindex="0"><div id="inspector"><p class="muted"><span data-i18n="node.select"></span></p></div></div>
+  </section>
+  <div id="resize-live" class="panel-divider" data-panel-resize="live" role="separator" aria-orientation="horizontal" tabindex="0" data-i18n-label="panel.resize.live" hidden></div>
+  <section class="inspector-panel material-preview" id="pane-live" data-panel="live">
+    <button class="panel-heading" id="livetoggle" aria-expanded="true" aria-controls="livebody"><span id="previewtitle">LIVE MATERIAL</span><span class="live-dot" aria-hidden="true"></span></button>
+    <div class="panel-scroll" id="livebody" role="region" aria-labelledby="livetoggle" tabindex="0"><div class="preview-controls"><button id="nativeviewer" type="button" data-i18n="viewer.open" data-i18n-label="viewer.description" hidden disabled></button><button id="refreshpreview" type="button"><svg class="refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M19 11a7 7 0 0 0-12-5L4 9m1 4a7 7 0 0 0 12 5l3-3"/></svg><span data-i18n="preview.refresh"></span></button><span id="previewactivity" class="sr-only" role="status" aria-live="polite"></span><label><input id="autopreview" type="checkbox" checked><span data-i18n="preview.auto"></span></label><button id="previewbackground" type="button" aria-pressed="false"><span class="checker-glyph" aria-hidden="true"></span><span data-i18n="preview.background"></span></button></div><div class="preview"><img id="preview" data-i18n-alt="preview.alt"><span id="previewsize">Preview</span></div></div>
+  </section>
+  <div id="resize-help" class="panel-divider" data-panel-resize="help" role="separator" aria-orientation="horizontal" tabindex="0" data-i18n-label="panel.resize.help" hidden></div>
+  <section class="inspector-panel help-panel" id="pane-help" data-panel="help">
+    <button class="panel-heading" id="helptoggle" aria-expanded="true" aria-controls="helpbody"><span data-i18n="panel.helpTitle">Help</span></button>
+    <div class="panel-scroll" id="helpbody" role="region" aria-labelledby="helptoggle" tabindex="0"><div id="nodehelp"></div></div>
+  </section>
+</aside></main>
+<footer><span id="status" role="status"><span data-i18n="connection.starting"></span></span><button id="reload"><span data-i18n="action.reload"></span></button></footer>
+<dialog id="upgradereview" aria-labelledby="upgradetitle">
+  <div class="upgrade-heading"><strong id="upgradetitle" data-i18n="upgrade.title"></strong><button id="closeupgrade" data-i18n="action.close"></button></div>
+  <p id="upgradetarget"></p><p data-i18n="upgrade.explanation"></p><p id="upgradestatus" role="status"></p>
+  <ul id="upgradechanges"></ul><p class="muted" data-i18n="upgrade.backup"></p>
+  <div class="upgrade-actions"><button id="upgraderecheck" data-i18n="upgrade.recheck"></button><button id="upgradeaccept" class="primary" data-i18n="upgrade.accept"></button></div>
+</dialog>
+<dialog id="savedreview" aria-labelledby="savedtitle">
+  <div class="saved-heading"><strong id="savedtitle" data-i18n="saved.title"></strong><button id="closesaved" data-i18n="action.close"></button></div>
+  <p data-i18n="saved.explanation"></p><p id="savedpath"></p><ul id="savedissues"></ul>
+  <details><summary data-i18n="saved.original"></summary><pre id="savedraw"></pre><p id="savedtruncated" class="muted" data-i18n="saved.truncated" hidden></p></details>
+  <p id="savedstatus" role="status"></p><div class="saved-actions"><button id="downloadsaved" data-i18n="saved.download"></button><button id="reloadsaved" data-i18n="action.reload"></button></div>
+</dialog>
+<dialog id="shaderswitch" aria-labelledby="switchtitle">
+  <div class="switch-heading"><strong id="switchtitle" data-i18n="switch.title"></strong><button id="switchcancel" data-i18n="action.close"></button></div>
+  <p id="switchdestination"></p><p data-i18n="switch.explanation"></p><p id="switchstatus" role="status"></p>
+  <div class="switch-actions"><button id="switchkeep" data-i18n="switch.keep"></button><button id="switchapply" class="primary" data-i18n="switch.apply"></button></div>
+</dialog>
+<dialog id="aboutdialog" aria-labelledby="abouttitle">
+  <div class="about-heading"><div class="brand"><!-- sgrape-brand:start --><svg class="brand-mark" data-brand-mark="true" viewBox="0 0 64 64" aria-hidden="true" focusable="false" width="28" height="28">
+  <circle cx="20" cy="23" r="11" fill="#bfa5f4"/>
+  <circle cx="44" cy="23" r="11" fill="#a98be2"/>
+  <circle cx="32" cy="44" r="11" fill="#b499ef"/>
+</svg><!-- sgrape-brand:end --><strong id="abouttitle">TD-Grape</strong></div><button id="closeabout" data-i18n="action.close"></button></div>
+  <p class="about-version">0.8.5 · TouchDesigner Shader Editor</p>
+  <p data-i18n="about.description"></p>
+  <dl class="about-author"><dt data-i18n="about.author"></dt><dd>Yea Chen (yeataro)</dd></dl>
+  <nav class="about-links" data-i18n-label="about.authorLinks"><a href="mailto:yeataro@gmail.com">yeataro@gmail.com</a><a href="https://github.com/yeataro" target="_blank" rel="noopener noreferrer">GitHub · yeataro</a></nav>
+  <details class="about-release"><summary data-i18n="about.releaseNotes"></summary><p data-i18n="about.releaseSummary"></p></details>
+
+  <section class="dedication" lang="en"><p data-i18n="about.dedication"></p><p class="dedication-dates" data-i18n="about.dates"></p></section>
+</dialog>
+<dialog id="customdialog"></dialog>
+<dialog id="source" aria-labelledby="sourceheading"><div><strong id="sourceheading">Generated GLSL</strong><button id="closecode"><span data-i18n="action.close"></span></button></div><pre id="sourcecode" tabindex="0" aria-label="Generated GLSL"></pre></dialog>
+<div id="creator" role="dialog" aria-labelledby="createcontext" hidden><div class="create-heading"><strong id="createcontext"></strong><button id="closecreator" class="icon-button" data-i18n-label="action.close"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M6 18 18 6"/></svg></button></div><input id="createsearch" data-i18n-placeholder="node.searchPlaceholder" data-i18n-label="create.search"><div class="create-filters"><select id="createsource" data-i18n-label="browser.sourceFilter"><option value="all" data-i18n="browser.source.all"></option><option value="glsl" data-i18n="browser.source.glsl"></option><option value="td" data-i18n="browser.source.td"></option><option value="editor" data-i18n="browser.source.editor"></option><option value="personal" data-i18n="browser.source.personal"></option><option value="project" data-i18n="browser.source.project"></option></select><select id="createtype" data-i18n-label="create.type"><option value="all" data-i18n="create.allTypes"></option></select></div><div class="create-columns-scroll"><div class="create-columns"><div id="createcategory" data-i18n-label="create.category"></div><div id="createresults" role="listbox" data-i18n-label="create.title"></div><section id="createdetail" aria-live="polite"></section></div></div></div>
+<dialog id="exportdialog" aria-labelledby="exporttitle">
+  <div class="export-heading"><strong id="exporttitle" data-i18n="export.title"></strong><button id="closeexport" data-i18n="action.close"></button></div>
+  <p id="exportview"></p><p class="muted" data-i18n="png.scope"></p>
+  <div class="export-options"><button id="exportpng" class="primary" data-i18n="png.download"></button><button id="exportjsondownload" data-i18n="export.downloadJson"></button><button id="exportjson" data-i18n="export.json"></button></div>
+  <p id="exportstatus" role="status"></p>
+</dialog>
+<dialog id="importreview" aria-labelledby="importtitle">
+  <div class="import-heading"><strong id="importtitle" data-i18n="import.title"></strong><button id="closeimport" data-i18n="action.close"></button></div>
+  <p id="importfilename"></p><p id="importstatus" role="status"></p><ul id="importissues"></ul>
+  <p class="muted" data-i18n="import.explanation"></p>
+  <details><summary id="importrawtitle" data-i18n="import.original"></summary><pre id="importraw"></pre></details>
+  <details id="importproposal" hidden><summary data-i18n="import.proposal"></summary><pre id="importcandidate"></pre></details>
+  <div class="import-actions"><button id="importdownload" data-i18n="import.download"></button><button id="importaccept" class="primary" data-i18n="import.accept"></button></div>
+</dialog>
+<input id="file" type="file" accept=".json,.png,application/json,image/png" hidden><template id="subgraph-icon"><svg class="subgraph-icon" viewBox="0 0 64 64" fill="currentColor" aria-hidden="true" focusable="false">
+  <path d="M20 23H44L32 44" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="20" cy="23" r="8"/>
+  <circle cx="44" cy="23" r="8"/>
+  <circle cx="32" cy="44" r="8"/>
+</svg></template><script id="node-browser-data" type="application/json">{"categories":["math","vector","matrix","logic","color","coordinate","texture","data","shader","uncategorized"],"nodes":{"sgrape.builtin.float":{"category":"data","source":"editor","aliases":["constant","scalar","常數","浮點"],"glslName":"float","secondaryCategories":[]},"sgrape.builtin.vec2":{"category":"data","source":"editor","aliases":["constant","vec2","常數"],"glslName":"vec2","secondaryCategories":[]},"sgrape.builtin.vec3":{"category":"data","source":"editor","aliases":["constant","vec3","常數"],"glslName":"vec3","secondaryCategories":[]},"sgrape.builtin.color":{"category":"color","source":"editor","aliases":["constant","rgba","colour","顏色","色彩"],"glslName":"color","secondaryCategories":[]},"sgrape.builtin.add":{"category":"math","source":"glsl","aliases":["+","加法"],"glslName":"+","secondaryCategories":[],"categoryPath":["math","arithmetic"]},"sgrape.builtin.multiply":{"category":"math","source":"glsl","aliases":["*","mul","乘法"],"glslName":"*","secondaryCategories":[],"categoryPath":["math","arithmetic"]},"sgrape.builtin.mix":{"category":"math","source":"glsl","aliases":["lerp","interpolate","插值"],"glslName":"mix","secondaryCategories":[],"categoryPath":["math","interpolation"]},"sgrape.builtin.sin":{"category":"math","source":"glsl","aliases":["sin","sine","正弦"],"glslName":"sin","secondaryCategories":[],"categoryPath":["math","trigonometry"]},"sgrape.builtin.subtract":{"category":"math","source":"glsl","aliases":["-","sub","減法"],"glslName":"-","secondaryCategories":[],"categoryPath":["math","arithmetic"]},"sgrape.builtin.divide":{"category":"math","source":"glsl","aliases":["/","div","除法"],"glslName":"/","secondaryCategories":[],"categoryPath":["math","arithmetic"]},"sgrape.builtin.min":{"category":"math","source":"glsl","aliases":["min","minimum","最小"],"glslName":"min","secondaryCategories":[],"categoryPath":["math","range"]},"sgrape.builtin.max":{"category":"math","source":"glsl","aliases":["max","maximum","最大"],"glslName":"max","secondaryCategories":[],"categoryPath":["math","range"]},"sgrape.builtin.clamp":{"category":"math","source":"glsl","aliases":["clamp","限制"],"glslName":"clamp","secondaryCategories":[],"categoryPath":["math","range"]},"sgrape.builtin.smoothstep":{"category":"math","source":"glsl","aliases":["smoothstep","平滑"],"glslName":"smoothstep","secondaryCategories":[],"categoryPath":["math","interpolation"]},"sgrape.builtin.abs":{"category":"math","source":"glsl","aliases":["abs","absolute","絕對值"],"glslName":"abs","secondaryCategories":[],"categoryPath":["math","arithmetic"]},"sgrape.builtin.fract":{"category":"math","source":"glsl","aliases":["fract","fraction","小數"],"glslName":"fract","secondaryCategories":[],"categoryPath":["math","range"]},"sgrape.builtin.pow":{"category":"math","source":"glsl","aliases":["pow","power","次方"],"glslName":"pow","secondaryCategories":[],"categoryPath":["math","exponential"]},"sgrape.builtin.cos":{"category":"math","source":"glsl","aliases":["cos","cosine","餘弦"],"glslName":"cos","secondaryCategories":[],"categoryPath":["math","trigonometry"]},"sgrape.builtin.dot":{"category":"vector","source":"glsl","aliases":["dot","內積"],"glslName":"dot","secondaryCategories":[]},"sgrape.builtin.length":{"category":"vector","source":"glsl","aliases":["length","magnitude","長度"],"glslName":"length","secondaryCategories":[]},"sgrape.builtin.normalize":{"category":"vector","source":"glsl","aliases":["normalize","unit","正規化"],"glslName":"normalize","secondaryCategories":[]},"sgrape.builtin.rgba":{"category":"data","source":"editor","aliases":["combine","compose","rgba","組合"],"glslName":"rgba","secondaryCategories":["color"]},"sgrape.builtin.split":{"category":"data","source":"editor","aliases":["split","swizzle","分量","拆分"],"glslName":"split","secondaryCategories":["color"]},"sgrape.builtin.uniform":{"category":"shader","source":"editor","aliases":["parameter","參數","公開"],"glslName":"uniform","secondaryCategories":[]},"sgrape.builtin.uv":{"category":"coordinate","source":"td","aliases":["uv","texture coordinates","貼圖座標"],"glslName":"uv","secondaryCategories":[]},"sgrape.builtin.texture":{"category":"texture","source":"glsl","aliases":["texture","sample","貼圖","取樣"],"glslName":"texture","secondaryCategories":[]},"sgrape.builtin.position":{"category":"shader","source":"td","aliases":["P","attribute","position","頂點位置"],"glslName":"position","secondaryCategories":[]},"sgrape.builtin.deform":{"category":"coordinate","source":"td","aliases":["TDDeform","world","變形"],"glslName":"TDDeform","secondaryCategories":[]},"sgrape.builtin.to_clip":{"category":"coordinate","source":"td","aliases":["TDWorldToProj","projection","投影"],"glslName":"TDWorldToProj","secondaryCategories":[]},"sgrape.builtin.vertex_out":{"category":"shader","source":"td","aliases":["output","vertex","輸出"],"glslName":"vertex_out","secondaryCategories":[]},"sgrape.builtin.pixel_out":{"category":"shader","source":"td","aliases":["output","fragment","輸出"],"glslName":"pixel_out","secondaryCategories":[]},"sgrape.builtin.sampler":{"category":"texture","source":"glsl","aliases":["texture source"],"descriptionKey":"help.sampler","glslName":"sampler2D","secondaryCategories":[]},"sgrape.builtin.texture_sample":{"category":"texture","source":"glsl","aliases":["sample"],"descriptionKey":"help.texture_sample","glslName":"texture","secondaryCategories":[]}},"functions":{"sgrape.library.tint":{"category":"color","source":"editor","aliases":[],"descriptionKey":"help.function"},"sgrape.library.invert":{"category":"color","source":"editor","aliases":[],"descriptionKey":"help.filter.invert"},"sgrape.library.contrast":{"category":"color","source":"editor","aliases":[],"descriptionKey":"help.filter.contrast"},"sgrape.library.color_clamp":{"category":"color","source":"editor","aliases":[],"descriptionKey":"help.filter.color_clamp"}}}</script><script src="/functions_model.js"></script><script src="/functions_ui.js"></script><script src="/graph_ui.js"></script><script src="/inspector.js"></script><script src="/import_ui.js"></script><script src="/app.js"></script>
+</body></html>
