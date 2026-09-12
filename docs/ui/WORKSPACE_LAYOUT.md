@@ -14,6 +14,8 @@ At widths up to 1100px, the first header row keeps the logo/name left and Apply 
 
 The floating Add Node browser uses category, result and detail columns. Authored categories currently reach two levels; additional depth adds fixed 170px columns, with horizontal scrolling on small screens. Search crosses category paths; source/type and connection compatibility are independent filters.
 
+The canvas stage/count/help text sits at the lower left; the zoom percentage sits at the lower right, each inset 20px horizontally and 18px from the bottom. Both overlays let pointer actions pass through to the canvas.
+
 The location row shows the current TOE filename and component path. Export offers full-graph JSON download, TD-folder JSON and PNG with embedded graph data. Canvas title Label/provenance placement remains a separate decision.
 
 Validation: `tests/browser/test_workspace_layout.cjs` covers existing docking, presets and transfers. `tests/browser/test_ui_refinement.cjs` adds pointer insertion/reorder, hidden-panel persistence, rename, compact Parameter controls, local Subgraph copies and Chinese narrow headers. Both use the portable editor-state fixture. Windows Chromium is verified; physical touch devices and macOS remain unverified.
