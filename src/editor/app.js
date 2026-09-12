@@ -124,12 +124,18 @@ function input(value,cb,type='text'){
 }
 function current(){return currentFunction()?.graph||graph.stages[stage];}
 function ports(n,kind){const d=definition(n);if(!d)return{};const decl=graph.declarations.find(x=>x.id===n.params.declarationId);return resolvedNodePorts(d,n.params,decl,kind);}
+function graphPoint(clientX,clientY){
+  // The 1px HTML world shares the sockets' coordinate system, including ancestor
+  // scaling. Older WebKit SVG getScreenCTM() can omit that CSS transform.
+  const rect=$('#world').getBoundingClientRect();
+  if(!rect.width||!rect.height)return null;
+  return {x:(clientX-rect.left)/rect.width,y:(clientY-rect.top)/rect.height};
+}
 function point(n,port,kind){
   const socket=$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"] [data-kind="${kind}"][data-port="${CSS.escape(port)}"]`);
-  const matrix=$('#wires').getScreenCTM();
-  if(!socket||!matrix)return null;
+  if(!socket)return null;
   const rect=socket.getBoundingClientRect();
-  return new DOMPoint(rect.left+rect.width/2,rect.top+rect.height/2).matrixTransform(matrix.inverse());
+  return graphPoint(rect.left+rect.width/2,rect.top+rect.height/2);
 }
 function transform(){
   // Hide intermediate grid lines at distant zoom; snapping stays in world units.

@@ -227,9 +227,8 @@ function dragWire(button,event){
     moved=true;linkStart=null;
     const next=findWireTarget(candidates,e.clientX,e.clientY);
     if(target!==next){target?.classList.remove('wire-target');target=next;target?.classList.add('wire-target');}
-    const matrix=$('#wires').getScreenCTM();if(!matrix)return;
     const r=target?.getBoundingClientRect();
-    const q=new DOMPoint(r?r.left+r.width/2:e.clientX,r?r.top+r.height/2:e.clientY).matrixTransform(matrix.inverse());
+    const q=graphPoint(r?r.left+r.width/2:e.clientX,r?r.top+r.height/2:e.clientY);if(!q)return;
     wireDrag={...start,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':'wire.connect');wires();
   };
   wireGesture={cancel,refresh:()=>{if(moved&&lastEvent)update(lastEvent);}};button.setPointerCapture(event.pointerId);
