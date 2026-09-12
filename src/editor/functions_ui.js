@@ -129,7 +129,7 @@ function functionInspector(box,n,d){
   if(d.key==='function_call'){
     const f=FunctionModel.find(graph,n.params.functionId);box.append(functionNameField(f));box.append(el('p',{class:'muted'},f.scope==='local'?t('function.local'):t('function.source')));
     const open=el('button',{class:'wide'},t('function.open'));open.onclick=()=>enterFunction(n);box.append(open);
-    const separate=el('button',{class:'wide'},t('function.independent'));separate.onclick=()=>change(()=>FunctionModel.independent(graph,n));box.append(separate);
+    const separate=el('button',{class:'wide','data-action':'local-subgraph'},t(f.scope==='local'?'function.independent':'function.makeLocal'));separate.disabled=readonly;separate.onclick=()=>change(()=>FunctionModel.independent(graph,n));box.append(separate);
     const save=el('button',{class:'wide','data-action':'save-personal'},t('personal.save'));save.disabled=readonly;save.onclick=()=>savePersonalFunction(f);box.append(save);
   }
   const f=currentFunction();if(!f||!['function_input','function_output'].includes(d.key))return;
@@ -163,7 +163,7 @@ function functionInspector(box,n,d){
 function convertValue(value,type){return value===null&&!isResourceType(type)?filledValue(type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
-  if(n.definitionUuid==='sgrape.builtin.pixel_out'&&editorTarget==='mat'&&kind==='inputs'){const index=typeContract?.pixelBufferOutputs?.ports.indexOf(id);if(index>=0)return 'Buffer '+index;}
+  if(n.definitionUuid==='sgrape.builtin.pixel_out'&&editorTarget==='mat'&&kind==='inputs'){const index=typeContract?.pixelBufferOutputs?.ports.indexOf(id);if(index>=0){const label=n.ui?.bufferLabels?.[id];return typeof label==='string'&&label.length<=80&&!/[\x00-\x1f\x7f]/.test(label)&&label.trim()?label:'Buffer '+index;}}
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(n.definitionUuid))return id;
   const f=n.definitionUuid===FunctionModel.CALL?FunctionModel.find(graph,n.params.functionId):currentFunction();
   const direction=n.definitionUuid===FunctionModel.INPUT?'inputs':n.definitionUuid===FunctionModel.OUTPUT?'outputs':kind;

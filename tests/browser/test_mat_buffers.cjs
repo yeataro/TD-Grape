@@ -44,11 +44,20 @@ const server=http.createServer(async(req,res)=>{
     await page.evaluate(()=>undo());assert.equal(await page.locator('[data-pixel-buffer-count]').inputValue(),'2');
     await page.evaluate(()=>undo(true));assert.equal(await page.locator('[data-pixel-buffer-count]').inputValue(),'4');
     checks.push('Resize preserves dormant values and supports undo/redo');
+    await page.getByRole('tab',{name:'Settings',exact:true}).click();
+    const beforeNames=await page.evaluate(()=>JSON.stringify({declarations:graph.declarations,params:current().nodes.find(n=>n.id==='pixel').params,edges:current().edges}));
+    await page.locator('[data-buffer-label=buffer3]').fill('Auxiliary / 輔助');await page.locator('[data-buffer-label=buffer3]').press('Enter');
+    assert.equal(await page.locator('[data-node=pixel] .input>span').last().innerText(),'Auxiliary / 輔助');
+    assert.equal(await page.evaluate(()=>JSON.stringify({declarations:graph.declarations,params:current().nodes.find(n=>n.id==='pixel').params,edges:current().edges})),beforeNames);
+    await page.getByRole('tab',{name:'Parameters',exact:true}).click();await page.selectOption('[data-pixel-buffer-count]','2');await page.selectOption('[data-pixel-buffer-count]','4');
+    assert.equal(await page.locator('[data-node=pixel] .input>span').last().innerText(),'Auxiliary / 輔助');
+    checks.push('Buffer display names preserve indices and wires, and survive removing/re-adding a slot');
+
     await page.evaluate(()=>{change(()=>current().edges.push({from:['color','out'],to:['pixel','buffer2']}));openExport();});
     const downloadPromise=page.waitForEvent('download');await page.locator('#exportjsondownload').click();const download=await downloadPromise;
     await download.saveAs(path.join(out,'graph.json'));
     const saved=JSON.parse(fs.readFileSync(path.join(out,'graph.json')));assert.equal(saved.stages.pixel.nodes.find(n=>n.id==='pixel').params.bufferCount,4);
-    assert.ok(saved.stages.pixel.edges.some(e=>e.to[1]==='buffer2'));checks.push('JSON download preserves the buffer count and additional output wires');
+    assert.equal(saved.stages.pixel.nodes.find(n=>n.id==='pixel').ui.bufferLabels.buffer3,'Auxiliary / 輔助');assert.ok(saved.stages.pixel.edges.some(e=>e.to[1]==='buffer2'));checks.push('JSON download preserves the buffer count and additional output wires');
     // Drag-to-create compatibility uses the same actual dynamic output socket.
     await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openCreator(r.left+80,r.top+80,{kind:'inputs',node:'pixel',port:'buffer1',type:'vec4'});});
     await page.fill('#createsearch','Color');assert.ok(await page.locator('#createresults [data-create-entry=color]').count());

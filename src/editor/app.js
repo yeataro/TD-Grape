@@ -234,6 +234,7 @@ let previewRequest=0,lastPreviewAt=0,autoPreview=true;try{autoPreview=localStora
 let previewBackground='dark';try{if(localStorage.getItem('sgrapePreviewBackground')==='checker')previewBackground='checker';}catch{}
 function renderPreviewAppearance(){
   renderNativeViewer();
+  $('#refreshpreview').title=t('preview.refresh');
   const checker=previewBackground==='checker',button=$('#previewbackground'),img=$('#preview');
   $('#livebody .preview').classList.toggle('checker-background',checker);button.setAttribute('aria-pressed',String(checker));
   const description=t(checker?'preview.backgroundChecker':'preview.backgroundDark');button.title=description;button.setAttribute('aria-label',description);

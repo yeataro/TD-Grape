@@ -1,6 +1,6 @@
 # 下一輪 UI 與圖根操作筆記
 
-這份文件記錄目錄遷移期間的使用者修訂，尚未因此實作。具體外觀可在下一輪繼續調整。發生歧異時，回看原規劃並討論偏差原因；舊規則不是不可修正的限制。
+這份文件記錄目錄遷移期間的使用者修訂。2026-09-12 UI 輪已實作面板／Layout、窄版頂列、畫布註解、Label 行尾產碼，以及原生 TOP／MAT 頁序；圖根恆常節點與 Viewer 所有權仍保留後續。具體完成狀態見 [本輪驗證](../development/UI_REFINEMENT.md)。具體外觀可在下一輪繼續調整。發生歧異時，回看原規劃並討論偏差原因；舊規則不是不可修正的限制。
 
 ## 圖根的恆常節點（設計方向）
 
@@ -38,6 +38,34 @@ vec4 sg_n_texture = texture(sTD2DInputs[0], sg_n_uv); // 中文?
 // Comment 保持在下方
 ```
 
-Label 不用作 GLSL 識別字，仍需防止換行或特殊字元改變程式語意。多行產碼、無獨立程式行的節點及 Subgraph 展開的放置位置在實作時確認。此修訂尚未改動目前編譯器。
+Label 不用作 GLSL 識別字，仍需防止換行或特殊字元改變程式語意。本輪實作採第一個有效程式行尾；沒有獨立程式行的節點與 Subgraph 邊界保留單行 `// 名稱`，不為註解新增變數。
 
 Label、Library／本地來源資訊在畫布節點上的配置仍保留決策。
+
+## 原生 TD 參數頁排序與排版
+
+使用者已確認：Grape TOP 頁內的參數排序與分隔線分組正式納入下一輪實作。頁籤順序依以下截圖筆記實作，保留現有自訂控制。
+
+- 頁籤由左至右：使用者自訂頁（圖中為 myPage、myPage2），接著 Output，最後 Grape 功能頁（圖中為 Grape TOP）。自訂頁之間沿用使用者的排序。
+- Grape 功能頁第一組：Open Editor、Open in Browser，依此順序。
+- 分隔線後第二組：GLSL Parameters。
+- 再一條分隔線後第三組：Version、Generated TOP，依此順序。
+- 這是既有參數的排序與分組調整，保留原功能、參數值及關聯。截圖中的 myPage／myPage2 是自訂頁範例，不新增固定同名頁面。
+
+## 原生 Viewer 的視窗前後順序
+
+使用者回報「開啟 Viewer」存在視窗顯示順序問題，並提供 OP Viewer 搭配 Window COMP 的截圖。
+
+- 改善方向：由 Window COMP 顯示 OP Viewer，利用 Always on Top 讓預覽視窗維持在上層。截圖作為操作參考，尚未完成產品接入或跨平台驗證。
+- 此筆針對「開啟 Viewer」的原生視窗行為，與網頁內預覽圖像來源的更換分開追蹤。
+- 未決：Window COMP 是放在管理主元件集中共用，或每個 Grape MAT／TOP 子元件各自擁有。不要在記錄階段擅自選定。
+- 後續評估需涵蓋多個 Shader 同時開窗、切換目標及視窗重用，以及子元件獨立使用時的行為；保持方案單純。
+- 本次只補充筆記，不修改 TD 元件、Viewer 或現有開啟行為。
+
+## Grape MAT 原生參數頁：下一輪已確認範圍
+
+- Grape MAT 功能頁依 Grape TOP 相同原則整理：Open Editor、Open in Browser；分隔線；GLSL Parameters；分隔線；Version、對應的 Generated MAT 輸出資訊。
+- 同時整理外層 Grape MAT COMP 的參數頁，落實先前精簡介面決策：只主動提供 Grape 必要功能頁及使用者自訂參數頁，不自動暴露或重包 Uniform 等來源設定分頁。
+- Uniform 等來源仍在 Grape UI 對應工具或實際 GLSL OP 原生參數頁編輯。GLSL Parameters 保持開啟真正 GLSL MAT 參數頁的入口。
+- 使用者自行新增或由自訂參數編輯器建立的控制頁與既有綁定需保留；不主動暴露來源設定不等於禁止使用者建立 Uniform 的自訂控制。
+- 本項已與 Grape TOP 頁內整理一起實作並保存正式開發 TOE；既有舊控制與綁定保留。

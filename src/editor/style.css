@@ -189,7 +189,7 @@ main { grid-template-columns: 205px minmax(0,1fr) 308px; }
 #wires .wire-preview.ready{stroke-dasharray:none}
 
 /* Three independent panes; headings stay visible while each body scrolls. */
-:root{--panel-header-height:38px;--panel-parameters-weight:5;--panel-live-weight:3;--panel-help-weight:2;--panel-header-bg:#22212b;--panel-content-bg:#1b1b23;--panel-header-inactive-bg:#14141c;--panel-header-fg:#dddce8;--panel-header-hover-bg:#24242e}
+:root{--panel-header-height:32px;--panel-parameters-weight:5;--panel-live-weight:3;--panel-help-weight:2;--panel-header-bg:#22212b;--panel-content-bg:#1b1b23;--panel-header-inactive-bg:#14141c;--panel-header-fg:#dddce8;--panel-header-hover-bg:#24242e}
 .details{min-height:0}
 .inspector-panel{display:flex;flex-direction:column;min-height:var(--panel-header-height);flex:1 1 0;overflow:hidden;border-bottom:1px solid var(--line)}
 .parameter-panel{flex-grow:var(--panel-parameters-weight)}
@@ -208,7 +208,7 @@ main { grid-template-columns: 205px minmax(0,1fr) 308px; }
 .panel-scroll>.muted:first-child,#inspector>.muted:first-child{margin-top:0}
 #parameterbody #inspector{margin-bottom:0}
 #livebody .preview{width:100%;max-width:180px}
-@media(max-height:600px){:root{--panel-header-height:34px}.panel-scroll{padding-top:10px;padding-bottom:10px}}
+@media(max-height:600px){:root{--panel-header-height:32px}.panel-scroll{padding-top:10px;padding-bottom:10px}}
 
 .shader-selector{position:relative;min-width:0;max-width:calc(100vw - 90px)}
 #shaderpicker{display:flex;align-items:center;gap:9px;max-width:100%;padding:4px 7px;background:transparent;border-color:transparent;font-size:11px}
@@ -573,7 +573,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-comment-help{border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px;font-size:11px;color:#c0b7cd}.node-comment-help p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;margin:7px 0 0}
 
 /* Selected-node identity follows the node palette; Label is edited in the title. */
-.node-inspector-title{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:center;gap:8px;min-height:44px;padding:6px 8px;margin-bottom:12px;background:var(--category-bg);color:var(--category-fg);border-bottom:1px solid #ffffff16}
+.node-inspector-title{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:center;gap:8px;height:var(--panel-header-height);min-height:var(--panel-header-height);padding:0 10px;margin:0;background:var(--category-bg);color:var(--category-fg);border-bottom:1px solid #ffffff16}
 #inspector .node-inspector-name{min-width:0;margin:0;font-size:13px;line-height:1.4;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .node-inspector-title .node-inspector-label{min-width:0;margin:0;color:inherit}
 .node-inspector-label input{width:100%;min-width:0;padding:6px 7px;border:1px solid transparent;border-radius:2px;background:#ffffff12;color:inherit;font-size:12px;text-overflow:ellipsis}
@@ -582,11 +582,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-inspector-label input:focus{outline:1px solid var(--purple);background:#00000024}
 .node-inspector-label input:disabled{opacity:.55;cursor:default}
 
-/* Optional notes sit below values and ports, using the node's own color family. */
-.node-canvas-comment{padding:8px 12px 10px;border-top:1px solid #ffffff12;color:var(--category-fg);font-size:10px;line-height:1.5}
-.node-canvas-comment>summary{cursor:pointer;opacity:.7;min-height:18px}
-.node-canvas-comment>summary:focus-visible{outline:1px solid var(--purple);outline-offset:3px}
-.node-canvas-comment>p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;opacity:.7}
+/* Canvas notes are plain text, with the same color for every category. */
+.node-canvas-comment{padding:8px 12px 10px;border-top:1px solid #ffffff12;color:var(--muted);font-size:10px;line-height:1.5}
+.node-canvas-comment>p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 
 /* Persistent sidebar controls share the TD location row on every screen size. */
 .sidebar-toggles{display:flex;align-items:center;gap:5px;flex:none;margin-left:auto}
@@ -619,12 +617,12 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .workspace-sidebar{padding:0;overflow:hidden;min-height:0;flex-direction:column}.workspace-sidebar:not([hidden]){display:flex}
 @media(max-width:800px){.workspace-sidebar:not([hidden]){display:none}.show-library #sidebar-left,.show-details #parameter-sidebar{display:flex}.location-bar{flex-wrap:wrap}.location-bar>.tag{order:2}.location-bar>.sidebar-toggles{margin-left:0}}
 .workspace-group{position:relative;margin:0;background:var(--panel-content-bg)}.workspace-pane{background:var(--panel-content-bg);flex:1 1 0;display:flex;flex-direction:column;min-height:0;overflow:hidden;margin:0;border:0}.workspace-pane[hidden]{display:none!important}
-.workspace-tabs{display:flex;flex:0 0 37px;min-width:0;overflow-x:auto;background:var(--panel-header-inactive-bg);scrollbar-width:thin}
-.workspace-tab.panel-heading{position:relative;font-weight:400;flex:1 0 auto;width:auto;max-width:100%;padding:0 10px;letter-spacing:.4px;font-size:11px;touch-action:none;background:var(--panel-header-inactive-bg);color:var(--muted);border-bottom:2px solid transparent}
+.workspace-tabs{display:flex;flex:0 0 var(--panel-header-height);min-width:0;overflow-x:auto;background:var(--panel-header-inactive-bg);scrollbar-width:thin}
+.workspace-tab.panel-heading{position:relative;font-weight:400;flex:1 0 auto;width:auto;max-width:100%;padding:0 10px;letter-spacing:.4px;font-size:11px;touch-action:none;background:var(--panel-header-inactive-bg);color:var(--muted);border-bottom:0}
 .workspace-tab.panel-heading::before{display:none}.workspace-tab[aria-selected=true]{background:var(--panel-content-bg);color:var(--panel-header-fg);font-weight:600}
 .workspace-tab.panel-heading[aria-selected=false]:hover{background:#191920;color:var(--panel-header-fg)}
 .workspace-tab.panel-heading[aria-selected=true]:hover{background:var(--panel-content-bg)}
-.workspace-group[data-tabbed=true]:not(.collapsed) .workspace-tab[aria-selected=true]::after{content:'';position:absolute;left:10px;right:10px;bottom:0;height:2px;border-radius:1px;background:var(--muted)}
+
 .workspace-group.collapsed .workspace-tab.panel-heading{background:var(--panel-header-inactive-bg);color:var(--muted);font-weight:400}
 .workspace-group.collapsed .workspace-tabs{background:var(--panel-header-inactive-bg)}
 .workspace-tabs .workspace-fold{display:grid;place-items:center;align-self:stretch;color:var(--muted);background:transparent}
@@ -685,3 +683,48 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* Resource sockets share the existing texture accent; numeric colors stay intact. */
 .port-row[data-type="sampler2D"]{--socket:#c2a47a}
 #wires path[data-type="sampler2D"]{stroke:#c2a47a}
+
+/* Compact inspector: node identity reaches the pane edges, with regular gutters below. */
+.subgraph-icon.source-subgraph{opacity:.5}
+#pane-parameters>.panel-scroll{padding:0;scrollbar-gutter:auto}
+#inspector{margin:0 0 12px}
+#inspector>:not(.node-inspector-title):not(.parameter-tabs){margin-left:12px;margin-right:12px}
+#inspector>.wide{width:calc(100% - 24px)}
+.node-inspector-title .node-inspector-label input{height:26px;padding:3px 7px}
+.parameter-tabs{gap:0;margin:0 0 10px;border-bottom:0;min-height:var(--panel-header-height);background:var(--panel-header-inactive-bg)}
+.parameter-tabs button{border:0;padding:0 12px;min-height:var(--panel-header-height);background:var(--panel-header-inactive-bg)}
+.parameter-tabs button.active{background:var(--panel-content-bg);color:var(--panel-header-fg)}
+#inspector label.field{margin-top:8px;margin-bottom:8px;gap:4px}
+#inspector .input-parameter{margin-top:10px;padding-top:9px}
+.input-heading{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.input-heading small{font-size:10px;color:var(--muted);font-weight:400}
+.input-values.scalar .component-label{display:none}
+.connection-row{display:flex;align-items:center;gap:8px;min-width:0}
+.connection-row .connection-source{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.connection-row button{flex:none;font-size:11px;padding:4px 8px}
+/* Keep the primary action with the brand when the remaining actions wrap. */
+@media(max-width:1100px){
+ header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;height:auto;min-height:0;padding:12px 15px}
+ header .brand{grid-row:1;grid-column:1;margin:0;gap:10px}header .brand strong{font-size:20px}
+ header .brand small,header #about{display:none}
+ header .actions{display:contents}
+ header #apply{grid-row:1;grid-column:2;justify-self:end;margin:0}
+ header .secondary-actions{grid-row:2;grid-column:1/-1;display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;min-width:0}
+ header .secondary-actions button,header .secondary-actions select{font-size:11px;padding:6px 8px}
+}
+.secondary-actions{display:flex;align-items:center;gap:8px}
+
+.workspace-drop-mark[data-mode=insert]{border:0;border-radius:1px;background:var(--purple);box-shadow:0 0 0 1px #19181f}
+#layoutmenu{position:fixed;z-index:200;min-width:200px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 120px);overflow:auto;padding:6px;background:#24232c;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px #0007}
+#layoutmenu[hidden]{display:none}#layoutmenu button{display:block;width:100%;padding:6px 12px 6px 28px;text-align:left;border:0;border-radius:3px;background:transparent;font-size:12px;position:relative}
+#layoutmenu button:hover,#layoutmenu button:focus-visible{background:#393741;outline:none}
+#layoutmenu button[aria-checked=true]::before{content:'';position:absolute;left:11px;top:calc(50% - 3px);width:6px;height:6px;border-radius:50%;background:var(--purple)}
+.layout-menu-heading{padding:8px 12px 4px;color:var(--muted);font-size:10px;font-weight:600}
+#layoutmenu hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+#layoutdialog .layout-row{grid-template-columns:minmax(80px,1fr) minmax(80px,2fr) 26px 26px 26px 26px}
+#layoutdialog .layout-preset>input{flex:1;min-width:100px}
+
+#inspector .node-inspector-title .node-inspector-label{margin:0}
+
+.preview-controls .preview-icon-button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;width:30px;height:28px;padding:0;gap:0}
+@media(pointer:coarse){.preview-controls .preview-icon-button{flex-basis:36px;width:36px;height:36px}}

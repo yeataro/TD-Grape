@@ -251,25 +251,12 @@ function drawWireDrag(svg){
   const a=wireDrag.kind==='outputs'?p:wireDrag.q,b=wireDrag.kind==='outputs'?wireDrag.q:p,dx=Math.max(60,Math.abs(a.x-b.x)*.5),path=document.createElementNS('http://www.w3.org/2000/svg','path');
   path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
 }
-// Folding a canvas note is view state, separate from the saved node comment.
-const collapsedNodeComments=new Set();
 function nodeCanvasComment(n){
-  const key=JSON.stringify([stage,...graphTrail,n.id]);
-  const note=el('details',{class:'node-canvas-comment'});
-  note.open=!collapsedNodeComments.has(key);
-  const summary=el('summary',{},t('node.comment'));
-  summary.onclick=e=>{
-    e.preventDefault();e.stopPropagation();note.open=!note.open;
-    if(note.open)collapsedNodeComments.delete(key);else collapsedNodeComments.add(key);
-  };
-  note.append(summary,el('p',{},nodeComment(n)));
+  const note=el('div',{class:'node-canvas-comment'});
+  note.append(el('p',{},nodeComment(n)));
   note.onpointerdown=e=>e.stopPropagation();
   note.onclick=e=>e.stopPropagation();
   note.ondblclick=e=>e.stopPropagation();
-  note.ontoggle=()=>{
-    if(!note.isConnected)return;
-    requestAnimationFrame(()=>{if(note.isConnected)wires();});
-  };
   return note;
 }
 function renderCards(){
@@ -282,7 +269,7 @@ function renderCards(){
     const title=el('div',{class:'node-title'}),text=el('div',{class:'node-title-text'});
     const name=el('span',{class:d?.key==='function_call'?'node-function-name':'node-function-title'},d?.label||t('node.unknown'));
     name.title=d?.label||t('node.unknown');
-    if(d?.key==='function_call'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true);text.append(icon);text.title='Subgraph';}
+    if(d?.key==='function_call'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true),local=FunctionModel.find(graph,n.params.functionId)?.scope==='local';icon.classList.toggle('source-subgraph',!local);text.append(icon);text.title=t(local?'function.local':'function.source');}
     text.append(name);title.append(text);
     if(nodeLabel(n)){
       const alias=el('span',{class:'node-alias'},nodeLabel(n));alias.title=nodeLabel(n);title.append(alias);

@@ -300,6 +300,26 @@ def apply_op_color(shader):
             data['op_color']=list(color)
             info.text=json.dumps(data)
 
+def arrange_shader_parameters(shader):
+    page_name='Grape '+shader_kind(shader).upper()
+    page=next((p for p in shader.customPages if p.name==page_name),None)
+    if page is None:return
+    names=['Openeditor','Openinbrowser','Glslparameters','Version',
+           'Outputtop' if shader_kind(shader)=='top' else 'Material']
+    for index,name in enumerate(names):
+        p=getattr(shader.par,name,None)
+        if p is not None:
+            if p.page.name!=page_name:p.page=page
+            if p.order!=index:p.order=index
+            section=name in ('Glslparameters','Version')
+            if p.startSection!=section:p.startSection=section
+    # Existing custom pages (including adopted legacy controls) keep their order.
+    pages=[p.name for p in shader.customPages]
+    tail=[name for name in ('Output',page_name) if name in pages]
+    ordered=[name for name in pages if name not in tail]+tail
+    if ordered!=pages:shader.sortCustomPages(*ordered)
+
+
 def register_shader(shader,fresh=False):
     if not shader.fetch('sgrapeGenerated',False): raise RuntimeError('Not a generated Grape Shader')
     supported=True
@@ -348,6 +368,7 @@ def register_shader(shader,fresh=False):
     if getattr(shader.par,'opviewer',None) is not None:
         shader.par.opviewer.expr="me.op('preview')";shader.viewer=True
     shader.par.Version=json.loads(shader.op('manifest').text).get('compilerBuild',PRODUCT_VERSION); shader.par.Version.readOnly=True
+    arrange_shader_parameters(shader)
     shader.showCustomOnly=True
     if fresh: shader.currentPage=page_name
     controls=shader.op('controls') or shader.create(parameterexecuteDAT,'controls')
@@ -863,6 +884,7 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
                     parameter.val=values[j] if j<len(values) else 0
     comp.op('graph').text=json.dumps(graph,ensure_ascii=False,indent=2)
     comp.op('manifest').text=json.dumps({'version':PRODUCT_VERSION,'compilerBuild':PRODUCT_VERSION,'catalogContractHash':core().catalog_contract()['hash'],'catalogSnapshot':_owner.op('document').module.catalog_snapshot(core()),'compiledFingerprint':compiled_fingerprint(compiled),'hash':compiled['hash'],'bindings':compiled['bindings'],'publicUniforms':public},indent=2)
+    arrange_shader_parameters(comp)
 
 def validate_material(comp,compiled=None):
     kind=shader_kind(comp)

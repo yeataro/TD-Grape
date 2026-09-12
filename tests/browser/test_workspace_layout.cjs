@@ -19,7 +19,7 @@ assert.equal(await page.locator('#sidebar-left .workspace-group:last-child [role
 assert.ok(await page.locator('#pane-help').isVisible());await page.locator('#livetoggle').click();assert.ok(await page.locator('#pane-live').isVisible());
 assert.equal(await stable(),before);checks.push('Pointer drag moves panels across sidebars and combines tabs, preserving graph and view');
 const moved=await page.evaluate(()=>workspaceLayout.snapshot());await page.reload();await page.waitForSelector('.node');assert.deepEqual(await page.evaluate(()=>workspaceLayout.snapshot()),moved);checks.push('Groups, active tab and positions survive reload');
-await page.locator('#workspacelayout').click();await page.locator('#layoutname').fill('Review layout');await page.getByRole('button',{name:'Save layout',exact:true}).click();assert.ok(await page.locator('.layout-preset').filter({hasText:'Review layout'}).isVisible());
+await page.locator('#workspacelayout').click();await page.getByRole('menuitem',{name:'Manage layouts…',exact:true}).click();await page.locator('#layoutname').fill('Review layout');await page.getByRole('button',{name:'Save layout',exact:true}).click();assert.ok(await page.locator('.layout-preset').filter({hasText:'Review layout'}).isVisible());
 await page.getByRole('button',{name:'Restore default',exact:true}).click();assert.equal(await page.locator('#parameter-sidebar .workspace-group').count(),3);
 await page.locator('.layout-preset').filter({hasText:'Review layout'}).getByRole('button',{name:'Apply',exact:true}).click();assert.equal(await page.locator('#sidebar-left #pane-live').count(),1);
 const row=page.locator('.layout-row').filter({has:page.getByLabel('Parameter · Parameters',{exact:true})});

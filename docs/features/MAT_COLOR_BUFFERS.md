@@ -7,6 +7,7 @@
 - MAT 的 buffer 分配由使用該 MAT 的 Render TOP 決定。Grape 不猜測某個 Render TOP 為唯一來源，也不更動外部 Render TOP；請設定其 `# of Color Buffers`，使用 Render Select TOP 的 Color Buffer Index 讀取額外輸出。
 - 產碼使用 `layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS]`，先清零所有實際配置的輸出；額外寫入以 `#if TD_NUM_COLOR_BUFFERS > index` 保護。1-buffer 原生預覽仍可編譯 8-output 圖；Render 配置比圖多時，多出的 buffer 保持零值。
 - Buffer 0 的有效色彩沿用既有 TDAlphaTest／TDDither／TDOutputSwizzle；空白預設不經抖動，確保精確零。額外輸出只做 TDOutputSwizzle，避免改動資料值。原生 Alpha Test／discard 對整個 fragment 的作用維持 TD 行為。
+- Settings 可編輯每個 Buffer 的辨識名稱，保存於 `ui.bufferLabels`。名称不改內部 port ID、buffer 索引、宣告或 GLSL；關閉再開啟 slot、Undo／Redo、JSON／PNG 皆保留名稱。Buffer 名稱在 GLSL 的位置仍保留決策。
 - JSON／PNG 內嵌圖仍保存完整資料；額外接口也參與 Subgraph 展開、型別檢查與匯入，第一個接口的內部 ID `color` 保持相容。此批未擴充 TOP 多輸出。
 
 實作分布：`sgrape_core.py` 定義動態接口及产碼；`sgrape_document.py` 驗證匯入接口；瀏覽器從 type contract 取得相同接口表，`inspector.js` 處理數量編輯。未新增外層 COMP 參數分頁。

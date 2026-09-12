@@ -2033,6 +2033,42 @@
     "viewer.opened": {
       "en": "Grape COMP viewer opened in TouchDesigner.",
       "zh-Hant": "已在 TouchDesigner 開啟 Grape COMP 的 Viewer。"
+    },
+    "wire.disconnectSelected": {
+      "zh-Hant": "斷開連線",
+      "en": "Disconnect wire"
+    },
+    "wire.disconnectShort": {
+      "zh-Hant": "斷開",
+      "en": "Disconnect"
+    },
+    "function.makeLocal": {
+      "zh-Hant": "轉為本地可編輯副本",
+      "en": "Make local editable copy"
+    },
+    "layout.panels": {
+      "zh-Hant": "面板",
+      "en": "Panels"
+    },
+    "layout.presets": {
+      "zh-Hant": "配置",
+      "en": "Presets"
+    },
+    "layout.manage": {
+      "zh-Hant": "管理配置…",
+      "en": "Manage layouts…"
+    },
+    "layout.rename": {
+      "zh-Hant": "重新命名",
+      "en": "Rename"
+    },
+    "layout.tabEarlier": {
+      "zh-Hant": "分頁向前",
+      "en": "Move tab earlier"
+    },
+    "layout.tabLater": {
+      "zh-Hant": "分頁向後",
+      "en": "Move tab later"
     }
   }
 }

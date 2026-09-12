@@ -30,3 +30,11 @@
 原生參考：[ParGroup](https://derivative.ca/UserGuide/ParGroup_Class)、[Parameter Execute DAT](https://derivative.ca/UserGuide/Parameter_Execute_DAT)、[Page](https://derivative.ca/UserGuide/Page_Class)。目前驗證平台為 Windows TD 2025.32820。
 
 區網補充（2026-09-12）：啟用主元件的 Allow LAN Connections 後，可使用 [LAN URLs](LAN_ACCESS.md) 直接使用全部原生來源／控制 API。舊私人代理仍不轉送這些新入口，兩者網址不同。
+
+## 原生頁面整理（2026-09-12 UI 輪）
+
+自訂頁保持原本相對順序，接著是 Output（適用時），最後為 Grape TOP／MAT。功能頁依序為 Open Editor、Open in Browser；分隔線；GLSL Parameters；分隔線；Version、Generated TOP／MAT。整理只變更原有 Par 的排序與分組，不重建控制。
+
+新建 Uniform 不會自動產生外層來源頁。既有被接管的 Uniforms／Inactive Uniforms 控制與 Texture 舊控制仍保留；它們不是完整 GLSL 來源頁的鏡像，也不因整理被刪除。新的來源連動仍由 Uniforms → 自訂參數明確建立。
+
+`tests/td/test_parameter_layout.py` 驗證 TOP／MAT 新建、重複排序、建立自訂頁及原有 Par 物件、值、預設值與運算式保存；原有 18 項自訂參數流程亦通過。正式開發 TOE 已更新，產品版號維持 0.8.5。

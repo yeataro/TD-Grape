@@ -1,6 +1,6 @@
 # 開發狀態
 
-產品版本：**0.8.5**。本次為獨立原始碼目錄與正式開發 TOE 的遷移，不是新的產品版本或公開發佈。
+產品版本：**0.8.5**。獨立目錄遷移後，已完成 UI 精簡、Layout 分頁排序、Label 行尾註解與 TOP／MAT 原生頁面整理，並保存正式開發 TOE。這仍不是公開發佈版本。後續版號允許持續向前小幅遞增，不固定停留在此版本，也不可倒退。
 
 目前來源包含 MAT／TOP 圖編輯、Subgraph、Sampler 引用與取樣分離、原生 Uniform 同步、多頁自訂控制、GLSL 註解、可選 LAN 編輯與本機 COMP Viewer 入口。原生 TD OP 路徑、圖身分與歷史 schema 維持相容。
 
@@ -10,6 +10,6 @@
 
 Label 與來源資訊的節點呈現仍保留決策。TOX 發佈、Web 資源安裝／載入方式、公開發佈時程也另行處理。歷史文件中的功能構想不直接等同目前已完成能力。
 
-目錄遷移期間的新 UI 與 Label 修訂集中於 [下一輪筆記](../discussions/NEXT_UI_NOTES.md)，不混入此次來源遷移。
+已完成內容及驗證見 [UI 本輪紀錄](UI_REFINEMENT.md)；剩餘設計方向見 [討論筆記](../discussions/NEXT_UI_NOTES.md)。
 
 本次已完成的實測與固定開檔入口限制見 [遷移驗證](MIGRATION_VALIDATION.md)。

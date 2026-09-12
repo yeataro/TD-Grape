@@ -311,7 +311,7 @@ def _comment_lines(text, kind):
     for index,line in enumerate(text.splitlines()):
         line=''.join(c if ord(c)>=32 or c=='\t' else ' ' for c in line).replace('\x7f',' ')
         if line.rstrip().endswith('\\'):line+=' //'
-        result.append('    // '+(kind+': ' if index==0 else '')+line)
+        result.append('    // '+(kind+': ' if kind and index==0 else '')+line)
     return result
 
 
@@ -330,7 +330,7 @@ def _scope_comments(lines, owners, nodes, scopes, stage):
         result.extend(text)
         locations.extend([dict(scope['origin'],stage=stage,_originResolved=True)]*len(text))
     for index,(line,ident) in enumerate(zip(lines,owners)):
-        for scope in sorted(before.get(index,[]),key=lambda s:s['depth']):notes(scope,'label','Label')
+        for scope in sorted(before.get(index,[]),key=lambda s:s['depth']):notes(scope,'label',None)
         result.append(line);locations.append({'node':ident,'stage':stage,'trail':[]})
         for scope in sorted(after.get(index,[]),key=lambda s:-s['depth']):notes(scope,'comment','Comment')
     return result,locations
@@ -456,7 +456,6 @@ def _compile_flat(graph,annotation_scopes=None):
             for ident in order:
                 line_start=len(lines)
                 note=nodes[ident].get('ui',{});note=note if isinstance(note,dict) else {}
-                lines.extend(_comment_lines(note.get('label'),'Label'))
                 d=defs[ident]; k=emitter_id(d); p=nodes[ident]['params']; ty=ports[ident]['out'].get('out'); expr=None
                 a=lambda port:inp(ident,port)
                 if k in ('float','vec2','vec3','color'): expr=literal(p.get('value'),ty)
@@ -506,6 +505,17 @@ def _compile_flat(graph,annotation_scopes=None):
                     variable='sg_n_'+ident
                     lines.append('    '+ty+' '+variable+' = '+expr+';')
                     expressions[(ident,'out')]=variable
+                label_lines=_comment_lines(note.get('label'),None)
+                if label_lines:
+                    if len(lines)>line_start:
+                        # The first emitted statement identifies this node; any
+                        # extra imported Label lines remain inert line comments.
+                        lines[line_start]+=' '+label_lines[0].lstrip()
+                        lines[line_start+1:line_start+1]=label_lines[1:]
+                    else:
+                        # Inline expressions and opaque resources have no local
+                        # statement. Keep their marker without inventing code.
+                        lines.extend(label_lines)
                 lines.extend(_comment_lines(note.get('comment'),'Comment'))
                 line_nodes.extend([ident]*(len(lines)-line_start))
             lines,line_nodes=_scope_comments(lines,line_nodes,nodes,annotation_scopes or {},stage)
@@ -519,7 +529,7 @@ def _compile_flat(graph,annotation_scopes=None):
         vertex=''
         pixel='\n'.join(headers+['layout(location=0) out vec4 fragColor;','void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
         for i,d in enumerate(samplers):
-            pixel='\n'.join(line if line.lstrip().startswith('//') else re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',line) for line in pixel.split('\n'))
+            pixel='\n'.join(re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',code)+marker+comment for code,marker,comment in (line.partition('//') for line in pixel.split('\n')))
     else:
         headers=['uniform '+declarations[i]['type']+' '+declarations[i]['name']+';' for i in sorted(used)]
         vertex='\n'.join(headers+['out vec2 sg_uv;','void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])

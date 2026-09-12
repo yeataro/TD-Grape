@@ -22,7 +22,7 @@ try:
             previous_hash=r.state()['appliedHash'];previous_text=shader.op('pixel_shader').text
             result=r.deploy(graph,r.state()['revision']);assert result['ok'] and result['compileInfo']!='Graph layout saved'
             assert r.state()['appliedHash']==previous_hash and shader.op('pixel_shader').text!=previous_text
-            assert '// Label: 顏色 / freely named' in shader.op('pixel_shader').text
+            assert '; // 顏色 / freely named' in shader.op('pixel_shader').text
             preview.cook(force=True);after=preview.numpyArray(delayed=False)
             assert float(abs(after-pixels).max())<1e-6
             checks.append(kind+': Unicode, multiline notes and GLSL-looking text compile without changing pixels')

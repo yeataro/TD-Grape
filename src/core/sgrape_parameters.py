@@ -214,5 +214,6 @@ def edit(runtime,body):
             elif not isinstance(value,str) or len(value)>4096:raise RuntimeError('Enter a text default up to 4096 characters.')
             g[index].default=value
         else:raise RuntimeError('Unknown custom-control operation.')
+    if action.startswith('page-'):runtime.arrange_shader_parameters(comp)
     model.sync(comp)
     return snapshot(runtime)
