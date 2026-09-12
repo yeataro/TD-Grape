@@ -17,7 +17,7 @@ conversion. Socket positions continue to follow actual layout, including node
 labels, comments and differing port rows; there are no hardcoded node heights.
 Pan and zoom still transform the common parent without rebuilding established
 paths on every frame. Selection, snapping, mouse gestures, Undo and graph data
-are unchanged. Full touch node editing is a separate task.
+are unchanged. Subsequent touch editing is documented in [Touch editing](TOUCH_EDITING.md).
 
 ## Regression verification
 

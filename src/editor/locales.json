@@ -2069,6 +2069,10 @@
     "layout.tabLater": {
       "zh-Hant": "分頁向後",
       "en": "Move tab later"
+    },
+    "wire.touchConnect": {
+      "zh-Hant": "拖到或點選另一個端點接線；點同一端點取消",
+      "en": "Drag to or tap another socket to connect; tap the same socket to cancel"
     }
   }
 }

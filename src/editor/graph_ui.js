@@ -1,3 +1,4 @@
+let touchGraphGesture=null;
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
 function nodeCategory(d){
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
@@ -194,12 +195,12 @@ function connectPorts(start,end){
 function portInfo(button){
   const node=button.closest('[data-node]');return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type};
 }
-function findWireTarget(candidates,x,y){
+function findWireTarget(candidates,x,y,radius=14){
   const hit=document.elementFromPoint(x,y);
   if(!hit?.closest('#canvas'))return null;
   const direct=hit.closest('.port');
   if(direct)return candidates.includes(direct)?direct:null;
-  let nearest=null,distance=14; // Screen pixels, independent of graph zoom.
+  let nearest=null,distance=radius; // Screen pixels, independent of graph zoom.
   for(const candidate of candidates){
     const r=candidate.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,d=Math.hypot(x-cx,y-cy);
     if(d<distance&&document.elementFromPoint(cx,cy)?.closest('.port')===candidate){nearest=candidate;distance=d;}
@@ -259,7 +260,7 @@ function nodeCanvasComment(n){
   return note;
 }
 function renderCards(){
-  clearWireGesture();const cards=$('#cards');cards.replaceChildren();
+  touchGraphGesture?.cancel();clearWireGesture();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
   if(selected&&!current().nodes.some(n=>n.id===selected))selected=null;
   for(const n of current().nodes){
@@ -560,62 +561,139 @@ function installGraphInteractions(){
 }
 
 function installTouchNavigation(canvas){
-  // First touch support: background pan, two-finger anchored zoom, and taps.
-  // Mouse/pen editing continues through the existing pointer handlers.
-  const points=new Map();let origin=null,tap=null,moved=false,hadPinch=false,lastTouch=-Infinity,frame=0;
-  const sample=()=>{
-    const values=[...points.values()].slice(0,2),a=values[0],b=values[1]||a;
-    return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};
+  // One owner for a touch sequence. Graph edits remain previews until release;
+  // a second finger cancels the preview and takes over as anchored navigation.
+  const points=new Map(),slop=8,holdDelay=550,doubleDelay=320;
+  let gesture=null,frame=0,holdTimer=0,lastTap=null,lastTouch=-Infinity,lastDevice='mouse';
+  const stop=e=>{if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();};
+  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation');
+  const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
+  const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
+  const rebase=()=>{gesture.origin={...sample(),pan:{...pan},scale};};
+  const stopHold=()=>{clearTimeout(holdTimer);holdTimer=0;};
+  const clearPreview=g=>{
+    for(const item of g?.positions||[]){if(item.card.isConnected){item.card.style.left=item.x+'px';item.card.style.top=item.y+'px';}}
+    if(g?.mode==='box'){selection=new Set(g.selection);selected=g.selected;selectedEdge=g.selectedEdge;syncSelection();}
+    g?.target?.classList.remove('wire-target');wireDrag=null;$('#marquee').hidden=true;
+    if(g?.mode==='wire'){$('#connection').hidden=true;linkStart=null;}
   };
-  const rebase=()=>{origin={...sample(),pan:{...pan},scale};};
-  const draw=()=>{frame=0;transform();};
-  const move=()=>{
-    if(!points.size)return;
-    const p=sample(),pinching=points.size>=2,travel=Math.hypot(p.x-origin.x,p.y-origin.y);
-    if(!moved&&!pinching&&travel<5)return;
-    if(!moved){moved=true;cancelConnection();}
-    if(pinching){
-      const rect=canvas.getBoundingClientRect(),ratio=p.distance/Math.max(1,origin.distance);
-      scale=Math.max(.25,Math.min(1.7,origin.scale*ratio));
-      pan={x:p.x-rect.left-(origin.x-rect.left-origin.pan.x)*scale/origin.scale,
-           y:p.y-rect.top-(origin.y-rect.top-origin.pan.y)*scale/origin.scale};
-    }else if(hadPinch||!tap?.closest('.node'))pan={x:origin.pan.x+p.x-origin.x,y:origin.pan.y+p.y-origin.y};
-    if(!frame)frame=requestAnimationFrame(draw);
-  };
-  const clear=()=>{
-    const ids=[...points.keys()];points.clear();origin=null;tap=null;cancelAnimationFrame(frame);frame=0;
+  const finish=()=>{
+    stopHold();cancelAnimationFrame(frame);frame=0;
+    const g=gesture,ids=[...points.keys()];gesture=null;touchGraphGesture=null;points.clear();
     for(const id of ids)if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);
-    lastTouch=performance.now();transform();
+    lastTouch=performance.now();return g;
+  };
+  const cancel=()=>{
+    if(!gesture)return;const g=finish();clearPreview(g);lastTap=null;if(graph)wires();
+  };
+  const touchPort=(x,y)=>findWireTarget([...$('#cards').querySelectorAll('.port')],x,y,22);
+  const edgeIndex=path=>path?current().edges.findIndex(e=>e.from.join(':')===path.dataset.from&&e.to.join(':')===path.dataset.to):-1;
+  const selectEdge=index=>{selectedEdge=index;selected=null;selection.clear();syncSelection();inspector();wires();renderNavigation();};
+  const openMenu=(g,p)=>{
+    if(g.node&&!selection.has(g.node.id)){selectNode(g.node);syncSelection();inspector();}
+    else if(g.edge>=0)selectEdge(g.edge);
+    g.mode='menu';lastTap=null;cancelConnection();openGraphMenu(p.x,p.y,g.node?.id||null,{touch:true});
+  };
+  const beginPinch=()=>{
+    const g=gesture;stopHold();cancelAnimationFrame(frame);frame=0;clearPreview(g);
+    g.positions=null;g.target=null;g.mode='pinch';g.moved=true;g.hadPinch=true;lastTap=null;
+    closeGraphMenu();cancelConnection();rebase();
+  };
+  const paint=()=>{
+    frame=0;const g=gesture;if(!g||!points.size)return;
+    const p=sample(),dx=p.x-g.start.x,dy=p.y-g.start.y;
+    if(points.size>=2){
+      const o=g.origin,r=canvas.getBoundingClientRect();
+      scale=Math.max(.25,Math.min(1.7,o.scale*p.distance/Math.max(1,o.distance)));
+      pan={x:p.x-r.left-(o.x-r.left-o.pan.x)*scale/o.scale,y:p.y-r.top-(o.y-r.top-o.pan.y)*scale/o.scale};transform();return;
+    }
+    if(g.mode==='pan'){
+      const o=g.origin;pan={x:o.pan.x+p.x-o.x,y:o.pan.y+p.y-o.y};transform();
+    }else if(g.mode==='node'){
+      const anchor=g.positions.find(item=>item.node===g.node),mx=snap(anchor.x+dx/g.origin.scale)-anchor.x,my=snap(anchor.y+dy/g.origin.scale)-anchor.y;
+      for(const item of g.positions){item.nextX=item.x+mx;item.nextY=item.y+my;item.card.style.left=item.nextX+'px';item.card.style.top=item.nextY+'px';}wires();
+    }else if(g.mode==='wire'){
+      const target=findWireTarget(g.candidates,p.x,p.y,22);if(g.target!==target){g.target?.classList.remove('wire-target');g.target=target;target?.classList.add('wire-target');}
+      const r=target?.getBoundingClientRect(),q=graphPoint(r?r.left+r.width/2:p.x,r?r.top+r.height/2:p.y);
+      if(q){wireDrag={...g.port,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':'wire.touchConnect');wires();}
+    }else if(g.mode==='box'){
+      const r=canvas.getBoundingClientRect(),box=$('#marquee');box.hidden=false;
+      box.style.left=Math.min(g.start.x,p.x)-r.left+'px';box.style.top=Math.min(g.start.y,p.y)-r.top+'px';box.style.width=Math.abs(dx)+'px';box.style.height=Math.abs(dy)+'px';
+      selection=new Set();document.querySelectorAll('.node').forEach(card=>{const r=card.getBoundingClientRect();if(r.right>=Math.min(g.start.x,p.x)&&r.left<=Math.max(g.start.x,p.x)&&r.bottom>=Math.min(g.start.y,p.y)&&r.top<=Math.max(g.start.y,p.y))selection.add(card.dataset.node);});syncSelection();
+    }
+  };
+  const move=()=>{
+    const g=gesture,p=sample();if(!g||g.mode==='menu')return;
+    if(!g.moved&&Math.hypot(p.x-g.start.x,p.y-g.start.y)>=slop){
+      g.moved=true;stopHold();lastTap=null;
+      if(g.port&&!readonly){g.mode='wire';cancelConnection();g.candidates=[...$('#cards').querySelectorAll('.port')].filter(b=>!connectionProblem(g.port,portInfo(b)));}
+      else if(g.node&&!readonly){
+        g.mode='node';if(!selection.has(g.node.id))selectNode(g.node);else selected=g.node.id;selectedEdge=null;syncSelection();inspector();cancelConnection();
+        g.positions=current().nodes.filter(n=>selection.has(n.id)).map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),x:node.ui.x,y:node.ui.y,nextX:node.ui.x,nextY:node.ui.y}));
+      }else if(!g.node){g.mode=boxSelectMode?'box':'pan';cancelConnection();}
+      else g.mode='blocked';
+    }
+    if(g.moved&&!frame)frame=requestAnimationFrame(paint);
+  };
+  const tap=(g,p)=>{
+    if(g.port){
+      lastTap=null;if(readonly)return;
+      if(linkStart?.node===g.port.node&&linkStart.port===g.port.port&&linkStart.kind===g.port.kind){cancelConnection();return;}
+      if(linkStart&&linkStart.kind!==g.port.kind)connectPorts(linkStart,g.port);
+      else {linkStart=g.port;$('#connection').hidden=false;$('#connection').textContent=t('wire.touchConnect');}
+      return;
+    }
+    const key=g.node?'node:'+g.node.id:g.edge>=0?'edge:'+g.edge:'canvas',now=performance.now();
+    const double=lastTap&&lastTap.key===key&&now-lastTap.time<=doubleDelay&&Math.hypot(p.x-lastTap.x,p.y-lastTap.y)<24;
+    lastTap=double?null:{key,time:now,x:p.x,y:p.y};
+    if(g.node){
+      selectNode(g.node);syncSelection();inspector();renderNavigation();
+      if(double){if(g.alias)focusNodeLabel(g.node);else if(definition(g.node)?.key==='function_call')enterFunction(g.node);}
+    }else if(g.edge>=0)selectEdge(g.edge);
+    else if(double||linkStart){const start=linkStart;lastTap=null;openCreator(p.x,p.y,start);}
+    else {selected=selectedEdge=null;selection.clear();syncSelection();inspector();renderNavigation();}
   };
   canvas.addEventListener('pointerdown',e=>{
-    if(e.pointerType!=='touch')return;e.preventDefault();e.stopImmediatePropagation();
-    if(!points.size){clearWireGesture();closeCreator();canvas.focus();tap=e.target;moved=false;hadPinch=false;}
+    if(e.pointerType!=='touch'||!graph||editable(e.target))return;stop(e);lastDevice='touch';lastTouch=performance.now();canvas.dataset.input='touch';
+    if(!points.size){
+      clearWireGesture();closeCreator();closeGraphMenu();canvas.focus({preventScroll:true});
+      const button=touchPort(e.clientX,e.clientY),card=(button||e.target).closest('.node'),node=card&&current().nodes.find(n=>n.id===card.dataset.node);
+      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,port:button?portInfo(button):null,alias:!!e.target.closest('.node-alias'),edge:edgeIndex(e.target.closest('#wires path[data-from]')),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
+      touchGraphGesture={cancel};
+      if(!button)holdTimer=setTimeout(()=>{holdTimer=0;if(gesture&&!gesture.moved&&points.size===1)openMenu(gesture,sample());},holdDelay);
+    }
     points.set(e.pointerId,{x:e.clientX,y:e.clientY});canvas.setPointerCapture(e.pointerId);
-    if(points.size>=2){hadPinch=true;moved=true;cancelConnection();}rebase();
+    if(points.size>=2)beginPinch();else rebase();
   },true);
   canvas.addEventListener('pointermove',e=>{
-    if(!points.has(e.pointerId))return;e.preventDefault();e.stopImmediatePropagation();
-    points.set(e.pointerId,{x:e.clientX,y:e.clientY});move();
+    if(!points.has(e.pointerId))return;stop(e);points.set(e.pointerId,{x:e.clientX,y:e.clientY});move();
   },true);
   canvas.addEventListener('pointerup',e=>{
-    if(!points.has(e.pointerId))return;e.preventDefault();e.stopImmediatePropagation();
-    points.set(e.pointerId,{x:e.clientX,y:e.clientY});move();
-    const activate=!moved&&!hadPinch&&points.size===1?tap:null;
-    points.delete(e.pointerId);if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);
-    if(points.size)rebase();else clear();
-    if(activate?.isConnected){
-      if(activate.closest('.node')){suppressPortClick=false;activate.click();}
-      else if(linkStart)openCreator(e.clientX,e.clientY,linkStart);
-      else {selection.clear();selected=selectedEdge=null;render();}
-    }
-    lastTouch=performance.now();
+    if(!points.has(e.pointerId))return;stop(e);points.set(e.pointerId,{x:e.clientX,y:e.clientY});move();cancelAnimationFrame(frame);paint();
+    const g=gesture,p={x:e.clientX,y:e.clientY};
+    if(points.size>1){points.delete(e.pointerId);if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);g.mode=points.size>=2?'pinch':'pan';rebase();return;}
+    const target=g.target&&portInfo(g.target),hit=document.elementFromPoint(p.x,p.y);finish();
+    if(g.mode==='node'){
+      clearPreview(g);if(!readonly&&current()===g.data&&g.positions.some(item=>item.x!==item.nextX||item.y!==item.nextY)){
+        checkpoint();for(const item of g.positions){item.node.ui.x=item.nextX;item.node.ui.y=item.nextY;}mark(false);render();
+      }else wires();
+    }else if(g.mode==='wire'){
+      clearPreview(g);if(target)connectPorts(g.port,target);
+      else if(hit?.closest('#canvas')&&!hit.closest('.node'))openCreator(p.x,p.y,g.port);wires();
+    }else if(g.mode==='box'){$('#marquee').hidden=true;selected=[...selection].at(-1)||null;selectedEdge=null;inspector();renderNavigation();}
+    else if(!g.moved&&!g.hadPinch&&g.mode!=='menu')tap(g,p);
   },true);
-  for(const name of ['pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{
-    if(points.has(e.pointerId)){e.stopImmediatePropagation();clear();}
+  for(const name of ['pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{if(points.has(e.pointerId)){stop(e);cancel();}},true);
+  // Keep native double-tap zoom, text selection and callouts out of this canvas,
+  // including older iOS handling of absolutely positioned descendants.
+  for(const name of ['touchstart','touchmove'])canvas.addEventListener(name,e=>{if(!editable(e.target)&&e.cancelable)e.preventDefault();},{passive:false});
+  for(const name of ['click','dblclick','contextmenu'])canvas.addEventListener(name,e=>{
+    if(e.isTrusted&&!editable(e.target)&&(points.size||e.pointerType==='touch'||lastDevice==='touch'&&performance.now()-lastTouch<900))stop(e);
   },true);
-  // Browsers may synthesize a click even after a canceled touch gesture.
-  canvas.addEventListener('click',e=>{if(e.isTrusted&&performance.now()-lastTouch<400){e.preventDefault();e.stopImmediatePropagation();}},true);
-  window.addEventListener('blur',()=>{if(points.size)clear();});
+  document.addEventListener('pointerdown',e=>{lastDevice=e.pointerType;if(e.pointerType!=='touch'){cancel();lastTouch=-Infinity;lastTap=null;canvas.dataset.input=e.pointerType;}else if(gesture&&!e.target.closest('#canvas'))cancel();},true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){lastTap=null;cancel();}},true);
+  window.addEventListener('blur',()=>{lastTap=null;cancel();});window.addEventListener('resize',()=>{lastTap=null;cancel();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){lastTap=null;cancel();}});
 }
 
 let editorClipboard=null,graphEditMenu=null,pastePoint=null,pasteCount=0;
@@ -631,11 +709,11 @@ function pasteGraphSelection(text,position=null){
   if(changed){pasteCount++;status(t('clipboard.pasted'));$('#canvas').focus({preventScroll:true});}return changed;
 }
 function closeGraphMenu(){graphEditMenu?.remove();graphEditMenu=null;}
-function openGraphMenu(x,y,nodeId=null){
+function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   closeGraphMenu();closeCreator();cancelConnection();
   if(nodeId&&!selection.has(nodeId)){selectNode(current().nodes.find(n=>n.id===nodeId));render();}
   const rect=$('#canvas').getBoundingClientRect(),position={x:(x-rect.left-pan.x)/scale,y:(y-rect.top-pan.y)/scale};
-  const menu=el('div',{id:'grapheditmenu',role:'menu','aria-label':t('edit.menu')}),count=clipboardSelection().length;
+  const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
   const rows=[
     ['add',t('action.nodes'),'Tab',!readonly,()=>openCreator(x,y)],
     ['copy',t('edit.copy'),'Ctrl+C',count>0,()=>{let text;try{text=copyGraphSelection();}catch(e){status(t(e.clipboardCode||'clipboard.invalid'),true);return;}$('#canvas').focus();let copied=false;try{copied=document.execCommand('copy');}catch{}status(t(copied?'clipboard.copied':'clipboard.localCopy'));}],
@@ -643,7 +721,7 @@ function openGraphMenu(x,y,nodeId=null){
     ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
     ['duplicate',t('edit.duplicate'),'Ctrl+D',!readonly&&count>0,duplicateSelection],
     ['group',t('function.group'),'Ctrl+G',!readonly&&count>0,groupSelection],
-    ['delete',t('node.delete'),'Delete',!readonly&&count>0,remove]
+    ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),'Delete',!readonly&&(count>0||selectedEdge!==null),remove]
   ];
   for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled)continue;const b=el('button',{role:'menuitem','data-edit':key},label);b.append(el('small',{},shortcut));b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
   menu.onkeydown=e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeGraphMenu();$('#canvas').focus();}};
