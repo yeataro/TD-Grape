@@ -12,6 +12,30 @@ Clipboard events carry plain JSON and do not rely on HTTPS-only clipboard APIs. 
 
 Short right-click opens Add / Copy / Paste / Duplicate / Create Graph Function / Delete, plus Rename Function when applicable. Right-drag still box-selects. Shift+F10 opens the menu; arrows, Home/End, Enter and Escape work. Paste offsets subsequent copies on the world grid. Undo/Redo restores graph content using existing history behavior.
 
+## Canvas quick actions
+
+The canvas toolbar places Copy, Paste, Create Subgraph and Delete beside Undo/Redo.
+Touch targets are 44px; desktop icons remain compact. Localized tooltips and
+accessible labels describe each command. Empty selections and fixed stage/Function
+boundaries cannot be copied, grouped or deleted. Read-only graphs can still be
+copied. Create Subgraph uses the existing Ctrl+G selection and source-boundary rules.
+When a wire is selected, Delete is labeled Disconnect and removes only that wire.
+
+Toolbar and context-menu clipboard actions share one implementation. Explicit
+Copy retains an editor-local payload, even on HTTP LAN pages; normal text copying
+in Parameter fields remains native. Paste uses the system clipboard where allowed
+and falls back to the local payload when reading is unavailable or denied.
+Toolbar Paste anchors in the visible viewport, with bounded grid offsets for
+successive copies. A graph/stage change during clipboard permission resolution
+cancels the pending paste. Node/wire deletion, paste and grouping each use Undo.
+
+Validation: `node tests/browser/test_edit_shortcuts.cjs src/editor tests/fixtures/editor-state.json <report-directory>`.
+Set `TEST_BROWSER=webkit` to run the same suite in WebKit. Ten scenario groups
+passed in both Chromium and WebKit, including native touch taps, permission
+fallbacks, history, protected/readonly nodes, grouping, localization and responsive
+layout. The existing 25 navigation checks passed. These fixture tests do not write
+the system clipboard or connect to TD.
+
 ## Parameter scope
 
 Node shows the selected-node Parameter/Settings. Exposed lists every exposed declaration in the Shader, regardless of selection or Function depth, with current values and collapsible default/Expose settings. Entries that do not currently contribute to output explain why no TD parameter is active. Existing revision/compare-and-set, Expression/Bind ownership and guarded live writes are reused. Global declaration changes do not spuriously localize the Function currently being viewed. Defaults and live TD values remain distinct.

@@ -734,3 +734,8 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #canvas :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 #grapheditmenu[data-input="touch"] button{min-height:44px;font-size:14px;touch-action:manipulation}
 #grapheditmenu[data-input="touch"] button small{display:none}
+
+/* Keep graph edit commands together, with larger targets on touch devices. */
+.graph-edit-actions{display:flex;align-items:center;gap:6px;flex:none}
+.graph-workspace .graph-edit-actions .icon-button{width:32px;height:30px;padding:0;touch-action:manipulation}
+@media(pointer:coarse){.graph-workspace .graph-edit-actions .icon-button{width:44px;height:44px}}

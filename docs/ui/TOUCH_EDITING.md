@@ -79,6 +79,7 @@ also passed.
 
 Chromium tests dispatch real browser touch sequences through the test protocol;
 WebKit tests use native tap automation. These are not physical iPad tests.
-The target iPad mini 6 / iPadOS 18.7.8 / Chrome 151 has previously passed wire
-display verification, but the new editing gestures still require user/device
-verification, especially long-press and interaction with the software keyboard.
+The user reported good touch editing behavior on the target iPad mini 6 /
+iPadOS 18.7.8 / Chrome 151 on 2026-09-12, after confirming wire alignment. This
+is overall user feedback, not exhaustive device coverage of every gesture or
+software-keyboard interaction.

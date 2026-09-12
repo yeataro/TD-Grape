@@ -44,6 +44,7 @@ function enterFunction(n){
   graphTrail.push(f.id);selected=null;selection.clear();selectedEdge=null;cancelConnection();closeCreator();render();fit();
 }
 function renderNavigation(){
+  renderGraphEditActions();
   tidyTrail();const nav=$('#graphpath');nav.replaceChildren();$('#graphup').disabled=graphTrail.length===0;
   const crumbs=[stage==='pixel'?'Pixel':'Vertex',...graphTrail.map(id=>FunctionModel.find(graph,id)?.name||'?')];
   crumbs.forEach((label,depth)=>{if(depth)nav.append(el('span',{class:'graph-separator'},'/'));

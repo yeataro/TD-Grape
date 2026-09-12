@@ -173,7 +173,7 @@ function selectNode(n,toggle=false){
   $('#canvas').focus({preventScroll:true});
   if(toggle){if(selection.has(n.id))selection.delete(n.id);else selection.add(n.id);selected=selection.has(n.id)?n.id:[...selection].at(-1)||null;}
   else {selection=new Set([n.id]);selected=n.id;}
-  selectedEdge=null;
+  selectedEdge=null;renderGraphEditActions();
 }
 function connectionProblem(start,end){
   if(start.kind===end.kind)return 'direction';
@@ -700,7 +700,49 @@ let editorClipboard=null,graphEditMenu=null,pastePoint=null,pasteCount=0;
 let clipboardSource=null;
 const editableText=target=>target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.library,.details,#creator');
 function clipboardSelection(){return current().nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)).map(n=>n.id);}
-function copyGraphSelection(){const text=GraphClipboard.encode(graph,current(),clipboardSelection(),clipboardSource);if(text){editorClipboard=text;pasteCount=0;}return text;}
+function copyGraphSelection(){const text=GraphClipboard.encode(graph,current(),clipboardSelection(),clipboardSource);if(text){editorClipboard=text;pasteCount=0;renderGraphEditActions();}return text;}
+
+function renderGraphEditActions(){
+  const count=graph&&selectedEdge===null?clipboardSelection().length:0;
+  const edge=graph&&selectedEdge!==null&&!!current().edges[selectedEdge];
+  for(const [id,key,enabled] of [
+    ['graphcopy','edit.copy',count>0],
+    ['graphpaste','edit.paste',graph&&!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText)],
+    ['graphgroup','function.group',graph&&!readonly&&selectedEdge===null&&current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog))],
+    ['graphdelete',edge?'wire.disconnectSelected':'node.delete',!readonly&&(count>0||edge)]
+  ]){
+    const button=$('#'+id);button.disabled=!enabled;button.title=t(key);button.setAttribute('aria-label',t(key));
+  }
+}
+async function copyGraphToClipboard(){
+  let text;try{text=copyGraphSelection();}catch(e){status(t(e.clipboardCode||'clipboard.invalid'),true);return;}
+  if(!text)return;
+  $('#canvas').focus({preventScroll:true});
+  let copied=false;
+  // Explicit Copy owns this event even when a Parameter text range was selected.
+  const capture=e=>{if(e.clipboardData){e.clipboardData.setData('text/plain',text);e.preventDefault();e.stopImmediatePropagation();copied=true;}};
+  document.addEventListener('copy',capture,true);
+  try{document.execCommand('copy');}catch{}finally{document.removeEventListener('copy',capture,true);}
+  if(!copied&&navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(text);copied=true;}catch{}}
+  status(t(copied?'clipboard.copied':'clipboard.localCopy'));
+}
+async function pasteGraphFromClipboard(position){
+  if(!graph||readonly)return false;
+  const owner=graph,level=current(),pasteStage=stage;
+  let text;try{if(navigator.clipboard?.readText)text=await navigator.clipboard.readText();}catch{}
+  // A clipboard permission prompt must not paste into a different graph level.
+  if(graph!==owner||stage!==pasteStage||current()!==level||readonly)return false;
+  if(!text)text=editorClipboard;
+  if(text)return pasteGraphSelection(text,position);
+  status(t('clipboard.useShortcut'));return false;
+}
+function pasteGraphFromToolbar(){
+  const rect=$('#canvas').getBoundingClientRect(),offset=(pasteCount%5)*24;
+  // Disregard the last pointer position; it can be offscreen after touch panning.
+  // Bound the stagger so repeated button presses stay in the visible area.
+  return pasteGraphFromClipboard({x:(rect.width/3-pan.x)/scale+offset-pasteCount*24,y:(rect.height/3-pan.y)/scale+offset-pasteCount*24});
+}
+
 function pasteGraphSelection(text,position=null){
   if(readonly||!graph)return false;
   let payload;try{payload=GraphClipboard.decode(text);}catch(e){status(t(e.clipboardCode||'clipboard.invalid'),true);return false;}
@@ -716,8 +758,8 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
   const rows=[
     ['add',t('action.nodes'),'Tab',!readonly,()=>openCreator(x,y)],
-    ['copy',t('edit.copy'),'Ctrl+C',count>0,()=>{let text;try{text=copyGraphSelection();}catch(e){status(t(e.clipboardCode||'clipboard.invalid'),true);return;}$('#canvas').focus();let copied=false;try{copied=document.execCommand('copy');}catch{}status(t(copied?'clipboard.copied':'clipboard.localCopy'));}],
-    ['paste',t('edit.paste'),'Ctrl+V',!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),async()=>{let text;try{if(navigator.clipboard?.readText)text=await navigator.clipboard.readText();}catch{}if(!text)text=editorClipboard;if(text)pasteGraphSelection(text,position);else status(t('clipboard.useShortcut'));}],
+    ['copy',t('edit.copy'),'Ctrl+C',count>0,copyGraphToClipboard],
+    ['paste',t('edit.paste'),'Ctrl+V',!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),()=>pasteGraphFromClipboard(position)],
     ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
     ['duplicate',t('edit.duplicate'),'Ctrl+D',!readonly&&count>0,duplicateSelection],
     ['group',t('function.group'),'Ctrl+G',!readonly&&count>0,groupSelection],
@@ -728,6 +770,10 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   document.body.append(menu);graphEditMenu=menu;menu.style.left=Math.max(4,Math.min(x,innerWidth-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y,innerHeight-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
 }
 function installGraphClipboard(){
+  $('#graphcopy').onclick=copyGraphToClipboard;
+  $('#graphpaste').onclick=pasteGraphFromToolbar;
+  $('#graphgroup').onclick=()=>{if(!$('#graphgroup').disabled)groupSelection();};
+  $('#graphdelete').onclick=()=>{if(!$('#graphdelete').disabled){$('#canvas').focus({preventScroll:true});remove();}};
   clipboardSource=shaderId||crypto.randomUUID();
   $('#canvas').addEventListener('pointermove',e=>{const r=e.currentTarget.getBoundingClientRect();pastePoint={x:(e.clientX-r.left-pan.x)/scale,y:(e.clientY-r.top-pan.y)/scale};});
   document.addEventListener('copy',e=>{if(!graph||editableText(e.target)||window.getSelection()?.toString())return;try{const text=copyGraphSelection();if(!text||!e.clipboardData)return;e.clipboardData.setData('text/plain',text);e.preventDefault();status(t('clipboard.copied'));}catch(error){status(t(error.clipboardCode||'clipboard.invalid'),true);}});
