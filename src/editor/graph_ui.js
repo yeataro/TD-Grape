@@ -1,6 +1,24 @@
+// Development-only experiments. Update embedded sources and reload the Editor after changing.
+// These switches are not user preferences and are never serialized with a graph or layout.
+const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: true });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,suppressWireClick=false;
+function isBlankWireDrop(x,y){
+  const hit=document.elementFromPoint(x,y);
+  return !!hit?.closest('#canvas')&&!hit.closest('.node,#wires path,.graph-navigation');
+}
+function canDisconnectInputOnBlank(start){
+  return !EDITOR_DEV_SETTINGS.canvasTrash&&!readonly&&start?.kind==='inputs'&&current().edges.some(e=>e.to[0]===start.node&&e.to[1]===start.port);
+}
+function wireStartHint(start,touch=false){return canDisconnectInputOnBlank(start)?'wire.inputDisconnectHint':touch?'wire.touchConnect':'wire.connect';}
+function finishWireOnBlank(start,x,y){
+  if(!isBlankWireDrop(x,y))return;
+  if(canDisconnectInputOnBlank(start)){
+    const changed=change(()=>{current().edges=current().edges.filter(e=>e.to[0]!==start.node||e.to[1]!==start.port);selectedEdge=null;});
+    if(changed)cancelConnection();
+  }else openCreator(x,y,start);
+}
 function trashTarget(kind,value){
   const data=current(),target={owner:graph,data,stage,kind,ids:[],edges:[]};
   if(kind==='nodes')target.ids=value.filter(n=>canDeleteNode(n)).map(n=>n.id);
@@ -9,7 +27,7 @@ function trashTarget(kind,value){
   target.allowed=!readonly&&(kind==='port'||target.ids.length>0||target.edges.length>0);
   return target;
 }
-function beginGraphTrash(target){graphTrash={...target,over:false};$('#graphtrash').dataset.state=target.allowed?'available':'blocked';}
+function beginGraphTrash(target){if(!EDITOR_DEV_SETTINGS.canvasTrash){clearGraphTrash();return;}graphTrash={...target,over:false};$('#graphtrash').dataset.state=target.allowed?'available':'blocked';}
 function trashMessage(target,over){
   if(!target.allowed)return t('trash.protected');
   if(!over)return t('trash.hint');
@@ -22,7 +40,7 @@ function paintTrashHighlights(){
   document.querySelectorAll('#wires path[data-from]').forEach(path=>path.classList.toggle('trash-pending',!!active&&target.edges.some(e=>e.from.join(':')===path.dataset.from&&e.to.join(':')===path.dataset.to)));
 }
 function updateGraphTrash(x,y){
-  const target=graphTrash;if(!target)return false;
+  const target=graphTrash;if(!EDITOR_DEV_SETTINGS.canvasTrash||!target)return false;
   // The fixed transparent target stays larger than the animated trash icon.
   const r=$('#graphtrash').getBoundingClientRect(),canvas=$('#canvas').getBoundingClientRect();
   target.over=x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom&&x>=canvas.left&&y>=canvas.top;
@@ -31,11 +49,11 @@ function updateGraphTrash(x,y){
   paintTrashHighlights();return target.over;
 }
 function clearGraphTrash(){
-  graphTrash=null;$('#graphtrash').dataset.state='idle';$('#graphtrashlabel').textContent='';$('#graphtrashproxy').hidden=true;paintTrashHighlights();
+  graphTrash=null;$('#graphtrash').hidden=!EDITOR_DEV_SETTINGS.canvasTrash;$('#graphtrash').dataset.state='idle';$('#graphtrashlabel').textContent='';$('#graphtrashproxy').hidden=true;paintTrashHighlights();
 }
 function graphTrashDrop(x,y){return updateGraphTrash(x,y)?{...graphTrash}:null;}
 function commitGraphTrash(target){
-  if(!target?.allowed||readonly||graph!==target.owner||current()!==target.data||stage!==target.stage)return false;
+  if(!EDITOR_DEV_SETTINGS.canvasTrash||!target?.allowed||readonly||graph!==target.owner||current()!==target.data||stage!==target.stage)return false;
   const ids=new Set(current().nodes.filter(n=>target.ids.includes(n.id)&&canDeleteNode(n)).map(n=>n.id));
   const matches=e=>target.edges.some(edge=>edge.from[0]===e.from[0]&&edge.from[1]===e.from[1]&&edge.to[0]===e.to[0]&&edge.to[1]===e.to[1]);
   if(!ids.size&&!current().edges.some(matches))return false;
@@ -45,9 +63,9 @@ function commitGraphTrash(target){
     selection=new Set([...selection].filter(id=>!ids.has(id)));selected=selection.has(selected)?selected:[...selection].at(-1)||null;selectedEdge=null;
   });
 }
-function showTrashWireProxy(x,y){const proxy=$('#graphtrashproxy');proxy.hidden=false;proxy.style.left=x+16+'px';proxy.style.top=y-32+'px';}
+function showTrashWireProxy(x,y){if(!EDITOR_DEV_SETTINGS.canvasTrash)return;const proxy=$('#graphtrashproxy');proxy.hidden=false;proxy.style.left=x+16+'px';proxy.style.top=y-32+'px';}
 function dragExistingWire(path,event,index){
-  if(event.button!==0||event.pointerType==='touch'||readonly)return;
+  if(!EDITOR_DEV_SETTINGS.canvasTrash||event.button!==0||event.pointerType==='touch'||readonly)return;
   event.stopPropagation();clearWireGesture();nodeDragGesture?.cancel();suppressWireClick=false;
   const canvas=$('#canvas'),sx=event.clientX,sy=event.clientY,target=trashTarget('edge',index);let moved=false;
   canvas.focus({preventScroll:true});selectedEdge=index;selected=null;selection.clear();inspector();renderNavigation();wires();
@@ -342,7 +360,7 @@ function dragWire(button,event){
     if(target!==next){target?.classList.remove('wire-target');target=next;target?.classList.add('wire-target');}
     const r=target?.getBoundingClientRect();
     const q=graphPoint(r?r.left+r.width/2:e.clientX,r?r.top+r.height/2:e.clientY);if(!q)return;
-    wireDrag={...start,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':'wire.connect');wires();
+    wireDrag={...start,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(start)&&isBlankWireDrop(e.clientX,e.clientY)?'trash.releaseWire':'wire.connect');wires();
   };
   wireGesture={cancel,refresh:()=>{if(moved&&lastEvent)update(lastEvent);}};button.setPointerCapture(event.pointerId);
   window.addEventListener('blur',cancel);document.addEventListener('keydown',onKey,true);
@@ -354,7 +372,7 @@ function dragWire(button,event){
     if(!wasMoved)return;
     if(drop){commitGraphTrash(drop);wires();return;}
     if(end)connectPorts(start,end);
-    else if(hit?.closest('#canvas')&&!hit.closest('.node'))openCreator(e.clientX,e.clientY,start);
+    else finishWireOnBlank(start,e.clientX,e.clientY);
     wires();
   };
   button.onpointercancel=button.onlostpointercapture=cancel;
@@ -396,7 +414,7 @@ function renderCards(){
       const row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${name} (${type})`,'aria-label':`${n.id} ${className} ${name}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
       b.onpointerdown=e=>dragWire(b,e);
-      b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t('wire.connect');}};
+      b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
       row.append(b,el('span',{},portLabel(n,kind,name)),portTypeCaption(n,kind,name));list.append(row);
     }
     card.append(list);
@@ -624,7 +642,7 @@ function installGraphInteractions(){
     };
     canvas.onpointerup=ev=>{canvas.onpointermove=null;canvas.onpointerup=null;$('#marquee').hidden=true;
       if(boxSelect&&moved){selected=[...selection].at(-1)||null;selectedEdge=null;suppressContext=e.button===2;render();}
-      else if(!moved&&e.button===0){if(linkStart)openCreator(ev.clientX,ev.clientY,linkStart);else {selected=null;selection.clear();selectedEdge=null;render();}}
+      else if(!moved&&e.button===0){if(linkStart)finishWireOnBlank(linkStart,ev.clientX,ev.clientY);else {selected=null;selection.clear();selectedEdge=null;render();}}
     };
     canvas.onpointercancel=()=>{canvas.onpointermove=null;canvas.onpointerup=null;$('#marquee').hidden=true;};
   };
@@ -710,7 +728,7 @@ function installTouchNavigation(canvas){
     }else if(g.mode==='wire'){
       const over=updateGraphTrash(p.x,p.y),target=over?null:findWireTarget(g.candidates,p.x,p.y,22);if(g.target!==target){g.target?.classList.remove('wire-target');g.target=target;target?.classList.add('wire-target');}
       const r=target?.getBoundingClientRect(),q=graphPoint(r?r.left+r.width/2:p.x,r?r.top+r.height/2:p.y);
-      if(q){wireDrag={...g.port,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':'wire.touchConnect');wires();}
+      if(q){wireDrag={...g.port,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(g.port)&&isBlankWireDrop(p.x,p.y)?'trash.releaseWire':'wire.touchConnect');wires();}
     }else if(g.mode==='box'){
       const r=canvas.getBoundingClientRect(),box=$('#marquee');box.hidden=false;
       box.style.left=Math.min(g.start.x,p.x)-r.left+'px';box.style.top=Math.min(g.start.y,p.y)-r.top+'px';box.style.width=Math.abs(dx)+'px';box.style.height=Math.abs(dy)+'px';
@@ -726,7 +744,7 @@ function installTouchNavigation(canvas){
         g.mode='node';if(!selection.has(g.node.id))selectNode(g.node);else selected=g.node.id;selectedEdge=null;syncSelection();inspector();cancelConnection();
         g.positions=current().nodes.filter(n=>selection.has(n.id)).map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),x:node.ui.x,y:node.ui.y,nextX:node.ui.x,nextY:node.ui.y}));
         beginGraphTrash(trashTarget('nodes',g.positions.map(p=>p.node)));
-      }else if(g.edge>=0&&!readonly){g.mode='edge';selectEdge(g.edge);cancelConnection();beginGraphTrash(trashTarget('edge',g.edge));
+      }else if(EDITOR_DEV_SETTINGS.canvasTrash&&g.edge>=0&&!readonly){g.mode='edge';selectEdge(g.edge);cancelConnection();beginGraphTrash(trashTarget('edge',g.edge));
       }else if(!g.node){g.mode=boxSelectMode?'box':'pan';cancelConnection();}
       else g.mode='blocked';
     }
@@ -737,7 +755,7 @@ function installTouchNavigation(canvas){
       lastTap=null;if(readonly)return;
       if(linkStart?.node===g.port.node&&linkStart.port===g.port.port&&linkStart.kind===g.port.kind){cancelConnection();return;}
       if(linkStart&&linkStart.kind!==g.port.kind)connectPorts(linkStart,g.port);
-      else {linkStart=g.port;$('#connection').hidden=false;$('#connection').textContent=t('wire.touchConnect');}
+      else {linkStart=g.port;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(g.port,true));}
       return;
     }
     const key=g.node?'node:'+g.node.id:g.edge>=0?'edge:'+g.edge:'canvas',now=performance.now();
@@ -747,7 +765,7 @@ function installTouchNavigation(canvas){
       selectNode(g.node);syncSelection();inspector();renderNavigation();
       if(double){if(g.alias)focusNodeLabel(g.node);else if(definition(g.node)?.key==='function_call')enterFunction(g.node);}
     }else if(g.edge>=0)selectEdge(g.edge);
-    else if(double||linkStart){const start=linkStart;lastTap=null;openCreator(p.x,p.y,start);}
+    else if(double||linkStart){const start=linkStart;lastTap=null;if(start)finishWireOnBlank(start,p.x,p.y);else openCreator(p.x,p.y);}
     else {selected=selectedEdge=null;selection.clear();syncSelection();inspector();renderNavigation();}
   };
   canvas.addEventListener('pointerdown',e=>{
@@ -778,7 +796,7 @@ function installTouchNavigation(canvas){
       }else wires();
     }else if(g.mode==='wire'){
       clearPreview(g);if(target)connectPorts(g.port,target);
-      else if(hit?.closest('#canvas')&&!hit.closest('.node'))openCreator(p.x,p.y,g.port);wires();
+      else finishWireOnBlank(g.port,p.x,p.y);wires();
     }else if(g.mode==='box'){$('#marquee').hidden=true;selected=[...selection].at(-1)||null;selectedEdge=null;inspector();renderNavigation();}
     else if(!g.moved&&!g.hadPinch&&g.mode!=='menu')tap(g,p);
   },true);

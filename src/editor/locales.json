@@ -2093,6 +2093,10 @@
     "trash.cancelWire": {
       "en": "Release to cancel this wire",
       "zh-Hant": "放開以取消這次拉線"
+    },
+    "wire.inputDisconnectHint": {
+      "en": "Connect to another output, or click empty canvas to disconnect.",
+      "zh-Hant": "接到另一個輸出，或點擊空白畫布斷開連線。"
     }
   }
 }

@@ -49,6 +49,35 @@ except that dropping on the trash area cancels the new wire instead.
 No type rules or shared node/wire coordinate math changed. Touch long-press,
 double-tap, pan/zoom and mouse/keyboard selection retain their separate roles.
 
+## Internal development parameter
+
+`src/editor/graph_ui.js` defines `EDITOR_DEV_SETTINGS.canvasTrash`, currently
+`true`. This is a code-level development parameter, not a user preference,
+TD parameter, URL option or Layout setting. Update the embedded sources and
+reload the Editor after editing its value. It is not serialized with graphs.
+
+- `true`: retain the current trash experiment.
+- `false`: hide the trash and disable its hit detection, highlighting, proxy
+  and drag-to-trash deletion. Toolbar Delete, copy/paste, grouping and Undo
+  remain available. Dragging a node through the former trash area is a normal
+  node move.
+
+When the parameter is `false`, an occupied input can instead be disconnected
+by dragging its wire onto blank canvas and releasing, or by selecting the
+input and then clicking/tapping blank canvas. The original connection remains
+during the gesture; disconnect commits once and is undoable. Escape, blur,
+an invalid node/wire target, and dropping outside the canvas preserve it.
+Unconnected inputs and outputs retain the compatible Add Node flow.
+
+Derivative's [Getting started](https://docs.derivative.ca/Getting_started)
+documents the occupied-input-then-empty-space disconnect interaction; its
+[Wire guide](https://derivative.ca/UserGuide/Wire) describes both click-click
+and drag-release wiring. The Editor applies the disconnect rule to both mouse
+and touch, with the same cancel/Undo protections as its other gestures.
+
+The user reported good phone behavior for the trash and asked to retain it
+provisionally; iPad and touchscreen-monitor evaluation remain pending.
+
 ## Verification
 
 ```text
@@ -66,3 +95,16 @@ The blank-canvas test point was moved away from the newly reserved trash area.
 These are isolated fixture tests, not physical iPad validation of the trash
 experiment. The first user feedback on target size and hover appearance is applied above;
 further physical iPad feedback on this refinement and wire grabbing is pending.
+
+For the disabled configuration, run:
+
+```text
+node tests/browser/test_graph_trash_disabled.cjs src/editor tests/fixtures/editor-state.json <report-directory>
+```
+
+This fixture serves the source with `canvasTrash: false`, without modifying
+production settings. Thirteen Chromium touch/mouse groups and seven WebKit
+mouse groups passed, covering hidden trash, ordinary node movement, both
+input-disconnect gestures, cancellation, unchanged Add Node flows, and
+toolbar Delete/Undo. The enabled configuration's sixteen Chromium trash
+groups also passed.
