@@ -740,22 +740,23 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .graph-workspace .graph-edit-actions .icon-button{width:32px;height:30px;padding:0;touch-action:manipulation}
 @media(pointer:coarse){.graph-workspace .graph-edit-actions .icon-button{width:44px;height:44px}}
 
-/* Experimental drop-to-delete target, anchored outside the graph transform. */
+/* The detection box is fixed; only the trash face reacts to an eligible hover. */
 .graph-navigation #zoom{position:static;margin-left:auto;flex:none;padding-left:8px}
-#graphtrash{position:absolute;right:14px;bottom:14px;width:64px;height:64px;border:1px solid transparent;border-radius:14px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:12;color:var(--muted);background:#201f28a6}
-#graphtrash .ui-icon{width:24px;height:24px}
-#graphtrash[data-state=idle]{width:44px;height:44px;border-radius:10px;opacity:.65}
-#graphtrash[data-state=available]{border-color:#777084;background:#302d3bea;color:#e5e4ed}
-#graphtrash[data-state=active]{border-color:#ff9d9d;background:#63383bf2;color:#fff;box-shadow:0 0 0 3px #ef969633}
-#graphtrash .trash-cross,#graphtrash[data-state=active] .trash-bin{display:none}
-#graphtrash[data-state=active] .trash-cross{display:block;width:30px;height:30px}
-#graphtrash[data-state=blocked]{opacity:.45}
-#graphtrashlabel{position:absolute;right:0;bottom:calc(100% + 8px);padding:6px 10px;border-radius:6px;background:#26232fed;color:#ddd7e6;font-size:11px;white-space:nowrap}
+#graphtrash{position:absolute;right:0;bottom:0;width:84px;height:84px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:12;color:var(--muted)}
+#graphtrash .trash-face{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#24232bcc;opacity:.65;transition:transform 140ms ease,background-color 140ms ease,color 140ms ease,opacity 140ms ease}
+#graphtrash .ui-icon{width:22px;height:22px;overflow:visible}
+#graphtrash .trash-lid{transform-origin:5px 6px;transition:transform 140ms ease}
+#graphtrash[data-state=available] .trash-face{opacity:1;color:#e5e4ed}
+#graphtrash[data-state=active] .trash-face{transform:scale(1.2);background:#74434aed;color:#fff;opacity:1}
+#graphtrash[data-state=active] .trash-lid{transform:translateY(-1px) rotate(-14deg)}
+#graphtrash[data-state=blocked] .trash-face{opacity:.4}
+#graphtrashlabel{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:13;max-width:calc(100% - 32px);padding:10px 15px;border-radius:8px;background:#26232fed;color:#ddd7e6;font-size:13px;text-align:center;pointer-events:none}
 #graphtrashlabel:empty{display:none}
-#graphtrash[data-state=active] #graphtrashlabel{background:#63383bf2;color:#fff}
-#graphtrash[data-state=active]~#connection{visibility:hidden}
+#graphtrash[data-state=active]~#graphtrashlabel{background:#63383bf2;color:#fff}
+#graphtrashlabel:not(:empty)~#connection{visibility:hidden}
 #graphtrashproxy{position:fixed;z-index:13;padding:6px;border:1px solid #aaa0bf;border-radius:8px;background:#302d3bed;color:#eee8fa;pointer-events:none}
 #graphtrashproxy[hidden]{display:none}
 .node.trash-pending{border-color:#ff9999!important;box-shadow:0 0 0 2px #ff9999,0 6px 20px #0004!important}
 #wires path.trash-pending{stroke:#ff9999!important;stroke-width:5}
-@media(pointer:coarse){#graphtrash:not([data-state=idle]){width:80px;height:80px}#graphtrash[data-state=idle]{width:48px;height:48px}}
+@media(pointer:coarse){#graphtrash{width:96px;height:96px}#graphtrash .trash-face{width:48px;height:48px}}
+@media(prefers-reduced-motion:reduce){#graphtrash .trash-face,#graphtrash .trash-lid{transition:none}}

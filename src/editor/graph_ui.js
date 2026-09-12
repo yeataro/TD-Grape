@@ -23,10 +23,11 @@ function paintTrashHighlights(){
 }
 function updateGraphTrash(x,y){
   const target=graphTrash;if(!target)return false;
+  // The fixed transparent target stays larger than the animated trash icon.
   const r=$('#graphtrash').getBoundingClientRect(),canvas=$('#canvas').getBoundingClientRect();
   target.over=x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom&&x>=canvas.left&&y>=canvas.top;
   $('#graphtrash').dataset.state=target.over?(target.allowed?'active':'blocked'):(target.allowed?'available':'blocked');
-  $('#graphtrashlabel').textContent=trashMessage(target,target.over);
+  $('#graphtrashlabel').textContent=target.over?trashMessage(target,true):'';
   paintTrashHighlights();return target.over;
 }
 function clearGraphTrash(){

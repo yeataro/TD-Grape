@@ -5,9 +5,14 @@ It has no sockets and does not participate in the graph. The zoom percentage
 moves to the right end of the graph navigation row. This is an enabled UX trial
 for user feedback, committed separately from the established toolbar actions.
 
-The target is subdued at rest. During a drag it grows to 64px (80px for touch);
-an eligible hover turns it red with an X and a release instruction. Eligible
-nodes or the affected wire are also highlighted. A small wire badge follows
+The trash stays a small, subdued circle at rest and retains that size when a
+drag begins. Its transparent detection region is fixed at 84px (96px for touch),
+larger than the visible 44px (48px for touch) face. Only an eligible hover scales
+the face to 1.2 times its size and lifts the lid; the bin icon remains visible.
+Animation never changes the hit region. Release instructions appear at the
+bottom center of the canvas, matching other operation hints, with a muted red
+background for a pending deletion. Eligible nodes or the affected wire are
+also highlighted. A small wire badge follows
 the pointer when dragging a wire body, so the operation is visible without
 moving its source or destination nodes. The trash is a drop target, not a
 click-to-delete button; toolbar Delete remains the accessible direct action.
@@ -59,4 +64,5 @@ cancellation paths. The existing 19 touch editing checks, 25 navigation checks,
 The blank-canvas test point was moved away from the newly reserved trash area.
 
 These are isolated fixture tests, not physical iPad validation of the trash
-experiment. User feedback on target size, location and wire grabbing is pending.
+experiment. The first user feedback on target size and hover appearance is applied above;
+further physical iPad feedback on this refinement and wire grabbing is pending.
