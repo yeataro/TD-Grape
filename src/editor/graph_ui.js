@@ -1,6 +1,6 @@
 // Development-only experiments. Update embedded sources and reload the Editor after changing.
-// These switches are not user preferences and are never serialized with a graph or layout.
-const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: true });
+// These internal values are not user preferences and are never serialized with a graph or layout.
+const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,suppressWireClick=false;

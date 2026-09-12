@@ -19,7 +19,7 @@ const server=http.createServer(async(req,res)=>{
   const nameOnDisk=name==='/'?'index.html':name.slice(1);if(!/^[a-z0-9_.-]+$/i.test(nameOnDisk)){res.statusCode=404;return res.end();}
   const file=overlay&&fs.existsSync(path.join(overlay,nameOnDisk))?path.join(overlay,nameOnDisk):path.join(source,nameOnDisk);
   if(!fs.existsSync(file)){res.statusCode=404;return res.end();}
-  res.setHeader('Content-Type',({'.html':'text/html','.css':'text/css','.js':'text/javascript','.json':'application/json','.svg':'image/svg+xml'})[path.extname(file)]||'text/plain');res.end(fs.readFileSync(file));
+  res.setHeader('Content-Type',({'.html':'text/html','.css':'text/css','.js':'text/javascript','.json':'application/json','.svg':'image/svg+xml'})[path.extname(file)]||'text/plain');const bytes=fs.readFileSync(file);res.end(nameOnDisk==='graph_ui.js'?bytes.toString().replace('canvasTrash: false','canvasTrash: true'):bytes);
 });
 (async()=>{
   const isWebKit=process.env.TEST_BROWSER==='webkit';

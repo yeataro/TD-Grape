@@ -52,7 +52,7 @@ double-tap, pan/zoom and mouse/keyboard selection retain their separate roles.
 ## Internal development parameter
 
 `src/editor/graph_ui.js` defines `EDITOR_DEV_SETTINGS.canvasTrash`, currently
-`true`. This is a code-level development parameter, not a user preference,
+`false`. This is a code-level development parameter, not a user preference,
 TD parameter, URL option or Layout setting. Update the embedded sources and
 reload the Editor after editing its value. It is not serialized with graphs.
 
@@ -84,7 +84,8 @@ provisionally; iPad and touchscreen-monitor evaluation remain pending.
 node tests/browser/test_graph_trash.cjs src/editor tests/fixtures/editor-state.json <report-directory>
 ```
 
-The default Chromium run covers actual browser touch sequences and mouse
+The enabled-mode fixture explicitly enables the internal parameter, independently
+of the current default. The Chromium run covers actual browser touch sequences and mouse
 drags: 16 scenario groups. Set `TEST_BROWSER=webkit` to run 8 mouse scenario
 groups in WebKit. Coverage includes release/hover separation, Undo, exact-wire
 deletion, output branches, protected/mixed selections, readonly state, and
