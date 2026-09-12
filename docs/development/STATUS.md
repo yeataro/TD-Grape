@@ -19,3 +19,5 @@ Label 與來源資訊的節點呈現仍保留決策。TOX 發佈、Web 資源安
 觸控操作與衝突處理規則見 [觸控編輯](../ui/TOUCH_EDITING.md)。
 
 畫布工具列已加入複製、貼上、建立子圖與刪除快捷按鈕；選取連線時可直接斷線。見 [快捷編輯](../features/CLIPBOARD_AND_EXPOSED.md#canvas-quick-actions)。
+
+已另外加入右下角拖放垃圾桶試驗：放開才刪除節點／斷線，支援復原及取消；縮放比例移至導覽列右端。這是待使用者回驗的嘗試性互動，見 [垃圾桶試驗](../ui/GRAPH_TRASH.md)。

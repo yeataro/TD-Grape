@@ -43,7 +43,7 @@ const server=http.createServer(async(req,res)=>{
     // A mouse pointerdown also clears the previous touch double-tap sequence.
     await page.mouse.click(10,10);await settle();
   };
-  const blank=async()=>{const r=await page.locator('#canvas').boundingBox();return{x:r.x+r.width-45,y:r.y+r.height-65};};
+  const blank=async()=>{const r=await page.locator('#canvas').boundingBox();return{x:r.x+r.width-130,y:r.y+r.height-65};};
   const wiresAligned=()=>page.evaluate(()=>{
     for(const p of document.querySelectorAll('#wires path[data-from]'))for(const[ref,kind,len]of [[p.dataset.from,'outputs',0],[p.dataset.to,'inputs',p.getTotalLength()]]){
       const i=ref.lastIndexOf(':'),b=document.querySelector(`[data-node="${ref.slice(0,i)}"] [data-kind="${kind}"][data-port="${ref.slice(i+1)}"]`).getBoundingClientRect(),q=p.getPointAtLength(len),m=document.createElementNS(p.namespaceURI,'circle');m.setAttribute('cx',q.x);m.setAttribute('cy',q.y);m.setAttribute('r',1);p.parentNode.append(m);const r=m.getBoundingClientRect();m.remove();if(Math.hypot(r.left+r.width/2-b.left-b.width/2,r.top+r.height/2-b.top-b.height/2)>.75)return false;

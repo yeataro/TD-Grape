@@ -2073,6 +2073,26 @@
     "wire.touchConnect": {
       "zh-Hant": "拖到或點選另一個端點接線；點同一端點取消",
       "en": "Drag to or tap another socket to connect; tap the same socket to cancel"
+    },
+    "trash.hint": {
+      "en": "Drag here to delete",
+      "zh-Hant": "拖入此處以刪除"
+    },
+    "trash.protected": {
+      "en": "This node cannot be deleted",
+      "zh-Hant": "此節點無法刪除"
+    },
+    "trash.releaseNodes": {
+      "en": "Release to delete {count} node(s)",
+      "zh-Hant": "放開以刪除 {count} 個節點"
+    },
+    "trash.releaseWire": {
+      "en": "Release to disconnect",
+      "zh-Hant": "放開以斷開連線"
+    },
+    "trash.cancelWire": {
+      "en": "Release to cancel this wire",
+      "zh-Hant": "放開以取消這次拉線"
     }
   }
 }

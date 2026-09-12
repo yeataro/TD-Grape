@@ -18,6 +18,7 @@ coordinate conversion is unchanged.
 | Double-tap the node Label | Focus its Parameter editor |
 | Hold a node or blank canvas | Open the graph context menu |
 | Hold a wire | Open the context menu with Disconnect |
+| Drag a wire or node into the lower-right trash | Preview, then delete/disconnect on release (experiment) |
 | Drag blank canvas | Pan, or select a rectangle when Box Select is enabled |
 | Use two fingers | Pan and zoom around their midpoint |
 
@@ -83,3 +84,6 @@ The user reported good touch editing behavior on the target iPad mini 6 /
 iPadOS 18.7.8 / Chrome 151 on 2026-09-12, after confirming wire alignment. This
 is overall user feedback, not exhaustive device coverage of every gesture or
 software-keyboard interaction.
+
+The subsequent drop-to-delete experiment and its specific cancellation rules are
+documented in [Canvas trash](GRAPH_TRASH.md).
