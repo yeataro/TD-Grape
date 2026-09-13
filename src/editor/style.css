@@ -23,6 +23,8 @@
 :where([data-category="output"]){--category-bg:var(--node-output-bg);--category-fg:var(--node-output-fg)}
 .node-title{background:var(--category-bg);color:var(--category-fg)}
 .port-row{--socket:var(--type-float)}
+.port-row .port-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.port-row small{flex-shrink:0}.port-row.output{padding-left:13px}
 .port-row[data-type="vec2"]{--socket:var(--type-vec2)}
 .port-row[data-type="vec3"]{--socket:var(--type-vec3)}
 .port-row[data-type="vec4"]{--socket:var(--type-vec4)}

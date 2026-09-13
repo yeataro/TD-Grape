@@ -8,7 +8,9 @@
 - 沿用舊預設分組的位置會一次性更新；自訂分組與已儲存的 Layout 預設集保留，亦可用 Restore default 套用新配置。
 - Inputs 列出此 Shader 的 Uniforms 與 Samplers，可搜尋名稱與型別。選取來源會開啟 Parameter，不需要先在圖中放節點。
 - 每列 `+` 點一下建立引用，也可用滑鼠或觸控拖入畫布。拖出畫布、Escape、pointer cancel、第二指加入或失去視窗焦點均取消，不建立項目。清單其餘區域仍可捲動。
-- 浮動 Add Node 同時包含新增來源、現有來源引用與 Time 預設；搜尋到來源名稱後建立的是同一 ID 的引用。
+- 浮動 Add Node 提供 **Inputs → Uniforms／Samplers** 分類，同時包含新增來源與現有來源引用；Time／Frame 預設歸在 Uniforms。全域搜尋保留，搜尋到來源名稱後建立的是同一 ID 的引用。
+- 浮動清單的 Uniform 引用與時間預設使用 Uniform 辨識色，Sampler 引用使用 Sampler 辨識色。
+- 畫布 Uniform／Sampler 引用的輸出端口顯示來源名稱（例如 `mixfac · float`），改名後同步更新顯示。內部端口仍為 `out`，接線與 GLSL 身分不因顯示規則改變；長名稱截斷時可由提示查看完整名稱。
 - 從未接線的 input 呼叫新增選單，新增 Uniform 會預填接收端的型別、名稱與未接線數值並接線。新增／引用有明確區別；不再自動挑第一個相容 Uniform 或 Sampler。
 - 刪除圖中引用保留來源。刪除 Uniform 來源走 Parameter 的獨立操作，保留缺失引用與恢復入口。自訂參數仍是獨立實體。
 

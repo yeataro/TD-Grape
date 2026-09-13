@@ -1654,6 +1654,18 @@
       "zh-Hant": "Data",
       "en": "Data"
     },
+    "browser.category.inputs": {
+      "zh-Hant": "Inputs",
+      "en": "Inputs"
+    },
+    "browser.branch.uniforms": {
+      "zh-Hant": "Uniforms",
+      "en": "Uniforms"
+    },
+    "browser.branch.samplers": {
+      "zh-Hant": "Samplers",
+      "en": "Samplers"
+    },
     "browser.category.shader": {
       "zh-Hant": "Shader",
       "en": "Shader"

@@ -130,7 +130,9 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 }
 
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
+function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
+  const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
   if(['float','vec2','vec3','color'].includes(d.key))return 'constant';
   if(d.key==='uniform')return 'uniform';if(['texture','texture_sample','sampler','uv'].includes(d.key))return 'sampler';
@@ -413,11 +415,11 @@ function renderCards(){
     title.onpointerdown=e=>dragNodeTitle(e,n,title,cards,moved=>{suppressCardClick=moved;});
     card.append(title);const list=el('div',{class:'ports'});
     for(const[kind,className]of [['inputs','input'],['outputs','output']])for(const[name,type]of Object.entries(ports(n,kind))){
-      const row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${name} (${type})`,'aria-label':`${n.id} ${className} ${name}`});
+      const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
       b.onpointerdown=e=>dragWire(b,e);
       b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
-      row.append(b,el('span',{},portLabel(n,kind,name)),portTypeCaption(n,kind,name));list.append(row);
+      row.append(b,el('span',{class:'port-label',title:label},label),portTypeCaption(n,kind,name));list.append(row);
     }
     card.append(list);
     if(n.params?.value!==undefined)card.append(el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));
@@ -596,18 +598,18 @@ function openCreator(clientX,clientY,wire=null){
 function renderCreator(){
   if(!creatorState)return;const query=$('#createsearch').value.toLowerCase(),category=creatorCategory,typeFilter=$('#createtype').value,wire=creatorState.wire;
   creatorMatches=[];
-  const entries=browserIndex().map(e=>['uniform','sampler'].includes(e.d.key)?{...e,d:{...e.d,label:t('inputs.new')+' · '+e.d.label}}:e);
+  const entries=browserIndex().map(({d})=>{if(['uniform','sampler'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
   for(const preset of Object.keys(inputPresets)){
     const base=catalog.find(d=>d.key==='uniform');if(!base)continue;
-    const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:browserMeta(d)});
+    const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:creatorMeta(d)});
   }
   for(const decl of graph.declarations.filter(d=>['uniform','sampler'].includes(d.kind)&&!d.sourceMissing)){
     const base=catalog.find(d=>d.key===decl.kind);if(!base?.stages.includes(stage))continue;
-    const d={...base,key:'input:'+decl.id,label:decl.name,inputSourceId:decl.id,inputType:decl.type};entries.push({d,meta:browserMeta(d)});
+    const d={...base,key:'input:'+decl.id,label:decl.name,inputSourceId:decl.id,inputKind:decl.kind,inputType:decl.type};entries.push({d,meta:creatorMeta(d)});
   }
   renderCreatorColumns(entries,query);
-  for(const {d} of browseEntries(entries,query,{tab:'categories',category,source:$('#createsource').value})){
-    const entry={d,meta:browserMeta(d)},path=creatorState.path||[];if(!query.trim()&&!creatorPaths(entry).some(p=>path.every((key,i)=>p[i]===key)))continue;
+  for(const {d,meta} of browseEntries(entries,query,{tab:'categories',category,source:$('#createsource').value})){
+    const entry={d,meta},path=creatorState.path||[];if(!query.trim()&&!creatorPaths(entry).some(p=>path.every((key,i)=>p[i]===key)))continue;
     let candidates=[];
     for(const variant of typeVariants(d)){
       const p=Object.entries(wire?.kind==='inputs'?variant.outputs:variant.inputs);
@@ -617,7 +619,7 @@ function renderCreator(){
     if(candidates.length){candidates.sort((a,b)=>Number(b.portType===wire?.type)-Number(a.portType===wire?.type));creatorMatches.push(candidates[0]);}
   }
   creatorIndex=Math.min(creatorIndex,Math.max(0,creatorMatches.length-1));const list=$('#createresults');list.replaceChildren();
-  creatorMatches.forEach((match,i)=>{const b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':match.d.key},match.d.label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:browserMeta(match.d)})));b.dataset.browserCategory=browserMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
+  creatorMatches.forEach((match,i)=>{const b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':match.d.key},match.d.label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
   if(!creatorMatches.length)list.append(el('p',{class:'muted'},t('create.empty')));
   for(const button of document.querySelectorAll('[data-create-category]')){const active=button.dataset.createCategory===(query.trim()?'all':category);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;}
   renderCreatorDetails();
@@ -916,6 +918,10 @@ function installGraphClipboard(){
   window.addEventListener('blur',closeGraphMenu);window.addEventListener('resize',closeGraphMenu);
 }
 
+function creatorMeta(d){
+  const meta=browserMeta(d),kind=inputSourceKind(d);
+  return kind?{...meta,category:'inputs',path:['inputs',kind==='uniform'?'uniforms':'samplers'],secondary:[]}:meta;
+}
 function creatorPaths(entry){return [entry.meta.path,...entry.meta.secondary.map(cat=>[cat])];}
 function renderCreatorColumns(entries,query){
   const container=$('#createcategory'),path=creatorState.path||(creatorState.path=[]),filtered=entries.filter(e=>$('#createsource').value==='all'||e.meta.source===$('#createsource').value);
@@ -925,7 +931,7 @@ function renderCreatorColumns(entries,query){
   for(let level=0;level<depth;level++){
     const prefix=path.slice(0,level),keys=[...new Set(paths.filter(p=>prefix.every((key,i)=>p[i]===key)&&p[level]).map(p=>p[level]))];
     if(!keys.length)break;
-    const order=level?['arithmetic','interpolation','range','trigonometry','exponential']:browserData().categories;
+    const order=level?['uniforms','samplers','arithmetic','interpolation','range','trigonometry','exponential']:['inputs',...browserData().categories];
     keys.sort((a,b)=>{const ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b);});
     const column=el('div',{class:'create-category-column',role:'listbox','aria-label':t('create.category')+' '+(level+1),'data-level':level});
     for(const key of [null,...keys]){
@@ -939,7 +945,7 @@ function renderCreatorColumns(entries,query){
 }
 function renderCreatorDetails(){
   const box=$('#createdetail'),match=creatorMatches[creatorIndex];box.replaceChildren();if(!match){box.append(el('p',{class:'muted'},t('create.empty')));return;}
-  const entry={d:match.d,meta:browserMeta(match.d)},meta=entry.meta;
+  const entry={d:match.d,meta:creatorMeta(match.d)},meta=entry.meta;
   box.append(el('strong',{},match.d.label),el('small',{class:'muted'},browserBadges(entry)),el('p',{class:'browser-category-path'},meta.path.map((key,i)=>i?(t('browser.branch.'+key)==='browser.branch.'+key?key:t('browser.branch.'+key)):browserCategoryLabel(key)).join(' › ')));
   const variant=typeVariants(match.d).find(v=>v.type===match.type)||typeVariants(match.d)[0];
   if(variant){const inputs=Object.entries(variant.inputs).map(([name,type])=>type+' '+name).join(', '),outputs=Object.entries(variant.outputs).map(([name,type])=>type+' '+name).join(', ');box.append(el('code',{class:'browser-signature'},(meta.glslName||match.d.label)+'('+inputs+')'+(outputs?' → '+outputs:'')));}

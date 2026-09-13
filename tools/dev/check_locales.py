@@ -23,9 +23,9 @@ refs.update(['panel.parameters','panel.settings'])
 refs.update(re.findall(r'data-i18n(?:-placeholder|-label|-alt)?="([^"]+)"',(root/'index.html').read_text(encoding='utf-8')))
 refs.update('texture.'+key for key in ('current','currentEmpty','effective','invalid','connected','updated','mode','filterMode','sourceMode','default','filterHint','sourceHint'))
 refs.discard('browser.category.');refs.discard('browser.source.')
-refs.update('browser.category.'+key for key in ('math','vector','matrix','logic','color','coordinate','texture','data','shader','uncategorized'))
+refs.update('browser.category.'+key for key in ('inputs','math','vector','matrix','logic','color','coordinate','texture','data','shader','uncategorized'))
 refs.update('browser.source.'+key for key in ('all','glsl','td','editor','personal','project'))
-refs.discard('browser.branch.');refs.update('browser.branch.'+key for key in ('arithmetic','interpolation','range','trigonometry','exponential'))
+refs.discard('browser.branch.');refs.update('browser.branch.'+key for key in ('uniforms','samplers','arithmetic','interpolation','range','trigonometry','exponential'))
 for key in refs:
     assert key in data['messages'],key
     for lang in data['languages']: assert data['messages'][key].get(lang),(key,lang)
