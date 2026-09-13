@@ -35,13 +35,14 @@ const server=http.createServer(async(req,res)=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});const checks=[],errors=[];
  try{
   const page=await browser.newPage({viewport:{width:1560,height:1050},hasTouch:true});page.on('pageerror',e=>errors.push(e.message));
-  // Existing four-panel personal layouts must gain one peer tab, not reset.
+  // Older personal layouts gain Inputs beside Add Node and Controls beside Parameter without resetting groups.
   await page.addInitScript(()=>localStorage.setItem('grapeWorkspaceV1',JSON.stringify({version:1,left:[{panels:['browser'],active:'browser',weight:1}],right:[{panels:['parameters','help'],active:'help',weight:7},{panels:['live'],active:'live',weight:2}],widths:{left:245,right:390}})));
   await page.goto('http://127.0.0.1:'+server.address().port+'/#fixture');await page.waitForSelector('.node');await page.selectOption('#language','en');
   await page.evaluate(()=>{window.actualApplyGraph=applyGraph;applyGraph=async()=>{clearTimeout(autoTimer);};});
   const showInputs=async()=>{await page.locator('[data-workspace-panel=uniforms]').click();};
   await showInputs();await page.waitForSelector('[data-input-source=gain]');
-  assert.equal(await page.locator('.workspace-group[data-workspace-group=parameters] [data-workspace-panel]').count(),4);
+  assert.equal(await page.locator('.workspace-group[data-workspace-group=parameters] [data-workspace-panel]').count(),3);
+  assert.equal(await page.locator('#sidebar-left [data-workspace-panel=uniforms]').count(),1);
   assert.match(await page.locator('#nodecount').innerText(),/nodes/);checks.push('Existing layout retained with compact Inputs inventory');
   await page.locator('#sourceparameters').click();assert.equal(opened,1);
   await page.locator('[data-input-source=gain] .input-source-select').click();

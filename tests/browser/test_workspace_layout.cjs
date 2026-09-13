@@ -10,6 +10,8 @@ const stable=()=>page.evaluate(()=>JSON.stringify({graph,revision,dirty,pan,scal
 assert.equal(await page.locator('#projectfile').innerText(),'Review Project.toe');
 const l=await page.locator('#togglelibrary').boundingBox(),r=await page.locator('#toggledetails').boundingBox();assert.ok(l.x<40&&r.x>1500);
 assert.equal(await page.locator('#sidebar-left .workspace-group').count(),1);assert.equal(await page.locator('#parameter-sidebar .workspace-group').count(),3);
+assert.deepEqual(await page.evaluate(()=>workspaceLayout.snapshot().left[0].panels),['browser','uniforms']);
+assert.deepEqual(await page.evaluate(()=>workspaceLayout.snapshot().right[0].panels),['parameters','controls']);
 await page.screenshot({path:path.join(folder,'default.png')});checks.push('TOE name and opposite-edge sidebar toggles; initial panel structure retained');
 const drag=async(from,to,ratio=.5)=>{const a=await page.locator(from).boundingBox(),b=await page.locator(to).boundingBox();await page.mouse.move(a.x+Math.min(60,a.width/2),a.y+a.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2,b.y+b.height*ratio,{steps:12});await page.mouse.up();};
 await drag('#livetoggle','#sidebar-left .workspace-group',.9);

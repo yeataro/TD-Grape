@@ -4,7 +4,8 @@
 
 ## 操作入口
 
-- Nodes / Add Node 保留節點目錄。原 Uniforms 面板改稱 **Inputs**，保留原 Layout 身分與使用者配置。
+- Nodes / Add Node 保留節點目錄。原 Uniforms 面板改稱 **Inputs**，預設與「新增節點」並排為左側同一區塊的兩個分頁；右側預設為 Parameter／自訂參數、Preview、Help。面板仍可跨側欄移動。
+- 沿用舊預設分組的位置會一次性更新；自訂分組與已儲存的 Layout 預設集保留，亦可用 Restore default 套用新配置。
 - Inputs 列出此 Shader 的 Uniforms 與 Samplers，可搜尋名稱與型別。選取來源會開啟 Parameter，不需要先在圖中放節點。
 - 每列 `+` 點一下建立引用，也可用滑鼠或觸控拖入畫布。拖出畫布、Escape、pointer cancel、第二指加入或失去視窗焦點均取消，不建立項目。清單其餘區域仍可捲動。
 - 浮動 Add Node 同時包含新增來源、現有來源引用與 Time 預設；搜尋到來源名稱後建立的是同一 ID 的引用。

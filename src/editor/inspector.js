@@ -691,7 +691,7 @@ function installPanelWorkspace(){
   const hosts={left:$('#sidebar-left'),right:$('#parameter-sidebar')},panes={browser:$('#nodelibrary')},heads={};
   const copy=value=>JSON.parse(JSON.stringify(value)),read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
   const write=(k,value)=>{try{localStorage.setItem(k,JSON.stringify(value));return true;}catch{status(t('layout.storageError'),true);return false;}};
-  const defaults=()=>({version:1,left:[{panels:['browser'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','uniforms','controls'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:220,right:340},visibility:{left:true,right:true},hidden:[]});
+  const defaults=()=>({version:1,left:[{panels:['browser','uniforms'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:220,right:340},visibility:{left:true,right:true},hidden:[]});
   function validate(raw){
     if(!raw||raw.version!==1)throw Error(t('layout.invalid'));
     const value=defaults(),seen=[];
@@ -705,7 +705,7 @@ function installPanelWorkspace(){
       const width=raw.widths?.[side];value.widths[side]=Number.isFinite(width)?Math.max(side==='left'?180:300,Math.min(side==='left'?520:640,width)):value.widths[side];
       value.visibility[side]=raw.visibility?.[side]!==false;
     }
-    if(seen.length===4&&!seen.includes('uniforms')&&new Set(seen).size===4){const group=[...value.left,...value.right].find(g=>g.panels.includes('parameters'));group.panels.push('uniforms');seen.push('uniforms');}
+    if(seen.length===4&&!seen.includes('uniforms')&&new Set(seen).size===4){const group=[...value.left,...value.right].find(g=>g.panels.includes('browser'));group.panels.push('uniforms');seen.push('uniforms');}
     if(seen.length===5&&!seen.includes('controls')&&new Set(seen).size===5){const group=[...value.left,...value.right].find(g=>g.panels.includes('parameters'));group.panels.push('controls');seen.push('controls');}
     if(seen.length!==ids.length||new Set(seen).size!==ids.length)throw Error(t('layout.invalid'));
     if(raw.hidden!==undefined&&(!Array.isArray(raw.hidden)||raw.hidden.some(id=>!ids.includes(id))||new Set(raw.hidden).size!==raw.hidden.length))throw Error(t('layout.invalid'));
@@ -719,6 +719,17 @@ function installPanelWorkspace(){
     for(const g of state.right){g.collapsed=open[g.active]===false;g.weight=weights[g.active]||g.weight;}
     state=validate(state);
   }}catch{}
+  // Upgrade only the former stock arrangement, once. Personal layouts and named presets stay put.
+  const inputsPlacementKey='grapeInputsDefaultLeftV1';
+  if(!read(inputsPlacementKey,false)){
+    const topology=JSON.stringify([state.left,state.right].map(groups=>groups.map(g=>g.panels)));
+    if(topology==='[[["browser"]],[["parameters","uniforms","controls"],["live"],["help"]]]'){
+      state.left[0].panels.push('uniforms');state.right[0].panels=state.right[0].panels.filter(id=>id!=='uniforms');
+      if(state.right[0].active==='uniforms'){state.left[0].active='uniforms';state.right[0].active='parameters';}
+      write(key,state);
+    }
+    write(inputsPlacementKey,true);
+  }
   const storedPresets=read(presetsKey,[]);let presets=[];for(const item of (Array.isArray(storedPresets)?storedPresets.slice(0,100):[])){try{if(typeof item.name==='string'&&item.name.trim())presets.push({name:item.name.slice(0,80),layout:validate(item.layout)});}catch{}}
   const browserHead=el('button',{id:'browsertoggle',class:'panel-heading',type:'button','aria-controls':'browserbody'});
   const browserLabel=el('span',{'data-i18n':'panel.addNode'});browserHead.append(browserLabel);
