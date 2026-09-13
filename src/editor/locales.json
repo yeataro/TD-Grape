@@ -555,8 +555,8 @@
       "en": "Extracts individual RGBA components or RGB together using GLSL swizzles such as `.rgb` and `.a`.\n\n[GLSL · Swizzle ↗](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#vector-components)\n\n[The Book of Shaders: Swizzles and color components](https://thebookofshaders.com/06/)"
     },
     "help.uniform": {
-      "zh-Hant": "Uniform 是由 TD 提供的數值，同一次 draw 中保持一致。\n\n**Expose** 會在此 Grape Shader 建立可控制的 TD 參數。同一宣告的所有節點共用數值；公開名稱可以修改而不更換參數身分。\n\n[GLSL MAT · Uniform Parameters ↗](https://docs.derivative.ca/GLSL_MAT#Parameters_-_Vectors_Page)\n\n[The Book of Shaders：Uniforms](https://thebookofshaders.com/03/?lan=ch)\n\n[GLSL TOP · Uniforms ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Uniforms)",
-      "en": "A Uniform is supplied by TD and stays constant within a draw.\n\n**Expose** creates a TD parameter on this Grape Shader. Nodes referencing the same declaration share its value. Renaming its label preserves parameter identity.\n\n[GLSL MAT · Uniform Parameters ↗](https://docs.derivative.ca/GLSL_MAT#Parameters_-_Vectors_Page)\n\n[The Book of Shaders: Uniforms](https://thebookofshaders.com/03/)\n\n[GLSL TOP · Uniforms ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Uniforms)"
+      "zh-Hant": "Uniform 由 TD 提供，在一次 draw 內保持相同。它與 GLSL 編譯常數不同。\n\n在 Inputs 選取來源，可於 Parameter 修改數值、型別或 Python Expression。同一來源的所有引用共用數值；刪除引用不會刪除來源。「新增到自訂參數」可把它加入 COMP 的控制頁。\n\n[GLSL MAT · Uniform Parameters](https://docs.derivative.ca/GLSL_MAT#Parameters_-_Vectors_Page)\n\n[GLSL TOP · Uniforms](https://docs.derivative.ca/Write_a_GLSL_TOP#Uniforms)",
+      "en": "TD supplies a Uniform that stays constant within a draw. It is distinct from a GLSL compile-time constant.\n\nSelect its source in Inputs to edit values, types or Python expressions in Parameter. All references share the source; deleting a reference keeps it. Add to Custom Parameters connects it to a COMP control page.\n\n[GLSL MAT · Uniform Parameters](https://docs.derivative.ca/GLSL_MAT#Parameters_-_Vectors_Page)\n\n[GLSL TOP · Uniforms](https://docs.derivative.ca/Write_a_GLSL_TOP#Uniforms)"
     },
     "help.uv": {
       "zh-Hant": "取得 TD 的第一組 Texture Coordinates，從 Vertex Stage 內插到 Pixel Stage。\n\n[TD Texture Coordinates ↗](https://docs.derivative.ca/Write_a_GLSL_MAT#Working_with_Geometry_Attributes)\n\n[The Book of Shaders：座標與 Uniforms](https://thebookofshaders.com/03/?lan=ch)",
@@ -1859,8 +1859,8 @@
       "zh-Hant": "每個 Buffer 對應一個 vec4。未連線預設為 (0, 0, 0, 0)；接收額外輸出時，請在 Render TOP 開啟對應數量的 Color Buffers。"
     },
     "sources.title": {
-      "en": "Uniforms",
-      "zh-Hant": "Uniforms"
+      "zh-Hant": "Inputs",
+      "en": "Inputs"
     },
     "sources.native": {
       "en": "GLSL Parameters",
@@ -2097,6 +2097,94 @@
     "wire.inputDisconnectHint": {
       "en": "Connect to another output, or click empty canvas to disconnect.",
       "zh-Hant": "接到另一個輸出，或點擊空白畫布斷開連線。"
+    },
+    "inputs.search": {
+      "zh-Hant": "搜尋 Inputs…",
+      "en": "Search Inputs…"
+    },
+    "inputs.kind": {
+      "zh-Hant": "來源類型",
+      "en": "Source kind"
+    },
+    "inputs.new": {
+      "zh-Hant": "新增 Input",
+      "en": "New Input"
+    },
+    "inputs.create": {
+      "zh-Hant": "建立來源",
+      "en": "Create source"
+    },
+    "inputs.edit": {
+      "zh-Hant": "編輯來源",
+      "en": "Edit source"
+    },
+    "inputs.references": {
+      "zh-Hant": "圖中有 {count} 個引用。刪除引用不會刪除來源。",
+      "en": "{count} graph references. Deleting a reference keeps its source."
+    },
+    "inputs.referenceHint": {
+      "zh-Hant": "引用此 Shader 的既有來源；數值與其他引用共用。",
+      "en": "Reference an existing source in this Shader. All references share its values."
+    },
+    "inputs.dragReference": {
+      "zh-Hant": "點擊新增引用，或拖入畫布",
+      "en": "Click to add a reference, or drag into the canvas"
+    },
+    "inputs.empty": {
+      "zh-Hant": "尚無來源。新增後可選取編輯，或用 + 拉入圖中。",
+      "en": "No sources yet. Create one to edit it or drag + into the graph."
+    },
+    "inputs.invalidName": {
+      "zh-Hant": "請使用不重複、有效的 GLSL 名稱。",
+      "en": "Use a unique, valid GLSL name."
+    },
+    "inputs.drivers": {
+      "zh-Hant": "數值來源 / Python Expression",
+      "en": "Value source / Python Expression"
+    },
+    "inputs.expression": {
+      "zh-Hant": "未使用 Expression",
+      "en": "No expression"
+    },
+    "inputs.freeze": {
+      "zh-Hant": "保留目前值",
+      "en": "Keep value"
+    },
+    "inputs.driverHint": {
+      "zh-Hant": "直接編輯 GLSL OP 的 Python Expression。Bind / Export 請在原生參數頁調整。",
+      "en": "Edits the GLSL OP Python expression. Manage Bind / Export in native Parameters."
+    },
+    "inputs.nativeColor": {
+      "zh-Hant": "TD Colors · vec4（含 TD 色彩轉換）",
+      "en": "TD Colors · vec4 (TD color conversion applies)"
+    },
+    "inputs.nativeVector": {
+      "zh-Hant": "TD Vectors · 保留四個原生分量",
+      "en": "TD Vectors · all four native components are retained"
+    },
+    "inputs.preset.time": {
+      "zh-Hant": "Time · 時間軸秒數",
+      "en": "Time · timeline seconds"
+    },
+    "inputs.preset.frame": {
+      "zh-Hant": "Frame · 時間軸影格",
+      "en": "Frame · timeline frame"
+    },
+    "inputs.preset.absTime": {
+      "zh-Hant": "Absolute Time · 程序秒數",
+      "en": "Absolute Time · process seconds"
+    },
+    "inputs.preset.absFrame": {
+      "zh-Hant": "Absolute Frame · 程序影格",
+      "en": "Absolute Frame · process frame"
+    },
+    "inputs.clockHint": {
+      "zh-Hant": "建立一般 float Uniform，以 TD Python Expression 取得時間。可修改 Expression，或新增到自訂參數。",
+      "en": "Create an ordinary float Uniform driven by a TD clock expression. Edit its expression or add it to a custom parameter page."
+    },
+    "inputs.valueMode": {
+      "zh-Hant": "數值",
+      "en": "Value"
     }
   }
 }

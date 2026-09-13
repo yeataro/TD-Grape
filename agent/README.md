@@ -7,7 +7,7 @@
 - 持久的設計決策與可重現驗證方法寫入 `docs/`、`tests/`。避免在工作筆記重複維護第二份規格。
 - 更新正在運行的 TD 程式必須保留使用者的圖、參數關聯、Shader ID 與連線狀態。`refresh_sources.py` 不等同保存 TOE，也不等同升級 Shader。
 - 移除私人資料時，檢查檔案內容、TOE 內的 DAT／參數／storage 及 Git 歷史。`.gitignore` 不會移除已提交內容。
-- 根目錄的 Markdown 僅保留 README。產品版本只能向前；本次遷移維持 0.8.5。
+- 根目錄的 Markdown 僅保留 README。產品版本只能向前；目前版本與完成範圍以 `docs/development/STATUS.md` 為準。
 - 交付打包、安裝方式、Web 資源外部化與公開發佈需要另行處理。
 
 私人工作區可以另設機器設定與交接文件；新加入的開發者不需要取得它們即可開啟並驗證此專案。

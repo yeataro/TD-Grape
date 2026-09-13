@@ -364,6 +364,8 @@ def _compile_flat(graph,annotation_scopes=None):
             if not isinstance(label,str) or len(label)>80 or any(ord(c)<32 for c in label):raise GraphError('Public texture label must be plain text up to 80 characters')
         elif d.get('kind')=='uniform':
             if d.get('type') not in TYPES: raise GraphError('Unsupported uniform type')
+            if d.get('nativeSequence','vec') not in ('vec','color'):raise GraphError('Unsupported native Uniform page')
+            if 'initialDriver' in d and d['initialDriver'] not in ('time','frame','absTime','absFrame'):raise GraphError('Unsupported initial Uniform driver')
             literal(d.get('value'), d['type'])
             if not isinstance(d.get('expose',False),bool): raise GraphError('Expose must be a boolean')
             label=d.get('exposeName','')

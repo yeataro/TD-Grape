@@ -180,6 +180,8 @@ const filledValue=(type,value=0)=>shapedValue(value,type);
 const selectableNodeTypes=d=>typeVariants(d).map(v=>v.type).filter(type=>type!==null);
 const compatible=(a,b)=>!!typeContract?.conversions.some(rule=>rule.from===a&&rule.to===b);
 function typeVariants(d){
+  if(d.inputPreset)return [{type:'float',inputs:{},outputs:{out:'float'}}];
+  if(d.inputSourceId)return [{type:d.inputType,inputs:{},outputs:{out:d.inputType}}];
   const entry=typeContract?.definitions[d.definitionUuid];if(entry)return entry.variants;
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(d.definitionUuid))return [];
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
@@ -299,7 +301,7 @@ function portTypeCaption(n,kind,name){
   return caption;
 }
 function selectNode(n,toggle=false){
-  helpContext='node';
+  selectedInputId=null;helpContext='node';
   $('#canvas').focus({preventScroll:true});
   if(toggle){if(selection.has(n.id))selection.delete(n.id);else selection.add(n.id);selected=selection.has(n.id)?n.id:[...selection].at(-1)||null;}
   else {selection=new Set([n.id]);selected=n.id;}
@@ -435,6 +437,8 @@ const browserCategoryLabel=key=>t('browser.category.'+key);
 const browserSourceLabel=key=>t('browser.source.'+key);
 const normalizeSearch=value=>String(value||'').normalize('NFKC').toLowerCase().trim();
 function browserMeta(d){
+  if(d.inputPreset)return {category:'shader',path:['shader'],source:'td',secondary:[],aliases:[inputPresets[d.inputPreset][0],'uniform','time','frame'],tags:[],glslName:inputPresets[d.inputPreset][1],descriptionKey:'inputs.clockHint',subgraph:false,saved:false,project:false};
+  if(d.inputSourceId)return {category:'shader',path:['shader'],source:'project',secondary:[],aliases:['input','reference'],tags:[],glslName:d.label,descriptionKey:'inputs.referenceHint',subgraph:false,saved:false,project:true};
   const f=d.definitionUuid===FunctionModel.CALL?(d.source||FunctionModel.find(graph,d.functionId)):null;
   const authored=f?(f.browser||browserData().functions[f.source?.id]||browserData().functions[f.origin?.id]):browserData().nodes[d.definitionUuid];
   const stringList=value=>Array.isArray(value)?value.filter(x=>typeof x==='string'):[];
@@ -592,7 +596,15 @@ function openCreator(clientX,clientY,wire=null){
 function renderCreator(){
   if(!creatorState)return;const query=$('#createsearch').value.toLowerCase(),category=creatorCategory,typeFilter=$('#createtype').value,wire=creatorState.wire;
   creatorMatches=[];
-  const entries=browserIndex();
+  const entries=browserIndex().map(e=>['uniform','sampler'].includes(e.d.key)?{...e,d:{...e.d,label:t('inputs.new')+' · '+e.d.label}}:e);
+  for(const preset of Object.keys(inputPresets)){
+    const base=catalog.find(d=>d.key==='uniform');if(!base)continue;
+    const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:browserMeta(d)});
+  }
+  for(const decl of graph.declarations.filter(d=>['uniform','sampler'].includes(d.kind)&&!d.sourceMissing)){
+    const base=catalog.find(d=>d.key===decl.kind);if(!base?.stages.includes(stage))continue;
+    const d={...base,key:'input:'+decl.id,label:decl.name,inputSourceId:decl.id,inputType:decl.type};entries.push({d,meta:browserMeta(d)});
+  }
   renderCreatorColumns(entries,query);
   for(const {d} of browseEntries(entries,query,{tab:'categories',category,source:$('#createsource').value})){
     const entry={d,meta:browserMeta(d)},path=creatorState.path||[];if(!query.trim()&&!creatorPaths(entry).some(p=>path.every((key,i)=>p[i]===key)))continue;
@@ -612,9 +624,14 @@ function renderCreator(){
   const box=$('#creator');box.style.left=Math.max(8,Math.min(creatorState.anchorX,innerWidth-box.offsetWidth-8))+'px';box.style.top=Math.max(8,Math.min(creatorState.anchorY,innerHeight-box.offsetHeight-8))+'px';
 
 }
+function creatorInputSeed(wire){
+  if(wire?.kind!=='inputs')return {};
+  const n=current().nodes.find(n=>n.id===wire.node),name=portLabel(n,'inputs',wire.port),hint='u'+name.charAt(0).toUpperCase()+name.slice(1);
+  return {name:hint,value:defaultInput(n,wire.port,wire.type)};
+}
 function chooseCreator(index){
   const match=creatorMatches[index],state=creatorState;if(!match||!state)return;
-  const changed=change(()=>{const n=instantiate(match.d,state.x,state.y,match.type,{locked:$('#createtype').value!=='all'});if(state.wire){const from=state.wire.kind==='outputs'?[state.wire.node,state.wire.port]:[n.id,match.port],to=state.wire.kind==='inputs'?[state.wire.node,state.wire.port]:[n.id,match.port];current().edges=current().edges.filter(e=>e.to[0]!==to[0]||e.to[1]!==to[1]);current().edges.push({from,to});}});
+  const changed=change(()=>{const n=instantiate(match.d.inputSourceId||match.d.inputPreset?catalog.find(d=>d.definitionUuid===match.d.definitionUuid):match.d,state.x,state.y,match.type,{locked:$('#createtype').value!=='all',declarationId:match.d.inputSourceId,inputSeed:match.d.inputPreset?{name:inputPresets[match.d.inputPreset][0],preset:match.d.inputPreset}:creatorInputSeed(state.wire)});if(state.wire){const from=state.wire.kind==='outputs'?[state.wire.node,state.wire.port]:[n.id,match.port],to=state.wire.kind==='inputs'?[state.wire.node,state.wire.port]:[n.id,match.port];current().edges=current().edges.filter(e=>e.to[0]!==to[0]||e.to[1]!==to[1]);current().edges.push({from,to});}});
   if(changed){closeCreator();$('#canvas').focus();}else $('#createsearch').focus();
 }
 function duplicateSelection(){

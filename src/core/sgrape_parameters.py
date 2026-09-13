@@ -161,10 +161,15 @@ def edit(runtime,body):
                 if row is None or row['missing'] or row['expected']!=body.get('sourceExpected'):raise RuntimeError('The Uniform changed. Refresh first.')
                 if row['id'] in comp.fetch(model.STORE,{}):raise RuntimeError('This Uniform already has a custom control.')
                 count=runtime.core().type_components(row['type']); pars=model.source_pars(comp,row['id'])
-                if any(not str(p.mode).endswith('CONSTANT') for p in pars[:count]):raise RuntimeError('This Uniform is already driven in TD. Keep or detach that control first.')
+                # Only known clocks can move without guessing how to rebase Python.
+                presets=runtime.source_module().PRESETS.values()
+                if any(not str(p.mode).endswith('CONSTANT') and not (str(p.mode).endswith('EXPRESSION') and p.expr in presets) for p in pars[:count]):raise RuntimeError('This Uniform is already driven in TD. Keep or detach that control first.')
+                drivers=[p.expr if str(p.mode).endswith('EXPRESSION') else '' for p in pars[:count]]
                 values=[p.eval() for p in pars[:count]]
                 defaults=[row['default']] if count==1 else row['default']
                 group=create_group(comp,page,row['name'],row['type'],values,defaults)
+                for control,driver,p in zip(group,drivers,pars):
+                    if driver:control.expr=driver.replace('me.time.', 'me.op('+repr(p.owner.name)+').time.')
                 model.bind(comp,row['id'],list(group))
     else:
         row=next((g for g in seen['controls'] if g['name']==body.get('name')),None)

@@ -10,6 +10,11 @@ const server=http.createServer(async(req,res)=>{
   let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{},op=route.split('/').at(-1);res.setHeader('Content-Type','application/json');
   if(op==='state')return res.end(JSON.stringify(fixture));
   if(op==='sources')return res.end(JSON.stringify(sources));
+  if(op==='apply'){
+   assert.equal(body.revision,sources.revision);sources.revision++;sources.graph=body.graph;sources.declarations=body.graph.declarations;
+   for(const d of sources.declarations.filter(d=>d.kind==='uniform'))if(!sources.uniforms.some(r=>r.id===d.id))sources.uniforms.push({id:d.id,name:d.name,type:d.type,missing:false,nameWritable:true,expected:d.id,components:[0,1,2,3].map(i=>({parameter:'test'+i,value:Array.isArray(d.value)?d.value[i]||0:d.value,mode:'CONSTANT',writable:true}))});
+   fixture.state={graph:body.graph,revision:sources.revision};return res.end(JSON.stringify({state:fixture.state,target:fixture.target}));
+  }
   if(op==='shaders')return res.end(JSON.stringify({projectFile:'Sources-test.toe',shaders:[]}));
   if(op==='uniforms')return res.end(JSON.stringify({revision:sources.revision,uniforms:{},textures:{}}));
   if(op==='preview'){res.statusCode=204;return res.end();}
@@ -29,26 +34,69 @@ const server=http.createServer(async(req,res)=>{
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});const checks=[],errors=[];
  try{
-  const page=await browser.newPage({viewport:{width:1560,height:1050}});page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:1560,height:1050},hasTouch:true});page.on('pageerror',e=>errors.push(e.message));
   // Existing four-panel personal layouts must gain one peer tab, not reset.
   await page.addInitScript(()=>localStorage.setItem('grapeWorkspaceV1',JSON.stringify({version:1,left:[{panels:['browser'],active:'browser',weight:1}],right:[{panels:['parameters','help'],active:'help',weight:7},{panels:['live'],active:'live',weight:2}],widths:{left:245,right:390}})));
   await page.goto('http://127.0.0.1:'+server.address().port+'/#fixture');await page.waitForSelector('.node');await page.selectOption('#language','en');
-  await page.evaluate(()=>{applyGraph=async()=>{clearTimeout(autoTimer);};});
-  await page.locator('[data-workspace-panel=uniforms]').click();await page.waitForSelector('[data-native-source=gain]');
-  assert.equal(await page.locator('.workspace-group[data-workspace-group=parameters] [data-workspace-panel]').count(),3);
-  assert.equal(await page.locator('#nodecount').evaluate(e=>e.closest('#canvas')!==null),true);
-  assert.match(await page.locator('#nodecount').innerText(),/nodes/);checks.push('Existing layout retained; Uniforms added as a peer tab; count moved to canvas');
-  const value=page.locator('[data-native-source=gain] [data-source-component="0"]');
+  await page.evaluate(()=>{window.actualApplyGraph=applyGraph;applyGraph=async()=>{clearTimeout(autoTimer);};});
+  const showInputs=async()=>{await page.locator('[data-workspace-panel=uniforms]').click();};
+  await showInputs();await page.waitForSelector('[data-input-source=gain]');
+  assert.equal(await page.locator('.workspace-group[data-workspace-group=parameters] [data-workspace-panel]').count(),4);
+  assert.match(await page.locator('#nodecount').innerText(),/nodes/);checks.push('Existing layout retained with compact Inputs inventory');
+  await page.locator('#sourceparameters').click();assert.equal(opened,1);
+  await page.locator('[data-input-source=gain] .input-source-select').click();
+  const value=page.locator('#inspector [data-native-source=gain] [data-source-component="0"]');
   await value.fill('0.42');await value.press('Enter');await page.waitForFunction(()=>!nativeSourceBusy);
-  assert.equal(writes,1);assert.equal(await value.inputValue(),'0.42');checks.push('Editing a source value calls the native parameter endpoint without Expose');
-  await page.locator('#sourceparameters').click();assert.equal(opened,1);checks.push('GLSL native parameter window has a direct entry');
-  await page.fill('#sourcename','uAdded');await page.selectOption('#sourcetype','float');await page.locator('#sourcecreate button').click();await page.waitForSelector('[data-native-source=native_added]');
-  assert.equal(await page.evaluate(()=>graph.declarations.some(d=>d.name==='uAdded')),true);checks.push('Add Uniform updates the graph source list from the returned native state');
-  const row=page.locator('[data-native-source=native_added]');await row.getByRole('button',{name:'Add reference to graph',exact:true}).click();
-  assert.equal(await page.evaluate(()=>current().nodes.some(n=>n.params.declarationId==='native_added')),true);checks.push('Graph reference uses the existing source definition');
+  assert.equal(writes,1);assert.equal(await value.inputValue(),'0.42');checks.push('Selecting a source without a node edits actual TD values in Parameter');
+  await showInputs();await page.locator('.inputs-create summary').click();
+  await page.fill('#sourcename','uAdded');await page.selectOption('#sourcetype','vec3');await page.locator('#sourcecreate button').click();
+  const id=await page.evaluate(()=>graph.declarations.find(d=>d.name==='uAdded').id);
+  assert.equal(await page.evaluate(()=>current().nodes.filter(n=>n.params.declarationId===selectedInputId).length),0);
+  assert.equal(await page.locator('.input-inspector-title strong').innerText(),'uAdded');checks.push('A source can be created and inspected before any graph reference');
+  await page.locator('#inspector [data-input-reference]').click();
+  await showInputs();await page.locator('#nativeuniforms [data-input-reference="'+id+'"]').click();
+  assert.equal(await page.evaluate(id=>current().nodes.filter(n=>n.params.declarationId===id).length,id),2);
+  assert.equal(await page.evaluate(id=>graph.declarations.filter(d=>d.id===id).length,id),1);checks.push('Repeated references reuse identity without creating incidental sources');
+  await page.locator('#graphdelete').click();assert.equal(await page.evaluate(id=>graph.declarations.some(d=>d.id===id),id),true);
+  const canvas=await page.locator('#canvas').boundingBox(),drop={x:canvas.x+canvas.width*.65,y:canvas.y+canvas.height*.45};
+  await page.evaluate(({x,y})=>openCreator(x,y),drop);await page.fill('#createsearch','uAdded');
+  await page.locator('[data-create-entry="input:'+id+'"]').click();
+  assert.equal(await page.evaluate(id=>current().nodes.filter(n=>n.params.declarationId===id).length,id),2);checks.push('Floating Add Node finds and references existing named Inputs');
+  const before=await page.evaluate(()=>graph.declarations.length);
+  await page.evaluate(({x,y})=>openCreator(x,y),drop);await page.fill('#createsearch','uniform');await page.locator('[data-create-entry=uniform]').click();
+  assert.equal(await page.evaluate(()=>graph.declarations.length),before+1);checks.push('New Uniform always creates a new identity');
+  await page.evaluate(()=>{const n=current().nodes.find(n=>definition(n)?.key==='pixel_out');n.inputValues={color:[.1,.2,.3,.4]};const r=document.querySelector('#canvas').getBoundingClientRect();openCreator(r.x+120,r.y+150,{node:n.id,port:'color',kind:'inputs',type:'vec4'});});
+  await page.fill('#createsearch','uniform');await page.locator('[data-create-entry=uniform]').click();
+  const created=await page.evaluate(()=>{const n=current().nodes.find(n=>n.id===selected);return{node:n,decl:graph.declarations.find(d=>d.id===n.params.declarationId),edges:current().edges};});
+  assert.equal(created.decl.type,'vec4');assert.deepEqual(created.decl.value,[.1,.2,.3,.4]);assert.ok(created.edges.some(e=>e.from[0]===created.node.id));
+  await page.locator('#undo').click();assert.equal(await page.evaluate(id=>graph.declarations.some(d=>d.id===id),created.decl.id),false);checks.push('Wire shortcut inherits type/value, connects and undoes as one graph edit');
+  // Mouse and touch handles share one transaction; cancellation leaves no source or node.
+  await showInputs();await page.fill('#inputsearch','uAdded');
+  let handle=page.locator('#nativeuniforms [data-input-reference="'+id+'"]'),rect=await handle.boundingBox();
+  const start=await page.evaluate(()=>current().nodes.length);
+  await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(drop.x,drop.y,{steps:8});await page.keyboard.press('Escape');await page.mouse.up();
+  assert.equal(await page.evaluate(()=>current().nodes.length),start);
+  rect=await handle.boundingBox();await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(drop.x,drop.y,{steps:8});await page.mouse.up();
+  assert.equal(await page.evaluate(()=>current().nodes.length),start+1);checks.push('Reference drag creates once on canvas; Escape cancels without mutation');
+  const touchBefore=await page.evaluate(()=>current().nodes.length),cdp=await page.context().newCDPSession(page);rect=await handle.boundingBox();
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:rect.x+rect.width/2,y:rect.y+rect.height/2,id:1}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:drop.x,y:drop.y,id:1}]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  assert.equal(await page.evaluate(()=>current().nodes.length),touchBefore+1);checks.push('Real Chromium touch drag follows the same release-to-create path');
+  await page.evaluate(({x,y})=>openCreator(x,y),drop);await page.fill('#createsearch','uAbsTime');await page.locator('[data-create-entry="preset:absTime"]').click();
+  assert.equal(await page.evaluate(()=>graph.declarations.find(d=>d.id===current().nodes.find(n=>n.id===selected).params.declarationId).initialDriver),'absTime');
+  await page.locator('#undo').click();assert.equal(await page.evaluate(()=>graph.declarations.some(d=>d.initialDriver==='absTime')),false);checks.push('Clock presets create ordinary sources and references in one undoable edit');
+  await page.evaluate(()=>{applyGraph=window.actualApplyGraph;});
+  await page.evaluate(({x,y})=>openCreator(x,y),drop);await page.fill('#createsearch','uniform');await page.locator('[data-create-entry=uniform]').click();
+  const committed=await page.evaluate(()=>({node:selected,source:current().nodes.find(n=>n.id===selected).params.declarationId}));
+  await page.waitForFunction(()=>!dirty&&!submitBusy);
+  await page.locator('#undo').click();await page.waitForFunction(()=>!dirty&&!submitBusy);
+  assert.equal(await page.evaluate(id=>current().nodes.some(n=>n.id===id),committed.node),false);
+  assert.equal(await page.evaluate(id=>graph.declarations.some(d=>d.id===id),committed.source),true);
+  checks.push('After Apply, Graph Undo keeps the native source identity while removing the reference');
   await page.evaluate(()=>{clearTimeout(autoTimer);dirty=false;});
-  await page.selectOption('#language','zh-Hant');
-  await page.screenshot({path:path.join(w,'uniforms-panel.png')});
+  await page.selectOption('#language','zh-Hant');await showInputs();await page.fill('#inputsearch','');
+  await page.screenshot({path:path.join(w,'inputs-panel.png')});
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(w,'browser-result.json'),JSON.stringify({passed:true,checks},null,2));console.log(JSON.stringify({passed:true,checks}));
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

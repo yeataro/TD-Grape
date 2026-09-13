@@ -61,14 +61,14 @@ class LanTests(unittest.TestCase):
         self.assertEqual(self.request(headers={'X-Sgrape-Token':'\xe9'})[0],401)
         self.assertEqual(json.loads(self.request()[1]),self.original)
     def test_switch_keeps_port_session_queue_and_values(self):
-        r=self.r;port,token,work=r._port,r._token,r._queue
+        r=self.r;port,token,work=r._port,r._token,r._queue;version=r.PRODUCT_VERSION
         for enabled in (True,False,True,False):
             r.set_lan_enabled(enabled)
             self.assertEqual(r._server.server_address[0],'0.0.0.0' if enabled else '127.0.0.1')
             self.assertEqual((r._port,r._token),(port,token));self.assertIs(r._queue,work)
             self.assertEqual(json.loads(self.request()[1]),self.original)
             self.assertEqual(self.owner.par.Allowlan.eval(),enabled)
-        self.assertEqual(r.PRODUCT_VERSION,'0.8.5')
+        self.assertEqual(r.PRODUCT_VERSION,version)
     def test_wildcard_accepts_actual_destination_and_shared_writes(self):
         self.r.set_lan_enabled(True)
         self.assertEqual(self.request('127.0.0.2',body={'value':.75})[0],200)

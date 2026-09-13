@@ -12,6 +12,8 @@ import uuid
 
 STORE = 'grapeNativeUniformsV1'
 TYPES = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
+PRESETS = {'time': 'me.time.seconds', 'frame': 'me.time.frame',
+           'absTime': 'absTime.seconds', 'absFrame': 'absTime.frame'}
 CHANNELS = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'),
             'color': ('rgbr', 'rgbg', 'rgbb', 'alpha')}
 
@@ -46,7 +48,12 @@ def component(p):
         value = None
     mode = str(p.mode).split('.')[-1].upper()
     edit=editable_parameter(p)
+    expression=p.expr if mode=='EXPRESSION' else ''
     return {'parameter': p.name, 'value': value, 'mode': mode,
+            'expression': expression, 'binding':p.bindExpr if mode=='BIND' else '',
+            'modeWritable': mode in ('CONSTANT','EXPRESSION') and bool(p.enable) and not p.readOnly,
+            'modeExpected': token({'parameter':p.name,'mode':mode,'expression':expression,
+                                   'bind':p.bindExpr if mode=='BIND' else ''}),
             'writable': value is not None and edit is not None and bool(edit.enable) and not edit.readOnly,
             **({'control':edit.name} if edit is not None and not edit.isSamePar(p) else {})}
 
@@ -103,6 +110,7 @@ def reconcile(declarations, registry, rows):
             issues.append({'id': ident, 'message': 'Uniform source is missing or ambiguous: ' + decl['name']})
         else:
             decl['name'] = row['name']; decl.pop('sourceMissing', None)
+            if row['sequence']=='color':decl['nativeSequence']='color'
             record.update(name=row['name'], index=row['index']); record.pop('missing', None)
     known = {d['name'] for d in declarations}
     for i, row in enumerate(rows):
@@ -114,7 +122,8 @@ def reconcile(declarations, registry, rows):
         ty = 'vec4' if row['sequence'] == 'color' else 'float'
         values = [c['value'] if c['value'] is not None and abs(c['value']) <= 1e20 else 0.0 for c in row['components']]
         declarations.append({'id': ident, 'kind': 'uniform', 'name': name, 'type': ty,
-                             'value': values if ty == 'vec4' else values[0]})
+                             'value': values if ty == 'vec4' else values[0],
+                             **({'nativeSequence':'color'} if row['sequence']=='color' else {})})
         registry[ident] = {k: row[k] for k in ('sequence', 'index', 'name')}
         known.add(name)
     return declarations, registry, issues
@@ -189,10 +198,10 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             continue
         if record and not record.get('missing'):
             raise RuntimeError('Uniform changed in TD. Refresh sources before applying: ' + decl['name'])
-        sequence = 'vec'; seq = operator.seq.vec
+        sequence = decl.get('nativeSequence','vec'); seq = getattr(operator.seq,sequence)
         index = seq.numBlocks
         # The untouched initial blank row is safe; edited blank rows survive.
-        if index == 1 and not operator.par.vec0name.eval() and all(str(parameter(operator, 'vec', 0, c).mode).endswith('CONSTANT') and parameter(operator, 'vec', 0, c).isDefault for c in CHANNELS['vec']): index = 0
+        if index == 1 and not parameter(operator,sequence,0,'name').eval() and all(str(parameter(operator, sequence, 0, c).mode).endswith('CONSTANT') and parameter(operator, sequence, 0, c).isDefault for c in CHANNELS[sequence]): index = 0
         else: seq.numBlocks = index + 1
         parameter(operator, sequence, index, 'name').val = decl['name']
         source = locate(original, original_registry.get(ident))
@@ -211,6 +220,8 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             p.val = (source['components'][j]['value'] if source and source['components'][j]['value'] is not None else values[j] if j < len(values) else 0)
             if ident in public and j < len(public[ident]['parameters']) and not input_owner:
                 p.expr = 'parent().par.' + public[ident]['parameters'][j]
+            elif not source and not input_owner and j == 0 and decl.get('initialDriver') in PRESETS:
+                p.expr = PRESETS[decl['initialDriver']]
         registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
     # Removing a graph reference does not remove a declaration or native row.
     # Explicit source deletion is handled by remove(), with a missing reference.
@@ -300,6 +311,12 @@ def edit(runtime, body):
             if ty not in TYPES: raise RuntimeError('Unsupported Uniform type.')
             decl = {'id': 'uniform_' + uuid.uuid4().hex, 'kind': 'uniform', 'name': name, 'type': ty,
                     'value': 0.0 if TYPES[ty] == 1 else [0.0] * TYPES[ty]}
+            if body.get('sequence'):
+                if body['sequence'] not in CHANNELS:raise RuntimeError('Unsupported native Uniform page.')
+                decl['nativeSequence']=body['sequence']
+            if body.get('preset'):
+                if body['preset'] not in PRESETS or ty!='float':raise RuntimeError('Unsupported time preset.')
+                decl['initialDriver']=body['preset']
             graph['declarations'].append(decl)
         elif not decl or not decl.get('sourceMissing'):
             raise RuntimeError('Select a missing Uniform to restore.')
@@ -310,6 +327,23 @@ def edit(runtime, body):
     if not decl: raise RuntimeError('Select an existing Uniform source.')
     row = locate(operator, comp.fetch(STORE, {}).get(decl['id']))
     if row is None: raise RuntimeError('This Uniform source is missing.')
+    if action == 'driver':
+        index=body.get('component');expression=body.get('expression')
+        if type(index) is not int or not 0<=index<4 or not isinstance(expression,str) or len(expression)>4096:
+            raise RuntimeError('Select a component and enter a Python expression up to 4096 characters.')
+        item=row['components'][index]
+        if not item['modeWritable'] or body.get('expected')!=item['modeExpected']:
+            raise RuntimeError('The driver changed or is owned by Bind / Export. Refresh or use native Parameters.')
+        p=getattr(operator.par,item['parameter']);before=(p.mode,p.val,p.expr)
+        try:
+            if expression.strip():p.expr=expression
+            else:
+                value=p.eval();runtime.core().number(value);p.mode=ParMode.CONSTANT;p.val=value
+            runtime.core().number(p.eval())
+        except Exception:
+            p.val=before[1];p.expr=before[2];p.mode=before[0]
+            raise RuntimeError('Expression must evaluate to a finite numeric value; the previous driver was restored.')
+        return snapshot(runtime)
     if body.get('expected') != edit_token(row): raise RuntimeError('The Uniform changed in TD. Refresh and try again.')
     if action == 'rename':
         name = body.get('name')

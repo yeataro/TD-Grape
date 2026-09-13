@@ -763,3 +763,21 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* Native hidden must override the trash target's flex display. */
 #graphtrash[hidden]{display:none}
+
+/* Source inventory stays compact; editing lives in Parameter. */
+#inputsearch{width:100%;box-sizing:border-box;margin:0 0 8px}
+.input-group-title{font-size:11px;color:var(--muted);padding:10px 4px 4px}
+.input-source-row{display:flex;gap:2px;min-width:0;margin:2px 0}
+.input-source-select{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0;text-align:left;padding:8px;background:transparent;border-color:transparent}
+.input-source-select span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.input-source-select small{color:var(--muted);font-size:11px;flex-shrink:0}
+.input-source-select[aria-pressed=true]{background:var(--panel-2,#292632);border-color:var(--border,#36323f)}
+.input-reference{width:34px;min-height:34px;padding:4px;font-size:20px;touch-action:none;user-select:none;-webkit-user-select:none}
+.input-drag-preview{position:fixed;z-index:10000;pointer-events:none;background:#2b2838;color:#e1dcf0;border:1px solid #aaa0c4;border-radius:5px;padding:8px 12px}
+.input-inspector-title{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px;margin-bottom:12px;min-width:0}
+.input-inspector-title strong{overflow:hidden;text-overflow:ellipsis}.input-inspector-title small{white-space:nowrap;color:var(--muted)}
+.input-drivers,.input-defaults,.inputs-create{margin:12px 0;font-size:12px}.input-drivers summary,.input-defaults summary,.inputs-create summary{cursor:pointer;padding:6px 0}
+.input-drivers .muted{font-size:11px}.source-driver{display:flex;align-items:end;gap:5px}.source-driver .field{flex:1;min-width:0}.source-driver input{font-family:monospace;width:100%;box-sizing:border-box}.source-driver button{margin-bottom:10px;white-space:nowrap;font-size:11px}
+#sourcecreate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}#sourcekind,#sourcepresethint,#sourcecreate button{grid-column:1/-1}#sourcecreate input{min-width:0}#sourcepresethint{font-size:11px;overflow-wrap:anywhere}
+.native-input-fields .source-components{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.native-source-state:empty,#sourcestatus:empty{display:none}
+@media(pointer:coarse){.input-reference{min-width:44px;min-height:44px}.input-source-select{min-height:44px}}

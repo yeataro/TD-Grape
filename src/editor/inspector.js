@@ -406,6 +406,8 @@ function renderHelp(){
     help.append(el('h3',{},t(editorTarget==='top'?'preview.top':'preview.material')),markdown(t(editorTarget==='top'?'preview.helpTop':'preview.helpMaterial')));return;
   }
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
+  const source=!n&&graph.declarations.find(d=>d.id===selectedInputId);
+  if(source){help.append(el('h3',{},source.name+' · '+source.type),markdown(t('help.'+source.kind)));return;}
   if(nodeComment(n)){const note=el('section',{class:'node-comment-help'});note.append(el('strong',{},t('node.comment')),el('p',{},nodeComment(n)));help.append(note);}
   help.append(markdown(t(d?(editorTarget==='top'&&['uv','texture','pixel_out'].includes(d.key)?'help.top.'+d.key:(d.descriptionKey||'help.'+d.key)):'help.select')));
 }
@@ -421,6 +423,9 @@ function inspector(){
   cancelValueLadder();
   const box=$('#inspector');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
+  if(n||selectedEdge!==null)selectedInputId=null;
+  const inputSource=graph.declarations.find(d=>d.id===selectedInputId);
+  if(inputSource){inputSourceInspector(box,inputSource);return;}
   if(!n){
     box.append(el('p',{class:'muted'},selectedEdge!==null?t('wire.selected'):t('node.select')));
     if(selectedEdge!==null){const disconnect=el('button',{class:'wide danger','data-action':'disconnect-wire'},t('wire.disconnectSelected'));disconnect.disabled=readonly;disconnect.onclick=remove;box.append(disconnect);}
@@ -444,7 +449,12 @@ function inspector(){
     if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(split);}
     if('value'in n.params)box.append((d.key==='color'?colorFields:numbers)(n.params.value,t('declaration.value'),value=>change(()=>n.params.value=value)));
     const decl=graph.declarations.find(x=>x.id===n.params.declarationId);
-    if(decl)declarationFields(box,decl);
+    if(decl){
+      const source=el('button',{class:'wide','data-inspect-input':decl.id},t('inputs.edit')+' · '+decl.name);
+      source.onclick=()=>selectInputSource(decl.id);box.append(source);
+      if(decl.kind==='sampler')declarationFields(box,decl);
+      else nativeInputFields(box,decl);
+    }
     if(d.key==='sampler'){const create=el('button',{class:'wide'},t('sampler.create'));create.onclick=()=>newSampler(n);box.append(create);}
     else if(d.key==='uniform'&&!decl){
       const create=el('button',{class:'wide'},t('uniform.create'));create.onclick=()=>newUniform(n);box.append(create);
@@ -867,12 +877,27 @@ function installPanelWorkspace(){
   return {move,apply,snapshot:()=>copy(state),closeBrowser(){setSidebarOpen(locate('browser').side,false);},reveal(id){state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);build();persist();},translate(){build();if(dialog.open)manager();if(!menu.hidden)showMenu();},manager};
 }
 
-/* Native Uniform editor. Values come from the actual GLSL OP; defaults remain
-   portable graph metadata. This panel is independent of selected-node tools. */
-let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceError='',nativeSourceRetryAt=0;
+/* Inputs are a source inventory. Graph nodes reference these identities; native
+   Uniform values/modes continue to belong to the actual GLSL OP. */
+let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceError='',nativeSourceRetryAt=0,selectedInputId=null;
+const inputPresets={time:['uTime','me.time.seconds'],frame:['uFrame','me.time.frame'],absTime:['uAbsTime','absTime.seconds'],absFrame:['uAbsFrame','absTime.frame']};
 function sourceReferences(id){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)].flatMap(g=>g.nodes).filter(n=>n.params?.declarationId===id);}
+function sourceReady(){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!dirty&&!submitBusy&&!nativeSourceBusy&&nativeSourceSnapshot.revision===revision&&!readonly;}
+function selectInputSource(id){
+  if(!graph.declarations.some(d=>d.id===id))return;
+  helpContext='node';selectedInputId=id;selected=null;selectedEdge=null;selection.clear();cancelConnection();closeCreator();
+  workspaceLayout?.reveal('parameters');render();
+}
+function inputReference(id,x=null,y=null){
+  const decl=graph.declarations.find(d=>d.id===id),d=decl&&catalog.find(d=>d.key===decl.kind);if(!d)return;
+  const rect=$('#canvas').getBoundingClientRect(),p=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!p)return;
+  change(()=>{selectedInputId=null;const n=instantiate(d,p.x,p.y,null,{declarationId:id});selectNode(n);});
+}
 function receiveNativeSources(data){
+  if(data.revision<revision)return; // A pre-Apply poll must not roll back its result.
   nativeSourceSnapshot=data;
+  const live=new Set(data.uniforms.filter(r=>!r.missing&&!r.pending).map(r=>r.id));
+  rememberNativeInputSources((data.declarations||data.graph?.declarations||[]).filter(d=>live.has(d.id)));
   if(data.revision!==revision&&!dirty&&!submitBusy&&data.graph){
     graph=clone(data.graph);revision=data.revision;past=[];future=[];render();
     if(data.sourceChanged){mark();}else{$('#dirty').textContent=t('graph.applied')+revision;}
@@ -887,59 +912,141 @@ async function refreshNativeSources(){
   finally{nativeSourcePolling=false;}
 }
 async function nativeSourceRequest(endpoint,body){
-  if(nativeSourceBusy||dirty||submitBusy||readonly)return;
-  nativeSourceBusy=true;renderNativeSourceValues();
-  try{const data=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});nativeSourceError='';receiveNativeSources(data);}
+  if(!sourceReady())return null;
+  nativeSourceBusy=true;renderNativeSourceValues();let result=null;
+  try{result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});nativeSourceError='';receiveNativeSources(result);}
   catch(e){nativeSourceError=e.message;status(e.message,true);}
   finally{nativeSourceBusy=false;renderNativeSourceValues();await refreshNativeSources();}
+  return result;
 }
 function renderNativeSourceValues(){
-  const box=$('#nativeuniforms');if(!box)return;
-  const ready=nativeSourceSnapshot?.enabled&&!nativeSourceError&&!dirty&&!submitBusy&&!nativeSourceBusy&&nativeSourceSnapshot.revision===revision&&!readonly;
-  for(const card of box.querySelectorAll('[data-native-source]')){
+  const ready=sourceReady();
+  for(const card of document.querySelectorAll('#inspector [data-native-source]')){
     const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===card.dataset.nativeSource);if(!row)continue;
     for(const entry of card.querySelectorAll('[data-source-component]')){
       const item=row.components[Number(entry.dataset.sourceComponent)];entry.disabled=!ready||!item?.writable;
       if(document.activeElement!==entry&&!entry.numericGestureActive){entry.setSyncedValue(item?.value);entry.sourceExpected=item?clone(item):null;}
-      entry.title=item?.mode&&item.mode!=='CONSTANT'?item.mode:'';
+      entry.title=item?.expression||item?.mode||'';
     }
-    const name=card.querySelector('[data-source-name]');name.disabled=!ready||!row.nameWritable;
-    if(document.activeElement!==name){name.setSyncedValue(row.name);name.sourceExpected=row.expected;}
-    for(const button of card.querySelectorAll('button'))button.disabled=!ready;
-    card.querySelector('.native-source-state').textContent=row.pending?t('sources.enable'):row.missing?t('sources.missing'):row.components.some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');
+    for(const label of card.querySelectorAll('[data-source-mode]')){
+      const item=row.components[Number(label.dataset.sourceMode)];label.textContent=item?.mode==='CONSTANT'?t('inputs.valueMode'):item?.mode||'';label.title=item?.binding||item?.expression||'';
+    }
+    for(const entry of card.querySelectorAll('[data-source-expression]')){
+      const item=row.components[Number(entry.dataset.sourceExpression)];entry.disabled=!ready||!item?.modeWritable;
+      if(document.activeElement!==entry){entry.setSyncedValue(item?.expression||'');entry.sourceExpected=item?.modeExpected;}
+    }
+    for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
+    const state=card.querySelector('.native-source-state');if(state)state.textContent=row.pending?t('sources.enable'):row.missing?t('sources.missing'):row.components.some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');
   }
-  for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=!ready;
+  for(const entry of document.querySelectorAll('#inspector [data-input-name]')){
+    const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
+  }
+  for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
+  for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=readonly;
+  if($('#sourcekind'))$('#sourcekind').disabled=readonly;
+  if($('#sourcetype'))$('#sourcetype').disabled=readonly||$('#sourcekind').value!=='uniform';
   $('#sourcestatus').textContent=nativeSourceError||(!nativeSourceSnapshot?.enabled?t('sources.enable'):dirty||nativeSourceSnapshot.revision!==revision?t('sources.pending'):(nativeSourceSnapshot.issues||[]).map(i=>i.message).join('\n'));
+  for(const item of document.querySelectorAll('[data-input-reference]'))item.disabled=readonly;
+  for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
+}
+function nativeInputFields(box,decl){
+  const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===decl.id);
+  const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
+  if(!row||row.pending){card.append(el('p',{class:'muted'},t('sources.pending')));return;}
+  const count=typeContract?.types?.[decl.type]?.components||1;
+  if(!row.missing){
+    const values=el('div',{class:'source-components'});
+    row.components.forEach((item,index)=>{
+      const entry=input(item.value,value=>nativeSourceRequest('source-value',{id:decl.id,component:index,value,expected:entry.sourceExpected}),'number');
+      entry.dataset.sourceComponent=index;entry.sourceExpected=clone(item);entry.setAttribute('aria-label',decl.name+' '+'XYZW'[index]);
+      const f=field('XYZW'[index],entry);if(index>=count)f.classList.add('source-dormant');values.append(f);
+    });card.append(values);
+    const drivers=el('details',{class:'input-drivers'});drivers.append(el('summary',{},t('inputs.drivers')));
+    row.components.forEach((item,index)=>{
+      const line=el('div',{class:'source-driver'}),expr=input(item.expression||'',expression=>nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression,expected:expr.sourceExpected}));
+      expr.dataset.sourceExpression=index;expr.sourceExpected=item.modeExpected;expr.placeholder=t('inputs.expression');expr.setAttribute('aria-label',decl.name+' '+'XYZW'[index]+' Python');
+      const freeze=el('button',{'data-source-freeze':index},t('inputs.freeze'));
+      freeze.onclick=()=>{const live=nativeSourceSnapshot?.uniforms.find(r=>r.id===decl.id)?.components[index];nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression:'',expected:live?.modeExpected});};
+      line.append(field('XYZW'[index],expr),el('small',{'data-source-mode':index}),freeze);drivers.append(line);
+    });drivers.append(el('p',{class:'muted'},t('inputs.driverHint')));card.append(drivers);
+  }
+  card.append(el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
+}
+function inputSourceInspector(box,decl){
+  const heading=el('div',{class:'input-inspector-title'});heading.append(el('strong',{},decl.name),el('small',{},decl.kind==='uniform'?'Uniform · '+decl.type:'Sampler · '+decl.type));box.append(heading);
+  const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===decl.id);
+  const rename=input(decl.name,name=>{
+    if(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)||graph.declarations.some(d=>d.id!==decl.id&&d.name===name)){status(t('inputs.invalidName'),true);inspector();return;}
+    if(decl.kind==='uniform'&&row&&!row.pending){nativeSourceRequest('source-edit',{action:'rename',id:decl.id,name,expected:row.expected});}
+    else changeDeclaration(()=>decl.name=name);
+  });rename.dataset.sourceName='true';rename.dataset.inputName=decl.id;rename.disabled=readonly||(decl.kind==='uniform'&&row&&!row.pending&&(!sourceReady()||!row.nameWritable));box.append(field(t('declaration.name'),rename));
+  if(decl.kind==='uniform'){
+    box.append(field(t('node.type'),select(['float','vec2','vec3','vec4'].map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),el('small',{class:'muted'},row?.sequence==='color'?t('inputs.nativeColor'):t('inputs.nativeVector')));
+    nativeInputFields(box,decl);
+    const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value)));box.append(defaults);
+    const custom=el('button',{'data-source-custom':decl.id,class:'wide'},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(decl.id);box.append(custom);
+  }else declarationFields(box,decl);
+  const actions=el('div',{class:'source-actions'}),reference=el('button',{'data-input-reference':decl.id},t('sources.reference'));reference.onclick=()=>inputReference(decl.id);
+  actions.append(reference);box.append(actions,el('p',{class:'muted'},t('inputs.references').replace('{count}',sourceReferences(decl.id).length)));
+  if(decl.kind==='uniform'&&row&&!row.pending){
+    const remove=el('button',{class:'wide danger','data-source-remove':decl.id},t(row.missing?'sources.restore':'sources.remove'));remove.disabled=!sourceReady();
+    remove.onclick=()=>{const live=nativeSourceSnapshot.uniforms.find(r=>r.id===decl.id);if(!live.missing&&!confirm(t('sources.removeConfirm').replace('{name}',live.name).replace('{count}',sourceReferences(decl.id).length)))return;nativeSourceRequest('source-edit',{action:live.missing?'restore':'remove',id:decl.id,expected:live.expected}).then(()=>inspector());};box.append(remove);
+  }
+  if(readonly)for(const field of box.querySelectorAll('input,select,button'))field.disabled=true;
+  renderNativeSourceValues();
+}
+function installInputDrag(button,id){
+  // Only the explicit reference handle captures touch; the inventory still scrolls.
+  let suppressClick=0;
+  button.onclick=()=>{if(performance.now()>suppressClick)inputReference(id);};
+  button.onpointerdown=e=>{
+    if(readonly||e.button!==0)return;e.preventDefault();e.stopPropagation();
+    const start={x:e.clientX,y:e.clientY},pointer=e.pointerId,ghost=el('div',{class:'input-drag-preview'},graph.declarations.find(d=>d.id===id)?.name||'');let moved=false,done=false;
+    button.setPointerCapture(pointer);
+    const cancel=()=>finish(null),escape=ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopImmediatePropagation();cancel();}},second=ev=>{if(ev.pointerId!==pointer)cancel();};
+    function finish(ev){
+      if(done)return;done=true;const drop=moved&&ev&&document.elementFromPoint(ev.clientX,ev.clientY)?.closest('#canvas');
+      button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',finish);button.removeEventListener('pointercancel',cancel);button.removeEventListener('lostpointercapture',cancel);document.removeEventListener('keydown',escape,true);document.removeEventListener('pointerdown',second,true);window.removeEventListener('blur',cancel);ghost.remove();$('#canvas').classList.remove('drop-ready');
+      if(button.hasPointerCapture(pointer))button.releasePointerCapture(pointer);
+      if(moved||!ev)suppressClick=performance.now()+500;
+      if(drop)inputReference(id,ev.clientX,ev.clientY);
+    }
+    function move(ev){if(ev.pointerId!==pointer)return;if(Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>8)moved=true;if(!moved)return;if(!ghost.isConnected)document.body.append(ghost);ghost.style.left=ev.clientX+12+'px';ghost.style.top=ev.clientY+12+'px';$('#canvas').classList.toggle('drop-ready',!!document.elementFromPoint(ev.clientX,ev.clientY)?.closest('#canvas'));}
+    button.addEventListener('pointermove',move);button.addEventListener('pointerup',finish);button.addEventListener('pointercancel',cancel);button.addEventListener('lostpointercapture',cancel);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',second,true);window.addEventListener('blur',cancel);
+  };
 }
 function renderNativeSources(){
-  const box=$('#nativeuniforms');if(!box)return;
-  const data=nativeSourceSnapshot;if(!data){renderNativeSourceValues();return;}
-  const identity=JSON.stringify([language,data.uniforms.map(r=>[r.id,r.type,r.missing])]);
-  if(box.dataset.sourceStructure===identity){renderNativeSourceValues();return;}
-  // A poll never destroys a field while the user is typing in this panel.
-  if(box.contains(document.activeElement))return;
-  box.dataset.sourceStructure=identity;box.replaceChildren();
-  for(const row of data.uniforms){
-    const id=row.id,card=el('section',{class:'native-source-card','data-native-source':id});
-    const name=input(row.name,value=>{nativeSourceRequest('source-edit',{action:'rename',id,name:value,expected:name.sourceExpected});});name.dataset.sourceName='true';name.sourceExpected=row.expected;
-    const heading=el('div',{class:'source-heading'});heading.append(name,el('small',{},row.type));card.append(heading);
-    if(!row.missing){
-      const values=el('div',{class:'source-components'});
-      row.components.forEach((item,index)=>{let entry;entry=input(item.value,value=>nativeSourceRequest('source-value',{id,component:index,value,expected:entry.sourceExpected}),'number');entry.dataset.sourceComponent=index;entry.sourceExpected=clone(item);entry.setAttribute('aria-label',row.name+' '+'XYZW'[index]);const f=field('XYZW'[index],entry);if(index>=(typeContract?.types?.[row.type]?.components||({float:1,vec2:2,vec3:3,vec4:4}[row.type])))f.classList.add('source-dormant');values.append(f);});card.append(values);
+  const box=$('#nativeuniforms');if(!box||!graph)return;
+  const query=normalizeSearch($('#inputsearch')?.value),decls=graph.declarations.filter(d=>['uniform','sampler'].includes(d.kind)&&normalizeSearch(d.name+' '+d.kind+' '+d.type).includes(query));
+  const identity=JSON.stringify([language,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing]),selectedInputId]);
+  if(box.dataset.sourceStructure!==identity&&!box.querySelector(':active')){
+    box.dataset.sourceStructure=identity;box.replaceChildren();
+    for(const kind of ['uniform','sampler']){
+      const group=decls.filter(d=>d.kind===kind);if(!group.length)continue;box.append(el('div',{class:'input-group-title'},kind==='uniform'?'Uniforms':'Samplers'));
+      for(const decl of group){
+        const card=el('div',{class:'input-source-row','data-input-source':decl.id}),pick=el('button',{class:'input-source-select','aria-pressed':String(selectedInputId===decl.id)});
+        pick.append(el('span',{},decl.name),el('small',{},decl.type+(decl.sourceMissing?' · '+t('sources.missing'):'')));pick.onclick=()=>selectInputSource(decl.id);
+        const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');installInputDrag(reference,decl.id);card.append(pick,reference);box.append(card);
+      }
     }
-    const actions=el('div',{class:'source-actions'}),reference=el('button',{},t('sources.reference'));
-    reference.onclick=()=>{change(()=>{const rect=$('#canvas').getBoundingClientRect();const n=instantiate(catalog.find(d=>d.key==='uniform'),(rect.width/2-pan.x)/scale,(rect.height/2-pan.y)/scale);n.params.declarationId=id;selectNode(n);});};
-    const remove=el('button',{},t(row.missing?'sources.restore':'sources.remove'));
-    remove.onclick=()=>{const current=nativeSourceSnapshot.uniforms.find(r=>r.id===id);if(!row.missing&&!confirm(t('sources.removeConfirm').replace('{name}',current.name).replace('{count}',sourceReferences(id).length)))return;nativeSourceRequest('source-edit',{action:row.missing?'restore':'remove',id,expected:current.expected});};
-    const custom=el('button',{},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(id);custom.dataset.sourceCustom='true';
-    actions.append(reference,custom,remove);card.append(actions,el('p',{class:'muted native-source-state'}));box.append(card);
+    if(!decls.length)box.append(el('p',{class:'muted'},query?t('create.empty'):t('inputs.empty')));
   }
-  if(!data.uniforms.length)box.append(el('p',{class:'muted'},t('sources.empty')));
+  // Native row availability can arrive after an apply without changing graph revision.
+  const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;
+  const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.components.map(c=>[c.mode,c.control,c.modeWritable])]);
+  if($('#inspector').dataset.inputState!==signature&&!$('#inspector').contains(document.activeElement)){$('#inspector').dataset.inputState=signature;if(active)inspector();}
   renderNativeSourceValues();
 }
 function installNativeSources(){
-  $('#sourcecreate').onsubmit=e=>{e.preventDefault();nativeSourceRequest('source-edit',{action:'create',name:$('#sourcename').value.trim(),type:$('#sourcetype').value});};
+  $('#inputsearch').oninput=renderNativeSources;
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)];$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').value=kind==='color'?'vec4':'float';$('#sourcepresethint').textContent=preset?preset[1]:'';renderNativeSourceValues();};
+  $('#sourcecreate').onsubmit=async e=>{
+    e.preventDefault();const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value;
+    if(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)){status(t('inputs.invalidName'),true);return;}
+    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(kind==='sampler'?'sampler':'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});if(changed)selectInputSource(id);
+  };
   $('#sourceparameters').onclick=async()=>{try{await api('native-parameters',{});}catch(e){status(e.message,true);}};
+  $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);
   setInterval(refreshNativeSources,1000);
 }
 

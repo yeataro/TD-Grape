@@ -66,20 +66,29 @@ function availableEntries(){
   }
   return entries.filter(d=>!d.functionId||!graphTrail.includes(d.functionId));
 }
-function instantiate(d,x,y,type=null,{locked=false}={}){
+function uniqueInputName(hint='uValue'){
+  const base=String(hint).replace(/[^A-Za-z0-9_]/g,'').slice(0,38)||'uValue',names=new Set(graph.declarations.map(d=>d.name));
+  const safe=/^[A-Za-z]/.test(base)&&! /^(gl_|TD|sg_|sTD)/.test(base)?base:'u'+base;
+  if(!names.has(safe))return safe;let i=2;while(names.has(safe+i))i++;return safe+i;
+}
+function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence}={}){
+  const id=kind+'_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
+  const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||(kind==='sampler'?'uTexture':'uValue'))};
+  if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
+  else {Object.assign(decl,{value:shapedValue(value??0,type),expose:false});if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;}
+  graph.declarations.push(decl);return decl;
+}
+function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={}}={}){
   const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});
   if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
   if(type&&params.type)params.type=type;
   if(d.key==='uniform'){
-    const decl=graph.declarations.find(x=>x.kind==='uniform'&&(!type||x.type===type));
-    if(decl)params.declarationId=decl.id;
-    else {const uid='uniform_'+crypto.randomUUID().replaceAll('-','').slice(0,8),ty=type||'float';
-      graph.declarations.push({id:uid,kind:'uniform',type:ty,name:'uValue'+uid.slice(-8),value:filledValue(ty,.5),expose:false});params.declarationId=uid;}
+    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='uniform'):createInputDeclaration('uniform',type||'float',inputSeed);
+    if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;
   }
   if(d.key==='sampler'){
-    let decl=graph.declarations.find(x=>x.kind==='sampler'&&!x.sourceMissing);
-    if(!decl){const uid='sampler_'+crypto.randomUUID().replaceAll('-','').slice(0,12);decl={id:uid,kind:'sampler',type:'sampler2D',name:'uTexture'+uid.slice(-8),source:'builtin:black',fallback:'opaque-black'};graph.declarations.push(decl);}
-    decl.fallback='opaque-black';params.declarationId=decl.id;
+    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='sampler'):createInputDeclaration('sampler','sampler2D',inputSeed);
+    if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;
   }
   const n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
   if(d.revisionHash)n.revisionHash=d.revisionHash;current().nodes.push(n);selected=id;selection=new Set([id]);selectedEdge=null;return n;
