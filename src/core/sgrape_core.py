@@ -41,7 +41,7 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample'))
+    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input'))
 
 def _definition_signature(d):
     # Presentation changes do not change port/default behavior.
@@ -336,6 +336,23 @@ def _scope_comments(lines, owners, nodes, scopes, stage):
     return result,locations
 
 
+def top_input_slots(graph):
+    """Optional managed COMP inputs. Absence preserves legacy source ordering."""
+    slots=graph.get('topInputs')
+    if slots is None:return []
+    if graph_target(graph)!='top':raise GraphError('TOP Inputs belong to Grape TOP only')
+    if not isinstance(slots,list) or not 1<=len(slots)<=16:raise GraphError('Keep between 1 and 16 TOP Inputs')
+    seen=set()
+    for slot in slots:
+        if not isinstance(slot,dict) or not ID.fullmatch(str(slot.get('id',''))) or slot['id'] in seen:raise GraphError('Invalid or duplicate TOP Input identity')
+        seen.add(slot['id'])
+        name=slot.get('name')
+        if not isinstance(name,str) or not 1<=len(name)<=48 or any(ord(c)<32 for c in name):raise GraphError('TOP Input name must contain 1–48 plain text characters')
+        if not texture_source_valid(slot.get('defaultSource')):raise GraphError('Choose a TOP Input default image or absolute TOP path')
+    if graph.get('topInputLegacyId') is not None and graph['topInputLegacyId'] not in seen:raise GraphError('The legacy TOP Input slot is still referenced')
+    return slots
+
+
 def _compile_flat(graph,annotation_scopes=None):
     if not isinstance(graph,dict) or graph.get('schemaVersion')!=VERSION:
         raise GraphError('Unsupported graph version; original data has been kept')
@@ -345,6 +362,7 @@ def _compile_flat(graph,annotation_scopes=None):
         for item in data.get('nodes',[]):item.pop('_annotationScopes',None)
     if len(json.dumps(sized,allow_nan=False))>512000: raise GraphError('Graph exceeds 512 KB')
     if set(graph.get('stages',{}))!=set(graph_stages(graph)): raise GraphError('Shader stages do not match its target')
+    slots=top_input_slots(graph)
     declarations={}; names=set()
     for d in graph.get('declarations',[]):
         if not isinstance(d,dict) or not ID.fullmatch(str(d.get('id',''))): raise GraphError('Invalid declaration ID')
@@ -362,6 +380,10 @@ def _compile_flat(graph,annotation_scopes=None):
             if not isinstance(d.get('expose',False),bool):raise GraphError('Expose must be a boolean')
             label=d.get('exposeName','')
             if not isinstance(label,str) or len(label)>80 or any(ord(c)<32 for c in label):raise GraphError('Public texture label must be plain text up to 80 characters')
+        elif d.get('kind')=='constant':
+            if d.get('type') not in TYPES:raise GraphError('Unsupported constant type')
+            literal(d.get('value'),d['type'])
+            if d.get('initialDriver') or d.get('expose'):raise GraphError('Constants cannot have a live Uniform driver')
         elif d.get('kind')=='uniform':
             if d.get('type') not in TYPES: raise GraphError('Unsupported uniform type')
             if d.get('nativeSequence','vec') not in ('vec','color'):raise GraphError('Unsupported native Uniform page')
@@ -376,7 +398,15 @@ def _compile_flat(graph,annotation_scopes=None):
         declarations[d['id']]=d; names.add(name)
     input_specs={(d.get('defaultSource','builtin:banana'),d.get('expose',False),d.get('exposeName','') if d.get('expose') else '') for d in declarations.values() if d.get('source')=='input:0'}
     if len(input_specs)>1:raise GraphError('Samplers using Input 1 must share its default source and exposed parameter settings')
-    stages={}; used=set(); diagnostics=[]
+    slot_bindings=[]
+    for index,slot in enumerate(slots):
+        ident='grapeTop_'+slot['id']
+        if ident in declarations:raise GraphError('Reserved TOP Input identity')
+        binding={'id':ident,'kind':'sampler','name':'sg_topInput'+str(index),'type':'sampler2D',
+                 'source':'input:'+str(index),'topInputId':slot['id'],'defaultSource':slot['defaultSource'],
+                 'fallback':'opaque-black','internal':True}
+        declarations[ident]=binding;slot_bindings.append(ident)
+    stages={}; used=set(slot_bindings); diagnostics=[]
     for stage in graph_stages(graph):
         try:
             data=graph['stages'][stage]
@@ -395,10 +425,12 @@ def _compile_flat(graph,annotation_scopes=None):
                 if d['key'] in ('float','vec2','vec3','color'):
                     literal(params.get('value'),next(iter(d['outputs'].values())))
                 declaration=None
-                if d['key'] in ('uniform','texture','sampler'):
+                if d['key'] in ('uniform','constant','texture','sampler'):
                     declaration=declarations.get(params.get('declarationId'))
-                    expected='uniform' if d['key']=='uniform' else 'sampler'
+                    expected=d['key'] if d['key'] in ('uniform','constant') else 'sampler'
                     if not declaration or declaration['kind']!=expected: raise GraphError('Select a matching declaration',ident)
+                if d['key']=='top_input' and not any(slot['id']==params.get('inputId') for slot in slots):
+                    raise GraphError('Select an existing TOP Input',ident)
                 if d['key']=='pixel_out' and graph_target(graph)=='top' and pixel_buffer_count(params)!=1:
                     raise GraphError('Multiple color buffers are currently supported for MAT only',ident)
                 resolved = resolved_ports(d, params, declaration)
@@ -472,10 +504,15 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
                 elif k=='split':
                     for port in ports[ident]['out']: expressions[(ident,port)]='('+a('color')+').'+port
-                elif k in ('uniform','texture','sampler'):
+                elif k in ('uniform','constant','texture','sampler'):
                     decl=declarations[p['declarationId']]; used.add(decl['id'])
-                    symbol='sg_sampler_'+decl['id'] if graph_target(graph)=='top' and k!='uniform' else decl['name']
+                    symbol='sg_sampler_'+decl['id'] if graph_target(graph)=='top' and k not in ('uniform','constant') else decl['name']
                     expr='texture('+symbol+', '+a('uv')+')' if k=='texture' else symbol
+                elif k=='top_input':
+                    index=next(i for i,slot in enumerate(slots) if slot['id']==p['inputId'])
+                    expr='sTD2DInputs['+str(index)+']'
+                    expressions[(ident,'size')]='uTD2DInfos['+str(index)+'].res.zw'
+                    expressions[(ident,'pixelSize')]='uTD2DInfos['+str(index)+'].res.xy'
                 elif k=='texture_sample': expr='texture('+a('sampler')+', '+a('uv')+')'
                 elif k=='uv': expr='sg_uv'
                 elif k=='position': expr='TDPos()'
@@ -500,7 +537,7 @@ def _compile_flat(graph,annotation_scopes=None):
                             lines.extend(['#if TD_NUM_COLOR_BUFFERS > '+str(index),
                                           '    fragColor['+str(index)+'] = TDOutputSwizzle('+a(port)+');',
                                           '#endif'])
-                if expr is not None and ty in RESOURCE_TYPES:
+                if expr is not None and (ty in RESOURCE_TYPES or k=='constant'):
                     # Opaque GLSL samplers are references, never local variables.
                     expressions[(ident,'out')]=expr
                 elif expr is not None:
@@ -524,16 +561,22 @@ def _compile_flat(graph,annotation_scopes=None):
             stages[stage]={'lines':lines,'ports':ports,'live':sorted(live),'lineNodes':line_nodes}
         except GraphError as exc:
             exc.stage=stage; raise
+    aliases={i for i in used if slots and declarations[i].get('source')=='input:0' and not declarations[i].get('topInputId')}
+    binding_ids=slot_bindings+sorted(used-set(slot_bindings)-aliases)
+    def header(d):
+        return ('const '+d['type']+' '+d['name']+' = '+literal(d['value'],d['type'])+';' if d['kind']=='constant'
+                else 'uniform '+d['type']+' '+d['name']+';')
     if graph_target(graph)=='top':
-        samplers=[declarations[i] for i in sorted(used) if declarations[i]['kind']=='sampler']
-        if len(samplers)>16: raise GraphError('Sgrape TOP supports at most 16 live texture sources')
-        headers=['uniform '+declarations[i]['type']+' '+declarations[i]['name']+';' for i in sorted(used) if declarations[i]['kind']=='uniform']
+        samplers=[declarations[i] for i in binding_ids if declarations[i]['kind']=='sampler']
+        if len(samplers)>(32 if slots else 16): raise GraphError('Too many texture sources: up to 16 TOP Inputs plus 16 legacy/fallback sources')
+        headers=[header(declarations[i]) for i in sorted(used) if declarations[i]['kind'] in ('uniform','constant')]
+        if slots:headers+=['#if TD_NUM_2D_INPUTS != '+str(len(samplers)), '#error Grape TOP Inputs require 2D textures in every slot', '#endif']
         vertex=''
         pixel='\n'.join(headers+['layout(location=0) out vec4 fragColor;','void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
-        for i,d in enumerate(samplers):
+        for i,d in list(enumerate(samplers))+[(next((j for j,slot in enumerate(slots) if slot['id']==graph.get('topInputLegacyId')),0),declarations[ident]) for ident in aliases]:
             pixel='\n'.join(re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',code)+marker+comment for code,marker,comment in (line.partition('//') for line in pixel.split('\n')))
     else:
-        headers=['uniform '+declarations[i]['type']+' '+declarations[i]['name']+';' for i in sorted(used)]
+        headers=[header(declarations[i]) for i in sorted(used)]
         vertex='\n'.join(headers+['out vec2 sg_uv;','void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
         pixel='\n'.join(headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];',
                                  'void main() {','    TDCheckDiscard();']+stages['pixel']['lines']+['}',''])
@@ -542,7 +585,7 @@ def _compile_flat(graph,annotation_scopes=None):
         prefix=len(headers)+(3 if graph_target(graph)=='top' or stage=='vertex' else 4)
         source_map[stage]=[dict(location,line=prefix+i+1) for i,location in enumerate(stages[stage].pop('lineNodes'))]
     return {'sourceMap':source_map,'vertex':vertex,'pixel':pixel,'hash':digest(clean_semantic(graph)),
-            'bindings':[declarations[i] for i in sorted(used)],'stages':stages,'diagnostics':diagnostics}
+            'bindings':[declarations[i] for i in binding_ids],'stages':stages,'diagnostics':diagnostics}
 
 
 def function_library(with_browser=False):

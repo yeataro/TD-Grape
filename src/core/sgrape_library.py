@@ -33,7 +33,7 @@ def validate_functions(core,functions,root):
     if len(reachable(core,functions,root))!=len(functions):raise ValueError('Unrelated Function in personal snapshot')
     for f in functions:
         for n in f['graph']['nodes']:
-            if n.get('definitionUuid') in ('sgrape.builtin.uniform','sgrape.builtin.texture','sgrape.builtin.sampler'):
+            if n.get('definitionUuid') in ('sgrape.builtin.uniform','sgrape.builtin.texture','sgrape.builtin.sampler','sgrape.builtin.constant','sgrape.builtin.top_input'):
                 raise ValueError('Personal Functions must be self-contained. Place Uniform and Texture 2D outside the Function and pass their values through Function Input.')
     # This validates all definitions and each promised stage, including unused nodes.
     core.compile_graph(probe)

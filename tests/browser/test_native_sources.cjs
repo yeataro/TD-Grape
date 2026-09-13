@@ -94,7 +94,7 @@ const server=http.createServer(async(req,res)=>{
   const value=page.locator('#inspector [data-native-source=gain] [data-source-component="0"]');
   await value.fill('0.42');await value.press('Enter');await page.waitForFunction(()=>!nativeSourceBusy);
   assert.equal(writes,1);assert.equal(await value.inputValue(),'0.42');checks.push('Selecting a source without a node edits actual TD values in Parameter');
-  await showInputs();await page.locator('.inputs-create summary').click();
+  await showInputs();assert.ok(await page.locator('#sourcecreate').isVisible());
   await page.fill('#sourcename','uAdded');await page.selectOption('#sourcetype','vec3');await page.locator('#sourcecreate button').click();
   const id=await page.evaluate(()=>graph.declarations.find(d=>d.name==='uAdded').id);
   assert.equal(await page.evaluate(()=>current().nodes.filter(n=>n.params.declarationId===selectedInputId).length),0);

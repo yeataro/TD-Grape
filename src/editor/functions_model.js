@@ -79,12 +79,13 @@ const GraphClipboard=(()=>{
   const validId=v=>typeof v==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(v);
   function encode(graph,data,ids,source){
     const chosen=new Set(ids),nodes=data.nodes.filter(n=>chosen.has(n.id));if(!nodes.length)return null;
-    const functions=[],declarations=[],seenFunctions=new Set(),seenDeclarations=new Set();
+    const functions=[],declarations=[],topInputs=[],seenFunctions=new Set(),seenDeclarations=new Set();
     function scan(nodes){for(const n of nodes){
+      if(n.params?.inputId&&!topInputs.some(s=>s.id===n.params.inputId)){const slot=graph.topInputs?.find(s=>s.id===n.params.inputId);if(!slot)fail('clipboard.missing');topInputs.push(copy(slot));}
       const declaration=n.params?.declarationId;if(declaration&&!seenDeclarations.has(declaration)){const d=graph.declarations.find(d=>d.id===declaration);if(!d)fail('clipboard.missing');seenDeclarations.add(declaration);declarations.push(copy(d));}
       if(n.definitionUuid===FunctionModel.CALL){const ident=n.params.functionId;if(seenFunctions.has(ident))continue;const f=FunctionModel.find(graph,ident);if(!f)fail('clipboard.missing');seenFunctions.add(ident);functions.push(copy(f));scan(f.graph.nodes);}
     }}
-    scan(nodes);const result={format:FORMAT,version:1,source,nodes:copy(nodes),edges:copy(data.edges.filter(e=>chosen.has(e.from[0])&&chosen.has(e.to[0]))),functions,declarations};
+    scan(nodes);const result={format:FORMAT,version:1,source,nodes:copy(nodes),edges:copy(data.edges.filter(e=>chosen.has(e.from[0])&&chosen.has(e.to[0]))),functions,declarations,topInputs};
     const text=JSON.stringify(result);if(new TextEncoder().encode(text).length>LIMIT)fail('clipboard.size');return text;
   }
   function decode(text){
@@ -99,13 +100,15 @@ const GraphClipboard=(()=>{
     const same=p.source===source,defs=new Map(catalog.map(d=>[d.definitionUuid,d])),functionMap=new Map(),declarationMap=new Map();
     function unique(items){const map=new Map();for(const item of items){if(!object(item)||!validId(item.id)||map.has(item.id))fail('clipboard.invalid');map.set(item.id,item);}return map;}
     const sourceFunctions=unique(p.functions),sourceDeclarations=unique(p.declarations);
+    const topMap=new Map(),newSlots=[];
+    if(p.topInputs?.length){if(target!=='top')fail('clipboard.stage');for(const [key,slot]of unique(p.topInputs)){if(typeof slot.name!=='string'||!slot.name.length||slot.name.length>48||typeof slot.defaultSource!=='string')fail('clipboard.invalid');const existing=graph.topInputs?.find(s=>s.id===key);if(same&&existing)topMap.set(key,key);else {const next={...copy(slot),id:id()};topMap.set(key,next.id);newSlots.push(next);}}}
     const newFunctions=[],newDeclarations=[],names=new Set(graph.declarations.map(d=>d.name));
     for(const [key,d]of sourceDeclarations){
       if(same&&graph.declarations.some(x=>x.id===key)){declarationMap.set(key,key);continue;}
-      if(!['uniform','sampler'].includes(d.kind)||!types.includes(d.type)&&d.type!=='sampler2D'||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
+      if(!['uniform','sampler','constant'].includes(d.kind)||!types.includes(d.type)&&d.type!=='sampler2D'||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
       const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
-      if(d.kind==='uniform'){const count=d.type==='float'?1:Number(d.type.slice(-1));if(count===1?!number(d.value):!Array.isArray(d.value)||d.value.length!==count||!d.value.every(number))fail('clipboard.invalid');}
+      if(['uniform','constant'].includes(d.kind)){const count=d.type==='float'?1:Number(d.type.slice(-1));if(count===1?!number(d.value):!Array.isArray(d.value)||d.value.length!==count||!d.value.every(number))fail('clipboard.invalid');}
       if(d.kind==='sampler'&&(!source(d.source)||d.defaultSource!==undefined&&!source(d.defaultSource)))fail('clipboard.invalid');
       const next=copy(d);next.id=id();let name=d.name,index=1;while(names.has(name))name=d.name.slice(0,36)+'_copy'+index++;next.name=name;names.add(name);
       if(next.kind==='sampler'&&next.source==='input:0'){
@@ -129,6 +132,7 @@ const GraphClipboard=(()=>{
         if(node.definitionUuid===FunctionModel.CALL){const key=node.params.functionId;if(!functionMap.has(key))fail('clipboard.missing');node.params.functionId=functionMap.get(key);}
         else if([FunctionModel.INPUT,FunctionModel.OUTPUT].includes(node.definitionUuid)){if(!boundary)fail('clipboard.boundary');}
         else{const d=defs.get(node.definitionUuid);if(!d)fail('clipboard.missing');if(!d.stages.includes(stage))fail('clipboard.stage');if(d.key.endsWith('_out'))fail('clipboard.boundary');if(node.revisionHash&&node.revisionHash!==d.revisionHash)fail('clipboard.revision');}
+        if(node.params.inputId){if(!topMap.has(node.params.inputId))fail('clipboard.missing');node.params.inputId=topMap.get(node.params.inputId);}
         if(node.params.declarationId){if(!declarationMap.has(node.params.declarationId))fail('clipboard.missing');node.params.declarationId=declarationMap.get(node.params.declarationId);}
       }
       const edges=new Set();for(const edge of content.edges){if(!object(edge)||!Array.isArray(edge.from)||!Array.isArray(edge.to)||edge.from.length!==2||edge.to.length!==2||!nodes.has(edge.from[0])||!nodes.has(edge.to[0])||!validId(edge.from[1])||!validId(edge.to[1]))fail('clipboard.invalid');const key=JSON.stringify(edge.to);if(edges.has(key))fail('clipboard.invalid');edges.add(key);}
@@ -137,6 +141,7 @@ const GraphClipboard=(()=>{
     const content={nodes:copy(p.nodes),edges:copy(p.edges)};nodesAndEdges(content);
     if(data.nodes.length+content.nodes.length>256||data.edges.length+content.edges.length>1024)fail('clipboard.size');
     FunctionModel.ensureCapacity(graph,newFunctions.length);
+    if(newSlots.length){if(!graph.topInputs){const legacy=graph.declarations.find(d=>d.source==='input:0');graph.topInputs=[{id:'input0',name:'Input 0',defaultSource:legacy?.defaultSource||'builtin:banana',matchDefault:!!legacy?.defaultSource}];}if(graph.topInputs.length+newSlots.length>16)fail('clipboard.size');if(graph.declarations.some(d=>d.source==='input:0'))graph.topInputLegacyId||=graph.topInputs[0].id;graph.topInputs.push(...newSlots);}
     graph.functions||=[];graph.functions.push(...newFunctions);graph.declarations.push(...newDeclarations);
     const remap=new Map(content.nodes.map(n=>[n.id,id()])),x=Math.min(...content.nodes.map(n=>n.ui.x)),y=Math.min(...content.nodes.map(n=>n.ui.y));
     for(const node of content.nodes){node.id=remap.get(node.id);node.ui={...node.ui,x:node.ui.x-x+anchor.x,y:node.ui.y-y+anchor.y};data.nodes.push(node);}
@@ -152,11 +157,11 @@ const GraphClipboard=(()=>{
 
 /* Source placement is an editing policy, separate from Function expansion. */
 const SubgraphSourcePolicy=(()=>{
-  const outside=new Set(['uniform','sampler','attribute','attributes','buffer']);
+  const outside=new Set(['uniform','sampler','constant','top_input','attribute','attributes','buffer']);
   function isSource(node,catalog){return outside.has(catalog.find(d=>d.definitionUuid===node.definitionUuid)?.key);}
   function inputName(document,node,port,fallback){
     const source=document.declarations.find(d=>d.id===node?.params?.declarationId);
-    return source?.name||fallback||port;
+    return source?.name||document.topInputs?.find(s=>s.id===node?.params?.inputId)?.name||fallback||port;
   }
   return {isSource,inputName};
 })();

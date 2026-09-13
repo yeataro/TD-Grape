@@ -340,7 +340,7 @@ function markdown(text){
 
 function changeDeclaration(fn){return change(fn,{localize:false});}
 function changeTextureSettings(decl,edit){
-  changeDeclaration(()=>{edit(decl);if(decl.source==='input:0')for(const other of graph.declarations.filter(d=>d.kind==='sampler'&&d.source==='input:0'&&d!==decl))for(const key of ['defaultSource','expose','exposeName']){if(Object.hasOwn(decl,key))other[key]=clone(decl[key]);else delete other[key];}});
+  changeDeclaration(()=>{edit(decl);if(decl.source==='input:0'&&graph.topInputs){const slot=graph.topInputs.find(s=>s.id===(graph.topInputLegacyId||graph.topInputs[0].id));slot.defaultSource=decl.defaultSource||'builtin:banana';slot.matchDefault=true;}if(decl.source==='input:0')for(const other of graph.declarations.filter(d=>d.kind==='sampler'&&d.source==='input:0'&&d!==decl))for(const key of ['defaultSource','expose','exposeName']){if(Object.hasOwn(decl,key))other[key]=clone(decl[key]);else delete other[key];}});
 }
 function setTextureMode(decl,mode){
   changeDeclaration(()=>{
@@ -424,7 +424,8 @@ function inspector(){
   const box=$('#inspector');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   if(n||selectedEdge!==null)selectedInputId=null;
-  const inputSource=graph.declarations.find(d=>d.id===selectedInputId);
+  const inputSource=allInputSources().find(d=>d.id===selectedInputId);
+  if(inputSource?.kind==='top_input'){topInputInspector(box,inputSource);return;}
   if(inputSource){inputSourceInspector(box,inputSource);return;}
   if(!n){
     box.append(el('p',{class:'muted'},selectedEdge!==null?t('wire.selected'):t('node.select')));
@@ -453,8 +454,10 @@ function inspector(){
       const source=el('button',{class:'wide','data-inspect-input':decl.id},t('inputs.edit')+' · '+decl.name);
       source.onclick=()=>selectInputSource(decl.id);box.append(source);
       if(decl.kind==='sampler')declarationFields(box,decl);
+      else if(decl.kind==='constant')constantFields(box,decl);
       else nativeInputFields(box,decl);
     }
+    if(d.key==='top_input'){const source=allInputSources().find(s=>s.id===n.params.inputId);if(source)topInputInspector(box,source);}
     if(d.key==='sampler'){const create=el('button',{class:'wide'},t('sampler.create'));create.onclick=()=>newSampler(n);box.append(create);}
     else if(d.key==='uniform'&&!decl){
       const create=el('button',{class:'wide'},t('uniform.create'));create.onclick=()=>newUniform(n);box.append(create);
@@ -491,7 +494,7 @@ function inspector(){
       }
     }))));
     if('declarationId'in n.params){
-      const options=graph.declarations.filter(x=>x.kind===(d.key==='uniform'?'uniform':'sampler')).map(x=>[x.id,x.name]);
+      const options=graph.declarations.filter(x=>x.kind===(['uniform','constant'].includes(d.key)?d.key:'sampler')).map(x=>[x.id,x.name]);
       box.append(field(t('node.declaration'),select([['',t('select.placeholder')],...options],n.params.declarationId,value=>change(()=>n.params.declarationId=value))));
       const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl)declarationFields(box,decl,true);
     }
@@ -892,15 +895,15 @@ function installPanelWorkspace(){
    Uniform values/modes continue to belong to the actual GLSL OP. */
 let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceError='',nativeSourceRetryAt=0,selectedInputId=null;
 const inputPresets={time:['uTime','me.time.seconds'],frame:['uFrame','me.time.frame'],absTime:['uAbsTime','absTime.seconds'],absFrame:['uAbsFrame','absTime.frame']};
-function sourceReferences(id){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)].flatMap(g=>g.nodes).filter(n=>n.params?.declarationId===id);}
+function sourceReferences(id){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)].flatMap(g=>g.nodes).filter(n=>n.params?.declarationId===id||n.params?.inputId===id);}
 function sourceReady(){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!dirty&&!submitBusy&&!nativeSourceBusy&&nativeSourceSnapshot.revision===revision&&!readonly;}
 function selectInputSource(id){
-  if(!graph.declarations.some(d=>d.id===id))return;
+  if(!allInputSources().some(d=>d.id===id))return;
   helpContext='node';selectedInputId=id;selected=null;selectedEdge=null;selection.clear();cancelConnection();closeCreator();
   workspaceLayout?.reveal('parameters');render();
 }
 function inputReference(id,x=null,y=null){
-  const decl=graph.declarations.find(d=>d.id===id),d=decl&&catalog.find(d=>d.key===decl.kind);if(!d)return;
+  const decl=allInputSources().find(d=>d.id===id),d=decl&&catalog.find(d=>d.key===decl.kind);if(!d)return;
   const rect=$('#canvas').getBoundingClientRect(),p=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!p)return;
   change(()=>{selectedInputId=null;const n=instantiate(d,p.x,p.y,null,{declarationId:id});selectNode(n);});
 }
@@ -955,7 +958,9 @@ function renderNativeSourceValues(){
   for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
   for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=readonly;
   if($('#sourcekind'))$('#sourcekind').disabled=readonly;
-  if($('#sourcetype'))$('#sourcetype').disabled=readonly||$('#sourcekind').value!=='uniform';
+  if($('#sourcetype'))$('#sourcetype').disabled=readonly||!['uniform','constant'].includes($('#sourcekind').value);
+  $('#sourceparameters').hidden=!localViewerEntry;
+  for(const option of $('#sourcekind').options)option.hidden=editorTarget==='top'?option.value==='sampler':option.value==='top_input';
   $('#sourcestatus').textContent=nativeSourceError||(!nativeSourceSnapshot?.enabled?t('sources.enable'):dirty||nativeSourceSnapshot.revision!==revision?t('sources.pending'):(nativeSourceSnapshot.issues||[]).map(i=>i.message).join('\n'));
   for(const item of document.querySelectorAll('[data-input-reference]'))item.disabled=readonly;
   for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
@@ -984,7 +989,7 @@ function nativeInputFields(box,decl){
   card.append(el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
 }
 function inputSourceInspector(box,decl){
-  const heading=el('div',{class:'input-inspector-title'});heading.append(el('strong',{},decl.name),el('small',{},decl.kind==='uniform'?'Uniform · '+decl.type:'Sampler · '+decl.type));box.append(heading);
+  const heading=el('div',{class:'input-inspector-title'});heading.append(el('strong',{},decl.name),el('small',{},decl.kind==='uniform'?'Uniform · '+decl.type:(decl.kind==='constant'?'Constant':'Sampler')+' · '+decl.type));box.append(heading);
   const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===decl.id);
   const rename=input(decl.name,name=>{
     if(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)||graph.declarations.some(d=>d.id!==decl.id&&d.name===name)){status(t('inputs.invalidName'),true);inspector();return;}
@@ -996,23 +1001,54 @@ function inputSourceInspector(box,decl){
     nativeInputFields(box,decl);
     const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value)));box.append(defaults);
     const custom=el('button',{'data-source-custom':decl.id,class:'wide'},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(decl.id);box.append(custom);
-  }else declarationFields(box,decl);
+  }else if(decl.kind==='constant')constantFields(box,decl);
+  else declarationFields(box,decl);
   const actions=el('div',{class:'source-actions'}),reference=el('button',{'data-input-reference':decl.id},t('sources.reference'));reference.onclick=()=>inputReference(decl.id);
   actions.append(reference);box.append(actions,el('p',{class:'muted'},t('inputs.references').replace('{count}',sourceReferences(decl.id).length)));
   if(decl.kind==='uniform'&&row&&!row.pending){
     const remove=el('button',{class:'wide danger','data-source-remove':decl.id},t(row.missing?'sources.restore':'sources.remove'));remove.disabled=!sourceReady();
     remove.onclick=()=>{const live=nativeSourceSnapshot.uniforms.find(r=>r.id===decl.id);if(!live.missing&&!confirm(t('sources.removeConfirm').replace('{name}',live.name).replace('{count}',sourceReferences(decl.id).length)))return;nativeSourceRequest('source-edit',{action:live.missing?'restore':'remove',id:decl.id,expected:live.expected}).then(()=>inspector());};box.append(remove);
   }
+  else {
+    const remove=el('button',{class:'wide danger'},t(decl.sourceMissing?'sources.restore':'sources.remove'));
+    remove.onclick=()=>changeDeclaration(()=>{if(decl.sourceMissing)delete decl.sourceMissing;else if(sourceReferences(decl.id).length)decl.sourceMissing=true;else {graph.declarations=graph.declarations.filter(d=>d.id!==decl.id);selectedInputId=null;}});box.append(remove);
+  }
+  sourceLocations(box,decl.id);
   if(readonly)for(const field of box.querySelectorAll('input,select,button'))field.disabled=true;
   renderNativeSourceValues();
 }
+function sourceLocations(box,id){
+  const refs=sourceReferences(id);if(!refs.length)return;
+  const list=el('details',{class:'source-locations'});list.append(el('summary',{},t('inputs.locate')));
+  for(const [st,data]of Object.entries(graph.stages))for(const n of data.nodes.filter(n=>refs.includes(n))){const button=el('button',{},st+' · '+(nodeLabel(n)||definition(n)?.label||n.id));button.onclick=()=>{stage=st;graphTrail=[];selectedInputId=null;selected=n.id;selection=new Set([n.id]);render();fit();};list.append(button);}box.append(list);
+}
+function topInputInspector(box,source){
+  const slots=topInputsView(),index=slots.findIndex(s=>s.id===source.id),live=nativeSourceSnapshot?.topInputs?.find(s=>s.id===source.id);
+  const edit=fn=>changeDeclaration(()=>{const slot=ensureTopInputs().find(s=>s.id===source.id);fn(slot);if(slot.id===graph.topInputLegacyId)for(const d of graph.declarations.filter(d=>d.source==='input:0'))d.defaultSource=slot.defaultSource;});
+  box.append(el('strong',{},source.name),el('code',{class:'wide'},'sTD2DInputs['+index+']'),field(t('declaration.name'),input(source.name,name=>{if(name.trim()&&name.length<=48&&!/[\x00-\x1f]/.test(name))edit(s=>s.name=name);})),el('p',{class:'muted'},t('inputs.topHint')));
+  const value=source.defaultSource;
+  box.append(field(t('texture.default'),select(textureOptions().filter(([key])=>key!=='input:0'),value.startsWith('op:')?'external':value,next=>edit(s=>{s.defaultSource=next==='external'?'op:/project1/texture':next;s.matchDefault=true;}))));
+  if(value.startsWith('op:'))box.append(field(t('texture.path'),input(value.slice(3),next=>edit(s=>{s.defaultSource='op:'+next;s.matchDefault=true;}))));
+  if(live)box.append(el('p',{class:'muted'},(live.connected?t('inputs.connected'):t('texture.default'))+' · '+live.path+' · '+live.width+' × '+live.height));
+  const actions=el('div',{class:'source-actions'});
+  for(const [label,offset]of [['↑',-1],['↓',1]]){const b=el('button',{'aria-label':t(offset<0?'inputs.moveUp':'inputs.moveDown')},label);b.disabled=readonly||index+offset<0||index+offset>=slots.length;b.onclick=()=>changeDeclaration(()=>{const slots=ensureTopInputs();[slots[index],slots[index+offset]]=[slots[index+offset],slots[index]];});actions.append(b);}
+  const ref=el('button',{},t('sources.reference'));ref.disabled=readonly;ref.onclick=()=>inputReference(source.id);actions.append(ref);box.append(actions);
+  const aliases=source.id===(graph.topInputLegacyId||slots[0].id)&&graph.declarations.some(d=>d.source==='input:0'),used=sourceReferences(source.id).length;
+  const remove=el('button',{class:'wide danger'},t('sources.remove'));remove.disabled=readonly||slots.length===1||!!used||aliases||!!live?.connected;remove.onclick=()=>changeDeclaration(()=>{graph.topInputs=ensureTopInputs().filter(s=>s.id!==source.id);if(graph.topInputLegacyId===source.id)delete graph.topInputLegacyId;selectedInputId=null;});box.append(remove);
+  if(remove.disabled&&!readonly)box.append(el('p',{class:'muted'},t('inputs.topRemoveHint')));
+  sourceLocations(box,source.id);
+  if(readonly)for(const field of box.querySelectorAll('input,select,button'))field.disabled=true;
+}
 function installInputDrag(button,id){
+  installCanvasItemDrag(button,()=>allInputSources().find(d=>d.id===id)?.name||'',(x,y)=>inputReference(id,x,y),()=>inputReference(id));
+}
+function installCanvasItemDrag(button,label,dropItem,clickItem){
   // Only the explicit reference handle captures touch; the inventory still scrolls.
   let suppressClick=0;
-  button.onclick=()=>{if(performance.now()>suppressClick)inputReference(id);};
+  button.onclick=()=>{if(performance.now()>suppressClick)clickItem();};
   button.onpointerdown=e=>{
     if(readonly||e.button!==0)return;e.preventDefault();e.stopPropagation();
-    const start={x:e.clientX,y:e.clientY},pointer=e.pointerId,ghost=el('div',{class:'input-drag-preview'},graph.declarations.find(d=>d.id===id)?.name||'');let moved=false,done=false;
+    const start={x:e.clientX,y:e.clientY},pointer=e.pointerId,ghost=el('div',{class:'input-drag-preview'},label());let moved=false,done=false;
     button.setPointerCapture(pointer);
     const cancel=()=>finish(null),escape=ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopImmediatePropagation();cancel();}},second=ev=>{if(ev.pointerId!==pointer)cancel();};
     function finish(ev){
@@ -1020,7 +1056,7 @@ function installInputDrag(button,id){
       button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',finish);button.removeEventListener('pointercancel',cancel);button.removeEventListener('lostpointercapture',cancel);document.removeEventListener('keydown',escape,true);document.removeEventListener('pointerdown',second,true);window.removeEventListener('blur',cancel);ghost.remove();$('#canvas').classList.remove('drop-ready');
       if(button.hasPointerCapture(pointer))button.releasePointerCapture(pointer);
       if(moved||!ev)suppressClick=performance.now()+500;
-      if(drop)inputReference(id,ev.clientX,ev.clientY);
+      if(drop)dropItem(ev.clientX,ev.clientY);
     }
     function move(ev){if(ev.pointerId!==pointer)return;if(Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>8)moved=true;if(!moved)return;if(!ghost.isConnected)document.body.append(ghost);ghost.style.left=ev.clientX+12+'px';ghost.style.top=ev.clientY+12+'px';$('#canvas').classList.toggle('drop-ready',!!document.elementFromPoint(ev.clientX,ev.clientY)?.closest('#canvas'));}
     button.addEventListener('pointermove',move);button.addEventListener('pointerup',finish);button.addEventListener('pointercancel',cancel);button.addEventListener('lostpointercapture',cancel);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',second,true);window.addEventListener('blur',cancel);
@@ -1028,15 +1064,15 @@ function installInputDrag(button,id){
 }
 function renderNativeSources(){
   const box=$('#nativeuniforms');if(!box||!graph)return;
-  const query=normalizeSearch($('#inputsearch')?.value),decls=graph.declarations.filter(d=>['uniform','sampler'].includes(d.kind)&&normalizeSearch(d.name+' '+d.kind+' '+d.type).includes(query));
-  const identity=JSON.stringify([language,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing]),selectedInputId]);
+  const query=normalizeSearch($('#inputsearch')?.value),decls=allInputSources().filter(d=>['uniform','sampler','constant','top_input'].includes(d.kind)&&normalizeSearch(d.name+' '+d.kind+' '+d.type).includes(query));
+  const identity=JSON.stringify([language,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing,d.kind,d.index]),selectedInputId]);
   if(box.dataset.sourceStructure!==identity&&!box.querySelector(':active')){
     box.dataset.sourceStructure=identity;box.replaceChildren();
-    for(const kind of ['uniform','sampler']){
-      const group=decls.filter(d=>d.kind===kind);if(!group.length)continue;box.append(el('div',{class:'input-group-title'},kind==='uniform'?'Uniforms':'Samplers'));
+    for(const kind of ['top_input','constant','uniform','sampler']){
+      const group=decls.filter(d=>d.kind===kind);if(!group.length)continue;box.append(el('div',{class:'input-group-title'},({top_input:'TOP Inputs',constant:'Constants',uniform:'Uniforms',sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind]));
       for(const decl of group){
         const card=el('div',{class:'input-source-row','data-input-source':decl.id}),pick=el('button',{class:'input-source-select','aria-pressed':String(selectedInputId===decl.id)});
-        pick.append(el('span',{},decl.name),el('small',{},decl.type+(decl.sourceMissing?' · '+t('sources.missing'):'')));pick.onclick=()=>selectInputSource(decl.id);
+        pick.append(el('span',{},decl.name),el('small',{},(kind==='top_input'?'['+decl.index+']':decl.type)+(decl.sourceMissing?' · '+t('sources.missing'):'')));pick.onclick=()=>selectInputSource(decl.id);
         const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');installInputDrag(reference,decl.id);card.append(pick,reference);box.append(card);
       }
     }
@@ -1050,11 +1086,11 @@ function renderNativeSources(){
 }
 function installNativeSources(){
   $('#inputsearch').oninput=renderNativeSources;
-  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)];$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').value=kind==='color'?'vec4':'float';$('#sourcepresethint').textContent=preset?preset[1]:'';renderNativeSourceValues();};
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)];$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').value=['sampler','top_input'].includes(kind)?'sampler2D':kind==='color'?'vec4':'float';$('#sourcepresethint').textContent=preset?preset[1]:'';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
     e.preventDefault();const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value;
     if(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)){status(t('inputs.invalidName'),true);return;}
-    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(kind==='sampler'?'sampler':'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});if(changed)selectInputSource(id);
+    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','top_input'].includes(kind)?kind:'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});if(changed)selectInputSource(id);
   };
   $('#sourceparameters').onclick=async()=>{try{await api('native-parameters',{});}catch(e){status(e.message,true);}};
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);

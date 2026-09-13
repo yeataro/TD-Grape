@@ -2197,6 +2197,66 @@
     "inputs.valueMode": {
       "zh-Hant": "數值",
       "en": "Value"
+    },
+    "help.constant": {
+      "en": "A named compile-time GLSL constant. Editing its value recompiles the Shader. References use the same const symbol.",
+      "zh-Hant": "具名 GLSL 編譯期常數。修改值會重新編譯 Shader；引用節點使用同一個 const 名稱。"
+    },
+    "help.top_input": {
+      "en": "A Grape TOP COMP input. Sample its texture or use its size and pixel size. An unconnected slot uses its default image.",
+      "zh-Hant": "Grape TOP 的 COMP 輸入。可採樣圖像或取得解析度、像素大小；未連接時使用預設圖像。"
+    },
+    "inputs.constantHint": {
+      "en": "Constant values are compiled into GLSL; changing them recompiles the Shader.",
+      "zh-Hant": "常數會寫入 GLSL；修改數值需要重新編譯。"
+    },
+    "inputs.topHint": {
+      "en": "COMP input order follows these slots. Empty inputs use their default image; size follows the effective image.",
+      "zh-Hant": "COMP 接口依槽位排序。空接口使用預設圖像；解析度跟隨實際圖像來源。"
+    },
+    "inputs.topLimit": {
+      "en": "At most 16 TOP Inputs.",
+      "zh-Hant": "最多 16 個 TOP 輸入。"
+    },
+    "inputs.topRemoveHint": {
+      "en": "Keep one slot. Remove its references and disconnect its COMP input before deleting it.",
+      "zh-Hant": "至少保留一個槽位。請先移除引用並斷開 COMP 接線，再刪除槽位。"
+    },
+    "inputs.size": {
+      "en": "Size",
+      "zh-Hant": "解析度"
+    },
+    "inputs.pixelSize": {
+      "en": "Pixel size",
+      "zh-Hant": "像素大小"
+    },
+    "inputs.connected": {
+      "en": "Connected",
+      "zh-Hant": "已連接"
+    },
+    "inputs.moveUp": {
+      "en": "Move input up",
+      "zh-Hant": "輸入上移"
+    },
+    "inputs.moveDown": {
+      "en": "Move input down",
+      "zh-Hant": "輸入下移"
+    },
+    "inputs.locate": {
+      "en": "Locate references",
+      "zh-Hant": "定位引用節點"
+    },
+    "inputs.legacySamplers": {
+      "en": "Samplers · Existing graph",
+      "zh-Hant": "Samplers · 既有圖"
+    },
+    "browser.branch.constants": {
+      "en": "Constants",
+      "zh-Hant": "常數"
+    },
+    "browser.branch.topInputs": {
+      "en": "TOP Inputs",
+      "zh-Hant": "TOP 輸入"
     }
   }
 }

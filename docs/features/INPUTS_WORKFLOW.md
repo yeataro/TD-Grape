@@ -1,4 +1,4 @@
-# Inputs 編輯流程（0.8.6 開發版）
+# Inputs 編輯流程（0.8.7 開發版）
 
 這輪依 2026-09-13 的討論開始實作，讓使用者看成果後調整。版本仍未進入 Alpha；以下完成範圍不代表所有輸入種類都已支援。
 
@@ -6,9 +6,9 @@
 
 - Nodes / Add Node 保留節點目錄。原 Uniforms 面板改稱 **Inputs**，預設與「新增節點」並排為左側同一區塊的兩個分頁；右側預設為 Parameter／自訂參數、Preview、Help。面板仍可跨側欄移動。
 - 沿用舊預設分組的位置會一次性更新；自訂分組與已儲存的 Layout 預設集保留，亦可用 Restore default 套用新配置。
-- Inputs 列出此 Shader 的 Uniforms 與 Samplers，可搜尋名稱與型別。選取來源會開啟 Parameter，不需要先在圖中放節點。
+- Inputs 最上方提供新增表單，列出此 Shader 的 Constants、Uniforms，以及 TOP Inputs（TOP）或 Samplers（MAT），可搜尋名稱與型別。選取來源會開啟 Parameter，不需要先在圖中放節點。
 - 每列 `+` 點一下建立引用，也可用滑鼠或觸控拖入畫布。拖出畫布、Escape、pointer cancel、第二指加入或失去視窗焦點均取消，不建立項目。清單其餘區域仍可捲動。
-- 浮動 Add Node 提供 **Inputs → Uniforms／Samplers** 分類，同時包含新增來源與現有來源引用；Time／Frame 預設歸在 Uniforms。全域搜尋保留，搜尋到來源名稱後建立的是同一 ID 的引用。
+- 浮動 Add Node 提供 **Inputs → Constants／Uniforms／TOP Inputs／Samplers** 分類，同時包含新增來源與現有來源引用；Time／Frame 預設歸在 Uniforms。全域搜尋保留，搜尋到來源名稱後建立的是同一 ID 的引用。
 - 浮動清單的 Uniform 引用與時間預設使用 Uniform 辨識色，Sampler 引用使用 Sampler 辨識色。
 - 畫布 Uniform／Sampler 引用的輸出端口顯示來源名稱（例如 `mixfac · float`），改名後同步更新顯示。內部端口仍為 `out`，接線與 GLSL 身分不因顯示規則改變；長名稱截斷時可由提示查看完整名稱。
 - 從未接線的 input 呼叫新增選單，新增 Uniform 會預填接收端的型別、名稱與未接線數值並接線。新增／引用有明確區別；不再自動挑第一個相容 Uniform 或 Sampler。
@@ -42,13 +42,37 @@ Bind / Export 由原生參數頁處理，網頁不覆寫其驅動。非數值或
 
 Graph 的待套用新增可整筆復原。原生來源一旦已由 TD 接受，Graph Undo 只移除引用，保留來源、型別與原 ID；避免輪詢把同一個原生列重新辨識成新來源。實際來源刪除走 Parameter 的獨立操作，不能把 Graph Undo 當作 TD 來源刪除。
 
+## TOP Inputs 與 Constants（0.8.7）
+
+TOP Inputs 管理 COMP 外部接口，預設 Input 0，可先建立最多 16 個槽位再接入圖像。槽位 ID 不隨名称與排序變動；Parameter 提供改名、上下移動、預設圖與引用位置。第一槽位的有效圖像決定 Match Input 的輸出尺寸；Custom 模式仍使用指定尺寸。刪除槽位前須移除圖中引用並斷開 COMP 接線，至少保留一個槽位。
+
+每個 TOP Input 引用提供 sampler2D、解析度與像素大小，分別使用同一槽位的 `sTD2DInputs[i]`、`uTD2DInfos[i].res.zw`、`.res.xy`。空槽使用設定的預設圖；新增加的槽位預設不透明黑。未知路徑依既有缺失來源策略使用黑色；非 TOP 與非 2D 圖像會拒絕套用，保留上一個成功輸出。
+
+執行端使用現有 GLSL TOP 的 TOPs 參數依序綁定來源，不替換 Shader OP。設定槽位不依使用與否壓縮編號。額外保留舊圖的獨立 Sampler 與缺接黑色來源空間；它們不占用 COMP 槽位。TOP 的新建入口不提供另一份獨立 Sampler 清單，MAT 保留 Samplers。
+
+舊圖未使用槽位模型時維持原編譯順序；第一次編輯／引用 TOP Input 才加入 `topInputs`。`topInputLegacyId` 固定舊 `input:0` 引用的槽位，使重新排序後仍使用原圖像。舊 Expose TOP 參數及其 Expression 身分保留。新增 catalog 定義不改動舊節點 revision。
+
+Constants 是 `kind: constant` 的圖資料，首版提供 float／vec2／vec3／vec4。使用的常數產生全域 `const`，引用直接使用常數名稱，避免被轉成一般區域變數。修改值會重新編譯；不建立 Uniform 原生列，也不套用 Python 時鐘預設。既有 Float／Vector 常值節點維持不變。
+
+新增節點與 Inputs 共用 Pointer Events 拖放：`+` 可供滑鼠及觸控拖入；節點名稱也支援滑鼠拖入。觸控捲動區不截取手勢。來源／節點複製貼上維持引用身分；跨 Shader 的 TOP Input 貼上建立新槽位，禁止貼入 MAT。打包子圖時具名來源留在外層。
+
+原生 GLSL Parameters 按鈕僅在 localhost／127.0.0.1／IPv6 loopback 網址顯示。
+
 ## 驗證與後續
 
+- `tests/unit/test_top_inputs.py`、`tests/td/test_top_inputs.py`：槽位順序、16 槽與黑色備援、原生像素輸出、刪除／編譯失敗回復、保存重載、2D 型別保護、舊來源與 Expression 保留、具名常數。原生環境為 TD 2025.32820 / Windows。
+- `tests/browser/test_inputs_round.cjs`：新增表單、Constants／TOP Inputs、引用、複製貼上、刪除／還原、滑鼠／觸控拖放。
 - `tests/browser/test_native_sources.cjs`：選取來源、原生值寫入、搜尋、新增／引用區分、預填接線、待套用編輯 Undo、滑鼠取消與實際 Chromium 觸控事件。
 - `tests/browser/test_custom_parameters.cjs`：加入自訂頁、修改、解除關聯。
 - `tests/td/test_native_sources.py`、`test_custom_parameters.py`、`test_input_presets.py`：TOP / MAT 原生資料、時鐘、保留驅動、型別呈現、衝突與回復。測試使用獨立元件，並比較使用者 Shader 保存內容。
 - 桌面 wire geometry、既有觸控編輯與 WebKit 空白斷線流程有回歸驗證。這輪新 Inputs 拖放尚待 iPad / macOS 實機回驗。
 
-Alpha 仍須補足：明確的命名編譯常數、int / uint 與分量轉換、Attributes / Input Buffers 完整來源管理、MAT 跨 stage 介面、可多輸出的手寫 GLSL 節點、Instancing 存取與變形／法線／顏色／UV／自訂屬性、Render TOP Uniform 外部供值與同名診斷，以及能快速修改 PBR / MAT / TOP 範例的節點與模板。較少使用的能力仍在 Alpha 範圍內，實作順序可分輪推進。
+Alpha 仍須補足：int / uint 與分量轉換、Attributes / Input Buffers 完整來源管理、MAT 跨 stage 介面、可多輸出的手寫 GLSL 節點、Instancing 存取與變形／法線／顏色／UV／自訂屬性、Render TOP Uniform 外部供值與同名診斷，以及能快速修改 PBR / MAT / TOP 範例的節點與模板。較少使用的能力仍在 Alpha 範圍內，實作順序可分輪推進。
 
 恆常集合節點、末端灰點與節點 Label／來源資訊位置保留既有未決策狀態；不因這輪 Inputs 原型而定案。
+
+### 本輪交付驗證
+
+0.8.7：148 項 Python 單元測試、14 項啟動邏輯測試、421 個雙語鍵、四組 JavaScript 模型測試及新舊 Inputs 瀏覽器測試通過。TD 2025.32820 實測通過槽位接線／排序、17 張來源（16 槽加缺接備援）、既有參數 Expression、常數像素輸出、錯誤回復與組件保存重載。開發 TOE 已保存，展開後 24 份內嵌文字來源與 repository 一致，私人開發助手排除。
+
+獨立 TD 程序可載入 TOE 副本並顯示既有工程，但本輪冷啟動的自動 HTTP 驗證未產生結果，不能列為通過；原因尚未確認，也未因此修改執行架構或全域 Cooking 偏好。iPad / macOS 本輪實機回驗仍待進行。

@@ -783,3 +783,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #sourcecreate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}#sourcekind,#sourcepresethint,#sourcecreate button{grid-column:1/-1}#sourcecreate input{min-width:0}#sourcepresethint{font-size:11px;overflow-wrap:anywhere}
 .native-input-fields .source-components{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.native-source-state:empty,#sourcestatus:empty{display:none}
 @media(pointer:coarse){.input-reference{min-width:44px;min-height:44px}.input-source-select{min-height:44px}}
+
+/* Explicit drag handles preserve touch scrolling in source inventories. */
+.browser-add,.input-reference{touch-action:none}
+.source-locations button{display:block;width:100%;text-align:left;margin-block:4px}
+.inputs-create{margin-top:0}
+#sourceparameters[hidden]{display:none}

@@ -58,7 +58,7 @@ function functionEntry(f,source=false){
   return {key:source?'source:'+f.scope+':'+f.id+':'+(f.source?.version||''):'function:'+f.id,label:f.name,stages:f.stages,inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id,source:source?f:null,category:f.scope==='personal'?'personal':'functions'};
 }
 function availableEntries(){
-  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&d.key!=='texture').map(d=>({...d,category:nodeCategory(d)}));
+  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&d.key!=='texture'&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).map(d=>({...d,category:nodeCategory(d)}));
   for(const f of librarySources().filter(f=>f.stages.includes(stage)))entries.push(functionEntry(f,true));
   const sources=librarySources().flatMap(f=>[f,...(f.dependencies||[])]);
   for(const f of (graph.functions||[]).filter(f=>f.stages.includes(stage)&&!graphTrail.includes(f.id))){
@@ -71,21 +71,33 @@ function uniqueInputName(hint='uValue'){
   const safe=/^[A-Za-z]/.test(base)&&! /^(gl_|TD|sg_|sTD)/.test(base)?base:'u'+base;
   if(!names.has(safe))return safe;let i=2;while(names.has(safe+i))i++;return safe+i;
 }
+function topInputsView(){
+  if(editorTarget!=='top')return [];
+  const legacy=graph.declarations.find(d=>d.kind==='sampler'&&d.source==='input:0');
+  return graph.topInputs||[{id:'input0',name:'Input 0',defaultSource:legacy?.defaultSource||'builtin:banana',matchDefault:!!legacy?.defaultSource}];
+}
+function ensureTopInputs(){if(editorTarget!=='top')throw Error('TOP Inputs require Grape TOP.');graph.topInputs||=clone(topInputsView());if(graph.declarations.some(d=>d.source==='input:0'))graph.topInputLegacyId||=graph.topInputs[0].id;return graph.topInputs;}
+function allInputSources(){return [...topInputsView().map((s,index)=>({...s,kind:'top_input',type:'sampler2D',index})),...graph.declarations];}
+function constantFields(box,decl){
+  box.append(field(t('node.type'),select(['float','vec2','vec3','vec4'].map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value)),el('p',{class:'muted'},t('inputs.constantHint')));
+}
 function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence}={}){
+  if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:name||'Input '+slots.length,defaultSource:'builtin:black'};slots.push(slot);return slot;}
   const id=kind+'_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||(kind==='sampler'?'uTexture':'uValue'))};
   if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
-  else {Object.assign(decl,{value:shapedValue(value??0,type),expose:false});if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;}
+  else {Object.assign(decl,{value:shapedValue(value??0,type),expose:false});if(kind==='uniform'){if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;}}
   graph.declarations.push(decl);return decl;
 }
 function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={}}={}){
   const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});
   if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
   if(type&&params.type)params.type=type;
-  if(d.key==='uniform'){
-    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='uniform'):createInputDeclaration('uniform',type||'float',inputSeed);
+  if(['uniform','constant'].includes(d.key)){
+    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||'float',inputSeed);
     if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;
   }
+  if(d.key==='top_input'){const slots=ensureTopInputs();const slot=declarationId?slots.find(s=>s.id===declarationId):createInputDeclaration('top_input',null,inputSeed);if(!slot)throw Error(t('clipboard.missing'));params.inputId=slot.id;}
   if(d.key==='sampler'){
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='sampler'):createInputDeclaration('sampler','sampler2D',inputSeed);
     if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;
@@ -173,7 +185,8 @@ function functionInspector(box,n,d){
 function convertValue(value,type){return value===null&&!isResourceType(type)?filledValue(type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
-  if(kind==='outputs'&&id==='out'&&['uniform','sampler'].includes(definition(n)?.key))return graph.declarations.find(d=>d.id===n.params?.declarationId)?.name||id;
+  if(kind==='outputs'&&definition(n)?.key==='top_input'){if(id==='out')return topInputsView().find(s=>s.id===n.params.inputId)?.name||id;return id==='size'?t('inputs.size'):t('inputs.pixelSize');}
+  if(kind==='outputs'&&id==='out'&&['uniform','sampler','constant'].includes(definition(n)?.key))return graph.declarations.find(d=>d.id===n.params?.declarationId)?.name||id;
   if(n.definitionUuid==='sgrape.builtin.pixel_out'&&editorTarget==='mat'&&kind==='inputs'){const index=typeContract?.pixelBufferOutputs?.ports.indexOf(id);if(index>=0){const label=n.ui?.bufferLabels?.[id];return typeof label==='string'&&label.length<=80&&!/[\x00-\x1f\x7f]/.test(label)&&label.trim()?label:'Buffer '+index;}}
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(n.definitionUuid))return id;
   const f=n.definitionUuid===FunctionModel.CALL?FunctionModel.find(graph,n.params.functionId):currentFunction();

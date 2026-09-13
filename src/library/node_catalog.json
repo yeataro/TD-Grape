@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.6.5",
+  "catalogVersion": "0.8.7",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -1284,6 +1284,51 @@
         "descriptionKey": "help.texture_sample",
         "glslName": "texture",
         "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "constant",
+        "label": "Constant",
+        "inputs": {},
+        "outputs": {
+          "out": "D"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.constant",
+        "definitionUuid": "sgrape.builtin.constant",
+        "revisionHash": "0fcf1e30aa13bd1d9df35e00dbabd54819e0af0c90263a1afeb780dcc6642978"
+      },
+      "emitter": {
+        "id": "constant",
+        "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "top_input",
+        "label": "TOP Input",
+        "inputs": {},
+        "outputs": {
+          "out": "sampler2D",
+          "size": "vec2",
+          "pixelSize": "vec2"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.top_input",
+        "definitionUuid": "sgrape.builtin.top_input",
+        "revisionHash": "5b0bf1d805c3c23663eeaf4d559d348707c53e922d4a3410236bd8b4b190c8ca"
+      },
+      "emitter": {
+        "id": "top_input",
+        "version": 1
       }
     }
   ],

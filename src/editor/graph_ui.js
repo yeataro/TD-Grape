@@ -130,8 +130,10 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 }
 
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
-function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler'].includes(d.key)?d.key:null);}
+function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
+  if(d.key==='constant'||d.inputKind==='constant')return 'constant';
+  if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
   if(['float','vec2','vec3','color'].includes(d.key))return 'constant';
@@ -183,7 +185,7 @@ const selectableNodeTypes=d=>typeVariants(d).map(v=>v.type).filter(type=>type!==
 const compatible=(a,b)=>!!typeContract?.conversions.some(rule=>rule.from===a&&rule.to===b);
 function typeVariants(d){
   if(d.inputPreset)return [{type:'float',inputs:{},outputs:{out:'float'}}];
-  if(d.inputSourceId)return [{type:d.inputType,inputs:{},outputs:{out:d.inputType}}];
+  if(d.inputSourceId)return [{type:d.inputType,inputs:{},outputs:d.inputKind==='top_input'?d.outputs:{out:d.inputType}}];
   const entry=typeContract?.definitions[d.definitionUuid];if(entry)return entry.variants;
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(d.definitionUuid))return [];
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
@@ -529,13 +531,15 @@ function paletteEntry(d){
   const entry={d,meta:browserMeta(d)},row=el('div',{class:'browser-row','data-category':nodeCategory(d),'data-browser-category':entry.meta.category});
   const button=el('button',{'data-entry':d.key,class:'palette-entry','aria-pressed':String(browserSelection===d.key)});
   button.append(browserGlyph(entry.meta.subgraph?'subgraph':'node'),el('span',{class:'palette-entry-label'},d.label),el('small',{class:'palette-entry-source'},browserSourceLabel(entry.meta.source)));
-  button.draggable=!readonly;button.title=d.label+' · '+browserBadges(entry)+'\n'+t('browser.inspect');
-  button.ondragstart=e=>{if(readonly){e.preventDefault();return;}e.dataTransfer.setData('application/x-sgrape-node',d.key);e.dataTransfer.effectAllowed='copy';$('#canvas').classList.add('drop-ready');};
-  button.ondragend=()=>$('#canvas').classList.remove('drop-ready');
+  button.title=d.label+' · '+browserBadges(entry)+'\n'+t('browser.inspect');
   button.onclick=()=>{browserSelection=d.key;document.querySelectorAll('#nodelibrary [data-entry]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.entry===d.key)));renderBrowserDetail(entry);};
   button.ondblclick=()=>addNode(d,(180-pan.x)/scale,(160-pan.y)/scale);
   const add=el('button',{class:'browser-add','data-add-entry':d.key,'aria-label':t('browser.add')+' '+d.label},'+');add.disabled=readonly;
-  add.onclick=()=>addNode(d,(180-pan.x)/scale,(160-pan.y)/scale);row.append(button,add);return row;
+  const drop=(x,y)=>{const p=graphPoint(x,y);if(p)addNode(d,p.x,p.y);};
+  installCanvasItemDrag(add,()=>d.label,drop,()=>addNode(d,(180-pan.x)/scale,(160-pan.y)/scale));
+  const inspect=button.onclick;installCanvasItemDrag(button,()=>d.label,drop,inspect);
+  const pointer=button.onpointerdown;button.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
+  row.append(button,add);return row;
 }
 function renderBrowserDetail(entry){
   const box=$('#browserdetail');box.hidden=!entry;box.replaceChildren();if(!entry)return;
@@ -598,12 +602,12 @@ function openCreator(clientX,clientY,wire=null){
 function renderCreator(){
   if(!creatorState)return;const query=$('#createsearch').value.toLowerCase(),category=creatorCategory,typeFilter=$('#createtype').value,wire=creatorState.wire;
   creatorMatches=[];
-  const entries=browserIndex().map(({d})=>{if(['uniform','sampler'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
+  const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant','top_input'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
   for(const preset of Object.keys(inputPresets)){
     const base=catalog.find(d=>d.key==='uniform');if(!base)continue;
     const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:creatorMeta(d)});
   }
-  for(const decl of graph.declarations.filter(d=>['uniform','sampler'].includes(d.kind)&&!d.sourceMissing)){
+  for(const decl of allInputSources().filter(d=>['uniform','sampler','constant','top_input'].includes(d.kind)&&!d.sourceMissing)){
     const base=catalog.find(d=>d.key===decl.kind);if(!base?.stages.includes(stage))continue;
     const d={...base,key:'input:'+decl.id,label:decl.name,inputSourceId:decl.id,inputKind:decl.kind,inputType:decl.type};entries.push({d,meta:creatorMeta(d)});
   }
@@ -919,6 +923,7 @@ function installGraphClipboard(){
 }
 
 function creatorMeta(d){
+  if(d.key==='constant'||d.inputKind==='constant'||d.key==='top_input'||d.inputKind==='top_input'){const branch=(d.inputKind||d.key)==='constant'?'constants':'topInputs';return {...browserMeta(d),category:'inputs',path:['inputs',branch],secondary:[],descriptionKey:'help.'+(d.inputKind||d.key)};}
   const meta=browserMeta(d),kind=inputSourceKind(d);
   return kind?{...meta,category:'inputs',path:['inputs',kind==='uniform'?'uniforms':'samplers'],secondary:[]}:meta;
 }

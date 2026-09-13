@@ -8,6 +8,8 @@ TouchDesigner 的 GLSL MAT／TOP 節點編輯器。圖、參數關聯與產生�
 
 以 TouchDesigner 開啟 **`src/td/TD-Grape-dev.toe`**。在 Grape MAT／TOP 的參數頁按 **Open Editor**。服務由 TD 啟動；跨裝置編輯可由管理元件的 **Allow LAN Connections** 控制。
 
+管理元件的 **連線需要憑證**（`Requiretoken`）目前預設關閉，方便開發期間跨瀏覽器與裝置驗證；可連到服務的裝置可以讀取與修改工程。開啟後要求有效的 Editor 連結憑證。切換於 TD 正常運作時生效，不重啟服務，也不改變目前 port 或憑證；設定隨 TOE 保存，適用於該服務管理的所有 Shader。是否在後續版本加入關閉憑證時的警示視窗，仍待討論。
+
 這份原始碼專案可以整個複製到其他位置，不需要舊專案資料夾、Agent 工作資料或外部私人代理。TOE 內保存目前可運行的程式；修改原始碼後，要透過開發工具更新內嵌 DAT，再保存 TOE。詳細流程見 [開發說明](docs/development/DEVELOPMENT.md)。
 
 目前已在 Windows、TouchDesigner 2025.32820 驗證。macOS 為目標平台，仍需實機驗證。

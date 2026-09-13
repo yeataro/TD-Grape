@@ -65,6 +65,6 @@ class SamplerSplit(unittest.TestCase):
  def test_legacy_definition_identity_preserved(self):
   import pathlib
   baseline=json.loads((pathlib.Path(__file__).resolve().parents[1]/'fixtures/type_contract_baseline.json').read_text(encoding='utf-8'))
-  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample')}),baseline['catalogHash'])
+  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample','constant','top_input')}),baseline['catalogHash'])
 
 if __name__=='__main__':unittest.main()

@@ -17,7 +17,7 @@ class Parameter:
     def eval(self):return self.val
 
 class Owner:
-    def __init__(self):self.par=types.SimpleNamespace(Allowlan=Parameter());self.storage={}
+    def __init__(self):self.par=types.SimpleNamespace(Allowlan=Parameter(),Requiretoken=Parameter());self.storage={}
     def fetch(self,key,default=None):return True if key=='sgrapeManager' else self.storage.get(key,default)
     def store(self,key,value):self.storage[key]=value
 
@@ -50,16 +50,50 @@ class LanTests(unittest.TestCase):
         values={'X-Sgrape-Token':self.r._token}
         if body is not None:values['Content-Type']='application/json'
         values.update(headers or {})
+        values={key:value for key,value in values.items() if value is not None}
         try:
             conn.request('GET' if body is None else 'POST',path,body=data,headers=values)
             response=conn.getresponse();return response.status,response.read()
         finally:conn.close()
-    def test_default_is_loopback_and_requires_token(self):
+    def test_default_is_loopback_without_token_requirement(self):
         self.assertEqual(self.r._server.server_address[0],'127.0.0.1')
         self.assertEqual(self.request(path='/',headers={'X-Sgrape-Token':''})[0],200)
-        self.assertEqual(self.request(headers={'X-Sgrape-Token':''})[0],401)
-        self.assertEqual(self.request(headers={'X-Sgrape-Token':'\xe9'})[0],401)
+        self.assertEqual(self.request(headers={'X-Sgrape-Token':None})[0],200)
+        self.assertEqual(self.request(headers={'X-Sgrape-Token':'stale-token'})[0],200)
         self.assertEqual(json.loads(self.request()[1]),self.original)
+    def test_auth_toggle_controls_reads_and_writes_without_restarting(self):
+        r=self.r;server,worker,port,token,work=r._server,r._worker,r._port,r._token,r._queue
+        for required in (True,False,True,False):
+            self.owner.par.Requiretoken.val=required;r.service_network()
+            for supplied in (None,'','wrong-token','\xe9'):
+                headers={'X-Sgrape-Token':supplied}
+                expected=401 if required else 200
+                self.assertEqual(self.request(headers=headers)[0],expected)
+                before=dict(self.state)
+                self.assertEqual(self.request(body={'value':self.state['value']+1},headers=headers)[0],expected)
+                if required:self.assertEqual(self.state,before)
+            self.assertEqual(self.request()[0],200)
+            self.assertEqual(self.request(body={'value':.75})[0],200)
+            self.assertIs(r._server,server);self.assertIs(r._worker,worker);self.assertIs(r._queue,work)
+            self.assertEqual((r._port,r._token),(port,token))
+    def test_auth_requirement_survives_lan_rebind_and_service_restart(self):
+        for required in (True,False):
+            self.owner.par.Requiretoken.val=required;self.r.service_network()
+            for lan in (True,False):
+                self.r.set_lan_enabled(lan)
+                address='127.0.0.2' if lan else '127.0.0.1'
+                self.assertEqual(self.request(address,headers={'X-Sgrape-Token':None})[0],401 if required else 200)
+                self.assertEqual(self.request(address)[0],200)
+            self.r.stop();self.r.start(self.owner)
+            self.assertEqual(self.request(headers={'X-Sgrape-Token':None})[0],401 if required else 200)
+    def test_http_worker_does_not_evaluate_td_auth_parameter(self):
+        main_thread=threading.get_ident()
+        def evaluate():
+            self.assertEqual(threading.get_ident(),main_thread)
+            return True
+        self.owner.par.Requiretoken.eval=evaluate;self.r.service_network()
+        self.assertEqual(self.request(headers={'X-Sgrape-Token':None})[0],401)
+        self.assertEqual(self.request()[0],200)
     def test_switch_keeps_port_session_queue_and_values(self):
         r=self.r;port,token,work=r._port,r._token,r._queue;version=r.PRODUCT_VERSION
         for enabled in (True,False,True,False):
@@ -78,11 +112,13 @@ class LanTests(unittest.TestCase):
         with self.assertRaises(OSError):self.request('127.0.0.2')
         self.assertEqual(json.loads(self.request()[1])['value'],.75)
     def test_host_origin_and_cross_site_guards_in_both_modes(self):
-        for enabled in (False,True):
-            self.r.set_lan_enabled(enabled)
-            for headers in ({'Host':'evil.invalid'},{'Origin':'http://evil.invalid'},{'Origin':'null'},{'Sec-Fetch-Site':'cross-site'},{'Host':'127.0.0.1:1'}):
-                self.assertEqual(self.request(headers=headers)[0],403,headers)
-            self.assertEqual(self.request(headers={'Transfer-Encoding':'chunked'})[0],400)
+        for required in (False,True):
+            self.owner.par.Requiretoken.val=required;self.r.service_network()
+            for enabled in (False,True):
+                self.r.set_lan_enabled(enabled)
+                for headers in ({'Host':'evil.invalid'},{'Origin':'http://evil.invalid'},{'Origin':'null'},{'Sec-Fetch-Site':'cross-site'},{'Host':'127.0.0.1:1'}):
+                    self.assertEqual(self.request(headers=headers)[0],403,headers)
+                self.assertEqual(self.request(headers={'Transfer-Encoding':'chunked'})[0],400)
     def test_failed_bind_restores_previous_mode_without_port_drift(self):
         original_socket=socket.socket;first=[True]
         class FailingSocket(original_socket):

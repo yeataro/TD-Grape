@@ -602,6 +602,8 @@ promote 時 par 建成什麼型別（`vec3`→RGB/XYZ；`int`→Int/Menu/Toggle�
 
 ## 11. Web Server 安全 ★ 回應審閱 B9
 
+> 2026-09-13 開發階段修訂：管理組件新增「連線需要憑證」（Requiretoken），依使用者決策預設關閉；LAN 存取仍由獨立開關控制。開啟 Requiretoken 時才要求下述 session token，Host／Origin 等檢查持續啟用。操作行為見 README。未來關閉憑證時的警示視窗仍待討論。
+
 Web Server 的 HTTP/WebSocket callback 能直接修改專案，故即使單使用者假設，預設：
 - 只綁 loopback
 - 啟動生成 session token

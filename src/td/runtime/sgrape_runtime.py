@@ -1,7 +1,7 @@
 """Embedded TD runtime. All TD API calls run on TD's main thread.
 
-The HTTP worker only handles bytes and a queue. LAN access is an explicit
-user option; both modes validate Host/Origin and require the same session token.
+The HTTP worker only handles bytes and a queue. LAN access and session-token
+requirements are manager options; both network modes validate Host/Origin.
 """
 import base64
 import copy
@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.6'
+PRODUCT_VERSION='0.8.7'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -92,6 +92,14 @@ def external_input():
     return comp.op(external) if external else (comp.inputs[0] if comp.inputs else None)
 
 def effective(key):
+    comp=me.parent()
+    slots=comp.fetch('grapeTopSlots',[])
+    if key=='input:0' and slots:key='slot:'+comp.fetch('grapeTopLegacyId',slots[0]['id'])
+    if key.startswith('slot:'):
+        ident=key[5:];index=next((i for i,slot in enumerate(slots) if slot['id']==ident),None)
+        path=comp.fetch('grapeTopExternal',{}).get(ident)
+        external=comp.op(path) if path else (comp.inputConnectors[index].connections[0].owner if index is not None and index<len(comp.inputConnectors) and comp.inputConnectors[index].connections else None)
+        if external:return {'valid':True,'status':'connected','path':external.path,'source':external}
     if key == 'input:0':
         external = external_input()
         if external:
@@ -104,10 +112,12 @@ def status(key):
 
 def match_input():
     comp = me.parent()
-    spec=comp.fetch('sgrapeTextureSources', {}).get('input:0', {})
+    slots=comp.fetch('grapeTopSlots',[])
+    key='slot:'+slots[0]['id'] if slots else 'input:0'
+    spec=comp.fetch('sgrapeTextureSources', {}).get(key, {})
     parameter=getattr(comp.par,spec.get('parameter') or '_missing',None)
     selected=parameter is not None and (parameter.mode!=ParMode.CONSTANT or bool(str(parameter.val).strip()))
-    return bool(external_input()) or spec.get('matchDefault',False) or selected
+    return effective(key)['status']=='connected' or spec.get('matchDefault',False) or selected
 '''
 
 _server=None
@@ -119,6 +129,7 @@ _last_tick=0
 _worker=None
 _assets={}
 _lan_enabled=False
+_require_token=False
 _network_refresh=0.0
 _shader=None
 _shaders={}
@@ -385,7 +396,9 @@ def create_shader(parent_comp,name='Grape_MAT1',graph=None,kind='mat'):
         stem=name.rstrip('0123456789'); index=1
         while parent_comp.op(stem+str(index)): index+=1
         name=stem+str(index)
+    fresh=graph is None
     graph=copy.deepcopy(graph or core().demo_graph(target=kind))
+    if fresh and kind=='top':graph['topInputLegacyId']='input0';graph['topInputs']=[{'id':'input0','name':'Input 0','defaultSource':'builtin:banana','matchDefault':False}]
     review=_owner.op('document').module.inspect_upgrade(graph, core(), kind, require_baseline=False)
     if review['required'] or review['blocked']:
         raise RuntimeError('This graph needs a version review. Create a current Shader and import the graph in its editor.')
@@ -516,17 +529,81 @@ def make_top_scene(comp):
 
 
 def texture_key(decl):
-    return 'input:0' if decl['source']=='input:0' else decl['id']
+    return 'slot:'+decl['topInputId'] if decl.get('topInputId') else 'input:0' if decl['source']=='input:0' else decl['id']
 
 def texture_specs(graph):
     specs={}
     for decl in graph['declarations']:
         if decl['kind']!='sampler':continue
         key=texture_key(decl)
-        specs[key]={'default':decl.get('defaultSource','builtin:banana') if key=='input:0' else decl['source'],
+        specs[key]={'default':decl.get('defaultSource','builtin:banana') if key=='input:0' or decl.get('topInputId') else decl['source'],
             'fallback':decl.get('fallback'), 'expose':decl.get('expose',False), 'label':decl.get('exposeName') or ('Input 1 Default TOP' if key=='input:0' else decl['name']),
             'matchDefault':specs.get(key,{}).get('matchDefault',False) or (key=='input:0' and 'defaultSource' in decl)}
+    # Preserve the exposed legacy Input 0 parameter while adopting explicit slots.
+    for index,slot in enumerate(core().top_input_slots(graph)):
+        key='slot:'+slot['id']
+        if slot['id']==graph.get('topInputLegacyId',graph['topInputs'][0]['id']) and 'input:0' in specs:
+            specs[key].update({k:specs['input:0'][k] for k in ('expose','label')})
+        specs[key]['matchDefault']=slot.get('matchDefault',True)
     return specs
+
+def top_external_connections(comp):
+    slots=comp.fetch('grapeTopSlots',[])
+    ids=[slot['id'] for slot in slots] or ['input0']
+    return {ident:(comp.inputConnectors[index].connections[0].owner if index<len(comp.inputConnectors) and comp.inputConnectors[index].connections else None) for index,ident in enumerate(ids)}
+
+def prepare_top_slots(comp,graph,input_owner=None):
+    slots=core().top_input_slots(graph)
+    old=comp.fetch('grapeTopSlots',[])
+    if not slots and not old:return
+    owner=input_owner or comp
+    external=top_external_connections(owner)
+    if not owner.fetch('grapeTopSlots',[]) and slots:
+        external={slots[0]['id']:external.get('input0')}
+    desired={slot['id'] for slot in slots} if slots else {'input0'}
+    if any(source and ident not in desired for ident,source in external.items()):
+        raise RuntimeError('Disconnect the COMP input before removing its TOP Input slot.')
+    if not slots:
+        slots=[{'id':'input0','name':'Input 0','defaultSource':'builtin:banana'}]
+    old_nodes={slot['id']:slot['node'] for slot in old}
+    records=[]
+    # Create all destinations before changing connector order. Internal object
+    # identities persist through rename/reorder; external wires follow slot IDs.
+    for index,slot in enumerate(slots):
+        name=old_nodes.get(slot['id']) or ('in1' if not old and index==0 else 'in_'+hashlib.sha256(slot['id'].encode()).hexdigest()[:12])
+        incoming=comp.op(name) or comp.create(inTOP,name)
+        records.append(dict(slot,node=incoming.name))
+    for connector in comp.inputConnectors:connector.disconnect()
+    for record in old:
+        if record['node'] not in {r['node'] for r in records}:
+            comp.op(record['node']).destroy()
+    if not old and records[0]['node']!='in1' and comp.op('in1'):comp.op('in1').destroy()
+    comp.store('grapeTopLegacyId',graph.get('topInputLegacyId',records[0]['id']))
+    comp.store('grapeTopSlots',records if graph.get('topInputs') else [])
+    comp.store('grapeTopExternal', {ident:source.path for ident,source in external.items() if source} if input_owner else {})
+    for index,record in enumerate(records):
+        incoming=comp.op(record['node']);incoming.par.connectorder=index;incoming.par.label=record['name'];incoming.par.format='useinput'
+        key='slot:'+record['id'] if graph.get('topInputs') else 'input:0'
+        default=comp.op('default_'+incoming.name) or comp.create(selectTOP,'default_'+incoming.name)
+        default.par.format='useinput'
+        source=external.get(record['id'])
+        default.par.top=source.path if input_owner and source else ''
+        if not (input_owner and source):default.par.top.expr="mod('texture_sources').resolve("+repr(key)+")"
+        incoming.inputConnectors[0].connect(default)
+    if not input_owner:
+        for index,record in enumerate(records):
+            source=external.get(record['id'])
+            if source:comp.inputConnectors[index].connect(source)
+    comp.op('input_router').inputConnectors[0].connect(comp.op(records[0]['node']))
+
+def top_input_snapshot(comp):
+    helper=comp.op('texture_sources')
+    rows=[]
+    for index,record in enumerate(comp.fetch('grapeTopSlots',[])):
+        row=helper.module.effective('slot:'+record['id'])
+        image=comp.op(record['node'])
+        rows.append({'id':record['id'],'index':index,'connected':row['status']=='connected','status':row['status'],'path':row['path'],'width':image.width,'height':image.height})
+    return rows
 
 def texture_asset(comp,key,source):
     name='texture_default_'+hashlib.sha256(key.encode()).hexdigest()[:16]
@@ -550,8 +627,12 @@ def texture_asset(comp,key,source):
 def prepare_textures(comp,graph,input_owner=None,compiled=None):
     projected=dict(graph,declarations=graph['declarations']+[b for b in (compiled or {}).get('bindings',[]) if b.get('internal')])
     bindings=copy.deepcopy(comp.fetch('sgrapePublicTextures',{}));specs=texture_specs(projected)
+    if graph.get('topInputs') and 'input:0' in bindings:
+        bindings.setdefault('slot:'+graph.get('topInputLegacyId',graph['topInputs'][0]['id']),bindings['input:0'])
     for key,spec in specs.items():
         if not spec['expose']:continue
+        legacy_key='slot:'+graph.get('topInputLegacyId',graph['topInputs'][0]['id']) if graph.get('topInputs') else None
+        if key==legacy_key and 'input:0' in bindings:bindings.setdefault(key,bindings['input:0'])
         if key not in bindings:
             name='T'+hashlib.sha256(key.encode()).hexdigest()[:16]
             if getattr(comp.par,name,None) is not None:raise RuntimeError('Public texture parameter name collision')
@@ -564,7 +645,7 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
         p.page=page;p.label=spec['label'];p.enable=True
         p.default=spec['default'][3:] if spec['default'].startswith('op:') else ''
         if input_owner:
-            old=input_owner.fetch('sgrapePublicTextures',{}).get(key)
+            old=input_owner.fetch('sgrapePublicTextures',{}).get(key) or (input_owner.fetch('sgrapePublicTextures',{}).get('input:0') if key==legacy_key else None)
             previous=getattr(input_owner.par,old['parameter'],None) if old else None
             if previous is not None:
                 value=previous.eval()
@@ -588,7 +669,9 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
     comp.store('sgrapeTextureExternal',external.path if external else '')
     helper=comp.op('texture_sources') or comp.create(textDAT,'texture_sources')
     if helper.text!=TEXTURE_SOURCE_CODE:helper.text=TEXTURE_SOURCE_CODE
-    if shader_kind(comp)=='top':
+    if shader_kind(comp)=='top' and (graph.get('topInputs') or comp.fetch('grapeTopSlots',[])):
+        prepare_top_slots(comp,graph,input_owner)
+    elif shader_kind(comp)=='top':
         default=comp.op('input_default') or comp.create(selectTOP,'input_default')
         default.par.format='useinput';default.par.top.expr="mod('texture_sources').resolve('input:0')"
         incoming=comp.op('in1')
@@ -849,11 +932,14 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
     if not source_module():
         mat.seq.vec.numBlocks=max(1,len(uniforms))
         for i in range(mat.seq.vec.numBlocks): getattr(mat.par,'vec'+str(i)+'name').val=''
+    top_paths=[]
     for i,b in enumerate(samplers):
         key=texture_key(b)
         row=comp.op('texture_sources').module.effective(key)
         if not row['valid'] and not row.get('recoverable'):raise RuntimeError('Invalid TOP source for '+b['name'])
-        if key=='input:0':texture=comp.op('input_router')
+        if b.get('topInputId'):
+            texture=comp.op(next(slot['node'] for slot in comp.fetch('grapeTopSlots',[]) if slot['id']==b['topInputId']))
+        elif key=='input:0':texture=comp.op('input_router')
         else:
             name='texture_source_'+hashlib.sha256(key.encode()).hexdigest()[:16]
             texture=comp.op(name) or comp.create(selectTOP,name)
@@ -863,10 +949,12 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
             if texture.parent()!=comp:
                 selected=comp.op('source_'+b['id']) or comp.create(selectTOP,'source_'+b['id'])
                 selected.par.top=texture.path;selected.par.format='useinput';texture=selected
-            mat.inputConnectors[i].connect(texture)
+            top_paths.append(texture.path)
+            if not graph.get('topInputs'):mat.inputConnectors[i].connect(texture)
         else:
             getattr(mat.par,'sampler'+str(i)+'name').val=b['name']
             getattr(mat.par,'sampler'+str(i)+'top').val=reference
+    if kind=='top':mat.par.tops.val=' '.join(top_paths) if graph.get('topInputs') else ''
     if source_module():
         source_module().configure(_owner.op('runtime').module,comp,graph,public,preserve,input_owner)
     else:
@@ -1031,7 +1119,7 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
     backup_text_before=backup_dat_before.text if backup_dat_before else None
     compiled=core().compile_graph(graph)
     if any(b.get('sourceMissing') for b in compiled['bindings']):
-        raise RuntimeError('A used Uniform source is missing. Restore or reassign its reference before applying.')
+        raise RuntimeError('A used Input source is missing. Restore or reassign its reference before applying.')
     if target() and core().graph_target(graph)!=shader_kind(target()): raise RuntimeError('Import a graph for the same Shader target')
     if not inject_failure and not accepted and current.get('appliedHash')==compiled['hash'] and target() and compiled_is_current(target(),compiled,graph):
         new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,lastError='',sourceChanged=False)
@@ -1208,7 +1296,9 @@ def process_shader_request(method,path,body):
         return _owner.op('parameters').module.edit(_owner.op('runtime').module,body)
     if method=='GET' and path=='/api/sources':
         if not source_module(): raise RuntimeError('Update the Grape manager to edit native sources.')
-        return source_module().snapshot(_owner.op('runtime').module)
+        result=source_module().snapshot(_owner.op('runtime').module)
+        result['topInputs']=top_input_snapshot(target())
+        return result
     if method=='POST' and path=='/api/source-value':
         ensure_supported_shader(target())
         return source_module().write_value(_owner.op('runtime').module,body)
@@ -1259,6 +1349,10 @@ def ensure_network_controls(owner):
     if getattr(owner.par,'Allowlan',None) is None:
         page.appendToggle('Allowlan',label='Allow LAN Connections')
         owner.par.Allowlan.default=False;owner.par.Allowlan.val=False
+    if getattr(owner.par,'Requiretoken',None) is None:
+        page.appendToggle('Requiretoken',label='連線需要憑證')
+        owner.par.Requiretoken.default=False;owner.par.Requiretoken.val=False
+        owner.par.Requiretoken.order=owner.par.Allowlan.order+0.5
     for name,label in (('Lanurls','LAN URLs'),('Lanstatus','Connection Status')):
         if getattr(owner.par,name,None) is None: page.appendStr(name,label=label)
         getattr(owner.par,name).readOnly=True
@@ -1267,6 +1361,11 @@ def ensure_network_controls(owner):
 
 def requested_lan(owner):
     parameter=getattr(owner.par,'Allowlan',None)
+    return bool(parameter.eval()) if parameter is not None else False
+
+
+def requested_token_requirement(owner):
+    parameter=getattr(owner.par,'Requiretoken',None)
     return bool(parameter.eval()) if parameter is not None else False
 
 
@@ -1314,6 +1413,9 @@ def set_lan_enabled(enabled):
 
 
 def service_network():
+    global _require_token
+    # Read TD parameters on the main thread. The HTTP worker uses this snapshot.
+    _require_token=requested_token_requirement(_owner)
     desired=requested_lan(_owner)
     if desired!=_lan_enabled:
         try:set_lan_enabled(desired)
@@ -1379,9 +1481,10 @@ def local_viewer_request(peer, destination, host, headers, body):
 
 
 def start(owner,session=None):
-    global _owner,_server,_token,_port,_last_tick,_worker,_lan_enabled
+    global _owner,_server,_token,_port,_last_tick,_worker,_lan_enabled,_require_token
     if _server: return url()
     ensure_network_controls(owner)
+    _require_token=requested_token_requirement(owner)
     enabled=session.get('lan',requested_lan(owner)) if session else requested_lan(owner)
     _owner=owner; _token=session['token'] if session else secrets.token_urlsafe(32)
     if owner.fetch('sgrapeManager',False):
@@ -1424,7 +1527,8 @@ def start(owner,session=None):
                 value,mime=_assets[path]
                 return self.reply(200,value,mime)
             supplied=self.headers.get('X-Sgrape-Token','')
-            if not supplied or not supplied.isascii() or not secrets.compare_digest(supplied,_token): return self.reply(401,{'error':'Open the editor from TouchDesigner to reconnect'})
+            if _require_token and (not supplied or not supplied.isascii() or not secrets.compare_digest(supplied,_token)):
+                return self.reply(401,{'error':'Open the editor from TouchDesigner to reconnect'})
             if self.command=='POST' and self.headers.get_content_type()!='application/json':
                 return self.reply(415,{'error':'Write requests require application/json'})
             try:
