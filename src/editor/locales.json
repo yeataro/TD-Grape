@@ -2257,6 +2257,66 @@
     "browser.branch.topInputs": {
       "en": "TOP Inputs",
       "zh-Hant": "TOP 輸入"
+    },
+    "connection.unavailable": {
+      "zh-Hant": "連線逾時或服務無法連線",
+      "en": "Connection timed out or the service is unreachable"
+    },
+    "connection.busy": {
+      "zh-Hant": "TouchDesigner 暫時沒有回應",
+      "en": "TouchDesigner is not responding yet"
+    },
+    "connection.auth": {
+      "zh-Hant": "此連線需要有效憑證",
+      "en": "This connection needs a valid credential"
+    },
+    "connection.forbidden": {
+      "zh-Hant": "此網址的連線遭到拒絕",
+      "en": "Connection from this address was rejected"
+    },
+    "connection.review": {
+      "zh-Hant": "套用結果尚未確認",
+      "en": "Apply result has not been confirmed"
+    },
+    "connection.changed": {
+      "zh-Hant": "TD 圖已更新；目前畫布已保留",
+      "en": "The TD graph has changed; your canvas is kept"
+    },
+    "connection.retry": {
+      "zh-Hant": "重試連線",
+      "en": "Retry connection"
+    },
+    "connection.checking": {
+      "zh-Hant": "檢查連線中…",
+      "en": "Checking connection…"
+    },
+    "connection.help": {
+      "zh-Hant": "如何恢復",
+      "en": "How to reconnect"
+    },
+    "connection.checkHelp": {
+      "zh-Hant": "請在執行工程的電腦上確認：\n• TouchDesigner 仍開啟；若已最小化，先還原視窗。\n• 全域 Cooking 開關已開啟；若正在處理耗時工作，稍候再試。\n• 遠端裝置的區網或 Tailscale 連線仍正常。\n若 TD 已重開，請從 Grape 元件按 Open Editor，使用最新網址。Editor 無法只憑逾時確認原因，也無法在 TD 停止回應時替它恢復 Cooking。",
+      "en": "On the computer running the project, check:\n• TouchDesigner is still open. Restore its window if minimized.\n• Global Cooking is enabled. If TD is doing lengthy work, wait and retry.\n• Remote devices still have LAN or Tailscale connectivity.\nIf TD restarted, use Open Editor on the Grape component for the current URL. A timeout alone does not identify the cause; the Editor cannot resume Cooking while TD is unresponsive."
+    },
+    "connection.authHelp": {
+      "zh-Hant": "從 TD 的 Grape 元件按 Open Editor，使用包含有效憑證的新連結。這與 Cooking 或 Shader 編譯錯誤無關。",
+      "en": "Use Open Editor on the Grape component in TD for a new link with a valid credential. This is unrelated to Cooking or shader compilation."
+    },
+    "connection.forbiddenHelp": {
+      "zh-Hant": "請使用 Grape 元件提供的網址。自行改寫網址或經過代理可能不符合服務的連線條件。",
+      "en": "Use the URL provided by the Grape component. A rewritten URL or proxy may not meet the service connection requirements."
+    },
+    "connection.reviewHelp": {
+      "zh-Hant": "連線中斷時無法確認套用是否完成。重試只讀取 TD 狀態，不會重送套用或儲存。",
+      "en": "A lost connection cannot confirm whether Apply completed. Retry reads TD state without resending Apply or Save."
+    },
+    "connection.changedHelp": {
+      "zh-Hant": "TD 的圖版本與此畫布不同，可能是先前套用已完成，或其他入口修改了工程。請先匯出目前畫布留存，再視需要使用「重新載入已套用」。重試連線不會覆蓋畫布。",
+      "en": "TD has a different graph revision. An earlier Apply may have completed, or another editor may have changed the project. Export your current graph first, then use Reload applied if needed. Retry does not replace the canvas."
+    },
+    "connection.draftHelp": {
+      "zh-Hant": "目前畫布與復原記錄會保留。恢復連線後，請確認狀態再套用。",
+      "en": "Your canvas and Undo history are kept. Review the state before applying after recovery."
     }
   }
 }

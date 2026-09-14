@@ -789,3 +789,14 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .source-locations button{display:block;width:100%;text-align:left;margin-block:4px}
 .inputs-create{margin-top:0}
 #sourceparameters[hidden]{display:none}
+
+/* Connection feedback stays separate from shader diagnostics and panel headings. */
+#connectionnotice{flex:none;border-bottom:1px solid var(--line);background:#24232a;padding:8px 16px;max-height:32dvh;overflow:auto}
+#connectionnotice[hidden]{display:none}
+.connection-summary{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap}
+.connection-summary strong{font-size:12px;font-weight:500;color:#e4bd77}
+.connection-summary button{padding:6px 10px}
+.connection-summary details{font-size:12px;color:var(--muted)}
+.connection-summary details[open]{flex-basis:100%}
+.connection-summary summary{cursor:pointer;color:inherit}
+.connection-summary p{margin:6px 0;max-width:80em;line-height:1.65;white-space:pre-line}
