@@ -41,7 +41,7 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input'))
+    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code'))
 
 def _definition_signature(d):
     # Presentation changes do not change port/default behavior.
@@ -162,6 +162,76 @@ def convert_expression(value, source, target):
     if kind == 'splat': return target + '(' + value + ')'
     raise GraphError(source + ' cannot connect to ' + target)
 
+GLSL_CODE_MAX_PORTS = 16
+GLSL_CODE_MAX_LENGTH = 16384
+GLSL_CODE_RESERVED = frozenset("""attribute const uniform varying buffer shared coherent
+volatile restrict readonly writeonly atomic_uint layout centroid flat smooth noperspective
+patch sample break continue do for while switch case default if else subroutine in out
+inout float double int void bool true false invariant precise discard return mat2 mat3
+mat4 dmat2 dmat3 dmat4 vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 dvec2 dvec3
+dvec4 uint uvec2 uvec3 uvec4 lowp mediump highp precision struct common partition active
+asm class union enum typedef template this resource goto inline noinline public static
+extern external interface long short half fixed unsigned superp input output hvec2 hvec3
+hvec4 fvec2 fvec3 fvec4 sampler3DRect filter sizeof cast namespace using row_major main""".split())
+
+def glsl_code_name(value):
+    return (isinstance(value,str) and bool(NAME.fullmatch(value)) and '__' not in value
+            and not value.startswith(('gl_','TD','sTD','uTD','sg_'))
+            and not re.match(r'(?:[iu]?sampler|[iu]?image|[d]?mat[234])',value)
+            and value not in GLSL_CODE_RESERVED)
+
+def glsl_code_interface(params):
+    if not isinstance(params,dict):raise GraphError('GLSL Code: invalid parameters')
+    if not glsl_code_name(params.get('functionName')):
+        raise GraphError('GLSL Code: use a non-reserved GLSL function name (up to 48 characters)')
+    names={params['functionName']}; ids=set(); result={}
+    for direction in ('inputs','outputs'):
+        ports=params.get(direction)
+        if not isinstance(ports,list) or not (0 if direction=='inputs' else 1)<=len(ports)<=GLSL_CODE_MAX_PORTS:
+            raise GraphError('GLSL Code: up to 16 inputs and 1–16 outputs are supported')
+        result[direction]={}
+        for port in ports:
+            if not isinstance(port,dict):raise GraphError('GLSL Code: invalid port')
+            ident=port.get('id'); name=port.get('name'); ty=port.get('type')
+            if not isinstance(ident,str) or not ID.fullmatch(ident) or ident in ids:
+                raise GraphError('GLSL Code: invalid or duplicate port ID')
+            if not glsl_code_name(name) or name in names:
+                raise GraphError('GLSL Code: port names must be unique, non-reserved GLSL identifiers')
+            if ty not in (PORT_TYPES if direction=='inputs' else TYPES):
+                raise GraphError('GLSL Code: unsupported port type; samplers can only be inputs')
+            ids.add(ident); names.add(name); result[direction][ident]=ty
+    return result
+
+def glsl_code_body(params):
+    """Keep handwritten statements inside their generated function boundary.
+
+    This is a boundary check, not a GLSL parser or GPU sandbox. TD still checks
+    expressions, overloads and stage-specific operations with its native compiler.
+    """
+    body=params.get('code')
+    if not isinstance(body,str) or len(body)>GLSL_CODE_MAX_LENGTH:
+        raise GraphError('GLSL Code: function body must be text of at most 16384 characters')
+    body=body.replace('\r\n','\n').replace('\r','\n')
+    if any(ord(ch)<32 and ch not in '\t\n' for ch in body) or '\\' in body:
+        raise GraphError('GLSL Code: control characters and line continuations are not supported')
+    depth=0; comment=None; index=0
+    while index<len(body):
+        pair=body[index:index+2]; ch=body[index]
+        if comment=='line':
+            if ch=='\n':comment=None
+        elif comment=='block':
+            if pair=='*/':comment=None;index+=1
+        elif pair=='//':comment='line';index+=1
+        elif pair=='/*':comment='block';index+=1
+        elif ch=='#':raise GraphError('GLSL Code: edit function statements only; preprocessor directives are not supported')
+        elif ch=='{':depth+=1
+        elif ch=='}':
+            depth-=1
+            if depth<0:raise GraphError('GLSL Code: the function boundary is generated; remove the extra closing brace')
+        index+=1
+    if depth or comment=='block':raise GraphError('GLSL Code: close the block or comment inside the function body')
+    return body
+
 # Pixel output slots are graph interfaces; Render TOP owns their allocation.
 PIXEL_BUFFER_PORTS = ('color',) + tuple('buffer'+str(i) for i in range(1,8))
 
@@ -173,6 +243,7 @@ def pixel_buffer_count(params):
     return count
 
 def definition_ports(definition, params):
+    if definition['key']=='glsl_code':return glsl_code_interface(params)
     if definition['key']=='pixel_out':
         return {'inputs':dict.fromkeys(PIXEL_BUFFER_PORTS[:pixel_buffer_count(params)],'vec4'),'outputs':{}}
     return {kind:definition[kind] for kind in ('inputs','outputs')}
@@ -203,9 +274,10 @@ def type_contract():
         default = definition['defaults'].get('type', 'float')
         choices = [default] + [ty for ty in TYPES if ty != default] if selector != 'fixed' else [None]
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [
-            dict(type=ty, **resolved_ports(definition, {'type': ty or 'float'}, {'type': ty})) for ty in choices]}
+            dict(type=ty, **resolved_ports(definition, dict(definition['defaults'],type=ty or 'float'), {'type': ty})) for ty in choices]}
     result = {'version': 1, 'numericTypes': list(TYPES), 'resourceTypes': list(RESOURCE_TYPES),
               'types': dict(copy.deepcopy(TYPE_DESCRIPTORS), sampler2D={'family':'sampler','components':0}),
+              'glslCode':{'maxPorts':GLSL_CODE_MAX_PORTS,'maxLength':GLSL_CODE_MAX_LENGTH,'reservedNames':sorted(GLSL_CODE_RESERVED)},
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
               'definitions': variants}
@@ -433,7 +505,10 @@ def _compile_flat(graph,annotation_scopes=None):
                     raise GraphError('Select an existing TOP Input',ident)
                 if d['key']=='pixel_out' and graph_target(graph)=='top' and pixel_buffer_count(params)!=1:
                     raise GraphError('Multiple color buffers are currently supported for MAT only',ident)
-                resolved = resolved_ports(d, params, declaration)
+                try:
+                    resolved = resolved_ports(d, params, declaration)
+                    if d['key']=='glsl_code':glsl_code_body(params)
+                except GraphError as exc:raise GraphError(str(exc),ident) from exc
                 ports[ident]={'in':resolved['inputs'], 'out':resolved['outputs']}
                 values=n.get('inputValues',{})
                 if not isinstance(values,dict) or any(port not in ports[ident]['in'] for port in values):
@@ -466,7 +541,7 @@ def _compile_flat(graph,annotation_scopes=None):
             visited.clear(); order.clear(); visit(outputs[0])
             live=set(order)
             for ident in sorted(set(nodes)-live): diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
-            expressions={}; lines=[]; line_nodes=[]
+            expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[]
             def inp(ident,port):
                 target=ports[ident]['in'][port]; source=links.get((ident,port))
                 if source:
@@ -514,6 +589,24 @@ def _compile_flat(graph,annotation_scopes=None):
                     expressions[(ident,'size')]='uTD2DInfos['+str(index)+'].res.zw'
                     expressions[(ident,'pixelSize')]='uTD2DInfos['+str(index)+'].res.xy'
                 elif k=='texture_sample': expr='texture('+a('sampler')+', '+a('uv')+')'
+                elif k=='glsl_code':
+                    function='sg_code_'+ident+'_'+p['functionName']
+                    signature=[('in' if direction=='inputs' else 'out')+' '+port['type']+' '+port['name']
+                               for direction in ('inputs','outputs') for port in p[direction]]
+                    body=glsl_code_body(p).split('\n')
+                    block=['void '+function+'('+', '.join(signature)+') {']
+                    block.extend('    '+port['name']+' = '+literal(filled_value(port['type']),port['type'])+';' for port in p['outputs'])
+                    body_start=len(block)
+                    block.extend('    '+line for line in body)
+                    block.append('}')
+                    helper_nodes.extend(dict(node=ident,stage=stage,trail=[],**({'codeLine':i-body_start+1} if body_start<=i<body_start+len(body) else {})) for i in range(len(block)))
+                    helpers.extend(block)
+                    arguments=[a(port['id']) for port in p['inputs']]
+                    for port in p['outputs']:
+                        variable='sg_n_'+ident+'_'+port['id']
+                        lines.append('    '+port['type']+' '+variable+';')
+                        expressions[(ident,port['id'])]=variable;arguments.append(variable)
+                    lines.append('    '+function+'('+', '.join(arguments)+');')
                 elif k=='uv': expr='sg_uv'
                 elif k=='position': expr='TDPos()'
                 elif k=='deform': expr='TDDeform('+a('position')+')'
@@ -558,7 +651,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 lines.extend(_comment_lines(note.get('comment'),'Comment'))
                 line_nodes.extend([ident]*(len(lines)-line_start))
             lines,line_nodes=_scope_comments(lines,line_nodes,nodes,annotation_scopes or {},stage)
-            stages[stage]={'lines':lines,'ports':ports,'live':sorted(live),'lineNodes':line_nodes}
+            stages[stage]={'lines':lines,'ports':ports,'live':sorted(live),'lineNodes':line_nodes,'helpers':helpers,'helperNodes':helper_nodes}
         except GraphError as exc:
             exc.stage=stage; raise
     aliases={i for i in used if slots and declarations[i].get('source')=='input:0' and not declarations[i].get('topInputId')}
@@ -572,18 +665,20 @@ def _compile_flat(graph,annotation_scopes=None):
         headers=[header(declarations[i]) for i in sorted(used) if declarations[i]['kind'] in ('uniform','constant')]
         if slots:headers+=['#if TD_NUM_2D_INPUTS != '+str(len(samplers)), '#error Grape TOP Inputs require 2D textures in every slot', '#endif']
         vertex=''
-        pixel='\n'.join(headers+['layout(location=0) out vec4 fragColor;','void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
+        pixel='\n'.join(headers+['layout(location=0) out vec4 fragColor;']+stages['pixel']['helpers']+['void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
         for i,d in list(enumerate(samplers))+[(next((j for j,slot in enumerate(slots) if slot['id']==graph.get('topInputLegacyId')),0),declarations[ident]) for ident in aliases]:
             pixel='\n'.join(re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',code)+marker+comment for code,marker,comment in (line.partition('//') for line in pixel.split('\n')))
     else:
         headers=[header(declarations[i]) for i in sorted(used)]
-        vertex='\n'.join(headers+['out vec2 sg_uv;','void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
-        pixel='\n'.join(headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];',
+        vertex='\n'.join(headers+['out vec2 sg_uv;']+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
+        pixel='\n'.join(headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+stages['pixel']['helpers']+[
                                  'void main() {','    TDCheckDiscard();']+stages['pixel']['lines']+['}',''])
     source_map={}
     for stage in graph_stages(graph):
         prefix=len(headers)+(3 if graph_target(graph)=='top' or stage=='vertex' else 4)
-        source_map[stage]=[dict(location,line=prefix+i+1) for i,location in enumerate(stages[stage].pop('lineNodes'))]
+        helpers=stages[stage].pop('helpers');helper_nodes=stages[stage].pop('helperNodes')
+        source_map[stage]=[dict(location,line=prefix-2+i+1) for i,location in enumerate(helper_nodes)]
+        source_map[stage].extend(dict(location,line=prefix+len(helpers)+i+1) for i,location in enumerate(stages[stage].pop('lineNodes')))
     return {'sourceMap':source_map,'vertex':vertex,'pixel':pixel,'hash':digest(clean_semantic(graph)),
             'bindings':[declarations[i] for i in binding_ids],'stages':stages,'diagnostics':diagnostics}
 
@@ -741,7 +836,9 @@ def _expand(graph,functions):
                     if boundary is not None and d['key'].endswith('_out'): raise GraphError('Use Function Output inside a Function',ident)
                     nid=mapped(ident,path); out=copy.deepcopy(n); out['id']=nid; add(out,path,scopes)
                     if path: origins[(stage,nid)]={'node':ident,'functionId':path[-1][0],'trail':[step[0] for step in path]}
-                    templates=definition_ports(d,n.get('params',{}))
+                    try:templates=definition_ports(d,n.get('params',{}))
+                    except GraphError as exc:
+                        exc.node=ident;raise
                     maps[ident]={'in':{p:[nid,p] for p in templates['inputs']},'out':{p:[nid,p] for p in templates['outputs']}}
             if boundary is not None and (kinds.count(FUNCTION_INPUT)!=1 or kinds.count(FUNCTION_OUTPUT)!=1): raise GraphError('Exactly one Function Input and Output are required')
             for e in data['edges']:

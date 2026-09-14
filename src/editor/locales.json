@@ -2317,6 +2317,102 @@
     "connection.draftHelp": {
       "zh-Hant": "目前畫布與復原記錄會保留。恢復連線後，請確認狀態再套用。",
       "en": "Your canvas and Undo history are kept. Review the state before applying after recovery."
+    },
+    "code.invalidName": {
+      "zh-Hant": "名稱須唯一，以英文字母開頭，可含數字與底線，最多 48 字元；不可使用 GLSL 保留字。",
+      "en": "Use a unique GLSL name: start with a letter, use letters, digits or underscores, up to 48 characters. Reserved names are unavailable."
+    },
+    "code.portLimit": {
+      "zh-Hant": "最多 16 個輸入、1–16 個輸出。",
+      "en": "Use up to 16 inputs and 1–16 outputs."
+    },
+    "code.invalidPort": {
+      "zh-Hant": "接點 ID 無效或重複。",
+      "en": "Invalid or duplicate port ID."
+    },
+    "code.invalidType": {
+      "zh-Hant": "不支援此接點型別；Sampler 只能作為輸入。",
+      "en": "Unsupported port type; samplers can only be inputs."
+    },
+    "code.disconnectFirst": {
+      "zh-Hant": "請先取消此接點的連線，再刪除接點。",
+      "en": "Disconnect this port before removing it."
+    },
+    "code.keepOutput": {
+      "zh-Hant": "至少保留一個輸出。",
+      "en": "Keep at least one output."
+    },
+    "code.function": {
+      "zh-Hant": "函式名稱",
+      "en": "Function name"
+    },
+    "code.inputs": {
+      "zh-Hant": "輸入",
+      "en": "Inputs"
+    },
+    "code.outputs": {
+      "zh-Hant": "輸出",
+      "en": "Outputs"
+    },
+    "code.add.inputs": {
+      "zh-Hant": "新增輸入",
+      "en": "Add input"
+    },
+    "code.add.outputs": {
+      "zh-Hant": "新增輸出",
+      "en": "Add output"
+    },
+    "code.portName": {
+      "zh-Hant": "GLSL 接點名稱",
+      "en": "GLSL port name"
+    },
+    "code.renameHint": {
+      "zh-Hant": "改名後請同步修改程式內的引用；接線保持不變。",
+      "en": "After renaming, update references in the body. Wires keep their port IDs."
+    },
+    "code.up": {
+      "zh-Hant": "上移",
+      "en": "Move up"
+    },
+    "code.down": {
+      "zh-Hant": "下移",
+      "en": "Move down"
+    },
+    "code.remove": {
+      "zh-Hant": "移除接點",
+      "en": "Remove port"
+    },
+    "code.body": {
+      "zh-Hant": "GLSL 函式內容",
+      "en": "GLSL function body"
+    },
+    "code.inputValues": {
+      "zh-Hant": "未接線輸入值與連線",
+      "en": "Input values and connections"
+    },
+    "code.hint": {
+      "zh-Hant": "將結果寫入輸出變數。離開欄位或按 Ctrl / ⌘ + Enter 套用內容。",
+      "en": "Assign results to the output variables. Leave the field or press Ctrl / ⌘ + Enter to apply the body."
+    },
+    "help.glsl_code": {
+      "zh-Hant": "**GLSL Code** 是手寫的函式節點。在 Parameter 編輯輸入、輸出的名稱與型別，再編寫中間的函式內容。多個輸出使用 `out` 參數，預設為零；例如 `c = a + b;`。\n\n支援 `float`、`vec2`、`vec3`、`vec4`，以及 `sampler2D` 輸入。數值、Uniform 與貼圖可透過接線傳入。GLSL / TD 函式能否使用由目前的 Vertex / Pixel 與 TOP / MAT 決定。\n\n改名或排序保留接線；改名後需同步修改程式。刪除接點前先斷線。函式的外框由 UI 產生，這版不接受前處理指令、行接續或額外的全域函式。可將節點包入 Subgraph 保存到函式庫。編譯失敗時保留上次成功輸出。",
+      "en": "**GLSL Code** is a handwritten function node. Edit input/output names and types in Parameter, then write the function body. Multiple results use `out` parameters initialized to zero; for example, `c = a + b;`.\n\nSupports `float`, `vec2`, `vec3`, `vec4`, and `sampler2D` inputs. Connect values, Uniforms and textures through inputs. GLSL / TD function availability depends on the current Vertex / Pixel stage and TOP / MAT target.\n\nRenaming and reordering preserve wires; update body references after renaming. Disconnect a port before removing it. The UI generates the function boundary. This version does not accept preprocessor directives, line continuations or additional global functions. Package the node into a Subgraph to save it to the library. Compile failures retain the last successful output."
+    },
+    "function.quickInput": {
+      "en": "Add Subgraph input",
+      "zh-Hant": "新增 Subgraph 輸入"
+    },
+    "function.quickOutput": {
+      "en": "Add Subgraph output",
+      "zh-Hant": "新增 Subgraph 輸出"
+    },
+    "function.quickHint": {
+      "en": "Connect a wire to add a port. Edit its name and order in Parameter.",
+      "zh-Hant": "接線以新增接口；名稱與順序可在 Parameter 編輯。"
+    },
+    "wire.portLimit": {
+      "en": "A Subgraph supports up to 16 ports in each direction.",
+      "zh-Hant": "Subgraph 每側最多支援 16 個接口。"
     }
   }
 }

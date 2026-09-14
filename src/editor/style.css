@@ -800,3 +800,31 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .connection-summary details[open]{flex-basis:100%}
 .connection-summary summary{cursor:pointer;color:inherit}
 .connection-summary p{margin:6px 0;max-width:80em;line-height:1.65;white-space:pre-line}
+
+/* Handwritten GLSL shares the Parameter panel and neutral control palette. */
+.glsl-code-panel{min-width:0;display:grid;gap:12px}
+.glsl-code-panel>.field{margin:0}
+.code-interface{min-width:0;display:grid;gap:5px}
+.code-interface-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.code-interface-heading button{min-width:28px;padding:2px 8px}
+.code-port{display:grid;grid-template-columns:minmax(50px,1fr) minmax(66px,auto) repeat(3,24px);gap:3px;align-items:center}
+.code-port input,.code-port select{width:100%;min-width:0;padding:5px 6px;font-size:12px}
+.code-port button{width:24px;min-width:0;padding:5px 0;font-size:14px}
+.code-editor{min-width:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.code-wrapper{margin:0;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.5;color:var(--muted);background:#191920}
+.code-editor textarea{background:#191920;color:inherit;display:block;box-sizing:border-box;width:100%;min-height:140px;max-height:65vh;margin:0;padding:10px;border-radius:0;border:0;border-block:1px solid var(--line);font-family:monospace;font-size:13px;line-height:1.5;tab-size:4;resize:vertical;white-space:pre;overflow:auto}
+.code-editor textarea:focus{outline-offset:-2px}
+.code-hint{line-height:1.5}
+.code-input-values{margin-top:14px}
+
+.node[data-drag-surface="body"]{cursor:grab}
+
+/* Internal Subgraph interface shortcuts; grey sockets never represent saved ports. */
+.spare-port-row{height:24px;color:var(--muted)}
+.spare-port-row .port-add{--socket:#85818e;border-color:#85818e;background:#85818e}
+.spare-port-row .port-add:hover,.spare-port-row .port-add.wire-target{background:#ddd9e5;border-color:#ddd9e5}
+.spare-port-row .port-add:disabled{opacity:.25;outline:none;cursor:default}
+.spare-port-row .port-label{opacity:0;font-size:13px}
+.spare-port-row:hover .port-label{opacity:1}
+.function-port-order{display:flex;gap:6px;margin:8px 0}
+.function-port-order button{padding:3px 10px}

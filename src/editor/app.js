@@ -115,6 +115,10 @@ function locateCompileIssue(issue){
   cancelConnection();closeCreator();document.querySelectorAll('.stage').forEach(button=>button.classList.toggle('active',button.dataset.stage===stage));
   $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();
   const rect=$('#canvas').getBoundingClientRect();scale=Math.max(.7,Math.min(1,scale));pan={x:rect.width/2-(location.node.ui?.x||0)*scale-100,y:rect.height/2-(location.node.ui?.y||0)*scale-65};transform();
+  if(location.node.definitionUuid==='sgrape.builtin.glsl_code'&&Number.isInteger(issue.codeLine)&&issue.codeLine>0){
+    inspectorTab='parameters';inspector();workspaceLayout.reveal('parameters');
+    const body=$('[data-code-body]');if(body){const lines=body.value.split('\n'),index=Math.min(issue.codeLine-1,lines.length-1),start=lines.slice(0,index).reduce((n,line)=>n+line.length+1,0);body.focus();body.setSelectionRange(start,start+lines[index].length);body.scrollTop=index*parseFloat(getComputedStyle(body).lineHeight);}
+  }
 }
 function renderCompileDiagnostics(){
   const bar=$('#diagnosticbar');if(!bar)return;
@@ -151,7 +155,7 @@ function mark(semantic=true){
   clearTimeout(autoTimer);if(!readonly&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,650);
 }
 function checkpoint(){past.push(clone(graph));if(past.length>60)past.shift();future=[];}
-function change(fn,{localize=true}={}){
+function change(fn,{localize=true,redraw=true}={}){
   if(readonly)return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
   try{if(localize)prepareSemanticEdit();fn();FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous);}
@@ -159,7 +163,7 @@ function change(fn,{localize=true}={}){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
   }
-  past.push(previous);if(past.length>60)past.shift();future=[];mark();render();return true;
+  past.push(previous);if(past.length>60)past.shift();future=[];mark();if(redraw)render();return true;
 }
 function undo(redo=false){if(readonly)return;let from=redo?future:past,to=redo?past:future;if(!from.length)return;to.push(clone(graph));graph=from.pop();retainNativeInputSources(graph);tidyTrail();mark();render();}
 async function applyGraph(){

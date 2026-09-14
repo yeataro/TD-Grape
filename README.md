@@ -2,7 +2,7 @@
 
 TouchDesigner 的 GLSL MAT／TOP 節點編輯器。圖、參數關聯與產生的 Shader 保存在 TD 專案中，Web Editor 提供編輯介面。
 
-目前產品版本 **0.8.72**，持續開發中，尚未進入 Alpha。此開發版包含 Inputs 來源清單與統一的 Parameter 編輯流程，並補上連線中斷提示、保留畫布的重試，以及 MAT 原生 Viewer 預覽；不產生公開發佈套件。
+目前產品版本 **0.8.73**，持續開發中，尚未進入 Alpha。本輪新增 [GLSL Code 多輸出手寫節點](docs/features/GLSL_CODE.md)、[Subgraph I/O 快捷與全節點拖曳](docs/features/SUBGRAPH_SHORTCUTS.md)，並區分 Sampler 與取樣函式的顏色；不產生公開發佈套件。
 
 ## 開啟開發專案
 

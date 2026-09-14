@@ -103,3 +103,12 @@ Label、Library／本地來源資訊在畫布節點上的配置仍保留決策�
 - Uniform 等來源仍在 Grape UI 對應工具或實際 GLSL OP 原生參數頁編輯。GLSL Parameters 保持開啟真正 GLSL MAT 參數頁的入口。
 - 使用者自行新增或由自訂參數編輯器建立的控制頁與既有綁定需保留；不主動暴露來源設定不等於禁止使用者建立 Uniform 的自訂控制。
 - 本項已與 Grape TOP 頁內整理一起實作並保存正式開發 TOE；既有舊控制與綁定保留。
+
+
+## 2026-09-15 本輪確認與後續界線
+
+- 已實作 GLSL Code 多輸出手寫節點，入口維持 Parameter。見 [功能範圍](../features/GLSL_CODE.md)。
+- 已實作 Subgraph 內部 Input／Output 灰點快捷，以及程式內的全節點拖曳 flag（預設開啟）；詳細行為與驗證見 [Subgraph 快捷](../features/SUBGRAPH_SHORTCUTS.md)。
+- Sampler／來源保留棕色；Texture 2D／Texture Sample 使用函式紫色。來源與採樣功能保留，不因配色刪除舊節點。
+- 使用者還有節點本體與顯示、Inputs 邏輯、新增節點面板的重要改動尚未提供。此輪只處理已確認範圍，等待後續筆記，不先重設計上述部分。
+- 外部 Subgraph 呼叫、其他來源及根輸出節點的灰點延伸仍留待後續體驗設計。

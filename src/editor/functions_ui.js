@@ -147,6 +147,40 @@ function functionNameField(f){
 function focusFunctionName(){
   inspectorScope='node';inspectorTab='parameters';inspector();workspaceLayout.reveal('parameters');const field=$('[data-function-name]');field?.scrollIntoView({block:'nearest'});field?.focus();field?.select();
 }
+// Spare sockets are UI-only. A port and its first wire are one graph edit.
+function sparePortDirection(n){
+  return n?.definitionUuid===FunctionModel.INPUT?'inputs':n?.definitionUuid===FunctionModel.OUTPUT?'outputs':null;
+}
+function sparePortProblem(spare,other){
+  const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=currentFunction();
+  const peer=current().nodes.find(n=>n.id===other.node),type=peer&&ports(peer,other.kind)[other.port];
+  if(other.add||!f||!direction||spare.kind!==(direction==='inputs'?'outputs':'inputs')||!interfaceTypes().includes(type))return 'autoConflict';
+  return f[direction].length>=16?'portLimit':null;
+}
+function materializeSparePort(spare,other){
+  const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=currentFunction();
+  const peer=current().nodes.find(n=>n.id===other.node),type=ports(peer,other.kind)[other.port];
+  const base=(portLabel(peer,other.kind,other.port)||'Value').slice(0,48),names=new Set(f[direction].map(p=>p.name));
+  let name=base,index=2;while(names.has(name))name=base+' '+index++;
+  const id='p'+crypto.randomUUID().replaceAll('-','').slice(0,12);
+  const value=direction==='inputs'?defaultInput(peer,other.port,type):null;
+  f[direction].push({id,name,type,default:isResourceType(type)?null:value??filledValue(type)});
+  return {...spare,port:id,type,add:false};
+}
+function appendSparePort(list,n){
+  const direction=sparePortDirection(n),f=currentFunction();if(!f||!direction)return;
+  const kind=direction==='inputs'?'outputs':'inputs',label=t(direction==='inputs'?'function.quickInput':'function.quickOutput');
+  const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'});
+  const b=el('button',{class:'port port-add',title:label+' · '+t('function.quickHint'),'aria-label':label,
+    'data-kind':kind,'data-port':'__add__','data-type':'spare','data-add-port':'true'});
+  b.disabled=readonly||f[direction].length>=16;
+  if(f[direction].length>=16)b.title=t('wire.portLimit');
+  b.onpointerdown=e=>{if(!b.disabled)dragWire(b,e);};
+  b.onclick=e=>{e.stopPropagation();if(b.disabled||suppressPortClick)return;const info=portInfo(b);
+    if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);
+    else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t('function.quickHint');}};
+  row.append(b,el('span',{class:'port-label'},'+'));list.append(row);
+}
 function functionInspector(box,n,d){
   if(d.key==='function_call'){
     const f=FunctionModel.find(graph,n.params.functionId);box.append(functionNameField(f));box.append(el('p',{class:'muted'},f.scope==='local'?t('function.local'):t('function.source')));
@@ -167,6 +201,13 @@ function functionInspector(box,n,d){
         p.type=type;p.default=convertValue(p.default,type);
         for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id&&direction==='inputs'&&Object.hasOwn(call.inputValues||{},p.id))call.inputValues[p.id]=convertValue(call.inputValues[p.id],type);
       }))));
+      const order=el('div',{class:'function-port-order'});
+      for(const [delta,label]of [[-1,t('code.up')],[1,t('code.down')]]){
+        const button=el('button',{type:'button',title:label,'aria-label':label,'data-port-move':String(delta),'data-port-id':p.id},delta<0?'↑':'↓');
+        const index=f[direction].findIndex(item=>item.id===p.id);button.disabled=readonly||index+delta<0||index+delta>=f[direction].length;
+        button.onclick=()=>change(()=>{const list=currentFunction()[direction],index=list.findIndex(item=>item.id===p.id);const [item]=list.splice(index,1);list.splice(index+delta,0,item);});order.append(button);
+      }
+      section.append(order);
       const removePort=el('button',{class:'wide danger'},t('function.removePort'));
       removePort.onclick=()=>change(()=>{
         f[direction]=f[direction].filter(x=>x!==p);
@@ -185,6 +226,7 @@ function functionInspector(box,n,d){
 function convertValue(value,type){return value===null&&!isResourceType(type)?filledValue(type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  if(n.definitionUuid==='sgrape.builtin.glsl_code')return n.params[kind]?.find(p=>p.id===id)?.name||id;
   if(kind==='outputs'&&definition(n)?.key==='top_input'){if(id==='out')return topInputsView().find(s=>s.id===n.params.inputId)?.name||id;return id==='size'?t('inputs.size'):t('inputs.pixelSize');}
   if(kind==='outputs'&&id==='out'&&['uniform','sampler','constant'].includes(definition(n)?.key))return graph.declarations.find(d=>d.id===n.params?.declarationId)?.name||id;
   if(n.definitionUuid==='sgrape.builtin.pixel_out'&&editorTarget==='mat'&&kind==='inputs'){const index=typeContract?.pixelBufferOutputs?.ports.indexOf(id);if(index>=0){const label=n.ui?.bufferLabels?.[id];return typeof label==='string'&&label.length<=80&&!/[\x00-\x1f\x7f]/.test(label)&&label.trim()?label:'Buffer '+index;}}

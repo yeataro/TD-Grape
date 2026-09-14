@@ -5,6 +5,7 @@ data=json.loads((root/'locales.json').read_text(encoding='utf-8'))
 refs=set()
 for script in root.glob('*.js'):
     refs.update(re.findall(r"\bt\('([^']+)'\)",script.read_text(encoding='utf-8')))
+refs.discard('code.');refs.discard('code.add.');refs.update('code.'+k for k in ('inputs','outputs','add.inputs','add.outputs','up','down'));
 refs.discard('help.top.'); refs.update(['help.top.uv','help.top.texture','help.top.pixel_out']); refs.discard('help.'); refs.discard('panel.')
 refs.discard('category.')
 refs.discard('library.source.');refs.discard('library.search.')

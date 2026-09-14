@@ -50,3 +50,18 @@ python tools/dev/submit_job.py tests/td/test_material_preview.py --report mat-na
 ```
 
 此測試分幀執行，runner 回報 `started` 只代表開始；請讀取回報目錄中的 `native-result.json` 並確認 `passed: true`。測試保留使用者的圖，臨時元件在成功或失敗後自行清除。
+
+
+## 0.8.73 手寫節點與圖互動
+
+```text
+node tests/browser/test_glsl_code.cjs src/editor <current-editor-state-json> <code-report-directory>
+node tests/browser/test_node_interactions.cjs src/editor <current-editor-state-json> <interaction-report-directory>
+python tools/dev/submit_job.py tests/td/test_glsl_code.py --timeout 60
+```
+
+瀏覽器 fixture 的 catalog／typeContract 需與測試 checkout 一致；harness 使用獨立 HTTP API，不寫入 TD。互動測試涵蓋預設全節點及 header-only 兩種程式設定。輸出的 `code-graph.json`、`subgraph-graph.json` 可交給 `compile_graph` 再驗證序列化結果。
+
+本輪已通過核心／介面 8 項新增單元測試、9 項 GLSL Code 瀏覽器檢查、18 項節點／Subgraph 互動檢查，以及 Windows TD 13 項原生檢查。瀏覽器事件包含 Chromium 真實觸控派送；iPad／macOS 實機回驗不計入此數字。
+
+回歸另通過：19 項既有觸控操作、Chromium 7 項及 WebKit 6 項接線定位、6 項 TD 原生 GLSL 註解／錯誤定位檢查。正式 TOE 已保存更新來源，四份使用者 Shader 的 state／graph／manifest／GLSL 保留。

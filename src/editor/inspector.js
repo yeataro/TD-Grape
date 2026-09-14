@@ -419,6 +419,67 @@ function installPreviewHelp(){
   });
 }
 
+const glslCodeDrafts=new WeakMap();
+function glslCodeInspector(box,n){
+  const panel=el('div',{class:'glsl-code-panel','data-glsl-code':n.id});
+  const name=input(n.params.functionName,value=>change(()=>{n.params.functionName=value;CustomGLSL.validate(n.params);}));
+  name.maxLength=48;name.disabled=readonly;name.dataset.codeFunction='';
+  panel.append(field(t('code.function'),name));
+  for(const direction of ['inputs','outputs']){
+    const group=el('section',{class:'code-interface','data-code-direction':direction});
+    const heading=el('div',{class:'code-interface-heading'});
+    heading.append(el('strong',{},t('code.'+direction)));
+    const add=el('button',{type:'button','aria-label':t('code.add.'+direction),'data-code-add':direction},'+');
+    add.disabled=readonly||n.params[direction].length>=typeContract.glslCode.maxPorts;
+    add.onclick=()=>change(()=>CustomGLSL.add(n.params,direction));heading.append(add);group.append(heading);
+    for(const [index,p]of n.params[direction].entries()){
+      const row=el('div',{class:'code-port','data-code-port':p.id});
+      const entry=input(p.name,value=>change(()=>CustomGLSL.update(n,direction,p.id,{name:value})));
+      entry.maxLength=48;entry.disabled=readonly;entry.setAttribute('aria-label',t('code.portName'));entry.title=t('code.renameHint');
+      const types=direction==='inputs'?interfaceTypes():numericTypes();
+      const type=select(types.map(type=>[type,type]),p.type,value=>change(()=>CustomGLSL.update(n,direction,p.id,{type:value})));
+      type.disabled=readonly;type.setAttribute('aria-label',t('node.type'));
+      row.append(entry,type);
+      for(const [label,offset,symbol]of [['code.up',-1,'↑'],['code.down',1,'↓']]){
+        const move=el('button',{type:'button','aria-label':t(label),'data-code-move':String(offset)},symbol);
+        move.title=t(label);move.disabled=readonly||index+offset<0||index+offset>=n.params[direction].length;
+        move.onclick=()=>change(()=>CustomGLSL.move(n.params,direction,p.id,offset));row.append(move);
+      }
+      const remove=el('button',{type:'button','aria-label':t('code.remove'),'data-code-remove':p.id},'×');
+      remove.title=t('code.remove');remove.disabled=readonly||direction==='outputs'&&n.params.outputs.length===1;
+      remove.onclick=()=>change(()=>CustomGLSL.remove(n,direction,p.id,current().edges));row.append(remove);group.append(row);
+    }
+    panel.append(group);
+  }
+  const editor=el('div',{class:'code-editor'}),header=el('pre',{class:'code-wrapper','data-code-header':''},CustomGLSL.header(n.params));
+  const body=el('textarea',{'aria-label':t('code.body'),'data-code-body':'',spellcheck:'false',autocapitalize:'off',autocomplete:'off',autocorrect:'off',wrap:'off'});
+  const draft=glslCodeDrafts.get(n);body.value=draft?.base===n.params.code?draft.text:n.params.code;body.maxLength=typeContract.glslCode.maxLength;body.readOnly=readonly;
+  body.rows=Math.max(6,Math.min(20,body.value.split('\n').length+1));
+  let committed=n.params.code;
+  const commit=()=>{
+    if(readonly||body.value===committed)return;
+    const value=body.value,previous=committed;
+    // Replacing the focused editor during render can emit blur synchronously.
+    committed=value;glslCodeDrafts.delete(n);
+    // The body does not change node layout. Keep the focused DOM alive so a
+    // blur followed by a button click is not swallowed by replacing that button.
+    if(!change(()=>n.params.code=value,{redraw:false}))committed=previous;
+    else {
+      document.querySelectorAll('.node.error').forEach(card=>card.classList.remove('error'));
+      const f=currentFunction();if(f)$('#functionscope').textContent=t(f.scope==='local'?'function.local':'function.source');
+    }
+  };
+  body.oninput=()=>glslCodeDrafts.set(n,{base:n.params.code,text:body.value});
+  body.onchange=commit;body.onblur=commit;
+  body.onkeydown=event=>{
+    if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();event.stopPropagation();commit();}
+    else if(event.key==='Tab'&&!event.shiftKey&&!readonly){event.preventDefault();event.stopPropagation();body.setRangeText('    ',body.selectionStart,body.selectionEnd,'end');body.oninput();}
+  };
+  editor.append(header,body,el('pre',{class:'code-wrapper'},'}'));panel.append(editor);
+  panel.append(el('small',{class:'muted code-hint'},t('code.hint')));
+  box.append(panel);
+}
+
 function inspector(){
   cancelValueLadder();
   const box=$('#inspector');box.replaceChildren();renderHelp();
@@ -442,6 +503,7 @@ function inspector(){
   box.append(tabs);
   functionInspector(box,n,d);
   if(inspectorTab==='parameters'){
+    if(d.key==='glsl_code')glslCodeInspector(box,n);
     if(supportsAutoType(d)){
       const automatic=n.ui?.typeMode==='auto',control=select([['auto',t('type.auto')+' · '+n.params.type],...selectableNodeTypes(d).map(type=>[type,type])],automatic?'auto':n.params.type,value=>setMathType(n,value));control.dataset.mathType=n.id;
       const row=field(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
@@ -462,6 +524,8 @@ function inspector(){
     else if(d.key==='uniform'&&!decl){
       const create=el('button',{class:'wide'},t('uniform.create'));create.onclick=()=>newUniform(n);box.append(create);
     }
+    const inputBox=d.key==='glsl_code'?el('details',{class:'code-input-values'}):box;
+    if(d.key==='glsl_code'&&n.params.inputs.length){inputBox.append(el('summary',{},t('code.inputValues')));box.append(inputBox);}
     for(const [port,type]of Object.entries(d.key==='function_output'?{}:ports(n,'inputs'))){
       const section=el('section',{class:'input-parameter','data-input':port});
       const connection=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
@@ -483,7 +547,7 @@ function inspector(){
       }else if(['texture','texture_sample'].includes(d.key)&&port==='uv'&&value!==null){
         const reset=el('button',{class:'wide'},t('input.restoreUV'));reset.onclick=()=>change(()=>delete n.inputValues[port]);section.append(reset);
       }
-      box.append(section);
+      inputBox.append(section);
     }
   }else{
     if(n.params.type&&!supportsAutoType(d))box.append(field(t('node.type'),select(selectableNodeTypes(d).map(type=>[type,type]),n.params.type,value=>change(()=>{

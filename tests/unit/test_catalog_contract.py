@@ -16,7 +16,7 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(c.digest(a),fingerprint)
         b['definitions'][0]['emitter']['version']=99;b['history'].clear()
         self.assertEqual(c.catalog_contract(),before)
-        self.assertEqual(len(a['definitions']),35)
+        self.assertEqual(len(a['definitions']),len(c.CATALOG))
         self.assertEqual(len(a['history']),18)
 
     def test_known_history_keeps_original_reference_and_compiled_result(self):

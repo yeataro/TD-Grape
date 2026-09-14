@@ -1,6 +1,6 @@
 // Development-only experiments. Update embedded sources and reload the Editor after changing.
 // These internal values are not user preferences and are never serialized with a graph or layout.
-const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false });
+const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, nodeBodyDrag: true });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,suppressWireClick=false;
@@ -13,7 +13,7 @@ function canDisconnectInputOnBlank(start){
 }
 function wireStartHint(start,touch=false){return canDisconnectInputOnBlank(start)?'wire.inputDisconnectHint':touch?'wire.touchConnect':'wire.connect';}
 function finishWireOnBlank(start,x,y){
-  if(!isBlankWireDrop(x,y))return;
+  if(start?.add||!isBlankWireDrop(x,y))return;
   if(canDisconnectInputOnBlank(start)){
     const changed=change(()=>{current().edges=current().edges.filter(e=>e.to[0]!==start.node||e.to[1]!==start.port);selectedEdge=null;});
     if(changed)cancelConnection();
@@ -88,8 +88,13 @@ function dragExistingWire(path,event,index){
   window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('blur',cancel);window.addEventListener('resize',cancel);
   canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('lostpointercapture',cancel);document.addEventListener('keydown',key,true);
 }
+function isNodeDragSurface(target,card){
+  if(!target||target.closest('.node')!==card)return false;
+  if(target.closest('button,input,textarea,select,a,summary,[contenteditable="true"],[role="button"],.node-alias'))return false;
+  return EDITOR_DEV_SETTINGS.nodeBodyDrag||!!target.closest('.node-title');
+}
 function dragNodeTitle(event,node,title,cards,onFinish){
-  if(event.button!==0)return;event.stopPropagation();closeCreator();
+  if(event.button!==0)return;event.preventDefault();event.stopPropagation();closeCreator();
   if(event.ctrlKey||event.metaKey)return;
   nodeDragGesture?.cancel();clearWireGesture();
   if(!selection.has(node.id))selectNode(node);else {selected=node.id;selectedEdge=null;}
@@ -137,11 +142,67 @@ function nodeCategory(d){
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
   if(['float','vec2','vec3','color'].includes(d.key))return 'constant';
-  if(d.key==='uniform')return 'uniform';if(['texture','texture_sample','sampler','uv'].includes(d.key))return 'sampler';
+  if(d.key==='uniform')return 'uniform';if(['sampler','uv'].includes(d.key))return 'sampler';
+  if(['texture','texture_sample'].includes(d.key))return 'math';
   if(['position','deform','to_clip'].includes(d.key))return 'builtin';
   if(d.key.endsWith('_out')||d.key==='function_output')return 'output';return 'math';
 }
 let typeContract=null;
+// GLSL Code interfaces keep connection IDs separate from editable GLSL names.
+const CustomGLSL=(()=>{
+  const directions=['inputs','outputs'];
+  const isName=value=>typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(value)&&
+    !value.includes('__')&&!/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(value)&&
+    !typeContract.glslCode.reservedNames.includes(value);
+  function validate(params){
+    if(!typeContract?.glslCode)throw Error(t('contract.unsupported'));
+    if(!isName(params.functionName))throw Error(t('code.invalidName'));
+    const names=new Set([params.functionName]),ids=new Set();
+    for(const direction of directions){
+      const list=params[direction];
+      if(!Array.isArray(list)||list.length>(typeContract.glslCode.maxPorts)||direction==='outputs'&&!list.length)throw Error(t('code.portLimit'));
+      for(const p of list){
+        if(!p||typeof p.id!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id)||ids.has(p.id))throw Error(t('code.invalidPort'));
+        if(!isName(p.name)||names.has(p.name))throw Error(t('code.invalidName'));
+        if(!(direction==='inputs'?interfaceTypes():numericTypes()).includes(p.type))throw Error(t('code.invalidType'));
+        ids.add(p.id);names.add(p.name);
+      }
+    }
+  }
+  function add(params,direction){
+    const used=new Set([params.functionName,...directions.flatMap(d=>params[d].map(p=>p.name))]);
+    let index=1,name;do{name=(direction==='inputs'?'input':'output')+index++;}while(used.has(name));
+    params[direction].push({id:'p'+crypto.randomUUID().replaceAll('-','').slice(0,12),name,type:'float'});
+    validate(params);
+  }
+  function update(node,direction,id,patch){
+    const p=node.params[direction].find(p=>p.id===id),before=p.type;
+    Object.assign(p,patch);validate(node.params);
+    if(direction==='inputs'&&before!==p.type&&Object.hasOwn(node.inputValues||{},id)){
+      if(isResourceType(p.type))delete node.inputValues[id];
+      else node.inputValues[id]=shapedValue(node.inputValues[id]??0,p.type);
+    }
+  }
+  function remove(node,direction,id,edges){
+    const side=direction==='inputs'?'to':'from';
+    if(edges.some(e=>e[side][0]===node.id&&e[side][1]===id))throw Error(t('code.disconnectFirst'));
+    if(direction==='outputs'&&node.params.outputs.length===1)throw Error(t('code.keepOutput'));
+    node.params[direction]=node.params[direction].filter(p=>p.id!==id);
+    if(direction==='inputs'&&node.inputValues)delete node.inputValues[id];
+  }
+  function move(params,direction,id,offset){
+    const list=params[direction],index=list.findIndex(p=>p.id===id),next=index+offset;
+    if(index<0||next<0||next>=list.length)return;
+    [list[index],list[next]]=[list[next],list[index]];
+  }
+  function header(params){
+    const signature=directions.flatMap(direction=>params[direction].map(p=>`${direction==='inputs'?'in':'out'} ${p.type} ${p.name}`)).join(', ');
+    const defaults=params.outputs.map(p=>`    ${p.name} = ${p.type==='float'?'0.0':p.type+'(0.0)'};`).join('\n');
+    return `void ${params.functionName}(${signature}) {\n${defaults}`;
+  }
+  return {validate,add,update,remove,move,header};
+})();
+
 function setTypeContract(contract){
   if(contract?.version!==1||!Array.isArray(contract.numericTypes)||!contract.numericTypes.length||
       new Set(contract.numericTypes).size!==contract.numericTypes.length||!contract.numericTypes.every(t=>typeof t==='string')||
@@ -166,6 +227,7 @@ function setTypeContract(contract){
     const spec=contract.pixelBufferOutputs;
     if(spec.parameter!=='bufferCount'||spec.type!=='vec4'||!Array.isArray(spec.ports)||spec.ports.length!==8||spec.ports.some((p,i)=>p!==(i?'buffer'+i:'color')))throw Error(t('contract.invalid'));
   }
+  if(contract.glslCode&&(contract.glslCode.maxPorts!==16||contract.glslCode.maxLength!==16384||!Array.isArray(contract.glslCode.reservedNames)||!contract.glslCode.reservedNames.every(n=>typeof n==='string')))throw Error(t('contract.invalid'));
   typeContract=JSON.parse(JSON.stringify(contract));
 }
 const numericTypes=()=>typeContract?.numericTypes||[];
@@ -191,6 +253,7 @@ function typeVariants(d){
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
 }
 function resolvedNodePorts(d,params,decl,kind){
+  if(d.key==='glsl_code')return Object.fromEntries((Array.isArray(params[kind])?params[kind]:[]).map(p=>[p.id,p.type]));
   if(d.key==='pixel_out'&&kind==='inputs'&&typeContract?.pixelBufferOutputs){
     const spec=typeContract.pixelBufferOutputs,count=params[spec.parameter]??1;
     if(Number.isInteger(count)&&count>=1&&count<=spec.ports.length)return Object.fromEntries(spec.ports.slice(0,count).map(port=>[port,spec.type]));
@@ -319,25 +382,30 @@ function connectionProblem(start,end){
   const pending=[to.node],seen=new Set();
   while(pending.length){const id=pending.pop();if(id===from.node)return 'cycle';if(seen.has(id))continue;seen.add(id);
     for(const edge of current().edges)if(edge.from[0]===id)pending.push(edge.to[0]);}
+  if(start.add||end.add)return sparePortProblem(start.add?start:end,start.add?end:start);
   try{planWireTypes(from,to);}catch{return 'autoConflict';}
   return null;
 }
 function connectPorts(start,end){
   const problem=connectionProblem(start,end);
   if(problem){if(problem!=='direction')status(t('wire.'+problem),true);return false;}
-  const from=start.kind==='outputs'?start:end,to=start.kind==='inputs'?start:end;
-  const changed=change(()=>{current().edges=current().edges.filter(e=>!(e.to[0]===to.node&&e.to[1]===to.port));current().edges.push({from:[from.node,from.port],to:[to.node,to.port]});});if(changed)cancelConnection();return changed;
+  const changed=change(()=>{
+    let from=start.kind==='outputs'?start:end,to=start.kind==='inputs'?start:end;
+    if(from.add)from=materializeSparePort(from,to);else if(to.add)to=materializeSparePort(to,from);
+    current().edges=current().edges.filter(e=>!(e.to[0]===to.node&&e.to[1]===to.port));current().edges.push({from:[from.node,from.port],to:[to.node,to.port]});
+  });if(changed)cancelConnection();return changed;
 }
 function portInfo(button){
-  const node=button.closest('[data-node]');return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type};
+  const node=button.closest('[data-node]');return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type,...(button.dataset.addPort?{add:true}:{})};
 }
 function findWireTarget(candidates,x,y,radius=14){
   const hit=document.elementFromPoint(x,y);
   if(!hit?.closest('#canvas'))return null;
   const direct=hit.closest('.port');
-  if(direct)return candidates.includes(direct)?direct:null;
+  if(direct)return !direct.disabled&&candidates.includes(direct)?direct:null;
   let nearest=null,distance=radius; // Screen pixels, independent of graph zoom.
   for(const candidate of candidates){
+    if(candidate.disabled)continue;
     const r=candidate.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,d=Math.hypot(x-cx,y-cy);
     if(d<distance&&document.elementFromPoint(cx,cy)?.closest('.port')===candidate){nearest=candidate;distance=d;}
   }
@@ -391,7 +459,7 @@ function drawWireDrag(svg){
 function nodeCanvasComment(n){
   const note=el('div',{class:'node-canvas-comment'});
   note.append(el('p',{},nodeComment(n)));
-  note.onpointerdown=e=>e.stopPropagation();
+  note.onpointerdown=e=>{if(!EDITOR_DEV_SETTINGS.nodeBodyDrag)e.stopPropagation();};
   note.onclick=e=>e.stopPropagation();
   note.ondblclick=e=>e.stopPropagation();
   return note;
@@ -414,7 +482,8 @@ function renderCards(){
       alias.ondblclick=e=>{e.preventDefault();e.stopPropagation();focusNodeLabel(n);};
     }
     let suppressCardClick=false;
-    title.onpointerdown=e=>dragNodeTitle(e,n,title,cards,moved=>{suppressCardClick=moved;});
+    card.dataset.dragSurface=EDITOR_DEV_SETTINGS.nodeBodyDrag?'body':'header';
+    card.onpointerdown=e=>{if(isNodeDragSurface(e.target,card))dragNodeTitle(e,n,card,cards,moved=>{suppressCardClick=moved;});};
     card.append(title);const list=el('div',{class:'ports'});
     for(const[kind,className]of [['inputs','input'],['outputs','output']])for(const[name,type]of Object.entries(ports(n,kind))){
       const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
@@ -423,7 +492,7 @@ function renderCards(){
       b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
       row.append(b,el('span',{class:'port-label',title:label},label),portTypeCaption(n,kind,name));list.append(row);
     }
-    card.append(list);
+    appendSparePort(list,n);card.append(list);
     if(n.params?.value!==undefined)card.append(el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));
     if(d?.key==='color'&&Array.isArray(n.params.value)){const strip=el('div',{class:'node-color'});strip.append(colorSwatch(n.params.value));card.append(strip);}
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
@@ -763,7 +832,7 @@ function installTouchNavigation(canvas){
     if(!g.moved&&Math.hypot(p.x-g.start.x,p.y-g.start.y)>=slop){
       g.moved=true;stopHold();lastTap=null;
       if(g.port&&!readonly){g.mode='wire';cancelConnection();beginGraphTrash(trashTarget('port',g.port));g.candidates=[...$('#cards').querySelectorAll('.port')].filter(b=>!connectionProblem(g.port,portInfo(b)));}
-      else if(g.node&&!readonly){
+      else if(g.node&&g.canDragNode&&!readonly){
         g.mode='node';if(!selection.has(g.node.id))selectNode(g.node);else selected=g.node.id;selectedEdge=null;syncSelection();inspector();cancelConnection();
         g.positions=current().nodes.filter(n=>selection.has(n.id)).map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),x:node.ui.x,y:node.ui.y,nextX:node.ui.x,nextY:node.ui.y}));
         beginGraphTrash(trashTarget('nodes',g.positions.map(p=>p.node)));
@@ -796,7 +865,7 @@ function installTouchNavigation(canvas){
     if(!points.size){
       clearWireGesture();closeCreator();closeGraphMenu();canvas.focus({preventScroll:true});
       const button=touchPort(e.clientX,e.clientY),card=(button||e.target).closest('.node'),node=card&&current().nodes.find(n=>n.id===card.dataset.node);
-      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,port:button?portInfo(button):null,alias:!!e.target.closest('.node-alias'),edge:edgeIndex(e.target.closest('#wires path[data-from]')),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
+      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,canDragNode:!!card&&isNodeDragSurface(e.target,card),port:button?portInfo(button):null,alias:!!e.target.closest('.node-alias'),edge:edgeIndex(e.target.closest('#wires path[data-from]')),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
       touchGraphGesture={cancel};
       if(!button)holdTimer=setTimeout(()=>{holdTimer=0;if(gesture&&!gesture.moved&&points.size===1)openMenu(gesture,sample());},holdDelay);
     }

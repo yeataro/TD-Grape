@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.7",
+  "catalogVersion": "0.8.73",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -1329,6 +1329,68 @@
       "emitter": {
         "id": "top_input",
         "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "glsl_code",
+        "label": "GLSL Code",
+        "inputs": {
+          "a": "float",
+          "b": "float"
+        },
+        "outputs": {
+          "c": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "functionName": "add",
+          "inputs": [
+            {
+              "id": "a",
+              "name": "a",
+              "type": "float"
+            },
+            {
+              "id": "b",
+              "name": "b",
+              "type": "float"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "c",
+              "name": "c",
+              "type": "float"
+            }
+          ],
+          "code": "c = a + b;"
+        },
+        "descriptionKey": "help.glsl_code",
+        "definitionUuid": "sgrape.builtin.glsl_code",
+        "revisionHash": "a46fcc0f5028fd744b798f8bbd033912deaa34bb85ae5aba5cf96d3735ac4ebd"
+      },
+      "emitter": {
+        "id": "glsl_code",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "source": "editor",
+        "aliases": [
+          "custom GLSL",
+          "code",
+          "function",
+          "手寫",
+          "自訂",
+          "自定义",
+          "程式碼"
+        ],
+        "glslName": "void",
+        "secondaryCategories": []
       }
     }
   ],
