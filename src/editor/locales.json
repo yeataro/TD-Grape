@@ -1475,8 +1475,8 @@
       "zh-Hant": "目前為棋盤格。切換為深灰底。"
     },
     "preview.helpMaterial": {
-      "zh-Hant": "影像由 **TouchDesigner 渲染**，再以 PNG 快照傳到此處。網頁只顯示收到的影像。\n\n啟用「自動更新」後，套用 Shader 或偵測到參數變更時會更新；也可按「重新整理」手動更新。收合預覽或切到背景分頁時，會暫停新的預覽請求。",
-      "en": "**TouchDesigner renders** the image and sends a PNG snapshot here. The web page displays the received image.\n\nWith Auto update enabled, applying the Shader or detecting parameter changes refreshes the snapshot. Use Refresh for a manual update. Collapsing the preview or hiding this browser tab pauses new preview requests."
+      "zh-Hant": "圖像來自 **TouchDesigner MAT 原生 Viewer** 的 PNG 快照。預覽幾何與光照依原生 Viewer 呈現，可能與你的 Render TOP 場景不同；透明區域使用此處選擇的背景。\n\n開啟自動更新後，套用 Shader 或偵測到參數變動會刷新快照。也可手動重新整理；收合預覽或隱藏瀏覽器分頁時，會暫停新的預覽請求。",
+      "en": "The image is a PNG snapshot of the **TouchDesigner MAT viewer**. Its preview geometry and lighting follow the native viewer, so it can differ from your Render TOP scene. Transparent areas use the background selected here.\n\nWith Auto update enabled, applying the Shader or detecting parameter changes refreshes the snapshot. Use Refresh for a manual update. Collapsing the preview or hiding this browser tab pauses new preview requests."
     },
     "preview.helpTop": {
       "zh-Hant": "影像來自 **TouchDesigner 的 TOP 輸出**，以 PNG 快照傳到此處。網頁只顯示收到的影像。\n\n啟用「自動更新」且預覽可見時，約每秒更新一次；也可按「重新整理」手動更新。收合預覽或切到背景分頁時，會暫停新的預覽請求。",

@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.71'
+PRODUCT_VERSION='0.8.72'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -376,8 +376,10 @@ def register_shader(shader,fresh=False):
         page=next(p for p in shader.customPages if p.name==page_name)
         page.appendMAT('Material',label='Generated MAT')
         shader.par.Material.expr="me.op('material')";shader.par.Material.readOnly=True
+    if shader_kind(shader)=='mat': material_preview(shader)
     if getattr(shader.par,'opviewer',None) is not None:
-        shader.par.opviewer.expr="me.op('preview')";shader.viewer=True
+        shader.par.opviewer.expr="me.op('material')" if shader_kind(shader)=='mat' else "me.op('preview')"
+        shader.viewer=True
     shader.par.Version=json.loads(shader.op('manifest').text).get('compilerBuild',PRODUCT_VERSION); shader.par.Version.readOnly=True
     arrange_shader_parameters(shader)
     shader.showCustomOnly=True
@@ -1174,9 +1176,34 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
     finally:
         candidate.destroy()
 
+def material_preview(comp):
+    """Capture the actual MAT viewer; the Render scene remains for validation."""
+    name='grape_material_preview'
+    top=comp.op(name)
+    if top and (top.type!='opview' or not top.fetch('grapeMatViewerV1',False)):
+        raise RuntimeError('The internal MAT preview name is occupied: '+top.path)
+    if not top:
+        top=comp.create(opviewerTOP,name)
+        top.store('grapeMatViewerV1',True)
+        top.par.opviewer='material'
+        top.par.outputresolution='custom'
+        top.par.resolutionw=512;top.par.resolutionh=512
+        top.par.preservealpha=True
+        top.par.format='rgba8fixed'
+        top.viewer=False
+    return top
+
+
+class _PreviewFramePending(Exception):
+    def __init__(self,comp,top,frame):
+        self.comp=comp;self.top=top;self.frame=frame
+
+
 def png(comp):
     import numpy as np
-    top=comp.op('preview'); top.cook(force=True)
+    top=material_preview(comp) if shader_kind(comp)=='mat' else comp.op('preview')
+    top.cook(force=True)
+    if top.errors():raise RuntimeError(top.errors())
     pixels=top.numpyArray(delayed=False)
     data=np.flipud(np.clip(pixels*255,0,255).astype(np.uint8))
     h,w,_=data.shape
@@ -1288,7 +1315,14 @@ def process_shader_request(method,path,body):
             except (ValueError,TypeError,KeyError,AttributeError,RecursionError):pass
         return {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
                 'examples':{name:_owner.op('document').module.stamp_catalog(core().demo_graph(name,target=shader_kind(target())),core()) for name in ('banana','color','tint')}}
-    if method=='GET' and path=='/api/preview': return png(target()) if target() else b''
+    if method=='GET' and path=='/api/preview':
+        comp=target()
+        if comp and shader_kind(comp)=='mat':
+            top=material_preview(comp);top.cook(force=True)
+            # MAT viewers finish drawing after this frame's callbacks. Keep the
+            # existing HTTP request queued; never wait or run TD API off-thread.
+            raise _PreviewFramePending(comp,top,int(absTime.frame))
+        return png(comp) if comp else bytes()
     if method=='GET' and path=='/api/uniforms': return uniform_snapshot()
     if method=='GET' and path=='/api/custom-parameters':
         return _owner.op('parameters').module.snapshot(_owner.op('runtime').module)
@@ -1431,16 +1465,39 @@ def tick():
     _last_tick=time.monotonic()
     service_network()
     service_family_startup()
+    deferred=[]
     for _ in range(2):
         try: job=_queue.get_nowait()
         except queue.Empty: break
         with job['lock']:
             if job.get('canceled'): continue
             job['started']=True
-        try: job['result']=process_request(*job['args'])
+        try:
+            pending=job.get('previewFrame')
+            if pending:
+                if not pending.comp.valid or not pending.top.valid:
+                    raise RuntimeError('The requested material preview no longer exists')
+                # The first draw can still contain the native placeholder.
+                # Read after two frame advances, including initial compilation.
+                if int(absTime.frame)-pending.frame<2:raise pending
+                if material_preview(pending.comp)!=pending.top:
+                    raise RuntimeError('The material preview changed; refresh it again')
+                job['result']=png(pending.comp)
+            else:job['result']=process_request(*job['args'])
+        except _PreviewFramePending as pending:
+            job['previewFrame']=pending
+            deferred.append(job)
+            continue
         except Exception as exc:
             job['error']={'error':str(exc),**{key:getattr(exc,key,None) for key in ('node','functionId','stage','trail','diagnostics')}}
-        finally: job['done'].set()
+        job['done'].set()
+    for job in deferred:
+        with job['lock']:
+            if job.get('canceled'):continue
+            try:_queue.put_nowait(job)
+            except queue.Full:
+                job['error']={'error':'Preview queue is busy; refresh it again'}
+                job['done'].set()
 
 def stop():
     global _server,_worker

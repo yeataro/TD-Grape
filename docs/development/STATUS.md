@@ -1,6 +1,8 @@
 # 開發狀態
 
-產品版本：**0.8.71**（開發版，未進入 Alpha）。獨立目錄遷移後，已完成 UI 精簡、Layout 分頁排序、Label 行尾註解與 TOP／MAT 原生頁面整理，並保存正式開發 TOE。這仍不是公開發佈版本。後續版號允許持續向前小幅遞增，不固定停留在此版本，也不可倒退。
+產品版本：**0.8.72**（開發版，未進入 Alpha）。獨立目錄遷移後，已完成 UI 精簡、Layout 分頁排序、Label 行尾註解與 TOP／MAT 原生頁面整理，並保存正式開發 TOE。這仍不是公開發佈版本。後續版號允許持續向前小幅遞增，不固定停留在此版本，也不可倒退。
+
+2026-09-14：0.8.72 將 MAT 網頁預覽改為 OP Viewer TOP 擷取原生 material Viewer，COMP Viewer 也指向 material。保留 Render 場景作編譯驗證；Inputs 與 TOP 預覽流程維持。詳見 [MAT 原生預覽](../features/NATIVE_MAT_PREVIEW.md)。
 
 2026-09-14：0.8.71 分開連線與編譯錯誤，加入 Cooking／最小化檢查提示及保留畫布的讀取重試。Inputs 操作設計維持上一版。詳見 [連線恢復與啟動驗證](../features/CONNECTION_RECOVERY.md)。
 
@@ -12,7 +14,7 @@
 
 本次目錄整理的驗收：正式 TOE 位於 `src/td`；程式、UI、節點定義與品牌素材集中於 `src`；測試與工具分開；工作憑證與本機紀錄在 repository 外；獨立複製後可以開啟與驗證。
 
-仍需後續處理的產品工作包括：完整 Sampler／Attributes／Buffers 來源管理、MAT 原生 Viewer 影像來源、跨 stage 介面與更多節點，以及 macOS 實機驗證。圖根層固定來源入口是後續設計提案，尚未因本次資料夾遷移而實作。
+仍需後續處理的產品工作包括：完整 Sampler／Attributes／Buffers 來源管理、跨 stage 介面與更多節點，以及 macOS 實機驗證。圖根層固定來源入口是後續設計提案，尚未因本次資料夾遷移而實作。
 
 Label 與來源資訊的節點呈現仍保留決策。TOX 發佈、Web 資源安裝／載入方式、公開發佈時程也另行處理。歷史文件中的功能構想不直接等同目前已完成能力。
 

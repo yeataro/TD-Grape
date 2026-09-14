@@ -4,7 +4,7 @@ The preview panel has an Open Viewer action on the local editor entry. It opens 
 
 The working direct entry is `127.0.0.1`. The browser recognizes localhost and IPv6 loopback aliases conservatively, but the existing listener still requires its exact destination Host and currently binds IPv4; this feature does not broaden that listener contract. LAN/Tailscale/other-host browser entries hide the action. The authenticated endpoint requires a loopback peer and destination, matching HTTP Origin plus the browser's actual origin supplied in the request, and no standard forwarding headers. The actual browser origin also prevents the existing remote proxy's Host/Origin rewriting from enabling the action in the ordinary Grape UI. This is an environment boundary, not proof of physical presence or a defense against a trusted local process/proxy intentionally disguising requests.
 
-The native GLSL parameter button remains its existing separate action. MAT image capture via OP Viewer TOP/COMP is a separate pending change.
+The native GLSL parameter button remains its existing separate action. As of 0.8.72, MAT image capture uses an OP Viewer TOP targeting the actual material; see [MAT native preview](NATIVE_MAT_PREVIEW.md). Window COMP ownership and Always on Top remain separate follow-up work.
 
 Validation: 10 Python tests (3 viewer cases plus 7 real listener regressions), 7 Chrome cases covering local/remote visibility, request payload, failure/retry and localization; 5 live Windows TD checks including actual MAT/TOP windows, reuse after repeated requests, and preservation of all user Shader documents. Test windows and isolated components were removed. macOS native window behavior remains to be tested.
 
