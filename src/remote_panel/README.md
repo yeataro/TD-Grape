@@ -1,4 +1,4 @@
-# TD Remote Panel — experimental 0.1.3
+# TD Remote Panel — experimental 0.1.4
 
 One TouchDesigner Panel COMP or native OP Viewer, streamed to one browser over
 WebRTC, with mouse and translated touch events returned to that same panel. The component owns its
@@ -118,7 +118,7 @@ directory and preserves existing parameter values and OP identities.
 From the repository with a running development bridge:
 
 ```text
-node --test tests/unit/test_remote_panel_touch.mjs tests/unit/test_remote_panel_input.mjs
+node --test tests/unit/test_remote_panel_touch.mjs tests/unit/test_remote_panel_input.mjs tests/unit/test_remote_panel_size.mjs
 python tools/dev/submit_job.py tools/dev/jobs/build_remote_panel.py
 python tools/dev/submit_job.py tools/dev/jobs/export_remote_panel.py
 python tools/dev/submit_job.py tests/td/test_remote_panel.py --report remote-panel
@@ -168,3 +168,27 @@ Graph UI or duplicating stream encoders in shader components.
 Multiple cloned sources are deferred. Creating them with TD Clone would not alone
 solve resource lifetime: a future design would also need a receiver/source limit
 and an idle lease, so forgotten Editor tabs cannot keep allocating new renderers.
+
+
+## Settled viewport sizing (0.1.4 / Grape 0.8.75)
+
+Graph UI opts into `<td-remote-panel follow-size>`. During panel drags the browser
+scales the current video. After every pointer is released and layout stays stable
+for 350 ms, `panel-size.js` sends the final CSS content size over the existing
+control data channel. Window capture observes release events even when host
+splitters stop their propagation. Hidden/collapsed/disconnected views send no
+resize requests; a new connection submits that page's current viewport.
+
+The requested dimensions use CSS pixels (not device pixel ratio), rounded to even
+numbers and bounded to 64–1920 wide / 64–1080 high, scaling proportionally when
+possible. Small previews retain a minimum encodable size. The active native peer
+and source revision are checked before changing Width/Height; both controller
+COMP and capture TOP already follow those parameters. Repeated identical sizes
+are ignored. Source metadata acknowledges the result and supplies the revision
+for subsequent input. The peer, data channel and video track are retained; the
+encoder/decoder may briefly adjust. Actual received resolution may also reflect
+WebRTC adaptation.
+
+The standalone demo omits `follow-size`, so its native manual dimensions retain
+their existing behavior. UI controls and further overlay simplification are tracked
+in [preview UI notes](../../docs/discussions/PREVIEW_UI_NOTES.md).

@@ -11,7 +11,7 @@ import secrets
 import time
 from urllib.parse import urlsplit, parse_qs
 
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 TRACK = 'TDPanel'
 CHANNEL = 'control'
 _client = None
@@ -238,6 +238,7 @@ def http(request, response):
     path = urlsplit(request.get('uri', '/')).path
     assets = {'/': ('index_html', 'text/html; charset=utf-8'),
               '/remote-panel.js': ('remote_panel_js', 'text/javascript; charset=utf-8'),
+              '/panel-size.js': ('panel_size_js', 'text/javascript; charset=utf-8'),
               '/touch-gestures.js': ('touch_gestures_js', 'text/javascript; charset=utf-8'),
               '/demo.js': ('demo_js', 'text/javascript; charset=utf-8'),
               '/style.css': ('style_css', 'text/css; charset=utf-8')}
@@ -362,6 +363,21 @@ def rtc_data(connection, channel, data):
     try:
         message = json.loads(data)
         if not isinstance(message, dict) or message.get('revision') != _revision:
+            return
+        if message.get('type') == 'resize':
+            width, height = message.get('width'), message.get('height')
+            if any(type(v) is not int for v in (width, height)) or not (64 <= width <= 1920 and 64 <= height <= 1080):
+                return
+            if width % 2 or height % 2:return
+            comp=owner()
+            if (width,height)==(comp.par.Width.eval(),comp.par.Height.eval()):return
+            controls=comp.op('controls');active=controls.par.active.eval()
+            controls.par.active=False
+            try:
+                comp.par.Width=width;comp.par.Height=height
+            finally:controls.par.active=active
+            refresh_source()
+            _last_seen=time.monotonic();_events+=1
             return
         if message.get('type') == 'shortcut':
             # TD 2025.32820 has no PanelCOMP.interactKeyboard. H is an explicit

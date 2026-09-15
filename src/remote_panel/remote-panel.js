@@ -1,5 +1,6 @@
 // Reusable browser surface. No Grape state, routing, framework, or global DOM IDs.
 import {TouchGestures} from './touch-gestures.js';
+import {SettledPanelSize} from './panel-size.js';
 
 export class TDRemotePanel extends HTMLElement {
   constructor() {
@@ -21,6 +22,18 @@ export class TDRemotePanel extends HTMLElement {
     this.shortcuts = [];
     this.touch = new TouchGestures(point => this.point(point, true), (point, buttons, wheel) => this.sendMouse(point, buttons, wheel));
     this.touchFrame = 0;
+    this.sizeUpdates = new SettledPanelSize(size => {
+      if (!this.hasAttribute('follow-size') || this.channel?.readyState !== 'open') return false;
+      this.channel.send(JSON.stringify({type: 'resize', revision: this.revision, ...size}));
+      return true;
+    });
+    this.onSizeDown = e => this.sizeUpdates.hold(e.pointerId);
+    this.onSizeUp = e => this.sizeUpdates.release(e.pointerId);
+    this.onSizeBlur = () => this.sizeUpdates.releaseAll();
+    this.onSizeVisibility = () => {
+      this.sizeUpdates.pause(document.hidden);
+      if (document.hidden) this.sizeUpdates.releaseAll();
+    };
     this.onBlur = () => { this.release(); this.setFocused(false); };
     this.onFocus = () => this.setFocused(this.shadowRoot.activeElement === this.video);
     this.onVisibility = () => { if (document.hidden) this.onBlur(); else this.onFocus(); };
@@ -53,6 +66,20 @@ export class TDRemotePanel extends HTMLElement {
     window.addEventListener('focus', this.onFocus);
     window.addEventListener('resize', this.onBlur);
     document.addEventListener('visibilitychange', this.onVisibility);
+    // Host dividers may stop propagation at Window during capture.
+    window.addEventListener('pointerdown', this.onSizeDown, true);
+    window.addEventListener('pointerup', this.onSizeUp, true);
+    window.addEventListener('pointercancel', this.onSizeUp, true);
+    document.addEventListener('visibilitychange', this.onSizeVisibility);
+    window.addEventListener('blur', this.onSizeBlur);
+    if (this.hasAttribute('follow-size') && !this.sizeObserver) {
+      this.sizeObserver = new ResizeObserver(entries => {
+        const {width, height} = entries[0].contentRect;
+        this.sizeUpdates.resize(width, height);
+      });
+      this.sizeObserver.observe(this);
+    }
+    this.onSizeVisibility();
     if (this.hasAttribute('autoconnect')) this.connect();
   }
 
@@ -63,7 +90,14 @@ export class TDRemotePanel extends HTMLElement {
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.onBlur();
     // Docking moves the existing element within the same document. Preserve its peer.
-    queueMicrotask(() => { if (!this.isConnected) this.disconnect(); });
+    window.removeEventListener('pointerdown', this.onSizeDown, true);
+    window.removeEventListener('pointerup', this.onSizeUp, true);
+    window.removeEventListener('pointercancel', this.onSizeUp, true);
+    document.removeEventListener('visibilitychange', this.onSizeVisibility);
+    window.removeEventListener('blur', this.onSizeBlur);
+    queueMicrotask(() => {
+      if (!this.isConnected) { this.sizeObserver?.disconnect(); this.sizeObserver = null; this.disconnect(); }
+    });
   }
 
   report(state, message = '') {
@@ -106,6 +140,7 @@ export class TDRemotePanel extends HTMLElement {
         if (!current()) return;
         clearTimeout(this.timeout);
         this.report('connected');
+        this.sizeUpdates.setActive(this.hasAttribute('follow-size'));
       };
     };
     pc.onconnectionstatechange = () => {
@@ -134,6 +169,7 @@ export class TDRemotePanel extends HTMLElement {
         if (message.type === 'source') {
           this.release();
           this.revision = message.revision;
+          this.sizeUpdates.acknowledge(message.width, message.height);
           this.shortcuts = Array.isArray(message.shortcuts) ? message.shortcuts : [];
           this.touch.navigation = message.touchNavigation === '3d';
           this.video.style.transform = message.mirrorX ? 'scaleX(-1)' : '';
@@ -175,6 +211,7 @@ export class TDRemotePanel extends HTMLElement {
   }
 
   disconnect(notify = true) {
+    this.sizeUpdates.setActive(false);
     this.release();
     this.shortcuts = [];
     this.touch.navigation = false;

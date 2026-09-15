@@ -48,5 +48,8 @@ if changed:
         raise
     finally:
         lifecycle.par.active = active
+else:
+    # Companion modules are embedded outside the manager's source mapping.
+    runtime.refresh_assets(owner)
 result = {'updated': changed, 'sources': len(mapping), 'shadersPreserved': len(shaders),
           'version': runtime.PRODUCT_VERSION, 'saved': False}

@@ -81,6 +81,45 @@ try:
         check('old clients, stale sources and unknown shortcuts are ignored', runtime.event_count() == count + 1)
     finally:
         runtime._connection = None
+    # Resize an isolated native peer; never send a resize to the user's viewer.
+    rtc = component.op('webrtc')
+    rtc.par.active = True
+    connection = rtc.openConnection()
+    rtc.addTrack(connection, runtime.TRACK, 'video')
+    runtime._connection = connection
+    component.op('video_out').par.webrtcconnection = connection
+    try:
+        revision = runtime._revision
+        resize = {'type': 'resize', 'revision': revision, 'width': 640, 'height': 360}
+        runtime.rtc_data('old-client', 'control', json.dumps(resize))
+        runtime.rtc_data(connection, 'other-channel', json.dumps(resize))
+        runtime.rtc_data(connection, 'control', json.dumps(dict(resize, revision=revision - 1)))
+        for width, height in [(0, 360), (1922, 360), (640, 1082), (641, 360), (True, 360), (640.0, 360)]:
+            runtime.rtc_data(connection, 'control', json.dumps(dict(resize, width=width, height=height)))
+        check('resize rejects old peers, wrong channels, stale revisions and invalid dimensions',
+              (component.par.Width.eval(), component.par.Height.eval()) == (960, 540)
+              and runtime._revision == revision)
+        runtime.rtc_data(connection, 'control', json.dumps(resize))
+        component.op('panel_image').cook(force=True)
+        check('resize updates both native surfaces and keeps the peer',
+              (component.op('panel_image').width, component.op('panel_image').height) == (640, 360)
+              and (component.op('op_viewer').width, component.op('op_viewer').height) == (640, 360)
+              and runtime._connection == connection and not runtime._error)
+        check('resize publishes a new coordinate revision', runtime._revision == revision + 1)
+        revision = runtime._revision
+        runtime.rtc_data(connection, 'control', json.dumps(dict(resize, revision=revision)))
+        check('unchanged size does not refresh the source again', runtime._revision == revision)
+        runtime.rtc_data(connection, 'control', json.dumps(dict(resize, revision=revision, width=64, height=64)))
+        component.op('panel_image').cook(force=True)
+        check('the minimum capture size cooks without native errors',
+              (component.op('panel_image').width, component.op('panel_image').height) == (64, 64)
+              and not component.op('panel_image').errors())
+    finally:
+        runtime.disconnect()
+        rtc.par.active = False
+    response = runtime.http({'method': 'GET', 'uri': '/panel-size.js', 'clientAddress': '127.0.0.1'}, {})
+    check('settled resize helper is available from the standalone server',
+          response['statusCode'] == 200 and 'export class SettledPanelSize' in response['data'])
     component.par.Source = 'panel'
     component.par.Panel = component.op('test_panel')
     runtime.refresh_source()

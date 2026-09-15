@@ -6,7 +6,7 @@ ASSETS = {
     'rtc_callbacks': 'rtc_callbacks.py', 'controls': 'controls.py',
     'lifecycle': 'lifecycle.py', 'index_html': 'index.html',
     'remote_panel_js': 'remote-panel.js', 'demo_js': 'demo.js', 'style_css': 'style.css',
-    'touch_gestures_js': 'touch-gestures.js',
+    'touch_gestures_js': 'touch-gestures.js', 'panel_size_js': 'panel-size.js',
 }
 
 
@@ -55,8 +55,8 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     panel = par('COMP', 'Panel', 'Panel')
     target.enableExpr = "me.par.Source == 'viewer'"
     panel.enableExpr = "me.par.Source == 'panel'"
-    par('Int', 'Width', 'Width', 960, 160, 1920).startSection = True
-    par('Int', 'Height', 'Height', 540, 120, 1080)
+    par('Int', 'Width', 'Width', 960, 64, 1920).startSection = True
+    par('Int', 'Height', 'Height', 540, 64, 1080)
     par('Int', 'Framerate', 'Frame Rate', 30, 1, 60)
     par('Int', 'Bitrate', 'Max Bitrate (kbps)', 4000, 128, 20000)
     par('Int', 'Port', 'Web Port', 8920, 1024, 65535).startSection = True
@@ -70,8 +70,8 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     p.label = 'Input Events Received'
     p.expr = "me.op('runtime').module.event_count()"
     p.readOnly = True
-    version = par('Str', 'Version', 'Module Version', '0.1.3')
-    version.default = version.val = '0.1.3'
+    version = par('Str', 'Version', 'Module Version', '0.1.4')
+    version.default = version.val = '0.1.4'
     version.readOnly = True
 
     rtc = node(webrtcDAT, 'webrtc', 0, 0)

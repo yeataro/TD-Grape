@@ -39,6 +39,23 @@ fs.mkdirSync(folder,{recursive:true});
   await first.locator('#resize-live').press('Home');await connected(first);
   const fits=await first.locator('#preview').evaluate(e=>{const b=e.getBoundingClientRect(),p=e.closest('#livebody').getBoundingClientRect();return b.top>=p.top&&b.bottom<=p.bottom;});
   assert.ok(fits);checks.push('docking rebuild and panel resizing retain video within the pane');
+  // Host dividers consume pointerup at Window capture. Hold the drag long enough
+  // to catch accidental live resize and a lost release event.
+  const panel=first.locator('#preview');
+  await first.waitForTimeout(700);
+  const oldSize=await panel.evaluate(e=>e.style.aspectRatio);
+  const track=await panel.evaluate(e=>e.shadowRoot.querySelector('video').srcObject.getVideoTracks()[0].id);
+  const divider=await first.locator('#resize-live').boundingBox();
+  await first.mouse.move(divider.x+divider.width/2,divider.y+divider.height/2);
+  await first.mouse.down();
+  await first.mouse.move(divider.x+divider.width/2,divider.y+divider.height/2+48,{steps:8});
+  await first.waitForTimeout(700);
+  assert.equal(await panel.evaluate(e=>e.style.aspectRatio),oldSize);
+  await first.mouse.up();
+  await first.waitForFunction(previous=>document.querySelector('#preview').style.aspectRatio!==previous,oldSize);
+  await connected(first);
+  assert.equal(await panel.evaluate(e=>e.shadowRoot.querySelector('video').srcObject.getVideoTracks()[0].id),track);
+  checks.push('divider hold keeps capture size; release updates size without replacing the video track');
   await first.screenshot({path:path.join(folder,'live-preview.png')});
   await first.locator('#autopreview').uncheck();
   assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);assert.equal(snapshots,0);

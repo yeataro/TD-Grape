@@ -102,3 +102,9 @@ Legacy MAT PNG requests lazily create manager-owned captures under
 of Grape MAT therefore do not carry private validation/capture scenes. Use
 `sync_masters.py` to bring template compiler metadata forward without a graph
 schema upgrade. Do not increment catalog definitions for this UI/runtime change.
+
+
+Remote Panel 0.1.4 adds `panel-size.js` to the companion module's embedded assets.
+`refresh_sources.py` refreshes the HTTP asset snapshot even when no manager DAT
+changed, so rebuilding only the companion module cannot leave stale JavaScript
+at the editor origin. Rebuild the module, refresh sources, then reload the browser.

@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.74'
+PRODUCT_VERSION='0.8.75'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1611,7 +1611,7 @@ def refresh_assets(owner):
     panel=owner.op('remote_panel')
     _remote_port=int(panel.par.Port.eval()) if panel else None
     if panel:
-        for path,dat in [('/remote-panel.js','remote_panel_js'),('/touch-gestures.js','touch_gestures_js')]:
+        for path,dat in [('/remote-panel.js','remote_panel_js'),('/touch-gestures.js','touch_gestures_js'),('/panel-size.js','panel_size_js')]:
             if panel.op(dat):_assets[path]=(panel.op(dat).text.encode('utf-8'),'text/javascript; charset=utf-8')
     if owner.op('web_icons_json'):
         for path, asset in json.loads(owner.op('web_icons_json').text).items():
