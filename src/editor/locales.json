@@ -1606,6 +1606,10 @@
       "zh-Hant": "收合節點說明",
       "en": "Close node details"
     },
+    "browser.resizeDetails": {
+      "zh-Hant": "調整節點說明高度；雙擊恢復預設",
+      "en": "Resize node details; double-click to reset"
+    },
     "browser.inputs": {
       "zh-Hant": "輸入",
       "en": "Inputs"

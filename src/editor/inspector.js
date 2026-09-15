@@ -751,6 +751,59 @@ function installPanelHeights(panels,options={}){
   layout();return {cancel,layout,destroy(){cancel();events.abort();observer.disconnect();}};
 }
 
+/* The description keeps its chosen height even when its text or dock changes. */
+function installBrowserDetailResize(){
+  const host=$('#browserbody'),list=$('#librarycontent'),detail=$('#browserdetail'),handle=$('#browserdetailresize');
+  const key='grapeBrowserDetailHeight',defaultHeight=240;
+  let preferred=defaultHeight,height=defaultHeight,gesture=null;
+  try{const saved=Number(localStorage.getItem(key));if(Number.isFinite(saved)&&saved>0)preferred=saved;}catch{}
+  function limits(){
+    const style=getComputedStyle(host),divider=Number.parseFloat(getComputedStyle(handle).getPropertyValue('--panel-divider-size'))||6;
+    const available=Math.max(0,Math.floor(host.getBoundingClientRect().bottom-(Number.parseFloat(style.paddingBottom)||0)-list.getBoundingClientRect().top-divider));
+    const max=Math.max(0,available-Math.min(140,Math.floor(available/2)));
+    return {min:Math.min(112,max),max};
+  }
+  function layout(){
+    if(!host.getClientRects().length)return;
+    const b=limits();height=Math.max(b.min,Math.min(b.max,preferred));detail.style.flexBasis=height+'px';
+    handle.setAttribute('aria-valuemin',b.min);handle.setAttribute('aria-valuemax',b.max);handle.setAttribute('aria-valuenow',height);
+  }
+  function save(){try{localStorage.setItem(key,String(preferred));}catch{}}
+  function set(value){const b=limits();preferred=Math.max(b.min,Math.min(b.max,Math.round(value)));layout();}
+  function cancel(){gesture?.cancel();}
+  handle.addEventListener('pointerdown',event=>{
+    if(event.button!==0||detail.hidden)return;
+    event.preventDefault();event.stopPropagation();cancel();cancelValueLadder();cancelConnection();closeCreator();handle.focus({preventScroll:true});
+    layout();const before=preferred,startHeight=height,startY=event.clientY,controller=new AbortController(),options={capture:true,signal:controller.signal};let finished=false;
+    document.body.classList.add('resizing-panel');handle.classList.add('resizing');
+    function finish(accept){
+      if(finished)return;finished=true;controller.abort();gesture=null;
+      document.body.classList.remove('resizing-panel');handle.classList.remove('resizing');
+      if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);
+      if(accept)save();else{preferred=before;layout();}
+    }
+    gesture={cancel:()=>finish(false)};
+    window.addEventListener('pointermove',e=>{if(e.pointerId!==event.pointerId)return;if(!(e.buttons&1)){finish(false);return;}e.preventDefault();set(startHeight+startY-e.clientY);},options);
+    window.addEventListener('pointerup',e=>{if(e.pointerId===event.pointerId&&e.button===0){e.preventDefault();e.stopPropagation();set(startHeight+startY-e.clientY);finish(true);}},options);
+    window.addEventListener('pointercancel',e=>{if(e.pointerId===event.pointerId)finish(false);},options);
+    handle.addEventListener('lostpointercapture',()=>finish(false),options);
+    window.addEventListener('blur',()=>finish(false),options);
+    window.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(false);}},options);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)finish(false);},options);
+    try{handle.setPointerCapture(event.pointerId);}catch{finish(false);}
+  });
+  handle.addEventListener('keydown',event=>{
+    if(!['ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+    event.preventDefault();event.stopPropagation();cancel();layout();const b=limits();
+    set(event.key==='Home'?b.min:event.key==='End'?b.max:height+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?32:8));save();
+  });
+  handle.addEventListener('dblclick',event=>{event.preventDefault();cancel();preferred=defaultHeight;layout();save();});
+  // Viewport clamping never overwrites the saved height; expanding restores it.
+  new ResizeObserver(()=>{cancel();layout();}).observe(host);
+  new MutationObserver(()=>{if(detail.hidden)cancel();layout();}).observe(detail,{attributes:true,attributeFilter:['hidden']});
+  layout();
+}
+
 /* Limited two-sidebar workspace. All persisted data is presentation only. */
 function installPanelWorkspace(){
   const ids=['browser','parameters','uniforms','controls','live','help'],key='grapeWorkspaceV1',presetsKey='grapeWorkspacePresetsV1';

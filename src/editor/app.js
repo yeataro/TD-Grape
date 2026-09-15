@@ -416,6 +416,7 @@ installUpgradeUI();
 installGraphInteractions();
 installLibraryTabs();
 installInspectorPanels();installNativeSources();installCustomParameters();
+installBrowserDetailResize();
 installPreviewHelp();
 installSidebarWidths();
 installShaderNavigation();
