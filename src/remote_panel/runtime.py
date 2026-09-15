@@ -10,7 +10,7 @@ import socket
 import time
 from urllib.parse import urlsplit
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 TRACK = 'TDPanel'
 CHANNEL = 'control'
 _client = None
@@ -23,6 +23,7 @@ _last_frame = 0.0
 _last_mouse = (0.5, 0.5)
 _mouse_down = False
 _panel = None
+_viewer_target = None
 _revision = 0
 _events = 0
 _started = False
@@ -80,7 +81,8 @@ def metadata():
             'panel': _panel.path if _panel else '', 'revision': _revision,
             'width': int(comp.par.Width.eval()), 'height': int(comp.par.Height.eval()),
             # Matches TD 2025 and the official remote-panel browser example.
-            'fps': int(comp.par.Framerate.eval()), 'mirrorX': True, 'status': _status, 'error': _error}
+            'fps': int(comp.par.Framerate.eval()), 'mirrorX': True, 'status': _status, 'error': _error,
+            'shortcuts': ['reset-viewer'] if _viewer_target and _viewer_target.valid else []}
 
 
 def send(message, client=None):
@@ -97,8 +99,9 @@ def release_mouse():
 
 
 def refresh_source():
-    global _panel, _revision, _error, _status
+    global _panel, _viewer_target, _revision, _error, _status
     release_mouse()
+    _viewer_target = None
     _revision += 1
     comp = owner()
     try:
@@ -108,6 +111,8 @@ def refresh_source():
         # remains the mouse receiver and operates that same native viewer state.
         capture = comp.par.Targetop.eval() if comp.par.Source.eval() == 'viewer' else _panel
         comp.op('panel_image').par.opviewer = capture
+        if comp.par.Source.eval() == 'viewer':
+            _viewer_target = capture
         _error = ''
         _status = 'Connected' if _connection and comp.op('webrtc').getConnectionState(_connection) == 'connected' else 'Ready'
         comp.op('video_out').par.active = bool(_connection)
@@ -232,9 +237,10 @@ def ws_open(client, uri):
         server.webSocketClose(client)
         return
     if _client:
-        send({'type': 'busy', 'message': 'Another browser is using this panel. Disconnect it before connecting here.'}, client)
-        server.webSocketClose(client)
-        return
+        send({'type': 'replaced', 'message': 'Another browser has taken control. Connect again to take control here.'})
+        # Clear the old identity before closing it. Its late callbacks/messages
+        # must not close the new peer or release the new receiver's mouse input.
+        disconnect()
     _client = client
     _last_seen = time.monotonic()
     refresh_source()
@@ -310,11 +316,25 @@ def rtc_state(connection, state):
 
 def rtc_data(connection, channel, data):
     global _events, _last_mouse, _mouse_down, _last_seen
-    if connection != _connection or channel != CHANNEL or len(data) > 4096 or not _panel:
+    if not _connection or connection != _connection or channel != CHANNEL or len(data) > 4096 or not _panel:
         return
     try:
         message = json.loads(data)
-        if message.get('type') != 'mouse' or message.get('revision') != _revision:
+        if not isinstance(message, dict) or message.get('revision') != _revision:
+            return
+        if message.get('type') == 'shortcut':
+            # TD 2025.32820 has no PanelCOMP.interactKeyboard. H is an explicit
+            # viewer reset, not an emulated native key or an application shortcut.
+            if message.get('action') != 'reset-viewer' or not _viewer_target or not _viewer_target.valid:
+                return
+            comp = owner()
+            if comp.par.Source.eval() != 'viewer' or comp.par.Targetop.eval() != _viewer_target:
+                return
+            _viewer_target.resetViewer()
+            _last_seen = time.monotonic()
+            _events += 1
+            return
+        if message.get('type') != 'mouse':
             return
         u, v = float(message['u']), float(message['v'])
         wheel = float(message.get('wheel', 0))

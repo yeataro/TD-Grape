@@ -65,10 +65,13 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
         p = par('Str', name, label)
         p.expr = "me.op('runtime').module." + function + '()'
         p.readOnly = True
-    p = par('Int', 'Events', 'Mouse Events Received')
+    p = par('Int', 'Events', 'Input Events Received')
+    p.label = 'Input Events Received'
     p.expr = "me.op('runtime').module.event_count()"
     p.readOnly = True
-    par('Str', 'Version', 'Module Version', '0.1.0').readOnly = True
+    version = par('Str', 'Version', 'Module Version', '0.1.1')
+    version.default = version.val = '0.1.1'
+    version.readOnly = True
 
     rtc = node(webrtcDAT, 'webrtc', 0, 0)
     server = node(webserverDAT, 'web_server', -240, 0)

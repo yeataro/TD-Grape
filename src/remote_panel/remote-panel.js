@@ -6,6 +6,7 @@ export class TDRemotePanel extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>
       :host{display:block;position:relative;background:#101014;overflow:hidden;min-height:160px;aspect-ratio:16/9}
       video{display:block;width:100%;height:100%;object-fit:contain;outline:none;user-select:none;-webkit-user-drag:none}
+      :host([data-focused])::after{content:"";position:absolute;inset:0;border:2px solid #b69bf2;pointer-events:none}
       .message{position:absolute;inset:0;display:grid;place-items:center;padding:24px;pointer-events:none;color:#c9c5d7;font:14px/1.6 system-ui;text-align:center}
       .message[hidden]{display:none}
     </style><video autoplay muted playsinline tabindex="0" aria-label="TouchDesigner remote panel"></video><div class="message">Connect to the TD panel.</div>`;
@@ -15,7 +16,13 @@ export class TDRemotePanel extends HTMLElement {
     this.state = 'disconnected';
     this.lastPoint = {u: .5, v: .5};
     this.buttons = 0;
-    this.onBlur = () => this.release();
+    this.shortcuts = [];
+    this.onBlur = () => { this.release(); this.setFocused(false); };
+    this.onFocus = () => this.setFocused(this.shadowRoot.activeElement === this.video);
+    this.onVisibility = () => { if (document.hidden) this.onBlur(); else this.onFocus(); };
+    this.video.addEventListener('focus', this.onFocus);
+    this.video.addEventListener('blur', this.onBlur);
+    this.video.addEventListener('keydown', e => this.shortcut(e));
     for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
       this.video.addEventListener(type, e => this.pointer(e));
     }
@@ -38,16 +45,21 @@ export class TDRemotePanel extends HTMLElement {
 
   connectedCallback() {
     window.addEventListener('blur', this.onBlur);
+    window.addEventListener('focus', this.onFocus);
+    document.addEventListener('visibilitychange', this.onVisibility);
     if (this.hasAttribute('autoconnect')) this.connect();
   }
 
   disconnectedCallback() {
     window.removeEventListener('blur', this.onBlur);
+    window.removeEventListener('focus', this.onFocus);
+    document.removeEventListener('visibilitychange', this.onVisibility);
     this.disconnect();
   }
 
   report(state, message = '') {
     this.state = state;
+    this.onFocus();
     if (message) { this.message.textContent = message; this.message.hidden = false; }
     this.dispatchEvent(new CustomEvent('panel-state', {detail: {state, message}}));
   }
@@ -78,7 +90,7 @@ export class TDRemotePanel extends HTMLElement {
       this.video.play().catch(() => this.report('connected', 'Click the panel to play.'));
     };
     pc.ondatachannel = e => {
-      if (e.channel.label !== 'control') return;
+      if (!current() || e.channel.label !== 'control') return;
       this.channel = e.channel;
       e.channel.onopen = () => {
         if (!current()) return;
@@ -112,6 +124,7 @@ export class TDRemotePanel extends HTMLElement {
         if (message.type === 'source') {
           this.release();
           this.revision = message.revision;
+          this.shortcuts = Array.isArray(message.shortcuts) ? message.shortcuts : [];
           this.video.style.transform = message.mirrorX ? 'scaleX(-1)' : '';
           this.style.aspectRatio = `${message.width} / ${message.height}`;
           this.dispatchEvent(new CustomEvent('panel-source', {detail: message}));
@@ -132,6 +145,9 @@ export class TDRemotePanel extends HTMLElement {
         } else if (message.type === 'busy') {
           this.disconnect(false);
           this.report('busy', message.message);
+        } else if (message.type === 'replaced') {
+          this.disconnect(false);
+          this.report('replaced', message.message);
         } else if (message.type === 'error') {
           fail(message.message);
         } else if (message.type === 'pong') {
@@ -149,6 +165,8 @@ export class TDRemotePanel extends HTMLElement {
 
   disconnect(notify = true) {
     this.release();
+    this.shortcuts = [];
+    this.setFocused(false);
     clearTimeout(this.timeout);
     clearInterval(this.heartbeat);
     const ws = this.ws, pc = this.pc;
@@ -190,6 +208,25 @@ export class TDRemotePanel extends HTMLElement {
     if (this.channel?.readyState === 'open') {
       this.channel.send(JSON.stringify({type: 'mouse', revision: this.revision, ...point, buttons, wheel}));
     }
+  }
+
+  setFocused(focused) {
+    focused = focused && document.hasFocus() && !document.hidden && this.channel?.readyState === 'open';
+    this.toggleAttribute('data-focused', Boolean(focused));
+    this.dispatchEvent(new CustomEvent('panel-focus', {detail: {focused: Boolean(focused)}}));
+  }
+
+  shortcut(event) {
+    if (this.shadowRoot.activeElement !== this.video || !document.hasFocus() || document.hidden
+        || this.channel?.readyState !== 'open' || !this.shortcuts.includes('reset-viewer')) return;
+    // Only the explicit, unmodified H action is supported in this TD build.
+    // Tab and all other keys keep their normal browser behavior.
+    if (event.isComposing || event.keyCode === 229 || event.ctrlKey || event.altKey || event.metaKey
+        || event.shiftKey || event.key.toLowerCase() !== 'h') return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.repeat) return;
+    this.channel.send(JSON.stringify({type: 'shortcut', action: 'reset-viewer', revision: this.revision}));
   }
 
   release() {

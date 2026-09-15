@@ -52,10 +52,27 @@ try:
           component.op('panel_image').par.opviewer.eval() == component.par.Targetop.eval()
           and not component.op('panel_image').par.allowpanel.eval()
           and component.op('op_viewer').par.interactive.eval())
+    check('only OP Viewer advertises the explicit reset shortcut',
+          runtime.metadata()['shortcuts'] == ['reset-viewer'])
+    # Exercise messages against the independent fixture, never the user's viewer.
+    runtime._connection = 'keyboard-test'
+    count = runtime.event_count()
+    shortcut = {'type': 'shortcut', 'action': 'reset-viewer', 'revision': runtime._revision}
+    try:
+        runtime.rtc_data('keyboard-test', 'control', json.dumps(shortcut))
+        check('reset shortcut reaches the configured target', runtime.event_count() == count + 1)
+        runtime.rtc_data('old-client', 'control', json.dumps(shortcut))
+        runtime.rtc_data('keyboard-test', 'control', json.dumps(dict(shortcut, revision=runtime._revision - 1)))
+        runtime.rtc_data('keyboard-test', 'control', json.dumps(dict(shortcut, action='arbitrary-key')))
+        runtime.rtc_data('keyboard-test', 'control', '[]')
+        check('old clients, stale sources and unknown shortcuts are ignored', runtime.event_count() == count + 1)
+    finally:
+        runtime._connection = None
     component.par.Source = 'panel'
     component.par.Panel = component.op('test_panel')
     runtime.refresh_source()
     check('Panel mode targets the original Panel COMP', runtime.source_panel() == component.op('test_panel'))
+    check('Panel mode does not advertise viewer reset', runtime.metadata()['shortcuts'] == [])
     component.par.Source = 'test'
     component.par.Targetop = ''
     component.par.Panel = ''

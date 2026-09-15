@@ -1,4 +1,4 @@
-# TD Remote Panel — experimental 0.1
+# TD Remote Panel — experimental 0.1.1
 
 One TouchDesigner Panel COMP or native OP Viewer, streamed to one browser over
 WebRTC, with mouse events returned to that same panel. The component owns its
@@ -15,8 +15,13 @@ The development TOE contains `TD_Grape/remote_panel`. The standalone
 2. Set an unused **Web Port**, then enable **Active**.
 3. Press **Open in Browser** or open **Local URL**. For another device, enable
    **Allow LAN Connections** and use one of **LAN URLs**.
-4. Disconnect the current browser before connecting another. **Reset Connection**
-   releases a stale receiver.
+4. Click the picture to focus it. In **OP Viewer** mode, press **H** to call TD's
+   `resetViewer()` on that target. Click elsewhere or press **Tab** to leave the
+   panel. This is not TD's native H/Home: on the tested MAT it resets display
+   options but leaves the current rotation intact. Native homing remains unresolved.
+5. A new connection takes control and disconnects the previous browser. The old
+   page shows **Taken over** and stays disconnected until its user presses
+   **Connect** again. **Reset Connection** releases a stale receiver.
 
 The standalone TOX starts inactive, with LAN disabled and Test Panel selected.
 The development TOE may preserve the developer's explicitly selected settings.
@@ -37,12 +42,23 @@ service is used. Internet routing and multiple receivers are outside this previe
   on TD 2025.32820. TOP's deprecated Allow Panel Interaction stays disabled.
   Keep the internal controller's Center/Scale at their defaults; native viewer
   pan/zoom/rotate operations are supported, additional COMP-level transforms are not.
-- No keyboard, touch gestures, or translation of native popup windows yet.
+- The unmodified **H** shortcut only runs while the connected browser panel has
+  focus. IME composition, held-key repeats and modifier combinations are ignored.
+  Other keys keep their normal browser behavior. Panel and Test Panel modes do
+  not expose the viewer-reset action.
+- Arbitrary native keyboard forwarding is unavailable in TD 2025.32820: neither
+  Panel COMP nor OP Viewer COMP has `interactKeyboard`. The official webRTCPanel
+  example contains a future stub, and its browser README also lists keyboard
+  input as unsupported. We do not change the host's keyboard focus or inject OS
+  keys. Touch gestures and native popup windows are also outside this preview.
 - Only a connected receiver enables video output. Static panels are cooked at
   the configured frame rate while streaming so WebRTC keeps receiving frames.
   TD's available cook rate and WebRTC adaptation can reduce the delivered rate
   or resolution. Disconnection disables the stream and releases held mouse input.
-- Changes to source invalidate older mouse messages and release held buttons.
+- Changes to source invalidate older control messages and release held buttons.
+  H addresses the exact captured target; a target change cannot redirect a stale
+  reset message to the next OP. Takeover releases the old mouse input and closes
+  its peer before creating the replacement. Old callbacks cannot reclaim control.
 - TD must be running with Cooking enabled. A heartbeat failure shows a reconnect
   message. This component does not bypass TD's global Cooking switch.
 - This preview is separate from Grape's existing Output Preview. Intermediate
@@ -62,9 +78,21 @@ component's origin. Cross-origin module loading requires appropriate HTTP header
 the prototype server does not enable cross-origin asset access. An HTTPS page
 needs a secure signaling endpoint; use the supplied HTTP test page for this preview.
 
-`connect()` and `disconnect()` control the session. `panel-state`, `panel-source`
-and `panel-format` events expose state, TD paths and decoded video dimensions.
+`connect()` and `disconnect()` control the session. `panel-state`, `panel-source`,
+`panel-format` and `panel-focus` events expose state, TD paths, decoded video
+dimensions and browser focus. `panel-source.detail.shortcuts` lists supported
+actions; currently only `reset-viewer` in OP Viewer mode. The `replaced` state
+means a newer receiver took control; hosts should not auto-reconnect that state.
 `index.html`, `demo.js` and `style.css` implement the small test page.
+
+## Viewer follow-up
+
+The user observed that a secondary OP Viewer can defer its updates until a mouse
+gesture ends. This remains a TD viewer behavior to investigate separately. A
+user-built single Universal Viewer or two coordinated viewers may replace this
+prototype's source later. Existing **Panel** source mode can target that custom
+Panel COMP without changing signaling or the browser element; a specialized
+capture/control split would need its own verification.
 
 ## Development
 
