@@ -376,8 +376,12 @@ def register_shader(shader,fresh=False):
     if fresh or not identity or (other and other.valid and other!=shader): identity=uuid.uuid4().hex
     shader.store('sgrapeShaderId',identity)
     shader.store('sgrapeManagerId',_owner.fetch('sgrapeManagerId'))
-    shader.store('sgrapeMaster',False)
-    shader.tags.add('sgrapeShader')
+    # Opening a product template in its editor must not turn it into a user
+    # Shader. Copies outside masters still register as ordinary new Shaders.
+    is_master=not fresh and shader.parent()==_owner.op('masters') and shader==master_template(shader_kind(shader))
+    shader.store('sgrapeMaster',is_master)
+    if is_master:shader.tags.discard('sgrapeShader')
+    else:shader.tags.add('sgrapeShader')
     for key,value in list(_shaders.items()):
         if not value or not value.valid or (value==shader and key!=identity): del _shaders[key]
     _shaders[identity]=shader
@@ -493,10 +497,14 @@ def prepare_masters():
     folder=_owner.op('masters') or _owner.create(baseCOMP,'masters')
     for kind in ('mat','top'):
         master=master_template(kind) or create_shader(folder,'grape_'+kind,kind=kind)
-        register_shader(master)
-        update_shader(master)
-        master.store('sgrapeMaster',True);master.tags.discard('sgrapeShader')
-        _shaders.pop(master.fetch('sgrapeShaderId'),None)
+        try:
+            register_shader(master)
+            updated=update_shader(master)
+        finally:
+            master.store('sgrapeMaster',True);master.tags.discard('sgrapeShader')
+            _shaders.pop(master.fetch('sgrapeShaderId'),None)
+        if updated.get('reviewRequired'):
+            raise RuntimeError('Grape '+kind.upper()+' template needs a graph upgrade review; its default graph was not updated.')
         manifest=master.op('FamManifest') or master.create(baseCOMP,'FamManifest')
         values={
             'OpInfo':{'op_type':'sgrape_'+kind,'op_name':'Grape_'+kind.upper()+'1','op_label':'Grape '+kind.upper(),'op_version':PRODUCT_VERSION,'op_group':'Shaders','summary':'Visual GLSL '+kind.upper()+' editor. Open Editor edits this Shader.','op_color':list(OP_COLORS[kind]),'isFilter':kind=='top','compatible_types':['TOP'] if kind=='top' else [],'search_words':['shader','glsl','grape','sgrape',kind]},
@@ -532,7 +540,9 @@ def make_scene(parent,name,kind='mat'):
     render=comp.create(renderTOP,'preview'); render.par.camera='preview_camera'; render.par.geometry='preview_geometry'
     render.par.resolutionw=512; render.par.resolutionh=512
     render.par.antialias='aaoff'
-    info=comp.create(infoDAT,'compile_info'); info.par.op='material'
+    # Reuse the Info DAT created by GLSL MAT instead of retaining a duplicate.
+    info=comp.op('material_info') or comp.create(infoDAT,'compile_info')
+    info.name='compile_info';info.par.op='material'
     comp.create(textDAT,'graph'); comp.create(textDAT,'manifest')
     for i,o in enumerate(comp.children): o.nodeX=(i%4)*190; o.nodeY=-(i//4)*150
     return comp
@@ -702,8 +712,9 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
             if p is not None:
                 page=next((p for p in comp.customPages if p.name=='Inactive Textures'),None) or comp.appendCustomPage('Inactive Textures')
                 p.page=page;p.enable=False
-    # Input 1 remains available even for a color-only graph.
-    specs.setdefault('input:0',{'default':'builtin:banana','expose':False,'matchDefault':False})
+    # Only TOP components have the default COMP input. MAT uses its samplers.
+    if shader_kind(comp)=='top':
+        specs.setdefault('input:0',{'default':'builtin:banana','expose':False,'matchDefault':False})
     for key,spec in specs.items():
         spec['asset']=texture_asset(comp,key,spec['default']).name
         if spec.get('fallback')=='opaque-black':spec['blackAsset']=texture_asset(comp,'black:'+key,'builtin:black').name

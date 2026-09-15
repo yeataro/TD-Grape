@@ -56,3 +56,23 @@ python tools/dev/submit_job.py tools/dev/jobs/arrange_native_networks.py --repor
 個人函式庫優先使用 Palette 下的 `TD-Grape/Functions`；若新目錄不存在但舊 `TD-Sgrape/Functions` 有資料，仍可讀取舊庫。此次已將開發環境的舊資料夾改名、更新參數 Expression，驗證檔案雜湊及讀入的函式相同；既有函式檔案格式與檔名保持相容。
 
 Open Editor 在沒有 Shader 時自動建立 MAT 的行為仍待調整；允許尚未連接 Shader 的空白編輯器是討論中的方向，本次參數分類尚未改動該流程。
+
+## Master 同步與 MAT 清理
+
+2026-09-15 將兩份 Master 保留的預設圖同步至目前的 0.8.73 編譯器與 targetShellVersion 2。保留圖的節點、連線與位置，以及 TD OP 身分和既有參數值；不以重新建立範例圖取代人工編輯的模板。MAT 的 COMP Viewer 指向 `material`，網頁預覽由 `grape_material_preview` 擷取同一個 MAT。
+
+MAT 移除四個已確認無引用的節點：重複的 `material_info`、舊 `asset_texture_main_image`，以及誤建立於 MAT 的 TOP Input 0 預設 Select／Movie File In。建立新 MAT 時重用原生自動產生的 Info DAT 作為 `compile_info`，並只為 TOP 加入預設 COMP 輸入資源，避免重新產生這些冗餘。有效的 Sampler 貼圖鏈、Shader DAT、`compile_info`、Render 驗證場景及控制同步助手保留；新增助手放到獨立位置，既有人工配置不變。
+
+更新工具不再忽略 `reviewRequired`。普通 `prepare_masters()` 遇到需要確認的舊圖會明確報錯；已核對編譯變更、確定要升級產品 Master 時，再依序執行：
+
+```text
+python tools/dev/submit_job.py tools/dev/jobs/refresh_sources.py
+python tools/dev/submit_job.py tools/dev/jobs/sync_masters.py --report master-sync
+python tools/dev/submit_job.py tests/td/test_master_templates.py --report master-check
+python tools/dev/submit_job.py tests/td/test_native_naming.py --report master-create-check
+python tools/dev/submit_job.py tools/dev/jobs/save_source_project.py
+```
+
+`sync_masters.py` 只處理目前管理元件的兩份 Master，使用正常的候選圖驗證與 upgrade ticket 流程，並先備份模板。升級的舊內容保存在私人報告目錄，不把模板的 `upgrade_backup` 複製進之後新建的 Shader。使用者實例仍使用既有升級確認流程；產品啟動不自動執行此開發工作。
+
+從 Master 開啟 Editor 會保留 Master 身分；複製到其他位置的組件才登記為新 Shader。新建組件仍預設只顯示自訂參數。來源刷新、模板同步與保存工具從專案根層尋找管理元件，支援此次將 `TD_Grape` 搬到根層後的開發工程。

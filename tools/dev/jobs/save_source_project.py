@@ -11,7 +11,7 @@ destination.relative_to(GRAPE_ROOT.resolve())
 assert destination.parent.is_dir()
 backup = GRAPE_WORK / 'source-saves' / uuid.uuid4().hex
 backup.mkdir(parents=True)
-owners = [n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)]
+owners = [n for n in op('/').findChildren() if n.storage.get('sgrapeManager', False)]
 assert len(owners) == 1
 owner = owners[0]
 runtime = owner.op('runtime').module

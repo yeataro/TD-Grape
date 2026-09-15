@@ -1,7 +1,7 @@
 """Check native creation and family lookup after the public OP naming migration."""
 import json
 
-owner=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager',False))
+owner=next(n for n in op('/').findChildren() if n.storage.get('sgrapeManager',False))
 runtime=owner.op('runtime').module
 family=owner.op('tdfam')
 parent_comp=owner.parent()
@@ -36,8 +36,21 @@ try:
         assert instance.op('state').text==template.op('state').text
         assert instance.op('controls').module.manager(instance)==owner
         runtime.validate_material(instance)
+        with runtime.shader_context(instance):
+            review=runtime.upgrade_review()
+            assert not review['required'] and not review['blocked'], runtime.upgrade_summary(review)
+            state=runtime.checked_state()
+            assert runtime.compiled_is_current(instance,runtime.core().compile_graph(state['graph']),state['graph'])
+        assert instance.par.Version.eval()==runtime.PRODUCT_VERSION
+        assert instance.showCustomOnly, 'New Shaders keep the existing parameter initialization policy'
+        assert not instance.op('upgrade_backup'), 'New Shaders must not inherit template upgrade history'
+        if kind=='mat':
+            assert instance.par.opviewer.eval()==instance.op('material')
+            assert instance.op('grape_material_preview').par.opviewer.eval()==instance.op('material')
+            assert 'input:0' not in instance.storage['sgrapeTextureSources']
         records.append({'kind':kind,'created':instance.name,'nativeCompilePassed':True,
-                        'graphPreserved':True,'managerResolved':True,'familyAliasesResolved':True})
+                        'graphPreserved':True,'managerResolved':True,'familyAliasesResolved':True,
+                        'currentDefaultGraph':True,'upgradeNotRequired':True})
         instance.destroy()
     # Check compatibility on a private fixture, never by renaming the user's master again.
     fixture=op('/grape_devbridge').create(baseCOMP,'naming_fixture')
@@ -53,6 +66,16 @@ try:
         runtime._owner=owner
         fixture.destroy()
     assert snapshot()==before,'Creation changed a template'
+    # The native Open Editor callback also registers an existing Master.
+    for template in templates.values():
+        show_custom=template.showCustomOnly
+        try:
+            identity=runtime.register_shader(template)
+            assert template.storage['sgrapeMaster'] and 'sgrapeShader' not in template.tags
+            assert runtime.resolve_shader(identity)==template
+            assert identity==template.storage['sgrapeShaderId']
+        finally:template.showCustomOnly=show_custom
+    assert snapshot()==before,'Opening a Master changed its stored identity or graph'
 finally:
     runtime._owner=owner
     for n in parent_comp.children:
@@ -63,5 +86,5 @@ finally:
     runtime._shader=previous_shader
 assert {n.id for n in parent_comp.children}==initial_ids
 result={'checks':records,'legacyTemplateLookupPassed':True,'templatesUnchanged':True,
-        'testInstancesRemoved':True,'version':runtime.PRODUCT_VERSION}
+        'testInstancesRemoved':True,'masterEditorIdentityPreserved':True,'version':runtime.PRODUCT_VERSION}
 (GRAPE_TEST_OUTPUT/'validation.json').write_text(json.dumps(result,indent=2),encoding='utf-8')

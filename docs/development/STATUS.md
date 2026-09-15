@@ -10,6 +10,8 @@
 
 2026-09-15：管理元件參數整理為 `TD-Grape`／`Settings` 兩頁，以原生分隔線分組，產品標籤統一英文。個人函式庫預設路徑優先使用 `TD-Grape/Functions`；本機舊庫已改名並驗證內容及讀入結果相同。既有設定值、Shader 資料與節點位置保留。見 [管理元件參數分類](DEVELOPMENT.md#管理元件參數分類)。
 
+2026-09-15：TOP／MAT Master 的預設圖、GLSL、編譯紀錄與 catalog snapshot 已由舊模板同步至 0.8.73／targetShellVersion 2；新建組件不需再升級圖。MAT 清理四個未使用的舊節點，原生與網頁 Viewer 均指向 material。修正模板更新略過升級確認，以及開啟 Master Editor 會清掉模板身分的問題。既有圖升級確認與新組件參數初始化維持；兩種模板渲染結果、既有 OP 身分、人工位置及參數值比對相同。正式開發 TOE 已保存，主組件位於專案根層。見 [Master 同步](DEVELOPMENT.md#master-同步與-mat-清理)。
+
 2026-09-14：0.8.72 將 MAT 網頁預覽改為 OP Viewer TOP 擷取原生 material Viewer，COMP Viewer 也指向 material。保留 Render 場景作編譯驗證；Inputs 與 TOP 預覽流程維持。詳見 [MAT 原生預覽](../features/NATIVE_MAT_PREVIEW.md)。
 
 2026-09-14：0.8.71 分開連線與編譯錯誤，加入 Cooking／最小化檢查提示及保留畫布的讀取重試。Inputs 操作設計維持上一版。詳見 [連線恢復與啟動驗證](../features/CONNECTION_RECOVERY.md)。

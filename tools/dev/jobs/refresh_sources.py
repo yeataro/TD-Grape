@@ -2,8 +2,8 @@
 from pathlib import Path
 import json
 
-owners = [n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)]
-assert len(owners) == 1, 'Expected one TD-Grape manager in /project1'
+owners = [n for n in op('/').findChildren() if n.storage.get('sgrapeManager', False)]
+assert len(owners) == 1, 'Expected one TD-Grape manager in the project'
 owner = owners[0]
 mapping = json.loads((GRAPE_ROOT / 'src/td/embedded_sources.json').read_text(encoding='utf-8'))
 old = {dat: owner.op(dat).text for dat in mapping}
