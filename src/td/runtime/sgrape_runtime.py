@@ -195,9 +195,10 @@ def service_family_startup():
 
 def default_personal_folder():
     from pathlib import Path
-    # Keep existing libraries discoverable; a new installation uses the new brand.
+    # Prefer the current folder, retaining a fallback for unmigrated libraries.
+    current=Path(app.userPaletteFolder)/'TD-Grape'/'Functions'
     legacy=Path(app.userPaletteFolder)/'TD-Sgrape'/'Functions'
-    return legacy if legacy.is_dir() else Path(app.userPaletteFolder)/'TD-Grape'/'Functions'
+    return legacy if legacy.is_dir() and not current.is_dir() else current
 
 def personal_folder():
     from pathlib import Path
@@ -310,6 +311,40 @@ def apply_op_color(shader):
         if isinstance(data,dict) and data.get('op_color')!=list(color):
             data['op_color']=list(color)
             info.text=json.dumps(data)
+
+def arrange_manager_parameters(owner):
+    """Group product controls without replacing parameters or their values."""
+    if not owner.fetch('sgrapeManager',False):return
+    layouts=[('TD-Grape',[
+        [('Createtop','Create Grape TOP'),('Createmat','Create Grape MAT')],
+        [('Openeditor','Open Editor'),('Openinbrowser','Open in Browser')],
+        [('Updateshaders','Update Shaders'),('Updatestatus','Last Update')],
+        [('Version','Version')],
+    ]),('Settings',[
+        [('Allowlan','Allow LAN Connections'),('Requiretoken','Require Connection Token'),
+         ('Lanurls','LAN URLs'),('Lanstatus','Connection Status')],
+        [('Personalfolder','Personal Folder'),('Openpersonalfolder','Open Personal Folder')],
+        [('Registertdfam','Register TDFam'),('Tdfamstatus','TDFam Status')],
+    ])]
+    legacy=next((p for p in owner.customPages if p.name=='TD-Sgrape'),None)
+    if legacy and not any(p.name=='TD-Grape' for p in owner.customPages):legacy.name='TD-Grape'
+    for page_name,groups in layouts:
+        page=next((p for p in owner.customPages if p.name==page_name),None) or owner.appendCustomPage(page_name)
+        order=0
+        for group_index,group in enumerate(groups):
+            for item_index,(name,label) in enumerate(group):
+                parameter=getattr(owner.par,name,None)
+                if parameter is None:continue
+                if parameter.page!=page:parameter.page=page
+                if parameter.order!=order:parameter.order=order
+                if parameter.label!=label:parameter.label=label
+                section=group_index>0 and item_index==0
+                if parameter.startSection!=section:parameter.startSection=section
+                order+=1
+    pages=[p.name for p in owner.customPages]
+    ordered=[name for name,groups in layouts]+[name for name in pages if name not in ('TD-Grape','Settings')]
+    if pages!=ordered:owner.sortCustomPages(*ordered)
+
 
 def arrange_shader_parameters(shader):
     page_name='Grape '+shader_kind(shader).upper()
@@ -474,6 +509,7 @@ def prepare_masters():
             if name=='OpInfo' or not dat.text:dat.text=json.dumps(data)
         master.currentPage='Grape '+kind.upper();master.showCustomOnly=True
     _owner.par.Version=PRODUCT_VERSION
+    arrange_manager_parameters(_owner)
     return folder
 
 def make_scene(parent,name,kind='mat'):
@@ -1389,13 +1425,14 @@ def ensure_network_controls(owner):
         page.appendToggle('Allowlan',label='Allow LAN Connections')
         owner.par.Allowlan.default=False;owner.par.Allowlan.val=False
     if getattr(owner.par,'Requiretoken',None) is None:
-        page.appendToggle('Requiretoken',label='連線需要憑證')
+        page.appendToggle('Requiretoken',label='Require Connection Token')
         owner.par.Requiretoken.default=False;owner.par.Requiretoken.val=False
         owner.par.Requiretoken.order=owner.par.Allowlan.order+0.5
     for name,label in (('Lanurls','LAN URLs'),('Lanstatus','Connection Status')):
         if getattr(owner.par,name,None) is None: page.appendStr(name,label=label)
         getattr(owner.par,name).readOnly=True
     owner.par.Lanurls.enableExpr='me.par.Allowlan'
+    arrange_manager_parameters(owner)
 
 
 def requested_lan(owner):
@@ -1550,6 +1587,7 @@ def start(owner,session=None):
     enabled=session.get('lan',requested_lan(owner)) if session else requested_lan(owner)
     _owner=owner; _token=session['token'] if session else secrets.token_urlsafe(32)
     if owner.fetch('sgrapeManager',False):
+        if getattr(owner.par,'Version',None) is not None:owner.par.Version=PRODUCT_VERSION
         if not owner.fetch('sgrapeManagerId',None): owner.store('sgrapeManagerId',uuid.uuid4().hex)
         if not session or not session.get('rebind'):
             shaders()

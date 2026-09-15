@@ -47,3 +47,12 @@ python tools/dev/submit_job.py tools/dev/jobs/arrange_native_networks.py --repor
 `tests/td/test_native_naming.py` 驗證 TOP／MAT 建立入口、原生編譯、回到管理元件的解析，以及舊模板相容；測試組件於結束時移除。改名後仍透過 `save_source_project.py` 保存正式 TOE。
 
 同輪清理 TOP 模板中已確認未使用的 `input_fallback`、`shader_pixel`、`shader_info`、`shader_compute`，並清空未使用的 Compute DAT 引用。保留實際產碼 `pixel_shader`、編譯檢查 `compile_info` 及仍被流程引用的輸入鏈；清理前後編譯與 TOP 圖像相同。Output／Common 的參數模板與輸入鏈簡化等待人工設計，尚未套用。
+
+
+## 管理元件參數分類
+
+`TD-Grape` 頁依序分組為建立 TOP／MAT、開啟 Editor／Browser、Update Shaders／Last Update，以及 Version。`Settings` 頁分組為 LAN／憑證／連線資訊、個人函式庫，以及 TDFam 註冊／狀態；組間使用 TD 原生分隔線。這些產品參數的標籤使用英文，原本的參數名稱、值、Expression 與 callback 保留。`arrange_manager_parameters()` 在啟動及整理模板時維持分類，僅處理已知管理參數；不移動節點或重編譯使用者圖。管理元件的 Version 顯示目前載入的 runtime 版本。
+
+個人函式庫優先使用 Palette 下的 `TD-Grape/Functions`；若新目錄不存在但舊 `TD-Sgrape/Functions` 有資料，仍可讀取舊庫。此次已將開發環境的舊資料夾改名、更新參數 Expression，驗證檔案雜湊及讀入的函式相同；既有函式檔案格式與檔名保持相容。
+
+Open Editor 在沒有 Shader 時自動建立 MAT 的行為仍待調整；允許尚未連接 Shader 的空白編輯器是討論中的方向，本次參數分類尚未改動該流程。
