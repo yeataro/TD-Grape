@@ -307,15 +307,32 @@ function installShaderNavigation(){
   };
   window.addEventListener('pageshow',()=>{switchingShader=false;});
 }
-let lastPreviewAt=0,autoPreview=true,previewAttempted=false,previewPending=0,previewFormat='';
+let lastPreviewAt=0,autoPreview=true,previewAttempted=false,previewPending=0,previewFormat='',previewSource='';
 try{autoPreview=localStorage.getItem('sgrapeAutoPreview')!=='false';}catch{}
 function renderPreviewAppearance(){
   renderNativeViewer();
   $('#refreshpreview').title=t('preview.connect');
   $('#refreshpreview').setAttribute('aria-label',t('preview.connect'));
   $('#previewsize').textContent=previewFormat;
+  renderPreviewSource(previewSource);
   showPreviewBusy();
 }
+function renderPreviewSource(source){
+  previewSource=source||'';
+  const parts=previewSource.split('/').filter(Boolean),tail=parts.splice(-2);
+  $('#previewpathprefix').textContent=parts.length?'/'+parts.join('/'):'';
+  $('#previewpathtail').textContent=tail.length?'/'+tail.join('/'):'';
+  $('#previewpath').disabled=!previewSource;
+  $('#previewpath').title=previewSource;
+  $('#previewpath').setAttribute('aria-label',t('preview.source')+(previewSource?' · '+previewSource:''));
+  $('#previewpathdetail').textContent=previewSource;
+}
+$('#previewpathdetail').addEventListener('beforetoggle',event=>{
+  if(event.newState!=='open')return;
+  const rect=$('#previewpath').getBoundingClientRect(),width=Math.min(360,innerWidth-24),top=Math.min(rect.bottom+4,innerHeight-100);
+  Object.assign(event.target.style,{left:Math.max(12,Math.min(rect.left,innerWidth-width-12))+'px',top:Math.max(12,top)+'px',width:width+'px',maxHeight:Math.min(240,innerHeight-top-12)+'px'});
+});
+if(typeof window!=='undefined')window.addEventListener('resize',()=>{const detail=$('#previewpathdetail');if(detail.matches(':popover-open'))detail.hidePopover();});
 const localViewerEntry=['127.0.0.1','localhost','[::1]'].includes(location.hostname);
 let nativeViewerOpening=false;
 function renderNativeViewer(){const button=$('#nativeviewer');button.hidden=true;button.disabled=!graph||nativeViewerOpening;button.title=t('viewer.description');}
@@ -331,9 +348,12 @@ function showPreviewBusy(){
   const state=panel.state||'disconnected',busy=previewPending>0||state==='connecting';
   $('#livebody').setAttribute('aria-busy',String(busy));
   $('#refreshpreview').classList.toggle('is-loading',busy);$('#refreshpreview').disabled=busy;
+  $('#autopreview').setAttribute('aria-pressed',String(autoPreview));
+  $('#autopreview').title=t(autoPreview?'preview.stop':'preview.start');
+  $('#autopreview').disabled=!graph;
   const key=busy?'connecting':state==='connected'?'connected':state==='replaced'?'replaced':state==='error'?'error':'disconnected';
   $('#previewactivity').textContent=t('preview.'+key);
-  $('#pane-live .live-dot')?.classList.toggle('is-connected',state==='connected');
+  const dot=$('#pane-live .live-dot');if(dot){dot.classList.toggle('is-connected',state==='connected');dot.title=t('preview.'+key);}
 }
 $('#preview').addEventListener('panel-state',event=>{
   const {state,message}=event.detail;if(!$('#previewactivity'))return;
@@ -343,7 +363,7 @@ $('#preview').addEventListener('panel-state',event=>{
 });
 $('#preview').addEventListener('panel-source',event=>{
   const {source}=event.detail;
-  $('#previewpath').textContent=source;$('#previewpath').title=source;
+  renderPreviewSource(source);
 });
 $('#preview').addEventListener('panel-format',event=>{
   previewFormat=event.detail.width+' × '+event.detail.height;
@@ -359,11 +379,12 @@ async function preview(force=false){
     let timeout;
     try{await Promise.race([customElements.whenDefined('td-remote-panel'),new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error(t('preview.unavailable'))),10000);})]);}
     finally{clearTimeout(timeout);}
+    if(!autoPreview)return;
     const data=await editorRequest('remote-preview',{});
-    if(!autoPreview&&!force)return;
+    if(!autoPreview)return;
     const endpoint=new URL('/',location.href);endpoint.port=String(data.port);
     $('#preview').setAttribute('endpoint',endpoint.href);
-    $('#previewpath').textContent=data.source;$('#previewpath').title=data.source;
+    renderPreviewSource(data.source);
     await $('#preview').connect({ticket:data.ticket});
   }catch(error){
     $('#previewactivity').title=error.message;
@@ -446,9 +467,17 @@ function renderGLSL(source){
   fragment.append(document.createTextNode(source.slice(offset)));target.replaceChildren(fragment);target.scrollTop=0;target.scrollLeft=0;
 }
 
-$('#autopreview').checked=autoPreview;
-$('#autopreview').onchange=()=>{autoPreview=$('#autopreview').checked;try{localStorage.setItem('sgrapeAutoPreview',String(autoPreview));}catch{}if(autoPreview)preview(true).catch(e=>status(e.message,true));else $('#preview').disconnect?.();};
-$('#refreshpreview').onclick=async()=>{autoPreview=true;$('#autopreview').checked=true;try{localStorage.setItem('sgrapeAutoPreview','true');await preview(true);}catch(e){status(e.message,true);}finally{showPreviewBusy();}};
+async function setPreviewEnabled(enabled){
+  autoPreview=enabled;
+  try{localStorage.setItem('sgrapeAutoPreview',String(enabled));}catch{}
+  showPreviewBusy();
+  try{if(enabled)await preview(true);else $('#preview').disconnect?.();}
+  catch(error){status(error.message,true);}
+  finally{showPreviewBusy();}
+}
+$('#autopreview').onclick=()=>setPreviewEnabled(!autoPreview);
+$('#refreshpreview').onclick=()=>setPreviewEnabled(true);
+showPreviewBusy();
 
 async function refreshProjectFile(){
   try{const result=await api('shaders');const label=$('#projectfile');label.textContent=result.projectFile||t('project.unsaved');label.title=label.textContent;}catch{const label=$('#projectfile');if(!label.textContent)label.textContent=t('project.unavailable');}

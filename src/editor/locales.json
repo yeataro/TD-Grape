@@ -1475,12 +1475,12 @@
       "zh-Hant": "目前為棋盤格。切換為深灰底。"
     },
     "preview.helpMaterial": {
-      "zh-Hant": "即時顯示 **TouchDesigner MAT 原生 Viewer**，上方路徑指出目前來源。點選影像即可操作；H 會重設該 Viewer。3D Viewer 支援單指旋轉、雙指平移與捏合縮放。\n\n所有 Editor 共用一個預覽連線；新的連線會接管來源。按「連線／接管預覽」可取回控制，取消「即時預覽」可釋放連線。切換分頁或修改 Shader 不會自動搶回控制。",
-      "en": "Live view of the **TouchDesigner native MAT viewer**. The path above identifies the source. Click the image to interact; H resets its Viewer. A 3D viewer supports single-finger orbit, two-finger pan and pinch zoom.\n\nAll Editors share one preview connection. The latest connection takes control. Use Connect / take control to reclaim it, or uncheck Live preview to release it. Returning to a tab or editing a Shader never automatically reclaims control."
+      "zh-Hant": "即時顯示 **TouchDesigner MAT 原生 Viewer**，上方路徑指出目前來源。點選影像即可操作；H 會重設該 Viewer。3D Viewer 支援單指旋轉、雙指平移與捏合縮放。\n\n所有 Editor 共用一個預覽連線；新的連線會接管來源。按「連線／接管預覽」可取回控制，按電源圖示停止預覽可釋放連線。切換分頁或修改 Shader 不會自動搶回控制。",
+      "en": "Live view of the **TouchDesigner native MAT viewer**. The path above identifies the source. Click the image to interact; H resets its Viewer. A 3D viewer supports single-finger orbit, two-finger pan and pinch zoom.\n\nAll Editors share one preview connection. The latest connection takes control. Use Connect / take control to reclaim it, or use the power icon to stop the preview and release it. Returning to a tab or editing a Shader never automatically reclaims control."
     },
     "preview.helpTop": {
-      "zh-Hant": "即時顯示 **TouchDesigner TOP 原生 Viewer**，上方路徑指出目前來源。點選影像即可操作；H 會重設該 Viewer。3D Viewer 支援單指旋轉、雙指平移與捏合縮放。\n\n所有 Editor 共用一個預覽連線；新的連線會接管來源。按「連線／接管預覽」可取回控制，取消「即時預覽」可釋放連線。切換分頁或修改 Shader 不會自動搶回控制。",
-      "en": "Live view of the **TouchDesigner native TOP viewer**. The path above identifies the source. Click the image to interact; H resets its Viewer. A 3D viewer supports single-finger orbit, two-finger pan and pinch zoom.\n\nAll Editors share one preview connection. The latest connection takes control. Use Connect / take control to reclaim it, or uncheck Live preview to release it. Returning to a tab or editing a Shader never automatically reclaims control."
+      "zh-Hant": "即時顯示 **TouchDesigner TOP 原生 Viewer**，上方路徑指出目前來源。點選影像即可操作；H 會重設該 Viewer。3D Viewer 支援單指旋轉、雙指平移與捏合縮放。\n\n所有 Editor 共用一個預覽連線；新的連線會接管來源。按「連線／接管預覽」可取回控制，按電源圖示停止預覽可釋放連線。切換分頁或修改 Shader 不會自動搶回控制。",
+      "en": "Live view of the **TouchDesigner native TOP viewer**. The path above identifies the source. Click the image to interact; H resets its Viewer. A 3D viewer supports single-finger orbit, two-finger pan and pinch zoom.\n\nAll Editors share one preview connection. The latest connection takes control. Use Connect / take control to reclaim it, or use the power icon to stop the preview and release it. Returning to a tab or editing a Shader never automatically reclaims control."
     },
     "node.label": {
       "zh-Hant": "Label · 標籤",
@@ -2421,6 +2421,18 @@
     "preview.live": {
       "zh-Hant": "即時預覽",
       "en": "Live preview"
+    },
+    "preview.source": {
+      "zh-Hant": "預覽來源路徑",
+      "en": "Preview source path"
+    },
+    "preview.start": {
+      "zh-Hant": "啟用即時預覽",
+      "en": "Enable live preview"
+    },
+    "preview.stop": {
+      "zh-Hant": "停止即時預覽",
+      "en": "Stop live preview"
     },
     "preview.connecting": {
       "zh-Hant": "連線中",
