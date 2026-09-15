@@ -101,9 +101,10 @@ const GraphClipboard=(()=>{
     function unique(items){const map=new Map();for(const item of items){if(!object(item)||!validId(item.id)||map.has(item.id))fail('clipboard.invalid');map.set(item.id,item);}return map;}
     const sourceFunctions=unique(p.functions),sourceDeclarations=unique(p.declarations);
     const topMap=new Map(),newSlots=[];
-    if(p.topInputs?.length){if(target!=='top')fail('clipboard.stage');for(const [key,slot]of unique(p.topInputs)){if(typeof slot.name!=='string'||!slot.name.length||slot.name.length>48||typeof slot.defaultSource!=='string')fail('clipboard.invalid');const existing=graph.topInputs?.find(s=>s.id===key);if(same&&existing)topMap.set(key,key);else {const next={...copy(slot),id:id()};topMap.set(key,next.id);newSlots.push(next);}}}
+    if(p.topInputs?.length){if(target!=='top')fail('clipboard.stage');for(const [key,slot]of unique(p.topInputs)){if(typeof slot.name!=='string'||!slot.name.length||slot.name.length>48||typeof slot.defaultSource!=='string')fail('clipboard.invalid');const existing=graph.topInputs?.find(s=>same?s.id===key:s.origin?.shader===p.source&&s.origin?.id===key);if(existing)topMap.set(key,existing.id);else {const next={...copy(slot),id:id(),origin:{shader:p.source,id:key}};delete next.legacyKeys;topMap.set(key,next.id);newSlots.push(next);}}}
     const newFunctions=[],newDeclarations=[],names=new Set(graph.declarations.map(d=>d.name));
     for(const [key,d]of sourceDeclarations){
+      if(graph.topSourceVersion===1&&d.kind==='sampler')fail('clipboard.stage');
       if(same&&graph.declarations.some(x=>x.id===key)){declarationMap.set(key,key);continue;}
       if(!['uniform','sampler','constant'].includes(d.kind)||!types.includes(d.type)&&d.type!=='sampler2D'||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;

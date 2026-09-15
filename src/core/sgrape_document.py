@@ -227,6 +227,10 @@ def inspect_upgrade(graph, core, expected_target, baseline=None, require_baselin
         references = core.inspect_graph_definitions(graph)['entries']
         candidate = copy.deepcopy(graph)
         affected = set()
+        if expected_target == 'top' and graph.get('topSourceVersion') != 1:
+            candidate, changed_functions = core.normalize_top_sources(candidate)
+            affected.update(changed_functions)
+            change('topSources', old=0, new=1)
         for ref in references:
             if ref['status'] == 'function':
                 continue
@@ -249,7 +253,8 @@ def inspect_upgrade(graph, core, expected_target, baseline=None, require_baselin
                 change('node', reasons=reasons, old=copy.deepcopy(old), new=copy.deepcopy(new), **context)
                 affected.add(ref['functionId'])
                 data = candidate['stages'][ref['stage']] if ref['stage'] else next(f['graph'] for f in candidate['functions'] if f['id'] == ref['functionId'])
-                next(n for n in data['nodes'] if n['id'] == ref['node'])['revisionHash'] = ref['currentRevision']
+                node = next(n for n in data['nodes'] if n['id'] == ref['node'])
+                node['revisionHash'] = core.BY_UUID[node['definitionUuid']]['revisionHash']
 
         # A changed source and its read-only callers become Shader-local copies.
         # Old full definitions stay in the TD upgrade backup, not in the active

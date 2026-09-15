@@ -519,7 +519,11 @@ function inspector(){
       else if(decl.kind==='constant')constantFields(box,decl);
       else nativeInputFields(box,decl);
     }
-    if(d.key==='top_input'){const source=allInputSources().find(s=>s.id===n.params.inputId);if(source)topInputInspector(box,source);}
+    if(n.params.inputId){
+      const sources=topInputsView(),source=sources.find(s=>s.id===n.params.inputId);
+      box.append(field(t('inputs.referenceSource'),select(sources.map(s=>[s.id,s.name]),n.params.inputId,value=>change(()=>n.params.inputId=value))));
+      if(source){const edit=el('button',{class:'wide'},t('inputs.edit')+' · '+source.name);edit.onclick=()=>selectInputSource(source.id);box.append(edit);}
+    }
     if(d.key==='sampler'){const create=el('button',{class:'wide'},t('sampler.create'));create.onclick=()=>newSampler(n);box.append(create);}
     else if(d.key==='uniform'&&!decl){
       const create=el('button',{class:'wide'},t('uniform.create'));create.onclick=()=>newUniform(n);box.append(create);
@@ -1075,6 +1079,7 @@ function renderNativeSourceValues(){
   for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=readonly;
   if($('#sourcekind'))$('#sourcekind').disabled=readonly;
   if($('#sourcetype'))$('#sourcetype').disabled=readonly||!['uniform','constant'].includes($('#sourcekind').value);
+  if($('#sourcekind').value==='top_input'){$('#sourcename').value='sTD2DInputs['+topInputsView().length+']';$('#sourcename').disabled=true;}
   $('#sourceparameters').hidden=!localViewerEntry;
   for(const option of $('#sourcekind').options)option.hidden=editorTarget==='top'?option.value==='sampler':option.value==='top_input';
   $('#sourcestatus').textContent=nativeSourceError||(!nativeSourceSnapshot?.enabled?t('sources.enable'):dirty||nativeSourceSnapshot.revision!==revision?t('sources.pending'):(nativeSourceSnapshot.issues||[]).map(i=>i.message).join('\n'));
@@ -1141,16 +1146,18 @@ function sourceLocations(box,id){
 function topInputInspector(box,source){
   const slots=topInputsView(),index=slots.findIndex(s=>s.id===source.id),live=nativeSourceSnapshot?.topInputs?.find(s=>s.id===source.id);
   const edit=fn=>changeDeclaration(()=>{const slot=ensureTopInputs().find(s=>s.id===source.id);fn(slot);if(slot.id===graph.topInputLegacyId)for(const d of graph.declarations.filter(d=>d.source==='input:0'))d.defaultSource=slot.defaultSource;});
-  box.append(el('strong',{},source.name),el('code',{class:'wide'},'sTD2DInputs['+index+']'),field(t('declaration.name'),input(source.name,name=>{if(name.trim()&&name.length<=48&&!/[\x00-\x1f]/.test(name))edit(s=>s.name=name);})),el('p',{class:'muted'},t('inputs.topHint')));
+  box.append(el('strong',{},'sTD2DInputs['+index+']'),field(t('node.label'),input(source.label||'',name=>{if(name.length<=48&&!/[\x00-\x1f]/.test(name))edit(s=>s.label=name);})),el('p',{class:'muted'},t('inputs.topHint')));
   const value=source.defaultSource;
   box.append(field(t('texture.default'),select(textureOptions().filter(([key])=>key!=='input:0'),value.startsWith('op:')?'external':value,next=>edit(s=>{s.defaultSource=next==='external'?'op:/project1/texture':next;s.matchDefault=true;}))));
   if(value.startsWith('op:'))box.append(field(t('texture.path'),input(value.slice(3),next=>edit(s=>{s.defaultSource='op:'+next;s.matchDefault=true;}))));
+  box.append(toggle(t('uniform.expose'),!!source.expose,next=>edit(s=>s.expose=next)));
+  if(source.expose)box.append(field(t('uniform.publicName'),input(source.exposeName||'Input '+(index+1)+' Default TOP',next=>edit(s=>s.exposeName=next))));
   if(live)box.append(el('p',{class:'muted'},(live.connected?t('inputs.connected'):t('texture.default'))+' · '+live.path+' · '+live.width+' × '+live.height));
   const actions=el('div',{class:'source-actions'});
   for(const [label,offset]of [['↑',-1],['↓',1]]){const b=el('button',{'aria-label':t(offset<0?'inputs.moveUp':'inputs.moveDown')},label);b.disabled=readonly||index+offset<0||index+offset>=slots.length;b.onclick=()=>changeDeclaration(()=>{const slots=ensureTopInputs();[slots[index],slots[index+offset]]=[slots[index+offset],slots[index]];});actions.append(b);}
   const ref=el('button',{},t('sources.reference'));ref.disabled=readonly;ref.onclick=()=>inputReference(source.id);actions.append(ref);box.append(actions);
   const aliases=source.id===(graph.topInputLegacyId||slots[0].id)&&graph.declarations.some(d=>d.source==='input:0'),used=sourceReferences(source.id).length;
-  const remove=el('button',{class:'wide danger'},t('sources.remove'));remove.disabled=readonly||slots.length===1||!!used||aliases||!!live?.connected;remove.onclick=()=>changeDeclaration(()=>{graph.topInputs=ensureTopInputs().filter(s=>s.id!==source.id);if(graph.topInputLegacyId===source.id)delete graph.topInputLegacyId;selectedInputId=null;});box.append(remove);
+  const remove=el('button',{class:'wide danger'},t('sources.remove'));remove.disabled=readonly||!!used||aliases||!!live?.connected;remove.onclick=()=>changeDeclaration(()=>{graph.topInputs=ensureTopInputs().filter(s=>s.id!==source.id);if(graph.topInputLegacyId===source.id)delete graph.topInputLegacyId;selectedInputId=null;});box.append(remove);
   if(remove.disabled&&!readonly)box.append(el('p',{class:'muted'},t('inputs.topRemoveHint')));
   sourceLocations(box,source.id);
   if(readonly)for(const field of box.querySelectorAll('input,select,button'))field.disabled=true;
@@ -1205,7 +1212,7 @@ function installNativeSources(){
   $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)];$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').value=['sampler','top_input'].includes(kind)?'sampler2D':kind==='color'?'vec4':'float';$('#sourcepresethint').textContent=preset?preset[1]:'';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
     e.preventDefault();const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value;
-    if(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)){status(t('inputs.invalidName'),true);return;}
+    if(kind!=='top_input'&&(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name))){status(t('inputs.invalidName'),true);return;}
     let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','top_input'].includes(kind)?kind:'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});if(changed)selectInputSource(id);
   };
   $('#sourceparameters').onclick=async()=>{try{await api('native-parameters',{});}catch(e){status(e.message,true);}};

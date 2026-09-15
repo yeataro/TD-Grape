@@ -16,7 +16,7 @@ commands = [
     [sys.executable, 'tools/build/sync_brand_assets.py', '--check'],
 ]
 commands.extend(['node', 'tests/unit/' + name] for name in (
-    'test_functions_model.js', 'test_personal_model.js', 'test_editor_edits.js', 'test_import_ui.js', 'test_preview_controls.js'))
+    'test_functions_model.js', 'test_top_source_clipboard.js', 'test_personal_model.js', 'test_editor_edits.js', 'test_import_ui.js', 'test_preview_controls.js'))
 commands.append(['node', '--test', 'tests/unit/test_remote_panel_touch.mjs', 'tests/unit/test_remote_panel_input.mjs', 'tests/unit/test_remote_panel_size.mjs'])
 for command in commands:
     subprocess.run(command, cwd=root, env=env, check=True)

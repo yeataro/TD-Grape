@@ -23,6 +23,7 @@ class UpgradePolicyTests(unittest.TestCase):
     def test_exact_and_proven_legacy_baselines_need_no_acceptance(self):
         for kind in ('mat','top'):
             graph=c.demo_graph('color',target=kind)
+            if kind=='top':graph=c.normalize_top_sources(graph)[0]
             report=d.inspect_upgrade(graph,c,kind,baseline={'catalogHash':c.catalog_contract()['hash']})
             self.assertFalse(report['required']);self.assertFalse(report['blocked'])
             self.assertIn('catalogSnapshot',report['candidate'])

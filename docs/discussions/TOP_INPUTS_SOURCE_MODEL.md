@@ -107,7 +107,7 @@ MAT 與 TOP 可共用來源／引用的管理原則，但原生綁定不同：MA
 - 新建時程式化計算間距，保留可讀名稱／標籤。一般套用應保留後续人工調整的位置；整體重排的觸發方式仍需設計。
 - 舊獨立 Sampler、`input:0` 與現有 `topInputs` 的轉換需納入同一輪規劃，保留來源、圖內引用、外部接線與公開參數綁定。不能只讓新圖乾淨而把舊圖留在無法升級的狀態。
 
-## 下一步待決策
+## 當時列出的待決策（實作結果見下節）
 
 1. 不保留永久不可刪的第一個 Input；零輸入與跟隨輸入解析度的行為需實測。
 2. 首版是否所有 TOP 來源都對應 COMP 接口；指定路徑但不暴露接口的能力如何呈現。
@@ -132,3 +132,7 @@ MAT 與 TOP 可共用來源／引用的管理原則，但原生綁定不同：MA
 - [TD：GLSL TOP](https://derivative.ca/UserGuide/GLSL_TOP)
 - [TD：GLSL Multi TOP](https://derivative.ca/UserGuide/GLSL_Multi_TOP)
 - [Derivative 論壇：TOPs 參數新增紀錄](https://forum.derivative.ca/t/fixed-tops-parameter-for-glsl-multi-top/283917)
+
+## 0.8.79 實作結果
+
+本輪已依授權完成，詳見 [實作與驗證紀錄](../features/TOP_SOURCE_INVENTORY.md)。第一個來源可以刪除；所有來源暫以 2D 對應 COMP 接口，索引名稱直接顯示 `sTD2DInputs[i]`，可另加 Label。新增引用不建立來源。來源管理與混合維度的完整 UI 仍待下一輪使用者實際觀察。

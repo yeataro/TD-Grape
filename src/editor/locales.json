@@ -2195,8 +2195,8 @@
       "en": "Absolute Frame · process frame"
     },
     "inputs.clockHint": {
-      "zh-Hant": "建立一般 float Uniform，以 TD Python Expression 取得時間。可修改 Expression，或新增到自訂參數。",
-      "en": "Create an ordinary float Uniform driven by a TD clock expression. Edit its expression or add it to a custom parameter page."
+      "en": "Time shortcuts reuse an existing Uniform for that clock, or create one if absent. Edit its TD Python expression or add it to a custom parameter page.",
+      "zh-Hant": "時間快捷方式會引用同一時鐘的既有 Uniform，沒有時才建立。可修改 TD Python Expression，或新增到自訂參數。"
     },
     "inputs.valueMode": {
       "zh-Hant": "數值",
@@ -2207,24 +2207,24 @@
       "zh-Hant": "具名 GLSL 編譯期常數。修改值會重新編譯 Shader；引用節點使用同一個 const 名稱。"
     },
     "help.top_input": {
-      "en": "A Grape TOP COMP input. Sample its texture or use its size and pixel size. An unconnected slot uses its default image.",
-      "zh-Hant": "Grape TOP 的 COMP 輸入。可採樣圖像或取得解析度、像素大小；未連接時使用預設圖像。"
+      "en": "Reference an existing TOP Input by its GLSL name, sTD2DInputs[i]. Adding or copying reference nodes does not create texture sources. Manage sources and their order in Inputs. Size and pixel size describe the same source.",
+      "zh-Hant": "以 sTD2DInputs[i] 引用既有 TOP 來源。新增或複製引用節點不會建立額外貼圖；在 Inputs 面板管理來源與順序。解析度與像素大小對應同一來源。"
     },
     "inputs.constantHint": {
       "en": "Constant values are compiled into GLSL; changing them recompiles the Shader.",
       "zh-Hant": "常數會寫入 GLSL；修改數值需要重新編譯。"
     },
     "inputs.topHint": {
-      "en": "COMP input order follows these slots. Empty inputs use their default image; size follows the effective image.",
-      "zh-Hant": "COMP 接口依槽位排序。空接口使用預設圖像；解析度跟隨實際圖像來源。"
+      "en": "One managed 2D source per COMP input. Order matches TOPs and sTD2DInputs[i]. External wiring overrides the default. With no inputs, the Shader uses its configured output size.",
+      "zh-Hant": "每個 COMP 接口對應一個受管理的 2D 來源，順序與 TOPs、sTD2DInputs[i] 一致。外部接線優先於預設圖像；沒有來源時使用設定的輸出尺寸。"
     },
     "inputs.topLimit": {
       "en": "At most 16 TOP Inputs.",
       "zh-Hant": "最多 16 個 TOP 輸入。"
     },
     "inputs.topRemoveHint": {
-      "en": "Keep one slot. Remove its references and disconnect its COMP input before deleting it.",
-      "zh-Hant": "至少保留一個槽位。請先移除引用並斷開 COMP 接線，再刪除槽位。"
+      "en": "Remove this source’s graph references and disconnect its COMP input before deleting it. All sources can be removed.",
+      "zh-Hant": "請先移除這個來源的圖內引用並斷開 COMP 接線，再刪除來源。可以刪除全部來源。"
     },
     "inputs.size": {
       "en": "Size",
@@ -2465,6 +2465,18 @@
     "preview.controlHint": {
       "zh-Hant": "點選預覽後可操作 · H 重設 Viewer",
       "en": "Click preview to interact · H resets Viewer"
+    },
+    "inputs.chooseTop": {
+      "en": "Create a TOP Input in the Inputs panel first. Nodes only reference existing sources.",
+      "zh-Hant": "請先在 Inputs 面板建立 TOP Input；圖內節點只引用既有來源。"
+    },
+    "inputs.referenceSource": {
+      "en": "Input source",
+      "zh-Hant": "引用來源"
+    },
+    "upgrade.topSources": {
+      "en": "Move TOP texture sources into one ordered inventory. Keep references and external connections; remove duplicate source plumbing.",
+      "zh-Hant": "將 TOP 貼圖來源統整為一份有序清單，保留引用與外部接線，清除重複的來源結構。"
     }
   }
 }

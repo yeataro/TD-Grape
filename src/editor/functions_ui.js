@@ -73,16 +73,19 @@ function uniqueInputName(hint='uValue'){
 }
 function topInputsView(){
   if(editorTarget!=='top')return [];
+  if(graph.topSourceVersion===1)return (graph.topInputs||[]).map((s,index)=>({...s,name:'sTD2DInputs['+index+']'}));
   const legacy=graph.declarations.find(d=>d.kind==='sampler'&&d.source==='input:0');
   return graph.topInputs||[{id:'input0',name:'Input 0',defaultSource:legacy?.defaultSource||'builtin:banana',matchDefault:!!legacy?.defaultSource}];
 }
-function ensureTopInputs(){if(editorTarget!=='top')throw Error('TOP Inputs require Grape TOP.');graph.topInputs||=clone(topInputsView());if(graph.declarations.some(d=>d.source==='input:0'))graph.topInputLegacyId||=graph.topInputs[0].id;return graph.topInputs;}
+function ensureTopInputs(){if(editorTarget!=='top')throw Error('TOP Inputs require Grape TOP.');graph.topInputs||=clone(topInputsView());if(graph.declarations.some(d=>d.source==='input:0')&&graph.topInputs.length)graph.topInputLegacyId||=graph.topInputs[0].id;return graph.topInputs;}
 function allInputSources(){return [...topInputsView().map((s,index)=>({...s,kind:'top_input',type:'sampler2D',index})),...graph.declarations];}
 function constantFields(box,decl){
   box.append(field(t('node.type'),select(['float','vec2','vec3','vec4'].map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value)),el('p',{class:'muted'},t('inputs.constantHint')));
 }
 function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence}={}){
-  if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:name||'Input '+slots.length,defaultSource:'builtin:black'};slots.push(slot);return slot;}
+  if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'sTD2DInputs['+slots.length+']',defaultSource:'builtin:black'};slots.push(slot);return slot;}
+  if(kind==='sampler'&&editorTarget==='top')throw Error(t('inputs.chooseTop'));
+  if(kind==='uniform'&&preset){const existing=graph.declarations.find(d=>d.kind==='uniform'&&d.type===type&&d.initialDriver===preset);if(existing)return existing;}
   const id=kind+'_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||(kind==='sampler'?'uTexture':'uValue'))};
   if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
@@ -97,7 +100,7 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||'float',inputSeed);
     if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;
   }
-  if(d.key==='top_input'){const slots=ensureTopInputs();const slot=declarationId?slots.find(s=>s.id===declarationId):createInputDeclaration('top_input',null,inputSeed);if(!slot)throw Error(t('clipboard.missing'));params.inputId=slot.id;}
+  if(d.key==='top_input'){const slots=ensureTopInputs();const slot=declarationId?slots.find(s=>s.id===declarationId):slots.find(s=>s.id===selectedInputId)||slots[0];if(!slot)throw Error(t('inputs.chooseTop'));params.inputId=slot.id;}
   if(d.key==='sampler'){
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='sampler'):createInputDeclaration('sampler','sampler2D',inputSeed);
     if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;
@@ -239,6 +242,13 @@ function portLabel(n,kind,id){
 function splitLegacyTexture(n){
   if(definition(n)?.key!=='texture')return false;
   return change(()=>{
+    if(editorTarget==='top'&&n.params.inputId){
+      const data=current(),inputId=n.params.inputId,sourceDef=catalog.find(d=>d.key==='top_input'),sampleDef=catalog.find(d=>d.key==='texture_sample');
+      let source=data.nodes.find(s=>s.definitionUuid===sourceDef.definitionUuid&&s.params.inputId===inputId);
+      if(!source){source={id:'n'+crypto.randomUUID().replaceAll('-','').slice(0,12),definitionUuid:sourceDef.definitionUuid,revisionHash:sourceDef.revisionHash,params:{inputId},ui:{x:n.ui.x-288,y:n.ui.y+168}};data.nodes.push(source);}
+      n.definitionUuid=sampleDef.definitionUuid;n.revisionHash=sampleDef.revisionHash;delete n.params.inputId;
+      data.edges.push({from:[source.id,'out'],to:[n.id,'sampler']});return;
+    }
     const decl=graph.declarations.find(d=>d.id===n.params.declarationId&&d.kind==='sampler');
     if(!decl)throw Error(t('sampler.missingDeclaration'));
     const data=current(),samplerDef=catalog.find(d=>d.key==='sampler'),sampleDef=catalog.find(d=>d.key==='texture_sample');

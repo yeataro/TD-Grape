@@ -37,6 +37,7 @@ try:
         with runtime.shader_context(master):
             if runtime.source_module():runtime.source_module().sync(runtime)
             review=runtime.prepare_upgrade_review()
+            before[kind]['sourceMigration']=any(c['code']=='topSources' for c in review['changes'])
             assert not review['blocked'], runtime.upgrade_summary(review)
             if review['required']:
                 outcome=runtime.deploy(review['candidate'],review['revision'],upgrade_token=review['token'])
@@ -55,7 +56,8 @@ try:
     for kind,master in masters.items():
         baseline=before[kind]
         assert (master.id,master.storage['sgrapeShaderId'])==(baseline['id'],baseline['identity'])
-        assert all((n.nodeX,n.nodeY)==baseline['positions'][n.id] for n in master.children if n.id in baseline['positions'])
+        if not baseline['sourceMigration']:
+            assert all((n.nodeX,n.nodeY)==baseline['positions'][n.id] for n in master.children if n.id in baseline['positions'])
         for name,(original,mode,value,expr,bind) in baseline['parameters'].items():
             p=getattr(master.par,name)
             assert p.isSamePar(original) and (str(p.mode),p.val,p.expr,p.bindExpr)==(mode,value,expr,bind), name
@@ -74,6 +76,6 @@ finally:
         master.currentPage=before[kind]['currentPage']
     runtime._shaders=previous_shaders
     runtime._shader=previous_shader
-result={'masters':records,'identitiesAndPositionsPreserved':True,'userShadersPreserved':len(before_users),
+result={'masters':records,'identitiesPreserved':True,'positionsPreservedExceptSourceMigration':True,'userShadersPreserved':len(before_users),
         'backup':str(backup),'saved':False}
 (GRAPE_TEST_OUTPUT/'sync.json').write_text(json.dumps(result,indent=2),encoding='utf-8')

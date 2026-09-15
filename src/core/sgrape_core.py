@@ -408,12 +408,70 @@ def _scope_comments(lines, owners, nodes, scopes, stage):
     return result,locations
 
 
+def normalize_top_sources(graph):
+    """Migrate TOP sampler declarations to one ordered inventory, without TD writes.
+
+    Slot IDs survive reordering. legacyKeys only reconnect existing public TOP
+    parameters during migration; they are not additional image resources.
+    """
+    result=copy.deepcopy(graph)
+    if graph_target(result)=='top' and result.get('topSourceVersion') not in (None,1):raise GraphError('Unsupported TOP source model version')
+    if graph_target(result)!='top' or result.get('topSourceVersion')==1:return result,[]
+    slots=result.setdefault('topInputs',[{'id':'input0','name':'Input 1','defaultSource':'builtin:banana','legacyKeys':['input:0']}]);changed_functions=[];mapping={}
+    samplers=[d for d in result.get('declarations',[]) if d.get('kind')=='sampler']
+    occupied={s['id'] for s in slots}
+    legacy=result.get('topInputLegacyId') or (slots[0]['id'] if slots else None)
+    for decl in samplers:
+        key='input:0' if decl.get('source')=='input:0' else decl['id']
+        slot=next((s for s in slots if s['id']==legacy),None) if key=='input:0' else None
+        if slot is None:
+            ident='input0' if key=='input:0' else 'input_'+digest(['topSource',decl['id']])[:20]
+            while ident in occupied:ident+='x'
+            occupied.add(ident)
+            slot={'id':ident,'name':decl['name'],'defaultSource':decl.get('defaultSource','builtin:banana') if key=='input:0' else decl['source']}
+            slots.append(slot)
+            if key=='input:0':legacy=ident
+        slot.setdefault('legacyKeys',[])
+        if key=='input:0' and 'topInputs' not in graph:slot['defaultSource']=decl.get('defaultSource','builtin:banana')
+        if key not in slot['legacyKeys']:slot['legacyKeys'].append(key)
+        if decl.get('expose'):
+            slot['expose']=True;slot['exposeName']=decl.get('exposeName') or decl['name']
+        mapping[decl['id']]=slot['id']
+    for index,slot in enumerate(slots):
+        if slot.get('name')!='sTD2DInputs['+str(index)+']':slot.setdefault('label',slot.get('name',''))
+        slot['name']='sTD2DInputs['+str(index)+']';slot['matchDefault']=True
+    for owner,data in [(None,s) for s in result['stages'].values()]+[(f['id'],f['graph']) for f in result.get('functions',[])]:
+        for n in list(data['nodes']):
+            p=n.get('params',{});definition=BY_UUID.get(n.get('definitionUuid'),{})
+            if definition.get('key') not in ('sampler','texture') or p.get('declarationId') not in mapping:continue
+            p['inputId']=mapping[p.pop('declarationId')]
+            if definition['key']=='sampler':
+                n['definitionUuid']=CATALOG['top_input']['definitionUuid'];n['revisionHash']=CATALOG['top_input']['revisionHash']
+            else:
+                # Keep the original sample node and its UV/output connections.
+                source=next((s for s in data['nodes'] if s.get('definitionUuid')==CATALOG['top_input']['definitionUuid'] and s.get('params',{}).get('inputId')==p['inputId']),None)
+                if source is None:
+                    ident='source_'+digest([n['id'],p['inputId']])[:20]
+                    while any(s['id']==ident for s in data['nodes']):ident+='x'
+                    source=node('top_input',ident,inputId=p['inputId'])
+                    source['ui']={'x':n.get('ui',{}).get('x',0)-288,'y':n.get('ui',{}).get('y',0)+168}
+                    data['nodes'].append(source)
+                n['definitionUuid']=CATALOG['texture_sample']['definitionUuid'];n['revisionHash']=CATALOG['texture_sample']['revisionHash']
+                p.pop('inputId');data['edges'].append(edge(source['id'],n['id'],'sampler'))
+            if owner and owner not in changed_functions:changed_functions.append(owner)
+    result['declarations']=[d for d in result['declarations'] if d.get('kind')!='sampler']
+    result.pop('topInputLegacyId',None);result['topSourceVersion']=1
+    top_input_slots(result)
+    return result,changed_functions
+
+
 def top_input_slots(graph):
     """Optional managed COMP inputs. Absence preserves legacy source ordering."""
     slots=graph.get('topInputs')
+    if graph.get('topSourceVersion')==1 and slots is None:raise GraphError('The TOP source inventory is missing')
     if slots is None:return []
     if graph_target(graph)!='top':raise GraphError('TOP Inputs belong to Grape TOP only')
-    if not isinstance(slots,list) or not 1<=len(slots)<=16:raise GraphError('Keep between 1 and 16 TOP Inputs')
+    if not isinstance(slots,list) or not 0<=len(slots)<=16:raise GraphError('Keep between 0 and 16 TOP Inputs')
     seen=set()
     for slot in slots:
         if not isinstance(slot,dict) or not ID.fullmatch(str(slot.get('id',''))) or slot['id'] in seen:raise GraphError('Invalid or duplicate TOP Input identity')
@@ -421,6 +479,9 @@ def top_input_slots(graph):
         name=slot.get('name')
         if not isinstance(name,str) or not 1<=len(name)<=48 or any(ord(c)<32 for c in name):raise GraphError('TOP Input name must contain 1–48 plain text characters')
         if not texture_source_valid(slot.get('defaultSource')):raise GraphError('Choose a TOP Input default image or absolute TOP path')
+        if not isinstance(slot.get('expose',False),bool):raise GraphError('Expose must be a boolean')
+        label=slot.get('exposeName','')
+        if not isinstance(label,str) or len(label)>80 or any(ord(c)<32 for c in label):raise GraphError('Public texture label must be plain text up to 80 characters')
     if graph.get('topInputLegacyId') is not None and graph['topInputLegacyId'] not in seen:raise GraphError('The legacy TOP Input slot is still referenced')
     return slots
 
@@ -435,6 +496,9 @@ def _compile_flat(graph,annotation_scopes=None):
     if len(json.dumps(sized,allow_nan=False))>512000: raise GraphError('Graph exceeds 512 KB')
     if set(graph.get('stages',{}))!=set(graph_stages(graph)): raise GraphError('Shader stages do not match its target')
     slots=top_input_slots(graph)
+    managed=graph.get('topSourceVersion')==1
+    if managed and any(d.get('kind')=='sampler' for d in graph.get('declarations',[])):
+        raise GraphError('Grape TOP texture sources belong in TOP Inputs; nodes reference an input ID')
     declarations={}; names=set()
     for d in graph.get('declarations',[]):
         if not isinstance(d,dict) or not ID.fullmatch(str(d.get('id',''))): raise GraphError('Invalid declaration ID')
@@ -498,7 +562,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     literal(params.get('value'),next(iter(d['outputs'].values())))
                 declaration=None
                 if d['key'] in ('uniform','constant','texture','sampler'):
-                    declaration=declarations.get(params.get('declarationId'))
+                    declaration=declarations.get('grapeTop_'+str(params['inputId'])) if managed and d['key']=='texture' and params.get('inputId') else declarations.get(params.get('declarationId'))
                     expected=d['key'] if d['key'] in ('uniform','constant') else 'sampler'
                     if not declaration or declaration['kind']!=expected: raise GraphError('Select a matching declaration',ident)
                 if d['key']=='top_input' and not any(slot['id']==params.get('inputId') for slot in slots):
@@ -548,6 +612,9 @@ def _compile_flat(graph,annotation_scopes=None):
                     val=expressions[source]
                     return convert_expression(val, ports[source[0]]['out'][source[1]], target)
                 if target in RESOURCE_TYPES:
+                    if managed:
+                        diagnostics.append({'node':ident,'stage':stage,'message':'Sampler input is unconnected; sampling returns opaque black without allocating a TOP Input'})
+                        return 'sg_unconnectedSampler'
                     # One defined fallback binding per Shader, even through nested interfaces.
                     fallback={'id':'grapeFallbackSampler','kind':'sampler','name':'sg_fallbackTexture',
                               'type':'sampler2D','source':'builtin:black','fallback':'opaque-black','internal':True}
@@ -580,7 +647,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='split':
                     for port in ports[ident]['out']: expressions[(ident,port)]='('+a('color')+').'+port
                 elif k in ('uniform','constant','texture','sampler'):
-                    decl=declarations[p['declarationId']]; used.add(decl['id'])
+                    decl=declarations['grapeTop_'+p['inputId']] if managed and k=='texture' and p.get('inputId') else declarations[p['declarationId']]; used.add(decl['id'])
                     symbol='sg_sampler_'+decl['id'] if graph_target(graph)=='top' and k not in ('uniform','constant') else decl['name']
                     expr='texture('+symbol+', '+a('uv')+')' if k=='texture' else symbol
                 elif k=='top_input':
@@ -588,7 +655,9 @@ def _compile_flat(graph,annotation_scopes=None):
                     expr='sTD2DInputs['+str(index)+']'
                     expressions[(ident,'size')]='uTD2DInfos['+str(index)+'].res.zw'
                     expressions[(ident,'pixelSize')]='uTD2DInfos['+str(index)+'].res.xy'
-                elif k=='texture_sample': expr='texture('+a('sampler')+', '+a('uv')+')'
+                elif k=='texture_sample':
+                    sampler=a('sampler')
+                    expr='vec4(0.0, 0.0, 0.0, 1.0)' if sampler=='sg_unconnectedSampler' else 'texture('+sampler+', '+a('uv')+')'
                 elif k=='glsl_code':
                     function='sg_code_'+ident+'_'+p['functionName']
                     signature=[('in' if direction=='inputs' else 'out')+' '+port['type']+' '+port['name']
@@ -602,6 +671,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     helper_nodes.extend(dict(node=ident,stage=stage,trail=[],**({'codeLine':i-body_start+1} if body_start<=i<body_start+len(body) else {})) for i in range(len(block)))
                     helpers.extend(block)
                     arguments=[a(port['id']) for port in p['inputs']]
+                    if 'sg_unconnectedSampler' in arguments:raise GraphError('Connect every GLSL Code sampler input to an existing TOP Input',ident)
                     for port in p['outputs']:
                         variable='sg_n_'+ident+'_'+port['id']
                         lines.append('    '+port['type']+' '+variable+';')

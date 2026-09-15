@@ -671,7 +671,7 @@ function openCreator(clientX,clientY,wire=null){
 function renderCreator(){
   if(!creatorState)return;const query=$('#createsearch').value.toLowerCase(),category=creatorCategory,typeFilter=$('#createtype').value,wire=creatorState.wire;
   creatorMatches=[];
-  const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant','top_input'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
+  const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
   for(const preset of Object.keys(inputPresets)){
     const base=catalog.find(d=>d.key==='uniform');if(!base)continue;
     const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:creatorMeta(d)});

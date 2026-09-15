@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.78'
+PRODUCT_VERSION='0.8.79'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -113,11 +113,18 @@ def status(key):
 def match_input():
     comp = me.parent()
     slots=comp.fetch('grapeTopSlots',[])
+    if comp.fetch('grapeTopSourceVersion',0)==1:return bool(slots)
     key='slot:'+slots[0]['id'] if slots else 'input:0'
     spec=comp.fetch('sgrapeTextureSources', {}).get(key, {})
     parameter=getattr(comp.par,spec.get('parameter') or '_missing',None)
     selected=parameter is not None and (parameter.mode!=ParMode.CONSTANT or bool(str(parameter.val).strip()))
     return effective(key)['status']=='connected' or spec.get('matchDefault',False) or selected
+
+def input_dimension(dimension):
+    comp=me.parent()
+    slots=comp.fetch('grapeTopSlots',[])
+    image=comp.op(slots[0]['node']) if slots else None
+    return getattr(image,dimension) if image else getattr(comp.par,dimension.title()).eval()
 '''
 
 _server=None
@@ -439,7 +446,7 @@ def create_shader(parent_comp,name='Grape_MAT1',graph=None,kind='mat'):
         name=stem+str(index)
     fresh=graph is None
     graph=copy.deepcopy(graph or core().demo_graph(target=kind))
-    if fresh and kind=='top':graph['topInputLegacyId']='input0';graph['topInputs']=[{'id':'input0','name':'Input 0','defaultSource':'builtin:banana','matchDefault':False}]
+    if fresh and kind=='top':graph=core().normalize_top_sources(graph)[0]
     review=_owner.op('document').module.inspect_upgrade(graph, core(), kind, require_baseline=False)
     if review['required'] or review['blocked']:
         raise RuntimeError('This graph needs a version review. Create a current Shader and import the graph in its editor.')
@@ -449,6 +456,7 @@ def create_shader(parent_comp,name='Grape_MAT1',graph=None,kind='mat'):
     try:
         configure(shader,compiled,graph)
         validate_material(shader)
+        cleanup_top_sources(shader,graph)
         register_shader(shader,fresh=True)
         return shader
     except Exception:
@@ -560,6 +568,11 @@ def make_top_scene(comp):
     router.inputConnectors[0].connect(incoming)
     shader=comp.create(glslTOP,'shader');shader.par.glslversion='glsl450';shader.par.compilebehavior='stalluntildone'
     pixel=comp.create(textDAT,'pixel_shader');shader.par.pixeldat='pixel_shader'
+    # Native creation provides example DATs; this shell supplies its own pixel
+    # program and does not expose Compute mode. Remove only these fresh defaults.
+    shader.par.computedat=''
+    for name in ('shader_pixel','shader_compute','shader_info'):
+        if comp.op(name):comp.op(name).destroy()
     output=comp.create(outTOP,'out1');output.inputConnectors[0].connect(shader)
     output.par.format='useinput'
     preview=comp.create(resolutionTOP,'preview');preview.inputConnectors[0].connect(shader)
@@ -575,6 +588,10 @@ def texture_key(decl):
     return 'slot:'+decl['topInputId'] if decl.get('topInputId') else 'input:0' if decl['source']=='input:0' else decl['id']
 
 def texture_specs(graph):
+    if graph.get('topSourceVersion')==1:
+        return {'slot:'+slot['id']:{'default':slot['defaultSource'],'expose':slot.get('expose',False),
+            'label':slot.get('exposeName') or 'Input '+str(index+1)+' Default TOP','matchDefault':True,
+            'fallback':'opaque-black'} for index,slot in enumerate(core().top_input_slots(graph))}
     specs={}
     for decl in graph['declarations']:
         if decl['kind']!='sampler':continue
@@ -596,6 +613,7 @@ def top_external_connections(comp):
     return {ident:(comp.inputConnectors[index].connections[0].owner if index<len(comp.inputConnectors) and comp.inputConnectors[index].connections else None) for index,ident in enumerate(ids)}
 
 def prepare_top_slots(comp,graph,input_owner=None):
+    if graph.get('topSourceVersion')==1:return prepare_managed_top_slots(comp,graph,input_owner)
     slots=core().top_input_slots(graph)
     old=comp.fetch('grapeTopSlots',[])
     if not slots and not old:return
@@ -639,6 +657,98 @@ def prepare_top_slots(comp,graph,input_owner=None):
             if source:comp.inputConnectors[index].connect(source)
     comp.op('input_router').inputConnectors[0].connect(comp.op(records[0]['node']))
 
+
+def prepare_managed_top_slots(comp,graph,input_owner=None):
+    """One row per source: default image -> In TOP -> shader TOPs list.
+
+    Public/default-path overrides add a Select only when they need indirection.
+    Graph references never reach this builder with their own resource entries.
+    """
+    slots=core().top_input_slots(graph);owner=input_owner or comp
+    old=comp.fetch('grapeTopSlots',[]);external=top_external_connections(owner)
+    if not owner.fetch('grapeTopSlots',[]) and slots:
+        external={slots[0]['id']:external.get('input0')}
+    desired={slot['id'] for slot in slots}
+    if any(source and ident not in desired for ident,source in external.items()):
+        raise RuntimeError('Disconnect the COMP input before removing its TOP Input source.')
+    old_nodes={record['id']:comp.op(record['node']) for record in old}
+    if not old and slots and comp.op('in1'):old_nodes[slots[0]['id']]=comp.op('in1')
+    for connector in comp.inputConnectors:connector.disconnect()
+    # Temporary names make swapping source order safe without replacing In OPs.
+    for ident,incoming in old_nodes.items():
+        if incoming:incoming.name='grape_input_'+hashlib.sha256(ident.encode()).hexdigest()[:12]
+    records=[]
+    for index,slot in enumerate(slots):
+        incoming=old_nodes.get(slot['id']) or comp.create(inTOP,'grape_new_input')
+        incoming.name='in'+str(index+1)
+        incoming.par.connectorder=index;incoming.par.label='sTD2DInputs['+str(index)+']';incoming.par.format='useinput'
+        if comp.fetch('grapeTopArrangeSources',False):
+            incoming.nodeX=-360;incoming.nodeY=-(index*220);incoming.nodeWidth=150;incoming.nodeHeight=100
+        incoming.comment='Input '+str(index+1)+' / sTD2DInputs['+str(index)+'] — external wire overrides the default image.'
+        key='slot:'+slot['id'];spec=comp.fetch('sgrapeTextureSources',{})[key]
+        source=external.get(slot['id']);default=comp.op(spec['asset'])
+        if spec.get('parameter') or spec['default'].startswith('op:') or (input_owner and source):
+            name='input_'+str(index+1)+'_source'
+            selected=comp.op(name)
+            if selected and not selected.fetch('grapeManagedTopSource',False):raise RuntimeError('An unrelated operator occupies '+selected.path)
+            selected=selected or comp.create(selectTOP,name)
+            selected.store('grapeManagedTopSource',True);selected.par.format='useinput'
+            selected.par.top=source.path if input_owner and source else ''
+            if not (input_owner and source):selected.par.top.expr="mod('texture_sources').resolve("+repr(key)+")"
+            if comp.fetch('grapeTopArrangeSources',False) or not selected.fetch('grapeSourcePlaced',False):
+                selected.nodeX=-590;selected.nodeY=-(index*220);selected.nodeWidth=150;selected.nodeHeight=100;selected.store('grapeSourcePlaced',True)
+            default=selected
+        incoming.inputConnectors[0].connect(default)
+        records.append(dict(slot,node=incoming.name))
+    for ident,incoming in old_nodes.items():
+        if ident not in desired and incoming:incoming.destroy()
+    if not slots and comp.op('in1'):comp.op('in1').destroy()
+    comp.store('grapeTopSlots',records);comp.store('grapeTopSourceVersion',1)
+    comp.store('grapeTopExternal',{ident:source.path for ident,source in external.items() if source} if input_owner else {})
+    if not input_owner:
+        for index,record in enumerate(records):
+            source=external.get(record['id'])
+            if source:comp.inputConnectors[index].connect(source)
+
+
+def managed_top_asset(comp,index,source):
+    name='input_'+str(index+1)+'_default'
+    kind=constantTOP if source in ('builtin:white','builtin:black') or source.startswith('op:') else moviefileinTOP
+    asset=comp.op(name)
+    if asset and not asset.fetch('grapeManagedTopSource',False):raise RuntimeError('An unrelated operator occupies '+asset.path)
+    if asset and asset.type!=('constant' if kind==constantTOP else 'moviefilein'):asset.destroy();asset=None
+    asset=asset or comp.create(kind,name);asset.store('grapeManagedTopSource',True)
+    if kind==constantTOP:
+        value=1 if source=='builtin:white' else 0
+        asset.par.colorr=value;asset.par.colorg=value;asset.par.colorb=value;asset.par.alpha=1
+        asset.par.resolutionw=2;asset.par.resolutionh=2
+    else:
+        file='Jellybeans.1.jpg' if source=='builtin:jellybeans' else 'Banana.tif'
+        asset.par.file.expr="app.samplesFolder + '/Map/"+file+"'"
+    if comp.fetch('grapeTopArrangeSources',False) or not asset.fetch('grapeSourcePlaced',False):
+        asset.nodeX=-820;asset.nodeY=-(index*220);asset.nodeWidth=150;asset.nodeHeight=100;asset.store('grapeSourcePlaced',True)
+    asset.comment='Default image for Input '+str(index+1)+'. Used when the COMP input is disconnected.'
+    return asset
+
+
+def cleanup_top_sources(comp,graph):
+    """After successful deployment only, retire known generated source plumbing."""
+    if graph.get('topSourceVersion')!=1:return
+    keep={s['node'] for s in comp.fetch('grapeTopSlots',[])}
+    keep.update(spec['asset'] for spec in comp.fetch('sgrapeTextureSources',{}).values())
+    keep.update(spec['blackAsset'] for spec in comp.fetch('sgrapeTextureSources',{}).values() if spec.get('blackAsset'))
+    keep.update(c.owner.name for slot in comp.fetch('grapeTopSlots',[]) for c in comp.op(slot['node']).inputConnectors[0].connections)
+    legacy=set(comp.fetch('grapeRetiredTopNodes',[]))
+    obsolete=[n for n in comp.children if n.name not in keep and (n.id in legacy or n.fetch('grapeManagedTopSource',False))]
+    for n in obsolete:
+        if n.valid:n.destroy()
+    comp.store('grapeRetiredTopNodes',[])
+    if not comp.fetch('grapeTopLayoutV1',False):
+        for name,(x,y) in {'shader':(0,0),'pixel_shader':(0,260),'out1':(280,0),'preview':(280,-220),'compile_info':(0,-220),'graph':(520,260),'manifest':(760,260),'state':(1000,260),'texture_sources':(-360,260),'controls':(520,-220),'parameter_links':(760,-220),'upgrade_backup':(1000,-220),'parameter_lifecycle':(520,-440),'FamManifest':(1000,-440)}.items():
+            n=comp.op(name)
+            if n:n.nodeX=x;n.nodeY=y
+        comp.store('grapeTopLayoutV1',True)
+
 def top_input_snapshot(comp):
     helper=comp.op('texture_sources')
     rows=[]
@@ -668,8 +778,33 @@ def texture_asset(comp,key,source):
     return asset
 
 def prepare_textures(comp,graph,input_owner=None,compiled=None):
+    managed=graph.get('topSourceVersion')==1
+    if managed and comp.fetch('grapeTopSourceVersion',0)!=1:
+        # Identify old generated objects from the previous resource registry,
+        # not a broad name-prefix sweep over potentially user-authored OPs.
+        names={'input_default','input_fallback','input_router','input_external'}
+        for key,spec in comp.fetch('sgrapeTextureSources',{}).items():
+            names.update(spec[k] for k in ('asset','blackAsset') if spec.get(k))
+            for value in (key,'black:'+key):
+                suffix=hashlib.sha256(value.encode()).hexdigest()[:16]
+                names.update('texture_default_'+suffix+tail for tail in ('','_image','_constant'))
+                names.add('texture_source_'+suffix)
+        names.update('default_'+s['node'] for s in comp.fetch('grapeTopSlots',[]))
+        names.add('default_in1')
+        comp.store('grapeRetiredTopNodes',[comp.op(name).id for name in names if comp.op(name)])
+    if managed:comp.store('grapeTopArrangeSources',comp.fetch('grapeTopSourceVersion',0)!=1 or [s['id'] for s in comp.fetch('grapeTopSlots',[])]!=[s['id'] for s in graph['topInputs']])
+    if shader_kind(comp)=='top' and not managed:
+        comp.store('grapeTopSourceVersion',0)
+        if not comp.op('in1'):comp.create(inTOP,'in1')
+        if not comp.op('input_router'):comp.create(nullTOP,'input_router')
     projected=dict(graph,declarations=graph['declarations']+[b for b in (compiled or {}).get('bindings',[]) if b.get('internal')])
     bindings=copy.deepcopy(comp.fetch('sgrapePublicTextures',{}));specs=texture_specs(projected)
+    if managed:
+        previous=(input_owner or comp).fetch('sgrapePublicTextures',{})
+        for slot in graph['topInputs']:
+            key='slot:'+slot['id']
+            old=next((previous[k] for k in [key]+slot.get('legacyKeys',[]) if k in previous),None)
+            if old and getattr(comp.par,old['parameter'],None) is not None:bindings.setdefault(key,copy.deepcopy(old))
     if graph.get('topInputs') and 'input:0' in bindings:
         bindings.setdefault('slot:'+graph.get('topInputLegacyId',graph['topInputs'][0]['id']),bindings['input:0'])
     for key,spec in specs.items():
@@ -689,6 +824,9 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
         p.default=spec['default'][3:] if spec['default'].startswith('op:') else ''
         if input_owner:
             old=input_owner.fetch('sgrapePublicTextures',{}).get(key) or (input_owner.fetch('sgrapePublicTextures',{}).get('input:0') if key==legacy_key else None)
+            if managed and not old:
+                slot=next(s for s in graph['topInputs'] if key=='slot:'+s['id'])
+                old=next((input_owner.fetch('sgrapePublicTextures',{})[k] for k in slot.get('legacyKeys',[]) if k in input_owner.fetch('sgrapePublicTextures',{})),None)
             previous=getattr(input_owner.par,old['parameter'],None) if old else None
             if previous is not None:
                 value=previous.eval()
@@ -698,22 +836,33 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
         spec['parameter']=p.name
     for key,binding in bindings.items():
         if key not in specs or not specs[key]['expose']:
+            if any(spec.get('parameter')==binding['parameter'] for spec in specs.values()):continue
             p=getattr(comp.par,binding['parameter'],None)
             if p is not None:
                 page=next((p for p in comp.customPages if p.name=='Inactive Textures'),None) or comp.appendCustomPage('Inactive Textures')
                 p.page=page;p.enable=False
     # Only TOP components have the default COMP input. MAT uses its samplers.
-    if shader_kind(comp)=='top':
+    if shader_kind(comp)=='top' and not managed:
         specs.setdefault('input:0',{'default':'builtin:banana','expose':False,'matchDefault':False})
-    for key,spec in specs.items():
-        spec['asset']=texture_asset(comp,key,spec['default']).name
-        if spec.get('fallback')=='opaque-black':spec['blackAsset']=texture_asset(comp,'black:'+key,'builtin:black').name
+    for index,(key,spec) in enumerate(specs.items()):
+        spec['asset']=(managed_top_asset(comp,index,spec['default']) if managed else texture_asset(comp,key,spec['default'])).name
+        if spec.get('fallback')=='opaque-black':
+            if managed:
+                spec['blackAsset']=spec['asset']
+                if spec.get('expose') and not spec['default'].startswith('op:') and spec['default']!='builtin:black':
+                    name='input_'+str(index+1)+'_missing'
+                    black=comp.op(name) or comp.create(constantTOP,name);black.store('grapeManagedTopSource',True)
+                    black.par.colorr=0;black.par.colorg=0;black.par.colorb=0;black.par.alpha=1
+                    black.par.resolutionw=2;black.par.resolutionh=2;black.nodeX=-1060;black.nodeY=-index*220
+                    black.comment='Opaque black fallback for a missing exposed TOP path.'
+                    spec['blackAsset']=black.name
+            else:spec['blackAsset']=texture_asset(comp,'black:'+key,'builtin:black').name
     comp.store('sgrapePublicTextures',bindings);comp.store('sgrapeTextureSources',specs)
     external=input_owner.inputs[0] if input_owner and shader_kind(comp)=='top' and input_owner.inputs else None
     comp.store('sgrapeTextureExternal',external.path if external else '')
     helper=comp.op('texture_sources') or comp.create(textDAT,'texture_sources')
     if helper.text!=TEXTURE_SOURCE_CODE:helper.text=TEXTURE_SOURCE_CODE
-    if shader_kind(comp)=='top' and (graph.get('topInputs') or comp.fetch('grapeTopSlots',[])):
+    if shader_kind(comp)=='top' and (managed or graph.get('topInputs') or comp.fetch('grapeTopSlots',[])):
         prepare_top_slots(comp,graph,input_owner)
     elif shader_kind(comp)=='top':
         default=comp.op('input_default') or comp.create(selectTOP,'input_default')
@@ -960,7 +1109,8 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
         mat.par.outputresolution='custom'
         context='parent()'
         for name,dimension in (('resolutionw','width'),('resolutionh','height')):
-            getattr(mat.par,name).expr=context+".op('input_router')."+dimension+" if "+context+".par.Resolution == 'input' and mod('texture_sources').match_input() else parent().par."+dimension.title()
+            source="mod('texture_sources').input_dimension("+repr(dimension)+")" if graph.get('topSourceVersion')==1 else context+".op('input_router')."+dimension
+            getattr(mat.par,name).expr=source+" if "+context+".par.Resolution == 'input' and mod('texture_sources').match_input() else parent().par."+dimension.title()
         mat.par.format.expr='parent().par.Pixelformat.eval()'
         mat.par.inputextenduv.expr='parent().par.Extenduv.eval()'
         for connector in mat.inputConnectors:connector.disconnect()
@@ -993,11 +1143,11 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
                 selected=comp.op('source_'+b['id']) or comp.create(selectTOP,'source_'+b['id'])
                 selected.par.top=texture.path;selected.par.format='useinput';texture=selected
             top_paths.append(texture.path)
-            if not graph.get('topInputs'):mat.inputConnectors[i].connect(texture)
+            if not graph.get('topInputs') and graph.get('topSourceVersion')!=1:mat.inputConnectors[i].connect(texture)
         else:
             getattr(mat.par,'sampler'+str(i)+'name').val=b['name']
             getattr(mat.par,'sampler'+str(i)+'top').val=reference
-    if kind=='top':mat.par.tops.val=' '.join(top_paths) if graph.get('topInputs') else ''
+    if kind=='top':mat.par.tops.val=' '.join(top_paths) if graph.get('topInputs') or graph.get('topSourceVersion')==1 else ''
     if source_module():
         source_module().configure(_owner.op('runtime').module,comp,graph,public,preserve,input_owner)
     else:
@@ -1254,6 +1404,7 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
                 if backup_dat and backup_text_before is None:backup_dat.destroy()
                 elif backup_dat:backup_dat.text=backup_text_before
             raise
+        cleanup_top_sources(destination,graph)
         return {'ok':True,'state':new,'compileInfo':info,'diagnostics':compiled['diagnostics'],'target':destination.path}
     finally:
         candidate.destroy()
@@ -1408,7 +1559,7 @@ def process_shader_request(method,path,body):
                 if inspected['required']:upgrade=upgrade_summary(inspected)
             except (ValueError,TypeError,KeyError,AttributeError,RecursionError):pass
         return {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
-                'examples':{name:_owner.op('document').module.stamp_catalog(core().demo_graph(name,target=shader_kind(target())),core()) for name in ('banana','color','tint')}}
+                'examples':{name:_owner.op('document').module.stamp_catalog(core().normalize_top_sources(core().demo_graph(name,target=shader_kind(target())))[0],core()) for name in ('banana','color','tint')}}
     if method=='POST' and path=='/api/remote-preview':
         return remote_preview(target())
     if method=='GET' and path=='/api/preview':

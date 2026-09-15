@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const context=vm.createContext({crypto:require('node:crypto').webcrypto,TextEncoder});
+vm.runInContext(fs.readFileSync('src/editor/functions_model.js','utf8')+'\nthis.clip=GraphClipboard;',context);
+const clip=context.clip,catalog=JSON.parse(fs.readFileSync('src/library/node_catalog.json','utf8')).definitions.map(d=>d.definition);
+const blank=()=>({target:'top',topSourceVersion:1,topInputs:[],declarations:[],functions:[],stages:{pixel:{nodes:[],edges:[]}}});
+const a=blank();a.topInputs.push({id:'input0',name:'sTD2DInputs[0]',defaultSource:'builtin:banana'});
+a.stages.pixel.nodes.push({id:'ref',definitionUuid:'sgrape.builtin.top_input',params:{inputId:'input0'},ui:{x:0,y:0}});
+const payload=clip.decode(clip.encode(a,a.stages.pixel,['ref'],'A'));
+const options={source:'A',target:'top',stage:'pixel',catalog,types:['float','vec2','vec3','vec4'],anchor:{x:100,y:100}};
+clip.paste(a,a.stages.pixel,payload,options);assert.equal(a.topInputs.length,1);assert.equal(a.stages.pixel.nodes.length,2);
+const b=blank();clip.paste(b,b.stages.pixel,payload,{...options,source:'B'});const id=b.topInputs[0].id;
+clip.paste(b,b.stages.pixel,payload,{...options,source:'B'});
+assert.equal(b.topInputs.length,1);assert.ok(b.stages.pixel.nodes.every(n=>n.params.inputId===id));
+assert.equal(b.topInputs[0].defaultSource,'builtin:banana');
+console.log('TOP clipboard: repeated references reuse one source within and across Shaders');
