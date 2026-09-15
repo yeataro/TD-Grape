@@ -318,7 +318,7 @@ function renderPreviewAppearance(){
 }
 const localViewerEntry=['127.0.0.1','localhost','[::1]'].includes(location.hostname);
 let nativeViewerOpening=false;
-function renderNativeViewer(){const button=$('#nativeviewer');button.hidden=!localViewerEntry;button.disabled=!graph||nativeViewerOpening;button.title=t('viewer.description');}
+function renderNativeViewer(){const button=$('#nativeviewer');button.hidden=true;button.disabled=!graph||nativeViewerOpening;button.title=t('viewer.description');}
 $('#nativeviewer').onclick=async()=>{
   if(!localViewerEntry||!graph||nativeViewerOpening)return;
   nativeViewerOpening=true;renderNativeViewer();

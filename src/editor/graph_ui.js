@@ -601,7 +601,7 @@ function paletteEntry(d){
   const button=el('button',{'data-entry':d.key,class:'palette-entry','aria-pressed':String(browserSelection===d.key)});
   button.append(browserGlyph(entry.meta.subgraph?'subgraph':'node'),el('span',{class:'palette-entry-label'},d.label),el('small',{class:'palette-entry-source'},browserSourceLabel(entry.meta.source)));
   button.title=d.label+' · '+browserBadges(entry)+'\n'+t('browser.inspect');
-  button.onclick=()=>{browserSelection=d.key;document.querySelectorAll('#nodelibrary [data-entry]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.entry===d.key)));renderBrowserDetail(entry);};
+  button.onclick=()=>{browserSelection=d.key;document.querySelectorAll('#nodelibrary [data-entry]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.entry===d.key)));renderBrowserDetail(entry);button.scrollIntoView({block:'nearest'});};
   button.ondblclick=()=>addNode(d,(180-pan.x)/scale,(160-pan.y)/scale);
   const add=el('button',{class:'browser-add','data-add-entry':d.key,'aria-label':t('browser.add')+' '+d.label},'+');add.disabled=readonly;
   const drop=(x,y)=>{const p=graphPoint(x,y);if(p)addNode(d,p.x,p.y);};
@@ -614,7 +614,7 @@ function renderBrowserDetail(entry){
   const box=$('#browserdetail');box.hidden=!entry;box.replaceChildren();if(!entry)return;
   const head=el('div',{class:'browser-detail-heading'});head.append(el('strong',{},entry.d.label));
   const close=el('button',{'aria-label':t('browser.closeDetails')},'×');close.onclick=()=>{browserSelection=null;renderLibrary();};head.append(close);box.append(head);
-  const body=el('div',{class:'browser-detail-body'});body.append(el('small',{class:'muted'},browserBadges(entry)));
+  const body=el('div',{class:'browser-detail-body',tabindex:'0'});body.append(el('small',{class:'muted'},browserBadges(entry)));
   body.append(el('p',{class:'browser-category-path'},entry.meta.path.map((key,i)=>i?t('browser.branch.'+key):browserCategoryLabel(key)).join(' › ')));
   const variants=typeVariants(entry.d),variant=variants[0];
   if(variant){

@@ -563,7 +563,6 @@ function inspector(){
       const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl)declarationFields(box,decl,true);
     }
     pixelBufferNames(box,n);
-    if(canDeleteNode(n)){const del=el('button',{class:'wide danger'},t('node.delete'));del.onclick=remove;box.append(del);}
     box.append(el('div',{class:'node-identity'},n.id));
   }
   box.append(nodeCommentField(n));
