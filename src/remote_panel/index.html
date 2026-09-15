@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TD Remote Panel · Preview</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="demo.js"></script>
+</head>
+<body>
+  <main>
+    <header><div><span class="eyebrow">EXPERIMENTAL · 0.1</span><h1>TD Remote Panel</h1></div><button id="connection">Connect</button></header>
+    <div class="source"><span id="state" role="status">Disconnected</span><span id="target">Choose the source in the TD component.</span></div>
+    <td-remote-panel></td-remote-panel>
+    <footer><span>Mouse controls · one connected browser</span><span id="format">WebRTC</span></footer>
+    <p class="hint">Choose <strong>Test Panel</strong> in TouchDesigner to try the button and slider, or <strong>OP Viewer</strong> to inspect an operator. Touch gestures are not enabled in this preview.</p>
+  </main>
+</body>
+</html>

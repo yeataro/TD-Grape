@@ -4,6 +4,7 @@
 
 - [開發與更新內嵌程式](development/DEVELOPMENT.md)
 - [測試方式](development/TESTING.md)
+- [獨立 TD Remote Panel 試驗元件](../src/remote_panel/README.md)
 - [目錄與私人工作區](development/PROJECT_LAYOUT.md)
 - `architecture/`：編譯、型別、保存與升級契約。
 - `features/`：目前功能與相容行為。
