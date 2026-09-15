@@ -16,7 +16,8 @@
 
 ### 等待使用者補充或共同決策
 
-- Inputs 新增、管理與快捷入口，以及新增節點面板、節點本體／Label／來源資訊的整體呈現。
+- TOP Inputs／Sampler 來源整理：使用者已補充來源實體與圖內引用分離、初始 Input 1／香蕉預設、TD 內部按來源預留空間的要求；首個來源是否不可刪、接口對應與混合維度保護仍待決策。原生 TOPs 與 2D／3D 混接／斷線行為已實測，尚未修改產品。見 [TOP 來源模型筆記](../discussions/TOP_INPUTS_SOURCE_MODEL.md)。Inputs 快捷入口、新增節點面板、節點本體／Label／來源資訊的整體呈現仍需設計。
+- TDFAM 是否造成 OP Create Dialog 底部說明文字消失：已發現其有介入共用說明資料鏈，但尚未確認回報問題的原因；使用者要求暫緩調查，後續再處理。
 - Color Output 的 Help 尚有舊版預覽說明（512 像素、約每秒更新等）；使用者要求先記錄，下次相關說明更新時一併修正。見 [預覽 UI 筆記](../discussions/PREVIEW_UI_NOTES.md#待同步的節點說明2026-09-16)。
 - Parameter 參數名稱、型別、欄位的排版與分組；點回畫布顯示目前 Grape TOP／MAT 的 OP 參數；新增與 Vertex／Pixel 並列的自訂參數工作區，從 Inputs 拖入建立公開控制。
 - Grape TOP Common／Output 一比一綁定及 UV 的人工模板；TOP 輸入链簡化與 TD 網路四象限配置，以使用者人工範本為依據。
