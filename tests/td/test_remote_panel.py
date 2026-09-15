@@ -55,6 +55,9 @@ try:
           component.op('panel_image').par.opviewer.eval() == component.par.Targetop.eval()
           and not component.op('panel_image').par.allowpanel.eval()
           and component.op('op_viewer').par.interactive.eval())
+    check('both viewers follow the one Target OP parameter',
+          component.op('panel_image').par.opviewer.mode==ParMode.EXPRESSION
+          and component.op('op_viewer').par.opviewer.eval()==component.par.Targetop.eval())
     check('only OP Viewer advertises the explicit reset shortcut',
           runtime.metadata()['shortcuts'] == ['reset-viewer'])
     check('a panel viewed through OP Viewer keeps single-touch control', runtime.metadata()['touchNavigation'] == '')

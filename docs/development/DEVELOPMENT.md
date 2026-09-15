@@ -76,3 +76,29 @@ python tools/dev/submit_job.py tools/dev/jobs/save_source_project.py
 `sync_masters.py` 只處理目前管理元件的兩份 Master，使用正常的候選圖驗證與 upgrade ticket 流程，並先備份模板。升級的舊內容保存在私人報告目錄，不把模板的 `upgrade_backup` 複製進之後新建的 Shader。使用者實例仍使用既有升級確認流程；產品啟動不自動執行此開發工作。
 
 從 Master 開啟 Editor 會保留 Master 身分；複製到其他位置的組件才登記為新 Shader。新建組件仍預設只顯示自訂參數。來源刷新、模板同步與保存工具從專案根層尋找管理元件，支援此次將 `TD_Grape` 搬到根層後的開發工程。
+
+
+## Shared preview integration (0.8.74)
+
+Graph UI uses the manager's `remote_panel`. Rebuild that module before refreshing
+manager sources: `build_remote_panel.py`, then `refresh_sources.py`. This updates
+the same-origin ES module assets and the companion-port CSP. The transfer lease
+and source selection are documented in `src/remote_panel/README.md`.
+
+MAT creation no longer builds `preview_geometry`, `preview_camera`, `preview` or
+`grape_material_preview` inside every shader. `validation_scene(comp)` borrows one
+manager-owned rectangle/camera/render context during candidate validation and
+final deployment, then releases its material reference, including on exceptions.
+GLSL compile diagnostics and failed-deploy rollback remain intact. This renderer
+is independent of the interactive Remote Panel target.
+
+Run the explicit `tools/dev/jobs/migrate_shared_preview.py` for old authoring
+Masters/instances after reviewing the change. It checks native references, saves
+a private backup, removes only the recognized MAT scene/capture, and compares
+saved graph data, retained node identities and positions. TOP's small `preview`
+Resolution TOP is retained for its local COMP viewer and legacy PNG API.
+Legacy MAT PNG requests lazily create manager-owned captures under
+`snapshot_previews`; the normal Graph UI never creates or polls them. New copies
+of Grape MAT therefore do not carry private validation/capture scenes. Use
+`sync_masters.py` to bring template compiler metadata forward without a graph
+schema upgrade. Do not increment catalog definitions for this UI/runtime change.

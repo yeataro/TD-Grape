@@ -1,4 +1,4 @@
-# TD Remote Panel — experimental 0.1.2
+# TD Remote Panel — experimental 0.1.3
 
 One TouchDesigner Panel COMP or native OP Viewer, streamed to one browser over
 WebRTC, with mouse and translated touch events returned to that same panel. The component owns its
@@ -32,7 +32,8 @@ service is used. Internet routing and multiple receivers are outside this previe
 ## Current behavior
 
 - The browser displays the actual TD source path, connection state and received
-  resolution. TD remains the place to choose the target.
+  resolution. In the standalone page, TD chooses the target. Grape integration
+  chooses its current shader when the browser acquires the connection.
 - Mouse buttons, movement and wheel events use native `PanelCOMP.interactMouse`.
   Viewer gestures keep TD's own behavior. Browser coordinates account for video
   letterboxing and TD's mirrored video transport.
@@ -135,3 +136,35 @@ Native API references: [WebRTC DAT](https://docs.derivative.ca/WebRTC_DAT),
 [PanelCOMP](https://docs.derivative.ca/PanelCOMP_Class),
 [Geometry Viewer navigation](https://derivative.ca/UserGuide/Geometry_Viewer),
 [Derivative's browser example](https://github.com/TouchDesigner/WebRTC-Remote-Panel-Web-Demo).
+
+## Grape integration (0.8.74)
+
+Graph UI embeds the same `<td-remote-panel>` element, served as ES modules from
+its own editor origin. There is one `remote_panel` under the manager. Both the
+controller COMP and the capture TOP resolve the same **Target OP**; capture stays
+direct, not nested through the controller.
+
+`POST /api/{shaderId}/remote-preview` passes through the editor's existing access
+checks. On TD's main thread it reserves the resolved shader OP for 30 seconds and
+returns a one-use ticket plus the module port. It does not change the active
+source. The ticket is consumed at `/signal?ticket=…`; only then does the new peer
+replace the previous peer and select its target. Invalid, expired, reused or
+removed-target tickets cannot evict the existing peer. Tickets are memory-only,
+bounded to 32 pending reservations, and cleared when the module stops. These are
+handoff reservations, not a new login system for the standalone prototype.
+
+The web component accepts `connect({ticket})`; omitting the ticket retains its
+standalone behavior. Graph edits, uniform polling, returning to a tab and moving
+a docked pane never reclaim a lost connection. The connection button explicitly
+reclaims it; unchecking Live preview closes it. Focused viewer keys do not leak
+to graph shortcuts. Source path and connection state remain visible above video.
+
+The editor CSP permits media blobs and only the companion WebSocket port on the
+same host. No worker thread calls the TD API. Change the companion Web Port before
+refreshing embedded sources/reloading an editor, so its asset/CSP snapshot matches.
+A future custom Viewer can replace the source behind this adapter without changing
+Graph UI or duplicating stream encoders in shader components.
+
+Multiple cloned sources are deferred. Creating them with TD Clone would not alone
+solve resource lifetime: a future design would also need a receiver/source limit
+and an idle lease, so forgotten Editor tabs cannot keep allocating new renderers.

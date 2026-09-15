@@ -7,10 +7,11 @@ import ipaddress
 import json
 import math
 import socket
+import secrets
 import time
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 TRACK = 'TDPanel'
 CHANNEL = 'control'
 _client = None
@@ -29,6 +30,7 @@ _events = 0
 _started = False
 _status = 'Stopped'
 _error = ''
+_launches = {}
 
 
 def owner():
@@ -74,6 +76,23 @@ def source_panel():
     return panel
 
 
+def capture_target():
+    comp=owner()
+    return comp.par.Targetop.eval() if comp.par.Source.eval()=='viewer' else source_panel()
+
+
+def prepare_viewer(target):
+    """Reserve a source without changing the active viewer. Consumed at connection."""
+    if not target or not target.valid:raise ValueError('The requested viewer no longer exists.')
+    now=time.monotonic()
+    for token,(expires,op_ref) in list(_launches.items()):
+        if expires<=now or not op_ref.valid:del _launches[token]
+    while len(_launches)>=32:del _launches[next(iter(_launches))]
+    token=secrets.token_urlsafe(24)
+    _launches[token]=(now+30,target)
+    return token
+
+
 def metadata():
     comp = owner()
     target = comp.par.Targetop.eval() if comp.par.Source.eval() == 'viewer' else _panel
@@ -112,8 +131,7 @@ def refresh_source():
         # Capture the target's native viewer directly. In TD 2025, capturing
         # a 3D viewer through OP Viewer COMP can lose depth ordering. The COMP
         # remains the mouse receiver and operates that same native viewer state.
-        capture = comp.par.Targetop.eval() if comp.par.Source.eval() == 'viewer' else _panel
-        comp.op('panel_image').par.opviewer = capture
+        capture = capture_target()
         if comp.par.Source.eval() == 'viewer':
             _viewer_target = capture
         _error = ''
@@ -166,6 +184,7 @@ def start():
 def stop():
     global _started, _status
     _started = False
+    _launches.clear()
     disconnect()
     owner().op('web_server').par.active = False
     owner().op('webrtc').par.active = False
@@ -240,11 +259,29 @@ def ws_open(client, uri):
     if urlsplit(uri).path != '/signal' or not allowed(client):
         server.webSocketClose(client)
         return
+    query=parse_qs(urlsplit(uri).query,keep_blank_values=True)
+    target=None
+    if 'ticket' in query:
+        ticket=query['ticket']
+        launch=_launches.pop(ticket[0],None) if len(ticket)==1 else None
+        if not launch or launch[0]<=time.monotonic() or not launch[1].valid:
+            send({'type':'error','message':'This preview request expired. Connect again.'},client)
+            server.webSocketClose(client)
+            return
+        target=launch[1]
     if _client:
         send({'type': 'replaced', 'message': 'Another browser has taken control. Connect again to take control here.'})
         # Clear the old identity before closing it. Its late callbacks/messages
         # must not close the new peer or release the new receiver's mouse input.
         disconnect()
+    if target is not None:
+        # Suppress duplicate parameter callbacks; refresh atomically below.
+        controls=owner().op('controls');active=controls.par.active.eval()
+        controls.par.active=False
+        try:
+            owner().par.Source='viewer'
+            owner().par.Targetop=target
+        finally:controls.par.active=active
     _client = client
     _last_seen = time.monotonic()
     refresh_source()

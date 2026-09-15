@@ -1,9 +1,49 @@
-// Read-only TD preview controls: node test_preview_controls.cjs SESSION_JSON REPORT_DIR [OVERLAY_DIR]
-const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');const{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const[sessionFile,folder,overlay]=process.argv.slice(2),session=JSON.parse(fs.readFileSync(sessionFile,'utf8'));fs.mkdirSync(folder,{recursive:true});
-(async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE}),checks=[],errors=[],writes=[];try{const page=await browser.newPage({viewport:{width:1500,height:1040}});let previews=0;page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',async r=>{const q=r.request(),url=new URL(q.url()),name=q.resourceType()==='document'?'index.html':path.basename(url.pathname),file=overlay&&path.join(overlay,name);if(q.method()!=='GET'){writes.push(q.method());return r.abort();}if(url.pathname.endsWith('/preview')){previews++;await new Promise(resolve=>setTimeout(resolve,250));}return file&&fs.existsSync(file)?r.fulfill({body:fs.readFileSync(file),contentType:({'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json'})[path.extname(name)]}):r.continue();});await page.goto(session.url);await page.waitForFunction(()=>graph&&document.querySelector('#preview').naturalWidth>0);const initial=await page.evaluate(()=>JSON.stringify({graph,revision}));assert.equal(await page.locator('#previewtitle').innerText(),'Output Preview');checks.push('TOP uses Output Preview and loads a real TD image');
-await page.locator('#autopreview').uncheck();const count=previews,src=await page.locator('#preview').getAttribute('src');await page.evaluate(async()=>{await preview();await refreshUniforms();});await page.waitForTimeout(1200);assert.equal(previews,count);assert.equal(await page.locator('#preview').getAttribute('src'),src);checks.push('Auto off stops new automatic image requests while retaining the last image');
-await page.locator('#refreshpreview').click();assert.equal(await page.locator('#livebody').getAttribute('aria-busy'),'true');assert.ok((await page.locator('#refreshpreview').getAttribute('class')).includes('is-loading'));await page.waitForFunction(()=>document.querySelector('#livebody').getAttribute('aria-busy')==='false');checks.push('pending request animates the Refresh icon and clears its busy state on completion');await page.waitForFunction(old=>document.querySelector('#preview').src!==old,src);assert.equal(previews,count+1);checks.push('manual Refresh requests one snapshot with Auto off');
-let rect=await page.locator('#livebody .preview').boundingBox();assert.ok(rect.width>250);const beforeHeight=rect.height;await page.locator('#resize-live').focus();await page.keyboard.press('Home');rect=await page.locator('#livebody .preview').boundingBox();assert.ok(rect.height>beforeHeight+50);assert.equal(await page.locator('#preview').evaluate(e=>getComputedStyle(e).objectFit),'contain');checks.push('preview fills the pane beyond the former 180px cap and preserves source aspect ratio');
-await page.screenshot({path:path.join(folder,'output-preview.png')});await page.reload();await page.waitForSelector('.node');assert.equal(await page.locator('#autopreview').isChecked(),false);const afterReload=previews;await page.waitForTimeout(1100);assert.equal(previews,afterReload);await page.locator('#refreshpreview').click();await page.waitForFunction(()=>document.querySelector('#preview').naturalWidth>0);checks.push('Auto preference persists and manual loading works after reload');
-await page.locator('#autopreview').check();await page.waitForFunction(()=>document.querySelector('#preview').naturalWidth>0);await page.locator('#livetoggle').click();const collapsed=previews;await page.evaluate(()=>preview());await page.waitForTimeout(650);assert.equal(previews,collapsed);checks.push('collapsed preview skips image requests even with Auto enabled');
-assert.equal(await page.evaluate(()=>JSON.stringify({graph,revision})),initial);assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);checks.push('preview controls leave TD graph and revision unchanged');fs.writeFileSync(path.join(folder,'preview-tests.json'),JSON.stringify({passed:true,count:checks.length,checks},null,2));console.log(JSON.stringify({passed:true,count:checks.length}));}catch(e){fs.writeFileSync(path.join(folder,'preview-tests.json'),JSON.stringify({passed:false,checks,errors,error:e.message},null,2));throw e;}finally{await browser.close();}})().catch(e=>{console.error(e.message);process.exitCode=1;});
+// Live shared-preview regression: node test_preview_controls.cjs SESSION_JSON REPORT_DIR
+// Exercises real UI controls; only remote-preview POSTs are allowed.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const [sessionFile,folder]=process.argv.slice(2),session=JSON.parse(fs.readFileSync(sessionFile,'utf8'));
+fs.mkdirSync(folder,{recursive:true});
+(async()=>{
+ const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
+ const checks=[],errors=[],writes=[];let snapshots=0;
+ try{
+  const context=await browser.newContext({viewport:{width:1500,height:1040}});
+  await context.route('**/*',route=>{
+   const request=route.request(),url=new URL(request.url());
+   if(url.pathname.endsWith('/preview'))snapshots++;
+   if(request.method()!=='GET'&&!url.pathname.endsWith('/remote-preview')){writes.push(url.pathname);return route.abort();}
+   return route.continue();
+  });
+  const open=async()=>{const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(session.url);return page;};
+  const connected=page=>page.waitForFunction(()=>document.querySelector('#preview').state==='connected'&&document.querySelector('#preview').shadowRoot.querySelector('video').videoWidth>0);
+  const first=await open();await connected(first);
+  const source=await first.locator('#previewpath').innerText();assert.ok(source.startsWith('/'));
+  assert.equal(snapshots,0);checks.push('actual video and source path replace PNG polling');
+  await first.locator('#autopreview').uncheck();
+  await first.waitForFunction(()=>document.querySelector('#preview').state==='disconnected');
+  await first.reload();await first.waitForSelector('.node');
+  assert.equal(await first.locator('#autopreview').isChecked(),false);
+  await first.locator('#refreshpreview').click();await connected(first);
+  checks.push('disconnect preference persists and explicit reconnect re-enables preview');
+  const second=await open();await connected(second);
+  await first.waitForFunction(()=>document.querySelector('#preview').state==='replaced');
+  await first.bringToFront();await first.locator('#fit').click();
+  assert.equal(await first.locator('#preview').evaluate(e=>e.state),'replaced');
+  await first.locator('#refreshpreview').click();await connected(first);
+  await second.waitForFunction(()=>document.querySelector('#preview').state==='replaced');
+  checks.push('latest tab takes over; returning to an old tab does not reclaim it');
+  const connection=await first.locator('#preview').evaluate(e=>e.state);
+  await first.locator('#language').selectOption('en');
+  assert.equal(await first.locator('#preview').evaluate(e=>e.state),connection);
+  await first.locator('#resize-live').press('Home');await connected(first);
+  const fits=await first.locator('#preview').evaluate(e=>{const b=e.getBoundingClientRect(),p=e.closest('#livebody').getBoundingClientRect();return b.top>=p.top&&b.bottom<=p.bottom;});
+  assert.ok(fits);checks.push('docking rebuild and panel resizing retain video within the pane');
+  await first.screenshot({path:path.join(folder,'live-preview.png')});
+  await first.locator('#autopreview').uncheck();
+  assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);assert.equal(snapshots,0);
+  fs.writeFileSync(path.join(folder,'preview-tests.json'),JSON.stringify({passed:true,checks},null,2));
+  console.log(JSON.stringify({passed:true,count:checks.length}));
+ }catch(error){fs.writeFileSync(path.join(folder,'preview-tests.json'),JSON.stringify({passed:false,checks,errors,error:error.message},null,2));throw error;}
+ finally{await browser.close();}
+})().catch(e=>{console.error(e.message);process.exitCode=1;});

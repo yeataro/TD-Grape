@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.73'
+PRODUCT_VERSION='0.8.74'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -128,6 +128,7 @@ _port=None
 _last_tick=0
 _worker=None
 _assets={}
+_remote_port=None
 _lan_enabled=False
 _require_token=False
 _network_refresh=0.0
@@ -415,7 +416,6 @@ def register_shader(shader,fresh=False):
         page=next(p for p in shader.customPages if p.name==page_name)
         page.appendMAT('Material',label='Generated MAT')
         shader.par.Material.expr="me.op('material')";shader.par.Material.readOnly=True
-    if shader_kind(shader)=='mat': material_preview(shader)
     if getattr(shader.par,'opviewer',None) is not None:
         shader.par.opviewer.expr="me.op('material')" if shader_kind(shader)=='mat' else "me.op('preview')"
         shader.viewer=True
@@ -530,16 +530,6 @@ def make_scene(parent,name,kind='mat'):
     mat.par.vdat.eval().name='vertex_shader'; mat.par.pdat.eval().name='pixel_shader'
     mat.par.vdat='vertex_shader'; mat.par.pdat='pixel_shader'
     mat.par.compilebehavior='stalluntildone'
-    geo=comp.create(geometryCOMP,'preview_geometry')
-    rect=geo.create(rectangleSOP,'rectangle')
-    for child in geo.children:
-        if child.family in ('SOP','POP'): child.render=child==rect; child.display=child==rect
-    geo.par.material='material'
-    camera=comp.create(cameraCOMP,'preview_camera'); camera.par.tz=2
-    camera.par.projection='ortho'; camera.par.orthowidth=1.12
-    render=comp.create(renderTOP,'preview'); render.par.camera='preview_camera'; render.par.geometry='preview_geometry'
-    render.par.resolutionw=512; render.par.resolutionh=512
-    render.par.antialias='aaoff'
     # Reuse the Info DAT created by GLSL MAT instead of retaining a duplicate.
     info=comp.op('material_info') or comp.create(infoDAT,'compile_info')
     info.name='compile_info';info.par.op='material'
@@ -962,7 +952,6 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
     textures=prepare_textures(comp,graph,input_owner,compiled)
     mat=shader_operator(comp)
     if kind=='mat':
-        comp.op('preview_geometry').par.material='material'
         comp.op('vertex_shader').text=compiled['vertex']
     else:
         for name in ('Width','Height'):getattr(comp.par,name).enableExpr="me.par.Resolution == 'custom' or not me.op('texture_sources').module.match_input()"
@@ -1028,14 +1017,55 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
     comp.op('manifest').text=json.dumps({'version':PRODUCT_VERSION,'compilerBuild':PRODUCT_VERSION,'catalogContractHash':core().catalog_contract()['hash'],'catalogSnapshot':_owner.op('document').module.catalog_snapshot(core()),'compiledFingerprint':compiled_fingerprint(compiled),'hash':compiled['hash'],'bindings':compiled['bindings'],'publicUniforms':public},indent=2)
     arrange_shader_parameters(comp)
 
+def internal_area(name, marker):
+    area=_owner.op(name)
+    if area and not area.fetch(marker,False):
+        raise RuntimeError('An unrelated component occupies '+area.path)
+    if not area:
+        area=_owner.create(baseCOMP,name)
+        area.store(marker,True)
+        area.nodeX=-600;area.nodeY=-550 if name=='compiler_validation' else -750
+    return area
+
+
+@contextmanager
+def validation_scene(comp):
+    """One manager-owned render context; never used as the user's viewer."""
+    area=internal_area('compiler_validation','grapeValidationV1')
+    if not area.op('geometry'):
+        geo=area.create(geometryCOMP,'geometry')
+        rect=geo.create(rectangleSOP,'rectangle')
+        for child in geo.children:
+            if child.family in ('SOP','POP'):child.render=child==rect;child.display=child==rect
+        camera=area.create(cameraCOMP,'camera');camera.par.tz=2
+        camera.par.projection='ortho';camera.par.orthowidth=1.12
+        render=area.create(renderTOP,'render');render.par.camera='camera';render.par.geometry='geometry'
+        render.par.resolutionw=512;render.par.resolutionh=512;render.par.antialias='aaoff'
+        geo.nodeX=0;camera.nodeX=220;render.nodeX=440
+        for child in area.children:child.viewer=False
+    geo=area.op('geometry')
+    previous=geo.par.material.val
+    try:
+        geo.par.material=comp.op('material')
+        yield area.op('render')
+    finally:
+        # Do not leave an idle validation renderer dependent on a live shader.
+        geo.par.material=previous
+
+
 def validate_material(comp,compiled=None):
     kind=shader_kind(comp)
-    if kind=='mat' and comp.op('preview_geometry').par.material.eval()!=comp.op('material'):
-        raise RuntimeError('Preview is not using the generated material')
     operator=shader_operator(comp)
-    operator.cook(force=True);comp.op('preview').cook(force=True)
-    info=comp.op('compile_info').text
-    error=operator.errors() or comp.op('preview').errors()
+    operator.cook(force=True)
+    if kind=='mat':
+        with validation_scene(comp) as render:
+            render.cook(force=True)
+            info=comp.op('compile_info').text
+            error=operator.errors() or render.errors()
+    else:
+        comp.op('preview').cook(force=True)
+        info=comp.op('compile_info').text
+        error=operator.errors() or comp.op('preview').errors()
     succeeded=('Pixel Shader Compile Results:' in info and info.count('Compiled Successfully')>=2) if kind=='top' else 'Linked Successfully' in info
     if error or 'ERROR:' in info or not succeeded:
         exc=RuntimeError((error+'\n'+info).strip() or 'Shader has not compiled')
@@ -1229,21 +1259,33 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         candidate.destroy()
 
 def material_preview(comp):
-    """Capture the actual MAT viewer; the Render scene remains for validation."""
-    name='grape_material_preview'
-    top=comp.op(name)
-    if top and (top.type!='opview' or not top.fetch('grapeMatViewerV1',False)):
-        raise RuntimeError('The internal MAT preview name is occupied: '+top.path)
+    """Legacy PNG clients get lazy manager-owned captures, outside shader copies."""
+    area=internal_area('snapshot_previews','grapeSnapshotsV1')
+    for child in area.children:
+        if child.fetch('grapeMatViewerV1',False) and not child.par.opviewer.eval():child.destroy()
+    name='mat_'+str(comp.id)
+    top=area.op(name)
     if not top:
-        top=comp.create(opviewerTOP,name)
+        top=area.create(opviewerTOP,name)
         top.store('grapeMatViewerV1',True)
-        top.par.opviewer='material'
         top.par.outputresolution='custom'
         top.par.resolutionw=512;top.par.resolutionh=512
-        top.par.preservealpha=True
-        top.par.format='rgba8fixed'
-        top.viewer=False
+        top.par.preservealpha=True;top.par.allowpanel=False
+        top.par.format='rgba8fixed';top.viewer=False
+    top.par.opviewer=comp.op('material')
     return top
+
+
+def remote_preview(comp):
+    panel=_owner.op('remote_panel')
+    if not panel or not panel.fetch('tdRemotePanel',False):
+        raise RuntimeError('The Remote Panel module is not installed in this Grape manager.')
+    if not panel.par.Active.eval():
+        raise RuntimeError('Enable Active on the Remote Panel component in TouchDesigner.')
+    shader=shader_operator(comp)
+    if not shader:raise RuntimeError('The shader output no longer exists.')
+    ticket=panel.op('runtime').module.prepare_viewer(shader)
+    return {'port':int(panel.par.Port.eval()),'ticket':ticket,'source':shader.path}
 
 
 class _PreviewFramePending(Exception):
@@ -1367,6 +1409,8 @@ def process_shader_request(method,path,body):
             except (ValueError,TypeError,KeyError,AttributeError,RecursionError):pass
         return {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
                 'examples':{name:_owner.op('document').module.stamp_catalog(core().demo_graph(name,target=shader_kind(target())),core()) for name in ('banana','color','tint')}}
+    if method=='POST' and path=='/api/remote-preview':
+        return remote_preview(target())
     if method=='GET' and path=='/api/preview':
         comp=target()
         if comp and shader_kind(comp)=='mat':
@@ -1559,11 +1603,16 @@ def stop():
     if _worker and _worker is not threading.current_thread(): _worker.join(1)
 
 def refresh_assets(owner):
-    global _assets
+    global _assets,_remote_port
     _assets={'/':(owner.op('index_html').text.encode('utf-8'),'text/html; charset=utf-8'),
              '/app.js':(owner.op('app_js').text.encode('utf-8'),'text/javascript; charset=utf-8'),
              '/style.css':(owner.op('style_css').text.encode('utf-8'),'text/css; charset=utf-8'),
              '/locales.json':(owner.op('locales_json').text.encode('utf-8'),'application/json; charset=utf-8')}
+    panel=owner.op('remote_panel')
+    _remote_port=int(panel.par.Port.eval()) if panel else None
+    if panel:
+        for path,dat in [('/remote-panel.js','remote_panel_js'),('/touch-gestures.js','touch_gestures_js')]:
+            if panel.op(dat):_assets[path]=(panel.op(dat).text.encode('utf-8'),'text/javascript; charset=utf-8')
     if owner.op('web_icons_json'):
         for path, asset in json.loads(owner.op('web_icons_json').text).items():
             _assets[path]=(base64.b64decode(asset['base64']),asset['type'])
@@ -1666,7 +1715,9 @@ def start(owner,session=None):
                 self.send_response(status); self.send_header('Content-Type',mime or 'application/json; charset=utf-8')
                 self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-store')
                 self.send_header('X-Content-Type-Options','nosniff'); self.send_header('Referrer-Policy','no-referrer')
-                self.send_header('Content-Security-Policy',"default-src 'self'; img-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'")
+                # The socket destination was validated against Host above; no TD calls on this worker.
+                remote=' ws://'+self.connection.getsockname()[0]+':'+str(_remote_port) if _remote_port else ''
+                self.send_header('Content-Security-Policy',"default-src 'self'; connect-src 'self'"+remote+"; media-src 'self' blob:; img-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'")
                 self.end_headers(); self.wfile.write(data)
             except (BrokenPipeError,ConnectionResetError): pass
     class LoopbackServer(http.server.ThreadingHTTPServer):

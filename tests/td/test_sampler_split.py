@@ -1,7 +1,7 @@
 from pathlib import Path
 import copy,json,uuid,numpy as np
 w=Path(GRAPE_TEST_OUTPUT)
-original=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module
+original=next(n for n in op('/').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module
 before={s.path:{n:s.op(n).text for n in ('state','graph','manifest','pixel_shader','vertex_shader') if s.op(n)} for s in original.shaders()}
 assert not op('/grape_sampler_test')
 root=op('/').create(baseCOMP,'grape_sampler_test');checks=[];success=False
@@ -26,8 +26,12 @@ try:
         shader=r.create_shader(root,'Test_'+kind,g,kind);operator=r.shader_operator(shader)
         native_pages[kind]={'pages':[p.name for p in operator.pages],'samplerSequence':getattr(operator.seq,'sampler',None) is not None}
         def pixels(label,expected):
-            r.validate_material(shader);top=shader.op('preview') if kind=='mat' else shader.op('shader');top.cook(force=True)
-            a=top.numpyArray(delayed=False)
+            r.validate_material(shader)
+            if kind=='mat':
+                with r.validation_scene(shader) as top:
+                    top.cook(force=True);a=top.numpyArray(delayed=False).copy()
+            else:
+                top=shader.op('shader');top.cook(force=True);a=top.numpyArray(delayed=False)
             if kind=='mat':a=a[96:416,96:416,:]
             error=float(np.max(np.abs(a-np.array(expected))))
             check(kind+': '+label,error<.009)

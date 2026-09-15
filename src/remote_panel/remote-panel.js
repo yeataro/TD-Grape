@@ -26,7 +26,8 @@ export class TDRemotePanel extends HTMLElement {
     this.onVisibility = () => { if (document.hidden) this.onBlur(); else this.onFocus(); };
     this.video.addEventListener('focus', this.onFocus);
     this.video.addEventListener('blur', this.onBlur);
-    this.video.addEventListener('keydown', e => this.shortcut(e));
+    this.video.addEventListener('keydown', e => { this.shortcut(e); e.stopPropagation(); });
+    this.video.addEventListener('keyup', e => e.stopPropagation());
     for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
       this.video.addEventListener(type, e => this.pointer(e));
     }
@@ -60,7 +61,9 @@ export class TDRemotePanel extends HTMLElement {
     window.removeEventListener('focus', this.onFocus);
     window.removeEventListener('resize', this.onBlur);
     document.removeEventListener('visibilitychange', this.onVisibility);
-    this.disconnect();
+    this.onBlur();
+    // Docking moves the existing element within the same document. Preserve its peer.
+    queueMicrotask(() => { if (!this.isConnected) this.disconnect(); });
   }
 
   report(state, message = '') {
@@ -70,12 +73,13 @@ export class TDRemotePanel extends HTMLElement {
     this.dispatchEvent(new CustomEvent('panel-state', {detail: {state, message}}));
   }
 
-  async connect() {
+  async connect({ticket} = {}) {
     this.disconnect(false);
     this.report('connecting', 'Connecting to TouchDesigner…');
     const base = new URL(this.getAttribute('endpoint') || '/', location.href);
     const signal = new URL('signal', base);
     signal.protocol = signal.protocol === 'https:' ? 'wss:' : 'ws:';
+    if (ticket) signal.searchParams.set('ticket', ticket);
     const pc = this.pc = new RTCPeerConnection({iceServers: []});
     const ws = this.ws = new WebSocket(signal);
     let candidates = [];

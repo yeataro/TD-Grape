@@ -1,7 +1,7 @@
 /* Run real import handlers with isolated DOM and HTTP boundaries. */
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 const dir=process.argv[2]||path.resolve(__dirname,'../../src/editor'),elements=new Map();let downloaded;
-const element=()=>({textContent:'',children:[],value:'',open:false,disabled:false,hidden:false,
+const element=()=>({addEventListener(){},textContent:'',children:[],value:'',open:false,disabled:false,hidden:false,
   classList:{add(){},toggle(){}},setAttribute(){},append(...children){this.children.push(...children);},replaceChildren(){this.children=[];},
   showModal(){this.open=true;},close(){this.open=false;},click(){}});
 const context=vm.createContext({assert,console,crypto:globalThis.crypto,location:{pathname:'/',hash:''},history:{replaceState(){}},

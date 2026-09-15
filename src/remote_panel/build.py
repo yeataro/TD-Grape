@@ -70,8 +70,8 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     p.label = 'Input Events Received'
     p.expr = "me.op('runtime').module.event_count()"
     p.readOnly = True
-    version = par('Str', 'Version', 'Module Version', '0.1.2')
-    version.default = version.val = '0.1.2'
+    version = par('Str', 'Version', 'Module Version', '0.1.3')
+    version.default = version.val = '0.1.3'
     version.readOnly = True
 
     rtc = node(webrtcDAT, 'webrtc', 0, 0)
@@ -106,6 +106,7 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     image.par.resolutionw.expr = 'parent().par.Width'
     image.par.resolutionh.expr = 'parent().par.Height'
     # Interaction is delivered to the Panel COMP, never through the capture TOP.
+    image.par.opviewer.expr = "parent().op('runtime').module.capture_target()"
     image.par.allowpanel = False
     image.par.preservealpha = False
     viewer.par.opviewer.expr = 'parent().par.Targetop'

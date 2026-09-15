@@ -46,7 +46,8 @@ try:
         assert not instance.op('upgrade_backup'), 'New Shaders must not inherit template upgrade history'
         if kind=='mat':
             assert instance.par.opviewer.eval()==instance.op('material')
-            assert instance.op('grape_material_preview').par.opviewer.eval()==instance.op('material')
+            assert not instance.op('grape_material_preview')
+            assert not instance.op('preview_geometry') and not instance.op('preview_camera')
             assert 'input:0' not in instance.storage['sgrapeTextureSources']
         records.append({'kind':kind,'created':instance.name,'nativeCompilePassed':True,
                         'graphPreserved':True,'managerResolved':True,'familyAliasesResolved':True,

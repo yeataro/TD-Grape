@@ -23,6 +23,10 @@ def job(comp):
     return value
 
 
+def manager_render():
+    return r._owner.op('compiler_validation/render')
+
+
 def pixels(comp):
     top=r.material_preview(comp);top.cook(force=True)
     return top.numpyArray(delayed=False).copy()
@@ -31,7 +35,7 @@ def pixels(comp):
 def begin(source_root,report,files,runtime_source=None):
     global root,w,original,before,r,c,checks,phase,mat,other,top,request,texture_request,render_cooks,previous,saved,target_id,original_material,metrics,deadline
     root=me.parent();w=Path(report);checks=[];phase=0;metrics={};deadline=time.monotonic()+20
-    original=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module;before=snapshot(original)
+    original=next(n for n in op('/').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module;before=snapshot(original)
     manager=root.create(baseCOMP,'manager');manager.store('sgrapeManager',True);manager.store('sgrapeManagerId',uuid.uuid4().hex)
     page=manager.appendCustomPage('Test');page.appendStr('Updatestatus');page.appendFolder('Personalfolder')
     manager.par.Personalfolder=str(w/'empty_personal')
@@ -49,13 +53,16 @@ def begin(source_root,report,files,runtime_source=None):
     for comp in (mat,other,top):comp.viewer=False
     original_material=mat.op('material');target_id=mat.fetch('sgrapeShaderId');saved=mat.op('state').text
     check('MAT capture uses actual material',r.material_preview(mat).par.opviewer.eval()==original_material)
+    check('MAT children contain no validation scene or capture',all(mat.op(n) is None for n in ('preview','preview_geometry','preview_camera','grape_material_preview')))
+    check('capture belongs to manager',r.material_preview(mat).parent().parent()==manager)
+    check('validation releases its material',not r._owner.op('compiler_validation/geometry').par.material.eval())
     check('COMP viewer uses material',mat.par.opviewer.eval()==original_material)
     check('TOP retains resolution preview',top.op('preview').inputs[0]==top.op('shader') and not top.op('grape_material_preview'))
     # Exercise conversion of an already saved old scene without recompilation.
     r.material_preview(mat).destroy();mat.par.opviewer.expr="me.op('preview')"
     r.register_shader(mat)
     check('register preserves graph and material identity',mat.op('state').text==saved and mat.op('material')==original_material and mat.fetch('sgrapeShaderId')==target_id)
-    render_cooks=mat.op('preview').totalCooks
+    render_cooks=manager_render().totalCooks
     request=job(mat);texture_request=job(other);r.tick();check('fresh image waits for TD drawing',not request['done'].is_set())
     callbacks=root.create(executeDAT,'frames');callbacks.text="def onFrameStart(frame):\n    parent().op('test').module.advance()\n";callbacks.par.framestart=True;callbacks.par.active=True
 
@@ -74,7 +81,7 @@ def advance():
             check('native image has visible geometry and transparent background',image[:,:,3].max()>.5 and image[:,:,3].min()==0)
             check('first image uses the actual shader color',image[:,:,0].max()>.7 and image[:,:,1].max()<.3 and image[:,:,2].max()<.2)
             check('PNG path uses native image',request['result']==r.png(mat))
-            check('native capture does not cook validation Render',mat.op('preview').totalCooks==render_cooks)
+            check('native capture does not cook validation Render',manager_render().totalCooks==render_cooks)
             r.material_preview(mat).save(str(w/'material.png'))
             check('second material request completes independently',texture_request['done'].is_set() and 'error' not in texture_request)
             texture=pixels(other);check('texture native image is not blank',texture[:,:,:3].max()>.3)

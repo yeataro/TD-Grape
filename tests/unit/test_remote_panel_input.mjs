@@ -98,3 +98,24 @@ test('mouse input retains the original path, and cannot interrupt active touch',
   pointer('pointerup', 2);
   assert.equal(events.length, 5);
 });
+
+test('focused panel keys do not reach graph shortcuts', () => {
+  const {panel} = fixture();
+  const stopped = [];
+  for (const key of ['Delete', 'a', 'h']) {
+    panel.testVideo.listeners.keydown({key, stopPropagation: () => stopped.push(key)});
+  }
+  panel.testVideo.listeners.keyup({stopPropagation: () => stopped.push('up')});
+  assert.deepEqual(stopped, ['Delete', 'a', 'h', 'up']);
+});
+
+test('docking within the same document preserves the peer; actual removal disconnects', async () => {
+  const {panel} = fixture();let closed = 0;
+  globalThis.window = {removeEventListener() {}};
+  document.removeEventListener = () => {};
+  panel.disconnect = () => closed++;
+  panel.isConnected = false;panel.disconnectedCallback();panel.isConnected = true;
+  await Promise.resolve();assert.equal(closed, 0);
+  panel.isConnected = false;panel.disconnectedCallback();
+  await Promise.resolve();assert.equal(closed, 1);
+});
