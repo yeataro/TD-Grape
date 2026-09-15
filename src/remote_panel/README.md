@@ -1,7 +1,7 @@
-# TD Remote Panel — experimental 0.1.1
+# TD Remote Panel — experimental 0.1.2
 
 One TouchDesigner Panel COMP or native OP Viewer, streamed to one browser over
-WebRTC, with mouse events returned to that same panel. The component owns its
+WebRTC, with mouse and translated touch events returned to that same panel. The component owns its
 server, signaling, capture and control channel. It has no dependency on Grape's
 graph, compiler or editor.
 
@@ -36,6 +36,17 @@ service is used. Internet routing and multiple receivers are outside this previe
 - Mouse buttons, movement and wheel events use native `PanelCOMP.interactMouse`.
   Viewer gestures keep TD's own behavior. Browser coordinates account for video
   letterboxing and TD's mirrored video transport.
+- Touch: **tap** clicks, **one-finger drag** performs a left drag. A 3D OP Viewer
+  (MAT, SOP, POP or object COMP) also accepts **two-finger pan** and **pinch zoom**,
+  translated to TD's right drag and middle-button dolly. Pinch uses a virtual
+  vertical drag rather than wheel events; its horizontal position stays fixed.
+  Panel/Test Panel and other viewer types retain single-finger control.
+- Two-finger pan or pinch is selected after a small movement and remains selected
+  until lift. Lift all fingers before starting another gesture. A second finger
+  cancels a pending tap; three fingers cancel navigation. Focus loss, pointer
+  cancellation, window resize, source changes and disconnection release held
+  input and discard queued movement. Browser touch gestures are disabled only
+  over the video, leaving the surrounding page scrollable.
 - OP Viewer mode captures the Target OP directly with OP Viewer TOP. Its companion
   OP Viewer COMP only receives mouse input, changing the same target viewer state.
   This avoids depth artifacts observed when capturing a MAT through OP Viewer COMP
@@ -50,7 +61,7 @@ service is used. Internet routing and multiple receivers are outside this previe
   Panel COMP nor OP Viewer COMP has `interactKeyboard`. The official webRTCPanel
   example contains a future stub, and its browser README also lists keyboard
   input as unsupported. We do not change the host's keyboard focus or inject OS
-  keys. Touch gestures and native popup windows are also outside this preview.
+  keys. Long-press context menus and native popup windows remain outside this preview.
 - Only a connected receiver enables video output. Static panels are cooked at
   the configured frame rate while streaming so WebRTC keeps receiving frames.
   TD's available cook rate and WebRTC adaptation can reduce the delivered rate
@@ -80,7 +91,10 @@ needs a secure signaling endpoint; use the supplied HTTP test page for this prev
 
 `connect()` and `disconnect()` control the session. `panel-state`, `panel-source`,
 `panel-format` and `panel-focus` events expose state, TD paths, decoded video
-dimensions and browser focus. `panel-source.detail.shortcuts` lists supported
+dimensions and browser focus. `touch-gestures.js` is the browser-only translation
+module; embed it alongside `remote-panel.js`. `panel-source.detail.touchNavigation`
+is `3d` when two-finger navigation is available, otherwise empty.
+`panel-source.detail.shortcuts` lists supported
 actions; currently only `reset-viewer` in OP Viewer mode. The `replaced` state
 means a newer receiver took control; hosts should not auto-reconnect that state.
 `index.html`, `demo.js` and `style.css` implement the small test page.
@@ -103,6 +117,7 @@ directory and preserves existing parameter values and OP identities.
 From the repository with a running development bridge:
 
 ```text
+node --test tests/unit/test_remote_panel_touch.mjs tests/unit/test_remote_panel_input.mjs
 python tools/dev/submit_job.py tools/dev/jobs/build_remote_panel.py
 python tools/dev/submit_job.py tools/dev/jobs/export_remote_panel.py
 python tools/dev/submit_job.py tests/td/test_remote_panel.py --report remote-panel
@@ -112,6 +127,11 @@ The native test builds the component outside Grape, rebuilds it without duplicat
 controls, reloads its TOX and checks source selection, asset embedding, network
 boundaries and preservation of existing shader states.
 
+Touch state/adapter checks run headlessly in Node. Native event replay verified
+the button, slider and 3D rotation/pan/dolly; desktop Chromium still controls the
+live panel. These checks do not replace physical phone/iPad touch testing.
+
 Native API references: [WebRTC DAT](https://docs.derivative.ca/WebRTC_DAT),
 [PanelCOMP](https://docs.derivative.ca/PanelCOMP_Class),
+[Geometry Viewer navigation](https://derivative.ca/UserGuide/Geometry_Viewer),
 [Derivative's browser example](https://github.com/TouchDesigner/WebRTC-Remote-Panel-Web-Demo).

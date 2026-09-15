@@ -2,6 +2,8 @@
 
 產品版本：**0.8.73**（開發版，未進入 Alpha）。獨立目錄遷移後，已完成 UI 精簡、Layout 分頁排序、Label 行尾註解與 TOP／MAT 原生頁面整理，並保存正式開發 TOE。這仍不是公開發佈版本。後續版號允許持續向前小幅遞增，不固定停留在此版本，也不可倒退。
 
+2026-09-16：Remote Panel 0.1.2 加入網頁端觸控轉譯：單指點按／拖曳，3D OP Viewer 支援雙指平移與捏合縮放，分別轉成右鍵拖曳與中鍵 dolly。手勢取消、失焦及來源／連線切換會釋放按鍵；一般 Panel 保留單指操作。15 項 Node 檢查、24 項原生元件檢查及 TD 控制事件回放通過，桌面 Chromium 拖曳回驗通過；手機與 iPad 實機觸控仍待使用者回驗。沿用既有 WebRTC／擷取架構。
+
 2026-09-15：主組件內新增獨立的 [TD Remote Panel 0.1](../../src/remote_panel/README.md) 試驗元件。以原生 WebRTC 傳送 Panel／OP Viewer，滑鼠操作回傳至同一個 TD 面板；單一接收端、來源路徑、斷線釋放及無效來源恢復已驗證。另附可在 Grape 外載入的 TOX。這次未改動編譯器版本或現有 Output Preview；觸控、鍵盤、中間 Shader 預覽及多接收端尚未實作。
 
 2026-09-16：修正 OP Viewer 模式的深度顯示問題：改成 TOP 直接擷取 Target OP，OP Viewer COMP 僅處理滑鼠，避免 MAT 透過 COMP 再擷取時的破面。停用不需要的 TOP 舊版 Panel Interaction；擷取與原生旋轉已回驗，詳見 [測試紀錄](TESTING.md#td-remote-panel-01)。

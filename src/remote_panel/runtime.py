@@ -10,7 +10,7 @@ import socket
 import time
 from urllib.parse import urlsplit
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 TRACK = 'TDPanel'
 CHANNEL = 'control'
 _client = None
@@ -77,12 +77,15 @@ def source_panel():
 def metadata():
     comp = owner()
     target = comp.par.Targetop.eval() if comp.par.Source.eval() == 'viewer' else _panel
+    geometry_viewer = bool(_viewer_target and _viewer_target.valid and (
+        _viewer_target.family in ('MAT', 'SOP', 'POP') or getattr(_viewer_target, 'isObject', False)))
     return {'type': 'source', 'version': VERSION, 'source': target.path if target else '',
             'panel': _panel.path if _panel else '', 'revision': _revision,
             'width': int(comp.par.Width.eval()), 'height': int(comp.par.Height.eval()),
             # Matches TD 2025 and the official remote-panel browser example.
             'fps': int(comp.par.Framerate.eval()), 'mirrorX': True, 'status': _status, 'error': _error,
-            'shortcuts': ['reset-viewer'] if _viewer_target and _viewer_target.valid else []}
+            'shortcuts': ['reset-viewer'] if _viewer_target and _viewer_target.valid else [],
+            'touchNavigation': '3d' if geometry_viewer else ''}
 
 
 def send(message, client=None):
@@ -216,6 +219,7 @@ def http(request, response):
     path = urlsplit(request.get('uri', '/')).path
     assets = {'/': ('index_html', 'text/html; charset=utf-8'),
               '/remote-panel.js': ('remote_panel_js', 'text/javascript; charset=utf-8'),
+              '/touch-gestures.js': ('touch_gestures_js', 'text/javascript; charset=utf-8'),
               '/demo.js': ('demo_js', 'text/javascript; charset=utf-8'),
               '/style.css': ('style_css', 'text/css; charset=utf-8')}
     if request.get('method') != 'GET':

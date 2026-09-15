@@ -6,6 +6,7 @@ ASSETS = {
     'rtc_callbacks': 'rtc_callbacks.py', 'controls': 'controls.py',
     'lifecycle': 'lifecycle.py', 'index_html': 'index.html',
     'remote_panel_js': 'remote-panel.js', 'demo_js': 'demo.js', 'style_css': 'style.css',
+    'touch_gestures_js': 'touch-gestures.js',
 }
 
 
@@ -69,8 +70,8 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     p.label = 'Input Events Received'
     p.expr = "me.op('runtime').module.event_count()"
     p.readOnly = True
-    version = par('Str', 'Version', 'Module Version', '0.1.1')
-    version.default = version.val = '0.1.1'
+    version = par('Str', 'Version', 'Module Version', '0.1.2')
+    version.default = version.val = '0.1.2'
     version.readOnly = True
 
     rtc = node(webrtcDAT, 'webrtc', 0, 0)

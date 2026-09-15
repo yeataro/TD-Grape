@@ -8,10 +8,11 @@ let focused = false;
 let sourceFormat;
 let receivedFormat;
 function updateControls() {
-  if (panel.state !== 'connected') controls.textContent = 'Mouse controls · one connected browser';
+  if (panel.state !== 'connected') controls.textContent = 'Mouse & touch · one connected browser';
   else if (sourceFormat?.shortcuts?.includes('reset-viewer')) {
-    controls.textContent = focused ? 'Panel focused · H reset view · Tab leave panel' : 'Click panel to focus · H reset view';
-  } else controls.textContent = 'Mouse controls · keyboard unavailable for this panel';
+    const touch = sourceFormat.touchNavigation === '3d' ? 'Drag to rotate · Two fingers to pan · Pinch to zoom' : 'Tap or drag to interact';
+    controls.textContent = `${touch} · ${focused ? 'H reset view · Tab leave panel' : 'Focus panel for H reset'}`;
+  } else controls.textContent = 'Tap or drag to interact · Mouse controls available';
 }
 function updateFormat() {
   if (!sourceFormat) return;

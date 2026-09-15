@@ -40,6 +40,9 @@ try:
     check('LAN disabled refuses HTTP', response['statusCode'] == 403)
     response = runtime.http({'method': 'GET', 'uri': '/runtime.py', 'clientAddress': '127.0.0.1'}, {})
     check('server only serves browser assets', response['statusCode'] == 404)
+    response = runtime.http({'method': 'GET', 'uri': '/touch-gestures.js', 'clientAddress': '127.0.0.1'}, {})
+    check('touch translator is available from the embedded standalone server',
+          response['statusCode'] == 200 and 'export class TouchGestures' in response['data'])
     component.par.Source = 'viewer'
     runtime.refresh_source()
     check('missing target stops the stream and reports the source problem',
@@ -54,6 +57,13 @@ try:
           and component.op('op_viewer').par.interactive.eval())
     check('only OP Viewer advertises the explicit reset shortcut',
           runtime.metadata()['shortcuts'] == ['reset-viewer'])
+    check('a panel viewed through OP Viewer keeps single-touch control', runtime.metadata()['touchNavigation'] == '')
+    material = container.create(phongMAT, 'touch_material')
+    component.par.Targetop = material
+    runtime.refresh_source()
+    check('3D OP Viewer advertises touch navigation', runtime.metadata()['touchNavigation'] == '3d')
+    component.par.Targetop = component.op('test_panel')
+    runtime.refresh_source()
     # Exercise messages against the independent fixture, never the user's viewer.
     runtime._connection = 'keyboard-test'
     count = runtime.event_count()
@@ -73,6 +83,7 @@ try:
     runtime.refresh_source()
     check('Panel mode targets the original Panel COMP', runtime.source_panel() == component.op('test_panel'))
     check('Panel mode does not advertise viewer reset', runtime.metadata()['shortcuts'] == [])
+    check('Panel mode does not translate two fingers into a right click', runtime.metadata()['touchNavigation'] == '')
     component.par.Source = 'test'
     component.par.Targetop = ''
     component.par.Panel = ''

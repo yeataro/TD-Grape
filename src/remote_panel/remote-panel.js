@@ -1,11 +1,13 @@
 // Reusable browser surface. No Grape state, routing, framework, or global DOM IDs.
+import {TouchGestures} from './touch-gestures.js';
+
 export class TDRemotePanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({mode: 'open'});
     this.shadowRoot.innerHTML = `<style>
       :host{display:block;position:relative;background:#101014;overflow:hidden;min-height:160px;aspect-ratio:16/9}
-      video{display:block;width:100%;height:100%;object-fit:contain;outline:none;user-select:none;-webkit-user-drag:none}
+      video{display:block;width:100%;height:100%;object-fit:contain;outline:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;touch-action:none;-webkit-touch-callout:none}
       :host([data-focused])::after{content:"";position:absolute;inset:0;border:2px solid #b69bf2;pointer-events:none}
       .message{position:absolute;inset:0;display:grid;place-items:center;padding:24px;pointer-events:none;color:#c9c5d7;font:14px/1.6 system-ui;text-align:center}
       .message[hidden]{display:none}
@@ -17,6 +19,8 @@ export class TDRemotePanel extends HTMLElement {
     this.lastPoint = {u: .5, v: .5};
     this.buttons = 0;
     this.shortcuts = [];
+    this.touch = new TouchGestures(point => this.point(point, true), (point, buttons, wheel) => this.sendMouse(point, buttons, wheel));
+    this.touchFrame = 0;
     this.onBlur = () => { this.release(); this.setFocused(false); };
     this.onFocus = () => this.setFocused(this.shadowRoot.activeElement === this.video);
     this.onVisibility = () => { if (document.hidden) this.onBlur(); else this.onFocus(); };
@@ -46,6 +50,7 @@ export class TDRemotePanel extends HTMLElement {
   connectedCallback() {
     window.addEventListener('blur', this.onBlur);
     window.addEventListener('focus', this.onFocus);
+    window.addEventListener('resize', this.onBlur);
     document.addEventListener('visibilitychange', this.onVisibility);
     if (this.hasAttribute('autoconnect')) this.connect();
   }
@@ -53,6 +58,7 @@ export class TDRemotePanel extends HTMLElement {
   disconnectedCallback() {
     window.removeEventListener('blur', this.onBlur);
     window.removeEventListener('focus', this.onFocus);
+    window.removeEventListener('resize', this.onBlur);
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.disconnect();
   }
@@ -125,6 +131,7 @@ export class TDRemotePanel extends HTMLElement {
           this.release();
           this.revision = message.revision;
           this.shortcuts = Array.isArray(message.shortcuts) ? message.shortcuts : [];
+          this.touch.navigation = message.touchNavigation === '3d';
           this.video.style.transform = message.mirrorX ? 'scaleX(-1)' : '';
           this.style.aspectRatio = `${message.width} / ${message.height}`;
           this.dispatchEvent(new CustomEvent('panel-source', {detail: message}));
@@ -166,6 +173,7 @@ export class TDRemotePanel extends HTMLElement {
   disconnect(notify = true) {
     this.release();
     this.shortcuts = [];
+    this.touch.navigation = false;
     this.setFocused(false);
     clearTimeout(this.timeout);
     clearInterval(this.heartbeat);
@@ -179,6 +187,7 @@ export class TDRemotePanel extends HTMLElement {
 
   point(event, allowOutside = false) {
     const r = this.video.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
     const ratio = this.video.videoWidth / this.video.videoHeight || r.width / r.height;
     const width = Math.min(r.width, r.height * ratio), height = width / ratio;
     const u = (event.clientX - r.left - (r.width - width) / 2) / width;
@@ -188,7 +197,8 @@ export class TDRemotePanel extends HTMLElement {
   }
 
   pointer(event) {
-    if (event.pointerType !== 'mouse') return; // Touch gestures are a later, separate translation layer.
+    if (event.pointerType === 'touch') { this.touchPointer(event); return; }
+    if (event.pointerType !== 'mouse' || this.touch.contacts.size) return;
     if (event.type === 'pointercancel' || event.type === 'lostpointercapture') { this.release(); return; }
     const point = this.point(event, Boolean(this.buttons));
     if (!point) return;
@@ -202,6 +212,37 @@ export class TDRemotePanel extends HTMLElement {
     this.buttons = event.buttons;
     this.sendMouse(point, event.buttons);
     if (event.type === 'pointerup' && this.video.hasPointerCapture(event.pointerId)) this.video.releasePointerCapture(event.pointerId);
+  }
+
+  touchPointer(event) {
+    const id = event.pointerId;
+    const position = {clientX: event.clientX, clientY: event.clientY};
+    if (event.type === 'pointerdown') {
+      if (this.channel?.readyState !== 'open' || !this.point(event)) return;
+      event.preventDefault();
+      if (!this.touch.contacts.size) this.release();
+      this.video.focus({preventScroll: true});
+      this.video.play().catch(() => {});
+      this.touch.down(id, position);
+      this.video.setPointerCapture(id);
+      return;
+    }
+    if (!this.touch.contacts.has(id)) return;
+    if (event.cancelable) event.preventDefault();
+    if (event.type === 'pointermove') {
+      this.touch.move(id, position);
+      // Coalesce both fingers before deciding between a pan and a pinch.
+      if (!this.touchFrame) this.touchFrame = requestAnimationFrame(() => {
+        this.touchFrame = 0;
+        this.touch.flush();
+      });
+      return;
+    }
+    cancelAnimationFrame(this.touchFrame);
+    this.touchFrame = 0;
+    if (event.type === 'pointerup') this.touch.up(id, position);
+    else this.touch.cancel(id);
+    if (this.video.hasPointerCapture(id)) this.video.releasePointerCapture(id);
   }
 
   sendMouse(point, buttons, wheel = 0) {
@@ -230,6 +271,13 @@ export class TDRemotePanel extends HTMLElement {
   }
 
   release() {
+    cancelAnimationFrame(this.touchFrame);
+    this.touchFrame = 0;
+    const contacts = [...this.touch.contacts.keys()];
+    this.touch.reset();
+    for (const id of contacts) {
+      if (this.video.hasPointerCapture(id)) this.video.releasePointerCapture(id);
+    }
     if (this.buttons) this.sendMouse(this.lastPoint, 0);
     this.buttons = 0;
   }

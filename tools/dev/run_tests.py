@@ -17,6 +17,7 @@ commands = [
 ]
 commands.extend(['node', 'tests/unit/' + name] for name in (
     'test_functions_model.js', 'test_personal_model.js', 'test_editor_edits.js', 'test_import_ui.js'))
+commands.append(['node', '--test', 'tests/unit/test_remote_panel_touch.mjs', 'tests/unit/test_remote_panel_input.mjs'])
 for command in commands:
     subprocess.run(command, cwd=root, env=env, check=True)
 print('Portable checks passed')
