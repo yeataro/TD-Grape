@@ -126,7 +126,8 @@ shaders=list(masters.children) if masters else []
 shaders += [n for n in manager.parent().findChildren(tags=['sgrapeShader'])
             if n not in shaders and n.fetch('sgrapeManagerId',None)==manager.fetch('sgrapeManagerId',None)]
 if masters:
-    targets.append((masters,complete_plan(masters,{'sgrape_top':[0,0],'sgrape_mat':[360,0]},-240)))
+    targets.append((masters,complete_plan(masters,{'grape_top':[0,0],'grape_mat':[360,0],
+                                                  'sgrape_top':[0,0],'sgrape_mat':[360,0]},-240)))
 for component in shaders:
     if component.family!='COMP':continue
     kind=component.fetch('sgrapeTarget','mat')

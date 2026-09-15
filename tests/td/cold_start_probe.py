@@ -12,7 +12,7 @@ def native():
     assert os.getpid()!=EXPECTED['originalPid']
     assert ROOT.name=='TD-Grape' and (CONTROL/'expected.private.json').is_file()
     assert not op('/TD_RemoteDebug') and not op('/sgrape_devbridge') and not op('/grape_devbridge')
-    m=op('/project1/TD_Sgrape');r=m.op('runtime').module
+    m=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False));r=m.op('runtime').module
     assert r._server and r._worker.is_alive()
     mapping=json.loads((ROOT/'src/td/embedded_sources.json').read_text(encoding='utf-8'))
     files=json.loads((ROOT/'src/td/source_files.json').read_text(encoding='utf-8'))
@@ -56,7 +56,7 @@ def onFrameStart(frame):
     global phase
     if phase==2:return
     if phase==0 and time.monotonic()-started>5:
-        m=op('/project1/TD_Sgrape');r=m.op('runtime').module
+        m=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False));r=m.op('runtime').module
         if r._family_pending and time.monotonic()-started<35:return
         phase=1
         try:

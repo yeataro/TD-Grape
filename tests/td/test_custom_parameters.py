@@ -1,7 +1,7 @@
 from pathlib import Path
 import json,copy,uuid
 w=Path(GRAPE_TEST_OUTPUT);w.mkdir(parents=True,exist_ok=True)
-original=op('/project1/TD_Sgrape').op('runtime').module
+original=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module
 before={s.path:{n:s.op(n).text for n in ('state','graph','manifest','pixel_shader','vertex_shader') if s.op(n)} for s in original.shaders()}
 assert not op('/grape_custom_test')
 root=op('/').create(baseCOMP,'grape_custom_test');checks=[]

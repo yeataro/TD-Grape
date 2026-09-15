@@ -31,7 +31,7 @@ def pixels(comp):
 def begin(source_root,report,files,runtime_source=None):
     global root,w,original,before,r,c,checks,phase,mat,other,top,request,texture_request,render_cooks,previous,saved,target_id,original_material,metrics,deadline
     root=me.parent();w=Path(report);checks=[];phase=0;metrics={};deadline=time.monotonic()+20
-    original=op('/project1/TD_Sgrape/runtime').module;before=snapshot(original)
+    original=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module;before=snapshot(original)
     manager=root.create(baseCOMP,'manager');manager.store('sgrapeManager',True);manager.store('sgrapeManagerId',uuid.uuid4().hex)
     page=manager.appendCustomPage('Test');page.appendStr('Updatestatus');page.appendFolder('Personalfolder')
     manager.par.Personalfolder=str(w/'empty_personal')

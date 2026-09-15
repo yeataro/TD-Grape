@@ -57,7 +57,9 @@ def main():
             for name in ('pixel_shader', 'vertex_shader') if (state.parent / (name + '.text')).is_file()}}
     assert expected['shaders'], 'No saved Shader fixtures in the development TOE'
     (control / 'expected.private.json').write_text(json.dumps(expected, indent=2), encoding='utf-8')
-    sample = expanded / 'project1/TD_Sgrape/lifecycle'
+    sample = next(expanded / 'project1' / name / 'lifecycle'
+                  for name in ('TD_Grape', 'TD_Sgrape')
+                  if (expanded / 'project1' / name / 'lifecycle.text').is_file())
     for ext in ('n', 'parm'):
         (expanded / ('grape_cold_probe.' + ext)).write_bytes(sample.with_suffix('.' + ext).read_bytes())
     code = (ROOT / 'tests/td/cold_start_probe.py').read_bytes()

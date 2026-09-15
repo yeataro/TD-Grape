@@ -168,7 +168,7 @@ def service_family_startup():
                 if not registry.IsFamilyInstalled(family_name):family.Install(True)
                 if registry.IsFamilyInstalled(family_name):
                     # TDFam initially paints its source COMPs with the family color.
-                    # Restore each Sgrape template's per-operator manifest color.
+                    # Restore each Grape template's per-operator manifest color.
                     folder=_owner.op('masters')
                     if folder:
                         for master in folder.children:
@@ -424,6 +424,11 @@ def resolve_shader(identity):
     if not shader or not shader.valid: raise RuntimeError('Shader no longer exists. Open Editor from the intended Shader.')
     return shader
 
+def master_template(kind):
+    """Resolve current templates while accepting names from older projects."""
+    if kind not in ('top','mat'):raise ValueError('Unknown Grape template: '+str(kind))
+    return _owner.op('masters/grape_'+kind) or _owner.op('masters/sgrape_'+kind)
+
 def prepare_masters():
     """Refresh product entry points without replacing any user Shader."""
     page=next((p for p in _owner.customPages if p.name in ('TD-Grape','TD-Sgrape')),None) or _owner.appendCustomPage('TD-Grape')
@@ -452,7 +457,7 @@ def prepare_masters():
             if abs(parameter.eval()-value)>1e-6:parameter.val=value
     folder=_owner.op('masters') or _owner.create(baseCOMP,'masters')
     for kind in ('mat','top'):
-        master=folder.op('sgrape_'+kind) or create_shader(folder,'sgrape_'+kind,kind=kind)
+        master=master_template(kind) or create_shader(folder,'grape_'+kind,kind=kind)
         register_shader(master)
         update_shader(master)
         master.store('sgrapeMaster',True);master.tags.discard('sgrapeShader')
@@ -1366,8 +1371,8 @@ def process_shader_request(method,path,body):
         if not isinstance(graph,dict): raise RuntimeError('Invalid graph document')
         text=json.dumps(graph,ensure_ascii=False,indent=2,allow_nan=False)
         if len(text.encode('utf-8'))>512000: raise RuntimeError('Graph exceeds 512 KB')
-        folder=Path(project.folder)/'TD-Sgrape-graphs'; folder.mkdir(exist_ok=True)
-        path=folder/('TD-Sgrape-'+time.strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]+'.json')
+        folder=Path(project.folder)/'TD-Grape-graphs'; folder.mkdir(exist_ok=True)
+        path=folder/('TD-Grape-'+time.strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]+'.json')
         path.write_text(text,encoding='utf-8')
         return {'saved':True,'path':str(path)}
     if method=='POST' and path=='/api/save':

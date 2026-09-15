@@ -32,7 +32,7 @@ def initialize():
     p=root.appendCustomPage('Research');p.appendFloat('Value');p.appendFloat('Other');root.par.Value=.2;root.par.Other=.7
     dat=root.create(textDAT,'text');dat.text='before'
     root.store('testValue','before')
-    m=op('/project1/TD_Sgrape');r=m.op('runtime').module
+    m=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False));r=m.op('runtime').module
     graph=shader_graph(r.core())
     shader=r.create_shader(root,'Shader',graph,'top')
     external=root.create(constantTOP,'ExternalBlue');external.par.colorr=.1;external.par.colorg=.2;external.par.colorb=.9
@@ -417,7 +417,7 @@ def onFrameStart(frame):
     try:
         if phase==0:
             if time.monotonic()-started<3:return
-            r=op('/project1/TD_Sgrape/runtime').module
+            r=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module
             if r._family_pending and time.monotonic()-started<25:return
             initialize();phase=1;return
         if phase==1:

@@ -4,7 +4,9 @@ def onPulse(par):
     runtime=owner.op('runtime').module
     runtime.start(owner)
     def create(kind='mat'):
-        shader=owner.parent().copy(owner.op('masters/sgrape_'+kind),name='Grape_'+kind.upper()+'1')
+        master=runtime.master_template(kind)
+        if not master:raise RuntimeError('Missing Grape '+kind.upper()+' template')
+        shader=owner.parent().copy(master,name='Grape_'+kind.upper()+'1')
         runtime.register_shader(shader,fresh=True)
         shader.nodeX=owner.nodeX+240;shader.nodeY=owner.nodeY
         return shader
