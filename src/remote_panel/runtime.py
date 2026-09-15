@@ -103,7 +103,11 @@ def refresh_source():
     comp = owner()
     try:
         _panel = source_panel()
-        comp.op('panel_image').par.opviewer = _panel
+        # Capture the target's native viewer directly. In TD 2025, capturing
+        # a 3D viewer through OP Viewer COMP can lose depth ordering. The COMP
+        # remains the mouse receiver and operates that same native viewer state.
+        capture = comp.par.Targetop.eval() if comp.par.Source.eval() == 'viewer' else _panel
+        comp.op('panel_image').par.opviewer = capture
         _error = ''
         _status = 'Connected' if _connection and comp.op('webrtc').getConnectionState(_connection) == 'connected' else 'Ready'
         comp.op('video_out').par.active = bool(_connection)

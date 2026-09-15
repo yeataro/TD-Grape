@@ -31,6 +31,12 @@ service is used. Internet routing and multiple receivers are outside this previe
 - Mouse buttons, movement and wheel events use native `PanelCOMP.interactMouse`.
   Viewer gestures keep TD's own behavior. Browser coordinates account for video
   letterboxing and TD's mirrored video transport.
+- OP Viewer mode captures the Target OP directly with OP Viewer TOP. Its companion
+  OP Viewer COMP only receives mouse input, changing the same target viewer state.
+  This avoids depth artifacts observed when capturing a MAT through OP Viewer COMP
+  on TD 2025.32820. TOP's deprecated Allow Panel Interaction stays disabled.
+  Keep the internal controller's Center/Scale at their defaults; native viewer
+  pan/zoom/rotate operations are supported, additional COMP-level transforms are not.
 - No keyboard, touch gestures, or translation of native popup windows yet.
 - Only a connected receiver enables video output. Static panels are cooked at
   the configured frame rate while streaming so WebRTC keeps receiving frames.

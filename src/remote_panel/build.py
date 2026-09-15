@@ -101,7 +101,8 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     image.par.outputresolution = 'custom'
     image.par.resolutionw.expr = 'parent().par.Width'
     image.par.resolutionh.expr = 'parent().par.Height'
-    image.par.allowpanel = True
+    # Interaction is delivered to the Panel COMP, never through the capture TOP.
+    image.par.allowpanel = False
     image.par.preservealpha = False
     viewer.par.opviewer.expr = 'parent().par.Targetop'
     viewer.par.interactive = True

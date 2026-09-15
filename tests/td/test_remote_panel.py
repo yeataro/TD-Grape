@@ -48,6 +48,10 @@ try:
     runtime.refresh_source()
     check('OP Viewer accepts a configured operator',
           runtime.source_panel() == component.op('op_viewer') and not runtime.metadata()['error'])
+    check('OP capture bypasses the controller COMP and deprecated TOP interaction',
+          component.op('panel_image').par.opviewer.eval() == component.par.Targetop.eval()
+          and not component.op('panel_image').par.allowpanel.eval()
+          and component.op('op_viewer').par.interactive.eval())
     component.par.Source = 'panel'
     component.par.Panel = component.op('test_panel')
     runtime.refresh_source()
