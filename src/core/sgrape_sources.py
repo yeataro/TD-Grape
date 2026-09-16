@@ -296,6 +296,46 @@ def write_value(runtime, body):
     return snapshot(runtime)
 
 
+def source_references(graph, ident):
+    """Inventory ownership includes disconnected nodes and every function body."""
+    data = list(graph.get('stages', {}).values()) + [f['graph'] for f in graph.get('functions', [])]
+    return [node for part in data for node in part.get('nodes', [])
+            if node.get('params', {}).get('declarationId') == ident
+            or node.get('params', {}).get('inputId') == ident]
+
+
+def purge_missing_source(runtime, ident):
+    """Forget an unused missing source without compiling unrelated graph edits.
+
+    Native deletion is a separate, already-completed operation. If this metadata
+    commit fails, restore its recoverable missing record, not destroyed TD Pars.
+    """
+    comp = runtime.target(); before = copy.deepcopy(runtime.state())
+    graph = before['graph']
+    decl = next((d for d in graph['declarations'] if d['id'] == ident and d['kind'] == 'uniform'), None)
+    if not decl or not decl.get('sourceMissing'):
+        raise RuntimeError('Select a missing Uniform source to remove from Inputs.')
+    if source_references(graph, ident):
+        raise RuntimeError('This Uniform still has graph references. Remove or reassign them before removing the missing source.')
+    registry_before = copy.deepcopy(comp.fetch(STORE, {}))
+    issues_before = copy.deepcopy(comp.fetch('grapeSourceIssues', []))
+    registry = copy.deepcopy(registry_before); registry.pop(ident, None)
+    after = copy.deepcopy(before)
+    after['graph']['declarations'] = [d for d in after['graph']['declarations'] if d['id'] != ident]
+    after['revision'] += 1; after['sourceChanged'] = True
+    # Validate serialization before writing any inventory metadata.
+    json.dumps(after, allow_nan=False)
+    try:
+        comp.store(STORE, registry)
+        comp.store('grapeSourceIssues', [issue for issue in issues_before if issue.get('id') != ident])
+        runtime.write_state(after)
+    except Exception as exc:
+        comp.store(STORE, registry_before)
+        comp.store('grapeSourceIssues', issues_before)
+        runtime.write_state(before)
+        raise RuntimeError('Could not remove the missing Uniform from Inputs. Its missing record was retained; refresh and retry.') from exc
+
+
 def edit(runtime, body):
     seen = snapshot(runtime)
     if not seen['enabled']: raise RuntimeError('Apply this Shader once to enable native Uniform sources.')
@@ -326,6 +366,10 @@ def edit(runtime, body):
         return snapshot(runtime)
     if not decl: raise RuntimeError('Select an existing Uniform source.')
     row = locate(operator, comp.fetch(STORE, {}).get(decl['id']))
+    if action == 'remove' and row is None:
+        if body.get('expected') is not None: raise RuntimeError('The Uniform changed in TD. Refresh and try again.')
+        purge_missing_source(runtime, decl['id'])
+        return snapshot(runtime)
     if row is None: raise RuntimeError('This Uniform source is missing.')
     if action == 'driver':
         index=body.get('component');expression=body.get('expression')
@@ -355,7 +399,6 @@ def edit(runtime, body):
         comp.store(STORE, registry)
     elif action == 'remove':
         registry = copy.deepcopy(comp.fetch(STORE)); registry[decl['id']]['missing'] = True
-        comp.store(STORE, registry)
         sequence = getattr(operator.seq, row['sequence'])
         if sequence.numBlocks == 1:
             # Native vector sequences retain one slot; deleting the last block
@@ -364,5 +407,14 @@ def edit(runtime, body):
             name_parameter.mode = ParMode.CONSTANT
             name_parameter.val = ''
         else: sequence.destroyBlock(row['index'])
+        comp.store(STORE, registry)
+        # First reconcile the native removal into a recoverable missing record.
+        # Metadata purge can then fail/retry without pretending TD row identity
+        # or its Expression/Export/Bind state was restored.
+        removed = snapshot(runtime)
+        if not source_references(removed['graph'], decl['id']):
+            purge_missing_source(runtime, decl['id'])
+            return snapshot(runtime)
+        return removed
     else: raise RuntimeError('Unknown source operation.')
     return snapshot(runtime)

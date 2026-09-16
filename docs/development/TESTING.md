@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-17 Inputs 刪除修復（0.8.83）：`test_sources.py` 16 項通過，涵蓋零引用清理、所有 stage／function 的引用保護、過期 revision／原生身分拒絕、鄰列驅動保留、最後原生列清名、metadata 失敗回復與重試；清理不要求重新編譯。`test_input_removal.cjs` 7 組通過，涵蓋取消／確認刪除、連續清理 missing 項目、其他缺失來源造成 Apply 失敗後仍可修復、Undo 不補回已刪除來源、本地草稿不被輪詢覆蓋，以及 Constant／Sampler 的缺失零引用刪除。`test_native_sources.py` 在 TD TOP／MAT 通過 21 組，驗證原生移除、缺失記錄清理、輪詢不再生、既有 Expression／Bind／COMP 控制與編譯失敗回復，保留使用者 Shader。語系鍵檢查通過。來源修正已同步 24 份內嵌資源；針對使用者先前刪除的記錄，先備份並重新核對引用，只清理仍無引用的三筆，保留已重新引用的來源與全部節點、接線、GLSL。
+
+執行刪除回歸：`node tests/browser/test_input_removal.cjs src/editor <editor-state-json> <report-directory>`；原生驗證：`python tools/dev/submit_job.py tests/td/test_native_sources.py`。
+
 2026-09-17 淺色畫布調整（0.8.83）：在隔離 Chromium 以新版及上一個已提交版本的 CSS 分別載入同一份圖，確認代表元素的深色 computed styles 一致。淺色模式的畫布、節點、型別接孔／接線、RGBA 提示、數字欄位、選取／錯誤／接線提示及 Value Ladder 通過目視；1600px 與 390px 無新增水平溢出。淺色／深色切換保留節點及 Parameter 尺寸、圖資料、Undo 與 pan／scale，沒有新增 POST 或 JavaScript 錯誤；取消 Value Ladder 保留圖狀態。實際滑鼠驗證 RGBA 線的 hover／selected 與刪除提示覆蓋順序。代表 RGBA 數字對比至少 4.80:1，實線對畫布至少 4.48:1；次要節點標籤再加深，對各分類標題底色為 4.60–4.72:1。未變更 Shader 語意或預覽像素；實體 iPad／Safari 仍待人工回驗。TD 同步僅更新 style_css，24 份內嵌來源與提供中的資源一致，保留兩份既有 Shader 並保存來源 TOE。
 
 2026-09-17 第一版介面大小／外觀切換（0.8.83）：隔離 Chromium 的 `test_ui_appearance.cjs` 通過 7 組檢查，涵蓋標準／舒適與深色／淺色四種組合、雙語提示與鍵盤操作、本機設定重載／失效回復／儲存拒寫、唯讀圖可切換，以及不改變圖／Undo／縮放／預覽狀態。未提交數字草稿保持同一 DOM；離開欄位沿用既有一次提交，外觀切換不產生額外 Undo 或寫入。320／390／960／1600px 的 16 組 footer 幾何確認控制置中、左右不重疊且仍可點擊。

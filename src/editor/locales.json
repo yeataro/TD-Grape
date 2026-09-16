@@ -1926,6 +1926,14 @@
       "en": "Apply or reload graph changes before editing live native Uniform values.",
       "zh-Hant": "先套用或重新載入圖的修改，再編輯原生 Uniform 目前值。"
     },
+    "sources.missingUnused": {
+      "en": "Source missing. No graph references.",
+      "zh-Hant": "來源缺失，目前沒有圖內引用。"
+    },
+    "sources.removeUnusedConfirm": {
+      "en": "Remove {name} from Inputs? It has no graph references.",
+      "zh-Hant": "刪除 {name}？此來源目前沒有圖內引用。"
+    },
     "sources.removeConfirm": {
       "en": "Remove {name}? {count} graph references will remain and need reassignment or restoration.",
       "zh-Hant": "移除 {name}？會保留 {count} 個圖中引用，可重新指定或重建來源。"
