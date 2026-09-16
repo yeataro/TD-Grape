@@ -135,3 +135,29 @@ python tools/dev/submit_job.py tests/td/test_glsl_code.py --timeout 60
 `tests/td/test_native_naming.py` 經由原生建立按鈕驗證 TOP／MAT、TDFam 名稱查找、目前編譯紀錄與不需升級的預設圖，也檢查開啟 Master Editor 後身分仍保留。`tests/td/test_master_templates.py` 驗證全新 MAT 只有一張預設 Sampler 圖與一個編譯 Info DAT，並以舊 shader shell 的隔離 fixture 重現模板升級需求，確認更新明確報錯且原圖不被改寫。
 
 2026-09-15 兩項 TD 檢查及 53 項相關 Python 單元測試通過。原生 Master 清理前後的 TOP 輸出與 MAT 驗證 Render 像素相同；TD OP 身分、既有人工位置與參數值保留。檢查為 Windows TD 原生實測，不計為跨平台驗證。
+
+## MAT 即時預覽套用掛起（0.8.81，2026-09-16）
+
+TD 2025.32820、Windows 上可重現：MAT 的 Pixel 圖保留 Texture Coordinates →
+Texture 2D，以及同一個 UV → Combine（vec4，XY=vec2，Z/W=0）。開啟即時預覽，
+把 Color Output Buffer 0 從 Texture 2D 改接 Combine。0.8.80 已在獨立測試 MAT
+與不同 TD process 重現。套用、候選/實際 Render 驗證與 candidate 清理均成功；
+下一次 Remote Panel `panel_image.cook(force=True)` 不返回，未進入 Video Stream
+Out 的 forced cook。直接建立相同 UV/W0 圖再預覽正常；TOP 同圖與原生編譯正常。
+改成 threadedprevious 仍無法避免此掛起。這些證據定位到既有 MAT 更新後的
+原生 viewer 擷取時機；沒有 native stack 證據可指認 TD／驅動內部的鎖。
+
+0.8.81 在 commit/rollback 前鎖定當前 capture，暫停 stream cook，保留最近影像；
+三個完整 callback 後解除。回歸必須確認 **畫面已改成 UV 色彩且後續擷取仍持續**，
+不能只看 API 回報成功、綠燈或舊影片。反向接回 Texture、再接 Combine，以及
+原生 GLSL 錯誤與注入 commit 失敗也要檢查預覽恢復、原圖與上一份成功 Shader 保留。
+
+`tests/unit/test_remote_capture_update.py` 覆蓋獨立元件的暫停／恢復、重疊更新、
+resize、來源/連線切換及 inactive 狀態；圖語意與 catalog 沒有更新，不新增升級門檻。
+私人逐階段紀錄與故障重現截圖保存在開發工作目錄，不納入產品。
+
+實測結果：修正後在同一個 WebRTC peer 上反覆切換 Texture ↔ UV 成功，捕捉
+cook 次數持續增加；原生無效 GLSL 的節點定位與上一份成功內容保留通過，
+注入 commit 失敗後圖／state／manifest／兩份 GLSL 完整還原，capture 自動解除。
+TOP／MAT 向量原生 27 項案例與 Master 檢查通過。可攜完整檢查通過，Remote Panel 相關行為測試共 15 項通過（本次新增 10 項）。兩份使用者圖與產碼對原始備份完全相同；
+Master 已同步、正式 TOE 已保存；沒有修改任何 catalog 定義或圖結構。

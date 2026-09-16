@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.80'
+PRODUCT_VERSION='0.8.81'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1332,6 +1332,20 @@ def upgrade_backup(comp, current):
                        'vertex': comp.op('vertex_shader').text if comp.op('vertex_shader') else ''}, ensure_ascii=False, allow_nan=False)
 
 
+def begin_material_preview_update(comp):
+    # The native MAT viewer can block when it captures a material in the same
+    # frame as its sampler layout changes. Let the companion retain its frame
+    # across the full commit/rollback, without changing the WebRTC connection.
+    if not comp or shader_kind(comp) != 'mat':
+        return None, None
+    panel = _owner.op('remote_panel')
+    if not panel or not panel.fetch('tdRemotePanel', False):
+        return None, None
+    runtime = panel.op('runtime').module
+    begin = getattr(runtime, 'begin_source_update', None)
+    return (runtime, begin(shader_operator(comp))) if begin else (None, None)
+
+
 def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
     if source_module(): source_module().sync(_owner.op('runtime').module)
     current=checked_state()
@@ -1361,10 +1375,12 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         target().op('graph').text=json.dumps(graph,ensure_ascii=False,indent=2)
         return {'ok':True,'state':new,'shaderUpdated':False,'compileInfo':'Graph layout saved','diagnostics':compiled['diagnostics'],'target':target().path}
     old_target=target(); preserve=existing_values(old_target,graph)
-    candidate=_owner.op('candidate')
-    if candidate: candidate.destroy()
-    candidate=make_scene(_owner,'candidate',core().graph_target(graph))
+    preview_runtime,preview_token=begin_material_preview_update(old_target)
+    candidate=None
     try:
+        candidate=_owner.op('candidate')
+        if candidate: candidate.destroy()
+        candidate=make_scene(_owner,'candidate',core().graph_target(graph))
         configure(candidate,compiled,graph,preserve,input_owner=old_target)
         info=validate_material(candidate,compiled)
         # Candidate validation precedes mutation. Snapshot allows compensation;
@@ -1407,7 +1423,11 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         cleanup_top_sources(destination,graph)
         return {'ok':True,'state':new,'shaderUpdated':True,'compileInfo':info,'diagnostics':compiled['diagnostics'],'target':destination.path}
     finally:
-        candidate.destroy()
+        try:
+            if candidate and candidate.valid: candidate.destroy()
+        finally:
+            if preview_token is not None:
+                preview_runtime.end_source_update(preview_token)
 
 def material_preview(comp):
     """Legacy PNG clients get lazy manager-owned captures, outside shader copies."""

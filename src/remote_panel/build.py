@@ -70,8 +70,8 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     p.label = 'Input Events Received'
     p.expr = "me.op('runtime').module.event_count()"
     p.readOnly = True
-    version = par('Str', 'Version', 'Module Version', '0.1.4')
-    version.default = version.val = '0.1.4'
+    version = par('Str', 'Version', 'Module Version', '0.1.5')
+    version.default = version.val = '0.1.5'
     version.readOnly = True
 
     rtc = node(webrtcDAT, 'webrtc', 0, 0)

@@ -1,4 +1,4 @@
-# TD Remote Panel — experimental 0.1.4
+# TD Remote Panel — experimental 0.1.5
 
 One TouchDesigner Panel COMP or native OP Viewer, streamed to one browser over
 WebRTC, with mouse and translated touch events returned to that same panel. The component owns its
@@ -192,3 +192,16 @@ WebRTC adaptation.
 The standalone demo omits `follow-size`, so its native manual dimensions retain
 their existing behavior. UI controls and further overlay simplification are tracked
 in [preview UI notes](../../docs/discussions/PREVIEW_UI_NOTES.md).
+
+## Updating a captured material (0.1.5 / Grape 0.8.81)
+
+`begin_source_update(target)` freezes only a matching viewer source and returns a
+hold token. The caller must call `end_source_update(token)` in `finally`, after
+validation, commit or rollback completes. Capture retains its last frame through
+three draw callbacks, then resumes on the same WebRTC peer. Nested updates wait
+for all tokens; source changes, disconnect and stop release the capture lock
+without reconnecting a departed receiver.
+
+This avoids a reproducible TD 2025.32820 native OP Viewer TOP hang when a GLSL MAT
+changes from textured output to UV output while live capture is running. Shader
+validation remains synchronous; the compiler and material contents are unchanged.

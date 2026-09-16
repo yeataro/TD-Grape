@@ -11,7 +11,7 @@ import secrets
 import time
 from urllib.parse import urlsplit, parse_qs
 
-VERSION = '0.1.4'
+VERSION = '0.1.5'
 TRACK = 'TDPanel'
 CHANNEL = 'control'
 _client = None
@@ -31,6 +31,7 @@ _started = False
 _status = 'Stopped'
 _error = ''
 _launches = {}
+_source_update = None
 
 
 def owner():
@@ -81,6 +82,84 @@ def capture_target():
     return comp.par.Targetop.eval() if comp.par.Source.eval()=='viewer' else source_panel()
 
 
+def _source_update_matches(update):
+    comp = owner()
+    return (update['target'].valid and comp.par.Source.eval() == 'viewer'
+            and comp.par.Targetop.eval() == update['target']
+            and _connection == update['connection'])
+
+
+def _release_source_update(resume=True):
+    global _source_update
+    update, _source_update = _source_update, None
+    if update is None:
+        return
+    try:
+        if update['image'].valid:
+            update['image'].lock = update['locked']
+    finally:
+        if resume and update['video'].valid and _source_update_matches(update):
+            update['video'].par.active = update['active']
+
+
+def begin_source_update(target):
+    """Freeze this viewer while its exact source is changed; return a hold token.
+
+    Locking the capture also blocks automatic dependent cooks from Video Stream
+    Out. Skipping the explicit cook alone leaves that native path active.
+    """
+    global _source_update
+    comp = owner()
+    if (not target or not target.valid or comp.par.Source.eval() != 'viewer'
+            or comp.par.Targetop.eval() != target):
+        return None
+    if _source_update is not None and not _source_update_matches(_source_update):
+        _release_source_update(resume=False)
+    token = secrets.token_urlsafe(24)
+    if _source_update is not None:
+        _source_update['tokens'].add(token)
+        _source_update['frames'] = None
+        return token
+    image, video = comp.op('panel_image'), comp.op('video_out')
+    _source_update = {'target': target, 'connection': _connection,
+                      'image': image, 'video': video, 'locked': bool(image.lock),
+                      'active': bool(video.par.active.eval()), 'tokens': {token},
+                      'frames': None}
+    try:
+        video.par.active = False
+        image.lock = True
+    except Exception:
+        _release_source_update()
+        raise
+    return token
+
+
+def end_source_update(token):
+    """After the final mutation or rollback, allow three draw-frame callbacks."""
+    if _source_update is None or token not in _source_update['tokens']:
+        return
+    _source_update['tokens'].remove(token)
+    if not _source_update['tokens']:
+        _source_update['frames'] = 3
+
+
+def _advance_source_update():
+    update = _source_update
+    if update is None:
+        return False
+    if not _source_update_matches(update):
+        _release_source_update(resume=False)
+        return False
+    # A resize may refresh metadata during a hold, but must not restart capture.
+    update['video'].par.active = False
+    if update['frames'] is not None:
+        if update['frames'] == 0:
+            _release_source_update()
+            return False
+        update['frames'] -= 1
+    return True
+
+
 def prepare_viewer(target):
     """Reserve a source without changing the active viewer. Consumed at connection."""
     if not target or not target.valid:raise ValueError('The requested viewer no longer exists.')
@@ -126,6 +205,8 @@ def refresh_source():
     _viewer_target = None
     _revision += 1
     comp = owner()
+    if _source_update is not None and not _source_update_matches(_source_update):
+        _release_source_update(resume=False)
     try:
         _panel = source_panel()
         # Capture the target's native viewer directly. In TD 2025, capturing
@@ -136,7 +217,7 @@ def refresh_source():
             _viewer_target = capture
         _error = ''
         _status = 'Connected' if _connection and comp.op('webrtc').getConnectionState(_connection) == 'connected' else 'Ready'
-        comp.op('video_out').par.active = bool(_connection)
+        comp.op('video_out').par.active = bool(_connection) and _source_update is None
     except Exception as exc:
         _panel = None
         _error = str(exc)
@@ -154,12 +235,15 @@ def disconnect(close_socket=True):
     _candidates = []
     comp = owner()
     comp.op('video_out').par.active = False
-    comp.op('video_out').par.webrtcconnection = ''
-    if connection:
-        comp.op('webrtc').closeConnection(connection)
-    if client and close_socket:
-        comp.op('web_server').webSocketClose(client)
-    _status = 'Ready' if _started and not _error else ('Invalid source' if _error else 'Stopped')
+    try:
+        _release_source_update(resume=False)
+    finally:
+        comp.op('video_out').par.webrtcconnection = ''
+        if connection:
+            comp.op('webrtc').closeConnection(connection)
+        if client and close_socket:
+            comp.op('web_server').webSocketClose(client)
+        _status = 'Ready' if _started and not _error else ('Invalid source' if _error else 'Stopped')
 
 
 def start():
@@ -185,10 +269,12 @@ def stop():
     global _started, _status
     _started = False
     _launches.clear()
-    disconnect()
-    owner().op('web_server').par.active = False
-    owner().op('webrtc').par.active = False
-    _status = 'Stopped'
+    try:
+        disconnect()
+    finally:
+        owner().op('web_server').par.active = False
+        owner().op('webrtc').par.active = False
+        _status = 'Stopped'
 
 
 def restart():
@@ -200,7 +286,8 @@ def tick():
     global _last_tick, _last_frame
     now = time.monotonic()
     comp = owner()
-    if _connection and _panel and comp.op('video_out').par.active.eval():
+    held = _advance_source_update()
+    if not held and _connection and _panel and comp.op('video_out').par.active.eval():
         if now - _last_frame >= 1 / max(1, int(comp.par.Framerate.eval())):
             # Static panels otherwise stop cooking, starving WebRTC of frames
             # and causing its bandwidth estimator to reduce image quality.
