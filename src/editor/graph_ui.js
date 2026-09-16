@@ -707,7 +707,7 @@ function renderCards(){
     }else for(const kind of ['inputs','outputs'])for(const name of Object.keys(ports(n,kind)))list.append(portRow(kind,name));
     appendSparePort(list,n);card.append(list);
     if(n.params?.value!==undefined){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
-    if(d?.key==='color'&&Array.isArray(n.params.value)){const strip=el('div',{class:'node-color'});strip.append(colorSwatch(n.params.value));card.append(strip);}
+    if(d?.key==='color'&&Array.isArray(n.params.value))card.append(nodeColorPicker(n));
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
     if(nodeComment(n))card.append(nodeCanvasComment(n));
     card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};

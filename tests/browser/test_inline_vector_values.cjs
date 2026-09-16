@@ -146,7 +146,7 @@ async function run() {
     assert.match(await page.locator('[data-node="base"] .node-value').innerText(), /0\.8.*0\.9/);
     await page.locator('[data-node="pair"] .node-title').click();
     assert.equal(await page.locator('#inspector input[type="number"]').count() >= 2, true);
-    checks.push('only scalar graph values edit inline; fixed vector summaries stay readable and their full controls remain in Parameter');
+    checks.push('general nodes expose only scalar inputs inline; fixed vectors keep read-only summaries and Parameter controls while Color has dedicated inline controls');
 
     await page.locator('[data-node="base"] .vector-split-shortcut').click();
     const shortcut = await page.evaluate(() => ({id: selected, key: definition(current().nodes.find(n => n.id === selected))?.key,
@@ -436,6 +436,127 @@ async function run() {
     assert.equal(await graphJSON(), before); assert.equal(await history(), count);
     assert.equal(await page.evaluate(() => document.body.classList.contains('scrubbing-value')), false);
     checks.push('read-only transition cancels an active draft, blocks Ladder editing and leaves no stuck gesture styling');
+
+    await reset(false);
+    await page.evaluate(() => {
+      current().nodes.push(testNode('color', 'color', 340, 410, {value: [1.4, -.2, .25, .35]}));
+      selected = 'color'; selection = new Set(['color']); render();
+    });
+    const colorFields = () => page.locator('[data-inline-node="color"][data-inline-port="$value"]');
+    const nodePicker = () => page.locator('[data-node="color"] input[type="color"]');
+    const parameterPicker = () => page.locator('#inspector input[type="color"]');
+    const parameterColorFields = () => page.locator('#inspector .color-parameter input[type="number"]');
+    const swatch = () => page.locator('[data-node="color"] .node-color .color-ink');
+    const swatchColor = () => swatch().evaluate(entry => getComputedStyle(entry).backgroundColor);
+    const assertSwatch = async expected => {
+      const actual = (await swatchColor()).match(/[\d.]+/g).map(Number);
+      assert.deepEqual(actual.slice(0, 3), expected.slice(0, 3));
+      assert.ok(Math.abs((actual[3] ?? 1) - expected[3]) <= 1 / 255, 'computed alpha may only differ by browser display quantization');
+    };
+    const chooseColor = (picker, hex) => picker.evaluate((entry, next) => {
+      entry.value = next; entry.dispatchEvent(new Event('change', {bubbles: true}));
+    }, hex);
+    assert.equal(await colorFields().count(), 4);
+    const rgbaRects = await colorFields().evaluateAll(entries => entries.map(entry => entry.getBoundingClientRect().toJSON()));
+    assert.ok(rgbaRects.every(rect => Math.abs(rect.top - rgbaRects[0].top) <= 1));
+    for (let index = 1; index < rgbaRects.length; index++) assert.ok(rgbaRects[index].left >= rgbaRects[index - 1].right);
+    await checkBounds();
+    assert.deepEqual(await value('color'), [1.4, -.2, .25, .35]);
+    await assertSwatch([255, 0, 64, .35]);
+    assert.equal(await nodePicker().inputValue(), '#ff0040');
+    assert.equal(await parameterPicker().inputValue(), '#ff0040');
+    const pickerHit = await page.locator('[data-node="color"] .node-color').evaluate(strip => {
+      const rect = strip.getBoundingClientRect(), target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return target?.matches('input[type="color"]');
+    });
+    assert.equal(pickerHit, true, 'the visible color strip must hit the native color picker');
+    before = await graphJSON(); count = await history();
+    await nodePicker().dispatchEvent('change'); await parameterPicker().dispatchEvent('change');
+    assert.equal(await graphJSON(), before); assert.equal(await history(), count);
+    checks.push('Color RGBA has four non-overlapping inline fields on one row; its strip targets a native picker and display clamping preserves HDR/negative values');
+
+    const originalPicker = await nodePicker().elementHandle();
+    await field('color', '$value', 0).fill('1.6'); await nodePicker().focus(); await settle();
+    assert.deepEqual(await value('color'), [1.6, -.2, .25, .35]); assert.equal(await history(), count + 1);
+    await page.evaluate(() => render()); await settle();
+    assert.equal(await nodePicker().evaluate((entry, original) => entry === original && entry === document.activeElement, originalPicker), true);
+    await originalPicker.dispose();
+    await page.locator('#undo').click(); assert.equal(await graphJSON(), before);
+    checks.push('blurring a numeric draft into the node picker commits once and preserves the focused picker DOM through redraw');
+
+    await field('color', '$value', 0).fill('1.8'); await field('color', '$value', 0).press('Enter'); await settle();
+    assert.deepEqual(await value('color'), [1.8, -.2, .25, .35]); assert.equal(await history(), count + 1);
+    assert.equal(await field('color', '$value', 0).evaluate(entry => entry === document.activeElement), true);
+    assert.deepEqual(await parameterColorFields().evaluateAll(entries => entries.map(entry => Number(entry.value))), [1.8, -.2, .25, .35]);
+    await field('color', '$value', 0).fill('4.5');
+    await page.evaluate(() => render());
+    assert.equal(await field('color', '$value', 0).inputValue(), '4.5');
+    await field('color', '$value', 0).press('Escape');
+    assert.equal(await field('color', '$value', 0).inputValue(), '1.8');
+    assert.deepEqual(await value('color'), [1.8, -.2, .25, .35]); assert.equal(await history(), count + 1);
+    await page.locator('#undo').click(); assert.equal(await graphJSON(), before);
+    await page.locator('#redo').click(); assert.deepEqual(await value('color'), [1.8, -.2, .25, .35]);
+    checks.push('Color inline HDR Enter edits retain focus and update Parameter once; draft redraw, Escape and one-step Undo/Redo preserve values');
+
+    count = await history();
+    await field('color', '$value', 3).fill('0.625'); await field('color', '$value', 3).press('Enter'); await settle();
+    assert.deepEqual(await value('color'), [1.8, -.2, .25, .625]); assert.equal(await history(), count + 1);
+    await assertSwatch([255, 0, 64, .625]);
+    assert.equal(await parameterColorFields().last().inputValue(), '0.625');
+    assert.equal(await nodePicker().inputValue(), '#ff0040');
+    before = await graphJSON(); count = await history();
+    await page.locator('#canvas').focus(); await settle();
+    await chooseColor(nodePicker(), '#336699'); await settle();
+    assert.deepEqual(await value('color'), [.2, .4, .6, .625]); assert.equal(await history(), count + 1);
+    assert.deepEqual(await colorFields().evaluateAll(entries => entries.map(entry => Number(entry.value))), [.2, .4, .6, .625]);
+    assert.deepEqual(await parameterColorFields().evaluateAll(entries => entries.map(entry => Number(entry.value))), [.2, .4, .6, .625]);
+    assert.equal(await parameterPicker().inputValue(), '#336699');
+    await assertSwatch([51, 102, 153, .625]);
+    await page.locator('#undo').click(); assert.equal(await graphJSON(), before);
+    await page.locator('#redo').click(); assert.deepEqual(await value('color'), [.2, .4, .6, .625]);
+    checks.push('inline Alpha immediately updates the color strip; node picker changes synchronize both editors while preserving Alpha in one Undo/Redo step');
+
+    await chooseColor(parameterPicker(), '#6699cc'); await settle();
+    assert.deepEqual(await value('color'), [.4, .6, .8, .625]);
+    assert.deepEqual(await colorFields().evaluateAll(entries => entries.map(entry => Number(entry.value))), [.4, .6, .8, .625]);
+    assert.equal(await nodePicker().inputValue(), '#6699cc');
+    await parameterColorFields().last().fill('0.4'); await parameterColorFields().last().press('Enter'); await settle();
+    assert.equal(await field('color', '$value', 3).inputValue(), '0.4');
+    await assertSwatch([102, 153, 204, .4]);
+    await checkBounds();
+    await page.screenshot({path: path.join(folder, 'color-inline-rgba.png')});
+    checks.push('Parameter picker and Alpha edits synchronize the node RGBA fields, picker and color strip');
+
+    before = await graphJSON(); count = await history();
+    const colorPosition = await position('color');
+    p = await at(numeric('color', '$value', 1));
+    await drag(p, {x: p.x + 22, y: p.y + 10});
+    assert.deepEqual(await position('color'), colorPosition); assert.equal(await graphJSON(), before); assert.equal(await history(), count);
+    await field('color', '$value', 1).dblclick();
+    assert.deepEqual(await position('color'), colorPosition); assert.equal(await graphJSON(), before);
+    await page.locator('#canvas').focus(); await settle();
+    // Suppress only the native dialog default; pointer propagation and node movement stay real.
+    await nodePicker().evaluate(entry => entry.addEventListener('click', event => event.preventDefault(), {capture: true, once: true}));
+    p = await at('[data-node="color"] input[type="color"]');
+    await drag(p, {x: p.x + 18, y: p.y});
+    assert.deepEqual(await position('color'), colorPosition); assert.equal(await graphJSON(), before); assert.equal(await history(), count);
+    checks.push('Color numeric fields and native picker pointer gestures do not become node dragging or graph edits');
+
+    await page.locator('#canvas').focus(); await settle();
+    await page.evaluate(() => {
+      const n = current().nodes.find(n => n.id === 'color'); n.params.value = [.55, .28, .9, 1];
+      n.ui.x = 340; n.ui.y = 410; selected = n.id; selection = new Set([n.id]); scale = 1; render();
+    });
+    await checkBounds();
+    await page.locator('[data-node="color"]').screenshot({path: path.join(folder, 'color-inline-100-percent.png')});
+
+    await page.evaluate(() => {readonly = true; render();});
+    assert.equal(await colorFields().evaluateAll(entries => entries.every(entry => entry.disabled || entry.readOnly)), true);
+    assert.equal(await nodePicker().isDisabled(), true); assert.equal(await parameterPicker().isDisabled(), true);
+    before = await graphJSON(); count = await history();
+    await chooseColor(nodePicker(), '#ffffff');
+    assert.equal(await graphJSON(), before); assert.equal(await history(), count);
+    checks.push('read-only graphs disable all Color inline fields and both color pickers without allowing graph writes');
 
     fs.writeFileSync(path.join(folder, 'inline-vector-graph.json'), await graphJSON());
     assert.deepEqual(errors, []);

@@ -249,15 +249,21 @@ function colorSwatch(value){
   const swatch=el('span',{class:'color-swatch','aria-hidden':'true'}),ink=el('span',{class:'color-ink'});
   ink.style.backgroundColor=colorDisplay(value).css;swatch.append(ink);return swatch;
 }
-function colorFields(value,label,callback,disabled=false){
-  const box=el('div',{class:'color-parameter'}),row=el('div',{class:'color-picker-row'}),display=colorDisplay(value),swatch=colorSwatch(value);
+function colorPickerSwatch(value,callback,disabled=false){
+  const read=()=>typeof value==='function'?value():value,display=colorDisplay(read()),swatch=colorSwatch(read());
+  swatch.removeAttribute('aria-hidden');
   const picker=el('input',{type:'color',value:display.hex,'aria-label':t('color.choose')});picker.disabled=readonly||disabled;
   picker.onchange=()=>{
-    if(readonly||disabled||picker.value===display.hex||!/^#[0-9a-f]{6}$/i.test(picker.value))return;
+    const current=read();
+    if(readonly||disabled||!picker.isConnected||picker.value===colorDisplay(current).hex||!/^#[0-9a-f]{6}$/i.test(picker.value))return;
     const rgb=[1,3,5].map(i=>parseInt(picker.value.slice(i,i+2),16)/255);
-    callback([...rgb,value[3]]);
+    callback([...rgb,current[3]]);
   };
-  swatch.append(picker);row.append(swatch,el('span',{},t('color.choose')));box.append(row,numbers(value,label,callback,disabled,'RGBA'));
+  swatch.append(picker);return swatch;
+}
+function colorFields(value,label,callback,disabled=false){
+  const box=el('div',{class:'color-parameter'}),row=el('div',{class:'color-picker-row'});
+  row.append(colorPickerSwatch(value,callback,disabled),el('span',{},t('color.choose')));box.append(row,numbers(value,label,callback,disabled,'RGBA'));
   if(value.some(v=>v<0||v>1))box.append(el('small',{class:'muted color-range-hint'},t('color.range')));
   return box;
 }
@@ -548,6 +554,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
       if(!ok)return;
       committed=entry.value;entry.removeAttribute('aria-invalid');focus();
       const summary=entry.closest('.node')?.querySelector('[data-vector-summary]');if(summary)updateVectorManualSummary(n,summary);
+      if(definition(n)?.key==='color')updateNodeColorPreview(n,entry.closest('.node'));
       if(selected===n.id)inspector();queueInlineValueRender();
     };
     entry.cancelInlineValue=()=>{restore();if(inlineValueEdit?.entry===entry)inlineValueEdit=null;};
@@ -579,10 +586,27 @@ function nodeInlineValues(n,port){
   },key==='vector'?vectorNames(n):'XYZW');
 }
 function nodeFixedValueEditor(n){
-  const key=definition(n)?.key;if(key!=='float')return null;
+  const key=definition(n)?.key;if(!['float','color'].includes(key))return null;
   const box=inlineNumericFields(n,'$value',n.params.value,(index,next)=>{
     if(Array.isArray(n.params.value)){n.params.value=n.params.value.slice();n.params.value[index]=next;}else n.params.value=next;
-  },key==='color'?'RGBA':'XYZW');box.classList.add('node-fixed-values');return box;
+  },key==='color'?'RGBA':'XYZW');box.classList.add('node-fixed-values');
+  if(key==='color'){box.classList.add('node-color-values');for(const entry of box.querySelectorAll('input'))entry.title=entry.getAttribute('aria-label');}
+  return box;
+}
+function updateNodeColorPreview(n,card){
+  const display=colorDisplay(n.params.value),ink=card?.querySelector('.node-color .color-ink'),picker=card?.querySelector('.node-color input[type=color]');
+  if(ink)ink.style.backgroundColor=display.css;if(picker)picker.value=display.hex;
+}
+function nodeColorPicker(n){
+  const strip=el('div',{class:'node-color'}),swatch=colorPickerSwatch(()=>n.params.value,value=>{
+    if(current().nodes.includes(n))change(()=>n.params.value=value);
+  }),picker=swatch.querySelector('input');
+  // Keep the native picker attached when leaving a numeric field schedules a redraw.
+  picker.onfocus=()=>{if(!readonly)inlineValueEdit={entry:picker,node:n,owner:current(),signature:inlineValueSignature(n)};};
+  picker.cancelInlineValue=()=>{picker.value=colorDisplay(n.params.value).hex;if(inlineValueEdit?.entry===picker)inlineValueEdit=null;};
+  picker.onblur=()=>{if(inlineValueEdit?.entry===picker)inlineValueEdit=null;queueInlineValueRender();};
+  for(const event of ['pointerdown','click','dblclick','contextmenu','keydown'])picker.addEventListener(event,e=>e.stopPropagation());
+  strip.append(swatch);return strip;
 }
 function inspector(){
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode)cancelValueLadder();

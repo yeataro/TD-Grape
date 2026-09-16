@@ -1,6 +1,6 @@
 # Color RGBA and node labels
 
-Color RGBA now displays an alpha-aware CSS swatch on its node and an RGB picker in Parameter. Existing numeric RGBA fields and Value Ladder remain available on one row. Ordinary vectors retain numeric semantics and do not display a color picker.
+Color RGBA displays four compact numeric fields in one row, ordered R, G, B, A, above an alpha-aware CSS swatch. The swatch opens the same browser-native RGB picker as Parameter. Numeric fields share Parameter's stored values and use the existing inline Enter/blur, Escape, Undo and Value Ladder behavior. Component names remain available in field tooltips and accessible labels. Ordinary vectors retain numeric semantics and do not display a color picker.
 
 The browser-native RGB picker changes only RGB and retains the exact Alpha. Choosing its unchanged value is a no-op. Rendering a swatch clamps its display to 0–1, but never changes extended-range stored values. A concise note explains this when the color contains extended-range components. The swatch is a visual reference, not a color-managed render replacement. The browser picker itself supports 0–1 RGB; HDR values remain editable numerically.
 
