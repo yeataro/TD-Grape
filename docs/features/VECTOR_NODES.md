@@ -56,7 +56,7 @@ vec2／vec3 從指定位置占用連續分量，只保留起始接孔，名稱�
 
 ## 拆分、重排與快捷
 
-Split、Swizzle 保留依 vec2／vec3／vec4 顯示接孔的規則。Swizzle 可取出、重排或重複 1–4 個有效分量，例如 YX、YXY、XXXX。Settings 的 XYZW／RGBA／UV 別名只改文字，不改接孔身分或型別。
+Split、Swizzle 保留依 vec2／vec3／vec4 顯示接孔的規則。Swizzle 可取出、重排或重複 1–4 個有效分量，例如 YX、YXY、XXXX。Settings 的 XYZW／RGBA／UV 別名調整顯示文字；RGBA 模式另為單一分量接孔與其輸出線提供淡色提示，不改接孔身分或型別，也不讓下游運算自動繼承顏色用途。
 
 向量輸出旁的分支快捷新增接好的 Vector 並展開分量；已有對應 Vector／Split 時選取它，Vector 也會展開。UV／Color 的別名隨新增沿用。接線新增選單優先適合當前型別的 Vector 等常用操作。
 

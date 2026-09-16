@@ -2,6 +2,10 @@
 
 Color RGBA displays four compact numeric fields in one row, ordered R, G, B, A, above an alpha-aware CSS swatch. The swatch opens the same browser-native RGB picker as Parameter. Numeric fields share Parameter's stored values and use the existing inline Enter/blur, Escape, Undo and Value Ladder behavior. Component names remain available in field tooltips and accessible labels. Ordinary vectors retain numeric semantics and do not display a color picker.
 
+The node's four fields use subtle red, green, blue and neutral gray backgrounds and borders with neutral numeric text. Known R/G/B/A scalar component ports use corresponding muted socket/label colors, and their outgoing wires use the source port's color. This covers Split RGBA, Compose RGBA's alpha, and scalar component ports of Vector/Combine/Split/Swizzle explicitly displayed as RGBA. Grouped RGB/RGBA/vector ports and ordinary XYZ/UV retain their existing type colors. Arbitrary user labels do not determine component hints.
+
+These are display hints, not new GLSL subtypes: compatibility and compilation are unchanged. Hints do not propagate through operations; a red R wire into Add does not recolor Add's output. Wire selection, hover and deletion feedback retain priority over component colors.
+
 The browser-native RGB picker changes only RGB and retains the exact Alpha. Choosing its unchanged value is a no-op. Rendering a swatch clamps its display to 0–1, but never changes extended-range stored values. A concise note explains this when the color contains extended-range components. The swatch is a visual reference, not a color-managed render replacement. The browser picker itself supports 0–1 RGB; HDR values remain editable numerically.
 
 Each node can have a custom label, up to 80 characters of single-line plain text. The functional title stays primary; the label is a smaller second line. Edit it in Parameter, or double-click an existing label to focus the same field. Escape cancels. Empty labels disappear, keeping the original compact node height. Double-clicking the rest of a Function call continues to enter the Function.

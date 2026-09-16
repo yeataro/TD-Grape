@@ -33,6 +33,15 @@
 #wires path[data-type="vec2"]{stroke:var(--type-vec2)}
 #wires path[data-type="vec3"]{stroke:var(--type-vec3)}
 #wires path[data-type="vec4"]{stroke:var(--type-vec4)}
+/* RGBA hints affect presentation, not GLSL types or downstream inference. */
+:where([data-color-component="r"]){--component-color:#cc989d;--component-bg:#2b242b;--component-border:#63505a}
+:where([data-color-component="g"]){--component-color:#9bc4a5;--component-bg:#232c2b;--component-border:#4b6157}
+:where([data-color-component="b"]){--component-color:#9aafd4;--component-bg:#242a34;--component-border:#4d5b72}
+:where([data-color-component="a"]){--component-color:#c3c0cb;--component-bg:#282831;--component-border:#595865}
+.port-row[data-color-component]{--socket:var(--component-color)}
+.port-row[data-color-component] .port-label{color:var(--component-color)}
+.port-row[data-color-component]>small{color:var(--type-float)}
+#wires path[data-color-component]{stroke:var(--component-color)}
 #wires path.selected{stroke:var(--wire-selected);stroke-width:5}
 #wires path:hover{stroke:var(--wire-hover);stroke-width:5}
 
@@ -872,6 +881,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-fixed-values.node-color-values:has(.node-inline-component){grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding-bottom:7px}
 .node-color-values .node-inline-component>span{display:none}
 .node-color-values .node-inline-component input{min-width:0;width:100%;padding-inline:3px}
+.node-color-values input,.port-row[data-color-component] .node-inline-values input{background:var(--component-bg);border-color:var(--component-border)}
 .vector-port-pair{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:center}
 .vector-port-pair:has(.vector-whole){grid-template-columns:repeat(2,minmax(0,1fr))}
 .vector-port-pair .port-row{min-width:0;gap:5px}

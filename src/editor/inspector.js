@@ -590,7 +590,7 @@ function nodeFixedValueEditor(n){
   const box=inlineNumericFields(n,'$value',n.params.value,(index,next)=>{
     if(Array.isArray(n.params.value)){n.params.value=n.params.value.slice();n.params.value[index]=next;}else n.params.value=next;
   },key==='color'?'RGBA':'XYZW');box.classList.add('node-fixed-values');
-  if(key==='color'){box.classList.add('node-color-values');for(const entry of box.querySelectorAll('input'))entry.title=entry.getAttribute('aria-label');}
+  if(key==='color'){box.classList.add('node-color-values');for(const entry of box.querySelectorAll('input')){entry.title=entry.getAttribute('aria-label');entry.dataset.colorComponent='rgba'[Number(entry.dataset.component)];}}
   return box;
 }
 function updateNodeColorPreview(n,card){

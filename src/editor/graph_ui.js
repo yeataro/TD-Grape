@@ -497,6 +497,22 @@ function portTypeCaption(n,kind,name){
   return caption;
 }
 function vectorNames(n){return n.ui?.componentNames==='rgba'?'RGBA':n.ui?.componentNames==='uv'&&n.params.type==='vec2'?'UV':'XYZW';}
+// Display hints come from known component ports, never arbitrary labels or upstream nodes.
+function portColorComponent(n,kind,port){
+  if(ports(n,kind)[port]!=='float')return null;
+  const d=definition(n);
+  if(d?.key==='split'&&kind==='outputs'&&['r','g','b','a'].includes(port))return port;
+  if(d?.key==='rgba'&&kind==='inputs'&&port==='alpha')return 'a';
+  if(isVectorOperation(d)&&n.ui?.componentNames==='rgba'){
+    const label=vectorPortLabel(n,kind,port);
+    if(['R','G','B','A'].includes(label))return label.toLowerCase();
+  }
+  return null;
+}
+function applyPortColorHint(element,n,kind,port){
+  const component=portColorComponent(n,kind,port);
+  if(component)element.dataset.colorComponent=component;
+}
 // Presentation only: show manual components that still contribute to the value.
 function vectorManualComponents(n){
   const incoming=current().edges.filter(e=>e.to[0]===n.id);
@@ -636,7 +652,7 @@ function dragWire(button,event){
 function drawWireDrag(svg){
   if(!wireDrag)return;const n=current().nodes.find(n=>n.id===wireDrag.node),p=n&&point(n,wireDrag.port,wireDrag.kind);if(!p)return;
   const a=wireDrag.kind==='outputs'?p:wireDrag.q,b=wireDrag.kind==='outputs'?wireDrag.q:p,dx=Math.max(60,Math.abs(a.x-b.x)*.5),path=document.createElementNS('http://www.w3.org/2000/svg','path');
-  path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
+  path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);if(wireDrag.kind==='outputs')applyPortColorHint(path,n,'outputs',wireDrag.port);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
 }
 function nodeCanvasComment(n){
   const note=el('div',{class:'node-canvas-comment'});
@@ -673,6 +689,7 @@ function renderCards(){
       const className=kind==='inputs'?'input':'output',type=ports(n,kind)[name];
       const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
+      applyPortColorHint(row,n,kind,name);
       if(d?.key==='vector'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
       b.onpointerdown=e=>dragWire(b,e);
       b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
