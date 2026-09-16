@@ -911,8 +911,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* Header, location controls and a persistent compact footer stay separate. */
 #editorheader{display:flex;align-items:center;justify-content:space-between;gap:24px;height:52px;min-height:52px;padding:0 18px}
 #editorheader[hidden]{display:none!important}
-#editorheader .brand{display:flex;align-items:baseline;flex-wrap:nowrap;gap:8px;min-width:0;margin:0}
-#editorheader .brand-mark{width:28px;height:28px;flex:none;align-self:center}
+#editorheader .brand{display:flex;align-items:center;flex-wrap:nowrap;gap:8px;min-width:0;margin:0}
+/* The mark artwork sits slightly below the center of its SVG viewBox. */
+#editorheader .brand-mark{width:28px;height:28px;flex:none;transform:translateY(-.5px)}
 #editorheader .brand strong{flex:none;font-size:20px;line-height:24px;font-weight:600;letter-spacing:-.35px}
 #editorheader .brand small{display:flex;align-items:baseline;gap:6px;font-size:11px;line-height:18px;font-weight:400;letter-spacing:.15px;min-width:0;margin-left:12px;white-space:nowrap}
 #editorheader .brand-tagline{min-width:0;flex:0 1 auto}
