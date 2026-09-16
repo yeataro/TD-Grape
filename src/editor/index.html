@@ -62,7 +62,6 @@
     <button class="panel-heading" id="uniformstoggle"><span data-i18n="sources.title">Inputs</span></button>
     <div class="panel-scroll" id="uniformsbody" tabindex="0">
       <details class="inputs-create" open><summary data-i18n="inputs.new">New Input</summary><form id="sourcecreate"><select id="sourcekind" data-i18n-label="inputs.kind"><option value="constant">Constant</option><option value="top_input">TOP Input</option><option value="uniform" selected>Uniform</option><option value="color">Color · vec4</option><option value="sampler">Sampler</option><optgroup label="Shortcuts"><option value="preset:time">Time · seconds</option><option value="preset:frame">Frame · timeline</option><option value="preset:absTime">Absolute Time · seconds</option><option value="preset:absFrame">Absolute Frame</option></optgroup></select><input id="sourcename" value="uValue" placeholder="uName" data-i18n-label="declaration.name" required maxlength="48"><select id="sourcetype" data-i18n-label="node.type"><option>float</option><option>vec2</option><option>vec3</option><option>vec4</option><option hidden>sampler2D</option></select><code id="sourcepresethint"></code><button type="submit" data-i18n="inputs.create">Create source</button></form></details>
-      <button id="sourceparameters" data-i18n="sources.native">GLSL Parameters</button>
       <p id="sourcestatus" class="muted" role="status"></p>
       <input id="inputsearch" type="search" data-i18n-placeholder="inputs.search" data-i18n-label="inputs.search"><div id="nativeuniforms"></div>
 

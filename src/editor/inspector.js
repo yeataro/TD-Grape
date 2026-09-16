@@ -1217,7 +1217,6 @@ function renderNativeSourceValues(){
   if($('#sourcekind'))$('#sourcekind').disabled=readonly;
   if($('#sourcetype'))$('#sourcetype').disabled=readonly||!['uniform','constant'].includes($('#sourcekind').value);
   if($('#sourcekind').value==='top_input'){$('#sourcename').value='sTD2DInputs['+topInputsView().length+']';$('#sourcename').disabled=true;}
-  $('#sourceparameters').hidden=!localViewerEntry;
   for(const option of $('#sourcekind').options)option.hidden=editorTarget==='top'?option.value==='sampler':option.value==='top_input';
   $('#sourcestatus').textContent=nativeSourceError||(!nativeSourceSnapshot?.enabled?t('sources.enable'):dirty||nativeSourceSnapshot.revision!==revision?t('sources.pending'):(nativeSourceSnapshot.issues||[]).map(i=>i.message).join('\n'));
   for(const item of document.querySelectorAll('[data-input-reference]'))item.disabled=readonly;
@@ -1352,7 +1351,6 @@ function installNativeSources(){
     if(kind!=='top_input'&&(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name))){status(t('inputs.invalidName'),true);return;}
     let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','top_input'].includes(kind)?kind:'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});if(changed)selectInputSource(id);
   };
-  $('#sourceparameters').onclick=async()=>{try{await api('native-parameters',{});}catch(e){status(e.message,true);}};
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);
   setInterval(refreshNativeSources,1000);
 }

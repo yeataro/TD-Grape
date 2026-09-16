@@ -1878,10 +1878,6 @@
       "zh-Hant": "Inputs",
       "en": "Inputs"
     },
-    "sources.native": {
-      "en": "GLSL Parameters",
-      "zh-Hant": "GLSL 原生參數"
-    },
     "sources.add": {
       "en": "Add Uniform",
       "zh-Hant": "新增 Uniform"

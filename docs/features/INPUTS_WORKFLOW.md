@@ -56,7 +56,7 @@ Constants 是 `kind: constant` 的圖資料，首版提供 float／vec2／vec3�
 
 新增節點與 Inputs 共用 Pointer Events 拖放：`+` 可供滑鼠及觸控拖入；節點名稱也支援滑鼠拖入。觸控捲動區不截取手勢。來源／節點複製貼上維持引用身分；跨 Shader 的 TOP Input 貼上建立新槽位，禁止貼入 MAT。打包子圖時具名來源留在外層。
 
-原生 GLSL Parameters 按鈕僅在 localhost／127.0.0.1／IPv6 loopback 網址顯示。
+Inputs 不產生原生 GLSL Parameters 按鈕，也不保留其 HTML、前端事件綁定或隱藏樣式；後端開啟原生參數的 API 能力仍保留，後續有需求再設計入口。
 
 ## 驗證與後續
 

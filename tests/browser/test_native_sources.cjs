@@ -3,7 +3,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const [src,fixtureFile,sourcesFile,w]=process.argv.slice(2),fixture=JSON.parse(fs.readFileSync(fixtureFile)),sources=JSON.parse(fs.readFileSync(sourcesFile));fs.mkdirSync(w,{recursive:true});
 sources.graph=fixture.state.graph;sources.revision=fixture.state.revision;sources.sourceChanged=false;
 const editable=sources.uniforms.find(r=>r.id==='gain');editable.components[0].mode='CONSTANT';editable.components[0].writable=true;
-let opened=0,writes=0;
+let writes=0;
 const server=http.createServer(async(req,res)=>{
  const route=new URL(req.url,'http://localhost').pathname;
  if(route.startsWith('/api/')){
@@ -18,7 +18,6 @@ const server=http.createServer(async(req,res)=>{
   if(op==='shaders')return res.end(JSON.stringify({projectFile:'Sources-test.toe',shaders:[]}));
   if(op==='uniforms')return res.end(JSON.stringify({revision:sources.revision,uniforms:{},textures:{}}));
   if(op==='preview'){res.statusCode=204;return res.end();}
-  if(op==='native-parameters'){opened++;return res.end('{}');}
   if(op==='source-value'){
    const row=sources.uniforms.find(r=>r.id===body.id);assert.equal(body.expected.value,row.components[body.component].value);row.components[body.component].value=body.value;writes++;return res.end(JSON.stringify(sources));
   }
@@ -89,7 +88,7 @@ const server=http.createServer(async(req,res)=>{
   assert.equal(await page.locator('.workspace-group[data-workspace-group=parameters] [data-workspace-panel]').count(),3);
   assert.equal(await page.locator('#sidebar-left [data-workspace-panel=uniforms]').count(),1);
   assert.match(await page.locator('#nodecount').innerText(),/nodes/);checks.push('Existing layout retained with compact Inputs inventory');
-  await page.locator('#sourceparameters').click();assert.equal(opened,1);
+  assert.equal(await page.locator('#sourceparameters').count(),0);
   await page.locator('[data-input-source=gain] .input-source-select').click();
   const value=page.locator('#inspector [data-native-source=gain] [data-source-component="0"]');
   await value.fill('0.42');await value.press('Enter');await page.waitForFunction(()=>!nativeSourceBusy);

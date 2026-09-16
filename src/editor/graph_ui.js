@@ -793,10 +793,10 @@ function renderCategoryTabs(container,entries,active,attribute){
   for(const b of container.children){const chosen=b.getAttribute(attribute)===active;b.setAttribute('aria-selected',String(chosen));b.tabIndex=chosen?0:-1;}
 }
 function browserGlyph(kind){
-  if(kind==='subgraph'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true);icon.setAttribute('class','browser-glyph');return icon;}
+  if(kind==='subgraph'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true);icon.setAttribute('class','browser-glyph browser-glyph-filled');return icon;}
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','browser-glyph');svg.setAttribute('aria-hidden','true');
   const path=document.createElementNS(svg.namespaceURI,'path');
-  path.setAttribute('d',kind==='subgraph'?'M7 7h10l-5 10M4 7a3 3 0 1 0 6 0a3 3 0 1 0-6 0M14 7a3 3 0 1 0 6 0a3 3 0 1 0-6 0M9 17a3 3 0 1 0 6 0a3 3 0 1 0-6 0':kind==='categories'?'M4 4v16M4 7h4M4 17h4M12 7h8M12 17h8':kind==='library'?'M4 5v14M8 5v14M12 6l4 13M17 4l4 13':kind==='project'?'M3 6h6l2 2h10v12H3Z':'m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5m-9 5L3 7m9 5v10');
+  path.setAttribute('d',kind==='categories'?'M4 4v16M4 7h4M4 17h4M12 7h8M12 17h8':kind==='library'?'M4 5v14M8 5v14M12 6l4 13M17 4l4 13':kind==='project'?'M3 6h6l2 2h10v12H3Z':'m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5m-9 5L3 7m9 5v10');
   svg.append(path);return svg;
 }
 function browserTree(entries){

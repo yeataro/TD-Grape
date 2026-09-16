@@ -535,6 +535,7 @@ header .brand small{min-width:0}.brand-tagline{overflow:hidden;text-overflow:ell
 .browser-section>summary::-webkit-details-marker,.browser-branch>summary::-webkit-details-marker{display:none}
 .browser-section>summary:hover{background:#ffffff05}
 .browser-glyph{display:block;flex:none;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;color:#aaa4b8}
+.browser-glyph-filled{fill:currentColor;stroke:none}
 .tree-chevron{width:6px;height:6px;border-right:1.3px solid currentColor;border-bottom:1.3px solid currentColor;transform:rotate(-45deg);display:block;flex:none;color:var(--muted);margin:0 4px 0 2px}
 details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transform:rotate(45deg);margin-top:-3px}
 .browser-section-body{padding:0 9px 10px}
@@ -799,7 +800,6 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .browser-add,.input-reference{touch-action:none}
 .source-locations button{display:block;width:100%;text-align:left;margin-block:4px}
 .inputs-create{margin-top:0}
-#sourceparameters[hidden]{display:none}
 
 /* Connection feedback stays separate from shader diagnostics and panel headings. */
 #connectionnotice{flex:none;border-bottom:1px solid var(--line);background:#24232a;padding:8px 16px;max-height:32dvh;overflow:auto}

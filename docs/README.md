@@ -10,6 +10,7 @@
 - `features/`：目前功能與相容行為；[向量拆分、組合與常數](features/VECTOR_NODES.md)。
 - `ui/`：UI 操作及設計。
 - `discussions/`：未完成或仍待取捨的設計討論。
+- [Inputs 面板與工作區設計](discussions/INPUTS_UI_NEXT_ROUND.md)：已確認的 UI 整理方向、型別擴充目標與待決範圍。
 - `specs/`：原始規格與歷史背景。
 
 機器設定、逐輪對話整理、個人路徑、原始測試輸出及一次性遷移紀錄不在公開專案內。
