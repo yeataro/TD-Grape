@@ -10,7 +10,7 @@ const GRID=24;
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='zh-Hant';
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();}
 async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
@@ -452,7 +452,7 @@ function pendingEditorField(){
 function renderHeaderVisibility(){
   const button=$('#toggleheader'),shown=!$('#editorheader').hidden;
   button.setAttribute('aria-expanded',String(shown));button.title=t(shown?'header.hide':'header.show');
-  $('#editorrefresh').title=t('editorReload.action');
+  $('#editorrefresh').title=t('editorReload.action');$('#reload').title=t('action.reload');
 }
 function requestEditorReload(){
   const unfinished=pendingEditorField();
@@ -468,7 +468,39 @@ function requestEditorReload(){
   }
   clearTimeout(autoTimer);autoTimer=null;editorReloading=true;location.reload();return true;
 }
+const appearanceStorageKey='sgrapeAppearanceV1';
+function parseUIAppearance(raw){
+  let saved;try{saved=JSON.parse(raw);}catch{}
+  return{size:saved?.size==='comfortable'?'comfortable':'standard',theme:saved?.theme==='light'?'light':'dark'};
+}
+let uiAppearance=parseUIAppearance(null);
+function renderUIAppearance(){
+  const root=document.documentElement,{size,theme}=uiAppearance;
+  root.dataset.uiSize=size;root.dataset.uiTheme=theme;
+  for(const [id,key,value,pressed]of [['uisize','size',size,size==='comfortable'],['uitheme','theme',theme,theme==='light']]){
+    const button=$('#'+id);if(!button)continue;
+    const label=t('appearance.'+key+'.'+value);
+    button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(pressed));
+  }
+  $('#uitheme .theme-moon').toggleAttribute('hidden',theme!=='dark');$('#uitheme .theme-sun').toggleAttribute('hidden',theme!=='light');
+  $('meta[name="theme-color"]').content=theme==='light'?'#f2f1f6':'#19181f';
+}
+function setUIAppearance(key,value){
+  if(!((key==='size'&&['standard','comfortable'].includes(value))||(key==='theme'&&['dark','light'].includes(value))))return;
+  uiAppearance={...uiAppearance,[key]:value};
+  try{localStorage.setItem(appearanceStorageKey,JSON.stringify(uiAppearance));}catch{}
+  renderUIAppearance();
+  // A display preference does not redraw the graph, change its zoom or apply a Shader.
+  if(graph)requestAnimationFrame(wires);
+}
+function installUIAppearance(){
+  try{uiAppearance=parseUIAppearance(localStorage.getItem(appearanceStorageKey));}catch{}
+  renderUIAppearance();
+  $('#uisize').onclick=()=>setUIAppearance('size',uiAppearance.size==='standard'?'comfortable':'standard');
+  $('#uitheme').onclick=()=>setUIAppearance('theme',uiAppearance.theme==='dark'?'light':'dark');
+}
 function installEditorChrome(){
+  installUIAppearance();
   try{$('#editorheader').hidden=localStorage.getItem('sgrapeHeaderVisible')==='false';}catch{}
   renderHeaderVisibility();
   $('#toggleheader').onclick=()=>{

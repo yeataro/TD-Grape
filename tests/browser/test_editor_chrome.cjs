@@ -6,7 +6,7 @@ async function run(){
   try{
     await page.selectOption('#language','en');
     assert.equal(await page.locator('footer #dirty').count(),1);assert.equal(await page.locator('.location-bar #dirty').count(),0);
-    assert.equal(await page.locator('footer > #editorrefresh:first-child + #dirty').count(),1);
+    assert.equal(await page.locator('footer > .footer-start > #editorrefresh:first-child + #dirty').count(),1);
     assert.ok(await page.evaluate(()=>{const bar=$('.location-bar').getBoundingClientRect(),toggle=$('#toggleheader').getBoundingClientRect();return Math.abs(toggle.x+toggle.width/2-bar.x-bar.width/2)<1;}));
     assert.equal(await page.locator('.graph-tool-group').count(),4);
     assert.deepEqual(await page.locator('.graph-tool-group').evaluateAll(groups=>groups.map(g=>[...g.querySelectorAll('button')].map(b=>b.id))),[['undo','redo'],['graphcopy','graphpaste','graphgroup','graphdelete'],['fit','boxselect'],['code']]);

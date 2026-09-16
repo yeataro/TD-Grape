@@ -951,13 +951,23 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .location-end>.sidebar-toggles{margin:0}
 .editor-view-actions{display:flex;align-items:center;justify-self:center;gap:3px}
 #editorrefresh svg{stroke-linecap:round}
-footer{display:grid;grid-template-columns:25px auto minmax(0,1fr) auto;height:32px;min-height:32px;gap:8px;padding:3px 8px 3px 3px}
-footer #dirty{grid-column:2;grid-row:1;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:10px;white-space:nowrap}
-footer #status{grid-column:3;grid-row:1;min-width:0;padding:0;font-size:11px}
-footer #reload{flex:none;height:24px;max-width:none;padding:0 8px;font-size:10px;white-space:nowrap}
-.footer-actions{display:flex;align-items:center;grid-column:4;grid-row:1;gap:5px}
-footer #editorrefresh{grid-column:1;grid-row:1;width:25px;height:24px;padding:4px;border:0;background:transparent;border-radius:3px}
+footer{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);height:32px;min-height:32px;gap:8px;padding:3px 8px}
+.footer-start{display:flex;align-items:center;gap:8px;min-width:0}
+footer #dirty{flex:0 1 auto;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:10px;white-space:nowrap}
+footer #status{flex:1;min-width:0;padding:0;font-size:11px}
+.footer-start:has(#status.error) #dirty{display:none}
+footer #reload{flex:0 1 auto;min-width:0;height:24px;max-width:100%;padding:0 8px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.footer-actions{display:flex;align-items:center;justify-content:flex-end;min-width:0;gap:5px}
+footer #editorrefresh{flex:none;width:25px;height:24px;padding:4px;margin-left:-5px;border:0;background:transparent;border-radius:3px}
 footer #editorrefresh svg{width:16px;height:16px}
+.footer-preferences{display:flex;align-items:center;justify-content:center;gap:4px}
+footer .footer-preferences button{display:flex;align-items:center;justify-content:center;flex:none;width:25px;height:24px;padding:4px;border:0;border-radius:3px;background:transparent;color:var(--muted)}
+footer .footer-preferences button:hover{background:#ffffff0b;color:#e5e4ed}
+footer .footer-preferences button[aria-pressed="true"]{color:var(--purple)}
+footer .footer-preferences button:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
+footer .footer-preferences svg{width:17px;height:17px;stroke-linecap:round;stroke-linejoin:round}
+footer .footer-preferences svg[hidden]{display:none}
+@media(max-width:600px){footer #status:not(.error){display:none}}
 @media(max-width:800px){
  .location-start>#projectfile{max-width:72px;font-size:10px}
  .location-bar .shader-selector #shaderpicker{max-width:100%;font-size:10px}
@@ -967,3 +977,153 @@ footer #editorrefresh svg{width:16px;height:16px}
  .graph-workspace .graph-tools .icon-button{width:34px}
  footer #status{font-size:10px}
 }
+
+/* Optional light chrome. Graph data colors, preview pixels and code syntax stay independent. */
+:root[data-ui-theme="light"]{
+ color-scheme:light;color:#292733;background:#e6e4eb;
+ --ui-text:#292733;--ui-chrome:#eceaf0;--ui-surface:#f5f4f7;--ui-field:#ffffff;--ui-control:#eeecf2;--ui-hover:#e2deea;--ui-selected:#d9cfe9;--ui-code-chip:#e8e2f0;
+ --muted:#686371;--line:#c8c3d0;--border:#c8c3d0;--purple:#6b489d;--green:#367c50;--danger:#a33f41;--help-link:#644194;
+ --panel:#f5f4f7;--panel-2:#eeecf2;--panel-header-bg:#eeecf2;--panel-content-bg:#f5f4f7;--panel-header-inactive-bg:#e6e3eb;--panel-header-fg:#292733;--panel-header-hover-bg:#ded9e6;
+ --panel-divider-bg:#e4e0e9;--panel-divider-grip:#aaa1b6;--scroll-track:#ece9f0;--scroll-thumb:#b2aabb;--scroll-hover:#8e819f;
+ --state-surface:#f5f4f7;--state-code:#ece8f0;--browser-item-bg:#f5f4f7;--browser-item-hover:#e2deea;--browser-active:#8264aa;--browser-row-hover:#e9e5ef;--browser-row-selected:#ded5eb;--browser-section-bg:#f5f4f7;--browser-tree-line:#cfc8d8;
+ --browser-category-math:#805b9f;--browser-category-vector:#636fa4;--browser-category-color:#965f7e;--browser-category-coordinate:#52798c;--browser-category-texture:#8b6238;--browser-category-data:#61718b;--browser-category-shader:#427d74;--browser-category-uncategorized:#746d81;
+}
+:root[data-ui-theme="light"] :is(#editorheader,.location-bar,footer,.graph-workspace .toolbar,.graph-navigation){background:var(--ui-chrome);color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(aside,.material-preview,.help-panel,#browserdetail){background:var(--ui-surface);color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(dialog,#creator,#shaderchoices,#layoutmenu,#grapheditmenu,#previewpathdetail){background:var(--ui-surface);color:var(--ui-text);border-color:var(--line);box-shadow:0 12px 32px #34274722}
+:root[data-ui-theme="light"] dialog::backdrop{background:#30283750}
+:root[data-ui-theme="light"] :where(#editorheader,.location-bar,footer,aside,dialog,#creator,#shaderchoices,#layoutmenu,#grapheditmenu) button{background:var(--ui-control);color:var(--ui-text);border-color:var(--line)}
+:root[data-ui-theme="light"] :where(#editorheader,.location-bar,footer,aside,dialog,#creator,#shaderchoices,#layoutmenu,#grapheditmenu) button:enabled:hover{background:var(--ui-hover);color:var(--ui-text)}
+:root[data-ui-theme="light"] :where(#editorheader,.location-bar,aside,dialog,#creator) :is(input,select,textarea){background:var(--ui-field);color:var(--ui-text);border-color:var(--line)}
+:root[data-ui-theme="light"] :where(#editorheader,.location-bar,aside,dialog,#creator) :is(input,textarea)::placeholder{color:var(--muted);opacity:.8}
+:root[data-ui-theme="light"] :is(#editorheader,aside,dialog) .primary{background:var(--purple);color:#fff;border-color:transparent}
+:root[data-ui-theme="light"] :is(#editorheader,aside,dialog) .primary:enabled:hover{background:#583a85;color:#fff}
+:root[data-ui-theme="light"] :is(label.field,.components label,.toggle-field,.input-parameter h4,.connection-source,.node-comment-help,.about-release p,#shaderswitch p,.create-heading){color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(.section-label,.hint,.decl small,.browser-signature,.location-bar .target,.graph-location span){color:var(--muted)}
+:root[data-ui-theme="light"] :where(aside,dialog,#creator,footer) :is(.danger,.error){color:var(--danger)}
+:root[data-ui-theme="light"] #status{color:#3e6e4e}
+:root[data-ui-theme="light"] #status.error{color:var(--danger)}
+:root[data-ui-theme="light"] .tag.pending{color:#896216}
+:root[data-ui-theme="light"] :is(.side-divider){background:var(--panel-divider-bg)}
+:root[data-ui-theme="light"] .side-divider::after{background:var(--panel-divider-grip)}
+:root[data-ui-theme="light"] .toolbar nav{background:var(--panel-header-inactive-bg)}
+:root[data-ui-theme="light"] .graph-workspace .toolbar button{background:var(--ui-control);color:var(--ui-text);border-color:var(--line)}
+:root[data-ui-theme="light"] .graph-workspace .toolbar button:hover{background:var(--ui-hover)}
+:root[data-ui-theme="light"] .graph-workspace .toolbar :is(.stage.active,button[aria-pressed="true"]){background:var(--ui-selected);color:#4d2e79;border-color:var(--purple)}
+:root[data-ui-theme="light"] .graph-navigation button,:root[data-ui-theme="light"] .graph-navigation button:disabled{color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(#editorheader #about,.location-bar .sidebar-toggle,.location-bar #shaderpicker,footer #editorrefresh){background:transparent;color:var(--muted);border-color:transparent}
+:root[data-ui-theme="light"] :is(#editorheader #about,.location-bar .sidebar-toggle,.location-bar #shaderpicker,footer #editorrefresh):hover{background:var(--ui-hover);color:var(--ui-text)}
+:root[data-ui-theme="light"] .sidebar-toggle[aria-expanded="true"]{color:var(--purple)}
+:root[data-ui-theme="light"] #shaderchoices>button,:root[data-ui-theme="light"] :is(#layoutmenu,#grapheditmenu) button{background:transparent}
+:root[data-ui-theme="light"] #shaderchoices>button:hover,:root[data-ui-theme="light"] :is(#layoutmenu,#grapheditmenu) button:is(:hover,:focus-visible){background:var(--ui-selected)}
+:root[data-ui-theme="light"] .shader-kind,:root[data-ui-theme="light"] .shader-kind[data-kind="top"]{color:var(--purple)}
+:root[data-ui-theme="light"] .workspace-tab.panel-heading{background:var(--panel-header-inactive-bg);color:var(--muted)}
+:root[data-ui-theme="light"] .workspace-tab.panel-heading[aria-selected="true"]{background:var(--panel-content-bg);color:var(--panel-header-fg)}
+:root[data-ui-theme="light"] .workspace-tab.panel-heading:hover{background:var(--panel-header-hover-bg);color:var(--panel-header-fg)}
+:root[data-ui-theme="light"] .workspace-group.collapsed .workspace-tab.panel-heading{background:var(--panel-header-inactive-bg);color:var(--muted)}
+:root[data-ui-theme="light"] .workspace-tabs .workspace-fold{background:transparent;color:var(--muted)}
+:root[data-ui-theme="light"] .workspace-tabs .workspace-fold:hover{background:var(--panel-header-hover-bg);color:var(--panel-header-fg)}
+:root[data-ui-theme="light"] .parameter-tabs button{background:var(--panel-header-inactive-bg);color:var(--muted)}
+:root[data-ui-theme="light"] .parameter-tabs button.active{background:var(--panel-content-bg);color:var(--panel-header-fg)}
+:root[data-ui-theme="light"] :is(.browser-section>summary,.browser-branch>summary):hover{background:var(--ui-hover)}
+:root[data-ui-theme="light"] .browser-tree>.browser-branch[open]>summary{background:var(--ui-control)}
+:root[data-ui-theme="light"] #nodelibrary .browser-row .palette-entry{background:transparent;color:var(--ui-text)}
+:root[data-ui-theme="light"] #nodelibrary .browser-row .palette-entry:enabled:hover{background:transparent;color:var(--ui-text)}
+:root[data-ui-theme="light"] #nodelibrary .browser-row .palette-entry-source{color:var(--muted)}
+:root[data-ui-theme="light"] #nodelibrary .browser-add{background:transparent;color:var(--muted)}
+:root[data-ui-theme="light"] #nodelibrary .browser-add:hover{background:#5143670d;color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(.input-group-toggle,.input-group-add,.input-reference,.input-source-select,.personal-help){background:transparent;color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(.input-group-toggle,.input-source-select):enabled:hover{background:transparent;color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(.input-group-add,.input-reference,.personal-help):enabled:hover{background:#5143670d}
+:root[data-ui-theme="light"] :is(.library #functionsources [role="tab"],.create-category-choice){background:transparent;color:var(--muted)}
+:root[data-ui-theme="light"] :is(.library #functionsources [role="tab"][aria-selected="true"],.create-category-choice[aria-selected="true"]){background:var(--ui-selected);color:var(--purple)}
+:root[data-ui-theme="light"] #creator .create-entry{background:transparent;color:var(--ui-text)}
+:root[data-ui-theme="light"] #creator .create-entry:is(.active,:hover){background:var(--ui-selected);color:var(--ui-text)}
+:root[data-ui-theme="light"] #creator .create-entry small{color:var(--muted)}
+:root[data-ui-theme="light"] .help-markdown{color:#554e61}
+:root[data-ui-theme="light"] .help-markdown strong{color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(.help-markdown code,.browser-signature>code,#createdetail .browser-signature){background:var(--ui-code-chip);color:#53377c}
+:root[data-ui-theme="light"] :is(#livebody .preview-path,#livebody .preview-icon-button){background:transparent;color:var(--muted)}
+:root[data-ui-theme="light"] :is(#livebody .preview-path,#livebody .preview-icon-button):enabled:hover{background:transparent;color:var(--ui-text)}
+:root[data-ui-theme="light"] #livebody #autopreview[aria-pressed="true"]{color:var(--purple)}
+:root[data-ui-theme="light"] #diagnosticbar{background:#f7e9e7;border-color:#d3a5a0;color:#82352e}
+:root[data-ui-theme="light"] :is(#diagnosticbar strong,.compile-details summary){color:#82352e}
+:root[data-ui-theme="light"] #connectionnotice{background:#f4ecd9;color:#705616}
+:root[data-ui-theme="light"] .connection-summary strong{color:#705616}
+:root[data-ui-theme="light"] #canvas{background-color:#211f29;background-image:radial-gradient(#3d3748 var(--grid-dot,1px),transparent calc(var(--grid-dot,1px) + .5px))}
+:root[data-ui-theme="light"] #canvas.drop-ready{background-color:#302839}
+:root[data-ui-theme="light"] .canvas-caption :is(strong,span){color:#9390a5}
+/* Dark islands retain their local contrast; do not recolor individual sockets or typed wires. */
+:root[data-ui-theme="light"] :is(#canvas .node,.node-inspector-title,#valueladder,.code-editor,#sourcecode){color-scheme:dark;--muted:#9390a5;--line:#30303b;--purple:#b39cfb;--green:#a2d3b0;color:#e5e4ed}
+:root[data-ui-theme="light"] #inspector .node-inspector-title{color:var(--category-fg);border-color:#ffffff16}
+:root[data-ui-theme="light"] #inspector .node-inspector-title .node-inspector-label{color:inherit}
+:root[data-ui-theme="light"] #inspector .node-inspector-label input{background:#ffffff12;color:inherit;border-color:transparent}
+:root[data-ui-theme="light"] #inspector .node-inspector-label input:hover{background:#ffffff1c}
+:root[data-ui-theme="light"] #inspector .node-inspector-label input:focus{background:#00000024}
+:root[data-ui-theme="light"] #inspector .code-editor textarea{background:#191920;color:#e5e4ed;border-color:var(--line)}
+:root[data-ui-theme="light"] #sourcecode{background:#14141c;color:var(--glsl-text)}
+
+/* Comfortable enlarges editor chrome only; Standard remains the base stylesheet.
+   Append after the standard header/location/footer rules. Colors stay in the theme. */
+:root[data-ui-size="comfortable"] #editorheader{height:68px;min-height:68px;padding-inline:20px;gap:28px}
+:root[data-ui-size="comfortable"] #editorheader .brand{gap:10px}
+:root[data-ui-size="comfortable"] #editorheader .brand-mark{width:32px;height:32px}
+:root[data-ui-size="comfortable"] #editorheader .brand-text{gap:22px}
+:root[data-ui-size="comfortable"] #editorheader .brand strong{font-size:22px;line-height:28px}
+:root[data-ui-size="comfortable"] #editorheader .brand small{font-size:12px;line-height:20px;gap:7px}
+:root[data-ui-size="comfortable"] #editorheader .brand-version::before{margin-right:7px}
+:root[data-ui-size="comfortable"] #editorheader .actions,
+:root[data-ui-size="comfortable"] #editorheader .secondary-actions{gap:8px}
+:root[data-ui-size="comfortable"] #editorheader .actions button,
+:root[data-ui-size="comfortable"] #editorheader .actions select{height:38px;padding-inline:12px;font-size:13px}
+:root[data-ui-size="comfortable"] #editorheader #apply{padding-inline:16px}
+
+:root[data-ui-size="comfortable"] .location-bar,
+:root[data-ui-size="comfortable"] footer{height:42px;min-height:42px;padding-block:4px}
+:root[data-ui-size="comfortable"] .location-bar .sidebar-toggle{width:32px;height:32px;padding:4px}
+:root[data-ui-size="comfortable"] .location-bar .sidebar-toggle svg{width:20px;height:20px}
+:root[data-ui-size="comfortable"] .location-bar #workspacelayout{height:32px;font-size:12px;padding-inline:10px}
+:root[data-ui-size="comfortable"] .location-bar #shaderpicker{height:32px;font-size:12px;padding-inline:4px}
+:root[data-ui-size="comfortable"] .location-bar #shaderpicker .target,
+:root[data-ui-size="comfortable"] .location-start>#projectfile{font-size:12px}
+:root[data-ui-size="comfortable"] footer #dirty,
+:root[data-ui-size="comfortable"] footer #status{font-size:12px}
+:root[data-ui-size="comfortable"] footer #reload{height:32px;padding-inline:10px;font-size:12px}
+:root[data-ui-size="comfortable"] footer #editorrefresh,
+:root[data-ui-size="comfortable"] footer .footer-preferences button{width:32px;height:32px;padding:5px}
+:root[data-ui-size="comfortable"] footer #editorrefresh svg,
+:root[data-ui-size="comfortable"] footer .footer-preferences button svg{width:20px;height:20px}
+
+:root[data-ui-size="comfortable"] .graph-workspace .toolbar{padding-block:8px;gap:8px}
+:root[data-ui-size="comfortable"] .graph-workspace .toolbar .graph-tools button,
+:root[data-ui-size="comfortable"] .graph-workspace .toolbar .stage{height:38px;min-height:38px;font-size:13px;padding-inline:12px}
+:root[data-ui-size="comfortable"] .graph-workspace .graph-tools .icon-button{width:38px;padding:0}
+:root[data-ui-size="comfortable"] .graph-workspace .graph-tools .icon-button svg{width:18px;height:18px}
+:root[data-ui-size="comfortable"] .graph-navigation{min-height:40px;gap:8px;padding-block:5px}
+:root[data-ui-size="comfortable"] .graph-navigation>span,
+:root[data-ui-size="comfortable"] .graph-navigation #functionscope,
+:root[data-ui-size="comfortable"] #zoom{font-size:12px}
+:root[data-ui-size="comfortable"] .graph-navigation button,
+:root[data-ui-size="comfortable"] #graphpath{font-size:13px}
+:root[data-ui-size="comfortable"] .graph-navigation #graphup{width:30px;height:30px}
+
+/* Larger metadata/actions need their second row earlier than Standard. */
+@media(max-width:1120px){
+ :root[data-ui-size="comfortable"] #editorheader{display:grid;grid-template-columns:minmax(0,1fr) auto;height:auto;min-height:0;padding:10px 16px;gap:8px 14px}
+ :root[data-ui-size="comfortable"] #editorheader .brand{grid-row:1;grid-column:1}
+ :root[data-ui-size="comfortable"] #editorheader .actions{display:contents}
+ :root[data-ui-size="comfortable"] #editorheader #apply{grid-row:1;grid-column:2;justify-self:end;margin:0}
+ :root[data-ui-size="comfortable"] #editorheader .secondary-actions{grid-column:1/-1;grid-row:2;justify-content:flex-end;flex-wrap:wrap;min-width:0}
+ :root[data-ui-size="comfortable"] #editorheader .secondary-actions button,
+ :root[data-ui-size="comfortable"] #editorheader .secondary-actions select{padding-inline:8px}
+}
+@media(max-width:480px){
+ :root[data-ui-size="comfortable"] #editorheader .brand{grid-column:1/-1}
+ :root[data-ui-size="comfortable"] #editorheader .actions{display:flex;grid-column:1/-1;grid-row:2;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+ :root[data-ui-size="comfortable"] #editorheader .secondary-actions{display:contents}
+}
+
+/* Appearance controls keep the same quiet treatment in either theme. */
+:root[data-ui-theme="light"] footer .footer-preferences button{background:transparent;color:var(--muted)}
+:root[data-ui-theme="light"] footer .footer-preferences button:enabled:hover{background:var(--ui-hover);color:var(--ui-text)}
+:root[data-ui-theme="light"] footer .footer-preferences button[aria-pressed="true"]{color:var(--purple)}

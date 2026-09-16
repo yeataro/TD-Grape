@@ -1,5 +1,13 @@
 # 測試
 
+2026-09-17 介面大小／外觀切換（0.8.83）：隔離 Chromium 的 `test_ui_appearance.cjs` 通過 7 組檢查，涵蓋標準／舒適與深色／淺色四種組合、雙語提示與鍵盤操作、本機設定重載／失效回復／儲存拒寫、唯讀圖可切換，以及不改變圖／Undo／縮放／預覽狀態。未提交數字草稿保持同一 DOM；離開欄位沿用既有一次提交，外觀切換不產生額外 Undo 或寫入。320／390／960／1600px 的 16 組 footer 幾何確認控制置中、左右不重疊且仍可點擊。
+
+既有 `test_editor_chrome.cjs` 10 組檢查通過，保留 header 收合、刷新與草稿保護。Light 主題另通過 3 組隔離檢查：圖內節點／接孔／接線／數字框樣式保持、Inputs／浮動新增與來源對話框可讀、沒有圖／歷史變更及 JS 錯誤。最終淺色外框保留深色畫布，避免淡色線條對比不足。語系檢查通過。本輪未改型別、編譯契約或 Master；實體 iPad／Safari 仍待人工回驗。
+
+執行外觀回歸：`node tests/browser/test_ui_appearance.cjs src/editor <editor-state-json> <report-directory>`。
+
+更新 TD 的 4 份 Editor 來源後，全部 24 份內嵌來源與目前服務資產均與磁碟一致。正式 TOE 保存為 639,732 bytes；更新及保存均確認使用者 TOP／MAT 兩份 Shader 保留，私人開發橋接未寫入。
+
 2026-09-17 Inputs／工作區 UI 批（0.8.83）：203 項 Python 測試及完整可攜檢查通過；最後文案修訂後另確認 468 個雙語語系鍵。瀏覽器通過 Native sources 13 組、workspace 7 組、header／footer／重載保護 10 組，另完成 TOP Inputs 建立／搜尋／收合／拖放／引用重用、Personal 投放與觸控捲動驗證。獨立 review 覆蓋對話框按 Tab 後仍保留草稿、取消清除草稿、寫入中禁止整頁重載，以及來源切換只產生一次 Undo。最後工具列 CSS 修正另驗 320／390／960px，組內不拆、控制等高、無水平溢出。後續使用回饋另通過 5 項來源提示檢查：Inputs 無頂部狀態段、僅原生 Uniform 操作提示限制、輪詢不覆蓋操作或編譯錯誤、Constant／TOP 引用正常、限制解除可恢復編輯。Add Node 中性背景／圖示、Inputs 淡色列與兩側標題一致另以 4 項視覺檢查確認；Refresh 在 footer 最左端以四種寬度的 saved／pending／error 狀態檢查。頂欄開關置中另驗 1600／960／390／320px：中心誤差小於 0.6px、長路徑不重疊、收合及再開啟正常，位置列與 footer 高度維持。這些為隔離的 Chromium fixture 測試，尚未代替實體手機／iPad／Safari。
 
 TD 2025.32820 更新 6 份 Editor 來源，確認全部 24 份內嵌來源與磁碟、服務資產一致，正式 TOE 最終保存為 632,948 bytes；最後更新與保存均比對保留使用者的 TOP／MAT 兩份 Shader，私人開發橋接未寫入正式 TOE。此批未修改型別／catalog／編譯規則，沒有執行 Master 升級。
