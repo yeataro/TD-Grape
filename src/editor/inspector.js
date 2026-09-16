@@ -149,7 +149,7 @@ function writeUniformInput(entry,value){
       uniformSnapshot=await api('uniform-value',{declarationId:id,component:index,value,revision:expected.revision,expected});
       const item=liveParameterRow(id)?.components[index];
       if(item){entry.setSyncedValue(item.value);entry.uniformExpected={revision:uniformSnapshot.revision,...item};}
-      uniformSyncError='';status(t(entry.dataset.texture?'texture.updated':'uniform.updated'));await preview();
+      uniformSyncError='';status(t(entry.dataset.texture?'texture.updated':'uniform.updated'),false,{clearError:'operation'});await preview();
     }catch(e){
       // A rejected write must read TD back before this field can accept another edit.
       uniformReadbacks.add(key);entry.uniformExpected=null;uniformSyncError=e.message;status(e.message,true);
@@ -410,6 +410,9 @@ function exposedInspector(box){
 let helpContext='node',previewHelpSelection=null;
 function renderHelp(){
   const help=$('#nodehelp');help.replaceChildren();
+  if(helpContext==='personal'){
+    help.append(el('h3',{},t('browser.source.personal')),markdown(t('personal.hint')),markdown(t('personal.help')));return;
+  }
   if(helpContext==='preview'&&selected!==previewHelpSelection)helpContext='node';
   if(helpContext==='preview'){
     help.append(el('h3',{},t(editorTarget==='top'?'preview.top':'preview.material')),markdown(t(editorTarget==='top'?'preview.helpTop':'preview.helpMaterial')));return;
@@ -465,6 +468,7 @@ function glslCodeInspector(box,n){
   const draft=glslCodeDrafts.get(n);body.value=draft?.base===n.params.code?draft.text:n.params.code;body.maxLength=typeContract.glslCode.maxLength;body.readOnly=readonly;
   body.rows=Math.max(6,Math.min(20,body.value.split('\n').length+1));
   let committed=n.params.code;
+  body.hasPendingEdit=()=>body.value!==committed;
   const commit=()=>{
     if(readonly||body.value===committed)return;
     const value=body.value,previous=committed;
@@ -539,6 +543,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
     const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:''),entry=el('input',{type:'number',step:'any','aria-label':label});
     entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.value=String(v);
     let committed=entry.value;
+    entry.hasPendingEdit=()=>entry.value!==committed;
     const own=()=>!readonly&&entry.isConnected&&current().nodes.includes(n);
     const focus=()=>{if(own())inlineValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
     const restore=()=>{entry.value=committed;entry.removeAttribute('aria-invalid');};
@@ -1013,7 +1018,7 @@ function installPanelWorkspace(){
         const groupId=group.panels[0],section=el('section',{class:'inspector-panel workspace-group','data-panel':groupId,'data-workspace-group':groupId,'data-tabbed':String(visible.length>1)});
         const bar=el('div',{class:'workspace-tabs',role:'tablist'});
         for(const id of visible){const button=heads[id];button.setAttribute('role','tab');button.setAttribute('aria-selected',String(group.active===id));button.setAttribute('aria-expanded',String(!group.collapsed));button.tabIndex=group.active===id?0:-1;
-          button.onclick=()=>{if(group.active===id&&visible.length===1)group.collapsed=!group.collapsed;else {group.active=id;group.collapsed=false;}build();persist();heads[id].focus({preventScroll:true});};
+          button.onclick=()=>{group.active=id;group.collapsed=false;build();persist();heads[id].focus({preventScroll:true});};
           button.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();e.stopPropagation();const at=visible.indexOf(id),next=e.key==='Home'?0:e.key==='End'?visible.length-1:(at+(e.key==='ArrowRight'?1:-1)+visible.length)%visible.length;group.active=visible[next];group.collapsed=false;build();persist();heads[group.active].focus();};
           button.onpointerdown=e=>beginDrag(e,id);bar.append(button);
         }
@@ -1152,12 +1157,45 @@ function installPanelWorkspace(){
    Uniform values/modes continue to belong to the actual GLSL OP. */
 let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceError='',nativeSourceRetryAt=0,selectedInputId=null;
 const inputPresets={time:['uTime','me.time.seconds'],frame:['uFrame','me.time.frame'],absTime:['uAbsTime','absTime.seconds'],absFrame:['uAbsFrame','absTime.frame']};
+const inputCollapsedGroups=(()=>{try{const saved=JSON.parse(localStorage.getItem('sgrapeInputCollapsedGroups'));return new Set(Array.isArray(saved)?saved:[]);}catch{return new Set();}})();
+function setInputGroupCollapsed(kind,collapsed){
+  if(collapsed)inputCollapsedGroups.add(kind);else inputCollapsedGroups.delete(kind);
+  try{localStorage.setItem('sgrapeInputCollapsedGroups',JSON.stringify([...inputCollapsedGroups]));}catch{}
+}
+function inputGroupLabel(kind){return ({top_input:'TOP Inputs',constant:'Constants',uniform:'Uniforms',sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind];}
+function inputSourceGroup(kind){return kind==='color'||kind.startsWith('preset:')?'uniform':kind;}
+function inputPresetSource(kind){return kind.startsWith('preset:')?graph.declarations.find(d=>d.kind==='uniform'&&d.type==='float'&&d.initialDriver===kind.slice(7)):null;}
+function finishInputCreate(kind,id){
+  setInputGroupCollapsed(inputSourceGroup(kind),false);$('#inputsearch').value='';$('#nativeuniforms').dataset.sourceStructure='';$('#sourcecreatedialog').close();selectInputSource(id);
+}
+function openInputCreate(kind){
+  if(readonly||!graph||!['constant','uniform',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
+  closeCreator();const dialog=$('#sourcecreatedialog'),choice=$('#sourcekind');
+  const options=kind==='uniform'?[['uniform','Uniform'],['color','Color · vec4'],...Object.keys(inputPresets).map(p=>['preset:'+p,t('inputs.preset.'+p)])]:[[kind,inputGroupLabel(kind)]];
+  choice.replaceChildren(...options.map(([value,label])=>el('option',{value},label)));choice.value=kind;
+  $('#sourcekindfield').hidden=options.length===1;$('#sourcecreatetitle').textContent=t('inputs.new')+' · '+inputGroupLabel(kind);
+  $('#sourcecreateerror').textContent='';choice.onchange();dialog.showModal();
+  if(!matchMedia('(pointer:coarse)').matches&&!$('#sourcename').disabled){$('#sourcename').focus({preventScroll:true});$('#sourcename').select();}
+}
 function sourceReferences(id){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)].flatMap(g=>g.nodes).filter(n=>n.params?.declarationId===id||n.params?.inputId===id);}
 function sourceReady(){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!dirty&&!submitBusy&&!nativeSourceBusy&&nativeSourceSnapshot.revision===revision&&!readonly;}
+let nativeSourceHint='';
+function nativeSourceHintText(){
+  return nativeSourceError||(!nativeSourceSnapshot?.enabled?t('sources.enable'):dirty||nativeSourceSnapshot.revision!==revision?t('sources.nativePending'):(nativeSourceSnapshot.issues||[]).map(i=>i.message).join(' '));
+}
+function showNativeSourceHint(){
+  const message=nativeSourceHintText();
+  if(message){nativeSourceHint=message;status(message);}
+}
+function clearNativeSourceHint(){
+  if(nativeSourceHint&&$('#status').textContent===nativeSourceHint&&!persistentStatusError)status('');
+  nativeSourceHint='';
+}
 function selectInputSource(id){
   if(!allInputSources().some(d=>d.id===id))return;
   helpContext='node';selectedInputId=id;selected=null;selectedEdge=null;selection.clear();cancelConnection();closeCreator();
   workspaceLayout?.reveal('parameters');render();
+  if(allInputSources().find(d=>d.id===id)?.kind==='uniform')showNativeSourceHint();else clearNativeSourceHint();
 }
 function inputReference(id,x=null,y=null){
   const decl=allInputSources().find(d=>d.id===id),d=decl&&catalog.find(d=>d.key===decl.kind);if(!d)return;
@@ -1183,9 +1221,9 @@ async function refreshNativeSources(){
   finally{nativeSourcePolling=false;}
 }
 async function nativeSourceRequest(endpoint,body){
-  if(!sourceReady())return null;
+  if(!sourceReady()){showNativeSourceHint();return null;}
   nativeSourceBusy=true;renderNativeSourceValues();let result=null;
-  try{result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});nativeSourceError='';receiveNativeSources(result);}
+  try{result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});nativeSourceError='';receiveNativeSources(result);status(t('uniform.updated'),false,{clearError:'operation'});}
   catch(e){nativeSourceError=e.message;status(e.message,true);}
   finally{nativeSourceBusy=false;renderNativeSourceValues();await refreshNativeSources();}
   return result;
@@ -1197,7 +1235,7 @@ function renderNativeSourceValues(){
     for(const entry of card.querySelectorAll('[data-source-component]')){
       const item=row.components[Number(entry.dataset.sourceComponent)];entry.disabled=!ready||!item?.writable;
       if(document.activeElement!==entry&&!entry.numericGestureActive){entry.setSyncedValue(item?.value);entry.sourceExpected=item?clone(item):null;}
-      entry.title=item?.expression||item?.mode||'';
+      entry.title=[!ready?nativeSourceHintText():'',item?.expression||item?.mode||''].filter(Boolean).join(' · ');
     }
     for(const label of card.querySelectorAll('[data-source-mode]')){
       const item=row.components[Number(label.dataset.sourceMode)];label.textContent=item?.mode==='CONSTANT'?t('inputs.valueMode'):item?.mode||'';label.title=item?.binding||item?.expression||'';
@@ -1214,17 +1252,20 @@ function renderNativeSourceValues(){
   }
   for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
   for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=readonly;
-  if($('#sourcekind'))$('#sourcekind').disabled=readonly;
   if($('#sourcetype'))$('#sourcetype').disabled=readonly||!['uniform','constant'].includes($('#sourcekind').value);
   if($('#sourcekind').value==='top_input'){$('#sourcename').value='sTD2DInputs['+topInputsView().length+']';$('#sourcename').disabled=true;}
-  for(const option of $('#sourcekind').options)option.hidden=editorTarget==='top'?option.value==='sampler':option.value==='top_input';
-  $('#sourcestatus').textContent=nativeSourceError||(!nativeSourceSnapshot?.enabled?t('sources.enable'):dirty||nativeSourceSnapshot.revision!==revision?t('sources.pending'):(nativeSourceSnapshot.issues||[]).map(i=>i.message).join('\n'));
+  const presetSource=inputPresetSource($('#sourcekind').value);if(presetSource){$('#sourcename').value=presetSource.name;$('#sourcename').disabled=true;}
+  $('#sourcecreate button[type=submit]').textContent=t(presetSource?'inputs.useExisting':'inputs.create');
+  // Polls may clear this source hint after recovery; they never publish it over another action.
+  if(nativeSourceHint&&(!nativeSourceHintText()||!selectedInputId))clearNativeSourceHint();
   for(const item of document.querySelectorAll('[data-input-reference]'))item.disabled=readonly;
+  for(const item of document.querySelectorAll('[data-input-create]'))item.disabled=readonly||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16);
   for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
 }
 function nativeInputFields(box,decl){
   const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===decl.id);
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
+  card.addEventListener('pointerdown',()=>{if(!sourceReady())showNativeSourceHint();},true);
   if(!row||row.pending){card.append(el('p',{class:'muted'},t('sources.pending')));return;}
   const count=typeContract?.types?.[decl.type]?.components||1;
   if(!row.missing){
@@ -1324,18 +1365,27 @@ function installCanvasItemDrag(button,label,dropItem,clickItem){
 function renderNativeSources(){
   const box=$('#nativeuniforms');if(!box||!graph)return;
   const query=normalizeSearch($('#inputsearch')?.value),decls=allInputSources().filter(d=>['uniform','sampler','constant','top_input'].includes(d.kind)&&normalizeSearch(d.name+' '+d.kind+' '+d.type).includes(query));
-  const identity=JSON.stringify([language,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing,d.kind,d.index]),selectedInputId]);
+  const identity=JSON.stringify([language,editorTarget,query,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing,d.kind,d.index]),selectedInputId]);
   if(box.dataset.sourceStructure!==identity&&!box.querySelector(':active')){
     box.dataset.sourceStructure=identity;box.replaceChildren();
     for(const kind of ['top_input','constant','uniform','sampler']){
-      const group=decls.filter(d=>d.kind===kind);if(!group.length)continue;box.append(el('div',{class:'input-group-title'},({top_input:'TOP Inputs',constant:'Constants',uniform:'Uniforms',sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind]));
+      const group=decls.filter(d=>d.kind===kind),canCreate=kind!==(editorTarget==='top'?'sampler':'top_input');if(!canCreate&&!group.length)continue;
+      const section=el('section',{class:'input-group','data-input-group':kind,'data-browser-category':kind==='top_input'||kind==='sampler'?'texture':kind==='constant'?'data':'shader'}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind});
+      list.hidden=!query&&inputCollapsedGroups.has(kind);
+      if(group.length){
+        const toggle=el('button',{class:'input-group-toggle','aria-expanded':String(!list.hidden),'aria-controls':list.id});toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},inputGroupLabel(kind)));
+        toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!query)setInputGroupCollapsed(kind,list.hidden);};head.append(toggle);
+      }else head.append(el('span',{class:'input-group-empty'},inputGroupLabel(kind)));
+      if(canCreate){const add=el('button',{class:'input-group-add','data-input-create':kind,'aria-label':t('inputs.create')+' · '+inputGroupLabel(kind),title:t('inputs.create')+' · '+inputGroupLabel(kind)},'+');add.onclick=()=>openInputCreate(kind);head.append(add);}
+      section.append(head,list);box.append(section);
       for(const decl of group){
         const card=el('div',{class:'input-source-row','data-input-source':decl.id}),pick=el('button',{class:'input-source-select','aria-pressed':String(selectedInputId===decl.id)});
-        pick.append(el('span',{},decl.name),el('small',{},(kind==='top_input'?'['+decl.index+']':decl.type)+(decl.sourceMissing?' · '+t('sources.missing'):'')));pick.onclick=()=>selectInputSource(decl.id);
-        const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');installInputDrag(reference,decl.id);card.append(pick,reference);box.append(card);
+        pick.append(el('span',{},decl.name));if(kind!=='top_input')pick.append(el('small',{},decl.type+(decl.sourceMissing?' · '+t('sources.missing'):'')));pick.title=decl.name+' · '+decl.type+' · '+t('inputs.editReference');
+        installCanvasItemDrag(pick,()=>allInputSources().find(d=>d.id===decl.id)?.name||'',(x,y)=>inputReference(decl.id,x,y),()=>selectInputSource(decl.id));const pointer=pick.onpointerdown;pick.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
+        const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');installInputDrag(reference,decl.id);card.append(pick,reference);list.append(card);
       }
     }
-    if(!decls.length)box.append(el('p',{class:'muted'},query?t('create.empty'):t('inputs.empty')));
+    if(query&&!decls.length)box.append(el('p',{class:'muted'},t('create.empty')));
   }
   // Native row availability can arrive after an apply without changing graph revision.
   const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;
@@ -1345,11 +1395,14 @@ function renderNativeSources(){
 }
 function installNativeSources(){
   $('#inputsearch').oninput=renderNativeSources;
-  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)];$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').value=['sampler','top_input'].includes(kind)?'sampler2D':kind==='color'?'vec4':'float';$('#sourcepresethint').textContent=preset?preset[1]:'';renderNativeSourceValues();};
+  $('#closesourcecreate').onclick=()=>$('#sourcecreatedialog').close();
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)];$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').value=['sampler','top_input'].includes(kind)?'sampler2D':kind==='color'?'vec4':'float';for(const option of $('#sourcetype').options)option.hidden=(option.value==='sampler2D')!==['sampler','top_input'].includes(kind);$('#sourcepresethint').textContent=preset?preset[1]:'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
-    e.preventDefault();const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value;
-    if(kind!=='top_input'&&(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name))){status(t('inputs.invalidName'),true);return;}
-    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','top_input'].includes(kind)?kind:'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});if(changed)selectInputSource(id);
+    e.preventDefault();if(readonly)return;const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value,existing=inputPresetSource(kind);
+    if(existing){finishInputCreate(kind,existing.id);return;}
+    if(kind!=='top_input'&&(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)||graph.declarations.some(d=>d.name===name&&!(kind.startsWith('preset:')&&d.kind==='uniform'&&d.initialDriver===kind.slice(7))))){$('#sourcecreateerror').textContent=t('inputs.invalidName');return;}
+    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','top_input'].includes(kind)?kind:'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});
+    if(changed)finishInputCreate(kind,id);else $('#sourcecreateerror').textContent=$('#status').textContent;
   };
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);
   setInterval(refreshNativeSources,1000);

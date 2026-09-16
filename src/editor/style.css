@@ -313,7 +313,7 @@ input.scrubbing{outline:1px solid var(--purple);background:#2d2538}
 #nodes .example-entry{display:flex;flex-direction:column;align-items:flex-start;gap:6px;cursor:pointer;padding:12px;width:100%;text-align:left;line-height:1.4}
 .example-entry strong{font-size:12px}.example-entry small{font-size:10px;color:var(--muted)}
 .library-empty{padding:6px 2px;font-size:11px;line-height:1.6}
-#personal-library{min-height:170px;border-radius:5px;overflow-wrap:anywhere}
+#personal-library{border-radius:5px;overflow-wrap:anywhere}
 .library [hidden]{display:none!important}
 @media(max-width:800px){.library{display:none}.show-library .library{display:flex}}
 
@@ -389,9 +389,7 @@ body.resizing-sidebar,body.resizing-sidebar *{cursor:col-resize!important;user-s
 :is(.panel-divider,.browser-detail-divider):focus-visible{box-shadow:inset 0 0 0 1px var(--purple)}
 body.resizing-panel,body.resizing-panel *{cursor:row-resize!important;user-select:none!important}
 
-/* Create candidates use the same category palette as the resulting node title. */
-#nodes button.palette-entry,#createresults button.create-entry{background:var(--category-bg);color:var(--category-fg);border:1px solid transparent}
-#nodes button.palette-entry:hover,#createresults button.create-entry:hover,#createresults button.create-entry.active{background:var(--category-bg);color:var(--category-fg);border-color:var(--category-fg);filter:brightness(1.1)}
+/* Category metadata does not fill Add Node rows with the node title color. */
 #nodes .palette-entry-label,#nodes .palette-entry>span:last-child,#createresults .create-entry small{color:inherit}
 #nodes .palette-entry-meta{color:inherit;opacity:.75}
 .library-category .palette-category{color:var(--category-fg)}
@@ -569,7 +567,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .browser-signature>code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;background:#302e3a;border-radius:4px;padding:8px 9px;color:#d3cedf;font-size:10px}
 .browser-signature>small{display:block;font-size:9px;margin-top:7px;line-height:1.5}
 .browser-aliases{font-size:10px;color:var(--muted);margin:8px 0 0}
-.browser-personal{margin-top:12px}.browser-templates>.example-entry{display:block;width:100%;margin:5px 0;font-size:11px;text-align:left}
+.browser-personal{margin-top:12px}.personal-heading{display:flex;align-items:center;justify-content:space-between;gap:6px}.personal-heading h4{margin:0}.personal-help{border:0;background:transparent;padding:2px 6px;min-width:24px;min-height:24px;color:var(--muted)}.personal-drop-label{font-size:10px;color:var(--muted);margin:4px 0 8px}#personal-library .personal-location{margin-bottom:0}.browser-templates>.example-entry{display:block;width:100%;margin:5px 0;font-size:11px;text-align:left}
 #functionsources{margin:3px 0 10px}
 #libraryintro{font-size:10px;padding:0 5px}
 .library-empty{padding:0 8px;font-size:11px}
@@ -750,9 +748,14 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #grapheditmenu[data-input="touch"] button small{display:none}
 
 /* Keep graph edit commands together, with larger targets on touch devices. */
-.graph-edit-actions{display:flex;align-items:center;gap:6px;flex:none}
-.graph-workspace .graph-edit-actions .icon-button{width:32px;height:30px;padding:0;touch-action:manipulation}
-@media(pointer:coarse){.graph-workspace .graph-edit-actions .icon-button{width:44px;height:44px}}
+.graph-tools{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;flex:1 1 auto;min-width:0}
+.graph-tool-group{display:flex;align-items:center;gap:5px;flex:none}
+.graph-tool-group+.graph-tool-group{border-left:1px solid var(--line);padding-left:7px}
+.graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:32px;min-height:32px;padding:0 10px;white-space:nowrap;touch-action:manipulation}
+.graph-workspace .graph-tools .icon-button{width:32px;padding:0}
+.graph-workspace .toolbar nav{display:flex;align-items:center;gap:4px;flex:none}
+.graph-workspace .toolbar>.spacer{display:none}
+@media(pointer:coarse){.graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:38px;min-height:38px}.graph-workspace .graph-tools .icon-button{width:38px}}
 
 /* The detection box is fixed; only the trash face reacts to an eligible hover. */
 .graph-navigation #zoom{position:static;margin-left:auto;flex:none;padding-left:8px}
@@ -780,26 +783,28 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* Source inventory stays compact; editing lives in Parameter. */
 #inputsearch{width:100%;box-sizing:border-box;margin:0 0 8px}
-.input-group-title{font-size:11px;color:var(--muted);padding:10px 4px 4px}
-.input-source-row{display:flex;gap:2px;min-width:0;margin:2px 0}
-.input-source-select{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0;text-align:left;padding:8px;background:transparent;border-color:transparent}
+.input-group{margin:4px 0 10px}.input-group-title{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:34px;font-size:12px;font-weight:400;color:inherit}
+.input-group-toggle{display:flex;align-items:center;gap:5px;flex:1;min-width:0;border:0;background:transparent;text-align:left;padding:5px 2px;color:inherit}.input-group-toggle:hover{background:transparent;color:#e5e0ed}.input-group-empty{padding-left:14px;flex:1}.input-group-arrow{display:inline-block;width:8px;flex:none;transform:rotate(90deg);font-size:15px;line-height:1}.input-group-toggle[aria-expanded=false] .input-group-arrow{transform:none}
+.input-group-add{flex:none;width:24px;height:28px;padding:0;border:0;background:transparent;color:#c3bbd4;font-size:16px}
+.input-source-row{display:flex;gap:0;min-width:0;margin:3px 0;border-radius:5px;overflow:hidden;background:color-mix(in srgb,var(--browser-accent) 12%,var(--browser-section-bg))}
+.input-source-row:hover{background:color-mix(in srgb,var(--browser-accent) 20%,var(--browser-section-bg))}.input-source-row:has(.input-source-select[aria-pressed=true]){background:color-mix(in srgb,var(--browser-accent) 28%,var(--browser-section-bg))}.input-source-row:focus-within{outline:1px solid var(--browser-active);outline-offset:-1px}
+.input-source-select{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0;min-height:34px;text-align:left;padding:6px 8px;border:0;border-radius:0;background:transparent;font-size:12px}
 .input-source-select span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.input-source-select small{color:var(--muted);font-size:11px;flex-shrink:0}
-.input-source-select[aria-pressed=true]{background:var(--panel-2,#292632);border-color:var(--border,#36323f)}
-.input-reference{width:34px;min-height:34px;padding:4px;font-size:20px;touch-action:none;user-select:none;-webkit-user-select:none}
+.input-source-select small{color:var(--muted);font-size:10px;flex-shrink:0}
+.input-source-select:hover,.input-source-select[aria-pressed=true]{background:transparent}.input-source-select:active{cursor:grabbing}
+.input-reference{display:flex;align-items:center;justify-content:center;flex:0 0 22px;min-height:34px;padding:0;font-size:13px;border:0;border-radius:0;background:transparent;color:#c3bbd4;opacity:.6;touch-action:none;user-select:none;-webkit-user-select:none}.input-reference:hover{background:#ffffff09;opacity:1}
 .input-drag-preview{position:fixed;z-index:10000;pointer-events:none;background:#2b2838;color:#e1dcf0;border:1px solid #aaa0c4;border-radius:5px;padding:8px 12px}
 .input-inspector-title{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px;margin-bottom:12px;min-width:0}
 .input-inspector-title strong{overflow:hidden;text-overflow:ellipsis}.input-inspector-title small{white-space:nowrap;color:var(--muted)}
-.input-drivers,.input-defaults,.inputs-create{margin:12px 0;font-size:12px}.input-drivers summary,.input-defaults summary,.inputs-create summary{cursor:pointer;padding:6px 0}
+.input-drivers,.input-defaults{margin:12px 0;font-size:12px}.input-drivers summary,.input-defaults summary{cursor:pointer;padding:6px 0}
 .input-drivers .muted{font-size:11px}.source-driver{display:flex;align-items:end;gap:5px}.source-driver .field{flex:1;min-width:0}.source-driver input{font-family:monospace;width:100%;box-sizing:border-box}.source-driver button{margin-bottom:10px;white-space:nowrap;font-size:11px}
-#sourcecreate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}#sourcekind,#sourcepresethint,#sourcecreate button{grid-column:1/-1}#sourcecreate input{min-width:0}#sourcepresethint{font-size:11px;overflow-wrap:anywhere}
-.native-input-fields .source-components{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.native-source-state:empty,#sourcestatus:empty{display:none}
-@media(pointer:coarse){.input-reference{min-width:44px;min-height:44px}.input-source-select{min-height:44px}}
+#sourcecreatedialog{width:min(420px,calc(100vw - 24px));padding:16px}#sourcecreatedialog .source-create-heading{padding:0 0 12px;gap:12px}#sourcecreatedialog .source-create-heading button{font-size:11px;padding:5px 8px}#sourcecreate{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px}#sourcecreate .field{margin:0}#sourcekindfield,#sourcepresethint,#sourcecreateerror,#sourcecreate button{grid-column:1/-1}#sourcekindfield[hidden],#sourcepresethint:empty,#sourcecreateerror:empty{display:none}#sourcecreate input{min-width:0;width:100%}#sourcepresethint{font-size:11px;overflow-wrap:anywhere}#sourcecreateerror{margin:0;font-size:11px}#sourcecreate button{margin-top:6px}
+.native-input-fields .source-components{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.native-source-state:empty{display:none}
+@media(pointer:coarse){.input-reference{flex-basis:30px;min-height:42px}.input-source-select{min-height:42px}.input-group-title{min-height:42px}.input-group-toggle{min-height:42px}.input-group-add{width:34px;height:42px}#sourcecreate input,#sourcecreate select{font-size:16px}}
 
 /* Explicit drag handles preserve touch scrolling in source inventories. */
 .browser-add,.input-reference{touch-action:none}
 .source-locations button{display:block;width:100%;text-align:left;margin-block:4px}
-.inputs-create{margin-top:0}
 
 /* Connection feedback stays separate from shader diagnostics and panel headings. */
 #connectionnotice{flex:none;border-bottom:1px solid var(--line);background:#24232a;padding:8px 16px;max-height:32dvh;overflow:auto}
@@ -912,3 +917,51 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 .vector-split-shortcut svg { display:block;width:14px;height:14px;margin:auto;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round; }
 .port-row.output:has(.vector-split-shortcut) { padding-left:37px; }
+
+/* Header, location controls and a persistent compact footer stay separate. */
+#editorheader[hidden]{display:none!important}
+#editorheader .brand{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 10px}
+#editorheader .brand-mark{grid-column:1;grid-row:1/3;align-self:center}
+#editorheader .brand strong{grid-column:2;grid-row:1}
+#editorheader .brand small{display:flex;align-items:center;grid-column:2;grid-row:2;gap:5px;font-size:10px;min-width:0}
+#editorheader .brand-tagline{min-width:0;flex:0 1 auto}
+#editorheader .brand-version::before{margin-right:5px}
+#editorheader #about{display:inline;padding:0;border:0;border-radius:2px;font:inherit;line-height:inherit;flex:none}
+#editorheader .actions button,#editorheader .actions select{height:34px;padding-block:0;white-space:nowrap}
+.location-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:8px}
+.location-start{display:flex;align-items:center;gap:8px;min-width:0}
+.location-start>#togglelibrary{flex:none;margin:0}
+.location-start>#projectfile{flex:0 1 auto;max-width:220px;min-width:0}
+.location-start>.shader-selector{flex:1 1 0;min-width:0;max-width:none}
+.location-end{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+.location-end>.sidebar-toggles{margin:0}
+.editor-view-actions{display:flex;align-items:center;justify-self:center;gap:3px}
+#editorrefresh svg{stroke-linecap:round}
+footer{display:grid;grid-template-columns:25px auto minmax(0,1fr) auto;height:30px;min-height:30px;gap:8px;padding:0 14px}
+footer #dirty{grid-column:2;grid-row:1;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:10px;white-space:nowrap}
+footer #status{grid-column:3;grid-row:1;min-width:0;padding:0;font-size:11px}
+footer #reload{flex:none;height:24px;padding:0 8px;font-size:10px}
+.footer-actions{display:flex;align-items:center;grid-column:4;grid-row:1;gap:5px}
+footer #editorrefresh{grid-column:1;grid-row:1;width:25px;height:24px;padding:4px;border:0;background:transparent;border-radius:3px}
+footer #editorrefresh svg{width:16px;height:16px}
+@media(max-width:800px){
+ .location-bar{grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);grid-template-rows:auto;gap:0 5px;padding:6px 10px}
+ .location-start{display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;gap:2px 5px}
+ .location-start>#togglelibrary{grid-column:1;grid-row:1/3}
+ .location-start>#projectfile{grid-column:2;grid-row:1;max-width:none;font-size:9px}
+ .location-start>.shader-selector{grid-column:2;grid-row:2;min-width:0}
+ .location-bar .shader-selector #shaderpicker{max-width:100%;padding:0;font-size:10px}
+ .location-end{gap:5px}
+ .location-bar .sidebar-toggle{width:34px;height:34px;padding:6px}
+ #editorheader .brand small{font-size:9px;gap:4px}
+ #editorheader .actions button,#editorheader .actions select{height:32px}
+ .graph-workspace .toolbar{gap:5px}
+ .graph-workspace .graph-tools{display:contents}
+ .graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:34px;min-height:34px}
+ .graph-workspace .graph-tools .icon-button{width:34px}
+ footer{grid-template-columns:25px minmax(0,1fr) auto;grid-template-rows:24px 18px;height:48px;min-height:48px;gap:0 8px;padding:2px 10px}
+ footer #dirty{grid-column:2;grid-row:1}
+ footer .footer-actions{grid-column:3;grid-row:1}
+ footer #reload{max-width:none}
+ footer #status{grid-column:2/-1;grid-row:2;max-width:100%;font-size:10px}
+}

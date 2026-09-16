@@ -1,6 +1,6 @@
 # Inspector panes and preview
 
-Parameter stays at the top, Preview in the middle, Help at the bottom. Each heading independently collapses its section; all three bodies scroll independently while the outer sidebar stays fixed.
+Parameter stays at the top, Preview in the middle, Help at the bottom. The right-hand chevron independently collapses its section; clicking a heading selects or expands it without toggling it closed. All three bodies scroll independently while the outer sidebar stays fixed. Panel grouping and title dragging follow [Workspace layout](WORKSPACE_LAYOUT.md).
 
 Drag the horizontal dividers to resize adjacent open sections. If the middle section is collapsed, the remaining divider adjusts Parameter and Help. Open bodies normally retain at least 80px; in very short windows that minimum contracts only as needed to keep headings accessible. Initial body weights are 5:3:2. Browser-local weights survive collapse, reload and viewport resizing; graph data and Undo are not changed. Arrow Up/Down adjusts 8px (Shift:32), Home/End reaches the limit, double-click resets the adjacent pair. Escape, blur, lost capture or resize cancels a drag. Pointer events support touch as well as mouse; physical-device validation is still pending.
 

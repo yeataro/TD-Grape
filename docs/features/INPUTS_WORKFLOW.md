@@ -1,13 +1,14 @@
-# Inputs 編輯流程（0.8.7 開發版）
+# Inputs 編輯流程
 
-這輪依 2026-09-13 的討論開始實作，讓使用者看成果後調整。版本仍未進入 Alpha；以下完成範圍不代表所有輸入種類都已支援。
+Inputs 的來源模型始於 0.8.7；以下操作入口已依目前 UI 更新。歷史版本驗證記錄保留在文末，完成範圍不代表所有輸入種類都已支援。
 
 ## 操作入口
 
 - Nodes / Add Node 保留節點目錄。原 Uniforms 面板改稱 **Inputs**，預設與「新增節點」並排為左側同一區塊的兩個分頁；右側預設為 Parameter／自訂參數、Preview、Help。面板仍可跨側欄移動。
 - 沿用舊預設分組的位置會一次性更新；自訂分組與已儲存的 Layout 預設集保留，亦可用 Restore default 套用新配置。
-- Inputs 最上方提供新增表單，列出此 Shader 的 Constants、Uniforms，以及 TOP Inputs（TOP）或 Samplers（MAT），可搜尋名稱與型別。選取來源會開啟 Parameter，不需要先在圖中放節點。
-- 每列 `+` 點一下建立引用，也可用滑鼠或觸控拖入畫布。拖出畫布、Escape、pointer cancel、第二指加入或失去視窗焦點均取消，不建立項目。清單其餘區域仍可捲動。
+- Inputs 保留名稱與型別搜尋，各來源分類標題的 `+` 開啟建立對話框，填寫名稱與該類別可用的型別。TOP 提供 TOP Inputs、Constants、Uniforms；MAT 提供 Constants、Uniforms、Samplers。Uniform 對話框保留 Color 與四種時鐘快捷方式。重複選同一時鐘會選取既有來源，不產生新來源、空 Undo 或 Shader 更新。
+- 分類預設展開，收合偏好存在瀏覽器；新增成功會展開該分類並清除搜尋，使新來源可見。空分類保留標題與建立按鈕，不顯示無作用的收合箭頭。搜尋暫時展開匹配結果，不覆寫原有收合偏好。
+- 來源列使用緊湊、淡類別底色。點名稱在 Parameter 編輯；整列可用滑鼠拖入畫布。列右小 `+` 點一下建立引用，也支援滑鼠或觸控拖入；它不建立額外來源。拖出畫布、Escape、pointer cancel、第二指加入或失去視窗焦點均取消。觸控在名稱列保留捲動，明確拖放入口為 `+`。
 - 浮動 Add Node 提供 **Inputs → Constants／Uniforms／TOP Inputs／Samplers** 分類，同時包含新增來源與現有來源引用；Time／Frame 預設歸在 Uniforms。全域搜尋保留，搜尋到來源名稱後建立的是同一 ID 的引用。
 - 浮動清單的 Uniform 引用與時間預設使用 Uniform 辨識色，Sampler 引用使用 Sampler 辨識色。
 - 畫布 Uniform／Sampler 引用的輸出端口顯示來源名稱（例如 `mixfac · float`），改名後同步更新顯示。內部端口仍為 `out`，接線與 GLSL 身分不因顯示規則改變；長名稱截斷時可由提示查看完整名稱。
@@ -42,7 +43,9 @@ Bind / Export 由原生參數頁處理，網頁不覆寫其驅動。非數值或
 
 Graph 的待套用新增可整筆復原。原生來源一旦已由 TD 接受，Graph Undo 只移除引用，保留來源、型別與原 ID；避免輪詢把同一個原生列重新辨識成新來源。實際來源刪除走 Parameter 的獨立操作，不能把 Graph Undo 當作 TD 來源刪除。
 
-## TOP Inputs 與 Constants（0.8.7）
+## TOP Inputs 與 Constants 的初版記錄（0.8.7）
+
+本節記錄最初槽位模型，包含當時至少保留一槽及舊 Sampler 的過渡行為；目前來源清單、零輸入、命名與相容處理以 [TOP 來源清單](TOP_SOURCE_INVENTORY.md) 為準。
 
 TOP Inputs 管理 COMP 外部接口，預設 Input 0，可先建立最多 16 個槽位再接入圖像。槽位 ID 不隨名称與排序變動；Parameter 提供改名、上下移動、預設圖與引用位置。第一槽位的有效圖像決定 Match Input 的輸出尺寸；Custom 模式仍使用指定尺寸。刪除槽位前須移除圖中引用並斷開 COMP 接線，至少保留一個槽位。
 
@@ -61,7 +64,7 @@ Inputs 不產生原生 GLSL Parameters 按鈕，也不保留其 HTML、前端事
 ## 驗證與後續
 
 - `tests/unit/test_top_inputs.py`、`tests/td/test_top_inputs.py`：槽位順序、16 槽與黑色備援、原生像素輸出、刪除／編譯失敗回復、保存重載、2D 型別保護、舊來源與 Expression 保留、具名常數。原生環境為 TD 2025.32820 / Windows。
-- `tests/browser/test_inputs_round.cjs`：新增表單、Constants／TOP Inputs、引用、複製貼上、刪除／還原、滑鼠／觸控拖放。
+- `tests/browser/test_inputs_round.cjs`：分類建立對話框、取消／非法名稱、收合／搜尋／保存重載、重複時鐘不產生編輯、Constants／TOP Inputs、引用、複製貼上、刪除／還原、整列滑鼠／明確入口觸控拖放。
 - `tests/browser/test_native_sources.cjs`：選取來源、原生值寫入、搜尋、新增／引用區分、預填接線、待套用編輯 Undo、滑鼠取消與實際 Chromium 觸控事件。
 - `tests/browser/test_custom_parameters.cjs`：加入自訂頁、修改、解除關聯。
 - `tests/td/test_native_sources.py`、`test_custom_parameters.py`、`test_input_presets.py`：TOP / MAT 原生資料、時鐘、保留驅動、型別呈現、衝突與回復。測試使用獨立元件，並比較使用者 Shader 保存內容。
@@ -71,7 +74,7 @@ Alpha 仍須補足：int / uint 與分量轉換、Attributes / Input Buffers 完
 
 恆常集合節點、末端灰點與節點 Label／來源資訊位置保留既有未決策狀態；不因這輪 Inputs 原型而定案。
 
-### 本輪交付驗證
+### 0.8.7 歷史交付驗證
 
 0.8.7：148 項 Python 單元測試、14 項啟動邏輯測試、421 個雙語鍵、四組 JavaScript 模型測試及新舊 Inputs 瀏覽器測試通過。TD 2025.32820 實測通過槽位接線／排序、17 張來源（16 槽加缺接備援）、既有參數 Expression、常數像素輸出、錯誤回復與組件保存重載。開發 TOE 已保存，展開後 24 份內嵌文字來源與 repository 一致，私人開發助手排除。
 

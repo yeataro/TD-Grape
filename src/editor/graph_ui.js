@@ -793,7 +793,7 @@ function renderCategoryTabs(container,entries,active,attribute){
   for(const b of container.children){const chosen=b.getAttribute(attribute)===active;b.setAttribute('aria-selected',String(chosen));b.tabIndex=chosen?0:-1;}
 }
 function browserGlyph(kind){
-  if(kind==='subgraph'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true);icon.setAttribute('class','browser-glyph browser-glyph-filled');return icon;}
+  if(kind==='subgraph'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true);icon.setAttribute('class','browser-glyph browser-glyph-filled');icon.setAttribute('viewBox','8 10 48 48');return icon;}
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','browser-glyph');svg.setAttribute('aria-hidden','true');
   const path=document.createElementNS(svg.namespaceURI,'path');
   path.setAttribute('d',kind==='categories'?'M4 4v16M4 7h4M4 17h4M12 7h8M12 17h8':kind==='library'?'M4 5v14M8 5v14M12 6l4 13M17 4l4 13':kind==='project'?'M3 6h6l2 2h10v12H3Z':'m12 2 9 5v10l-9 5-9-5V7Zm0 10 9-5m-9 5L3 7m9 5v10');
@@ -887,7 +887,8 @@ function renderLibrary(){
     const found=browseEntries(entries,'',{tab,category:'all',source:tab==='categories'?browserSource:'all'});
     if(found.length)container.append(browserTree(found));else container.append(el('p',{class:'muted library-empty'},t('library.noResults')));
     if(tab==='library'){
-      const personal=el('section',{id:'personal-library',class:'browser-personal'});personal.append(el('h4',{},t('browser.source.personal')),el('p',{class:'muted'},t('personal.hint')));personalSourceHeader(personal);container.append(personal);
+      const personal=el('section',{id:'personal-library',class:'browser-personal'}),heading=el('div',{class:'personal-heading'}),help=el('button',{class:'personal-help','aria-label':t('personal.showHelp'),title:t('personal.showHelp')},'?');
+      help.onclick=()=>{helpContext='personal';workspaceLayout?.reveal('help');renderHelp();};heading.append(el('h4',{},t('browser.source.personal')),help);personal.append(heading,el('p',{class:'personal-drop-label'},t('personal.drop')));personalSourceHeader(personal);container.append(personal);
       const templates=el('details',{class:'browser-templates'});templates.append(el('summary',{},t('browser.templates')),el('p',{class:'muted'},t('library.exampleHint')));
       for(const name of Object.keys(examples)){const b=el('button',{class:'example-entry','data-example':name},t('example.'+name));b.disabled=readonly;b.onclick=()=>loadExample(name);templates.append(b);}container.append(templates);
     }

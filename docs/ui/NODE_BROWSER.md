@@ -10,15 +10,17 @@ The functional categories are Math, Vector, Matrix, Logic, Color, Coordinate, Te
 
 Library shows built-in and Personal assets, using the same definitions as Categories. This Project shows reusable definitions and saved source versions in the current Shader, with an explicit scope explanation; it does not invent cross-Shader editing. Handwritten GLSL Functions and Pack installation are not available yet and are not displayed as placeholder capabilities. Whole-Shader examples remain a distinct collapsible Library section.
 
-Select a row to inspect its ports and Markdown Help. Use +, double-click or drag to insert. Repeated library insertion retains existing reference reuse. Personal refresh/location/save drop target and current declaration controls remain available. The floating creator shares the same categories, source identities and ranked search, with the existing compatible-wire filtering and Auto behavior.
+Select a row to inspect its ports and Markdown Help. Use +, double-click or drag to insert. The whole name row supports mouse dragging; touch dragging uses the explicit + handle so the name rows remain scrollable. Repeated library insertion retains existing reference reuse. The floating creator shares the same categories, source identities and ranked search, with the existing compatible-wire filtering and Auto behavior.
 
-Colors are restrained: small SVG icons carry functional category accents, with source text identifying provenance. Socket colors remain unchanged. Palette colors are centralized in CSS. All new text is in locales.json.
+Add Node and Inputs deliberately use different list presentations. Add Node keeps neutral row backgrounds, a small cube icon for ordinary nodes and a filled identity icon for Subgraphs. The Subgraph drawing has tighter bounds so both icons have a comparable visual size. Floating Add also uses neutral backgrounds, retaining its existing category accents rather than filling the row with the node category color. Source text still identifies provenance. Inputs keeps its rounded, softly tinted source rows; its category headings match the size, weight and brightness of Add Node category headings. Both panel titles use the shared workspace heading style; the English title is `Add Node`, matching `Inputs` capitalization. Row styling remains independent of source identities, search, insertion and socket colors.
+
+Personal retains a compact, labelled Subgraph save drop target, Refresh Personal and the expandable source folder/load status. The lengthy instructions moved to Help, reachable through the small help button beside Personal. Loading issues remain visible in the expandable status. The drop target is not removed along with the old explanatory space.
 
 ## Metadata and compatibility
 
 Authored browser metadata lives beside each node definition in node_catalog.json, outside its semantic revision fingerprint. Built-in library metadata is an opt-in display projection produced by function_library(with_browser=True); the default snapshots are byte-for-byte unchanged. tools/sync_node_browser.py generates the embedded browser index in index.html. Its --check mode detects stale projections. No second handwritten node index, new server route or external dependency is introduced.
 
-## Validation
+## Initial implementation validation
 
 - 18 real Chromium browser checks: global search/aliases/sources, definition reuse, both creation directions, drag/drop, read-only inspection, bilingual text and narrow layouts.
 - 12 clipboard and 8 Function rename browser regression checks passed using their original fixture.

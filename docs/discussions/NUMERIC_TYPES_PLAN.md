@@ -29,8 +29,61 @@ GLSL 分成浮點、帶號整數、無號整數與布林家族。不同函式有
 ## 推進順序
 
 1. 建立有限的顯式型別資料、literal 編碼與 JSON 值驗證；涵蓋 int／uint 範圍及 bool 真正布林，禁止以 truthiness 或浮點四捨五入偷偷接受輸入。增加對應向量與明確 Cast 的節點候選，原有圖與 revision 保持可核對。
-2. 按節點列出合法 overload，UI、Create、port 與 compiler 都由同一表決定。不要將所有型別塞入每個 math 節點。跨家族只透過使用者選擇的 Cast，Auto／隱式自動推導仍待決。
+2. 按節點列出合法 overload，UI、Create、port 與 compiler 都由同一表決定。不要將所有型別塞入每個 math 節點。跨家族只透過使用者選擇的 Cast；既有 Math Auto 已完成，新增家族仍須由同一合法簽名表推導，不默許跨家族轉換。
 3. 再核對 TD GLSL MAT／TOP 的整數 Uniform 參數列與 bool 投影、Expose 參數型別、預設值／目前值、Expression／Bind／Undo；使用真正動態更新和端點值驗證精度，避免把 uint 最大值經 float32 中轉。
-4. 然後才接常數分類、requiresConst／spec constants；矩陣是否納入1.0仍需決策，迴圈不在這批。
+4. 接常數分類、requireConstant 與 Specialization Constants；Array／Matrix 的型別及合理初始化列入本批最小範圍評估，完整值編輯後補。迴圈不在這批。
 
 使用體驗：維持單一操作節點加明確 Type 選項，顯示確實解析出的 port 型別；型別切換只在合法選項間進行，接線不相容要清楚顯示錯誤，既有連線及上次成功輸出保留。這是實作起點，不宣稱新型別或所有GLSL overload已支援。
+
+## 型別批依賴與可分段邊界
+
+狀態：實作前審查；以下新型別尚未啟用。整體排程以 [Inputs 設計](INPUTS_UI_NEXT_ROUND.md#下一輪實作型別批) 為準；本節補充編譯與原生依賴，不另訂 UI 規格。UI 批可先獨立交付，型別批按以下完整能力分段。
+
+| 範圍 | 已有證據 | 最小可交付邊界／准入條件 |
+|---|---|---|
+| float／vec2／vec3／vec4 | 現行圖、Constants、Vectors／Colors Uniform 已實作 | 舊圖 literal、簽名及產碼維持相容 |
+| int／ivec2–4、uint／uvec2–4、bool／bvec2–4 | 上述研究只證明指定 GLSL 表達式；不是完整圖或原生 Uniform 驗證 | 共用型別、值驗證、合法 overload、Cast、來源與保存鏈完成後開放；Uniform 另以動態 GPU 讀回把關 |
+| Specialization Constants | TD TOP／MAT 有 Constants 頁；官方提供 int 範例 | 先驗證單一 scalar int 的預設／覆寫、穩定 ID、更新與失敗回復；uint／float／bool 分別驗證後才列入其來源選單 |
+| Matrix | TD 有 Matrices 頁，現行圖尚無 matrix 型別 | 候選先做 float mat2／mat3／mat4、固定形狀、零／單位矩陣初始化、同型接線與 GLSL Code 使用；原生 Uniform 另驗 mat4，其餘維度不推定可上傳 |
+| Array | TD Arrays 頁的元素選項是 float／vec2／vec3／vec4，來源是 CHOP | 候選先做固定一維、固定正整數長度、已支援 scalar／vector 元素及零／false 初始化的圖內常數；要能接入 GLSL Code 或有界取值才算可用。原生 CHOP Uniform Array 是另一個來源整合項 |
+
+Array／Matrix 沒有全部延期；先落實形狀與初始化的可用範圍，完整值編輯器可後補。初版建議不納入巢狀／不定長陣列、以 Spec 決定陣列長度、非方形矩陣、矩陣陣列、double／dvec。這是有界實作候選，實際啟用的組合須經驗證後明列。
+
+### 1. 先建立共用型別與 overload，再開放圖內數值
+
+- [sgrape_core.py](../../src/core/sgrape_core.py) 的 `TYPE_DESCRIPTORS`、`CONVERSIONS`、`resolved_ports()`、`type_contract()`、`literal()` 必須一起調整。目前每個含 `T` 的節點展開成所有 `TYPES`，而 float 到其他型別一律 splat；直接加 int／bool 會產生不合法 Math 簽名。先按現有節點的完整輸入／輸出列白名單，再擴充特殊 overload；例如目前 Mix 的 float factor 不能直接套到整數版本。
+- `number()` 把值轉 float 並格式化為 `.9g`，不可用於整數 literal。int／uint 應驗證整數與 32-bit 範圍、精確編碼及 unsigned 後綴；bool 使用 JSON boolean。UI 的輸入、Value Ladder、預設值與 native 寫入都應共用家族規則，不以 truthiness、截斷或四捨五入修正無效輸入。
+- 明確 Cast 需要獨立的來源／目的型別簽名；不能沿用一個 `T` 同時代入所有接孔的機制。初版可限定同維度跨家族與明列的 scalar constructor，避免偷偷加入向量截短／擴張。Vector／Combine／Split／Swizzle 的分量與分組也須依家族產生，現行硬編碼 `float`／`vecN` 不足。
+- [graph_ui.js](../../src/editor/graph_ui.js) 的 `setTypeContract()` 目前只接受 float 家族、1–4 components、固定三種 vectors；同步更新契約驗證、Auto、Create／接線相容與值形狀。Array／Matrix 需明確 shape／元素型別／維度資料，不能把分量數加大後當成一般向量。
+- [functions_model.js](../../src/editor/functions_model.js) 的 GraphClipboard 目前以型別字尾猜數量、只收 number，來源 kind 也有白名單。連同 [functions_ui.js](../../src/editor/functions_ui.js)、[sgrape_library.py](../../src/core/sgrape_library.py)、Subgraph 外部來源政策、[app.js](../../src/editor/app.js)／[inspector.js](../../src/editor/inspector.js) 的值編輯一起改用契約；驗證複製、匯入、函式介面及保存重載，不另維護一份型別猜測表。
+
+### 2. 原生 Uniform 先驗精度，再擴來源支援
+
+TD 2025.32820 的只讀參數盤點確認 TOP／MAT 均有 Vectors、Colors、Arrays、Matrices、Constants，沒有獨立 Integers 頁。Vectors 分量是 XYZW style，Constants 的 `const0value` 是 Float style；沒有 clamp 並不等於整數極值能精確送進 GPU。此輪只讀 metadata，沒有建立／cook／修改 TD 節點，尚未完成動態精度測試。
+
+- 必須在隔離 shader 動態寫入後於 GLSL 內比較，將通過旗標讀回；只比較 Python `par.eval()` 或把 uint 轉 float 輸出都不足。至少覆蓋 `16777216 ± 1`、int 最小／最大、uint 最大，以及 bool 各分量切換；區分參數儲存精度與 GPU 上傳精度。
+- [sgrape_sources.py](../../src/core/sgrape_sources.py) 現有 `TYPES`／`CHANNELS` 只認 float 家族、vec／color；讀值先 `float()`、寫值用 `core.number()`。需改成來源種類與家族感知的辨識、驗證、快照、同步、原生模式保留及失敗回復。Python float 可精確表示 32-bit 整數，不可僅見 `float()` 就判定 TD 已有損失；真正未知的是原生上傳路徑。
+- [sgrape_runtime.py](../../src/td/runtime/sgrape_runtime.py) 的 configure、live snapshot／write、candidate 驗證、manifest bindings 與 rollback 必須同步。原生 Vectors 列本身沒有 int／uint／bool 型別選項；無現有圖宣告時不能從欄位猜家族，需明確的來源型別選擇／保留政策。
+- [sgrape_parameters.py](../../src/core/sgrape_parameters.py) 已有 COMP Integer／Toggle；[sgrape_parameter_links.py](../../src/core/sgrape_parameter_links.py) 仍用既有 native channels／浮點讀值，execute 監聽也只涵蓋 vec／color。擴支援時核對 Bind／Expression／Export、Undo、預設值與目前值；不需同輪重做整個自訂參數編輯器。
+
+### 3. Specialization Constants 必須有自己的常數規則
+
+原生 `const0name`／`const0value` 依名稱覆寫，GLSL `constant_id` 則是另一個穩定識別。分配 ID 不應依每次拓撲排序重排；建立、重新命名、複製／匯入、刪除、未使用來源及失敗回復都要有一致政策。改預設值會改 shader 內容；改原生覆寫值的生效與狀態不可冒用普通 Uniform 更新流程。TD 會為特殊化版本保留快取，適合偶爾切換的模式值。[TD 官方說明](https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Specialization_Constants)
+
+`constant_id` 只能直接標 scalar bool／int／uint／float／double，不能直接宣告一個 Spec vecN；向量可由個別 scalar 合成。這是 GLSL 能力，TD 的覆寫型別與精度仍須各別驗證。一般函式以 Spec 為參數不因此產生常數表達式；只支援規範允許的運算與 constructor。以 Spec 決定 array 長度還會影響型別相等與初始化，初版固定長度可避開這個耦合。[GLSL 常數與特殊化規則](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#specialization-constant-qualifier)
+
+因此 `sgrape_core.py` 的 `CONSTANT_EXPRESSIONS`／`constant_outputs`／`demand_constant()` 與 `graph_ui.js` 的 `constantRequirementIssues()` 需共用一般常數、specialization expression、runtime 分類，保留逐輸出口判定與 Subgraph 展開後行為。先定義 `requireConstant` 在哪些位置接受 Spec，不直接把新來源加入現有二元名單。
+
+### 4. Array／Matrix 的最低可用形狀與來源分開交付
+
+圖內 literal、宣告、GLSL Code 輸入／輸出初始化與函式介面都須認得形狀；不能只讓選單出現 `mat4` 或 `float[]`。Matrix 明確定義欄列順序；Array 明確定義元素型別、固定長度、容量上限與合法初始化。先以同型接線及 GLSL Code 使用驗收，再決定補專用運算節點；矩陣乘法不是目前所有輸入口／輸出口共用 `T` 的逐分量 Math 簽名。
+
+TD Matrices 參數雖顯示 CHOP style，官方實際接受 `tdu.Matrix`、4×4 Table DAT 或 16-channel CHOP，不能只把它當成 CHOP 路徑。原生矩陣綁定需另驗維度與排列，不能由頁面存在推導 mat2／mat3 一定可用。[Matrix Parameters](https://derivative.ca/UserGuide/Matrix_Parameters)
+
+TD Arrays 的 `Uniform Array` 與 `Texture Buffer` 是不同資源路徑；後者是 samplerBuffer，不能混入數值 array 型別或沿用 sampler2D。初版若整合原生 Array，只承諾實際菜單的 float 家族與 CHOP 來源，並驗證長度／通道排列／GPU 限制；不把它當成 int／uint 全精度陣列來源。[GLSL TOP Arrays](https://derivative.ca/UserGuide/GLSL_TOP#Parameters_-_Arrays_Page)
+
+### 版本與驗收
+
+UI 批不需要先變更編譯版本。型別基礎、消費契約的 Editor、core、library 與 native runtime 必須成套交付；可以分「圖內家族與 Cast → 已驗證 Uniform → Spec → aggregate 最小範圍」幾次完整編譯版本，不要求一次大改。任何一段未通過時，不把該來源／型別組合放進選單。
+
+`typeContract.version` 表示資料結構，hash 表示內容；加入 shape 或新的常數契約若不相容，應升契約版本並讓舊 Editor 明確拒絕。Catalog definition revision、emitter ABI、target shell 與產品 compilerBuild 分開判斷，不因加型別就重寫所有舊 revision。保留現有舊圖產碼／catalog 指紋檢查，補 core/UI 簽名對照、邊界 literal、Cast、Clipboard／Subgraph、native 動態更新及保存／失敗回復；以實際能力完成後的 compilerBuild 與 manifest 核對部署。

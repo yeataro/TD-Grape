@@ -736,7 +736,7 @@
     },
     "panel.addNode": {
       "zh-Hant": "新增節點",
-      "en": "ADD NODE"
+      "en": "Add Node"
     },
     "canvas.workspace": {
       "zh-Hant": "Shader 圖編輯區",
@@ -875,8 +875,20 @@
       "en": "An identical Personal snapshot already exists and was reused."
     },
     "personal.hint": {
-      "zh-Hant": "將一個 Function 拖到這裡保存，或使用右側的「存入個人調色盤」。",
-      "en": "Drop one Function here to save it, or use Save to Personal in its parameters."
+      "zh-Hant": "將圖中的一個 Subgraph 拖入新增節點面板的 Personal 區域保存，或使用參數中的「存入個人調色盤」。",
+      "en": "Drag a Subgraph from the graph into the Personal area in Add Node to save it, or use Save to Personal in its parameters."
+    },
+    "personal.drop": {
+      "zh-Hant": "拖入 Subgraph 以保存",
+      "en": "Drop Subgraph to save"
+    },
+    "personal.showHelp": {
+      "zh-Hant": "個人資源庫說明",
+      "en": "Personal library help"
+    },
+    "personal.help": {
+      "zh-Hant": "重新讀取會更新可新增的個人資源；圖中已使用的版本保持原快照。來源資料夾與讀取問題可在 Personal 下方展開查看。",
+      "en": "Refresh updates the available Personal entries; versions already used in the graph keep their snapshots. Expand the source folder and load status below Personal to inspect its location or loading issues."
     },
     "personal.location": {
       "zh-Hant": "來源資料夾與讀取狀態",
@@ -1910,6 +1922,10 @@
       "en": "Apply or reload graph changes before editing sources.",
       "zh-Hant": "先套用或重新載入圖的修改，再編輯來源。"
     },
+    "sources.nativePending": {
+      "en": "Apply or reload graph changes before editing live native Uniform values.",
+      "zh-Hant": "先套用或重新載入圖的修改，再編輯原生 Uniform 目前值。"
+    },
     "sources.removeConfirm": {
       "en": "Remove {name}? {count} graph references will remain and need reassignment or restoration.",
       "zh-Hant": "移除 {name}？會保留 {count} 個圖中引用，可重新指定或重建來源。"
@@ -2126,6 +2142,10 @@
       "zh-Hant": "建立來源",
       "en": "Create source"
     },
+    "inputs.useExisting": {
+      "zh-Hant": "選取既有來源",
+      "en": "Select existing source"
+    },
     "inputs.edit": {
       "zh-Hant": "編輯來源",
       "en": "Edit source"
@@ -2141,6 +2161,10 @@
     "inputs.dragReference": {
       "zh-Hant": "點擊新增引用，或拖入畫布",
       "en": "Click to add a reference, or drag into the canvas"
+    },
+    "inputs.editReference": {
+      "zh-Hant": "點擊編輯來源，或以滑鼠拖入畫布新增引用",
+      "en": "Click to edit the source, or drag into the canvas to add a reference"
     },
     "inputs.empty": {
       "zh-Hant": "尚無來源。新增後可選取編輯，或用 + 拉入圖中。",
@@ -2474,6 +2498,38 @@
       "en": "Move TOP texture sources into one ordered inventory. Keep references and external connections; remove duplicate source plumbing.",
       "zh-Hant": "將 TOP 貼圖來源統整為一份有序清單，保留引用與外部接線，清除重複的來源結構。"
     },
+      "header.toggle": {
+        "zh-Hant": "顯示或收合頂欄",
+        "en": "Show or hide header"
+      },
+      "header.hide": {
+        "zh-Hant": "收合頂欄",
+        "en": "Hide header"
+      },
+      "header.show": {
+        "zh-Hant": "顯示頂欄",
+        "en": "Show header"
+      },
+      "editorReload.action": {
+        "zh-Hant": "重新載入編輯器頁面",
+        "en": "Reload editor page"
+      },
+      "editorReload.finishField": {
+        "zh-Hant": "欄位仍有未提交的編輯。請先完成或取消，再重新載入頁面。",
+        "en": "A field has unfinished edits. Finish or cancel them before reloading the page."
+      },
+      "editorReload.busy": {
+        "zh-Hant": "正在儲存或更新參數，請完成後再重新載入頁面。",
+        "en": "A save or parameter update is in progress. Wait before reloading the page."
+      },
+      "editorReload.keepDraft": {
+        "zh-Hant": "重新載入編輯器頁面？未儲存的圖已保留在此分頁，重新連線後會提供草稿復原檢視。",
+        "en": "Reload the editor page? The unsaved graph is kept in this tab; after reconnecting you can review and restore its draft."
+      },
+      "editorReload.storageFailed": {
+        "zh-Hant": "無法保留圖的草稿，已取消重新載入。請先匯出圖或完成儲存。",
+        "en": "The graph draft could not be retained, so the page was not reloaded. Export the graph or save it first."
+      },
     "graph.saved": {
       "zh-Hant": "圖已儲存",
       "en": "Graph saved"
