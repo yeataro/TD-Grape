@@ -189,13 +189,38 @@ async function reviewImportFile(file){
     Object.assign(importReview,{status:'blocked',candidate:null,message:t(error.message)});renderImportReview();
   }
 }
+function prepareGraphReplacement(document){
+  const replacement=clone(document),snapshot=nativeSourceSnapshot;
+  if(!snapshot&&graph.declarations.some(d=>d.kind==='uniform'&&!d.sourceMissing))throw Error(t('sources.nativePending'));
+  if(!snapshot?.enabled)return replacement;
+  if(snapshot.revision!==revision)throw Error(t('sources.nativePending'));
+  const liveIds=new Set(snapshot.uniforms.filter(row=>!row.missing&&!row.pending).map(row=>row.id));
+  const live=graph.declarations.filter(d=>d.kind==='uniform'&&liveIds.has(d.id));
+  if(live.length!==liveIds.size)throw Error(t('history.changed'));
+  const byId=new Map(live.map(d=>[d.id,d])),byName=new Map(live.map(d=>[d.name,d])),remap=new Map(),retained=new Set();
+  for(const declaration of replacement.declarations){
+    const sameId=byId.get(declaration.id),sameName=byName.get(declaration.name),existing=sameId||sameName;
+    if(!existing)continue;
+    if(declaration.kind!=='uniform'||sameId&&sameName&&sameId.id!==sameName.id||retained.has(existing.id))throw Error(t('import.sourceConflict').replace('{name}',declaration.name));
+    // The native runtime already reuses a unique Uniform name. Preserve that
+    // entity's identity while importing its new graph metadata and references.
+    remap.set(declaration.id,existing.id);declaration.id=existing.id;delete declaration.sourceMissing;retained.add(existing.id);
+    const sequence=snapshot.uniforms.find(row=>row.id===existing.id)?.sequence;
+    if(sequence==='color')declaration.nativeSequence='color';else if(sequence==='vec')delete declaration.nativeSequence;
+  }
+  for(const declaration of live)if(!retained.has(declaration.id))replacement.declarations.push(clone(declaration));
+  for(const data of [...Object.values(replacement.stages),...(replacement.functions||[]).map(f=>f.graph)]){
+    for(const node of data.nodes)if(remap.has(node.params?.declarationId))node.params.declarationId=remap.get(node.params.declarationId);
+  }
+  return replacement;
+}
 function acceptImportReview(){
   const review=importReview;if(!review?.candidate||readonly)return false;
   if(review.target!==editorTarget||review.baseGraph!==JSON.stringify(graph)){
     review.candidate=null;review.message=t('import.changed');renderImportReview();return false;
   }
   const changed=change(()=>{
-    graph=clone(review.candidate);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;
+    graph=prepareGraphReplacement(review.candidate);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;
   },{localize:false});
   if(!changed){review.message=$('#status').textContent;renderImportReview();return false;}
   closeImportReview();fit();status(t('graph.loaded'));return true;
@@ -316,14 +341,16 @@ async function reviewUpgrade(){
 }
 async function acceptUpgradeReview(){
   const review=upgradeDialogReview;
-  if(!review?.token||!review.candidate||review.busy||review.blocked||submitBusy)return false;
+  if(!review?.token||!review.candidate||review.busy||review.blocked||submitBusy||historyBusy||nativeMutationBusy)return false;
   if(review.baseGraph!==JSON.stringify(graph)||review.baseRevision!==revision){
     review.token=null;review.message=t('upgrade.changed');renderUpgradeReview();return false;
   }
-  const request=upgradeRequest,previous=clone(graph);
-  review.busy=true;submitBusy=true;renderUpgradeReview();$('#apply').disabled=true;$('#reload').disabled=true;
+  const request=upgradeRequest,previous=clone(graph),generation=editorLoadGeneration,nativeBefore=historyNativeToken;
+  const sentEntries=past.filter(entry=>entry.kind==='graph'&&!entry.nativeApplied);
+  review.busy=true;submitBusy=true;nativeMutationBusy=true;renderHistoryActions();renderUpgradeReview();$('#apply').disabled=true;$('#reload').disabled=true;
   try{
     const result=await api('apply',{graph:review.candidate,revision:review.revision,upgradeToken:review.token});
+    if(generation!==editorLoadGeneration)return false;
     if(!result.ok)throw Error(t('upgrade.changed'));
     // The modal prevents graph edits; still preserve a draft changed by another
     // local callback while the request was in flight instead of overwriting it.
@@ -331,15 +358,16 @@ async function acceptUpgradeReview(){
     if(review.baseGraph!==JSON.stringify(graph)){
       conflicted=true;dirty=true;review.token=null;review.message=t('upgrade.localChanged');return false;
     }
-    past.push(previous);if(past.length>60)past.shift();future=[];
     graph=clone(result.state.graph);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;
+    sealGraphHistory(sentEntries,result.history?.beforeToken||nativeBefore,result.history?.token||null);
+    recordGraphHistory(previous,{nativeBefore:result.history?.beforeToken||nativeBefore,nativeAfter:result.history?.token||null,nativeApplied:true});
     savedStateIssue=null;upgradePending=null;readonly=!!editorReadOnlyReason;dirty=false;conflicted=false;
     sessionStorage.removeItem(draftKey);rememberSavedGraph(graph,'graph.applied');renderGraphSaveState();
     closeUpgradeReview();render();renderUpgradeNotice();fit();preview().catch(e=>status(e.message,true));status(t('upgrade.applied'));return true;
-  }catch(e){if(request===upgradeRequest){review.token=null;review.message=e.message;}return false;}
+  }catch(e){if(generation===editorLoadGeneration&&request===upgradeRequest){review.token=null;review.message=e.message;}return false;}
   finally{
-    submitBusy=false;review.busy=false;$('#apply').disabled=readonly;$('#reload').disabled=false;
-    if(request===upgradeRequest)renderUpgradeReview();refreshUniforms();
+    if(generation===editorLoadGeneration){submitBusy=false;nativeMutationBusy=false;review.busy=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();
+      if(request===upgradeRequest)renderUpgradeReview();refreshUniforms();}
   }
 }
 function installUpgradeUI(){

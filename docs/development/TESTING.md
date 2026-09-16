@@ -1,5 +1,15 @@
 # 測試
 
+2026-09-17 共同 Undo／Redo（0.8.83）：`test_history.py` 22 項與既有 `test_sources.py` 16 項通過。涵蓋固定操作差異與目前狀態分離、原生列結構回復／失敗回滾、過期／跨 Shader token、同名重建 Par 的固定 index、owned Bind、Sampler TOP 身分，以及無效草稿不損壞權威 state。`test_input_removal.cjs` 7 組與更新後 `test_native_sources.cjs` 13 組通過；來源刪除改記錄為可撤回的一步，新增來源在 Apply 後也能連同該次引用一起撤回。
+
+`test_input_history.cjs` 在隔離 Chromium 通過混合圖／Inputs 順序、取消／同值保留 Redo、刪除／恢復、合併 Apply 的逐步回放、同来源中間改名／型別、失敗不移動游標、外部未觸分量保留，以及延遲 Apply 等待／Reload 後舊回應隔離。`test_input_history.py` 在全新、測後清除的 TD 2025.32820 TOP／MAT 組件通過 21 組：值與原 Par 身分、同來源外改 Z、其他來源外改、衝突拒絕、刪除還原順序／隱藏分量、Expression 動態結果不產生歷史、Bind 主控值與綁定恢復、同名重建主控拒絕、批次新增 A/B、請求重試去重、批次新增／改名中間態，以及 Sampler 路徑還原／同路徑新 TOP 拒絕。使用者的兩份 Shader 保存內容保持一致，未使用全域 TD Undo 回放。
+
+實機 sequence 探針另外確認：TD 2025.32820 在刪除／插回列時可能改動鄰列值，Par handle 也不能單憑 valid 判斷原身分；結構恢復需校正交易前的鄰列設定，Export／外部 Bind 連結則須預檢，不能僅保存 eval 值。這些觀察已轉為上述原生與單元回歸，私人探針輸出不作產品依賴。
+
+執行共同歷史測試：`node tests/browser/test_input_history.cjs src/editor <editor-state-json> <report-directory>`；原生驗證：`python tools/dev/submit_job.py tests/td/test_input_history.py`。這些瀏覽器結果不取代實體 iPad／Safari 回驗。
+
+共同歷史瀏覽器最終共 10 組通過、零頁面錯誤，包含實際匯入／範例切換維持來源 ID、stage／function 引用對應、同名型別 metadata 修改保留目前值，以及待 Apply 時外改 Z 不被 Undo／Redo 覆蓋。474 個雙語鍵與語法／diff 檢查通過。25 份 TD 內嵌來源及提供中的資產與磁碟一致；正式 TOE 已保存為 655,612 bytes，保留使用者兩份 Shader、排除私人開發橋接。未修改 catalog／產碼契約，沒有要求 Master 升級。
+
 2026-09-17 Inputs 刪除修復（0.8.83）：`test_sources.py` 16 項通過，涵蓋零引用清理、所有 stage／function 的引用保護、過期 revision／原生身分拒絕、鄰列驅動保留、最後原生列清名、metadata 失敗回復與重試；清理不要求重新編譯。`test_input_removal.cjs` 7 組通過，涵蓋取消／確認刪除、連續清理 missing 項目、其他缺失來源造成 Apply 失敗後仍可修復、Undo 不補回已刪除來源、本地草稿不被輪詢覆蓋，以及 Constant／Sampler 的缺失零引用刪除。`test_native_sources.py` 在 TD TOP／MAT 通過 21 組，驗證原生移除、缺失記錄清理、輪詢不再生、既有 Expression／Bind／COMP 控制與編譯失敗回復，保留使用者 Shader。語系鍵檢查通過。來源修正已同步 24 份內嵌資源；針對使用者先前刪除的記錄，先備份並重新核對引用，只清理仍無引用的三筆，保留已重新引用的來源與全部節點、接線、GLSL。
 
 執行刪除回歸：`node tests/browser/test_input_removal.cjs src/editor <editor-state-json> <report-directory>`；原生驗證：`python tools/dev/submit_job.py tests/td/test_native_sources.py`。

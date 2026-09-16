@@ -99,7 +99,7 @@ const uniformPending=new Map(),uniformReadbacks=new Set();
 function updateUniformFields(forceKeys=new Set()){
   for(const section of document.querySelectorAll('.uniform-live')){
     const id=section.dataset.declaration,row=liveParameterRow(id);
-    const ready=!!row&&uniformSnapshot.revision===revision&&!dirty&&!submitBusy;
+    const ready=!!row&&uniformSnapshot.revision===revision&&!dirty&&!submitBusy&&!editorMutationBlocked();
     for(const entry of section.querySelectorAll('input[data-component]')){
       const index=Number(entry.dataset.component),item=row?.components[index],key=id+':'+index,pending=uniformPending.has(key);
       entry.disabled=readonly||!ready||!item?.writable||pending||uniformReadbacks.has(key);
@@ -118,20 +118,20 @@ function updateUniformFields(forceKeys=new Set()){
 }
 
 async function refreshUniforms(){
-  if(!graph||(typeof savedStateIssue!=='undefined'&&savedStateIssue)||uniformPolling||uniformPending.size||document.hidden)return;
+  if(!graph||(typeof savedStateIssue!=='undefined'&&savedStateIssue)||uniformPolling||uniformPending.size||historyBusy||nativeMutationBusy||document.hidden)return;
   const visible=el=>el&&el.getClientRects().length>0&&!el.closest('details:not([open])');
   if(!visible($('.uniform-live'))&&(!autoPreview||!visible($('#preview'))))return;
   uniformPolling=true;
-  const generation=uniformGeneration;
+  const generation=uniformGeneration,loadGeneration=editorLoadGeneration;
   try{
     const incoming=await api('uniforms');
-    if(generation!==uniformGeneration)return;
+    if(generation!==uniformGeneration||loadGeneration!==editorLoadGeneration)return;
     uniformSnapshot=incoming;uniformSyncError=incoming.revision!==revision&&!dirty&&!submitBusy?t('uniform.graphChanged'):'';
     const recovered=new Set(uniformReadbacks);uniformReadbacks.clear();updateUniformFields(recovered);
     const signature=JSON.stringify([Object.fromEntries(Object.entries(uniformSnapshot.uniforms).map(([id,row])=>[id,row.components.map(c=>c.value)])),uniformSnapshot.textures]);
     if(autoPreview&&(signature!==uniformPreviewSignature||(editorTarget==='top'&&performance.now()-lastPreviewAt>=1000))&&visible($('#preview'))){uniformPreviewSignature=signature;await preview();}
-  }catch(e){uniformSyncError=t('uniform.offline');updateUniformFields();}
-  finally{uniformPolling=false;}
+  }catch(e){if(loadGeneration===editorLoadGeneration){uniformSyncError=t('uniform.offline');updateUniformFields();}}
+  finally{if(loadGeneration===editorLoadGeneration)uniformPolling=false;}
 }
 
 function startUniformSync(){
@@ -140,24 +140,31 @@ function startUniformSync(){
 
 function writeUniformInput(entry,value){
   const id=entry.closest('.uniform-live').dataset.declaration,index=Number(entry.dataset.component),key=id+':'+index;
-  if(uniformPending.has(key)||uniformReadbacks.has(key))return;
-  uniformGeneration++;uniformPending.set(key,1);updateUniformFields();
+  if(editorMutationBlocked()||submitBusy||dirty||uniformPending.has(key)||uniformReadbacks.has(key))return;
+  const generation=editorLoadGeneration,before=clone(graph),nativeBefore=uniformSnapshot.history?.token||nativeSourceSnapshot?.history?.token||historyNativeToken;
+  uniformGeneration++;uniformPending.set(key,1);nativeMutationBusy=true;clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();updateUniformFields();
   uniformWrites=uniformWrites.then(async()=>{
+    if(generation!==editorLoadGeneration)return;
     try{
       const expected=entry.uniformExpected;
       if(!expected)throw Error(t('uniform.waiting'));
-      uniformSnapshot=await api('uniform-value',{declarationId:id,component:index,value,revision:expected.revision,expected});
+      const result=await api('uniform-value',{declarationId:id,component:index,value,revision:expected.revision,expected});
+      if(generation!==editorLoadGeneration)return;
+      uniformSnapshot=result;if(result.history?.token)historyNativeToken=result.history.token;
+      recordHistory({kind:'value',before,after:clone(graph),nativeBefore:result.history?.beforeToken||nativeBefore,nativeAfter:result.history?.token||null,nativeApplied:true,sourceIds:[],valueIds:[id]});
       const item=liveParameterRow(id)?.components[index];
       if(item){entry.setSyncedValue(item.value);entry.uniformExpected={revision:uniformSnapshot.revision,...item};}
       uniformSyncError='';status(t(entry.dataset.texture?'texture.updated':'uniform.updated'),false,{clearError:'operation'});await preview();
     }catch(e){
+      if(generation!==editorLoadGeneration)return;
       // A rejected write must read TD back before this field can accept another edit.
       uniformReadbacks.add(key);entry.uniformExpected=null;uniformSyncError=e.message;status(e.message,true);
     }
     finally{
+      if(generation!==editorLoadGeneration)return;
       const remaining=uniformPending.get(key)-1;
       if(remaining)uniformPending.set(key,remaining);else uniformPending.delete(key);
-      updateUniformFields();if(uniformReadbacks.size)refreshUniforms();
+      nativeMutationBusy=false;renderGraphEditActions();updateUniformFields();if(uniformReadbacks.size)refreshUniforms();scheduleGraphApply();
     }
   });
 }
@@ -544,7 +551,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
     entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.value=String(v);
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
-    const own=()=>!readonly&&entry.isConnected&&current().nodes.includes(n);
+    const own=()=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
     const focus=()=>{if(own())inlineValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
     const restore=()=>{entry.value=committed;entry.removeAttribute('aria-invalid');};
     const commit=()=>{
@@ -1169,7 +1176,7 @@ function finishInputCreate(kind,id){
   setInputGroupCollapsed(inputSourceGroup(kind),false);$('#inputsearch').value='';$('#nativeuniforms').dataset.sourceStructure='';$('#sourcecreatedialog').close();selectInputSource(id);
 }
 function openInputCreate(kind){
-  if(readonly||!graph||!['constant','uniform',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
+  if(editorMutationBlocked()||!graph||!['constant','uniform',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
   closeCreator();const dialog=$('#sourcecreatedialog'),choice=$('#sourcekind');
   const options=kind==='uniform'?[['uniform','Uniform'],['color','Color · vec4'],...Object.keys(inputPresets).map(p=>['preset:'+p,t('inputs.preset.'+p)])]:[[kind,inputGroupLabel(kind)]];
   choice.replaceChildren(...options.map(([value,label])=>el('option',{value},label)));choice.value=kind;
@@ -1181,10 +1188,10 @@ function sourceReferences(id){return [...Object.values(graph.stages),...(graph.f
 function nativeSourceGraphOnly(){
   // A source change may still need compilation. Repair that exact snapshot
   // without treating an unrelated local graph draft as safe to replace.
-  return !!(nativeSourceSnapshot?.sourceChanged&&nativeSourceSnapshot.revision===revision&&nativeSourceSnapshot.graph&&JSON.stringify(graph)===JSON.stringify(nativeSourceSnapshot.graph));
+  return !!(nativeSourceSnapshot?.sourceChanged&&nativeSourceSnapshot.revision===revision&&nativeSourceSnapshot.graph&&historyGraphKey(graph)===historyGraphKey(nativeSourceSnapshot.graph));
 }
 function sourceGraphPending(){return dirty&&!nativeSourceGraphOnly();}
-function sourceReady(){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!sourceGraphPending()&&!submitBusy&&!nativeSourceBusy&&nativeSourceSnapshot.revision===revision&&!readonly;}
+function sourceReady(){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!sourceGraphPending()&&!submitBusy&&!nativeSourceBusy&&!editorMutationBlocked()&&nativeSourceSnapshot.revision===revision;}
 function sourceMissingHint(decl){return t(sourceReferences(decl.id).length?'sources.missing':'sources.missingUnused');}
 let nativeSourceHint='';
 function nativeSourceHintText(){
@@ -1209,31 +1216,36 @@ function inputReference(id,x=null,y=null){
   const rect=$('#canvas').getBoundingClientRect(),p=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!p)return;
   change(()=>{selectedInputId=null;const n=instantiate(d,p.x,p.y,null,{declarationId:id});selectNode(n);});
 }
-function receiveNativeSources(data){
+function receiveNativeSources(data,{own=false}={}){
   if(data.revision<revision)return; // A pre-Apply poll must not roll back its result.
   const acceptGraph=!dirty||nativeSourceGraphOnly();
   nativeSourceSnapshot=data;
-  const live=new Set(data.uniforms.filter(r=>!r.missing&&!r.pending).map(r=>r.id));
-  rememberNativeInputSources((data.declarations||data.graph?.declarations||[]).filter(d=>live.has(d.id)));
-  if(data.revision!==revision&&acceptGraph&&!submitBusy&&data.graph){
-    graph=clone(data.graph);revision=data.revision;past=[];future=[];if(selectedInputId&&!allInputSources().some(d=>d.id===selectedInputId))selectedInputId=null;render();
-    if(data.sourceChanged){mark();}else{rememberSavedGraph(graph);renderGraphSaveState();}
+  if(data.history?.token&&(own||!historyNativeToken))historyNativeToken=data.history.token;
+  if((data.revision!==revision||own&&data.workingGraph)&&acceptGraph&&!submitBusy&&data.graph){
+    adoptHistoryGraph(own&&data.workingGraph||data.graph);revision=data.revision;render();
+    if(data.sourceChanged||data.workingGraph){mark();}else{rememberSavedGraph(graph);dirty=false;renderGraphSaveState();}
   }
   renderNativeSources();
 }
 async function refreshNativeSources(){
-  if(!graph||readonly||nativeSourcePolling||nativeSourceBusy||document.hidden||submitBusy||Date.now()<nativeSourceRetryAt)return;
-  nativeSourcePolling=true;
-  try{const shader=shaderChoice?.id;const data=await api('sources');if(shader!==shaderChoice?.id)return;nativeSourceError='';receiveNativeSources(data);}
-  catch(e){nativeSourceError=e.status===404?t('sources.connectionUnsupported'):e.message;nativeSourceRetryAt=Date.now()+5000;renderNativeSourceValues();}
-  finally{nativeSourcePolling=false;}
+  if(!graph||readonly||nativeSourcePolling||nativeSourceBusy||historyBusy||nativeMutationBusy||document.hidden||submitBusy||Date.now()<nativeSourceRetryAt)return;
+  nativeSourcePolling=true;const generation=editorLoadGeneration;
+  try{const data=await api('sources');if(generation!==editorLoadGeneration)return;nativeSourceError='';receiveNativeSources(data);}
+  catch(e){if(generation!==editorLoadGeneration)return;nativeSourceError=e.status===404?t('sources.connectionUnsupported'):e.message;nativeSourceRetryAt=Date.now()+5000;renderNativeSourceValues();}
+  finally{if(generation===editorLoadGeneration)nativeSourcePolling=false;}
 }
 async function nativeSourceRequest(endpoint,body){
   if(!sourceReady()){showNativeSourceHint();return null;}
-  nativeSourceBusy=true;renderNativeSourceValues();let result=null;
-  try{result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});nativeSourceError='';receiveNativeSources(result);status(t('uniform.updated'),false,{clearError:'operation'});}
-  catch(e){nativeSourceError=e.message;status(e.message,true);}
-  finally{nativeSourceBusy=false;renderNativeSourceValues();await refreshNativeSources();}
+  const generation=editorLoadGeneration,before=clone(graph),nativeBefore=nativeSourceSnapshot.history?.token||historyNativeToken;
+  nativeSourceBusy=true;nativeMutationBusy=true;clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();renderNativeSourceValues();let result=null;
+  try{
+    result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});if(generation!==editorLoadGeneration)return null;
+    nativeSourceError='';receiveNativeSources(result,{own:true});
+    recordHistory({kind:'source',before,after:clone(graph),nativeBefore:result.history?.beforeToken||nativeBefore,nativeAfter:result.history?.token||null,nativeApplied:true,sourceIds:body.id?[body.id]:historySourceIds(before,graph)});
+    status(t('uniform.updated'),false,{clearError:'operation'});
+  }
+  catch(e){if(generation!==editorLoadGeneration)return null;nativeSourceError=e.message;status(e.message,true);}
+  finally{if(generation===editorLoadGeneration){nativeSourceBusy=false;nativeMutationBusy=false;renderGraphEditActions();renderNativeSourceValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
   return result;
 }
 function renderNativeSourceValues(){
@@ -1259,15 +1271,15 @@ function renderNativeSourceValues(){
     const row=nativeSourceSnapshot?.uniforms.find(r=>r.id===entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
   }
   for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
-  for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=readonly;
-  if($('#sourcetype'))$('#sourcetype').disabled=readonly||!['uniform','constant'].includes($('#sourcekind').value);
+  for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=editorMutationBlocked();
+  if($('#sourcetype'))$('#sourcetype').disabled=editorMutationBlocked()||!['uniform','constant'].includes($('#sourcekind').value);
   if($('#sourcekind').value==='top_input'){$('#sourcename').value='sTD2DInputs['+topInputsView().length+']';$('#sourcename').disabled=true;}
   const presetSource=inputPresetSource($('#sourcekind').value);if(presetSource){$('#sourcename').value=presetSource.name;$('#sourcename').disabled=true;}
   $('#sourcecreate button[type=submit]').textContent=t(presetSource?'inputs.useExisting':'inputs.create');
   // Polls may clear this source hint after recovery; they never publish it over another action.
   if(nativeSourceHint&&(!nativeSourceHintText()||!selectedInputId))clearNativeSourceHint();
-  for(const item of document.querySelectorAll('[data-input-reference]'))item.disabled=readonly;
-  for(const item of document.querySelectorAll('[data-input-create]'))item.disabled=readonly||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16);
+  for(const item of document.querySelectorAll('[data-input-reference]'))item.disabled=editorMutationBlocked();
+  for(const item of document.querySelectorAll('[data-input-create]'))item.disabled=editorMutationBlocked()||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16);
   for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
 }
 function nativeInputFields(box,decl){
@@ -1438,20 +1450,20 @@ function installNativeSources(){
 let customSnapshot=null,customBusy=false,customPolling=false,customError='',customRetryAt=0,customPage='';
 function receiveCustomParameters(data){customSnapshot=data;renderCustomParameters();}
 async function refreshCustomParameters(){
-  if(!graph||readonly||customBusy||customPolling||document.hidden||submitBusy||Date.now()<customRetryAt)return;
-  customPolling=true;const shader=shaderChoice?.id;
-  try{const data=await api('custom-parameters');if(shader!==shaderChoice?.id)return;customError='';receiveCustomParameters(data);}
-  catch(e){customError=e.status===404?t('sources.connectionUnsupported'):e.message;customRetryAt=Date.now()+5000;updateCustomValues();}
-  finally{customPolling=false;}
+  if(!graph||readonly||customBusy||customPolling||historyBusy||nativeMutationBusy||document.hidden||submitBusy||Date.now()<customRetryAt)return;
+  customPolling=true;const generation=editorLoadGeneration;
+  try{const data=await api('custom-parameters');if(generation!==editorLoadGeneration)return;customError='';receiveCustomParameters(data);}
+  catch(e){if(generation!==editorLoadGeneration)return;customError=e.status===404?t('sources.connectionUnsupported'):e.message;customRetryAt=Date.now()+5000;updateCustomValues();}
+  finally{if(generation===editorLoadGeneration)customPolling=false;}
 }
 async function customRequest(body){
-  if(customBusy||dirty||submitBusy||readonly||!customSnapshot)return false;
-  customBusy=true;updateCustomValues();const shader=shaderChoice?.id;
-  try{const data=await api('custom-parameters',{revision:customSnapshot.revision,expectedPages:customSnapshot.expectedPages,...body});if(shader!==shaderChoice?.id)return false;customError='';receiveCustomParameters(data);await refreshNativeSources();return true;}
-  catch(e){customError=e.message;status(e.message,true);return false;}
-  finally{customBusy=false;updateCustomValues();}
+  if(customBusy||dirty||submitBusy||editorMutationBlocked()||!customSnapshot)return false;
+  customBusy=true;nativeMutationBusy=true;renderGraphEditActions();updateCustomValues();const generation=editorLoadGeneration;
+  try{const data=await api('custom-parameters',{revision:customSnapshot.revision,expectedPages:customSnapshot.expectedPages,...body});if(generation!==editorLoadGeneration)return false;customError='';receiveCustomParameters(data);return true;}
+  catch(e){if(generation===editorLoadGeneration){customError=e.message;status(e.message,true);}return false;}
+  finally{if(generation===editorLoadGeneration){customBusy=false;nativeMutationBusy=false;renderGraphEditActions();updateCustomValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
 }
-function customReady(){return customSnapshot?.enabled&&!customError&&!dirty&&!submitBusy&&!customBusy&&!readonly&&customSnapshot.revision===revision;}
+function customReady(){return customSnapshot?.enabled&&!customError&&!dirty&&!submitBusy&&!customBusy&&!editorMutationBlocked()&&customSnapshot.revision===revision;}
 function customCurrent(name){return customSnapshot?.controls.find(g=>g.name===name);}
 function updateCustomValues(){
   const ready=customReady(),box=$('#customcontrols');if(!box)return;

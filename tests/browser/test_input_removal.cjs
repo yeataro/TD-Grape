@@ -20,10 +20,10 @@ initial.declarations=[uniform('Live'),...Array.from({length:4},(_,i)=>uniform('M
 initial.stages.pixel.nodes.push(reference('used_ref','Used'));
 initial.functions.push({id:'hidden_function',name:'Hidden reference',scope:'local',stages:['pixel'],inputs:[],outputs:[],graph:{nodes:[reference('nested_ref','Nested')],edges:[]}});
 fixture.state.graph=copy(initial);fixture.upgradeReview=null;
-let nativeGraph=copy(initial),nativeRevision=fixture.state.revision,sourceChanged=false,applyFailures=0;
+let nativeGraph=copy(initial),nativeRevision=fixture.state.revision,sourceChanged=true,applyFailures=0;
 const writes=[],errors=[],checks=[],dialogs=[];
 const references=(document,id)=>[...Object.values(document.stages),...(document.functions||[]).map(f=>f.graph)].flatMap(g=>g.nodes).filter(n=>n.params?.declarationId===id);
-const snapshot=()=>({enabled:true,revision:nativeRevision,sourceChanged,graph:copy(nativeGraph),declarations:copy(nativeGraph.declarations),issues:[],topInputs:[],uniforms:nativeGraph.declarations.filter(d=>d.kind==='uniform').map(d=>({
+const snapshot=()=>({history:{token:'removal-'+nativeRevision},enabled:true,revision:nativeRevision,sourceChanged,graph:copy(nativeGraph),declarations:copy(nativeGraph.declarations),issues:[],topInputs:[],uniforms:nativeGraph.declarations.filter(d=>d.kind==='uniform').map(d=>({
   id:d.id,name:d.name,type:d.type,missing:!!d.sourceMissing,pending:false,nameWritable:!d.sourceMissing,expected:d.sourceMissing?null:d.id+':'+nativeRevision,sequence:'vector',
   components:[{parameter:'value',value:d.value,mode:'CONSTANT',writable:!d.sourceMissing,modeWritable:true,expression:'',modeExpected:'CONSTANT'}]
 }))});
@@ -33,7 +33,7 @@ const server=http.createServer(async(req,res)=>{
     if(route.startsWith('/api/')){
       let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{},operation=route.split('/').at(-1);
       res.setHeader('Content-Type','application/json');
-      if(operation==='state')return res.end(JSON.stringify(fixture));
+      if(operation==='state')return res.end(JSON.stringify({...fixture,history:{token:'removal-'+nativeRevision}}));
       if(operation==='sources')return res.end(JSON.stringify(snapshot()));
       if(operation==='shaders')return res.end(JSON.stringify({projectFile:'Inputs-removal.toe',shaders:[]}));
       if(operation==='uniforms')return res.end(JSON.stringify({revision:nativeRevision,uniforms:{},textures:{}}));
@@ -79,15 +79,15 @@ const server=http.createServer(async(req,res)=>{
       await page.waitForFunction(id=>!graph.declarations.some(d=>d.id===id)&&!nativeSourceBusy,id);
       assert.equal(await page.locator('[data-input-source="'+id+'"]').count(),0);
       assert.equal(await page.evaluate(()=>selectedInputId),null);
-      assert.deepEqual(await page.evaluate(()=>[past.length,future.length]),[0,0]);
-      assert.equal(await page.evaluate(id=>nativeInputHistory.some(d=>d.id===id),id),false);
+      assert.equal(await page.evaluate(()=>future.length),0);
+      assert.equal(await page.evaluate(id=>past.at(-1)?.before.declarations.some(d=>d.id===id)&&!past.at(-1)?.after.declarations.some(d=>d.id===id),id),true);
       assert.equal(await page.evaluate(()=>JSON.stringify(graph)),JSON.stringify(nativeGraph));
     };
 
-    await selectSource('Live');await page.evaluate(()=>{past=[clone(graph)];future=[clone(graph)];});const beforeCancel=await state(),cancelDialogs=dialogs.length;
+    await selectSource('Live');await page.evaluate(async()=>{change(()=>graph.stages.pixel.nodes[0].ui.x+=4);await undo();});const beforeCancel=await state(),cancelDialogs=dialogs.length;
     acceptDialog=false;await nativeRemove('Live').click();assert.equal(dialogs.length,cancelDialogs+1);assert.equal(writes.length,0);assert.equal(await state(),beforeCancel);
     acceptDialog=true;await nativeRemove('Live').click();await removed('Live');assert.equal(writes.length,1);
-    checks.push('Live Uniform with zero references: Cancel preserves graph/history; confirmed Remove adopts the native graph, clears selection and removes the native history identity');
+    checks.push('Live Uniform with zero references: Cancel preserves graph/history; confirmed Remove adopts the native graph, clears selection and records one reversible step');
 
     await selectSource('Missing0');assert.equal(await nativeRestore('Missing0').count(),1);assert.equal(await nativeRemove('Missing0').isEnabled(),true);
     const missingCancel=await state(),missingDialogs=dialogs.length;acceptDialog=false;await nativeRemove('Missing0').click();assert.equal(dialogs.length,missingDialogs+1);assert.equal(await state(),missingCancel);assert.equal(writes.length,1);acceptDialog=true;
@@ -110,7 +110,7 @@ const server=http.createServer(async(req,res)=>{
 
     await page.evaluate(()=>change(()=>graph.stages.pixel.nodes[0].ui.x+=10));await page.locator('#undo').click();
     assert.equal(await page.evaluate(()=>graph.declarations.some(d=>d.id==='Live'||/^Missing[0-3]$/.test(d.id))),false);
-    checks.push('Undo of a later graph edit does not resurrect a purged native source through nativeInputHistory');
+    checks.push('Undo of a later graph edit does not resurrect an unrelated purged native source');
 
     await selectSource('Blocked');await page.evaluate(()=>change(()=>graph.stages.pixel.nodes[0].ui.x+=17));const draft=await page.evaluate(()=>JSON.stringify(graph)),draftRevision=await page.evaluate(()=>revision);
     nativeGraph.declarations.push(uniform('External'));nativeRevision++;sourceChanged=true;

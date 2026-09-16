@@ -1,25 +1,36 @@
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const [src,fixtureFile,sourcesFile,w]=process.argv.slice(2),fixture=JSON.parse(fs.readFileSync(fixtureFile)),sources=JSON.parse(fs.readFileSync(sourcesFile));fs.mkdirSync(w,{recursive:true});
+// The native fixture recreates this source while testing deletion, so its ID is
+// deliberately generated. Give only that fixture identity a stable test alias.
+const gainId=sources.uniforms.find(r=>r.name==='uRenamed')?.id;
+if(gainId&&gainId!=='gain')for(const document of [fixture,sources])Object.assign(document,JSON.parse(JSON.stringify(document).replaceAll(JSON.stringify(gainId),'"gain"')));
 sources.graph=fixture.state.graph;sources.revision=fixture.state.revision;sources.sourceChanged=false;
 const editable=sources.uniforms.find(r=>r.id==='gain');editable.components[0].mode='CONSTANT';editable.components[0].writable=true;
 let writes=0;
+const historyCheckpoints=new Map();let historySerial=0,historySignature='';
+function stampSources(){const key=JSON.stringify(sources.uniforms);if(key!==historySignature){historySignature=key;sources.history={token:'native-test-'+(++historySerial)};historyCheckpoints.set(sources.history.token,structuredClone(sources.uniforms));}return sources;}
 const server=http.createServer(async(req,res)=>{
  const route=new URL(req.url,'http://localhost').pathname;
  if(route.startsWith('/api/')){
   let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{},op=route.split('/').at(-1);res.setHeader('Content-Type','application/json');
-  if(op==='state')return res.end(JSON.stringify(fixture));
-  if(op==='sources')return res.end(JSON.stringify(sources));
+  if(op==='state')return res.end(JSON.stringify({...fixture,history:stampSources().history}));
+  if(op==='sources')return res.end(JSON.stringify(stampSources()));
   if(op==='apply'){
    assert.equal(body.revision,sources.revision);sources.revision++;sources.graph=body.graph;sources.declarations=body.graph.declarations;
    for(const d of sources.declarations.filter(d=>d.kind==='uniform'))if(!sources.uniforms.some(r=>r.id===d.id))sources.uniforms.push({id:d.id,name:d.name,type:d.type,missing:false,nameWritable:true,expected:d.id,components:[0,1,2,3].map(i=>({parameter:'test'+i,value:Array.isArray(d.value)?d.value[i]||0:d.value,mode:'CONSTANT',writable:true}))});
-   fixture.state={graph:body.graph,revision:sources.revision};return res.end(JSON.stringify({state:fixture.state,target:fixture.target}));
+   fixture.state={graph:body.graph,revision:sources.revision};return res.end(JSON.stringify({state:fixture.state,target:fixture.target,history:stampSources().history}));
+  }
+  if(op==='history-restore'){
+   const checkpoint=historyCheckpoints.get(body.toToken);assert.ok(checkpoint);assert.equal(body.revision,sources.revision);
+   for(const id of body.sourceIds){sources.uniforms=sources.uniforms.filter(r=>r.id!==id);const prior=checkpoint.find(r=>r.id===id),decl=body.graph.declarations.find(d=>d.id===id);if(prior&&decl)sources.uniforms.push(structuredClone(prior));}
+   sources.revision++;sources.graph=body.graph;sources.declarations=body.graph.declarations;sources.sourceChanged=true;fixture.state={graph:body.graph,revision:sources.revision};return res.end(JSON.stringify(stampSources()));
   }
   if(op==='shaders')return res.end(JSON.stringify({projectFile:'Sources-test.toe',shaders:[]}));
   if(op==='uniforms')return res.end(JSON.stringify({revision:sources.revision,uniforms:{},textures:{}}));
   if(op==='preview'){res.statusCode=204;return res.end();}
   if(op==='source-value'){
-   const row=sources.uniforms.find(r=>r.id===body.id);assert.equal(body.expected.value,row.components[body.component].value);row.components[body.component].value=body.value;writes++;return res.end(JSON.stringify(sources));
+   const row=sources.uniforms.find(r=>r.id===body.id);assert.equal(body.expected.value,row.components[body.component].value);row.components[body.component].value=body.value;writes++;return res.end(JSON.stringify(stampSources()));
   }
   if(op==='source-edit'&&body.action==='create'){
    sources.revision++;const id='native_added';const decl={id,kind:'uniform',name:body.name,type:body.type,value:0};sources.graph.declarations.push(decl);sources.declarations=sources.graph.declarations;
@@ -67,7 +78,7 @@ const server=http.createServer(async(req,res)=>{
   checks.push('Inputs subcategories browse new and existing sources; clock presets are Uniforms; global search and source filters remain usable');
   await page.fill('#createsearch','');
   const colors=await page.evaluate(()=>{
-   const color=key=>getComputedStyle(document.querySelector('[data-create-entry="'+key+'"]')).backgroundColor;
+   const color=key=>getComputedStyle(document.querySelector('[data-create-entry="'+key+'"]')).borderLeftColor;
    return {uniform:color('uniform'),reference:color('input:gain'),time:color('preset:absTime'),sampler:color('sampler'),samplerReference:color('input:presentation_sampler'),math:color('mix')};
   });
   assert.equal(colors.reference,colors.uniform);assert.equal(colors.time,colors.uniform);assert.equal(colors.samplerReference,colors.sampler);assert.notEqual(colors.reference,colors.math);assert.notEqual(colors.sampler,colors.math);
@@ -135,10 +146,11 @@ const server=http.createServer(async(req,res)=>{
   await page.evaluate(({x,y})=>openCreator(x,y),drop);await page.fill('#createsearch','uniform');await page.locator('[data-create-entry=uniform]').click();
   const committed=await page.evaluate(()=>({node:selected,source:current().nodes.find(n=>n.id===selected).params.declarationId}));
   await page.waitForFunction(()=>!dirty&&!submitBusy);
-  await page.locator('#undo').click();await page.waitForFunction(()=>!dirty&&!submitBusy);
+  await page.locator('#undo').click();await page.waitForFunction(()=>!dirty&&!submitBusy&&!historyBusy);
   assert.equal(await page.evaluate(id=>current().nodes.some(n=>n.id===id),committed.node),false);
-  assert.equal(await page.evaluate(id=>graph.declarations.some(d=>d.id===id),committed.source),true);
-  checks.push('After Apply, Graph Undo keeps the native source identity while removing the reference');
+  assert.equal(await page.evaluate(id=>graph.declarations.some(d=>d.id===id),committed.source),false);
+  assert.equal(sources.uniforms.some(d=>d.id===committed.source),false);
+  checks.push('After Apply, Undo of source creation removes its native source and reference as that same creation step');
   await page.evaluate(()=>{clearTimeout(autoTimer);dirty=false;});
   await page.selectOption('#language','zh-Hant');await showInputs();await page.fill('#inputsearch','');
   await page.screenshot({path:path.join(w,'inputs-panel.png')});

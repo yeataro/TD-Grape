@@ -236,6 +236,38 @@ def source_module():
     dat = _owner.op('sources')
     return dat.module if dat else None
 
+def history_module():
+    dat = _owner.op('history')
+    return dat.module if dat else None
+
+
+def history_result(result):
+    module = history_module()
+    return module.attach(_owner.op('runtime').module, result) if module else result
+
+
+@contextmanager
+def history_native_writes():
+    capture = bool(ui.undo.globalState)
+    if capture: ui.undo.startBlock('Grape editor Undo/Redo', enable=False)
+    try: yield
+    finally:
+        if capture: ui.undo.endBlock()
+
+
+def history_operation(operation, source_edit=None):
+    module = history_module()
+    if module is None: return operation()
+    runtime = _owner.op('runtime').module
+    if source_module(): source_module().sync(runtime)
+    before = module.capture(runtime)['token']
+    result = operation()
+    if source_edit is not None: module.note_edit(runtime, source_edit, before)
+    result = module.attach(runtime, result)
+    result['history']['beforeToken'] = before
+    return result
+
+
 def saved_state_source():
     dat=(_shader or _owner).op('state')
     return dat.text if dat else None
@@ -1578,8 +1610,9 @@ def process_shader_request(method,path,body):
                 inspected=upgrade_review()
                 if inspected['required']:upgrade=upgrade_summary(inspected)
             except (ValueError,TypeError,KeyError,AttributeError,RecursionError):pass
-        return {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
+        result = {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
                 'examples':{name:_owner.op('document').module.stamp_catalog(core().normalize_top_sources(core().demo_graph(name,target=shader_kind(target())))[0],core()) for name in ('banana','color','tint')}}
+        return history_result(result) if not saved_issue and current is not None else result
     if method=='POST' and path=='/api/remote-preview':
         return remote_preview(target())
     if method=='GET' and path=='/api/preview':
@@ -1590,7 +1623,7 @@ def process_shader_request(method,path,body):
             # existing HTTP request queued; never wait or run TD API off-thread.
             raise _PreviewFramePending(comp,top,int(absTime.frame))
         return png(comp) if comp else bytes()
-    if method=='GET' and path=='/api/uniforms': return uniform_snapshot()
+    if method=='GET' and path=='/api/uniforms': return history_result(uniform_snapshot())
     if method=='GET' and path=='/api/custom-parameters':
         return _owner.op('parameters').module.snapshot(_owner.op('runtime').module)
     if method=='POST' and path=='/api/custom-parameters':
@@ -1599,13 +1632,19 @@ def process_shader_request(method,path,body):
         if not source_module(): raise RuntimeError('Update the Grape manager to edit native sources.')
         result=source_module().snapshot(_owner.op('runtime').module)
         result['topInputs']=top_input_snapshot(target())
-        return result
+        return history_result(result)
     if method=='POST' and path=='/api/source-value':
         ensure_supported_shader(target())
-        return source_module().write_value(_owner.op('runtime').module,body)
+        return history_operation(lambda: source_module().write_value(_owner.op('runtime').module,body))
     if method=='POST' and path=='/api/source-edit':
         ensure_supported_shader(target())
-        return source_module().edit(_owner.op('runtime').module,body)
+        if history_module(): history_module().preflight_edit(_owner.op('runtime').module,body)
+        return history_operation(lambda: source_module().edit(_owner.op('runtime').module,body), source_edit=body)
+    if method=='POST' and path=='/api/history-restore':
+        ensure_supported_shader(target())
+        if not history_module(): raise RuntimeError('Update the Grape manager to use native source history.')
+        with history_native_writes():
+            return history_module().restore(_owner.op('runtime').module,body)
     if method=='POST' and path=='/api/native-viewer':
         comp=target()
         if comp is None: raise RuntimeError('The Grape component is no longer available.')
@@ -1617,14 +1656,14 @@ def process_shader_request(method,path,body):
 
     if method=='GET' and path=='/api/personal':return personal_library(refresh=True)
     if method=='POST' and path=='/api/personal-save':return save_personal(body)
-    if method=='POST' and path=='/api/uniform-value': return set_uniform_value(body)
+    if method=='POST' and path=='/api/uniform-value': return history_operation(lambda: set_uniform_value(body))
     if method=='POST' and path=='/api/inspect':
         if body.get('reviewUpgrade') is True:return prepare_upgrade_review(body.get('graph'))
         report=_owner.op('document').module.inspect_document(body.get('graph'),core(),shader_kind(target()))
         if report.get('candidate') is not None:
             report['upgradeReview']=upgrade_summary(_owner.op('document').module.inspect_upgrade(report['candidate'],core(),shader_kind(target())))
         return report
-    if method=='POST' and path=='/api/apply': return deploy(body['graph'],body['revision'],upgrade_token=body.get('upgradeToken'))
+    if method=='POST' and path=='/api/apply': return history_operation(lambda: deploy(body['graph'],body['revision'],upgrade_token=body.get('upgradeToken')))
     if method=='POST' and path=='/api/validate': return core().compile_graph(body['graph'])
     if method=='POST' and path=='/api/export':
         from pathlib import Path

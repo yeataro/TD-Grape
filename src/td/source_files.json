@@ -28,6 +28,7 @@
   "sgrape_core.py": "src/core/sgrape_core.py",
   "sgrape_document.py": "src/core/sgrape_document.py",
   "sgrape_library.py": "src/core/sgrape_library.py",
+  "sgrape_history.py": "src/core/sgrape_history.py",
   "sgrape_parameter_links.py": "src/core/sgrape_parameter_links.py",
   "sgrape_parameters.py": "src/core/sgrape_parameters.py",
   "sgrape_runtime.py": "src/td/runtime/sgrape_runtime.py",

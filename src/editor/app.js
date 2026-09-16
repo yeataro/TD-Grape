@@ -70,11 +70,11 @@ async function editorRequest(path,data,binary=false){
   }finally{clearTimeout(timer);if(data)pendingEditorWrites--;}
 }
 async function api(path,data){
-  const snapshot=['apply','validate'].includes(path)&&graph?JSON.stringify(graph):null;
+  const snapshot=['apply','validate'].includes(path)&&graph?JSON.stringify(graph):null,generation=editorLoadGeneration;
   try{return await editorRequest(path,data);}
   catch(error){
     // Authentication, transport failures and revision conflicts are not GLSL errors.
-    if(snapshot&&error.status===422&&!error.message.startsWith('Conflict:'))setCompileDiagnostics(error.result,snapshot);
+    if(generation===editorLoadGeneration&&snapshot&&error.status===422&&!error.message.startsWith('Conflict:'))setCompileDiagnostics(error.result,snapshot);
     throw error;
   }
 }
@@ -171,38 +171,120 @@ function renderGraphSaveState(){
   badge.title=t('graph.revision')+revision;
   badge.classList.toggle('pending',dirty);renderStatusVisibility();
 }
-let nativeInputHistory=[];
-function rememberNativeInputSources(declarations){nativeInputHistory=clone(declarations.filter(d=>d.kind==='uniform'&&!d.sourceMissing));}
-function retainNativeInputSources(document){
-  // Graph Undo removes references, not native Par entities already accepted by TD.
-  for(const decl of nativeInputHistory)if(!document.declarations.some(d=>d.id===decl.id||d.name===decl.name))document.declarations.push(clone(decl));
+// History follows user commits, independently of Apply's compilation debounce.
+let editorLoadGeneration=0,historyNativeToken=null,historyBusy=false,nativeMutationBusy=false,applyInFlight=null,historyEpoch=0;
+function historyValueKey(value){
+  const ordered=v=>Array.isArray(v)?v.map(ordered):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,ordered(v[k])])):v;
+  return JSON.stringify(ordered(value));
+}
+function historyGraphKey(document){const value=clone(document);delete value.catalogSnapshot;return historyValueKey(value);}
+function historySourceIds(before,after){
+  const sources=document=>new Map((document.declarations||[]).filter(d=>d.kind==='uniform').map(d=>[d.id,d]));
+  const a=sources(before),b=sources(after);
+  return [...new Set([...a.keys(),...b.keys()])].filter(id=>historyValueKey(a.get(id))!==historyValueKey(b.get(id)));
+}
+function editorMutationBlocked(){return readonly||historyBusy||nativeMutationBusy;}
+function renderHistoryActions(){
+  const busy=editorMutationBlocked();
+  $('#undo').disabled=busy||!past.length;$('#redo').disabled=busy||!future.length;
+  $('#reload').disabled=submitBusy||historyBusy||nativeMutationBusy;$('#apply').disabled=readonly||submitBusy||historyBusy||nativeMutationBusy;
+  $('#inspector').inert=historyBusy||nativeMutationBusy;
+  for(const input of document.querySelectorAll('#cards .node-inline-values input'))input.disabled=busy;
+}
+function recordHistory(entry){
+  if(historyGraphKey(entry.before)===historyGraphKey(entry.after)&&(!entry.nativeApplied||entry.nativeBefore===entry.nativeAfter))return null;
+  const step={id:crypto.randomUUID(),epoch:historyEpoch,...entry};
+  if(step.nativeApplied){step.deltaBefore=step.nativeBefore;step.deltaAfter=step.nativeAfter;}
+  past.push(step);if(past.length>60)past.shift();future=[];renderHistoryActions();return step;
+}
+function recordGraphHistory(before,{nativeBefore=historyNativeToken,nativeAfter=null,nativeApplied=false}={}){
+  if(historyGraphKey(before)===historyGraphKey(graph))return null;
+  return recordHistory({kind:'graph',before:clone(before),after:clone(graph),sourceIds:historySourceIds(before,graph),nativeBefore,nativeAfter,nativeApplied});
+}
+function scheduleGraphApply(delay=650){
+  clearTimeout(autoTimer);autoTimer=null;
+  if(dirty&&!readonly&&!submitBusy&&!historyBusy&&!nativeMutationBusy&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,delay);
+}
+function adoptHistoryGraph(document){
+  const snapshot=graph?.catalogSnapshot;graph=clone(document);if(snapshot)graph.catalogSnapshot=clone(snapshot);
+  if(selectedInputId&&!allInputSources().some(d=>d.id===selectedInputId))selectedInputId=null;
+  tidyTrail();
+}
+function sealGraphHistory(entries,beforeToken,afterToken){
+  if(afterToken)historyNativeToken=afterToken;
+  for(const entry of entries){
+    if(entry.nativeApplied)continue;
+    entry.nativeBefore=beforeToken||entry.nativeBefore;entry.nativeAfter=afterToken;entry.nativeApplied=true;
+    entry.deltaBefore=entry.nativeBefore;entry.deltaAfter=entry.nativeAfter;
+  }
 }
 function mark(){
   clearCompileDiagnostics();
   dirty=true;editVersion++;renderGraphSaveState();$('#apply').disabled=readonly||submitBusy;
   try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}
-  clearTimeout(autoTimer);if(!readonly&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,650);
+  scheduleGraphApply();
 }
-function checkpoint(){past.push(clone(graph));if(past.length>60)past.shift();future=[];}
 function change(fn,{localize=true,redraw=true}={}){
-  if(readonly)return false;
+  if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
   try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous);rejectNewConstantIssues(graph,previous);}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
   }
-  past.push(previous);if(past.length>60)past.shift();future=[];mark();if(redraw)render();return true;
+  if(!recordGraphHistory(previous)){if(redraw)render();return true;}
+  mark();if(redraw)render();return true;
 }
-function undo(redo=false){if(readonly)return;let from=redo?future:past,to=redo?past:future;if(!from.length)return;to.push(clone(graph));graph=from.pop();retainNativeInputSources(graph);tidyTrail();mark();render();}
-async function applyGraph(){
+async function undo(redo=false){
+  if(editorMutationBlocked())return false;
+  const from=redo?future:past,to=redo?past:future;if(!from.length)return false;
+  const generation=editorLoadGeneration;let replayed=false;historyBusy=true;clearTimeout(autoTimer);autoTimer=null;renderHistoryActions();
+  try{
+    // An in-flight Apply may materialize sources for several pending entries.
+    // Wait for its receipts before deciding whether this one step is local.
+    if(applyInFlight)await applyInFlight;
+    if(generation!==editorLoadGeneration)return false;
+    const entry=from.at(-1),expected=redo?entry.before:entry.after,desired=redo?entry.after:entry.before;
+    if(entry.epoch!==historyEpoch||historyGraphKey(graph)!==historyGraphKey(expected))throw Error(t('history.changed'));
+    const previousGraph=historyGraphKey(graph);let needsApply=false;
+    if(entry.nativeApplied&&(entry.sourceIds.length||entry.valueIds?.length)){
+      const fromToken=redo?entry.nativeBefore:entry.nativeAfter,toToken=redo?entry.nativeAfter:entry.nativeBefore;
+      if(!fromToken||!toToken)throw Error(t('history.unavailable'));
+      // Receipts rebase CAS expectations, but may include unrelated external
+      // edits. Keep the operation's original field delta immutable for replay.
+      const deltaFromToken=redo?entry.deltaBefore:entry.deltaAfter,deltaToToken=redo?entry.deltaAfter:entry.deltaBefore;
+      const result=await api('history-restore',{requestId:crypto.randomUUID(),revision,fromToken,toToken,deltaFromToken,deltaToToken,sourceIds:entry.sourceIds,valueIds:entry.valueIds||[],graph:clone(desired),currentGraph:clone(graph)});
+      if(generation!==editorLoadGeneration)return false;
+      nativeSourceError='';nativeSourceSnapshot=result;revision=result.revision;
+      const restored=result.workingGraph||result.graph||desired;adoptHistoryGraph(restored);
+      needsApply=!!(result.sourceChanged||result.workingGraph);
+      historyNativeToken=result.history?.token||toToken;
+      if(redo)entry.nativeAfter=historyNativeToken;else entry.nativeBefore=historyNativeToken;
+    }else adoptHistoryGraph(desired);
+    from.pop();to.push(entry);
+    // Carry the expected current checkpoint through intervening graph-only steps.
+    // The opposite end remains the historic destination of that next replay.
+    const neighbor=from.at(-1);if(neighbor?.nativeApplied&&historyNativeToken){if(redo)neighbor.nativeBefore=historyNativeToken;else neighbor.nativeAfter=historyNativeToken;}
+    if(needsApply||previousGraph!==historyGraphKey(graph))mark();render();replayed=true;status(t(dirty?graphPendingKey():lastGraphSaveKey),false,{clearError:'operation'});return true;
+  }catch(error){if(generation===editorLoadGeneration)status(t('history.failed')+error.message,true);return false;}
+  finally{if(generation===editorLoadGeneration){historyBusy=false;renderHistoryActions();renderNativeSourceValues();if(replayed){await refreshUniforms();if(generation===editorLoadGeneration)scheduleGraphApply();}}}
+}
+function applyGraph(){
+  if(applyInFlight)return applyInFlight;
+  if(historyBusy||nativeMutationBusy)return Promise.resolve();
+  const operation=performApplyGraph();applyInFlight=operation;
+  operation.finally(()=>{if(applyInFlight===operation)applyInFlight=null;});return operation;
+}
+async function performApplyGraph(){
   clearTimeout(autoTimer);autoTimer=null;if(readonly||submitBusy||!dirty)return;
-  const sentVersion=editVersion,sentGraph=clone(graph),layoutOnly=!hasShaderChanges(sentGraph);
+  const generation=editorLoadGeneration,sentVersion=editVersion,sentGraph=clone(graph),layoutOnly=!hasShaderChanges(sentGraph);
+  const sentEntries=past.filter(entry=>entry.kind==='graph'&&!entry.nativeApplied),beforeToken=historyNativeToken;
   submitBusy=true;$('#apply').disabled=true;$('#reload').disabled=true;status(t(layoutOnly?'graph.saving':'material.compiling'));
   try{
     const data=await api('apply',{graph:sentGraph,revision});
+    if(generation!==editorLoadGeneration)return;
     if(data.upgradeReview){upgradePending=data.upgradeReview;conflicted=true;renderUpgradeNotice();status(t('upgrade.explanation'));return;}
-    rememberNativeInputSources(data.state.graph.declarations);retainNativeInputSources(graph);
+    sealGraphHistory(sentEntries,data.history?.beforeToken||beforeToken,data.history?.token||null);
     if(data.state.graph.catalogSnapshot)graph.catalogSnapshot=clone(data.state.graph.catalogSnapshot);
     revision=data.state.revision;conflicted=false;clearCompileDiagnostics();
     const shaderUpdated=data.shaderUpdated??(data.compileInfo!=='Graph layout saved');
@@ -210,17 +292,18 @@ async function applyGraph(){
     if(editVersion===sentVersion){dirty=false;sessionStorage.removeItem(draftKey);}
     else {try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}}
     renderGraphSaveState();$('#target').textContent=data.target;await preview().catch(()=>{});
+    if(generation!==editorLoadGeneration)return;
     if(!connectionInterrupted)status(t(dirty?graphPendingKey():shaderUpdated?'material.applied':lastGraphSaveKey),false,{clearError:true});
     document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
-  }catch(e){conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
-  finally{submitBusy=false;$('#apply').disabled=readonly;$('#reload').disabled=false;refreshUniforms();if(dirty&&editVersion!==sentVersion&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,200);}
+  }catch(e){if(generation!==editorLoadGeneration)return;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
+  finally{if(generation===editorLoadGeneration){submitBusy=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();refreshUniforms();if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
 }
 function el(tag,attrs={},text=''){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else e.setAttribute(k,v);}e.textContent=text;return e;}
 function field(label,control){const f=el('label',{class:'field'},label);f.append(control);return f;}
 function select(options,value,onchange){const s=el('select');for(const [id,label]of options){const o=el('option',{value:id},label);s.append(o);}s.value=value;s.onchange=()=>onchange(s.value);return s;}
 function input(value,cb,type='text'){
   const i=el('input',{type});i.value=value;let committed=i.value;
-  const commit=()=>{if(readonly||i.numericGestureActive||i.value===committed)return;const next=type==='number'?Number(i.value):i.value;if(type==='number'&&(!i.value.trim()||!Number.isFinite(next)))return;committed=i.value;cb(next);};
+  const commit=()=>{if(editorMutationBlocked()||i.numericGestureActive||i.value===committed)return;const next=type==='number'?Number(i.value):i.value;if(type==='number'&&(!i.value.trim()||!Number.isFinite(next)))return;committed=i.value;cb(next);};
   i.onchange=commit;i.onblur=commit;
   i.hasPendingEdit=()=>i.value!==committed;
   i.setSyncedValue=value=>{if(i.numericGestureActive)return;i.value=value??'';committed=i.value;};
@@ -304,7 +387,7 @@ function leaveForShader(row){
 }
 function chooseShader(row){
   if(row.id===shaderId){closeShaderMenu();return;}
-  if(submitBusy||uniformPending.size||nativeSourceBusy){status(t('switch.busy'));return;}
+  if(submitBusy||uniformPending.size||nativeSourceBusy||historyBusy||nativeMutationBusy){status(t('switch.busy'));return;}
   closeShaderMenu();
   if(!dirty){leaveForShader(row);return;}
   resumeAfterShaderSwitch=autoTimer!==null;clearTimeout(autoTimer);autoTimer=null;
@@ -325,7 +408,7 @@ function installShaderNavigation(){
   $('#switchcancel').onclick=()=>closeShaderSwitch();
   $('#shaderswitch').addEventListener('cancel',e=>{e.preventDefault();closeShaderSwitch();});
   $('#switchkeep').onclick=()=>{
-    if(!shaderChoice||submitBusy||uniformPending.size||nativeSourceBusy)return;
+    if(!shaderChoice||submitBusy||uniformPending.size||nativeSourceBusy||historyBusy||nativeMutationBusy)return;
     try{
       const draft=JSON.stringify({graph,revision});sessionStorage.setItem(draftKey,draft);
       if(sessionStorage.getItem(draftKey)!==draft)throw Error('Draft not retained');
@@ -333,7 +416,7 @@ function installShaderNavigation(){
     }catch{$('#switchstatus').textContent=t('switch.storageFailed');}
   };
   $('#switchapply').onclick=async()=>{
-    const row=shaderChoice;if(!row||submitBusy||uniformPending.size||nativeSourceBusy)return;
+    const row=shaderChoice;if(!row||submitBusy||uniformPending.size||nativeSourceBusy||historyBusy||nativeMutationBusy)return;
     $('#switchapply').disabled=$('#switchkeep').disabled=true;$('#switchstatus').textContent=t('material.compiling');conflicted=false;
     await applyGraph();if(shaderChoice!==row)return;
     $('#switchapply').disabled=readonly;$('#switchkeep').disabled=false;
@@ -429,7 +512,26 @@ async function preview(force=false){
 }
 
 function fit(){if(!graph)return;const ns=current().nodes;if(!ns.length)return;const minX=Math.min(...ns.map(n=>n.ui?.x||0)),minY=Math.min(...ns.map(n=>n.ui?.y||0)),maxX=Math.max(...ns.map(n=>(n.ui?.x||0)+190)),maxY=Math.max(...ns.map(n=>(n.ui?.y||0)+180));scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();}
-async function load(){const data=await api('state');applyNeedsReview=false;connectionIssue='';renderConnectionNotice();setTypeContract(data.typeContract);const filter=$('#createtype');filter.replaceChildren(el('option',{value:'all','data-i18n':'create.allTypes'},t('create.allTypes')),...interfaceTypes().map(type=>el('option',{value:type},type)));upgradePending=data.upgradeReview||null;closeUpgradeReview();savedStateIssue=data.savedStateIssue||null;editorTarget=data.shaderKind||data.state?.graph?.target||'mat';graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;nativeInputHistory=[];nativeSourceSnapshot=null;customSnapshot=null;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;past=[];future=[];selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();$('#target').textContent=data.target;$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):data.readOnlyReason||t('connection.ready'),readonly,{clearError:true});if(!savedStateIssue&&$('#savedreview').open)$('#savedreview').close();}
+async function load(){
+  const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
+  try{
+    const data=await api('state');if(generation!==editorLoadGeneration)return;
+    applyNeedsReview=false;connectionIssue='';renderConnectionNotice();setTypeContract(data.typeContract);
+    const filter=$('#createtype');filter.replaceChildren(el('option',{value:'all','data-i18n':'create.allTypes'},t('create.allTypes')),...interfaceTypes().map(type=>el('option',{value:type},type)));
+    upgradePending=data.upgradeReview||null;closeUpgradeReview();savedStateIssue=data.savedStateIssue||null;editorTarget=data.shaderKind||data.state?.graph?.target||'mat';
+    graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);
+    editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
+    graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
+    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeMutationBusy=false;applyInFlight=null;submitBusy=false;
+    uniformGeneration++;uniformPolling=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();uniformSnapshot={revision:-1,uniforms:{}};
+    customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
+    readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();
+    $('#target').textContent=data.target;$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});
+    if(generation!==editorLoadGeneration)return;
+    status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):data.readOnlyReason||t('connection.ready'),readonly,{clearError:true});
+    if(!savedStateIssue&&$('#savedreview').open)$('#savedreview').close();
+  }finally{if(generation===editorLoadGeneration){historyBusy=false;renderHistoryActions();}}
+}
 
 let editorReloading=false;
 const editorFieldDrafts=new Map();
@@ -458,7 +560,7 @@ function requestEditorReload(){
   const unfinished=pendingEditorField();
   if(unfinished){status(t('editorReload.finishField'),true,{kind:'reload'});unfinished.focus?.({preventScroll:true});return false;}
   if(statusErrorKind==='reload')status(t('connection.ready'),false,{clearError:'reload'});
-  if(submitBusy||uniformPending.size||nativeSourceBusy||customBusy||exportBusy||personalBusy||pendingEditorWrites){status(t('editorReload.busy'));return false;}
+  if(submitBusy||uniformPending.size||nativeSourceBusy||historyBusy||nativeMutationBusy||customBusy||exportBusy||personalBusy||pendingEditorWrites){status(t('editorReload.busy'));return false;}
   if(dirty){
     try{
       const draft=JSON.stringify({graph,revision});sessionStorage.setItem(draftKey,draft);
@@ -527,7 +629,7 @@ $('#canvas').addEventListener('drop',e=>{const key=e.dataTransfer.getData('appli
 
 $('#apply').onclick=()=>{conflicted=false;applyNeedsReview=false;if(connectionIssue==='changed')connectionIssue='';renderConnectionNotice();applyGraph();};
 $('#save').onclick=async()=>{try{const r=await api('save',{});status(r.saved?t('project.saved')+(dirty?t('project.draft'):''):t('project.saveFailed'),!r.saved);}catch(e){status(e.message,true);}};
-$('#reload').onclick=()=>{if(dirty&&!confirm(t('graph.reloadConfirm')))return;load().catch(e=>status(e.message,true));};
+$('#reload').onclick=()=>{if(submitBusy||historyBusy||nativeMutationBusy)return;if(dirty&&!confirm(t('graph.reloadConfirm')))return;load().catch(e=>status(e.message,true));};
 
 $('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();fit();});
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=fit;$('#search').oninput=library;

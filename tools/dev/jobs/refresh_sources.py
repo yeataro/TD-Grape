@@ -6,7 +6,7 @@ owners = [n for n in op('/').findChildren() if n.storage.get('sgrapeManager', Fa
 assert len(owners) == 1, 'Expected one TD-Grape manager in the project'
 owner = owners[0]
 mapping = json.loads((GRAPE_ROOT / 'src/td/embedded_sources.json').read_text(encoding='utf-8'))
-old = {dat: owner.op(dat).text for dat in mapping}
+old = {dat: owner.op(dat).text if owner.op(dat) else None for dat in mapping}
 new = {dat: source_path(name).read_text(encoding='utf-8') for dat, name in mapping.items()}
 changed = [dat for dat in mapping if old[dat] != new[dat]]
 runtime = owner.op('runtime').module
@@ -23,12 +23,20 @@ if changed:
                'rebind': True, 'lan': bool(owner.par.Allowlan.eval())}
     lifecycle = owner.op('lifecycle')
     active = lifecycle.par.active.eval()
+    created = []
     try:
         lifecycle.par.active = False
         worker = runtime._worker
         runtime.stop()
         assert not worker or not worker.is_alive(), 'Previous HTTP worker is still alive'
         for dat in changed:
+            if owner.op(dat) is None:
+                added = owner.create(textDAT, dat)
+                created.append(added)
+                anchor = owner.op('sources')
+                if anchor:
+                    added.nodeX = anchor.nodeX
+                    added.nodeY = anchor.nodeY - 120 * len(created)
             owner.op(dat).text = new[dat]
         runtime = owner.op('runtime').module
         for key, value in state.items():
@@ -40,7 +48,11 @@ if changed:
         if getattr(runtime, '_server', None):
             runtime.stop()
         for dat in changed:
-            owner.op(dat).text = old[dat]
+            if old[dat] is not None:
+                owner.op(dat).text = old[dat]
+        for added in created:
+            if added.valid:
+                added.destroy()
         restored = owner.op('runtime').module
         restored.__dict__.update(namespace)
         restored._server = restored._worker = None

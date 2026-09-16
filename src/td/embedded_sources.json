@@ -4,6 +4,7 @@
   "personal_library": "sgrape_library.py",
   "document": "sgrape_document.py",
   "sources": "sgrape_sources.py",
+  "history": "sgrape_history.py",
   "parameters": "sgrape_parameters.py",
   "parameter_links": "sgrape_parameter_links.py",
   "runtime": "sgrape_runtime.py",

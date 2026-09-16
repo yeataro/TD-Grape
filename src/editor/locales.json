@@ -18,6 +18,26 @@
     "Graph"
   ],
   "messages": {
+    "import.sourceConflict": {
+      "zh-Hant": "匯入來源 {name} 與目前來源身分衝突；原圖未變更。",
+      "en": "Imported source {name} conflicts with an existing source identity. The current graph was preserved."
+    },
+    "history.busy": {
+      "zh-Hant": "操作仍在處理中，請稍候。",
+      "en": "An operation is still in progress. Please wait."
+    },
+    "history.changed": {
+      "zh-Hant": "圖已在這份操作歷史之外被修改。請重新載入已套用圖，再繼續 Undo／Redo。",
+      "en": "The graph changed outside this history. Reload the applied graph before continuing Undo/Redo."
+    },
+    "history.unavailable": {
+      "zh-Hant": "此連線無法恢復來源歷史，請從 TouchDesigner 重新開啟編輯器。",
+      "en": "This connection cannot restore source history. Reopen the editor from TouchDesigner."
+    },
+    "history.failed": {
+      "zh-Hant": "無法 Undo／Redo：",
+      "en": "Could not undo/redo: "
+    },
     "export.title": {
       "zh-Hant": "匯出 Shader 圖",
       "en": "Export Shader graph"

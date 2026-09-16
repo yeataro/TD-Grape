@@ -125,10 +125,10 @@ function dragNodeTitle(event,node,title,cards,onFinish){
     if(e.pointerId!==event.pointerId)return;move(e);
     const drop=moved&&graphTrashDrop(e.clientX,e.clientY),library=moved&&definition(node)?.key==='function_call'&&positions.length===1&&document.elementFromPoint(e.clientX,e.clientY)?.closest('#personal-library');
     restore();finish();
-    if(readonly||graph!==owner||current()!==data){wires();return;}
+    if(editorMutationBlocked()||graph!==owner||current()!==data){wires();return;}
     if(drop){commitGraphTrash(drop);wires();return;}
     if(library){render();savePersonalFunction(FunctionModel.find(graph,node.params.functionId));return;}
-    if(moved&&positions.some(p=>p.x!==p.nextX||p.y!==p.nextY)){checkpoint();for(const p of positions){p.node.ui.x=p.nextX;p.node.ui.y=p.nextY;}mark();render();}else wires();
+    if(moved&&positions.some(p=>p.x!==p.nextX||p.y!==p.nextY))change(()=>{for(const p of positions){p.node.ui.x=p.nextX;p.node.ui.y=p.nextY;}},{localize:false});else wires();
   };
   title.onpointercancel=title.onlostpointercapture=cancel;
   nodeDragGesture={cancel};title.setPointerCapture(event.pointerId);window.addEventListener('blur',cancel);window.addEventListener('resize',cancel);document.addEventListener('keydown',key,true);
@@ -868,7 +868,7 @@ function personalSourceHeader(section){
 function loadExample(name){
   if(readonly||!examples[name])return false;
   if(dirty&&!confirm(t('graph.exampleConfirm')))return false;
-  const changed=change(()=>{graph=clone(examples[name]);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;},{localize:false});
+  const changed=change(()=>{graph=prepareGraphReplacement(examples[name]);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;},{localize:false});
   if(changed){cancelConnection();closeCreator();fit();if(matchMedia('(max-width:800px)').matches)workspaceLayout.closeBrowser();}return changed;
 }
 function renderLibrary(){
@@ -1132,8 +1132,8 @@ function installTouchNavigation(canvas){
     if(drop){clearPreview(g);commitGraphTrash(drop);wires();return;}
     if(g.mode==='edge'){clearPreview(g);wires();return;}
     if(g.mode==='node'){
-      clearPreview(g);if(!readonly&&current()===g.data&&g.positions.some(item=>item.x!==item.nextX||item.y!==item.nextY)){
-        checkpoint();for(const item of g.positions){item.node.ui.x=item.nextX;item.node.ui.y=item.nextY;}mark();render();
+      clearPreview(g);if(!editorMutationBlocked()&&current()===g.data&&g.positions.some(item=>item.x!==item.nextX||item.y!==item.nextY)){
+        change(()=>{for(const item of g.positions){item.node.ui.x=item.nextX;item.node.ui.y=item.nextY;}},{localize:false});
       }else wires();
     }else if(g.mode==='wire'){
       clearPreview(g);if(target)connectPorts(g.port,target);
@@ -1161,13 +1161,14 @@ function clipboardSelection(){return current().nodes.filter(n=>selection.has(n.i
 function copyGraphSelection(){const text=GraphClipboard.encode(graph,current(),clipboardSelection(),clipboardSource);if(text){editorClipboard=text;pasteCount=0;renderGraphEditActions();}return text;}
 
 function renderGraphEditActions(){
+  renderHistoryActions();
   const count=graph&&selectedEdge===null?clipboardSelection().length:0;
   const edge=graph&&selectedEdge!==null&&!!current().edges[selectedEdge];
   for(const [id,key,enabled] of [
     ['graphcopy','edit.copy',count>0],
-    ['graphpaste','edit.paste',graph&&!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText)],
-    ['graphgroup','function.group',graph&&!readonly&&selectedEdge===null&&current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog))],
-    ['graphdelete',edge?'wire.disconnectSelected':'node.delete',!readonly&&(count>0||edge)]
+    ['graphpaste','edit.paste',graph&&!editorMutationBlocked()&&(!!editorClipboard||!!navigator.clipboard?.readText)],
+    ['graphgroup','function.group',graph&&!editorMutationBlocked()&&selectedEdge===null&&current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog))],
+    ['graphdelete',edge?'wire.disconnectSelected':'node.delete',!editorMutationBlocked()&&(count>0||edge)]
   ]){
     const button=$('#'+id);button.disabled=!enabled;button.title=t(key);button.setAttribute('aria-label',t(key));
   }
