@@ -878,8 +878,10 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .vector-port-pair .node-inline-values{flex-basis:48px}
 .vector-port-pair .node-inline-values input{width:48px}
 .vector-whole{min-height:32px}
-.vector-components-toggle{display:flex;align-items:center;gap:5px;width:100%;border:0;border-top:1px solid #ffffff0a;border-radius:0;margin-top:3px;padding:5px 13px;background:transparent;color:var(--muted);font-size:10px;line-height:16px;text-align:left}
+.vector-components-toggle{display:flex;align-items:center;gap:5px;width:100%;border:0;border-top:1px solid #ffffff0a;border-radius:0;margin-top:3px;padding:5px 13px;background:transparent;color:var(--muted);font-size:10px;line-height:16px;text-align:left;white-space:nowrap}
 .vector-components-toggle:hover{background:#ffffff08;color:#ded7ea}
+.vector-components-toggle>span:first-child{flex:none}
+.vector-components-summary{min-width:0;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--type-float);font-variant-numeric:tabular-nums}
 .vector-components-toggle:focus-visible{outline:1px solid var(--purple);outline-offset:-2px}
 #wires .vector-drop-replaced{stroke:#edb187;stroke-dasharray:4 3;opacity:.7}
 @media(pointer:coarse){.node-inline-values input{height:30px;font-size:13px}.port-row.input:has(.node-inline-values){min-height:36px}.vector-port-pair .port-row{min-height:36px}.vector-components-toggle{min-height:34px}}

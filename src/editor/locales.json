@@ -2542,6 +2542,10 @@
       "zh-Hant": "分量",
       "en": "Components"
     },
+    "vector.manualValues": {
+      "zh-Hant": "手填值",
+      "en": "Manual values"
+    },
     "vector.componentsHint": {
       "zh-Hant": "展開分量接孔與數值；收合時保留已接線的分量。",
       "en": "Show component sockets and values. Connected components stay visible when collapsed."

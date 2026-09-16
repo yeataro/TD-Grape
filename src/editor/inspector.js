@@ -547,6 +547,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
       const ok=change(()=>write(index,next),{redraw:false});
       if(!ok)return;
       committed=entry.value;entry.removeAttribute('aria-invalid');focus();
+      const summary=entry.closest('.node')?.querySelector('[data-vector-summary]');if(summary)updateVectorManualSummary(n,summary);
       if(selected===n.id)inspector();queueInlineValueRender();
     };
     entry.cancelInlineValue=()=>{restore();if(inlineValueEdit?.entry===entry)inlineValueEdit=null;};

@@ -47,6 +47,7 @@ async function run() {
       scale = .8; pan = {x: 22, y: 25}; render();
     }, expanded);
     const toggle = () => page.locator('[data-vector-expand="vector"]');
+    const summary = () => page.locator('[data-vector-summary="vector"]');
     const socketVisible = (kind, port) => page.locator(socket('vector', kind, port)).isVisible();
     const paired = async (input, output) => {
       const left = await page.locator(socket('vector', 'inputs', input)).boundingBox();
@@ -58,7 +59,7 @@ async function run() {
     const checkBounds = async () => {
       const layout = await page.evaluate(() => [...document.querySelectorAll('.node')].map(card => {
         const bounds = card.getBoundingClientRect();
-        const controls = [...card.querySelectorAll('input[data-inline-node],.node-value,[data-vector-expand],.port-label')]
+        const controls = [...card.querySelectorAll('input[data-inline-node],.node-value,[data-vector-expand],.vector-components-summary,.port-label')]
           .filter(entry => entry.getClientRects().length)
           .map(entry => ({label: entry.getAttribute('aria-label') || entry.textContent, numeric: entry.matches('input'), bounds: entry.getBoundingClientRect().toJSON()}));
         const captions = [...card.querySelectorAll('.port-label,.port-type')]
@@ -92,6 +93,7 @@ async function run() {
       assert.equal(await socketVisible('inputs', port), false);
       assert.equal(await socketVisible('outputs', port), false);
     }
+    assert.equal(await summary().innerText(), '0.1 · 0.2 · 0.3 · 0.4');
     const compactBox = await page.locator('[data-node="vector"]').boundingBox();
     await checkBounds();
     await page.screenshot({path: path.join(folder, 'vector-compact.png')});
@@ -100,6 +102,7 @@ async function run() {
     const beforeExpand = await semanticJSON();
     await toggle().focus(); await page.keyboard.press('Enter'); await settle();
     assert.equal(await toggle().getAttribute('aria-expanded'), 'true');
+    assert.equal(await summary().count(), 0);
     assert.equal(await toggle().evaluate(entry => entry === document.activeElement), true);
     assert.equal(await page.evaluate(() => current().nodes.find(n => n.id === 'vector').ui.componentsExpanded), true);
     assert.equal(await semanticJSON(), beforeExpand);
@@ -151,6 +154,88 @@ async function run() {
     assert.equal(shortcut.key, 'vector'); assert.equal(shortcut.expanded, true);
     assert.equal(await page.locator(socket(shortcut.id, 'outputs', 'z')).isVisible(), true);
     checks.push('the vector split shortcut opens an expanded Vector with component outputs immediately available');
+
+    await reset(false);
+    for (const size of [2, 3, 4]) {
+      await page.evaluate(size => {
+        const n = current().nodes.find(n => n.id === 'vector');
+        n.params.type = 'vec' + size; n.params.components = [0, 0, 0, 1]; render();
+      }, size);
+      const expected = [0, 0, 0, 1].slice(0, size).join(' · ');
+      assert.equal(await summary().innerText(), expected);
+      const title = await summary().getAttribute('title');
+      for (const [index, value] of [0, 0, 0, 1].slice(0, size).entries()) assert.ok(title.includes('XYZW'[index] + ' ' + String(value)));
+      assert.equal(await summary().locator('input').count(), 0);
+      const beforeRender = await graphJSON(), beforeHistory = await history();
+      await page.evaluate(() => render());
+      assert.equal(await graphJSON(), beforeRender); assert.equal(await history(), beforeHistory);
+    }
+    const precise = [0.123456789012345, 123456.7890123, -98765.432109, 0.000000123456789];
+    await page.evaluate(values => {current().nodes.find(n => n.id === 'vector').params.components = values; render();}, precise);
+    assert.equal(await summary().innerText(), precise.map(String).join(' · '));
+    const fullTitle = await summary().getAttribute('title');
+    for (const [index, value] of precise.entries()) assert.ok(fullTitle.includes('XYZW'[index] + ' ' + String(value)));
+    const overflow = await summary().evaluate(entry => ({visible: entry.clientWidth, content: entry.scrollWidth, overflow: getComputedStyle(entry).textOverflow}));
+    assert.equal(overflow.overflow, 'ellipsis'); assert.ok(overflow.content > overflow.visible);
+    const toggleCaptionLines = await toggle().evaluate(button => {
+      const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT), lines = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (!node.textContent.trim() || node.parentElement.closest('.vector-components-summary')) continue;
+        const range = document.createRange(); range.selectNodeContents(node);
+        lines.push({text: node.textContent, lines: range.getClientRects().length});
+      }
+      return lines;
+    });
+    for (const caption of toggleCaptionLines) assert.ok(caption.lines <= 1, `long summary wraps the Components caption: ${caption.text}`);
+    await checkBounds();
+    await page.screenshot({path: path.join(folder, 'vector-summary-long.png')});
+    checks.push('collapsed Vector 2/3/4 summaries show raw manual values without graph/history writes; long values ellipsize with their full text in title');
+
+    await reset(false);
+    await page.locator('[data-node="vector"] .node-title').click();
+    const parameterW = page.locator('#inspector .input-parameter[data-input="w"] input[type="number"]');
+    const parameterHistory = await history();
+    await parameterW.fill('0.875'); await parameterW.press('Enter'); await settle();
+    assert.equal(await summary().innerText(), '0.1 · 0.2 · 0.3 · 0.875');
+    assert.equal(await history(), parameterHistory + 1);
+    assert.equal(await connect('pair', 'vector', 'x'), true);
+    assert.equal(await summary().innerText(), 'Z 0.3 · W 0.875');
+    assert.equal(await connect('vector', 'other', 'a', 'w'), true);
+    assert.equal(await summary().innerText(), 'Z 0.3 · W 0.875');
+    await page.evaluate(() => {current().nodes.find(n => n.id === 'vector').ui.componentNames = 'rgba'; render();});
+    assert.equal(await summary().innerText(), 'B 0.3 · A 0.875');
+    await checkBounds();
+    await page.screenshot({path: path.join(folder, 'vector-summary-partial.png')});
+    assert.equal(await connect('base', 'vector', 'value'), true);
+    assert.equal(await summary().count(), 0);
+    await page.evaluate(() => change(() => {current().edges = current().edges.filter(e => e.to.join(':') !== 'vector:value');}));
+    assert.equal(await summary().innerText(), 'B 0.3 · A 0.875');
+    await page.evaluate(() => change(() => {current().edges = current().edges.filter(e => e.to[0] !== 'vector');}));
+    assert.equal(await summary().innerText(), '0.1 · 0.2 · 0.3 · 0.875');
+    const inlineSummaryHistory = await history();
+    await field('vector', 'w').fill('0.625'); await field('vector', 'w').press('Enter'); await settle();
+    assert.equal(await history(), inlineSummaryHistory + 1);
+    const summaryAfterEnter = await summary().innerText();
+    assert.equal(await field('vector', 'w').evaluate(entry => entry === document.activeElement), true);
+    const committedSummaryGraph = await graphJSON();
+    await field('vector', 'w').fill('0.9375'); await field('vector', 'w').press('Escape');
+    assert.equal(await graphJSON(), committedSummaryGraph); assert.equal(await history(), inlineSummaryHistory + 1);
+    assert.equal(await summary().innerText(), summaryAfterEnter);
+    assert.equal(await field('vector', 'w').inputValue(), '0.625');
+    await field('vector', 'w').press('Tab'); await settle();
+    const summaryAfterBlur = await summary().innerText();
+    assert.equal(summaryAfterEnter, '0.1 · 0.2 · 0.3 · 0.625', JSON.stringify({summaryAfterEnter, summaryAfterBlur}));
+    assert.equal(summaryAfterBlur, summaryAfterEnter);
+    checks.push('Parameter and inline Enter commits refresh the collapsed summary; incoming groups exclude values, output wires retain them, and baseline disconnect restores the summary');
+
+    await reset(false);
+    await page.evaluate(() => {const n = current().nodes.find(n => n.id === 'vector'); n.params.type = 'vec2'; n.ui.componentNames = 'uv'; render();});
+    assert.equal(await connect('scalar', 'vector', 'x'), true);
+    assert.equal(await summary().innerText(), 'V 0.2');
+    assert.equal(await connect('scalar', 'vector', 'y'), true);
+    assert.equal(await summary().count(), 0);
+    checks.push('partial summaries follow UV component names and disappear when every component is supplied by a wire');
 
     await reset();
     assert.equal(await page.locator('[data-inline-node="vector"]').count(), 4);

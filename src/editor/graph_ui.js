@@ -497,6 +497,30 @@ function portTypeCaption(n,kind,name){
   return caption;
 }
 function vectorNames(n){return n.ui?.componentNames==='rgba'?'RGBA':n.ui?.componentNames==='uv'&&n.params.type==='vec2'?'UV':'XYZW';}
+// Presentation only: show manual components that still contribute to the value.
+function vectorManualComponents(n){
+  const incoming=current().edges.filter(e=>e.to[0]===n.id);
+  if(incoming.some(e=>e.to[1]==='value'))return [];
+  const inputs=ports(n,'inputs'),covered=new Set(),names=vectorNames(n);
+  for(const edge of incoming){
+    const start='xyzw'.indexOf(edge.to[1]),type=inputs[edge.to[1]];
+    if(start<0||!type)continue;
+    for(let i=start;i<start+typeComponents(type);i++)covered.add(i);
+  }
+  return [...'xyzw'.slice(0,typeComponents(n.params.type))].flatMap((port,index)=>{
+    const value=defaultInput(n,port,'float');
+    return !covered.has(index)&&Number.isFinite(value)?[{name:names[index],value}]:[];
+  });
+}
+function updateVectorManualSummary(n,summary=null){
+  const manual=vectorManualComponents(n);
+  if(!manual.length){summary?.remove();return null;}
+  const all=manual.length===typeComponents(n.params.type),labelled=manual.map(c=>c.name+' '+String(c.value));
+  const description=t('vector.manualValues')+': '+labelled.join(' · ');
+  summary||=el('span',{class:'vector-components-summary','data-vector-summary':n.id});
+  summary.textContent=manual.map((c,i)=>all?String(c.value):labelled[i]).join(' · ');
+  summary.title=description;summary.setAttribute('aria-label',description);return summary;
+}
 function vectorPortLabel(n,kind,port){
   const d=definition(n),names=vectorNames(n),start='xyzw'.indexOf(port);
   if(['combine','vector'].includes(d?.key)&&kind==='inputs'&&start>=0)return names.slice(start,start+typeComponents(ports(n,kind)[port]));
@@ -673,6 +697,7 @@ function renderCards(){
       const connected=new Set(current().edges.flatMap(e=>[...(e.to[0]===n.id?[e.to[1]]:[]),...(e.from[0]===n.id?[e.from[1]]:[])]));
       const toggle=el('button',{class:'vector-components-toggle',type:'button','data-vector-expand':n.id,'aria-expanded':String(expanded),title:t('vector.componentsHint')});
       toggle.append(el('span',{'aria-hidden':'true'},expanded?'▾':'▸'),document.createTextNode(t('vector.components')));
+      if(!expanded){const summary=updateVectorManualSummary(n);if(summary)toggle.append(summary);}
       toggle.disabled=readonly;toggle.onpointerdown=e=>e.stopPropagation();toggle.ondblclick=e=>e.stopPropagation();
       toggle.onclick=e=>{e.stopPropagation();if(change(()=>{n.ui.componentsExpanded=!expanded;},{localize:false}))document.querySelector(`[data-vector-expand="${CSS.escape(n.id)}"]`)?.focus({preventScroll:true});};
       list.append(toggle);
