@@ -334,7 +334,7 @@ async function acceptUpgradeReview(){
     past.push(previous);if(past.length>60)past.shift();future=[];
     graph=clone(result.state.graph);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;
     savedStateIssue=null;upgradePending=null;readonly=!!editorReadOnlyReason;dirty=false;conflicted=false;
-    sessionStorage.removeItem(draftKey);$('#dirty').textContent=t('graph.applied')+revision;$('#dirty').classList.remove('pending');
+    sessionStorage.removeItem(draftKey);rememberSavedGraph(graph,'graph.applied');renderGraphSaveState();
     closeUpgradeReview();render();renderUpgradeNotice();fit();preview().catch(e=>status(e.message,true));status(t('upgrade.applied'));return true;
   }catch(e){if(request===upgradeRequest){review.token=null;review.message=e.message;}return false;}
   finally{

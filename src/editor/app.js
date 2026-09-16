@@ -11,7 +11,7 @@ const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='zh-Hant';
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
 function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();}
-async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();$('#dirty').textContent=savedStateIssue?t('saved.locked'):dirty?t('graph.pending'):t('graph.applied')+revision;renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
+async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
 let graph=null, catalog=[], examples={}, revision=0, selected=null, selectedEdge=null, stage='pixel', dirty=false, readonly=false;
@@ -142,15 +142,34 @@ function renderCompileDiagnostics(){
 }
 
 let editVersion=0,submitBusy=false,autoTimer=null,conflicted=false;
+let savedGraphContent=null,lastGraphSaveKey='graph.saved';
+function graphContent(document){
+  const content=clone(document);delete content.catalogSnapshot;
+  // Only coordinates are presentation-only here. Labels and type settings may
+  // affect generated GLSL, so keep them when choosing the progress message.
+  for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
+    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;if(!Object.keys(node.ui).length)delete node.ui;}
+  }
+  return JSON.stringify(content);
+}
+function hasShaderChanges(document=graph){return !document||graphContent(document)!==savedGraphContent;}
+function graphPendingKey(){return hasShaderChanges()?'graph.pending':'graph.savePending';}
+function rememberSavedGraph(document,key='graph.saved'){savedGraphContent=graphContent(document);lastGraphSaveKey=key;}
+function renderGraphSaveState(){
+  const badge=$('#dirty');
+  badge.textContent=t(savedStateIssue?'saved.locked':dirty?(readonly?'graph.readonly':graphPendingKey()):lastGraphSaveKey);
+  badge.title=t('graph.revision')+revision;
+  badge.classList.toggle('pending',dirty);
+}
 let nativeInputHistory=[];
 function rememberNativeInputSources(declarations){nativeInputHistory=clone(declarations.filter(d=>d.kind==='uniform'&&!d.sourceMissing));}
 function retainNativeInputSources(document){
   // Graph Undo removes references, not native Par entities already accepted by TD.
   for(const decl of nativeInputHistory)if(!document.declarations.some(d=>d.id===decl.id||d.name===decl.name))document.declarations.push(clone(decl));
 }
-function mark(semantic=true){
+function mark(){
   clearCompileDiagnostics();
-  dirty=true;editVersion++;$('#dirty').textContent=readonly?t('graph.readonly'):t('graph.pending');$('#dirty').classList.add('pending');$('#apply').disabled=readonly||submitBusy;
+  dirty=true;editVersion++;renderGraphSaveState();$('#apply').disabled=readonly||submitBusy;
   try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}
   clearTimeout(autoTimer);if(!readonly&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,650);
 }
@@ -168,17 +187,22 @@ function change(fn,{localize=true,redraw=true}={}){
 function undo(redo=false){if(readonly)return;let from=redo?future:past,to=redo?past:future;if(!from.length)return;to.push(clone(graph));graph=from.pop();retainNativeInputSources(graph);tidyTrail();mark();render();}
 async function applyGraph(){
   clearTimeout(autoTimer);autoTimer=null;if(readonly||submitBusy||!dirty)return;
-  const sentVersion=editVersion,sentGraph=clone(graph);submitBusy=true;$('#apply').disabled=true;$('#reload').disabled=true;status(t('material.compiling'));
+  const sentVersion=editVersion,sentGraph=clone(graph),layoutOnly=!hasShaderChanges(sentGraph);
+  submitBusy=true;$('#apply').disabled=true;$('#reload').disabled=true;status(t(layoutOnly?'graph.saving':'material.compiling'));
   try{
     const data=await api('apply',{graph:sentGraph,revision});
     if(data.upgradeReview){upgradePending=data.upgradeReview;conflicted=true;renderUpgradeNotice();status(t('upgrade.explanation'));return;}
     rememberNativeInputSources(data.state.graph.declarations);retainNativeInputSources(graph);
     if(data.state.graph.catalogSnapshot)graph.catalogSnapshot=clone(data.state.graph.catalogSnapshot);
     revision=data.state.revision;conflicted=false;clearCompileDiagnostics();
-    if(editVersion===sentVersion){dirty=false;sessionStorage.removeItem(draftKey);$('#dirty').textContent=t('graph.applied')+revision;$('#dirty').classList.remove('pending');}
+    const shaderUpdated=data.shaderUpdated??(data.compileInfo!=='Graph layout saved');
+    rememberSavedGraph(sentGraph,shaderUpdated?'graph.applied':'graph.saved');
+    if(editVersion===sentVersion){dirty=false;sessionStorage.removeItem(draftKey);}
     else {try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}}
-    $('#target').textContent=data.target;await preview().catch(()=>{});if(!connectionInterrupted)status(t('material.applied'));document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
-  }catch(e){conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true);}else status(t('material.failed')+e.message,true);}
+    renderGraphSaveState();$('#target').textContent=data.target;await preview().catch(()=>{});
+    if(!connectionInterrupted)status(t(dirty?graphPendingKey():shaderUpdated?'material.applied':lastGraphSaveKey));
+    document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
+  }catch(e){conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true);}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true);}
   finally{submitBusy=false;$('#apply').disabled=readonly;$('#reload').disabled=false;refreshUniforms();if(dirty&&editVersion!==sentVersion&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,200);}
 }
 function el(tag,attrs={},text=''){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else e.setAttribute(k,v);}e.textContent=text;return e;}
@@ -394,7 +418,7 @@ async function preview(force=false){
 }
 
 function fit(){if(!graph)return;const ns=current().nodes;if(!ns.length)return;const minX=Math.min(...ns.map(n=>n.ui?.x||0)),minY=Math.min(...ns.map(n=>n.ui?.y||0)),maxX=Math.max(...ns.map(n=>(n.ui?.x||0)+190)),maxY=Math.max(...ns.map(n=>(n.ui?.y||0)+180));scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();}
-async function load(){const data=await api('state');applyNeedsReview=false;connectionIssue='';renderConnectionNotice();setTypeContract(data.typeContract);const filter=$('#createtype');filter.replaceChildren(el('option',{value:'all','data-i18n':'create.allTypes'},t('create.allTypes')),...interfaceTypes().map(type=>el('option',{value:type},type)));upgradePending=data.upgradeReview||null;closeUpgradeReview();savedStateIssue=data.savedStateIssue||null;editorTarget=data.shaderKind||data.state?.graph?.target||'mat';graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;nativeInputHistory=[];nativeSourceSnapshot=null;customSnapshot=null;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;past=[];future=[];selected=null;selectedInputId=null;clearCompileDiagnostics();$('#dirty').textContent=savedStateIssue?t('saved.locked'):t('graph.applied')+revision;$('#dirty').classList.remove('pending');$('#target').textContent=data.target;$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):data.readOnlyReason||t('connection.ready'),readonly);if(!savedStateIssue&&$('#savedreview').open)$('#savedreview').close();}
+async function load(){const data=await api('state');applyNeedsReview=false;connectionIssue='';renderConnectionNotice();setTypeContract(data.typeContract);const filter=$('#createtype');filter.replaceChildren(el('option',{value:'all','data-i18n':'create.allTypes'},t('create.allTypes')),...interfaceTypes().map(type=>el('option',{value:type},type)));upgradePending=data.upgradeReview||null;closeUpgradeReview();savedStateIssue=data.savedStateIssue||null;editorTarget=data.shaderKind||data.state?.graph?.target||'mat';graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;nativeInputHistory=[];nativeSourceSnapshot=null;customSnapshot=null;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;past=[];future=[];selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();$('#target').textContent=data.target;$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):data.readOnlyReason||t('connection.ready'),readonly);if(!savedStateIssue&&$('#savedreview').open)$('#savedreview').close();}
 
 function addNode(d,x,y){const changed=change(()=>instantiate(d,x,y));if(changed&&matchMedia('(max-width:800px)').matches)workspaceLayout.closeBrowser();return changed;}
 $('#canvas').addEventListener('dragover',e=>{if(Array.from(e.dataTransfer.types).includes('application/x-sgrape-node')){e.preventDefault();e.dataTransfer.dropEffect='copy';}});

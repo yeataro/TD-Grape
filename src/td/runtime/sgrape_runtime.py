@@ -1359,7 +1359,7 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,lastError='',sourceChanged=False)
         write_state(new)
         target().op('graph').text=json.dumps(graph,ensure_ascii=False,indent=2)
-        return {'ok':True,'state':new,'compileInfo':'Graph layout saved','diagnostics':compiled['diagnostics'],'target':target().path}
+        return {'ok':True,'state':new,'shaderUpdated':False,'compileInfo':'Graph layout saved','diagnostics':compiled['diagnostics'],'target':target().path}
     old_target=target(); preserve=existing_values(old_target,graph)
     candidate=_owner.op('candidate')
     if candidate: candidate.destroy()
@@ -1405,7 +1405,7 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
                 elif backup_dat:backup_dat.text=backup_text_before
             raise
         cleanup_top_sources(destination,graph)
-        return {'ok':True,'state':new,'compileInfo':info,'diagnostics':compiled['diagnostics'],'target':destination.path}
+        return {'ok':True,'state':new,'shaderUpdated':True,'compileInfo':info,'diagnostics':compiled['diagnostics'],'target':destination.path}
     finally:
         candidate.destroy()
 

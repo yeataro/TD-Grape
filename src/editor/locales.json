@@ -179,8 +179,8 @@
       "en": "● Unapplied changes"
     },
     "graph.applied": {
-      "zh-Hant": "已套用 · r",
-      "en": "Applied · r"
+      "zh-Hant": "Shader 已套用",
+      "en": "Shader applied"
     },
     "node.select": {
       "zh-Hant": "選取一個節點以調整參數。",
@@ -271,8 +271,8 @@
       "en": "TD is checking the Shader…"
     },
     "material.applied": {
-      "zh-Hant": "Shader 已更新",
-      "en": "Shader updated"
+      "zh-Hant": "Shader 已套用",
+      "en": "Shader applied"
     },
     "material.skipped": {
       "zh-Hant": " 個未連接節點略過",
@@ -2477,6 +2477,26 @@
     "upgrade.topSources": {
       "en": "Move TOP texture sources into one ordered inventory. Keep references and external connections; remove duplicate source plumbing.",
       "zh-Hant": "將 TOP 貼圖來源統整為一份有序清單，保留引用與外部接線，清除重複的來源結構。"
+    },
+    "graph.saved": {
+      "zh-Hant": "圖已儲存",
+      "en": "Graph saved"
+    },
+    "graph.revision": {
+      "zh-Hant": "圖的儲存修訂（非 Shader 編譯次數）· r",
+      "en": "Graph save revision (not a Shader compilation count) · r"
+    },
+    "graph.savePending": {
+      "zh-Hant": "圖待儲存",
+      "en": "Unsaved graph"
+    },
+    "graph.saving": {
+      "zh-Hant": "正在儲存圖…",
+      "en": "Saving graph…"
+    },
+    "graph.saveFailed": {
+      "zh-Hant": "圖儲存失敗：",
+      "en": "Could not save graph: "
     }
   }
 }

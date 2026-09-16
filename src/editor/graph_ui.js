@@ -128,7 +128,7 @@ function dragNodeTitle(event,node,title,cards,onFinish){
     if(readonly||graph!==owner||current()!==data){wires();return;}
     if(drop){commitGraphTrash(drop);wires();return;}
     if(library){render();savePersonalFunction(FunctionModel.find(graph,node.params.functionId));return;}
-    if(moved&&positions.some(p=>p.x!==p.nextX||p.y!==p.nextY)){checkpoint();for(const p of positions){p.node.ui.x=p.nextX;p.node.ui.y=p.nextY;}mark(false);render();}else wires();
+    if(moved&&positions.some(p=>p.x!==p.nextX||p.y!==p.nextY)){checkpoint();for(const p of positions){p.node.ui.x=p.nextX;p.node.ui.y=p.nextY;}mark();render();}else wires();
   };
   title.onpointercancel=title.onlostpointercapture=cancel;
   nodeDragGesture={cancel};title.setPointerCapture(event.pointerId);window.addEventListener('blur',cancel);window.addEventListener('resize',cancel);document.addEventListener('keydown',key,true);
@@ -884,7 +884,7 @@ function installTouchNavigation(canvas){
     if(g.mode==='edge'){clearPreview(g);wires();return;}
     if(g.mode==='node'){
       clearPreview(g);if(!readonly&&current()===g.data&&g.positions.some(item=>item.x!==item.nextX||item.y!==item.nextY)){
-        checkpoint();for(const item of g.positions){item.node.ui.x=item.nextX;item.node.ui.y=item.nextY;}mark(false);render();
+        checkpoint();for(const item of g.positions){item.node.ui.x=item.nextX;item.node.ui.y=item.nextY;}mark();render();
       }else wires();
     }else if(g.mode==='wire'){
       clearPreview(g);if(target)connectPorts(g.port,target);

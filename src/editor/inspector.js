@@ -1034,7 +1034,7 @@ function receiveNativeSources(data){
   rememberNativeInputSources((data.declarations||data.graph?.declarations||[]).filter(d=>live.has(d.id)));
   if(data.revision!==revision&&!dirty&&!submitBusy&&data.graph){
     graph=clone(data.graph);revision=data.revision;past=[];future=[];render();
-    if(data.sourceChanged){mark();}else{$('#dirty').textContent=t('graph.applied')+revision;}
+    if(data.sourceChanged){mark();}else{rememberSavedGraph(graph);renderGraphSaveState();}
   }
   renderNativeSources();
 }
