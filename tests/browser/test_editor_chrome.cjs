@@ -11,7 +11,7 @@ async function run(){
     assert.equal(await page.locator('.graph-tool-group').count(),4);
     assert.deepEqual(await page.locator('.graph-tool-group').evaluateAll(groups=>groups.map(g=>[...g.querySelectorAll('button')].map(b=>b.id))),[['undo','redo'],['graphcopy','graphpaste','graphgroup','graphdelete'],['fit','boxselect'],['code']]);
     assert.equal(await page.locator('#editorheader #about').innerText(),'About');
-    const desktopFooter=await page.locator('footer').boundingBox();assert.equal(desktopFooter.height,30);
+    const desktopFooter=await page.locator('footer').boundingBox();assert.equal(desktopFooter.height,32);
     const heights=await page.locator('#editorheader .actions button,#editorheader .actions select').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().height));
     assert.ok(heights.every(h=>h===heights[0]),heights.join(','));
     await page.screenshot({path:path.join(folder,'desktop.png')});
@@ -22,7 +22,7 @@ async function run(){
     }
     assert.ok(await page.locator('.toolbar').evaluate(e=>e.scrollWidth<=e.clientWidth+1));
     await page.screenshot({path:path.join(folder,'half-width.png')});
-    checks.push('four intact toolbar groups, separate graph path, equal header controls and compact persistent footer fit desktop and half width');
+    checks.push('four intact toolbar groups, separate graph path, equal header controls and 32px persistent footer fit desktop and half width');
     const canvasBefore=(await page.locator('#canvas').boundingBox()).height;
     await page.locator('#toggleheader').click();await settle();
     assert.equal(await page.locator('#editorheader').isVisible(),false);assert.equal(await page.locator('footer').isVisible(),true);

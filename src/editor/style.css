@@ -607,6 +607,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .sidebar-toggle[aria-expanded="true"] .sidebar-icon-fill{opacity:.17}
 .sidebar-toggle:hover{background:#ffffff0e;border-color:var(--line);color:#e6dcf7}
 .sidebar-toggle:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
+.location-bar .sidebar-toggle{background:transparent;border-color:transparent}
 .location-bar .shader-selector{flex:0 1 auto;min-width:0}
 .location-bar .tag{white-space:nowrap}
 @media(min-width:801px){
@@ -920,15 +921,25 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* Header, location controls and a persistent compact footer stay separate. */
 #editorheader[hidden]{display:none!important}
-#editorheader .brand{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 10px}
-#editorheader .brand-mark{grid-column:1;grid-row:1/3;align-self:center}
-#editorheader .brand strong{grid-column:2;grid-row:1}
-#editorheader .brand small{display:flex;align-items:center;grid-column:2;grid-row:2;gap:5px;font-size:10px;min-width:0}
+#editorheader .brand{display:flex;align-items:baseline;flex-wrap:nowrap;gap:10px;min-width:0}
+#editorheader .brand-mark,#editorheader .brand strong{flex:none}
+#editorheader .brand-mark{align-self:center}
+#editorheader .brand small{display:flex;align-items:baseline;gap:5px;font-size:10px;min-width:0;margin-left:0}
 #editorheader .brand-tagline{min-width:0;flex:0 1 auto}
 #editorheader .brand-version::before{margin-right:5px}
 #editorheader #about{display:inline;padding:0;border:0;border-radius:2px;font:inherit;line-height:inherit;flex:none}
 #editorheader .actions button,#editorheader .actions select{height:34px;padding-block:0;white-space:nowrap}
-.location-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:8px}
+@media(max-width:600px){#editorheader .brand-tagline{display:none}}
+@media(max-width:360px){
+ #editorheader .brand{grid-column:1/-1}
+ #editorheader .actions{display:flex;grid-column:1/-1;grid-row:2;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+ #editorheader .secondary-actions{display:contents}
+}
+.location-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;height:32px;min-height:32px;gap:8px;padding:3px 8px}
+.location-bar .sidebar-toggle{width:25px;height:24px;padding:2px}
+.location-bar .sidebar-toggle svg{width:18px;height:18px}
+.location-bar #workspacelayout{height:24px;padding:0 8px;font-size:10px}
+.location-bar #shaderpicker{height:24px;padding:0 3px}
 .location-start{display:flex;align-items:center;gap:8px;min-width:0}
 .location-start>#togglelibrary{flex:none;margin:0}
 .location-start>#projectfile{flex:0 1 auto;max-width:220px;min-width:0}
@@ -937,31 +948,21 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .location-end>.sidebar-toggles{margin:0}
 .editor-view-actions{display:flex;align-items:center;justify-self:center;gap:3px}
 #editorrefresh svg{stroke-linecap:round}
-footer{display:grid;grid-template-columns:25px auto minmax(0,1fr) auto;height:30px;min-height:30px;gap:8px;padding:0 14px}
+footer{display:grid;grid-template-columns:25px auto minmax(0,1fr) auto;height:32px;min-height:32px;gap:8px;padding:3px 8px 3px 3px}
 footer #dirty{grid-column:2;grid-row:1;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:10px;white-space:nowrap}
 footer #status{grid-column:3;grid-row:1;min-width:0;padding:0;font-size:11px}
-footer #reload{flex:none;height:24px;padding:0 8px;font-size:10px}
+footer #reload{flex:none;height:24px;max-width:none;padding:0 8px;font-size:10px;white-space:nowrap}
 .footer-actions{display:flex;align-items:center;grid-column:4;grid-row:1;gap:5px}
 footer #editorrefresh{grid-column:1;grid-row:1;width:25px;height:24px;padding:4px;border:0;background:transparent;border-radius:3px}
 footer #editorrefresh svg{width:16px;height:16px}
 @media(max-width:800px){
- .location-bar{grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);grid-template-rows:auto;gap:0 5px;padding:6px 10px}
- .location-start{display:grid;grid-template-columns:34px minmax(0,1fr);grid-template-rows:auto auto;gap:2px 5px}
- .location-start>#togglelibrary{grid-column:1;grid-row:1/3}
- .location-start>#projectfile{grid-column:2;grid-row:1;max-width:none;font-size:9px}
- .location-start>.shader-selector{grid-column:2;grid-row:2;min-width:0}
- .location-bar .shader-selector #shaderpicker{max-width:100%;padding:0;font-size:10px}
- .location-end{gap:5px}
- .location-bar .sidebar-toggle{width:34px;height:34px;padding:6px}
+ .location-start>#projectfile{max-width:72px;font-size:10px}
+ .location-bar .shader-selector #shaderpicker{max-width:100%;font-size:10px}
  #editorheader .brand small{font-size:9px;gap:4px}
  #editorheader .actions button,#editorheader .actions select{height:32px}
  .graph-workspace .toolbar{gap:5px}
  .graph-workspace .graph-tools{display:contents}
  .graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:34px;min-height:34px}
  .graph-workspace .graph-tools .icon-button{width:34px}
- footer{grid-template-columns:25px minmax(0,1fr) auto;grid-template-rows:24px 18px;height:48px;min-height:48px;gap:0 8px;padding:2px 10px}
- footer #dirty{grid-column:2;grid-row:1}
- footer .footer-actions{grid-column:3;grid-row:1}
- footer #reload{max-width:none}
- footer #status{grid-column:2/-1;grid-row:2;max-width:100%;font-size:10px}
+ footer #status{font-size:10px}
 }
