@@ -23,8 +23,8 @@ function connect(a,b,p,o='out'){return connectPorts(info(a,'outputs',o),info(b,'
 const identical=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
 
 // Every scalar/vector partition is chosen from the same core contract, by wires.
-for(const layout of typeContract.vectors.layouts.vec4){
-  setup([...Object.entries(layout.inputs).map(([p,t])=>node(t,p,{value:filledValue(t,.25)})),node('combine','join',{type:'vec4'})]);
+for(const key of ['combine','vector'])for(const layout of typeContract.vectors.layouts.vec4){
+  setup([...Object.entries(layout.inputs).map(([p,t])=>node(t,p,{value:filledValue(t,.25)})),node(key,'join',{type:'vec4'})]);
   for(const p of Object.keys(layout.inputs))assert.equal(connect(p,'join',p),true);
   identical(n('join').params.groups,layout.groups);assert.equal(connect('join','result','color'),true);graphs.push(clone(graph));
 }
@@ -49,9 +49,9 @@ assert.equal(change(()=>n('join').params.type='vec2'),false);identical(graph,bef
 
 // V-only editing works with direct node shortcut and one-step undo for add + wire.
 setup([node('uv','uv')]);addVectorSplit(n('uv'),'out');
-let split=n(selected);assert.equal(definition(split).key,'vector_split');assert.equal(split.params.type,'vec2');
+let split=n(selected);assert.equal(definition(split).key,'vector');assert.equal(split.params.type,'vec2');
 assert.equal(split.ui.componentNames,'uv');assert.equal(portLabel(split,'outputs','y'),'V');assert.equal(past.length,1);
-const splitId=split.id;addVectorSplit(n('uv'),'out');assert.equal(current().nodes.filter(n=>definition(n).key==='vector_split').length,1);
+const splitId=split.id;addVectorSplit(n('uv'),'out');assert.equal(current().nodes.filter(n=>definition(n).key==='vector').length,1);
 assert.equal(change(()=>{current().nodes.push(node('add','offset'),node('combine','join'),node('combine','rgba',{type:'vec4'}));n('offset').inputValues={b:.125};}),true);
 assert.equal(connect(splitId,'offset','a','y'),true);assert.equal(connect(splitId,'join','x','x'),true);
 assert.equal(connect('offset','join','y'),true);assert.equal(connect('join','rgba','x'),true);assert.equal(connect('rgba','result','color'),true);graphs.push(clone(graph));
@@ -83,5 +83,65 @@ const back=info('dest','inputs','x'),swizzle=catalog.find(d=>d.key==='swizzle');
 assert.ok(creatorVariants(swizzle,back).every(v=>v.outputs.out==='float'));
 assert.ok(creatorPriority({d:catalog.find(d=>d.key==='vector_split')},wire)<creatorPriority({d:catalog.find(d=>d.key==='add')},wire));
 const beforePlan=JSON.stringify(graph);creatorTypePlan(combine,variant,'x',wire,false);assert.equal(JSON.stringify(graph),beforePlan);
+
+// Unified Vector replaces overlapping component wires, never their source nodes.
+setup([node('vec4','base'),node('vec2','pair'),node('float','scalar'),node('vector','value',{type:'vec4',components:[1,2,3,4]}),node('combine','other')]);
+assert.equal(connect('base','value','value'),true);assert.equal(connect('scalar','value','z'),true);assert.equal(connect('scalar','other','x'),true);
+before=clone(graph);historySize=past.length;
+assert.equal(connect('pair','value','y'),true);assert.equal(past.length,historySize+1);
+identical(ports(n('value'),'inputs'),{value:'vec4',x:'float',y:'vec2',w:'float'});
+identical(ports(n('value'),'outputs'),{out:'vec4',x:'float',y:'float',z:'float',w:'float'});
+assert.equal(portLabel(n('value'),'inputs','y'),'YZ');assert.ok(n('scalar'));
+assert.ok(current().edges.some(e=>e.from[0]==='scalar'&&e.to[0]==='other'));
+assert.ok(current().edges.some(e=>e.from[0]==='base'&&e.to[1]==='value'));
+assert.ok(!current().edges.some(e=>e.to[0]==='value'&&e.to[1]==='z'));
+let after=clone(graph);assert.equal(connect('scalar','value','z'),false);identical(graph,after); // Hidden Z is not a destination.
+undo();identical(graph,before);undo(true);identical(graph,after);
+assert.equal(change(()=>current().edges=current().edges.filter(e=>e.to[0]!=='value'||e.to[1]!=='y')),true);
+identical(ports(n('value'),'inputs'),{value:'vec4',x:'float',y:'float',z:'float',w:'float'});
+identical(n('value').params.components,[1,2,3,4]); // Dormant defaults survive baseline/group disconnects.
+
+// Overlapping a wider old group removes that whole wire and releases its tail.
+assert.equal(connect('pair','value','z'),true);assert.equal(connect('pair','value','y'),true);
+identical(n('value').params.groups,{y:'vec2'});assert.equal(ports(n('value'),'inputs').w,'float');
+assert.equal(connect('value','result','color'),true);graphs.push(clone(graph));
+
+// Invalid widths, cycles, baseline type changes, and upstream inference roll back.
+assert.equal(change(()=>current().nodes.push(node('vec3','large'),node('add','math'))),true);
+before=clone(graph);historySize=past.length;
+assert.equal(connect('large','value','w'),false);identical(graph,before);assert.equal(past.length,historySize);
+assert.equal(connect('pair','value','value'),false);identical(graph,before);
+assert.equal(connect('value','math','a','x'),true);before=clone(graph);historySize=past.length;
+assert.equal(connect('math','value','x'),false);identical(graph,before);assert.equal(past.length,historySize);
+setup([node('float','f'),node('vec2','wide'),node('add','math'),node('float','z'),node('vector','value',{type:'vec4'})]);
+assert.equal(connect('f','math','a'),true);assert.equal(connect('math','value','y'),true);assert.equal(connect('z','value','z'),true);
+before=clone(graph);historySize=past.length;
+assert.equal(connect('wide','math','a'),false);identical(graph,before);assert.equal(past.length,historySize); // Unrelated inference cannot evict Z.
+
+// A fully overridden runtime baseline is dormant, while each final scalar keeps
+// its own constness. Replacement is validated against the complete trial graph.
+setup([node('uniform','runtime',{declarationId:'u'}),node('vec2','fixed'),node('float','f'),node('vector','value',{type:'vec4'}),node('add','need',{requireConstant:true})]);
+graph.declarations=[{id:'u',kind:'uniform',name:'uValue',type:'vec4',value:[.1,.2,.3,.4]}];
+assert.equal(connect('runtime','value','value'),true);assert.equal(connect('fixed','value','x'),true);
+assert.equal(connect('value','need','a','x'),true); // X is constant despite runtime ZW.
+before=clone(graph);historySize=past.length;
+assert.equal(connect('value','need','a','z'),false);identical(graph,before);assert.equal(past.length,historySize);
+assert.equal(connect('fixed','value','z'),true);assert.equal(change(()=>n('value').params.requireConstant=true),true);
+assert.equal(connect('value','result','color'),true);graphs.push(clone(graph));
+assert.equal(connect('f','value','y'),false); // Y is hidden inside XY.
+before=clone(graph);assert.equal(connect('f','value','x'),false);identical(graph,before); // Would release runtime Y and violate const.
+
+// Context-menu creation and direct drops share the same displacement planner.
+setup([node('float','z'),node('vector','value',{type:'vec4'})]);assert.equal(connect('z','value','z'),true);
+const sourceDefinition=catalog.find(d=>d.key==='vec2'),sourceVariant=typeVariants(sourceDefinition)[0],destination=info('value','inputs','y');
+before=clone(graph);creatorTypePlan(sourceDefinition,sourceVariant,'out',destination,false);identical(graph,before);
+creatorState={x:80,y:80,wire:destination};creatorMatches=[{d:sourceDefinition,type:sourceVariant.type,port:'out',variant:sourceVariant}];historySize=past.length;
+chooseCreator(0);assert.equal(past.length,historySize+1);identical(n('value').params.groups,{y:'vec2'});assert.ok(n('z'));
+assert.ok(!current().edges.some(e=>e.from[0]==='z'));undo();identical(graph,before);
+const vector=catalog.find(d=>d.key==='vector');assert.ok(creatorPriority({d:vector},{kind:'outputs',type:'vec2'})<creatorPriority({d:combine},{kind:'outputs',type:'vec2'}));
+
+// Existing Split shortcuts are reused without converting old nodes or defaults.
+setup([node('uv','uv'),node('vector_split','old',{type:'vec2'})],[edge('uv','old','value')]);
+before=clone(graph);addVectorSplit(n('uv'),'out');assert.equal(selected,'old');identical(graph,before);
 console.log(JSON.stringify({passed:true,graphs}));
 `,context);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.80",
+  "catalogVersion": "0.8.82",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -1566,6 +1566,68 @@
           "取分量"
         ],
         "glslName": "swizzle",
+        "secondaryCategories": [
+          "data"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "vector",
+        "label": "Vector",
+        "inputs": {
+          "value": "vec2",
+          "x": "float",
+          "y": "float"
+        },
+        "outputs": {
+          "out": "vec2",
+          "x": "float",
+          "y": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2",
+          "groups": {},
+          "components": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "descriptionKey": "help.vector",
+        "definitionUuid": "sgrape.builtin.vector",
+        "revisionHash": "89d0f8d9de8af0eb90f06e18c949f9d72143f6d40cd29008d180a805b471a5fb"
+      },
+      "emitter": {
+        "id": "vector",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "vec2",
+          "vec3",
+          "vec4",
+          "vector2",
+          "vector3",
+          "vector4",
+          "compose",
+          "combine",
+          "split",
+          "components",
+          "向量",
+          "合併",
+          "組合",
+          "拆分",
+          "分量"
+        ],
+        "glslName": "vecN",
         "secondaryCategories": [
           "data"
         ]

@@ -16,20 +16,23 @@ async function run(){
       graph.stages.pixel={nodes:[testNode('source','float',24,50,{value:.3}),testNode('sum','add',348,80),testNode('pixel','pixel_out',650,80)],edges:[{from:['source','out'],to:['sum','a']},{from:['sum','out'],to:['pixel','color']}]};
       current().nodes[0].ui.comment='Body drag comment';current().nodes[0].ui.label='source label';scale=.9;pan={x:32,y:50};render();
     });
-    let p=await at('[data-node="source"] .node-value'),before=await pos(),history=await page.evaluate(()=>past.length);
+    // The Float's output-list center is blank body space; its inline number is a separate editing surface.
+    let p=await at('[data-node="source"] .ports'),before=await pos(),history=await page.evaluate(()=>past.length);
+    assert.equal(await page.evaluate(p=>{const target=document.elementFromPoint(p.x,p.y);return target?.closest('.node')?.dataset.node==='source'&&!target.closest('input,textarea,select,button,a,[contenteditable="true"]');},p),true);
     await drag(p,{x:p.x+80,y:p.y+38});let after=await pos();assert.notEqual(after.x,before.x);assert.notEqual(after.y,before.y);assert.equal(await page.evaluate(()=>past.length),history+1);
     const geometry=await page.evaluate(()=>{const b=$('[data-node="source"] [data-port="out"]'),r=b.getBoundingClientRect(),q=graphPoint(r.left+r.width/2,r.top+r.height/2),p=point(current().nodes[0],'out','outputs');return Math.hypot(q.x-p.x,q.y-p.y);});assert.ok(geometry<.1);
     await page.locator('#undo').click();assert.deepEqual(await pos(),before);await page.locator('#redo').click();assert.deepEqual(await pos(),after);checks.push('desktop body drag moves a node in one Undo/Redo step; wire endpoint stays on its socket');
     p=await at('[data-node="source"] .node-canvas-comment');before=await pos();await drag(p,{x:p.x+36,y:p.y+22});assert.notEqual((await pos()).x,before.x);
-    p=await at('[data-node="source"] .node-value');before=await pos();history=await page.evaluate(()=>past.length);await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.move(p.x+70,p.y+30,{steps:5});await page.keyboard.press('Escape');await page.mouse.up();assert.deepEqual(await pos(),before);assert.equal(await page.evaluate(()=>past.length),history);checks.push('comments support whole-node dragging; Escape cancels movement without a history entry');
+    p=await at('[data-node="source"] .ports');before=await pos();history=await page.evaluate(()=>past.length);await page.mouse.move(p.x,p.y);await page.mouse.down();await page.mouse.move(p.x+70,p.y+30,{steps:5});await page.keyboard.press('Escape');await page.mouse.up();assert.deepEqual(await pos(),before);assert.equal(await page.evaluate(()=>past.length),history);checks.push('comments support whole-node dragging; Escape cancels movement without a history entry');
+    // Restore spacing after the move checks so wider inline cards cannot overlap the Label target.
+    await page.evaluate(()=>{Object.assign(current().nodes.find(n=>n.id==='source').ui,{x:24,y:50});render();});
     p=await at('[data-node="source"] .node-alias');before=await pos();await drag(p,{x:p.x+45,y:p.y+20});assert.deepEqual(await pos(),before);
     await page.locator('[data-node="source"] .node-alias').dblclick();assert.ok(await page.evaluate(()=>document.activeElement.matches('input')));checks.push('node Label retains its editing interaction instead of becoming a drag handle');
-    await page.evaluate(()=>{Object.assign(current().nodes.find(n=>n.id==='source').ui,{x:24,y:50});render();});
     before=await pos();await drag(await at(port('source','outputs','out')),await at(port('sum','inputs','b')));assert.deepEqual(await pos(),before);assert.ok(await page.evaluate(()=>current().edges.some(e=>e.to.join(':')==='sum:b')));checks.push('dragging a socket still connects wires without moving the node');
-    await page.evaluate(()=>{selected=null;selection.clear();render();});p=await at('[data-node="source"] .node-value');before=await pos();await start(p);await move({x:p.x+55,y:p.y+24});await end();assert.notEqual((await pos()).x,before.x);
-    p=await at('[data-node="source"] .node-value');before=await pos();await start(p);await move({x:p.x+40,y:p.y+20});await touch('touchCancel');assert.deepEqual(await pos(),before);checks.push('real Chromium touch body drag commits on release and cancels on pointer cancellation');
-    p=await at('[data-node="source"] .node-value');before=await pos();await start(p);await move({x:p.x+32,y:p.y+20});await touch('touchStart',[[1,p.x+32,p.y+20],[2,p.x+130,p.y+20]]);await touch('touchMove',[[1,p.x+12,p.y+20],[2,p.x+150,p.y+20]]);await end();assert.deepEqual(await pos(),before);checks.push('two-finger pinch cancels a pending body move and only changes the view');
-    await page.evaluate(()=>{readonly=true;render();});p=await at('[data-node="source"] .node-value');before=await pos();await drag(p,{x:p.x+50,y:p.y+20});await start(p);await move({x:p.x+60,y:p.y+20});await end();assert.deepEqual(await pos(),before);checks.push('desktop and touch body drag cannot edit read-only graphs');
+    await page.evaluate(()=>{selected=null;selection.clear();render();});p=await at('[data-node="source"] .ports');before=await pos();await start(p);await move({x:p.x+55,y:p.y+24});await end();assert.notEqual((await pos()).x,before.x);
+    p=await at('[data-node="source"] .ports');before=await pos();await start(p);await move({x:p.x+40,y:p.y+20});await touch('touchCancel');assert.deepEqual(await pos(),before);checks.push('real Chromium touch body drag commits on release and cancels on pointer cancellation');
+    p=await at('[data-node="source"] .ports');before=await pos();await start(p);await move({x:p.x+32,y:p.y+20});await touch('touchStart',[[1,p.x+32,p.y+20],[2,p.x+130,p.y+20]]);await touch('touchMove',[[1,p.x+12,p.y+20],[2,p.x+150,p.y+20]]);await end();assert.deepEqual(await pos(),before);checks.push('two-finger pinch cancels a pending body move and only changes the view');
+    await page.evaluate(()=>{readonly=true;render();});p=await at('[data-node="source"] .ports');before=await pos();await drag(p,{x:p.x+50,y:p.y+20});await start(p);await move({x:p.x+60,y:p.y+20});await end();assert.deepEqual(await pos(),before);checks.push('desktop and touch body drag cannot edit read-only graphs');
 
     // Source Function deliberately tests copy-on-write while adding its first boundary port.
     await page.evaluate(()=>{
@@ -75,9 +78,11 @@ async function run(){
     const legacy=await harness(source,stateFile,path.join(folder,'header-only'),{headerOnly:true,touch:true});
     try{
       await legacy.page.evaluate(()=>{graphTrail=[];graph.functions=[];graph.declarations=[];graph.stages.pixel={nodes:[testNode('source','float',48,80,{value:.2})],edges:[]};scale=1;pan={x:25,y:25};selected=null;selection.clear();readonly=false;render();});
-      let p=await legacy.at('[data-node="source"] .node-value'),before=await legacy.page.evaluate(()=>clone(current().nodes[0].ui));await legacy.drag(p,{x:p.x+70,y:p.y+28});assert.deepEqual(await legacy.page.evaluate(()=>current().nodes[0].ui),before);
+      let p=await legacy.at('[data-node="source"] .ports'),before=await legacy.page.evaluate(()=>clone(current().nodes[0].ui));
+      assert.equal(await legacy.page.evaluate(p=>{const target=document.elementFromPoint(p.x,p.y);return target?.closest('.node')?.dataset.node==='source'&&!target.closest('input,textarea,select,button,a,[contenteditable="true"]');},p),true);
+      await legacy.drag(p,{x:p.x+70,y:p.y+28});assert.deepEqual(await legacy.page.evaluate(()=>current().nodes[0].ui),before);
       p=await legacy.at('[data-node="source"] .node-title');await legacy.drag(p,{x:p.x+70,y:p.y+28});assert.notDeepEqual(await legacy.page.evaluate(()=>current().nodes[0].ui),before);
-      const c=await legacy.page.context().newCDPSession(legacy.page);p=await legacy.at('[data-node="source"] .node-value');before=await legacy.page.evaluate(()=>clone(current().nodes[0].ui));
+      const c=await legacy.page.context().newCDPSession(legacy.page);p=await legacy.at('[data-node="source"] .ports');before=await legacy.page.evaluate(()=>clone(current().nodes[0].ui));
       for(const[type,points]of [['touchStart',[{id:1,x:p.x,y:p.y}]],['touchMove',[{id:1,x:p.x+70,y:p.y+30}]],['touchEnd',[]]]){await c.send('Input.dispatchTouchEvent',{type,touchPoints:points});await legacy.settle();}assert.deepEqual(await legacy.page.evaluate(()=>current().nodes[0].ui),before);
       assert.deepEqual(legacy.errors,[]);legacy.checks.push('internal nodeBodyDrag=false restores header-only dragging for mouse and touch');await legacy.finish();
     }catch(e){await legacy.finish(e);throw e;}

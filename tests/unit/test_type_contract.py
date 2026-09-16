@@ -9,7 +9,7 @@ class TypeContract(unittest.TestCase):
   first=c.type_contract();self.assertEqual(first,c.type_contract())
   expected=dict(first);expected.pop('hash');self.assertEqual(first['hash'],c.digest(expected))
   first['definitions'].clear();self.assertEqual(len(c.type_contract()['definitions']),len(c.CATALOG))
-  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle')}),baseline['catalogHash']);self.assertEqual(c.digest(c.function_library()),baseline['libraryHash'])
+  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector')}),baseline['catalogHash']);self.assertEqual(c.digest(c.function_library()),baseline['libraryHash'])
 
  def test_value_descriptors_and_literals(self):
   descriptor=c.type_contract()['types'];self.assertEqual(tuple(descriptor),c.PORT_TYPES)
@@ -39,7 +39,7 @@ class TypeContract(unittest.TestCase):
  def test_existing_graphs_produce_identical_results(self):
   graphs=[c.demo_graph(preset,target) for target in ('mat','top') for preset in ('banana','color','tint')]
   for key,d in c.CATALOG.items():
-   if key in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle'):continue  # New nodes have dedicated resource tests; keep all 138 old fingerprints.
+   if key in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector'):continue  # New nodes have dedicated resource tests; keep all 138 old fingerprints.
    for ty in c.TYPES:
     g=c.demo_graph('color');stage=d['stages'][0];node=c.node(key,'probe',type=ty)
     if key=='uniform':g['declarations'].append({'id':'test_uniform','kind':'uniform','name':'uTest','type':ty,'value':.25 if ty=='float' else [.25]*int(ty[-1])});node['params']['declarationId']='test_uniform'

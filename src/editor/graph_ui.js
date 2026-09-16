@@ -90,7 +90,7 @@ function dragExistingWire(path,event,index){
 }
 function isNodeDragSurface(target,card){
   if(!target||target.closest('.node')!==card)return false;
-  if(target.closest('button,input,textarea,select,a,summary,[contenteditable="true"],[role="button"],.node-alias'))return false;
+  if(target.closest('button,input,textarea,select,a,summary,[contenteditable="true"],[role="button"],.node-alias,.node-inline-values'))return false;
   return EDITOR_DEV_SETTINGS.nodeBodyDrag||!!target.closest('.node-title');
 }
 function dragNodeTitle(event,node,title,cards,onFinish){
@@ -277,15 +277,15 @@ function resolvedNodePorts(d,params,decl,kind){
   return variant?.[kind]||Object.fromEntries(Object.keys(d[kind]||{}).map(port=>[port,'?']));
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
-const supportsAutoType=d=>!!d&&d.key!=='combine'&&nodeCategory(d)==='math'&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
-const isVectorOperation=d=>['combine','vector_split','swizzle'].includes(d?.key);
+const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&nodeCategory(d)==='math'&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const isVectorOperation=d=>['vector','combine','vector_split','swizzle'].includes(d?.key);
 function vectorPorts(key,params){
   const spec=typeContract?.vectors,type=params.type||'vec2';
   if(!spec?.types.includes(type))throw Error(t('vector.invalidType'));
-  if(key==='combine'){
+  if(key==='combine'||key==='vector'){
     const groups=params.groups||{},layout=spec.layouts[type].find(row=>Object.keys(row.groups).length===Object.keys(groups).length&&Object.entries(row.groups).every(([p,t])=>groups[p]===t));
     if(!layout)throw Error(t('vector.overlap'));
-    return {inputs:layout.inputs,outputs:{out:type}};
+    return key==='vector'?{inputs:{value:type,...layout.inputs},outputs:{out:type,...Object.fromEntries([...spec.components.slice(0,typeComponents(type))].map(p=>[p,'float']))}}:{inputs:layout.inputs,outputs:{out:type}};
   }
   const components=spec.components.slice(0,typeComponents(type));
   if(key==='vector_split')return {inputs:{value:type},outputs:Object.fromEntries([...components].map(p=>[p,'float']))};
@@ -315,6 +315,15 @@ function constantRequirementIssues(document){
       else if(n.definitionUuid===FunctionModel.CALL){
         const fn=document.functions?.find(f=>f.id===n.params.functionId);
         if(fn&&!stack.includes(fn.id)){seenFunctions.add(fn.id);out=unit(fn.graph,fn,incoming,[...trail,n.id],[...stack,fn.id]);}
+      }else if(d?.key==='vector'){
+        // Only the final component's effective source determines its constness.
+        // A fully overridden runtime baseline must not taint a constant result.
+        const components='xyzw'.slice(0,typeComponents(n.params.type)),final={};
+        for(const component of components){
+          const index='xyzw'.indexOf(component),group=Object.keys(p.inputs).find(port=>port!=='value'&&inputs.has(n.id+':'+port)&&'xyzw'.indexOf(port)<=index&&'xyzw'.indexOf(port)+typeComponents(p.inputs[port])>index);
+          final[component]=group?incoming[group]:inputs.has(n.id+':value')?incoming.value:true;
+        }
+        out={out:Object.values(final).every(Boolean),...final};
       }else {
         const constant=typeContract?.constantExpressions?.includes(d?.key)&&Object.values(incoming).every(Boolean);
         out=Object.fromEntries(Object.entries(p.outputs).map(([port,type])=>[port,!!constant&&!isResourceType(type)]));
@@ -350,7 +359,7 @@ function concretePorts(document,n,owner,type=n.params.type,override=null){
   return {inputs:resolvedNodePorts(d,params,decl,'inputs'),outputs:resolvedNodePorts(d,params,decl,'outputs')};
 }
 function invalidTypeEdges(data,portMap){
-  const vectors=new Set(data.nodes.filter(n=>['combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
+  const vectors=new Set(data.nodes.filter(n=>['vector','combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
   return data.edges.filter(e=>{const source=portMap.get(e.from[0])?.outputs[e.from[1]],target=portMap.get(e.to[0])?.inputs[e.to[1]];return !(vectors.has(e.to[0])?!!source&&source===target:compatible(source,target));});
 }
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
@@ -359,16 +368,17 @@ function planAutoGraph(document,data,owner=null,overrides=new Map()){
   for(const e of data.edges){if(!incoming.has(e.to[0]))incoming.set(e.to[0],[]);incoming.get(e.to[0]).push(e);}
   const canInfer=!owner||owner.scope==='local';
   const autoNodes=new Set(data.nodes.filter(n=>canInfer&&n.ui?.typeMode==='auto'&&supportsAutoType(autoDefinition(document,n,owner))).map(n=>n.id));
-  const combineNodes=new Set(data.nodes.filter(n=>canInfer&&autoDefinition(document,n,owner)?.key==='combine').map(n=>n.id));
+  const combineNodes=new Set(data.nodes.filter(n=>canInfer&&['combine','vector'].includes(autoDefinition(document,n,owner)?.key)).map(n=>n.id));
   function visit(n){
     if(ports.has(n.id))return;
     if(active.has(n.id))throw autoTypeError('wire.cycle');active.add(n.id);
     const links=incoming.get(n.id)||[];
     for(const e of links){const source=nodes.get(e.from[0]);if(source)visit(source);}
     if(combineNodes.has(n.id)){
-      const layout=typeContract.vectors.layouts[n.params.type]?.find(row=>links.every(e=>Object.hasOwn(row.inputs,e.to[1])&&ports.get(e.from[0])?.outputs[e.from[1]]===row.inputs[e.to[1]])&&Object.keys(row.groups).every(p=>links.some(e=>e.to[1]===p)));
+      const isVector=autoDefinition(document,n,owner)?.key==='vector',componentLinks=isVector?links.filter(e=>e.to[1]!=='value'):links;
+      const layout=typeContract.vectors.layouts[n.params.type]?.find(row=>componentLinks.every(e=>Object.hasOwn(row.inputs,e.to[1])&&ports.get(e.from[0])?.outputs[e.from[1]]===row.inputs[e.to[1]])&&Object.keys(row.groups).every(p=>componentLinks.some(e=>e.to[1]===p)));
       if(!layout)throw Error(t('vector.overlap'));
-      groups.set(n.id,layout.groups);ports.set(n.id,{inputs:layout.inputs,outputs:{out:n.params.type}});
+      groups.set(n.id,layout.groups);ports.set(n.id,vectorPorts(isVector?'vector':'combine',{...n.params,groups:layout.groups}));
     }else if(autoNodes.has(n.id)){
       const d=autoDefinition(document,n,owner),candidates=nodeTypeVariants(d,n.params).filter(v=>links.every(e=>vectorConnectionExact(d,ports.get(e.from[0])?.outputs[e.from[1]],v.inputs[e.to[1]])));
       const score=v=>links.reduce((sum,e)=>sum+Number(ports.get(e.from[0])?.outputs[e.from[1]]!==v.inputs[e.to[1]]),0);
@@ -415,16 +425,35 @@ function setMathType(n,mode){
   return change(()=>{n.ui||={};if(mode==='auto')n.ui.typeMode='auto';else{if(!selectableNodeTypes(d).includes(mode))throw autoTypeError('contract.invalid');n.ui.typeMode='locked';reshapeTypedInputs(n,d,mode);}});
 }
 function planWireTypes(from,to,extra=null){
-  const data=current(),owner=currentFunction(),nodes=extra?[...data.nodes,extra.node]:data.nodes;
-  const candidate={nodes,edges:[...data.edges.filter(e=>!(e.to[0]===to.node&&e.to[1]===to.port)),{from:[from.node,from.port],to:[to.node,to.port]}]};
-  const plan=planAutoGraph(graph,candidate,owner,extra?new Map([[extra.node.id,extra.ports]]):new Map());
+  const data=current(),owner=currentFunction(),nodes=clone(extra?[...data.nodes,extra.node]:data.nodes),overrides=extra?new Map([[extra.node.id,extra.ports]]):new Map();
+  const target=nodes.find(n=>n.id===to.node),oldPorts=storedTypePorts(graph,data,owner),source=nodes.find(n=>n.id===from.node);
+  const sourcePorts=source&&concretePorts(graph,source,owner,source.params.type,overrides.get(source.id));
+  let replaced=e=>e.to[0]===to.node&&e.to[1]===to.port;
+  if(autoDefinition(graph,target,owner)?.key==='vector'&&to.port!=='value'){
+    const targetPorts=concretePorts(graph,target,owner,target.params.type,overrides.get(target.id));
+    const first='xyzw'.indexOf(to.port),type=sourcePorts?.outputs[from.port];
+    if(first<0||!Object.hasOwn(targetPorts.inputs,to.port)||!numericTypes().includes(type)||first+typeComponents(type)>typeComponents(target.params.type))throw Error(t('vector.overlap'));
+    const end=first+typeComponents(type);
+    replaced=e=>{
+      if(e.to[0]!==to.node||e.to[1]==='value')return false;
+      const start='xyzw'.indexOf(e.to[1]),oldType=oldPorts.get(e.from[0])?.outputs[e.from[1]],width=numericTypes().includes(oldType)?typeComponents(oldType):typeComponents(targetPorts.inputs[e.to[1]]||'float');
+      return start<end&&start+width>first;
+    };
+  }
+  const displaced=data.edges.filter(replaced),candidate={nodes,edges:[...clone(data.edges.filter(e=>!replaced(e))),{from:[from.node,from.port],to:[to.node,to.port]}]};
+  // All entry paths (including creator previews) validate the trial before edits.
+  const pending=[to.node],seen=new Set();
+  while(pending.length){const id=pending.pop();if(id===from.node){const error=autoTypeError('wire.cycle');error.code='cycle';throw error;}if(seen.has(id))continue;seen.add(id);for(const e of candidate.edges)if(e.from[0]===id)pending.push(e.to[0]);}
+  const plan=planAutoGraph(graph,candidate,owner,overrides);
   rejectNewTypeIssues(candidate,plan.ports,data,storedTypePorts(graph,data,owner));
+  for(const n of nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
   if(autoUnits(graph).some(u=>u.data.nodes.some(n=>n.params.requireConstant))){
     const document=owner?{...graph,functions:graph.functions.map(f=>f===owner?{...f,graph:candidate}:f)}:{...graph,stages:{...graph.stages,[stage]:candidate}};
     rejectNewConstantIssues(document,graph);
   }
-  return plan;
+  return {...plan,edges:candidate.edges,displaced};
 }
+function commitPlannedWire(from,to){current().edges=planWireTypes(from,to).edges;}
 function creatorTypePlan(d,variant,port,wire,locked){
   let id='__creator';while(current().nodes.some(n=>n.id===id))id+='_';
   const node={id,definitionUuid:d.definitionUuid,params:{...clone(d.defaults||{}),...(variant.type?{type:variant.type}:{}),...clone(variant.params||{})},ui:supportsAutoType(d)&&!locked?{typeMode:'auto'}:{}};
@@ -444,7 +473,7 @@ function creatorVariants(d,wire){
 function creatorPriority(match,wire){
   if(!wire)return 99;
   const count=numericTypes().includes(wire.type)?typeComponents(wire.type):0;
-  const order=wire.kind==='outputs'?(count>1?['vector_split','swizzle','combine','multiply','add','mix']:['multiply','add','combine','mix']):count>1?['combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','add','multiply'];
+  const order=wire.kind==='outputs'?(count>1?['vector','vector_split','swizzle','combine','multiply','add','mix']:['multiply','add','vector','combine','mix']):count>1?['vector','combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','vector','add','multiply'];
   const index=order.indexOf(match.d.key);return index<0?99:index;
 }
 
@@ -467,26 +496,29 @@ function portTypeCaption(n,kind,name){
 function vectorNames(n){return n.ui?.componentNames==='rgba'?'RGBA':n.ui?.componentNames==='uv'&&n.params.type==='vec2'?'UV':'XYZW';}
 function vectorPortLabel(n,kind,port){
   const d=definition(n),names=vectorNames(n),start='xyzw'.indexOf(port);
-  if(d?.key==='combine'&&kind==='inputs'&&start>=0)return names.slice(start,start+typeComponents(ports(n,kind)[port]));
-  if(d?.key==='vector_split'&&kind==='outputs'&&start>=0)return names[start];
+  if(['combine','vector'].includes(d?.key)&&kind==='inputs'&&start>=0)return names.slice(start,start+typeComponents(ports(n,kind)[port]));
+  if(['vector_split','vector'].includes(d?.key)&&kind==='outputs'&&start>=0)return names[start];
+  if(d?.key==='vector'&&(port==='value'||port==='out'))return 'Vector '+typeComponents(n.params.type);
   if(d?.key==='swizzle'&&kind==='outputs'&&port==='out')return [...n.params.mask].map(p=>names['xyzw'.indexOf(p)]).join('');
   return null;
 }
 function addVectorSplit(source,port){
   const type=ports(source,'outputs')[port];if(!typeContract?.vectors?.types.includes(type))return;
-  const existing=current().edges.find(e=>e.from[0]===source.id&&e.from[1]===port&&definition(current().nodes.find(n=>n.id===e.to[0]))?.key==='vector_split');
+  const existing=current().edges.find(e=>e.from[0]===source.id&&e.from[1]===port&&e.to[1]==='value'&&['vector','vector_split'].includes(definition(current().nodes.find(n=>n.id===e.to[0]))?.key));
   if(existing){selectNode(current().nodes.find(n=>n.id===existing.to[0]));render();return;}
-  change(()=>{const node=instantiate(catalog.find(d=>d.key==='vector_split'),source.ui.x+260,source.ui.y,type);
+  change(()=>{const node=instantiate(catalog.find(d=>d.key==='vector')||catalog.find(d=>d.key==='vector_split'),source.ui.x+260,source.ui.y,type);
     node.ui.componentNames=definition(source)?.key==='color'?'rgba':definition(source)?.key==='uv'?'uv':source.ui?.componentNames||'xyzw';
-    current().edges.push({from:[source.id,port],to:[node.id,'value']});});
+    commitPlannedWire({node:source.id,port},{node:node.id,port:'value'});});
 }
-function clearVectorWirePreview(){document.querySelectorAll('.vector-drop-range').forEach(row=>row.classList.remove('vector-drop-range'));}
+function clearVectorWirePreview(){document.querySelectorAll('.vector-drop-range,.vector-drop-replaced').forEach(row=>row.classList.remove('vector-drop-range','vector-drop-replaced'));}
 function previewVectorWire(start,button){
   clearVectorWirePreview();if(!button)return '';
   const end=portInfo(button),from=start.kind==='outputs'?start:end,to=start.kind==='inputs'?start:end,node=current().nodes.find(n=>n.id===to.node);
-  if(definition(node)?.key!=='combine')return '';
+  if(!['combine','vector'].includes(definition(node)?.key)||to.port==='value')return '';
   const size=typeComponents(from.type),first='xyzw'.indexOf(to.port),range='xyzw'.slice(first,first+size);
-  for(const row of button.closest('.node').querySelectorAll('.port-row.input'))if(range.includes(row.querySelector('.port')?.dataset.port))row.classList.add('vector-drop-range');
+  const targetCard=document.querySelector(`#cards [data-node="${CSS.escape(to.node)}"]`);
+  for(const row of targetCard?.querySelectorAll('.port-row.input')||[])if(range.includes(row.querySelector('.port')?.dataset.port))row.classList.add('vector-drop-range');
+  try{const displaced=planWireTypes(from,to).displaced;for(const path of document.querySelectorAll('#wires path[data-from]'))if(displaced.some(e=>path.dataset.from===e.from.join(':')&&path.dataset.to===e.to.join(':')))path.classList.add('vector-drop-replaced');}catch{}
   return vectorNames(node).slice(first,first+size);
 }
 function selectNode(n,toggle=false){
@@ -505,7 +537,7 @@ function connectionProblem(start,end){
   while(pending.length){const id=pending.pop();if(id===from.node)return 'cycle';if(seen.has(id))continue;seen.add(id);
     for(const edge of current().edges)if(edge.from[0]===id)pending.push(edge.to[0]);}
   if(start.add||end.add)return sparePortProblem(start.add?start:end,start.add?end:start);
-  try{planWireTypes(from,to);}catch(e){return e.code==='constantConflict'?'constantConflict':'autoConflict';}
+  try{planWireTypes(from,to);}catch(e){return e.code==='cycle'?'cycle':e.code==='constantConflict'?'constantConflict':'autoConflict';}
   return null;
 }
 function connectPorts(start,end){
@@ -514,7 +546,7 @@ function connectPorts(start,end){
   const changed=change(()=>{
     let from=start.kind==='outputs'?start:end,to=start.kind==='inputs'?start:end;
     if(from.add)from=materializeSparePort(from,to);else if(to.add)to=materializeSparePort(to,from);
-    current().edges=current().edges.filter(e=>!(e.to[0]===to.node&&e.to[1]===to.port));current().edges.push({from:[from.node,from.port],to:[to.node,to.port]});
+    commitPlannedWire(from,to);
   });if(changed)cancelConnection();return changed;
 }
 function portInfo(button){
@@ -556,8 +588,8 @@ function dragWire(button,event){
     if(target!==next){target?.classList.remove('wire-target');target=next;target?.classList.add('wire-target');}
     const r=target?.getBoundingClientRect();
     const q=graphPoint(r?r.left+r.width/2:e.clientX,r?r.top+r.height/2:e.clientY);if(!q)return;
-    const componentRange=previewVectorWire(start,target);
-    wireDrag={...start,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(start)&&isBlankWireDrop(e.clientX,e.clientY)?'trash.releaseWire':'wire.connect')+(componentRange?' · '+componentRange:'');wires();
+    wireDrag={...start,q,ready:!!target};wires();const componentRange=previewVectorWire(start,target);
+    $('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(start)&&isBlankWireDrop(e.clientX,e.clientY)?'trash.releaseWire':'wire.connect')+(componentRange?' · '+componentRange:'');
   };
   wireGesture={cancel,refresh:()=>{if(moved&&lastEvent)update(lastEvent);}};button.setPointerCapture(event.pointerId);
   window.addEventListener('blur',cancel);document.addEventListener('keydown',onKey,true);
@@ -588,6 +620,7 @@ function nodeCanvasComment(n){
   return note;
 }
 function renderCards(){
+  if(typeof deferInlineValueRender==='function'&&deferInlineValueRender())return;
   touchGraphGesture?.cancel();nodeDragGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
   if(selected&&!current().nodes.some(n=>n.id===selected))selected=null;
@@ -595,8 +628,9 @@ function renderCards(){
     n.ui||={x:0,y:0};const d=definition(n),card=el('article',{class:'node'+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=n.ui.x+'px';card.style.top=n.ui.y+'px';
     const title=el('div',{class:'node-title'}),text=el('div',{class:'node-title-text'});
-    const name=el('span',{class:d?.key==='function_call'?'node-function-name':'node-function-title'},d?.label||t('node.unknown'));
-    name.title=d?.label||t('node.unknown');
+    const displayName=d?.key==='vector'?'Vector '+typeComponents(n.params.type):d?.label||t('node.unknown');
+    const name=el('span',{class:d?.key==='function_call'?'node-function-name':'node-function-title'},displayName);
+    name.title=displayName;
     if(d?.key==='function_call'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true),local=FunctionModel.find(graph,n.params.functionId)?.scope==='local';icon.classList.toggle('source-subgraph',!local);text.append(icon);text.title=t(local?'function.local':'function.source');}
     text.append(name);title.append(text);
     if(nodeLabel(n)){
@@ -611,10 +645,12 @@ function renderCards(){
     for(const[kind,className]of [['inputs','input'],['outputs','output']])for(const[name,type]of Object.entries(ports(n,kind))){
       const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
+      if(d?.key==='vector'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
       b.onpointerdown=e=>dragWire(b,e);
       b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
       row.append(b,el('span',{class:'port-label',title:label},label),portTypeCaption(n,kind,name));
-      if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&d?.key!=='vector_split'){
+      if(kind==='inputs'&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
+      if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&!['vector','vector_split'].includes(d?.key)){
         const split=el('button',{class:'vector-split-shortcut',type:'button',title:t('vector.splitShortcut'),'aria-label':t('vector.splitShortcut')+' · '+label});
         const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 16 16');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d','M2 8h5M7 3v10M7 3h6M7 13h6');icon.append(path);split.append(icon);
         split.disabled=readonly;split.onpointerdown=e=>e.stopPropagation();split.onclick=e=>{e.stopPropagation();addVectorSplit(n,name);};split.ondblclick=e=>e.stopPropagation();row.append(split);
@@ -622,12 +658,12 @@ function renderCards(){
       list.append(row);
     }
     appendSparePort(list,n);card.append(list);
-    if(n.params?.value!==undefined)card.append(el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));
+    if(n.params?.value!==undefined){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
     if(d?.key==='color'&&Array.isArray(n.params.value)){const strip=el('div',{class:'node-color'});strip.append(colorSwatch(n.params.value));card.append(strip);}
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
     if(nodeComment(n))card.append(nodeCanvasComment(n));
-    card.onclick=e=>{e.stopPropagation();if(suppressCardClick)return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};
-    card.ondblclick=e=>{e.stopPropagation();if(d?.key==='function_call')enterFunction(n);};cards.append(card);
+    card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};
+    card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);
   }
 }
 /* Node Browser: one definition index, multiple views, global search. */
@@ -814,6 +850,8 @@ function renderCreator(){
     const entry={d,meta},path=creatorState.path||[];if(!query.trim()&&!creatorPaths(entry).some(p=>path.every((key,i)=>p[i]===key)))continue;
     let candidates=[];
     for(const variant of creatorVariants(d,wire)){
+      const requestedVector=d.key==='vector'&&query.match(/\bvec(?:tor)?\s*([234])\b/);
+      if(requestedVector&&variant.type!=='vec'+requestedVector[1])continue;
       const p=Object.entries(wire?.kind==='inputs'?variant.outputs:variant.inputs);
       if(!wire){const socketTypes=[...Object.values(variant.inputs),...Object.values(variant.outputs)];if(typeFilter==='all'||socketTypes.includes(typeFilter))candidates.push({d,type:variant.type,port:null,params:variant.params,variant});}
       else for(const[name,type]of p){try{const plan=creatorTypePlan(d,variant,name,wire,typeFilter!=='all'),actual=plan[wire.kind==='inputs'?'outputs':'inputs'][name];if(typeFilter==='all'||actual===typeFilter)candidates.push({d,type:variant.type,port:name,portType:actual,params:variant.params,variant:plan});}catch{}}
@@ -825,7 +863,7 @@ function renderCreator(){
   }
   if(!query.trim())creatorMatches.sort((a,b)=>creatorPriority(a,wire)-creatorPriority(b,wire));
   creatorIndex=Math.min(creatorIndex,Math.max(0,creatorMatches.length-1));const list=$('#createresults');list.replaceChildren();
-  creatorMatches.forEach((match,i)=>{const b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':match.d.key},match.d.label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
+  creatorMatches.forEach((match,i)=>{const label=match.d.key==='vector'?'Vector '+typeComponents(match.type):match.d.label,b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':match.d.key},label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
   if(!creatorMatches.length)list.append(el('p',{class:'muted'},t('create.empty')));
   for(const button of document.querySelectorAll('[data-create-category]')){const active=button.dataset.createCategory===(query.trim()?'all':category);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;}
   renderCreatorDetails();
@@ -839,7 +877,16 @@ function creatorInputSeed(wire){
 }
 function chooseCreator(index){
   const match=creatorMatches[index],state=creatorState;if(!match||!state)return;
-  const changed=change(()=>{const n=instantiate(match.d.inputSourceId||match.d.inputPreset?catalog.find(d=>d.definitionUuid===match.d.definitionUuid):match.d,state.x,state.y,match.type,{locked:$('#createtype').value!=='all',declarationId:match.d.inputSourceId,inputSeed:match.d.inputPreset?{name:inputPresets[match.d.inputPreset][0],preset:match.d.inputPreset}:creatorInputSeed(state.wire)});Object.assign(n.params,clone(match.params||{}));if(state.wire){if(isVectorOperation(match.d)){const peer=current().nodes.find(p=>p.id===state.wire.node);n.ui.componentNames=definition(peer)?.key==='uv'?'uv':definition(peer)?.key==='color'?'rgba':peer.ui?.componentNames||'xyzw';}const from=state.wire.kind==='outputs'?[state.wire.node,state.wire.port]:[n.id,match.port],to=state.wire.kind==='inputs'?[state.wire.node,state.wire.port]:[n.id,match.port];current().edges=current().edges.filter(e=>e.to[0]!==to[0]||e.to[1]!==to[1]);current().edges.push({from,to});}});
+  const changed=change(()=>{
+    const d=match.d.inputSourceId||match.d.inputPreset?catalog.find(d=>d.definitionUuid===match.d.definitionUuid):match.d;
+    const inputSeed=match.d.inputPreset?{name:inputPresets[match.d.inputPreset][0],preset:match.d.inputPreset}:creatorInputSeed(state.wire);
+    const n=instantiate(d,state.x,state.y,match.type,{locked:$('#createtype').value!=='all',declarationId:match.d.inputSourceId,inputSeed});Object.assign(n.params,clone(match.params||{}));
+    if(state.wire){
+      if(isVectorOperation(match.d)){const peer=current().nodes.find(p=>p.id===state.wire.node);n.ui.componentNames=definition(peer)?.key==='uv'?'uv':definition(peer)?.key==='color'?'rgba':peer.ui?.componentNames||'xyzw';}
+      const from=state.wire.kind==='outputs'?{node:state.wire.node,port:state.wire.port}:{node:n.id,port:match.port};
+      const to=state.wire.kind==='inputs'?{node:state.wire.node,port:state.wire.port}:{node:n.id,port:match.port};commitPlannedWire(from,to);
+    }
+  });
   if(changed){closeCreator();$('#canvas').focus();}else $('#createsearch').focus();
 }
 function duplicateSelection(){
@@ -902,13 +949,13 @@ function installTouchNavigation(canvas){
   const points=new Map(),slop=8,holdDelay=550,doubleDelay=320;
   let gesture=null,frame=0,holdTimer=0,lastTap=null,lastTouch=-Infinity,lastDevice='mouse';
   const stop=e=>{if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();};
-  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation');
+  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values');
   const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
   const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
   const rebase=()=>{gesture.origin={...sample(),pan:{...pan},scale};};
   const stopHold=()=>{clearTimeout(holdTimer);holdTimer=0;};
   const clearPreview=g=>{
-    clearGraphTrash();
+    clearGraphTrash();clearVectorWirePreview();
     for(const item of g?.positions||[]){if(item.card.isConnected){item.card.style.left=item.x+'px';item.card.style.top=item.y+'px';}}
     if(g?.mode==='box'){selection=new Set(g.selection);selected=g.selected;selectedEdge=g.selectedEdge;syncSelection();}
     g?.target?.classList.remove('wire-target');wireDrag=null;$('#marquee').hidden=true;
@@ -953,7 +1000,7 @@ function installTouchNavigation(canvas){
     }else if(g.mode==='wire'){
       const over=updateGraphTrash(p.x,p.y),target=over?null:findWireTarget(g.candidates,p.x,p.y,22);if(g.target!==target){g.target?.classList.remove('wire-target');g.target=target;target?.classList.add('wire-target');}
       const r=target?.getBoundingClientRect(),q=graphPoint(r?r.left+r.width/2:p.x,r?r.top+r.height/2:p.y);
-      if(q){wireDrag={...g.port,q,ready:!!target};$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(g.port)&&isBlankWireDrop(p.x,p.y)?'trash.releaseWire':'wire.touchConnect');wires();}
+      if(q){wireDrag={...g.port,q,ready:!!target};wires();const range=previewVectorWire(g.port,target);$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(g.port)&&isBlankWireDrop(p.x,p.y)?'trash.releaseWire':'wire.touchConnect')+(range?' · '+range:'');}
     }else if(g.mode==='box'){
       const r=canvas.getBoundingClientRect(),box=$('#marquee');box.hidden=false;
       box.style.left=Math.min(g.start.x,p.x)-r.left+'px';box.style.top=Math.min(g.start.y,p.y)-r.top+'px';box.style.width=Math.abs(dx)+'px';box.style.height=Math.abs(dy)+'px';

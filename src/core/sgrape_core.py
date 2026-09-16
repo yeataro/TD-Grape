@@ -42,14 +42,14 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
-    'vec4','combine','vector_split','swizzle'))
+    'vec4','combine','vector_split','swizzle','vector'))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
 CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
-    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle'))
-VECTOR_KEYS = ('combine','vector_split','swizzle')
+    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector'))
+VECTOR_KEYS = ('combine','vector_split','swizzle','vector')
 VECTOR_TYPES = ('vec2','vec3','vec4')
 VECTOR_COMPONENTS = 'xyzw'
 
@@ -69,12 +69,14 @@ def vector_interface(key,params):
     ty=params.get('type','vec2')
     if ty not in VECTOR_TYPES:raise GraphError('Select vec2, vec3 or vec4')
     components=VECTOR_COMPONENTS[:TYPE_DESCRIPTORS[ty]['components']]
-    if key=='combine':
+    if key in ('combine','vector'):
         groups=params.get('groups',{})
         layout=next((row for row in combine_layouts(ty) if row['groups']==groups),None)
-        if layout is None:raise GraphError('Combine: component groups overlap or exceed the output size')
+        if layout is None:raise GraphError(('Vector' if key=='vector' else 'Combine')+': component groups overlap or exceed the output size')
         values=params.get('components',[0,0,0,0])
         literal(values,'vec4')
+        if key=='vector':
+            return {'inputs':{'value':ty,**layout['inputs']},'outputs':{'out':ty,**dict.fromkeys(components,'float')}}
         return {'inputs':layout['inputs'],'outputs':{'out':ty}}
     if key=='vector_split':
         return {'inputs':{'value':ty},'outputs':dict.fromkeys(components,'float')}
@@ -624,6 +626,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 values=n.get('inputValues',{})
                 if not isinstance(values,dict) or any(port not in ports[ident]['in'] for port in values):
                     raise GraphError('Invalid input default values',ident)
+                if d['key']=='vector' and values:
+                    raise GraphError('Vector manual values belong to its components, not input default overrides',ident)
                 for port,value in values.items():
                     try: literal(value,ports[ident]['in'][port])
                     except GraphError as exc: raise GraphError(str(exc),ident) from exc
@@ -640,6 +644,27 @@ def _compile_flat(graph,annotation_scopes=None):
                     raise GraphError('Vector components require an exact type; use Combine or Swizzle explicitly',dst)
                 if conversion_kind(a,b) is None: raise GraphError(a+' cannot connect to '+b,dst)
                 links[(dst,dp)]=(src,sp)
+            # Each visible vector group is one actual wire, never a persisted
+            # constructor mode with missing sockets. Legacy Combine keeps its
+            # original ability to hold an unconnected vector default group.
+            component_sources={}
+            for ident,n in nodes.items():
+                if defs[ident]['key']!='vector':continue
+                for port in n['params'].get('groups',{}):
+                    if (ident,port) not in links:
+                        raise GraphError('Vector: remove an unconnected component group',ident)
+                components=VECTOR_COMPONENTS[:type_components(ports[ident]['out']['out'])]
+                mapped=[('value',index) if (ident,'value') in links else (None,index) for index in range(len(components))]
+                for port,ty in ports[ident]['in'].items():
+                    if port=='value' or (ident,port) not in links:continue
+                    start=VECTOR_COMPONENTS.index(port)
+                    for offset in range(type_components(ty)):mapped[start+offset]=(port,offset)
+                component_sources[ident]=mapped
+            def effective_inputs(ident,output=None):
+                if defs[ident]['key']!='vector':return set(ports[ident]['in'])
+                mapped=component_sources[ident]
+                indices=range(len(mapped)) if output in (None,'out') else [VECTOR_COMPONENTS.index(output)]
+                return {mapped[index][0] for index in indices if mapped[index][0] is not None}
             visited=set(); active=set(); order=[]
             def visit(ident):
                 if ident in active: raise GraphError('Cycle detected',ident)
@@ -651,29 +676,49 @@ def _compile_flat(graph,annotation_scopes=None):
                 active.remove(ident); visited.add(ident); order.append(ident)
             # Reject cycles even in disconnected edits. Only live nodes are emitted.
             for ident in sorted(nodes): visit(ident)
-            constant_nodes=set()
+            constant_nodes=set();constant_outputs=set()
             for ident in order:
                 key=defs[ident]['key']
-                if key in CONSTANT_EXPRESSIONS and all(
-                    links[(ident,port)][0] in constant_nodes if (ident,port) in links
-                    else port in nodes[ident].get('inputValues',{}) or input_default(key,port,ty) is not None
-                    for port,ty in ports[ident]['in'].items()):
+                for output in ports[ident]['out']:
+                    if key in CONSTANT_EXPRESSIONS and all(
+                        links[(ident,port)] in constant_outputs if (ident,port) in links
+                        else port in nodes[ident].get('inputValues',{}) or input_default(key,port,ports[ident]['in'][port]) is not None
+                        for port in effective_inputs(ident,output)):
+                        constant_outputs.add((ident,output))
+                if key in CONSTANT_EXPRESSIONS and all((ident,port) in constant_outputs for port in ports[ident]['out']):
                     constant_nodes.add(ident)
                 if nodes[ident]['params'].get('requireConstant') and ident not in constant_nodes:
                     raise GraphError('Require Constant: this value depends on runtime data or an unsupported constant expression',ident)
-            visited.clear(); order.clear(); visit(outputs[0])
+            # Follow output-specific dependencies before choosing node order.
+            # A fully replaced baseline (or an unused runtime component) is not
+            # evaluated just because its wire remains visible in the editor.
+            needed_outputs={};needed_inputs={};pending=[(outputs[0],None)]
+            while pending:
+                ident,output=pending.pop()
+                if output in needed_outputs.setdefault(ident,set()):continue
+                needed_outputs[ident].add(output)
+                inputs=effective_inputs(ident,output);needed_inputs.setdefault(ident,set()).update(inputs)
+                pending.extend(links[(ident,port)] for port in inputs if (ident,port) in links)
+            visited.clear();order.clear()
+            def visit_live(ident):
+                if ident in visited:return
+                for port in sorted(needed_inputs[ident]):
+                    if (ident,port) in links:visit_live(links[(ident,port)][0])
+                visited.add(ident);order.append(ident)
+            visit_live(outputs[0])
             live=set(order)
             # Qualify constant chains only when requested or consumed by the new
             # vector operations. Old graphs keep their generated text unchanged.
-            const_emit=set()
-            def demand_constant(ident):
-                if ident in const_emit or ident not in constant_nodes:return
-                const_emit.add(ident)
-                for port in ports[ident]['in']:
-                    if (ident,port) in links:demand_constant(links[(ident,port)][0])
+            const_emit=set();const_emit_outputs=set()
+            def demand_constant(ident,output):
+                if (ident,output) in const_emit_outputs or (ident,output) not in constant_outputs:return
+                const_emit_outputs.add((ident,output))
+                if defs[ident]['key']!='vector' or output=='out':const_emit.add(ident)
+                for port in effective_inputs(ident,output):
+                    if (ident,port) in links:demand_constant(*links[(ident,port)])
             for ident in order:
                 if defs[ident]['key'] in (*VECTOR_KEYS,'vec4') or nodes[ident]['params'].get('requireConstant'):
-                    demand_constant(ident)
+                    for output in needed_outputs[ident]:demand_constant(ident,output)
             for ident in sorted(set(nodes)-live): diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
             expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[]
             def inp(ident,port):
@@ -719,6 +764,39 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='relay': expr=a('value')
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
                 elif k=='combine':expr=ty+'('+', '.join(a(port) for port in ports[ident]['in'])+')'
+                elif k=='vector':
+                    mapped=component_sources[ident]
+                    def component_expression(index):
+                        port,offset=mapped[index]
+                        if port is None:return number(p.get('components',[0,0,0,0])[index])
+                        value=a(port)
+                        return value if ports[ident]['in'][port]=='float' else '('+value+').'+VECTOR_COMPONENTS[offset]
+                    if 'out' in needed_outputs[ident]:
+                        # Preserve groups in the constructor so the generated
+                        # expression mirrors XY / ZW sockets rather than an
+                        # assignment chain with intermediate mutable state.
+                        arguments=[];index=0
+                        while index<len(mapped):
+                            port,offset=mapped[index]
+                            if port is not None and port!='value':
+                                arguments.append(a(port));index+=type_components(ports[ident]['in'][port])
+                            elif port=='value':
+                                end=index+1
+                                while end<len(mapped) and mapped[end][0]=='value':end+=1
+                                mask=VECTOR_COMPONENTS[index:end]
+                                arguments.append(a('value') if len(mask)==len(mapped) else '('+a('value')+').'+mask)
+                                index=end
+                            else:
+                                arguments.append(component_expression(index));index+=1
+                        expr=ty+'('+', '.join(arguments)+')'
+                    for output in VECTOR_COMPONENTS[:len(mapped)]:
+                        if output not in needed_outputs[ident]:continue
+                        # A separate namespace prevents a component such as
+                        # node A / x from colliding with a node named A_x.
+                        variable='sg_v_'+ident+'_'+output
+                        qualifier='const ' if (ident,output) in const_emit_outputs else ''
+                        lines.append('    '+qualifier+'float '+variable+' = '+component_expression(VECTOR_COMPONENTS.index(output))+';')
+                        expressions[(ident,output)]=variable
                 elif k=='vector_split':
                     for port in ports[ident]['out']:expressions[(ident,port)]='('+a('value')+').'+port
                 elif k=='swizzle':expr='('+a('value')+').'+p.get('mask','xy')

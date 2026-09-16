@@ -843,8 +843,8 @@
       "en": "Sample RGBA with UV coordinates. An unconnected UV input uses the current pixel coordinates. `TD Input 1` reads this Grape TOP’s native input, using the default source configured in Parameters when disconnected (initially the bundled TD banana). Built-in images and external TOP paths are also supported.\n\nSource channels are preserved without automatic alpha premultiplication or unpremultiplication. Input Extend UV is available on the component’s Output page in TD, with Hold as the default.\n\n[GLSL texture](https://registry.khronos.org/OpenGL-Refpages/gl4/html/texture.xhtml) · [GLSL TOP · Sampling Inputs ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Sampling_Inputs)\n\n**Expose** makes the TOP source a TD parameter; its current value is also editable here. COMP wiring takes priority over the default source. Expression/Bind values are displayed without overwriting their control. Relative paths use the network containing the Shader, matching TD."
     },
     "help.top.pixel_out": {
-      "zh-Hant": "此圖的 RGBA 輸出會經過 `TDOutputSwizzle`，再從 Grape TOP 的原生輸出口送出。Output 頁可設定解析度與 Pixel Format。16／32-bit float 保留超過 0–1 的值；8-bit 與網頁預覽會限制顯示範圍。\n\n網頁預覽最多 512 像素寬高；開啟自動更新且窗格可見時約每秒更新，也可關閉後手動重新整理。TD 輸出維持原生尺寸與運作。\n\n[TDOutputSwizzle ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Output_Swizzle)",
-      "en": "RGBA output passes through `TDOutputSwizzle` to the Grape TOP’s native output connector. Resolution and Pixel Format are available on its Output page. 16/32-bit float preserves values outside 0–1; 8-bit and the browser preview limit the display range.\n\nThe browser preview is limited to 512 pixels per dimension. When Auto update is on, the visible TOP preview refreshes about once per second; turn it off to refresh manually. The TD output retains its native resolution and operation.\n\n[TDOutputSwizzle ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Output_Swizzle)"
+      "zh-Hant": "此圖的 RGBA 輸出會經過 `TDOutputSwizzle`，再從 Grape TOP 的原生輸出口送出。Output 頁可設定解析度與 Pixel Format。16／32-bit float 保留超過 0–1 的值；8-bit 與網頁預覽會限制顯示範圍。\n\n網頁預覽透過共用的即時影像串流顯示目前來源，尺寸會在預覽窗格調整完成後更新。重新連線圖示可重新取得預覽，電源圖示可停止串流；其他頁面連入時可能接管此預覽。TD 輸出維持原生尺寸與運作。\n\n[TDOutputSwizzle ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Output_Swizzle)",
+      "en": "RGBA output passes through `TDOutputSwizzle` to the Grape TOP’s native output connector. Resolution and Pixel Format are available on its Output page. 16/32-bit float preserves values outside 0–1; 8-bit and the browser preview limit the display range.\n\nThe browser preview uses a shared live video stream of the current source. Its size updates after the preview pane has finished resizing. Reconnect retrieves the preview again; the power control stops streaming. Another page may take over the shared preview. The TD output retains its native resolution and operation.\n\n[TDOutputSwizzle ↗](https://docs.derivative.ca/Write_a_GLSL_TOP#Output_Swizzle)"
     },
     "uniform.graphChanged": {
       "zh-Hant": "此 Shader 已在 TD 或另一個編輯器更新；請按「重新載入已套用圖」查看最新狀態。",
@@ -2573,6 +2573,18 @@
     "wire.constantConflict": {
       "zh-Hant": "這個輸出必須為編譯期常數，不能接入執行期資料。",
       "en": "This output requires a compile-time constant and cannot accept runtime data."
+    },
+    "vector.baselineHint": {
+      "zh-Hant": "接入完整向量後，未被分量接線替換的值沿用此來源。",
+      "en": "A whole vector supplies components that are not replaced by component wires."
+    },
+    "vector.inherited": {
+      "zh-Hant": "沿用完整向量輸入；接入此分量可替換它。",
+      "en": "Inherited from the whole vector input. Connect this component to replace it."
+    },
+    "help.vector": {
+      "zh-Hant": "在同一節點組合與拆分 vec2／vec3／vec4。完整向量輸入提供原值，分量接線替換對應部分；完整向量與個別分量輸出都代表最終結果。\n\n向量從接入位置開始占用連續分量，例如 vec2 接 Y 占用 YZ。被占用的接孔會合併；新線會取代範圍內的舊分量連線，來源節點保留，整個替換可一次復原。\n\n未接來源時可在節點或 Parameter 手填數值；有分量接線或完整向量輸入時，對應手填欄位隱藏。移除來源後恢復先前手填值。數字支援 Value Ladder，放開才提交。\n\n輸出依實際參與計算的來源判定常數性。要先拆分再運算後組合，請使用上游 Vector 與下游 Vector；將此節點的最終分量繞回自身會形成迴圈。",
+      "en": "Compose and split vec2, vec3 or vec4 in one node. The whole vector input supplies original values; component wires replace their corresponding parts. Both whole and component outputs contain the final result.\n\nA vector occupies consecutive components from its input position: vec2 at Y covers YZ. Occupied sockets merge. New wires replace overlapping component wires while retaining their source nodes; replacement is one undo step.\n\nEdit unconnected values on the node or in Parameter. Component wires or a whole vector input hide the corresponding manual fields; disconnecting restores their saved values. Value Ladder commits on release.\n\nConstantness follows the sources actually used by each output. To split, process and compose, use an upstream and downstream Vector; feeding a final component back into the same node creates a cycle."
     }
   }
 }

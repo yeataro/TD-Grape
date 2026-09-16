@@ -71,14 +71,15 @@ function installValueLadder(entry,commit){
     if(e.button!==0||e.ctrlKey||e.metaKey||e.altKey||entry.disabled||entry.readOnly||readonly)return;
     cancelValueLadder();
     if(touch){e.preventDefault();e.stopPropagation();}
-    const controller=new AbortController(),options={capture:true,signal:controller.signal},scroller=entry.closest('.panel-scroll');
-    const sx=e.clientX,sy=e.clientY,scrollTop=scroller?.scrollTop||0;let moved=false,done=false,timer;
+    const controller=new AbortController(),options={capture:true,signal:controller.signal},scroller=entry.closest('.panel-scroll'),inlineCanvas=touch&&entry.closest('#canvas');
+    const sx=e.clientX,sy=e.clientY,scrollTop=scroller?.scrollTop||0,initialPan=inlineCanvas?{...pan}:null;let moved=false,done=false,timer;
     const cleanup=()=>{if(done)return;done=true;clearTimeout(timer);controller.abort();if(pendingValueLadder?.entry===entry)pendingValueLadder=null;};
     pendingValueLadder={entry,cancel:cleanup};
     timer=setTimeout(()=>{cleanup();if(!entry.isConnected||entry.disabled||entry.readOnly||!entry.getClientRects().length)return;beginLadder(e);},450);
     window.addEventListener('pointermove',ev=>{if(ev.pointerId!==e.pointerId)return;
       if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>8){moved=true;clearTimeout(timer);if(!touch){cleanup();return;}}
-      if(touch){ev.preventDefault();ev.stopPropagation();if(moved&&scroller)scroller.scrollTop=scrollTop-(ev.clientY-sy);}
+      if(touch){ev.preventDefault();ev.stopPropagation();if(moved&&scroller)scroller.scrollTop=scrollTop-(ev.clientY-sy);
+        else if(moved&&inlineCanvas){pan={x:initialPan.x+ev.clientX-sx,y:initialPan.y+ev.clientY-sy};transform();}}
     },options);
     window.addEventListener('pointerup',ev=>{if(ev.pointerId!==e.pointerId)return;cleanup();if(touch){ev.preventDefault();ev.stopPropagation();if(!moved)entry.focus();}},options);
     window.addEventListener('pointercancel',cleanup,options);window.addEventListener('pointerdown',cleanup,options);window.addEventListener('blur',cleanup,options);
@@ -180,7 +181,8 @@ function defaultInput(n,port,type){
   if(isResourceType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
   const key=definition(n)?.key;
-  if(key==='combine'){const start='xyzw'.indexOf(port),values=(n.params.components||[0,0,0,0]).slice(start,start+typeComponents(type));return type==='float'?values[0]:values;}
+  if(['combine','vector'].includes(key)&&port!=='value'){const start='xyzw'.indexOf(port),values=(n.params.components||[0,0,0,0]).slice(start,start+typeComponents(type));return type==='float'?values[0]:values;}
+  if(key==='vector'&&port==='value')return null;
   if(key==='function_call')return clone(FunctionModel.find(graph,n.params.functionId)?.inputs.find(p=>p.id===port)?.default??0);
   if(key==='function_output')return clone(currentFunction()?.outputs.find(p=>p.id===port)?.default??0);
   if(['texture','texture_sample'].includes(key)&&port==='uv')return null;
@@ -484,10 +486,11 @@ function glslCodeInspector(box,n){
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;
   const automatic=n.ui?.typeMode==='auto',options=selectableNodeTypes(d).map(type=>[type,type]);
-  const control=select(d.key==='combine'?options:[['auto',t('type.auto')+' · '+n.params.type],...options],automatic?'auto':n.params.type,value=>{
-    if(d.key==='combine')change(()=>n.params.type=value);else setMathType(n,value);
+  const composed=['combine','vector'].includes(d.key);
+  const control=select(composed?options:[['auto',t('type.auto')+' · '+n.params.type],...options],automatic?'auto':n.params.type,value=>{
+    if(composed)change(()=>n.params.type=value);else setMathType(n,value);
   });control.dataset.vectorType=n.id;control.disabled=readonly;
-  box.append(field(t(d.key==='combine'?'vector.outputType':'vector.inputType'),control));
+  box.append(field(t(composed?'vector.outputType':'vector.inputType'),control));
   if(d.key==='swizzle'){
     const slots=el('div',{class:'swizzle-components'}),names=vectorNames(n),components='xyzw'.slice(0,typeComponents(n.params.type));
     [...n.params.mask].forEach((value,index)=>{
@@ -502,12 +505,86 @@ function vectorInspector(box,n,d){
   }
 }
 function setNodeInputValue(n,port,next){
-  if(definition(n)?.key==='combine'){
+  if(['combine','vector'].includes(definition(n)?.key)&&port!=='value'){
     n.params.components||=[0,0,0,0];const values=Array.isArray(next)?next:[next];n.params.components.splice('xyzw'.indexOf(port),values.length,...values);
   }else {n.inputValues||={};n.inputValues[port]=next;}
 }
+// Inline controls edit the same graph values as Parameter. Keep drafts outside
+// the graph until commit, and keep their DOM alive across unrelated refreshes.
+let inlineValueEdit=null,inlineValueRenderPending=false,inlineValueRenderTimer=null;
+function inlineValueSignature(n){return JSON.stringify([n.params,n.inputValues,current().edges.filter(e=>e.to[0]===n.id)]);}
+function deferInlineValueRender(){
+  const edit=inlineValueEdit;if(!edit)return false;
+  if(edit.entry.isConnected&&document.activeElement===edit.entry&&!readonly&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)){
+    inlineValueRenderPending=true;return true;
+  }
+  edit.entry.cancelInlineValue?.();inlineValueEdit=null;return false;
+}
+function queueInlineValueRender(){
+  inlineValueRenderPending=true;clearTimeout(inlineValueRenderTimer);
+  inlineValueRenderTimer=setTimeout(()=>{
+    inlineValueRenderTimer=null;if(inlineValueEdit?.entry===document.activeElement)return;
+    if(inlineValueRenderPending){inlineValueRenderPending=false;render();}
+  },0);
+}
+function inlineNumericFields(n,port,value,write,labels='XYZW'){
+  const values=Array.isArray(value)?value:[value],box=el('span',{class:'node-inline-values'});
+  values.forEach((v,index)=>{
+    const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:''),entry=el('input',{type:'number',step:'any','aria-label':label});
+    entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.value=String(v);
+    let committed=entry.value;
+    const own=()=>!readonly&&entry.isConnected&&current().nodes.includes(n);
+    const focus=()=>{if(own())inlineValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
+    const restore=()=>{entry.value=committed;entry.removeAttribute('aria-invalid');};
+    const commit=()=>{
+      if(entry.numericGestureActive||!own()||entry.value===committed)return;
+      const next=Number(entry.value);
+      if(!entry.value.trim()||!Number.isFinite(next)){entry.setAttribute('aria-invalid','true');return;}
+      // A changed source/topology invalidates a draft instead of writing it into
+      // a replacement graph or another Subgraph definition.
+      if(inlineValueEdit?.entry===entry&&inlineValueEdit.signature!==inlineValueSignature(n)){restore();return;}
+      inlineValueEdit=null;
+      const ok=change(()=>write(index,next),{redraw:false});
+      if(!ok)return;
+      committed=entry.value;entry.removeAttribute('aria-invalid');focus();
+      if(selected===n.id)inspector();queueInlineValueRender();
+    };
+    entry.cancelInlineValue=()=>{restore();if(inlineValueEdit?.entry===entry)inlineValueEdit=null;};
+    entry.addEventListener('focus',focus);
+    entry.addEventListener('input',()=>entry.removeAttribute('aria-invalid'));
+    entry.addEventListener('change',commit);
+    entry.addEventListener('blur',()=>{if(!entry.numericGestureActive)commit();restore();if(inlineValueEdit?.entry===entry)inlineValueEdit=null;queueInlineValueRender();});
+    entry.addEventListener('keydown',e=>{
+      e.stopPropagation();
+      if(e.key==='Enter'){e.preventDefault();commit();}
+      else if(e.key==='Escape'){e.preventDefault();cancelValueLadder();restore();focus();}
+    });
+    installValueLadder(entry,commit);
+    for(const event of ['pointerdown','click','dblclick','contextmenu'])entry.addEventListener(event,e=>e.stopPropagation());
+    if(values.length>1){const component=el('label',{class:'node-inline-component'});component.append(el('span',{'aria-hidden':'true'},labels[index]),entry);box.append(component);}
+    else box.append(entry);
+  });
+  return box;
+}
+function nodeInlineValues(n,port){
+  const type=ports(n,'inputs')[port],key=definition(n)?.key;
+  if(!numericTypes().includes(type)||current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port))return null;
+  if(key==='vector'&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value')))return null;
+  const value=defaultInput(n,port,type);if(value===null)return null;
+  return inlineNumericFields(n,port,value,(index,next)=>{
+    const old=defaultInput(n,port,type),updated=Array.isArray(old)?old.slice():old;
+    if(Array.isArray(updated))updated[index]=next;
+    setNodeInputValue(n,port,Array.isArray(updated)?updated:next);
+  },key==='vector'?vectorNames(n):'XYZW');
+}
+function nodeFixedValueEditor(n){
+  const key=definition(n)?.key;if(!['float','vec2','vec3','vec4','color'].includes(key))return null;
+  const box=inlineNumericFields(n,'$value',n.params.value,(index,next)=>{
+    if(Array.isArray(n.params.value)){n.params.value=n.params.value.slice();n.params.value[index]=next;}else n.params.value=next;
+  },key==='color'?'RGBA':'XYZW');box.classList.add('node-fixed-values');return box;
+}
 function inspector(){
-  cancelValueLadder();
+  if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode)cancelValueLadder();
   const box=$('#inspector');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   if(n||selectedEdge!==null)selectedInputId=null;
@@ -566,6 +643,8 @@ function inspector(){
       const value=defaultInput(n,port,type);
       if(isResourceType(type)){
         if(!connection)section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
+      }else if(d.key==='vector'&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value'))){
+        if(!connection)section.append(el('p',{class:'muted'},t(port==='value'?'vector.baselineHint':'vector.inherited')));
       }else if(value===null){
         section.append(el('p',{class:'muted'},t('input.implicitUV')));
         if(!connection){const override=el('button',{class:'wide'},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}

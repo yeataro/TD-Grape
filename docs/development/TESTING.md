@@ -1,5 +1,23 @@
 # 測試
 
+## 0.8.82 整合 Vector 與節點內數值
+
+完整可攜檢查通過：201 項 Python 核心測試（包含透過 Python fixture 執行的 JavaScript 接線規劃檢查）、456 個雙語語系鍵、既有整合檢查及 26 項 Remote Panel Node 檢查。138 份歷史 GLSL 指紋保持一致。新增選單 metadata 檢查確認 Vector 分類與 vec2／vec3／vec4 搜尋可用，內嵌分類與 catalog 相同。
+
+Chromium fixture 測試 34 項通過、零頁面錯誤：16 項 inline 值／Vector 接線案例，以及 18 項既有節點互動案例。涵蓋自動移除衝突線與 Undo、基底／手填值顯示、Enter／blur／Escape、失效草稿、MMB Value Ladder、實際 Chromium touch tap／hold／swipe／cancel、唯讀及雙擊隔離。截圖已檢視並修正固定 Vector 值的留白；驗證尺寸為 1600 × 1100、畫布縮放 80%。這不代替實體手機、iPad 或 Safari 回驗。
+
+TD 2025.32820：新 Vector 39 項、既有向量 27 項原生檢查通過。包括 TOP／MAT 八種 vec4 分組、完整基底與 YZ 覆寫、最終分量输出、斷線後恢復、重疊替換、無效依賴不產生 Uniform、常數陣列長度，以及只改 UV 的 V。新測試在取得 CAS revision 前先同步原生來源，避免前一案例刻意保留的 Uniform 列重新接納後使 fixture 使用舊 revision；未因此修改 runtime。
+
+Master 同步、新建 TOP／MAT、舊模板拒絕未確認升級均通過。Catalog 版本前進至 0.8.82，不改舊定義 fingerprint、ABI 或 shell。兩份 Master 無語意升級差異，保存使用者的一份 Shader 與人工 OP 位置；24 份內嵌來源及目前服務資產與磁碟一致，臨時原生測試元件已移除。正式 TOE 已保存為 604,348 bytes，排除私人開發橋接。
+
+```text
+python tools/dev/run_tests.py
+node tests/browser/test_inline_vector_values.cjs src/editor <current-editor-state-json> <report-directory>
+node tests/browser/test_node_interactions.cjs src/editor <current-editor-state-json> <report-directory>
+python tools/dev/submit_job.py tests/td/test_unified_vector.py --report vectors-unified --timeout 60
+python tools/dev/submit_job.py tests/td/test_vector_nodes.py --report vectors-regression --timeout 60
+```
+
 0.8.80：179 項 Python 測試、既有可攜檢查及 26 項 Remote Panel Node 檢查通過。新向量處理測試涵蓋各維度合法分割、八種 vec4 組合、固定分量值、斷線／Undo、重疊與截斷拒絕、Swizzle 重排／重複、Subgraph 常數傳遞、UI 常數要求回退與接線選單計畫。舊節點定義及 138 份 GLSL 指紋保持不變。
 
 TD 2025.32820 原生 27 項檢查通過：TOP／MAT 各八種組合的像素結果、Split → Combine → Swizzle、Fract／Mix／Smoothstep 常數鏈、兩種鏈各自作為陣列長度，以及 Runtime Uniform 違反常數要求時保留上次輸出；TOP 額外驗證只修改 UV 的 V、其餘分量與解析度不變。

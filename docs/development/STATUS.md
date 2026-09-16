@@ -1,12 +1,14 @@
 # 開發狀態
 
-產品版本：**0.8.81**（開發版，未進入 Alpha）。獨立目錄遷移後，已完成 UI 精簡、Layout 分頁排序、Label 行尾註解與 TOP／MAT 原生頁面整理，並保存正式開發 TOE。這仍不是公開發佈版本。後續版號允許持續向前小幅遞增，不固定停留在此版本，也不可倒退。
+產品版本：**0.8.82**（開發版，未進入 Alpha）。本輪已完成整合 Vector 與節點內數值編輯、TD 驗證、Master 同步及正式開發 TOE 保存。這仍不是公開發佈版本。後續版號允許持續向前小幅遞增，不固定停留在此版本，也不可倒退。
 
 ## 目前待辦與建議順序（2026-09-16）
 
 使用者已確認並啟動以下三項 UI 整理，於 0.8.76 完成，預覽控制列再依回饋於 0.8.77 精簡。尺寸變更可能有延遲的觀察已記入 [預覽 UI 筆記](../discussions/PREVIEW_UI_NOTES.md)，先保留待測，不預判原因。
 
 ### 本輪已完成
+
+0.8.82 新增整合 Vector（vec2／vec3／vec4）：完整向量基底、分量覆寫、連續分組及最終分量輸出；新線取代重疊的舊分量線，一次 Undo 恢復。節點可直接編輯固定值及未接線數值，Value Ladder 放開才提交；接線後隱藏手填值，斷線恢復。常數判定與產碼只追蹤有效來源。舊固定值與 Split／Combine／Swizzle 保持相容，新增選單分類／搜尋及 Color Output Help 一併更新。詳細規則見 [向量與數值操作](../features/VECTOR_NODES.md)。
 
 0.8.80 完成一般向量操作：Vector 4 固定值、Split、Combine、Swizzle，向量輸出的 Split 快捷及依接線情境排序。Combine 固定分量位置，接入向量時明示占用範圍；保留未接線值與 Undo。可要求編譯期常數，UI／編譯器拒絕執行期來源，Subgraph 常數鏈也可追蹤。舊節點定義與 GLSL 指紋保持不變；詳細規則見 [向量操作](../features/VECTOR_NODES.md)。完整可攜、原生 TOP／MAT 與桌面瀏覽器驗證完成，Master 同步與正式 TOE 保存完成。
 
@@ -20,16 +22,14 @@
 
 後續能獨立於 Inputs 改版往下推進的是數值型別核心：int／uint、對應向量、明確轉型、literal／合法函式簽名與舊圖相容驗證。這是較大的工作，宜分輪完成，來源與 Parameter 的最終介面仍配合後續設計。參考 [型別計畫](../discussions/NUMERIC_TYPES_PLAN.md)。0.8.80 已完成 float 向量組合／拆分與常數性檢查；int／uint 等擴充尚未啟動。
 
-### 已確認待辦：節點內數值編輯
+### 下一輪方向
 
-- 使用者已同意將畫布節點的手填數值編輯與 Value Ladder 納入待做清單，尚未啟動實作。需共用 Parameter 資料並處理接線狀態、拖曳／觸控、焦點及提交／撤銷邊界；詳見 [節點 UI 筆記](../discussions/NEXT_UI_NOTES.md#節點內數值編輯與-value-ladder2026-09-16已納入待辦)。
-- 建議先交付一輪現有浮點／向量的圖內數值操作，再整理 Inputs 清單及其與自訂參數的銜接；自訂參數已有原生控制與綁定基礎。新型別及 Specialization Constants 可另分里程碑，不必全部完成才推進 Inputs。順序待使用者決定。
+節點內數值操作已於 0.8.82 交付，等待使用回饋。Inputs 清單及其與自訂參數的銜接仍另行整理；新數值型別與 Specialization Constants 保留後續里程碑，不先決定 Parameter 的最終位置。
 
 ### 等待使用者補充或共同決策
 
 - TOP 來源 0.8.79 已先收斂：來源可全部刪除，首版為 0–16 個 2D 來源，每項對應 COMP 接口；3D／Array／Cube 尚未實作。Inputs、新增節點面板與節點資訊的整體 UI 仍等使用者後續筆記。見 [TOP 來源模型筆記](../discussions/TOP_INPUTS_SOURCE_MODEL.md)。
 - TDFAM 是否造成 OP Create Dialog 底部說明文字消失：已發現其有介入共用說明資料鏈，但尚未確認回報問題的原因；使用者要求暫緩調查，後續再處理。
-- Color Output 的 Help 尚有舊版預覽說明（512 像素、約每秒更新等）；使用者要求先記錄，下次相關說明更新時一併修正。見 [預覽 UI 筆記](../discussions/PREVIEW_UI_NOTES.md#待同步的節點說明2026-09-16)。
 - OP 參數呈現與 Parameter 整體安排（2026-09-16 修訂）：不確定／待決議。OP 參數呈現保留為可行方向；Parameter 可能位於另一個位置，其位置、排版與切換規則尚未定案。「點回畫布顯示 OP 參數」仍是提案，不視為已確定要求，也不預先與 Parameter 改版綁在同一輪。見 [Parameter 筆記](../discussions/NEXT_UI_NOTES.md#parameter-改版筆記2026-09-15待討論實作)。
 - 自訂參數工作區與 Inputs 拖入建立公開控制保留為後續設計方向；其工作區位置不因上述 Parameter 待決事項而被預先選定。
 - Grape TOP Common／Output 一比一綁定及 UV 的人工模板；TOP 輸入链簡化與 TD 網路四象限配置，以使用者人工範本為依據。
@@ -49,6 +49,8 @@
 已完成的 GLSL Code 多輸出、Subgraph **內部**灰點、全節點拖曳、Sampler／取樣函式配色、TOP 輸入槽位與 Constants、模板同步及共用預覽，不重列成未實作項目。舊討論文件中較早的「尚未」描述需以後續交付記錄為準。
 
 ## 交付紀錄
+
+2026-09-16：0.8.82 完成上述 Vector 與 inline 數值操作。201 項 Python 核心測試、可攜檢查、34 項瀏覽器互動，以及 TD 新舊向量共 66 項原生檢查通過。兩份 Master 同步至目前 catalog／compiler，建立 TOP／MAT 不需升級預設圖；保留使用者 Shader、OP 身分、參數與位置。24 份內嵌來源及服務資產確認一致，正式 TOE 已保存。實體手機／iPad／Safari 仍待回驗；本輪沒有修改既有 OP Viewer 限制或 Lock 暫解。
 
 2026-09-16：0.8.81／Remote Panel 0.1.5 修正正在即時預覽的 MAT 套用新 Shader 時，OP Viewer TOP 擷取可能使 TD 掛起。套用及失敗回復期間保留預覽影像，經過三個更新 callback 後恢復同一條 WebRTC 連線；只處理當前預覽來源。Combine 產碼、圖格式、節點定義與原本的同步編譯驗證保持不變。
 

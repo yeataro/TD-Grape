@@ -853,6 +853,24 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* Vector shortcuts keep sockets in their existing column. */
 .port-row { position: relative; }
+/* Numeric controls occupy a stable row; connector hit areas stay on the edge. */
+.node:has(.node-inline-values){min-width:220px}
+.port-row.input:has(.node-inline-values){height:auto;min-height:30px;padding-right:12px;flex-wrap:wrap;gap:5px 7px}
+.node-inline-values{display:inline-flex;min-width:0;gap:4px;align-items:center;flex:1;justify-content:flex-end;cursor:default;user-select:text}
+.node-inline-values input{width:60px;min-width:42px;max-width:100%;height:24px;padding:2px 5px;border:1px solid #494250;border-radius:4px;background:#1d1c25;color:#e5dff0;text-align:right;font-size:11px;font-variant-numeric:tabular-nums;cursor:text;appearance:textfield}
+.node-inline-values input::-webkit-inner-spin-button,.node-inline-values input::-webkit-outer-spin-button{appearance:none;margin:0}
+.node-inline-values input[aria-invalid="true"]{outline:1px solid #ef8d8d}
+.node-inline-component{display:inline-flex;align-items:center;gap:3px;min-width:0;color:var(--muted);font-size:9px;flex:1}
+.node-inline-component input{flex:1;width:42px}
+.node-inline-values:has(.node-inline-component){flex-basis:100%;padding:2px 0 5px}
+.node-fixed-values{display:flex;padding:3px 12px 11px;width:100%;gap:6px}
+.node-fixed-values:has(.node-inline-component){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:3px 12px 11px}
+.node-fixed-values .node-inline-component{min-height:25px}
+.node-fixed-values input{width:100%}
+.vector-whole{min-height:34px}
+.vector-whole+.vector-component{border-top:1px solid #45404e;margin-top:4px;padding-top:4px;min-height:34px}
+#wires .vector-drop-replaced{stroke:#edb187;stroke-dasharray:4 3;opacity:.7}
+@media(pointer:coarse){.node-inline-values input{height:30px;font-size:13px}.port-row.input:has(.node-inline-values){min-height:36px}}
 .vector-split-shortcut { position:absolute;left:9px;top:2px;min-width:22px;width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--muted);opacity:0;line-height:1; }
 .port-row.output:hover .vector-split-shortcut,.vector-split-shortcut:focus-visible { opacity:1;background:#262530; }
 .vector-split-shortcut:hover { color:#e5e4ed; }
