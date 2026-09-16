@@ -57,10 +57,15 @@ function canDeleteNode(n){return !['pixel_out','vertex_out','function_input','fu
 function functionEntry(f,source=false){
   return {key:source?'source:'+f.scope+':'+f.id+':'+(f.source?.version||''):'function:'+f.id,label:f.name,stages:f.stages,inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id,source:source?f:null,category:f.scope==='personal'?'personal':'functions'};
 }
+function nodeTypeLabel(d,params=d?.defaults){
+  if(d?.key==='vector')return 'Vector '+typeComponents(params?.type||'vec2');
+  const label=d?.label||t('node.unknown');
+  return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
+}
 function availableEntries(){
   const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&d.key!=='texture'&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
-    if(d.key==='vector')return ['vec2','vec3','vec4'].map(type=>({...d,entryKey:'vector:'+type,presetType:type,label:'Vector '+type.slice(-1),defaults:{...d.defaults,type},category:nodeCategory(d)}));
-    return [{...d,label:['vec2','vec3','vec4'].includes(d.key)?d.label+' · Constant':d.label,category:nodeCategory(d)}];
+    if(d.key==='vector')return ['vec2','vec3','vec4'].map(type=>({...d,entryKey:'vector:'+type,presetType:type,label:nodeTypeLabel(d,{type}),defaults:{...d.defaults,type},category:nodeCategory(d)}));
+    return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
   for(const f of librarySources().filter(f=>f.stages.includes(stage)))entries.push(functionEntry(f,true));
   const sources=librarySources().flatMap(f=>[f,...(f.dependencies||[])]);

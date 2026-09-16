@@ -276,13 +276,13 @@ function setNodeLabel(n,value){
 }
 function nodeLabelField(n){
   const entry=input(nodeLabel(n),value=>{if(!setNodeLabel(n,value))entry.setSyncedValue(nodeLabel(n));});
-  entry.dataset.nodeLabel=n.id;entry.maxLength=80;entry.placeholder=definition(n)?.label||'';entry.disabled=readonly;
+  entry.dataset.nodeLabel=n.id;entry.maxLength=80;entry.placeholder=nodeTypeLabel(definition(n),n.params);entry.disabled=readonly;
   const previous=entry.onkeydown;entry.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();entry.setSyncedValue(nodeLabel(n));entry.blur();}else previous(e);};
   return field(t('node.label'),entry);
 }
 function nodeInspectorTitle(n,d){
   const title=el('div',{class:'node-inspector-title','data-category':nodeCategory(d||{key:''})});
-  const name=el('h3',{class:'node-inspector-name'},d?.label||t('node.unknown'));
+  const name=el('h3',{class:'node-inspector-name'},nodeTypeLabel(d,n.params));
   name.title=name.textContent;title.append(name);
   if(d){
     const label=nodeLabelField(n),entry=label.querySelector('input');
@@ -676,7 +676,7 @@ function inspector(){
       }else if(!connection){const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>setNodeInputValue(n,port,next)),false,port==='color'?'RGBA':'XYZW');values.classList.add('input-values');section.append(values);}
       if(connection){
         const source=current().nodes.find(other=>other.id===connection.from[0]),connectionRow=el('div',{class:'connection-row'});
-        const origin=el('span',{class:'connection-source'},(nodeLabel(source)||definition(source)?.label||connection.from[0])+' · '+portLabel(source,'outputs',connection.from[1]));origin.title=connection.from.join(' · ');
+        const origin=el('span',{class:'connection-source'},(nodeLabel(source)||nodeTypeLabel(definition(source),source.params))+' · '+portLabel(source,'outputs',connection.from[1]));origin.title=connection.from.join(' · ');
         const disconnect=el('button',{'aria-label':t('wire.disconnect')+portLabel(n,'inputs',port)},t('wire.disconnectShort'));disconnect.disabled=readonly;
         disconnect.onclick=()=>change(()=>current().edges=current().edges.filter(e=>e!==connection));connectionRow.append(origin,disconnect);section.append(connectionRow);
       }else if(['texture','texture_sample'].includes(d.key)&&port==='uv'&&value!==null){

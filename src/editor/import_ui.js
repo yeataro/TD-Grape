@@ -79,7 +79,7 @@ function graphPngCanvas(){
     if(!card||!title)throw Error('png.layout');
     const x=n.ui.x,y=n.ui.y,width=card.offsetWidth,height=card.offsetHeight;
     if(![x,y,width,height].every(Number.isFinite)||!width||!height)throw Error('png.layout');
-    return {x,y,width,height,title:definition(n)?.label||t('node.unknown'),type:title.querySelector('small')?.textContent||'',header:title.offsetHeight,bg:getComputedStyle(card).backgroundColor,headbg:getComputedStyle(title).backgroundColor,
+    return {x,y,width,height,title:nodeTypeLabel(definition(n),n.params),type:title.querySelector('small')?.textContent||'',header:title.offsetHeight,bg:getComputedStyle(card).backgroundColor,headbg:getComputedStyle(title).backgroundColor,
       ports:[...card.querySelectorAll('.port-row')].map(row=>{
         const socket=row.querySelector('.port'),p=point(n,socket.dataset.port,socket.dataset.kind);if(!p)throw Error('png.layout');
         return {x:p.x,y:p.y,output:socket.dataset.kind==='outputs',label:row.querySelector('span').textContent,type:socket.dataset.type,color:getComputedStyle(row).getPropertyValue('--socket').trim()};

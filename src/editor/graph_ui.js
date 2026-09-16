@@ -672,7 +672,7 @@ function renderCards(){
     n.ui||={x:0,y:0};const d=definition(n),card=el('article',{class:'node'+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=n.ui.x+'px';card.style.top=n.ui.y+'px';
     const title=el('div',{class:'node-title'}),text=el('div',{class:'node-title-text'});
-    const displayName=d?.key==='vector'?'Vector '+typeComponents(n.params.type):d?.label||t('node.unknown');
+    const displayName=nodeTypeLabel(d,n.params);
     const name=el('span',{class:d?.key==='function_call'?'node-function-name':'node-function-title'},displayName);
     name.title=displayName;
     if(d?.key==='function_call'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true),local=FunctionModel.find(graph,n.params.functionId)?.scope==='local';icon.classList.toggle('source-subgraph',!local);text.append(icon);text.title=t(local?'function.local':'function.source');}
@@ -688,7 +688,7 @@ function renderCards(){
     card.append(title);const list=el('div',{class:'ports'});
     const portRow=(kind,name)=>{
       const className=kind==='inputs'?'input':'output',type=ports(n,kind)[name];
-      const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
+      const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${displayName} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
       applyPortColorHint(row,n,kind,name);
       if(d?.key==='vector'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
