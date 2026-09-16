@@ -3,7 +3,7 @@
 
 #nodes button{cursor:grab}#nodes button:active{cursor:grabbing}#canvas.drop-ready{box-shadow:inset 0 0 0 2px #b49be4;background-color:#1d1729}
 
-/* Edit this palette in one place. No end-user theme controls in 0.1. */
+/* Default dark palette; light variants are defined in the theme block. */
 :root{
   --type-float:#b8b5ae;
   --node-value-bg:#393843;
@@ -978,15 +978,22 @@ footer .footer-preferences svg[hidden]{display:none}
  footer #status{font-size:10px}
 }
 
-/* Optional light chrome. Graph data colors, preview pixels and code syntax stay independent. */
+/* Light surfaces and graph palette; preview pixels and source code stay independent. */
 :root[data-ui-theme="light"]{
- color-scheme:light;color:#292733;background:#e6e4eb;
- --ui-text:#292733;--ui-chrome:#eceaf0;--ui-surface:#f5f4f7;--ui-field:#ffffff;--ui-control:#eeecf2;--ui-hover:#e2deea;--ui-selected:#d9cfe9;--ui-code-chip:#e8e2f0;
- --muted:#686371;--line:#c8c3d0;--border:#c8c3d0;--purple:#6b489d;--green:#367c50;--danger:#a33f41;--help-link:#644194;
- --panel:#f5f4f7;--panel-2:#eeecf2;--panel-header-bg:#eeecf2;--panel-content-bg:#f5f4f7;--panel-header-inactive-bg:#e6e3eb;--panel-header-fg:#292733;--panel-header-hover-bg:#ded9e6;
- --panel-divider-bg:#e4e0e9;--panel-divider-grip:#aaa1b6;--scroll-track:#ece9f0;--scroll-thumb:#b2aabb;--scroll-hover:#8e819f;
- --state-surface:#f5f4f7;--state-code:#ece8f0;--browser-item-bg:#f5f4f7;--browser-item-hover:#e2deea;--browser-active:#8264aa;--browser-row-hover:#e9e5ef;--browser-row-selected:#ded5eb;--browser-section-bg:#f5f4f7;--browser-tree-line:#cfc8d8;
+ color-scheme:light;color:#303640;background:#e1e4e8;
+ --ui-text:#303640;--ui-chrome:#e7e9ed;--ui-surface:#f1f3f5;--ui-field:#fafbfc;--ui-control:#e6e9ee;--ui-hover:#dce1e8;--ui-selected:#ded9e9;--ui-code-chip:#e5e1ee;
+ --muted:#626b78;--line:#c2c8d1;--border:#c2c8d1;--purple:#694b91;--green:#35794d;--danger:#ad3e46;--help-link:#634a8c;
+ --panel:#f1f3f5;--panel-2:#e6e9ee;--panel-header-bg:#e6e9ee;--panel-content-bg:#f1f3f5;--panel-header-inactive-bg:#e1e5eb;--panel-header-fg:#303640;--panel-header-hover-bg:#d8dee7;
+ --panel-divider-bg:#dce1e7;--panel-divider-grip:#a3acba;--scroll-track:#e7eaee;--scroll-thumb:#abb4c0;--scroll-hover:#8591a2;
+ --state-surface:#f1f3f5;--state-code:#e7e8ee;--browser-item-bg:#f1f3f5;--browser-item-hover:#dce1e8;--browser-active:#80699c;--browser-row-hover:#e4e8ee;--browser-row-selected:#ded9e9;--browser-section-bg:#f1f3f5;--browser-tree-line:#c7ced8;
  --browser-category-math:#805b9f;--browser-category-vector:#636fa4;--browser-category-color:#965f7e;--browser-category-coordinate:#52798c;--browser-category-texture:#8b6238;--browser-category-data:#61718b;--browser-category-shader:#427d74;--browser-category-uncategorized:#746d81;
+ --canvas-bg:#d9dde3;--canvas-grid:#b9c1cd;--node-body:#f4f5f7;--node-border:#9ca6b4;--node-value-bg:#e0e5eb;--node-alias-color:#536072;
+ --node-function-bg:#ded8e9;--node-function-fg:#4c3b67;--node-uniform-bg:#cddfe0;--node-uniform-fg:#28575b;
+ --node-sampler-bg:#e4dac9;--node-sampler-fg:#6a512e;--node-constant-bg:#d5deeb;--node-constant-fg:#344665;--node-output-bg:#d3e1d6;--node-output-fg:#315b3d;
+ --type-float:#59616b;--type-vec2:#29658f;--type-vec3:#20745d;--type-vec4:#75529b;--type-sampler:#87622f;
+ --selection:#357a4d;--selection-glow:#357a4d18;--wire-selected:#795211;--wire-hover:#4c356e;--wire-ready:#65488f;--wire-ready-glow:#65488f22;
+ --category-tab-border:#b9c2ce;--category-all-bg:#e3e7ed;--category-all-fg:#4f5968;
+ --color-checker-light:#fafbfc;--color-checker-dark:#d7dce3;--ladder-bg:#f1f3f5;--ladder-border:#9ca6b4;--ladder-active:#ded9e9;
 }
 :root[data-ui-theme="light"] :is(#editorheader,.location-bar,footer,.graph-workspace .toolbar,.graph-navigation){background:var(--ui-chrome);color:var(--ui-text)}
 :root[data-ui-theme="light"] :is(aside,.material-preview,.help-panel,#browserdetail){background:var(--ui-surface);color:var(--ui-text)}
@@ -1050,16 +1057,58 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] :is(#diagnosticbar strong,.compile-details summary){color:#82352e}
 :root[data-ui-theme="light"] #connectionnotice{background:#f4ecd9;color:#705616}
 :root[data-ui-theme="light"] .connection-summary strong{color:#705616}
-:root[data-ui-theme="light"] #canvas{background-color:#211f29;background-image:radial-gradient(#3d3748 var(--grid-dot,1px),transparent calc(var(--grid-dot,1px) + .5px))}
-:root[data-ui-theme="light"] #canvas.drop-ready{background-color:#302839}
-:root[data-ui-theme="light"] .canvas-caption :is(strong,span){color:#9390a5}
-/* Dark islands retain their local contrast; do not recolor individual sockets or typed wires. */
-:root[data-ui-theme="light"] :is(#canvas .node,.node-inspector-title,#valueladder,.code-editor,#sourcecode){color-scheme:dark;--muted:#9390a5;--line:#30303b;--purple:#b39cfb;--green:#a2d3b0;color:#e5e4ed}
-:root[data-ui-theme="light"] #inspector .node-inspector-title{color:var(--category-fg);border-color:#ffffff16}
+:root[data-ui-theme="light"] #canvas{background-color:var(--canvas-bg);background-image:radial-gradient(var(--canvas-grid) var(--grid-dot,1px),transparent calc(var(--grid-dot,1px) + .5px))}
+:root[data-ui-theme="light"] #canvas.drop-ready{background-color:#d5d2e3;box-shadow:inset 0 0 0 2px var(--purple)}
+:root[data-ui-theme="light"] .canvas-caption :is(strong,span){color:var(--muted)}
+:root[data-ui-theme="light"] #canvas .node{color:var(--ui-text);background:var(--node-body);border-color:var(--node-border);box-shadow:0 3px 9px #29384d20}
+:root[data-ui-theme="light"] #canvas .node.selected{border-color:var(--selection);box-shadow:0 0 0 1px var(--selection),0 3px 9px #29384d20}
+:root[data-ui-theme="light"] #canvas .node.error{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger),0 3px 9px #29384d20}
+:root[data-ui-theme="light"] .node .node-title{background:var(--category-bg);color:var(--category-fg);border-bottom-color:#8995a333}
+:root[data-ui-theme="light"] :is(.node-value,.expose-badge){color:var(--muted)}
+:root[data-ui-theme="light"] .port-row{color:var(--ui-text)}
+:root[data-ui-theme="light"] .input .port{background:var(--node-body)}
+:root[data-ui-theme="light"] .port:hover{background:var(--socket);outline-color:#694b912b}
+:root[data-ui-theme="light"] .port.wire-target{background:var(--socket);outline-color:var(--wire-ready)}
+:root[data-ui-theme="light"] .port-row[data-type="sampler2D"]{--socket:var(--type-sampler)}
+:root[data-ui-theme="light"] #wires path[data-type="sampler2D"]{stroke:var(--type-sampler)}
+:root[data-ui-theme="light"] [data-color-component="r"]{--component-color:#a23f48}
+:root[data-ui-theme="light"] [data-color-component="g"]{--component-color:#376d45}
+:root[data-ui-theme="light"] [data-color-component="b"]{--component-color:#32649c}
+:root[data-ui-theme="light"] [data-color-component="a"]{--component-color:#62616d}
+:root[data-ui-theme="light"]:where(.rgba-component-tint) .port-row[data-color-component]{--socket:var(--component-color)}
+:root[data-ui-theme="light"]:where(.rgba-component-tint) #wires path[data-color-component]{stroke:var(--component-color)}
+:root[data-ui-theme="light"] #wires path.selected{stroke:var(--wire-selected)}
+:root[data-ui-theme="light"] #wires path:hover{stroke:var(--wire-hover)}
+:root[data-ui-theme="light"] .spare-port-row .port-add{--socket:#717d8f;background:#717d8f;border-color:#717d8f}
+:root[data-ui-theme="light"] .spare-port-row .port-add:is(:hover,.wire-target){background:var(--purple);border-color:var(--purple)}
+:root[data-ui-theme="light"] .node-inline-values input{background:var(--node-value-bg);color:var(--ui-text)}
+:root[data-ui-theme="light"]:where(.rgba-component-tint) :is(.node-color-values input,.port-row[data-color-component] .node-inline-values input){color:var(--component-color)}
+:root[data-ui-theme="light"] .node-inline-values input[aria-invalid="true"]{outline-color:var(--danger)}
+:root[data-ui-theme="light"] .port-type[data-conversion="invalid"]{text-decoration-color:var(--danger)}
+:root[data-ui-theme="light"] :is(.node-canvas-comment,.vector-components-toggle){border-top-color:var(--line)}
+:root[data-ui-theme="light"] .vector-components-toggle:hover{background:#dde2e980;color:var(--ui-text)}
+:root[data-ui-theme="light"] .port-row.output:hover .vector-split-shortcut,:root[data-ui-theme="light"] .vector-split-shortcut:focus-visible{background:var(--node-body)}
+:root[data-ui-theme="light"] .vector-split-shortcut:hover{color:var(--purple)}
+:root[data-ui-theme="light"] .vector-drop-range{background:#694b911c;outline-color:#694b9170}
+:root[data-ui-theme="light"] #wires .vector-drop-replaced{stroke:#96601c;opacity:.9}
+:root[data-ui-theme="light"] #inspector .node-inspector-title{color:var(--category-fg);border-color:var(--line)}
 :root[data-ui-theme="light"] #inspector .node-inspector-title .node-inspector-label{color:inherit}
-:root[data-ui-theme="light"] #inspector .node-inspector-label input{background:#ffffff12;color:inherit;border-color:transparent}
-:root[data-ui-theme="light"] #inspector .node-inspector-label input:hover{background:#ffffff1c}
-:root[data-ui-theme="light"] #inspector .node-inspector-label input:focus{background:#00000024}
+:root[data-ui-theme="light"] #inspector .node-inspector-label input{background:#ffffff70;color:inherit;border-color:transparent}
+:root[data-ui-theme="light"] #inspector .node-inspector-label input:hover{background:#ffffffa0}
+:root[data-ui-theme="light"] #inspector .node-inspector-label input:focus{background:var(--ui-field)}
+:root[data-ui-theme="light"] #valueladder{box-shadow:0 5px 16px #29384d28}
+:root[data-ui-theme="light"] #valueladder :is(strong,output,.ladder-rows>div){color:var(--ui-text)}
+:root[data-ui-theme="light"] #valueladder .ladder-rows>div.active{color:var(--purple)}
+:root[data-ui-theme="light"] #valueladder small{color:var(--muted)}
+:root[data-ui-theme="light"] :is(.node-inline-values input,input).scrubbing{background:var(--ui-selected)}
+:root[data-ui-theme="light"] :is(#connection,#graphtrashlabel,#graphtrashproxy,.input-drag-preview){background:var(--ui-surface);color:var(--ui-text);border-color:var(--node-border);box-shadow:0 3px 12px #29384d24}
+:root[data-ui-theme="light"] #graphtrash .trash-face{background:#eef1f5e6}
+:root[data-ui-theme="light"] #graphtrash[data-state=available] .trash-face{color:var(--ui-text)}
+:root[data-ui-theme="light"] #graphtrash[data-state=active] .trash-face,:root[data-ui-theme="light"] #graphtrash[data-state=active]~#graphtrashlabel{background:var(--danger);color:#fff}
+:root[data-ui-theme="light"] .node.trash-pending{border-color:var(--danger)!important;box-shadow:0 0 0 2px var(--danger),0 3px 9px #29384d20!important}
+:root[data-ui-theme="light"] #wires path.trash-pending{stroke:var(--danger)!important}
+/* Source code keeps its own syntax palette; no filters are applied to preview images. */
+:root[data-ui-theme="light"] :is(.code-editor,#sourcecode){color-scheme:dark;--muted:#9390a5;--line:#30303b;--purple:#b39cfb;--green:#a2d3b0;color:#e5e4ed}
 :root[data-ui-theme="light"] #inspector .code-editor textarea{background:#191920;color:#e5e4ed;border-color:var(--line)}
 :root[data-ui-theme="light"] #sourcecode{background:#14141c;color:var(--glsl-text)}
 
