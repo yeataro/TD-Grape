@@ -6,6 +6,7 @@
 /* Edit this palette in one place. No end-user theme controls in 0.1. */
 :root{
   --type-float:#b8b5ae;
+  --node-value-bg:#393843;
   --type-vec2:#79b9eb;
   --type-vec3:#75c7ac;
   --type-vec4:#b7a0db;
@@ -34,14 +35,14 @@
 #wires path[data-type="vec3"]{stroke:var(--type-vec3)}
 #wires path[data-type="vec4"]{stroke:var(--type-vec4)}
 /* RGBA hints affect presentation, not GLSL types or downstream inference. */
-:where([data-color-component="r"]){--component-color:#cc989d;--component-bg:#2b242b;--component-border:#63505a}
-:where([data-color-component="g"]){--component-color:#9bc4a5;--component-bg:#232c2b;--component-border:#4b6157}
-:where([data-color-component="b"]){--component-color:#9aafd4;--component-bg:#242a34;--component-border:#4d5b72}
-:where([data-color-component="a"]){--component-color:#c3c0cb;--component-bg:#282831;--component-border:#595865}
-.port-row[data-color-component]{--socket:var(--component-color)}
-.port-row[data-color-component] .port-label{color:var(--component-color)}
-.port-row[data-color-component]>small{color:var(--type-float)}
-#wires path[data-color-component]{stroke:var(--component-color)}
+:where([data-color-component="r"]){--component-color:#cc989d}
+:where([data-color-component="g"]){--component-color:#9bc4a5}
+:where([data-color-component="b"]){--component-color:#9aafd4}
+:where([data-color-component="a"]){--component-color:#c3c0cb}
+:where(.rgba-component-tint) .port-row[data-color-component]{--socket:var(--component-color)}
+:where(.rgba-component-tint) .port-row[data-color-component] .port-label{color:var(--component-color)}
+:where(.rgba-component-tint) .port-row[data-color-component]>small{color:var(--type-float)}
+:where(.rgba-component-tint) #wires path[data-color-component]{stroke:var(--component-color)}
 #wires path.selected{stroke:var(--wire-selected);stroke-width:5}
 #wires path:hover{stroke:var(--wire-hover);stroke-width:5}
 
@@ -867,8 +868,8 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .port-row.input:has(.node-inline-values){min-height:30px;padding-right:12px;gap:6px;flex-wrap:nowrap}
 .port-row.input:has(.node-inline-values) .port-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .port-row.input:has(.node-inline-values) .port-type{flex:none}
-.node-inline-values{display:inline-flex;min-width:0;gap:4px;align-items:center;flex:0 0 60px;margin-left:auto;justify-content:flex-end;cursor:default;user-select:text}
-.node-inline-values input{width:60px;min-width:42px;max-width:100%;height:24px;padding:2px 5px;border:1px solid #494250;border-radius:4px;background:#1d1c25;color:#e5dff0;text-align:right;font-size:11px;font-variant-numeric:tabular-nums;cursor:text;appearance:textfield}
+.node-inline-values{display:inline-flex;min-width:0;gap:4px;align-items:center;flex:1 1 60px;margin-left:auto;justify-content:flex-end;cursor:default;user-select:text}
+.node-inline-values input{width:100%;min-width:42px;max-width:100%;height:24px;padding:2px 5px;border:0;border-radius:4px;background:var(--node-value-bg);color:#e5dff0;text-align:left;font-size:11px;font-variant-numeric:tabular-nums;cursor:text;appearance:textfield}
 .node-inline-values input::-webkit-inner-spin-button,.node-inline-values input::-webkit-outer-spin-button{appearance:none;margin:0}
 .node-inline-values input[aria-invalid="true"]{outline:1px solid #ef8d8d}
 .node-inline-component{display:inline-flex;align-items:center;gap:3px;min-width:0;color:var(--muted);font-size:9px;flex:1}
@@ -881,7 +882,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-fixed-values.node-color-values:has(.node-inline-component){grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding-bottom:7px}
 .node-color-values .node-inline-component>span{display:none}
 .node-color-values .node-inline-component input{min-width:0;width:100%;padding-inline:3px}
-.node-color-values input,.port-row[data-color-component] .node-inline-values input{background:var(--component-bg);border-color:var(--component-border)}
+:where(.rgba-component-tint) :is(.node-color-values input,.port-row[data-color-component] .node-inline-values input){color:var(--component-color)}
 .vector-port-pair{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:center}
 .vector-port-pair:has(.vector-whole){grid-template-columns:repeat(2,minmax(0,1fr))}
 .vector-port-pair .port-row{min-width:0;gap:5px}
@@ -889,7 +890,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .vector-port-pair .port-type,.vector-port-pair small{flex:none}
 .vector-port-pair .port-row.input{padding-right:5px}
 .vector-port-pair .node-inline-values{flex-basis:48px}
-.vector-port-pair .node-inline-values input{width:48px}
+.vector-port-pair .node-inline-values input{width:100%}
 .vector-whole{min-height:32px}
 .vector-components-toggle{display:flex;align-items:center;gap:5px;width:100%;border:0;border-top:1px solid #ffffff0a;border-radius:0;margin-top:3px;padding:5px 13px;background:transparent;color:var(--muted);font-size:10px;line-height:16px;text-align:left;white-space:nowrap}
 .vector-components-toggle:hover{background:#ffffff08;color:#ded7ea}

@@ -1,6 +1,6 @@
 // Development-only experiments. Update embedded sources and reload the Editor after changing.
 // These internal values are not user preferences and are never serialized with a graph or layout.
-const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, nodeBodyDrag: true });
+const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, nodeBodyDrag: true, rgbaComponentTint: true });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,suppressWireClick=false;
@@ -663,6 +663,7 @@ function nodeCanvasComment(n){
   return note;
 }
 function renderCards(){
+  document.documentElement.classList.toggle('rgba-component-tint',EDITOR_DEV_SETTINGS.rgbaComponentTint);
   if(typeof deferInlineValueRender==='function'&&deferInlineValueRender())return;
   touchGraphGesture?.cancel();nodeDragGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
