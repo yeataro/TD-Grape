@@ -20,14 +20,21 @@
 
 後續能獨立於 Inputs 改版往下推進的是數值型別核心：int／uint、對應向量、明確轉型、literal／合法函式簽名與舊圖相容驗證。這是較大的工作，宜分輪完成，來源與 Parameter 的最終介面仍配合後續設計。參考 [型別計畫](../discussions/NUMERIC_TYPES_PLAN.md)。0.8.80 已完成 float 向量組合／拆分與常數性檢查；int／uint 等擴充尚未啟動。
 
+### 已確認待辦：節點內數值編輯
+
+- 使用者已同意將畫布節點的手填數值編輯與 Value Ladder 納入待做清單，尚未啟動實作。需共用 Parameter 資料並處理接線狀態、拖曳／觸控、焦點及提交／撤銷邊界；詳見 [節點 UI 筆記](../discussions/NEXT_UI_NOTES.md#節點內數值編輯與-value-ladder2026-09-16已納入待辦)。
+- 建議先交付一輪現有浮點／向量的圖內數值操作，再整理 Inputs 清單及其與自訂參數的銜接；自訂參數已有原生控制與綁定基礎。新型別及 Specialization Constants 可另分里程碑，不必全部完成才推進 Inputs。順序待使用者決定。
+
 ### 等待使用者補充或共同決策
 
 - TOP 來源 0.8.79 已先收斂：來源可全部刪除，首版為 0–16 個 2D 來源，每項對應 COMP 接口；3D／Array／Cube 尚未實作。Inputs、新增節點面板與節點資訊的整體 UI 仍等使用者後續筆記。見 [TOP 來源模型筆記](../discussions/TOP_INPUTS_SOURCE_MODEL.md)。
 - TDFAM 是否造成 OP Create Dialog 底部說明文字消失：已發現其有介入共用說明資料鏈，但尚未確認回報問題的原因；使用者要求暫緩調查，後續再處理。
 - Color Output 的 Help 尚有舊版預覽說明（512 像素、約每秒更新等）；使用者要求先記錄，下次相關說明更新時一併修正。見 [預覽 UI 筆記](../discussions/PREVIEW_UI_NOTES.md#待同步的節點說明2026-09-16)。
-- Parameter 參數名稱、型別、欄位的排版與分組；點回畫布顯示目前 Grape TOP／MAT 的 OP 參數；新增與 Vertex／Pixel 並列的自訂參數工作區，從 Inputs 拖入建立公開控制。
+- OP 參數呈現與 Parameter 整體安排（2026-09-16 修訂）：不確定／待決議。OP 參數呈現保留為可行方向；Parameter 可能位於另一個位置，其位置、排版與切換規則尚未定案。「點回畫布顯示 OP 參數」仍是提案，不視為已確定要求，也不預先與 Parameter 改版綁在同一輪。見 [Parameter 筆記](../discussions/NEXT_UI_NOTES.md#parameter-改版筆記2026-09-15待討論實作)。
+- 自訂參數工作區與 Inputs 拖入建立公開控制保留為後續設計方向；其工作區位置不因上述 Parameter 待決事項而被預先選定。
 - Grape TOP Common／Output 一比一綁定及 UV 的人工模板；TOP 輸入链簡化與 TD 網路四象限配置，以使用者人工範本為依據。
 - 使用者自製的 Universal／PBR Viewer 接入；控制面板後續設計、原生快捷鍵與 Viewer 更新時機的限制。
+- 0.8.81 的預覽 Lock 暫解仍有存檔時把暫態寫入 TOE 的疑慮，尚未處理。使用者預計替換 OP Viewer；若仍需保留上一幀，優先評估 Cache TOP。此次僅記錄，見 [預覽暫存筆記](../discussions/PREVIEW_UI_NOTES.md)。
 - Open Editor 在沒有 Shader 時的行為：現有自動建立 MAT 仍在；空白啟動與建立／選擇入口尚未定案。
 - 灰點快捷延伸到外部 Subgraph 呼叫、Uniform／Attributes／Color Output／Vertex Output 等入口；各類型的命名、排序及合法操作邊界仍需設計。
 
