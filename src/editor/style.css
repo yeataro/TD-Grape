@@ -715,17 +715,6 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .connection-row{display:flex;align-items:center;gap:8px;min-width:0}
 .connection-row .connection-source{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .connection-row button{flex:none;font-size:11px;padding:4px 8px}
-/* Keep the primary action with the brand when the remaining actions wrap. */
-@media(max-width:1100px){
- header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;height:auto;min-height:0;padding:12px 15px}
- header .brand{grid-row:1;grid-column:1;margin:0;gap:10px}header .brand strong{font-size:20px}
- header .brand small,header #about{display:none}
- header .actions{display:contents}
- header #apply{grid-row:1;grid-column:2;justify-self:end;margin:0}
- header .secondary-actions{grid-row:2;grid-column:1/-1;display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;min-width:0}
- header .secondary-actions button,header .secondary-actions select{font-size:11px;padding:6px 8px}
-}
-.secondary-actions{display:flex;align-items:center;gap:8px}
 
 .workspace-drop-mark[data-mode=insert]{border:0;border-radius:1px;background:var(--purple);box-shadow:0 0 0 1px #19181f}
 #layoutmenu{position:fixed;z-index:200;min-width:200px;max-width:calc(100vw - 16px);max-height:calc(100dvh - 120px);overflow:auto;padding:6px;background:#24232c;border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px #0007}
@@ -920,17 +909,28 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .port-row.output:has(.vector-split-shortcut) { padding-left:37px; }
 
 /* Header, location controls and a persistent compact footer stay separate. */
+#editorheader{display:flex;align-items:center;justify-content:space-between;gap:24px;height:52px;min-height:52px;padding:0 18px}
 #editorheader[hidden]{display:none!important}
-#editorheader .brand{display:flex;align-items:baseline;flex-wrap:nowrap;gap:10px;min-width:0}
-#editorheader .brand-mark,#editorheader .brand strong{flex:none}
-#editorheader .brand-mark{align-self:center}
-#editorheader .brand small{display:flex;align-items:baseline;gap:5px;font-size:10px;min-width:0;margin-left:0}
+#editorheader .brand{display:flex;align-items:baseline;flex-wrap:nowrap;gap:8px;min-width:0;margin:0}
+#editorheader .brand-mark{width:28px;height:28px;flex:none;align-self:center}
+#editorheader .brand strong{flex:none;font-size:20px;line-height:24px;font-weight:600;letter-spacing:-.35px}
+#editorheader .brand small{display:flex;align-items:baseline;gap:6px;font-size:11px;line-height:18px;font-weight:400;letter-spacing:.15px;min-width:0;margin-left:12px;white-space:nowrap}
 #editorheader .brand-tagline{min-width:0;flex:0 1 auto}
-#editorheader .brand-version::before{margin-right:5px}
-#editorheader #about{display:inline;padding:0;border:0;border-radius:2px;font:inherit;line-height:inherit;flex:none}
-#editorheader .actions button,#editorheader .actions select{height:34px;padding-block:0;white-space:nowrap}
+#editorheader .brand-version::before{margin-right:6px}
+#editorheader #about{display:inline;padding:0;border:0;border-radius:2px;font:inherit;letter-spacing:inherit;line-height:inherit;flex:none}
+#editorheader .actions,#editorheader .secondary-actions{display:flex;align-items:center;gap:6px;flex:none}
+#editorheader .actions button,#editorheader .actions select{height:32px;padding:0 10px;font-size:11px;white-space:nowrap}
+#editorheader #apply{padding-inline:14px}
+@media(max-width:980px){
+ #editorheader{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;height:auto;min-height:0;padding:8px 14px}
+ #editorheader .brand{grid-row:1;grid-column:1}
+ #editorheader .actions{display:contents}
+ #editorheader #apply{grid-row:1;grid-column:2;justify-self:end;margin:0}
+ #editorheader .secondary-actions{grid-column:1/-1;grid-row:2;justify-content:flex-end;flex-wrap:wrap;min-width:0}
+ #editorheader .secondary-actions button,#editorheader .secondary-actions select{padding-inline:6px}
+}
 @media(max-width:600px){#editorheader .brand-tagline{display:none}}
-@media(max-width:360px){
+@media(max-width:480px){
  #editorheader .brand{grid-column:1/-1}
  #editorheader .actions{display:flex;grid-column:1/-1;grid-row:2;flex-wrap:wrap;justify-content:flex-end;gap:6px}
  #editorheader .secondary-actions{display:contents}
@@ -958,8 +958,6 @@ footer #editorrefresh svg{width:16px;height:16px}
 @media(max-width:800px){
  .location-start>#projectfile{max-width:72px;font-size:10px}
  .location-bar .shader-selector #shaderpicker{max-width:100%;font-size:10px}
- #editorheader .brand small{font-size:9px;gap:4px}
- #editorheader .actions button,#editorheader .actions select{height:32px}
  .graph-workspace .toolbar{gap:5px}
  .graph-workspace .graph-tools{display:contents}
  .graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:34px;min-height:34px}
