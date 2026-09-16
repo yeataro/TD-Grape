@@ -1,4 +1,4 @@
-"""A position save must not configure or replace the native Shader program."""
+"""Position and component visibility saves must not replace the native Shader."""
 import copy,json
 r=op('/TD_Grape/runtime').module;c=r.core()
 def snapshot():
@@ -10,6 +10,7 @@ try:
     for kind in ('top','mat'):
         initial=c.demo_graph('color',target=kind)
         if kind=='top':initial=c.normalize_top_sources(initial)[0]
+        initial['stages']['pixel']['nodes'].append(c.node('vector','compactVector',360,300,type='vec4'))
         shader=r.create_shader(area,kind,initial,kind)
         with r.shader_context(shader):
             graph=copy.deepcopy(r.state()['graph']);previous_revision=r.state()['revision']
@@ -24,10 +25,22 @@ try:
             assert saved['shaderUpdated'] is False and saved['state']['revision']==previous_revision+1
             assert not calls, calls
             assert all(shader.op(k).text==v for k,v in texts.items())
+            for expanded in (True,False):
+                vector=next(n for n in graph['stages']['pixel']['nodes'] if n['id']=='compactVector')
+                vector['ui']['componentsExpanded']=expanded
+                previous_revision=saved['state']['revision']
+                saved=r.deploy(graph,previous_revision)
+                assert saved['shaderUpdated'] is False and saved['state']['revision']==previous_revision+1
+                assert not calls,calls
+                assert all(shader.op(k).text==v for k,v in texts.items())
+                stored=json.loads(shader.op('graph').text)
+                assert next(n for n in stored['stages']['pixel']['nodes'] if n['id']=='compactVector')['ui']['componentsExpanded'] is expanded
+                assert next(n for n in saved['state']['graph']['stages']['pixel']['nodes'] if n['id']=='compactVector')['ui']['componentsExpanded'] is expanded
             graph['stages']['pixel']['nodes'][0]['ui']['label']='Native save status check'
             applied=r.deploy(graph,saved['state']['revision'])
             assert applied['shaderUpdated'] is True and len(calls)==2,calls
-            checks.append({'kind':kind,'positionSaveConfiguredShader':False,'shaderEditConfiguredShader':True})
+            checks.append({'kind':kind,'positionSaveConfiguredShader':False,'componentVisibilityConfiguredShader':False,
+                           'componentVisibilityPersisted':[True,False],'shaderEditConfiguredShader':True})
             r.configure=configure
 finally:
     r.configure=configure

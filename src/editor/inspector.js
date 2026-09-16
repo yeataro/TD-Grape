@@ -568,7 +568,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
 }
 function nodeInlineValues(n,port){
   const type=ports(n,'inputs')[port],key=definition(n)?.key;
-  if(!numericTypes().includes(type)||current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port))return null;
+  if(type!=='float'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port))return null;
   if(key==='vector'&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value')))return null;
   const value=defaultInput(n,port,type);if(value===null)return null;
   return inlineNumericFields(n,port,value,(index,next)=>{
@@ -578,7 +578,7 @@ function nodeInlineValues(n,port){
   },key==='vector'?vectorNames(n):'XYZW');
 }
 function nodeFixedValueEditor(n){
-  const key=definition(n)?.key;if(!['float','vec2','vec3','vec4','color'].includes(key))return null;
+  const key=definition(n)?.key;if(key!=='float')return null;
   const box=inlineNumericFields(n,'$value',n.params.value,(index,next)=>{
     if(Array.isArray(n.params.value)){n.params.value=n.params.value.slice();n.params.value[index]=next;}else n.params.value=next;
   },key==='color'?'RGBA':'XYZW');box.classList.add('node-fixed-values');return box;

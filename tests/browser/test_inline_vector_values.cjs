@@ -19,6 +19,7 @@ async function run() {
   try {
     const field = (node, port = '$value', component = 0) => page.locator(numeric(node, port, component));
     const graphJSON = () => page.evaluate(() => JSON.stringify(graph));
+    const semanticJSON = () => page.evaluate(() => JSON.stringify(graph, (key, value) => key === 'ui' ? undefined : value));
     const history = () => page.evaluate(() => past.length);
     const value = (node = 'scalar') => page.evaluate(id => current().nodes.find(n => n.id === id).params.value, node);
     const position = (node = 'scalar') => page.evaluate(id => clone(current().nodes.find(n => n.id === id).ui), node);
@@ -29,7 +30,7 @@ async function run() {
         {node: to, kind: 'inputs', port, type: ports(target, 'inputs')[port]}
       );
     }, [from, to, port, output]);
-    const reset = () => page.evaluate(() => {
+    const reset = (expanded = true) => page.evaluate(expanded => {
       clearTimeout(autoTimer); connectionInterrupted = true; readonly = false;
       graphTrail = []; graph.functions = []; graph.declarations = []; stage = 'pixel';
       selected = selectedEdge = null; selection.clear(); past = []; future = [];
@@ -42,8 +43,115 @@ async function run() {
         testNode('other', 'add', 655, 350, {type: 'float'}),
         testNode('pixel', 'pixel_out', 655, 95)
       ], edges: []};
+      if (expanded) current().nodes.find(n => n.id === 'vector').ui.componentsExpanded = true;
       scale = .8; pan = {x: 22, y: 25}; render();
-    });
+    }, expanded);
+    const toggle = () => page.locator('[data-vector-expand="vector"]');
+    const socketVisible = (kind, port) => page.locator(socket('vector', kind, port)).isVisible();
+    const paired = async (input, output) => {
+      const left = await page.locator(socket('vector', 'inputs', input)).boundingBox();
+      const right = await page.locator(socket('vector', 'outputs', output)).boundingBox();
+      assert.ok(left && right, `${input}/${output} sockets must both be visible`);
+      assert.ok(left.x < right.x, `${input}/${output} must read from left to right`);
+      assert.ok(Math.abs(left.y + left.height / 2 - right.y - right.height / 2) <= 1, `${input}/${output} must share one row`);
+    };
+    const checkBounds = async () => {
+      const layout = await page.evaluate(() => [...document.querySelectorAll('.node')].map(card => {
+        const bounds = card.getBoundingClientRect();
+        const controls = [...card.querySelectorAll('input[data-inline-node],.node-value,[data-vector-expand],.port-label')]
+          .filter(entry => entry.getClientRects().length)
+          .map(entry => ({label: entry.getAttribute('aria-label') || entry.textContent, numeric: entry.matches('input'), bounds: entry.getBoundingClientRect().toJSON()}));
+        const captions = [...card.querySelectorAll('.port-label,.port-type')]
+          .filter(entry => entry.getClientRects().length)
+          .map(entry => ({label: entry.textContent, bounds: entry.getBoundingClientRect().toJSON()}));
+        return {node: card.dataset.node, bounds: bounds.toJSON(), controls, captions};
+      }));
+      for (const card of layout) for (const item of card.controls) {
+        assert.ok(item.bounds.left >= card.bounds.left - 1 && item.bounds.right <= card.bounds.right + 1,
+          `${card.node}: ${item.label} overflows its card horizontally`);
+        assert.ok(item.bounds.top >= card.bounds.top - 1 && item.bounds.bottom <= card.bounds.bottom + 1,
+          `${card.node}: ${item.label} overflows its card vertically`);
+        if (item.numeric) for (const caption of card.captions) {
+          const overlapX = Math.min(item.bounds.right, caption.bounds.right) - Math.max(item.bounds.left, caption.bounds.left);
+          const overlapY = Math.min(item.bounds.bottom, caption.bounds.bottom) - Math.max(item.bounds.top, caption.bounds.top);
+          assert.ok(overlapX <= 1 || overlapY <= 1, `${card.node}: numeric field overlaps ${caption.label}`);
+        }
+      }
+    };
+
+    const checkMainLabels = async () => {
+      const labels = await page.locator('[data-node="vector"] .vector-whole .port-label').evaluateAll(entries =>
+        entries.map(entry => ({text: entry.textContent, width: entry.clientWidth, content: entry.scrollWidth})));
+      for (const label of labels) assert.ok(label.content <= label.width + 1, `whole-vector label is truncated: ${label.text}`);
+    };
+    await reset(false);
+    assert.equal(await toggle().getAttribute('aria-expanded'), 'false');
+    assert.equal(await page.evaluate(() => !!current().nodes.find(n => n.id === 'vector').ui.componentsExpanded), false);
+    await paired('value', 'out'); await checkMainLabels();
+    for (const port of 'xyzw') {
+      assert.equal(await socketVisible('inputs', port), false);
+      assert.equal(await socketVisible('outputs', port), false);
+    }
+    const compactBox = await page.locator('[data-node="vector"]').boundingBox();
+    await checkBounds();
+    await page.screenshot({path: path.join(folder, 'vector-compact.png')});
+    checks.push('Vector starts compact with its whole input/output paired on one row and unused component rows hidden');
+
+    const beforeExpand = await semanticJSON();
+    await toggle().focus(); await page.keyboard.press('Enter'); await settle();
+    assert.equal(await toggle().getAttribute('aria-expanded'), 'true');
+    assert.equal(await toggle().evaluate(entry => entry === document.activeElement), true);
+    assert.equal(await page.evaluate(() => current().nodes.find(n => n.id === 'vector').ui.componentsExpanded), true);
+    assert.equal(await semanticJSON(), beforeExpand);
+
+    for (const port of 'xyzw') await paired(port, port);
+    await paired('value', 'out'); await checkMainLabels();
+    const expandedBox = await page.locator('[data-node="vector"]').boundingBox();
+    assert.ok(expandedBox.height > compactBox.height);
+    assert.ok(Math.abs(expandedBox.width - compactBox.width) <= 1);
+    await checkBounds();
+    await page.screenshot({path: path.join(folder, 'vector-expanded.png')});
+    await page.keyboard.press('Space'); await settle();
+    assert.equal(await semanticJSON(), beforeExpand);
+    assert.equal(await toggle().getAttribute('aria-expanded'), 'false');
+    assert.equal(await toggle().evaluate(entry => entry === document.activeElement), true);
+    await page.evaluate(() => render());
+    assert.equal(await toggle().getAttribute('aria-expanded'), 'false');
+    checks.push('Components retains focus across keyboard Enter/Space toggles and survives redraw as UI state only; expanded pairs align without widening the card');
+
+    assert.equal(await connect('scalar', 'vector', 'z'), true);
+    await paired('z', 'z');
+    for (const port of 'xyw') assert.equal(await socketVisible('outputs', port), false);
+    assert.equal(await connect('vector', 'other', 'a', 'z'), true);
+    await page.evaluate(() => change(() => {current().edges = current().edges.filter(e => e.to.join(':') !== 'vector:z');}));
+    await paired('z', 'z');
+    assert.equal(Number(await field('vector', 'z').inputValue()), .3);
+    assert.equal(await connect('pair', 'vector', 'y'), true);
+    assert.equal(await socketVisible('inputs', 'y'), true);
+    assert.equal(await socketVisible('inputs', 'z'), false);
+    assert.equal(await socketVisible('outputs', 'z'), true);
+    assert.equal(await page.evaluate(() => current().edges.some(e => e.from.join(':') === 'vector:z' && e.to.join(':') === 'other:a')), true);
+    for (const port of 'xw') assert.equal(await socketVisible('outputs', port), false);
+    await checkBounds();
+    await page.screenshot({path: path.join(folder, 'vector-compact-wired.png')});
+    checks.push('collapsed Vector keeps rows connected on either side, including a distinct Z output beside a merged YZ input');
+
+    assert.equal(await field('scalar').count(), 1);
+    assert.equal(await field('other', 'b').count(), 1);
+    for (const id of ['pair', 'base', 'pixel']) assert.equal(await page.locator(`[data-inline-node="${id}"]`).count(), 0);
+    assert.match(await page.locator('[data-node="pair"] .node-value').innerText(), /0\.6.*0\.7/);
+    assert.match(await page.locator('[data-node="base"] .node-value').innerText(), /0\.8.*0\.9/);
+    await page.locator('[data-node="pair"] .node-title').click();
+    assert.equal(await page.locator('#inspector input[type="number"]').count() >= 2, true);
+    checks.push('only scalar graph values edit inline; fixed vector summaries stay readable and their full controls remain in Parameter');
+
+    await page.locator('[data-node="base"] .vector-split-shortcut').click();
+    const shortcut = await page.evaluate(() => ({id: selected, key: definition(current().nodes.find(n => n.id === selected))?.key,
+      expanded: current().nodes.find(n => n.id === selected)?.ui.componentsExpanded}));
+    assert.equal(shortcut.key, 'vector'); assert.equal(shortcut.expanded, true);
+    assert.equal(await page.locator(socket(shortcut.id, 'outputs', 'z')).isVisible(), true);
+    checks.push('the vector split shortcut opens an expanded Vector with component outputs immediately available');
+
     await reset();
     assert.equal(await page.locator('[data-inline-node="vector"]').count(), 4);
     for (const [index, port] of [...'xyzw'].entries()) {

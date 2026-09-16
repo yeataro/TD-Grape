@@ -58,7 +58,10 @@ function functionEntry(f,source=false){
   return {key:source?'source:'+f.scope+':'+f.id+':'+(f.source?.version||''):'function:'+f.id,label:f.name,stages:f.stages,inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id,source:source?f:null,category:f.scope==='personal'?'personal':'functions'};
 }
 function availableEntries(){
-  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&d.key!=='texture'&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).map(d=>({...d,category:nodeCategory(d)}));
+  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&d.key!=='texture'&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+    if(d.key==='vector')return ['vec2','vec3','vec4'].map(type=>({...d,entryKey:'vector:'+type,presetType:type,label:'Vector '+type.slice(-1),defaults:{...d.defaults,type},category:nodeCategory(d)}));
+    return [{...d,label:['vec2','vec3','vec4'].includes(d.key)?d.label+' · Constant':d.label,category:nodeCategory(d)}];
+  });
   for(const f of librarySources().filter(f=>f.stages.includes(stage)))entries.push(functionEntry(f,true));
   const sources=librarySources().flatMap(f=>[f,...(f.dependencies||[])]);
   for(const f of (graph.functions||[]).filter(f=>f.stages.includes(stage)&&!graphTrail.includes(f.id))){
@@ -94,6 +97,9 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
 }
 function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={}}={}){
   const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});
+  // Presets are insertion choices only; the saved graph retains the canonical
+  // definition UUID and concrete type, never an extra preset node identity.
+  type=d.presetType||type;
   if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
   if(type&&params.type)params.type=type;
   if(['uniform','constant'].includes(d.key)){

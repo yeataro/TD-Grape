@@ -9,6 +9,7 @@ initial_ids={n.id for n in parent_comp.children}
 previous_shaders=dict(runtime._shaders)
 previous_shader=runtime._shader
 records=[]
+created_instances=[]
 templates={kind:runtime.master_template(kind) for kind in ('top','mat')}
 def snapshot():
     return {kind:{'id':n.id,'storage':repr(n.storage),
@@ -28,6 +29,7 @@ try:
         added=[n for n in parent_comp.children if n.id not in old_ids]
         assert len(added)==1,[(n.name,n.id) for n in added]
         instance=added[0]
+        created_instances.append(instance)
         assert instance.name.startswith('Grape_'+kind.upper())
         assert instance.storage['sgrapeShaderId']!=template.storage['sgrapeShaderId']
         assert instance.storage['sgrapeManagerId']==owner.storage['sgrapeManagerId']
@@ -79,10 +81,11 @@ try:
     assert snapshot()==before,'Opening a Master changed its stored identity or graph'
 finally:
     runtime._owner=owner
-    for n in parent_comp.children:
-        if n.id not in initial_ids:
-            assert n.storage.get('sgrapeGenerated',False)
-            n.destroy()
+    # Only dispose of this test's own copies. A user may create or move a
+    # generated Shader into the root while the test is running.
+    for instance in created_instances:
+        if instance and instance.valid:
+            instance.destroy()
     runtime._shaders=previous_shaders
     runtime._shader=previous_shader
 assert {n.id for n in parent_comp.children}==initial_ids

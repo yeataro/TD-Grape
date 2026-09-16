@@ -179,3 +179,19 @@ cook 次數持續增加；原生無效 GLSL 的節點定位與上一份成功內
 注入 commit 失敗後圖／state／manifest／兩份 GLSL 完整還原，capture 自動解除。
 TOP／MAT 向量原生 27 項案例與 Master 檢查通過。可攜完整檢查通過，Remote Panel 相關行為測試共 15 項通過（本次新增 10 項）。兩份使用者圖與產碼對原始備份完全相同；
 Master 已同步、正式 TOE 已保存；沒有修改任何 catalog 定義或圖結構。
+
+
+## 節點緊湊顯示（0.8.83，2026-09-16）
+
+```text
+node tests/browser/test_inline_vector_values.cjs src/editor <current-editor-state-json> <inline-report-directory>
+node tests/browser/test_vector_presets.cjs src/editor <current-editor-state-json> <preset-report-directory>
+node tests/browser/test_node_interactions.cjs src/editor <current-editor-state-json> <interaction-report-directory>
+python tools/dev/submit_job.py tests/td/test_editor_save_status.py --report compact-save-status
+```
+
+本輪 203 項 Python 單元測試與完整可攜檢查通過。瀏覽器共 43 項檢查：21 項數值／Vector 互動、4 組維度入口、18 項既有節點／Subgraph 操作；零頁面錯誤。檢查包含預設收合、左右接孔對齊、展開後寬度不變、已接入或接出的分量保持可見、YZ 分組與獨立 Z 輸出共存、float-only inline，以及欄位不重疊、不越界與標籤不截短。實際截圖已檢視。
+
+TD 2025.32820、Windows 原生 TOP／MAT 的展開與收合均確認：保存 UI 狀態、`shaderUpdated: false`、不呼叫 configure、manifest／Shader DAT 不變；語意編輯仍正常更新。Master 模板同步、建立入口與舊模板拒絕檢查通過。本輪未改編譯節點定義，138 份既有 GLSL 指紋維持一致。瀏覽器觸控事件測試不代表手機／iPad／Safari 實機驗證。
+
+0.8.83 的 24 份內嵌來源與服務資產於保存前再次核對一致；正式開發 TOE 已保存，保留當時的使用者 Shader，私人開發助手不寫入來源檔。

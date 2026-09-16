@@ -143,5 +143,24 @@ const vector=catalog.find(d=>d.key==='vector');assert.ok(creatorPriority({d:vect
 // Existing Split shortcuts are reused without converting old nodes or defaults.
 setup([node('uv','uv'),node('vector_split','old',{type:'vec2'})],[edge('uv','old','value')]);
 before=clone(graph);addVectorSplit(n('uv'),'out');assert.equal(selected,'old');identical(graph,before);
+
+// Three direct insertion presets share one compiler definition, but retain an
+// exact dimension through all creation paths and never serialize UI identities.
+const vectorEntries=availableEntries().filter(d=>d.key==='vector');
+identical(vectorEntries.map(d=>[browserEntryKey(d),d.label,d.presetType]),[
+  ['vector:vec2','Vector 2','vec2'],['vector:vec3','Vector 3','vec3'],['vector:vec4','Vector 4','vec4']]);
+for(const entry of vectorEntries){
+  identical(creatorVariants(entry,null).map(v=>v.type),[entry.presetType]);
+  setup([]);assert.equal(change(()=>instantiate(entry,100,100)),true);
+  const created=n(selected);assert.equal(created.params.type,entry.presetType);assert.equal(created.definitionUuid,'sgrape.builtin.vector');
+  assert.equal(Object.hasOwn(created,'entryKey'),false);assert.equal(Object.hasOwn(created.params,'presetType'),false);
+}
+for(const key of ['vec2','vec3','vec4']){
+  const entry=availableEntries().find(d=>d.key===key);assert.ok(entry.label.endsWith(' · Constant'));
+  setup([]);assert.equal(change(()=>instantiate(entry,100,100)),true);
+  assert.equal(n(selected).definitionUuid,'sgrape.builtin.'+key);identical(n(selected).params,catalog.find(d=>d.key===key).defaults);
+}
+const preset3=vectorEntries.find(d=>d.presetType==='vec3'),preset2=vectorEntries.find(d=>d.presetType==='vec2');
+assert.ok(creatorPriority({d:preset3,portType:'vec3'},{kind:'inputs',type:'vec3'})<creatorPriority({d:preset2,portType:'float'},{kind:'inputs',type:'vec3'}));
 console.log(JSON.stringify({passed:true,graphs}));
 `,context);

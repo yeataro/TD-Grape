@@ -461,6 +461,7 @@ function creatorTypePlan(d,variant,port,wire,locked){
   const plan=planWireTypes(from,to,{node,ports:variant});return plan.ports.get(id);
 }
 function creatorVariants(d,wire){
+  if(d.presetType)return typeVariants(d).filter(variant=>variant.type===d.presetType);
   if(d.key!=='swizzle')return typeVariants(d);
   const count=wire&&numericTypes().includes(wire.type)?typeComponents(wire.type):2;
   return typeVariants(d).flatMap(variant=>{
@@ -474,7 +475,9 @@ function creatorPriority(match,wire){
   if(!wire)return 99;
   const count=numericTypes().includes(wire.type)?typeComponents(wire.type):0;
   const order=wire.kind==='outputs'?(count>1?['vector','vector_split','swizzle','combine','multiply','add','mix']:['multiply','add','vector','combine','mix']):count>1?['vector','combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','vector','add','multiply'];
-  const index=order.indexOf(match.d.key);return index<0?99:index;
+  const index=order.indexOf(match.d.key);
+  // Exact whole-vector matches precede scalar fallbacks across preset entries.
+  return index<0?99:index+(match.d.presetType&&match.portType!==wire.type?0.5:0);
 }
 
 function inputTypeDisplay(n,port){
@@ -505,9 +508,9 @@ function vectorPortLabel(n,kind,port){
 function addVectorSplit(source,port){
   const type=ports(source,'outputs')[port];if(!typeContract?.vectors?.types.includes(type))return;
   const existing=current().edges.find(e=>e.from[0]===source.id&&e.from[1]===port&&e.to[1]==='value'&&['vector','vector_split'].includes(definition(current().nodes.find(n=>n.id===e.to[0]))?.key));
-  if(existing){selectNode(current().nodes.find(n=>n.id===existing.to[0]));render();return;}
+  if(existing){const node=current().nodes.find(n=>n.id===existing.to[0]);selectNode(node);if(definition(node)?.key==='vector')change(()=>{node.ui.componentsExpanded=true;},{localize:false});else render();return;}
   change(()=>{const node=instantiate(catalog.find(d=>d.key==='vector')||catalog.find(d=>d.key==='vector_split'),source.ui.x+260,source.ui.y,type);
-    node.ui.componentNames=definition(source)?.key==='color'?'rgba':definition(source)?.key==='uv'?'uv':source.ui?.componentNames||'xyzw';
+    node.ui.componentNames=definition(source)?.key==='color'?'rgba':definition(source)?.key==='uv'?'uv':source.ui?.componentNames||'xyzw';node.ui.componentsExpanded=true;
     commitPlannedWire({node:source.id,port},{node:node.id,port:'value'});});
 }
 function clearVectorWirePreview(){document.querySelectorAll('.vector-drop-range,.vector-drop-replaced').forEach(row=>row.classList.remove('vector-drop-range','vector-drop-replaced'));}
@@ -642,7 +645,8 @@ function renderCards(){
     card.dataset.dragSurface=EDITOR_DEV_SETTINGS.nodeBodyDrag?'body':'header';
     card.onpointerdown=e=>{if(isNodeDragSurface(e.target,card))dragNodeTitle(e,n,card,cards,moved=>{suppressCardClick=moved;});};
     card.append(title);const list=el('div',{class:'ports'});
-    for(const[kind,className]of [['inputs','input'],['outputs','output']])for(const[name,type]of Object.entries(ports(n,kind))){
+    const portRow=(kind,name)=>{
+      const className=kind==='inputs'?'input':'output',type=ports(n,kind)[name];
       const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${d?.label} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
       if(d?.key==='vector'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
@@ -655,8 +659,27 @@ function renderCards(){
         const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 16 16');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d','M2 8h5M7 3v10M7 3h6M7 13h6');icon.append(path);split.append(icon);
         split.disabled=readonly;split.onpointerdown=e=>e.stopPropagation();split.onclick=e=>{e.stopPropagation();addVectorSplit(n,name);};split.ondblclick=e=>e.stopPropagation();row.append(split);
       }
-      list.append(row);
-    }
+      return row;
+    };
+    if(d?.key==='vector'){
+      card.classList.add('node-vector');
+      const pair=(input,output)=>{
+        const row=el('div',{class:'vector-port-pair'});
+        row.append(input?portRow('inputs',input):el('div',{class:'vector-port-empty'}),portRow('outputs',output));
+        list.append(row);
+      };
+      pair('value','out');
+      const expanded=n.ui.componentsExpanded===true,inputs=ports(n,'inputs');
+      const connected=new Set(current().edges.flatMap(e=>[...(e.to[0]===n.id?[e.to[1]]:[]),...(e.from[0]===n.id?[e.from[1]]:[])]));
+      const toggle=el('button',{class:'vector-components-toggle',type:'button','data-vector-expand':n.id,'aria-expanded':String(expanded),title:t('vector.componentsHint')});
+      toggle.append(el('span',{'aria-hidden':'true'},expanded?'▾':'▸'),document.createTextNode(t('vector.components')));
+      toggle.disabled=readonly;toggle.onpointerdown=e=>e.stopPropagation();toggle.ondblclick=e=>e.stopPropagation();
+      toggle.onclick=e=>{e.stopPropagation();if(change(()=>{n.ui.componentsExpanded=!expanded;},{localize:false}))document.querySelector(`[data-vector-expand="${CSS.escape(n.id)}"]`)?.focus({preventScroll:true});};
+      list.append(toggle);
+      for(const component of 'xyzw'.slice(0,typeComponents(n.params.type))){
+        if(expanded||connected.has(component))pair(Object.hasOwn(inputs,component)?component:null,component);
+      }
+    }else for(const kind of ['inputs','outputs'])for(const name of Object.keys(ports(n,kind)))list.append(portRow(kind,name));
     appendSparePort(list,n);card.append(list);
     if(n.params?.value!==undefined){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
     if(d?.key==='color'&&Array.isArray(n.params.value)){const strip=el('div',{class:'node-color'});strip.append(colorSwatch(n.params.value));card.append(strip);}
@@ -683,17 +706,21 @@ function browserMeta(d){
   const raw=authored||{},known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
   const source=f?(f.scope==='local'?'project':f.scope==='personal'?'personal':'editor'):(raw.source||'editor');
   const path=stringList(raw.categoryPath);
-  return {category,path:path[0]===category?path:[category],source,secondary:stringList(raw.secondaryCategories).filter(known),aliases:stringList(raw.aliases),tags:stringList(raw.tags),glslName:raw.glslName||'',descriptionKey:d.descriptionKey||f?.descriptionKey||raw.descriptionKey||'help.function',subgraph:!!f,saved:!!f&&!d.source&&f.scope!=='local',project:!!f&&!d.source};
+  const aliases=stringList(raw.aliases).filter(alias=>!d.presetType||!/^vec(?:tor)?\s*[234]$/i.test(alias)||alias.replace(/tor|\s/gi,'').toLowerCase()===d.presetType);
+  return {category,path:path[0]===category?path:[category],source,secondary:stringList(raw.secondaryCategories).filter(known),aliases,tags:stringList(raw.tags),glslName:d.presetType||raw.glslName||'',descriptionKey:d.descriptionKey||f?.descriptionKey||raw.descriptionKey||'help.function',subgraph:!!f,saved:!!f&&!d.source&&f.scope!=='local',project:!!f&&!d.source};
 }
+const browserEntryKey=d=>d.entryKey||d.key;
 function browserIndex(){
   // availableEntries already deduplicates installed library snapshots by source/version.
   const unique=new Map();
-  for(const d of availableEntries())if(!unique.has(d.key))unique.set(d.key,{d,meta:browserMeta(d)});
+  for(const d of availableEntries()){const key=browserEntryKey(d);if(!unique.has(key))unique.set(key,{d,meta:browserMeta(d)});}
   return [...unique.values()];
 }
 function browserSearchScore(entry,query){
   const q=normalizeSearch(query);if(!q)return 0;
   const {d,meta:m}=entry,names=[d.label,m.glslName].map(normalizeSearch),aliases=m.aliases.map(normalizeSearch);
+  const requestedVector=q.match(/\bvec(?:tor)?\s*([234])\b/);
+  if(d.presetType&&requestedVector&&d.presetType!=='vec'+requestedVector[1])return Infinity;
   if(names.includes(q))return 0;if(aliases.includes(q))return 1;
   const terms=q.split(/\s+/),contains=values=>terms.every(term=>values.some(v=>v.includes(term)));
   if(contains([...names,...aliases]))return 2;
@@ -763,12 +790,12 @@ function graphFunctionSource(d){const m=browserMeta(d);return m.source==='projec
 function browserBadges(entry){const m=entry.meta;return [browserSourceLabel(m.source),...(m.subgraph?['Subgraph']:[]),...(m.saved?[t('library.savedVersion')]:[])].join(' · ');}
 function paletteEntry(d){
   const entry={d,meta:browserMeta(d)},row=el('div',{class:'browser-row','data-category':nodeCategory(d),'data-browser-category':entry.meta.category});
-  const button=el('button',{'data-entry':d.key,class:'palette-entry','aria-pressed':String(browserSelection===d.key)});
+  const key=browserEntryKey(d),button=el('button',{'data-entry':key,class:'palette-entry','aria-pressed':String(browserSelection===key)});
   button.append(browserGlyph(entry.meta.subgraph?'subgraph':'node'),el('span',{class:'palette-entry-label'},d.label),el('small',{class:'palette-entry-source'},browserSourceLabel(entry.meta.source)));
   button.title=d.label+' · '+browserBadges(entry)+'\n'+t('browser.inspect');
-  button.onclick=()=>{browserSelection=d.key;document.querySelectorAll('#nodelibrary [data-entry]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.entry===d.key)));renderBrowserDetail(entry);button.scrollIntoView({block:'nearest'});};
+  button.onclick=()=>{browserSelection=key;document.querySelectorAll('#nodelibrary [data-entry]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.entry===key)));renderBrowserDetail(entry);button.scrollIntoView({block:'nearest'});};
   button.ondblclick=()=>addNode(d,(180-pan.x)/scale,(160-pan.y)/scale);
-  const add=el('button',{class:'browser-add','data-add-entry':d.key,'aria-label':t('browser.add')+' '+d.label},'+');add.disabled=readonly;
+  const add=el('button',{class:'browser-add','data-add-entry':key,'aria-label':t('browser.add')+' '+d.label},'+');add.disabled=readonly;
   const drop=(x,y)=>{const p=graphPoint(x,y);if(p)addNode(d,p.x,p.y);};
   installCanvasItemDrag(add,()=>d.label,drop,()=>addNode(d,(180-pan.x)/scale,(160-pan.y)/scale));
   const inspect=button.onclick;installCanvasItemDrag(button,()=>d.label,drop,inspect);
@@ -781,7 +808,7 @@ function renderBrowserDetail(entry){
   const close=el('button',{'aria-label':t('browser.closeDetails')},'×');close.onclick=()=>{browserSelection=null;renderLibrary();};head.append(close);box.append(head);
   const body=el('div',{class:'browser-detail-body',tabindex:'0'});body.append(el('small',{class:'muted'},browserBadges(entry)));
   body.append(el('p',{class:'browser-category-path'},entry.meta.path.map((key,i)=>i?t('browser.branch.'+key):browserCategoryLabel(key)).join(' › ')));
-  const variants=typeVariants(entry.d),variant=variants[0];
+  const variants=creatorVariants(entry.d,null),variant=variants[0];
   if(variant){
     const signature=el('div',{class:'browser-signature'}),inputs=Object.entries(variant.inputs).map(([name,type])=>type+' '+name).join(', '),outputs=Object.entries(variant.outputs).map(([name,type])=>type+(Object.keys(variant.outputs).length>1?' '+name:'')).join(', ');
     signature.append(el('code',{},(entry.meta.glslName||entry.d.label)+'('+inputs+')'+(outputs?' → '+outputs:'')));
@@ -824,7 +851,7 @@ function renderLibrary(){
   }
   for(const b of document.querySelectorAll('#functionsources [data-function-source]')){const active=b.dataset.functionSource===libraryFunctionSource;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;}
   $('#libraryintro').textContent=t('browser.projectScope');
-  renderBrowserDetail(entries.find(e=>e.d.key===browserSelection));$('#nodecount').textContent=current().nodes.length+' '+t('sources.nodes');
+  renderBrowserDetail(entries.find(e=>browserEntryKey(e.d)===browserSelection));$('#nodecount').textContent=current().nodes.length+' '+t('sources.nodes');
 }
 function closeCreator(){creatorState=null;$('#creator').hidden=true;}
 function openCreator(clientX,clientY,wire=null){
@@ -850,8 +877,6 @@ function renderCreator(){
     const entry={d,meta},path=creatorState.path||[];if(!query.trim()&&!creatorPaths(entry).some(p=>path.every((key,i)=>p[i]===key)))continue;
     let candidates=[];
     for(const variant of creatorVariants(d,wire)){
-      const requestedVector=d.key==='vector'&&query.match(/\bvec(?:tor)?\s*([234])\b/);
-      if(requestedVector&&variant.type!=='vec'+requestedVector[1])continue;
       const p=Object.entries(wire?.kind==='inputs'?variant.outputs:variant.inputs);
       if(!wire){const socketTypes=[...Object.values(variant.inputs),...Object.values(variant.outputs)];if(typeFilter==='all'||socketTypes.includes(typeFilter))candidates.push({d,type:variant.type,port:null,params:variant.params,variant});}
       else for(const[name,type]of p){try{const plan=creatorTypePlan(d,variant,name,wire,typeFilter!=='all'),actual=plan[wire.kind==='inputs'?'outputs':'inputs'][name];if(typeFilter==='all'||actual===typeFilter)candidates.push({d,type:variant.type,port:name,portType:actual,params:variant.params,variant:plan});}catch{}}
@@ -863,7 +888,7 @@ function renderCreator(){
   }
   if(!query.trim())creatorMatches.sort((a,b)=>creatorPriority(a,wire)-creatorPriority(b,wire));
   creatorIndex=Math.min(creatorIndex,Math.max(0,creatorMatches.length-1));const list=$('#createresults');list.replaceChildren();
-  creatorMatches.forEach((match,i)=>{const label=match.d.key==='vector'?'Vector '+typeComponents(match.type):match.d.label,b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':match.d.key},label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
+  creatorMatches.forEach((match,i)=>{const label=match.d.key==='vector'?'Vector '+typeComponents(match.type):match.d.label,b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':browserEntryKey(match.d)},label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
   if(!creatorMatches.length)list.append(el('p',{class:'muted'},t('create.empty')));
   for(const button of document.querySelectorAll('[data-create-category]')){const active=button.dataset.createCategory===(query.trim()?'all':category);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;}
   renderCreatorDetails();

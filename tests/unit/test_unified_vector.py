@@ -4,6 +4,7 @@ import json
 import unittest
 
 import sgrape_core as c
+import sgrape_document as document
 
 
 def graph(nodes, edges=(), source='vector', output='out'):
@@ -170,6 +171,38 @@ class UnifiedVector(unittest.TestCase):
         self.assertIn('float sg_v_vector_x = 0.0;',text)
         self.assertIn('float sg_n_vector_x = 0.2;',text)
         self.assertIn('(sg_v_vector_x + sg_n_vector_x)',text)
+
+    def test_component_expansion_is_saved_ui_without_shader_or_upgrade_changes(self):
+        original=document.stamp_catalog(graph([c.node('vector','vector',type='vec4')]),c)
+        compiled=c.compile_graph(original)
+        for expanded in (True,False):
+            edited=copy.deepcopy(original)
+            edited['stages']['pixel']['nodes'][0]['ui']['componentsExpanded']=expanded
+            before=copy.deepcopy(edited)
+            self.assertEqual(c.compile_graph(edited),compiled)
+            self.assertEqual(c.clean_semantic(edited),c.clean_semantic(original))
+            review=document.inspect_upgrade(edited,c,'top')
+            self.assertFalse(review['required']);self.assertFalse(review['blocked'])
+            self.assertIs(review['candidate']['stages']['pixel']['nodes'][0]['ui']['componentsExpanded'],expanded)
+            saved=document.inspect_saved_state(json.dumps(dict(revision=4,graph=edited,appliedHash=compiled['hash'],lastError='')),c,'top')
+            self.assertEqual(saved['status'],'valid')
+            self.assertIs(saved['state']['graph']['stages']['pixel']['nodes'][0]['ui']['componentsExpanded'],expanded)
+            self.assertEqual(edited,before)
+
+    def test_component_expansion_in_subgraph_does_not_change_shader(self):
+        original=document.stamp_catalog(graph([{'id':'call','definitionUuid':c.CALL,'params':{'functionId':'component_fn'},'ui':{'x':0,'y':0}}],source='call'),c)
+        original['functions']=[dict(id='component_fn',name='Components',scope='local',stages=['pixel'],inputs=[],
+            outputs=[dict(id='out',name='Out',type='vec4',default=[0,0,0,1])],
+            graph=dict(nodes=[c.node('vector','vector',type='vec4',components=[.1,.2,.3,1]),
+                {'id':'input','definitionUuid':c.FUNCTION_INPUT,'params':{},'ui':{'x':0,'y':0}},
+                {'id':'output','definitionUuid':c.FUNCTION_OUTPUT,'params':{},'ui':{'x':500,'y':0}}],edges=[c.edge('vector','output','out')]))]
+        compiled=c.compile_graph(original)
+        edited=copy.deepcopy(original);edited['functions'][0]['graph']['nodes'][0]['ui']['componentsExpanded']=True
+        self.assertEqual(c.compile_graph(edited),compiled)
+        self.assertEqual(c.clean_semantic(edited),c.clean_semantic(original))
+        review=document.inspect_upgrade(edited,c,'top')
+        self.assertFalse(review['required']);self.assertFalse(review['blocked'])
+        self.assertTrue(review['candidate']['functions'][0]['graph']['nodes'][0]['ui']['componentsExpanded'])
 
 
 if __name__=='__main__':unittest.main()

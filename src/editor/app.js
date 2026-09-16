@@ -145,10 +145,10 @@ let editVersion=0,submitBusy=false,autoTimer=null,conflicted=false;
 let savedGraphContent=null,lastGraphSaveKey='graph.saved';
 function graphContent(document){
   const content=clone(document);delete content.catalogSnapshot;
-  // Only coordinates are presentation-only here. Labels and type settings may
+  // Coordinates and component expansion are presentation-only. Labels and type settings may
   // affect generated GLSL, so keep them when choosing the progress message.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
-    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;if(!Object.keys(node.ui).length)delete node.ui;}
+    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.componentsExpanded;if(!Object.keys(node.ui).length)delete node.ui;}
   }
   return JSON.stringify(content);
 }
@@ -422,7 +422,7 @@ async function load(){const data=await api('state');applyNeedsReview=false;conne
 
 function addNode(d,x,y){const changed=change(()=>instantiate(d,x,y));if(changed&&matchMedia('(max-width:800px)').matches)workspaceLayout.closeBrowser();return changed;}
 $('#canvas').addEventListener('dragover',e=>{if(Array.from(e.dataTransfer.types).includes('application/x-sgrape-node')){e.preventDefault();e.dataTransfer.dropEffect='copy';}});
-$('#canvas').addEventListener('drop',e=>{const key=e.dataTransfer.getData('application/x-sgrape-node'),d=availableEntries().find(d=>d.key===key);$('#canvas').classList.remove('drop-ready');if(!d||!d.stages.includes(stage)||readonly)return;e.preventDefault();const rect=$('#canvas').getBoundingClientRect();if(addNode(d,(e.clientX-rect.left-pan.x)/scale-95,(e.clientY-rect.top-pan.y)/scale-18))status(t('node.added')+d.label);});
+$('#canvas').addEventListener('drop',e=>{const key=e.dataTransfer.getData('application/x-sgrape-node'),d=availableEntries().find(d=>browserEntryKey(d)===key||(key==='vector'&&d.key==='vector'&&d.presetType==='vec2'));$('#canvas').classList.remove('drop-ready');if(!d||!d.stages.includes(stage)||readonly)return;e.preventDefault();const rect=$('#canvas').getBoundingClientRect();if(addNode(d,(e.clientX-rect.left-pan.x)/scale-95,(e.clientY-rect.top-pan.y)/scale-18))status(t('node.added')+d.label);});
 
 $('#apply').onclick=()=>{conflicted=false;applyNeedsReview=false;if(connectionIssue==='changed')connectionIssue='';renderConnectionNotice();applyGraph();};
 $('#save').onclick=async()=>{try{const r=await api('save',{});status(r.saved?t('project.saved')+(dirty?t('project.draft'):''):t('project.saveFailed'),!r.saved);}catch(e){status(e.message,true);}};

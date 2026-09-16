@@ -44,6 +44,8 @@ setup();move();api=async()=>{throw Error('fixture failure');};await applyGraph()
 check('graph.savePending','graph.saveFailedfixture failure');assert.equal(dirty,true);assert.equal(revision,41);
 // Subgraph positions are layout; code labels and settings are not.
 setup();graph.functions[0].graph.nodes[0].ui.y=48;mark();check('graph.savePending');
+setup();graph.stages.pixel.nodes[0].ui.componentsExpanded=true;mark();check('graph.savePending');
+setup();graph.functions[0].graph.nodes[0].ui.componentsExpanded=false;mark();check('graph.savePending');
 setup();graph.stages.pixel.nodes[0].ui.label='GLSL comment';mark();check('graph.pending');
 setup();graph.stages.pixel.nodes[0].ui.typeMode='locked';mark();check('graph.pending');
 setup();graph.catalogSnapshot={serverMetadata:true};move();check('graph.savePending');
