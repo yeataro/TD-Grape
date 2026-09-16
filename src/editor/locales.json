@@ -2497,6 +2497,82 @@
     "graph.saveFailed": {
       "zh-Hant": "圖儲存失敗：",
       "en": "Could not save graph: "
+    },
+    "vector.invalidType": {
+      "zh-Hant": "請選擇 vec2、vec3 或 vec4。",
+      "en": "Choose vec2, vec3 or vec4."
+    },
+    "vector.overlap": {
+      "zh-Hant": "分量範圍不足或已有接線；請選擇空的分量位置，或先調整輸出型別。",
+      "en": "The component range is occupied or too small. Choose free components or change the output type first."
+    },
+    "vector.invalidMask": {
+      "zh-Hant": "請選擇輸入中存在的 1–4 個分量。",
+      "en": "Choose 1–4 components that exist in the input."
+    },
+    "vector.splitShortcut": {
+      "zh-Hant": "新增 Split 拆分分量",
+      "en": "Add Split for these components"
+    },
+    "vector.outputType": {
+      "zh-Hant": "輸出型別",
+      "en": "Output type"
+    },
+    "vector.inputType": {
+      "zh-Hant": "輸入型別",
+      "en": "Input type"
+    },
+    "vector.outputComponent": {
+      "zh-Hant": "輸出分量",
+      "en": "Output component"
+    },
+    "vector.addComponent": {
+      "zh-Hant": "增加輸出分量",
+      "en": "Add output component"
+    },
+    "vector.removeComponent": {
+      "zh-Hant": "移除最後一個輸出分量",
+      "en": "Remove last output component"
+    },
+    "vector.componentOrder": {
+      "zh-Hant": "分量順序",
+      "en": "Component order"
+    },
+    "vector.names": {
+      "zh-Hant": "分量名稱",
+      "en": "Component names"
+    },
+    "vector.requireConstant": {
+      "zh-Hant": "必須為編譯期常數",
+      "en": "Require compile-time constant"
+    },
+    "vector.constantHint": {
+      "zh-Hant": "檢查整條輸入運算是否可作為 GLSL 常數，並以 const 產生。Uniform、UV 等執行期資料會報錯，不會被凍結或轉成固定值。",
+      "en": "Checks the input expression and emits GLSL const. Runtime data such as Uniforms or UVs is rejected, never frozen or converted to a fixed value."
+    },
+    "help.vec4": {
+      "zh-Hant": "四個一般數值分量的固定值來源，輸出 `vec4`。與 Color RGBA 相同型別；這裡使用 X／Y／Z／W 數值編輯。調整值需要重新編譯。",
+      "en": "A fixed vec4 value edited as X/Y/Z/W. It has the same type as Color RGBA without a color picker. Changing the value requires recompilation."
+    },
+    "help.combine": {
+      "zh-Hant": "依固定分量位置組成 `vec2`、`vec3` 或 `vec4`。將 vec2 接到 X 會佔用 XY；接到 Y 會佔用 YZ。其他已接分量不會被覆蓋，也不會自動截斷向量。\n\n未接線的分量可在 Parameter 輸入；取消連線會恢復原本的值。輸出型別由你決定。所有輸入都是合法常數時，結果也保留常數性；Settings 可要求必須是常數。",
+      "en": "Build vec2, vec3 or vec4 at fixed component positions. A vec2 connected to X occupies XY; connected to Y it occupies YZ. Existing connections are never overwritten and vectors are never silently truncated.\n\nEdit unconnected components in Parameter. Disconnecting restores their values. Choose the output type explicitly. Legal constant inputs preserve constantness; Settings can require it."
+    },
+    "help.vector_split": {
+      "zh-Hant": "將 vec2／vec3／vec4 拆為各個 float 分量。Auto 跟隨接線的向量型別；Settings 可切換 XYZW、RGBA 或 UV 名稱，資料與端口身分不變。\n\n例如只改 UV 的 V：UV → Split，保留 U，調整 V，再接到 Combine 的 X／Y。若縮小型別會使既有接線失效，修改會被拒絕並保留原圖。",
+      "en": "Split vec2/vec3/vec4 into float components. Auto follows the connected vector type. Settings can label the same components XYZW, RGBA or UV.\n\nTo edit only UV V: connect UV to Split, keep U, modify V, and connect both to Combine. Type changes that invalidate existing wires are rejected without changing the graph."
+    },
+    "help.swizzle": {
+      "zh-Hant": "從向量挑選、重排或重複 1–4 個分量，例如 YX、XYZ、XXXX。每個下拉欄由左至右對應一個輸出分量；加減按鈕調整輸出數量。\n\n型別由分量數決定。只能選擇輸入中存在的分量；改變輸出數量若影響既有下游接線，需要先解除該連線。常數輸入可保留編譯期常數性。",
+      "en": "Select, reorder or repeat 1–4 vector components, for example YX, XYZ or XXXX. Each dropdown is one output component, from left to right. Use +/− to change the output size.\n\nOnly existing input components can be selected. Disconnect incompatible downstream wires before changing output size. Constant inputs preserve compile-time constantness."
+    },
+    "vector.constantRejected": {
+      "zh-Hant": "這個輸出必須為編譯期常數，不能接入執行期資料。",
+      "en": "This output requires a compile-time constant and cannot accept runtime data."
+    },
+    "wire.constantConflict": {
+      "zh-Hant": "這個輸出必須為編譯期常數，不能接入執行期資料。",
+      "en": "This output requires a compile-time constant and cannot accept runtime data."
     }
   }
 }

@@ -1,5 +1,18 @@
 # 測試
 
+0.8.80：179 項 Python 測試、既有可攜檢查及 26 項 Remote Panel Node 檢查通過。新向量處理測試涵蓋各維度合法分割、八種 vec4 組合、固定分量值、斷線／Undo、重疊與截斷拒絕、Swizzle 重排／重複、Subgraph 常數傳遞、UI 常數要求回退與接線選單計畫。舊節點定義及 138 份 GLSL 指紋保持不變。
+
+TD 2025.32820 原生 27 項檢查通過：TOP／MAT 各八種組合的像素結果、Split → Combine → Swizzle、Fract／Mix／Smoothstep 常數鏈、兩種鏈各自作為陣列長度，以及 Runtime Uniform 違反常數要求時保留上次輸出；TOP 額外驗證只修改 UV 的 V、其餘分量與解析度不變。
+
+以 Chromium 連到實際 TD，完成 UV → Split → 修改 V → Combine 的操作；確認向量候選前三項為 Split／Swizzle／Combine、Swizzle YXY 輸出 vec3、Vector 4 有四個數值欄位。常數來源可啟用常數要求，UV 衍生結果啟用時立即拒絕並恢復原圖。刷新後資料保持，SVG 快捷圖示已載入，無 JavaScript 錯誤。這是桌面滑鼠驗證，未代替 iPad／手機／Safari 實機回驗。
+
+兩份 Master 已同步 0.8.80；更新內嵌來源與保存 TOE 各自確認使用者 Shader 資料保留。測試場景與註冊已清除，測試預覽返回使用者 Shader。
+
+```text
+python tools/dev/run_tests.py
+python tools/dev/submit_job.py tests/td/test_vector_nodes.py --report vectors --timeout 30
+```
+
 0.8.79 儲存提示修正：172 項 Python 測試及既有可攜檢查通過。新增瀏覽器處理函式測試涵蓋位移、Undo／Redo、接線／參數混合、延遲回覆、失敗、Subgraph 與實際後端回報；TD TOP／MAT 測試確認位置保存不呼叫 configure，且 GLSL／manifest 不變，真正的 Shader 更新回報另行區分。實際網頁拖曳顯示「圖待儲存 → 圖已儲存」，修改 Color RGBA 數值則顯示「Shader 已套用」；原提示位置保留，r 僅在滑鼠提示中呈現。
 
 0.8.78：168 項 Python 單元測試、445 個雙語語系鍵、既有可攜檢查與 26 項 Remote Panel Node 檢查通過；TD Master 既有六項檢查通過。兩份 Master 同步版本時確認 OP 身分、位置及使用者 Shader 保持不變；內嵌來源更新也逐次比對保存中的 Shader 資料。

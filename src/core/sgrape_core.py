@@ -41,7 +41,47 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code'))
+    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
+    'vec4','combine','vector_split','swizzle'))
+
+# These built-ins are GLSL constant expressions when every input is one.
+# User functions, uniforms, texture queries and stage data are intentionally absent.
+CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
+    'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
+    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle'))
+VECTOR_KEYS = ('combine','vector_split','swizzle')
+VECTOR_TYPES = ('vec2','vec3','vec4')
+VECTOR_COMPONENTS = 'xyzw'
+
+def combine_layouts(ty):
+    """All exact, ordered scalar/vector partitions; socket IDs are component starts."""
+    count=TYPE_DESCRIPTORS[ty]['components']
+    def partitions(start):
+        if start==count:
+            yield {}
+        else:
+            for size in range(1,count-start+1):
+                for rest in partitions(start+size):
+                    yield {VECTOR_COMPONENTS[start]:'float' if size==1 else 'vec'+str(size),**rest}
+    return [{'inputs':ports,'groups':{p:t for p,t in ports.items() if t!='float'}} for ports in partitions(0)]
+
+def vector_interface(key,params):
+    ty=params.get('type','vec2')
+    if ty not in VECTOR_TYPES:raise GraphError('Select vec2, vec3 or vec4')
+    components=VECTOR_COMPONENTS[:TYPE_DESCRIPTORS[ty]['components']]
+    if key=='combine':
+        groups=params.get('groups',{})
+        layout=next((row for row in combine_layouts(ty) if row['groups']==groups),None)
+        if layout is None:raise GraphError('Combine: component groups overlap or exceed the output size')
+        values=params.get('components',[0,0,0,0])
+        literal(values,'vec4')
+        return {'inputs':layout['inputs'],'outputs':{'out':ty}}
+    if key=='vector_split':
+        return {'inputs':{'value':ty},'outputs':dict.fromkeys(components,'float')}
+    mask=params.get('mask','xy')
+    if not isinstance(mask,str) or not 1<=len(mask)<=4 or any(c not in components for c in mask):
+        raise GraphError('Swizzle: choose 1 to 4 components that exist in the input')
+    return {'inputs':{'value':ty},'outputs':{'out':'float' if len(mask)==1 else 'vec'+str(len(mask))}}
 
 def _definition_signature(d):
     # Presentation changes do not change port/default behavior.
@@ -243,6 +283,7 @@ def pixel_buffer_count(params):
     return count
 
 def definition_ports(definition, params):
+    if definition['key'] in VECTOR_KEYS:return vector_interface(definition['key'],params)
     if definition['key']=='glsl_code':return glsl_code_interface(params)
     if definition['key']=='pixel_out':
         return {'inputs':dict.fromkeys(PIXEL_BUFFER_PORTS[:pixel_buffer_count(params)],'vec4'),'outputs':{}}
@@ -270,14 +311,18 @@ def type_contract():
     variants = {}
     for definition in CATALOG.values():
         tokens = set(definition['inputs'].values()) | set(definition['outputs'].values())
-        selector = 'parameter' if 'T' in tokens else 'declaration' if 'D' in tokens else 'fixed'
+        selector = 'parameter' if 'T' in tokens or definition['key'] in VECTOR_KEYS else 'declaration' if 'D' in tokens else 'fixed'
         default = definition['defaults'].get('type', 'float')
         choices = [default] + [ty for ty in TYPES if ty != default] if selector != 'fixed' else [None]
+        if definition['key'] in VECTOR_KEYS:choices=list(VECTOR_TYPES)
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [
             dict(type=ty, **resolved_ports(definition, dict(definition['defaults'],type=ty or 'float'), {'type': ty})) for ty in choices]}
     result = {'version': 1, 'numericTypes': list(TYPES), 'resourceTypes': list(RESOURCE_TYPES),
               'types': dict(copy.deepcopy(TYPE_DESCRIPTORS), sampler2D={'family':'sampler','components':0}),
               'glslCode':{'maxPorts':GLSL_CODE_MAX_PORTS,'maxLength':GLSL_CODE_MAX_LENGTH,'reservedNames':sorted(GLSL_CODE_RESERVED)},
+              'vectors':{'version':1,'types':list(VECTOR_TYPES),'components':VECTOR_COMPONENTS,
+                         'layouts':{ty:combine_layouts(ty) for ty in VECTOR_TYPES}},
+              'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
               'definitions': variants}
@@ -558,8 +603,10 @@ def _compile_flat(graph,annotation_scopes=None):
                 if not isinstance(params,dict): raise GraphError('Invalid node parameters',ident)
                 ty=params.get('type','float')
                 if ty not in (PORT_TYPES if d['key']=='relay' else TYPES): raise GraphError('Unsupported numeric type',ident)
-                if d['key'] in ('float','vec2','vec3','color'):
+                if d['key'] in ('float','vec2','vec3','vec4','color'):
                     literal(params.get('value'),next(iter(d['outputs'].values())))
+                if type(params.get('requireConstant',False)) is not bool:
+                    raise GraphError('Require Constant must be a boolean',ident)
                 declaration=None
                 if d['key'] in ('uniform','constant','texture','sampler'):
                     declaration=declarations.get('grapeTop_'+str(params['inputId'])) if managed and d['key']=='texture' and params.get('inputId') else declarations.get(params.get('declarationId'))
@@ -589,6 +636,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 if src not in ports or sp not in ports[src]['out'] or dst not in ports or dp not in ports[dst]['in']: raise GraphError('Connection endpoint no longer exists',dst)
                 if (dst,dp) in links: raise GraphError('An input can only have one connection',dst)
                 a=ports[src]['out'][sp]; b=ports[dst]['in'][dp]
+                if defs[dst]['key'] in VECTOR_KEYS and a!=b:
+                    raise GraphError('Vector components require an exact type; use Combine or Swizzle explicitly',dst)
                 if conversion_kind(a,b) is None: raise GraphError(a+' cannot connect to '+b,dst)
                 links[(dst,dp)]=(src,sp)
             visited=set(); active=set(); order=[]
@@ -602,8 +651,29 @@ def _compile_flat(graph,annotation_scopes=None):
                 active.remove(ident); visited.add(ident); order.append(ident)
             # Reject cycles even in disconnected edits. Only live nodes are emitted.
             for ident in sorted(nodes): visit(ident)
+            constant_nodes=set()
+            for ident in order:
+                key=defs[ident]['key']
+                if key in CONSTANT_EXPRESSIONS and all(
+                    links[(ident,port)][0] in constant_nodes if (ident,port) in links
+                    else port in nodes[ident].get('inputValues',{}) or input_default(key,port,ty) is not None
+                    for port,ty in ports[ident]['in'].items()):
+                    constant_nodes.add(ident)
+                if nodes[ident]['params'].get('requireConstant') and ident not in constant_nodes:
+                    raise GraphError('Require Constant: this value depends on runtime data or an unsupported constant expression',ident)
             visited.clear(); order.clear(); visit(outputs[0])
             live=set(order)
+            # Qualify constant chains only when requested or consumed by the new
+            # vector operations. Old graphs keep their generated text unchanged.
+            const_emit=set()
+            def demand_constant(ident):
+                if ident in const_emit or ident not in constant_nodes:return
+                const_emit.add(ident)
+                for port in ports[ident]['in']:
+                    if (ident,port) in links:demand_constant(links[(ident,port)][0])
+            for ident in order:
+                if defs[ident]['key'] in (*VECTOR_KEYS,'vec4') or nodes[ident]['params'].get('requireConstant'):
+                    demand_constant(ident)
             for ident in sorted(set(nodes)-live): diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
             expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[]
             def inp(ident,port):
@@ -625,6 +695,10 @@ def _compile_flat(graph,annotation_scopes=None):
                     return 'sg_sampler_'+fallback['id'] if graph_target(graph)=='top' else fallback['name']
                 saved=nodes[ident].get('inputValues',{})
                 if port in saved: return literal(saved[port],target)
+                if defs[ident]['key']=='combine':
+                    start=VECTOR_COMPONENTS.index(port);size=type_components(target)
+                    values=nodes[ident]['params'].get('components',[0,0,0,0])[start:start+size]
+                    return literal(values[0] if size==1 else values,target)
                 default=([0,0,0,0] if defs[ident]['key']=='pixel_out' and graph_target(graph)=='mat'
                          else input_default(defs[ident]['key'],port,target))
                 if default is None: return 'sg_uv'
@@ -634,7 +708,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 note=nodes[ident].get('ui',{});note=note if isinstance(note,dict) else {}
                 d=defs[ident]; k=emitter_id(d); p=nodes[ident]['params']; ty=ports[ident]['out'].get('out'); expr=None
                 a=lambda port:inp(ident,port)
-                if k in ('float','vec2','vec3','color'): expr=literal(p.get('value'),ty)
+                if k in ('float','vec2','vec3','vec4','color'): expr=literal(p.get('value'),ty)
                 elif k in ('add','subtract','multiply','divide'): expr='('+a('a')+{'add':' + ','subtract':' - ','multiply':' * ','divide':' / '}[k]+a('b')+')'
                 elif k in ('min','max','dot'): expr=k+'('+a('a')+', '+a('b')+')'
                 elif k=='clamp': expr='clamp('+a('value')+', '+a('min')+', '+a('max')+')'
@@ -644,6 +718,10 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k in ('sin','cos','abs','fract','length','normalize'): expr=k+'('+a('value')+')'
                 elif k=='relay': expr=a('value')
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
+                elif k=='combine':expr=ty+'('+', '.join(a(port) for port in ports[ident]['in'])+')'
+                elif k=='vector_split':
+                    for port in ports[ident]['out']:expressions[(ident,port)]='('+a('value')+').'+port
+                elif k=='swizzle':expr='('+a('value')+').'+p.get('mask','xy')
                 elif k=='split':
                     for port in ports[ident]['out']: expressions[(ident,port)]='('+a('color')+').'+port
                 elif k in ('uniform','constant','texture','sampler'):
@@ -705,7 +783,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     expressions[(ident,'out')]=expr
                 elif expr is not None:
                     variable='sg_n_'+ident
-                    lines.append('    '+ty+' '+variable+' = '+expr+';')
+                    lines.append('    '+('const ' if ident in const_emit else '')+ty+' '+variable+' = '+expr+';')
                     expressions[(ident,'out')]=variable
                 label_lines=_comment_lines(note.get('label'),None)
                 if label_lines:

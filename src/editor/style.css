@@ -850,3 +850,19 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #previewsize:empty{display:none}
 #pane-live .live-dot{background:#696576}
 #pane-live .live-dot.is-connected{background:var(--green)}
+
+/* Vector shortcuts keep sockets in their existing column. */
+.port-row { position: relative; }
+.vector-split-shortcut { position:absolute;left:9px;top:2px;min-width:22px;width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--muted);opacity:0;line-height:1; }
+.port-row.output:hover .vector-split-shortcut,.vector-split-shortcut:focus-visible { opacity:1;background:#262530; }
+.vector-split-shortcut:hover { color:#e5e4ed; }
+@media (hover:none) { .vector-split-shortcut { opacity:.7; } }
+.vector-drop-range { background:rgba(177,155,227,.18);outline:1px solid rgba(177,155,227,.35); }
+.swizzle-components { display:flex;gap:5px;min-width:0; }
+.swizzle-components select { flex:1;min-width:38px;width:0; }
+.swizzle-components button { padding:4px 8px; }
+.field.constant-requirement { flex-direction:row;display:flex;align-items:center;gap:8px; }
+.constant-requirement input { order:-1;width:auto;margin:0; }
+
+.vector-split-shortcut svg { display:block;width:14px;height:14px;margin:auto;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round; }
+.port-row.output:has(.vector-split-shortcut) { padding-left:37px; }

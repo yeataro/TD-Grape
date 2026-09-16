@@ -177,7 +177,7 @@ function checkpoint(){past.push(clone(graph));if(past.length>60)past.shift();fut
 function change(fn,{localize=true,redraw=true}={}){
   if(readonly)return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
-  try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous);}
+  try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous);rejectNewConstantIssues(graph,previous);}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;

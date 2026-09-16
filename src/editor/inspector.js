@@ -180,6 +180,7 @@ function defaultInput(n,port,type){
   if(isResourceType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
   const key=definition(n)?.key;
+  if(key==='combine'){const start='xyzw'.indexOf(port),values=(n.params.components||[0,0,0,0]).slice(start,start+typeComponents(type));return type==='float'?values[0]:values;}
   if(key==='function_call')return clone(FunctionModel.find(graph,n.params.functionId)?.inputs.find(p=>p.id===port)?.default??0);
   if(key==='function_output')return clone(currentFunction()?.outputs.find(p=>p.id===port)?.default??0);
   if(['texture','texture_sample'].includes(key)&&port==='uv')return null;
@@ -480,6 +481,31 @@ function glslCodeInspector(box,n){
   box.append(panel);
 }
 
+function vectorInspector(box,n,d){
+  if(!isVectorOperation(d))return;
+  const automatic=n.ui?.typeMode==='auto',options=selectableNodeTypes(d).map(type=>[type,type]);
+  const control=select(d.key==='combine'?options:[['auto',t('type.auto')+' · '+n.params.type],...options],automatic?'auto':n.params.type,value=>{
+    if(d.key==='combine')change(()=>n.params.type=value);else setMathType(n,value);
+  });control.dataset.vectorType=n.id;control.disabled=readonly;
+  box.append(field(t(d.key==='combine'?'vector.outputType':'vector.inputType'),control));
+  if(d.key==='swizzle'){
+    const slots=el('div',{class:'swizzle-components'}),names=vectorNames(n),components='xyzw'.slice(0,typeComponents(n.params.type));
+    [...n.params.mask].forEach((value,index)=>{
+      const selectComponent=select([...components].map((p,i)=>[p,names[i]]),value,next=>change(()=>n.params.mask=n.params.mask.slice(0,index)+next+n.params.mask.slice(index+1)));
+      selectComponent.dataset.swizzleComponent=index;selectComponent.setAttribute('aria-label',t('vector.outputComponent')+' '+(index+1));selectComponent.disabled=readonly;
+      slots.append(selectComponent);
+    });
+    for(const [label,enabled,edit]of [['−',n.params.mask.length>1,()=>n.params.mask=n.params.mask.slice(0,-1)],['+',n.params.mask.length<4,()=>n.params.mask+=components[Math.min(n.params.mask.length,components.length-1)]]]){
+      const b=el('button',{type:'button','aria-label':t(label==='+'?'vector.addComponent':'vector.removeComponent')},label);b.disabled=readonly||!enabled;b.onclick=()=>change(edit);slots.append(b);
+    }
+    box.append(field(t('vector.componentOrder'),slots));
+  }
+}
+function setNodeInputValue(n,port,next){
+  if(definition(n)?.key==='combine'){
+    n.params.components||=[0,0,0,0];const values=Array.isArray(next)?next:[next];n.params.components.splice('xyzw'.indexOf(port),values.length,...values);
+  }else {n.inputValues||={};n.inputValues[port]=next;}
+}
 function inspector(){
   cancelValueLadder();
   const box=$('#inspector');box.replaceChildren();renderHelp();
@@ -504,7 +530,8 @@ function inspector(){
   functionInspector(box,n,d);
   if(inspectorTab==='parameters'){
     if(d.key==='glsl_code')glslCodeInspector(box,n);
-    if(supportsAutoType(d)){
+    vectorInspector(box,n,d);
+    if(supportsAutoType(d)&&!isVectorOperation(d)){
       const automatic=n.ui?.typeMode==='auto',control=select([['auto',t('type.auto')+' · '+n.params.type],...selectableNodeTypes(d).map(type=>[type,type])],automatic?'auto':n.params.type,value=>setMathType(n,value));control.dataset.mathType=n.id;
       const row=field(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
@@ -542,10 +569,10 @@ function inspector(){
       }else if(value===null){
         section.append(el('p',{class:'muted'},t('input.implicitUV')));
         if(!connection){const override=el('button',{class:'wide'},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}
-      }else if(!connection){const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>{n.inputValues||={};n.inputValues[port]=next;}),false,port==='color'?'RGBA':'XYZW');values.classList.add('input-values');section.append(values);}
+      }else if(!connection){const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>setNodeInputValue(n,port,next)),false,port==='color'?'RGBA':'XYZW');values.classList.add('input-values');section.append(values);}
       if(connection){
         const source=current().nodes.find(other=>other.id===connection.from[0]),connectionRow=el('div',{class:'connection-row'});
-        const origin=el('span',{class:'connection-source'},(nodeLabel(source)||definition(source)?.label||connection.from[0])+' · '+connection.from[1]);origin.title=connection.from.join(' · ');
+        const origin=el('span',{class:'connection-source'},(nodeLabel(source)||definition(source)?.label||connection.from[0])+' · '+portLabel(source,'outputs',connection.from[1]));origin.title=connection.from.join(' · ');
         const disconnect=el('button',{'aria-label':t('wire.disconnect')+portLabel(n,'inputs',port)},t('wire.disconnectShort'));disconnect.disabled=readonly;
         disconnect.onclick=()=>change(()=>current().edges=current().edges.filter(e=>e!==connection));connectionRow.append(origin,disconnect);section.append(connectionRow);
       }else if(['texture','texture_sample'].includes(d.key)&&port==='uv'&&value!==null){
@@ -554,13 +581,19 @@ function inspector(){
       inputBox.append(section);
     }
   }else{
-    if(n.params.type&&!supportsAutoType(d))box.append(field(t('node.type'),select(selectableNodeTypes(d).map(type=>[type,type]),n.params.type,value=>change(()=>{
+    if(n.params.type&&!supportsAutoType(d)&&!isVectorOperation(d))box.append(field(t('node.type'),select(selectableNodeTypes(d).map(type=>[type,type]),n.params.type,value=>change(()=>{
       const old=clone(n.inputValues||{});n.params.type=value;
       for(const [port,type]of Object.entries(ports(n,'inputs'))){
         if(!Object.hasOwn(old,port))continue;
         n.inputValues[port]=shapedValue(old[port],type);
       }
     }))));
+    if(isVectorOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],...(n.params.type==='vec2'?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
+    if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','float','vec2','vec3','vec4','color'].includes(d.key)){
+      const requirement=el('input',{type:'checkbox','data-require-constant':n.id});requirement.checked=!!n.params.requireConstant;requirement.disabled=readonly;
+      requirement.onchange=()=>change(()=>{if(requirement.checked)n.params.requireConstant=true;else delete n.params.requireConstant;});
+      const row=field(t('vector.requireConstant'),requirement);row.classList.add('constant-requirement');row.title=t('vector.constantHint');box.append(row,el('p',{class:'muted'},t('vector.constantHint')));
+    }
     if('declarationId'in n.params){
       const options=graph.declarations.filter(x=>x.kind===(['uniform','constant'].includes(d.key)?d.key:'sampler')).map(x=>[x.id,x.name]);
       box.append(field(t('node.declaration'),select([['',t('select.placeholder')],...options],n.params.declarationId,value=>change(()=>n.params.declarationId=value))));

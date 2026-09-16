@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.73",
+  "catalogVersion": "0.8.80",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -1391,6 +1391,184 @@
         ],
         "glslName": "void",
         "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "vec4",
+        "label": "Vector 4",
+        "inputs": {},
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "value": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "descriptionKey": "help.vec4",
+        "definitionUuid": "sgrape.builtin.vec4",
+        "revisionHash": "200c2cd0c628bb254d1a0a4e6b584d42435d6344ff5c1a7b63fcddb452d59656"
+      },
+      "emitter": {
+        "id": "vec4",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "constant",
+          "vec4",
+          "常數",
+          "四維向量"
+        ],
+        "glslName": "vec4",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "combine",
+        "label": "Combine",
+        "inputs": {
+          "x": "float",
+          "y": "float"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2",
+          "groups": {},
+          "components": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "descriptionKey": "help.combine",
+        "definitionUuid": "sgrape.builtin.combine",
+        "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a"
+      },
+      "emitter": {
+        "id": "combine",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "compose",
+          "append",
+          "append vector",
+          "merge",
+          "construct",
+          "合併",
+          "組合"
+        ],
+        "glslName": "vecN",
+        "secondaryCategories": [
+          "data"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "vector_split",
+        "label": "Split",
+        "inputs": {
+          "value": "vec2"
+        },
+        "outputs": {
+          "x": "float",
+          "y": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2"
+        },
+        "descriptionKey": "help.vector_split",
+        "definitionUuid": "sgrape.builtin.vector_split",
+        "revisionHash": "364abce677961b275edf97cd163dd9ada7a778ac92d369bb19ba39d688a61927"
+      },
+      "emitter": {
+        "id": "vector_split",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "separate",
+          "break",
+          "components",
+          "拆分",
+          "分量",
+          "UV"
+        ],
+        "glslName": "vector_split",
+        "secondaryCategories": [
+          "data"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "swizzle",
+        "label": "Swizzle",
+        "inputs": {
+          "value": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2",
+          "mask": "xy"
+        },
+        "descriptionKey": "help.swizzle",
+        "definitionUuid": "sgrape.builtin.swizzle",
+        "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442"
+      },
+      "emitter": {
+        "id": "swizzle",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "component mask",
+          "reorder",
+          "shuffle",
+          "分量",
+          "重排",
+          "取分量"
+        ],
+        "glslName": "swizzle",
+        "secondaryCategories": [
+          "data"
+        ]
       }
     }
   ],
