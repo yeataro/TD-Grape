@@ -666,7 +666,29 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* Markdown annotations retain the normal card, selection and resize behavior. */
 :where([data-category="annotation"]){--category-bg:#303034;--category-fg:var(--ui-tone-text)}
 .node[data-category="annotation"]:not(.collapsed){--node-min-height:130px;--node-max-height:1200px;display:flex;flex-direction:column;height:180px;min-height:var(--node-min-height);max-height:var(--node-max-height)}
-.node[data-category="annotation"]>.node-title{flex-shrink:0}
+.node[data-category="annotation"]>.node-title{flex-shrink:0;gap:4px;padding-inline:8px}
+.node[data-category="annotation"]>.node-title>.node-title-meta{flex:none}
+.note-title-actions{display:flex;align-items:center;gap:2px;flex:none;visibility:hidden}
+.node.selected .note-title-actions,.node:focus-within .note-title-actions{visibility:visible}
+.note-title-actions>button{display:grid;place-items:center;flex:none;width:22px;height:22px;min-width:0;min-height:0;padding:3px;margin-block:-3px;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer}
+.note-title-actions>button svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.note-title-actions>button:hover{background:#80808030}
+.note-title-actions>button[aria-pressed="true"]{background:#80808040;color:var(--purple)}
+.note-title-actions>button:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
+.note-color-button>span{display:block;width:14px;height:14px;border-radius:50%;background:#7f8797;box-shadow:inset 0 0 0 1px #ffffff30}
+.note-color-button>.note-transparent-swatch,.group-frame-palette .note-color-transparent>span{background:conic-gradient(#a5a5ab 25%,#56565f 0 50%,#a5a5ab 0 75%,#56565f 0);background-size:8px 8px}
+.node[data-note-title-on-selection="true"]:not(.collapsed)>.node-title{position:absolute;left:-1px;right:-1px;top:0;transform:translateY(-100%);border:1px solid var(--ui-tone-node-border);border-radius:6px 6px 0 0;visibility:hidden;z-index:1}
+.node[data-note-title-on-selection="true"]:not(.collapsed).selected>.node-title{visibility:visible}
+.node[data-note-title-on-selection="true"].selected{z-index:2}
+.node-size-probe[data-note-title-on-selection="true"]:not(.collapsed)>.node-title{position:static;transform:none;visibility:visible}
+:root #canvas .node[data-category="annotation"].note-colored{background:color-mix(in srgb,var(--note-color) 24%,var(--node-body,var(--ui-tone-node)))}
+:root #canvas .node[data-category="annotation"][data-note-transparent="true"]{background:transparent;border-color:transparent}
+:root #canvas .node[data-category="annotation"][data-note-transparent="true"]:hover{border-color:var(--ui-tone-node-border)}
+:root #canvas .node[data-category="annotation"][data-note-transparent="true"].selected{border-color:var(--selection)}
+.node[data-category="annotation"][data-note-transparent="true"]:not(.selected):not(:hover)>.node-resize-handle{visibility:hidden}
+:root #canvas .node[data-category="annotation"][data-note-transparent="true"]{box-shadow:none}
+:root #canvas .node[data-category="annotation"][data-note-transparent="true"].selected{box-shadow:0 0 0 1px var(--selection)}
+@media(pointer:coarse){.note-title-actions>button{width:28px;height:28px;margin-block:-6px}.node[data-category="annotation"]>.node-title{padding-inline:6px}}
 .node[data-category="annotation"]>.ports{display:none}
 .comment-node-content{min-width:0;min-height:0;color:var(--ui-text,var(--ui-tone-text));font-size:12px;line-height:1.5}
 .comment-node-editor,.comment-node-preview{box-sizing:border-box;width:100%;padding:10px;overflow:auto;overscroll-behavior:contain;border-radius:6px;touch-action:pan-x pan-y;user-select:text;cursor:text}
@@ -871,7 +893,11 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .group-frame-palette .group-frame-custom{display:flex;align-items:center;gap:9px;width:100%;min-height:34px;padding:5px;border-radius:var(--popup-row-radius,6px);text-align:left;font-size:12px}
 .group-frame-rainbow{display:block;flex:none;width:24px;height:24px;border-radius:50%;background:conic-gradient(#d77878,#d4bf79,#84b789,#78b6c4,#858cd2,#bc81b7,#d77878);box-shadow:inset 0 0 0 1px #ffffff40}
 .group-frame-native-color{position:fixed;left:0;top:0;width:1px;height:1px;min-width:0;margin:0;padding:0;border:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+.group-frame-palette-actions{display:flex;align-items:center;justify-content:space-between}
+.group-frame-palette .note-color-custom{width:114px;min-width:0;min-height:34px;justify-content:flex-start;gap:6px;padding:5px;border-radius:var(--popup-row-radius,6px)}
+.group-frame-palette .note-color-custom>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(pointer:coarse){.group-frame-palette-grid{grid-template-columns:repeat(4,44px)}.group-frame-palette .group-frame-preset{width:44px;height:44px}.group-frame-palette .group-frame-custom{min-height:44px}}
+@media(pointer:coarse){.group-frame-palette .note-color-custom{width:144px}}
 .group-frame-title:focus-visible{outline:1px solid var(--purple);outline-offset:2px}
 :root[data-ui-theme="light"] .group-frame-title{background:color-mix(in srgb,var(--frame-color) 22%,var(--node-body))}
 .graph-tool-group[hidden],.selection-toolbar[hidden],#selectionbounds[hidden]{display:none}

@@ -58,6 +58,7 @@ function functionEntry(f,source=false){
   return {key:source?'source:'+f.scope+':'+f.id+':'+(f.source?.version||''):'function:'+f.id,label:f.name,stages:f.stages,inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id,source:source?f:null,category:f.scope==='personal'?'personal':'functions'};
 }
 function nodeTypeLabel(d,params=d?.defaults){
+  if(d?.key==='comment')return 'Note';
   if(d?.key==='vector')return 'Vector '+typeComponents(params?.type||'vec2');
   const label=d?.label||t('node.unknown');
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;

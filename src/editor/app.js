@@ -724,7 +724,7 @@ function setUIExperiments(values){
   if(graph&&redrawWires){
     for(const card of document.querySelectorAll('#cards .node')){
       const node=current().nodes.find(node=>node.id===card.dataset.node);if(!node)continue;
-      card.dataset.dragSurface=next.nodeBodyDrag?'body':'header';
+      card.dataset.dragSurface=definition(node)?.key==='comment'||!next.nodeBodyDrag?'header':'body';
       const title=card.querySelector('.node-title-text'),toggle=title.querySelector('.node-collapse-toggle');
       const visible=node.ui?.collapsed===true?next.nodeCollapseCollapsedHint:next.nodeCollapseExpandedHint;
       if(visible!==!!toggle){

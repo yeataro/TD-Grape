@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 Note 外觀：新增 `test_note_appearance.cjs` 11 組通過，涵蓋標題浮層幾何不變、色盤／透明單步 Undo／Redo、深淺色、拖動隔離、收合恢復、JSON／剪貼簿、唯讀、190px 自訂名稱排版及觸控／鍵盤；沒有 Shader 或 UUID／版本變更。測試找出的 Undo 後按鈕停用問題已修正：渲染不把暫時 historyBusy 固化到 disabled，操作仍由共用 mutation guard 保護。既有節點 8 組、Markdown 9 組、尺寸 9 組、選取工具列 12 組與群組框 13 組回歸通過，零頁面錯誤；窄版及深淺色截圖已目視。報告位於 note-appearance-round 與 note-shared-palette-frames。
+
+色盤最終補充檢查涵蓋中英文與桌面／390px 觸控 4 種組合，左下自訂色與右下透明均無溢出，透明標題色點顯示棋盤格；桌面英文依預期省略，完整名稱保留於提示及無障礙標籤。Footer 新順序在桌面與窄版保持，按鈕無重疊。報告及截圖位於 note-appearance-round/palette-final。
+
+本輪已推送並保存 TD，31 份內嵌來源／9 份服務資源一致、TOP／MAT Master current、兩份使用者 Shader 保留。正式 TOE 765,316 bytes，SHA-256 `d4792b5e138f71dff03a1af8b94f777e09d3d57a2dcb40b401bc5b6d94e85c8d`，排除私人助手，未重新整理既有 Editor。JavaScript 語法、596 個雙語引用與 diff 檢查通過；原生報告位於 note-appearance-round 的 refresh／audit／save。
+
 2026-09-18 Comment 共用寬度下限：resize 9 組通過，確認縮小限制為一般節點共用的 190px、繼續向內拖曳不增加歷史、既有 120px 保存值在顯示與 JSON 重載時以 190px 呈現且不重寫資料；窄版截圖已目視。更新並保存 TD，31 份內嵌來源／9 份服務資源一致、兩份使用者 Shader 保留。TOE 763,668 bytes，SHA-256 `d7059557983a054b1b239b4b159402df7abcf8648a815ab29fefb60a2eb96e10`。報告位於 comment-shared-width-round。
 
 2026-09-18 Comment 寬度解除：`test_comment_resize.cjs` 9 組通過，涵蓋縮至 120×130 並經 JSON 重載、縮放座標換算、一次 Undo／Redo、取消／唯讀／觸控及一般節點仍只改寬度；窄版截圖已目視。報告位於 comment-width-round。沒有新增自動折行或固定預設寬度，也未改高度規則。

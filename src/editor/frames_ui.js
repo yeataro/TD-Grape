@@ -74,10 +74,17 @@ function setGroupFrameColor(frame,color,data=current()){
   return updateGroupFrame(frame,target=>target.color=color.toLowerCase(),data);
 }
 function groupFrameColorSessionValid(session){
-  return !!session&&graph===session.owner&&current()===session.data&&!editorMutationBlocked()&&GraphFrames.read(session.data).some(frame=>frame.id===session.frame.id);
+  return !!session&&graph===session.owner&&current()===session.data&&!editorMutationBlocked()&&
+    (session.node?session.data.nodes.includes(session.node)&&definition(session.node)?.key==='comment':GraphFrames.read(session.data).some(frame=>frame.id===session.frame.id));
+}
+function paletteTargetColor(session){
+  const color=session.node?session.node.ui?.noteColor:GraphFrames.read(session.data).find(frame=>frame.id===session.frame.id)?.color;
+  return typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color)?color.toLowerCase():GROUP_FRAME_COLOR;
 }
 function focusGroupFrameColor(session){
-  if(graph===session?.owner&&current()===session.data)$('#groupframes')?.querySelector(`[data-frame-color="${CSS.escape(session.frame.id)}"]`)?.focus({preventScroll:true});
+  if(graph!==session?.owner||current()!==session.data)return;
+  const selector=session.node?`[data-note-color="${CSS.escape(session.node.id)}"]`:`[data-frame-color="${CSS.escape(session.frame.id)}"]`;
+  $(session.node?'#cards':'#groupframes')?.querySelector(selector)?.focus({preventScroll:true});
 }
 function closeGroupFramePalette(focus=false){
   const palette=groupFramePalette;if(!palette)return;
@@ -87,8 +94,9 @@ function closeGroupFramePalette(focus=false){
   if(focus)focusGroupFrameColor(session);
 }
 function commitGroupFrameColor(session,color){
-  if(!groupFrameColorSessionValid(session))return false;
-  const result=setGroupFrameColor(session.frame,color,session.data);focusGroupFrameColor(session);return result;
+  if(!groupFrameColorSessionValid(session)||!/^#[0-9a-f]{6}$/i.test(color))return false;
+  const result=session.node?change(()=>{session.node.ui||={};session.node.ui.noteColor=color.toLowerCase();session.node.ui.noteTransparent=false;},{localize:false}):setGroupFrameColor(session.frame,color,session.data);
+  focusGroupFrameColor(session);return result;
 }
 function ensureGroupFramePalette(){
   if(groupFramePalette)return groupFramePalette;
@@ -115,36 +123,52 @@ function ensureGroupFramePalette(){
   document.body.append(popup,picker);return palette;
 }
 function openGroupFramePalette(frame,trigger,data=current()){
+  return openCanvasColorPalette({owner:graph,data,frame,trigger});
+}
+function openNoteColorPalette(node,trigger){
+  return openCanvasColorPalette({owner:graph,data:current(),node,trigger});
+}
+function openCanvasColorPalette(session){
+  const {trigger}=session;
   const palette=ensureGroupFramePalette();
   if(palette.context?.trigger===trigger){closeGroupFramePalette(true);return;}
   closeGroupFramePalette();palette.native=null;
-  const session={owner:graph,data,frame,trigger};if(!groupFrameColorSessionValid(session))return;
+  if(!groupFrameColorSessionValid(session))return;
   palette.context=session;trigger.setAttribute('aria-expanded','true');
-  const popup=palette.popup,color=GraphFrames.read(data).find(item=>item.id===frame.id)?.color||GROUP_FRAME_COLOR;
-  popup.setAttribute('aria-label',t('frame.color'));popup.replaceChildren();
+  const popup=palette.popup,color=paletteTargetColor(session);
+  popup.setAttribute('aria-label',t(session.node?'note.color':'frame.color'));popup.replaceChildren();
   const grid=el('div',{class:'group-frame-palette-grid',role:'group','aria-label':t('frame.presetColors')});
   for(const [name,value]of GROUP_FRAME_COLORS){
-    const label=t('frame.colorPreset.'+name)+' · '+value.toUpperCase(),button=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-frame-color-preset':value,'aria-label':label,title:label,'aria-checked':String(color.toLowerCase()===value),tabindex:'-1'});
+    const label=t('frame.colorPreset.'+name)+' · '+value.toUpperCase(),button=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-frame-color-preset':value,'aria-label':label,title:label,'aria-checked':String(session.node?.ui?.noteTransparent!==true&&color.toLowerCase()===value),tabindex:'-1'});
     button.style.setProperty('--swatch-color',value);button.append(el('span',{'aria-hidden':'true'}));
     button.onclick=()=>{closeGroupFramePalette();commitGroupFrameColor(session,value);};grid.append(button);
   }
-  const custom=el('button',{type:'button',class:'group-frame-custom',role:'menuitem','data-frame-color-custom':'',tabindex:'-1'});
+  const custom=el('button',{type:'button',class:'group-frame-custom'+(session.node?' note-color-custom':''),role:'menuitem','data-frame-color-custom':'',tabindex:'-1','aria-label':t('frame.customColor'),title:t('frame.customColor')});
   custom.append(el('span',{class:'group-frame-rainbow','aria-hidden':'true'}),el('span',{},t('frame.customColor')));
   custom.onclick=()=>{
     if(!groupFrameColorSessionValid(session)){closeGroupFramePalette();return;}
     const rect=custom.getBoundingClientRect(),zoom=uiScaleFactor();
     Object.assign(palette.picker.style,{left:rect.left/zoom+'px',top:rect.top/zoom+'px'});
-    palette.native=session;palette.picker.value=GraphFrames.read(data).find(item=>item.id===frame.id)?.color||GROUP_FRAME_COLOR;
+    palette.native=session;palette.picker.value=paletteTargetColor(session);
     palette.picker.setAttribute('aria-label',t('frame.customColor'));closeGroupFramePalette();
     // Native pickers require the original trusted click; do not defer this call.
     if(typeof palette.picker.showPicker==='function')palette.picker.showPicker();else palette.picker.click();
   };
-  popup.append(grid,el('div',{class:'group-frame-palette-divider',role:'separator'}),custom);popup.showPopover();
+  popup.append(grid,el('div',{class:'group-frame-palette-divider',role:'separator'}));
+  if(session.node){
+    const actions=el('div',{class:'group-frame-palette-actions'}),transparent=el('button',{type:'button',class:'group-frame-preset note-color-transparent',role:'menuitemradio','data-note-color-transparent':'',tabindex:'-1','aria-label':t('note.transparent'),title:t('note.transparent'),'aria-checked':String(session.node.ui?.noteTransparent===true)});
+    transparent.append(el('span',{'aria-hidden':'true'}));transparent.onclick=()=>{
+      closeGroupFramePalette();if(!groupFrameColorSessionValid(session))return;
+      change(()=>{session.node.ui||={};session.node.ui.noteTransparent=true;},{localize:false});focusGroupFrameColor(session);
+    };
+    actions.append(custom,transparent);popup.append(actions);
+  }else popup.append(custom);
+  popup.showPopover();
   const rect=trigger.getBoundingClientRect(),zoom=uiScaleFactor(),margin=8,width=innerWidth/zoom,height=innerHeight/zoom;
   popup.style.maxHeight=Math.max(40,height-margin*2)+'px';
   const below=rect.bottom/zoom+6,above=rect.top/zoom-popup.offsetHeight-6;
   Object.assign(popup.style,{left:Math.max(margin,Math.min(rect.left/zoom,width-popup.offsetWidth-margin))+'px',top:Math.max(margin,Math.min(below+popup.offsetHeight<=height-margin?below:above,height-popup.offsetHeight-margin))+'px'});
-  (grid.querySelector('[aria-checked="true"]')||custom).focus({preventScroll:true});
+  (popup.querySelector('[aria-checked="true"]')||custom).focus({preventScroll:true});
 }
 function removeGroupFrame(frame,data=current()){
   if(editorMutationBlocked()||current()!==data||!GraphFrames.read(data).some(item=>item.id===frame.id))return false;

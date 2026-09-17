@@ -2950,28 +2950,52 @@
     "frame.colorPreset.rose": {"zh-Hant": "灰玫瑰", "en": "Dusty rose"},
     "frame.invalidName": {"zh-Hant": "名稱需為 1–80 字，且不可包含控制字元。", "en": "Use 1–80 characters without control characters."},
     "comment.resize": {
-      "zh-Hant": "拖曳調整註解寬度與高度",
-      "en": "Drag to resize comment width and height"
+      "zh-Hant": "拖曳調整筆記寬度與高度",
+      "en": "Drag to resize note width and height"
     },
     "comment.text": {
-      "zh-Hant": "註解文字",
-      "en": "Comment text"
+      "zh-Hant": "筆記文字",
+      "en": "Note text"
     },
     "comment.placeholder": {
-      "zh-Hant": "輸入註解…",
-      "en": "Write a comment…"
+      "zh-Hant": "輸入筆記…",
+      "en": "Write a note…"
     },
     "comment.hint": {
-      "zh-Hant": "畫布以 Markdown 顯示，glsl 程式區塊會高亮。移開焦點或 Ctrl／Cmd＋Enter 套用；Esc 取消。註解不參與 Shader 計算。",
-      "en": "The canvas renders Markdown and highlights glsl code blocks. Leave the field or press Ctrl/Cmd+Enter to apply; Esc cancels. Comments do not affect Shader calculations."
+      "zh-Hant": "畫布以 Markdown 顯示，glsl 程式區塊會高亮。移開焦點或 Ctrl／Cmd＋Enter 套用；Esc 取消。筆記不參與 Shader 計算。",
+      "en": "The canvas renders Markdown and highlights glsl code blocks. Leave the field or press Ctrl/Cmd+Enter to apply; Esc cancels. Notes do not affect Shader calculations."
     },
     "comment.edit": {
-      "zh-Hant": "雙擊／點兩下編輯；鍵盤可按 Enter",
-      "en": "Double-click or double-tap to edit; press Enter with the keyboard"
+      "zh-Hant": "雙擊／點兩下編輯筆記；鍵盤可按 Enter",
+      "en": "Double-click or double-tap to edit the note; press Enter with the keyboard"
+    },
+    "note.titleOnSelection": {
+      "zh-Hant": "僅選取時顯示標題",
+      "en": "Show title only when selected"
+    },
+    "note.titleOnSelection.hint": {
+      "zh-Hant": "選取時以浮層顯示標題，筆記大小與文字位置不變。",
+      "en": "Show the title as an overlay when selected; the note's size and text position stay fixed."
+    },
+    "note.transparent": {
+      "zh-Hant": "透明背景",
+      "en": "Transparent background"
+    },
+    "note.transparent.hint": {
+      "zh-Hant": "讓畫布上的筆記背景透明，內文仍正常顯示與編輯。",
+      "en": "Make the note's canvas background transparent while keeping its text visible and editable."
+    },
+    "note.color": {
+      "zh-Hant": "筆記背景顏色",
+      "en": "Note background color"
+    },
+    "note.color.hint": {
+      "zh-Hant": "只調整筆記內文的背景顏色，不改變標題。透明背景會隱藏底色，並保留所選顏色。",
+      "en": "Color only the note body background, leaving the title unchanged. Transparent background hides the tint and keeps the chosen color."
     },
     "help.comment": {
-      "zh-Hant": "在畫布上留下 Markdown 註解，支援標題、粗體、清單、連結、行內程式碼與程式區塊；以 glsl 標記區塊可顯示語法色。雙擊或點兩下內文編輯。沒有輸入或輸出，不影響產生的 GLSL；可移動、調整寬高、複製與刪除。",
-      "en": "Leave a Markdown note with headings, bold text, lists, links, inline code and fenced code blocks. Mark a block glsl for syntax colors. Double-click or double-tap to edit. No inputs or outputs and no effect on generated GLSL; move, resize, copy and delete it like other nodes."
+      "zh-Hant": "在畫布上加入 Markdown 筆記，支援標題、粗體、清單、連結、行內程式碼與程式區塊；以 glsl 標記區塊可顯示語法色。雙擊或點兩下內文編輯。可設定僅選取時顯示標題或使用透明背景。沒有輸入或輸出，不影響產生的 GLSL；可移動、調整寬高、複製與刪除。",
+      "en": "A Note displays Markdown with headings, bold text, lists, links, inline code and fenced code blocks. Mark a block glsl for syntax colors. Double-click or double-tap to edit. Choose to show its title only when selected or use a transparent background. No inputs or outputs and no effect on generated GLSL; move, resize, copy and delete it like other nodes."
     },
     "appearance.tone.reset": {
       "zh-Hant": "右鍵或雙擊還原基準",
