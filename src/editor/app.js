@@ -630,7 +630,7 @@ function uiToneColor(value){
 function uiToneAdjustedColor(color,amount,theme){
   const [r,g,b,alpha]=color,brightness=(.2126*r+.7152*g+.0722*b)/255;
   if(brightness<=0||brightness>=1)return `rgba(${r},${g},${b},${alpha})`;
-  const strength=amount>0?.32:theme==='light'?.55:.40;
+  const strength=(amount>0?.32:theme==='light'?.55:.40)*1.5;
   const curved=Math.pow(brightness,Math.exp(-amount*strength));
   // Protect dark surfaces during brightening, without introducing a contrast pivot.
   const x=Math.min(1,brightness/(theme==='light'?.10:.35));
