@@ -61,8 +61,11 @@ function positionSelectionToolbar(){
   const bottom=tools?(tools.getBoundingClientRect().top-r.top)/zoom-margin:h-margin;
   bar.style.maxWidth=Math.max(40,w-margin*2)+'px';
   bar.style.maxHeight=Math.max(40,bottom-top)+'px';
-  const x=Math.max(margin,Math.min((bounds.right-r.left)/zoom-bar.offsetWidth,w-bar.offsetWidth-margin));
-  const y=Math.max(top,Math.min((bounds.top-r.top)/zoom-bar.offsetHeight-12,bottom-bar.offsetHeight));
+  const x=Math.max(margin,Math.min(((bounds.left+bounds.right)/2-r.left)/zoom-bar.offsetWidth/2,w-bar.offsetWidth-margin));
+  const above=(bounds.top-r.top)/zoom-bar.offsetHeight-12,below=(bounds.bottom-r.top)/zoom+12;
+  const fits=y=>y>=top&&y+bar.offsetHeight<=bottom;
+  const preferred=fits(above)?above:fits(below)?below:above;
+  const y=Math.max(top,Math.min(preferred,bottom-bar.offsetHeight));
   bar.style.left=x+'px';bar.style.top=y+'px';
   outline.hidden=!(selectionToolbarHover||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open'));
   outline.style.left=(bounds.left-r.left)/zoom-6+'px';outline.style.top=(bounds.top-r.top)/zoom-6+'px';

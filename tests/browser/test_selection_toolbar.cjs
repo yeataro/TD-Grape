@@ -42,7 +42,7 @@ async function run(){
 
     await reset();await mode('all');await select(['a','b']);await page.evaluate(()=>{scale=.5;pan={x:35,y:180};transform();$('#canvas').focus();});await page.mouse.move(2,2);await settle();
     let first=await visual();assert.equal(first.visible,true);
-    assert.ok(Math.abs(first.bar.right-first.bounds.right)<1,'toolbar aligns its right edge with the selected bounds');
+    assert.ok(Math.abs((first.bar.x+first.bar.right)/2-(first.bounds.left+first.bounds.right)/2)<1,'toolbar centers horizontally above the selected bounds');
     assert.ok(first.bar.bottom<=first.bounds.top-5,'toolbar sits above the selection and does not cover output ports');
     const desktopButtons=await page.locator('#selectiontoolbar button:visible').evaluateAll(items=>items.map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,height:r.height};}));
     assert.ok(desktopButtons.every((r,i)=>Math.abs(r.y-desktopButtons[0].y)<1&&(!i||r.x>=desktopButtons[i-1].right)),'desktop toolbar is one horizontal row');
@@ -53,10 +53,17 @@ async function run(){
     assert.equal(await page.evaluate(()=>document.activeElement.id),await page.locator('#graphpaste').isEnabled()?'graphpaste':'graphdelete','Right moves to the next enabled toolbar action');
     await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>document.activeElement.id),'graphcopy','Left returns to the preceding action');await page.locator('#canvas').focus();
     await page.locator('#graphcopy').click();await page.mouse.move(2,2);await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),false,'mouse click must not pin the hover outline');
-    await page.evaluate(()=>{scale=.3;pan={x:70,y:210};transform();});await settle();const second=await visual();near(first.bar.width,second.bar.width,'toolbar width independent of graph zoom');near(first.bar.height,second.bar.height,'toolbar height independent of graph zoom');assert.notEqual(first.bar.x,second.bar.x);assert.ok(Math.abs(second.bar.right-second.bounds.right)<1);assert.ok(second.bar.bottom<=second.bounds.top-5);
+    await page.evaluate(()=>{scale=.3;pan={x:70,y:210};transform();});await settle();const second=await visual();near(first.bar.width,second.bar.width,'toolbar width independent of graph zoom');near(first.bar.height,second.bar.height,'toolbar height independent of graph zoom');assert.notEqual(first.bar.x,second.bar.x);assert.ok(Math.abs((second.bar.x+second.bar.right)/2-(second.bounds.left+second.bounds.right)/2)<1);assert.ok(second.bar.bottom<=second.bounds.top-5);
     await page.evaluate(()=>{const c=$('#canvas');pan.x=c.clientWidth-330;scale=.5;transform();});await settle();const clamped=await visual();assert.equal(clamped.visible,true);assert.ok(clamped.bar.right<=clamped.canvas.right-2);assert.ok(clamped.bar.y>=clamped.canvas.y&&clamped.bar.bottom<=clamped.canvas.bottom);
     await page.evaluate(()=>{pan.x=-10000;transform();});await settle();assert.equal((await visual()).visible,false);
-    checks.push('horizontal toolbar sits above the top-right of selection bounds, aligns right without covering output ports, clamps inside canvas, keeps its size through graph zoom/pan, and bounds appear only during contextual interaction');
+    checks.push('horizontal toolbar centers above selection bounds without covering output ports, clamps inside canvas, keeps its size through graph zoom/pan, and bounds appear only during contextual interaction');
+
+    await reset();await mode('all');await select(['a']);
+    await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect(),toolbar=$('#canvas>.toolbar').getBoundingClientRect(),n=current().nodes.find(n=>n.id==='a');scale=.6;pan={x:220,y:(toolbar.bottom-r.top)/uiScaleFactor()+10-n.ui.y*scale};transform();});await settle();
+    const below=await visual();assert.equal(below.visible,true);assert.ok(below.bar.y>=below.bounds.bottom+5,'selection near the top toolbar uses the free space below');assert.ok(Math.abs((below.bar.x+below.bar.right)/2-(below.bounds.left+below.bounds.right)/2)<1,'below fallback remains centered');assert.ok(below.bar.bottom<=below.canvas.bottom);
+    await select(['a','b']);await page.evaluate(()=>{scale=.6;pan={x:80,y:0};current().nodes.find(n=>n.id==='a').ui.y=0;current().nodes.find(n=>n.id==='b').ui.y=($('#canvas').clientHeight-40)/scale;render();transform();});await settle();
+    const tight=await visual(),safeTop=await page.evaluate(()=>$('#canvas>.toolbar').getBoundingClientRect().bottom+8*uiScaleFactor());assert.equal(tight.visible,true);assert.ok(Math.abs(tight.bar.y-safeTop)<1,'when neither side fits, above placement clamps to the usable canvas top');assert.ok(tight.bar.x>=tight.canvas.x&&tight.bar.right<=tight.canvas.right+1&&tight.bar.bottom<=tight.canvas.bottom,'clamped fallback remains reachable');
+    checks.push('centered toolbar falls below the selection when the top overlay blocks the space above, and clamps to the usable canvas when neither side fits');
 
     await reset();await mode('all');
     const original=await graphJSON();

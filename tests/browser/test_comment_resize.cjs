@@ -23,7 +23,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
   try{
     await reset();const before=await snapshot(),barBefore=await page.locator('#selectiontoolbar').boundingBox(),p=await start();
     await page.mouse.move(p.x+70,p.y+90,{steps:5});await settle();assert.deepEqual(await size('note'),{width:390,height:290});assert.equal(await snapshot(),before);
-    const barPreview=await page.locator('#selectiontoolbar').boundingBox();assert.ok(barPreview.x>barBefore.x+60);assert.ok(Math.abs(barPreview.y-barBefore.y)<.02,'top-aligned toolbar stays above while the node grows down');
+    const barPreview=await page.locator('#selectiontoolbar').boundingBox();assert.ok(Math.abs(barPreview.x-barBefore.x-35)<.02,'centered toolbar follows half the width delta');assert.ok(Math.abs(barPreview.y-barBefore.y)<.02,'top-aligned toolbar stays above while the node grows down');
     await page.mouse.up();await settle();assert.equal(await page.evaluate(()=>past.length),1);assert.equal(await page.evaluate(()=>hasShaderChanges(graph)),false);
     assert.deepEqual(await page.evaluate(()=>[current().nodes[0].ui.width,current().nodes[0].ui.height]),[390,290]);
     await page.evaluate(()=>undo());assert.deepEqual(await size('note'),{width:320,height:200});await page.evaluate(()=>undo(true));assert.deepEqual(await size('note'),{width:390,height:290});

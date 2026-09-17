@@ -827,10 +827,10 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* Selection actions remain in screen space, independent of graph zoom. */
 .graph-tool-group[hidden],.selection-toolbar[hidden],#selectionbounds[hidden]{display:none}
-.selection-toolbar{position:absolute;z-index:8;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:5px;width:max-content;padding:5px;border:1px solid var(--line);border-radius:10px;background:var(--ui-surface,var(--ui-tone-menu));box-shadow:0 5px 18px #0004;overflow-y:auto;overscroll-behavior:contain;touch-action:manipulation}
-.selection-toolbar .graph-tool-group{flex-direction:row;gap:4px}
-.selection-toolbar .graph-tool-group+.graph-tool-group{border-left:1px solid var(--line);padding-left:5px}
-.selection-toolbar button.icon-button{width:34px;height:34px;min-height:34px;padding:0;border:0;background:transparent}
+.selection-toolbar{position:absolute;z-index:8;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:4px;width:max-content;padding:3px;border:1px solid var(--line);border-radius:8px;background:var(--ui-surface,var(--ui-tone-menu));box-shadow:0 5px 18px #0004;overflow-y:auto;overscroll-behavior:contain;touch-action:manipulation}
+.selection-toolbar .graph-tool-group{flex-direction:row;gap:2px}
+.selection-toolbar .graph-tool-group+.graph-tool-group{border-left:1px solid var(--line);padding-left:4px}
+.selection-toolbar button.icon-button{width:28px;height:28px;min-height:28px;padding:0;border:0;background:transparent}
 .selection-toolbar button:enabled:is(:hover,:focus-visible){background:var(--ui-hover,var(--ui-tone-menu-hover))}
 .selection-toolbar button:disabled{opacity:1;color:color-mix(in srgb,var(--muted) 48%,var(--ui-surface,var(--ui-tone-menu)));background:transparent;cursor:default}
 #selectionbounds{position:absolute;z-index:3;border:1px dashed var(--selection);border-radius:5px;pointer-events:none}
@@ -838,7 +838,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #arrangemenu button{display:flex;align-items:center;gap:12px;width:100%;padding:6px 12px;text-align:left;white-space:nowrap}
 #arrangemenu .ui-icon{flex:none}
 #arrangemenu button[data-arrange="top"],#arrangemenu button[data-arrange="spaceX"],#arrangemenu button[data-arrange="grid"]{margin-top:6px}
-@media(pointer:coarse){.selection-toolbar button.icon-button{width:42px;height:42px;min-height:42px}#arrangemenu button{min-height:44px}}
+@media(pointer:coarse){.selection-toolbar button.icon-button{width:36px;height:36px;min-height:36px}#arrangemenu button{min-height:44px}}
 
 /* The detection box is fixed; only the trash face reacts to an eligible hover. */
 .graph-navigation #zoom{position:static;margin-left:auto;flex:none;padding-left:8px}
