@@ -1415,7 +1415,7 @@ function renderNativeSources(){
       if(canCreate){const add=el('button',{class:'input-group-add','data-input-create':kind,'aria-label':t('inputs.create')+' · '+inputGroupLabel(kind),title:t('inputs.create')+' · '+inputGroupLabel(kind)},'+');add.onclick=()=>openInputCreate(kind);head.append(add);}
       section.append(head,list);box.append(section);
       for(const decl of group){
-        const card=el('div',{class:'input-source-row','data-input-source':decl.id}),pick=el('button',{class:'input-source-select','aria-pressed':String(selectedInputId===decl.id)});
+        const card=el('div',{class:'input-source-row','data-input-source':decl.id,'data-category':nodeCategory({key:kind})}),pick=el('button',{class:'input-source-select','aria-pressed':String(selectedInputId===decl.id)});
         pick.append(el('span',{},decl.name));if(kind!=='top_input')pick.append(el('small',{},decl.type+(decl.sourceMissing?' · '+sourceMissingHint(decl):'')));pick.title=decl.name+' · '+decl.type+' · '+t('inputs.editReference');
         installCanvasItemDrag(pick,()=>allInputSources().find(d=>d.id===decl.id)?.name||'',(x,y)=>inputReference(decl.id,x,y),()=>selectInputSource(decl.id));const pointer=pick.onpointerdown;pick.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
         const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');installInputDrag(reference,decl.id);card.append(pick,reference);list.append(card);
