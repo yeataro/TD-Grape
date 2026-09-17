@@ -100,9 +100,9 @@
   </section>
 </aside></main>
 <footer><div class="footer-start"><div class="footer-actions"><button id="editorrefresh" type="button" class="sidebar-toggle" data-i18n-label="editorReload.action"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 4v6h-6M20 10a8 8 0 1 0 0 6"/></svg></button><button id="reload"><span data-i18n="action.reload"></span></button></div><span id="dirty" class="tag" role="status"><span data-i18n="connection.connecting"></span></span><span id="status" role="status"><span data-i18n="connection.starting"></span></span></div><div class="footer-preferences" role="group" data-i18n-label="appearance.controls">
+  <button id="uishare" type="button" aria-haspopup="dialog" aria-controls="sharepanel" aria-expanded="false" data-i18n-label="share.title"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="6" height="6" rx=".5"/><rect x="15" y="3" width="6" height="6" rx=".5"/><rect x="3" y="15" width="6" height="6" rx=".5"/><path d="M13 13h4v4h4v4h-4m-4-4v4m8-8v1M6 5v2m12-2v2M6 17v2"/></svg></button>
   <button id="uisize" type="button" popovertarget="sizepanel" aria-haspopup="dialog" aria-controls="sizepanel" aria-expanded="false" data-i18n-label="appearance.size.standard"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 17 6.5 8 10 17M4.3 14h4.4M12 19 17 5 22 19M14 14h6"/></svg></button>
   <button id="uitheme" type="button" popovertarget="appearancepanel" aria-haspopup="dialog" aria-controls="appearancepanel" aria-expanded="false" data-i18n-label="appearance.theme.dark"><svg class="ui-icon theme-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14A8.7 8.7 0 0 1 10 3.5 8.8 8.8 0 1 0 20.5 14Z"/></svg><svg class="ui-icon theme-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg></button>
-  <button id="uishare" type="button" popovertarget="sharepanel" aria-haspopup="dialog" aria-controls="sharepanel" aria-expanded="false" data-i18n-label="share.title"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="6" height="6" rx=".5"/><rect x="15" y="3" width="6" height="6" rx=".5"/><rect x="3" y="15" width="6" height="6" rx=".5"/><path d="M13 13h4v4h4v4h-4m-4-4v4m8-8v1M6 5v2m12-2v2M6 17v2"/></svg></button>
   <button id="uifullscreen" type="button" aria-pressed="false" data-i18n-label="view.fullscreen"><svg class="ui-icon fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><svg class="ui-icon fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true" focusable="false" hidden><path d="M3 8h5V3m8 0v5h5M8 21v-5H3m18 0h-5v5"/></svg></button>
 </div></footer>
 <div id="appearancepanel" class="appearance-panel" popover role="dialog" data-i18n-label="appearance.panel">
@@ -127,15 +127,15 @@
     <button id="uiscaleplus" type="button" data-i18n-label="appearance.scale.increase"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12h12M12 6v12"/></svg></button>
   </div>
 </div>
-<div id="sharepanel" class="appearance-panel share-panel" popover role="dialog" aria-labelledby="sharetitle">
-  <strong id="sharetitle" data-i18n="share.title"></strong>
-  <select id="shareorigin" data-i18n-label="share.origin"></select>
+<dialog id="sharepanel" class="share-panel" aria-labelledby="sharetitle" aria-describedby="sharehint">
+  <div class="share-heading"><strong id="sharetitle" data-i18n="share.title"></strong><button id="shareclose" class="icon-button" type="button" data-i18n-label="action.close"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  <select id="shareorigin" autofocus data-i18n-label="share.origin"></select>
   <div id="shareqr"></div>
   <p id="sharehint"></p>
   <input id="shareurl" type="text" readonly spellcheck="false" data-i18n-label="share.url">
   <button id="sharecopy" type="button" data-i18n="share.copy"></button>
   <p id="sharemessage" role="status" aria-live="polite"></p>
-</div>
+</dialog>
 <div id="canvaszoommenu" popover role="menu" data-i18n-label="canvas.zoomPresets"></div>
 <dialog id="reloadapplieddialog" aria-labelledby="reloadappliedtitle" aria-describedby="reloadappliedexplanation">
   <strong id="reloadappliedtitle" data-i18n="appliedReload.title"></strong>

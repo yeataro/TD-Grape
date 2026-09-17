@@ -25,7 +25,7 @@ function renderShareQR(url){
 }
 function renderUIShare(){
   const panel=$('#sharepanel'),opener=$('#uishare');if(!panel||!opener)return;
-  opener.title=t('share.title');opener.setAttribute('aria-expanded',String(panel.matches(':popover-open')));
+  opener.title=t('share.title');opener.setAttribute('aria-expanded',String(panel.open));
   if(!uiShareState.origins.length)return;
   const select=$('#shareorigin'),items=uiShareState.origins;
   select.replaceChildren(...items.map(item=>el('option',{value:item.origin},item.origin+' · '+t('share.'+item.kind))));
@@ -35,7 +35,6 @@ function renderUIShare(){
   const hint=shareLoopback(uiShareState.selected)?'share.localOnly':'share.ready';
   $('#sharehint').textContent=t(hint);
   $('#sharemessage').textContent=uiShareState.status?t(uiShareState.status):'';
-  if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);
 }
 async function discoverShareLinks(){
   const request=++uiShareState.request,current=location.origin;
@@ -68,13 +67,20 @@ async function copyShareLink(){
 }
 function installUIShare(){
   const panel=$('#sharepanel'),opener=$('#uishare');
-  const position=()=>positionAppearancePanel(panel,opener);
-  panel.addEventListener('beforetoggle',event=>{if(event.newState==='open'){position();discoverShareLinks();}else uiShareState.request++;});
-  panel.addEventListener('toggle',()=>{opener.setAttribute('aria-expanded',String(panel.matches(':popover-open')));if(panel.matches(':popover-open'))position();});
-  opener.onclick=event=>{if(event.detail===0)requestAnimationFrame(()=>{if(panel.matches(':popover-open'))$('#shareorigin').focus({preventScroll:true});});};
+  opener.onclick=()=>{
+    for(const popover of document.querySelectorAll('[popover]:popover-open'))popover.hidePopover();
+    panel.showModal();opener.setAttribute('aria-expanded','true');discoverShareLinks();
+  };
+  $('#shareclose').onclick=()=>panel.close();
+  panel.addEventListener('close',()=>{uiShareState.request++;opener.setAttribute('aria-expanded','false');opener.focus({preventScroll:true});});
   $('#shareorigin').onchange=event=>{uiShareState.selected=event.target.value;uiShareState.status=uiShareState.discovery;renderUIShare();};
   $('#sharecopy').onclick=copyShareLink;
-  panel.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Escape'){event.preventDefault();panel.hidePopover();opener.focus({preventScroll:true});}});
-  window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))position();});
+  panel.addEventListener('keydown',event=>event.stopPropagation());
+  // Dismiss only a complete backdrop click, not a drag out of the dialog.
+  const outside=event=>{const r=panel.getBoundingClientRect();return event.target===panel&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom);};
+  let backdropPressed=false;
+  panel.addEventListener('pointerdown',event=>{backdropPressed=event.button===0&&outside(event);});
+  panel.addEventListener('pointercancel',()=>{backdropPressed=false;});
+  panel.addEventListener('click',event=>{if(backdropPressed&&outside(event))panel.close();backdropPressed=false;});
   renderUIShare();
 }

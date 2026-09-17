@@ -1413,13 +1413,16 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #reloadapplieddialog .reload-applied-actions{justify-content:flex-end;gap:8px;padding:8px 0 0}
 #reloadapplieddialog button{min-height:34px}
 
-/* Sharing uses the same footer popover surface; QR contrast stays independent of theme. */
-.share-panel{width:288px;padding:14px}
-.share-panel>strong{display:block;font-size:13px;margin-bottom:10px}
-.share-panel :is(select,input,button){width:100%;min-width:0;box-sizing:border-box}
+/* Centered sharing dialog gives the QR room to scan from another device. */
+#sharepanel{width:min(360px,calc(100 * var(--ui-vw) - 24px));max-height:calc(100 * var(--ui-dvh) - 24px);margin:auto;padding:20px;overflow:auto}
+.share-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0;margin-bottom:12px;font-size:14px}
+.share-panel :is(select,input){width:100%;min-width:0;box-sizing:border-box}
+#shareclose{flex:none;width:28px;height:28px;padding:5px;border-color:transparent;background:transparent}
+#shareclose:hover{background:var(--ui-hover,var(--ui-tone-control-hover))}
 .share-panel select{font-size:12px}
-#shareqr{display:flex;justify-content:center;margin:12px auto 10px;width:224px;max-width:100%;aspect-ratio:1;background:#fff}
+#shareqr{display:flex;justify-content:center;margin:16px auto 12px;padding:0;width:min(288px,max(128px,calc(100 * var(--ui-dvh) - 140px)));max-width:100%;aspect-ratio:1;background:#fff}
 #shareqr svg{display:block;width:100%;height:100%}
 .share-panel p{font-size:12px;line-height:1.5;margin:8px 0;color:var(--muted)}
 #shareurl{font-size:12px;margin:0 0 8px}
+#sharecopy{width:100%}
 #sharemessage{margin-bottom:0;min-height:18px}
