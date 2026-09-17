@@ -757,6 +757,11 @@ function nodeCanvasComment(n){
   note.ondblclick=e=>e.stopPropagation();
   return note;
 }
+function noteFontScale(node){return Math.max(1,Math.min(10,Number.isFinite(node.ui?.noteFontScale)?node.ui.noteFontScale:1));}
+function setNoteTitleOnSelection(node,enabled,owner=current()){
+  if(editorMutationBlocked()||current()!==owner||!owner.nodes.includes(node))return false;
+  return change(()=>{node.ui||={};if(enabled)node.ui.noteTitleOnSelection=true;else delete node.ui.noteTitleOnSelection;},{localize:false});
+}
 function noteAppearanceControls(node){
   const controls=el('div',{class:'note-title-actions'}),key='noteTitleOnSelection',label='note.titleOnSelection';
   const button=el('button',{type:'button','data-note-appearance':key,'aria-label':t(label),title:t(label)+' · '+t(label+'.hint'),'aria-pressed':String(node.ui?.[key]===true)});
@@ -764,7 +769,7 @@ function noteAppearanceControls(node){
   button.onpointerdown=button.ondblclick=e=>e.stopPropagation();
   button.onclick=e=>{
     e.stopPropagation();if(editorMutationBlocked()||!current().nodes.includes(node))return;
-    if(change(()=>{node.ui||={};if(node.ui[key]===true)delete node.ui[key];else node.ui[key]=true;},{localize:false})){
+    if(setNoteTitleOnSelection(node,node.ui?.[key]!==true)){
       $('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"] [data-note-appearance="${key}"]`)?.focus({preventScroll:true});
     }
   };
@@ -779,7 +784,7 @@ function noteAppearanceControls(node){
 // only the DOM until release so cancellation never creates a history entry.
 function nodeCanResizeHeight(node){return definition(node)?.key==='comment';}
 function nodeHeightLimits(card){
-  const style=getComputedStyle(card),minimum=parseFloat(style.getPropertyValue('--node-min-height'))||130;
+  const style=getComputedStyle(card),minimum=parseFloat(style.minHeight)||110;
   return {minimum,maximum:Math.max(minimum,parseFloat(style.getPropertyValue('--node-max-height'))||1200)};
 }
 function nodeMinimumWidth(card){
@@ -879,6 +884,7 @@ function renderCards(){
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
     if(d?.key==='comment'){
       card.dataset.noteTitleOnSelection=String(n.ui?.noteTitleOnSelection===true);card.dataset.noteTransparent=String(n.ui?.noteTransparent===true);
+      card.style.setProperty('--note-font-scale',noteFontScale(n));
       if(/^#[\da-f]{6}$/i.test(n.ui?.noteColor||'')){card.classList.add('note-colored');card.style.setProperty('--note-color',n.ui.noteColor);}
     }
     const title=el('div',{class:'node-title'}),text=el('div',{class:'node-title-text'});

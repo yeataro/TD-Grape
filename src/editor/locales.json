@@ -2974,8 +2974,8 @@
       "en": "Show title only when selected"
     },
     "note.titleOnSelection.hint": {
-      "zh-Hant": "選取時以浮層顯示標題，筆記大小與文字位置不變。",
-      "en": "Show the title as an overlay when selected; the note's size and text position stay fixed."
+      "zh-Hant": "未選取時隱藏標題；選取後在原位顯示，筆記大小與內文位置均不改變。",
+      "en": "Hide the title when unselected and show it in its original position when selected, without moving the text or resizing the note."
     },
     "note.transparent": {
       "zh-Hant": "透明背景",
@@ -2989,9 +2989,21 @@
       "zh-Hant": "筆記背景顏色",
       "en": "Note background color"
     },
+    "note.defaultColor": {
+      "zh-Hant": "預設背景色",
+      "en": "Default background color"
+    },
     "note.color.hint": {
       "zh-Hant": "只調整筆記內文的背景顏色，不改變標題。透明背景會隱藏底色，並保留所選顏色。",
       "en": "Color only the note body background, leaving the title unchanged. Transparent background hides the tint and keeps the chosen color."
+    },
+    "note.fontScale": {
+      "zh-Hant": "字級倍率",
+      "en": "Font scale"
+    },
+    "note.fontScale.hint": {
+      "zh-Hant": "將畫布上的筆記文字放大為 1–10 倍，不改變標題與編輯欄位的字級。",
+      "en": "Scale the note text on the canvas from 1 to 10 times its size, keeping title and editor text unchanged."
     },
     "help.comment": {
       "zh-Hant": "在畫布上加入 Markdown 筆記，支援標題、粗體、清單、連結、行內程式碼與程式區塊；以 glsl 標記區塊可顯示語法色。雙擊或點兩下內文編輯。可設定僅選取時顯示標題或使用透明背景。沒有輸入或輸出，不影響產生的 GLSL；可移動、調整寬高、複製與刪除。",

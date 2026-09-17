@@ -21,8 +21,6 @@ function selectedCanvasNodes(){return graph&&selectedEdge===null?current().nodes
 function fitSelection(){fitNodes(selectedCanvasNodes());}
 function selectedCanvasBounds(){
   const rects=selectedCanvasNodes().map(n=>$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`)?.getBoundingClientRect()).filter(Boolean);
-  // A selected Note can expose a floating header above its unchanged body bounds.
-  for(const title of $('#cards').querySelectorAll('.node.selected[data-note-title-on-selection="true"]:not(.collapsed)>.node-title'))rects.push(title.getBoundingClientRect());
   for(const frame of completeGroupFrames(selectedCanvasNodes())){const rect=$('#groupframes')?.querySelector(`[data-frame="${CSS.escape(frame.id)}"]`)?.getBoundingClientRect();if(rect)rects.push(rect);}
   if(!rects.length)return null;
   return {left:Math.min(...rects.map(r=>r.left)),top:Math.min(...rects.map(r=>r.top)),right:Math.max(...rects.map(r=>r.right)),bottom:Math.max(...rects.map(r=>r.bottom))};

@@ -58,7 +58,7 @@ function installValueLadder(entry,commit){
     let fraction=magnitude;
     // Decimal leading digits avoid overflowing the next decade for large finite values.
     if(magnitude>1){const leading=Number(magnitude.toExponential().split('e')[0]);fraction=leading===1?1:leading/10;}
-    const proportion=valid&&value<0?1-fraction:fraction;
+    const range=entry.numericRange,proportion=range?(valid?Math.max(0,Math.min(1,(value-range.min)/(range.max-range.min))):0):valid&&value<0?1-fraction:fraction;
     entry.style.setProperty('--numeric-fill',Number((proportion*100).toFixed(6))+'%');
     entry.onNumericPreview?.();
   };
@@ -70,7 +70,7 @@ function installValueLadder(entry,commit){
     const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner;
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
     if(e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
-    const initial=entry.value,initialValue=Number(initial),integer=entry.step==='1';
+    const initial=entry.value,initialValue=Number(initial),integer=entry.step==='1',range=entry.numericRange;
     const dragWidth=Math.max(1,entry.getBoundingClientRect().width);
     // Unwrap the repeating fill into continuous travel: 1 -> 10, 10 -> 19,
     // 100 -> 28. Integer band widths avoid drift at exact decimal boundaries.
@@ -88,7 +88,7 @@ function installValueLadder(entry,commit){
       return {value:Number((Math.sign(position)*(distance-9*decade))+'e'+(decade-1)),decade};
     };
     const decimalPlaces=value=>{const [digits,exponent='0']=String(value).toLowerCase().split('e');return Math.max(0,(digits.split('.')[1]?.length||0)-Number(exponent));};
-    let value=initialValue,baseValue=initialValue,deltaUnits=0,segmentPixels=0,segmentTicks=0,sensitivity='',lastX=e.clientX,finished=false;
+    let value=initialValue,baseValue=initialValue,boundedValue=initialValue,deltaUnits=0,segmentPixels=0,segmentTicks=0,sensitivity='',lastX=e.clientX,finished=false;
     entry.numericGestureActive=true;if(e.pointerType==='touch')entry.beginNumericEdit?.();document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
     const controller=new AbortController(),options={capture:true,signal:controller.signal};
     const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
@@ -106,6 +106,12 @@ function installValueLadder(entry,commit){
       if(ev.pointerId!==e.pointerId)return;
       if(!(ev.buttons&1)||!writable()){finish(false);return;}
       ev.preventDefault();ev.stopPropagation();
+      if(range){
+        const sensitivity=ev.ctrlKey?(ev.shiftKey?.01:10):ev.shiftKey?.1:1;
+        boundedValue=Math.max(range.min,Math.min(range.max,boundedValue+(ev.clientX-lastX)/dragWidth*(range.max-range.min)*sensitivity));lastX=ev.clientX;
+        value=Math.max(range.min,Math.min(range.max,Number((range.min+Math.round((boundedValue-range.min)/range.step)*range.step).toPrecision(15))));
+        entry.value=String(value);paintSlider();return;
+      }
       const units=integer?10000:ev.ctrlKey?(ev.shiftKey?1:1000):ev.shiftKey?10:100;
       const pixelsPerStep=integer?(ev.ctrlKey?1:ev.shiftKey?100:10):dragWidth/1000,key=units+':'+pixelsPerStep;
       // Retain completed steps when modifiers change, without carrying a partial
@@ -209,6 +215,8 @@ function installValueLadder(entry,commit){
       value=ticks?Number(candidate.toPrecision(15)):base;
       if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);
       if(entry.max!==''&&Number.isFinite(Number(entry.max)))value=Math.min(Number(entry.max),value);
+      const range=entry.numericRange;
+      if(range)value=Math.max(range.min,Math.min(range.max,Number((range.min+Math.round((value-range.min)/range.step)*range.step).toPrecision(15))));
       entry.value=String(value);paintSlider();paint();
     }
     valueLadder={entry,cancel:()=>finish(false)};
@@ -443,6 +451,32 @@ function parameterControlRow(label,control,type=''){
   row.append(el('span',{class:'parameter-value-label',title:label},label));
   if(type)row.append(el('small',{class:'parameter-value-type',title:type},type));
   control.classList.add('parameter-control');row.append(control);return row;
+}
+function noteAppearanceSettings(box,node){
+  const owner=current(),documentGraph=graph,section=el('section',{class:'note-appearance-settings'});
+  const title=el('input',{type:'checkbox','data-note-title-setting':node.id,'aria-label':t('note.titleOnSelection'),title:t('note.titleOnSelection.hint')});
+  title.checked=node.ui?.noteTitleOnSelection===true;title.disabled=readonly;
+  title.onchange=()=>{
+    if(!title.isConnected)return;
+    if(setNoteTitleOnSelection(node,title.checked,owner))$('#inspector').querySelector(`[data-note-title-setting="${CSS.escape(node.id)}"]`)?.focus({preventScroll:true});
+    else title.checked=node.ui?.noteTitleOnSelection===true;
+  };
+  const explicitColor=typeof node.ui?.noteColor==='string'&&/^#[0-9a-f]{6}$/i.test(node.ui.noteColor),transparent=node.ui?.noteTransparent===true;
+  const value=transparent?t('note.transparent'):explicitColor?node.ui.noteColor.toUpperCase():t('note.defaultColor');
+  const color=el('button',{type:'button',class:'note-setting-color','data-note-color':node.id,'data-note-color-setting':'','aria-label':t('note.color')+': '+value,title:t('note.color.hint'),'aria-haspopup':'menu','aria-controls':'groupframepalette','aria-expanded':'false'});
+  const swatch=el('span',{class:'note-setting-color-swatch'+(transparent?' note-transparent-swatch':''),'aria-hidden':'true'});
+  if(!transparent)swatch.style.backgroundColor=explicitColor?node.ui.noteColor:'var(--note-default-bg)';
+  color.append(swatch,el('span',{class:'note-setting-color-value'},value));color.disabled=readonly;
+  color.onclick=()=>{if(current()===owner&&color.isConnected)openNoteColorPalette(node,color);};
+  const font=input(noteFontScale(node),value=>{
+    if(!font.isConnected||graph!==documentGraph||current()!==owner||!owner.nodes.includes(node)||definition(node)?.key!=='comment'||editorMutationBlocked())return;
+    const next=Math.round(Math.max(1,Math.min(10,value))*10)/10;
+    change(()=>{node.ui||={};if(next===1)delete node.ui.noteFontScale;else node.ui.noteFontScale=next;},{localize:false});
+  },'number');
+  Object.assign(font,{min:'1',max:'10',step:'0.1',disabled:readonly});font.numericRange={min:1,max:10,step:.1};font.refreshNumericSlider();
+  font.dataset.noteFontScale=node.id;font.setAttribute('aria-label',t('note.fontScale'));font.title=t('note.fontScale.hint')+'\n'+font.title;
+  section.append(parameterControlRow(t('note.titleOnSelection'),title),parameterControlRow(t('note.color'),color),parameterControlRow(t('note.fontScale'),font));
+  box.append(section);
 }
 function deferParameterInspector(){
   const edit=parameterValueEdit;if(!edit)return false;
@@ -1138,6 +1172,7 @@ function inspector(){
       inputBox.append(section);
     }
   }else{
+    if(d.key==='comment')noteAppearanceSettings(box,n);
     if(n.params.type&&!supportsAutoType(d)&&!isVectorOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
     if(isVectorOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],...(n.params.type==='vec2'?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
     if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','vector','float','vec2','vec3','vec4','color'].includes(d.key)){

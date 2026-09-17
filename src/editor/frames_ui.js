@@ -83,8 +83,8 @@ function paletteTargetColor(session){
 }
 function focusGroupFrameColor(session){
   if(graph!==session?.owner||current()!==session.data)return;
-  const selector=session.node?`[data-note-color="${CSS.escape(session.node.id)}"]`:`[data-frame-color="${CSS.escape(session.frame.id)}"]`;
-  $(session.node?'#cards':'#groupframes')?.querySelector(selector)?.focus({preventScroll:true});
+  const selector=session.node?`[data-note-color="${CSS.escape(session.node.id)}"]${session.inspector?'[data-note-color-setting]':''}`:`[data-frame-color="${CSS.escape(session.frame.id)}"]`;
+  $(session.node?(session.inspector?'#inspector':'#cards'):'#groupframes')?.querySelector(selector)?.focus({preventScroll:true});
 }
 function closeGroupFramePalette(focus=false){
   const palette=groupFramePalette;if(!palette)return;
@@ -126,7 +126,7 @@ function openGroupFramePalette(frame,trigger,data=current()){
   return openCanvasColorPalette({owner:graph,data,frame,trigger});
 }
 function openNoteColorPalette(node,trigger){
-  return openCanvasColorPalette({owner:graph,data:current(),node,trigger});
+  return openCanvasColorPalette({owner:graph,data:current(),node,trigger,inspector:trigger.hasAttribute('data-note-color-setting')});
 }
 function openCanvasColorPalette(session){
   const {trigger}=session;
@@ -138,8 +138,18 @@ function openCanvasColorPalette(session){
   const popup=palette.popup,color=paletteTargetColor(session);
   popup.setAttribute('aria-label',t(session.node?'note.color':'frame.color'));popup.replaceChildren();
   const grid=el('div',{class:'group-frame-palette-grid',role:'group','aria-label':t('frame.presetColors')});
-  for(const [name,value]of GROUP_FRAME_COLORS){
-    const label=t('frame.colorPreset.'+name)+' · '+value.toUpperCase(),button=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-frame-color-preset':value,'aria-label':label,title:label,'aria-checked':String(session.node?.ui?.noteTransparent!==true&&color.toLowerCase()===value),tabindex:'-1'});
+  const hasNoteColor=!!session.node&&typeof session.node.ui?.noteColor==='string'&&/^#[0-9a-f]{6}$/i.test(session.node.ui.noteColor);
+  if(session.node){
+    const reset=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-note-color-default':'','aria-label':t('note.defaultColor'),title:t('note.defaultColor'),'aria-checked':String(!hasNoteColor&&session.node.ui?.noteTransparent!==true),tabindex:'-1'});
+    reset.style.setProperty('--swatch-color','var(--note-default-bg)');reset.append(el('span',{'aria-hidden':'true'}));
+    reset.onclick=()=>{
+      closeGroupFramePalette();if(!groupFrameColorSessionValid(session))return;
+      change(()=>{if(session.node.ui){delete session.node.ui.noteColor;delete session.node.ui.noteTransparent;}},{localize:false});focusGroupFrameColor(session);
+    };
+    grid.append(reset);
+  }
+  for(const [name,value]of(session.node?GROUP_FRAME_COLORS.slice(1):GROUP_FRAME_COLORS)){
+    const label=t('frame.colorPreset.'+name)+' · '+value.toUpperCase(),button=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-frame-color-preset':value,'aria-label':label,title:label,'aria-checked':String((!session.node||hasNoteColor)&&session.node?.ui?.noteTransparent!==true&&color.toLowerCase()===value),tabindex:'-1'});
     button.style.setProperty('--swatch-color',value);button.append(el('span',{'aria-hidden':'true'}));
     button.onclick=()=>{closeGroupFramePalette();commitGroupFrameColor(session,value);};grid.append(button);
   }

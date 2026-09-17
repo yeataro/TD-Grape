@@ -147,7 +147,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
     checks.push('read-only numeric fields cannot be changed by touch taps or scrubs');
 
     await reset();await inline().click();assert.equal(await focused(inline()),true);
-    await page.locator('#canvas').focus();p=await point(inline());await page.mouse.move(p.x,p.y);await page.mouse.down();
+    // Blurring inline editing queues a redraw; measure its replacement afterwards.
+    await page.locator('#canvas').focus();await settle();p=await point(inline());await page.mouse.move(p.x,p.y);await page.mouse.down();
     await page.mouse.move(p.x+30,p.y);assert.equal(await page.locator('#valueladder').count(),0);await page.mouse.up();await settle();
     assert.ok(await currentValue()>.3);assert.equal(await page.evaluate(()=>past.length),1);
     p=await point(inline());await page.mouse.move(p.x,p.y);await page.mouse.down({button:'middle'});await page.locator('#valueladder').waitFor();

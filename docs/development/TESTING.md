@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 Note 試用修正與字級：外觀 15 組、尺寸 11 組、群組框 13 組及選取工具列 12 組通過。涵蓋深淺色下改色／透明還原真正預設底色、原位標題與不變的內文幾何、正常圓角、設定分頁與畫布快捷同步、190×110 一般／190×90 透明 Note 的單行 H1、透明四邊留白減半且尺寸資料不被改写。字級檢查包括 1／2／10 倍、輸入上下限、原字級的標題與編輯區、滑桿半寬行程、端點反向立即調整、取消及精確一次 Undo／Redo，並確認圖檔／剪貼簿持續保存而不改 Shader；零頁面錯誤。新畫面截圖已目視，報告位於 note-correction-round，群組框報告位於 note-settings-group-palette。
+
+共用數值操作回歸：numeric scrub 32 組與 numeric touch 20 組全過。首次執行遇到 capture loss 事件尚未派送及 blur 後非同步重建 DOM 的測試時序問題；以 HEAD／現行版相同診斷測試比對確認，再只修正測試等待方式，不變更產品的取消／觸控行為。前者釋放 capture 後送下一筆真實 pointer move，後者 canvas focus 後等待既有 settle 再量測替換的欄位。診斷證據保留於 numeric-diagnosis，最終原測試報告位於 note-correction-round。
+
+本次同步並保存 TD：31 份內嵌來源／9 份服務資源一致，TOP／MAT Master current，兩份使用者 Shader 保留且未重載現有頁面。正式 TOE 767,460 bytes，SHA-256 `31c9dd2f8b537a658869397673885d00ccefb45d1a221970e6065549de72b78d`，私人助手已排除。JavaScript 語法、601 個雙語引用及 diff 檢查通過，原生報告位於 note-correction-round 的 refresh／audit／save。
+
 2026-09-18 Note 外觀：新增 `test_note_appearance.cjs` 11 組通過，涵蓋標題浮層幾何不變、色盤／透明單步 Undo／Redo、深淺色、拖動隔離、收合恢復、JSON／剪貼簿、唯讀、190px 自訂名稱排版及觸控／鍵盤；沒有 Shader 或 UUID／版本變更。測試找出的 Undo 後按鈕停用問題已修正：渲染不把暫時 historyBusy 固化到 disabled，操作仍由共用 mutation guard 保護。既有節點 8 組、Markdown 9 組、尺寸 9 組、選取工具列 12 組與群組框 13 組回歸通過，零頁面錯誤；窄版及深淺色截圖已目視。報告位於 note-appearance-round 與 note-shared-palette-frames。
 
 色盤最終補充檢查涵蓋中英文與桌面／390px 觸控 4 種組合，左下自訂色與右下透明均無溢出，透明標題色點顯示棋盤格；桌面英文依預期省略，完整名稱保留於提示及無障礙標籤。Footer 新順序在桌面與窄版保持，按鈕無重疊。報告及截圖位於 note-appearance-round/palette-final。
