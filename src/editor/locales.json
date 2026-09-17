@@ -18,6 +18,10 @@
     "Graph"
   ],
   "messages": {
+    "node.collapse": {"zh-Hant": "收合節點", "en": "Collapse nodes"},
+    "node.expand": {"zh-Hant": "展開節點", "en": "Expand nodes"},
+    "node.collapsedPorts": {"zh-Hant": "{count} 個接孔；展開節點以新增接線", "en": "{count} ports; expand the node to add connections"},
+    "panel.notes": {"zh-Hant": "註記", "en": "Notes"},
     "share.title": {"zh-Hant": "開啟到其他裝置", "en": "Open on another device"},
     "share.origin": {"zh-Hant": "網址來源", "en": "Address"},
     "share.url": {"zh-Hant": "目前 Shader 網址", "en": "Current Shader URL"},
@@ -188,10 +192,7 @@
       "zh-Hant": "無法產生 PNG，請重試或使用 JSON 匯出。",
       "en": "PNG could not be created. Retry or use JSON export."
     },
-    "ladder.hint": {
-      "en": "Click to edit; drag horizontally to adjust (Shift: fine, Ctrl: coarse). Middle mouse, Alt+right mouse or long-press opens Value Ladder. Release applies; Esc cancels. Float drag steps: 0.01; Shift 0.001, Ctrl 0.1, Shift+Ctrl 0.0001. Right-click for presets.",
-      "zh-Hant": "點放編輯；左右拖曳調值（Shift 細調、Ctrl 粗調）。中鍵、Alt＋右鍵或長按開啟 Value Ladder。放開套用，Esc 取消。 浮點拖曳：0.01；Shift 0.001、Ctrl 0.1、Shift＋Ctrl 0.0001。 右鍵開啟預設值。"
-    },
+    "ladder.hint": {"en": "Click to edit; drag horizontally to adjust.\nDrag follows the slider range; Ctrl ×10, Shift ÷10, Ctrl+Shift ÷100.\nMiddle mouse, Alt+right mouse or long-press: Value Ladder.\nChoose a step vertically; adjust horizontally. Release applies; Esc cancels.\nRight-click: quick presets.", "zh-Hant": "點放編輯；左鍵左右拖曳調值。\n拖曳依滑桿範圍調值；Ctrl ×10、Shift ÷10、Ctrl＋Shift ÷100。\n中鍵、Alt＋右鍵或長按：Value Ladder。\n上下選級距，左右調值；放開套用，Esc 取消。\n右鍵：快速預設值。"},
     "ladder.release": {
       "zh-Hant": "放開套用 · Esc 取消",
       "en": "Release · Esc cancels"

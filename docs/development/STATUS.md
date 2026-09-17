@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-17 數值操作與節點／Parameter 整理（0.8.84）：左鍵浮點拖曳依起始十進 slider 範圍及實際欄寬換算，一個欄寬約一個範圍、增量為範圍千分之一；Ctrl ×10、Shift ÷10、Ctrl＋Shift ÷100，手勢期間固定基準以免跨位數加速。保留手填精度、整數與取消／一次 Undo。Value Ladder 改為五級、0.1 列對齊按下位置，調值提示同時顯示目前值與級距、不受圖縮放影響；欄位說明分行，Help 保持節點內容。一般 Parameter 改為名稱／型別／值同列，可展開分量並保留完整值列同步；Notes 獨立分頁，Uniform／來源與 Settings 內容保持。節點支援三角形與右鍵批次收合；每側單孔保留接線、多孔只匯集既有線，兩個獨立三角形 flag 預設開啟。收合隨圖保存，保留展開寬度與 Undo，不改 GLSL。
+
+66 組相關瀏覽器檢查、14 項收合／向量／型別單元回歸及 TOP／MAT 原生保存驗證通過，520 個雙語鍵與語法檢查通過。28 份內嵌來源及服務內容一致、兩份 Master 仍 current；正式 TOE 保存為 723,028 bytes，保留兩份使用者 Shader，排除私人助手。未重新整理使用者現有瀏覽器分頁。
+
 2026-09-17 對話框選單回歸修正與 Inputs 陰影（0.8.84）：對話框的通用橫排樣式曾誤套到共用選單，造成來源種類橫向溢出及 vec2／vec3 等標籤換行；選單現在明確使用獨立直向排版與內容寬度，對話框結構樣式排除 popover。Inputs 的有色來源列與 TD Built In 列加入比節點輕、小的陰影，維持原色與尺寸。實際新增 Input 的種類／型別選單及 QR 來源選單已補上排列檢查；完整選單回歸 11 組通過。TD 28 份內嵌來源與服務資產一致，正式 TOE 已保存並保留兩份使用者 Shader。節點收合、Value Ladder 五階／中央定位及 Parameter 改版仍為待辦，本批不實作。
 
 2026-09-17 彈出選單與 Value Ladder（0.8.84）：一般單選清單改為圓角共用選單，14px 字級／32px 列高，粗指標 40px；不受圖縮放影響，沿用 UI 縮放。保留原 select 值及變更處理，支援鍵盤、觸控、分組／停用與對話框。Value Ladder 在游標／欄位下方展開精度列，水平調值時只留欄位上方固定精度標籤，沒有標題、說明、重複值或亮邊；原步進、取消與一次 Undo 保持。64 組相關瀏覽器檢查通過，TD 28 份來源、10 份資產與 8 項 HTTP 檢查一致；正式 TOE 已保存，兩份使用者 Shader 及連線保留。導覽／工具列微紫已確認來自共用底色 #1c1b23；本輪只調查、不改配色。
@@ -70,7 +74,7 @@ Spec Constants 支援 int／uint／bool／float、穩定 constant ID 與共同 U
 
 ### 下一輪方向
 
-0.8.84 已實作 Specialization Constants、Vector／Replace 職責分開與上述節點工作流程。後續補一般數值型別、TOP 的其他貼圖維度，以及 Parameter／Inputs 來源值介面。Array／Matrix 希望至少型別與合理初始化可用，初版範圍仍需評估，完整值編輯介面後補。節點收合、多選工具、Comment、中途預覽與 Canvas Backdrop 分輪處理。詳細已決議／延後範圍見 [本輪清單](../discussions/NODE_WORKFLOW_ROUND.md)；较早筆記保留於 [Inputs 面板與工作區設計](../discussions/INPUTS_UI_NEXT_ROUND.md)。空白畫布設定頁與資源庫獨立 panel 仍未定案。
+0.8.84 已實作 Specialization Constants、Vector／Replace 職責分開與上述節點工作流程。後續補一般數值型別、TOP 的其他貼圖維度，以及 Parameter／Inputs 來源值介面。Array／Matrix 希望至少型別與合理初始化可用，初版範圍仍需評估，完整值編輯介面後補。節點收合已完成；多選工具延伸、中途預覽與 Canvas Backdrop 分輪處理。詳細已決議／延後範圍見 [本輪清單](../discussions/NODE_WORKFLOW_ROUND.md)；较早筆記保留於 [Inputs 面板與工作區設計](../discussions/INPUTS_UI_NEXT_ROUND.md)。空白畫布設定頁與資源庫獨立 panel 仍未定案。
 
 ### 等待使用者補充或共同決策
 

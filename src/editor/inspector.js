@@ -59,6 +59,7 @@ function installValueLadder(entry,commit){
     if(magnitude>1){const leading=Number(magnitude.toExponential().split('e')[0]);fraction=leading===1?1:leading/10;}
     const proportion=valid&&value<0?1-fraction:fraction;
     entry.style.setProperty('--numeric-fill',Number((proportion*100).toFixed(6))+'%');
+    entry.onNumericPreview?.();
   };
   entry.refreshNumericSlider=paintSlider;paintSlider();
   entry.addEventListener('input',paintSlider);entry.addEventListener('change',paintSlider);
@@ -69,7 +70,11 @@ function installValueLadder(entry,commit){
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
     entry.focus({preventScroll:true});if(!writable())return;
     const initial=entry.value,initialValue=Number(initial),integer=entry.step==='1';
-    // Drag increments are decimal steps; manual values may retain finer precision.
+    // Freeze the displayed decade and screen width for this gesture. Crossing a
+    // decade must not accelerate the mouse; manual values retain their precision.
+    const [leading,exponent]=Math.abs(initialValue).toExponential().split('e');
+    const decade=Math.abs(initialValue)<=1?0:Math.min(308,Number(exponent)+(Number(leading)===1?0:1));
+    const quantum=integer?.0001:10**(decade-5),dragWidth=Math.max(1,entry.getBoundingClientRect().width);
     const decimalPlaces=value=>{const [digits,exponent='0']=String(value).toLowerCase().split('e');return Math.max(0,(digits.split('.')[1]?.length||0)-Number(exponent));};
     let value=initialValue,baseValue=initialValue,deltaUnits=0,segmentPixels=0,segmentTicks=0,sensitivity='',lastX=e.clientX,finished=false;
     entry.numericGestureActive=true;document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
@@ -89,15 +94,16 @@ function installValueLadder(entry,commit){
       if(!(ev.buttons&1)||!writable()){finish(false);return;}
       ev.preventDefault();ev.stopPropagation();
       const units=integer?10000:ev.ctrlKey?(ev.shiftKey?1:1000):ev.shiftKey?10:100;
-      const pixelsPerStep=integer?(ev.ctrlKey?1:ev.shiftKey?100:10):1,key=units+':'+pixelsPerStep;
+      const pixelsPerStep=integer?(ev.ctrlKey?1:ev.shiftKey?100:10):dragWidth/1000,key=units+':'+pixelsPerStep;
       // Retain completed steps when modifiers change, without carrying a partial
       // coarse step into a finer sensitivity and causing an unexpected jump.
       if(key!==sensitivity){segmentPixels=0;segmentTicks=0;sensitivity=key;}
       segmentPixels+=ev.clientX-lastX;lastX=ev.clientX;
-      const ticks=Math.trunc(segmentPixels/pixelsPerStep),change=ticks-segmentTicks;
+      const travel=segmentPixels/pixelsPerStep;
+      const ticks=integer?Math.trunc(travel):Math.sign(travel)*Math.round(Math.abs(travel)),change=ticks-segmentTicks;
       if(!change)return;segmentTicks=ticks;deltaUnits+=change*units;
-      const precision=Math.min(100,Math.max(4,decimalPlaces(baseValue)));
-      const candidate=Number((baseValue+deltaUnits/10000).toFixed(precision));
+      const precision=Math.min(100,Math.max(integer?4:5-decade,decimalPlaces(baseValue)));
+      const candidate=deltaUnits===0?baseValue:Number((baseValue+deltaUnits*quantum).toFixed(precision));
       if(!Number.isFinite(candidate))return;value=candidate;
       if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);
       if(entry.max!==''&&Number.isFinite(Number(entry.max)))value=Math.min(Number(entry.max),value);
@@ -130,26 +136,29 @@ function installValueLadder(entry,commit){
     const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!readonly;
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
     entry.focus({preventScroll:true});if(!writable())return;
-    const initial=entry.value,initialValue=Number(initial),steps=[100,10,1,.1,.01,.001];
+    const initial=entry.value,initialValue=Number(initial),steps=[10,1,.1,.01,.001];
     const popup=el('div',{id:'valueladder',role:'tooltip'}),rows=el('div',{class:'ladder-rows'});
+    const readout=el('div',{class:'ladder-readout'}),number=el('output',{class:'ladder-value'}),increment=el('span',{class:'ladder-step'});
+    readout.append(number,increment);
     for(const step of steps)rows.append(el('div',{'data-step':step},String(step)));
-    popup.append(rows);document.body.append(popup);
+    popup.append(rows,readout);document.body.append(popup);
     const uiZoom=uiScaleFactor(),rowHeight=rows.firstChild.getBoundingClientRect().height,popupRect=popup.getBoundingClientRect(),entryRect=entry.getBoundingClientRect();
-    const position=(x,y,height=popupRect.height)=>{
-      popup.style.left=Math.max(8,Math.min(x,innerWidth-popupRect.width-8))/uiZoom+'px';
+    const position=(x,y,width=popupRect.width,height=popupRect.height)=>{
+      popup.style.left=Math.max(8,Math.min(x,innerWidth-width-8))/uiZoom+'px';
       popup.style.top=Math.max(8,Math.min(y,innerHeight-height-8))/uiZoom+'px';
     };
-    const below=Math.max(e.clientY+8*uiZoom,entryRect.bottom+4*uiZoom);
-    position(e.clientX-popupRect.width/2,below+popupRect.height<=innerHeight-8?below:entryRect.top-popupRect.height-4*uiZoom);
+    const centerOffset=rows.children[2].getBoundingClientRect().top-popupRect.top+rowHeight/2;
+    position(e.clientX-popupRect.width/2,e.clientY-centerOffset);
     const fullRect=popup.getBoundingClientRect(),rowsTop=rows.getBoundingClientRect().top,rowsBottom=rowsTop+steps.length*rowHeight;
     const indexAt=y=>Math.max(0,Math.min(steps.length-1,Math.floor((y-rowsTop)/rowHeight)));
-    const compactHeight=popupRect.height-(steps.length-1)*rowHeight;
-    let index=3,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,leftGrid=false;
+    let index=2,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,leftGrid=false,selectionEngaged=false;
     const oldDescription=entry.getAttribute('aria-describedby');entry.setAttribute('aria-describedby','valueladder');entry.numericGestureActive=true;
+    const oldTitle=entry.getAttribute('title');entry.removeAttribute('title');
     document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing');
     const paint=()=>{
       [...rows.children].forEach((row,i)=>row.classList.toggle('active',i===index));popup.classList.toggle('ladder-compact',compact);
-      if(compact){const gap=4*uiZoom,above=entryRect.top-compactHeight-gap;position(entryRect.right-popupRect.width,above>=8?above:entryRect.bottom+gap,compactHeight);}
+      number.textContent=String(value);increment.textContent='Δ '+steps[index];
+      if(compact){const badge=popup.getBoundingClientRect(),gap=4*uiZoom,above=entryRect.top-badge.height-gap;position(entryRect.right-badge.width,above>=8?above:entryRect.bottom+gap,badge.width,badge.height);}
       else position(fullRect.left,fullRect.top);
     };paint();
     const controller=new AbortController(),options={capture:true,signal:controller.signal};
@@ -159,6 +168,7 @@ function installValueLadder(entry,commit){
       const allowed=accept&&writable();entry.value=allowed?String(value):initial;paintSlider();entry.numericGestureActive=false;
       popup.remove();document.body.classList.remove('scrubbing-value');entry.classList.remove('scrubbing');
       if(oldDescription===null)entry.removeAttribute('aria-describedby');else entry.setAttribute('aria-describedby',oldDescription);
+      if(oldTitle!==null)entry.setAttribute('title',oldTitle);
       if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
       // Graph defaults use the existing single checkpoint; live Uniforms use their CAS write.
       if(allowed&&value!==initialValue)commit();
@@ -170,7 +180,10 @@ function installValueLadder(entry,commit){
       // The compact label leaves the field clear; its position never moves the
       // original selection grid. Return to that grid to choose a precision.
       const inGrid=ev.clientX>=fullRect.left&&ev.clientX<=fullRect.right&&ev.clientY>=rowsTop&&ev.clientY<rowsBottom;
-      const next=inGrid?indexAt(ev.clientY):index;
+      // Edge clamping may put another rung under the initial pointer. A purely
+      // horizontal first movement must still use the default 0.1 increment.
+      if(Math.abs(ev.clientY-e.clientY)>3)selectionEngaged=true;
+      const next=inGrid&&selectionEngaged?indexAt(ev.clientY):index;
       if(compact&&!inGrid)leftGrid=true;
       if(next!==index||(compact&&inGrid&&leftGrid)){index=next;base=value;anchorX=ev.clientX;compact=false;leftGrid=false;paint();return;}
       const ticks=Math.trunc((ev.clientX-anchorX)/8),candidate=base+ticks*steps[index];
@@ -382,6 +395,80 @@ function numbers(value,label,callback,disabled=false,labels='XYZW'){
   return box;
 }
 
+// Parameter presentation is local to this pane; expanding components does not
+// change the graph or the canvas node's independent presentation state.
+const parameterExpansions=new WeakMap();
+let parameterValueEdit=null;
+function deferParameterInspector(){
+  const edit=parameterValueEdit;if(!edit)return false;
+  if(edit.entry.isConnected&&!readonly&&selected===edit.node.id&&inspectorTab==='parameters'&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)&&(document.activeElement===edit.entry||numericPresetMenu?.entry===edit.entry||edit.committing))return true;
+  edit.entry.cancelParameterValue?.();parameterValueEdit=null;return false;
+}
+function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
+  const initial=read(),vector=Array.isArray(initial),values=vector?initial:[initial];
+  const box=el('section',{class:'parameter-value-group','data-parameter-value':key});
+  const row=el('div',{class:'parameter-value-row'}),heading=el('div',{class:'parameter-value-heading'});
+  heading.append(el('span',{class:'parameter-value-label'},label),el('small',{class:'parameter-value-type'},type));row.append(heading);box.append(row);
+  const compact=el('div',{class:'parameter-value-controls'}),entries=[];let syncing=false;
+  const scalarType=/^[iu]vec/.test(type)?(type[0]==='u'?'uint':'int'):/^bvec/.test(type)?'bool':vector?'float':type;
+  const own=entry=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
+  const currentValues=()=>{const value=read();return Array.isArray(value)?value:[value];};
+  function syncPreview(entry,index){
+    if(syncing)return;syncing=true;
+    for(const peer of entries)if(peer!==entry&&Number(peer.dataset.component)===index&&!(peer===document.activeElement&&peer.hasPendingEdit?.())){peer.value=entry.value;peer.refreshNumericSlider?.();}
+    syncing=false;
+  }
+  function createEntry(index,expanded=false){
+    const name=label+(vector?' '+labels[index]:''),attrs={'aria-label':name,'data-parameter-node':n.id,'data-parameter-port':key,'data-component':String(index),'data-parameter-copy':expanded?'component':'compact'};
+    if(scalarType==='bool'){
+      const entry=select([['false','false'],['true','true']],String(!!values[index]),value=>{if(own(entry))change(()=>write(index,value==='true'));});
+      for(const[k,v]of Object.entries(attrs))entry.setAttribute(k,v);entry.disabled=readonly;return entry;
+    }
+    const entry=el('input',{...attrs,type:'number',step:['int','uint'].includes(scalarType)?'1':'any'});entry.value=String(values[index]);entry.disabled=readonly;
+    if(['int','uint'].includes(scalarType)){entry.min=scalarType==='uint'?'0':'-2147483648';entry.max=scalarType==='uint'?'4294967295':'2147483647';}
+    let committed=entry.value;
+    entry.hasPendingEdit=()=>entry.value!==committed;
+    const focus=()=>{if(own(entry))parameterValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
+    const restore=()=>{entry.value=committed;entry.removeAttribute('aria-invalid');entry.refreshNumericSlider?.();};
+    entry.setSyncedValue=value=>{if(entry.numericGestureActive)return;entry.value=String(value);committed=entry.value;entry.refreshNumericSlider?.();};
+    const commit=()=>{
+      if(entry.numericGestureActive||!own(entry)||entry.value===committed)return;
+      const next=Number(entry.value);
+      if(!entry.value.trim()||!Number.isFinite(next)||(['int','uint'].includes(scalarType)&&(!Number.isInteger(next)||next<Number(entry.min)||next>Number(entry.max)))){entry.setAttribute('aria-invalid','true');return;}
+      if(parameterValueEdit?.entry===entry&&parameterValueEdit.signature!==inlineValueSignature(n)){restore();return;}
+      if(!change(()=>write(index,next),{redraw:false}))return;
+      syncing=true;const latest=currentValues();for(const peer of entries)peer.setSyncedValue(latest[Number(peer.dataset.component)]);syncing=false;
+      if(definition(n)?.key==='color'&&key==='$value'){
+        const display=colorDisplay(n.params.value),ink=box.querySelector('.color-ink'),picker=box.querySelector('input[type=color]');
+        if(ink)ink.style.backgroundColor=display.css;if(picker)picker.value=display.hex;
+        let hint=box.querySelector('.color-range-hint');
+        if(n.params.value.some(v=>v<0||v>1)){if(!hint){hint=el('small',{class:'muted color-range-hint'},t('color.range'));box.append(hint);}}else hint?.remove();
+      }
+      entry.removeAttribute('aria-invalid');focus();
+      if(parameterValueEdit?.entry===entry)parameterValueEdit.committing=true;
+      render();
+      if(parameterValueEdit?.entry===entry)parameterValueEdit.committing=false;
+    };
+    entry.cancelParameterValue=restore;
+    entry.addEventListener('focus',focus);
+    entry.addEventListener('input',()=>entry.removeAttribute('aria-invalid'));
+    entry.addEventListener('change',commit);
+    entry.addEventListener('blur',()=>{if(numericPresetMenu?.entry===entry)return;if(!entry.numericGestureActive)commit();restore();if(parameterValueEdit?.entry===entry)parameterValueEdit=null;});
+    entry.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){e.preventDefault();cancelValueLadder();restore();focus();}});
+    installValueLadder(entry,commit);entry.onNumericPreview=()=>syncPreview(entry,index);entries.push(entry);return entry;
+  }
+  values.forEach((_,index)=>compact.append(createEntry(index)));row.append(compact);
+  if(vector&&values.length>=2&&values.length<=4){
+    let expanded=parameterExpansions.get(n)?.has(key)||false;
+    const toggle=el('button',{class:'parameter-components-toggle',type:'button','aria-label':t('node.expandValues'),'aria-expanded':String(expanded),'data-parameter-expand':key},expanded?'▾':'▸');
+    heading.prepend(toggle);
+    const components=el('div',{class:'parameter-component-rows'});components.hidden=!expanded;
+    values.forEach((_,index)=>{const component=el('label',{class:'parameter-component-row'});component.append(el('span',{},labels[index]),createEntry(index,true));components.append(component);});box.append(components);
+    toggle.onclick=()=>{expanded=!expanded;let state=parameterExpansions.get(n);if(!state){state=new Set();parameterExpansions.set(n,state);}if(expanded)state.add(key);else state.delete(key);components.hidden=!expanded;toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
+  }
+  return box;
+}
+
 function colorDisplay(value){
   const clamp=value=>Math.max(0,Math.min(1,Number.isFinite(value)?value:0));
   const rgb=value.slice(0,3).map(v=>Math.round(clamp(v)*255));
@@ -440,9 +527,9 @@ function setNodeComment(n,value){
   if(comment===nodeComment(n))return true;
   return change(()=>{n.ui||={};if(comment)n.ui.comment=comment;else delete n.ui.comment;},{localize:false});
 }
-function nodeCommentField(n){
-  const section=el('details',{class:'node-comment-field'});section.open=!!nodeComment(n);
-  section.append(el('summary',{},t('node.comment')));
+function nodeCommentField(n,standalone=false){
+  const section=el(standalone?'section':'details',{class:'node-comment-field'+(standalone?' node-notes-page':'')});
+  if(!standalone){section.open=!!nodeComment(n);section.append(el('summary',{},t('node.comment')));}
   const entry=el('textarea',{'data-node-comment':n.id,rows:3,maxlength:2000,'aria-label':t('node.comment')});entry.value=nodeComment(n);entry.disabled=readonly;
   let committed=entry.value;
   const commit=()=>{if(readonly||entry.value===committed)return;const value=entry.value;committed=value;if(!setNodeComment(n,value)){entry.value=nodeComment(n);committed=entry.value;}};
@@ -770,8 +857,9 @@ function nodeColorPicker(n){
   strip.append(swatch);return strip;
 }
 function inspector(){
+  if(deferParameterInspector())return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
-  const box=$('#inspector');box.replaceChildren();renderHelp();
+  const box=$('#inspector');box.classList.remove('ordinary-parameters');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   if(n||selectedEdge!==null)selectedInputId=null;
   const inputSource=allInputSources().find(d=>d.id===selectedInputId);
@@ -784,24 +872,37 @@ function inspector(){
   }
   box.append(nodeInspectorTitle(n,d));
   if(!d)return;
+  const ordinary=!isSourceReferenceNode(n);
+  if(!ordinary&&inspectorTab==='notes')inspectorTab='parameters';
   const tabs=el('div',{class:'parameter-tabs',role:'tablist','aria-label':t('panel.parameters')});
-  for(const key of ['parameters','settings']){
+  for(const key of ordinary?['parameters','settings','notes']:['parameters','settings']){
     const button=el('button',{class:inspectorTab===key?'active':'',role:'tab','aria-selected':String(inspectorTab===key)},t('panel.'+key));
     button.onclick=()=>{inspectorTab=key;inspector();};tabs.append(button);
   }
   box.append(tabs);
+  if(inspectorTab==='notes'){box.append(nodeCommentField(n,true));return;}
+  box.classList.toggle('ordinary-parameters',ordinary&&inspectorTab==='parameters');
   functionInspector(box,n,d);
   if(inspectorTab==='parameters'){
     if(d.key==='glsl_code')glslCodeInspector(box,n);
     vectorInspector(box,n,d);
-    if(d.key==='vector')box.append(numbers((n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),t('declaration.value'),value=>change(()=>{n.params.components.splice(0,value.length,...value);})));
+    if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));
     if(supportsAutoType(d)&&!isVectorOperation(d)){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
       const row=field(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
     pixelBufferFields(box,n);
     if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(split);}
-    if('value'in n.params)box.append((d.key==='color'?colorFields:numbers)(n.params.value,t('declaration.value'),value=>change(()=>n.params.value=value)));
+    if('value'in n.params){
+      if(ordinary){
+        const values=parameterValueRow(n,'$value',t('declaration.value'),Object.values(ports(n,'outputs'))[0]||n.params.type||'float',()=>n.params.value,(index,value)=>{if(Array.isArray(n.params.value))n.params.value[index]=value;else n.params.value=value;},d.key==='color'?'RGBA':'XYZW');
+        if(d.key==='color'){
+          values.classList.add('color-parameter');values.querySelector('.parameter-value-heading').append(colorPickerSwatch(()=>n.params.value,value=>change(()=>n.params.value=value)));
+          if(n.params.value.some(v=>v<0||v>1))values.append(el('small',{class:'muted color-range-hint'},t('color.range')));
+        }
+        box.append(values);
+      }else box.append((d.key==='color'?colorFields:numbers)(n.params.value,t('declaration.value'),value=>change(()=>n.params.value=value)));
+    }
     const decl=graph.declarations.find(x=>x.id===n.params.declarationId);
     if(decl){
       const source=el('button',{class:'wide','data-inspect-input':decl.id},t('inputs.edit')+' · '+decl.name);
@@ -835,7 +936,13 @@ function inspector(){
       }else if(value===null){
         section.append(el('p',{class:'muted'},t('input.implicitUV')));
         if(!connection){const override=el('button',{class:'wide'},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}
-      }else if(!connection){const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>setNodeInputValue(n,port,next)),false,port==='color'?'RGBA':'XYZW');values.classList.add('input-values');section.append(values);}
+      }else if(!connection){
+        if(ordinary){
+          heading.remove();section.prepend(parameterValueRow(n,port,portLabel(n,'inputs',port),typeInfo.text,()=>defaultInput(n,port,type),(index,next)=>{
+            const old=defaultInput(n,port,type);if(Array.isArray(old)){old[index]=next;setNodeInputValue(n,port,old);}else setNodeInputValue(n,port,next);
+          },port==='color'?'RGBA':isVectorOperation(d)?vectorNames(n):'XYZW'));
+        }else {const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>setNodeInputValue(n,port,next)),false,port==='color'?'RGBA':'XYZW');values.classList.add('input-values');section.append(values);}
+      }
       if(connection){
         const source=current().nodes.find(other=>other.id===connection.from[0]),connectionRow=el('div',{class:'connection-row'});
         const origin=el('span',{class:'connection-source'},nodeDisplayName(source)+' · '+portLabel(source,'outputs',connection.from[1]));origin.title=connection.from.join(' · ');
@@ -862,7 +969,7 @@ function inspector(){
     pixelBufferNames(box,n);
     box.append(el('div',{class:'node-identity'},n.id));
   }
-  box.append(nodeCommentField(n));
+  if(!ordinary)box.append(nodeCommentField(n));
   updateUniformFields();
 
 }

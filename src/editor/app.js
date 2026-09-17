@@ -159,7 +159,7 @@ function graphContent(document){
   // Coordinates and component expansion are presentation-only. Labels and type settings may
   // affect generated GLSL, so keep them when choosing the progress message.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
-    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.componentsExpanded;if(!Object.keys(node.ui).length)delete node.ui;}
+    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.componentsExpanded;delete node.ui.collapsed;if(!Object.keys(node.ui).length)delete node.ui;}
   }
   return JSON.stringify(content);
 }

@@ -311,7 +311,12 @@ main { grid-template-columns: 205px minmax(0,1fr) 308px; }
 #valueladder{position:fixed;z-index:100;width:84px;padding:4px;background:var(--ladder-bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0005;pointer-events:none;user-select:none;font-size:14px}
 .ladder-rows>div{height:var(--ladder-row-height);line-height:var(--ladder-row-height);padding:0 10px;border-radius:6px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ui-text,var(--ui-tone-text))}
 .ladder-rows>div.active{background:var(--ladder-active);color:#f6f0ff;font-weight:500}
-#valueladder.ladder-compact .ladder-rows>div:not(.active){display:none}
+.ladder-readout{display:none;align-items:center;gap:14px;min-height:var(--ladder-row-height);padding:0 8px;font-variant-numeric:tabular-nums}
+.ladder-value{min-width:9ch;max-width:100%;font-size:14px;font-weight:500;color:var(--ui-text,var(--ui-tone-text));overflow-wrap:anywhere}
+.ladder-step{flex:none;font-size:12px;color:var(--muted);white-space:nowrap}
+#valueladder.ladder-compact{width:max-content;min-width:160px;max-width:calc(100 * var(--ui-vw) - 16px)}
+#valueladder.ladder-compact .ladder-rows{display:none}
+#valueladder.ladder-compact .ladder-readout{display:flex}
 @media(pointer:coarse){:root{--ladder-row-height:40px}}
 
 body.scrubbing-value,body.scrubbing-value *{cursor:ew-resize!important;user-select:none!important}
@@ -1334,6 +1339,24 @@ footer .footer-preferences svg[hidden]{display:none}
 .node-size-probe .node-prototype,.node-size-probe .port-label{flex:none;max-width:none}
 .node-size-probe .node-inline-values,.node-size-probe .node-fixed-values,.node-size-probe .node-inline-component{flex:none}
 .node-size-probe .node-manual-value-group.expanded .node-fixed-values{display:grid}
+
+/* Node collapse is a presentation state; hidden wire anchors keep real port IDs. */
+.node-collapse-toggle{display:inline-flex;align-items:center;justify-content:center;flex:none;width:18px;height:18px;margin-block:-1px;padding:0;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;opacity:.9}
+.node-collapse-toggle:hover{background:#ffffff12;color:inherit}
+.node-collapse-toggle:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
+.node-collapse-toggle svg{display:block;width:1em;height:1em;fill:currentColor;pointer-events:none}
+.node-collapse-toggle[aria-expanded="true"] svg{transform:rotate(90deg)}
+.node.collapsed>.node-title{border-bottom-color:transparent;border-radius:inherit}
+.node.collapsed>.collapsed-ports{position:absolute;inset:0;padding:0;pointer-events:none}
+.node.collapsed .collapsed-port-row{position:absolute;left:0;right:0;top:50%;height:0;margin:0;padding:0;pointer-events:none}
+.node.collapsed .collapsed-port{top:0;transform:translateY(-50%);pointer-events:auto}
+.collapsed-port.aggregate{position:absolute;width:11px;height:11px;margin:0;padding:0;border:2px solid var(--muted);border-radius:50%;background:var(--ui-tone-port-fill);cursor:default}
+.input .collapsed-port.aggregate{left:-6px}
+.output .collapsed-port.aggregate{right:-6px;background:var(--muted)}
+.collapsed-port.aggregate:hover{border-color:var(--muted);box-shadow:none}
+.collapsed-wire-anchor{position:absolute;top:0;width:11px;height:11px;transform:translateY(-50%);visibility:hidden;pointer-events:none}
+.input .collapsed-wire-anchor{left:-6px}
+.output .collapsed-wire-anchor{right:-6px}
 .node>.node-resize-handle{--resize-hit-offset:1px;position:absolute;right:var(--resize-hit-offset);bottom:var(--resize-hit-offset);width:15px;height:15px;min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--muted);cursor:ew-resize;touch-action:none;opacity:.28}
 /* The hint sits 3px inside the outer border: subtract the 1px node border and handle offset. */
 .node>.node-resize-handle::after{content:none;position:absolute;right:calc(2px - var(--resize-hit-offset));bottom:calc(2px - var(--resize-hit-offset));width:calc(var(--node-radius) - 3px);height:calc(var(--node-radius) - 3px);border-right:1px solid currentColor;border-bottom:1px solid currentColor;border-bottom-right-radius:100%;pointer-events:none}
@@ -1348,6 +1371,36 @@ footer .footer-preferences svg[hidden]{display:none}
 :root :is(.node-inline-values input,input).numeric-slider{background-image:linear-gradient(to right,var(--numeric-slider-fill) 0 var(--numeric-fill,0%),transparent var(--numeric-fill,0%) 100%)}
 :root input.numeric-slider:not(:focus):not(:disabled):not([readonly]){cursor:ew-resize}
 :root input.numeric-slider.numeric-dragging{outline:0}
+
+/* Ordinary node Parameters share the canvas' compact value controls. */
+#inspector.ordinary-parameters>label.field{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;min-height:30px}
+#inspector.ordinary-parameters>label.field>select{max-width:60%;min-width:0}
+#inspector.ordinary-parameters .input-parameter[data-input]{display:grid;grid-template-columns:minmax(75px,auto) minmax(0,1fr);align-items:center;gap:6px 10px;border:0;margin-top:10px;padding:0}
+#inspector.ordinary-parameters .input-heading{justify-content:flex-start;gap:7px;margin:0;min-width:0;line-height:1.4}
+#inspector.ordinary-parameters .input-parameter[data-input]>p{margin:0;font-size:10px;line-height:1.5}
+#inspector.ordinary-parameters .input-parameter[data-input]>.conversion-hint,#inspector.ordinary-parameters .input-parameter[data-input]>.wide{grid-column:1/-1}
+#inspector.ordinary-parameters .input-parameter[data-input]>.parameter-value-group{grid-column:1/-1;margin:0}
+.parameter-value-group{min-width:0;margin-top:10px;margin-bottom:10px}
+.parameter-value-row{display:flex;align-items:center;gap:10px;min-height:30px}
+.parameter-value-heading{display:flex;align-items:center;gap:6px;flex:0 1 auto;min-width:0;max-width:45%;font-size:11px;line-height:1.4}
+.parameter-value-label{min-width:0;overflow-wrap:anywhere}
+.parameter-value-type{flex:none;font-size:10px;color:var(--muted);font-weight:400}
+.parameter-value-controls{display:flex;flex:1;gap:5px;min-width:0}
+.parameter-value-controls>input,.parameter-value-controls>select{flex:1;width:0;min-width:0}
+#inspector .parameter-value-group input[type=number]{box-sizing:border-box;min-width:0;height:30px;padding:5px 7px;margin:0;border:0;border-radius:5px;background-color:var(--node-value-bg);color:var(--ui-text);font:inherit;font-size:12px;font-variant-numeric:tabular-nums;appearance:textfield}
+#inspector .parameter-value-group input[type=number]::-webkit-inner-spin-button,#inspector .parameter-value-group input[type=number]::-webkit-outer-spin-button{appearance:none;margin:0}
+#inspector .parameter-value-group input:focus{outline:1px solid var(--purple)}
+#inspector .parameter-value-group input[aria-invalid=true]{outline:1px solid #e793a1}
+.parameter-components-toggle{flex:none;width:12px;min-width:12px;height:24px;padding:0;border:0;background:transparent;color:var(--muted);font-size:10px}
+.parameter-components-toggle:hover{background:transparent;color:var(--ui-text)}
+.parameter-component-rows{display:grid;gap:6px;margin-top:6px;padding:7px 8px;border-radius:6px;background:#ffffff04}
+.parameter-component-rows[hidden]{display:none}
+.parameter-component-row{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.parameter-value-group .color-swatch{flex:none;width:20px;height:20px;border-radius:4px}
+.parameter-value-group .color-range-hint{display:block;margin-top:6px;line-height:1.5}
+:root[data-ui-theme="light"] .parameter-component-rows{background:#00000004}
+#inspector .node-notes-page{border:0;padding:0;margin-top:12px}
+#inspector .node-notes-page textarea{margin-top:0;min-height:120px;color:var(--ui-text)}
 
 /* Footer appearance popover: one preset row and a restrained native range. */
 .appearance-panel{position:fixed;inset:auto 8px 40px auto;margin:0;width:260px;max-width:calc(100 * var(--ui-vw) - 16px);padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--ui-surface,var(--ui-tone-menu));color:var(--ui-text,var(--ui-tone-text));box-shadow:0 8px 28px #0004;overflow:auto}

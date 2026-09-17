@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-17 節點收合、Parameter 與數值操作（0.8.84）：`test_numeric_scrub.cjs` 29 組、`test_ui_scale_panels.cjs` 15 組、`test_node_collapse.cjs` 9 組、`test_parameter_values.cjs` 13 組全部通過，零瀏覽器錯誤，共 66 組。新增檢查包括依實際欄寬的浮點拖曳、正負／零與十進邊界、凍結敏感度、小數位移往返、修飾鍵切換、手填精度、極小值精確回原點、最大有限值與上下限反轉；保留原整數／uint、Undo、取消、觸控与 Value Ladder 入口。階梯驗證五級／0.1 置中、UI 尺寸的目前值＋級距、Help 保持、tooltip 分行／隱藏與恢復、長數字及視窗邊緣。
+
+收合涵蓋實際接線／單孔與摘要限制、既有線刪除、混合批次、Undo／複製／名稱、75／125% 與 fit 幾何、可信任觸控、四種旗標組合，以及缺少 ui 舊圖的無副作用 render／移動。Parameter 涵蓋同列與分量同步、草稿／preset／取消／一次 Undo、接線與 Replace 預設值、Color picker、vec2/3/4、bool/int/uint、Notes 及 Uniform／Settings 保留，另有深淺色與縮放截圖目視。收合模型、向量與型別單元回歸共 14 項通過，編譯輸出一致。新浏览器測試沿用 `node tests/browser/<test>.cjs src/editor <editor-state-json> <report-directory>` 的隔離 fixture 模式。
+
+`tests/td/test_editor_save_status.py` 在獨立 TOP／MAT 測試元件確認 collapsed true→false、分量展開及 width=460 寫入 graph DAT／state，shaderUpdated=false、無 configure、GLSL／manifest／接線保持；真正語意改動仍更新 Shader。測試區已清除，原有使用者圖保留。520 個雙語鍵、JavaScript 語法及 diff 檢查通過。TD 更新 5 份 Editor 資產，28 份來源與服務內容一致，Master current；正式 TOE 保存為 723,028 bytes，保留兩份 Shader、排除私人助手，未重新整理使用者分頁。實體 iPad／Safari 未在本輪驗證。
+
 2026-09-17 對話框下拉回歸（0.8.84）：先在真正的 Inputs → 新增 Uniform 重現 #sourcetype 被 dialog>div 的 flex 橫排影響，vec2／vec3／vec4 高度 52px 且排在同一橫帶。修正後 `test_select_menus.cjs` 11 組全部通過，零瀏覽器錯誤；新增來源種類／型別選單於 1600／320px × UI 75／125% 的逐列對齊、不重疊、短標籤不換行及視窗邊界檢查。Color 預設與 Uniform／vec3 選取僅更新表單，未發出寫入 API，graph／Undo 保持不變；QR 來源選單同樣驗證逐列顯示。修正前後截圖已目視。來源列陰影僅樣式微調，以深／淺色視覺檢查為準，未新增重複樣式的測試。 TD 僅更新 style_css，28 份來源與服務內容一致，TOP／MAT Master 仍 current；正式 TOE 保存為 718,844 bytes，兩份使用者 Shader 保留、私人助手排除，既有瀏覽器分頁未重新整理。
 
 2026-09-17 共用選單與 Value Ladder（0.8.84）：新增 `test_select_menus.cjs` 10 組，涵蓋圖縮放 25/170%、UI 75/125%、實際滑鼠與可信任 Chromium 觸控事件、原 select 事件／一次 Undo、同值不提交、鍵盤／typeahead／Tab、數值草稿保護、停用選項與分組、翻譯、失效清理、QR modal 及 320px 邊界。`test_numeric_scrub.cjs` 25 組與 `test_ui_scale_panels.cjs` 15 組驗證下方展開、固定單精度標籤、回原列重新選擇不跳值、精度鎖定、取消／Undo、縮放與上下邊界；數值預設及畫布縮放選單各 7 組回歸通過，共 64 組、零頁面錯誤。全列與精簡狀態截圖已目視；實體觸控裝置仍未驗證。TD 28 份內嵌來源、10 份服務資產、8 項實際 HTTP 檢查通過，Master 保持 current，圖資料、原生連線及 session 保留；正式 TOE 保存為 718,660 bytes，保留兩份 Shader 並排除私人助手。既有瀏覽器分頁未重新整理。
