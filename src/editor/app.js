@@ -617,35 +617,100 @@ function installGraphChrome(){
     controls.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   }
 }
+/* One immutable palette per base theme. Only root color tokens are transformed;
+   image pixels, authored color swatches and GLSL syntax colors never pass here. */
+const uiTonePalettes=new Map();
+const uiToneOverridden=new Set();
+function uiToneColor(value){
+  const hex=String(value).trim().match(/^#([\da-f]{3,4}|[\da-f]{6}|[\da-f]{8})$/i);
+  if(hex){let h=hex[1];if(h.length<=4)h=[...h].map(c=>c+c).join('');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16),h.length===8?parseInt(h.slice(6,8),16)/255:1];}
+  const rgb=String(value).trim().match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i);
+  return rgb?[+rgb[1],+rgb[2],+rgb[3],rgb[4]===undefined?1:+rgb[4]]:null;
+}
+function uiToneAdjustedColor(color,amount){
+  const [r,g,b,alpha]=color,brightness=(.2126*r+.7152*g+.0722*b)/255;
+  if(brightness<=0||brightness>=1)return `rgba(${r},${g},${b},${alpha})`;
+  const target=Math.pow(brightness,Math.exp(-amount*.32));
+  // Blend toward white or black in one proportion, preserving channel ordering.
+  const adjusted=[r,g,b].map(c=>Math.round(target>brightness?c+(255-c)*(target-brightness)/(1-brightness):c*target/brightness));
+  return `rgba(${adjusted.join(',')},${alpha})`;
+}
+function applyUITone(theme,value){
+  const root=document.documentElement,amount=Math.max(-100,Math.min(100,Number(value)||0))/100;
+  for(const property of uiToneOverridden)root.style.removeProperty(property);
+  uiToneOverridden.clear();
+  if(!amount)return;
+  let palette=uiTonePalettes.get(theme);
+  if(!palette){
+    const style=getComputedStyle(root);palette=new Map();
+    // Explicit UI namespaces exclude authoring/preview colors and shader syntax.
+    for(const property of style){
+      if(!/^--(?:ui-|node-|panel(?:-|$)|canvas-|browser-|state-|scroll-|category-|ladder-|type-|wire-|selection(?:-|$)|muted$|line$|border$|purple$|green$|danger$|help-link$)/.test(property))continue;
+      const color=uiToneColor(style.getPropertyValue(property));if(color)palette.set(property,color);
+    }
+    uiTonePalettes.set(theme,palette);
+  }
+  for(const [property,color] of palette){root.style.setProperty(property,uiToneAdjustedColor(color,amount));uiToneOverridden.add(property);}
+}
+
+function normalizeUITone(value){return typeof value==='number'&&Number.isFinite(value)?Math.max(-100,Math.min(100,Math.round(value))):0;}
 function parseUIAppearance(raw){
   let saved;try{saved=JSON.parse(raw);}catch{}
-  return{size:saved?.size==='comfortable'?'comfortable':'standard',theme:saved?.theme==='light'?'light':'dark'};
+  return{size:saved?.size==='comfortable'?'comfortable':'standard',theme:saved?.theme==='light'?'light':'dark',tone:normalizeUITone(saved?.tone)};
 }
 let uiAppearance=parseUIAppearance(null);
+function positionAppearancePanel(){
+  const panel=$('#appearancepanel'),rect=$('#uitheme').getBoundingClientRect();
+  panel.style.right=Math.max(8,innerWidth-rect.right)+'px';
+  panel.style.bottom=Math.max(8,innerHeight-rect.top+8)+'px';
+  panel.style.maxHeight=Math.max(80,rect.top-16)+'px';
+}
 function renderUIAppearance(){
-  const root=document.documentElement,{size,theme}=uiAppearance;
+  const root=document.documentElement,{size,theme,tone}=uiAppearance;
   root.dataset.uiSize=size;root.dataset.uiTheme=theme;
-  for(const [id,key,value,pressed]of [['uisize','size',size,size==='comfortable'],['uitheme','theme',theme,theme==='light']]){
+  applyUITone(theme,tone);
+  for(const [id,key,value]of [['uisize','size',size],['uitheme','theme',theme]]){
     const button=$('#'+id);if(!button)continue;
     const label=t('appearance.'+key+'.'+value);
-    button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(pressed));
+    button.title=label;button.setAttribute('aria-label',label);
   }
+  $('#uisize').setAttribute('aria-pressed',String(size==='comfortable'));
+  $('#uitheme').setAttribute('aria-expanded',String($('#appearancepanel').matches(':popover-open')));
   $('#uitheme .theme-moon').toggleAttribute('hidden',theme!=='dark');$('#uitheme .theme-sun').toggleAttribute('hidden',theme!=='light');
+  for(const button of document.querySelectorAll('[data-ui-theme-choice]'))button.setAttribute('aria-pressed',String(button.dataset.uiThemeChoice===theme));
+  const slider=$('#uitone'),description=t('appearance.tone.'+(tone===0?'base':tone>0?'brighter':'darker'))+(tone?' '+Math.abs(tone):'');
+  slider.value=String(tone);slider.setAttribute('aria-valuetext',description);slider.title=t('appearance.tone')+' · '+description+' · '+t('appearance.tone.reset');
+  $('#uitoneminus').disabled=tone<=-100;$('#uitoneplus').disabled=tone>=100;
+  $('#uitoneminus').title=t('appearance.tone.decrease');$('#uitoneplus').title=t('appearance.tone.increase');
   $('meta[name="theme-color"]').content=theme==='light'?'#f2f1f6':'#19181f';
+  if($('#appearancepanel').matches(':popover-open'))positionAppearancePanel();
 }
 function setUIAppearance(key,value){
-  if(!((key==='size'&&['standard','comfortable'].includes(value))||(key==='theme'&&['dark','light'].includes(value))))return;
-  uiAppearance={...uiAppearance,[key]:value};
+  if(!((key==='size'&&['standard','comfortable'].includes(value))||(key==='theme'&&['dark','light'].includes(value))||(key==='tone'&&typeof value==='number'&&Number.isFinite(value))))return;
+  uiAppearance={...uiAppearance,[key]:key==='tone'?normalizeUITone(value):value,...(key==='theme'?{tone:0}:{})};
   try{localStorage.setItem(appearanceStorageKey,JSON.stringify(uiAppearance));}catch{}
   renderUIAppearance();
   // A display preference does not redraw the graph, change its zoom or apply a Shader.
-  if(graph)requestAnimationFrame(wires);
+  if(graph&&key!=='tone')requestAnimationFrame(wires);
 }
 function installUIAppearance(){
   try{uiAppearance=parseUIAppearance(localStorage.getItem(appearanceStorageKey));}catch{}
   renderUIAppearance();
   $('#uisize').onclick=()=>setUIAppearance('size',uiAppearance.size==='standard'?'comfortable':'standard');
-  $('#uitheme').onclick=()=>setUIAppearance('theme',uiAppearance.theme==='dark'?'light':'dark');
+  const panel=$('#appearancepanel'),opener=$('#uitheme');
+  panel.addEventListener('beforetoggle',event=>{if(event.newState==='open')positionAppearancePanel();});
+  panel.addEventListener('toggle',()=>opener.setAttribute('aria-expanded',String(panel.matches(':popover-open'))));
+  opener.onclick=event=>{if(event.detail===0)requestAnimationFrame(()=>{if(panel.matches(':popover-open'))panel.querySelector('[aria-pressed="true"]').focus({preventScroll:true});});};
+  for(const button of panel.querySelectorAll('[data-ui-theme-choice]'))button.onclick=()=>setUIAppearance('theme',button.dataset.uiThemeChoice);
+  $('#uitone').oninput=event=>setUIAppearance('tone',Number(event.target.value));
+  $('#uitone').ondblclick=()=>setUIAppearance('tone',0);
+  $('#uitoneminus').onclick=()=>setUIAppearance('tone',uiAppearance.tone-10);
+  $('#uitoneplus').onclick=()=>setUIAppearance('tone',uiAppearance.tone+10);
+  panel.addEventListener('keydown',event=>{
+    event.stopPropagation();
+    if(event.key==='Escape'){event.preventDefault();panel.hidePopover();opener.focus({preventScroll:true});}
+  });
+  window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))positionAppearancePanel();});
 }
 function installEditorChrome(){
   installUIAppearance();

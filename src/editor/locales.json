@@ -2746,12 +2746,56 @@
       "en": "Interface size: Comfortable. Switch to Standard"
     },
     "appearance.theme.dark": {
-      "zh-Hant": "外觀：深色。切換為淺色",
-      "en": "Appearance: Dark. Switch to Light"
+      "zh-Hant": "外觀：深色。開啟明暗調整",
+      "en": "Appearance: Dark. Open appearance adjustments"
     },
     "appearance.theme.light": {
-      "zh-Hant": "外觀：淺色。切換為深色",
-      "en": "Appearance: Light. Switch to Dark"
+      "zh-Hant": "外觀：淺色。開啟明暗調整",
+      "en": "Appearance: Light. Open appearance adjustments"
+    },
+    "appearance.panel": {
+      "zh-Hant": "外觀調整",
+      "en": "Appearance adjustments"
+    },
+    "appearance.mode": {
+      "zh-Hant": "外觀基準",
+      "en": "Appearance preset"
+    },
+    "appearance.mode.dark": {
+      "zh-Hant": "深色",
+      "en": "Dark"
+    },
+    "appearance.mode.light": {
+      "zh-Hant": "淺色",
+      "en": "Light"
+    },
+    "appearance.tone": {
+      "zh-Hant": "介面明暗",
+      "en": "Interface brightness"
+    },
+    "appearance.tone.base": {
+      "zh-Hant": "基準",
+      "en": "Default"
+    },
+    "appearance.tone.brighter": {
+      "zh-Hant": "偏亮",
+      "en": "Brighter"
+    },
+    "appearance.tone.darker": {
+      "zh-Hant": "偏暗",
+      "en": "Darker"
+    },
+    "appearance.tone.decrease": {
+      "zh-Hant": "調暗介面",
+      "en": "Darker"
+    },
+    "appearance.tone.increase": {
+      "zh-Hant": "調亮介面",
+      "en": "Brighter"
+    },
+    "appearance.tone.reset": {
+      "zh-Hant": "雙擊還原基準",
+      "en": "Double-click to reset"
     }
   }
 }

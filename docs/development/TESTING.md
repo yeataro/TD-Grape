@@ -1,5 +1,13 @@
 # 測試
 
+2026-09-17 明暗二級面板（0.8.84）：更新 `test_ui_appearance.cjs`，9 組桌面與 1 組 Chromium 原生觸控檢查通過，零頁面錯誤。涵蓋開啟與基準切換、滑鼠即時拖曳、減／加步進、方向鍵／Home／End、Escape 回焦與點外關閉、預設或雙擊還原、舊偏好相容與新值重載、非法值／界限／儲存拒寫，以及深淺色 × 標準／舒適在 320／390／960／1600px 的面板配置。真實 CDP touch event 在 390px 驗證滑桿雙向拖曳與面板操作；此結果不代替實體 iPad／Safari。
+
+外觀操作保留圖、Undo、縮放、Preview 狀態及實際顏色色票，無非預期 API 寫入。程式更新外觀保留數字草稿 DOM；使用者移開焦點仍按原規則提交一次，滑桿不再新增圖歷史。另通過既有 `test_editor_chrome.cjs` 10 組與 496 個雙語鍵檢查。
+
+獨立色票探針比對深／淺色各 1,042 個 DOM 元素，中央值與改動前的 computed colors 完全一致；五段調整值的主要表面亮度依序增加，歸零完整還原。GLSL 語法色與實際 Color RGBA 色票保持，Preview 沒有增加濾鏡。代表標題及數字文字的對比保持 5.49:1 以上；面板、窄版與兩種主題的明暗端點截圖已目視。
+
+TD 更新 4 份 Editor 資產，25 份內嵌來源及服務資產一致；TOP／MAT Master 保持 current，兩份使用者 Shader 保留。正式 TOE 保存為 693,500 bytes，私人助手未寫入；無核心／catalog／產碼變更。
+
 2026-09-17 Attribute 與節點標題（0.8.84）：`test_node_round.cjs` 17 組及 `test_node_rename_geometry.cjs` 7 組通過，零頁面錯誤。後者涵蓋 Split RGBA／Vector、預設／手動寬度、50%／100%／150% 縮放、Enter／blur／Escape／IME、重名與空值提示、單步 Undo，確認標題維持 41px 且接孔位置不變；Parameter 保留原名稱欄尺寸。
 
 隔離 Chromium 另確認 TOP／MAT × 深色／淺色的 Attribute 標題、Parameter 與 Inputs 色彩一致，型別接孔保持原色；MAT Position 同組、Deform 保留原分類。UV 提示依目標顯示 vUV.st／UV 0，搜尋提示文字能取得來源且不顯示錯誤的空結果。改名及配色截圖已目視；實體 iPad／Safari 尚未回驗。
