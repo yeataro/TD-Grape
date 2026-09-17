@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-18 浮動工具列預設與窄版排版（0.8.84）：既有 test_ui_experiments.cjs 19 組、test_editor_chrome.cjs 16 組通過。驗證首次／缺少值／Reset 為浮動、明確 false 經重載仍保留、原 DOM 搬移、模式／草稿／圖／歷史及 focus／fullscreen／重載保護。私人 floating-toolbar/mobile-layout 5 組通過，含 320／390／430px × 繁中／英文 × Standard／Comfortable × 100／125% 的 24 種組合：每排命令齊右、Stage 與 navigation 下方同行、無重疊／水平溢出；390px 子圖路徑與 1500px 螢幕內 410px 畫布同規則。停用控制 opacity=1、背景 alpha=255 且深色比啟用按鈕暗；可信任 Chromium touch 僅觸發一次，停用控制不平移画布，圖／Undo 保持，零 API POST／頁面錯誤。三張截圖已目視。實體 iOS Safari 未測；未新增正式樣式鏡像測試。
+
+JavaScript 語法及 diff 通過。TD 僅更新 graph_ui_js／style_css，28 份映射來源與服務一致、兩份 Master current；正式 TOE 720,780 bytes，SHA-256 5556653847c7b36023e1bf882ff4d1feb1849b7787b317e1f62d97b130fd2396，保留兩份 Shader、排除私人助手，既有瀏覽器分頁未重新整理。
+
 2026-09-18 互動過渡清除核對（0.8.84）：確認 src/editor 無舊 --ui-glow-duration、--cool-filter-off 或子元素 shadow／filter transition。私人 ui-style/professional-error-outline 兩組檢查通過：使用同一隔離 Chromium fixture 對照 90b4d17 與目前 CSS，Professional 的 error／selected.error 可見陰影、邊框及幾何一致，操作 transition 為 0s；Cool 選取錯誤光暈與 Excellent 錯誤光暈保留，零頁面錯誤。修正僅兩條 Professional 外框規則。原六組模式／即時操作探針與測試結果保留，可重跑；這些視覺腳本位於私人 work，未加入產品執行依賴。28 份來源／服務一致，兩份 Master current。正式 TOE 720,740 bytes，SHA-256 357072fc7a423a710b80384cfa579dfcb81f580603c5f82371583451267ef6ca；保留兩份 Shader 並排除私人助手，既有頁面未重新整理。
 
 2026-09-18 模式過渡與即時操作（0.8.84）：私人 `ui-style/mode-only-transition` 探針 6 組通過。Professional／Cool／Excellent 六方向切換在 250ms 實采模式強度約 0.408／0.592，1.1 秒已到目標；Cool 選取／取消、Excellent 按鈕開關及 Apply enabled／disabled 在同一 task 與第一 frame 已對應當下模式強度，過渡途中也無操作本身的額外淡入。實際滑鼠移入／移出接線立即更新，過渡中 alpha 等於當下 level × 33%，無 filter transition。Legendary／Godlike 兩點抽樣仍持續動態；Light 五模式相同，減動態立即切换並停止動畫。11 個節點及 10 條接線 DOM、graph／history／dirty 保持，零 API 寫入與瀏覽器錯誤；截圖已目視。只用私人探針，未新增正式樣式鏡像測試或重跑效能。

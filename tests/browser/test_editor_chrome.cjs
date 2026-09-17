@@ -10,7 +10,7 @@ async function run(){
     assert.equal(await page.locator('.footer-start > .footer-actions:first-child + #dirty + #status').count(),1);
     assert.deepEqual(await page.locator('.footer-start > .footer-actions').evaluate(e=>[...e.children].map(button=>button.id)),['editorrefresh','reload']);
     assert.ok(await page.evaluate(()=>{const toggle=$('#toggleheader').getBoundingClientRect(),layout=$('#workspacelayout').getBoundingClientRect();return toggle.right<=layout.left&&layout.left-toggle.right<20;}));
-    assert.equal(await page.locator('.toolbar .graph-navigation').count(),1);
+    assert.equal(await page.locator('.toolbar .graph-navigation').count(),1);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.evaluate(()=>EDITOR_DEV_SETTINGS.floatingToolbar),true);
     assert.equal(await page.locator('#canvas #fit').count(),1);
     assert.deepEqual(await page.locator('.graph-tool-group').evaluateAll(groups=>groups.map(g=>[...g.querySelectorAll('button')].map(b=>b.id))),[['undo','redo'],['graphcopy','graphpaste','graphgroup','graphdelete'],['boxselect'],['customnames'],['code']]);
     assert.equal(await page.locator('#editorheader #about').innerText(),'About');

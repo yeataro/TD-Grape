@@ -27,13 +27,13 @@ const [source,stateFile,folder]=process.argv.slice(2);
   try{
     await setup();const defaults=await page.evaluate(()=>({...EDITOR_DEV_DEFAULTS}));
     assert.equal(Object.keys(defaults).length,12);assert.deepEqual(await settings(),defaults);assert.equal(defaults.uiStyle,'professional');assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    assert.equal(defaults.systemClock,false);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);
+    assert.equal(defaults.floatingToolbar,true);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(defaults.systemClock,false);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);
     await open();assert.equal(await panel.locator('input[type=checkbox]').count(),10);assert.equal(await panel.locator('select').count(),2);
     assert.deepEqual(await control('nodeDragCursor').locator('option').evaluateAll(options=>options.map(o=>o.value)),['default','move']);
     assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool','excellent','legendary','godlike']);
     assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.equal(await opener.getAttribute('aria-expanded'),'true');
     assert.equal(await control('canvasTrash').evaluate(e=>e===document.activeElement),true);const openedGraph=await snapshot();await page.keyboard.press('Tab');assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Delete');assert.equal(await snapshot(),openedGraph);
-    checks.push('fresh editors expose ten boolean experiments, cursor and UI style choices; Professional is the default without changing preferences on open');
+    checks.push('fresh editors use the floating toolbar and Professional style; ten boolean experiments and two choice controls open without changing preferences');
     checks.push('mouse opening focuses the first option, Tab stays in the panel and Delete does not delete selected graph nodes');
 
     const unchanged=await snapshot();
@@ -44,7 +44,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     }
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),await settings());
     assert.equal(await page.locator('#graphtrash').isVisible(),true);
-    assert.equal(await page.locator('#canvas>.toolbar').count(),1);
+    assert.equal(await page.locator('#canvas>.toolbar').count(),0);assert.equal(await page.locator('.graph-workspace>.toolbar').count(),1);
     assert.equal(await page.locator('[data-node="value"]').getAttribute('data-drag-surface'),'header');
     assert.equal(await page.locator('[data-collapse-node="value"]').count(),0);assert.equal(await page.locator('[data-collapse-node="folded"]').count(),0);
     assert.equal(await page.locator('[data-node-resize="value"]').count(),1,'hiding the resize hint retains resizing');
@@ -156,23 +156,23 @@ const [source,stateFile,folder]=process.argv.slice(2);
     }
     checks.push('English and Traditional Chinese expose translated names, hints, cursor/style choices and opener labels');
 
-    await set({canvasTrash:true,floatingToolbar:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'godlike',systemClock:true});const saved=await settings();
+    await set({canvasTrash:true,floatingToolbar:false,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'godlike',systemClock:true});const saved=await settings();
     for(const uiStyle of ['professional','cool','excellent','legendary','godlike']){
-      await set({...saved,uiStyle});await reload();assert.deepEqual(await settings(),{...saved,uiStyle});assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);assert.equal(await page.locator('#uisystemclock').isVisible(),true);
-      await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
+      await set({...saved,uiStyle});await reload();assert.deepEqual(await settings(),{...saved,uiStyle});assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);assert.equal(await page.locator('#canvas>.toolbar').count(),0);assert.equal(await page.locator('.graph-workspace>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);assert.equal(await page.locator('#uisystemclock').isVisible(),true);
+      await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
     }
     await page.evaluate(()=>localStorage.setItem('sgrapeExperimentsV1','{ broken'));await reload();assert.deepEqual(await settings(),defaults);
     const malformed={canvasTrash:'true',floatingToolbar:1,nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',systemClock:'true',nodeResizeHint:false,unknown:true};
     assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),JSON.stringify(malformed)),{...defaults,nodeResizeHint:false});
     for(const raw of ['null','[]','true','"text"'])assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),raw),defaults);
-    checks.push('all five UI styles survive isolated reload, reset restores and persists Professional defaults from each style, and malformed or unknown storage values are safely ignored');
+    checks.push('all five UI styles and an explicitly disabled floating toolbar survive isolated reload; reset restores floating toolbar/Professional defaults and malformed storage is ignored');
 
-    const legacy={...saved};delete legacy.uiStyle;delete legacy.systemClock;
+    const legacy={...saved};delete legacy.uiStyle;delete legacy.systemClock;delete legacy.floatingToolbar;
     await page.evaluate(legacy=>localStorage.setItem('sgrapeExperimentsV1',JSON.stringify(legacy)),legacy);await reload();
-    assert.deepEqual(await settings(),{...legacy,uiStyle:'professional',systemClock:false});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    await open();for(const uiStyle of ['cool','excellent','legendary','godlike']){await control('uiStyle').selectOption(uiStyle);await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...legacy,uiStyle,systemClock:false});}
+    assert.deepEqual(await settings(),{...legacy,uiStyle:'professional',systemClock:false,floatingToolbar:true});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#canvas>.toolbar').count(),1);
+    await open();for(const uiStyle of ['cool','excellent','legendary','godlike']){await control('uiStyle').selectOption(uiStyle);await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...legacy,uiStyle,systemClock:false,floatingToolbar:true});}
     await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    checks.push('legacy V1 preferences retain existing options and default to Professional; choosing Cool, Excellent, Legendary or Godlike upgrades saved preferences and reset restores Professional');
+    checks.push('legacy V1 preferences retain existing options while missing style/toolbar flags default to Professional/floating; selecting a style persists defaults and reset restores them');
 
     await setup();await set({systemClock:true});assert.equal(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches),true);
     const geometryBefore=await snapshot();

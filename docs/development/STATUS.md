@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-18 浮動工具列預設與窄版排版（0.8.84）：floatingToolbar 預設開啟，明確保存的關閉偏好保留。浮動停用按鈕以不透明暗底與較暗前景呈現，避免節點透出；操作群組換行齊右，工具列可用寬度不超過 700px 時 Stage 與子圖位置一起置於命令列之下，長路徑保留橫向捲動。CSS container query 依實際工具列寬度反應，沒有新增 JavaScript 排版；兩份重複規則合併為一份。既有 experiments 19 組、Editor chrome 16 組及私人窄版 5 組通過。28 份來源／服務一致、兩份 Master current；正式 TOE 720,780 bytes，保留兩份使用者 Shader，現有頁面未重新整理。
+
 2026-09-18 互動過渡清除核對（0.8.84）：確認按下／選取／hover 的光暈過渡已刪除，沒有停用分支或備用開關；模式切換過渡仍獨立保留。額外還原 Professional 錯誤節點被新版透明光暈規則連帶增加的紅色外環，保留原錯誤邊框及選取環。與過渡前 90b4d17 樣式直接比對的兩組檢查通過，沒有改動 JavaScript 或圖／Undo／GLSL。28 份來源與服務一致、Master current；正式 TOE 保存 720,740 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
 
 2026-09-18 過渡限於表現模式（0.8.84）：依使用者澄清，只有切換 Professional／Cool／Excellent 等表現模式時才以 1 秒漸亮／漸暗。節點選取、接線 hover、框選／自訂名稱按鈕及 Apply 的啟用狀態立即回應，切換模式的過程中亦同。純 CSS 改由 root 模式強度控制過渡，移除元件 shadow／filter 的過渡與舊濾鏡插值補丁；既有 Legendary 呼吸及 Godlike 環繞保持。此輪未新增或修改 JavaScript、DOM 與圖資料結構。

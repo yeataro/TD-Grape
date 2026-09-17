@@ -1042,14 +1042,13 @@ footer .footer-preferences svg[hidden]{display:none}
  .location-start>#projectfile{max-width:72px;font-size:10px}
  .location-bar .shader-selector #shaderpicker{max-width:100%;font-size:10px}
  .graph-workspace .toolbar{gap:5px}
- .graph-workspace .graph-tools{display:contents}
  .graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:34px;min-height:34px}
  .graph-workspace .graph-tools .icon-button{width:34px}
  footer #status{font-size:10px}
 }
 
 /* One graph toolbar: stage, path and grouped commands. Zoom occupies canvas space only. */
-.graph-workspace .toolbar{height:auto;min-height:44px;flex-wrap:wrap;align-content:center}
+.graph-workspace .toolbar{container:graph-toolbar / inline-size;height:auto;min-height:44px;flex-wrap:wrap;align-content:center;justify-content:flex-end}
 .graph-location-tools{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;flex:1 1 140px}
 .graph-workspace .toolbar .stage-tabs{margin:0;flex:none}
 .graph-workspace .toolbar .graph-navigation{position:static;min-height:0;padding:0;border:0;background:transparent;gap:3px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
@@ -1059,39 +1058,20 @@ footer .footer-preferences svg[hidden]{display:none}
 .graph-workspace .toolbar #graphup{flex:none;width:25px;height:28px;min-height:0;padding:4px;background:transparent;border:0}
 .graph-workspace .toolbar #graphup:disabled{display:none}
 .graph-workspace .toolbar #functionscope{display:none}
-.graph-workspace .graph-tools{flex:0 1 auto;justify-content:flex-start}
+.graph-workspace .graph-tools{flex:0 1 auto;max-width:100%;margin-left:auto;justify-content:flex-end}
 .graph-workspace .toolbar #customnames[aria-pressed="true"]{color:var(--purple);border-color:var(--purple)}
 .canvas-view-tools{position:absolute;right:12px;bottom:12px;z-index:6;display:flex;align-items:center;gap:9px;pointer-events:none;color:var(--muted);font-size:11px}
 .canvas-view-tools #zoom{position:static;font-size:11px;letter-spacing:.2px;text-shadow:0 1px 2px var(--canvas-bg,var(--ui-tone-canvas))}
 .canvas-view-tools #fit{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,var(--ui-tone-chrome));color:inherit;border-color:var(--line)}
 .graph-workspace.floating-toolbar .toolbar{position:absolute;inset:0 0 auto;z-index:7;background:transparent;border:0;pointer-events:none}
 .floating-toolbar .toolbar :is(button,select){pointer-events:auto}
+/* Dim disabled controls without making the canvas visible through their surface. */
+.graph-workspace.floating-toolbar .toolbar :is(.graph-tools,.stage-tabs) button:disabled{opacity:1;background:var(--ui-chrome,var(--ui-tone-chrome));color:color-mix(in srgb,var(--muted) 70%,var(--ui-control,var(--ui-tone-control)));border-color:color-mix(in srgb,var(--line) 65%,var(--ui-chrome,var(--ui-tone-chrome)));cursor:default}
 .floating-toolbar .toolbar .stage-tabs{background:var(--ui-chrome,#1c1b23e8)}
 .floating-toolbar .toolbar .graph-navigation{text-shadow:0 1px 2px var(--canvas-bg,var(--ui-tone-canvas))}
-@media(max-width:800px){.graph-workspace .graph-tools{display:flex}.graph-location-tools{flex-basis:100%}.graph-workspace .toolbar{min-height:0}}
-@media(pointer:coarse){.canvas-view-tools #fit{min-height:36px;padding-inline:10px}.graph-workspace .toolbar #graphpath button,.graph-workspace .toolbar #graphup{height:34px}}
-
-/* One graph toolbar: stage, path and grouped commands. Zoom occupies canvas space only. */
-.graph-workspace .toolbar{height:auto;min-height:44px;flex-wrap:wrap;align-content:center}
-.graph-location-tools{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;flex:1 1 140px}
-.graph-workspace .toolbar .stage-tabs{margin:0;flex:none}
-.graph-workspace .toolbar .graph-navigation{position:static;min-height:0;padding:0;border:0;background:transparent;gap:3px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
-.graph-workspace .toolbar #graphpath{flex:1 1 auto;min-width:0;overflow:auto;flex-wrap:nowrap;background:transparent;border-radius:0;padding:0;margin:0;scrollbar-width:thin}
-.graph-workspace .toolbar #graphpath button{white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;flex:none;height:28px;min-height:0;padding:0 5px;background:transparent;border:0}
-.graph-workspace .toolbar #graphpath .graph-separator{flex:none}
-.graph-workspace .toolbar #graphup{flex:none;width:25px;height:28px;min-height:0;padding:4px;background:transparent;border:0}
-.graph-workspace .toolbar #graphup:disabled{display:none}
-.graph-workspace .toolbar #functionscope{display:none}
-.graph-workspace .graph-tools{flex:0 1 auto;justify-content:flex-start}
-.graph-workspace .toolbar #customnames[aria-pressed="true"]{color:var(--purple);border-color:var(--purple)}
-.canvas-view-tools{position:absolute;right:12px;bottom:12px;z-index:6;display:flex;align-items:center;gap:9px;pointer-events:none;color:var(--muted);font-size:11px}
-.canvas-view-tools #zoom{position:static;font-size:11px;letter-spacing:.2px;text-shadow:0 1px 2px var(--canvas-bg,var(--ui-tone-canvas))}
-.canvas-view-tools #fit{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,var(--ui-tone-chrome));color:inherit;border-color:var(--line)}
-.graph-workspace.floating-toolbar .toolbar{position:absolute;inset:0 0 auto;z-index:7;background:transparent;border:0;pointer-events:none}
-.floating-toolbar .toolbar :is(button,select){pointer-events:auto}
-.floating-toolbar .toolbar .stage-tabs{background:var(--ui-chrome,#1c1b23e8)}
-.floating-toolbar .toolbar .graph-navigation{text-shadow:0 1px 2px var(--canvas-bg,var(--ui-tone-canvas))}
-@media(max-width:800px){.graph-workspace .graph-tools{display:flex}.graph-location-tools{flex-basis:100%}.graph-workspace .toolbar{min-height:0}}
+/* Below the available toolbar width, stage and path stay together after commands. */
+@container graph-toolbar (max-width:700px){.graph-workspace .graph-tools{flex:1 0 100%}.graph-location-tools{order:1;flex:1 0 100%}}
+@media(max-width:800px){.graph-workspace .toolbar{min-height:0}}
 @media(pointer:coarse){.canvas-view-tools #fit{min-height:36px;padding-inline:10px}.graph-workspace .toolbar #graphpath button,.graph-workspace .toolbar #graphup{height:34px}}
 
 /* Light surfaces and graph palette; preview pixels and source code stay independent. */
