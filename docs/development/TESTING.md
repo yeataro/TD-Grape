@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-18 模式過渡與即時操作（0.8.84）：私人 `ui-style/mode-only-transition` 探針 6 組通過。Professional／Cool／Excellent 六方向切換在 250ms 實采模式強度約 0.408／0.592，1.1 秒已到目標；Cool 選取／取消、Excellent 按鈕開關及 Apply enabled／disabled 在同一 task 與第一 frame 已對應當下模式強度，過渡途中也無操作本身的額外淡入。實際滑鼠移入／移出接線立即更新，過渡中 alpha 等於當下 level × 33%，無 filter transition。Legendary／Godlike 兩點抽樣仍持續動態；Light 五模式相同，減動態立即切换並停止動畫。11 個節點及 10 條接線 DOM、graph／history／dirty 保持，零 API 寫入與瀏覽器錯誤；截圖已目視。只用私人探針，未新增正式樣式鏡像測試或重跑效能。
+
+555 個雙語鍵及 diff 檢查通過；TD 的 style_css／locales_json 已同步，28 份內嵌來源與服務內容一致、TOP／MAT Master current。正式 TOE 為 720,660 bytes，SHA-256 `6cd4ad277ace852ac4c84c7474242cbe8667bd4d4af3416aee0fc421a7cd27c2`，保留兩份 Shader、排除私人助手，現有編輯頁未重新整理。
+
 2026-09-18 光暈分級修訂與 CSS 動畫（0.8.84）：既有 `test_ui_experiments.cjs` 19 組通過，涵蓋五種風格即時切換／保存／重載／重置／舊偏好，沿用時鐘測試，且純模式／時鐘／主題切換保留節點、Parameter、工具列與接線 DOM、圖／Undo／幾何。私人 Cool 範圍與過渡探針確認只有彩色接線、選取框、葡萄圖示與 Apply 發光，普通節點／名稱／接孔保持原貌；減少動態效果和 Light 保持預期。報告分別位於私人 work/reports/ui-style/five-tiers-experiments 及 cool-scope-motion。
 
 最後 `legendary-godlike-motion` 私人探針 5 組通過：Legendary 的減動態範圍等同 Excellent，4 秒實采 alpha 33.11–49.85%；Godlike 4.8 秒實采四象限，節點偏移半徑 7px、接線／圖示 2.8px、名稱 2.1px，固定 alpha 50%，顏色／blur／幾何不變。首秒入場及退出各模式均為 1 秒；Light 停用動畫，減動態 Legendary 33%、Godlike 50% 居中靜態。Graph／歷史／DOM 保持，零頁面錯誤／API 寫入，主頁及 About 截圖已目視。沒有新增正式樣式鏡像測試或執行效能量測。

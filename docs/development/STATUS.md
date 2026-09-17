@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-18 過渡限於表現模式（0.8.84）：依使用者澄清，只有切換 Professional／Cool／Excellent 等表現模式時才以 1 秒漸亮／漸暗。節點選取、接線 hover、框選／自訂名稱按鈕及 Apply 的啟用狀態立即回應，切換模式的過程中亦同。純 CSS 改由 root 模式強度控制過渡，移除元件 shadow／filter 的過渡與舊濾鏡插值補丁；既有 Legendary 呼吸及 Godlike 環繞保持。此輪未新增或修改 JavaScript、DOM 與圖資料結構。
+
+6 組瀏覽器檢查通過，含模式過渡期間的即時操作、Light 與減動態；555 個雙語鍵與 diff 通過。28 份來源與服務一致、兩份 Master current；正式 TOE 保存 720,660 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
+
+6 組瀏覽器檢查通過，含模式過渡期間的即時操作、Light 與減動態；555 個雙語鍵與 diff 通過。28 份來源與服務一致、兩份 Master current；正式 TOE 保存 720,660 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
+
 2026-09-18 光暈分級修訂與 CSS 動畫（0.8.84）：Cool 改為僅彩色接線、選取框、葡萄圖示與 Apply Shader 發光，未選取節點與名稱／接孔保持原貌；Excellent 加入整顆節點分類色外光與既有介面重點。新增 Legendary 的 4 秒慢呼吸（33–50%），Godlike 為 50% 外光以 4.8 秒環繞方向流動，只有陰影偏移，元件位置與型別色保持。五級切換以 1 秒過渡，僅 Dark 生效；減少動態效果時採靜態光暈。動畫只用既有 CSS 光暈與 registered properties，未增加 DOM、繪圖層、ID 分组或 JavaScript 動畫系統。純外觀切換保留接線 DOM，圖與 Undo 不變。
 
 既有實驗功能測試 19 組、最後 Legendary／Godlike 動態檢查 5 組通過，另完成 Cool 範圍及過渡檢查；555 個雙語鍵、JavaScript 語法與 diff 通過。28 份來源與服務一致、兩份 Master current；正式 TOE 保存 720,748 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
