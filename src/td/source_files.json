@@ -25,6 +25,7 @@
   "manager_controls.py": "src/td/runtime/manager_controls.py",
   "manifest.webmanifest": "src/editor/manifest.webmanifest",
   "node_catalog.json": "src/library/node_catalog.json",
+  "qrcode.js": "src/editor/qrcode.js",
   "sgrape_core.py": "src/core/sgrape_core.py",
   "sgrape_document.py": "src/core/sgrape_document.py",
   "sgrape_library.py": "src/core/sgrape_library.py",
@@ -34,6 +35,7 @@
   "sgrape_runtime.py": "src/td/runtime/sgrape_runtime.py",
   "sgrape_sources.py": "src/core/sgrape_sources.py",
   "shader_controls.py": "src/td/runtime/shader_controls.py",
+  "share_ui.js": "src/editor/share_ui.js",
   "style.css": "src/editor/style.css",
   "tdfam_menu_colors.py": "src/td/runtime/tdfam_menu_colors.py",
   "web_icons.json": "src/editor/web_icons.json"

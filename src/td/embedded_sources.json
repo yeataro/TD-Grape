@@ -23,5 +23,7 @@
   "functions_model_js": "functions_model.js",
   "functions_ui_js": "functions_ui.js",
   "graph_ui_js": "graph_ui.js",
-  "import_ui_js": "import_ui.js"
+  "import_ui_js": "import_ui.js",
+  "qrcode_js": "qrcode.js",
+  "share_ui_js": "share_ui.js"
 }

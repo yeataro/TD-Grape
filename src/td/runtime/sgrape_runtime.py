@@ -1576,6 +1576,7 @@ def set_uniform_value(body):
 
 def process_shader_request(method,path,body):
     if method=='GET' and path=='/api/shaders':return shader_choices()
+    if method=='GET' and path=='/api/share-links':return share_links()
     if method=='GET' and path=='/api/state-source':
         raw=saved_state_source()
         if raw is None:raise RuntimeError('The saved state DAT is missing')
@@ -1718,6 +1719,15 @@ def network_addresses():
     return sorted((value for value in values if not value.startswith(('127.','169.254.')) and value!='0.0.0.0'),key=lambda value:tuple(map(int,value.split('.'))))
 
 
+def share_links():
+    """Report listener origins, without disclosing tokens or testing reachability."""
+    origins=[{'origin':'http://127.0.0.1:'+str(_port),'kind':'local'}]
+    if _lan_enabled:
+        origins.extend({'origin':'http://'+address+':'+str(_port),'kind':'lan'} for address in network_addresses())
+    path='/shader/'+target().fetch('sgrapeShaderId')+'/' if _owner.fetch('sgrapeManager',False) else '/'
+    return {'origins':origins,'lanEnabled':_lan_enabled,'tokenRequired':_require_token,'shaderPath':path}
+
+
 def update_network_links():
     global _network_refresh
     _network_refresh=time.monotonic()
@@ -1830,7 +1840,7 @@ def refresh_assets(owner):
         _assets['/favicon.svg']=(owner.op('favicon_svg').text.encode('utf-8'),'image/svg+xml')
     if owner.op('inspector_js'):
         _assets['/inspector.js']=(owner.op('inspector_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
-    for name in ('functions_model','functions_ui','graph_ui','import_ui'):
+    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui'):
         if owner.op(name+'_js'):
             _assets['/'+name+'.js']=(owner.op(name+'_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
 

@@ -1,0 +1,75 @@
+/* Local QR sharing UI; isolated fixture API only, never contacts TD.
+ * node test_ui_share.cjs SOURCE_DIR STATE_JSON REPORT_DIR
+ */
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {harness}=require('./test_glsl_code.cjs');
+
+async function run(){
+  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder),{page,checks,errors,settle}=h;
+  page.setDefaultTimeout(6000);
+  const base=new URL(page.url()).origin,shader='/shader/'+'1'.repeat(32)+'/',syntheticToken='fixture-share-token-only';
+  const writes=[],externalRequests=[];
+  const lan='http://192.168.50.7:9980',secondLan='http://192.168.50.8:9980';
+  let metadata={origins:[{origin:base,kind:'local'},{origin:base,kind:'local'},{origin:lan,kind:'lan'},{origin:lan,kind:'lan'},{origin:secondLan,kind:'lan'}],lanEnabled:true,tokenRequired:true,shaderPath:shader},metadataStatus=200;
+  await page.route('**/api/**share-links',route=>route.fulfill({status:metadataStatus,contentType:'application/json',body:JSON.stringify(metadata)}));
+  const decode=process.env.QR_DECODER_MODULE?require(process.env.QR_DECODER_MODULE):null;
+  page.on('request',request=>{const url=new URL(request.url());if(url.protocol.startsWith('http')&&url.origin!==base)externalRequests.push(url.origin);if(request.method()==='POST'&&url.pathname.startsWith('/api/')&&!url.pathname.endsWith('/remote-preview'))writes.push(url.pathname);});
+  const panel=()=>page.locator('#sharepanel'),urlField=()=>page.locator('#shareurl'),origin=()=>page.locator('#shareorigin');
+  const snapshot=()=>page.evaluate(()=>({graph:JSON.stringify(graph),past:JSON.stringify(past),future:JSON.stringify(future),pan:{...pan},scale,dirty,stage,selected}));
+  const open=async()=>{if(!await panel().isVisible())await page.locator('#uishare').click();await panel().waitFor();await settle();};
+  const close=async()=>{if(await panel().isVisible()){await page.locator('#sharecopy').focus();await page.keyboard.press('Escape');await settle();}};
+  const qr=()=>page.locator('#shareqr svg').evaluate(e=>e.outerHTML);
+  const decodeQR=async()=>{assert.ok(decode,'Set QR_DECODER_MODULE to an independent jsQR module for QR round-trip verification');const raster=await page.locator('#shareqr svg').evaluate(async svg=>{const image=new Image(),copy=svg.cloneNode(true);copy.setAttribute('width','480');copy.setAttribute('height','480');image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(copy));await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=480;const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,480,480);context.drawImage(image,0,0,480,480);return Array.from(context.getImageData(0,0,480,480).data);});const result=decode(Uint8ClampedArray.from(raster),480,480,{inversionAttempts:'dontInvert'});assert.ok(result,'rendered QR must be decodable');return result.data;};
+  const options=()=>origin().locator('option').evaluateAll(items=>items.map(e=>({value:e.value,label:e.textContent})));
+  const clipboard=async(mode)=>page.evaluate(mode=>{
+    window.shareTestWrites=[];window.shareTestExec=[];
+    Object.defineProperty(navigator,'clipboard',{configurable:true,value:mode==='absent'?undefined:{writeText:async text=>{shareTestWrites.push(text);if(mode!=='success')throw new DOMException('Fixture denied','NotAllowedError');}}});
+    document.execCommand=command=>{shareTestExec.push(command);return mode==='fallback';};
+  },mode);
+  const geometry=()=>page.evaluate(()=>{
+    const rect=selector=>{const r=$(selector).getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+    return{width:innerWidth,height:innerHeight,panel:rect('#sharepanel'),qr:rect('#shareqr'),field:rect('#shareurl'),copy:rect('#sharecopy'),footer:rect('footer'),overflow:document.documentElement.scrollWidth>innerWidth+1,
+      clickable:['shareorigin','shareurl','sharecopy'].every(id=>{const e=$('#'+id),r=e.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return top===e||e.contains(top);})};
+  });
+  try{
+    await page.route('**'+shader,route=>route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(source,'index.html'),'utf8')}));
+    await page.goto(base+shader+'#'+syntheticToken);await page.waitForSelector('.node');await page.evaluate(()=>document.fonts.ready);
+    await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;});
+    await page.selectOption('#language','en');
+    const initial=await snapshot();await open();
+    await page.waitForFunction(()=>document.querySelectorAll('#shareorigin option').length>=3);
+    const choices=await options();assert.deepEqual(choices.map(x=>x.value).sort(),[base,lan,secondLan].sort());assert.ok(choices.every(x=>!x.label.includes(syntheticToken)));assert.equal(await origin().inputValue(),lan,'loopback chooses a usable LAN address for another device');
+    assert.equal(await page.locator('#uishare').getAttribute('aria-controls'),'sharepanel');assert.equal(await page.locator('#uishare').getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#uishare').getAttribute('aria-haspopup'),'dialog');assert.equal(await urlField().getAttribute('readonly'),'');assert.ok(await origin().getAttribute('aria-label'));
+    assert.equal(await page.locator('.footer-preferences button').last().getAttribute('id'),'uifullscreen');
+    const checkURL=async expectedOrigin=>{const url=await urlField().inputValue();assert.equal(url,expectedOrigin+shader+'#'+syntheticToken);return url;};
+    await origin().selectOption(lan);await settle();const firstURL=await checkURL(lan),firstQR=await qr();assert.ok(firstQR.length>500);if(decode)assert.equal(await decodeQR(),firstURL);
+    await origin().selectOption(secondLan);await settle();const secondURL=await checkURL(secondLan);assert.notEqual(await qr(),firstQR);if(decode)assert.equal(await decodeQR(),secondURL);
+    await origin().selectOption(lan);await settle();assert.equal(await qr(),firstQR,'returning to the same link regenerates the same QR');assert.deepEqual(await snapshot(),initial);
+    checks.push('current/server origins are deduplicated; selected host preserves shader path and synthetic auth fragment; generated QR is stable per URL'+(decode?' and independently decodes to each exact link':''));
+
+    await clipboard('success');await page.locator('#sharecopy').click();await settle();assert.deepEqual(await page.evaluate(()=>shareTestWrites),[firstURL]);assert.deepEqual(await page.evaluate(()=>shareTestExec),[]);const copiedMessage=await page.locator('#sharemessage').innerText();assert.equal(copiedMessage,await page.evaluate(()=>t('share.copied')));
+    await clipboard('fallback');await page.locator('#sharecopy').click();await settle();assert.deepEqual(await page.evaluate(()=>shareTestWrites),[firstURL]);assert.deepEqual(await page.evaluate(()=>shareTestExec),['copy']);assert.equal(await page.locator('#sharemessage').innerText(),copiedMessage);
+    for(const mode of['denied','absent']){await clipboard(mode);await page.locator('#sharecopy').click();await settle();assert.deepEqual(await page.evaluate(()=>shareTestExec),['copy']);assert.equal(await page.locator('#sharemessage').innerText(),await page.evaluate(()=>t('share.copyManual')));assert.deepEqual(await urlField().evaluate(e=>({start:e.selectionStart,end:e.selectionEnd,focused:e===document.activeElement})),{start:0,end:firstURL.length,focused:true});}assert.deepEqual(await snapshot(),initial);
+    checks.push('async clipboard success and denied-API legacy fallback report success honestly; unavailable/denied copy selects the full URL for manual copying without graph writes');
+
+    await close();assert.equal(await page.locator('#uishare').getAttribute('aria-expanded'),'false');assert.equal(await page.locator('#uishare').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Enter');await panel().waitFor();await page.locator('#editorheader').click({position:{x:3,y:3}});await settle();assert.equal(await panel().isVisible(),false);
+    await open();await page.locator('#uitheme').click();await settle();assert.equal(await panel().isVisible(),false);assert.equal(await page.locator('#appearancepanel').isVisible(),true);await open();assert.equal(await page.locator('#appearancepanel').isVisible(),false);
+    await page.evaluate(()=>{readonly=true;render();});await close();await open();assert.equal(await page.locator('#sharecopy').isEnabled(),true);await clipboard('success');await page.locator('#sharecopy').click();await settle();assert.deepEqual(await snapshot(),initial);await page.evaluate(()=>{readonly=false;render();});
+    checks.push('keyboard opener/Escape restore focus, outside click and appearance popovers dismiss sharing, and readonly graphs can still share without edits');
+
+    const layouts=[];for(const width of[320,390,1600])for(const uiScale of[75,125])for(const theme of['dark','light']){
+      await close();await page.setViewportSize({width,height:width<500?844:1050});await page.evaluate(({uiScale,theme})=>{setUIAppearance('size',uiScale===125?'comfortable':'standard');setUIAppearance('scale',uiScale);setUIAppearance('theme',theme);},{uiScale,theme});await settle();await open();
+      const layout=await geometry(),label=JSON.stringify({width,uiScale,theme});assert.equal(layout.overflow,false,label);assert.ok(layout.panel.x>=-1&&layout.panel.y>=-1&&layout.panel.right<=layout.width+1&&layout.panel.bottom<=layout.height+1,label+' panel bounds '+JSON.stringify(layout));assert.ok(layout.field.x>=layout.panel.x&&layout.field.right<=layout.panel.right+1,label+' URL bounds');assert.ok(layout.qr.width>=110&&layout.qr.height>=110,label+' QR must remain legible');assert.equal(layout.clickable,true,label+' controls must remain reachable');layouts.push({width,uiScale,theme,...layout});if(theme==='dark'&&(width===390||width===1600)&&uiScale===125)await page.screenshot({path:path.join(folder,`share-${width}-${uiScale}.png`)});
+    }
+    fs.writeFileSync(path.join(folder,'layouts.json'),JSON.stringify(layouts,null,2));checks.push('share panel and controls fit320/390/1600px viewports at75/125% in both themes, including comfortable density');
+    await close();await page.setViewportSize({width:1600,height:1050});await page.evaluate(()=>{setUIAppearance('size','standard');setUIAppearance('scale',100);});
+    metadata={origins:[{origin:base,kind:'local'}],lanEnabled:false,tokenRequired:true,shaderPath:shader};await page.reload();await page.waitForSelector('.node');await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;});await open();await page.waitForFunction(()=>document.querySelector('#shareorigin')?.options.length>0);assert.deepEqual((await options()).map(x=>x.value),[base]);await checkURL(base);const localOnlyText=await panel().innerText();assert.ok(localOnlyText.includes(await page.evaluate(()=>t('share.localOnly'))));
+    checks.push('local-only listener still provides its QR/link and clearly labels the local-only context');
+    await close();metadataStatus=503;await page.reload();await page.waitForSelector('.node');await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;});await open();await page.waitForFunction(()=>document.querySelector('#shareorigin')?.options.length>0);await checkURL(base);assert.ok(await page.locator('#shareqr svg').count());
+    checks.push('metadata failure preserves current-origin QR and a selectable URL instead of breaking sharing');
+    await close();metadataStatus=200;metadata={origins:[{origin:base,kind:'local'},{origin:lan,kind:'lan'}],lanEnabled:true,tokenRequired:true,shaderPath:shader};await page.evaluate(()=>sessionStorage.removeItem('sgrapeToken'));await page.reload();await page.waitForSelector('.node');await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;});await open();await page.waitForFunction(()=>document.querySelector('#shareorigin')?.options.length>0);assert.deepEqual((await options()).map(x=>x.value),[base]);assert.equal(await urlField().inputValue(),base+shader);assert.ok((await panel().innerText()).includes(await page.evaluate(()=>t('share.tokenMissing'))));checks.push('missing required auth keeps current origin only and explains why alternate-host links are unavailable');
+    assert.deepEqual(writes,[]);assert.deepEqual(externalRequests,[]);checks.push('all sharing remains local and read-only: no external requests or mutation API calls');
+    assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
+  }catch(error){await h.finish(error);throw error;}
+}
+if(require.main===module)run().catch(error=>{console.error(error.stack);process.exitCode=1;});

@@ -35,3 +35,9 @@ Host 必須符合連線實際抵達的本機 IPv4 位址與埠；Origin（若有
 跨位址驗證均在同一台主機完成，尚未由第二台實體裝置或 macOS 驗收。不因此自動變更使用者防火牆。私人代理未更動，區網直接功能請使用 LAN URLs，而非舊代理網址。
 
 另外兩組 Function／個人庫 JavaScript 模型檢查通過。`test_editor_edits.js` 與 `test_import_ui.js` 的舊模擬案例在本輪修改前、後均於相同斷言失敗，未列入通過數；本輪未修改這兩份測試。
+
+## Editor QR 分享（2026-09-17）
+
+右下角 QR 圖示可選目前網址或服務提供的 IPv4 位址，產生目前 Shader 的 QR Code 並複製完整網址。QR 編码在瀏覽器本機執行，沒有外部服務。瀏覽器網址列已移除的連線碼會由目前分頁暫存補回；`Require Connection Token` 關閉時不要求此碼，開啟且頁面沒有可攜帶憑證時只保留目前入口。面板不更改 LAN 或 token 設定；純本機入口會明確標示，其他位址是否能連線仍取決於網路環境。
+
+`GET /api/<shaderId>/share-links`（舊單一 Shader 入口為 `/api/share-links`）只回傳 `{origins, lanEnabled, tokenRequired, shaderPath}`，不回傳 token。沿用現有 Host／Origin 及 API 驗證。瀏覽器自己的 Chrome 傳送到裝置功能未整合。
