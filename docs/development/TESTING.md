@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-18 Comment Parameter 原文編輯：既有 Comment nodes 8 組、resize 9 組、Markdown 9 組共 26 組通過，零頁面錯誤。參數頁直接顯示原始 textarea，提交／取消後仍保留輸入欄位，畫布 Markdown 與 Undo 同步；以實際面板分隔線調大／縮回驗證輸入框自動填滿、說明留在底部且未改圖或歷史。長文可在欄位內捲動，唯讀保持可見而不可編輯；深灰類型色與深／淺色截圖已目視。582 雙語引用、JS 語法及 diff 檢查通過，未重跑無關 portable tests。
+
+已更新三份 TD 來源並保存 TOE，30 份來源與 8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留。TOE 752,364 bytes，SHA-256 `d018f7d0c3f751f7d18443c4bef8704fe9fa2e0637e8e864e38d358ac4a37ed8`。未重新整理現有 Editor，私人報告位於 comment-parameter-source。
+
 2026-09-18 Comment Markdown：`test_comment_nodes.cjs` 8 組、`test_comment_resize.cjs` 9 組、`test_comment_markdown.cjs` 8 組通過，零頁面錯誤。涵蓋雙介面的閱讀／編輯、失焦／快捷提交、取消、草稿重繪及改回原值後不誤重開、一次 Undo／Redo、resize 保留草稿、HTML／危險 URL 不可執行、安全連結的隔離 popup、GLSL 原文與語法色、唯讀及雙點觸控。主圖與子圖的 Comment 增刪／文字／尺寸皆不標 Shader 變更，普通節點註記仍保留語意判斷。
 
 隔離 Chromium CDP 實測閱讀長文、textarea 垂直捲動及 GLSL pre 水平捲動，不改圖 pan／scale／Undo；一般畫布拖移與雙指縮放維持正常，visualViewport.scale 保持 1。深／淺色截圖已目視，明亮模式程式區塊正文對比 11.41:1，token 最低 5.07:1。5 項 Comment Python 測試、既有 Editor save status、582 雙語引用及語法／diff 檢查通過；原 GLSL renderer 抽共用 fragment 前後 DOM／原文字串一致。未重跑整套 portable runner，實體 iOS Safari 未測。

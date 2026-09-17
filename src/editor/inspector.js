@@ -595,15 +595,16 @@ function deferCommentNodeEditor(canvas){
 }
 function commentNodeEditor(n,canvas=false){
   const owner=current(),draft=commentNodeDrafts.get(n),hasDraft=!readonly&&draft?.base===nodeComment(n)&&draft.text!==nodeComment(n)&&draft.canvas===canvas;
-  const box=el('div',{class:'comment-node-content'+(canvas?' comment-node-canvas-content':'')}),preview=el('div',{class:'comment-node-preview',tabindex:'0',role:'group','aria-label':t('comment.text')});
+  const box=el('div',{class:'comment-node-content'+(canvas?' comment-node-canvas-content':'')}),preview=canvas?el('div',{class:'comment-node-preview',tabindex:'0',role:'group','aria-label':t('comment.text')}):null;
   const entry=el('textarea',{class:'comment-node-editor'+(canvas?' comment-node-canvas':''),'data-comment-node':n.id,'aria-label':t('comment.text'),placeholder:t('comment.placeholder'),rows:canvas?5:8,maxlength:2000});
   entry.value=hasDraft?draft.text:nodeComment(n);entry.readOnly=readonly;
   let committed=nodeComment(n);
   const renderPreview=()=>{
+    if(!preview)return;
     preview.replaceChildren(committed?commentMarkdown(committed):el('span',{class:'muted'},t('comment.placeholder')));
     if(!readonly)preview.title=t('comment.edit');
   };
-  const read=()=>{renderPreview();entry.hidden=true;preview.hidden=false;};
+  const read=()=>{if(preview){renderPreview();entry.hidden=true;preview.hidden=false;}};
   const edit=()=>{
     if(readonly||editorMutationBlocked()||current()!==owner||!owner.nodes.includes(n)||!box.isConnected)return;
     preview.hidden=true;entry.hidden=false;entry.focus({preventScroll:true});
@@ -631,9 +632,10 @@ function commentNodeEditor(n,canvas=false){
   entry.onclick=entry.ondblclick=e=>e.stopPropagation();
   if(canvas)box.onwheel=e=>e.stopPropagation();
   entry.onkeydown=e=>{
-    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commentNodeDrafts.delete(n);entry.value=nodeComment(n);committed=entry.value;entry.blur();preview.focus({preventScroll:true});}
-    else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();e.stopPropagation();entry.blur();preview.focus({preventScroll:true});}
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commentNodeDrafts.delete(n);entry.value=nodeComment(n);committed=entry.value;entry.blur();preview?.focus({preventScroll:true});}
+    else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();e.stopPropagation();if(canvas){entry.blur();preview.focus({preventScroll:true});}else commit();}
   };
+  if(!canvas){box.append(entry);return box;}
   preview.ondblclick=e=>{e.stopPropagation();if(!e.target.closest('a')){e.preventDefault();edit();}};
   preview.onclick=e=>e.stopPropagation();
   preview.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'&&e.target===preview){e.preventDefault();edit();}};
@@ -1038,7 +1040,7 @@ function nodeColorPicker(n){
 function inspector(){
   if(deferParameterInspector()||deferCommentNodeEditor(false))return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
-  const box=$('#inspector');box.classList.remove('ordinary-parameters');box.replaceChildren();renderHelp();
+  const box=$('#inspector');box.classList.remove('ordinary-parameters','comment-parameters');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   if(n||selectedEdge!==null)selectedInputId=null;
   const inputSource=allInputSources().find(d=>d.id===selectedInputId);
@@ -1063,7 +1065,7 @@ function inspector(){
   box.classList.toggle('ordinary-parameters',ordinary&&inspectorTab==='parameters');
   functionInspector(box,n,d);
   if(inspectorTab==='parameters'){
-    if(d.key==='comment'){const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
+    if(d.key==='comment'){box.classList.add('comment-parameters');const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
     if(d.key==='glsl_code')glslCodeInspector(box,n);
     vectorInspector(box,n,d);
     if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));

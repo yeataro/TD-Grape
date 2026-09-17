@@ -664,7 +664,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-canvas-comment{padding:8px 12px 10px;border-top:1px solid #ffffff12;color:var(--muted);font-size:10px;line-height:1.5}
 .node-canvas-comment>p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 /* Markdown annotations retain the normal card, selection and resize behavior. */
-:where([data-category="annotation"]){--category-bg:color-mix(in srgb,#808080 35%,var(--ui-tone-field));--category-fg:var(--ui-tone-text)}
+:where([data-category="annotation"]){--category-bg:#303034;--category-fg:var(--ui-tone-text)}
 .node[data-category="annotation"]{--node-min-width:260px}
 .node[data-category="annotation"]:not(.collapsed){--node-min-height:130px;--node-max-height:1200px;display:flex;flex-direction:column;height:180px;min-height:var(--node-min-height);max-height:var(--node-max-height)}
 .node[data-category="annotation"]>.node-title{flex-shrink:0}
@@ -678,7 +678,13 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .comment-node-preview:focus-visible{outline:1px solid var(--purple);outline-offset:-1px}
 .comment-node-canvas-content{width:calc(100% - 20px);margin:10px;flex:1 1 0;display:flex}
 .comment-node-canvas-content>.comment-node-preview,.comment-node-canvas-content>.comment-node-editor{flex:1 1 0;min-height:0;max-height:none}
-.comment-node-parameter{margin:10px 0}.comment-node-parameter small{display:block;margin-top:7px;line-height:1.5}
+#parameterbody:not([hidden]):has(>#inspector.comment-parameters){display:flex;flex-direction:column}
+#parameterbody>#inspector.comment-parameters{display:flex;flex-direction:column;flex:1 0 auto}
+#inspector.comment-parameters>.node-inspector-title,#inspector.comment-parameters>.parameter-tabs{flex-shrink:0}
+.comment-node-parameter{display:flex;flex-direction:column;flex:1 0 auto;margin:0 0 10px}
+.comment-node-parameter>.comment-node-content{display:flex;flex-direction:column;flex:1 0 120px}
+.comment-node-parameter .comment-node-editor{flex:1 1 0;min-height:120px}
+.comment-node-parameter small{display:block;flex-shrink:0;margin-top:7px;line-height:1.5}
 .comment-markdown{min-width:0}.comment-markdown>:first-child{margin-top:0}.comment-markdown>:last-child{margin-bottom:0}
 .comment-markdown p{margin:0 0 .75em;line-height:1.5}
 .comment-markdown :is(h1,h2,h3,h4,h5,h6){margin:1em 0 .5em;font-weight:600;line-height:1.3;color:inherit}

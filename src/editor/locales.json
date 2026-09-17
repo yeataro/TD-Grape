@@ -2934,8 +2934,8 @@
       "en": "Write a comment…"
     },
     "comment.hint": {
-      "zh-Hant": "雙擊內文編輯；支援 Markdown 與 glsl 程式區塊。移開焦點或 Ctrl／Cmd＋Enter 套用；Esc 取消。不參與 Shader 計算。",
-      "en": "Double-click to edit Markdown, including glsl code blocks. Leave the field or press Ctrl/Cmd+Enter to apply; Esc cancels. Excluded from Shader calculations."
+      "zh-Hant": "畫布以 Markdown 顯示，glsl 程式區塊會高亮。移開焦點或 Ctrl／Cmd＋Enter 套用；Esc 取消。註解不參與 Shader 計算。",
+      "en": "The canvas renders Markdown and highlights glsl code blocks. Leave the field or press Ctrl/Cmd+Enter to apply; Esc cancels. Comments do not affect Shader calculations."
     },
     "comment.edit": {
       "zh-Hant": "雙擊／點兩下編輯；鍵盤可按 Enter",

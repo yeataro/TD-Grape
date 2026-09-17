@@ -16,7 +16,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.locator('#createsearch').fill('註解');
     assert.equal(await page.locator('[data-create-entry="comment"]').count(),1);
     await page.locator('[data-create-entry="comment"]').click();await settle();
-    const id=await page.evaluate(()=>selected),node=()=>page.locator(`[data-node="${id}"]`),body=()=>node().locator('[data-comment-node]'),parameter=()=>page.locator('#inspector [data-comment-node]'),preview=()=>node().locator('.comment-node-preview'),parameterPreview=()=>page.locator('#inspector .comment-node-preview');
+    const id=await page.evaluate(()=>selected),node=()=>page.locator(`[data-node="${id}"]`),body=()=>node().locator('[data-comment-node]'),parameter=()=>page.locator('#inspector [data-comment-node]'),preview=()=>node().locator('.comment-node-preview');
     assert.equal(await node().getAttribute('data-category'),'annotation');assert.equal(await node().locator('.port').count(),0);
     assert.equal(await body().count(),1);assert.equal(await parameter().count(),1);assert.equal(await page.evaluate(()=>past.length),1);
     checks.push('Comment is searchable by its translated alias, created as a neutral card with no ports, and editable on both surfaces');
@@ -33,9 +33,9 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.equal(await parameter().inputValue(),text);await body().press('Escape');assert.equal(await body().inputValue(),text);assert.equal(await parameter().inputValue(),text);
     checks.push('A canvas draft keeps focus through a full redraw and does not leak into the other editor when cancelled');
 
-    await parameterPreview().dblclick();await parameter().fill('Draft survives a redraw');await page.evaluate(()=>inspector());assert.equal(await parameter().inputValue(),'Draft survives a redraw');
+    await parameter().fill('Draft survives a redraw');await page.evaluate(()=>inspector());assert.equal(await parameter().inputValue(),'Draft survives a redraw');
     await parameter().press('Escape');assert.equal(await parameter().inputValue(),text);
-    await parameterPreview().dblclick();await parameter().fill('Parameter update');await parameter().press('Control+Enter');assert.equal(await body().inputValue(),'Parameter update');
+    await parameter().fill('Parameter update');await parameter().press('Control+Enter');assert.equal(await body().inputValue(),'Parameter update');assert.equal(await parameter().isVisible(),true);
     checks.push('Parameter drafts survive rebuilding the inspector; Escape discards only the draft, and committing updates the canvas');
 
     const before=await page.evaluate(id=>({...current().nodes.find(n=>n.id===id).ui}),id),start=await at(`[data-node="${id}"] .node-title`);
