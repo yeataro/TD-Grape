@@ -265,6 +265,10 @@
       "zh-Hant": "輸出型別",
       "en": "Output type"
     },
+    "node.resize": {
+      "zh-Hant": "調整節點寬度",
+      "en": "Resize node width"
+    },
     "node.declaration": {
       "zh-Hant": "宣告",
       "en": "Declaration"

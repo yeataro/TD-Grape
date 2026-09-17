@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-17 節點寬度追加（0.8.84）：標題型別快捷改為透明無框；右下角可水平調寬，以各類原先寬度為最小值。寬度隨圖保存，拖曳放開只記一筆 Undo，屬圖面修改而不重編 Shader；置中及錯誤定位使用實際節點尺寸。11 組隔離瀏覽器檢查與 TOP／MAT 原生保存驗證通過，25 份內嵌來源一致，正式 TOE 已同步保存，兩份使用者 Shader 保留。改型別自動拆除失效線仍待決議，未混入此次修改。
+
 2026-09-17 節點工作流程（0.8.84）：Vector 2／3／4 改為手填值、無輸入、單一完整輸出；Replace 負責完整基底與分量覆寫，Combine／Split 保持各自用途。Vector／Color RGBA 的數值可緊湊同列或展開具名分量；標題提供與 Parameter 共用的主要型別快捷。來源節點以宣告名稱為主標題，普通節點支援自訂名稱切換與畫布內改名，合法唯一名稱用於可讀 GLSL。Inputs 區分 New 與新增引用，加入 Graph Constants／Spec Constants 與 TD Built In 入口。導航併入工具列，縮放／置中移至畫布角落；浮動工具列為預設關閉的程式 flag，頂欄開關移到 Layout 左方。完整決議與延後事項見 [本輪清單](../discussions/NODE_WORKFLOW_ROUND.md)。
 
 Spec Constants 支援 int／uint／bool／float、穩定 constant ID 與共同 Undo／Redo，透過 TD 原生 Constants 頁供值。TD 2025.32820 GPU 實測有原生整數傳輸限制：負 int 不可正確覆寫；MAT 的整數須能以 float32 精確表示。編輯與回放預檢會拒絕不安全數值；直接從 TD 改入異常值會顯示來源提示。一般 int／uint 運算與整數向量仍未全面開放，詳見 [型別契約](../architecture/TYPE_CONTRACT.md)。

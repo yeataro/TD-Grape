@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-17 節點寬度追加（0.8.84）：`tests/browser/test_node_width.cjs` 11 組通過、無頁面錯誤。包含各類 minimum、50% 畫布縮放、即時連線端點、pointer capture、一次布局 Undo／Redo、最小寬度無效操作、Escape／blur／cancel／失去 capture、唯讀、Chromium 真實 touch event、未提交數值保留、置中及透明無框型別選單；截圖已目視。此觸控檢查不取代 iPad／Safari 實機驗證。
+
+`tests/unit/test_editor_save_status.js` 驗證 stage／Subgraph 的寬度僅顯示圖待儲存；488 個雙語語系鍵通過。原生 `tests/td/test_editor_save_status.py` 在 TOP／MAT 確認寬度 460 隨 graph 保存且 `shaderUpdated` 為 false、不呼叫 configure、不改 GLSL；真正語意修改仍更新。25 份內嵌來源及已服務資產一致，兩份 Master 已是目前版本，兩份使用者 Shader 保留。正式 TOE 已保存為 686,756 bytes，排除私人開發橋接。
+
+重現：`node tests/browser/test_node_width.cjs src/editor <current-editor-state-json> <report-directory>`；原生保存檢查透過 `submit_job.py` 執行。
+
 2026-09-17 節點工作流程（0.8.84）：完整可攜檢查通過，包括 256 項 Python 核心／來源／歷史測試、487 個雙語語系鍵、browser metadata、品牌資產、14 項 Editor Launch，以及 JavaScript 編輯／匯入模型與 26 項 Remote Panel 檢查。舊 UI fixture 已配合本輪共用來源與節點介面修訂。新增名稱檢查包含 GLSL 保留字／重複名稱拒絕、重複 Subgraph 展開與多輸出符號分配；Vector／Replace 檢查保留既有基本節點產碼指紋。
 
 隔離 Chromium 的 `test_node_round.cjs` 已通過 Vector 2／3／4 直接新增、手填／展開、Split 快捷、Replace 排版、自訂名稱只改顯示、原地改名與 IME／取消／重複、複製唯一名称、標題快捷、Graph／Spec 來源及 TD Built In 等 15 組基本檢查；無頁面錯誤。`test_editor_chrome.cjs` 10 組通過。另驗證合併工具列的 1600／900／750／390px 組內不拆及無頁面溢出，以及淺色浮動工具列的透明背景與空白穿透；畫布命令仍可操作。實體 iPad／Safari 尚未回驗。

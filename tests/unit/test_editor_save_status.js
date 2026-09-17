@@ -46,6 +46,8 @@ check('graph.savePending','graph.saveFailedfixture failure');assert.equal(dirty,
 setup();graph.functions[0].graph.nodes[0].ui.y=48;mark();check('graph.savePending');
 setup();graph.stages.pixel.nodes[0].ui.componentsExpanded=true;mark();check('graph.savePending');
 setup();graph.functions[0].graph.nodes[0].ui.componentsExpanded=false;mark();check('graph.savePending');
+setup();graph.stages.pixel.nodes[0].ui.width=420;mark();check('graph.savePending');
+setup();graph.functions[0].graph.nodes[0].ui.width=360;mark();check('graph.savePending');
 setup();graph.stages.pixel.nodes[0].ui.label='GLSL comment';mark();check('graph.pending');
 setup();graph.stages.pixel.nodes[0].ui.typeMode='locked';mark();check('graph.pending');
 setup();graph.catalogSnapshot={serverMetadata:true};move();check('graph.savePending');

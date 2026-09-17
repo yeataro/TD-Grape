@@ -1,4 +1,4 @@
-"""Position and component visibility saves must not replace the native Shader."""
+"""Position, width and component visibility saves must not replace the native Shader."""
 import copy,json
 r=op('/TD_Grape/runtime').module;c=r.core()
 def snapshot():
@@ -36,11 +36,17 @@ try:
                 stored=json.loads(shader.op('graph').text)
                 assert next(n for n in stored['stages']['pixel']['nodes'] if n['id']=='compactVector')['ui']['componentsExpanded'] is expanded
                 assert next(n for n in saved['state']['graph']['stages']['pixel']['nodes'] if n['id']=='compactVector')['ui']['componentsExpanded'] is expanded
+            vector['ui']['width']=460
+            saved=r.deploy(graph,saved['state']['revision'])
+            assert saved['shaderUpdated'] is False and not calls,calls
+            assert all(shader.op(k).text==v for k,v in texts.items())
+            stored=json.loads(shader.op('graph').text)
+            assert next(n for n in stored['stages']['pixel']['nodes'] if n['id']=='compactVector')['ui']['width']==460
             graph['stages']['pixel']['nodes'][0]['ui']['label']='Native save status check'
             applied=r.deploy(graph,saved['state']['revision'])
             assert applied['shaderUpdated'] is True and len(calls)==2,calls
             checks.append({'kind':kind,'positionSaveConfiguredShader':False,'componentVisibilityConfiguredShader':False,
-                           'componentVisibilityPersisted':[True,False],'shaderEditConfiguredShader':True})
+                           'componentVisibilityPersisted':[True,False],'widthPersistedWithoutShaderUpdate':460,'shaderEditConfiguredShader':True})
             r.configure=configure
 finally:
     r.configure=configure

@@ -3,7 +3,7 @@
 const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, rgbaComponentTint: true });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
-let graphTrash=null,nodeDragGesture=null,suppressWireClick=false;
+let graphTrash=null,nodeDragGesture=null,nodeResizeGesture=null,suppressWireClick=false;
 function isBlankWireDrop(x,y){
   const hit=document.elementFromPoint(x,y);
   return !!hit?.closest('#canvas')&&!hit.closest('.node,#wires path,.graph-navigation');
@@ -686,10 +686,66 @@ function nodeCanvasComment(n){
   note.ondblclick=e=>e.stopPropagation();
   return note;
 }
+// Width is a layout override in graph units, not a Shader parameter. Preview
+// only the DOM until release so cancellation never creates a history entry.
+function nodeMinimumWidth(card){
+  const cached=Number(card.dataset.nodeMinWidth);if(cached>0)return cached;
+  const style=getComputedStyle(card),minimum=parseFloat(style.getPropertyValue('--node-min-width'))||parseFloat(style.minWidth)||parseFloat(style.width)||card.offsetWidth;
+  card.dataset.nodeMinWidth=String(minimum);return minimum;
+}
+function applyNodeWidth(card,node){
+  const minimum=nodeMinimumWidth(card),width=node.ui?.width;
+  card.style.width=Number.isFinite(width)?Math.max(minimum,width)+'px':'';
+}
+function dragNodeWidth(event,node,card,handle){
+  if(event.button!==0||readonly||editorMutationBlocked())return;
+  event.preventDefault();event.stopPropagation();nodeResizeGesture?.cancel();nodeDragGesture?.cancel();touchGraphGesture?.cancel();clearWireGesture();closeCreator();
+  const owner=graph,data=current(),originScale=scale,startX=event.clientX,minimum=nodeMinimumWidth(card),initialWidth=card.getBoundingClientRect().width/originScale,oldStyle=card.style.width;
+  let nextWidth=initialWidth,moved=false,closed=false;
+  const restore=()=>{card.style.width=oldStyle;};
+  const finish=()=>{
+    if(closed)return;closed=true;nodeResizeGesture=null;card.classList.remove('resizing');
+    handle.onpointermove=handle.onpointerup=handle.onpointercancel=handle.onlostpointercapture=null;
+    window.removeEventListener('blur',cancel);window.removeEventListener('resize',cancel);window.removeEventListener('wheel',cancel,true);
+    document.removeEventListener('keydown',key,true);document.removeEventListener('pointerdown',otherPointer,true);document.removeEventListener('visibilitychange',hidden);
+    if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);
+  };
+  const cancel=()=>{if(closed)return;restore();finish();if(graph)wires();};
+  const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cancel();}};
+  const otherPointer=e=>{if(e.pointerId!==event.pointerId)cancel();};
+  const hidden=()=>{if(document.hidden)cancel();};
+  const move=e=>{
+    if(closed||e.pointerId!==event.pointerId)return;e.preventDefault();e.stopPropagation();
+    if(scale!==originScale||graph!==owner||current()!==data){cancel();return;}
+    if(!moved&&Math.abs(e.clientX-startX)<3)return;
+    nextWidth=Math.max(minimum,Math.round(initialWidth+(e.clientX-startX)/originScale));moved=true;
+    card.style.width=nextWidth+'px';wires();
+  };
+  handle.onpointermove=move;
+  handle.onpointerup=e=>{
+    if(e.pointerId!==event.pointerId||closed)return;move(e);if(closed)return;
+    restore();finish();
+    if(!editorMutationBlocked()&&graph===owner&&current()===data&&data.nodes.includes(node)&&moved&&Math.abs(nextWidth-initialWidth)>.5){
+      change(()=>{node.ui.width=nextWidth;},{localize:false});
+      // A focused numeric draft can intentionally defer card replacement.
+      if(card.isConnected)applyNodeWidth(card,node);
+    }
+    wires();
+  };
+  handle.onpointercancel=handle.onlostpointercapture=e=>{if(e.pointerId===event.pointerId)cancel();};
+  nodeResizeGesture={cancel};card.classList.add('resizing');handle.setPointerCapture(event.pointerId);
+  window.addEventListener('blur',cancel);window.addEventListener('resize',cancel);window.addEventListener('wheel',cancel,{capture:true,passive:true});
+  document.addEventListener('keydown',key,true);document.addEventListener('pointerdown',otherPointer,true);document.addEventListener('visibilitychange',hidden);
+}
+function appendNodeResizeHandle(card,node){
+  applyNodeWidth(card,node);if(readonly)return;
+  const handle=el('button',{type:'button',class:'node-resize-handle','aria-label':t('node.resize'),title:t('node.resize'),'data-node-resize':node.id});
+  handle.onpointerdown=e=>dragNodeWidth(e,node,card,handle);handle.onclick=handle.ondblclick=e=>e.stopPropagation();card.append(handle);
+}
 function renderCards(){
   document.documentElement.classList.toggle('rgba-component-tint',EDITOR_DEV_SETTINGS.rgbaComponentTint);
   if(typeof deferInlineValueRender==='function'&&deferInlineValueRender())return;
-  touchGraphGesture?.cancel();nodeDragGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
+  touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
   if(selected&&!current().nodes.some(n=>n.id===selected))selected=null;
   for(const n of current().nodes){
@@ -740,7 +796,7 @@ function renderCards(){
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
     if(nodeComment(n))card.append(nodeCanvasComment(n));
     card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};
-    card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);
+    card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);appendNodeResizeHandle(card,n);
   }
 }
 /* Node Browser: one definition index, multiple views, global search. */

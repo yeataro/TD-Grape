@@ -124,7 +124,7 @@ function locateCompileIssue(issue){
   stage=issue.stage;graphTrail=[...location.trail];selected=location.node.id;selection=new Set([selected]);selectedEdge=null;
   cancelConnection();closeCreator();document.querySelectorAll('.stage').forEach(button=>button.classList.toggle('active',button.dataset.stage===stage));
   $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();
-  const rect=$('#canvas').getBoundingClientRect();scale=Math.max(.7,Math.min(1,scale));pan={x:rect.width/2-(location.node.ui?.x||0)*scale-100,y:rect.height/2-(location.node.ui?.y||0)*scale-65};transform();
+  const rect=$('#canvas').getBoundingClientRect(),bounds=nodeLayoutBounds(location.node);scale=Math.max(.7,Math.min(1,scale));pan={x:rect.width/2-(bounds.x+bounds.width/2)*scale,y:rect.height/2-(bounds.y+bounds.height/2)*scale};transform();
   if(location.node.definitionUuid==='sgrape.builtin.glsl_code'&&Number.isInteger(issue.codeLine)&&issue.codeLine>0){
     inspectorTab='parameters';inspector();workspaceLayout.reveal('parameters');
     const body=$('[data-code-body]');if(body){const lines=body.value.split('\n'),index=Math.min(issue.codeLine-1,lines.length-1),start=lines.slice(0,index).reduce((n,line)=>n+line.length+1,0);body.focus();body.setSelectionRange(start,start+lines[index].length);body.scrollTop=index*parseFloat(getComputedStyle(body).lineHeight);}
@@ -158,7 +158,7 @@ function graphContent(document){
   // Coordinates and component expansion are presentation-only. Labels and type settings may
   // affect generated GLSL, so keep them when choosing the progress message.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
-    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.componentsExpanded;if(!Object.keys(node.ui).length)delete node.ui;}
+    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.componentsExpanded;if(!Object.keys(node.ui).length)delete node.ui;}
   }
   return JSON.stringify(content);
 }
@@ -527,7 +527,11 @@ async function preview(force=false){
   }finally{previewPending--;showPreviewBusy();}
 }
 
-function fit(){if(!graph)return;const ns=current().nodes;if(!ns.length)return;const minX=Math.min(...ns.map(n=>n.ui?.x||0)),minY=Math.min(...ns.map(n=>n.ui?.y||0)),maxX=Math.max(...ns.map(n=>(n.ui?.x||0)+190)),maxY=Math.max(...ns.map(n=>(n.ui?.y||0)+180));scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();}
+function nodeLayoutBounds(n){
+  const card=document.querySelector(`#cards [data-node="${CSS.escape(n.id)}"]`);
+  return {x:n.ui?.x||0,y:n.ui?.y||0,width:card?.offsetWidth||(Number.isFinite(n.ui?.width)&&n.ui.width>0?n.ui.width:190),height:card?.offsetHeight||180};
+}
+function fit(){if(!graph)return;const ns=current().nodes;if(!ns.length)return;const bounds=ns.map(nodeLayoutBounds),minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();}
 async function load(){
   const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
   try{
