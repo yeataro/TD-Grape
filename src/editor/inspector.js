@@ -1471,20 +1471,20 @@ function installCanvasItemDrag(button,label,dropItem,clickItem){
     button.addEventListener('pointermove',move);button.addEventListener('pointerup',finish);button.addEventListener('pointercancel',cancel);button.addEventListener('lostpointercapture',cancel);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',second,true);window.addEventListener('blur',cancel);
   };
 }
-function tdBuiltInEntries(){
-  return catalog.filter(d=>['uv','position'].includes(d.key)&&d.stages.includes(stage));
+function tdBuiltInEntries(query=''){
+  return catalog.filter(d=>['uv','position'].includes(d.key)&&d.stages.includes(stage)&&normalizeSearch(d.label+' '+d.key+' '+builtInSourceLabel(d)).includes(query));
 }
 function addBuiltInReference(d,x=null,y=null){
   const rect=$('#canvas').getBoundingClientRect(),point=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!point)return;
   change(()=>{selectedInputId=null;selectNode(instantiate(d,point.x,point.y));});
 }
 function appendBuiltInInputs(box,query){
-  const entries=tdBuiltInEntries().filter(d=>normalizeSearch(d.label+' '+d.key+' '+(d.key==='uv'?'vUV.st':'P')).includes(query)),kind='tdBuiltin';
+  const entries=tdBuiltInEntries(query),kind='tdBuiltin';
   if(query&&!entries.length)return;
   const section=el('section',{class:'input-group','data-input-group':kind}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind}),toggle=el('button',{class:'input-group-toggle','aria-controls':list.id});
   list.hidden=!query&&inputCollapsedGroups.has(kind);toggle.setAttribute('aria-expanded',String(!list.hidden));toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},t('inputs.tdBuiltIn')));
   toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!query)setInputGroupCollapsed(kind,list.hidden);};head.append(toggle);section.append(head,list);
-  for(const d of entries){const row=el('div',{class:'input-source-row','data-category':nodeCategory(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.key});button.append(el('span',{},d.label),el('small',{},d.key==='uv'?'vUV.st':'P'));installCanvasItemDrag(button,()=>d.label,(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));row.append(button);list.append(row);}box.append(section);
+  for(const d of entries){const row=el('div',{class:'input-source-row','data-category':nodeCategory(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.key});button.append(el('span',{},d.label),el('small',{},builtInSourceLabel(d)));installCanvasItemDrag(button,()=>d.label,(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));row.append(button);list.append(row);}box.append(section);
 }
 function renderNativeSources(){
   const box=$('#nativeuniforms');if(!box||!graph)return;
@@ -1510,7 +1510,7 @@ function renderNativeSources(){
       }
     }
     appendBuiltInInputs(box,query);
-    if(query&&!decls.length&&!tdBuiltInEntries().some(d=>normalizeSearch(d.label+' '+d.key).includes(query)))box.append(el('p',{class:'muted'},t('create.empty')));
+    if(query&&!decls.length&&!tdBuiltInEntries(query).length)box.append(el('p',{class:'muted'},t('create.empty')));
   }
   // Native row availability can arrive after an apply without changing graph revision.
   const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;

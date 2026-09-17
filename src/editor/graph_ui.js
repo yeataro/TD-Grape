@@ -142,11 +142,13 @@ function nodeCategory(d){
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
   if(['float','vec2','vec3','vec4','color'].includes(d.key))return 'constant';
-  if(d.key==='uniform')return 'uniform';if(d.key==='sampler')return 'sampler';if(d.key==='uv')return 'builtin';
+  if(d.key==='uniform')return 'uniform';if(d.key==='sampler')return 'sampler';
+  if(['uv','position'].includes(d.key))return 'attribute';
   if(['texture','texture_sample'].includes(d.key))return 'math';
-  if(['position','deform','to_clip'].includes(d.key))return 'builtin';
+  if(['deform','to_clip'].includes(d.key))return 'builtin';
   if(d.key.endsWith('_out')||d.key==='function_output')return 'output';return 'math';
 }
+function builtInSourceLabel(d){return d.key==='uv'?(editorTarget==='top'?'vUV.st':'UV 0'):d.key==='position'?'P':'';}
 let typeContract=null;
 // GLSL Code interfaces keep connection IDs separate from editable GLSL names.
 const CustomGLSL=(()=>{
@@ -800,7 +802,7 @@ function renderCards(){
     else {
       const subtitles=[];
       if(customNodeNamesEnabled()&&n.name)subtitles.push(d?.key==='vector'?'Vector':d?.label||'');
-      if(d?.key==='uv')subtitles.push('vUV.st');
+      if(d?.key==='uv')subtitles.push(builtInSourceLabel(d));
       if(subtitles.length){const subtitle=subtitles.join(' · ');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     }
     if(quick){if(meta.childNodes.length)meta.append(el('small',{class:'node-meta-separator','aria-hidden':'true'},'·'));meta.append(quick);}

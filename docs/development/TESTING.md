@@ -1,5 +1,15 @@
 # 測試
 
+2026-09-17 Attribute 與節點標題（0.8.84）：`test_node_round.cjs` 17 組及 `test_node_rename_geometry.cjs` 7 組通過，零頁面錯誤。後者涵蓋 Split RGBA／Vector、預設／手動寬度、50%／100%／150% 縮放、Enter／blur／Escape／IME、重名與空值提示、單步 Undo，確認標題維持 41px 且接孔位置不變；Parameter 保留原名稱欄尺寸。
+
+隔離 Chromium 另確認 TOP／MAT × 深色／淺色的 Attribute 標題、Parameter 與 Inputs 色彩一致，型別接孔保持原色；MAT Position 同組、Deform 保留原分類。UV 提示依目標顯示 vUV.st／UV 0，搜尋提示文字能取得來源且不顯示錯誤的空結果。改名及配色截圖已目視；實體 iPad／Safari 尚未回驗。
+
+追加副標靠右的 3 組隔離檢查通過：Split／Replace 的 Auto 與指定型別、自訂名稱開關、Uniform 與唯讀標題均貼齊右側且無截字，標題維持 41px，原生選單仍可切換。最後樣式另重跑改名幾何 7 組通過，截圖已目視。
+
+型別快捷使用 `field-sizing: content` 收緊目前選项；不支援該 CSS 的瀏覽器沿用原生較寬選單，仍以 `text-align-last: right` 將目前型別靠右。Chromium 展開選單的 Auto／vec2／vec3／vec4 均完整可讀；尚未將此結果視為 Safari 實機驗證。
+
+TD 更新 3 份 Editor 資產，25 份內嵌來源與服務內容一致，TOP／MAT Master 保持 current。正式 TOE 保存為 690,580 bytes，兩份使用者 Shader 保留，私人助手未寫入；無核心或 catalog 變更。
+
 2026-09-17 名稱、數值拖曳與 Auto（0.8.84）：完整可攜檢查通過（260 項 Python 單元測試、488 個雙語鍵、既有模型／整合與 26 項 Remote Panel 檢查）。瀏覽器 test_node_round 17 組、test_node_width 15 組、test_numeric_scrub 15 組、test_replace_inputs 6 組、test_type_disconnect 4 組及關閉 flag 的 test_type_drafts 15 組通過，零頁面錯誤。Auto model 26 項及 vector_nodes 7 項整合通過。數值驗證含真正 Chromium touch、原 Ladder 各入口、文字選取、縮放、取消、逐步 Undo、整數與外部同步；Replace 驗證保留手填／拆基底恢復、主輸入各維度及手動鎖定。名稱測試確認 Parameter 不受畫布名稱模式影響，來源仍禁止獨立改名。
 
 舊 test_value_ladder／test_ladder_touch 與 test_math_auto_browser 依賴過時的 Uniform Parameter／sidebar 選擇器，未列入本次通過數；所需手勢與型別回歸已由上述現行套件覆盖。實體 iPad／Safari 尚未回驗。
