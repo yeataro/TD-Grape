@@ -665,7 +665,6 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-canvas-comment>p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 /* Markdown annotations retain the normal card, selection and resize behavior. */
 :where([data-category="annotation"]){--category-bg:#303034;--category-fg:var(--ui-tone-text)}
-.node[data-category="annotation"]{--node-min-width:0px}
 .node[data-category="annotation"]:not(.collapsed){--node-min-height:130px;--node-max-height:1200px;display:flex;flex-direction:column;height:180px;min-height:var(--node-min-height);max-height:var(--node-max-height)}
 .node[data-category="annotation"]>.node-title{flex-shrink:0}
 .node[data-category="annotation"]>.ports{display:none}

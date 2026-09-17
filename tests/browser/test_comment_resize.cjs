@@ -40,10 +40,12 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.deepEqual(await size('note'),{width:400,height:256});assert.equal(await page.evaluate(()=>past.length),1);
     checks.push('Combined 125% interface / 50% graph scale converts both pointer deltas into graph units correctly');
 
-    await reset();await page.evaluate(()=>{scale=.4;transform();});await drag(-80,-100);assert.deepEqual(await size('note'),{width:120,height:130});
-    await page.evaluate(()=>{graph=JSON.parse(JSON.stringify(graph));render();scale=1;transform();});await settle();assert.deepEqual(await size('note'),{width:120,height:130});await card('note').screenshot({path:path.join(folder,'comment-narrow.png')});await page.evaluate(()=>{scale=.4;transform();});
+    await reset();await page.evaluate(()=>{scale=.4;transform();});await drag(-80,-100);assert.deepEqual(await size('note'),{width:190,height:130});
+    const atMinimum=await page.evaluate(()=>past.length);await drag(-20,-20);assert.equal(await page.evaluate(()=>past.length),atMinimum,'dragging beyond the shared minimum adds no history');
+    await page.evaluate(()=>{current().nodes[0].ui.width=120;render();});await settle();assert.deepEqual(await size('note'),{width:190,height:130},'saved widths below the ordinary-node minimum are clamped for display');
+    await page.evaluate(()=>{graph=JSON.parse(JSON.stringify(graph));render();scale=1;transform();});await settle();assert.deepEqual(await size('note'),{width:190,height:130});assert.equal(await page.evaluate(()=>current().nodes[0].ui.width),120,'render and reload do not rewrite saved dimensions');assert.equal(await page.evaluate(()=>past.length),atMinimum);await card('note').screenshot({path:path.join(folder,'comment-narrow.png')});await page.evaluate(()=>{scale=.4;transform();});
     await drag(450,450);assert.deepEqual(await size('note'),{width:1200,height:1200});const atMaximum=await page.evaluate(()=>past.length);await drag(30,30);assert.equal(await page.evaluate(()=>past.length),atMaximum);
-    checks.push('Comment resizes below the former 260px width floor and survives JSON reload; height still clamps at 130px and maximum dimensions remain 1200px');
+    checks.push('Comment shares the ordinary 190px width minimum, clamps narrower saved widths on render/reload without rewriting them, and keeps no-op history empty; height remains 130–1200px and maximum width1200px');
 
     for(const reason of ['Escape','blur','pointercancel','lostpointercapture']){
       await reset();const stable=await snapshot(),p=await start();await page.mouse.move(p.x+35,p.y+45);

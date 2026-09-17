@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-18 Comment 共用寬度下限：resize 9 組通過，確認縮小限制為一般節點共用的 190px、繼續向內拖曳不增加歷史、既有 120px 保存值在顯示與 JSON 重載時以 190px 呈現且不重寫資料；窄版截圖已目視。更新並保存 TD，31 份內嵌來源／9 份服務資源一致、兩份使用者 Shader 保留。TOE 763,668 bytes，SHA-256 `d7059557983a054b1b239b4b159402df7abcf8648a815ab29fefb60a2eb96e10`。報告位於 comment-shared-width-round。
+
 2026-09-18 Comment 寬度解除：`test_comment_resize.cjs` 9 組通過，涵蓋縮至 120×130 並經 JSON 重載、縮放座標換算、一次 Undo／Redo、取消／唯讀／觸控及一般節點仍只改寬度；窄版截圖已目視。報告位於 comment-width-round。沒有新增自動折行或固定預設寬度，也未改高度規則。
 
 追加設定及寬度修正後再次刷新並保存 TD：31 份內嵌來源與 9 份服務資源核對一致，兩份使用者 Shader 保留、TOP／MAT Master current；沒有重載現有 Editor。TOE 763,636 bytes，SHA-256 `a880e451074e62d8cdc0801a74db9de78947874ac55bfe462d405866f0ad8ddf`，排除私人助手；原生報告位於 frame-outline-setting 的 refresh／audit／save。
