@@ -1,6 +1,6 @@
 // Development-only experiments. Update embedded sources and reload the Editor after changing.
 // These internal values are not user preferences and are never serialized with a graph or layout.
-const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, rgbaComponentTint: true });
+const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, rgbaComponentTint: true });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,nodeResizeGesture=null,suppressWireClick=false;
@@ -565,7 +565,7 @@ function vectorPortLabel(n,kind,port){
   const d=definition(n),names=vectorNames(n),start='xyzw'.indexOf(port);
   if(['combine','replace'].includes(d?.key)&&kind==='inputs'&&start>=0)return names.slice(start,start+typeComponents(ports(n,kind)[port]));
   if(['vector_split'].includes(d?.key)&&kind==='outputs'&&start>=0)return names[start];
-  if(['vector','replace'].includes(d?.key)&&(port==='value'||port==='out'))return 'Vector '+typeComponents(n.params.type);
+  if(d?.key==='replace'&&(port==='value'||port==='out'))return 'Vector '+typeComponents(n.params.type);
   if(d?.key==='swizzle'&&kind==='outputs'&&port==='out')return [...n.params.mask].map(p=>names['xyzw'.indexOf(p)]).join('');
   return null;
 }
@@ -693,14 +693,30 @@ function nodeMinimumWidth(card){
   const style=getComputedStyle(card),minimum=parseFloat(style.getPropertyValue('--node-min-width'))||parseFloat(style.minWidth)||parseFloat(style.width)||card.offsetWidth;
   card.dataset.nodeMinWidth=String(minimum);return minimum;
 }
+function nodeMaximumWidth(card){return Math.max(nodeMinimumWidth(card),parseFloat(getComputedStyle(card).getPropertyValue('--node-max-width'))||1200);}
+function nodePreferredWidth(card){
+  const cached=Number(card.dataset.nodeDefaultWidth);if(cached>0)return cached;
+  // Measure actual labels and fields without ellipsis; comments can still wrap.
+  const probe=card.cloneNode(true);probe.removeAttribute('data-node');probe.classList.add('node-size-probe');
+  probe.querySelectorAll('.node-canvas-comment,.node-resize-handle').forEach(e=>e.remove());
+  card.parentNode.append(probe);
+  const context=document.createElement('canvas').getContext('2d');
+  for(const input of probe.querySelectorAll('input:not([type=color])')){
+    const style=getComputedStyle(input);context.font=style.font;
+    const padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight)+parseFloat(style.borderLeftWidth)+parseFloat(style.borderRightWidth);
+    input.style.width=Math.ceil(Math.max(42,context.measureText(input.value||'0').width+padding+8))+'px';
+  }
+  const width=Math.max(nodeMinimumWidth(card),Math.min(nodeMaximumWidth(card),Math.ceil(probe.offsetWidth)+2));probe.remove();
+  card.dataset.nodeDefaultWidth=String(width);return width;
+}
 function applyNodeWidth(card,node){
-  const minimum=nodeMinimumWidth(card),width=node.ui?.width;
-  card.style.width=Number.isFinite(width)?Math.max(minimum,width)+'px':'';
+  const width=Number.isFinite(node.ui?.width)?node.ui.width:nodePreferredWidth(card);
+  card.style.width=Math.max(nodeMinimumWidth(card),Math.min(nodeMaximumWidth(card),width))+'px';
 }
 function dragNodeWidth(event,node,card,handle){
   if(event.button!==0||readonly||editorMutationBlocked())return;
   event.preventDefault();event.stopPropagation();nodeResizeGesture?.cancel();nodeDragGesture?.cancel();touchGraphGesture?.cancel();clearWireGesture();closeCreator();
-  const owner=graph,data=current(),originScale=scale,startX=event.clientX,minimum=nodeMinimumWidth(card),initialWidth=card.getBoundingClientRect().width/originScale,oldStyle=card.style.width;
+  const owner=graph,data=current(),originScale=scale,startX=event.clientX,minimum=nodeMinimumWidth(card),maximum=nodeMaximumWidth(card),initialWidth=card.getBoundingClientRect().width/originScale,oldStyle=card.style.width;
   let nextWidth=initialWidth,moved=false,closed=false;
   const restore=()=>{card.style.width=oldStyle;};
   const finish=()=>{
@@ -718,7 +734,7 @@ function dragNodeWidth(event,node,card,handle){
     if(closed||e.pointerId!==event.pointerId)return;e.preventDefault();e.stopPropagation();
     if(scale!==originScale||graph!==owner||current()!==data){cancel();return;}
     if(!moved&&Math.abs(e.clientX-startX)<3)return;
-    nextWidth=Math.max(minimum,Math.round(initialWidth+(e.clientX-startX)/originScale));moved=true;
+    nextWidth=Math.max(minimum,Math.min(maximum,Math.round(initialWidth+(e.clientX-startX)/originScale)));moved=true;
     card.style.width=nextWidth+'px';wires();
   };
   handle.onpointermove=move;
@@ -744,6 +760,8 @@ function appendNodeResizeHandle(card,node){
 }
 function renderCards(){
   document.documentElement.classList.toggle('rgba-component-tint',EDITOR_DEV_SETTINGS.rgbaComponentTint);
+  document.documentElement.classList.toggle('node-resize-hints',EDITOR_DEV_SETTINGS.nodeResizeHint);
+  document.documentElement.style.setProperty('--node-drag-cursor',EDITOR_DEV_SETTINGS.nodeDragCursor);
   if(typeof deferInlineValueRender==='function'&&deferInlineValueRender())return;
   touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
@@ -760,9 +778,15 @@ function renderCards(){
     if(customNodeNamesEnabled()&&!isSourceReferenceNode(n)){name.onpointerdown=e=>e.stopPropagation();name.ondblclick=e=>{e.preventDefault();e.stopPropagation();beginNodeRename(n,name);};}
     const meta=el('div',{class:'node-title-meta'}),source=nodeSourceDeclaration(n),quick=source?null:nodePrimarySelector(n,d);
     if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=label+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
-    else if(customNodeNamesEnabled()&&n.name){const prototype=d?.key==='vector'?'Vector':d?.label||'';meta.append(el('small',{class:'node-prototype',title:prototype},prototype));}
-    if(quick)meta.append(quick);if(meta.childNodes.length)title.append(meta);
-    if(d?.key==='uv')text.append(el('small',{class:'node-source-subtitle'},'vUV.st'));
+    else {
+      const subtitles=[];
+      if(customNodeNamesEnabled()&&n.name)subtitles.push(d?.key==='vector'?'Vector':d?.label||'');
+      if(quick)subtitles.push(nodeCategory(d)==='constant'?'Constant':browserSourceLabel(browserMeta(d).source));
+      if(d?.key==='uv')subtitles.push('vUV.st');
+      if(subtitles.length){const subtitle=subtitles.join(' · ');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
+    }
+    if(quick){meta.append(el('small',{class:'node-meta-separator','aria-hidden':'true'},'·'),quick);}
+    if(meta.childNodes.length)title.append(meta);
     let suppressCardClick=false;
     card.dataset.dragSurface=EDITOR_DEV_SETTINGS.nodeBodyDrag?'body':'header';
     card.onpointerdown=e=>{if(isNodeDragSurface(e.target,card))dragNodeTitle(e,n,card,cards,moved=>{suppressCardClick=moved;});};

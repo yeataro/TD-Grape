@@ -293,7 +293,7 @@ function portLabel(n,kind,id){
   if(['sgrape.builtin.vector','sgrape.builtin.replace','sgrape.builtin.combine','sgrape.builtin.vector_split','sgrape.builtin.swizzle'].includes(n.definitionUuid)){const label=vectorPortLabel(n,kind,id);if(label)return label;}
   if(n.definitionUuid==='sgrape.builtin.glsl_code')return n.params[kind]?.find(p=>p.id===id)?.name||id;
   if(kind==='outputs'&&definition(n)?.key==='top_input'){if(id==='out')return topInputsView().find(s=>s.id===n.params.inputId)?.name||id;return id==='size'?t('inputs.size'):t('inputs.pixelSize');}
-  if(kind==='outputs'&&id==='out'&&['uniform','sampler','constant','spec_constant'].includes(definition(n)?.key))return graph.declarations.find(d=>d.id===n.params?.declarationId)?.name||id;
+  if(kind==='outputs'&&id==='out'&&['sampler','constant','spec_constant'].includes(definition(n)?.key))return graph.declarations.find(d=>d.id===n.params?.declarationId)?.name||id;
   if(n.definitionUuid==='sgrape.builtin.pixel_out'&&editorTarget==='mat'&&kind==='inputs'){const index=typeContract?.pixelBufferOutputs?.ports.indexOf(id);if(index>=0){const label=n.ui?.bufferLabels?.[id];return typeof label==='string'&&label.length<=80&&!/[\x00-\x1f\x7f]/.test(label)&&label.trim()?label:'Buffer '+index;}}
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(n.definitionUuid))return id;
   const f=n.definitionUuid===FunctionModel.CALL?FunctionModel.find(graph,n.params.functionId):currentFunction();

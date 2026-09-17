@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-17 節點外觀與預設寬度追加（0.8.84）：更新後的 `test_node_width.cjs` 15 組通過。檢查 Vector／Color／Split／Add／Texture Coordinates／Power 的完整標題、接孔名稱與數值；桌面與 coarse pointer 標題同高、UV 副標同行；手動縮到低於內容預設值、1200px 上限與無效拖曳不增 Undo，以及既有取消／唯讀／觸控／保存語意。JavaScript 語法與保存提示單元檢查通過。私人外觀探針另確認 Uniform／Vector 顯示 `out`、一般箭頭不改文字與調寬游標、15px／24px 把手的圓弧同圓心，以及來源 flag 關閉提示後仍能調寬；截圖已目視。此為 Chromium 驗證，不代替實體 Safari／iPad。
+
+25 份內嵌來源與服務資產一致，Master 保持目前版本；正式 TOE 已保存為 687,708 bytes，兩份使用者 Shader 保留並排除私人橋接。
+
 2026-09-17 節點寬度追加（0.8.84）：`tests/browser/test_node_width.cjs` 11 組通過、無頁面錯誤。包含各類 minimum、50% 畫布縮放、即時連線端點、pointer capture、一次布局 Undo／Redo、最小寬度無效操作、Escape／blur／cancel／失去 capture、唯讀、Chromium 真實 touch event、未提交數值保留、置中及透明無框型別選單；截圖已目視。此觸控檢查不取代 iPad／Safari 實機驗證。
 
 `tests/unit/test_editor_save_status.js` 驗證 stage／Subgraph 的寬度僅顯示圖待儲存；488 個雙語語系鍵通過。原生 `tests/td/test_editor_save_status.py` 在 TOP／MAT 確認寬度 460 隨 graph 保存且 `shaderUpdated` 為 false、不呼叫 configure、不改 GLSL；真正語意修改仍更新。25 份內嵌來源及已服務資產一致，兩份 Master 已是目前版本，兩份使用者 Shader 保留。正式 TOE 已保存為 686,756 bytes，排除私人開發橋接。
