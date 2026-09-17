@@ -245,8 +245,8 @@
       "en": "Help"
     },
     "wire.release": {
-      "zh-Hant": "放開即可連接（已接線的 Input 將替換來源）",
-      "en": "Release to connect (replaces an existing input connection)"
+      "zh-Hant": "放開即可連接（取代受影響的原輸入連線）",
+      "en": "Release to connect (replaces affected input connections)"
     },
     "wire.cycle": {
       "zh-Hant": "此連線會形成循環，無法連接。",
@@ -2677,8 +2677,8 @@
       "en": "Choose vec2, vec3 or vec4."
     },
     "vector.overlap": {
-      "zh-Hant": "分量範圍不足或已有接線；請選擇空的分量位置，或先調整輸出型別。",
-      "en": "The component range is occupied or too small. Choose free components or change the output type first."
+      "zh-Hant": "分量範圍或接孔配置無效；請確認起始接孔與輸出型別。",
+      "en": "The component range or port layout is invalid. Check the starting input and output type."
     },
     "vector.invalidMask": {
       "zh-Hant": "請選擇輸入中存在的 1–4 個分量。",
@@ -2741,8 +2741,8 @@
       "en": "A fixed vec4 value edited as X/Y/Z/W. It has the same type as Color RGBA without a color picker. Changing the value requires recompilation."
     },
     "help.combine": {
-      "zh-Hant": "依固定分量位置組成 `vec2`、`vec3` 或 `vec4`。將 vec2 接到 X 會佔用 XY；接到 Y 會佔用 YZ。其他已接分量不會被覆蓋，也不會自動截斷向量。\n\n未接線的分量可在 Parameter 輸入；取消連線會恢復原本的值。輸出型別由你決定。所有輸入都是合法常數時，結果也保留常數性；Settings 可要求必須是常數。",
-      "en": "Build vec2, vec3 or vec4 at fixed component positions. A vec2 connected to X occupies XY; connected to Y it occupies YZ. Existing connections are never overwritten and vectors are never silently truncated.\n\nEdit unconnected components in Parameter. Disconnecting restores their values. Choose the output type explicitly. Legal constant inputs preserve constantness; Settings can require it."
+      "zh-Hant": "依固定分量位置組成 `vec2`、`vec3` 或 `vec4`。將 vec2 接到 X 會占用 XY；接到 Y 會占用 YZ。新接線會取代範圍重疊的整條舊線，保留來源節點與其他連線，整次替換可一步 Undo；不自動截斷向量。\n\n未接線的分量可在節點或 Parameter 輸入；移除連線會恢復原本的值。輸出維度由你決定。所有輸入都是合法常數時，結果也保留常數性；Settings 可要求必須是常數。",
+      "en": "Build vec2, vec3 or vec4 at fixed component positions. A vec2 connected to X occupies XY; connected to Y it occupies YZ. A new wire replaces whole overlapping wires, keeping their source nodes and other connections, as one Undo step. Vectors are never silently truncated.\n\nEdit unconnected components on the node or in Parameter. Disconnecting restores their values. Choose the output type explicitly. Legal constant inputs preserve constantness; Settings can require it."
     },
     "help.vector_split": {
       "zh-Hant": "將 vec2／vec3／vec4 拆為各個 float 分量。Auto 跟隨接線的向量型別；Settings 可切換 XYZW、RGBA 或 UV 名稱，資料與端口身分不變。\n\n例如只改 UV 的 V：UV → Split，保留 U，調整 V，再接到 Combine 的 X／Y。若縮小型別會使既有接線失效，修改會被拒絕並保留原圖。",

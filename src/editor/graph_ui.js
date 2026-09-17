@@ -473,7 +473,8 @@ function planWireTypes(from,to,extra=null){
   const target=nodes.find(n=>n.id===to.node),oldPorts=storedTypePorts(graph,data,owner),source=nodes.find(n=>n.id===from.node);
   const sourcePorts=source&&safeConcretePorts(graph,source,owner,source.params.type,overrides.get(source.id));
   let replaced=e=>e.to[0]===to.node&&e.to[1]===to.port;
-  if(autoDefinition(graph,target,owner)?.key==='replace'&&to.port!=='value'){
+  // Explicit component drops replace the whole overlapping wire, for both assemblers.
+  if(['combine','replace'].includes(autoDefinition(graph,target,owner)?.key)&&to.port!=='value'){
     const targetPorts=safeConcretePorts(graph,target,owner,target.params.type,overrides.get(target.id));
     const first='xyzw'.indexOf(to.port),type=sourcePorts?.outputs[from.port];
     if(first<0||!Object.hasOwn(targetPorts.inputs,to.port)||!numericTypes().includes(type)||first+typeComponents(type)>typeComponents(target.params.type))throw Error(t('vector.overlap'));

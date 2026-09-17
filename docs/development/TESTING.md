@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-17 Combine 覆蓋接線（0.8.84）：`test_combine_replacement.cjs` 5 組實際滑鼠檢查通過，涵蓋 XYZ／YZW 替換與未受影響接線、預覽虛線／範圍、Escape 不變、單步 Undo／Redo、反向接線及 Z／W 起點越界拒絕，零頁面錯誤；預覽截圖已目視。更新 `test_vector_nodes.js` 原有 Combine 拒絕重疊的預期，驗證來源節點／fan-out／手填值保留、舊群組整線移除、既有 Redo 不被失敗操作破壞、常數與迴圈回滾、creator 及上游 Auto 邊界。`test_vector_nodes`、`test_unified_vector`、`test_type_contract` 共 26 項通過；JS 產生的圖逐份由 Python 核心編譯。TD 更新 graph_ui／locales，27 份內嵌来源及服務內容一致，Master 保持 current。來源 TOE 保存為 715,356 bytes，兩份使用者 Shader 與既有 session 保留，私人助手排除。
+
 2026-09-17 QR 置中修訂（0.8.84）：更新既有 `test_ui_share.cjs`，9 組通過，零瀏覽器錯誤。QR 按鈕順序、modal 焦點／背景阻擋、Escape／關閉鈕／點背景、原 QR 獨立解碼與複製備援均通過；12 組視窗／縮放／主題置中偏差小於 2px，另驗證 844×390／125% 的 QR 可完整顯示於單一捲動位置，複製與關閉仍可操作。桌面與窄版截圖已目視。TD 更新 3 份資產，27 份內嵌來源、9 份服務資產及 7 項既有 HTTP 讀取檢查通過；session、Shader 資料及原生連線不變。正式 TOE 保存為 715,100 bytes，保留兩份 Shader 並排除私人助手。
 
 2026-09-17 QR 與 H（0.8.84）：`test_qrcode_roundtrip.cjs` 5 組以獨立 jsQR 解碼器確認 135–584 字元、fragment、編碼路徑、IPv6 及旋轉；產品只有本機編碼器，解碼器為測試依賴。`test_ui_share.cjs` 8 組通過實際 SVG 解碼、來源去重與選擇、必要 token 缺失、探索失敗備援、Clipboard／舊 copy／手動選取、鍵盤與唯讀圖，以及 320／390／1600px × 75／125% × 深／淺色共 12 種配置；窄版截圖已目視。`test_editor_chrome.cjs` 16 組含 H 同等 Fit、保持圖與歷史、輸入／選單／修飾鍵／IME／實際拖曳阻擋。`test_share_links.py` 與既有 `test_lan_access.py` 合計 17 項真實 HTTP／契約測試通過。737 個雙語鍵、HTML 翻譯引用及 JavaScript 語法通過，瀏覽器零錯誤。TD 另驗證 27 份來源、9 份服務資產、兩個 Shader context 及 7 項真實 HTTP 邊界；既有 session、Shader DAT 與原生連線保留，Master current。來源 TOE 為 714,860 bytes，排除私人助手。此為 Windows Chromium 與同機 TD 網路驗證，第二台實體裝置和 Safari 尚未實測。

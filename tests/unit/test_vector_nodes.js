@@ -4,7 +4,7 @@ const payload=JSON.parse(fs.readFileSync(0,'utf8')),dir=path.resolve(__dirname,'
 const elements=new Map();
 const element=key=>{if(!elements.has(key))elements.set(key,{value:'all',textContent:'',title:'',hidden:false,disabled:false,focus(){},replaceChildren(){},setAttribute(){},addEventListener(){},classList:{add(){},remove(){},toggle(){}}});return elements.get(key);};
 const context=vm.createContext({assert,payload,console,crypto:globalThis.crypto,
-  location:{pathname:'/',hash:''},history:{replaceState(){}},
+  location:{pathname:'/',hash:''},history:{replaceState(){}},window:{addEventListener(){}},
   document:{querySelector:element,querySelectorAll:()=>[]},
   sessionStorage:{getItem(){return '';},setItem(){}},setTimeout(){return 1;},clearTimeout(){}});
 for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
@@ -21,6 +21,10 @@ const n=id=>current().nodes.find(n=>n.id===id);
 const info=(id,kind,port)=>({node:id,kind,port,type:ports(n(id),kind)[port]});
 function connect(a,b,p,o='out'){return connectPorts(info(a,'outputs',o),info(b,'inputs',p));}
 const identical=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
+function rejectsWire(a,b,p,o='out'){
+  const snapshot=clone({graph,past,future,dirty});
+  assert.equal(connect(a,b,p,o),false);identical({graph,past,future,dirty},snapshot);
+}
 
 // Every scalar/vector partition is chosen from the same core contract, by wires.
 for(const key of ['combine','replace'])for(const layout of typeContract.vectors.layouts.vec4){
@@ -41,11 +45,50 @@ identical(ports(n('join'),'inputs'),{x:'float',y:'float',z:'float',w:'float'});
 identical(n('join').params.components,[.1,.2,.3,.4]);assert.ok(current().edges.some(e=>e.to[1]==='z'));
 undo();identical(graph,before);
 
-// A vec3 cannot swallow an existing Z connection; failed edits keep undo/draft.
+// A direct wider Combine wire replaces all overlapping wires in one undo step.
 assert.equal(change(()=>current().nodes.push(node('vec3','large'))),true);
 before=clone(graph);historySize=past.length;
-assert.equal(connect('large','join','x'),false);identical(graph,before);assert.equal(past.length,historySize);
-assert.equal(change(()=>n('join').params.type='vec2'),false);identical(graph,before);
+assert.equal(connect('large','join','x'),true);assert.equal(past.length,historySize+1);
+identical(n('join').params.groups,{x:'vec3'});identical(current().edges,[edge('large','join','x')]);
+let combined=clone(graph);undo();identical(graph,before);undo(true);identical(graph,combined);
+assert.equal(change(()=>n('join').params.type='vec2'),false);identical(graph,combined);
+
+// XYZ and YZW replacement keep the opposite component, source nodes and fan-outs.
+for(const start of ['x','y']){
+  setup([...Array.from('xyzw',p=>node('float',p)),node('vec3','large'),node('add','math'),node('combine','join',{type:'vec4',components:[.1,.2,.3,.4]}),node('combine','other',{type:'vec4'})]);
+  for(const p of 'xyzw'){assert.equal(connect(p,'join',p),true);assert.equal(connect(p,'other',p),true);}
+  before=clone(graph);historySize=past.length;
+  assert.equal(connect('large','join',start),true);assert.equal(past.length,historySize+1);
+  const remaining=start==='x'?'w':'x',hidden=start==='x'?'y':'z';
+  identical(current().edges.filter(e=>e.to[0]==='join'),[edge(remaining,'join',remaining),edge('large','join',start)]);
+  identical(current().edges.filter(e=>e.to[0]==='other'),Array.from('xyzw',p=>edge(p,'other',p)));
+  identical(n('join').params.groups,{[start]:'vec3'});identical(n('join').params.components,[.1,.2,.3,.4]);
+  identical(current().nodes,before.stages.pixel.nodes.map(item=>item.id==='join'?{...item,params:{...item.params,groups:{[start]:'vec3'}}}:item));
+  combined=clone(graph);undo();identical(graph,before);undo(true);identical(graph,combined);
+  rejectsWire('x','join',hidden); // Covered component is no longer a visible destination.
+  rejectsWire('large','join',start==='x'?'w':'z'); // Overflow cannot discard any wires.
+  assert.equal(connect('join','math','a'),true);
+  rejectsWire('math','join','x'); // A cycle would otherwise displace all four components.
+  assert.equal(connect('join','result','color'),true);graphs.push(clone(graph));
+}
+
+// A partial overlap removes the entire old grouped wire and releases its tail.
+setup([node('float','x'),node('vec2','pair'),node('combine','join',{type:'vec4',components:[1,2,3,4]}),node('combine','other',{type:'vec4'})]);
+assert.equal(connect('x','join','x'),true);assert.equal(connect('pair','join','z'),true);assert.equal(connect('pair','other','x'),true);
+before=clone(graph);historySize=past.length;
+assert.equal(connect('pair','join','y'),true);assert.equal(past.length,historySize+1);
+identical(n('join').params.groups,{y:'vec2'});assert.equal(ports(n('join'),'inputs').w,'float');
+identical(current().edges,[edge('x','join','x'),edge('pair','other','x'),edge('pair','join','y')]);
+identical(n('join').params.components,[1,2,3,4]);assert.ok(n('pair'));
+combined=clone(graph);undo();identical(graph,before);undo(true);identical(graph,combined);
+assert.equal(connect('join','result','color'),true);graphs.push(clone(graph));
+
+// Constant rejection restores even the wires that the candidate would displace.
+setup([...Array.from('xyzw',p=>node('float',p)),node('uniform','runtime',{declarationId:'u'}),node('combine','join',{type:'vec4',requireConstant:true})]);
+graph.declarations=[{id:'u',kind:'uniform',name:'uValue',type:'vec3',value:[.1,.2,.3]}];
+for(const p of 'xyzw')assert.equal(connect(p,'join',p),true);
+assert.equal(change(()=>n('join').params.components[0]=.75),true);undo();assert.equal(future.length,1);
+rejectsWire('runtime','join','x');rejectsWire('runtime','join','y');
 
 // V-only editing works with direct node shortcut and one-step undo for add + wire.
 setup([node('uv','uv')]);addVectorSplit(n('uv'),'out');
@@ -113,10 +156,11 @@ assert.equal(connect('large','value','w'),false);identical(graph,before);assert.
 assert.equal(connect('pair','value','value'),false);identical(graph,before);
 assert.equal(connect('value','math','a'),true);before=clone(graph);historySize=past.length;
 assert.equal(connect('math','value','x'),false);identical(graph,before);assert.equal(past.length,historySize);
-setup([node('float','f'),node('vec2','wide'),node('add','math'),node('float','z'),node('replace','value',{type:'vec4'})]);
-assert.equal(connect('f','math','a'),true);assert.equal(connect('math','value','y'),true);assert.equal(connect('z','value','z'),true);
-before=clone(graph);historySize=past.length;
-assert.equal(connect('wide','math','a'),false);identical(graph,before);assert.equal(past.length,historySize); // Unrelated inference cannot evict Z.
+for(const key of ['combine','replace']){
+  setup([node('float','f'),node('vec2','wide'),node('add','math'),node('float','z'),node(key,'value',{type:'vec4'})]);
+  assert.equal(connect('f','math','a'),true);assert.equal(connect('math','value','y'),true);assert.equal(connect('z','value','z'),true);
+  rejectsWire('wide','math','a'); // Unrelated Auto inference cannot evict Z.
+}
 
 // A fully overridden runtime baseline is dormant; the single whole output
 // becomes constant only when every effective component is constant.
@@ -131,12 +175,15 @@ assert.equal(connect('f','value','y'),false); // Y is hidden inside XY.
 before=clone(graph);assert.equal(connect('f','value','x'),false);identical(graph,before); // Would release runtime Y and violate const.
 
 // Context-menu creation and direct drops share the same displacement planner.
-setup([node('float','z'),node('replace','value',{type:'vec4'})]);assert.equal(connect('z','value','z'),true);
-const sourceDefinition=catalog.find(d=>d.key==='vec2'),sourceVariant=typeVariants(sourceDefinition)[0],destination=info('value','inputs','y');
-before=clone(graph);creatorTypePlan(sourceDefinition,sourceVariant,'out',destination,false);identical(graph,before);
-creatorState={x:80,y:80,wire:destination};creatorMatches=[{d:sourceDefinition,type:sourceVariant.type,port:'out',variant:sourceVariant}];historySize=past.length;
-chooseCreator(0);assert.equal(past.length,historySize+1);identical(n('value').params.groups,{y:'vec2'});assert.ok(n('z'));
-assert.ok(!current().edges.some(e=>e.from[0]==='z'));undo();identical(graph,before);
+for(const key of ['combine','replace']){
+  setup([node('float','z'),node(key,'value',{type:'vec4'})]);assert.equal(connect('z','value','z'),true);
+  const sourceDefinition=catalog.find(d=>d.key==='vec2'),sourceVariant=typeVariants(sourceDefinition)[0],destination=info('value','inputs','y');
+  before=clone(graph);creatorTypePlan(sourceDefinition,sourceVariant,'out',destination,false);identical(graph,before);
+  creatorState={x:80,y:80,wire:destination};creatorMatches=[{d:sourceDefinition,type:sourceVariant.type,port:'out',variant:sourceVariant}];historySize=past.length;
+  chooseCreator(0);assert.equal(past.length,historySize+1);identical(n('value').params.groups,{y:'vec2'});assert.ok(n('z'));
+  assert.ok(!current().edges.some(e=>e.from[0]==='z'));combined=clone(graph);undo();identical(graph,before);undo(true);identical(graph,combined);
+  assert.equal(connect('value','result','color'),true);graphs.push(clone(graph));
+}
 const vector=catalog.find(d=>d.key==='vector');identical(vectorPorts(vector.key,{type:'vec2',components:[0,0,0,0]}).inputs,{});
 
 // Existing Split shortcuts are reused without converting old nodes or defaults.
