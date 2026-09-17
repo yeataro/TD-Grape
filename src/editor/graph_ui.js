@@ -63,7 +63,7 @@ function commitGraphTrash(target){
     selection=new Set([...selection].filter(id=>!ids.has(id)));selected=selection.has(selected)?selected:[...selection].at(-1)||null;selectedEdge=null;
   });
 }
-function showTrashWireProxy(x,y){if(!EDITOR_DEV_SETTINGS.canvasTrash)return;const proxy=$('#graphtrashproxy');proxy.hidden=false;proxy.style.left=x+16+'px';proxy.style.top=y-32+'px';}
+function showTrashWireProxy(x,y){if(!EDITOR_DEV_SETTINGS.canvasTrash)return;const proxy=$('#graphtrashproxy');proxy.hidden=false;proxy.style.left=x/uiScaleFactor()+16+'px';proxy.style.top=y/uiScaleFactor()-32+'px';}
 function dragExistingWire(path,event,index){
   if(!EDITOR_DEV_SETTINGS.canvasTrash||event.button!==0||event.pointerType==='touch'||readonly)return;
   event.stopPropagation();clearWireGesture();nodeDragGesture?.cancel();suppressWireClick=false;
@@ -100,7 +100,7 @@ function dragNodeTitle(event,node,title,cards,onFinish){
   if(!selection.has(node.id))selectNode(node);else {selected=node.id;selectedEdge=null;}
   document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();
   if(readonly)return;
-  const data=current(),owner=graph,originScale=scale,sx=event.clientX,sy=event.clientY;
+  const data=current(),owner=graph,originScale=scale*uiScaleFactor(),sx=event.clientX,sy=event.clientY;
   const positions=data.nodes.filter(n=>selection.has(n.id)).map(n=>({node:n,card:cards.querySelector(`[data-node="${CSS.escape(n.id)}"]`),x:n.ui.x,y:n.ui.y,nextX:n.ui.x,nextY:n.ui.y}));
   const anchor=positions.find(item=>item.node===node);let moved=false;
   const restore=()=>{for(const p of positions){p.card.style.left=p.x+'px';p.card.style.top=p.y+'px';}};
@@ -737,7 +737,7 @@ function applyNodeWidth(card,node){
 function dragNodeWidth(event,node,card,handle){
   if(event.button!==0||readonly||editorMutationBlocked())return;
   event.preventDefault();event.stopPropagation();nodeResizeGesture?.cancel();nodeDragGesture?.cancel();touchGraphGesture?.cancel();clearWireGesture();closeCreator();
-  const owner=graph,data=current(),originScale=scale,startX=event.clientX,minimum=nodeMinimumWidth(card),maximum=nodeMaximumWidth(card),initialWidth=card.getBoundingClientRect().width/originScale,oldStyle=card.style.width;
+  const owner=graph,data=current(),originScale=scale*uiScaleFactor(),startX=event.clientX,minimum=nodeMinimumWidth(card),maximum=nodeMaximumWidth(card),initialWidth=card.getBoundingClientRect().width/originScale,oldStyle=card.style.width;
   let nextWidth=initialWidth,moved=false,closed=false;
   const restore=()=>{card.style.width=oldStyle;};
   const finish=()=>{
@@ -753,7 +753,7 @@ function dragNodeWidth(event,node,card,handle){
   const hidden=()=>{if(document.hidden)cancel();};
   const move=e=>{
     if(closed||e.pointerId!==event.pointerId)return;e.preventDefault();e.stopPropagation();
-    if(scale!==originScale||graph!==owner||current()!==data){cancel();return;}
+    if(scale*uiScaleFactor()!==originScale||graph!==owner||current()!==data){cancel();return;}
     if(!moved&&Math.abs(e.clientX-startX)<3)return;
     nextWidth=Math.max(minimum,Math.min(maximum,Math.round(initialWidth+(e.clientX-startX)/originScale)));moved=true;
     card.style.width=nextWidth+'px';wires();
@@ -1010,9 +1010,9 @@ function renderLibrary(){
 }
 function closeCreator(){creatorState=null;$('#creator').hidden=true;}
 function openCreator(clientX,clientY,wire=null){
-  if(readonly||!graph)return;cancelConnection();const rect=$('#canvas').getBoundingClientRect();
-  creatorState={path:[],anchorX:clientX,anchorY:clientY,x:(clientX-rect.left-pan.x)/scale,y:(clientY-rect.top-pan.y)/scale,wire};creatorIndex=0;
-  const box=$('#creator');box.hidden=false;box.style.left=Math.max(8,Math.min(clientX,innerWidth-324))+'px';box.style.top=Math.max(8,Math.min(clientY,innerHeight-380))+'px';
+  if(readonly||!graph)return;cancelConnection();const position=graphPoint(clientX,clientY);if(!position)return;
+  creatorState={path:[],anchorX:clientX,anchorY:clientY,...position,wire};creatorIndex=0;
+  const box=$('#creator'),uiScale=uiScaleFactor();box.hidden=false;box.style.left=Math.max(8,Math.min(clientX/uiScale,innerWidth/uiScale-324))+'px';box.style.top=Math.max(8,Math.min(clientY/uiScale,innerHeight/uiScale-380))+'px';
   $('#createsearch').value='';$('#createsource').value='all';creatorCategory='all';$('#createtype').value='all';$('#createcontext').textContent=wire?`${wire.type} · ${wire.kind==='outputs'?'→':'←'}`:t('create.title');renderCreator();$('#createsearch').focus();
 }
 function renderCreator(){
@@ -1047,7 +1047,7 @@ function renderCreator(){
   if(!creatorMatches.length)list.append(el('p',{class:'muted'},t('create.empty')));
   for(const button of document.querySelectorAll('[data-create-category]')){const active=button.dataset.createCategory===(query.trim()?'all':category);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;}
   renderCreatorDetails();
-  const box=$('#creator');box.style.left=Math.max(8,Math.min(creatorState.anchorX,innerWidth-box.offsetWidth-8))+'px';box.style.top=Math.max(8,Math.min(creatorState.anchorY,innerHeight-box.offsetHeight-8))+'px';
+  const box=$('#creator'),uiScale=uiScaleFactor();box.style.left=Math.max(8,Math.min(creatorState.anchorX/uiScale,innerWidth/uiScale-box.offsetWidth-8))+'px';box.style.top=Math.max(8,Math.min(creatorState.anchorY/uiScale,innerHeight/uiScale-box.offsetHeight-8))+'px';
 
 }
 function creatorInputSeed(wire){
@@ -1088,9 +1088,9 @@ function installGraphInteractions(){
     canvas.focus();closeCreator();const boxSelect=(boxSelectMode&&e.button===0)||e.shiftKey||e.button===2,sx=e.clientX,sy=e.clientY,ox=pan.x,oy=pan.y,previous=e.ctrlKey||e.metaKey?new Set(selection):new Set();let moved=false;
     if(![0,1,2].includes(e.button))return;canvas.setPointerCapture(e.pointerId);
     canvas.onpointermove=ev=>{moved=Math.hypot(ev.clientX-sx,ev.clientY-sy)>3;
-      if(boxSelect){const rect=canvas.getBoundingClientRect(),box=$('#marquee');box.hidden=false;box.style.left=Math.min(sx,ev.clientX)-rect.left+'px';box.style.top=Math.min(sy,ev.clientY)-rect.top+'px';box.style.width=Math.abs(ev.clientX-sx)+'px';box.style.height=Math.abs(ev.clientY-sy)+'px';
+      if(boxSelect){const rect=canvas.getBoundingClientRect(),box=$('#marquee'),uiScale=uiScaleFactor();box.hidden=false;box.style.left=(Math.min(sx,ev.clientX)-rect.left)/uiScale+'px';box.style.top=(Math.min(sy,ev.clientY)-rect.top)/uiScale+'px';box.style.width=Math.abs(ev.clientX-sx)/uiScale+'px';box.style.height=Math.abs(ev.clientY-sy)/uiScale+'px';
         selection=new Set(previous);document.querySelectorAll('.node').forEach(card=>{const r=card.getBoundingClientRect();if(r.right>=Math.min(sx,ev.clientX)&&r.left<=Math.max(sx,ev.clientX)&&r.bottom>=Math.min(sy,ev.clientY)&&r.top<=Math.max(sy,ev.clientY))selection.add(card.dataset.node);card.classList.toggle('selected',selection.has(card.dataset.node));});
-      }else {pan={x:ox+ev.clientX-sx,y:oy+ev.clientY-sy};transform();}
+      }else {pan={x:ox+(ev.clientX-sx)/uiScaleFactor(),y:oy+(ev.clientY-sy)/uiScaleFactor()};transform();}
     };
     canvas.onpointerup=ev=>{canvas.onpointermove=null;canvas.onpointerup=null;$('#marquee').hidden=true;
       if(boxSelect&&moved){selected=[...selection].at(-1)||null;selectedEdge=null;suppressContext=e.button===2;render();}
@@ -1138,7 +1138,7 @@ function installTouchNavigation(canvas){
   const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values');
   const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
   const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
-  const rebase=()=>{gesture.origin={...sample(),pan:{...pan},scale};};
+  const rebase=()=>{const p=sample();gesture.origin={...p,point:graphPoint(p.x,p.y),pan:{...pan},scale};};
   const stopHold=()=>{clearTimeout(holdTimer);holdTimer=0;};
   const clearPreview=g=>{
     clearGraphTrash();clearVectorWirePreview();
@@ -1173,14 +1173,14 @@ function installTouchNavigation(canvas){
     frame=0;const g=gesture;if(!g||!points.size)return;
     const p=sample(),dx=p.x-g.start.x,dy=p.y-g.start.y;
     if(points.size>=2){
-      const o=g.origin,r=canvas.getBoundingClientRect();
-      scale=Math.max(.25,Math.min(1.7,o.scale*p.distance/Math.max(1,o.distance)));
-      pan={x:p.x-r.left-(o.x-r.left-o.pan.x)*scale/o.scale,y:p.y-r.top-(o.y-r.top-o.pan.y)*scale/o.scale};transform();return;
+      const o=g.origin,r=canvas.getBoundingClientRect(),uiScale=uiScaleFactor();
+      scale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,o.scale*p.distance/Math.max(1,o.distance)));
+      pan={x:(p.x-r.left)/uiScale-o.point.x*scale,y:(p.y-r.top)/uiScale-o.point.y*scale};transform();return;
     }
     if(g.mode==='pan'){
-      const o=g.origin;pan={x:o.pan.x+p.x-o.x,y:o.pan.y+p.y-o.y};transform();
+      const o=g.origin;pan={x:o.pan.x+(p.x-o.x)/uiScaleFactor(),y:o.pan.y+(p.y-o.y)/uiScaleFactor()};transform();
     }else if(g.mode==='node'){
-      const anchor=g.positions.find(item=>item.node===g.node),mx=snap(anchor.x+dx/g.origin.scale)-anchor.x,my=snap(anchor.y+dy/g.origin.scale)-anchor.y;
+      const anchor=g.positions.find(item=>item.node===g.node),screenScale=g.origin.scale*uiScaleFactor(),mx=snap(anchor.x+dx/screenScale)-anchor.x,my=snap(anchor.y+dy/screenScale)-anchor.y;
       for(const item of g.positions){item.nextX=item.x+mx;item.nextY=item.y+my;item.card.style.left=item.nextX+'px';item.card.style.top=item.nextY+'px';}updateGraphTrash(p.x,p.y);wires();
     }else if(g.mode==='edge'){showTrashWireProxy(p.x,p.y);updateGraphTrash(p.x,p.y);
     }else if(g.mode==='wire'){
@@ -1188,8 +1188,8 @@ function installTouchNavigation(canvas){
       const r=target?.getBoundingClientRect(),q=graphPoint(r?r.left+r.width/2:p.x,r?r.top+r.height/2:p.y);
       if(q){wireDrag={...g.port,q,ready:!!target};wires();const range=previewVectorWire(g.port,target);$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(g.port)&&isBlankWireDrop(p.x,p.y)?'trash.releaseWire':'wire.touchConnect')+(range?' · '+range:'');}
     }else if(g.mode==='box'){
-      const r=canvas.getBoundingClientRect(),box=$('#marquee');box.hidden=false;
-      box.style.left=Math.min(g.start.x,p.x)-r.left+'px';box.style.top=Math.min(g.start.y,p.y)-r.top+'px';box.style.width=Math.abs(dx)+'px';box.style.height=Math.abs(dy)+'px';
+      const r=canvas.getBoundingClientRect(),box=$('#marquee'),uiScale=uiScaleFactor();box.hidden=false;
+      box.style.left=(Math.min(g.start.x,p.x)-r.left)/uiScale+'px';box.style.top=(Math.min(g.start.y,p.y)-r.top)/uiScale+'px';box.style.width=Math.abs(dx)/uiScale+'px';box.style.height=Math.abs(dy)/uiScale+'px';
       selection=new Set();document.querySelectorAll('.node').forEach(card=>{const r=card.getBoundingClientRect();if(r.right>=Math.min(g.start.x,p.x)&&r.left<=Math.max(g.start.x,p.x)&&r.bottom>=Math.min(g.start.y,p.y)&&r.top<=Math.max(g.start.y,p.y))selection.add(card.dataset.node);});syncSelection();
     }
   };
@@ -1316,13 +1316,14 @@ function pasteGraphFromToolbar(){
   const rect=$('#canvas').getBoundingClientRect(),offset=(pasteCount%5)*24;
   // Disregard the last pointer position; it can be offscreen after touch panning.
   // Bound the stagger so repeated button presses stay in the visible area.
-  return pasteGraphFromClipboard({x:(rect.width/3-pan.x)/scale+offset-pasteCount*24,y:(rect.height/3-pan.y)/scale+offset-pasteCount*24});
+  const position=graphPoint(rect.left+rect.width/3,rect.top+rect.height/3);if(!position)return false;
+  return pasteGraphFromClipboard({x:position.x+offset-pasteCount*24,y:position.y+offset-pasteCount*24});
 }
 
 function pasteGraphSelection(text,position=null){
   if(readonly||!graph)return false;
   let payload;try{payload=GraphClipboard.decode(text);}catch(e){status(t(e.clipboardCode||'clipboard.invalid'),true);return false;}
-  const canvas=$('#canvas').getBoundingClientRect(),anchor=position||pastePoint||{x:(canvas.width/2-pan.x)/scale,y:(canvas.height/3-pan.y)/scale};
+  const canvas=$('#canvas').getBoundingClientRect(),anchor=position||pastePoint||graphPoint(canvas.left+canvas.width/2,canvas.top+canvas.height/3);if(!anchor)return false;
   const changed=change(()=>{let ids;try{ids=GraphClipboard.paste(graph,current(),payload,{source:clipboardSource,stage,target:editorTarget,catalog,types:interfaceTypes(),anchor:{x:snap(anchor.x+pasteCount*24),y:snap(anchor.y+pasteCount*24)}});}catch(e){if(e.clipboardCode)e.message=t(e.clipboardCode);throw e;}assignCreatedNodeNames(current().nodes.filter(n=>ids.includes(n.id)));selection=new Set(ids);selected=ids.at(-1);selectedEdge=null;});
   if(changed){pasteCount++;status(t('clipboard.pasted'));$('#canvas').focus({preventScroll:true});}return changed;
 }
@@ -1330,7 +1331,7 @@ function closeGraphMenu(){graphEditMenu?.remove();graphEditMenu=null;}
 function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   closeGraphMenu();closeCreator();cancelConnection();
   if(nodeId&&!selection.has(nodeId)){selectNode(current().nodes.find(n=>n.id===nodeId));render();}
-  const rect=$('#canvas').getBoundingClientRect(),position={x:(x-rect.left-pan.x)/scale,y:(y-rect.top-pan.y)/scale};
+  const position=graphPoint(x,y);
   const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
   const rows=[
     ['add',t('action.nodes'),'Tab',!readonly,()=>openCreator(x,y)],
@@ -1343,7 +1344,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   ];
   for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled)continue;const b=el('button',{role:'menuitem','data-edit':key},label);b.append(el('small',{},shortcut));b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
   menu.onkeydown=e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeGraphMenu();$('#canvas').focus();}};
-  document.body.append(menu);graphEditMenu=menu;menu.style.left=Math.max(4,Math.min(x,innerWidth-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y,innerHeight-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
+  document.body.append(menu);graphEditMenu=menu;const uiScale=uiScaleFactor();menu.style.left=Math.max(4,Math.min(x/uiScale,innerWidth/uiScale-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/uiScale,innerHeight/uiScale-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
 }
 function installGraphClipboard(){
   $('#graphcopy').onclick=copyGraphToClipboard;
@@ -1351,7 +1352,7 @@ function installGraphClipboard(){
   $('#graphgroup').onclick=()=>{if(!$('#graphgroup').disabled)groupSelection();};
   $('#graphdelete').onclick=()=>{if(!$('#graphdelete').disabled){$('#canvas').focus({preventScroll:true});remove();}};
   clipboardSource=shaderId||crypto.randomUUID();
-  $('#canvas').addEventListener('pointermove',e=>{const r=e.currentTarget.getBoundingClientRect();pastePoint={x:(e.clientX-r.left-pan.x)/scale,y:(e.clientY-r.top-pan.y)/scale};});
+  $('#canvas').addEventListener('pointermove',e=>{pastePoint=graphPoint(e.clientX,e.clientY);});
   document.addEventListener('copy',e=>{if(!graph||editableText(e.target)||window.getSelection()?.toString())return;try{const text=copyGraphSelection();if(!text||!e.clipboardData)return;e.clipboardData.setData('text/plain',text);e.preventDefault();status(t('clipboard.copied'));}catch(error){status(t(error.clipboardCode||'clipboard.invalid'),true);}});
   document.addEventListener('paste',e=>{if(!graph||readonly||editableText(e.target))return;const text=e.clipboardData?.getData('text/plain');if(!text)return;e.preventDefault();pasteGraphSelection(text);});
   document.addEventListener('pointerdown',e=>{if(graphEditMenu&&!e.target.closest('#grapheditmenu'))closeGraphMenu();});

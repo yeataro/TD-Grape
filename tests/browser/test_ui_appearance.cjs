@@ -26,6 +26,7 @@ async function run() {
   const openPanel = async () => {if (!await page.locator('#appearancepanel').isVisible()) await page.locator('#uitheme').click(); await settle();};
   const closePanel = async () => {if (await page.locator('#appearancepanel').isVisible()) {await page.locator('#uitone').focus(); await page.keyboard.press('Escape'); await settle();}};
   const chooseTheme = async theme => {await openPanel(); await page.locator(`[data-ui-theme-choice="${theme}"]`).click(); await settle();};
+  const chooseSize = async size => {if(!await page.locator('#sizepanel').isVisible())await page.locator('#uisize').click();await page.locator(`[data-ui-size-choice="${size}"]`).click();await settle();};
   const snapshot = () => page.evaluate(() => ({
     graph:JSON.stringify(graph), past:JSON.stringify(past), future:JSON.stringify(future),
     pan:{...pan}, scale, dirty, stage, selected,
@@ -35,7 +36,11 @@ async function run() {
   const inspectControls = async (size, theme, tone, language) => {
     assert.deepEqual(await appearance(), {size, theme, tone});
     const sizeButton=page.locator('#uisize'), themeButton=page.locator('#uitheme');
-    assert.equal(await sizeButton.getAttribute('aria-pressed'), String(size==='comfortable'));
+    assert.equal(await sizeButton.getAttribute('aria-pressed'),null);
+    assert.equal(await sizeButton.getAttribute('aria-haspopup'),'dialog');
+    assert.equal(await sizeButton.getAttribute('aria-controls'),'sizepanel');
+    assert.equal(await sizeButton.getAttribute('aria-expanded'),String(await page.locator('#sizepanel').isVisible()));
+    for(const choice of ['standard','comfortable'])assert.equal(await page.locator(`[data-ui-size-choice="${choice}"]`).getAttribute('aria-pressed'),String(size===choice));
     for (const [button, word] of [
       [sizeButton, language==='en' ? (size==='comfortable'?'Comfortable':'Standard') : (size==='comfortable'?'舒適':'標準')],
       [themeButton, language==='en' ? (theme==='light'?'Light':'Dark') : (theme==='light'?'淺色':'深色')]
@@ -79,9 +84,9 @@ async function run() {
     const initial=await snapshot();
     await openPanel();
     assert.deepEqual(await appearance(),{size:'standard',theme:'dark',tone:0},'opening the panel must not change theme');
-    await page.locator('#uisize').click(); await chooseTheme('light');
+    await chooseSize('comfortable'); await chooseTheme('light');
     await inspectControls('comfortable','light',0,'en');
-    await closePanel(); await page.locator('#uisize').click(); await chooseTheme('dark');
+    await closePanel(); await chooseSize('standard'); await chooseTheme('dark');
     await inspectControls('standard','dark',0,'en');
     assert.deepEqual(await snapshot(),initial,'appearance controls must leave graph/history/view/preview state intact');
     checks.push('new browsers start Standard/Dark at neutral tone; the opener only opens a popover and preset/size controls cover all four appearances without changing graph state');
@@ -93,9 +98,12 @@ async function run() {
     }
     await closePanel();
     await page.locator('#uisize').focus(); await page.keyboard.press('Enter');
-    assert.equal(await page.locator('#uisize').getAttribute('aria-pressed'),'true');
-    await page.keyboard.press('Space');
-    assert.equal(await page.locator('#uisize').getAttribute('aria-pressed'),'false');
+    await settle();assert.equal(await page.locator('#uisize').getAttribute('aria-expanded'),'true');
+    await page.locator('[data-ui-size-choice="comfortable"]').focus();await page.keyboard.press('Space');
+    assert.equal((await appearance()).size,'comfortable');
+    await page.locator('[data-ui-size-choice="standard"]').focus();await page.keyboard.press('Space');
+    assert.equal((await appearance()).size,'standard');
+    await page.keyboard.press('Escape');await settle();
     await page.locator('#uitheme').focus(); await page.keyboard.press('Enter'); await settle();
     assert.equal(await page.locator('#uitheme').getAttribute('aria-expanded'),'true');
     await page.locator('[data-ui-theme-choice="light"]').focus();await page.keyboard.press('Space');
@@ -131,7 +139,7 @@ async function run() {
 
     await setAppearance('standard','dark',-23);
     await setAppearance('comfortable','light',37);
-    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1'))),{size:'comfortable',theme:'light',tones:{dark:-23,light:37}});
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1'))),{size:'comfortable',theme:'light',tones:{dark:-23,light:37},scales:{standard:100,comfortable:100}});
     await page.reload();await page.waitForSelector('.node');await settle();await inspectControls('comfortable','light',37,'en');
     await chooseTheme('dark');await inspectControls('comfortable','dark',-23,'en');await chooseTheme('light');
     for (const [stored,expected,otherTone=0] of [
@@ -202,7 +210,7 @@ async function run() {
     checks.push('normal-motion UI tone responds immediately, rapid preset switches reach the remembered palette and no canvas/node animations or graph edits are introduced');
 
     await page.evaluate(()=>{readonly=true;});const readOnlyScene=await snapshot();
-    await page.locator('#uisize').click();await chooseTheme('dark');await page.locator('#uitoneplus').click();await settle();
+    await chooseSize('comfortable');await chooseTheme('dark');await page.locator('#uitoneplus').click();await settle();
     await inspectControls('comfortable','dark',10,'en');assert.deepEqual(await snapshot(),readOnlyScene);
     await page.evaluate(()=>{readonly=false;});
     const storageResult=await page.evaluate(()=>{

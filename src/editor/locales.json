@@ -174,8 +174,8 @@
       "en": "PNG could not be created. Retry or use JSON export."
     },
     "ladder.hint": {
-      "en": "Click to edit; drag horizontally to adjust (Shift: fine, Ctrl: coarse). Middle mouse, Alt+right mouse or long-press opens Value Ladder. Release applies; Esc cancels.",
-      "zh-Hant": "點放編輯；左右拖曳調值（Shift 細調、Ctrl 粗調）。中鍵、Alt＋右鍵或長按開啟 Value Ladder。放開套用，Esc 取消。"
+      "en": "Click to edit; drag horizontally to adjust (Shift: fine, Ctrl: coarse). Middle mouse, Alt+right mouse or long-press opens Value Ladder. Release applies; Esc cancels. Float drag steps: 0.01; Shift 0.001, Ctrl 0.1, Shift+Ctrl 0.0001.",
+      "zh-Hant": "點放編輯；左右拖曳調值（Shift 細調、Ctrl 粗調）。中鍵、Alt＋右鍵或長按開啟 Value Ladder。放開套用，Esc 取消。 浮點拖曳：0.01；Shift 0.001、Ctrl 0.1、Shift＋Ctrl 0.0001。"
     },
     "ladder.release": {
       "zh-Hant": "放開套用 · Esc 取消",
@@ -2741,17 +2741,25 @@
     "view.exitFullscreen": {"zh-Hant": "離開瀏覽器全螢幕", "en": "Exit browser fullscreen"},
     "view.fullscreenUnavailable": {"zh-Hant": "此瀏覽器不支援全螢幕", "en": "Fullscreen is unavailable in this browser"},
     "view.fullscreenFailed": {"zh-Hant": "無法切換瀏覽器全螢幕", "en": "Could not change browser fullscreen"},
+    "appearance.sizePanel": {"zh-Hant": "介面大小調整", "en": "Interface size adjustments"},
+    "appearance.sizePreset": {"zh-Hant": "介面大小基準", "en": "Interface size preset"},
+    "appearance.sizePreset.standard": {"zh-Hant": "標準", "en": "Standard"},
+    "appearance.sizePreset.comfortable": {"zh-Hant": "舒適", "en": "Comfortable"},
+    "appearance.scale": {"zh-Hant": "介面縮放", "en": "Interface scale"},
+    "appearance.scale.decrease": {"zh-Hant": "縮小介面", "en": "Smaller"},
+    "appearance.scale.increase": {"zh-Hant": "放大介面", "en": "Larger"},
+    "appearance.scale.reset": {"zh-Hant": "右鍵或雙擊還原 100%", "en": "Right-click or double-click to reset to 100%"},
     "appearance.controls": {
       "zh-Hant": "介面大小與外觀",
       "en": "Interface size and appearance"
     },
     "appearance.size.standard": {
-      "zh-Hant": "介面大小：標準。切換為舒適",
-      "en": "Interface size: Standard. Switch to Comfortable"
+      "zh-Hant": "介面大小：標準。開啟大小調整",
+      "en": "Interface size: Standard. Open size adjustments"
     },
     "appearance.size.comfortable": {
-      "zh-Hant": "介面大小：舒適。切換為標準",
-      "en": "Interface size: Comfortable. Switch to Standard"
+      "zh-Hant": "介面大小：舒適。開啟大小調整",
+      "en": "Interface size: Comfortable. Open size adjustments"
     },
     "appearance.theme.dark": {
       "zh-Hant": "外觀：深色。開啟明暗調整",
@@ -2800,6 +2808,14 @@
     "appearance.tone.increase": {
       "zh-Hant": "調亮介面",
       "en": "Brighter"
+    },
+    "canvas.zoom": {
+      "zh-Hant": "畫布縮放",
+      "en": "Canvas zoom"
+    },
+    "canvas.zoomPresets": {
+      "zh-Hant": "畫布縮放倍率",
+      "en": "Canvas zoom presets"
     },
     "appearance.tone.reset": {
       "zh-Hant": "右鍵或雙擊還原基準",
