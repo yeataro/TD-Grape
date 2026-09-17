@@ -77,7 +77,7 @@ General node Parameters use shared columns: a fixed 10px triangle slot, a right-
 
 ## Experimental UI preferences
 
-The footer gear precedes QR, size, appearance and fullscreen. It opens a small rounded popover with every current `EDITOR_DEV_DEFAULTS` entry: nine checkboxes and the existing Arrow/Move cursor choice. Labels and hover descriptions are bilingual. The panel shares the appearance popover placement and UI scale, supports keyboard focus/Escape and light dismissal, and scrolls in short viewports. Reset defaults restores all current defaults.
+The footer gear precedes QR, size, appearance and fullscreen. It opens a small rounded popover with every current `EDITOR_DEV_DEFAULTS` entry: nine checkboxes, the Arrow/Move cursor choice and the Professional/Cool style choice. Labels and hover descriptions are bilingual. The panel shares the appearance popover placement and UI scale, supports keyboard focus/Escape and light dismissal, and scrolls in short viewports. Reset defaults restores all current defaults.
 
 | Preference | Default |
 | --- | --- |
@@ -91,5 +91,10 @@ The footer gear precedes QR, size, appearance and fullscreen. It opens a small r
 | RGBA component colors | On |
 | All vector component colors | Off |
 | Disconnect newly incompatible wires | On |
+| Swagger / 耍帥程度 | Professional |
 
 Changes apply immediately and are stored in browser localStorage under `sgrapeExperimentsV1`; malformed or unknown values fall back to the known defaults. Graphs, Layout, Shader data and Undo are not rewritten. Existing numeric/name fields keep their DOM and drafts; active edit gestures are canceled before changing behavior, while an active mouse pan/box selection must finish first. The same toolbar DOM moves reversibly between its fixed and floating positions. Hidden resize/collapse hints do not remove the underlying resize or context-menu actions. All-vector tinting uses component order for XYZ/W, UV and other vector labels, and includes RGBA even if its narrower switch is off. The RGBA switch continues to work independently when all-vector tinting is off. Automatic disconnection affects future type changes only. The enabled trash target sits at lower right above the view controls, with a gap in both desktop and touch layouts.
+
+Experimental controls are chosen case by case from the current discussion. Adding a feature does not itself require a flag; the gear lists those settings that have been deliberately registered.
+
+The Swagger / 耍帥程度 style selector defaults to Professional (the existing appearance). In Dark mode, Cool adds static outer glow to colored wires, node/Parameter category titles and names, selection cues, colored Input rows and their names, the active Pixel/Vertex stage, pressed toolbar controls and the Apply Shader button. Glow alpha is 33%; title/Input halos use a broad 20px blur and names use 12px. Title glow derives its hue from the category background with boosted saturation/lightness (a CSS color-mix fallback is provided). Ordinary gray node bodies retain their original shadow; there is no added inner glow. Small or faintly colored metadata text stays unchanged. The effect is an isolated `data-ui-style="cool"` CSS block using existing color tokens; no new rendering layer, graph fields or animations are introduced. Switching back to Professional removes the overlay. Light mode never applies glow, while retaining the selected style for the next switch to Dark. A third style is left for later discussion.

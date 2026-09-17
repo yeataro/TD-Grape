@@ -26,18 +26,20 @@ const [source,stateFile,folder]=process.argv.slice(2);
   const reload=async()=>{await close();await page.reload();await page.waitForSelector('.node');await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;});await settle();};
   try{
     await setup();const defaults=await page.evaluate(()=>({...EDITOR_DEV_DEFAULTS}));
-    assert.equal(Object.keys(defaults).length,10);assert.deepEqual(await settings(),defaults);
-    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),9);assert.equal(await panel.locator('select').count(),1);
+    assert.equal(Object.keys(defaults).length,11);assert.deepEqual(await settings(),defaults);assert.equal(defaults.uiStyle,'professional');assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
+    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),9);assert.equal(await panel.locator('select').count(),2);
     assert.deepEqual(await control('nodeDragCursor').locator('option').evaluateAll(options=>options.map(o=>o.value)),['default','move']);
+    assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool']);
     assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.equal(await opener.getAttribute('aria-expanded'),'true');
     assert.equal(await control('canvasTrash').evaluate(e=>e===document.activeElement),true);const openedGraph=await snapshot();await page.keyboard.press('Tab');assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Delete');assert.equal(await snapshot(),openedGraph);
-    checks.push('fresh editors expose all nine boolean experiments and the default/move cursor choice, without changing defaults on open');
+    checks.push('fresh editors expose nine boolean experiments, cursor and UI style choices; Professional is the default without changing preferences on open');
     checks.push('mouse opening focuses the first option, Tab stays in the panel and Delete does not delete selected graph nodes');
 
     const unchanged=await snapshot();
     for(const [key,value]of Object.entries(defaults)){
-      if(typeof value==='boolean')await control(key).setChecked(!value);else await control(key).selectOption('move');
-      await settle();assert.equal((await settings())[key],typeof value==='boolean'?!value:'move');
+      const changed=typeof value==='boolean'?!value:key==='uiStyle'?'cool':'move';
+      if(typeof value==='boolean')await control(key).setChecked(changed);else await control(key).selectOption(changed);
+      await settle();assert.equal((await settings())[key],changed);
     }
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),await settings());
     assert.equal(await page.locator('#graphtrash').isVisible(),true);
@@ -48,6 +50,18 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.deepEqual(await page.evaluate(()=>({tint:document.documentElement.classList.contains('rgba-component-tint'),vectorTint:document.documentElement.classList.contains('vector-component-tint'),resize:document.documentElement.classList.contains('node-resize-hints'),cursor:getComputedStyle($('.node-title')).cursor})),{tint:false,vectorTint:true,resize:false,cursor:'move'});
     assert.equal(await snapshot(),unchanged);assert.deepEqual(writes,[]);
     checks.push('every control changes its live behavior and browser preference only; resize handles remain, while graph, invalid wire, history, dirty state and API writes remain untouched');
+
+    await page.evaluate(()=>{window.experimentStyleDOM=[...document.querySelectorAll('#cards .node,#inspector input,.toolbar')];});
+    const styleGeometry=()=>page.locator('#cards .node,#wires path,#inspector input,.toolbar').evaluateAll(elements=>elements.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
+    const geometry=await styleGeometry();
+    for(const uiStyle of ['professional','cool','professional','cool']){
+      await control('uiStyle').selectOption(uiStyle);await settle();
+      assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);
+      assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1')).uiStyle),uiStyle);
+      assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#inspector input,.toolbar')[index]===element)),true);
+      assert.deepEqual(await styleGeometry(),geometry);assert.equal(await snapshot(),unchanged);
+    }
+    checks.push('Professional and Cool apply immediately and persist, while repeated switches reuse node/Parameter/toolbar DOM and preserve node/wire geometry, graph and Undo');
 
     for(const expanded of[false,true])for(const collapsed of[false,true]){
       await set({nodeCollapseExpandedHint:expanded,nodeCollapseCollapsedHint:collapsed});
@@ -67,12 +81,12 @@ const [source,stateFile,folder]=process.argv.slice(2);
 
     await setup();const numeric=page.locator('[data-inline-node="value"]').first();await numeric.fill('');
     await page.evaluate(()=>{window.experimentDraft=document.activeElement;});const numericBefore=await snapshot();
-    await set({floatingToolbar:true,nodeBodyDrag:true,rgbaComponentTint:true,nodeCollapseExpandedHint:false});
+    await set({floatingToolbar:true,nodeBodyDrag:true,rgbaComponentTint:true,nodeCollapseExpandedHint:false,uiStyle:'professional'});
     assert.equal(await page.evaluate(()=>experimentDraft.isConnected&&document.activeElement===experimentDraft),true);assert.equal(await numeric.inputValue(),'');assert.equal(await snapshot(),numericBefore);await numeric.press('Escape');
     await page.locator('#canvas').focus();await settle();
     await page.evaluate(()=>{showCustomNodeNames=true;render();const card=$('[data-node="value"]');beginNodeRename(current().nodes[0],card.querySelector('.node-function-title'));});
     const rename=page.locator('#cards [data-node-name="value"]');await rename.fill('Draft_Name');await page.evaluate(()=>{window.experimentNameDraft=document.activeElement;});const nameBefore=await snapshot();
-    await set({floatingToolbar:false,nodeDragCursor:'default',nodeCollapseExpandedHint:true});
+    await set({floatingToolbar:false,nodeDragCursor:'default',nodeCollapseExpandedHint:true,uiStyle:'cool'});
     assert.equal(await page.evaluate(()=>experimentNameDraft.isConnected&&document.activeElement===experimentNameDraft),true);assert.equal(await rename.inputValue(),'Draft_Name');assert.equal(await snapshot(),nameBefore);await rename.press('Escape');
     checks.push('live preferences preserve focused incomplete numeric drafts and canvas rename DOM/text without committing or discarding either draft');
 
@@ -106,15 +120,22 @@ const [source,stateFile,folder]=process.argv.slice(2);
       const labels=await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(e=>({key:e.dataset.experiment,label:e.closest('label').querySelector('span').textContent,title:e.closest('label').title})));
       assert.ok(labels.every(x=>x.label.trim()&&x.title.trim()&&!x.label.startsWith('experiments.')&&!x.title.startsWith('experiments.')));await close();
     }
-    checks.push('English and Traditional Chinese expose translated names, hints, cursor choices and opener labels');
+    checks.push('English and Traditional Chinese expose translated names, hints, cursor/style choices and opener labels');
 
-    await set({canvasTrash:true,floatingToolbar:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false});const saved=await settings();await reload();assert.deepEqual(await settings(),saved);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);
+    await set({canvasTrash:true,floatingToolbar:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'cool'});const saved=await settings();await reload();assert.deepEqual(await settings(),saved);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'cool');assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);
     await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
     await page.evaluate(()=>localStorage.setItem('sgrapeExperimentsV1','{ broken'));await reload();assert.deepEqual(await settings(),defaults);
-    const malformed={canvasTrash:'true',floatingToolbar:1,nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',nodeResizeHint:false,unknown:true};
+    const malformed={canvasTrash:'true',floatingToolbar:1,nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',nodeResizeHint:false,unknown:true};
     assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),JSON.stringify(malformed)),{...defaults,nodeResizeHint:false});
     for(const raw of ['null','[]','true','"text"'])assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),raw),defaults);
     checks.push('preferences survive isolated reload, reset restores and persists defaults, and malformed or unknown storage values are safely ignored');
+
+    const legacy={...saved};delete legacy.uiStyle;
+    await page.evaluate(legacy=>localStorage.setItem('sgrapeExperimentsV1',JSON.stringify(legacy)),legacy);await reload();
+    assert.deepEqual(await settings(),{...legacy,uiStyle:'professional'});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
+    await open();await control('uiStyle').selectOption('cool');await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...legacy,uiStyle:'cool'});
+    await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
+    checks.push('legacy V1 preferences retain existing options and default to Professional; choosing Cool upgrades saved preferences and reset restores Professional');
 
     await setup();assert.equal(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches),true);
     const geometryBefore=await snapshot();

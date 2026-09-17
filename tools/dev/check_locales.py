@@ -31,6 +31,7 @@ refs.discard('experiments.');refs.discard('experiments.cursor.')
 settings=re.search(r'EDITOR_DEV_DEFAULTS = Object.freeze\(\{(.*?)\}\)',(root/'graph_ui.js').read_text(encoding='utf-8')).group(1)
 for key in re.findall(r'(\w+):',settings): refs.update(['experiments.'+key,'experiments.'+key+'.hint'])
 refs.update('experiments.cursor.'+value for value in ('default','move'))
+refs.update('experiments.style.'+value for value in ('professional','cool'))
 for key in refs:
     assert key in data['messages'],key
     for lang in data['languages']: assert data['messages'][key].get(lang),(key,lang)

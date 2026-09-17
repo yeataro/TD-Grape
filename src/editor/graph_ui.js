@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -829,6 +829,7 @@ function appendNodeResizeHandle(card,node){
   handle.onpointerdown=e=>dragNodeWidth(e,node,card,handle);handle.onclick=handle.ondblclick=e=>e.stopPropagation();card.append(handle);
 }
 function applyGraphUISettings(){
+  document.documentElement.dataset.uiStyle=EDITOR_DEV_SETTINGS.uiStyle;
   document.documentElement.classList.toggle('rgba-component-tint',EDITOR_DEV_SETTINGS.rgbaComponentTint);
   document.documentElement.classList.toggle('vector-component-tint',EDITOR_DEV_SETTINGS.vectorComponentTint);
   document.documentElement.classList.toggle('node-resize-hints',EDITOR_DEV_SETTINGS.nodeResizeHint);

@@ -1521,3 +1521,38 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root.vector-component-tint #wires path:hover{stroke:var(--wire-hover)}
 :root.vector-component-tint :is(#cards,#inspector,#uniformsbody,#controlsbody) .component-tint-label[data-vector-component],
 :root.rgba-component-tint :is(#cards,#inspector,#uniformsbody,#controlsbody) .component-tint-label[data-color-component]{color:var(--component-color)}
+
+/* Optional Cool style: broad 33% outer light in Dark mode only. */
+:root[data-ui-style="cool"][data-ui-theme="dark"]{--cool-node-depth:0 6px 20px #0004;--cool-input-depth:0 2px 6px #0003}
+:root[data-ui-style="cool"][data-ui-theme="dark"] :is(.node,.node-inspector-title,.input-source-row){--cool-accent:color-mix(in srgb,var(--category-bg) 65%,var(--category-fg) 35%)}
+@supports(color:hsl(from red h s l)){
+  :root[data-ui-style="cool"][data-ui-theme="dark"] :is(.node,.node-inspector-title,.input-source-row){--cool-accent:hsl(from var(--category-bg) h calc(s * 1.8) calc(l + 25))}
+}
+/* Neutral wires stay unfiltered; colored paths reuse their existing type/component hue. */
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires :where(path){--cool-wire-filter:none;filter:var(--cool-wire-filter)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires :where(path[data-type="vec2"]){--cool-wire-color:var(--type-vec2);--cool-wire-filter:drop-shadow(0 0 6px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires :where(path[data-type="vec3"]){--cool-wire-color:var(--type-vec3);--cool-wire-filter:drop-shadow(0 0 6px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires :where(path[data-type="vec4"]){--cool-wire-color:var(--type-vec4);--cool-wire-filter:drop-shadow(0 0 6px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires :where(path[data-type="sampler2D"]){--cool-wire-color:var(--type-sampler,#c2a47a);--cool-wire-filter:drop-shadow(0 0 6px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+:root[data-ui-style="cool"][data-ui-theme="dark"]:where(.rgba-component-tint) #wires :where(path[data-color-component="r"],path[data-color-component="g"],path[data-color-component="b"]),
+:root[data-ui-style="cool"][data-ui-theme="dark"]:where(.vector-component-tint) #wires :where(path[data-vector-component="0"],path[data-vector-component="1"],path[data-vector-component="2"]){--cool-wire-color:var(--component-color);--cool-wire-filter:drop-shadow(0 0 6px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+:root[data-ui-style="cool"][data-ui-theme="dark"]:where(.rgba-component-tint) #wires :where(path[data-color-component="a"]),
+:root[data-ui-style="cool"][data-ui-theme="dark"]:where(.vector-component-tint) #wires :where(path[data-vector-component="3"]){--cool-wire-filter:none}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires path.selected{--cool-wire-color:var(--wire-selected);--cool-wire-filter:drop-shadow(0 0 8px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires path:hover{--cool-wire-color:var(--wire-hover);--cool-wire-filter:drop-shadow(0 0 8px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires path.vector-drop-replaced{filter:none}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #wires path.trash-pending{--cool-wire-color:#ff9999;--cool-wire-filter:drop-shadow(0 0 8px color-mix(in srgb,var(--cool-wire-color) 33%,transparent))}
+/* Ordinary node bodies keep their original shadow; only title bars and names glow. */
+:root[data-ui-style="cool"][data-ui-theme="dark"] #canvas .node.selected{box-shadow:0 0 0 1px var(--selection),var(--cool-node-depth),0 0 20px color-mix(in srgb,var(--selection) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #canvas .node.error{box-shadow:0 0 0 1px var(--danger,#ef8d8d),var(--cool-node-depth),0 0 20px color-mix(in srgb,var(--danger,#ef8d8d) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] :is(.node-title,.node-inspector-title){box-shadow:0 0 20px 1px color-mix(in srgb,var(--cool-accent) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] :is(.node-title-text>span,.node-inspector-name,.input-source-select>span){text-shadow:0 0 12px color-mix(in srgb,var(--cool-accent) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] .input-source-row{box-shadow:var(--cool-input-depth),0 0 20px 1px color-mix(in srgb,var(--cool-accent) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] .port-row:where([data-type="vec2"],[data-type="vec3"],[data-type="vec4"],[data-type="sampler2D"]) .port:not(.wire-target):not(.aggregate),
+:root[data-ui-style="cool"][data-ui-theme="dark"]:where(.rgba-component-tint) .port-row:where([data-color-component="r"],[data-color-component="g"],[data-color-component="b"]) .port:not(.wire-target):not(.aggregate),
+:root[data-ui-style="cool"][data-ui-theme="dark"]:where(.vector-component-tint) .port-row:where([data-vector-component="0"],[data-vector-component="1"],[data-vector-component="2"]) .port:not(.wire-target):not(.aggregate){box-shadow:0 0 10px color-mix(in srgb,var(--socket) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] .port.wire-target{box-shadow:0 0 0 var(--wire-glow,7px) var(--wire-ready-glow),0 0 14px color-mix(in srgb,var(--wire-ready) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] #apply:enabled{box-shadow:0 0 20px color-mix(in srgb,var(--purple) 33%,transparent)}
+
+:root[data-ui-style="cool"][data-ui-theme="dark"] .toolbar .stage.active:enabled{box-shadow:0 0 16px color-mix(in srgb,var(--purple) 33%,transparent)}
+:root[data-ui-style="cool"][data-ui-theme="dark"] .toolbar button[aria-pressed="true"]:enabled{box-shadow:0 0 24px 2px color-mix(in srgb,var(--selection) 33%,transparent)}

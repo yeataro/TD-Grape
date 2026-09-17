@@ -654,14 +654,17 @@ function applyFloatingToolbar(){
   else if(toolbar.parentElement!==workspace)workspace.insertBefore(toolbar,canvas);
 }
 const experimentsStorageKey='sgrapeExperimentsV1';
-const experimentChoices={nodeDragCursor:['default','move']};
+const experimentChoices={
+  nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],
+  uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool']]
+};
 function parseUIExperiments(raw){
   let saved;try{saved=JSON.parse(raw);}catch{}
   const result={...EDITOR_DEV_DEFAULTS};
   if(!saved||typeof saved!=='object'||Array.isArray(saved))return result;
   for(const key of Object.keys(result)){
     const value=saved[key];
-    if(experimentChoices[key]?experimentChoices[key].includes(value):typeof value==='boolean')result[key]=value;
+    if(experimentChoices[key]?experimentChoices[key].some(([choice])=>choice===value):typeof value==='boolean')result[key]=value;
   }
   return result;
 }
@@ -706,7 +709,7 @@ function installUIExperiments(){
   for(const key of Object.keys(EDITOR_DEV_DEFAULTS)){
     const row=el('label',{class:'experiment-option'}),choices=experimentChoices[key];
     const entry=choices?el('select',{'data-experiment':key}):el('input',{type:'checkbox','data-experiment':key});
-    if(choices)for(const value of choices)entry.append(el('option',{value,'data-i18n':'experiments.cursor.'+value},t('experiments.cursor.'+value)));
+    if(choices)for(const [value,label]of choices)entry.append(el('option',{value,'data-i18n':label},t(label)));
     row.append(el('span',{'data-i18n':'experiments.'+key},t('experiments.'+key)),entry);list.append(row);
     entry.onchange=()=>setUIExperiments({[key]:choices?entry.value:entry.checked});
   }

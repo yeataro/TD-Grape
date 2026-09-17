@@ -1,5 +1,13 @@
 # 測試
 
+2026-09-17 Cool 外光風格（0.8.84）：既有 `test_ui_experiments.cjs` 擴為 17 組，驗證 11 項設定（9 checkbox、2 select）、Professional 原預設、Cool 即時切換、舊偏好缺少 style 時回預設、無效值、保存／重設、控制項 DOM／草稿／幾何／Graph／Undo 保留與雙語。既有 `test_vector_component_tint.cjs` 10 組回歸通過。
+
+私人視覺探針 4 組通過，2000×1200、UI／圖縮放 100%，合法節點與接線 fixture：普通 node 本體 box-shadow 與 Professional 相同；Title／Inputs 同色同範圍外光、alpha .33、無新增 inset；主名稱發光但 small metadata 無 text-shadow；分類色衍生 accent 與淡色前景文字不同。實際點擊框選／顯示自訂名稱與切換 Vertex／Pixel 確認啟用光暈同步；所有幾何、圖、歷史及 dirty 保持。Light Professional／Cool 的陰影、filter、顏色及幾何完全一致。深淺色截圖已目視，零瀏覽器錯誤／寫入 API，共 31 組；550 個雙語鍵、JavaScript 語法與 diff 檢查通過。
+
+早期原型另以 Chrome 152.0.7977.83 headless／1600×1000、200 個合法 vec4 Add 節點和 199 條連線，兩次交錯樣式測量真實 mouse pan／wheel 的 rAF 間隔。平移 p95 Professional 25.1ms、Cool 50.1ms；縮放 41.6／50.0ms。使用者明確接受此實驗的效能取捨；後續外光／文字／blur 調校未再次跑性能，因此上述數字只代表早期原型，並非最終樣式的裝置 FPS 保證。未測實體 iPad／Safari。
+
+28 份映射來源與服務內容一致，TOP／MAT Master current。正式 TOE 為 719,124 bytes，SHA-256 `c1fa95e835431606eb8b93a3c003c807b38e37d32f9d46bb1ee84752fe04620f`；兩份使用者 Shader 保留、私人助手排除，未重新整理現有編輯頁。
+
 2026-09-17 實驗功能齒輪與分量染色（0.8.84）：新增 `test_ui_experiments.cjs` 15 組，驗證全部 10 項／9 個開關、原預設、即時行為、瀏覽器保存／重設／錯誤資料、拒絕儲存仍可使用、數值／名稱草稿 DOM 與 Graph／Undo 不變、浮動工具列重用且操作只執行一次、拖動中拒絕切換、滑鼠及鍵盤開啟後焦點／Tab／Delete／Escape、雙語與可信任觸控。320／390px × UI 75／125% × 深淺色可操作；320px／125% 觸控專注模式確認右下垃圾桶位於工具列上方、不重疊。
 
 新增 `test_vector_component_tint.cjs` 10 組，驗證 RGBA-only 原預設、新旗標獨立控制 XYZW／UV／RGBA、依索引支援既有 ST 標籤、節點及 Parameter 緊湊／展開欄位、Swizzle 與群組文字、已知單分量接孔／來源線和整體向量型別色、一般 Add 不傳遞染色、選取／hover 優先、深淺色、切換不改數值草稿／Graph／Undo。首次群組測試未給 Combine 合法 groups 參數，修正 fixture 後通過，無追加產品修正。截圖已目視。
