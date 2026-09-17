@@ -43,8 +43,14 @@ function renderSelectionToolbar(){
   edit.hidden=mode!=='all'&&EDITOR_DEV_SETTINGS.editToolbar===false;
   multi.hidden=!nodes.length;
   $('#graphgroup').hidden=!multiple;$('#grapharrange').hidden=!multiple;$('#graphframe').hidden=!multiple;
+  const joinTarget=groupFrameJoinTarget(),joinButton=$('#graphjoinframe');
+  joinButton.hidden=!joinTarget;joinButton.disabled=editorMutationBlocked();
+  joinButton.dataset.shortcutContext=joinTarget?.name||'';decorateShortcutButton(joinButton,'joinFrame');
+  $('#graphdetachframe').hidden=!canDetachGroupFrameSelection();
+  $('#graphdetachframe').disabled=editorMutationBlocked();
+  decorateShortcutButton($('#graphdetachframe'),'detachFrame');
   $('#graphframe').disabled=editorMutationBlocked()||!canCreateGroupFrame();
-  $('#graphframe').title=t(canCreateGroupFrame()?'frame.create':'frame.unframedOnly');$('#graphframe').setAttribute('aria-label',t('frame.create'));
+  decorateShortcutButton($('#graphframe'),'groupFrame',canCreateGroupFrame()?'frame.create':'frame.unframedOnly');
   $('#grapharrange').disabled=!multiple||editorMutationBlocked();
   $('#graphfitselection').disabled=!nodes.length;
   bar.hidden=mode==='off'||!nodes.length||(mode==='multiple'&&!multiple);
@@ -61,14 +67,18 @@ function scheduleSelectionToolbarPosition(){
 }
 function positionSelectionToolbar(){
   const bar=$('#selectiontoolbar'),outline=$('#selectionbounds');if(!bar||!outline)return;
-  const persistent=EDITOR_DEV_SETTINGS.persistentSelectionBounds&&selectedCanvasNodes().length>1;
+  const nodes=selectedCanvasNodes(),persistent=EDITOR_DEV_SETTINGS.persistentSelectionBounds&&nodes.length>1;
   if(bar.hidden&&!persistent){outline.hidden=true;return;}
   const bounds=selectedCanvasBounds(),canvas=$('#canvas'),r=canvas.getBoundingClientRect(),zoom=uiScaleFactor();
   if(!bounds||bounds.right<r.left||bounds.left>r.right||bounds.bottom<r.top||bounds.top>r.bottom){bar.style.visibility='hidden';outline.hidden=true;return;}
   bar.style.visibility='';
-  outline.hidden=!(persistent||!bar.hidden&&(selectionToolbarHover||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open')));
-  outline.style.left=(bounds.left-r.left)/zoom-6+'px';outline.style.top=(bounds.top-r.top)/zoom-6+'px';
-  outline.style.width=(bounds.right-bounds.left)/zoom+12+'px';outline.style.height=(bounds.bottom-bounds.top)/zoom+12+'px';
+  const gap=6,frame=completeGroupFrames(nodes).find(item=>item.nodes.length===nodes.length);
+  outline.hidden=!!(EDITOR_DEV_SETTINGS.hideGroupedSelectionBounds&&frame)||!(persistent||!bar.hidden&&(selectionToolbarHover||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open')));
+  const frameElement=frame&&$('#groupframes')?.querySelector(`[data-frame="${CSS.escape(frame.id)}"]`);
+  // Keep the outer selection curve concentric with a single complete frame at any graph zoom.
+  outline.style.borderRadius=frameElement?parseFloat(getComputedStyle(frameElement).borderTopLeftRadius)*scale+gap+'px':'';
+  outline.style.left=(bounds.left-r.left)/zoom-gap+'px';outline.style.top=(bounds.top-r.top)/zoom-gap+'px';
+  outline.style.width=(bounds.right-bounds.left)/zoom+gap*2+'px';outline.style.height=(bounds.bottom-bounds.top)/zoom+gap*2+'px';
   if(bar.hidden)return;
   const margin=8,w=canvas.clientWidth,h=canvas.clientHeight,toolbar=$('#canvas>.toolbar'),tools=$('.canvas-view-tools');
   const top=toolbar?(toolbar.getBoundingClientRect().bottom-r.top)/zoom+margin:margin;
@@ -216,7 +226,11 @@ function installSelectionToolbar(){
   const frame=el('button',{id:'graphfitselection',class:'icon-button',type:'button'});
   frame.append(selectionIcon('M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M8 8h8v8H8z'));frame.onclick=fitSelection;
   const groupFrame=el('button',{id:'graphframe',class:'icon-button',type:'button'});groupFrame.append(selectionIcon('M7 2v20M17 2v20M2 7h20M2 17h20'));groupFrame.onclick=createGroupFrame;
-  multi.append(groupFrame,$('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
+  const join=el('button',{id:'graphjoinframe',class:'icon-button',type:'button'});join.append(selectionIcon('M10 4H4v16h16v-6M21 3 10 14M10 7v7h7'));
+  join.onclick=()=>{if(joinGroupFrameSelection())$('#canvas').focus({preventScroll:true});};
+  const detach=el('button',{id:'graphdetachframe',class:'icon-button',type:'button'});detach.append(selectionIcon('M10 4H4v16h16v-6M10 14 21 3M14 3h7v7'));
+  detach.onclick=()=>{if(detachGroupFrameSelection())$('#canvas').focus({preventScroll:true});};
+  multi.append(groupFrame,join,detach,$('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
   const menu=el('div',{id:'arrangemenu',class:'popup-menu arrangement-menu',popover:'auto',role:'menu'});document.body.append(menu);
   for(const control of [bar,menu]){
     for(const event of ['pointerdown','mousedown','touchstart','dblclick'])control.addEventListener(event,e=>e.stopPropagation());

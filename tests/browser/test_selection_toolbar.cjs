@@ -64,6 +64,27 @@ async function run(){
     await page.evaluate(()=>{setUIExperiments({persistentSelectionBounds:false});setUIAppearance('scale',100);});await settle();
     checks.push('optional persistent outline works with every toolbar mode and hidden edit tools, requires two nodes, survives readonly and viewport movement, follows both zoom scales, and changes no graph or history');
 
+    await reset();await page.evaluate(()=>{
+      GraphFrames.write(current(),[{id:'groupAB',name:'Group 1',color:'#7f8797',nodes:['a','b']},{id:'groupC',name:'Group 2',color:'#9285ad',nodes:['c']}]);render();fit();
+    });await select(['a','b']);const beforeGroupOutline=await editState();
+    for(const value of ['off','multiple','all']){
+      await mode(value);await page.evaluate(()=>setUIExperiments({persistentSelectionBounds:true,hideGroupedSelectionBounds:true}));await settle();
+      assert.equal(await page.locator('#selectionbounds').isVisible(),false,'complete group hides its outline in '+value+' mode');
+      assert.equal(await page.locator('#selectiontoolbar').isVisible(),value!=='off','hiding the outline leaves the toolbar available');
+      if(value!=='off'){await page.locator('#selectiontoolbar').hover();await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),false,'toolbar hover respects the group exception');}
+    }
+    assert.deepEqual(await editState(),beforeGroupOutline,'group outline setting is view-only');
+    for(const ids of [['a','b','d'],['a','b','c'],['a','d']]){
+      await select(ids);assert.equal(await page.locator('#selectionbounds').isVisible(),true,'mixed or partial groups retain outline: '+ids);
+    }
+    await select(['a','b']);await page.evaluate(()=>setUIExperiments({hideGroupedSelectionBounds:false}));await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),true,'disabling the exception restores the outline immediately');
+    await page.evaluate(()=>setUIExperiments({persistentSelectionBounds:false,hideGroupedSelectionBounds:true}));await page.locator('#selectiontoolbar').hover();await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),false,'hover-only outline also respects the exception');
+    await select(['c']);await page.locator('#selectiontoolbar').hover();await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),false,'one remaining group member is still a complete group');
+    await select(['a','b','d']);await page.locator('#selectiontoolbar').hover();await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),true,'hover-only mixed selection still shows its outline');
+    await page.evaluate(()=>{readonly=true;setUIExperiments({persistentSelectionBounds:true});});await select(['a','b']);assert.equal(await page.locator('#selectionbounds').isVisible(),false,'group exception is available in readonly');
+    await page.evaluate(()=>setUIExperiments({persistentSelectionBounds:false,hideGroupedSelectionBounds:false}));await page.mouse.move(2,2);
+    checks.push('optional complete-group outline exception applies to persistent and hover outlines in all toolbar modes; mixed/partial/multiple groups retain outlines, toolbar remains available, readonly works and no graph/history changes occur');
+
     await reset();await mode('all');await select(['a','b']);
     const frameBefore=await editState(),allView=await viewState();
     await page.locator('#graphfitselection').click();await settle();await framed();

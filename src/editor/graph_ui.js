@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'off', persistentSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'off', persistentSelectionBounds: false, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -766,8 +766,9 @@ function nodeHeightLimits(card){
   return {minimum,maximum:Math.max(minimum,parseFloat(style.getPropertyValue('--node-max-height'))||1200)};
 }
 function nodeMinimumWidth(card){
-  const cached=Number(card.dataset.nodeMinWidth);if(cached>0)return cached;
-  const style=getComputedStyle(card),minimum=parseFloat(style.getPropertyValue('--node-min-width'))||parseFloat(style.minWidth)||parseFloat(style.width)||card.offsetWidth;
+  const cached=parseFloat(card.dataset.nodeMinWidth);if(Number.isFinite(cached)&&cached>=0)return cached;
+  const style=getComputedStyle(card),declared=parseFloat(style.getPropertyValue('--node-min-width'));
+  const minimum=Number.isFinite(declared)?Math.max(0,declared):parseFloat(style.minWidth)||parseFloat(style.width)||card.offsetWidth;
   card.dataset.nodeMinWidth=String(minimum);return minimum;
 }
 function nodeMaximumWidth(card){return Math.max(nodeMinimumWidth(card),parseFloat(getComputedStyle(card).getPropertyValue('--node-max-width'))||1200);}
@@ -1234,11 +1235,21 @@ function installGraphInteractions(){
     if(e.defaultPrevented)return;
     if(e.target.closest('.details')||e.target.closest('#grapheditmenu')||e.target.closest('.library')||e.target.closest('#creator')||e.target.closest('.shader-selector')||e.target.closest('dialog')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
     const plainKey=e.key.toLowerCase();
+    const inGraph=e.target===document.body||e.target===document.documentElement||e.target.closest('.graph-workspace');
+    const graphCommandReady=inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open],:popover-open');
     if(['h','l'].includes(plainKey)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
-      const inGraph=e.target===document.body||e.target===document.documentElement||e.target.closest('.graph-workspace');
-      if(inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open],:popover-open')){
+      if(graphCommandReady){
         if(plainKey==='h'){e.preventDefault();fit();}
         else if(!e.repeat&&!editorMutationBlocked()&&selectedCanvasNodes().length>1){e.preventDefault();arrangeSelection('auto');}
+      }
+      return;
+    }
+    if(plainKey==='g'&&((e.ctrlKey||e.metaKey)&&!e.altKey||e.altKey&&!e.ctrlKey&&!e.metaKey)){
+      if(graphCommandReady){
+        e.preventDefault();
+        if(!e.repeat&&!editorMutationBlocked()){
+          if(e.altKey){if(e.shiftKey)joinGroupFrameSelection();else detachGroupFrameSelection();}else if(e.shiftKey)groupSelection();else createGroupFrame();
+        }
       }
       return;
     }
@@ -1252,8 +1263,8 @@ function installGraphInteractions(){
     }
     if(e.altKey&&e.key==='ArrowUp'){e.preventDefault();if(graphTrail.length)navigateGraph(graphTrail.length-1);}
     if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}
-    if(e.ctrlKey||e.metaKey){const k=e.key.toLowerCase();if(['z','a','d','g'].includes(k))e.preventDefault();
-      if(k==='z')undo(e.shiftKey);if(k==='a'){selection=new Set(current().nodes.map(n=>n.id));selected=[...selection].at(-1);render();}if(k==='d')duplicateSelection();if(k==='g')groupSelection();
+    if(e.ctrlKey||e.metaKey){const k=e.key.toLowerCase();if(['z','a','d'].includes(k))e.preventDefault();
+      if(k==='z')undo(e.shiftKey);if(k==='a'){selection=new Set(current().nodes.map(n=>n.id));selected=[...selection].at(-1);render();}if(k==='d')duplicateSelection();
     }
   });
   $('#graphup').onclick=()=>navigateGraph(graphTrail.length-1);$('#group').onclick=groupSelection;$('#newfunction').onclick=newFunction;

@@ -1,5 +1,19 @@
 # 測試
 
+2026-09-18 Comment 寬度解除：`test_comment_resize.cjs` 9 組通過，涵蓋縮至 120×130 並經 JSON 重載、縮放座標換算、一次 Undo／Redo、取消／唯讀／觸控及一般節點仍只改寬度；窄版截圖已目視。報告位於 comment-width-round。沒有新增自動折行或固定預設寬度，也未改高度規則。
+
+追加設定及寬度修正後再次刷新並保存 TD：31 份內嵌來源與 9 份服務資源核對一致，兩份使用者 Shader 保留、TOP／MAT Master current；沒有重載現有 Editor。TOE 763,636 bytes，SHA-256 `a880e451074e62d8cdc0801a74db9de78947874ac55bfe462d405866f0ad8ddf`，排除私人助手；原生報告位於 frame-outline-setting 的 refresh／audit／save。
+
+2026-09-18 群組輪廓顯示設定：選取工具列 12 組、設定面板 19 組瀏覽器檢查通過，零頁面錯誤。涵蓋所有工具列模式、常態／互動輪廓、完整／部分／混合／跨群組、單一剩餘成員、唯讀、即時切換、偏好保存／重設、雙語及窄版觸控；圖與 Undo 不變。593 個雙語引用檢查通過。報告位於 frame-outline-setting；新增設定使窄版面板變高，外部點擊測試改為驗證後點擊面板外的視窗角落，避免誤點被面板遮住的主標題。
+
+2026-09-18 群組成員移入：新增 `test_group_membership.cjs` 6 組全過，使用真實群組標題點擊＋Ctrl 加選外部／其他群組成員，再用按鈕或 Alt＋Shift＋G 移入。涵蓋選取 3 對 2（目的群組總人數較少且存放順序在後）、1 對未分組、同票／無目的地／已全在目的地時隱藏且不執行、未選成員保留、移空框、值／位置／接線及一筆 Undo／Redo、唯讀／文字編輯隔離。追加後群組框 13 組、選取工具列 11 組、快捷鍵列表 7 組回歸全過，零頁面錯誤。報告位於 frame-membership-round。
+
+本輪色盤／輪廓、移出與移入均分批推送並保存 TD。最後核對 31 份內嵌來源及 9 份服務資源與工作樹一致，TOP／MAT Master current，兩份使用者 Shader 保留；未重新整理現有 Editor。正式 TOE 763,244 bytes，SHA-256 `f9f3b22fcbc9b452492685c7b81ce973e46b31effe0dc7008859aa4b46a84bd3`，排除私人助手。最後原生報告位於 frame-membership-round 的 refresh／audit／save。
+
+2026-09-18 群組操作追加：既有群組框瀏覽器檢查擴至 13 組，包含單一／跨框成員移出、剩一人／空框、位置與接線保留、一次 Undo／Redo、唯讀／空選取，以及 Ctrl＋G／Ctrl＋Shift＋G／Alt＋G 的實際鍵盤分工與名稱輸入隔離。選取工具列 11 組、快捷鍵列表 7 組、自動排列 11 組均通過，零頁面錯誤。色盤隔離探針另有 14 組，涵蓋預設色／自訂 change、同色不增歷史、舊 session 拒絕、關閉方式、鍵盤與 Chromium 觸控、中文環境英文預設名、窄版／縮放定位；自訂系統選色器以 stub 驗證呼叫與提交，未操作實體 OS 選色視窗。
+
+選取圓角探針 3 組通過，包含 12 組 UI 75／100／125% 與畫布 25／50／100／150% 的四邊等距及圓心一致、混合／跨群組／部分成員恢復一般輪廓、工具列 hover 共用輪廓；前後角落與色盤截圖已目視。JavaScript 語法、591 個雙語引用及 diff 檢查通過。私人報告位於 frame-outline-round、frame-controls-round、frame-palette-round。這批沒有更動 shader 產碼契約。
+
 本輪收尾回歸：群組框 10 組、Editor chrome 16 組、自動排列 11 組全過，零頁面錯誤。包含 CDP 真實觸控拖移群組標題（全體成員同移、一筆 Undo、pan 不變）及框內空白命中穿透後的實際滑鼠平移（圖與歷史不變）。本輪相關瀏覽器檢查共 85 組；實體 iOS Safari 未測。
 
 同輪註記入口修正：`test_node_notes.cjs` 3 組通過，逐一涵蓋 Constant、Uniform、Spec Constant、Sampler、TOP Input、一般節點及 GLSL Code 的分頁、編輯／取消／Undo／Redo、來源資料隔離、跨節點切換、唯讀、雙語及 Comment 原文內文例外。`test_parameter_values.cjs` 15 組既有輸入行為回歸通過。舊 `details` 入口已移除，沒有改註記的既有成碼語意。

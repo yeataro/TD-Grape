@@ -665,7 +665,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-canvas-comment>p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 /* Markdown annotations retain the normal card, selection and resize behavior. */
 :where([data-category="annotation"]){--category-bg:#303034;--category-fg:var(--ui-tone-text)}
-.node[data-category="annotation"]{--node-min-width:260px}
+.node[data-category="annotation"]{--node-min-width:0px}
 .node[data-category="annotation"]:not(.collapsed){--node-min-height:130px;--node-max-height:1200px;display:flex;flex-direction:column;height:180px;min-height:var(--node-min-height);max-height:var(--node-max-height)}
 .node[data-category="annotation"]>.node-title{flex-shrink:0}
 .node[data-category="annotation"]>.ports{display:none}
@@ -858,8 +858,21 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .group-frame-title>button{display:grid;place-items:center;flex:none;width:22px;height:22px;min-width:0;min-height:0;padding:3px;border:0;border-radius:4px;background:transparent;color:inherit;opacity:.65;cursor:pointer}
 .group-frame-title>button:hover,.group-frame-title>button:focus-visible{background:#80808030;opacity:1}
 .group-frame-title>button svg{width:15px;height:15px}
-.group-frame-title>input[type=color]{appearance:none;-webkit-appearance:none;flex:none;width:18px;height:18px;min-width:0;padding:2px;border:0;border-radius:50%;background:transparent;cursor:pointer}
-.group-frame-title>input[type=color]::-webkit-color-swatch-wrapper{padding:0}.group-frame-title>input[type=color]::-webkit-color-swatch{border:0;border-radius:50%}.group-frame-title>input[type=color]::-moz-color-swatch{border:0;border-radius:50%}
+.group-frame-title>.group-frame-color{border-radius:50%;opacity:1}
+.group-frame-color>span{display:block;width:14px;height:14px;border-radius:50%;background:var(--frame-color);box-shadow:inset 0 0 0 1px #ffffff30}
+.group-frame-palette{position:fixed;inset:auto;margin:0;padding:8px;width:max-content;max-width:calc(100 * var(--ui-vw) - 16px);overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:var(--popup-radius,10px);background:var(--ui-surface,var(--ui-tone-menu));color:var(--ui-text,var(--ui-tone-text));box-shadow:0 8px 24px #0004;font-size:13px}
+.group-frame-palette-grid{display:grid;grid-template-columns:repeat(4,34px);gap:4px}
+.group-frame-palette button{border:0;background:transparent;color:inherit;cursor:pointer;touch-action:manipulation}
+.group-frame-palette .group-frame-preset{display:grid;place-items:center;width:34px;height:34px;min-height:0;padding:5px;border-radius:50%}
+.group-frame-preset>span{display:block;width:24px;height:24px;border-radius:50%;background:var(--swatch-color);box-shadow:inset 0 0 0 1px #ffffff30}
+.group-frame-preset[aria-checked=true]>span{outline:2px solid var(--ui-text,var(--ui-tone-text));outline-offset:2px}
+.group-frame-palette button:hover{background:var(--ui-hover,var(--ui-tone-control-hover))}
+.group-frame-palette button:focus-visible,.group-frame-title>.group-frame-color:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
+.group-frame-palette-divider{height:1px;background:var(--line);margin:8px 0}
+.group-frame-palette .group-frame-custom{display:flex;align-items:center;gap:9px;width:100%;min-height:34px;padding:5px;border-radius:var(--popup-row-radius,6px);text-align:left;font-size:12px}
+.group-frame-rainbow{display:block;flex:none;width:24px;height:24px;border-radius:50%;background:conic-gradient(#d77878,#d4bf79,#84b789,#78b6c4,#858cd2,#bc81b7,#d77878);box-shadow:inset 0 0 0 1px #ffffff40}
+.group-frame-native-color{position:fixed;left:0;top:0;width:1px;height:1px;min-width:0;margin:0;padding:0;border:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+@media(pointer:coarse){.group-frame-palette-grid{grid-template-columns:repeat(4,44px)}.group-frame-palette .group-frame-preset{width:44px;height:44px}.group-frame-palette .group-frame-custom{min-height:44px}}
 .group-frame-title:focus-visible{outline:1px solid var(--purple);outline-offset:2px}
 :root[data-ui-theme="light"] .group-frame-title{background:color-mix(in srgb,var(--frame-color) 22%,var(--node-body))}
 .graph-tool-group[hidden],.selection-toolbar[hidden],#selectionbounds[hidden]{display:none}

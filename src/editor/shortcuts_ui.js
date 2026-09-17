@@ -8,7 +8,10 @@ const EDITOR_SHORTCUTS=Object.freeze({
   duplicate:{label:'edit.duplicate',keys:['Mod+D'],section:'edit'},
   delete:{label:'node.delete',keys:['Delete','Backspace'],section:'edit'},
   selectAll:{label:'shortcuts.selectAll',keys:['Mod+A'],section:'edit'},
-  group:{label:'function.group',keys:['Mod+G'],section:'edit'},
+  groupFrame:{label:'frame.create',keys:['Mod+G'],section:'edit'},
+  joinFrame:{label:'frame.join',keys:['Alt+Shift+G'],section:'edit'},
+  detachFrame:{label:'frame.detach',keys:['Alt+G'],section:'edit'},
+  group:{label:'function.group',keys:['Mod+Shift+G'],section:'edit'},
   autoArrange:{label:'arrange.auto',keys:['L'],section:'edit'},
   add:{label:'action.nodes',keys:['Tab'],section:'navigation'},
   fit:{label:'action.fit',keys:['H'],section:'navigation'},
@@ -26,7 +29,7 @@ function shortcutKeyParts(key){
 function shortcutLabel(action){return EDITOR_SHORTCUTS[action]?.keys.map(key=>shortcutKeyParts(key).join('＋')).join(' / ')||'';}
 function decorateShortcutButton(button,action,labelKey){
   const command=EDITOR_SHORTCUTS[action];if(!button||!command)return;
-  const label=t(labelKey||command.label),hint=label+'　'+shortcutLabel(action);
+  const label=t(labelKey||command.label)+(button.dataset.shortcutContext?' · '+button.dataset.shortcutContext:''),hint=label+'　'+shortcutLabel(action);
   button.title=hint;button.setAttribute('aria-label',hint);button.dataset.shortcutAction=action;
   if(labelKey)button.dataset.shortcutLabel=labelKey;else delete button.dataset.shortcutLabel;
   button.setAttribute('aria-keyshortcuts',command.keys.flatMap(key=>key.includes('Mod')?[key.replace('Mod','Control'),key.replace('Mod','Meta')]:[key]).join(' '));
