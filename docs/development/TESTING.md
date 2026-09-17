@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-17 整顆節點外光（0.8.84）：私人 VISUAL_ONLY 探針 5 組通過並目視 2000×1200 截圖。驗證節點整體分類色外光為 33%／20px／1px、Title 不另加陰影、灰底與幾何不變、名稱／Inputs 規則保留；展開與收合的普通／選取／錯誤／兩者並存状态均維持分類光暈及原狀態框。Light Professional／Cool 完全一致，工具列實際切換正常，零瀏覽器錯誤／API 寫入。550 個雙語鍵與 diff 檢查通過；未重跑效能。28 份內嵌來源與服務一致、兩份 Master current。正式 TOE 719,132 bytes，SHA-256 `8c6620aaf7dd958bdab5feaa7e53b6305544bb93177a7b32a45001a2a9924f68`；保留兩份使用者 Shader、排除私人助手，未重新整理現有編輯頁。
+
 2026-09-17 Cool 外光風格（0.8.84）：既有 `test_ui_experiments.cjs` 擴為 17 組，驗證 11 項設定（9 checkbox、2 select）、Professional 原預設、Cool 即時切換、舊偏好缺少 style 時回預設、無效值、保存／重設、控制項 DOM／草稿／幾何／Graph／Undo 保留與雙語。既有 `test_vector_component_tint.cjs` 10 組回歸通過。
 
 私人視覺探針 4 組通過，2000×1200、UI／圖縮放 100%，合法節點與接線 fixture：普通 node 本體 box-shadow 與 Professional 相同；Title／Inputs 同色同範圍外光、alpha .33、無新增 inset；主名稱發光但 small metadata 無 text-shadow；分類色衍生 accent 與淡色前景文字不同。實際點擊框選／顯示自訂名稱與切換 Vertex／Pixel 確認啟用光暈同步；所有幾何、圖、歷史及 dirty 保持。Light Professional／Cool 的陰影、filter、顏色及幾何完全一致。深淺色截圖已目視，零瀏覽器錯誤／寫入 API，共 31 組；550 個雙語鍵、JavaScript 語法與 diff 檢查通過。

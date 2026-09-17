@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-17 整顆節點外光（0.8.84）：依最新回饋，Cool 的分類色光暈從 Title 移到整個節點外圍，維持 33%／20px blur／1px spread；灰底與名稱保留。選取／錯誤維持狀態細框，外光仍為分類色；收合亦套用。5 組隔離視覺檢查通過，Light 不變；28 份來源與服務一致，兩份 Master current，正式 TOE 保存 719,132 bytes。兩份使用者 Shader 保留，現有瀏覽器頁面未重新整理。
+
 2026-09-17 Cool 外光風格（0.8.84）：齒輪新增「耍帥程度 / Swagger」Professional／Cool 選單，Professional 為原貌及預設；Cool 僅在 Dark 套用，Light 保持原貌但記住偏好。主要改動集中在 35 行獨立 CSS，沿用既有 flag／瀏覽器保存機制，未新增繪圖層、動畫或圖資料。
 
 依試用回饋改為 33% 彩色外光：普通節點灰色本體不加 Glow，Title 與 Inputs 同分類色外光 20px，主名稱 12px；接線 6px（操作狀態 8px）、選取框與 Apply 20px、啟用工具列按鈕 24px／2px spread，active Pixel／Vertex 也有光。移除新增內光，小型別文字不發光。31 組相關瀏覽器／視覺檢查及 550 個雙語鍵通過；28 份內嵌來源與服務一致，兩份 Master current。正式 TOE 保存為 719,124 bytes，兩份使用者 Shader 保留，現有瀏覽器頁面未重新整理。

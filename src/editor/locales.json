@@ -22,7 +22,7 @@
     "experiments.reset": {"zh-Hant": "還原預設", "en": "Reset defaults"},
     "experiments.note": {"zh-Hant": "立即套用，只保存在此瀏覽器。", "en": "Applies immediately; saved only in this browser."},
     "experiments.uiStyle": {"zh-Hant": "耍帥程度", "en": "Swagger"},
-    "experiments.uiStyle.hint": {"zh-Hant": "Professional 維持目前外觀；Cool 在深色模式為標題、名稱、接線與啟用中的控制項加上彩色外光暈。", "en": "Professional keeps the current look; Cool adds colored outer glow to titles, names, wires and active controls in Dark mode."},
+    "experiments.uiStyle.hint": {"zh-Hant": "Professional 維持目前外觀；Cool 在深色模式為節點、標題、名稱、接線與啟用中的控制項加上彩色外光暈。", "en": "Professional keeps the current look; Cool adds colored outer glow to nodes, titles, names, wires and active controls in Dark mode."},
     "experiments.style.professional": {"zh-Hant": "Professional · 專業", "en": "Professional"},
     "experiments.style.cool": {"zh-Hant": "Cool · 酷", "en": "Cool"},
     "experiments.finishGesture": {"zh-Hant": "請先結束畫布拖曳，再切換實驗功能。", "en": "Finish the canvas drag before changing experimental features."},
