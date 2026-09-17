@@ -1566,6 +1566,9 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root[data-ui-theme="dark"] #canvas .node.selected{box-shadow:0 0 0 1px var(--selection),var(--cool-node-depth),var(--cool-node-glow),var(--cool-selection-glow)}
 :root[data-ui-theme="dark"] #canvas .node.error{--cool-selection:var(--danger,#ef8d8d);box-shadow:0 0 0 1px var(--danger,#ef8d8d),var(--cool-node-depth),var(--cool-node-glow)}
 :root[data-ui-theme="dark"] #canvas .node.selected.error{box-shadow:0 0 0 1px var(--cool-selection),var(--cool-node-depth),var(--cool-node-glow),var(--cool-selection-glow)}
+/* Professional keeps the original error border and selection outline. */
+:root[data-ui-theme="dark"][data-ui-style="professional"] #canvas .node.error{box-shadow:var(--cool-node-depth),var(--cool-node-glow)}
+:root[data-ui-theme="dark"][data-ui-style="professional"] #canvas .node.selected.error{box-shadow:0 0 0 1px var(--selection),var(--cool-node-depth),var(--cool-node-glow),var(--cool-selection-glow)}
 :root[data-ui-theme="dark"] .node-inspector-title{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) calc(var(--cool-glow-alpha) * var(--cool-detail-level)),transparent)}
 :root[data-ui-theme="dark"] :is(.node-title-text>span,.node-inspector-name,.input-source-select>span){text-shadow:calc(var(--cool-glow-x,0px) * .3) calc(var(--cool-glow-y,0px) * .3) 12px color-mix(in srgb,var(--cool-accent) calc(var(--cool-glow-alpha) * var(--cool-detail-level)),transparent)}
 :root[data-ui-theme="dark"] .input-source-row{box-shadow:var(--cool-input-depth),var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) calc(var(--cool-glow-alpha) * var(--cool-detail-level)),transparent)}

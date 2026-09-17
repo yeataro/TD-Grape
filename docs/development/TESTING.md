@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-18 互動過渡清除核對（0.8.84）：確認 src/editor 無舊 --ui-glow-duration、--cool-filter-off 或子元素 shadow／filter transition。私人 ui-style/professional-error-outline 兩組檢查通過：使用同一隔離 Chromium fixture 對照 90b4d17 與目前 CSS，Professional 的 error／selected.error 可見陰影、邊框及幾何一致，操作 transition 為 0s；Cool 選取錯誤光暈與 Excellent 錯誤光暈保留，零頁面錯誤。修正僅兩條 Professional 外框規則。原六組模式／即時操作探針與測試結果保留，可重跑；這些視覺腳本位於私人 work，未加入產品執行依賴。28 份來源／服務一致，兩份 Master current。正式 TOE 720,740 bytes，SHA-256 357072fc7a423a710b80384cfa579dfcb81f580603c5f82371583451267ef6ca；保留兩份 Shader 並排除私人助手，既有頁面未重新整理。
+
 2026-09-18 模式過渡與即時操作（0.8.84）：私人 `ui-style/mode-only-transition` 探針 6 組通過。Professional／Cool／Excellent 六方向切換在 250ms 實采模式強度約 0.408／0.592，1.1 秒已到目標；Cool 選取／取消、Excellent 按鈕開關及 Apply enabled／disabled 在同一 task 與第一 frame 已對應當下模式強度，過渡途中也無操作本身的額外淡入。實際滑鼠移入／移出接線立即更新，過渡中 alpha 等於當下 level × 33%，無 filter transition。Legendary／Godlike 兩點抽樣仍持續動態；Light 五模式相同，減動態立即切换並停止動畫。11 個節點及 10 條接線 DOM、graph／history／dirty 保持，零 API 寫入與瀏覽器錯誤；截圖已目視。只用私人探針，未新增正式樣式鏡像測試或重跑效能。
 
 555 個雙語鍵及 diff 檢查通過；TD 的 style_css／locales_json 已同步，28 份內嵌來源與服務內容一致、TOP／MAT Master current。正式 TOE 為 720,660 bytes，SHA-256 `6cd4ad277ace852ac4c84c7474242cbe8667bd4d4af3416aee0fc421a7cd27c2`，保留兩份 Shader、排除私人助手，現有編輯頁未重新整理。
