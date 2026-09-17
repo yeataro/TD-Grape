@@ -589,6 +589,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* Selected-node identity follows the node palette; Label is edited in the title. */
 .node-inspector-title{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:center;gap:8px;height:var(--panel-header-height);min-height:var(--panel-header-height);padding:0 10px;margin:0;background:var(--category-bg);color:var(--category-fg);border-bottom:1px solid #ffffff16}
 #inspector .node-inspector-name{min-width:0;margin:0;font-size:13px;line-height:1.4;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node-inspector-source{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-size:12px}
 .node-inspector-title .node-inspector-label{min-width:0;margin:0;color:inherit}
 .node-inspector-label input{width:100%;min-width:0;padding:6px 7px;border:1px solid transparent;border-radius:2px;background:#ffffff12;color:inherit;font-size:12px;text-overflow:ellipsis}
 .node-inspector-label input::placeholder{color:inherit;opacity:.6}
@@ -1271,3 +1272,10 @@ footer .footer-preferences svg[hidden]{display:none}
 .node:hover>.node-resize-handle,.node.selected>.node-resize-handle,.node>.node-resize-handle:focus-visible{opacity:.75}
 .node>.node-resize-handle:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
 @media(pointer:coarse){.node>.node-resize-handle{--resize-hit-offset:-7px;width:24px;height:24px}}
+
+/* Numeric fields preview a clamped 0–1 proportion; the value itself stays unrestricted. */
+:root{--numeric-slider-fill:#c4c0df0e}
+:root[data-ui-theme="light"]{--numeric-slider-fill:#5143670d}
+:root :is(.node-inline-values input,input).numeric-slider{background-image:linear-gradient(to right,var(--numeric-slider-fill) 0 var(--numeric-fill,0%),transparent var(--numeric-fill,0%) 100%)}
+:root input.numeric-slider:not(:focus):not(:disabled):not([readonly]){cursor:ew-resize}
+:root input.numeric-slider.numeric-dragging{outline:0}

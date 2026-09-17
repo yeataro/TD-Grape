@@ -3,6 +3,58 @@ let valueLadder=null,pendingValueLadder=null;
 function cancelValueLadder(){pendingValueLadder?.cancel();valueLadder?.cancel();}
 function installValueLadder(entry,commit){
   entry.title=t('ladder.hint');
+  entry.classList.add('numeric-slider');
+  const paintSlider=()=>{const value=Number(entry.value);entry.style.setProperty('--numeric-fill',((entry.value.trim()&&Number.isFinite(value)?Math.max(0,Math.min(1,value)):0)*100)+'%');};
+  entry.refreshNumericSlider=paintSlider;paintSlider();
+  entry.addEventListener('input',paintSlider);entry.addEventListener('change',paintSlider);
+  if(entry.setSyncedValue){const sync=entry.setSyncedValue;entry.setSyncedValue=value=>{sync(value);paintSlider();};}
+  function beginScrub(e,firstMove){
+    const owner=current(),documentGraph=graph;
+    const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner;
+    if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
+    entry.focus({preventScroll:true});if(!writable())return;
+    const initial=entry.value,initialValue=Number(initial),integer=entry.step==='1';
+    let value=initialValue,lastX=e.clientX,finished=false;
+    entry.numericGestureActive=true;document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
+    const controller=new AbortController(),options={capture:true,signal:controller.signal};
+    const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
+    function finish(accept){
+      if(finished)return;finished=true;controller.abort();observer.disconnect();valueLadder=null;
+      const allowed=accept&&writable();entry.value=allowed?String(integer?Math.round(value):value):initial;paintSlider();
+      entry.numericGestureActive=false;document.body.classList.remove('scrubbing-value');entry.classList.remove('scrubbing','numeric-dragging');
+      if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
+      if(allowed&&Number(entry.value)!==initialValue)commit();
+      // A drag leaves the control ready for another drag. A click instead enters text editing.
+      if(document.activeElement===entry)entry.blur();
+    }
+    function move(ev){
+      if(ev.pointerId!==e.pointerId)return;
+      if(!(ev.buttons&1)||!writable()){finish(false);return;}
+      ev.preventDefault();ev.stopPropagation();
+      const multiplier=ev.shiftKey ? .1 : ev.ctrlKey ? 10 : 1,candidate=value+(ev.clientX-lastX)*(integer ? .1 : .01)*multiplier;lastX=ev.clientX;
+      if(!Number.isFinite(candidate))return;value=Number(candidate.toPrecision(15));
+      if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);
+      if(entry.max!==''&&Number.isFinite(Number(entry.max)))value=Math.min(Number(entry.max),value);
+      entry.value=String(integer?Math.round(value):value);paintSlider();
+    }
+    valueLadder={entry,cancel:()=>finish(false)};
+    window.addEventListener('pointermove',move,options);
+    window.addEventListener('pointerup',ev=>{if(ev.pointerId===e.pointerId&&ev.button===0){ev.preventDefault();ev.stopPropagation();finish(true);}},options);
+    window.addEventListener('pointercancel',ev=>{if(ev.pointerId===e.pointerId)finish(false);},options);
+    window.addEventListener('pointerdown',()=>finish(false),options);
+    entry.addEventListener('lostpointercapture',()=>finish(false),options);entry.addEventListener('blur',()=>finish(false),options);
+    window.addEventListener('blur',()=>finish(false),options);window.addEventListener('resize',()=>finish(false),options);
+    document.addEventListener('scroll',ev=>{if(ev.target.contains?.(entry))finish(false);},options);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)finish(false);},options);
+    window.addEventListener('keydown',ev=>{
+      if(ev.key==='Escape'){ev.preventDefault();ev.stopImmediatePropagation();finish(false);}
+      else if(ev.key==='Tab')finish(false);
+      else if(!['Shift','Control','Alt','Meta'].includes(ev.key)){ev.preventDefault();ev.stopImmediatePropagation();}
+    },options);
+    window.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();},options);
+    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','hidden']});
+    try{entry.setPointerCapture(e.pointerId);move(firstMove);}catch{finish(false);}
+  }
   entry.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   entry.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
   function beginLadder(e){
@@ -27,7 +79,7 @@ function installValueLadder(entry,commit){
     const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
     function finish(accept){
       if(finished)return;finished=true;controller.abort();observer.disconnect();valueLadder=null;if(button===2||e.pointerType==='touch')suppressContextUntil=performance.now()+400;
-      const allowed=accept&&writable();entry.value=allowed?String(value):initial;entry.numericGestureActive=false;
+      const allowed=accept&&writable();entry.value=allowed?String(value):initial;paintSlider();entry.numericGestureActive=false;
       popup.remove();document.body.classList.remove('scrubbing-value');entry.classList.remove('scrubbing');
       if(oldDescription===null)entry.removeAttribute('aria-describedby');else entry.setAttribute('aria-describedby',oldDescription);
       if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
@@ -45,7 +97,7 @@ function installValueLadder(entry,commit){
       value=ticks?Number(candidate.toPrecision(15)):base;
       if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);
       if(entry.max!==''&&Number.isFinite(Number(entry.max)))value=Math.min(Number(entry.max),value);
-      entry.value=String(value);paint();
+      entry.value=String(value);paintSlider();paint();
     }
     valueLadder={entry,cancel:()=>finish(false)};
     window.addEventListener('pointermove',move,options);
@@ -68,22 +120,24 @@ function installValueLadder(entry,commit){
   entry.addEventListener('pointerdown',e=>{
     const touch=e.pointerType==='touch';
     if(!touch&&(e.button===1||(e.button===2&&e.altKey))){suppressContextUntil=performance.now()+1200;beginLadder(e);return;}
-    if(e.button!==0||e.ctrlKey||e.metaKey||e.altKey||entry.disabled||entry.readOnly||readonly)return;
+    if(e.button!==0||e.metaKey||e.altKey||entry.disabled||entry.readOnly||editorMutationBlocked())return;
     cancelValueLadder();
-    if(touch){e.preventDefault();e.stopPropagation();}
+    const textEditing=document.activeElement===entry,canScrub=!touch&&!textEditing&&entry.value.trim()&&Number.isFinite(Number(entry.value));
+    if(touch||canScrub){e.preventDefault();e.stopPropagation();}
     const controller=new AbortController(),options={capture:true,signal:controller.signal},scroller=entry.closest('.panel-scroll'),inlineCanvas=touch&&entry.closest('#canvas');
     const sx=e.clientX,sy=e.clientY,scrollTop=scroller?.scrollTop||0,initialPan=inlineCanvas?{...pan}:null;let moved=false,done=false,timer;
     const cleanup=()=>{if(done)return;done=true;clearTimeout(timer);controller.abort();if(pendingValueLadder?.entry===entry)pendingValueLadder=null;};
     pendingValueLadder={entry,cancel:cleanup};
     timer=setTimeout(()=>{cleanup();if(!entry.isConnected||entry.disabled||entry.readOnly||!entry.getClientRects().length)return;beginLadder(e);},450);
     window.addEventListener('pointermove',ev=>{if(ev.pointerId!==e.pointerId)return;
+      if(canScrub&&Math.abs(ev.clientX-sx)>4&&Math.abs(ev.clientX-sx)>=Math.abs(ev.clientY-sy)){cleanup();beginScrub(e,ev);return;}
       if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>8){moved=true;clearTimeout(timer);if(!touch){cleanup();return;}}
       if(touch){ev.preventDefault();ev.stopPropagation();if(moved&&scroller)scroller.scrollTop=scrollTop-(ev.clientY-sy);
         else if(moved&&inlineCanvas){pan={x:initialPan.x+ev.clientX-sx,y:initialPan.y+ev.clientY-sy};transform();}}
     },options);
-    window.addEventListener('pointerup',ev=>{if(ev.pointerId!==e.pointerId)return;cleanup();if(touch){ev.preventDefault();ev.stopPropagation();if(!moved)entry.focus();}},options);
+    window.addEventListener('pointerup',ev=>{if(ev.pointerId!==e.pointerId)return;cleanup();if(touch||canScrub){ev.preventDefault();ev.stopPropagation();if(!moved&&entry.isConnected)entry.focus({preventScroll:true});}},options);
     window.addEventListener('pointercancel',cleanup,options);window.addEventListener('pointerdown',cleanup,options);window.addEventListener('blur',cleanup,options);
-    window.addEventListener('keydown',cleanup,options);document.addEventListener('visibilitychange',()=>{if(document.hidden)cleanup();},options);
+    window.addEventListener('keydown',ev=>{if(!canScrub||!['Shift','Control'].includes(ev.key))cleanup();},options);document.addEventListener('visibilitychange',()=>{if(document.hidden)cleanup();},options);
   });
 }
 
@@ -288,8 +342,9 @@ function nodeLabelField(n){
 }
 function nodeInspectorTitle(n,d){
   const title=el('div',{class:'node-inspector-title','data-category':nodeCategory(d||{key:''})});
-  const name=el('h3',{class:'node-inspector-name'},nodeDisplayName(n));name.title=name.textContent;title.append(name);
-  if(d&&customNodeNamesEnabled()&&!isSourceReferenceNode(n))title.append(nodeNameEditor(n,inspector));
+  const name=el('h3',{class:'node-inspector-name'},nodeTypeLabel(d,n.params));name.title=name.textContent;title.append(name);
+  if(d&&!isSourceReferenceNode(n))title.append(nodeNameEditor(n,inspector));
+  else if(d){const source=nodeSourceDeclaration(n),label=source?.name||'';title.append(el('span',{class:'node-inspector-source',title:label},label));}
   return title;
 }
 function focusNodeLabel(n){
@@ -560,7 +615,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
     entry.hasPendingEdit=()=>entry.value!==committed;
     const own=()=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
     const focus=()=>{if(own())inlineValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
-    const restore=()=>{entry.value=committed;entry.removeAttribute('aria-invalid');};
+    const restore=()=>{entry.value=committed;entry.refreshNumericSlider?.();entry.removeAttribute('aria-invalid');};
     const commit=()=>{
       if(entry.numericGestureActive||!own()||entry.value===committed)return;
       const next=Number(entry.value);

@@ -227,7 +227,7 @@ function mark(){
 function change(fn,{localize=true,redraw=true,typeChange=false}={}){
   if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
-  try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange});if(!typeChange)rejectNewConstantIssues(graph,previous);}
+  try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges});if(!typeChange)rejectNewConstantIssues(graph,previous);}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;

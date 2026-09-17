@@ -26,12 +26,40 @@ test('Math with fixed scalar inputs does not accept a vector in Mix.factor',()=>
 test('cycles involving Auto are rejected',()=>{const g=graph([node('add','a','float',true),node('multiply','b','float',true)],[edge('a','b'),edge('b','a')]);assert.throws(()=>resolved(g),/wire.cycle/);});
 test('labels and numeric edits do not re-infer saved Auto state',()=>{const g=base();g.stages.pixel.nodes.find(n=>n.id==='m').params.type='vec4';const before=copy(g);g.stages.pixel.nodes[0].params.value=.8;g.stages.pixel.nodes[0].ui.label='gain';resolved(g,before);assert.equal(ty(g,'m'),'vec4');});
 test('unrelated edits can still repair a graph with a preexisting invalid edge',()=>{const g=graph([node('vec2','a'),node('length','length','vec3')],[edge('a','length','value')]);const before=copy(g);g.stages.pixel.nodes.push(node('float','new'));resolved(g,before);assert.equal(ty(g,'length'),'vec3');});
+test('manual type cleanup infers Auto first and preserves splats and preexisting invalid drafts',()=>{
+ const g=graph([node('vector','v','vec2'),node('add','a','vec2',true),node('length','locked','vec2'),node('float','scalar'),node('add','splat','vec4'),node('vector','old','vec2'),node('length','invalid','vec3')],[edge('v','a'),edge('a','locked','value'),edge('scalar','splat'),edge('old','invalid','value')]);
+ const before=copy(g);g.stages.pixel.nodes.find(n=>n.id==='v').params.type='vec3';M.resolveAutoEdit(g,before,{allowInvalid:true,disconnectInvalid:true});
+ assert.equal(ty(g,'a'),'vec3');assert.deepEqual(g.stages.pixel.edges,[edge('v','a'),edge('scalar','splat'),edge('old','invalid','value')]);
+});
+test('disabled cleanup preserves newly invalid endpoints and ordinary edits never remove them',()=>{
+ const g=graph([node('vector','v','vec4'),node('vector_split','split','vec4')],[edge('v','split','value')]),before=copy(g);
+ g.stages.pixel.nodes[0].params.type='vec2';M.resolveAutoEdit(g,before,{allowInvalid:true});assert.deepEqual(g.stages.pixel.edges,before.stages.pixel.edges);
+ const invalid=copy(g);g.stages.pixel.nodes.push(node('float','unrelated'));resolved(g,invalid);assert.deepEqual(g.stages.pixel.edges,before.stages.pixel.edges);
+});
+test('manual port shrink removes only connections to newly missing ports',()=>{
+ const g=graph([node('color','c')],[edge('c','out','color'),edge('c','out','buffer1')]);g.stages.pixel.nodes.find(n=>n.id==='out').params.bufferCount=2;
+ const before=copy(g);g.stages.pixel.nodes.find(n=>n.id==='out').params.bufferCount=1;
+ M.resolveAutoEdit(g,before,{allowInvalid:true,disconnectInvalid:true});assert.deepEqual(g.stages.pixel.edges,[edge('c','out','color')]);
+});
+test('Replace Auto follows only its base and propagates the result downstream',()=>{
+ assert.equal(M.supportsAutoType(fixture.catalog.find(d=>d.key==='replace')),true);assert.equal(M.supportsAutoType(fixture.catalog.find(d=>d.key==='vector')),false);
+ const g=graph([node('vector','v','vec4'),node('float','z'),node('replace','r','vec2',true),node('length','next','float',true)],[edge('v','r','value'),edge('z','r','z'),edge('r','next','value')]);resolved(g);
+ assert.equal(ty(g,'r'),'vec4');assert.equal(ty(g,'next'),'vec4');const before=copy(g);g.stages.pixel.edges=g.stages.pixel.edges.filter(e=>e.to[1]!=='value'||e.to[0]!=='r');resolved(g,before);assert.equal(ty(g,'r'),'vec4');
+});
+test('Replace overrides cannot enlarge Auto and manual base shrink discards only the out-of-range override',()=>{
+ const g=graph([node('vector','v','vec4'),node('float','z'),node('replace','r','vec4',true)],[edge('v','r','value'),edge('z','r','z')]),before=copy(g);
+ g.stages.pixel.nodes[0].params.type='vec2';M.resolveAutoEdit(g,before,{allowInvalid:true,disconnectInvalid:true});assert.equal(ty(g,'r'),'vec2');assert.deepEqual(g.stages.pixel.edges,[edge('v','r','value')]);
+ const bad=graph([node('vector','v','vec3'),node('replace','r','vec2',true)],[edge('v','r','x')]);assert.throws(()=>resolved(bad),/vector.overlap/);assert.equal(ty(bad,'r'),'vec2');
+});
 function withFunction(scope='local'){
  const g=graph([],[]);g.functions=[{id:'fn',name:'Example',scope,inputs:[{id:'v',name:'Value',type:'vec3',default:[1,1,1]}],outputs:[{id:'v',name:'Value',type:'vec3',default:[0,0,0]}],stages:['pixel'],graph:{nodes:[{id:'in',definitionUuid:'sgrape.function.input',params:{},ui:{}},node('add','m','float',true),{id:'out',definitionUuid:'sgrape.function.output',params:{},ui:{}}],edges:[edge('in','m','a','v'),edge('m','out','v')]}}];return g;
 }
 test('Function boundary types resolve using that Function rather than the visible graph',()=>{const g=withFunction();resolved(g);assert.equal(g.functions[0].graph.nodes[1].params.type,'vec3');});
 test('read-only library graphs keep stored concrete types',()=>{const g=withFunction('builtin');g.functions[0].graph.nodes[1].params.type='vec3';const old=copy(g);g.stages.pixel.nodes.push(node('float','new'));resolved(g,old);assert.deepEqual(g.functions,old.functions);});
 test('different components propagate from shared typed Function interfaces',()=>{const g=withFunction();g.stages.pixel.nodes.push({id:'call',definitionUuid:'sgrape.function.call',params:{functionId:'fn'},ui:{}},node('length','l','float',true));g.stages.pixel.edges=[edge('call','l','value','v'),edge('l','out','color')];resolved(g);assert.equal(ty(g,'l'),'vec3');compiled.push({name:'function-boundary',graph:g});});
+test('Function interface edits infer internal Auto before pruning incompatible boundary connections',()=>{
+ const g=withFunction();resolved(g);const before=copy(g);g.functions[0].inputs[0].type='vec2';
+ M.resolveAutoEdit(g,before,{allowInvalid:true,disconnectInvalid:true});assert.equal(g.functions[0].graph.nodes[1].params.type,'vec2');assert.deepEqual(g.functions[0].graph.edges,[edge('in','m','a','v')]);
+});
 for(const name of ['dot','length','normalize'])test(name+' supports Auto float using the shared signature contract',()=>{const edges=[edge('a','m',name==='dot'?'a':'value'),edge('m','out','color')];if(name==='dot')edges.push(edge('a','m','b'));const g=resolved(graph([node('float','a'),node(name,'m','vec3',true)],edges));assert.equal(ty(g,'m'),'float');compiled.push({name:'scalar-'+name,graph:g});});
 fs.mkdirSync(folder,{recursive:true});fs.writeFileSync(path.join(folder,'model.json'),JSON.stringify({passed:true,count:checks.length,checks},null,2));fs.writeFileSync(path.join(folder,'compiler-cases.json'),JSON.stringify(compiled,null,2));console.log(JSON.stringify({passed:true,count:checks.length,compilerCases:compiled.length}));
-

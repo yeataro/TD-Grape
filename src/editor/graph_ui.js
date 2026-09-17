@@ -1,6 +1,6 @@
 // Development-only experiments. Update embedded sources and reload the Editor after changing.
 // These internal values are not user preferences and are never serialized with a graph or layout.
-const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, rgbaComponentTint: true });
+const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, rgbaComponentTint: true, autoDisconnectInvalidEdges: true });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,nodeResizeGesture=null,suppressWireClick=false;
@@ -280,7 +280,7 @@ function resolvedNodePorts(d,params,decl,kind){
   return variant?.[kind]||Object.fromEntries(Object.keys(d[kind]||{}).map(port=>[port,'?']));
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
-const supportsAutoType=d=>!!d&&!['combine','vector','replace'].includes(d.key)&&nodeCategory(d)==='math'&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&nodeCategory(d)==='math'&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
 const isVectorOperation=d=>['vector','replace','combine','vector_split','swizzle'].includes(d?.key);
 function vectorPorts(key,params){
   const spec=typeContract?.vectors,type=params.type||'vec2';
@@ -390,13 +390,20 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
   function visit(n){
     if(ports.has(n.id))return;
     if(active.has(n.id))throw autoTypeError('wire.cycle');active.add(n.id);
-    const links=incoming.get(n.id)||[];
+    const links=incoming.get(n.id)||[];let plannedType=n.params.type;
     for(const e of links){const source=nodes.get(e.from[0]);if(source)visit(source);}
     try{if(combineNodes.has(n.id)){
       const isVector=autoDefinition(document,n,owner)?.key==='replace',componentLinks=isVector?links.filter(e=>e.to[1]!=='value'):links;
-      const layout=typeContract.vectors.layouts[n.params.type]?.find(row=>componentLinks.every(e=>Object.hasOwn(row.inputs,e.to[1])&&ports.get(e.from[0])?.outputs[e.from[1]]===row.inputs[e.to[1]])&&Object.keys(row.groups).every(p=>componentLinks.some(e=>e.to[1]===p)));
+      if(isVector&&autoNodes.has(n.id)){
+        const base=links.find(e=>e.to[1]==='value'),baseType=base&&ports.get(base.from[0])?.outputs[base.from[1]];
+        // Replace follows only its whole-vector baseline. Overrides cannot
+        // enlarge it, and a disconnected baseline keeps the stored dimension.
+        if(typeContract.vectors.types.includes(baseType))plannedType=baseType;
+        choices.set(n.id,plannedType);
+      }
+      const layout=typeContract.vectors.layouts[plannedType]?.find(row=>componentLinks.every(e=>Object.hasOwn(row.inputs,e.to[1])&&ports.get(e.from[0])?.outputs[e.from[1]]===row.inputs[e.to[1]])&&Object.keys(row.groups).every(p=>componentLinks.some(e=>e.to[1]===p)));
       if(!layout)throw Error(t('vector.overlap'));
-      groups.set(n.id,layout.groups);ports.set(n.id,vectorPorts(isVector?'replace':'combine',{...n.params,groups:layout.groups}));
+      groups.set(n.id,layout.groups);ports.set(n.id,vectorPorts(isVector?'replace':'combine',{...n.params,type:plannedType,groups:layout.groups}));
     }else if(autoNodes.has(n.id)){
       const d=autoDefinition(document,n,owner),candidates=nodeTypeVariants(d,n.params).filter(v=>links.every(e=>vectorConnectionExact(d,ports.get(e.from[0])?.outputs[e.from[1]],v.inputs[e.to[1]])));
       const score=v=>links.reduce((sum,e)=>sum+Number(ports.get(e.from[0])?.outputs[e.from[1]]!==v.inputs[e.to[1]]),0);
@@ -404,7 +411,7 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
       const chosen=candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
       choices.set(n.id,chosen.type);ports.set(n.id,{inputs:chosen.inputs,outputs:chosen.outputs});
     }else ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
-    }catch(error){if(!draft)throw error;issues.set(n.id,error.message);ports.set(n.id,safeConcretePorts(document,n,owner,n.params.type,overrides.get(n.id)));}
+    }catch(error){if(!draft)throw error;issues.set(n.id,error.message);ports.set(n.id,safeConcretePorts(document,n,owner,plannedType,overrides.get(n.id)));}
     active.delete(n.id);
   }
   // No policy nodes: existing unresolved/cyclic drafts remain a compiler concern.
@@ -429,15 +436,27 @@ function reshapeTypedInputs(n,d,nextType){
   n.params.type=nextType;
 }
 function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.inputs,n.params.outputs,n.ui?.typeMode]),data.edges])});}
-function resolveAutoEdit(document,previous,{allowInvalid=false}={}){
+function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
   if(autoTopology(document)===autoTopology(previous))return;
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
   for(const unit of autoUnits(document)){
-    const plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true}),old=oldUnits.get(unit.key);
+    const old=oldUnits.get(unit.key),oldPorts=old?storedTypePorts(previous,old.data,old.owner):new Map();
+    let plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true});
+    if(disconnectInvalid&&(!unit.owner||unit.owner.scope==='local')){
+      const retained=new Set(old?invalidTypeEdges(old.data,oldPorts).map(e=>typeEdgeKey(e,oldPorts)):[]);
+      // Infer all downstream Auto nodes before removing newly incompatible
+      // edges. Re-infer after removal; the edge count bounds this process.
+      while(true){
+        const invalid=new Set(invalidTypeEdges(unit.data,plan.ports).filter(e=>!retained.has(typeEdgeKey(e,plan.ports))));
+        if(!invalid.size)break;
+        unit.data.edges=unit.data.edges.filter(e=>!invalid.has(e));
+        plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true});
+      }
+    }
     if(!allowInvalid){
       const oldPlan=old?planAutoGraph(previous,old.data,old.owner,new Map(),{draft:true}):null;
       for(const [id,message]of plan.issues)if(oldPlan?.issues.get(id)!==message)throw Error(message);
-      rejectNewTypeIssues(unit.data,plan.ports,old?.data,old?storedTypePorts(previous,old.data,old.owner):new Map());
+      rejectNewTypeIssues(unit.data,plan.ports,old?.data,oldPorts);
     }
     plans.push({...unit,plan});
   }
@@ -781,11 +800,10 @@ function renderCards(){
     else {
       const subtitles=[];
       if(customNodeNamesEnabled()&&n.name)subtitles.push(d?.key==='vector'?'Vector':d?.label||'');
-      if(quick)subtitles.push(nodeCategory(d)==='constant'?'Constant':browserSourceLabel(browserMeta(d).source));
       if(d?.key==='uv')subtitles.push('vUV.st');
       if(subtitles.length){const subtitle=subtitles.join(' · ');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     }
-    if(quick){meta.append(el('small',{class:'node-meta-separator','aria-hidden':'true'},'·'),quick);}
+    if(quick){if(meta.childNodes.length)meta.append(el('small',{class:'node-meta-separator','aria-hidden':'true'},'·'));meta.append(quick);}
     if(meta.childNodes.length)title.append(meta);
     let suppressCardClick=false;
     card.dataset.dragSurface=EDITOR_DEV_SETTINGS.nodeBodyDrag?'body':'header';

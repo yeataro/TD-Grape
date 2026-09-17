@@ -26,8 +26,8 @@
       "en": "Reference an Inputs specialization constant with a stable constant_id. Its value is fixed at specialization and can control constant branches.\n\nCurrent TD native limitation: int current values must be nonnegative; large MAT integers must be exactly representable as 32-bit float. Unsupported values are rejected."
     },
     "help.replace": {
-      "zh-Hant": "整體向量提供基底；分量接線取代對應的連續分量。新線會移除重疊的分量接線，來源節點保留，整個替換是一次復原操作。輸出只有最終向量。未接基底時可手填各分量。",
-      "en": "The whole vector supplies the base; component wires replace consecutive components. A new wire replaces overlapping component wires while keeping their source nodes, as one Undo step. Only the final vector is output. With no base input, edit the manual component values."
+      "zh-Hant": "整體向量提供基底；分量接線取代對應的連續分量。新線會移除重疊的分量接線，來源節點保留，整個替換是一次復原操作。輸出只有最終向量。Auto 僅依完整基底推導型別；未接基底時保留目前型別並可手填各分量。",
+      "en": "The whole vector supplies the base; component wires replace consecutive components. A new wire replaces overlapping component wires while keeping their source nodes, as one Undo step. Only the final vector is output. Auto follows the whole base type; without a base, the current type and editable manual component values remain."
     },
     "browser.branch.specConstants": {
       "zh-Hant": "Spec Constants",
@@ -66,8 +66,8 @@
       "en": "Node name"
     },
     "action.customNames": {
-      "zh-Hant": "自訂名稱",
-      "en": "Custom Names"
+      "zh-Hant": "顯示自訂名稱",
+      "en": "Show Custom Names"
     },
     "import.sourceConflict": {
       "zh-Hant": "匯入來源 {name} 與目前來源身分衝突；原圖未變更。",
@@ -174,8 +174,8 @@
       "en": "PNG could not be created. Retry or use JSON export."
     },
     "ladder.hint": {
-      "en": "Hold middle mouse, Alt+right mouse, or long-press to adjust. Release to apply; Esc cancels.",
-      "zh-Hant": "按住中鍵、Alt＋右鍵，或長按數值來調整。放開套用，Esc 取消。"
+      "en": "Click to edit; drag horizontally to adjust (Shift: fine, Ctrl: coarse). Middle mouse, Alt+right mouse or long-press opens Value Ladder. Release applies; Esc cancels.",
+      "zh-Hant": "點放編輯；左右拖曳調值（Shift 細調、Ctrl 粗調）。中鍵、Alt＋右鍵或長按開啟 Value Ladder。放開套用，Esc 取消。"
     },
     "ladder.release": {
       "zh-Hant": "放開套用 · Esc 取消",

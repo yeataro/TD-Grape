@@ -3,7 +3,7 @@
  */
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-async function harness(source,stateFile,folder,{headerOnly=false,touch=false}={}){
+async function harness(source,stateFile,folder,{headerOnly=false,touch=false,autoDisconnectInvalidEdges}={}){
   const state=JSON.parse(fs.readFileSync(stateFile,'utf8').replace(/^\uFEFF/,''));fs.mkdirSync(folder,{recursive:true});
   const errors=[],checks=[];
   const server=http.createServer(async(req,res)=>{
@@ -20,7 +20,7 @@ async function harness(source,stateFile,folder,{headerOnly=false,touch=false}={}
     if(!/^[a-z0-9_.-]+$/i.test(fileName)){res.statusCode=404;return res.end();}
     const file=path.join(source,fileName);if(!fs.existsSync(file)){res.statusCode=404;return res.end();}
     res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');
-    let body=fs.readFileSync(file);if(headerOnly&&fileName==='graph_ui.js')body=body.toString().replace('nodeBodyDrag: true','nodeBodyDrag: false');res.end(body);
+    let body=fs.readFileSync(file);if(headerOnly&&fileName==='graph_ui.js')body=body.toString().replace('nodeBodyDrag: true','nodeBodyDrag: false');if(typeof autoDisconnectInvalidEdges==='boolean'&&fileName==='graph_ui.js')body=body.toString().replace('autoDisconnectInvalidEdges: true','autoDisconnectInvalidEdges: '+autoDisconnectInvalidEdges);res.end(body);
   });
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
