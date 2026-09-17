@@ -44,6 +44,26 @@ async function run(){
     await mode('off',true);assert.equal(await page.locator('#graphcopy').isVisible(),true);
     checks.push('independent edit-toolbar visibility controls top edit actions while all-selection mode still supplies its contextual edit actions');
 
+    await reset();await page.mouse.move(2,2);await page.locator('#canvas').focus();
+    assert.equal(await page.evaluate(()=>EDITOR_DEV_SETTINGS.persistentSelectionBounds),false);
+    for(const value of ['off','multiple','all']){
+      await mode(value,false);await select(['a','b']);const beforeOutline=await editState();
+      await page.evaluate(()=>setUIExperiments({persistentSelectionBounds:true}));await settle();
+      assert.equal(await page.locator('#selectionbounds').isVisible(),true,'persistent outline is independent of toolbar mode '+value);
+      assert.deepEqual(await editState(),beforeOutline,'outline preference preserves graph, selection, history and dirty state');
+      await page.evaluate(()=>setUIExperiments({persistentSelectionBounds:false}));await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),false);
+    }
+    await mode('off',false);await page.evaluate(()=>setUIExperiments({persistentSelectionBounds:true}));
+    for(const ids of [[],['a'],['a','b']]){await select(ids);assert.equal(await page.locator('#selectionbounds').isVisible(),ids.length>1,'persistent outline requires multiple selected nodes');}
+    await page.evaluate(()=>{readonly=true;render();});await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),true,'readonly may still show the selection outline');
+    await page.evaluate(()=>{readonly=false;setUIAppearance('scale',125);scale=.35;pan={x:30,y:120};transform();});await settle();
+    const outlineGeometry=await page.evaluate(()=>{const r=$('#selectionbounds').getBoundingClientRect();return{left:r.left,top:r.top,right:r.right,bottom:r.bottom,bounds:selectedCanvasBounds(),zoom:uiScaleFactor()};});
+    near(outlineGeometry.left,outlineGeometry.bounds.left-6*outlineGeometry.zoom,'outline tracks graph and UI zoom horizontally');near(outlineGeometry.top,outlineGeometry.bounds.top-6*outlineGeometry.zoom,'outline tracks graph and UI zoom vertically');
+    await page.evaluate(()=>{pan.x=-10000;transform();});await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),false,'fully offscreen selection hides its persistent outline');
+    await page.evaluate(()=>{pan.x=30;transform();});await settle();assert.equal(await page.locator('#selectionbounds').isVisible(),true,'outline returns when selection enters the viewport');
+    await page.evaluate(()=>{setUIExperiments({persistentSelectionBounds:false});setUIAppearance('scale',100);});await settle();
+    checks.push('optional persistent outline works with every toolbar mode and hidden edit tools, requires two nodes, survives readonly and viewport movement, follows both zoom scales, and changes no graph or history');
+
     await reset();await mode('all');await select(['a','b']);
     const frameBefore=await editState(),allView=await viewState();
     await page.locator('#graphfitselection').click();await settle();await framed();

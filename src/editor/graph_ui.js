@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'off', nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'off', persistentSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1192,8 +1192,10 @@ function chooseCreator(index){
 function duplicateSelection(){
   const ids=new Set(selection),nodes=current().nodes.filter(n=>ids.has(n.id)&&canDeleteNode(n));if(!nodes.length)return;
   change(()=>{const remap=new Map(nodes.map(n=>[n.id,'n'+crypto.randomUUID().replaceAll('-','').slice(0,12)]));
+    const frames=GraphFrames.copy(current(),remap.keys(),remap);
     const edges=current().edges.filter(e=>remap.has(e.from[0])&&remap.has(e.to[0])).map(e=>({from:[remap.get(e.from[0]),e.from[1]],to:[remap.get(e.to[0]),e.to[1]]}));
     for(const n of nodes){const duplicate=clone(n);duplicate.id=remap.get(n.id);duplicate.ui={...clone(n.ui||{}),x:(n.ui?.x||0)+48,y:(n.ui?.y||0)+48};current().nodes.push(duplicate);assignCreatedNodeNames([duplicate]);}current().edges.push(...edges);selection=new Set(remap.values());selected=[...selection].at(-1);selectedEdge=null;
+    if(frames.length)GraphFrames.write(current(),[...GraphFrames.read(current()),...frames]);
   });
 }
 function installGraphInteractions(){
@@ -1264,7 +1266,7 @@ function installTouchNavigation(canvas){
   const points=new Map(),slop=8,holdDelay=550,doubleDelay=320;
   let gesture=null,frame=0,holdTimer=0,lastTap=null,lastTouch=-Infinity,lastDevice='mouse';
   const stop=e=>{if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();};
-  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview');
+  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview,.group-frame-title');
   const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
   const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
   const rebase=()=>{const p=sample();gesture.origin={...p,point:graphPoint(p.x,p.y),pan:{...pan},scale};};

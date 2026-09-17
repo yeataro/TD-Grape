@@ -31,7 +31,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await open();assert.equal(await panel.locator('input[type=checkbox]').count(),Object.values(defaults).filter(value=>typeof value==='boolean').length);assert.equal(await panel.locator('select').count(),Object.values(defaults).filter(value=>typeof value==='string').length);
     assert.deepEqual(await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment).sort()),Object.keys(defaults).sort());
     assert.deepEqual(await panel.locator('[data-experiment-group]').evaluateAll(groups=>groups.map(group=>group.dataset.experimentGroup)),['toolbars','nodes','appearance']);
-    assert.deepEqual(await panel.locator('[data-experiment-group="toolbars"] [data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment)),['floatingToolbar','editToolbar','selectionToolbar','canvasTrash'].filter(key=>Object.hasOwn(defaults,key)));
+    assert.deepEqual(await panel.locator('[data-experiment-group="toolbars"] [data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment)),['floatingToolbar','editToolbar','selectionToolbar','persistentSelectionBounds','canvasTrash'].filter(key=>Object.hasOwn(defaults,key)));
+    assert.equal(defaults.persistentSelectionBounds,false);assert.equal(await control('persistentSelectionBounds').isChecked(),false);
     assert.equal(await panel.locator('details').count(),0);assert.equal(await control('floatingToolbar').isChecked(),false);
     if(Object.hasOwn(defaults,'selectionToolbar')){assert.equal(defaults.selectionToolbar,'off');assert.equal(defaults.editToolbar,true);assert.deepEqual(await control('selectionToolbar').locator('option').evaluateAll(options=>options.map(option=>option.value)),['off','multiple','all']);}
     assert.deepEqual(await control('nodeDragCursor').locator('option').evaluateAll(options=>options.map(o=>o.value)),['default','move']);
@@ -119,7 +120,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
 
     await setup();const numeric=page.locator('[data-inline-node="value"]').first();await numeric.fill('');
     await page.evaluate(()=>{window.experimentDraft=document.activeElement;});const numericBefore=await snapshot();
-    await set({floatingToolbar:true,nodeBodyDrag:true,rgbaComponentTint:true,nodeCollapseExpandedHint:false,uiStyle:'professional'});
+    await set({floatingToolbar:true,nodeBodyDrag:true,rgbaComponentTint:true,nodeCollapseExpandedHint:false,uiStyle:'professional',persistentSelectionBounds:false});
     assert.equal(await page.evaluate(()=>experimentDraft.isConnected&&document.activeElement===experimentDraft),true);assert.equal(await numeric.inputValue(),'');assert.equal(await snapshot(),numericBefore);await numeric.press('Escape');
     await page.locator('#canvas').focus();await settle();
     await page.evaluate(()=>{showCustomNodeNames=true;render();const card=$('[data-node="value"]');beginNodeRename(current().nodes[0],card.querySelector('.node-function-title'));});
@@ -162,13 +163,13 @@ const [source,stateFile,folder]=process.argv.slice(2);
     }
     checks.push('English and Traditional Chinese expose translated names, hints, cursor/style choices and opener labels');
 
-    await set({canvasTrash:true,floatingToolbar:false,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'godlike',systemClock:true});const saved=await settings();
+    await set({canvasTrash:true,floatingToolbar:false,persistentSelectionBounds:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'godlike',systemClock:true});const saved=await settings();
     for(const uiStyle of ['professional','cool','excellent','legendary','godlike']){
       await set({...saved,uiStyle});await reload();assert.deepEqual(await settings(),{...saved,uiStyle});assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);assert.equal(await page.locator('#canvas>.toolbar').count(),0);assert.equal(await page.locator('.graph-workspace>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);assert.equal(await page.locator('#uisystemclock').isVisible(),true);
       await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
     }
     await page.evaluate(()=>localStorage.setItem('sgrapeExperimentsV1','{ broken'));await reload();assert.deepEqual(await settings(),defaults);
-    const malformed={canvasTrash:'true',floatingToolbar:1,nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',systemClock:'true',nodeResizeHint:false,unknown:true};
+    const malformed={canvasTrash:'true',floatingToolbar:1,persistentSelectionBounds:'true',nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',systemClock:'true',nodeResizeHint:false,unknown:true};
     assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),JSON.stringify(malformed)),{...defaults,nodeResizeHint:false});
     for(const raw of ['null','[]','true','"text"'])assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),raw),defaults);
     checks.push('all five UI styles and an explicitly disabled floating toolbar survive isolated reload; reset restores floating toolbar/Professional defaults and malformed storage is ignored');

@@ -28,5 +28,6 @@
   "share_ui_js": "share_ui.js",
   "shortcuts_ui_js": "shortcuts_ui.js",
   "select_ui_js": "select_ui.js",
-  "selection_ui_js": "selection_ui.js"
+  "selection_ui_js": "selection_ui.js",
+  "frames_ui_js": "frames_ui.js"
 }

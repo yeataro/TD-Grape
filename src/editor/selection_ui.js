@@ -21,6 +21,7 @@ function selectedCanvasNodes(){return graph&&selectedEdge===null?current().nodes
 function fitSelection(){fitNodes(selectedCanvasNodes());}
 function selectedCanvasBounds(){
   const rects=selectedCanvasNodes().map(n=>$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`)?.getBoundingClientRect()).filter(Boolean);
+  for(const frame of completeGroupFrames(selectedCanvasNodes())){const rect=$('#groupframes')?.querySelector(`[data-frame="${CSS.escape(frame.id)}"]`)?.getBoundingClientRect();if(rect)rects.push(rect);}
   if(!rects.length)return null;
   return {left:Math.min(...rects.map(r=>r.left)),top:Math.min(...rects.map(r=>r.top)),right:Math.max(...rects.map(r=>r.right)),bottom:Math.max(...rects.map(r=>r.bottom))};
 }
@@ -41,7 +42,9 @@ function renderSelectionToolbar(){
   move(multi,mode==='off'?top:bar,mode==='off'?view:null);
   edit.hidden=mode!=='all'&&EDITOR_DEV_SETTINGS.editToolbar===false;
   multi.hidden=!nodes.length;
-  $('#graphgroup').hidden=!multiple;$('#grapharrange').hidden=!multiple;
+  $('#graphgroup').hidden=!multiple;$('#grapharrange').hidden=!multiple;$('#graphframe').hidden=!multiple;
+  $('#graphframe').disabled=editorMutationBlocked()||!canCreateGroupFrame();
+  $('#graphframe').title=t(canCreateGroupFrame()?'frame.create':'frame.unframedOnly');$('#graphframe').setAttribute('aria-label',t('frame.create'));
   $('#grapharrange').disabled=!multiple||editorMutationBlocked();
   $('#graphfitselection').disabled=!nodes.length;
   bar.hidden=mode==='off'||!nodes.length||(mode==='multiple'&&!multiple);
@@ -49,7 +52,7 @@ function renderSelectionToolbar(){
   $('#grapharrange').title=t('arrange.title');$('#grapharrange').setAttribute('aria-label',t('arrange.title'));
   $('#graphfitselection').title=t('action.fitSelection');$('#graphfitselection').setAttribute('aria-label',t('action.fitSelection'));
   if(!arrangeContextMatches()||editorMutationBlocked()||!multiple)closeArrangeMenu();
-  if(bar.hidden){selectionToolbarHover=false;$('#selectionbounds').hidden=true;}
+  if(bar.hidden)selectionToolbarHover=false;
   scheduleSelectionToolbarPosition();
 }
 function scheduleSelectionToolbarPosition(){
@@ -57,10 +60,16 @@ function scheduleSelectionToolbarPosition(){
   selectionToolbarFrame=requestAnimationFrame(()=>{selectionToolbarFrame=0;positionSelectionToolbar();});
 }
 function positionSelectionToolbar(){
-  const bar=$('#selectiontoolbar'),outline=$('#selectionbounds');if(!bar||bar.hidden){if(outline)outline.hidden=true;return;}
+  const bar=$('#selectiontoolbar'),outline=$('#selectionbounds');if(!bar||!outline)return;
+  const persistent=EDITOR_DEV_SETTINGS.persistentSelectionBounds&&selectedCanvasNodes().length>1;
+  if(bar.hidden&&!persistent){outline.hidden=true;return;}
   const bounds=selectedCanvasBounds(),canvas=$('#canvas'),r=canvas.getBoundingClientRect(),zoom=uiScaleFactor();
   if(!bounds||bounds.right<r.left||bounds.left>r.right||bounds.bottom<r.top||bounds.top>r.bottom){bar.style.visibility='hidden';outline.hidden=true;return;}
   bar.style.visibility='';
+  outline.hidden=!(persistent||!bar.hidden&&(selectionToolbarHover||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open')));
+  outline.style.left=(bounds.left-r.left)/zoom-6+'px';outline.style.top=(bounds.top-r.top)/zoom-6+'px';
+  outline.style.width=(bounds.right-bounds.left)/zoom+12+'px';outline.style.height=(bounds.bottom-bounds.top)/zoom+12+'px';
+  if(bar.hidden)return;
   const margin=8,w=canvas.clientWidth,h=canvas.clientHeight,toolbar=$('#canvas>.toolbar'),tools=$('.canvas-view-tools');
   const top=toolbar?(toolbar.getBoundingClientRect().bottom-r.top)/zoom+margin:margin;
   const bottom=tools?(tools.getBoundingClientRect().top-r.top)/zoom-margin:h-margin;
@@ -72,9 +81,6 @@ function positionSelectionToolbar(){
   const preferred=fits(above)?above:fits(below)?below:above;
   const y=Math.max(top,Math.min(preferred,bottom-bar.offsetHeight));
   bar.style.left=x+'px';bar.style.top=y+'px';
-  outline.hidden=!(selectionToolbarHover||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open'));
-  outline.style.left=(bounds.left-r.left)/zoom-6+'px';outline.style.top=(bounds.top-r.top)/zoom-6+'px';
-  outline.style.width=(bounds.right-bounds.left)/zoom+12+'px';outline.style.height=(bounds.bottom-bounds.top)/zoom+12+'px';
 }
 // Lay out only the selected graph. Collapse cycles for ranking, then use two
 // neighbor/port-order sweeps to reduce crossings without a layout dependency.
@@ -209,7 +215,8 @@ function installSelectionToolbar(){
   arrange.append(selectionIcon('M4 3v18M8 5h12v4H8zM8 11h8v3H8zM8 16h10v3H8z'));arrange.onclick=openArrangeMenu;
   const frame=el('button',{id:'graphfitselection',class:'icon-button',type:'button'});
   frame.append(selectionIcon('M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M8 8h8v8H8z'));frame.onclick=fitSelection;
-  multi.append($('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
+  const groupFrame=el('button',{id:'graphframe',class:'icon-button',type:'button'});groupFrame.append(selectionIcon('M7 2v20M17 2v20M2 7h20M2 17h20'));groupFrame.onclick=createGroupFrame;
+  multi.append(groupFrame,$('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
   const menu=el('div',{id:'arrangemenu',class:'popup-menu arrangement-menu',popover:'auto',role:'menu'});document.body.append(menu);
   for(const control of [bar,menu]){
     for(const event of ['pointerdown','mousedown','touchstart','dblclick'])control.addEventListener(event,e=>e.stopPropagation());

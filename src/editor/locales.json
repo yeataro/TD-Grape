@@ -56,6 +56,8 @@
     "experiments.editToolbar.hint": {"zh-Hant": "在頂部保留複製、貼上與刪除。選取工具列設為「單選與複選」時，這些操作改在選取工具列顯示。", "en": "Keep Copy, Paste and Delete at the top. With selection toolbar set to Single and multiple, these actions move to the selection toolbar."},
     "experiments.selectionToolbar": {"zh-Hant": "選取工具列", "en": "Selection toolbar"},
     "experiments.selectionToolbar.hint": {"zh-Hant": "僅複選：選取兩個以上節點時顯示，頂部編輯工具列保留；單選與複選：選取節點時顯示，並接管頂部編輯工具。", "en": "Multiple only shows the selection toolbar for two or more nodes and keeps the top edit toolbar. Single and multiple shows it for any selection and replaces the top edit toolbar."},
+    "experiments.persistentSelectionBounds": {"zh-Hant": "常態顯示多選框", "en": "Always show multiple-selection outline"},
+    "experiments.persistentSelectionBounds.hint": {"zh-Hant": "選取兩個以上節點時，持續顯示周圍的虛線框，不受選取工具列開關影響。關閉時，只在操作選取工具列時顯示。", "en": "Keep the dashed outline visible around two or more selected nodes, even when the selection toolbar is off. When disabled, show it only while interacting with the selection toolbar."},
     "experiments.selection.off": {"zh-Hant": "關閉", "en": "Off"},
     "experiments.selection.multiple": {"zh-Hant": "僅複選", "en": "Multiple only"},
     "experiments.selection.all": {"zh-Hant": "單選與複選", "en": "Single and multiple"},
@@ -2921,6 +2923,14 @@
       "zh-Hant": "畫布縮放倍率",
       "en": "Canvas zoom presets"
     },
+    "frame.defaultName": {"zh-Hant": "群組", "en": "Group"},
+    "frame.create": {"zh-Hant": "建立群組框", "en": "Create group frame"},
+    "frame.unframedOnly": {"zh-Hant": "選取至少兩個尚未分組的節點", "en": "Select at least two ungrouped nodes"},
+    "frame.name": {"zh-Hant": "群組框名稱", "en": "Group frame name"},
+    "frame.rename": {"zh-Hant": "重新命名群組框 · F2（或雙擊標題）", "en": "Rename group frame · F2 (or double-click title)"},
+    "frame.remove": {"zh-Hant": "移除群組框（保留節點）", "en": "Remove group frame (keep nodes)"},
+    "frame.color": {"zh-Hant": "群組框顏色", "en": "Group frame color"},
+    "frame.invalidName": {"zh-Hant": "名稱需為 1–80 字，且不可包含控制字元。", "en": "Use 1–80 characters without control characters."},
     "comment.resize": {
       "zh-Hant": "拖曳調整註解寬度與高度",
       "en": "Drag to resize comment width and height"

@@ -1840,7 +1840,7 @@ def refresh_assets(owner):
         _assets['/favicon.svg']=(owner.op('favicon_svg').text.encode('utf-8'),'image/svg+xml')
     if owner.op('inspector_js'):
         _assets['/inspector.js']=(owner.op('inspector_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
-    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui'):
+    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui','frames_ui'):
         if owner.op(name+'_js'):
             _assets['/'+name+'.js']=(owner.op(name+'_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
 

@@ -651,9 +651,8 @@ function commentNodeEditor(n,canvas=false){
   };
   box.append(preview,entry);renderPreview();entry.hidden=!hasDraft;preview.hidden=!!hasDraft;return box;
 }
-function nodeCommentField(n,standalone=false){
-  const section=el(standalone?'section':'details',{class:'node-comment-field'+(standalone?' node-notes-page':'')});
-  if(!standalone){section.open=!!nodeComment(n);section.append(el('summary',{},t('node.comment')));}
+function nodeCommentField(n){
+  const section=el('section',{class:'node-comment-field node-notes-page'});
   const entry=el('textarea',{'data-node-comment':n.id,rows:3,maxlength:2000,'aria-label':t('node.comment')});entry.value=nodeComment(n);entry.disabled=readonly;
   let committed=entry.value;
   const commit=()=>{if(readonly||entry.value===committed)return;const value=entry.value;committed=value;if(!setNodeComment(n,value)){entry.value=nodeComment(n);committed=entry.value;}};
@@ -1054,14 +1053,14 @@ function inspector(){
   box.append(nodeInspectorTitle(n,d));
   if(!d)return;
   const ordinary=!isSourceReferenceNode(n);
-  if((!ordinary||d.key==='comment')&&inspectorTab==='notes')inspectorTab='parameters';
+  if(d.key==='comment'&&inspectorTab==='notes')inspectorTab='parameters';
   const tabs=el('div',{class:'parameter-tabs',role:'tablist','aria-label':t('panel.parameters')});
-  for(const key of ordinary&&d.key!=='comment'?['parameters','settings','notes']:['parameters','settings']){
+  for(const key of d.key!=='comment'?['parameters','settings','notes']:['parameters','settings']){
     const button=el('button',{class:inspectorTab===key?'active':'',role:'tab','aria-selected':String(inspectorTab===key)},t('panel.'+key));
     button.onclick=()=>{inspectorTab=key;inspector();};tabs.append(button);
   }
   box.append(tabs);
-  if(inspectorTab==='notes'){box.append(nodeCommentField(n,true));return;}
+  if(inspectorTab==='notes'){box.append(nodeCommentField(n));return;}
   box.classList.toggle('ordinary-parameters',ordinary&&inspectorTab==='parameters');
   functionInspector(box,n,d);
   if(inspectorTab==='parameters'){
@@ -1154,7 +1153,6 @@ function inspector(){
     pixelBufferNames(box,n);
     box.append(el('div',{class:'node-identity'},n.id));
   }
-  if(!ordinary)box.append(nodeCommentField(n));
   updateUniformFields();
 
 }

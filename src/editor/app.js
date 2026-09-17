@@ -159,6 +159,7 @@ function graphContent(document){
   // Coordinates and component expansion are presentation-only. Labels and type settings may
   // affect generated GLSL, so keep them when choosing the progress message.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
+    delete data.ui;
     data.nodes=data.nodes.filter(node=>node.definitionUuid!=='sgrape.builtin.comment');
     for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.height;delete node.ui.componentsExpanded;delete node.ui.collapsed;if(!Object.keys(node.ui).length)delete node.ui;}
   }
@@ -230,7 +231,7 @@ function mark(){
 function change(fn,{localize=true,redraw=true,typeChange=false}={}){
   if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
-  try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges});if(!typeChange)rejectNewConstantIssues(graph,previous);}
+  try{if(localize)prepareSemanticEdit();fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges});if(!typeChange)rejectNewConstantIssues(graph,previous);}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
@@ -354,14 +355,14 @@ function transform(){
   $('#canvas').style.setProperty('--wire-glow',7/scale+'px');
   $('#canvas').dataset.gridStep=displayGrid;
   $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;renderGraphZoom();wireGesture?.refresh?.();scheduleSelectionToolbarPosition();}
-function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();scheduleSelectionToolbarPosition();}
+function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();}
 function library(){renderLibrary();}
 function render(){renderCompileDiagnostics();
   if(!graph)return;if(!graph.stages?.[stage])stage='pixel';
   document.querySelectorAll('[data-stage]').forEach(b=>{b.hidden=!graph.stages?.[b.dataset.stage];b.classList.toggle('active',b.dataset.stage===stage);});
   $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';
   $('#previewtitle').dataset.i18n=editorTarget==='top'?'preview.top':'preview.material';$('#previewtitle').textContent=t($('#previewtitle').dataset.i18n);renderPreviewAppearance();
-  tidyTrail();renderCards();wires();inspector();library();declarations();renderNativeSources();transform();renderNavigation();renderSavedStateIssue();
+  tidyTrail();renderCards();renderGroupFrames();wires();inspector();library();declarations();renderNativeSources();transform();renderNavigation();renderSavedStateIssue();
 }
 function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('texture.input0')]]:[]),...[['builtin:banana',t('texture.banana')],['builtin:jellybeans',t('texture.jellybeans')],['builtin:white',t('texture.white')],['builtin:black',t('texture.black')],['external',t('texture.custom')]]]; }
 function declarations(){const box=$('#declarations');box.replaceChildren();for(const d of graph.declarations){const card=el('div',{class:'decl'});card.append(el('small',{},d.type+' · '+d.id));card.append(field(t('declaration.name'),input(d.name,v=>change(()=>d.name=v))));declarationFields(card,d);box.append(card);}}
@@ -541,7 +542,7 @@ function nodeLayoutBounds(n){
 }
 function fitNodes(nodes){
   if(!nodes.length)return;
-  const bounds=nodes.map(nodeLayoutBounds),minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));
+  const bounds=[...nodes.map(nodeLayoutBounds),...completeGroupFrames(nodes).map(groupFrameBounds).filter(Boolean)],minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));
   scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);
   pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();
 }
@@ -668,7 +669,7 @@ const experimentChoices={
   uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent'],['legendary','experiments.style.legendary'],['godlike','experiments.style.godlike']]
 };
 const experimentGroups=[
-  ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','canvasTrash']],
+  ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','persistentSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
   ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock']]
 ];
@@ -711,7 +712,7 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','floatingToolbar','editToolbar','selectionToolbar'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','floatingToolbar','editToolbar','selectionToolbar','persistentSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){
     cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();

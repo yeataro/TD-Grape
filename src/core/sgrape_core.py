@@ -411,10 +411,12 @@ def clean_semantic(graph):
     g=copy.deepcopy(graph)
     g.pop('catalogSnapshot',None)
     for s in g['stages'].values():
+        s.pop('ui',None)
         s['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in s['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
         s['edges']=sorted(s['edges'],key=lambda e:tuple(e['to']+e['from']))
     g['declarations']=sorted(g['declarations'],key=lambda d:d['id'])
     for f in g.get('functions',[]):
+        f['graph'].pop('ui',None)
         f['graph']['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in f['graph']['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
         f['graph']['edges']=sorted(f['graph']['edges'],key=lambda e:tuple(e['to']+e['from']))
     if 'functions' in g: g['functions'].sort(key=lambda f:f['id'])
@@ -1150,11 +1152,33 @@ def _expand(graph,functions):
     return expanded,origins,annotation_scopes
 
 
+def validate_graph_frames(data):
+    """Frames are optional UI metadata, scoped to this graph's node identities."""
+    ui=data.get('ui') if isinstance(data,dict) else None
+    if not isinstance(ui,dict) or 'frames' not in ui:return
+    frames=ui['frames']
+    if not isinstance(frames,list) or len(frames)>256:raise GraphError('Invalid graph frames')
+    raw_nodes=data.get('nodes');nodes={n.get('id') for n in (raw_nodes if isinstance(raw_nodes,list) else []) if isinstance(n,dict) and isinstance(n.get('id'),str)}
+    identities=set();claimed=set()
+    for frame in frames:
+        if not isinstance(frame,dict):raise GraphError('Invalid graph frame')
+        ident=frame.get('id');name=frame.get('name');members=frame.get('nodes')
+        if not isinstance(ident,str) or not ID.fullmatch(ident) or ident in identities:raise GraphError('Invalid or duplicate frame ID')
+        if not isinstance(name,str) or not name.strip() or len(name)>80 or re.search(r'[\x00-\x1f\x7f]',name):raise GraphError('Frame name must contain 1–80 characters without control characters')
+        if 'color' in frame and (not isinstance(frame['color'],str) or not re.fullmatch(r'#[0-9a-fA-F]{6}',frame['color'])):raise GraphError('Frame color must be a six-digit hex color')
+        if not isinstance(members,list) or not 1<=len(members)<=256:raise GraphError('Frame must reference existing nodes')
+        identities.add(ident)
+        for member in members:
+            if not isinstance(member,str) or member not in nodes or member in claimed:raise GraphError('Frame members must exist and belong to only one frame')
+            claimed.add(member)
+
+
 def compile_graph(graph):
     if not isinstance(graph,dict) or graph.get('schemaVersion')!=VERSION: raise GraphError('Unsupported graph version; original data has been kept')
     if len(json.dumps(graph,allow_nan=False))>512000: raise GraphError('Graph exceeds 512 KB')
     if set(graph.get('stages',{}))!=set(graph_stages(graph)): raise GraphError('Shader stages do not match its target')
     functions=_functions(graph)
+    for data in [*graph['stages'].values(),*(fn['graph'] for fn in functions.values())]:validate_graph_frames(data)
     # Check unused definitions too, before any material is touched.
     for fn in functions.values():
         for stage in fn['stages']:

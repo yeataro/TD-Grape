@@ -1,5 +1,17 @@
 # 測試
 
+本輪收尾回歸：群組框 10 組、Editor chrome 16 組、自動排列 11 組全過，零頁面錯誤。包含 CDP 真實觸控拖移群組標題（全體成員同移、一筆 Undo、pan 不變）及框內空白命中穿透後的實際滑鼠平移（圖與歷史不變）。本輪相關瀏覽器檢查共 85 組；實體 iOS Safari 未測。
+
+同輪註記入口修正：`test_node_notes.cjs` 3 組通過，逐一涵蓋 Constant、Uniform、Spec Constant、Sampler、TOP Input、一般節點及 GLSL Code 的分頁、編輯／取消／Undo／Redo、來源資料隔離、跨節點切換、唯讀、雙語及 Comment 原文內文例外。`test_parameter_values.cjs` 15 組既有輸入行為回歸通過。舊 `details` 入口已移除，沒有改註記的既有成碼語意。
+
+本批更新並保存 TD，31 份內嵌來源及 9 份服務資源與工作樹相同，兩份 Master current、兩份使用者 Shader 保留。正式 TOE 757,884 bytes，SHA-256 `d804a2ff53030f2754d539d4b5800a35ba63d94193f70169a0c18e02934e243b`；私人助手已排除，未重新整理使用者現有 Editor。私人報告分別位於 group-frames、persistent-selection-bounds、persistent-selection-experiments、notes-tab-node_notes 及 notes-tab-parameter_values。
+
+2026-09-18 群組框／常態多選框：完整 portable runner 通過，包含 288 個 Python 測試、591 個雙語引用、14 個 Editor Launch 測試、metadata／品牌檢查、9 支 JS 模型腳本與 26 個 Remote Panel 測試；138 份舊圖的編譯 fingerprint 保持相同。新模型測試驗證不合法成員／色碼／名稱、框 ID 重映、部分與完整剪貼簿、函式庫、子圖轉換及清理空框，UI metadata 不影響編譯或 Shader dirty。
+
+隔離 Chromium 的 `test_group_frames.cjs` 驗證建立、名稱／改色、一次 Undo／Redo、圖與 UI 縮放下整組拖移、取消、成員移動／resize 即時跟隨、刪除後剩一個／零個、移除框保留節點、唯讀、重複成員限制、剪貼簿及子圖／Stage 隔離。獨立檢閱另外實測拖移途中切 Stage、readonly、Undo 及失效舊色彩欄位事件，均未改壞圖或新增歷史。桌面截圖已目視。
+
+`test_selection_toolbar.cjs` 11 組與 `test_ui_experiments.cjs` 19 組通過，零頁面錯誤。涵蓋常態多選框的預設關閉、持久化、重設、繁英排序、工具列關閉時仍顯示、單選／離屏隱藏、縮放與無圖資料／歷史副作用。
+
 2026-09-18 Comment Parameter 原文編輯：既有 Comment nodes 8 組、resize 9 組、Markdown 9 組共 26 組通過，零頁面錯誤。參數頁直接顯示原始 textarea，提交／取消後仍保留輸入欄位，畫布 Markdown 與 Undo 同步；以實際面板分隔線調大／縮回驗證輸入框自動填滿、說明留在底部且未改圖或歷史。長文可在欄位內捲動，唯讀保持可見而不可編輯；深灰類型色與深／淺色截圖已目視。582 雙語引用、JS 語法及 diff 檢查通過，未重跑無關 portable tests。
 
 已更新三份 TD 來源並保存 TOE，30 份來源與 8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留。TOE 752,364 bytes，SHA-256 `d018f7d0c3f751f7d18443c4bef8704fe9fa2e0637e8e864e38d358ac4a37ed8`。未重新整理現有 Editor，私人報告位於 comment-parameter-source。

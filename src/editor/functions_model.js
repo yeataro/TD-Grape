@@ -5,6 +5,48 @@ if(!crypto.randomUUID){crypto.randomUUID=()=>{
   const hex=Array.from(bytes,value=>value.toString(16).padStart(2,'0')).join('');
   return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
 };}
+/* Graph-level presentation metadata. Membership is local to one graph. */
+const GraphFrames=(()=>{
+  const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
+  const validId=value=>typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(value);
+  const validName=value=>typeof value==='string'&&value.trim().length>0&&value.length<=80&&!/[\x00-\x1f\x7f]/.test(value);
+  const validColor=value=>typeof value==='string'&&/^#[\da-f]{6}$/i.test(value);
+  const uid=()=> 'frame_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
+  function read(data){
+    const frames=data?.ui?.frames;if(!Array.isArray(frames))return [];
+    const available=new Set((Array.isArray(data?.nodes)?data.nodes:[]).filter(object).map(n=>n.id)),ids=new Set(),claimed=new Set(),result=[];
+    for(const frame of frames.slice(0,256)){
+      if(!object(frame)||!validId(frame.id)||ids.has(frame.id)||!validName(frame.name)||!Array.isArray(frame.nodes))continue;
+      const nodes=[...new Set(frame.nodes.filter(id=>validId(id)&&available.has(id)&&!claimed.has(id)))];if(!nodes.length)continue;
+      ids.add(frame.id);nodes.forEach(id=>claimed.add(id));
+      result.push({id:frame.id,name:frame.name,nodes,...(validColor(frame.color)?{color:frame.color}:{})});
+    }
+    return result;
+  }
+  function write(data,frames){
+    if(!object(data))return;
+    const kept=read({nodes:data.nodes,ui:{frames}});
+    if(kept.length){if(!object(data.ui))data.ui={};data.ui.frames=kept;}
+    else if(object(data.ui)){delete data.ui.frames;if(!Object.keys(data.ui).length)delete data.ui;}
+  }
+  function prune(data){write(data,read(data));}
+  function copy(data,selected,remap=null){
+    const chosen=new Set(selected);
+    return read(data).filter(frame=>frame.nodes.every(id=>chosen.has(id)&&(!remap||remap.has(id)))).map(frame=>({...frame,id:remap?uid():frame.id,nodes:frame.nodes.map(id=>remap?remap.get(id):id)}));
+  }
+  function valid(data){
+    if(!object(data?.ui)||!Object.hasOwn(data.ui,'frames'))return true;
+    const frames=data.ui.frames;if(!Array.isArray(frames)||frames.length>256)return false;
+    const available=new Set((data.nodes||[]).map(n=>n.id)),ids=new Set(),claimed=new Set();
+    for(const frame of frames){
+      if(!object(frame)||!validId(frame.id)||ids.has(frame.id)||!validName(frame.name)||!Array.isArray(frame.nodes)||!frame.nodes.length||frame.nodes.length>256||Object.hasOwn(frame,'color')&&!validColor(frame.color))return false;
+      ids.add(frame.id);
+      for(const id of frame.nodes){if(!validId(id)||!available.has(id)||claimed.has(id))return false;claimed.add(id);}
+    }
+    return true;
+  }
+  return {read,write,prune,copy,valid};
+})();
 /* Pure graph operations, shared by the editor and model tests. */
 const FunctionModel=(()=>{
   const CALL='sgrape.function.call',INPUT='sgrape.function.input',OUTPUT='sgrape.function.output';
@@ -68,7 +110,7 @@ const FunctionModel=(()=>{
   }
   return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity};
 })();
-if(typeof module!=='undefined')module.exports=FunctionModel;
+if(typeof module!=='undefined'){module.exports=FunctionModel;module.exports.GraphFrames=GraphFrames;}
 
 /* Portable selection snapshots contain graph data only, never editor credentials. */
 const GraphClipboard=(()=>{
@@ -86,6 +128,7 @@ const GraphClipboard=(()=>{
       if(n.definitionUuid===FunctionModel.CALL){const ident=n.params.functionId;if(seenFunctions.has(ident))continue;const f=FunctionModel.find(graph,ident);if(!f)fail('clipboard.missing');seenFunctions.add(ident);functions.push(copy(f));scan(f.graph.nodes);}
     }}
     scan(nodes);const result={format:FORMAT,version:1,source,nodes:copy(nodes),edges:copy(data.edges.filter(e=>chosen.has(e.from[0])&&chosen.has(e.to[0]))),functions,declarations,topInputs};
+    GraphFrames.write(result,GraphFrames.copy(data,chosen));
     const text=JSON.stringify(result);if(new TextEncoder().encode(text).length>LIMIT)fail('clipboard.size');return text;
   }
   function decode(text){
@@ -129,7 +172,7 @@ const GraphClipboard=(()=>{
     }
     function nodesAndEdges(content,boundary=false){
       if(!object(content)||!Array.isArray(content.nodes)||!Array.isArray(content.edges)||content.nodes.length>256||content.edges.length>1024)fail('clipboard.invalid');
-      const nodes=unique(content.nodes);
+      const nodes=unique(content.nodes);if(!GraphFrames.valid(content))fail('clipboard.invalid');
       for(const node of nodes.values()){
         if(!object(node.params)||!object(node.ui)||![node.ui.x,node.ui.y].every(Number.isFinite))fail('clipboard.invalid');
         if(node.definitionUuid===FunctionModel.CALL){const key=node.params.functionId;if(!functionMap.has(key))fail('clipboard.missing');node.params.functionId=functionMap.get(key);}
@@ -141,14 +184,15 @@ const GraphClipboard=(()=>{
       const edges=new Set();for(const edge of content.edges){if(!object(edge)||!Array.isArray(edge.from)||!Array.isArray(edge.to)||edge.from.length!==2||edge.to.length!==2||!nodes.has(edge.from[0])||!nodes.has(edge.to[0])||!validId(edge.from[1])||!validId(edge.to[1]))fail('clipboard.invalid');const key=JSON.stringify(edge.to);if(edges.has(key))fail('clipboard.invalid');edges.add(key);}
     }
     for(const f of newFunctions)nodesAndEdges(f.graph,true);
-    const content={nodes:copy(p.nodes),edges:copy(p.edges)};nodesAndEdges(content);
+    const content={nodes:copy(p.nodes),edges:copy(p.edges),...(Object.hasOwn(p,'ui')?{ui:copy(p.ui)}:{})};nodesAndEdges(content);
     if(data.nodes.length+content.nodes.length>256||data.edges.length+content.edges.length>1024)fail('clipboard.size');
     FunctionModel.ensureCapacity(graph,newFunctions.length);
     if(newSlots.length){if(!graph.topInputs){const legacy=graph.declarations.find(d=>d.source==='input:0');graph.topInputs=[{id:'input0',name:'Input 0',defaultSource:legacy?.defaultSource||'builtin:banana',matchDefault:!!legacy?.defaultSource}];}if(graph.topInputs.length+newSlots.length>16)fail('clipboard.size');if(graph.declarations.some(d=>d.source==='input:0'))graph.topInputLegacyId||=graph.topInputs[0].id;graph.topInputs.push(...newSlots);}
     graph.functions||=[];graph.functions.push(...newFunctions);graph.declarations.push(...newDeclarations);
-    const remap=new Map(content.nodes.map(n=>[n.id,id()])),x=Math.min(...content.nodes.map(n=>n.ui.x)),y=Math.min(...content.nodes.map(n=>n.ui.y));
+    const remap=new Map(content.nodes.map(n=>[n.id,id()])),x=Math.min(...content.nodes.map(n=>n.ui.x)),y=Math.min(...content.nodes.map(n=>n.ui.y)),frames=GraphFrames.copy(content,remap.keys(),remap);
     for(const node of content.nodes){node.id=remap.get(node.id);node.ui={...node.ui,x:node.ui.x-x+anchor.x,y:node.ui.y-y+anchor.y};data.nodes.push(node);}
     for(const edge of content.edges)data.edges.push({from:[remap.get(edge.from[0]),edge.from[1]],to:[remap.get(edge.to[0]),edge.to[1]]});
+    if(frames.length)GraphFrames.write(data,[...GraphFrames.read(data),...frames]);
     // Reject recursive function pastes as one failed transaction, including into itself.
     const seen=new Set(),active=new Set();function visit(key){if(active.has(key))fail('clipboard.cycle');if(seen.has(key))return;const f=FunctionModel.find(graph,key);if(!f)fail('clipboard.missing');if(!f.stages.includes(stage))fail('clipboard.stage');active.add(key);for(const n of f.graph.nodes)if(n.definitionUuid===FunctionModel.CALL)visit(n.params.functionId);active.delete(key);seen.add(key);}
     for(const n of data.nodes)if(n.definitionUuid===FunctionModel.CALL)visit(n.params.functionId);
