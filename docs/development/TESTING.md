@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-17 Parameter 外觀與 Value Ladder 鎖定（0.8.84）：既有 test_parameter_values.cjs 15 組通過；私人探針 21 組確認單行說明／全文 title、深淺色文字分頁與名稱欄、選單操作、連線文字垂直置中（中心差低於 0.01px）、vec4／Color 整列展開、輸入／拖曳／色票排除、鍵盤與 Chromium 觸控。涵蓋 300／600px 及 UI 75／100／125%；緊湊與展開欄界差低於 1px，數值輸入維持 24px。截圖已目視，未新增正式樣式鏡像測試。
+
+更新既有 test_numeric_scrub.cjs 的重新選級距預期，32 組全部通過；75／125% UI 下，左右調值後跨回原列表保持精簡提示與原級距，回 anchor 恢復原值，新手勢可選 0.01，放開只提交一次 Undo／Redo；可信任 Chromium touch event 覆蓋相同行為。保留左拖連續換範圍、手填精度、界限與取消。合計 68 組、零瀏覽器錯誤，JavaScript 語法與 diff 檢查通過；實體 iPad／Safari 未測。
+
+TD 更新 style_css／inspector_js／functions_ui_js，28 份內嵌來源與服務一致、兩份 Master current。正式 TOE 為 712,420 bytes，SHA-256 259a08cfd6b7793a5427180dc37555fa9d0a8e35f27dcc6ba4602db1970605b9；保留兩份 Shader、排除私人助手，既有瀏覽器分頁未重新整理。
+
 2026-09-17 Parameter 共用控制列（0.8.84）：既有 test_parameter_values.cjs 15 組通過，涵蓋共用列重構後的草稿、分量同步、取消／Undo、bool／int／uint、Settings／Uniform 保持及窄版；私人幾何／操作探針 19 組通過，涵蓋 Replace／Swizzle／Tint 在 300／600px 與 UI 75／100／125% 的欄位對齊、24px 基準、無溢出，GLSL 函式改名與單步 Undo、MAT Buffer 選單、UV 設定／還原往返。44px Swizzle 選單換行後字母完整，截圖已目視，零瀏覽器錯誤。未新增正式樣式測試。舊 test_glsl_code.cjs 單擊新增項後仍停在預覽，等不到編輯器，未列入通過數；此輪涉及的函式名稱／Undo 由上述直接建立節點的隔離探針驗證。
 
 TD 更新 style_css／inspector_js／functions_ui_js；28 份內嵌來源與服務內容一致，兩份 Master current。正式 TOE 為 724,684 bytes，SHA-256 aff8d1073fad0025f314de50a9cc1ce3057b0f0743b3352b94bd9c760e5318a2；保留兩份 Shader、排除私人助手，現有瀏覽器分頁未重新整理。

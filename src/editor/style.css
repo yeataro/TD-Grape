@@ -125,9 +125,6 @@ main{height:calc(100 * var(--ui-vh) - 199px);grid-template-columns:205px 1fr 308
 .graph-location .graph-separator{color:#777080}
 .details{display:flex;flex-direction:column;overflow:hidden;padding:0}
 .material-preview .preview{max-width:180px;margin:auto}
-.parameter-tabs{display:flex;gap:5px;border-bottom:1px solid var(--line);margin:15px 0 18px}
-.parameter-tabs button{background:transparent;border:0;border-bottom:2px solid transparent;border-radius:0;font-size:12px;color:var(--muted);padding:8px}
-.parameter-tabs button.active{border-bottom-color:var(--purple);color:#eee5ff}
 .node-identity{font-size:10px;color:var(--muted);overflow-wrap:anywhere}
 #inspector h3{margin-bottom:5px}#inspector{margin-bottom:8px}
 .input-parameter{border-top:1px solid var(--line);margin-top:18px;padding-top:9px}
@@ -136,7 +133,7 @@ main{height:calc(100 * var(--ui-vh) - 199px);grid-template-columns:205px 1fr 308
 input:disabled{opacity:.48;cursor:default}
 .toggle-field{display:flex;gap:9px;align-items:center;font-size:12px;margin:18px 0;color:var(--ui-tone-label)}
 .toggle-field input{accent-color:var(--purple);width:15px;height:15px}
-.connection-source{font-size:10px;color:var(--node-uniform-fg);overflow-wrap:anywhere;margin-top:9px}
+.connection-source{font-size:10px;color:var(--node-uniform-fg);overflow-wrap:anywhere}
 .help-markdown{font-size:12px;color:var(--ui-tone-help);line-height:1.7}
 .help-markdown p{margin:0 0 10px}.help-markdown p:last-child{margin-bottom:0}
 .help-markdown code{color:var(--ui-tone-code-chip-text);font-size:11px;background:var(--ui-tone-code-chip);padding:1px 3px;border-radius:3px}
@@ -415,7 +412,6 @@ input.scrubbing{outline:1px solid var(--purple);background:#2d2538}
 .components:not(.scalar) input{padding-left:18px}
 .components input[type=number]{appearance:textfield;-moz-appearance:textfield}
 .components input[type=number]::-webkit-inner-spin-button,.components input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-.parameter-hint{font-size:10px;color:var(--muted);line-height:1.5;margin:8px 0 14px}
 /* Adjustable sidebars. Width preferences are separate from graph coordinates. */
 :root{--sidebar-left-min:180px;--sidebar-right-min:300px;--sidebar-left-max:520px;--sidebar-right-max:640px;--sidebar-left-default:220px;--sidebar-right-default:340px;--sidebar-canvas-min:280px;--sidebar-divider:6px}
 .side-divider{position:relative;z-index:12;min-width:0;min-height:0;cursor:col-resize;touch-action:none;outline:none;background:#191820}
@@ -658,12 +654,11 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .node-inspector-title{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:center;gap:8px;height:var(--panel-header-height);min-height:var(--panel-header-height);padding:0 10px;margin:0;background:var(--category-bg);color:var(--category-fg);border-bottom:1px solid #ffffff16}
 #inspector .node-inspector-name{min-width:0;margin:0;font-size:13px;line-height:1.4;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .node-inspector-source{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-size:12px}
-.node-inspector-title .node-inspector-label{min-width:0;margin:0;color:inherit}
-.node-inspector-label input{width:100%;min-width:0;padding:6px 7px;border:1px solid transparent;border-radius:2px;background:#ffffff12;color:inherit;font-size:12px;text-overflow:ellipsis}
-.node-inspector-label input::placeholder{color:inherit;opacity:.6}
-.node-inspector-label input:hover{background:#ffffff1c}
-.node-inspector-label input:focus{outline:1px solid var(--purple);background:#00000024}
-.node-inspector-label input:disabled{opacity:.55;cursor:default}
+
+/* Header names use a light tint over their category color. */
+#inspector .node-inspector-title .node-name-editor input{background:#ffffff14;color:inherit;border-color:transparent}
+#inspector .node-inspector-title .node-name-editor input:hover{background:#ffffff20}
+#inspector .node-inspector-title .node-name-editor input:focus{background:#ffffff20;outline:1px solid var(--purple)}
 
 /* Canvas notes are plain text, with the same color for every category. */
 .node-canvas-comment{padding:8px 12px 10px;border-top:1px solid #ffffff12;color:var(--muted);font-size:10px;line-height:1.5}
@@ -772,12 +767,14 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .subgraph-icon.source-subgraph{opacity:.5}
 #pane-parameters>.panel-scroll{padding:0;scrollbar-gutter:auto}
 #inspector{margin:0 0 12px}
-#inspector>:not(.node-inspector-title):not(.parameter-tabs){margin-left:12px;margin-right:12px}
+#inspector>:not(.node-inspector-title):not(.parameter-tabs){margin-left:var(--parameter-inset,12px);margin-right:var(--parameter-inset,12px)}
 #inspector>.wide{width:calc(100% - 24px)}
-.node-inspector-title .node-inspector-label input{height:26px;padding:3px 7px}
-.parameter-tabs{gap:0;margin:0 0 10px;border-bottom:0;min-height:var(--panel-header-height);background:var(--panel-header-inactive-bg)}
-.parameter-tabs button{border:0;padding:0 12px;min-height:var(--panel-header-height);background:var(--panel-header-inactive-bg)}
-.parameter-tabs button.active{background:var(--panel-content-bg);color:var(--panel-header-fg)}
+/* Parameter pages use quiet text tabs, distinct from workspace panel tabs. */
+#inspector .parameter-tabs{display:flex;gap:2px;margin:0 var(--parameter-inset,12px) 10px;min-height:28px;border-bottom:1px solid color-mix(in srgb,var(--muted) 18%,transparent);background:transparent}
+#inspector .parameter-tabs button{min-height:28px;margin-bottom:-1px;padding:4px 8px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;font-size:11px;color:var(--muted)}
+#inspector .parameter-tabs button:hover{background:transparent;color:var(--ui-text)}
+#inspector .parameter-tabs button.active{background:transparent;border-bottom-color:color-mix(in srgb,var(--ui-text) 55%,transparent);color:var(--ui-text)}
+#inspector .parameter-tabs button:focus-visible{outline:1px solid var(--purple);outline-offset:-3px}
 #inspector label.field{margin-top:8px;margin-bottom:8px;gap:4px}
 #inspector .input-parameter{margin-top:10px;padding-top:9px}
 .input-heading{display:flex;align-items:center;justify-content:space-between;gap:6px}
@@ -797,7 +794,6 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #layoutdialog .layout-row{grid-template-columns:minmax(80px,1fr) minmax(80px,2fr) 26px 26px 26px 26px}
 #layoutdialog .layout-preset>input{flex:1;min-width:100px}
 
-#inspector .node-inspector-title .node-inspector-label{margin:0}
 
 .preview-controls .preview-icon-button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;width:30px;height:28px;padding:0;gap:0}
 @media(pointer:coarse){.preview-controls .preview-icon-button{flex-basis:36px;width:36px;height:36px}}
@@ -1153,8 +1149,6 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] .workspace-group.collapsed .workspace-tab.panel-heading{background:var(--panel-header-inactive-bg);color:var(--muted)}
 :root[data-ui-theme="light"] .workspace-tabs .workspace-fold{background:transparent;color:var(--muted)}
 :root[data-ui-theme="light"] .workspace-tabs .workspace-fold:hover{background:var(--panel-header-hover-bg);color:var(--panel-header-fg)}
-:root[data-ui-theme="light"] .parameter-tabs button{background:var(--panel-header-inactive-bg);color:var(--muted)}
-:root[data-ui-theme="light"] .parameter-tabs button.active{background:var(--panel-content-bg);color:var(--panel-header-fg)}
 :root[data-ui-theme="light"] :is(.browser-section>summary,.browser-branch>summary):hover{background:var(--ui-hover)}
 :root[data-ui-theme="light"] .browser-tree>.browser-branch[open]>summary{background:var(--ui-control)}
 :root[data-ui-theme="light"] #nodelibrary .browser-row .palette-entry{background:transparent;color:var(--ui-text)}
@@ -1217,10 +1211,6 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] .vector-drop-range{background:#694b911c;outline-color:#694b9170}
 :root[data-ui-theme="light"] #wires .vector-drop-replaced{stroke:#96601c;opacity:.9}
 :root[data-ui-theme="light"] #inspector .node-inspector-title{color:var(--category-fg);border-color:var(--line)}
-:root[data-ui-theme="light"] #inspector .node-inspector-title .node-inspector-label{color:inherit}
-:root[data-ui-theme="light"] #inspector .node-inspector-label input{background:#ffffff70;color:inherit;border-color:transparent}
-:root[data-ui-theme="light"] #inspector .node-inspector-label input:hover{background:#ffffffa0}
-:root[data-ui-theme="light"] #inspector .node-inspector-label input:focus{background:var(--ui-field)}
 :root[data-ui-theme="light"] #valueladder{box-shadow:0 5px 16px #29384d28}
 :root[data-ui-theme="light"] #valueladder .ladder-rows>div{color:var(--ui-text)}
 :root[data-ui-theme="light"] #valueladder .ladder-rows>div.active{color:var(--purple)}
@@ -1373,20 +1363,19 @@ footer .footer-preferences svg[hidden]{display:none}
 :root input.numeric-slider.numeric-dragging{outline:0}
 
 /* One row contract for ordinary Parameter names, types and every control kind. */
-#inspector.ordinary-parameters{--parameter-columns:12px minmax(0,21%) 5ch minmax(0,1fr);--parameter-column-gap:6px}
+#inspector.ordinary-parameters{--parameter-inset:8px;--parameter-toggle-width:10px;--parameter-columns:var(--parameter-toggle-width) minmax(0,21%) 5ch minmax(0,1fr);--parameter-column-gap:4px}
 .parameter-row{display:grid;grid-template-columns:var(--parameter-columns);align-items:center;column-gap:var(--parameter-column-gap);row-gap:6px;min-width:0;min-height:24px;font-size:11px;line-height:1.4}
 #inspector.ordinary-parameters>.parameter-row{margin-block:9px}
-.parameter-control,.parameter-control-hint{grid-column:4;min-width:0}
+.parameter-control{grid-column:4;min-width:0}
 .parameter-control:is(input,select,textarea,button),.parameter-control>:is(input,select,button){box-sizing:border-box;min-height:24px;margin:0;padding:3px 5px;font:inherit}
 .parameter-control:is(input,select,textarea,button){width:100%}
 .parameter-control:is(input,select),.parameter-control>:is(input,select){height:24px}
 .parameter-control:is(p,small){margin:0;font-size:10px;line-height:1.5}
-.parameter-control-hint{font-size:10px;line-height:1.5}
+.parameter-hint{grid-column:4;min-width:0;margin:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px;line-height:1.5}
 .parameter-control.swizzle-components{flex-wrap:wrap}
 .parameter-control.swizzle-components select{min-width:44px}
 #inspector.ordinary-parameters .input-parameter[data-input]{row-gap:6px;border:0;margin-top:9px;padding:0}
 #inspector.ordinary-parameters .input-heading{display:contents}
-#inspector.ordinary-parameters .input-parameter[data-input]>p{grid-column:4;margin:0;font-size:10px;line-height:1.5}
 #inspector.ordinary-parameters .input-parameter[data-input]>.parameter-value-group{grid-column:1/-1;margin:0}
 #inspector.ordinary-parameters .connection-row{grid-column:4;grid-row:1;min-height:24px;gap:5px;font-size:11px}
 #inspector.ordinary-parameters .connection-row button{min-height:24px;padding:3px 5px;font-size:10px}
@@ -1395,12 +1384,17 @@ footer .footer-preferences svg[hidden]{display:none}
 .parameter-value-type{grid-column:3;min-width:0;text-align:left;overflow-wrap:anywhere;font-size:10px;color:var(--muted);font-weight:400}
 .parameter-value-controls{display:flex;gap:5px;min-width:0}
 .parameter-value-controls>input,.parameter-value-controls>select{flex:1;width:0;min-width:0}
+#inspector .parameter-row select{border:0;border-radius:5px;background-color:var(--node-value-bg);color:var(--ui-text)}
+#inspector .parameter-row select:enabled:hover{background-color:color-mix(in srgb,var(--node-value-bg) 92%,var(--ui-text))}
 #inspector .parameter-value-group input[type=number]{box-sizing:border-box;min-width:0;height:24px;padding:3px 5px;margin:0;border:0;border-radius:5px;background-color:var(--node-value-bg);color:var(--ui-text);font:inherit;font-size:11px;font-variant-numeric:tabular-nums;appearance:textfield}
 #inspector .parameter-value-group input[type=number]::-webkit-inner-spin-button,#inspector .parameter-value-group input[type=number]::-webkit-outer-spin-button{appearance:none;margin:0}
 #inspector .parameter-value-group input:focus{outline:1px solid var(--purple)}
 #inspector .parameter-value-group input[aria-invalid=true]{outline:1px solid #e793a1}
-.parameter-components-toggle{grid-column:1;grid-row:1;width:12px;min-width:12px;height:24px;padding:0;border:0;background:transparent;color:var(--muted);font-size:10px}
+.parameter-expandable{cursor:pointer}
+.parameter-components-toggle{grid-column:1;grid-row:1;display:grid;place-items:center;width:var(--parameter-toggle-width);min-width:var(--parameter-toggle-width);height:24px;padding:0;border:0;background:transparent;color:var(--muted);font-size:14px;line-height:1;opacity:0}
+.parameter-expandable:hover .parameter-components-toggle,.parameter-components-toggle:focus-visible{opacity:1}
 .parameter-components-toggle:hover{background:transparent;color:var(--ui-text)}
+@media(hover:none){.parameter-components-toggle{opacity:1}}
 .parameter-component-rows{display:grid;gap:6px;margin-top:6px;padding:6px 0;border-radius:6px;background:#ffffff04}
 .parameter-component-rows[hidden]{display:none}
 .parameter-component-row{color:var(--muted)}

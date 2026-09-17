@@ -206,7 +206,7 @@ function renameGraphFunction(id,value){
 function functionNameField(f,rowBuilder=field){
   const entry=input(f.name,value=>{if(!renameGraphFunction(f.id,value))entry.setSyncedValue(f.name);});entry.dataset.functionName=f.id;entry.maxLength=80;entry.disabled=readonly;
   entry.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();entry.setSyncedValue(f.name);entry.blur();}});
-  const row=rowBuilder(t('function.name'),entry);if(f.scope!=='local')row.append(el('small',{class:'muted'+(row.classList.contains('parameter-row')?' parameter-control-hint':'')},t('function.renameSource')));return row;
+  const row=rowBuilder(t('function.name'),entry);if(f.scope!=='local')row.append(row.classList.contains('parameter-row')?parameterHint(t('function.renameSource')):el('small',{class:'muted'},t('function.renameSource')));return row;
 }
 function focusFunctionName(){
   inspectorScope='node';inspectorTab='parameters';inspector();workspaceLayout.reveal('parameters');const field=$('[data-function-name]');field?.scrollIntoView({block:'nearest'});field?.focus();field?.select();
@@ -250,7 +250,7 @@ function functionInspector(box,n,d){
   const action=button=>parameterPage?parameterControlRow('',button):button;
   if(d.key==='function_call'){
     const f=FunctionModel.find(graph,n.params.functionId);box.append(functionNameField(f,row));
-    const scope=el('p',{class:'muted'},f.scope==='local'?t('function.local'):t('function.source'));box.append(parameterPage?parameterControlRow('',scope):scope);
+    const scope=f.scope==='local'?t('function.local'):t('function.source');box.append(parameterPage?parameterControlRow('',parameterHint(scope)):el('p',{class:'muted'},scope));
     const open=el('button',{class:'wide'},t('function.open'));open.onclick=()=>enterFunction(n);box.append(action(open));
     const separate=el('button',{class:'wide','data-action':'local-subgraph'},t(f.scope==='local'?'function.independent':'function.makeLocal'));separate.disabled=readonly;separate.onclick=()=>change(()=>FunctionModel.independent(graph,n));box.append(action(separate));
     const save=el('button',{class:'wide','data-action':'save-personal'},t('personal.save'));save.disabled=readonly;save.onclick=()=>savePersonalFunction(f);box.append(action(save));

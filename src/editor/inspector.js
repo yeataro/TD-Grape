@@ -164,7 +164,7 @@ function installValueLadder(entry,commit){
     position(e.clientX-popupRect.width/2,e.clientY-centerOffset);
     const fullRect=popup.getBoundingClientRect(),rowsTop=rows.getBoundingClientRect().top,rowsBottom=rowsTop+steps.length*rowHeight;
     const indexAt=y=>Math.max(0,Math.min(steps.length-1,Math.floor((y-rowsTop)/rowHeight)));
-    let index=2,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,leftGrid=false,selectionEngaged=false;
+    let index=2,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,selectionEngaged=false;
     const oldDescription=entry.getAttribute('aria-describedby');entry.setAttribute('aria-describedby','valueladder');entry.numericGestureActive=true;
     const oldTitle=entry.getAttribute('title');entry.removeAttribute('title');
     document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing');
@@ -190,17 +190,17 @@ function installValueLadder(entry,commit){
       if(ev.pointerId!==e.pointerId)return;
       if(!(ev.buttons&mask)||!writable()){finish(false);return;}
       ev.preventDefault();ev.stopPropagation();
-      // The compact label leaves the field clear; its position never moves the
-      // original selection grid. Return to that grid to choose a precision.
-      const inGrid=ev.clientX>=fullRect.left&&ev.clientX<=fullRect.right&&ev.clientY>=rowsTop&&ev.clientY<rowsBottom;
-      // Edge clamping may put another rung under the initial pointer. A purely
-      // horizontal first movement must still use the default 0.1 increment.
-      if(Math.abs(ev.clientY-e.clientY)>3)selectionEngaged=true;
-      const next=inGrid&&selectionEngaged?indexAt(ev.clientY):index;
-      if(compact&&!inGrid)leftGrid=true;
-      if(next!==index||(compact&&inGrid&&leftGrid)){index=next;base=value;anchorX=ev.clientX;compact=false;leftGrid=false;paint();return;}
+      // Once horizontal adjustment begins, this gesture keeps its increment.
+      // The hidden list no longer participates in pointer hit testing.
+      if(!compact){
+        const inGrid=ev.clientX>=fullRect.left&&ev.clientX<=fullRect.right&&ev.clientY>=rowsTop&&ev.clientY<rowsBottom;
+        // Edge clamping must not change the initial 0.1 on horizontal movement.
+        if(Math.abs(ev.clientY-e.clientY)>3)selectionEngaged=true;
+        const next=inGrid&&selectionEngaged?indexAt(ev.clientY):index;
+        if(next!==index){index=next;base=value;anchorX=ev.clientX;paint();return;}
+      }
       const ticks=Math.trunc((ev.clientX-anchorX)/8),candidate=base+ticks*steps[index];
-      if(Math.abs(ev.clientX-anchorX)>=8){compact=true;if(!inGrid)leftGrid=true;}
+      if(Math.abs(ev.clientX-anchorX)>=8)compact=true;
       if(!Number.isFinite(candidate))return;
       value=ticks?Number(candidate.toPrecision(15)):base;
       if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);
@@ -414,6 +414,9 @@ const parameterExpansions=new WeakMap();
 let parameterValueEdit=null;
 // All ordinary Parameter controls share these columns, including untyped fields
 // and action rows. Full-width editors keep their explicit specialized layout.
+function parameterHint(text,className=''){
+  return el('small',{class:'muted parameter-hint'+(className?' '+className:''),title:text},text);
+}
 function parameterControlRow(label,control,type=''){
   const row=el(control.matches('input,select,textarea')?'label':'div',{class:'parameter-row'});
   row.append(el('span',{class:'parameter-value-label'},label));
@@ -462,7 +465,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
         const display=colorDisplay(n.params.value),ink=box.querySelector('.color-ink'),picker=box.querySelector('input[type=color]');
         if(ink)ink.style.backgroundColor=display.css;if(picker)picker.value=display.hex;
         let hint=box.querySelector('.color-range-hint');
-        if(n.params.value.some(v=>v<0||v>1)){if(!hint){hint=parameterControlRow('',el('small',{class:'muted'},t('color.range')));hint.classList.add('color-range-hint');box.append(hint);}}else hint?.remove();
+        if(n.params.value.some(v=>v<0||v>1)){if(!hint){hint=parameterControlRow('',parameterHint(t('color.range')));hint.classList.add('color-range-hint');box.append(hint);}}else hint?.remove();
       }
       entry.removeAttribute('aria-invalid');focus();
       if(parameterValueEdit?.entry===entry)parameterValueEdit.committing=true;
@@ -480,11 +483,16 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
   values.forEach((_,index)=>compact.append(createEntry(index)));
   if(vector&&values.length>=2&&values.length<=4){
     let expanded=parameterExpansions.get(n)?.has(key)||false;
+    row.classList.add('parameter-expandable');
     const toggle=el('button',{class:'parameter-components-toggle',type:'button','aria-label':t('node.expandValues'),'aria-expanded':String(expanded),'data-parameter-expand':key},expanded?'▾':'▸');
     row.prepend(toggle);
     const components=el('div',{class:'parameter-component-rows'});components.hidden=!expanded;
     values.forEach((_,index)=>{const component=parameterControlRow(labels[index],createEntry(index,true),scalarType);component.classList.add('parameter-component-row');components.append(component);});box.append(components);
     toggle.onclick=()=>{expanded=!expanded;let state=parameterExpansions.get(n);if(!state){state=new Set();parameterExpansions.set(n,state);}if(expanded)state.add(key);else state.delete(key);components.hidden=!expanded;toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
+    row.addEventListener('click',event=>{
+      if(event.target.closest('input,select,textarea,button,a,[contenteditable],.color-swatch'))return;
+      toggle.click();
+    });
   }
   return box;
 }
@@ -918,7 +926,7 @@ function inspector(){
         const values=parameterValueRow(n,'$value',t('declaration.value'),Object.values(ports(n,'outputs'))[0]||n.params.type||'float',()=>n.params.value,(index,value)=>{if(Array.isArray(n.params.value))n.params.value[index]=value;else n.params.value=value;},d.key==='color'?'RGBA':'XYZW');
         if(d.key==='color'){
           values.classList.add('color-parameter');values.querySelector('.parameter-value-controls').append(colorPickerSwatch(()=>n.params.value,value=>change(()=>n.params.value=value)));
-          if(n.params.value.some(v=>v<0||v>1)){const hint=parameterControlRow('',el('small',{class:'muted'},t('color.range')));hint.classList.add('color-range-hint');values.append(hint);}
+          if(n.params.value.some(v=>v<0||v>1)){const hint=parameterControlRow('',parameterHint(t('color.range')));hint.classList.add('color-range-hint');values.append(hint);}
         }
         box.append(values);
       }else box.append((d.key==='color'?colorFields:numbers)(n.params.value,t('declaration.value'),value=>change(()=>n.params.value=value)));
@@ -942,19 +950,20 @@ function inspector(){
     }
     const inputBox=d.key==='glsl_code'?el('details',{class:'code-input-values'}):box;
     if(d.key==='glsl_code'&&n.params.inputs.length){inputBox.append(el('summary',{},t('code.inputValues')));box.append(inputBox);}
+    const hint=(text,className='')=>ordinary?parameterHint(text,className):el('p',{class:'muted '+className},text);
     for(const [port,type]of Object.entries(d.key==='function_output'?{}:ports(n,'inputs'))){
       const section=el('section',{class:'input-parameter'+(ordinary?' parameter-row':''),'data-input':port});
       const connection=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
       const typeInfo=inputTypeDisplay(n,port);
       const heading=el('h4',{class:'input-heading'});heading.append(el('span',ordinary?{class:'parameter-value-label'}:{},portLabel(n,'inputs',port)),el('small',ordinary?{class:'parameter-value-type'}:{},typeInfo.text));section.append(heading);
-      if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(el('p',{class:'muted conversion-hint'},t(typeInfo.conversion==='splat'?'type.splat':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target)));
+      if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(hint(t(typeInfo.conversion==='splat'?'type.splat':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target),'conversion-hint'));
       const value=defaultInput(n,port,type);
       if(isResourceType(type)){
-        if(!connection)section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
+        if(!connection)section.append(hint(t('sampler.fallbackHint')));
       }else if(d.key==='replace'&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value'))){
-        if(!connection)section.append(el('p',{class:'muted'},t(port==='value'?'vector.baselineHint':'vector.inherited')));
+        if(!connection)section.append(hint(t(port==='value'?'vector.baselineHint':'vector.inherited')));
       }else if(value===null){
-        section.append(el('p',{class:'muted'},t('input.implicitUV')));
+        section.append(hint(t('input.implicitUV')));
         if(!connection){const override=el('button',{class:'wide'+(ordinary?' parameter-control':'')},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}
       }else if(!connection){
         if(ordinary){
