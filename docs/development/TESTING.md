@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 表現能力分級、Parameter 與時鐘（0.8.84）：既有 test_ui_experiments.cjs 19 組通過，覆蓋 12 項設定／10 checkbox／2 select，三種風格的即時切換／保存／重置／舊偏好與 DOM／草稿／幾何／Graph／Undo 保留；時鐘本機 HH:mm、Fullscreen 前方位置、Focus 無副本、整分鐘與午夜切換、單一 timer、visibility 刷新及停用清理通過；320／390px、75／125% 與 Dark／Light 的時鐘及全螢幕按鈕均在 Footer 範圍內。首次 timer spy 未綁定 window 造成 Illegal invocation，修正測試後重跑通過，非產品問題。私人 Glow VISUAL_ONLY 6 組通過：Dark Cool 僅圖與品牌，Excellent 加介面，Light 三款完全一致；節點展開／收合／選取／錯誤保留，About 實際開關並驗證圖示主標題光暈，小字不亮，截圖已目視。
+
+既有 test_parameter_values.cjs 15 組、私人 Texture2D／TOP Input／UV 排版 12 組通過（一般／長來源 × UI 75／100／125% × 面板 300／640px）：sampler2D 完整單行、欄位對齊、長來源省略及全文 title、斷開按鈕位於值欄，重複來源名去重而不同 port 標籤保留。零頁面錯誤／API 寫入，52 組總計；553 個雙語鍵、JS 語法及 diff 通過。未重跑效能。
+
+28 份內嵌來源與服務一致，TOP／MAT Master current；正式 TOE 719,828 bytes，SHA-256 `09ff7efc305d30e5ad28b5ec7d9d52d89417c410a774937cf740ffc8528f5c06`。兩份使用者 Shader 保留、私人助手排除，未重新整理使用者現有編輯頁。
+
 2026-09-17 整顆節點外光（0.8.84）：私人 VISUAL_ONLY 探針 5 組通過並目視 2000×1200 截圖。驗證節點整體分類色外光為 33%／20px／1px、Title 不另加陰影、灰底與幾何不變、名稱／Inputs 規則保留；展開與收合的普通／選取／錯誤／兩者並存状态均維持分類光暈及原狀態框。Light Professional／Cool 完全一致，工具列實際切換正常，零瀏覽器錯誤／API 寫入。550 個雙語鍵與 diff 檢查通過；未重跑效能。28 份內嵌來源與服務一致、兩份 Master current。正式 TOE 719,132 bytes，SHA-256 `8c6620aaf7dd958bdab5feaa7e53b6305544bb93177a7b32a45001a2a9924f68`；保留兩份使用者 Shader、排除私人助手，未重新整理現有編輯頁。
 
 2026-09-17 Cool 外光風格（0.8.84）：既有 `test_ui_experiments.cjs` 擴為 17 組，驗證 11 項設定（9 checkbox、2 select）、Professional 原預設、Cool 即時切換、舊偏好缺少 style 時回預設、無效值、保存／重設、控制項 DOM／草稿／幾何／Graph／Undo 保留與雙語。既有 `test_vector_component_tint.cjs` 10 組回歸通過。

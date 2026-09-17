@@ -421,8 +421,8 @@ function parameterHint(text,className=''){
 }
 function parameterControlRow(label,control,type=''){
   const row=el(control.matches('input,select,textarea')?'label':'div',{class:'parameter-row'});
-  row.append(el('span',{class:'parameter-value-label'},label));
-  if(type)row.append(el('small',{class:'parameter-value-type'},type));
+  row.append(el('span',{class:'parameter-value-label',title:label},label));
+  if(type)row.append(el('small',{class:'parameter-value-type',title:type},type));
   control.classList.add('parameter-control');row.append(control);return row;
 }
 function deferParameterInspector(){
@@ -967,7 +967,7 @@ function inspector(){
       const section=el('section',{class:'input-parameter'+(ordinary?' parameter-row':''),'data-input':port});
       const connection=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
       const typeInfo=inputTypeDisplay(n,port);
-      const heading=el('h4',{class:'input-heading'});heading.append(el('span',ordinary?{class:'parameter-value-label'}:{},portLabel(n,'inputs',port)),el('small',ordinary?{class:'parameter-value-type'}:{},typeInfo.text));section.append(heading);
+      const label=portLabel(n,'inputs',port),heading=el('h4',{class:'input-heading'});heading.append(el('span',ordinary?{class:'parameter-value-label',title:label}:{},label),el('small',ordinary?{class:'parameter-value-type',title:typeInfo.text}:{},typeInfo.text));section.append(heading);
       applyPortLabelColorHint(heading.firstElementChild,n,'inputs',port);
       if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(hint(t(typeInfo.conversion==='splat'?'type.splat':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target),'conversion-hint'));
       const value=defaultInput(n,port,type);
@@ -987,7 +987,8 @@ function inspector(){
       }
       if(connection){
         const source=current().nodes.find(other=>other.id===connection.from[0]),connectionRow=el('div',{class:'connection-row'});
-        const origin=el('span',{class:'connection-source'},nodeDisplayName(source)+' · '+portLabel(source,'outputs',connection.from[1]));origin.title=connection.from.join(' · ');
+        const sourceName=nodeDisplayName(source),outputName=portLabel(source,'outputs',connection.from[1]),sourceLabel=sourceName===outputName?sourceName:sourceName+' · '+outputName;
+        const origin=el('span',{class:'connection-source',title:sourceLabel},sourceLabel);
         const disconnect=el('button',{'aria-label':t('wire.disconnect')+portLabel(n,'inputs',port)},t('wire.disconnectShort'));disconnect.disabled=readonly;
         disconnect.onclick=()=>change(()=>current().edges=current().edges.filter(e=>e!==connection));connectionRow.append(origin,disconnect);section.append(connectionRow);
       }else if(['texture','texture_sample'].includes(d.key)&&port==='uv'&&value!==null){

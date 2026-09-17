@@ -656,8 +656,22 @@ function applyFloatingToolbar(){
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
   nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],
-  uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool']]
+  uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent']]
 };
+let systemClockTimer=null;
+function refreshSystemClock(){
+  const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const clock=$('#uisystemclock');clock.textContent=time;clock.dateTime=time;
+  clearTimeout(systemClockTimer);
+  systemClockTimer=setTimeout(refreshSystemClock,60000-now.getSeconds()*1000-now.getMilliseconds());
+}
+function refreshVisibleSystemClock(){if(!document.hidden)refreshSystemClock();}
+function applySystemClock(){
+  const enabled=EDITOR_DEV_SETTINGS.systemClock;$('#uisystemclock').hidden=!enabled;
+  clearTimeout(systemClockTimer);systemClockTimer=null;
+  document.removeEventListener('visibilitychange',refreshVisibleSystemClock);
+  if(enabled){refreshSystemClock();document.addEventListener('visibilitychange',refreshVisibleSystemClock);}
+}
 function parseUIExperiments(raw){
   let saved;try{saved=JSON.parse(raw);}catch{}
   const result={...EDITOR_DEV_DEFAULTS};
@@ -687,7 +701,7 @@ function setUIExperiments(values){
   cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();cancelConnection();
   Object.assign(EDITOR_DEV_SETTINGS,next);
   try{localStorage.setItem(experimentsStorageKey,JSON.stringify(next));}catch{}
-  applyFloatingToolbar();applyGraphUISettings();clearGraphTrash();
+  applyFloatingToolbar();applyGraphUISettings();applySystemClock();clearGraphTrash();
   if(graph){
     for(const card of document.querySelectorAll('#cards .node')){
       const node=current().nodes.find(node=>node.id===card.dataset.node);if(!node)continue;
@@ -722,7 +736,7 @@ function installUIExperiments(){
   });
   opener.onclick=()=>requestAnimationFrame(()=>{if(panel.matches(':popover-open'))list.querySelector('input,select')?.focus({preventScroll:true});});
   window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);});
-  applyGraphUISettings();clearGraphTrash();renderUIExperiments();
+  applyGraphUISettings();applySystemClock();clearGraphTrash();renderUIExperiments();
 }
 /* One immutable palette per base theme. Only root color tokens are transformed;
    image pixels, authored color swatches and GLSL syntax colors never pass here. */

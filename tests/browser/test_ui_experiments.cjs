@@ -26,13 +26,14 @@ const [source,stateFile,folder]=process.argv.slice(2);
   const reload=async()=>{await close();await page.reload();await page.waitForSelector('.node');await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;});await settle();};
   try{
     await setup();const defaults=await page.evaluate(()=>({...EDITOR_DEV_DEFAULTS}));
-    assert.equal(Object.keys(defaults).length,11);assert.deepEqual(await settings(),defaults);assert.equal(defaults.uiStyle,'professional');assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),9);assert.equal(await panel.locator('select').count(),2);
+    assert.equal(Object.keys(defaults).length,12);assert.deepEqual(await settings(),defaults);assert.equal(defaults.uiStyle,'professional');assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
+    assert.equal(defaults.systemClock,false);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);
+    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),10);assert.equal(await panel.locator('select').count(),2);
     assert.deepEqual(await control('nodeDragCursor').locator('option').evaluateAll(options=>options.map(o=>o.value)),['default','move']);
-    assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool']);
+    assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool','excellent']);
     assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.equal(await opener.getAttribute('aria-expanded'),'true');
     assert.equal(await control('canvasTrash').evaluate(e=>e===document.activeElement),true);const openedGraph=await snapshot();await page.keyboard.press('Tab');assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Delete');assert.equal(await snapshot(),openedGraph);
-    checks.push('fresh editors expose nine boolean experiments, cursor and UI style choices; Professional is the default without changing preferences on open');
+    checks.push('fresh editors expose ten boolean experiments, cursor and UI style choices; Professional is the default without changing preferences on open');
     checks.push('mouse opening focuses the first option, Tab stays in the panel and Delete does not delete selected graph nodes');
 
     const unchanged=await snapshot();
@@ -51,17 +52,38 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.equal(await snapshot(),unchanged);assert.deepEqual(writes,[]);
     checks.push('every control changes its live behavior and browser preference only; resize handles remain, while graph, invalid wire, history, dirty state and API writes remain untouched');
 
+    await close();assert.equal(await page.locator('#uisystemclock').isVisible(),true);
+    const clockPosition=await page.evaluate(()=>{const c=$('#uisystemclock'),r=c.getBoundingClientRect(),f=$('#uifullscreen').getBoundingClientRect(),now=new Date();return {next:c.nextElementSibling?.id,left:r.left,right:r.right,fullscreenLeft:f.left,text:c.textContent,expected:String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),dateTime:c.dateTime};});
+    assert.equal(clockPosition.next,'uifullscreen');assert.ok(clockPosition.right<=clockPosition.fullscreenLeft);assert.equal(clockPosition.text,clockPosition.expected);assert.equal(clockPosition.dateTime,clockPosition.text);
+    await page.evaluate(()=>{setGraphFocus(true);});assert.equal(await page.locator('.footer-preferences #uisystemclock').count(),1);assert.equal(await page.locator('.canvas-view-tools #uisystemclock').count(),0);await page.evaluate(()=>setGraphFocus(false));assert.equal(await page.locator('#uisystemclock').evaluate(e=>e.nextElementSibling?.id),'uifullscreen');
+    checks.push('enabled system clock shows padded local 24-hour HH:mm immediately before footer fullscreen, stays in the footer during graph focus, and has no graph duplicate');
+    await set({systemClock:false});
+    await page.evaluate(()=>{
+      window.experimentClock={Date:window.Date,setTimeout:window.setTimeout,clearTimeout:window.clearTimeout,now:new Date(2026,8,18,23,59,59,950).getTime(),next:0,timers:new Map()};
+      const fixture=experimentClock;window.Date=class extends fixture.Date{constructor(...args){super(...(args.length?args:[fixture.now]));}static now(){return fixture.now;}};
+      window.setTimeout=(fn,delay,...args)=>{if(fn!==refreshSystemClock)return fixture.setTimeout.call(window,fn,delay,...args);const id=--fixture.next;fixture.timers.set(id,{fn,delay});return id;};
+      window.clearTimeout=id=>{if(fixture.timers.has(id))fixture.timers.delete(id);else fixture.clearTimeout.call(window,id);};
+    });
+    try{
+      await set({systemClock:true});assert.equal(await page.locator('#uisystemclock').textContent(),'23:59');assert.deepEqual(await page.evaluate(()=>[...experimentClock.timers.values()].map(t=>t.delay)),[50]);
+      await page.evaluate(()=>{experimentClock.now+=50;const [id,timer]=[...experimentClock.timers][0];experimentClock.timers.delete(id);timer.fn();});assert.equal(await page.locator('#uisystemclock').textContent(),'00:00');assert.deepEqual(await page.evaluate(()=>[...experimentClock.timers.values()].map(t=>t.delay)),[60000]);
+      await page.evaluate(()=>{experimentClock.now+=60*1000;document.dispatchEvent(new Event('visibilitychange'));});assert.equal(await page.locator('#uisystemclock').textContent(),'00:01');assert.equal(await page.evaluate(()=>experimentClock.timers.size),1);
+      await set({systemClock:false});assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.evaluate(()=>experimentClock.timers.size),0);
+      await page.evaluate(()=>{experimentClock.now+=60*1000;document.dispatchEvent(new Event('visibilitychange'));});assert.equal(await page.locator('#uisystemclock').textContent(),'00:01');assert.equal(await page.evaluate(()=>experimentClock.timers.size),0);
+    }finally{await page.evaluate(()=>{setUIExperiments({systemClock:false});window.Date=experimentClock.Date;window.setTimeout=experimentClock.setTimeout;window.clearTimeout=experimentClock.clearTimeout;delete window.experimentClock;});}
+    assert.equal(await snapshot(),unchanged);checks.push('system clock rolls over midnight at the next minute boundary, keeps exactly one minute timer, refreshes on visibility restoration and clears timer/listener when disabled');await open();
+
     await page.evaluate(()=>{window.experimentStyleDOM=[...document.querySelectorAll('#cards .node,#inspector input,.toolbar')];});
     const styleGeometry=()=>page.locator('#cards .node,#wires path,#inspector input,.toolbar').evaluateAll(elements=>elements.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
     const geometry=await styleGeometry();
-    for(const uiStyle of ['professional','cool','professional','cool']){
+    for(const uiStyle of ['professional','cool','excellent','cool','professional','excellent']){
       await control('uiStyle').selectOption(uiStyle);await settle();
       assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);
       assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1')).uiStyle),uiStyle);
       assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#inspector input,.toolbar')[index]===element)),true);
       assert.deepEqual(await styleGeometry(),geometry);assert.equal(await snapshot(),unchanged);
     }
-    checks.push('Professional and Cool apply immediately and persist, while repeated switches reuse node/Parameter/toolbar DOM and preserve node/wire geometry, graph and Undo');
+    checks.push('Professional, Cool and Excellent apply immediately and persist, while repeated switches reuse node/Parameter/toolbar DOM and preserve node/wire geometry, graph and Undo');
 
     for(const expanded of[false,true])for(const collapsed of[false,true]){
       await set({nodeCollapseExpandedHint:expanded,nodeCollapseCollapsedHint:collapsed});
@@ -86,7 +108,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.locator('#canvas').focus();await settle();
     await page.evaluate(()=>{showCustomNodeNames=true;render();const card=$('[data-node="value"]');beginNodeRename(current().nodes[0],card.querySelector('.node-function-title'));});
     const rename=page.locator('#cards [data-node-name="value"]');await rename.fill('Draft_Name');await page.evaluate(()=>{window.experimentNameDraft=document.activeElement;});const nameBefore=await snapshot();
-    await set({floatingToolbar:false,nodeDragCursor:'default',nodeCollapseExpandedHint:true,uiStyle:'cool'});
+    await set({floatingToolbar:false,nodeDragCursor:'default',nodeCollapseExpandedHint:true,uiStyle:'excellent'});
     assert.equal(await page.evaluate(()=>experimentNameDraft.isConnected&&document.activeElement===experimentNameDraft),true);assert.equal(await rename.inputValue(),'Draft_Name');assert.equal(await snapshot(),nameBefore);await rename.press('Escape');
     checks.push('live preferences preserve focused incomplete numeric drafts and canvas rename DOM/text without committing or discarding either draft');
 
@@ -118,35 +140,40 @@ const [source,stateFile,folder]=process.argv.slice(2);
     for(const locale of ['en','zh-Hant']){
       await page.selectOption('#language',locale);await open();const title=await page.evaluate(()=>t('experiments.title'));assert.equal(await opener.getAttribute('aria-label'),title);assert.equal(await opener.getAttribute('title'),title);
       const labels=await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(e=>({key:e.dataset.experiment,label:e.closest('label').querySelector('span').textContent,title:e.closest('label').title})));
-      assert.ok(labels.every(x=>x.label.trim()&&x.title.trim()&&!x.label.startsWith('experiments.')&&!x.title.startsWith('experiments.')));await close();
+      assert.ok(labels.every(x=>x.label.trim()&&x.title.trim()&&!x.label.startsWith('experiments.')&&!x.title.startsWith('experiments.')));
+      assert.ok(await control('uiStyle').locator('option').evaluateAll(options=>options.every(option=>option.textContent.trim()&&!option.textContent.startsWith('experiments.'))));await close();
     }
     checks.push('English and Traditional Chinese expose translated names, hints, cursor/style choices and opener labels');
 
-    await set({canvasTrash:true,floatingToolbar:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'cool'});const saved=await settings();await reload();assert.deepEqual(await settings(),saved);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'cool');assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);
-    await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
+    await set({canvasTrash:true,floatingToolbar:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'excellent',systemClock:true});const saved=await settings();
+    for(const uiStyle of ['professional','cool','excellent']){
+      await set({...saved,uiStyle});await reload();assert.deepEqual(await settings(),{...saved,uiStyle});assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);assert.equal(await page.locator('#uisystemclock').isVisible(),true);
+      await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
+    }
     await page.evaluate(()=>localStorage.setItem('sgrapeExperimentsV1','{ broken'));await reload();assert.deepEqual(await settings(),defaults);
-    const malformed={canvasTrash:'true',floatingToolbar:1,nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',nodeResizeHint:false,unknown:true};
+    const malformed={canvasTrash:'true',floatingToolbar:1,nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',systemClock:'true',nodeResizeHint:false,unknown:true};
     assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),JSON.stringify(malformed)),{...defaults,nodeResizeHint:false});
     for(const raw of ['null','[]','true','"text"'])assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),raw),defaults);
-    checks.push('preferences survive isolated reload, reset restores and persists defaults, and malformed or unknown storage values are safely ignored');
+    checks.push('all three UI styles survive isolated reload, reset restores and persists Professional defaults from each style, and malformed or unknown storage values are safely ignored');
 
-    const legacy={...saved};delete legacy.uiStyle;
+    const legacy={...saved};delete legacy.uiStyle;delete legacy.systemClock;
     await page.evaluate(legacy=>localStorage.setItem('sgrapeExperimentsV1',JSON.stringify(legacy)),legacy);await reload();
-    assert.deepEqual(await settings(),{...legacy,uiStyle:'professional'});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    await open();await control('uiStyle').selectOption('cool');await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...legacy,uiStyle:'cool'});
+    assert.deepEqual(await settings(),{...legacy,uiStyle:'professional',systemClock:false});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
+    await open();for(const uiStyle of ['cool','excellent']){await control('uiStyle').selectOption(uiStyle);await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...legacy,uiStyle,systemClock:false});}
     await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    checks.push('legacy V1 preferences retain existing options and default to Professional; choosing Cool upgrades saved preferences and reset restores Professional');
+    checks.push('legacy V1 preferences retain existing options and default to Professional; choosing Cool or Excellent upgrades saved preferences and reset restores Professional');
 
-    await setup();assert.equal(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches),true);
+    await setup();await set({systemClock:true});assert.equal(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches),true);
     const geometryBefore=await snapshot();
     for(const width of[320,390])for(const scale of[75,125])for(const theme of['dark','light']){
       await close();await page.setViewportSize({width,height:844});await page.evaluate(({scale,theme})=>{setUIAppearance('scale',scale);setUIAppearance('theme',theme);}, {scale,theme});await settle();await open();
       const bounds=await panel.boundingBox();assert.ok(bounds.x>=-1&&bounds.y>=-1&&bounds.x+bounds.width<=width+1&&bounds.y+bounds.height<=845,JSON.stringify({width,scale,theme,bounds}));
       assert.ok(await panel.evaluate(e=>e.scrollWidth<=e.clientWidth+1));
-      await control('autoDisconnectInvalidEdges').scrollIntoViewIfNeeded();const target=await control('autoDisconnectInvalidEdges').boundingBox();assert.ok(target&&target.x>=0&&target.x+target.width<=width);
+      const clockBounds=await page.locator('#uisystemclock').boundingBox(),fullscreenBounds=await page.locator('#uifullscreen').boundingBox();assert.ok(clockBounds&&fullscreenBounds&&clockBounds.x>=0&&clockBounds.x+clockBounds.width<=fullscreenBounds.x&&fullscreenBounds.x+fullscreenBounds.width<=width+1);
+      await control('systemClock').scrollIntoViewIfNeeded();const target=await control('systemClock').boundingBox();assert.ok(target&&target.x>=0&&target.x+target.width<=width);
       if(width===390&&scale===125)await page.screenshot({path:path.join(folder,`experiments-${theme}-coarse.png`)});
     }
-    assert.equal(await snapshot(),geometryBefore);checks.push('320/390px coarse-pointer layouts at 75/125% in both themes keep the panel and its last option usable without graph/history changes');
+    assert.equal(await snapshot(),geometryBefore);checks.push('320/390px coarse-pointer layouts at 75/125% in both themes keep the enabled footer clock, fullscreen, panel and its last option usable without graph/history changes');
     await close();await page.setViewportSize({width:390,height:844});await page.evaluate(()=>setUIAppearance('scale',100));await settle();await opener.tap();assert.equal(await panel.isVisible(),true);const old=(await settings()).nodeBodyDrag;await control('nodeBodyDrag').tap();assert.equal((await settings()).nodeBodyDrag,!old);await page.locator('#editorheader .brand').tap();assert.equal(await panel.isVisible(),false);
     checks.push('trusted coarse touch opens the panel, toggles a preference and dismisses outside');
 
@@ -156,7 +183,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.equal(await page.locator('.canvas-view-tools #uifullscreen').count(),1);assert.equal(await page.locator('#graphfocus').getAttribute('aria-pressed'),'true');
     checks.push('320px / 125% coarse focus mode keeps the trash at the right edge above fullscreen and restore-layout view tools');
 
-    const desktop=await h.browser.newPage({viewport:{width:1600,height:1000},hasTouch:false});desktop.on('pageerror',error=>errors.push(error.message));await desktop.goto(page.url());await desktop.waitForSelector('.node');await desktop.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;setUIAppearance('theme','dark');setUIAppearance('scale',100);});await desktop.locator('#uiexperiments').click();await desktop.evaluate(()=>document.fonts.ready);await desktop.screenshot({path:path.join(folder,'experiments-dark-desktop.png')});await desktop.close();
+    const desktop=await h.browser.newPage({viewport:{width:1600,height:1000},hasTouch:false});desktop.on('pageerror',error=>errors.push(error.message));await desktop.goto(page.url());await desktop.waitForSelector('.node');await desktop.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;setUIAppearance('theme','dark');setUIAppearance('scale',100);setUIExperiments({systemClock:true});});await desktop.locator('#uiexperiments').click();await desktop.evaluate(()=>document.fonts.ready);await desktop.screenshot({path:path.join(folder,'experiments-dark-desktop.png')});await desktop.close();
     assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
   }catch(error){await h.finish(error);throw error;}
 })().catch(error=>{console.error(error.stack);process.exitCode=1;});

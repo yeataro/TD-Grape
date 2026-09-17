@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-18 表現能力分級、Parameter 與時鐘（0.8.84）：齒輪風格改名「表現能力」，Professional 維持原貌；Cool 保留節點／接線／接孔外光，Excellent 再加 Inputs、Parameter、工具列及 Apply。兩級葡萄圖示與產品主標題發光，含 About，仍限 Dark。一般 Parameter 名稱欄 17%、型別欄 9ch，名稱／型別單行省略，sampler2D 不再拆行；相同來源／輸出名去重。新增預設關閉的 systemClock，Footer 全螢幕左邊顯示本機 HH:mm，整分鐘更新，停用清除 timer。52 組相關瀏覽器／視覺檢查與 553 個雙語鍵通過。28 份來源與服務一致、兩份 Master current；正式 TOE 保存 719,828 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
+
 2026-09-17 整顆節點外光（0.8.84）：依最新回饋，Cool 的分類色光暈從 Title 移到整個節點外圍，維持 33%／20px blur／1px spread；灰底與名稱保留。選取／錯誤維持狀態細框，外光仍為分類色；收合亦套用。5 組隔離視覺檢查通過，Light 不變；28 份來源與服務一致，兩份 Master current，正式 TOE 保存 719,132 bytes。兩份使用者 Shader 保留，現有瀏覽器頁面未重新整理。
 
 2026-09-17 Cool 外光風格（0.8.84）：齒輪新增「耍帥程度 / Swagger」Professional／Cool 選單，Professional 為原貌及預設；Cool 僅在 Dark 套用，Light 保持原貌但記住偏好。主要改動集中在 35 行獨立 CSS，沿用既有 flag／瀏覽器保存機制，未新增繪圖層、動畫或圖資料。
