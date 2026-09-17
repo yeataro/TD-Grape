@@ -70,11 +70,22 @@ function installValueLadder(entry,commit){
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
     entry.focus({preventScroll:true});if(!writable())return;
     const initial=entry.value,initialValue=Number(initial),integer=entry.step==='1';
-    // Freeze the displayed decade and screen width for this gesture. Crossing a
-    // decade must not accelerate the mouse; manual values retain their precision.
-    const [leading,exponent]=Math.abs(initialValue).toExponential().split('e');
-    const decade=Math.abs(initialValue)<=1?0:Math.min(308,Number(exponent)+(Number(leading)===1?0:1));
-    const quantum=integer?.0001:10**(decade-5),dragWidth=Math.max(1,entry.getBoundingClientRect().width);
+    const dragWidth=Math.max(1,entry.getBoundingClientRect().width);
+    // Unwrap the repeating fill into continuous travel: 1 -> 10, 10 -> 19,
+    // 100 -> 28. Integer band widths avoid drift at exact decimal boundaries.
+    // Adding mouse travel here follows every crossed range, even within one event.
+    const dragPosition=value=>{
+      const magnitude=Math.abs(value);if(magnitude<=1)return value*10;
+      const [digits,power]=magnitude.toExponential().split('e'),leading=Number(digits);
+      const decade=Number(power)+(leading===1?0:1),fraction=leading===1?1:leading/10;
+      return Math.sign(value)*(9*decade+fraction*10);
+    };
+    const dragValue=position=>{
+      const distance=Math.abs(position),decade=distance<=10?0:Math.min(309,Math.ceil((distance-10)/9));
+      // Scientific notation keeps the conceptual 1e309 range usable for finite
+      // values above 1e308 without ever constructing an infinite range width.
+      return {value:Number((Math.sign(position)*(distance-9*decade))+'e'+(decade-1)),decade};
+    };
     const decimalPlaces=value=>{const [digits,exponent='0']=String(value).toLowerCase().split('e');return Math.max(0,(digits.split('.')[1]?.length||0)-Number(exponent));};
     let value=initialValue,baseValue=initialValue,deltaUnits=0,segmentPixels=0,segmentTicks=0,sensitivity='',lastX=e.clientX,finished=false;
     entry.numericGestureActive=true;document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
@@ -102,9 +113,11 @@ function installValueLadder(entry,commit){
       const travel=segmentPixels/pixelsPerStep;
       const ticks=integer?Math.trunc(travel):Math.sign(travel)*Math.round(Math.abs(travel)),change=ticks-segmentTicks;
       if(!change)return;segmentTicks=ticks;deltaUnits+=change*units;
-      const precision=Math.min(100,Math.max(integer?4:5-decade,decimalPlaces(baseValue)));
-      const candidate=deltaUnits===0?baseValue:Number((baseValue+deltaUnits*quantum).toFixed(precision));
-      if(!Number.isFinite(candidate))return;value=candidate;
+      const travelled=integer?{value:baseValue+deltaUnits/10000,decade:0}:dragValue(dragPosition(baseValue)+deltaUnits/10000);
+      const precision=Math.min(100,Math.max(integer?4:5-travelled.decade,decimalPlaces(baseValue)));
+      const candidate=deltaUnits===0?baseValue:Number(travelled.value.toFixed(precision));
+      if(Number.isNaN(candidate))return;
+      value=Number.isFinite(candidate)?candidate:Math.sign(candidate)*Number.MAX_VALUE;
       if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);
       if(entry.max!==''&&Number.isFinite(Number(entry.max)))value=Math.min(Number(entry.max),value);
       if(value!==candidate){baseValue=value;deltaUnits=0;segmentPixels=0;segmentTicks=0;}

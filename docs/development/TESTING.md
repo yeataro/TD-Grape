@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-17 連續拖曳範圍（0.8.84）：test_numeric_scrub.cjs 更新後 32 組、test_parameter_values.cjs 13 組通過，零頁面錯誤。驗證跨越多個正負範圍／零／返回原點、相同路徑以 1 次或 60 次實際 pointer move 執行結果相同、Ctrl 粗調與邊界切換修飾鍵、極大有限值即時反轉；保留手填精度、極小原值、界限、整數／uint、Undo、取消、UI／圖縮放及 Value Ladder／Help／觸控測試。僅 inspector_js 來源更新；28 份內嵌來源及服務內容一致，TOP／MAT Master current。正式 TOE 保存 723,468 bytes，兩份使用者 Shader 保留，私人助手排除，現有分頁未重新整理。
+
 2026-09-17 節點收合、Parameter 與數值操作（0.8.84）：`test_numeric_scrub.cjs` 29 組、`test_ui_scale_panels.cjs` 15 組、`test_node_collapse.cjs` 9 組、`test_parameter_values.cjs` 13 組全部通過，零瀏覽器錯誤，共 66 組。新增檢查包括依實際欄寬的浮點拖曳、正負／零與十進邊界、凍結敏感度、小數位移往返、修飾鍵切換、手填精度、極小值精確回原點、最大有限值與上下限反轉；保留原整數／uint、Undo、取消、觸控与 Value Ladder 入口。階梯驗證五級／0.1 置中、UI 尺寸的目前值＋級距、Help 保持、tooltip 分行／隱藏與恢復、長數字及視窗邊緣。
 
 收合涵蓋實際接線／單孔與摘要限制、既有線刪除、混合批次、Undo／複製／名稱、75／125% 與 fit 幾何、可信任觸控、四種旗標組合，以及缺少 ui 舊圖的無副作用 render／移動。Parameter 涵蓋同列與分量同步、草稿／preset／取消／一次 Undo、接線與 Replace 預設值、Color picker、vec2/3/4、bool/int/uint、Notes 及 Uniform／Settings 保留，另有深淺色與縮放截圖目視。收合模型、向量與型別單元回歸共 14 項通過，編譯輸出一致。新浏览器測試沿用 `node tests/browser/<test>.cjs src/editor <editor-state-json> <report-directory>` 的隔離 fixture 模式。
