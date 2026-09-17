@@ -236,3 +236,31 @@ Swizzle 待議（2026-09-17）：是否保留獨立節點尚未決定；可考�
 - iOS 輸入框聚焦可能觸發瀏覽器自動放大；常見的字級方向是 16 CSS px，不是 16pt。現有 UI 縮放與節點縮放下，不能將「16px 再 scale」當作已驗證的解法；字級、縮放與鍵盤行為留待實機評估。
 - 新增節點面板會自動 focus 搜尋框，使用者回報因此放大且難以恢復視窗。觸控開啟時先不 autofocus、點搜尋框後才輸入是候選方向，尚未採用；desktop 的即時搜尋優先保持。
 - 使用者回報瀏覽器縮放後 Value Ladder 位置偏移。檢查發現 Ladder／Creator 定位尚未處理 `visualViewport`；頁面放大、平移與軟鍵盤引起的可見範圍改變可作為後續調查方向。尚未以 iPhone 實機確證原因，也未授權本輪修改這些定位規則。
+
+## 2026-09-18 草稿：Compare、If、Switch 與跨平台分支
+
+使用者先描繪後續能力，本段是設計草稿，不代表已實作，也不啟動編譯器改造。
+
+### 已確認的方向
+
+- 布林二選一命名為 If，避免與 switch/case 多路選擇混淆。條件與 True／False 值分開輸入；比較節點產生 bool 後再接 If 是基礎方向。Select 名稱仍留給前述來源／分量選取構想。
+- Switch 使用固定、連續的 Case 0、1、2……，以加減控制數量；選擇索引只接受 int／uint。它與 If 分工，不以任意 case 表達式增加第一版複雜度。
+- 分清「產生 GLSL」與「驅動編譯／特化後的 GPU 程式」。來源仍含兩條路徑不代表 GPU 最終都會執行；若下游編譯器已消掉未選運算，就不需要在節點圖另做剪枝。
+- 一般常數與 specialization constant 的值確定時機不同。Spec Constant 的預設值不代表之後採用的特化值，不能依預設值提前永久刪除其他 Case。專案已有真正的 GLSL specialization constant 與 TD 原生覆寫路徑。
+- Metal 作為本專案的最低可攜與驗收目標，NVIDIA、AMD 另做回歸。這是工程上的基準，不推定各平台所有能力或最佳化行為存在嚴格包含關係。
+
+### 候選 UI 與尚未定案
+
+- Compare 可用 A／B 加比較方式下拉，輸出 bool；先做 scalar 或同時支援向量比較、容差等，尚未定案。bool 型別已有基礎，Compare／If／Switch 節點尚未落地。
+- 建議 Index 未接線時取 0，Default 獨立處理無匹配 Case；使用者也曾提出以 Case 0 兼任預設，尚未決定。語音中未釐清的「MT／綠色」不作為規格。
+- 建議加減只新增／移除末尾 Case，以保留既有編號；最少／最多數量、刪除已接線 Case 的操作規則，以及分支值的型別範圍尚待定案。int／uint 限制針對索引，不先推定所有結果值都必須是整數。
+- 執行期真正的條件計算、兩側先算再選，以及 GPU 分歧執行是不同問題。現有產碼器先按依賴順序產生上游結果，不能僅因新增最後一個 If 就承諾未選支路不運算。是否增加延後計算的分支產碼能力，留待需求和量測，不先新增模式或控制流架構。
+
+### 已查證的依據與驗證缺口
+
+- [Derivative 的 Vulkan 說明](https://docs.derivative.ca/Vulkan) 確認 macOS 使用 MoltenVK 將 Vulkan 接到 Metal；因此驗收應走實際 TD／MoltenVK 路徑，而非只驗獨立原生 Metal 範例。
+- [Apple WWDC23：Optimize GPU renderers with Metal](https://developer.apple.com/videos/play/wwdc2023/10127/) 明確介紹以 function constants 固定條件，折疊常數並移除未用分支，也要求用 GPU Debugger 確認效果。這支持方案可行性，不等於本專案所有產碼模式已在 Metal 測過。
+- [MoltenVK 公開實作](https://github.com/KhronosGroup/MoltenVK/blob/main/MoltenVK/MoltenVK/GPUObjects/MVKShaderModule.mm) 將 Vulkan specialization info 填入 Metal function constant values，再建立特化函式。尚未逐一核對目前 TD 內附版本或實機產物。
+- [Derivative 的 Specialization Constants](https://docs.derivative.ca/Specialization_Constants) 將 if／switch 模式選擇列為用途；[AMD 的 GCN shader 指南](https://gpuopen.com/download/GDC2017-Advanced-Shader-Programming-On-GCN.pdf) 亦說明在 pipeline 編譯時提供特化值以便常數折疊。但文件不能取代實際驅動回歸。
+- 目前既有原生測試驗證 Spec Constant 的覆寫、型別、編譯成功及畫面值，未驗證死分支消除；編譯成功、輸出正確與 SPIR-V 中間檔是否仍有分支，都不能單獨證明最終機器碼已刪除運算。這輪沒有進行新 GPU benchmark，亦沒有 AMD／Metal 實機結果。
+- 後續最小驗證組：If 的 true／false、Switch 的 int／uint 多個 Case 與 Default，分別使用一般常數、Spec Constant 和執行期輸入；包含特化值不同於預設值，以及本專案「上游先算、下游選值」的實際產碼形式。比較手動只保留選中路徑的基準，優先檢查最終指令／資源資料，再輔以暖機後 GPU 時間。保留共享且另有用途的計算，不把它誤判為消除失敗。
