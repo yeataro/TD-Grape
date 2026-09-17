@@ -12,7 +12,7 @@ async function run(){
     assert.ok(await page.evaluate(()=>{const toggle=$('#toggleheader').getBoundingClientRect(),layout=$('#workspacelayout').getBoundingClientRect();return toggle.right<=layout.left&&layout.left-toggle.right<20;}));
     assert.equal(await page.locator('.toolbar .graph-navigation').count(),1);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.evaluate(()=>EDITOR_DEV_SETTINGS.floatingToolbar),true);
     assert.equal(await page.locator('#canvas #fit').count(),1);
-    assert.deepEqual(await page.locator('.graph-tool-group').evaluateAll(groups=>groups.map(g=>[...g.querySelectorAll('button')].map(b=>b.id))),[['undo','redo'],['graphcopy','graphpaste','graphdelete'],['graphgroup','grapharrange'],['boxselect'],['customnames'],['code']]);
+    assert.deepEqual(await page.locator('.graph-tool-group').evaluateAll(groups=>groups.map(g=>[...g.querySelectorAll('button')].map(b=>b.id))),[['undo','redo'],['graphcopy','graphpaste','graphdelete'],['graphgroup','grapharrange','graphfitselection'],['boxselect'],['customnames'],['code']]);
     assert.equal(await page.locator('#editorheader #about').innerText(),'About');
     const desktopFooter=await page.locator('footer').boundingBox();assert.equal(desktopFooter.height,32);
     const heights=await page.locator('#editorheader .actions button,#editorheader .actions select').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().height));
@@ -20,7 +20,7 @@ async function run(){
     await page.screenshot({path:path.join(folder,'desktop.png')});
     await page.setViewportSize({width:960,height:780});await settle();
     for(const group of await page.locator('.graph-tool-group').all()){
-      const tops=await group.locator('button').evaluateAll(es=>es.map(e=>Math.round(e.getBoundingClientRect().top)));
+      const tops=await group.locator('button:visible').evaluateAll(es=>es.map(e=>Math.round(e.getBoundingClientRect().top)));
       assert.ok(tops.every(y=>y===tops[0]),tops.join(','));
     }
     assert.ok(await page.locator('.toolbar').evaluate(e=>e.scrollWidth<=e.clientWidth+1));

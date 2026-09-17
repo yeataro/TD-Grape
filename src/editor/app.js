@@ -538,7 +538,13 @@ function nodeLayoutBounds(n){
   const card=document.querySelector(`#cards [data-node="${CSS.escape(n.id)}"]`);
   return {x:n.ui?.x||0,y:n.ui?.y||0,width:card?.offsetWidth||(Number.isFinite(n.ui?.width)&&n.ui.width>0?n.ui.width:190),height:card?.offsetHeight||180};
 }
-function fit(){if(!graph)return;const ns=current().nodes;if(!ns.length)return;const bounds=ns.map(nodeLayoutBounds),minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();}
+function fitNodes(nodes){
+  if(!nodes.length)return;
+  const bounds=nodes.map(nodeLayoutBounds),minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));
+  scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);
+  pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();
+}
+function fit(){if(graph)fitNodes(current().nodes);}
 async function load(){
   const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
   try{

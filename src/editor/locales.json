@@ -22,7 +22,7 @@
     "experiments.reset": {"zh-Hant": "還原預設", "en": "Reset defaults"},
     "selection.toolbar": {"zh-Hant": "選取工具列", "en": "Selection toolbar"},
     "selection.editTools": {"zh-Hant": "編輯工具", "en": "Edit tools"},
-    "selection.multipleTools": {"zh-Hant": "多選工具", "en": "Multiple selection tools"},
+    "selection.nodeTools": {"zh-Hant": "選取節點工具", "en": "Selected node tools"},
     "arrange.title": {"zh-Hant": "排列節點", "en": "Arrange nodes"},
     "arrange.auto": {"zh-Hant": "自動排列", "en": "Auto arrange"},
     "arrange.left": {"zh-Hant": "齊左", "en": "Align left"},
@@ -555,6 +555,10 @@
     "action.fit": {
       "zh-Hant": "置中",
       "en": "Frame all"
+    },
+    "action.fitSelection": {
+      "zh-Hant": "置中選取",
+      "en": "Frame selection"
     },
     "action.details": {
       "zh-Hant": "預覽 / 參數",

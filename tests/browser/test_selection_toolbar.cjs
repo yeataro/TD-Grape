@@ -9,10 +9,13 @@ async function run(){
   const select=async ids=>{await page.evaluate(ids=>{selection=new Set(ids);selected=ids.at(-1)||null;selectedEdge=null;render();},ids);await settle();};
   const mode=async(value,edit=true)=>{await page.evaluate(({value,edit})=>setUIExperiments({selectionToolbar:value,editToolbar:edit}),{value,edit});await settle();};
   const graphJSON=()=>page.evaluate(()=>JSON.stringify(graph));
+  const editState=()=>page.evaluate(()=>({graph:JSON.stringify(graph),selection:[...selection],selected,selectedEdge,past:JSON.stringify(past),future:JSON.stringify(future),dirty,shaderChanges:hasShaderChanges()}));
+  const viewState=()=>page.evaluate(()=>({scale,pan:{...pan}}));
   const bounds=()=>page.evaluate(()=>current().nodes.filter(n=>selection.has(n.id)).map(n=>({id:n.id,...nodeLayoutBounds(n)})));
   const reset=async()=>{await page.evaluate(()=>{closeArrangeMenu();graph=clone(window.selectionFixture);selection=new Set(['a','b','c','d']);selected='c';selectedEdge=null;past=[];future=[];readonly=false;historyBusy=false;nativeMutationBusy=false;dirty=false;rememberSavedGraph(graph);render();fit();});await settle();};
   const arrangement=async kind=>{await page.locator('#grapharrange').click();await page.locator('[data-arrange="'+kind+'"]').click();await settle();};
   const visual=()=>page.evaluate(()=>{const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};return{bar:rect($('#selectiontoolbar')),canvas:rect($('#canvas')),bounds:selectedCanvasBounds(),visible:!$('#selectiontoolbar').hidden&&getComputedStyle($('#selectiontoolbar')).visibility!=='hidden'};});
+  const framed=async()=>{const v=await visual();assert.ok(v.bounds,'selection has visible bounds');assert.ok(Math.abs((v.bounds.left+v.bounds.right)/2-(v.canvas.x+v.canvas.right)/2)<1.5,'selected bounds centered horizontally');assert.ok(Math.abs((v.bounds.top+v.bounds.bottom)/2-(v.canvas.y+v.canvas.bottom)/2)<1.5,'selected bounds centered vertically');assert.ok(v.bounds.left>=v.canvas.x&&v.bounds.right<=v.canvas.right&&v.bounds.top>=v.canvas.y&&v.bounds.bottom<=v.canvas.bottom,'selected bounds fit within the canvas');return v;};
   try{
     await page.waitForSelector('#selectiontoolbar',{state:'attached'});
     await page.evaluate(()=>{
@@ -29,8 +32,9 @@ async function run(){
       assert.equal(await page.locator('.toolbar [data-tool-group="edit"]').count(),value==='all'?0:1);
       assert.equal(await page.locator('#graphgroup').isVisible(),ids.length>1);
       assert.equal(await page.locator('#grapharrange').isVisible(),ids.length>1);
+      assert.equal(await page.locator('#graphfitselection').isVisible(),ids.length>0&&(value!=='multiple'||ids.length>1));
       assert.equal(await page.locator('.toolbar #undo').count(),1);assert.equal(await page.locator('.toolbar #redo').count(),1);
-      for(const id of ['graphcopy','graphpaste','graphdelete','graphgroup','grapharrange'])assert.equal(await page.locator('#'+id).count(),1,id+' must be moved, never cloned');
+      for(const id of ['graphcopy','graphpaste','graphdelete','graphgroup','grapharrange','graphfitselection'])assert.equal(await page.locator('#'+id).count(),1,id+' must be moved, never cloned');
     }
     checks.push('off/multiple/all modes place edit and multi-selection actions correctly for zero/one/two selections; history stays above and action IDs remain unique');
 
@@ -39,6 +43,25 @@ async function run(){
     await mode('all',false);await select(['a']);assert.equal(await page.locator('#graphcopy').isVisible(),true);
     await mode('off',true);assert.equal(await page.locator('#graphcopy').isVisible(),true);
     checks.push('independent edit-toolbar visibility controls top edit actions while all-selection mode still supplies its contextual edit actions');
+
+    await reset();await mode('all');await select(['a','b']);
+    const frameBefore=await editState(),allView=await viewState();
+    await page.locator('#graphfitselection').click();await settle();await framed();
+    const selectedView=await viewState();assert.ok(selectedView.scale>allView.scale,'framing selected nodes ignores the distant unselected nodes');assert.deepEqual(await editState(),frameBefore,'framing is view-only');
+    await page.locator('#fit').click();await settle();assert.deepEqual(await viewState(),allView,'existing frame-all button still includes all nodes');
+    await page.locator('#graphfitselection').click();await page.locator('#canvas').focus();await page.keyboard.press('h');await settle();assert.deepEqual(await viewState(),allView,'H still frames all nodes');assert.deepEqual(await editState(),frameBefore);
+    await page.evaluate(()=>{arrangeSelection('left');arrangeSelection('top');});await page.locator('#undo').click();await settle();const pendingBefore=await editState();assert.equal(JSON.parse(pendingBefore.past).length,1);assert.equal(JSON.parse(pendingBefore.future).length,1);assert.equal(pendingBefore.dirty,true);await page.locator('#graphfitselection').click();await settle();await framed();assert.deepEqual(await editState(),pendingBefore,'framing preserves pending changes and both Undo/Redo branches');
+    for(const[language,label]of [['en','Frame selection'],['zh-Hant','置中選取']]){await page.selectOption('#language',language);assert.equal(await page.locator('#graphfitselection').getAttribute('title'),label);assert.equal(await page.locator('#graphfitselection').getAttribute('aria-label'),label);assert.equal(await page.locator('#graphfitselection').getAttribute('aria-keyshortcuts'),null,'Frame selection has no new shortcut');}
+    checks.push('Frame selection centers only selected nodes and zooms past distant unselected nodes without changing graph/selection/history/dirty state; frame-all and H stay unchanged and hints translate');
+
+    await reset();await mode('all');await page.evaluate(()=>{const note=current().nodes.find(n=>n.id==='d');note.ui.width=500;note.ui.height=1200;render();});await select(['d']);
+    const tallBefore=await editState();await page.locator('#graphfitselection').click();await settle();const tall=await framed(),tallScale=(await viewState()).scale;assert.deepEqual(await editState(),tallBefore,'tall-node framing is view-only');
+    await page.evaluate(()=>{current().nodes.find(n=>n.id==='d').ui.collapsed=true;render();});await settle();
+    const collapsedBefore=await editState();await page.locator('#graphfitselection').click();await settle();const collapsed=await framed();assert.ok(collapsed.bounds.bottom-collapsed.bounds.top<tall.bounds.bottom-tall.bounds.top,'collapsed node uses its actual rendered height');assert.ok((await viewState()).scale>tallScale,'collapsed height allows a closer frame');assert.deepEqual(await editState(),collapsedBefore);
+    await page.evaluate(()=>{readonly=true;render();scale=.3;pan={x:100,y:100};transform();});assert.equal(await page.locator('#graphfitselection').isEnabled(),true);const lockedBefore=await editState();await page.locator('#graphfitselection').click();await settle();await framed();assert.deepEqual(await editState(),lockedBefore,'readonly still permits view-only framing');await page.evaluate(()=>{readonly=false;render();});
+    await select([]);const emptyView=await viewState(),emptyState=await editState();await page.evaluate(()=>fitSelection());assert.deepEqual(await viewState(),emptyView);assert.deepEqual(await editState(),emptyState);
+    await select(['a','b']);await page.evaluate(()=>{selectedEdge=0;render();});const edgeView=await viewState(),edgeState=await editState();await page.evaluate(()=>fitSelection());assert.deepEqual(await viewState(),edgeView);assert.deepEqual(await editState(),edgeState);
+    checks.push('single/tall/collapsed selections frame their real bounds, readonly remains available, and empty or edge selections leave the viewport and editor state unchanged');
 
     await reset();await mode('all');await select(['a','b']);await page.evaluate(()=>{scale=.5;pan={x:35,y:180};transform();$('#canvas').focus();});await page.mouse.move(2,2);await settle();
     let first=await visual();assert.equal(first.visible,true);
@@ -99,10 +122,12 @@ async function run(){
       const groups=await page.locator('#selectiontoolbar .graph-tool-group:visible').evaluateAll(items=>items.map(group=>[...group.querySelectorAll('button')].filter(e=>e.getClientRects().length).map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right};})));
       assert.ok(groups.every(items=>items.every((r,i)=>Math.abs(r.y-items[0].y)<1&&(!i||r.x>=items[i-1].right))),JSON.stringify({width,factor,groups})+' each group stays horizontal even when groups wrap');
       if(width===320&&factor===125)await page.screenshot({path:path.join(folder,'selection-toolbar-mobile-125.png')});
+      const beforeFrame=await editState(),frameButton=await page.locator('#graphfitselection').boundingBox();assert.ok(frameButton&&frameButton.x>=0&&frameButton.y>=0&&frameButton.x+frameButton.width<=width+1&&frameButton.y+frameButton.height<=(width===844?390:844)+1,'Frame selection remains touch-reachable');await page.touchscreen.tap(frameButton.x+frameButton.width/2,frameButton.y+frameButton.height/2);await settle();await framed();assert.deepEqual(await editState(),beforeFrame,'touch framing adds no graph edit');
       const button=await page.locator('#grapharrange').boundingBox();await page.touchscreen.tap(button.x+button.width/2,button.y+button.height/2);await settle();assert.equal(await page.locator('#arrangemenu').isVisible(),true);const m=await page.locator('#arrangemenu').boundingBox();assert.ok(m.x>=0&&m.y>=0&&m.x+m.width<=width+1&&m.y+m.height<=(width===844?390:844)+1,JSON.stringify(m));
-      const option=await page.locator('[data-arrange="left"]').boundingBox();await page.touchscreen.tap(option.x+option.width/2,option.y+option.height/2);await settle();const arranged=await bounds();near(arranged[0].x,arranged[1].x,'touch aligns');assert.equal(await page.evaluate(()=>past.length),1);layouts.push({width,factor,...v,menu:m});await page.evaluate(()=>setGraphFocus(false));
+      const option=await page.locator('[data-arrange="left"]').boundingBox();await page.touchscreen.tap(option.x+option.width/2,option.y+option.height/2);await settle();const arranged=await bounds();near(arranged[0].x,arranged[1].x,'touch aligns');assert.equal(await page.evaluate(()=>past.length),1);layouts.push({width,factor,...v,menu:m});
+      await page.evaluate(()=>setGraphFocus(false));
     }
-    fs.writeFileSync(path.join(folder,'layouts.json'),JSON.stringify(layouts,null,2));checks.push('touch can open and apply arrangements at320/390px portrait and844px landscape at100/125% UI scale; groups remain horizontal while toolbar/menu stay inside viewport');
+    fs.writeFileSync(path.join(folder,'layouts.json'),JSON.stringify(layouts,null,2));checks.push('touch can frame selection and apply arrangements at320/390px portrait and844px landscape at100/125% UI scale; all six buttons remain reachable, groups stay horizontal, and toolbar/menu fit inside viewport');
     await page.setViewportSize({width:1600,height:1100});await page.evaluate(()=>setUIAppearance('scale',100));await reset();await mode('all');await select(['a','b']);await page.screenshot({path:path.join(folder,'selection-toolbar.png')});assert.deepEqual(errors,[]);await h.finish();
   }catch(error){await h.finish(error);throw error;}
 }

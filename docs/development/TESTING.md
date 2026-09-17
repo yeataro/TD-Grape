@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-18 置中選取：`test_selection_toolbar.cjs` 擴為 10 組、`test_editor_chrome.cjs` 16 組通過，零頁面錯誤。新增三態下唯一按鈕與顯示條件、選取子集合排除遠處未選節點、單選／高 Comment／收合實際尺寸、唯讀可用、零選取／選線 no-op；保留非空 Undo／Redo、圖、選取與 dirty 狀態，原 Frame all／H 不變。繁英 title／aria-label、觸控 320／390 直向與 844 橫向、100／125% UI 縮放可達；六按鈕在最窄配置依既有分組靠右換行。桌面與窄版截圖已目視，更新既有工具列按鈕名單預期及只對可見按鈕檢查同列，無放寬操作斷言。語法及 diff 檢查通過。
+
+本批已刷新四份來源並保存 TD；30 份來源／8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留，既有 Editor 未刷新。TOE 739,532 bytes，SHA-256 `5a6821fcc49721eab88738579f9cdb8167cee009d7a88abe0b7ab6f7a46b1eec`。報告在私人 frame-selection 與 frame-selection-toolbar。
+
 2026-09-18 自動排列 L 快捷鍵：`test_auto_arrange.cjs` 11 組、`test_shortcut_help.cjs` 7 組與共用 H 範圍的 `test_editor_chrome.cjs` 16 組通過，共 34 組、零頁面錯誤。實際按 L 沿用精確 Undo／Redo、只改座標與穩定性驗證；修飾鍵 L 未攔截，文字／contenteditable／IME、非圖面焦點、長按、唯讀／忙碌、零／單選、對話框／popover、數值／接線／移動／縮放／觸控手勢皆不誤觸。選單與快捷鍵清單中英文短名稱、title、aria-label／aria-keyshortcuts 一致；H 的實際拖曳及平移保護仍通過。語法及 diff 檢查通過。
 
 本批已刷新四份來源並儲存 TD，30 份來源／8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留；既有 Editor 未刷新。TOE 739,364 bytes，SHA-256 `f534fcc9bf06536fa43a1398b34b8eb98b0cab4613a66f4f5090883dd89563f6`；報告位於私人 auto-arrange-shortcut 與 auto-arrange-shortcut-help。

@@ -827,6 +827,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* Selection actions remain in screen space, independent of graph zoom. */
 .graph-tool-group[hidden],.selection-toolbar[hidden],#selectionbounds[hidden]{display:none}
+.graph-tool-group>button[hidden]{display:none!important}
 .selection-toolbar{position:absolute;z-index:8;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:4px;width:max-content;padding:3px;border:1px solid var(--line);border-radius:8px;background:var(--ui-surface,var(--ui-tone-menu));box-shadow:0 5px 18px #0004;overflow-y:auto;overscroll-behavior:contain;touch-action:manipulation}
 .selection-toolbar .graph-tool-group{flex-direction:row;gap:2px}
 .selection-toolbar .graph-tool-group+.graph-tool-group{border-left:1px solid var(--line);padding-left:4px}

@@ -18,6 +18,7 @@ function selectionIcon(path){
   const shape=document.createElementNS(svg.namespaceURI,'path');shape.setAttribute('d',path);svg.append(shape);return svg;
 }
 function selectedCanvasNodes(){return graph&&selectedEdge===null?current().nodes.filter(n=>selection.has(n.id)):[];}
+function fitSelection(){fitNodes(selectedCanvasNodes());}
 function selectedCanvasBounds(){
   const rects=selectedCanvasNodes().map(n=>$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`)?.getBoundingClientRect()).filter(Boolean);
   if(!rects.length)return null;
@@ -39,11 +40,14 @@ function renderSelectionToolbar(){
   move(edit,mode==='all'?bar:top,mode==='all'?bar.firstChild:view);
   move(multi,mode==='off'?top:bar,mode==='off'?view:null);
   edit.hidden=mode!=='all'&&EDITOR_DEV_SETTINGS.editToolbar===false;
-  multi.hidden=!multiple;
+  multi.hidden=!nodes.length;
+  $('#graphgroup').hidden=!multiple;$('#grapharrange').hidden=!multiple;
   $('#grapharrange').disabled=!multiple||editorMutationBlocked();
+  $('#graphfitselection').disabled=!nodes.length;
   bar.hidden=mode==='off'||!nodes.length||(mode==='multiple'&&!multiple);
-  bar.setAttribute('aria-label',t('selection.toolbar'));edit.setAttribute('aria-label',t('selection.editTools'));multi.setAttribute('aria-label',t('selection.multipleTools'));
+  bar.setAttribute('aria-label',t('selection.toolbar'));edit.setAttribute('aria-label',t('selection.editTools'));multi.setAttribute('aria-label',t('selection.nodeTools'));
   $('#grapharrange').title=t('arrange.title');$('#grapharrange').setAttribute('aria-label',t('arrange.title'));
+  $('#graphfitselection').title=t('action.fitSelection');$('#graphfitselection').setAttribute('aria-label',t('action.fitSelection'));
   if(!arrangeContextMatches()||editorMutationBlocked()||!multiple)closeArrangeMenu();
   if(bar.hidden){selectionToolbarHover=false;$('#selectionbounds').hidden=true;}
   scheduleSelectionToolbarPosition();
@@ -203,7 +207,9 @@ function installSelectionToolbar(){
   const multi=el('div',{class:'graph-tool-group','data-tool-group':'selection',role:'group',hidden:''});
   const arrange=el('button',{id:'grapharrange',class:'icon-button',type:'button','aria-haspopup':'menu','aria-controls':'arrangemenu','aria-expanded':'false'});
   arrange.append(selectionIcon('M4 3v18M8 5h12v4H8zM8 11h8v3H8zM8 16h10v3H8z'));arrange.onclick=openArrangeMenu;
-  multi.append($('#graphgroup'),arrange);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
+  const frame=el('button',{id:'graphfitselection',class:'icon-button',type:'button'});
+  frame.append(selectionIcon('M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M8 8h8v8H8z'));frame.onclick=fitSelection;
+  multi.append($('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
   const menu=el('div',{id:'arrangemenu',class:'popup-menu arrangement-menu',popover:'auto',role:'menu'});document.body.append(menu);
   for(const control of [bar,menu]){
     for(const event of ['pointerdown','mousedown','touchstart','dblclick'])control.addEventListener(event,e=>e.stopPropagation());
