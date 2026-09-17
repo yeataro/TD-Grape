@@ -51,9 +51,10 @@ const [source,stateFile,folder]=process.argv.slice(2);
       checks.push(`${percent}% Layout menu anchors to its button within the viewport`);
 
       const p=await center('[data-inline-node="scale_value"]');await page.mouse.move(p.x,p.y);await page.mouse.down({button:'middle'});await page.locator('#valueladder').waitFor();
-      const ladder=await box('#valueladder'),field=await box('[data-inline-node="scale_value"]');
-      close(ladder.x,Math.max(8,field.x-ladder.width-10),'Ladder left anchor');
-      const rung=await box('[data-step="0.1"]');close(rung.y+rung.height/2,p.y,'Ladder initial rung centered on pointer');
+      const ladder=await box('#valueladder');
+      close(ladder.x,Math.max(8,p.x-ladder.width/2),'Ladder centers on pointer');
+      const rung=await box('[data-step="0.1"]'),field=await box('[data-inline-node="scale_value"]');
+      assert.ok(ladder.y>=field.y+field.height);assert.equal(await page.locator('#valueladder .active').getAttribute('data-step'),'0.1');
       assert.ok(ladder.y>=7&&ladder.y+ladder.height<=1101);
       await page.mouse.move(p.x,rung.y+rung.height/2);await page.mouse.move(p.x+16,rung.y+rung.height/2);
       assert.equal(Number(await page.locator('[data-inline-node="scale_value"]').inputValue()),.5);

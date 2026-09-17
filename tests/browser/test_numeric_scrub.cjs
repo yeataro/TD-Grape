@@ -60,7 +60,36 @@ const cancellations=[['Escape',()=>page.keyboard.press('Escape')],['window blur'
 for(const [name,cancel]of cancellations){await reset();p=await begin();await move(p,20);before=await snapshot();await cancel();await page.waitForFunction(()=>!valueLadder);await end();assert.equal(await snapshot(),before,name);assert.equal(await value(),.3);assert.equal(await page.evaluate(()=>document.body.classList.contains('scrubbing-value')),false);}checks.push('Escape, blur, pointercancel, capture loss, read-only transitions, Tab and graph replacement cancel without history writes');
 await reset();await page.evaluate(()=>{readonly=true;render();});p=await point(field());await page.mouse.move(p.x,p.y);await page.mouse.down();await move(p,20);await end();assert.equal(await value(),.3);assert.equal(await page.evaluate(()=>past.length),0);checks.push('read-only numeric fields do not start or commit a drag');
 await reset();await page.evaluate(()=>{selected='color';selection=new Set(['color']);inspector();});const param=page.locator('#inspector .color-parameter input[type=number]').first();await drag(param,20);assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='color').params.value[0]),.75);assert.equal(await page.evaluate(()=>past.length),1);assert.equal(await field('color').evaluate(e=>e.style.getPropertyValue('--numeric-fill')),'75%');checks.push('Parameter and inline controls share the gesture and synchronized value/fill');
-await reset();p=await point(field());await page.mouse.move(p.x,p.y);await page.mouse.down({button:'middle'});await page.locator('#valueladder').waitFor();const rung=await page.locator('[data-step="0.1"]').boundingBox(),y=rung.y+rung.height/2;await page.mouse.move(p.x,y);await page.mouse.move(p.x+16,y);assert.equal(Number(await field().inputValue()),.5);await page.mouse.up({button:'middle'});await settle();assert.equal(await value(),.5);assert.equal(await page.evaluate(()=>past.length),1);checks.push('existing middle-button Ladder retains its appearance, increments and single commit');
+await reset();p=await point(field());await page.mouse.move(p.x,p.y);await page.mouse.down({button:'middle'});await page.locator('#valueladder').waitFor();const rung=await page.locator('[data-step="0.1"]').boundingBox(),y=rung.y+rung.height/2;await page.mouse.move(p.x,y);await page.mouse.move(p.x+16,y);assert.equal(Number(await field().inputValue()),.5);await page.mouse.up({button:'middle'});await settle();assert.equal(await value(),.5);assert.equal(await page.evaluate(()=>past.length),1);checks.push('middle-button Ladder retains its increments and single commit');
+for(const percent of [75,125]){
+  await reset(percent===75?.6:1.2);await page.evaluate(percent=>setUIAppearance('scale',percent),percent);await settle();
+  before=await snapshot();p=await point(field());const fieldRect=await field().boundingBox();
+  await page.mouse.move(p.x,p.y);await page.mouse.down({button:'middle'});await page.locator('#valueladder').waitFor();
+  const popup=page.locator('#valueladder'),full=await popup.boundingBox(),z=percent/100;
+  assert.ok(Math.abs(full.width/z-84)<1);assert.ok(Math.abs(full.x+full.width/2-p.x)<1);
+  assert.ok(full.y>=fieldRect.y+fieldRect.height);assert.equal(await popup.locator('strong,output,small').count(),0);
+  assert.equal(await popup.locator('[data-step]:visible').count(),6);assert.equal(await popup.locator('.active').getAttribute('data-step'),'0.1');
+  assert.equal(await popup.evaluate(e=>getComputedStyle(e).fontSize),'14px');
+  const originalRows=await popup.locator('[data-step]').evaluateAll(rows=>Object.fromEntries(rows.map(row=>[row.dataset.step,{y:row.getBoundingClientRect().y+row.getBoundingClientRect().height/2}])));
+  await page.mouse.move(p.x,p.y+2);assert.equal(Number(await field().inputValue()),.3);assert.equal(await popup.locator('.active').getAttribute('data-step'),'0.1');
+  await page.screenshot({path:path.join(folder,`ladder-full-${percent}.png`)});
+  await page.mouse.move(p.x,originalRows['0.1'].y);await page.mouse.move(p.x+16,originalRows['0.1'].y);
+  assert.equal(Number(await field().inputValue()),.5);assert.equal(await popup.locator('[data-step]:visible').count(),1);
+  const badge=await popup.boundingBox();assert.ok(badge.y+badge.height<=fieldRect.y);assert.ok(badge.height<full.height/3);
+  await page.screenshot({path:path.join(folder,`ladder-compact-${percent}.png`)});
+  const outside=full.x+full.width+80;await page.mouse.move(outside,originalRows['0.1'].y);
+  const horizontal=Number(await field().inputValue());await page.mouse.move(outside,originalRows['0.01'].y);
+  assert.equal(Number(await field().inputValue()),horizontal);assert.equal(await popup.locator('.active').getAttribute('data-step'),'0.1');
+  assert.deepEqual(await popup.boundingBox(),badge); // The label stays fixed at the field, not the cursor.
+  await page.mouse.move(p.x,originalRows['0.01'].y);
+  assert.equal(Number(await field().inputValue()),horizontal);assert.equal(await popup.locator('[data-step]:visible').count(),6);
+  assert.equal(await popup.locator('.active').getAttribute('data-step'),'0.01');assert.deepEqual(await popup.boundingBox(),full);
+  await page.mouse.move(p.x+16,originalRows['0.01'].y);assert.ok(Math.abs(Number(await field().inputValue())-(horizontal+.02))<1e-12);
+  assert.equal(await snapshot(),before);await page.keyboard.press('Escape');await page.mouse.up({button:'middle'});
+  assert.equal(await snapshot(),before);assert.equal(Number(await field().inputValue()),.3);
+  checks.push(`${percent}% UI / independent graph zoom: Ladder starts below the field, compacts to one fixed unobscuring increment, locks precision outside its grid and restores selection without value jumps`);
+}
+await page.evaluate(()=>setUIAppearance('scale',100));await settle();
 await reset();const cdp=await page.context().newCDPSession(page),touch=async(type,p)=>{await cdp.send('Input.dispatchTouchEvent',{type,touchPoints:p?[{id:1,x:p.x,y:p.y}]:[]});await settle();};p=await point(field());await touch('touchStart',p);await touch('touchEnd');assert.equal(await field().evaluate(e=>e===document.activeElement),true);const oldPan=await page.evaluate(()=>clone(pan));p=await point(field());await touch('touchStart',p);await touch('touchMove',{x:p.x+35,y:p.y+20});await touch('touchEnd');assert.notDeepEqual(await page.evaluate(()=>pan),oldPan);assert.equal(await value(),.3);assert.equal(await page.evaluate(()=>past.length),0);p=await point(field());await touch('touchStart',p);await page.locator('#valueladder').waitFor();const touchRung=await page.locator('[data-step="0.1"]').boundingBox(),touchY=touchRung.y+touchRung.height/2;await touch('touchMove',{x:p.x,y:touchY});await touch('touchMove',{x:p.x+16,y:touchY});assert.equal(await value(),.3);await touch('touchEnd');assert.equal(await value(),.5);assert.equal(await page.evaluate(()=>past.length),1);p=await point(field());await touch('touchStart',p);await page.locator('#valueladder').waitFor();await touch('touchCancel');assert.equal(await page.locator('#valueladder').count(),0);assert.equal(await value(),.5);checks.push('touch tap focuses typing, swipe pans, long-press Ladder commits once and touch cancellation preserves the value');
 await reset();p=await begin();await page.locator('#valueladder').waitFor();await page.keyboard.press('Escape');await end();assert.equal(await value(),.3);assert.equal(await page.evaluate(()=>past.length),0);await page.keyboard.down('Alt');p=await point(field());await page.mouse.move(p.x,p.y);await page.mouse.down({button:'right'});await page.locator('#valueladder').waitFor();await page.mouse.up({button:'right'});await page.keyboard.up('Alt');assert.equal(await page.locator('#valueladder').count(),0);assert.equal(await value(),.3);checks.push('stationary left hold and Alt+right mouse retain their existing Ladder triggers');
 await reset();before=await snapshot();p=await begin();await move(p,20);await move(p,0);await end();assert.equal(await snapshot(),before);checks.push('returning to the starting value produces no Undo entry');
@@ -97,5 +126,25 @@ for(const text of ['', '1e', 'NaN', 'Infinity']){
 }
 assert.equal(await snapshot(),before);
 checks.push('signed decade fills keep a left-to-right gradient, honor exact power-of-ten boundaries, handle maximum finite values without overflow, and leave numeric data/history untouched');
+await reset();await page.setViewportSize({width:390,height:640});await page.evaluate(()=>{
+  setUIAppearance('scale',125);window.ladderEdgeWrites=[];
+  const input=el('input',{id:'ladder-edge',type:'number',value:'.3'});input.style.cssText='position:fixed;right:8px;bottom:8px;width:150px;height:32px;z-index:99';
+  document.body.append(input);installValueLadder(input,()=>ladderEdgeWrites.push(input.value));
+});
+const edgeField=page.locator('#ladder-edge');
+for(const location of ['bottom','top']){
+  if(location==='top')await edgeField.evaluate(e=>{e.style.bottom='auto';e.style.top='8px';});
+  p=await point(edgeField);const inputRect=await edgeField.boundingBox();await page.mouse.move(p.x,p.y);await page.mouse.down({button:'middle'});await page.locator('#valueladder').waitFor();
+  const list=await page.locator('#valueladder').boundingBox();assert.ok(list.x>=7&&list.y>=7&&list.x+list.width<=383&&list.y+list.height<=633);
+  if(location==='bottom')assert.ok(list.y+list.height<=inputRect.y);else assert.ok(list.y>=inputRect.y+inputRect.height);
+  assert.equal(await page.locator('#valueladder .active').getAttribute('data-step'),'0.1');
+  await page.mouse.move(p.x+16,p.y);const compact=await page.locator('#valueladder').boundingBox();
+  assert.equal(await page.locator('#valueladder [data-step]:visible').count(),1);
+  if(location==='bottom')assert.ok(compact.y+compact.height<=inputRect.y);else assert.ok(compact.y>=inputRect.y+inputRect.height);
+  assert.ok(compact.x>=7&&compact.y>=7&&compact.x+compact.width<=383&&compact.y+compact.height<=633);
+  await page.screenshot({path:path.join(folder,`ladder-edge-${location}.png`)});await page.keyboard.press('Escape');await page.mouse.up({button:'middle'});
+}
+assert.deepEqual(await page.evaluate(()=>ladderEdgeWrites),[]);await edgeField.evaluate(e=>e.remove());await page.evaluate(()=>setUIAppearance('scale',100));await page.setViewportSize({width:1600,height:1100});
+checks.push('390px viewport at 125% UI keeps the full list and compact label in bounds, flips above/below the field at edges, and cancels without submitting');
 await reset();await page.screenshot({path:path.join(folder,'numeric-slider-dark.png')});await page.evaluate(()=>setUIAppearance('theme','light'));await page.screenshot({path:path.join(folder,'numeric-slider-light.png')});assert.ok(await field().evaluate(e=>getComputedStyle(e).backgroundImage.includes('linear-gradient')));assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
 }catch(error){await h.finish(error);throw error;}})().catch(error=>{console.error(error.stack);process.exitCode=1;});

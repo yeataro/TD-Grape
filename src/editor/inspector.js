@@ -131,17 +131,27 @@ function installValueLadder(entry,commit){
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
     entry.focus({preventScroll:true});if(!writable())return;
     const initial=entry.value,initialValue=Number(initial),steps=[100,10,1,.1,.01,.001];
-    const popup=el('div',{id:'valueladder',role:'tooltip'}),heading=el('strong',{},'Value Ladder'),rows=el('div',{class:'ladder-rows'}),output=el('output'),hint=el('small',{},t('ladder.release'));
+    const popup=el('div',{id:'valueladder',role:'tooltip'}),rows=el('div',{class:'ladder-rows'});
     for(const step of steps)rows.append(el('div',{'data-step':step},String(step)));
-    popup.append(heading,rows,output,hint);document.body.append(popup);
-    const uiZoom=uiScaleFactor(),rowHeight=rows.firstChild.getBoundingClientRect().height,offset=rows.offsetTop*uiZoom,popupRect=popup.getBoundingClientRect();
-    popup.style.left=Math.max(8,Math.min(entry.getBoundingClientRect().left-popupRect.width-10,innerWidth-popupRect.width-8))/uiZoom+'px';
-    popup.style.top=Math.max(8,Math.min(e.clientY-offset-3.5*rowHeight,innerHeight-popupRect.height-8))/uiZoom+'px';
-    const rowsTop=rows.getBoundingClientRect().top,indexAt=y=>Math.max(0,Math.min(steps.length-1,Math.floor((y-rowsTop)/rowHeight)));
-    let index=indexAt(e.clientY),anchorX=e.clientX,base=initialValue,value=initialValue,finished=false;
+    popup.append(rows);document.body.append(popup);
+    const uiZoom=uiScaleFactor(),rowHeight=rows.firstChild.getBoundingClientRect().height,popupRect=popup.getBoundingClientRect(),entryRect=entry.getBoundingClientRect();
+    const position=(x,y,height=popupRect.height)=>{
+      popup.style.left=Math.max(8,Math.min(x,innerWidth-popupRect.width-8))/uiZoom+'px';
+      popup.style.top=Math.max(8,Math.min(y,innerHeight-height-8))/uiZoom+'px';
+    };
+    const below=Math.max(e.clientY+8*uiZoom,entryRect.bottom+4*uiZoom);
+    position(e.clientX-popupRect.width/2,below+popupRect.height<=innerHeight-8?below:entryRect.top-popupRect.height-4*uiZoom);
+    const fullRect=popup.getBoundingClientRect(),rowsTop=rows.getBoundingClientRect().top,rowsBottom=rowsTop+steps.length*rowHeight;
+    const indexAt=y=>Math.max(0,Math.min(steps.length-1,Math.floor((y-rowsTop)/rowHeight)));
+    const compactHeight=popupRect.height-(steps.length-1)*rowHeight;
+    let index=3,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,leftGrid=false;
     const oldDescription=entry.getAttribute('aria-describedby');entry.setAttribute('aria-describedby','valueladder');entry.numericGestureActive=true;
     document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing');
-    const paint=()=>{[...rows.children].forEach((row,i)=>row.classList.toggle('active',i===index));output.value=String(value);};paint();
+    const paint=()=>{
+      [...rows.children].forEach((row,i)=>row.classList.toggle('active',i===index));popup.classList.toggle('ladder-compact',compact);
+      if(compact){const gap=4*uiZoom,above=entryRect.top-compactHeight-gap;position(entryRect.right-popupRect.width,above>=8?above:entryRect.bottom+gap,compactHeight);}
+      else position(fullRect.left,fullRect.top);
+    };paint();
     const controller=new AbortController(),options={capture:true,signal:controller.signal};
     const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
     function finish(accept){
@@ -157,9 +167,14 @@ function installValueLadder(entry,commit){
       if(ev.pointerId!==e.pointerId)return;
       if(!(ev.buttons&mask)||!writable()){finish(false);return;}
       ev.preventDefault();ev.stopPropagation();
-      const next=indexAt(ev.clientY);
-      if(next!==index){index=next;base=value;anchorX=ev.clientX;paint();return;}
+      // The compact label leaves the field clear; its position never moves the
+      // original selection grid. Return to that grid to choose a precision.
+      const inGrid=ev.clientX>=fullRect.left&&ev.clientX<=fullRect.right&&ev.clientY>=rowsTop&&ev.clientY<rowsBottom;
+      const next=inGrid?indexAt(ev.clientY):index;
+      if(compact&&!inGrid)leftGrid=true;
+      if(next!==index||(compact&&inGrid&&leftGrid)){index=next;base=value;anchorX=ev.clientX;compact=false;leftGrid=false;paint();return;}
       const ticks=Math.trunc((ev.clientX-anchorX)/8),candidate=base+ticks*steps[index];
+      if(Math.abs(ev.clientX-anchorX)>=8){compact=true;if(!inGrid)leftGrid=true;}
       if(!Number.isFinite(candidate))return;
       value=ticks?Number(candidate.toPrecision(15)):base;
       if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);

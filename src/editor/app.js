@@ -856,6 +856,7 @@ function installViewModes(){
   renderViewModes();
 }
 function installEditorChrome(){
+  installSelectMenus();
   installViewModes();
   installUIAppearance();
   installGraphZoom();

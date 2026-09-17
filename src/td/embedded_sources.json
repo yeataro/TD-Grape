@@ -25,5 +25,6 @@
   "graph_ui_js": "graph_ui.js",
   "import_ui_js": "import_ui.js",
   "qrcode_js": "qrcode.js",
-  "share_ui_js": "share_ui.js"
+  "share_ui_js": "share_ui.js",
+  "select_ui_js": "select_ui.js"
 }

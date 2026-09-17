@@ -307,13 +307,13 @@ main { grid-template-columns: 205px minmax(0,1fr) 308px; }
 #shaderswitch .switch-actions{padding:12px 0 0;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 
 /* The ladder previews locally and submits once on release. */
-:root{--ladder-bg:#26212f;--ladder-border:#6a577f;--ladder-active:#604c78;--ladder-row-height:26px}
-#valueladder{position:fixed;z-index:100;width:112px;padding:6px;background:var(--ladder-bg);border:1px solid var(--ladder-border);border-radius:7px;box-shadow:0 10px 24px #0008;pointer-events:none;user-select:none;font-size:11px}
-#valueladder strong{display:block;font-size:10px;font-weight:500;color:#c7b5de;padding:3px 5px 7px;white-space:nowrap}
-.ladder-rows>div{height:var(--ladder-row-height);line-height:var(--ladder-row-height);padding:0 10px;border-radius:3px;text-align:right;font-variant-numeric:tabular-nums;color:#a79ab7}
-.ladder-rows>div.active{background:var(--ladder-active);color:#f0e6ff;box-shadow:inset 2px 0 var(--purple)}
-#valueladder output{display:block;padding:7px 3px 5px;text-align:right;color:#fff;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--line);margin-top:5px}
-#valueladder small{display:block;padding:1px 3px;font-size:9px;color:#b3a4c3;text-align:center}
+:root{--ladder-bg:#26212f;--ladder-border:#6a577f;--ladder-active:#695384;--ladder-row-height:32px}
+#valueladder{position:fixed;z-index:100;width:84px;padding:4px;background:var(--ladder-bg);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0005;pointer-events:none;user-select:none;font-size:14px}
+.ladder-rows>div{height:var(--ladder-row-height);line-height:var(--ladder-row-height);padding:0 10px;border-radius:6px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ui-text,var(--ui-tone-text))}
+.ladder-rows>div.active{background:var(--ladder-active);color:#f6f0ff;font-weight:500}
+#valueladder.ladder-compact .ladder-rows>div:not(.active){display:none}
+@media(pointer:coarse){:root{--ladder-row-height:40px}}
+
 body.scrubbing-value,body.scrubbing-value *{cursor:ew-resize!important;user-select:none!important}
 input.scrubbing{outline:1px solid var(--purple);background:#2d2538}
 
@@ -1216,9 +1216,8 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] #inspector .node-inspector-label input:hover{background:#ffffffa0}
 :root[data-ui-theme="light"] #inspector .node-inspector-label input:focus{background:var(--ui-field)}
 :root[data-ui-theme="light"] #valueladder{box-shadow:0 5px 16px #29384d28}
-:root[data-ui-theme="light"] #valueladder :is(strong,output,.ladder-rows>div){color:var(--ui-text)}
+:root[data-ui-theme="light"] #valueladder .ladder-rows>div{color:var(--ui-text)}
 :root[data-ui-theme="light"] #valueladder .ladder-rows>div.active{color:var(--purple)}
-:root[data-ui-theme="light"] #valueladder small{color:var(--muted)}
 :root[data-ui-theme="light"] :is(.node-inline-values input,input).scrubbing{background:var(--ui-selected)}
 :root[data-ui-theme="light"] :is(#connection,#graphtrashlabel,#graphtrashproxy,.input-drag-preview){background:var(--ui-surface);color:var(--ui-text);border-color:var(--node-border);box-shadow:0 3px 12px #29384d24}
 :root[data-ui-theme="light"] #graphtrash .trash-face{background:#eef1f5e6}
@@ -1426,3 +1425,18 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #shareurl{font-size:12px;margin:0 0 8px}
 #sharecopy{width:100%}
 #sharemessage{margin-bottom:0;min-height:18px}
+
+/* A shared surface for dropdowns, upward menus and context actions. */
+:root{--popup-font-size:14px;--popup-row-height:32px;--popup-radius:10px;--popup-row-radius:6px}
+:root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices){padding:4px;border:1px solid var(--line);border-radius:var(--popup-radius);background:var(--ui-surface,var(--ui-tone-menu));color:var(--ui-text,var(--ui-tone-text));box-shadow:0 8px 24px #0004;font-size:var(--popup-font-size)}
+:root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices) button{min-height:var(--popup-row-height);font-size:var(--popup-font-size);line-height:20px;border:0;border-radius:var(--popup-row-radius);background:transparent;color:inherit}
+:root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices) button:is(:hover,:focus-visible):not(:disabled){background:var(--ui-hover,var(--ui-tone-menu-hover));outline:none}
+:root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices) button:is([aria-selected="true"],[aria-checked="true"]){background:var(--ui-selected,var(--ui-tone-control-hover));color:var(--purple)}
+#selectmenu{position:fixed;inset:auto;margin:0;min-width:140px;max-width:calc(100 * var(--ui-vw) - 16px);max-height:calc(100 * var(--ui-dvh) - 16px);overflow:auto;text-align:left}
+#selectmenu::backdrop{background:transparent}
+#selectmenu [role="option"]{display:block;width:100%;padding:6px 12px;text-align:inherit;white-space:normal;overflow-wrap:anywhere;touch-action:manipulation}
+#selectmenu[data-align="right"]{text-align:right}
+#selectmenu [role="option"]:disabled{cursor:default;opacity:.45}
+#selectmenu .select-group{display:block;padding:0}
+#selectmenu .select-group-label{padding:8px 12px 4px;color:var(--muted);font-size:12px}
+@media(pointer:coarse){:root{--popup-row-height:40px}}

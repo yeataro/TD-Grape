@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-17 共用選單與 Value Ladder（0.8.84）：新增 `test_select_menus.cjs` 10 組，涵蓋圖縮放 25/170%、UI 75/125%、實際滑鼠與可信任 Chromium 觸控事件、原 select 事件／一次 Undo、同值不提交、鍵盤／typeahead／Tab、數值草稿保護、停用選項與分組、翻譯、失效清理、QR modal 及 320px 邊界。`test_numeric_scrub.cjs` 25 組與 `test_ui_scale_panels.cjs` 15 組驗證下方展開、固定單精度標籤、回原列重新選擇不跳值、精度鎖定、取消／Undo、縮放與上下邊界；數值預設及畫布縮放選單各 7 組回歸通過，共 64 組、零頁面錯誤。全列與精簡狀態截圖已目視；實體觸控裝置仍未驗證。TD 28 份內嵌來源、10 份服務資產、8 項實際 HTTP 檢查通過，Master 保持 current，圖資料、原生連線及 session 保留；正式 TOE 保存為 718,660 bytes，保留兩份 Shader 並排除私人助手。既有瀏覽器分頁未重新整理。
+
 2026-09-17 Combine 覆蓋接線（0.8.84）：`test_combine_replacement.cjs` 5 組實際滑鼠檢查通過，涵蓋 XYZ／YZW 替換與未受影響接線、預覽虛線／範圍、Escape 不變、單步 Undo／Redo、反向接線及 Z／W 起點越界拒絕，零頁面錯誤；預覽截圖已目視。更新 `test_vector_nodes.js` 原有 Combine 拒絕重疊的預期，驗證來源節點／fan-out／手填值保留、舊群組整線移除、既有 Redo 不被失敗操作破壞、常數與迴圈回滾、creator 及上游 Auto 邊界。`test_vector_nodes`、`test_unified_vector`、`test_type_contract` 共 26 項通過；JS 產生的圖逐份由 Python 核心編譯。TD 更新 graph_ui／locales，27 份內嵌来源及服務內容一致，Master 保持 current。來源 TOE 保存為 715,356 bytes，兩份使用者 Shader 與既有 session 保留，私人助手排除。
 
 2026-09-17 QR 置中修訂（0.8.84）：更新既有 `test_ui_share.cjs`，9 組通過，零瀏覽器錯誤。QR 按鈕順序、modal 焦點／背景阻擋、Escape／關閉鈕／點背景、原 QR 獨立解碼與複製備援均通過；12 組視窗／縮放／主題置中偏差小於 2px，另驗證 844×390／125% 的 QR 可完整顯示於單一捲動位置，複製與關閉仍可操作。桌面與窄版截圖已目視。TD 更新 3 份資產，27 份內嵌來源、9 份服務資產及 7 項既有 HTTP 讀取檢查通過；session、Shader 資料及原生連線不變。正式 TOE 保存為 715,100 bytes，保留兩份 Shader 並排除私人助手。

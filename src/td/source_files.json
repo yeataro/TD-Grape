@@ -34,6 +34,7 @@
   "sgrape_parameters.py": "src/core/sgrape_parameters.py",
   "sgrape_runtime.py": "src/td/runtime/sgrape_runtime.py",
   "sgrape_sources.py": "src/core/sgrape_sources.py",
+  "select_ui.js": "src/editor/select_ui.js",
   "shader_controls.py": "src/td/runtime/shader_controls.py",
   "share_ui.js": "src/editor/share_ui.js",
   "style.css": "src/editor/style.css",
