@@ -476,7 +476,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
     const toggle=el('button',{class:'parameter-components-toggle',type:'button','aria-label':t('node.expandValues'),'aria-expanded':String(expanded),'data-parameter-expand':key},expanded?'▾':'▸');
     heading.prepend(toggle);
     const components=el('div',{class:'parameter-component-rows'});components.hidden=!expanded;
-    values.forEach((_,index)=>{const component=el('label',{class:'parameter-component-row'});component.append(el('span',{},labels[index]),createEntry(index,true));components.append(component);});box.append(components);
+    values.forEach((_,index)=>{const component=el('label',{class:'parameter-component-row'});component.append(el('span',{class:'parameter-value-label'},labels[index]),el('small',{class:'parameter-value-type'},scalarType),createEntry(index,true));components.append(component);});box.append(components);
     toggle.onclick=()=>{expanded=!expanded;let state=parameterExpansions.get(n);if(!state){state=new Set();parameterExpansions.set(n,state);}if(expanded)state.add(key);else state.delete(key);components.hidden=!expanded;toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
   }
   return box;
@@ -910,7 +910,7 @@ function inspector(){
       if(ordinary){
         const values=parameterValueRow(n,'$value',t('declaration.value'),Object.values(ports(n,'outputs'))[0]||n.params.type||'float',()=>n.params.value,(index,value)=>{if(Array.isArray(n.params.value))n.params.value[index]=value;else n.params.value=value;},d.key==='color'?'RGBA':'XYZW');
         if(d.key==='color'){
-          values.classList.add('color-parameter');values.querySelector('.parameter-value-heading').append(colorPickerSwatch(()=>n.params.value,value=>change(()=>n.params.value=value)));
+          values.classList.add('color-parameter');values.querySelector('.parameter-value-controls').append(colorPickerSwatch(()=>n.params.value,value=>change(()=>n.params.value=value)));
           if(n.params.value.some(v=>v<0||v>1))values.append(el('small',{class:'muted color-range-hint'},t('color.range')));
         }
         box.append(values);
@@ -939,7 +939,7 @@ function inspector(){
       const section=el('section',{class:'input-parameter','data-input':port});
       const connection=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
       const typeInfo=inputTypeDisplay(n,port);
-      const heading=el('h4',{class:'input-heading'});heading.append(el('span',{},portLabel(n,'inputs',port)),el('small',{},typeInfo.text));section.append(heading);
+      const heading=el('h4',{class:'input-heading'});heading.append(el('span',ordinary?{class:'parameter-value-label'}:{},portLabel(n,'inputs',port)),el('small',ordinary?{class:'parameter-value-type'}:{},typeInfo.text));section.append(heading);
       if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(el('p',{class:'muted conversion-hint'},t(typeInfo.conversion==='splat'?'type.splat':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target)));
       const value=defaultInput(n,port,type);
       if(isResourceType(type)){

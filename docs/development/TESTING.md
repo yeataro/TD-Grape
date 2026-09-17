@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-17 Parameter 對齊與子圖命名（0.8.84）：完整 `unittest discover` 279 項通過。新增命名檢查涵蓋同名呼叫、巢狀路徑、port 後綴衝突、長名稱限制及穩定消歧，保留原圖與 sourceMap；20 個內部預設名稱的合法性、唯一性、內容版本、瀏覽器引用／本地化與個人庫往返通過。既有 138 個產碼指紋及舊函式庫指紋以移除新增名稱並重算來源版本的測試投影核對，未覆寫歷史基準。
+
+`test_parameter_values.cjs` 15 組、`test_numeric_scrub.cjs` 32 組通過，零頁面錯誤；包括長名稱、固定三角形與欄位、連線／數值／展開分量共同起點、較窄面板和既有編輯／拖曳／Undo 行為。Add 與 Tint 對齊截圖已目視。`tests/td/test_subgraph_names.py` 驗證 TOP／MAT 的重複與巢狀 Tint：產生預期可讀名稱、編譯保持 current、沒有版本升級要求；TOP 最大像素誤差 0.000098，MAT 0.003922，均低於既有 0.006 容差。測試圖與操作區清除，既有 Shader 資料完整保留。首次原生測試因測試圖的兩個介面節點缺少位置被拒；補齊測試資料後通過，無產品修正。
+
+TD 更新 core／style_css／inspector_js；28 份映射來源與服務資產一致，兩份 Master current。正式 TOE 保存為 724,172 bytes，SHA-256 `ab2ef04f49f43c8ed9d28176b2e7871811690d9365cf3ae47163131e925706dc`；保留兩份使用者 Shader、排除私人助手，未重新整理現有頁面。未量測名稱長度對驅動編譯時間的差異。
+
 2026-09-17 連續拖曳範圍（0.8.84）：test_numeric_scrub.cjs 更新後 32 組、test_parameter_values.cjs 13 組通過，零頁面錯誤。驗證跨越多個正負範圍／零／返回原點、相同路徑以 1 次或 60 次實際 pointer move 執行結果相同、Ctrl 粗調與邊界切換修飾鍵、極大有限值即時反轉；保留手填精度、極小原值、界限、整數／uint、Undo、取消、UI／圖縮放及 Value Ladder／Help／觸控測試。僅 inspector_js 來源更新；28 份內嵌來源及服務內容一致，TOP／MAT Master current。正式 TOE 保存 723,468 bytes，兩份使用者 Shader 保留，私人助手排除，現有分頁未重新整理。
 
 2026-09-17 節點收合、Parameter 與數值操作（0.8.84）：`test_numeric_scrub.cjs` 29 組、`test_ui_scale_panels.cjs` 15 組、`test_node_collapse.cjs` 9 組、`test_parameter_values.cjs` 13 組全部通過，零瀏覽器錯誤，共 66 組。新增檢查包括依實際欄寬的浮點拖曳、正負／零與十進邊界、凍結敏感度、小數位移往返、修飾鍵切換、手填精度、極小值精確回原點、最大有限值與上下限反轉；保留原整數／uint、Undo、取消、觸控与 Value Ladder 入口。階梯驗證五級／0.1 置中、UI 尺寸的目前值＋級距、Help 保持、tooltip 分行／隱藏與恢復、長數字及視窗邊緣。

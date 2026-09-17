@@ -229,6 +229,13 @@ def glsl_code_name(value):
             and not re.match(r'(?:[iu]?sampler|[iu]?image|[d]?mat[234])',value)
             and value not in GLSL_CODE_RESERVED)
 
+def _scoped_symbol_stem(parts):
+    """Compiler-owned readable names; authored identities remain unchanged."""
+    stem=re.sub('_+', '_', '_'.join(parts)).strip('_')
+    if len(stem)>128:stem=stem[:117].rstrip('_')+'_'+digest(parts)[:10]
+    return stem
+
+
 def node_output_symbols(nodes, definitions, ports):
     """Readable local names, unique even after repeated Subgraph expansion.
 
@@ -237,9 +244,11 @@ def node_output_symbols(nodes, definitions, ports):
     """
     candidates={}
     for ident,n in nodes.items():
-        stem=n.get('name',ident)
+        stem=n.get('_symbolStem',n.get('name',ident))
         for port in ports[ident]['out']:
-            candidates[(ident,port)]='sg_n_'+stem+('_'+port if definitions[ident]['key']=='glsl_code' else '' if port=='out' else '_'+port)
+            candidate='sg_n_'+stem+('_'+port if definitions[ident]['key']=='glsl_code' else '' if port=='out' else '_'+port)
+            if '_symbolStem' in n:candidate=re.sub('_+', '_',candidate).rstrip('_')
+            candidates[(ident,port)]=candidate
     counts={}
     for candidate in candidates.values():counts[candidate]=counts.get(candidate,0)+1
     reserved=set(candidates.values());assigned=set();result={}
@@ -578,7 +587,8 @@ def _compile_flat(graph,annotation_scopes=None):
     # Internal annotation memberships do not consume the user's graph budget.
     sized=copy.deepcopy(graph)
     for data in sized.get('stages',{}).values():
-        for item in data.get('nodes',[]):item.pop('_annotationScopes',None)
+        for item in data.get('nodes',[]):
+            item.pop('_annotationScopes',None);item.pop('_symbolStem',None)
     if len(json.dumps(sized,allow_nan=False))>512000: raise GraphError('Graph exceeds 512 KB')
     if set(graph.get('stages',{}))!=set(graph_stages(graph)): raise GraphError('Shader stages do not match its target')
     slots=top_input_slots(graph)
@@ -954,39 +964,41 @@ def _compile_flat(graph,annotation_scopes=None):
 
 def function_library(with_browser=False):
     """Versioned library snapshots. Shader edits never write to this source."""
+    def named_node(key,ident,name,x,y,**params):
+        value=node(key,ident,x,y,**params);value['name']=name
+        return value
     fn={'id':'library_tint_v1','name':'Tint','scope':'library','stages':['pixel','vertex'],
         'inputs':[{'id':'color','name':'Color','type':'vec4','default':[1,1,1,1]},
                   {'id':'tint','name':'Tint','type':'vec4','default':[.7,.3,1,1]}],
         'outputs':[{'id':'color','name':'Color','type':'vec4','default':[0,0,0,1]}],
         'graph':{'nodes':[
-            {'id':'input','definitionUuid':FUNCTION_INPUT,'params':{},'ui':{'x':48,'y':144}},
-            node('multiply','multiply',336,144,type='vec4'),
-            {'id':'output','definitionUuid':FUNCTION_OUTPUT,'params':{},'ui':{'x':624,'y':144}}],
+            {'id':'input','name':'Input','definitionUuid':FUNCTION_INPUT,'params':{},'ui':{'x':48,'y':144}},
+            named_node('multiply','multiply','Apply_Tint',336,144,type='vec4'),
+            {'id':'output','name':'Output','definitionUuid':FUNCTION_OUTPUT,'params':{},'ui':{'x':624,'y':144}}],
             'edges':[edge('input','multiply','a','color'),edge('input','multiply','b','tint'),edge('multiply','output','color')]}}
     fn['source']={'id':'sgrape.library.tint','version':digest(fn)}
-    # Keep the original Tint snapshot byte-for-byte compatible with 0.2.
     def color_function(key,name,parameters,body,links,last):
         color={'id':'color','name':'Color','type':'vec4','default':[.5,.5,.5,1]}
         f={'id':'library_'+key+'_v1','name':name,'scope':'library','stages':['pixel','vertex'],
            'descriptionKey':'help.filter.'+key,'inputs':[color]+parameters,
            'outputs':[{'id':'color','name':'Color','type':'vec4','default':[0,0,0,1]}],
            'graph':{'nodes':[
-               {'id':'input','definitionUuid':FUNCTION_INPUT,'params':{},'ui':{'x':48,'y':144}},
-               node('split','split',288,144),*body,node('rgba','rgba',1200,144),
-               {'id':'output','definitionUuid':FUNCTION_OUTPUT,'params':{},'ui':{'x':1440,'y':144}}],
+               {'id':'input','name':'Input','definitionUuid':FUNCTION_INPUT,'params':{},'ui':{'x':48,'y':144}},
+               named_node('split','split','Split_Color',288,144),*body,named_node('rgba','rgba','Compose_Color',1200,144),
+               {'id':'output','name':'Output','definitionUuid':FUNCTION_OUTPUT,'params':{},'ui':{'x':1440,'y':144}}],
                'edges':[edge('input','split','color','color'),*links,
                         edge(last,'rgba','rgb'),edge('split','rgba','alpha','a'),edge('rgba','output','color')]}}
         f['source']={'id':'sgrape.library.'+key,'version':digest(f)}
         return f
     def scalar(ident,name,value): return {'id':ident,'name':name,'type':'float','default':value}
-    invert=node('subtract','invert',576,144,type='vec3');invert['inputValues']={'a':[1,1,1]}
+    invert=named_node('subtract','invert','Invert_RGB',576,144,type='vec3');invert['inputValues']={'a':[1,1,1]}
     filters=[color_function('invert','Invert',[],[invert],[edge('split','invert','b','rgb')],'invert'),
              color_function('contrast','Contrast',[scalar('contrast','Contrast',1),scalar('pivot','Pivot',.5)],
-                 [node('subtract','center',528,144,type='vec3'),node('multiply','scale',744,144,type='vec3'),node('add','restore',960,144,type='vec3')],
+                 [named_node('subtract','center','Center_RGB',528,144,type='vec3'),named_node('multiply','scale','Scale_Contrast',744,144,type='vec3'),named_node('add','restore','Restore_Pivot',960,144,type='vec3')],
                  [edge('split','center','a','rgb'),edge('input','center','b','pivot'),edge('center','scale','a'),
                   edge('input','scale','b','contrast'),edge('scale','restore','a'),edge('input','restore','b','pivot')],'restore'),
              color_function('color_clamp','Color Clamp',[scalar('minimum','Minimum',0),scalar('maximum','Maximum',1)],
-                 [node('clamp','limit',576,144,type='vec3')],
+                 [named_node('clamp','limit','Clamp_RGB',576,144,type='vec3')],
                  [edge('split','limit','value','rgb'),edge('input','limit','min','minimum'),edge('input','limit','max','maximum')],'limit')]
     result = [fn]+filters
     if with_browser:
@@ -1048,16 +1060,18 @@ def _expand(graph,functions):
             if path: origins[(stage,n['id'])]={'node':path[-1][1],'functionId':path[-2][0] if len(path)>1 else None,'trail':[step[0] for step in path[:-1]]}
         def mapped(ident,path):
             return ident if not path else 'f'+digest([path,ident])[:40]
-        def relay(ident,ty,value,path,scopes):
-            add({'id':ident,'definitionUuid':'sgrape.internal.relay','params':{'type':ty},'inputValues':{'value':copy.deepcopy(value)}},path,scopes)
-        def expand(data,path=(),boundary=None,scopes=()):
-            try: expand_data(data,path,boundary,scopes)
+        def relay(ident,ty,value,path,scopes,symbol_parts=()):
+            n={'id':ident,'definitionUuid':'sgrape.internal.relay','params':{'type':ty},'inputValues':{'value':copy.deepcopy(value)}}
+            if symbol_parts:n['_symbolStem']=_scoped_symbol_stem(symbol_parts)
+            add(n,path,scopes)
+        def expand(data,path=(),boundary=None,scopes=(),symbol_path=()):
+            try: expand_data(data,path,boundary,scopes,symbol_path)
             except GraphError as exc:
                 if not hasattr(exc,'stage'): exc.stage=stage
                 if path and not hasattr(exc,'functionId'):
                     exc.functionId=path[-1][0]; exc.trail=[step[0] for step in path]
                 raise
-        def expand_data(data,path=(),boundary=None,scopes=()):
+        def expand_data(data,path=(),boundary=None,scopes=(),symbol_path=()):
             if not isinstance(data,dict) or not isinstance(data.get('nodes'),list) or not isinstance(data.get('edges'),list): raise GraphError('Invalid graph data')
             if len(data['nodes'])>256 or len(data['edges'])>1024: raise GraphError('Graph is too large')
             maps={}; kinds=[];node_names=set()
@@ -1092,6 +1106,9 @@ def _expand(graph,functions):
                     saved=n.get('inputValues',{})
                     if not isinstance(saved,dict) or set(saved)-{p['id'] for p in fn['inputs']}: raise GraphError('Invalid Function input values',ident)
                     inside=path+((fn['id'],ident),); ins={}; outs={}; local_in={}; local_out={}
+                    # A readable namespace starts at an explicitly named call.
+                    # Unnamed legacy calls retain their original generated text.
+                    inside_symbols=symbol_path+(n.get('name',ident),) if symbol_path or n.get('name') else ()
                     annotation=scope_record(digest([stage,inside]),n,path,ident,len(path)*2)
                     nested_scopes=scopes+((annotation,) if annotation else ())
                     for direction in ('inputs','outputs'):
@@ -1099,18 +1116,20 @@ def _expand(graph,functions):
                             value=saved.get(p['id'],p['default']) if direction=='inputs' else p['default']
                             literal(value,p['type'])
                             rid='f'+digest([inside,direction,p['id']])[:40]
-                            relay(rid,p['type'],value,inside,nested_scopes)
-                            if direction=='outputs' and n.get('name'):
-                                flat['nodes'][-1]['name']=n['name']+'_'+p['id']
+                            symbol_parts=inside_symbols+(('input',p['id']) if direction=='inputs' else (p['id'],)) if inside_symbols else ()
+                            relay(rid,p['type'],value,inside,nested_scopes,symbol_parts)
                             if direction=='inputs': ins[p['id']]=[rid,'value']; local_in[p['id']]=[rid,'out']
                             else: outs[p['id']]=[rid,'out']; local_out[p['id']]=[rid,'value']
                     maps[ident]={'in':ins,'out':outs}
-                    expand(fn['graph'],inside,(local_in,local_out),nested_scopes)
+                    expand(fn['graph'],inside,(local_in,local_out),nested_scopes,inside_symbols)
                 else:
                     if key not in BY_UUID or key=='sgrape.internal.relay': raise GraphError('Unknown node',ident)
                     d=BY_UUID[key]
                     if boundary is not None and d['key'].endswith('_out'): raise GraphError('Use Function Output inside a Function',ident)
-                    nid=mapped(ident,path); out=copy.deepcopy(n); out['id']=nid; add(out,path,scopes)
+                    nid=mapped(ident,path); out=copy.deepcopy(n); out['id']=nid
+                    out.pop('_symbolStem',None)  # Never trust graph-provided compiler metadata.
+                    if symbol_path:out['_symbolStem']=_scoped_symbol_stem(symbol_path+(n.get('name',ident),))
+                    add(out,path,scopes)
                     if path: origins[(stage,nid)]={'node':ident,'functionId':path[-1][0],'trail':[step[0] for step in path]}
                     try:templates=definition_ports(d,n.get('params',{}))
                     except GraphError as exc:

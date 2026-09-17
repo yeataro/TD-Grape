@@ -4,12 +4,23 @@ from pathlib import Path
 import sgrape_core as c
 root=Path(__file__).parent
 baseline=json.loads((root.parent/'fixtures/type_contract_baseline.json').read_text(encoding='utf-8'))
+def legacy_function_library():
+ # The pinned 0.6.0 snapshots predate semantic names in bundled Subgraphs.
+ # Restore only that intentional asset change; retain the historical math,
+ # topology, IDs, defaults, layout and compiler fingerprints unchanged.
+ library=c.function_library()
+ for function in library:
+  source=function.pop('source')
+  for node in function['graph']['nodes']:node.pop('name',None)
+  source['version']=c.digest(function);function['source']=source
+ return library
+
 class TypeContract(unittest.TestCase):
  def test_contract_is_pure_and_deterministic(self):
   first=c.type_contract();self.assertEqual(first,c.type_contract())
   expected=dict(first);expected.pop('hash');self.assertEqual(first['hash'],c.digest(expected))
   first['definitions'].clear();self.assertEqual(len(c.type_contract()['definitions']),len(c.CATALOG))
-  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant')}),baseline['catalogHash']);self.assertEqual(c.digest(c.function_library()),baseline['libraryHash'])
+  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant')}),baseline['catalogHash']);self.assertEqual(c.digest(legacy_function_library()),baseline['libraryHash'])
 
  def test_value_descriptors_and_literals(self):
   descriptor=c.type_contract()['types'];self.assertEqual(tuple(descriptor),c.PORT_TYPES)
@@ -46,7 +57,7 @@ class TypeContract(unittest.TestCase):
     if key.endswith('_out'):g['stages'][stage]['nodes']=[node];g['stages'][stage]['edges']=[]
     else:g['stages'][stage]['nodes'].append(node)
     graphs.append(g)
-  for fn in c.function_library():
+  for fn in legacy_function_library():
    for target in ('mat','top'):
     g=c.demo_graph('color',target);g['functions']=[fn]
     g['stages']['pixel']={'nodes':[{'id':'filter','definitionUuid':c.CALL,'params':{'functionId':fn['id']}},c.node('pixel_out','output')],'edges':[c.edge('filter','output','color','color')]};graphs.append(g)

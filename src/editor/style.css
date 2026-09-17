@@ -1373,29 +1373,34 @@ footer .footer-preferences svg[hidden]{display:none}
 :root input.numeric-slider.numeric-dragging{outline:0}
 
 /* Ordinary node Parameters share the canvas' compact value controls. */
+#inspector.ordinary-parameters{--parameter-columns:12px minmax(0,21%) 5ch minmax(0,1fr);--parameter-column-gap:6px}
 #inspector.ordinary-parameters>label.field{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;min-height:30px}
 #inspector.ordinary-parameters>label.field>select{max-width:60%;min-width:0}
-#inspector.ordinary-parameters .input-parameter[data-input]{display:grid;grid-template-columns:minmax(75px,auto) minmax(0,1fr);align-items:center;gap:6px 10px;border:0;margin-top:10px;padding:0}
-#inspector.ordinary-parameters .input-heading{justify-content:flex-start;gap:7px;margin:0;min-width:0;line-height:1.4}
-#inspector.ordinary-parameters .input-parameter[data-input]>p{margin:0;font-size:10px;line-height:1.5}
-#inspector.ordinary-parameters .input-parameter[data-input]>.conversion-hint,#inspector.ordinary-parameters .input-parameter[data-input]>.wide{grid-column:1/-1}
+#inspector.ordinary-parameters .input-parameter[data-input],.parameter-value-row,.parameter-component-row{display:grid;grid-template-columns:var(--parameter-columns);align-items:center;column-gap:var(--parameter-column-gap);font-size:11px;line-height:1.4}
+#inspector.ordinary-parameters .input-parameter[data-input]{row-gap:6px;border:0;margin-top:9px;padding:0}
+#inspector.ordinary-parameters .input-heading,.parameter-value-heading{display:contents}
+#inspector.ordinary-parameters .input-parameter[data-input]>p{grid-column:4;margin:0;font-size:10px;line-height:1.5}
+#inspector.ordinary-parameters .input-parameter[data-input]>.conversion-hint{grid-column:2/-1}
+#inspector.ordinary-parameters .input-parameter[data-input]>.wide{grid-column:4;margin-top:0}
 #inspector.ordinary-parameters .input-parameter[data-input]>.parameter-value-group{grid-column:1/-1;margin:0}
-.parameter-value-group{min-width:0;margin-top:10px;margin-bottom:10px}
-.parameter-value-row{display:flex;align-items:center;gap:10px;min-height:30px}
-.parameter-value-heading{display:flex;align-items:center;gap:6px;flex:0 1 auto;min-width:0;max-width:45%;font-size:11px;line-height:1.4}
-.parameter-value-label{min-width:0;overflow-wrap:anywhere}
-.parameter-value-type{flex:none;font-size:10px;color:var(--muted);font-weight:400}
-.parameter-value-controls{display:flex;flex:1;gap:5px;min-width:0}
+#inspector.ordinary-parameters .connection-row{grid-column:4;grid-row:1;min-height:24px;gap:5px;font-size:11px}
+#inspector.ordinary-parameters .connection-row button{min-height:24px;padding:3px 5px;font-size:10px}
+.parameter-value-group{min-width:0;margin-top:9px;margin-bottom:9px}
+.parameter-value-row{min-height:24px}
+.parameter-value-label{grid-column:2;min-width:0;text-align:right;overflow-wrap:anywhere;font-weight:400}
+.parameter-value-type{grid-column:3;min-width:0;text-align:left;overflow-wrap:anywhere;font-size:10px;color:var(--muted);font-weight:400}
+.parameter-value-controls{grid-column:4;display:flex;gap:5px;min-width:0}
 .parameter-value-controls>input,.parameter-value-controls>select{flex:1;width:0;min-width:0}
-#inspector .parameter-value-group input[type=number]{box-sizing:border-box;min-width:0;height:30px;padding:5px 7px;margin:0;border:0;border-radius:5px;background-color:var(--node-value-bg);color:var(--ui-text);font:inherit;font-size:12px;font-variant-numeric:tabular-nums;appearance:textfield}
+#inspector .parameter-value-group input[type=number]{box-sizing:border-box;min-width:0;height:24px;padding:3px 5px;margin:0;border:0;border-radius:5px;background-color:var(--node-value-bg);color:var(--ui-text);font:inherit;font-size:11px;font-variant-numeric:tabular-nums;appearance:textfield}
 #inspector .parameter-value-group input[type=number]::-webkit-inner-spin-button,#inspector .parameter-value-group input[type=number]::-webkit-outer-spin-button{appearance:none;margin:0}
 #inspector .parameter-value-group input:focus{outline:1px solid var(--purple)}
 #inspector .parameter-value-group input[aria-invalid=true]{outline:1px solid #e793a1}
-.parameter-components-toggle{flex:none;width:12px;min-width:12px;height:24px;padding:0;border:0;background:transparent;color:var(--muted);font-size:10px}
+.parameter-components-toggle{grid-column:1;grid-row:1;width:12px;min-width:12px;height:24px;padding:0;border:0;background:transparent;color:var(--muted);font-size:10px}
 .parameter-components-toggle:hover{background:transparent;color:var(--ui-text)}
-.parameter-component-rows{display:grid;gap:6px;margin-top:6px;padding:7px 8px;border-radius:6px;background:#ffffff04}
+.parameter-component-rows{display:grid;gap:6px;margin-top:6px;padding:6px 0;border-radius:6px;background:#ffffff04}
 .parameter-component-rows[hidden]{display:none}
-.parameter-component-row{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.parameter-component-row{color:var(--muted)}
+.parameter-component-row>input,.parameter-component-row>select{grid-column:4;width:100%}
 .parameter-value-group .color-swatch{flex:none;width:20px;height:20px;border-radius:4px}
 .parameter-value-group .color-range-hint{display:block;margin-top:6px;line-height:1.5}
 :root[data-ui-theme="light"] .parameter-component-rows{background:#00000004}
