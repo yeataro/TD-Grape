@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../../src/editor/import_ui.js'),'utf8');
+const helper=source.slice(source.indexOf('function prepareGraphReplacement('),source.indexOf('function acceptImportReview('));
+const spec=(id,name,constantId)=>({id,name,constantId,kind:'spec_constant',type:'int',value:0,nativeSequence:'const'});
+const document=declarations=>({declarations,stages:{pixel:{nodes:[],edges:[]}},functions:[]});
+const graph=document([spec('old','sOld',7),spec('kept','sKept',0),{id:'gain',kind:'uniform',name:'uGain',type:'float',value:0}]);
+const ctx=vm.createContext({clone:structuredClone,t:key=>key,graph,revision:3,nativeSourceSnapshot:{enabled:true,revision:3,
+  uniforms:[{id:'gain',sequence:'vec'}],specConstants:[{id:'old',sequence:'const'},{id:'kept',sequence:'const'}]}});
+vm.runInContext(helper,ctx);
+const replace=input=>structuredClone(ctx.prepareGraphReplacement(input));
+const imported=document([spec('foreign','sOld',99),spec('new','sNew',0)]);
+imported.stages.pixel.nodes=[{params:{declarationId:'foreign'}}];
+imported.functions=[{graph:{nodes:[{params:{declarationId:'foreign'}}]}}];
+const result=replace(imported);
+assert.equal(result.declarations.find(d=>d.name==='sOld').id,'old');
+assert.equal(result.declarations.find(d=>d.name==='sOld').constantId,7);
+assert.equal(result.declarations.find(d=>d.name==='sNew').constantId,1);
+assert.equal(result.declarations.find(d=>d.name==='sKept').constantId,0);
+assert.equal(result.stages.pixel.nodes[0].params.declarationId,'old');
+assert.equal(result.functions[0].graph.nodes[0].params.declarationId,'old');
+assert.equal(imported.declarations[0].constantId,99);
+assert.equal(replace(document([])).declarations.length,3);
+assert.throws(()=>replace(document([{id:'collision',name:'sOld',kind:'uniform',type:'float',value:0}])),/import.sourceConflict/);
+assert.throws(()=>replace(document([spec('old','sKept',2)])),/import.sourceConflict/);
+ctx.nativeSourceSnapshot.revision=2;
+assert.throws(()=>replace(document([])),/sources.nativePending/);
+console.log('Spec import: same entity/constantId, missing retention, collisions, stage/function references and stale snapshot passed');

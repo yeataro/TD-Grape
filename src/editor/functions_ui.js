@@ -46,8 +46,8 @@ function enterFunction(n){
 function renderNavigation(){
   renderGraphEditActions();
   tidyTrail();const nav=$('#graphpath');nav.replaceChildren();$('#graphup').disabled=graphTrail.length===0;
-  const crumbs=[stage==='pixel'?'Pixel':'Vertex',...graphTrail.map(id=>FunctionModel.find(graph,id)?.name||'?')];
-  crumbs.forEach((label,depth)=>{if(depth)nav.append(el('span',{class:'graph-separator'},'/'));
+  const crumbs=graphTrail.map(id=>FunctionModel.find(graph,id)?.name||'?');
+  crumbs.forEach((label,index)=>{const depth=index+1;if(index)nav.append(el('span',{class:'graph-separator'},'/'));
     const b=el('button',{'aria-current':depth===graphTrail.length?'location':'false'},label);b.disabled=depth===graphTrail.length;b.onclick=()=>navigateGraph(depth);nav.append(b);
   });
   const f=currentFunction();$('#functionscope').textContent=f?(f.scope==='local'?t('function.local'):t('function.source')):'';
@@ -63,7 +63,7 @@ function nodeTypeLabel(d,params=d?.defaults){
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
 }
 function availableEntries(){
-  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&d.key!=='texture'&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
     if(d.key==='vector')return ['vec2','vec3','vec4'].map(type=>({...d,entryKey:'vector:'+type,presetType:type,label:nodeTypeLabel(d,{type}),defaults:{...d.defaults,type},category:nodeCategory(d)}));
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
@@ -73,6 +73,54 @@ function availableEntries(){
     if(f.scope==='local'||!sources.some(s=>s.source?.id===f.source?.id&&s.source?.version===f.source?.version))entries.push(functionEntry(f));
   }
   return entries.filter(d=>!d.functionId||!graphTrail.includes(d.functionId));
+}
+function nodeSourceDeclaration(n){
+  if(n?.params?.declarationId)return graph.declarations.find(d=>d.id===n.params.declarationId)||null;
+  if(n?.params?.inputId)return topInputsView().find(d=>d.id===n.params.inputId)||null;
+  return null;
+}
+function isSourceReferenceNode(n){return !!(n?.params&&('declarationId' in n.params||'inputId' in n.params));}
+function nodeDisplayName(n){
+  const source=nodeSourceDeclaration(n);if(source)return source.name;
+  return customNodeNamesEnabled()&&n?.name?n.name:nodeTypeLabel(definition(n),n?.params);
+}
+function nodeNameValid(value){
+  return typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(value)&&!value.includes('__')&&
+    !/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(value)&&!(typeContract?.glslCode?.reservedNames||[]).includes(value);
+}
+function uniqueNodeName(hint,n=null,nodes=current().nodes){
+  let base=String(hint||'Node').replace(/[^A-Za-z0-9_]/g,'_').replace(/_+/g,'_').slice(0,38);
+  if(!nodeNameValid(base))base='Node';
+  const names=new Set(nodes.filter(x=>x!==n&&!isSourceReferenceNode(x)).map(x=>x.name).filter(Boolean));
+  let index=1,name=base;while(names.has(name))name=base+'_'+index++;
+  return name;
+}
+function assignCreatedNodeNames(nodes){
+  for(const n of nodes){if(isSourceReferenceNode(n)){delete n.name;continue;}n.name=uniqueNodeName(n.name||nodeTypeLabel(definition(n),n.params),n);}
+}
+function commitNodeName(n,raw){
+  if(editorMutationBlocked()||isSourceReferenceNode(n))return false;
+  const name=String(raw).trim().replace(/ +/g,'_');
+  if(!nodeNameValid(name))throw Error(t('node.nameInvalid'));
+  if(current().nodes.some(other=>other!==n&&!isSourceReferenceNode(other)&&other.name===name))throw Error(t('node.nameDuplicate'));
+  if(name===n.name)return true;
+  const changed=change(()=>n.name=name);if(changed)status(t('node.renamed'),false,{clearError:'operation'});return changed;
+}
+function nodeNameEditor(n,onDone=()=>{}){
+  const wrapper=el('span',{class:'node-name-editor'}),entry=el('input',{type:'text','data-node-name':n.id,'aria-label':t('node.name'),autocomplete:'off',spellcheck:'false'}),error=el('small',{class:'node-name-error',role:'alert'});
+  const original=n.name||uniqueNodeName(nodeTypeLabel(definition(n),n.params),n);entry.value=original;entry.maxLength=64;entry.disabled=readonly;let composing=false,finished=false;
+  entry.hasPendingEdit=()=>!finished&&entry.value!==original;
+  const clearNameError=()=>{if([t('node.nameInvalid'),t('node.nameDuplicate')].includes(persistentStatusError))status('',false,{clearError:'operation'});};
+  const commit=()=>{if(composing||finished)return;finished=true;try{if(commitNodeName(n,entry.value)){clearNameError();onDone();}else finished=false;}catch(e){finished=false;error.textContent=e.message;entry.setAttribute('aria-invalid','true');status(e.message,true);}};
+  const filter=()=>{const before=entry.value,start=entry.selectionStart,end=entry.selectionEnd,clean=value=>value.replace(/ /g,'_').replace(/[^A-Za-z0-9_]/g,'').slice(0,48);entry.value=clean(before);if(start!==null)entry.setSelectionRange(clean(before.slice(0,start)).length,clean(before.slice(0,end)).length);entry.removeAttribute('aria-invalid');error.textContent='';};
+  entry.addEventListener('compositionstart',()=>{composing=true;});entry.addEventListener('compositionend',()=>{composing=false;filter();});entry.onblur=commit;
+  entry.onkeydown=e=>{e.stopPropagation();if(e.isComposing||composing||e.keyCode===229)return;if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){e.preventDefault();finished=true;entry.value=original;clearNameError();onDone();}};
+  for(const event of ['pointerdown','click','dblclick','contextmenu'])entry.addEventListener(event,e=>e.stopPropagation());
+  entry.oninput=()=>{if(!composing)filter();};wrapper.append(entry,error);return wrapper;
+}
+function beginNodeRename(n,label){
+  if(readonly||!customNodeNamesEnabled()||isSourceReferenceNode(n)||label.parentElement.querySelector('[data-node-name]'))return;
+  const editor=nodeNameEditor(n,()=>{if(editor.isConnected)render();});label.replaceWith(editor);const entry=editor.querySelector('input');entry.focus();entry.select();
 }
 function uniqueInputName(hint='uValue'){
   const base=String(hint).replace(/[^A-Za-z0-9_]/g,'').slice(0,38)||'uValue',names=new Set(graph.declarations.map(d=>d.name));
@@ -90,13 +138,15 @@ function allInputSources(){return [...topInputsView().map((s,index)=>({...s,kind
 function constantFields(box,decl){
   box.append(field(t('node.type'),select(['float','vec2','vec3','vec4'].map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value)),el('p',{class:'muted'},t('inputs.constantHint')));
 }
+function specDefaultValue(value,type){const n=Number(Array.isArray(value)?value[0]:value)||0;return type==='bool'?!!n:type==='int'?Math.max(-2147483648,Math.min(2147483647,Math.trunc(n))):type==='uint'?Math.max(0,Math.min(4294967295,Math.trunc(n))):n;}
 function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence}={}){
   if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'sTD2DInputs['+slots.length+']',defaultSource:'builtin:black'};slots.push(slot);return slot;}
   if(kind==='sampler'&&editorTarget==='top')throw Error(t('inputs.chooseTop'));
   if(kind==='uniform'&&preset){const existing=graph.declarations.find(d=>d.kind==='uniform'&&d.type===type&&d.initialDriver===preset);if(existing)return existing;}
   const id=kind+'_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
-  const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||(kind==='sampler'?'uTexture':'uValue'))};
-  if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
+  const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'sValue'})[kind]||'uValue')};
+  if(kind==='spec_constant'){const ids=new Set(graph.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;Object.assign(decl,{value:specDefaultValue(value??0,type),constantId,nativeSequence:'const'});}
+  else if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
   else {Object.assign(decl,{value:shapedValue(value??0,type),expose:false});if(kind==='uniform'){if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;}}
   graph.declarations.push(decl);return decl;
 }
@@ -107,8 +157,8 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
   type=d.presetType||type;
   if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
   if(type&&params.type)params.type=type;
-  if(['uniform','constant'].includes(d.key)){
-    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||'float',inputSeed);
+  if(['uniform','constant','spec_constant'].includes(d.key)){
+    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||(d.key==='spec_constant'?'int':'float'),inputSeed);
     if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;
   }
   if(d.key==='top_input'){const slots=ensureTopInputs();const slot=declarationId?slots.find(s=>s.id===declarationId):slots.find(s=>s.id===selectedInputId)||slots[0];if(!slot)throw Error(t('inputs.chooseTop'));params.inputId=slot.id;}
@@ -117,11 +167,11 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
     if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;
   }
   const n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
-  if(d.revisionHash)n.revisionHash=d.revisionHash;current().nodes.push(n);selected=id;selection=new Set([id]);selectedEdge=null;return n;
+  if(d.revisionHash)n.revisionHash=d.revisionHash;current().nodes.push(n);assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
 }
 function newFunction(){
   change(()=>{const id=FunctionModel.uid();graph.functions||=[];
-    const f={id,name:'Function '+(graph.functions.filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],graph:{nodes:[{id:'input',definitionUuid:FunctionModel.INPUT,params:{},ui:{x:48,y:144}},{id:'output',definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:624,y:144}}],edges:[{from:['input','value'],to:['output','value']}]}};
+    const f={id,name:'Function '+(graph.functions.filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],graph:{nodes:[{id:'input',name:'Input',definitionUuid:FunctionModel.INPUT,params:{},ui:{x:48,y:144}},{id:'output',name:'Output',definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:624,y:144}}],edges:[{from:['input','value'],to:['output','value']}]}};
     graph.functions.push(f);instantiate(functionEntry(f),200,180);
   });
 }
@@ -142,9 +192,9 @@ function groupSelection(){
     }
     const x=Math.min(...chosen.map(n=>n.ui.x)),y=Math.min(...chosen.map(n=>n.ui.y));
     const nodes=chosen.map(n=>({...clone(n),ui:{...clone(n.ui),x:n.ui.x-x+288,y:n.ui.y-y+144}}));
-    nodes.push({id:'input',definitionUuid:FunctionModel.INPUT,params:{},ui:{x:24,y:144}},{id:'output',definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:Math.max(...nodes.map(n=>n.ui.x))+288,y:144}});
+    nodes.push({id:'input',name:uniqueNodeName('Input',null,nodes),definitionUuid:FunctionModel.INPUT,params:{},ui:{x:24,y:144}},{id:'output',name:uniqueNodeName('Output',null,nodes),definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:Math.max(...nodes.map(n=>n.ui.x))+288,y:144}});
     const f={id,name:'Function '+((graph.functions||[]).filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs,outputs,graph:{nodes,edges}};
-    graph.functions||=[];graph.functions.push(f);data.nodes=data.nodes.filter(n=>!ids.has(n.id));data.nodes.push({id:callId,definitionUuid:FunctionModel.CALL,params:{functionId:id},ui:{x,y}});data.edges=outside;selected=callId;selection=new Set([callId]);selectedEdge=null;
+    graph.functions||=[];graph.functions.push(f);data.nodes=data.nodes.filter(n=>!ids.has(n.id));data.nodes.push({id:callId,definitionUuid:FunctionModel.CALL,params:{functionId:id},ui:{x,y}});assignCreatedNodeNames([data.nodes.at(-1)]);data.edges=outside;selected=callId;selection=new Set([callId]);selectedEdge=null;
   });
 }
 function renameGraphFunction(id,value){
@@ -214,7 +264,7 @@ function functionInspector(box,n,d){
       section.append(field(t('node.type'),select(interfaceTypes().map(t=>[t,t]),p.type,type=>change(()=>{
         p.type=type;p.default=convertValue(p.default,type);
         for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id&&direction==='inputs'&&Object.hasOwn(call.inputValues||{},p.id))call.inputValues[p.id]=convertValue(call.inputValues[p.id],type);
-      }))));
+      },{typeChange:true}))));
       const order=el('div',{class:'function-port-order'});
       for(const [delta,label]of [[-1,t('code.up')],[1,t('code.down')]]){
         const button=el('button',{type:'button',title:label,'aria-label':label,'data-port-move':String(delta),'data-port-id':p.id},delta<0?'↑':'↓');
@@ -240,10 +290,10 @@ function functionInspector(box,n,d){
 function convertValue(value,type){return value===null&&!isResourceType(type)?filledValue(type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
-  if(['sgrape.builtin.vector','sgrape.builtin.combine','sgrape.builtin.vector_split','sgrape.builtin.swizzle'].includes(n.definitionUuid)){const label=vectorPortLabel(n,kind,id);if(label)return label;}
+  if(['sgrape.builtin.vector','sgrape.builtin.replace','sgrape.builtin.combine','sgrape.builtin.vector_split','sgrape.builtin.swizzle'].includes(n.definitionUuid)){const label=vectorPortLabel(n,kind,id);if(label)return label;}
   if(n.definitionUuid==='sgrape.builtin.glsl_code')return n.params[kind]?.find(p=>p.id===id)?.name||id;
   if(kind==='outputs'&&definition(n)?.key==='top_input'){if(id==='out')return topInputsView().find(s=>s.id===n.params.inputId)?.name||id;return id==='size'?t('inputs.size'):t('inputs.pixelSize');}
-  if(kind==='outputs'&&id==='out'&&['uniform','sampler','constant'].includes(definition(n)?.key))return graph.declarations.find(d=>d.id===n.params?.declarationId)?.name||id;
+  if(kind==='outputs'&&id==='out'&&['uniform','sampler','constant','spec_constant'].includes(definition(n)?.key))return graph.declarations.find(d=>d.id===n.params?.declarationId)?.name||id;
   if(n.definitionUuid==='sgrape.builtin.pixel_out'&&editorTarget==='mat'&&kind==='inputs'){const index=typeContract?.pixelBufferOutputs?.ports.indexOf(id);if(index>=0){const label=n.ui?.bufferLabels?.[id];return typeof label==='string'&&label.length<=80&&!/[\x00-\x1f\x7f]/.test(label)&&label.trim()?label:'Buffer '+index;}}
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(n.definitionUuid))return id;
   const f=n.definitionUuid===FunctionModel.CALL?FunctionModel.find(graph,n.params.functionId):currentFunction();

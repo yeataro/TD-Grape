@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.82",
+  "catalogVersion": "0.8.84",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -1575,15 +1575,9 @@
       "definition": {
         "key": "vector",
         "label": "Vector",
-        "inputs": {
-          "value": "vec2",
-          "x": "float",
-          "y": "float"
-        },
+        "inputs": {},
         "outputs": {
-          "out": "vec2",
-          "x": "float",
-          "y": "float"
+          "out": "vec2"
         },
         "stages": [
           "vertex",
@@ -1591,7 +1585,6 @@
         ],
         "defaults": {
           "type": "vec2",
-          "groups": {},
           "components": [
             0,
             0,
@@ -1601,7 +1594,7 @@
         },
         "descriptionKey": "help.vector",
         "definitionUuid": "sgrape.builtin.vector",
-        "revisionHash": "89d0f8d9de8af0eb90f06e18c949f9d72143f6d40cd29008d180a805b471a5fb"
+        "revisionHash": "d4afc585f94d526bf61a7cf77fcf91ea92136adc0d614f4ef23016b437b0ae67"
       },
       "emitter": {
         "id": "vector",
@@ -1617,20 +1610,86 @@
           "vector2",
           "vector3",
           "vector4",
-          "compose",
-          "combine",
-          "split",
-          "components",
-          "向量",
-          "合併",
-          "組合",
-          "拆分",
-          "分量"
+          "value",
+          "components"
         ],
         "glslName": "vecN",
         "secondaryCategories": [
           "data"
         ]
+      }
+    },
+    {
+      "definition": {
+        "key": "replace",
+        "label": "Replace",
+        "inputs": {
+          "value": "vec2",
+          "x": "float",
+          "y": "float"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2",
+          "groups": {},
+          "components": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "descriptionKey": "help.replace",
+        "definitionUuid": "sgrape.builtin.replace",
+        "revisionHash": "7f8301823f0c70bb4e745d3cc12f3d860f82b48dbb227a6e095bff2ab55d75d8"
+      },
+      "emitter": {
+        "id": "replace",
+        "version": 1
+      },
+      "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+          "replace",
+          "override",
+          "components",
+          "replace components"
+        ],
+        "glslName": "vecN",
+        "secondaryCategories": [
+          "data"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "spec_constant",
+        "label": "Spec Constant",
+        "inputs": {},
+        "outputs": {
+          "out": "D"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "declarationId": ""
+        },
+        "descriptionKey": "help.spec_constant",
+        "definitionUuid": "sgrape.builtin.spec_constant",
+        "revisionHash": "63133d315db7b36a3020e5d5c5e48b35b18464e90bb69f3034874934ca5066f1"
+      },
+      "emitter": {
+        "id": "spec_constant",
+        "version": 1
       }
     }
   ],

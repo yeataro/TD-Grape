@@ -8,14 +8,56 @@ import hashlib
 import json
 import math
 import re
+import struct
 import uuid
 
 STORE = 'grapeNativeUniformsV1'
 TYPES = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
+SPEC_TYPES = ('int', 'uint', 'bool', 'float')
+SOURCE_KINDS = ('uniform', 'spec_constant')
 PRESETS = {'time': 'me.time.seconds', 'frame': 'me.time.frame',
            'absTime': 'absTime.seconds', 'absFrame': 'absTime.frame'}
 CHANNELS = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'),
-            'color': ('rgbr', 'rgbg', 'rgbb', 'alpha')}
+            'color': ('rgbr', 'rgbg', 'rgbb', 'alpha'), 'const': ('value',)}
+
+
+def source_sequence(declaration):
+    return 'const' if declaration.get('kind') == 'spec_constant' else declaration.get('nativeSequence', 'vec')
+
+
+def source_components(declaration):
+    return 1 if declaration.get('kind') == 'spec_constant' else TYPES[declaration['type']]
+
+
+def next_constant_id(declarations):
+    used = {d.get('constantId') for d in declarations if d.get('kind') == 'spec_constant'}
+    return next(i for i in range(len(used) + 1) if i not in used)
+
+
+def spec_native_limits(kind):
+    """TD 2025.32820 native override limits verified by GPU bit readback.
+
+    The GLSL language retains its full scalar ranges. This is the actual TD
+    Constants parameter transport, not a change to declaration types.
+    """
+    return {'nonnegativeIntegers': True, 'integerFloat32Exact': kind == 'mat'}
+
+
+def native_kind(runtime, comp, graph=None):
+    return runtime.shader_kind(comp) if hasattr(runtime, 'shader_kind') else (graph or {}).get('target', 'mat')
+
+
+def validate_spec_native(declaration, value, kind, role='value'):
+    ty = declaration.get('type')
+    if ty not in ('int', 'uint'): return
+    name = declaration.get('name', 'Spec Constant')
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or int(value) != value:
+        raise RuntimeError('Spec Constant '+name+': native '+role+' must be a whole '+ty+' value.')
+    maximum = 2147483647 if ty == 'int' else 4294967295
+    if not 0 <= value <= maximum:
+        raise RuntimeError('Spec Constant '+name+': TD native integer overrides require a value from 0 to '+str(maximum)+'. Negative int overrides do not reach the GPU correctly in this TD build.')
+    if kind == 'mat' and struct.unpack('f', struct.pack('f', value))[0] != value:
+        raise RuntimeError('Spec Constant '+name+': GLSL MAT requires an integer exactly representable in float32. This value loses precision in the TD Constants parameter; its previous value was preserved.')
 
 
 def valid_name(name):
@@ -99,7 +141,7 @@ def reconcile(declarations, registry, rows):
             if rec['index'] == row['index'] and valid_name(row['name']):
                 matches[ident] = i; taken.add(i)
     by_id = {d['id']: d for d in declarations}
-    occupied = {d['name'] for d in declarations if d['kind'] != 'uniform'}
+    occupied = {d['name'] for d in declarations if d['kind'] not in SOURCE_KINDS}
     for ident, record in registry.items():
         decl = by_id.get(ident)
         if not decl: continue
@@ -107,7 +149,7 @@ def reconcile(declarations, registry, rows):
         duplicate = row is not None and sum(r['name'] == row['name'] for r in rows) != 1
         if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied:
             decl['sourceMissing'] = True; record['missing'] = True
-            issues.append({'id': ident, 'message': 'Uniform source is missing or ambiguous: ' + decl['name']})
+            issues.append({'id': ident, 'message': 'Native source is missing or ambiguous: ' + decl['name']})
         else:
             decl['name'] = row['name']; decl.pop('sourceMissing', None)
             if row['sequence']=='color':decl['nativeSequence']='color'
@@ -118,11 +160,15 @@ def reconcile(declarations, registry, rows):
         name = row['name']
         if not valid_name(name) or name in known or sum(r['name'] == name for r in rows) != 1:
             issues.append({'message': 'Review the native Uniform name: ' + name}); continue
-        ident = 'uniform_' + uuid.uuid4().hex
+        kind = 'spec_constant' if row['sequence'] == 'const' else 'uniform'
+        ident = kind + '_' + uuid.uuid4().hex
         ty = 'vec4' if row['sequence'] == 'color' else 'float'
         values = [c['value'] if c['value'] is not None and abs(c['value']) <= 1e20 else 0.0 for c in row['components']]
-        declarations.append({'id': ident, 'kind': 'uniform', 'name': name, 'type': ty,
+        if kind == 'spec_constant':
+            ty = 'int'; values = [max(-2147483648, min(2147483647, int(values[0])))]
+        declarations.append({'id': ident, 'kind': kind, 'name': name, 'type': ty,
                              'value': values if ty == 'vec4' else values[0],
+                             **({'constantId': next_constant_id(declarations), 'nativeSequence':'const'} if kind == 'spec_constant' else {}),
                              **({'nativeSequence':'color'} if row['sequence']=='color' else {})})
         registry[ident] = {k: row[k] for k in ('sequence', 'index', 'name')}
         known.add(name)
@@ -166,7 +212,19 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
     old_graph = {}
     if comp.op('graph') and comp.op('graph').text:
         old_graph = {d['id']: d for d in json.loads(comp.op('graph').text).get('declarations', [])}
-    declarations = [d for d in graph['declarations'] if d['kind'] == 'uniform']
+    declarations = [d for d in graph['declarations'] if d['kind'] in SOURCE_KINDS]
+    # Validate the whole batch before creating/renaming any native row. Defaults
+    # must also travel safely when this graph is opened in a fresh Shader.
+    for decl in declarations:
+        if decl['kind'] != 'spec_constant' or decl.get('sourceMissing'): continue
+        kind = native_kind(runtime, comp, graph)
+        validate_spec_native(decl, decl['value'], kind, 'default')
+        source = locate(original, original_registry.get(decl['id']))
+        if source is None:
+            matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] == 'const']
+            source = matches[0] if len(matches) == 1 else None
+        if source: validate_spec_native(decl, source['components'][0]['value'], kind)
+        elif decl['id'] in (preserve or {}): validate_spec_native(decl, preserve[decl['id']], kind)
     # Legacy builds only instantiated used uniforms. Adopt those exact native
     # names; don't reuse arbitrary blank slots carrying expressions/exports.
     for decl in declarations:
@@ -181,11 +239,13 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             existing = candidates[0] if candidates else None
         if existing:
             sequence = existing['sequence']; index = existing['index']
+            if (sequence=='const') != (decl['kind']=='spec_constant'):
+                raise RuntimeError('Native source kind differs from its declaration: ' + decl['name'])
             if existing['name'] != decl['name']:
                 if existing['nameMode'] != 'CONSTANT': raise RuntimeError('The Uniform name is controlled by TD.')
                 parameter(operator, sequence, index, 'name').val = decl['name']
             previous = old_graph.get(ident, {})
-            if ident not in comp.fetch('grapeCustomMigratedV1',[]) and bool(previous.get('expose')) != bool(decl.get('expose')):
+            if decl['kind']=='uniform' and ident not in comp.fetch('grapeCustomMigratedV1',[]) and bool(previous.get('expose')) != bool(decl.get('expose')):
                 legacy = comp.fetch('sgrapePublicUniforms', {}).get(ident, {})
                 for j, name in enumerate(legacy.get('parameters', [])):
                     p = parameter(operator, sequence, index, CHANNELS[sequence][j])
@@ -198,7 +258,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             continue
         if record and not record.get('missing'):
             raise RuntimeError('Uniform changed in TD. Refresh sources before applying: ' + decl['name'])
-        sequence = decl.get('nativeSequence','vec'); seq = getattr(operator.seq,sequence)
+        sequence = source_sequence(decl); seq = getattr(operator.seq,sequence)
         index = seq.numBlocks
         # The untouched initial blank row is safe; edited blank rows survive.
         if index == 1 and not parameter(operator,sequence,0,'name').eval() and all(str(parameter(operator, sequence, 0, c).mode).endswith('CONSTANT') and parameter(operator, sequence, 0, c).isDefault for c in CHANNELS[sequence]): index = 0
@@ -208,13 +268,13 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
         if source is None:
             candidates = [r for r in native_rows(original) if r['name'] == decl['name']]
             source = candidates[0] if len(candidates) == 1 and original != operator else None
-        default = decl['value']; values = [default] if TYPES[decl['type']] == 1 else list(default)
+        default = decl['value']; values = [default] if source_components(decl) == 1 else list(default)
         # Old exposed but unused sources still have their existing COMP value.
         if ident in public:
             master = input_owner or comp
             values = [float((getattr(master.par, name) if getattr(master.par, name, None) is not None else getattr(comp.par, name)).eval()) for name in public[ident]['parameters']]
         elif ident in (preserve or {}):
-            value = preserve[ident]; values = [value] if TYPES[decl['type']] == 1 else list(value)
+            value = preserve[ident]; values = [value] if source_components(decl) == 1 else list(value)
         for j, suffix in enumerate(CHANNELS[sequence]):
             p = parameter(operator, sequence, index, suffix)
             p.val = (source['components'][j]['value'] if source and source['components'][j]['value'] is not None else values[j] if j < len(values) else 0)
@@ -251,34 +311,43 @@ def snapshot(runtime):
     links=comp.op('parameter_links')
     if links: links.module.sync(comp)
     registry = comp.fetch(STORE, {})
-    rows = []
+    rows = []; spec_rows = []; issues = copy.deepcopy(comp.fetch('grapeSourceIssues', []))
+    kind = native_kind(runtime, comp, current['graph'])
     for decl in current['graph']['declarations']:
-        if decl['kind'] != 'uniform': continue
+        if decl['kind'] not in SOURCE_KINDS: continue
         row = locate(operator, registry.get(decl['id']))
-        rows.append({'id': decl['id'], 'name': decl['name'], 'type': decl['type'],
+        if decl['kind']=='spec_constant' and row:
+            try: validate_spec_native(decl, row['components'][0]['value'], kind)
+            except RuntimeError as exc: issues.append({'id':decl['id'], 'code':'spec-native-value', 'message':str(exc)})
+        destination = spec_rows if decl['kind']=='spec_constant' else rows
+        destination.append({'id': decl['id'], 'kind':decl['kind'], 'name': decl['name'], 'type': decl['type'],
+                     **({'constantId':decl['constantId']} if decl['kind']=='spec_constant' else {}),
                      'default': decl['value'], 'missing': comp.fetch(STORE, None) is not None and row is None,
                      'pending': comp.fetch(STORE, None) is None,
                      'sequence': row['sequence'] if row else '',
                      'components': row['components'] if row else [],
                      'nameWritable': row is not None and row['nameMode'] == 'CONSTANT',
                      'expected': edit_token(row) if row else None})
-    return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows,
+    return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows, 'specConstants': spec_rows,
             'declarations': current['graph']['declarations'], 'graph': current['graph'], 'sourceChanged': current.get('sourceChanged', False),
-            'issues': comp.fetch('grapeSourceIssues', []), 'enabled': comp.fetch(STORE, None) is not None}
+            'issues': issues, 'specConstantLimits': spec_native_limits(kind), 'enabled': comp.fetch(STORE, None) is not None}
 
 
 def write_value(runtime, body):
     seen = snapshot(runtime)
     if body.get('revision') != seen['revision']: raise RuntimeError('Conflict: refresh sources before editing.')
-    rows = [r for r in seen['uniforms'] if r['id'] == body.get('id')]
+    rows = [r for r in seen['uniforms'] + seen.get('specConstants', []) if r['id'] == body.get('id')]
     index = body.get('component')
-    if len(rows) != 1 or type(index) is not int or not 0 <= index < 4 or rows[0]['missing']:
-        raise RuntimeError('Select an existing Uniform component.')
+    if len(rows) != 1 or type(index) is not int or not 0 <= index < len(rows[0]['components']) or rows[0]['missing']:
+        raise RuntimeError('Select an existing native source component.')
     item = rows[0]['components'][index]
     if not item['writable']: raise RuntimeError('This value is controlled by TD; its Expression, Export or Bind was preserved.')
     if body.get('expected') != item: raise RuntimeError('The value changed in TD. Refresh and try again.')
     value = body.get('value')
-    runtime.core().number(value)
+    if rows[0].get('kind')=='spec_constant':
+        runtime.core().literal(value, rows[0]['type'])
+        validate_spec_native(rows[0], value, native_kind(runtime, runtime.target(), seen['graph']))
+    else:runtime.core().number(value)
     p = getattr(runtime.shader_operator(runtime.target()).par, item['parameter'])
     comp = runtime.target(); ident = rows[0]['id']; operator = runtime.shader_operator(comp)
     def validate(value):
@@ -312,7 +381,7 @@ def purge_missing_source(runtime, ident):
     """
     comp = runtime.target(); before = copy.deepcopy(runtime.state())
     graph = before['graph']
-    decl = next((d for d in graph['declarations'] if d['id'] == ident and d['kind'] == 'uniform'), None)
+    decl = next((d for d in graph['declarations'] if d['id'] == ident and d['kind'] in SOURCE_KINDS), None)
     if not decl or not decl.get('sourceMissing'):
         raise RuntimeError('Select a missing Uniform source to remove from Inputs.')
     if source_references(graph, ident):
@@ -342,20 +411,21 @@ def edit(runtime, body):
     if body.get('revision') != seen['revision']: raise RuntimeError('Conflict: refresh sources before editing.')
     action = body.get('action'); comp = runtime.target(); operator = runtime.shader_operator(comp)
     graph = copy.deepcopy(runtime.state()['graph'])
-    decl = next((d for d in graph['declarations'] if d['id'] == body.get('id') and d['kind'] == 'uniform'), None)
+    decl = next((d for d in graph['declarations'] if d['id'] == body.get('id') and d['kind'] in SOURCE_KINDS), None)
     if action in ('create', 'restore'):
         if action == 'create':
-            name = body.get('name'); ty = body.get('type')
+            name = body.get('name'); ty = body.get('type'); kind = body.get('kind', 'uniform')
             if not valid_name(name) or name in {d['name'] for d in graph['declarations']} or any(r['name'] == name for r in native_rows(operator)):
                 raise RuntimeError('Use a unique GLSL Uniform name.')
-            if ty not in TYPES: raise RuntimeError('Unsupported Uniform type.')
-            decl = {'id': 'uniform_' + uuid.uuid4().hex, 'kind': 'uniform', 'name': name, 'type': ty,
-                    'value': 0.0 if TYPES[ty] == 1 else [0.0] * TYPES[ty]}
+            if kind not in SOURCE_KINDS or ty not in (SPEC_TYPES if kind=='spec_constant' else TYPES): raise RuntimeError('Unsupported native source type.')
+            decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
+                    'value': False if ty=='bool' else 0 if kind=='spec_constant' else 0.0 if TYPES[ty] == 1 else [0.0] * TYPES[ty]}
+            if kind=='spec_constant':decl.update(constantId=next_constant_id(graph['declarations']), nativeSequence='const')
             if body.get('sequence'):
-                if body['sequence'] not in CHANNELS:raise RuntimeError('Unsupported native Uniform page.')
+                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('vec','color')):raise RuntimeError('Unsupported native source page.')
                 decl['nativeSequence']=body['sequence']
             if body.get('preset'):
-                if body['preset'] not in PRESETS or ty!='float':raise RuntimeError('Unsupported time preset.')
+                if kind!='uniform' or body['preset'] not in PRESETS or ty!='float':raise RuntimeError('Unsupported time preset.')
                 decl['initialDriver']=body['preset']
             graph['declarations'].append(decl)
         elif not decl or not decl.get('sourceMissing'):
@@ -372,6 +442,7 @@ def edit(runtime, body):
         return snapshot(runtime)
     if row is None: raise RuntimeError('This Uniform source is missing.')
     if action == 'driver':
+        if decl['kind']=='spec_constant':raise RuntimeError('Spec Constants are intended for infrequent integer mode changes; edit native drivers in TD.')
         index=body.get('component');expression=body.get('expression')
         if type(index) is not int or not 0<=index<4 or not isinstance(expression,str) or len(expression)>4096:
             raise RuntimeError('Select a component and enter a Python expression up to 4096 characters.')

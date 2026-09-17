@@ -1,10 +1,14 @@
 # 開發狀態
 
+2026-09-17 節點工作流程（0.8.84）：Vector 2／3／4 改為手填值、無輸入、單一完整輸出；Replace 負責完整基底與分量覆寫，Combine／Split 保持各自用途。Vector／Color RGBA 的數值可緊湊同列或展開具名分量；標題提供與 Parameter 共用的主要型別快捷。來源節點以宣告名稱為主標題，普通節點支援自訂名稱切換與畫布內改名，合法唯一名稱用於可讀 GLSL。Inputs 區分 New 與新增引用，加入 Graph Constants／Spec Constants 與 TD Built In 入口。導航併入工具列，縮放／置中移至畫布角落；浮動工具列為預設關閉的程式 flag，頂欄開關移到 Layout 左方。完整決議與延後事項見 [本輪清單](../discussions/NODE_WORKFLOW_ROUND.md)。
+
+Spec Constants 支援 int／uint／bool／float、穩定 constant ID 與共同 Undo／Redo，透過 TD 原生 Constants 頁供值。TD 2025.32820 GPU 實測有原生整數傳輸限制：負 int 不可正確覆寫；MAT 的整數須能以 float32 精確表示。編輯與回放預檢會拒絕不安全數值；直接從 TD 改入異常值會顯示來源提示。一般 int／uint 運算與整數向量仍未全面開放，詳見 [型別契約](../architecture/TYPE_CONTRACT.md)。
+
 2026-09-17 共同操作歷史（0.8.83）：畫布與 Inputs 共用依操作順序的 Undo／Redo，來源刪除不再清空圖的歷史；自動 Apply 合併請求但不合併使用者步驟。撤回來源操作依固定 ID 修改原生實體，再同步 UI，已移除前端另一份會補回來源的清單。支援來源新增／刪除／改名／驅動、目前值、owned Bind 主控與既有 exposed Sampler 來源值。每步固定真正修改的欄位，外部未觸及分量與其他來源保留；有衝突則停止且不移動歷史游標。復原資料僅存在工作階段記憶體，不寫入 TOE，也不呼叫 TD 全域 Undo。權責及保守限制見 [Inputs 流程](../features/INPUTS_WORKFLOW.md) 與 [Undo／Redo](../features/NATIVE_UNDO.md)。
 
 2026-09-17 Inputs 刪除修復（0.8.83）：Uniform 在所有 stage／Subgraph 均無引用時，刪除會清除原生來源、宣告與清單記錄；既有零引用缺失項目也可直接刪除。Constants／Samplers 的零引用缺失記錄同樣有刪除入口。來源變更待套用、但本地沒有額外草稿時仍可修復，避免另一個缺失來源造成 Apply 失敗後鎖住操作；輪詢與 Graph Undo 不會復活已刪除來源。有引用的來源仍可移除原生列並保留節點／接線，缺失標示與重新綁定改善另依後續回饋處理。已通過來源單元、瀏覽器與 TD TOP／MAT 驗證，並同步保存。
 
-產品版本：**0.8.83**（開發版，未進入 Alpha）。已完成節點顯示精簡、Vector 分量展開與維度新增入口；2026-09-17 再完成 Inputs 與工作區 UI 批、交付驗證及正式 TOE 保存。這仍不是公開發佈版本。後續版號允許持續向前小幅遞增，不固定停留在此版本，也不可倒退。
+產品版本：**0.8.84**（開發版，未進入 Alpha）。最新規則以上方節點工作流程與本輪清單為準，下方較早記錄保留歷史背景。使用者允許此次移除舊統合式 Vector 開發測試節點；這是 Alpha 前一次性例外，不是一般資產遷移政策。這仍不是公開發佈版本，版號只向前。
 
 ## 目前待辦與建議順序（2026-09-17）
 
@@ -34,7 +38,7 @@
 
 ### 下一輪方向
 
-已按 UI 與型別兩批推進：Inputs 與工作區 UI 整理已完成；後續補一般數值型別與 Specialization Constants。Array／Matrix 希望至少型別與合理初始化可用，初版範圍仍需評估，完整值編輯介面後補。詳細實作清單、後續待辦和模糊筆記統一見 [Inputs 面板與工作區設計](../discussions/INPUTS_UI_NEXT_ROUND.md)。2026-09-17 UI 批已交付並保存；型別批已核對完整鏈路與原生支援，尚未啟用新型別。UI 亮度、空白畫布的設定頁、Vector I/O 拆分與資源庫獨立 panel 不預先定案。
+0.8.84 已實作 Specialization Constants、Vector／Replace 職責分開與上述節點工作流程。後續補一般數值型別、TOP 的其他貼圖維度，以及 Parameter／Inputs 來源值介面。Array／Matrix 希望至少型別與合理初始化可用，初版範圍仍需評估，完整值編輯介面後補。節點收合、多選工具、Comment、中途預覽與 Canvas Backdrop 分輪處理。詳細已決議／延後範圍見 [本輪清單](../discussions/NODE_WORKFLOW_ROUND.md)；较早筆記保留於 [Inputs 面板與工作區設計](../discussions/INPUTS_UI_NEXT_ROUND.md)。空白畫布設定頁與資源庫獨立 panel 仍未定案。
 
 ### 等待使用者補充或共同決策
 
@@ -59,6 +63,8 @@
 已完成的 GLSL Code 多輸出、Subgraph **內部**灰點、全節點拖曳、Sampler／取樣函式配色、TOP 輸入槽位與 Constants、模板同步及共用預覽，不重列成未實作項目。舊討論文件中較早的「尚未」描述需以後續交付記錄為準。
 
 ## 交付紀錄
+
+2026-09-17：0.8.84 已完成本輪節點／Inputs／工具列工作流程，含可編輯的型別失效草稿與保留接線、目前版本錯誤不誤判為升級，以及 Spec Constants 改型別失敗後的 Undo／Redo。完整可攜檢查及最後修改的定向回歸通過；隔離瀏覽器基本功能 15 組、型別草稿 15 組、工作區控制 10 組通過，TD 向量 53 項、Spec Constants 18 組、既有來源歷史 21 組與 Master 模板檢查通過。25 份內嵌來源及服務資產核對一致，兩份 Master 版本／預設圖均為目前狀態，正式 TOE 已保存為 685,276 bytes，排除私人開發橋接。僅按本次例外移除開發 TOP 中一顆舊統合 Vector 及其接線，已先私人備份；其餘使用者節點與 MAT 保留。實體 iPad／Safari、TD 跨程序拖放調查仍待後續，不在此次自動啟動。
 
 2026-09-17：Inputs／工作區 UI 批保留版本 0.8.83。203 項 Python 測試與完整可攜檢查通過，另通過 Inputs／原生來源、workspace、整頁重載保護及 320–1280px 版面驗證。TD 24 份內嵌來源與服務資產核對一致，最終更新與保存確認使用者 `/project1/Grape_TOP1`、`/project1/Grape_MAT1` 均保持不變，正式 TOE 已保存為 632,948 bytes，排除私人開發橋接。實體 iPad／Safari 尚未回驗。TD OP／Parameter 跨進程拖入網頁的獨立調查已記錄，交付時提醒，未自動啟動。
 

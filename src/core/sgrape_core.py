@@ -13,9 +13,13 @@ TYPE_DESCRIPTORS = {
     'vec4': {'family': 'float', 'components': 4},
 }
 TYPES = tuple(TYPE_DESCRIPTORS)
+SPEC_TYPES = ('int', 'uint', 'bool', 'float')
+TYPE_DESCRIPTORS.update({ty: {'family': ty, 'components': 1} for ty in SPEC_TYPES if ty not in TYPE_DESCRIPTORS})
 RESOURCE_TYPES = ('sampler2D',)
-PORT_TYPES = TYPES + RESOURCE_TYPES
+PORT_TYPES = TYPES + tuple(ty for ty in SPEC_TYPES if ty not in TYPES) + RESOURCE_TYPES
 CONVERSIONS = {(ty, ty): 'identity' for ty in TYPES}
+CONVERSIONS.update({(ty, ty): 'identity' for ty in SPEC_TYPES})
+CONVERSIONS.update({(source, target): 'cast' for source in ('int','uint','bool') for target in TYPES})
 CONVERSIONS.update({('float', ty): 'splat' for ty in TYPES if ty != 'float'})
 CONVERSIONS[('sampler2D', 'sampler2D')] = 'identity'
 ID = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
@@ -42,14 +46,14 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
-    'vec4','combine','vector_split','swizzle','vector'))
+    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant'))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
 CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
-    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector'))
-VECTOR_KEYS = ('combine','vector_split','swizzle','vector')
+    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace'))
+VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = ('vec2','vec3','vec4')
 VECTOR_COMPONENTS = 'xyzw'
 
@@ -69,14 +73,17 @@ def vector_interface(key,params):
     ty=params.get('type','vec2')
     if ty not in VECTOR_TYPES:raise GraphError('Select vec2, vec3 or vec4')
     components=VECTOR_COMPONENTS[:TYPE_DESCRIPTORS[ty]['components']]
-    if key in ('combine','vector'):
+    if key=='vector':
+        literal(params.get('components',[0,0,0,0]),'vec4')
+        return {'inputs':{},'outputs':{'out':ty}}
+    if key in ('combine','replace'):
         groups=params.get('groups',{})
         layout=next((row for row in combine_layouts(ty) if row['groups']==groups),None)
-        if layout is None:raise GraphError(('Vector' if key=='vector' else 'Combine')+': component groups overlap or exceed the output size')
+        if layout is None:raise GraphError(('Replace' if key=='replace' else 'Combine')+': component groups overlap or exceed the output size')
         values=params.get('components',[0,0,0,0])
         literal(values,'vec4')
-        if key=='vector':
-            return {'inputs':{'value':ty,**layout['inputs']},'outputs':{'out':ty,**dict.fromkeys(components,'float')}}
+        if key=='replace':
+            return {'inputs':{'value':ty,**layout['inputs']},'outputs':{'out':ty}}
         return {'inputs':layout['inputs'],'outputs':{'out':ty}}
     if key=='vector_split':
         return {'inputs':{'value':ty},'outputs':dict.fromkeys(components,'float')}
@@ -201,7 +208,7 @@ def conversion_kind(source, target):
 def convert_expression(value, source, target):
     kind = conversion_kind(source, target)
     if kind == 'identity': return value
-    if kind == 'splat': return target + '(' + value + ')'
+    if kind in ('splat','cast'): return target + '(' + value + ')'
     raise GraphError(source + ' cannot connect to ' + target)
 
 GLSL_CODE_MAX_PORTS = 16
@@ -221,6 +228,28 @@ def glsl_code_name(value):
             and not value.startswith(('gl_','TD','sTD','uTD','sg_'))
             and not re.match(r'(?:[iu]?sampler|[iu]?image|[d]?mat[234])',value)
             and value not in GLSL_CODE_RESERVED)
+
+def node_output_symbols(nodes, definitions, ports):
+    """Readable local names, unique even after repeated Subgraph expansion.
+
+    Names are user-facing identifiers; node IDs retain identity. Allocate every
+    actual local symbol together so A/output x cannot collide with node A_x.
+    """
+    candidates={}
+    for ident,n in nodes.items():
+        stem=n.get('name',ident)
+        for port in ports[ident]['out']:
+            candidates[(ident,port)]='sg_n_'+stem+('_'+port if definitions[ident]['key']=='glsl_code' else '' if port=='out' else '_'+port)
+    counts={}
+    for candidate in candidates.values():counts[candidate]=counts.get(candidate,0)+1
+    reserved=set(candidates.values());assigned=set();result={}
+    for key,candidate in sorted(candidates.items()):
+        name=candidate
+        if counts[candidate]>1:
+            name=candidate+'_'+digest(key)[:10]
+            while name in reserved or name in assigned:name+='x'
+        result[key]=name;assigned.add(name)
+    return result
 
 def glsl_code_interface(params):
     if not isinstance(params,dict):raise GraphError('GLSL Code: invalid parameters')
@@ -298,7 +327,7 @@ def resolved_ports(definition, params, declaration=None):
         if token == 'T': return selected
         if token == 'D':
             ty = declaration.get('type') if declaration else None
-            if ty not in TYPES: raise GraphError('Select a matching declaration')
+            if ty not in TYPES + SPEC_TYPES: raise GraphError('Select a matching declaration')
             return ty
         return token
     return {kind: {port: resolve(ty) for port, ty in definition_ports(definition, params)[kind].items()}
@@ -317,9 +346,10 @@ def type_contract():
         default = definition['defaults'].get('type', 'float')
         choices = [default] + [ty for ty in TYPES if ty != default] if selector != 'fixed' else [None]
         if definition['key'] in VECTOR_KEYS:choices=list(VECTOR_TYPES)
+        if definition['key']=='spec_constant':choices=list(SPEC_TYPES)
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [
-            dict(type=ty, **resolved_ports(definition, dict(definition['defaults'],type=ty or 'float'), {'type': ty})) for ty in choices]}
-    result = {'version': 1, 'numericTypes': list(TYPES), 'resourceTypes': list(RESOURCE_TYPES),
+            dict(type=ty, **resolved_ports(definition, dict(definition['defaults'],type='float' if definition['key']=='spec_constant' else ty or 'float'), {'type': ty})) for ty in choices]}
+    result = {'version': 1, 'numericTypes': list(TYPES), 'specConstantTypes': list(SPEC_TYPES), 'resourceTypes': list(RESOURCE_TYPES),
               'types': dict(copy.deepcopy(TYPE_DESCRIPTORS), sampler2D={'family':'sampler','components':0}),
               'glslCode':{'maxPorts':GLSL_CODE_MAX_PORTS,'maxLength':GLSL_CODE_MAX_LENGTH,'reservedNames':sorted(GLSL_CODE_RESERVED)},
               'vectors':{'version':1,'types':list(VECTOR_TYPES),'components':VECTOR_COMPONENTS,
@@ -396,9 +426,18 @@ def type_components(ty):
 
 def filled_value(ty, value=0):
     count = type_components(ty)
+    if ty=='bool':return bool(value)
     return value if count == 1 else [value] * count
 
 def literal(value, ty):
+    if ty=='bool':
+        if type(value) is not bool:raise GraphError('Expected a boolean constant')
+        return 'true' if value else 'false'
+    if ty in ('int','uint'):
+        low,high=(-2147483648,2147483647) if ty=='int' else (0,4294967295)
+        if type(value) is not int or not low<=value<=high:raise GraphError('Expected a 32-bit '+ty+' constant')
+        if ty=='int' and value==-2147483648:return '(-2147483647 - 1)'
+        return str(value)+('u' if ty=='uint' else '')
     if ty in RESOURCE_TYPES:
         if value is not None: raise GraphError('A sampler has no editable numeric default; connect a Sampler source')
         return None
@@ -546,7 +585,7 @@ def _compile_flat(graph,annotation_scopes=None):
     managed=graph.get('topSourceVersion')==1
     if managed and any(d.get('kind')=='sampler' for d in graph.get('declarations',[])):
         raise GraphError('Grape TOP texture sources belong in TOP Inputs; nodes reference an input ID')
-    declarations={}; names=set()
+    declarations={}; names=set(); specialization_ids=set()
     for d in graph.get('declarations',[]):
         if not isinstance(d,dict) or not ID.fullmatch(str(d.get('id',''))): raise GraphError('Invalid declaration ID')
         if d['id'] in declarations: raise GraphError('Duplicate declaration ID')
@@ -567,6 +606,15 @@ def _compile_flat(graph,annotation_scopes=None):
             if d.get('type') not in TYPES:raise GraphError('Unsupported constant type')
             literal(d.get('value'),d['type'])
             if d.get('initialDriver') or d.get('expose'):raise GraphError('Constants cannot have a live Uniform driver')
+        elif d.get('kind')=='spec_constant':
+            if d.get('type') not in SPEC_TYPES:raise GraphError('Unsupported specialization constant type')
+            literal(d.get('value'),d['type'])
+            constant_id=d.get('constantId')
+            if type(constant_id) is not int or not 0<=constant_id<=2147483647 or constant_id in specialization_ids:
+                raise GraphError('Specialization constants require unique nonnegative constant IDs')
+            specialization_ids.add(constant_id)
+            if d.get('initialDriver') or d.get('expose'):raise GraphError('Spec Constants do not expose Uniform drivers')
+            if d.get('nativeSequence','const')!='const':raise GraphError('Spec Constants use the native Constants page')
         elif d.get('kind')=='uniform':
             if d.get('type') not in TYPES: raise GraphError('Unsupported uniform type')
             if d.get('nativeSequence','vec') not in ('vec','color'):raise GraphError('Unsupported native Uniform page')
@@ -610,9 +658,9 @@ def _compile_flat(graph,annotation_scopes=None):
                 if type(params.get('requireConstant',False)) is not bool:
                     raise GraphError('Require Constant must be a boolean',ident)
                 declaration=None
-                if d['key'] in ('uniform','constant','texture','sampler'):
+                if d['key'] in ('uniform','constant','spec_constant','texture','sampler'):
                     declaration=declarations.get('grapeTop_'+str(params['inputId'])) if managed and d['key']=='texture' and params.get('inputId') else declarations.get(params.get('declarationId'))
-                    expected=d['key'] if d['key'] in ('uniform','constant') else 'sampler'
+                    expected=d['key'] if d['key'] in ('uniform','constant','spec_constant') else 'sampler'
                     if not declaration or declaration['kind']!=expected: raise GraphError('Select a matching declaration',ident)
                 if d['key']=='top_input' and not any(slot['id']==params.get('inputId') for slot in slots):
                     raise GraphError('Select an existing TOP Input',ident)
@@ -626,8 +674,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 values=n.get('inputValues',{})
                 if not isinstance(values,dict) or any(port not in ports[ident]['in'] for port in values):
                     raise GraphError('Invalid input default values',ident)
-                if d['key']=='vector' and values:
-                    raise GraphError('Vector manual values belong to its components, not input default overrides',ident)
+                if d['key']=='replace' and values:
+                    raise GraphError('Replace manual values belong to its components, not input default overrides',ident)
                 for port,value in values.items():
                     try: literal(value,ports[ident]['in'][port])
                     except GraphError as exc: raise GraphError(str(exc),ident) from exc
@@ -649,10 +697,10 @@ def _compile_flat(graph,annotation_scopes=None):
             # original ability to hold an unconnected vector default group.
             component_sources={}
             for ident,n in nodes.items():
-                if defs[ident]['key']!='vector':continue
+                if defs[ident]['key']!='replace':continue
                 for port in n['params'].get('groups',{}):
                     if (ident,port) not in links:
-                        raise GraphError('Vector: remove an unconnected component group',ident)
+                        raise GraphError('Replace: remove an unconnected component group',ident)
                 components=VECTOR_COMPONENTS[:type_components(ports[ident]['out']['out'])]
                 mapped=[('value',index) if (ident,'value') in links else (None,index) for index in range(len(components))]
                 for port,ty in ports[ident]['in'].items():
@@ -661,10 +709,9 @@ def _compile_flat(graph,annotation_scopes=None):
                     for offset in range(type_components(ty)):mapped[start+offset]=(port,offset)
                 component_sources[ident]=mapped
             def effective_inputs(ident,output=None):
-                if defs[ident]['key']!='vector':return set(ports[ident]['in'])
+                if defs[ident]['key']!='replace':return set(ports[ident]['in'])
                 mapped=component_sources[ident]
-                indices=range(len(mapped)) if output in (None,'out') else [VECTOR_COMPONENTS.index(output)]
-                return {mapped[index][0] for index in indices if mapped[index][0] is not None}
+                return {port for port,offset in mapped if port is not None}
             visited=set(); active=set(); order=[]
             def visit(ident):
                 if ident in active: raise GraphError('Cycle detected',ident)
@@ -713,13 +760,14 @@ def _compile_flat(graph,annotation_scopes=None):
             def demand_constant(ident,output):
                 if (ident,output) in const_emit_outputs or (ident,output) not in constant_outputs:return
                 const_emit_outputs.add((ident,output))
-                if defs[ident]['key']!='vector' or output=='out':const_emit.add(ident)
+                const_emit.add(ident)
                 for port in effective_inputs(ident,output):
                     if (ident,port) in links:demand_constant(*links[(ident,port)])
             for ident in order:
                 if defs[ident]['key'] in (*VECTOR_KEYS,'vec4') or nodes[ident]['params'].get('requireConstant'):
                     for output in needed_outputs[ident]:demand_constant(ident,output)
             for ident in sorted(set(nodes)-live): diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
+            symbols=node_output_symbols(nodes,defs,ports)
             expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[]
             def inp(ident,port):
                 target=ports[ident]['in'][port]; source=links.get((ident,port))
@@ -764,7 +812,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='relay': expr=a('value')
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
                 elif k=='combine':expr=ty+'('+', '.join(a(port) for port in ports[ident]['in'])+')'
-                elif k=='vector':
+                elif k=='vector':expr=literal(p.get('components',[0,0,0,0])[:type_components(ty)],ty)
+                elif k=='replace':
                     mapped=component_sources[ident]
                     def component_expression(index):
                         port,offset=mapped[index]
@@ -789,22 +838,14 @@ def _compile_flat(graph,annotation_scopes=None):
                             else:
                                 arguments.append(component_expression(index));index+=1
                         expr=ty+'('+', '.join(arguments)+')'
-                    for output in VECTOR_COMPONENTS[:len(mapped)]:
-                        if output not in needed_outputs[ident]:continue
-                        # A separate namespace prevents a component such as
-                        # node A / x from colliding with a node named A_x.
-                        variable='sg_v_'+ident+'_'+output
-                        qualifier='const ' if (ident,output) in const_emit_outputs else ''
-                        lines.append('    '+qualifier+'float '+variable+' = '+component_expression(VECTOR_COMPONENTS.index(output))+';')
-                        expressions[(ident,output)]=variable
                 elif k=='vector_split':
                     for port in ports[ident]['out']:expressions[(ident,port)]='('+a('value')+').'+port
                 elif k=='swizzle':expr='('+a('value')+').'+p.get('mask','xy')
                 elif k=='split':
                     for port in ports[ident]['out']: expressions[(ident,port)]='('+a('color')+').'+port
-                elif k in ('uniform','constant','texture','sampler'):
+                elif k in ('uniform','constant','spec_constant','texture','sampler'):
                     decl=declarations['grapeTop_'+p['inputId']] if managed and k=='texture' and p.get('inputId') else declarations[p['declarationId']]; used.add(decl['id'])
-                    symbol='sg_sampler_'+decl['id'] if graph_target(graph)=='top' and k not in ('uniform','constant') else decl['name']
+                    symbol='sg_sampler_'+decl['id'] if graph_target(graph)=='top' and k not in ('uniform','constant','spec_constant') else decl['name']
                     expr='texture('+symbol+', '+a('uv')+')' if k=='texture' else symbol
                 elif k=='top_input':
                     index=next(i for i,slot in enumerate(slots) if slot['id']==p['inputId'])
@@ -829,7 +870,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     arguments=[a(port['id']) for port in p['inputs']]
                     if 'sg_unconnectedSampler' in arguments:raise GraphError('Connect every GLSL Code sampler input to an existing TOP Input',ident)
                     for port in p['outputs']:
-                        variable='sg_n_'+ident+'_'+port['id']
+                        variable=symbols[(ident,port['id'])]
                         lines.append('    '+port['type']+' '+variable+';')
                         expressions[(ident,port['id'])]=variable;arguments.append(variable)
                     lines.append('    '+function+'('+', '.join(arguments)+');')
@@ -856,11 +897,11 @@ def _compile_flat(graph,annotation_scopes=None):
                             lines.extend(['#if TD_NUM_COLOR_BUFFERS > '+str(index),
                                           '    fragColor['+str(index)+'] = TDOutputSwizzle('+a(port)+');',
                                           '#endif'])
-                if expr is not None and (ty in RESOURCE_TYPES or k=='constant'):
+                if expr is not None and (ty in RESOURCE_TYPES or k in ('constant','spec_constant')):
                     # Opaque GLSL samplers are references, never local variables.
                     expressions[(ident,'out')]=expr
                 elif expr is not None:
-                    variable='sg_n_'+ident
+                    variable=symbols[(ident,'out')]
                     lines.append('    '+('const ' if ident in const_emit else '')+ty+' '+variable+' = '+expr+';')
                     expressions[(ident,'out')]=variable
                 label_lines=_comment_lines(note.get('label'),None)
@@ -883,12 +924,14 @@ def _compile_flat(graph,annotation_scopes=None):
     aliases={i for i in used if slots and declarations[i].get('source')=='input:0' and not declarations[i].get('topInputId')}
     binding_ids=slot_bindings+sorted(used-set(slot_bindings)-aliases)
     def header(d):
+        if d['kind']=='spec_constant':
+            return 'layout(constant_id = '+str(d['constantId'])+') const '+d['type']+' '+d['name']+' = '+literal(d['value'],d['type'])+';'
         return ('const '+d['type']+' '+d['name']+' = '+literal(d['value'],d['type'])+';' if d['kind']=='constant'
                 else 'uniform '+d['type']+' '+d['name']+';')
     if graph_target(graph)=='top':
         samplers=[declarations[i] for i in binding_ids if declarations[i]['kind']=='sampler']
         if len(samplers)>(32 if slots else 16): raise GraphError('Too many texture sources: up to 16 TOP Inputs plus 16 legacy/fallback sources')
-        headers=[header(declarations[i]) for i in sorted(used) if declarations[i]['kind'] in ('uniform','constant')]
+        headers=[header(declarations[i]) for i in sorted(used) if declarations[i]['kind'] in ('uniform','constant','spec_constant')]
         if slots:headers+=['#if TD_NUM_2D_INPUTS != '+str(len(samplers)), '#error Grape TOP Inputs require 2D textures in every slot', '#endif']
         vertex=''
         pixel='\n'.join(headers+['layout(location=0) out vec4 fragColor;']+stages['pixel']['helpers']+['void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
@@ -1017,10 +1060,15 @@ def _expand(graph,functions):
         def expand_data(data,path=(),boundary=None,scopes=()):
             if not isinstance(data,dict) or not isinstance(data.get('nodes'),list) or not isinstance(data.get('edges'),list): raise GraphError('Invalid graph data')
             if len(data['nodes'])>256 or len(data['edges'])>1024: raise GraphError('Graph is too large')
-            maps={}; kinds=[]
+            maps={}; kinds=[];node_names=set()
             for n in data['nodes']:
                 ident=n.get('id',''); key=n.get('definitionUuid'); params=n.get('params')
                 if not ID.fullmatch(ident) or ident in maps: raise GraphError('Invalid or duplicate node ID',ident)
+                if 'name' in n:
+                    name=n['name']
+                    if not glsl_code_name(name):raise GraphError('Node name must be a non-reserved GLSL identifier (up to 48 characters)',ident)
+                    if name in node_names:raise GraphError('Node names must be unique within this graph',ident)
+                    node_names.add(name)
                 if not isinstance(params,dict): raise GraphError('Invalid node parameters',ident)
                 if key in (FUNCTION_INPUT,FUNCTION_OUTPUT):
                     if boundary is None: raise GraphError('Function ports belong inside a Function',ident)
@@ -1052,6 +1100,8 @@ def _expand(graph,functions):
                             literal(value,p['type'])
                             rid='f'+digest([inside,direction,p['id']])[:40]
                             relay(rid,p['type'],value,inside,nested_scopes)
+                            if direction=='outputs' and n.get('name'):
+                                flat['nodes'][-1]['name']=n['name']+'_'+p['id']
                             if direction=='inputs': ins[p['id']]=[rid,'value']; local_in[p['id']]=[rid,'out']
                             else: outs[p['id']]=[rid,'out']; local_out[p['id']]=[rid,'value']
                     maps[ident]={'in':ins,'out':outs}

@@ -942,7 +942,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
  #editorheader .actions{display:flex;grid-column:1/-1;grid-row:2;flex-wrap:wrap;justify-content:flex-end;gap:6px}
  #editorheader .secondary-actions{display:contents}
 }
-.location-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;height:32px;min-height:32px;gap:8px;padding:3px 8px}
+.location-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;height:32px;min-height:32px;gap:8px;padding:3px 8px}
 .location-bar .sidebar-toggle{width:25px;height:24px;padding:2px}
 .location-bar .sidebar-toggle svg{width:18px;height:18px}
 .location-bar #workspacelayout{height:24px;padding:0 8px;font-size:10px}
@@ -981,6 +981,52 @@ footer .footer-preferences svg[hidden]{display:none}
  .graph-workspace .graph-tools .icon-button{width:34px}
  footer #status{font-size:10px}
 }
+
+/* One graph toolbar: stage, path and grouped commands. Zoom occupies canvas space only. */
+.graph-workspace .toolbar{height:auto;min-height:44px;flex-wrap:wrap;align-content:center}
+.graph-location-tools{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;flex:1 1 140px}
+.graph-workspace .toolbar .stage-tabs{margin:0;flex:none}
+.graph-workspace .toolbar .graph-navigation{position:static;min-height:0;padding:0;border:0;background:transparent;gap:3px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+.graph-workspace .toolbar #graphpath{flex:1 1 auto;min-width:0;overflow:auto;flex-wrap:nowrap;background:transparent;border-radius:0;padding:0;margin:0;scrollbar-width:thin}
+.graph-workspace .toolbar #graphpath button{white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;flex:none;height:28px;min-height:0;padding:0 5px;background:transparent;border:0}
+.graph-workspace .toolbar #graphpath .graph-separator{flex:none}
+.graph-workspace .toolbar #graphup{flex:none;width:25px;height:28px;min-height:0;padding:4px;background:transparent;border:0}
+.graph-workspace .toolbar #graphup:disabled{display:none}
+.graph-workspace .toolbar #functionscope{display:none}
+.graph-workspace .graph-tools{flex:0 1 auto;justify-content:flex-start}
+.graph-workspace .toolbar #customnames[aria-pressed="true"]{color:var(--purple);border-color:var(--purple)}
+.canvas-view-tools{position:absolute;right:12px;bottom:12px;z-index:6;display:flex;align-items:center;gap:9px;pointer-events:none;color:var(--muted);font-size:11px}
+.canvas-view-tools #zoom{position:static;font-size:11px;letter-spacing:.2px;text-shadow:0 1px 2px var(--canvas-bg,#14141c)}
+.canvas-view-tools #fit{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,#1c1b23);color:inherit;border-color:var(--line)}
+.graph-workspace.floating-toolbar .toolbar{position:absolute;inset:0 0 auto;z-index:7;background:transparent;border:0;pointer-events:none}
+.floating-toolbar .toolbar :is(button,select){pointer-events:auto}
+.floating-toolbar .toolbar .stage-tabs{background:var(--ui-chrome,#1c1b23e8)}
+.floating-toolbar .toolbar .graph-navigation{text-shadow:0 1px 2px var(--canvas-bg,#14141c)}
+@media(max-width:800px){.graph-workspace .graph-tools{display:flex}.graph-location-tools{flex-basis:100%}.graph-workspace .toolbar{min-height:0}}
+@media(pointer:coarse){.canvas-view-tools #fit{min-height:36px;padding-inline:10px}.graph-workspace .toolbar #graphpath button,.graph-workspace .toolbar #graphup{height:34px}}
+
+/* One graph toolbar: stage, path and grouped commands. Zoom occupies canvas space only. */
+.graph-workspace .toolbar{height:auto;min-height:44px;flex-wrap:wrap;align-content:center}
+.graph-location-tools{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;flex:1 1 140px}
+.graph-workspace .toolbar .stage-tabs{margin:0;flex:none}
+.graph-workspace .toolbar .graph-navigation{position:static;min-height:0;padding:0;border:0;background:transparent;gap:3px;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+.graph-workspace .toolbar #graphpath{flex:1 1 auto;min-width:0;overflow:auto;flex-wrap:nowrap;background:transparent;border-radius:0;padding:0;margin:0;scrollbar-width:thin}
+.graph-workspace .toolbar #graphpath button{white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;flex:none;height:28px;min-height:0;padding:0 5px;background:transparent;border:0}
+.graph-workspace .toolbar #graphpath .graph-separator{flex:none}
+.graph-workspace .toolbar #graphup{flex:none;width:25px;height:28px;min-height:0;padding:4px;background:transparent;border:0}
+.graph-workspace .toolbar #graphup:disabled{display:none}
+.graph-workspace .toolbar #functionscope{display:none}
+.graph-workspace .graph-tools{flex:0 1 auto;justify-content:flex-start}
+.graph-workspace .toolbar #customnames[aria-pressed="true"]{color:var(--purple);border-color:var(--purple)}
+.canvas-view-tools{position:absolute;right:12px;bottom:12px;z-index:6;display:flex;align-items:center;gap:9px;pointer-events:none;color:var(--muted);font-size:11px}
+.canvas-view-tools #zoom{position:static;font-size:11px;letter-spacing:.2px;text-shadow:0 1px 2px var(--canvas-bg,#14141c)}
+.canvas-view-tools #fit{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,#1c1b23);color:inherit;border-color:var(--line)}
+.graph-workspace.floating-toolbar .toolbar{position:absolute;inset:0 0 auto;z-index:7;background:transparent;border:0;pointer-events:none}
+.floating-toolbar .toolbar :is(button,select){pointer-events:auto}
+.floating-toolbar .toolbar .stage-tabs{background:var(--ui-chrome,#1c1b23e8)}
+.floating-toolbar .toolbar .graph-navigation{text-shadow:0 1px 2px var(--canvas-bg,#14141c)}
+@media(max-width:800px){.graph-workspace .graph-tools{display:flex}.graph-location-tools{flex-basis:100%}.graph-workspace .toolbar{min-height:0}}
+@media(pointer:coarse){.canvas-view-tools #fit{min-height:36px;padding-inline:10px}.graph-workspace .toolbar #graphpath button,.graph-workspace .toolbar #graphup{height:34px}}
 
 /* Light surfaces and graph palette; preview pixels and source code stay independent. */
 :root[data-ui-theme="light"]{
@@ -1022,6 +1068,8 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] .graph-workspace .toolbar button:hover{background:var(--ui-hover)}
 :root[data-ui-theme="light"] .graph-workspace .toolbar :is(.stage.active,button[aria-pressed="true"]){background:var(--ui-selected);color:#4d2e79;border-color:var(--purple)}
 :root[data-ui-theme="light"] .graph-navigation button,:root[data-ui-theme="light"] .graph-navigation button:disabled{color:var(--ui-text)}
+:root[data-ui-theme="light"] .graph-workspace .toolbar .graph-navigation,:root[data-ui-theme="light"] .graph-workspace .toolbar #graphpath,:root[data-ui-theme="light"] .graph-workspace.floating-toolbar .toolbar{background:transparent}
+:root[data-ui-theme="light"] #canvas>.toolbar,:root[data-ui-theme="light"] #canvas .toolbar .graph-navigation{background:transparent}
 :root[data-ui-theme="light"] :is(#editorheader #about,.location-bar .sidebar-toggle,.location-bar #shaderpicker,footer #editorrefresh){background:transparent;color:var(--muted);border-color:transparent}
 :root[data-ui-theme="light"] :is(#editorheader #about,.location-bar .sidebar-toggle,.location-bar #shaderpicker,footer #editorrefresh):hover{background:var(--ui-hover);color:var(--ui-text)}
 :root[data-ui-theme="light"] .sidebar-toggle[aria-expanded="true"]{color:var(--purple)}
@@ -1181,3 +1229,31 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] footer .footer-preferences button{background:transparent;color:var(--muted)}
 :root[data-ui-theme="light"] footer .footer-preferences button:enabled:hover{background:var(--ui-hover);color:var(--ui-text)}
 :root[data-ui-theme="light"] footer .footer-preferences button[aria-pressed="true"]{color:var(--purple)}
+
+/* Manual vector values, primary node selectors and authored names. */
+.node:has(.node-manual-value-group){width:230px}
+.node-title .node-primary-selector{flex:0 1 74px;max-width:45%;min-width:48px;height:25px;padding:2px 3px;font-size:10px;font-weight:400;background:transparent;border-color:currentColor;color:inherit;opacity:.85}
+.node-title .node-primary-selector option{background:var(--ui-surface,#24242e);color:var(--ui-text,#e5e4ed)}
+.node-title-text:has(.node-source-subtitle){display:block}
+.node-source-subtitle{display:block;margin-top:3px}
+.node-name-editor{display:flex;flex-direction:column;min-width:0;flex:1;gap:3px}
+.node-name-editor input{width:100%;min-width:0;padding:3px 5px;font-size:12px}
+.node-name-error{color:var(--danger,#efb1a8);white-space:normal;font-weight:400;font-size:10px}
+.node-name-error:empty{display:none}
+.node-manual-value-group{display:flex;align-items:flex-start;gap:4px;padding:3px 9px 10px}
+.node-values-toggle{flex:none;width:18px;min-width:18px;height:25px;padding:0;border:0;background:transparent;color:var(--muted);font-size:12px}
+.node-manual-value-group .node-fixed-values{display:flex;flex:1;min-width:0;gap:4px;margin:0;padding:0}
+.node-manual-value-group .node-inline-component{min-width:0;min-height:25px;flex:1}
+.node-manual-value-group .node-inline-component>span{display:none}
+.node-manual-value-group .node-inline-component input{min-width:0;width:100%;padding-inline:4px}
+.node-manual-value-group.expanded .node-fixed-values{display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
+.node-manual-value-group.expanded .node-inline-component>span{display:block;min-width:14px}
+.node-manual-value-group.expanded .node-inline-component input{flex:1}
+.input-group-add{width:auto;min-width:32px;padding-inline:5px;font-size:10px}
+@media(pointer:coarse){.node-title .node-primary-selector{height:30px}.node-values-toggle{height:30px}}
+
+.node-title-meta{display:flex;align-items:center;gap:5px;min-width:0;max-width:60%;flex:0 1 auto}
+.node-title-meta .node-prototype{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:400;opacity:.75}
+.node-title-meta .node-primary-selector{flex:none;max-width:74px}
+.node-title-meta:has(.node-primary-selector){max-width:65%}
+.node-title-meta:has(.node-primary-selector) .node-prototype{max-width:56px}

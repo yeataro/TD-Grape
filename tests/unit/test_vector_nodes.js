@@ -11,7 +11,7 @@ for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspect
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');
 vm.runInContext(app.slice(0,app.indexOf("$('#canvas').addEventListener('dragover'")),context);
 vm.runInContext(`
-render=()=>{};wires=()=>{};renderGraphEditActions=()=>{};inspector=()=>{};renderNavigation=()=>{};
+render=()=>{};wires=()=>{};renderGraphEditActions=()=>{};inspector=()=>{};renderNavigation=()=>{};renderNativeSourceValues=()=>{};refreshUniforms=()=>{};
 catalog=payload.catalog;setTypeContract(payload.contract);editorTarget='top';
 const graphs=[];
 function node(key,id,params={}){const d=catalog.find(d=>d.key===key);return {id,definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...clone(d.defaults),...params},ui:{x:24,y:24,...(supportsAutoType(d)?{typeMode:'auto'}:{})}};}
@@ -23,7 +23,7 @@ function connect(a,b,p,o='out'){return connectPorts(info(a,'outputs',o),info(b,'
 const identical=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
 
 // Every scalar/vector partition is chosen from the same core contract, by wires.
-for(const key of ['combine','vector'])for(const layout of typeContract.vectors.layouts.vec4){
+for(const key of ['combine','replace'])for(const layout of typeContract.vectors.layouts.vec4){
   setup([...Object.entries(layout.inputs).map(([p,t])=>node(t,p,{value:filledValue(t,.25)})),node(key,'join',{type:'vec4'})]);
   for(const p of Object.keys(layout.inputs))assert.equal(connect(p,'join',p),true);
   identical(n('join').params.groups,layout.groups);assert.equal(connect('join','result','color'),true);graphs.push(clone(graph));
@@ -49,9 +49,9 @@ assert.equal(change(()=>n('join').params.type='vec2'),false);identical(graph,bef
 
 // V-only editing works with direct node shortcut and one-step undo for add + wire.
 setup([node('uv','uv')]);addVectorSplit(n('uv'),'out');
-let split=n(selected);assert.equal(definition(split).key,'vector');assert.equal(split.params.type,'vec2');
+let split=n(selected);assert.equal(definition(split).key,'vector_split');assert.equal(split.params.type,'vec2');
 assert.equal(split.ui.componentNames,'uv');assert.equal(portLabel(split,'outputs','y'),'V');assert.equal(past.length,1);
-const splitId=split.id;addVectorSplit(n('uv'),'out');assert.equal(current().nodes.filter(n=>definition(n).key==='vector').length,1);
+const splitId=split.id;addVectorSplit(n('uv'),'out');assert.equal(current().nodes.filter(n=>definition(n).key==='vector_split').length,1);
 assert.equal(change(()=>{current().nodes.push(node('add','offset'),node('combine','join'),node('combine','rgba',{type:'vec4'}));n('offset').inputValues={b:.125};}),true);
 assert.equal(connect(splitId,'offset','a','y'),true);assert.equal(connect(splitId,'join','x','x'),true);
 assert.equal(connect('offset','join','y'),true);assert.equal(connect('join','rgba','x'),true);assert.equal(connect('rgba','result','color'),true);graphs.push(clone(graph));
@@ -84,13 +84,13 @@ assert.ok(creatorVariants(swizzle,back).every(v=>v.outputs.out==='float'));
 assert.ok(creatorPriority({d:catalog.find(d=>d.key==='vector_split')},wire)<creatorPriority({d:catalog.find(d=>d.key==='add')},wire));
 const beforePlan=JSON.stringify(graph);creatorTypePlan(combine,variant,'x',wire,false);assert.equal(JSON.stringify(graph),beforePlan);
 
-// Unified Vector replaces overlapping component wires, never their source nodes.
-setup([node('vec4','base'),node('vec2','pair'),node('float','scalar'),node('vector','value',{type:'vec4',components:[1,2,3,4]}),node('combine','other')]);
+// Replace replaces overlapping component wires, never their source nodes.
+setup([node('vec4','base'),node('vec2','pair'),node('float','scalar'),node('replace','value',{type:'vec4',components:[1,2,3,4]}),node('combine','other')]);
 assert.equal(connect('base','value','value'),true);assert.equal(connect('scalar','value','z'),true);assert.equal(connect('scalar','other','x'),true);
 before=clone(graph);historySize=past.length;
 assert.equal(connect('pair','value','y'),true);assert.equal(past.length,historySize+1);
 identical(ports(n('value'),'inputs'),{value:'vec4',x:'float',y:'vec2',w:'float'});
-identical(ports(n('value'),'outputs'),{out:'vec4',x:'float',y:'float',z:'float',w:'float'});
+identical(ports(n('value'),'outputs'),{out:'vec4'});
 assert.equal(portLabel(n('value'),'inputs','y'),'YZ');assert.ok(n('scalar'));
 assert.ok(current().edges.some(e=>e.from[0]==='scalar'&&e.to[0]==='other'));
 assert.ok(current().edges.some(e=>e.from[0]==='base'&&e.to[1]==='value'));
@@ -111,34 +111,33 @@ assert.equal(change(()=>current().nodes.push(node('vec3','large'),node('add','ma
 before=clone(graph);historySize=past.length;
 assert.equal(connect('large','value','w'),false);identical(graph,before);assert.equal(past.length,historySize);
 assert.equal(connect('pair','value','value'),false);identical(graph,before);
-assert.equal(connect('value','math','a','x'),true);before=clone(graph);historySize=past.length;
+assert.equal(connect('value','math','a'),true);before=clone(graph);historySize=past.length;
 assert.equal(connect('math','value','x'),false);identical(graph,before);assert.equal(past.length,historySize);
-setup([node('float','f'),node('vec2','wide'),node('add','math'),node('float','z'),node('vector','value',{type:'vec4'})]);
+setup([node('float','f'),node('vec2','wide'),node('add','math'),node('float','z'),node('replace','value',{type:'vec4'})]);
 assert.equal(connect('f','math','a'),true);assert.equal(connect('math','value','y'),true);assert.equal(connect('z','value','z'),true);
 before=clone(graph);historySize=past.length;
 assert.equal(connect('wide','math','a'),false);identical(graph,before);assert.equal(past.length,historySize); // Unrelated inference cannot evict Z.
 
-// A fully overridden runtime baseline is dormant, while each final scalar keeps
-// its own constness. Replacement is validated against the complete trial graph.
-setup([node('uniform','runtime',{declarationId:'u'}),node('vec2','fixed'),node('float','f'),node('vector','value',{type:'vec4'}),node('add','need',{requireConstant:true})]);
+// A fully overridden runtime baseline is dormant; the single whole output
+// becomes constant only when every effective component is constant.
+setup([node('uniform','runtime',{declarationId:'u'}),node('vec2','fixed'),node('float','f'),node('replace','value',{type:'vec4'}),node('add','need',{type:'vec4',requireConstant:true})]);
 graph.declarations=[{id:'u',kind:'uniform',name:'uValue',type:'vec4',value:[.1,.2,.3,.4]}];
 assert.equal(connect('runtime','value','value'),true);assert.equal(connect('fixed','value','x'),true);
-assert.equal(connect('value','need','a','x'),true); // X is constant despite runtime ZW.
 before=clone(graph);historySize=past.length;
-assert.equal(connect('value','need','a','z'),false);identical(graph,before);assert.equal(past.length,historySize);
+assert.equal(connect('value','need','a'),false);identical(graph,before);assert.equal(past.length,historySize);
 assert.equal(connect('fixed','value','z'),true);assert.equal(change(()=>n('value').params.requireConstant=true),true);
-assert.equal(connect('value','result','color'),true);graphs.push(clone(graph));
+assert.equal(connect('value','need','a'),true);assert.equal(connect('need','result','color'),true);graphs.push(clone(graph));
 assert.equal(connect('f','value','y'),false); // Y is hidden inside XY.
 before=clone(graph);assert.equal(connect('f','value','x'),false);identical(graph,before); // Would release runtime Y and violate const.
 
 // Context-menu creation and direct drops share the same displacement planner.
-setup([node('float','z'),node('vector','value',{type:'vec4'})]);assert.equal(connect('z','value','z'),true);
+setup([node('float','z'),node('replace','value',{type:'vec4'})]);assert.equal(connect('z','value','z'),true);
 const sourceDefinition=catalog.find(d=>d.key==='vec2'),sourceVariant=typeVariants(sourceDefinition)[0],destination=info('value','inputs','y');
 before=clone(graph);creatorTypePlan(sourceDefinition,sourceVariant,'out',destination,false);identical(graph,before);
 creatorState={x:80,y:80,wire:destination};creatorMatches=[{d:sourceDefinition,type:sourceVariant.type,port:'out',variant:sourceVariant}];historySize=past.length;
 chooseCreator(0);assert.equal(past.length,historySize+1);identical(n('value').params.groups,{y:'vec2'});assert.ok(n('z'));
 assert.ok(!current().edges.some(e=>e.from[0]==='z'));undo();identical(graph,before);
-const vector=catalog.find(d=>d.key==='vector');assert.ok(creatorPriority({d:vector},{kind:'outputs',type:'vec2'})<creatorPriority({d:combine},{kind:'outputs',type:'vec2'}));
+const vector=catalog.find(d=>d.key==='vector');identical(vectorPorts(vector.key,{type:'vec2',components:[0,0,0,0]}).inputs,{});
 
 // Existing Split shortcuts are reused without converting old nodes or defaults.
 setup([node('uv','uv'),node('vector_split','old',{type:'vec2'})],[edge('uv','old','value')]);
@@ -153,13 +152,10 @@ for(const entry of vectorEntries){
   identical(creatorVariants(entry,null).map(v=>v.type),[entry.presetType]);
   setup([]);assert.equal(change(()=>instantiate(entry,100,100)),true);
   const created=n(selected);assert.equal(created.params.type,entry.presetType);assert.equal(created.definitionUuid,'sgrape.builtin.vector');
+  identical(ports(created,'inputs'),{});identical(ports(created,'outputs'),{out:entry.presetType});
   assert.equal(Object.hasOwn(created,'entryKey'),false);assert.equal(Object.hasOwn(created.params,'presetType'),false);
 }
-for(const key of ['vec2','vec3','vec4']){
-  const entry=availableEntries().find(d=>d.key===key);assert.ok(entry.label.endsWith(' · Constant'));
-  setup([]);assert.equal(change(()=>instantiate(entry,100,100)),true);
-  assert.equal(n(selected).definitionUuid,'sgrape.builtin.'+key);identical(n(selected).params,catalog.find(d=>d.key===key).defaults);
-}
+for(const key of ['vec2','vec3','vec4'])assert.ok(!availableEntries().some(d=>d.key===key));
 const preset3=vectorEntries.find(d=>d.presetType==='vec3'),preset2=vectorEntries.find(d=>d.presetType==='vec2');
 assert.ok(creatorPriority({d:preset3,portType:'vec3'},{kind:'inputs',type:'vec3'})<creatorPriority({d:preset2,portType:'float'},{kind:'inputs',type:'vec3'}));
 console.log(JSON.stringify({passed:true,graphs}));

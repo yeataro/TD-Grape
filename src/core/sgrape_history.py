@@ -71,7 +71,7 @@ def _same_par(left, right):
 def _live(runtime):
     sources = runtime.source_module(); comp = runtime.target(); operator = runtime.shader_operator(comp)
     registry = comp.fetch(sources.STORE, {}) or {}; links = comp.fetch(LINKS, {})
-    declarations = {d['id']: d for d in runtime.state()['graph']['declarations'] if d.get('kind') == 'uniform'}
+    declarations = {d['id']: d for d in runtime.state()['graph']['declarations'] if d.get('kind') in sources.SOURCE_KINDS}
     entries = {}; handles = {}
     for ident in set(declarations) | set(registry):
         record = copy.deepcopy(registry.get(ident)); native = sources.locate(operator, record)
@@ -140,7 +140,7 @@ def _checkpoint(runtime, token):
 
 
 def _declarations(graph):
-    return {d['id']: d for d in graph['declarations'] if d.get('kind') == 'uniform'}
+    return {d['id']: d for d in graph['declarations'] if d.get('kind') in ('uniform','spec_constant')}
 
 
 def _validate_graph(graph):
@@ -162,8 +162,9 @@ def _project(runtime, entry, declaration):
     """A coalesced Apply may not have captured this intermediate declaration."""
     sources = runtime.source_module(); entry = copy.deepcopy(entry)
     if declaration is None: return None
-    if declaration.get('type') not in sources.TYPES or not sources.valid_name(declaration.get('name')):
-        raise RuntimeError('Invalid Uniform declaration in editor history.')
+    types = sources.SPEC_TYPES if declaration.get('kind')=='spec_constant' else sources.TYPES
+    if declaration.get('type') not in types or not sources.valid_name(declaration.get('name')):
+        raise RuntimeError('Invalid native source declaration in editor history.')
     if entry and entry['native']:
         entry['native']['params']['name']['val'] = declaration['name']
         entry['record']['name'] = declaration['name']
@@ -172,14 +173,16 @@ def _project(runtime, entry, declaration):
         entry['record']['name'] = declaration['name']
         return entry
     if declaration.get('sourceMissing'):
-        return {'record': {'name': declaration['name'], 'sequence': declaration.get('nativeSequence', 'vec'), 'index': 0, 'missing': True},
+        return {'record': {'name': declaration['name'], 'sequence': sources.source_sequence(declaration), 'index': 0, 'missing': True},
                 'native': None, 'link': None, 'controls': {}}
-    sequence = declaration.get('nativeSequence', 'vec')
+    sequence = sources.source_sequence(declaration)
     if sequence not in sources.CHANNELS: raise RuntimeError('Unsupported native Uniform sequence.')
-    value = declaration.get('value'); values = [value] if sources.TYPES[declaration['type']] == 1 else value
-    if not isinstance(values, list) or len(values) != sources.TYPES[declaration['type']]:
+    value = declaration.get('value'); count = sources.source_components(declaration); values = [value] if count == 1 else value
+    if not isinstance(values, list) or len(values) != count:
         raise RuntimeError('Invalid Uniform defaults in editor history.')
-    for value in values: runtime.core().number(value)
+    if declaration.get('kind')=='spec_constant':runtime.core().literal(value,declaration['type'])
+    else:
+        for value in values: runtime.core().number(value)
     operator = runtime.shader_operator(runtime.target()); index = getattr(operator.seq, sequence).numBlocks
     params = {'name': {'val': declaration['name'], 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}}
     for i, suffix in enumerate(sources.CHANNELS[sequence]):
@@ -439,6 +442,36 @@ def restore(runtime, body):
                 comp = runtime.target(); top = comp.parent().op(wanted['parameter']['val']); helper = comp.op('texture_sources')
                 if top is None or top.id != wanted.get('topId') or not helper or not helper.module._external_allowed(comp, top): _conflict()
             value_plan.append((par, wanted['parameter']))
+    # A failed type/default Apply can leave a browser-only Spec draft between
+    # two equal native checkpoints. Undo must reach that draft without turning
+    # its metadata into an applied declaration or replaying an unsafe value.
+    native_draft = False
+    no_native_writes = not value_plan and all(
+        not plan['structural'] and not plan['params'] and not plan['controls']
+        and _entry_semantic(projected[ident]) == _entry_semantic(old['data']['entries'].get(ident))
+        for ident, plan in plans.items())
+    for ident, declaration in right_decl.items():
+        if ident not in plans or declaration.get('kind') != 'spec_constant': continue
+        plan = plans[ident]; after = projected[ident]
+        effective = copy.deepcopy(after if plan['structural'] else entries.get(ident))
+        if effective and effective['native'] and not plan['structural']:
+            for suffix in plan['params']:
+                effective['native']['params'][suffix] = after['native']['params'][suffix]
+        try:
+            kind = sources.native_kind(runtime, runtime.target())
+            sources.validate_spec_native(declaration, declaration.get('value'), kind, 'default')
+            value = ((effective or {}).get('native') or {}).get('params', {}).get('value', {})
+            if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'), kind)
+        except RuntimeError:
+            previous = left_decl.get(ident, {})
+            changes = {key for key in previous.keys() | declaration.keys() if previous.get(key) != declaration.get(key)}
+            checkpoints_equal = all(
+                _entry_semantic(before['data']['entries'].get(ident)) == _entry_semantic(after['data']['entries'].get(ident))
+                for before, after in ((old, target), (delta_old, delta_target)))
+            if not (no_native_writes and checkpoints_equal and previous.get('kind') == 'spec_constant'
+                    and changes and changes.issubset({'type', 'value'}) and effective and effective['native']):
+                raise
+            native_draft = True
     # Validate all affected rows before any write; reindexing can also affect
     # references/exports attached to neighbours that are outside sourceIds.
     affected = {}
@@ -466,8 +499,8 @@ def restore(runtime, body):
             for suffix, state in entry['native']['params'].items():
                 if state['mode'] == 'BIND' and (suffix not in owned or state['bindExpr'] != 'parent().par.' + owned[suffix]):
                     raise RuntimeError('This external Bind cannot be recreated by editor history.')
-    # Core-invalid drafts remain browser working data, never authoritative DATs.
-    working = None
+    # Invalid drafts remain browser working data, never authoritative DATs.
+    working = desired if native_draft else None
     try: runtime.core().compile_graph(desired)
     except Exception: working = desired
     comp = runtime.target(); registry_before = copy.deepcopy(comp.fetch(sources.STORE, None))
@@ -549,7 +582,7 @@ def restore(runtime, body):
         # missing declaration there; the local workingGraph can already omit it.
         existing_ids = {d['id'] for d in canonical['declarations']}
         canonical['declarations'].extend(copy.deepcopy(d) for d in current_state['graph']['declarations']
-                                         if d.get('kind') == 'uniform' and d['id'] not in ids and d['id'] not in existing_ids)
+                                         if d.get('kind') in sources.SOURCE_KINDS and d['id'] not in ids and d['id'] not in existing_ids)
         declarations, registry, issues = sources.reconcile(canonical['declarations'], registry, sources.native_rows(runtime.shader_operator(comp)))
         canonical['declarations'] = declarations
         runtime.core().compile_graph(canonical)

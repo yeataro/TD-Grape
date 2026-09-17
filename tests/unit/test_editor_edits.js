@@ -5,14 +5,14 @@ const element={addEventListener(){},textContent:'',title:'',disabled:false,repla
 let timers=0,writes=0;
 const context=vm.createContext({console,crypto:globalThis.crypto,assert,
   location:{pathname:'/',hash:''},history:{replaceState(){}},
-  document:{querySelector(){return element;}},
+  document:{querySelector(){return element;},querySelectorAll(){return [];}},
   sessionStorage:{getItem(){return '';},setItem(){writes++;}},
   setTimeout(){return ++timers;},clearTimeout(){}});
 for(const name of ['functions_model.js','functions_ui.js','graph_ui.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');
 vm.runInContext(app.slice(0,app.indexOf("$('#canvas').addEventListener('dragover'")),context);
 vm.runInContext(`
-render=()=>{};
+render=()=>{};renderNativeSourceValues=()=>{};refreshUniforms=()=>{};
 const call=(id,fn)=>({id,definitionUuid:FunctionModel.CALL,params:{functionId:fn},ui:{x:24,y:24}});
 const fn=(id,scope='local')=>({id,name:id,scope,stages:['pixel'],inputs:[],outputs:[],graph:{nodes:[],edges:[]},...(scope==='local'?{}:{source:{id:'source.'+id,version:'1'}})});
 const setup=()=>{
@@ -43,7 +43,7 @@ assert.equal(state(),before,'callback failure must roll back its partial mutatio
 // Successful changes create exactly one history entry, clear redo and schedule deployment.
 setup();graphTrail=[];graph.functions=[];const old=JSON.stringify(graph);
 assert.equal(change(()=>graph.stages.pixel.nodes.push({id:'added',params:{}})),true);
-assert.equal(past.length,2);assert.equal(JSON.stringify(past.at(-1)),old);assert.equal(future.length,0);assert.equal(editVersion,6);assert.equal(dirty,true);
+assert.equal(past.length,2);assert.equal(past.at(-1).kind,'graph');assert.equal(JSON.stringify(past.at(-1).before),old);assert.equal(JSON.stringify(past.at(-1).after),JSON.stringify(graph));assert.equal(future.length,0);assert.equal(editVersion,6);assert.equal(dirty,true);
 // A read-only graph must be inert for mutations and keyboard Undo/Redo.
 readonly=true;before=state();change(()=>{throw Error('must not run');});undo();undo(true);assert.equal(state(),before);
 console.log('Editor edits: failed import/localization, New Function, Independent, callback rollback, success history and read-only undo passed');

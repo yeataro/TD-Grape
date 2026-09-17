@@ -18,6 +18,57 @@
     "Graph"
   ],
   "messages": {
+    "type.missingPort": {"zh-Hant": "連接埠 {port} 不存在於目前型別；原接線仍保留。", "en": "Port {port} does not exist for the current type; its wire is retained."},
+    "inputs.newShort": {"zh-Hant": "新增", "en": "New"},
+    "node.renamed": {"zh-Hant": "已更新節點名稱", "en": "Node name updated"},
+    "help.spec_constant": {
+      "zh-Hant": "引用 Inputs 中的特化常數，保留固定 constant_id。它的數值在 Shader 特化時確定，可用於常數分支。\n\n目前 TD 版本的原生限制：int 的目前值需非負；MAT 的大整數須可由 32-bit float 精確表示。不支援值會拒絕套用。",
+      "en": "Reference an Inputs specialization constant with a stable constant_id. Its value is fixed at specialization and can control constant branches.\n\nCurrent TD native limitation: int current values must be nonnegative; large MAT integers must be exactly representable as 32-bit float. Unsupported values are rejected."
+    },
+    "help.replace": {
+      "zh-Hant": "整體向量提供基底；分量接線取代對應的連續分量。新線會移除重疊的分量接線，來源節點保留，整個替換是一次復原操作。輸出只有最終向量。未接基底時可手填各分量。",
+      "en": "The whole vector supplies the base; component wires replace consecutive components. A new wire replaces overlapping component wires while keeping their source nodes, as one Undo step. Only the final vector is output. With no base input, edit the manual component values."
+    },
+    "browser.branch.specConstants": {
+      "zh-Hant": "Spec Constants",
+      "en": "Spec Constants"
+    },
+    "inputs.specHint": {
+      "zh-Hant": "特化常數用於不常更動的 Shader 選項。變更目前值會選擇新的特化版本，constant_id 維持固定。",
+      "en": "Specialization constants are for infrequently changed Shader options. Changing the current value selects a specialization; constant_id remains fixed."
+    },
+    "inputs.tdBuiltIn": {
+      "zh-Hant": "TD 內建來源",
+      "en": "TD Built In"
+    },
+    "inputs.specConstants": {
+      "zh-Hant": "Spec Constants",
+      "en": "Spec Constants"
+    },
+    "inputs.graphConstants": {
+      "zh-Hant": "Graph Constants",
+      "en": "Graph Constants"
+    },
+    "node.expandValues": {
+      "zh-Hant": "展開或收合分量數值",
+      "en": "Expand or collapse component values"
+    },
+    "node.nameDuplicate": {
+      "zh-Hant": "這張圖已有同名節點，請使用其他名稱。",
+      "en": "Another node in this graph has that name."
+    },
+    "node.nameInvalid": {
+      "zh-Hant": "名稱須以英文字母開始，限 48 個英文字母、數字與底線；不可使用 GLSL 保留名稱。",
+      "en": "Use 1–48 ASCII letters, digits or underscores, starting with a letter. GLSL reserved names are unavailable."
+    },
+    "node.name": {
+      "zh-Hant": "節點名稱",
+      "en": "Node name"
+    },
+    "action.customNames": {
+      "zh-Hant": "自訂名稱",
+      "en": "Custom Names"
+    },
     "import.sourceConflict": {
       "zh-Hant": "匯入來源 {name} 與目前來源身分衝突；原圖未變更。",
       "en": "Imported source {name} conflicts with an existing source identity. The current graph was preserved."
@@ -2675,8 +2726,8 @@
       "en": "Inherited from the whole vector input. Connect this component to replace it."
     },
     "help.vector": {
-      "zh-Hant": "在同一節點組合與拆分 vec2／vec3／vec4。完整向量輸入提供原值，分量接線替換對應部分；完整向量與個別分量輸出都代表最終結果。\n\n向量從接入位置開始占用連續分量，例如 vec2 接 Y 占用 YZ。被占用的接孔會合併；新線會取代範圍內的舊分量連線，來源節點保留，整個替換可一次復原。\n\n展開「分量」即可使用分量接孔；收合只隱藏未使用的分量，已接線者保持可見。未接線的單分量值可在節點或 Parameter 手填，多分量值在 Parameter 編輯；有分量接線或完整向量輸入時，對應手填欄位隱藏。移除來源後恢復先前手填值。數字支援 Value Ladder，放開才提交。\n\n輸出依實際參與計算的來源判定常數性。要先拆分再運算後組合，請使用上游 Vector 與下游 Vector；將此節點的最終分量繞回自身會形成迴圈。",
-      "en": "Compose and split vec2, vec3 or vec4 in one node. The whole vector input supplies original values; component wires replace their corresponding parts. Both whole and component outputs contain the final result.\n\nA vector occupies consecutive components from its input position: vec2 at Y covers YZ. Occupied sockets merge. New wires replace overlapping component wires while retaining their source nodes; replacement is one undo step.\n\nExpand Components to access individual sockets; connected components stay visible when collapsed. Edit unconnected scalar values on the node or in Parameter, and multi-component values in Parameter. Component wires or a whole vector input hide the corresponding manual fields; disconnecting restores their saved values. Value Ladder commits on release.\n\nConstantness follows the sources actually used by each output. To split, process and compose, use an upstream and downstream Vector; feeding a final component back into the same node creates a cycle."
+      "zh-Hant": "手填 vec2、vec3 或 vec4 常數。此節點沒有輸入，只輸出整體向量；頂端可切換維度。展開三角形可顯示分量標籤，數值支援 Value Ladder。用輸出旁的 Split 快捷新增拆分節點；需要基底與分量覆寫時使用 Replace。",
+      "en": "Enter a vec2, vec3 or vec4 constant. This node has no inputs and outputs the whole vector; choose its size in the header. Expand the triangle for labelled component rows. Values support Value Ladder. Use the Split shortcut beside the output to add a Split node; use Replace for a base vector with component overrides."
     },
     "appearance.controls": {
       "zh-Hant": "介面大小與外觀",

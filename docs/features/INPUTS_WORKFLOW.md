@@ -6,10 +6,11 @@ Inputs 的來源模型始於 0.8.7；以下操作入口已依目前 UI 更新。
 
 - Nodes / Add Node 保留節點目錄。原 Uniforms 面板改稱 **Inputs**，預設與「新增節點」並排為左側同一區塊的兩個分頁；右側預設為 Parameter／自訂參數、Preview、Help。面板仍可跨側欄移動。
 - 沿用舊預設分組的位置會一次性更新；自訂分組與已儲存的 Layout 預設集保留，亦可用 Restore default 套用新配置。
-- Inputs 保留名稱與型別搜尋，各來源分類標題的 `+` 開啟建立對話框，填寫名稱與該類別可用的型別。TOP 提供 TOP Inputs、Constants、Uniforms；MAT 提供 Constants、Uniforms、Samplers。Uniform 對話框保留 Color 與四種時鐘快捷方式。重複選同一時鐘會選取既有來源，不產生新來源、空 Undo 或 Shader 更新。
+- Inputs 保留名稱與型別搜尋，各來源分類標題的 **New／新增** 開啟建立對話框，填寫名稱與該類別可用的型別；來源列的 `+` 僅把既有來源加入畫布，避免與建立來源混淆。TOP 提供 TOP Inputs、Graph Constants、Spec Constants、Uniforms；MAT 提供 Graph Constants、Spec Constants、Uniforms、Samplers。Uniform 對話框保留 Color 與四種時鐘快捷方式。重複選同一時鐘會選取既有來源，不產生新來源、空 Undo 或 Shader 更新。
 - 分類預設展開，收合偏好存在瀏覽器；新增成功會展開該分類並清除搜尋，使新來源可見。空分類保留標題與建立按鈕，不顯示無作用的收合箭頭。搜尋暫時展開匹配結果，不覆寫原有收合偏好。
 - 來源列直接使用對應圖內節點標題的分類底色，共用 9px 外圓角；選取時保留底色並加同色綠框，不改變列尺寸，深色／淺色模式皆沿用節點配色。點名稱在 Parameter 編輯；整列可用滑鼠拖入畫布。列右小 `+` 點一下建立引用，也支援滑鼠或觸控拖入；它不建立額外來源。拖出畫布、Escape、pointer cancel、第二指加入或失去視窗焦點均取消。觸控在名稱列保留捲動，明確拖放入口為 `+`。
-- 浮動 Add Node 提供 **Inputs → Constants／Uniforms／TOP Inputs／Samplers** 分類，同時包含新增來源與現有來源引用；Time／Frame 預設歸在 Uniforms。全域搜尋保留，搜尋到來源名稱後建立的是同一 ID 的引用。
+- 浮動 Add Node 提供 **Inputs → Graph Constants／Spec Constants／Uniforms／TOP Inputs／Samplers** 分類，同時包含新增來源與現有來源引用；Time／Frame 預設歸在 Uniforms。全域搜尋保留，搜尋到來源名稱後建立的是同一 ID 的引用。
+- **TD Built In／TD 內建來源** 是尋找既有 TD 來源的分類，不另外建立來源宣告，也不要求其中所有節點同色。Texture Coordinates 暫保留原名，實作來源為 `vUV.st`；分類依現有節點能力呈現，不把所有 TD 輸入都當成常數。TD 函式與內建來源的完整擴充清單留待後續。
 - 浮動清單的 Uniform 引用與時間預設使用 Uniform 辨識色，Sampler 引用使用 Sampler 辨識色。
 - 畫布 Uniform／Sampler 引用的輸出端口顯示來源名稱（例如 `mixfac · float`），改名後同步更新顯示。內部端口仍為 `out`，接線與 GLSL 身分不因顯示規則改變；長名稱截斷時可由提示查看完整名稱。
 - 從未接線的 input 呼叫新增選單，新增 Uniform 會預填接收端的型別、名稱與未接線數值並接線。新增／引用有明確區別；不再自動挑第一個相容 Uniform 或 Sampler。
@@ -21,6 +22,8 @@ Inputs 的來源模型始於 0.8.7；以下操作入口已依目前 UI 更新。
 | --- | --- |
 | Uniform | GLSL OP Vectors 的原生列；目前支援 float、vec2、vec3、vec4 |
 | Color | GLSL OP Colors 的原生列與 vec4；保留 TD 色彩轉換語意 |
+| Graph Constants／圖內常數 | 圖宣告保存的 float／vec2／vec3／vec4 常數；使用時產生 GLSL `const` |
+| Spec Constants／特化常數 | GLSL OP **Constants** 頁的原生列；支援 int／uint／bool／float 純量 |
 | Sampler | 既有 sampler2D 宣告、TOP 來源及取樣分離流程 |
 | Time | float Uniform，初始 Python Expression 為 `me.time.seconds` |
 | Frame | float Uniform，初始 Python Expression 為 `me.time.frame` |
@@ -28,6 +31,14 @@ Inputs 的來源模型始於 0.8.7；以下操作入口已依目前 UI 更新。
 | Absolute Frame | float Uniform，初始 Python Expression 為 `absTime.frame` |
 
 Time / Frame 名稱可改，衝突時使用流水號。這些是普通 Uniform，不是新增 GPU built-in。Frame 暫以 float 傳遞，沒有藉此宣稱 int / uint 管線已完成。時鐘語意依 [TD Frame](https://derivative.ca/UserGuide/Frame) 與 [absTime Class](https://docs.derivative.ca/AbsTime_Class)。
+
+Spec Constants 的正式名稱為 **Specialization Constants**，窄標題可縮寫 **Spec Const**。它與 Graph Constants 分開：宣告保存固定來源 ID、GLSL 型別、建立預設及不隨名稱／排列改變的 `constantId`，產碼為 `layout(constant_id = N) const TYPE name = default;`；目前值由 TD `constNvalue` 單一原生參數維護。值改動由 TD 特化 Shader，不重新寫 Graph 的預設或產生新來源。適合偶爾變動的模式選擇，不用它取代每幀更新的 Uniform。
+
+兩類原生來源共用既有 registry 與網頁 Undo／Redo，不維護另一份目前值清單。Spec Constants 可建立、改名、修改目前值、刪除及恢復；仍有引用的刪除保留缺失節點，Undo 恢復同一來源 ID、`constantId` 及先前原生值。原生 Expression／Bind／Export 照既有保護保存；這輪不提供 Spec Constants 的網頁驅動編輯或 Expose。bool 使用布林值；純量可明確 cast 到既有 float／向量路徑，但不因此開放尚未完成的整套整數運算、陣列或 Matrix 編輯。
+
+**TD 2025.32820 原生整數覆寫限制**：GLSL 語言本身仍接受完整 32 位元 int／uint literal，但 TD Constants 頁的傳送有額外限制。TOP／MAT 的 int 原生覆寫不能是負數；MAT 的 int／uint 還必須可被 float32 精確表示，例如 `16777217` 不行、`1073741824` 可以，並仍須在該整數型別範圍內。Graph 預設、新來源、套用、目前值與 Undo 均先檢查此限制，拒絕時保留原狀；不默默截斷、不改 GLSL 宣告型別。外部直接改 TD 造成不支援值時，Inputs 來源快照保留實際 Par 值並回報問題，可再改回合法值。float 的負數覆寫正常，不受整數限制。
+
+Spec Constants 並不在圖內「一般常數表達式」的完整白名單中。特化表達式有自身限制，不能僅因輸入是 Spec Const 就把任意數學函式結果宣稱為可用於所有編譯期位置。參考 [Derivative Specialization Constants](https://docs.derivative.ca/Specialization_Constants)；純量支援以 TD 2025.32820 的 TOP／MAT 實測為準。
 
 Parameter 顯示四個原生分量，未使用分量淡化並保留原值；GLSL 型別與 TD 原生列分開。預設值收在折疊區，與目前值分開。來源型別修改沿用現有相容性檢查；不相容修改會被阻擋，不靜默改接線。
 

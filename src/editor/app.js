@@ -179,7 +179,7 @@ function historyValueKey(value){
 }
 function historyGraphKey(document){const value=clone(document);delete value.catalogSnapshot;return historyValueKey(value);}
 function historySourceIds(before,after){
-  const sources=document=>new Map((document.declarations||[]).filter(d=>d.kind==='uniform').map(d=>[d.id,d]));
+  const sources=document=>new Map((document.declarations||[]).filter(d=>['uniform','spec_constant'].includes(d.kind)).map(d=>[d.id,d]));
   const a=sources(before),b=sources(after);
   return [...new Set([...a.keys(),...b.keys()])].filter(id=>historyValueKey(a.get(id))!==historyValueKey(b.get(id)));
 }
@@ -224,10 +224,10 @@ function mark(){
   try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}
   scheduleGraphApply();
 }
-function change(fn,{localize=true,redraw=true}={}){
+function change(fn,{localize=true,redraw=true,typeChange=false}={}){
   if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
-  try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous);rejectNewConstantIssues(graph,previous);}
+  try{if(localize)prepareSemanticEdit();fn();if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange});if(!typeChange)rejectNewConstantIssues(graph,previous);}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
@@ -283,7 +283,23 @@ async function performApplyGraph(){
   try{
     const data=await api('apply',{graph:sentGraph,revision});
     if(generation!==editorLoadGeneration)return;
-    if(data.upgradeReview){upgradePending=data.upgradeReview;conflicted=true;renderUpgradeNotice();status(t('upgrade.explanation'));return;}
+    if(data.upgradeReview){
+      const review=data.upgradeReview;
+      if(review.required===false&&review.blocked&&!(review.changes||[]).length){
+        // Current-version graph errors are editable drafts, not version upgrades.
+        upgradePending=null;conflicted=false;renderUpgradeNotice();
+        const diagnostics=(review.issues||[]).map(issue=>{const owner=issue.node&&!issue.functionId&&Object.entries(sentGraph.stages).find(([,data])=>data.nodes.some(n=>n.id===issue.node));return {...issue,stage:issue.stage||owner?.[0]};});
+        const missing=[];
+        for(const unit of autoUnits(sentGraph))for(const edge of unit.data.edges)for(const [side,direction]of [['from','outputs'],['to','inputs']]){
+          const node=unit.data.nodes.find(n=>n.id===edge[side][0]);if(!node||Object.hasOwn(safeConcretePorts(sentGraph,node,unit.owner)[direction],edge[side][1]))continue;
+          missing.push({node:node.id,stage:unit.owner?stage:unit.key.slice(6),functionId:unit.owner?.id||null,trail:unit.owner?[unit.owner.id]:[],message:t('type.missingPort').replace('{port}',(node.name||autoDefinition(sentGraph,node,unit.owner)?.label||node.id)+'.'+edge[side][1])});
+        }
+        if(missing.length){for(let i=diagnostics.length-1;i>=0;i--)if(diagnostics[i].code==='repair')diagnostics.splice(i,1);diagnostics.unshift(...missing);}
+        const error=diagnostics.map(issue=>issue.message).filter(Boolean).join('\n')||t('material.failed');
+        setCompileDiagnostics({error,diagnostics},JSON.stringify(sentGraph));throw Error(error);
+      }
+      upgradePending=review;conflicted=true;renderUpgradeNotice();status(t('upgrade.explanation'));return;
+    }
     sealGraphHistory(sentEntries,data.history?.beforeToken||beforeToken,data.history?.token||null);
     if(data.state.graph.catalogSnapshot)graph.catalogSnapshot=clone(data.state.graph.catalogSnapshot);
     revision=data.state.revision;conflicted=false;clearCompileDiagnostics();
@@ -311,7 +327,7 @@ function input(value,cb,type='text'){
   if(type==='number'){i.step='0.05';installValueLadder(i,commit);}return i;
 }
 function current(){return currentFunction()?.graph||graph.stages[stage];}
-function ports(n,kind){const d=definition(n);if(!d)return{};const decl=graph.declarations.find(x=>x.id===n.params.declarationId);return resolvedNodePorts(d,n.params,decl,kind);}
+function ports(n,kind){const d=definition(n);if(!d)return{};const decl=graph.declarations.find(x=>x.id===n.params.declarationId);return displayNodePorts(d,n.params,decl,kind);}
 function graphPoint(clientX,clientY){
   // The 1px HTML world shares the sockets' coordinate system, including ancestor
   // scaling. Older WebKit SVG getScreenCTM() can omit that CSS transform.
@@ -335,7 +351,7 @@ function transform(){
   $('#canvas').style.setProperty('--wire-glow',7/scale+'px');
   $('#canvas').dataset.gridStep=displayGrid;
   $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;$('#zoom').textContent=Math.round(scale*100)+'%';wireGesture?.refresh?.();}
-function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();}
+function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();}
 function library(){renderLibrary();}
 function render(){renderCompileDiagnostics();
   if(!graph)return;if(!graph.stages?.[stage])stage='pixel';
@@ -571,6 +587,32 @@ function requestEditorReload(){
   clearTimeout(autoTimer);autoTimer=null;editorReloading=true;location.reload();return true;
 }
 const appearanceStorageKey='sgrapeAppearanceV1';
+const customNamesStorageKey='sgrapeCustomNamesV1';
+let showCustomNodeNames=false;
+function customNodeNamesEnabled(){return showCustomNodeNames;}
+function installGraphChrome(){
+  try{showCustomNodeNames=localStorage.getItem(customNamesStorageKey)==='true';}catch{}
+  const button=$('#customnames'),toolbar=$('.toolbar'),canvas=$('#canvas');
+  button.setAttribute('aria-pressed',String(showCustomNodeNames));
+  button.onclick=()=>{
+    // Finish the same inline edit before changing how node titles are shown.
+    document.activeElement?.blur?.();
+    const unfinished=pendingEditorField();
+    if(unfinished){status(t('editorReload.finishField'),true,{kind:'reload'});unfinished.focus?.({preventScroll:true});return;}
+    showCustomNodeNames=!showCustomNodeNames;
+    try{localStorage.setItem(customNamesStorageKey,String(showCustomNodeNames));}catch{}
+    button.setAttribute('aria-pressed',String(showCustomNodeNames));
+    if(graph)render();
+  };
+  const floating=!!EDITOR_DEV_SETTINGS.floatingToolbar;
+  $('.graph-workspace').classList.toggle('floating-toolbar',floating);
+  if(floating)canvas.prepend(toolbar);
+  for(const controls of [toolbar,$('.canvas-view-tools')]){
+    // Floating controls must never start a canvas pan, selection, or node drop.
+    for(const event of ['pointerdown','mousedown','touchstart','dblclick'])controls.addEventListener(event,e=>e.stopPropagation());
+    controls.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+  }
+}
 function parseUIAppearance(raw){
   let saved;try{saved=JSON.parse(raw);}catch{}
   return{size:saved?.size==='comfortable'?'comfortable':'standard',theme:saved?.theme==='light'?'light':'dark'};
@@ -603,6 +645,7 @@ function installUIAppearance(){
 }
 function installEditorChrome(){
   installUIAppearance();
+  installGraphChrome();
   try{$('#editorheader').hidden=localStorage.getItem('sgrapeHeaderVisible')==='false';}catch{}
   renderHeaderVisibility();
   $('#toggleheader').onclick=()=>{

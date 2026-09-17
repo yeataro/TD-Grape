@@ -191,24 +191,35 @@ async function reviewImportFile(file){
 }
 function prepareGraphReplacement(document){
   const replacement=clone(document),snapshot=nativeSourceSnapshot;
-  if(!snapshot&&graph.declarations.some(d=>d.kind==='uniform'&&!d.sourceMissing))throw Error(t('sources.nativePending'));
+  const nativeKind=kind=>['uniform','spec_constant'].includes(kind);
+  if(!snapshot&&graph.declarations.some(d=>nativeKind(d.kind)&&!d.sourceMissing))throw Error(t('sources.nativePending'));
   if(!snapshot?.enabled)return replacement;
   if(snapshot.revision!==revision)throw Error(t('sources.nativePending'));
-  const liveIds=new Set(snapshot.uniforms.filter(row=>!row.missing&&!row.pending).map(row=>row.id));
-  const live=graph.declarations.filter(d=>d.kind==='uniform'&&liveIds.has(d.id));
+  const nativeRows=[...(snapshot.uniforms||[]),...(snapshot.specConstants||[])];
+  const liveIds=new Set(nativeRows.filter(row=>!row.missing&&!row.pending).map(row=>row.id));
+  const live=graph.declarations.filter(d=>nativeKind(d.kind)&&liveIds.has(d.id));
   if(live.length!==liveIds.size)throw Error(t('history.changed'));
   const byId=new Map(live.map(d=>[d.id,d])),byName=new Map(live.map(d=>[d.name,d])),remap=new Map(),retained=new Set();
   for(const declaration of replacement.declarations){
     const sameId=byId.get(declaration.id),sameName=byName.get(declaration.name),existing=sameId||sameName;
     if(!existing)continue;
-    if(declaration.kind!=='uniform'||sameId&&sameName&&sameId.id!==sameName.id||retained.has(existing.id))throw Error(t('import.sourceConflict').replace('{name}',declaration.name));
-    // The native runtime already reuses a unique Uniform name. Preserve that
+    if(declaration.kind!==existing.kind||sameId&&sameName&&sameId.id!==sameName.id||retained.has(existing.id))throw Error(t('import.sourceConflict').replace('{name}',declaration.name));
+    // The native runtime already reuses a unique source name. Preserve that
     // entity's identity while importing its new graph metadata and references.
     remap.set(declaration.id,existing.id);declaration.id=existing.id;delete declaration.sourceMissing;retained.add(existing.id);
-    const sequence=snapshot.uniforms.find(row=>row.id===existing.id)?.sequence;
+    const sequence=nativeRows.find(row=>row.id===existing.id)?.sequence;
+    if(existing.kind==='spec_constant'){declaration.constantId=existing.constantId;declaration.nativeSequence='const';}
     if(sequence==='color')declaration.nativeSequence='color';else if(sequence==='vec')delete declaration.nativeSequence;
   }
   for(const declaration of live)if(!retained.has(declaration.id))replacement.declarations.push(clone(declaration));
+  // An imported source is new in this Shader, so allocate its specialization
+  // slot here if occupied; existing native sources retain their original IDs.
+  const occupied=new Set(live.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));
+  const reserved=new Set(replacement.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));
+  for(const declaration of replacement.declarations.filter(d=>d.kind==='spec_constant'&&!liveIds.has(d.id))){
+    if(occupied.has(declaration.constantId)){let ident=0;while(reserved.has(ident))ident++;declaration.constantId=ident;reserved.add(ident);}
+    occupied.add(declaration.constantId);
+  }
   for(const data of [...Object.values(replacement.stages),...(replacement.functions||[]).map(f=>f.graph)]){
     for(const node of data.nodes)if(remap.has(node.params?.declarationId))node.params.declarationId=remap.get(node.params.declarationId);
   }

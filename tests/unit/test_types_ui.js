@@ -8,8 +8,8 @@ vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),context);
 vm.runInContext(`
 assert.equal(compatible('float','float'),false,'no private fallback before the contract loads');
 setTypeContract(payload.contract);
-for(const a of [...numericTypes(),'?','int','sampler2D'])for(const b of [...numericTypes(),'?','int','sampler2D'])
- assert.equal(compatible(a,b),(numericTypes().includes(a)&&numericTypes().includes(b)&&(a===b||a==='float'))||a===b&&a==='sampler2D');
+for(const a of [...Object.keys(typeContract.types),'?'])for(const b of [...Object.keys(typeContract.types),'?'])
+ assert.equal(compatible(a,b),(a===b&&Object.hasOwn(typeContract.types,a))||(numericTypes().includes(b)&&['float','int','uint','bool'].includes(a)));
 for(const row of payload.rows)for(const kind of ['inputs','outputs'])assert.equal(JSON.stringify(resolvedNodePorts(row.definition,row.params,row.declaration,kind)),JSON.stringify(row.expected[kind]));
 const uniform=payload.catalog.find(d=>d.key==='uniform');assert.equal(resolvedNodePorts(uniform,{},null,'outputs').out,'?');
 const fn={definitionUuid:FunctionModel.CALL,inputs:{x:'vec2'},outputs:{y:'float'}};assert.equal(resolvedNodePorts(fn,{},null,'inputs').x,'vec2');
@@ -24,7 +24,8 @@ for(const type of numericTypes()){
  assert.equal(JSON.stringify(shapedValue([1,2,3,4],type)),JSON.stringify(size===1?1:[1,2,3,4].slice(0,size)));
  assert.equal(JSON.stringify(shapedValue([1,2],type)),JSON.stringify(size===1?1:[1,2,1,1].slice(0,size)));
 }
-for(const type of ['int','bool','?','toString'])assert.throws(()=>typeComponents(type));
+for(const type of ['int','uint','bool'])assert.equal(typeComponents(type),1);
+for(const type of ['?','toString'])assert.throws(()=>typeComponents(type));
 for(const types of [undefined,{}, {...typeContract.types,float:{family:'float',components:0}}, {...typeContract.types,float:{family:'float',components:2.5}}, {...typeContract.types,float:{family:'bool',components:1}}]){
  assert.throws(()=>setTypeContract({...typeContract,types}));assert.equal(JSON.stringify(typeContract),original);
 }

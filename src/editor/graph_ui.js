@@ -1,6 +1,6 @@
 // Development-only experiments. Update embedded sources and reload the Editor after changing.
 // These internal values are not user preferences and are never serialized with a graph or layout.
-const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, nodeBodyDrag: true, rgbaComponentTint: true });
+const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, rgbaComponentTint: true });
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,suppressWireClick=false;
@@ -135,14 +135,14 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 }
 
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
-function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','top_input'].includes(d.key)?d.key:null);}
+function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
-  if(d.key==='constant'||d.inputKind==='constant')return 'constant';
+  if(['constant','spec_constant','vector'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
   if(['float','vec2','vec3','vec4','color'].includes(d.key))return 'constant';
-  if(d.key==='uniform')return 'uniform';if(['sampler','uv'].includes(d.key))return 'sampler';
+  if(d.key==='uniform')return 'uniform';if(d.key==='sampler')return 'sampler';if(d.key==='uv')return 'builtin';
   if(['texture','texture_sample'].includes(d.key))return 'math';
   if(['position','deform','to_clip'].includes(d.key))return 'builtin';
   if(d.key.endsWith('_out')||d.key==='function_output')return 'output';return 'math';
@@ -209,15 +209,18 @@ function setTypeContract(contract){
       !Array.isArray(contract.conversions)||!contract.definitions||!contract.types)throw Error(t('contract.unsupported'));
   const resourceTypes=contract.resourceTypes||[];
   if(!Array.isArray(resourceTypes)||resourceTypes.some(t=>t!=='sampler2D')||new Set(resourceTypes).size!==resourceTypes.length)throw Error(t('contract.invalid'));
-  const known=t=>contract.numericTypes.includes(t)||resourceTypes.includes(t);
-  if(Object.keys(contract.types).length!==contract.numericTypes.length+resourceTypes.length)throw Error(t('contract.invalid'));
+  const specTypes=contract.specConstantTypes||[];
+  if(!Array.isArray(specTypes)||specTypes.some(t=>!['int','uint','bool','float'].includes(t))||new Set(specTypes).size!==specTypes.length)throw Error(t('contract.invalid'));
+  const valueTypes=[...new Set([...contract.numericTypes,...specTypes])],known=t=>valueTypes.includes(t)||resourceTypes.includes(t);
+  if(Object.keys(contract.types).length!==valueTypes.length+resourceTypes.length)throw Error(t('contract.invalid'));
   for(const type of contract.numericTypes){
     const descriptor=contract.types[type];
     if(!Object.hasOwn(contract.types,type)||!descriptor||descriptor.family!=='float'||
         !Number.isInteger(descriptor.components)||descriptor.components<1||descriptor.components>4)throw Error(t('contract.invalid'));
   }
+  for(const type of specTypes.filter(t=>!contract.numericTypes.includes(t)))if(contract.types[type]?.family!==type||contract.types[type]?.components!==1)throw Error(t('contract.invalid'));
   for(const type of resourceTypes)if(contract.types[type]?.family!=='sampler'||contract.types[type]?.components!==0)throw Error(t('contract.invalid'));
-  for(const rule of contract.conversions)if(!known(rule.from)||!known(rule.to)||!['identity','splat'].includes(rule.kind))throw Error(t('contract.invalid'));
+  for(const rule of contract.conversions)if(!known(rule.from)||!known(rule.to)||!['identity','splat','cast'].includes(rule.kind))throw Error(t('contract.invalid'));
   for(const entry of Object.values(contract.definitions)){
     if(!['fixed','parameter','declaration'].includes(entry.selector)||!Array.isArray(entry.variants)||!entry.variants.length)throw Error(t('contract.invalid'));
     for(const variant of entry.variants)if((variant.type!==null&&!known(variant.type))||!variant.inputs||!variant.outputs||
@@ -242,7 +245,7 @@ function setTypeContract(contract){
   typeContract=JSON.parse(JSON.stringify(contract));
 }
 const numericTypes=()=>typeContract?.numericTypes||[];
-const interfaceTypes=()=>[...numericTypes(),...(typeContract?.resourceTypes||[])];
+const interfaceTypes=()=>[...new Set([...numericTypes(),...(typeContract?.specConstantTypes||[]),...(typeContract?.resourceTypes||[])])];
 const isResourceType=type=>(typeContract?.resourceTypes||[]).includes(type);
 function typeComponents(type){
   if(!typeContract||!Object.hasOwn(typeContract.types,type))throw Error(t('contract.invalid'));
@@ -277,21 +280,33 @@ function resolvedNodePorts(d,params,decl,kind){
   return variant?.[kind]||Object.fromEntries(Object.keys(d[kind]||{}).map(port=>[port,'?']));
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
-const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&nodeCategory(d)==='math'&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
-const isVectorOperation=d=>['vector','combine','vector_split','swizzle'].includes(d?.key);
+const supportsAutoType=d=>!!d&&!['combine','vector','replace'].includes(d.key)&&nodeCategory(d)==='math'&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const isVectorOperation=d=>['vector','replace','combine','vector_split','swizzle'].includes(d?.key);
 function vectorPorts(key,params){
   const spec=typeContract?.vectors,type=params.type||'vec2';
   if(!spec?.types.includes(type))throw Error(t('vector.invalidType'));
-  if(key==='combine'||key==='vector'){
+  if(key==='vector')return {inputs:{},outputs:{out:type}};
+  if(key==='combine'||key==='replace'){
     const groups=params.groups||{},layout=spec.layouts[type].find(row=>Object.keys(row.groups).length===Object.keys(groups).length&&Object.entries(row.groups).every(([p,t])=>groups[p]===t));
     if(!layout)throw Error(t('vector.overlap'));
-    return key==='vector'?{inputs:{value:type,...layout.inputs},outputs:{out:type,...Object.fromEntries([...spec.components.slice(0,typeComponents(type))].map(p=>[p,'float']))}}:{inputs:layout.inputs,outputs:{out:type}};
+    return key==='replace'?{inputs:{value:type,...layout.inputs},outputs:{out:type}}:{inputs:layout.inputs,outputs:{out:type}};
   }
   const components=spec.components.slice(0,typeComponents(type));
   if(key==='vector_split')return {inputs:{value:type},outputs:Object.fromEntries([...components].map(p=>[p,'float']))};
   const mask=params.mask??'xy';
   if(typeof mask!=='string'||!mask.length||mask.length>4||[...mask].some(p=>!components.includes(p)))throw Error(t('vector.invalidMask'));
   return {inputs:{value:type},outputs:{out:mask.length===1?'float':'vec'+mask.length}};
+}
+// A type draft can retain groups or swizzles that no longer fit. These are
+// display ports only; strict vectorPorts still validates compiler/wire layouts.
+function draftVectorPorts(key,params){
+  const type=typeContract?.vectors?.types.includes(params.type)?params.type:'vec2',components='xyzw'.slice(0,typeComponents(type));
+  if(key==='combine'||key==='replace'){const inputs=Object.fromEntries([...components].map(p=>[p,'float']));return {inputs:key==='replace'?{value:type,...inputs}:inputs,outputs:{out:type}};}
+  if(key==='swizzle'){const count=Math.max(1,Math.min(4,String(params.mask||'xy').length));return {inputs:{value:type},outputs:{out:count===1?'float':'vec'+count}};}
+  return vectorPorts(key,{...params,type});
+}
+function displayNodePorts(d,params,decl,kind){
+  try{return resolvedNodePorts(d,params,decl,kind);}catch(error){if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,params)[kind];}
 }
 function nodeTypeVariants(d,params){
   return typeVariants(d).flatMap(v=>{try{return [{...v,...(isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
@@ -305,7 +320,7 @@ function constantRequirementIssues(document){
     for(const edge of data.edges)inputs.set(edge.to.join(':'),edge.from);
     function visit(n){
       if(values.has(n.id))return values.get(n.id);if(active.has(n.id))return {};
-      active.add(n.id);const d=autoDefinition(document,n,owner),p=concretePorts(document,n,owner),incoming={};
+      active.add(n.id);const d=autoDefinition(document,n,owner),p=safeConcretePorts(document,n,owner),incoming={};
       for(const [port,type]of Object.entries(p.inputs)){
         const source=inputs.get(n.id+':'+port),peer=source&&data.nodes.find(n=>n.id===source[0]);
         incoming[port]=peer?!!visit(peer)[source[1]]:!isResourceType(type)&&(!(d?.key==='texture'||d?.key==='texture_sample')||port!=='uv'||Object.hasOwn(n.inputValues||{},port));
@@ -315,7 +330,7 @@ function constantRequirementIssues(document){
       else if(n.definitionUuid===FunctionModel.CALL){
         const fn=document.functions?.find(f=>f.id===n.params.functionId);
         if(fn&&!stack.includes(fn.id)){seenFunctions.add(fn.id);out=unit(fn.graph,fn,incoming,[...trail,n.id],[...stack,fn.id]);}
-      }else if(d?.key==='vector'){
+      }else if(d?.key==='replace'){
         // Only the final component's effective source determines its constness.
         // A fully overridden runtime baseline must not taint a constant result.
         const components='xyzw'.slice(0,typeComponents(n.params.type)),final={};
@@ -323,7 +338,7 @@ function constantRequirementIssues(document){
           const index='xyzw'.indexOf(component),group=Object.keys(p.inputs).find(port=>port!=='value'&&inputs.has(n.id+':'+port)&&'xyzw'.indexOf(port)<=index&&'xyzw'.indexOf(port)+typeComponents(p.inputs[port])>index);
           final[component]=group?incoming[group]:inputs.has(n.id+':value')?incoming.value:true;
         }
-        out={out:Object.values(final).every(Boolean),...final};
+        out={out:Object.values(final).every(Boolean)};
       }else {
         const constant=typeContract?.constantExpressions?.includes(d?.key)&&Object.values(incoming).every(Boolean);
         out=Object.fromEntries(Object.entries(p.outputs).map(([port,type])=>[port,!!constant&&!isResourceType(type)]));
@@ -358,27 +373,30 @@ function concretePorts(document,n,owner,type=n.params.type,override=null){
   const decl=document.declarations.find(d=>d.id===n.params.declarationId),params={...n.params,type};
   return {inputs:resolvedNodePorts(d,params,decl,'inputs'),outputs:resolvedNodePorts(d,params,decl,'outputs')};
 }
+function safeConcretePorts(document,n,owner=null,type=n.params.type,override=null){
+  try{return concretePorts(document,n,owner,type,override);}catch(error){const d=autoDefinition(document,n,owner);if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,{...n.params,type});}
+}
 function invalidTypeEdges(data,portMap){
-  const vectors=new Set(data.nodes.filter(n=>['vector','combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
+  const vectors=new Set(data.nodes.filter(n=>['vector','replace','combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
   return data.edges.filter(e=>{const source=portMap.get(e.from[0])?.outputs[e.from[1]],target=portMap.get(e.to[0])?.inputs[e.to[1]];return !(vectors.has(e.to[0])?!!source&&source===target:compatible(source,target));});
 }
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
-function planAutoGraph(document,data,owner=null,overrides=new Map()){
-  const nodes=new Map(data.nodes.map(n=>[n.id,n])),incoming=new Map(),ports=new Map(),choices=new Map(),groups=new Map(),active=new Set();
+function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false}={}){
+  const nodes=new Map(data.nodes.map(n=>[n.id,n])),incoming=new Map(),ports=new Map(),choices=new Map(),groups=new Map(),issues=new Map(),active=new Set();
   for(const e of data.edges){if(!incoming.has(e.to[0]))incoming.set(e.to[0],[]);incoming.get(e.to[0]).push(e);}
   const canInfer=!owner||owner.scope==='local';
   const autoNodes=new Set(data.nodes.filter(n=>canInfer&&n.ui?.typeMode==='auto'&&supportsAutoType(autoDefinition(document,n,owner))).map(n=>n.id));
-  const combineNodes=new Set(data.nodes.filter(n=>canInfer&&['combine','vector'].includes(autoDefinition(document,n,owner)?.key)).map(n=>n.id));
+  const combineNodes=new Set(data.nodes.filter(n=>canInfer&&['combine','replace'].includes(autoDefinition(document,n,owner)?.key)).map(n=>n.id));
   function visit(n){
     if(ports.has(n.id))return;
     if(active.has(n.id))throw autoTypeError('wire.cycle');active.add(n.id);
     const links=incoming.get(n.id)||[];
     for(const e of links){const source=nodes.get(e.from[0]);if(source)visit(source);}
-    if(combineNodes.has(n.id)){
-      const isVector=autoDefinition(document,n,owner)?.key==='vector',componentLinks=isVector?links.filter(e=>e.to[1]!=='value'):links;
+    try{if(combineNodes.has(n.id)){
+      const isVector=autoDefinition(document,n,owner)?.key==='replace',componentLinks=isVector?links.filter(e=>e.to[1]!=='value'):links;
       const layout=typeContract.vectors.layouts[n.params.type]?.find(row=>componentLinks.every(e=>Object.hasOwn(row.inputs,e.to[1])&&ports.get(e.from[0])?.outputs[e.from[1]]===row.inputs[e.to[1]])&&Object.keys(row.groups).every(p=>componentLinks.some(e=>e.to[1]===p)));
       if(!layout)throw Error(t('vector.overlap'));
-      groups.set(n.id,layout.groups);ports.set(n.id,vectorPorts(isVector?'vector':'combine',{...n.params,groups:layout.groups}));
+      groups.set(n.id,layout.groups);ports.set(n.id,vectorPorts(isVector?'replace':'combine',{...n.params,groups:layout.groups}));
     }else if(autoNodes.has(n.id)){
       const d=autoDefinition(document,n,owner),candidates=nodeTypeVariants(d,n.params).filter(v=>links.every(e=>vectorConnectionExact(d,ports.get(e.from[0])?.outputs[e.from[1]],v.inputs[e.to[1]])));
       const score=v=>links.reduce((sum,e)=>sum+Number(ports.get(e.from[0])?.outputs[e.from[1]]!==v.inputs[e.to[1]]),0);
@@ -386,14 +404,15 @@ function planAutoGraph(document,data,owner=null,overrides=new Map()){
       const chosen=candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
       choices.set(n.id,chosen.type);ports.set(n.id,{inputs:chosen.inputs,outputs:chosen.outputs});
     }else ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
+    }catch(error){if(!draft)throw error;issues.set(n.id,error.message);ports.set(n.id,safeConcretePorts(document,n,owner,n.params.type,overrides.get(n.id)));}
     active.delete(n.id);
   }
   // No policy nodes: existing unresolved/cyclic drafts remain a compiler concern.
-  if(autoNodes.size||combineNodes.size)for(const n of data.nodes)visit(n);
+  if(autoNodes.size||combineNodes.size||draft)for(const n of data.nodes)visit(n);
   else for(const n of data.nodes)ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
-  return {choices,ports,groups};
+  return {choices,ports,groups,issues};
 }
-function storedTypePorts(document,data,owner=null){return new Map(data.nodes.map(n=>[n.id,concretePorts(document,n,owner)]));}
+function storedTypePorts(document,data,owner=null){return new Map(data.nodes.map(n=>[n.id,safeConcretePorts(document,n,owner)]));}
 function rejectNewTypeIssues(data,ports,oldData,oldPorts){
   const old=new Set(oldData?invalidTypeEdges(oldData,oldPorts).map(e=>typeEdgeKey(e,oldPorts)):[]);
   for(const e of invalidTypeEdges(data,ports))if(!old.has(typeEdgeKey(e,ports)))throw autoTypeError('type.autoDownstream',`${ports.get(e.from[0])?.outputs[e.from[1]]||'?'} → ${ports.get(e.to[0])?.inputs[e.to[1]]||'?'}`);
@@ -409,28 +428,32 @@ function reshapeTypedInputs(n,d,nextType){
   }
   n.params.type=nextType;
 }
-function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.ui?.typeMode]),data.edges])});}
-function resolveAutoEdit(document,previous){
+function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.inputs,n.params.outputs,n.ui?.typeMode]),data.edges])});}
+function resolveAutoEdit(document,previous,{allowInvalid=false}={}){
   if(autoTopology(document)===autoTopology(previous))return;
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
   for(const unit of autoUnits(document)){
-    const plan=planAutoGraph(document,unit.data,unit.owner),old=oldUnits.get(unit.key);
-    rejectNewTypeIssues(unit.data,plan.ports,old?.data,old?storedTypePorts(previous,old.data,old.owner):new Map());
+    const plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true}),old=oldUnits.get(unit.key);
+    if(!allowInvalid){
+      const oldPlan=old?planAutoGraph(previous,old.data,old.owner,new Map(),{draft:true}):null;
+      for(const [id,message]of plan.issues)if(oldPlan?.issues.get(id)!==message)throw Error(message);
+      rejectNewTypeIssues(unit.data,plan.ports,old?.data,old?storedTypePorts(previous,old.data,old.owner):new Map());
+    }
     plans.push({...unit,plan});
   }
   for(const {data,owner,plan}of plans)for(const n of data.nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(document,n,owner),plan.choices.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
 }
 function setMathType(n,mode){
   const d=definition(n);if(!supportsAutoType(d))return false;
-  return change(()=>{n.ui||={};if(mode==='auto')n.ui.typeMode='auto';else{if(!selectableNodeTypes(d).includes(mode))throw autoTypeError('contract.invalid');n.ui.typeMode='locked';reshapeTypedInputs(n,d,mode);}});
+  return change(()=>{n.ui||={};if(mode==='auto')n.ui.typeMode='auto';else{if(!selectableNodeTypes(d).includes(mode))throw autoTypeError('contract.invalid');n.ui.typeMode='locked';reshapeTypedInputs(n,d,mode);}},{typeChange:true});
 }
 function planWireTypes(from,to,extra=null){
   const data=current(),owner=currentFunction(),nodes=clone(extra?[...data.nodes,extra.node]:data.nodes),overrides=extra?new Map([[extra.node.id,extra.ports]]):new Map();
   const target=nodes.find(n=>n.id===to.node),oldPorts=storedTypePorts(graph,data,owner),source=nodes.find(n=>n.id===from.node);
-  const sourcePorts=source&&concretePorts(graph,source,owner,source.params.type,overrides.get(source.id));
+  const sourcePorts=source&&safeConcretePorts(graph,source,owner,source.params.type,overrides.get(source.id));
   let replaced=e=>e.to[0]===to.node&&e.to[1]===to.port;
-  if(autoDefinition(graph,target,owner)?.key==='vector'&&to.port!=='value'){
-    const targetPorts=concretePorts(graph,target,owner,target.params.type,overrides.get(target.id));
+  if(autoDefinition(graph,target,owner)?.key==='replace'&&to.port!=='value'){
+    const targetPorts=safeConcretePorts(graph,target,owner,target.params.type,overrides.get(target.id));
     const first='xyzw'.indexOf(to.port),type=sourcePorts?.outputs[from.port];
     if(first<0||!Object.hasOwn(targetPorts.inputs,to.port)||!numericTypes().includes(type)||first+typeComponents(type)>typeComponents(target.params.type))throw Error(t('vector.overlap'));
     const end=first+typeComponents(type);
@@ -444,7 +467,8 @@ function planWireTypes(from,to,extra=null){
   // All entry paths (including creator previews) validate the trial before edits.
   const pending=[to.node],seen=new Set();
   while(pending.length){const id=pending.pop();if(id===from.node){const error=autoTypeError('wire.cycle');error.code='cycle';throw error;}if(seen.has(id))continue;seen.add(id);for(const e of candidate.edges)if(e.from[0]===id)pending.push(e.to[0]);}
-  const plan=planAutoGraph(graph,candidate,owner,overrides);
+  const plan=planAutoGraph(graph,candidate,owner,overrides,{draft:true}),oldPlan=planAutoGraph(graph,data,owner,new Map(),{draft:true});
+  for(const [id,message]of plan.issues)if(oldPlan.issues.get(id)!==message)throw Error(message);
   rejectNewTypeIssues(candidate,plan.ports,data,storedTypePorts(graph,data,owner));
   for(const n of nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
   if(autoUnits(graph).some(u=>u.data.nodes.some(n=>n.params.requireConstant))){
@@ -474,7 +498,7 @@ function creatorVariants(d,wire){
 function creatorPriority(match,wire){
   if(!wire)return 99;
   const count=numericTypes().includes(wire.type)?typeComponents(wire.type):0;
-  const order=wire.kind==='outputs'?(count>1?['vector','vector_split','swizzle','combine','multiply','add','mix']:['multiply','add','vector','combine','mix']):count>1?['vector','combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','vector','add','multiply'];
+  const order=wire.kind==='outputs'?(count>1?['vector_split','replace','swizzle','combine','multiply','add','mix']:['multiply','add','replace','combine','mix']):count>1?['vector','combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','vector','add','multiply'];
   const index=order.indexOf(match.d.key);
   // Exact whole-vector matches precede scalar fallbacks across preset entries.
   return index<0?99:index+(match.d.presetType&&match.portType!==wire.type?0.5:0);
@@ -539,17 +563,17 @@ function updateVectorManualSummary(n,summary=null){
 }
 function vectorPortLabel(n,kind,port){
   const d=definition(n),names=vectorNames(n),start='xyzw'.indexOf(port);
-  if(['combine','vector'].includes(d?.key)&&kind==='inputs'&&start>=0)return names.slice(start,start+typeComponents(ports(n,kind)[port]));
-  if(['vector_split','vector'].includes(d?.key)&&kind==='outputs'&&start>=0)return names[start];
-  if(d?.key==='vector'&&(port==='value'||port==='out'))return 'Vector '+typeComponents(n.params.type);
+  if(['combine','replace'].includes(d?.key)&&kind==='inputs'&&start>=0)return names.slice(start,start+typeComponents(ports(n,kind)[port]));
+  if(['vector_split'].includes(d?.key)&&kind==='outputs'&&start>=0)return names[start];
+  if(['vector','replace'].includes(d?.key)&&(port==='value'||port==='out'))return 'Vector '+typeComponents(n.params.type);
   if(d?.key==='swizzle'&&kind==='outputs'&&port==='out')return [...n.params.mask].map(p=>names['xyzw'.indexOf(p)]).join('');
   return null;
 }
 function addVectorSplit(source,port){
   const type=ports(source,'outputs')[port];if(!typeContract?.vectors?.types.includes(type))return;
-  const existing=current().edges.find(e=>e.from[0]===source.id&&e.from[1]===port&&e.to[1]==='value'&&['vector','vector_split'].includes(definition(current().nodes.find(n=>n.id===e.to[0]))?.key));
-  if(existing){const node=current().nodes.find(n=>n.id===existing.to[0]);selectNode(node);if(definition(node)?.key==='vector')change(()=>{node.ui.componentsExpanded=true;},{localize:false});else render();return;}
-  change(()=>{const node=instantiate(catalog.find(d=>d.key==='vector')||catalog.find(d=>d.key==='vector_split'),source.ui.x+260,source.ui.y,type);
+  const existing=current().edges.find(e=>e.from[0]===source.id&&e.from[1]===port&&e.to[1]==='value'&&definition(current().nodes.find(n=>n.id===e.to[0]))?.key==='vector_split');
+  if(existing){selectNode(current().nodes.find(n=>n.id===existing.to[0]));render();return;}
+  change(()=>{const node=instantiate(catalog.find(d=>d.key==='vector_split'),source.ui.x+260,source.ui.y,type);
     node.ui.componentNames=definition(source)?.key==='color'?'rgba':definition(source)?.key==='uv'?'uv':source.ui?.componentNames||'xyzw';node.ui.componentsExpanded=true;
     commitPlannedWire({node:source.id,port},{node:node.id,port:'value'});});
 }
@@ -557,7 +581,7 @@ function clearVectorWirePreview(){document.querySelectorAll('.vector-drop-range,
 function previewVectorWire(start,button){
   clearVectorWirePreview();if(!button)return '';
   const end=portInfo(button),from=start.kind==='outputs'?start:end,to=start.kind==='inputs'?start:end,node=current().nodes.find(n=>n.id===to.node);
-  if(!['combine','vector'].includes(definition(node)?.key)||to.port==='value')return '';
+  if(!['combine','replace'].includes(definition(node)?.key)||to.port==='value')return '';
   const size=typeComponents(from.type),first='xyzw'.indexOf(to.port),range='xyzw'.slice(first,first+size);
   const targetCard=document.querySelector(`#cards [data-node="${CSS.escape(to.node)}"]`);
   for(const row of targetCard?.querySelectorAll('.port-row.input')||[])if(range.includes(row.querySelector('.port')?.dataset.port))row.classList.add('vector-drop-range');
@@ -672,59 +696,46 @@ function renderCards(){
     n.ui||={x:0,y:0};const d=definition(n),card=el('article',{class:'node'+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=n.ui.x+'px';card.style.top=n.ui.y+'px';
     const title=el('div',{class:'node-title'}),text=el('div',{class:'node-title-text'});
-    const displayName=nodeTypeLabel(d,n.params);
+    const displayName=nodeDisplayName(n);
     const name=el('span',{class:d?.key==='function_call'?'node-function-name':'node-function-title'},displayName);
     name.title=displayName;
     if(d?.key==='function_call'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true),local=FunctionModel.find(graph,n.params.functionId)?.scope==='local';icon.classList.toggle('source-subgraph',!local);text.append(icon);text.title=t(local?'function.local':'function.source');}
     text.append(name);title.append(text);
-    if(nodeLabel(n)){
-      const alias=el('span',{class:'node-alias'},nodeLabel(n));alias.title=nodeLabel(n);title.append(alias);
-      alias.onpointerdown=e=>{if(e.button!==0)return;e.stopPropagation();selectNode(n);inspector();};
-      alias.ondblclick=e=>{e.preventDefault();e.stopPropagation();focusNodeLabel(n);};
-    }
+    if(customNodeNamesEnabled()&&!isSourceReferenceNode(n)){name.onpointerdown=e=>e.stopPropagation();name.ondblclick=e=>{e.preventDefault();e.stopPropagation();beginNodeRename(n,name);};}
+    const meta=el('div',{class:'node-title-meta'}),source=nodeSourceDeclaration(n),quick=source?null:nodePrimarySelector(n,d);
+    if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=label+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
+    else if(customNodeNamesEnabled()&&n.name){const prototype=d?.key==='vector'?'Vector':d?.label||'';meta.append(el('small',{class:'node-prototype',title:prototype},prototype));}
+    if(quick)meta.append(quick);if(meta.childNodes.length)title.append(meta);
+    if(d?.key==='uv')text.append(el('small',{class:'node-source-subtitle'},'vUV.st'));
     let suppressCardClick=false;
     card.dataset.dragSurface=EDITOR_DEV_SETTINGS.nodeBodyDrag?'body':'header';
     card.onpointerdown=e=>{if(isNodeDragSurface(e.target,card))dragNodeTitle(e,n,card,cards,moved=>{suppressCardClick=moved;});};
     card.append(title);const list=el('div',{class:'ports'});
-    const portRow=(kind,name)=>{
-      const className=kind==='inputs'?'input':'output',type=ports(n,kind)[name];
-      const label=portLabel(n,kind,name),row=el('div',{class:'port-row '+className}),b=el('button',{class:'port',title:`${displayName} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
+    const portRow=(kind,name,missing=false)=>{
+      const className=kind==='inputs'?'input':'output',type=ports(n,kind)[name]||'?';
+      const label=missing?name:portLabel(n,kind,name),row=el('div',{class:'port-row '+className+(missing?' missing-port':'')}),b=el('button',{class:'port',title:`${displayName} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
-      applyPortColorHint(row,n,kind,name);
-      if(d?.key==='vector'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
-      b.onpointerdown=e=>dragWire(b,e);
+      if(!missing)applyPortColorHint(row,n,kind,name);
+      if(d?.key==='replace'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
+      b.disabled=missing;if(missing){b.setAttribute('aria-label',label+' · '+t('type.incompatible'));row.title=t('type.incompatible');}
+      b.onpointerdown=e=>{if(!missing)dragWire(b,e);};
       b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
-      row.append(b,el('span',{class:'port-label',title:label},label),portTypeCaption(n,kind,name));
-      if(kind==='inputs'&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
-      if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&!['vector','vector_split'].includes(d?.key)){
+      row.append(b,el('span',{class:'port-label',title:label},label),missing?el('small',{},'?'):portTypeCaption(n,kind,name));
+      if(!missing&&kind==='inputs'&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
+      if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&d?.key!=='vector_split'){
         const split=el('button',{class:'vector-split-shortcut',type:'button',title:t('vector.splitShortcut'),'aria-label':t('vector.splitShortcut')+' · '+label});
         const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 16 16');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d','M2 8h5M7 3v10M7 3h6M7 13h6');icon.append(path);split.append(icon);
         split.disabled=readonly;split.onpointerdown=e=>e.stopPropagation();split.onclick=e=>{e.stopPropagation();addVectorSplit(n,name);};split.ondblclick=e=>e.stopPropagation();row.append(split);
       }
       return row;
     };
-    if(d?.key==='vector'){
-      card.classList.add('node-vector');
-      const pair=(input,output)=>{
-        const row=el('div',{class:'vector-port-pair'});
-        row.append(input?portRow('inputs',input):el('div',{class:'vector-port-empty'}),portRow('outputs',output));
-        list.append(row);
-      };
-      pair('value','out');
-      const expanded=n.ui.componentsExpanded===true,inputs=ports(n,'inputs');
-      const connected=new Set(current().edges.flatMap(e=>[...(e.to[0]===n.id?[e.to[1]]:[]),...(e.from[0]===n.id?[e.from[1]]:[])]));
-      const toggle=el('button',{class:'vector-components-toggle',type:'button','data-vector-expand':n.id,'aria-expanded':String(expanded),title:t('vector.componentsHint')});
-      toggle.append(el('span',{'aria-hidden':'true'},expanded?'▾':'▸'),document.createTextNode(t('vector.components')));
-      if(!expanded){const summary=updateVectorManualSummary(n);if(summary)toggle.append(summary);}
-      toggle.disabled=readonly;toggle.onpointerdown=e=>e.stopPropagation();toggle.ondblclick=e=>e.stopPropagation();
-      toggle.onclick=e=>{e.stopPropagation();if(change(()=>{n.ui.componentsExpanded=!expanded;},{localize:false}))document.querySelector(`[data-vector-expand="${CSS.escape(n.id)}"]`)?.focus({preventScroll:true});};
-      list.append(toggle);
-      for(const component of 'xyzw'.slice(0,typeComponents(n.params.type))){
-        if(expanded||connected.has(component))pair(Object.hasOwn(inputs,component)?component:null,component);
-      }
-    }else for(const kind of ['inputs','outputs'])for(const name of Object.keys(ports(n,kind)))list.append(portRow(kind,name));
+    for(const kind of ['inputs','outputs']){
+      const known=ports(n,kind);for(const name of Object.keys(known))list.append(portRow(kind,name));
+      const side=kind==='inputs'?'to':'from',missing=new Set(current().edges.filter(e=>e[side][0]===n.id&&!Object.hasOwn(known,e[side][1])).map(e=>e[side][1]));
+      for(const name of missing)list.append(portRow(kind,name,true));
+    }
     appendSparePort(list,n);card.append(list);
-    if(n.params?.value!==undefined){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
+    if(n.params?.value!==undefined||d?.key==='vector'){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
     if(d?.key==='color'&&Array.isArray(n.params.value))card.append(nodeColorPicker(n));
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
     if(nodeComment(n))card.append(nodeCanvasComment(n));
@@ -746,7 +757,7 @@ function browserMeta(d){
   const f=d.definitionUuid===FunctionModel.CALL?(d.source||FunctionModel.find(graph,d.functionId)):null;
   const authored=f?(f.browser||browserData().functions[f.source?.id]||browserData().functions[f.origin?.id]):browserData().nodes[d.definitionUuid];
   const stringList=value=>Array.isArray(value)?value.filter(x=>typeof x==='string'):[];
-  const raw=authored||{},known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
+  const raw=authored||(d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
   const source=f?(f.scope==='local'?'project':f.scope==='personal'?'personal':'editor'):(raw.source||'editor');
   const path=stringList(raw.categoryPath);
   const aliases=stringList(raw.aliases).filter(alias=>!d.presetType||!/^vec(?:tor)?\s*[234]$/i.test(alias)||alias.replace(/tor|\s/gi,'').toLowerCase()===d.presetType);
@@ -907,12 +918,12 @@ function openCreator(clientX,clientY,wire=null){
 function renderCreator(){
   if(!creatorState)return;const query=$('#createsearch').value.toLowerCase(),category=creatorCategory,typeFilter=$('#createtype').value,wire=creatorState.wire;
   creatorMatches=[];
-  const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
+  const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant','spec_constant'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
   for(const preset of Object.keys(inputPresets)){
     const base=catalog.find(d=>d.key==='uniform');if(!base)continue;
     const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:creatorMeta(d)});
   }
-  for(const decl of allInputSources().filter(d=>['uniform','sampler','constant','top_input'].includes(d.kind)&&!d.sourceMissing)){
+  for(const decl of allInputSources().filter(d=>['uniform','sampler','constant','spec_constant','top_input'].includes(d.kind)&&!d.sourceMissing)){
     const base=catalog.find(d=>d.key===decl.kind);if(!base?.stages.includes(stage))continue;
     const d={...base,key:'input:'+decl.id,label:decl.name,inputSourceId:decl.id,inputKind:decl.kind,inputType:decl.type};entries.push({d,meta:creatorMeta(d)});
   }
@@ -962,7 +973,7 @@ function duplicateSelection(){
   const ids=new Set(selection),nodes=current().nodes.filter(n=>ids.has(n.id)&&canDeleteNode(n));if(!nodes.length)return;
   change(()=>{const remap=new Map(nodes.map(n=>[n.id,'n'+crypto.randomUUID().replaceAll('-','').slice(0,12)]));
     const edges=current().edges.filter(e=>remap.has(e.from[0])&&remap.has(e.to[0])).map(e=>({from:[remap.get(e.from[0]),e.from[1]],to:[remap.get(e.to[0]),e.to[1]]}));
-    for(const n of nodes){const duplicate=clone(n);duplicate.id=remap.get(n.id);duplicate.ui={...clone(n.ui),x:n.ui.x+48,y:n.ui.y+48};current().nodes.push(duplicate);}current().edges.push(...edges);selection=new Set(remap.values());selected=[...selection].at(-1);selectedEdge=null;
+    for(const n of nodes){const duplicate=clone(n);duplicate.id=remap.get(n.id);duplicate.ui={...clone(n.ui),x:n.ui.x+48,y:n.ui.y+48};current().nodes.push(duplicate);assignCreatedNodeNames([duplicate]);}current().edges.push(...edges);selection=new Set(remap.values());selected=[...selection].at(-1);selectedEdge=null;
   });
 }
 function installGraphInteractions(){
@@ -1104,7 +1115,7 @@ function installTouchNavigation(canvas){
     lastTap=double?null:{key,time:now,x:p.x,y:p.y};
     if(g.node){
       selectNode(g.node);syncSelection();inspector();renderNavigation();
-      if(double){if(g.alias)focusNodeLabel(g.node);else if(definition(g.node)?.key==='function_call')enterFunction(g.node);}
+      if(double){if(g.rename){const label=$('#cards').querySelector('[data-node="'+g.node.id+'"] .node-title-text>span');if(label)beginNodeRename(g.node,label);}else if(definition(g.node)?.key==='function_call')enterFunction(g.node);}
     }else if(g.edge>=0)selectEdge(g.edge);
     else if(double||linkStart){const start=linkStart;lastTap=null;if(start)finishWireOnBlank(start,p.x,p.y);else openCreator(p.x,p.y);}
     else {selected=selectedEdge=null;selection.clear();syncSelection();inspector();renderNavigation();}
@@ -1114,7 +1125,7 @@ function installTouchNavigation(canvas){
     if(!points.size){
       clearWireGesture();closeCreator();closeGraphMenu();canvas.focus({preventScroll:true});
       const button=touchPort(e.clientX,e.clientY),card=(button||e.target).closest('.node'),node=card&&current().nodes.find(n=>n.id===card.dataset.node);
-      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,canDragNode:!!card&&isNodeDragSurface(e.target,card),port:button?portInfo(button):null,alias:!!e.target.closest('.node-alias'),edge:edgeIndex(e.target.closest('#wires path[data-from]')),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
+      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,canDragNode:!!card&&isNodeDragSurface(e.target,card),port:button?portInfo(button):null,rename:customNodeNamesEnabled()&&!isSourceReferenceNode(node)&&!!e.target.closest('.node-function-title,.node-function-name'),edge:edgeIndex(e.target.closest('#wires path[data-from]')),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
       touchGraphGesture={cancel};
       if(!button)holdTimer=setTimeout(()=>{holdTimer=0;if(gesture&&!gesture.moved&&points.size===1)openMenu(gesture,sample());},holdDelay);
     }
@@ -1206,7 +1217,7 @@ function pasteGraphSelection(text,position=null){
   if(readonly||!graph)return false;
   let payload;try{payload=GraphClipboard.decode(text);}catch(e){status(t(e.clipboardCode||'clipboard.invalid'),true);return false;}
   const canvas=$('#canvas').getBoundingClientRect(),anchor=position||pastePoint||{x:(canvas.width/2-pan.x)/scale,y:(canvas.height/3-pan.y)/scale};
-  const changed=change(()=>{let ids;try{ids=GraphClipboard.paste(graph,current(),payload,{source:clipboardSource,stage,target:editorTarget,catalog,types:interfaceTypes(),anchor:{x:snap(anchor.x+pasteCount*24),y:snap(anchor.y+pasteCount*24)}});}catch(e){if(e.clipboardCode)e.message=t(e.clipboardCode);throw e;}selection=new Set(ids);selected=ids.at(-1);selectedEdge=null;});
+  const changed=change(()=>{let ids;try{ids=GraphClipboard.paste(graph,current(),payload,{source:clipboardSource,stage,target:editorTarget,catalog,types:interfaceTypes(),anchor:{x:snap(anchor.x+pasteCount*24),y:snap(anchor.y+pasteCount*24)}});}catch(e){if(e.clipboardCode)e.message=t(e.clipboardCode);throw e;}assignCreatedNodeNames(current().nodes.filter(n=>ids.includes(n.id)));selection=new Set(ids);selected=ids.at(-1);selectedEdge=null;});
   if(changed){pasteCount++;status(t('clipboard.pasted'));$('#canvas').focus({preventScroll:true});}return changed;
 }
 function closeGraphMenu(){graphEditMenu?.remove();graphEditMenu=null;}
@@ -1242,7 +1253,7 @@ function installGraphClipboard(){
 }
 
 function creatorMeta(d){
-  if(d.key==='constant'||d.inputKind==='constant'||d.key==='top_input'||d.inputKind==='top_input'){const branch=(d.inputKind||d.key)==='constant'?'constants':'topInputs';return {...browserMeta(d),category:'inputs',path:['inputs',branch],secondary:[],descriptionKey:'help.'+(d.inputKind||d.key)};}
+  if(['constant','spec_constant','top_input'].includes(d.inputKind||d.key)){const branch=({constant:'constants',spec_constant:'specConstants',top_input:'topInputs'})[d.inputKind||d.key];return {...browserMeta(d),category:'inputs',path:['inputs',branch],secondary:[],descriptionKey:'help.'+(d.inputKind||d.key)};}
   const meta=browserMeta(d),kind=inputSourceKind(d);
   return kind?{...meta,category:'inputs',path:['inputs',kind==='uniform'?'uniforms':'samplers'],secondary:[]}:meta;
 }

@@ -106,16 +106,18 @@ const GraphClipboard=(()=>{
     for(const [key,d]of sourceDeclarations){
       if(graph.topSourceVersion===1&&d.kind==='sampler')fail('clipboard.stage');
       if(same&&graph.declarations.some(x=>x.id===key)){declarationMap.set(key,key);continue;}
-      if(!['uniform','sampler','constant'].includes(d.kind)||!types.includes(d.type)&&d.type!=='sampler2D'||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
+      if(!['uniform','sampler','constant','spec_constant'].includes(d.kind)||!types.includes(d.type)&&d.type!=='sampler2D'&&!(['int','uint','bool'].includes(d.type)&&d.kind==='spec_constant')||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
       const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
       if(['uniform','constant'].includes(d.kind)){const count=d.type==='float'?1:Number(d.type.slice(-1));if(count===1?!number(d.value):!Array.isArray(d.value)||d.value.length!==count||!d.value.every(number))fail('clipboard.invalid');}
+      if(d.kind==='spec_constant'&&(!['int','uint','bool','float'].includes(d.type)||!Number.isInteger(d.constantId)||d.constantId<0||(d.type==='bool'?typeof d.value!=='boolean':!number(d.value)||(d.type!=='float'&&(!Number.isInteger(d.value)||d.value<(d.type==='uint'?0:-2147483648)||d.value>(d.type==='uint'?4294967295:2147483647))))))fail('clipboard.invalid');
       if(d.kind==='sampler'&&(!source(d.source)||d.defaultSource!==undefined&&!source(d.defaultSource)))fail('clipboard.invalid');
       const next=copy(d);next.id=id();let name=d.name,index=1;while(names.has(name))name=d.name.slice(0,36)+'_copy'+index++;next.name=name;names.add(name);
       if(next.kind==='sampler'&&next.source==='input:0'){
         if(target!=='top'){next.source=next.defaultSource||'builtin:banana';delete next.defaultSource;}
         else{const existing=[...graph.declarations,...newDeclarations].find(d=>d.kind==='sampler'&&d.source==='input:0');if(existing)for(const field of ['defaultSource','expose','exposeName']){delete next[field];if(Object.hasOwn(existing,field))next[field]=copy(existing[field]);}}
       }
+      if(next.kind==='spec_constant'){const ids=new Set([...graph.declarations,...newDeclarations].filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;next.constantId=constantId;}
       declarationMap.set(key,next.id);newDeclarations.push(next);
     }
     for(const [key,f]of sourceFunctions){
@@ -158,7 +160,7 @@ const GraphClipboard=(()=>{
 
 /* Source placement is an editing policy, separate from Function expansion. */
 const SubgraphSourcePolicy=(()=>{
-  const outside=new Set(['uniform','sampler','constant','top_input','attribute','attributes','buffer']);
+  const outside=new Set(['uniform','sampler','constant','spec_constant','top_input','attribute','attributes','buffer']);
   function isSource(node,catalog){return outside.has(catalog.find(d=>d.definitionUuid===node.definitionUuid)?.key);}
   function inputName(document,node,port,fallback){
     const source=document.declarations.find(d=>d.id===node?.params?.declarationId);

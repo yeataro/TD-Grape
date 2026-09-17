@@ -6,17 +6,17 @@ const element=()=>({textContent:'',title:'',disabled:false,hidden:false,addEvent
 const context=vm.createContext({assert,console,crypto:globalThis.crypto,location:{pathname:'/',hash:''},history:{replaceState(){}},
   document:{querySelector(s){if(!elements.has(s))elements.set(s,element());return elements.get(s);},querySelectorAll(){return [];}},
   sessionStorage:{getItem(){return '';},setItem(){},removeItem(){}},setTimeout(){return 1;},clearTimeout(){}});
-for(const name of ['functions_model.js','functions_ui.js','graph_ui.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
+for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');
 vm.runInContext(app.slice(0,app.indexOf("$('#canvas').addEventListener('dragover'")),context);
 vm.runInContext(`
 (async()=>{
-render=()=>{};preview=async()=>{};refreshUniforms=()=>{};
+render=()=>{};preview=async()=>{};refreshUniforms=()=>{};renderNativeSourceValues=()=>{};
 const fixture={schemaVersion:1,target:'top',declarations:[],functions:[{id:'f',graph:{nodes:[{id:'inner',params:{value:1},ui:{x:0,y:0}}],edges:[]}}],
   stages:{pixel:{nodes:[{id:'value',params:{value:1},ui:{x:0,y:0}}],edges:[]}}};
 const setup=()=>{graph=clone(fixture);revision=41;dirty=false;readonly=false;submitBusy=false;conflicted=false;connectionInterrupted=false;applyNeedsReview=false;
-  editVersion=0;graphTrail=[];past=[];future=[];nativeInputHistory=[];rememberSavedGraph(graph);renderGraphSaveState();};
-const move=()=>{checkpoint();graph.stages.pixel.nodes[0].ui.x+=24;mark();};
+  editVersion=0;graphTrail=[];past=[];future=[];historyNativeToken=null;historyBusy=false;nativeMutationBusy=false;applyInFlight=null;rememberSavedGraph(graph);renderGraphSaveState();};
+const move=()=>{const before=clone(graph);graph.stages.pixel.nodes[0].ui.x+=24;recordGraphHistory(before);mark();};
 let respond;
 api=(route,body)=>{assert.equal(route,'apply');return new Promise(resolve=>{respond=(shaderUpdated=false)=>resolve({state:{graph:body.graph,revision:body.revision+1},shaderUpdated,target:'/test/shader'});});};
 const check=(badge,message)=>{assert.equal($('#dirty').textContent,badge);if(message)assert.equal($('#status').textContent,message);};
@@ -24,8 +24,8 @@ setup();check('graph.saved');move();check('graph.savePending');
 let pending=applyGraph();check('graph.savePending','graph.saving');respond();await pending;
 check('graph.saved','graph.saved');assert.equal(revision,42);assert.equal(dirty,false);
 assert.ok($('#dirty').title.endsWith('42'),'revision stays available in the tooltip');
-undo();check('graph.savePending');pending=applyGraph();respond();await pending;check('graph.saved');
-undo(true);check('graph.savePending');pending=applyGraph();respond();await pending;check('graph.saved');
+await undo();check('graph.savePending');pending=applyGraph();respond();await pending;check('graph.saved');
+await undo(true);check('graph.savePending');pending=applyGraph();respond();await pending;check('graph.saved');
 // A movement cannot downgrade an outstanding parameter or wire edit.
 setup();graph.stages.pixel.nodes[0].params.value=2;mark();move();check('graph.pending');
 pending=applyGraph();check('graph.pending','material.compiling');respond(true);await pending;check('graph.applied','material.applied');

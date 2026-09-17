@@ -1,5 +1,23 @@
 # 測試
 
+2026-09-17 節點工作流程（0.8.84）：完整可攜檢查通過，包括 256 項 Python 核心／來源／歷史測試、487 個雙語語系鍵、browser metadata、品牌資產、14 項 Editor Launch，以及 JavaScript 編輯／匯入模型與 26 項 Remote Panel 檢查。舊 UI fixture 已配合本輪共用來源與節點介面修訂。新增名稱檢查包含 GLSL 保留字／重複名稱拒絕、重複 Subgraph 展開與多輸出符號分配；Vector／Replace 檢查保留既有基本節點產碼指紋。
+
+隔離 Chromium 的 `test_node_round.cjs` 已通過 Vector 2／3／4 直接新增、手填／展開、Split 快捷、Replace 排版、自訂名稱只改顯示、原地改名與 IME／取消／重複、複製唯一名称、標題快捷、Graph／Spec 來源及 TD Built In 等 15 組基本檢查；無頁面錯誤。`test_editor_chrome.cjs` 10 組通過。另驗證合併工具列的 1600／900／750／390px 組內不拆及無頁面溢出，以及淺色浮動工具列的透明背景與空白穿透；畫布命令仍可操作。實體 iPad／Safari 尚未回驗。
+
+`test_type_drafts.cjs` 另有 15 組通過、無頁面錯誤：Header／Parameter 的新型別與原接線保留、Auto 推導、移動／數值編輯、Undo／Redo、缺失接孔與虛線、Swizzle 修復、分組越界、MRT buffer 縮小、間接常數失效，以及新接線／直接 Require Constant 的嚴格檢查。套用回覆使用 TD 實測的當前版本 blocked／無 changes 形態，compile 與 repair-only 回覆均保留可編輯草稿，不進版本升級；後者顯示具體缺口，截圖已目視。
+
+原生 TD 2025.32820 的 `test_unified_vector.py` 通過 53 項檢查：TOP／MAT 實際像素、連續分組、基底覆寫、獨立 Split、斷線恢復、常數陣列界限及可讀名稱，以及各自的固定型別衝突／缺失 Z 接孔草稿。無效草稿拒絕套用後，成功像素、原生來源身分／列、OP path／id、圖、revision、GLSL 均保留，修正後能再套用。既有 `test_input_history.py` 21 組與 Master 模板檢查通過；測試元件於結束清除，使用者 Shader 保留。本輪最終同步／保存另記於下方交付記錄。
+
+2026-09-17 Spec Constants：`test_spec_constants.py` 最終 19 項核心／來源歷史測試通過，涵蓋四種純量產碼、固定 `constant_id`、非法型別／ID／數值拒絕、特化與一般常數表達式邊界、原生改名／重排保留宣告、bool 預設與 signed int 邊界、跨原生種類誤綁拒絕、值／刪除 Undo、TD 整數輸送限制及拒絕寫入時原狀保留。最終修改後與既有 `test_history.py` 22 項合計 41 項定向檢查通過；`test_sources.py` 16 項已於完整可攜檢查通過。`test_spec_import.js` 確認既有 Spec 宣告 ID／constantId 保留、匯入新來源 ID 衝突重新配置、stage／function 引用對應、跨來源種類衝突及過期來源快照拒絕。
+
+`tests/td/test_spec_constants.py` 在 TD 2025.32820 全新 TOP／MAT fixture 通過 18 組：同一原生 Par 的值 Undo／Redo、int／uint／bool／float 編譯與目前值、改名、引用中刪除後缺失／恢復、建立與刪除的來源 ID 及 `constant_id`，以及不支援整數寫入／預設的拒絕與原狀保留、精確大整數 `2^30` 可用、外部錯值提示與修復。新增 float 目前值 `.75` → int 失敗 → float 成功 → Undo 回 int 草稿／Redo 的案例；原生 Par、目前值與成功 GLSL 不被草稿覆蓋。只有型別／預設 metadata 且無任何原生寫入的步驟適用，非法值回放、混合寫入及身分改動仍拒絕。fixture 測後清除，既有使用者 Shader 保留。另以原生 GLSL＋GPU readback 探針確認 TOP／MAT 四種純量均接受 Constants 頁的兩次一般值覆寫；`const0value` 的原生 Par style 是 Float，宣告型別由 GLSL 決定，整數邊界限制如下。
+
+執行：`python tools/dev/submit_job.py tests/td/test_spec_constants.py --report spec-constants --timeout 60`。原生值更新不改寫 Shader 文字。
+
+0.8.84 最終交付：25 份內嵌來源及服務資產與磁碟一致；兩份 Master 均為 0.8.84，圖已編譯且不需升級。僅依使用者本輪例外移除開發測試 TOP 中的一顆舊統合 Vector 及相關接線，先保留私人備份，其他節點與另一份 MAT 保持；最後更新／保存前後再次確認兩份 Shader 保留。正式 `src/td/TD-Grape-dev.toe` 已保存為 685,276 bytes，排除私人開發橋接。
+
+額外 fresh OP＋GPU 位元 readback 與跨幀探針確認 TD 2025.32820 限制：TOP／MAT 的 native int `-1` 成為 GPU `0`；MAT `16777217` 成為 `16777216`、int 最大值成為最小值、uint 最大值成為 `0`。TOP 的正 int／uint 邊界精確，兩者 float `-0.5` 正常。另在建立與讀回相隔 1005 幀後確認 TOP `-1`、MAT `16777217` 仍錯誤，排除同幀快取。來源限制依此實測加入；可接受的整數仍依型別範圍及 MAT float32 exact 判斷，沒有一律限制在 `2^24`。
+
 2026-09-17 共同 Undo／Redo（0.8.83）：`test_history.py` 22 項與既有 `test_sources.py` 16 項通過。涵蓋固定操作差異與目前狀態分離、原生列結構回復／失敗回滾、過期／跨 Shader token、同名重建 Par 的固定 index、owned Bind、Sampler TOP 身分，以及無效草稿不損壞權威 state。`test_input_removal.cjs` 7 組與更新後 `test_native_sources.cjs` 13 組通過；來源刪除改記錄為可撤回的一步，新增來源在 Apply 後也能連同該次引用一起撤回。
 
 `test_input_history.cjs` 在隔離 Chromium 通過混合圖／Inputs 順序、取消／同值保留 Redo、刪除／恢復、合併 Apply 的逐步回放、同来源中間改名／型別、失敗不移動游標、外部未觸分量保留，以及延遲 Apply 等待／Reload 後舊回應隔離。`test_input_history.py` 在全新、測後清除的 TD 2025.32820 TOP／MAT 組件通過 21 組：值與原 Par 身分、同來源外改 Z、其他來源外改、衝突拒絕、刪除還原順序／隱藏分量、Expression 動態結果不產生歷史、Bind 主控值與綁定恢復、同名重建主控拒絕、批次新增 A/B、請求重試去重、批次新增／改名中間態，以及 Sampler 路徑還原／同路徑新 TOP 拒絕。使用者的兩份 Shader 保存內容保持一致，未使用全域 TD Undo 回放。
