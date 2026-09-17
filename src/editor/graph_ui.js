@@ -1264,7 +1264,7 @@ function installTouchNavigation(canvas){
   const points=new Map(),slop=8,holdDelay=550,doubleDelay=320;
   let gesture=null,frame=0,holdTimer=0,lastTap=null,lastTouch=-Infinity,lastDevice='mouse';
   const stop=e=>{if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();};
-  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values');
+  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview');
   const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
   const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
   const rebase=()=>{const p=sample();gesture.origin={...p,point:graphPoint(p.x,p.y),pan:{...pan},scale};};
@@ -1402,7 +1402,7 @@ function installTouchNavigation(canvas){
 
 let editorClipboard=null,graphEditMenu=null,pastePoint=null,pasteCount=0;
 let clipboardSource=null;
-const editableText=target=>target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.library,.details,#creator');
+const editableText=target=>target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.library,.details,#creator,.comment-node-preview');
 function clipboardSelection(){return current().nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)).map(n=>n.id);}
 function copyGraphSelection(){const text=GraphClipboard.encode(graph,current(),clipboardSelection(),clipboardSource);if(text){editorClipboard=text;pasteCount=0;renderGraphEditActions();}return text;}
 

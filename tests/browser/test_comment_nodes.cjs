@@ -1,4 +1,4 @@
-/* Plain-text Comment node, tested through the isolated API harness. */
+/* Comment lifecycle and portable graph behavior, using the isolated API harness. */
 const assert=require('node:assert/strict');
 const {harness}=require('./test_glsl_code.cjs');
 const [source,stateFile,folder]=process.argv.slice(2);
@@ -16,26 +16,26 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.locator('#createsearch').fill('註解');
     assert.equal(await page.locator('[data-create-entry="comment"]').count(),1);
     await page.locator('[data-create-entry="comment"]').click();await settle();
-    const id=await page.evaluate(()=>selected),node=()=>page.locator(`[data-node="${id}"]`),body=()=>node().locator('[data-comment-node]'),parameter=()=>page.locator('#inspector [data-comment-node]');
+    const id=await page.evaluate(()=>selected),node=()=>page.locator(`[data-node="${id}"]`),body=()=>node().locator('[data-comment-node]'),parameter=()=>page.locator('#inspector [data-comment-node]'),preview=()=>node().locator('.comment-node-preview'),parameterPreview=()=>page.locator('#inspector .comment-node-preview');
     assert.equal(await node().getAttribute('data-category'),'annotation');assert.equal(await node().locator('.port').count(),0);
     assert.equal(await body().count(),1);assert.equal(await parameter().count(),1);assert.equal(await page.evaluate(()=>past.length),1);
     checks.push('Comment is searchable by its translated alias, created as a neutral card with no ports, and editable on both surfaces');
 
     const text='First line\n<img src=x onerror=alert(1)>\n**plain text**';
-    await body().fill(text);assert.equal(await page.evaluate(()=>nodeComment(current().nodes.find(n=>n.id===selected))),'');
+    await preview().dblclick();await body().fill(text);assert.equal(await page.evaluate(()=>nodeComment(current().nodes.find(n=>n.id===selected))),'');
     await body().press('Control+Enter');await settle();
-    assert.equal(await body().inputValue(),text);assert.equal(await parameter().inputValue(),text);assert.equal(await node().locator('img').count(),0);assert.equal(await page.evaluate(()=>past.length),2);
+    assert.equal(await body().inputValue(),text);assert.equal(await parameter().inputValue(),text);assert.equal(await node().locator('img').count(),0);assert.equal(await preview().locator('strong').innerText(),'plain text');assert.equal(await body().isVisible(),false);assert.equal(await page.evaluate(()=>past.length),2);
     await page.locator('#undo').click();assert.equal(await body().inputValue(),'');await page.locator('#redo').click();assert.equal(await body().inputValue(),text);
-    checks.push('Multiline and HTML-looking text remain plain text; one edit synchronizes both surfaces with one Undo/Redo');
+    checks.push('Markdown reads as formatted content while HTML-looking text stays inert; one edit synchronizes both surfaces with one Undo/Redo');
 
-    await body().fill('Canvas draft');await page.evaluate(()=>render());
+    await preview().dblclick();await body().fill('Canvas draft');await page.evaluate(()=>render());
     assert.equal(await body().inputValue(),'Canvas draft');assert.equal(await body().evaluate(e=>e===document.activeElement),true);
     assert.equal(await parameter().inputValue(),text);await body().press('Escape');assert.equal(await body().inputValue(),text);assert.equal(await parameter().inputValue(),text);
     checks.push('A canvas draft keeps focus through a full redraw and does not leak into the other editor when cancelled');
 
-    await parameter().fill('Draft survives a redraw');await page.evaluate(()=>inspector());assert.equal(await parameter().inputValue(),'Draft survives a redraw');
+    await parameterPreview().dblclick();await parameter().fill('Draft survives a redraw');await page.evaluate(()=>inspector());assert.equal(await parameter().inputValue(),'Draft survives a redraw');
     await parameter().press('Escape');assert.equal(await parameter().inputValue(),text);
-    await parameter().fill('Parameter update');await parameter().press('Control+Enter');assert.equal(await body().inputValue(),'Parameter update');
+    await parameterPreview().dblclick();await parameter().fill('Parameter update');await parameter().press('Control+Enter');assert.equal(await body().inputValue(),'Parameter update');
     checks.push('Parameter drafts survive rebuilding the inspector; Escape discards only the draft, and committing updates the canvas');
 
     const before=await page.evaluate(id=>({...current().nodes.find(n=>n.id===id).ui}),id),start=await at(`[data-node="${id}"] .node-title`);
@@ -74,6 +74,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
 
     await page.evaluate(id=>{selectNode(current().nodes.find(n=>n.id===id));readonly=true;render();},id);
     assert.equal(await body().getAttribute('readonly'),'');assert.equal(await parameter().getAttribute('readonly'),'');
+    await preview().dblclick();assert.equal(await body().isVisible(),false);assert.equal(await preview().isVisible(),true);
     await page.screenshot({path:require('node:path').join(folder,'comment-node.png')});
     assert.deepEqual(errors,[]);checks.push('Read-only state disables both text editors; no browser errors');
     await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));

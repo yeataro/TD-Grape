@@ -436,14 +436,14 @@ body.resizing-sidebar,body.resizing-sidebar *{cursor:col-resize!important;user-s
 /* GLSL display palette: source text and compilation are unaffected. */
 :root{--glsl-text:#ded8ee;--glsl-comment:#9d99ad;--glsl-keyword:#c5a5f3;--glsl-type:#8dd9c5;--glsl-number:#efc58e;--glsl-function:#9dcbf5;--glsl-directive:#e5aad0;--glsl-string:#d6cb97;--glsl-builtin:#b5c5fc}
 #sourcecode{color:var(--glsl-text);font-family:Consolas,'Courier New',monospace;tab-size:4;white-space:pre;user-select:text}
-#sourcecode .glsl-comment{color:var(--glsl-comment)}
-#sourcecode .glsl-keyword{color:var(--glsl-keyword)}
-#sourcecode .glsl-type{color:var(--glsl-type)}
-#sourcecode .glsl-number{color:var(--glsl-number)}
-#sourcecode .glsl-function{color:var(--glsl-function)}
-#sourcecode .glsl-directive{color:var(--glsl-directive)}
-#sourcecode .glsl-string{color:var(--glsl-string)}
-#sourcecode .glsl-builtin{color:var(--glsl-builtin)}
+:is(#sourcecode,.comment-markdown) .glsl-comment{color:var(--glsl-comment)}
+:is(#sourcecode,.comment-markdown) .glsl-keyword{color:var(--glsl-keyword)}
+:is(#sourcecode,.comment-markdown) .glsl-type{color:var(--glsl-type)}
+:is(#sourcecode,.comment-markdown) .glsl-number{color:var(--glsl-number)}
+:is(#sourcecode,.comment-markdown) .glsl-function{color:var(--glsl-function)}
+:is(#sourcecode,.comment-markdown) .glsl-directive{color:var(--glsl-directive)}
+:is(#sourcecode,.comment-markdown) .glsl-string{color:var(--glsl-string)}
+:is(#sourcecode,.comment-markdown) .glsl-builtin{color:var(--glsl-builtin)}
 
 /* Horizontal pane dividers; open bodies share the remaining sidebar height. */
 :root{--panel-divider-size:6px;--panel-body-min:80px;--panel-divider-bg:#191820;--panel-divider-grip:#625a70}
@@ -663,17 +663,32 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* Canvas notes are plain text, with the same color for every category. */
 .node-canvas-comment{padding:8px 12px 10px;border-top:1px solid #ffffff12;color:var(--muted);font-size:10px;line-height:1.5}
 .node-canvas-comment>p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
-/* Plain-text annotations retain the normal card, selection and resize behavior. */
+/* Markdown annotations retain the normal card, selection and resize behavior. */
 :where([data-category="annotation"]){--category-bg:color-mix(in srgb,#808080 35%,var(--ui-tone-field));--category-fg:var(--ui-tone-text)}
 .node[data-category="annotation"]{--node-min-width:260px}
 .node[data-category="annotation"]:not(.collapsed){--node-min-height:130px;--node-max-height:1200px;display:flex;flex-direction:column;height:180px;min-height:var(--node-min-height);max-height:var(--node-max-height)}
 .node[data-category="annotation"]>.node-title{flex-shrink:0}
 .node[data-category="annotation"]>.ports{display:none}
-.comment-node-editor{display:block;box-sizing:border-box;width:100%;padding:10px;border:0;border-radius:6px;background:var(--ui-tone-field);color:var(--ui-tone-text);font:inherit;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;resize:none}
+.comment-node-content{min-width:0;min-height:0;color:var(--ui-text,var(--ui-tone-text));font-size:12px;line-height:1.5}
+.comment-node-editor,.comment-node-preview{box-sizing:border-box;width:100%;padding:10px;overflow:auto;overscroll-behavior:contain;border-radius:6px;touch-action:pan-x pan-y;user-select:text;cursor:text}
+.comment-node-content>[hidden]{display:none}
+.comment-node-editor{display:block;border:0;background:var(--ui-field,var(--ui-tone-field));color:inherit;font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;resize:none}
 .comment-node-editor:focus{outline:1px solid var(--purple);outline-offset:-1px}
-.comment-node-canvas{width:calc(100% - 20px);margin:10px;flex:1 1 0;min-height:0;overflow:auto;background:transparent}
-.comment-node-canvas:focus{background:var(--ui-tone-field)}
+.comment-node-preview{background:transparent;overflow-wrap:anywhere;max-height:400px;min-height:150px}
+.comment-node-preview:focus-visible{outline:1px solid var(--purple);outline-offset:-1px}
+.comment-node-canvas-content{width:calc(100% - 20px);margin:10px;flex:1 1 0;display:flex}
+.comment-node-canvas-content>.comment-node-preview,.comment-node-canvas-content>.comment-node-editor{flex:1 1 0;min-height:0;max-height:none}
 .comment-node-parameter{margin:10px 0}.comment-node-parameter small{display:block;margin-top:7px;line-height:1.5}
+.comment-markdown{min-width:0}.comment-markdown>:first-child{margin-top:0}.comment-markdown>:last-child{margin-bottom:0}
+.comment-markdown p{margin:0 0 .75em;line-height:1.5}
+.comment-markdown :is(h1,h2,h3,h4,h5,h6){margin:1em 0 .5em;font-weight:600;line-height:1.3;color:inherit}
+.comment-markdown h1{font-size:1.5em}.comment-markdown h2{font-size:1.3em}#inspector .comment-markdown h3,.comment-markdown h3{font-size:1.15em;margin:1em 0 .5em}.comment-markdown :is(h4,h5,h6){font-size:1em}
+.comment-markdown ul,.comment-markdown ol{padding-left:1.7em;margin:.5em 0 .75em}.comment-markdown li{margin:.2em 0}
+.comment-markdown a{color:var(--purple);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.comment-markdown code{font-family:Consolas,'Courier New',monospace;font-size:.95em;tab-size:4}
+.comment-markdown :not(pre)>code{padding:.08em .3em;background:color-mix(in srgb,currentColor 8%,transparent);border-radius:3px}
+.comment-markdown pre{margin:.65em 0;padding:8px 10px;border:0;border-radius:5px;background:color-mix(in srgb,var(--ui-field,var(--ui-tone-field)) 45%,transparent);font-size:inherit;line-height:1.5;white-space:pre;overflow:auto}
+:root[data-ui-theme="light"] .comment-markdown{--glsl-comment:#606375;--glsl-keyword:#7349a2;--glsl-type:#1e7767;--glsl-number:#955510;--glsl-function:#276ca7;--glsl-directive:#9b427d;--glsl-string:#756422;--glsl-builtin:#5364ac}
 
 /* Persistent sidebar controls share the TD location row on every screen size. */
 .sidebar-toggles{display:flex;align-items:center;gap:5px;flex:none;margin-left:auto}
@@ -812,6 +827,8 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* Canvas touch gestures are app-owned; text fields outside remain native. */
 #canvas,#canvas *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
 #canvas :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* Annotation readers and editors scroll/select locally, outside graph gestures. */
+#canvas :is(.comment-node-preview,.comment-node-preview *,.comment-node-editor){-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;touch-action:pan-x pan-y}
 #grapheditmenu[data-input="touch"] button{min-height:44px;font-size:14px;touch-action:manipulation}
 #grapheditmenu[data-input="touch"] button small{display:none}
 

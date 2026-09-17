@@ -2934,12 +2934,16 @@
       "en": "Write a comment…"
     },
     "comment.hint": {
-      "zh-Hant": "純文字註解，不參與 Shader 計算。移開焦點或 Ctrl＋Enter 套用；Esc 取消此次編輯。",
-      "en": "Plain text, excluded from Shader calculations. Leave the field or press Ctrl+Enter to apply; Esc cancels this edit."
+      "zh-Hant": "雙擊內文編輯；支援 Markdown 與 glsl 程式區塊。移開焦點或 Ctrl／Cmd＋Enter 套用；Esc 取消。不參與 Shader 計算。",
+      "en": "Double-click to edit Markdown, including glsl code blocks. Leave the field or press Ctrl/Cmd+Enter to apply; Esc cancels. Excluded from Shader calculations."
+    },
+    "comment.edit": {
+      "zh-Hant": "雙擊／點兩下編輯；鍵盤可按 Enter",
+      "en": "Double-click or double-tap to edit; press Enter with the keyboard"
     },
     "help.comment": {
-      "zh-Hant": "在畫布上留下純文字註解。沒有輸入或輸出，不影響產生的 GLSL；可以像一般節點一樣移動、複製與刪除。",
-      "en": "Leave a plain-text note on the canvas. Comments have no inputs or outputs and do not affect generated GLSL. Move, copy and delete them like other nodes."
+      "zh-Hant": "在畫布上留下 Markdown 註解，支援標題、粗體、清單、連結、行內程式碼與程式區塊；以 glsl 標記區塊可顯示語法色。雙擊或點兩下內文編輯。沒有輸入或輸出，不影響產生的 GLSL；可移動、調整寬高、複製與刪除。",
+      "en": "Leave a Markdown note with headings, bold text, lists, links, inline code and fenced code blocks. Mark a block glsl for syntax colors. Double-click or double-tap to edit. No inputs or outputs and no effect on generated GLSL; move, resize, copy and delete it like other nodes."
     },
     "appearance.tone.reset": {
       "zh-Hant": "右鍵或雙擊還原基準",

@@ -594,34 +594,60 @@ function deferCommentNodeEditor(canvas){
   return !!entry?.matches('[data-comment-node]')&&entry.classList.contains('comment-node-canvas')===canvas&&entry.keepCommentEditor?.();
 }
 function commentNodeEditor(n,canvas=false){
-  const owner=current(),draft=commentNodeDrafts.get(n),entry=el('textarea',{class:'comment-node-editor'+(canvas?' comment-node-canvas':''),'data-comment-node':n.id,'aria-label':t('comment.text'),placeholder:t('comment.placeholder'),rows:canvas?5:8,maxlength:2000});
-  entry.value=!readonly&&draft?.base===nodeComment(n)&&draft.canvas===canvas?draft.text:nodeComment(n);entry.readOnly=readonly;
+  const owner=current(),draft=commentNodeDrafts.get(n),hasDraft=!readonly&&draft?.base===nodeComment(n)&&draft.text!==nodeComment(n)&&draft.canvas===canvas;
+  const box=el('div',{class:'comment-node-content'+(canvas?' comment-node-canvas-content':'')}),preview=el('div',{class:'comment-node-preview',tabindex:'0',role:'group','aria-label':t('comment.text')});
+  const entry=el('textarea',{class:'comment-node-editor'+(canvas?' comment-node-canvas':''),'data-comment-node':n.id,'aria-label':t('comment.text'),placeholder:t('comment.placeholder'),rows:canvas?5:8,maxlength:2000});
+  entry.value=hasDraft?draft.text:nodeComment(n);entry.readOnly=readonly;
   let committed=nodeComment(n);
+  const renderPreview=()=>{
+    preview.replaceChildren(committed?commentMarkdown(committed):el('span',{class:'muted'},t('comment.placeholder')));
+    if(!readonly)preview.title=t('comment.edit');
+  };
+  const read=()=>{renderPreview();entry.hidden=true;preview.hidden=false;};
+  const edit=()=>{
+    if(readonly||editorMutationBlocked()||current()!==owner||!owner.nodes.includes(n)||!box.isConnected)return;
+    preview.hidden=true;entry.hidden=false;entry.focus({preventScroll:true});
+  };
   entry.keepCommentEditor=()=>!readonly&&current()===owner&&owner.nodes.includes(n)&&nodeComment(n)===committed&&(canvas||selected===n.id&&inspectorTab==='parameters');
   entry.hasPendingEdit=()=>entry.value!==committed;
-  entry.syncCommentValue=value=>{if(document.activeElement!==entry){committed=value;entry.value=value;}};
+  entry.syncCommentValue=value=>{if(document.activeElement!==entry){committed=value;entry.value=value;renderPreview();}};
   const commit=()=>{
-    if(readonly||current()!==owner||!owner.nodes.includes(n)||entry.value===committed)return;
+    if(readonly||current()!==owner||!owner.nodes.includes(n))return;
+    if(entry.value===committed){commentNodeDrafts.delete(n);return;}
     const value=entry.value,previous=committed;committed=value;commentNodeDrafts.delete(n);
     if(!setNodeComment(n,value,{redraw:false})){committed=previous;entry.value=nodeComment(n);return;}
     committed=nodeComment(n);
     for(const other of document.querySelectorAll('[data-comment-node]'))if(other!==entry&&other.dataset.commentNode===n.id)other.syncCommentValue?.(committed);
   };
   entry.oninput=()=>commentNodeDrafts.set(n,{base:nodeComment(n),text:entry.value,canvas});
-  entry.onchange=entry.onblur=commit;
-  entry.onpointerdown=e=>{
+  entry.onchange=commit;entry.onblur=()=>{commit();read();};
+  const select=e=>{
     e.stopPropagation();
     if(canvas&&!selection.has(n.id)){
       selectNode(n);document.querySelectorAll('.node').forEach(card=>card.classList.toggle('selected',selection.has(card.dataset.node)));inspector();renderNavigation();
     }
   };
+  entry.onpointerdown=select;
   entry.onclick=entry.ondblclick=e=>e.stopPropagation();
-  if(canvas)entry.onwheel=e=>e.stopPropagation();
+  if(canvas)box.onwheel=e=>e.stopPropagation();
   entry.onkeydown=e=>{
-    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commentNodeDrafts.delete(n);entry.value=nodeComment(n);committed=entry.value;entry.blur();}
-    else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();e.stopPropagation();commit();}
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commentNodeDrafts.delete(n);entry.value=nodeComment(n);committed=entry.value;entry.blur();preview.focus({preventScroll:true});}
+    else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();e.stopPropagation();entry.blur();preview.focus({preventScroll:true});}
   };
-  return entry;
+  preview.ondblclick=e=>{e.stopPropagation();if(!e.target.closest('a')){e.preventDefault();edit();}};
+  preview.onclick=e=>e.stopPropagation();
+  preview.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'&&e.target===preview){e.preventDefault();edit();}};
+  // The native scrolling surface handles its own double tap, outside graph gestures.
+  let touchStart=null,lastTap=null;
+  preview.onpointerdown=e=>{select(e);touchStart=e.pointerType==='touch'&&!e.target.closest('a')?{x:e.clientX,y:e.clientY}:null;};
+  preview.onpointermove=e=>{if(touchStart&&Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>8){touchStart=null;lastTap=null;}};
+  preview.onpointercancel=()=>{touchStart=lastTap=null;};
+  preview.onpointerup=e=>{
+    if(!touchStart)return;const point=touchStart;touchStart=null;const now=performance.now();
+    if(lastTap&&now-lastTap.time<350&&Math.hypot(point.x-lastTap.x,point.y-lastTap.y)<24){lastTap=null;edit();}
+    else lastTap={...point,time:now};
+  };
+  box.append(preview,entry);renderPreview();entry.hidden=!hasDraft;preview.hidden=!!hasDraft;return box;
 }
 function nodeCommentField(n,standalone=false){
   const section=el(standalone?'section':'details',{class:'node-comment-field'+(standalone?' node-notes-page':'')});
@@ -647,6 +673,60 @@ function toggle(label,value,callback){
   const check=el('input',{type:'checkbox'});check.checked=!!value;check.disabled=readonly;
   check.onchange=()=>callback(check.checked);
   const row=el('label',{class:'toggle-field'});row.append(check,el('span',{},label));return row;
+}
+
+// Comment display is a deliberately small Markdown subset. Never interpret HTML.
+function commentMarkdown(text){
+  const root=el('div',{class:'comment-markdown'}),lines=String(text).replace(/\r\n?/g,'\n').split('\n');
+  const inline=(target,value)=>{
+    const tokens=/`([^`\n]+)`|\[([^\]\n]+)\]\(([^\s)]+)\)|\*\*([^*\n]+)\*\*|\*([^*\n]+)\*/g;let start=0;
+    for(const match of value.matchAll(tokens)){
+      target.append(document.createTextNode(value.slice(start,match.index)));
+      if(match[1])target.append(el('code',{},match[1]));
+      else if(match[2]){
+        let url=null;
+        if(/^(?:https?:\/\/|mailto:)/i.test(match[3]))try{url=new URL(match[3]);}catch{}
+        if(url&&['http:','https:','mailto:'].includes(url.protocol))target.append(el('a',{href:url.href,target:'_blank',rel:'noopener noreferrer'},match[2]));
+        else target.append(document.createTextNode(match[0]));
+      }else target.append(el(match[4]?'strong':'em',{},match[4]||match[5]));
+      start=match.index+match[0].length;
+    }
+    target.append(document.createTextNode(value.slice(start)));
+  };
+  const fence=line=>/^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  const heading=line=>/^ {0,3}(#{1,6})\s+(.+)$/.exec(line);
+  const listItem=line=>/^ {0,3}(?:([-+*])|([0-9]{1,9})[.)])\s+(.+)$/.exec(line);
+  const startsBlock=line=>fence(line)||heading(line)||listItem(line);
+  for(let i=0;i<lines.length;){
+    if(!lines[i].trim()){i++;continue;}
+    const fenced=fence(lines[i]),title=heading(lines[i]),item=listItem(lines[i]);
+    if(fenced){
+      const source=[];i++;
+      while(i<lines.length){
+        const close=fence(lines[i]);
+        if(close&&close[1][0]===fenced[1][0]&&close[1].length>=fenced[1].length&&!close[2].trim()){i++;break;}
+        source.push(lines[i++]);
+      }
+      const pre=el('pre'),code=el('code'),value=source.join('\n');
+      if(fenced[2].trim().toLowerCase()==='glsl')code.append(glslFragment(value));else code.textContent=value;
+      pre.append(code);root.append(pre);
+    }else if(title){
+      const block=el('h'+title[1].length);inline(block,title[2]);root.append(block);i++;
+    }else if(item){
+      const ordered=!!item[2],list=el(ordered?'ol':'ul');
+      if(ordered)list.start=Number(item[2]);
+      while(i<lines.length){
+        const next=listItem(lines[i]);if(!next||!!next[2]!==ordered)break;
+        const li=el('li');inline(li,next[3]);list.append(li);i++;
+      }
+      root.append(list);
+    }else{
+      const block=el('p');inline(block,lines[i++]);
+      while(i<lines.length&&lines[i].trim()&&!startsBlock(lines[i])){block.append(el('br'));inline(block,lines[i++]);}
+      root.append(block);
+    }
+  }
+  return root;
 }
 
 function markdown(text){

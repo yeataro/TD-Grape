@@ -5,7 +5,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
 (async()=>{
   const h=await harness(source,stateFile,folder,{touch:true}),{page,checks,errors,settle}=h;
   page.setDefaultTimeout(6000);
-  const card=id=>page.locator(`[data-node="${id}"]`),handle=id=>page.locator(`[data-node-resize="${id}"]`),body=()=>card('note').locator('[data-comment-node]');
+  const card=id=>page.locator(`[data-node="${id}"]`),handle=id=>page.locator(`[data-node-resize="${id}"]`),body=()=>card('note').locator('[data-comment-node]'),preview=()=>card('note').locator('.comment-node-preview');
   const size=id=>card(id).evaluate(e=>{const r=e.getBoundingClientRect(),z=scale*uiScaleFactor();return{width:r.width/z,height:r.height/z};});
   const snapshot=()=>page.evaluate(()=>JSON.stringify({graph,past,future,pan,dirty}));
   const start=async(id='note')=>{const r=await handle(id).boundingBox(),p={x:r.x+r.width/2,y:r.y+r.height/2};await page.mouse.move(p.x,p.y);await page.mouse.down();return p;};
@@ -15,7 +15,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
       document.activeElement?.blur();clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;historyBusy=false;nativeMutationBusy=false;
       graphTrail=[];graph.functions=[];graph.declarations=[];stage='pixel';selectedInputId=null;inspectorTab='parameters';
       graph.stages.pixel={nodes:[testNode('note','comment',60,180),testNode('value','float',520,180)],edges:[]};
-      Object.assign(current().nodes[0].ui,{width:320,height:200,comment:Array.from({length:35},(_,i)=>'Line '+(i+1)).join('\n')});
+      Object.assign(current().nodes[0].ui,{width:320,height:200,comment:Array.from({length:35},(_,i)=>'- Line '+(i+1)).join('\n')});
       selected='note';selection=new Set(['note']);past=[];future=[];dirty=false;rememberSavedGraph(graph);
       setUIAppearance('scale',100);setUIExperiments({selectionToolbar:'all'});render();scale=1;pan={x:20,y:20};transform();
     });await settle();
@@ -29,9 +29,9 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.evaluate(()=>undo());assert.deepEqual(await size('note'),{width:320,height:200});await page.evaluate(()=>undo(true));assert.deepEqual(await size('note'),{width:390,height:290});
     checks.push('Two-axis preview updates the selection toolbar without writes; release commits both dimensions as one layout-only Undo/Redo');
 
-    const textLayout=await body().evaluate(e=>{const r=e.getBoundingClientRect(),card=e.closest('.node').getBoundingClientRect(),title=e.closest('.node').querySelector('.node-title').getBoundingClientRect();return{gap:r.top-title.bottom,bottom:card.bottom-r.bottom,scroll:e.scrollHeight>e.clientHeight,overflow:getComputedStyle(e).overflowY};});
+    const textLayout=await preview().evaluate(e=>{const r=e.getBoundingClientRect(),card=e.closest('.node').getBoundingClientRect(),title=e.closest('.node').querySelector('.node-title').getBoundingClientRect();return{gap:r.top-title.bottom,bottom:card.bottom-r.bottom,scroll:e.scrollHeight>e.clientHeight,overflow:getComputedStyle(e).overflowY};});
     assert.ok(textLayout.gap>=9&&textLayout.gap<=11);assert.ok(textLayout.bottom>=10&&textLayout.bottom<=12);assert.equal(textLayout.scroll,true);assert.equal(textLayout.overflow,'auto');
-    const graphZoom=await page.evaluate(()=>scale);await body().hover();await page.mouse.wheel(0,160);await page.waitForFunction(()=>document.querySelector('[data-node="note"] .comment-node-canvas').scrollTop>0);assert.equal(await page.evaluate(()=>scale),graphZoom);
+    const graphZoom=await page.evaluate(()=>scale);await preview().hover();await page.mouse.wheel(0,160);await page.waitForFunction(()=>document.querySelector('[data-node="note"] .comment-node-preview').scrollTop>0);assert.equal(await page.evaluate(()=>scale),graphZoom);
     await page.evaluate(()=>setNodesCollapsed(['note'],true));assert.ok((await size('note')).height<70);assert.equal(await handle('note').count(),0);assert.equal(await page.evaluate(()=>current().nodes[0].ui.height),290);
     await page.evaluate(()=>setNodesCollapsed(['note'],false));assert.deepEqual(await size('note'),{width:390,height:290});
     checks.push('Text fills the card body and scrolls; collapse ignores stored height and expanding restores both saved dimensions');
@@ -63,7 +63,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.equal(await snapshot(),stable);assert.deepEqual(await size('note'),{width:360,height:255});
     checks.push('Trusted touch resizes both dimensions without graph pan; touch cancellation restores the last saved size');
 
-    await reset();await body().fill('Uncommitted text');const committed=await page.evaluate(()=>nodeComment(current().nodes[0]));await drag(30,50);
+    await reset();await preview().dblclick();await body().fill('Uncommitted text');const committed=await page.evaluate(()=>nodeComment(current().nodes[0]));await drag(30,50);
     assert.equal(await body().inputValue(),'Uncommitted text');assert.equal(await body().evaluate(e=>e===document.activeElement),true);assert.equal(await page.evaluate(()=>nodeComment(current().nodes[0])),committed);assert.equal(await page.evaluate(()=>past.length),1);assert.deepEqual(await size('note'),{width:350,height:250});
     await body().press('Control+Enter');assert.equal(await page.evaluate(()=>past.length),2);assert.equal(await page.evaluate(()=>nodeComment(current().nodes[0])),'Uncommitted text');
     checks.push('A focused text draft survives two-axis resizing, stays uncommitted, and creates a separate Undo only when explicitly applied');

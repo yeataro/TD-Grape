@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 Comment Markdown：`test_comment_nodes.cjs` 8 組、`test_comment_resize.cjs` 9 組、`test_comment_markdown.cjs` 8 組通過，零頁面錯誤。涵蓋雙介面的閱讀／編輯、失焦／快捷提交、取消、草稿重繪及改回原值後不誤重開、一次 Undo／Redo、resize 保留草稿、HTML／危險 URL 不可執行、安全連結的隔離 popup、GLSL 原文與語法色、唯讀及雙點觸控。主圖與子圖的 Comment 增刪／文字／尺寸皆不標 Shader 變更，普通節點註記仍保留語意判斷。
+
+隔離 Chromium CDP 實測閱讀長文、textarea 垂直捲動及 GLSL pre 水平捲動，不改圖 pan／scale／Undo；一般畫布拖移與雙指縮放維持正常，visualViewport.scale 保持 1。深／淺色截圖已目視，明亮模式程式區塊正文對比 11.41:1，token 最低 5.07:1。5 項 Comment Python 測試、既有 Editor save status、582 雙語引用及語法／diff 檢查通過；原 GLSL renderer 抽共用 fragment 前後 DOM／原文字串一致。未重跑整套 portable runner，實體 iOS Safari 未測。
+
+本批刷新五份來源並保存 TD，30 份來源／8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留，未刷新使用者既有 Editor。TOE 742,004 bytes，SHA-256 `14fa84f35efe2b4c75653af1cb85af56dc49da7cecfc6b6fa934794b2a8c4107`。私人報告目錄為 comment-markdown-round。
+
 2026-09-18 置中選取：`test_selection_toolbar.cjs` 擴為 10 組、`test_editor_chrome.cjs` 16 組通過，零頁面錯誤。新增三態下唯一按鈕與顯示條件、選取子集合排除遠處未選節點、單選／高 Comment／收合實際尺寸、唯讀可用、零選取／選線 no-op；保留非空 Undo／Redo、圖、選取與 dirty 狀態，原 Frame all／H 不變。繁英 title／aria-label、觸控 320／390 直向與 844 橫向、100／125% UI 縮放可達；六按鈕在最窄配置依既有分組靠右換行。桌面與窄版截圖已目視，更新既有工具列按鈕名單預期及只對可見按鈕檢查同列，無放寬操作斷言。語法及 diff 檢查通過。
 
 本批已刷新四份來源並保存 TD；30 份來源／8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留，既有 Editor 未刷新。TOE 739,532 bytes，SHA-256 `5a6821fcc49721eab88738579f9cdb8167cee009d7a88abe0b7ab6f7a46b1eec`。報告在私人 frame-selection 與 frame-selection-toolbar。

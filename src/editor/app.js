@@ -159,6 +159,7 @@ function graphContent(document){
   // Coordinates and component expansion are presentation-only. Labels and type settings may
   // affect generated GLSL, so keep them when choosing the progress message.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
+    data.nodes=data.nodes.filter(node=>node.definitionUuid!=='sgrape.builtin.comment');
     for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.height;delete node.ui.componentsExpanded;delete node.ui.collapsed;if(!Object.keys(node.ui).length)delete node.ui;}
   }
   return JSON.stringify(content);
@@ -1054,8 +1055,8 @@ $('#closeabout').onclick=()=>$('#aboutdialog').close();
 
 
 /* Display-only GLSL tokens. Text nodes preserve source and keep code inert. */
-function renderGLSL(source){
-  const target=$('#sourcecode'),fragment=document.createDocumentFragment();
+function glslFragment(source){
+  const fragment=document.createDocumentFragment();
   const keywords=new Set(('attribute const uniform varying buffer shared coherent volatile restrict readonly writeonly layout centroid flat smooth noperspective patch sample invariant precise highp mediump lowp precision in out inout subroutine if else switch case default while do for break continue return discard struct').split(' '));
   const types=/^(?:void|bool|int|uint|float|double|atomic_uint|[biud]?vec[234]|d?mat[234](?:x[234])?|[iu]?(?:sampler|image)(?:1D|2D|3D|Cube|2DRect|Buffer)(?:MS)?(?:Array)?(?:Shadow)?)$/;
   const tokens=/(?<comment>\/\/[^\r\n]*|\/\*[\s\S]*?(?:\*\/|(?![\s\S])))|(?<directive>^[\t ]*#[\t ]*[A-Za-z_]\w*)|(?<string>"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*')|(?<number>\b0[xX][\da-fA-F]+[uU]?\b|(?:\b\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?(?:[fF]|[lL][fF]|[uU])?)|(?<identifier>\b[A-Za-z_]\w*\b)/gm;
@@ -1070,7 +1071,10 @@ function renderGLSL(source){
     else fragment.append(document.createTextNode(text));
     offset=match.index+text.length;
   }
-  fragment.append(document.createTextNode(source.slice(offset)));target.replaceChildren(fragment);target.scrollTop=0;target.scrollLeft=0;
+  fragment.append(document.createTextNode(source.slice(offset)));return fragment;
+}
+function renderGLSL(source){
+  const target=$('#sourcecode');target.replaceChildren(glslFragment(source));target.scrollTop=0;target.scrollLeft=0;
 }
 
 async function setPreviewEnabled(enabled){

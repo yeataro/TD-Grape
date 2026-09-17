@@ -37,14 +37,15 @@
 ## 2026-09-18 追加：Comment 註解節點
 
 - 在新增節點／搜尋清單提供 Comment，可用 note、annotation、text、註解、備註尋找；沿用一般節點的命名、選取、拖動、調寬、收合、複製貼上、刪除與 Undo。分類色為中性灰，沒有輸入或輸出接孔。
-- 畫布內文未編輯時使用透明底，融入節點 body；只有聚焦編輯時才顯示深色輸入底。未來 Markdown 預覽沿用 body 底色。
-- 文字直接在畫布節點或 Parameter 的參數頁編輯。採純文字，保留換行，不解析 Markdown 或 HTML。失焦或 Ctrl／Command＋Enter 套用為一次 Undo；Esc 取消此次草稿。正常介面重繪保留正在輸入的文字與焦點，唯讀狀態禁止修改。
+- 畫布及 Parameter 內文平時呈現 Markdown，使用透明底融入節點 body；雙擊／觸控點兩下，或聚焦閱讀區按 Enter 後進入 textarea 編輯，才顯示輸入底色。不設文字／Markdown／GLSL 模式選單。
+- 失焦或 Ctrl／Command＋Enter 套用為一次 Undo 並回閱讀；Esc 取消此次草稿。正常介面重繪及調整尺寸保留正在輸入的文字與焦點；画布／Parameter 套用後互相同步，唯讀狀態只可閱讀、捲動及開啟連結。
 - 使用者後續確認 Comment 為第一個可同時調寬、調高的節點。沿用右下角拖曳把手，尺寸以圖座標保存於 `ui.width`／`ui.height`，一次拖曳只有一次 Undo；高度基準 180、最小 130、最大 1200。文字區填滿剩餘高度，過長內容可捲動；收合時只顯示標題，展開恢復保存的高度。其他節點繼續只調寬。
 - 文字沿用 `ui.comment`，最多 2000 字；位置、寬度及收合狀態同樣放在節點 `ui`。不增加另一種畫布物件或獨立保存系統。一般節點既有的「註記」分頁保持，Comment 則直接以文字編輯作為主要內容，避免重複分頁。
 - Comment 可隨其他節點一起轉換為子圖，文字及外观一併保留；子圖／個人庫／選取剪貼簿沿用既有資料路徑。註解不產生接孔，也不參與 GLSL、編譯 hash 或未接線警告；不把註解文字附加到產生的 shader。
 - 這是新增 catalog 定義，既有節點的 revision、emitter ABI、shader shell 及圖 schema 不變。有完整舊 catalogSnapshot 的既有圖不需要版本升級；讀取 Editor state 時沿用既有相容性檢查，回傳目前定義的證據，不改寫舊 DAT。既有未經證明／損壞的版本證據仍走原審查流程。
-- **群組框與 Markdown 仍待後续。** 群組框的自動尺寸、成員加入／移出與跨群組選取規則尚未定案；Comment 不提前承擔這些行為。Markdown 富文字也不在這次純文字版本中。
-- Markdown 後續方向已補充：使用單一自然書寫的 Markdown 內容，**不設純文字／Markdown／GLSL 模式選單**；以 fenced `glsl` 程式區塊自動套語法色。保留 `ui.comment` 與 textarea 編輯，閱讀呈現採 Markdown；先確定 Markdown 子集或解析器，以及編輯／預覽的切換方式。現有 `markdown()` 只是簡易 inline 子集，GLSL 配色在 `renderGLSL()`／`#sourcecode`；後續可抽出共用 DOM highlighter 給 fenced code，不在本輪先加依賴或重構。屆時一併驗證文字安全、連結、圍欄語法與尺寸／換行。
+- **群組框仍待後續。** 自動尺寸、成員加入／移出與跨群組選取規則尚未定案；Comment 不提前承擔這些行為。
+- Markdown 於後續一輪完成小型顯示子集：ATX 標題、段落換行、粗體／斜體、單層有序／無序清單、連結、行內 code 及 fenced code；不宣稱完整 CommonMark，尚無巢狀清單、表格或圖片。`glsl` fence（不分大小寫）與原 GLSL 視窗共用 DOM tokenizer 和配色，其他語言以原文呈現；不增加套件，原 Help 的 inline renderer 保持。
+- 所有文字透過 DOM text 寫入，HTML 不執行；連結只接受 HTTP／HTTPS／mailto，開新頁並隔離 opener，其他協定保留原文字。Comment 節點的增刪、文字、名稱與尺寸只影響圖面保存提示；一般節點會加入 GLSL 的既有註記仍保留原判斷。
 
 ## 2026-09-18 追加：工具列分組與選取操作
 
