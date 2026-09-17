@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-18 自動排列接孔順序修正：`test_auto_arrange.cjs` 擴為 9 組通過，零頁面錯誤。新增節點建立／接線插入各正反順序的組合，驗證下游 a／b Input、Split X／Y Output、跨上游鏈的順位傳遞與收合節點；各例繼續核對只改位置、一次精確 Undo／Redo、重複穩定與 Shader 語意不變。以私人舊來源副本重現原版在第一個接孔順序案例失敗，修正版通過。獨立檢閱的 1,000 組帶接孔、循環與複數接線的隨機圖亦通過穩定／無重疊／有限座標／輸入不變檢查。語法與 diff 檢查通過。
+
+本批更新 `selection_ui_js` 並保存 TD，30 份來源及 8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留，既有 Editor 未刷新。TOE 739,124 bytes，SHA-256 `01b6fafde6e40c125b223c79e8d7f38fbd9182d155b31b347f130949d8ebf081`；報告在私人 auto-arrange-port-order。
+
 2026-09-18 自動排列與選單分組：新增 `test_auto_arrange.cjs` 6 組、既有 `test_selection_toolbar.cjs` 8 組通過，零頁面錯誤。涵蓋選單入口、鏈／菱形／合流／多來源、實際不同尺寸、獨立區塊與高 Comment、局部選取、其他圖層／未選節點保持、只改座標與 Shader 語意不變、一次精確 Undo／Redo、重複排列穩定且不加歷史、唯讀與單選限制；純排版器另驗證循環、自接線、懸空端點及空／單節點。既有窄畫面觸控排列與視窗邊界檢查通過。獨立檢閱以 1,000 組隨機圖檢查有限座標、無選取節點重疊、重複一致與輸入資料不變，均通過；語法及 diff 檢查通過。
 
 本批已刷新 3 份來源並保存 TD，30 份內嵌來源／8 份服務資源一致、TOP／MAT Master current、兩份使用者 Shader 保留；既有 Editor 未重新整理。TOE 738,980 bytes，SHA-256 `d652dac04be062590a7acc19f0bd73dcfd8d10d5697efa3bf8b677e4d6735cdc`。隔離瀏覽器報告及 TD 交付紀錄在私人 auto-arrange 目錄。

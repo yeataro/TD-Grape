@@ -73,12 +73,15 @@ function positionSelectionToolbar(){
   outline.style.width=(bounds.right-bounds.left)/zoom+12+'px';outline.style.height=(bounds.bottom-bounds.top)/zoom+12+'px';
 }
 // Lay out only the selected graph. Collapse cycles for ranking, then use two
-// neighbor-order sweeps to reduce crossings without a layout dependency.
+// neighbor/port-order sweeps to reduce crossings without a layout dependency.
 function autoArrangePositions(items,edges){
   const positions=new Map();if(!items.length)return positions;
   const byId=new Map(items.map(n=>[n.id,n])),order=new Map(items.map((n,i)=>[n.id,i]));
   const next=new Map(items.map(n=>[n.id,new Set()])),previous=new Map(items.map(n=>[n.id,new Set()]));
-  for(const e of edges){const a=e.from[0],b=e.to[0];if(a!==b&&byId.has(a)&&byId.has(b)){next.get(a).add(b);previous.get(b).add(a);}}
+  const incoming=new Map(items.map(n=>[n.id,[]])),outgoing=new Map(items.map(n=>[n.id,[]]));
+  for(const e of edges){const a=e.from[0],b=e.to[0];if(a!==b&&byId.has(a)&&byId.has(b)){
+    next.get(a).add(b);previous.get(b).add(a);incoming.get(b).push(e.from);outgoing.get(a).push(e.to);
+  }}
 
   // Connected pieces get separate vertical bands, so unrelated chains do not
   // weave through one another. Graph order supplies deterministic tie breaks.
@@ -120,15 +123,21 @@ function autoArrangePositions(items,edges){
     const rowOrder=new Map();
     const remember=layer=>layer.forEach((id,i)=>rowOrder.set(id,(i+.5)/layer.length));
     layers.forEach(remember);
+    // A neighbor occupies one row slot; its ordered ports subdivide that slot.
+    // Use logical port order so collapsed nodes retain their expanded ordering.
+    const portOrder=(id,port,kind)=>{
+      const ports=byId.get(id)[kind]||[],index=ports.indexOf(port),fraction=index<0?.5:(index+.5)/ports.length;
+      return rowOrder.get(id)+(fraction-.5)/layers[groupOf.get(id).rank].length;
+    };
     const sortLayer=(layer,neighbors,forward)=>{
-      const score=id=>{const related=[...neighbors.get(id)].filter(other=>forward?groupOf.get(other).rank<groupOf.get(id).rank:groupOf.get(other).rank>groupOf.get(id).rank);
-        return related.length?related.reduce((sum,other)=>sum+rowOrder.get(other),0)/related.length:rowOrder.get(id);};
+      const score=id=>{const related=neighbors.get(id).filter(([other])=>forward?groupOf.get(other).rank<groupOf.get(id).rank:groupOf.get(other).rank>groupOf.get(id).rank);
+        return related.length?related.reduce((sum,[other,port])=>sum+portOrder(other,port,forward?'outputs':'inputs'),0)/related.length:rowOrder.get(id);};
       const scores=new Map(layer.map(id=>[id,score(id)]));
       layer.sort((a,b)=>scores.get(a)-scores.get(b)||order.get(a)-order.get(b));remember(layer);
     };
     for(let pass=0;pass<2;pass++){
-      for(let i=1;i<layers.length;i++)sortLayer(layers[i],previous,true);
-      for(let i=layers.length-2;i>=0;i--)sortLayer(layers[i],next,false);
+      for(let i=1;i<layers.length;i++)sortLayer(layers[i],incoming,true);
+      for(let i=layers.length-2;i>=0;i--)sortLayer(layers[i],outgoing,false);
     }
     const heights=layers.map(layer=>layer.reduce((sum,id)=>sum+byId.get(id).height,0)+gapY*(layer.length-1));
     const height=Math.max(...heights);let x=left;
@@ -144,7 +153,8 @@ function autoArrangePositions(items,edges){
 function arrangeSelection(kind){
   if(editorMutationBlocked()||!arrangeContextMatches())return false;
   const nodes=selectedCanvasNodes();if(nodes.length<2||!ARRANGE_ACTIONS.some(([key])=>key===kind))return false;
-  const items=nodes.map(n=>({id:n.id,...nodeLayoutBounds(n)})),positions=kind==='auto'?autoArrangePositions(items,current().edges):new Map(items.map(n=>[n.id,{x:n.x,y:n.y}]));
+  const items=nodes.map(n=>({id:n.id,...nodeLayoutBounds(n),...(kind==='auto'?{inputs:Object.keys(ports(n,'inputs')),outputs:Object.keys(ports(n,'outputs'))}:{})}));
+  const positions=kind==='auto'?autoArrangePositions(items,current().edges):new Map(items.map(n=>[n.id,{x:n.x,y:n.y}]));
   const left=Math.min(...items.map(n=>n.x)),top=Math.min(...items.map(n=>n.y)),right=Math.max(...items.map(n=>n.x+n.width)),bottom=Math.max(...items.map(n=>n.y+n.height));
   if(['left','centerX','right','top','centerY','bottom'].includes(kind))for(const n of items){
     const p=positions.get(n.id);

@@ -10,13 +10,14 @@ async function run(){
   const withoutPositions=raw=>{const g=JSON.parse(raw);for(const level of [...Object.values(g.stages),...(g.functions||[]).map(f=>f.graph)])for(const n of level.nodes)if(n.ui){delete n.ui.x;delete n.ui.y;}return g;};
   const noOverlap=rows=>{for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){const a=rows[i],b=rows[j];assert.ok(a.x+a.width+47.9<=b.x||b.x+b.width+47.9<=a.x||a.y+a.height+47.9<=b.y||b.y+b.height+47.9<=a.y,`${a.id}/${b.id} need space around their actual bounds`);}};
   const flowsRight=(rows,pairs)=>{const byId=new Map(rows.map(n=>[n.id,n]));for(const[a,b]of pairs){const from=byId.get(a),to=byId.get(b);assert.ok(from.x+from.width+47.9<=to.x,`${a} must precede ${b} from left to right`);}};
+  const above=(rows,upper,lower)=>{const a=rows.find(n=>n.id===upper),b=rows.find(n=>n.id===lower);assert.ok(a.y+a.height+47.9<=b.y,`${upper} must be above ${lower}, following socket order`);};
   const separatedGroups=(rows,groups)=>{const boxes=groups.map(ids=>{const ns=rows.filter(n=>ids.includes(n.id));return{top:Math.min(...ns.map(n=>n.y)),bottom:Math.max(...ns.map(n=>n.y+n.height))};}).sort((a,b)=>a.top-b.top);for(let i=1;i<boxes.length;i++)assert.ok(boxes[i-1].bottom+47.9<=boxes[i].top,'disconnected groups occupy separate vertical bands');};
   const install=async(specs,pairs,ids=specs.map(n=>n.id))=>{
     await page.evaluate(({specs,pairs,ids})=>{
       closeArrangeMenu();graph=clone(window.autoArrangeFixture);stage='pixel';graphTrail=[];
-      const nodes=specs.map((s,i)=>{const n=testNode(s.id,s.key||'add',s.x??(950-i*175),s.y??(60+(i%3)*170));n.ui.width=s.width||[230,330,280][i%3];if(s.key==='comment'){n.ui.height=s.height||340;n.ui.comment='Layout note\nKept outside the shader flow.';}return n;});
+      const nodes=specs.map((s,i)=>{const n=testNode(s.id,s.key||'add',s.x??(950-i*175),s.y??(60+(i%3)*170),s.params||{});n.ui.width=s.width||[230,330,280][i%3];if(s.collapsed)n.ui.collapsed=true;if(s.key==='comment'){n.ui.height=s.height||340;n.ui.comment='Layout note\nKept outside the shader flow.';}return n;});
       nodes.push(testNode('outside','color',1800,80,{value:[.1,.2,.3,1]}),testNode('output','pixel_out',2150,80));
-      current().nodes=nodes;current().edges=pairs.map(([from,to,port='a'])=>({from:[from,'out'],to:[to,port]}));current().edges.push({from:['outside','out'],to:['output','color']});
+      current().nodes=nodes;current().edges=pairs.map(([from,to,port='a',fromPort='out'])=>({from:[from,fromPort],to:[to,port]}));current().edges.push({from:['outside','out'],to:['output','color']});
       selection=new Set(ids);selected=ids.at(-1)||null;selectedEdge=null;selectedInputId=null;past=[];future=[];readonly=false;historyBusy=false;nativeMutationBusy=false;dirty=false;rememberSavedGraph(graph);render();fit();
     },{specs,pairs,ids});await settle();
   };
@@ -47,6 +48,24 @@ async function run(){
     await exercise([{id:'a',key:'float',width:240},{id:'b',width:370},{id:'c',width:280},{id:'d',width:330}],[['a','b'],['a','c'],['b','d','a'],['c','d','b']]);
     await exercise([{id:'a',key:'float'},{id:'b'},{id:'c'},{id:'d'}],[['a','d','a'],['b','d','b'],['b','c']]);
     checks.push('diamond branches, merges, and multiple roots keep every dependency left to right with generous nonoverlapping bounds');
+
+    for(const reverseNodes of [false,true])for(const reverseEdges of [false,true]){
+      const specs=[{id:'lower',key:'float'},{id:'upper',key:'float'},{id:'sink'}],pairs=[['lower','sink','b'],['upper','sink','a']];
+      const rows=await exercise(reverseNodes?[...specs].reverse():specs,reverseEdges?[...pairs].reverse():pairs);above(rows,'upper','lower');
+    }
+    checks.push('sources follow the target input socket order a then b regardless of graph creation order or edge insertion order');
+
+    for(const reverseNodes of [false,true])for(const reverseEdges of [false,true]){
+      const specs=[{id:'lower'},{id:'upper'},{id:'split',key:'vector_split',params:{type:'vec2'}}],pairs=[['split','lower','a','y'],['split','upper','a','x']];
+      const rows=await exercise(reverseNodes?[...specs].reverse():specs,reverseEdges?[...pairs].reverse():pairs);above(rows,'upper','lower');
+    }
+    checks.push('Split output branches follow logical X then Y socket order regardless of graph creation order or edge insertion order');
+
+    const chained=await exercise([{id:'lowerSource',key:'float'},{id:'lower'},{id:'upperSource',key:'float'},{id:'upper'},{id:'sink'}],[['lowerSource','lower'],['lower','sink','b'],['upperSource','upper'],['upper','sink','a']]);
+    above(chained,'upper','lower');above(chained,'upperSource','lowerSource');
+    const collapsed=await exercise([{id:'lower',key:'float'},{id:'upper',key:'float'},{id:'sink',collapsed:true}],[['lower','sink','b'],['upper','sink','a']]);above(collapsed,'upper','lower');
+    assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='sink').ui.collapsed),true);
+    checks.push('final target socket ordering propagates through upstream chains and survives a collapsed target with a shared visual anchor; exact history and semantic invariants still hold');
 
     const disconnected=await exercise([{id:'a',key:'float'},{id:'b'},{id:'c',key:'float'},{id:'d'},{id:'note',key:'comment',height:380}],[['a','b'],['c','d']],{groups:[['a','b'],['c','d'],['note']]});
     assert.ok(new Set(disconnected.map(n=>n.height)).size>1,'fixture exercises actual variable heights');
