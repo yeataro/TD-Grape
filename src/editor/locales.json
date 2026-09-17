@@ -227,7 +227,7 @@
       "zh-Hant": "無法產生 PNG，請重試或使用 JSON 匯出。",
       "en": "PNG could not be created. Retry or use JSON export."
     },
-    "ladder.hint": {"en": "Click to edit; drag horizontally to adjust.\nDrag follows the slider range; Ctrl ×10, Shift ÷10, Ctrl+Shift ÷100.\nMiddle mouse, Alt+right mouse or long-press: Value Ladder.\nChoose a step vertically; adjust horizontally. Release applies; Esc cancels.\nRight-click: quick presets.", "zh-Hant": "點放編輯；左鍵左右拖曳調值。\n拖曳依滑桿範圍調值；Ctrl ×10、Shift ÷10、Ctrl＋Shift ÷100。\n中鍵、Alt＋右鍵或長按：Value Ladder。\n上下選級距，左右調值；放開套用，Esc 取消。\n右鍵：快速預設值。"},
+    "ladder.hint": {"en": "Click to edit (touch: double-tap); drag horizontally to adjust.\nDrag follows the slider range; Ctrl ×10, Shift ÷10, Ctrl+Shift ÷100.\nMiddle mouse, Alt+right mouse or long-press: Value Ladder.\nChoose a step vertically; adjust horizontally. Release applies; Esc cancels.\nRight-click: quick presets.", "zh-Hant": "點放編輯（觸控：雙點）；左右拖曳調值。\n拖曳依滑桿範圍調值；Ctrl ×10、Shift ÷10、Ctrl＋Shift ÷100。\n中鍵、Alt＋右鍵或長按：Value Ladder。\n上下選級距，左右調值；放開套用，Esc 取消。\n右鍵：快速預設值。"},
     "ladder.release": {
       "zh-Hant": "放開套用 · Esc 取消",
       "en": "Release · Esc cancels"

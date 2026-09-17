@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 Node／Parameter 觸控數值（0.8.84）：新增 `test_numeric_touch.cjs` 20 組通過，採隔離服務及可信任 Chromium touch dispatch。涵蓋兩處單點不 focus／雙點高精度輸入、水平預覽／一次提交及 Undo／Redo、450ms 階梯無 focus、一般 render 保留手勢、真正 capture loss、第二指與 pointer cancellation 還原、不殘留雙點狀態、已聚焦文字原生操作、垂直捲動／平移、唯讀及同裝置滑鼠行為。向量 X 文字草稿在觸控調 Y、調值中與結束後 render 時，緊湊／展開副本均保留；Y 只提交一次，X 待明確 Enter 才另建 Undo。
+
+修正可信任觸控查出的 input 內部控制轉移 capture 到 input host 被當成取消，以及 Parameter 更新覆蓋另一分量文字草稿的問題。既有 `test_numeric_scrub.cjs` 32 組、`test_parameter_values.cjs` 15 組、`test_numeric_presets.cjs` 7 組回歸通過，共 74 組，零頁面錯誤；JavaScript 語法與 diff 檢查通過。報告位於私人 work/reports/numeric-touch 及 touch-numeric。桌面模擬不證明 iPhone 鍵盤、Safari focus zoom 或原生 pinch 的實機行為；後三者不在本輪修改範圍。
+
+TD 更新 inspector_js／style_css／locales_json，28 份內嵌來源與三份修改後服務資源一致；正式 TOE 723,820 bytes，SHA-256 `15c0e1088046036274c058fcc25a099f78c41eaaac83595e37a491471177609e`，兩份使用者 Shader 保留、私人助手排除，既有瀏覽器分頁未重新整理。
+
 2026-09-18 浮動工具列預設與窄版排版（0.8.84）：既有 test_ui_experiments.cjs 19 組、test_editor_chrome.cjs 16 組通過。驗證首次／缺少值／Reset 為浮動、明確 false 經重載仍保留、原 DOM 搬移、模式／草稿／圖／歷史及 focus／fullscreen／重載保護。私人 floating-toolbar/mobile-layout 5 組通過，含 320／390／430px × 繁中／英文 × Standard／Comfortable × 100／125% 的 24 種組合：每排命令齊右、Stage 與 navigation 下方同行、無重疊／水平溢出；390px 子圖路徑與 1500px 螢幕內 410px 畫布同規則。停用控制 opacity=1、背景 alpha=255 且深色比啟用按鈕暗；可信任 Chromium touch 僅觸發一次，停用控制不平移画布，圖／Undo 保持，零 API POST／頁面錯誤。三張截圖已目視。實體 iOS Safari 未測；未新增正式樣式鏡像測試。
 
 JavaScript 語法及 diff 通過。TD 僅更新 graph_ui_js／style_css，28 份映射來源與服務一致、兩份 Master current；正式 TOE 720,780 bytes，SHA-256 5556653847c7b36023e1bf882ff4d1feb1849b7787b317e1f62d97b130fd2396，保留兩份 Shader、排除私人助手，既有瀏覽器分頁未重新整理。

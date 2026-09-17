@@ -42,7 +42,7 @@ Node shows the selected-node Parameter/Settings. Exposed lists every exposed dec
 
 ## Value Ladder
 
-Middle mouse continues to open immediately. Alt+right mouse also works. A 450ms left-button or touch hold opens the same Ladder; vertical movement chooses a rung and horizontal movement previews the value. Release commits once. A short touch focuses the field; movement before activation scrolls the Parameter body. Escape, touch cancellation, blur, removal and capture loss restore the initial value. Physical touchscreen/iPad verification remains pending. The numeric field owns touch handling so an activated Ladder can drag reliably; other pane areas keep native scrolling.
+Middle mouse continues to open immediately. Alt+right mouse also works. A 450ms left-button or touch hold opens the same Ladder; vertical movement chooses a rung and horizontal movement previews the value. Release commits once. The subsequent [numeric touch revision](../ui/TOUCH_EDITING.md#numeric-fields-on-nodes-and-in-parameter) replaces short-tap focus with double-tap text editing and horizontal scrubbing; touch Ladder activation no longer focuses the input. Initial vertical movement retains Parameter scrolling. Escape, touch cancellation, blur, removal and capture loss restore the initial value. Physical touchscreen/iPad verification remains pending. The numeric field owns touch handling so an activated Ladder can drag reliably; other pane areas keep native scrolling.
 
 Official behavior references: https://derivative.ca/UserGuide/Value_Ladder and https://docs.derivative.ca/Dialogs:Preferences_Dialog . Do not describe a precise preference anchor as verified unless actually checked.
 

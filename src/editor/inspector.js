@@ -1,5 +1,6 @@
 /* Node Parameter card. All explanatory content and labels live in locales.json. */
-let valueLadder=null,pendingValueLadder=null,numericPresetMenu=null;
+let valueLadder=null,pendingValueLadder=null,numericPresetMenu=null,numericTouchTap=null;
+document.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch'||!e.isPrimary||e.target!==numericTouchTap?.entry)numericTouchTap=null;},true);
 function cancelValueLadder(){pendingValueLadder?.cancel();valueLadder?.cancel();numericPresetMenu?.close();}
 function openNumericPresets(entry,commit,event){
   event.preventDefault();event.stopPropagation();cancelValueLadder();
@@ -68,7 +69,7 @@ function installValueLadder(entry,commit){
     const owner=current(),documentGraph=graph;
     const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner;
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
-    entry.focus({preventScroll:true});if(!writable())return;
+    if(e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
     const initial=entry.value,initialValue=Number(initial),integer=entry.step==='1';
     const dragWidth=Math.max(1,entry.getBoundingClientRect().width);
     // Unwrap the repeating fill into continuous travel: 1 -> 10, 10 -> 19,
@@ -88,7 +89,7 @@ function installValueLadder(entry,commit){
     };
     const decimalPlaces=value=>{const [digits,exponent='0']=String(value).toLowerCase().split('e');return Math.max(0,(digits.split('.')[1]?.length||0)-Number(exponent));};
     let value=initialValue,baseValue=initialValue,deltaUnits=0,segmentPixels=0,segmentTicks=0,sensitivity='',lastX=e.clientX,finished=false;
-    entry.numericGestureActive=true;document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
+    entry.numericGestureActive=true;if(e.pointerType==='touch')entry.beginNumericEdit?.();document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
     const controller=new AbortController(),options={capture:true,signal:controller.signal};
     const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
     function finish(accept){
@@ -99,6 +100,7 @@ function installValueLadder(entry,commit){
       if(allowed&&Number(entry.value)!==initialValue)commit();
       // A drag leaves the control ready for another drag. A click instead enters text editing.
       if(document.activeElement===entry)entry.blur();
+      if(e.pointerType==='touch'){entry.endNumericEdit?.();document.activeElement?.beginNumericEdit?.();}
     }
     function move(ev){
       if(ev.pointerId!==e.pointerId)return;
@@ -128,7 +130,8 @@ function installValueLadder(entry,commit){
     window.addEventListener('pointerup',ev=>{if(ev.pointerId===e.pointerId&&ev.button===0){ev.preventDefault();ev.stopPropagation();finish(true);}},options);
     window.addEventListener('pointercancel',ev=>{if(ev.pointerId===e.pointerId)finish(false);},options);
     window.addEventListener('pointerdown',()=>finish(false),options);
-    entry.addEventListener('lostpointercapture',()=>finish(false),options);entry.addEventListener('blur',()=>finish(false),options);
+    // An input's inner control may transfer its implicit touch capture to the host.
+    entry.addEventListener('lostpointercapture',ev=>{if(ev.pointerId===e.pointerId&&!entry.hasPointerCapture(e.pointerId))finish(false);},options);entry.addEventListener('blur',()=>finish(false),options);
     window.addEventListener('blur',()=>finish(false),options);window.addEventListener('resize',()=>finish(false),options);
     document.addEventListener('scroll',ev=>{if(ev.target.contains?.(entry))finish(false);},options);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)finish(false);},options);
@@ -139,7 +142,7 @@ function installValueLadder(entry,commit){
     },options);
     window.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();},options);
     observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','hidden']});
-    try{entry.setPointerCapture(e.pointerId);move(firstMove);}catch{finish(false);}
+    try{if(!entry.hasPointerCapture(e.pointerId))entry.setPointerCapture(e.pointerId);move(firstMove);}catch{finish(false);}
   }
   entry.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   entry.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
@@ -148,7 +151,7 @@ function installValueLadder(entry,commit){
     e.preventDefault();e.stopPropagation();cancelValueLadder();
     const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!readonly;
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
-    entry.focus({preventScroll:true});if(!writable())return;
+    if(e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
     const initial=entry.value,initialValue=Number(initial),steps=[10,1,.1,.01,.001];
     const popup=el('div',{id:'valueladder',role:'tooltip'}),rows=el('div',{class:'ladder-rows'});
     const readout=el('div',{class:'ladder-readout'}),number=el('output',{class:'ladder-value'}),increment=el('span',{class:'ladder-step'});
@@ -165,7 +168,7 @@ function installValueLadder(entry,commit){
     const fullRect=popup.getBoundingClientRect(),rowsTop=rows.getBoundingClientRect().top,rowsBottom=rowsTop+steps.length*rowHeight;
     const indexAt=y=>Math.max(0,Math.min(steps.length-1,Math.floor((y-rowsTop)/rowHeight)));
     let index=2,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,selectionEngaged=false;
-    const oldDescription=entry.getAttribute('aria-describedby');entry.setAttribute('aria-describedby','valueladder');entry.numericGestureActive=true;
+    const oldDescription=entry.getAttribute('aria-describedby');entry.setAttribute('aria-describedby','valueladder');entry.numericGestureActive=true;if(e.pointerType==='touch')entry.beginNumericEdit?.();
     const oldTitle=entry.getAttribute('title');entry.removeAttribute('title');
     document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing');
     const paint=()=>{
@@ -185,6 +188,7 @@ function installValueLadder(entry,commit){
       if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
       // Graph defaults use the existing single checkpoint; live Uniforms use their CAS write.
       if(allowed&&value!==initialValue)commit();
+      if(e.pointerType==='touch'){entry.endNumericEdit?.();document.activeElement?.beginNumericEdit?.();}
     }
     function move(ev){
       if(ev.pointerId!==e.pointerId)return;
@@ -212,7 +216,7 @@ function installValueLadder(entry,commit){
     window.addEventListener('pointerup',ev=>{if(ev.pointerId===e.pointerId&&ev.button===button){ev.preventDefault();ev.stopPropagation();finish(true);}},options);
     window.addEventListener('pointercancel',ev=>{if(ev.pointerId===e.pointerId)finish(false);},options);
     window.addEventListener('pointerdown',()=>finish(false),options);
-    entry.addEventListener('lostpointercapture',()=>finish(false),options);
+    entry.addEventListener('lostpointercapture',ev=>{if(ev.pointerId===e.pointerId&&!entry.hasPointerCapture(e.pointerId))finish(false);},options);
     entry.addEventListener('blur',()=>finish(false),options);
     window.addEventListener('blur',()=>finish(false),options);
     window.addEventListener('resize',()=>finish(false),options);
@@ -221,29 +225,44 @@ function installValueLadder(entry,commit){
     window.addEventListener('keydown',ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopImmediatePropagation();finish(false);}else if(ev.key==='Tab')finish(false);else {ev.preventDefault();ev.stopImmediatePropagation();}},options);
     window.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();},options);
     observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','hidden']});
-    try{entry.setPointerCapture(e.pointerId);}catch{finish(false);}
+    try{if(!entry.hasPointerCapture(e.pointerId))entry.setPointerCapture(e.pointerId);}catch{finish(false);}
   }
   let suppressContextUntil=0;
   entry.addEventListener('contextmenu',e=>{if(performance.now()<suppressContextUntil||e.altKey){e.preventDefault();e.stopPropagation();return;}openNumericPresets(entry,commit,e);});
   entry.addEventListener('pointerdown',e=>{
     const touch=e.pointerType==='touch';
+    if(touch&&!e.isPrimary){e.preventDefault();e.stopPropagation();return;}
     if(!touch&&(e.button===1||(e.button===2&&e.altKey))){suppressContextUntil=performance.now()+1200;beginLadder(e);return;}
     if(e.button!==0||e.metaKey||e.altKey||entry.disabled||entry.readOnly||editorMutationBlocked())return;
     cancelValueLadder();
-    const textEditing=document.activeElement===entry,canScrub=!touch&&!textEditing&&entry.value.trim()&&Number.isFinite(Number(entry.value));
+    const textEditing=document.activeElement===entry,canScrub=!textEditing&&entry.value.trim()&&Number.isFinite(Number(entry.value));
+    // Once explicitly editing, leave caret placement and selection to the browser.
+    if(touch&&textEditing){numericTouchTap=null;return;}
     if(touch||canScrub){e.preventDefault();e.stopPropagation();}
     const controller=new AbortController(),options={capture:true,signal:controller.signal},scroller=entry.closest('.panel-scroll'),inlineCanvas=touch&&entry.closest('#canvas');
     const sx=e.clientX,sy=e.clientY,scrollTop=scroller?.scrollTop||0,initialPan=inlineCanvas?{...pan}:null;let moved=false,done=false,timer;
+    const previousTap=touch?numericTouchTap:null;numericTouchTap=null;
     const cleanup=()=>{if(done)return;done=true;clearTimeout(timer);controller.abort();if(pendingValueLadder?.entry===entry)pendingValueLadder=null;};
     pendingValueLadder={entry,cancel:cleanup};
     timer=setTimeout(()=>{cleanup();if(!entry.isConnected||entry.disabled||entry.readOnly||!entry.getClientRects().length)return;beginLadder(e);},450);
     window.addEventListener('pointermove',ev=>{if(ev.pointerId!==e.pointerId)return;
-      if(canScrub&&Math.abs(ev.clientX-sx)>4&&Math.abs(ev.clientX-sx)>=Math.abs(ev.clientY-sy)){cleanup();beginScrub(e,ev);return;}
+      const dx=ev.clientX-sx,dy=ev.clientY-sy;
+      if(canScrub&&(!touch||!moved)&&(touch?Math.hypot(dx,dy)>8:Math.abs(dx)>4)&&Math.abs(dx)>=Math.abs(dy)){cleanup();beginScrub(e,ev);return;}
       if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>8){moved=true;clearTimeout(timer);if(!touch){cleanup();return;}}
       if(touch){ev.preventDefault();ev.stopPropagation();if(moved&&scroller)scroller.scrollTop=scrollTop-(ev.clientY-sy)/uiScaleFactor();
         else if(moved&&inlineCanvas){pan={x:initialPan.x+(ev.clientX-sx)/uiScaleFactor(),y:initialPan.y+(ev.clientY-sy)/uiScaleFactor()};transform();}}
     },options);
-    window.addEventListener('pointerup',ev=>{if(ev.pointerId!==e.pointerId)return;cleanup();if(touch||canScrub){ev.preventDefault();ev.stopPropagation();if(!moved&&entry.isConnected)entry.focus({preventScroll:true});}},options);
+    window.addEventListener('pointerup',ev=>{
+      if(ev.pointerId!==e.pointerId)return;cleanup();
+      if(touch||canScrub){
+        ev.preventDefault();ev.stopPropagation();
+        if(!moved&&entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()){
+          if(!touch)entry.focus({preventScroll:true});
+          else if(previousTap?.entry===entry&&performance.now()-previousTap.time<=350&&Math.hypot(sx-previousTap.x,sy-previousTap.y)<=24)entry.focus({preventScroll:true});
+          else numericTouchTap={entry,time:performance.now(),x:sx,y:sy};
+        }
+      }
+    },options);
     window.addEventListener('pointercancel',cleanup,options);window.addEventListener('pointerdown',cleanup,options);window.addEventListener('blur',cleanup,options);
     window.addEventListener('keydown',ev=>{if(!canScrub||!['Shift','Control'].includes(ev.key))cleanup();},options);document.addEventListener('visibilitychange',()=>{if(document.hidden)cleanup();},options);
   });
@@ -427,7 +446,7 @@ function parameterControlRow(label,control,type=''){
 }
 function deferParameterInspector(){
   const edit=parameterValueEdit;if(!edit)return false;
-  if(edit.entry.isConnected&&!readonly&&selected===edit.node.id&&inspectorTab==='parameters'&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)&&(document.activeElement===edit.entry||numericPresetMenu?.entry===edit.entry||edit.committing))return true;
+  if(edit.entry.isConnected&&!readonly&&selected===edit.node.id&&inspectorTab==='parameters'&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)&&(document.activeElement===edit.entry||edit.entry.numericGestureActive||numericPresetMenu?.entry===edit.entry||edit.committing))return true;
   edit.entry.cancelParameterValue?.();parameterValueEdit=null;return false;
 }
 function applyValueComponentHint(element,n,port,index,vector,labels){
@@ -470,7 +489,8 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
       if(!entry.value.trim()||!Number.isFinite(next)||(['int','uint'].includes(scalarType)&&(!Number.isInteger(next)||next<Number(entry.min)||next>Number(entry.max)))){entry.setAttribute('aria-invalid','true');return;}
       if(parameterValueEdit?.entry===entry&&parameterValueEdit.signature!==inlineValueSignature(n)){restore();return;}
       if(!change(()=>write(index,next),{redraw:false}))return;
-      syncing=true;const latest=currentValues();for(const peer of entries)peer.setSyncedValue(latest[Number(peer.dataset.component)]);syncing=false;
+      const focusedDraft=entries.find(peer=>peer!==entry&&peer===document.activeElement&&peer.hasPendingEdit?.());
+      syncing=true;const latest=currentValues();for(const peer of entries)if(peer.dataset.component!==focusedDraft?.dataset.component)peer.setSyncedValue(latest[Number(peer.dataset.component)]);syncing=false;
       if(definition(n)?.key==='color'&&key==='$value'){
         const display=colorDisplay(n.params.value),ink=box.querySelector('.color-ink'),picker=box.querySelector('input[type=color]');
         if(ink)ink.style.backgroundColor=display.css;if(picker)picker.value=display.hex;
@@ -483,6 +503,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
       if(parameterValueEdit?.entry===entry)parameterValueEdit.committing=false;
     };
     entry.cancelParameterValue=restore;
+    entry.beginNumericEdit=focus;entry.endNumericEdit=()=>{if(parameterValueEdit?.entry===entry)parameterValueEdit=null;};
     entry.addEventListener('focus',focus);
     entry.addEventListener('input',()=>entry.removeAttribute('aria-invalid'));
     entry.addEventListener('change',commit);
@@ -802,7 +823,7 @@ let inlineValueEdit=null,inlineValueRenderPending=false,inlineValueRenderTimer=n
 function inlineValueSignature(n){return JSON.stringify([n.params,n.inputValues,current().edges.filter(e=>e.to[0]===n.id)]);}
 function deferInlineValueRender(){
   const edit=inlineValueEdit;if(!edit)return false;
-  if(edit.entry.isConnected&&(document.activeElement===edit.entry||numericPresetMenu?.entry===edit.entry)&&!readonly&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)){
+  if(edit.entry.isConnected&&(document.activeElement===edit.entry||edit.entry.numericGestureActive||numericPresetMenu?.entry===edit.entry)&&!readonly&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)){
     inlineValueRenderPending=true;return true;
   }
   edit.entry.cancelInlineValue?.();inlineValueEdit=null;return false;
@@ -810,7 +831,7 @@ function deferInlineValueRender(){
 function queueInlineValueRender(){
   inlineValueRenderPending=true;clearTimeout(inlineValueRenderTimer);
   inlineValueRenderTimer=setTimeout(()=>{
-    inlineValueRenderTimer=null;if(inlineValueEdit?.entry&&(inlineValueEdit.entry===document.activeElement||numericPresetMenu?.entry===inlineValueEdit.entry))return;
+    inlineValueRenderTimer=null;if(inlineValueEdit?.entry&&(inlineValueEdit.entry===document.activeElement||inlineValueEdit.entry.numericGestureActive||numericPresetMenu?.entry===inlineValueEdit.entry))return;
     if(inlineValueRenderPending){inlineValueRenderPending=false;render();}
   },0);
 }
@@ -841,6 +862,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
       if(selected===n.id)inspector();queueInlineValueRender();
     };
     entry.cancelInlineValue=()=>{restore();if(inlineValueEdit?.entry===entry)inlineValueEdit=null;};
+    entry.beginNumericEdit=focus;entry.endNumericEdit=()=>{if(inlineValueEdit?.entry===entry)inlineValueEdit=null;queueInlineValueRender();};
     entry.addEventListener('focus',focus);
     entry.addEventListener('input',()=>entry.removeAttribute('aria-invalid'));
     entry.addEventListener('change',commit);

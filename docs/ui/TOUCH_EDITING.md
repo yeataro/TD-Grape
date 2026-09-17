@@ -28,6 +28,33 @@ open a context menu on hold. Touch connection targets allow 22 CSS px proximity
 without enlarging the visible socket; mouse proximity remains 14 CSS px.
 Context-menu rows have at least 44px height when opened by touch.
 
+## Numeric fields on nodes and in Parameter
+
+Numeric fields use the same shared gesture handler in both locations. Behavior
+is selected by the actual touch pointer, not screen width; mouse and pen retain
+their existing desktop behavior.
+
+| Touch gesture on a numeric field outside text editing | Action |
+| --- | --- |
+| Single tap | Leave the value visible without focusing the input or opening the keyboard |
+| Double-tap the same field | Enter text editing |
+| Drag horizontally | Adjust the value with the existing scrub sensitivity and increments |
+| Hold for 450 ms | Open Value Ladder without focusing the input; choose a rung vertically, then adjust horizontally |
+| Move vertically before a scrub or Ladder starts | Keep Parameter scrolling or graph navigation, without changing the value |
+
+Text editing retains native caret/selection behavior and the existing commit
+and cancel rules. Scrubbing and Ladder preview changes during the gesture,
+commit once on release, and restore the initial value on cancellation. A second
+finger cancels an unfinished numeric gesture; a canceled gesture does not add
+Undo history or accidentally enter text editing. The Ladder increment remains
+locked after horizontal adjustment begins.
+
+This change is confined to numeric touch interaction. Browser page zoom, input
+focus zoom, Add Node autofocus and floating-panel visual-viewport positioning
+remain separate follow-ups in [the current UI notes](../discussions/NODE_WORKFLOW_ROUND.md).
+Physical iPhone/iPad keyboard and Safari behavior require device verification;
+automated touch checks do not establish those results.
+
 ## Gesture ownership and cancellation
 
 Node dragging only previews DOM positions until release; the graph is not
@@ -50,8 +77,9 @@ wires. Read-only graphs reject touch mutations.
 Canvas descendants disable native touch actions, text selection and WebKit
 callouts. Cancelable touch start/move events are prevented only within the
 canvas, providing a fallback for older iOS handling of absolutely positioned
-elements. Graph text fields are exempted from selection suppression; Parameter,
-code and search fields outside the canvas retain native editing.
+elements. Graph text fields are exempted from selection suppression. Numeric
+fields enter native editing through the touch interaction above; other
+Parameter, code and search fields outside the canvas retain native editing.
 
 Compatibility clicks, double-clicks and context-menu events from the same touch
 sequence are suppressed to avoid duplicate commands. A real mouse/pen down

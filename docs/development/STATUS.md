@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-18 Node／Parameter 觸控數值（0.8.84）：共用數值控制器依實際 touch pointer 分流；單點不 focus，同欄位 350ms／24px 內雙點進文字編輯，水平越過 8px 門檻沿用既有 scrub，450ms 長按開 Value Ladder。初始垂直移動保留 Parameter 捲動／畫布平移；已進文字編輯時保留原生游標及選字。滑鼠／觸控筆沿用原操作。手勢預覽不改圖、放開提交一次，第二指、真正 capture loss 或取消均還原；無焦點手勢仍保留編輯狀態與 DOM，另一分量的文字草稿及緊湊／展開副本不被同步覆寫。
+
+20 組新觸控、32 組 numeric scrub、15 組 Parameter、7 組預設值檢查通過；28 份來源與服務資源一致，正式 TOE 723,820 bytes，保留兩份 Shader 並排除私人助手，現有頁面未重新整理。手機頁面縮放、輸入放大、Creator autofocus 與 visualViewport 定位僅記錄待辦；本輪未改，desktop 仍優先。實體 iPhone／Safari 未驗證。
+
 2026-09-18 浮動工具列預設與窄版排版（0.8.84）：floatingToolbar 預設開啟，明確保存的關閉偏好保留。浮動停用按鈕以不透明暗底與較暗前景呈現，避免節點透出；操作群組換行齊右，工具列可用寬度不超過 700px 時 Stage 與子圖位置一起置於命令列之下，長路徑保留橫向捲動。CSS container query 依實際工具列寬度反應，沒有新增 JavaScript 排版；兩份重複規則合併為一份。既有 experiments 19 組、Editor chrome 16 組及私人窄版 5 組通過。28 份來源／服務一致、兩份 Master current；正式 TOE 720,780 bytes，保留兩份使用者 Shader，現有頁面未重新整理。
 
 2026-09-18 互動過渡清除核對（0.8.84）：確認按下／選取／hover 的光暈過渡已刪除，沒有停用分支或備用開關；模式切換過渡仍獨立保留。額外還原 Professional 錯誤節點被新版透明光暈規則連帶增加的紅色外環，保留原錯誤邊框及選取環。與過渡前 90b4d17 樣式直接比對的兩組檢查通過，沒有改動 JavaScript 或圖／Undo／GLSL。28 份來源與服務一致、Master current；正式 TOE 保存 720,740 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
