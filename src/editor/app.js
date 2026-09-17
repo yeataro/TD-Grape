@@ -596,6 +596,31 @@ function requestEditorReload(){
   }
   clearTimeout(autoTimer);autoTimer=null;editorReloading=true;location.reload();return true;
 }
+// Reloading the applied graph replaces editing state and clears its history.
+let reloadAppliedPending=null;
+function reloadAppliedBusy(){return submitBusy||historyBusy||nativeMutationBusy||uniformPending.size||nativeSourceBusy||customBusy||exportBusy||personalBusy||pendingEditorWrites;}
+function requestAppliedGraphReload(){
+  const dialog=$('#reloadapplieddialog');if(dialog.open)return true;
+  const unfinished=pendingEditorField();
+  if(unfinished||valueLadder||pendingValueLadder){status(t('appliedReload.finishField'),true,{kind:'reload'});unfinished?.focus?.({preventScroll:true});return false;}
+  if(reloadAppliedBusy()){status(t('appliedReload.busy'));return false;}
+  reloadAppliedPending={resumeApply:!!autoTimer};clearTimeout(autoTimer);autoTimer=null;
+  $('#reloadappliedstatus').textContent='';dialog.showModal();$('#reloadappliedcancel').focus({preventScroll:true});return true;
+}
+async function confirmAppliedGraphReload(){
+  const dialog=$('#reloadapplieddialog');if(!dialog.open||!reloadAppliedPending)return false;
+  if(reloadAppliedBusy()){$('#reloadappliedstatus').textContent=t('appliedReload.busy');return false;}
+  if(pendingEditorField()||valueLadder||pendingValueLadder){$('#reloadappliedstatus').textContent=t('appliedReload.finishField');return false;}
+  reloadAppliedPending.resumeApply=false;dialog.close('reload');
+  try{await load();return true;}catch(error){status(error.message,true);return false;}
+}
+function installAppliedGraphReload(){
+  $('#reload').onpointerdown=event=>{if(pendingEditorField()||valueLadder||pendingValueLadder)event.preventDefault();};
+  $('#reload').onclick=requestAppliedGraphReload;
+  $('#reloadappliedcancel').onclick=()=>$('#reloadapplieddialog').close('cancel');
+  $('#reloadappliedconfirm').onclick=confirmAppliedGraphReload;
+  $('#reloadapplieddialog').addEventListener('close',()=>{const pending=reloadAppliedPending;reloadAppliedPending=null;if(pending?.resumeApply)scheduleGraphApply();});
+}
 const appearanceStorageKey='sgrapeAppearanceV1';
 const customNamesStorageKey='sgrapeCustomNamesV1';
 let showCustomNodeNames=false;
@@ -673,8 +698,9 @@ function parseUIAppearance(raw){
   if(saved?.tones&&typeof saved.tones==='object'&&!Array.isArray(saved.tones)){
     for(const mode of ['dark','light'])tones[mode]=normalizeUITone(saved.tones[mode]);
   }else tones[theme]=normalizeUITone(saved?.tone);
-  const size=saved?.size==='comfortable'?'comfortable':'standard',scales={standard:normalizeUIScale(saved?.scales?.standard),comfortable:normalizeUIScale(saved?.scales?.comfortable)};
-  return{size,theme,tones,tone:tones[theme],scales,scale:scales[size]};
+  const size=saved?.size==='comfortable'?'comfortable':'standard';
+  const scale=normalizeUIScale(Object.hasOwn(saved??{},'scale')?saved.scale:saved?.scales?.[size]);
+  return{size,theme,tones,tone:tones[theme],scale};
 }
 let uiAppearance=parseUIAppearance(null);
 function positionAppearancePanel(panel=$('#appearancepanel'),opener=$('#uitheme')){
@@ -714,12 +740,12 @@ function renderUIAppearance(){
 function setUIAppearance(key,value){
   if(!((key==='size'&&['standard','comfortable'].includes(value))||(key==='theme'&&['dark','light'].includes(value))||(['tone','scale'].includes(key)&&typeof value==='number'&&Number.isFinite(value))))return;
   const previous=uiAppearance;
-  const tones={...previous.tones},scales={...previous.scales};
+  const tones={...previous.tones};
   if(key==='tone')tones[previous.theme]=normalizeUITone(value);
-  if(key==='scale')scales[previous.size]=normalizeUIScale(value);
+  const scale=key==='scale'?normalizeUIScale(value):previous.scale;
   const theme=key==='theme'?value:previous.theme,size=key==='size'?value:previous.size;
-  uiAppearance={size,theme,tones,tone:tones[theme],scales,scale:scales[size]};
-  try{localStorage.setItem(appearanceStorageKey,JSON.stringify({size,theme,tones,scales}));}catch{}
+  uiAppearance={size,theme,tones,tone:tones[theme],scale};
+  try{localStorage.setItem(appearanceStorageKey,JSON.stringify({size,theme,tones,scale}));}catch{}
   renderUIAppearance();
   // A display preference does not redraw the graph, change its zoom or apply a Shader.
   if(previous.scale!==uiAppearance.scale||previous.size!==size)window.dispatchEvent(new Event('resize'));
@@ -860,7 +886,7 @@ $('#canvas').addEventListener('drop',e=>{const key=e.dataTransfer.getData('appli
 
 $('#apply').onclick=()=>{conflicted=false;applyNeedsReview=false;if(connectionIssue==='changed')connectionIssue='';renderConnectionNotice();applyGraph();};
 $('#save').onclick=async()=>{try{const r=await api('save',{});status(r.saved?t('project.saved')+(dirty?t('project.draft'):''):t('project.saveFailed'),!r.saved);}catch(e){status(e.message,true);}};
-$('#reload').onclick=()=>{if(submitBusy||historyBusy||nativeMutationBusy)return;if(dirty&&!confirm(t('graph.reloadConfirm')))return;load().catch(e=>status(e.message,true));};
+installAppliedGraphReload();
 
 $('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();fit();});
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=fit;$('#search').oninput=library;

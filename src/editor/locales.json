@@ -174,8 +174,8 @@
       "en": "PNG could not be created. Retry or use JSON export."
     },
     "ladder.hint": {
-      "en": "Click to edit; drag horizontally to adjust (Shift: fine, Ctrl: coarse). Middle mouse, Alt+right mouse or long-press opens Value Ladder. Release applies; Esc cancels. Float drag steps: 0.01; Shift 0.001, Ctrl 0.1, Shift+Ctrl 0.0001.",
-      "zh-Hant": "點放編輯；左右拖曳調值（Shift 細調、Ctrl 粗調）。中鍵、Alt＋右鍵或長按開啟 Value Ladder。放開套用，Esc 取消。 浮點拖曳：0.01；Shift 0.001、Ctrl 0.1、Shift＋Ctrl 0.0001。"
+      "en": "Click to edit; drag horizontally to adjust (Shift: fine, Ctrl: coarse). Middle mouse, Alt+right mouse or long-press opens Value Ladder. Release applies; Esc cancels. Float drag steps: 0.01; Shift 0.001, Ctrl 0.1, Shift+Ctrl 0.0001. Right-click for presets.",
+      "zh-Hant": "點放編輯；左右拖曳調值（Shift 細調、Ctrl 粗調）。中鍵、Alt＋右鍵或長按開啟 Value Ladder。放開套用，Esc 取消。 浮點拖曳：0.01；Shift 0.001、Ctrl 0.1、Shift＋Ctrl 0.0001。 右鍵開啟預設值。"
     },
     "ladder.release": {
       "zh-Hant": "放開套用 · Esc 取消",
@@ -368,6 +368,30 @@
     "project.saveFailed": {
       "zh-Hant": "工程儲存未完成",
       "en": "Project was not saved"
+    },
+    "appliedReload.title": {
+      "zh-Hant": "重新載入已套用圖？",
+      "en": "Reload the applied graph?"
+    },
+    "appliedReload.explanation": {
+      "zh-Hant": "將從 TouchDesigner 取得最後已套用的圖，取代目前編輯內容。尚未套用的修改會被捨棄，Undo／Redo 記錄將全部清除。此操作無法撤銷。",
+      "en": "Fetch the last applied graph from TouchDesigner and replace the current editing content. Unapplied changes will be discarded and all Undo/Redo history will be cleared. This cannot be undone."
+    },
+    "appliedReload.cancel": {
+      "zh-Hant": "取消",
+      "en": "Cancel"
+    },
+    "appliedReload.confirm": {
+      "zh-Hant": "重新載入",
+      "en": "Reload"
+    },
+    "appliedReload.finishField": {
+      "zh-Hant": "欄位仍有未完成的編輯。請先完成或取消編輯，再重新載入已套用圖。",
+      "en": "A field has unfinished edits. Finish or cancel them before reloading the applied graph."
+    },
+    "appliedReload.busy": {
+      "zh-Hant": "儲存或參數更新正在進行，請完成後再重新載入已套用圖。",
+      "en": "A save or parameter update is in progress. Wait before reloading the applied graph."
     },
     "graph.reloadConfirm": {
       "zh-Hant": "捨棄尚未套用的修改，載入 TD 中的圖？",
@@ -2748,6 +2772,7 @@
     "appearance.scale": {"zh-Hant": "介面縮放", "en": "Interface scale"},
     "appearance.scale.decrease": {"zh-Hant": "縮小介面", "en": "Smaller"},
     "appearance.scale.increase": {"zh-Hant": "放大介面", "en": "Larger"},
+    "numeric.presets": {"zh-Hant": "數值預設值", "en": "Numeric presets"},
     "appearance.scale.reset": {"zh-Hant": "右鍵或雙擊還原 100%", "en": "Right-click or double-click to reset to 100%"},
     "appearance.controls": {
       "zh-Hant": "介面大小與外觀",

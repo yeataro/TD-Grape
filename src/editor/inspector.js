@@ -1,10 +1,65 @@
 /* Node Parameter card. All explanatory content and labels live in locales.json. */
-let valueLadder=null,pendingValueLadder=null;
-function cancelValueLadder(){pendingValueLadder?.cancel();valueLadder?.cancel();}
+let valueLadder=null,pendingValueLadder=null,numericPresetMenu=null;
+function cancelValueLadder(){pendingValueLadder?.cancel();valueLadder?.cancel();numericPresetMenu?.close();}
+function openNumericPresets(entry,commit,event){
+  event.preventDefault();event.stopPropagation();cancelValueLadder();
+  const owner=current(),documentGraph=graph,writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner;
+  if(!writable())return;
+  const values=(entry.step==='1'?[0,1,-1]:[0,1,.5,-.5,-1]).filter(value=>(entry.min===''||value>=Number(entry.min))&&(entry.max===''||value<=Number(entry.max)));
+  if(!values.length)return;
+  entry.focus({preventScroll:true});if(!writable())return;
+  const popup=el('div',{id:'numericpresets',popover:'auto',role:'menu','aria-label':t('numeric.presets')});
+  const previousAttributes=new Map(['aria-haspopup','aria-expanded','aria-controls'].map(key=>[key,entry.getAttribute(key)]));
+  const controller=new AbortController(),options={signal:controller.signal};let closed=false;
+  const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)close();});
+  function close(focus=false){
+    if(closed)return;closed=true;controller.abort();observer.disconnect();
+    if(popup.matches(':popover-open'))popup.hidePopover();popup.remove();
+    if(numericPresetMenu?.entry===entry)numericPresetMenu=null;entry.numericGestureActive=false;
+    for(const[key,value]of previousAttributes){if(value===null)entry.removeAttribute(key);else entry.setAttribute(key,value);}
+    if(focus&&entry.isConnected&&!entry.disabled)entry.focus({preventScroll:true});
+  }
+  numericPresetMenu={entry,close};entry.numericGestureActive=true;
+  entry.setAttribute('aria-haspopup','menu');entry.setAttribute('aria-controls','numericpresets');entry.setAttribute('aria-expanded','true');
+  for(const value of values){
+    const button=el('button',{type:'button',role:'menuitemradio','data-numeric-preset':value,'aria-checked':String(entry.value.trim()!==''&&Number(entry.value)===value),tabindex:'-1'},String(value));
+    button.onclick=()=>{if(!writable()){close();return;}entry.value=String(value);entry.refreshNumericSlider?.();close(true);commit();};popup.append(button);
+  }
+  document.body.append(popup);popup.showPopover();
+  const rect=entry.getBoundingClientRect(),zoom=uiScaleFactor(),x=event.clientX||rect.left,y=event.clientY||rect.bottom;
+  Object.assign(popup.style,{left:Math.max(8,Math.min(x/zoom,innerWidth/zoom-popup.offsetWidth-8))+'px',top:Math.max(8,Math.min(y/zoom,innerHeight/zoom-popup.offsetHeight-8))+'px'});
+  const buttons=[...popup.querySelectorAll('button')];(buttons.find(button=>button.getAttribute('aria-checked')==='true')||buttons[0]).focus({preventScroll:true});
+  popup.addEventListener('keydown',e=>{
+    e.stopPropagation();const index=buttons.indexOf(document.activeElement);
+    if(e.key==='Escape'){e.preventDefault();close(true);}
+    else if(e.key==='Tab'){e.preventDefault();close(true);}
+    else if(['ArrowUp','ArrowDown','Home','End'].includes(e.key)){e.preventDefault();buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length].focus({preventScroll:true});}
+  },options);
+  popup.addEventListener('contextmenu',e=>e.preventDefault(),options);
+  popup.addEventListener('toggle',e=>{if(e.newState==='closed')close();},options);
+  document.addEventListener('pointerdown',e=>{
+    if(popup.contains(e.target)||e.target===entry)return;
+    // Dismiss this menu without blurring and committing an unfinished field.
+    e.preventDefault();e.stopImmediatePropagation();
+    const consume=click=>{click.preventDefault();click.stopImmediatePropagation();};
+    document.addEventListener('click',consume,{capture:true,once:true});setTimeout(()=>document.removeEventListener('click',consume,true),400);
+    close(true);
+  },{...options,capture:true});
+  window.addEventListener('resize',()=>close(),options);window.addEventListener('blur',e=>{if(e.target===window)close();},options);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)close();},options);
+  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','hidden']});
+}
 function installValueLadder(entry,commit){
   entry.title=t('ladder.hint');
   entry.classList.add('numeric-slider');
-  const paintSlider=()=>{const value=Number(entry.value);entry.style.setProperty('--numeric-fill',((entry.value.trim()&&Number.isFinite(value)?Math.max(0,Math.min(1,value)):0)*100)+'%');};
+  const paintSlider=()=>{
+    const value=Number(entry.value),valid=entry.value.trim()!==''&&Number.isFinite(value),magnitude=valid?Math.abs(value):0;
+    let fraction=magnitude;
+    // Decimal leading digits avoid overflowing the next decade for large finite values.
+    if(magnitude>1){const leading=Number(magnitude.toExponential().split('e')[0]);fraction=leading===1?1:leading/10;}
+    const proportion=valid&&value<0?1-fraction:fraction;
+    entry.style.setProperty('--numeric-fill',Number((proportion*100).toFixed(6))+'%');
+  };
   entry.refreshNumericSlider=paintSlider;paintSlider();
   entry.addEventListener('input',paintSlider);entry.addEventListener('change',paintSlider);
   if(entry.setSyncedValue){const sync=entry.setSyncedValue;entry.setSyncedValue=value=>{sync(value);paintSlider();};}
@@ -128,7 +183,7 @@ function installValueLadder(entry,commit){
     try{entry.setPointerCapture(e.pointerId);}catch{finish(false);}
   }
   let suppressContextUntil=0;
-  entry.addEventListener('contextmenu',e=>{if(performance.now()<suppressContextUntil){e.preventDefault();e.stopPropagation();}});
+  entry.addEventListener('contextmenu',e=>{if(performance.now()<suppressContextUntil||e.altKey){e.preventDefault();e.stopPropagation();return;}openNumericPresets(entry,commit,e);});
   entry.addEventListener('pointerdown',e=>{
     const touch=e.pointerType==='touch';
     if(!touch&&(e.button===1||(e.button===2&&e.altKey))){suppressContextUntil=performance.now()+1200;beginLadder(e);return;}
@@ -169,7 +224,7 @@ function updateUniformFields(forceKeys=new Set()){
     for(const entry of section.querySelectorAll('input[data-component]')){
       const index=Number(entry.dataset.component),item=row?.components[index],key=id+':'+index,pending=uniformPending.has(key);
       entry.disabled=readonly||!ready||!item?.writable||pending||uniformReadbacks.has(key);
-      if(item&&(document.activeElement!==entry||forceKeys.has(key))&&!pending){
+      if(item&&!entry.numericGestureActive&&(document.activeElement!==entry||forceKeys.has(key))&&!pending){
         entry.setSyncedValue(item.value);
         entry.uniformExpected={revision:uniformSnapshot.revision,...item};
       }
@@ -606,7 +661,7 @@ let inlineValueEdit=null,inlineValueRenderPending=false,inlineValueRenderTimer=n
 function inlineValueSignature(n){return JSON.stringify([n.params,n.inputValues,current().edges.filter(e=>e.to[0]===n.id)]);}
 function deferInlineValueRender(){
   const edit=inlineValueEdit;if(!edit)return false;
-  if(edit.entry.isConnected&&document.activeElement===edit.entry&&!readonly&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)){
+  if(edit.entry.isConnected&&(document.activeElement===edit.entry||numericPresetMenu?.entry===edit.entry)&&!readonly&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)){
     inlineValueRenderPending=true;return true;
   }
   edit.entry.cancelInlineValue?.();inlineValueEdit=null;return false;
@@ -614,7 +669,7 @@ function deferInlineValueRender(){
 function queueInlineValueRender(){
   inlineValueRenderPending=true;clearTimeout(inlineValueRenderTimer);
   inlineValueRenderTimer=setTimeout(()=>{
-    inlineValueRenderTimer=null;if(inlineValueEdit?.entry===document.activeElement)return;
+    inlineValueRenderTimer=null;if(inlineValueEdit?.entry&&(inlineValueEdit.entry===document.activeElement||numericPresetMenu?.entry===inlineValueEdit.entry))return;
     if(inlineValueRenderPending){inlineValueRenderPending=false;render();}
   },0);
 }
@@ -647,7 +702,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
     entry.addEventListener('focus',focus);
     entry.addEventListener('input',()=>entry.removeAttribute('aria-invalid'));
     entry.addEventListener('change',commit);
-    entry.addEventListener('blur',()=>{if(!entry.numericGestureActive)commit();restore();if(inlineValueEdit?.entry===entry)inlineValueEdit=null;queueInlineValueRender();});
+    entry.addEventListener('blur',()=>{if(numericPresetMenu?.entry===entry)return;if(!entry.numericGestureActive)commit();restore();if(inlineValueEdit?.entry===entry)inlineValueEdit=null;queueInlineValueRender();});
     entry.addEventListener('keydown',e=>{
       e.stopPropagation();
       if(e.key==='Enter'){e.preventDefault();commit();}
@@ -700,7 +755,7 @@ function nodeColorPicker(n){
   strip.append(swatch);return strip;
 }
 function inspector(){
-  if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode)cancelValueLadder();
+  if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
   const box=$('#inspector');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   if(n||selectedEdge!==null)selectedInputId=null;

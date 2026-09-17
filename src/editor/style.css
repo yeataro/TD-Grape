@@ -1397,3 +1397,18 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #canvaszoommenu button:hover,#canvaszoommenu button:focus-visible{background:var(--ui-hover,var(--ui-tone-control-hover));outline:none}
 #canvaszoommenu button[aria-checked="true"]{color:var(--purple);background:var(--ui-selected,var(--ui-tone-control-hover))}
 @media(pointer:coarse){.canvas-view-tools #zoom{min-height:36px}#canvaszoommenu button{min-height:36px}}
+
+#creator .create-heading{cursor:move;touch-action:none;user-select:none}
+
+#numericpresets{position:fixed;inset:auto;margin:0;min-width:80px;max-width:calc(100 * var(--ui-vw) - 16px);max-height:calc(100 * var(--ui-dvh) - 16px);overflow:auto;padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--ui-surface,var(--ui-tone-menu));color:var(--ui-text,var(--ui-tone-text));box-shadow:0 6px 20px #0004}
+#numericpresets::backdrop{background:transparent}
+#numericpresets button{display:block;width:100%;padding:6px 14px;background:transparent;border-color:transparent;color:inherit;text-align:right;font-variant-numeric:tabular-nums}
+#numericpresets button:is(:hover,:focus-visible){background:var(--ui-hover,var(--ui-tone-menu-hover));outline:none}
+#numericpresets button[aria-checked="true"]{color:var(--purple)}
+
+#reloadapplieddialog{width:min(440px,calc(100 * var(--ui-vw) - 24px));padding:20px}
+#reloadappliedtitle{display:block;font-size:15px}
+#reloadapplieddialog p{line-height:1.7;margin:14px 0;overflow-wrap:anywhere}
+#reloadappliedstatus{color:var(--danger)}#reloadappliedstatus:empty{display:none}
+#reloadapplieddialog .reload-applied-actions{justify-content:flex-end;gap:8px;padding:8px 0 0}
+#reloadapplieddialog button{min-height:34px}

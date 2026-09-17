@@ -17,7 +17,7 @@ await reset();let before=await snapshot(),p=await begin();await move(p,30);asser
 await drag(field(),10);assert.equal(await value(),.7);checks.push('successive drags on the same field keep working');
 await reset();await field().click();assert.equal(await field().evaluate(e=>e===document.activeElement),true);before=await snapshot();p=await point(field());await page.mouse.move(p.x,p.y);await page.mouse.down();await move(p,30);await end();assert.equal(await snapshot(),before);await field().fill('.75');await field().press('Enter');assert.equal(await value(),.75);assert.equal(await page.evaluate(()=>past.length),1);await field().fill('');await page.evaluate(()=>render());assert.equal(await field().inputValue(),'');await field().press('Escape');assert.equal(Number(await field().inputValue()),.75);assert.equal(await field().evaluate(e=>e.style.getPropertyValue('--numeric-fill')),'75%');checks.push('click-release enters text editing; selection drags and incomplete drafts remain native, with typed commit and Escape restoration');
 for(const zoom of [.5,1,1.5]){await reset(zoom);await drag(field(),20);assert.equal(await value(),.5);}checks.push('numeric sensitivity is based on screen pixels, independent of graph zoom');
-await reset();p=await begin();await page.keyboard.down('Shift');await move(p,20);await page.keyboard.up('Shift');await end();assert.equal(await value(),.32);p=await begin();await page.keyboard.down('Control');await move(p,20);await page.keyboard.up('Control');await end();assert.equal(await value(),2.32);assert.equal(await field().evaluate(e=>e.style.getPropertyValue('--numeric-fill')),'100%');p=await begin();await page.keyboard.down('Control');await move(p,-30);await page.keyboard.up('Control');await end();assert.equal(await value(),-.68);assert.equal(await field().evaluate(e=>e.style.getPropertyValue('--numeric-fill')),'0%');checks.push('Shift fine and Control coarse gestures allow values outside 0–1; only the fill is clamped');
+await reset();p=await begin();await page.keyboard.down('Shift');await move(p,20);await page.keyboard.up('Shift');await end();assert.equal(await value(),.32);p=await begin();await page.keyboard.down('Control');await move(p,20);await page.keyboard.up('Control');await end();assert.equal(await value(),2.32);assert.equal(await field().evaluate(e=>e.style.getPropertyValue('--numeric-fill')),'23.2%');p=await begin();await page.keyboard.down('Control');await move(p,-30);await page.keyboard.up('Control');await end();assert.equal(await value(),-.68);assert.equal(await field().evaluate(e=>e.style.getPropertyValue('--numeric-fill')),'32%');checks.push('Shift fine and Control coarse gestures allow signed values outside 0–1; fills use their current signed decade interval');
 // PointerEvent client coordinates are fractional CSS viewport pixels on scaled displays.
 // Dispatch each fraction as one actual mouse move so event grouping cannot mask drift.
 const preciseMove=async(p,dx)=>{await page.mouse.move(p.x+dx,p.y);await settle();};
@@ -84,5 +84,18 @@ await preciseMove(p,-30);assert.equal(await unsignedField.inputValue(),'1');awai
 p=await begin(unsignedField);await preciseMove(p,-40);await end();assert.equal(await unsignedField.inputValue(),'0');assert.deepEqual(await page.evaluate(()=>uintWrites),[0]);
 checks.push('uint scrubbing respects zero, rebases at the clamp for immediate reversal, and emits no write when the gesture returns to its starting value');
 await page.evaluate(()=>{const entry=$('[data-test-integer]');entry.setSyncedValue(.4);});assert.equal(await integerField.evaluate(e=>e.style.getPropertyValue('--numeric-fill')),'40%');checks.push('programmatic source synchronization also updates the proportion fill');
+await reset();before=await snapshot();
+for(const [number,percent]of [[-100,0],[-20,80],[-10,0],[-2,80],[-1,0],[-.8,20],[-.2,80],[-0,0],[0,0],[.5,50],[1,100],[1.0000000000000002,10],[2,20],[10,100],[10.000000000000002,10],[20,20],[100,100],[1e308,100],[Number.MAX_VALUE,17.976931],[-Number.MAX_VALUE,82.023069]]){
+  await field().evaluate((entry,number)=>{entry.value=String(number);entry.refreshNumericSlider();},number);
+  assert.equal(await field().evaluate(entry=>entry.style.getPropertyValue('--numeric-fill')),percent+'%',String(number));
+  assert.equal(Number(await field().inputValue()),number===0?0:number);
+  assert.ok(await field().evaluate(entry=>getComputedStyle(entry).backgroundImage.startsWith('linear-gradient(to right,')),'the bright fill always grows from the left');
+}
+for(const text of ['', '1e', 'NaN', 'Infinity']){
+  await field().evaluate((entry,text)=>{entry.value=text;entry.refreshNumericSlider();},text);
+  assert.equal(await field().evaluate(entry=>entry.style.getPropertyValue('--numeric-fill')),'0%');
+}
+assert.equal(await snapshot(),before);
+checks.push('signed decade fills keep a left-to-right gradient, honor exact power-of-ten boundaries, handle maximum finite values without overflow, and leave numeric data/history untouched');
 await reset();await page.screenshot({path:path.join(folder,'numeric-slider-dark.png')});await page.evaluate(()=>setUIAppearance('theme','light'));await page.screenshot({path:path.join(folder,'numeric-slider-light.png')});assert.ok(await field().evaluate(e=>getComputedStyle(e).backgroundImage.includes('linear-gradient')));assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
 }catch(error){await h.finish(error);throw error;}})().catch(error=>{console.error(error.stack);process.exitCode=1;});

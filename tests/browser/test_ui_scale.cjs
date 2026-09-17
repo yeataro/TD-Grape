@@ -8,7 +8,7 @@ async function run(){
   const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder),{page,checks,errors,settle}=h;
   const writes=[];
   page.on('request',request=>{const route=new URL(request.url()).pathname;if(request.method()==='POST'&&route.startsWith('/api/')&&!route.endsWith('/remote-preview'))writes.push(route);});
-  const state=()=>page.evaluate(()=>({size:uiAppearance.size,scale:uiAppearance.scale,scales:{...uiAppearance.scales},theme:uiAppearance.theme,tone:uiAppearance.tone,tones:{...uiAppearance.tones}}));
+  const state=()=>page.evaluate(()=>({size:uiAppearance.size,scale:uiAppearance.scale,theme:uiAppearance.theme,tone:uiAppearance.tone,tones:{...uiAppearance.tones}}));
   const snapshot=()=>page.evaluate(()=>({graph:JSON.stringify(graph),past:JSON.stringify(past),future:JSON.stringify(future),pan:{...pan},scale,dirty,stage,selected,preview:{source:previewSource,format:previewFormat,state:$('#preview').state}}));
   const setScale=async value=>{await page.evaluate(value=>setUIAppearance('scale',value),value);await settle();};
   const setSize=async(size,scale=100)=>{await page.evaluate(({size,scale})=>{setUIAppearance('size',size);setUIAppearance('scale',scale);},{size,scale});await settle();};
@@ -32,7 +32,6 @@ async function run(){
   };
   try{
     await page.selectOption('#language','en');
-    assert.deepEqual((await state()).scales,{standard:100,comfortable:100});
     assert.equal((await state()).scale,100);
     const initial=await snapshot();await open();
     assert.equal(await page.locator('#uisize').getAttribute('aria-haspopup'),'dialog');
@@ -64,24 +63,30 @@ async function run(){
     assert.deepEqual(await snapshot(),initial);
     checks.push('plus/minus step five, native keys/limits and pointer drag work; right-click/double-click reset100, Escape restores opener focus and outside click dismisses');
 
-    await setSize('standard',87);await setSize('comfortable',116);await choose('comfortable');assert.equal((await state()).scale,116,'active preset preserves its adjustment');
-    await choose('standard');assert.equal((await state()).scale,87);await page.locator('#uiscale').click({button:'right'});await settle();
-    assert.deepEqual((await state()).scales,{standard:100,comfortable:116});await choose('comfortable');assert.equal((await state()).scale,116);
+    await setSize('standard',87);await choose('comfortable');assert.equal((await state()).scale,87,'switching density preserves the shared adjustment');
+    await setScale(116);await choose('comfortable');assert.equal((await state()).scale,116,'active preset preserves the shared adjustment');
+    await choose('standard');assert.equal((await state()).scale,116);await page.locator('#uiscale').click({button:'right'});await settle();
+    assert.equal((await state()).scale,100);await choose('comfortable');assert.equal((await state()).scale,100,'reset is shared across both densities');await setScale(116);
     await page.evaluate(()=>{setUIAppearance('theme','dark');setUIAppearance('tone',-34);setUIAppearance('theme','light');setUIAppearance('tone',26);});await settle();
     const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1')));
-    assert.deepEqual(saved,{size:'comfortable',theme:'light',tones:{dark:-34,light:26},scales:{standard:100,comfortable:116}});
+    assert.deepEqual(saved,{size:'comfortable',theme:'light',tones:{dark:-34,light:26},scale:116});
     await page.reload();await page.waitForSelector('.node');await settle();
-    assert.deepEqual(await state(),{size:'comfortable',scale:116,scales:{standard:100,comfortable:116},theme:'light',tone:26,tones:{dark:-34,light:26}});
+    assert.deepEqual(await state(),{size:'comfortable',scale:116,theme:'light',tone:26,tones:{dark:-34,light:26}});
     for(const[stored,expected]of[
-      [{size:'standard',theme:'dark',tones:{dark:23,light:-12}},{standard:100,comfortable:100}],
-      [{size:'comfortable',theme:'light',scales:{standard:60,comfortable:180}},{standard:75,comfortable:125}],
-      [{size:'standard',theme:'dark',scales:{standard:'95',comfortable:null}},{standard:100,comfortable:100}],
-      [{size:'comfortable',theme:'dark',scales:{standard:93.6,comfortable:108.2}},{standard:94,comfortable:108}]
+      [{size:'standard',theme:'dark',tones:{dark:23,light:-12}},100],
+      [{size:'comfortable',theme:'light',scales:{standard:87,comfortable:116}},116],
+      [{size:'standard',theme:'dark',scales:{standard:87,comfortable:116}},87],
+      [{size:'comfortable',theme:'dark',scale:92,scales:{standard:80,comfortable:115}},92],
+      [{size:'standard',theme:'dark',scale:'95',scales:{standard:85,comfortable:115}},100],
+      [{size:'comfortable',theme:'dark',scale:null,scales:{standard:85,comfortable:115}},100],
+      [{size:'standard',theme:'dark',scale:60},75],
+      [{size:'comfortable',theme:'light',scale:180},125],
+      [{size:'comfortable',theme:'dark',scale:108.2},108]
     ]){
       await page.evaluate(value=>localStorage.setItem('sgrapeAppearanceV1',JSON.stringify(value)),stored);await page.reload();await page.waitForSelector('.node');await settle();
-      assert.deepEqual((await state()).scales,expected);assert.equal((await state()).scale,expected[stored.size]);
+      assert.equal((await state()).scale,expected);await choose(stored.size==='standard'?'comfortable':'standard');assert.equal((await state()).scale,expected);
     }
-    checks.push('each density remembers its scale independently from theme tones; reset affects only active density; reload, legacy preferences and invalid/bounded/fractional scales recover');
+    checks.push('densities share one scale and reset while theme tones remain independent; reload and legacy active-density migration preserve appearance; invalid/bounded/fractional values normalize');
 
     await page.setViewportSize({width:1600,height:1050});
     await page.evaluate(()=>{
@@ -157,10 +162,10 @@ async function runTouch(){
     const r=await page.locator('#uiscale').boundingBox();assert.ok(r.height>=32);
     const cdp=await page.context().newCDPSession(page),touch=async(type,x,y)=>{await cdp.send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'?[]:[{id:1,x,y,radiusX:5,radiusY:5}]});await settle();};
     await touch('touchStart',r.x+r.width/2,r.y+r.height/2);for(let i=1;i<=6;i++)await touch('touchMove',r.x+r.width*(.5+i*.04),r.y+r.height/2);await touch('touchEnd');
-    assert.ok(await page.evaluate(()=>uiAppearance.scale)>105,'trusted native touch drag must enlarge UI');
+    const dragged=await page.evaluate(()=>uiAppearance.scale);assert.ok(dragged>105,'trusted native touch drag must enlarge UI');
     assert.equal(await page.locator('#sizepanel').isVisible(),true);
-    await page.locator('[data-ui-size-choice="comfortable"]').tap();await settle();assert.equal(await page.evaluate(()=>uiAppearance.scale),100);
-    await page.locator('#uiscaleminus').tap();await settle();assert.equal(await page.evaluate(()=>uiAppearance.scale),95);
+    await page.locator('[data-ui-size-choice="comfortable"]').tap();await settle();assert.equal(await page.evaluate(()=>uiAppearance.scale),dragged);
+    await page.locator('#uiscaleminus').tap();await settle();assert.equal(await page.evaluate(()=>uiAppearance.scale),dragged-5);
     const p=await page.locator('#sizepanel').boundingBox(),f=await page.locator('footer').boundingBox();assert.ok(p.x>=0&&p.x+p.width<=391&&p.y+p.height<=f.y+1);
     await page.screenshot({path:path.join(folder,'touch','390-scale.png')});
     assert.deepEqual(await page.evaluate(()=>({graph:JSON.stringify(graph),past:JSON.stringify(past),future:JSON.stringify(future),pan:{...pan},scale})),before);

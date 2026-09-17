@@ -19,7 +19,7 @@ async function run() {
   });
   const appearance = () => page.evaluate(() => ({size:document.documentElement.dataset.uiSize, theme:document.documentElement.dataset.uiTheme, tone:uiAppearance.tone}));
   const setAppearance = async (size, theme, tone=0) => {
-    await page.evaluate(({size, theme, tone}) => {setUIAppearance('size', size); setUIAppearance('theme', theme); setUIAppearance('tone', tone);}, {size, theme, tone});
+    await page.evaluate(({size, theme, tone}) => {setUIAppearance('size', size); setUIAppearance('scale',100); setUIAppearance('theme', theme); setUIAppearance('tone', tone);}, {size, theme, tone});
     await settle();
   };
   const setTone = async tone => {await page.evaluate(tone => setUIAppearance('tone', tone), tone); await settle();};
@@ -139,7 +139,7 @@ async function run() {
 
     await setAppearance('standard','dark',-23);
     await setAppearance('comfortable','light',37);
-    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1'))),{size:'comfortable',theme:'light',tones:{dark:-23,light:37},scales:{standard:100,comfortable:100}});
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1'))),{size:'comfortable',theme:'light',tones:{dark:-23,light:37},scale:100});
     await page.reload();await page.waitForSelector('.node');await settle();await inspectControls('comfortable','light',37,'en');
     await chooseTheme('dark');await inspectControls('comfortable','dark',-23,'en');await chooseTheme('light');
     for (const [stored,expected,otherTone=0] of [
