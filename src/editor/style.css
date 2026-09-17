@@ -837,7 +837,6 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #arrangemenu{position:fixed;inset:auto;margin:0;width:max-content;min-width:186px;max-width:calc(100 * var(--ui-vw) - 16px);overflow:auto;overscroll-behavior:contain}
 #arrangemenu button{display:flex;align-items:center;gap:12px;width:100%;padding:6px 12px;text-align:left;white-space:nowrap}
 #arrangemenu .ui-icon{flex:none}
-#arrangemenu button[data-arrange="top"],#arrangemenu button[data-arrange="spaceX"],#arrangemenu button[data-arrange="grid"]{margin-top:6px}
 @media(pointer:coarse){.selection-toolbar button.icon-button{width:36px;height:36px;min-height:36px}#arrangemenu button{min-height:44px}}
 
 /* The detection box is fixed; only the trash face reacts to an eligible hover. */
@@ -1496,6 +1495,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 /* A shared surface for dropdowns, upward menus and context actions. */
 :root{--popup-font-size:14px;--popup-row-height:32px;--popup-radius:10px;--popup-row-radius:6px}
+.popup-menu .popup-separator{height:0;margin:4px 8px;border-top:1px solid var(--line);opacity:.65}
 :root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices){padding:4px;border:1px solid var(--line);border-radius:var(--popup-radius);background:var(--ui-surface,var(--ui-tone-menu));color:var(--ui-text,var(--ui-tone-text));box-shadow:0 8px 24px #0004;font-size:var(--popup-font-size)}
 :root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices) button{min-height:var(--popup-row-height);font-size:var(--popup-font-size);line-height:20px;border:0;border-radius:var(--popup-row-radius);background:transparent;color:inherit}
 :root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices) button:is(:hover,:focus-visible):not(:disabled){background:var(--ui-hover,var(--ui-tone-menu-hover));outline:none}

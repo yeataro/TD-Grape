@@ -1,0 +1,74 @@
+/* Automatic layout runs against the isolated fixture API, never TD.
+ * node test_auto_arrange.cjs SOURCE_DIR STATE_JSON REPORT_DIR */
+const assert=require('node:assert/strict'),path=require('node:path');
+const {harness}=require('./test_glsl_code.cjs');
+async function run(){
+  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder),{page,checks,errors,settle}=h;
+  page.setDefaultTimeout(6000);
+  const graphJSON=()=>page.evaluate(()=>JSON.stringify(graph));
+  const bounds=()=>page.evaluate(()=>selectedCanvasNodes().map(n=>({id:n.id,...nodeLayoutBounds(n)})));
+  const withoutPositions=raw=>{const g=JSON.parse(raw);for(const level of [...Object.values(g.stages),...(g.functions||[]).map(f=>f.graph)])for(const n of level.nodes)if(n.ui){delete n.ui.x;delete n.ui.y;}return g;};
+  const noOverlap=rows=>{for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){const a=rows[i],b=rows[j];assert.ok(a.x+a.width+47.9<=b.x||b.x+b.width+47.9<=a.x||a.y+a.height+47.9<=b.y||b.y+b.height+47.9<=a.y,`${a.id}/${b.id} need space around their actual bounds`);}};
+  const flowsRight=(rows,pairs)=>{const byId=new Map(rows.map(n=>[n.id,n]));for(const[a,b]of pairs){const from=byId.get(a),to=byId.get(b);assert.ok(from.x+from.width+47.9<=to.x,`${a} must precede ${b} from left to right`);}};
+  const separatedGroups=(rows,groups)=>{const boxes=groups.map(ids=>{const ns=rows.filter(n=>ids.includes(n.id));return{top:Math.min(...ns.map(n=>n.y)),bottom:Math.max(...ns.map(n=>n.y+n.height))};}).sort((a,b)=>a.top-b.top);for(let i=1;i<boxes.length;i++)assert.ok(boxes[i-1].bottom+47.9<=boxes[i].top,'disconnected groups occupy separate vertical bands');};
+  const install=async(specs,pairs,ids=specs.map(n=>n.id))=>{
+    await page.evaluate(({specs,pairs,ids})=>{
+      closeArrangeMenu();graph=clone(window.autoArrangeFixture);stage='pixel';graphTrail=[];
+      const nodes=specs.map((s,i)=>{const n=testNode(s.id,s.key||'add',s.x??(950-i*175),s.y??(60+(i%3)*170));n.ui.width=s.width||[230,330,280][i%3];if(s.key==='comment'){n.ui.height=s.height||340;n.ui.comment='Layout note\nKept outside the shader flow.';}return n;});
+      nodes.push(testNode('outside','color',1800,80,{value:[.1,.2,.3,1]}),testNode('output','pixel_out',2150,80));
+      current().nodes=nodes;current().edges=pairs.map(([from,to,port='a'])=>({from:[from,'out'],to:[to,port]}));current().edges.push({from:['outside','out'],to:['output','color']});
+      selection=new Set(ids);selected=ids.at(-1)||null;selectedEdge=null;selectedInputId=null;past=[];future=[];readonly=false;historyBusy=false;nativeMutationBusy=false;dirty=false;rememberSavedGraph(graph);render();fit();
+    },{specs,pairs,ids});await settle();
+  };
+  const exercise=async(specs,pairs,{ids,menu=false,groups}={})=>{
+    await install(specs,pairs,ids);const original=await graphJSON(),initialBounds=await bounds();
+    assert.equal(await page.evaluate(()=>hasShaderChanges()),false);
+    if(menu){await page.locator('#grapharrange').click();const action=page.locator('[data-arrange="auto"]');assert.equal(await action.isVisible(),true);assert.equal(await action.isEnabled(),true);assert.ok((await action.innerText()).trim()&&!((await action.innerText()).includes('arrange.auto')),'automatic layout has a translated menu label');await action.click();}
+    else assert.equal(await page.evaluate(()=>arrangeSelection('auto')),true);
+    await settle();const arranged=await graphJSON(),rows=await bounds();assert.notEqual(arranged,original,'fixture must require a layout change');
+    assert.equal(await page.evaluate(()=>past.length),1,'automatic layout is one Undo operation');
+    assert.equal(await page.evaluate(()=>hasShaderChanges()),false,'positions never make the shader semantically dirty');
+    assert.deepEqual(withoutPositions(arranged),withoutPositions(original),'layout changes coordinates only');
+    const selectedIds=new Set(rows.map(n=>n.id)),before=JSON.parse(original),after=JSON.parse(arranged);
+    assert.deepEqual(after.stages.pixel.nodes.filter(n=>!selectedIds.has(n.id)),before.stages.pixel.nodes.filter(n=>!selectedIds.has(n.id)),'unselected nodes retain exact data and positions');
+    for(const name of Object.keys(before.stages))if(name!=='pixel')assert.deepEqual(after.stages[name],before.stages[name],'other stages remain unchanged');
+    rows.forEach(n=>{assert.ok(Number.isFinite(n.x)&&Number.isFinite(n.y));const old=initialBounds.find(o=>o.id===n.id);assert.equal(n.width,old.width);assert.equal(n.height,old.height);});
+    noOverlap(rows);flowsRight(rows,pairs.filter(([a,b])=>selectedIds.has(a)&&selectedIds.has(b)));if(groups)separatedGroups(rows,groups);
+    assert.equal(await page.evaluate(()=>arrangeSelection('auto')),true);await settle();assert.equal(await graphJSON(),arranged,'repeated automatic layout is stable');assert.equal(await page.evaluate(()=>past.length),1,'repeating unchanged layout adds no history');
+    await page.locator('#undo').click();await settle();assert.equal(await graphJSON(),original,'Undo restores the exact graph');
+    await page.locator('#redo').click();await settle();assert.equal(await graphJSON(),arranged,'Redo restores the exact arranged graph');assert.equal(await page.evaluate(()=>hasShaderChanges()),false);
+    return rows;
+  };
+  try{
+    await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;window.autoArrangeFixture=clone(graph);setUIExperiments({selectionToolbar:'off',editToolbar:true});});
+    await exercise([{id:'a',key:'float'},{id:'b'},{id:'c'}],[['a','b'],['b','c']],{menu:true});
+    checks.push('the translated automatic-layout menu action lays a chain left to right using rendered node sizes; coordinates alone change, with one exact Undo/Redo and stable repeat');
+
+    await exercise([{id:'a',key:'float',width:240},{id:'b',width:370},{id:'c',width:280},{id:'d',width:330}],[['a','b'],['a','c'],['b','d','a'],['c','d','b']]);
+    await exercise([{id:'a',key:'float'},{id:'b'},{id:'c'},{id:'d'}],[['a','d','a'],['b','d','b'],['b','c']]);
+    checks.push('diamond branches, merges, and multiple roots keep every dependency left to right with generous nonoverlapping bounds');
+
+    const disconnected=await exercise([{id:'a',key:'float'},{id:'b'},{id:'c',key:'float'},{id:'d'},{id:'note',key:'comment',height:380}],[['a','b'],['c','d']],{groups:[['a','b'],['c','d'],['note']]});
+    assert.ok(new Set(disconnected.map(n=>n.height)).size>1,'fixture exercises actual variable heights');
+    checks.push('disconnected chains and a tall Comment occupy separate vertical bands; Comment text, dimensions, graph content, and shader state stay intact');
+
+    await exercise([{id:'a',key:'float'},{id:'b'},{id:'c'},{id:'d'}],[['a','b'],['b','c'],['c','d']],{ids:['b','c']});
+    checks.push('a selected subset uses only its internal dependencies and leaves incoming/outgoing unselected nodes and other graphs untouched');
+
+    const cyclic=await page.evaluate(()=>{
+      const items=[{id:'a',x:610,y:170,width:240,height:120},{id:'b',x:180,y:230,width:320,height:190},{id:'c',x:15,y:80,width:260,height:140},{id:'d',x:700,y:900,width:210,height:280}],edges=[{from:['a','out'],to:['b','a']},{from:['b','out'],to:['a','a']},{from:['b','out'],to:['c','a']},{from:['a','out'],to:['a','b']},{from:['missing','out'],to:['b','b']}],original=JSON.stringify({items,edges});
+      const positions=autoArrangePositions(items,edges),rows=items.map(n=>({...n,...positions.get(n.id)})),again=autoArrangePositions(rows,edges);
+      return{rows,stable:JSON.stringify([...positions])===JSON.stringify([...again]),unchanged:original===JSON.stringify({items,edges}),empty:[...autoArrangePositions([],edges)],single:[...autoArrangePositions([items[0]],edges)]};
+    });
+    assert.equal(cyclic.unchanged,true,'layout solver does not mutate its inputs');assert.equal(cyclic.stable,true);assert.deepEqual(cyclic.empty,[]);assert.equal(cyclic.single.length,1);noOverlap(cyclic.rows);
+    const byId=new Map(cyclic.rows.map(n=>[n.id,n]));assert.equal(byId.get('a').x,byId.get('b').x,'cycle members share a column');flowsRight(cyclic.rows,[['a','c'],['b','c']]);separatedGroups(cyclic.rows,[['a','b','c'],['d']]);
+    cyclic.rows.forEach(n=>assert.ok(Number.isFinite(n.x)&&Number.isFinite(n.y)));checks.push('cycles condense into a nonoverlapping column with downstream nodes after them; self/dangling edges, empty input, and single nodes remain finite and repeatable');
+
+    await install([{id:'a',key:'float'},{id:'b'}],[['a','b']]);await page.evaluate(()=>{readonly=true;render();});const locked=await graphJSON();assert.equal(await page.evaluate(()=>arrangeSelection('auto')),false);assert.equal(await graphJSON(),locked);assert.equal(await page.evaluate(()=>past.length),0);
+    await page.evaluate(()=>{readonly=false;selection=new Set(['a']);selected='a';render();});assert.equal(await page.evaluate(()=>arrangeSelection('auto')),false);assert.equal(await graphJSON(),locked);assert.equal(await page.evaluate(()=>past.length),0);checks.push('read-only and single-node selections cannot invoke a mutating automatic layout');
+
+    await install([{id:'a',key:'float'},{id:'b'},{id:'c'},{id:'d'},{id:'note',key:'comment'}],[['a','b'],['a','c'],['b','d','a'],['c','d','b']]);await page.evaluate(()=>{arrangeSelection('auto');fit();});await settle();await page.screenshot({path:path.join(folder,'auto-arrange.png')});
+    await page.locator('#grapharrange').click();await settle();await page.screenshot({path:path.join(folder,'auto-arrange-menu.png')});assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
+  }catch(error){await h.finish(error);throw error;}
+}
+run().catch(error=>{console.error(error);process.exit(1);});

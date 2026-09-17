@@ -1,5 +1,6 @@
 /* Selection actions share the existing buttons and graph transactions. */
 const ARRANGE_ACTIONS=[
+  ['auto','M3 9h5v6H3zM16 3h5v6h-5zM16 15h5v6h-5zM8 12h4M12 6v12M12 6h4M12 18h4'],
   ['left','M4 3v18M8 6h12v4H8zM8 14h8v4H8z'],
   ['centerX','M12 2v20M4 6h16v4H4zM7 14h10v4H7z'],
   ['right','M20 3v18M4 6h12v4H4zM8 14h8v4H8z'],
@@ -71,10 +72,79 @@ function positionSelectionToolbar(){
   outline.style.left=(bounds.left-r.left)/zoom-6+'px';outline.style.top=(bounds.top-r.top)/zoom-6+'px';
   outline.style.width=(bounds.right-bounds.left)/zoom+12+'px';outline.style.height=(bounds.bottom-bounds.top)/zoom+12+'px';
 }
+// Lay out only the selected graph. Collapse cycles for ranking, then use two
+// neighbor-order sweeps to reduce crossings without a layout dependency.
+function autoArrangePositions(items,edges){
+  const positions=new Map();if(!items.length)return positions;
+  const byId=new Map(items.map(n=>[n.id,n])),order=new Map(items.map((n,i)=>[n.id,i]));
+  const next=new Map(items.map(n=>[n.id,new Set()])),previous=new Map(items.map(n=>[n.id,new Set()]));
+  for(const e of edges){const a=e.from[0],b=e.to[0];if(a!==b&&byId.has(a)&&byId.has(b)){next.get(a).add(b);previous.get(b).add(a);}}
+
+  // Connected pieces get separate vertical bands, so unrelated chains do not
+  // weave through one another. Graph order supplies deterministic tie breaks.
+  const pieces=[],seen=new Set();
+  for(const n of items){
+    if(seen.has(n.id))continue;
+    const ids=[],pending=[n.id];seen.add(n.id);
+    while(pending.length){const id=pending.pop();ids.push(id);
+      for(const other of [...next.get(id),...previous.get(id)])if(!seen.has(other)){seen.add(other);pending.push(other);}
+    }
+    pieces.push(ids.sort((a,b)=>order.get(a)-order.get(b)));
+  }
+  const left=Math.min(...items.map(n=>n.x)),gapX=GRID*4,gapY=GRID*2;
+  let top=Math.min(...items.map(n=>n.y));
+  for(const ids of pieces){
+    const index=new Map(),low=new Map(),stack=[],active=new Set(),groups=[],groupOf=new Map();let visitIndex=0;
+    function visit(id){
+      index.set(id,visitIndex);low.set(id,visitIndex++);stack.push(id);active.add(id);
+      for(const to of next.get(id)){
+        if(!index.has(to)){visit(to);low.set(id,Math.min(low.get(id),low.get(to)));}
+        else if(active.has(to))low.set(id,Math.min(low.get(id),index.get(to)));
+      }
+      if(low.get(id)===index.get(id)){
+        const group={next:new Set(),incoming:0,rank:0};let member;
+        do{member=stack.pop();active.delete(member);groupOf.set(member,group);}while(member!==id);
+        groups.push(group);
+      }
+    }
+    for(const id of ids)if(!index.has(id))visit(id);
+    for(const id of ids)for(const to of next.get(id)){
+      const a=groupOf.get(id),b=groupOf.get(to);if(a!==b&&!a.next.has(b)){a.next.add(b);b.incoming++;}
+    }
+    const ready=groups.filter(g=>!g.incoming);
+    for(let i=0;i<ready.length;i++)for(const to of ready[i].next){
+      to.rank=Math.max(to.rank,ready[i].rank+1);if(!--to.incoming)ready.push(to);
+    }
+    const layers=Array.from({length:Math.max(...groups.map(g=>g.rank))+1},()=>[]);
+    for(const id of ids)layers[groupOf.get(id).rank].push(id);
+    const rowOrder=new Map();
+    const remember=layer=>layer.forEach((id,i)=>rowOrder.set(id,(i+.5)/layer.length));
+    layers.forEach(remember);
+    const sortLayer=(layer,neighbors,forward)=>{
+      const score=id=>{const related=[...neighbors.get(id)].filter(other=>forward?groupOf.get(other).rank<groupOf.get(id).rank:groupOf.get(other).rank>groupOf.get(id).rank);
+        return related.length?related.reduce((sum,other)=>sum+rowOrder.get(other),0)/related.length:rowOrder.get(id);};
+      const scores=new Map(layer.map(id=>[id,score(id)]));
+      layer.sort((a,b)=>scores.get(a)-scores.get(b)||order.get(a)-order.get(b));remember(layer);
+    };
+    for(let pass=0;pass<2;pass++){
+      for(let i=1;i<layers.length;i++)sortLayer(layers[i],previous,true);
+      for(let i=layers.length-2;i>=0;i--)sortLayer(layers[i],next,false);
+    }
+    const heights=layers.map(layer=>layer.reduce((sum,id)=>sum+byId.get(id).height,0)+gapY*(layer.length-1));
+    const height=Math.max(...heights);let x=left;
+    layers.forEach((layer,i)=>{
+      let y=top+(height-heights[i])/2;
+      for(const id of layer){positions.set(id,{x,y});y+=byId.get(id).height+gapY;}
+      x+=Math.max(...layer.map(id=>byId.get(id).width))+gapX;
+    });
+    top+=height+gapX;
+  }
+  return positions;
+}
 function arrangeSelection(kind){
   if(editorMutationBlocked()||!arrangeContextMatches())return false;
   const nodes=selectedCanvasNodes();if(nodes.length<2||!ARRANGE_ACTIONS.some(([key])=>key===kind))return false;
-  const items=nodes.map(n=>({id:n.id,...nodeLayoutBounds(n)})),positions=new Map(items.map(n=>[n.id,{x:n.x,y:n.y}]));
+  const items=nodes.map(n=>({id:n.id,...nodeLayoutBounds(n)})),positions=kind==='auto'?autoArrangePositions(items,current().edges):new Map(items.map(n=>[n.id,{x:n.x,y:n.y}]));
   const left=Math.min(...items.map(n=>n.x)),top=Math.min(...items.map(n=>n.y)),right=Math.max(...items.map(n=>n.x+n.width)),bottom=Math.max(...items.map(n=>n.y+n.height));
   if(['left','centerX','right','top','centerY','bottom'].includes(kind))for(const n of items){
     const p=positions.get(n.id);
@@ -87,7 +157,7 @@ function arrangeSelection(kind){
     const first=items[0],last=items.at(-1),span=last[axis]+last[size]-first[axis],total=items.reduce((sum,n)=>sum+n[size],0);
     const gap=Math.max(GRID*2,(span-total)/(items.length-1));let at=first[axis];
     for(const n of items){positions.get(n.id)[axis]=at;at+=n[size]+gap;}
-  }else{
+  }else if(kind==='grid'){
     items.sort((a,b)=>a.y-b.y||a.x-b.x||a.id.localeCompare(b.id));
     const columns=Math.ceil(Math.sqrt(items.length)),widths=Array(columns).fill(0);
     items.forEach((n,i)=>widths[i%columns]=Math.max(widths[i%columns],n.width));
@@ -104,6 +174,7 @@ function openArrangeMenu(){
   const nodes=selectedCanvasNodes();arrangeContext={owner:graph,level:current(),ids:nodes.map(n=>n.id)};
   menu.replaceChildren();menu.setAttribute('aria-label',t('arrange.title'));
   for(const [kind,path]of ARRANGE_ACTIONS){
+    if(['left','top','spaceX'].includes(kind))menu.append(el('div',{role:'separator',class:'popup-separator'}));
     const item=el('button',{type:'button',role:'menuitem','data-arrange':kind});item.append(selectionIcon(path),el('span',{},t('arrange.'+kind)));
     item.disabled=(kind==='spaceX'||kind==='spaceY')&&nodes.length<3;
     item.onclick=()=>{if(!arrangeContextMatches())return closeArrangeMenu();arrangeSelection(kind);closeArrangeMenu();$('#grapharrange').focus({preventScroll:true});};menu.append(item);
