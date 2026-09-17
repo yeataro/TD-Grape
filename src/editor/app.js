@@ -11,7 +11,7 @@ const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='zh-Hant';
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
 async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
@@ -159,7 +159,7 @@ function graphContent(document){
   // Coordinates and component expansion are presentation-only. Labels and type settings may
   // affect generated GLSL, so keep them when choosing the progress message.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
-    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.componentsExpanded;delete node.ui.collapsed;if(!Object.keys(node.ui).length)delete node.ui;}
+    for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.height;delete node.ui.componentsExpanded;delete node.ui.collapsed;if(!Object.keys(node.ui).length)delete node.ui;}
   }
   return JSON.stringify(content);
 }
@@ -191,6 +191,7 @@ function renderHistoryActions(){
   $('#reload').disabled=submitBusy||historyBusy||nativeMutationBusy;$('#apply').disabled=readonly||submitBusy||historyBusy||nativeMutationBusy;
   $('#inspector').inert=historyBusy||nativeMutationBusy;
   for(const input of document.querySelectorAll('#cards .node-inline-values input'))input.disabled=busy;
+  if(typeof renderSelectionToolbar==='function')renderSelectionToolbar();
 }
 function recordHistory(entry){
   if(historyGraphKey(entry.before)===historyGraphKey(entry.after)&&(!entry.nativeApplied||entry.nativeBefore===entry.nativeAfter))return null;
@@ -351,8 +352,8 @@ function transform(){
   $('#canvas').style.setProperty('--wire-ring',3/scale+'px');
   $('#canvas').style.setProperty('--wire-glow',7/scale+'px');
   $('#canvas').dataset.gridStep=displayGrid;
-  $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;renderGraphZoom();wireGesture?.refresh?.();}
-function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();}
+  $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;renderGraphZoom();wireGesture?.refresh?.();scheduleSelectionToolbarPosition();}
+function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();scheduleSelectionToolbarPosition();}
 function library(){renderLibrary();}
 function render(){renderCompileDiagnostics();
   if(!graph)return;if(!graph.stages?.[stage])stage='pixel';
@@ -655,9 +656,15 @@ function applyFloatingToolbar(){
 }
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
+  selectionToolbar:[['off','experiments.selection.off'],['multiple','experiments.selection.multiple'],['all','experiments.selection.all']],
   nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],
   uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent'],['legendary','experiments.style.legendary'],['godlike','experiments.style.godlike']]
 };
+const experimentGroups=[
+  ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','canvasTrash']],
+  ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
+  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock']]
+];
 let systemClockTimer=null;
 function refreshSystemClock(){
   const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
@@ -687,7 +694,7 @@ function renderUIExperiments(){
   opener.title=t('experiments.title');opener.setAttribute('aria-expanded',String(panel.matches(':popover-open')));
   for(const entry of panel.querySelectorAll('[data-experiment]')){
     const key=entry.dataset.experiment;
-    if(entry.type==='checkbox')entry.checked=EDITOR_DEV_SETTINGS[key];else entry.value=EDITOR_DEV_SETTINGS[key];
+    if(entry.type==='checkbox')entry.checked=key==='floatingToolbar'?!EDITOR_DEV_SETTINGS[key]:EDITOR_DEV_SETTINGS[key];else entry.value=EDITOR_DEV_SETTINGS[key];
     entry.closest('label').title=t('experiments.'+key+'.hint');
   }
   $('#experimentsreset').disabled=Object.keys(EDITOR_DEV_DEFAULTS).every(key=>EDITOR_DEV_SETTINGS[key]===EDITOR_DEV_DEFAULTS[key]);
@@ -697,14 +704,16 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
-  // Preserve wire elements for glow transitions when only presentation changes.
-  cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();
-  if(linkStart||wireDrag||wireGesture)cancelConnection();
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','floatingToolbar','editToolbar','selectionToolbar'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  // Display preferences preserve graph elements and in-progress numeric drafts.
+  if(redrawWires){
+    cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();
+    if(linkStart||wireDrag||wireGesture)cancelConnection();
+  }
   Object.assign(EDITOR_DEV_SETTINGS,next);
   try{localStorage.setItem(experimentsStorageKey,JSON.stringify(next));}catch{}
   applyFloatingToolbar();applyGraphUISettings();applySystemClock();clearGraphTrash();
-  if(graph){
+  if(graph&&redrawWires){
     for(const card of document.querySelectorAll('#cards .node')){
       const node=current().nodes.find(node=>node.id===card.dataset.node);if(!node)continue;
       card.dataset.dragSurface=next.nodeBodyDrag?'body':'header';
@@ -715,19 +724,26 @@ function setUIExperiments(values){
         delete card.dataset.nodeDefaultWidth;applyNodeWidth(card,node);
       }
     }
-    if(redrawWires)wires();
+    wires();
   }
+  if(typeof renderSelectionToolbar==='function')renderSelectionToolbar();
   renderUIExperiments();
 }
 function installUIExperiments(){
   try{Object.assign(EDITOR_DEV_SETTINGS,parseUIExperiments(localStorage.getItem(experimentsStorageKey)));}catch{}
   const panel=$('#experimentspanel'),opener=$('#uiexperiments'),list=$('#experimentoptions');
-  for(const key of Object.keys(EDITOR_DEV_DEFAULTS)){
-    const row=el('label',{class:'experiment-option'}),choices=experimentChoices[key];
-    const entry=choices?el('select',{'data-experiment':key}):el('input',{type:'checkbox','data-experiment':key});
-    if(choices)for(const [value,label]of choices)entry.append(el('option',{value,'data-i18n':label},t(label)));
-    row.append(el('span',{'data-i18n':'experiments.'+key},t('experiments.'+key)),entry);list.append(row);
-    entry.onchange=()=>setUIExperiments({[key]:choices?entry.value:entry.checked});
+  for(const [name,keys]of experimentGroups){
+    const headingId='experimentgroup-'+name,group=el('section',{class:'experiment-group','data-experiment-group':name,'aria-labelledby':headingId});
+    group.append(el('h3',{id:headingId,'data-i18n':'experiments.group.'+name},t('experiments.group.'+name)));
+    for(const key of keys){
+      if(!Object.hasOwn(EDITOR_DEV_DEFAULTS,key))continue;
+      const row=el('label',{class:'experiment-option'}),choices=experimentChoices[key];
+      const entry=choices?el('select',{'data-experiment':key}):el('input',{type:'checkbox','data-experiment':key});
+      if(choices)for(const [value,label]of choices)entry.append(el('option',{value,'data-i18n':label},t(label)));
+      row.append(el('span',{'data-i18n':'experiments.'+key},t('experiments.'+key)),entry);group.append(row);
+      entry.onchange=()=>setUIExperiments({[key]:choices?entry.value:key==='floatingToolbar'?!entry.checked:entry.checked});
+    }
+    list.append(group);
   }
   $('#experimentsreset').onclick=()=>setUIExperiments(EDITOR_DEV_DEFAULTS);
   panel.addEventListener('beforetoggle',event=>{if(event.newState==='open')positionAppearancePanel(panel,opener);});
@@ -953,8 +969,10 @@ function installEditorChrome(){
   installUIAppearance();
   installGraphZoom();
   installUIShare();
+  installShortcutHelp();
   installUIExperiments();
   installGraphChrome();
+  installSelectionToolbar();
   try{$('#editorheader').hidden=localStorage.getItem('sgrapeHeaderVisible')==='false';}catch{}
   renderHeaderVisibility();
   $('#toggleheader').onclick=()=>{

@@ -1,12 +1,12 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'off', nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,nodeResizeGesture=null,suppressWireClick=false;
 function isBlankWireDrop(x,y){
   const hit=document.elementFromPoint(x,y);
-  return !!hit?.closest('#canvas')&&!hit.closest('.node,#wires path,.graph-navigation');
+  return !!hit?.closest('#canvas')&&!hit.closest('.node,#wires path,.graph-navigation,.selection-toolbar');
 }
 function canDisconnectInputOnBlank(start){
   return !EDITOR_DEV_SETTINGS.canvasTrash&&!readonly&&start?.kind==='inputs'&&current().edges.some(e=>e.to[0]===start.node&&e.to[1]===start.port);
@@ -137,6 +137,7 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
 function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
+  if(d.key==='comment')return 'annotation';
   if(['constant','spec_constant','vector'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
@@ -756,8 +757,14 @@ function nodeCanvasComment(n){
   note.ondblclick=e=>e.stopPropagation();
   return note;
 }
-// Width is a layout override in graph units, not a Shader parameter. Preview
+// Size is a layout override in graph units, not a Shader parameter. Preview
 // only the DOM until release so cancellation never creates a history entry.
+// Comment is the only two-axis card; ordinary nodes retain width-only resizing.
+function nodeCanResizeHeight(node){return definition(node)?.key==='comment';}
+function nodeHeightLimits(card){
+  const style=getComputedStyle(card),minimum=parseFloat(style.getPropertyValue('--node-min-height'))||130;
+  return {minimum,maximum:Math.max(minimum,parseFloat(style.getPropertyValue('--node-max-height'))||1200)};
+}
 function nodeMinimumWidth(card){
   const cached=Number(card.dataset.nodeMinWidth);if(cached>0)return cached;
   const style=getComputedStyle(card),minimum=parseFloat(style.getPropertyValue('--node-min-width'))||parseFloat(style.minWidth)||parseFloat(style.width)||card.offsetWidth;
@@ -782,13 +789,18 @@ function nodePreferredWidth(card){
 function applyNodeWidth(card,node){
   const width=node.ui?.collapsed===true?nodePreferredWidth(card):Number.isFinite(node.ui?.width)?node.ui.width:nodePreferredWidth(card);
   card.style.width=Math.max(nodeMinimumWidth(card),Math.min(nodeMaximumWidth(card),width))+'px';
+  if(nodeCanResizeHeight(node)){
+    const {minimum,maximum}=nodeHeightLimits(card),height=node.ui?.height;
+    card.style.height=node.ui?.collapsed!==true&&Number.isFinite(height)?Math.max(minimum,Math.min(maximum,height))+'px':'';
+  }
 }
 function dragNodeWidth(event,node,card,handle){
   if(event.button!==0||readonly||editorMutationBlocked())return;
   event.preventDefault();event.stopPropagation();nodeResizeGesture?.cancel();nodeDragGesture?.cancel();touchGraphGesture?.cancel();clearWireGesture();closeCreator();
-  const owner=graph,data=current(),originScale=scale*uiScaleFactor(),startX=event.clientX,minimum=nodeMinimumWidth(card),maximum=nodeMaximumWidth(card),initialWidth=card.getBoundingClientRect().width/originScale,oldStyle=card.style.width;
-  let nextWidth=initialWidth,moved=false,closed=false;
-  const restore=()=>{card.style.width=oldStyle;};
+  const owner=graph,data=current(),originScale=scale*uiScaleFactor(),startX=event.clientX,startY=event.clientY,minimum=nodeMinimumWidth(card),maximum=nodeMaximumWidth(card),bounds=card.getBoundingClientRect(),initialWidth=bounds.width/originScale,oldStyle=card.style.width;
+  const resizeHeight=nodeCanResizeHeight(node),heightLimits=resizeHeight?nodeHeightLimits(card):null,initialHeight=bounds.height/originScale,oldHeight=card.style.height;
+  let nextWidth=initialWidth,nextHeight=initialHeight,moved=false,closed=false;
+  const restore=()=>{card.style.width=oldStyle;if(resizeHeight)card.style.height=oldHeight;};
   const finish=()=>{
     if(closed)return;closed=true;nodeResizeGesture=null;card.classList.remove('resizing');
     handle.onpointermove=handle.onpointerup=handle.onpointercancel=handle.onlostpointercapture=null;
@@ -803,16 +815,18 @@ function dragNodeWidth(event,node,card,handle){
   const move=e=>{
     if(closed||e.pointerId!==event.pointerId)return;e.preventDefault();e.stopPropagation();
     if(scale*uiScaleFactor()!==originScale||graph!==owner||current()!==data){cancel();return;}
-    if(!moved&&Math.abs(e.clientX-startX)<3)return;
+    if(!moved&&Math.abs(e.clientX-startX)<3&&(!resizeHeight||Math.abs(e.clientY-startY)<3))return;
     nextWidth=Math.max(minimum,Math.min(maximum,Math.round(initialWidth+(e.clientX-startX)/originScale)));moved=true;
-    card.style.width=nextWidth+'px';wires();
+    card.style.width=nextWidth+'px';
+    if(resizeHeight){nextHeight=Math.max(heightLimits.minimum,Math.min(heightLimits.maximum,Math.round(initialHeight+(e.clientY-startY)/originScale)));card.style.height=nextHeight+'px';}
+    wires();
   };
   handle.onpointermove=move;
   handle.onpointerup=e=>{
     if(e.pointerId!==event.pointerId||closed)return;move(e);if(closed)return;
     restore();finish();
-    if(!editorMutationBlocked()&&graph===owner&&current()===data&&data.nodes.includes(node)&&moved&&Math.abs(nextWidth-initialWidth)>.5){
-      change(()=>{node.ui||={};node.ui.width=nextWidth;},{localize:false});
+    if(!editorMutationBlocked()&&graph===owner&&current()===data&&data.nodes.includes(node)&&moved&&(Math.abs(nextWidth-initialWidth)>.5||resizeHeight&&Math.abs(nextHeight-initialHeight)>.5)){
+      change(()=>{node.ui||={};node.ui.width=nextWidth;if(resizeHeight)node.ui.height=nextHeight;},{localize:false});
       // A focused numeric draft can intentionally defer card replacement.
       if(card.isConnected)applyNodeWidth(card,node);
     }
@@ -825,7 +839,7 @@ function dragNodeWidth(event,node,card,handle){
 }
 function appendNodeResizeHandle(card,node){
   applyNodeWidth(card,node);if(readonly||node.ui?.collapsed===true)return;
-  const handle=el('button',{type:'button',class:'node-resize-handle','aria-label':t('node.resize'),title:t('node.resize'),'data-node-resize':node.id});
+  const label=t(nodeCanResizeHeight(node)?'comment.resize':'node.resize'),handle=el('button',{type:'button',class:'node-resize-handle','aria-label':label,title:label,'data-node-resize':node.id});
   handle.onpointerdown=e=>dragNodeWidth(e,node,card,handle);handle.onclick=handle.ondblclick=e=>e.stopPropagation();card.append(handle);
 }
 function applyGraphUISettings(){
@@ -837,6 +851,7 @@ function applyGraphUISettings(){
 }
 function renderCards(){
   applyGraphUISettings();
+  if(typeof deferCommentNodeEditor==='function'&&deferCommentNodeEditor(true))return;
   if(typeof deferInlineValueRender==='function'&&deferInlineValueRender())return;
   touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
@@ -896,7 +911,8 @@ function renderCards(){
     if(n.params?.value!==undefined||d?.key==='vector'){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
     if(d?.key==='color'&&Array.isArray(n.params.value))card.append(nodeColorPicker(n));
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
-    if(nodeComment(n))card.append(nodeCanvasComment(n));
+    if(d?.key==='comment')card.append(commentNodeEditor(n,true));
+    else if(nodeComment(n))card.append(nodeCanvasComment(n));
     }
     card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};
     card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);appendNodeResizeHandle(card,n);
@@ -916,7 +932,7 @@ function browserMeta(d){
   const f=d.definitionUuid===FunctionModel.CALL?(d.source||FunctionModel.find(graph,d.functionId)):null;
   const authored=f?(f.browser||browserData().functions[f.source?.id]||browserData().functions[f.origin?.id]):browserData().nodes[d.definitionUuid];
   const stringList=value=>Array.isArray(value)?value.filter(x=>typeof x==='string'):[];
-  const raw=authored||(d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
+  const raw=authored||(d.key==='comment'?{category:'data',source:'editor',aliases:['note','annotation','text','註解','注释','備註'],descriptionKey:'help.comment'}:d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
   const source=f?(f.scope==='local'?'project':f.scope==='personal'?'personal':'editor'):(raw.source||'editor');
   const path=stringList(raw.categoryPath);
   const aliases=stringList(raw.aliases).filter(alias=>!d.presetType||!/^vec(?:tor)?\s*[234]$/i.test(alias)||alias.replace(/tor|\s/gi,'').toLowerCase()===d.presetType);
@@ -1398,6 +1414,8 @@ function renderGraphEditActions(){
   ]){
     const button=$('#'+id);button.disabled=!enabled;button.title=t(key);button.setAttribute('aria-label',t(key));
   }
+  if(typeof renderSelectionToolbar==='function')renderSelectionToolbar();
+  if(typeof renderShortcutButtonHints==='function')renderShortcutButtonHints();
 }
 async function copyGraphToClipboard(){
   let text;try{text=copyGraphSelection();}catch(e){status(t(e.clipboardCode||'clipboard.invalid'),true);return;}
@@ -1444,16 +1462,16 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
   const collapseNodes=nodeCollapseSelection(),collapse=collapseNodes.some(n=>n.ui?.collapsed!==true);
   const rows=[
-    ['add',t('action.nodes'),'Tab',!readonly,()=>openCreator(x,y)],
+    ['add',t('action.nodes'),shortcutLabel('add'),!readonly,()=>openCreator(x,y)],
     ['collapse',t(collapse?'node.collapse':'node.expand'),'',!readonly&&collapseNodes.length>0,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),collapse)],
-    ['copy',t('edit.copy'),'Ctrl+C',count>0,copyGraphToClipboard],
-    ['paste',t('edit.paste'),'Ctrl+V',!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),()=>pasteGraphFromClipboard(position)],
+    ['copy',t('edit.copy'),shortcutLabel('copy'),count>0,copyGraphToClipboard],
+    ['paste',t('edit.paste'),shortcutLabel('paste'),!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),()=>pasteGraphFromClipboard(position)],
     ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
-    ['duplicate',t('edit.duplicate'),'Ctrl+D',!readonly&&count>0,duplicateSelection],
-    ['group',t('function.group'),'Ctrl+G',!readonly&&count>0,groupSelection],
-    ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),'Delete',!readonly&&(count>0||selectedEdge!==null),remove]
+    ['duplicate',t('edit.duplicate'),shortcutLabel('duplicate'),!readonly&&count>0,duplicateSelection],
+    ['group',t('function.group'),shortcutLabel('group'),!readonly&&count>0,groupSelection],
+    ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
   ];
-  for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled||key==='collapse'&&!collapseNodes.length)continue;const b=el('button',{role:'menuitem','data-edit':key},label);b.append(el('small',{},shortcut));b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
+  for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled||key==='collapse'&&!collapseNodes.length)continue;const b=el('button',{role:'menuitem','data-edit':key},label);b.append(el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
   menu.onkeydown=e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeGraphMenu();$('#canvas').focus();}};
   document.body.append(menu);graphEditMenu=menu;const uiScale=uiScaleFactor();menu.style.left=Math.max(4,Math.min(x/uiScale,innerWidth/uiScale-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/uiScale,innerHeight/uiScale-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
 }

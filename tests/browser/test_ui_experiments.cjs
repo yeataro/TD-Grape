@@ -26,20 +26,25 @@ const [source,stateFile,folder]=process.argv.slice(2);
   const reload=async()=>{await close();await page.reload();await page.waitForSelector('.node');await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;});await settle();};
   try{
     await setup();const defaults=await page.evaluate(()=>({...EDITOR_DEV_DEFAULTS}));
-    assert.equal(Object.keys(defaults).length,12);assert.deepEqual(await settings(),defaults);assert.equal(defaults.uiStyle,'professional');assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
+    assert.deepEqual(await settings(),defaults);assert.equal(defaults.uiStyle,'professional');assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
     assert.equal(defaults.floatingToolbar,true);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(defaults.systemClock,false);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);
-    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),10);assert.equal(await panel.locator('select').count(),2);
+    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),Object.values(defaults).filter(value=>typeof value==='boolean').length);assert.equal(await panel.locator('select').count(),Object.values(defaults).filter(value=>typeof value==='string').length);
+    assert.deepEqual(await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment).sort()),Object.keys(defaults).sort());
+    assert.deepEqual(await panel.locator('[data-experiment-group]').evaluateAll(groups=>groups.map(group=>group.dataset.experimentGroup)),['toolbars','nodes','appearance']);
+    assert.deepEqual(await panel.locator('[data-experiment-group="toolbars"] [data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment)),['floatingToolbar','editToolbar','selectionToolbar','canvasTrash'].filter(key=>Object.hasOwn(defaults,key)));
+    assert.equal(await panel.locator('details').count(),0);assert.equal(await control('floatingToolbar').isChecked(),false);
+    if(Object.hasOwn(defaults,'selectionToolbar')){assert.equal(defaults.selectionToolbar,'off');assert.equal(defaults.editToolbar,true);assert.deepEqual(await control('selectionToolbar').locator('option').evaluateAll(options=>options.map(option=>option.value)),['off','multiple','all']);}
     assert.deepEqual(await control('nodeDragCursor').locator('option').evaluateAll(options=>options.map(o=>o.value)),['default','move']);
     assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool','excellent','legendary','godlike']);
     assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.equal(await opener.getAttribute('aria-expanded'),'true');
-    assert.equal(await control('canvasTrash').evaluate(e=>e===document.activeElement),true);const openedGraph=await snapshot();await page.keyboard.press('Tab');assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Delete');assert.equal(await snapshot(),openedGraph);
-    checks.push('fresh editors use the floating toolbar and Professional style; ten boolean experiments and two choice controls open without changing preferences');
+    assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);const openedGraph=await snapshot();await page.keyboard.press('Tab');assert.equal(await control(Object.hasOwn(defaults,'editToolbar')?'editToolbar':'canvasTrash').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Delete');assert.equal(await snapshot(),openedGraph);
+    checks.push('fresh editors keep the toolbar background off and Professional style; all registered preferences appear once in three ordered, open groups with toolbar controls first');
     checks.push('mouse opening focuses the first option, Tab stays in the panel and Delete does not delete selected graph nodes');
 
     const unchanged=await snapshot();
     for(const [key,value]of Object.entries(defaults)){
-      const changed=typeof value==='boolean'?!value:key==='uiStyle'?'cool':'move';
-      if(typeof value==='boolean')await control(key).setChecked(changed);else await control(key).selectOption(changed);
+      const changed=typeof value==='boolean'?!value:key==='uiStyle'?'cool':key==='selectionToolbar'?'multiple':'move';
+      if(typeof value==='boolean')await control(key).setChecked(key==='floatingToolbar'?!changed:changed);else await control(key).selectOption(changed);
       await settle();assert.equal((await settings())[key],changed);
     }
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),await settings());
@@ -141,7 +146,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.mouse.up({button:'middle'});assert.equal(await page.evaluate(()=>!!$('#canvas').onpointermove),false);await set({nodeBodyDrag:!panFlags.nodeBodyDrag});assert.equal((await settings()).nodeBodyDrag,!panFlags.nodeBodyDrag);
     checks.push('an active trusted mouse pan rejects preference changes without changing flags, storage or graph, then permits them after release');
 
-    await close();await opener.focus();await page.keyboard.press('Enter');await settle();assert.equal(await panel.isVisible(),true);assert.equal(await control('canvasTrash').evaluate(e=>e===document.activeElement),true);
+    await close();await opener.focus();await page.keyboard.press('Enter');await settle();assert.equal(await panel.isVisible(),true);assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);
     await page.keyboard.press('Escape');await settle();assert.equal(await panel.isVisible(),false);assert.equal(await opener.evaluate(e=>e===document.activeElement),true);
     await open();await page.locator('#uitheme').click();assert.equal(await panel.isVisible(),false);assert.equal(await page.locator('#appearancepanel').isVisible(),true);
     await open();assert.equal(await page.locator('#appearancepanel').isVisible(),false);await page.locator('#uisize').click();assert.equal(await panel.isVisible(),false);await open();assert.equal(await page.locator('#sizepanel').isVisible(),false);
@@ -152,7 +157,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
       await page.selectOption('#language',locale);await open();const title=await page.evaluate(()=>t('experiments.title'));assert.equal(await opener.getAttribute('aria-label'),title);assert.equal(await opener.getAttribute('title'),title);
       const labels=await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(e=>({key:e.dataset.experiment,label:e.closest('label').querySelector('span').textContent,title:e.closest('label').title})));
       assert.ok(labels.every(x=>x.label.trim()&&x.title.trim()&&!x.label.startsWith('experiments.')&&!x.title.startsWith('experiments.')));
-      assert.ok(await control('uiStyle').locator('option').evaluateAll(options=>options.every(option=>option.textContent.trim()&&!option.textContent.startsWith('experiments.'))));await close();
+      assert.ok(await panel.locator('select option,[data-experiment-group] h3').evaluateAll(entries=>entries.every(entry=>entry.textContent.trim()&&!entry.textContent.startsWith('experiments.'))));
+      assert.equal(await control('floatingToolbar').locator('..').locator('span').textContent(),locale==='en'?'Show toolbar background':'顯示工具列底色');await close();
     }
     checks.push('English and Traditional Chinese expose translated names, hints, cursor/style choices and opener labels');
 

@@ -26,5 +26,7 @@
   "import_ui_js": "import_ui.js",
   "qrcode_js": "qrcode.js",
   "share_ui_js": "share_ui.js",
-  "select_ui_js": "select_ui.js"
+  "shortcuts_ui_js": "shortcuts_ui.js",
+  "select_ui_js": "select_ui.js",
+  "selection_ui_js": "selection_ui.js"
 }

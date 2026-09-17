@@ -4,7 +4,7 @@ const dir=process.argv[2]||path.resolve(__dirname,'../../src/editor');
 const element={addEventListener(){},textContent:'',title:'',disabled:false,replaceChildren(){},classList:{add(){},toggle(){}}};
 let timers=0,writes=0;
 const context=vm.createContext({console,crypto:globalThis.crypto,assert,
-  location:{pathname:'/',hash:''},history:{replaceState(){}},
+  location:{pathname:'/',hash:''},history:{replaceState(){}},window:{addEventListener(){}},
   document:{querySelector(){return element;},querySelectorAll(){return [];}},
   sessionStorage:{getItem(){return '';},setItem(){writes++;}},
   setTimeout(){return ++timers;},clearTimeout(){}});

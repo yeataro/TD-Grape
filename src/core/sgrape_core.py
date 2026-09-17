@@ -46,7 +46,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
-    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant'))
+    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment'))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
@@ -411,11 +411,11 @@ def clean_semantic(graph):
     g=copy.deepcopy(graph)
     g.pop('catalogSnapshot',None)
     for s in g['stages'].values():
-        s['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in s['nodes']],key=lambda n:n['id'])
+        s['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in s['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
         s['edges']=sorted(s['edges'],key=lambda e:tuple(e['to']+e['from']))
     g['declarations']=sorted(g['declarations'],key=lambda d:d['id'])
     for f in g.get('functions',[]):
-        f['graph']['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in f['graph']['nodes']],key=lambda n:n['id'])
+        f['graph']['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in f['graph']['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
         f['graph']['edges']=sorted(f['graph']['edges'],key=lambda e:tuple(e['to']+e['from']))
     if 'functions' in g: g['functions'].sort(key=lambda f:f['id'])
     return g
@@ -661,6 +661,10 @@ def _compile_flat(graph,annotation_scopes=None):
                 if not d or stage not in d['stages']: raise GraphError('Unknown node or wrong shader stage',ident)
                 params=n.get('params')
                 if not isinstance(params,dict): raise GraphError('Invalid node parameters',ident)
+                if d['key']=='comment':
+                    text=n.get('ui',{}).get('comment','') if isinstance(n.get('ui',{}),dict) else None
+                    if not isinstance(text,str) or len(text)>2000 or re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]',text):
+                        raise GraphError('Comment must be plain text up to 2000 characters',ident)
                 ty=params.get('type','float')
                 if ty not in (PORT_TYPES if d['key']=='relay' else TYPES): raise GraphError('Unsupported numeric type',ident)
                 if d['key'] in ('float','vec2','vec3','vec4','color'):
@@ -776,7 +780,8 @@ def _compile_flat(graph,annotation_scopes=None):
             for ident in order:
                 if defs[ident]['key'] in (*VECTOR_KEYS,'vec4') or nodes[ident]['params'].get('requireConstant'):
                     for output in needed_outputs[ident]:demand_constant(ident,output)
-            for ident in sorted(set(nodes)-live): diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
+            for ident in sorted(set(nodes)-live):
+                if defs[ident]['key']!='comment':diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
             symbols=node_output_symbols(nodes,defs,ports)
             expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[]
             def inp(ident,port):

@@ -6,6 +6,27 @@
   "definitions": [
     {
       "definition": {
+        "key": "comment",
+        "label": "Comment",
+        "inputs": {},
+        "outputs": {},
+        "stages": ["vertex", "pixel"],
+        "defaults": {},
+        "descriptionKey": "help.comment",
+        "definitionUuid": "sgrape.builtin.comment",
+        "revisionHash": "7f17afc234779bd67c7ddb5bbf6a65612302b709a5017545a27cb4f9efc6913e"
+      },
+      "emitter": {"id": "comment", "version": 1},
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": ["note", "annotation", "text", "註解", "注释", "備註"],
+        "glslName": "",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
         "key": "float",
         "label": "Float",
         "inputs": {},

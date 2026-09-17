@@ -580,11 +580,48 @@ function focusNodeLabel(n){
   const entry=$('[data-node-label]');entry?.focus();entry?.select();
 }
 function nodeComment(n){return typeof n?.ui?.comment==='string'?n.ui.comment:'';}
-function setNodeComment(n,value){
+function setNodeComment(n,value,{redraw=true}={}){
   const comment=value.replace(/\r\n?/g,'\n');
   if(comment.length>2000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(comment)){status(t('node.commentInvalid'),true);return false;}
   if(comment===nodeComment(n))return true;
-  return change(()=>{n.ui||={};if(comment)n.ui.comment=comment;else delete n.ui.comment;},{localize:false});
+  return change(()=>{n.ui||={};if(comment)n.ui.comment=comment;else delete n.ui.comment;},{localize:false,redraw});
+}
+// Comment nodes use the same UI-only text storage as node notes. A draft stays
+// local until blur or Ctrl+Enter, so typing is a single undoable edit.
+const commentNodeDrafts=new WeakMap();
+function deferCommentNodeEditor(canvas){
+  const entry=document.activeElement;
+  return !!entry?.matches('[data-comment-node]')&&entry.classList.contains('comment-node-canvas')===canvas&&entry.keepCommentEditor?.();
+}
+function commentNodeEditor(n,canvas=false){
+  const owner=current(),draft=commentNodeDrafts.get(n),entry=el('textarea',{class:'comment-node-editor'+(canvas?' comment-node-canvas':''),'data-comment-node':n.id,'aria-label':t('comment.text'),placeholder:t('comment.placeholder'),rows:canvas?5:8,maxlength:2000});
+  entry.value=!readonly&&draft?.base===nodeComment(n)&&draft.canvas===canvas?draft.text:nodeComment(n);entry.readOnly=readonly;
+  let committed=nodeComment(n);
+  entry.keepCommentEditor=()=>!readonly&&current()===owner&&owner.nodes.includes(n)&&nodeComment(n)===committed&&(canvas||selected===n.id&&inspectorTab==='parameters');
+  entry.hasPendingEdit=()=>entry.value!==committed;
+  entry.syncCommentValue=value=>{if(document.activeElement!==entry){committed=value;entry.value=value;}};
+  const commit=()=>{
+    if(readonly||current()!==owner||!owner.nodes.includes(n)||entry.value===committed)return;
+    const value=entry.value,previous=committed;committed=value;commentNodeDrafts.delete(n);
+    if(!setNodeComment(n,value,{redraw:false})){committed=previous;entry.value=nodeComment(n);return;}
+    committed=nodeComment(n);
+    for(const other of document.querySelectorAll('[data-comment-node]'))if(other!==entry&&other.dataset.commentNode===n.id)other.syncCommentValue?.(committed);
+  };
+  entry.oninput=()=>commentNodeDrafts.set(n,{base:nodeComment(n),text:entry.value,canvas});
+  entry.onchange=entry.onblur=commit;
+  entry.onpointerdown=e=>{
+    e.stopPropagation();
+    if(canvas&&!selection.has(n.id)){
+      selectNode(n);document.querySelectorAll('.node').forEach(card=>card.classList.toggle('selected',selection.has(card.dataset.node)));inspector();renderNavigation();
+    }
+  };
+  entry.onclick=entry.ondblclick=e=>e.stopPropagation();
+  if(canvas)entry.onwheel=e=>e.stopPropagation();
+  entry.onkeydown=e=>{
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commentNodeDrafts.delete(n);entry.value=nodeComment(n);committed=entry.value;entry.blur();}
+    else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();e.stopPropagation();commit();}
+  };
+  return entry;
 }
 function nodeCommentField(n,standalone=false){
   const section=el(standalone?'section':'details',{class:'node-comment-field'+(standalone?' node-notes-page':'')});
@@ -919,7 +956,7 @@ function nodeColorPicker(n){
   strip.append(swatch);return strip;
 }
 function inspector(){
-  if(deferParameterInspector())return;
+  if(deferParameterInspector()||deferCommentNodeEditor(false))return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
   const box=$('#inspector');box.classList.remove('ordinary-parameters');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
@@ -935,9 +972,9 @@ function inspector(){
   box.append(nodeInspectorTitle(n,d));
   if(!d)return;
   const ordinary=!isSourceReferenceNode(n);
-  if(!ordinary&&inspectorTab==='notes')inspectorTab='parameters';
+  if((!ordinary||d.key==='comment')&&inspectorTab==='notes')inspectorTab='parameters';
   const tabs=el('div',{class:'parameter-tabs',role:'tablist','aria-label':t('panel.parameters')});
-  for(const key of ordinary?['parameters','settings','notes']:['parameters','settings']){
+  for(const key of ordinary&&d.key!=='comment'?['parameters','settings','notes']:['parameters','settings']){
     const button=el('button',{class:inspectorTab===key?'active':'',role:'tab','aria-selected':String(inspectorTab===key)},t('panel.'+key));
     button.onclick=()=>{inspectorTab=key;inspector();};tabs.append(button);
   }
@@ -946,6 +983,7 @@ function inspector(){
   box.classList.toggle('ordinary-parameters',ordinary&&inspectorTab==='parameters');
   functionInspector(box,n,d);
   if(inspectorTab==='parameters'){
+    if(d.key==='comment'){const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
     if(d.key==='glsl_code')glslCodeInspector(box,n);
     vectorInspector(box,n,d);
     if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));

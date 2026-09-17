@@ -663,6 +663,17 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* Canvas notes are plain text, with the same color for every category. */
 .node-canvas-comment{padding:8px 12px 10px;border-top:1px solid #ffffff12;color:var(--muted);font-size:10px;line-height:1.5}
 .node-canvas-comment>p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+/* Plain-text annotations retain the normal card, selection and resize behavior. */
+:where([data-category="annotation"]){--category-bg:color-mix(in srgb,#808080 35%,var(--ui-tone-field));--category-fg:var(--ui-tone-text)}
+.node[data-category="annotation"]{--node-min-width:260px}
+.node[data-category="annotation"]:not(.collapsed){--node-min-height:130px;--node-max-height:1200px;display:flex;flex-direction:column;height:180px;min-height:var(--node-min-height);max-height:var(--node-max-height)}
+.node[data-category="annotation"]>.node-title{flex-shrink:0}
+.node[data-category="annotation"]>.ports{display:none}
+.comment-node-editor{display:block;box-sizing:border-box;width:100%;padding:10px;border:0;border-radius:6px;background:var(--ui-tone-field);color:var(--ui-tone-text);font:inherit;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;resize:none}
+.comment-node-editor:focus{outline:1px solid var(--purple);outline-offset:-1px}
+.comment-node-canvas{width:calc(100% - 20px);margin:10px;flex:1 1 0;min-height:0;overflow:auto;background:transparent}
+.comment-node-canvas:focus{background:var(--ui-tone-field)}
+.comment-node-parameter{margin:10px 0}.comment-node-parameter small{display:block;margin-top:7px;line-height:1.5}
 
 /* Persistent sidebar controls share the TD location row on every screen size. */
 .sidebar-toggles{display:flex;align-items:center;gap:5px;flex:none;margin-left:auto}
@@ -813,6 +824,21 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .graph-workspace .toolbar nav{display:flex;align-items:center;gap:4px;flex:none}
 .graph-workspace .toolbar>.spacer{display:none}
 @media(pointer:coarse){.graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:38px;min-height:38px}.graph-workspace .graph-tools .icon-button{width:38px}}
+
+/* Selection actions remain in screen space, independent of graph zoom. */
+.graph-tool-group[hidden],.selection-toolbar[hidden],#selectionbounds[hidden]{display:none}
+.selection-toolbar{position:absolute;z-index:8;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:5px;width:max-content;padding:5px;border:1px solid var(--line);border-radius:10px;background:var(--ui-surface,var(--ui-tone-menu));box-shadow:0 5px 18px #0004;overflow-y:auto;overscroll-behavior:contain;touch-action:manipulation}
+.selection-toolbar .graph-tool-group{flex-direction:row;gap:4px}
+.selection-toolbar .graph-tool-group+.graph-tool-group{border-left:1px solid var(--line);padding-left:5px}
+.selection-toolbar button.icon-button{width:34px;height:34px;min-height:34px;padding:0;border:0;background:transparent}
+.selection-toolbar button:enabled:is(:hover,:focus-visible){background:var(--ui-hover,var(--ui-tone-menu-hover))}
+.selection-toolbar button:disabled{opacity:1;color:color-mix(in srgb,var(--muted) 48%,var(--ui-surface,var(--ui-tone-menu)));background:transparent;cursor:default}
+#selectionbounds{position:absolute;z-index:3;border:1px dashed var(--selection);border-radius:5px;pointer-events:none}
+#arrangemenu{position:fixed;inset:auto;margin:0;width:max-content;min-width:186px;max-width:calc(100 * var(--ui-vw) - 16px);overflow:auto;overscroll-behavior:contain}
+#arrangemenu button{display:flex;align-items:center;gap:12px;width:100%;padding:6px 12px;text-align:left;white-space:nowrap}
+#arrangemenu .ui-icon{flex:none}
+#arrangemenu button[data-arrange="top"],#arrangemenu button[data-arrange="spaceX"],#arrangemenu button[data-arrange="grid"]{margin-top:6px}
+@media(pointer:coarse){.selection-toolbar button.icon-button{width:42px;height:42px;min-height:42px}#arrangemenu button{min-height:44px}}
 
 /* The detection box is fixed; only the trash face reacts to an eligible hover. */
 .graph-navigation #zoom{position:static;margin-left:auto;flex:none;padding-left:8px}
@@ -1333,6 +1359,7 @@ footer .footer-preferences svg[hidden]{display:none}
 .node-resize-hints .node>.node-resize-handle::after{content:''}
 .node:hover>.node-resize-handle,.node.selected>.node-resize-handle,.node>.node-resize-handle:focus-visible{opacity:.75}
 .node>.node-resize-handle:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
+.node[data-category="annotation"]>.node-resize-handle{cursor:nwse-resize}
 @media(pointer:coarse){.node>.node-resize-handle{--resize-hit-offset:-7px;width:24px;height:24px}}
 
 /* Numeric fields preview a clamped 0–1 proportion; the value itself stays unrestricted. */
@@ -1484,11 +1511,13 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #selectmenu .select-group-label{padding:8px 12px 4px;color:var(--muted);font-size:12px}
 @media(pointer:coarse){:root{--popup-row-height:40px}}
 
-/* Experimental flags use the same footer popover and a compact, shared row. */
-.experiments-panel{width:320px;padding:8px}
+/* Experimental flags share compact rows grouped by the part of the UI they affect. */
+.experiments-panel{width:340px;padding:8px}
 .experiments-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 6px 8px;font-size:13px}
 .experiments-heading button{padding:4px 6px;border:0;background:transparent;color:var(--muted);font-size:11px;white-space:nowrap}
 .experiments-heading button:disabled{cursor:default}
+.experiment-group+.experiment-group{margin-top:10px}
+.experiment-group h3{margin:0;padding:4px 8px;color:var(--muted);font-size:12px;font-weight:500;line-height:1.5}
 .experiment-option{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;padding:6px 8px;border-radius:6px;font-size:14px;line-height:1.4;cursor:pointer}
 .experiment-option:hover{background:var(--ui-hover,var(--ui-tone-menu-hover))}
 .experiment-option>span{min-width:0}
@@ -1565,3 +1594,23 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 :root[data-ui-theme="dark"] .brand-mark{filter:drop-shadow(calc(var(--cool-glow-x,0px) * .4) calc(var(--cool-glow-y,0px) * .4) 8px color-mix(in srgb,var(--purple) calc(var(--cool-glow-alpha) * var(--cool-common-level)),transparent))}
 :root[data-ui-theme="dark"] .brand strong{text-shadow:calc(var(--cool-glow-x,0px) * .3) calc(var(--cool-glow-y,0px) * .3) 12px color-mix(in srgb,var(--purple) calc(var(--cool-glow-alpha) * var(--cool-detail-level)),transparent)}
+
+/* Shortcut reference remains readable independently of graph zoom. */
+#shortcutspanel{width:min(520px,calc(100 * var(--ui-vw) - 28px));max-height:calc(100 * var(--ui-dvh) - 28px);box-sizing:border-box;margin:auto;padding:18px 20px;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px #0005;overflow:auto}
+#shortcutspanel[open]{display:flex;flex-direction:column;overflow:hidden}
+#shortcutspanel .shortcuts-heading{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0}
+.shortcuts-heading h2{margin:0;font-size:16px;font-weight:600}
+#shortcutsclose{display:flex;align-items:center;justify-content:center;flex:none;min-width:32px;min-height:32px;padding:6px;border:0;background:transparent}
+#shortcutsclose:hover{background:var(--ui-hover,var(--ui-tone-control-hover))}
+#shortcutshint{flex:none;margin:10px 0 16px;color:var(--muted);font-size:12px;line-height:1.5}
+#shortcutspanel #shortcutslist{display:block;min-height:0;padding:0;overflow:auto;overscroll-behavior:contain}
+.shortcuts-section+.shortcuts-section{margin-top:18px}
+.shortcuts-section h3{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--muted)}
+.shortcuts-commands{margin:0}
+.shortcuts-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.shortcuts-row dt{min-width:0;line-height:1.4}
+.shortcuts-row dd{display:flex;justify-content:flex-end;align-items:center;gap:5px;margin:0;white-space:nowrap}
+.shortcuts-chord{display:inline-flex;gap:3px;align-items:center}
+.shortcuts-chord kbd{font:inherit;font-size:11px;line-height:1.4;min-width:19px;text-align:center;padding:2px 5px;border-radius:4px;background:var(--ui-control,var(--ui-tone-control));box-shadow:0 1px 0 var(--line)}
+.shortcuts-or{color:var(--muted);font-size:11px}
+@media(pointer:coarse){#shortcutsclose{min-width:40px;min-height:40px}.shortcuts-row{min-height:36px}#uishortcuts{touch-action:manipulation}}

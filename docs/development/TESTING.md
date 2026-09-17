@@ -1,5 +1,19 @@
 # 測試
 
+2026-09-18 選取工具列位置／註解底色修正：選取工具列 7 組及 Comment 縮放 9 組依橫向右上規則重驗通過，含 320／390px 與 844px 橫向、100／125% UI 縮放、左右鍵導覽、群組換行、尺寸／Undo／拖曳跟隨。私人閱讀／編輯探針確認未聚焦透明底、聚焦輸入底，幾何與 graph 不變；截圖已目視。極矮視窗若上方空間不足，工具列優先限制在畫布可視區。未新增樣式鏡像測試。
+
+最後再次核對 30 份內嵌來源、8 份服務快照及修改後 HTTP 資源，兩份 Master current、兩份使用者 Shader 保留。最終 TOE 737,476 bytes，SHA-256 `9cca12f7233921faa6f4c8831a9aea4c8b4e555ca46b44fad09e779181d1b846`。以下各次 TOE 大小與 hash 均為當時的小批次紀錄。
+
+2026-09-18 Comment 雙向縮放追加：`test_comment_resize.cjs` 9 組、既有 `test_node_width.cjs` 15 組通過，Comment 核心 5 項再驗證通過；前述 66 組加上本批共 90 組瀏覽器檢查。新測試涵蓋兩軸手勢預覽／一次 Undo、介面及圖縮放換算、130–1200 高度限制、clamp 後無變更不建歷史、Escape／失焦／取消／capture loss、可信任觸控、文字草稿、收合恢復、剪貼簿與 JSON 往返、唯讀、一般節點仍只調寬及選取工具列即時跟隨。實際滾輪令 textarea 捲動且圖 scale 不變，保留原生預設捲動。修正 graphContent 排除 ui.height，並補主圖／子圖存檔狀態回歸；580 雙語引用、語法及 diff 檢查通過。
+
+最終五批已推送並各自保存 TD，30 份內嵌來源／8 份 HTTP 服務資源一致，TOP／MAT Master current；最終 TOE 737,436 bytes，SHA-256 `7e992b3c88fceffa570e3369297e71a221124a2c54a31d0bfcefd82ceadb9f6f`。兩份使用者 Shader 保留、私人助手排除，既有 Editor 分頁未重新整理。報告與截圖位於私人 toolbar-round 與 comment-node；實體手機／Safari 仍未測。
+
+2026-09-18 編輯工具列與註解節點（0.8.84）：新 selection toolbar 7 組、shortcut help 6 組、Comment 8 組；既有 experiments 19 組、edit shortcuts 10 組、editor chrome 16 組，共 66 組 Chromium 瀏覽器檢查通過且零頁面錯誤。選取工具列涵蓋三態與 0／1／多選、共用 DOM 按鈕、獨立開關、滑鼠離開後框線消失、鍵盤 Tab 不誤開 Creator、方向鍵／Escape、圖縮放與畫布定位、六種對齊、實際尺寸間距、一次 Undo 精確還原、唯讀／忙碌／選取改變及觸控。額外 24 組 viewport／UI scale／工具列底色配置通過。快捷鍵清單驗證深淺色、繁英、Mac 提示、320／390／1600px、75／125% 與短橫向畫面；關閉鈕保持可操作。
+
+Comment 驗證畫布及 Parameter 草稿、換行、提交／取消／Undo、複製貼上／刪除、收合、唯讀、子圖擷取與可攜函式。完整 portable runner 通過：284 Python tests、579 個雙語引用、14 Editor Launch tests、瀏覽器 metadata／品牌資源、8 支既有模型腳本與 26 Remote Panel tests；保留全部 138 個歷史 compiler fingerprints。測試基礎補齊既有 touch code 需要的 document/window listener mock，更新新增 Comment 對 catalog 集合的預期；未放寬版本／安全契約。edit shortcuts fixture 清除初始 busy，沿用現有 38／34px 響應式按鈕規則；chrome 分組預期改為已確認的新結構。
+
+四個小批次（齒輪／快捷鍵／Comment／選取與排列）各自更新 TD 並保存 TOE。選取批次核對 30 份內嵌來源、8 份 HTTP 服務資源一致，TOP／MAT Master current，使用者兩份 Shader 保留，私人助手未存入 TOE。該批 TOE 737,068 bytes，SHA-256 `45b43068a907e1a421cfa57473180dac7255b6201269751bda55c5bdd6f171b4`。未重新整理使用者現有 Editor；實體 iOS Safari 未測。後續追加高度調整的驗證與最終 TOE 記錄另列。
+
 2026-09-18 Node／Parameter 觸控數值（0.8.84）：新增 `test_numeric_touch.cjs` 20 組通過，採隔離服務及可信任 Chromium touch dispatch。涵蓋兩處單點不 focus／雙點高精度輸入、水平預覽／一次提交及 Undo／Redo、450ms 階梯無 focus、一般 render 保留手勢、真正 capture loss、第二指與 pointer cancellation 還原、不殘留雙點狀態、已聚焦文字原生操作、垂直捲動／平移、唯讀及同裝置滑鼠行為。向量 X 文字草稿在觸控調 Y、調值中與結束後 render 時，緊湊／展開副本均保留；Y 只提交一次，X 待明確 Enter 才另建 Undo。
 
 修正可信任觸控查出的 input 內部控制轉移 capture 到 input host 被當成取消，以及 Parameter 更新覆蓋另一分量文字草稿的問題。既有 `test_numeric_scrub.cjs` 32 組、`test_parameter_values.cjs` 15 組、`test_numeric_presets.cjs` 7 組回歸通過，共 74 組，零頁面錯誤；JavaScript 語法與 diff 檢查通過。報告位於私人 work/reports/numeric-touch 及 touch-numeric。桌面模擬不證明 iPhone 鍵盤、Safari focus zoom 或原生 pinch 的實機行為；後三者不在本輪修改範圍。

@@ -38,7 +38,7 @@ class MathCatalog(unittest.TestCase):
                     t=ty if t=='T' else t
                     rows.append({'node':c.node(key,'probe',type=ty),'port':port,'type':t,'expected':c.input_default(key,port,t)})
         script="""const fs=require('fs'),vm=require('vm');const data=JSON.parse(fs.readFileSync(0,'utf8'));
-const context={t:x=>x,clone:x=>JSON.parse(JSON.stringify(x)),definition:n=>data.catalog.find(d=>d.definitionUuid===n.definitionUuid)};
+const context={t:x=>x,document:{addEventListener(){}},clone:x=>JSON.parse(JSON.stringify(x)),definition:n=>data.catalog.find(d=>d.definitionUuid===n.definitionUuid)};
 vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),context);context.setTypeContract(data.contract);
 vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),context);
 process.stdout.write(JSON.stringify(data.rows.map(r=>context.defaultInput(r.node,r.port,r.type))));"""

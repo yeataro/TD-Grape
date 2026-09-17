@@ -5,7 +5,7 @@ const elements=new Map();
 const element=key=>{if(!elements.has(key))elements.set(key,{value:'all',textContent:'',title:'',hidden:false,disabled:false,focus(){},replaceChildren(){},setAttribute(){},addEventListener(){},classList:{add(){},remove(){},toggle(){}}});return elements.get(key);};
 const context=vm.createContext({assert,payload,console,crypto:globalThis.crypto,
   location:{pathname:'/',hash:''},history:{replaceState(){}},window:{addEventListener(){}},
-  document:{querySelector:element,querySelectorAll:()=>[]},
+  document:{addEventListener(){},querySelector:element,querySelectorAll:()=>[]},
   sessionStorage:{getItem(){return '';},setItem(){}},setTimeout(){return 1;},clearTimeout(){}});
 for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');

@@ -4,8 +4,8 @@ const dir=process.argv[2]||path.resolve(__dirname,'../../src/editor'),elements=n
 const element=()=>({addEventListener(){},textContent:'',children:[],value:'',open:false,disabled:false,hidden:false,
   classList:{add(){},toggle(){}},setAttribute(){},append(...children){this.children.push(...children);},replaceChildren(){this.children=[];},
   showModal(){this.open=true;},close(){this.open=false;},click(){}});
-const context=vm.createContext({assert,console,crypto:globalThis.crypto,location:{pathname:'/',hash:''},history:{replaceState(){}},
-  document:{querySelector(s){if(!elements.has(s))elements.set(s,element());return elements.get(s);},querySelectorAll(){return [];},createElement:element},
+const context=vm.createContext({assert,console,crypto:globalThis.crypto,location:{pathname:'/',hash:''},history:{replaceState(){}},window:{addEventListener(){}},
+  document:{addEventListener(){},querySelector(s){if(!elements.has(s))elements.set(s,element());return elements.get(s);},querySelectorAll(){return [];},createElement:element},
   sessionStorage:{getItem(){return '';},setItem(){}},setTimeout(){return 1;},clearTimeout(){},Blob,File,
   URL:{createObjectURL(blob){downloaded=blob;return 'blob:fixture';},revokeObjectURL(){}}});
 for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js','import_ui.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);

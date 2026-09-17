@@ -20,7 +20,23 @@
   "messages": {
     "experiments.title": {"zh-Hant": "實驗功能", "en": "Experimental features"},
     "experiments.reset": {"zh-Hant": "還原預設", "en": "Reset defaults"},
+    "selection.toolbar": {"zh-Hant": "選取工具列", "en": "Selection toolbar"},
+    "selection.editTools": {"zh-Hant": "編輯工具", "en": "Edit tools"},
+    "selection.multipleTools": {"zh-Hant": "多選工具", "en": "Multiple selection tools"},
+    "arrange.title": {"zh-Hant": "排列節點", "en": "Arrange nodes"},
+    "arrange.left": {"zh-Hant": "齊左", "en": "Align left"},
+    "arrange.centerX": {"zh-Hant": "水平置中", "en": "Align horizontal centers"},
+    "arrange.right": {"zh-Hant": "齊右", "en": "Align right"},
+    "arrange.top": {"zh-Hant": "齊上", "en": "Align top"},
+    "arrange.centerY": {"zh-Hant": "垂直置中", "en": "Align vertical centers"},
+    "arrange.bottom": {"zh-Hant": "齊下", "en": "Align bottom"},
+    "arrange.spaceX": {"zh-Hant": "水平等距", "en": "Equal horizontal gaps"},
+    "arrange.spaceY": {"zh-Hant": "垂直等距", "en": "Equal vertical gaps"},
+    "arrange.grid": {"zh-Hant": "格狀排列", "en": "Arrange in grid"},
     "experiments.note": {"zh-Hant": "立即套用，只保存在此瀏覽器。", "en": "Applies immediately; saved only in this browser."},
+    "experiments.group.toolbars": {"zh-Hant": "工具列與入口", "en": "Toolbars and controls"},
+    "experiments.group.nodes": {"zh-Hant": "節點與接線", "en": "Nodes and wires"},
+    "experiments.group.appearance": {"zh-Hant": "色彩與顯示", "en": "Colors and display"},
     "experiments.uiStyle": {"zh-Hant": "表現能力", "en": "Visual Capability"},
     "experiments.uiStyle.hint": {"zh-Hant": "Professional 維持原貌；Cool 讓接線、選取框、葡萄圖示與套用 Shader 發光；Excellent 再加上節點與其他介面；Legendary 加上緩慢呼吸；Godlike 讓更強的彩色外光持續環繞。切換表現模式以 1 秒過渡；選取與按鈕等操作立即反應。只在深色模式生效。", "en": "Professional keeps the original look; Cool lights up wires, selection outlines, the grape logo and Apply Shader; Excellent adds nodes and other interface accents; Legendary adds a slow breathing glow; Godlike moves a stronger colored halo around the edges. Visual mode changes fade over one second; selection and button feedback stay immediate. Dark mode only."},
     "experiments.style.professional": {"zh-Hant": "Professional · 專業", "en": "Professional"},
@@ -33,8 +49,15 @@
     "experiments.finishGesture": {"zh-Hant": "請先結束畫布拖曳，再切換實驗功能。", "en": "Finish the canvas drag before changing experimental features."},
     "experiments.canvasTrash": {"zh-Hant": "畫布垃圾桶", "en": "Canvas trash"},
     "experiments.canvasTrash.hint": {"zh-Hant": "將節點或接線拖到垃圾桶刪除。開啟後，輸入線拖到空白處會開啟新增節點。", "en": "Drag nodes or wires to the trash to delete them. Dragging an input wire to blank canvas opens Add Node while enabled."},
-    "experiments.floatingToolbar": {"zh-Hant": "浮動工具列", "en": "Floating toolbar"},
-    "experiments.floatingToolbar.hint": {"zh-Hant": "工具列浮在畫布上方，空白處可穿透操作。", "en": "Overlay the toolbar on the canvas; empty areas allow canvas interaction."},
+    "experiments.floatingToolbar": {"zh-Hant": "顯示工具列底色", "en": "Show toolbar background"},
+    "experiments.floatingToolbar.hint": {"zh-Hant": "開啟時，頂部工具列使用獨立底色；關閉時，按鈕留在畫布上方，空白處可操作畫布。", "en": "Show a background behind the top toolbar. When off, buttons overlay the canvas and empty areas allow canvas interaction."},
+    "experiments.editToolbar": {"zh-Hant": "顯示編輯工具列", "en": "Show edit toolbar"},
+    "experiments.editToolbar.hint": {"zh-Hant": "在頂部保留複製、貼上與刪除。選取工具列設為「單選與複選」時，這些操作改在選取工具列顯示。", "en": "Keep Copy, Paste and Delete at the top. With selection toolbar set to Single and multiple, these actions move to the selection toolbar."},
+    "experiments.selectionToolbar": {"zh-Hant": "選取工具列", "en": "Selection toolbar"},
+    "experiments.selectionToolbar.hint": {"zh-Hant": "僅複選：選取兩個以上節點時顯示，頂部編輯工具列保留；單選與複選：選取節點時顯示，並接管頂部編輯工具。", "en": "Multiple only shows the selection toolbar for two or more nodes and keeps the top edit toolbar. Single and multiple shows it for any selection and replaces the top edit toolbar."},
+    "experiments.selection.off": {"zh-Hant": "關閉", "en": "Off"},
+    "experiments.selection.multiple": {"zh-Hant": "僅複選", "en": "Multiple only"},
+    "experiments.selection.all": {"zh-Hant": "單選與複選", "en": "Single and multiple"},
     "experiments.nodeBodyDrag": {"zh-Hant": "從節點內文拖曳", "en": "Drag nodes by their body"},
     "experiments.nodeBodyDrag.hint": {"zh-Hant": "關閉後只從節點標題列拖曳；數值欄位保持編輯行為。", "en": "When off, drag nodes only by their title. Numeric fields retain their editing gestures."},
     "experiments.nodeDragCursor": {"zh-Hant": "節點拖曳游標", "en": "Node drag cursor"},
@@ -2893,9 +2916,73 @@
       "zh-Hant": "畫布縮放倍率",
       "en": "Canvas zoom presets"
     },
+    "comment.resize": {
+      "zh-Hant": "拖曳調整註解寬度與高度",
+      "en": "Drag to resize comment width and height"
+    },
+    "comment.text": {
+      "zh-Hant": "註解文字",
+      "en": "Comment text"
+    },
+    "comment.placeholder": {
+      "zh-Hant": "輸入註解…",
+      "en": "Write a comment…"
+    },
+    "comment.hint": {
+      "zh-Hant": "純文字註解，不參與 Shader 計算。移開焦點或 Ctrl＋Enter 套用；Esc 取消此次編輯。",
+      "en": "Plain text, excluded from Shader calculations. Leave the field or press Ctrl+Enter to apply; Esc cancels this edit."
+    },
+    "help.comment": {
+      "zh-Hant": "在畫布上留下純文字註解。沒有輸入或輸出，不影響產生的 GLSL；可以像一般節點一樣移動、複製與刪除。",
+      "en": "Leave a plain-text note on the canvas. Comments have no inputs or outputs and do not affect generated GLSL. Move, copy and delete them like other nodes."
+    },
     "appearance.tone.reset": {
       "zh-Hant": "右鍵或雙擊還原基準",
       "en": "Right-click or double-click to reset"
+    },
+    "shortcuts.title": {
+      "zh-Hant": "快捷鍵",
+      "en": "Keyboard shortcuts"
+    },
+    "shortcuts.hint": {
+      "zh-Hant": "畫布快捷鍵在文字輸入及對話框中不會執行。Mac 也可用 Cmd 取代 Ctrl。",
+      "en": "Graph shortcuts are inactive while editing text or using a dialog. Mac also supports Cmd instead of Ctrl."
+    },
+    "shortcuts.section.edit": {
+      "zh-Hant": "編輯",
+      "en": "Editing"
+    },
+    "shortcuts.section.navigation": {
+      "zh-Hant": "畫布與導覽",
+      "en": "Canvas & navigation"
+    },
+    "shortcuts.section.values": {
+      "zh-Hant": "數值與文字編輯",
+      "en": "Values & text"
+    },
+    "shortcuts.selectAll": {
+      "zh-Hant": "全選節點",
+      "en": "Select all nodes"
+    },
+    "shortcuts.cancel": {
+      "zh-Hant": "取消操作／離開專注編輯",
+      "en": "Cancel interaction / leave focus mode"
+    },
+    "shortcuts.contextKey": {
+      "zh-Hant": "選單鍵",
+      "en": "Menu key"
+    },
+    "shortcuts.valueApply": {
+      "zh-Hant": "套用數值",
+      "en": "Apply numeric value"
+    },
+    "shortcuts.valueCancel": {
+      "zh-Hant": "取消本次數值編輯",
+      "en": "Cancel numeric edit"
+    },
+    "shortcuts.textApply": {
+      "zh-Hant": "套用註記或 GLSL 文字",
+      "en": "Apply notes or GLSL text"
     }
   }
 }

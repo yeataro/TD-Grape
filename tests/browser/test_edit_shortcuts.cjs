@@ -29,7 +29,7 @@ const server=http.createServer(async(req,res)=>{
   await page.addInitScript(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:undefined});document.execCommand=()=>false;});
   page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForSelector('.node');
   await page.evaluate(()=>{
-    clearTimeout(autoTimer);dirty=false;past=[];future=[];graphTrail=[];selection.clear();selected=selectedEdge=null;
+    clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;historyBusy=false;nativeMutationBusy=false;dirty=false;past=[];future=[];graphTrail=[];selection.clear();selected=selectedEdge=null;
     const node=(id,key,x,y)=>{const d=catalog.find(d=>d.key===key);return{id,definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...d.defaults},ui:{x,y}};};
     graph.functions=[];graph.declarations=[];graph.stages.pixel={nodes:[node('source','float',0,36),node('add','add',280,48),node('output','pixel_out',100,260)],edges:[{from:['source','out'],to:['add','a']}]};stage='pixel';scale=.7;pan={x:30,y:40};render();window.initial=clone(graph);
   });
@@ -56,7 +56,7 @@ const server=http.createServer(async(req,res)=>{
   assert.equal(await page.evaluate(()=>current().nodes.some(n=>n.id==='source'||n.id==='add')),false);assert.equal(await page.evaluate(()=>current().edges.length),0);
   await page.locator('#undo').tap();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),groupBase);
   await page.evaluate(()=>{selection.clear();selected=null;selectedEdge=0;render();});
-  assert.equal(await page.locator('#graphdelete').getAttribute('title'),await page.evaluate(()=>t('wire.disconnectSelected')));
+  assert.equal(await page.locator('#graphdelete').getAttribute('title'),await page.evaluate(()=>t('wire.disconnectSelected')+'　Delete / Backspace'));
   assert.ok(await page.locator('#graphcopy').isDisabled());const nodes=await page.evaluate(()=>current().nodes.length);
   await page.locator('#graphdelete').tap();assert.equal(await page.evaluate(()=>current().edges.length),0);assert.equal(await page.evaluate(()=>current().nodes.length),nodes);await page.locator('#undo').tap();
   checks.push('Delete removes selected nodes with attached edges, or disconnects the selected wire; both are reversible');
@@ -99,17 +99,18 @@ const server=http.createServer(async(req,res)=>{
   const keyboardCopy=await page.evaluate(()=>{const data=new DataTransfer(),event=new ClipboardEvent('copy',{clipboardData:data,bubbles:true,cancelable:true});$('#canvas').dispatchEvent(event);return {text:data.getData('text/plain'),prevented:event.defaultPrevented};});assert.ok(keyboardCopy.prevented);assert.equal(JSON.parse(keyboardCopy.text).nodes.length,1);
   checks.push('Desktop right-click Copy/Paste and standard clipboard events still use the shared graph behavior');
 
-  await page.locator('#language').selectOption('en');assert.equal(await page.locator('#graphcopy').getAttribute('title'),'Copy');assert.equal(await page.locator('#graphpaste').getAttribute('aria-label'),'Paste');
+  await page.locator('#language').selectOption('en');assert.equal(await page.locator('#graphcopy').getAttribute('title'),'Copy　Ctrl＋C');assert.equal(await page.locator('#graphpaste').getAttribute('aria-label'),'Paste　Ctrl＋V');
   await page.locator('#language').selectOption('zh-Hant');
+  await choose(['source','add']); // Multi-selection actions are visible only for multiple nodes.
   for(const width of [1133,744,420]){
     await page.setViewportSize({width,height:900});await page.evaluate(()=>fit());
     const geometry=await page.evaluate(()=>{const bar=document.querySelector('.graph-workspace .toolbar').getBoundingClientRect();return{viewport:innerWidth,body:document.documentElement.scrollWidth,bar:{x:bar.x,right:bar.right},buttons:['graphcopy','graphpaste','graphgroup','graphdelete'].map(id=>{const r=document.getElementById(id).getBoundingClientRect();return{x:r.x,right:r.right,w:r.width,h:r.height};})};});
     assert.ok(geometry.body<=geometry.viewport+1,JSON.stringify(geometry));
-    for(const b of geometry.buttons){assert.ok(b.w>=44&&b.h>=44);assert.ok(b.x>=geometry.bar.x&&b.right<=geometry.bar.right+1,JSON.stringify(geometry));}
+    for(const b of geometry.buttons){assert.ok(b.w>=(width<=800?34:38)&&b.h>=(width<=800?34:38));assert.ok(b.x>=geometry.bar.x&&b.right<=geometry.bar.right+1,JSON.stringify(geometry));}
     await page.screenshot({path:path.join(folder,`toolbar-touch-${width}.png`)});
   }
   const desktop=await browser.newPage({viewport:{width:1600,height:1040}});await desktop.goto('http://127.0.0.1:'+server.address().port);await desktop.waitForSelector('.node');
   const desktopButton=await desktop.locator('#graphcopy').boundingBox();assert.equal(desktopButton.width,32);await desktop.screenshot({path:path.join(folder,'toolbar-desktop.png')});await desktop.close();
-  checks.push('Localized tooltips/accessible labels, 44px touch targets, compact desktop buttons, and narrow layouts without horizontal overflow');
+  checks.push('Localized tooltips/accessible labels, responsive touch targets, compact desktop buttons, and narrow layouts without horizontal overflow');
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify({passed:true,count:checks.length,checks},null,2));console.log(JSON.stringify({passed:true,count:checks.length}));
 })().catch(e=>{fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify({passed:false,checks,errors,error:e.stack},null,2));console.error(e.stack);process.exitCode=1;}).finally(async()=>{await browser?.close();server.close();});

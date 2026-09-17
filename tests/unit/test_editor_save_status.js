@@ -3,8 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const dir=path.resolve(__dirname,'../../src/editor'),elements=new Map();
 const element=()=>({textContent:'',title:'',disabled:false,hidden:false,addEventListener(){},replaceChildren(){},
   classList:{add(){},remove(){},toggle(){}}});
-const context=vm.createContext({assert,console,crypto:globalThis.crypto,location:{pathname:'/',hash:''},history:{replaceState(){}},
-  document:{querySelector(s){if(!elements.has(s))elements.set(s,element());return elements.get(s);},querySelectorAll(){return [];}},
+const context=vm.createContext({assert,console,crypto:globalThis.crypto,location:{pathname:'/',hash:''},history:{replaceState(){}},window:{addEventListener(){}},
+  document:{addEventListener(){},querySelector(s){if(!elements.has(s))elements.set(s,element());return elements.get(s);},querySelectorAll(){return [];}},
   sessionStorage:{getItem(){return '';},setItem(){},removeItem(){}},setTimeout(){return 1;},clearTimeout(){}});
 for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');
@@ -48,6 +48,8 @@ setup();graph.stages.pixel.nodes[0].ui.componentsExpanded=true;mark();check('gra
 setup();graph.functions[0].graph.nodes[0].ui.componentsExpanded=false;mark();check('graph.savePending');
 setup();graph.stages.pixel.nodes[0].ui.width=420;mark();check('graph.savePending');
 setup();graph.functions[0].graph.nodes[0].ui.width=360;mark();check('graph.savePending');
+setup();graph.stages.pixel.nodes[0].ui.height=300;mark();check('graph.savePending');
+setup();graph.functions[0].graph.nodes[0].ui.height=500;mark();check('graph.savePending');
 setup();graph.stages.pixel.nodes[0].ui.label='GLSL comment';mark();check('graph.pending');
 setup();graph.stages.pixel.nodes[0].ui.typeMode='locked';mark();check('graph.pending');
 setup();graph.catalogSnapshot={serverMetadata:true};move();check('graph.savePending');

@@ -37,7 +37,9 @@
   "select_ui.js": "src/editor/select_ui.js",
   "shader_controls.py": "src/td/runtime/shader_controls.py",
   "share_ui.js": "src/editor/share_ui.js",
+  "shortcuts_ui.js": "src/editor/shortcuts_ui.js",
   "style.css": "src/editor/style.css",
   "tdfam_menu_colors.py": "src/td/runtime/tdfam_menu_colors.py",
-  "web_icons.json": "src/editor/web_icons.json"
+  "web_icons.json": "src/editor/web_icons.json",
+  "selection_ui.js": "src/editor/selection_ui.js"
 }
