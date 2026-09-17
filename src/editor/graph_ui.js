@@ -1231,9 +1231,13 @@ function installGraphInteractions(){
   document.addEventListener('keydown',e=>{
     if(e.defaultPrevented)return;
     if(e.target.closest('.details')||e.target.closest('#grapheditmenu')||e.target.closest('.library')||e.target.closest('#creator')||e.target.closest('.shader-selector')||e.target.closest('dialog')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
-    if(e.key.toLowerCase()==='h'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
+    const plainKey=e.key.toLowerCase();
+    if(['h','l'].includes(plainKey)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
       const inGraph=e.target===document.body||e.target===document.documentElement||e.target.closest('.graph-workspace');
-      if(inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open],:popover-open')){e.preventDefault();fit();}
+      if(inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open],:popover-open')){
+        if(plainKey==='h'){e.preventDefault();fit();}
+        else if(!e.repeat&&!editorMutationBlocked()&&selectedCanvasNodes().length>1){e.preventDefault();arrangeSelection('auto');}
+      }
       return;
     }
     if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')){e.preventDefault();const r=canvas.getBoundingClientRect();openGraphMenu(r.left+r.width/2,r.top+r.height/3);return;}

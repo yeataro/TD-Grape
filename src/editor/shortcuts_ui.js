@@ -9,6 +9,7 @@ const EDITOR_SHORTCUTS=Object.freeze({
   delete:{label:'node.delete',keys:['Delete','Backspace'],section:'edit'},
   selectAll:{label:'shortcuts.selectAll',keys:['Mod+A'],section:'edit'},
   group:{label:'function.group',keys:['Mod+G'],section:'edit'},
+  autoArrange:{label:'arrange.auto',keys:['L'],section:'edit'},
   add:{label:'action.nodes',keys:['Tab'],section:'navigation'},
   fit:{label:'action.fit',keys:['H'],section:'navigation'},
   up:{label:'navigation.up',keys:['Alt+ArrowUp'],section:'navigation'},

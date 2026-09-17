@@ -21,10 +21,11 @@ async function run(){
       selection=new Set(ids);selected=ids.at(-1)||null;selectedEdge=null;selectedInputId=null;past=[];future=[];readonly=false;historyBusy=false;nativeMutationBusy=false;dirty=false;rememberSavedGraph(graph);render();fit();
     },{specs,pairs,ids});await settle();
   };
-  const exercise=async(specs,pairs,{ids,menu=false,groups}={})=>{
+  const exercise=async(specs,pairs,{ids,menu=false,groups,shortcut=false}={})=>{
     await install(specs,pairs,ids);const original=await graphJSON(),initialBounds=await bounds();
     assert.equal(await page.evaluate(()=>hasShaderChanges()),false);
     if(menu){await page.locator('#grapharrange').click();const action=page.locator('[data-arrange="auto"]');assert.equal(await action.isVisible(),true);assert.equal(await action.isEnabled(),true);assert.ok((await action.innerText()).trim()&&!((await action.innerText()).includes('arrange.auto')),'automatic layout has a translated menu label');await action.click();}
+    else if(shortcut){await page.locator('#canvas').focus();await page.keyboard.press('l');}
     else assert.equal(await page.evaluate(()=>arrangeSelection('auto')),true);
     await settle();const arranged=await graphJSON(),rows=await bounds();assert.notEqual(arranged,original,'fixture must require a layout change');
     assert.equal(await page.evaluate(()=>past.length),1,'automatic layout is one Undo operation');
@@ -44,6 +45,39 @@ async function run(){
     await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;window.autoArrangeFixture=clone(graph);setUIExperiments({selectionToolbar:'off',editToolbar:true});});
     await exercise([{id:'a',key:'float'},{id:'b'},{id:'c'}],[['a','b'],['b','c']],{menu:true});
     checks.push('the translated automatic-layout menu action lays a chain left to right using rendered node sizes; coordinates alone change, with one exact Undo/Redo and stable repeat');
+
+    await exercise([{id:'a',key:'float'},{id:'b'},{id:'c'}],[['a','b'],['b','c']],{shortcut:true});
+    checks.push('plain L from the graph invokes the same automatic layout with one exact Undo/Redo, stable repeat, and no shader changes');
+
+    await install([{id:'a',key:'float'},{id:'b'}],[['a','b']]);
+    const shortcutBefore=await graphJSON();
+    const blocked=await page.evaluate(()=>{
+      const results=[],canvas=$('#canvas'),fire=(name,target=canvas,options={})=>{const e=new KeyboardEvent('keydown',{key:'l',code:'KeyL',bubbles:true,cancelable:true,...options});target.dispatchEvent(e);results.push({name,prevented:e.defaultPrevented,graph:JSON.stringify(graph),history:past.length});};
+      for(const modifier of ['ctrlKey','shiftKey','altKey','metaKey'])fire(modifier,canvas,{[modifier]:true});
+      fire('repeat',canvas,{repeat:true});fire('IME',canvas,{isComposing:true});
+      for(const tag of ['input','textarea','select','div']){const control=document.createElement(tag);if(tag==='div')control.contentEditable='true';canvas.append(control);control.focus();fire(tag,control);control.remove();}
+      const outside=document.createElement('button');document.body.append(outside);outside.focus();fire('outside graph',outside);outside.remove();
+      readonly=true;fire('readonly');readonly=false;
+      historyBusy=true;fire('history busy');historyBusy=false;
+      nativeMutationBusy=true;fire('native mutation busy');nativeMutationBusy=false;
+      selection=new Set(['a']);fire('single selection');selection.clear();fire('empty selection');selection=new Set(['a','b']);
+      canvas.onpointermove=()=>{};fire('canvas gesture');canvas.onpointermove=null;
+      valueLadder={};fire('value ladder');valueLadder=null;
+      pendingValueLadder={};fire('pending value ladder');pendingValueLadder=null;
+      numericPresetMenu={};fire('numeric presets');numericPresetMenu=null;
+      creatorState={};fire('creator');creatorState=null;
+      linkStart={};fire('connection');linkStart=null;
+      wireGesture={};fire('wire gesture');wireGesture=null;
+      nodeDragGesture={};fire('node drag');nodeDragGesture=null;
+      nodeResizeGesture={};fire('node resize');nodeResizeGesture=null;
+      touchGraphGesture={};fire('touch gesture');touchGraphGesture=null;
+      $('#shortcutspanel').showModal();fire('dialog open');$('#shortcutspanel').close();
+      openArrangeMenu();fire('popover open');closeArrangeMenu();
+      return results;
+    });
+    for(const result of blocked){assert.equal(result.graph,shortcutBefore,result.name+' must not edit the graph');assert.equal(result.history,0,result.name+' must not add history');}
+    for(const modifier of ['ctrlKey','shiftKey','altKey','metaKey'])assert.equal(blocked.find(r=>r.name===modifier).prevented,false,modifier+'+L remains available to the browser');
+    checks.push('L leaves modified browser chords, text/select/contenteditable/IME input, key repeat, out-of-graph focus, modal/popover and active gestures alone; readonly, busy and fewer-than-two selections do not mutate');
 
     await exercise([{id:'a',key:'float',width:240},{id:'b',width:370},{id:'c',width:280},{id:'d',width:330}],[['a','b'],['a','c'],['b','d','a'],['c','d','b']]);
     await exercise([{id:'a',key:'float'},{id:'b'},{id:'c'},{id:'d'}],[['a','d','a'],['b','d','b'],['b','c']]);

@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-18 自動排列 L 快捷鍵：`test_auto_arrange.cjs` 11 組、`test_shortcut_help.cjs` 7 組與共用 H 範圍的 `test_editor_chrome.cjs` 16 組通過，共 34 組、零頁面錯誤。實際按 L 沿用精確 Undo／Redo、只改座標與穩定性驗證；修飾鍵 L 未攔截，文字／contenteditable／IME、非圖面焦點、長按、唯讀／忙碌、零／單選、對話框／popover、數值／接線／移動／縮放／觸控手勢皆不誤觸。選單與快捷鍵清單中英文短名稱、title、aria-label／aria-keyshortcuts 一致；H 的實際拖曳及平移保護仍通過。語法及 diff 檢查通過。
+
+本批已刷新四份來源並儲存 TD，30 份來源／8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留；既有 Editor 未刷新。TOE 739,364 bytes，SHA-256 `f534fcc9bf06536fa43a1398b34b8eb98b0cab4613a66f4f5090883dd89563f6`；報告位於私人 auto-arrange-shortcut 與 auto-arrange-shortcut-help。
+
 2026-09-18 自動排列接孔順序修正：`test_auto_arrange.cjs` 擴為 9 組通過，零頁面錯誤。新增節點建立／接線插入各正反順序的組合，驗證下游 a／b Input、Split X／Y Output、跨上游鏈的順位傳遞與收合節點；各例繼續核對只改位置、一次精確 Undo／Redo、重複穩定與 Shader 語意不變。以私人舊來源副本重現原版在第一個接孔順序案例失敗，修正版通過。獨立檢閱的 1,000 組帶接孔、循環與複數接線的隨機圖亦通過穩定／無重疊／有限座標／輸入不變檢查。語法與 diff 檢查通過。
 
 本批更新 `selection_ui_js` 並保存 TD，30 份來源及 8 份服務資源一致、兩份 Master current、兩份使用者 Shader 保留，既有 Editor 未刷新。TOE 739,124 bytes，SHA-256 `01b6fafde6e40c125b223c79e8d7f38fbd9182d155b31b347f130949d8ebf081`；報告在私人 auto-arrange-port-order。

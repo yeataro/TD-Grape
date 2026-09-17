@@ -186,6 +186,7 @@ function openArrangeMenu(){
   for(const [kind,path]of ARRANGE_ACTIONS){
     if(['left','top','spaceX'].includes(kind))menu.append(el('div',{role:'separator',class:'popup-separator'}));
     const item=el('button',{type:'button',role:'menuitem','data-arrange':kind});item.append(selectionIcon(path),el('span',{},t('arrange.'+kind)));
+    if(kind==='auto')decorateShortcutButton(item,'autoArrange');
     item.disabled=(kind==='spaceX'||kind==='spaceY')&&nodes.length<3;
     item.onclick=()=>{if(!arrangeContextMatches())return closeArrangeMenu();arrangeSelection(kind);closeArrangeMenu();$('#grapharrange').focus({preventScroll:true});};menu.append(item);
   }

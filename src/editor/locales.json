@@ -24,7 +24,7 @@
     "selection.editTools": {"zh-Hant": "編輯工具", "en": "Edit tools"},
     "selection.multipleTools": {"zh-Hant": "多選工具", "en": "Multiple selection tools"},
     "arrange.title": {"zh-Hant": "排列節點", "en": "Arrange nodes"},
-    "arrange.auto": {"zh-Hant": "自動排列 · 依連線", "en": "Auto arrange · by connections"},
+    "arrange.auto": {"zh-Hant": "自動排列", "en": "Auto arrange"},
     "arrange.left": {"zh-Hant": "齊左", "en": "Align left"},
     "arrange.centerX": {"zh-Hant": "水平置中", "en": "Align horizontal centers"},
     "arrange.right": {"zh-Hant": "齊右", "en": "Align right"},
