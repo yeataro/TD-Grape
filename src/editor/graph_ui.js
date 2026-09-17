@@ -1,6 +1,6 @@
-// Development-only experiments. Update embedded sources and reload the Editor after changing.
-// These internal values are not user preferences and are never serialized with a graph or layout.
-const EDITOR_DEV_SETTINGS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, autoDisconnectInvalidEdges: true });
+// Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true });
+const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
 let graphTrash=null,nodeDragGesture=null,nodeResizeGesture=null,suppressWireClick=false;
@@ -558,6 +558,21 @@ function portColorComponent(n,kind,port){
 function applyPortColorHint(element,n,kind,port){
   const component=portColorComponent(n,kind,port);
   if(component)element.dataset.colorComponent=component;
+  const d=definition(n),label=vectorPortLabel(n,kind,port);
+  const index=component?'rgba'.indexOf(component):isVectorOperation(d)&&ports(n,kind)[port]==='float'&&label?.length===1?vectorNames(n).indexOf(label):-1;
+  if(index>=0)element.dataset.vectorComponent=String(index);
+}
+function applyComponentColorHint(element,index,rgba=false){
+  if(!Number.isInteger(index)||index<0||index>3)return;
+  element.dataset.vectorComponent=String(index);element.classList.add('component-tint-label');
+  if(rgba)element.dataset.colorComponent='rgba'[index];
+}
+function applyPortLabelColorHint(element,n,kind,port){
+  applyPortColorHint(element,n,kind,port);
+  if(element.dataset.vectorComponent!==undefined)element.classList.add('component-tint-label');
+  const label=vectorPortLabel(n,kind,port),names=vectorNames(n);
+  if(!label||label.length<2||element.textContent!==label||![...label].every(name=>names.includes(name)))return;
+  element.replaceChildren(...[...label].map(name=>{const span=el('span',{},name);applyComponentColorHint(span,names.indexOf(name),names==='RGBA');return span;}));
 }
 // Presentation only: show manual components that still contribute to the value.
 function vectorManualComponents(n){
@@ -813,10 +828,14 @@ function appendNodeResizeHandle(card,node){
   const handle=el('button',{type:'button',class:'node-resize-handle','aria-label':t('node.resize'),title:t('node.resize'),'data-node-resize':node.id});
   handle.onpointerdown=e=>dragNodeWidth(e,node,card,handle);handle.onclick=handle.ondblclick=e=>e.stopPropagation();card.append(handle);
 }
-function renderCards(){
+function applyGraphUISettings(){
   document.documentElement.classList.toggle('rgba-component-tint',EDITOR_DEV_SETTINGS.rgbaComponentTint);
+  document.documentElement.classList.toggle('vector-component-tint',EDITOR_DEV_SETTINGS.vectorComponentTint);
   document.documentElement.classList.toggle('node-resize-hints',EDITOR_DEV_SETTINGS.nodeResizeHint);
   document.documentElement.style.setProperty('--node-drag-cursor',EDITOR_DEV_SETTINGS.nodeDragCursor);
+}
+function renderCards(){
+  applyGraphUISettings();
   if(typeof deferInlineValueRender==='function'&&deferInlineValueRender())return;
   touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
@@ -856,7 +875,8 @@ function renderCards(){
       b.onpointerdown=e=>{if(!missing)dragWire(b,e);};
       b.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick)return;const info=portInfo(b);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
       if(compact){row.append(b);return row;}
-      row.append(b,el('span',{class:'port-label',title:label},label),missing?el('small',{},'?'):portTypeCaption(n,kind,name));
+      const caption=el('span',{class:'port-label',title:label},label);if(!missing)applyPortLabelColorHint(caption,n,kind,name);
+      row.append(b,caption,missing?el('small',{},'?'):portTypeCaption(n,kind,name));
       if(!missing&&kind==='inputs'&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
       if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&d?.key!=='vector_split'){
         const split=el('button',{class:'vector-split-shortcut',type:'button',title:t('vector.splitShortcut'),'aria-label':t('vector.splitShortcut')+' · '+label});

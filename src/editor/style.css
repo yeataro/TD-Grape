@@ -100,10 +100,10 @@
 #wires path[data-type="vec3"]{stroke:var(--type-vec3)}
 #wires path[data-type="vec4"]{stroke:var(--type-vec4)}
 /* RGBA hints affect presentation, not GLSL types or downstream inference. */
-:where([data-color-component="r"]){--component-color:#cc989d}
-:where([data-color-component="g"]){--component-color:#9bc4a5}
-:where([data-color-component="b"]){--component-color:#9aafd4}
-:where([data-color-component="a"]){--component-color:#c3c0cb}
+:where([data-color-component="r"],[data-vector-component="0"]){--component-color:#cc989d}
+:where([data-color-component="g"],[data-vector-component="1"]){--component-color:#9bc4a5}
+:where([data-color-component="b"],[data-vector-component="2"]){--component-color:#9aafd4}
+:where([data-color-component="a"],[data-vector-component="3"]){--component-color:#c3c0cb}
 :where(.rgba-component-tint) .port-row[data-color-component]{--socket:var(--component-color)}
 :where(.rgba-component-tint) .port-row[data-color-component] .port-label{color:var(--component-color)}
 :where(.rgba-component-tint) .port-row[data-color-component]>small{color:var(--type-float)}
@@ -816,7 +816,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* The detection box is fixed; only the trash face reacts to an eligible hover. */
 .graph-navigation #zoom{position:static;margin-left:auto;flex:none;padding-left:8px}
-#graphtrash{position:absolute;right:0;bottom:0;width:84px;height:84px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:12;color:var(--muted)}
+#graphtrash{position:absolute;right:0;bottom:48px;width:84px;height:84px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:12;color:var(--muted)}
 #graphtrash .trash-face{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#24232bcc;opacity:.65;transition:transform 140ms ease,background-color 140ms ease,color 140ms ease,opacity 140ms ease}
 #graphtrash .ui-icon{width:22px;height:22px;overflow:visible}
 #graphtrash .trash-lid{transform-origin:5px 6px;transition:transform 140ms ease}
@@ -832,7 +832,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #graphtrashproxy[hidden]{display:none}
 .node.trash-pending{border-color:#ff9999!important;box-shadow:0 0 0 2px #ff9999,0 6px 20px #0004!important}
 #wires path.trash-pending{stroke:#ff9999!important;stroke-width:5}
-@media(pointer:coarse){#graphtrash{width:96px;height:96px}#graphtrash .trash-face{width:48px;height:48px}}
+@media(pointer:coarse){#graphtrash{bottom:56px;width:96px;height:96px}#graphtrash .trash-face{width:48px;height:48px}}
 @media(prefers-reduced-motion:reduce){#graphtrash .trash-face,#graphtrash .trash-lid{transition:none}}
 
 /* Native hidden must override the trash target's flex display. */
@@ -1190,10 +1190,10 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] .port.wire-target{background:var(--socket);outline-color:var(--wire-ready)}
 :root[data-ui-theme="light"] .port-row[data-type="sampler2D"]{--socket:var(--type-sampler)}
 :root[data-ui-theme="light"] #wires path[data-type="sampler2D"]{stroke:var(--type-sampler)}
-:root[data-ui-theme="light"] [data-color-component="r"]{--component-color:#a23f48}
-:root[data-ui-theme="light"] [data-color-component="g"]{--component-color:#376d45}
-:root[data-ui-theme="light"] [data-color-component="b"]{--component-color:#32649c}
-:root[data-ui-theme="light"] [data-color-component="a"]{--component-color:#62616d}
+:root[data-ui-theme="light"] :is([data-color-component="r"],[data-vector-component="0"]){--component-color:#a23f48}
+:root[data-ui-theme="light"] :is([data-color-component="g"],[data-vector-component="1"]){--component-color:#376d45}
+:root[data-ui-theme="light"] :is([data-color-component="b"],[data-vector-component="2"]){--component-color:#32649c}
+:root[data-ui-theme="light"] :is([data-color-component="a"],[data-vector-component="3"]){--component-color:#62616d}
 :root[data-ui-theme="light"]:where(.rgba-component-tint) .port-row[data-color-component]{--socket:var(--component-color)}
 :root[data-ui-theme="light"]:where(.rgba-component-tint) #wires path[data-color-component]{stroke:var(--component-color)}
 :root[data-ui-theme="light"] #wires path.selected{stroke:var(--wire-selected)}
@@ -1425,7 +1425,7 @@ footer .footer-preferences svg[hidden]{display:none}
 .appearance-adjustment input[type="range"]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--ui-text,var(--ui-tone-text))}
 .appearance-adjustment input[type="range"]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--purple);outline-offset:3px}
 .appearance-adjustment input[type="range"]:focus-visible::-moz-range-thumb{outline:2px solid var(--purple);outline-offset:3px}
-footer .footer-preferences :is(#uitheme,#uisize,#uishare)[aria-expanded="true"]{color:var(--purple);background:var(--ui-hover,var(--ui-tone-control-hover))}
+footer .footer-preferences :is(#uitheme,#uisize,#uishare,#uiexperiments)[aria-expanded="true"]{color:var(--purple);background:var(--ui-hover,var(--ui-tone-control-hover))}
 @media(pointer:coarse){.appearance-presets button{height:36px}.appearance-adjustment button,.appearance-adjustment input[type="range"]{height:40px}.appearance-adjustment button{width:36px}}
 
 /* Graph focus only changes chrome visibility; original panel DOM and layout stay in place. */
@@ -1498,3 +1498,26 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #selectmenu .select-group{display:block;padding:0}
 #selectmenu .select-group-label{padding:8px 12px 4px;color:var(--muted);font-size:12px}
 @media(pointer:coarse){:root{--popup-row-height:40px}}
+
+/* Experimental flags use the same footer popover and a compact, shared row. */
+.experiments-panel{width:320px;padding:8px}
+.experiments-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 6px 8px;font-size:13px}
+.experiments-heading button{padding:4px 6px;border:0;background:transparent;color:var(--muted);font-size:11px;white-space:nowrap}
+.experiments-heading button:disabled{cursor:default}
+.experiment-option{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;padding:6px 8px;border-radius:6px;font-size:14px;line-height:1.4;cursor:pointer}
+.experiment-option:hover{background:var(--ui-hover,var(--ui-tone-menu-hover))}
+.experiment-option>span{min-width:0}
+.experiment-option input[type=checkbox]{flex:none;width:16px;height:16px;margin:0;padding:0;accent-color:var(--purple);cursor:pointer}
+.experiment-option select{flex:none;max-width:46%;height:28px;padding:2px 5px;border:0;background:var(--node-value-bg);font-size:12px}
+.experiments-note{margin:8px 6px 3px;color:var(--muted);font-size:11px;line-height:1.5}
+@media(pointer:coarse){.experiment-option{min-height:40px}}
+
+/* Component positions share the RGBA palette without changing vector socket types. */
+:root.vector-component-tint .port-row[data-vector-component]{--socket:var(--component-color)}
+:root.vector-component-tint .port-row[data-vector-component]>.port-label{color:var(--component-color)}
+:root.vector-component-tint .port-row[data-vector-component]>small{color:var(--type-float)}
+:root.vector-component-tint #wires path[data-vector-component]{stroke:var(--component-color)}
+:root.vector-component-tint #wires path.selected{stroke:var(--wire-selected)}
+:root.vector-component-tint #wires path:hover{stroke:var(--wire-hover)}
+:root.vector-component-tint :is(#cards,#inspector,#uniformsbody,#controlsbody) .component-tint-label[data-vector-component],
+:root.rgba-component-tint :is(#cards,#inspector,#uniformsbody,#controlsbody) .component-tint-label[data-color-component]{color:var(--component-color)}

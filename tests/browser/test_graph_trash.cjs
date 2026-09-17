@@ -40,7 +40,7 @@ const server=http.createServer(async(req,res)=>{
   const state=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty}));
   const reset=async()=>{
     await page.evaluate(()=>{
-      touchGraphGesture?.cancel();nodeDragGesture?.cancel();clearWireGesture();cancelConnection();closeCreator();closeGraphMenu();clearTimeout(autoTimer);dirty=false;past=[];future=[];readonly=false;graphTrail=[];selection.clear();selected=selectedEdge=null;
+      touchGraphGesture?.cancel();nodeDragGesture?.cancel();clearWireGesture();cancelConnection();closeCreator();closeGraphMenu();clearTimeout(autoTimer);dirty=false;past=[];future=[];readonly=false;historyBusy=false;nativeMutationBusy=false;connectionInterrupted=true;graphTrail=[];selection.clear();selected=selectedEdge=null;
       const node=(id,key,x,y)=>{const d=catalog.find(d=>d.key===key);return{id,definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...d.defaults},ui:{x,y}};};
       graph.functions=[];graph.declarations=[];graph.stages.pixel={nodes:[node('source','float',0,24),node('add','add',330,20),node('output','pixel_out',330,260)],edges:[{from:['source','out'],to:['add','a']},{from:['source','out'],to:['add','b']}]};stage='pixel';scale=.7;pan={x:24,y:34};render();
     });await page.mouse.click(10,10);await settle();
@@ -80,7 +80,7 @@ const server=http.createServer(async(req,res)=>{
   }
   if(!isWebKit){device='touch';await reset();const beforePinch=await state(),p=await at('[data-node="source"] .node-title'),q=await trash();await start(p);await move(q);await touch('touchStart',[[1,q.x,q.y],[2,q.x-120,q.y-50]]);await touch('touchMove',[[1,q.x,q.y],[2,q.x-140,q.y-50]]);await end();assert.equal(await state(),beforePinch);assert.equal(await page.locator('#graphtrash').getAttribute('data-state'),'idle');
     checks.push('Second finger cancels a trash hover and transfers to navigation without deleting or moving a node');}
-  await reset();const zoom=await page.locator('#zoom').boundingBox(),nav=await page.locator('.graph-navigation').boundingBox();assert.ok(zoom.y>=nav.y&&zoom.y+zoom.height<=nav.y+nav.height);
-  checks.push('Zoom percentage is in graph navigation; the lower-right canvas corner is reserved for trash');
+  await reset();const target=await page.locator('#graphtrash').boundingBox(),tools=await page.locator('.canvas-view-tools').boundingBox(),canvas=await page.locator('#canvas').boundingBox();assert.ok(Math.abs(target.x+target.width-canvas.x-canvas.width)<1);assert.ok(target.y+target.height<=tools.y);
+  checks.push('Trash stays at the lower right above the zoom, fit and focus controls');
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify({passed:true,count:checks.length,checks},null,2));console.log(JSON.stringify({passed:true,count:checks.length}));
 })().catch(e=>{fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify({passed:false,checks,errors,error:e.stack},null,2));console.error(e.stack);process.exitCode=1;}).finally(async()=>{await browser?.close();server.close();});

@@ -1,9 +1,9 @@
 # Experimental canvas trash
 
-The current experiment adds a drop target to the lower-right canvas corner.
-It has no sockets and does not participate in the graph. The zoom percentage
-moves to the right end of the graph navigation row. This is an enabled UX trial
-for user feedback, committed separately from the established toolbar actions.
+The experiment adds a drop target to the lower-right canvas corner, above
+the zoom, Fit, focus and fullscreen controls. It has no sockets and
+does not participate in the graph. It defaults to off and can be enabled from
+the footer gear under Experimental features.
 
 The trash stays a small, subdued circle at rest and retains that size when a
 drag begins. Its transparent detection region is fixed at 84px (96px for touch),
@@ -49,12 +49,12 @@ except that dropping on the trash area cancels the new wire instead.
 No type rules or shared node/wire coordinate math changed. Touch long-press,
 double-tap, pan/zoom and mouse/keyboard selection retain their separate roles.
 
-## Internal development parameter
+## Experimental preference
 
-`src/editor/graph_ui.js` defines `EDITOR_DEV_SETTINGS.canvasTrash`, currently
-`false`. This is a code-level development parameter, not a user preference,
-TD parameter, URL option or Layout setting. Update the embedded sources and
-reload the Editor after editing its value. It is not serialized with graphs.
+`src/editor/graph_ui.js` defines the `canvasTrash` default as `false`. The footer
+Experimental features panel changes it immediately and saves the override only
+in this browser. It is not a TD parameter, URL option, graph or Layout setting.
+Reset defaults restores the disabled state without changing graph history.
 
 - `true`: retain the current trash experiment.
 - `false`: hide the trash and disable its hit detection, highlighting, proxy

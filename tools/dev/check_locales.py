@@ -27,6 +27,10 @@ refs.discard('browser.category.');refs.discard('browser.source.')
 refs.update('browser.category.'+key for key in ('inputs','math','vector','matrix','logic','color','coordinate','texture','data','shader','uncategorized'))
 refs.update('browser.source.'+key for key in ('all','glsl','td','editor','personal','project'))
 refs.discard('browser.branch.');refs.update('browser.branch.'+key for key in ('uniforms','samplers','arithmetic','interpolation','range','trigonometry','exponential'))
+refs.discard('experiments.');refs.discard('experiments.cursor.')
+settings=re.search(r'EDITOR_DEV_DEFAULTS = Object.freeze\(\{(.*?)\}\)',(root/'graph_ui.js').read_text(encoding='utf-8')).group(1)
+for key in re.findall(r'(\w+):',settings): refs.update(['experiments.'+key,'experiments.'+key+'.hint'])
+refs.update('experiments.cursor.'+value for value in ('default','move'))
 for key in refs:
     assert key in data['messages'],key
     for lang in data['languages']: assert data['messages'][key].get(lang),(key,lang)

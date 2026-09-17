@@ -73,3 +73,23 @@ Parameter page tabs are distinct from workspace panel tabs: transparent text tab
 Within one UI area, equivalent controls follow one layout contract to reduce relearning. Ordinary Parameter fields use `parameterControlRow()` and `.parameter-row` for numeric values, selectors, text fields, action buttons and explanatory rows. A missing type leaves its column empty; it does not move the control. Add future ordinary controls through this helper rather than new per-control alignment rules. Code editors and port-definition tables retain explicit full-width authoring layouts; exceptions should serve the content and stay localized.
 
 General node Parameters use shared columns: a fixed 10px triangle slot, a right-aligned 21% name column, a left-aligned 5ch type column and the remaining width for values or connection state. Single-line controls share a 24px baseline height with 4px column gaps; buttons may grow for wrapped labels, and grouped controls can wrap within the control column. The content inset is 8px, and the triangle glyph is 14px without inner padding. A vector row expands when clicking its name, type or blank area; input controls and the color picker retain their own interactions. The triangle appears on row hover or keyboard focus, and stays visible when hover is unavailable. Long labels wrap within their own column. Connected sources, unconnected values and expanded component editors start at the same position; fallback messages and conversion hints share the value column. Inline explanations use one line with ellipsis and a full native hover title, so prose cannot increase a parameter row height. Touch users keep the existing Help panel; no new touch gesture or disclosure is added. Numeric backgrounds remain borderless and share the scrub, Ladder and preset interactions. Select triggers in these same Parameter rows use the numeric field base color without a persistent border, retaining their arrow, focus outline and existing popup. Creator filters and other panel controls keep their separate context styling. Expanding vec2/vec3/vec4 adds named component rows on a subtle background while keeping the full vector row visible; both copies synchronize previews, typed edits and cancellation. Expansion is local UI state. Output type stays at the top of the content. Notes has its own tab; Settings and Uniform/source-reference workflows retain their prior content and actions. `test_parameter_values.cjs` covers these interactions and narrow/scaled layouts; `test_node_collapse.cjs` separately covers node-wide collapse, port capability and history.
+
+
+## Experimental UI preferences
+
+The footer gear precedes QR, size, appearance and fullscreen. It opens a small rounded popover with every current `EDITOR_DEV_DEFAULTS` entry: nine checkboxes and the existing Arrow/Move cursor choice. Labels and hover descriptions are bilingual. The panel shares the appearance popover placement and UI scale, supports keyboard focus/Escape and light dismissal, and scrolls in short viewports. Reset defaults restores all current defaults.
+
+| Preference | Default |
+| --- | --- |
+| Canvas trash | Off |
+| Floating toolbar | Off |
+| Drag nodes by their body | On |
+| Node drag cursor | Arrow |
+| Node resize hint | On |
+| Triangle on expanded nodes | On |
+| Triangle on collapsed nodes | On |
+| RGBA component colors | On |
+| All vector component colors | Off |
+| Disconnect newly incompatible wires | On |
+
+Changes apply immediately and are stored in browser localStorage under `sgrapeExperimentsV1`; malformed or unknown values fall back to the known defaults. Graphs, Layout, Shader data and Undo are not rewritten. Existing numeric/name fields keep their DOM and drafts; active edit gestures are canceled before changing behavior, while an active mouse pan/box selection must finish first. The same toolbar DOM moves reversibly between its fixed and floating positions. Hidden resize/collapse hints do not remove the underlying resize or context-menu actions. All-vector tinting uses component order for XYZ/W, UV and other vector labels, and includes RGBA even if its narrower switch is off. The RGBA switch continues to work independently when all-vector tinting is off. Automatic disconnection affects future type changes only. The enabled trash target sits at lower right above the view controls, with a gap in both desktop and touch layouts.

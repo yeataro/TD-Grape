@@ -1,5 +1,13 @@
 # 測試
 
+2026-09-17 實驗功能齒輪與分量染色（0.8.84）：新增 `test_ui_experiments.cjs` 15 組，驗證全部 10 項／9 個開關、原預設、即時行為、瀏覽器保存／重設／錯誤資料、拒絕儲存仍可使用、數值／名稱草稿 DOM 與 Graph／Undo 不變、浮動工具列重用且操作只執行一次、拖動中拒絕切換、滑鼠及鍵盤開啟後焦點／Tab／Delete／Escape、雙語與可信任觸控。320／390px × UI 75／125% × 深淺色可操作；320px／125% 觸控專注模式確認右下垃圾桶位於工具列上方、不重疊。
+
+新增 `test_vector_component_tint.cjs` 10 組，驗證 RGBA-only 原預設、新旗標獨立控制 XYZW／UV／RGBA、依索引支援既有 ST 標籤、節點及 Parameter 緊湊／展開欄位、Swizzle 與群組文字、已知單分量接孔／來源線和整體向量型別色、一般 Add 不傳遞染色、選取／hover 優先、深淺色、切換不改數值草稿／Graph／Undo。首次群組測試未給 Combine 合法 groups 參數，修正 fixture 後通過，無追加產品修正。截圖已目視。
+
+既有 `test_graph_trash.cjs` 16 組、`test_graph_trash_disabled.cjs` 13 組、`test_type_disconnect.cjs` 4 組、`test_editor_chrome.cjs` 16 組通過；垃圾桶 fixture 明確清除初始化 busy guard，更新工具列位置與觸控第二指坐標，涵蓋拖放／取消／Undo。共 74 組，零瀏覽器錯誤；546 個雙語鍵、JavaScript 語法及 diff 檢查通過。均為隔離 Chromium fixture，實體 iPad／Safari 未測。
+
+TD 更新 Editor 資產，28 份映射來源及服務內容一致、TOP／MAT Master current；正式 TOE 為 717,956 bytes，SHA-256 `7c02e2487d7f5175dc45c7c683a962c0c852a8955500753288c3080dd7413c03`。兩份使用者 Shader 保留、私人助手排除，未重新整理現有瀏覽器頁面。
+
 2026-09-17 Parameter 外觀與 Value Ladder 鎖定（0.8.84）：既有 test_parameter_values.cjs 15 組通過；私人探針 21 組確認單行說明／全文 title、深淺色文字分頁與名稱欄、選單操作、連線文字垂直置中（中心差低於 0.01px）、vec4／Color 整列展開、輸入／拖曳／色票排除、鍵盤與 Chromium 觸控。涵蓋 300／600px 及 UI 75／100／125%；緊湊與展開欄界差低於 1px，數值輸入維持 24px。截圖已目視，未新增正式樣式鏡像測試。
 
 更新既有 test_numeric_scrub.cjs 的重新選級距預期，32 組全部通過；75／125% UI 下，左右調值後跨回原列表保持精簡提示與原級距，回 anchor 恢復原值，新手勢可選 0.01，放開只提交一次 Undo／Redo；可信任 Chromium touch event 覆蓋相同行為。保留左拖連續換範圍、手填精度、界限與取消。合計 68 組、零瀏覽器錯誤，JavaScript 語法與 diff 檢查通過；實體 iPad／Safari 未測。

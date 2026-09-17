@@ -34,11 +34,11 @@ const server=http.createServer(async(req,res)=>{
   const move=async p=>{if(device==='touch')await touch('touchMove',p);else {await page.mouse.move(p.x,p.y,{steps:6});await settle();}};
   const end=async()=>{if(device==='touch')await touch('touchEnd');else {await page.mouse.up();await settle();}};
   const at=async selector=>{const r=await page.locator(selector).boundingBox();return{x:r.x+r.width/2,y:r.y+r.height/2};};
-  const corner=async()=>{const r=await page.locator('#canvas').boundingBox();return{x:r.x+r.width-30,y:r.y+r.height-30};};
+  const corner=async()=>{const r=await page.locator('#canvas').boundingBox();return{x:r.x+r.width-30,y:r.y+r.height-80};};
   const state=()=>page.evaluate(()=>JSON.stringify({graph,past,future}));
   const reset=async()=>{
     await page.evaluate(()=>{
-      cancelConnection();closeCreator();closeGraphMenu();clearTimeout(autoTimer);dirty=false;past=[];future=[];selection.clear();selected=selectedEdge=null;
+      cancelConnection();closeCreator();closeGraphMenu();clearTimeout(autoTimer);dirty=false;past=[];future=[];historyBusy=false;nativeMutationBusy=false;connectionInterrupted=true;selection.clear();selected=selectedEdge=null;
       const node=(id,key,x,y)=>{const d=catalog.find(d=>d.key===key);return{id,definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...d.defaults},ui:{x,y}};};
       graph.functions=[];graph.declarations=[];graph.stages.pixel={nodes:[node('source','float',0,24),node('add','add',330,24)],edges:[{from:['source','out'],to:['add','a']}]};stage='pixel';scale=.7;pan={x:24,y:34};render();
     });await page.mouse.click(10,10);await settle();
@@ -46,7 +46,7 @@ const server=http.createServer(async(req,res)=>{
   for(device of isWebKit?['mouse']:['mouse','touch']){
     await reset();await start(await at('[data-node="source"] .node-title'));await move(await corner());
     assert.equal(await page.locator('#graphtrash').isVisible(),false);assert.equal(await page.locator('#graphtrashlabel').isVisible(),false);assert.equal(await page.locator('.trash-pending').count(),0);await end();
-    assert.equal(await page.evaluate(()=>current().nodes.length),2);assert.equal(await page.evaluate(()=>current().edges.length),1);assert.equal(await page.evaluate(()=>past.length),1);assert.ok(await page.evaluate(()=>current().nodes[0].ui.x>0));await page.locator('#undo').click();assert.equal(await page.evaluate(()=>current().nodes[0].ui.x),0);
+    assert.equal(await page.evaluate(()=>current().nodes.length),2);assert.equal(await page.evaluate(()=>current().edges.length),1);assert.equal(await page.evaluate(()=>past.length),1);assert.ok(await page.evaluate(()=>current().nodes[0].ui.x!==0));await page.locator('#undo').click();assert.equal(await page.evaluate(()=>current().nodes[0].ui.x),0);
     checks.push(`${device}: former trash area is an ordinary node move, without hidden hit detection or deletion`);
     await reset();const before=await state(),input='[data-node="add"] [data-kind="inputs"][data-port="a"]';await start(await at(input));await move(await corner());assert.equal(await state(),before);await end();
     assert.equal(await page.evaluate(()=>current().edges.length),0);assert.equal(await page.evaluate(()=>past.length),1);assert.equal(await page.locator('#creator').isVisible(),false);assert.equal(await page.locator('#graphtrashproxy').isVisible(),false);await page.locator('#undo').click();assert.equal(await page.evaluate(()=>current().edges.length),1);

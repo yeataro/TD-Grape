@@ -13,11 +13,11 @@
 
 外部呼叫節點會顯示更新後的介面，本輪未增加外部呼叫節點、Uniform、Attributes 或 Output 根節點的灰點。後續 Inputs 及節點顯示設計另行討論。
 
-## 開發用拖曳參數
+## 實驗性拖曳設定
 
-`src/editor/graph_ui.js` 的 `EDITOR_DEV_SETTINGS.nodeBodyDrag` 預設為 `true`，允許從節點內文、數值摘要、註解區拖曳。設為 `false` 並更新內嵌來源、重載頁面後，恢復只從標題列拖曳。
+`src/editor/graph_ui.js` 的 `EDITOR_DEV_SETTINGS.nodeBodyDrag` 預設為 `true`，允許從節點內文、數值摘要、註解區拖曳。可從 footer 齒輪的「實驗功能」即時關閉，恢復只從標題列拖曳。
 
-這是程式內設定，沒有使用者介面，也不隨圖／Layout 保存。接孔、按鈕、輸入框及 Label 編輯區仍使用各自操作。滑鼠和觸控共用這個範圍判斷；取消、唯讀與雙指縮放保護保留。
+設定只保存在目前瀏覽器，不隨圖／Layout 保存。接孔、按鈕、輸入框及 Label 編輯區仍使用各自操作。滑鼠和觸控共用這個範圍判斷；取消、唯讀與雙指縮放保護保留。
 
 `canvasTrash` 本輪維持 `false`；既有 input 線拖至空白處斷線行為保留。
 

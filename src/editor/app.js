@@ -11,7 +11,7 @@ const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='zh-Hant';
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();}
 async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
@@ -627,7 +627,7 @@ let showCustomNodeNames=false;
 function customNodeNamesEnabled(){return showCustomNodeNames;}
 function installGraphChrome(){
   try{showCustomNodeNames=localStorage.getItem(customNamesStorageKey)==='true';}catch{}
-  const button=$('#customnames'),toolbar=$('.toolbar'),canvas=$('#canvas');
+  const button=$('#customnames'),toolbar=$('.toolbar');
   button.setAttribute('aria-pressed',String(showCustomNodeNames));
   button.onclick=()=>{
     // Finish the same inline edit before changing how node titles are shown.
@@ -639,14 +639,87 @@ function installGraphChrome(){
     button.setAttribute('aria-pressed',String(showCustomNodeNames));
     if(graph)render();
   };
-  const floating=!!EDITOR_DEV_SETTINGS.floatingToolbar;
-  $('.graph-workspace').classList.toggle('floating-toolbar',floating);
-  if(floating)canvas.prepend(toolbar);
+  applyFloatingToolbar();
   for(const controls of [toolbar,$('.canvas-view-tools')]){
     // Floating controls must never start a canvas pan, selection, or node drop.
     for(const event of ['pointerdown','mousedown','touchstart','dblclick'])controls.addEventListener(event,e=>e.stopPropagation());
     controls.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   }
+}
+function applyFloatingToolbar(){
+  const workspace=$('.graph-workspace'),canvas=$('#canvas'),toolbar=$('.toolbar');
+  const floating=EDITOR_DEV_SETTINGS.floatingToolbar;
+  workspace.classList.toggle('floating-toolbar',floating);
+  if(floating){if(toolbar.parentElement!==canvas)canvas.prepend(toolbar);}
+  else if(toolbar.parentElement!==workspace)workspace.insertBefore(toolbar,canvas);
+}
+const experimentsStorageKey='sgrapeExperimentsV1';
+const experimentChoices={nodeDragCursor:['default','move']};
+function parseUIExperiments(raw){
+  let saved;try{saved=JSON.parse(raw);}catch{}
+  const result={...EDITOR_DEV_DEFAULTS};
+  if(!saved||typeof saved!=='object'||Array.isArray(saved))return result;
+  for(const key of Object.keys(result)){
+    const value=saved[key];
+    if(experimentChoices[key]?experimentChoices[key].includes(value):typeof value==='boolean')result[key]=value;
+  }
+  return result;
+}
+function renderUIExperiments(){
+  const panel=$('#experimentspanel'),opener=$('#uiexperiments');
+  opener.title=t('experiments.title');opener.setAttribute('aria-expanded',String(panel.matches(':popover-open')));
+  for(const entry of panel.querySelectorAll('[data-experiment]')){
+    const key=entry.dataset.experiment;
+    if(entry.type==='checkbox')entry.checked=EDITOR_DEV_SETTINGS[key];else entry.value=EDITOR_DEV_SETTINGS[key];
+    entry.closest('label').title=t('experiments.'+key+'.hint');
+  }
+  $('#experimentsreset').disabled=Object.keys(EDITOR_DEV_DEFAULTS).every(key=>EDITOR_DEV_SETTINGS[key]===EDITOR_DEV_DEFAULTS[key]);
+  if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);
+}
+function setUIExperiments(values){
+  if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
+  const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
+  if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
+  // Clear only active gestures; retain existing field DOM and unsubmitted text.
+  cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();cancelConnection();
+  Object.assign(EDITOR_DEV_SETTINGS,next);
+  try{localStorage.setItem(experimentsStorageKey,JSON.stringify(next));}catch{}
+  applyFloatingToolbar();applyGraphUISettings();clearGraphTrash();
+  if(graph){
+    for(const card of document.querySelectorAll('#cards .node')){
+      const node=current().nodes.find(node=>node.id===card.dataset.node);if(!node)continue;
+      card.dataset.dragSurface=next.nodeBodyDrag?'body':'header';
+      const title=card.querySelector('.node-title-text'),toggle=title.querySelector('.node-collapse-toggle');
+      const visible=node.ui?.collapsed===true?next.nodeCollapseCollapsedHint:next.nodeCollapseExpandedHint;
+      if(visible!==!!toggle){
+        if(visible)title.prepend(nodeCollapseToggle(node));else toggle.remove();
+        delete card.dataset.nodeDefaultWidth;applyNodeWidth(card,node);
+      }
+    }
+    wires();
+  }
+  renderUIExperiments();
+}
+function installUIExperiments(){
+  try{Object.assign(EDITOR_DEV_SETTINGS,parseUIExperiments(localStorage.getItem(experimentsStorageKey)));}catch{}
+  const panel=$('#experimentspanel'),opener=$('#uiexperiments'),list=$('#experimentoptions');
+  for(const key of Object.keys(EDITOR_DEV_DEFAULTS)){
+    const row=el('label',{class:'experiment-option'}),choices=experimentChoices[key];
+    const entry=choices?el('select',{'data-experiment':key}):el('input',{type:'checkbox','data-experiment':key});
+    if(choices)for(const value of choices)entry.append(el('option',{value,'data-i18n':'experiments.cursor.'+value},t('experiments.cursor.'+value)));
+    row.append(el('span',{'data-i18n':'experiments.'+key},t('experiments.'+key)),entry);list.append(row);
+    entry.onchange=()=>setUIExperiments({[key]:choices?entry.value:entry.checked});
+  }
+  $('#experimentsreset').onclick=()=>setUIExperiments(EDITOR_DEV_DEFAULTS);
+  panel.addEventListener('beforetoggle',event=>{if(event.newState==='open')positionAppearancePanel(panel,opener);});
+  panel.addEventListener('toggle',renderUIExperiments);
+  panel.addEventListener('keydown',event=>{
+    event.stopPropagation();
+    if(event.key==='Escape'){event.preventDefault();panel.hidePopover();opener.focus({preventScroll:true});}
+  });
+  opener.onclick=()=>requestAnimationFrame(()=>{if(panel.matches(':popover-open'))list.querySelector('input,select')?.focus({preventScroll:true});});
+  window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);});
+  applyGraphUISettings();clearGraphTrash();renderUIExperiments();
 }
 /* One immutable palette per base theme. Only root color tokens are transformed;
    image pixels, authored color swatches and GLSL syntax colors never pass here. */
@@ -861,6 +934,7 @@ function installEditorChrome(){
   installUIAppearance();
   installGraphZoom();
   installUIShare();
+  installUIExperiments();
   installGraphChrome();
   try{$('#editorheader').hidden=localStorage.getItem('sgrapeHeaderVisible')==='false';}catch{}
   renderHeaderVisibility();

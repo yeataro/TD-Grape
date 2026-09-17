@@ -340,7 +340,8 @@ function liveUniformFields(decl){
     const entry=input('',next=>writeUniformInput(entry,next),texture?'text':'number');if(texture){entry.dataset.texture='true';entry.placeholder=t('texture.currentEmpty');}
     entry.dataset.component=index;entry.disabled=true;
     entry.setAttribute('aria-label',t(texture?'texture.current':'uniform.current')+(components.length===1?'':' '+'XYZW'[index]));
-    const row=field('',entry);row.prepend(el('span',{class:'component-label','aria-hidden':'true'},components.length===1?decl.type:'XYZW'[index]));
+    const row=field('',entry),label=el('span',{class:'component-label','aria-hidden':'true'},components.length===1?decl.type:'XYZW'[index]);
+    if(components.length>1){applyComponentColorHint(label,index);applyComponentColorHint(entry,index);}row.prepend(label);
     row.append(el('small',{class:'uniform-mode'}));box.append(row);
   });
   section.append(box,el('p',{class:'muted uniform-sync-state'},t('uniform.waiting')));if(texture)section.append(el('p',{class:'muted texture-effective'}));return section;
@@ -403,7 +404,8 @@ function numbers(value,label,callback,disabled=false,labels='XYZW'){
     },'number');
     entry.setAttribute('aria-label',label+(values.length>1?' '+labels[index]:''));
     entry.disabled=disabled||readonly;
-    const row=field('',entry);row.prepend(el('span',{class:'component-label','aria-hidden':'true'},values.length>1?labels[index]:label));box.append(row);
+    const row=field('',entry),caption=el('span',{class:'component-label','aria-hidden':'true'},values.length>1?labels[index]:label);
+    if(values.length>1){applyComponentColorHint(caption,index,labels==='RGBA');applyComponentColorHint(entry,index,labels==='RGBA');}row.prepend(caption);box.append(row);
   });
   return box;
 }
@@ -428,11 +430,18 @@ function deferParameterInspector(){
   if(edit.entry.isConnected&&!readonly&&selected===edit.node.id&&inspectorTab==='parameters'&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)&&(document.activeElement===edit.entry||numericPresetMenu?.entry===edit.entry||edit.committing))return true;
   edit.entry.cancelParameterValue?.();parameterValueEdit=null;return false;
 }
+function applyValueComponentHint(element,n,port,index,vector,labels){
+  if(vector){
+    const key=definition(n)?.key,start=['combine','replace'].includes(key)?'xyzw'.indexOf(port):-1;
+    applyComponentColorHint(element,Math.max(0,start)+index,labels==='RGBA');
+  }else {applyPortColorHint(element,n,'inputs',port);if(element.dataset.vectorComponent!==undefined)element.classList.add('component-tint-label');}
+}
 function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
   const initial=read(),vector=Array.isArray(initial),values=vector?initial:[initial];
   const box=el('section',{class:'parameter-value-group','data-parameter-value':key});
   const compact=el('div',{class:'parameter-value-controls'}),entries=[];let syncing=false;
   const row=parameterControlRow(label,compact,type);row.classList.add('parameter-value-row');box.append(row);
+  if(key!=='$value')applyPortLabelColorHint(row.querySelector('.parameter-value-label'),n,'inputs',key);
   const scalarType=/^[iu]vec/.test(type)?(type[0]==='u'?'uint':'int'):/^bvec/.test(type)?'bool':vector?'float':type;
   const own=entry=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
   const currentValues=()=>{const value=read();return Array.isArray(value)?value:[value];};
@@ -445,9 +454,10 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
     const name=label+(vector?' '+labels[index]:''),attrs={'aria-label':name,'data-parameter-node':n.id,'data-parameter-port':key,'data-component':String(index),'data-parameter-copy':expanded?'component':'compact'};
     if(scalarType==='bool'){
       const entry=select([['false','false'],['true','true']],String(!!values[index]),value=>{if(own(entry))change(()=>write(index,value==='true'));});
-      for(const[k,v]of Object.entries(attrs))entry.setAttribute(k,v);entry.disabled=readonly;return entry;
+      for(const[k,v]of Object.entries(attrs))entry.setAttribute(k,v);entry.disabled=readonly;applyValueComponentHint(entry,n,key,index,vector,labels);return entry;
     }
     const entry=el('input',{...attrs,type:'number',step:['int','uint'].includes(scalarType)?'1':'any'});entry.value=String(values[index]);entry.disabled=readonly;
+    applyValueComponentHint(entry,n,key,index,vector,labels);
     if(['int','uint'].includes(scalarType)){entry.min=scalarType==='uint'?'0':'-2147483648';entry.max=scalarType==='uint'?'4294967295':'2147483647';}
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
@@ -487,7 +497,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
     const toggle=el('button',{class:'parameter-components-toggle',type:'button','aria-label':t('node.expandValues'),'aria-expanded':String(expanded),'data-parameter-expand':key},expanded?'▾':'▸');
     row.prepend(toggle);
     const components=el('div',{class:'parameter-component-rows'});components.hidden=!expanded;
-    values.forEach((_,index)=>{const component=parameterControlRow(labels[index],createEntry(index,true),scalarType);component.classList.add('parameter-component-row');components.append(component);});box.append(components);
+    values.forEach((_,index)=>{const component=parameterControlRow(labels[index],createEntry(index,true),scalarType);component.classList.add('parameter-component-row');applyValueComponentHint(component.querySelector('.parameter-value-label'),n,key,index,true,labels);components.append(component);});box.append(components);
     toggle.onclick=()=>{expanded=!expanded;let state=parameterExpansions.get(n);if(!state){state=new Set();parameterExpansions.set(n,state);}if(expanded)state.add(key);else state.delete(key);components.hidden=!expanded;toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
     row.addEventListener('click',event=>{
       if(event.target.closest('input,select,textarea,button,a,[contenteditable],.color-swatch'))return;
@@ -772,6 +782,7 @@ function vectorInspector(box,n,d){
     [...n.params.mask].forEach((value,index)=>{
       const selectComponent=select([...components].map((p,i)=>[p,names[i]]),value,next=>change(()=>n.params.mask=n.params.mask.slice(0,index)+next+n.params.mask.slice(index+1),{typeChange:true}));
       selectComponent.dataset.swizzleComponent=index;selectComponent.setAttribute('aria-label',t('vector.outputComponent')+' '+(index+1));selectComponent.disabled=readonly;
+      applyComponentColorHint(selectComponent,'xyzw'.indexOf(value),names==='RGBA');
       slots.append(selectComponent);
     });
     for(const [label,enabled,edit]of [['−',n.params.mask.length>1,()=>n.params.mask=n.params.mask.slice(0,-1)],['+',n.params.mask.length<4,()=>n.params.mask+=components[Math.min(n.params.mask.length,components.length-1)]]]){
@@ -808,6 +819,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
   values.forEach((v,index)=>{
     const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:''),entry=el('input',{type:'number',step:'any','aria-label':label});
     entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.value=String(v);
+    applyValueComponentHint(entry,n,port,index,values.length>1,labels);
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
     const own=()=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
@@ -840,7 +852,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
     });
     installValueLadder(entry,commit);
     for(const event of ['pointerdown','click','dblclick','contextmenu'])entry.addEventListener(event,e=>e.stopPropagation());
-    if(values.length>1){const component=el('label',{class:'node-inline-component'});component.append(el('span',{'aria-hidden':'true'},labels[index]),entry);box.append(component);}
+    if(values.length>1){const component=el('label',{class:'node-inline-component'}),caption=el('span',{'aria-hidden':'true'},labels[index]);applyValueComponentHint(caption,n,port,index,true,labels);component.append(caption,entry);box.append(component);}
     else box.append(entry);
   });
   return box;
@@ -956,6 +968,7 @@ function inspector(){
       const connection=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
       const typeInfo=inputTypeDisplay(n,port);
       const heading=el('h4',{class:'input-heading'});heading.append(el('span',ordinary?{class:'parameter-value-label'}:{},portLabel(n,'inputs',port)),el('small',ordinary?{class:'parameter-value-type'}:{},typeInfo.text));section.append(heading);
+      applyPortLabelColorHint(heading.firstElementChild,n,'inputs',port);
       if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(hint(t(typeInfo.conversion==='splat'?'type.splat':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target),'conversion-hint'));
       const value=defaultInput(n,port,type);
       if(isResourceType(type)){
