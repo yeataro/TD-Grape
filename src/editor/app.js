@@ -10,7 +10,7 @@ const GRID=24;
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='zh-Hant';
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();}
 async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
@@ -627,10 +627,15 @@ function uiToneColor(value){
   const rgb=String(value).trim().match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i);
   return rgb?[+rgb[1],+rgb[2],+rgb[3],rgb[4]===undefined?1:+rgb[4]]:null;
 }
-function uiToneAdjustedColor(color,amount){
+function uiToneAdjustedColor(color,amount,theme){
   const [r,g,b,alpha]=color,brightness=(.2126*r+.7152*g+.0722*b)/255;
   if(brightness<=0||brightness>=1)return `rgba(${r},${g},${b},${alpha})`;
-  const target=Math.pow(brightness,Math.exp(-amount*.32));
+  const strength=amount>0?.32:theme==='light'?.55:.40;
+  const curved=Math.pow(brightness,Math.exp(-amount*strength));
+  // Protect dark surfaces during brightening, without introducing a contrast pivot.
+  const x=Math.min(1,brightness/(theme==='light'?.10:.35));
+  const weight=amount>0?x*x*(3-2*x):1;
+  const target=brightness+(curved-brightness)*weight;
   // Blend toward white or black in one proportion, preserving channel ordering.
   const adjusted=[r,g,b].map(c=>Math.round(target>brightness?c+(255-c)*(target-brightness)/(1-brightness):c*target/brightness));
   return `rgba(${adjusted.join(',')},${alpha})`;
@@ -650,13 +655,17 @@ function applyUITone(theme,value){
     }
     uiTonePalettes.set(theme,palette);
   }
-  for(const [property,color] of palette){root.style.setProperty(property,uiToneAdjustedColor(color,amount));uiToneOverridden.add(property);}
+  for(const [property,color] of palette){root.style.setProperty(property,uiToneAdjustedColor(color,amount,theme));uiToneOverridden.add(property);}
 }
 
 function normalizeUITone(value){return typeof value==='number'&&Number.isFinite(value)?Math.max(-100,Math.min(100,Math.round(value))):0;}
 function parseUIAppearance(raw){
   let saved;try{saved=JSON.parse(raw);}catch{}
-  return{size:saved?.size==='comfortable'?'comfortable':'standard',theme:saved?.theme==='light'?'light':'dark',tone:normalizeUITone(saved?.tone)};
+  const theme=saved?.theme==='light'?'light':'dark',tones={dark:0,light:0};
+  if(saved?.tones&&typeof saved.tones==='object'&&!Array.isArray(saved.tones)){
+    for(const mode of ['dark','light'])tones[mode]=normalizeUITone(saved.tones[mode]);
+  }else tones[theme]=normalizeUITone(saved?.tone);
+  return{size:saved?.size==='comfortable'?'comfortable':'standard',theme,tones,tone:tones[theme]};
 }
 let uiAppearance=parseUIAppearance(null);
 function positionAppearancePanel(){
@@ -687,8 +696,12 @@ function renderUIAppearance(){
 }
 function setUIAppearance(key,value){
   if(!((key==='size'&&['standard','comfortable'].includes(value))||(key==='theme'&&['dark','light'].includes(value))||(key==='tone'&&typeof value==='number'&&Number.isFinite(value))))return;
-  uiAppearance={...uiAppearance,[key]:key==='tone'?normalizeUITone(value):value,...(key==='theme'?{tone:0}:{})};
-  try{localStorage.setItem(appearanceStorageKey,JSON.stringify(uiAppearance));}catch{}
+  const previous=uiAppearance;
+  const tones={...previous.tones};
+  if(key==='tone')tones[previous.theme]=normalizeUITone(value);
+  const theme=key==='theme'?value:previous.theme,size=key==='size'?value:previous.size;
+  uiAppearance={size,theme,tones,tone:tones[theme]};
+  try{localStorage.setItem(appearanceStorageKey,JSON.stringify({size,theme,tones}));}catch{}
   renderUIAppearance();
   // A display preference does not redraw the graph, change its zoom or apply a Shader.
   if(graph&&key!=='tone')requestAnimationFrame(wires);
@@ -704,6 +717,7 @@ function installUIAppearance(){
   for(const button of panel.querySelectorAll('[data-ui-theme-choice]'))button.onclick=()=>setUIAppearance('theme',button.dataset.uiThemeChoice);
   $('#uitone').oninput=event=>setUIAppearance('tone',Number(event.target.value));
   $('#uitone').ondblclick=()=>setUIAppearance('tone',0);
+  $('#uitone').oncontextmenu=event=>{event.preventDefault();setUIAppearance('tone',0);};
   $('#uitoneminus').onclick=()=>setUIAppearance('tone',uiAppearance.tone-10);
   $('#uitoneplus').onclick=()=>setUIAppearance('tone',uiAppearance.tone+10);
   panel.addEventListener('keydown',event=>{
@@ -712,7 +726,43 @@ function installUIAppearance(){
   });
   window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))positionAppearancePanel();});
 }
+// View modes retain the same graph DOM and never enter graph history or saved layouts.
+let graphFocused=false,fullscreenBusy=false;
+function renderViewModes(){
+  const focused=$('#graphfocus'),fullscreen=$('#uifullscreen'),active=!!document.fullscreenElement;
+  focused.textContent=t(graphFocused?'view.restoreLayout':'view.graphFocus');
+  focused.title=t(graphFocused?'view.restoreLayoutHint':'view.graphFocusHint');
+  focused.setAttribute('aria-pressed',String(graphFocused));
+  const supported=!!document.documentElement.requestFullscreen&&document.fullscreenEnabled!==false;
+  fullscreen.disabled=fullscreenBusy||(!active&&!supported);
+  fullscreen.title=t(active?'view.exitFullscreen':supported?'view.fullscreen':'view.fullscreenUnavailable');
+  fullscreen.setAttribute('aria-label',fullscreen.title);fullscreen.setAttribute('aria-pressed',String(active));
+  fullscreen.querySelector('.fullscreen-enter').toggleAttribute('hidden',active);
+  fullscreen.querySelector('.fullscreen-exit').toggleAttribute('hidden',!active);
+}
+function setGraphFocus(enabled){
+  graphFocused=!!enabled;document.body.classList.toggle('graph-focused',graphFocused);
+  renderViewModes();if(graph)requestAnimationFrame(wires);
+}
+function installViewModes(){
+  $('#graphfocus').onclick=()=>setGraphFocus(!graphFocused);
+  // Canvas controls must not start a pan/selection gesture or clear the selection.
+  $('.canvas-view-tools').addEventListener('pointerdown',event=>event.stopPropagation());
+  $('.canvas-view-tools').addEventListener('dblclick',event=>event.stopPropagation());
+  $('.canvas-view-tools').addEventListener('contextmenu',event=>event.stopPropagation());
+  $('#uifullscreen').onclick=async()=>{
+    if(fullscreenBusy)return;fullscreenBusy=true;renderViewModes();
+    try{
+      if(document.fullscreenElement)await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    }catch{status(t('view.fullscreenFailed'),true);}
+    finally{fullscreenBusy=false;renderViewModes();}
+  };
+  document.addEventListener('fullscreenchange',()=>{renderViewModes();if(graph)requestAnimationFrame(wires);});
+  renderViewModes();
+}
 function installEditorChrome(){
+  installViewModes();
   installUIAppearance();
   installGraphChrome();
   try{$('#editorheader').hidden=localStorage.getItem('sgrapeHeaderVisible')==='false';}catch{}
@@ -763,7 +813,8 @@ installConnectionRecovery();
 installEditorChrome();
 window.addEventListener('beforeunload',e=>{if(!editorReloading&&!switchingShader&&(dirty||pendingEditorField())){e.preventDefault();e.returnValue='';}});
 installSidebarVisibility();
-window.addEventListener('resize',()=>{fit();if(graph)wires();});
+// Resizing (including browser fullscreen) keeps the user's pan and zoom; Center fits explicitly.
+window.addEventListener('resize',()=>{if(graph)wires();});
 document.fonts.ready.then(()=>{if(graph)wires();});
 let editorStarted=false,editorStartPromise=null;
 function startEditor(){

@@ -10,6 +10,7 @@ async function run() {
   const [source, stateFile, folder] = process.argv.slice(2);
   const h = await harness(source, stateFile, folder);
   const {page, checks, errors, settle} = h;
+  await page.emulateMedia({reducedMotion:'reduce'});
   const writes = [];
   page.on('request', request => {
     const route = new URL(request.url()).pathname;
@@ -119,29 +120,36 @@ async function run() {
     await page.mouse.move(slider.x+slider.width*.8,slider.y+slider.height/2,{steps:8});await settle();
     assert.ok((await appearance()).tone>30,'pointer dragging must update the visible tone before release');
     await page.mouse.up();await settle();
-    assert.equal((await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1')))).tone,(await appearance()).tone);
+    assert.equal((await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1')))).tones.dark,(await appearance()).tone);
     await page.locator('#uitone').dblclick();await settle();assert.equal((await appearance()).tone,0);
-    await setTone(40);await chooseTheme('dark');assert.equal((await appearance()).tone,0,'the active preset restores its baseline');
-    await setTone(-40);await chooseTheme('light');assert.equal((await appearance()).tone,0,'changing theme restores its baseline');
+    await setTone(40);await chooseTheme('dark');assert.equal((await appearance()).tone,40,'the active preset preserves its adjustment');
+    await setAppearance('standard','light',-25);await chooseTheme('dark');assert.equal((await appearance()).tone,40);
+    await page.locator('#uitone').click({button:'right'});await settle();assert.equal((await appearance()).tone,0,'right-click restores only the active theme');
+    await chooseTheme('light');assert.equal((await appearance()).tone,-25,'other theme adjustment survives reset');
     assert.deepEqual(await snapshot(),initial);
-    checks.push('plus/minus adjust by ten; native pointer drag updates immediately and persists; double-click or selecting either preset restores its zero baseline');
+    checks.push('plus/minus adjust by ten; native drag persists; each preset remembers its tone, reselecting preserves it and right-click/double-click reset only the active theme');
 
+    await setAppearance('standard','dark',-23);
     await setAppearance('comfortable','light',37);
-    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1'))),{size:'comfortable',theme:'light',tone:37});
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeAppearanceV1'))),{size:'comfortable',theme:'light',tones:{dark:-23,light:37}});
     await page.reload();await page.waitForSelector('.node');await settle();await inspectControls('comfortable','light',37,'en');
-    for (const [stored,expected] of [
+    await chooseTheme('dark');await inspectControls('comfortable','dark',-23,'en');await chooseTheme('light');
+    for (const [stored,expected,otherTone=0] of [
       [JSON.stringify({size:'comfortable',theme:'light'}),{size:'comfortable',theme:'light',tone:0}],
       ['{broken',{size:'standard',theme:'dark',tone:0}],
       [JSON.stringify({size:'giant',theme:'pastel',tone:'45'}),{size:'standard',theme:'dark',tone:0}],
       [JSON.stringify({size:'standard',theme:'dark',tone:null}),{size:'standard',theme:'dark',tone:0}],
       [JSON.stringify({size:'standard',theme:'dark',tone:500}),{size:'standard',theme:'dark',tone:100}],
       [JSON.stringify({size:'standard',theme:'dark',tone:-500}),{size:'standard',theme:'dark',tone:-100}],
-      [JSON.stringify({size:'standard',theme:'dark',tone:12.7}),{size:'standard',theme:'dark',tone:13}]
+      [JSON.stringify({size:'standard',theme:'light',tone:12.7}),{size:'standard',theme:'light',tone:13}],
+      [JSON.stringify({size:'standard',theme:'light',tone:99,tones:{dark:-23,light:47}}),{size:'standard',theme:'light',tone:47},-23],
+      [JSON.stringify({size:'standard',theme:'dark',tone:99,tones:{dark:'15',light:300}}),{size:'standard',theme:'dark',tone:0},100]
     ]) {
       await page.evaluate(value=>localStorage.setItem('sgrapeAppearanceV1',value),stored);
       await page.reload();await page.waitForSelector('.node');await settle();assert.deepEqual(await appearance(),expected);
+      await chooseTheme(expected.theme==='dark'?'light':'dark');assert.equal((await appearance()).tone,otherTone,'legacy tone migrates only to its saved theme; new values stay independent');
     }
-    checks.push('tone and presets survive reload; prior two-field preferences remain compatible; malformed/enumerated/string/null values recover and finite numeric tones are bounded/rounded');
+    checks.push('both theme adjustments survive reload; legacy single tone migrates only to the saved theme; current per-theme values take precedence and invalid/bounded/fractional values recover predictably');
 
     await page.evaluate(()=>{
       clearTimeout(autoTimer);connectionInterrupted=true;nativeSourcePolling=true;uniformPolling=true;customPolling=true;
@@ -179,6 +187,19 @@ async function run() {
     }
     fs.writeFileSync(path.join(folder,'appearance-palette.json'),JSON.stringify(palettes,null,2));
     checks.push('both themes visibly lighten/darken monotonically and restore exact neutral colors, with no reflow or graph changes and no filters/color changes on preview or actual swatches');
+
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await setAppearance('standard','dark',100);
+    assert.deepEqual(await palette(),palettes.find(p=>p.theme==='dark').lighter,'tone should respond immediately even when reduced motion is not requested');
+    await page.evaluate(()=>{setUIAppearance('theme','light');setUIAppearance('theme','dark');setUIAppearance('theme','light');});await settle();
+    assert.deepEqual(await palette(),palettes.find(p=>p.theme==='light').neutral,'rapid theme switches must immediately reach the final remembered palette');
+    const appearanceAnimations=await page.evaluate(()=>document.getAnimations().filter(animation=>{
+      const target=animation.effect?.target;return target===$('#canvas')||target?.closest?.('[data-node="appearance_value"]');
+    }).length);
+    assert.equal(appearanceAnimations,0,'appearance changes must not create running canvas/node animations');
+    assert.deepEqual(await snapshot(),scene);
+    await page.emulateMedia({reducedMotion:'reduce'});await setAppearance('standard','dark');await setAppearance('standard','light');
+    checks.push('normal-motion UI tone responds immediately, rapid preset switches reach the remembered palette and no canvas/node animations or graph edits are introduced');
 
     await page.evaluate(()=>{readonly=true;});const readOnlyScene=await snapshot();
     await page.locator('#uisize').click();await chooseTheme('dark');await page.locator('#uitoneplus').click();await settle();
@@ -223,7 +244,7 @@ async function run() {
           const footerStyle=getComputedStyle($('footer'));
           return {width:innerWidth,height:innerHeight,footer:rect('footer'),start:rect('.footer-start'),preferences:rect('.footer-preferences'),actions:rect('.footer-actions'),refresh:rect('#editorrefresh'),reload:rect('#reload'),panel:rect('#appearancepanel'),range:rect('#uitone'),
             rightInset:parseFloat(footerStyle.paddingRight)+parseFloat(footerStyle.borderRightWidth),overflow:document.documentElement.scrollWidth>innerWidth+1,
-            clickable:['uisize','uitheme','editorrefresh','reload','uitoneminus','uitoneplus'].every(id=>{const e=$('#'+id),r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===e;})};
+            clickable:['uisize','uitheme','uifullscreen','editorrefresh','reload','uitoneminus','uitoneplus'].every(id=>{const e=$('#'+id),r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===e;})};
         });
         assert.equal(layout.overflow,false,JSON.stringify({size,theme,layout}));
         assert.ok(Math.abs(layout.preferences.right-(layout.footer.right-layout.rightInset))<=1);
@@ -251,6 +272,7 @@ async function runTouch() {
   page.on('request',request=>{const route=new URL(request.url()).pathname;if(request.method()==='POST'&&route.startsWith('/api/')&&!route.endsWith('/remote-preview'))writes.push(route);});
   const snapshot=()=>page.evaluate(()=>({graph:JSON.stringify(graph),past:JSON.stringify(past),future:JSON.stringify(future),pan:{...pan},scale,dirty,stage,selected}));
   try {
+    await page.emulateMedia({reducedMotion:'reduce'});
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>{setUIAppearance('size','standard');setUIAppearance('theme','dark');});await settle();
     assert.equal(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches),true);

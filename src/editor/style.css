@@ -1371,3 +1371,12 @@ footer .footer-preferences svg[hidden]{display:none}
 .appearance-adjustment input[type="range"]:focus-visible::-moz-range-thumb{outline:2px solid var(--purple);outline-offset:3px}
 footer .footer-preferences #uitheme[aria-expanded="true"]{color:var(--purple);background:var(--ui-hover,var(--ui-tone-control-hover))}
 @media(pointer:coarse){.appearance-presets button{height:36px}.appearance-adjustment button,.appearance-adjustment input[type="range"]{height:40px}.appearance-adjustment button{width:36px}}
+
+/* Graph focus only changes chrome visibility; original panel DOM and layout stay in place. */
+body.graph-focused>:is(#editorheader,.location-bar,#connectionnotice,footer){display:none!important}
+body.graph-focused>main{display:flex;width:100%;min-width:0;min-height:0}
+body.graph-focused>main>:not(.graph-workspace){display:none!important}
+body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;min-height:0}
+.canvas-view-tools #graphfocus{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,var(--ui-tone-chrome));color:inherit;border-color:var(--line);white-space:nowrap}
+.canvas-view-tools #graphfocus[aria-pressed="true"]{color:var(--purple)}
+@media(pointer:coarse){.canvas-view-tools #graphfocus{min-height:36px;padding-inline:10px}}

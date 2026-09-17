@@ -2733,6 +2733,14 @@
       "zh-Hant": "手填 vec2、vec3 或 vec4 常數。此節點沒有輸入，只輸出整體向量；頂端可切換維度。展開三角形可顯示分量標籤，數值支援 Value Ladder。用輸出旁的 Split 快捷新增拆分節點；需要基底與分量覆寫時使用 Replace。",
       "en": "Enter a vec2, vec3 or vec4 constant. This node has no inputs and outputs the whole vector; choose its size in the header. Expand the triangle for labelled component rows. Values support Value Ladder. Use the Split shortcut beside the output to add a Split node; use Replace for a base vector with component overrides."
     },
+    "view.graphFocus": {"zh-Hant": "專注編輯", "en": "Focus graph"},
+    "view.restoreLayout": {"zh-Hant": "還原介面", "en": "Restore layout"},
+    "view.graphFocusHint": {"zh-Hant": "只顯示網路圖與工具列", "en": "Show only the graph and toolbar"},
+    "view.restoreLayoutHint": {"zh-Hant": "還原介面（Esc）", "en": "Restore layout (Esc)"},
+    "view.fullscreen": {"zh-Hant": "進入瀏覽器全螢幕", "en": "Enter browser fullscreen"},
+    "view.exitFullscreen": {"zh-Hant": "離開瀏覽器全螢幕", "en": "Exit browser fullscreen"},
+    "view.fullscreenUnavailable": {"zh-Hant": "此瀏覽器不支援全螢幕", "en": "Fullscreen is unavailable in this browser"},
+    "view.fullscreenFailed": {"zh-Hant": "無法切換瀏覽器全螢幕", "en": "Could not change browser fullscreen"},
     "appearance.controls": {
       "zh-Hant": "介面大小與外觀",
       "en": "Interface size and appearance"
@@ -2794,8 +2802,8 @@
       "en": "Brighter"
     },
     "appearance.tone.reset": {
-      "zh-Hant": "雙擊還原基準",
-      "en": "Double-click to reset"
+      "zh-Hant": "右鍵或雙擊還原基準",
+      "en": "Right-click or double-click to reset"
     }
   }
 }

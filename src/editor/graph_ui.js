@@ -1109,10 +1109,16 @@ function installGraphInteractions(){
     if(e.key==='Enter'&&e.target.tagName!=='SELECT'){e.preventDefault();chooseCreator(creatorIndex);}
   };
   document.addEventListener('keydown',e=>{
+    if(e.defaultPrevented)return;
     if(e.target.closest('.details')||e.target.closest('#grapheditmenu')||e.target.closest('.library')||e.target.closest('#creator')||e.target.closest('.shader-selector')||e.target.closest('dialog')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
     if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')){e.preventDefault();const r=canvas.getBoundingClientRect();openGraphMenu(r.left+r.width/2,r.top+r.height/3);return;}
     if(e.key==='Tab'){e.preventDefault();const r=canvas.getBoundingClientRect();openCreator(r.left+r.width/2,r.top+r.height/3);}
-    if(e.key==='Escape'){cancelConnection();closeCreator();}
+    if(e.key==='Escape'){
+      const interaction=!!linkStart||!!creatorState;
+      cancelConnection();closeCreator();
+      if(!interaction&&graphFocused&&!document.fullscreenElement&&!document.querySelector('dialog[open],:popover-open')){e.preventDefault();setGraphFocus(false);$('#graphfocus').focus({preventScroll:true});}
+      return;
+    }
     if(e.altKey&&e.key==='ArrowUp'){e.preventDefault();if(graphTrail.length)navigateGraph(graphTrail.length-1);}
     if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();remove();}
     if(e.ctrlKey||e.metaKey){const k=e.key.toLowerCase();if(['z','a','d','g'].includes(k))e.preventDefault();
