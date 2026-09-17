@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 光暈分級修訂與 CSS 動畫（0.8.84）：既有 `test_ui_experiments.cjs` 19 組通過，涵蓋五種風格即時切換／保存／重載／重置／舊偏好，沿用時鐘測試，且純模式／時鐘／主題切換保留節點、Parameter、工具列與接線 DOM、圖／Undo／幾何。私人 Cool 範圍與過渡探針確認只有彩色接線、選取框、葡萄圖示與 Apply 發光，普通節點／名稱／接孔保持原貌；減少動態效果和 Light 保持預期。報告分別位於私人 work/reports/ui-style/five-tiers-experiments 及 cool-scope-motion。
+
+最後 `legendary-godlike-motion` 私人探針 5 組通過：Legendary 的減動態範圍等同 Excellent，4 秒實采 alpha 33.11–49.85%；Godlike 4.8 秒實采四象限，節點偏移半徑 7px、接線／圖示 2.8px、名稱 2.1px，固定 alpha 50%，顏色／blur／幾何不變。首秒入場及退出各模式均為 1 秒；Light 停用動畫，減動態 Legendary 33%、Godlike 50% 居中靜態。Graph／歷史／DOM 保持，零頁面錯誤／API 寫入，主頁及 About 截圖已目視。沒有新增正式樣式鏡像測試或執行效能量測。
+
+驗證中處理兩項過渡問題：動畫先等待一秒淡入，再讓每幀陰影直接更新，避免 CSS transition 不斷追逐新值；Chromium 的 none→color-mix drop-shadow 插值會出現暗色中途影格，改用同色彩模型的透明零模糊濾鏡作關閉端點，250／500／750／1000ms 像素與參考一致。555 個雙語鍵、JavaScript 語法及 diff 通過。28 份內嵌來源與服務一致、TOP／MAT Master current；正式 TOE 720,748 bytes，SHA-256 `5e493e926e65fd99ca7339a5c1885f157c65d19d40d5b0969a0bea6b286ca924`，保留兩份 Shader 並排除私人助手，未重新整理現有編輯頁。
+
 2026-09-18 表現能力分級、Parameter 與時鐘（0.8.84）：既有 test_ui_experiments.cjs 19 組通過，覆蓋 12 項設定／10 checkbox／2 select，三種風格的即時切換／保存／重置／舊偏好與 DOM／草稿／幾何／Graph／Undo 保留；時鐘本機 HH:mm、Fullscreen 前方位置、Focus 無副本、整分鐘與午夜切換、單一 timer、visibility 刷新及停用清理通過；320／390px、75／125% 與 Dark／Light 的時鐘及全螢幕按鈕均在 Footer 範圍內。首次 timer spy 未綁定 window 造成 Illegal invocation，修正測試後重跑通過，非產品問題。私人 Glow VISUAL_ONLY 6 組通過：Dark Cool 僅圖與品牌，Excellent 加介面，Light 三款完全一致；節點展開／收合／選取／錯誤保留，About 實際開關並驗證圖示主標題光暈，小字不亮，截圖已目視。
 
 既有 test_parameter_values.cjs 15 組、私人 Texture2D／TOP Input／UV 排版 12 組通過（一般／長來源 × UI 75／100／125% × 面板 300／640px）：sampler2D 完整單行、欄位對齊、長來源省略及全文 title、斷開按鈕位於值欄，重複來源名去重而不同 port 標籤保留。零頁面錯誤／API 寫入，52 組總計；553 個雙語鍵、JS 語法及 diff 通過。未重跑效能。

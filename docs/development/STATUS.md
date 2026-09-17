@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-18 光暈分級修訂與 CSS 動畫（0.8.84）：Cool 改為僅彩色接線、選取框、葡萄圖示與 Apply Shader 發光，未選取節點與名稱／接孔保持原貌；Excellent 加入整顆節點分類色外光與既有介面重點。新增 Legendary 的 4 秒慢呼吸（33–50%），Godlike 為 50% 外光以 4.8 秒環繞方向流動，只有陰影偏移，元件位置與型別色保持。五級切換以 1 秒過渡，僅 Dark 生效；減少動態效果時採靜態光暈。動畫只用既有 CSS 光暈與 registered properties，未增加 DOM、繪圖層、ID 分组或 JavaScript 動畫系統。純外觀切換保留接線 DOM，圖與 Undo 不變。
+
+既有實驗功能測試 19 組、最後 Legendary／Godlike 動態檢查 5 組通過，另完成 Cool 範圍及過渡檢查；555 個雙語鍵、JavaScript 語法與 diff 通過。28 份來源與服務一致、兩份 Master current；正式 TOE 保存 720,748 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
+
 2026-09-18 表現能力分級、Parameter 與時鐘（0.8.84）：齒輪風格改名「表現能力」，Professional 維持原貌；Cool 保留節點／接線／接孔外光，Excellent 再加 Inputs、Parameter、工具列及 Apply。兩級葡萄圖示與產品主標題發光，含 About，仍限 Dark。一般 Parameter 名稱欄 17%、型別欄 9ch，名稱／型別單行省略，sampler2D 不再拆行；相同來源／輸出名去重。新增預設關閉的 systemClock，Footer 全螢幕左邊顯示本機 HH:mm，整分鐘更新，停用清除 timer。52 組相關瀏覽器／視覺檢查與 553 個雙語鍵通過。28 份來源與服務一致、兩份 Master current；正式 TOE 保存 719,828 bytes，兩份使用者 Shader 保留，現有編輯頁未重新整理。
 
 2026-09-17 整顆節點外光（0.8.84）：依最新回饋，Cool 的分類色光暈從 Title 移到整個節點外圍，維持 33%／20px blur／1px spread；灰底與名稱保留。選取／錯誤維持狀態細框，外光仍為分類色；收合亦套用。5 組隔離視覺檢查通過，Light 不變；28 份來源與服務一致，兩份 Master current，正式 TOE 保存 719,132 bytes。兩份使用者 Shader 保留，現有瀏覽器頁面未重新整理。

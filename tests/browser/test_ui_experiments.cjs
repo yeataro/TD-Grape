@@ -30,7 +30,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.equal(defaults.systemClock,false);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);
     await open();assert.equal(await panel.locator('input[type=checkbox]').count(),10);assert.equal(await panel.locator('select').count(),2);
     assert.deepEqual(await control('nodeDragCursor').locator('option').evaluateAll(options=>options.map(o=>o.value)),['default','move']);
-    assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool','excellent']);
+    assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool','excellent','legendary','godlike']);
     assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.equal(await opener.getAttribute('aria-expanded'),'true');
     assert.equal(await control('canvasTrash').evaluate(e=>e===document.activeElement),true);const openedGraph=await snapshot();await page.keyboard.press('Tab');assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Delete');assert.equal(await snapshot(),openedGraph);
     checks.push('fresh editors expose ten boolean experiments, cursor and UI style choices; Professional is the default without changing preferences on open');
@@ -73,17 +73,28 @@ const [source,stateFile,folder]=process.argv.slice(2);
     }finally{await page.evaluate(()=>{setUIExperiments({systemClock:false});window.Date=experimentClock.Date;window.setTimeout=experimentClock.setTimeout;window.clearTimeout=experimentClock.clearTimeout;delete window.experimentClock;});}
     assert.equal(await snapshot(),unchanged);checks.push('system clock rolls over midnight at the next minute boundary, keeps exactly one minute timer, refreshes on visibility restoration and clears timer/listener when disabled');await open();
 
-    await page.evaluate(()=>{window.experimentStyleDOM=[...document.querySelectorAll('#cards .node,#inspector input,.toolbar')];});
+    assert.equal(await page.locator('#wires path').count(),1);
+    await page.evaluate(()=>{window.experimentStyleDOM=[...document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')];});
     const styleGeometry=()=>page.locator('#cards .node,#wires path,#inspector input,.toolbar').evaluateAll(elements=>elements.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
     const geometry=await styleGeometry();
-    for(const uiStyle of ['professional','cool','excellent','cool','professional','excellent']){
+    for(const uiStyle of ['professional','cool','excellent','legendary','godlike','cool','excellent','godlike','legendary','professional']){
       await control('uiStyle').selectOption(uiStyle);await settle();
       assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);
       assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1')).uiStyle),uiStyle);
-      assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#inspector input,.toolbar')[index]===element)),true);
+      assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')[index]===element)),true);
       assert.deepEqual(await styleGeometry(),geometry);assert.equal(await snapshot(),unchanged);
     }
-    checks.push('Professional, Cool and Excellent apply immediately and persist, while repeated switches reuse node/Parameter/toolbar DOM and preserve node/wire geometry, graph and Undo');
+    for(const systemClock of [true,false]){
+      await control('systemClock').setChecked(systemClock);await settle();
+      assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')[index]===element)),true);
+      assert.deepEqual(await styleGeometry(),geometry);assert.equal(await snapshot(),unchanged);
+    }
+    for(const theme of ['light','dark']){
+      await page.evaluate(theme=>setUIAppearance('theme',theme),theme);await settle();
+      assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')[index]===element)),true);
+      assert.deepEqual(await styleGeometry(),geometry);assert.equal(await snapshot(),unchanged);
+    }
+    checks.push('Professional, Cool, Excellent, Legendary and Godlike apply and persist without rebuilding node/wire/Parameter/toolbar DOM; style, clock-only and theme switches preserve geometry, graph and Undo');
 
     for(const expanded of[false,true])for(const collapsed of[false,true]){
       await set({nodeCollapseExpandedHint:expanded,nodeCollapseCollapsedHint:collapsed});
@@ -108,7 +119,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.locator('#canvas').focus();await settle();
     await page.evaluate(()=>{showCustomNodeNames=true;render();const card=$('[data-node="value"]');beginNodeRename(current().nodes[0],card.querySelector('.node-function-title'));});
     const rename=page.locator('#cards [data-node-name="value"]');await rename.fill('Draft_Name');await page.evaluate(()=>{window.experimentNameDraft=document.activeElement;});const nameBefore=await snapshot();
-    await set({floatingToolbar:false,nodeDragCursor:'default',nodeCollapseExpandedHint:true,uiStyle:'excellent'});
+    await set({floatingToolbar:false,nodeDragCursor:'default',nodeCollapseExpandedHint:true,uiStyle:'godlike'});
     assert.equal(await page.evaluate(()=>experimentNameDraft.isConnected&&document.activeElement===experimentNameDraft),true);assert.equal(await rename.inputValue(),'Draft_Name');assert.equal(await snapshot(),nameBefore);await rename.press('Escape');
     checks.push('live preferences preserve focused incomplete numeric drafts and canvas rename DOM/text without committing or discarding either draft');
 
@@ -145,8 +156,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
     }
     checks.push('English and Traditional Chinese expose translated names, hints, cursor/style choices and opener labels');
 
-    await set({canvasTrash:true,floatingToolbar:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'excellent',systemClock:true});const saved=await settings();
-    for(const uiStyle of ['professional','cool','excellent']){
+    await set({canvasTrash:true,floatingToolbar:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:false,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'godlike',systemClock:true});const saved=await settings();
+    for(const uiStyle of ['professional','cool','excellent','legendary','godlike']){
       await set({...saved,uiStyle});await reload();assert.deepEqual(await settings(),{...saved,uiStyle});assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);assert.equal(await page.locator('#uisystemclock').isVisible(),true);
       await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
     }
@@ -154,14 +165,14 @@ const [source,stateFile,folder]=process.argv.slice(2);
     const malformed={canvasTrash:'true',floatingToolbar:1,nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',systemClock:'true',nodeResizeHint:false,unknown:true};
     assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),JSON.stringify(malformed)),{...defaults,nodeResizeHint:false});
     for(const raw of ['null','[]','true','"text"'])assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),raw),defaults);
-    checks.push('all three UI styles survive isolated reload, reset restores and persists Professional defaults from each style, and malformed or unknown storage values are safely ignored');
+    checks.push('all five UI styles survive isolated reload, reset restores and persists Professional defaults from each style, and malformed or unknown storage values are safely ignored');
 
     const legacy={...saved};delete legacy.uiStyle;delete legacy.systemClock;
     await page.evaluate(legacy=>localStorage.setItem('sgrapeExperimentsV1',JSON.stringify(legacy)),legacy);await reload();
     assert.deepEqual(await settings(),{...legacy,uiStyle:'professional',systemClock:false});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    await open();for(const uiStyle of ['cool','excellent']){await control('uiStyle').selectOption(uiStyle);await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...legacy,uiStyle,systemClock:false});}
+    await open();for(const uiStyle of ['cool','excellent','legendary','godlike']){await control('uiStyle').selectOption(uiStyle);await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...legacy,uiStyle,systemClock:false});}
     await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
-    checks.push('legacy V1 preferences retain existing options and default to Professional; choosing Cool or Excellent upgrades saved preferences and reset restores Professional');
+    checks.push('legacy V1 preferences retain existing options and default to Professional; choosing Cool, Excellent, Legendary or Godlike upgrades saved preferences and reset restores Professional');
 
     await setup();await set({systemClock:true});assert.equal(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches),true);
     const geometryBefore=await snapshot();

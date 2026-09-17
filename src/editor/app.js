@@ -656,7 +656,7 @@ function applyFloatingToolbar(){
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
   nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],
-  uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent']]
+  uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent'],['legendary','experiments.style.legendary'],['godlike','experiments.style.godlike']]
 };
 let systemClockTimer=null;
 function refreshSystemClock(){
@@ -697,8 +697,10 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  // Clear only active gestures; retain existing field DOM and unsubmitted text.
-  cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();cancelConnection();
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  // Preserve wire elements for glow transitions when only presentation changes.
+  cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();
+  if(linkStart||wireDrag||wireGesture)cancelConnection();
   Object.assign(EDITOR_DEV_SETTINGS,next);
   try{localStorage.setItem(experimentsStorageKey,JSON.stringify(next));}catch{}
   applyFloatingToolbar();applyGraphUISettings();applySystemClock();clearGraphTrash();
@@ -713,7 +715,7 @@ function setUIExperiments(values){
         delete card.dataset.nodeDefaultWidth;applyNodeWidth(card,node);
       }
     }
-    wires();
+    if(redrawWires)wires();
   }
   renderUIExperiments();
 }
@@ -839,7 +841,7 @@ function setUIAppearance(key,value){
   renderUIAppearance();
   // A display preference does not redraw the graph, change its zoom or apply a Shader.
   if(previous.scale!==uiAppearance.scale||previous.size!==size)window.dispatchEvent(new Event('resize'));
-  if(graph&&key!=='tone')requestAnimationFrame(wires);
+  if(graph&&(key==='size'||key==='scale'))requestAnimationFrame(wires);
 }
 function installUIAppearance(){
   try{uiAppearance=parseUIAppearance(localStorage.getItem(appearanceStorageKey));}catch{}
