@@ -376,7 +376,7 @@ function pixelBufferFields(box,n){
   if(editorTarget!=='mat'||definition(n)?.key!=='pixel_out'||!typeContract?.pixelBufferOutputs)return;
   const entry=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));
   entry.dataset.pixelBufferCount=n.id;entry.disabled=readonly;
-  entry.title=t('pixel.buffersHint');box.append(field(t('pixel.bufferCount'),entry));
+  entry.title=t('pixel.buffersHint');box.append(parameterControlRow(t('pixel.bufferCount'),entry));
 }
 
 function pixelBufferNames(box,n){
@@ -412,6 +412,14 @@ function numbers(value,label,callback,disabled=false,labels='XYZW'){
 // change the graph or the canvas node's independent presentation state.
 const parameterExpansions=new WeakMap();
 let parameterValueEdit=null;
+// All ordinary Parameter controls share these columns, including untyped fields
+// and action rows. Full-width editors keep their explicit specialized layout.
+function parameterControlRow(label,control,type=''){
+  const row=el(control.matches('input,select,textarea')?'label':'div',{class:'parameter-row'});
+  row.append(el('span',{class:'parameter-value-label'},label));
+  if(type)row.append(el('small',{class:'parameter-value-type'},type));
+  control.classList.add('parameter-control');row.append(control);return row;
+}
 function deferParameterInspector(){
   const edit=parameterValueEdit;if(!edit)return false;
   if(edit.entry.isConnected&&!readonly&&selected===edit.node.id&&inspectorTab==='parameters'&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)&&(document.activeElement===edit.entry||numericPresetMenu?.entry===edit.entry||edit.committing))return true;
@@ -420,9 +428,8 @@ function deferParameterInspector(){
 function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
   const initial=read(),vector=Array.isArray(initial),values=vector?initial:[initial];
   const box=el('section',{class:'parameter-value-group','data-parameter-value':key});
-  const row=el('div',{class:'parameter-value-row'}),heading=el('div',{class:'parameter-value-heading'});
-  heading.append(el('span',{class:'parameter-value-label'},label),el('small',{class:'parameter-value-type'},type));row.append(heading);box.append(row);
   const compact=el('div',{class:'parameter-value-controls'}),entries=[];let syncing=false;
+  const row=parameterControlRow(label,compact,type);row.classList.add('parameter-value-row');box.append(row);
   const scalarType=/^[iu]vec/.test(type)?(type[0]==='u'?'uint':'int'):/^bvec/.test(type)?'bool':vector?'float':type;
   const own=entry=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
   const currentValues=()=>{const value=read();return Array.isArray(value)?value:[value];};
@@ -455,7 +462,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
         const display=colorDisplay(n.params.value),ink=box.querySelector('.color-ink'),picker=box.querySelector('input[type=color]');
         if(ink)ink.style.backgroundColor=display.css;if(picker)picker.value=display.hex;
         let hint=box.querySelector('.color-range-hint');
-        if(n.params.value.some(v=>v<0||v>1)){if(!hint){hint=el('small',{class:'muted color-range-hint'},t('color.range'));box.append(hint);}}else hint?.remove();
+        if(n.params.value.some(v=>v<0||v>1)){if(!hint){hint=parameterControlRow('',el('small',{class:'muted'},t('color.range')));hint.classList.add('color-range-hint');box.append(hint);}}else hint?.remove();
       }
       entry.removeAttribute('aria-invalid');focus();
       if(parameterValueEdit?.entry===entry)parameterValueEdit.committing=true;
@@ -470,13 +477,13 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
     entry.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){e.preventDefault();cancelValueLadder();restore();focus();}});
     installValueLadder(entry,commit);entry.onNumericPreview=()=>syncPreview(entry,index);entries.push(entry);return entry;
   }
-  values.forEach((_,index)=>compact.append(createEntry(index)));row.append(compact);
+  values.forEach((_,index)=>compact.append(createEntry(index)));
   if(vector&&values.length>=2&&values.length<=4){
     let expanded=parameterExpansions.get(n)?.has(key)||false;
     const toggle=el('button',{class:'parameter-components-toggle',type:'button','aria-label':t('node.expandValues'),'aria-expanded':String(expanded),'data-parameter-expand':key},expanded?'▾':'▸');
-    heading.prepend(toggle);
+    row.prepend(toggle);
     const components=el('div',{class:'parameter-component-rows'});components.hidden=!expanded;
-    values.forEach((_,index)=>{const component=el('label',{class:'parameter-component-row'});component.append(el('span',{class:'parameter-value-label'},labels[index]),el('small',{class:'parameter-value-type'},scalarType),createEntry(index,true));components.append(component);});box.append(components);
+    values.forEach((_,index)=>{const component=parameterControlRow(labels[index],createEntry(index,true),scalarType);component.classList.add('parameter-component-row');components.append(component);});box.append(components);
     toggle.onclick=()=>{expanded=!expanded;let state=parameterExpansions.get(n);if(!state){state=new Set();parameterExpansions.set(n,state);}if(expanded)state.add(key);else state.delete(key);components.hidden=!expanded;toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
   }
   return box;
@@ -672,7 +679,7 @@ function glslCodeInspector(box,n){
   const panel=el('div',{class:'glsl-code-panel','data-glsl-code':n.id});
   const name=input(n.params.functionName,value=>change(()=>{n.params.functionName=value;CustomGLSL.validate(n.params);}));
   name.maxLength=48;name.disabled=readonly;name.dataset.codeFunction='';
-  panel.append(field(t('code.function'),name));
+  panel.append(parameterControlRow(t('code.function'),name));
   for(const direction of ['inputs','outputs']){
     const group=el('section',{class:'code-interface','data-code-direction':direction});
     const heading=el('div',{class:'code-interface-heading'});
@@ -751,7 +758,7 @@ function nodePrimarySelector(n,d){
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;
   const composed=['combine','vector','replace'].includes(d.key),control=nodeTypeSelector(n,d);
-  box.append(field(t(composed?'vector.outputType':'vector.inputType'),control));
+  box.append(parameterControlRow(t(composed?'vector.outputType':'vector.inputType'),control));
   if(d.key==='swizzle'){
     const slots=el('div',{class:'swizzle-components'}),names=vectorNames(n),components='xyzw'.slice(0,typeComponents(n.params.type));
     [...n.params.mask].forEach((value,index)=>{
@@ -762,7 +769,7 @@ function vectorInspector(box,n,d){
     for(const [label,enabled,edit]of [['−',n.params.mask.length>1,()=>n.params.mask=n.params.mask.slice(0,-1)],['+',n.params.mask.length<4,()=>n.params.mask+=components[Math.min(n.params.mask.length,components.length-1)]]]){
       const b=el('button',{type:'button','aria-label':t(label==='+'?'vector.addComponent':'vector.removeComponent')},label);b.disabled=readonly||!enabled;b.onclick=()=>change(edit,{typeChange:true});slots.append(b);
     }
-    box.append(field(t('vector.componentOrder'),slots));
+    box.append(parameterControlRow(t('vector.componentOrder'),slots));
   }
 }
 function setNodeInputValue(n,port,next){
@@ -902,16 +909,16 @@ function inspector(){
     if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));
     if(supportsAutoType(d)&&!isVectorOperation(d)){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
-      const row=field(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
+      const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
     pixelBufferFields(box,n);
-    if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(split);}
+    if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(ordinary?parameterControlRow('',split):split);}
     if('value'in n.params){
       if(ordinary){
         const values=parameterValueRow(n,'$value',t('declaration.value'),Object.values(ports(n,'outputs'))[0]||n.params.type||'float',()=>n.params.value,(index,value)=>{if(Array.isArray(n.params.value))n.params.value[index]=value;else n.params.value=value;},d.key==='color'?'RGBA':'XYZW');
         if(d.key==='color'){
           values.classList.add('color-parameter');values.querySelector('.parameter-value-controls').append(colorPickerSwatch(()=>n.params.value,value=>change(()=>n.params.value=value)));
-          if(n.params.value.some(v=>v<0||v>1))values.append(el('small',{class:'muted color-range-hint'},t('color.range')));
+          if(n.params.value.some(v=>v<0||v>1)){const hint=parameterControlRow('',el('small',{class:'muted'},t('color.range')));hint.classList.add('color-range-hint');values.append(hint);}
         }
         box.append(values);
       }else box.append((d.key==='color'?colorFields:numbers)(n.params.value,t('declaration.value'),value=>change(()=>n.params.value=value)));
@@ -936,7 +943,7 @@ function inspector(){
     const inputBox=d.key==='glsl_code'?el('details',{class:'code-input-values'}):box;
     if(d.key==='glsl_code'&&n.params.inputs.length){inputBox.append(el('summary',{},t('code.inputValues')));box.append(inputBox);}
     for(const [port,type]of Object.entries(d.key==='function_output'?{}:ports(n,'inputs'))){
-      const section=el('section',{class:'input-parameter','data-input':port});
+      const section=el('section',{class:'input-parameter'+(ordinary?' parameter-row':''),'data-input':port});
       const connection=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
       const typeInfo=inputTypeDisplay(n,port);
       const heading=el('h4',{class:'input-heading'});heading.append(el('span',ordinary?{class:'parameter-value-label'}:{},portLabel(n,'inputs',port)),el('small',ordinary?{class:'parameter-value-type'}:{},typeInfo.text));section.append(heading);
@@ -948,7 +955,7 @@ function inspector(){
         if(!connection)section.append(el('p',{class:'muted'},t(port==='value'?'vector.baselineHint':'vector.inherited')));
       }else if(value===null){
         section.append(el('p',{class:'muted'},t('input.implicitUV')));
-        if(!connection){const override=el('button',{class:'wide'},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}
+        if(!connection){const override=el('button',{class:'wide'+(ordinary?' parameter-control':'')},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}
       }else if(!connection){
         if(ordinary){
           heading.remove();section.prepend(parameterValueRow(n,port,portLabel(n,'inputs',port),typeInfo.text,()=>defaultInput(n,port,type),(index,next)=>{
@@ -962,7 +969,7 @@ function inspector(){
         const disconnect=el('button',{'aria-label':t('wire.disconnect')+portLabel(n,'inputs',port)},t('wire.disconnectShort'));disconnect.disabled=readonly;
         disconnect.onclick=()=>change(()=>current().edges=current().edges.filter(e=>e!==connection));connectionRow.append(origin,disconnect);section.append(connectionRow);
       }else if(['texture','texture_sample'].includes(d.key)&&port==='uv'&&value!==null){
-        const reset=el('button',{class:'wide'},t('input.restoreUV'));reset.onclick=()=>change(()=>delete n.inputValues[port]);section.append(reset);
+        const reset=el('button',{class:'wide'+(ordinary?' parameter-control':'')},t('input.restoreUV'));reset.onclick=()=>change(()=>delete n.inputValues[port]);section.append(reset);
       }
       inputBox.append(section);
     }

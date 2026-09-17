@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-17 Parameter 共用控制列（0.8.84）：既有 test_parameter_values.cjs 15 組通過，涵蓋共用列重構後的草稿、分量同步、取消／Undo、bool／int／uint、Settings／Uniform 保持及窄版；私人幾何／操作探針 19 組通過，涵蓋 Replace／Swizzle／Tint 在 300／600px 與 UI 75／100／125% 的欄位對齊、24px 基準、無溢出，GLSL 函式改名與單步 Undo、MAT Buffer 選單、UV 設定／還原往返。44px Swizzle 選單換行後字母完整，截圖已目視，零瀏覽器錯誤。未新增正式樣式測試。舊 test_glsl_code.cjs 單擊新增項後仍停在預覽，等不到編輯器，未列入通過數；此輪涉及的函式名稱／Undo 由上述直接建立節點的隔離探針驗證。
+
+TD 更新 style_css／inspector_js／functions_ui_js；28 份內嵌來源與服務內容一致，兩份 Master current。正式 TOE 為 724,684 bytes，SHA-256 aff8d1073fad0025f314de50a9cc1ce3057b0f0743b3352b94bd9c760e5318a2；保留兩份 Shader、排除私人助手，現有瀏覽器分頁未重新整理。
+
 2026-09-17 Parameter 對齊與子圖命名（0.8.84）：完整 `unittest discover` 279 項通過。新增命名檢查涵蓋同名呼叫、巢狀路徑、port 後綴衝突、長名稱限制及穩定消歧，保留原圖與 sourceMap；20 個內部預設名稱的合法性、唯一性、內容版本、瀏覽器引用／本地化與個人庫往返通過。既有 138 個產碼指紋及舊函式庫指紋以移除新增名稱並重算來源版本的測試投影核對，未覆寫歷史基準。
 
 `test_parameter_values.cjs` 15 組、`test_numeric_scrub.cjs` 32 組通過，零頁面錯誤；包括長名稱、固定三角形與欄位、連線／數值／展開分量共同起點、較窄面板和既有編輯／拖曳／Undo 行為。Add 與 Tint 對齊截圖已目視。`tests/td/test_subgraph_names.py` 驗證 TOP／MAT 的重複與巢狀 Tint：產生預期可讀名稱、編譯保持 current、沒有版本升級要求；TOP 最大像素誤差 0.000098，MAT 0.003922，均低於既有 0.006 容差。測試圖與操作區清除，既有 Shader 資料完整保留。首次原生測試因測試圖的兩個介面節點缺少位置被拒；補齊測試資料後通過，無產品修正。

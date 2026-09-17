@@ -203,10 +203,10 @@ function renameGraphFunction(id,value){
   if(original.name===name)return true;
   return change(()=>{const mapping=FunctionModel.localize(graph,id);graphTrail=graphTrail.map(key=>mapping.get(key)||key);FunctionModel.find(graph,mapping.get(id)||id).name=name;},{localize:false});
 }
-function functionNameField(f){
+function functionNameField(f,rowBuilder=field){
   const entry=input(f.name,value=>{if(!renameGraphFunction(f.id,value))entry.setSyncedValue(f.name);});entry.dataset.functionName=f.id;entry.maxLength=80;entry.disabled=readonly;
   entry.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();entry.setSyncedValue(f.name);entry.blur();}});
-  const row=field(t('function.name'),entry);if(f.scope!=='local')row.append(el('small',{class:'muted'},t('function.renameSource')));return row;
+  const row=rowBuilder(t('function.name'),entry);if(f.scope!=='local')row.append(el('small',{class:'muted'+(row.classList.contains('parameter-row')?' parameter-control-hint':'')},t('function.renameSource')));return row;
 }
 function focusFunctionName(){
   inspectorScope='node';inspectorTab='parameters';inspector();workspaceLayout.reveal('parameters');const field=$('[data-function-name]');field?.scrollIntoView({block:'nearest'});field?.focus();field?.select();
@@ -246,17 +246,21 @@ function appendSparePort(list,n){
   row.append(b,el('span',{class:'port-label'},'+'));list.append(row);
 }
 function functionInspector(box,n,d){
+  const parameterPage=inspectorTab==='parameters',row=parameterPage?parameterControlRow:field;
+  const action=button=>parameterPage?parameterControlRow('',button):button;
   if(d.key==='function_call'){
-    const f=FunctionModel.find(graph,n.params.functionId);box.append(functionNameField(f));box.append(el('p',{class:'muted'},f.scope==='local'?t('function.local'):t('function.source')));
-    const open=el('button',{class:'wide'},t('function.open'));open.onclick=()=>enterFunction(n);box.append(open);
-    const separate=el('button',{class:'wide','data-action':'local-subgraph'},t(f.scope==='local'?'function.independent':'function.makeLocal'));separate.disabled=readonly;separate.onclick=()=>change(()=>FunctionModel.independent(graph,n));box.append(separate);
-    const save=el('button',{class:'wide','data-action':'save-personal'},t('personal.save'));save.disabled=readonly;save.onclick=()=>savePersonalFunction(f);box.append(save);
+    const f=FunctionModel.find(graph,n.params.functionId);box.append(functionNameField(f,row));
+    const scope=el('p',{class:'muted'},f.scope==='local'?t('function.local'):t('function.source'));box.append(parameterPage?parameterControlRow('',scope):scope);
+    const open=el('button',{class:'wide'},t('function.open'));open.onclick=()=>enterFunction(n);box.append(action(open));
+    const separate=el('button',{class:'wide','data-action':'local-subgraph'},t(f.scope==='local'?'function.independent':'function.makeLocal'));separate.disabled=readonly;separate.onclick=()=>change(()=>FunctionModel.independent(graph,n));box.append(action(separate));
+    const save=el('button',{class:'wide','data-action':'save-personal'},t('personal.save'));save.disabled=readonly;save.onclick=()=>savePersonalFunction(f);box.append(action(save));
   }
   const f=currentFunction();if(!f||!['function_input','function_output'].includes(d.key))return;
-  box.append(functionNameField(f));
+  box.append(functionNameField(f,row));
   const direction=d.key==='function_input'?'inputs':'outputs';
   for(const p of f[direction]){
     const section=el('section',{class:'input-parameter'});section.append(el('h4',{},p.id+' · '+p.type));
+    // Port-definition tables retain their own grouped authoring layout.
     section.append(field(t('function.portName'),input(p.name||p.id,v=>change(()=>p.name=v))));
     if(isResourceType(p.type))section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
     else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>p.default=v)));

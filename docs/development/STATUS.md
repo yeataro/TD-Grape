@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-17 Parameter 共用控制列（0.8.84）：數值、展開分量、主要型別／Buffer 選單、Swizzle 控制組、子圖名稱與操作按鈕、GLSL 函式名稱及一般說明共用欄位結構。無型別保留空欄，控制區起點固定；單行控制以 24px 為基準，窄版群組可在欄內換行。程式碼編輯器及介面定義表保留專用排版，Settings／來源流程保持。34 組相關瀏覽器檢查通過；28 份來源與服務一致，正式 TOE 保存 724,684 bytes，兩份使用者 Shader 保留，現有頁面未重新整理。Swizzle 的存在、逐分量來源選單與節點內快捷仍待討論。
+
 2026-09-17 Parameter 對齊與子圖命名（0.8.84）：一般 Parameter 統一固定三角形、名稱、型別、值／連線欄，展開分量與連線來源沿用相同起點，數值欄縮至 24px；Settings／Uniform 流程保持。Tint、Invert、Contrast、Color Clamp 的 20 個預設內部節點補上用途名稱，新來源快照獨立版本，既有使用者快照不覆寫。GLSL 保留 `sg_n_`，具名子圖展平時加入呼叫路徑與內部名稱，例如 `sg_n_Tint_Apply_Tint`、`sg_n_Outer_Tint_Apply_Tint`，保留既有消歧、運算、節點 ID 與 sourceMap；未命名的舊呼叫維持原命名路徑。
 
 279 項完整單元測試、47 組 Parameter／數值瀏覽器回歸與 TOP／MAT 重複、巢狀 Tint 原生編譯／影像驗證通過。28 份內嵌來源與服務一致，Master 保持 current；正式 TOE 保存為 724,172 bytes，兩份使用者 Shader 保留，現有瀏覽器分頁未重新整理。
