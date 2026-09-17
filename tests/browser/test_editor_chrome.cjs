@@ -6,7 +6,9 @@ async function run(){
   try{
     await page.selectOption('#language','en');
     assert.equal(await page.locator('footer #dirty').count(),1);assert.equal(await page.locator('.location-bar #dirty').count(),0);
-    assert.equal(await page.locator('footer > .footer-start > #editorrefresh:first-child + #dirty').count(),1);
+    assert.equal(await page.locator('footer > .footer-start:first-child + .footer-preferences:last-child').count(),1);
+    assert.equal(await page.locator('.footer-start > .footer-actions:first-child + #dirty + #status').count(),1);
+    assert.deepEqual(await page.locator('.footer-start > .footer-actions').evaluate(e=>[...e.children].map(button=>button.id)),['editorrefresh','reload']);
     assert.ok(await page.evaluate(()=>{const toggle=$('#toggleheader').getBoundingClientRect(),layout=$('#workspacelayout').getBoundingClientRect();return toggle.right<=layout.left&&layout.left-toggle.right<20;}));
     assert.equal(await page.locator('.toolbar .graph-navigation').count(),1);
     assert.equal(await page.locator('#canvas #fit').count(),1);

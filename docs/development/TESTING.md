@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-17 副標與 footer 微調（0.8.84）：既有 test_node_width.cjs 15 組、test_editor_chrome.cjs 10 組及 test_ui_appearance.cjs 7 組通過，零頁面錯誤。標準／舒適 × 深色／淺色在 320／390／960／1600px 確認 footer 左側刷新與重載、右側外觀快捷無重疊或水平溢出，四個按鈕均可命中；節點標題保留 41px 高度及可讀型別。副標基線與 About 兩行置中另以隔離 Chromium 截圖和 computed style 確認。25 份來源與服務資產一致，TOP／MAT Master 保持 current；正式 TOE 保存為 690,364 bytes，保留使用者兩份 Shader，排除私人助手。實體 iPad／Safari 未實測。
+
 2026-09-17 節點外觀與預設寬度追加（0.8.84）：更新後的 `test_node_width.cjs` 15 組通過。檢查 Vector／Color／Split／Add／Texture Coordinates／Power 的完整標題、接孔名稱與數值；桌面與 coarse pointer 標題同高、UV 副標同行；手動縮到低於內容預設值、1200px 上限與無效拖曳不增 Undo，以及既有取消／唯讀／觸控／保存語意。JavaScript 語法與保存提示單元檢查通過。私人外觀探針另確認 Uniform／Vector 顯示 `out`、一般箭頭不改文字與調寬游標、15px／24px 把手的圓弧同圓心，以及來源 flag 關閉提示後仍能調寬；截圖已目視。此為 Chromium 驗證，不代替實體 Safari／iPad。
 
 25 份內嵌來源與服務資產一致，Master 保持目前版本；正式 TOE 已保存為 687,708 bytes，兩份使用者 Shader 保留並排除私人橋接。

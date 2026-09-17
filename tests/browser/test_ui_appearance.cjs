@@ -161,20 +161,23 @@ async function run() {
         await page.evaluate(() => status('A deliberately long persistent compile error remains readable through the footer title.',true,{kind:'compile'}));
         const layout=await page.evaluate(() => {
           const rect=selector=>{const r=$(selector).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};
-          return {width:innerWidth,footer:rect('footer'),start:rect('.footer-start'),preferences:rect('.footer-preferences'),actions:rect('.footer-actions'),overflow:document.documentElement.scrollWidth>innerWidth+1,
+          const footerStyle=getComputedStyle($('footer'));
+          return {width:innerWidth,footer:rect('footer'),start:rect('.footer-start'),preferences:rect('.footer-preferences'),actions:rect('.footer-actions'),refresh:rect('#editorrefresh'),reload:rect('#reload'),
+            rightInset:parseFloat(footerStyle.paddingRight)+parseFloat(footerStyle.borderRightWidth),overflow:document.documentElement.scrollWidth>innerWidth+1,
             clickable:['uisize','uitheme','editorrefresh','reload'].every(id=>{const e=$('#'+id),r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===e;})};
         });
         assert.equal(layout.overflow,false,JSON.stringify({size,theme,layout}));
-        assert.ok(Math.abs((layout.preferences.left+layout.preferences.right-layout.footer.left-layout.footer.right)/2)<=1,'footer preferences must stay centered');
-        assert.ok(layout.start.left>=layout.footer.left-1 && layout.start.right<=layout.preferences.left+1,'left status group must not overlap preferences');
-        assert.ok(layout.preferences.right<=layout.actions.left+1 && layout.actions.right<=layout.footer.right+1,'right actions must not overlap preferences');
+        assert.ok(Math.abs(layout.preferences.right-(layout.footer.right-layout.rightInset))<=1,'footer preferences must stay at the right edge');
+        assert.ok(layout.start.left>=layout.footer.left-1 && layout.start.right<=layout.preferences.left+1,'left actions and status must not overlap right preferences');
+        assert.ok(layout.actions.left>=layout.footer.left-1 && layout.actions.right<=layout.start.right+1,'reload actions must fit in the left footer group');
+        assert.ok(layout.refresh.right<=layout.reload.left+1 && layout.reload.right<=layout.preferences.left+1,'refresh and reload must remain ordered on the left without overlap');
         assert.equal(layout.clickable,true,'all four footer actions must remain hit-testable');
         layouts.push({size,theme,...layout});
         if(width===390||width===1600)await page.screenshot({path:path.join(folder,`${width}-${size}-${theme}.png`)});
       }
     }
     fs.writeFileSync(path.join(folder,'appearance-layout.json'),JSON.stringify(layouts,null,2));
-    checks.push('all four appearances keep the footer centered and its actions separate/hit-testable at 320, 390, 960 and 1600px');
+    checks.push('all four appearances keep refresh/reload on the left and preferences on the right without overlap, with all four buttons hit-testable at 320, 390, 960 and 1600px');
     assert.deepEqual(writes,[],'appearance controls must not apply, save or write graph/native state');
     assert.deepEqual(errors,[]);
     await h.finish(); console.log(JSON.stringify({passed:true,count:checks.length}));
