@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.91'
+PRODUCT_VERSION='0.8.92'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -457,7 +457,7 @@ def register_shader(shader,fresh=False):
         shader.par.Material.expr="me.op('material')";shader.par.Material.readOnly=True
     if getattr(shader.par,'opviewer',None) is not None:
         shader.par.opviewer.expr="me.op('material')" if shader_kind(shader)=='mat' else "me.op('preview')"
-        shader.viewer=True
+        if fresh:shader.viewer=True
     shader.par.Version=json.loads(shader.op('manifest').text).get('compilerBuild',PRODUCT_VERSION); shader.par.Version.readOnly=True
     arrange_shader_parameters(shader)
     shader.showCustomOnly=True

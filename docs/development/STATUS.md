@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 Open Editor Viewer 修正（0.8.92）：既有 OP 的登記不再強制開啟 Viewer，新建仍保留原預設。TOP／MAT 的開、關、再關共 6 項原生檢查通過，使用者 Shader 與 registry 保留。此筆獨立於進行中的符號長度陣列；同步與保存狀態見後續交付紀錄。[開啟流程及其他既有副作用](../ui/EDITOR_LAUNCH.md)。
+
 2026-09-19 陣列／結構第一輪已完成並交付 0.8.91：已整合 main、同步 TD 並保存正式 TOE。新增 Array、Array[i]、Array Replace、Array Length、Field；讀取 Clamp、Replace 越界不修改，建立數值／向量／矩陣／結構陣列採零初始化。共用型別契約承接 Function、Subgraph、GLSL Code、剪貼簿與個人函式库；TD 既有結構引用宿主定義，圖內自訂定義按依賴宣告。TOP／MAT CHOP Uniform Array 支援固定長度的 float／vec2／vec3／vec4 與原生綁定，快照不讀取樣本、不更改 Uniform 即時通訊。自訂結構作者 UI、迴圈與一般 SSBO 作者介面仍為後續範圍。操作及責任見 [Arrays and structures](../features/ARRAYS_AND_STRUCTURES.md)，宿主來源限制見 [TD array sources](../features/TD_ARRAY_SOURCES.md)。
 
 本輪最終 425 項 Python unit、完整 portable 檢查與專項瀏覽器檢查通過；TD 2025.32820 的 277 項 GPU 檢查通過。2026-09-19 已完成掛起修正後的 TOP／MAT／Light 共 8 組來源檢查，另有 6 組 TOP 接線回歸通過；三份使用者 Shader 與 registry 保留、fixture 移除。外部 Python stack 將掛起定位在新增 Uniform 時不必要的 In TOP 重接線；改為保留未變更的接線及名稱，仍允許來源更換、重排與缺線修復。TD 內部阻塞機制尚未證明，不宣稱已定位到原生鎖或驅動。交付已核對 32 份內嵌來源、9 份服務資源一致，core 無錯誤、TOP／MAT Master current。正式 TOE 889,438 bytes，SHA-256 `fb8b99f706b93881204131d759022d2e0e29272b1414a67dc565dc11f57de648`，排除一份私人助手；本機 Git 無遠端設定，未稱為遠端推送。
