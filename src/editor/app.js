@@ -986,6 +986,7 @@ function installEditorChrome(){
   installUIExperiments();
   installGraphChrome();
   installSelectionToolbar();
+  installGraphToolbarOverflow();
   try{$('#editorheader').hidden=localStorage.getItem('sgrapeHeaderVisible')==='false';}catch{}
   renderHeaderVisibility();
   $('#toggleheader').onclick=()=>{

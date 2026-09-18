@@ -104,6 +104,8 @@
     "experiments.title": {"zh-Hant": "實驗功能", "en": "Experimental features"},
     "experiments.reset": {"zh-Hant": "還原預設", "en": "Reset defaults"},
     "selection.toolbar": {"zh-Hant": "選取工具列", "en": "Selection toolbar"},
+    "toolbar.more": {"zh-Hant": "節點編輯器工具", "en": "Network Editor tools"},
+    "toolbar.allVisible": {"zh-Hant": "所有工具已顯示於工具列", "en": "All tools are shown in the toolbar"},
     "selection.editTools": {"zh-Hant": "編輯工具", "en": "Edit tools"},
     "selection.nodeTools": {"zh-Hant": "選取節點工具", "en": "Selected node tools"},
     "arrange.title": {"zh-Hant": "排列節點", "en": "Arrange nodes"},

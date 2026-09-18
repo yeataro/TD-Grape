@@ -19,7 +19,7 @@ async function run(){
   try{
     await page.waitForSelector('#selectiontoolbar',{state:'attached'});
     await page.evaluate(()=>{
-      clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;stage='pixel';graphTrail=[];historyBusy=false;nativeMutationBusy=false;
+      clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;stage='pixel';graphTrail=[];historyBusy=false;nativeMutationBusy=false;setUIExperiments({persistentSelectionBounds:false});
       const a=testNode('a','float',80,100,{value:.375}),b=testNode('b','vec2',490,220,{value:[.2,.8]}),c=testNode('c','color',1000,410,{value:[.1,.3,.7,.9]}),d=testNode('d','comment',1540,600),out=testNode('output','pixel_out',2200,800);
       a.ui.width=230;b.ui.width=300;c.ui.width=370;d.ui.width=280;d.ui.comment='Fixture note\nSecond line';
       current().nodes=[a,b,c,d,out];current().edges=[{from:['c','out'],to:['output','color']}];selectionFixture=clone(graph);
