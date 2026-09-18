@@ -66,7 +66,7 @@ def type_registry():
 @contextmanager
 def type_context(graph=None):
     if graph is not None and not isinstance(graph,dict):raise GraphError('Invalid Graph structure')
-    registry=_composites.Registry(TYPE_DESCRIPTORS,(graph or {}).get('typeDefinitions',[]),error=GraphError)
+    registry=_composites.Registry(TYPE_DESCRIPTORS,(graph or {}).get('typeDefinitions',[]),error=GraphError,declarations=(graph or {}).get('declarations',[]))
     token=_TYPE_CONTEXT.set(registry)
     try:yield registry
     finally:_TYPE_CONTEXT.reset(token)
@@ -858,8 +858,10 @@ def _compile_flat(graph,annotation_scopes=None):
             if d.get('nativeSequence','vec') not in ('vec','color','matrix','array'):raise GraphError('Unsupported native Uniform page')
             if d.get('nativeSequence')=='array':
                 shape=type_registry().describe(d['type'])
-                if shape['kind']!='array' or not isinstance(shape['length'],int) or shape['elementType'] not in FLOAT_TYPES:
-                    raise GraphError('The Arrays page supports fixed arrays of float or vec2/3/4')
+                if shape['kind']!='array' or shape['elementType'] not in FLOAT_TYPES:
+                    raise GraphError('The Arrays page supports arrays of float or vec2/3/4')
+                if not isinstance(shape['length'],int) and shape['length'] not in type_registry().lengths:
+                    raise GraphError('Native CHOP Uniform Array length requires a literal or an integer constant reference')
                 source=d.get('arraySource','')
                 if not isinstance(source,str) or len(source)>4096 or any(ord(c)<32 for c in source):raise GraphError('Array source must be a CHOP path')
             elif compound_type(d['type']):raise GraphError('Compound Uniforms require a supported native array source')
@@ -1001,6 +1003,12 @@ def _compile_flat(graph,annotation_scopes=None):
             constant_nodes=set();constant_outputs=set()
             for ident in order:
                 key=defs[ident]['key']
+                if key=='array' and not isinstance(type_registry().describe(ports[ident]['out']['out'])['length'],int):
+                    if nodes[ident]['params'].get('requireConstant'):raise GraphError('Symbolic array initialization is not an ordinary constant expression',ident)
+                    continue
+                if key=='array_length' and type_registry().specialized(ports[ident]['in']['Array']):
+                    if nodes[ident]['params'].get('requireConstant'):raise GraphError('Specialization length is not an ordinary constant expression',ident)
+                    continue
                 for output in ports[ident]['out']:
                     if key in CONSTANT_EXPRESSIONS and all(
                         links[(ident,port)] in constant_outputs if (ident,port) in links
@@ -1084,15 +1092,22 @@ def _compile_flat(graph,annotation_scopes=None):
                 compound_used.update(t for direction in ports[ident].values() for t in direction.values() if compound_type(t))
                 a=lambda port:inp(ident,port)
                 if k in ('float','vec2','vec3','vec4','color','scalar'): expr=literal(p.get('value'),ty)
-                elif k=='array':expr=literal(filled_value(ty),ty)
+                elif k=='array':
+                    expr=literal(filled_value(ty),ty)
+                    if expr is None:
+                        variable=symbols[(ident,'out')]
+                        lines.append('    '+glsl_declaration(ty,variable)+';')
+                        lines.extend(type_registry().initialize(variable,ty,filled_value,literal))
+                        expressions[(ident,'out')]=variable
                 elif k=='builtin_source':expr=type_registry().source(p['source'],graph_target(graph),stage)['expression']
                 elif k in ('array_get','array_replace','array_length'):
-                    array_type=ports[ident]['in']['Array'];shape=type_registry().describe(array_type);length=shape['length']
+                    array_type=ports[ident]['in']['Array'];shape=type_registry().describe(array_type);length=type_registry().extent(shape['length'])
                     # Host lengths are compile-time macros. No per-element CPU or GPU scan.
-                    if k=='array_length':expr=str(length)
+                    if k=='array_length':expr='int('+length+')' if type_registry().lengths.get(shape['length'],{}).get('type')=='uint' else length
                     else:
                         source=a('Array');index=a('i')
-                        if isinstance(length,str):lines.extend(['#if '+length+' <= 0','#error Grape array access requires at least one source element','#endif'])
+                        if shape['length'] in _composites.LENGTH_MACROS:lines.extend(['#if '+length+' <= 0','#error Grape array access requires at least one source element','#endif'])
+                        if type_registry().lengths.get(shape['length'],{}).get('type')=='uint':length='int('+length+')'
                         bounded=('min('+index+', uint('+str(length)+' - 1))' if p.get('indexType','int')=='uint'
                                  else 'clamp('+index+', 0, '+str(length)+' - 1)')
                         if k=='array_get':
@@ -1100,7 +1115,10 @@ def _compile_flat(graph,annotation_scopes=None):
                             expr='('+source+')['+bounded+']'
                         else:
                             variable=symbols[(ident,'out')]
-                            lines.append('    '+glsl_declaration(ty,variable)+' = '+source+';')
+                            if type_registry().specialized(ty):
+                                lines.append('    '+glsl_declaration(ty,variable)+';')
+                                lines.extend(type_registry().copy_value(variable,source,ty))
+                            else:lines.append('    '+glsl_declaration(ty,variable)+' = '+source+';')
                             in_range=(index+' < uint('+str(length)+')' if p.get('indexType','int')=='uint'
                                       else index+' >= 0 && '+index+' < '+str(length))
                             # A constant out-of-range subscript is illegal even in a
@@ -1256,7 +1274,7 @@ def _compile_flat(graph,annotation_scopes=None):
                             lines.extend(['#if TD_NUM_COLOR_BUFFERS > '+str(index),
                                           '    fragColor['+str(index)+'] = TDOutputSwizzle('+a(port)+');',
                                           '#endif'])
-                if expr is not None and (type_registry().opaque(ty) or k in ('constant','spec_constant','builtin_source') or (k=='uniform' and compound_type(ty))):
+                if expr is not None and (type_registry().opaque(ty) or k in ('constant','spec_constant','builtin_source') or (k in ('uniform','relay') and compound_type(ty))):
                     # Opaque GLSL samplers are references, never local variables.
                     expressions[(ident,'out')]=expr
                 elif expr is not None:
@@ -1280,6 +1298,11 @@ def _compile_flat(graph,annotation_scopes=None):
             stages[stage]={'lines':lines,'ports':ports,'live':sorted(live),'lineNodes':line_nodes,'helpers':helpers,'helperNodes':helper_nodes,'compoundTypes':compound_used}
         except GraphError as exc:
             exc.stage=stage; raise
+    length_used=set()
+    for data in stages.values():
+        for ty in data['compoundTypes']:length_used.update(type_registry().length_dependencies(ty))
+    for ident in list(used):length_used.update(type_registry().length_dependencies(declarations[ident]['type']))
+    used.update(length_used)
     aliases={i for i in used if slots and declarations[i].get('source')=='input:0' and not declarations[i].get('topInputId')}
     binding_ids=slot_bindings+sorted(used-set(slot_bindings)-aliases)
     def header(d):
@@ -1287,19 +1310,19 @@ def _compile_flat(graph,annotation_scopes=None):
             return 'layout(constant_id = '+str(d['constantId'])+') const '+d['type']+' '+d['name']+' = '+literal(d['value'],d['type'])+';'
         return ('const '+glsl_declaration(d['type'],d['name'])+' = '+literal(d['value'],d['type'])+';' if d['kind']=='constant'
                 else 'uniform '+glsl_declaration(d['type'],d['name'])+';')
-    type_headers={stage:type_registry().declarations(stages[stage]['compoundTypes']|{declarations[i]['type'] for i in used if compound_type(declarations[i]['type'])},graph_target(graph),stage)
+    type_headers={stage:[header(declarations[i]) for i in sorted(length_used)]+type_registry().declarations(stages[stage]['compoundTypes']|{declarations[i]['type'] for i in used if compound_type(declarations[i]['type'])},graph_target(graph),stage)
                   for stage in graph_stages(graph)}
     if graph_target(graph)=='top':
         samplers=[declarations[i] for i in binding_ids if declarations[i]['kind']=='sampler']
         if len(samplers)>(32 if slots else 16): raise GraphError('Too many texture sources: up to 16 TOP Inputs plus 16 legacy/fallback sources')
-        headers=[header(declarations[i]) for i in sorted(used) if declarations[i]['kind'] in ('uniform','constant','spec_constant')]
+        headers=[header(declarations[i]) for i in sorted(used-length_used) if declarations[i]['kind'] in ('uniform','constant','spec_constant')]
         if slots:headers+=['#if TD_NUM_2D_INPUTS != '+str(len(samplers)), '#error Grape TOP Inputs require 2D textures in every slot', '#endif']
         vertex=''
         pixel='\n'.join(type_headers['pixel']+headers+['layout(location=0) out vec4 fragColor;']+stages['pixel']['helpers']+['void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
         for i,d in list(enumerate(samplers))+[(next((j for j,slot in enumerate(slots) if slot['id']==graph.get('topInputLegacyId')),0),declarations[ident]) for ident in aliases]:
             pixel='\n'.join(re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',code)+marker+comment for code,marker,comment in (line.partition('//') for line in pixel.split('\n')))
     else:
-        headers=[header(declarations[i]) for i in sorted(used)]
+        headers=[header(declarations[i]) for i in sorted(used-length_used)]
         vertex='\n'.join(type_headers['vertex']+headers+['out vec2 sg_uv;']+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
         pixel='\n'.join(type_headers['pixel']+headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+stages['pixel']['helpers']+[
                                  'void main() {','    TDCheckDiscard();']+stages['pixel']['lines']+['}',''])
@@ -1468,7 +1491,7 @@ def _expand(graph,functions):
                     nested_scopes=scopes+((annotation,) if annotation else ())
                     for direction in ('inputs','outputs'):
                         for p in fn[direction]:
-                            value=saved.get(p['id'],p['default']) if direction=='inputs' else p['default']
+                            value=saved.get(p['id'],p.get('default')) if direction=='inputs' else p.get('default')
                             literal(value,p['type'])
                             rid='f'+digest([inside,direction,p['id']])[:40]
                             symbol_parts=inside_symbols+(('input',p['id']) if direction=='inputs' else (p['id'],)) if inside_symbols else ()

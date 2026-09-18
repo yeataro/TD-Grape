@@ -33,17 +33,37 @@ SEQUENCE_CHANNELS = dict(CHANNELS, array=('type', 'chop', 'arraytype'))
 
 
 def array_shape(ty):
-    match = re.fullmatch(r'(float|vec[234])\[([1-9][0-9]*)\]', ty) if isinstance(ty,str) else None
-    return (match[1], int(match[2])) if match and int(match[2]) <= MAX_NATIVE_ARRAY_LENGTH else None
+    match = re.fullmatch(r'(float|vec[234])\[([1-9][0-9]*|sg_len_[A-Za-z][A-Za-z0-9_]{0,63})\]', ty) if isinstance(ty,str) else None
+    if not match:return None
+    if match[2].startswith('sg_len_'):return (match[1],match[2])
+    return (match[1],int(match[2])) if int(match[2])<=MAX_NATIVE_ARRAY_LENGTH else None
 
 
 def source_sequence(declaration):
     return 'const' if declaration.get('kind') == 'spec_constant' else 'array' if array_shape(declaration.get('type')) else 'matrix' if declaration.get('type') in MATRIX_SHAPES else declaration.get('nativeSequence', 'vec')
 
 
+def native_array_length(declaration, declarations):
+    shape=array_shape(declaration.get('type'))
+    if not shape:return None
+    length=shape[1]
+    if isinstance(length,int):return length
+    source=declarations.get(length[7:])
+    if not source or source.get('kind') not in ('constant','spec_constant') or source.get('type') not in ('int','uint'):
+        raise RuntimeError('Uniform Array length source is missing or is not an integer constant.')
+    if source['kind']=='spec_constant':
+        # TD 2025.32820 probe: length specializes, but the CHOP values arrive as
+        # zero; MAT also fails linking identical declarations across stages.
+        # Do not silently replace the symbol with its default value.
+        raise RuntimeError('TouchDesigner CHOP Uniform Arrays do not correctly upload specialization-sized arrays on the verified host build. Use a literal or Graph Constant length; graph-local specialization-sized arrays remain supported.')
+    value=source.get('value')
+    if type(value) is not int or value<1:raise RuntimeError('Uniform Array length constant must be positive.')
+    return value
+
+
 def source_components(declaration):
     shape = array_shape(declaration.get('type'))
-    if shape: return TYPES[shape[0]] * shape[1]
+    if shape: return TYPES[shape[0]] * shape[1] if isinstance(shape[1],int) else 0
     return 1 if declaration.get('kind') == 'spec_constant' else TYPES[declaration['type']]
 
 
@@ -408,6 +428,8 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
     if comp.op('graph') and comp.op('graph').text:
         old_graph = {d['id']: d for d in json.loads(comp.op('graph').text).get('declarations', [])}
     declarations = [d for d in graph['declarations'] if d['kind'] in SOURCE_KINDS]
+    declaration_map={d['id']:d for d in graph['declarations']}
+    array_lengths={d['id']:native_array_length(d,declaration_map) for d in declarations if array_shape(d.get('type'))}
     # Validate candidate types before creating/renaming native rows.
     # Precision and numerical conversion remain the host's responsibility.
     for decl in declarations:
@@ -423,7 +445,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
                         raise RuntimeError('Create a new Uniform Array when changing native source pages: '+decl['name'])
                     if source['arrayBinding']['elementType'] != array_shape(decl['type'])[0]:
                         raise RuntimeError('The CHOP Uniform Array element type differs from its graph declaration: '+decl['name'])
-                    if array_source_length(original, source['index']) < array_shape(decl['type'])[1]:
+                    if array_source_length(original, source['index']) < array_lengths[decl['id']]:
                         raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
                 continue
             if source and source['sequence'] == 'array':
@@ -514,7 +536,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
                 p.val = resolved.path
             else:
                 p.val = decl.get('arraySource', '')
-            if array_source_length(operator, index) < array_shape(decl['type'])[1]:
+            if array_source_length(operator, index) < array_lengths[decl['id']]:
                 raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
             registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
             continue
@@ -634,9 +656,15 @@ def write_value(runtime, body):
 def source_references(graph, ident):
     """Inventory ownership includes disconnected nodes and every function body."""
     data = list(graph.get('stages', {}).values()) + [f['graph'] for f in graph.get('functions', [])]
+    def uses_length(item):
+        if isinstance(item,list):return any(uses_length(v) for v in item)
+        if not isinstance(item,dict):return False
+        token='sg_len_'+ident
+        return any((v==token or '['+token+']' in v) if k in ('type','elementType','fromType','toType','fixedType','length') and isinstance(v,str)
+                   else uses_length(v) if k not in ('code','ui','source','origin') else False for k,v in item.items())
     return [node for part in data for node in part.get('nodes', [])
             if node.get('params', {}).get('declarationId') == ident
-            or node.get('params', {}).get('inputId') == ident]
+            or node.get('params', {}).get('inputId') == ident or uses_length(node)] + [item for item in graph.get('declarations',[]) if uses_length(item)] + [f for f in graph.get('functions',[]) if uses_length(f.get('inputs',[])) or uses_length(f.get('outputs',[]))]
 
 
 def purge_missing_source(runtime, ident):
@@ -726,7 +754,7 @@ def edit(runtime, body):
         try:
             if mode == 'EXPRESSION': p.expr = value
             else: p.mode = ParMode.CONSTANT; p.val = value
-            if array_source_length(operator,row['index']) < array_shape(decl['type'])[1]:
+            if array_source_length(operator,row['index']) < native_array_length(decl,{d['id']:d for d in runtime.state()['graph']['declarations']}):
                 raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length.')
         except Exception:
             for key in ('val','expr','bindExpr','mode'): setattr(p,key,before[key])

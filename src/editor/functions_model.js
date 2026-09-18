@@ -64,11 +64,11 @@ const GraphTypeDefinitions=(()=>{
     if(result.length>64)throw Error('At most 64 structure definitions are supported');
     return result;
   }
-  function valid(type,base,definitions=[],depth=0){
+  function valid(type,base,definitions=[],depth=0,declarations=[]){
     if(typeof type!=='string'||depth>8)return false;
     if(base.includes(type)||['TDTexInfo','TDMatrix','TDCameraInfo','TDLight'].includes(type)||definitions.some(d=>'struct:'+d.id===type))return true;
-    const match=/^(.+)\[([1-9][0-9]*|TD_NUM_2D_INPUTS|TD_NUM_CAMERAS|TD_NUM_LIGHTS)\]$/.exec(type);
-    return !!(match&&(!/^\d+$/.test(match[2])||Number(match[2])<=1024)&&valid(match[1],base,definitions,depth+1));
+    const match=/^(.+)\[([1-9][0-9]*|TD_NUM_2D_INPUTS|TD_NUM_CAMERAS|TD_NUM_LIGHTS|sg_len_[A-Za-z][A-Za-z0-9_]{0,63})\]$/.exec(type);
+    return !!(match&&(!match[2].startsWith('sg_len_')||declarations.some(d=>d.id===match[2].slice(7)&&['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type)))&&(!/^\d+$/.test(match[2])||Number(match[2])<=1024)&&valid(match[1],base,definitions,depth+1,declarations));
   }
   function reachable(definitions=[],fragment){
     const available=new Map(definitions.map(d=>[d.id,d])),seen=new Set();
@@ -158,6 +158,18 @@ const FunctionModel=(()=>{
 if(typeof module!=='undefined'){module.exports=FunctionModel;module.exports.GraphFrames=GraphFrames;module.exports.GraphTypeDefinitions=GraphTypeDefinitions;}
 
 /* Portable selection snapshots contain graph data only, never editor credentials. */
+const GraphLengthReferences=(()=>{
+  const keys=new Set(['type','elementType','fromType','toType','fixedType','length']);
+  function walk(value,replace,mutate=true){
+    if(Array.isArray(value)){value.forEach(v=>walk(v,replace,mutate));return;}
+    if(!value||typeof value!=='object')return;
+    for(const key of Object.keys(value)){
+      if(keys.has(key)&&typeof value[key]==='string'){const next=value[key].replace(/\bsg_len_([A-Za-z][A-Za-z0-9_]{0,63})\b/g,(token,id)=>replace(id,token));if(mutate)value[key]=next;}
+      else if(!['code','ui','source','origin'].includes(key))walk(value[key],replace,mutate);
+    }
+  }
+  return {walk};
+})();
 const GraphClipboard=(()=>{
   const FORMAT='td-sgrape.selection',LIMIT=512000,copy=v=>JSON.parse(JSON.stringify(v));
   const fail=code=>{throw Object.assign(Error(code),{clipboardCode:code});};
@@ -173,6 +185,7 @@ const GraphClipboard=(()=>{
       if(n.definitionUuid===FunctionModel.CALL){const ident=n.params.functionId;if(seenFunctions.has(ident))continue;const f=FunctionModel.find(graph,ident);if(!f)fail('clipboard.missing');seenFunctions.add(ident);functions.push(copy(f));scan(f.graph.nodes);}
     }}
     scan(nodes);const result={format:FORMAT,version:1,source,nodes:copy(nodes),edges:copy(data.edges.filter(e=>chosen.has(e.from[0])&&chosen.has(e.to[0]))),functions,declarations,topInputs};
+    GraphLengthReferences.walk(result,(id,token)=>{if(!seenDeclarations.has(id)){const declaration=graph.declarations.find(d=>d.id===id);if(!declaration)fail('clipboard.missing');seenDeclarations.add(id);declarations.push(copy(declaration));}return token;});
     const usedTypes=GraphTypeDefinitions.reachable(graph.typeDefinitions,result);
     if(usedTypes.length)result.typeDefinitions=usedTypes;
     GraphFrames.write(result,GraphFrames.copy(data,chosen));
@@ -188,7 +201,7 @@ const GraphClipboard=(()=>{
   }
   function paste(graph,data,p,{source,stage,target,catalog,types,anchor}){
     let typeDefinitions;try{typeDefinitions=GraphTypeDefinitions.merge(graph.typeDefinitions,GraphTypeDefinitions.reachable(p.typeDefinitions,p));}catch{fail('clipboard.invalid');}
-    const validType=type=>GraphTypeDefinitions.valid(type,types,typeDefinitions);
+    const validType=type=>GraphTypeDefinitions.valid(type,types,typeDefinitions,0,p.declarations);
     const same=p.source===source,defs=new Map(catalog.map(d=>[d.definitionUuid,d])),functionMap=new Map(),declarationMap=new Map();
     function unique(items){const map=new Map();for(const item of items){if(!object(item)||!validId(item.id)||map.has(item.id))fail('clipboard.invalid');map.set(item.id,item);}return map;}
     const sourceFunctions=unique(p.functions),sourceDeclarations=unique(p.declarations);
@@ -202,7 +215,7 @@ const GraphClipboard=(()=>{
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
       const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
       if(d.kind==='uniform'&&d.nativeSequence==='array'){
-        if(!/^(float|vec[234])\[[1-9][0-9]*\]$/.test(d.type)||typeof d.arraySource!=='string'||d.arraySource.length>2048||/[\x00-\x1f]/.test(d.arraySource))fail('clipboard.invalid');
+        if(!/^(float|vec[234])\[([1-9][0-9]*|sg_len_[A-Za-z][A-Za-z0-9_]{0,63})\]$/.test(d.type)||typeof d.arraySource!=='string'||d.arraySource.length>2048||/[\x00-\x1f]/.test(d.arraySource))fail('clipboard.invalid');
       }else if(['uniform','constant'].includes(d.kind)){
         const vector=/^(i|u|b|d)?vec([234])$/.exec(d.type),matrix=/^(d)?mat([234])(?:x([234]))?$/.exec(d.type),family=matrix?(matrix[1]?'double':'float'):vector?({i:'int',u:'uint',b:'bool',d:'double'}[vector[1]]||'float'):d.type,count=matrix?Number(matrix[2])*Number(matrix[3]||matrix[2]):vector?Number(vector[2]):1;
         const scalar=v=>family==='bool'?typeof v==='boolean':family==='double'?typeof v==='number'&&Number.isFinite(v):number(v)&&(family==='float'||['int','uint'].includes(family)&&Number.isInteger(v)&&v>=(family==='uint'?0:-2147483648)&&v<=(family==='uint'?4294967295:2147483647));
@@ -240,6 +253,7 @@ const GraphClipboard=(()=>{
     }
     for(const f of newFunctions)nodesAndEdges(f.graph,true);
     const content={nodes:copy(p.nodes),edges:copy(p.edges),...(Object.hasOwn(p,'ui')?{ui:copy(p.ui)}:{})};nodesAndEdges(content);
+    GraphLengthReferences.walk([content,newFunctions,newDeclarations],(id)=>{if(!declarationMap.has(id))fail('clipboard.missing');return 'sg_len_'+declarationMap.get(id);});
     if(data.nodes.length+content.nodes.length>256||data.edges.length+content.edges.length>1024)fail('clipboard.size');
     FunctionModel.ensureCapacity(graph,newFunctions.length);
     if(typeDefinitions.length)graph.typeDefinitions=typeDefinitions;

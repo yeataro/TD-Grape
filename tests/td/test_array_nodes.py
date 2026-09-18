@@ -194,6 +194,9 @@ def run_native():
                         native.par.vec0name='uArrayIndex'
                         for i in range(count):getattr(native.par,'vec'+str(i+1)+'name').val='uExpected'+str(i)
                     native.seq.array.numBlocks=1;native.par.array0name=''
+                    native.seq.const.numBlocks=1;native.par.const0name=''
+                    if case.get('specialization'):
+                        native.par.const0name='arrayCount';native.par.const0value=case['specialization']
                     if case.get('arrayElement'):
                         native.par.array0name='uProbeArray';native.par.array0type=case['arrayElement'];native.par.array0arraytype='uniformarray';native.par.array0chop=data
                     program=(pixel,vertex)
@@ -203,6 +206,7 @@ def run_native():
                             native.par.vec0valuex=update['index']
                             for i,value in enumerate(update['expected']):getattr(native.par,'vec'+str(i+1)+'valuex').val=value
                         if update.get('samples'):data.store('samples',update['samples']);data.cook(force=True)
+                        if update.get('specialization'):native.par.const0value=update['specialization']
                         native.cook(force=True);target.cook(force=True);pixels=target.numpyArray(delayed=False)
                         record['errors']=str(native.errors() or '')+str(target.errors() or '');record['compileInfo']=infos[native.path].text
                         assert pixels is not None,'GPU readback unavailable'

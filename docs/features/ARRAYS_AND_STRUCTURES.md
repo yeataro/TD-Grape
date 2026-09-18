@@ -6,7 +6,7 @@
 
 | 節點 | 輸入 | 輸出／行為 |
 | --- | --- | --- |
-| Array | Parameter 指定元素型別與固定長度 | 建立陣列。所有元素初始為零；布林是 `false`，矩陣是零矩陣。 |
+| Array | Parameter 指定元素型別與長度（數字或整數常數引用） | 建立陣列。所有元素初始為零；布林是 `false`，矩陣是零矩陣。 |
 | Array[i] | `Array`、整數 `i` | 取出一項，輸出型別由陣列元素型別推導。索引小於零取第一項，超過上界取最後一項。 |
 | Array Replace | `Array`、整數 `i`、`replacement` | 產生替換一項後的陣列。越界時原陣列保持不變，不 Clamp、不回寫 Uniform 或 TD 來源。 |
 | Array Length | `Array` | 回傳宣告長度，型別是 `int`。固定／宿主巨集大小是編譯期資訊，不讀取陣列內容。 |
@@ -16,6 +16,16 @@
 建立節點時可以搜尋 Array、Array[i]、Array Replace、Array Length、Field，或 TD 來源名稱。從接孔拖線建立節點時，候選節點使用同一份型別描述進行局部配對；真正建立時仍進行完整接線驗證。輸入搜尋文字不向 TD 查詢，也不逐一複製整份圖模擬候選接線。
 
 Array 的畫布節點只顯示元素型別與長度摘要，不會因長度增加而展開 N 個編輯欄位。Parameter 提供元素型別和長度；逐項內容由 Array Replace 編輯。Replace 的數值、向量或矩陣替換值沿用既有值編輯器；結構或陣列替換值顯示型別並接受接線。
+
+### 符號長度（0.8.93）
+
+長度選單可選固定數字，或圖內既有的 `int`／`uint` Graph Constant、Specialization Constant。已知數字顯示數字；TD 巨集及 specialization 長度顯示 `T[N]`，提示保留實際名稱。`N` 只是顯示方式，不是把所有未知長度視為同一型別：資料仍保存長度來源的穩定 ID，例如 `float[sg_len_count]`，產碼再以該宣告的實際名稱生成 `float values[arrayCount]`。重新命名、Undo、整圖保存和選取複製貼上均保留／重映射依賴。
+
+這些陣列可經過 Array[i]、Replace、Length、Function／Subgraph 和 GLSL Code；產碼先安排長度宣告，不向 TD 查詢 specialization 的目前值。Length 直接引用長度符號，不掃描內容。符號長度的 Array 用 GLSL 迴圈填零；specialization 陣列的 Replace 用逐元素複製，再進行越界不修改判斷，避免 GLSL 不允許的整體賦值。普通固定長度維持既有產碼。
+
+本輪長度入口仍在 Parameter 的引用選單；任意上游常數運算鏈的長度接孔、Array Fill、SSBO 執行期長度未實作。沒有新增 CPU GLSL 求值器、持續監控或 TD 常數值鏡像。符號初始化不是 ordinary constant expression；Specialization Length 也不冒充普通編譯期常數。不同來源 ID 不靠預設值恰巧相同就判定相容；個人函式匯出仍遵守原本自足定義的限制，沒有新增封裝全域來源的能力。
+
+Specialization 長度只可位於最外層維度；結構欄位仍使用固定長度。CHOP Uniform Array 的 specialization 長度有已重現的宿主上傳問題，因此目前 UI 與 native 配置會拒絕該組合；圖內 specialization 陣列仍可用，詳見 [TD array sources](TD_ARRAY_SOURCES.md)。
 
 在編輯器接線或更改來源型別時，Get、Replace、Length 的陣列型別隨來源更新，相關設定隨該次編輯保存。編譯器仍依實際接線重新推導，不改寫傳入的圖資料。索引型別 int／uint 由節點設定決定，不因索引接線自動改變；不同數值型別依共用接線轉換規則處理。
 

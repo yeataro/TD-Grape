@@ -1,6 +1,6 @@
 """Graph-owned compound type descriptions; no runtime evaluation or global registry.
 
-Array lengths are positive literals or identifiers owned by the host catalog.
+Array lengths are literals, host macros, or stable references to integer constants.
 Opaque resources are references, never editable/copyable values.
 """
 import copy
@@ -38,8 +38,11 @@ LENGTH_MACROS = {'TD_NUM_2D_INPUTS':dict(targets=['top'],stages=['pixel']),
                  'TD_NUM_LIGHTS':dict(targets=['mat'],stages=['vertex','pixel'])}
 
 class Registry:
-    def __init__(self,base_types,definitions=(),error=ValueError):
+    def __init__(self,base_types,definitions=(),error=ValueError,declarations=()):
         self.base=base_types;self.error=error;self.structs=copy.deepcopy(BUILTIN_STRUCTS);self.cache={};self.checked=set();self.environments=set()
+        self.lengths={'sg_len_'+d['id']:d for d in declarations if isinstance(d,dict)
+                     and isinstance(d.get('id'),str) and TYPE_ID.fullmatch(d['id'])
+                     and d.get('kind') in ('constant','spec_constant') and d.get('type') in ('int','uint')}
         if not isinstance(definitions,(list,tuple)) or len(definitions)>64:self.fail('At most 64 structure definitions are supported')
         for item in definitions:
             if not isinstance(item,dict):self.fail('Invalid structure definition')
@@ -90,9 +93,10 @@ class Registry:
             if raw.isdigit():
                 length=int(raw)
                 if str(length)!=raw or not 1<=length<=MAX_ARRAY_LENGTH:self.fail('Array length must be an integer from 1 to '+str(MAX_ARRAY_LENGTH))
-            elif raw in LENGTH_MACROS:length=raw
+            elif raw in LENGTH_MACROS or raw in self.lengths:length=raw
             else:self.fail('Array length must be a positive literal or a supported host length')
-            self.describe(element)
+            child=self.describe(element)
+            if child['kind']=='array' and self.specialized(element):self.fail('Only the outermost array dimension can use a specialization constant')
             result=dict(kind='array',type=ty,elementType=element,length=length)
         self.cache[ty]=result;return result
 
@@ -109,7 +113,7 @@ class Registry:
         if key in self.environments:return
         d=self.describe(ty)
         if d['kind']=='array':
-            if isinstance(d['length'],str):self._available(LENGTH_MACROS[d['length']],target,stage)
+            if d['length'] in LENGTH_MACROS:self._available(LENGTH_MACROS[d['length']],target,stage)
             self.check_environment(d['elementType'],target,stage)
         elif d['kind']=='struct':
             self._available(d['definition'],target,stage)
@@ -134,7 +138,7 @@ class Registry:
 
     def glsl_type(self,ty):
         d=self.describe(ty)
-        if d['kind']=='array':return self.array_type(self.glsl_type(d['elementType']),d['length'])
+        if d['kind']=='array':return self.array_type(self.glsl_type(d['elementType']),self.extent(d['length']))
         if d['kind']=='struct':return d['definition'].get('glslName',d['definition']['name'])
         return ty
 
@@ -145,8 +149,31 @@ class Registry:
     def declaration(self,ty,name):
         # GLSL permits type-attached sizes; declarator sizes keep function ports clear.
         d=self.describe(ty)
-        if d['kind']=='array':return self.declaration(d['elementType'],name+'['+str(d['length'])+']')
+        if d['kind']=='array':return self.declaration(d['elementType'],name+'['+self.extent(d['length'])+']')
         return self.glsl_type(ty)+' '+name
+
+    def extent(self,length):
+        """Render a symbol, never fetch/evaluate its live value from the host."""
+        return self.lengths[length]['name'] if length in self.lengths else str(length)
+
+    def length_dependencies(self,ty):
+        d=self.describe(ty)
+        if d['kind']=='array':
+            source=self.lengths.get(d['length'])
+            return ({source['id']} if source else set())|self.length_dependencies(d['elementType'])
+        if d['kind']=='struct':return set().union(*(self.length_dependencies(f['type']) for f in d['definition']['fields']))
+        return set()
+
+    def specialized(self,ty):
+        d=self.describe(ty)
+        return d['kind']=='array' and (self.lengths.get(d['length'],{}).get('kind')=='spec_constant' or self.specialized(d['elementType']))
+
+    def copy_value(self,target,source,ty):
+        """Specialization-sized arrays cannot use GLSL aggregate assignment."""
+        d=self.describe(ty)
+        if not self.specialized(ty):return ['    '+target+' = '+source+';']
+        return ['    for (int sg_copy_i = 0; sg_copy_i < '+self.extent(d['length'])+'; ++sg_copy_i) {',
+                '        '+target+'[sg_copy_i] = ('+source+')[sg_copy_i];','    }']
 
     def value(self,ty,base_value,scalar=0,budget=None):
         budget=[0] if budget is None else budget;budget[0]+=1
@@ -181,7 +208,7 @@ class Registry:
             if self.opaque(kind):self.fail('Opaque outputs cannot be initialized')
             if d['kind']=='array':
                 variable='sg_init_'+str(counter[0]);counter[0]+=1
-                result.append(indent+'for (int '+variable+' = 0; '+variable+' < '+str(d['length'])+'; ++'+variable+') {')
+                result.append(indent+'for (int '+variable+' = 0; '+variable+' < '+self.extent(d['length'])+'; ++'+variable+') {')
                 emit(target+'['+variable+']',d['elementType'],indent+'    ')
                 result.append(indent+'}')
             else:result.append(indent+target+' = '+self.literal(self.value(kind,base_value),kind,base_literal)+';')
@@ -208,7 +235,7 @@ class Registry:
         if key=='array':
             element=params.get('elementType','float');length=params.get('length',4)
             self.describe(element)
-            if type(length) is not int:self.fail('Array length must be an integer')
+            if type(length) is not int and (not isinstance(length,str) or length not in self.lengths and length not in LENGTH_MACROS):self.fail('Array length must be an integer or a constant reference')
             ty=self.array_type(element,length);self.describe(ty)
             if self.opaque(ty):self.fail('Opaque resources must come from a source; they cannot be initialized')
             return dict(inputs={},outputs={'out':ty})

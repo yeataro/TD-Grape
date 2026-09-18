@@ -44,7 +44,7 @@ An example declaration is:
 
 ### Fixed length and changes
 
-- The graph declaration has a fixed positive length. The current general array model accepts lengths from 1 through 1024; the GPU's Uniform storage budget can impose a lower practical limit across declarations.
+- A native CHOP array uses a positive literal or a reference to an integer Graph Constant. Literal lengths range from 1 through 1024; the GPU's Uniform storage budget can impose a lower practical limit across declarations. The source inspector can switch between these forms. Graph Constant references retain their identity and generated GLSL name; checking the CHOP sample count reads the already stored literal, without evaluating an expression chain or querying a live specialization value.
 - Creating, rebinding, or applying a source verifies that the CHOP exists and has at least the declared number of samples. More samples do not automatically increase the graph type's length.
 - An unregistered native Uniform Array can be imported. Its native element menu and CHOP sample count establish the initial graph type once. No sample contents are copied into the declaration.
 - Later CHOP value or sample-count changes do not silently rewrite the declared type or create graph history entries. The shader array's declared length and the application's meaningful-data count remain distinct.
@@ -155,6 +155,16 @@ Validated on TouchDesigner **2025.32820**:
 - `tests/unit/test_array_sources.py` covers carrier validation, null defaults, no-sample snapshots, import limits, stale bindings, read-only modes, short sources, configuration rollback, and original-context path resolution. Existing numeric/matrix source and history tests also pass.
 
 A separate test observation must not be confused with array indexing: on this TD build, a dynamic `uint` Uniform delivered through the GLSL TOP Vectors page did not preserve the intended `4294967295` value in the probe, while MAT passed the same case. The precise host conversion path was not established. No new graph type restriction or Uniform coercion was introduced. Array unsigned-boundary behavior is verified using the exact GLSL literal `4294967295u`; dynamic clamp behavior is independently verified using smaller out-of-range Uniform values that the native carrier preserves. Uniform transport precision remains a separate topic.
+
+### Specialization-sized native Uniform Arrays (0.8.93)
+
+The type system and graph-local arrays retain specialization length symbols. The native CHOP Uniform carrier is a separate limitation: on **TD 2025.32820**, a raw GLSL TOP with `uniform float weights[arrayCount]`, where `arrayCount` is a specialization constant, compiled without errors but returned zero values. Changing specialization from 4 to 2 to 5 changed `weights.length()` correctly; the CHOP contents still read as zero. The same six CHOP samples `[1,5,9,13,17,21]` with literal length 4 or ordinary `const int arrayCount=4` returned the expected first/last values 1 and 13. A MAT Pixel probe also failed linking the specialization-sized Uniform declarations across stages. This establishes an observed host limitation, not its internal cause or behavior on every TD release.
+
+`tests/td/probe_specialized_uniform_array.py` reproduces the raw TOP comparison without Grape code generation. It reports observations instead of asserting that this host issue must remain forever. Before enabling this carrier combination on a newer build, verify actual data and both MAT stages as well as successful compilation.
+
+Native configuration now rejects specialization length before changing rows, and the native source inspector disables that choice with an explanation. It never substitutes the default or continuously mirrors the current TD parameter. Literal and Graph Constant lengths remain available; graph-local specialization arrays remain available. Normal failed-apply handling keeps the last successful Shader.
+
+`tests/td/test_symbolic_arrays.py` passed **48 GPU checks** across TOP Pixel, MAT Pixel and MAT Vertex: ordinary-constant native float/vec3 arrays with changing CHOP data; graph-local specialization zero initialization, Replace, changed bounds, Length and GLSL Code output with specialization 4 → 2 → 5. Generated Shader text stayed unchanged during the native value changes. User Shaders and registry were preserved and test fixtures removed.
 
 ## References
 

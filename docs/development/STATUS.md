@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 符號長度陣列（0.8.93，實作檢查點）：Array 長度可引用整數 Graph Constant／Specialization Constant，未知顯示 N，內部保留來源 ID；Get／Replace／Length、Subgraph、GLSL Code、剪貼簿與來源引用追蹤已接通，不新增 CPU 求值器或持續 TD 長度同步。48 項 TD GPU 檢查、10 組瀏覽器操作通過；435 項 Python 與完整 portable 檢查通過，後補原生宿主巨集診斷以 11 項符號陣列單元測試驗證。TD 2025.32820 的 specialization 長度 CHOP Uniform Array 已重現「長度正確、資料為零」，目前明確拒絕該 native 組合，不把圖內 specialization 陣列一起禁用。任意常數運算鏈長度接孔、Array Fill 與 SSBO 尚未提供。同步／保存另外記錄。[使用方式](../features/ARRAYS_AND_STRUCTURES.md)、[宿主觀察及重現](../features/TD_ARRAY_SOURCES.md)。
+
 2026-09-19 Open Editor Viewer 修正（0.8.92，已同步並保存）：Open Editor 不寫入或更動既有 OP 的 Viewer 開關，沒有記住再還原的流程；新建仍使用原預設。TOP／MAT 的開、關、再關共 6 項原生檢查通過，使用者 Shader 與 registry 保留。32 份來源刷新完成、兩份 Master current，Master 編譯檢查通過；保存的 TOE 為 887,534 bytes，SHA-256 `a0107ccbd8a9c6e48e5c1833bd22ace935e9002dccf739540c19000f05f81d40`，三份使用者 Shader 保留、排除一份私人助手。實作提交 `432beed`，獨立於進行中的符號長度陣列。這是目前未證明開啟 Viewer 有必要的判斷；若未來實測特定操作需要觸發 cook，再針對該操作處理，不視為永久禁止。[開啟流程及其他既有副作用](../ui/EDITOR_LAUNCH.md)。
 
 2026-09-19 陣列／結構第一輪已完成並交付 0.8.91：已整合 main、同步 TD 並保存正式 TOE。新增 Array、Array[i]、Array Replace、Array Length、Field；讀取 Clamp、Replace 越界不修改，建立數值／向量／矩陣／結構陣列採零初始化。共用型別契約承接 Function、Subgraph、GLSL Code、剪貼簿與個人函式库；TD 既有結構引用宿主定義，圖內自訂定義按依賴宣告。TOP／MAT CHOP Uniform Array 支援固定長度的 float／vec2／vec3／vec4 與原生綁定，快照不讀取樣本、不更改 Uniform 即時通訊。自訂結構作者 UI、迴圈與一般 SSBO 作者介面仍為後續範圍。操作及責任見 [Arrays and structures](../features/ARRAYS_AND_STRUCTURES.md)，宿主來源限制見 [TD array sources](../features/TD_ARRAY_SOURCES.md)。

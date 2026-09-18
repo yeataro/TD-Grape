@@ -20,6 +20,8 @@
   "messages": {
     "array.elementType": {"zh-Hant":"元素型別", "en":"Element type"},
     "array.length": {"zh-Hant":"陣列長度", "en":"Array length"},
+    "array.fixedLength": {"zh-Hant":"固定數字", "en":"Literal length"},
+    "array.nativeSpecializationLimit": {"zh-Hant":"目前驗證的 TD 版本無法正確上傳 Spec Constant 長度的 CHOP 陣列；此來源可用固定數字或 Graph Constant。圖內陣列可用 Spec Constant。", "en":"The verified TD build does not correctly upload CHOP arrays sized by Spec Constants. This source supports literal or Graph Constant lengths; graph-local arrays support Spec Constants."},
     "array.initializationHint": {"zh-Hant":"所有元素初始化為零；布林為 false，矩陣為零矩陣。使用 Array Replace 替換指定位置的元素。", "en":"Elements start at zero; booleans start at false and matrices at the zero matrix. Use Array Replace to change one element."},
     "array.indexHint": {"zh-Hant":"索引自動限制在陣列的有效範圍。小於零取第一項，超出範圍取最後一項。", "en":"The index is clamped to the array bounds. Negative indices read the first item; indices beyond the end read the last item."},
     "array.replaceIndexHint": {"zh-Hant":"只替換有效索引的元素。索引超出範圍時，原陣列保持不變；不回寫 TD 來源。", "en":"Replaces only an item at a valid index. An out-of-range index leaves the array unchanged. Does not write back to the TD source."},

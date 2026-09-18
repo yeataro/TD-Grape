@@ -25,5 +25,12 @@ const uniform=make('uniform','uniform',{declarationId:'weights'}),get=make('arra
 same(concretePorts(graph,uniform,null).outputs,{out:'float[8]'});same(concretePorts(graph,get,null),{inputs:{Array:'float[8]',i:'int'},outputs:{out:'float'}});same(constantRequirementIssues(graph),[]);
 const plan=planAutoGraph(graph,graph.stages.pixel,null,new Map(),{draft:true});assert.equal(plan.issues.size,0);assert.equal(plan.choices.get('get'),'float[8]');
 assert.throws(()=>compositePorts('array_get',{type:'float'}),/composite.arrayRequired/);assert.throws(()=>compositePorts('array_replace',{type:'sampler2D[TD_NUM_2D_INPUTS]'}),/composite.resourceReadOnly/);assert.equal(compatible('unknown','unknown'),false);
+graph.declarations.push({id:'count',name:'sampleCount',kind:'spec_constant',type:'int',value:4,constantId:1},{id:'other',name:'otherCount',kind:'spec_constant',type:'int',value:4,constantId:2});
+assert.equal(displayType('vec3[sg_len_count]'),'vec3[N]');assert.equal(displayType('TDTexInfo[TD_NUM_2D_INPUTS]'),'TDTexInfo[N]');
+assert.equal(glslPortDeclaration('vec3[sg_len_count]','values'),'vec3 values[sampleCount]');
+assert.equal(compatible('vec3[sg_len_count]','vec3[sg_len_other]'),false);assert.equal(typeAvailable('vec3[sg_len_count]'),true);
+same(compositePorts('array',{elementType:'vec3',length:'sg_len_count'}).outputs,{out:'vec3[sg_len_count]'});
+graph.declarations[0].type='float[sg_len_count]';assert.equal(constantRequirementIssues(graph).length,1);
+graph.declarations.find(d=>d.id==='count').name='renamedCount';assert.equal(glslPortDeclaration('float[sg_len_count]','items'),'float items[renamedCount]');
 console.log(JSON.stringify({passed:true,checks:8}));
 `,context);

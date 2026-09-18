@@ -19,6 +19,14 @@ assert.throws(()=>clipboard.paste(conflict,conflict.stages.pixel,packet,options)
 assert.equal(JSON.stringify(conflict),before);
 assert.equal(defs.valid('struct:sample[4]',['float'],[shape]),true);
 assert.equal(defs.valid('float[0]',['float'],[]),false);
+const symbolic=graph();symbolic.declarations.push({id:'count',kind:'spec_constant',type:'int',value:4,constantId:5,name:'elementCount'});
+symbolic.stages.pixel.nodes.push({id:'array',definitionUuid:'sgrape.builtin.array',params:{elementType:'float',length:'sg_len_count'},ui:{x:0,y:0}});
+const symbolicPacket=clipboard.decode(clipboard.encode(symbolic,symbolic.stages.pixel,['array'],'one'));
+assert.equal(symbolicPacket.declarations.length,1);
+const symbolicTarget=graph();clipboard.paste(symbolicTarget,symbolicTarget.stages.pixel,symbolicPacket,options);
+assert.equal(symbolicTarget.stages.pixel.nodes[0].params.length,'sg_len_'+symbolicTarget.declarations[0].id);
+assert.notEqual(symbolicTarget.declarations[0].id,'count');
+assert.equal(defs.valid('float[sg_len_missing]',['float'],[],0,symbolic.declarations),false);
 const personal={id:'p',name:'Pass',scope:'personal',source:{id:'p',version:'1'},inputs:[{id:'sample',type:'struct:sample'}],outputs:[],graph:{nodes:[],edges:[]},typeDefinitions:[shape]};
 const imported=graph();fn.importLibrary(imported,personal);
 assert.equal(JSON.stringify(imported.typeDefinitions),JSON.stringify([shape]));
