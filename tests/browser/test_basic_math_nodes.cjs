@@ -20,12 +20,13 @@ const[source,stateFile,folder]=process.argv.slice(2);
       assert.deepEqual(await page.evaluate(id=>browserData().nodes[id],row.definition.definitionUuid),row.browser);
       await page.locator('#canvas').focus();await page.keyboard.press('Tab');await page.locator('#creator').waitFor({state:'visible'});await page.locator('#createsearch').fill(query);
       const entry=page.locator(`[data-create-entry="${key}"]`);assert.equal(await entry.count(),1);await entry.hover();
-      const help=await page.locator('#createdetail .help-markdown').textContent();assert.ok(help&&!help.includes('help.'+key),key);assert.ok(help.includes('Khronos GLSL'));
+      const help=await page.locator('#createdetail .help-markdown').textContent();assert.ok(help&&!help.includes('help.'+key),key);assert.ok(help.includes('GLSL'));
       const count=await page.evaluate(()=>past.length);await entry.click();await settle();const id=await page.evaluate(()=>selected);
       assert.equal(await page.evaluate(id=>current().nodes.find(n=>n.id===id).ui.typeMode,id),'auto');assert.equal(await page.evaluate(()=>past.length),count+1);
       await page.evaluate(id=>{current().nodes.find(n=>n.id===id).ui.x=180;current().nodes.find(n=>n.id===id).ui.y=100;inspectorTab='parameters';render();},id);await settle();
       const card=page.locator(`[data-node="${id}"]`),type=page.locator(`#inspector [data-math-type="${id}"]`);
-      assert.deepEqual(await type.locator('option').evaluateAll(es=>es.map(e=>e.value)),['auto','float','vec2','vec3','vec4']);
+      const allowed=key==='mod'?['float','vec2','vec3','vec4','int','ivec2','ivec3','ivec4','uint','uvec2','uvec3','uvec4','double','dvec2','dvec3','dvec4']:key==='sign'?['float','vec2','vec3','vec4','int','ivec2','ivec3','ivec4','double','dvec2','dvec3','dvec4']:['float','vec2','vec3','vec4','double','dvec2','dvec3','dvec4'];
+      assert.deepEqual(await type.locator('option').evaluateAll(es=>es.map(e=>e.value)),['auto',...allowed]);
       for(const ty of ['vec2','vec3','vec4','float']){
         await type.selectOption(ty);await settle();assert.equal(await page.evaluate(id=>ports(current().nodes.find(n=>n.id===id),'outputs').out,id),ty);
         assert.equal(await card.locator('[data-math-type]').inputValue(),ty);

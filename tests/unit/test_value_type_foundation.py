@@ -19,7 +19,8 @@ def typed_value(ty, ident='source'):
 
 def typed_graph(nodes, edges, result, ty, target='top', stage='pixel'):
     # The original 16-family fixtures exercise Convert and its old shader text.
-    # New value types use a handwritten observer until Convert's separate batch.
+    # New value types use a handwritten observer so their checks do not depend
+    # on Convert's implementation or an unrelated matrix flattening policy.
     if ty not in c.LEGACY_TYPES:return observed_graph(copy.deepcopy(nodes),copy.deepcopy(edges),source=result,ty=ty,target=target,stage=stage)
     graph=c.demo_graph('color',target)
     graph['declarations']=[]
@@ -41,7 +42,7 @@ class ValueTypeFoundation(unittest.TestCase):
         contract=c.type_contract()
         self.assertEqual(len(contract['valueTypes']),38)
         self.assertEqual(len(contract['numericTypes']),16)
-        self.assertEqual(contract['convert']['types'],list(c.LEGACY_TYPES))
+        self.assertEqual(contract['convert']['types'],list(c.TYPES))
         for ty in c.TYPES:
             descriptor=contract['types'][ty]
             expected=c.matrix_type(descriptor['family'],descriptor['columns'],descriptor['rows']) if descriptor.get('shape')=='matrix' else c.shaped_type(descriptor['family'],descriptor['components'])
@@ -77,17 +78,18 @@ class ValueTypeFoundation(unittest.TestCase):
         numeric=('add','subtract','multiply','divide','min','max','clamp','mod')
         floating=('sin','cos','pow','mix','sqrt','floor','round','ceil','trunc','fract','length','normalize','dot','remap','range_from','range_to','loop','zigzag')
         for key,allowed in [(key,c.LEGACY_NUMERIC_TYPES) for key in numeric]+[(key,c.FLOAT_TYPES) for key in floating]+[(key,c.SIGNED_TYPES) for key in ('abs','sign')]:
+            if key in c.DOUBLE_MATH_KEYS:allowed+=c.DOUBLE_TYPES
             self.assertEqual(c.node_parameter_types(c.CATALOG[key]),allowed)
             for ty in c.TYPES:
                 with self.subTest(node=key,type=ty):
                     operation=c.node(key,'operation',type=ty)
-                    resulttype='float' if key in ('dot','length') else ty
+                    resulttype=c.TYPE_DESCRIPTORS[ty]['family'] if key in ('dot','length') else ty
                     graph=typed_graph([operation],[],'operation',resulttype)
                     if ty not in allowed:
                         with self.assertRaises(c.GraphError):c.compile_graph(graph)
                     else:
                         code=c.compile_graph(graph)['pixel']
-                        if key=='mod':self.assertIn('mod(' if c.TYPE_DESCRIPTORS[ty]['family']=='float' else ' % ',code)
+                        if key=='mod':self.assertIn('mod(' if c.TYPE_DESCRIPTORS[ty]['family'] in ('float','double') else ' % ',code)
                         if key=='divide':self.assertIn(' / ',code)
 
     def test_named_graph_constants_keep_each_declared_family_and_literal(self):
@@ -114,14 +116,14 @@ class ValueTypeFoundation(unittest.TestCase):
                 if allowed:self.assertEqual(c.convert_expression('value',source,target),'value' if source==target else target+'(value)')
 
     def test_convert_all_constructor_shapes_and_constant_propagation(self):
-        # This is the original scalar/vector Convert contract. Matrix conversion
-        # and double operation expansion belong to the following delivery batch.
+        # Keep all legacy family combinations, including the newly exposed
+        # legal GLSL unary vector truncation and scalar extraction cases.
         for source in c.LEGACY_TYPES:
             for target in c.LEGACY_TYPES:
                 with self.subTest(source=source,target=target):
                     convert=c.node('convert','cast',fromType=source,toType=target,requireConstant=True)
                     graph=typed_graph([typed_value(source),convert],[c.edge('source','cast','value')],'cast',target)
-                    if c.type_components(source)!=1 and c.type_components(source)!=c.type_components(target):
+                    if c.type_components(source)!=1 and c.type_components(source)<c.type_components(target):
                         with self.assertRaisesRegex(c.GraphError,'Convert'):c.compile_graph(graph)
                     else:self.assertIn('const '+target+' sg_n_cast = '+target+'(sg_n_source);',c.compile_graph(graph)['pixel'])
 

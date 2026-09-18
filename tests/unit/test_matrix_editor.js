@@ -12,8 +12,10 @@ const same=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b)),matrixTypes=
 assert.equal(matrixTypes.length,18);assert.equal(typeForShape('float',4),'vec4');assert.equal(typeForShape('double',4),'dvec4');assert.equal(validScalarValue(.125,'double'),true);
 same(shapedValue(2,'mat2'),[2,0,0,2]);same(shapedValue(1,'mat2x3'),[1,0,0,0,1,0]);
 const conversion=catalog.find(d=>d.key==='convert');
-same(creatorVariants(conversion,{kind:'outputs',type:'mat2'}),[]);same(creatorVariants(conversion,{kind:'inputs',type:'mat2'}),[]);
-assert.throws(()=>resolvedNodePorts(conversion,{fromType:'mat2',toType:'vec4'},null,'outputs'));
+assert.ok(creatorVariants(conversion,{kind:'outputs',type:'mat2'}).some(v=>v.outputs.out==='vec4'));
+assert.ok(creatorVariants(conversion,{kind:'inputs',type:'mat2'}).some(v=>v.inputs.value==='vec4'));
+same(resolvedNodePorts(conversion,{fromType:'mat2',toType:'vec4'},null,'outputs'),{out:'vec4'});
+assert.throws(()=>resolvedNodePorts(conversion,{fromType:'vec3',toType:'mat2'},null,'outputs'));
 assert.equal(creatorVariants(conversion,{kind:'outputs',type:'float'}).some(v=>v.outputs.out==='vec4'),true);
 same(matrixReshapeValue([1,2,3,4,5,6],'mat2x3','mat3x2'),[1,2,4,5,0,0]);
 same(matrixReshapeValue([1,2,3,4],'mat2','dmat4'),[1,2,0,0,3,4,0,0,0,0,1,0,0,0,0,1]);
@@ -43,6 +45,8 @@ n.definitionUuid=catalog.find(d=>d.key==='matrix_replace').definitionUuid;curren
 for(let c=0;c<3;c++)for(let r=0;r<3;r++)assert.equal(matrixComponentWritable(n,c,r),false);
 same(n.params.values,baseline);
 const invalid=clone(typeContract);invalid.types.mat3.rows=2;assert.throws(()=>setTypeContract(invalid));
+const missingPair=clone(typeContract);delete missingPair.convert.pairs.mat3;assert.throws(()=>setTypeContract(missingPair));
+const unknownPair=clone(typeContract);unknownPair.convert.pairs.mat3.push('unknown');assert.throws(()=>setTypeContract(unknownPair));
 const make=(key,id,params)=>({id,definitionUuid:catalog.find(d=>d.key===key).definitionUuid,params,ui:{}});
 const join=make('matrix_combine','join',{type:'mat3',values:shapedValue(1,'mat3'),requireConstant:true}),runtime=make('uniform','runtime',{declarationId:'runtime'}),constant=make('scalar','constant',{type:'float',value:4});
 graph={declarations:[{id:'runtime',kind:'uniform',name:'runtime',type:'vec3',value:[0,0,0]}],functions:[],stages:{pixel:{nodes:[join,runtime,constant],edges:[{from:['runtime','out'],to:['join','c0']},...Array.from('xyz',p=>({from:['constant','out'],to:['join','c0'+p]}))]}}};

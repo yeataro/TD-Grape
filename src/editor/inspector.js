@@ -402,6 +402,7 @@ function defaultInput(n,port,type){
   if(key==='pixel_out'&&editorTarget==='mat')return [0,0,0,0];
   if(key==='pixel_out'||key==='vertex_out')return [0,0,0,1];
   const value=definition(n)?.inputDefaults?.[port]??(port==='factor'?.5:port==='alpha'?1:0);
+  if(key==='convert'&&isMatrixType(type))return filledValue(type,1);
   return filledValue(type,value);
 }
 
@@ -1044,12 +1045,13 @@ function nodePrimarySelector(n,d){
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
 }
 function convertTypeSelector(n,parameter){
-  const options=convertTypes().filter(type=>parameter==='fromType'||typeComponents(n.params.fromType)===1||typeComponents(type)===typeComponents(n.params.fromType));
+  const options=parameter==='fromType'?convertTypes():convertTargets(n.params.fromType);
   const control=select(options.map(type=>[type,type]),n.params[parameter],type=>change(()=>{
+    const previous=n.params[parameter];
     n.params[parameter]=type;
     if(parameter==='fromType'){
-      if(typeComponents(type)>1&&typeComponents(n.params.toType)!==typeComponents(type))n.params.toType=typeForShape(typeFamily(n.params.toType),typeComponents(type));
-      if(Object.hasOwn(n.inputValues||{},'value'))n.inputValues.value=shapedValue(n.inputValues.value,type);
+      if(!explicitConversionValid(type,n.params.toType))n.params.toType=type;
+      if(Object.hasOwn(n.inputValues||{},'value'))n.inputValues.value=matrixReshapeValue(n.inputValues.value,previous,type);
     }
   },{typeChange:true}));
   control.dataset.convertType=parameter;control.disabled=readonly;control.title=t(parameter==='fromType'?'convert.fromType':'convert.toType');return control;

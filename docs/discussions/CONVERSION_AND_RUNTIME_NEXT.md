@@ -2,6 +2,14 @@
 
 2026-09-18。本文是具體提案及已查明現況，不授權改動尚未確認的轉換、Binding 恢復或輪詢行為。已定案的入口與來源模型在 [VALUE_MODEL](../architecture/VALUE_MODEL.md)；術語在 [GLOSSARY](../GLOSSARY.md)。
 
+## 2026-09-18 最新 review：Convert 分流與型別清單負擔
+
+- 使用者看到既有 Convert 尚無矩陣選項後，明確提出將一般 Convert 與矩陣轉換分開；不是只另做 float 建構 Matrix。正式名稱仍可討論。
+- 助手建議 Matrix Convert；Resize 無法涵蓋 scalar 對角建構／精度轉換，Construct 與 Combine 容易混淆。候選分工依目的型別：Convert 輸出 scalar／vector，Matrix Convert 輸出 matrix；matrix→vector 等合法配對仍保留。此分工是提案，尚未定案，不直接改動已交付入口。
+- 使用者進一步擔心數學節點型別下拉清單過長。這需要連 Auto、手動指定、合法輸入／輸出簽名與共用選擇介面一起整理，不能將所有 GLSL 合法簽名直接展平成選單，也不能每新增型別就臨時拆出例外節點。
+- 暫緩交付本輪 Convert／數學型別選項擴充；已完成的 core／frontend 與測試保留於 Matrix 工作分支，避免丟失工作。原生運算能力的驗證可獨立進行，介面名稱／分工未確認前不部署該批。
+- 已交付的 Matrix 完整分量格數與覆寫標記試行為 0.8.87／0.8.88，與此入口討論分開。
+
 ## 接線：先區分四件事
 
 1. Auto 推導：從合法簽名中選擇運算型別。

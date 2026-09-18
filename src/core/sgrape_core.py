@@ -25,6 +25,7 @@ MATRIX_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d.get('shape')==
 SQUARE_MATRIX_TYPES = tuple(ty for ty in MATRIX_TYPES if TYPE_DESCRIPTORS[ty]['columns']==TYPE_DESCRIPTORS[ty]['rows'])
 TYPES = tuple(TYPE_DESCRIPTORS)
 FLOAT_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family']=='float')
+DOUBLE_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['family']=='double')
 NUMERIC_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['family']!='bool')
 LEGACY_NUMERIC_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family']!='bool')
 SIGNED_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family'] in ('float','int'))
@@ -82,6 +83,10 @@ MATRIX_KEYS = ('matrix','matrix_combine','matrix_replace','matrix_split','matrix
 FLOAT_VECTOR_TYPES = tuple(ty for ty in VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['family']=='float')
 VECTOR_COMPONENTS = 'xyzw'
 NOISE_HELPERS = {'perlin_noise':'TDPerlinNoise','simplex_noise':'TDSimplexNoise'}
+# Native fp64 overloads only. Trigonometry, pow and TD helpers retain their
+# existing signatures; user-written range formulas below also support double.
+DOUBLE_MATH_KEYS = frozenset(('sqrt','abs','sign','floor','round','ceil','trunc','fract',
+    'min','max','clamp','mod','smoothstep','mix','length','dot','normalize','range_from','range_to'))
 
 def combine_layouts(ty):
     """All exact, ordered scalar/vector partitions; socket IDs are component starts."""
@@ -410,8 +415,13 @@ def definition_ports(definition, params):
     if definition['key'] in MATRIX_KEYS:return matrix_interface(definition['key'],params)
     if definition['key']=='convert':
         source=params.get('fromType','float');target=params.get('toType','int')
-        if not explicit_conversion_valid(source,target):raise GraphError('Convert: use matching dimensions or a scalar input')
+        if not explicit_conversion_valid(source,target):raise GraphError('Convert: the source does not supply a valid single-argument constructor for the target type')
         return {'inputs':{'value':source},'outputs':{'out':target}}
+    if params.get('type') in DOUBLE_TYPES:
+        if definition['key'] in ('dot','length'):
+            return {'inputs':definition['inputs'],'outputs':{'out':'double'}}
+        if definition['key']=='mix':
+            return {'inputs':{**definition['inputs'],'factor':'double'},'outputs':definition['outputs']}
     if definition['key']=='glsl_code':return glsl_code_interface(params)
     if definition['key']=='pixel_out':
         return {'inputs':dict.fromkeys(PIXEL_BUFFER_PORTS[:pixel_buffer_count(params)],'vec4'),'outputs':{}}
@@ -427,13 +437,25 @@ def node_parameter_types(definition):
     if key in MATRIX_KEYS:return MATRIX_TYPES
     if key in NOISE_HELPERS:return FLOAT_VECTOR_TYPES
     if key in ('uniform','constant'):return TYPES
-    if key in ('if','spec_constant','convert'):return LEGACY_TYPES
-    if key in ('add','subtract','multiply','divide','min','max','clamp','mod'):return LEGACY_NUMERIC_TYPES
-    if key in ('abs','sign'):return SIGNED_TYPES
+    if key in ('if','convert'):return TYPES
+    if key=='spec_constant':return LEGACY_TYPES
+    if key in ('add','subtract','multiply','divide'):return LEGACY_NUMERIC_TYPES
+    if key in ('min','max','clamp','mod'):return NUMERIC_TYPES
+    if key in ('abs','sign'):return SIGNED_TYPES+DOUBLE_TYPES
+    if key in DOUBLE_MATH_KEYS:return FLOAT_TYPES+DOUBLE_TYPES
     return FLOAT_TYPES
 
 def explicit_conversion_valid(source,target):
-    return source in LEGACY_TYPES and target in LEGACY_TYPES and (type_components(source)==1 or type_components(source)==type_components(target))
+    """GLSL unary constructors, deliberately separate from wire conversions.
+
+    Scalar input splats vectors or initializes a matrix diagonal. Matrix input
+    resizes a matrix by coordinates and identity fill; all other composites
+    supply components in their native order (matrix order is column-major).
+    A single vector may have excess components, but cannot supply too few.
+    """
+    if source not in TYPES or target not in TYPES:return False
+    if source in MATRIX_TYPES and target in MATRIX_TYPES:return True
+    return type_components(source)==1 or type_components(source)>=type_components(target)
 
 def resolved_ports(definition, params, declaration=None):
     selected = params.get('type', 'float')
@@ -481,7 +503,8 @@ def type_contract():
               'matrices':{'version':1,'types':list(MATRIX_TYPES),'valueParameter':'values','storage':'column-major',
                           'columnPrefix':'c','components':VECTOR_COMPONENTS,'indexTypes':['int','uint'],
                           'indexModes':['column','element'],'identityValues':{ty:matrix_identity(ty) for ty in MATRIX_TYPES}},
-              'convert':{'types':list(LEGACY_TYPES),'fromParameter':'fromType','toParameter':'toType'},
+              'convert':{'types':list(TYPES),'fromParameter':'fromType','toParameter':'toType',
+                         'pairs':{source:[target for target in TYPES if explicit_conversion_valid(source,target)] for source in TYPES}},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
@@ -592,7 +615,13 @@ def literal(value, ty):
     return ty+'('+', '.join(literal(v,scalar) for v in value)+')'
 
 def input_default(key,port,ty):
-    if ty in MATRIX_TYPES:return matrix_identity(ty)
+    if ty in MATRIX_TYPES:
+        # If preserves its existing True=1 / False=0 semantics using GLSL's
+        # scalar-to-matrix diagonal construction, including nonsquare shapes.
+        if key=='if':
+            value=CATALOG[key]['inputDefaults'].get(port,0)
+            return [component*value for component in matrix_identity(ty)]
+        return matrix_identity(ty)
     if key in ('texture','texture_sample') and port=='uv': return None  # Implicit interpolated UV.
     if key=='vertex_out': return [0,0,0,1]
     if key=='pixel_out': return [0,0,0,1]
@@ -601,7 +630,7 @@ def input_default(key,port,ty):
 
 def componentwise_expression(ty, arguments, expression):
     """Apply a scalar expression to each component without adding GLSL helpers."""
-    if ty=='float':return expression(*arguments)
+    if type_components(ty)==1:return expression(*arguments)
     return ty+'('+', '.join(expression(*('('+value+').'+axis for value in arguments))
                            for axis in VECTOR_COMPONENTS[:type_components(ty)])+')'
 

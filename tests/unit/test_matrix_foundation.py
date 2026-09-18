@@ -199,11 +199,10 @@ class MatrixFoundation(unittest.TestCase):
             self.assertIn(c.literal(value,ty),compiled['pixel'])
             self.assertEqual(compiled,c.compile_graph(json.loads(json.dumps(result))))
 
-    def test_existing_operation_choices_remain_outside_additive_batch(self):
-        for key in ('add','multiply','if','convert'):
+    def test_heterogeneous_arithmetic_remains_outside_current_batch(self):
+        for key in ('add','multiply'):
             self.assertNotIn('mat3',c.node_parameter_types(c.CATALOG[key]))
             self.assertNotIn('double',c.node_parameter_types(c.CATALOG[key]))
-        self.assertFalse(c.explicit_conversion_valid('mat3','mat4'))
 
 
 class DoubleFoundation(unittest.TestCase):

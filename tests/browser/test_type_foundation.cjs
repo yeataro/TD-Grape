@@ -18,10 +18,10 @@ const[source,stateFile,folder]=process.argv.slice(2);
   const connect=async(from,port,to,target)=>{const result=await page.evaluate(({from,port,to,target})=>connectPorts({kind:'outputs',node:from,port},{kind:'inputs',node:to,port:target}),{from,port,to,target});await settle();return result;};
   try{
     await page.selectOption('#language','en');await reset();
-    const values=await page.evaluate(()=>valueTypes());assert.equal(values.length,16);
+    const values=await page.evaluate(()=>valueTypes());assert.equal(values.length,38);
     const matrix=await page.evaluate(()=>typeContract.vectors.types.map(type=>({type,split:vectorPorts('vector_split',{type}),swizzle:vectorPorts('swizzle',{type,mask:'yx'}),combine:vectorPorts('combine',{type}),replace:vectorPorts('replace',{type})})));
-    for(const row of matrix){const family=/^ivec/.test(row.type)?'int':/^uvec/.test(row.type)?'uint':/^bvec/.test(row.type)?'bool':'float',prefix={float:'vec',int:'ivec',uint:'uvec',bool:'bvec'}[family];assert.ok(Object.values(row.split.outputs).every(type=>type===family));assert.equal(row.swizzle.outputs.out,prefix+'2');assert.ok(Object.values(row.combine.inputs).every(type=>type===family));assert.equal(row.replace.inputs.value,row.type);}
-    checks.push('Contract exposes all 16 value types; every vector family uses the right scalar ports, Swizzle result family, Combine and Replace layout');
+    for(const row of matrix){const family=/^ivec/.test(row.type)?'int':/^uvec/.test(row.type)?'uint':/^bvec/.test(row.type)?'bool':/^dvec/.test(row.type)?'double':'float',prefix={float:'vec',int:'ivec',uint:'uvec',bool:'bvec',double:'dvec'}[family];assert.ok(Object.values(row.split.outputs).every(type=>type===family));assert.equal(row.swizzle.outputs.out,prefix+'2');assert.ok(Object.values(row.combine.inputs).every(type=>type===family));assert.equal(row.replace.inputs.value,row.type);}
+    checks.push('Contract exposes all 38 value types; every vector family uses the right scalar ports, Swizzle result family, Combine and Replace layout');
     const browserRows=JSON.parse(fs.readFileSync(path.resolve(source,'../library/node_catalog.json'),'utf8')).definitions.filter(row=>['scalar','convert'].includes(row.definition.key));
     for(const row of browserRows)assert.deepEqual(await page.evaluate(id=>browserData().nodes[id],row.definition.definitionUuid),row.browser);
     await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openCreator(r.left+160,r.top+140);});
@@ -58,7 +58,7 @@ const[source,stateFile,folder]=process.argv.slice(2);
     await page.locator(`#inspector [data-vector-type="${b.id}"]`).selectOption('ivec3');await settle();assert.deepEqual((await state(b.id)).params.components,[0,1,0,0]);
     await page.screenshot({path:path.join(folder,'typed-vectors.png')});
     const colors=await page.evaluate(()=>['vec2','ivec2','uvec2','bvec2'].map(type=>{const socket=document.querySelector(`[data-kind="outputs"][data-type="${type}"]`);return socket?getComputedStyle(socket).backgroundColor:null;}));assert.ok(colors.every(c=>c&&c===colors[0]),JSON.stringify(colors));
-    checks.push('All 12 generic Vector configurations create family-correct defaults; Boolean components edit individually and convert on type changes; socket dimension colors match across families');
+    checks.push('All 15 generic Vector configurations create family-correct defaults; Boolean components edit individually and convert on type changes; socket dimension colors match across families');
 
     await reset();await page.evaluate(()=>{addTyped('i','vector',{type:'ivec3',components:[1,2,3,0]});addTyped('add','add',{}, {typeMode:'auto'});addTyped('split','vector_split',{}, {typeMode:'auto'});addTyped('swizzle','swizzle',{mask:'yx'},{typeMode:'auto'});render();});await settle();
     await connect('i','out','add','a');assert.equal((await state('add')).params.type,'ivec3');
@@ -75,23 +75,23 @@ const[source,stateFile,folder]=process.argv.slice(2);
     checks.push('Boolean Combine and Replace accept exact grouped components and reject implicit numeric-to-Boolean wires atomically');
 
     await reset();await page.evaluate(()=>{addTyped('convert','convert');render();});await choose('convert');
-    assert.equal(await page.locator('#inspector [data-convert-type="fromType"] option').count(),16);
-    await page.locator('#inspector [data-convert-type="fromType"]').selectOption('bvec3');await settle();assert.equal((await state('convert')).params.toType,'ivec3');
-    assert.deepEqual(await page.locator('#inspector [data-convert-type="toType"] option').evaluateAll(es=>es.map(e=>e.value)),['vec3','ivec3','uvec3','bvec3']);
+    assert.equal(await page.locator('#inspector [data-convert-type="fromType"] option').count(),38);
+    await page.locator('#inspector [data-convert-type="fromType"]').selectOption('bvec3');await settle();assert.equal((await state('convert')).params.toType,'int');
+    assert.deepEqual(await page.locator('#inspector [data-convert-type="toType"] option').evaluateAll(es=>es.map(e=>e.value)),await page.evaluate(()=>clone(typeContract.convert.pairs.bvec3)));
     await page.locator('#inspector [data-convert-type="toType"]').selectOption('uvec3');await settle();
     assert.deepEqual(await page.evaluate(()=>{const n=current().nodes.find(n=>n.id==='convert');return {input:ports(n,'inputs'),output:ports(n,'outputs')};}),{input:{value:'bvec3'},output:{out:'uvec3'}});
     assert.equal(await page.locator('#inspector select[data-parameter-port="value"][data-parameter-copy="compact"]').count(),3);
-    await page.locator('#inspector [data-convert-type="fromType"]').selectOption('int');await settle();assert.equal(await page.locator('#inspector [data-convert-type="toType"] option').count(),16);
+    await page.locator('#inspector [data-convert-type="fromType"]').selectOption('int');await settle();assert.equal(await page.locator('#inspector [data-convert-type="toType"] option').count(),38);
     await page.locator('#inspector [data-convert-type="toType"]').selectOption('bvec4');await settle();
-    checks.push('Convert uses common input/output selectors and typed inputs, limits vector casts to same-width types, and supports scalar-to-vector conversion');
+    checks.push('Convert uses common input/output selectors and typed inputs, uses the constructor pair whitelist including truncation, and supports scalar-to-vector conversion');
 
     await reset();await page.evaluate(()=>{addTyped('code','glsl_code');render();});await choose('code');
     const outputId=await page.evaluate(()=>current().nodes.find(n=>n.id==='code').params.outputs[0].id);
-    assert.equal(await page.locator(`[data-code-port="${outputId}"] select option`).count(),16);
+    assert.equal(await page.locator(`[data-code-port="${outputId}"] select option`).count(),38);
     await page.locator(`[data-code-port="${outputId}"] select`).selectOption('bvec4');await settle();
     assert.match(await page.locator('[data-code-header]').innerText(),/out bvec4/);
     const inputId=await page.evaluate(()=>current().nodes.find(n=>n.id==='code').params.inputs[0].id);
-    await page.locator(`[data-code-port="${inputId}"] select`).selectOption('uvec3');await settle();assert.equal(await page.locator(`[data-code-port="${inputId}"] select option`).count(),17);
+    await page.locator(`[data-code-port="${inputId}"] select`).selectOption('uvec3');await settle();assert.equal(await page.locator(`[data-code-port="${inputId}"] select option`).count(),39);
     assert.equal(await page.evaluate(()=>{CustomGLSL.validate(current().nodes.find(n=>n.id==='code').params);return true;}),true);
     checks.push('GLSL Code interfaces expose all value outputs and value/resource inputs; Boolean vectors validate and render in the GLSL header');
 
@@ -99,8 +99,8 @@ const[source,stateFile,folder]=process.argv.slice(2);
       const result=[];for(const type of valueTypes()){const decl=createInputDeclaration('constant',type);const box=document.createElement('div');constantFields(box,decl);const control=box.querySelector('.components input,.components select');result.push({type,value:decl.value,options:box.querySelector('select').options.length,tag:control?.tagName,max:control?.max});}
       return result;
     });
-    for(const row of declarationChecks){assert.equal(row.options,16);assert.equal(row.tag,/bool|bvec/.test(row.type)?'SELECT':'INPUT');if(/uint|uvec/.test(row.type))assert.equal(row.max,'4294967295');}
-    checks.push('Graph Constant declarations share all 16 types and exact integer/Boolean controls');
+    for(const row of declarationChecks){assert.equal(row.options,38);assert.equal(row.tag,/bool|bvec/.test(row.type)?'SELECT':'INPUT');if(/uint|uvec/.test(row.type))assert.equal(row.max,'4294967295');}
+    checks.push('Graph Constant declarations share all 38 types and exact integer/Boolean controls');
     const live=await page.evaluate(()=>{
       const previous=nativeSourceSnapshot,request=nativeSourceRequest,requests=[];nativeSourceRequest=(endpoint,body)=>requests.push(clone(body));
       const decl={id:'boolLive',name:'uFlags',kind:'uniform',type:'bvec2',value:[false,false]};

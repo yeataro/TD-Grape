@@ -233,6 +233,11 @@ function setTypeContract(contract){
     for(const variant of entry.variants)if((variant.type!==null&&!known(variant.type))||!variant.inputs||!variant.outputs||
       ![...Object.values(variant.inputs),...Object.values(variant.outputs)].every(known))throw Error(t('contract.invalid'));
   }
+  if(contract.convert?.pairs){
+    const {types,pairs}=contract.convert;
+    if(!Array.isArray(types)||types.length!==new Set(types).size||types.some(type=>!valueTypes.includes(type))||Object.keys(pairs).length!==types.length)throw Error(t('contract.invalid'));
+    for(const type of types)if(!Array.isArray(pairs[type])||pairs[type].length!==new Set(pairs[type]).size||!pairs[type].includes(type)||pairs[type].some(target=>!types.includes(target)))throw Error(t('contract.invalid'));
+  }
   if(contract.pixelBufferOutputs){
     const spec=contract.pixelBufferOutputs;
     if(spec.parameter!=='bufferCount'||spec.type!=='vec4'||!Array.isArray(spec.ports)||spec.ports.length!==8||spec.ports.some((p,i)=>p!==(i?'buffer'+i:'color')))throw Error(t('contract.invalid'));
@@ -254,6 +259,8 @@ function setTypeContract(contract){
 const numericTypes=()=>typeContract?.numericTypes||[];
 const valueTypes=()=>typeContract?.valueTypes||[...new Set([...numericTypes(),...(typeContract?.specConstantTypes||[])])];
 const convertTypes=()=>typeContract?.convert?.types||valueTypes().filter(type=>!isMatrixType(type)&&typeFamily(type)!=='double');
+const convertTargets=source=>typeContract?.convert?.pairs?typeContract.convert.pairs[source]||[]:convertTypes().filter(target=>convertTypes().includes(source)&&!isMatrixType(source)&&!isMatrixType(target)&&(typeComponents(source)===1||typeComponents(source)===typeComponents(target)));
+const explicitConversionValid=(source,target)=>convertTargets(source).includes(target);
 const interfaceTypes=()=>[...valueTypes(),...(typeContract?.resourceTypes||[])];
 const typeFamily=type=>typeContract?.types?.[type]?.family;
 const typeForShape=(family,count)=>valueTypes().find(type=>typeContract.types[type].shape!=='matrix'&&typeFamily(type)===family&&typeComponents(type)===count);
@@ -310,7 +317,7 @@ function resolvedNodePorts(d,params,decl,kind){
   if(isMatrixAccess(d))return matrixAccessPorts(d.key,params)[kind];
   if(d.key==='convert'){
     const from=params.fromType||'float',to=params.toType||'int';
-    if(!convertTypes().includes(from)||!convertTypes().includes(to)||typeComponents(from)!==1&&typeComponents(from)!==typeComponents(to))throw Error(t('contract.invalid'));
+    if(!explicitConversionValid(from,to))throw Error(t('contract.invalid'));
     return kind==='inputs'?{value:from}:{out:to};
   }
   if(d.key==='glsl_code')return Object.fromEntries((Array.isArray(params[kind])?params[kind]:[]).map(p=>[p.id,p.type]));
@@ -678,7 +685,12 @@ function creatorVariants(d,wire){
   if(d.key==='convert'){
     const from=wire?.kind==='outputs'?wire.type:d.defaults.fromType,to=wire?.kind==='inputs'?wire.type:d.defaults.toType;
     const pairs=wire?convertTypes().map(type=>wire.kind==='outputs'?[from,type]:[type,to]):[[from,to]];
-    return pairs.filter(([a,b])=>convertTypes().includes(a)&&convertTypes().includes(b)&&(typeComponents(a)===1||typeComponents(a)===typeComponents(b))).map(([a,b])=>({type:null,inputs:{value:a},outputs:{out:b},params:{fromType:a,toType:b}}));
+    const variants=pairs.filter(([a,b])=>explicitConversionValid(a,b)).map(([a,b])=>({type:null,inputs:{value:a},outputs:{out:b},params:{fromType:a,toType:b}}));
+    // New truncating constructors must not change the default dragged-wire
+    // result into a scalar. Preserve shape before offering other conversions.
+    const sameShape=type=>isMatrixType(from)||isMatrixType(type)?isMatrixType(from)&&isMatrixType(type)&&typeContract.types[from].columns===typeContract.types[type].columns&&typeContract.types[from].rows===typeContract.types[type].rows:typeComponents(from)===typeComponents(type);
+    if(wire?.kind==='outputs')variants.sort((a,b)=>Number(sameShape(b.outputs.out))-Number(sameShape(a.outputs.out)));
+    return variants;
   }
   if(d.key!=='swizzle')return typeVariants(d);
   const count=wire&&valueTypes().includes(wire.type)?typeComponents(wire.type):2;
