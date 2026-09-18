@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 搜尋排序試行（0.8.94）：名稱前綴、名稱包含與別名部分命中分級，完整名稱／完整別名維持最高優先。搜尋 mat 時 mat／Matrix 在 dmat 與 Determinant 等部分別名前；無節點特例，原本可搜尋項目仍可找到。3 組排序與 11 組拉線效能／交易回歸通過，輸入文字不做整圖模擬、不改圖；101 節點合成圖開啟約 15–25ms。待使用者實際體驗回饋；交付另記。
+
 2026-09-19 0.8.93 交付檢查點：實作提交 `97efae2` 已整合 main 並同步 TD。32 份內嵌來源、9 份服務資源核對一致，core 無錯誤、TOP／MAT Master current；三份使用者 Shader 保留。保存 TOE 891,054 bytes，SHA-256 `0a6b12efa0a7365d6ff060630d6957525b0350af01a8b93fc577ff3d465b8c83`，排除一份私人助手。本機無 Git 遠端，未做遠端推送。
 
 2026-09-19 符號長度陣列（0.8.93，實作檢查點）：Array 長度可引用整數 Graph Constant／Specialization Constant，未知顯示 N，內部保留來源 ID；Get／Replace／Length、Subgraph、GLSL Code、剪貼簿與來源引用追蹤已接通，不新增 CPU 求值器或持續 TD 長度同步。48 項 TD GPU 檢查、10 組瀏覽器操作通過；435 項 Python 與完整 portable 檢查通過，後補原生宿主巨集診斷以 11 項符號陣列單元測試驗證。TD 2025.32820 的 specialization 長度 CHOP Uniform Array 已重現「長度正確、資料為零」，目前明確拒絕該 native 組合，不把圖內 specialization 陣列一起禁用。任意常數運算鏈長度接孔、Array Fill 與 SSBO 尚未提供。同步／保存另外記錄。[使用方式](../features/ARRAYS_AND_STRUCTURES.md)、[宿主觀察及重現](../features/TD_ARRAY_SOURCES.md)。

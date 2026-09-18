@@ -1475,11 +1475,13 @@ function browserSearchScore(entry,query){
   if(d.fixedType&&valueTypes().includes(q)&&d.fixedType!==q)return Infinity;
   if(names.includes(q))return 0;if(aliases.includes(q))return 1;
   const terms=q.split(/\s+/),contains=values=>terms.every(term=>values.some(v=>v.includes(term)));
-  if(contains([...names,...aliases]))return 2;
+  if(names.some(name=>name.startsWith(q)))return 2;
+  if(contains(names))return 3;
+  if(contains([...names,...aliases]))return 4;
   const tags=[...m.tags,...m.path,...m.path.slice(1).map(key=>t('browser.branch.'+key)),m.category,...m.secondary,browserCategoryLabel(m.category),...m.secondary.map(browserCategoryLabel)].map(normalizeSearch);
-  if(contains([...names,...aliases,...tags]))return 3;
+  if(contains([...names,...aliases,...tags]))return 5;
   const description=normalizeSearch(t(m.descriptionKey));
-  return contains([...names,...aliases,...tags,description])?4:Infinity;
+  return contains([...names,...aliases,...tags,description])?6:Infinity;
 }
 function browseEntries(entries,query,{tab=libraryTab,category=libraryNodeCategory,source=browserSource,librarySource=libraryFunctionSource}={}){
   let found=entries.filter(e=>source==='all'||e.meta.source===source);

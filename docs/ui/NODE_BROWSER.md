@@ -1,5 +1,11 @@
 # TD-Grape Node Browser
 
+## Search ranking — 2026-09-19 (0.8.94 trial)
+
+Both the side browser and floating creator rank nonempty queries by: exact display/GLSL name; exact alias; name prefix; name substring (all terms); partial alias/name terms; category/tags; description. Equal scores retain display-name and key ordering. Fixed-type queries retain their existing exact-type filter. There are no Matrix-specific exceptions: `mat3` remains an exact hit, while `mat` now puts `mat…`/`Matrix…` before `dmat…`, then partial aliases such as Determinant. Aliases and descriptions remain searchable. This is the user-approved trial, subject to later usage feedback.
+
+Three targeted browser checks and eleven wire-creator regressions passed. Typing performed zero whole-graph connection plans and did not mutate the graph. Synthetic 101-node creator openings took about 15–25 ms in this run; this is local evidence, not a performance guarantee for every device. Search remains in the browser with the existing per-context signature cache.
+
 Implemented from the cloud task “Node Browser Taxonomy Design” (2026-09-10), then aligned to the two user-supplied mockup screenshots. The cloud HTML attachment itself was not retrieved. Categories, Library and This Project are vertically stacked accordion sections, not horizontal entry tabs.
 
 ## Browsing and searching
