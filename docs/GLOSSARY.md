@@ -9,7 +9,8 @@
 | 建議用語 | 英文／識別碼 | 定義與區分 |
 | --- | --- | --- |
 | 型別 | Type | 一個值的具體型別，例如 float、int、ivec3。Auto 是選擇型別的模式，不是一種值型別。 |
-| 型別家族／元素型別 | Type family／Element type；`family` | 純量與向量的基本元素種類，例如 float、int、uint、bool。ivec3 的元素型別是 int。矩陣、陣列與資源的結構需另行描述，不能只靠家族與分量數概括。 |
+| 型別家族 | Type family；`family` | 純量與向量的基本元素種類，例如 float、int、uint、bool、double。矩陣、陣列與資源的結構需另行描述，不能只靠家族與分量數概括。 |
+| 元素型別 | Element type | 一個容器中單一元素的型別，須指出所談的容器。ivec3 的分量型別是 int；vec3[4] 的陣列元素型別是 vec3；Sample[4] 的元素型別是 Sample。不可把陣列元素型別一律等同 scalar family。 |
 | 分量／分量數 | Component／Component count；`components` | vec3 有三個分量，純量有一個。談向量形狀時優先說「分量數」，避免與貼圖維度或矩陣行列混用。 |
 | 純量／向量 | Scalar／Vector | 單一值與有多個分量的值；與名稱相同的節點種類須依上下文區分。 |
 | 接孔 | Port／Socket | 節點上的輸入或輸出端點，帶有具體型別與用途。接線（Wire／Edge）連接兩個接孔。 |
@@ -75,6 +76,23 @@ Graph Constant 是既有介面名稱；Global Constant／全域常量是討論�
 - **對角填值（Diagonal construction）**：`matN(scalar)` 以 scalar 填對角線，其餘為 0；與向量的純量展開（Splat）不同。
 - **矩陣尺寸轉換（Matrix resize conversion）**：以矩陣 constructor 保留左上方重疊元素；擴大部分依單位矩陣補值。與 Replace 的同尺寸覆寫不同。
 - **原生傳輸載體（Native transport carrier）**：TD 向 Uniform 提供資料的原生參數／資源；載體尺寸、精度與 GLSL 宣告型別是不同層次，不能相互推論。
+
+## 陣列、結構與產碼責任
+
+下列術語描述不同責任；定義它們不代表相關產品功能已實作。行為與進度見[陣列與結構後續計畫](discussions/ARRAY_AND_STRUCT_PLAN.md)。
+
+| 建議用語 | 英文 | 定義與區分 |
+| --- | --- | --- |
+| 陣列 | Array | 同一元素型別的有序列表。陣列長度、元素型別及元素本身的分量數分開描述。 |
+| 陣列長度／有效筆數 | Array length／Active count | 長度描述陣列的元素位置數；有效筆數描述使用者目前採用其中多少筆，需由資料契約明確提供，不能由元素是否為零推測。 |
+| 結構／型別定義 | Struct／Type definition | 結構將具名欄位組成一種型別；型別定義描述欄位及其型別。定義型別不等於建立一個值，也不等於已取得外部來源。 |
+| 型別身分 | Type identity | 供引用與相容性判斷的穩定身分。顯示名稱或欄位形狀相同，不足以代表同一個具名結構。 |
+| 定義提供者 | Definition provider | 說明某份型別定義的 GLSL 宣告由宿主、外部程式碼或 Grape 提供，連同適用環境供產碼判斷。與提供實際值的資料來源分開。 |
+| GLSL 結構宣告 | GLSL struct declaration | 讓 GLSL 編譯器認得結構的程式宣告。是否需生成取決於使用情況、定義提供者及編譯環境；不是每個節點各自勾選的永久屬性。 |
+| 圖的運算內容／圖文件 | Graph semantics／Graph document | 前者包含節點、接線、操作及值等計算意義；後者還可保存必要定義及位置、展開狀態等編輯資訊。存於同一檔案不代表都參與 Shader 運算。 |
+| 圖建立工具 | Graph authoring tool | 依共用契約建立及修改圖的工具；可為圖形編輯器、程式或智能體。UI 是其中一種操作介面。 |
+| GLSL 產生器／產碼器 | GLSL code generator | 將圖及必要定義轉為 GLSL，並處理型別、環境、宣告依賴與診斷。與建立圖的工具分開稱呼。 |
+| TD 的 GLSL 編譯器 | Host GLSL compiler | 接收產生好的 GLSL 並進行語言檢查、最佳化與編譯；不直接讀 Grape 的圖文件或型別表。 |
 
 ## 維護與文件分工
 

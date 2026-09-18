@@ -6,7 +6,9 @@
 
 官方文件中的例子包括 TOP 的 `TDTexInfo`／`uTD2DInfos[]`，以及 MAT 的 `TDMatrix`、`TDCameraInfo`、`TDLight` 等。它們是 TD 提供的具名結構，應引用既有定義；具體圖接口、欄位存取、Stage 適用性及版本差異尚待設計／驗證。[TOP built-in uniforms](https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built_In_Uniforms)、[MAT specific uniforms](https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms)。
 
-陣列與迴圈高度互補，但來源傳入／整體傳遞、索引取項與逐項遍歷是不同能力。使用者目前希望先了解能力，再決定實作；Array／迴圈的節點与 UI 尚未定案。型別模型應將元素型別、陣列形狀及來源分開；Sampler 陣列、一般資料陣列及 Buffer 的讀寫／索引能力也須分別盤點，不以可索引就假定其操作完全相同。
+陣列與迴圈高度互補，但來源傳入／整體傳遞、索引取項與逐項遍歷是不同能力。2026-09-18 後續討論已確認：依元素型別與長度建立陣列；取項節點名為 `Array[i]`、輸入為 `Array` 和 `i`、輸出依元素型別推導，有元素時自動 Clamp；編輯先提供指定位置的 Replace。尚未填值的初始化、沒有元素時的結果、Replace 越界及完整 UI 尚未定案，迴圈亦未因本次討論啟動。
+
+型別模型應將元素型別、陣列形狀及來源分開；Sampler 陣列、一般資料陣列及 Buffer 的讀寫／索引能力也須分別盤點，不以可索引就假定其操作完全相同。共用型別定義、來源／定義提供者、圖、UI、GLSL 產生器和 TD 編譯器的責任及後續實作順序，集中在[陣列與結構後續計畫](ARRAY_AND_STRUCT_PLAN.md)。該文件明確區分使用者已決定、工程方案與待 review 行為；目前是計畫，未實作產品功能。
 
 ## 先前型別批決議與紀錄
 
