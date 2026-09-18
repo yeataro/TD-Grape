@@ -13,6 +13,7 @@ const EDITOR_SHORTCUTS=Object.freeze({
   detachFrame:{label:'frame.detach',keys:['Alt+G'],section:'edit'},
   group:{label:'function.group',keys:['Mod+Shift+G'],section:'edit'},
   autoArrange:{label:'arrange.auto',keys:['L'],section:'edit'},
+  autoArrangeReverse:{label:'arrange.autoReverse',keys:['Shift+L'],section:'edit'},
   add:{label:'action.nodes',keys:['Tab'],section:'navigation'},
   fit:{label:'action.fit',keys:['H'],section:'navigation'},
   up:{label:'navigation.up',keys:['Alt+ArrowUp'],section:'navigation'},

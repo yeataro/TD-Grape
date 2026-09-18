@@ -20,7 +20,7 @@ class TypeContract(unittest.TestCase):
   first=c.type_contract();self.assertEqual(first,c.type_contract())
   expected=dict(first);expected.pop('hash');self.assertEqual(first['hash'],c.digest(expected))
   first['definitions'].clear();self.assertEqual(len(c.type_contract()['definitions']),len(c.CATALOG))
-  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment')}),baseline['catalogHash']);self.assertEqual(c.digest(legacy_function_library()),baseline['libraryHash'])
+  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if')}),baseline['catalogHash']);self.assertEqual(c.digest(legacy_function_library()),baseline['libraryHash'])
 
  def test_value_descriptors_and_literals(self):
   descriptor=c.type_contract()['types'];self.assertEqual(tuple(descriptor),c.PORT_TYPES)
@@ -50,7 +50,7 @@ class TypeContract(unittest.TestCase):
  def test_existing_graphs_produce_identical_results(self):
   graphs=[c.demo_graph(preset,target) for target in ('mat','top') for preset in ('banana','color','tint')]
   for key,d in c.CATALOG.items():
-   if key in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment'):continue  # New nodes have dedicated tests; keep all 138 old fingerprints.
+   if key in ('sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if'):continue  # New nodes have dedicated tests; keep all 138 old fingerprints.
    for ty in c.TYPES:
     g=c.demo_graph('color');stage=d['stages'][0];node=c.node(key,'probe',type=ty)
     if key=='uniform':g['declarations'].append({'id':'test_uniform','kind':'uniform','name':'uTest','type':ty,'value':.25 if ty=='float' else [.25]*int(ty[-1])});node['params']['declarationId']='test_uniform'
@@ -73,7 +73,7 @@ class TypeContract(unittest.TestCase):
   # Browser code consumes the core's resolved variants, including declaration-selected Uniforms.
   rows=[]
   for d in c.CATALOG.values():
-   for ty in (c.VECTOR_TYPES if d['key'] in c.VECTOR_KEYS else c.TYPES):
+   for ty in (c.VECTOR_TYPES if d['key'] in c.VECTOR_KEYS else c.node_parameter_types(d)):
     node=c.node(d['key'],'probe',type=ty)
     for decltype in (c.SPEC_TYPES if d['key']=='spec_constant' else c.TYPES):
      decl={'type':decltype};rows.append({'definition':d,'params':node['params'],'declaration':decl,'expected':c.resolved_ports(d,node['params'],decl)})

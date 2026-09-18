@@ -6,6 +6,100 @@
   "definitions": [
     {
       "definition": {
+        "key": "compare",
+        "label": "Compare",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "bool"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float",
+          "operator": ">"
+        },
+        "inputDefaults": {
+          "a": 0,
+          "b": 0
+        },
+        "descriptionKey": "help.compare",
+        "definitionUuid": "sgrape.builtin.compare",
+        "revisionHash": "d2010eb23d404212e4ff254b22d71d0259600226604e8cdcbaae93e68e52779f"
+      },
+      "emitter": {
+        "id": "compare",
+        "version": 1
+      },
+      "browser": {
+        "category": "logic",
+        "source": "editor",
+        "aliases": [
+          "comparison",
+          "greater",
+          "less",
+          "equal",
+          "bool",
+          "condition",
+          "比較"
+        ],
+        "glslName": ">, >=, <, <=, ==, !=",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "if",
+        "label": "If",
+        "inputs": {
+          "condition": "bool",
+          "true": "T",
+          "false": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "condition": false,
+          "true": 1,
+          "false": 0
+        },
+        "descriptionKey": "help.if",
+        "definitionUuid": "sgrape.builtin.if",
+        "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54"
+      },
+      "emitter": {
+        "id": "if",
+        "version": 1
+      },
+      "browser": {
+        "category": "logic",
+        "source": "editor",
+        "aliases": [
+          "branch",
+          "conditional",
+          "select",
+          "ternary",
+          "條件",
+          "選擇"
+        ],
+        "glslName": "?:",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
         "key": "comment",
         "label": "Comment",
         "inputs": {},

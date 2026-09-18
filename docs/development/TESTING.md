@@ -1,5 +1,21 @@
 # 測試
 
+本輪最終同步並保存 TD：31 份內嵌來源、9 份服務資源一致，TOP／MAT Master current，兩份使用者 Shader 保留，core 無錯誤，現有 Editor 未強制重載。正式 TOE 775,884 bytes，SHA-256 `18bea942f6cc14945a9d96fd4390ad62238c38d26e851358f2e8a9da7c434843`；私人助手排除。最終原生報告位於 clipboard-focus-round 的 refresh／audit／save；Note／排列中途保存報告位於 note-layout-round。
+
+2026-09-18 剪貼簿焦點：新增 `test_clipboard_keyboard.cjs`，修正前以實際 Ctrl＋C 和 trusted copy event 重現「Note 文字 range 殘留後點選節點，節點複製未執行」。修正後 8 組通過，涵蓋點選、已選節點拖移、群組框、Ctrl＋V 及單次 Undo；Note／input 文字事件仍保留原生處理，navigator.clipboard 呼叫為 0。測試僅重導事件的資料至隔離 DataTransfer，不讀取主機剪貼簿。群組框 13 組、Markdown 9 組及 edit-shortcuts 10 組回歸通過，零頁面錯誤。
+
+2026-09-18 自動排列雙方向與零散節點：auto arrange 15 組、shortcut help 7 組及選取工具列 12 組通過，零頁面錯誤。涵蓋原來源排列精確座標、逆向短支路、多末端、循環、接孔順序、邊儲存順序、兩方向共用的孤立節點換行／全孤立 3×3、實際尺寸、重複穩定、單步 Undo／Redo、唯讀及 L／Shift＋L 的輸入／彈窗隔離；選取工具列另驗證手機尺寸與 UI 縮放。606 個雙語引用通過，排列截圖已檢視。
+
+2026-09-18 Note 尺寸優化：resize 14 組、appearance 16 組、Markdown 9 組及基本節點 8 組通過，零頁面錯誤。尺寸測試包含普通文字／H1／code／無序清單／有序清單 × 1／4／10 倍 × 四種外觀共 60 種組合，以及拖曳、取消、Undo／Redo、實際編輯提交、JSON 保存、縮放、水平與垂直捲動。10× 普通文字下限減少 90px，H1 及 code 仍容納完整一行；畫布清單最後一項去掉多餘尾端 margin，避免單行清單仍產生捲動。預設與手動高度保持，截圖已檢視。報告位於 note-size-round。
+
+2026-09-18 Compare／If：新增 browser `test_control_nodes.cjs`，由目前 core 匯出獨立 fixture，9 組通過且零頁面錯誤；涵蓋真實新增與拖線、六種比較方式、bool 未接值、型別推導／鎖定、非法接線不改圖、整數驗證、Undo／Redo、共用 Parameter 排版及唯讀。相關 numeric scrub 32 組、numeric touch 20 組、Parameter 15 組、select menus 11 組通過；截圖已檢視。報告位於 control-nodes-round。
+
+完整 portable checks 通過：297 項 Python unit（含新 control unit 及執行真實 JS 型別／交易模型後再由 Python 編譯的往返測試）、既有 JS model、26 項 remote-panel、604 個雙語引用、14 項 editor-launch 及 14 項 browser metadata。原有 138 個编譯指紋不變；既有兩處 legacy catalog baseline 僅排除新增 Compare／If 定義，未更改原 expected hash。
+
+新增隔離 TD `test_control_nodes.py` 共 67 項 TOP／MAT 通過，包含六比較運算兩種結果、If 四型別兩分支、Uniform 即時改值、int／uint／bool Spec 覆寫往返且 GLSL 兩側仍保留、編譯失敗保留 last-good Shader／像素，以及 MAT Vertex Compare→If。測試區與測試 manager 已清除，兩份使用者 Shader 保全。這是 Windows／NVIDIA 上的編譯與輸出語意驗證，不是死碼消除、效能或 Metal／AMD 的實測。
+
+TD 已同步並保存：31 份內嵌來源、9 份服務資源一致，TOP／MAT Master 的新 catalog contract 已明確同步，兩份使用者 Shader 內容不變；core 無錯誤。正式 TOE 774,484 bytes，SHA-256 `cea7f08483bdc831511ea163699cc1fe23dded0d9870a7e5bc262e5ea351041f`；私人助手排除，既有 Editor 未重載。原生報告位於 control-nodes-round 的 native／masters／audit-final／save。
+
 2026-09-18 透明 Note 回歸補強：先以實際內文 `::before` 的 border／box-shadow 檢查重現問題，修正前即失敗；先前只檢查節點本體的透明狀態，漏掉真正繪製圓角表面的偽元素。此次加入深淺色、Professional／Excellent／Godlike，以及 hover／選取提示的檢查，Note 外觀 15 組全過，零頁面錯誤。兩個未選取透明 Note 的截圖已目視確認沒有外框與陰影，報告位於 note-transparent-fix 的 before／after。
 
 已同步並保存 TD：31 份內嵌來源／9 份服務資源一致，TOP／MAT Master current，兩份使用者 Shader 保留。正式 TOE 767,428 bytes，SHA-256 `7aa00286ae2c72e3d8c6d8b2f3e621279c9d583653c910a4f2f7c6ac11543eec`，私人助手已排除，既有頁面未重載。

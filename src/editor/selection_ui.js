@@ -1,6 +1,7 @@
 /* Selection actions share the existing buttons and graph transactions. */
 const ARRANGE_ACTIONS=[
   ['auto','M3 9h5v6H3zM16 3h5v6h-5zM16 15h5v6h-5zM8 12h4M12 6v12M12 6h4M12 18h4'],
+  ['autoReverse','M3 3h5v6H3zM3 15h5v6H3zM16 9h5v6h-5zM8 6h4M8 18h4M12 6v12M12 12h4'],
   ['left','M4 3v18M8 6h12v4H8zM8 14h8v4H8z'],
   ['centerX','M12 2v20M4 6h16v4H4zM7 14h10v4H7z'],
   ['right','M20 3v18M4 6h12v4H4zM8 14h8v4H8z'],
@@ -94,12 +95,14 @@ function positionSelectionToolbar(){
 }
 // Lay out only the selected graph. Collapse cycles for ranking, then use two
 // neighbor/port-order sweeps to reduce crossings without a layout dependency.
-function autoArrangePositions(items,edges){
+function autoArrangePositions(items,edges,fromOutputs=false){
   const positions=new Map();if(!items.length)return positions;
   const byId=new Map(items.map(n=>[n.id,n])),order=new Map(items.map((n,i)=>[n.id,i]));
   const next=new Map(items.map(n=>[n.id,new Set()])),previous=new Map(items.map(n=>[n.id,new Set()]));
   const incoming=new Map(items.map(n=>[n.id,[]])),outgoing=new Map(items.map(n=>[n.id,[]]));
-  for(const e of edges){const a=e.from[0],b=e.to[0];if(a!==b&&byId.has(a)&&byId.has(b)){
+  const connected=new Set();
+  for(const e of edges){const a=e.from[0],b=e.to[0];if(byId.has(a)&&byId.has(b)){
+    connected.add(a);connected.add(b);if(a===b)continue;
     next.get(a).add(b);previous.get(b).add(a);incoming.get(b).push(e.from);outgoing.get(a).push(e.to);
   }}
 
@@ -115,8 +118,9 @@ function autoArrangePositions(items,edges){
     pieces.push(ids.sort((a,b)=>order.get(a)-order.get(b)));
   }
   const left=Math.min(...items.map(n=>n.x)),gapX=GRID*4,gapY=GRID*2;
-  let top=Math.min(...items.map(n=>n.y));
+  let top=Math.min(...items.map(n=>n.y)),mainWidth=0;
   for(const ids of pieces){
+    if(ids.length===1&&!connected.has(ids[0]))continue;
     const index=new Map(),low=new Map(),stack=[],active=new Set(),groups=[],groupOf=new Map();let visitIndex=0;
     function visit(id){
       index.set(id,visitIndex);low.set(id,visitIndex++);stack.push(id);active.add(id);
@@ -137,6 +141,14 @@ function autoArrangePositions(items,edges){
     const ready=groups.filter(g=>!g.incoming);
     for(let i=0;i<ready.length;i++)for(const to of ready[i].next){
       to.rank=Math.max(to.rank,ready[i].rank+1);if(!--to.incoming)ready.push(to);
+    }
+    if(fromOutputs){
+      // Rank the same condensed DAG from its sinks. Short branches move next
+      // to their consumers while every sink shares this component's last layer.
+      const distance=new Map();
+      for(let i=ready.length-1;i>=0;i--)distance.set(ready[i],Math.max(0,...[...ready[i].next].map(to=>distance.get(to)+1)));
+      const depth=Math.max(...distance.values());
+      for(const group of groups)group.rank=depth-distance.get(group);
     }
     const layers=Array.from({length:Math.max(...groups.map(g=>g.rank))+1},()=>[]);
     for(const id of ids)layers[groupOf.get(id).rank].push(id);
@@ -166,15 +178,28 @@ function autoArrangePositions(items,edges){
       for(const id of layer){positions.set(id,{x,y});y+=byId.get(id).height+gapY;}
       x+=Math.max(...layer.map(id=>byId.get(id).width))+gapX;
     });
+    mainWidth=Math.max(mainWidth,x-gapX-left);
     top+=height+gapX;
+  }
+  // Unwired singletons share a compact shelf below connected components. Keep
+  // graph order, actual dimensions, and the same spacing in both directions.
+  const loose=items.filter(n=>!connected.has(n.id));
+  if(loose.length){
+    const widest=Math.max(...loose.map(n=>n.width)),columns=mainWidth?Math.min(2,loose.length):Math.ceil(Math.sqrt(loose.length));
+    const width=Math.max(mainWidth,columns*(widest+gapX)-gapX);let x=left,rowHeight=0;
+    for(const n of loose){
+      if(x>left&&x+n.width>left+width){top+=rowHeight+gapY;x=left;rowHeight=0;}
+      positions.set(n.id,{x,y:top});x+=n.width+gapX;rowHeight=Math.max(rowHeight,n.height);
+    }
   }
   return positions;
 }
 function arrangeSelection(kind){
   if(editorMutationBlocked()||!arrangeContextMatches())return false;
   const nodes=selectedCanvasNodes();if(nodes.length<2||!ARRANGE_ACTIONS.some(([key])=>key===kind))return false;
-  const items=nodes.map(n=>({id:n.id,...nodeLayoutBounds(n),...(kind==='auto'?{inputs:Object.keys(ports(n,'inputs')),outputs:Object.keys(ports(n,'outputs'))}:{})}));
-  const positions=kind==='auto'?autoArrangePositions(items,current().edges):new Map(items.map(n=>[n.id,{x:n.x,y:n.y}]));
+  const automatic=kind==='auto'||kind==='autoReverse';
+  const items=nodes.map(n=>({id:n.id,...nodeLayoutBounds(n),...(automatic?{inputs:Object.keys(ports(n,'inputs')),outputs:Object.keys(ports(n,'outputs'))}:{})}));
+  const positions=automatic?autoArrangePositions(items,current().edges,kind==='autoReverse'):new Map(items.map(n=>[n.id,{x:n.x,y:n.y}]));
   const left=Math.min(...items.map(n=>n.x)),top=Math.min(...items.map(n=>n.y)),right=Math.max(...items.map(n=>n.x+n.width)),bottom=Math.max(...items.map(n=>n.y+n.height));
   if(['left','centerX','right','top','centerY','bottom'].includes(kind))for(const n of items){
     const p=positions.get(n.id);
@@ -207,6 +232,7 @@ function openArrangeMenu(){
     if(['left','top','spaceX'].includes(kind))menu.append(el('div',{role:'separator',class:'popup-separator'}));
     const item=el('button',{type:'button',role:'menuitem','data-arrange':kind});item.append(selectionIcon(path),el('span',{},t('arrange.'+kind)));
     if(kind==='auto')decorateShortcutButton(item,'autoArrange');
+    if(kind==='autoReverse')decorateShortcutButton(item,'autoArrangeReverse');
     item.disabled=(kind==='spaceX'||kind==='spaceY')&&nodes.length<3;
     item.onclick=()=>{if(!arrangeContextMatches())return closeArrangeMenu();arrangeSelection(kind);closeArrangeMenu();$('#grapharrange').focus({preventScroll:true});};menu.append(item);
   }

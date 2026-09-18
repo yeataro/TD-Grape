@@ -14,6 +14,8 @@ TYPE_DESCRIPTORS = {
 }
 TYPES = tuple(TYPE_DESCRIPTORS)
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
+COMPARE_TYPES = ('float', 'int', 'uint')
+COMPARE_OPERATORS = ('>', '>=', '<', '<=', '==', '!=')
 TYPE_DESCRIPTORS.update({ty: {'family': ty, 'components': 1} for ty in SPEC_TYPES if ty not in TYPE_DESCRIPTORS})
 RESOURCE_TYPES = ('sampler2D',)
 PORT_TYPES = TYPES + tuple(ty for ty in SPEC_TYPES if ty not in TYPES) + RESOURCE_TYPES
@@ -46,13 +48,13 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
-    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment'))
+    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if'))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
 CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
-    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace'))
+    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = ('vec2','vec3','vec4')
 VECTOR_COMPONENTS = 'xyzw'
@@ -329,9 +331,12 @@ def definition_ports(definition, params):
         return {'inputs':dict.fromkeys(PIXEL_BUFFER_PORTS[:pixel_buffer_count(params)],'vec4'),'outputs':{}}
     return {kind:definition[kind] for kind in ('inputs','outputs')}
 
+def node_parameter_types(definition):
+    return PORT_TYPES if definition['key']=='relay' else COMPARE_TYPES if definition['key']=='compare' else TYPES
+
 def resolved_ports(definition, params, declaration=None):
     selected = params.get('type', 'float')
-    if selected not in (PORT_TYPES if definition['key']=='relay' else TYPES): raise GraphError('Unsupported numeric type')
+    if selected not in node_parameter_types(definition): raise GraphError('Unsupported numeric type')
     def resolve(token):
         if token == 'T': return selected
         if token == 'D':
@@ -355,6 +360,7 @@ def type_contract():
         default = definition['defaults'].get('type', 'float')
         choices = [default] + [ty for ty in TYPES if ty != default] if selector != 'fixed' else [None]
         if definition['key'] in VECTOR_KEYS:choices=list(VECTOR_TYPES)
+        if definition['key']=='compare':choices=list(COMPARE_TYPES)
         if definition['key']=='spec_constant':choices=list(SPEC_TYPES)
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [
             dict(type=ty, **resolved_ports(definition, dict(definition['defaults'],type='float' if definition['key']=='spec_constant' else ty or 'float'), {'type': ty})) for ty in choices]}
@@ -668,7 +674,9 @@ def _compile_flat(graph,annotation_scopes=None):
                     if not isinstance(text,str) or len(text)>2000 or re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]',text):
                         raise GraphError('Comment must be plain text up to 2000 characters',ident)
                 ty=params.get('type','float')
-                if ty not in (PORT_TYPES if d['key']=='relay' else TYPES): raise GraphError('Unsupported numeric type',ident)
+                if ty not in node_parameter_types(d): raise GraphError('Unsupported numeric type',ident)
+                if d['key']=='compare' and params.get('operator','>') not in COMPARE_OPERATORS:
+                    raise GraphError('Compare: choose >, >=, <, <=, == or !=',ident)
                 if d['key'] in ('float','vec2','vec3','vec4','color'):
                     literal(params.get('value'),next(iter(d['outputs'].values())))
                 if type(params.get('requireConstant',False)) is not bool:
@@ -704,6 +712,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 if src not in ports or sp not in ports[src]['out'] or dst not in ports or dp not in ports[dst]['in']: raise GraphError('Connection endpoint no longer exists',dst)
                 if (dst,dp) in links: raise GraphError('An input can only have one connection',dst)
                 a=ports[src]['out'][sp]; b=ports[dst]['in'][dp]
+                if defs[dst]['key']=='compare' and a not in COMPARE_TYPES:
+                    raise GraphError('Compare accepts float, int or uint scalar inputs',dst)
                 if defs[dst]['key'] in VECTOR_KEYS and a!=b:
                     raise GraphError('Vector components require an exact type; use Combine or Swizzle explicitly',dst)
                 if conversion_kind(a,b) is None: raise GraphError(a+' cannot connect to '+b,dst)
@@ -780,7 +790,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 for port in effective_inputs(ident,output):
                     if (ident,port) in links:demand_constant(*links[(ident,port)])
             for ident in order:
-                if defs[ident]['key'] in (*VECTOR_KEYS,'vec4') or nodes[ident]['params'].get('requireConstant'):
+                if defs[ident]['key'] in (*VECTOR_KEYS,'vec4','compare','if') or nodes[ident]['params'].get('requireConstant'):
                     for output in needed_outputs[ident]:demand_constant(ident,output)
             for ident in sorted(set(nodes)-live):
                 if defs[ident]['key']!='comment':diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
@@ -825,6 +835,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='smoothstep': expr='smoothstep('+a('edge0')+', '+a('edge1')+', '+a('value')+')'
                 elif k=='pow': expr='pow('+a('base')+', '+a('exponent')+')'
                 elif k=='mix': expr='mix('+a('a')+', '+a('b')+', '+a('factor')+')'
+                elif k=='compare': expr='('+a('a')+' '+p.get('operator','>')+' '+a('b')+')'
+                elif k=='if': expr='('+a('condition')+' ? '+a('true')+' : '+a('false')+')'
                 elif k in ('sin','cos','abs','fract','length','normalize'): expr=k+'('+a('value')+')'
                 elif k=='relay': expr=a('value')
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'

@@ -31,9 +31,10 @@ async function run(){
     const labels=await page.locator('[data-shortcut]').evaluateAll(rows=>Object.fromEntries(rows.map(e=>[e.dataset.shortcut,e.innerText])));
     assert.ok(labels.redo.includes('Shift'));assert.ok(labels.group.includes('Ctrl'));assert.ok(labels.group.includes('G'));
     assert.ok(labels.delete.includes('Backspace'));assert.ok(labels.menu.includes('F10'));assert.ok(labels.up.includes('↑'));
-    assert.equal(await page.locator('[data-shortcut="autoArrange"] dt').innerText(),'Auto arrange');assert.equal(await page.locator('[data-shortcut="autoArrange"] kbd').innerText(),'L');
+    assert.equal(await page.locator('[data-shortcut="autoArrange"] dt').innerText(),'Auto arrange: from sources');assert.equal(await page.locator('[data-shortcut="autoArrange"] kbd').innerText(),'L');
+    assert.equal(await page.locator('[data-shortcut="autoArrangeReverse"] dt').innerText(),'Auto arrange: from outputs');assert.deepEqual(await page.locator('[data-shortcut="autoArrangeReverse"] kbd').allTextContents(),['Shift','L']);
     assert.equal(Object.values(labels).some(label=>label.includes('Ctrl＋Y')),false);
-    for(const key of ['Delete','Control+g','Control+d','Control+a','h','l','Tab'])await page.keyboard.press(key);
+    for(const key of ['Delete','Control+g','Control+d','Control+a','h','l','Shift+l','Tab'])await page.keyboard.press(key);
     await settle();assert.deepEqual(await state(),before);assert.equal(await page.locator('#creator').isVisible(),false);
     assert.equal(await panel().evaluate(e=>e.contains(document.activeElement)),true);
     checks.push('reference contains existing graph and field commands only; modal help traps focus and graph edit/navigation hotkeys do not leak through');
@@ -48,18 +49,21 @@ async function run(){
     await close();checks.push('Escape, close, and complete backdrop clicks dismiss with focus restored; drag-out does not dismiss and opening closes existing popovers');
 
     await page.selectOption('#language','zh-Hant');await open();assert.equal(await page.locator('#shortcutstitle').innerText(),'快捷鍵');assert.match(await page.locator('#graphcopy').getAttribute('title'),/Ctrl＋C$/);
-    assert.equal(await page.locator('[data-shortcut="autoArrange"] dt').innerText(),'自動排列');assert.equal(await page.locator('[data-shortcut="autoArrange"] kbd').innerText(),'L');
+    assert.equal(await page.locator('[data-shortcut="autoArrange"] dt').innerText(),'自動排列：由來源');assert.equal(await page.locator('[data-shortcut="autoArrange"] kbd').innerText(),'L');
+    assert.equal(await page.locator('[data-shortcut="autoArrangeReverse"] dt').innerText(),'自動排列：由結果');assert.deepEqual(await page.locator('[data-shortcut="autoArrangeReverse"] kbd').allTextContents(),['Shift','L']);
     await close();await page.evaluate(()=>{Object.defineProperty(navigator,'platform',{configurable:true,value:'MacIntel'});renderShortcutHelp();});
     assert.match(await page.locator('#graphcopy').getAttribute('title'),/Cmd＋C$/);await open();assert.ok((await page.locator('[data-shortcut="copy"] dd').innerText()).includes('Cmd'));
     await close();await page.evaluate(()=>{delete navigator.platform;renderShortcutHelp();});checks.push('dialog and tooltip labels translate, with Mac Cmd hints derived from the same action metadata');
 
     await page.evaluate(()=>{selection=new Set(current().nodes.slice(0,2).map(n=>n.id));selected=[...selection].at(-1);selectedEdge=null;readonly=false;historyBusy=false;nativeMutationBusy=false;render();});
-    for(const[language,label]of [['en','Auto arrange'],['zh-Hant','自動排列']]){
-      await page.selectOption('#language',language);await page.locator('#grapharrange').click();const action=page.locator('[data-arrange="auto"]');
-      assert.equal(await action.innerText(),label);assert.equal(await action.getAttribute('title'),label+'　L');assert.equal(await action.getAttribute('aria-label'),label+'　L');assert.equal(await action.getAttribute('aria-keyshortcuts'),'L');
+    for(const[language,labels]of [['en',['Auto arrange: from sources','Auto arrange: from outputs']],['zh-Hant',['自動排列：由來源','自動排列：由結果']]]){
+      await page.selectOption('#language',language);await page.locator('#grapharrange').click();
+      for(const[kind,label,hint,keys]of [['auto',labels[0],'L','L'],['autoReverse',labels[1],'Shift＋L','Shift+L']]){
+        const action=page.locator(`[data-arrange="${kind}"]`);assert.equal(await action.innerText(),label);assert.equal(await action.getAttribute('title'),label+'　'+hint);assert.equal(await action.getAttribute('aria-label'),label+'　'+hint);assert.equal(await action.getAttribute('aria-keyshortcuts'),keys);
+      }
       await page.keyboard.press('Escape');await settle();
     }
-    checks.push('auto-arrange menu uses the concise translated label and shared L tooltip/accessible metadata in both languages, matching shortcut help');
+    checks.push('both auto-arrange menu entries use their translated direction and shared L/Shift+L tooltip and accessible metadata in both languages, matching shortcut help');
 
     const layouts=[];
     for(const width of [320,390,1600])for(const factor of [75,125])for(const theme of ['dark','light']){

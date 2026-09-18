@@ -33,7 +33,7 @@ for key in re.findall(r'(\w+):',settings): refs.update(['experiments.'+key,'expe
 refs.update('experiments.cursor.'+value for value in ('default','move'))
 refs.update('experiments.style.'+value for value in ('professional','cool','excellent','legendary','godlike'))
 refs.update(['node.resize','comment.resize'])
-refs.update('arrange.'+key for key in ('left','centerX','right','top','centerY','bottom','spaceX','spaceY','grid'))
+refs.update('arrange.'+key for key in ('auto','autoReverse','left','centerX','right','top','centerY','bottom','spaceX','spaceY','grid'))
 for key in refs:
     assert key in data['messages'],key
     for lang in data['languages']: assert data['messages'][key].get(lang),(key,lang)

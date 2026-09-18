@@ -18,13 +18,26 @@
     "Graph"
   ],
   "messages": {
+    "compare.operator": {
+      "zh-Hant": "比較方式",
+      "en": "Comparison"
+    },
+    "help.compare": {
+      "zh-Hant": "比較 A 與 B，輸出 `bool`。支援 `>`、`≥`、`<`、`≤`、`==`、`!=`；輸入型別為 float、int 或 uint。Auto 依接線選型，也可鎖定型別。向量請先取出要比較的分量；浮點相等是精確比較，沒有容差。\n\n[Khronos GLSL · Operators](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)",
+      "en": "Compare A and B and output a `bool`. Supports `>`, `≥`, `<`, `≤`, `==`, and `!=` with float, int, or uint inputs. Auto resolves the type from connections, or you can lock it. Extract a component before comparing vectors. Floating-point equality is exact, with no tolerance.\n\n[Khronos GLSL · Operators](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)"
+    },
+    "help.if": {
+      "zh-Hant": "Condition 為 true 時輸出 True，否則輸出 False。Condition 只接受 `bool`；未接線時可直接選擇。結果支援 float、vec2、vec3、vec4，沿用 Auto／鎖定型別及既有數值轉換。\n\n這是數值選擇：上游節點可能已先計算，不能保證未選分支完全不執行。Spec Constant 的預設值不會用來提前刪除另一側。\n\n[Khronos GLSL · Selection operator](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)",
+      "en": "Output True when Condition is true; otherwise output False. Condition accepts only `bool` and can be set directly while unconnected. The result supports float, vec2, vec3, and vec4, using the existing Auto/locked type and numeric conversion rules.\n\nThis selects a value: upstream nodes may already have been evaluated, so it does not guarantee skipping an entire unselected branch. A Spec Constant default never prunes the other branch in generated code.\n\n[Khronos GLSL · Selection operator](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)"
+    },
     "experiments.title": {"zh-Hant": "實驗功能", "en": "Experimental features"},
     "experiments.reset": {"zh-Hant": "還原預設", "en": "Reset defaults"},
     "selection.toolbar": {"zh-Hant": "選取工具列", "en": "Selection toolbar"},
     "selection.editTools": {"zh-Hant": "編輯工具", "en": "Edit tools"},
     "selection.nodeTools": {"zh-Hant": "選取節點工具", "en": "Selected node tools"},
     "arrange.title": {"zh-Hant": "排列節點", "en": "Arrange nodes"},
-    "arrange.auto": {"zh-Hant": "自動排列", "en": "Auto arrange"},
+    "arrange.auto": {"zh-Hant": "自動排列：由來源", "en": "Auto arrange: from sources"},
+    "arrange.autoReverse": {"zh-Hant": "自動排列：由結果", "en": "Auto arrange: from outputs"},
     "arrange.left": {"zh-Hant": "齊左", "en": "Align left"},
     "arrange.centerX": {"zh-Hant": "水平置中", "en": "Align horizontal centers"},
     "arrange.right": {"zh-Hant": "齊右", "en": "Align right"},

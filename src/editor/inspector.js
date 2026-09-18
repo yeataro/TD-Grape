@@ -633,19 +633,20 @@ function commentNodeEditor(n,canvas=false){
   const entry=el('textarea',{class:'comment-node-editor'+(canvas?' comment-node-canvas':''),'data-comment-node':n.id,'aria-label':t('comment.text'),placeholder:t('comment.placeholder'),rows:canvas?5:8,maxlength:2000});
   entry.value=hasDraft?draft.text:nodeComment(n);entry.readOnly=readonly;
   let committed=nodeComment(n);
+  const refreshSize=()=>{const card=canvas&&box.closest('.node');if(card?.isConnected){applyNodeWidth(card,n);wires();}};
   const renderPreview=()=>{
     if(!preview)return;
     preview.replaceChildren(committed?commentMarkdown(committed):el('span',{class:'muted'},t('comment.placeholder')));
     if(!readonly)preview.title=t('comment.edit');
   };
-  const read=()=>{if(preview){renderPreview();entry.hidden=true;preview.hidden=false;}};
+  const read=()=>{if(preview){renderPreview();entry.hidden=true;preview.hidden=false;refreshSize();}};
   const edit=()=>{
     if(readonly||editorMutationBlocked()||current()!==owner||!owner.nodes.includes(n)||!box.isConnected)return;
     preview.hidden=true;entry.hidden=false;entry.focus({preventScroll:true});
   };
   entry.keepCommentEditor=()=>!readonly&&current()===owner&&owner.nodes.includes(n)&&nodeComment(n)===committed&&(canvas||selected===n.id&&inspectorTab==='parameters');
   entry.hasPendingEdit=()=>entry.value!==committed;
-  entry.syncCommentValue=value=>{if(document.activeElement!==entry){committed=value;entry.value=value;renderPreview();}};
+  entry.syncCommentValue=value=>{if(document.activeElement!==entry){committed=value;entry.value=value;renderPreview();refreshSize();}};
   const commit=()=>{
     if(readonly||current()!==owner||!owner.nodes.includes(n))return;
     if(entry.value===committed){commentNodeDrafts.delete(n);return;}
@@ -939,12 +940,19 @@ function nodeTypeSelector(n,d){
 }
 function nodePrimarySelector(n,d){
   if(!d)return null;let control=null;
-  if(n.params.type)control=nodeTypeSelector(n,d);
+  if(d.key==='compare')control=compareOperatorSelector(n);
+  else if(n.params.type)control=nodeTypeSelector(n,d);
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
   else if(n.params.declarationId){const source=nodeSourceDeclaration(n);if(source)control=select(graph.declarations.filter(item=>item.kind===source.kind).map(item=>[item.id,item.name]),source.id,value=>change(()=>n.params.declarationId=value));}
   else if(n.params.inputId)control=select(topInputsView().map(item=>[item.id,item.name]),n.params.inputId,value=>change(()=>n.params.inputId=value));
   if(!control)return null;control.classList.add('node-primary-selector');control.dataset.nodeSelector=n.id;control.disabled=readonly;control.setAttribute('aria-label',control.title||t('node.declaration'));
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
+}
+function compareOperatorSelector(n){
+  const control=select([['>','>'],['>=','≥'],['<','<'],['<=','≤'],['==','=='],['!=','!=']],n.params.operator,value=>{
+    if(!editorMutationBlocked()&&current().nodes.includes(n))change(()=>n.params.operator=value);
+  });
+  control.dataset.compareOperator=n.id;control.disabled=readonly;control.title=t('compare.operator');control.setAttribute('aria-label',control.title);return control;
 }
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;
@@ -989,9 +997,11 @@ function queueInlineValueRender(){
 }
 function inlineNumericFields(n,port,value,write,labels='XYZW'){
   const values=Array.isArray(value)?value:[value],box=el('span',{class:'node-inline-values'});
+  const type=port==='$value'?Object.values(ports(n,'outputs'))[0]:ports(n,'inputs')[port],integer=['int','uint'].includes(type);
   values.forEach((v,index)=>{
-    const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:''),entry=el('input',{type:'number',step:'any','aria-label':label});
+    const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:''),entry=el('input',{type:'number',step:integer?'1':'any','aria-label':label});
     entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.value=String(v);
+    if(integer){entry.min=type==='uint'?'0':'-2147483648';entry.max=type==='uint'?'4294967295':'2147483647';}
     applyValueComponentHint(entry,n,port,index,values.length>1,labels);
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
@@ -1001,7 +1011,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
     const commit=()=>{
       if(entry.numericGestureActive||!own()||entry.value===committed)return;
       const next=Number(entry.value);
-      if(!entry.value.trim()||!Number.isFinite(next)){entry.setAttribute('aria-invalid','true');return;}
+      if(!entry.value.trim()||!Number.isFinite(next)||(integer&&(!Number.isInteger(next)||next<Number(entry.min)||next>Number(entry.max)))){entry.setAttribute('aria-invalid','true');return;}
       // A changed source/topology invalidates a draft instead of writing it into
       // a replacement graph or another Subgraph definition.
       if(inlineValueEdit?.entry===entry&&inlineValueEdit.signature!==inlineValueSignature(n)){restore();return;}
@@ -1033,9 +1043,16 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
 }
 function nodeInlineValues(n,port){
   const type=ports(n,'inputs')[port],key=definition(n)?.key;
-  if(type!=='float'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port))return null;
+  if(!['float','int','uint','bool'].includes(type)||current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port))return null;
   if(key==='replace'&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value')))return null;
   const value=defaultInput(n,port,type);if(value===null)return null;
+  if(type==='bool'){
+    const box=el('span',{class:'node-inline-values'}),entry=select([['false','false'],['true','true']],String(!!value),next=>{
+      if(!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n))change(()=>setNodeInputValue(n,port,next==='true'));
+    });
+    entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.disabled=readonly;entry.setAttribute('aria-label',portLabel(n,'inputs',port));
+    for(const event of ['pointerdown','click','dblclick','keydown'])entry.addEventListener(event,e=>e.stopPropagation());box.append(entry);return box;
+  }
   return inlineNumericFields(n,port,value,(index,next)=>{
     const old=defaultInput(n,port,type),updated=Array.isArray(old)?old.slice():old;
     if(Array.isArray(updated))updated[index]=next;
@@ -1106,6 +1123,7 @@ function inspector(){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
       const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
+    if(d.key==='compare')box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
     pixelBufferFields(box,n);
     if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(ordinary?parameterControlRow('',split):split);}
     if('value'in n.params){

@@ -249,6 +249,8 @@ Swizzle 待議（2026-09-17）：是否保留獨立節點尚未決定；可考�
 
 使用者先描繪後續能力，本段是設計草稿，不代表已實作，也不啟動編譯器改造。
 
+2026-09-18 本輪範圍確認：說明方案後，使用者以「okgo」授權先做 Compare／If。Compare 先支援 float／int／uint 的 A、B 與六種比較方式，輸出 bool；If 採 Condition／True／False，條件嚴格 bool，結果沿既有 float／vec2／vec3／vec4 的 Auto／鎖定型別及明確轉換規則。一般常數可保留 const 鏈，Spec Constant 不依預設值剪枝。這輪不改上游先計算的產碼架構；Switch、typed integer／bool 結果、Discard 及最佳化量測仍待後續。
+
 ### 已確認的方向
 
 - 布林二選一命名為 If，避免與 switch/case 多路選擇混淆。條件與 True／False 值分開輸入；比較節點產生 bool 後再接 If 是基礎方向。Select 名稱仍留給前述來源／分量選取構想。
@@ -272,3 +274,25 @@ Swizzle 待議（2026-09-17）：是否保留獨立節點尚未決定；可考�
 - [Derivative 的 Specialization Constants](https://docs.derivative.ca/Specialization_Constants) 將 if／switch 模式選擇列為用途；[AMD 的 GCN shader 指南](https://gpuopen.com/download/GDC2017-Advanced-Shader-Programming-On-GCN.pdf) 亦說明在 pipeline 編譯時提供特化值以便常數折疊。但文件不能取代實際驅動回歸。
 - 目前既有原生測試驗證 Spec Constant 的覆寫、型別、編譯成功及畫面值，未驗證死分支消除；編譯成功、輸出正確與 SPIR-V 中間檔是否仍有分支，都不能單獨證明最終機器碼已刪除運算。這輪沒有進行新 GPU benchmark，亦沒有 AMD／Metal 實機結果。
 - 後續最小驗證組：If 的 true／false、Switch 的 int／uint 多個 Case 與 Default，分別使用一般常數、Spec Constant 和執行期輸入；包含特化值不同於預設值，以及本專案「上游先算、下游選值」的實際產碼形式。比較手動只保留選中路徑的基準，優先檢查最終指令／資源資料，再輔以暖機後 GPU 時間。保留共享且另有用途的計算，不把它誤判為消除失敗。
+
+## 2026-09-18 討論：Uniform 共用資料與編輯入口
+
+使用者明確說這是架構與命名比較，不是修改指示。現在 graph.declarations 保存共用宣告，各 Uniform 畫布節點以 declarationId 引用，同時各自保存位置、接線、註記；不是一顆本尊加多顆獨立克隆。共用名稱、型別與數值的資料模型可保留，是否讓各引用的 Parameter 直接編輯共用屬性、取代「編輯來源」跳轉，尚未決定。
+
+命名候選：程式碼維持 Declaration／Reference；介面可考慮「共用參數／引用」，來源仍適合作為 Uniform、貼圖、時間等 Inputs 的廣義用語。本輪不改按鈕名稱或來源流程。
+
+[Epic 官方 Material Expressions Reference](https://dev.epicgames.com/documentation/unreal-engine/unreal-engine-material-expressions-reference) 說明同一 Material 內同型別、同名稱的參數視為同一參數，Material Instance 的值覆寫影響各處；[Instanced Materials](https://dev.epicgames.com/documentation/unreal-engine/instanced-materials-in-unreal-engine) 說明參數為具名且可覆寫的值。這支持參考其直接操作體驗，不推論圖上每顆節點共用同一物件或改名必然同步；本專案仍可維持穩定 ID 引用，不改為以同名合併。
+
+## 2026-09-18 調查：Note 放大字級後底部留白
+
+使用者回報 10× 字級的一行透明 Note 下方空白過大，要求調查。隔離瀏覽器量測 24 組（普通段落／H1、1×／10×、未存高度／180／1、透明／不透明），確認目前 `43px + 4 × inset + 27px × fontScale` 的最小高度公式，將 H1 的保守預留套用到所有內文。10× 透明 Note 下限 333px，preview 高 280px，普通段落實際行高 180px，扣除 preview 內距後多 90px；H1 實際行高 234px，仍多 36px。不透明 Note 下限 353px，但額外空間相同。小於下限的儲存高度與縮小拖曳都被 clamp，所以不能再縮。
+
+1× 尚未調整尺寸時，預設 180px 的固定高度也會保留空白，這與放大後下限過高是不同來源。候選修正為依實際一行文字高度設定縮小下限，保留手動拉大尺寸；本次僅調查記錄，未更改 Note CSS、尺寸或使用者圖。量測及截图位於私人報告 note-bottom-space。
+
+後續使用者授權優化 Note 節點尺寸，包含此次留白。採實際首行高度加現有標題／內距／邊框／捲軸計算縮小下限；保留手動尺寸、未設定高度的 180px 預設、隱藏標題時固定內文位置、190px 寬度下限及多行捲動。畫布長行不自動折行，保留明確換行與橫向捲動；編輯器的文字輸入行為不變。實際 live Note 後續讀到已改為 4×／475×171px，舊公式同樣多留 36px，降低下限後可再縮小，不批次改寫使用者既存高度。
+
+## 2026-09-18 自動排列雙方向
+
+使用者確認保留現行排列，再新增從鏈路結果往回決定層級的第二種方式；多個最終節點也應支援。兩者接線仍由左到右：`自動排列：由來源` 將來源放在左侧，`自動排列：由結果` 將末端放在右側，再讓較短支路靠近下游。共用選區範圍、實際尺寸、接孔上下順序、間距及一次 Undo，不增加外部排版函式庫。快捷鍵為 L／Shift＋L，選單提示及快捷鍵列表保持一致。
+
+使用者另討論被一併選取的零散節點是否可在下方由左至右或 grid 排列，以免結果過高；先表示擱置，隨後明確授權簡單實作為第二階段整理。兩個方向共用：完全沒有選區內連線的節點集中到主圖下方，由左至右依合適寬度換行；有連線的獨立小鏈路保留原本鏈路排列。全為零散節點時也採緊湊格狀，不堆成單一直欄；只改位置，沿用同一次 Undo。

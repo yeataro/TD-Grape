@@ -185,6 +185,7 @@ function removeGroupFrame(frame,data=current()){
   return change(()=>GraphFrames.write(data,GraphFrames.read(data).filter(item=>item.id!==frame.id)),{localize:false});
 }
 function selectGroupFrame(frame){
+  focusGraphCanvas();
   const members=groupFrameMembers(frame);selection=new Set(members.map(n=>n.id));selected=members[0]?.id||null;selectedEdge=null;
   document.querySelectorAll('.node').forEach(card=>card.classList.toggle('selected',selection.has(card.dataset.node)));
   inspector();renderNavigation();positionGroupFrames();
