@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 最新工作順序：0.8.103 共用控制已交付，接續 Array Create；完成後進行[UI 元件共用調查](../discussions/UX_BACKLOG.md)。後者僅調查與提出建議，不修改 UI，須另經使用者審查。
+
 2026-09-19 0.8.103 交付檢查點：`841b6d3` 已整合 main，刷新 runtime／style_css／inspector_js 並核對 32 份來源；三份使用者 Shader 保留。TOE 已保存為 899,238 bytes，SHA-256 `70518fa17c4c8c01f930c3aed4e74d767db5f6a55677b263d89b63979c574601`，排除一份私人助手；未重載使用者目前的編輯器頁面。
 
 2026-09-19 Array 控制共用修正（0.8.103 實作檢查點）：節點長度改用既有 `inlineNumericFields` INT 編輯器，僅提供長度範圍及型別變更提交選項；長度來源下拉與 Parameter 共用來源建立器。節點 body 的下拉共用數值欄位底色、高度及字級，移除 Array 專用尺寸 CSS，維持上下排列。12 組陣列、15 組 Matrix 及 15 組 Parameter 瀏覽器檢查通過，涵蓋明暗樣式、非法整數、草稿保留、Escape、型別傳遞及 Undo。Array Create 依使用者最新指示暫緩，未完成草稿已移出產品工作樹，未混入此次交付。同步／保存另記。
