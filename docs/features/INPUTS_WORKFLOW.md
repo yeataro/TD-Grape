@@ -20,9 +20,9 @@ Inputs 的來源模型始於 0.8.7；以下操作入口已依目前 UI 更新。
 
 | 入口 | 實際建立／編輯的資料 |
 | --- | --- |
-| Uniform | GLSL OP Vectors 的原生列；目前支援 float、vec2、vec3、vec4 |
+| Uniform | GLSL OP Vectors 的原生列；支援 float／int／uint／bool 及其 2–4 分量向量，共 16 種值型別 |
 | Color | GLSL OP Colors 的原生列與 vec4；保留 TD 色彩轉換語意 |
-| Graph Constants／圖內常數 | 圖宣告保存的 float／vec2／vec3／vec4 常數；使用時產生 GLSL `const` |
+| Graph Constants／圖內常數 | 圖宣告保存的 16 種純量／向量常數；使用時產生 GLSL `const` |
 | Spec Constants／特化常數 | GLSL OP **Constants** 頁的原生列；支援 int／uint／bool／float 純量 |
 | Sampler | 既有 sampler2D 宣告、TOP 來源及取樣分離流程 |
 | Time | float Uniform，初始 Python Expression 為 `me.time.seconds` |
@@ -30,13 +30,13 @@ Inputs 的來源模型始於 0.8.7；以下操作入口已依目前 UI 更新。
 | Absolute Time | float Uniform，初始 Python Expression 為 `absTime.seconds` |
 | Absolute Frame | float Uniform，初始 Python Expression 為 `absTime.frame` |
 
-Time / Frame 名稱可改，衝突時使用流水號。這些是普通 Uniform，不是新增 GPU built-in。Frame 暫以 float 傳遞，沒有藉此宣稱 int / uint 管線已完成。時鐘語意依 [TD Frame](https://derivative.ca/UserGuide/Frame) 與 [absTime Class](https://docs.derivative.ca/AbsTime_Class)。
+Time / Frame 名稱可改，衝突時使用流水號。這些是普通 Uniform，不是新增 GPU built-in。Frame 快捷入口仍以 float 作預設；這是預設配置，不代表 Uniform 缺少 int／uint 型別。時鐘語意依 [TD Frame](https://derivative.ca/UserGuide/Frame) 與 [absTime Class](https://docs.derivative.ca/AbsTime_Class)。
 
 Spec Constants 的正式名稱為 **Specialization Constants**，窄標題可縮寫 **Spec Const**。它與 Graph Constants 分開：宣告保存固定來源 ID、GLSL 型別、建立預設及不隨名稱／排列改變的 `constantId`，產碼為 `layout(constant_id = N) const TYPE name = default;`；目前值由 TD `constNvalue` 單一原生參數維護。值改動由 TD 特化 Shader，不重新寫 Graph 的預設或產生新來源。適合偶爾變動的模式選擇，不用它取代每幀更新的 Uniform。
 
-兩類原生來源共用既有 registry 與網頁 Undo／Redo，不維護另一份目前值清單。Spec Constants 可建立、改名、修改目前值、刪除及恢復；仍有引用的刪除保留缺失節點，Undo 恢復同一來源 ID、`constantId` 及先前原生值。原生 Expression／Bind／Export 照既有保護保存；這輪不提供 Spec Constants 的網頁驅動編輯或 Expose。bool 使用布林值；純量可明確 cast 到既有 float／向量路徑，但不因此開放尚未完成的整套整數運算、陣列或 Matrix 編輯。
+兩類原生來源共用既有 registry 與網頁 Undo／Redo，不維護另一份目前值清單。Spec Constants 可建立、改名、修改目前值、刪除及恢復；仍有引用的刪除保留缺失節點，Undo 恢復同一來源 ID、`constantId` 及先前原生值。原生 Expression／Bind／Export 照既有保護保存；這輪不提供 Spec Constants 的網頁驅動編輯或 Expose。bool 使用布林值；一般節點已有純量／向量型別與轉換基礎，各運算仍受合法簽名限制。陣列與 Matrix 編輯尚未實作，Spec Constant 仍限四種純量。
 
-**TD 2025.32820 原生整數覆寫限制**：GLSL 語言本身仍接受完整 32 位元 int／uint literal，但 TD Constants 頁的傳送有額外限制。TOP／MAT 的 int 原生覆寫不能是負數；MAT 的 int／uint 還必須可被 float32 精確表示，例如 `16777217` 不行、`1073741824` 可以，並仍須在該整數型別範圍內。Graph 預設、新來源、套用、目前值與 Undo 均先檢查此限制，拒絕時保留原狀；不默默截斷、不改 GLSL 宣告型別。外部直接改 TD 造成不支援值時，Inputs 來源快照保留實際 Par 值並回報問題，可再改回合法值。float 的負數覆寫正常，不受整數限制。
+**原生整數傳輸與 Grape 驗證**：已撤除額外的 float32 精確表示限制、MAT uint 人工上限及負整數 Spec 限制。TD 原生傳輸可能失真，但不因此拒絕原生接受的整數值；來源讀快照不再驗證或回報這些精度問題。明確編輯／配置／Undo 仍驗證基本型別、有限值及完整 int32／uint32 範圍。這不是持續監控原生動畫值的機制，精度撤銷也沒有變更既有 Bind 回呼或轮詢。
 
 Spec Constants 並不在圖內「一般常數表達式」的完整白名單中。特化表達式有自身限制，不能僅因輸入是 Spec Const 就把任意數學函式結果宣稱為可用於所有編譯期位置。參考 [Derivative Specialization Constants](https://docs.derivative.ca/Specialization_Constants)；純量支援以 TD 2025.32820 的 TOP／MAT 實測為準。
 
@@ -63,8 +63,6 @@ Graph 與 Inputs 共用網頁 Undo／Redo 順序，每個完成的使用者操�
 | ID 對應的原生 sequence／列 | 來源 registry 保存對應，重新排序時校正位置；它不另存一份目前數值 |
 | Inputs 清單、Parameter 顯示、圖內引用顯示 | 從宣告與原生來源快照呈現，不自行建立來源 |
 | Undo／Redo 快照 | 工作階段內的歷史資料；只在明確撤銷／重做時用來修改上述實體 |
-
-匯入整張圖或載入範例時，仍存在的原生 Uniform 清單保留。匯入宣告按相同 ID、或唯一相同 Uniform 名稱重用現有來源；所有 stage／Subgraph 引用一併對應回該 ID，GLSL 型別與預設可採匯入資料，但目前值與原生 vec／color 列不重建。未被新圖使用的來源仍可由 Inputs 明確刪除。同名跨種類、ID 與名稱分別命中不同實體等歧義會拒絕這次匯入並保留原圖。這個對應屬於匯入那一步，不是 Undo 或輪詢的隱性補回。
 
 匯入整張圖或載入範例時，仍存在的原生 Uniform 清單保留。匯入宣告按相同 ID、或唯一相同 Uniform 名稱重用現有來源；所有 stage／Subgraph 引用一併對應回該 ID，GLSL 型別與預設可採匯入資料，但目前值與原生 vec／color 列不重建。未被新圖使用的來源仍可由 Inputs 明確刪除。同名跨種類、ID 與名稱分別命中不同實體等歧義會拒絕這次匯入並保留原圖。這個對應屬於匯入那一步，不是 Undo 或輪詢的隱性補回。
 
@@ -97,7 +95,7 @@ Inputs 不產生原生 GLSL Parameters 按鈕，也不保留其 HTML、前端事
 - `tests/td/test_native_sources.py`、`test_custom_parameters.py`、`test_input_presets.py`：TOP / MAT 原生資料、時鐘、保留驅動、型別呈現、衝突與回復。測試使用獨立元件，並比較使用者 Shader 保存內容。
 - 桌面 wire geometry、既有觸控編輯與 WebKit 空白斷線流程有回歸驗證。這輪新 Inputs 拖放尚待 iPad / macOS 實機回驗。
 
-Alpha 仍須補足：int / uint 與分量轉換、Attributes / Input Buffers 完整來源管理、MAT 跨 stage 介面、可多輸出的手寫 GLSL 節點、Instancing 存取與變形／法線／顏色／UV／自訂屬性、Render TOP Uniform 外部供值與同名診斷，以及能快速修改 PBR / MAT / TOP 範例的節點與模板。較少使用的能力仍在 Alpha 範圍內，實作順序可分輪推進。
+Alpha 尚待補足：矩陣／陣列、接線轉換規則的整體整理、Attributes / Input Buffers 完整來源管理、MAT 跨 stage 介面、可多輸出的手寫 GLSL 節點、Instancing 存取與變形／法線／顏色／UV／自訂屬性、Render TOP Uniform 外部供值與同名診斷，以及能快速修改 PBR / MAT / TOP 範例的節點與模板。較少使用的能力仍在 Alpha 範圍內，實作順序可分輪推進。
 
 恆常集合節點、末端灰點與節點 Label／來源資訊位置保留既有未決策狀態；不因這輪 Inputs 原型而定案。
 

@@ -2,6 +2,9 @@
 
 目前狀態以 [STATUS.md](development/STATUS.md) 為準。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
 
+- [專案用語表](GLOSSARY.md)：跨功能的中英術語與概念界線；不代替行為規格。
+- [值、節點與來源模型](architecture/VALUE_MODEL.md)：已確認的固定／通用入口、穩定名稱、來源引用及能力邊界。
+- [接線轉換與背景工作提案](discussions/CONVERSION_AND_RUNTIME_NEXT.md)：現況、推薦方向與尚未定案的規則。
 - [開發與更新內嵌程式](development/DEVELOPMENT.md)
 - [測試方式](development/TESTING.md)
 - [獨立 TD Remote Panel 試驗元件](../src/remote_panel/README.md)

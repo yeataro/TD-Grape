@@ -8,6 +8,8 @@
 - 處理某項功能時，依 [文件索引](../docs/README.md) 讀相關文件。只在需要釐清背景時追查歷史，不要求每次修改讀完整專案。
 - 更新 TD 內嵌程式或保存 TOE 時，查 [開發流程](../docs/development/DEVELOPMENT.md)；選擇驗證方法時，查 [測試說明](../docs/development/TESTING.md)。
 
+跨功能術語依 [專案用語表](../docs/GLOSSARY.md)。新增概念先查既有定義；新用詞須說明與相近詞的界線。待決行為仍寫在設計提案，不以用語定義代替產品決策。
+
 ## 專案邊界
 
 - 產品程式只在 `src/` 維護；來源與 TD DAT 的對應由 `src/td/source_files.json`、`src/td/embedded_sources.json` 定義。

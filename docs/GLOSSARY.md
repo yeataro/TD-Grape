@@ -1,0 +1,79 @@
+# 專案用語表
+
+本表統一 TD-Grape 文件、設計討論及開發溝通的用詞。定義名詞不代表啟用功能、改變接線規則或批准 UI 命名方案；UI 標籤、程式識別碼及保存格式也不隨本表自動更名。
+
+採用既有 GLSL／圖形編輯器術語，補上本專案需要的層次與範圍。中文詞搭配穩定英文詞；縮寫及舊稱作為查找別名，不另建立不同概念。
+
+## 型別、接孔與運算
+
+| 建議用語 | 英文／識別碼 | 定義與區分 |
+| --- | --- | --- |
+| 型別 | Type | 一個值的具體型別，例如 float、int、ivec3。Auto 是選擇型別的模式，不是一種值型別。 |
+| 型別家族／元素型別 | Type family／Element type；`family` | 純量與向量的基本元素種類，例如 float、int、uint、bool。ivec3 的元素型別是 int。矩陣、陣列與資源的結構需另行描述，不能只靠家族與分量數概括。 |
+| 分量／分量數 | Component／Component count；`components` | vec3 有三個分量，純量有一個。談向量形狀時優先說「分量數」，避免與貼圖維度或矩陣行列混用。 |
+| 純量／向量 | Scalar／Vector | 單一值與有多個分量的值；與名稱相同的節點種類須依上下文區分。 |
+| 接孔 | Port／Socket | 節點上的輸入或輸出端點，帶有具體型別與用途。接線（Wire／Edge）連接兩個接孔。 |
+| 函數簽名／節點簽名 | Function signature／Node signature | 一組輸入與輸出型別。相同功能可有多個合法簽名；支援哪些簽名由功能決定。 |
+| 運算型別 | Operation type | 節點選用的運算配置型別，不保證等於輸出型別。例如 Length 可對 vec3 運算而輸出 float。 |
+| 來源型別／接孔型別／輸出型別 | Source type／Input port type／Output type | 分別指上游提供的型別、輸入接孔要求的型別及結果型別。介面上的 `int → float` 表示來源與接孔之間有轉換。 |
+| 自動型別推導 | Type inference／Auto | 編輯器依來源及合法簽名選擇實際運算型別。它決定使用哪個型別，不等於自動轉換值。推導方向、優先順序及無接線時的預設另由規則文件定義。 |
+| 指定型別／鎖定型別 | Explicit type／Locked type | 使用者明確指定運算型別，Auto 不再為該配置選型別。這不等於禁止輸入接線轉換；兩者需分開判斷。 |
+
+## 接線與轉換
+
+「接線型別規則」是討論型別推導、接孔相容性與接線轉換的總稱。描述轉換時先說值做了什麼，再說由誰決定；不要用一個「Auto Cast」涵蓋所有行為。
+
+| 建議用語 | 英文 | 定義與區分 |
+| --- | --- | --- |
+| 型別轉換／轉型 | Type conversion／Cast | 在本表的純量／向量例子中，指元素型別改變，例如 int → float、vec3 → ivec3，也包含 bool 與數值的明確轉換。是否合法、自動或需 Convert，是另一個問題。 |
+| 純量展開 | Splat | 把同一純量填入向量每個分量，例如 int → ivec3，得到三個相同整數。不是補零，也不是任意向量擴張或截短。可與元素型別轉換同時發生。 |
+| 分量組合／選取 | Component assembly／Selection；Combine／Swizzle | 明確指定分量的組成、來源或順序。vec2 變 vec4 需要說明新增分量的來源，不能籠統稱為 splat。 |
+| 接線自動轉換 | Automatic connection conversion | 編輯器按接線規則替來源與接孔的型別差異產生轉換程式；畫布上不需要存在 Convert 節點。可包含 cast 與 splat。 |
+| GLSL 隱式轉換 | GLSL implicit conversion | GLSL 語言規格在特定情境中允許編譯器自動完成的轉換。與 Grape 的接線轉換表不是同一件事。 |
+| GLSL 明確轉換 | GLSL explicit conversion／Constructor | 程式直接寫出 `float(x)`、`ivec3(x)` 等建構式。即使畫布沒有 Convert，Grape 也可能產生這種程式。 |
+| 明確轉換節點 | Convert | 圖上明確表達轉換操作的節點。它是編輯介面中的實體，不等同所有產生的 GLSL constructor。 |
+| 來源型別推導 | Source type inference | 轉換操作根據實際接線決定來源型別。與目的型別選擇分開；此詞不宣告現有 Convert 已提供 Auto。 |
+| 自動插入轉換節點 | Automatic Convert insertion | 編輯器新增並接好 Convert 的快捷操作。與不新增節點的接線自動轉換，以及 Convert 本身的來源型別推導，都是不同功能。 |
+
+例：`int → Ceil` 的來源是 int，Ceil 使用浮點運算。Grape 可選擇 float 簽名並產生 `ceil(float(x))`；前者是型別推導，`float(x)` 是轉型，畫布省略 Convert 是接線自動轉換。If 的 Condition 是 bool，而分支／結果可用另一種型別；一個節點的 Auto 不一定作用於所有接孔。
+
+「節點內 cast」無法說明是接孔適配、節點本身的演算法還是 GLSL constructor，應指明上述層次。「自動 cast」也應改寫為接線自動轉換、來源型別推導或自動插入 Convert 中實際指涉的行為。
+
+## 節點、來源與值
+
+| 建議用語 | 英文／識別碼 | 定義與區分 |
+| --- | --- | --- |
+| 節點種類／節點定義 | Node kind／Node definition | 種類描述功能分類；定義記錄該功能的接孔、配置等資料。不能只用目前顯示名稱判斷節點身分。 |
+| 節點實例 | Node instance | 畫布上某一個具體節點，有自己的位置、配置及 UI 狀態。 |
+| 顯示名稱／身分識別碼 | Display name／ID | 顯示名稱供人辨識，ID 供資料穩定引用；顯示名稱也不必是合法 GLSL 識別字。具體命名與更名行為另由設計規則決定。 |
+| 共用來源 | Shared source／Source | 可被多個畫布引用使用的具名來源，例如 Uniform。談接線上的「來源」時需說明是上游輸出，避免和來源物件混淆。 |
+| 宣告 | Declaration | 圖內記錄來源種類、名稱、型別等資料的定義；談產生的 GLSL 宣告時明說「GLSL 宣告」。兩者不是一段一對一跨 Stage 共用的程式文字。 |
+| 來源引用 | Source reference | 指向既有來源的畫布節點。它與其他引用共用來源定義，位置與註記等節點 UI 狀態可以獨立；不以「實體／克隆」表示來源與引用的關係。 |
+| 本地值／字面值 | Local value／Literal | 本地值描述資料由某個節點或輸入持有；字面值描述程式中的直接值表示，例如 `1.0`。資料歸屬和程式表示是不同問題。 |
+| 預設值／目前值 | Default value／Current value | 建立、初始化或回復時採用的值，與當下實際使用的值。來源預設值、TD 原生目前值、未接線輸入值需明確標出歸屬。 |
+| 未接線輸入值 | Unconnected input value／Input default | 沒有上游連線時使用的本地輸入值；不可與來源宣告的預設值混稱。 |
+
+## 常量、Stage 與參數
+
+| 建議用語 | 英文 | 定義與區分 |
+| --- | --- | --- |
+| 常量／常量表達式 | Constant／Constant expression | 前者是值的分類；後者是符合相應語言常量規則的表達式。值目前沒有變動，不足以判定它是編譯期常量。專案中已有「常數」用詞視為同義詞，不另造一類。 |
+| Uniform | Uniform | 由宿主提供 Shader 執行時使用的值。即使 TD 目前手填一個固定值，來源仍是 Uniform。 |
+| 特化常量 | Specialization constant／Spec Constant | 特化時決定的常量，有自己的可用表達式與宿主覆寫規則；不能直接當成普通常量或 Uniform。 |
+| Shader 階段 | Shader stage／Stage | 例如 Vertex、Fragment（本專案介面也使用 Pixel）。階段間資料傳遞，與不同階段引用同一份 Grape 來源定義是不同關係。 |
+| 共用範圍／生效時機 | Sharing scope／Value resolution time | 分別描述哪些地方引用同一份定義，以及值何時確定；跨 Stage 可用不代表各類來源具有相同生效時機。 |
+| Parameter 面板 | Parameter panel | Grape 編輯器的節點設定介面。不是另一種 Shader 資料來源。 |
+| TD 原生參數／自訂參數 | Native TD parameter／Custom parameter | TD OP 的參數，以及建立於 COMP 的控制項。需與 Parameter 面板、GLSL 函數參數分開稱呼。 |
+| TD 固定值模式 | TD parameter Constant mode | TD 參數的手動固定值模式。不是 GLSL `const`，也不是 Spec Constant。 |
+
+Graph Constant 是既有介面名稱；Global Constant／全域常量是討論中的命名方向。本表不代替該命名決策。說明共享範圍時，應明確說是同一份 Grape Shader 的共用來源定義，不能暗示 GLSL 自動建立一個跨 Stage 的單一變數。
+
+## 維護與文件分工
+
+- 本表回答「這個詞指什麼」，不維護另一份型別允許清單，也不收錄每輪對話。
+- 實際接線與編譯規則放在 [型別契約](architecture/TYPE_CONTRACT.md)；Auto 操作放在 [MATH_AUTO](ui/MATH_AUTO.md)，型別顯示放在 [TYPE_DISPLAY](ui/TYPE_DISPLAY.md)。這些文件含歷史描述，現況需核對 [狀態](development/STATUS.md)、最新實作與文件標示的時點，不能將舊限制當成術語定義。
+- 尚待決定的行為、命名與替代方案放在 `discussions/`，明確區分提案、已確認決定與已實作狀態。從候選方案挑出的例子，不自動成為共通規則。
+- 新增跨功能概念時先查本表：已有概念沿用既有詞；確實不同時補上定義、英文名稱、例子及與相近詞的界線。調整用詞時保留必要別名，並同步相關文件連結。
+- 本表只做術語整理時，不批次修改 UI 文案、程式識別碼、保存資料或執行行為。
+
+GLSL 術語依據：[Implicit Conversions](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#implicit-conversions)、[Constructors](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#constructors)、[Common Functions](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#common-functions)。專案是否提供某項便利操作另由產品規則決定。
