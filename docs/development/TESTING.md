@@ -1,6 +1,12 @@
 # 測試
 
-2026-09-18 值模型／Compare／Note／偏好整合（main `1d2a3c1`）：完整 portable checks 通過，含 344 項 Python unit、632 個雙語鍵及既有 editor launch／browser metadata／JS model／26 項 Remote Panel 檢查。使用目前 core 匯出 fixture 後，主線 headless Chromium 的固定型別入口 7、型別基礎 13、Compare／If 11、Note 對齊 3、UI experiments 20、editor chrome 17，共 71 組通過、零頁面錯誤。固定入口涵蓋全部 16 型別、搜尋／實際建立、固定身分與泛型切換、複製／JSON／Undo；全螢幕時鐘涵蓋原生進入／退出、失敗、外部退出及既有偏好恢復。
+2026-09-18 Parameter 整組 Value Ladder（main `390a1d1`）：新正式 Chromium 測試 14 組在功能分支及主線通過、零頁面錯誤；主線 JavaScript 語法、diff 及 634 個雙語鍵通過。覆蓋固定／通用型別、展開分量、未接線值、Color 不限於 0–1、共同整數界限、純預覽／一筆 Undo、取消、一般重繪、上下文切換、忙碌／唯讀，以及同節點畫布與 Parameter 草稿保護。另以獨立 probe 重驗零位移／來回零位移精度、畫布草稿與重繪後單筆 Undo，四項均通過；Ladder 畫面已檢視。
+
+同輪測試查出並修正兩項問題：零位移對手填高精度小數多做取位數，以及整組手勢覆寫畫布未提交草稿。額外驗證 Number.MAX_VALUE 仍為有限數、聚焦但未改值的欄位在整組提交／blur／下一次手勢後保持一致，沒有假草稿或額外 Undo。此次僅背景檔案與 headless fixture，未操作 TD、使用者圖或桌面。
+
+同一穩定功能版本的既有 headless 回歸：numeric scrub 32、numeric touch 20、numeric presets 7、Parameter values 15，共 74 組通過、零頁面錯誤；涵蓋單欄中鍵、Alt＋右鍵、左鍵／觸控長按、級距鎖定、縮放、草稿及取消，與新整組 14 組合計 88 組數值操作檢查。兩支更早期 `test_value_ladder.cjs`／`test_ladder_touch.cjs` 因舊 Uniform／Parameter DOM 選擇器在首個手勢前 timeout，不能列為通過；它們亦含已被取代的級距／單點觸控假設，應另作測試維護。沒有為了通過舊測試修改產品語意，現行六個回歸入口的 headless 瀏覽器皆已關閉。
+
+2026-09-18 值模型／Compare／Note／偏好整合（main `1d2a3c1`）：完整 portable checks 通過，含 344 項 Python unit、633 個雙語鍵及既有 editor launch／browser metadata／JS model／26 項 Remote Panel 檢查。使用目前 core 匯出 fixture 後，主線 headless Chromium 的固定型別入口 7、型別基礎 13、Compare／If 11、Note 對齊 3、UI experiments 20、editor chrome 17，共 71 組通過、零頁面錯誤。固定入口涵蓋全部 16 型別、搜尋／實際建立、固定身分與泛型切換、複製／JSON／Undo；全螢幕時鐘涵蓋原生進入／退出、失敗、外部退出及既有偏好恢復。
 
 分支另完成註記高度驗證：既有 node notes 3、Markdown 9、Note appearance 16、Note resize 14 組通過；私人版面探針檢查分隔線實際拖動、極矮面板最小輸入高度、窄面板長文捲動及分頁切換，截圖已檢視。Compare 的 9 項 Python control 往返、26 項 Math Auto model 與 10 項 Auto／指定型別產碼等價檢查通過；沒有更動其他節點的推導排序。
 
