@@ -178,8 +178,8 @@ class NativeDoubleMath(unittest.TestCase):
         for key in ('sin','cos','pow','rgb_to_hsv','hsv_to_rgb','remap','loop','zigzag','perlin_noise','simplex_noise'):
             for ty in c.DOUBLE_TYPES+c.MATRIX_TYPES:
                 self.assertNotIn(ty,c.node_parameter_types(c.CATALOG[key]),(key,ty))
-        for key in ('add','subtract','multiply','divide'):
-            self.assertEqual(c.node_parameter_types(c.CATALOG[key]),c.LEGACY_NUMERIC_TYPES)
+        for key in c.ARITHMETIC_KEYS:
+            self.assertEqual(c.node_parameter_types(c.CATALOG[key]),c.ARITHMETIC_TYPES)
         self.assertEqual(c.node_parameter_types(c.CATALOG['compare']),('float','int','uint'))
 
 

@@ -150,6 +150,60 @@ def matrix_type(family,columns,rows):
         raise GraphError('Matrix dimensions must be 2 to 4 columns and rows')
     return ('dmat' if family=='double' else 'mat')+str(columns)+(('x'+str(rows)) if columns!=rows else '')
 
+ARITHMETIC_KEYS = ('add','subtract','multiply','divide')
+ARITHMETIC_TYPES = NUMERIC_TYPES + MATRIX_TYPES
+
+def arithmetic_result(key,a,b):
+    """Native operator signatures, without evaluating any shader values.
+
+    Existing scalar/vector sockets keep their explicit wire-cast policy.
+    Matrix signatures retain both operand shapes: a scalar is never promoted
+    to a diagonal matrix for component-wise arithmetic.
+    """
+    if key not in ARITHMETIC_KEYS or a not in ARITHMETIC_TYPES or b not in ARITHMETIC_TYPES:return None
+    left=TYPE_DESCRIPTORS[a];right=TYPE_DESCRIPTORS[b]
+    if left['family']!=right['family']:return None
+    lm=a in MATRIX_TYPES;rm=b in MATRIX_TYPES
+    if not (lm or rm):return a if a==b else None
+    if left['components']==1:return b
+    if right['components']==1:return a
+    if key!='multiply':return a if lm and rm and a==b else None
+    columns=left['columns'] if lm else left['components']
+    rows=right['rows'] if rm else right['components']
+    if columns!=rows:return None
+    if lm and rm:return matrix_type(left['family'],right['columns'],left['rows'])
+    return shaped_type(left['family'],left['rows'] if lm else right['columns'])
+
+ARITHMETIC_SIGNATURES = {key:{(a,b):result for a in ARITHMETIC_TYPES for b in ARITHMETIC_TYPES
+                            if (result:=arithmetic_result(key,a,b)) is not None} for key in ARITHMETIC_KEYS}
+
+def arithmetic_operands(key,ty):
+    # Selecting an output shape provides useful legal defaults even when a
+    # nonsquare matrix cannot multiply another matrix of its own shape.
+    if key=='multiply' and ty in MATRIX_TYPES:
+        shape=TYPE_DESCRIPTORS[ty]
+        return {'a':ty,'b':matrix_type(shape['family'],shape['columns'],shape['columns'])}
+    return {'a':ty,'b':ty}
+
+def arithmetic_interface(key,params):
+    ty=params.get('type','float');operands=params.get('operandTypes',arithmetic_operands(key,ty))
+    if not isinstance(operands,dict) or set(operands)!= {'a','b'} or any(not isinstance(t,str) for t in operands.values()):
+        raise GraphError('Invalid arithmetic operand types')
+    if ty not in ARITHMETIC_TYPES or ARITHMETIC_SIGNATURES[key].get((operands['a'],operands['b']))!=ty:
+        raise GraphError('Arithmetic operands do not produce the selected output type')
+    return {'inputs':dict(operands),'outputs':{'out':ty}}
+
+def arithmetic_variants(key):
+    # Canonical variants first preserves ordinary Auto defaults and old files.
+    default=CATALOG[key]['defaults'].get('type','float')
+    types=(default,)+tuple(ty for ty in ARITHMETIC_TYPES if ty!=default)
+    pairs=[tuple(arithmetic_operands(key,ty).values()) for ty in types]
+    pairs+=list(ARITHMETIC_SIGNATURES[key])
+    return [dict(type=ARITHMETIC_SIGNATURES[key][pair],inputs=dict(zip(('a','b'),pair)),
+                 outputs={'out':ARITHMETIC_SIGNATURES[key][pair]},
+                 **({'params':{'operandTypes':dict(zip(('a','b'),pair))}} if any(t in MATRIX_TYPES for t in pair) else {}))
+            for pair in dict.fromkeys(pairs)]
+
 def matrix_identity(ty):
     if ty not in MATRIX_TYPES:raise GraphError('Select a matrix type')
     d=TYPE_DESCRIPTORS[ty]
@@ -455,6 +509,7 @@ def definition_ports(definition, params):
         choices=SCALAR_TYPES if key=='scalar' else VECTOR_TYPES if key=='vector' else MATRIX_TYPES if key=='matrix' else ()
         if fixed not in choices or params.get('type')!=fixed:
             raise GraphError('Fixed value type cannot change')
+    if definition['key'] in ARITHMETIC_KEYS:return arithmetic_interface(definition['key'],params)
     if definition['key'] in VECTOR_KEYS:return vector_interface(definition['key'],params)
     if definition['key'] in MATRIX_KEYS:return matrix_interface(definition['key'],params)
     if definition['key'] in CONVERT_KEYS:
@@ -486,7 +541,7 @@ def node_parameter_types(definition):
     if key in ('uniform','constant'):return TYPES
     if key in ('if',*CONVERT_KEYS):return TYPES
     if key=='spec_constant':return LEGACY_TYPES
-    if key in ('add','subtract','multiply','divide'):return LEGACY_NUMERIC_TYPES
+    if key in ARITHMETIC_KEYS:return ARITHMETIC_TYPES
     if key in ('min','max','clamp','mod'):return NUMERIC_TYPES
     if key in ('abs','sign'):return SIGNED_TYPES+DOUBLE_TYPES
     if key in DOUBLE_MATH_KEYS:return FLOAT_TYPES+DOUBLE_TYPES
@@ -528,6 +583,9 @@ def _type_contract():
     """
     variants = {}
     for definition in CATALOG.values():
+        if definition['key'] in ARITHMETIC_KEYS:
+            variants[definition['definitionUuid']]={'selector':'parameter','variants':arithmetic_variants(definition['key'])}
+            continue
         if definition['key'] in COMPOSITE_KEYS:
             variants[definition['definitionUuid']]={'selector':'dynamic','variants':[dict(type=None,**resolved_ports(definition,definition['defaults']))]}
             continue
@@ -674,6 +732,10 @@ def literal(value, ty):
 def input_default(key,port,ty):
     if compound_type(ty):return filled_value(ty)
     if ty in MATRIX_TYPES:
+        if key in ARITHMETIC_KEYS and key!='multiply':
+            # Component-wise division needs ones in every divisor cell, not
+            # an identity matrix with zero off-diagonal divisors.
+            return filled_value(ty,CATALOG[key].get('inputDefaults',{}).get(port,0))
         # If preserves its existing True=1 / False=0 semantics using GLSL's
         # scalar-to-matrix diagonal construction, including nonsquare shapes.
         if key=='if':

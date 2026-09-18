@@ -199,10 +199,9 @@ class MatrixFoundation(unittest.TestCase):
             self.assertIn(c.literal(value,ty),compiled['pixel'])
             self.assertEqual(compiled,c.compile_graph(json.loads(json.dumps(result))))
 
-    def test_heterogeneous_arithmetic_remains_outside_current_batch(self):
-        for key in ('add','multiply'):
-            self.assertNotIn('mat3',c.node_parameter_types(c.CATALOG[key]))
-            self.assertNotIn('double',c.node_parameter_types(c.CATALOG[key]))
+    def test_arithmetic_extension_does_not_widen_ordinary_matrix_wires(self):
+        for source,target in [('mat2','mat3'),('mat3','dmat3'),('float','mat3'),('vec3','mat3')]:
+            self.assertIsNone(c.conversion_kind(source,target))
 
 
 class DoubleFoundation(unittest.TestCase):

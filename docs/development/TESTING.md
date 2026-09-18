@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-19 矩陣四則與分層型別選單：`test_matrix_arithmetic.py`／`.js` 檢查 352 組完整簽名、輸入形狀、序列化、預設數值與非法配對；`tests/browser/test_matrix_arithmetic.cjs` 實際連線、切換操作數、Undo／Redo、拉線新增；`test_creator_performance.cjs` 持續檢查候選配對與 101 節點的搜尋成本。既有 138 圖編譯基準保持一致。TD 的 `tests/td/test_matrix_arithmetic.py` 比對 360 個 TOP Pixel／MAT Pixel／MAT Vertex 結果（包含 12 個未接線預設），使用獨立 fixture，結束核對既有 Shader、registry 並清理 fixture。前端使用共用的 type contract；若用舊 browser state，先以 `tests/browser/export_editor_fixture.py` 更新 fixture，避免測到舊簽名。
+
+`test_type_menus.cjs` 驗證分層順序、水平線、Double 第三級、鍵盤、320／390px 與 UI scale；`test_select_menus.cjs` 驗證其他既有下拉選單與共用提交路徑。實際 iOS 裝置的手勢體感仍待使用者 review。
+
 2026-09-19 Array Create：`tools/dev/run_tests.py` 通過（445 Python unit、14 integration、687 雙語 keys、Node suites）。`test_array_create.cjs` 6 組檢查，包含長度數字修改同步下游、執行期長度拒絕、Uniform 填值、複製重映射及兩種子圖擷取；匯出的三份圖另由 core 實際編譯。`test_array_structure.cjs` 12 組既有陣列檢查通過。`tests/td/test_array_create.py` 在 TD 2025.32820 以隔離 fixture 載入工作樹 core，42 項 TOP／MAT Pixel／Vertex GPU 比對全部通過，包含 Spec 值改變時原 Shader 文字不變、Uniform 填值更新、bool／double／非方形矩陣；既有 Shader／registry 不變，fixture 刪除。私人報告在 `work/reports/array-create-round/native`；瀏覽器及 portable 證據在 Documents 工作區 `reports/array-create-round`，不打包進產品。
 
 

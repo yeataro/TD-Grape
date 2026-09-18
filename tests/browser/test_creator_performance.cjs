@@ -28,7 +28,9 @@ const [source,stateFile,folder]=process.argv.slice(2);
   const compare=async(query='',filter='all',sourceFilter='all')=>{
     const result=await page.evaluate(({query,filter,sourceFilter})=>{
       $('#createsearch').value=query;$('#createtype').value=filter;$('#createsource').value=sourceFilter;
-      const before=JSON.stringify({graph,past,future}),read=()=>creatorMatches.map(m=>({key:browserEntryKey(m.d),type:m.type,port:m.port,portType:m.portType,params:m.params,variant:m.variant}));
+      // Local previews intentionally keep an Array Create length symbolic;
+      // the committed graph can recognize a direct literal without evaluation.
+      const before=JSON.stringify({graph,past,future}),read=()=>creatorMatches.map(m=>({key:browserEntryKey(m.d),type:m.type,port:m.port,portType:m.portType,params:m.params,variant:m.d.key==='array_create'?{...m.variant,outputs:{out:m.variant.outputs.out.replace(/\[[^\]]+\]/,'[N]')}}:m.variant}));
       creatorTypePlan=optimizedCreatorTypePlan;renderCreator();const actual=read();
       try{creatorTypePlan=(...args)=>optimizedCreatorTypePlan(...args.slice(0,5));renderCreator();return {actual,expected:read(),unchanged:before===JSON.stringify({graph,past,future})};}
       finally{creatorTypePlan=optimizedCreatorTypePlan;}
@@ -38,8 +40,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
   try{
     for(const type of ['float','int','uint','bool','vec3','ivec3','bvec3','double','dvec3','mat3','mat2x3','dmat2x3']){
       const matrix=/^d?mat/.test(type);
-      // Add deliberately has no matrix signature. Matrix parity must use a
-      // valid source and receiver, rather than comparing two empty error lists.
+      // Also exercise the existing matrix-specific receiver independently.
       await reset({type,count:matrix?0:1});await open('outputs',type);assert.ok(await page.evaluate(()=>creatorMatches.length>0));await compare();await compare('con');
       if(matrix){
         await page.evaluate(type=>{current().nodes.push(testNode('matrix-target','matrix_replace',400,80,{type,values:matrixReshapeValue([1,0,0,1],'mat2',type)}));render();},type);

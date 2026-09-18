@@ -448,6 +448,11 @@ function typeVariants(d){
 function resolvedNodePorts(d,params,decl,kind){
   if(isCompositeOperation(d))return compositePorts(d.key,params)[kind];
   if(params.fixedType&&params.type!==params.fixedType)throw Error(t('type.fixedValue'));
+  if(isArithmetic(d)){
+    const operands=params.operandTypes,variant=typeVariants(d).find(v=>v.type===(params.type||'float')&&(!operands||Object.keys(operands).length===2&&v.inputs.a===operands.a&&v.inputs.b===operands.b));
+    if(!variant)throw Error(t('contract.invalid'));
+    return variant[kind];
+  }
   if(isVectorOperation(d))return vectorPorts(d.key,params)[kind];
   if(isMatrixOperation(d))return matrixPorts(d.key,params)[kind];
   if(isMatrixAccess(d))return matrixAccessPorts(d.key,params)[kind];
@@ -470,6 +475,7 @@ function resolvedNodePorts(d,params,decl,kind){
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
 const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&!isMatrixOperation(d)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const isArithmetic=d=>['add','subtract','multiply','divide'].includes(d?.key);
 const isVectorOperation=d=>['vector','replace','combine','vector_split','swizzle'].includes(d?.key);
 const isMatrixOperation=d=>['matrix','matrix_combine','matrix_replace','matrix_split'].includes(d?.key);
 const isMatrixAccess=d=>['matrix_get','matrix_set'].includes(d?.key);
@@ -688,7 +694,7 @@ function invalidTypeEdges(data,portMap){
 }
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
 function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false}={}){
-  const nodes=new Map(data.nodes.map(n=>[n.id,n])),incoming=new Map(),ports=new Map(),choices=new Map(),groups=new Map(),issues=new Map(),active=new Set();
+  const nodes=new Map(data.nodes.map(n=>[n.id,n])),incoming=new Map(),ports=new Map(),choices=new Map(),operands=new Map(),groups=new Map(),issues=new Map(),active=new Set();
   const scope=owner?'fn_'+owner.id:Object.keys(document.stages).find(key=>document.stages[key]===data)||stage;
   const typeDocument=owner?{...document,functions:document.functions.map(f=>f.id===owner.id?{...f,graph:data}:f)}:{...document,stages:{...document.stages,[scope]:data}};
   for(const e of data.edges){if(!incoming.has(e.to[0]))incoming.set(e.to[0],[]);incoming.get(e.to[0]).push(e);}
@@ -717,31 +723,37 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
       const layout=typeContract.vectors.layouts[plannedType]?.find(row=>componentLinks.every(e=>Object.hasOwn(row.inputs,e.to[1])&&ports.get(e.from[0])?.outputs[e.from[1]]===row.inputs[e.to[1]])&&Object.keys(row.groups).every(p=>componentLinks.some(e=>e.to[1]===p)));
       if(!layout)throw Error(t('vector.overlap'));
       groups.set(n.id,layout.groups);ports.set(n.id,vectorPorts(isVector?'replace':'combine',{...n.params,type:plannedType,groups:layout.groups}));
-    }else if(autoNodes.has(n.id)){
-      const d=autoDefinition(document,n,owner),candidates=nodeTypeVariants(d,n.params).filter(v=>links.every(e=>vectorConnectionExact(d,ports.get(e.from[0])?.outputs[e.from[1]],v.inputs[e.to[1]])));
+    }else if(autoNodes.has(n.id)||isArithmetic(autoDefinition(document,n,owner))){
+      const d=autoDefinition(document,n,owner),arithmetic=isArithmetic(d),automatic=autoNodes.has(n.id),candidates=nodeTypeVariants(d,n.params).filter(v=>(automatic||v.type===n.params.type)&&links.every(e=>vectorConnectionExact(d,ports.get(e.from[0])?.outputs[e.from[1]],v.inputs[e.to[1]])));
       const score=v=>links.reduce((sum,e)=>sum+Number(ports.get(e.from[0])?.outputs[e.from[1]]!==v.inputs[e.to[1]]),0);
-      candidates.sort((a,b)=>score(a)-score(b)||typeComponents(a.type)-typeComponents(b.type));
+      // A single matrix wire keeps a matrix result until the other operand
+      // determines it. Otherwise Multiply would prematurely choose a vector.
+      const loneMatrix=links.length===1&&ports.get(links[0].from[0])?.outputs[links[0].from[1]],matrixDefault=v=>arithmetic&&isMatrixType(loneMatrix)?Number(v.type!==loneMatrix):0;
+      candidates.sort((a,b)=>score(a)-score(b)||matrixDefault(a)-matrixDefault(b)||typeComponents(a.type)-typeComponents(b.type));
       // Compare starts with integers only when no input can determine its type.
       // Keep the shared ranking unchanged as soon as either input is connected.
-      const chosen=(!links.length&&d.key==='compare'?candidates.find(v=>v.type==='int'):null)||candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
+      const stored=!automatic&&!links.length&&arithmetic?candidates.find(v=>v.inputs.a===n.params.operandTypes?.a&&v.inputs.b===n.params.operandTypes?.b):null;
+      const chosen=stored||(!links.length&&d.key==='compare'?candidates.find(v=>v.type==='int'):null)||candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
       choices.set(n.id,chosen.type);ports.set(n.id,{inputs:chosen.inputs,outputs:chosen.outputs});
+      if(arithmetic)operands.set(n.id,chosen.params?.operandTypes||null);
     }else ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
     }catch(error){if(!draft)throw error;issues.set(n.id,error.message);ports.set(n.id,safeConcretePorts(document,n,owner,plannedType,overrides.get(n.id)));}
     active.delete(n.id);
   }
   // No policy nodes: existing unresolved/cyclic drafts remain a compiler concern.
-  if(autoNodes.size||combineNodes.size||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
+  if(autoNodes.size||combineNodes.size||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))||isArithmetic(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
   else for(const n of data.nodes)ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
-  return {choices,ports,groups,issues};
+  return {choices,ports,operands,groups,issues};
 }
 function storedTypePorts(document,data,owner=null){return new Map(data.nodes.map(n=>[n.id,safeConcretePorts(document,n,owner)]));}
 function rejectNewTypeIssues(data,ports,oldData,oldPorts){
   const old=new Set(oldData?invalidTypeEdges(oldData,oldPorts).map(e=>typeEdgeKey(e,oldPorts)):[]);
   for(const e of invalidTypeEdges(data,ports))if(!old.has(typeEdgeKey(e,ports)))throw autoTypeError('type.autoDownstream',`${ports.get(e.from[0])?.outputs[e.from[1]]||'?'} → ${ports.get(e.to[0])?.inputs[e.to[1]]||'?'}`);
 }
-function reshapeTypedInputs(n,d,nextType){
+function reshapeTypedInputs(n,d,nextType,nextOperands=null){
   if(n.params.fixedType&&nextType!==n.params.fixedType)throw Error(t('type.fixedValue'));
-  const previous=n.params.type||'float';if(previous===nextType)return;
+  const previous=n.params.type||'float',arithmetic=isArithmetic(d);
+  if(previous===nextType&&(!arithmetic||JSON.stringify(n.params.operandTypes||null)===JSON.stringify(nextOperands)))return;
   if(isCompositeOperation(d)){
     n.params.type=nextType;
     if(d.key==='struct_field'){
@@ -758,7 +770,7 @@ function reshapeTypedInputs(n,d,nextType){
     // cells from the cache while keeping every currently visible cell current.
     for(let c=0;c<Math.min(oldShape.columns,nextShape.columns);c++)for(let r=0;r<Math.min(oldShape.rows,nextShape.rows);r++)n.params.values[c*nextShape.rows+r]=old[c*oldShape.rows+r];
   }
-  const oldPorts=typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
+  const oldPorts=arithmetic?resolvedNodePorts(d,n.params,null,'inputs'):typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=arithmetic?resolvedNodePorts(d,{type:nextType,...(nextOperands?{operandTypes:nextOperands}:{})},null,'inputs'):typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
   // Retain manually entered defaults per dimension, including dormant connected inputs.
   for(const [port,value]of Object.entries(n.inputValues||{})){
     if(!oldPorts[port]||!newPorts[port]||oldPorts[port]===newPorts[port])continue;
@@ -774,6 +786,7 @@ function reshapeTypedInputs(n,d,nextType){
     }
   }
   n.params.type=nextType;
+  if(arithmetic){if(nextOperands)n.params.operandTypes=clone(nextOperands);else delete n.params.operandTypes;}
   normalizeNodeValues(n,d);
 }
 function normalizeNodeValues(n,d){
@@ -792,7 +805,7 @@ function autoTopology(document){
   return JSON.stringify({typeDefinitions:document.typeDefinitions,declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>{
     const creates=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.array_create').map(n=>n.id));
     const lengthSources=new Set(data.edges.filter(e=>creates.has(e.to[0])&&e.to[1]==='length').map(e=>e.from[0]));
-    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
+    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.operandTypes,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
   })});
 }
 function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
@@ -819,7 +832,7 @@ function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid
     }
     plans.push({...unit,plan});
   }
-  for(const {data,owner,plan}of plans)for(const n of data.nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(document,n,owner),plan.choices.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
+  for(const {data,owner,plan}of plans)for(const n of data.nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(document,n,owner),plan.choices.get(n.id),plan.operands.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
 }
 function setMathType(n,mode){
   const d=definition(n);if(!supportsAutoType(d))return false;
@@ -849,7 +862,7 @@ function planWireTypes(from,to,extra=null){
   const plan=planAutoGraph(graph,candidate,owner,overrides,{draft:true}),oldPlan=planAutoGraph(graph,data,owner,new Map(),{draft:true});
   for(const [id,message]of plan.issues)if(oldPlan.issues.get(id)!==message)throw Error(message);
   rejectNewTypeIssues(candidate,plan.ports,data,storedTypePorts(graph,data,owner));
-  for(const n of nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
+  for(const n of nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id),plan.operands.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
   if(autoUnits(graph).some(u=>u.data.nodes.some(n=>n.params.requireConstant||n.definitionUuid==='sgrape.builtin.array_create'))){
     const document=owner?{...graph,functions:graph.functions.map(f=>f===owner?{...f,graph:candidate}:f)}:{...graph,stages:{...graph.stages,[stage]:candidate}};
     rejectNewConstantIssues(document,graph);
@@ -880,7 +893,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
   // Ordinary Auto nodes choose their signature from their wires, not the trial
   // variant. Replace/Combine retain a dimension-dependent assembly policy.
   const infer=(!context.owner||context.owner.scope==='local')&&node.ui.typeMode==='auto'&&!['combine','replace'].includes(d.key);
-  const params={...node.params};if(infer)delete params.type;
+  const params={...node.params};if(infer){delete params.type;delete params.operandTypes;}
   const trialKey=JSON.stringify([d.definitionUuid,params,infer?null:variant,port,locked]);
   const cached=context.plans.get(trialKey);if(cached){if(cached.error)throw cached.error;return cached.ports;}
   try{
@@ -888,7 +901,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
     const possibleInputs=(entry,n,name)=>{
       if(assembling(entry)||isCompositeOperation(entry))return null;
       const automatic=(!context.owner||context.owner.scope==='local')&&n.ui?.typeMode==='auto'&&supportsAutoType(entry);
-      return automatic?nodeTypeVariants(entry,n.params).map(v=>v.inputs[name]):[n.id===id?variant.inputs[name]:context.oldPorts.get(n.id)?.inputs[name]];
+      return automatic||isArithmetic(entry)?nodeTypeVariants(entry,n.params).filter(v=>automatic||v.type===n.params.type).map(v=>v.inputs[name]):[n.id===id?variant.inputs[name]:context.oldPorts.get(n.id)?.inputs[name]];
     };
     let sourcePorts;
     if(wire.kind==='outputs')sourcePorts=context.oldPlan.ports.get(wire.node);
@@ -897,7 +910,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
       let single=context.singlePlans.get(singleKey);
       if(!single){
         single=planAutoGraph(graph,{nodes:[node],edges:[]},context.owner,new Map([[id,variant]]),{draft:true});
-        if(single.choices.has(id))reshapeTypedInputs(node,d,single.choices.get(id));
+        if(single.choices.has(id))reshapeTypedInputs(node,d,single.choices.get(id),single.operands.get(id));
         context.singlePlans.set(singleKey,single);
       }
       if(single.issues.size)throw Error([...single.issues.values()][0]);
@@ -918,7 +931,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
       const plan=planAutoGraph(graph,candidate,context.owner,new Map([[boundary.id,sourcePorts],[id,variant]]),{draft:true});
       if(plan.issues.size)throw Error([...plan.issues.values()][0]);
       rejectNewTypeIssues(candidate,plan.ports,null,null);
-      if(plan.choices.has(id))reshapeTypedInputs(node,d,plan.choices.get(id));
+      if(plan.choices.has(id))reshapeTypedInputs(node,d,plan.choices.get(id),plan.operands.get(id));
       ports=plan.ports.get(id);
     }else {
       // A new source has no incoming wires. Once its own signature is known,
@@ -943,7 +956,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
           const plan=planAutoGraph(graph,candidate,context.owner,boundaries,{draft:true});
           for(const [nodeId,message]of plan.issues)if(context.oldPlan.issues.get(nodeId)!==message)throw Error(message);
           if(invalidTypeEdges(candidate,plan.ports).some(edge=>!context.invalidEdges.has(typeEdgeKey(edge,plan.ports))))throw autoTypeError('type.autoInputs');
-          if(plan.choices.has(target.id))reshapeTypedInputs(candidate.nodes[0],targetDefinition,plan.choices.get(target.id));
+          if(plan.choices.has(target.id))reshapeTypedInputs(candidate.nodes[0],targetDefinition,plan.choices.get(target.id),plan.operands.get(target.id));
           context.reversePlans.set(sourceType,null);
         }
         catch(error){context.reversePlans.set(sourceType,error);}

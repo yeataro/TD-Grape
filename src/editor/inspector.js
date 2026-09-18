@@ -403,6 +403,7 @@ function defaultInput(n,port,type){
   if(key==='pixel_out'&&editorTarget==='mat')return [0,0,0,0];
   if(key==='pixel_out'||key==='vertex_out')return [0,0,0,1];
   const value=definition(n)?.inputDefaults?.[port]??(port==='factor'?.5:port==='alpha'?1:0);
+  if(isArithmetic(definition(n))&&isMatrixType(type))return key==='multiply'?filledValue(type,1):Array(typeComponents(type)).fill(value);
   if(isConvertOperation(definition(n))&&isMatrixType(type))return filledValue(type,1);
   return filledValue(type,value);
 }

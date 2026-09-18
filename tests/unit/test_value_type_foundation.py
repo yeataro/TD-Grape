@@ -79,6 +79,7 @@ class ValueTypeFoundation(unittest.TestCase):
         floating=('sin','cos','pow','mix','sqrt','floor','round','ceil','trunc','fract','length','normalize','dot','remap','range_from','range_to','loop','zigzag')
         for key,allowed in [(key,c.LEGACY_NUMERIC_TYPES) for key in numeric]+[(key,c.FLOAT_TYPES) for key in floating]+[(key,c.SIGNED_TYPES) for key in ('abs','sign')]:
             if key in c.DOUBLE_MATH_KEYS:allowed+=c.DOUBLE_TYPES
+            if key in c.ARITHMETIC_KEYS:allowed=c.ARITHMETIC_TYPES
             self.assertEqual(c.node_parameter_types(c.CATALOG[key]),allowed)
             for ty in c.TYPES:
                 with self.subTest(node=key,type=ty):

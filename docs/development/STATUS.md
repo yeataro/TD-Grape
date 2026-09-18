@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 矩陣四則（0.8.106 實作檢查點）：既有 Add／Subtract／Multiply／Divide 新增 mat／dmat 異型輸入簽名，補 double／dvec；Auto 依輸入順序與矩陣形狀推導結果。手動選單鎖定輸出型別；核心、接口與拉線搜尋共用有限型別表，沒有值求解或 TD 輪詢。一般圖的 138 組編譯基準不變。完整 portable（451 項 Python）通過；352 組簽名編譯與存檔往返、4 組新瀏覽器操作、11 組搜尋回歸通過；360 項 TOP／MAT Pixel／MAT Vertex GPU 檢查通過，使用者 Shader／registry 保留、fixture 清除。101 節點清單開啟 24.8–37.9 ms，查詢 1.3–11.1 ms，文字變更零 planner 呼叫。同步與保存另記。[矩陣規格](../features/MATRIX_NODES.md)
+
 2026-09-19 0.8.105 交付檢查點：`d66a575` 已整合 main，同步 32 份來源中的 8 份變更；Master 為 0.8.105、core 無錯誤、三份使用者 Shader 保留。保存 TOE 905,854 bytes，SHA-256 `49c73dacac644ca6f4c33ab76263fa262552ae98c06d5a5eaa3b27c45d085b9f`，排除一份私人助手。沒有重載使用者目前的 Editor 頁面；矩陣四則運算接續進行。
 
 2026-09-19 型別選單（0.8.105 實作檢查點）：依 Final Check 統一 Floating／Integer／Boolean／Matrix，Double 收到第三級。Auto、signed/unsigned 及方形/非方形矩陣用水平線分組，Matrix 方形優先。共用選單涵蓋節點／Parameter／來源／Function／GLSL Code 與型別篩選，維持原有合法選項與提交路徑。16 組瀏覽器檢查通過，涵蓋完整型別、三級、Undo、草稿、320px、UI 縮放與鍵盤／觸控；同步與保存另記。接續已授權矩陣四則異型簽名與 Auto，尚未宣稱已完成。[規格](../ui/TYPE_MENUS.md)

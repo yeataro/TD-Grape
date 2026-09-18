@@ -54,10 +54,29 @@ TD 2025.32820 的隔離 GPU 探針結果：
 
 第二批先交付的入口與運算擴充：Matrix Convert 負責所有矩陣輸出建構，Convert 負責純量／向量輸出建構，兩個入口完整涵蓋合法的單參數 GLSL constructor。Matrix Convert 的 `float → mat3` 等會將純量填在對角線；Matrix→Matrix 縮小保留重疊座標，擴大在額外對角線補 1、其餘補 0。If 支援同型別 Matrix／double 分支，Condition 仍是 bool；矩陣 True 預設 identity，False 預設 zero。19 個合法 double 數學函式沿用 Auto／手動入口，Dot／Length 輸出 double，Mix 的 factor 使用 double。Sin／Cos／Pow 及 TD helper 不因型別表擴大而假定有 double overload。
 
-四則異型簽名仍是後續工作，不能以增加一個輸出型別選項取代完整設計。例如 `mat3 + float` 和 `float + mat3` 都是九個元素逐一加純量；`vec3 + float` 同樣逐分量，`mat3 + vec3` 則不合法。不可把純量先轉成對角矩陣再加，因為語意不同。這些原生規則已釐清，但不宣稱此批已交付矩陣四則運算。
+2026-09-19，0.8.106 接上四則異型簽名；使用既有 Add／Subtract／Multiply／Divide，並支援 double／dvec／dmat：
+
+| 配對 | 行為 |
+| --- | --- |
+| Matrix 與 Scalar，任一順序 | 四則運算逐元素套用 Scalar；不先轉成對角矩陣 |
+| Matrix `+`／`-`／`/` Matrix | 形狀與精度相同，逐元素計算；除法不是乘反矩陣 |
+| Matrix `*` Matrix | 左側 Column 數等於右側 Row 數；結果採右側 Column 數、左側 Row 數 |
+| Matrix `*` Vector | 向量寬度等於矩陣 Column 數；輸出寬度等於 Row 數 |
+| Vector `*` Matrix | 向量寬度等於矩陣 Row 數；輸出寬度等於 Column 數 |
+| Matrix 與 Vector 做 `+`／`-`／`/` | 不合法，不提供隱式矩陣／向量轉換 |
+
+依據 [GLSL 4.60 Operators](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#operators)。矩陣逐元素乘法仍使用 Matrix Comp Mult。矩陣間不同精度／尺寸的轉换仍要明確使用 Matrix Convert；一般數值接線保留原有明確 cast／splat 政策。
+
+Auto 從完整左右輸入簽名選擇輸出，不求值。僅接入一個矩陣時先保持該矩陣形狀，另一側接入後再推導最終結果。手動型別鎖定輸出形狀，輸入仍在該輸出合法的簽名中選擇。例如 `mat2x3 * vec2 → vec3`、`mat2x3 * mat4x2 → mat4x3`。手動選擇非方形 Multiply，未接線的右輸入使用 Column 數相符的方形矩陣。
+
+保存時 `params.type` 是具體輸出型別；矩陣混合運算另保存 `params.operandTypes = {a, b}`。Core 重新驗證完整簽名後才產碼；旧圖沒有這個欄位仍沿用原有行為。型別表是有限的原生運算配對；前端 Auto、接口與拉線新增共用同一份表，不新增值求解器、TD 查詢或每候選節點的全圖模擬。Undo、匯出／匯入保存輸入型別及備用數值。
+
+Matrix Add／Subtract 的未接線值為零；Multiply 是 identity；Divide 的未接線除數每格為 1，避免 identity 的非對角零值成為除數。Parameter 使用相同預設值。
 
 第一批涵蓋型別、數值、宣告、Subgraph／手寫 GLSL／relay、匯入匯出／剪貼簿及以上新節點。不能因全域型別表增加，就自行放寬所有舊數學節點的 overload。
 
-第二批既有操作需以完整輸入／輸出簽名設計。例如矩陣乘向量會改變輸出形狀；矩陣加 scalar 必須產生原生逐元素加法，不能先把 scalar 建成對角矩陣後再相加。明確 constructor 配對另列，不與普通接線相容表混合。
+既有操作以完整輸入／輸出簽名設計；明確 constructor 配對另列，不與普通接線相容表混合。
 
 關鍵驗證入口：`test_matrix_foundation.py`、`test_matrix_editor.js`、`test_matrix_values.cjs`、`test_matrix_transport.py`、`test_matrix_sources.py`。原有圖的編譯基準與數值操作回歸仍須通過。
+
+四則新增 `test_matrix_arithmetic.py`／`.js`、同名 browser／TD 測試，包含 352 個完整簽名、全部 27 種矩陣乘法維度配對（各精度）、逐元素 GPU 數值、純量雙向順序、非法連線、未接線預設與 Undo。
