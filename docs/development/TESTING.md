@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-18 搜尋修正 0.8.89 已同步 TD 並保存：31 份內嵌來源、9 份服務資源一致，core 無錯誤，TOP／MAT Master current，三份使用者 Shader 保留。正式 TOE 863,390 bytes，SHA-256 `b0698e620bf75acf46116185cd1c808379c160cd4beb63c518d88359cdd3c817`，排除一份私人助手。creator_position 既有回歸另通過 13 組。未重新整理使用者現有 Editor；私人原生報告為 creator-performance-{refresh,masters,audit,save}-20260918。
+
 2026-09-18 拉線新增搜尋效能：完整 portable checks 通過（374 項 Python unit、656 個雙語鍵、14 項 editor launch、metadata／JS model／26 項 Remote Panel）。新增 `test_creator_performance.cjs`，10 組 headless Chromium 檢查全過、零頁面錯誤。涵蓋正反向純量／向量／矩陣候選与舊完整 planner 的結果／排序對照、文字／來源／指定型別篩選、Combine／Replace 重疊接線、If bool 接口、圖值／宣告／函式庫／契約／Undo 失效，以及過期候選與常數／下游限制拒絕時 graph／history 不變。正常建立仍執行 fresh 全圖驗證並只有一筆 Undo。
 
 效能 fixture 為來源加 100 個 Auto Add，正反向均含有／無 requireConstant：每次重開清單約 12.5–23.1ms，後續輸入约 1.1–7.1ms；候選完整圖 planner 呼叫為 0，文字變更 Auto planner 也為 0。另一支獨立 profiler 同樣 101 節點，舊版 standalone 開啟 12ms、往下游 773ms，修正後往下游 14ms；mat 查詢由 635ms 降為 5ms，standalone 約 2ms。這是本機隔離合成圖及工具計時，並非使用者實際圖或跨設備保證。計時路徑沒有 TD API 搜尋請求。報告位於私人 `work/creator-performance-regression`、`work/wire-creator-profile` 與 `work/wire-creator-independent`。
