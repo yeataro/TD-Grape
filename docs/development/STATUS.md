@@ -1,6 +1,6 @@
 # 開發狀態
 
-2026-09-18 第二批既有運算擴充暫留工作分支：已實作 Convert constructor 配對、If 矩陣／double，以及 19 種 double 數學多載，portable 383 項 Python 與相關 JS、39 組隔離新舊 UI 檢查通過。尚未部署；使用者希望一般 Convert 與矩陣轉換分流，並進一步擔心數學型別清單的負擔，需先整理共用型別選擇方式。名稱／入口分工仍待決，見 [最新 review](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)。程式与測試保留，現行 TD 為下述 0.8.88 UI 批。
+2026-09-18 第二批既有運算擴充已依同意的試行方案完成：Convert 輸出 scalar／vector，新增 Matrix Convert 輸出 matrix，完整保留 1,109 個合法 constructor 配對；If 支援矩陣／double，19 種 double 數學多載維持 Auto 主路徑及手動指定。完整 portable 與隔離 UI 檢查通過，TD TOP Pixel／MAT Pixel／MAT Vertex 的 237 項原生 GPU 檢查全過，既有 Shader、registry 保留，臨時 fixture 移除。尚未部署；先完成使用者新回報的拉線新增搜尋效能修正，兩批分開提交／交付。試行決議見 [最新 review](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)。
 
 2026-09-18 Matrix 覆寫標記試行（0.8.88）：使用者同意先試收合格內的 `↳ X／Y／Z／W`，辨識該分量有獨立接線；沿用 Matrix／Column 的格子維持橫槓，分量接口仍保留，來源節點可由提示查看。15 組 Matrix UI 檢查在分支及主線通過，已同步 TD、核對來源與資源並保存 TOE；三份使用者 Shader 保留。這筆視覺試行提交為 20fc6f2，與格數修正、既有運算擴充分開。
 

@@ -88,6 +88,48 @@
     },
     {
       "definition": {
+        "key": "matrix_convert",
+        "label": "Matrix Convert",
+        "inputs": {
+          "value": "float"
+        },
+        "outputs": {
+          "out": "mat3"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "fromType": "float",
+          "toType": "mat3"
+        },
+        "descriptionKey": "help.matrixConvert",
+        "definitionUuid": "sgrape.builtin.matrix_convert",
+        "revisionHash": "0f5450b01fe0fab7b4c446228fd9d10e1e37bfa51fbbb7163094403c14aa10df"
+      },
+      "emitter": {
+        "id": "matrix_convert",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "matrix cast",
+          "matrix constructor",
+          "matrix resize",
+          "mat2",
+          "mat3",
+          "mat4",
+          "dmat"
+        ],
+        "glslName": "matrix constructor",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
         "key": "compare",
         "label": "Compare",
         "inputs": {

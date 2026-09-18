@@ -237,6 +237,11 @@ function setTypeContract(contract){
     const {types,pairs}=contract.convert;
     if(!Array.isArray(types)||types.length!==new Set(types).size||types.some(type=>!valueTypes.includes(type))||Object.keys(pairs).length!==types.length)throw Error(t('contract.invalid'));
     for(const type of types)if(!Array.isArray(pairs[type])||pairs[type].length!==new Set(pairs[type]).size||!pairs[type].includes(type)||pairs[type].some(target=>!types.includes(target)))throw Error(t('contract.invalid'));
+    if(contract.convert.outputTypesByNode){
+      const outputs=contract.convert.outputTypesByNode;
+      for(const key of ['convert','matrix_convert'])if(!Array.isArray(outputs[key])||!outputs[key].length||outputs[key].length!==new Set(outputs[key]).size||outputs[key].some(type=>!types.includes(type)||(contract.types[type].shape==='matrix')!==(key==='matrix_convert')))throw Error(t('contract.invalid'));
+      if([...outputs.convert,...outputs.matrix_convert].length!==types.length)throw Error(t('contract.invalid'));
+    }
   }
   if(contract.pixelBufferOutputs){
     const spec=contract.pixelBufferOutputs;
@@ -259,8 +264,13 @@ function setTypeContract(contract){
 const numericTypes=()=>typeContract?.numericTypes||[];
 const valueTypes=()=>typeContract?.valueTypes||[...new Set([...numericTypes(),...(typeContract?.specConstantTypes||[])])];
 const convertTypes=()=>typeContract?.convert?.types||valueTypes().filter(type=>!isMatrixType(type)&&typeFamily(type)!=='double');
-const convertTargets=source=>typeContract?.convert?.pairs?typeContract.convert.pairs[source]||[]:convertTypes().filter(target=>convertTypes().includes(source)&&!isMatrixType(source)&&!isMatrixType(target)&&(typeComponents(source)===1||typeComponents(source)===typeComponents(target)));
-const explicitConversionValid=(source,target)=>convertTargets(source).includes(target);
+const isConvertOperation=d=>['convert','matrix_convert'].includes(d?.key);
+const convertTargets=(source,key='convert')=>{
+  const pairs=typeContract?.convert?.pairs?typeContract.convert.pairs[source]||[]:convertTypes().filter(target=>convertTypes().includes(source)&&!isMatrixType(source)&&!isMatrixType(target)&&(typeComponents(source)===1||typeComponents(source)===typeComponents(target)));
+  const outputs=typeContract?.convert?.outputTypesByNode?.[key];return outputs?pairs.filter(type=>outputs.includes(type)):key==='convert'?pairs:[];
+};
+const convertSources=(key='convert')=>convertTypes().filter(source=>convertTargets(source,key).length);
+const explicitConversionValid=(source,target,key='convert')=>convertTargets(source,key).includes(target);
 const interfaceTypes=()=>[...valueTypes(),...(typeContract?.resourceTypes||[])];
 const typeFamily=type=>typeContract?.types?.[type]?.family;
 const typeForShape=(family,count)=>valueTypes().find(type=>typeContract.types[type].shape!=='matrix'&&typeFamily(type)===family&&typeComponents(type)===count);
@@ -315,9 +325,9 @@ function resolvedNodePorts(d,params,decl,kind){
   if(isVectorOperation(d))return vectorPorts(d.key,params)[kind];
   if(isMatrixOperation(d))return matrixPorts(d.key,params)[kind];
   if(isMatrixAccess(d))return matrixAccessPorts(d.key,params)[kind];
-  if(d.key==='convert'){
+  if(isConvertOperation(d)){
     const from=params.fromType||'float',to=params.toType||'int';
-    if(!explicitConversionValid(from,to))throw Error(t('contract.invalid'));
+    if(!explicitConversionValid(from,to,d.key))throw Error(t('contract.invalid'));
     return kind==='inputs'?{value:from}:{out:to};
   }
   if(d.key==='glsl_code')return Object.fromEntries((Array.isArray(params[kind])?params[kind]:[]).map(p=>[p.id,p.type]));
@@ -682,10 +692,10 @@ function creatorTypePlan(d,variant,port,wire,locked){
 }
 function creatorVariants(d,wire){
   if(d.fixedType)return typeVariants(d);
-  if(d.key==='convert'){
+  if(isConvertOperation(d)){
     const from=wire?.kind==='outputs'?wire.type:d.defaults.fromType,to=wire?.kind==='inputs'?wire.type:d.defaults.toType;
     const pairs=wire?convertTypes().map(type=>wire.kind==='outputs'?[from,type]:[type,to]):[[from,to]];
-    const variants=pairs.filter(([a,b])=>explicitConversionValid(a,b)).map(([a,b])=>({type:null,inputs:{value:a},outputs:{out:b},params:{fromType:a,toType:b}}));
+    const variants=pairs.filter(([a,b])=>explicitConversionValid(a,b,d.key)).map(([a,b])=>({type:null,inputs:{value:a},outputs:{out:b},params:{fromType:a,toType:b}}));
     // New truncating constructors must not change the default dragged-wire
     // result into a scalar. Preserve shape before offering other conversions.
     const sameShape=type=>isMatrixType(from)||isMatrixType(type)?isMatrixType(from)&&isMatrixType(type)&&typeContract.types[from].columns===typeContract.types[type].columns&&typeContract.types[from].rows===typeContract.types[type].rows:typeComponents(from)===typeComponents(type);

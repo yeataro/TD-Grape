@@ -2,7 +2,9 @@
 
 2026-09-18 未交付的既有運算擴充：portable checks 383 項 Python unit、656 個雙語鍵、14 個 launch 檢查、既有 JS 與 26 個 Remote Panel 測試通過。第二批隔離 browser 新功能 7、basic math 8、control 11、type foundation 13 共 39 組通過；包括 Convert 1,109 個合法配對、If matrix 預設 true identity／false zero、double 簽名，以及保留拖線建立 Convert 的同形狀優先。
 
-新增 `tests/td/test_matrix_double_operations.py` 準備 73 個圖案例、219 份 core GLSL 編譯及預計 237 次 GPU 檢查。此次 TD runner 在將請求放入佇列時遇到 Windows 存取拒絕（WinError 5），未取得原生驗證結果，不能列為 GPU 通過。介面入口另待使用者確認一般／Matrix Convert 分流及數學選單設計，本批未同步 TD。
+新增 `tests/td/test_matrix_double_operations.py` 有 73 個圖案例、219 份 core GLSL 編譯及 237 次 GPU 檢查。首次提交曾在請求進入佇列前遇到 Windows 存取拒絕（WinError 5）；完成 Convert／Matrix Convert 分流後重新提交成功，237 項 TOP Pixel／MAT Pixel／MAT Vertex GPU 檢查全過，existingShadersPreserved／registryPreserved／fixtureRemoved 均為 true。包含 scalar 對角矩陣、Matrix 擴縮／精度、Matrix 擷取、If 原生動態切换、double Dot／Length／Mix／Range 等。這是工作樹的隔離驗證，尚未同步產品來源。
+
+分流後完整 portable checks 再次通過，另有 60 項核心／契約／catalog／歷史指紋 focused checks；前端新增功能 9 組及 type foundation 13 組共 22 組通過，Matrix editor unit 10 組、metadata、syntax／diff check 通過。Matrix Convert 的 28 個有效來源沒有 vec2／vec3 無合法目的的死路；全部 1,109 個配對由兩個入口聯集完整覆蓋。
 
 2026-09-18 Matrix 覆寫標記試行（0.8.88）：15 組隔離 Matrix UI 檢查通過。Combine 單獨接 X 時保持三格，顯示 `↳ X` 並帶來源提示；mat4 Replace 的 Value 與 Y 分量同時接入時，收合列精確為 `—｜↳ Y｜—｜—`，其他欄仍為四個沿用標記。數值編輯、Undo、接孔與各形狀檢查保持通過，實際 Replace 截圖已檢視。主線另以已交付 core 重驗同 15 組通過。TD 核對 31 份內嵌來源與 9 份服務資源、core 無錯誤、TOP／MAT Master current；三份使用者 Shader 保留。正式 TOE 861,518 bytes，SHA-256 `c6f87fbad7c6ecf59676c60e0294a25c3a6c619f489ed8f73d9a8d218848d655`，排除一份私人助手。交付報告為 matrix-marker-refresh／masters／audit／save-20260918。
 

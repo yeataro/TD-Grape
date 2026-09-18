@@ -34,6 +34,8 @@ COMPARE_TYPES = ('float', 'int', 'uint')
 COMPARE_OPERATORS = ('>', '>=', '<', '<=', '==', '!=')
 RESOURCE_TYPES = ('sampler2D',)
 PORT_TYPES = TYPES + RESOURCE_TYPES
+CONVERT_OUTPUT_TYPES = {'convert':SCALAR_VECTOR_TYPES,'matrix_convert':MATRIX_TYPES}
+CONVERT_KEYS = tuple(CONVERT_OUTPUT_TYPES)
 CONVERSIONS = {(ty, ty): 'identity' for ty in TYPES}
 CONVERSIONS.update({(source,target):'cast' for source in NUMERIC_TYPES for target in NUMERIC_TYPES
                     if source!=target and (TYPE_DESCRIPTORS[source]['components']==TYPE_DESCRIPTORS[target]['components'] or TYPE_DESCRIPTORS[source]['components']==1)})
@@ -65,7 +67,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
-    'perlin_noise','simplex_noise','scalar','convert',
+    'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
     'matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product'))
 
@@ -74,7 +76,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
 CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
     'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
-    'range_from','range_to','scalar','convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
+    'range_from','range_to','scalar','convert','matrix_convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
@@ -413,8 +415,10 @@ def definition_ports(definition, params):
             raise GraphError('Fixed value type cannot change')
     if definition['key'] in VECTOR_KEYS:return vector_interface(definition['key'],params)
     if definition['key'] in MATRIX_KEYS:return matrix_interface(definition['key'],params)
-    if definition['key']=='convert':
-        source=params.get('fromType','float');target=params.get('toType','int')
+    if definition['key'] in CONVERT_KEYS:
+        key=definition['key'];source=params.get('fromType',definition['defaults']['fromType']);target=params.get('toType',definition['defaults']['toType'])
+        if target not in CONVERT_OUTPUT_TYPES[key]:
+            raise GraphError(('Matrix Convert: choose a matrix output type' if key=='matrix_convert' else 'Convert: choose a scalar or vector output type'))
         if not explicit_conversion_valid(source,target):raise GraphError('Convert: the source does not supply a valid single-argument constructor for the target type')
         return {'inputs':{'value':source},'outputs':{'out':target}}
     if params.get('type') in DOUBLE_TYPES:
@@ -437,7 +441,7 @@ def node_parameter_types(definition):
     if key in MATRIX_KEYS:return MATRIX_TYPES
     if key in NOISE_HELPERS:return FLOAT_VECTOR_TYPES
     if key in ('uniform','constant'):return TYPES
-    if key in ('if','convert'):return TYPES
+    if key in ('if',*CONVERT_KEYS):return TYPES
     if key=='spec_constant':return LEGACY_TYPES
     if key in ('add','subtract','multiply','divide'):return LEGACY_NUMERIC_TYPES
     if key in ('min','max','clamp','mod'):return NUMERIC_TYPES
@@ -504,7 +508,8 @@ def type_contract():
                           'columnPrefix':'c','components':VECTOR_COMPONENTS,'indexTypes':['int','uint'],
                           'indexModes':['column','element'],'identityValues':{ty:matrix_identity(ty) for ty in MATRIX_TYPES}},
               'convert':{'types':list(TYPES),'fromParameter':'fromType','toParameter':'toType',
-                         'pairs':{source:[target for target in TYPES if explicit_conversion_valid(source,target)] for source in TYPES}},
+                         'pairs':{source:[target for target in TYPES if explicit_conversion_valid(source,target)] for source in TYPES},
+                         'outputTypesByNode':{key:list(types) for key,types in CONVERT_OUTPUT_TYPES.items()}},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
@@ -1011,7 +1016,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 d=defs[ident]; k=emitter_id(d); p=nodes[ident]['params']; ty=ports[ident]['out'].get('out'); expr=None
                 a=lambda port:inp(ident,port)
                 if k in ('float','vec2','vec3','vec4','color','scalar'): expr=literal(p.get('value'),ty)
-                elif k=='convert':expr=ty+'('+a('value')+')'
+                elif k in CONVERT_KEYS:expr=ty+'('+a('value')+')'
                 elif k in ('add','subtract','multiply','divide'): expr='('+a('a')+{'add':' + ','subtract':' - ','multiply':' * ','divide':' / '}[k]+a('b')+')'
                 elif k=='mod' and TYPE_DESCRIPTORS[ty]['family'] in ('int','uint'):expr='('+a('a')+' % '+a('b')+')'
                 elif k in ('min','max','dot','mod'): expr=k+'('+a('a')+', '+a('b')+')'

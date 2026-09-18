@@ -14,7 +14,7 @@ const {harness}=require('./test_glsl_code.cjs');
     await page.selectOption('#language','en');
     await page.evaluate(()=>{
       clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;historyBusy=nativeMutationBusy=false;graphTrail=[];stage='pixel';past=[];future=[];selected=selectedEdge=null;selection.clear();graph.functions=[];graph.declarations=[];
-      graph.stages.pixel={nodes:[testNode('result','pixel_out',1100,70),testNode('cast','convert',50,70),testNode('branch','if',400,70),testNode('matrix','matrix',50,400,{type:'mat3',values:shapedValue(1,'mat3')}),testNode('other','matrix',400,400,{type:'dmat3',values:shapedValue(1,'dmat3')}),testNode('number','scalar',750,400,{type:'double',value:.125}),testNode('vector','vector',750,70,{type:'dvec3',components:[1,2,3,0]})],edges:[]};
+      graph.stages.pixel={nodes:[testNode('result','pixel_out',1100,70),testNode('cast','convert',50,70),testNode('matrixCast','matrix_convert',1100,400),testNode('branch','if',400,70),testNode('matrix','matrix',50,400,{type:'mat3',values:shapedValue(1,'mat3')}),testNode('other','matrix',400,400,{type:'dmat3',values:shapedValue(1,'dmat3')}),testNode('number','scalar',750,400,{type:'double',value:.125}),testNode('vector','vector',750,70,{type:'dvec3',components:[1,2,3,0]})],edges:[]};
       current().nodes.find(n=>n.id==='branch').ui.typeMode='auto';selected='cast';selection=new Set(['cast']);scale=.8;pan={x:25,y:40};rememberSavedGraph(graph);render();transform();
     });await settle();
     const contract=await page.evaluate(()=>clone(typeContract));
@@ -22,33 +22,56 @@ const {harness}=require('./test_glsl_code.cjs');
     assert.deepEqual(await conversion('fromType').locator('option').evaluateAll(es=>es.map(e=>e.value)),contract.convert.types);
     assert.equal(await conversion('fromType').locator('option[value="auto"]').count(),0);
     const consistency=await page.evaluate(()=>{
-      const d=catalog.find(d=>d.key==='convert');let accepted=0,rejected=0;
-      for(const from of convertTypes())for(const to of convertTypes()){
-        const expected=typeContract.convert.pairs[from].includes(to);let actual=true;
-        try{resolvedNodePorts(d,{fromType:from,toType:to},null,'outputs');}catch{actual=false;}
-        if(expected!==actual)throw Error('Convert mismatch '+from+' -> '+to);if(actual)accepted++;else rejected++;
+      let accepted=0,rejected=0;
+      for(const key of ['convert','matrix_convert']){
+        const d=catalog.find(d=>d.key===key),outputs=typeContract.convert.outputTypesByNode[key];
+        for(const from of convertTypes())for(const to of convertTypes()){
+          const expected=outputs.includes(to)&&typeContract.convert.pairs[from].includes(to);let actual=true;
+          try{resolvedNodePorts(d,{fromType:from,toType:to},null,'outputs');}catch{actual=false;}
+          if(expected!==actual)throw Error(key+' mismatch '+from+' -> '+to);if(actual)accepted++;else rejected++;
+        }
+        for(const from of convertTypes()){
+          const variants=creatorVariants(d,{kind:'outputs',type:from}),targets=typeContract.convert.pairs[from].filter(type=>outputs.includes(type));
+          if(JSON.stringify(variants.map(v=>v.outputs.out).sort())!==JSON.stringify(targets.sort()))throw Error('Creator targets '+key+' '+from);
+        }
       }
-      for(const from of convertTypes()){
-        const variants=creatorVariants(d,{kind:'outputs',type:from});
-        if(JSON.stringify(variants.map(v=>v.outputs.out).sort())!==JSON.stringify([...typeContract.convert.pairs[from]].sort()))throw Error('Creator targets '+from);
-      }
+      const d=catalog.find(d=>d.key==='convert'),m=catalog.find(d=>d.key==='matrix_convert');
       if(creatorVariants(d,{kind:'outputs',type:'ivec3'})[0].outputs.out!=='vec3')throw Error('Legacy shape-preserving default');
-      if(creatorVariants(d,{kind:'outputs',type:'mat2'})[0].outputs.out!=='mat2')throw Error('Matrix shape-preserving default');
+      if(creatorVariants(m,{kind:'outputs',type:'mat2'})[0].outputs.out!=='mat2')throw Error('Matrix shape-preserving default');
       return {accepted,rejected};
-    });assert.deepEqual(consistency,{accepted:1109,rejected:335});
-    checks.push('All 38 explicit source choices and 1444 constructor pairs match the core contract; Creator follows the same targets without source Auto');
+    });assert.deepEqual(consistency,{accepted:1109,rejected:1779});
+    checks.push('Convert and Matrix Convert partition all 1109 legal constructors by output kind without losing pairs; Creator follows each node whitelist without source Auto');
 
     for(const from of ['mat2','dmat3x2','vec4','vec2','double','bvec4']){
       await conversion('fromType').selectOption(from);await settle();
-      assert.deepEqual(await conversion('toType').locator('option').evaluateAll(es=>es.map(e=>e.value)),contract.convert.pairs[from]);
+      assert.deepEqual(await conversion('toType').locator('option').evaluateAll(es=>es.map(e=>e.value)),contract.convert.pairs[from].filter(type=>contract.convert.outputTypesByNode.convert.includes(type)));
     }
-    await conversion('fromType').selectOption('mat2');await conversion('toType').selectOption('dmat4');await settle();
+    await conversion('fromType').selectOption('mat2');await conversion('toType').selectOption('vec4');await settle();
     const before=await state();await conversion('fromType').selectOption('vec2');await settle();
     assert.equal((await node('cast')).params.toType,'vec2');const changed=await state();
     await page.locator('#undo').click();await settle();assert.equal(await state(),before);
     await page.locator('#redo').click();await settle();assert.equal(await state(),changed);
     checks.push('Convert target choices filter by constructors; an incompatible retained target falls back to the explicitly selected source type with exact Undo/Redo');
 
+    await pick('matrixCast');assert.deepEqual((await node('matrixCast')).params,{fromType:'float',toType:'mat3'});
+    const matrixSources=await conversion('fromType').locator('option').evaluateAll(es=>es.map(e=>e.value));assert.equal(matrixSources.length,28);assert.ok(matrixSources.every(type=>!/(?:vec)[23]$/.test(type)));assert.equal(matrixSources.includes('auto'),false);
+    assert.deepEqual(await conversion('toType').locator('option').evaluateAll(es=>es.map(e=>e.value)),contract.convert.outputTypesByNode.matrix_convert);
+    assert.equal(await page.locator('[data-node="matrixCast"] [data-convert-type="toType"]').inputValue(),'mat3');
+    await conversion('toType').selectOption('dmat4');await settle();const matrixBefore=await state();
+    await conversion('fromType').selectOption('vec4');await settle();assert.equal((await node('matrixCast')).params.toType,'mat2');
+    assert.deepEqual(await conversion('toType').locator('option').evaluateAll(es=>es.map(e=>e.value)),['mat2','dmat2']);
+    await page.locator('#undo').click();await settle();assert.equal(await state(),matrixBefore);await page.locator('#redo').click();await settle();
+    await page.locator('[data-node="matrixCast"] [data-convert-type="toType"]').selectOption('dmat2');await settle();assert.equal(await conversion('toType').inputValue(),'dmat2');
+    assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='matrixCast').ui.typeMode||null),null);
+    checks.push('Matrix Convert has 28 viable explicit sources, no vec2/vec3 dead ends, 18 matrix destinations, synchronized header/Parameter controls and atomic target fallback Undo');
+
+    await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openCreator(r.left+130,r.top+120);});await page.locator('#createsearch').fill('Matrix Convert');
+    const matrixEntry=page.locator('[data-create-entry="matrix_convert"]');assert.equal(await matrixEntry.count(),1);await matrixEntry.hover();
+    const help=await page.locator('#createdetail .help-markdown').innerText();assert.ok(help.includes('diagonal')&&help.includes('column-major')&&!help.includes('help.matrixConvert'));
+    await matrixEntry.click();await settle();const created=await page.evaluate(()=>clone(current().nodes.find(n=>n.id===selected)));assert.deepEqual(created.params,{fromType:'float',toType:'mat3'});assert.equal(created.ui.typeMode,undefined);
+    checks.push('Matrix Convert is a distinct creatable node with stable defaults and accurate diagonal/column-major help');
+
+    await pick('cast');
     await conversion('fromType').selectOption('mat3');await conversion('toType').selectOption('vec4');await settle();
     assert.deepEqual(await page.evaluate(()=>defaultInput(current().nodes.find(n=>n.id==='cast'),'value','mat3')),[1,0,0,0,1,0,0,0,1]);
     await page.evaluate(()=>change(()=>{current().nodes.find(n=>n.id==='cast').inputValues={value:[1,2,3,4,5,6,7,8,9]};}));await settle();

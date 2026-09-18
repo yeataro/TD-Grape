@@ -2,12 +2,13 @@
 
 2026-09-18。本文是具體提案及已查明現況，不授權改動尚未確認的轉換、Binding 恢復或輪詢行為。已定案的入口與來源模型在 [VALUE_MODEL](../architecture/VALUE_MODEL.md)；術語在 [GLOSSARY](../GLOSSARY.md)。
 
-## 2026-09-18 最新 review：Convert 分流與型別清單負擔
+## 2026-09-18 最新 review：Convert 分流與型別清單負擔（已同意試行）
 
-- 使用者看到既有 Convert 尚無矩陣選項後，明確提出將一般 Convert 與矩陣轉換分開；不是只另做 float 建構 Matrix。正式名稱仍可討論。
-- 助手建議 Matrix Convert；Resize 無法涵蓋 scalar 對角建構／精度轉換，Construct 與 Combine 容易混淆。候選分工依目的型別：Convert 輸出 scalar／vector，Matrix Convert 輸出 matrix；matrix→vector 等合法配對仍保留。此分工是提案，尚未定案，不直接改動已交付入口。
-- 使用者進一步擔心數學節點型別下拉清單過長。這需要連 Auto、手動指定、合法輸入／輸出簽名與共用選擇介面一起整理，不能將所有 GLSL 合法簽名直接展平成選單，也不能每新增型別就臨時拆出例外節點。
-- 暫緩交付本輪 Convert／數學型別選項擴充；已完成的 core／frontend 與測試保留於 Matrix 工作分支，避免丟失工作。原生運算能力的驗證可獨立進行，介面名稱／分工未確認前不部署該批。
+- 使用者確認一般 Convert 與矩陣轉換分開，並同意先採以下方案試用，操作後再 review。
+- 依目的型別分工：Convert 輸出 scalar／vector，Matrix Convert 輸出 matrix；matrix→vector 等合法配對仍保留。先採 Matrix Convert 名稱；Resize 無法涵蓋 scalar 對角建構／精度轉換，Construct 與 Combine 容易混淆。
+- 數學節點保持按運算分類，以 Auto 為主要使用路徑，完整保留手動指定。不因清單變長拆出一套矩陣數學節點，也不將所有合法輸入／輸出組合直接攤成清單。推導正確、接口結果可辨識優先於單純減少選項數。
+- 來源與目的沿用明確選擇；Convert 來源 Auto 尚未授權。共用前端契約提供合法配對及每個節點的輸出種類，Matrix Convert 不列出沒有任何合法矩陣目的型別的來源。
+- 本輪曾暫緩的程式與測試已保留工作分支並恢復驗證；實際同步進度依開發狀態。另有拉線新增搜尋效能問題，使用者要求開啟與搜尋達到與獨立新增相近的體感，該修正獨立處理。
 - 已交付的 Matrix 完整分量格數與覆寫標記試行為 0.8.87／0.8.88，與此入口討論分開。
 
 ## 接線：先區分四件事
@@ -33,7 +34,7 @@ Ceil 接 int 時使用浮點簽名並轉換輸入；If 的 Condition 固定 bool
 | 自動插入 Convert | 有需要時作明確快捷命令 | 不因拖一條線就無提示增加節點或改变圖意圖 |
 | 向量大小改變 | 由 Combine／Swizzle 等表達；若擴充 Convert 需定義補值／選取 | 不把任意截短或擴張稱為 splat |
 
-目前 Convert 的 fromType 與 toType 固定。int 接入預設 float→int 的 Convert 可生成 int(float(x))；這是兩次轉換，不是無條件等同 int(x)。來源 Auto 的設計應直接使用實際來源，並用產碼／數值案例驗證是否移除非預期中間轉換。此次入口／Compare 整理尚未改動 Convert。
+Convert 與 Matrix Convert 的 fromType 與 toType 明確指定。int 接入預設 float→int 的 Convert 可生成 int(float(x))；這是兩次轉換，不是無條件等同 int(x)。來源 Auto 的設計應直接使用實際來源，並用產碼／數值案例驗證是否移除非預期中間轉換，仍屬待決事項。
 
 參考：[GLSL 4.60 型別轉換](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#implicit-conversions)、[建構式](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#constructors)。
 

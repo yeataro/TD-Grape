@@ -11,7 +11,9 @@
 | `resourceTypes` | sampler2D；其他貼圖維度尚未實作 |
 | `conversions` | 同型別 identity；數值家族間同寬 cast、數值純量到數值向量 constructor；同家族純量到向量 splat（含 bool → bvec） |
 
-型別轉換方向是明確清單，不靠同分量數猜測相容性。數值與 bool 之間須使用 Convert；Convert 允許同寬跨家族或純量到向量，不允許向量到純量或不同寬向量。Combine／Replace 的接孔維持既有精確型別規則，不能因一般接線允許 cast 而偷偷改變組合分量。各數學 overload、Compare 與 Convert 的規則不因新增固定型別入口而改變。
+型別轉換方向是明確清單，不靠同分量數猜測相容性。數值與 bool 之間須使用明確轉換；普通接線不因 Convert 能力擴充而放寬。Combine／Replace 的接孔維持既有精確型別規則，不能因一般接線允許 cast 而偷偷改變組合分量。各數學 overload 仍由定義變體決定。
+
+2026-09-18 第二批依目的型別分開 Convert（20 種 scalar／vector 輸出）與 Matrix Convert（18 種矩陣輸出）。`convert.pairs` 是 38 種來源之間的 1,109 個 GLSL 單參數 constructor 合法配對；`convert.outputTypesByNode` 限定各節點的目的集合，兩者交集產生實際選項。Convert 來源 38 種，Matrix Convert 來源 28 種（純量、四分量向量及矩陣）；沒有任何合法目的的來源不列入選單。向量／矩陣到 scalar／vector 按原生分量順序擷取，分量不足的單一 composite 拒絕；矩陣到矩陣按座標重疊與單位延伸處理，純量到矩陣填對角線。來源 Auto 未加入。交付狀態另查開發狀態。
 
 2026-09-18 矩陣基礎批：新型別與矩陣節點先獨立交付，舊算術／If／Compare／Convert 的能力擴充另批處理。因此必須讀取各定義變體及 `convert.types`，不能用擴大後的全域 `valueTypes` 自行推測既有節點能力。矩陣普通接線先限完整型別 identity；Matrix Get／Set 的 mode 與 indexType 也參與接口解析。型別、UI 及原生傳輸實測詳見 [矩陣與雙精度值](../features/MATRIX_NODES.md)。
 

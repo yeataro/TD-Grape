@@ -32,12 +32,13 @@ class ExplicitConstructors(unittest.TestCase):
                 with self.subTest(source=source, target=target):
                     self.assertEqual(c.explicit_conversion_valid(source,target), expected)
                     self.assertEqual(target in contract['pairs'][source], expected)
-                    node = c.node('convert', 'cast', fromType=source, toType=target, requireConstant=True)
+                    key='matrix_convert' if target in c.MATRIX_TYPES else 'convert'
+                    node = c.node(key, 'cast', fromType=source, toType=target, requireConstant=True)
                     if not expected:
                         with self.assertRaisesRegex(c.GraphError,'Convert'):
-                            c.resolved_ports(c.CATALOG['convert'],node['params'])
+                            c.resolved_ports(c.CATALOG[key],node['params'])
                         continue
-                    ports = c.resolved_ports(c.CATALOG['convert'],node['params'])
+                    ports = c.resolved_ports(c.CATALOG[key],node['params'])
                     self.assertEqual(ports, {'inputs':{'value':source}, 'outputs':{'out':target}})
                     shader = c.compile_graph(graph([value_node(source),node],
                         [c.edge('source','cast','value')],source='cast',ty=target))['pixel']
@@ -52,7 +53,8 @@ class ExplicitConstructors(unittest.TestCase):
                               ('mat2x3','vec4'),('dmat4','bool'),('dvec4','ivec2'),('bvec3','double')]:
             for target_kind,stage in [('top','pixel'),('mat','pixel'),('mat','vertex')]:
                 with self.subTest(source=source,target=target,target_kind=target_kind,stage=stage):
-                    data=graph([value_node(source),c.node('convert','cast',fromType=source,toType=target)],
+                    key='matrix_convert' if target in c.MATRIX_TYPES else 'convert'
+                    data=graph([value_node(source),c.node(key,'cast',fromType=source,toType=target)],
                         [c.edge('source','cast','value')],source='cast',ty=target,target=target_kind,stage=stage)
                     before=copy.deepcopy(data);compiled=c.compile_graph(data)
                     self.assertIn(target+'(sg_n_source)',compiled[stage])
@@ -68,6 +70,33 @@ class ExplicitConstructors(unittest.TestCase):
             self.assertFalse(c.explicit_conversion_valid(source,target))
         self.assertIsNone(c.conversion_kind('vec4','vec2'))
         self.assertIsNone(c.conversion_kind('float','bool'))
+
+    def test_convert_nodes_partition_output_types_without_losing_constructor_pairs(self):
+        contract=c.type_contract()['convert']
+        domains=contract['outputTypesByNode']
+        self.assertEqual(domains,{'convert':list(c.SCALAR_VECTOR_TYPES),'matrix_convert':list(c.MATRIX_TYPES)})
+        self.assertEqual(set(domains['convert'])|set(domains['matrix_convert']),set(c.TYPES))
+        self.assertFalse(set(domains['convert'])&set(domains['matrix_convert']))
+        self.assertNotIn('matrix_convert',c.MATRIX_KEYS)
+        self.assertEqual(c.CATALOG['convert']['revisionHash'],'20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc')
+        self.assertEqual(c.resolved_ports(c.CATALOG['matrix_convert'],{}),{'inputs':{'value':'float'},'outputs':{'out':'mat3'}})
+        sources={key:[source for source,targets in contract['pairs'].items() if any(target in allowed for target in targets)]
+                 for key,allowed in domains.items()}
+        self.assertEqual(len(sources['convert']),38)
+        self.assertEqual(len(sources['matrix_convert']),28)
+        self.assertEqual(set(sources['matrix_convert']),set(c.SCALAR_TYPES+c.MATRIX_TYPES+tuple(ty for ty in c.VECTOR_TYPES if c.type_components(ty)==4)))
+        total=0
+        for key,allowed in domains.items():
+            for source,targets in contract['pairs'].items():
+                for target in targets:
+                    params={'fromType':source,'toType':target}
+                    if target in allowed:
+                        total+=1
+                        c.resolved_ports(c.CATALOG[key],params)
+                    else:
+                        with self.assertRaisesRegex(c.GraphError,'output type'):
+                            c.resolved_ports(c.CATALOG[key],params)
+        self.assertEqual(total,1109)
 
 
 class MatrixAndDoubleIf(unittest.TestCase):

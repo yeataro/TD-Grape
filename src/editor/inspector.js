@@ -402,7 +402,7 @@ function defaultInput(n,port,type){
   if(key==='pixel_out'&&editorTarget==='mat')return [0,0,0,0];
   if(key==='pixel_out'||key==='vertex_out')return [0,0,0,1];
   const value=definition(n)?.inputDefaults?.[port]??(port==='factor'?.5:port==='alpha'?1:0);
-  if(key==='convert'&&isMatrixType(type))return filledValue(type,1);
+  if(isConvertOperation(definition(n))&&isMatrixType(type))return filledValue(type,1);
   return filledValue(type,value);
 }
 
@@ -1036,7 +1036,7 @@ function nodeTypeSelector(n,d){
 }
 function nodePrimarySelector(n,d){
   if(!d)return null;let control=null;
-  if(d.key==='convert')control=convertTypeSelector(n,'toType');
+  if(isConvertOperation(d))control=convertTypeSelector(n,'toType');
   else if(n.params.type)control=nodeTypeSelector(n,d);
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
   else if(n.params.declarationId){const source=nodeSourceDeclaration(n);if(source)control=select(graph.declarations.filter(item=>item.kind===source.kind).map(item=>[item.id,item.name]),source.id,value=>change(()=>n.params.declarationId=value));}
@@ -1045,12 +1045,14 @@ function nodePrimarySelector(n,d){
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
 }
 function convertTypeSelector(n,parameter){
-  const options=parameter==='fromType'?convertTypes():convertTargets(n.params.fromType);
+  const d=definition(n),options=parameter==='fromType'?convertSources(d.key):convertTargets(n.params.fromType,d.key);
   const control=select(options.map(type=>[type,type]),n.params[parameter],type=>change(()=>{
     const previous=n.params[parameter];
     n.params[parameter]=type;
     if(parameter==='fromType'){
-      if(!explicitConversionValid(type,n.params.toType))n.params.toType=type;
+      if(!explicitConversionValid(type,n.params.toType,d.key)){
+        const targets=convertTargets(type,d.key);n.params.toType=targets.includes(type)?type:targets.includes(d.defaults.toType)?d.defaults.toType:targets[0];
+      }
       if(Object.hasOwn(n.inputValues||{},'value'))n.inputValues.value=matrixReshapeValue(n.inputValues.value,previous,type);
     }
   },{typeChange:true}));
@@ -1281,7 +1283,7 @@ function inspector(){
       const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
-    if(d.key==='convert')for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
+    if(isConvertOperation(d))for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
     if(d.key==='compare')box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
     if(['matrix_get','matrix_set'].includes(d.key)){
       box.append(parameterControlRow(t('matrix.accessMode'),select([['column',t('matrix.wholeColumn')],['element',t('matrix.element')]],n.params.mode||'column',value=>changeMatrixAccess(n,'mode',value))));

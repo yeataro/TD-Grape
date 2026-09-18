@@ -52,6 +52,10 @@ TD 2025.32820 的隔離 GPU 探針結果：
 
 ## 分批邊界與驗證
 
+第二批先交付的入口與運算擴充：Matrix Convert 負責所有矩陣輸出建構，Convert 負責純量／向量輸出建構，兩個入口完整涵蓋合法的單參數 GLSL constructor。Matrix Convert 的 `float → mat3` 等會將純量填在對角線；Matrix→Matrix 縮小保留重疊座標，擴大在額外對角線補 1、其餘補 0。If 支援同型別 Matrix／double 分支，Condition 仍是 bool；矩陣 True 預設 identity，False 預設 zero。19 個合法 double 數學函式沿用 Auto／手動入口，Dot／Length 輸出 double，Mix 的 factor 使用 double。Sin／Cos／Pow 及 TD helper 不因型別表擴大而假定有 double overload。
+
+四則異型簽名仍是後續工作，不能以增加一個輸出型別選項取代完整設計。例如 `mat3 + float` 和 `float + mat3` 都是九個元素逐一加純量；`vec3 + float` 同樣逐分量，`mat3 + vec3` 則不合法。不可把純量先轉成對角矩陣再加，因為語意不同。這些原生規則已釐清，但不宣稱此批已交付矩陣四則運算。
+
 第一批涵蓋型別、數值、宣告、Subgraph／手寫 GLSL／relay、匯入匯出／剪貼簿及以上新節點。不能因全域型別表增加，就自行放寬所有舊數學節點的 overload。
 
 第二批既有操作需以完整輸入／輸出簽名設計。例如矩陣乘向量會改變輸出形狀；矩陣加 scalar 必須產生原生逐元素加法，不能先把 scalar 建成對角矩陣後再相加。明確 constructor 配對另列，不與普通接線相容表混合。

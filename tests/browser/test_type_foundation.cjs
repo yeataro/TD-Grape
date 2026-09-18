@@ -81,7 +81,7 @@ const[source,stateFile,folder]=process.argv.slice(2);
     await page.locator('#inspector [data-convert-type="toType"]').selectOption('uvec3');await settle();
     assert.deepEqual(await page.evaluate(()=>{const n=current().nodes.find(n=>n.id==='convert');return {input:ports(n,'inputs'),output:ports(n,'outputs')};}),{input:{value:'bvec3'},output:{out:'uvec3'}});
     assert.equal(await page.locator('#inspector select[data-parameter-port="value"][data-parameter-copy="compact"]').count(),3);
-    await page.locator('#inspector [data-convert-type="fromType"]').selectOption('int');await settle();assert.equal(await page.locator('#inspector [data-convert-type="toType"] option').count(),38);
+    await page.locator('#inspector [data-convert-type="fromType"]').selectOption('int');await settle();assert.equal(await page.locator('#inspector [data-convert-type="toType"] option').count(),20);
     await page.locator('#inspector [data-convert-type="toType"]').selectOption('bvec4');await settle();
     checks.push('Convert uses common input/output selectors and typed inputs, uses the constructor pair whitelist including truncation, and supports scalar-to-vector conversion');
 

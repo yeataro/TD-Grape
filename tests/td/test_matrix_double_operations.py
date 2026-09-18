@@ -60,8 +60,9 @@ def build_cases(c):
         ('vec3','double',[2.5,3.25,4.75]),
     ]
     for from_type,to_type,values in constructors:
-        add('convert/'+from_type+'/'+to_type,
-            [source(from_type,values),c.node('convert','operation',fromType=from_type,toType=to_type)],
+        key='matrix_convert' if to_type in c.MATRIX_TYPES else 'convert'
+        add(key+'/'+from_type+'/'+to_type,
+            [source(from_type,values),c.node(key,'operation',fromType=from_type,toType=to_type)],
             [c.edge('source','operation','value')],to_type,constructor_values(from_type,to_type,values))
 
     for ty in ('mat2','mat2x3','dmat3','dmat3x2','double','dvec3'):
