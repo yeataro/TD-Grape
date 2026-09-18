@@ -712,8 +712,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .comment-node-preview:focus-visible{outline:1px solid var(--purple);outline-offset:-1px}
 .comment-node-canvas-content{width:calc(100% - 2 * var(--note-inset));margin:var(--note-inset);flex:1 1 0;display:flex}
 .comment-node-canvas-content>.comment-node-preview,.comment-node-canvas-content>.comment-node-editor{flex:1 1 0;min-height:0;max-height:none;padding:var(--note-inset)}
-.comment-node-canvas-content>.comment-node-preview{font-size:calc(12px * var(--note-font-scale,1))}
+.comment-node-canvas-content>.comment-node-preview{font-size:calc(12px * var(--note-font-scale,1));text-align:var(--note-text-align,left)}
 .comment-node-canvas-content .comment-markdown{white-space:pre;overflow-wrap:normal}
+.comment-node-canvas-content .comment-markdown pre{text-align:left}
 .comment-node-canvas-content .comment-markdown li:last-child{margin-bottom:0}
 .note-appearance-settings{--parameter-columns:0 minmax(0,45%) 0 minmax(0,1fr);--parameter-column-gap:4px;display:grid;gap:10px;margin-block:12px}
 .note-appearance-settings input[type="checkbox"]{justify-self:start;width:16px;height:16px;min-height:0;accent-color:var(--purple)}

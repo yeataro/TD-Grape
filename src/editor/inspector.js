@@ -489,7 +489,12 @@ function noteAppearanceSettings(box,node){
   },'number');
   Object.assign(font,{min:'1',max:'10',step:'0.1',disabled:readonly});font.numericRange={min:1,max:10,step:.1};font.refreshNumericSlider();
   font.dataset.noteFontScale=node.id;font.setAttribute('aria-label',t('note.fontScale'));font.title=t('note.fontScale.hint')+'\n'+font.title;
-  section.append(parameterControlRow(t('note.titleOnSelection'),title),parameterControlRow(t('note.color'),color),parameterControlRow(t('note.fontScale'),font));
+  const align=select(['left','center','right'].map(value=>[value,t('note.align.'+value)]),noteTextAlign(node),value=>{
+    if(!align.isConnected||graph!==documentGraph||current()!==owner||!owner.nodes.includes(node)||definition(node)?.key!=='comment'||editorMutationBlocked())return;
+    change(()=>{node.ui||={};if(value==='left')delete node.ui.noteTextAlign;else node.ui.noteTextAlign=value;},{localize:false});
+  });
+  align.disabled=readonly;align.dataset.noteTextAlign=node.id;align.setAttribute('aria-label',t('note.textAlign'));
+  section.append(parameterControlRow(t('note.titleOnSelection'),title),parameterControlRow(t('note.color'),color),parameterControlRow(t('note.fontScale'),font),parameterControlRow(t('note.textAlign'),align));
   box.append(section);
 }
 function deferParameterInspector(){

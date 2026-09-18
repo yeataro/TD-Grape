@@ -18,6 +18,10 @@
     "Graph"
   ],
   "messages": {
+    "note.textAlign": {"zh-Hant":"文字對齊", "en":"Text alignment"},
+    "note.align.left": {"zh-Hant":"靠左", "en":"Left"},
+    "note.align.center": {"zh-Hant":"置中", "en":"Center"},
+    "note.align.right": {"zh-Hant":"靠右", "en":"Right"},
     "convert.fromType": {"zh-Hant": "輸入型別", "en": "Input type"},
     "convert.toType": {"zh-Hant": "輸出型別", "en": "Output type"},
     "type.cast": {"zh-Hant": "將 {source} 轉換為 {target}；整數轉換會截去小數。", "en": "Convert {source} to {target}; integer conversion truncates fractional parts."},

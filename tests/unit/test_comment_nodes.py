@@ -16,6 +16,21 @@ def comment(ident='note'):
 
 
 class CommentNodes(unittest.TestCase):
+    def test_note_alignment_survives_document_roundtrip_without_shader_changes(self):
+        for target in ('mat', 'top'):
+            graph = c.demo_graph('color', target=target)
+            note = comment(); graph['stages']['pixel']['nodes'].append(note)
+            before = c.compile_graph(graph)
+            for alignment in ('left', 'center', 'right'):
+                note['ui']['noteTextAlign'] = alignment
+                saved = json.loads(json.dumps(graph))
+                inspected = sgrape_document.inspect_document(saved, c, target)
+                self.assertEqual(inspected['status'], 'valid')
+                self.assertEqual(inspected['candidate'], saved)
+                after = c.compile_graph(saved)
+                for key in ('vertex', 'pixel', 'hash', 'sourceMap', 'bindings', 'diagnostics'):
+                    self.assertEqual(after[key], before[key])
+
     def test_catalog_addition_does_not_upgrade_existing_graphs(self):
         snapshot=sgrape_document.catalog_snapshot(c)
         del snapshot['definitions']['sgrape.builtin.comment']
