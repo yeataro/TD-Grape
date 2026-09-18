@@ -73,7 +73,7 @@
   --type-vec3:#75c7ac;
   --type-vec4:#b7a0db;
   --node-function-bg:#332a43;--node-function-fg:#e6dcf7;
-  --node-logic-bg:#25282b;--node-logic-fg:#e1e4e6;
+  --node-logic-bg:#17151b;--node-logic-fg:#e6e3eb;
   --node-uniform-bg:#24454d;--node-uniform-fg:#d0edef;
   --node-sampler-bg:#513b28;--node-sampler-fg:#f2dec2;
   --node-constant-bg:#303e57;--node-constant-fg:#d9e6fd;
@@ -1221,7 +1221,7 @@ footer .footer-preferences svg[hidden]{display:none}
  --browser-category-math:#805b9f;--browser-category-vector:#636fa4;--browser-category-color:#965f7e;--browser-category-coordinate:#52798c;--browser-category-texture:#8b6238;--browser-category-data:#61718b;--browser-category-shader:#427d74;--browser-category-uncategorized:#746d81;
  --canvas-bg:#d9dde3;--canvas-grid:#b9c1cd;--node-body:#f4f5f7;--node-border:#9ca6b4;--node-value-bg:#e0e5eb;--node-alias-color:#536072;
  --node-function-bg:#ded8e9;--node-function-fg:#4c3b67;--node-uniform-bg:#cddfe0;--node-uniform-fg:#28575b;
- --node-logic-bg:#c9ced2;--node-logic-fg:#30363b;
+ --node-logic-bg:#b8b4be;--node-logic-fg:#27242d;
  --node-attribute-bg:#e4e1d5;--node-attribute-fg:#423f34;
  --node-sampler-bg:#e4dac9;--node-sampler-fg:#6a512e;--node-constant-bg:#d5deeb;--node-constant-fg:#344665;--node-output-bg:#d3e1d6;--node-output-fg:#315b3d;
  --type-float:#59616b;--type-vec2:#29658f;--type-vec3:#20745d;--type-vec4:#75529b;--type-sampler:#87622f;
