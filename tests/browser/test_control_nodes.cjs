@@ -57,16 +57,37 @@ const[source,stateFile,folder]=process.argv.slice(2);
       Object.assign(current().nodes.find(n=>n.id===compareId).ui,{x:310,y:120});Object.assign(current().nodes.find(n=>n.id===ifId).ui,{x:630,y:120});window.controlFixture=clone(graph);render();
     },{compareId,ifId});await settle();
     assert.deepEqual(await page.evaluate(id=>ports(current().nodes.find(n=>n.id===id),'outputs'),compareId),{out:'bool'});
-    assert.equal((await state(ifId)).ui.typeMode,'auto');checks.push('Tab creator inserts Compare and If from the fresh core catalog with one Undo each; Compare outputs bool and If starts in Auto');
+    assert.equal((await state(ifId)).ui.typeMode,'auto');assert.equal((await state(compareId)).ui.typeMode,'auto');assert.equal((await state(compareId)).params.type,'int');
+    assert.equal(await card(compareId).locator('.node-title [data-math-type]').inputValue(),'auto');
+    assert.equal(await card(compareId).locator('.node-title [data-compare-operator]').count(),0);
+    assert.equal(await card(compareId).locator('.node-function-title').innerText(),'Compare');
+    assert.deepEqual(await card(compareId).locator('.node-body-controls [data-compare-operator] option').allTextContents(),['A > B','A ≥ B','A < B','A ≤ B','A == B','A != B']);
+    const positions=await card(compareId).evaluate(card=>({selector:card.querySelector('.node-body-controls').getBoundingClientRect().bottom,input:card.querySelector('.port-row.input').getBoundingClientRect().top}));assert.ok(positions.selector<=positions.input);
+    checks.push('Tab creates Compare in Auto int with a stable title, header type selector and full comparison formula at the top of its body; If still starts in Auto float');
 
     await reset();assert.deepEqual(await operator().locator('option').evaluateAll(es=>es.map(e=>e.value)),['>','>=','<','<=','==','!=']);
     for(const value of ['>=','<','<=','==','!=','>']){
       const before=await page.evaluate(()=>JSON.stringify(graph)),count=await page.evaluate(()=>past.length);await operator().selectOption(value);await settle();
-      assert.equal((await state(compareId)).params.operator,value);assert.equal(await card(compareId).locator('[data-compare-operator]').inputValue(),value);assert.equal(await page.evaluate(()=>past.length),count+1);
+      assert.equal((await state(compareId)).params.operator,value);assert.equal(await card(compareId).locator('[data-compare-operator]').inputValue(),value);assert.equal(await page.evaluate(()=>past.length),count+1);assert.equal(await card(compareId).locator('.node-function-title').innerText(),'Compare');
       const after=await page.evaluate(()=>JSON.stringify(graph));await undo();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),before);await undo(true);assert.equal(await page.evaluate(()=>JSON.stringify(graph)),after);
     }
     await card(compareId).locator('[data-compare-operator]').selectOption('==');await settle();assert.equal(await operator().inputValue(),'==');
-    checks.push('all six Compare operators synchronize header and Parameters; each selection has exact graph Undo/Redo');
+    checks.push('all six Compare operators synchronize the body and Parameters without renaming the node; each selection has exact graph Undo/Redo');
+
+    await reset();await choose(compareId);const headerType=()=>card(compareId).locator('.node-title [data-math-type]');
+    await headerType().selectOption('float');await settle();assert.equal(await page.locator(`#inspector [data-math-type="${compareId}"]`).inputValue(),'float');
+    const decimal=card(compareId).locator('[data-inline-port="b"]');await decimal.fill('1.75');await decimal.press('Enter');await settle();
+    assert.equal((await state(compareId)).inputValues.b,1.75);assert.equal((await state(compareId)).ui.typeMode,'locked');
+    await headerType().selectOption('auto');await settle();assert.equal((await state(compareId)).params.type,'int');assert.equal((await state(compareId)).inputValues.b,1);
+    assert.equal(await connect('scalar',compareId,'a'),true);assert.equal((await state(compareId)).params.type,'float');assert.equal((await state(compareId)).inputValues.b,1.75);
+    const connected=await page.evaluate(()=>JSON.stringify(graph));await page.locator('#inspector [data-input="a"] .connection-row button').click();await settle();
+    assert.equal((await state(compareId)).params.type,'int');assert.equal((await state(compareId)).inputValues.b,1);const disconnected=await page.evaluate(()=>JSON.stringify(graph));
+    await undo();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),connected);await undo(true);assert.equal(await page.evaluate(()=>JSON.stringify(graph)),disconnected);
+    await headerType().selectOption('float');await settle();assert.equal((await state(compareId)).inputValues.b,1.75);
+    await page.evaluate(id=>{showCustomNodeNames=true;current().nodes.find(n=>n.id===id).name='My_Compare';render();},compareId);await settle();
+    await card(compareId).locator('[data-compare-operator]').selectOption('<=');await settle();assert.equal(await card(compareId).locator('.node-function-title').innerText(),'My_Compare');
+    await page.evaluate(()=>{showCustomNodeNames=false;render();});await settle();assert.equal(await card(compareId).locator('.node-function-title').innerText(),'Compare');
+    checks.push('Compare header and Parameters share Auto/type state; float defaults survive int fallback and reconnect, last-wire disconnect has exact Undo/Redo, and custom names remain independent of the operator');
 
     await reset();await choose(ifId);assert.equal(await condition().inputValue(),'false');assert.equal(await inlineCondition().inputValue(),'false');
     assert.deepEqual(await condition().locator('option').evaluateAll(es=>es.map(e=>e.value)),['false','true']);

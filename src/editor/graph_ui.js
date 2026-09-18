@@ -433,7 +433,9 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
       const d=autoDefinition(document,n,owner),candidates=nodeTypeVariants(d,n.params).filter(v=>links.every(e=>vectorConnectionExact(d,ports.get(e.from[0])?.outputs[e.from[1]],v.inputs[e.to[1]])));
       const score=v=>links.reduce((sum,e)=>sum+Number(ports.get(e.from[0])?.outputs[e.from[1]]!==v.inputs[e.to[1]]),0);
       candidates.sort((a,b)=>score(a)-score(b)||typeComponents(a.type)-typeComponents(b.type));
-      const chosen=candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
+      // Compare starts with integers only when no input can determine its type.
+      // Keep the shared ranking unchanged as soon as either input is connected.
+      const chosen=(!links.length&&d.key==='compare'?candidates.find(v=>v.type==='int'):null)||candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
       choices.set(n.id,chosen.type);ports.set(n.id,{inputs:chosen.inputs,outputs:chosen.outputs});
     }else ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
     }catch(error){if(!draft)throw error;issues.set(n.id,error.message);ports.set(n.id,safeConcretePorts(document,n,owner,plannedType,overrides.get(n.id)));}
@@ -989,6 +991,7 @@ function renderCards(){
       return row;
     };
     if(collapsed){appendCollapsedPorts(list,n,portRow);card.append(list);}else{
+    if(d?.key==='compare'){const controls=el('div',{class:'node-body-controls'});controls.append(compareOperatorSelector(n));card.append(controls);}
     for(const kind of ['inputs','outputs']){
       const known=ports(n,kind);for(const name of Object.keys(known))list.append(portRow(kind,name));
       const side=kind==='inputs'?'to':'from',missing=new Set(current().edges.filter(e=>e[side][0]===n.id&&!Object.hasOwn(known,e[side][1])).map(e=>e[side][1]));

@@ -1446,6 +1446,8 @@ footer .footer-preferences svg[hidden]{display:none}
 .node-title-meta .node-prototype{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:400;opacity:.75}
 .node-title-meta .node-primary-selector{flex:none;max-width:none}
 .node-meta-separator{flex:none}
+.node-body-controls{padding:10px 12px 0}
+.node-body-controls>select{display:block;width:100%;height:28px;padding:4px 7px;font-size:12px}
 .node-title .node-title-meta :is(.node-prototype,.node-meta-separator,.node-primary-selector){font:inherit;color:inherit;opacity:1}
 /* Intrinsic measurement uses visible values, not native input's 20-character default. */
 .node.node-size-probe{position:absolute;visibility:hidden;pointer-events:none;width:max-content!important;min-width:0;max-width:none}

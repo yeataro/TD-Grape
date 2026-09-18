@@ -954,8 +954,7 @@ function nodeTypeSelector(n,d){
 }
 function nodePrimarySelector(n,d){
   if(!d)return null;let control=null;
-  if(d.key==='compare')control=compareOperatorSelector(n);
-  else if(d.key==='convert')control=convertTypeSelector(n,'toType');
+  if(d.key==='convert')control=convertTypeSelector(n,'toType');
   else if(n.params.type)control=nodeTypeSelector(n,d);
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
   else if(n.params.declarationId){const source=nodeSourceDeclaration(n);if(source)control=select(graph.declarations.filter(item=>item.kind===source.kind).map(item=>[item.id,item.name]),source.id,value=>change(()=>n.params.declarationId=value));}
@@ -975,10 +974,11 @@ function convertTypeSelector(n,parameter){
   control.dataset.convertType=parameter;control.disabled=readonly;control.title=t(parameter==='fromType'?'convert.fromType':'convert.toType');return control;
 }
 function compareOperatorSelector(n){
-  const control=select([['>','>'],['>=','≥'],['<','<'],['<=','≤'],['==','=='],['!=','!=']],n.params.operator,value=>{
+  const control=select([['>','A > B'],['>=','A ≥ B'],['<','A < B'],['<=','A ≤ B'],['==','A == B'],['!=','A != B']],n.params.operator,value=>{
     if(!editorMutationBlocked()&&current().nodes.includes(n))change(()=>n.params.operator=value);
   });
-  control.dataset.compareOperator=n.id;control.disabled=readonly;control.title=t('compare.operator');control.setAttribute('aria-label',control.title);return control;
+  control.dataset.compareOperator=n.id;control.disabled=readonly;control.title=t('compare.operator');control.setAttribute('aria-label',control.title);
+  for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
 }
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;

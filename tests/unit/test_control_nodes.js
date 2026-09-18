@@ -27,6 +27,20 @@ identical(selectableNodeTypes(d('compare')),['float','int','uint']);identical(se
 for(const ty of selectableNodeTypes(d('compare'))){const compare=node('compare','compare',{type:ty});assert.equal(defaultInput(compare,'a',ty),0);assert.equal(defaultInput(compare,'b',ty),0);identical(resolvedNodePorts(d('compare'),compare.params,null,'outputs'),{out:'bool'});}
 for(const ty of valueTypes()){const branch=node('if','branch',{type:ty});assert.equal(defaultInput(branch,'condition','bool'),false);identical(defaultInput(branch,'true',ty),filledValue(ty,1));identical(defaultInput(branch,'false',ty),filledValue(ty,0));}
 
+// Only an unconnected Auto Compare uses int. Locked/legacy float and the
+// remaining Auto operations retain their existing type/default policies.
+setup([node('compare','auto'),node('compare','locked'),node('compare','legacy'),node('add','math'),node('if','branch')]);n('locked').ui.typeMode='locked';delete n('legacy').ui.typeMode;
+assert.equal(change(()=>current().nodes.push(node('float','value'))),true);
+assert.equal(n('auto').params.type,'int');assert.equal(n('locked').params.type,'float');assert.equal(n('legacy').params.type,'float');assert.equal(n('math').params.type,'float');assert.equal(n('branch').params.type,'float');
+assert.equal(connect('value','auto','a'),true);assert.equal(n('auto').params.type,'float');
+assert.equal(change(()=>setNodeInputValue(n('auto'),'b',1.75)),true);
+const floatConnected=clone(graph);assert.equal(change(()=>current().edges=current().edges.filter(e=>e.to[0]!=='auto')),true);
+assert.equal(n('auto').params.type,'int');assert.equal(n('auto').inputValues.b,1);
+const intDisconnected=clone(graph);undo();identical(graph,floatConnected);undo(true);identical(graph,intDisconnected);
+assert.equal(setMathType(n('auto'),'float'),true);assert.equal(n('auto').inputValues.b,1.75);assert.equal(n('auto').ui.typeMode,'locked');
+assert.equal(setMathType(n('auto'),'auto'),true);assert.equal(n('auto').params.type,'int');
+assert.equal(connect('value','auto','a'),true);assert.equal(n('auto').params.type,'float');assert.equal(n('auto').inputValues.b,1.75);
+
 // Integer sources preserve exact integer comparison, while defaults retain a
 // separate cache for each scalar type across automatic promotion/demotion.
 for(const ty of ['int','uint']){
@@ -36,7 +50,8 @@ for(const ty of ['int','uint']){
   assert.equal(connect('source','compare','a'),true);assert.equal(n('compare').params.type,ty);assert.equal(n('compare').inputValues.a,0);assert.equal(n('compare').inputValues.b,ty==='int'?-2:0);assert.equal(past.length,1);
   const typed=clone(graph);undo();identical(graph,before);undo(true);identical(graph,typed);
   current().nodes.push(node('convert','boolCast',{fromType:'bool',toType:'vec4'}));assert.equal(connect('compare','boolCast','value'),true);assert.equal(connect('boolCast','result','color'),true);graphs.push(clone(graph));
-  assert.equal(change(()=>current().edges=current().edges.filter(e=>e.to[0]!=='compare')),true);assert.equal(n('compare').params.type,'float');identical(n('compare').inputValues,{a:.75,b:-2.25});
+  assert.equal(change(()=>current().edges=current().edges.filter(e=>e.to[0]!=='compare')),true);assert.equal(n('compare').params.type,'int');
+  assert.equal(setMathType(n('compare'),'float'),true);identical(n('compare').inputValues,{a:.75,b:-2.25});assert.equal(setMathType(n('compare'),'auto'),true);
   assert.equal(connect('source','compare','a'),true);assert.equal(n('compare').params.type,ty);assert.equal(n('compare').inputValues.b,ty==='int'?-2:0);
 }
 
@@ -45,6 +60,13 @@ for(const ty of ['int','uint']){
 setup([node('spec_constant','signed',{declarationId:'signed'}),node('spec_constant','unsigned',{declarationId:'unsigned'}),node('compare','compare')]);
 graph.declarations=[{id:'signed',kind:'spec_constant',name:'sSigned',type:'int',value:-1,constantId:0},{id:'unsigned',kind:'spec_constant',name:'sUnsigned',type:'uint',value:4294967295,constantId:1}];
 assert.equal(connect('signed','compare','a'),true);assert.equal(n('compare').params.type,'int');assert.equal(connect('unsigned','compare','b'),true);assert.equal(n('compare').params.type,'int');assert.equal(inputTypeDisplay(n('compare'),'a').conversion,null);assert.equal(inputTypeDisplay(n('compare'),'b').conversion,'cast');current().nodes.push(node('convert','boolCast',{fromType:'bool',toType:'vec4'}));assert.equal(connect('compare','boolCast','value'),true);assert.equal(connect('boolCast','result','color'),true);graphs.push(clone(graph));
+
+// Mixed float/integer input order keeps the pre-existing score/tie-break rules.
+for(const first of ['float','int','uint'])for(const second of ['float','int','uint']){
+  setup([node('scalar','a',{type:first,value:2}),node('scalar','b',{type:second,value:3}),node('compare','compare')]);
+  assert.equal(connect('a','compare','a'),true);assert.equal(n('compare').params.type,first);
+  assert.equal(connect('b','compare','b'),true);assert.equal(n('compare').params.type,['float','int','uint'].find(type=>type===first||type===second));
+}
 
 setup([node('compare','condition'),node('if','branch'),node('vec3','vector',{value:[.1,.2,.3]}),node('float','scalar'),node('length','length')]);
 assert.equal(connect('condition','branch','condition'),true);assert.equal(n('branch').params.type,'float');assert.equal(connect('vector','branch','true'),true);assert.equal(connect('scalar','branch','false'),true);assert.equal(n('branch').params.type,'vec3');

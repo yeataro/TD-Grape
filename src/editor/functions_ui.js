@@ -86,10 +86,7 @@ function nodeDisplayName(n){
   return customNodeNamesEnabled()&&n?.name?n.name:nodeTypeLabel(definition(n),n?.params);
 }
 function nodeCanvasTitle(n){
-  if(customNodeNamesEnabled()||definition(n)?.key!=='compare')return nodeDisplayName(n);
-  // Presentation only: node names and references keep the Compare identity.
-  const operator=n.params.operator||'>';
-  return 'A '+({'>=':'≥','<=':'≤'}[operator]||operator)+' B';
+  return nodeDisplayName(n);
 }
 function nodeNameValid(value){
   return typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(value)&&!value.includes('__')&&
