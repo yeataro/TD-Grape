@@ -1,8 +1,16 @@
 # 開發狀態
 
+2026-09-18 值模型與介面整理已合併、尚待本批 TD 同步：新增 16 種固定型別建立入口（float／int／uint／bool 及各自 2–4 分量向量），與可選型別的 Scalar／Vector 並存。固定型別身分隨保存／複製／Undo 保留，Scalar／Vector 標題固定；搜尋具體型別可同時找到固定與通用入口，查詢文字不改變通用入口的建立預設。Color RGBA 保留。規則集中於 [值模型](../architecture/VALUE_MODEL.md) 與 [用語表](../GLOSSARY.md)；接線轉換／Convert 與背景工作政策仍是 [待決提案](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)，未藉此次整理變更。
+
+Compare 預設標題固定，Header 選 Auto／型別，Body 首列選完整比較式，與 Parameter 共用設定。僅無輸入接線的 Auto 預設採 int；有線推導排序及 bool 接線規則保持。Note 設定新增左／中／右文字對齊，畫布 Markdown 套用、程式區塊及編輯輸入保持靠左。一般節點註記頁改為隨 Parameter 面板填滿可用高度，說明留在底部，極矮面板可捲動。
+
+新預設採單選與複選工具列、常態多選框、所有向量分量染色，關閉展開時的收合三角提示；已明確儲存的瀏覽器偏好保留。全螢幕期間自動顯示系統時鐘，退出恢復平常偏好，不覆寫設定。這些前端修改已提交並完成隔離驗證；整組 Value Ladder 是另外一筆仍在進行的工作。
+
+目前 TD 仍是整數傳輸限制撤銷後的檢查點：保留兩份使用者 Shader，TOE 807,132 bytes；本段列出的後續介面／值入口尚未寫入 TD，避免把 Git 合併誤報為已部署。來源刷新與 TOE 保存完成後另記交付結果。
+
 2026-09-18 純量／向量型別基礎完成：共用契約接通 float／int／uint／bool 與各自 2–4 分量向量，共 16 種值型別。新增 Scalar 與 Convert，既有 Float 保留；Graph Constant、Uniform、Vector／Combine／Split／Swizzle／Replace、共用值編輯、Auto、Subgraph／GLSL Code 及保存路徑同步。數學節點按合法簽名開放型別，Compare 維持 scalar 比較與 bool 輸出，If 的結果支援全部 16 型別。Auto 優先保留輸入家族；同維度數值與 numeric scalar splat 可接線轉換，bool／numeric 使用 Convert，不默默丟棄向量分量。矩陣、陣列、Switch Case 與 UV 數字顯示留後續。
 
-2026-09-18 後續隔離修正（尚未部署）：依使用者決定移除額外整數傳輸限制；Uniform／Spec Constant 接受完整 GLSL int／uint 32 位範圍，包含負 Spec int 與 UINT_MAX。保留明確寫入的有限值、型別、範圍及 bool／bvec 0／1 檢查；snapshot 不驗值。傳輸精度依 TD 原生行為，大整數可能失真；Graph Constant／Scalar／Vector literal 保持精確。原生 Undo 仍回到原 Shader 並依目前型別驗證。詳見 [數值型別計畫](../discussions/NUMERIC_TYPES_PLAN.md) 與 [測試紀錄](TESTING.md)。本機結果不代表 Metal／其他 GPU 已驗證。
+2026-09-18 後續隔離修正（已於本輪第一個檢查點部署並保存）：依使用者決定移除額外整數傳輸限制；Uniform／Spec Constant 接受完整 GLSL int／uint 32 位範圍，包含負 Spec int 與 UINT_MAX。保留明確寫入的有限值、型別、範圍及 bool／bvec 0／1 檢查；snapshot 不驗值。傳輸精度依 TD 原生行為，大整數可能失真；Graph Constant／Scalar／Vector literal 保持精確。原生 Undo 仍回到原 Shader 並依目前型別驗證。詳見 [數值型別計畫](../discussions/NUMERIC_TYPES_PLAN.md) 與 [測試紀錄](TESTING.md)。本機結果不代表 Metal／其他 GPU 已驗證。
 
 同輪介面收尾：右鍵功能加入圖示；選取工具列全展開時只顯示收合、全收合時只顯示展開、混合時顯示兩者；關閉該組設定時連同分隔線一起隱藏。完整群組的多選外範圍保留並使用直角；排列入口增加小三角。Note 預設標題及暗色模式 body 改為純灰，色盤預設同步；既有自訂背景及透明設定保留。自動排列演算法未改。
 

@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 值模型／Compare／Note／偏好整合（main `1d2a3c1`）：完整 portable checks 通過，含 344 項 Python unit、632 個雙語鍵及既有 editor launch／browser metadata／JS model／26 項 Remote Panel 檢查。使用目前 core 匯出 fixture 後，主線 headless Chromium 的固定型別入口 7、型別基礎 13、Compare／If 11、Note 對齊 3、UI experiments 20、editor chrome 17，共 71 組通過、零頁面錯誤。固定入口涵蓋全部 16 型別、搜尋／實際建立、固定身分與泛型切換、複製／JSON／Undo；全螢幕時鐘涵蓋原生進入／退出、失敗、外部退出及既有偏好恢復。
+
+分支另完成註記高度驗證：既有 node notes 3、Markdown 9、Note appearance 16、Note resize 14 組通過；私人版面探針檢查分隔線實際拖動、極矮面板最小輸入高度、窄面板長文捲動及分頁切換，截圖已檢視。Compare 的 9 項 Python control 往返、26 項 Math Auto model 與 10 項 Auto／指定型別產碼等價檢查通過；沒有更動其他節點的推導排序。
+
+整數傳輸限制撤銷已完成第一個 TD 同步／保存檢查點：來源刷新保留兩份使用者 Shader，正式 TOE 807,132 bytes、SHA-256 `0ea53df37ef47610a56141b6da3e0e40851e1f9a69a2e1a7943b1f1e695ab819`，保存排除私人助手。本段後續介面整合仍待 TD 部署；没有重跑原生 GPU 壓力或傳輸探針。無視窗測試不操作使用者桌面，不能代替實體觸控或其他 GPU 驗證。
+
 2026-09-18 整數傳輸限制移除，隔離 worktree 驗證：`test_typed_sources`、`test_typed_undo`、`test_spec_constants`、`test_sources`、`test_history` 共 73 項通過。覆蓋完整 int／uint 範圍、負 Spec int、大整數直接寫入與 Undo、非法型別／超界拒絕，以及 Uniform／Spec snapshot 不呼叫驗值。隔離 fixture 的 `test_type_foundation.cjs` 13 組通過、零頁面錯誤，新增原生來源欄位的完整整數上下限、精度邊界值及原始 expected 值保存；631 個雙語鍵通過。原生 TD 腳本已改成驗證合法值不被拒絕，能力探針仍記錄宿主失真；本次沒有執行原生 TD 測試、部署或保存。下方先前的傳輸限制／拒絕測試是舊版實測紀錄，不能作為目前編輯器輸入限制。
 
 2026-09-18 純量／向量型別與介面收尾：整輪 portable checks 通過（327 Python tests 及既有 editor／metadata／JS／Remote Panel 檢查）。其後追加 `test_typed_undo.py` 的 7 項重現測試，與 typed sources／history／Spec 共 52 項通過；驗證原 Shader context、型別變更後的原生 Undo、綁定控制項及舊 exposed Uniform 歷史值，並確認不合法還原在任何写入前拒絕。原生整數快照的 integral float 與布林 0／1 仍接受；綁定新 Int／Toggle 控制項前先驗值，避免控制項靜默截斷。
