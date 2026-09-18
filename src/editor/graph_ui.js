@@ -1421,7 +1421,7 @@ function renderCards(){
     if(collapsed){appendCollapsedPorts(list,n,portRow);card.append(list);}else{
     if(d?.key==='compare'){const controls=el('div',{class:'node-body-controls'});controls.append(compareOperatorSelector(n));card.append(controls);}
     if(d?.key==='struct_field'){const controls=el('div',{class:'node-body-controls'});controls.append(structFieldSelector(n));card.append(controls);}
-    if(d?.key==='array'){const summary=el('div',{class:'node-composite-summary','data-array-summary':n.id,title:arrayLengthExpression(n.params.length)},displayType(n.params.elementType)+' × '+arrayLengthLabel(n.params.length));card.append(summary);}
+    if(d?.key==='array')card.append(arrayNodeLengthControl(n));
     if(isMatrixOperation(d))appendMatrixNodeRows(list,n,portRow);
     for(const kind of ['inputs','outputs']){
       const known=ports(n,kind);if(!isMatrixOperation(d))for(const name of Object.keys(known))list.append(portRow(kind,name));

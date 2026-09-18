@@ -15,7 +15,7 @@
 
 建立節點時可以搜尋 Array、Array[i]、Array Replace、Array Length、Field，或 TD 來源名稱。從接孔拖線建立節點時，候選節點使用同一份型別描述進行局部配對；真正建立時仍進行完整接線驗證。輸入搜尋文字不向 TD 查詢，也不逐一複製整份圖模擬候選接線。
 
-Array 的畫布節點只顯示元素型別與長度摘要，不會因長度增加而展開 N 個編輯欄位。Parameter 提供元素型別和長度；逐項內容由 Array Replace 編輯。Replace 的數值、向量或矩陣替換值沿用既有值編輯器；結構或陣列替換值顯示型別並接受接線。
+Array 的畫布節點在標題選擇元素型別，body 上方選長度來源，選固定數字時在下方編輯長度；與 Parameter 共用設定及 Undo，不會因長度增加而展開 N 個編輯欄位。來源只接受 int／uint Graph Constant 或 Spec Constant，float／向量來源不列入。逐項內容由 Array Replace 編輯。Replace 的數值、向量或矩陣替換值沿用既有值編輯器；結構或陣列替換值顯示型別並接受接線。
 
 ### 符號長度（0.8.93）
 

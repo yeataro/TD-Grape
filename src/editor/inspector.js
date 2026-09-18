@@ -1062,7 +1062,7 @@ function compositeInspector(box,n,d){
     box.append(parameterControlRow(t('array.elementType'),arrayElementSelector(n)));
     const length=arrayLengthControl(n.params.length??4,value=>change(()=>n.params.length=value,{typeChange:true}));
     const lengthInput=length.querySelector('input');if(lengthInput)lengthInput.dataset.arrayLength=n.id;
-    box.append(parameterControlRow(t('array.length'),length),parameterControlRow('',parameterHint(t('array.initializationHint'))));
+    box.append(parameterControlRow(t('array.length'),length),parameterControlRow('',parameterHint(t('array.lengthSourceHint'))),parameterControlRow('',parameterHint(t('array.initializationHint'))));
   }else if(d.key==='builtin_source'){
     const choices=builtinSourceEntries(d).map(entry=>[entry.defaults.source,entry.label]);
     const source=select(choices,n.params.source,value=>change(()=>n.params.source=value,{typeChange:true}));source.dataset.builtinSource=n.id;source.disabled=readonly;
@@ -1083,15 +1083,22 @@ function compositeInspector(box,n,d){
   }
 }
 function arrayLengthControl(value,commit,allowSpecialization=true){
-  const box=el('div',{class:'components'}),references=graph.declarations.filter(d=>['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type));
+  const box=el('div',{class:'components array-length-control'}),references=graph.declarations.filter(d=>['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type));
   const mode=select([['literal',t('array.fixedLength')],...references.map(d=>['sg_len_'+d.id,d.name+' · '+(d.kind==='spec_constant'?'Spec Constant':'Constant')])],typeof value==='number'?'literal':value,next=>commit(next==='literal'?4:next));
-  mode.disabled=readonly;mode.dataset.arrayLengthSource='true';box.append(mode);
+  mode.disabled=readonly;mode.dataset.arrayLengthSource='true';mode.setAttribute('aria-label',t('array.length'));mode.title=t('array.lengthSourceHint');box.append(mode);
   if(!allowSpecialization)for(const option of mode.options)if(arrayLengthDeclaration(option.value)?.kind==='spec_constant'){option.disabled=true;option.title=t('array.nativeSpecializationLimit');}
   if(typeof value==='number'){
     const number=input(value,text=>{const count=Number(text);if(Number.isInteger(count)&&count>=1&&count<=(typeContract.composites.array.maxLength||1024))commit(count);else{status(t('array.invalidLength'),true);inspector();}},'number');
-    number.min='1';number.max=String(typeContract.composites.array.maxLength||1024);number.step='1';number.disabled=readonly;box.append(number);
+    number.min='1';number.max=String(typeContract.composites.array.maxLength||1024);number.step='1';number.disabled=readonly;number.setAttribute('aria-label',t('array.length'));box.append(number);
   }else box.title=arrayLengthExpression(value);
   return box;
+}
+function arrayNodeLengthControl(n){
+  const box=el('div',{class:'node-body-controls','data-array-length-controls':n.id});
+  const control=arrayLengthControl(n.params.length??4,value=>change(()=>n.params.length=value,{typeChange:true}));
+  const number=control.querySelector('input');if(number)number.dataset.arrayLength=n.id;
+  for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());
+  box.append(control);return box;
 }
 function compositeInputHint(n,port,type){
   if(typeContainsResource(type)||typeof typeDescriptor(type)?.length==='string')return t('composite.connectValue');
