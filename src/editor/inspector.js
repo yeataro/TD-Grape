@@ -1130,7 +1130,7 @@ function nodeColorPicker(n){
 function inspector(){
   if(deferParameterInspector()||deferCommentNodeEditor(false))return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
-  const box=$('#inspector');box.classList.remove('ordinary-parameters','comment-parameters');box.replaceChildren();renderHelp();
+  const box=$('#inspector');box.classList.remove('ordinary-parameters','comment-parameters','notes-parameters');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   if(n||selectedEdge!==null)selectedInputId=null;
   const inputSource=allInputSources().find(d=>d.id===selectedInputId);
@@ -1151,7 +1151,7 @@ function inspector(){
     button.onclick=()=>{inspectorTab=key;inspector();};tabs.append(button);
   }
   box.append(tabs);
-  if(inspectorTab==='notes'){box.append(nodeCommentField(n));return;}
+  if(inspectorTab==='notes'){box.classList.add('notes-parameters');box.append(nodeCommentField(n));return;}
   box.classList.toggle('ordinary-parameters',ordinary&&inspectorTab==='parameters');
   functionInspector(box,n,d);
   if(inspectorTab==='parameters'){

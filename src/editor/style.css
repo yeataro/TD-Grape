@@ -723,9 +723,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #inspector .note-setting-color{display:flex;align-items:center;gap:8px;text-align:left;border:0;border-radius:5px;background:var(--node-value-bg,var(--ui-tone-field))}
 .note-setting-color-swatch{flex:none;width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px #ffffff30}
 .note-setting-color-value{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-#parameterbody:not([hidden]):has(>#inspector.comment-parameters){display:flex;flex-direction:column}
-#parameterbody>#inspector.comment-parameters{display:flex;flex-direction:column;flex:1 0 auto}
-#inspector.comment-parameters>.node-inspector-title,#inspector.comment-parameters>.parameter-tabs{flex-shrink:0}
+#parameterbody:not([hidden]):has(>#inspector:is(.comment-parameters,.notes-parameters)){display:flex;flex-direction:column}
+#parameterbody>#inspector:is(.comment-parameters,.notes-parameters){display:flex;flex-direction:column;flex:1 0 auto}
+#inspector:is(.comment-parameters,.notes-parameters)>:is(.node-inspector-title,.parameter-tabs){flex-shrink:0}
 .comment-node-parameter{display:flex;flex-direction:column;flex:1 0 auto;margin:0 0 10px}
 .comment-node-parameter>.comment-node-content{display:flex;flex-direction:column;flex:1 0 120px}
 .comment-node-parameter .comment-node-editor{flex:1 1 0;min-height:120px}
@@ -1531,8 +1531,9 @@ footer .footer-preferences svg[hidden]{display:none}
 .parameter-value-group .color-swatch{flex:none;width:20px;height:20px;border-radius:4px}
 .parameter-value-group .color-range-hint{margin-top:6px}
 :root[data-ui-theme="light"] .parameter-component-rows{background:#00000004}
-#inspector .node-notes-page{border:0;padding:0;margin-top:12px}
-#inspector .node-notes-page textarea{margin-top:0;min-height:120px;color:var(--ui-text)}
+#inspector .node-notes-page{display:flex;flex-direction:column;flex:1 0 auto;border:0;padding:0;margin-top:12px}
+#inspector .node-notes-page textarea{flex:1 0 120px;margin-top:0;min-height:120px;max-height:none;resize:none;color:var(--ui-text)}
+#inspector .node-notes-page small{flex-shrink:0}
 
 /* Footer appearance popover: one preset row and a restrained native range. */
 .appearance-panel{position:fixed;inset:auto 8px 40px auto;margin:0;width:260px;max-width:calc(100 * var(--ui-vw) - 16px);padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--ui-surface,var(--ui-tone-menu));color:var(--ui-text,var(--ui-tone-text));box-shadow:0 8px 28px #0004;overflow:auto}
