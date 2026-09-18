@@ -18,6 +18,7 @@
     "Graph"
   ],
   "messages": {
+    "ladder.groupHint": {"zh-Hant":"中鍵按住並拖曳：以相同增量調整本列所有數值分量。", "en":"Hold the middle mouse button and drag to adjust this row's numeric components by the same amount."},
     "note.textAlign": {"zh-Hant":"文字對齊", "en":"Text alignment"},
     "note.align.left": {"zh-Hant":"靠左", "en":"Left"},
     "note.align.center": {"zh-Hant":"置中", "en":"Center"},

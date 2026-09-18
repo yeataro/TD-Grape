@@ -50,6 +50,90 @@ function openNumericPresets(entry,commit,event){
   document.addEventListener('visibilitychange',()=>{if(document.hidden)close();},options);
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','hidden']});
 }
+function beginValueLadder(entry,e,adapter){
+  const button=e.button,mask=button===1?4:button===2?2:1;
+  e.preventDefault();e.stopPropagation();cancelValueLadder();
+  const owner=current(),documentGraph=graph;
+  const writable=()=>entry.isConnected&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner&&(!adapter.writable||adapter.writable());
+  if(!writable()||!Number.isFinite(adapter.read()))return;
+  if(adapter.focus!==false&&e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
+  const initialValue=adapter.read(),steps=adapter.integer?[100,10,1]:[10,1,.1,.01,.001];
+  const popup=el('div',{id:'valueladder',role:'tooltip'}),rows=el('div',{class:'ladder-rows'});
+  const readout=el('div',{class:'ladder-readout'}),number=el('output',{class:'ladder-value'}),increment=el('span',{class:'ladder-step'});
+  readout.append(number,increment);
+  for(const step of steps)rows.append(el('div',{'data-step':step},String(step)));
+  popup.append(rows,readout);document.body.append(popup);
+  const uiZoom=uiScaleFactor(),rowHeight=rows.firstChild.getBoundingClientRect().height,popupRect=popup.getBoundingClientRect(),entryRect=entry.getBoundingClientRect();
+  const position=(x,y,width=popupRect.width,height=popupRect.height)=>{
+    popup.style.left=Math.max(8,Math.min(x,innerWidth-width-8))/uiZoom+'px';
+    popup.style.top=Math.max(8,Math.min(y,innerHeight-height-8))/uiZoom+'px';
+  };
+  const centerOffset=rows.children[2].getBoundingClientRect().top-popupRect.top+rowHeight/2;
+  position(e.clientX-popupRect.width/2,e.clientY-centerOffset);
+  const fullRect=popup.getBoundingClientRect(),rowsTop=rows.getBoundingClientRect().top,rowsBottom=rowsTop+steps.length*rowHeight;
+  const indexAt=y=>Math.max(0,Math.min(steps.length-1,Math.floor((y-rowsTop)/rowHeight)));
+  let index=2,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,selectionEngaged=false;
+  const oldDescription=entry.getAttribute('aria-describedby');entry.setAttribute('aria-describedby','valueladder');entry.numericGestureActive=true;adapter.begin?.();if(e.pointerType==='touch')entry.beginNumericEdit?.();
+  const oldTitle=entry.getAttribute('title');entry.removeAttribute('title');
+  document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing');
+  const paint=()=>{
+    [...rows.children].forEach((row,i)=>row.classList.toggle('active',i===index));popup.classList.toggle('ladder-compact',compact);
+    number.textContent=adapter.format?adapter.format(value):String(value);increment.textContent='Δ '+steps[index];
+    if(compact){const badge=popup.getBoundingClientRect(),gap=4*uiZoom,above=entryRect.top-badge.height-gap;position(entryRect.right-badge.width,above>=8?above:entryRect.bottom+gap,badge.width,badge.height);}
+    else position(fullRect.left,fullRect.top);
+  };paint();
+  const controller=new AbortController(),options={capture:true,signal:controller.signal};
+  const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
+  function finish(accept){
+    if(finished)return;finished=true;controller.abort();observer.disconnect();valueLadder=null;
+    const allowed=accept&&writable();if(allowed)adapter.preview(value);else adapter.restore();entry.numericGestureActive=false;adapter.end?.();
+    popup.remove();document.body.classList.remove('scrubbing-value');entry.classList.remove('scrubbing');
+    if(oldDescription===null)entry.removeAttribute('aria-describedby');else entry.setAttribute('aria-describedby',oldDescription);
+    if(oldTitle!==null)entry.setAttribute('title',oldTitle);
+    if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
+    if(allowed&&value!==initialValue)adapter.commit(value);
+    if(e.pointerType==='touch'){entry.endNumericEdit?.();document.activeElement?.beginNumericEdit?.();}
+  }
+  function move(ev){
+    if(ev.pointerId!==e.pointerId)return;
+    if(!(ev.buttons&mask)||!writable()){finish(false);return;}
+    ev.preventDefault();ev.stopPropagation();
+    // Once horizontal adjustment begins, this gesture keeps its increment.
+    // The hidden list no longer participates in pointer hit testing.
+    if(!compact){
+      const inGrid=ev.clientX>=fullRect.left&&ev.clientX<=fullRect.right&&ev.clientY>=rowsTop&&ev.clientY<rowsBottom;
+      // Edge clamping must not change the initial 0.1 on horizontal movement.
+      if(Math.abs(ev.clientY-e.clientY)>3)selectionEngaged=true;
+      const next=inGrid&&selectionEngaged?indexAt(ev.clientY):index;
+      if(next!==index){index=next;base=value;anchorX=ev.clientX;paint();return;}
+    }
+    const ticks=Math.trunc((ev.clientX-anchorX)/8),candidate=base+ticks*steps[index];
+    if(Math.abs(ev.clientX-anchorX)>=8)compact=true;
+    if(!Number.isFinite(candidate))return;
+    value=ticks?Number(candidate.toPrecision(15)):base;
+    if(Number.isFinite(adapter.min))value=Math.max(adapter.min,value);
+    if(Number.isFinite(adapter.max))value=Math.min(adapter.max,value);
+    const range=adapter.range;
+    if(range)value=Math.max(range.min,Math.min(range.max,Number((range.min+Math.round((value-range.min)/range.step)*range.step).toPrecision(15))));
+    adapter.preview(value);paint();
+  }
+  valueLadder={entry,cancel:()=>finish(false)};
+  window.addEventListener('pointermove',move,options);
+  window.addEventListener('pointerup',ev=>{if(ev.pointerId===e.pointerId&&ev.button===button){ev.preventDefault();ev.stopPropagation();finish(true);}},options);
+  window.addEventListener('pointercancel',ev=>{if(ev.pointerId===e.pointerId)finish(false);},options);
+  window.addEventListener('pointerdown',()=>finish(false),options);
+  entry.addEventListener('lostpointercapture',ev=>{if(ev.pointerId===e.pointerId&&!entry.hasPointerCapture(e.pointerId))finish(false);},options);
+  entry.addEventListener('blur',()=>finish(false),options);
+  window.addEventListener('blur',()=>finish(false),options);
+  window.addEventListener('resize',()=>finish(false),options);
+  document.addEventListener('scroll',ev=>{if(ev.target.contains?.(entry))finish(false);},options);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)finish(false);},options);
+  window.addEventListener('keydown',ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopImmediatePropagation();finish(false);}else if(ev.key==='Tab')finish(false);else {ev.preventDefault();ev.stopImmediatePropagation();}},options);
+  window.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();},options);
+  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','hidden']});
+  try{if(!entry.hasPointerCapture(e.pointerId))entry.setPointerCapture(e.pointerId);}catch{finish(false);}
+}
+
 function installValueLadder(entry,commit){
   entry.title=t('ladder.hint');
   entry.classList.add('numeric-slider');
@@ -153,87 +237,14 @@ function installValueLadder(entry,commit){
   entry.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   entry.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault();});
   function beginLadder(e){
-    const button=e.button,mask=button===1?4:button===2?2:1;
-    e.preventDefault();e.stopPropagation();cancelValueLadder();
-    const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!readonly;
-    if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
-    if(e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
-    const initial=entry.value,initialValue=Number(initial),steps=entry.step==='1'?[100,10,1]:[10,1,.1,.01,.001];
-    const popup=el('div',{id:'valueladder',role:'tooltip'}),rows=el('div',{class:'ladder-rows'});
-    const readout=el('div',{class:'ladder-readout'}),number=el('output',{class:'ladder-value'}),increment=el('span',{class:'ladder-step'});
-    readout.append(number,increment);
-    for(const step of steps)rows.append(el('div',{'data-step':step},String(step)));
-    popup.append(rows,readout);document.body.append(popup);
-    const uiZoom=uiScaleFactor(),rowHeight=rows.firstChild.getBoundingClientRect().height,popupRect=popup.getBoundingClientRect(),entryRect=entry.getBoundingClientRect();
-    const position=(x,y,width=popupRect.width,height=popupRect.height)=>{
-      popup.style.left=Math.max(8,Math.min(x,innerWidth-width-8))/uiZoom+'px';
-      popup.style.top=Math.max(8,Math.min(y,innerHeight-height-8))/uiZoom+'px';
-    };
-    const centerOffset=rows.children[2].getBoundingClientRect().top-popupRect.top+rowHeight/2;
-    position(e.clientX-popupRect.width/2,e.clientY-centerOffset);
-    const fullRect=popup.getBoundingClientRect(),rowsTop=rows.getBoundingClientRect().top,rowsBottom=rowsTop+steps.length*rowHeight;
-    const indexAt=y=>Math.max(0,Math.min(steps.length-1,Math.floor((y-rowsTop)/rowHeight)));
-    let index=2,anchorX=e.clientX,base=initialValue,value=initialValue,finished=false,compact=false,selectionEngaged=false;
-    const oldDescription=entry.getAttribute('aria-describedby');entry.setAttribute('aria-describedby','valueladder');entry.numericGestureActive=true;if(e.pointerType==='touch')entry.beginNumericEdit?.();
-    const oldTitle=entry.getAttribute('title');entry.removeAttribute('title');
-    document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing');
-    const paint=()=>{
-      [...rows.children].forEach((row,i)=>row.classList.toggle('active',i===index));popup.classList.toggle('ladder-compact',compact);
-      number.textContent=String(value);increment.textContent='Δ '+steps[index];
-      if(compact){const badge=popup.getBoundingClientRect(),gap=4*uiZoom,above=entryRect.top-badge.height-gap;position(entryRect.right-badge.width,above>=8?above:entryRect.bottom+gap,badge.width,badge.height);}
-      else position(fullRect.left,fullRect.top);
-    };paint();
-    const controller=new AbortController(),options={capture:true,signal:controller.signal};
-    const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
-    function finish(accept){
-      if(finished)return;finished=true;controller.abort();observer.disconnect();valueLadder=null;if(button===2||e.pointerType==='touch')suppressContextUntil=performance.now()+400;
-      const allowed=accept&&writable();entry.value=allowed?String(value):initial;paintSlider();entry.numericGestureActive=false;
-      popup.remove();document.body.classList.remove('scrubbing-value');entry.classList.remove('scrubbing');
-      if(oldDescription===null)entry.removeAttribute('aria-describedby');else entry.setAttribute('aria-describedby',oldDescription);
-      if(oldTitle!==null)entry.setAttribute('title',oldTitle);
-      if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
-      // Graph defaults use the existing single checkpoint; live Uniforms use their CAS write.
-      if(allowed&&value!==initialValue)commit();
-      if(e.pointerType==='touch'){entry.endNumericEdit?.();document.activeElement?.beginNumericEdit?.();}
-    }
-    function move(ev){
-      if(ev.pointerId!==e.pointerId)return;
-      if(!(ev.buttons&mask)||!writable()){finish(false);return;}
-      ev.preventDefault();ev.stopPropagation();
-      // Once horizontal adjustment begins, this gesture keeps its increment.
-      // The hidden list no longer participates in pointer hit testing.
-      if(!compact){
-        const inGrid=ev.clientX>=fullRect.left&&ev.clientX<=fullRect.right&&ev.clientY>=rowsTop&&ev.clientY<rowsBottom;
-        // Edge clamping must not change the initial 0.1 on horizontal movement.
-        if(Math.abs(ev.clientY-e.clientY)>3)selectionEngaged=true;
-        const next=inGrid&&selectionEngaged?indexAt(ev.clientY):index;
-        if(next!==index){index=next;base=value;anchorX=ev.clientX;paint();return;}
-      }
-      const ticks=Math.trunc((ev.clientX-anchorX)/8),candidate=base+ticks*steps[index];
-      if(Math.abs(ev.clientX-anchorX)>=8)compact=true;
-      if(!Number.isFinite(candidate))return;
-      value=ticks?Number(candidate.toPrecision(15)):base;
-      if(entry.min!==''&&Number.isFinite(Number(entry.min)))value=Math.max(Number(entry.min),value);
-      if(entry.max!==''&&Number.isFinite(Number(entry.max)))value=Math.min(Number(entry.max),value);
-      const range=entry.numericRange;
-      if(range)value=Math.max(range.min,Math.min(range.max,Number((range.min+Math.round((value-range.min)/range.step)*range.step).toPrecision(15))));
-      entry.value=String(value);paintSlider();paint();
-    }
-    valueLadder={entry,cancel:()=>finish(false)};
-    window.addEventListener('pointermove',move,options);
-    window.addEventListener('pointerup',ev=>{if(ev.pointerId===e.pointerId&&ev.button===button){ev.preventDefault();ev.stopPropagation();finish(true);}},options);
-    window.addEventListener('pointercancel',ev=>{if(ev.pointerId===e.pointerId)finish(false);},options);
-    window.addEventListener('pointerdown',()=>finish(false),options);
-    entry.addEventListener('lostpointercapture',ev=>{if(ev.pointerId===e.pointerId&&!entry.hasPointerCapture(e.pointerId))finish(false);},options);
-    entry.addEventListener('blur',()=>finish(false),options);
-    window.addEventListener('blur',()=>finish(false),options);
-    window.addEventListener('resize',()=>finish(false),options);
-    document.addEventListener('scroll',ev=>{if(ev.target.contains?.(entry))finish(false);},options);
-    document.addEventListener('visibilitychange',()=>{if(document.hidden)finish(false);},options);
-    window.addEventListener('keydown',ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopImmediatePropagation();finish(false);}else if(ev.key==='Tab')finish(false);else {ev.preventDefault();ev.stopImmediatePropagation();}},options);
-    window.addEventListener('contextmenu',ev=>{ev.preventDefault();ev.stopPropagation();},options);
-    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','readonly','hidden']});
-    try{if(!entry.hasPointerCapture(e.pointerId))entry.setPointerCapture(e.pointerId);}catch{finish(false);}
+    cancelValueLadder();const initial=entry.value;
+    if(!initial.trim()||!Number.isFinite(Number(initial)))return;
+    beginValueLadder(entry,e,{
+      read:()=>Number(entry.value),integer:entry.step==='1',min:entry.min===''?-Infinity:Number(entry.min),max:entry.max===''?Infinity:Number(entry.max),range:entry.numericRange,
+      writable:()=>!entry.disabled&&!entry.readOnly,
+      preview:value=>{entry.value=String(value);paintSlider();},restore:()=>{entry.value=initial;paintSlider();},commit,
+      end:()=>{if(e.button===2||e.pointerType==='touch')suppressContextUntil=performance.now()+400;}
+    });
   }
   let suppressContextUntil=0;
   entry.addEventListener('contextmenu',e=>{if(performance.now()<suppressContextUntil||e.altKey){e.preventDefault();e.stopPropagation();return;}openNumericPresets(entry,commit,e);});
@@ -564,14 +575,48 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
     entry.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();commit();}else if(e.key==='Escape'){e.preventDefault();cancelValueLadder();restore();focus();}});
     installValueLadder(entry,commit);entry.onNumericPreview=()=>syncPreview(entry,index);entries.push(entry);return entry;
   }
+  function installGroupLadder(target,indices){
+    if(scalarType==='bool'||readonly)return;
+    for(const anchor of target.querySelectorAll(':scope>.parameter-value-label,:scope>.parameter-value-type')){
+      anchor.dataset.parameterLadder=anchor.classList.contains('parameter-value-type')?'type':'name';
+      anchor.title+='\n'+t('ladder.groupHint');
+      for(const event of ['mousedown','auxclick'])anchor.addEventListener(event,e=>{if(e.button===1){e.preventDefault();e.stopPropagation();}});
+      anchor.addEventListener('pointerdown',e=>{
+        if(e.button!==1||e.pointerType==='touch')return;
+        e.preventDefault();e.stopPropagation();cancelValueLadder();
+        // A group gesture never submits or replaces another component's text draft.
+        const nodeFields=document.querySelectorAll(`[data-parameter-node="${CSS.escape(n.id)}"],[data-inline-node="${CSS.escape(n.id)}"]`);
+        if(!own(anchor)||[...nodeFields].some(entry=>entry.hasPendingEdit?.()))return;
+        const initial=currentValues(),signature=inlineValueSignature(n),integer=['int','uint'].includes(scalarType);
+        if(indices.some(index=>!Number.isFinite(initial[index])))return;
+        const low=scalarType==='uint'?0:integer?-2147483648:-Number.MAX_VALUE,high=scalarType==='uint'?4294967295:integer?2147483647:Number.MAX_VALUE;
+        // One shared delta stops at the first component boundary, keeping spacing.
+        const minimum=Math.max(...indices.map(index=>low-initial[index])),maximum=Math.min(...indices.map(index=>high-initial[index]));
+        const previews=delta=>initial.map((value,index)=>delta!==0&&indices.includes(index)?value+delta:value);
+        const display=values=>{syncing=true;for(const entry of entries){entry.value=String(values[Number(entry.dataset.component)]);entry.refreshNumericSlider?.();}syncing=false;};
+        const previousEdit=parameterValueEdit;
+        anchor.cancelParameterValue=()=>{if(valueLadder?.entry===anchor)cancelValueLadder();};
+        beginValueLadder(anchor,e,{
+          read:()=>0,integer,min:minimum,max:maximum,focus:false,
+          writable:()=>own(anchor)&&signature===inlineValueSignature(n)&&entries.every(entry=>entry.isConnected&&!entry.disabled&&!entry.readOnly),
+          begin:()=>{for(const entry of entries)entry.numericGestureActive=true;parameterValueEdit={entry:anchor,node:n,owner:current(),signature};},
+          preview:delta=>display(previews(delta)),restore:()=>display(initial),
+          format:delta=>indices.map(index=>previews(delta)[index]).join(' · '),
+          end:()=>{for(const entry of entries)entry.numericGestureActive=false;if(parameterValueEdit?.entry===anchor)parameterValueEdit=previousEdit?.entry.isConnected&&document.activeElement===previousEdit.entry?previousEdit:null;},
+          commit:delta=>change(()=>{const next=previews(delta);for(const index of indices)write(index,next[index]);})
+        });
+      });
+    }
+  }
   values.forEach((_,index)=>compact.append(createEntry(index)));
+  installGroupLadder(row,values.map((_,index)=>index));
   if(vector&&values.length>=2&&values.length<=4){
     let expanded=parameterExpansions.get(n)?.has(key)||false;
     row.classList.add('parameter-expandable');
     const toggle=el('button',{class:'parameter-components-toggle',type:'button','aria-label':t('node.expandValues'),'aria-expanded':String(expanded),'data-parameter-expand':key},expanded?'▾':'▸');
     row.prepend(toggle);
     const components=el('div',{class:'parameter-component-rows'});components.hidden=!expanded;
-    values.forEach((_,index)=>{const component=parameterControlRow(labels[index],createEntry(index,true),scalarType);component.classList.add('parameter-component-row');applyValueComponentHint(component.querySelector('.parameter-value-label'),n,key,index,true,labels);components.append(component);});box.append(components);
+    values.forEach((_,index)=>{const component=parameterControlRow(labels[index],createEntry(index,true),scalarType);component.classList.add('parameter-component-row');applyValueComponentHint(component.querySelector('.parameter-value-label'),n,key,index,true,labels);installGroupLadder(component,[index]);components.append(component);});box.append(components);
     toggle.onclick=()=>{expanded=!expanded;let state=parameterExpansions.get(n);if(!state){state=new Set();parameterExpansions.set(n,state);}if(expanded)state.add(key);else state.delete(key);components.hidden=!expanded;toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
     row.addEventListener('click',event=>{
       if(event.target.closest('input,select,textarea,button,a,[contenteditable],.color-swatch'))return;
