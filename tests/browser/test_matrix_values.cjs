@@ -35,7 +35,8 @@ async function run(){
     checks.push('Column and scalar override wires coexist; connected children remain anchored when collapsed while overridden fallback values are hidden');
     await page.evaluate(()=>connectPorts({node:'scalar',kind:'outputs',port:'out'},{node:'combine',kind:'inputs',port:'c1x'}));await settle();
     const compact=page.locator('[data-node="combine"] [data-matrix-column="1"] .matrix-compact-component');
-    assert.equal(await compact.count(),3);assert.equal(await compact.nth(0).innerText(),'—');
+    assert.equal(await compact.count(),3);assert.equal(await compact.nth(0).innerText(),'↳ X');
+    assert.ok((await compact.nth(0).locator('.matrix-component-override').getAttribute('title')).includes('Scalar'));
     assert.equal(await compact.nth(1).locator('input').getAttribute('data-matrix-index'),'4');assert.equal(await compact.nth(2).locator('input').getAttribute('data-matrix-index'),'5');
     const slotWidths=await compact.evaluateAll(items=>items.map(e=>e.getBoundingClientRect().width));assert.ok(Math.max(...slotWidths)-Math.min(...slotWidths)<1);
     await compact.nth(1).locator('input').fill('12');await compact.nth(1).locator('input').press('Enter');await settle();assert.equal((await node('combine')).params.values[4],12);
@@ -53,7 +54,10 @@ async function run(){
       render();connectPorts({node:'literal4',kind:'outputs',port:'out'},{node:'replace4',kind:'inputs',port:'value'});connectPorts({node:'scalar',kind:'outputs',port:'out'},{node:'replace4',kind:'inputs',port:'c0y'});
     });await settle();
     assert.equal(await page.locator('[data-node="replace4"] [data-matrix-column="0"] .matrix-compact-component').count(),4);
+    assert.deepEqual(await page.locator('[data-node="replace4"] [data-matrix-column="0"] .matrix-compact-component').allTextContents(),['—','↳ Y','—','—']);
+    assert.deepEqual(await page.locator('[data-node="replace4"] [data-matrix-column="1"] .matrix-compact-component').allTextContents(),['—','—','—','—']);
     assert.equal(await page.locator('[data-node="replace4"] [data-port="c0y"]').count(),1);assert.equal(await fields('replace4').count(),0);
+    await page.locator('[data-node="replace4"]').screenshot({path:path.join(folder,'matrix-replace-override.png')});
     checks.push('Replace with a matrix source and independent Y override retains all four compact slots plus the connected Y socket');
     await page.evaluate(()=>{current().nodes.push(testNode('sink','add',1100,430));render();connectPorts({node:'split',kind:'outputs',port:'c1z'},{node:'sink',kind:'inputs',port:'a'});});await settle();
     assert.equal(await page.locator('[data-node="split"] [data-port="c1z"]').count(),1);assert.equal(await page.locator('[data-node="split"] [data-port="c1"]').count(),1);

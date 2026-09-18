@@ -1758,6 +1758,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .matrix-expanded-value{padding:0!important;min-width:0}
 .matrix-expanded-value>input{min-width:0;width:100%}
 .matrix-inherited-value{display:block;min-width:0;color:var(--muted);font-size:11px;text-align:center;width:100%}
+.matrix-component-override{display:block;min-width:0;width:100%;color:var(--ui-tone-port-label);font-size:11px;text-align:center;white-space:nowrap}
 .matrix-ports>.port-row.output:last-child{margin-top:4px}
 .node-matrix .port-row[data-type*="mat"]{--socket:var(--type-vec4)}
 @media(pointer:coarse){.matrix-column-toggle{min-height:32px}.matrix-ports .matrix-column-row,.matrix-component-row{min-height:36px}}

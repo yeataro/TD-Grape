@@ -397,7 +397,13 @@ function appendMatrixNodeRows(list,n,portRow){
       }
       if(split)continue;
       const writable=matrixComponentWritable(n,column,row);
-      const field=copy=>writable?matrixValueInput(n,column,row,{onNode:true,copy}):el('span',{class:'matrix-inherited-value',title:matrixComponentSource(n,column,row),'aria-label':matrixComponentSource(n,column,row)},'—');
+      const field=copy=>{
+        if(writable)return matrixValueInput(n,column,row,{onNode:true,copy});
+        const override=copy==='compact'&&connected,source=matrixComponentSource(n,column,row),label=override?'XYZW'[row]+' ← '+source:source;
+        const marker=el('span',{class:override?'matrix-component-override':'matrix-inherited-value',title:label,'aria-label':label},override?'↳ '+'XYZW'[row]:'—');
+        if(override)applyComponentColorHint(marker,row);
+        return marker;
+      };
       if(visible){const holder=el('span',{class:'node-inline-values matrix-expanded-value'});holder.append(field('expanded'));child.append(holder);}
       if(!expanded){const holder=el('span',{class:'node-inline-component matrix-compact-component'});holder.append(field('compact'));values.append(holder);}
     }
