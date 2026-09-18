@@ -333,3 +333,11 @@ TD helper 可初始化區域 const，但不能初始化全域常數表達式；�
 本輪 Floor／Round／Ceil 等輸出仍為 float／vec，並非轉為 int。現有 Compare、Spec Constant 與 Subgraph 接口已有部分 int／uint／bool 支援；擴充前先整理每節點允許的型別族、跨族轉型／Auto 政策，以及畫布／Parameter 共用輸入驗證。可先補純量整數與 If 的整數／布林結果，再做整數向量；TD 原生 Uniform 綁定獨立驗證。此處是討論，尚未授權實作整批型別擴充。解開子圖目前也未實作，與一般節點收合／展開不同。
 
 使用者明確表示目前圖全部是功能試驗，可重建，不是必須維持相容的資產。Alpha 前必要的模型與圖格式調整可直接做，不應為未發布格式堆相容層；Alpha 後開始注意相容，正式版後嚴格維持。此決策更新 architecture/UPGRADE_POLICY.md 的歷史前提。
+
+### 2026-09-18 數字顯示與型別優先順序
+
+使用者希望快速顯示／檢查 Shader 數值：Value 可直接接 float 或 int，優先自動辨識，不要求先手動選型別。採 UV 座標與合理預設大小／精度；討論過左／中／右、上／中／下快速定位，Align 可用 int 接線，快捷定位可用 bool。使用者最後澄清這些不是強制介面規格，也可精簡為僅下拉選單；不要讓討論中的疑問限制更好的實作。目標是少操作、便利且通用，型別完成後再決定數字顯示的具體介面。
+
+參考為使用者提供的 [Dl2GWy](https://www.shadertoy.com/view/Dl2GWy)，網頁本輪被站方驗證擋住；其後使用者直接貼出 P_Malin 的 Smaller Number Printing 原碼，標示 CC0 1.0，原工具來源 [4sBSWW](https://www.shadertoy.com/view/4sBSWW)，前作 [4sf3RN](https://www.shadertoy.com/view/4sf3RN)，小數精度修正致謝 TimoKinnunen [lt3GRj](https://www.shadertoy.com/view/lt3GRj)。核心 PrintValue 已接受字元座標，螢幕像素只在外層包裝；可改為 UV 包裝，保留來源標示。原碼註明顯示數值可能不精確；後續需處理零、負數、邊界／位數以及整數不經 float 而損失精度。
+
+最新順序已由使用者調整：先完成型別、一起補齊既有數學運算的合法型別，再做 Switch Case／條件分支及數字顯示。不先為 Print Value 打局部的 int 補丁。本輪僅盤點與保存設計，未新增數字顯示節點或改動產品型別支援；詳細原則見 [NUMERIC_TYPES_PLAN.md](NUMERIC_TYPES_PLAN.md)。
