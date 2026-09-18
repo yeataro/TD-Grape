@@ -2037,7 +2037,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
     ['fitAll',t('action.fit'),shortcutLabel('fit'),true,()=>$('#fit').click()],
     ['fit',t('action.fitSelection'),'',count>0,fitSelection],
     ['focus',t(graphFocused?'view.restoreLayout':'view.graphFocus'),'',true,()=>$('#graphfocus').click()],
-    ['fullscreen',$('#uifullscreen').title,'',!$('#uifullscreen').disabled,()=>$('#uifullscreen').click()],
+    ['fullscreen',t(document.fullscreenElement?'view.exitFullscreen':'view.fullscreen'),'',!$('#uifullscreen').disabled,()=>$('#uifullscreen').click()],
   ],[
     ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
   ]];
@@ -2049,6 +2049,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
       const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));
       if(key!=='fit')decorateShortcutButton(b,key==='fitAll'?'fit':key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
       if(key==='focus'||key==='fullscreen'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(key==='focus'?graphFocused:!!document.fullscreenElement));}
+      if(key==='fullscreen')b.title=$('#uifullscreen').title;
       b.onclick=()=>{const valid=sameContext();closeGraphMenu();$('#canvas').focus({preventScroll:true});if(valid)action();};menu.append(b);
     }
   }
