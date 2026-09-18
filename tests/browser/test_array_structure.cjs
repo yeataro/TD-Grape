@@ -13,13 +13,24 @@ const {harness}=require('./test_glsl_code.cjs');
     await page.evaluate(()=>{
       clearTimeout(autoTimer);connectionInterrupted=true;conflicted=true;readonly=false;historyBusy=nativeMutationBusy=false;graphTrail=[];stage='pixel';past=[];future=[];selected=selectedEdge=null;selection.clear();graph.functions=[];graph.declarations=[];
       graph.typeDefinitions=[{id:'sample',name:'Sample',provider:'generated',fields:[{id:'position',name:'offset',type:'vec2'},{id:'weight',name:'amount',type:'float'}]}];
-      graph.stages.pixel={nodes:[testNode('result','pixel_out',1100,70),testNode('array','array',40,70),testNode('get','array_get',420,70),testNode('replace','array_replace',420,360),testNode('length','array_length',40,360),testNode('field','struct_field',800,360),testNode('scalar','scalar',40,640,{type:'float',value:5}),testNode('source','builtin_source',800,70,{source:'uTD2DInfos'})],edges:[]};
+      graph.stages.pixel={nodes:[testNode('result','pixel_out',1100,70),testNode('array','array',40,70),testNode('get','array_get',420,70),testNode('replace','array_replace',420,360),testNode('length','array_length',40,360),testNode('field','struct_field',800,360),testNode('scalar','scalar',40,640,{type:'int',value:4}),testNode('boolean','scalar',420,640,{type:'bool',value:false}),testNode('source','builtin_source',800,70,{source:'uTD2DInfos'})],edges:[]};
       selected='array';selection=new Set(['array']);scale=.7;pan={x:15,y:15};rememberSavedGraph(graph);render();transform();
     });await settle();
     assert.equal(await page.locator('[data-array-length-controls="array"] input').inputValue(),'4');
     assert.equal(await page.locator('[data-array-length-controls="array"] select').inputValue(),'literal');
     const lengthLayout=await page.locator('[data-array-length-controls="array"]').evaluate(e=>{const s=e.querySelector('select').getBoundingClientRect(),i=e.querySelector('input').getBoundingClientRect();return {stacked:i.top>=s.bottom,left:Math.abs(i.left-s.left),width:Math.abs(i.width-s.width)};});
     assert.equal(lengthLayout.stacked,true);assert.ok(lengthLayout.left<1&&lengthLayout.width<1);
+    for(const theme of ['dark','light']){
+      const styles=await page.evaluate(theme=>{
+        document.documentElement.dataset.uiTheme=theme;
+        const style=selector=>{const s=getComputedStyle(document.querySelector(selector));return ['height','backgroundColor','color','padding','borderWidth','borderRadius','fontSize'].map(key=>s[key]);};
+        return {length:style('[data-array-length-controls="array"] input'),int:style('[data-node="scalar"] .node-fixed-values input'),source:style('[data-array-length-controls="array"] select'),bool:style('[data-node="boolean"] .node-fixed-values select')};
+      },theme);
+      assert.deepEqual(styles.length,styles.int);assert.deepEqual(styles.source,styles.bool);
+    }
+    await page.evaluate(()=>document.documentElement.dataset.uiTheme='dark');
+    await page.screenshot({path:path.join(folder,'array-shared-controls.png')});
+    checks.push('Array length and source use the same node field styling as INT and bool controls in dark and light themes');
     await page.locator('#inspector [data-array-element-type="array"]').selectOption('vec3');await settle();
     const beforeLength=await state();await page.locator('#inspector [data-array-length="array"]').fill('8');await page.locator('#inspector [data-array-length="array"]').press('Enter');await settle();
     assert.equal(await page.evaluate(()=>ports(current().nodes.find(n=>n.id==='array'),'outputs').out),'vec3[8]');
@@ -31,6 +42,15 @@ const {harness}=require('./test_glsl_code.cjs');
     checks.push('Array length controls are stacked on the node; canvas and Parameter edits share settings and one-step Undo');
     assert.equal(await wire('array','get','Array'),true);assert.equal(await wire('array','replace','Array'),true);assert.equal(await wire('array','length','Array'),true);
     assert.deepEqual(await page.evaluate(()=>['get','replace','length'].map(id=>ports(current().nodes.find(n=>n.id===id),'outputs').out)),['vec3','vec3[8]','int']);
+    const lengthField=page.locator('[data-array-length-controls="array"] input'),beforeInvalidLength=await state();
+    for(const invalid of ['0','1.5','1025']){await lengthField.fill(invalid);await lengthField.press('Enter');assert.equal(await lengthField.getAttribute('aria-invalid'),'true');assert.equal(await state(),beforeInvalidLength);}
+    await lengthField.press('Escape');assert.equal(await lengthField.inputValue(),'8');
+    await lengthField.fill('12');await page.evaluate(()=>render());assert.equal(await lengthField.inputValue(),'12');
+    await lengthField.press('Enter');await settle();
+    assert.equal(await page.evaluate(()=>ports(current().nodes.find(n=>n.id==='replace'),'outputs').out),'vec3[12]');
+    assert.match(await page.locator('[data-node="replace"] .port-row.output').innerText(),/vec3\[12\]/);
+    await page.evaluate(()=>undo());await settle();assert.equal(await state(),beforeInvalidLength);
+    checks.push('Shared INT editor rejects invalid lengths, preserves drafts, supports Escape, refreshes connected types and commits one Undo');
     await pick('replace');assert.equal(await page.locator('#inspector [data-input="replacement"] input[type=number]:visible').count(),3);
     assert.match(await page.locator('#inspector').innerText(),/out-of-range index leaves the array unchanged/);
     await pick('get');assert.match(await page.locator('#inspector').innerText(),/clamped to the array bounds/);

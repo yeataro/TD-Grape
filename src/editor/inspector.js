@@ -1082,11 +1082,15 @@ function compositeInspector(box,n,d){
     }
   }
 }
-function arrayLengthControl(value,commit,allowSpecialization=true){
-  const box=el('div',{class:'components array-length-control'}),references=graph.declarations.filter(d=>['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type));
+function arrayLengthSelector(value,commit,allowSpecialization=true){
+  const references=graph.declarations.filter(d=>['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type));
   const mode=select([['literal',t('array.fixedLength')],...references.map(d=>['sg_len_'+d.id,d.name+' · '+(d.kind==='spec_constant'?'Spec Constant':'Constant')])],typeof value==='number'?'literal':value,next=>commit(next==='literal'?4:next));
-  mode.disabled=readonly;mode.dataset.arrayLengthSource='true';mode.setAttribute('aria-label',t('array.length'));mode.title=t('array.lengthSourceHint');box.append(mode);
+  mode.disabled=readonly;mode.dataset.arrayLengthSource='true';mode.setAttribute('aria-label',t('array.length'));mode.title=t('array.lengthSourceHint');
   if(!allowSpecialization)for(const option of mode.options)if(arrayLengthDeclaration(option.value)?.kind==='spec_constant'){option.disabled=true;option.title=t('array.nativeSpecializationLimit');}
+  return mode;
+}
+function arrayLengthControl(value,commit,allowSpecialization=true){
+  const box=el('div',{class:'components'});box.append(arrayLengthSelector(value,commit,allowSpecialization));
   if(typeof value==='number'){
     const number=input(value,text=>{const count=Number(text);if(Number.isInteger(count)&&count>=1&&count<=(typeContract.composites.array.maxLength||1024))commit(count);else{status(t('array.invalidLength'),true);inspector();}},'number');
     number.min='1';number.max=String(typeContract.composites.array.maxLength||1024);number.step='1';number.disabled=readonly;number.setAttribute('aria-label',t('array.length'));box.append(number);
@@ -1094,11 +1098,14 @@ function arrayLengthControl(value,commit,allowSpecialization=true){
   return box;
 }
 function arrayNodeLengthControl(n){
-  const box=el('div',{class:'node-body-controls','data-array-length-controls':n.id});
-  const control=arrayLengthControl(n.params.length??4,value=>change(()=>n.params.length=value,{typeChange:true}));
-  const number=control.querySelector('input');if(number)number.dataset.arrayLength=n.id;
-  for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());
-  box.append(control);return box;
+  const box=el('div',{class:'node-body-controls','data-array-length-controls':n.id}),value=n.params.length??4;
+  box.append(arrayLengthSelector(value,next=>change(()=>n.params.length=next,{typeChange:true})));
+  if(typeof value==='number'){
+    const fields=inlineNumericFields(n,'$length',value,(_,next)=>n.params.length=next,'XYZW',{type:'int',label:t('array.length'),typeChange:true}),number=fields.querySelector('input');
+    number.min='1';number.max=String(typeContract.composites.array.maxLength||1024);number.dataset.arrayLength=n.id;box.append(fields);
+  }
+  for(const event of ['pointerdown','click','dblclick','keydown'])box.addEventListener(event,e=>e.stopPropagation());
+  return box;
 }
 function compositeInputHint(n,port,type){
   if(typeContainsResource(type)||typeof typeDescriptor(type)?.length==='string')return t('composite.connectValue');
@@ -1208,9 +1215,11 @@ function inlineNumericFields(n,port,value,write,labels='XYZW',options={}){
       // a replacement graph or another Subgraph definition.
       if(inlineValueEdit?.entry===entry&&inlineValueEdit.signature!==inlineValueSignature(n)){restore();return;}
       inlineValueEdit=null;
-      const ok=change(()=>write(index,next),{redraw:false});
+      const ok=change(()=>write(index,next),{redraw:false,typeChange:options.typeChange===true});
       if(!ok)return;
-      committed=entry.value;entry.removeAttribute('aria-invalid');focus();
+      committed=entry.value;entry.removeAttribute('aria-invalid');
+      if(options.typeChange){render();return;}
+      focus();
       const summary=entry.closest('.node')?.querySelector('[data-vector-summary]');if(summary)updateVectorManualSummary(n,summary);
       if(definition(n)?.key==='color')updateNodeColorPreview(n,entry.closest('.node'));
       if(selected===n.id)inspector();queueInlineValueRender();
