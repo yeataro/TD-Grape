@@ -14,8 +14,10 @@ catalog=payload.catalog;setTypeContract(payload.contract);editorTarget='top';sta
 function node(key,id,params={}){const d=catalog.find(d=>d.key===key);return {id,definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...clone(d.defaults),...params},ui:{x:24,y:24,...(supportsAutoType(d)?{typeMode:'auto'}:{})}};}
 const n=id=>current().nodes.find(n=>n.id===id),info=(id,kind,port)=>({node:id,kind,port,type:ports(n(id),kind)[port]});
 const identical=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
+// Existing arithmetic overloads are expanded in a separate batch from values.
+const legacyNumericTypes=numericTypes().filter(type=>typeFamily(type)!=='double'&&!isMatrixType(type));
 for(const key of payload.keys){
- const d=catalog.find(d=>d.key===key),port=Object.keys(d.inputs)[0];assert.equal(supportsAutoType(d),true);identical(selectableNodeTypes(d),numericTypes().filter(type=>key==='mod'||typeFamily(type)==='float'||key==='sign'&&typeFamily(type)==='int'));
+ const d=catalog.find(d=>d.key===key),port=Object.keys(d.inputs)[0];assert.equal(supportsAutoType(d),true);identical(selectableNodeTypes(d),legacyNumericTypes.filter(type=>key==='mod'||typeFamily(type)==='float'||key==='sign'&&typeFamily(type)==='int'));
  assert.ok(typeContract.constantExpressions.includes(key));
  for(const ty of selectableNodeTypes(d))for(const p of Object.keys(d.inputs))identical(defaultInput(node(key,'sample',{type:ty}),p,ty),filledValue(ty,p==='b'?1:0));
  graph={schemaVersion:1,target:'top',topSourceVersion:1,topInputs:[],declarations:[],functions:[],stages:{pixel:{nodes:[node('vec3','source',{value:[.25,.5,.75]}),node(key,'operation'),node('length','measure'),node('pixel_out','result')],edges:[]}}};

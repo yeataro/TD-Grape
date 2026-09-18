@@ -3,6 +3,7 @@
 The GLSL OP owns current values and their modes. Graph declarations retain
 portable defaults/type metadata. No stored snapshot is a competing value store.
 """
+import ast
 import copy
 import hashlib
 import json
@@ -14,18 +15,21 @@ from contextlib import nullcontext
 STORE = 'grapeNativeUniformsV1'
 # Native vector rows contain up to four scalar components. Their GLSL family is
 # declared by the graph, independent of the native page's numeric widgets.
-TYPES = {name: count for scalar, prefix in (('float','vec'), ('int','ivec'), ('uint','uvec'), ('bool','bvec'))
+TYPES = {name: count for scalar, prefix in (('float','vec'), ('double','dvec'), ('int','ivec'), ('uint','uvec'), ('bool','bvec'))
          for count in range(1,5) for name in (scalar if count == 1 else prefix+str(count),)}
+MATRIX_SHAPES = {prefix+str(c)+(('x'+str(r)) if c != r else ''): (c,r)
+                 for prefix in ('mat','dmat') for c in range(2,5) for r in range(2,5)}
+TYPES.update({ty:c*r for ty,(c,r) in MATRIX_SHAPES.items()})
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
 SOURCE_KINDS = ('uniform', 'spec_constant')
 PRESETS = {'time': 'me.time.seconds', 'frame': 'me.time.frame',
            'absTime': 'absTime.seconds', 'absFrame': 'absTime.frame'}
 CHANNELS = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'),
-            'color': ('rgbr', 'rgbg', 'rgbb', 'alpha'), 'const': ('value',)}
+            'color': ('rgbr', 'rgbg', 'rgbb', 'alpha'), 'const': ('value',), 'matrix': ('value',)}
 
 
 def source_sequence(declaration):
-    return 'const' if declaration.get('kind') == 'spec_constant' else declaration.get('nativeSequence', 'vec')
+    return 'const' if declaration.get('kind') == 'spec_constant' else 'matrix' if declaration.get('type') in MATRIX_SHAPES else declaration.get('nativeSequence', 'vec')
 
 
 def source_components(declaration):
@@ -39,7 +43,7 @@ def next_constant_id(declarations):
 
 def source_family(ty):
     if ty not in TYPES: raise RuntimeError('Unsupported native source type.')
-    return 'bool' if ty == 'bool' or ty.startswith('bvec') else 'uint' if ty == 'uint' or ty.startswith('uvec') else 'int' if ty == 'int' or ty.startswith('ivec') else 'float'
+    return 'double' if ty.startswith('d') else 'bool' if ty == 'bool' or ty.startswith('bvec') else 'uint' if ty == 'uint' or ty.startswith('uvec') else 'int' if ty == 'int' or ty.startswith('ivec') else 'float'
 
 
 def validate_uniform_component(declaration, value, role='value'):
@@ -52,7 +56,7 @@ def validate_uniform_component(declaration, value, role='value'):
         return
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         raise RuntimeError('Uniform '+name+': native '+role+' must be a finite number.')
-    if family == 'float': return
+    if family in ('float','double'): return
     low, high = (-2147483648, 2147483647) if family == 'int' else (0, 4294967295)
     if int(value) != value or not low <= value <= high:
         raise RuntimeError('Uniform '+name+': native '+role+' must be a whole '+family+' value from '+str(low)+' to '+str(high)+'.')
@@ -139,6 +143,71 @@ def component(p):
             **({'control':edit.name} if edit is not None and not edit.isSamePar(p) else {})}
 
 
+def matrix_literal(expression):
+    """Read our literal carrier without evaluating arbitrary Python or an OP."""
+    if not isinstance(expression, str) or len(expression) > 4096: return None
+    try:
+        node = ast.parse(expression, mode='eval').body
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name) and node.func.value.id == 'tdu'
+                and node.func.attr == 'Matrix' and len(node.args) == 1 and not node.keywords): return None
+        values = ast.literal_eval(node.args[0])
+        if not isinstance(values, (list,tuple)) or len(values) != 16: return None
+        if any(type(v) not in (int,float) or not math.isfinite(v) for v in values): return None
+        return list(values)
+    except (SyntaxError, ValueError, TypeError, OverflowError, RecursionError): return None
+
+
+def matrix_expression(declaration, values, carrier=None):
+    """TD's carrier is 4x4; GLSL reads its top-left columns/rows."""
+    validate_uniform_native(declaration, values)
+    columns, rows = MATRIX_SHAPES[declaration['type']]
+    result = list(carrier) if carrier is not None else [float(c == r) for c in range(4) for r in range(4)]
+    for c in range(columns):
+        for r in range(rows): result[c*4+r] = values[c*rows+r]
+    return 'tdu.Matrix('+repr(result)+')'
+
+
+def matrix_control_expression(declaration, names):
+    columns, rows = MATRIX_SHAPES[declaration['type']]
+    values = ['1.0' if c == r else '0.0' for c in range(4) for r in range(4)]
+    for c in range(columns):
+        for r in range(rows): values[c*4+r] = 'parent().par.'+names[c*rows+r]+'.eval()'
+    return 'tdu.Matrix(['+', '.join(values)+'])'
+
+
+def matrix_binding(p):
+    # Configuration only: snapshots must not evaluate animated matrix drivers,
+    # cook DATs/CHOPs, or turn their sampled values into history conflicts.
+    mode = str(p.mode).split('.')[-1].upper()
+    state = {'parameter':p.name, 'mode':mode, 'value':str(p.val),
+             'expression':p.expr if mode == 'EXPRESSION' else '',
+             'binding':p.bindExpr if mode == 'BIND' else ''}
+    return {**state, 'expected':token(state),
+            'writable':mode in ('CONSTANT','EXPRESSION') and bool(p.enable) and not p.readOnly,
+            'literalValues':matrix_literal(state['expression']) if mode == 'EXPRESSION' else None}
+
+
+def matrix_components(binding, ty='mat4'):
+    values = binding['literalValues']
+    if values is None: return []
+    columns, rows = MATRIX_SHAPES[ty]
+    return [{'parameter':binding['parameter'], 'value':values[c*4+r], 'mode':binding['mode'],
+             'writable':False, 'column':c, 'row':r} for c in range(columns) for r in range(rows)]
+
+
+def matrix_driver_value(p):
+    """Candidate-cook forwarding only, never used by source polling/history.
+
+    Matrix values are OP parameters in TD: eval() may turn a valid tdu.Matrix
+    expression into None. Preserve the expression's Python result and resolve
+    string paths in the original native OP's context before forwarding them.
+    """
+    if not str(p.mode).endswith('EXPRESSION'): return p.eval()
+    value = p.evalExpression()
+    return p.owner.parent().op(value) if isinstance(value,str) else value
+
+
 def native_rows(operator):
     rows = []
     for sequence, channels in CHANNELS.items():
@@ -148,9 +217,11 @@ def native_rows(operator):
             p = parameter(operator, sequence, index, 'name')
             name = str(p.eval())
             if not name: continue
+            binding = matrix_binding(parameter(operator, sequence, index, 'value')) if sequence == 'matrix' else None
             rows.append({'sequence': sequence, 'index': index, 'name': name,
                          'nameMode': str(p.mode).split('.')[-1].upper(),
-                         'components': [component(parameter(operator, sequence, index, c)) for c in channels]})
+                         'components': matrix_components(binding) if binding else [component(parameter(operator, sequence, index, c)) for c in channels],
+                         **({'matrixBinding':binding} if binding else {})})
     return rows
 
 
@@ -191,7 +262,7 @@ def reconcile(declarations, registry, rows):
             issues.append({'id': ident, 'message': 'Native source is missing or ambiguous: ' + decl['name']})
         else:
             decl['name'] = row['name']; decl.pop('sourceMissing', None)
-            if row['sequence']=='color':decl['nativeSequence']='color'
+            if row['sequence'] in ('color','matrix'):decl['nativeSequence']=row['sequence']
             record.update(name=row['name'], index=row['index']); record.pop('missing', None)
     known = {d['name'] for d in declarations}
     for i, row in enumerate(rows):
@@ -201,14 +272,16 @@ def reconcile(declarations, registry, rows):
             issues.append({'message': 'Review the native Uniform name: ' + name}); continue
         kind = 'spec_constant' if row['sequence'] == 'const' else 'uniform'
         ident = kind + '_' + uuid.uuid4().hex
-        ty = 'vec4' if row['sequence'] == 'color' else 'float'
+        ty = 'mat4' if row['sequence'] == 'matrix' else 'vec4' if row['sequence'] == 'color' else 'float'
         values = [c['value'] if c['value'] is not None and abs(c['value']) <= 1e20 else 0.0 for c in row['components']]
         if kind == 'spec_constant':
             ty = 'int'; values = [max(-2147483648, min(2147483647, int(values[0])))]
+        elif ty == 'mat4':
+            values = row['matrixBinding']['literalValues'] or [float(c == r) for c in range(4) for r in range(4)]
         declarations.append({'id': ident, 'kind': kind, 'name': name, 'type': ty,
-                             'value': values if ty == 'vec4' else values[0],
+                             'value': values if ty in ('vec4','mat4') else values[0],
                              **({'constantId': next_constant_id(declarations), 'nativeSequence':'const'} if kind == 'spec_constant' else {}),
-                             **({'nativeSequence':'color'} if row['sequence']=='color' else {})})
+                             **({'nativeSequence':row['sequence']} if row['sequence'] in ('color','matrix') else {})})
         registry[ident] = {k: row[k] for k in ('sequence', 'index', 'name')}
         known.add(name)
     return declarations, registry, issues
@@ -223,6 +296,9 @@ def locate(operator, record):
 def capture_configuration(runtime, comp):
     operator = runtime.shader_operator(comp)
     return {'registry': copy.deepcopy(comp.fetch(STORE, None)),
+            'matrixParameters': [(parameter(operator,'matrix',i,'value'),
+                                  {key:getattr(parameter(operator,'matrix',i,'value'),key) for key in ('val','mode','expr','bindExpr')})
+                                 for i in range(getattr(getattr(operator.seq,'matrix',None),'numBlocks',0))],
             'sequences': {name: [(parameter(operator, name, i, 'name'), parameter(operator, name, i, 'name').val)
                                 for i in range(getattr(operator.seq, name).numBlocks)]
                           for name in CHANNELS if getattr(operator.seq, name, None) is not None}}
@@ -234,6 +310,9 @@ def restore_configuration(runtime, comp, before):
         getattr(operator.seq, name).numBlocks = len(pars)
         for p, value in pars:
             if p.val != value: p.val = value
+    for p, state in before.get('matrixParameters',[]):
+        for key in ('val','expr','bindExpr','mode'):
+            if getattr(p,key) != state[key]:setattr(p,key,state[key])
     if before['registry'] is None: comp.unstore(STORE)
     else: comp.store(STORE, before['registry'])
 
@@ -261,7 +340,9 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             if source is None:
                 matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] != 'const']
                 source = matches[0] if len(matches) == 1 else None
-            if source:
+            if source and (source['sequence'] == 'matrix') != (decl['type'] in MATRIX_SHAPES):
+                raise RuntimeError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
+            if source and source['sequence'] != 'matrix':
                 for component in source['components'][:source_components(decl)]:
                     validate_uniform_component(decl, component['value'])
             elif decl['id'] in (preserve or {}): validate_uniform_native(decl, preserve[decl['id']])
@@ -289,12 +370,23 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             sequence = existing['sequence']; index = existing['index']
             if (sequence=='const') != (decl['kind']=='spec_constant'):
                 raise RuntimeError('Native source kind differs from its declaration: ' + decl['name'])
+            if (sequence=='matrix') != (decl['type'] in MATRIX_SHAPES):
+                raise RuntimeError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
             if existing['name'] != decl['name']:
                 if existing['nameMode'] != 'CONSTANT': raise RuntimeError('The Uniform name is controlled by TD.')
                 parameter(operator, sequence, index, 'name').val = decl['name']
             previous = old_graph.get(ident, {})
             if decl['kind']=='uniform' and ident not in comp.fetch('grapeCustomMigratedV1',[]) and bool(previous.get('expose')) != bool(decl.get('expose')):
                 legacy = comp.fetch('sgrapePublicUniforms', {}).get(ident, {})
+                if sequence == 'matrix':
+                    names = legacy.get('parameters', [])
+                    p = parameter(operator, sequence, index, 'value')
+                    generated = matrix_control_expression(decl,names) if len(names) == source_components(decl) else None
+                    if generated and decl.get('expose'):p.expr = generated
+                    elif generated and str(p.mode).endswith('EXPRESSION') and p.expr == generated:
+                        p.expr = matrix_expression(decl,[float(getattr(comp.par,name).eval()) for name in names])
+                    registry[ident] = {'sequence':sequence, 'index':index, 'name':decl['name']}
+                    continue
                 for j, name in enumerate(legacy.get('parameters', [])):
                     p = parameter(operator, sequence, index, CHANNELS[sequence][j])
                     expression = 'parent().par.' + name
@@ -317,6 +409,19 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             candidates = [r for r in native_rows(original) if r['name'] == decl['name']]
             source = candidates[0] if len(candidates) == 1 and original != operator else None
         default = decl['value']; values = [default] if source_components(decl) == 1 else list(default)
+        if sequence == 'matrix':
+            p = parameter(operator, sequence, index, 'value')
+            if ident in public and not input_owner:
+                p.expr = matrix_control_expression(decl,public[ident]['parameters'])
+            elif source and original != operator:
+                # Candidate cooks use the existing native parameter in its own
+                # context, preserving relative OP paths and Python drivers.
+                helper = runtime._owner.op('sources').path
+                p.expr = 'op('+repr(helper)+').module.matrix_driver_value(op('+repr(original.path)+').par.matrix'+str(source['index'])+'value)'
+            else:
+                p.expr = matrix_expression(decl, (preserve or {}).get(ident, values))
+            registry[ident] = {'sequence':sequence, 'index':index, 'name':decl['name']}
+            continue
         # Old exposed but unused sources still have their existing COMP value.
         if ident in public:
             master = input_owner or comp
@@ -369,7 +474,8 @@ def snapshot(runtime):
                      'default': decl['value'], 'missing': comp.fetch(STORE, None) is not None and row is None,
                      'pending': comp.fetch(STORE, None) is None,
                      'sequence': row['sequence'] if row else '',
-                     'components': row['components'] if row else [],
+                     'components': (matrix_components(row['matrixBinding'],decl['type']) if row.get('matrixBinding') else row['components']) if row else [],
+                     **({'matrixBinding':row['matrixBinding']} if row and row.get('matrixBinding') else {}),
                      'nameWritable': row is not None and row['nameMode'] == 'CONSTANT',
                      'expected': edit_token(row) if row else None})
     return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows, 'specConstants': spec_rows,
@@ -469,8 +575,9 @@ def edit(runtime, body):
             decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
                     'value': runtime.core().filled_value(ty)}
             if kind=='spec_constant':decl.update(constantId=next_constant_id(graph['declarations']), nativeSequence='const')
+            elif ty in MATRIX_SHAPES:decl['nativeSequence']='matrix'
             if body.get('sequence'):
-                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('vec','color')):raise RuntimeError('Unsupported native source page.')
+                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise RuntimeError('Unsupported native source page.')
                 decl['nativeSequence']=body['sequence']
             if body.get('preset'):
                 if kind!='uniform' or body['preset'] not in PRESETS or ty!='float':raise RuntimeError('Unsupported time preset.')
@@ -489,7 +596,30 @@ def edit(runtime, body):
         purge_missing_source(runtime, decl['id'])
         return snapshot(runtime)
     if row is None: raise RuntimeError('This Uniform source is missing.')
+    if action in ('matrixBinding','matrixValue'):
+        if row['sequence'] != 'matrix' or decl['type'] not in MATRIX_SHAPES:
+            raise RuntimeError('Select a Matrix Uniform source.')
+        binding = row['matrixBinding']
+        if not binding['writable'] or body.get('expected') != binding['expected']:
+            raise RuntimeError('The matrix source changed or is owned by Bind / Export. Refresh or use native Parameters.')
+        p = parameter(operator, 'matrix', row['index'], 'value')
+        if action == 'matrixValue':
+            if binding['literalValues'] is None: raise RuntimeError('This matrix is driven by TD. Edit its source binding instead.')
+            runtime.core().literal(body.get('value'), decl['type'])
+            expression = matrix_expression(decl, body['value'], binding['literalValues'])
+            p.expr = expression
+        else:
+            mode = body.get('mode')
+            value = body.get('expression') if mode == 'EXPRESSION' else body.get('value')
+            if mode not in ('CONSTANT','EXPRESSION') or not isinstance(value,str) or len(value)>4096:
+                raise RuntimeError('Enter a Matrix source path or Python expression up to 4096 characters.')
+            # TD owns evaluation and error reporting. Do not sample drivers or
+            # impose additional numerical/transport rules on accepted sources.
+            if mode == 'EXPRESSION':p.expr = value
+            else:p.mode = ParMode.CONSTANT;p.val = value
+        return snapshot(runtime)
     if action == 'driver':
+        if row['sequence'] == 'matrix': raise RuntimeError('Use the Matrix source binding to edit this driver.')
         if decl['kind']=='spec_constant':raise RuntimeError('Spec Constants are intended for infrequent integer mode changes; edit native drivers in TD.')
         index=body.get('component');expression=body.get('expression')
         if type(index) is not int or not 0<=index<4 or not isinstance(expression,str) or len(expression)>4096:

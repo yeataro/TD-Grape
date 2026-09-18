@@ -1737,3 +1737,27 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .shortcuts-chord kbd{font:inherit;font-size:11px;line-height:1.4;min-width:19px;text-align:center;padding:2px 5px;border-radius:4px;background:var(--ui-control,var(--ui-tone-control));box-shadow:0 1px 0 var(--line)}
 .shortcuts-or{color:var(--muted);font-size:11px}
 @media(pointer:coarse){#shortcutsclose{min-width:40px;min-height:40px}.shortcuts-row{min-height:36px}#uishortcuts{touch-action:manipulation}}
+
+/* Each matrix row is one column vector; expanded components retain that parent. */
+.node-matrix{--node-min-width:280px}
+.matrix-ports .matrix-column-row{min-height:32px;height:auto;gap:6px;padding:2px 12px;justify-content:flex-start}
+.matrix-column-toggle{display:inline-flex;align-items:center;gap:4px;flex:none;min-width:0;height:26px;padding:0;border:0;border-radius:3px;background:transparent;color:var(--ui-tone-port-label);font:inherit;white-space:nowrap}
+.matrix-column-toggle>span:first-child{width:10px;color:var(--muted);font-size:10px}
+.matrix-column-toggle:hover{background:transparent;color:var(--ui-tone-text)}
+.matrix-column-toggle:focus-visible{outline:1px solid var(--purple);outline-offset:2px}
+.matrix-column-row>.port-type,.matrix-column-row>small{flex:none;font-size:9px}
+.matrix-column-row.output>small{margin-left:auto}
+.matrix-compact-values.node-inline-values{display:flex;flex:1;gap:3px;padding:0;min-width:0}
+.matrix-compact-component.node-inline-component{min-width:0;flex:1;justify-content:center}
+.matrix-compact-component input{min-width:0;width:100%;padding-inline:3px}
+.matrix-column-children{position:relative}
+.matrix-column-children::before{content:'';position:absolute;left:20px;top:0;bottom:15px;width:1px;background:var(--line)}
+.matrix-component-row{min-height:30px;height:auto;padding:2px 12px 2px 38px!important;gap:6px;justify-content:flex-start!important}
+.matrix-component-row::before{content:'';position:absolute;left:20px;top:50%;width:11px;height:1px;background:var(--line)}
+.matrix-component-row.output>small{margin-left:auto}
+.matrix-expanded-value{padding:0!important;min-width:0}
+.matrix-expanded-value>input{min-width:0;width:100%}
+.matrix-inherited-value{display:block;min-width:0;color:var(--muted);font-size:11px;text-align:center;width:100%}
+.matrix-ports>.port-row.output:last-child{margin-top:4px}
+.node-matrix .port-row[data-type*="mat"]{--socket:var(--type-vec4)}
+@media(pointer:coarse){.matrix-column-toggle{min-height:32px}.matrix-ports .matrix-column-row,.matrix-component-row{min-height:36px}}

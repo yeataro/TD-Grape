@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.84'
+PRODUCT_VERSION='0.8.86'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1057,9 +1057,14 @@ def public_uniforms(comp,graph,preserve=None):
             page=next((p for p in comp.customPages if p.name=='Uniforms'),None) or comp.appendCustomPage('Uniforms')
             count=core().type_components(decl['type'])
             family=core().TYPE_DESCRIPTORS[decl['type']]['family']
-            if family=='bool' and count==1:group=page.appendToggle(name,label=label)
-            else:group=(page.appendFloat if family=='float' else page.appendInt)(name,label=label,size=count)
-            if family!='float':
+            shape=core().TYPE_DESCRIPTORS[decl['type']]
+            if shape.get('shape')=='matrix':
+                group=[]
+                for column in range(shape['columns']):
+                    group.extend(page.appendFloat(name+'c'+str(column),label=label+' C'+str(column),size=shape['rows']))
+            elif family=='bool' and count==1:group=page.appendToggle(name,label=label)
+            else:group=(page.appendFloat if family in ('float','double') else page.appendInt)(name,label=label,size=count)
+            if family not in ('float','double'):
                 low,high=(0,1) if family=='bool' else (0,4294967295) if family=='uint' else (-2147483648,2147483647)
                 for p in group:p.min=low;p.max=high;p.clampMin=True;p.clampMax=True
             value=(preserve or {}).get(ident,decl['value'])
@@ -1067,10 +1072,11 @@ def public_uniforms(comp,graph,preserve=None):
             for p,value in zip(group,values): p.val=value
             bindings[ident]={'type':decl['type'],'parameters':[p.name for p in group]}
         defaults=[decl['value']] if core().type_components(decl['type'])==1 else decl['value']
-        for name,default in zip(bindings[ident]['parameters'],defaults):
+        shape=core().TYPE_DESCRIPTORS[decl['type']]
+        for index,(name,default) in enumerate(zip(bindings[ident]['parameters'],defaults)):
             p=getattr(comp.par,name)
             page=next((page for page in comp.customPages if page.name=='Uniforms'),None) or comp.appendCustomPage('Uniforms')
-            p.page=page; p.label=label; p.enable=True; p.default=default
+            p.page=page; p.label=label+' C'+str(index//shape['rows']) if shape.get('shape')=='matrix' else label; p.enable=True; p.default=default
     for ident,binding in bindings.items():
         if ident not in exposed and ident not in migrated:
             for name in binding['parameters']:
@@ -1274,8 +1280,9 @@ def existing_values(comp,new_graph):
             if decl['kind']!='uniform': continue
             row=source_module().locate(operator,comp.fetch('grapeNativeUniformsV1',{}).get(decl['id']))
             if row:
-                current=[c['value'] for c in row['components'][:core().type_components(decl['type'])]]
-                if all(value is not None for value in current):values[decl['id']]=current[0] if len(current)==1 else current
+                components=source_module().matrix_components(row['matrixBinding'],decl['type']) if row.get('matrixBinding') else row['components']
+                current=[c['value'] for c in components[:core().type_components(decl['type'])]]
+                if len(current)==core().type_components(decl['type']) and all(value is not None for value in current):values[decl['id']]=current[0] if len(current)==1 else current
         return values
     old=json.loads(comp.op('manifest').text)
     old_graph=json.loads(comp.op('graph').text)
@@ -1546,7 +1553,8 @@ def uniform_snapshot():
         current=state()
         for row in native['uniforms']:
             if not row['missing'] and row['id'] not in rows:
-                rows[row['id']]={'type':row['type'],'default':row['default'],'components':row['components'][:core().type_components(row['type'])]}
+                rows[row['id']]={'type':row['type'],'default':row['default'],'components':row['components'][:core().type_components(row['type'])],
+                                 **({'matrixBinding':row['matrixBinding']} if row.get('matrixBinding') else {})}
     return {'revision':current['revision'],'uniforms':rows,'textures':texture_snapshot(comp,current['graph'])}
 
 def set_uniform_value(body):

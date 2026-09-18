@@ -190,9 +190,9 @@ const vector=catalog.find(d=>d.key==='vector');identical(vectorPorts(vector.key,
 setup([node('uv','uv'),node('vector_split','old',{type:'vec2'})],[edge('uv','old','value')]);
 before=clone(graph);addVectorSplit(n('uv'),'out');assert.equal(selected,'old');identical(graph,before);
 
-// Fixed entries and generic Scalar/Vector share behavior, with a persistent fixed
+// Fixed entries and generic Scalar/Vector/Matrix share behavior, with a persistent fixed
 // type only on fixed entries. Search never changes a generic entry's defaults.
-const valueEntries=availableEntries().filter(d=>['scalar','vector'].includes(d.key)),fixedEntries=valueEntries.filter(d=>d.fixedType);
+const valueEntries=availableEntries().filter(d=>['scalar','vector','matrix'].includes(d.key)),fixedEntries=valueEntries.filter(d=>d.fixedType);
 identical(fixedEntries.map(d=>d.fixedType).sort(),valueTypes().slice().sort());
 for(const entry of fixedEntries){
   identical(creatorVariants(entry,null).map(v=>v.type),[entry.fixedType]);
@@ -207,8 +207,8 @@ for(const entry of fixedEntries){
 }
 for(const entry of valueEntries.filter(d=>!d.fixedType)){
   setup([]);change(()=>instantiate(entry,100,100));const created=n(selected),name=created.name;
-  assert.equal(created.params.type,entry.key==='scalar'?'float':'vec2');assert.equal(Object.hasOwn(created.params,'fixedType'),false);
-  for(const type of selectableNodeTypes(entry)){reshapeTypedInputs(created,entry,type);assert.equal(created.name,name);assert.equal(nodeTypeLabel(entry,created.params),entry.key==='scalar'?'Scalar':'Vector');}
+  assert.equal(created.params.type,{scalar:'float',vector:'vec2',matrix:'mat3'}[entry.key]);assert.equal(Object.hasOwn(created.params,'fixedType'),false);
+  for(const type of selectableNodeTypes(entry)){reshapeTypedInputs(created,entry,type);assert.equal(created.name,name);assert.equal(nodeTypeLabel(entry,created.params),{scalar:'Scalar',vector:'Vector',matrix:'Matrix'}[entry.key]);}
 }
 for(const key of ['float','vec2','vec3','vec4'])assert.ok(!availableEntries().some(d=>d.key===key));
 const preset3=fixedEntries.find(d=>d.fixedType==='vec3'),preset2=fixedEntries.find(d=>d.fixedType==='vec2');

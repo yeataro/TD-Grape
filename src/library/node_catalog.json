@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.85",
+  "catalogVersion": "0.8.86",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -39,7 +39,8 @@
           "integer",
           "unsigned",
           "boolean",
-          "value"
+          "value",
+          "double"
         ],
         "glslName": "scalar",
         "secondaryCategories": []
@@ -1820,7 +1821,10 @@
           "vector3",
           "vector4",
           "value",
-          "components"
+          "components",
+          "dvec2",
+          "dvec3",
+          "dvec4"
         ],
         "glslName": "vecN",
         "secondaryCategories": [
@@ -2606,6 +2610,446 @@
         "secondaryCategories": [
           "texture"
         ]
+      }
+    },
+    {
+      "definition": {
+        "key": "matrix",
+        "label": "Matrix",
+        "inputs": {},
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3",
+          "values": [
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "descriptionKey": "help.matrix",
+        "definitionUuid": "sgrape.builtin.matrix",
+        "revisionHash": "5a766b5a7e42b455f4f6343120f5bd1cfd407db3bb231d4305f32665ca366c81"
+      },
+      "emitter": {
+        "id": "matrix",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "mat2",
+          "mat3",
+          "mat4",
+          "dmat",
+          "matrix value",
+          "identity"
+        ],
+        "glslName": "matrix",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "matrix_combine",
+        "label": "Matrix Combine",
+        "inputs": {},
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3",
+          "values": [
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "descriptionKey": "help.matrix_combine",
+        "definitionUuid": "sgrape.builtin.matrix_combine",
+        "revisionHash": "3957695131d9580454b8476147a59abcb26029876d457ea1a693e9a38e814311"
+      },
+      "emitter": {
+        "id": "matrix_combine",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "construct matrix",
+          "columns",
+          "assemble"
+        ],
+        "glslName": "matrix_combine",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "matrix_replace",
+        "label": "Matrix Replace",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3",
+          "values": [
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "descriptionKey": "help.matrix_replace",
+        "definitionUuid": "sgrape.builtin.matrix_replace",
+        "revisionHash": "b2f46d31e6369fbbf69ae1a12b0f0bd8ee0aa4bee4af8ab61b834577340f202c"
+      },
+      "emitter": {
+        "id": "matrix_replace",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "replace matrix",
+          "override",
+          "columns"
+        ],
+        "glslName": "matrix_replace",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "matrix_split",
+        "label": "Matrix Split",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {},
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3"
+        },
+        "descriptionKey": "help.matrix_split",
+        "definitionUuid": "sgrape.builtin.matrix_split",
+        "revisionHash": "5dde90baccf710d9814b3b65bfbbd54b1aaf8cedf8f51a901bf609325fb5c4c4"
+      },
+      "emitter": {
+        "id": "matrix_split",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "split matrix",
+          "columns",
+          "elements"
+        ],
+        "glslName": "matrix_split",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "matrix_get",
+        "label": "Matrix Get",
+        "inputs": {
+          "value": "T",
+          "column": "int"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3",
+          "mode": "column",
+          "indexType": "int"
+        },
+        "descriptionKey": "help.matrix_get",
+        "definitionUuid": "sgrape.builtin.matrix_get",
+        "revisionHash": "f5b1cee1cb667fd0b5b7a7f1ca73b806bf88a299bfd5cfcdaf5a8cad40ae1d3e"
+      },
+      "emitter": {
+        "id": "matrix_get",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "matrix index",
+          "read element",
+          "get column"
+        ],
+        "glslName": "matrix_get",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "matrix_set",
+        "label": "Matrix Set",
+        "inputs": {
+          "value": "T",
+          "column": "int",
+          "replacement": "vec3"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3",
+          "mode": "column",
+          "indexType": "int"
+        },
+        "descriptionKey": "help.matrix_set",
+        "definitionUuid": "sgrape.builtin.matrix_set",
+        "revisionHash": "168a3fe735ac6ced6e5e2a56e8f105d1d00d6c6a02407e954193f423d6ad4925"
+      },
+      "emitter": {
+        "id": "matrix_set",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "matrix index",
+          "write element",
+          "set column"
+        ],
+        "glslName": "matrix_set",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "transpose",
+        "label": "Transpose",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3"
+        },
+        "descriptionKey": "help.transpose",
+        "definitionUuid": "sgrape.builtin.transpose",
+        "revisionHash": "91e4d002cb35874216176b7ece76bc79d48a1a9886755fc1f96f505a772b447f"
+      },
+      "emitter": {
+        "id": "transpose",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "matrix transpose",
+          "swap rows columns"
+        ],
+        "glslName": "transpose",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "inverse",
+        "label": "Inverse",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3"
+        },
+        "descriptionKey": "help.inverse",
+        "definitionUuid": "sgrape.builtin.inverse",
+        "revisionHash": "4cbf66190c594354c5946341dc352d66d25c250badeea95912fa73e439ae9103"
+      },
+      "emitter": {
+        "id": "inverse",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "matrix inverse"
+        ],
+        "glslName": "inverse",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "determinant",
+        "label": "Determinant",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3"
+        },
+        "descriptionKey": "help.determinant",
+        "definitionUuid": "sgrape.builtin.determinant",
+        "revisionHash": "73ab921b9f5c981d098c66096842ea9e63788539da4c594f84f4fc5cf0719548"
+      },
+      "emitter": {
+        "id": "determinant",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "matrix determinant"
+        ],
+        "glslName": "determinant",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "matrix_comp_mult",
+        "label": "Matrix Component Multiply",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3"
+        },
+        "descriptionKey": "help.matrix_comp_mult",
+        "definitionUuid": "sgrape.builtin.matrix_comp_mult",
+        "revisionHash": "c097f86596f9118cd45b1ce5380d5269acc9b1eef40d009696c77a7c090bba23"
+      },
+      "emitter": {
+        "id": "matrix_comp_mult",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "matrixCompMult",
+          "matrix elementwise multiply",
+          "hadamard"
+        ],
+        "glslName": "matrixCompMult",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "outer_product",
+        "label": "Outer Product",
+        "inputs": {
+          "a": "vec3",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "mat3"
+        },
+        "descriptionKey": "help.outer_product",
+        "definitionUuid": "sgrape.builtin.outer_product",
+        "revisionHash": "7a301e13e2ed3474cd6b59f88edb175fbb48e389eebca8076aab5abb1d6c84c9"
+      },
+      "emitter": {
+        "id": "outer_product",
+        "version": 1
+      },
+      "browser": {
+        "category": "matrix",
+        "source": "editor",
+        "aliases": [
+          "outerProduct",
+          "vector outer product"
+        ],
+        "glslName": "outerProduct",
+        "secondaryCategories": []
       }
     }
   ],

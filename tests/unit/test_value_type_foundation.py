@@ -4,17 +4,23 @@ import json
 import unittest
 
 import sgrape_core as c
+from test_matrix_foundation import graph as observed_graph
 
 
 def typed_value(ty, ident='source'):
     family=c.TYPE_DESCRIPTORS[ty]['family']
     values={'float':[.25,-.5,.75,1], 'int':[2147483647,-2147483648,16777217,-3],
-            'uint':[4294967295,2147483648,16777217,3], 'bool':[True,False,True,False]}[family]
+            'uint':[4294967295,2147483648,16777217,3], 'bool':[True,False,True,False],
+            'double':[1.0000000000000002,-.5,.75,1]}[family]
+    if ty in c.MATRIX_TYPES:return c.node('matrix',ident,type=ty,values=[values[i%4] for i in range(c.type_components(ty))])
     if c.type_components(ty)==1:return c.node('scalar',ident,type=ty,value=values[0])
     return c.node('vector',ident,type=ty,components=values)
 
 
 def typed_graph(nodes, edges, result, ty, target='top', stage='pixel'):
+    # The original 16-family fixtures exercise Convert and its old shader text.
+    # New value types use a handwritten observer until Convert's separate batch.
+    if ty not in c.LEGACY_TYPES:return observed_graph(copy.deepcopy(nodes),copy.deepcopy(edges),source=result,ty=ty,target=target,stage=stage)
     graph=c.demo_graph('color',target)
     graph['declarations']=[]
     nodes=copy.deepcopy(nodes);edges=copy.deepcopy(edges)
@@ -33,12 +39,13 @@ def typed_graph(nodes, edges, result, ty, target='top', stage='pixel'):
 class ValueTypeFoundation(unittest.TestCase):
     def test_registry_and_contract_are_family_aware(self):
         contract=c.type_contract()
-        self.assertEqual(len(contract['valueTypes']),16)
-        self.assertEqual(len(contract['numericTypes']),12)
-        self.assertEqual(contract['convert']['types'],list(c.TYPES))
+        self.assertEqual(len(contract['valueTypes']),38)
+        self.assertEqual(len(contract['numericTypes']),16)
+        self.assertEqual(contract['convert']['types'],list(c.LEGACY_TYPES))
         for ty in c.TYPES:
             descriptor=contract['types'][ty]
-            self.assertEqual(ty,c.shaped_type(descriptor['family'],descriptor['components']))
+            expected=c.matrix_type(descriptor['family'],descriptor['columns'],descriptor['rows']) if descriptor.get('shape')=='matrix' else c.shaped_type(descriptor['family'],descriptor['components'])
+            self.assertEqual(ty,expected)
             self.assertEqual(descriptor['scalarType'],descriptor['family'])
         for key in c.CATALOG:
             c.resolved_ports(c.CATALOG[key],c.node(key,'probe')['params'],{'type':'float'})
@@ -48,7 +55,7 @@ class ValueTypeFoundation(unittest.TestCase):
         self.assertEqual(c.literal([-2147483648,2147483647],'ivec2'),'ivec2((-2147483647 - 1), 2147483647)')
         self.assertEqual(c.literal([True,False,True],'bvec3'),'bvec3(true, false, true)')
         for ty in c.TYPES:
-            family=c.TYPE_DESCRIPTORS[ty]['family'];zero={'float':'0.0','int':'0','uint':'0u','bool':'false'}[family]
+            family=c.TYPE_DESCRIPTORS[ty]['family'];zero={'float':'0.0','int':'0','uint':'0u','bool':'false','double':'0.0LF'}[family]
             expected=zero if c.type_components(ty)==1 else ty+'('+', '.join([zero]*c.type_components(ty))+')'
             self.assertEqual(c.literal(c.filled_value(ty),ty),expected)
         for value,ty in [([1,False],'bvec2'),([.5,1],'ivec2'),([-1,1],'uvec2'),([4294967296,0],'uvec2'),([2147483648,0],'ivec2')]:
@@ -63,13 +70,13 @@ class ValueTypeFoundation(unittest.TestCase):
                     result=c.compile_graph(graph)
                     self.assertEqual(graph,before)
                     self.assertEqual(result,c.compile_graph(json.loads(json.dumps(graph))))
-                    expected=source['params'].get('value',source['params'].get('components',[])[:c.type_components(ty)])
+                    expected=source['params'].get('value',source['params'].get('values',source['params'].get('components',[])[:c.type_components(ty)]))
                     self.assertIn(c.literal(expected,ty),result[stage])
 
     def test_math_signature_families_and_integer_operators(self):
         numeric=('add','subtract','multiply','divide','min','max','clamp','mod')
         floating=('sin','cos','pow','mix','sqrt','floor','round','ceil','trunc','fract','length','normalize','dot','remap','range_from','range_to','loop','zigzag')
-        for key,allowed in [(key,c.NUMERIC_TYPES) for key in numeric]+[(key,c.FLOAT_TYPES) for key in floating]+[(key,c.SIGNED_TYPES) for key in ('abs','sign')]:
+        for key,allowed in [(key,c.LEGACY_NUMERIC_TYPES) for key in numeric]+[(key,c.FLOAT_TYPES) for key in floating]+[(key,c.SIGNED_TYPES) for key in ('abs','sign')]:
             self.assertEqual(c.node_parameter_types(c.CATALOG[key]),allowed)
             for ty in c.TYPES:
                 with self.subTest(node=key,type=ty):
@@ -86,7 +93,7 @@ class ValueTypeFoundation(unittest.TestCase):
     def test_named_graph_constants_keep_each_declared_family_and_literal(self):
         for ty in c.TYPES:
             source=typed_value(ty)
-            value=source['params']['value'] if c.type_components(ty)==1 else source['params']['components'][:c.type_components(ty)]
+            value=source['params']['value'] if c.type_components(ty)==1 else source['params']['values'] if ty in c.MATRIX_TYPES else source['params']['components'][:c.type_components(ty)]
             graph=typed_graph([c.node('constant','source',declarationId='constant')],[],'source',ty)
             graph['declarations']=[dict(id='constant',kind='constant',name='cTyped',type=ty,value=value)]
             before=copy.deepcopy(graph)
@@ -100,14 +107,17 @@ class ValueTypeFoundation(unittest.TestCase):
             a=c.TYPE_DESCRIPTORS[source]
             for target in c.TYPES:
                 b=c.TYPE_DESCRIPTORS[target]
-                allowed=source==target or (a['components']==1 and a['family']==b['family']) or (
-                    a['family']!='bool' and b['family']!='bool' and (a['components']==1 or a['components']==b['components']))
+                allowed=source==target or (source not in c.MATRIX_TYPES and target not in c.MATRIX_TYPES and (
+                    (a['components']==1 and a['family']==b['family']) or (
+                    a['family']!='bool' and b['family']!='bool' and (a['components']==1 or a['components']==b['components']))))
                 self.assertEqual(c.conversion_kind(source,target) is not None,allowed,(source,target))
                 if allowed:self.assertEqual(c.convert_expression('value',source,target),'value' if source==target else target+'(value)')
 
     def test_convert_all_constructor_shapes_and_constant_propagation(self):
-        for source in c.TYPES:
-            for target in c.TYPES:
+        # This is the original scalar/vector Convert contract. Matrix conversion
+        # and double operation expansion belong to the following delivery batch.
+        for source in c.LEGACY_TYPES:
+            for target in c.LEGACY_TYPES:
                 with self.subTest(source=source,target=target):
                     convert=c.node('convert','cast',fromType=source,toType=target,requireConstant=True)
                     graph=typed_graph([typed_value(source),convert],[c.edge('source','cast','value')],'cast',target)
@@ -116,7 +126,7 @@ class ValueTypeFoundation(unittest.TestCase):
                     else:self.assertIn('const '+target+' sg_n_cast = '+target+'(sg_n_source);',c.compile_graph(graph)['pixel'])
 
     def test_if_returns_each_family_with_scalar_boolean_condition(self):
-        for ty in c.TYPES:
+        for ty in c.node_parameter_types(c.CATALOG['if']):
             branch=c.node('if','choice',type=ty);branch['inputValues']={'condition':True}
             graph=typed_graph([typed_value(ty),branch],[c.edge('source','choice','true')],'choice',ty)
             code=c.compile_graph(graph)['pixel']
@@ -141,10 +151,8 @@ class ValueTypeFoundation(unittest.TestCase):
     def test_glsl_code_and_subgraph_interfaces_accept_all_value_types(self):
         for ty in c.TYPES:
             code=c.node('glsl_code','code',functionName='passValue',inputs=[dict(id='value',name='value',type=ty)],
-                        outputs=[dict(id='result',name='resultValue',type=ty)],code='resultValue = value;')
-            graph=typed_graph([code],[],'alias',ty)
-            graph['stages']['pixel']['nodes'].insert(1,c.node('convert','alias',fromType=ty,toType=ty))
-            graph['stages']['pixel']['edges'].insert(0,c.edge('code','alias','value','result'))
+                        outputs=[dict(id='out',name='resultValue',type=ty)],code='resultValue = value;')
+            graph=typed_graph([code],[],'code',ty)
             self.assertIn('out '+ty+' resultValue',c.compile_graph(graph)['pixel'])
             default=c.filled_value(ty)
             graph=typed_graph([{'id':'call','definitionUuid':c.CALL,'params':{'functionId':'typed'}}],[],'call',ty)

@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-18 Matrix／double 第一批（0.8.86）已實作，交付核對中，尚未同步 TD：新增 18 種 mat／dmat、double／dvec 與 Matrix、Combine、Replace、Split、Get／Set、Transpose、Inverse、Determinant、Matrix Comp Mult、Outer Product。涵蓋 Column／分量介面、固定與通用建立入口、來源／宣告、Subgraph／GLSL Code、保存與剪貼簿。既有算術、Compare、If、Convert 的能力擴充留第二批獨立提交，不因型別表增加而直接放寬舊簽名。規則及 TD 雙精度 Uniform 原生載體實測限制見 [Matrix 能力](../features/MATRIX_NODES.md)。
+
+Uniform 連續編輯／雙向通訊另為[調查評估](../discussions/UNIFORM_LIVE_EDITING.md)。已記錄多處控制項一起閃動的成因與未來持續同步的驗收要求，尚未修改 Uniform 提交流程或來源控制權；Sources 名稱／引用圖示留介面後續設計。
+
 2026-09-18 Parameter 整組 Value Ladder 已合併並同步保存 TD：本地數值列的名稱或型別文字按中鍵，可對所有分量施加相同增量，保留相對差值；支援 Scalar／Vector、固定型別、Color 及未接線輸入的數值型別（bool／bvec 除外），展開分量列則調整該分量。共用既有階梯手勢，拖動只預覽、放開一筆 Undo；取消完整還原，一般重繪保留手勢，同節點畫布／Parameter 未提交草稿阻止整組操作。整數邊界限制共同增量，不逐欄截斷；沒有位移不改變精度或建立歷史。
 
 原生 Uniform／Spec 的目前值及來源定義表單仍沿用原有單欄操作。它們沒有這次的共用名稱／型別數值列；原生多分量功能還需要一次請求、全組驗證／失敗回復及整組 TD Undo，不以多次單欄請求替代。整組 Value Ladder 這筆修改沒有修改 Python、原生參數模式或增加常駐監看。詳見 [Value Ladder](../ui/VALUE_LADDER.md)。

@@ -59,13 +59,13 @@ function functionEntry(f,source=false){
 }
 function nodeTypeLabel(d,params=d?.defaults){
   if(d?.key==='comment')return 'Note';
-  if(['scalar','vector'].includes(d?.key))return params?.fixedType||(d.key==='scalar'?'Scalar':'Vector');
+  if(['scalar','vector','matrix'].includes(d?.key))return params?.fixedType||({scalar:'Scalar',vector:'Vector',matrix:'Matrix'})[d.key];
   const label=d?.label||t('node.unknown');
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
 }
 function availableEntries(){
   const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
-    if(['scalar','vector'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:d.key==='scalar'?'help.fixedScalar':'help.fixedVector',defaults:{...d.defaults,type,fixedType:type},category:nodeCategory(d)}))];
+    if(['scalar','vector','matrix'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:({scalar:'help.fixedScalar',vector:'help.fixedVector',matrix:'help.fixedMatrix'})[d.key],defaults:{...d.defaults,...(d.key==='matrix'?{values:matrixReshapeValue(d.defaults.values,d.defaults.type,type)}:{}),type,fixedType:type},category:nodeCategory(d)}))];
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
   for(const f of librarySources().filter(f=>f.stages.includes(stage)))entries.push(functionEntry(f,true));
@@ -140,7 +140,16 @@ function topInputsView(){
 function ensureTopInputs(){if(editorTarget!=='top')throw Error('TOP Inputs require Grape TOP.');graph.topInputs||=clone(topInputsView());if(graph.declarations.some(d=>d.source==='input:0')&&graph.topInputs.length)graph.topInputLegacyId||=graph.topInputs[0].id;return graph.topInputs;}
 function allInputSources(){return [...topInputsView().map((s,index)=>({...s,kind:'top_input',type:'sampler2D',index})),...graph.declarations];}
 function constantFields(box,decl){
-  box.append(field(t('node.type'),select(valueTypes().map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type),el('p',{class:'muted'},t('inputs.constantHint')));
+  box.append(field(t('node.type'),select(valueTypes().map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>setDeclarationType(decl,value)))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type),el('p',{class:'muted'},t('inputs.constantHint')));
+}
+function setDeclarationType(decl,type){
+  const previous=decl.type;
+  decl.value=isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(decl.value,previous,type):shapedValue(decl.value,type);
+  decl.type=type;
+  if(decl.kind==='uniform'){
+    if(isMatrixType(type))decl.nativeSequence='matrix';
+    else if(decl.nativeSequence==='matrix')delete decl.nativeSequence;
+  }
 }
 function specDefaultValue(value,type){const n=Number(Array.isArray(value)?value[0]:value)||0;return type==='bool'?!!n:type==='int'?Math.max(-2147483648,Math.min(2147483647,Math.trunc(n))):type==='uint'?Math.max(0,Math.min(4294967295,Math.trunc(n))):n;}
 function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence}={}){
@@ -151,7 +160,7 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
   const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'sValue'})[kind]||'uValue')};
   if(kind==='spec_constant'){const ids=new Set(graph.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;Object.assign(decl,{value:specDefaultValue(value??0,type),constantId,nativeSequence:'const'});}
   else if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
-  else {Object.assign(decl,{value:shapedValue(value??0,type),expose:false});if(kind==='uniform'){if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;}}
+  else {Object.assign(decl,{value:shapedValue(value??(typeContract?.types?.[type]?.shape==='matrix'?1:0),type),expose:false});if(kind==='uniform'){if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;else if(typeContract?.types?.[type]?.shape==='matrix')decl.nativeSequence='matrix';}}
   graph.declarations.push(decl);return decl;
 }
 function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={}}={}){
@@ -160,7 +169,7 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
   // stable default unless an explicit wire/type context requests another type.
   type=d.fixedType||type;
   if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
-  if(type&&params.type)params.type=type;
+  if(type&&params.type){if(isMatrixType(params.type)&&isMatrixType(type)&&params.values)params.values=matrixReshapeValue(params.values,params.type,type);params.type=type;}
   if(['uniform','constant','spec_constant'].includes(d.key)){
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||(d.key==='spec_constant'?'int':'float'),inputSeed);
     if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;
@@ -272,8 +281,8 @@ function functionInspector(box,n,d){
     else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>p.default=v),false,'XYZW',p.type));
     if(inspectorTab==='settings'){
       section.append(field(t('node.type'),select(interfaceTypes().map(t=>[t,t]),p.type,type=>change(()=>{
-        p.type=type;p.default=convertValue(p.default,type);
-        for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id&&direction==='inputs'&&Object.hasOwn(call.inputValues||{},p.id))call.inputValues[p.id]=convertValue(call.inputValues[p.id],type);
+        const previous=p.type;p.type=type;p.default=convertValue(p.default,type,previous);
+        for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id&&direction==='inputs'&&Object.hasOwn(call.inputValues||{},p.id))call.inputValues[p.id]=convertValue(call.inputValues[p.id],type,previous);
       },{typeChange:true}))));
       const order=el('div',{class:'function-port-order'});
       for(const [delta,label]of [[-1,t('code.up')],[1,t('code.down')]]){
@@ -297,9 +306,10 @@ function functionInspector(box,n,d){
     add.onclick=()=>change(()=>f[direction].push({id:'p'+crypto.randomUUID().replaceAll('-','').slice(0,8),name:'Value',type:'float',default:0}));box.append(add);
   }
 }
-function convertValue(value,type){return value===null&&!isResourceType(type)?filledValue(type):shapedValue(value,type);}
+function convertValue(value,type,previous=null){return value===null&&!isResourceType(type)?filledValue(type):isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(value,previous,type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  if(isMatrixOperation(definition(n))&&/^c[0-3](?:[xyzw])?$/.test(id))return matrixPortLabel(id);
   if(kind==='inputs'&&id==='position'&&['sgrape.builtin.perlin_noise','sgrape.builtin.simplex_noise'].includes(n.definitionUuid))return t('noise.position');
   if(kind==='inputs'&&['sgrape.builtin.compare','sgrape.builtin.if'].includes(n.definitionUuid))return ({a:'A',b:'B',condition:'Condition',true:'True',false:'False'})[id]||id;
   if(['sgrape.builtin.vector','sgrape.builtin.replace','sgrape.builtin.combine','sgrape.builtin.vector_split','sgrape.builtin.swizzle'].includes(n.definitionUuid)){const label=vectorPortLabel(n,kind,id);if(label)return label;}

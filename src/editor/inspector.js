@@ -389,6 +389,11 @@ function defaultInput(n,port,type){
   if(isResourceType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
   const key=definition(n)?.key;
+  if(['matrix_combine','matrix_replace'].includes(key)){
+    if(port==='value')return null;
+    const match=/^c([0-3])([xyzw])?$/.exec(port);
+    if(match){const values=matrixColumnValues(n,Number(match[1]));return match[2]?values['xyzw'.indexOf(match[2])]:values;}
+  }
   if(['combine','replace'].includes(key)&&port!=='value'){const start='xyzw'.indexOf(port),values=(n.params.components||[0,0,0,0]).slice(start,start+typeComponents(type));return shapedValue(values,type);}
   if(key==='replace'&&port==='value')return null;
   if(key==='function_call')return clone(FunctionModel.find(graph,n.params.functionId)?.inputs.find(p=>p.id===port)?.default??0);
@@ -446,6 +451,16 @@ function typedScalarInput(value,family,commit){
   return entry;
 }
 function numbers(value,label,callback,disabled=false,labels='XYZW',type=null){
+  const shape=typeContract?.types?.[type];
+  if(shape?.shape==='matrix'){
+    const box=el('div',{class:'matrix-parameter-values'}),values=shapedValue(value,type);
+    for(let column=0;column<shape.columns;column++){
+      const group=el('section',{class:'matrix-parameter-column'}),name=t('matrix.column').replace('{index}',column),start=column*shape.rows;
+      group.append(el('div',{class:'parameter-value-label'},name),numbers(values.slice(start,start+shape.rows),label+' · '+name,next=>{const updated=values.slice();updated.splice(start,shape.rows,...next);callback(updated);},disabled,labels,typeForShape(shape.family,shape.rows)));
+      box.append(group);
+    }
+    return box;
+  }
   const values=Array.isArray(value)?value:[value],box=el('div',{class:'components'+(values.length===1?' scalar':'')});
   const family=type?typeFamily(type):typeof values[0]==='boolean'?'bool':'float';
   box.style.setProperty('--component-count',values.length);
@@ -519,14 +534,25 @@ function applyValueComponentHint(element,n,port,index,vector,labels){
     applyComponentColorHint(element,Math.max(0,start)+index,labels==='RGBA');
   }else {applyPortColorHint(element,n,'inputs',port);if(element.dataset.vectorComponent!==undefined)element.classList.add('component-tint-label');}
 }
-function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
+function parameterValueRow(n,key,label,type,read,write,labels='XYZW',options={}){
+  const matrixShape=typeContract?.types?.[type];
+  if(matrixShape?.shape==='matrix'){
+    const group=el('section',{class:'matrix-parameter-values','data-parameter-matrix':key});
+    group.append(parameterControlRow(label,el('span',{},type)));
+    for(let column=0;column<matrixShape.columns;column++){
+      const start=column*matrixShape.rows,name=t('matrix.column').replace('{index}',column);
+      group.append(parameterValueRow(n,key+':c'+column,name,typeForShape(matrixShape.family,matrixShape.rows),()=>read().slice(start,start+matrixShape.rows),(index,next)=>write(start+index,next),labels,options));
+    }
+    return group;
+  }
   const initial=read(),vector=Array.isArray(initial),values=vector?initial:[initial];
   const box=el('section',{class:'parameter-value-group','data-parameter-value':key});
   const compact=el('div',{class:'parameter-value-controls'}),entries=[];let syncing=false;
   const row=parameterControlRow(label,compact,type);row.classList.add('parameter-value-row');box.append(row);
   if(key!=='$value')applyPortLabelColorHint(row.querySelector('.parameter-value-label'),n,'inputs',key);
   const scalarType=typeFamily(type)||'float';
-  const own=entry=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
+  const componentWritable=index=>!options.writable||options.writable(index);
+  const own=entry=>!editorMutationBlocked()&&entry.isConnected&&!entry.disabled&&current().nodes.includes(n)&&(entry.dataset.component===undefined||componentWritable(Number(entry.dataset.component)));
   const currentValues=()=>{const value=read();return Array.isArray(value)?value:[value];};
   function syncPreview(entry,index){
     if(syncing)return;syncing=true;
@@ -539,14 +565,15 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
       const entry=select([['false','false'],['true','true']],String(!!values[index]),value=>{if(own(entry))change(()=>write(index,value==='true'));});
       for(const[k,v]of Object.entries(attrs))entry.setAttribute(k,v);entry.disabled=readonly;applyValueComponentHint(entry,n,key,index,vector,labels);return entry;
     }
-    const entry=el('input',{...attrs,type:'number',step:['int','uint'].includes(scalarType)?'1':'any'});entry.value=String(values[index]);entry.disabled=readonly;
+    const entry=el('input',{...attrs,type:'number',step:['int','uint'].includes(scalarType)?'1':'any'});entry.value=componentWritable(index)?String(values[index]):'';entry.disabled=readonly||!componentWritable(index);
+    if(!componentWritable(index)){entry.placeholder='—';entry.title=t('vector.inherited');}
     applyValueComponentHint(entry,n,key,index,vector,labels);
     if(['int','uint'].includes(scalarType)){entry.min=scalarType==='uint'?'0':'-2147483648';entry.max=scalarType==='uint'?'4294967295':'2147483647';}
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
     const focus=()=>{if(own(entry))parameterValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
     const restore=()=>{entry.value=committed;entry.removeAttribute('aria-invalid');entry.refreshNumericSlider?.();};
-    entry.setSyncedValue=value=>{if(entry.numericGestureActive)return;entry.value=String(value);committed=entry.value;entry.refreshNumericSlider?.();};
+    entry.setSyncedValue=value=>{if(entry.numericGestureActive)return;entry.value=componentWritable(index)?String(value):'';committed=entry.value;entry.refreshNumericSlider?.();};
     const commit=()=>{
       if(entry.numericGestureActive||!own(entry)||entry.value===committed)return;
       const next=Number(entry.value);
@@ -577,6 +604,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
   }
   function installGroupLadder(target,indices){
     if(scalarType==='bool'||readonly)return;
+    indices=indices.filter(componentWritable);if(!indices.length)return;
     for(const anchor of target.querySelectorAll(':scope>.parameter-value-label,:scope>.parameter-value-type')){
       anchor.dataset.parameterLadder=anchor.classList.contains('parameter-value-type')?'type':'name';
       anchor.title+='\n'+t('ladder.groupHint');
@@ -593,12 +621,12 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
         // One shared delta stops at the first component boundary, keeping spacing.
         const minimum=Math.max(...indices.map(index=>low-initial[index])),maximum=Math.min(...indices.map(index=>high-initial[index]));
         const previews=delta=>initial.map((value,index)=>delta!==0&&indices.includes(index)?value+delta:value);
-        const display=values=>{syncing=true;for(const entry of entries){entry.value=String(values[Number(entry.dataset.component)]);entry.refreshNumericSlider?.();}syncing=false;};
+        const display=values=>{syncing=true;for(const entry of entries){const index=Number(entry.dataset.component);if(componentWritable(index)){entry.value=String(values[index]);entry.refreshNumericSlider?.();}}syncing=false;};
         const previousEdit=parameterValueEdit;
         anchor.cancelParameterValue=()=>{if(valueLadder?.entry===anchor)cancelValueLadder();};
         beginValueLadder(anchor,e,{
           read:()=>0,integer,min:minimum,max:maximum,focus:false,
-          writable:()=>own(anchor)&&signature===inlineValueSignature(n)&&entries.every(entry=>entry.isConnected&&!entry.disabled&&!entry.readOnly),
+          writable:()=>own(anchor)&&signature===inlineValueSignature(n)&&entries.filter(entry=>indices.includes(Number(entry.dataset.component))).every(entry=>entry.isConnected&&!entry.disabled&&!entry.readOnly),
           begin:()=>{for(const entry of entries)entry.numericGestureActive=true;parameterValueEdit={entry:anchor,node:n,owner:current(),signature};},
           preview:delta=>display(previews(delta)),restore:()=>display(initial),
           format:delta=>indices.map(index=>previews(delta)[index]).join(' · '),
@@ -999,7 +1027,8 @@ function nodeTypeSelector(n,d){
   const composed=['combine','vector','replace'].includes(d.key),automatic=n.ui?.typeMode==='auto',auto=supportsAutoType(d);
   const control=select(auto?[['auto',t('type.auto')+' · '+n.params.type],...options]:options,auto&&automatic?'auto':n.params.type,value=>{
     if(auto)setMathType(n,value);
-    else change(()=>{const old=clone(n.inputValues||{});n.params.type=value;normalizeNodeValues(n,d);for(const [port,type]of Object.entries(ports(n,'inputs'))){if(Object.hasOwn(old,port))n.inputValues[port]=shapedValue(old[port],type);}},{typeChange:true});
+    else if(isMatrixOperation(d))change(()=>reshapeTypedInputs(n,d,value),{typeChange:true});
+    else change(()=>{const old=clone(n.inputValues||{}),previous=ports(n,'inputs');n.params.type=value;normalizeNodeValues(n,d);for(const [port,type]of Object.entries(ports(n,'inputs'))){if(Object.hasOwn(old,port))n.inputValues[port]=convertValue(old[port],type,previous[port]);}},{typeChange:true});
   });control.disabled=readonly;control.title=t(auto?'type.operation':composed?'vector.outputType':'node.type');
   if(isVectorOperation(d))control.dataset.vectorType=n.id;else if(auto)control.dataset.mathType=n.id;
   return control;
@@ -1015,7 +1044,7 @@ function nodePrimarySelector(n,d){
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
 }
 function convertTypeSelector(n,parameter){
-  const options=valueTypes().filter(type=>parameter==='fromType'||typeComponents(n.params.fromType)===1||typeComponents(type)===typeComponents(n.params.fromType));
+  const options=convertTypes().filter(type=>parameter==='fromType'||typeComponents(n.params.fromType)===1||typeComponents(type)===typeComponents(n.params.fromType));
   const control=select(options.map(type=>[type,type]),n.params[parameter],type=>change(()=>{
     n.params[parameter]=type;
     if(parameter==='fromType'){
@@ -1031,6 +1060,12 @@ function compareOperatorSelector(n){
   });
   control.dataset.compareOperator=n.id;control.disabled=readonly;control.title=t('compare.operator');control.setAttribute('aria-label',control.title);
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
+}
+function changeMatrixAccess(n,key,value){
+  return change(()=>{
+    n.params[key]=value;
+    for(const [port,type] of Object.entries(ports(n,'inputs')))if(Object.hasOwn(n.inputValues||{},port))n.inputValues[port]=shapedValue(n.inputValues[port],type);
+  },{typeChange:true});
 }
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;
@@ -1051,7 +1086,12 @@ function vectorInspector(box,n,d){
   }
 }
 function setNodeInputValue(n,port,next){
-  if(['combine','replace'].includes(definition(n)?.key)&&port!=='value'){
+  if(['matrix_combine','matrix_replace'].includes(definition(n)?.key)&&port!=='value'){
+    const shape=typeContract.types[n.params.type],match=/^c([0-3])([xyzw])?$/.exec(port);
+    if(!match)return;
+    n.params.values||=Array.from({length:shape.columns*shape.rows},(_,i)=>Math.floor(i/shape.rows)===i%shape.rows?1:0);
+    const start=Number(match[1])*shape.rows+(match[2]?'xyzw'.indexOf(match[2]):0),values=Array.isArray(next)?next:[next];n.params.values.splice(start,values.length,...values);
+  }else if(['combine','replace'].includes(definition(n)?.key)&&port!=='value'){
     n.params.components||=[0,0,0,0];const values=Array.isArray(next)?next:[next];n.params.components.splice('xyzw'.indexOf(port),values.length,...values);
   }else {n.inputValues||={};n.inputValues[port]=next;}
 }
@@ -1073,11 +1113,11 @@ function queueInlineValueRender(){
     if(inlineValueRenderPending){inlineValueRenderPending=false;render();}
   },0);
 }
-function inlineNumericFields(n,port,value,write,labels='XYZW'){
+function inlineNumericFields(n,port,value,write,labels='XYZW',options={}){
   const values=Array.isArray(value)?value:[value],box=el('span',{class:'node-inline-values'});
-  const type=port==='$value'?Object.values(ports(n,'outputs'))[0]:ports(n,'inputs')[port],family=typeFamily(type),integer=['int','uint'].includes(family);
+  const type=options.type||(port==='$value'?Object.values(ports(n,'outputs'))[0]:ports(n,'inputs')[port]),family=typeFamily(type),integer=['int','uint'].includes(family);
   values.forEach((v,index)=>{
-    const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:'');
+    const label=(options.label||(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port)))+(values.length>1?' '+labels[index]:'');
     if(family==='bool'){
       const entry=typedScalarInput(v,family,next=>{if(!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n))change(()=>write(index,next));});
       entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.setAttribute('aria-label',label);
@@ -1092,7 +1132,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
     applyValueComponentHint(entry,n,port,index,values.length>1,labels);
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
-    const own=()=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
+    const own=()=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n)&&(!options.writable||options.writable(index));
     const focus=()=>{if(own())inlineValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
     const restore=()=>{entry.value=committed;entry.refreshNumericSlider?.();entry.removeAttribute('aria-invalid');};
     const commit=()=>{
@@ -1128,9 +1168,36 @@ function inlineNumericFields(n,port,value,write,labels='XYZW'){
   });
   return box;
 }
+function matrixValueInput(n,column,row,{onNode=true,copy='compact'}={}){
+  const shape=typeContract.types[n.params.type],index=column*shape.rows+row,labels=vectorNames(n);
+  const entry=inlineNumericFields(n,'c'+column,matrixColumnValues(n,column)[row],(_,next)=>{
+    n.params.values||=Array.from({length:shape.columns*shape.rows},(_,i)=>Math.floor(i/shape.rows)===i%shape.rows?1:0);n.params.values[index]=next;
+  },labels,{type:shape.family,label:t('matrix.column').replace('{index}',column)+' '+labels[row],writable:()=>matrixComponentWritable(n,column,row)}).querySelector('input');
+  entry.dataset.matrixNode=n.id;entry.dataset.matrixIndex=String(index);entry.dataset.matrixCopy=copy;entry.dataset.component=String(row);
+  if(!onNode){delete entry.dataset.inlineNode;delete entry.dataset.inlinePort;}
+  applyComponentColorHint(entry,row,labels==='RGBA');return entry;
+}
+function matrixInspector(box,n,d){
+  const shape=typeContract?.types?.[n.params.type];if(!shape||!isMatrixOperation(d))return;
+  if(!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
+  if(d.key==='matrix_split')return;
+  for(let column=0;column<shape.columns;column++){
+    const key='c'+column,name=t('matrix.column').replace('{index}',column),row=parameterValueRow(n,key,name,typeForShape(shape.family,shape.rows),()=>matrixColumnValues(n,column),(index,next)=>{
+      n.params.values||=Array.from({length:shape.columns*shape.rows},(_,i)=>Math.floor(i/shape.rows)===i%shape.rows?1:0);n.params.values[column*shape.rows+index]=next;
+    },vectorNames(n),{writable:index=>matrixComponentWritable(n,column,index)});
+    for(const entry of row.querySelectorAll('[data-component]')){entry.dataset.matrixNode=n.id;entry.dataset.matrixIndex=String(column*shape.rows+Number(entry.dataset.component));}
+    const links=current().edges.filter(e=>e.to[0]===n.id&&(e.to[1]===key||e.to[1].startsWith(key)&&e.to[1].length===3));
+    for(const connection of links){
+      const peer=current().nodes.find(other=>other.id===connection.from[0]),line=el('div',{class:'connection-row'}),label=portLabel(n,'inputs',connection.to[1]);
+      line.append(el('span',{class:'connection-source'},label+' ← '+nodeDisplayName(peer)+' · '+portLabel(peer,'outputs',connection.from[1])));
+      const disconnect=el('button',{'aria-label':t('wire.disconnect')+label},t('wire.disconnectShort'));disconnect.disabled=readonly;disconnect.onclick=()=>change(()=>current().edges=current().edges.filter(e=>e!==connection));line.append(disconnect);row.append(line);
+    }
+    box.append(row);
+  }
+}
 function nodeInlineValues(n,port){
   const type=ports(n,'inputs')[port],key=definition(n)?.key;
-  if(!['float','int','uint','bool'].includes(type)||current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port))return null;
+  if(!['float','double','int','uint','bool'].includes(type)||current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port))return null;
   if(key==='replace'&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value')))return null;
   const value=defaultInput(n,port,type);if(value===null)return null;
   if(type==='bool'){
@@ -1205,6 +1272,7 @@ function inspector(){
     if(d.key==='comment'){box.classList.add('comment-parameters');const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
     if(d.key==='glsl_code')glslCodeInspector(box,n);
     vectorInspector(box,n,d);
+    matrixInspector(box,n,d);
     if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));
     if(supportsAutoType(d)&&!isVectorOperation(d)){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
@@ -1213,6 +1281,10 @@ function inspector(){
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
     if(d.key==='convert')for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
     if(d.key==='compare')box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
+    if(['matrix_get','matrix_set'].includes(d.key)){
+      box.append(parameterControlRow(t('matrix.accessMode'),select([['column',t('matrix.wholeColumn')],['element',t('matrix.element')]],n.params.mode||'column',value=>changeMatrixAccess(n,'mode',value))));
+      box.append(parameterControlRow(t('matrix.indexType'),select([['int','int'],['uint','uint']],n.params.indexType||'int',value=>changeMatrixAccess(n,'indexType',value))));
+    }
     pixelBufferFields(box,n);
     if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(ordinary?parameterControlRow('',split):split);}
     if('value'in n.params){
@@ -1246,6 +1318,7 @@ function inspector(){
     if(d.key==='glsl_code'&&n.params.inputs.length){inputBox.append(el('summary',{},t('code.inputValues')));box.append(inputBox);}
     const hint=(text,className='')=>ordinary?parameterHint(text,className):el('p',{class:'muted '+className},text);
     for(const [port,type]of Object.entries(d.key==='function_output'?{}:ports(n,'inputs'))){
+      if(isMatrixOperation(d)&&port!=='value')continue;
       const section=el('section',{class:'input-parameter'+(ordinary?' parameter-row':''),'data-input':port});
       const connection=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
       const typeInfo=inputTypeDisplay(n,port);
@@ -1255,7 +1328,7 @@ function inspector(){
       const value=defaultInput(n,port,type);
       if(isResourceType(type)){
         if(!connection)section.append(hint(t('sampler.fallbackHint')));
-      }else if(d.key==='replace'&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value'))){
+      }else if(['replace','matrix_replace'].includes(d.key)&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value'))){
         if(!connection)section.append(hint(t(port==='value'?'vector.baselineHint':'vector.inherited')));
       }else if(value===null){
         section.append(hint(t('input.implicitUV')));
@@ -1281,8 +1354,8 @@ function inspector(){
   }else{
     if(d.key==='comment')noteAppearanceSettings(box,n);
     if(n.params.type&&!n.params.fixedType&&!supportsAutoType(d)&&!isVectorOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
-    if(isVectorOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],...(typeComponents(n.params.type)===2?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
-    if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','scalar','vector','float','vec2','vec3','vec4','color'].includes(d.key)){
+    if(isVectorOperation(d)||isMatrixOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],['stpq','S / T / P / Q'],...(typeComponents(n.params.type)===2?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
+    if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','scalar','vector','matrix','float','vec2','vec3','vec4','color'].includes(d.key)){
       const requirement=el('input',{type:'checkbox','data-require-constant':n.id});requirement.checked=!!n.params.requireConstant;requirement.disabled=readonly;
       requirement.onchange=()=>change(()=>{if(requirement.checked)n.params.requireConstant=true;else delete n.params.requireConstant;});
       const row=field(t('vector.requireConstant'),requirement);row.classList.add('constant-requirement');row.title=t('vector.constantHint');box.append(row,el('p',{class:'muted'},t('vector.constantHint')));
@@ -1829,6 +1902,21 @@ function renderNativeSourceValues(){
   const ready=sourceReady();
   for(const card of document.querySelectorAll('#inspector [data-native-source]')){
     const row=nativeSourceRows().find(r=>r.id===card.dataset.nativeSource);if(!row)continue;
+    for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
+      const item=row.components[Number(entry.dataset.matrixSourceComponent)],binding=row.matrixBinding;
+      entry.disabled=!ready||!binding?.writable||!binding.literalValues;
+      if(document.activeElement!==entry&&!entry.numericGestureActive){entry.setSyncedValue(item?.value);entry.sourceExpected=binding?.expected;}
+    }
+    const matrixEditor=card.querySelector('[data-matrix-binding-editor]');
+    if(matrixEditor){
+      const binding=row.matrixBinding,mode=matrixEditor.querySelector('select'),entry=matrixEditor.querySelector('input'),apply=matrixEditor.querySelector('button');
+      mode.disabled=entry.disabled=apply.disabled=!ready||!binding?.writable;
+      if(!matrixEditor.bindingDirty&&!matrixEditor.contains(document.activeElement)){
+        mode.value=binding?.mode==='CONSTANT'?'CONSTANT':'EXPRESSION';entry.value=mode.value==='EXPRESSION'?binding?.expression||'':binding?.value||'';matrixEditor.sourceExpected=binding?.expected;
+      }
+      entry.placeholder=t(mode.value==='EXPRESSION'?'matrix.expression':'matrix.path');
+      entry.title=binding?.binding||binding?.expression||binding?.mode||'';
+    }
     for(const entry of card.querySelectorAll('[data-source-component]')){
       const item=row.components[Number(entry.dataset.sourceComponent)];entry.disabled=!ready||!item?.writable;
       if(document.activeElement!==entry&&!entry.numericGestureActive){entry.setSyncedValue(item?.value);entry.sourceExpected=item?clone(item):null;}
@@ -1842,7 +1930,7 @@ function renderNativeSourceValues(){
       if(document.activeElement!==entry){entry.setSyncedValue(item?.expression||'');entry.sourceExpected=item?.modeExpected;}
     }
     for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
-    const state=card.querySelector('.native-source-state');if(state)state.textContent=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.components.some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');
+    const state=card.querySelector('.native-source-state');if(state)state.textContent=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');
   }
   for(const entry of document.querySelectorAll('#inspector [data-input-name]')){
     const row=nativeSourceRows().find(r=>r.id===entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
@@ -1860,11 +1948,51 @@ function renderNativeSourceValues(){
   for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
 }
 function specValueField(value,type,commit){return field(t('declaration.value'),typedScalarInput(value,typeFamily(type),commit));}
+const nativeMatrixDrafts=new Map();
+function nativeMatrixFields(card,decl,row){
+  const shape=typeContract.types[decl.type],binding=row.matrixBinding;
+  if(!row.missing&&binding){
+    if(binding.literalValues){
+      const values=el('div',{class:'matrix-parameter-values'});
+      for(let column=0;column<shape.columns;column++){
+        const group=el('section',{class:'matrix-parameter-column'}),fields=el('div',{class:'components'});
+        group.append(el('div',{class:'parameter-value-label'},t('matrix.column').replace('{index}',column)),fields);
+        for(let component=0;component<shape.rows;component++){
+          const index=column*shape.rows+component,entry=typedScalarInput(row.components[index]?.value,shape.family,value=>{
+            const currentRow=nativeSourceRows().find(r=>r.id===decl.id),next=currentRow?.components.map(c=>c.value);
+            if(!next||next.length!==shape.components)return;
+            next[index]=value;nativeSourceRequest('source-edit',{action:'matrixValue',id:decl.id,value:next,expected:entry.sourceExpected});
+          });
+          entry.dataset.matrixSourceComponent=String(index);entry.sourceExpected=binding.expected;
+          entry.setAttribute('aria-label',decl.name+' '+t('matrix.column').replace('{index}',column)+' '+'XYZW'[component]);
+          fields.append(field('XYZW'[component],entry));
+        }
+        values.append(group);
+      }
+      card.append(values);
+    }
+    const editor=el('div',{'data-matrix-binding-editor':'',class:'input-drivers'}),mode=el('select',{'aria-label':t('matrix.bindingMode')}),entry=el('input',{type:'text','aria-label':t('matrix.binding'),spellcheck:'false',maxlength:4096}),apply=el('button',{type:'button'},t('matrix.applySource'));
+    mode.append(el('option',{value:'CONSTANT'},t('matrix.path')),el('option',{value:'EXPRESSION'},t('matrix.expression')));
+    const draftKey=editorLoadGeneration+':'+decl.id;
+    for(const key of nativeMatrixDrafts.keys())if(!key.startsWith(editorLoadGeneration+':'))nativeMatrixDrafts.delete(key);
+    const draft=nativeMatrixDrafts.get(draftKey);
+    mode.value=draft?.mode||(binding.mode==='CONSTANT'?'CONSTANT':'EXPRESSION');entry.value=draft?.value??(mode.value==='EXPRESSION'?binding.expression||'':binding.value||'');editor.sourceExpected=draft?.expected??binding.expected;editor.bindingDirty=!!draft;
+    const remember=()=>{editor.bindingDirty=true;nativeMatrixDrafts.set(draftKey,{mode:mode.value,value:entry.value,expected:editor.sourceExpected});};
+    mode.onchange=()=>{remember();entry.placeholder=t(mode.value==='EXPRESSION'?'matrix.expression':'matrix.path');};
+    entry.oninput=remember;entry.hasPendingEdit=()=>!!editor.bindingDirty;
+    apply.onclick=()=>nativeSourceRequest('source-edit',{action:'matrixBinding',id:decl.id,mode:mode.value,...(mode.value==='EXPRESSION'?{expression:entry.value}:{value:entry.value}),expected:editor.sourceExpected}).then(result=>{if(result){nativeMatrixDrafts.delete(draftKey);editor.bindingDirty=false;inspector();}});
+    entry.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();apply.click();}else if(e.key==='Escape'){nativeMatrixDrafts.delete(draftKey);editor.bindingDirty=false;entry.blur();renderNativeSourceValues();}};
+    editor.append(field(t('matrix.bindingMode'),mode),field(t('matrix.binding'),entry),apply);card.append(editor,el('p',{class:'muted'},t('matrix.bindingHint')));
+  }
+  if(shape.family==='double')card.append(el('p',{class:'muted'},t('inputs.doubleUniformHint')));
+  card.append(el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
+}
 function nativeInputFields(box,decl){
   const row=nativeSourceRows().find(r=>r.id===decl.id);
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
   card.addEventListener('pointerdown',()=>{if(!sourceReady())showNativeSourceHint();},true);
   if(!row||row.pending){card.append(el('p',{class:'muted'},t('sources.pending')));return;}
+  if(isMatrixType(decl.type)){nativeMatrixFields(card,decl,row);return;}
   const count=typeContract?.types?.[decl.type]?.components||1;
   if(!row.missing){
     const values=el('div',{class:'source-components'});
@@ -1877,6 +2005,7 @@ function nativeInputFields(box,decl){
     if(decl.kind==='uniform'&&['int','uint'].includes(typeFamily(decl.type))){
       card.append(el('p',{class:'muted'},t('inputs.integerUniformHint')));
     }
+    if(decl.kind==='uniform'&&typeFamily(decl.type)==='double')card.append(el('p',{class:'muted'},t('inputs.doubleUniformHint')));
     if(decl.kind!=='spec_constant'){const drivers=el('details',{class:'input-drivers'});drivers.append(el('summary',{},t('inputs.drivers')));
     row.components.forEach((item,index)=>{
       const line=el('div',{class:'source-driver'}),expr=input(item.expression||'',expression=>nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression,expected:expr.sourceExpected}));
@@ -1897,10 +2026,11 @@ function inputSourceInspector(box,decl){
     else changeDeclaration(()=>decl.name=name);
   });rename.dataset.sourceName='true';rename.dataset.inputName=decl.id;rename.disabled=readonly||(['uniform','spec_constant'].includes(decl.kind)&&row&&!row.pending&&(!sourceReady()||!row.nameWritable));box.append(field(t('declaration.name'),rename));
   if(decl.kind==='uniform'){
-    box.append(field(t('node.type'),select(valueTypes().map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),el('small',{class:'muted'},row?.sequence==='color'?t('inputs.nativeColor'):t('inputs.nativeVector')));
+    const types=valueTypes().filter(type=>!row||row.pending||isMatrixType(type)===(row.sequence==='matrix'));
+    box.append(field(t('node.type'),select(types.map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>setDeclarationType(decl,value)))),el('small',{class:'muted'},t(isMatrixType(decl.type)?'inputs.nativeMatrix':row?.sequence==='color'?'inputs.nativeColor':'inputs.nativeVector')));
     nativeInputFields(box,decl);
     const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type));box.append(defaults);
-    const custom=el('button',{'data-source-custom':decl.id,class:'wide'},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(decl.id);box.append(custom);
+    if(!isMatrixType(decl.type)){const custom=el('button',{'data-source-custom':decl.id,class:'wide'},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(decl.id);box.append(custom);}
   }else if(decl.kind==='spec_constant'){
     box.append(field(t('node.type'),select((typeContract?.specConstantTypes||['int','uint','bool','float']).map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=specDefaultValue(decl.value,value);}))),el('small',{class:'muted'},'constant_id = '+decl.constantId));
     nativeInputFields(box,decl);
@@ -2027,7 +2157,7 @@ function renderNativeSources(){
   }
   // Native row availability can arrive after an apply without changing graph revision.
   const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;
-  const row=nativeSourceRows().find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.components.map(c=>[c.mode,c.control,c.modeWritable])]);
+  const row=nativeSourceRows().find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.components.map(c=>[c.mode,c.control,c.modeWritable]),row?.matrixBinding&&[row.matrixBinding.mode,!!row.matrixBinding.literalValues,row.matrixBinding.writable]]);
   if($('#inspector').dataset.inputState!==signature&&!$('#inspector').contains(document.activeElement)){$('#inspector').dataset.inputState=signature;if(active)inspector();}
   renderNativeSourceValues();
 }

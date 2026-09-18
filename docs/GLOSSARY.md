@@ -68,6 +68,14 @@
 
 Graph Constant 是既有介面名稱；Global Constant／全域常量是討論中的命名方向。本表不代替該命名決策。說明共享範圍時，應明確說是同一份 Grape Shader 的共用來源定義，不能暗示 GLSL 自動建立一個跨 Stage 的單一變數。
 
+## 矩陣與來源傳輸
+
+- **Column／Row**：矩陣的欄／列。GLSL `matCxR` 的尺寸依序為 Column 數、Row 數，`m[column][row]` 同樣先 Column。介面保留 Column 名稱與零起算編號，避免把一橫排編輯控制項誤認為數學上的 Row。
+- **Column-major 值順序**：依 Column 逐組保存，每組包含該 Column 的所有 Row 元素；不表示 UI 必須以相同方向排版。
+- **對角填值（Diagonal construction）**：`matN(scalar)` 以 scalar 填對角線，其餘為 0；與向量的純量展開（Splat）不同。
+- **矩陣尺寸轉換（Matrix resize conversion）**：以矩陣 constructor 保留左上方重疊元素；擴大部分依單位矩陣補值。與 Replace 的同尺寸覆寫不同。
+- **原生傳輸載體（Native transport carrier）**：TD 向 Uniform 提供資料的原生參數／資源；載體尺寸、精度與 GLSL 宣告型別是不同層次，不能相互推論。
+
 ## 維護與文件分工
 
 - 本表回答「這個詞指什麼」，不維護另一份型別允許清單，也不收錄每輪對話。

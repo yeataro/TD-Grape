@@ -6,17 +6,28 @@ import math
 import re
 
 VERSION = 1
-TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec'}
+TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
 SCALAR_TYPES = tuple(TYPE_PREFIXES)
 TYPE_DESCRIPTORS = {
     (family if count==1 else prefix+str(count)):
         {'family':family, 'components':count, 'scalarType':family, 'vectorPrefix':prefix}
     for family,prefix in TYPE_PREFIXES.items() for count in range(1,5)
 }
+SCALAR_VECTOR_TYPES = tuple(TYPE_DESCRIPTORS)
+LEGACY_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['family']!='double')
+for _family,_prefix in (('float','mat'),('double','dmat')):
+    for _columns in range(2,5):
+        for _rows in range(2,5):
+            _name=_prefix+str(_columns)+(('x'+str(_rows)) if _columns!=_rows else '')
+            TYPE_DESCRIPTORS[_name]={'shape':'matrix','columns':_columns,'rows':_rows,
+                'components':_columns*_rows,'family':_family,'scalarType':_family,'vectorPrefix':TYPE_PREFIXES[_family]}
+MATRIX_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d.get('shape')=='matrix')
+SQUARE_MATRIX_TYPES = tuple(ty for ty in MATRIX_TYPES if TYPE_DESCRIPTORS[ty]['columns']==TYPE_DESCRIPTORS[ty]['rows'])
 TYPES = tuple(TYPE_DESCRIPTORS)
-FLOAT_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['family']=='float')
-NUMERIC_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['family']!='bool')
-SIGNED_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['family'] in ('float','int'))
+FLOAT_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family']=='float')
+NUMERIC_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['family']!='bool')
+LEGACY_NUMERIC_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family']!='bool')
+SIGNED_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family'] in ('float','int'))
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
 COMPARE_TYPES = ('float', 'int', 'uint')
 COMPARE_OPERATORS = ('>', '>=', '<', '<=', '==', '!=')
@@ -25,7 +36,7 @@ PORT_TYPES = TYPES + RESOURCE_TYPES
 CONVERSIONS = {(ty, ty): 'identity' for ty in TYPES}
 CONVERSIONS.update({(source,target):'cast' for source in NUMERIC_TYPES for target in NUMERIC_TYPES
                     if source!=target and (TYPE_DESCRIPTORS[source]['components']==TYPE_DESCRIPTORS[target]['components'] or TYPE_DESCRIPTORS[source]['components']==1)})
-CONVERSIONS.update({(d['family'],ty):'splat' for ty,d in TYPE_DESCRIPTORS.items() if d['components']>1})
+CONVERSIONS.update({(TYPE_DESCRIPTORS[ty]['family'],ty):'splat' for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1})
 CONVERSIONS[('sampler2D', 'sampler2D')] = 'identity'
 ID = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,47}$')
@@ -53,16 +64,21 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
-    'perlin_noise','simplex_noise','scalar','convert'))
+    'perlin_noise','simplex_noise','scalar','convert',
+    'matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
+    'transpose','inverse','determinant','matrix_comp_mult','outer_product'))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
 CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
     'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
-    'range_from','range_to','scalar','convert'))
+    'range_from','range_to','scalar','convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
+    'transpose','inverse','determinant','matrix_comp_mult','outer_product'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
-VECTOR_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['components']>1)
+VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
+MATRIX_KEYS = ('matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
+               'transpose','inverse','determinant','matrix_comp_mult','outer_product')
 FLOAT_VECTOR_TYPES = tuple(ty for ty in VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['family']=='float')
 VECTOR_COMPONENTS = 'xyzw'
 NOISE_HELPERS = {'perlin_noise':'TDPerlinNoise','simplex_noise':'TDSimplexNoise'}
@@ -81,6 +97,50 @@ def combine_layouts(ty):
 
 def shaped_type(family,count):
     return family if count==1 else TYPE_PREFIXES[family]+str(count)
+
+def matrix_type(family,columns,rows):
+    if family not in ('float','double') or type(columns) is not int or type(rows) is not int or not 2<=columns<=4 or not 2<=rows<=4:
+        raise GraphError('Matrix dimensions must be 2 to 4 columns and rows')
+    return ('dmat' if family=='double' else 'mat')+str(columns)+(('x'+str(rows)) if columns!=rows else '')
+
+def matrix_identity(ty):
+    if ty not in MATRIX_TYPES:raise GraphError('Select a matrix type')
+    d=TYPE_DESCRIPTORS[ty]
+    return [1 if column==row else 0 for column in range(d['columns']) for row in range(d['rows'])]
+
+def matrix_values(params,ty):
+    values=params.get('values',matrix_identity(ty))
+    literal(values,ty)
+    return values
+
+def matrix_interface(key,params):
+    ty=params.get('type','mat3')
+    if ty not in MATRIX_TYPES:raise GraphError('Select a matrix type')
+    d=TYPE_DESCRIPTORS[ty];family=d['family'];columns=d['columns'];rows=d['rows'];column_type=shaped_type(family,rows)
+    groups={}
+    for column in range(columns):
+        port='c'+str(column);groups[port]=column_type
+        groups.update({port+axis:family for axis in VECTOR_COMPONENTS[:rows]})
+    if key in ('matrix','matrix_combine','matrix_replace'):matrix_values(params,ty)
+    if key=='matrix':return {'inputs':{},'outputs':{'out':ty}}
+    if key=='matrix_combine':return {'inputs':groups,'outputs':{'out':ty}}
+    if key=='matrix_replace':return {'inputs':{'value':ty,**groups},'outputs':{'out':ty}}
+    if key=='matrix_split':return {'inputs':{'value':ty},'outputs':groups}
+    if key in ('matrix_get','matrix_set'):
+        mode=params.get('mode','column');index_type=params.get('indexType','int')
+        if mode not in ('column','element'):raise GraphError('Matrix indexing mode must be column or element')
+        if index_type not in ('int','uint'):raise GraphError('Matrix index type must be int or uint')
+        inputs={'value':ty,'column':index_type}
+        if mode=='element':inputs['row']=index_type
+        result_type=family if mode=='element' else column_type
+        if key=='matrix_set':inputs['replacement']=result_type
+        return {'inputs':inputs,'outputs':{'out':ty if key=='matrix_set' else result_type}}
+    if key in ('inverse','determinant') and columns!=rows:raise GraphError(key.title()+' requires a square matrix')
+    if key=='outer_product':
+        return {'inputs':{'a':column_type,'b':shaped_type(family,columns)},'outputs':{'out':ty}}
+    if key=='matrix_comp_mult':return {'inputs':{'a':ty,'b':ty},'outputs':{'out':ty}}
+    output=matrix_type(family,rows,columns) if key=='transpose' else family if key=='determinant' else ty
+    return {'inputs':{'value':ty},'outputs':{'out':output}}
 
 def vector_values(params,ty):
     return params.get('components',filled_value(shaped_type(TYPE_DESCRIPTORS[ty]['family'],4)))
@@ -237,7 +297,7 @@ mat4 dmat2 dmat3 dmat4 vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 dvec2 
 dvec4 uint uvec2 uvec3 uvec4 lowp mediump highp precision struct common partition active
 asm class union enum typedef template this resource goto inline noinline public static
 extern external interface long short half fixed unsigned superp input output hvec2 hvec3
-hvec4 fvec2 fvec3 fvec4 sampler3DRect filter sizeof cast namespace using row_major main""".split())
+hvec4 fvec2 fvec3 fvec4 sampler3DRect filter sizeof cast namespace using row_major main""".split()) | frozenset(TYPES)
 
 def glsl_code_name(value):
     return (isinstance(value,str) and bool(NAME.fullmatch(value)) and '__' not in value
@@ -343,10 +403,11 @@ def definition_ports(definition, params):
     # saved identity cannot silently become another type through an edit.
     if 'fixedType' in params:
         fixed=params['fixedType']; key=definition['key']
-        choices=SCALAR_TYPES if key=='scalar' else VECTOR_TYPES if key=='vector' else ()
+        choices=SCALAR_TYPES if key=='scalar' else VECTOR_TYPES if key=='vector' else MATRIX_TYPES if key=='matrix' else ()
         if fixed not in choices or params.get('type')!=fixed:
             raise GraphError('Fixed value type cannot change')
     if definition['key'] in VECTOR_KEYS:return vector_interface(definition['key'],params)
+    if definition['key'] in MATRIX_KEYS:return matrix_interface(definition['key'],params)
     if definition['key']=='convert':
         source=params.get('fromType','float');target=params.get('toType','int')
         if not explicit_conversion_valid(source,target):raise GraphError('Convert: use matching dimensions or a scalar input')
@@ -362,14 +423,17 @@ def node_parameter_types(definition):
     if key=='compare':return COMPARE_TYPES
     if key=='scalar':return SCALAR_TYPES
     if key in VECTOR_KEYS:return VECTOR_TYPES
+    if key in ('inverse','determinant'):return SQUARE_MATRIX_TYPES
+    if key in MATRIX_KEYS:return MATRIX_TYPES
     if key in NOISE_HELPERS:return FLOAT_VECTOR_TYPES
-    if key in ('if','uniform','constant','spec_constant','convert'):return TYPES
-    if key in ('add','subtract','multiply','divide','min','max','clamp','mod'):return NUMERIC_TYPES
+    if key in ('uniform','constant'):return TYPES
+    if key in ('if','spec_constant','convert'):return LEGACY_TYPES
+    if key in ('add','subtract','multiply','divide','min','max','clamp','mod'):return LEGACY_NUMERIC_TYPES
     if key in ('abs','sign'):return SIGNED_TYPES
     return FLOAT_TYPES
 
 def explicit_conversion_valid(source,target):
-    return source in TYPES and target in TYPES and (type_components(source)==1 or type_components(source)==type_components(target))
+    return source in LEGACY_TYPES and target in LEGACY_TYPES and (type_components(source)==1 or type_components(source)==type_components(target))
 
 def resolved_ports(definition, params, declaration=None):
     selected = params.get('type', 'float')
@@ -393,7 +457,7 @@ def type_contract():
     variants = {}
     for definition in CATALOG.values():
         tokens = set(definition['inputs'].values()) | set(definition['outputs'].values())
-        selector = 'parameter' if 'T' in tokens or definition['key'] in VECTOR_KEYS else 'declaration' if 'D' in tokens else 'fixed'
+        selector = 'parameter' if 'T' in tokens or definition['key'] in (*VECTOR_KEYS,*MATRIX_KEYS) else 'declaration' if 'D' in tokens else 'fixed'
         default = definition['defaults'].get('type', 'float')
         choices = [default] + [ty for ty in node_parameter_types(definition) if ty != default] if selector != 'fixed' else [None]
         if definition['key'] in VECTOR_KEYS:choices=list(VECTOR_TYPES)
@@ -404,6 +468,8 @@ def type_contract():
             params=dict(definition['defaults'],type='float' if definition['key']=='spec_constant' else ty or 'float')
             if definition['key'] in ('vector','combine','replace'):
                 params['components']=filled_value(shaped_type(TYPE_DESCRIPTORS[params['type']]['family'],4))
+            if definition['key'] in ('matrix','matrix_combine','matrix_replace'):
+                params['values']=matrix_identity(params['type'])
             return dict(type=ty,**resolved_ports(definition,params,{'type':ty}))
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [variant(ty) for ty in choices]}
     result = {'version': 1, 'valueTypes':list(TYPES), 'numericTypes': list(NUMERIC_TYPES), 'specConstantTypes': list(SPEC_TYPES), 'resourceTypes': list(RESOURCE_TYPES),
@@ -412,7 +478,10 @@ def type_contract():
               'vectors':{'version':1,'types':list(VECTOR_TYPES),'components':VECTOR_COMPONENTS,
                          'scalarTypes':{ty:TYPE_DESCRIPTORS[ty]['family'] for ty in VECTOR_TYPES},
                          'layouts':{ty:combine_layouts(ty) for ty in VECTOR_TYPES}},
-              'convert':{'types':list(TYPES),'fromParameter':'fromType','toParameter':'toType'},
+              'matrices':{'version':1,'types':list(MATRIX_TYPES),'valueParameter':'values','storage':'column-major',
+                          'columnPrefix':'c','components':VECTOR_COMPONENTS,'indexTypes':['int','uint'],
+                          'indexModes':['column','element'],'identityValues':{ty:matrix_identity(ty) for ty in MATRIX_TYPES}},
+              'convert':{'types':list(LEGACY_TYPES),'fromParameter':'fromType','toParameter':'toType'},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
@@ -426,6 +495,7 @@ def node(key, ident, x=0, y=0, **params):
     if key in ('vector','combine','replace') and 'components' not in params:
         params['components']=filled_value(shaped_type(TYPE_DESCRIPTORS.get(selected,{'family':'float'})['family'],4))
     if key=='scalar' and 'value' not in params:params['value']=filled_value(selected)
+    if key in ('matrix','matrix_combine','matrix_replace') and 'values' not in params:params['values']=matrix_identity(selected)
     return dict(id=ident, definitionUuid=d['definitionUuid'], revisionHash=d['revisionHash'],
                 params=copy.deepcopy(dict(d['defaults'], **params)), ui={'x':x,'y':y})
 
@@ -484,6 +554,14 @@ def number(value):
     s=format(value,'.9g')
     return s if '.' in s or 'e' in s.lower() else s+'.0'
 
+def double_number(value):
+    if isinstance(value,bool) or not isinstance(value,(int,float)):raise GraphError('Expected a finite double')
+    try:value=float(value)
+    except (ValueError,OverflowError):raise GraphError('Expected a finite double') from None
+    if not math.isfinite(value):raise GraphError('Expected a finite double')
+    text=format(value,'.17g')
+    return (text if '.' in text or 'e' in text.lower() else text+'.0')+'LF'
+
 def type_components(ty):
     descriptor = TYPE_DESCRIPTORS.get(ty)
     if descriptor is None: raise GraphError('Unsupported numeric type: ' + str(ty))
@@ -495,6 +573,7 @@ def filled_value(ty, value=0):
     return value if count == 1 else [value] * count
 
 def literal(value, ty):
+    if ty=='double':return double_number(value)
     if ty=='bool':
         if type(value) is not bool:raise GraphError('Expected a boolean constant')
         return 'true' if value else 'false'
@@ -513,6 +592,7 @@ def literal(value, ty):
     return ty+'('+', '.join(literal(v,scalar) for v in value)+')'
 
 def input_default(key,port,ty):
+    if ty in MATRIX_TYPES:return matrix_identity(ty)
     if key in ('texture','texture_sample') and port=='uv': return None  # Implicit interpolated UV.
     if key=='vertex_out': return [0,0,0,1]
     if key=='pixel_out': return [0,0,0,1]
@@ -690,7 +770,8 @@ def _compile_flat(graph,annotation_scopes=None):
             if d.get('nativeSequence','const')!='const':raise GraphError('Spec Constants use the native Constants page')
         elif d.get('kind')=='uniform':
             if d.get('type') not in TYPES: raise GraphError('Unsupported uniform type')
-            if d.get('nativeSequence','vec') not in ('vec','color'):raise GraphError('Unsupported native Uniform page')
+            if d.get('nativeSequence','vec') not in ('vec','color','matrix'):raise GraphError('Unsupported native Uniform page')
+            if d.get('nativeSequence')=='matrix' and d['type'] not in MATRIX_TYPES:raise GraphError('The Matrices page requires a matrix Uniform type')
             if 'initialDriver' in d and d['initialDriver'] not in ('time','frame','absTime','absFrame'):raise GraphError('Unsupported initial Uniform driver')
             literal(d.get('value'), d['type'])
             if not isinstance(d.get('expose',False),bool): raise GraphError('Expose must be a boolean')
@@ -753,7 +834,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 values=n.get('inputValues',{})
                 if not isinstance(values,dict) or any(port not in ports[ident]['in'] for port in values):
                     raise GraphError('Invalid input default values',ident)
-                if d['key']=='replace' and values:
+                if d['key'] in ('replace','matrix_replace','matrix_combine') and values:
                     raise GraphError('Replace manual values belong to its components, not input default overrides',ident)
                 for port,value in values.items():
                     try: literal(value,ports[ident]['in'][port])
@@ -789,7 +870,24 @@ def _compile_flat(graph,annotation_scopes=None):
                     start=VECTOR_COMPONENTS.index(port)
                     for offset in range(type_components(ty)):mapped[start+offset]=(port,offset)
                 component_sources[ident]=mapped
+            matrix_sources={}
+            for ident,n in nodes.items():
+                key=defs[ident]['key']
+                if key not in ('matrix_combine','matrix_replace'):continue
+                descriptor=TYPE_DESCRIPTORS[n['params']['type']];rows=descriptor['rows']
+                mapped=[]
+                for column in range(descriptor['columns']):
+                    parent='c'+str(column)
+                    for row in range(rows):
+                        child=parent+VECTOR_COMPONENTS[row]
+                        if (ident,child) in links:source=(child,0)
+                        elif (ident,parent) in links:source=(parent,row)
+                        elif key=='matrix_replace' and (ident,'value') in links:source=('value',column*rows+row)
+                        else:source=(None,column*rows+row)
+                        mapped.append(source)
+                matrix_sources[ident]=mapped
             def effective_inputs(ident,output=None):
+                if ident in matrix_sources:return {port for port,offset in matrix_sources[ident] if port is not None}
                 if defs[ident]['key']!='replace':return set(ports[ident]['in'])
                 mapped=component_sources[ident]
                 return {port for port,offset in mapped if port is not None}
@@ -845,7 +943,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 for port in effective_inputs(ident,output):
                     if (ident,port) in links:demand_constant(*links[(ident,port)])
             for ident in order:
-                if defs[ident]['key'] in (*VECTOR_KEYS,'vec4','compare','if') or nodes[ident]['params'].get('requireConstant'):
+                if defs[ident]['key'] in (*VECTOR_KEYS,*MATRIX_KEYS,'vec4','compare','if') or nodes[ident]['params'].get('requireConstant'):
                     for output in needed_outputs[ident]:demand_constant(ident,output)
             for ident in sorted(set(nodes)-live):
                 if defs[ident]['key']!='comment':diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
@@ -911,6 +1009,41 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
                 elif k=='combine':expr=ty+'('+', '.join(a(port) for port in ports[ident]['in'])+')'
                 elif k=='vector':expr=literal(vector_values(p,ty)[:type_components(ty)],ty)
+                elif k=='matrix':expr=literal(matrix_values(p,ty),ty)
+                elif k in ('matrix_combine','matrix_replace'):
+                    descriptor=TYPE_DESCRIPTORS[ty];rows=descriptor['rows'];family=descriptor['family']
+                    mapped=matrix_sources[ident];values=matrix_values(p,ty);arguments=[]
+                    for column in range(descriptor['columns']):
+                        entries=mapped[column*rows:(column+1)*rows];parent='c'+str(column)
+                        if all(port==parent for port,offset in entries):arguments.append(a(parent));continue
+                        if all(port=='value' for port,offset in entries):arguments.append('('+a('value')+')['+str(column)+']');continue
+                        components=[]
+                        for port,offset in entries:
+                            if port is None:component=literal(values[offset],family)
+                            elif port=='value':component='('+a(port)+')['+str(offset//rows)+']['+str(offset%rows)+']'
+                            elif port==parent:component='('+a(port)+')['+str(offset)+']'
+                            else:component=a(port)
+                            components.append(component)
+                        arguments.append(shaped_type(family,rows)+'('+', '.join(components)+')')
+                    expr=ty+'('+', '.join(arguments)+')'
+                elif k=='matrix_split':
+                    for port in ports[ident]['out']:
+                        column=int(port[1]);suffix='['+str(column)+']'
+                        if len(port)>2:suffix+='['+str(VECTOR_COMPONENTS.index(port[2]))+']'
+                        expressions[(ident,port)]='('+a('value')+')'+suffix
+                elif k=='matrix_get':
+                    expr='('+a('value')+')['+a('column')+']'
+                    if p.get('mode','column')=='element':expr+='['+a('row')+']'
+                elif k=='matrix_set':
+                    variable=symbols[(ident,'out')]
+                    lines.append('    '+ty+' '+variable+' = '+a('value')+';')
+                    destination=variable+'['+a('column')+']'
+                    if p.get('mode','column')=='element':destination+='['+a('row')+']'
+                    lines.append('    '+destination+' = '+a('replacement')+';')
+                    expressions[(ident,'out')]=variable
+                elif k in ('transpose','inverse','determinant'):expr=k+'('+a('value')+')'
+                elif k in ('matrix_comp_mult','outer_product'):
+                    expr={'matrix_comp_mult':'matrixCompMult','outer_product':'outerProduct'}[k]+'('+a('a')+', '+a('b')+')'
                 elif k=='replace':
                     mapped=component_sources[ident]
                     def component_expression(index):

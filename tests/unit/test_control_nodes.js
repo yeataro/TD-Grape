@@ -23,9 +23,11 @@ const identical=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
 function rejectsWire(a,b,p,o='out'){const before=clone({graph,past,future,dirty});assert.equal(connect(a,b,p,o),false);identical({graph,past,future,dirty},before);}
 
 assert.equal(supportsAutoType(d('compare')),true);assert.equal(supportsAutoType(d('if')),true);
-identical(selectableNodeTypes(d('compare')),['float','int','uint']);identical(selectableNodeTypes(d('if')),valueTypes());
+// Matrix/double operation overloads follow the additive value-type batch.
+const legacyValueTypes=valueTypes().filter(type=>typeFamily(type)!=='double'&&!isMatrixType(type));
+identical(selectableNodeTypes(d('compare')),['float','int','uint']);identical(selectableNodeTypes(d('if')),legacyValueTypes);
 for(const ty of selectableNodeTypes(d('compare'))){const compare=node('compare','compare',{type:ty});assert.equal(defaultInput(compare,'a',ty),0);assert.equal(defaultInput(compare,'b',ty),0);identical(resolvedNodePorts(d('compare'),compare.params,null,'outputs'),{out:'bool'});}
-for(const ty of valueTypes()){const branch=node('if','branch',{type:ty});assert.equal(defaultInput(branch,'condition','bool'),false);identical(defaultInput(branch,'true',ty),filledValue(ty,1));identical(defaultInput(branch,'false',ty),filledValue(ty,0));}
+for(const ty of legacyValueTypes){const branch=node('if','branch',{type:ty});assert.equal(defaultInput(branch,'condition','bool'),false);identical(defaultInput(branch,'true',ty),filledValue(ty,1));identical(defaultInput(branch,'false',ty),filledValue(ty,0));}
 
 // Only an unconnected Auto Compare uses int. Locked/legacy float and the
 // remaining Auto operations retain their existing type/default policies.

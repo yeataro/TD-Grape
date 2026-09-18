@@ -9,6 +9,7 @@ MIGRATED = 'grapeCustomMigratedV1'
 RESERVED = {'Openeditor','Openinbrowser','Glslparameters','Version','Material','Outputtop',
             'Resolution','Width','Height','Pixelformat','Extenduv','Texturestatus'}
 STYLES = {'float': ('appendFloat',1), 'vec2': ('appendFloat',2), 'vec3': ('appendFloat',3),
+          'double': ('appendFloat',1), **{'dvec'+str(size):('appendFloat',size) for size in (2,3,4)},
           'vec4': ('appendFloat',4), 'rgba': ('appendRGBA',4), 'int': ('appendInt',1),
           'uint': ('appendInt',1), 'bool': ('appendToggle',1),
           'toggle': ('appendToggle',1), 'text': ('appendStr',1),
@@ -69,6 +70,9 @@ def ensure(runtime):
     graph={d['id']:d for d in runtime.state()['graph']['declarations']}
     for ident,legacy in comp.fetch('sgrapePublicUniforms',{}).items():
         if ident in migrated: continue
+        # Matrix controls drive one native expression from several numeric
+        # columns, not one native Bind per component. Keep that ownership.
+        if graph.get(ident,{}).get('type') in runtime.source_module().MATRIX_SHAPES: continue
         controls=[getattr(comp.par,name,None) for name in legacy['parameters']]
         native=model.source_pars(comp,ident)
         decl=graph.get(ident,{})
@@ -183,6 +187,8 @@ def edit(runtime,body):
                 native=runtime.source_module().snapshot(runtime)
                 row=next((r for r in native['uniforms'] if r['id']==body.get('id')),None)
                 if row is None or row['missing'] or row['expected']!=body.get('sourceExpected'):raise RuntimeError('The Uniform changed. Refresh first.')
+                if row['type'] in runtime.source_module().MATRIX_SHAPES:
+                    raise RuntimeError('Matrix Uniforms use their native Matrix source binding. Select a DAT, CHOP or Python expression in Inputs.')
                 if row['id'] in comp.fetch(model.STORE,{}):raise RuntimeError('This Uniform already has a custom control.')
                 count=runtime.core().type_components(row['type']); pars=model.source_pars(comp,row['id'])
                 # Only known clocks can move without guessing how to rebase Python.

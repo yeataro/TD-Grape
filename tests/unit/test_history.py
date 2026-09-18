@@ -61,7 +61,7 @@ class NativePars:
     def __init__(self, owner): self.owner = owner
     def __getattr__(self, name):
         import re
-        match = re.fullmatch(r'(vec|color|const)([0-9]+)([a-z]+)', name)
+        match = re.fullmatch(r'(vec|color|const|matrix)([0-9]+)([a-z]+)', name)
         if match:
             seq, index, suffix = match.groups()
             try: return self.owner.sequences[seq].blocks[int(index)][suffix]

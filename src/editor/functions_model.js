@@ -153,8 +153,8 @@ const GraphClipboard=(()=>{
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
       const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
       if(['uniform','constant'].includes(d.kind)){
-        const vector=/^(i|u|b)?vec([234])$/.exec(d.type),family=vector?({i:'int',u:'uint',b:'bool'}[vector[1]]||'float'):d.type,count=vector?Number(vector[2]):1;
-        const scalar=v=>family==='bool'?typeof v==='boolean':number(v)&&(family==='float'||['int','uint'].includes(family)&&Number.isInteger(v)&&v>=(family==='uint'?0:-2147483648)&&v<=(family==='uint'?4294967295:2147483647));
+        const vector=/^(i|u|b|d)?vec([234])$/.exec(d.type),matrix=/^(d)?mat([234])(?:x([234]))?$/.exec(d.type),family=matrix?(matrix[1]?'double':'float'):vector?({i:'int',u:'uint',b:'bool',d:'double'}[vector[1]]||'float'):d.type,count=matrix?Number(matrix[2])*Number(matrix[3]||matrix[2]):vector?Number(vector[2]):1;
+        const scalar=v=>family==='bool'?typeof v==='boolean':family==='double'?typeof v==='number'&&Number.isFinite(v):number(v)&&(family==='float'||['int','uint'].includes(family)&&Number.isInteger(v)&&v>=(family==='uint'?0:-2147483648)&&v<=(family==='uint'?4294967295:2147483647));
         if(count===1?!scalar(d.value):!Array.isArray(d.value)||d.value.length!==count||!d.value.every(scalar))fail('clipboard.invalid');
       }
       if(d.kind==='spec_constant'&&(!['int','uint','bool','float'].includes(d.type)||!Number.isInteger(d.constantId)||d.constantId<0||(d.type==='bool'?typeof d.value!=='boolean':!number(d.value)||(d.type!=='float'&&(!Number.isInteger(d.value)||d.value<(d.type==='uint'?0:-2147483648)||d.value>(d.type==='uint'?4294967295:2147483647))))))fail('clipboard.invalid');

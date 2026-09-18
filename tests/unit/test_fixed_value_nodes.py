@@ -27,6 +27,7 @@ class FixedValueNodes(unittest.TestCase):
             source = typed_value(ty)
             source['params']['fixedType'] = ty
             generic_type = 'bool' if c.type_components(ty) == 1 and ty != 'bool' else 'float' if c.type_components(ty) == 1 else 'vec3' if ty != 'vec3' else 'vec2'
+            if ty in c.MATRIX_TYPES:generic_type='mat3' if ty!='mat3' else 'mat2'
             source['params']['type'] = generic_type
             with self.subTest(type=ty), self.assertRaisesRegex(c.GraphError, 'Fixed value type cannot change'):
                 c.resolved_ports(c.BY_UUID[source['definitionUuid']], source['params'])

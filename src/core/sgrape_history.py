@@ -185,6 +185,8 @@ def _project(runtime, entry, declaration):
     params = {'name': {'val': declaration['name'], 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}}
     for i, suffix in enumerate(sources.CHANNELS[sequence]):
         params[suffix] = {'val': values[i] if i < len(values) else 0, 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}
+        if sequence == 'matrix':
+            params[suffix] = {'val':'', 'mode':'EXPRESSION', 'expr':sources.matrix_expression(declaration,values), 'bindExpr':''}
         if i == 0 and declaration.get('initialDriver') in sources.PRESETS:
             params[suffix].update(mode='EXPRESSION', expr=sources.PRESETS[declaration['initialDriver']])
     return {'record': {'name': declaration['name'], 'sequence': sequence, 'index': index},
@@ -467,7 +469,7 @@ def restore(runtime, body):
                 if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'))
             else:
                 sources.validate_uniform_native(declaration, declaration.get('value'), 'default')
-                for channel in sources.CHANNELS.get(native.get('sequence'), ())[:sources.source_components(declaration)]:
+                for channel in (() if native.get('sequence') == 'matrix' else sources.CHANNELS.get(native.get('sequence'), ())[:sources.source_components(declaration)]):
                     value = native.get('params', {}).get(channel, {})
                     if value.get('mode') == 'CONSTANT':sources.validate_uniform_component(declaration, value.get('val'))
                     elif value.get('mode') == 'BIND':

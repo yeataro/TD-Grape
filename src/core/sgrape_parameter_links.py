@@ -20,6 +20,7 @@ def source_pars(comp, ident):
     record = comp.fetch('grapeNativeUniformsV1', {}).get(ident)
     if not record or record.get('missing'): return []
     op = operator(comp); sequence = record['sequence']
+    if sequence not in CHANNELS: return []
     found = [i for i in range(getattr(op.seq, sequence).numBlocks)
              if str(getattr(op.par, sequence+str(i)+'name').eval()) == record['name']]
     if len(found) != 1: return []

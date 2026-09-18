@@ -139,7 +139,7 @@ function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['unifo
 function nodeCategory(d){
   if(d.key==='comment')return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
-  if(['constant','spec_constant','scalar','vector'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
+  if(['constant','spec_constant','scalar','vector','matrix'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
@@ -184,7 +184,7 @@ const CustomGLSL=(()=>{
     Object.assign(p,patch);validate(node.params);
     if(direction==='inputs'&&before!==p.type&&Object.hasOwn(node.inputValues||{},id)){
       if(isResourceType(p.type))delete node.inputValues[id];
-      else node.inputValues[id]=shapedValue(node.inputValues[id]??0,p.type);
+      else node.inputValues[id]=isMatrixType(before)&&isMatrixType(p.type)?matrixReshapeValue(node.inputValues[id],before,p.type):shapedValue(node.inputValues[id]??0,p.type);
     }
   }
   function remove(node,direction,id,edges){
@@ -219,9 +219,11 @@ function setTypeContract(contract){
   if(!Array.isArray(valueTypes)||new Set(valueTypes).size!==valueTypes.length||!contract.numericTypes.every(t=>valueTypes.includes(t)))throw Error(t('contract.invalid'));
   if(Object.keys(contract.types).length!==valueTypes.length+resourceTypes.length)throw Error(t('contract.invalid'));
   for(const type of valueTypes){
-    const descriptor=contract.types[type],vector=/^(i|u|b)?vec([234])$/.exec(type);
-    const family=vector?({i:'int',u:'uint',b:'bool'}[vector[1]]||'float'):type,count=vector?Number(vector[2]):1;
-    if(!Object.hasOwn(contract.types,type)||!descriptor||!['float','int','uint','bool'].includes(family)||descriptor.family!==family||descriptor.components!==count)throw Error(t('contract.invalid'));
+    const descriptor=contract.types[type],vector=/^(i|u|b|d)?vec([234])$/.exec(type),matrix=/^(d)?mat([234])(?:x([234]))?$/.exec(type);
+    const family=matrix?(matrix[1]?'double':'float'):vector?({i:'int',u:'uint',b:'bool',d:'double'}[vector[1]]||'float'):type,count=matrix?Number(matrix[2])*Number(matrix[3]||matrix[2]):vector?Number(vector[2]):1;
+    if(!Object.hasOwn(contract.types,type)||!descriptor||!['float','double','int','uint','bool'].includes(family)||descriptor.family!==family||descriptor.components!==count)throw Error(t('contract.invalid'));
+    if(matrix&&(descriptor.shape!=='matrix'||descriptor.columns!==Number(matrix[2])||descriptor.rows!==Number(matrix[3]||matrix[2])))throw Error(t('contract.invalid'));
+    if(!matrix&&descriptor.shape==='matrix')throw Error(t('contract.invalid'));
   }
   for(const type of specTypes.filter(t=>!contract.numericTypes.includes(t)))if(contract.types[type]?.family!==type||contract.types[type]?.components!==1)throw Error(t('contract.invalid'));
   for(const type of resourceTypes)if(contract.types[type]?.family!=='sampler'||contract.types[type]?.components!==0)throw Error(t('contract.invalid'));
@@ -238,7 +240,7 @@ function setTypeContract(contract){
   if(contract.glslCode&&(contract.glslCode.maxPorts!==16||contract.glslCode.maxLength!==16384||!Array.isArray(contract.glslCode.reservedNames)||!contract.glslCode.reservedNames.every(n=>typeof n==='string')))throw Error(t('contract.invalid'));
   if(contract.vectors){
     const spec=contract.vectors;
-    if(spec.version!==1||spec.components!=='xyzw'||!Array.isArray(spec.types)||spec.types.length!==new Set(spec.types).size||spec.types.some(type=>!valueTypes.includes(type)||contract.types[type].components<2))throw Error(t('contract.invalid'));
+    if(spec.version!==1||spec.components!=='xyzw'||!Array.isArray(spec.types)||spec.types.length!==new Set(spec.types).size||spec.types.some(type=>!valueTypes.includes(type)||contract.types[type].components<2||contract.types[type].shape==='matrix'))throw Error(t('contract.invalid'));
     for(const type of spec.types){
       const layouts=spec.layouts?.[type];if(!Array.isArray(layouts)||layouts.length!==2**(contract.types[type].components-1))throw Error(t('contract.invalid'));
       for(const row of layouts){let cursor=0;const groups={};
@@ -251,9 +253,10 @@ function setTypeContract(contract){
 }
 const numericTypes=()=>typeContract?.numericTypes||[];
 const valueTypes=()=>typeContract?.valueTypes||[...new Set([...numericTypes(),...(typeContract?.specConstantTypes||[])])];
+const convertTypes=()=>typeContract?.convert?.types||valueTypes().filter(type=>!isMatrixType(type)&&typeFamily(type)!=='double');
 const interfaceTypes=()=>[...valueTypes(),...(typeContract?.resourceTypes||[])];
 const typeFamily=type=>typeContract?.types?.[type]?.family;
-const typeForShape=(family,count)=>valueTypes().find(type=>typeFamily(type)===family&&typeComponents(type)===count);
+const typeForShape=(family,count)=>valueTypes().find(type=>typeContract.types[type].shape!=='matrix'&&typeFamily(type)===family&&typeComponents(type)===count);
 function scalarValue(value,family){
   if(family==='bool')return !!value;
   const number=Number(value)||0;
@@ -263,7 +266,7 @@ function scalarValue(value,family){
 function validScalarValue(value,family){
   if(family==='bool')return typeof value==='boolean';
   if(typeof value!=='number'||!Number.isFinite(value))return false;
-  return family==='float'||Number.isInteger(value)&&value>=(family==='uint'?0:-2147483648)&&value<=(family==='uint'?4294967295:2147483647);
+  return family==='float'||family==='double'||Number.isInteger(value)&&value>=(family==='uint'?0:-2147483648)&&value<=(family==='uint'?4294967295:2147483647);
 }
 const isResourceType=type=>(typeContract?.resourceTypes||[]).includes(type);
 function typeComponents(type){
@@ -272,11 +275,25 @@ function typeComponents(type){
 }
 function shapedValue(value,type){
   if(isResourceType(type))return null;
+  if(isMatrixType(type)){
+    const shape=typeContract.types[type];
+    return Array.from({length:shape.components},(_,index)=>scalarValue(Array.isArray(value)?value[index]??0:Math.floor(index/shape.rows)===index%shape.rows?value:0,shape.family));
+  }
   const count=typeComponents(type),components=Array.isArray(value)?value:[value];
   const scalar=value=>scalarValue(value,typeFamily(type));
   return count===1?scalar(components[0]):Array.from({length:count},(_,i)=>scalar(components[i]??components[0]));
 }
 const filledValue=(type,value=0)=>shapedValue(value,type);
+function matrixReshapeValue(value,oldType,newType){
+  const oldShape=typeContract?.types?.[oldType],nextShape=typeContract?.types?.[newType];
+  if(!isMatrixType(newType))return shapedValue(value,newType);
+  if(!isMatrixType(oldType))return shapedValue(value,newType);
+  const old=shapedValue(value,oldType);
+  return Array.from({length:nextShape.components},(_,index)=>{
+    const column=Math.floor(index/nextShape.rows),row=index%nextShape.rows;
+    return column<oldShape.columns&&row<oldShape.rows?old[column*oldShape.rows+row]:column===row?1:0;
+  });
+}
 const selectableNodeTypes=d=>[...new Set(typeVariants(d).map(v=>v.type).filter(type=>type!==null))];
 const compatible=(a,b)=>!!typeContract?.conversions.some(rule=>rule.from===a&&rule.to===b);
 function typeVariants(d){
@@ -289,7 +306,13 @@ function typeVariants(d){
 function resolvedNodePorts(d,params,decl,kind){
   if(params.fixedType&&params.type!==params.fixedType)throw Error(t('type.fixedValue'));
   if(isVectorOperation(d))return vectorPorts(d.key,params)[kind];
-  if(d.key==='convert')return kind==='inputs'?{value:params.fromType||'float'}:{out:params.toType||'int'};
+  if(isMatrixOperation(d))return matrixPorts(d.key,params)[kind];
+  if(isMatrixAccess(d))return matrixAccessPorts(d.key,params)[kind];
+  if(d.key==='convert'){
+    const from=params.fromType||'float',to=params.toType||'int';
+    if(!convertTypes().includes(from)||!convertTypes().includes(to)||typeComponents(from)!==1&&typeComponents(from)!==typeComponents(to))throw Error(t('contract.invalid'));
+    return kind==='inputs'?{value:from}:{out:to};
+  }
   if(d.key==='glsl_code')return Object.fromEntries((Array.isArray(params[kind])?params[kind]:[]).map(p=>[p.id,p.type]));
   if(d.key==='pixel_out'&&kind==='inputs'&&typeContract?.pixelBufferOutputs){
     const spec=typeContract.pixelBufferOutputs,count=params[spec.parameter]??1;
@@ -302,8 +325,87 @@ function resolvedNodePorts(d,params,decl,kind){
   return variant?.[kind]||Object.fromEntries(Object.keys(d[kind]||{}).map(port=>[port,'?']));
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
-const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&!isMatrixOperation(d)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
 const isVectorOperation=d=>['vector','replace','combine','vector_split','swizzle'].includes(d?.key);
+const isMatrixOperation=d=>['matrix','matrix_combine','matrix_replace','matrix_split'].includes(d?.key);
+const isMatrixAccess=d=>['matrix_get','matrix_set'].includes(d?.key);
+const isMatrixType=type=>typeContract?.types?.[type]?.shape==='matrix';
+function matrixAccessPorts(key,params){
+  const type=params.type||'mat3',shape=typeContract?.types?.[type],mode=params.mode||'column',index=params.indexType||'int';
+  if(!isMatrixType(type)||!['column','element'].includes(mode)||!['int','uint'].includes(index))throw Error(t('contract.invalid'));
+  const result=mode==='element'?shape.family:typeForShape(shape.family,shape.rows),inputs={value:type,column:index};
+  if(mode==='element')inputs.row=index;
+  if(key==='matrix_set')inputs.replacement=result;
+  return {inputs,outputs:{out:key==='matrix_set'?type:result}};
+}
+function matrixPorts(key,params){
+  const type=params.type||'mat3',shape=typeContract?.types?.[type];
+  if(!isMatrixType(type))throw Error(t('contract.invalid'));
+  if(key==='matrix')return {inputs:{},outputs:{out:type}};
+  const columns={},vector=typeForShape(shape.family,shape.rows);
+  for(let c=0;c<shape.columns;c++){
+    columns['c'+c]=vector;
+    for(const component of 'xyzw'.slice(0,shape.rows))columns['c'+c+component]=shape.family;
+  }
+  return key==='matrix_split'?{inputs:{value:type},outputs:columns}:{inputs:{...(key==='matrix_replace'?{value:type}:{}),...columns},outputs:{out:type}};
+}
+function matrixColumnValues(n,column){
+  const rows=typeContract.types[n.params.type].rows;
+  return Array.from({length:rows},(_,row)=>n.params.values?.[column*rows+row]??(column===row?1:0));
+}
+function matrixComponentWritable(n,column,row){
+  if(definition(n)?.key==='matrix')return true;
+  const connected=port=>current().edges.some(e=>e.to[0]===n.id&&e.to[1]===port);
+  return !(definition(n)?.key==='matrix_replace'&&connected('value'))&&!connected('c'+column)&&!connected('c'+column+'xyzw'[row]);
+}
+function matrixPortLabel(port){
+  const match=/^c([0-3])([xyzw])?$/.exec(port);
+  return match?(match[2]?match[2].toUpperCase():t('matrix.column').replace('{index}',match[1])):port;
+}
+function matrixComponentSource(n,column,row){
+  const names=['c'+column+'xyzw'[row],'c'+column,...(definition(n)?.key==='matrix_replace'?['value']:[])];
+  for(const name of names){
+    const edge=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===name),source=edge&&current().nodes.find(peer=>peer.id===edge.from[0]);
+    if(source)return nodeDisplayName(source)+' · '+portLabel(source,'outputs',edge.from[1]);
+  }
+  return '';
+}
+function appendMatrixNodeRows(list,n,portRow){
+  const key=definition(n).key,shape=typeContract.types[n.params.type],split=key==='matrix_split',literal=key==='matrix',direction=split?'outputs':'inputs',side=split?'from':'to';
+  list.classList.add('matrix-ports');list.closest('.node')?.classList.add('node-matrix');
+  if(key==='matrix_replace'||split)list.append(portRow('inputs','value'));
+  for(let column=0;column<shape.columns;column++){
+    const port='c'+column,expanded=n.ui?.matrixColumnsExpanded?.[column]===true;
+    const group=el('div',{class:'matrix-column'+(expanded?' expanded':''),'data-matrix-column':String(column)});
+    const parent=literal?el('div',{class:'port-row matrix-literal-column'}):portRow(direction,port);
+    parent.classList.add('matrix-column-row');
+    if(literal)parent.append(el('span',{class:'port-label'},matrixPortLabel(port)),el('small',{class:'port-type'},typeForShape(shape.family,shape.rows)));
+    const caption=parent.querySelector('.port-label'),toggle=el('button',{type:'button',class:'matrix-column-toggle','data-matrix-expand':String(column),'aria-expanded':String(expanded),'aria-label':t('node.expandValues')+' · '+matrixPortLabel(port),title:t('node.expandValues')+' · '+matrixPortLabel(port)});
+    caption.replaceWith(toggle);toggle.append(el('span',{'aria-hidden':'true'},expanded?'▾':'▸'),caption);
+    for(const event of ['pointerdown','dblclick'])toggle.addEventListener(event,e=>e.stopPropagation());
+    toggle.onclick=e=>{e.stopPropagation();change(()=>{n.ui||={};n.ui.matrixColumnsExpanded||=[];n.ui.matrixColumnsExpanded[column]=!expanded;},{localize:false});};
+    const values=el('span',{class:'matrix-compact-values node-inline-values'}),children=el('div',{class:'matrix-column-children'});
+    for(let row=0;row<shape.rows;row++){
+      const childPort=port+'xyzw'[row],connected=current().edges.some(e=>e[side][0]===n.id&&e[side][1]===childPort),visible=expanded||connected;
+      let child;
+      if(visible){
+        child=literal?el('div',{class:'port-row matrix-literal-component'}):portRow(direction,childPort);
+        if(literal)child.append(el('span',{class:'port-label'},'XYZW'[row]),el('small',{class:'port-type'},shape.family));
+        child.classList.add('matrix-component-row');child.dataset.matrixRow=String(row);applyComponentColorHint(child,row);
+        const label=child.querySelector('.port-label');if(label)applyComponentColorHint(label,row);
+        children.append(child);
+      }
+      if(split)continue;
+      const writable=matrixComponentWritable(n,column,row),copy=visible?'expanded':'compact';
+      const field=writable?matrixValueInput(n,column,row,{onNode:true,copy}):el('span',{class:'matrix-inherited-value',title:matrixComponentSource(n,column,row),'aria-label':matrixComponentSource(n,column,row)},'—');
+      if(visible){const holder=el('span',{class:'node-inline-values matrix-expanded-value'});holder.append(field);child.append(holder);}
+      else {const holder=el('span',{class:'node-inline-component matrix-compact-component'});holder.append(field);values.append(holder);}
+    }
+    if(!split&&!expanded&&values.childNodes.length)parent.append(values);
+    group.append(parent);if(children.childNodes.length)group.append(children);list.append(group);
+  }
+  if(!split)list.append(portRow('outputs','out'));
+}
 function vectorPorts(key,params){
   const spec=typeContract?.vectors,type=params.type||'vec2';
   if(!spec?.types.includes(type))throw Error(t('vector.invalidType'));
@@ -331,7 +433,7 @@ function displayNodePorts(d,params,decl,kind){
   try{return resolvedNodePorts(d,params,decl,kind);}catch(error){if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,params)[kind];}
 }
 function nodeTypeVariants(d,params){
-  return typeVariants(d).filter(v=>!params?.fixedType||v.type===params.fixedType).flatMap(v=>{try{return [{...v,...(isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
+  return typeVariants(d).filter(v=>!params?.fixedType||v.type===params.fixedType).flatMap(v=>{try{return [{...v,...(isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):isMatrixAccess(d)?matrixAccessPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
 }
 function vectorConnectionExact(d,source,target){
   if(d?.key==='compare'&&!selectableNodeTypes(d).includes(source))return false;
@@ -355,6 +457,13 @@ function constantRequirementIssues(document){
       else if(n.definitionUuid===FunctionModel.CALL){
         const fn=document.functions?.find(f=>f.id===n.params.functionId);
         if(fn&&!stack.includes(fn.id)){seenFunctions.add(fn.id);out=unit(fn.graph,fn,incoming,[...trail,n.id],[...stack,fn.id]);}
+      }else if(['matrix_combine','matrix_replace'].includes(d?.key)){
+        const shape=typeContract.types[n.params.type],effective=[];
+        for(let c=0;c<shape.columns;c++)for(let r=0;r<shape.rows;r++){
+          const column='c'+c,component=column+'xyzw'[r];
+          effective.push(inputs.has(n.id+':'+component)?incoming[component]:inputs.has(n.id+':'+column)?incoming[column]:d.key==='matrix_replace'&&inputs.has(n.id+':value')?incoming.value:true);
+        }
+        out={out:effective.every(Boolean)};
       }else if(d?.key==='replace'){
         // Only the final component's effective source determines its constness.
         // A fully overridden runtime baseline must not taint a constant result.
@@ -455,13 +564,28 @@ function rejectNewTypeIssues(data,ports,oldData,oldPorts){
 function reshapeTypedInputs(n,d,nextType){
   if(n.params.fixedType&&nextType!==n.params.fixedType)throw Error(t('type.fixedValue'));
   const previous=n.params.type||'float';if(previous===nextType)return;
+  if(isMatrixOperation(d)&&isMatrixType(previous)&&isMatrixType(nextType)&&d.key!=='matrix_split'){
+    const old=clone(n.params.values||[]),oldShape=typeContract.types[previous],nextShape=typeContract.types[nextType];
+    n.ui||={};const cache=n.ui.matrixValuesByType||={};cache[previous]=old;
+    n.params.values=Array.isArray(cache[nextType])?clone(cache[nextType]):matrixReshapeValue(old,previous,nextType);
+    // A reduced shape can be edited before it expands again. Restore dormant
+    // cells from the cache while keeping every currently visible cell current.
+    for(let c=0;c<Math.min(oldShape.columns,nextShape.columns);c++)for(let r=0;r<Math.min(oldShape.rows,nextShape.rows);r++)n.params.values[c*nextShape.rows+r]=old[c*oldShape.rows+r];
+  }
   const oldPorts=typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
   // Retain manually entered defaults per dimension, including dormant connected inputs.
   for(const [port,value]of Object.entries(n.inputValues||{})){
     if(!oldPorts[port]||!newPorts[port]||oldPorts[port]===newPorts[port])continue;
     n.ui||={};const cache=n.ui.inputValuesByType||={};const values=cache[port]||={};values[oldPorts[port]]=clone(value);
-    let nextValue=shapedValue(value,newPorts[port]);
+    const matrix=isMatrixType(oldPorts[port])&&isMatrixType(newPorts[port]);
+    let nextValue=matrix?matrixReshapeValue(value,oldPorts[port],newPorts[port]):shapedValue(value,newPorts[port]);
     n.inputValues[port]=Object.hasOwn(values,newPorts[port])?clone(values[newPorts[port]]):nextValue;
+    if(matrix){
+      // Restore hidden cells when a previous shape returns, but keep edits to
+      // the currently visible intersection in column/row coordinates.
+      const old=typeContract.types[oldPorts[port]],next=typeContract.types[newPorts[port]],current=shapedValue(value,oldPorts[port]);
+      for(let c=0;c<Math.min(old.columns,next.columns);c++)for(let r=0;r<Math.min(old.rows,next.rows);r++)n.inputValues[port][c*next.rows+r]=current[c*old.rows+r];
+    }
   }
   n.params.type=nextType;
   normalizeNodeValues(n,d);
@@ -469,8 +593,12 @@ function reshapeTypedInputs(n,d,nextType){
 function normalizeNodeValues(n,d){
   if(['vector','combine','replace'].includes(d.key))n.params.components=Array.from({length:4},(_,i)=>scalarValue(n.params.components?.[i]??0,typeFamily(n.params.type)));
   if(d.key==='scalar')n.params.value=shapedValue(n.params.value,n.params.type);
+  if(isMatrixOperation(d)&&d.key!=='matrix_split'){
+    const shape=typeContract.types[n.params.type];
+    n.params.values=Array.from({length:shape.components},(_,index)=>scalarValue(n.params.values?.[index]??(Math.floor(index/shape.rows)===index%shape.rows?1:0),shape.family));
+  }
 }
-function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.inputs,n.params.outputs,n.ui?.typeMode]),data.edges])});}
+function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.ui?.typeMode]),data.edges])});}
 function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
   if(autoTopology(document)===autoTopology(previous))return;
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
@@ -543,8 +671,8 @@ function creatorVariants(d,wire){
   if(d.fixedType)return typeVariants(d);
   if(d.key==='convert'){
     const from=wire?.kind==='outputs'?wire.type:d.defaults.fromType,to=wire?.kind==='inputs'?wire.type:d.defaults.toType;
-    const pairs=wire?valueTypes().map(type=>wire.kind==='outputs'?[from,type]:[type,to]):[[from,to]];
-    return pairs.filter(([a,b])=>valueTypes().includes(a)&&valueTypes().includes(b)&&(typeComponents(a)===1||typeComponents(a)===typeComponents(b))).map(([a,b])=>({type:null,inputs:{value:a},outputs:{out:b},params:{fromType:a,toType:b}}));
+    const pairs=wire?convertTypes().map(type=>wire.kind==='outputs'?[from,type]:[type,to]):[[from,to]];
+    return pairs.filter(([a,b])=>convertTypes().includes(a)&&convertTypes().includes(b)&&(typeComponents(a)===1||typeComponents(a)===typeComponents(b))).map(([a,b])=>({type:null,inputs:{value:a},outputs:{out:b},params:{fromType:a,toType:b}}));
   }
   if(d.key!=='swizzle')return typeVariants(d);
   const count=wire&&valueTypes().includes(wire.type)?typeComponents(wire.type):2;
@@ -558,6 +686,7 @@ function creatorVariants(d,wire){
 function creatorPriority(match,wire){
   if(!wire)return 99;
   const count=valueTypes().includes(wire.type)?typeComponents(wire.type):0;
+  if(isMatrixType(wire.type)){const order=wire.kind==='outputs'?['matrix_split','matrix_replace','matrix_get']:['matrix','matrix_combine','matrix_replace'],index=order.indexOf(match.d.key);return index<0?99:index;}
   const order=wire.kind==='outputs'?(count>1?['vector_split','replace','swizzle','combine','multiply','add','mix']:['multiply','add','replace','combine','mix']):count>1?['vector','combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','vector','add','multiply'];
   const index=order.indexOf(match.d.key);
   // Exact whole-vector matches precede scalar fallbacks across preset entries.
@@ -945,6 +1074,7 @@ function renderCards(){
   for(const n of current().nodes){
     const collapsed=n.ui?.collapsed===true,d=definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
+    if(isMatrixOperation(d))card.classList.add('node-matrix');
     if(d?.key==='comment'){
       card.dataset.noteTitleOnSelection=String(n.ui?.noteTitleOnSelection===true);card.dataset.noteTransparent=String(n.ui?.noteTransparent===true);
       card.style.setProperty('--note-font-scale',noteFontScale(n));
@@ -976,7 +1106,7 @@ function renderCards(){
     card.append(title);const list=el('div',{class:'ports'+(collapsed?' collapsed-ports':'')});
     const portRow=(kind,name,missing=false,compact=false)=>{
       const className=kind==='inputs'?'input':'output',type=ports(n,kind)[name]||'?';
-      const label=missing?name:portLabel(n,kind,name),row=el('div',{class:'port-row '+className+(missing?' missing-port':'')+(compact?' collapsed-port-row':'')}),b=el('button',{class:'port'+(compact?' collapsed-port':''),title:`${displayName} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
+      const label=missing?name:isMatrixOperation(d)?matrixPortLabel(name):portLabel(n,kind,name),row=el('div',{class:'port-row '+className+(missing?' missing-port':'')+(compact?' collapsed-port-row':'')}),b=el('button',{class:'port'+(compact?' collapsed-port':''),title:`${displayName} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
       if(!missing)applyPortColorHint(row,n,kind,name);
       if(d?.key==='replace'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
@@ -986,8 +1116,8 @@ function renderCards(){
       if(compact){row.append(b);return row;}
       const caption=el('span',{class:'port-label',title:label},label);if(!missing)applyPortLabelColorHint(caption,n,kind,name);
       row.append(b,caption,missing?el('small',{},'?'):portTypeCaption(n,kind,name));
-      if(!missing&&kind==='inputs'&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
-      if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&d?.key!=='vector_split'){
+      if(!missing&&kind==='inputs'&&!isMatrixOperation(d)&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
+      if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&!['vector_split','matrix_split'].includes(d?.key)){
         const split=el('button',{class:'vector-split-shortcut',type:'button',title:t('vector.splitShortcut'),'aria-label':t('vector.splitShortcut')+' · '+label});
         const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 16 16');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d','M2 8h5M7 3v10M7 3h6M7 13h6');icon.append(path);split.append(icon);
         split.disabled=readonly;split.onpointerdown=e=>e.stopPropagation();split.onclick=e=>{e.stopPropagation();addVectorSplit(n,name);};split.ondblclick=e=>e.stopPropagation();row.append(split);
@@ -996,8 +1126,9 @@ function renderCards(){
     };
     if(collapsed){appendCollapsedPorts(list,n,portRow);card.append(list);}else{
     if(d?.key==='compare'){const controls=el('div',{class:'node-body-controls'});controls.append(compareOperatorSelector(n));card.append(controls);}
+    if(isMatrixOperation(d))appendMatrixNodeRows(list,n,portRow);
     for(const kind of ['inputs','outputs']){
-      const known=ports(n,kind);for(const name of Object.keys(known))list.append(portRow(kind,name));
+      const known=ports(n,kind);if(!isMatrixOperation(d))for(const name of Object.keys(known))list.append(portRow(kind,name));
       const side=kind==='inputs'?'to':'from',missing=new Set(current().edges.filter(e=>e[side][0]===n.id&&!Object.hasOwn(known,e[side][1])).map(e=>e[side][1]));
       for(const name of missing)list.append(portRow(kind,name,true));
     }
@@ -1029,8 +1160,8 @@ function browserMeta(d){
   const raw=authored||(d.key==='comment'?{category:'data',source:'editor',aliases:['note','annotation','text','註解','注释','備註'],descriptionKey:'help.comment'}:d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
   const source=f?(f.scope==='local'?'project':f.scope==='personal'?'personal':'editor'):(raw.source||'editor');
   const path=stringList(raw.categoryPath);
-  const aliases=stringList(raw.aliases).filter(alias=>!d.fixedType||!/^(float|int|uint|bool|integer|unsigned|boolean|[iub]?vec(?:tor)?\s*[234])$/i.test(alias));
-  if(['scalar','vector'].includes(d.key))aliases.push(...(d.fixedType?[d.fixedType]:selectableNodeTypes(d)));
+  const aliases=stringList(raw.aliases).filter(alias=>!d.fixedType||!/^(float|double|int|uint|bool|integer|unsigned|boolean|[iubd]?vec(?:tor)?\s*[234]|d?mat(?:[234](?:x[234])?)?)$/i.test(alias));
+  if(['scalar','vector','matrix'].includes(d.key))aliases.push(...(d.fixedType?[d.fixedType]:selectableNodeTypes(d)));
   if(d.key==='comment')aliases.push('comment','筆記');
   return {category,path:path[0]===category?path:[category],source,secondary:stringList(raw.secondaryCategories).filter(known),aliases,tags:stringList(raw.tags),glslName:d.fixedType||raw.glslName||'',descriptionKey:d.descriptionKey||f?.descriptionKey||raw.descriptionKey||'help.function',subgraph:!!f,saved:!!f&&!d.source&&f.scope!=='local',project:!!f&&!d.source};
 }

@@ -18,7 +18,13 @@ for(const bad of [{}, {...typeContract,version:2},{...typeContract,conversions:[
  assert.throws(()=>setTypeContract(bad));assert.equal(JSON.stringify(typeContract),original,'invalid refresh must leave prior contract intact');
 }
 for(const type of valueTypes()){
- const size=typeContract.types[type].components,family=typeFamily(type),quarter=family==='float'?.25:family==='bool'?true:0;
+ const descriptor=typeContract.types[type],size=descriptor.components,family=typeFamily(type),quarter=['float','double'].includes(family)?.25:family==='bool'?true:0;
+ if(descriptor.shape==='matrix'){
+  assert.equal(JSON.stringify(filledValue(type,.25)),JSON.stringify(Array.from({length:size},(_,i)=>Math.floor(i/descriptor.rows)===i%descriptor.rows?.25:0)));
+  assert.equal(JSON.stringify(shapedValue([1,2,3,4],type)),JSON.stringify(Array.from({length:size},(_,i)=>[1,2,3,4][i]??0)));
+  assert.equal(JSON.stringify(shapedValue([1,2],type)),JSON.stringify(Array.from({length:size},(_,i)=>[1,2][i]??0)));
+  continue;
+ }
  const values=family==='bool'?[true,true,true,true]:[1,2,3,4],repeat=family==='bool'?[true,true,true,true]:[1,2,1,1];
  assert.equal(typeComponents(type),size);
  assert.equal(JSON.stringify(filledValue(type,.25)),JSON.stringify(size===1?quarter:Array(size).fill(quarter)));

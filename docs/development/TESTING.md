@@ -1,5 +1,13 @@
 # 測試
 
+2026-09-18 Matrix 第一批：374 項 portable Python unit、656 個雙語引用、editor launch／browser metadata／brand 與既有 JS／Remote Panel checks 通過。矩陣 editor JS 驗證 18 型別與接孔／值規則；隔離矩陣 UI 13 組、來源 UI 7 組、既有 numeric scrub 32 組通過。交付前以實際 GLSL Code／Subgraph／Transpose 選單驗證 mat2x3 → mat3x2 的座標保留、暫存形狀往返與單筆 Undo／Redo；修正 GLSL Code 與 Auto 輸入預設值原先按平坦陣列重排的錯位，矩陣 editor JS 10 組亦通過。
+
+TD 2025.32820 隔離原生結果：新矩陣節點 408 records 全過；float Matrix Uniform 的九形狀 × 三載體 × TOP Pixel／MAT Pixel／MAT Vertex 共 81 項正確；圖內雙精度及 float 原生來源經 GLSL 轉 double 78 項通過。原生 double／dvec／dmat 直接 Uniform 載體另 105 項編譯成功但讀值錯誤，作為宿主限制揭露，不以攔截或隱性轉型改變能力。來源建立／手填／Expression／DAT 動態／Binding／Undo／Redo 八組通過，保留使用者 Shader 與 registry。節點測試最初的 MAT TDDither 及 Vector fixture 儲存欄位錯誤已修正，產品運算未因探針誤判而修改。
+
+建構式能力探針 `tests/td/test_matrix_constructors.py` 的 61 案例 × 三目標／Stage 共 183 項符合 GLSL 4.50 §5.4.1／§5.4.2：159 項接受且數值正確、24 項預期拒絕。涵蓋 scalar／vector／matrix 及雙精度、擴縮與不足分量。此為第二批 Convert 設計依據，沒有因此修改現有 Convert。各探針清除臨時節點並確認既有 Shader／registry 不變；結果只代表此次 Windows／GPU／TD build。
+
+新增驗證入口：`tests/unit/test_matrix_foundation.py`、`test_matrix_sources.py`、`test_matrix_editor.js`，`tests/browser/test_matrix_values.cjs`、`test_matrix_sources.cjs`，以及 `tests/td/test_matrix_nodes.py`、`test_matrix_transport.py`、`test_matrix_sources.py`、`test_matrix_constructors.py`。Browser 腳本自行匯出最新 catalog fixture；TD 測試以協調的開發 runner 單次串行執行，不與其他原生 job 並行。
+
 2026-09-18 值模型／Compare／Note／偏好／整組 Value Ladder 最終 TD 交付：來源刷新更新 7 份 DAT，核對全部 31 份內嵌來源及 9 份 HTTP 資源快照與目前來源一致；core 無錯誤，TOP／MAT Master current，三份現有 Shader 的 state／graph／manifest／pixel_shader／vertex_shader 保留。TOE 保存後再次核對 Shader state，837,526 bytes、SHA-256 `eac3113c4731c5122892c8d6045014fcd002ac84cfd3609f77527bf1f99e8788`，排除一份私人開發助手並恢復現場開發環境。私人報告位於 model-consolidation 的 final-refresh／final-audit／final-save。本次交付使用開發橋接，未操作滑鼠鍵盤或刷新現有 Editor；沒有重跑無關 GPU 壓力測試。
 
 2026-09-18 Parameter 整組 Value Ladder（main `390a1d1`）：新正式 Chromium 測試 14 組在功能分支及主線通過、零頁面錯誤；主線 JavaScript 語法、diff 及 634 個雙語鍵通過。覆蓋固定／通用型別、展開分量、未接線值、Color 不限於 0–1、共同整數界限、純預覽／一筆 Undo、取消、一般重繪、上下文切換、忙碌／唯讀，以及同節點畫布與 Parameter 草稿保護。另以獨立 probe 重驗零位移／來回零位移精度、畫布草稿與重繪後單筆 Undo，四項均通過；Ladder 畫面已檢視。
