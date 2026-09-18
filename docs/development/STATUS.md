@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.100 交付檢查點：模式切換／逐元素光暈修正 `c165aa4` 已整合 main、同步 TD 並保存。20 組 UI preferences、16 組 Note 與 4 組計算樣式檢查通過；32 份來源／9 份資源一致，core 無錯誤、Master current，三份使用者 Shader 保留。TOE 897,894 bytes，SHA-256 `0209d35c31faa0f35842be38938efbef06b8524c3b506d5fba3096d79ba0eea0`，排除一份私人助手。未操作使用者滑鼠鍵盤或重新載入現有網頁。
+
 2026-09-19 表現模式即時切換（0.8.100 實作檢查點）：依手機 review 移除模式間的一秒過渡與對應入場延遲；逐元素限定光暈規則，Professional 全部、Cool 的非光暈元素及 Excellent 以上不使用的選取光暈，均不保留透明 drop-shadow／零強度陰影。原本邊框、基本陰影及 Note 外觀保留；Legendary／Godlike 持續動畫仍維持，本次未全面取消動畫。同步／保存與最終驗證另記，未宣稱實機 iOS 效能量測。
 
 2026-09-19 0.8.99 交付檢查點：空收納入口修正 `4a0162b` 已整合 main、同步 TD 並保存。32 份來源／9 份資源一致、core 無錯誤、Master current，三份使用者 Shader 保留。TOE 898,278 bytes，SHA-256 `e0cfe7ed46355d0e849e86b6854dbc8b8ea41381aca36350da59880cfb103cb1`，排除一份私人助手。
