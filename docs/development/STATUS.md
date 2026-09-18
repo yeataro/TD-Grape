@@ -1,16 +1,16 @@
 # 開發狀態
 
-2026-09-18 Parameter 整組 Value Ladder 已合併、尚待 TD 同步：本地數值列的名稱或型別文字按中鍵，可對所有分量施加相同增量，保留相對差值；支援 Scalar／Vector、固定型別、Color 及未接線輸入值，展開分量列則調整該分量。共用既有階梯手勢，拖動只預覽、放開一筆 Undo；取消完整還原，一般重繪保留手勢，同節點畫布／Parameter 未提交草稿阻止整組操作。整數邊界限制共同增量，不逐欄截斷；沒有位移不改變精度或建立歷史。
+2026-09-18 Parameter 整組 Value Ladder 已合併並同步保存 TD：本地數值列的名稱或型別文字按中鍵，可對所有分量施加相同增量，保留相對差值；支援 Scalar／Vector、固定型別、Color 及未接線輸入的數值型別（bool／bvec 除外），展開分量列則調整該分量。共用既有階梯手勢，拖動只預覽、放開一筆 Undo；取消完整還原，一般重繪保留手勢，同節點畫布／Parameter 未提交草稿阻止整組操作。整數邊界限制共同增量，不逐欄截斷；沒有位移不改變精度或建立歷史。
 
-原生 Uniform／Spec 的目前值及來源定義表單仍沿用原有單欄操作。它們沒有這次的共用名稱／型別數值列；原生多分量功能還需要一次請求、全組驗證／失敗回復及整組 TD Undo，不以多次單欄請求替代。本輪沒有修改 Python、原生參數模式或增加常駐監看。詳見 [Value Ladder](../ui/VALUE_LADDER.md)。
+原生 Uniform／Spec 的目前值及來源定義表單仍沿用原有單欄操作。它們沒有這次的共用名稱／型別數值列；原生多分量功能還需要一次請求、全組驗證／失敗回復及整組 TD Undo，不以多次單欄請求替代。整組 Value Ladder 這筆修改沒有修改 Python、原生參數模式或增加常駐監看。詳見 [Value Ladder](../ui/VALUE_LADDER.md)。
 
-2026-09-18 值模型與介面整理已合併、尚待本批 TD 同步：新增 16 種固定型別建立入口（float／int／uint／bool 及各自 2–4 分量向量），與可選型別的 Scalar／Vector 並存。固定型別身分隨保存／複製／Undo 保留，Scalar／Vector 標題固定；搜尋具體型別可同時找到固定與通用入口，查詢文字不改變通用入口的建立預設。Color RGBA 保留。規則集中於 [值模型](../architecture/VALUE_MODEL.md) 與 [用語表](../GLOSSARY.md)；接線轉換／Convert 與背景工作政策仍是 [待決提案](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)，未藉此次整理變更。
+2026-09-18 值模型與介面整理已合併並同步保存 TD：新增 16 種固定型別建立入口（float／int／uint／bool 及各自 2–4 分量向量），與可選型別的 Scalar／Vector 並存。固定型別身分隨保存／複製／Undo 保留，Scalar／Vector 標題固定；搜尋具體型別可同時找到固定與通用入口，查詢文字不改變通用入口的建立預設。Color RGBA 保留。規則集中於 [值模型](../architecture/VALUE_MODEL.md) 與 [用語表](../GLOSSARY.md)；接線轉換／Convert 與背景工作政策仍是 [待決提案](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)，未藉此次整理變更。
 
 Compare 預設標題固定，Header 選 Auto／型別，Body 首列選完整比較式，與 Parameter 共用設定。僅無輸入接線的 Auto 預設採 int；有線推導排序及 bool 接線規則保持。Note 設定新增左／中／右文字對齊，畫布 Markdown 套用、程式區塊及編輯輸入保持靠左。一般節點註記頁改為隨 Parameter 面板填滿可用高度，說明留在底部，極矮面板可捲動。
 
 新預設採單選與複選工具列、常態多選框、所有向量分量染色，關閉展開時的收合三角提示；已明確儲存的瀏覽器偏好保留。全螢幕期間自動顯示系統時鐘，退出恢復平常偏好，不覆寫設定。這些前端修改及下述整組 Value Ladder 已分筆提交並完成隔離驗證。
 
-目前 TD 仍是整數傳輸限制撤銷後的檢查點：保留兩份使用者 Shader，TOE 807,132 bytes；本段列出的後續介面／值入口尚未寫入 TD，避免把 Git 合併誤報為已部署。來源刷新與 TOE 保存完成後另記交付結果。
+本批已完成 TD 來源刷新、核對及 TOE 保存：更新 core 與六份前端 DAT，31 份內嵌來源、9 份服務資源與工作樹一致，core 無錯誤、TOP／MAT Master current。保留目前三份使用者 Shader；正式 TOE 837,526 bytes，SHA-256 `eac3113c4731c5122892c8d6045014fcd002ac84cfd3609f77527bf1f99e8788`，排除一份私人開發助手。未操作桌面或重新整理使用者現有 Editor；重新整理編輯器即可載入這批 UI。整數精度限制撤銷仍保留，本批沒有重新加回。以下兩份 Shader 與舊 TOE 大小均為較早檢查點的紀錄。
 
 2026-09-18 純量／向量型別基礎完成：共用契約接通 float／int／uint／bool 與各自 2–4 分量向量，共 16 種值型別。新增 Scalar 與 Convert，既有 Float 保留；Graph Constant、Uniform、Vector／Combine／Split／Swizzle／Replace、共用值編輯、Auto、Subgraph／GLSL Code 及保存路徑同步。數學節點按合法簽名開放型別，Compare 維持 scalar 比較與 bool 輸出，If 的結果支援全部 16 型別。Auto 優先保留輸入家族；同維度數值與 numeric scalar splat 可接線轉換，bool／numeric 使用 Convert，不默默丟棄向量分量。矩陣、陣列、Switch Case 與 UV 數字顯示留後續。
 

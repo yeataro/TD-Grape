@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-18 值模型／Compare／Note／偏好／整組 Value Ladder 最終 TD 交付：來源刷新更新 7 份 DAT，核對全部 31 份內嵌來源及 9 份 HTTP 資源快照與目前來源一致；core 無錯誤，TOP／MAT Master current，三份現有 Shader 的 state／graph／manifest／pixel_shader／vertex_shader 保留。TOE 保存後再次核對 Shader state，837,526 bytes、SHA-256 `eac3113c4731c5122892c8d6045014fcd002ac84cfd3609f77527bf1f99e8788`，排除一份私人開發助手並恢復現場開發環境。私人報告位於 model-consolidation 的 final-refresh／final-audit／final-save。本次交付使用開發橋接，未操作滑鼠鍵盤或刷新現有 Editor；沒有重跑無關 GPU 壓力測試。
+
 2026-09-18 Parameter 整組 Value Ladder（main `390a1d1`）：新正式 Chromium 測試 14 組在功能分支及主線通過、零頁面錯誤；主線 JavaScript 語法、diff 及 634 個雙語鍵通過。覆蓋固定／通用型別、展開分量、未接線值、Color 不限於 0–1、共同整數界限、純預覽／一筆 Undo、取消、一般重繪、上下文切換、忙碌／唯讀，以及同節點畫布與 Parameter 草稿保護。另以獨立 probe 重驗零位移／來回零位移精度、畫布草稿與重繪後單筆 Undo，四項均通過；Ladder 畫面已檢視。
 
 同輪測試查出並修正兩項問題：零位移對手填高精度小數多做取位數，以及整組手勢覆寫畫布未提交草稿。額外驗證 Number.MAX_VALUE 仍為有限數、聚焦但未改值的欄位在整組提交／blur／下一次手勢後保持一致，沒有假草稿或額外 Undo。此次僅背景檔案與 headless fixture，未操作 TD、使用者圖或桌面。
@@ -10,7 +12,7 @@
 
 分支另完成註記高度驗證：既有 node notes 3、Markdown 9、Note appearance 16、Note resize 14 組通過；私人版面探針檢查分隔線實際拖動、極矮面板最小輸入高度、窄面板長文捲動及分頁切換，截圖已檢視。Compare 的 9 項 Python control 往返、26 項 Math Auto model 與 10 項 Auto／指定型別產碼等價檢查通過；沒有更動其他節點的推導排序。
 
-整數傳輸限制撤銷已完成第一個 TD 同步／保存檢查點：來源刷新保留兩份使用者 Shader，正式 TOE 807,132 bytes、SHA-256 `0ea53df37ef47610a56141b6da3e0e40851e1f9a69a2e1a7943b1f1e695ab819`，保存排除私人助手。本段後續介面整合仍待 TD 部署；没有重跑原生 GPU 壓力或傳輸探針。無視窗測試不操作使用者桌面，不能代替實體觸控或其他 GPU 驗證。
+整數傳輸限制撤銷已完成第一個 TD 同步／保存檢查點：來源刷新保留兩份使用者 Shader，正式 TOE 807,132 bytes、SHA-256 `0ea53df37ef47610a56141b6da3e0e40851e1f9a69a2e1a7943b1f1e695ab819`，保存排除私人助手。後續介面整合已由上方最終 TD 交付紀錄完成；沒有重跑原生 GPU 壓力或傳輸探針。無視窗測試不操作使用者桌面，不能代替實體觸控或其他 GPU 驗證。
 
 2026-09-18 整數傳輸限制移除，隔離 worktree 驗證：`test_typed_sources`、`test_typed_undo`、`test_spec_constants`、`test_sources`、`test_history` 共 73 項通過。覆蓋完整 int／uint 範圍、負 Spec int、大整數直接寫入與 Undo、非法型別／超界拒絕，以及 Uniform／Spec snapshot 不呼叫驗值。隔離 fixture 的 `test_type_foundation.cjs` 13 組通過、零頁面錯誤，新增原生來源欄位的完整整數上下限、精度邊界值及原始 expected 值保存；631 個雙語鍵通過。原生 TD 腳本已改成驗證合法值不被拒絕，能力探針仍記錄宿主失真；本次沒有執行原生 TD 測試、部署或保存。下方先前的傳輸限制／拒絕測試是舊版實測紀錄，不能作為目前編輯器輸入限制。
 
