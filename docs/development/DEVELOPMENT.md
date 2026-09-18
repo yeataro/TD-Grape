@@ -1,5 +1,7 @@
 # 開發流程
 
+TD 原生 Console、GLSL 診斷及掛起排查見 [開發技巧：外部擷取 TD 原生 Console](TD_NATIVE_CONSOLE.md)。
+
 1. 在 TouchDesigner 開啟 `src/td/TD-Grape-dev.toe`。TOE 中的管理元件會啟動產品 Editor 服務。
 2. 修改 `src/` 中的程式。`source_files.json` 集中記錄實際位置，`embedded_sources.json` 記錄管理元件 DAT 對應。不要另建第二份平行 src。
 3. 要在 TD 啟用本機開發橋接，在 Textport 執行：

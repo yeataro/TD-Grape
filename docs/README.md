@@ -12,6 +12,7 @@
 - [接線轉換與背景工作提案](discussions/CONVERSION_AND_RUNTIME_NEXT.md)：現況、推薦方向與尚未定案的規則。
 - [Uniform 連續編輯與按需同步評估](discussions/UNIFORM_LIVE_EDITING.md)：閃動重現、來源控制權、Binding／WebSocket 候選及主執行緒成本；尚未實作。
 - [開發與更新內嵌程式](development/DEVELOPMENT.md)
+- [開發技巧：外部擷取 TD 原生 Console](development/TD_NATIVE_CONSOLE.md)：不用畫面讀取診斷文字、GLSL 編譯線索與掛起前階段記錄。
 - [測試方式](development/TESTING.md)
 - [獨立 TD Remote Panel 試驗元件](../src/remote_panel/README.md)
 - [目錄與私人工作區](development/PROJECT_LAYOUT.md)
