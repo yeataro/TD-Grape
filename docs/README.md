@@ -10,6 +10,7 @@
 - [陣列與結構後續計畫](discussions/ARRAY_AND_STRUCT_PLAN.md)：原始決策及執行期間補充定案；最新交付狀態以開發狀態為準。
 - [自含式圖封存提案](discussions/GRAPH_ARCHIVE_PROPOSAL.md)：另行評估隨圖打包節點實作與相依定義，尚未實作。
 - [接線轉換與背景工作提案](discussions/CONVERSION_AND_RUNTIME_NEXT.md)：現況、推薦方向與尚未定案的規則。
+- [UI 元件共用調查](discussions/UI_COMPONENT_REUSE_AUDIT.md)：0.8.104 數值編輯、樣式、來源綁定與選單的共用缺口；只有調查，修改待審。
 - [Uniform 連續編輯與按需同步評估](discussions/UNIFORM_LIVE_EDITING.md)：閃動重現、來源控制權、Binding／WebSocket 候選及主執行緒成本；尚未實作。
 - [開發與更新內嵌程式](development/DEVELOPMENT.md)
 - [開發技巧：外部擷取 TD 原生 Console](development/TD_NATIVE_CONSOLE.md)：不用畫面讀取診斷文字、GLSL 編譯線索與掛起前階段記錄。

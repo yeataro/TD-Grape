@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 UI 元件共用調查完成：[報告](../discussions/UI_COMPONENT_REUSE_AUDIT.md) 基於已交付 0.8.104，重現 Array 節點 Escape 取消、Parameter 同欄位 Escape 後失焦仍提交的差異，以及 Parameter INT 欄未套共用底色。建議先審數值草稿核心與欄位樣式，再考慮來源綁定／選單重複。只新增文件；未修改任何調查項目的產品 UI。
+
 2026-09-19 0.8.104 交付檢查點：`b16d22c` 已整合 main，刷新 32 份來源中的 9 份變更，核對 TOP／MAT Master compilerBuild=0.8.104；三份使用者 Shader 及 Master 身分保留。TOE 已保存為 903,830 bytes，SHA-256 `0136db635b6e221c5616973fbe1f11f1636b6af76694be020a97b1e71735628d`，排除一份私人助手。未重載使用者編輯器頁面。接續 UI 共用只讀調查。
 
 2026-09-19 Array Create（0.8.104，實作檢查點）：新增 length／value 接孔，沿用既有數值及型別控制；允許整數 Graph／Spec Constant 與常數運算鏈作長度、Uniform 作填值。未知長度顯示 N，以來源身分產碼，不建立 CPU 求值器或 TD 值鏡像。補齊型別更新、長度相依裁切、剪貼簿及子圖邊界；同一 Function 多實例不同長度來源明確拒絕而非誤用第一份長度。445 項 Python 與完整 portable 檢查通過；6 組新增瀏覽器檢查、12 組既有陣列檢查、42 項 TD TOP／MAT Pixel／Vertex GPU 檢查通過。隔離測試清理成功，既有 Shader／registry 保留。同步／保存另記。後續只調查 UI 共用問題，不修改調查項目。

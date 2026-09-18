@@ -4,7 +4,10 @@
 
 ## UI 元件共用調查（2026-09-19，排在 Array Create 完成後）
 
-- [ ] Array Create 完成後，調查既有 UI 元件是否有應共用卻分別實作的情況。
+- [x] Array Create 完成後，調查既有 UI 元件是否有應共用卻分別實作的情況。
+- [ ] 使用者 review [UI 元件共用調查報告](UI_COMPONENT_REUSE_AUDIT.md)，再決定修改範圍。
+
+0.8.104 Array Create 已交付，調查完成；確認 Array 節點／Parameter 的 Escape 行為差異與樣式覆蓋遺漏，另列來源綁定及選單重複候選。產品 JS／CSS 未因本調查修改，優先建議的 A＋B 也仍待審。
 
 工作順序：Array 長度控制共用修正（0.8.103 已交付）→ Array Create → 本調查。使用者只授權調查，未授權依調查結果修改或重構 UI。
 
