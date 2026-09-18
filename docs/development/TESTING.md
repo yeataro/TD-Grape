@@ -1,5 +1,8 @@
 # 測試
 
+2026-09-19 Array Create：`tools/dev/run_tests.py` 通過（445 Python unit、14 integration、687 雙語 keys、Node suites）。`test_array_create.cjs` 6 組檢查，包含長度數字修改同步下游、執行期長度拒絕、Uniform 填值、複製重映射及兩種子圖擷取；匯出的三份圖另由 core 實際編譯。`test_array_structure.cjs` 12 組既有陣列檢查通過。`tests/td/test_array_create.py` 在 TD 2025.32820 以隔離 fixture 載入工作樹 core，42 項 TOP／MAT Pixel／Vertex GPU 比對全部通過，包含 Spec 值改變時原 Shader 文字不變、Uniform 填值更新、bool／double／非方形矩陣；既有 Shader／registry 不變，fixture 刪除。私人報告在 `work/reports/array-create-round/native`；瀏覽器及 portable 證據在 Documents 工作區 `reports/array-create-round`，不打包進產品。
+
+
 2026-09-19 Array 共用控制（0.8.103）：`test_array_structure.cjs` 12 組、`test_matrix_values.cjs` 15 組及 `test_parameter_values.cjs` 15 組通過。陣列增加與現有 INT／bool 欄位的明暗樣式對照、整數範圍及小數拒絕、Escape、重繪保留草稿、連接型別更新與單次 Undo。舊 `test_inline_vector_values.cjs` 仍尋找已不存在的 `data-vector-expand`，無法用於目前 Vector UI；本批使用現行 Matrix／Parameter 回歸，不將舊測試計為通過。隔離 Chromium 驗證，並非實機 iOS。
 
 2026-09-19 表現模式即時切換（0.8.100）：既有 `test_ui_experiments.cjs` 20 組、`test_note_appearance.cjs` 16 組通過。Note fixture 明確開啟它所操作的展開節點收合提示，修正仍依賴舊預設的前置條件；未更動產品預設。另在私人 `visual-no-transition` 報告保留 4 組 Chromium 計算樣式探針：Professional 與移除整套光暈 CSS 的基準相同（含選取／錯誤節點、Note）；模式即刻切換、無 CSSTransition 或入場延遲、退回 Professional 的 filter 為 none；Cool 非光暈節點／接孔／文字／面板及 Stage 與基本樣式相同；Light／減少動態效果與圖資料不變。未做實機 iOS 效能量測。

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.91",
+  "catalogVersion": "0.8.104",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -3275,6 +3275,45 @@
       "browser": {
         "category": "array",
         "aliases": []
+      }
+    },
+    {
+      "definition": {
+        "key": "array_create",
+        "label": "Array Create",
+        "inputs": {
+          "length": "int",
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "elementType": "float",
+          "length": 4
+        },
+        "inputDefaults": {
+          "length": 4,
+          "value": 0
+        },
+        "descriptionKey": "help.array_create",
+        "definitionUuid": "sgrape.builtin.array_create",
+        "revisionHash": "af74e2e0ae0b054f3ce7f7d9f1fcb19d0f7c1b62c37479585abd1dc823a21efc"
+      },
+      "emitter": {
+        "id": "array_create",
+        "version": 1
+      },
+      "browser": {
+        "category": "array",
+        "aliases": [
+          "array fill",
+          "make array"
+        ]
       }
     }
   ],

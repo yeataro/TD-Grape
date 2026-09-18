@@ -18,6 +18,8 @@
     "Graph"
   ],
   "messages": {
+    "help.array_create": {"zh-Hant": "以整數常數長度建立陣列，每一項填入 value。length 可接 Graph Constant、Spec Constant 或合法常數運算；value 可接執行期資料。", "en": "Creates an array filled with value. Length accepts integral constant expressions; value may vary at runtime."},
+    "array.createHint": {"zh-Hant": "length 須為整數常數；value 填入每個元素，可接 Uniform 等執行期數值。", "en": "Length must be an integral constant expression. Value fills every element and may come from a Uniform."},
     "array.elementType": {"zh-Hant":"元素型別", "en":"Element type"},
     "array.length": {"zh-Hant":"陣列長度", "en":"Array length"},
     "array.fixedLength": {"zh-Hant":"固定數字", "en":"Literal length"},

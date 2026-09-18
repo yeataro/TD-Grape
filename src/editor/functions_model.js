@@ -67,7 +67,7 @@ const GraphTypeDefinitions=(()=>{
   function valid(type,base,definitions=[],depth=0,declarations=[]){
     if(typeof type!=='string'||depth>8)return false;
     if(base.includes(type)||['TDTexInfo','TDMatrix','TDCameraInfo','TDLight'].includes(type)||definitions.some(d=>'struct:'+d.id===type))return true;
-    const match=/^(.+)\[([1-9][0-9]*|TD_NUM_2D_INPUTS|TD_NUM_CAMERAS|TD_NUM_LIGHTS|sg_len_[A-Za-z][A-Za-z0-9_]{0,63})\]$/.exec(type);
+    const match=/^(.+)\[([1-9][0-9]*|TD_NUM_2D_INPUTS|TD_NUM_CAMERAS|TD_NUM_LIGHTS|sg_len_[A-Za-z][A-Za-z0-9_]{0,63}|sg_extent_(?:[0-9a-f]{2})+)\]$/.exec(type);
     return !!(match&&(!match[2].startsWith('sg_len_')||declarations.some(d=>d.id===match[2].slice(7)&&['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type)))&&(!/^\d+$/.test(match[2])||Number(match[2])<=1024)&&valid(match[1],base,definitions,depth+1,declarations));
   }
   function reachable(definitions=[],fragment){
@@ -119,6 +119,7 @@ const FunctionModel=(()=>{
     for(const data of allGraphs(graph))for(const n of data.nodes){
       if(n.definitionUuid===CALL&&mapping.has(n.params.functionId))n.params.functionId=mapping.get(n.params.functionId);
     }
+    GraphArrayLengths.walk([...Object.values(graph.stages),...graph.functions.filter(f=>f.scope==='local')],(ref,old)=>ref.scope.startsWith('fn_')&&mapping.has(ref.scope.slice(3))?GraphArrayLengths.token('fn_'+mapping.get(ref.scope.slice(3)),ref.source):old);
     return mapping;
   }
   function importLibrary(graph,source){
@@ -151,11 +152,36 @@ const FunctionModel=(()=>{
     const source=find(graph,node.params.functionId);if(!source)return null;
     ensureCapacity(graph,1);
     const f=copy(source);f.id=uid();f.name+=' Copy';f.scope='local';f.origin=f.source||f.origin;delete f.source;
+    GraphArrayLengths.walk(f,(ref,old)=>ref.scope==='fn_'+source.id?GraphArrayLengths.token('fn_'+f.id,ref.source):old);
     graph.functions.push(f);node.params.functionId=f.id;return f;
   }
   return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity};
 })();
 if(typeof module!=='undefined'){module.exports=FunctionModel;module.exports.GraphFrames=GraphFrames;module.exports.GraphTypeDefinitions=GraphTypeDefinitions;}
+
+/* Array size identities describe their source, not an evaluated numeric value. */
+const GraphArrayLengths=(()=>{
+  const token=(scope,source)=>'sg_extent_'+[...new TextEncoder().encode([scope,...source].join('\0'))].map(v=>v.toString(16).padStart(2,'0')).join('');
+  function reference(value){
+    if(typeof value!=='string'||!/^sg_extent_(?:[0-9a-f]{2})+$/.test(value))return null;
+    try{const parts=new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(value.slice(10).match(/../g),v=>parseInt(v,16))).split('\0');return parts.length===3&&parts.every(p=>/^[A-Za-z][A-Za-z0-9_]{0,70}$/.test(p))?{scope:parts[0],source:parts.slice(1)}:null;}catch{return null;}
+  }
+  const unit=(document,scope)=>scope.startsWith('fn_')?document.functions?.find(f=>f.id===scope.slice(3))?.graph:document.stages?.[scope];
+  function find(document,value){const ref=reference(value),data=ref&&unit(document,ref.scope),node=data?.nodes.find(n=>n.id===ref.source[0]);return node?{...ref,node,data,name:value,type:'int',kind:'expression'}:null;}
+  function length(document,data,node,scope,links=data.edges,nodes=null){
+    const edge=links.find(e=>e.to[0]===node.id&&e.to[1]==='length');if(!edge)return node.inputValues?.length??node.params.length??4;
+    const source=nodes?nodes.get(edge.from[0]):data.nodes.find(n=>n.id===edge.from[0]),decl=document.declarations?.find(d=>d.id===source?.params.declarationId);
+    if(['sgrape.builtin.constant','sgrape.builtin.spec_constant'].includes(source?.definitionUuid)&&['constant','spec_constant'].includes(decl?.kind)&&['int','uint'].includes(decl.type))return 'sg_len_'+decl.id;
+    if(source?.definitionUuid==='sgrape.builtin.scalar'&&['int','uint'].includes(source.params.type)&&Number.isInteger(source.params.value))return source.params.value;
+    return token(scope,edge.from);
+  }
+  function walk(value,replace){
+    if(Array.isArray(value)){value.forEach(v=>walk(v,replace));return;}if(!value||typeof value!=='object')return;
+    for(const key of Object.keys(value))if(['type','elementType','fromType','toType','fixedType','length'].includes(key)&&typeof value[key]==='string')value[key]=value[key].replace(/\bsg_extent_(?:[0-9a-f]{2})+\b/g,old=>{const ref=reference(old);return ref?replace(ref,old):old;});else if(!['code','ui','source','origin'].includes(key))walk(value[key],replace);
+  }
+  return {token,reference,unit,find,length,walk};
+})();
+if(typeof module!=='undefined')module.exports.GraphArrayLengths=GraphArrayLengths;
 
 /* Portable selection snapshots contain graph data only, never editor credentials. */
 const GraphLengthReferences=(()=>{
@@ -260,6 +286,8 @@ const GraphClipboard=(()=>{
     if(newSlots.length){if(!graph.topInputs){const legacy=graph.declarations.find(d=>d.source==='input:0');graph.topInputs=[{id:'input0',name:'Input 0',defaultSource:legacy?.defaultSource||'builtin:banana',matchDefault:!!legacy?.defaultSource}];}if(graph.topInputs.length+newSlots.length>16)fail('clipboard.size');if(graph.declarations.some(d=>d.source==='input:0'))graph.topInputLegacyId||=graph.topInputs[0].id;graph.topInputs.push(...newSlots);}
     graph.functions||=[];graph.functions.push(...newFunctions);graph.declarations.push(...newDeclarations);
     const remap=new Map(content.nodes.map(n=>[n.id,id()])),x=Math.min(...content.nodes.map(n=>n.ui.x)),y=Math.min(...content.nodes.map(n=>n.ui.y)),frames=GraphFrames.copy(content,remap.keys(),remap);
+    const scope=graph.functions.find(f=>f.graph===data),destination=scope?'fn_'+scope.id:stage;
+    GraphArrayLengths.walk([content,newFunctions],(ref,old)=>ref.scope.startsWith('fn_')&&functionMap.has(ref.scope.slice(3))?GraphArrayLengths.token('fn_'+functionMap.get(ref.scope.slice(3)),ref.source):remap.has(ref.source[0])?GraphArrayLengths.token(destination,[remap.get(ref.source[0]),ref.source[1]]):old);
     for(const node of content.nodes){node.id=remap.get(node.id);node.ui={...node.ui,x:node.ui.x-x+anchor.x,y:node.ui.y-y+anchor.y};data.nodes.push(node);}
     for(const edge of content.edges)data.edges.push({from:[remap.get(edge.from[0]),edge.from[1]],to:[remap.get(edge.to[0]),edge.to[1]]});
     if(frames.length)GraphFrames.write(data,[...GraphFrames.read(data),...frames]);

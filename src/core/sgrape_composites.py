@@ -11,7 +11,34 @@ TYPE_ID = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 GLSL_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,47}$')
 RESERVED_NAMES = frozenset('struct uniform const buffer shared in out inout void if else for while do switch case default break continue return discard layout true false attribute varying precision highp mediump lowp bool int uint float double'.split())
 ARRAY_TYPE = re.compile(r'^([^\[\]]+)\[([A-Za-z_][A-Za-z0-9_]*|[0-9]+)\](.*)$')
-KEYS = ('array', 'array_get', 'array_replace', 'array_length', 'struct_field', 'builtin_source')
+KEYS = ('array', 'array_create', 'array_get', 'array_replace', 'array_length', 'struct_field', 'builtin_source')
+
+def expression_length(scope,source):
+    return 'sg_extent_'+('\0'.join((scope,*source))).encode('utf-8').hex()
+
+def creation_lengths(graph):
+    """Describe size provenance; never evaluate the upstream GLSL expression."""
+    declarations={d.get('id'):d for d in graph.get('declarations',[]) if isinstance(d,dict)}
+    units=list(graph.get('stages',{}).items())+[('fn_'+f['id'],f.get('graph',{})) for f in graph.get('functions',[]) if isinstance(f,dict) and isinstance(f.get('id'),str)]
+    expressions={};bindings={}
+    for scope,data in units:
+        nodes={n.get('id'):n for n in data.get('nodes',[]) if isinstance(n,dict)}
+        if not any(n.get('definitionUuid')=='sgrape.builtin.array_create' for n in nodes.values()):continue
+        incoming={tuple(e['to']):tuple(e['from']) for e in data.get('edges',[]) if isinstance(e,dict) and isinstance(e.get('to'),list) and len(e['to'])==2 and isinstance(e.get('from'),list) and len(e['from'])==2}
+        for ident,n in nodes.items():
+            if n.get('definitionUuid')!='sgrape.builtin.array_create':continue
+            length=n.get('inputValues',{}).get('length',n.get('params',{}).get('length',4));source=incoming.get((ident,'length'))
+            if source:
+                upstream=nodes.get(source[0],{});params=upstream.get('params',{});decl=declarations.get(params.get('declarationId'),{})
+                if upstream.get('definitionUuid') in ('sgrape.builtin.constant','sgrape.builtin.spec_constant') and decl.get('kind') in ('constant','spec_constant') and decl.get('type') in ('int','uint'):
+                    length='sg_len_'+decl['id']
+                elif upstream.get('definitionUuid')=='sgrape.builtin.scalar' and params.get('type') in ('int','uint') and type(params.get('value')) is int:
+                    length=params['value']
+                else:
+                    length=expression_length(scope,source)
+                    expressions[length]=dict(name=length,type='int',kind='expression',scope=scope,source=source)
+            bindings[(scope,ident)]=length
+    return expressions,bindings
 
 def fields(*items):
     return [dict(id=name,name=name,type=ty) for name,ty in items]
@@ -38,11 +65,13 @@ LENGTH_MACROS = {'TD_NUM_2D_INPUTS':dict(targets=['top'],stages=['pixel']),
                  'TD_NUM_LIGHTS':dict(targets=['mat'],stages=['vertex','pixel'])}
 
 class Registry:
-    def __init__(self,base_types,definitions=(),error=ValueError,declarations=()):
+    def __init__(self,base_types,definitions=(),error=ValueError,declarations=(),graph=None):
         self.base=base_types;self.error=error;self.structs=copy.deepcopy(BUILTIN_STRUCTS);self.cache={};self.checked=set();self.environments=set()
         self.lengths={'sg_len_'+d['id']:d for d in declarations if isinstance(d,dict)
                      and isinstance(d.get('id'),str) and TYPE_ID.fullmatch(d['id'])
-                     and d.get('kind') in ('constant','spec_constant') and d.get('type') in ('int','uint')}
+                      and d.get('kind') in ('constant','spec_constant') and d.get('type') in ('int','uint')}
+        expressions,self.creations=creation_lengths(graph or {})
+        self.lengths.update(expressions)
         if not isinstance(definitions,(list,tuple)) or len(definitions)>64:self.fail('At most 64 structure definitions are supported')
         for item in definitions:
             if not isinstance(item,dict):self.fail('Invalid structure definition')
@@ -160,13 +189,20 @@ class Registry:
         d=self.describe(ty)
         if d['kind']=='array':
             source=self.lengths.get(d['length'])
-            return ({source['id']} if source else set())|self.length_dependencies(d['elementType'])
+            return ({source['id']} if source and 'id' in source else set())|self.length_dependencies(d['elementType'])
         if d['kind']=='struct':return set().union(*(self.length_dependencies(f['type']) for f in d['definition']['fields']))
         return set()
 
     def specialized(self,ty):
         d=self.describe(ty)
-        return d['kind']=='array' and (self.lengths.get(d['length'],{}).get('kind')=='spec_constant' or self.specialized(d['elementType']))
+        source=self.lengths.get(d.get('length'),{})
+        return d['kind']=='array' and (source.get('kind')=='spec_constant' or source.get('specialized',False) or self.specialized(d['elementType']))
+
+    def expression_dependencies(self,ty):
+        d=self.describe(ty)
+        if d['kind']=='array':
+            return ({d['length']} if self.lengths.get(d['length'],{}).get('kind')=='expression' else set())|self.expression_dependencies(d['elementType'])
+        return set()
 
     def copy_value(self,target,source,ty):
         """Specialization-sized arrays cannot use GLSL aggregate assignment."""
@@ -232,13 +268,13 @@ class Registry:
 
     def interface(self,key,params):
         if key=='builtin_source':return dict(inputs={},outputs={'out':self.source(params.get('source','uTD2DInfos'))['type']})
-        if key=='array':
+        if key in ('array','array_create'):
             element=params.get('elementType','float');length=params.get('length',4)
             self.describe(element)
             if type(length) is not int and (not isinstance(length,str) or length not in self.lengths and length not in LENGTH_MACROS):self.fail('Array length must be an integer or a constant reference')
             ty=self.array_type(element,length);self.describe(ty)
             if self.opaque(ty):self.fail('Opaque resources must come from a source; they cannot be initialized')
-            return dict(inputs={},outputs={'out':ty})
+            return dict(inputs={'length':'int','value':element} if key=='array_create' else {},outputs={'out':ty})
         ty=params.get('type','TDTexInfo' if key=='struct_field' else 'float[4]')
         if key=='struct_field':return dict(inputs={'value':ty},outputs={'out':self.field(ty,params.get('field','res'))['type']})
         d=self.describe(ty)

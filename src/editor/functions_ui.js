@@ -215,7 +215,13 @@ function groupSelection(){
     nodes.push({id:'input',name:uniqueNodeName('Input',null,nodes),definitionUuid:FunctionModel.INPUT,params:{},ui:{x:24,y:144}},{id:'output',name:uniqueNodeName('Output',null,nodes),definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:Math.max(...nodes.map(n=>n.ui.x))+288,y:144}});
     const f={id,name:'Function '+((graph.functions||[]).filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs,outputs,graph:{nodes,edges}};
     GraphFrames.write(f.graph,GraphFrames.copy(data,ids));
+    const owner=(graph.functions||[]).find(item=>item.graph===data),oldScope=owner?'fn_'+owner.id:stage;
     graph.functions||=[];graph.functions.push(f);data.nodes=data.nodes.filter(n=>!ids.has(n.id));data.nodes.push({id:callId,definitionUuid:FunctionModel.CALL,params:{functionId:id},ui:{x,y}});assignCreatedNodeNames([data.nodes.at(-1)]);data.edges=outside;selected=callId;selection=new Set([callId]);selectedEdge=null;
+    GraphArrayLengths.walk(graph,(ref,old)=>ref.scope===oldScope&&ids.has(ref.source[0])?GraphArrayLengths.token('fn_'+id,ref.source):old);
+    if(chosen.some(n=>n.definitionUuid==='sgrape.builtin.array_create')){
+      const plan=planAutoGraph(graph,f.graph,f);
+      for(const port of f.outputs){const edge=edges.find(e=>e.to[0]==='output'&&e.to[1]===port.id);if(edge)port.type=plan.ports.get(edge.from[0]).outputs[edge.from[1]];}
+    }
   });
 }
 function renameGraphFunction(id,value){

@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 Array Create（0.8.104，實作檢查點）：新增 length／value 接孔，沿用既有數值及型別控制；允許整數 Graph／Spec Constant 與常數運算鏈作長度、Uniform 作填值。未知長度顯示 N，以來源身分產碼，不建立 CPU 求值器或 TD 值鏡像。補齊型別更新、長度相依裁切、剪貼簿及子圖邊界；同一 Function 多實例不同長度來源明確拒絕而非誤用第一份長度。445 項 Python 與完整 portable 檢查通過；6 組新增瀏覽器檢查、12 組既有陣列檢查、42 項 TD TOP／MAT Pixel／Vertex GPU 檢查通過。隔離測試清理成功，既有 Shader／registry 保留。同步／保存另記。後續只調查 UI 共用問題，不修改調查項目。
+
 2026-09-19 最新工作順序：0.8.103 共用控制已交付，接續 Array Create；完成後進行[UI 元件共用調查](../discussions/UX_BACKLOG.md)。後者僅調查與提出建議，不修改 UI，須另經使用者審查。
 
 2026-09-19 0.8.103 交付檢查點：`841b6d3` 已整合 main，刷新 runtime／style_css／inspector_js 並核對 32 份來源；三份使用者 Shader 保留。TOE 已保存為 899,238 bytes，SHA-256 `70518fa17c4c8c01f930c3aed4e74d767db5f6a55677b263d89b63979c574601`，排除一份私人助手；未重載使用者目前的編輯器頁面。

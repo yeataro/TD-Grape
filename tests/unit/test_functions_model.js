@@ -20,3 +20,12 @@ assert.deepEqual(m.find(nested,parent.id),parent);
 assert.equal(m.find(nested,nestedMap.get(parent.id)).graph.nodes[0].params.functionId,nestedMap.get(source.id));
 assert.equal(nested.stages.pixel.nodes[0].params.functionId,nestedMap.get(parent.id));
 console.log('Function model: reuse, Shader isolation, copy-on-write, independent calls and nested source preservation passed');
+
+// Expression-sized interfaces retain provenance through copy-on-write identities.
+const lengths=m.GraphArrayLengths,sized=graph(),token=lengths.token('fn_sized',['sum','out']);
+const sizedFn={...structuredClone(source),id:'sized',outputs:[{id:'array',type:'float['+token+']'}]};
+m.importLibrary(sized,sizedFn);sized.stages.pixel.nodes.push(call('use','sized'));
+const sizedMap=m.localize(sized,'sized'),localized=m.find(sized,sizedMap.get('sized'));
+assert.equal(localized.outputs[0].type,'float['+lengths.token('fn_'+localized.id,['sum','out'])+']');
+const sizedCopy=m.independent(sized,sized.stages.pixel.nodes[0]);
+assert.equal(sizedCopy.outputs[0].type,'float['+lengths.token('fn_'+sizedCopy.id,['sum','out'])+']');

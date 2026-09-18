@@ -389,6 +389,7 @@ function defaultInput(n,port,type){
   if(isResourceType(type)||isCompositeType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
   const key=definition(n)?.key;
+  if(key==='array_create'&&port==='length')return n.params.length??4;
   if(['matrix_combine','matrix_replace'].includes(key)){
     if(port==='value')return null;
     const match=/^c([0-3])([xyzw])?$/.exec(port);
@@ -535,6 +536,7 @@ function applyValueComponentHint(element,n,port,index,vector,labels){
     applyComponentColorHint(element,Math.max(0,start)+index,labels==='RGBA');
   }else {applyPortColorHint(element,n,'inputs',port);if(element.dataset.vectorComponent!==undefined)element.classList.add('component-tint-label');}
 }
+function nodeInputOptions(n,port){return definition(n)?.key==='array_create'&&port==='length'?{typeChange:true,min:1,max:typeContract.composites.array.maxLength||1024}:{};}
 function parameterValueRow(n,key,label,type,read,write,labels='XYZW',options={}){
   const matrixShape=typeContract?.types?.[type];
   if(matrixShape?.shape==='matrix'){
@@ -570,6 +572,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW',options={})
     if(!componentWritable(index)){entry.placeholder='—';entry.title=t('vector.inherited');}
     applyValueComponentHint(entry,n,key,index,vector,labels);
     if(['int','uint'].includes(scalarType)){entry.min=scalarType==='uint'?'0':'-2147483648';entry.max=scalarType==='uint'?'4294967295':'2147483647';}
+    if(options.min!==undefined)entry.min=String(options.min);if(options.max!==undefined)entry.max=String(options.max);
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
     const focus=()=>{if(own(entry))parameterValueEdit={entry,node:n,owner:current(),signature:inlineValueSignature(n)};};
@@ -580,7 +583,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW',options={})
       const next=Number(entry.value);
       if(!entry.value.trim()||!Number.isFinite(next)||(['int','uint'].includes(scalarType)&&(!Number.isInteger(next)||next<Number(entry.min)||next>Number(entry.max)))){entry.setAttribute('aria-invalid','true');return;}
       if(parameterValueEdit?.entry===entry&&parameterValueEdit.signature!==inlineValueSignature(n)){restore();return;}
-      if(!change(()=>write(index,next),{redraw:false}))return;
+      if(!change(()=>write(index,next),{redraw:false,typeChange:options.typeChange===true}))return;
       const focusedDraft=entries.find(peer=>peer!==entry&&peer===document.activeElement&&peer.hasPendingEdit?.());
       syncing=true;const latest=currentValues();for(const peer of entries)if(peer.dataset.component!==focusedDraft?.dataset.component)peer.setSyncedValue(latest[Number(peer.dataset.component)]);syncing=false;
       if(definition(n)?.key==='color'&&key==='$value'){
@@ -1036,7 +1039,7 @@ function nodeTypeSelector(n,d){
 }
 function nodePrimarySelector(n,d){
   if(!d)return null;let control=null;
-  if(isCompositeOperation(d))control=d.key==='array'?arrayElementSelector(n):null;
+  if(isCompositeOperation(d))control=['array','array_create'].includes(d.key)?arrayElementSelector(n):null;
   else if(isConvertOperation(d))control=convertTypeSelector(n,'toType');
   else if(n.params.type)control=nodeTypeSelector(n,d);
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
@@ -1047,7 +1050,7 @@ function nodePrimarySelector(n,d){
 }
 function arrayElementSelector(n){
   const options=graphValueTypes().filter(type=>typeDescriptor(type)?.shape!=='array'||typeof typeDescriptor(type).length==='number');
-  const control=select(options.map(type=>[type,displayType(type)]),n.params.elementType||'float',value=>change(()=>n.params.elementType=value,{typeChange:true}));
+  const control=select(options.map(type=>[type,displayType(type)]),n.params.elementType||'float',value=>change(()=>{n.params.elementType=value;if(definition(n)?.key==='array_create'&&Object.hasOwn(n.inputValues||{},'value'))n.inputValues.value=compositeValue(n.inputValues.value,value);},{typeChange:true}));
   control.dataset.arrayElementType=n.id;control.title=t('array.elementType');control.disabled=readonly;return control;
 }
 function structFieldSelector(n){
@@ -1063,6 +1066,8 @@ function compositeInspector(box,n,d){
     const length=arrayLengthControl(n.params.length??4,value=>change(()=>n.params.length=value,{typeChange:true}));
     const lengthInput=length.querySelector('input');if(lengthInput)lengthInput.dataset.arrayLength=n.id;
     box.append(parameterControlRow(t('array.length'),length),parameterControlRow('',parameterHint(t('array.lengthSourceHint'))),parameterControlRow('',parameterHint(t('array.initializationHint'))));
+  }else if(d.key==='array_create'){
+    box.append(parameterControlRow(t('array.elementType'),arrayElementSelector(n)),parameterControlRow('',parameterHint(t('array.createHint'))));
   }else if(d.key==='builtin_source'){
     const choices=builtinSourceEntries(d).map(entry=>[entry.defaults.source,entry.label]);
     const source=select(choices,n.params.source,value=>change(()=>n.params.source=value,{typeChange:true}));source.dataset.builtinSource=n.id;source.disabled=readonly;
@@ -1201,6 +1206,7 @@ function inlineNumericFields(n,port,value,write,labels='XYZW',options={}){
     const entry=el('input',{type:'number',step:integer?'1':'any','aria-label':label});
     entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.value=String(v);
     if(integer){entry.min=family==='uint'?'0':'-2147483648';entry.max=family==='uint'?'4294967295':'2147483647';}
+    if(options.min!==undefined)entry.min=String(options.min);if(options.max!==undefined)entry.max=String(options.max);
     applyValueComponentHint(entry,n,port,index,values.length>1,labels);
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
@@ -1285,7 +1291,7 @@ function nodeInlineValues(n,port){
     const old=defaultInput(n,port,type),updated=Array.isArray(old)?old.slice():old;
     if(Array.isArray(updated))updated[index]=next;
     setNodeInputValue(n,port,Array.isArray(updated)?updated:next);
-  },key==='replace'?vectorNames(n):'XYZW');
+  },key==='replace'?vectorNames(n):'XYZW',nodeInputOptions(n,port));
 }
 function nodeFixedValueEditor(n){
   const key=definition(n)?.key;if(!['scalar','float','color','vector','vec2','vec3','vec4'].includes(key))return null;
@@ -1414,7 +1420,7 @@ function inspector(){
         if(ordinary){
           heading.remove();section.prepend(parameterValueRow(n,port,portLabel(n,'inputs',port),typeInfo.text,()=>defaultInput(n,port,type),(index,next)=>{
             const old=defaultInput(n,port,type);if(Array.isArray(old)){old[index]=next;setNodeInputValue(n,port,old);}else setNodeInputValue(n,port,next);
-          },port==='color'?'RGBA':isVectorOperation(d)?vectorNames(n):'XYZW'));
+          },port==='color'?'RGBA':isVectorOperation(d)?vectorNames(n):'XYZW',nodeInputOptions(n,port)));
         }else {const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>setNodeInputValue(n,port,next)),false,port==='color'?'RGBA':'XYZW',type);values.classList.add('input-values');section.append(values);}
       }
       if(connection){

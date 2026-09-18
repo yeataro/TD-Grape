@@ -66,7 +66,7 @@ def type_registry():
 @contextmanager
 def type_context(graph=None):
     if graph is not None and not isinstance(graph,dict):raise GraphError('Invalid Graph structure')
-    registry=_composites.Registry(TYPE_DESCRIPTORS,(graph or {}).get('typeDefinitions',[]),error=GraphError,declarations=(graph or {}).get('declarations',[]))
+    registry=_composites.Registry(TYPE_DESCRIPTORS,(graph or {}).get('typeDefinitions',[]),error=GraphError,declarations=(graph or {}).get('declarations',[]),graph=graph)
     token=_TYPE_CONTEXT.set(registry)
     try:yield registry
     finally:_TYPE_CONTEXT.reset(token)
@@ -117,6 +117,7 @@ CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant
     'range_from','range_to','scalar','convert','matrix_convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',
     'array','array_get','array_length','struct_field'))
+SPECIALIZATION_EXPRESSIONS = frozenset(('relay','add','subtract','multiply','divide','convert','matrix_convert','scalar','vector','combine','swizzle','split','vector_split','compare','if'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
 MATRIX_KEYS = ('matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
@@ -559,6 +560,7 @@ def _type_contract():
                          'pairs':{source:[target for target in TYPES if explicit_conversion_valid(source,target)] for source in TYPES},
                          'outputTypesByNode':{key:list(types) for key,types in CONVERT_OUTPUT_TYPES.items()}},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
+              'specializationExpressions':sorted(SPECIALIZATION_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
               'definitions': variants,'composites':type_registry().contract()}
@@ -815,6 +817,7 @@ def _compile_flat(graph,annotation_scopes=None):
     # Internal annotation memberships do not consume the user's graph budget.
     sized=copy.deepcopy(graph)
     for data in sized.get('stages',{}).values():
+        data.pop('extentSources',None);data.pop('extentAlternatives',None)
         for item in data.get('nodes',[]):
             item.pop('_annotationScopes',None);item.pop('_symbolStem',None)
     if len(json.dumps(sized,allow_nan=False))>512000: raise GraphError('Graph exceeds 512 KB')
@@ -989,6 +992,9 @@ def _compile_flat(graph,annotation_scopes=None):
                 if defs[ident]['key']!='replace':return set(ports[ident]['in'])
                 mapped=component_sources[ident]
                 return {port for port,offset in mapped if port is not None}
+            extent_sources=data.get('extentSources',{})
+            extent_refs={ident:set().union(*(type_registry().expression_dependencies(ty) for direction in p.values() for ty in direction.values())) for ident,p in ports.items()}
+            extra_sources={ident:{extent_sources[token] for token in refs if token in extent_sources} for ident,refs in extent_refs.items()}
             visited=set(); active=set(); order=[]
             def visit(ident):
                 if ident in active: raise GraphError('Cycle detected',ident)
@@ -997,12 +1003,24 @@ def _compile_flat(graph,annotation_scopes=None):
                 for port in sorted(ports[ident]['in']):
                     source=links.get((ident,port))
                     if source: visit(source[0])
+                for source in sorted(extra_sources[ident]):visit(source[0])
                 active.remove(ident); visited.add(ident); order.append(ident)
             # Reject cycles even in disconnected edits. Only live nodes are emitted.
             for ident in sorted(nodes): visit(ident)
-            constant_nodes=set();constant_outputs=set()
+            constant_nodes=set();constant_outputs=set();specialization_outputs=set()
             for ident in order:
                 key=defs[ident]['key']
+                if key=='spec_constant':specialization_outputs.add((ident,'out'))
+                if key in SPECIALIZATION_EXPRESSIONS:
+                    sources=[links[(ident,p)] for p in effective_inputs(ident) if (ident,p) in links]
+                    if any(s in specialization_outputs for s in sources) and all(s in constant_outputs or s in specialization_outputs for s in sources):
+                        specialization_outputs.update((ident,p) for p in ports[ident]['out'])
+                if key=='array_create':
+                    source=links.get((ident,'length'))
+                    if source and (ports[source[0]]['out'][source[1]] not in ('int','uint') or source not in constant_outputs|specialization_outputs):raise GraphError('Array Create length requires an integral constant expression',ident)
+                    length=type_registry().describe(ports[ident]['out']['out'])['length']
+                    if length in type_registry().lengths and type_registry().lengths[length].get('kind')=='expression':type_registry().lengths[length]['specialized']=source in specialization_outputs
+                if key=='array_length' and type_registry().specialized(ports[ident]['in']['Array']):specialization_outputs.add((ident,'out'))
                 if key=='array' and not isinstance(type_registry().describe(ports[ident]['out']['out'])['length'],int):
                     if nodes[ident]['params'].get('requireConstant'):raise GraphError('Symbolic array initialization is not an ordinary constant expression',ident)
                     continue
@@ -1019,6 +1037,14 @@ def _compile_flat(graph,annotation_scopes=None):
                     constant_nodes.add(ident)
                 if nodes[ident]['params'].get('requireConstant') and ident not in constant_nodes:
                     raise GraphError('Require Constant: this value depends on runtime data or an unsupported constant expression',ident)
+            expression_ids={}
+            def expression_identity(source):
+                if source in expression_ids:return expression_ids[source]
+                ident,output=source;n=nodes[ident]
+                inputs={port:expression_identity(links[(ident,port)]) if (ident,port) in links else n.get('inputValues',{}).get(port,input_default(defs[ident]['key'],port,ports[ident]['in'][port])) for port in effective_inputs(ident,output)}
+                identity=digest([defs[ident]['key'],n['params'],output,inputs]);expression_ids[source]=identity;return identity
+            for token,sources in data.get('extentAlternatives',{}).items():
+                if len(sources)>1 and len({expression_identity(source) for source in sources})>1:raise GraphError('Function instances require the same array length source; use a shared constant or separate definitions',sources[-1][0])
             # Follow output-specific dependencies before choosing node order.
             # A fully replaced baseline (or an unused runtime component) is not
             # evaluated just because its wire remains visible in the editor.
@@ -1029,17 +1055,33 @@ def _compile_flat(graph,annotation_scopes=None):
                 needed_outputs[ident].add(output)
                 inputs=effective_inputs(ident,output);needed_inputs.setdefault(ident,set()).update(inputs)
                 pending.extend(links[(ident,port)] for port in inputs if (ident,port) in links)
+                pending.extend(extra_sources[ident])
             visited.clear();order.clear()
             def visit_live(ident):
                 if ident in visited:return
                 for port in sorted(needed_inputs[ident]):
                     if (ident,port) in links:visit_live(links[(ident,port)][0])
+                for source in sorted(extra_sources[ident]):visit_live(source[0])
                 visited.add(ident);order.append(ident)
             visit_live(outputs[0])
             live=set(order)
+            required_extents=set().union(*(extent_refs[ident] for ident in live))
+            global_nodes=set();extent_aliases={}
+            def demand_extent(source):
+                ident,output=source
+                if source not in constant_outputs|specialization_outputs:raise GraphError('Array length requires a constant expression',ident)
+                if ident in global_nodes:return
+                global_nodes.add(ident)
+                for port in effective_inputs(ident,output):
+                    if (ident,port) in links:demand_extent(links[(ident,port)])
+                for dependency in extra_sources[ident]:demand_extent(dependency)
+            for token in sorted(required_extents):
+                source=extent_sources.get(token)
+                if source is None:raise GraphError('Array length expression source is unavailable in this scope')
+                demand_extent(source);extent_aliases.setdefault(source[0],[]).append((token,source))
             # Qualify constant chains only when requested or consumed by the new
             # vector operations. Old graphs keep their generated text unchanged.
-            const_emit=set();const_emit_outputs=set()
+            const_emit=set(global_nodes);const_emit_outputs=set()
             def demand_constant(ident,output):
                 if (ident,output) in const_emit_outputs or (ident,output) not in constant_outputs:return
                 const_emit_outputs.add((ident,output))
@@ -1052,7 +1094,7 @@ def _compile_flat(graph,annotation_scopes=None):
             for ident in sorted(set(nodes)-live):
                 if defs[ident]['key']!='comment':diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
             symbols=node_output_symbols(nodes,defs,ports)
-            expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[]
+            expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[];extent_lines=[];extent_nodes=[]
             compound_used=set()
             def inp(ident,port):
                 target=ports[ident]['in'][port]; source=links.get((ident,port))
@@ -1099,6 +1141,12 @@ def _compile_flat(graph,annotation_scopes=None):
                         lines.append('    '+glsl_declaration(ty,variable)+';')
                         lines.extend(type_registry().initialize(variable,ty,filled_value,literal))
                         expressions[(ident,'out')]=variable
+                elif k=='array_create':
+                    variable=symbols[(ident,'out')];shape=type_registry().describe(ty);length=type_registry().extent(shape['length'])
+                    lines.append('    '+glsl_declaration(ty,variable)+';')
+                    lines.append('    for (int sg_fill_i = 0; sg_fill_i < '+length+'; ++sg_fill_i) {')
+                    lines.extend('    '+line for line in type_registry().copy_value(variable+'[sg_fill_i]',a('value'),shape['elementType']))
+                    lines.append('    }');expressions[(ident,'out')]=variable
                 elif k=='builtin_source':expr=type_registry().source(p['source'],graph_target(graph),stage)['expression']
                 elif k in ('array_get','array_replace','array_length'):
                     array_type=ports[ident]['in']['Array'];shape=type_registry().describe(array_type);length=type_registry().extent(shape['length'])
@@ -1293,8 +1341,13 @@ def _compile_flat(graph,annotation_scopes=None):
                         # statement. Keep their marker without inventing code.
                         lines.extend(label_lines)
                 lines.extend(_comment_lines(note.get('comment'),'Comment'))
+                if ident in global_nodes:
+                    extent_lines.extend(lines[line_start:]);extent_nodes.extend(dict(node=ident,stage=stage,trail=[]) for _ in lines[line_start:]);del lines[line_start:]
+                for token,source in extent_aliases.get(ident,[]):
+                    extent_lines.append('const int '+token+' = int('+expressions[source]+');');extent_nodes.append(dict(node=ident,stage=stage,trail=[]))
                 line_nodes.extend([ident]*(len(lines)-line_start))
             lines,line_nodes=_scope_comments(lines,line_nodes,nodes,annotation_scopes or {},stage)
+            helpers=extent_lines+helpers;helper_nodes=extent_nodes+helper_nodes
             stages[stage]={'lines':lines,'ports':ports,'live':sorted(live),'lineNodes':line_nodes,'helpers':helpers,'helperNodes':helper_nodes,'compoundTypes':compound_used}
         except GraphError as exc:
             exc.stage=stage; raise
@@ -1423,7 +1476,7 @@ def _expand(graph,functions):
     expanded=copy.deepcopy(graph); expanded.pop('functions',None)
     origins={};annotation_scopes={}
     for stage in graph_stages(graph):
-        flat={'nodes':[],'edges':[]}; budget=[0]
+        flat={'nodes':[],'edges':[],'extentSources':{},'extentAlternatives':{}}; budget=[0]
         def scope_record(identity,n,path,node_id,depth):
             ui=n.get('ui',{});ui=ui if isinstance(ui,dict) else {}
             if not any(isinstance(ui.get(k),str) and ui[k].strip() for k in ('label','comment')):return None
@@ -1514,6 +1567,12 @@ def _expand(graph,functions):
                         exc.node=ident;raise
                     maps[ident]={'in':{p:[nid,p] for p in templates['inputs']},'out':{p:[nid,p] for p in templates['outputs']}}
             if boundary is not None and (kinds.count(FUNCTION_INPUT)!=1 or kinds.count(FUNCTION_OUTPUT)!=1): raise GraphError('Exactly one Function Input and Output are required')
+            scope='fn_'+path[-1][0] if path else stage
+            for token,info in type_registry().lengths.items():
+                if info.get('kind')=='expression' and info['scope']==scope:
+                    source,port=info['source']
+                    if source in maps and port in maps[source]['out']:
+                        binding=tuple(maps[source]['out'][port]);flat['extentSources'].setdefault(token,binding);flat['extentAlternatives'].setdefault(token,[]).append(binding)
             for e in data['edges']:
                 try:
                     src,sp=e['from']; dst,dp=e['to']
@@ -1546,7 +1605,7 @@ def validate_graph_frames(data):
 
 def _infer_graph_types(graph):
     """Resolve compound nodes from upstream ports without persisting derived type state."""
-    dynamic={CATALOG[key]['definitionUuid'] for key in ('array_get','array_replace','array_length','struct_field')}
+    dynamic={CATALOG[key]['definitionUuid'] for key in ('array_create','array_get','array_replace','array_length','struct_field')}
     scoped=list(graph.get('stages',{}).values())+[f.get('graph',{}) for f in graph.get('functions',[]) if isinstance(f,dict)]
     if not any(n.get('definitionUuid') in dynamic for data in scoped if isinstance(data,dict)
                for n in data.get('nodes',[]) if isinstance(n,dict)):
@@ -1554,7 +1613,7 @@ def _infer_graph_types(graph):
     result=copy.deepcopy(graph)
     functions={f.get('id'):f for f in result.get('functions',[]) if isinstance(f,dict)}
     declarations={d.get('id'):d for d in result.get('declarations',[]) if isinstance(d,dict)}
-    def infer(data,boundary=None):
+    def infer(data,scope,boundary=None):
         if not isinstance(data,dict) or not isinstance(data.get('nodes'),list):return
         nodes={n.get('id'):n for n in data['nodes'] if isinstance(n,dict)};incoming={}
         for e in data.get('edges',[]):
@@ -1585,18 +1644,22 @@ def _infer_graph_types(graph):
                 if key in ('array_get','array_replace','array_length','struct_field'):
                     source=source_type('value' if key=='struct_field' else 'Array')
                     if source:p['type']=source
+                if key=='array_create':
+                    source=source_type('length')
+                    if source is not None and source not in ('int','uint'):raise GraphError('Array Create length requires int or uint',ident)
+                    p['length']=type_registry().creations[(scope,ident)]
                 declaration=declarations.get(p.get('declarationId'))
                 try:value=resolved_ports(d,p,declaration)
                 except GraphError as exc:raise GraphError(str(exc),ident) from exc
             active.remove(ident);resolved[ident]=value;return value
         for ident in nodes:ports(ident)
     for fn in functions.values():
-        try:infer(fn.get('graph'),fn)
+        try:infer(fn.get('graph'),'fn_'+fn['id'],fn)
         except GraphError as exc:
             exc.functionId=fn['id'];exc.trail=[fn['id']];exc.stage=fn.get('stages',['pixel'])[0]
             raise
     for stage,data in result.get('stages',{}).items():
-        try:infer(data)
+        try:infer(data,stage)
         except GraphError as exc:
             exc.stage=stage;raise
     return result

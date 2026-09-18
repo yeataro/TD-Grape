@@ -155,7 +155,7 @@ function builtInSourceLabel(d){return d.key==='uv'?(editorTarget==='top'?'vUV.st
 let typeContract=null;
 // Composite types have stable identities. Ports carry these identities; display
 // labels and generated GLSL names are projections of the shared definitions.
-const compositeKeys=['array','array_get','array_replace','array_length','struct_field','builtin_source'];
+const compositeKeys=['array','array_create','array_get','array_replace','array_length','struct_field','builtin_source'];
 const isCompositeOperation=d=>compositeKeys.includes(d?.key);
 const activeTypeDocument=()=>{try{return graph;}catch(error){if(error instanceof ReferenceError)return null;throw error;}};
 function compositeStructs(document=activeTypeDocument()){
@@ -181,7 +181,7 @@ function typeDescriptor(type,document=activeTypeDocument(),seen=new Set()){
 const isCompositeType=(type,document=activeTypeDocument())=>['array','struct'].includes(typeDescriptor(type,document)?.shape);
 const hasValueEditor=type=>valueTypes().includes(type);
 function arrayLengthDeclaration(length,document=activeTypeDocument()){
-  return typeof length==='string'&&length.startsWith('sg_len_')?(document?.declarations||[]).find(d=>d.id===length.slice(7)&&['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type)):null;
+  return typeof length==='string'&&length.startsWith('sg_len_')?(document?.declarations||[]).find(d=>d.id===length.slice(7)&&['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type)):typeof length==='string'&&length.startsWith('sg_extent_')?GraphArrayLengths.find(document||{},length):null;
 }
 function arrayLengthExpression(length,document=activeTypeDocument()){return arrayLengthDeclaration(length,document)?.name??String(length);}
 function arrayLengthLabel(length,document=activeTypeDocument()){
@@ -234,7 +234,7 @@ function graphInterfaceTypes(document=activeTypeDocument()){
   for(const source of Object.values(typeContract?.composites?.sources||{}))add(source.type);
   for(const declaration of document?.declarations||[])add(declaration.type);
   for(const unit of [...Object.values(document?.stages||{}),...(document?.functions||[]).map(f=>f.graph)])for(const n of unit.nodes||[]){
-    if(n.params?.elementType&&n.params.length!==undefined)add(arrayType(n.params.elementType,n.params.length));
+    if(n.params?.elementType&&n.params.length!==undefined){const scope=Object.keys(document.stages||{}).find(key=>document.stages[key]===unit)||'fn_'+document.functions.find(f=>f.graph===unit)?.id;add(arrayType(n.params.elementType,n.definitionUuid==='sgrape.builtin.array_create'?GraphArrayLengths.length(document,unit,n,scope):n.params.length));}
     for(const key of ['type','fromType','toType'])add(n.params?.[key]);
     for(const p of [...(n.params?.inputs||[]),...(n.params?.outputs||[])])add(p.type);
   }
@@ -251,9 +251,9 @@ function builtinSourceEntries(d){
   return Object.entries(typeContract?.composites?.sources||{}).filter(([,source])=>(source.targets||['top','mat']).includes(editorTarget)&&(source.stages||['pixel','vertex']).includes(stage)).map(([id,source])=>({...d,entryKey:'builtin:'+id,label:id,defaults:{...d.defaults,source:id},builtinSource:id,outputs:{out:source.type},category:'builtin'}));
 }
 function compositePorts(key,params,document=activeTypeDocument(),incoming={}){
-  if(key==='array'){
+  if(key==='array'||key==='array_create'){
     const type=arrayType(params.elementType||'float',params.length??4);if(!typeDescriptor(type,document)||typeContainsResource(type,document))throw Error(t('array.invalidLength'));
-    return {inputs:{},outputs:{out:type}};
+    return {inputs:key==='array_create'?{length:'int',value:params.elementType||'float'}:{},outputs:{out:type}};
   }
   if(key==='builtin_source')return {inputs:{},outputs:{out:typeContract?.composites?.sources?.[params.source]?.type||'?'}};
   if(key==='struct_field'){
@@ -590,34 +590,40 @@ function vectorConnectionExact(d,source,target){
   return isVectorOperation(d)?!!source&&source===target:compatible(source,target);
 }
 function constantRequirementIssues(document){
-  if(!autoUnits(document).some(u=>u.data.nodes.some(n=>n.params.requireConstant)))return [];
+  if(!autoUnits(document).some(u=>u.data.nodes.some(n=>n.params.requireConstant||n.definitionUuid==='sgrape.builtin.array_create')))return [];
   const issues=[],seenFunctions=new Set();
   function unit(data,owner,boundary,trail,stack=[]){
-    const values=new Map(),active=new Set(),inputs=new Map();
+    const values=new Map(),active=new Set(),inputs=new Map(),nodes=new Map(data.nodes.map(n=>[n.id,n]));
+    const combined=values=>values.every(Boolean)?values.includes(2)?2:1:0;
     for(const edge of data.edges)inputs.set(edge.to.join(':'),edge.from);
     function visit(n){
       if(values.has(n.id))return values.get(n.id);if(active.has(n.id))return {};
       active.add(n.id);const d=autoDefinition(document,n,owner),p=safeConcretePorts(document,n,owner),incoming={};
       for(const [port,type]of Object.entries(p.inputs)){
-        const source=inputs.get(n.id+':'+port),peer=source&&data.nodes.find(n=>n.id===source[0]);
-        incoming[port]=peer?!!visit(peer)[source[1]]:!isResourceType(type)&&(!(d?.key==='texture'||d?.key==='texture_sample')||port!=='uv'||Object.hasOwn(n.inputValues||{},port));
+        const source=inputs.get(n.id+':'+port),peer=source&&nodes.get(source[0]);
+        incoming[port]=peer?visit(peer)[source[1]]||0:Number(!isResourceType(type)&&(!(d?.key==='texture'||d?.key==='texture_sample')||port!=='uv'||Object.hasOwn(n.inputValues||{},port)));
       }
       let out={};
       if(n.definitionUuid===FunctionModel.INPUT)out=boundary;
       else if(n.definitionUuid===FunctionModel.CALL){
         const fn=document.functions?.find(f=>f.id===n.params.functionId);
         if(fn&&!stack.includes(fn.id)){seenFunctions.add(fn.id);out=unit(fn.graph,fn,incoming,[...trail,n.id],[...stack,fn.id]);}
+      }else if(d?.key==='spec_constant')out={out:2};
+      else if(d?.key==='array_create'){
+        out={out:0};const source=inputs.get(n.id+':length'),peer=source&&nodes.get(source[0]),type=peer&&safeConcretePorts(document,peer,owner).outputs[source[1]];
+        if(!incoming.length||peer&&!['int','uint'].includes(type))issues.push({key:[...trail,n.id,'length'].join('/'),name:d.label});
       }else if(d?.key==='array_length'){
-        out={out:arrayLengthDeclaration(typeDescriptor(p.inputs.Array,document)?.length,document)?.kind!=='spec_constant'};
+        const length=arrayLengthDeclaration(typeDescriptor(p.inputs.Array,document)?.length,document);
+        out={out:length?.kind==='spec_constant'?2:length?.kind==='expression'&&length.data===data?visit(length.node)[length.source[1]]||0:1};
       }else if(d?.key==='array'){
-        out={out:Number.isInteger(n.params.length??4)};
+        out={out:Number(Number.isInteger(n.params.length??4))};
       }else if(['matrix_combine','matrix_replace'].includes(d?.key)){
         const shape=typeContract.types[n.params.type],effective=[];
         for(let c=0;c<shape.columns;c++)for(let r=0;r<shape.rows;r++){
           const column='c'+c,component=column+'xyzw'[r];
           effective.push(inputs.has(n.id+':'+component)?incoming[component]:inputs.has(n.id+':'+column)?incoming[column]:d.key==='matrix_replace'&&inputs.has(n.id+':value')?incoming.value:true);
         }
-        out={out:effective.every(Boolean)};
+        out={out:combined(effective.map(v=>v===true?1:v))};
       }else if(d?.key==='replace'){
         // Only the final component's effective source determines its constness.
         // A fully overridden runtime baseline must not taint a constant result.
@@ -626,12 +632,13 @@ function constantRequirementIssues(document){
           const index='xyzw'.indexOf(component),group=Object.keys(p.inputs).find(port=>port!=='value'&&inputs.has(n.id+':'+port)&&'xyzw'.indexOf(port)<=index&&'xyzw'.indexOf(port)+typeComponents(p.inputs[port])>index);
           final[component]=group?incoming[group]:inputs.has(n.id+':value')?incoming.value:true;
         }
-        out={out:Object.values(final).every(Boolean)};
+        out={out:combined(Object.values(final).map(v=>v===true?1:v))};
       }else {
-        const constant=typeContract?.constantExpressions?.includes(d?.key)&&Object.values(incoming).every(Boolean);
-        out=Object.fromEntries(Object.entries(p.outputs).map(([port,type])=>[port,!!constant&&!isResourceType(type)]));
+        let constant=typeContract?.constantExpressions?.includes(d?.key)?combined(Object.values(incoming)):0;
+        if(constant===2&&!typeContract?.specializationExpressions?.includes(d?.key))constant=0;
+        out=Object.fromEntries(Object.entries(p.outputs).map(([port,type])=>[port,isResourceType(type)?0:constant]));
       }
-      if(n.params.requireConstant&&(!Object.keys(out).length||!Object.values(out).every(Boolean)))issues.push({key:[...trail,n.id].join('/'),name:d?.label||n.id});
+      if(n.params.requireConstant&&(!Object.keys(out).length||!Object.values(out).every(value=>value===1)))issues.push({key:[...trail,n.id].join('/'),name:d?.label||n.id});
       values.set(n.id,out);active.delete(n.id);
       if(n.definitionUuid===FunctionModel.OUTPUT)values.set('__result',incoming);
       return out;
@@ -640,7 +647,7 @@ function constantRequirementIssues(document){
     return values.get('__result')||{};
   }
   for(const [stage,data]of Object.entries(document.stages))unit(data,null,{},[stage]);
-  for(const fn of document.functions||[])if(!seenFunctions.has(fn.id))unit(fn.graph,fn,Object.fromEntries(fn.inputs.map(p=>[p.id,!isResourceType(p.type)])),['function',fn.id],[fn.id]);
+  for(const fn of document.functions||[])if(!seenFunctions.has(fn.id))unit(fn.graph,fn,Object.fromEntries(fn.inputs.map(p=>[p.id,Number(!isResourceType(p.type))])),['function',fn.id],[fn.id]);
   return issues;
 }
 function rejectNewConstantIssues(document,previous){
@@ -664,7 +671,9 @@ function concretePorts(document,n,owner,type=n.params.type,override=null,seen=ne
     if(!seen.has(n.id)&&data){const visited=new Set([...seen,n.id]);for(const edge of data.edges.filter(edge=>edge.to[0]===n.id&&edge.to[1]===input)){
       const source=data.nodes.find(peer=>peer.id===edge.from[0]);if(source&&!visited.has(source.id))incoming[edge.to[1]]=concretePorts(document,source,owner,source.params.type,null,visited).outputs[edge.from[1]];
     }}
-    return compositePorts(d.key,{...n.params,type},document,incoming);
+    const params={...n.params,type};
+    if(d.key==='array_create'&&data)params.length=GraphArrayLengths.length(document,data,n,owner?'fn_'+owner.id:Object.keys(document.stages).find(key=>document.stages[key]===data));
+    return compositePorts(d.key,params,document,incoming);
   }
   const decl=document.declarations.find(d=>d.id===n.params.declarationId),params={...n.params,type};
   return {inputs:resolvedNodePorts(d,params,decl,'inputs'),outputs:resolvedNodePorts(d,params,decl,'outputs')};
@@ -680,6 +689,8 @@ function invalidTypeEdges(data,portMap){
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
 function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false}={}){
   const nodes=new Map(data.nodes.map(n=>[n.id,n])),incoming=new Map(),ports=new Map(),choices=new Map(),groups=new Map(),issues=new Map(),active=new Set();
+  const scope=owner?'fn_'+owner.id:Object.keys(document.stages).find(key=>document.stages[key]===data)||stage;
+  const typeDocument=owner?{...document,functions:document.functions.map(f=>f.id===owner.id?{...f,graph:data}:f)}:{...document,stages:{...document.stages,[scope]:data}};
   for(const e of data.edges){if(!incoming.has(e.to[0]))incoming.set(e.to[0],[]);incoming.get(e.to[0]).push(e);}
   const canInfer=!owner||owner.scope==='local';
   const autoNodes=new Set(data.nodes.filter(n=>canInfer&&n.ui?.typeMode==='auto'&&supportsAutoType(autoDefinition(document,n,owner))).map(n=>n.id));
@@ -691,7 +702,8 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     for(const e of links){const source=nodes.get(e.from[0]);if(source)visit(source);}
     try{if(isCompositeOperation(autoDefinition(document,n,owner))){
       const d=autoDefinition(document,n,owner),incomingTypes=Object.fromEntries(links.map(edge=>[edge.to[1],ports.get(edge.from[0])?.outputs[edge.from[1]]]));
-      const p=compositePorts(d.key,n.params,document,incomingTypes);ports.set(n.id,p);
+      const params={...n.params};if(d.key==='array_create')params.length=GraphArrayLengths.length(typeDocument,data,n,scope,links,nodes);
+      const p=compositePorts(d.key,params,typeDocument,incomingTypes);ports.set(n.id,p);
       if(['array_get','array_replace','array_length','struct_field'].includes(d.key))choices.set(n.id,p.inputs[d.key==='struct_field'?'value':'Array']);
     }else if(combineNodes.has(n.id)){
       const isVector=autoDefinition(document,n,owner)?.key==='replace',componentLinks=isVector?links.filter(e=>e.to[1]!=='value'):links;
@@ -776,7 +788,13 @@ function normalizeNodeValues(n,d){
     n.params.values=Array.from({length:shape.components},(_,index)=>scalarValue(n.params.values?.[index]??(Math.floor(index/shape.rows)===index%shape.rows?1:0),shape.family));
   }
 }
-function autoTopology(document){return JSON.stringify({typeDefinitions:document.typeDefinitions,declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode]),data.edges])});}
+function autoTopology(document){
+  return JSON.stringify({typeDefinitions:document.typeDefinitions,declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>{
+    const creates=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.array_create').map(n=>n.id));
+    const lengthSources=new Set(data.edges.filter(e=>creates.has(e.to[0])&&e.to[1]==='length').map(e=>e.from[0]));
+    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
+  })});
+}
 function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
   if(autoTopology(document)===autoTopology(previous))return;
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
@@ -832,7 +850,7 @@ function planWireTypes(from,to,extra=null){
   for(const [id,message]of plan.issues)if(oldPlan.issues.get(id)!==message)throw Error(message);
   rejectNewTypeIssues(candidate,plan.ports,data,storedTypePorts(graph,data,owner));
   for(const n of nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
-  if(autoUnits(graph).some(u=>u.data.nodes.some(n=>n.params.requireConstant))){
+  if(autoUnits(graph).some(u=>u.data.nodes.some(n=>n.params.requireConstant||n.definitionUuid==='sgrape.builtin.array_create'))){
     const document=owner?{...graph,functions:graph.functions.map(f=>f===owner?{...f,graph:candidate}:f)}:{...graph,stages:{...graph.stages,[stage]:candidate}};
     rejectNewConstantIssues(document,graph);
   }
@@ -940,8 +958,9 @@ function creatorVariants(d,wire){
     const params={...clone(d.defaults||{})},descriptor=wire&&typeDescriptor(wire.type),variants=[];
     const add=params=>{try{variants.push({type:null,...compositePorts(d.key,params),params});}catch{}};
     if(d.key==='builtin_source'){add(params);return variants;}
-    if(d.key==='array'){
+    if(d.key==='array'||d.key==='array_create'){
       if(wire?.kind==='inputs'){if(descriptor?.shape!=='array'||typeof descriptor.length!=='number'||typeContainsResource(wire.type))return [];Object.assign(params,{elementType:descriptor.elementType,length:descriptor.length});}
+      if(d.key==='array_create'&&wire?.kind==='outputs'&&!typeContainsResource(wire.type))params.elementType=wire.type;
       add(params);return variants;
     }
     if(d.key==='struct_field'){
