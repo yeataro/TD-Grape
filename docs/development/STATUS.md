@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.105 交付檢查點：`d66a575` 已整合 main，同步 32 份來源中的 8 份變更；Master 為 0.8.105、core 無錯誤、三份使用者 Shader 保留。保存 TOE 905,854 bytes，SHA-256 `49c73dacac644ca6f4c33ab76263fa262552ae98c06d5a5eaa3b27c45d085b9f`，排除一份私人助手。沒有重載使用者目前的 Editor 頁面；矩陣四則運算接續進行。
+
 2026-09-19 型別選單（0.8.105 實作檢查點）：依 Final Check 統一 Floating／Integer／Boolean／Matrix，Double 收到第三級。Auto、signed/unsigned 及方形/非方形矩陣用水平線分組，Matrix 方形優先。共用選單涵蓋節點／Parameter／來源／Function／GLSL Code 與型別篩選，維持原有合法選項與提交路徑。16 組瀏覽器檢查通過，涵蓋完整型別、三級、Undo、草稿、320px、UI 縮放與鍵盤／觸控；同步與保存另記。接續已授權矩陣四則異型簽名與 Auto，尚未宣稱已完成。[規格](../ui/TYPE_MENUS.md)
 
 2026-09-19 UI 元件共用調查完成：[報告](../discussions/UI_COMPONENT_REUSE_AUDIT.md) 基於已交付 0.8.104，重現 Array 節點 Escape 取消、Parameter 同欄位 Escape 後失焦仍提交的差異，以及 Parameter INT 欄未套共用底色。建議先審數值草稿核心與欄位樣式，再考慮來源綁定／選單重複。只新增文件；未修改任何調查項目的產品 UI。
