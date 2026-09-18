@@ -79,7 +79,7 @@ Graph Constant 是既有介面名稱；Global Constant／全域常量是討論�
 
 ## 陣列、結構與產碼責任
 
-下列術語描述不同責任；定義它們不代表相關產品功能已實作。行為與進度見[陣列與結構後續計畫](discussions/ARRAY_AND_STRUCT_PLAN.md)。
+下列術語描述不同責任；實際支援範圍見[陣列與結構](features/ARRAYS_AND_STRUCTURES.md)、[TD 陣列來源](features/TD_ARRAY_SOURCES.md)，決策背景見[後續計畫](discussions/ARRAY_AND_STRUCT_PLAN.md)。
 
 | 建議用語 | 英文 | 定義與區分 |
 | --- | --- | --- |

@@ -26,13 +26,24 @@ PRESETS = {'time': 'me.time.seconds', 'frame': 'me.time.frame',
            'absTime': 'absTime.seconds', 'absFrame': 'absTime.frame'}
 CHANNELS = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'),
             'color': ('rgbr', 'rgbg', 'rgbb', 'alpha'), 'const': ('value',), 'matrix': ('value',)}
+ARRAY_ELEMENT_TYPES = ('float', 'vec2', 'vec3', 'vec4')
+MAX_NATIVE_ARRAY_LENGTH = 1024
+# Configuration channels are deliberately separate from editable numeric values.
+SEQUENCE_CHANNELS = dict(CHANNELS, array=('type', 'chop', 'arraytype'))
+
+
+def array_shape(ty):
+    match = re.fullmatch(r'(float|vec[234])\[([1-9][0-9]*)\]', ty) if isinstance(ty,str) else None
+    return (match[1], int(match[2])) if match and int(match[2]) <= MAX_NATIVE_ARRAY_LENGTH else None
 
 
 def source_sequence(declaration):
-    return 'const' if declaration.get('kind') == 'spec_constant' else 'matrix' if declaration.get('type') in MATRIX_SHAPES else declaration.get('nativeSequence', 'vec')
+    return 'const' if declaration.get('kind') == 'spec_constant' else 'array' if array_shape(declaration.get('type')) else 'matrix' if declaration.get('type') in MATRIX_SHAPES else declaration.get('nativeSequence', 'vec')
 
 
 def source_components(declaration):
+    shape = array_shape(declaration.get('type'))
+    if shape: return TYPES[shape[0]] * shape[1]
     return 1 if declaration.get('kind') == 'spec_constant' else TYPES[declaration['type']]
 
 
@@ -63,6 +74,13 @@ def validate_uniform_component(declaration, value, role='value'):
 
 
 def validate_uniform_native(declaration, value, role='value'):
+    shape = array_shape(declaration.get('type'))
+    if shape:
+        if value is None: return  # The CHOP owns data; no sampled JSON default.
+        if not isinstance(value, (list, tuple)) or len(value) != shape[1]:
+            raise RuntimeError('Uniform '+declaration.get('name', '')+': invalid native array length.')
+        for element in value: validate_uniform_native(dict(declaration, type=shape[0]), element, role)
+        return
     values = [value] if source_components(declaration) == 1 else value
     if not isinstance(values, (list, tuple)) or len(values) != source_components(declaration):
         raise RuntimeError('Uniform '+declaration.get('name', '')+': invalid native component count.')
@@ -208,15 +226,50 @@ def matrix_driver_value(p):
     return p.owner.parent().op(value) if isinstance(value,str) else value
 
 
+def array_binding(operator, index):
+    """Read configuration only: never sample or evaluate an animated CHOP."""
+    p = parameter(operator, 'array', index, 'chop')
+    mode = str(p.mode).split('.')[-1].upper()
+    state = {'parameter': p.name, 'mode': mode, 'value': str(p.val),
+             'expression': p.expr if mode == 'EXPRESSION' else '',
+             'binding': p.bindExpr if mode == 'BIND' else '',
+             'elementType': str(parameter(operator, 'array', index, 'type').eval()),
+             'arrayType': str(parameter(operator, 'array', index, 'arraytype').eval())}
+    return dict(state, expected=token(state),
+                writable=mode in ('CONSTANT', 'EXPRESSION') and bool(p.enable) and not p.readOnly)
+
+
+def array_driver_value(p):
+    """Resolve paths in the original OP context during candidate validation."""
+    value = p.evalExpression() if str(p.mode).endswith('EXPRESSION') else p.eval()
+    return p.owner.parent().op(value) if isinstance(value, str) else value
+
+
+def array_source_length(operator, index):
+    """Used once on import/apply, never to poll individual CHOP samples."""
+    source = array_driver_value(parameter(operator, 'array', index, 'chop'))
+    if source is None or getattr(source, 'family', None) != 'CHOP':
+        raise RuntimeError('Choose an existing CHOP for the Uniform Array source.')
+    length = int(source.numSamples)
+    if length < 1: raise RuntimeError('The Uniform Array source has no samples.')
+    return length
+
+
 def native_rows(operator):
     rows = []
-    for sequence, channels in CHANNELS.items():
+    for sequence, channels in SEQUENCE_CHANNELS.items():
         seq = getattr(operator.seq, sequence, None)
         if seq is None: continue
         for index in range(seq.numBlocks):
             p = parameter(operator, sequence, index, 'name')
             name = str(p.eval())
             if not name: continue
+            if sequence == 'array':
+                binding = array_binding(operator, index)
+                rows.append({'sequence': sequence, 'index': index, 'name': name,
+                             'nameMode': str(p.mode).split('.')[-1].upper(),
+                             'components': [], 'arrayBinding': binding})
+                continue
             binding = matrix_binding(parameter(operator, sequence, index, 'value')) if sequence == 'matrix' else None
             rows.append({'sequence': sequence, 'index': index, 'name': name,
                          'nameMode': str(p.mode).split('.')[-1].upper(),
@@ -225,7 +278,7 @@ def native_rows(operator):
     return rows
 
 
-def reconcile(declarations, registry, rows):
+def reconcile(declarations, registry, rows, operator=None):
     """Match within one OP, never by global names or transient Par identities.
 
     Exact unique names survive row movement. A single rename in an otherwise
@@ -238,7 +291,7 @@ def reconcile(declarations, registry, rows):
         found = [i for i, row in enumerate(rows) if row['name'] == record['name'] and row['sequence'] == record['sequence']]
         if len(found) == 1:
             matches[ident] = found[0]; taken.add(found[0])
-    for sequence in CHANNELS:
+    for sequence in SEQUENCE_CHANNELS:
         old = [(ident, rec) for ident, rec in registry.items() if rec['sequence'] == sequence and not rec.get('missing')]
         new = [(i, row) for i, row in enumerate(rows) if row['sequence'] == sequence]
         absent = [(ident, rec) for ident, rec in old if ident not in matches]
@@ -257,12 +310,13 @@ def reconcile(declarations, registry, rows):
         if not decl: continue
         row = rows[matches[ident]] if ident in matches else None
         duplicate = row is not None and sum(r['name'] == row['name'] for r in rows) != 1
-        if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied:
+        array_invalid = row is not None and row['sequence'] == 'array' and (not array_shape(decl['type']) or row['arrayBinding']['arrayType'] != 'uniformarray' or row['arrayBinding']['elementType'] != array_shape(decl['type'])[0])
+        if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied or array_invalid:
             decl['sourceMissing'] = True; record['missing'] = True
-            issues.append({'id': ident, 'message': 'Native source is missing or ambiguous: ' + decl['name']})
+            issues.append({'id': ident, 'message': ('Native Array storage or element type differs from '+decl['type']+': ' if array_invalid else 'Native source is missing or ambiguous: ') + decl['name']})
         else:
             decl['name'] = row['name']; decl.pop('sourceMissing', None)
-            if row['sequence'] in ('color','matrix'):decl['nativeSequence']=row['sequence']
+            if row['sequence'] in ('color','matrix','array'):decl['nativeSequence']=row['sequence']
             record.update(name=row['name'], index=row['index']); record.pop('missing', None)
     known = {d['name'] for d in declarations}
     for i, row in enumerate(rows):
@@ -272,6 +326,25 @@ def reconcile(declarations, registry, rows):
             issues.append({'message': 'Review the native Uniform name: ' + name}); continue
         kind = 'spec_constant' if row['sequence'] == 'const' else 'uniform'
         ident = kind + '_' + uuid.uuid4().hex
+        if row['sequence'] == 'array':
+            binding = row['arrayBinding']
+            if binding['arrayType'] != 'uniformarray' or binding['elementType'] not in ARRAY_ELEMENT_TYPES:
+                issues.append({'message': 'Texture Buffer sources require buffer access, not a value array: ' + name})
+                continue
+            try:
+                if operator is None: raise RuntimeError('Refresh native sources to inspect the CHOP length.')
+                length = array_source_length(operator, row['index'])
+                if length > MAX_NATIVE_ARRAY_LENGTH:
+                    raise RuntimeError('The CHOP exceeds the supported fixed-array length of '+str(MAX_NATIVE_ARRAY_LENGTH)+'.')
+            except RuntimeError as exc:
+                issues.append({'message': name + ': ' + str(exc)}); continue
+            element = binding['elementType']
+            declarations.append({'id': ident, 'kind': 'uniform', 'name': name,
+                                 'type': element+'['+str(length)+']', 'nativeSequence': 'array',
+                                 'value': None})
+            registry[ident] = {k: row[k] for k in ('sequence', 'index', 'name')}
+            known.add(name)
+            continue
         ty = 'mat4' if row['sequence'] == 'matrix' else 'vec4' if row['sequence'] == 'color' else 'float'
         values = [c['value'] if c['value'] is not None and abs(c['value']) <= 1e20 else 0.0 for c in row['components']]
         if kind == 'spec_constant':
@@ -299,9 +372,13 @@ def capture_configuration(runtime, comp):
             'matrixParameters': [(parameter(operator,'matrix',i,'value'),
                                   {key:getattr(parameter(operator,'matrix',i,'value'),key) for key in ('val','mode','expr','bindExpr')})
                                  for i in range(getattr(getattr(operator.seq,'matrix',None),'numBlocks',0))],
+            'arrayParameters': [(parameter(operator,'array',i,suffix),
+                                 {key:getattr(parameter(operator,'array',i,suffix),key) for key in ('val','mode','expr','bindExpr')})
+                                for i in range(getattr(getattr(operator.seq,'array',None),'numBlocks',0))
+                                for suffix in SEQUENCE_CHANNELS['array']],
             'sequences': {name: [(parameter(operator, name, i, 'name'), parameter(operator, name, i, 'name').val)
                                 for i in range(getattr(operator.seq, name).numBlocks)]
-                          for name in CHANNELS if getattr(operator.seq, name, None) is not None}}
+                          for name in SEQUENCE_CHANNELS if getattr(operator.seq, name, None) is not None}}
 
 
 def restore_configuration(runtime, comp, before):
@@ -310,7 +387,7 @@ def restore_configuration(runtime, comp, before):
         getattr(operator.seq, name).numBlocks = len(pars)
         for p, value in pars:
             if p.val != value: p.val = value
-    for p, state in before.get('matrixParameters',[]):
+    for p, state in before.get('matrixParameters',[]) + before.get('arrayParameters',[]):
         for key in ('val','expr','bindExpr','mode'):
             if getattr(p,key) != state[key]:setattr(p,key,state[key])
     if before['registry'] is None: comp.unstore(STORE)
@@ -340,6 +417,17 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             if source is None:
                 matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] != 'const']
                 source = matches[0] if len(matches) == 1 else None
+            if array_shape(decl['type']):
+                if source:
+                    if source['sequence'] != 'array' or source['arrayBinding']['arrayType'] != 'uniformarray':
+                        raise RuntimeError('Create a new Uniform Array when changing native source pages: '+decl['name'])
+                    if source['arrayBinding']['elementType'] != array_shape(decl['type'])[0]:
+                        raise RuntimeError('The CHOP Uniform Array element type differs from its graph declaration: '+decl['name'])
+                    if array_source_length(original, source['index']) < array_shape(decl['type'])[1]:
+                        raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
+                continue
+            if source and source['sequence'] == 'array':
+                raise RuntimeError('Create a new Uniform when changing native source pages: '+decl['name'])
             if source and (source['sequence'] == 'matrix') != (decl['type'] in MATRIX_SHAPES):
                 raise RuntimeError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
             if source and source['sequence'] != 'matrix':
@@ -370,11 +458,16 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             sequence = existing['sequence']; index = existing['index']
             if (sequence=='const') != (decl['kind']=='spec_constant'):
                 raise RuntimeError('Native source kind differs from its declaration: ' + decl['name'])
+            if (sequence == 'array') != bool(array_shape(decl['type'])):
+                raise RuntimeError('Create a new Uniform when changing native source pages: '+decl['name'])
             if (sequence=='matrix') != (decl['type'] in MATRIX_SHAPES):
                 raise RuntimeError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
             if existing['name'] != decl['name']:
                 if existing['nameMode'] != 'CONSTANT': raise RuntimeError('The Uniform name is controlled by TD.')
                 parameter(operator, sequence, index, 'name').val = decl['name']
+            if sequence == 'array':
+                registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
+                continue
             previous = old_graph.get(ident, {})
             if decl['kind']=='uniform' and ident not in comp.fetch('grapeCustomMigratedV1',[]) and bool(previous.get('expose')) != bool(decl.get('expose')):
                 legacy = comp.fetch('sgrapePublicUniforms', {}).get(ident, {})
@@ -401,13 +494,30 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
         sequence = source_sequence(decl); seq = getattr(operator.seq,sequence)
         index = seq.numBlocks
         # The untouched initial blank row is safe; edited blank rows survive.
-        if index == 1 and not parameter(operator,sequence,0,'name').eval() and all(str(parameter(operator, sequence, 0, c).mode).endswith('CONSTANT') and parameter(operator, sequence, 0, c).isDefault for c in CHANNELS[sequence]): index = 0
+        if index == 1 and not parameter(operator,sequence,0,'name').eval() and all(str(parameter(operator, sequence, 0, c).mode).endswith('CONSTANT') and parameter(operator, sequence, 0, c).isDefault for c in SEQUENCE_CHANNELS[sequence]): index = 0
         else: seq.numBlocks = index + 1
         parameter(operator, sequence, index, 'name').val = decl['name']
         source = locate(original, original_registry.get(ident))
         if source is None:
             candidates = [r for r in native_rows(original) if r['name'] == decl['name']]
             source = candidates[0] if len(candidates) == 1 and original != operator else None
+        if sequence == 'array':
+            parameter(operator, sequence, index, 'type').val = array_shape(decl['type'])[0]
+            parameter(operator, sequence, index, 'arraytype').val = 'uniformarray'
+            p = parameter(operator, sequence, index, 'chop')
+            if source and original != operator:
+                helper = runtime._owner.op('sources').path
+                p.expr = 'op('+repr(helper)+').module.array_driver_value(op('+repr(original.path)+').par.array'+str(source['index'])+'chop)'
+            elif input_owner and decl.get('arraySource'):
+                resolved = input_owner.op(decl['arraySource'])
+                if resolved is None: raise RuntimeError('Choose an existing CHOP for the Uniform Array source.')
+                p.val = resolved.path
+            else:
+                p.val = decl.get('arraySource', '')
+            if array_source_length(operator, index) < array_shape(decl['type'])[1]:
+                raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
+            registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
+            continue
         default = decl['value']; values = [default] if source_components(decl) == 1 else list(default)
         if sequence == 'matrix':
             p = parameter(operator, sequence, index, 'value')
@@ -446,7 +556,8 @@ def sync(runtime):
     comp = runtime.target(); registry = comp.fetch(STORE, None)
     if registry is None: return False
     current = runtime.checked_state()
-    declarations, new_registry, issues = reconcile(current['graph']['declarations'], registry, native_rows(runtime.shader_operator(comp)))
+    operator = runtime.shader_operator(comp)
+    declarations, new_registry, issues = reconcile(current['graph']['declarations'], registry, native_rows(operator), operator)
     if new_registry != registry: comp.store(STORE, new_registry)
     if issues != comp.fetch('grapeSourceIssues', []): comp.store('grapeSourceIssues', issues)
     if declarations == current['graph']['declarations']: return False
@@ -476,6 +587,7 @@ def snapshot(runtime):
                      'sequence': row['sequence'] if row else '',
                      'components': (matrix_components(row['matrixBinding'],decl['type']) if row.get('matrixBinding') else row['components']) if row else [],
                      **({'matrixBinding':row['matrixBinding']} if row and row.get('matrixBinding') else {}),
+                     **({'arrayBinding':dict(row['arrayBinding'], length=array_shape(decl['type'])[1])} if row and row.get('arrayBinding') and array_shape(decl['type']) else {}),
                      'nameWritable': row is not None and row['nameMode'] == 'CONSTANT',
                      'expected': edit_token(row) if row else None})
     return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows, 'specConstants': spec_rows,
@@ -571,13 +683,17 @@ def edit(runtime, body):
             name = body.get('name'); ty = body.get('type'); kind = body.get('kind', 'uniform')
             if not valid_name(name) or name in {d['name'] for d in graph['declarations']} or any(r['name'] == name for r in native_rows(operator)):
                 raise RuntimeError('Use a unique GLSL Uniform name.')
-            if kind not in SOURCE_KINDS or ty not in (SPEC_TYPES if kind=='spec_constant' else TYPES): raise RuntimeError('Unsupported native source type.')
+            if kind not in SOURCE_KINDS or not (ty in SPEC_TYPES if kind=='spec_constant' else ty in TYPES or array_shape(ty)): raise RuntimeError('Unsupported native source type.')
             decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
-                    'value': runtime.core().filled_value(ty)}
+                    'value': None if array_shape(ty) else runtime.core().filled_value(ty)}
             if kind=='spec_constant':decl.update(constantId=next_constant_id(graph['declarations']), nativeSequence='const')
+            elif array_shape(ty):
+                path = body.get('arraySource', '')
+                if not isinstance(path, str) or len(path)>4096 or any(ord(c)<32 for c in path): raise RuntimeError('Choose a CHOP path for the Uniform Array.')
+                decl.update(nativeSequence='array', arraySource=path)
             elif ty in MATRIX_SHAPES:decl['nativeSequence']='matrix'
             if body.get('sequence'):
-                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise RuntimeError('Unsupported native source page.')
+                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('array',) if array_shape(ty) else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise RuntimeError('Unsupported native source page.')
                 decl['nativeSequence']=body['sequence']
             if body.get('preset'):
                 if kind!='uniform' or body['preset'] not in PRESETS or ty!='float':raise RuntimeError('Unsupported time preset.')
@@ -596,6 +712,26 @@ def edit(runtime, body):
         purge_missing_source(runtime, decl['id'])
         return snapshot(runtime)
     if row is None: raise RuntimeError('This Uniform source is missing.')
+    if action == 'arrayBinding':
+        if row['sequence'] != 'array' or not array_shape(decl['type']): raise RuntimeError('Select a CHOP Uniform Array source.')
+        binding = row['arrayBinding']
+        if not binding['writable'] or body.get('expected') != binding['expected']:
+            raise RuntimeError('The array source changed or is owned by Bind / Export. Refresh or use native Parameters.')
+        mode = body.get('mode'); value = body.get('expression') if mode == 'EXPRESSION' else body.get('value')
+        if mode not in ('CONSTANT', 'EXPRESSION') or not isinstance(value, str) or len(value)>4096:
+            raise RuntimeError('Enter a CHOP path or Python expression up to 4096 characters.')
+        if mode == 'CONSTANT' and any(ord(c)<32 for c in value): raise RuntimeError('Choose a CHOP path without control characters.')
+        p = parameter(operator, 'array', row['index'], 'chop')
+        before = {key:getattr(p,key) for key in ('val','mode','expr','bindExpr')}
+        try:
+            if mode == 'EXPRESSION': p.expr = value
+            else: p.mode = ParMode.CONSTANT; p.val = value
+            if array_source_length(operator,row['index']) < array_shape(decl['type'])[1]:
+                raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length.')
+        except Exception:
+            for key in ('val','expr','bindExpr','mode'): setattr(p,key,before[key])
+            raise
+        return snapshot(runtime)
     if action in ('matrixBinding','matrixValue'):
         if row['sequence'] != 'matrix' or decl['type'] not in MATRIX_SHAPES:
             raise RuntimeError('Select a Matrix Uniform source.')
@@ -619,7 +755,7 @@ def edit(runtime, body):
             else:p.mode = ParMode.CONSTANT;p.val = value
         return snapshot(runtime)
     if action == 'driver':
-        if row['sequence'] == 'matrix': raise RuntimeError('Use the Matrix source binding to edit this driver.')
+        if row['sequence'] in ('matrix','array'): raise RuntimeError('Use the source binding to edit this driver.')
         if decl['kind']=='spec_constant':raise RuntimeError('Spec Constants are intended for infrequent integer mode changes; edit native drivers in TD.')
         index=body.get('component');expression=body.get('expression')
         if type(index) is not int or not 0<=index<4 or not isinstance(expression,str) or len(expression)>4096:

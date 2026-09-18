@@ -139,7 +139,8 @@ function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['unifo
 function nodeCategory(d){
   if(d.key==='comment')return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
-  if(['constant','spec_constant','scalar','vector','matrix'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
+  if(['constant','spec_constant','scalar','vector','matrix','array'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
+  if(d.key==='builtin_source')return 'builtin';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
@@ -152,6 +153,112 @@ function nodeCategory(d){
 }
 function builtInSourceLabel(d){return d.key==='uv'?(editorTarget==='top'?'vUV.st':'UV 0'):d.key==='position'?'P':'';}
 let typeContract=null;
+// Composite types have stable identities. Ports carry these identities; display
+// labels and generated GLSL names are projections of the shared definitions.
+const compositeKeys=['array','array_get','array_replace','array_length','struct_field','builtin_source'];
+const isCompositeOperation=d=>compositeKeys.includes(d?.key);
+const activeTypeDocument=()=>{try{return graph;}catch(error){if(error instanceof ReferenceError)return null;throw error;}};
+function compositeStructs(document=activeTypeDocument()){
+  const result={...(typeContract?.composites?.structs||{})};
+  for(const item of document?.typeDefinitions||[])result['struct:'+item.id]=item;
+  return result;
+}
+function typeDescriptor(type,document=activeTypeDocument(),seen=new Set()){
+  if(typeof type!=='string'||type.length>512||seen.has(type)||(type.match(/\[/g)||[]).length>8)return null;
+  if(typeContract?.types&&Object.hasOwn(typeContract.types,type))return typeContract.types[type];
+  const array=/^([^\[\]]+)\[([A-Za-z_][A-Za-z0-9_]*|[0-9]+)\](.*)$/.exec(type);
+  if(array){
+    const elementType=array[1]+array[3],element=typeDescriptor(elementType,document,new Set([...seen,type]));if(!element)return null;
+    const count=/^[0-9]+$/.test(array[2])?Number(array[2]):array[2];
+    if(typeof count==='number'&&(!Number.isInteger(count)||String(count)!==array[2]||count<1||count>(typeContract?.composites?.array?.maxLength||1024)))return null;
+    if(typeof count==='string'&&!typeContract?.composites?.array?.lengthMacros?.[count]&&!Object.values(typeContract?.composites?.sources||{}).some(source=>source.type?.includes('['+count+']')))return null;
+    return {shape:'array',family:'array',components:0,elementType,length:count};
+  }
+  const definitions=compositeStructs(document),definition=Object.hasOwn(definitions,type)?definitions[type]:null;
+  return definition?{...definition,shape:'struct',family:'struct',components:0}:null;
+}
+const isCompositeType=(type,document=activeTypeDocument())=>['array','struct'].includes(typeDescriptor(type,document)?.shape);
+const hasValueEditor=type=>valueTypes().includes(type);
+function arrayType(elementType,length){const at=elementType.indexOf('[');return at<0?elementType+'['+length+']':elementType.slice(0,at)+'['+length+']'+elementType.slice(at);}
+function compositeValue(value,type,document=activeTypeDocument(),budget={remaining:65536},active=new Set()){
+  if(--budget.remaining<0||active.has(type))throw Error(t('composite.valueTooLarge'));
+  const descriptor=typeDescriptor(type,document);if(!descriptor||typeContainsResource(type,document))return null;
+  if(descriptor.shape==='array'){
+    if(typeof descriptor.length!=='number')return null;
+    return Array.from({length:descriptor.length},(_,index)=>compositeValue(Array.isArray(value)?value[index]:undefined,descriptor.elementType,document,budget,new Set([...active,type])));
+  }
+  if(descriptor.shape==='struct')return Object.fromEntries((descriptor.fields||[]).map(field=>[field.id,compositeValue(value?.[field.id],field.type,document,budget,new Set([...active,type]))]));
+  return shapedValue(value??0,type);
+}
+const compositeZeroValue=(type,document=activeTypeDocument())=>compositeValue(undefined,type,document);
+function typeAvailable(type,document=activeTypeDocument(),seen=new Set()){
+  if(seen.has(type))return false;seen.add(type);const descriptor=typeDescriptor(type,document);if(!descriptor)return false;
+  const target=typeof editorTarget!=='undefined'?editorTarget:document?.target||'top',shaderStage=typeof stage!=='undefined'?stage:'pixel';
+  if(descriptor.shape==='array')return typeAvailable(descriptor.elementType,document,seen)&&(typeof descriptor.length==='number'||Object.values(typeContract?.composites?.sources||{}).some(source=>source.type?.includes('['+descriptor.length+']')&&(source.targets||[]).includes(target)&&(source.stages||[]).includes(shaderStage)));
+  return descriptor.shape!=='struct'||((descriptor.targets||['top','mat']).includes(target)&&(descriptor.stages||['pixel','vertex']).includes(shaderStage)&&(descriptor.fields||[]).every(field=>typeAvailable(field.type,document,new Set(seen))));
+}
+function displayType(type,document=activeTypeDocument()){
+  const descriptor=typeDescriptor(type,document);if(descriptor?.shape==='array')return arrayType(displayType(descriptor.elementType,document),descriptor.length);
+  return descriptor?.shape==='struct'?descriptor.name||type:type;
+}
+function glslTypeName(type){
+  const descriptor=typeDescriptor(type);if(descriptor?.shape==='array')return arrayType(glslTypeName(descriptor.elementType),descriptor.length);
+  return descriptor?.shape==='struct'?descriptor.glslName||(type.startsWith('struct:')?'sg_type_'+descriptor.id:descriptor.name):type;
+}
+function glslPortDeclaration(type,name){const descriptor=typeDescriptor(type);return descriptor?.shape==='array'?glslPortDeclaration(descriptor.elementType,name+'['+descriptor.length+']'):glslTypeName(type)+' '+name;}
+function glslZeroLiteral(type){
+  const descriptor=typeDescriptor(type);
+  if(descriptor?.shape==='array')return glslTypeName(type)+'('+Array.from({length:typeof descriptor.length==='number'?descriptor.length:0},()=>glslZeroLiteral(descriptor.elementType)).join(', ')+')';
+  if(descriptor?.shape==='struct')return glslTypeName(type)+'('+(descriptor.fields||[]).map(field=>glslZeroLiteral(field.type)).join(', ')+')';
+  if(type==='bool')return 'false';if(type==='int')return '0';if(type==='uint')return '0u';if(type==='double')return '0.0LF';if(type==='float')return '0.0';
+  return type+'('+Array.from({length:descriptor?.components||1},()=>glslZeroLiteral(descriptor?.family||'float')).join(', ')+')';
+}
+function glslOutputInitialization(name,type){
+  const lines=[];let counter=0;
+  const emit=(name,type,indent)=>{const descriptor=typeDescriptor(type);if(descriptor?.shape==='array'){
+    const index='sg_init_'+counter++;lines.push(indent+'for (int '+index+' = 0; '+index+' < '+descriptor.length+'; ++'+index+') {');emit(name+'['+index+']',descriptor.elementType,indent+'    ');lines.push(indent+'}');
+  }else lines.push(indent+name+' = '+glslZeroLiteral(type)+';');};emit(name,type,'    ');return lines.join('\n');
+}
+function graphInterfaceTypes(document=activeTypeDocument()){
+  const result=new Set([...interfaceTypes(),...Object.keys(compositeStructs(document))]);
+  const add=type=>{if(typeDescriptor(type,document))result.add(type);};
+  for(const source of Object.values(typeContract?.composites?.sources||{}))add(source.type);
+  for(const declaration of document?.declarations||[])add(declaration.type);
+  for(const unit of [...Object.values(document?.stages||{}),...(document?.functions||[]).map(f=>f.graph)])for(const n of unit.nodes||[]){
+    if(n.params?.elementType&&Number.isInteger(n.params.length))add(arrayType(n.params.elementType,n.params.length));
+    for(const key of ['type','fromType','toType'])add(n.params?.[key]);
+    for(const p of [...(n.params?.inputs||[]),...(n.params?.outputs||[])])add(p.type);
+  }
+  for(const f of document?.functions||[])for(const p of [...f.inputs,...f.outputs])add(p.type);
+  return [...result].filter(type=>typeAvailable(type,document));
+}
+function typeContainsResource(type,document=activeTypeDocument(),seen=new Set()){
+  if(seen.has(type))return false;seen.add(type);if(isResourceType(type))return true;
+  const descriptor=typeDescriptor(type,document);
+  return descriptor?.shape==='array'?typeContainsResource(descriptor.elementType,document,seen):descriptor?.shape==='struct'?(descriptor.fields||[]).some(field=>typeContainsResource(field.type,document,seen)):false;
+}
+const graphValueTypes=(document=activeTypeDocument())=>graphInterfaceTypes(document).filter(type=>!typeContainsResource(type,document));
+function builtinSourceEntries(d){
+  return Object.entries(typeContract?.composites?.sources||{}).filter(([,source])=>(source.targets||['top','mat']).includes(editorTarget)&&(source.stages||['pixel','vertex']).includes(stage)).map(([id,source])=>({...d,entryKey:'builtin:'+id,label:id,defaults:{...d.defaults,source:id},builtinSource:id,outputs:{out:source.type},category:'builtin'}));
+}
+function compositePorts(key,params,document=activeTypeDocument(),incoming={}){
+  if(key==='array'){
+    const type=arrayType(params.elementType||'float',params.length??4);if(!Number.isInteger(params.length??4)||!typeDescriptor(type,document)||typeContainsResource(type,document))throw Error(t('array.invalidLength'));
+    return {inputs:{},outputs:{out:type}};
+  }
+  if(key==='builtin_source')return {inputs:{},outputs:{out:typeContract?.composites?.sources?.[params.source]?.type||'?'}};
+  if(key==='struct_field'){
+    const type=incoming.value||params.type||'TDTexInfo',descriptor=typeDescriptor(type,document),field=descriptor?.fields?.find(field=>field.id===params.field||field.name===params.field)||(incoming.value&&incoming.value!==params.type?descriptor?.fields?.[0]:null);
+    if(descriptor?.shape!=='struct')throw Error(t('composite.structureRequired'));
+    return {inputs:{value:type},outputs:{out:field?.type||'?'}};
+  }
+  const type=incoming.Array||params.type||'float[4]',descriptor=typeDescriptor(type,document),inputs={Array:type};
+  if(descriptor?.shape!=='array')throw Error(t('composite.arrayRequired'));
+  if(key==='array_replace'&&typeContainsResource(type,document))throw Error(t('composite.resourceReadOnly'));
+  if(key==='array_length')return {inputs,outputs:{out:'int'}};
+  inputs.i=params.indexType||'int';if(key==='array_replace')inputs.replacement=descriptor?.elementType||'?';
+  return {inputs,outputs:{out:key==='array_replace'?type:descriptor?.elementType||'?'}};
+}
 // GLSL Code interfaces keep connection IDs separate from editable GLSL names.
 const CustomGLSL=(()=>{
   const directions=['inputs','outputs'];
@@ -168,7 +275,7 @@ const CustomGLSL=(()=>{
       for(const p of list){
         if(!p||typeof p.id!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id)||ids.has(p.id))throw Error(t('code.invalidPort'));
         if(!isName(p.name)||names.has(p.name))throw Error(t('code.invalidName'));
-        if(!(direction==='inputs'?interfaceTypes():valueTypes()).includes(p.type))throw Error(t('code.invalidType'));
+        if(!(direction==='inputs'?graphInterfaceTypes():graphValueTypes()).includes(p.type))throw Error(t('code.invalidType'));
         ids.add(p.id);names.add(p.name);
       }
     }
@@ -183,7 +290,7 @@ const CustomGLSL=(()=>{
     const p=node.params[direction].find(p=>p.id===id),before=p.type;
     Object.assign(p,patch);validate(node.params);
     if(direction==='inputs'&&before!==p.type&&Object.hasOwn(node.inputValues||{},id)){
-      if(isResourceType(p.type))delete node.inputValues[id];
+      if(!hasValueEditor(p.type))delete node.inputValues[id];
       else node.inputValues[id]=isMatrixType(before)&&isMatrixType(p.type)?matrixReshapeValue(node.inputValues[id],before,p.type):shapedValue(node.inputValues[id]??0,p.type);
     }
   }
@@ -200,8 +307,8 @@ const CustomGLSL=(()=>{
     [list[index],list[next]]=[list[next],list[index]];
   }
   function header(params){
-    const signature=directions.flatMap(direction=>params[direction].map(p=>`${direction==='inputs'?'in':'out'} ${p.type} ${p.name}`)).join(', ');
-    const defaults=params.outputs.map(p=>`    ${p.name} = ${p.type==='float'?'0.0':p.type+'(0.0)'};`).join('\n');
+    const signature=directions.flatMap(direction=>params[direction].map(p=>`${direction==='inputs'?'in':'out'} ${glslPortDeclaration(p.type,p.name)}`)).join(', ');
+    const defaults=params.outputs.map(p=>glslOutputInitialization(p.name,p.type)).join('\n');
     return `void ${params.functionName}(${signature}) {\n${defaults}`;
   }
   return {validate,add,update,remove,move,header};
@@ -215,7 +322,14 @@ function setTypeContract(contract){
   if(!Array.isArray(resourceTypes)||resourceTypes.some(t=>t!=='sampler2D')||new Set(resourceTypes).size!==resourceTypes.length)throw Error(t('contract.invalid'));
   const specTypes=contract.specConstantTypes||[];
   if(!Array.isArray(specTypes)||specTypes.some(t=>!['int','uint','bool','float'].includes(t))||new Set(specTypes).size!==specTypes.length)throw Error(t('contract.invalid'));
-  const valueTypes=contract.valueTypes||[...new Set([...contract.numericTypes,...specTypes])],known=t=>valueTypes.includes(t)||resourceTypes.includes(t);
+  const valueTypes=contract.valueTypes||[...new Set([...contract.numericTypes,...specTypes])];
+  const known=type=>{
+    if(valueTypes.includes(type)||resourceTypes.includes(type)||typeof type==='string'&&Object.hasOwn(contract.composites?.structs||{},type))return true;
+    if(!contract.composites||typeof type!=='string'||(type.match(/\[/g)||[]).length>8)return false;
+    const array=/^([^\[\]]+)\[([A-Za-z_][A-Za-z0-9_]*|[0-9]+)\](.*)$/.exec(type);if(!array)return false;
+    const count=/^[0-9]+$/.test(array[2])?Number(array[2]):array[2];
+    return (typeof count==='number'?String(count)===array[2]&&count>0&&count<=(contract.composites.array?.maxLength||1024):Object.hasOwn(contract.composites.array?.lengthMacros||{},count))&&known(array[1]+array[3]);
+  };
   if(!Array.isArray(valueTypes)||new Set(valueTypes).size!==valueTypes.length||!contract.numericTypes.every(t=>valueTypes.includes(t)))throw Error(t('contract.invalid'));
   if(Object.keys(contract.types).length!==valueTypes.length+resourceTypes.length)throw Error(t('contract.invalid'));
   for(const type of valueTypes){
@@ -229,7 +343,7 @@ function setTypeContract(contract){
   for(const type of resourceTypes)if(contract.types[type]?.family!=='sampler'||contract.types[type]?.components!==0)throw Error(t('contract.invalid'));
   for(const rule of contract.conversions)if(!known(rule.from)||!known(rule.to)||!['identity','splat','cast'].includes(rule.kind))throw Error(t('contract.invalid'));
   for(const entry of Object.values(contract.definitions)){
-    if(!['fixed','parameter','declaration'].includes(entry.selector)||!Array.isArray(entry.variants)||!entry.variants.length)throw Error(t('contract.invalid'));
+    if(!['fixed','parameter','declaration',...(contract.composites?['dynamic']:[])].includes(entry.selector)||!Array.isArray(entry.variants)||!entry.variants.length)throw Error(t('contract.invalid'));
     for(const variant of entry.variants)if((variant.type!==null&&!known(variant.type))||!variant.inputs||!variant.outputs||
       ![...Object.values(variant.inputs),...Object.values(variant.outputs)].every(known))throw Error(t('contract.invalid'));
   }
@@ -287,11 +401,12 @@ function validScalarValue(value,family){
 }
 const isResourceType=type=>(typeContract?.resourceTypes||[]).includes(type);
 function typeComponents(type){
-  if(!typeContract||!Object.hasOwn(typeContract.types,type))throw Error(t('contract.invalid'));
-  return typeContract.types[type].components;
+  const descriptor=typeDescriptor(type);if(!descriptor)throw Error(t('contract.invalid'));
+  return descriptor.components||0;
 }
 function shapedValue(value,type){
   if(isResourceType(type))return null;
+  if(isCompositeType(type))return compositeValue(value,type);
   if(isMatrixType(type)){
     const shape=typeContract.types[type];
     return Array.from({length:shape.components},(_,index)=>scalarValue(Array.isArray(value)?value[index]??0:Math.floor(index/shape.rows)===index%shape.rows?value:0,shape.family));
@@ -312,8 +427,9 @@ function matrixReshapeValue(value,oldType,newType){
   });
 }
 const selectableNodeTypes=d=>[...new Set(typeVariants(d).map(v=>v.type).filter(type=>type!==null))];
-const compatible=(a,b)=>!!typeContract?.conversions.some(rule=>rule.from===a&&rule.to===b);
+const compatible=(a,b)=>!!a&&a===b&&!!typeDescriptor(a)||!!typeContract?.conversions.some(rule=>rule.from===a&&rule.to===b);
 function typeVariants(d){
+  if(isCompositeOperation(d))return [{type:null,...compositePorts(d.key,d.defaults||{})}];
   if(d.inputPreset)return [{type:'float',inputs:{},outputs:{out:'float'}}];
   if(d.inputSourceId)return [{type:d.inputType,inputs:{},outputs:d.inputKind==='top_input'?d.outputs:{out:d.inputType}}];
   const entry=typeContract?.definitions[d.definitionUuid];if(entry)return d.fixedType?entry.variants.filter(v=>v.type===d.fixedType):entry.variants;
@@ -321,6 +437,7 @@ function typeVariants(d){
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
 }
 function resolvedNodePorts(d,params,decl,kind){
+  if(isCompositeOperation(d))return compositePorts(d.key,params)[kind];
   if(params.fixedType&&params.type!==params.fixedType)throw Error(t('type.fixedValue'));
   if(isVectorOperation(d))return vectorPorts(d.key,params)[kind];
   if(isMatrixOperation(d))return matrixPorts(d.key,params)[kind];
@@ -336,6 +453,7 @@ function resolvedNodePorts(d,params,decl,kind){
     if(Number.isInteger(count)&&count>=1&&count<=spec.ports.length)return Object.fromEntries(spec.ports.slice(0,count).map(port=>[port,spec.type]));
   }
   const entry=typeContract?.definitions[d.definitionUuid];
+  if(entry?.selector==='declaration'&&decl&&isCompositeType(decl.type))return kind==='inputs'?{}:{out:decl.type};
   const chosen=entry?.selector==='parameter'?(params.type||'float'):entry?.selector==='declaration'?decl?.type:null;
   const variant=typeVariants(d).find(v=>v.type===chosen);
   // Preserve anchors for an unresolved declaration; unknown types cannot connect.
@@ -480,6 +598,8 @@ function constantRequirementIssues(document){
       else if(n.definitionUuid===FunctionModel.CALL){
         const fn=document.functions?.find(f=>f.id===n.params.functionId);
         if(fn&&!stack.includes(fn.id)){seenFunctions.add(fn.id);out=unit(fn.graph,fn,incoming,[...trail,n.id],[...stack,fn.id]);}
+      }else if(d?.key==='array_length'){
+        out={out:true};
       }else if(['matrix_combine','matrix_replace'].includes(d?.key)){
         const shape=typeContract.types[n.params.type],effective=[];
         for(let c=0;c<shape.columns;c++)for(let r=0;r<shape.rows;r++){
@@ -524,14 +644,22 @@ function autoDefinition(document,node,owner=null){
 }
 function autoUnits(document){return [...Object.entries(document.stages).map(([name,data])=>({key:'stage:'+name,data,owner:null})),...(document.functions||[]).map(owner=>({key:'function:'+owner.id,data:owner.graph,owner}))];}
 function autoTypeError(key,detail=''){const error=Error(t(key)+(detail?' '+detail:''));error.code='autoConflict';return error;}
-function concretePorts(document,n,owner,type=n.params.type,override=null){
+function concretePorts(document,n,owner,type=n.params.type,override=null,seen=new Set()){
   if(override)return override;
   const d=autoDefinition(document,n,owner);if(!d)return {inputs:{},outputs:{}};
+  if(isCompositeOperation(d)){
+    const data=owner?.graph||Object.values(document.stages||{}).find(data=>data.nodes.some(peer=>peer===n||peer.id===n.id)),incoming={};
+    const input=d.key==='struct_field'?'value':'Array';
+    if(!seen.has(n.id)&&data){const visited=new Set([...seen,n.id]);for(const edge of data.edges.filter(edge=>edge.to[0]===n.id&&edge.to[1]===input)){
+      const source=data.nodes.find(peer=>peer.id===edge.from[0]);if(source&&!visited.has(source.id))incoming[edge.to[1]]=concretePorts(document,source,owner,source.params.type,null,visited).outputs[edge.from[1]];
+    }}
+    return compositePorts(d.key,{...n.params,type},document,incoming);
+  }
   const decl=document.declarations.find(d=>d.id===n.params.declarationId),params={...n.params,type};
   return {inputs:resolvedNodePorts(d,params,decl,'inputs'),outputs:resolvedNodePorts(d,params,decl,'outputs')};
 }
 function safeConcretePorts(document,n,owner=null,type=n.params.type,override=null){
-  try{return concretePorts(document,n,owner,type,override);}catch(error){const d=autoDefinition(document,n,owner);if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,{...n.params,type});}
+  try{return concretePorts(document,n,owner,type,override);}catch(error){const d=autoDefinition(document,n,owner);if(isCompositeOperation(d))return compositePorts(d.key,n.params,document);if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,{...n.params,type});}
 }
 function invalidTypeEdges(data,portMap){
   const vectors=new Set(data.nodes.filter(n=>['vector','replace','combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
@@ -550,7 +678,11 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     if(active.has(n.id))throw autoTypeError('wire.cycle');active.add(n.id);
     const links=incoming.get(n.id)||[];let plannedType=n.params.type;
     for(const e of links){const source=nodes.get(e.from[0]);if(source)visit(source);}
-    try{if(combineNodes.has(n.id)){
+    try{if(isCompositeOperation(autoDefinition(document,n,owner))){
+      const d=autoDefinition(document,n,owner),incomingTypes=Object.fromEntries(links.map(edge=>[edge.to[1],ports.get(edge.from[0])?.outputs[edge.from[1]]]));
+      const p=compositePorts(d.key,n.params,document,incomingTypes);ports.set(n.id,p);
+      if(['array_get','array_replace','array_length','struct_field'].includes(d.key))choices.set(n.id,p.inputs[d.key==='struct_field'?'value':'Array']);
+    }else if(combineNodes.has(n.id)){
       const isVector=autoDefinition(document,n,owner)?.key==='replace',componentLinks=isVector?links.filter(e=>e.to[1]!=='value'):links;
       if(isVector&&autoNodes.has(n.id)){
         const base=links.find(e=>e.to[1]==='value'),baseType=base&&ports.get(base.from[0])?.outputs[base.from[1]];
@@ -575,7 +707,7 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     active.delete(n.id);
   }
   // No policy nodes: existing unresolved/cyclic drafts remain a compiler concern.
-  if(autoNodes.size||combineNodes.size||draft)for(const n of data.nodes)visit(n);
+  if(autoNodes.size||combineNodes.size||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
   else for(const n of data.nodes)ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
   return {choices,ports,groups,issues};
 }
@@ -587,6 +719,14 @@ function rejectNewTypeIssues(data,ports,oldData,oldPorts){
 function reshapeTypedInputs(n,d,nextType){
   if(n.params.fixedType&&nextType!==n.params.fixedType)throw Error(t('type.fixedValue'));
   const previous=n.params.type||'float';if(previous===nextType)return;
+  if(isCompositeOperation(d)){
+    n.params.type=nextType;
+    if(d.key==='struct_field'){
+      const fields=typeDescriptor(nextType)?.fields||[];if(!fields.some(field=>field.id===n.params.field||field.name===n.params.field))n.params.field=fields[0]?.id||fields[0]?.name||'';
+    }
+    if(n.inputValues?.replacement!==undefined){const type=typeDescriptor(nextType)?.elementType;if(hasValueEditor(type))n.inputValues.replacement=shapedValue(n.inputValues.replacement,type);else delete n.inputValues.replacement;}
+    return;
+  }
   if(isMatrixOperation(d)&&isMatrixType(previous)&&isMatrixType(nextType)&&d.key!=='matrix_split'){
     const old=clone(n.params.values||[]),oldShape=typeContract.types[previous],nextShape=typeContract.types[nextType];
     n.ui||={};const cache=n.ui.matrixValuesByType||={};cache[previous]=old;
@@ -614,6 +754,10 @@ function reshapeTypedInputs(n,d,nextType){
   normalizeNodeValues(n,d);
 }
 function normalizeNodeValues(n,d){
+  if(d.key==='struct_field'&&!typeAvailable(n.params.type)){
+    const type=Object.keys(compositeStructs()).find(type=>typeAvailable(type)),field=typeDescriptor(type)?.fields?.[0];
+    if(type){n.params.type=type;n.params.field=field?.id||field?.name||'';}
+  }
   if(['vector','combine','replace'].includes(d.key))n.params.components=Array.from({length:4},(_,i)=>scalarValue(n.params.components?.[i]??0,typeFamily(n.params.type)));
   if(d.key==='scalar')n.params.value=shapedValue(n.params.value,n.params.type);
   if(isMatrixOperation(d)&&d.key!=='matrix_split'){
@@ -621,7 +765,7 @@ function normalizeNodeValues(n,d){
     n.params.values=Array.from({length:shape.components},(_,index)=>scalarValue(n.params.values?.[index]??(Math.floor(index/shape.rows)===index%shape.rows?1:0),shape.family));
   }
 }
-function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.ui?.typeMode]),data.edges])});}
+function autoTopology(document){return JSON.stringify({typeDefinitions:document.typeDefinitions,declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode]),data.edges])});}
 function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
   if(autoTopology(document)===autoTopology(previous))return;
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
@@ -713,7 +857,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
   try{
     const assembling=entry=>['combine','replace'].includes(entry?.key);
     const possibleInputs=(entry,n,name)=>{
-      if(assembling(entry))return null;
+      if(assembling(entry)||isCompositeOperation(entry))return null;
       const automatic=(!context.owner||context.owner.scope==='local')&&n.ui?.typeMode==='auto'&&supportsAutoType(entry);
       return automatic?nodeTypeVariants(entry,n.params).map(v=>v.inputs[name]):[n.id===id?variant.inputs[name]:context.oldPorts.get(n.id)?.inputs[name]];
     };
@@ -781,6 +925,27 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
   }catch(error){context.plans.set(trialKey,{error});throw error;}
 }
 function creatorVariants(d,wire){
+  if(isCompositeOperation(d)){
+    const params={...clone(d.defaults||{})},descriptor=wire&&typeDescriptor(wire.type),variants=[];
+    const add=params=>{try{variants.push({type:null,...compositePorts(d.key,params),params});}catch{}};
+    if(d.key==='builtin_source'){add(params);return variants;}
+    if(d.key==='array'){
+      if(wire?.kind==='inputs'){if(descriptor?.shape!=='array'||typeof descriptor.length!=='number'||typeContainsResource(wire.type))return [];Object.assign(params,{elementType:descriptor.elementType,length:descriptor.length});}
+      add(params);return variants;
+    }
+    if(d.key==='struct_field'){
+      if(!wire&&!typeAvailable(params.type)){params.type=Object.keys(compositeStructs()).find(type=>typeAvailable(type));params.field=typeDescriptor(params.type)?.fields?.[0]?.id;}
+      const structures=wire?.kind==='outputs'?(descriptor?.shape==='struct'?[wire.type]:[]):wire?.kind==='inputs'?Object.keys(compositeStructs()):[params.type];
+      for(const type of structures)for(const field of typeDescriptor(type)?.fields||[])if(!wire||wire.kind==='outputs'||compatible(field.type,wire.type))add({...params,type,field:field.id||field.name});
+      return variants;
+    }
+    if(wire&&descriptor?.shape==='array')params.type=wire.type;
+    else if(wire?.kind==='inputs'&&d.key==='array_get'){
+      const arrays=graphInterfaceTypes().filter(type=>typeDescriptor(type)?.shape==='array'&&compatible(typeDescriptor(type).elementType,wire.type));
+      for(const type of arrays)add({...params,type});if(!arrays.length&&!isResourceType(wire.type))add({...params,type:wire.type+'[4]'});return variants;
+    }
+    add(params);return variants;
+  }
   if(d.fixedType)return typeVariants(d);
   if(isConvertOperation(d)){
     const from=wire?.kind==='outputs'?wire.type:d.defaults.fromType,to=wire?.kind==='inputs'?wire.type:d.defaults.toType;
@@ -815,10 +980,10 @@ function inputTypeDisplay(n,port){
   const target=ports(n,'inputs')[port],edge=current().edges.find(e=>e.to[0]===n.id&&e.to[1]===port);
   const sourceNode=edge&&current().nodes.find(n=>n.id===edge.from[0]),source=sourceNode&&ports(sourceNode,'outputs')[edge.from[1]];
   const conversion=source&&source!==target?typeContract?.conversions.find(rule=>rule.from===source&&rule.to===target)?.kind:null;
-  return {source:source||null,target,conversion,text:source&&source!==target?source+' → '+target:target};
+  return {source:source||null,target,conversion,text:source&&source!==target?displayType(source)+' → '+displayType(target):displayType(target)};
 }
 function portTypeCaption(n,kind,name){
-  if(kind==='outputs')return el('small',{},ports(n,kind)[name]);
+  if(kind==='outputs')return el('small',{},displayType(ports(n,kind)[name]));
   const info=inputTypeDisplay(n,name),caption=el('small',{class:'port-type'},info.text);
   if(info.source&&info.source!==info.target){
     caption.classList.add('has-conversion');caption.dataset.conversion=info.conversion||'invalid';
@@ -1244,6 +1409,8 @@ function renderCards(){
     };
     if(collapsed){appendCollapsedPorts(list,n,portRow);card.append(list);}else{
     if(d?.key==='compare'){const controls=el('div',{class:'node-body-controls'});controls.append(compareOperatorSelector(n));card.append(controls);}
+    if(d?.key==='struct_field'){const controls=el('div',{class:'node-body-controls'});controls.append(structFieldSelector(n));card.append(controls);}
+    if(d?.key==='array'){const summary=el('div',{class:'node-composite-summary','data-array-summary':n.id},displayType(n.params.elementType)+' × '+n.params.length);card.append(summary);}
     if(isMatrixOperation(d))appendMatrixNodeRows(list,n,portRow);
     for(const kind of ['inputs','outputs']){
       const known=ports(n,kind);if(!isMatrixOperation(d))for(const name of Object.keys(known))list.append(portRow(kind,name));
@@ -1270,6 +1437,7 @@ const browserCategoryLabel=key=>t('browser.category.'+key);
 const browserSourceLabel=key=>t('browser.source.'+key);
 const normalizeSearch=value=>String(value||'').normalize('NFKC').toLowerCase().trim();
 function browserMeta(d){
+  if(isCompositeOperation(d))return {category:'data',path:['data'],source:d.key==='builtin_source'?'td':'editor',secondary:[],aliases:d.key==='builtin_source'?[d.defaults.source,'TD source','array source']:({array:['list','create array','陣列'],array_get:['array index','get','陣列取項'],array_replace:['array set','replace','陣列替換'],array_length:['array size','length','陣列長度'],struct_field:['struct','field','member','結構欄位']})[d.key]||[],tags:[],glslName:d.key==='builtin_source'?d.defaults.source:d.label,descriptionKey:d.descriptionKey||'help.'+d.key,subgraph:false,saved:false,project:false};
   if(d.inputPreset)return {category:'shader',path:['shader'],source:'td',secondary:[],aliases:[inputPresets[d.inputPreset][0],'uniform','time','frame'],tags:[],glslName:inputPresets[d.inputPreset][1],descriptionKey:'inputs.clockHint',subgraph:false,saved:false,project:false};
   if(d.inputSourceId)return {category:'shader',path:['shader'],source:'project',secondary:[],aliases:['input','reference'],tags:[],glslName:d.label,descriptionKey:'inputs.referenceHint',subgraph:false,saved:false,project:true};
   const f=d.definitionUuid===FunctionModel.CALL?(d.source||FunctionModel.find(graph,d.functionId)):null;
@@ -1476,6 +1644,7 @@ function installCreatorDrag(){
 function openCreator(clientX,clientY,wire=null){
   if(readonly||!graph)return;cancelConnection();creatorDragGesture?.cancel();const position=graphPoint(clientX,clientY);if(!position)return;
   creatorState={path:[],anchorX:clientX,anchorY:clientY,...position,wire};creatorIndex=0;
+  const typeFilter=$('#createtype');typeFilter.replaceChildren(el('option',{value:'all'},t('create.allTypes')),...graphInterfaceTypes().map(type=>el('option',{value:type},displayType(type))));
   $('#creator').hidden=false;
   $('#createsearch').value='';$('#createsource').value='all';creatorCategory='all';$('#createtype').value='all';$('#createcontext').textContent=wire?`${wire.type} · ${wire.kind==='outputs'?'→':'←'}`:t('create.title');renderCreator();$('#createsearch').focus();
 }

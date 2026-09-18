@@ -47,6 +47,49 @@ const GraphFrames=(()=>{
   }
   return {read,write,prune,copy,valid};
 })();
+/* Graph-owned type definitions travel with portable graph fragments. */
+const GraphTypeDefinitions=(()=>{
+  const copy=v=>JSON.parse(JSON.stringify(v));
+  const canonical=v=>JSON.stringify(Array.isArray(v)?v.map(normalize):normalize(v));
+  function normalize(v){return v&&typeof v==='object'?Array.isArray(v)?v.map(normalize):Object.fromEntries(Object.keys(v).sort().map(k=>[k,normalize(v[k])])):v;}
+  function merge(existing=[],incoming=[]){
+    if(!Array.isArray(existing)||!Array.isArray(incoming))throw Error('Invalid structure definitions');
+    const result=copy(existing),known=new Map();
+    for(const item of [...existing,...incoming]){
+      if(!item||typeof item!=='object'||!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(item.id)||!Array.isArray(item.fields))throw Error('Invalid structure definition');
+      if(known.has(item.id)&&canonical(known.get(item.id))!==canonical(item))throw Error('Conflicting structure definition: '+item.id);
+      known.set(item.id,item);
+      if(!result.some(d=>d.id===item.id))result.push(copy(item));
+    }
+    if(result.length>64)throw Error('At most 64 structure definitions are supported');
+    return result;
+  }
+  function valid(type,base,definitions=[],depth=0){
+    if(typeof type!=='string'||depth>8)return false;
+    if(base.includes(type)||['TDTexInfo','TDMatrix','TDCameraInfo','TDLight'].includes(type)||definitions.some(d=>'struct:'+d.id===type))return true;
+    const match=/^(.+)\[([1-9][0-9]*|TD_NUM_2D_INPUTS|TD_NUM_CAMERAS|TD_NUM_LIGHTS)\]$/.exec(type);
+    return !!(match&&(!/^\d+$/.test(match[2])||Number(match[2])<=1024)&&valid(match[1],base,definitions,depth+1));
+  }
+  function reachable(definitions=[],fragment){
+    const available=new Map(definitions.map(d=>[d.id,d])),seen=new Set();
+    function use(type){
+      if(typeof type!=='string'||!type.startsWith('struct:'))return;
+      const id=type.slice(7).split('[')[0];if(seen.has(id))return;seen.add(id);
+      for(const field of available.get(id)?.fields||[])use(field.type);
+    }
+    function walk(value){
+      if(!value||typeof value!=='object')return;
+      if(Array.isArray(value)){value.forEach(walk);return;}
+      for(const [key,item]of Object.entries(value)){
+        if(['typeDefinitions','ui','source','origin'].includes(key))continue;
+        if(['type','elementType','fromType','toType','fixedType'].includes(key))use(item);
+        else if(item&&typeof item==='object')walk(item);
+      }
+    }
+    walk(fragment);return definitions.filter(d=>seen.has(d.id)).map(copy);
+  }
+  return {merge,valid,reachable};
+})();
 /* Pure graph operations, shared by the editor and model tests. */
 const FunctionModel=(()=>{
   const CALL='sgrape.function.call',INPUT='sgrape.function.input',OUTPUT='sgrape.function.output';
@@ -80,6 +123,7 @@ const FunctionModel=(()=>{
   }
   function importLibrary(graph,source){
     graph.functions||=[];
+    const typeDefinitions=GraphTypeDefinitions.merge(graph.typeDefinitions,GraphTypeDefinitions.reachable(source.typeDefinitions,source));
     const existing=graph.functions.find(f=>f.scope===source.scope&&f.source?.id===source.source?.id&&f.source?.version===source.source?.version);
     if(existing)return existing;
     const bundle=[source,...(source.dependencies||[])],mapping=new Map(),pending=[];
@@ -100,6 +144,7 @@ const FunctionModel=(()=>{
       if(!mapped&&!find(graph,node.params.functionId))throw Error('Missing nested Function in library snapshot');
       if(mapped)node.params.functionId=mapped;
     }
+    if(typeDefinitions.length)graph.typeDefinitions=typeDefinitions;
     graph.functions.push(...pending);return find(graph,mapping.get(source.id));
   }
   function independent(graph,node){
@@ -110,7 +155,7 @@ const FunctionModel=(()=>{
   }
   return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity};
 })();
-if(typeof module!=='undefined'){module.exports=FunctionModel;module.exports.GraphFrames=GraphFrames;}
+if(typeof module!=='undefined'){module.exports=FunctionModel;module.exports.GraphFrames=GraphFrames;module.exports.GraphTypeDefinitions=GraphTypeDefinitions;}
 
 /* Portable selection snapshots contain graph data only, never editor credentials. */
 const GraphClipboard=(()=>{
@@ -128,6 +173,8 @@ const GraphClipboard=(()=>{
       if(n.definitionUuid===FunctionModel.CALL){const ident=n.params.functionId;if(seenFunctions.has(ident))continue;const f=FunctionModel.find(graph,ident);if(!f)fail('clipboard.missing');seenFunctions.add(ident);functions.push(copy(f));scan(f.graph.nodes);}
     }}
     scan(nodes);const result={format:FORMAT,version:1,source,nodes:copy(nodes),edges:copy(data.edges.filter(e=>chosen.has(e.from[0])&&chosen.has(e.to[0]))),functions,declarations,topInputs};
+    const usedTypes=GraphTypeDefinitions.reachable(graph.typeDefinitions,result);
+    if(usedTypes.length)result.typeDefinitions=usedTypes;
     GraphFrames.write(result,GraphFrames.copy(data,chosen));
     const text=JSON.stringify(result);if(new TextEncoder().encode(text).length>LIMIT)fail('clipboard.size');return text;
   }
@@ -140,6 +187,8 @@ const GraphClipboard=(()=>{
     return p;
   }
   function paste(graph,data,p,{source,stage,target,catalog,types,anchor}){
+    let typeDefinitions;try{typeDefinitions=GraphTypeDefinitions.merge(graph.typeDefinitions,GraphTypeDefinitions.reachable(p.typeDefinitions,p));}catch{fail('clipboard.invalid');}
+    const validType=type=>GraphTypeDefinitions.valid(type,types,typeDefinitions);
     const same=p.source===source,defs=new Map(catalog.map(d=>[d.definitionUuid,d])),functionMap=new Map(),declarationMap=new Map();
     function unique(items){const map=new Map();for(const item of items){if(!object(item)||!validId(item.id)||map.has(item.id))fail('clipboard.invalid');map.set(item.id,item);}return map;}
     const sourceFunctions=unique(p.functions),sourceDeclarations=unique(p.declarations);
@@ -149,10 +198,12 @@ const GraphClipboard=(()=>{
     for(const [key,d]of sourceDeclarations){
       if(graph.topSourceVersion===1&&d.kind==='sampler')fail('clipboard.stage');
       if(same&&graph.declarations.some(x=>x.id===key)){declarationMap.set(key,key);continue;}
-      if(!['uniform','sampler','constant','spec_constant'].includes(d.kind)||!types.includes(d.type)&&d.type!=='sampler2D'&&!(['int','uint','bool'].includes(d.type)&&d.kind==='spec_constant')||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
+      if(!['uniform','sampler','constant','spec_constant'].includes(d.kind)||!validType(d.type)&&d.type!=='sampler2D'&&!(['int','uint','bool'].includes(d.type)&&d.kind==='spec_constant')||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
       const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
-      if(['uniform','constant'].includes(d.kind)){
+      if(d.kind==='uniform'&&d.nativeSequence==='array'){
+        if(!/^(float|vec[234])\[[1-9][0-9]*\]$/.test(d.type)||typeof d.arraySource!=='string'||d.arraySource.length>2048||/[\x00-\x1f]/.test(d.arraySource))fail('clipboard.invalid');
+      }else if(['uniform','constant'].includes(d.kind)){
         const vector=/^(i|u|b|d)?vec([234])$/.exec(d.type),matrix=/^(d)?mat([234])(?:x([234]))?$/.exec(d.type),family=matrix?(matrix[1]?'double':'float'):vector?({i:'int',u:'uint',b:'bool',d:'double'}[vector[1]]||'float'):d.type,count=matrix?Number(matrix[2])*Number(matrix[3]||matrix[2]):vector?Number(vector[2]):1;
         const scalar=v=>family==='bool'?typeof v==='boolean':family==='double'?typeof v==='number'&&Number.isFinite(v):number(v)&&(family==='float'||['int','uint'].includes(family)&&Number.isInteger(v)&&v>=(family==='uint'?0:-2147483648)&&v<=(family==='uint'?4294967295:2147483647));
         if(count===1?!scalar(d.value):!Array.isArray(d.value)||d.value.length!==count||!d.value.every(scalar))fail('clipboard.invalid');
@@ -171,7 +222,7 @@ const GraphClipboard=(()=>{
       if(same&&FunctionModel.find(graph,key)){functionMap.set(key,key);continue;}
       const next=copy(f);next.id=FunctionModel.uid();next.scope='local';next.origin=next.source||next.origin;delete next.source;delete next.dependencies;
       if(typeof next.name!=='string'||!next.name.length||next.name.length>80||!Array.isArray(next.stages)||!next.stages.includes(stage))fail('clipboard.stage');
-      for(const direction of ['inputs','outputs']){if(!Array.isArray(next[direction])||next[direction].length>16)fail('clipboard.invalid');unique(next[direction]);for(const port of next[direction])if(!types.includes(port.type))fail('clipboard.invalid');}
+      for(const direction of ['inputs','outputs']){if(!Array.isArray(next[direction])||next[direction].length>16)fail('clipboard.invalid');unique(next[direction]);for(const port of next[direction])if(!validType(port.type))fail('clipboard.invalid');}
       functionMap.set(key,next.id);newFunctions.push(next);
     }
     function nodesAndEdges(content,boundary=false){
@@ -191,6 +242,7 @@ const GraphClipboard=(()=>{
     const content={nodes:copy(p.nodes),edges:copy(p.edges),...(Object.hasOwn(p,'ui')?{ui:copy(p.ui)}:{})};nodesAndEdges(content);
     if(data.nodes.length+content.nodes.length>256||data.edges.length+content.edges.length>1024)fail('clipboard.size');
     FunctionModel.ensureCapacity(graph,newFunctions.length);
+    if(typeDefinitions.length)graph.typeDefinitions=typeDefinitions;
     if(newSlots.length){if(!graph.topInputs){const legacy=graph.declarations.find(d=>d.source==='input:0');graph.topInputs=[{id:'input0',name:'Input 0',defaultSource:legacy?.defaultSource||'builtin:banana',matchDefault:!!legacy?.defaultSource}];}if(graph.topInputs.length+newSlots.length>16)fail('clipboard.size');if(graph.declarations.some(d=>d.source==='input:0'))graph.topInputLegacyId||=graph.topInputs[0].id;graph.topInputs.push(...newSlots);}
     graph.functions||=[];graph.functions.push(...newFunctions);graph.declarations.push(...newDeclarations);
     const remap=new Map(content.nodes.map(n=>[n.id,id()])),x=Math.min(...content.nodes.map(n=>n.ui.x)),y=Math.min(...content.nodes.map(n=>n.ui.y)),frames=GraphFrames.copy(content,remap.keys(),remap);
@@ -208,7 +260,7 @@ const GraphClipboard=(()=>{
 
 /* Source placement is an editing policy, separate from Function expansion. */
 const SubgraphSourcePolicy=(()=>{
-  const outside=new Set(['uniform','sampler','constant','spec_constant','top_input','attribute','attributes','buffer']);
+  const outside=new Set(['uniform','sampler','constant','spec_constant','top_input','builtin_source','attribute','attributes','buffer']);
   function isSource(node,catalog){return outside.has(catalog.find(d=>d.definitionUuid===node.definitionUuid)?.key);}
   function inputName(document,node,port,fallback){
     const source=document.declarations.find(d=>d.id===node?.params?.declarationId);

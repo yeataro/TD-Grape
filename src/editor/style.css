@@ -1762,3 +1762,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .matrix-ports>.port-row.output:last-child{margin-top:4px}
 .node-matrix .port-row[data-type*="mat"]{--socket:var(--type-vec4)}
 @media(pointer:coarse){.matrix-column-toggle{min-height:32px}.matrix-ports .matrix-column-row,.matrix-component-row{min-height:36px}}
+.node-composite-summary{padding:8px 16px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node-body-controls [data-struct-field]{width:100%;min-width:0}
+.source-array-fields{display:grid;gap:8px}
+.source-array-fields[hidden]{display:none}

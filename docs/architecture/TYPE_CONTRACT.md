@@ -9,6 +9,7 @@
 | `specConstantTypes` | int、uint、bool、float；Spec Constants 的建立／引用及 TD Constants 原生值 |
 | `types` | 38 種值型別，加 sampler2D；矩陣另記 shape、columns、rows，不能只以 components 辨識 |
 | `resourceTypes` | sampler2D；其他貼圖維度尚未實作 |
+| `composites` | 陣列描述規則、TD／圖內結構及欄位、定義提供者、目標／Stage 可用範圍、內建來源與長度巨集 |
 | `conversions` | 同型別 identity；數值家族間同寬 cast、數值純量到數值向量 constructor；同家族純量到向量 splat（含 bool → bvec） |
 
 型別轉換方向是明確清單，不靠同分量數猜測相容性。數值與 bool 之間須使用明確轉換；普通接線不因 Convert 能力擴充而放寬。Combine／Replace 的接孔維持既有精確型別規則，不能因一般接線允許 cast 而偷偷改變組合分量。各數學 overload 仍由定義變體決定。
@@ -21,7 +22,21 @@
 
 Spec Constant 引用的輸出型別來自來源宣告。`constantId` 是該 Shader 內穩定、唯一的非負 ID；名稱變更、原生列重排與新增引用不重新配置它。跨 Shader 貼上建立新來源時配置未使用 ID；匯入若重用既有來源則保留原 ID，新來源發生衝突才在該匯入操作配置新 ID。輪詢與 Undo 不維護另一份來源清單，也不重建來源身分。
 
-int／uint literal 使用 32 位元範圍；uint 帶 `u` 後綴，bool 必須是布林值並輸出 `true`／`false`。最小 signed int 以 `(-2147483647 - 1)` 表示，避免先解析超出 signed 範圍的正值。double literal 使用足以保留 binary64 的數字文字及 `LF` 後綴，不先變成 float literal。手寫 GLSL 輸入口／Function 介面及 relay 可辨識 38 種值型別；陣列尚未納入。
+int／uint literal 使用 32 位元範圍；uint 帶 `u` 後綴，bool 必須是布林值並輸出 `true`／`false`。最小 signed int 以 `(-2147483647 - 1)` 表示，避免先解析超出 signed 範圍的正值。double literal 使用足以保留 binary64 的數字文字及 `LF` 後綴，不先變成 float literal。手寫 GLSL 輸入口／Function 介面及 relay 可辨識 38 種值型別，以及合法的陣列與具名結構。
+
+## 陣列與結構擴充（0.8.91）
+
+既有 `types`／`valueTypes` 及數值轉換清單保持原意，不枚舉所有陣列長度或把結構當作任意數值。新增 `composites` 契約描述容器、欄位、來源和環境。Python `type_context(graph)` 限定本次圖的 registry；前端以圖的 `typeDefinitions` 補入相同定義，不讓一份 Shader 的自訂型別污染另一份 Shader。
+
+陣列引用如 `vec3[8]`、`struct:sample[4]`；多維依 GLSL 順序，`float[2][3]` 是兩個 `float[3]`。具名結構以穩定 ID 比較，不能因顯示名稱或欄位形狀相同就視為可互換。接線要求相同複合型別；不增加數值到陣列、不同長度陣列間的隱式轉換。
+
+`Array[i]`／Replace／Length 的主輸入型別，以及 Field 的來源結構，從上游推導；保存的 `params.type` 是未接線時的 fallback。索引選 int 或 uint。新增清單依共同描述做局部配對，使用者確定建立時仍驗證整張圖；查詢文字變更不要求 TD 通信。這些節點的 port ID 固定，匯入檢查不以 fallback 型別猜測刪除接線。
+
+固定陣列長度由型別提供；TD 長度巨集僅接受來源目錄的 allowlist。Array Length 是型別層的常數查詢，不讀取或遍歷陣列資料。Array[i] 產生 Clamp；Replace 複製值後僅在索引有效時寫入，越界保留原值。GLSL 编譯器負責編譯與可能的常數折疊，邊界政策由圖契約與產碼器明確決定。
+
+宿主結構由 TD 宣告；圖內 `provider: generated` 結構按使用到的依賴順序宣告一次。保存、剪貼簿及 Personal Function 保留用到的定義；Personal／clipboard 只攜帶其型別依賴閉包，拒絕真正同 ID 不同定義的衝突。TOP／MAT 專用 Function 按可用目標篩選。宿主結構以 `hostProfile` 記錄驗證環境，不能把公開文件摘錄當作永遠完整的 constructor ABI。
+
+實際操作、工程上限、來源載體及驗證限制見[陣列與結構](../features/ARRAYS_AND_STRUCTURES.md)和[TD 陣列來源](../features/TD_ARRAY_SOURCES.md)。
 
 TD 原生 Uniform／Spec Constant 的傳輸精度由 TD 決定；編輯器接受完整 GLSL int／uint 32 位範圍，包括負 int、大整數與 UINT_MAX。明確寫值、套用、綁定及 Undo 保留有限值、型別與完整範圍檢查，不附加 float32 round-trip、非負 int 或 MAT uint 上限。`/sources` 不驗證讀取中的即時值，也不回傳傳輸限制或精度 issue。TD 2025.32820 曾實測部分合法整數傳到 GPU 後失真，這是宿主能力紀錄，不是編輯限制，也不因此改寫或截斷使用者數值；圖內整數 literal 保持精確。
 

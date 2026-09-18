@@ -1,0 +1,29 @@
+/* Shared compound type semantics, independent of browser geometry or TD. */
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const payload=JSON.parse(fs.readFileSync(process.argv[2]||0,'utf8').replace(/^\uFEFF/,''));
+const context=vm.createContext({assert,payload,console,crypto:globalThis.crypto,t:key=>key,clone:value=>JSON.parse(JSON.stringify(value)),FunctionModel:{CALL:'sgrape.function.call',INPUT:'sgrape.function.input',OUTPUT:'sgrape.function.output'}});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/editor/graph_ui.js'),'utf8'),context);
+vm.runInContext(`
+setTypeContract(payload.typeContract||payload.contract);
+assert.equal(typeComponents('float'),1);assert.throws(()=>typeComponents('toString'));assert.throws(()=>typeComponents('?'));
+let graph={target:'top',declarations:[{id:'weights',kind:'uniform',type:'float[8]',value:[0,0,0,0,0,0,0,0]}],functions:[],stages:{pixel:{nodes:[],edges:[]}},typeDefinitions:[{id:'sample',name:'Sample',provider:'generated',fields:[{id:'position',name:'offset',type:'vec2'},{id:'matrix',name:'transform',type:'mat2'}]}]};
+let editorTarget='top',stage='pixel',catalog=payload.catalog;
+const same=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
+assert.equal(typeDescriptor('float[2][3]').length,2);assert.equal(typeDescriptor('float[2][3]').elementType,'float[3]');
+assert.equal(arrayType('float[3]',2),'float[2][3]');assert.equal(typeDescriptor('float[04]'),null);assert.equal(typeDescriptor('float[0]'),null);assert.equal(typeDescriptor('float[1025]'),null);assert.equal(typeDescriptor('float[2][2][2][2][2][2][2][2][2]'),null);
+same(compositeZeroValue('float[2][3]'),[[0,0,0],[0,0,0]]);same(compositeZeroValue('bool[2]'),[false,false]);same(compositeZeroValue('mat2[2]'),[[0,0,0,0],[0,0,0,0]]);
+same(compositeZeroValue('struct:sample[1]'),[{position:[0,0],matrix:[0,0,0,0]}]);assert.equal(compositeZeroValue('sampler2D[TD_NUM_2D_INPUTS]'),null);
+assert.throws(()=>compositeZeroValue('float[1024][1024]'),/composite.valueTooLarge/);
+assert.equal(displayType('struct:sample[2][3]'),'Sample[2][3]');assert.equal(glslPortDeclaration('struct:sample[2][3]','items'),'sg_type_sample items[2][3]');
+const header=CustomGLSL.header({functionName:'readSamples',inputs:[{id:'a',name:'items',type:'struct:sample[2]'}],outputs:[{id:'b',name:'weights',type:'float[2]'}]});
+assert.ok(header.includes('in sg_type_sample items[2]'));assert.ok(header.includes('out float weights[2]'));assert.ok(header.includes('for (int sg_init_0 = 0; sg_init_0 < 2; ++sg_init_0)'));assert.ok(header.includes('weights[sg_init_0] = 0.0;'));assert.ok(!header.includes('struct:sample'));
+assert.equal(glslZeroLiteral('struct:sample'),'sg_type_sample(vec2(0.0, 0.0), mat2(0.0, 0.0, 0.0, 0.0))');
+assert.equal(graphInterfaceTypes().includes('float[8]'),true);assert.equal(graphInterfaceTypes().includes('TDTexInfo'),true);assert.equal(graphInterfaceTypes().includes('TDMatrix'),false);assert.equal(graphValueTypes().includes('sampler2D[TD_NUM_2D_INPUTS]'),false);
+editorTarget='mat';stage='vertex';assert.equal(graphInterfaceTypes().includes('TDMatrix'),true);assert.equal(graphInterfaceTypes().includes('TDTexInfo'),false);editorTarget='top';stage='pixel';
+const make=(key,id,params)=>({id,definitionUuid:catalog.find(d=>d.key===key).definitionUuid,params:{...clone(catalog.find(d=>d.key===key).defaults),...params},ui:{}});
+const uniform=make('uniform','uniform',{declarationId:'weights'}),get=make('array_get','get',{}),length=make('array_length','length',{requireConstant:true});graph.stages.pixel={nodes:[uniform,get,length],edges:[{from:['uniform','out'],to:['get','Array']},{from:['uniform','out'],to:['length','Array']}]};
+same(concretePorts(graph,uniform,null).outputs,{out:'float[8]'});same(concretePorts(graph,get,null),{inputs:{Array:'float[8]',i:'int'},outputs:{out:'float'}});same(constantRequirementIssues(graph),[]);
+const plan=planAutoGraph(graph,graph.stages.pixel,null,new Map(),{draft:true});assert.equal(plan.issues.size,0);assert.equal(plan.choices.get('get'),'float[8]');
+assert.throws(()=>compositePorts('array_get',{type:'float'}),/composite.arrayRequired/);assert.throws(()=>compositePorts('array_replace',{type:'sampler2D[TD_NUM_2D_INPUTS]'}),/composite.resourceReadOnly/);assert.equal(compatible('unknown','unknown'),false);
+console.log(JSON.stringify({passed:true,checks:8}));
+`,context);

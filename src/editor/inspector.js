@@ -386,7 +386,7 @@ function liveUniformFields(decl){
 }
 
 function defaultInput(n,port,type){
-  if(isResourceType(type))return null;
+  if(isResourceType(type)||isCompositeType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
   const key=definition(n)?.key;
   if(['matrix_combine','matrix_replace'].includes(key)){
@@ -977,7 +977,7 @@ function glslCodeInspector(box,n){
       const row=el('div',{class:'code-port','data-code-port':p.id});
       const entry=input(p.name,value=>change(()=>CustomGLSL.update(n,direction,p.id,{name:value})));
       entry.maxLength=48;entry.disabled=readonly;entry.setAttribute('aria-label',t('code.portName'));entry.title=t('code.renameHint');
-      const types=direction==='inputs'?interfaceTypes():valueTypes();
+      const types=direction==='inputs'?graphInterfaceTypes():graphValueTypes();
       const type=select(types.map(type=>[type,type]),p.type,value=>change(()=>CustomGLSL.update(n,direction,p.id,{type:value}),{typeChange:true}));
       type.disabled=readonly;type.setAttribute('aria-label',t('node.type'));
       row.append(entry,type);
@@ -1036,13 +1036,56 @@ function nodeTypeSelector(n,d){
 }
 function nodePrimarySelector(n,d){
   if(!d)return null;let control=null;
-  if(isConvertOperation(d))control=convertTypeSelector(n,'toType');
+  if(isCompositeOperation(d))control=d.key==='array'?arrayElementSelector(n):null;
+  else if(isConvertOperation(d))control=convertTypeSelector(n,'toType');
   else if(n.params.type)control=nodeTypeSelector(n,d);
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
   else if(n.params.declarationId){const source=nodeSourceDeclaration(n);if(source)control=select(graph.declarations.filter(item=>item.kind===source.kind).map(item=>[item.id,item.name]),source.id,value=>change(()=>n.params.declarationId=value));}
   else if(n.params.inputId)control=select(topInputsView().map(item=>[item.id,item.name]),n.params.inputId,value=>change(()=>n.params.inputId=value));
   if(!control)return null;control.classList.add('node-primary-selector');control.dataset.nodeSelector=n.id;control.disabled=readonly;control.setAttribute('aria-label',control.title||t('node.declaration'));
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
+}
+function arrayElementSelector(n){
+  const options=graphValueTypes().filter(type=>typeDescriptor(type)?.shape!=='array'||typeof typeDescriptor(type).length==='number');
+  const control=select(options.map(type=>[type,displayType(type)]),n.params.elementType||'float',value=>change(()=>n.params.elementType=value,{typeChange:true}));
+  control.dataset.arrayElementType=n.id;control.title=t('array.elementType');control.disabled=readonly;return control;
+}
+function structFieldSelector(n){
+  const type=ports(n,'inputs').value,fields=typeDescriptor(type)?.fields||[];
+  const control=select(fields.map(field=>[field.id||field.name,field.name+' · '+displayType(field.type)]),n.params.field,value=>change(()=>n.params.field=value,{typeChange:true}));
+  control.dataset.structField=n.id;control.title=t('struct.field');control.disabled=readonly;control.setAttribute('aria-label',control.title);
+  for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,event=>event.stopPropagation());return control;
+}
+function compositeInspector(box,n,d){
+  if(!isCompositeOperation(d))return;
+  if(d.key==='array'){
+    box.append(parameterControlRow(t('array.elementType'),arrayElementSelector(n)));
+    const length=input(n.params.length??4,value=>{const count=Number(value);if(Number.isInteger(count)&&count>=1&&count<=(typeContract.composites.array.maxLength||1024))change(()=>n.params.length=count,{typeChange:true});else{status(t('array.invalidLength'),true);inspector();}},'number');
+    length.min='1';length.max=String(typeContract.composites.array.maxLength||1024);length.step='1';length.dataset.arrayLength=n.id;length.disabled=readonly;
+    box.append(parameterControlRow(t('array.length'),length),parameterControlRow('',parameterHint(t('array.initializationHint'))));
+  }else if(d.key==='builtin_source'){
+    const choices=builtinSourceEntries(d).map(entry=>[entry.defaults.source,entry.label]);
+    const source=select(choices,n.params.source,value=>change(()=>n.params.source=value,{typeChange:true}));source.dataset.builtinSource=n.id;source.disabled=readonly;
+    box.append(parameterControlRow(t('inputs.referenceSource'),source),parameterControlRow('',parameterHint(t('composite.hostSourceHint'))));
+  }else{
+    const port=d.key==='struct_field'?'value':'Array',connected=current().edges.some(edge=>edge.to[0]===n.id&&edge.to[1]===port),type=ports(n,'inputs')[port],typeLabel=d.key==='struct_field'?'struct.type':'composite.inputType';
+    if(!connected){
+      const choices=d.key==='struct_field'?Object.keys(compositeStructs()):graphInterfaceTypes().filter(type=>typeDescriptor(type)?.shape==='array'&&(d.key!=='array_replace'||!typeContainsResource(type)));
+      if(!choices.includes(n.params.type))choices.unshift(n.params.type);
+      const selector=select(choices.map(type=>[type,displayType(type)]),n.params.type,value=>change(()=>reshapeTypedInputs(n,d,value),{typeChange:true}));selector.disabled=readonly;selector.dataset.compositeInputType=n.id;
+      box.append(parameterControlRow(t(typeLabel),selector));
+    }else box.append(parameterControlRow(t(typeLabel),parameterHint(displayType(type))));
+    if(d.key==='struct_field')box.append(parameterControlRow(t('struct.field'),structFieldSelector(n)));
+    if(['array_get','array_replace'].includes(d.key)){
+      const index=select((typeContract.composites.array.indexTypes||['int','uint']).map(type=>[type,type]),n.params.indexType||'int',value=>change(()=>{n.params.indexType=value;if(n.inputValues?.i!==undefined)n.inputValues.i=shapedValue(n.inputValues.i,value);},{typeChange:true}));index.dataset.arrayIndexType=n.id;index.disabled=readonly;
+      box.append(parameterControlRow(t('matrix.indexType'),index),parameterControlRow('',parameterHint(t(d.key==='array_replace'?'array.replaceIndexHint':'array.indexHint'))));
+    }
+  }
+}
+function compositeInputHint(n,port,type){
+  if(typeContainsResource(type)||typeof typeDescriptor(type)?.length==='string')return t('composite.connectValue');
+  const descriptor=definition(n),stored=Object.hasOwn(n.inputValues||{},port)||(descriptor?.key==='function_call'&&FunctionModel.find(graph,n.params.functionId)?.inputs.some(p=>p.id===port&&p.default!==undefined))||(descriptor?.key==='function_output'&&currentFunction()?.outputs.some(p=>p.id===port&&p.default!==undefined));
+  return t(stored?'composite.storedDefault':'composite.zeroDefault')+' · '+displayType(type);
 }
 function convertTypeSelector(n,parameter){
   const d=definition(n),options=parameter==='fromType'?convertSources(d.key):convertTargets(n.params.fromType,d.key);
@@ -1277,6 +1320,7 @@ function inspector(){
     if(d.key==='glsl_code')glslCodeInspector(box,n);
     vectorInspector(box,n,d);
     matrixInspector(box,n,d);
+    compositeInspector(box,n,d);
     if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));
     if(supportsAutoType(d)&&!isVectorOperation(d)){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
@@ -1330,7 +1374,9 @@ function inspector(){
       applyPortLabelColorHint(heading.firstElementChild,n,'inputs',port);
       if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(hint(t(typeInfo.conversion==='splat'?'type.splat':typeInfo.conversion==='cast'?'type.cast':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target),'conversion-hint'));
       const value=defaultInput(n,port,type);
-      if(isResourceType(type)){
+      if(isCompositeType(type)){
+        if(!connection)section.append(hint(compositeInputHint(n,port,type)));
+      }else if(isResourceType(type)){
         if(!connection)section.append(hint(t('sampler.fallbackHint')));
       }else if(['replace','matrix_replace'].includes(d.key)&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value'))){
         if(!connection)section.append(hint(t(port==='value'?'vector.baselineHint':'vector.inherited')));
@@ -1357,7 +1403,7 @@ function inspector(){
     }
   }else{
     if(d.key==='comment')noteAppearanceSettings(box,n);
-    if(n.params.type&&!n.params.fixedType&&!supportsAutoType(d)&&!isVectorOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
+    if(n.params.type&&!n.params.fixedType&&!supportsAutoType(d)&&!isVectorOperation(d)&&!isCompositeOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
     if(isVectorOperation(d)||isMatrixOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],['stpq','S / T / P / Q'],...(typeComponents(n.params.type)===2?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
     if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','scalar','vector','matrix','float','vec2','vec3','vec4','color'].includes(d.key)){
       const requirement=el('input',{type:'checkbox','data-require-constant':n.id});requirement.checked=!!n.params.requireConstant;requirement.disabled=readonly;
@@ -1824,7 +1870,7 @@ function setInputGroupCollapsed(kind,collapsed){
 }
 function nativeSourceRows(){return [...(nativeSourceSnapshot?.uniforms||[]),...(nativeSourceSnapshot?.specConstants||[])];}
 function inputGroupLabel(kind){return ({top_input:'TOP Inputs',constant:t('inputs.graphConstants'),spec_constant:t('inputs.specConstants'),uniform:'Uniforms',sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind];}
-function inputSourceGroup(kind){return kind==='color'||kind.startsWith('preset:')?'uniform':kind;}
+function inputSourceGroup(kind){return kind==='color'||kind==='array'||kind.startsWith('preset:')?'uniform':kind;}
 function inputPresetSource(kind){return kind.startsWith('preset:')?graph.declarations.find(d=>d.kind==='uniform'&&d.type==='float'&&d.initialDriver===kind.slice(7)):null;}
 function finishInputCreate(kind,id){
   setInputGroupCollapsed(inputSourceGroup(kind),false);$('#inputsearch').value='';$('#nativeuniforms').dataset.sourceStructure='';$('#sourcecreatedialog').close();selectInputSource(id);
@@ -1832,7 +1878,7 @@ function finishInputCreate(kind,id){
 function openInputCreate(kind){
   if(editorMutationBlocked()||!graph||!['constant','spec_constant','uniform',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
   closeCreator();const dialog=$('#sourcecreatedialog'),choice=$('#sourcekind');
-  const options=kind==='uniform'?[['uniform','Uniform'],['color','Color · vec4'],...Object.keys(inputPresets).map(p=>['preset:'+p,t('inputs.preset.'+p)])]:[[kind,inputGroupLabel(kind)]];
+  const options=kind==='uniform'?[['uniform','Uniform'],['array',t('array.uniformSource')],['color','Color · vec4'],...Object.keys(inputPresets).map(p=>['preset:'+p,t('inputs.preset.'+p)])]:[[kind,inputGroupLabel(kind)]];
   choice.replaceChildren(...options.map(([value,label])=>el('option',{value},label)));choice.value=kind;
   $('#sourcekindfield').hidden=options.length===1;$('#sourcecreatetitle').textContent=t('inputs.new')+' · '+inputGroupLabel(kind);
   $('#sourcecreateerror').textContent='';choice.onchange();dialog.showModal();
@@ -1921,6 +1967,15 @@ function renderNativeSourceValues(){
       entry.placeholder=t(mode.value==='EXPRESSION'?'matrix.expression':'matrix.path');
       entry.title=binding?.binding||binding?.expression||binding?.mode||'';
     }
+    const arrayEditor=card.querySelector('[data-array-binding-editor]');
+    if(arrayEditor){
+      const binding=row.arrayBinding,mode=arrayEditor.querySelector('select'),entry=arrayEditor.querySelector('input'),apply=arrayEditor.querySelector('button');
+      mode.disabled=entry.disabled=apply.disabled=!ready||!binding?.writable;
+      if(!arrayEditor.bindingDirty&&!arrayEditor.contains(document.activeElement)){
+        mode.value=binding?.mode==='CONSTANT'?'CONSTANT':'EXPRESSION';entry.value=mode.value==='EXPRESSION'?binding?.expression||'':binding?.value||'';arrayEditor.sourceExpected=binding?.expected;
+      }
+      entry.placeholder=t(mode.value==='EXPRESSION'?'matrix.expression':'array.chopPath');entry.title=binding?.binding||binding?.expression||binding?.mode||'';
+    }
     for(const entry of card.querySelectorAll('[data-source-component]')){
       const item=row.components[Number(entry.dataset.sourceComponent)];entry.disabled=!ready||!item?.writable;
       if(document.activeElement!==entry&&!entry.numericGestureActive){entry.setSyncedValue(item?.value);entry.sourceExpected=item?clone(item):null;}
@@ -1934,14 +1989,14 @@ function renderNativeSourceValues(){
       if(document.activeElement!==entry){entry.setSyncedValue(item?.expression||'');entry.sourceExpected=item?.modeExpected;}
     }
     for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
-    const state=card.querySelector('.native-source-state');if(state)state.textContent=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');
+    const state=card.querySelector('.native-source-state');if(state)state.textContent=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.arrayBinding?t('uniform.driven'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');
   }
   for(const entry of document.querySelectorAll('#inspector [data-input-name]')){
     const row=nativeSourceRows().find(r=>r.id===entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
   }
   for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
   for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=editorMutationBlocked();
-  if($('#sourcetype'))$('#sourcetype').disabled=editorMutationBlocked()||!['uniform','constant','spec_constant'].includes($('#sourcekind').value);
+  if($('#sourcetype'))$('#sourcetype').disabled=editorMutationBlocked()||!['uniform','array','constant','spec_constant'].includes($('#sourcekind').value);
   if($('#sourcekind').value==='top_input'){$('#sourcename').value='sTD2DInputs['+topInputsView().length+']';$('#sourcename').disabled=true;}
   const presetSource=inputPresetSource($('#sourcekind').value);if(presetSource){$('#sourcename').value=presetSource.name;$('#sourcename').disabled=true;}
   $('#sourcecreate button[type=submit]').textContent=t(presetSource?'inputs.useExisting':'inputs.create');
@@ -1953,6 +2008,22 @@ function renderNativeSourceValues(){
 }
 function specValueField(value,type,commit){return field(t('declaration.value'),typedScalarInput(value,typeFamily(type),commit));}
 const nativeMatrixDrafts=new Map();
+const nativeArrayDrafts=new Map();
+function nativeArrayFields(card,decl,row){
+  const binding=row.arrayBinding;
+  if(!row.missing&&binding){
+    const editor=el('div',{'data-array-binding-editor':'',class:'input-drivers'}),mode=el('select',{'aria-label':t('matrix.bindingMode')}),entry=el('input',{type:'text','aria-label':t('array.chopPath'),spellcheck:'false',maxlength:4096}),apply=el('button',{type:'button'},t('matrix.applySource'));
+    mode.append(el('option',{value:'CONSTANT'},t('array.chopPath')),el('option',{value:'EXPRESSION'},t('matrix.expression')));
+    const key=editorLoadGeneration+':'+decl.id;for(const old of nativeArrayDrafts.keys())if(!old.startsWith(editorLoadGeneration+':'))nativeArrayDrafts.delete(old);
+    const draft=nativeArrayDrafts.get(key);mode.value=draft?.mode||(binding.mode==='CONSTANT'?'CONSTANT':'EXPRESSION');entry.value=draft?.value??(mode.value==='EXPRESSION'?binding.expression||'':binding.value||'');editor.sourceExpected=draft?.expected??binding.expected;editor.bindingDirty=!!draft;
+    const remember=()=>{editor.bindingDirty=true;nativeArrayDrafts.set(key,{mode:mode.value,value:entry.value,expected:editor.sourceExpected});};
+    mode.onchange=()=>{remember();entry.placeholder=t(mode.value==='EXPRESSION'?'matrix.expression':'array.chopPath');};entry.oninput=remember;entry.hasPendingEdit=()=>!!editor.bindingDirty;
+    apply.onclick=()=>nativeSourceRequest('source-edit',{action:'arrayBinding',id:decl.id,mode:mode.value,...(mode.value==='EXPRESSION'?{expression:entry.value}:{value:entry.value}),expected:editor.sourceExpected}).then(result=>{if(result){nativeArrayDrafts.delete(key);editor.bindingDirty=false;inspector();}});
+    entry.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();apply.click();}else if(event.key==='Escape'){nativeArrayDrafts.delete(key);editor.bindingDirty=false;entry.blur();renderNativeSourceValues();}};
+    editor.append(field(t('matrix.bindingMode'),mode),field(t('array.chopPath'),entry),apply);card.append(editor);
+  }
+  card.append(el('p',{class:'muted'},t('array.nativeHint')),el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
+}
 function nativeMatrixFields(card,decl,row){
   const shape=typeContract.types[decl.type],binding=row.matrixBinding;
   if(!row.missing&&binding){
@@ -1996,6 +2067,7 @@ function nativeInputFields(box,decl){
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
   card.addEventListener('pointerdown',()=>{if(!sourceReady())showNativeSourceHint();},true);
   if(!row||row.pending){card.append(el('p',{class:'muted'},t('sources.pending')));return;}
+  if(typeDescriptor(decl.type)?.shape==='array'){nativeArrayFields(card,decl,row);return;}
   if(isMatrixType(decl.type)){nativeMatrixFields(card,decl,row);return;}
   const count=typeContract?.types?.[decl.type]?.components||1;
   if(!row.missing){
@@ -2030,11 +2102,15 @@ function inputSourceInspector(box,decl){
     else changeDeclaration(()=>decl.name=name);
   });rename.dataset.sourceName='true';rename.dataset.inputName=decl.id;rename.disabled=readonly||(['uniform','spec_constant'].includes(decl.kind)&&row&&!row.pending&&(!sourceReady()||!row.nameWritable));box.append(field(t('declaration.name'),rename));
   if(decl.kind==='uniform'){
+    if(typeDescriptor(decl.type)?.shape==='array'){
+      box.append(field(t('node.type'),el('span',{},displayType(decl.type))));nativeInputFields(box,decl);
+    }else{
     const types=valueTypes().filter(type=>!row||row.pending||isMatrixType(type)===(row.sequence==='matrix'));
     box.append(field(t('node.type'),select(types.map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>setDeclarationType(decl,value)))),el('small',{class:'muted'},t(isMatrixType(decl.type)?'inputs.nativeMatrix':row?.sequence==='color'?'inputs.nativeColor':'inputs.nativeVector')));
     nativeInputFields(box,decl);
     const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type));box.append(defaults);
     if(!isMatrixType(decl.type)){const custom=el('button',{'data-source-custom':decl.id,class:'wide'},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(decl.id);box.append(custom);}
+    }
   }else if(decl.kind==='spec_constant'){
     box.append(field(t('node.type'),select((typeContract?.specConstantTypes||['int','uint','bool','float']).map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=specDefaultValue(decl.value,value);}))),el('small',{class:'muted'},'constant_id = '+decl.constantId));
     nativeInputFields(box,decl);
@@ -2119,7 +2195,7 @@ function installCanvasItemDrag(button,label,dropItem,clickItem){
   };
 }
 function tdBuiltInEntries(query=''){
-  return catalog.filter(d=>['uv','position'].includes(d.key)&&d.stages.includes(stage)&&normalizeSearch(d.label+' '+d.key+' '+builtInSourceLabel(d)).includes(query));
+  return catalog.filter(d=>['uv','position','builtin_source'].includes(d.key)&&d.stages.includes(stage)).flatMap(d=>d.key==='builtin_source'?builtinSourceEntries(d):[d]).filter(d=>normalizeSearch(d.label+' '+d.key+' '+builtInSourceLabel(d)).includes(query));
 }
 function addBuiltInReference(d,x=null,y=null){
   const rect=$('#canvas').getBoundingClientRect(),point=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!point)return;
@@ -2161,19 +2237,24 @@ function renderNativeSources(){
   }
   // Native row availability can arrive after an apply without changing graph revision.
   const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;
-  const row=nativeSourceRows().find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.components.map(c=>[c.mode,c.control,c.modeWritable]),row?.matrixBinding&&[row.matrixBinding.mode,!!row.matrixBinding.literalValues,row.matrixBinding.writable]]);
+  const row=nativeSourceRows().find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.components.map(c=>[c.mode,c.control,c.modeWritable]),row?.matrixBinding&&[row.matrixBinding.mode,!!row.matrixBinding.literalValues,row.matrixBinding.writable],row?.arrayBinding&&[row.arrayBinding.mode,row.arrayBinding.writable]]);
   if($('#inspector').dataset.inputState!==signature&&!$('#inspector').contains(document.activeElement)){$('#inspector').dataset.inputState=signature;if(active)inspector();}
   renderNativeSourceValues();
 }
 function installNativeSources(){
+  const arrayFields=el('section',{id:'sourcearrayfields',class:'source-array-fields'}),arrayLength=el('input',{id:'sourcearraylength',type:'number',min:1,max:1024,step:1,value:4}),arraySource=el('input',{id:'sourcearraypath',type:'text',maxlength:4096,spellcheck:'false',placeholder:'/project1/constant1'});
+  const lengthField=field('',arrayLength),pathField=field('',arraySource);lengthField.prepend(el('span',{'data-i18n':'array.length'},t('array.length')));pathField.prepend(el('span',{'data-i18n':'array.chopPath'},t('array.chopPath')));
+  arrayFields.append(lengthField,pathField,el('p',{class:'muted','data-i18n':'array.nativeHint'},t('array.nativeHint')));arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);
   $('#inputsearch').oninput=renderNativeSources;
   $('#closesourcecreate').onclick=()=>$('#sourcecreatedialog').close();
-  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='array'?['float','vec2','vec3','vec4']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':kind==='array'?'uArray':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];arrayFields.hidden=kind!=='array';arrayLength.required=arraySource.required=kind==='array';arrayLength.max=String(typeContract?.composites?.array?.maxLength||1024);$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
     e.preventDefault();if(readonly)return;const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value,existing=inputPresetSource(kind);
     if(existing){finishInputCreate(kind,existing.id);return;}
     if(kind!=='top_input'&&(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)||graph.declarations.some(d=>d.name===name&&!(kind.startsWith('preset:')&&d.kind==='uniform'&&d.initialDriver===kind.slice(7))))){$('#sourcecreateerror').textContent=t('inputs.invalidName');return;}
-    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','spec_constant','top_input'].includes(kind)?kind:'uniform',kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});
+    const count=Number(arrayLength.value),arrayPath=arraySource.value.trim();
+    if(kind==='array'&&(!Number.isInteger(count)||count<1||count>(typeContract?.composites?.array?.maxLength||1024)||!arrayPath)){$('#sourcecreateerror').textContent=t('array.invalidSource');return;}
+    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','spec_constant','top_input'].includes(kind)?kind:'uniform',kind==='array'?$('#sourcetype').value+'['+count+']':kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='array'?{nativeSequence:'array',elementType:$('#sourcetype').value,length:count,arraySource:arrayPath}:kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});
     if(changed)finishInputCreate(kind,id);else $('#sourcecreateerror').textContent=$('#status').textContent;
   };
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);

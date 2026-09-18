@@ -4,6 +4,13 @@ import hashlib
 import json
 import math
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
+
+if 'me' in globals():
+    _composites = me.parent().op('sgrape_composites').module
+else:
+    import sgrape_composites as _composites
 
 VERSION = 1
 TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
@@ -49,6 +56,37 @@ class GraphError(ValueError):
         super().__init__(message)
         self.node = node
 
+_TYPE_CONTEXT = ContextVar('grape_type_context', default=None)
+_BASE_REGISTRY = _composites.Registry(TYPE_DESCRIPTORS, error=GraphError)
+COMPOSITE_KEYS = _composites.KEYS
+
+def type_registry():
+    return _TYPE_CONTEXT.get() or _BASE_REGISTRY
+
+@contextmanager
+def type_context(graph=None):
+    if graph is not None and not isinstance(graph,dict):raise GraphError('Invalid Graph structure')
+    registry=_composites.Registry(TYPE_DESCRIPTORS,(graph or {}).get('typeDefinitions',[]),error=GraphError)
+    token=_TYPE_CONTEXT.set(registry)
+    try:yield registry
+    finally:_TYPE_CONTEXT.reset(token)
+
+def valid_port_type(ty,resources=True):
+    return type_registry().valid(ty,resources)
+
+def compound_type(ty):
+    return isinstance(ty,str) and ty not in PORT_TYPES and valid_port_type(ty)
+
+def glsl_declaration(ty,name):
+    return type_registry().declaration(ty,name)
+
+def parameter_type_valid(definition,params):
+    ty=params.get('type','float');key=definition['key']
+    if key in COMPOSITE_KEYS:return True  # Its interface validates the complete shape.
+    if key=='relay':return valid_port_type(ty)
+    if key in ('uniform','constant') and compound_type(ty):return not type_registry().opaque(ty)
+    return ty in node_parameter_types(definition)
+
 def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
@@ -69,7 +107,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
     'matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
-    'transpose','inverse','determinant','matrix_comp_mult','outer_product'))
+    'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
@@ -77,7 +115,8 @@ CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
     'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'range_from','range_to','scalar','convert','matrix_convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
-    'transpose','inverse','determinant','matrix_comp_mult','outer_product'))
+    'transpose','inverse','determinant','matrix_comp_mult','outer_product',
+    'array','array_get','array_length','struct_field'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
 MATRIX_KEYS = ('matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
@@ -286,6 +325,7 @@ FUNCTION_OUTPUT='sgrape.function.output'
 
 def conversion_kind(source, target):
     """The same finite conversion table is consumed by the compiler and UI."""
+    if source==target and valid_port_type(source):return 'identity'
     return CONVERSIONS.get((source, target))
 
 def convert_expression(value, source, target):
@@ -360,7 +400,7 @@ def glsl_code_interface(params):
                 raise GraphError('GLSL Code: invalid or duplicate port ID')
             if not glsl_code_name(name) or name in names:
                 raise GraphError('GLSL Code: port names must be unique, non-reserved GLSL identifiers')
-            if ty not in (PORT_TYPES if direction=='inputs' else TYPES):
+            if not valid_port_type(ty,resources=direction=='inputs'):
                 raise GraphError('GLSL Code: unsupported port type; samplers can only be inputs')
             ids.add(ident); names.add(name); result[direction][ident]=ty
     return result
@@ -408,6 +448,7 @@ def pixel_buffer_count(params):
 def definition_ports(definition, params):
     # Fixed value entries share the Scalar/Vector implementation, but their
     # saved identity cannot silently become another type through an edit.
+    if definition['key'] in COMPOSITE_KEYS:return type_registry().interface(definition['key'],params)
     if 'fixedType' in params:
         fixed=params['fixedType']; key=definition['key']
         choices=SCALAR_TYPES if key=='scalar' else VECTOR_TYPES if key=='vector' else MATRIX_TYPES if key=='matrix' else ()
@@ -433,6 +474,7 @@ def definition_ports(definition, params):
 
 def node_parameter_types(definition):
     key=definition['key']
+    if key in COMPOSITE_KEYS:return (definition['defaults'].get('type','float'),)
     if key=='relay':return PORT_TYPES
     if key=='compare':return COMPARE_TYPES
     if key=='scalar':return SCALAR_TYPES
@@ -463,18 +505,21 @@ def explicit_conversion_valid(source,target):
 
 def resolved_ports(definition, params, declaration=None):
     selected = params.get('type', 'float')
-    if selected not in node_parameter_types(definition): raise GraphError('Unsupported numeric type')
+    if not parameter_type_valid(definition,params): raise GraphError('Unsupported numeric type')
     def resolve(token):
         if token == 'T': return selected
         if token == 'D':
             ty = declaration.get('type') if declaration else None
-            if ty not in TYPES + SPEC_TYPES: raise GraphError('Select a matching declaration')
+            if not valid_port_type(ty,resources=False): raise GraphError('Select a matching declaration')
             return ty
         return token
     return {kind: {port: resolve(ty) for port, ty in definition_ports(definition, params)[kind].items()}
             for kind in ('inputs', 'outputs')}
 
-def type_contract():
+def type_contract(graph=None):
+    with type_context(graph):return _type_contract()
+
+def _type_contract():
     """Versioned data for local, network-free UI connection and Create decisions.
 
     Definitions keep their existing revision hashes. This contract is derived
@@ -482,6 +527,9 @@ def type_contract():
     """
     variants = {}
     for definition in CATALOG.values():
+        if definition['key'] in COMPOSITE_KEYS:
+            variants[definition['definitionUuid']]={'selector':'dynamic','variants':[dict(type=None,**resolved_ports(definition,definition['defaults']))]}
+            continue
         tokens = set(definition['inputs'].values()) | set(definition['outputs'].values())
         selector = 'parameter' if 'T' in tokens or definition['key'] in (*VECTOR_KEYS,*MATRIX_KEYS) else 'declaration' if 'D' in tokens else 'fixed'
         default = definition['defaults'].get('type', 'float')
@@ -513,7 +561,7 @@ def type_contract():
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
-              'definitions': variants}
+              'definitions': variants,'composites':type_registry().contract()}
     result['hash'] = digest(result)
     return result
 
@@ -596,11 +644,13 @@ def type_components(ty):
     return descriptor['components']
 
 def filled_value(ty, value=0):
+    if compound_type(ty):return type_registry().value(ty,filled_value,value)
     count = type_components(ty)
     if TYPE_DESCRIPTORS[ty]['family']=='bool':value=bool(value)
     return value if count == 1 else [value] * count
 
 def literal(value, ty):
+    if compound_type(ty):return type_registry().literal(value,ty,literal)
     if ty=='double':return double_number(value)
     if ty=='bool':
         if type(value) is not bool:raise GraphError('Expected a boolean constant')
@@ -620,6 +670,7 @@ def literal(value, ty):
     return ty+'('+', '.join(literal(v,scalar) for v in value)+')'
 
 def input_default(key,port,ty):
+    if compound_type(ty):return filled_value(ty)
     if ty in MATRIX_TYPES:
         # If preserves its existing True=1 / False=0 semantics using GLSL's
         # scalar-to-matrix diagonal construction, including nonsquare shapes.
@@ -790,8 +841,8 @@ def _compile_flat(graph,annotation_scopes=None):
             label=d.get('exposeName','')
             if not isinstance(label,str) or len(label)>80 or any(ord(c)<32 for c in label):raise GraphError('Public texture label must be plain text up to 80 characters')
         elif d.get('kind')=='constant':
-            if d.get('type') not in TYPES:raise GraphError('Unsupported constant type')
-            literal(d.get('value'),d['type'])
+            if not valid_port_type(d.get('type'),resources=False):raise GraphError('Unsupported constant type')
+            if literal(d.get('value'),d['type']) is None:raise GraphError('Constant arrays require literal values and a fixed length')
             if d.get('initialDriver') or d.get('expose'):raise GraphError('Constants cannot have a live Uniform driver')
         elif d.get('kind')=='spec_constant':
             if d.get('type') not in SPEC_TYPES:raise GraphError('Unsupported specialization constant type')
@@ -803,11 +854,18 @@ def _compile_flat(graph,annotation_scopes=None):
             if d.get('initialDriver') or d.get('expose'):raise GraphError('Spec Constants do not expose Uniform drivers')
             if d.get('nativeSequence','const')!='const':raise GraphError('Spec Constants use the native Constants page')
         elif d.get('kind')=='uniform':
-            if d.get('type') not in TYPES: raise GraphError('Unsupported uniform type')
-            if d.get('nativeSequence','vec') not in ('vec','color','matrix'):raise GraphError('Unsupported native Uniform page')
+            if not valid_port_type(d.get('type'),resources=False): raise GraphError('Unsupported uniform type')
+            if d.get('nativeSequence','vec') not in ('vec','color','matrix','array'):raise GraphError('Unsupported native Uniform page')
+            if d.get('nativeSequence')=='array':
+                shape=type_registry().describe(d['type'])
+                if shape['kind']!='array' or not isinstance(shape['length'],int) or shape['elementType'] not in FLOAT_TYPES:
+                    raise GraphError('The Arrays page supports fixed arrays of float or vec2/3/4')
+                source=d.get('arraySource','')
+                if not isinstance(source,str) or len(source)>4096 or any(ord(c)<32 for c in source):raise GraphError('Array source must be a CHOP path')
+            elif compound_type(d['type']):raise GraphError('Compound Uniforms require a supported native array source')
             if d.get('nativeSequence')=='matrix' and d['type'] not in MATRIX_TYPES:raise GraphError('The Matrices page requires a matrix Uniform type')
             if 'initialDriver' in d and d['initialDriver'] not in ('time','frame','absTime','absFrame'):raise GraphError('Unsupported initial Uniform driver')
-            literal(d.get('value'), d['type'])
+            if d.get('nativeSequence')!='array' or d.get('value') is not None:literal(d.get('value'), d['type'])
             if not isinstance(d.get('expose',False),bool): raise GraphError('Expose must be a boolean')
             label=d.get('exposeName','')
             if not isinstance(label,str) or len(label)>80 or any(ord(c)<32 for c in label):
@@ -844,7 +902,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     if not isinstance(text,str) or len(text)>2000 or re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]',text):
                         raise GraphError('Comment must be plain text up to 2000 characters',ident)
                 ty=params.get('type','float')
-                if ty not in node_parameter_types(d): raise GraphError('Unsupported numeric type',ident)
+                if not parameter_type_valid(d,params): raise GraphError('Unsupported numeric type',ident)
                 if d['key']=='compare' and params.get('operator','>') not in COMPARE_OPERATORS:
                     raise GraphError('Compare: choose >, >=, <, <=, == or !=',ident)
                 if d['key'] in ('float','vec2','vec3','vec4','color','scalar'):
@@ -863,6 +921,9 @@ def _compile_flat(graph,annotation_scopes=None):
                 try:
                     resolved = resolved_ports(d, params, declaration)
                     if d['key']=='glsl_code':glsl_code_body(params)
+                    if d['key']=='builtin_source':type_registry().source(params.get('source'),graph_target(graph),stage)
+                    for direction in resolved.values():
+                        for port_type in direction.values():type_registry().check_environment(port_type,graph_target(graph),stage)
                 except GraphError as exc:raise GraphError(str(exc),ident) from exc
                 ports[ident]={'in':resolved['inputs'], 'out':resolved['outputs']}
                 values=n.get('inputValues',{})
@@ -921,6 +982,7 @@ def _compile_flat(graph,annotation_scopes=None):
                         mapped.append(source)
                 matrix_sources[ident]=mapped
             def effective_inputs(ident,output=None):
+                if defs[ident]['key']=='array_length':return set()  # Fixed/host-macro extent, independent of stored values.
                 if ident in matrix_sources:return {port for port,offset in matrix_sources[ident] if port is not None}
                 if defs[ident]['key']!='replace':return set(ports[ident]['in'])
                 mapped=component_sources[ident]
@@ -983,6 +1045,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 if defs[ident]['key']!='comment':diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
             symbols=node_output_symbols(nodes,defs,ports)
             expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[]
+            compound_used=set()
             def inp(ident,port):
                 target=ports[ident]['in'][port]; source=links.get((ident,port))
                 if source:
@@ -1001,21 +1064,51 @@ def _compile_flat(graph,annotation_scopes=None):
                     diagnostics.append({'node':ident,'stage':stage,'message':'Sampler input is unconnected; using opaque black'})
                     return 'sg_sampler_'+fallback['id'] if graph_target(graph)=='top' else fallback['name']
                 saved=nodes[ident].get('inputValues',{})
-                if port in saved: return literal(saved[port],target)
+                if port in saved:
+                    rendered=literal(saved[port],target)
+                    if rendered is None and compound_type(target):raise GraphError('Connect an array source; this type has no editable default',ident)
+                    return rendered
                 if defs[ident]['key']=='combine':
                     start=VECTOR_COMPONENTS.index(port);size=type_components(target)
                     values=vector_values(nodes[ident]['params'],nodes[ident]['params']['type'])[start:start+size]
                     return literal(values[0] if size==1 else values,target)
                 default=([0,0,0,0] if defs[ident]['key']=='pixel_out' and graph_target(graph)=='mat'
                          else input_default(defs[ident]['key'],port,target))
+                if compound_type(target) and default is None:raise GraphError('Connect an array source; this type has no editable default',ident)
                 if default is None: return 'sg_uv'
                 return literal(default,target)
             for ident in order:
                 line_start=len(lines)
                 note=nodes[ident].get('ui',{});note=note if isinstance(note,dict) else {}
                 d=defs[ident]; k=emitter_id(d); p=nodes[ident]['params']; ty=ports[ident]['out'].get('out'); expr=None
+                compound_used.update(t for direction in ports[ident].values() for t in direction.values() if compound_type(t))
                 a=lambda port:inp(ident,port)
                 if k in ('float','vec2','vec3','vec4','color','scalar'): expr=literal(p.get('value'),ty)
+                elif k=='array':expr=literal(filled_value(ty),ty)
+                elif k=='builtin_source':expr=type_registry().source(p['source'],graph_target(graph),stage)['expression']
+                elif k in ('array_get','array_replace','array_length'):
+                    array_type=ports[ident]['in']['Array'];shape=type_registry().describe(array_type);length=shape['length']
+                    # Host lengths are compile-time macros. No per-element CPU or GPU scan.
+                    if k=='array_length':expr=str(length)
+                    else:
+                        source=a('Array');index=a('i')
+                        if isinstance(length,str):lines.extend(['#if '+length+' <= 0','#error Grape array access requires at least one source element','#endif'])
+                        bounded=('min('+index+', uint('+str(length)+' - 1))' if p.get('indexType','int')=='uint'
+                                 else 'clamp('+index+', 0, '+str(length)+' - 1)')
+                        if k=='array_get':
+                            if type_registry().opaque(array_type):bounded='nonuniformEXT('+bounded+')'
+                            expr='('+source+')['+bounded+']'
+                        else:
+                            variable=symbols[(ident,'out')]
+                            lines.append('    '+glsl_declaration(ty,variable)+' = '+source+';')
+                            in_range=(index+' < uint('+str(length)+')' if p.get('indexType','int')=='uint'
+                                      else index+' >= 0 && '+index+' < '+str(length))
+                            # A constant out-of-range subscript is illegal even in a
+                            # dead branch. Bound the subscript too; the guard alone
+                            # determines whether replacement happens.
+                            lines.append('    if ('+in_range+') { '+variable+'['+bounded+'] = '+a('replacement')+'; }')
+                            expressions[(ident,'out')]=variable
+                elif k=='struct_field':expr='('+a('value')+').'+type_registry().field(p['type'],p['field'])['name']
                 elif k in CONVERT_KEYS:expr=ty+'('+a('value')+')'
                 elif k in ('add','subtract','multiply','divide'): expr='('+a('a')+{'add':' + ','subtract':' - ','multiply':' * ','divide':' / '}[k]+a('b')+')'
                 elif k=='mod' and TYPE_DESCRIPTORS[ty]['family'] in ('int','uint'):expr='('+a('a')+' % '+a('b')+')'
@@ -1122,11 +1215,12 @@ def _compile_flat(graph,annotation_scopes=None):
                     expr='vec4(0.0, 0.0, 0.0, 1.0)' if sampler=='sg_unconnectedSampler' else 'texture('+sampler+', '+a('uv')+')'
                 elif k=='glsl_code':
                     function='sg_code_'+ident+'_'+p['functionName']
-                    signature=[('in' if direction=='inputs' else 'out')+' '+port['type']+' '+port['name']
+                    signature=[('in' if direction=='inputs' else 'out')+' '+glsl_declaration(port['type'],port['name'])
                                for direction in ('inputs','outputs') for port in p[direction]]
                     body=glsl_code_body(p).split('\n')
                     block=['void '+function+'('+', '.join(signature)+') {']
-                    block.extend('    '+port['name']+' = '+literal(filled_value(port['type']),port['type'])+';' for port in p['outputs'])
+                    for port in p['outputs']:
+                        block.extend(type_registry().initialize(port['name'],port['type'],filled_value,literal))
                     body_start=len(block)
                     block.extend('    '+line for line in body)
                     block.append('}')
@@ -1136,7 +1230,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     if 'sg_unconnectedSampler' in arguments:raise GraphError('Connect every GLSL Code sampler input to an existing TOP Input',ident)
                     for port in p['outputs']:
                         variable=symbols[(ident,port['id'])]
-                        lines.append('    '+port['type']+' '+variable+';')
+                        lines.append('    '+glsl_declaration(port['type'],variable)+';')
                         expressions[(ident,port['id'])]=variable;arguments.append(variable)
                     lines.append('    '+function+'('+', '.join(arguments)+');')
                 elif k=='uv': expr='sg_uv'
@@ -1162,12 +1256,12 @@ def _compile_flat(graph,annotation_scopes=None):
                             lines.extend(['#if TD_NUM_COLOR_BUFFERS > '+str(index),
                                           '    fragColor['+str(index)+'] = TDOutputSwizzle('+a(port)+');',
                                           '#endif'])
-                if expr is not None and (ty in RESOURCE_TYPES or k in ('constant','spec_constant')):
+                if expr is not None and (type_registry().opaque(ty) or k in ('constant','spec_constant','builtin_source') or (k=='uniform' and compound_type(ty))):
                     # Opaque GLSL samplers are references, never local variables.
                     expressions[(ident,'out')]=expr
                 elif expr is not None:
                     variable=symbols[(ident,'out')]
-                    lines.append('    '+('const ' if ident in const_emit else '')+ty+' '+variable+' = '+expr+';')
+                    lines.append('    '+('const ' if ident in const_emit else '')+glsl_declaration(ty,variable)+' = '+expr+';')
                     expressions[(ident,'out')]=variable
                 label_lines=_comment_lines(note.get('label'),None)
                 if label_lines:
@@ -1183,7 +1277,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 lines.extend(_comment_lines(note.get('comment'),'Comment'))
                 line_nodes.extend([ident]*(len(lines)-line_start))
             lines,line_nodes=_scope_comments(lines,line_nodes,nodes,annotation_scopes or {},stage)
-            stages[stage]={'lines':lines,'ports':ports,'live':sorted(live),'lineNodes':line_nodes,'helpers':helpers,'helperNodes':helper_nodes}
+            stages[stage]={'lines':lines,'ports':ports,'live':sorted(live),'lineNodes':line_nodes,'helpers':helpers,'helperNodes':helper_nodes,'compoundTypes':compound_used}
         except GraphError as exc:
             exc.stage=stage; raise
     aliases={i for i in used if slots and declarations[i].get('source')=='input:0' and not declarations[i].get('topInputId')}
@@ -1191,25 +1285,28 @@ def _compile_flat(graph,annotation_scopes=None):
     def header(d):
         if d['kind']=='spec_constant':
             return 'layout(constant_id = '+str(d['constantId'])+') const '+d['type']+' '+d['name']+' = '+literal(d['value'],d['type'])+';'
-        return ('const '+d['type']+' '+d['name']+' = '+literal(d['value'],d['type'])+';' if d['kind']=='constant'
-                else 'uniform '+d['type']+' '+d['name']+';')
+        return ('const '+glsl_declaration(d['type'],d['name'])+' = '+literal(d['value'],d['type'])+';' if d['kind']=='constant'
+                else 'uniform '+glsl_declaration(d['type'],d['name'])+';')
+    type_headers={stage:type_registry().declarations(stages[stage]['compoundTypes']|{declarations[i]['type'] for i in used if compound_type(declarations[i]['type'])},graph_target(graph),stage)
+                  for stage in graph_stages(graph)}
     if graph_target(graph)=='top':
         samplers=[declarations[i] for i in binding_ids if declarations[i]['kind']=='sampler']
         if len(samplers)>(32 if slots else 16): raise GraphError('Too many texture sources: up to 16 TOP Inputs plus 16 legacy/fallback sources')
         headers=[header(declarations[i]) for i in sorted(used) if declarations[i]['kind'] in ('uniform','constant','spec_constant')]
         if slots:headers+=['#if TD_NUM_2D_INPUTS != '+str(len(samplers)), '#error Grape TOP Inputs require 2D textures in every slot', '#endif']
         vertex=''
-        pixel='\n'.join(headers+['layout(location=0) out vec4 fragColor;']+stages['pixel']['helpers']+['void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
+        pixel='\n'.join(type_headers['pixel']+headers+['layout(location=0) out vec4 fragColor;']+stages['pixel']['helpers']+['void main() {','    vec2 sg_uv = vUV.st;']+stages['pixel']['lines']+['}',''])
         for i,d in list(enumerate(samplers))+[(next((j for j,slot in enumerate(slots) if slot['id']==graph.get('topInputLegacyId')),0),declarations[ident]) for ident in aliases]:
             pixel='\n'.join(re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',code)+marker+comment for code,marker,comment in (line.partition('//') for line in pixel.split('\n')))
     else:
         headers=[header(declarations[i]) for i in sorted(used)]
-        vertex='\n'.join(headers+['out vec2 sg_uv;']+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
-        pixel='\n'.join(headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+stages['pixel']['helpers']+[
+        vertex='\n'.join(type_headers['vertex']+headers+['out vec2 sg_uv;']+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
+        pixel='\n'.join(type_headers['pixel']+headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+stages['pixel']['helpers']+[
                                  'void main() {','    TDCheckDiscard();']+stages['pixel']['lines']+['}',''])
     source_map={}
     for stage in graph_stages(graph):
-        prefix=len(headers)+(3 if graph_target(graph)=='top' or stage=='vertex' else 4)
+        prefix=len(headers)+len(type_headers[stage])+(3 if graph_target(graph)=='top' or stage=='vertex' else 4)
+        stages[stage].pop('compoundTypes',None)
         helpers=stages[stage].pop('helpers');helper_nodes=stages[stage].pop('helperNodes')
         source_map[stage]=[dict(location,line=prefix-2+i+1) for i,location in enumerate(helper_nodes)]
         source_map[stage].extend(dict(location,line=prefix+len(helpers)+i+1) for i,location in enumerate(stages[stage].pop('lineNodes')))
@@ -1265,6 +1362,9 @@ def function_library(with_browser=False):
 
 
 def _functions(graph):
+    with type_context(graph):return _functions_scoped(graph)
+
+def _functions_scoped(graph):
     entries=graph.get('functions',[])
     if not isinstance(entries,list) or len(entries)>64: raise GraphError('At most 64 Function definitions are supported')
     functions={}
@@ -1279,7 +1379,7 @@ def _functions(graph):
             if not isinstance(ports,list) or len(ports)>16: raise GraphError('Function supports at most 16 ports per direction')
             for p in ports:
                 if not isinstance(p,dict) or not ID.fullmatch(p.get('id','')) or p['id'] in seen: raise GraphError('Invalid or duplicate Function port')
-                if p.get('type') not in PORT_TYPES: raise GraphError('Unsupported Function port type')
+                if not valid_port_type(p.get('type')): raise GraphError('Unsupported Function port type')
                 literal(p.get('default'),p['type']); seen.add(p['id'])
         functions[ident]=fn
     active=set(); done=set()
@@ -1421,7 +1521,74 @@ def validate_graph_frames(data):
             claimed.add(member)
 
 
+def _infer_graph_types(graph):
+    """Resolve compound nodes from upstream ports without persisting derived type state."""
+    dynamic={CATALOG[key]['definitionUuid'] for key in ('array_get','array_replace','array_length','struct_field')}
+    scoped=list(graph.get('stages',{}).values())+[f.get('graph',{}) for f in graph.get('functions',[]) if isinstance(f,dict)]
+    if not any(n.get('definitionUuid') in dynamic for data in scoped if isinstance(data,dict)
+               for n in data.get('nodes',[]) if isinstance(n,dict)):
+        return graph  # Existing numeric graphs do not need another validation pass.
+    result=copy.deepcopy(graph)
+    functions={f.get('id'):f for f in result.get('functions',[]) if isinstance(f,dict)}
+    declarations={d.get('id'):d for d in result.get('declarations',[]) if isinstance(d,dict)}
+    def infer(data,boundary=None):
+        if not isinstance(data,dict) or not isinstance(data.get('nodes'),list):return
+        nodes={n.get('id'):n for n in data['nodes'] if isinstance(n,dict)};incoming={}
+        for e in data.get('edges',[]):
+            if isinstance(e,dict) and isinstance(e.get('to'),list) and len(e['to'])==2:incoming[tuple(e['to'])]=e.get('from')
+        resolved={};active=set()
+        def ports(ident):
+            if ident in resolved:return resolved[ident]
+            if ident in active:raise GraphError('Cycle detected',ident)
+            n=nodes.get(ident)
+            if n is None:raise GraphError('Connection endpoint no longer exists',ident)
+            active.add(ident);uid=n.get('definitionUuid');p=n.get('params',{})
+            if not isinstance(p,dict):raise GraphError('Invalid node parameters',ident)
+            if uid==CALL:
+                fn=functions.get(p.get('functionId'),{})
+                value={direction:{v['id']:v['type'] for v in fn.get(direction,[])} for direction in ('inputs','outputs')}
+            elif uid in (FUNCTION_INPUT,FUNCTION_OUTPUT):
+                direction='inputs' if uid==FUNCTION_INPUT else 'outputs'
+                members=(boundary or {}).get(direction,[])
+                value={'inputs':{} if uid==FUNCTION_INPUT else {v['id']:v['type'] for v in members},'outputs':{v['id']:v['type'] for v in members} if uid==FUNCTION_INPUT else {}}
+            else:
+                d=BY_UUID.get(uid)
+                if d is None:raise GraphError('Unknown node',ident)
+                key=d['key']
+                def source_type(port):
+                    edge=incoming.get((ident,port))
+                    if not isinstance(edge,list) or len(edge)!=2:return None
+                    return ports(edge[0])['outputs'].get(edge[1])
+                if key in ('array_get','array_replace','array_length','struct_field'):
+                    source=source_type('value' if key=='struct_field' else 'Array')
+                    if source:p['type']=source
+                declaration=declarations.get(p.get('declarationId'))
+                try:value=resolved_ports(d,p,declaration)
+                except GraphError as exc:raise GraphError(str(exc),ident) from exc
+            active.remove(ident);resolved[ident]=value;return value
+        for ident in nodes:ports(ident)
+    for fn in functions.values():
+        try:infer(fn.get('graph'),fn)
+        except GraphError as exc:
+            exc.functionId=fn['id'];exc.trail=[fn['id']];exc.stage=fn.get('stages',['pixel'])[0]
+            raise
+    for stage,data in result.get('stages',{}).items():
+        try:infer(data)
+        except GraphError as exc:
+            exc.stage=stage;raise
+    return result
+
 def compile_graph(graph):
+    if not isinstance(graph,dict) or graph.get('schemaVersion')!=VERSION:raise GraphError('Unsupported graph version; original data has been kept')
+    if len(json.dumps(graph,allow_nan=False))>512000:raise GraphError('Graph exceeds 512 KB')
+    with type_context(graph):
+        inferred=_infer_graph_types(graph)
+        result=_compile_graph(inferred)
+        # Type inference is compiler state, not a user edit or a new semantic identity.
+        result['hash']=digest(clean_semantic(graph))
+        return result
+
+def _compile_graph(graph):
     if not isinstance(graph,dict) or graph.get('schemaVersion')!=VERSION: raise GraphError('Unsupported graph version; original data has been kept')
     if len(json.dumps(graph,allow_nan=False))>512000: raise GraphError('Graph exceeds 512 KB')
     if set(graph.get('stages',{}))!=set(graph_stages(graph)): raise GraphError('Shader stages do not match its target')
@@ -1432,6 +1599,7 @@ def compile_graph(graph):
         for stage in fn['stages']:
             probe=demo_graph('color',target=graph_target(graph) if stage=='pixel' else 'mat')
             probe['declarations']=copy.deepcopy(graph.get('declarations',[]))
+            if 'typeDefinitions' in graph:probe['typeDefinitions']=copy.deepcopy(graph['typeDefinitions'])
             if graph_target(graph)=='top' and stage=='vertex':
                 for decl in probe['declarations']:
                     if decl.get('source')=='input:0': decl['source']='builtin:banana'

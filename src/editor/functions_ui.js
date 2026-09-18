@@ -65,10 +65,11 @@ function nodeTypeLabel(d,params=d?.defaults){
 }
 function availableEntries(){
   const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+    if(d.key==='builtin_source')return builtinSourceEntries(d);
     if(['scalar','vector','matrix'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:({scalar:'help.fixedScalar',vector:'help.fixedVector',matrix:'help.fixedMatrix'})[d.key],defaults:{...d.defaults,...(d.key==='matrix'?{values:matrixReshapeValue(d.defaults.values,d.defaults.type,type)}:{}),type,fixedType:type},category:nodeCategory(d)}))];
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
-  for(const f of librarySources().filter(f=>f.stages.includes(stage)))entries.push(functionEntry(f,true));
+  for(const f of librarySources().filter(f=>f.stages.includes(stage)&&(!f.targets||f.targets.includes(editorTarget))))entries.push(functionEntry(f,true));
   const sources=librarySources().flatMap(f=>[f,...(f.dependencies||[])]);
   for(const f of (graph.functions||[]).filter(f=>f.stages.includes(stage)&&!graphTrail.includes(f.id))){
     if(f.scope==='local'||!sources.some(s=>s.source?.id===f.source?.id&&s.source?.version===f.source?.version))entries.push(functionEntry(f));
@@ -80,9 +81,10 @@ function nodeSourceDeclaration(n){
   if(n?.params?.inputId)return topInputsView().find(d=>d.id===n.params.inputId)||null;
   return null;
 }
-function isSourceReferenceNode(n){return !!(n?.params&&('declarationId' in n.params||'inputId' in n.params));}
+function isSourceReferenceNode(n){return !!(n?.params&&('declarationId' in n.params||'inputId' in n.params||n.definitionUuid==='sgrape.builtin.builtin_source'));}
 function nodeDisplayName(n){
   const source=nodeSourceDeclaration(n);if(source)return source.name;
+  if(n.definitionUuid==='sgrape.builtin.builtin_source')return n.params.source;
   return customNodeNamesEnabled()&&n?.name?n.name:nodeTypeLabel(definition(n),n?.params);
 }
 function nodeCanvasTitle(n){
@@ -152,7 +154,7 @@ function setDeclarationType(decl,type){
   }
 }
 function specDefaultValue(value,type){const n=Number(Array.isArray(value)?value[0]:value)||0;return type==='bool'?!!n:type==='int'?Math.max(-2147483648,Math.min(2147483647,Math.trunc(n))):type==='uint'?Math.max(0,Math.min(4294967295,Math.trunc(n))):n;}
-function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence}={}){
+function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence,arraySource,elementType,length}={}){
   if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'sTD2DInputs['+slots.length+']',defaultSource:'builtin:black'};slots.push(slot);return slot;}
   if(kind==='sampler'&&editorTarget==='top')throw Error(t('inputs.chooseTop'));
   if(kind==='uniform'&&preset){const existing=graph.declarations.find(d=>d.kind==='uniform'&&d.type===type&&d.initialDriver===preset);if(existing)return existing;}
@@ -160,6 +162,10 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
   const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'sValue'})[kind]||'uValue')};
   if(kind==='spec_constant'){const ids=new Set(graph.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;Object.assign(decl,{value:specDefaultValue(value??0,type),constantId,nativeSequence:'const'});}
   else if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
+  else if(kind==='uniform'&&(nativeSequence==='array'||/\[[0-9]+\]$/.test(type))){
+    if(elementType&&length)decl.type=elementType+'['+length+']';
+    Object.assign(decl,{value:null,expose:false,nativeSequence:'array',arraySource:arraySource||''});
+  }
   else {Object.assign(decl,{value:shapedValue(value??(typeContract?.types?.[type]?.shape==='matrix'?1:0),type),expose:false});if(kind==='uniform'){if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;else if(typeContract?.types?.[type]?.shape==='matrix')decl.nativeSequence='matrix';}}
   graph.declarations.push(decl);return decl;
 }
@@ -197,7 +203,7 @@ function groupSelection(){
       if(a&&b){edges.push(clone(e));continue;}
       if(!a&&!b){outside.push(clone(e));continue;}
       if(b){const n=chosen.find(n=>n.id===e.to[0]),type=ports(n,'inputs')[e.to[1]],key=e.from.join(':')+':'+type;
-        if(!incoming.has(key)){const p='in'+(inputs.length+1);incoming.set(key,p);const value=defaultInput(n,e.to[1],type);const from=data.nodes.find(n=>n.id===e.from[0]);const name=SubgraphSourcePolicy.isSource(from,catalog)?SubgraphSourcePolicy.inputName(graph,from,e.from[1],e.to[1]):e.to[1];inputs.push({id:p,name,type,default:isResourceType(type)?null:value??[0,0]});outside.push({from:clone(e.from),to:[callId,p]});}
+        if(!incoming.has(key)){const p='in'+(inputs.length+1);incoming.set(key,p);const value=defaultInput(n,e.to[1],type);const from=data.nodes.find(n=>n.id===e.from[0]);const name=SubgraphSourcePolicy.isSource(from,catalog)?SubgraphSourcePolicy.inputName(graph,from,e.from[1],e.to[1]):e.to[1];inputs.push({id:p,name,type,default:isResourceType(type)?null:value??filledValue(type)});outside.push({from:clone(e.from),to:[callId,p]});}
         edges.push({from:['input',incoming.get(key)],to:clone(e.to)});
       }else{const n=chosen.find(n=>n.id===e.from[0]),type=ports(n,'outputs')[e.from[1]],key=e.from.join(':');
         if(!outgoing.has(key)){const p='out'+(outputs.length+1);outgoing.set(key,p);outputs.push({id:p,name:e.from[1],type,default:filledValue(type)});edges.push({from:clone(e.from),to:['output',p]});}
@@ -233,7 +239,7 @@ function sparePortDirection(n){
 function sparePortProblem(spare,other){
   const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=currentFunction();
   const peer=current().nodes.find(n=>n.id===other.node),type=peer&&ports(peer,other.kind)[other.port];
-  if(other.add||!f||!direction||spare.kind!==(direction==='inputs'?'outputs':'inputs')||!interfaceTypes().includes(type))return 'autoConflict';
+  if(other.add||!f||!direction||spare.kind!==(direction==='inputs'?'outputs':'inputs')||!graphInterfaceTypes().includes(type))return 'autoConflict';
   return f[direction].length>=16?'portLimit':null;
 }
 function materializeSparePort(spare,other){
@@ -277,10 +283,11 @@ function functionInspector(box,n,d){
     const section=el('section',{class:'input-parameter'});section.append(el('h4',{},p.id+' · '+p.type));
     // Port-definition tables retain their own grouped authoring layout.
     section.append(field(t('function.portName'),input(p.name||p.id,v=>change(()=>p.name=v))));
-    if(isResourceType(p.type))section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
+    if(isCompositeType(p.type))section.append(el('code',{},displayType(p.type)));
+    else if(isResourceType(p.type))section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
     else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>p.default=v),false,'XYZW',p.type));
     if(inspectorTab==='settings'){
-      section.append(field(t('node.type'),select(interfaceTypes().map(t=>[t,t]),p.type,type=>change(()=>{
+      section.append(field(t('node.type'),select(graphInterfaceTypes().map(type=>[type,displayType(type)]),p.type,type=>change(()=>{
         const previous=p.type;p.type=type;p.default=convertValue(p.default,type,previous);
         for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id&&direction==='inputs'&&Object.hasOwn(call.inputValues||{},p.id))call.inputValues[p.id]=convertValue(call.inputValues[p.id],type,previous);
       },{typeChange:true}))));

@@ -9,6 +9,14 @@ import math
 
 
 def inspect_document(document, core, expected_target):
+    try:
+        with core.type_context(document):
+            return _inspect_document(document, core, expected_target)
+    except Exception as exc:
+        return {'status':'blocked', 'issues':[{'code':'types', 'message':str(exc)}], 'repairs':[], 'candidate':None}
+
+
+def _inspect_document(document, core, expected_target):
     report = {'status': 'blocked', 'repairs': [], 'issues': [], 'candidate': None}
 
     def issue(code, message, **context):
@@ -83,7 +91,10 @@ def inspect_document(document, core, expected_target):
                     ports[ident] = ({p['id'] for p in function['outputs']}, set())
                 elif key in core.BY_UUID and key != 'sgrape.internal.relay' and core.inspect_definition_reference(node)['status'] in ('exact', 'compatible_history'):
                     definition = core.BY_UUID[key]
-                    templates = core.definition_ports(definition, node.get('params', {}))
+                    # Compound operations have stable port IDs, while their
+                    # types follow upstream connections. Stored fallback types
+                    # must not cause import to remove valid edges prematurely.
+                    templates = definition if definition['key'] in core.COMPOSITE_KEYS else core.definition_ports(definition, node.get('params', {}))
                     ports[ident] = (set(templates['inputs']), set(templates['outputs']))
             kept = []
             for index, edge in enumerate(data['edges']):
@@ -193,6 +204,14 @@ def _snapshot_valid(snapshot, core):
 
 
 def inspect_upgrade(graph, core, expected_target, baseline=None, require_baseline=True):
+    try:
+        with core.type_context(graph):
+            return _inspect_upgrade(graph, core, expected_target, baseline, require_baseline)
+    except Exception as exc:
+        return {'required':False, 'blocked':True, 'changes':[], 'issues':[{'code':'types','message':str(exc)}], 'localizedFunctions':[], 'candidate':None}
+
+
+def _inspect_upgrade(graph, core, expected_target, baseline=None, require_baseline=True):
     """Propose a version change without TD writes or guessed edge repairs.
 
     A legacy local manifest can prove the *current* catalog hash. Otherwise a

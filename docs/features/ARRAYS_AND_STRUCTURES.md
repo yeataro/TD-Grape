@@ -1,0 +1,92 @@
+# Arrays and structures
+
+本文件記錄陣列第一輪的使用方式及各層責任。討論與使用者決議仍見 `docs/discussions/ARRAY_AND_STRUCT_PLAN.md`；此處描述目前的操作契約，不把未提供的自訂結構編輯介面視為已完成。
+
+## 操作
+
+| 節點 | 輸入 | 輸出／行為 |
+| --- | --- | --- |
+| Array | Parameter 指定元素型別與固定長度 | 建立陣列。所有元素初始為零；布林是 `false`，矩陣是零矩陣。 |
+| Array[i] | `Array`、整數 `i` | 取出一項，輸出型別由陣列元素型別推導。索引小於零取第一項，超過上界取最後一項。 |
+| Array Replace | `Array`、整數 `i`、`replacement` | 產生替換一項後的陣列。越界時原陣列保持不變，不 Clamp、不回寫 Uniform 或 TD 來源。 |
+| Array Length | `Array` | 回傳宣告長度，型別是 `int`。固定／宿主巨集大小是編譯期資訊，不讀取陣列內容。 |
+| Field | 結構 `value`，欄位選單 | 依共用結構定義列出欄位；輸出所選欄位的型別。 |
+| TD 內建來源 | 選擇一個可用的來源 | 引用 TD 已提供的資料，保留其陣列／結構型別。 |
+
+建立節點時可以搜尋 Array、Array[i]、Array Replace、Array Length、Field，或 TD 來源名稱。從接孔拖線建立節點時，候選節點使用同一份型別描述進行局部配對；真正建立時仍進行完整接線驗證。輸入搜尋文字不向 TD 查詢，也不逐一複製整份圖模擬候選接線。
+
+Array 的畫布節點只顯示元素型別與長度摘要，不會因長度增加而展開 N 個編輯欄位。Parameter 提供元素型別和長度；逐項內容由 Array Replace 編輯。Replace 的數值、向量或矩陣替換值沿用既有值編輯器；結構或陣列替換值顯示型別並接受接線。
+
+在編輯器接線或更改來源型別時，Get、Replace、Length 的陣列型別隨來源更新，相關設定隨該次編輯保存。編譯器仍依實際接線重新推導，不改寫傳入的圖資料。索引型別 int／uint 由節點設定決定，不因索引接線自動改變；不同數值型別依共用接線轉換規則處理。
+
+Field 接上結構後依其定義顯示欄位。若來源型別改變、原本選取的欄位不再存在，改用新結構第一個欄位；下游不相容接線依既有「自動斷開不相容接線」設定處理。這些編輯使用既有圖的 Undo／Redo 交易。
+
+## TD 來源
+
+來源入口依 TOP／MAT 與 Shader Stage 過濾：
+
+| 環境 | 來源 | 元素型別／大小 |
+| --- | --- | --- |
+| TOP Pixel | `uTD2DInfos` | `TDTexInfo[TD_NUM_2D_INPUTS]` |
+| TOP Pixel | `sTD2DInputs` | `sampler2D[TD_NUM_2D_INPUTS]` |
+| MAT Vertex／Pixel | `uTDMats` | `TDMatrix[TD_NUM_CAMERAS]` |
+| MAT Vertex／Pixel | `uTDCamInfos` | `TDCameraInfo[TD_NUM_CAMERAS]` |
+| MAT Vertex／Pixel | `uTDLights` | `TDLight[TD_NUM_LIGHTS]` |
+
+這些來源同時出現在節點瀏覽器與 Inputs 的 TD Built-ins 區域。來源與其結構資訊來自共用契約；Field 不需要各自實作 TDTexInfo、TDMatrix 等專用節點。既有 TOP Input 的 sampler、size、pixelSize 便利輸出保留。
+
+sampler 是資源引用。sampler 陣列可取項、傳遞及取得長度，但不能當成一般數值陣列建立或 Replace。空的宿主來源沒有可讀取的元素；取項應回報診斷，不虛構最後一项或任意填值。實際 TD 編譯失敗時，沿用現有保留圖與最後有效 Shader 的流程。
+
+### CHOP Uniform Array
+
+1. 在 Inputs 的 Uniforms 選擇新增，種類選 **Uniform Array · CHOP**。
+2. 選擇 `float`、`vec2`、`vec3` 或 `vec4`，填入固定長度和 CHOP 路徑。
+3. 建立來源引用節點，接到 Array[i]、Array Length，或可接受該型別的 Function／GLSL Code 入口。
+
+CHOP 樣本對應陣列元素，通道對應分量。CHOP 必須具有不少於宣告長度的樣本。來源 Parameter 顯示 CHOP 路徑／Python expression 綁定，不建立逐元素的数值滑桿。修改綁定使用既有 Source 編輯端點與 expected token；BIND／EXPORT 等不可直接修改的模式維持唯讀。
+
+這一輪沒有更動 Uniform 的即時同步傳輸方式，也沒有把 Inputs 面板整體重新命名為 Sources。
+
+## 型別、圖、UI 與產碼的責任
+
+- **共用型別定義**：描述陣列元素、長度、結構穩定 ID、欄位穩定 ID、欄位型別、GLSL 名稱及定義提供方式。
+- **圖資料**：保存節點設定、接線與專案自訂結構定義；引用穩定 ID。顯示名稱不能取代型別或欄位身份。
+- **UI**：根據定義提供選單、型別標籤和適用的值編輯器；不在各節點複製 TD 結構欄位清單。
+- **GLSL 產生器**：驗證型別及環境、安排必要宣告、推導輸出型別、產生取項／替換／欄位運算與預設初始化。
+- **TD 的 GLSL 編譯器**：接收生成的 GLSL；不讀 Grape 的圖資料或 UI 狀態。
+
+TD 內建結構由宿主提供，只登記並引用，不重複輸出 `struct`。圖擁有的結構由產碼器在需要的 Shader 內宣告一次，依欄位依賴安排順序。型別宣告、變數／值的建立、TD 外部資料綁定仍是不同責任。
+
+自訂結構的作者 UI 延後。既有图、測試或匯入資料可提供 `typeDefinitions`；其欄位能由通用 Field 節點列出並傳遞。自訂型別不會自動具有 Add 等數學運算。
+
+```json
+{
+  "typeDefinitions": [{
+    "id": "sample",
+    "name": "Sample",
+    "provider": "generated",
+    "fields": [
+      {"id": "position", "name": "offset", "type": "vec2"},
+      {"id": "weight", "name": "amount", "type": "float"}
+    ]
+  }]
+}
+```
+
+對應的圖型別是 `struct:sample`，陣列可寫成 `struct:sample[8]`。Field 保存 `position`，顯示並生成欄位名 `offset`。生成的 GLSL 結構使用 `sg_type_sample`，避免直接把任意 UI 名稱當成 GLSL 識別字。
+
+## 大小與限制
+
+目前共用契約的固定單維長度上限是 1024，陣列最多 8 維。這是實作保護上限，不是 GLSL 或硬體保證；宿主巨集長度由 TD 提供。複合預設值另有 65536 個遞迴項目的預算，防止展開巨大陣列或結構耗盡編輯器資源。UI 讀取契約上限，不自行維護另一份型別／長度配對表。
+
+巢狀陣列的第一個括號是最外層：`float[2][3]` 的長度是 2，取項結果是 `float[3]`。元素型別下拉可以使用目前圖已知的固定陣列型別；不提供通用自訂型別文字編輯器。
+
+陣列長度描述儲存範圍，不代表應用程式的「有效資料筆數」。若宣告 100 項只使用前 12 項，有效筆數必須作為另外的值或資料約定傳遞。
+
+目前尚未提供圖形化迴圈、任意執行期配置、一般 SSBO／Texture Buffer 作者介面或使用者結構定義編輯器；不把這些功能與本輪的 Array 建立、傳遞、取項混為一談。
+
+## 驗證入口
+
+- `tests/browser/test_array_structure.cjs`：Array 互動、Undo、型別推導、Field、局部搜尋、環境篩選及 CHOP 綁定控制。
+- `tests/unit/test_array_editor.js`：共用前端型別解析、巢狀陣列、零值、限制、GLSL wrapper 及來源型別。
+- `tests/browser/test_composite_functions.cjs`：Function／GLSL Code／剪貼簿等整合，另由整體測試及原生 TD 驗證覆蓋產碼與宿主結果。

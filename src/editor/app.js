@@ -331,7 +331,7 @@ function input(value,cb,type='text'){
   if(type==='number'){i.step='0.05';installValueLadder(i,commit);}return i;
 }
 function current(){return currentFunction()?.graph||graph.stages[stage];}
-function ports(n,kind){const d=definition(n);if(!d)return{};const decl=graph.declarations.find(x=>x.id===n.params.declarationId);return displayNodePorts(d,n.params,decl,kind);}
+function ports(n,kind){if(!definition(n))return{};return safeConcretePorts(graph,n,currentFunction())[kind];}
 function graphPoint(clientX,clientY){
   // The 1px HTML world shares the sockets' coordinate system, including ancestor
   // scaling. Older WebKit SVG getScreenCTM() can omit that CSS transform.

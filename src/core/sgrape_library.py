@@ -26,17 +26,60 @@ def reachable(core,functions,root):
     visit(root)
     return order
 
-def validate_functions(core,functions,root):
+def reachable_type_definitions(definitions,fragment):
+    """Keep the structure closure needed by typed interfaces and node parameters.
+
+    Handwritten code and display strings do not establish type dependencies.
+    Built-in definitions belong to the host catalog, not the portable snapshot.
+    """
+    definitions=definitions or [];known={item['id']:item for item in definitions};needed=set()
+    type_keys={'type','elementType','fromType','toType','fixedType'}
+    ignored={'typeDefinitions','code','ui','browser','source','origin'}
+    def reference(ty):
+        if not isinstance(ty,str):return
+        match=re.fullmatch(r'struct:([A-Za-z][A-Za-z0-9_]{0,63})(?:\[[^\[\]]+\])*',ty)
+        if not match:return
+        ident=match.group(1)
+        if ident in needed:return
+        if ident not in known:raise ValueError('Missing structure definition: '+ident)
+        needed.add(ident)
+        for field in known[ident].get('fields',[]):reference(field.get('type'))
+    def visit(item):
+        if isinstance(item,list):
+            for child in item:visit(child)
+        elif isinstance(item,dict):
+            for key,value in item.items():
+                if key in type_keys:reference(value)
+                elif key not in ignored:visit(value)
+    visit(fragment)
+    return [copy.deepcopy(item) for item in definitions if item['id'] in needed]
+
+def validate_functions(core,functions,root,type_definitions=None):
     probe=core.demo_graph('color');probe['declarations']=[];probe['functions']=functions
+    if type_definitions:probe['typeDefinitions']=copy.deepcopy(type_definitions)
     checked=core._functions(probe)
     if root not in checked:raise ValueError('Missing root Function')
     if len(reachable(core,functions,root))!=len(functions):raise ValueError('Unrelated Function in personal snapshot')
     for f in functions:
         for n in f['graph']['nodes']:
-            if n.get('definitionUuid') in ('sgrape.builtin.uniform','sgrape.builtin.texture','sgrape.builtin.sampler','sgrape.builtin.constant','sgrape.builtin.top_input'):
+            if n.get('definitionUuid') in ('sgrape.builtin.uniform','sgrape.builtin.texture','sgrape.builtin.sampler','sgrape.builtin.constant','sgrape.builtin.top_input','sgrape.builtin.builtin_source'):
                 raise ValueError('Personal Functions must be self-contained. Place Uniform and Texture 2D outside the Function and pass their values through Function Input.')
-    # This validates all definitions and each promised stage, including unused nodes.
-    core.compile_graph(probe)
+    # A TOP-only host type is valid in a portable function; it must not be
+    # tested exclusively in a MAT shell. Each accepted target still validates
+    # every promised stage, including disconnected contents and dependencies.
+    targets=[];errors=[]
+    for target in ('top','mat'):
+        if target=='top' and 'pixel' not in checked[root]['stages']:continue
+        candidate=core.demo_graph('color',target)
+        candidate['declarations']=[];candidate['functions']=functions
+        if type_definitions:candidate['typeDefinitions']=copy.deepcopy(type_definitions)
+        try:core.compile_graph(candidate)
+        except core.GraphError as exc:errors.append((target,exc))
+        else:targets.append(target)
+    if not targets:
+        if errors:raise ValueError('No supported Shader target: '+'; '.join(target.upper()+': '+str(exc) for target,exc in errors))
+        raise ValueError('Function has no supported Shader target')
+    return targets
 
 def build(core,graph,root):
     if not isinstance(graph,dict) or graph.get('schemaVersion')!=1:raise ValueError('Unsupported graph version')
@@ -53,24 +96,29 @@ def build(core,graph,root):
         for n in f['graph']['nodes']:
             if n['definitionUuid']==core.CALL:n['params']['functionId']=remap[n['params']['functionId']]
         definitions.append(f)
-    validate_functions(core,definitions,'fn0')
+    type_definitions=reachable_type_definitions(graph.get('typeDefinitions',[]),definitions)
+    validate_functions(core,definitions,'fn0',type_definitions)
     payload={'format':FORMAT,'formatVersion':1,'root':'fn0','functions':definitions}
+    if type_definitions:payload['typeDefinitions']=type_definitions
     packet={**payload,'contentHash':core.digest(payload)}
     if len(encode(packet))>MAX_BYTES:raise ValueError('Personal Function exceeds 256 KB')
     return packet
 
-def validate(core,packet):
+def _validate_packet(core,packet):
     if not isinstance(packet,dict) or packet.get('format')!=FORMAT or packet.get('formatVersion')!=1:
         raise ValueError('Unsupported personal Function format')
-    if set(packet)!={'format','formatVersion','root','functions','contentHash'}:raise ValueError('Unexpected personal Function fields')
+    if set(packet)-{'typeDefinitions'}!={'format','formatVersion','root','functions','contentHash'}:raise ValueError('Unexpected personal Function fields')
     if len(encode(packet))>MAX_BYTES:raise ValueError('Personal Function exceeds 256 KB')
     payload={key:value for key,value in packet.items() if key!='contentHash'}
     if core.digest(payload)!=packet['contentHash']:raise ValueError('Personal Function checksum mismatch')
-    validate_functions(core,packet['functions'],packet['root'])
+    return validate_functions(core,packet['functions'],packet['root'],packet.get('typeDefinitions'))
+
+def validate(core,packet):
+    _validate_packet(core,packet)
     return packet
 
 def entry(core,packet):
-    validate(core,packet)
+    targets=_validate_packet(core,packet)
     version=packet['contentHash'];defs=copy.deepcopy(packet['functions'])
     remap={f['id']:'personal_'+version[:24]+'_'+str(i) for i,f in enumerate(defs)}
     for f in defs:
@@ -79,6 +127,8 @@ def entry(core,packet):
         for n in f['graph']['nodes']:
             if n['definitionUuid']==core.CALL:n['params']['functionId']=remap[n['params']['functionId']]
     root=next(f for f in defs if f['id']==remap[packet['root']])
+    if packet.get('typeDefinitions'):root['typeDefinitions']=copy.deepcopy(packet['typeDefinitions'])
+    if targets!=['top','mat']:root['targets']=targets
     root['dependencies']=[f for f in defs if f is not root]
     return root
 

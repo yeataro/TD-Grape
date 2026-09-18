@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.90",
+  "catalogVersion": "0.8.91",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -3092,6 +3092,189 @@
         ],
         "glslName": "outerProduct",
         "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "array",
+        "label": "Array",
+        "inputs": {},
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "elementType": "float",
+          "length": 4
+        },
+        "descriptionKey": "help.array",
+        "definitionUuid": "sgrape.builtin.array",
+        "revisionHash": "453e001713178fabc47f005712fa7096ecdd360c146103c5ee6b340c6051ede2"
+      },
+      "emitter": {
+        "id": "array",
+        "version": 1
+      },
+      "browser": {
+        "category": "array",
+        "aliases": []
+      }
+    },
+    {
+      "definition": {
+        "key": "array_get",
+        "label": "Array[i]",
+        "inputs": {
+          "Array": "T",
+          "i": "int"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float[4]",
+          "indexType": "int"
+        },
+        "descriptionKey": "help.array_get",
+        "definitionUuid": "sgrape.builtin.array_get",
+        "revisionHash": "3160e1e2c4b05cdee96b0904bacbc655a922887592a9759c4255cabfe762bcde"
+      },
+      "emitter": {
+        "id": "array_get",
+        "version": 1
+      },
+      "browser": {
+        "category": "array",
+        "aliases": []
+      }
+    },
+    {
+      "definition": {
+        "key": "array_replace",
+        "label": "Array Replace",
+        "inputs": {
+          "Array": "T",
+          "i": "int",
+          "replacement": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float[4]",
+          "indexType": "int"
+        },
+        "descriptionKey": "help.array_replace",
+        "definitionUuid": "sgrape.builtin.array_replace",
+        "revisionHash": "721afefda5d8017ce43692cae11ae673549ce081169aa381117d329d72223e71"
+      },
+      "emitter": {
+        "id": "array_replace",
+        "version": 1
+      },
+      "browser": {
+        "category": "array",
+        "aliases": []
+      }
+    },
+    {
+      "definition": {
+        "key": "array_length",
+        "label": "Array Length",
+        "inputs": {
+          "Array": "T"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float[4]"
+        },
+        "descriptionKey": "help.array_length",
+        "definitionUuid": "sgrape.builtin.array_length",
+        "revisionHash": "fe2aaad7ed86f439ae2e16af2a326897c5c508bce680bdc8ae8bf06d7945644e"
+      },
+      "emitter": {
+        "id": "array_length",
+        "version": 1
+      },
+      "browser": {
+        "category": "array",
+        "aliases": []
+      }
+    },
+    {
+      "definition": {
+        "key": "struct_field",
+        "label": "Field",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "TDTexInfo",
+          "field": "res"
+        },
+        "descriptionKey": "help.struct_field",
+        "definitionUuid": "sgrape.builtin.struct_field",
+        "revisionHash": "f9e1b1e861d44f77bf514b2c5f1e96299a2ed34c0538e1d73dea88ca22859c56"
+      },
+      "emitter": {
+        "id": "struct_field",
+        "version": 1
+      },
+      "browser": {
+        "category": "array",
+        "aliases": []
+      }
+    },
+    {
+      "definition": {
+        "key": "builtin_source",
+        "label": "Built-in Source",
+        "inputs": {},
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "source": "uTD2DInfos"
+        },
+        "descriptionKey": "help.builtin_source",
+        "definitionUuid": "sgrape.builtin.builtin_source",
+        "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21"
+      },
+      "emitter": {
+        "id": "builtin_source",
+        "version": 1
+      },
+      "browser": {
+        "category": "array",
+        "aliases": []
       }
     }
   ],

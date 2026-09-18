@@ -98,7 +98,13 @@ class CatalogTests(unittest.TestCase):
         class Dat:
             text=json.dumps(DOCUMENT)
         class Parent:
-            def op(self,name):return Dat() if name=='node_catalog' else None
+            def op(self,name):
+                if name=='node_catalog':return Dat()
+                if name=='sgrape_composites':
+                    class Module:
+                        module=c._composites
+                    return Module()
+                return None
         class Me:
             def parent(self):return Parent()
         ns={'me':Me(),'__file__':'nonexistent/core'}

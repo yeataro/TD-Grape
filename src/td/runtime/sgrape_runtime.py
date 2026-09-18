@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.90'
+PRODUCT_VERSION='0.8.91'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1047,6 +1047,8 @@ def public_uniforms(comp,graph,preserve=None):
     exposed={d['id']:d for d in graph['declarations'] if d['kind']=='uniform' and d.get('expose',False) and d['id'] not in migrated}
     # Reject an incompatible in-place type change before mutating any parameters.
     for ident,decl in exposed.items():
+        if source_module() and source_module().array_shape(decl['type']):
+            raise RuntimeError('Uniform Arrays use their CHOP source; expose or edit the CHOP parameters in TD.')
         if ident in bindings and bindings[ident]['type']!=decl['type']:
             raise RuntimeError('Create a new Uniform when changing the type of an exposed parameter: '+decl['name'])
     for ident,decl in exposed.items():
@@ -1238,12 +1240,26 @@ def validation_scene(comp):
         for child in area.children:child.viewer=False
     geo=area.op('geometry')
     previous=geo.par.material.val
+    render=area.op('render');previous_lights=render.par.lights.val
+    # A graph may reference host light arrays. Give the isolated compiler
+    # fixture one light so TD can validate their element schema in both stages.
+    # This does not add lights to the user's Render TOP or promise that their
+    # actual render configuration has any elements to read.
+    needs_lights=any(re.search(r'\b(?:uTDLights|TD_NUM_LIGHTS)\b',comp.op(name).text)
+                     for name in ('pixel_shader','vertex_shader') if comp.op(name))
+    light=None
+    if needs_lights:
+        light=area.create(lightCOMP,'array_validation_light')
+        light.viewer=False;light.nodeX=220;light.nodeY=-150
     try:
         geo.par.material=comp.op('material')
-        yield area.op('render')
+        if needs_lights:render.par.lights=light.path
+        yield render
     finally:
         # Do not leave an idle validation renderer dependent on a live shader.
         geo.par.material=previous
+        render.par.lights=previous_lights
+        if light and light.valid:light.destroy()
 
 
 def validate_material(comp,compiled=None):
@@ -1278,6 +1294,7 @@ def existing_values(comp,new_graph):
         values={}; operator=shader_operator(comp)
         for decl in new_graph['declarations']:
             if decl['kind']!='uniform': continue
+            if source_module().array_shape(decl['type']): continue
             row=source_module().locate(operator,comp.fetch('grapeNativeUniformsV1',{}).get(decl['id']))
             if row:
                 components=source_module().matrix_components(row['matrixBinding'],decl['type']) if row.get('matrixBinding') else row['components']
@@ -1554,7 +1571,8 @@ def uniform_snapshot():
         for row in native['uniforms']:
             if not row['missing'] and row['id'] not in rows:
                 rows[row['id']]={'type':row['type'],'default':row['default'],'components':row['components'][:core().type_components(row['type'])],
-                                 **({'matrixBinding':row['matrixBinding']} if row.get('matrixBinding') else {})}
+                                 **({'matrixBinding':row['matrixBinding']} if row.get('matrixBinding') else {}),
+                                 **({'arrayBinding':row['arrayBinding']} if row.get('arrayBinding') else {})}
     return {'revision':current['revision'],'uniforms':rows,'textures':texture_snapshot(comp,current['graph'])}
 
 def set_uniform_value(body):
@@ -1630,7 +1648,7 @@ def process_shader_request(method,path,body):
                 inspected=upgrade_review()
                 if inspected['required']:upgrade=upgrade_summary(inspected)
             except (ValueError,TypeError,KeyError,AttributeError,RecursionError):pass
-        result = {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
+        result = {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(current['graph']),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
                 'examples':{name:_owner.op('document').module.stamp_catalog(core().normalize_top_sources(core().demo_graph(name,target=shader_kind(target())))[0],core()) for name in ('banana','color','tint')}}
         return history_result(result) if not saved_issue and current is not None else result
     if method=='POST' and path=='/api/remote-preview':

@@ -56,7 +56,7 @@ def _row_pars(runtime, sequence, index):
         if pars: return pars
     sources = runtime.source_module()
     return {suffix: sources.parameter(operator, sequence, index, suffix)
-            for suffix in ('name',) + sources.CHANNELS[sequence]}
+            for suffix in ('name',) + sources.SEQUENCE_CHANNELS[sequence]}
 
 
 def _row(runtime, sequence, index):
@@ -103,7 +103,7 @@ def _live(runtime):
                 source = comp.parent().op(str(par.val))
                 fields[name]['topId'] = source.id if source else None
         if fields: values[ident] = {'kind': kind, 'fields': fields}
-    return {'identity': _identity(runtime), 'entries': entries, 'values': values, 'sequenceCounts': {name: getattr(operator.seq, name).numBlocks for name in sources.CHANNELS if getattr(operator.seq, name, None) is not None}}, handles
+    return {'identity': _identity(runtime), 'entries': entries, 'values': values, 'sequenceCounts': {name: getattr(operator.seq, name).numBlocks for name in sources.SEQUENCE_CHANNELS if getattr(operator.seq, name, None) is not None}}, handles
 
 
 def _signature(data):
@@ -163,7 +163,8 @@ def _project(runtime, entry, declaration):
     sources = runtime.source_module(); entry = copy.deepcopy(entry)
     if declaration is None: return None
     types = sources.SPEC_TYPES if declaration.get('kind')=='spec_constant' else sources.TYPES
-    if declaration.get('type') not in types or not sources.valid_name(declaration.get('name')):
+    is_array = declaration.get('kind') == 'uniform' and bool(sources.array_shape(declaration.get('type')))
+    if (declaration.get('type') not in types and not is_array) or not sources.valid_name(declaration.get('name')):
         raise RuntimeError('Invalid native source declaration in editor history.')
     if entry and entry['native']:
         entry['native']['params']['name']['val'] = declaration['name']
@@ -176,14 +177,15 @@ def _project(runtime, entry, declaration):
         return {'record': {'name': declaration['name'], 'sequence': sources.source_sequence(declaration), 'index': 0, 'missing': True},
                 'native': None, 'link': None, 'controls': {}}
     sequence = sources.source_sequence(declaration)
-    if sequence not in sources.CHANNELS: raise RuntimeError('Unsupported native Uniform sequence.')
+    if sequence not in sources.SEQUENCE_CHANNELS: raise RuntimeError('Unsupported native Uniform sequence.')
     value = declaration.get('value'); count = sources.source_components(declaration); values = [value] if count == 1 else value
-    if not isinstance(values, list) or len(values) != count:
+    if is_array: values = [sources.array_shape(declaration['type'])[0], declaration.get('arraySource', ''), 'uniformarray']
+    if not isinstance(values, list) or (not is_array and len(values) != count):
         raise RuntimeError('Invalid Uniform defaults in editor history.')
-    runtime.core().literal(value,declaration['type'])
+    if not is_array: runtime.core().literal(value,declaration['type'])
     operator = runtime.shader_operator(runtime.target()); index = getattr(operator.seq, sequence).numBlocks
     params = {'name': {'val': declaration['name'], 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}}
-    for i, suffix in enumerate(sources.CHANNELS[sequence]):
+    for i, suffix in enumerate(sources.SEQUENCE_CHANNELS[sequence]):
         params[suffix] = {'val': values[i] if i < len(values) else 0, 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}
         if sequence == 'matrix':
             params[suffix] = {'val':'', 'mode':'EXPRESSION', 'expr':sources.matrix_expression(declaration,values), 'bindExpr':''}
@@ -366,7 +368,7 @@ def _insert_row(runtime, row, undo):
     operator = runtime.shader_operator(runtime.target()); seq = getattr(operator.seq, row['sequence'])
     index = min(row['index'], seq.numBlocks)
     pars = _row_pars(runtime, row['sequence'], 0)
-    pristine = all(_mode(pars[suffix]) == 'CONSTANT' and pars[suffix].isDefault for suffix in runtime.source_module().CHANNELS[row['sequence']])
+    pristine = all(_mode(pars[suffix]) == 'CONSTANT' and pars[suffix].isDefault for suffix in runtime.source_module().SEQUENCE_CHANNELS[row['sequence']])
     owned = _sentinels.get((_identity(runtime), row['sequence'])) == _row(runtime, row['sequence'], 0)
     if seq.numBlocks == 1 and not pars['name'].eval() and (pristine or owned):
         # Only an untouched initial row or a deletion observed by this history
@@ -469,7 +471,7 @@ def restore(runtime, body):
                 if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'))
             else:
                 sources.validate_uniform_native(declaration, declaration.get('value'), 'default')
-                for channel in (() if native.get('sequence') == 'matrix' else sources.CHANNELS.get(native.get('sequence'), ())[:sources.source_components(declaration)]):
+                for channel in (() if native.get('sequence') in ('matrix','array') else sources.CHANNELS.get(native.get('sequence'), ())[:sources.source_components(declaration)]):
                     value = native.get('params', {}).get(channel, {})
                     if value.get('mode') == 'CONSTANT':sources.validate_uniform_component(declaration, value.get('val'))
                     elif value.get('mode') == 'BIND':

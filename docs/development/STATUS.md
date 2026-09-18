@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-18 陣列／結構第一輪程式與可攜驗證完成，版本 0.8.91 **尚未同步正式 TD 或保存 TOE**。新增 Array、Array[i]、Array Replace、Array Length、Field；讀取 Clamp、Replace 越界不修改，建立數值／向量／矩陣／結構陣列採零初始化。共用型別契約承接 Function、Subgraph、GLSL Code、剪貼簿與個人函式库；TD 既有結構引用宿主定義，圖內自訂定義按依賴宣告。TOP／MAT CHOP Uniform Array 支援固定長度的 float／vec2／vec3／vec4 與原生綁定，快照不讀取樣本、不更改 Uniform 即時通訊。自訂結構作者 UI、迴圈與一般 SSBO 作者介面仍為後續範圍。操作及責任見 [Arrays and structures](../features/ARRAYS_AND_STRUCTURES.md)，宿主來源限制見 [TD array sources](../features/TD_ARRAY_SOURCES.md)。
+
+本輪 421 項 Python unit、完整 portable 檢查與專項瀏覽器檢查通過；TD 2025.32820 的 277 項 GPU 檢查回報通過、三份使用者 Shader 與 registry 保留、fixture 移除。隨後 final source 測試未收到橋接回覆，使用者亦回報 TD 掛起；原因尚未確認，不能把已通過的 GPU 報告當作正式交付成功。已停止新的 TD 操作，暫存未回覆的請求以免恢復時自動執行，等待外部診斷後再補最終來源測試、來源同步、Master／資源核對及 TOE 保存。
+
 2026-09-18 第二批既有運算擴充已依同意的試行方案完成並交付 0.8.90：Convert 輸出 scalar／vector，新增 Matrix Convert 輸出 matrix，完整保留 1,109 個合法 constructor 配對；If 支援矩陣／double，19 種 double 數學多載維持 Auto 主路徑及手動指定。完整 portable 與隔離 UI 檢查通過，TD TOP Pixel／MAT Pixel／MAT Vertex 的 237 項原生 GPU 檢查全過，既有 Shader、registry 保留，臨時 fixture 移除。拉線搜尋修正已先以 0.8.89 交付；此批整合最新搜尋規則並已以 0.8.90 同步 TD、保存正式 TOE。31 份內嵌來源與 9 份服務資源一致，core 無錯誤、兩份 Master current、三份使用者 Shader 保留。Matrix 四則異型簽名仍是後續工作。試行決議見 [最新 review](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)。
 
 2026-09-18 拉線新增搜尋效能（0.8.89，已同步並保存）：以共用型別契約做局部候選配對，搜尋文字沿用同一上下文的結果，不再對每個候選複製／規劃整張圖；實際建立仍沿用完整交易驗證。新舊普通圖候選一致，常數或下游限制可延至選定時拒絕，拒絕不改圖、不新增 Undo。10 組專項瀏覽器檢查通過，101 節點正反向開啟約 12.5–23.1ms；獨立量測往下游開啟由 773ms 降至 14ms、搜尋 mat 由 635ms 降至 5ms。這些是隔離合成圖的本機量測，非所有設備的上限。搜尋排序未改；Matrix Convert 分流及運算擴充保留獨立交付。規則見 [Node Browser](../ui/NODE_BROWSER.md)。本筆提交 9106140；31 份內嵌來源／9 份服務資源一致、core 無錯誤、TOP／MAT Master current，三份使用者 Shader 保留。

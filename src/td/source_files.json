@@ -27,6 +27,7 @@
   "node_catalog.json": "src/library/node_catalog.json",
   "qrcode.js": "src/editor/qrcode.js",
   "sgrape_core.py": "src/core/sgrape_core.py",
+  "sgrape_composites.py": "src/core/sgrape_composites.py",
   "sgrape_document.py": "src/core/sgrape_document.py",
   "sgrape_library.py": "src/core/sgrape_library.py",
   "sgrape_history.py": "src/core/sgrape_history.py",

@@ -1,5 +1,6 @@
 {
   "node_catalog": "node_catalog.json",
+  "sgrape_composites": "sgrape_composites.py",
   "core": "sgrape_core.py",
   "personal_library": "sgrape_library.py",
   "document": "sgrape_document.py",

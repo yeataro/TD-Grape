@@ -3,7 +3,7 @@
  */
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-async function harness(source,stateFile,folder,{headerOnly=false,touch=false,autoDisconnectInvalidEdges}={}){
+async function harness(source,stateFile,folder,{headerOnly=false,touch=false,autoDisconnectInvalidEdges,skipPreview=false}={}){
   const state=JSON.parse(fs.readFileSync(stateFile,'utf8').replace(/^\uFEFF/,''));fs.mkdirSync(folder,{recursive:true});
   const errors=[],checks=[];
   const server=http.createServer(async(req,res)=>{
@@ -25,6 +25,7 @@ async function harness(source,stateFile,folder,{headerOnly=false,touch=false,aut
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
   const page=await browser.newPage({viewport:{width:1600,height:1100},hasTouch:touch});page.on('pageerror',e=>errors.push(e.message));
+  if(skipPreview)await page.addInitScript(()=>localStorage.setItem('sgrapeAutoPreview','false'));
   await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForSelector('.node');await page.evaluate(()=>document.fonts.ready);
   await page.evaluate(()=>{clearTimeout(autoTimer);connectionInterrupted=true;window.testNode=(id,key,x,y,params={})=>{
     const d=catalog.find(d=>d.key===key);return{id,definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...clone(d.defaults),...params},ui:{x,y}};
@@ -40,7 +41,7 @@ async function harness(source,stateFile,folder,{headerOnly=false,touch=false,aut
   return{page,browser,checks,errors,at,drag,settle,finish};
 }
 async function run(){
-  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder),{page,checks,errors,settle}=h;
+  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder,{skipPreview:true}),{page,checks,errors,settle}=h;
   try{
     await page.evaluate(()=>{graph.declarations=[];graph.functions=[];graph.stages.pixel={nodes:[testNode('pixel','pixel_out',600,80)],edges:[]};stage='pixel';graphTrail=[];past=[];future=[];selected=null;selection.clear();readonly=false;render();scale=1;pan={x:30,y:50};transform();const r=$('#canvas').getBoundingClientRect();openCreator(r.left+160,r.top+200);});
     await page.locator('#createsearch').fill('custom GLSL');
