@@ -38,3 +38,13 @@ The user supplied the two cloud mockup screenshots after reviewing the first imp
 Global ranked search, Source filtering, repeated Library reference reuse, Personal refresh/drop target, current-Shader scope and the floating wire-to-create planner retain their established behavior. Empty category families are not presented as available nodes. Tree expansion is presentation state; categoryPath metadata is outside semantic revisions. Pending Texture/Sampler/Expose decisions are untouched.
 
 Validation: 14 actual Chromium tree/search/creation checks, 12 clipboard checks, 8 Function rename checks, both locales, unchanged catalog fingerprints/library snapshots and six MAT/TOP example compilation results. This is not physical iPad/Safari validation. The pre-existing VM fixture failures documented in NODE_BROWSER.md remain a separate harness gap.
+
+## Wire creator: local matching and final validation — 2026-09-18
+
+Floating Add opened from a wire searches the same browser index as standalone Add. Search, signature matching and validation execute in the browser; typing does not request a TD/server search or compatibility table.
+
+Candidate previews match the selected socket against a small local signature graph using the existing type contract and Auto solver. Forward creation uses the existing source signature and the candidate. Reverse creation uses the candidate output type, the receiving node and its other input signatures. Ordinary equivalent Auto variants share a result; dimension-dependent Combine/Replace variants and explicit type filters remain distinct. Search text changes reuse results for that creator session. A complete graph/declaration/function/library/type-contract/stage/wire snapshot invalidates the cache when its context changes; closing the creator drops it.
+
+The preview deliberately does not validate the entire downstream graph or propagate constants for every result. A locally compatible item can therefore appear even when a downstream or constant-only constraint will reject it after selection. This is a candidate-list difference, not permission to create an invalid graph: actual creation still uses the existing full connection validation inside the atomic edit transaction. Rejection restores the graph and does not add Undo history. Search ranking, explicit conversions, automatic casts and the graph format are unchanged.
+
+The performance requirement covers opening the creator and successive keystrokes in both directions. Regression checks must also cover fresh validation after edits, rejected creation, explicit type filters, assembly sockets and candidate parity on ordinary valid graphs. Timing evidence and delivery status are recorded in [TESTING.md](../development/TESTING.md).

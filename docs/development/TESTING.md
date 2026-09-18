@@ -1,5 +1,11 @@
 # 測試
 
+2026-09-18 拉線新增搜尋效能：完整 portable checks 通過（374 項 Python unit、656 個雙語鍵、14 項 editor launch、metadata／JS model／26 項 Remote Panel）。新增 `test_creator_performance.cjs`，10 組 headless Chromium 檢查全過、零頁面錯誤。涵蓋正反向純量／向量／矩陣候選与舊完整 planner 的結果／排序對照、文字／來源／指定型別篩選、Combine／Replace 重疊接線、If bool 接口、圖值／宣告／函式庫／契約／Undo 失效，以及過期候選與常數／下游限制拒絕時 graph／history 不變。正常建立仍執行 fresh 全圖驗證並只有一筆 Undo。
+
+效能 fixture 為來源加 100 個 Auto Add，正反向均含有／無 requireConstant：每次重開清單約 12.5–23.1ms，後續輸入约 1.1–7.1ms；候選完整圖 planner 呼叫為 0，文字變更 Auto planner 也為 0。另一支獨立 profiler 同樣 101 節點，舊版 standalone 開啟 12ms、往下游 773ms，修正後往下游 14ms；mat 查詢由 635ms 降為 5ms，standalone 約 2ms。這是本機隔離合成圖及工具計時，並非使用者實際圖或跨設備保證。計時路徑沒有 TD API 搜尋請求。報告位於私人 `work/creator-performance-regression`、`work/wire-creator-profile` 與 `work/wire-creator-independent`。
+
+獨立原始碼審查未發現資料正確性問題；已接受的小幅行為差異是僅受整圖常數或下游限制影響的項目可先出現在清單，點選時才回報限制，完整提交驗證及 rollback 保持不變。搜尋仍使用同一份型別契約，沒有新增後端索引、背景監看或改動 cast 規則。
+
 2026-09-18 Matrix 覆寫標記試行（0.8.88）：15 組隔離 Matrix UI 檢查通過。Combine 單獨接 X 時保持三格，顯示 `↳ X` 並帶來源提示；mat4 Replace 的 Value 與 Y 分量同時接入時，收合列精確為 `—｜↳ Y｜—｜—`，其他欄仍為四個沿用標記。數值編輯、Undo、接孔與各形狀檢查保持通過，實際 Replace 截圖已檢視。主線另以已交付 core 重驗同 15 組通過。TD 核對 31 份內嵌來源與 9 份服務資源、core 無錯誤、TOP／MAT Master current；三份使用者 Shader 保留。正式 TOE 861,518 bytes，SHA-256 `c6f87fbad7c6ecf59676c60e0294a25c3a6c619f489ed8f73d9a8d218848d655`，排除一份私人助手。交付報告為 matrix-marker-refresh／masters／audit／save-20260918。
 
 2026-09-18 Matrix 收合位置修正（0.8.87）：`test_matrix_values.cjs` 15 組通過，無頁面錯誤。新增實際接線案例核對 vec3 只接 X 後仍有三個等寬位置、Y／Z 編輯索引正確、修改 Y 的 Undo 保留接線，以及 mat4 Replace 接入 Value 後單獨覆寫 Y 仍有四格及下方 Y 接孔。既有 18 型別、展開／收合、Split 接孔、數值手勢與座標保留案例一併通過。本批只有前端顯示修正，無需重跑 GPU 數值探針。主線以已交付 core 重驗 15 組亦通過；TD 31 份內嵌來源與 9 份資源一致，core 無錯誤。兩份 Master 僅同步 compilerBuild 至 0.8.87，無定義升級，使用者三份 Shader 保留。正式 TOE 861,142 bytes，SHA-256 `8e553842eba385df9e54e341225335fe98382b50b09a8792f6b68a1bddecfd57`，排除一份私人助手；交付報告為 matrix-slots-refresh／masters／final-audit／save-20260918。

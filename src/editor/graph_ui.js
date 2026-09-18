@@ -667,11 +667,101 @@ function planWireTypes(from,to,extra=null){
   return {...plan,edges:candidate.edges,displaced};
 }
 function commitPlannedWire(from,to){current().edges=planWireTypes(from,to).edges;}
-function creatorTypePlan(d,variant,port,wire,locked){
+function creatorValidationContext(){
+  // Query text does not change signatures. Include the complete document so
+  // drafts, input defaults, Undo and changes outside the visible unit invalidate.
+  const key=JSON.stringify([graph,stage,graphTrail,creatorState.wire,catalog,typeContract,functionLibrary,personalLibrary,editorTarget,language]);
+  if(creatorState.validation?.key===key)return creatorState.validation;
+  const data=current(),owner=currentFunction(),context={key,data,owner,plans:new Map(),singlePlans:new Map(),reversePlans:new Map()};
+  creatorState.validation=context;
+  try{
+    context.oldPorts=storedTypePorts(graph,data,owner);
+    context.oldPlan=planAutoGraph(graph,data,owner,new Map(),{draft:true});
+    context.invalidEdges=new Set(invalidTypeEdges(data,context.oldPorts).map(e=>typeEdgeKey(e,context.oldPorts)));
+  }catch(error){context.error=error;}
+  return context;
+}
+function creatorTypePlan(d,variant,port,wire,locked,context=null){
+  if(context?.error)throw context.error;
   let id='__creator';while(current().nodes.some(n=>n.id===id))id+='_';
   const node={id,definitionUuid:d.definitionUuid,params:{...clone(d.defaults||{}),...(variant.type?{type:variant.type}:{}),...clone(variant.params||{})},ui:supportsAutoType(d)&&!locked?{typeMode:'auto'}:{}};
   const from=wire.kind==='outputs'?wire:{node:id,port},to=wire.kind==='inputs'?wire:{node:id,port};
-  const plan=planWireTypes(from,to,{node,ports:variant});return plan.ports.get(id);
+  if(!context)return planWireTypes(from,to,{node,ports:variant}).ports.get(id);
+  // Ordinary Auto nodes choose their signature from their wires, not the trial
+  // variant. Replace/Combine retain a dimension-dependent assembly policy.
+  const infer=(!context.owner||context.owner.scope==='local')&&node.ui.typeMode==='auto'&&!['combine','replace'].includes(d.key);
+  const params={...node.params};if(infer)delete params.type;
+  const trialKey=JSON.stringify([d.definitionUuid,params,infer?null:variant,port,locked]);
+  const cached=context.plans.get(trialKey);if(cached){if(cached.error)throw cached.error;return cached.ports;}
+  try{
+    const assembling=entry=>['combine','replace'].includes(entry?.key);
+    const possibleInputs=(entry,n,name)=>{
+      if(assembling(entry))return null;
+      const automatic=(!context.owner||context.owner.scope==='local')&&n.ui?.typeMode==='auto'&&supportsAutoType(entry);
+      return automatic?nodeTypeVariants(entry,n.params).map(v=>v.inputs[name]):[n.id===id?variant.inputs[name]:context.oldPorts.get(n.id)?.inputs[name]];
+    };
+    let sourcePorts;
+    if(wire.kind==='outputs')sourcePorts=context.oldPlan.ports.get(wire.node);
+    else {
+      const singleKey=JSON.stringify([d.definitionUuid,params,infer?null:variant,locked]);
+      let single=context.singlePlans.get(singleKey);
+      if(!single){
+        single=planAutoGraph(graph,{nodes:[node],edges:[]},context.owner,new Map([[id,variant]]),{draft:true});
+        if(single.choices.has(id))reshapeTypedInputs(node,d,single.choices.get(id));
+        context.singlePlans.set(singleKey,single);
+      }
+      if(single.issues.size)throw Error([...single.issues.values()][0]);
+      sourcePorts=single.ports.get(id);
+    }
+    const target=wire.kind==='outputs'?node:context.data.nodes.find(n=>n.id===wire.node),targetDefinition=wire.kind==='outputs'?d:autoDefinition(graph,target,context.owner);
+    const inputs=possibleInputs(targetDefinition,target,to.port),sourceType=sourcePorts?.outputs[from.port];
+    if(inputs&&!inputs.some(type=>vectorConnectionExact(targetDefinition,sourceType,type)))throw autoTypeError('type.autoInputs');
+    let ports;
+    if(wire.kind==='outputs'){
+      if(assembling(d)&&to.port!=='value'){
+        const first='xyzw'.indexOf(to.port),storedSource=context.oldPorts.get(wire.node)?.outputs[wire.port];
+        if(first<0||!Object.hasOwn(variant.inputs,to.port)||!valueTypes().includes(storedSource)||first+typeComponents(storedSource)>typeComponents(node.params.type))throw Error(t('vector.overlap'));
+      }
+      // Preview local signatures only. Whole-graph constraints are checked by
+      // the unchanged commitPlannedWire/change transaction after selection.
+      const boundary={id:wire.node,definitionUuid:'__creator_boundary',params:{},ui:{}},candidate={nodes:[boundary,node],edges:[{from:[from.node,from.port],to:[to.node,to.port]}]};
+      const plan=planAutoGraph(graph,candidate,context.owner,new Map([[boundary.id,sourcePorts],[id,variant]]),{draft:true});
+      if(plan.issues.size)throw Error([...plan.issues.values()][0]);
+      rejectNewTypeIssues(candidate,plan.ports,null,null);
+      if(plan.choices.has(id))reshapeTypedInputs(node,d,plan.choices.get(id));
+      ports=plan.ports.get(id);
+    }else {
+      // A new source has no incoming wires. Once its own signature is known,
+      // the receiving node only needs this output type and its other inputs.
+      // Reuse that local trial across candidates with the same output type.
+      if(!context.reversePlans.has(sourceType)){
+        try{
+          let replaced=e=>e.to[1]===to.port;
+          if(assembling(targetDefinition)&&to.port!=='value'){
+            const first='xyzw'.indexOf(to.port);
+            if(first<0||!Object.hasOwn(context.oldPorts.get(target.id).inputs,to.port)||!valueTypes().includes(sourceType)||first+typeComponents(sourceType)>typeComponents(target.params.type))throw Error(t('vector.overlap'));
+            const end=first+typeComponents(sourceType);
+            replaced=e=>{
+              if(e.to[1]==='value')return false;
+              const start='xyzw'.indexOf(e.to[1]),oldType=context.oldPorts.get(e.from[0])?.outputs[e.from[1]],width=valueTypes().includes(oldType)?typeComponents(oldType):typeComponents(context.oldPorts.get(target.id).inputs[e.to[1]]||'float');
+              return start<end&&start+width>first;
+            };
+          }
+          const incoming=context.data.edges.filter(e=>e.to[0]===to.node&&!replaced(e)),boundaries=new Map([[id,{inputs:{},outputs:{out:sourceType}}]]);
+          for(const edge of incoming)boundaries.set(edge.from[0],context.oldPlan.ports.get(edge.from[0]));
+          const candidate={nodes:[clone(target),...[...boundaries.keys()].map(id=>({id,definitionUuid:'__creator_boundary',params:{},ui:{}}))],edges:[...incoming,{from:[id,'out'],to:[to.node,to.port]}]};
+          const plan=planAutoGraph(graph,candidate,context.owner,boundaries,{draft:true});
+          for(const [nodeId,message]of plan.issues)if(context.oldPlan.issues.get(nodeId)!==message)throw Error(message);
+          if(invalidTypeEdges(candidate,plan.ports).some(edge=>!context.invalidEdges.has(typeEdgeKey(edge,plan.ports))))throw autoTypeError('type.autoInputs');
+          if(plan.choices.has(target.id))reshapeTypedInputs(candidate.nodes[0],targetDefinition,plan.choices.get(target.id));
+          context.reversePlans.set(sourceType,null);
+        }
+        catch(error){context.reversePlans.set(sourceType,error);}
+      }
+      const error=context.reversePlans.get(sourceType);if(error)throw error;ports=sourcePorts;
+    }
+    context.plans.set(trialKey,{ports});return ports;
+  }catch(error){context.plans.set(trialKey,{error});throw error;}
 }
 function creatorVariants(d,wire){
   if(d.fixedType)return typeVariants(d);
@@ -1369,6 +1459,7 @@ function openCreator(clientX,clientY,wire=null){
 }
 function renderCreator(){
   if(!creatorState)return;const query=$('#createsearch').value.toLowerCase(),category=creatorCategory,typeFilter=$('#createtype').value,wire=creatorState.wire;
+  const validation=wire?creatorValidationContext():null;
   creatorMatches=[];
   const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant','spec_constant'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
   for(const preset of Object.keys(inputPresets)){
@@ -1386,7 +1477,7 @@ function renderCreator(){
     for(const variant of creatorVariants(d,wire)){
       const p=Object.entries(wire?.kind==='inputs'?variant.outputs:variant.inputs);
       if(!wire){const socketTypes=[...Object.values(variant.inputs),...Object.values(variant.outputs)];if(typeFilter==='all'||socketTypes.includes(typeFilter))candidates.push({d,type:variant.type,port:null,params:variant.params,variant});}
-      else for(const[name,type]of p){try{const plan=creatorTypePlan(d,variant,name,wire,typeFilter!=='all'),actual=plan[wire.kind==='inputs'?'outputs':'inputs'][name];if(typeFilter==='all'||actual===typeFilter)candidates.push({d,type:variant.type,port:name,portType:actual,params:variant.params,variant:plan});}catch{}}
+      else for(const[name,type]of p){try{const plan=creatorTypePlan(d,variant,name,wire,typeFilter!=='all',validation),actual=plan[wire.kind==='inputs'?'outputs':'inputs'][name];if(typeFilter==='all'||actual===typeFilter)candidates.push({d,type:variant.type,port:name,portType:actual,params:variant.params,variant:plan});}catch{}}
     }
     if(candidates.length){
       const sizeScore=m=>d.key==='combine'&&wire?.kind==='outputs'&&valueTypes().includes(wire.type)?Math.abs(typeComponents(m.type)-Math.min(4,typeComponents(wire.type)+1)):0;
