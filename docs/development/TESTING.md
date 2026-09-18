@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 表現模式即時切換（0.8.100）：既有 `test_ui_experiments.cjs` 20 組、`test_note_appearance.cjs` 16 組通過。Note fixture 明確開啟它所操作的展開節點收合提示，修正仍依賴舊預設的前置條件；未更動產品預設。另在私人 `visual-no-transition` 報告保留 4 組 Chromium 計算樣式探針：Professional 與移除整套光暈 CSS 的基準相同（含選取／錯誤節點、Note）；模式即刻切換、無 CSSTransition 或入場延遲、退回 Professional 的 filter 為 none；Cool 非光暈節點／接孔／文字／面板及 Stage 與基本樣式相同；Light／減少動態效果與圖資料不變。未做實機 iOS 效能量測。
+
 2026-09-19 陣列／結構 0.8.91 已整合 main、同步 TD 並保存：32 份內嵌來源、9 份服務資源一致，core 無錯誤，TOP／MAT Master current，三份使用者 Shader 與模板身分保留。正式 TOE 889,438 bytes，SHA-256 `fb8b99f706b93881204131d759022d2e0e29272b1414a67dc565dc11f57de648`，排除一份私人助手。原生交付報告為 `array-{refresh,masters,audit,save}-20260919`；功能提交 `60f71f8`、掛起修正 `4c3d921`。沒有重新載入使用者現有 Editor。
 
 2026-09-19 陣列／結構 0.8.91 交付前驗證：完整 portable checks 通過，包含 425 項 Python unit、678 個雙語鍵、14 項 launch、metadata／brand／JS 模型及 26 項 Remote Panel 檢查。既有 138 個圖編譯指紋保持不變。複合型別新增動態描述，保留原 38 種數值型別；覆蓋零初始化、讀取 Clamp、Replace 越界不修改、明確 int／uint 索引設定、型別隔離、結構欄位 ID、宣告依賴、匯入／Undo／原生綁定與最後成功 Shader 的保護。
