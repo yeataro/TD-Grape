@@ -705,15 +705,23 @@ def prepare_managed_top_slots(comp,graph,input_owner=None):
         raise RuntimeError('Disconnect the COMP input before removing its TOP Input source.')
     old_nodes={record['id']:comp.op(record['node']) for record in old}
     if not old and slots and comp.op('in1'):old_nodes[slots[0]['id']]=comp.op('in1')
-    for connector in comp.inputConnectors:connector.disconnect()
-    # Temporary names make swapping source order safe without replacing In OPs.
-    for ident,incoming in old_nodes.items():
-        if incoming:incoming.name='grape_input_'+hashlib.sha256(ident.encode()).hexdigest()[:12]
+    # Uniform-only deployments must not dirty the TOP dependency graph by
+    # disconnecting/renaming unchanged inputs. Rebuild only for slot changes or
+    # damaged plumbing; external wires still follow stable slot IDs.
+    rebuild=([s['id'] for s in old]!=[s['id'] for s in slots] or
+        any(not old_nodes.get(s['id']) or old_nodes[s['id']].name!='in'+str(i+1)
+            or old_nodes[s['id']].par.connectorder.val!=i for i,s in enumerate(slots)))
+    if rebuild:
+        for connector in comp.inputConnectors:connector.disconnect()
+        # Temporary names make swapping source order safe without replacing In OPs.
+        for ident,incoming in old_nodes.items():
+            if incoming:incoming.name='grape_input_'+hashlib.sha256(ident.encode()).hexdigest()[:12]
     records=[]
     for index,slot in enumerate(slots):
         incoming=old_nodes.get(slot['id']) or comp.create(inTOP,'grape_new_input')
-        incoming.name='in'+str(index+1)
-        incoming.par.connectorder=index;incoming.par.label='sTD2DInputs['+str(index)+']';incoming.par.format='useinput'
+        if incoming.name!='in'+str(index+1):incoming.name='in'+str(index+1)
+        if incoming.par.connectorder.val!=index:incoming.par.connectorder=index
+        incoming.par.label='sTD2DInputs['+str(index)+']';incoming.par.format='useinput'
         if comp.fetch('grapeTopArrangeSources',False):
             incoming.nodeX=-360;incoming.nodeY=-(index*220);incoming.nodeWidth=150;incoming.nodeHeight=100
         incoming.comment='Input '+str(index+1)+' / sTD2DInputs['+str(index)+'] — external wire overrides the default image.'
@@ -730,7 +738,8 @@ def prepare_managed_top_slots(comp,graph,input_owner=None):
             if comp.fetch('grapeTopArrangeSources',False) or not selected.fetch('grapeSourcePlaced',False):
                 selected.nodeX=-590;selected.nodeY=-(index*220);selected.nodeWidth=150;selected.nodeHeight=100;selected.store('grapeSourcePlaced',True)
             default=selected
-        incoming.inputConnectors[0].connect(default)
+        connector=incoming.inputConnectors[0]
+        if len(connector.connections)!=1 or connector.connections[0].owner!=default:connector.connect(default)
         records.append(dict(slot,node=incoming.name))
     for ident,incoming in old_nodes.items():
         if ident not in desired and incoming:incoming.destroy()
@@ -740,7 +749,8 @@ def prepare_managed_top_slots(comp,graph,input_owner=None):
     if not input_owner:
         for index,record in enumerate(records):
             source=external.get(record['id'])
-            if source:comp.inputConnectors[index].connect(source)
+            connector=comp.inputConnectors[index]
+            if source and (len(connector.connections)!=1 or connector.connections[0].owner!=source):connector.connect(source)
 
 
 def managed_top_asset(comp,index,source):

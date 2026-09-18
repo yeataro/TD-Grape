@@ -58,6 +58,8 @@ Console 擷取只能保存已經輸出的訊息，不是攔截每一筆原始 st
 
 開發橋接 request 逾時不會自動取消請求。TD 無回應時先不要疊加新測試；確認 identity 後停放未回覆的請求，避免恢復後自動執行。不要只因視窗沒有回應就認定前一個已回報成功的 GPU 測試失敗，應以報告和階段記錄定位。
 
+若 Console 沒有新訊息，可另用 [py-spy](https://github.com/benfred/py-spy) 從外部讀取 Python 呼叫堆疊：`py-spy dump --pid <TD的PID>`。2026-09-19 在 TD 2025.32820／內嵌 Python 3.11.10 實測成功，將陣列來源測試的停點定位到 `prepare_managed_top_slots` 的 `connect()`，不必在掛起的主執行緒執行新程式。它是選用的開發工具，非產品依賴；此次只讀 stack，未使用 `--locals` 或完整程序記憶體 dump。Python stack 可以指出停在哪個原生呼叫，不能單靠它證明 TD 內部的鎖、驅動或 C++ 根因。
+
 此工具和原始記錄屬於開發診斷，不打包進正式 TOE，不把機器路徑／測試記錄提交到產品來源。擷取期間保留原生 Console；不要用它的關閉按鈕來停止擷取，關閉 Console 可能連同 TD 程序一起結束。
 
 ## 參考

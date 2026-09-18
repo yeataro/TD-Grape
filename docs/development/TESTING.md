@@ -1,12 +1,16 @@
 # 測試
 
-2026-09-18 陣列／結構 0.8.91 交付前驗證：完整 portable checks 通過，包含 421 項 Python unit、678 個雙語鍵、14 項 launch、metadata／brand／JS 模型及 26 項 Remote Panel 檢查。既有 138 個圖編譯指紋保持不變。複合型別新增動態描述，保留原 38 種數值型別；覆蓋零初始化、讀取 Clamp、Replace 越界不修改、明確 int／uint 索引設定、型別隔離、結構欄位 ID、宣告依賴、匯入／Undo／原生綁定與最後成功 Shader 的保護。
+2026-09-19 陣列／結構 0.8.91 交付前驗證：完整 portable checks 通過，包含 425 項 Python unit、678 個雙語鍵、14 項 launch、metadata／brand／JS 模型及 26 項 Remote Panel 檢查。既有 138 個圖編譯指紋保持不變。複合型別新增動態描述，保留原 38 種數值型別；覆蓋零初始化、讀取 Clamp、Replace 越界不修改、明確 int／uint 索引設定、型別隔離、結構欄位 ID、宣告依賴、匯入／Undo／原生綁定與最後成功 Shader 的保護。
 
 本輪 browser 檢查：Array／結構 8 組、Function／Subgraph／GLSL Code／剪貼簿整合 5 組、搜尋效能及副作用 11 組、GLSL Code 9 組通過；兩份瀏覽器生成的複合型別圖另經 core 編譯成功。最終搜尋測試的 101 節點圖，正反向、有／無常數限制的開啟時間約 13.9–23.7ms；沒有完整圖 planner 呼叫，搜尋文字沿用局部配對結果。這是本機隔離測量，不代表所有設備上限。GLSL Code 舊測試的 fixture 改為關閉不存在的 Remote Panel 預覽，避免啟動等待阻擋測試操作；產品預览行為未更改。
 
-TD 2025.32820／Windows／NVIDIA 的 `test_array_nodes.py` 最終 51 cases、139 programs、277 項 GPU records 全部通過，包含 TOP Pixel、MAT Pixel／Vertex、动态索引、Replace 來源分支不變、TD 內建結構欄位與零初始化。先前來源 fixture 8 組通過；最後新增的隔離 MAT light 清理尚未完成原生重跑。測試發現並修正 Replace 的常數越界索引即使在不執行的分支仍被 GLSL 編譯器拒絕，故保留 no-op guard 並使分支內 subscript 合法。宿主 struct constructor 實測另找到文件未列的 TDMatrix `quadReproject`／`clipDistances`、TDCameraInfo `ipdShift`，已按此 build 註冊並驗證，不能推廣為所有 TD 版本。
+TD 2025.32820／Windows／NVIDIA 的 `test_array_nodes.py` 最終 51 cases、139 programs、277 項 GPU records 全部通過，包含 TOP Pixel、MAT Pixel／Vertex、动态索引、Replace 來源分支不變、TD 內建結構欄位與零初始化。最終來源 fixture 按 TOP 4／MAT 3／Light 1 串行重跑全過，包含隔離 MAT light 設定還原及清理。測試發現並修正 Replace 的常數越界索引即使在不執行的分支仍被 GLSL 編譯器拒絕，故保留 no-op guard 並使分支內 subscript 合法。宿主 struct constructor 實測另找到文件未列的 TDMatrix `quadReproject`／`clipDistances`、TDCameraInfo `ipdShift`，已按此 build 註冊並驗證，不能推廣為所有 TD 版本。
 
-277 項 GPU job 回報成功、三份使用者 Shader／registry 保留、fixture 移除後，接續 sources job 未獲回覆、報告目錄為空，使用者回報 TD 掛起；TD 視窗操作亦逾時。此時間順序不能證明掛起原因。未重啟或強制關閉 TD；未回覆請求已暫存，避免恢復後自動執行。正式同步／Master 核對／TOE 保存仍待完成。另觀察 TOP Vectors 頁面傳入動態 uint 最大值未維持探針預期，與圖內 exact literal 的索引檢查分開記錄，未重新加入已撤銷的整數範圍限制。
+掛起調查：277 項 GPU job 完成後接續 sources job 未回覆。使用者關閉 TD 後重開，TOP-only fixture 在新增 `float[3]` 來源時再次重現；flushed phase 顯示候選驗證已返回，外部 py-spy stack 則落在 `prepare_managed_top_slots` 對既有 In TOP 呼叫 `connect(default)`。新增 Uniform 未改 TOP slots，但舊程式每次 deploy 都斷線、暫時改名、重接。修正只在 slots／順序或 plumbing 損壞時重建，原目標接線相同時不重接；沒有跳過來源內容更新。這是已重現路徑的定位，不能推定 TD 內部是哪個鎖或依賴評估機制。
+
+修正後 TOP／MAT／Light 共 8 組全部回覆成功，另 `test_top_source_inventory.py` 的 6 組原生回歸驗證五個輸入、重複引用、未變更時 OP identity／外線保留、改 default、缺線修復、重排依 ID 保留外線及解析度、零輸入清理。全部在隔離管理器執行，三份使用者 Shader／registry 保留、fixture 移除。報告為 `array-sources-{top,mat,light}-fixed-20260919` 及 `top-plumbing-fixed-20260919`。未回覆的舊 request 均以原 ID 改名暫存，沒有於重開後重播。
+
+另觀察 TOP Vectors 頁面傳入動態 uint 最大值未維持探針預期，與圖內 exact literal 的索引檢查分開記錄，未重新加入已撤銷的整數範圍限制。
 
 2026-09-18 Matrix Convert／double 第二批 0.8.90 已同步 TD 並保存：31 份內嵌來源、9 份服務資源一致，core 無錯誤，TOP／MAT Master current，三份使用者 Shader 保留。正式 TOE 865,718 bytes，SHA-256 `c79c0833fb8d2cf1560b6029fd1cd11856d9a1ac2c283fdb7ebb7f4f904abc6a`，排除一份私人助手；現有 Editor 未強制刷新。原生交付報告為 matrix-convert-{refresh,catalog-audit,masters,audit,save}-20260918。
 

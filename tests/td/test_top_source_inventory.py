@@ -1,5 +1,5 @@
 import copy,json
-owner=op('/TD_Grape');r=owner.op('runtime').module;c=r.core()
+owner=globals().get('GRAPE_TEST_MANAGER') or op('/TD_Grape');r=owner.op('runtime').module;c=r.core()
 user_before={s.path:{key:s.op(key).text for key in ('graph','state','manifest') if s.op(key)} for s in r._shaders.values() if s and s.valid}
 (GRAPE_TEST_OUTPUT/'user-before.json').write_text(json.dumps(user_before,ensure_ascii=False,indent=2),encoding='utf-8')
 area=op('/').create(baseCOMP,'grape_source_test')
@@ -23,6 +23,23 @@ try:
     checks.append({'case':'five inputs and repeated references','children':count})
     ext=area.create(constantTOP,'external');ext.par.resolutionw=140;ext.par.resolutionh=86
     s.inputConnectors[4].connect(ext)
+    identities={row['id']:s.op(row['node']).id for row in s.fetch('grapeTopSlots')}
+    for _ in range(3):
+        r.configure(s,c.compile_graph(g),g);r.validate_material(s)
+        assert {row['id']:s.op(row['node']).id for row in s.fetch('grapeTopSlots')}==identities
+        assert s.inputConnectors[4].connections[0].owner==ext
+    checks.append({'case':'unchanged TOP inventory preserves In TOP identities and external wire'})
+    # An unchanged slot list must still apply changed defaults and repair a
+    # missing internal connection; it is not a blanket configure early return.
+    g['topInputs'][0]['defaultSource']='builtin:white'
+    r.configure(s,c.compile_graph(g),g);r.validate_material(s);r.cleanup_top_sources(s,g)
+    incoming=s.op('in1');default=s.op('input_1_default')
+    assert default.type=='constant' and default.par.colorr.eval()==1
+    assert incoming.inputConnectors[0].connections[0].owner==default
+    incoming.inputConnectors[0].disconnect()
+    r.configure(s,c.compile_graph(g),g);r.validate_material(s)
+    assert incoming.inputConnectors[0].connections[0].owner==default
+    checks.append({'case':'default change and missing internal wire are still applied'})
     g['topInputs'].reverse()
     r.configure(s,c.compile_graph(g),g);r.validate_material(s);r.cleanup_top_sources(s,g)
     assert s.inputConnectors[0].connections[0].owner==ext
