@@ -12,7 +12,7 @@ const ARRANGE_ACTIONS=[
   ['spaceY','M3 3h18M3 21h18M6 7h12v3H6zM6 14h12v3H6z'],
   ['grid','M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z']
 ];
-let selectionToolbarFrame=0,selectionToolbarHover=false,arrangeContext=null;
+let selectionToolbarFrame=0,selectionToolbarHover=false,selectionBoundsHover=false,selectionSpreadActive=false,arrangeContext=null;
 function selectionIcon(path){
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','ui-icon');svg.setAttribute('aria-hidden','true');
@@ -54,12 +54,18 @@ function renderSelectionToolbar(){
   decorateShortcutButton($('#graphframe'),'groupFrame',canCreateGroupFrame()?'frame.create':'frame.unframedOnly');
   $('#grapharrange').disabled=!multiple||editorMutationBlocked();
   $('#graphfitselection').disabled=!nodes.length;
+  const collapseState=nodeCollapseSelectionState();
+  for(const [action,available]of [['collapse',collapseState.canCollapse],['expand',collapseState.canExpand]]){
+    const button=$('#graph'+action+'selection'),label=t('selection.'+action);
+    button.hidden=!EDITOR_DEV_SETTINGS.selectionCollapseTools;
+    button.disabled=editorMutationBlocked()||!available;button.title=label;button.setAttribute('aria-label',label);
+  }
   bar.hidden=mode==='off'||!nodes.length||(mode==='multiple'&&!multiple);
   bar.setAttribute('aria-label',t('selection.toolbar'));edit.setAttribute('aria-label',t('selection.editTools'));multi.setAttribute('aria-label',t('selection.nodeTools'));
   $('#grapharrange').title=t('arrange.title');$('#grapharrange').setAttribute('aria-label',t('arrange.title'));
   $('#graphfitselection').title=t('action.fitSelection');$('#graphfitselection').setAttribute('aria-label',t('action.fitSelection'));
   if(!arrangeContextMatches()||editorMutationBlocked()||!multiple)closeArrangeMenu();
-  if(bar.hidden)selectionToolbarHover=false;
+  if(bar.hidden)selectionToolbarHover=selectionBoundsHover=false;
   scheduleSelectionToolbarPosition();
 }
 function scheduleSelectionToolbarPosition(){
@@ -74,7 +80,8 @@ function positionSelectionToolbar(){
   if(!bounds||bounds.right<r.left||bounds.left>r.right||bounds.bottom<r.top||bounds.top>r.bottom){bar.style.visibility='hidden';outline.hidden=true;return;}
   bar.style.visibility='';
   const gap=6,frame=completeGroupFrames(nodes).find(item=>item.nodes.length===nodes.length);
-  outline.hidden=!!(EDITOR_DEV_SETTINGS.hideGroupedSelectionBounds&&frame)||!(persistent||!bar.hidden&&(selectionToolbarHover||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open')));
+  outline.hidden=!!(EDITOR_DEV_SETTINGS.hideGroupedSelectionBounds&&frame)||!(persistent||!bar.hidden&&(selectionToolbarHover||selectionBoundsHover||selectionSpreadActive||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open')));
+  for(const handle of outline.children){handle.hidden=nodes.length<2||editorMutationBlocked();handle.title=t('selection.spread');handle.setAttribute('aria-label',handle.title);}
   const frameElement=frame&&$('#groupframes')?.querySelector(`[data-frame="${CSS.escape(frame.id)}"]`);
   // Keep the outer selection curve concentric with a single complete frame at any graph zoom.
   outline.style.borderRadius=frameElement?parseFloat(getComputedStyle(frameElement).borderTopLeftRadius)*scale+gap+'px':'';
@@ -92,6 +99,93 @@ function positionSelectionToolbar(){
   const preferred=fits(above)?above:fits(below)?below:above;
   const y=Math.max(top,Math.min(preferred,bottom-bar.offsetHeight));
   bar.style.left=x+'px';bar.style.top=y+'px';
+}
+// Scale center distances, then translate to keep the opposite outside edge fixed.
+// Solving against actual widths/heights keeps differently sized nodes unchanged.
+function selectionSpreadPositions(items,handle,dx,dy){
+  const axes=[['x','width',handle.includes('w')?-1:handle.includes('e')?1:0,dx],['y','height',handle.includes('n')?-1:handle.includes('s')?1:0,dy]];
+  const factors=axes.map(([axis,size,direction,delta])=>{
+    if(!direction)return 1;
+    const centers=items.map(n=>n[axis]+n[size]/2),span=Math.max(...items.map(n=>n[axis]+n[size]))-Math.min(...items.map(n=>n[axis]));
+    const target=Math.max(Math.max(...items.map(n=>n[size])),span+direction*delta);let factor=Infinity,initialFactor=Infinity;
+    for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+      const distance=Math.abs(centers[i]-centers[j]);
+      if(distance>1e-6){
+        const half=(items[i][size]+items[j][size])/2;
+        factor=Math.min(factor,(target-half)/distance);initialFactor=Math.min(initialFactor,(span-half)/distance);
+      }
+    }
+    // A wide node may enclose every other node along this axis. Its outer
+    // bounds then stay constant initially; use center spread to avoid jumping
+    // straight to the point where another node escapes that enclosing width.
+    if(Number.isFinite(initialFactor)&&initialFactor>1+1e-6)return Math.max(0,1+direction*delta/(Math.max(...centers)-Math.min(...centers)));
+    return Number.isFinite(factor)?Math.max(0,factor):1;
+  });
+  // Stop at the first new collision on the drag path. Existing overlaps do not
+  // lock the selection; they may be spread apart normally. Preserve up to 8px
+  // of an existing gap instead of introducing touching edges while contracting.
+  let travel=1;
+  for(let i=0;i<items.length;i++)for(let j=i+1;j<items.length;j++){
+    const a=items[i],b=items[j],distances=axes.map(([axis,size])=>Math.abs(a[axis]+a[size]/2-b[axis]-b[size]/2));
+    const sizes=axes.map(([,size])=>(a[size]+b[size])/2);
+    if(distances.every((distance,k)=>distance<sizes[k]-1e-6))continue;
+    let enter=0,leave=1;
+    for(let k=0;k<2;k++){
+      const distance=distances[k],limit=sizes[k]+Math.min(8,Math.max(0,distance-sizes[k]));
+      if(distance<1e-6)continue;
+      const start=distance-limit,velocity=distance*(factors[k]-1);
+      if(Math.abs(velocity)<1e-9){if(start>=-1e-6)leave=-1;}
+      else if(velocity<0)enter=Math.max(enter,-start/velocity);
+      else leave=Math.min(leave,-start/velocity);
+    }
+    if(enter<leave-1e-8)travel=Math.min(travel,Math.max(0,enter));
+  }
+  const result=new Map(items.map(n=>[n.id,{x:n.x,y:n.y}]));
+  axes.forEach(([axis,size,direction],k)=>{
+    if(!direction)return;
+    const factor=1+(factors[k]-1)*travel;
+    const values=items.map(n=>(n[axis]+n[size]/2)*factor-n[size]/2);
+    const edge=direction>0?Math.min(...items.map(n=>n[axis])):Math.max(...items.map(n=>n[axis]+n[size]));
+    const nextEdge=direction>0?Math.min(...values):Math.max(...values.map((value,i)=>value+items[i][size]));
+    items.forEach((n,i)=>result.get(n.id)[axis]=values[i]+edge-nextEdge);
+  });
+  return result;
+}
+function dragSelectionSpread(event,handle){
+  event.preventDefault();event.stopPropagation();
+  const nodes=selectedCanvasNodes();if(event.button!==0||editorMutationBlocked()||nodes.length<2||$('#selectionbounds').hidden)return;
+  nodeResizeGesture?.cancel();nodeDragGesture?.cancel();touchGraphGesture?.cancel();clearWireGesture();closeCreator();closeArrangeMenu();focusGraphCanvas();
+  const owner=graph,data=current(),zoom=scale*uiScaleFactor(),originPan={...pan},start={x:event.clientX,y:event.clientY};
+  const items=nodes.map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),id:node.id,...nodeLayoutBounds(node)}));
+  if(items.some(item=>!item.card))return;
+  let positions=new Map(items.map(n=>[n.id,{x:n.x,y:n.y}])),moved=false,closed=false;
+  const abort=new AbortController(),options={signal:abort.signal};
+  const restore=()=>{for(const n of items){n.card.style.left=n.x+'px';n.card.style.top=n.y+'px';}};
+  const valid=()=>graph===owner&&current()===data&&!editorMutationBlocked()&&selectedEdge===null&&scale*uiScaleFactor()===zoom&&pan.x===originPan.x&&pan.y===originPan.y&&items.length===selection.size&&items.every(n=>data.nodes.includes(n.node)&&selection.has(n.id));
+  const finish=()=>{closed=true;abort.abort();nodeResizeGesture=null;selectionSpreadActive=false;handle.classList.remove('active');if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);};
+  const cancel=()=>{if(closed)return;restore();finish();if(graph)wires();};
+  const move=e=>{
+    if(closed||e.pointerId!==event.pointerId)return;e.preventDefault();e.stopPropagation();
+    if(!valid()){cancel();return;}
+    if(!moved&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<3)return;
+    moved=true;positions=selectionSpreadPositions(items,handle.dataset.selectionSpread,(e.clientX-start.x)/zoom,(e.clientY-start.y)/zoom);
+    for(const n of items){const p=positions.get(n.id);n.card.style.left=p.x+'px';n.card.style.top=p.y+'px';}wires();
+  };
+  nodeResizeGesture={cancel};selectionSpreadActive=true;handle.classList.add('active');
+  window.addEventListener('pointermove',move,options);
+  window.addEventListener('pointerup',e=>{
+    if(closed||e.pointerId!==event.pointerId)return;move(e);if(closed)return;
+    restore();finish();
+    if(valid()&&moved&&items.some(n=>Math.abs(positions.get(n.id).x-n.x)>.001||Math.abs(positions.get(n.id).y-n.y)>.001))change(()=>{
+      for(const n of items){const p=positions.get(n.id);n.node.ui||={};n.node.ui.x=p.x;n.node.ui.y=p.y;}
+    },{localize:false});else wires();
+  },options);
+  window.addEventListener('pointercancel',e=>{if(e.pointerId===event.pointerId)cancel();},options);handle.addEventListener('lostpointercapture',cancel,options);
+  window.addEventListener('pointerdown',e=>{if(e.pointerId!==event.pointerId)cancel();},{...options,capture:true});
+  window.addEventListener('blur',cancel,options);window.addEventListener('resize',cancel,options);window.addEventListener('wheel',cancel,{...options,capture:true,passive:true});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel();},options);
+  document.addEventListener('keydown',e=>{if(['Control','Meta','Shift','Alt'].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')cancel();},{...options,capture:true});
+  handle.setPointerCapture(event.pointerId);
 }
 // Lay out only the selected graph. Collapse cycles for ranking, then use two
 // neighbor/port-order sweeps to reduce crossings without a layout dependency.
@@ -245,7 +339,12 @@ function openArrangeMenu(){
   menu.querySelector('button:not(:disabled)')?.focus({preventScroll:true});scheduleSelectionToolbarPosition();
 }
 function installSelectionToolbar(){
-  const canvas=$('#canvas'),top=$('.toolbar .graph-tools'),bar=el('div',{id:'selectiontoolbar',class:'selection-toolbar',role:'toolbar',hidden:''}),outline=el('div',{id:'selectionbounds',hidden:'','aria-hidden':'true'});
+  const canvas=$('#canvas'),top=$('.toolbar .graph-tools'),bar=el('div',{id:'selectiontoolbar',class:'selection-toolbar',role:'toolbar',hidden:''}),outline=el('div',{id:'selectionbounds',hidden:''});
+  for(const direction of ['nw','n','ne','e','se','s','sw','w']){
+    const handle=el('button',{type:'button',class:'selection-spread-handle','data-selection-spread':direction,tabindex:'-1'});
+    handle.onpointerdown=e=>dragSelectionSpread(e,handle);outline.append(handle);
+  }
+  for(const name of ['click','dblclick','contextmenu','mousedown','touchstart'])outline.addEventListener(name,e=>{e.stopPropagation();});
   const multi=el('div',{class:'graph-tool-group','data-tool-group':'selection',role:'group',hidden:''});
   const arrange=el('button',{id:'grapharrange',class:'icon-button',type:'button','aria-haspopup':'menu','aria-controls':'arrangemenu','aria-expanded':'false'});
   arrange.append(selectionIcon('M4 3v18M8 5h12v4H8zM8 11h8v3H8zM8 16h10v3H8z'));arrange.onclick=openArrangeMenu;
@@ -256,14 +355,26 @@ function installSelectionToolbar(){
   join.onclick=()=>{if(joinGroupFrameSelection())$('#canvas').focus({preventScroll:true});};
   const detach=el('button',{id:'graphdetachframe',class:'icon-button',type:'button'});detach.append(selectionIcon('M10 4H4v16h16v-6M10 14 21 3M14 3h7v7'));
   detach.onclick=()=>{if(detachGroupFrameSelection())$('#canvas').focus({preventScroll:true});};
+  for(const [action,path]of [['collapse','M4 11h16v2H4zM8 3l4 4 4-4M8 21l4-4 4 4'],['expand','M4 10h16v4H4zM8 6l4-4 4 4M8 18l4 4 4-4']]){
+    const button=el('button',{id:'graph'+action+'selection',class:'icon-button',type:'button'});button.append(selectionIcon(path));
+    button.onclick=()=>{if(setNodesCollapsed(nodeCollapseSelection().map(n=>n.id),action==='collapse'))$('#canvas').focus({preventScroll:true});};multi.append(button);
+  }
   multi.append(groupFrame,join,detach,$('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
   const menu=el('div',{id:'arrangemenu',class:'popup-menu arrangement-menu',popover:'auto',role:'menu'});document.body.append(menu);
   for(const control of [bar,menu]){
     for(const event of ['pointerdown','mousedown','touchstart','dblclick'])control.addEventListener(event,e=>e.stopPropagation());
     control.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   }
-  bar.onpointerenter=e=>{if(e.pointerType==='mouse'){selectionToolbarHover=true;scheduleSelectionToolbarPosition();}};
+  bar.onpointerenter=e=>{if(e.pointerType==='mouse'){selectionToolbarHover=selectionBoundsHover=true;scheduleSelectionToolbarPosition();}};
   bar.onpointerleave=()=>{selectionToolbarHover=false;scheduleSelectionToolbarPosition();};
+  // Once revealed from the toolbar, keep the outline reachable across the gap
+  // and over its handles. Leaving this interaction area restores hover-only UI.
+  canvas.addEventListener('pointermove',e=>{
+    if(e.pointerType!=='mouse'||!selectionBoundsHover||selectionSpreadActive)return;
+    const near=element=>{const r=element.getBoundingClientRect(),gap=14*uiScaleFactor();return e.clientX>=r.left-gap&&e.clientX<=r.right+gap&&e.clientY>=r.top-gap&&e.clientY<=r.bottom+gap;};
+    selectionBoundsHover=near(bar)||near(outline);scheduleSelectionToolbarPosition();
+  },{passive:true});
+  canvas.addEventListener('pointerleave',()=>{if(!selectionSpreadActive){selectionBoundsHover=false;scheduleSelectionToolbarPosition();}});
   bar.addEventListener('focusin',scheduleSelectionToolbarPosition);bar.addEventListener('focusout',scheduleSelectionToolbarPosition);
   bar.addEventListener('keydown',e=>{if(e.key==='Tab')e.stopPropagation();if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...bar.querySelectorAll('button:not(:disabled)')].filter(b=>b.getClientRects().length),i=items.indexOf(document.activeElement);items[e.key==='Home'?0:e.key==='End'?items.length-1:(i+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+items.length)%items.length]?.focus();}if(e.key==='Escape'){e.stopPropagation();$('#canvas').focus({preventScroll:true});}});
   menu.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();closeArrangeMenu();arrange.focus({preventScroll:true});}else if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const items=[...menu.querySelectorAll('button:not(:disabled)')],i=items.indexOf(document.activeElement);items[e.key==='Home'?0:e.key==='End'?items.length-1:(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();}});

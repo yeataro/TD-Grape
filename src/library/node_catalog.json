@@ -104,17 +104,30 @@
         "label": "Comment",
         "inputs": {},
         "outputs": {},
-        "stages": ["vertex", "pixel"],
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
         "defaults": {},
         "descriptionKey": "help.comment",
         "definitionUuid": "sgrape.builtin.comment",
         "revisionHash": "7f17afc234779bd67c7ddb5bbf6a65612302b709a5017545a27cb4f9efc6913e"
       },
-      "emitter": {"id": "comment", "version": 1},
+      "emitter": {
+        "id": "comment",
+        "version": 1
+      },
       "browser": {
         "category": "data",
         "source": "editor",
-        "aliases": ["note", "annotation", "text", "註解", "注释", "備註"],
+        "aliases": [
+          "note",
+          "annotation",
+          "text",
+          "註解",
+          "注释",
+          "備註"
+        ],
         "glslName": "",
         "secondaryCategories": []
       }
@@ -1805,6 +1818,713 @@
       "emitter": {
         "id": "spec_constant",
         "version": 1
+      }
+    },
+    {
+      "definition": {
+        "key": "sign",
+        "label": "Sign",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.sign",
+        "definitionUuid": "sgrape.builtin.sign",
+        "revisionHash": "a99638202e9ffce9f6a1bc925ee7052f8092973ff92d85d5a56edddb9dcc2b4d"
+      },
+      "emitter": {
+        "id": "sign",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "sign",
+          "signum",
+          "sign(A)"
+        ],
+        "glslName": "sign",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "sqrt",
+        "label": "Sqrt",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.sqrt",
+        "definitionUuid": "sgrape.builtin.sqrt",
+        "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29"
+      },
+      "emitter": {
+        "id": "sqrt",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "sqrt",
+          "square root",
+          "sqrt(A)"
+        ],
+        "glslName": "sqrt",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "floor",
+        "label": "Floor",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.floor",
+        "definitionUuid": "sgrape.builtin.floor",
+        "revisionHash": "26fdcfbb4c290d0e46a521fb6c1154dff209f159c9b9bde6ff490ddc3e4fac86"
+      },
+      "emitter": {
+        "id": "floor",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "floor",
+          "round down",
+          "floor(A)"
+        ],
+        "glslName": "floor",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "round",
+        "label": "Round",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.round",
+        "definitionUuid": "sgrape.builtin.round",
+        "revisionHash": "4de9f33198e11998397b3d35c87b3bbb11fc63325b8bda0a7b2e44f7326911c1"
+      },
+      "emitter": {
+        "id": "round",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "round",
+          "nearest",
+          "round(A)"
+        ],
+        "glslName": "round",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "ceil",
+        "label": "Ceil",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.ceil",
+        "definitionUuid": "sgrape.builtin.ceil",
+        "revisionHash": "f14dfc171d179d9d4037965c879b689fb710cda2faabffb768bb7163ee1ca1dd"
+      },
+      "emitter": {
+        "id": "ceil",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "ceil",
+          "ceiling",
+          "round up",
+          "ceil(A)"
+        ],
+        "glslName": "ceil",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "trunc",
+        "label": "Truncate",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.trunc",
+        "definitionUuid": "sgrape.builtin.trunc",
+        "revisionHash": "3edeff6f538eba1c7c796d6c683e907abb4746c8034310e33ee9c5d34faa8302"
+      },
+      "emitter": {
+        "id": "trunc",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "trunc",
+          "truncate",
+          "toward zero",
+          "int(A)"
+        ],
+        "glslName": "trunc",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "mod",
+        "label": "Modulo",
+        "inputs": {
+          "a": "T",
+          "b": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "b": 1
+        },
+        "descriptionKey": "help.mod",
+        "definitionUuid": "sgrape.builtin.mod",
+        "revisionHash": "a75b270dfb85130b4c12901f4c191f0eb87a16ae427440b9069be88f9d78b0ae"
+      },
+      "emitter": {
+        "id": "mod",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "mod",
+          "modulo",
+          "mod(A,B)"
+        ],
+        "glslName": "mod",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "rgb_to_hsv",
+        "label": "RGB to HSV",
+        "inputs": {
+          "rgb": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "inputDefaults": {
+          "rgb": 0
+        },
+        "descriptionKey": "help.rgb_to_hsv",
+        "definitionUuid": "sgrape.builtin.rgb_to_hsv",
+        "revisionHash": "cde1eed2c5c6c057fe9a39243226957211b4144fd2d45b75c9dbba5157bcca05"
+      },
+      "emitter": {
+        "id": "rgb_to_hsv",
+        "version": 1
+      },
+      "browser": {
+        "category": "color",
+        "source": "td",
+        "aliases": [
+          "RGBtoHSV",
+          "RGBToHSV",
+          "TDRGBToHSV",
+          "hue saturation value"
+        ],
+        "glslName": "TDRGBToHSV",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "hsv_to_rgb",
+        "label": "HSV to RGB",
+        "inputs": {
+          "hsv": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "inputDefaults": {
+          "hsv": 0
+        },
+        "descriptionKey": "help.hsv_to_rgb",
+        "definitionUuid": "sgrape.builtin.hsv_to_rgb",
+        "revisionHash": "7ff6fa7f26d77de1b4035689b67a946e99906f6f65fd6d1e3d9213a8d639ca54"
+      },
+      "emitter": {
+        "id": "hsv_to_rgb",
+        "version": 1
+      },
+      "browser": {
+        "category": "color",
+        "source": "td",
+        "aliases": [
+          "HSVtoRGB",
+          "HSVToRGB",
+          "TDHSVToRGB",
+          "hue saturation value"
+        ],
+        "glslName": "TDHSVToRGB",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "remap",
+        "label": "Remap",
+        "inputs": {
+          "value": "T",
+          "fromMin": "T",
+          "fromMax": "T",
+          "toMin": "T",
+          "toMax": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "value": 0,
+          "fromMin": 0,
+          "fromMax": 1,
+          "toMin": 0,
+          "toMax": 1
+        },
+        "descriptionKey": "help.remap",
+        "definitionUuid": "sgrape.builtin.remap",
+        "revisionHash": "c9414cec6cd6e19a8c8a91e8959e830b85d06691dc033fa431bc46d962f2cb72"
+      },
+      "emitter": {
+        "id": "remap",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "TDRemap",
+          "map range",
+          "fit"
+        ],
+        "glslName": "TDRemap",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "range_from",
+        "label": "Range From",
+        "inputs": {
+          "value": "T",
+          "min": "T",
+          "max": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "value": 0,
+          "min": 0,
+          "max": 1
+        },
+        "descriptionKey": "help.range_from",
+        "definitionUuid": "sgrape.builtin.range_from",
+        "revisionHash": "f315cbe8f0cbd96918869af53ec5e3e345bfd2143b93c664470e9a230958eda4"
+      },
+      "emitter": {
+        "id": "range_from",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "editor",
+        "aliases": [
+          "rangefrom",
+          "normalize range",
+          "inverse lerp"
+        ],
+        "glslName": "(A - B) / (C - B)",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "range_to",
+        "label": "Range To",
+        "inputs": {
+          "value": "T",
+          "min": "T",
+          "max": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "value": 0,
+          "min": 0,
+          "max": 1
+        },
+        "descriptionKey": "help.range_to",
+        "definitionUuid": "sgrape.builtin.range_to",
+        "revisionHash": "30220f080cdc20616cae53ed1ea653454dc7079f5346b560299d2f299b6334d7"
+      },
+      "emitter": {
+        "id": "range_to",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "editor",
+        "aliases": [
+          "rangeto",
+          "scale range"
+        ],
+        "glslName": "A * (C - B) + B",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "loop",
+        "label": "Loop",
+        "inputs": {
+          "value": "T",
+          "min": "T",
+          "max": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "value": 0,
+          "min": 0,
+          "max": 1
+        },
+        "descriptionKey": "help.loop",
+        "definitionUuid": "sgrape.builtin.loop",
+        "revisionHash": "fdd32c38bcce5273c9a1dacbab4b87ddf55f0a12f4ed23c2cf9fe911b8eccf86"
+      },
+      "emitter": {
+        "id": "loop",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "TDLoop",
+          "wrap",
+          "repeat"
+        ],
+        "glslName": "TDLoop",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "zigzag",
+        "label": "Zigzag",
+        "inputs": {
+          "value": "T",
+          "min": "T",
+          "max": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "value": 0,
+          "min": 0,
+          "max": 1
+        },
+        "descriptionKey": "help.zigzag",
+        "definitionUuid": "sgrape.builtin.zigzag",
+        "revisionHash": "0e6673ca598b39f965e8320c84bc9eec220b002eb166b2bd38510b5544e9174a"
+      },
+      "emitter": {
+        "id": "zigzag",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "TDZigZag",
+          "ping pong",
+          "pingpong",
+          "mirror range"
+        ],
+        "glslName": "TDZigZag",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "perlin_noise",
+        "label": "Perlin Noise",
+        "inputs": {
+          "position": "T"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2"
+        },
+        "inputDefaults": {
+          "position": 0
+        },
+        "descriptionKey": "help.perlin_noise",
+        "definitionUuid": "sgrape.builtin.perlin_noise",
+        "revisionHash": "d46a667e0cd35a1faed4366970b9869eac5203ca7779c98de9d3f761f3483c4a"
+      },
+      "emitter": {
+        "id": "perlin_noise",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "Perlin Noise",
+          "TDPerlinNoise",
+          "Perlin",
+          "noise",
+          "2D",
+          "3D",
+          "4D"
+        ],
+        "glslName": "TDPerlinNoise",
+        "secondaryCategories": [
+          "texture"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "key": "simplex_noise",
+        "label": "Simplex Noise",
+        "inputs": {
+          "position": "T"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2"
+        },
+        "inputDefaults": {
+          "position": 0
+        },
+        "descriptionKey": "help.simplex_noise",
+        "definitionUuid": "sgrape.builtin.simplex_noise",
+        "revisionHash": "c70e5cf9c1411ec645568f9ef881fc6197bcc144a6553443f0e8a58438c5b4c9"
+      },
+      "emitter": {
+        "id": "simplex_noise",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "Simplex Noise",
+          "TDSimplexNoise",
+          "Simplex",
+          "noise",
+          "2D",
+          "3D",
+          "4D"
+        ],
+        "glslName": "TDSimplexNoise",
+        "secondaryCategories": [
+          "texture"
+        ]
       }
     }
   ],

@@ -31,7 +31,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await open();assert.equal(await panel.locator('input[type=checkbox]').count(),Object.values(defaults).filter(value=>typeof value==='boolean').length);assert.equal(await panel.locator('select').count(),Object.values(defaults).filter(value=>typeof value==='string').length);
     assert.deepEqual(await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment).sort()),Object.keys(defaults).sort());
     assert.deepEqual(await panel.locator('[data-experiment-group]').evaluateAll(groups=>groups.map(group=>group.dataset.experimentGroup)),['toolbars','nodes','appearance']);
-    assert.deepEqual(await panel.locator('[data-experiment-group="toolbars"] [data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment)),['floatingToolbar','editToolbar','selectionToolbar','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash'].filter(key=>Object.hasOwn(defaults,key)));
+    assert.deepEqual(await panel.locator('[data-experiment-group="toolbars"] [data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment)),['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash'].filter(key=>Object.hasOwn(defaults,key)));
     assert.equal(defaults.persistentSelectionBounds,false);assert.equal(await control('persistentSelectionBounds').isChecked(),false);
     assert.equal(defaults.hideGroupedSelectionBounds,false);assert.equal(await control('hideGroupedSelectionBounds').isChecked(),false);
     assert.equal(await panel.locator('details').count(),0);assert.equal(await control('floatingToolbar').isChecked(),false);

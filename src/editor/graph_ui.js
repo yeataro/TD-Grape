@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'off', persistentSelectionBounds: false, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'off', selectionCollapseTools: true, persistentSelectionBounds: false, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: true, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: false, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -138,6 +138,7 @@ let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creat
 function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
   if(d.key==='comment')return 'annotation';
+  if(['compare','if'].includes(d.key))return 'logic';
   if(['constant','spec_constant','vector'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
@@ -283,7 +284,7 @@ function resolvedNodePorts(d,params,decl,kind){
   return variant?.[kind]||Object.fromEntries(Object.keys(d[kind]||{}).map(port=>[port,'?']));
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
-const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&nodeCategory(d)==='math'&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
 const isVectorOperation=d=>['vector','replace','combine','vector_split','swizzle'].includes(d?.key);
 function vectorPorts(key,params){
   const spec=typeContract?.vectors,type=params.type||'vec2';
@@ -731,7 +732,11 @@ function drawWireDrag(svg){
   const a=wireDrag.kind==='outputs'?p:wireDrag.q,b=wireDrag.kind==='outputs'?wireDrag.q:p,dx=Math.max(60,Math.abs(a.x-b.x)*.5),path=document.createElementNS('http://www.w3.org/2000/svg','path');
   path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);if(wireDrag.kind==='outputs')applyPortColorHint(path,n,'outputs',wireDrag.port);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
 }
-function nodeCollapseSelection(){return current().nodes.filter(n=>selection.has(n.id));}
+function nodeCollapseSelection(){return graph&&selectedEdge===null?current().nodes.filter(n=>selection.has(n.id)):[];}
+function nodeCollapseSelectionState(){
+  const nodes=nodeCollapseSelection();
+  return {nodes,canCollapse:nodes.some(n=>n.ui?.collapsed!==true),canExpand:nodes.some(n=>n.ui?.collapsed===true)};
+}
 function setNodesCollapsed(ids,collapsed){
   if(editorMutationBlocked())return false;
   const wanted=new Set(ids),nodes=current().nodes.filter(n=>wanted.has(n.id)&&(n.ui?.collapsed===true)!==collapsed);
@@ -1536,10 +1541,11 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   if(nodeId&&!selection.has(nodeId)){selectNode(current().nodes.find(n=>n.id===nodeId));render();}
   const position=graphPoint(x,y);
   const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
-  const collapseNodes=nodeCollapseSelection(),collapse=collapseNodes.some(n=>n.ui?.collapsed!==true);
+  const {nodes:collapseNodes,canCollapse,canExpand}=nodeCollapseSelectionState();
   const rows=[
     ['add',t('action.nodes'),shortcutLabel('add'),!readonly,()=>openCreator(x,y)],
-    ['collapse',t(collapse?'node.collapse':'node.expand'),'',!readonly&&collapseNodes.length>0,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),collapse)],
+    ['collapse',t('node.collapse'),'',!editorMutationBlocked()&&canCollapse,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),true)],
+    ['expand',t('node.expand'),'',!editorMutationBlocked()&&canExpand,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),false)],
     ['copy',t('edit.copy'),shortcutLabel('copy'),count>0,copyGraphToClipboard],
     ['paste',t('edit.paste'),shortcutLabel('paste'),!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),()=>pasteGraphFromClipboard(position)],
     ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
@@ -1547,7 +1553,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
     ['group',t('function.group'),shortcutLabel('group'),!readonly&&count>0,groupSelection],
     ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
   ];
-  for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled||key==='collapse'&&!collapseNodes.length)continue;const b=el('button',{role:'menuitem','data-edit':key},label);b.append(el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
+  for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length)continue;const b=el('button',{role:'menuitem','data-edit':key},label);b.append(el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
   menu.onkeydown=e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeGraphMenu();$('#canvas').focus();}};
   document.body.append(menu);graphEditMenu=menu;const uiScale=uiScaleFactor();menu.style.left=Math.max(4,Math.min(x/uiScale,innerWidth/uiScale-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/uiScale,innerHeight/uiScale-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
 }

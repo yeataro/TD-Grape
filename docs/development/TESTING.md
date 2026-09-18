@@ -1,5 +1,13 @@
 # 測試
 
+2026-09-18 Math／TD helper／Noise 與選取操作：完整可攜檢查通過（313 Python tests、628 個雙語字串、editor launch／metadata／JS model／Remote Panel checks）。本機 TD 2025.32820 的基本數學 77、TD helper 97、Noise 54 項，共 228 項原生檢查通過；涵蓋 TOP Pixel、MAT Pixel／Vertex、實際數值、常數界線、Noise 品質模式。此結果不代表 Metal／AMD 硬體已驗證。
+
+瀏覽器新增基本數學 8、TD helper 5、Noise 7、選區拉點 8、收合工具 6 組檢查。拉點涵蓋八方向、不同尺寸、對側錨點、3,200 組幾何、取消／Undo／觸控；收合工具涵蓋混合狀態、按鈕停用、設定保存、唯讀、Note／Group 及窄螢幕。既有 node collapse 9、selection toolbar 12、UI experiments 19 組在合併後通過；畫面截圖已檢視。自動排列程式未改。
+
+新節點 browser tests 自動匯出最新 catalog fixture。選區測試與其他共用 harness 的測試應先使用 `python tests/browser/export_editor_fixture.py tests/fixtures/editor-state.json <current-state.json>`，再傳入該 current-state；舊靜態 fixture 沒有 Note 等後續節點，不能直接作為這些案例的 catalog。
+
+各批完成都已同步並保存 TD；最終 31 份內嵌來源及 9 份服務資源一致，TOP／MAT Master current、core 無錯誤。正式 TOE 799,060 bytes，SHA-256 `74fbff4ff05e552d7947c5cc071e89cbecd5994952e0819b762f0db0accba2ed`；私人開發助手排除。私人報告位於 math-node-round。
+
 2026-09-18 Compare／If browser projection 補正：控制節點檢查擴至 10 組，實際驗證 Logic 分類、comparison／branch／ternary 搜尋、正確說明及瀏覽不改圖／歷史；browser metadata integration、606 個雙語引用、語法與 diff 檢查通過。TD 再同步保存，31 份來源／9 份資源一致，兩份 Master current、使用者 Shader 保留。正式 TOE 775,964 bytes，SHA-256 `c78952d4de8faeeb8d2b3247493de6da4a06cfcff5f51ff52ac0645feebe9e12`；報告位於 control-node-browser-metadata-round。
 
 本輪最終同步並保存 TD：31 份內嵌來源、9 份服務資源一致，TOP／MAT Master current，兩份使用者 Shader 保留，core 無錯誤，現有 Editor 未強制重載。正式 TOE 775,884 bytes，SHA-256 `18bea942f6cc14945a9d96fd4390ad62238c38d26e851358f2e8a9da7c434843`；私人助手排除。最終原生報告位於 clipboard-focus-round 的 refresh／audit／save；Note／排列中途保存報告位於 note-layout-round。

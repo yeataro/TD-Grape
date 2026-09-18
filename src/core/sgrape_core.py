@@ -48,16 +48,20 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
-    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if'))
+    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
+    'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
+    'perlin_noise','simplex_noise'))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
 CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
-    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if'))
+    'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
+    'range_from','range_to'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = ('vec2','vec3','vec4')
 VECTOR_COMPONENTS = 'xyzw'
+NOISE_HELPERS = {'perlin_noise':'TDPerlinNoise','simplex_noise':'TDSimplexNoise'}
 
 def combine_layouts(ty):
     """All exact, ordered scalar/vector partitions; socket IDs are component starts."""
@@ -332,6 +336,7 @@ def definition_ports(definition, params):
     return {kind:definition[kind] for kind in ('inputs','outputs')}
 
 def node_parameter_types(definition):
+    if definition['key'] in NOISE_HELPERS:return VECTOR_TYPES
     return PORT_TYPES if definition['key']=='relay' else COMPARE_TYPES if definition['key']=='compare' else TYPES
 
 def resolved_ports(definition, params, declaration=None):
@@ -360,6 +365,7 @@ def type_contract():
         default = definition['defaults'].get('type', 'float')
         choices = [default] + [ty for ty in TYPES if ty != default] if selector != 'fixed' else [None]
         if definition['key'] in VECTOR_KEYS:choices=list(VECTOR_TYPES)
+        if definition['key'] in NOISE_HELPERS:choices=list(VECTOR_TYPES)
         if definition['key']=='compare':choices=list(COMPARE_TYPES)
         if definition['key']=='spec_constant':choices=list(SPEC_TYPES)
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [
@@ -469,6 +475,12 @@ def input_default(key,port,ty):
     if key=='pixel_out': return [0,0,0,1]
     value=CATALOG.get(key,{}).get('inputDefaults',{}).get(port,{'factor':.5,'alpha':1}.get(port,0))
     return filled_value(ty, value)
+
+def componentwise_expression(ty, arguments, expression):
+    """Apply a scalar expression to each component without adding GLSL helpers."""
+    if ty=='float':return expression(*arguments)
+    return ty+'('+', '.join(expression(*('('+value+').'+axis for value in arguments))
+                           for axis in VECTOR_COMPONENTS[:type_components(ty)])+')'
 
 def texture_source_valid(source):
     return isinstance(source,str) and len(source)<=2048 and not any(ord(c)<32 for c in source) and (source in ('builtin:banana','builtin:white','builtin:black','builtin:jellybeans') or (source.startswith('op:/') and len(source)>4))
@@ -830,14 +842,26 @@ def _compile_flat(graph,annotation_scopes=None):
                 a=lambda port:inp(ident,port)
                 if k in ('float','vec2','vec3','vec4','color'): expr=literal(p.get('value'),ty)
                 elif k in ('add','subtract','multiply','divide'): expr='('+a('a')+{'add':' + ','subtract':' - ','multiply':' * ','divide':' / '}[k]+a('b')+')'
-                elif k in ('min','max','dot'): expr=k+'('+a('a')+', '+a('b')+')'
+                elif k in ('min','max','dot','mod'): expr=k+'('+a('a')+', '+a('b')+')'
                 elif k=='clamp': expr='clamp('+a('value')+', '+a('min')+', '+a('max')+')'
                 elif k=='smoothstep': expr='smoothstep('+a('edge0')+', '+a('edge1')+', '+a('value')+')'
                 elif k=='pow': expr='pow('+a('base')+', '+a('exponent')+')'
                 elif k=='mix': expr='mix('+a('a')+', '+a('b')+', '+a('factor')+')'
                 elif k=='compare': expr='('+a('a')+' '+p.get('operator','>')+' '+a('b')+')'
                 elif k=='if': expr='('+a('condition')+' ? '+a('true')+' : '+a('false')+')'
-                elif k in ('sin','cos','abs','fract','length','normalize'): expr=k+'('+a('value')+')'
+                elif k in ('rgb_to_hsv','hsv_to_rgb'):
+                    expr={'rgb_to_hsv':'TDRGBToHSV','hsv_to_rgb':'TDHSVToRGB'}[k]+'('+a('rgb' if k=='rgb_to_hsv' else 'hsv')+')'
+                elif k=='remap':expr='TDRemap('+', '.join(a(port) for port in ('value','fromMin','fromMax','toMin','toMax'))+')'
+                elif k=='range_from':
+                    expr=componentwise_expression(ty,[a(port) for port in ('value','min','max')],
+                        lambda value,lo,hi:'('+lo+' != '+hi+' ? ('+value+' - '+lo+') / ('+hi+' - '+lo+') : '+value+')')
+                elif k=='range_to':expr='('+a('value')+' * ('+a('max')+' - '+a('min')+') + '+a('min')+')'
+                elif k in ('loop','zigzag'):
+                    helper='TDLoop' if k=='loop' else 'TDZigZag'
+                    expr=componentwise_expression(ty,[a(port) for port in ('value','min','max')],
+                        lambda *values:helper+'('+', '.join(values)+')')
+                elif k in ('sin','cos','abs','fract','length','normalize','sign','sqrt','floor','round','ceil','trunc'): expr=k+'('+a('value')+')'
+                elif k in NOISE_HELPERS: expr=NOISE_HELPERS[k]+'('+a('position')+')'
                 elif k=='relay': expr=a('value')
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
                 elif k=='combine':expr=ty+'('+', '.join(a(port) for port in ports[ident]['in'])+')'

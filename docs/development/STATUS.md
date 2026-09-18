@@ -1,5 +1,17 @@
 # 開發狀態
 
+2026-09-18 開發原則更新：Alpha 前現有圖均為可重建的功能測試資料，優先整理架構與行為，不為未發布格式增加相容層；Alpha 後逐步考慮相容，正式版後嚴格維持。詳見 [UPGRADE_POLICY.md](../architecture/UPGRADE_POLICY.md)。整數等型別擴充目前只評估前置工作，尚未改動型別規則；解開子圖亦未實作。
+
+2026-09-18 選取收合／展開：右鍵選單同時列出收合與展開，混合選取可明確選方向；選取工具列新增兩個固定位置按鈕，對全部選取節點執行，全部已達成該狀態時停用。齒輪「工具列與入口」新增顯示開關，預設開啟；不因狀態隱藏按鈕。共用原收合交易，一次 Undo，不修改 Note 尺寸／內容或群組成員。
+
+2026-09-18 多選框節點分布：四角及四邊共八個拉點，只按比例調整節點中心位置，尺寸與字級不變；對側外緣固定，缩小避免新增重疊。沿用多選框顯示設定，群組框跟隨成員，不新增旗標或群組尺寸資料。拖曳只預覽，放開一次 Undo；取消、失焦、換圖與觸控取消還原。自動排列算法保持不變。
+
+2026-09-18 TD 色彩／範圍／Noise：新增 RGB to HSV、HSV to RGB、Remap、Range From、Range To、Loop、Zigzag、Perlin Noise、Simplex Noise。沿用原生 TD helper；Range From 保留相等端點回傳輸入，Range To 允許外插；向量 Loop／Zigzag 逐分量呼叫。Noise 座標 vec2／vec3／vec4、輸出 float；Simplex 品質由 TD 宿主控制。TD helper 不視為 GLSL 常數表達式，不限幅或聲稱跨設備一致值域。本機 TOP／MAT 原生測試分別 97 與 54 項通過；搜尋、Auto／鎖定與參數行共用既有機制。
+
+2026-09-18 基本數學補齊：新增 Sign、Sqrt、Floor、Round、Ceil、Truncate、Modulo，支援 float／vec2／vec3／vec4 與既有 Auto／鎖定型別。採 GLSL 原生語意，不暗中更改負數 Modulo、截斷、半值 rounding 或未定義輸入的處理。七個節點的搜尋、共用參數及常數產碼已驗證；TD 2025.32820 本機 TOP／MAT 原生數值與 Vertex 編譯 77 項通過，使用者 Shader 保持不變。
+
+2026-09-18 邏輯類石墨灰：Compare／If 共用中性的深石墨灰標題，畫布、Parameter 與新增節點入口一致；亮色主題使用相應中性灰。接孔／連線依原有資料型別色，Auto／鎖定型別與公式標題保持。
+
 2026-09-18 Compare 畫布標題：一般顯示模式直接以 A > B／A ≥ B 等公式顯示目前比較方式；開啟自訂名稱時沿用原本名稱。右上選單、標題字級、預設 Compare 命名、Parameter 及連線來源標籤不變，公式不存入圖資料或 GLSL 識別字。Output 左側的提示位置先列為後續觀察，不增加第二套顯示。
 
 2026-09-18 Compare／If 搜尋補正：新增節點的 catalog metadata 尚未投影到實際編輯器索引，補齊 Logic 分類與 comparison／branch／ternary 等別名；既有節點搜尋資料不變。POP Math 能力對照仍在範圍整理階段，詳見討論紀錄，尚未新增該批節點。

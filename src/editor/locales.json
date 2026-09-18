@@ -2701,38 +2701,38 @@
       "en": "Move TOP texture sources into one ordered inventory. Keep references and external connections; remove duplicate source plumbing.",
       "zh-Hant": "將 TOP 貼圖來源統整為一份有序清單，保留引用與外部接線，清除重複的來源結構。"
     },
-      "header.toggle": {
-        "zh-Hant": "顯示或收合頂欄",
-        "en": "Show or hide header"
-      },
-      "header.hide": {
-        "zh-Hant": "收合頂欄",
-        "en": "Hide header"
-      },
-      "header.show": {
-        "zh-Hant": "顯示頂欄",
-        "en": "Show header"
-      },
-      "editorReload.action": {
-        "zh-Hant": "重新載入編輯器頁面",
-        "en": "Reload editor page"
-      },
-      "editorReload.finishField": {
-        "zh-Hant": "欄位仍有未提交的編輯。請先完成或取消，再重新載入頁面。",
-        "en": "A field has unfinished edits. Finish or cancel them before reloading the page."
-      },
-      "editorReload.busy": {
-        "zh-Hant": "正在儲存或更新參數，請完成後再重新載入頁面。",
-        "en": "A save or parameter update is in progress. Wait before reloading the page."
-      },
-      "editorReload.keepDraft": {
-        "zh-Hant": "重新載入編輯器頁面？未儲存的圖已保留在此分頁，重新連線後會提供草稿復原檢視。",
-        "en": "Reload the editor page? The unsaved graph is kept in this tab; after reconnecting you can review and restore its draft."
-      },
-      "editorReload.storageFailed": {
-        "zh-Hant": "無法保留圖的草稿，已取消重新載入。請先匯出圖或完成儲存。",
-        "en": "The graph draft could not be retained, so the page was not reloaded. Export the graph or save it first."
-      },
+    "header.toggle": {
+      "zh-Hant": "顯示或收合頂欄",
+      "en": "Show or hide header"
+    },
+    "header.hide": {
+      "zh-Hant": "收合頂欄",
+      "en": "Hide header"
+    },
+    "header.show": {
+      "zh-Hant": "顯示頂欄",
+      "en": "Show header"
+    },
+    "editorReload.action": {
+      "zh-Hant": "重新載入編輯器頁面",
+      "en": "Reload editor page"
+    },
+    "editorReload.finishField": {
+      "zh-Hant": "欄位仍有未提交的編輯。請先完成或取消，再重新載入頁面。",
+      "en": "A field has unfinished edits. Finish or cancel them before reloading the page."
+    },
+    "editorReload.busy": {
+      "zh-Hant": "正在儲存或更新參數，請完成後再重新載入頁面。",
+      "en": "A save or parameter update is in progress. Wait before reloading the page."
+    },
+    "editorReload.keepDraft": {
+      "zh-Hant": "重新載入編輯器頁面？未儲存的圖已保留在此分頁，重新連線後會提供草稿復原檢視。",
+      "en": "Reload the editor page? The unsaved graph is kept in this tab; after reconnecting you can review and restore its draft."
+    },
+    "editorReload.storageFailed": {
+      "zh-Hant": "無法保留圖的草稿，已取消重新載入。請先匯出圖或完成儲存。",
+      "en": "The graph draft could not be retained, so the page was not reloaded. Export the graph or save it first."
+    },
     "graph.saved": {
       "zh-Hant": "圖已儲存",
       "en": "Graph saved"
@@ -3069,6 +3069,94 @@
     "shortcuts.textApply": {
       "zh-Hant": "套用註記或 GLSL 文字",
       "en": "Apply notes or GLSL text"
+    },
+    "help.sign": {
+      "zh-Hant": "逐分量判斷正負：負值回傳 −1，零回傳 0，正值回傳 1。輸出仍為 float 或向量。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/sign.xhtml)",
+      "en": "Return −1 for negative values, 0 for zero, and 1 for positive values, per component. The result remains float or vector.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/sign.xhtml)"
+    },
+    "help.sqrt": {
+      "zh-Hant": "逐分量計算平方根。輸入必須大於或等於 0；負值的結果未定義。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/sqrt.xhtml)",
+      "en": "Compute the square root per component. Use nonnegative inputs; results for negative inputs are undefined.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/sqrt.xhtml)"
+    },
+    "help.floor": {
+      "zh-Hant": "逐分量向負無限大取整。例如 −1.25 得到 −2，1.75 得到 1。輸出仍為 float 或向量。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/floor.xhtml)",
+      "en": "Round toward negative infinity per component: −1.25 becomes −2, and 1.75 becomes 1. The result remains float or vector.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/floor.xhtml)"
+    },
+    "help.round": {
+      "zh-Hant": "逐分量取最接近的整數值，輸出仍為 float 或向量。小數恰為 0.5 時，取整方向由 GLSL 實作決定，不保證與 TD Math 的 round 完全相同。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/round.xhtml)",
+      "en": "Round each component to the nearest whole-number value, retaining float or vector type. At an exact half, GLSL allows the implementation to choose the direction; this need not match TD Math round.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/round.xhtml)"
+    },
+    "help.ceil": {
+      "zh-Hant": "逐分量向正無限大取整。例如 −1.25 得到 −1，1.25 得到 2。輸出仍為 float 或向量。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/ceil.xhtml)",
+      "en": "Round toward positive infinity per component: −1.25 becomes −1, and 1.25 becomes 2. The result remains float or vector.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/ceil.xhtml)"
+    },
+    "help.trunc": {
+      "zh-Hant": "逐分量去除小數，向零截斷。例如 −1.75 得到 −1，1.75 得到 1。對應 TD Math 的 int(A) 取整用途，但輸出仍為 float 或向量，不是 GLSL int 型別轉換。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/trunc.xhtml)",
+      "en": "Discard the fractional part toward zero per component: −1.75 becomes −1, and 1.75 becomes 1. Corresponds to the rounding use of TD Math int(A), while retaining float or vector type; this is not a GLSL int cast.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/trunc.xhtml)"
+    },
+    "help.mod": {
+      "zh-Hant": "逐分量計算 GLSL `mod(a, b)`：`a − b × floor(a / b)`。例如 `mod(-0.25, 1)` 得到 0.75，與向零截斷的餘數不同。b 預設為 1；b 為 0 時結果未定義。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml)",
+      "en": "Compute GLSL `mod(a, b)` per component: `a − b × floor(a / b)`. For example, `mod(-0.25, 1)` is 0.75, unlike a remainder based on truncation toward zero. The default b is 1; results with b = 0 are undefined.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml)"
+    },
+    "help.rgb_to_hsv": {
+      "zh-Hant": "使用 `TDRGBToHSV(rgb)` 將 RGB 轉為 HSV。輸入與輸出皆為 vec3；HSV 分量順序為 Hue、Saturation、Value，一般以 0–1 表示。不做額外截限或色彩空間轉換。RGBA 請先取 RGB，再視需要接回 Alpha。\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
+      "en": "Convert RGB to HSV with `TDRGBToHSV(rgb)`. Input and output are vec3; HSV components are Hue, Saturation, and Value, conventionally in 0–1. No additional clamp or color-space conversion is applied. Extract RGB from RGBA and recombine alpha separately when needed.\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"
+    },
+    "help.hsv_to_rgb": {
+      "zh-Hant": "使用 `TDHSVToRGB(hsv)` 將 HSV 轉為 RGB。輸入與輸出皆為 vec3；HSV 分量順序為 Hue、Saturation、Value，一般以 0–1 表示。不做額外截限或色彩空間轉換。需要 Alpha 時可接 Combine。\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
+      "en": "Convert HSV to RGB with `TDHSVToRGB(hsv)`. Input and output are vec3; HSV components are Hue, Saturation, and Value, conventionally in 0–1. No additional clamp or color-space conversion is applied. Use Combine when an alpha component is needed.\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"
+    },
+    "help.remap": {
+      "zh-Hant": "使用 `TDRemap(value, fromMin, fromMax, toMin, toMax)` 映射範圍。fromMin／fromMax 是來源端點，toMin／toMax 是目的端點。支援 float 與向量，逐分量計算，不額外截限，允許外插。來源端點相等時不保證跨平台結果；若需要相等端點回傳原值，請使用 Range From。\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
+      "en": "Map a source range to a destination range with `TDRemap(value, fromMin, fromMax, toMin, toMax)`. Supports float and vectors, component by component, without an additional clamp; values can extrapolate. Equal source endpoints have no cross-platform guarantee. Use Range From when equal endpoints must preserve the input.\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"
+    },
+    "help.range_from": {
+      "zh-Hant": "對應 TD Math 的 `rangefrom(A, B, C)`：將 value 從 min–max 映射到 0–1，計算 `(value - min) / (max - min)`。不截限，允許外插；min 與 max 相等的分量保留原 value。支援 float 與向量，可搭配 Range To 改到另一個範圍。\n\n[TouchDesigner Math Combine POP](https://docs.derivative.ca/Math_Combine_POP)",
+      "en": "TD Math `rangefrom(A, B, C)`: map value from min–max to 0–1 using `(value - min) / (max - min)`. Values are not clamped and can extrapolate. Each component with equal min and max keeps its original value. Supports float and vectors; combine with Range To for another output range.\n\n[TouchDesigner Math Combine POP](https://docs.derivative.ca/Math_Combine_POP)"
+    },
+    "help.range_to": {
+      "zh-Hant": "對應 TD Math 的 `rangeto(A, B, C)`：將 value 從 0–1 映射到 min–max，計算 `value * (max - min) + min`。不截限，允許外插；min 與 max 可反向或相等。支援 float 與向量。\n\n[TouchDesigner Math Combine POP](https://docs.derivative.ca/Math_Combine_POP)",
+      "en": "TD Math `rangeto(A, B, C)`: map value from 0–1 to min–max using `value * (max - min) + min`. Values are not clamped and can extrapolate. Endpoints may be reversed or equal. Supports float and vectors.\n\n[TouchDesigner Math Combine POP](https://docs.derivative.ca/Math_Combine_POP)"
+    },
+    "help.loop": {
+      "zh-Hant": "使用 `TDLoop(value, min, max)` 將數值循環到指定範圍。請使用 min < max；沒有額外處理零寬度或反向範圍。float 直接呼叫 TD 函式；向量逐分量呼叫。這是數值循環，不是 GLSL 迴圈敘述。\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
+      "en": "Wrap a value into a range with `TDLoop(value, min, max)`. Use min < max; no extra handling is added for zero-width or reversed ranges. Float calls the TD helper directly; vectors call it per component. This wraps numbers, not a GLSL loop statement.\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"
+    },
+    "help.zigzag": {
+      "zh-Hant": "使用 `TDZigZag(value, min, max)` 讓數值在範圍兩端往返，類似 ping-pong。請使用 min < max；沒有額外處理零寬度或反向範圍。float 直接呼叫 TD 函式；向量逐分量呼叫。\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
+      "en": "Reflect a value back and forth between range endpoints with `TDZigZag(value, min, max)`, like ping-pong. Use min < max; no extra handling is added for zero-width or reversed ranges. Float calls the TD helper directly; vectors call it per component.\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"
+    },
+    "noise.position": {
+      "zh-Hant": "座標",
+      "en": "Position"
+    },
+    "help.perlin_noise": {
+      "zh-Hant": "以 `TDPerlinNoise(Position)` 計算 Perlin Noise，輸出 float。座標支援 vec2、vec3、vec4（2D／3D／4D）；Auto 依接線選擇維度，也可鎖定型別。未接線時使用手動座標，預設為零。輸出保留 TD 原值，不做範圍轉換或限制。可用於 TOP Pixel 與 MAT Vertex／Pixel；不屬於 GLSL 常數運算式。\n\n[TouchDesigner · GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
+      "en": "Evaluates `TDPerlinNoise(Position)` and returns a float. Position supports vec2, vec3 and vec4 (2D/3D/4D); Auto follows the connected dimension, or choose a locked type. Unconnected inputs use editable coordinates, initially zero. The TD result is returned without remapping or clamping. Available in TOP Pixel and MAT Vertex/Pixel. This helper is not a GLSL constant expression.\n\n[TouchDesigner · GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"
+    },
+    "help.simplex_noise": {
+      "zh-Hant": "以 `TDSimplexNoise(Position)` 計算 Simplex Noise，輸出 float。座標支援 vec2、vec3、vec4（2D／3D／4D）；Auto 依接線選擇維度，也可鎖定型別。未接線時使用手動座標，預設為零。輸出保留 TD 原值，不做範圍轉換或限制。Performance／Quality 由所屬 GLSL TOP／MAT 的 Simplex Noise 設定控制，同一宿主的節點共用該設定。可用於 TOP Pixel 與 MAT Vertex／Pixel；不屬於 GLSL 常數運算式。\n\n[TouchDesigner · GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
+      "en": "Evaluates `TDSimplexNoise(Position)` and returns a float. Position supports vec2, vec3 and vec4 (2D/3D/4D); Auto follows the connected dimension, or choose a locked type. Unconnected inputs use editable coordinates, initially zero. The TD result is returned without remapping or clamping. Performance/Quality is controlled by the host GLSL TOP/MAT Simplex Noise setting and shared by its nodes. Available in TOP Pixel and MAT Vertex/Pixel. This helper is not a GLSL constant expression.\n\n[TouchDesigner · GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"
+    },
+    "selection.spread": {
+      "zh-Hant": "拖曳調整節點間距（節點尺寸不變）",
+      "en": "Drag to adjust node spacing (keep node sizes)"
+    },
+    "experiments.selectionCollapseTools": {
+      "zh-Hant": "顯示選取收合／展開按鈕",
+      "en": "Show selection collapse/expand buttons"
+    },
+    "experiments.selectionCollapseTools.hint": {
+      "zh-Hant": "在選取操作中保留收合與展開兩個按鈕，套用至所有選取節點；全部已處於該狀態時停用按鈕。關閉只隱藏按鈕，右鍵選單仍可使用。",
+      "en": "Keep both Collapse and Expand buttons in the selection tools. Apply to every selected node; disable an action when all selected nodes already match. Hiding the buttons keeps both context-menu commands available."
+    },
+    "selection.collapse": {
+      "zh-Hant": "收合選取節點",
+      "en": "Collapse selected nodes"
+    },
+    "selection.expand": {
+      "zh-Hant": "展開選取節點",
+      "en": "Expand selected nodes"
     }
   }
 }

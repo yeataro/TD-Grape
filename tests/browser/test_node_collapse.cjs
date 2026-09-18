@@ -16,7 +16,7 @@ const[source,stateFile,folder]=process.argv.slice(2);
   });await settle();};
   const collapse=async ids=>{await page.evaluate(ids=>setNodesCollapsed(ids,true),ids);await settle();};
   const clearHistory=()=>page.evaluate(()=>{past=[];future=[];dirty=false;rememberSavedGraph(graph);});
-  const context=async id=>{await page.locator(`${card(id)} .node-title`).click({button:'right'});await page.locator('#grapheditmenu [data-edit="collapse"]').click();await settle();};
+  const context=async id=>{await page.locator(`${card(id)} .node-title`).click({button:'right'});const action=await page.locator('#grapheditmenu [data-edit="collapse"]').isEnabled()?'collapse':'expand';await page.locator('#grapheditmenu [data-edit="'+action+'"]').click();await settle();};
   const geometry=()=>page.evaluate(()=>{
     const issues=[],endpoints=[];
     for(const wire of document.querySelectorAll('#wires path[data-from]'))for(const[end,kind,atEnd]of[['from','outputs',false],['to','inputs',true]]){

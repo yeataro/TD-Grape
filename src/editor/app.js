@@ -669,7 +669,7 @@ const experimentChoices={
   uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent'],['legendary','experiments.style.legendary'],['godlike','experiments.style.godlike']]
 };
 const experimentGroups=[
-  ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
+  ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
   ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock']]
 ];
@@ -712,7 +712,7 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','floatingToolbar','editToolbar','selectionToolbar','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){
     cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();

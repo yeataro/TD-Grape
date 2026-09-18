@@ -313,3 +313,23 @@ Swizzle 待議（2026-09-17）：是否保留獨立節點尚未決定；可考�
 隔離 TD 2025.32820 探針確認 TOP Pixel／MAT Pixel＋Vertex：TDRGBToHSV／TDHSVToRGB 只有 vec3 overload；TDLoop／TDZigZag／TDAverage 只有 float；TDRemap 支援 float／vec2／vec3／vec4。向量 Loop 若提供，需要逐分量呼叫。TDRemap(A,B,C,0,1) 在 B=C=.5 時回傳 .5，不能無條件代替官方 Range From 的 A fallback。負值 Zigzag 由實際 helper 正確反射，不照抄官文有疑義的 parity 範例。等端點 Loop／Zigzag 不將本機數值當跨平台保證。
 
 TD helper 可初始化區域 const，但不能初始化全域常數表達式；不可加入目前一般 GLSL constant-expression 白名單。探針只驗本機語意及支援介面，不宣稱 Metal／AMD 最佳化。測試區已清除、使用者 Shader 快照保持一致，報告位於私人 math-helper-probe；未因調查改動產品或保存 TOE。
+
+## 2026-09-18 本輪實作授權與範圍
+
+使用者確認三批並行：RGB to HSV／HSV to RGB、Remap、Range From／To、Loop／Zigzag；Sign、Sqrt、Floor、Round、Ceil、Truncate、Modulo；Perlin Noise、Simplex Noise。各批完成驗證即同步並儲存 TD，整輪完成再 Git 提交。Noise 首版接受 vec2／vec3／vec4 座標並輸出 float；Simplex 品質仍屬 TD 宿主設定，不增加獨立節點品質選項。Noise 導數、Curl、Fade、其餘 TD helper、Component reduction 和陣列能力留待後續。
+
+搜尋以節點名稱、共通數學符號、GLSL／TD 函式名稱為主，不逐語言擴充搜尋別名。Compare 的 float ==／!= 維持精確比較，不暗中加入容差。
+
+使用者實測確認兩條獨立連線分區及零散節點的現有排列均符合需求，取消下方區塊重新打包的修改；本輪不改排列。使用者後續另授權邏輯類標題採石墨灰，涵蓋 Compare／If 的畫布、Parameter 標題與新增節點入口；接孔及連線維持資料型別色，Auto 型別推導不變。
+
+### 多選框調整節點分布
+
+使用者先提出拖拉 Group Frame 邊緣，後續明確選擇將能力放在多選框上，四角、上下左右共八個拉點。按比例拉開或收攏節點中心位置，節點尺寸與字級不縮放；群組框繼續依成員自動貼合。沿用多選框既有顯示設定，不新增模式或旗標。左右邊調整水平、上下邊調整垂直、角落調整兩軸；对側外緣固定，縮小不引入新的節點重疊，既有重疊可繼續拉開。整次拖曳一次 Undo，取消完整還原，已實作。
+
+使用者另要求混合選取時收合與展開兩個操作均可選，工具列新增固定兩按鈕及獨立顯示設定。全部已收合時收合按鈕灰掉，全部已展開時展開按鈕灰掉；先不採隱藏不可用操作的方式。此項已實作。
+
+### 型別擴充前置工作與發布階段
+
+本輪 Floor／Round／Ceil 等輸出仍為 float／vec，並非轉為 int。現有 Compare、Spec Constant 與 Subgraph 接口已有部分 int／uint／bool 支援；擴充前先整理每節點允許的型別族、跨族轉型／Auto 政策，以及畫布／Parameter 共用輸入驗證。可先補純量整數與 If 的整數／布林結果，再做整數向量；TD 原生 Uniform 綁定獨立驗證。此處是討論，尚未授權實作整批型別擴充。解開子圖目前也未實作，與一般節點收合／展開不同。
+
+使用者明確表示目前圖全部是功能試驗，可重建，不是必須維持相容的資產。Alpha 前必要的模型與圖格式調整可直接做，不應為未發布格式堆相容層；Alpha 後開始注意相容，正式版後嚴格維持。此決策更新 architecture/UPGRADE_POLICY.md 的歷史前提。
