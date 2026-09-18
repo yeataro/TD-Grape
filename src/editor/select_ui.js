@@ -1,3 +1,34 @@
+/* Type grouping only arranges the caller's legal options; it never widens them. */
+function typeSelect(options,value,onchange){const control=select(options,value,onchange);control.dataset.typeMenu='true';return control;}
+function typeMenuItems(options){
+  const visible=options.filter(option=>!option.hidden),leaf=option=>({option});
+  if(visible.length<=5&&!visible.some(option=>typeDescriptor(option.value)?.family==='double')){const auto=visible.find(option=>['auto','all'].includes(option.value)),rest=visible.filter(option=>option!==auto);return auto?[leaf(auto),...(rest.length?[{separator:true}]:[]),...rest.map(leaf)]:visible.map(leaf);}
+  const buckets={Floating:[],Integer:[],Boolean:[],Matrix:[],Double:{Floating:[],Matrix:[]},Array:[],Struct:[],Sampler:[],Other:[]},automatic=[];
+  for(const option of visible){
+    if(['auto','all'].includes(option.value)){automatic.push(leaf(option));continue;}
+    const d=typeDescriptor(option.value),shape=d?.shape,family=d?.family;
+    const group=shape==='array'?buckets.Array:shape==='struct'?buckets.Struct:shape==='matrix'?(family==='double'?buckets.Double.Matrix:buckets.Matrix):family==='double'?buckets.Double.Floating:family==='float'?buckets.Floating:['int','uint'].includes(family)?buckets.Integer:family==='bool'?buckets.Boolean:isResourceType(option.value)?buckets.Sampler:buckets.Other;
+    group.push(option);
+  }
+  const ordered=(options,matrix=false,integer=false)=>{
+    const rank=option=>{const d=typeDescriptor(option.value);return matrix?(d.columns===d.rows?0:100)+d.columns*10+d.rows:integer?(d.family==='uint'?10:0)+d.components:d?.components||0;};
+    const sorted=[...options].sort((a,b)=>rank(a)-rank(b)),items=[];
+    let previous;
+    for(const option of sorted){const d=typeDescriptor(option.value),section=matrix?d.columns===d.rows:integer?d.family:null;if(previous!==undefined&&section!==previous)items.push({separator:true});items.push(leaf(option));previous=section;}
+    return items;
+  };
+  const groups=[];
+  for(const [label,options]of Object.entries(buckets)){
+    if(label==='Double'){
+      const children=Object.entries(options).filter(([,items])=>items.length).map(([label,items])=>({label,children:ordered(items,label==='Matrix')}));
+      if(children.length)groups.push({label,children});
+    }else if(options.length)groups.push({label,children:['Array','Struct','Sampler','Other'].includes(label)?options.map(leaf):ordered(options,label==='Matrix',label==='Integer')});
+  }
+  // A single ordinary family needs no redundant navigation. Double keeps its
+  // deliberate precision/family hierarchy even in a restricted type picker.
+  const content=groups.length===1&&groups[0].label!=='Double'?groups[0].children:groups;
+  return [...automatic,...(automatic.length&&content.length?[{separator:true}]:[]),...content];
+}
 /* Keep native select values and change handlers; render their popup outside graph zoom. */
 function installSelectMenus(){
   if(installSelectMenus.installed||!HTMLElement.prototype.showPopover)return;
@@ -12,15 +43,17 @@ function installSelectMenus(){
     entry.focus({preventScroll:true});
     if(!eligible(entry))return;
     const options=[...entry.options],initialIndex=entry.selectedIndex,anchor=entry.getBoundingClientRect();
+    const tree=entry.dataset.typeMenu==='true'?typeMenuItems(options):null,hierarchical=!!tree?.some(item=>item.children);
     const popup=document.createElement('div');popup.id='selectmenu';popup.className='popup-menu';popup.popover='auto';popup.setAttribute('role','listbox');popup.tabIndex=-1;
     popup.dataset.align=entry.matches('.node-primary-selector')||entry.closest('.node-title')?'right':'left';
     const labelledBy=entry.getAttribute('aria-labelledby');
     if(labelledBy)popup.setAttribute('aria-labelledby',labelledBy);
     else popup.setAttribute('aria-label',entry.getAttribute('aria-label')||entry.labels?.[0]?.textContent.trim()||entry.title||entry.name||entry.selectedOptions[0]?.label||'');
+    if(hierarchical){popup.classList.add('type-select-menu');popup.setAttribute('role','menu');}
     const controller=new AbortController(),listeners={signal:controller.signal};
     const oldAria=new Map(['aria-expanded','aria-controls','aria-haspopup'].map(name=>[name,entry.getAttribute(name)]));
-    entry.setAttribute('aria-expanded','true');entry.setAttribute('aria-controls',popup.id);entry.setAttribute('aria-haspopup','listbox');
-    let closed=false,buttons=[],search='',searchAt=0,observer=null,resizeObserver=null;
+    entry.setAttribute('aria-expanded','true');entry.setAttribute('aria-controls',popup.id);entry.setAttribute('aria-haspopup',hierarchical?'menu':'listbox');
+    let closed=false,buttons=[],search='',searchAt=0,observer=null,resizeObserver=null,treeAnchor=null;
     const current=()=>eligible(entry)&&entry.selectedIndex===initialIndex&&options.length===entry.options.length&&options.every((option,index)=>entry.options[index]===option);
 
     function close(focus=false,hide=true){
@@ -41,14 +74,49 @@ function installSelectMenus(){
     function appendOption(option,parent){
       if(option.hidden)return;
       const index=options.indexOf(option),button=document.createElement('button');
-      button.type='button';button.setAttribute('role','option');button.setAttribute('aria-selected',String(index===initialIndex));button.tabIndex=-1;
+      button.type='button';button.setAttribute('role',hierarchical?'menuitemradio':'option');button.setAttribute(hierarchical?'aria-checked':'aria-selected',String(index===initialIndex));button.tabIndex=-1;
       button.dataset.selectIndex=String(index);button.dataset.selectValue=option.value;button.textContent=option.label;button.disabled=optionDisabled(option);
       if(option.title)button.title=option.title;
       button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();choose(index);},listeners);
       button.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse'&&!button.disabled)button.focus({preventScroll:true});},listeners);
       parent.append(button);if(!button.disabled)buttons.push(button);
     }
-    for(const child of entry.children){
+    const branchPath=[];
+    const enabledItems=parent=>[...parent.querySelectorAll('button:not(:disabled)')].filter(button=>button.getClientRects().length);
+    function back(){
+      const branch=branchPath.pop();if(!branch)return;branch.button.setAttribute('aria-expanded','false');
+      popup.lastElementChild.remove();updatePanes();focusButton(branch.button);
+    }
+    function updatePanes(){
+      const drill=innerWidth/uiScaleFactor()<600;popup.classList.toggle('type-select-drill',drill);
+      for(const pane of popup.children)pane.hidden=drill&&pane!==popup.lastElementChild;
+      buttons=enabledItems(popup);if(popup.matches(':popover-open'))position();
+    }
+    function appendTree(items,parent,depth=0){
+      for(const item of items){
+        if(item.separator){const line=document.createElement('div');line.className='popup-separator';line.setAttribute('role','separator');parent.append(line);continue;}
+        if(item.option){appendOption(item.option,parent);continue;}
+        const button=document.createElement('button');button.type='button';button.className='type-select-branch';button.tabIndex=-1;button.setAttribute('role','menuitem');button.setAttribute('aria-haspopup','menu');button.setAttribute('aria-expanded','false');button.dataset.typeGroup=item.label;
+        const label=document.createElement('span');label.textContent=item.label;const arrow=document.createElement('span');arrow.textContent='›';arrow.setAttribute('aria-hidden','true');button.append(label,arrow);
+        const show=(focus=false)=>{
+          if(branchPath[depth]?.button!==button){
+            for(const branch of branchPath.splice(depth))branch.button.setAttribute('aria-expanded','false');
+            while(popup.children.length>depth+1)popup.lastElementChild.remove();
+            branchPath.push({button,item});button.setAttribute('aria-expanded','true');
+            const pane=document.createElement('div');pane.className='type-select-pane';pane.setAttribute('role','menu');pane.setAttribute('aria-label',item.label);
+            const up=document.createElement('button');up.type='button';up.className='type-select-back';up.tabIndex=-1;up.textContent='‹ '+item.label;up.setAttribute('aria-label',t('type.back'));up.addEventListener('click',back,listeners);pane.append(up);appendTree(item.children,pane,depth+1);popup.append(pane);updatePanes();
+          }
+          if(focus)focusButton(enabledItems(popup.lastElementChild).find(button=>!button.classList.contains('type-select-back')));
+        };
+        button.addEventListener('click',event=>{event.preventDefault();show(true);},listeners);
+        button.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse'&&!popup.classList.contains('type-select-drill')){button.focus({preventScroll:true});show();}},listeners);
+        parent.append(button);
+      }
+    }
+    if(tree){
+      if(hierarchical){const pane=document.createElement('div');pane.className='type-select-pane';pane.setAttribute('role','menu');appendTree(tree,pane);popup.append(pane);updatePanes();}
+      else appendTree(tree,popup);
+    }else for(const child of entry.children){
       if(child instanceof HTMLOptionElement)appendOption(child,popup);
       else if(child instanceof HTMLOptGroupElement&&!child.hidden){
         const group=document.createElement('div');group.className='select-group';group.setAttribute('role','group');group.setAttribute('aria-label',child.label);
@@ -59,14 +127,21 @@ function installSelectMenus(){
     }
     const host=entry.closest('[popover]:popover-open,dialog[open]')||document.body;
     host.append(popup);popup.showPopover();
+    function position(){
     const zoom=uiScaleFactor(),margin=8,viewportWidth=innerWidth/zoom,viewportHeight=innerHeight/zoom;
     popup.style.position='fixed';popup.style.margin='0';popup.style.inset='auto';popup.style.maxWidth=Math.max(0,viewportWidth-margin*2)+'px';
     const below=viewportHeight-anchor.bottom/zoom-margin-4,above=anchor.top/zoom-margin-4;
     const upward=popup.scrollHeight>below&&above>below;
     popup.style.maxHeight=Math.max(0,upward?above:below)+'px';
-    const left=popup.dataset.align==='right'?anchor.right/zoom-popup.offsetWidth:anchor.left/zoom;
+    let left=popup.dataset.align==='right'?anchor.right/zoom-popup.offsetWidth:anchor.left/zoom;
+    if(hierarchical&&!popup.classList.contains('type-select-drill')){
+      if(!treeAnchor){const x=Math.max(margin,Math.min(left,viewportWidth-popup.offsetWidth-margin)),right=viewportWidth-x-popup.offsetWidth;treeAnchor={x,width:popup.offsetWidth,reverse:right<300&&x>right};popup.classList.toggle('type-select-left',treeAnchor.reverse);}
+      left=treeAnchor.reverse?treeAnchor.x+treeAnchor.width-popup.offsetWidth:treeAnchor.x;
+    }
     popup.style.left=Math.max(margin,Math.min(left,viewportWidth-popup.offsetWidth-margin))+'px';
     popup.style.top=Math.max(margin,Math.min(upward?anchor.top/zoom-popup.offsetHeight-4:anchor.bottom/zoom+4,viewportHeight-popup.offsetHeight-margin))+'px';
+    }
+    position();buttons=enabledItems(popup);
 
     function focusButton(button){
       if(!button)return;button.focus({preventScroll:true});button.scrollIntoView({block:'nearest'});
@@ -81,12 +156,15 @@ function installSelectMenus(){
     function onKey(event){
       event.stopPropagation();
       if(event.isComposing)return;
-      const index=buttons.indexOf(document.activeElement);
+      const pane=hierarchical?document.activeElement.closest('.type-select-pane')||popup.lastElementChild:popup;
+      buttons=enabledItems(pane);const index=buttons.indexOf(document.activeElement);
       if(event.key==='Escape'){event.preventDefault();close(true);}
       else if(event.key==='Tab')close(true);
+      else if(hierarchical&&event.key==='ArrowLeft'){event.preventDefault();back();}
+      else if(hierarchical&&event.key==='ArrowRight'){event.preventDefault();document.activeElement.closest('.type-select-branch')?.click();}
       else if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
         event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:Math.max(0,Math.min(buttons.length-1,index+(event.key==='ArrowDown'?1:-1)));focusButton(buttons[next]);
-      }else if(event.key==='Enter'||event.key===' '){event.preventDefault();if(index>=0)choose(Number(buttons[index].dataset.selectIndex));}
+      }else if(event.key==='Enter'||event.key===' '){event.preventDefault();if(index>=0)buttons[index].click();}
       else if(event.key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();typeahead(event.key.toLocaleLowerCase());}
     }
     active={entry,popup,close,onKey};

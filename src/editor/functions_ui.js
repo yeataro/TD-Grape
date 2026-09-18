@@ -142,7 +142,7 @@ function topInputsView(){
 function ensureTopInputs(){if(editorTarget!=='top')throw Error('TOP Inputs require Grape TOP.');graph.topInputs||=clone(topInputsView());if(graph.declarations.some(d=>d.source==='input:0')&&graph.topInputs.length)graph.topInputLegacyId||=graph.topInputs[0].id;return graph.topInputs;}
 function allInputSources(){return [...topInputsView().map((s,index)=>({...s,kind:'top_input',type:'sampler2D',index})),...graph.declarations];}
 function constantFields(box,decl){
-  box.append(field(t('node.type'),select(valueTypes().map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>setDeclarationType(decl,value)))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type),el('p',{class:'muted'},t('inputs.constantHint')));
+  box.append(field(t('node.type'),typeSelect(valueTypes().map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>setDeclarationType(decl,value)))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type),el('p',{class:'muted'},t('inputs.constantHint')));
 }
 function setDeclarationType(decl,type){
   const previous=decl.type;
@@ -293,7 +293,7 @@ function functionInspector(box,n,d){
     else if(isResourceType(p.type))section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
     else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>p.default=v),false,'XYZW',p.type));
     if(inspectorTab==='settings'){
-      section.append(field(t('node.type'),select(graphInterfaceTypes().map(type=>[type,displayType(type)]),p.type,type=>change(()=>{
+      section.append(field(t('node.type'),typeSelect(graphInterfaceTypes().map(type=>[type,displayType(type)]),p.type,type=>change(()=>{
         const previous=p.type;p.type=type;p.default=convertValue(p.default,type,previous);
         for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id&&direction==='inputs'&&Object.hasOwn(call.inputValues||{},p.id))call.inputValues[p.id]=convertValue(call.inputValues[p.id],type,previous);
       },{typeChange:true}))));

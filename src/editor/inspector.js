@@ -981,7 +981,7 @@ function glslCodeInspector(box,n){
       const entry=input(p.name,value=>change(()=>CustomGLSL.update(n,direction,p.id,{name:value})));
       entry.maxLength=48;entry.disabled=readonly;entry.setAttribute('aria-label',t('code.portName'));entry.title=t('code.renameHint');
       const types=direction==='inputs'?graphInterfaceTypes():graphValueTypes();
-      const type=select(types.map(type=>[type,type]),p.type,value=>change(()=>CustomGLSL.update(n,direction,p.id,{type:value}),{typeChange:true}));
+      const type=typeSelect(types.map(type=>[type,type]),p.type,value=>change(()=>CustomGLSL.update(n,direction,p.id,{type:value}),{typeChange:true}));
       type.disabled=readonly;type.setAttribute('aria-label',t('node.type'));
       row.append(entry,type);
       for(const [label,offset,symbol]of [['code.up',-1,'↑'],['code.down',1,'↓']]){
@@ -1029,7 +1029,7 @@ function nodeTypeSelector(n,d){
   if(n.params.fixedType)return null;
   const options=selectableNodeTypes(d).map(type=>[type,type]);if(!options.length)return null;
   const composed=['combine','vector','replace'].includes(d.key),automatic=n.ui?.typeMode==='auto',auto=supportsAutoType(d);
-  const control=select(auto?[['auto',t('type.auto')+' · '+n.params.type],...options]:options,auto&&automatic?'auto':n.params.type,value=>{
+  const control=typeSelect(auto?[['auto',t('type.auto')+' · '+n.params.type],...options]:options,auto&&automatic?'auto':n.params.type,value=>{
     if(auto)setMathType(n,value);
     else if(isMatrixOperation(d))change(()=>reshapeTypedInputs(n,d,value),{typeChange:true});
     else change(()=>{const old=clone(n.inputValues||{}),previous=ports(n,'inputs');n.params.type=value;normalizeNodeValues(n,d);for(const [port,type]of Object.entries(ports(n,'inputs'))){if(Object.hasOwn(old,port))n.inputValues[port]=convertValue(old[port],type,previous[port]);}},{typeChange:true});
@@ -1050,7 +1050,7 @@ function nodePrimarySelector(n,d){
 }
 function arrayElementSelector(n){
   const options=graphValueTypes().filter(type=>typeDescriptor(type)?.shape!=='array'||typeof typeDescriptor(type).length==='number');
-  const control=select(options.map(type=>[type,displayType(type)]),n.params.elementType||'float',value=>change(()=>{n.params.elementType=value;if(definition(n)?.key==='array_create'&&Object.hasOwn(n.inputValues||{},'value'))n.inputValues.value=compositeValue(n.inputValues.value,value);},{typeChange:true}));
+  const control=typeSelect(options.map(type=>[type,displayType(type)]),n.params.elementType||'float',value=>change(()=>{n.params.elementType=value;if(definition(n)?.key==='array_create'&&Object.hasOwn(n.inputValues||{},'value'))n.inputValues.value=compositeValue(n.inputValues.value,value);},{typeChange:true}));
   control.dataset.arrayElementType=n.id;control.title=t('array.elementType');control.disabled=readonly;return control;
 }
 function structFieldSelector(n){
@@ -1077,7 +1077,7 @@ function compositeInspector(box,n,d){
     if(!connected){
       const choices=d.key==='struct_field'?Object.keys(compositeStructs()):graphInterfaceTypes().filter(type=>typeDescriptor(type)?.shape==='array'&&(d.key!=='array_replace'||!typeContainsResource(type)));
       if(!choices.includes(n.params.type))choices.unshift(n.params.type);
-      const selector=select(choices.map(type=>[type,displayType(type)]),n.params.type,value=>change(()=>reshapeTypedInputs(n,d,value),{typeChange:true}));selector.disabled=readonly;selector.dataset.compositeInputType=n.id;
+      const selector=typeSelect(choices.map(type=>[type,displayType(type)]),n.params.type,value=>change(()=>reshapeTypedInputs(n,d,value),{typeChange:true}));selector.disabled=readonly;selector.dataset.compositeInputType=n.id;
       box.append(parameterControlRow(t(typeLabel),selector));
     }else box.append(parameterControlRow(t(typeLabel),parameterHint(displayType(type))));
     if(d.key==='struct_field')box.append(parameterControlRow(t('struct.field'),structFieldSelector(n)));
@@ -1119,7 +1119,7 @@ function compositeInputHint(n,port,type){
 }
 function convertTypeSelector(n,parameter){
   const d=definition(n),options=parameter==='fromType'?convertSources(d.key):convertTargets(n.params.fromType,d.key);
-  const control=select(options.map(type=>[type,type]),n.params[parameter],type=>change(()=>{
+  const control=typeSelect(options.map(type=>[type,type]),n.params[parameter],type=>change(()=>{
     const previous=n.params[parameter];
     n.params[parameter]=type;
     if(parameter==='fromType'){
@@ -2144,13 +2144,13 @@ function inputSourceInspector(box,decl){
       box.append(field(t('node.type'),el('span',{},displayType(decl.type))),field(t('array.length'),arrayLengthControl(shape.length,value=>changeDeclaration(()=>{decl.type=arrayType(shape.elementType,value);decl.value=null;}),false)),el('small',{class:'muted'},t('array.nativeSpecializationLimit')));nativeInputFields(box,decl);
     }else{
     const types=valueTypes().filter(type=>!row||row.pending||isMatrixType(type)===(row.sequence==='matrix'));
-    box.append(field(t('node.type'),select(types.map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>setDeclarationType(decl,value)))),el('small',{class:'muted'},t(isMatrixType(decl.type)?'inputs.nativeMatrix':row?.sequence==='color'?'inputs.nativeColor':'inputs.nativeVector')));
+    box.append(field(t('node.type'),typeSelect(types.map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>setDeclarationType(decl,value)))),el('small',{class:'muted'},t(isMatrixType(decl.type)?'inputs.nativeMatrix':row?.sequence==='color'?'inputs.nativeColor':'inputs.nativeVector')));
     nativeInputFields(box,decl);
     const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type));box.append(defaults);
     if(!isMatrixType(decl.type)){const custom=el('button',{'data-source-custom':decl.id,class:'wide'},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(decl.id);box.append(custom);}
     }
   }else if(decl.kind==='spec_constant'){
-    box.append(field(t('node.type'),select((typeContract?.specConstantTypes||['int','uint','bool','float']).map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=specDefaultValue(decl.value,value);}))),el('small',{class:'muted'},'constant_id = '+decl.constantId));
+    box.append(field(t('node.type'),typeSelect((typeContract?.specConstantTypes||['int','uint','bool','float']).map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=specDefaultValue(decl.value,value);}))),el('small',{class:'muted'},'constant_id = '+decl.constantId));
     nativeInputFields(box,decl);
     const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),specValueField(decl.value,decl.type,value=>changeDeclaration(()=>decl.value=value)));box.append(defaults,el('p',{class:'muted'},t('inputs.specHint')));
   }else if(decl.kind==='constant')constantFields(box,decl);

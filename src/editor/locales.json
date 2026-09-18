@@ -1796,6 +1796,7 @@
       "zh-Hant": "搜尋 {category} 節點…",
       "en": "Search {category} nodes…"
     },
+    "type.back": {"zh-Hant":"返回上一層", "en":"Back"},
     "type.auto": {
       "zh-Hant": "Auto",
       "en": "Auto"

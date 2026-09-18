@@ -1647,6 +1647,18 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #selectmenu [role="option"]:disabled{cursor:default;opacity:.45}
 #selectmenu .select-group{display:block;padding:0}
 #selectmenu .select-group-label{padding:8px 12px 4px;color:var(--muted);font-size:12px}
+#selectmenu.type-select-menu:popover-open{display:flex;gap:4px;text-align:left;align-items:flex-start}
+#selectmenu.type-select-left:popover-open{flex-direction:row-reverse}
+#selectmenu .type-select-pane{flex:0 0 144px;min-width:0}
+#selectmenu .type-select-pane[hidden]{display:none}
+#selectmenu .type-select-pane+.type-select-pane{border-left:1px solid var(--line);padding-left:4px}
+#selectmenu :is([role="menuitemradio"],.type-select-branch,.type-select-back){display:block;width:100%;padding:6px 12px;text-align:left;white-space:normal;overflow-wrap:anywhere;touch-action:manipulation}
+#selectmenu .type-select-branch{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#selectmenu .type-select-branch[aria-expanded="true"]{background:var(--ui-hover,var(--ui-tone-menu-hover))}
+#selectmenu .type-select-back{display:none;border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px}
+#selectmenu.type-select-drill .type-select-pane{border:0;padding:0;flex:1;min-width:160px}
+#selectmenu.type-select-drill .type-select-back{display:block}
+#selectmenu [role="menuitemradio"]:disabled{cursor:default;opacity:.45}
 @media(pointer:coarse){:root{--popup-row-height:40px}}
 
 /* Experimental flags share compact rows grouped by the part of the UI they affect. */
