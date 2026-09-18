@@ -396,10 +396,10 @@ function appendMatrixNodeRows(list,n,portRow){
         children.append(child);
       }
       if(split)continue;
-      const writable=matrixComponentWritable(n,column,row),copy=visible?'expanded':'compact';
-      const field=writable?matrixValueInput(n,column,row,{onNode:true,copy}):el('span',{class:'matrix-inherited-value',title:matrixComponentSource(n,column,row),'aria-label':matrixComponentSource(n,column,row)},'—');
-      if(visible){const holder=el('span',{class:'node-inline-values matrix-expanded-value'});holder.append(field);child.append(holder);}
-      else {const holder=el('span',{class:'node-inline-component matrix-compact-component'});holder.append(field);values.append(holder);}
+      const writable=matrixComponentWritable(n,column,row);
+      const field=copy=>writable?matrixValueInput(n,column,row,{onNode:true,copy}):el('span',{class:'matrix-inherited-value',title:matrixComponentSource(n,column,row),'aria-label':matrixComponentSource(n,column,row)},'—');
+      if(visible){const holder=el('span',{class:'node-inline-values matrix-expanded-value'});holder.append(field('expanded'));child.append(holder);}
+      if(!expanded){const holder=el('span',{class:'node-inline-component matrix-compact-component'});holder.append(field('compact'));values.append(holder);}
     }
     if(!split&&!expanded&&values.childNodes.length)parent.append(values);
     group.append(parent);if(children.childNodes.length)group.append(children);list.append(group);

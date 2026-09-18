@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-18 Matrix 收合顯示修正（0.8.87）：Combine／Replace 的 Column 收合列始終保留完整分量位置，已接線子分量在原格顯示橫槓，下方接口仍可見，不再將 vec3 顯示為兩格。15 組隔離 Matrix UI 檢查通過；這筆修正獨立於第二批既有運算擴充，TD 同步結果於交付後補記。覆寫／沿用來源的視覺區別仍待設計，未套用討論中的新符號。[搜尋命中分級](../discussions/INPUTS_UI_NEXT_ROUND.md) 已依使用者同意列為高優先試行待辦，尚未改排序。
+
 2026-09-18 Matrix／double 第一批（0.8.86）已獨立提交、同步 TD 並保存 TOE：新增 18 種 mat／dmat、double／dvec 與 Matrix、Combine、Replace、Split、Get／Set、Transpose、Inverse、Determinant、Matrix Comp Mult、Outer Product。涵蓋 Column／分量介面、固定與通用建立入口、來源／宣告、Subgraph／GLSL Code、保存與剪貼簿。既有算術、Compare、If、Convert 的能力擴充留第二批獨立提交，不因型別表增加而直接放寬舊簽名。規則及 TD 雙精度 Uniform 原生載體實測限制見 [Matrix 能力](../features/MATRIX_NODES.md)。
 
 本批交付已核對 31 份內嵌來源、9 份服務資源與主倉一致，core 無錯誤，TOP／MAT Master current；三份使用者 Shader 與模板身分保留。正式 TOE 860,150 bytes，SHA-256 `c1dd7bbb6b1117120fd691b3a5e789411321e59d04ae7b64f7d248298c483fb3`，排除一份私人助手。未操作桌面或強制重新整理現有 Editor。新能力提交為 `ed31700`，獨立調查筆記為 `03da4d3`；舊運算擴充仍未交付。

@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-18 Matrix 收合位置修正（0.8.87）：`test_matrix_values.cjs` 15 組通過，無頁面錯誤。新增實際接線案例核對 vec3 只接 X 後仍有三個等寬位置、Y／Z 編輯索引正確、修改 Y 的 Undo 保留接線，以及 mat4 Replace 接入 Value 後單獨覆寫 Y 仍有四格及下方 Y 接孔。既有 18 型別、展開／收合、Split 接孔、數值手勢與座標保留案例一併通過。本批只有前端顯示修正，無需重跑 GPU 數值探針。
+
 2026-09-18 Matrix 0.8.86 第一批交付核對：最後一輪 portable checks 374 項 Python unit、656 個雙語引用、editor launch／browser metadata／既有 JS／26 項 Remote Panel 全過。刷新後 31 份內嵌來源、9 份服務資源一致，core 無錯誤、TOP／MAT Master current，三份使用者 Shader 保留。正式 TOE 860,150 bytes，SHA-256 `c1dd7bbb6b1117120fd691b3a5e789411321e59d04ae7b64f7d248298c483fb3`，私人助手排除。
 
 來源切換過程曾輸出 `Unknown catalog identity`；先做獨立唯讀一致性檢查，確認當前 catalog 驗證及純編譯成功、core 前後均無錯誤、全部 DAT 與來源一致，才繼續模板同步。模板同步與最終 audit 均通過，非忽略錯誤後直接保存。交付報告為 matrix-batch1-refresh／catalog-audit／masters／audit／save-20260918。

@@ -33,11 +33,28 @@ async function run(){
     await page.locator('[data-node="combine"] [data-matrix-expand="0"]').click();await page.locator('[data-node="combine"] [data-matrix-expand="0"]').click();
     assert.equal(await page.locator('[data-node="combine"] [data-port="c0y"]').count(),1);assert.equal(await page.locator('[data-node="combine"] [data-port="c0x"]').count(),0);
     checks.push('Column and scalar override wires coexist; connected children remain anchored when collapsed while overridden fallback values are hidden');
+    await page.evaluate(()=>connectPorts({node:'scalar',kind:'outputs',port:'out'},{node:'combine',kind:'inputs',port:'c1x'}));await settle();
+    const compact=page.locator('[data-node="combine"] [data-matrix-column="1"] .matrix-compact-component');
+    assert.equal(await compact.count(),3);assert.equal(await compact.nth(0).innerText(),'—');
+    assert.equal(await compact.nth(1).locator('input').getAttribute('data-matrix-index'),'4');assert.equal(await compact.nth(2).locator('input').getAttribute('data-matrix-index'),'5');
+    const slotWidths=await compact.evaluateAll(items=>items.map(e=>e.getBoundingClientRect().width));assert.ok(Math.max(...slotWidths)-Math.min(...slotWidths)<1);
+    await compact.nth(1).locator('input').fill('12');await compact.nth(1).locator('input').press('Enter');await settle();assert.equal((await node('combine')).params.values[4],12);
+    await page.locator('#undo').click();assert.equal((await node('combine')).params.values[4],1);
+    await page.locator('[data-node="combine"] [data-matrix-expand="1"]').click();await page.locator('[data-node="combine"] [data-matrix-expand="1"]').click();
+    assert.equal(await compact.count(),3);assert.equal(await page.locator('[data-node="combine"] [data-port="c1x"]').count(),1);
+    checks.push('A collapsed column keeps XYZ positions and equal slot widths when only X is wired; editing Y still targets Y and Undo preserves the wire');
     const saved=(await node('replace')).params.values;
     await page.evaluate(()=>connectPorts({node:'literal',kind:'outputs',port:'out'},{node:'replace',kind:'inputs',port:'value'}));await settle();
     assert.equal(await fields('replace').count(),0);assert.deepEqual((await node('replace')).params.values,saved);assert.equal(await page.locator('[data-node="replace"] .matrix-inherited-value').count(),9);
     await page.evaluate(()=>change(()=>{current().edges=current().edges.filter(e=>e.to[0]!=='replace');}));await settle();assert.equal(await fields('replace').count(),9);assert.deepEqual((await node('replace')).params.values,saved);
     checks.push('Replace baseline disables all manual fallbacks and disconnecting restores the unchanged saved values');
+    await page.evaluate(()=>{
+      for(const [id,key]of [['literal4','matrix'],['replace4','matrix_replace']]){const n=instantiate(catalog.find(d=>d.key===key),50,600,'mat4');n.id=id;}
+      render();connectPorts({node:'literal4',kind:'outputs',port:'out'},{node:'replace4',kind:'inputs',port:'value'});connectPorts({node:'scalar',kind:'outputs',port:'out'},{node:'replace4',kind:'inputs',port:'c0y'});
+    });await settle();
+    assert.equal(await page.locator('[data-node="replace4"] [data-matrix-column="0"] .matrix-compact-component').count(),4);
+    assert.equal(await page.locator('[data-node="replace4"] [data-port="c0y"]').count(),1);assert.equal(await fields('replace4').count(),0);
+    checks.push('Replace with a matrix source and independent Y override retains all four compact slots plus the connected Y socket');
     await page.evaluate(()=>{current().nodes.push(testNode('sink','add',1100,430));render();connectPorts({node:'split',kind:'outputs',port:'c1z'},{node:'sink',kind:'inputs',port:'a'});});await settle();
     assert.equal(await page.locator('[data-node="split"] [data-port="c1z"]').count(),1);assert.equal(await page.locator('[data-node="split"] [data-port="c1"]').count(),1);
     await page.locator('[data-node="split"] [data-matrix-expand="1"]').click();assert.equal(await page.locator('[data-node="split"] .output .port').count(),6);
