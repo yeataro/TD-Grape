@@ -1,6 +1,6 @@
 # 開發狀態
 
-2026-09-19 Open Editor Viewer 修正（0.8.92）：既有 OP 的登記不再強制開啟 Viewer，新建仍保留原預設。TOP／MAT 的開、關、再關共 6 項原生檢查通過，使用者 Shader 與 registry 保留。此筆獨立於進行中的符號長度陣列；同步與保存狀態見後續交付紀錄。[開啟流程及其他既有副作用](../ui/EDITOR_LAUNCH.md)。
+2026-09-19 Open Editor Viewer 修正（0.8.92，已同步並保存）：Open Editor 不寫入或更動既有 OP 的 Viewer 開關，沒有記住再還原的流程；新建仍使用原預設。TOP／MAT 的開、關、再關共 6 項原生檢查通過，使用者 Shader 與 registry 保留。32 份來源刷新完成、兩份 Master current，Master 編譯檢查通過；保存的 TOE 為 887,534 bytes，SHA-256 `a0107ccbd8a9c6e48e5c1833bd22ace935e9002dccf739540c19000f05f81d40`，三份使用者 Shader 保留、排除一份私人助手。實作提交 `432beed`，獨立於進行中的符號長度陣列。這是目前未證明開啟 Viewer 有必要的判斷；若未來實測特定操作需要觸發 cook，再針對該操作處理，不視為永久禁止。[開啟流程及其他既有副作用](../ui/EDITOR_LAUNCH.md)。
 
 2026-09-19 陣列／結構第一輪已完成並交付 0.8.91：已整合 main、同步 TD 並保存正式 TOE。新增 Array、Array[i]、Array Replace、Array Length、Field；讀取 Clamp、Replace 越界不修改，建立數值／向量／矩陣／結構陣列採零初始化。共用型別契約承接 Function、Subgraph、GLSL Code、剪貼簿與個人函式库；TD 既有結構引用宿主定義，圖內自訂定義按依賴宣告。TOP／MAT CHOP Uniform Array 支援固定長度的 float／vec2／vec3／vec4 與原生綁定，快照不讀取樣本、不更改 Uniform 即時通訊。自訂結構作者 UI、迴圈與一般 SSBO 作者介面仍為後續範圍。操作及責任見 [Arrays and structures](../features/ARRAYS_AND_STRUCTURES.md)，宿主來源限制見 [TD array sources](../features/TD_ARRAY_SOURCES.md)。
 

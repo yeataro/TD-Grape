@@ -5,7 +5,9 @@ Two native parameter pulses are retained on Grape Shaders and their manager:
 - **Open Editor** asks the OS which browser handles this URL scheme. A verified browser/OS combination launches an independent app window. Missing detection, unsupported browsers, missing executables, process creation errors or an immediate nonzero startup exit use the normal system browser instead.
 - **Open in Browser** uses TouchDesigner's normal `ui.viewFile` URL opening directly, with no browser detection or app-window logic.
 
-2026-09-19 (0.8.92): opening an existing Shader preserves its native OP Viewer flag. Registration still identifies the Shader, resolves duplicated IDs and ensures editor controls; `viewer=True` is a creation-only default (`fresh=True`). The earlier shared registration path incorrectly reset this flag on every Open Editor. Isolated TOP/MAT checks cover both on and off states and verify user Shader preservation.
+2026-09-19 (0.8.92): Open Editor does not write or change an existing Shader's native OP Viewer flag. There is no snapshot-and-restore operation. Registration still identifies the Shader, resolves duplicated IDs and ensures editor controls; `viewer=True` is a creation-only default (`fresh=True`). The earlier shared registration path incorrectly reset this flag on every Open Editor. Isolated TOP/MAT checks cover both on and off states and verify user Shader preservation.
+
+This decision reflects the current absence of a demonstrated need to enable Viewer when opening the editor, rather than a permanent prohibition. If a later native test establishes that a particular operation needs a cook or other prerequisite, handle and document that operation explicitly, including its side effects. The possibility that a visible Viewer may trigger cooking is not by itself a reason to enable it on every Open Editor.
 
 Registration also currently updates the COMP's OP Viewer expression, parameter ordering, custom-only parameter display, managed callbacks and product color. Those existing side effects are separate from the Viewer flag fix and have not been removed in this change.
 
