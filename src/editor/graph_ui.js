@@ -2015,26 +2015,34 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
   const {nodes:collapseNodes,canCollapse,canExpand}=nodeCollapseSelectionState();
   const owner=graph,level=current(),ids=selectedCanvasNodes().map(n=>n.id).join('\0'),sameContext=()=>graph===owner&&current()===level&&selectedCanvasNodes().map(n=>n.id).join('\0')===ids;
-  const rows=[
+  const groups=[[
     ['add',t('action.nodes'),shortcutLabel('add'),!readonly,()=>openCreator(x,y)],
-    ['collapse',t('node.collapse'),'',!editorMutationBlocked()&&canCollapse,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),true)],
-    ['expand',t('node.expand'),'',!editorMutationBlocked()&&canExpand,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),false)],
+  ],[
     ['copy',t('edit.copy'),shortcutLabel('copy'),count>0,copyGraphToClipboard],
     ['paste',t('edit.paste'),shortcutLabel('paste'),!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),()=>pasteGraphFromClipboard(position)],
-    ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
     ['duplicate',t('edit.duplicate'),shortcutLabel('duplicate'),!readonly&&count>0,duplicateSelection],
+    ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
+  ],[
+    ['collapse',t('node.collapse'),'',!editorMutationBlocked()&&canCollapse,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),true)],
+    ['expand',t('node.expand'),'',!editorMutationBlocked()&&canExpand,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),false)],
+    ['arrange',t('arrange.title'),'›',!editorMutationBlocked()&&count>1,()=>{}],
+    ['fit',t('action.fitSelection'),'',count>0,fitSelection],
+  ],[
     ['frame',t('frame.create'),shortcutLabel('groupFrame'),!editorMutationBlocked()&&canCreateGroupFrame(),createGroupFrame],
     ['joinFrame',t('frame.join'),shortcutLabel('joinFrame'),!editorMutationBlocked(),joinGroupFrameSelection],
     ['detachFrame',t('frame.detach'),shortcutLabel('detachFrame'),!editorMutationBlocked(),detachGroupFrameSelection],
-    ['arrange',t('arrange.title'),'›',!editorMutationBlocked()&&count>1,()=>{}],
-    ['fit',t('action.fitSelection'),'',count>0,fitSelection],
     ['group',t('function.group'),shortcutLabel('group'),!readonly&&count>0,groupSelection],
+  ],[
     ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
-  ];
-  for(const[key,label,shortcut,enabled,action]of rows){
-    if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length||['frame','arrange'].includes(key)&&count<2||key==='fit'&&!count||key==='joinFrame'&&!groupFrameJoinTarget()||key==='detachFrame'&&!canDetachGroupFrameSelection())continue;
-    const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
-    b.onclick=()=>{const valid=sameContext();closeGraphMenu();$('#canvas').focus({preventScroll:true});if(valid)action();};menu.append(b);
+  ]];
+  for(const rows of groups){
+    let first=true;
+    for(const[key,label,shortcut,enabled,action]of rows){
+      if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length||['frame','arrange'].includes(key)&&count<2||key==='fit'&&!count||key==='joinFrame'&&!groupFrameJoinTarget()||key==='detachFrame'&&!canDetachGroupFrameSelection())continue;
+      if(first){if(menu.childElementCount)menu.append(el('div',{role:'separator',class:'popup-separator'}));first=false;}
+      const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
+      b.onclick=()=>{const valid=sameContext();closeGraphMenu();$('#canvas').focus({preventScroll:true});if(valid)action();};menu.append(b);
+    }
   }
   const arrange=menu.querySelector('[data-edit="arrange"]'),submenu=el('div',{id:'grapharrangesubmenu',class:'popup-menu graph-menu-submenu',role:'menu','aria-label':t('arrange.title'),hidden:''});
   const hideSubmenu=(focus=false)=>{submenu.hidden=true;arrange?.setAttribute('aria-expanded','false');if(focus)arrange?.focus({preventScroll:true});};

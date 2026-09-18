@@ -12,7 +12,7 @@ const[source,stateFile,folder]=process.argv.slice(2);
       graph.stages.pixel={nodes:[a,b,testNode('output','pixel_out',1000,150)],edges:[]};selection=new Set(['a','b']);selected='a';past=[];future=[];rememberSavedGraph(graph);render();fit();
     });await settle();const before=await page.evaluate(()=>JSON.stringify({graph,past,future,selection:[...selection]}));await open();
     const items=await page.locator('#grapheditmenu [data-edit]').evaluateAll(es=>es.map(e=>({action:e.dataset.edit,icons:e.querySelectorAll('svg').length,hidden:e.querySelector('svg')?.getAttribute('aria-hidden'),label:e.querySelector('.graph-menu-label').textContent,shortcut:e.querySelector(':scope>small').textContent})));
-    assert.deepEqual(items.map(i=>i.action),['add','collapse','expand','copy','paste','duplicate','frame','arrange','fit','group','delete']);
+    assert.deepEqual(items.map(i=>i.action),['add','copy','paste','duplicate','collapse','expand','arrange','fit','frame','group','delete']);
     for(const item of items){assert.equal(item.icons,1);assert.equal(item.hidden,'true');assert.ok(item.label);}
     assert.equal(items.find(i=>i.action==='copy').shortcut,'Ctrl＋C');assert.ok(!items[0].label.startsWith('＋'));
     for(const [action,id] of Object.entries({copy:'graphcopy',paste:'graphpaste',group:'graphgroup',delete:'graphdelete',collapse:'graphcollapseselection',expand:'graphexpandselection'}))assert.equal(await page.locator(`#grapheditmenu [data-edit="${action}"] svg`).innerHTML(),await page.locator(`#${id} svg`).innerHTML());

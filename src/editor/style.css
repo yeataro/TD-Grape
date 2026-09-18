@@ -1621,7 +1621,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 /* A shared surface for dropdowns, upward menus and context actions. */
 :root{--popup-font-size:14px;--popup-row-height:32px;--popup-radius:10px;--popup-row-radius:6px}
-.popup-menu .popup-separator{height:0;margin:4px 8px;border-top:1px solid var(--line);opacity:.65}
+:is(.popup-menu,#grapheditmenu) .popup-separator{height:0;margin:4px 8px;border-top:1px solid var(--line);opacity:.65}
 :root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices){padding:4px;border:1px solid var(--line);border-radius:var(--popup-radius);background:var(--ui-surface,var(--ui-tone-menu));color:var(--ui-text,var(--ui-tone-text));box-shadow:0 8px 24px #0004;font-size:var(--popup-font-size)}
 :root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices) button{min-height:var(--popup-row-height);font-size:var(--popup-font-size);line-height:20px;border:0;border-radius:var(--popup-row-radius);background:transparent;color:inherit}
 :root :is(.popup-menu,#numericpresets,#canvaszoommenu,#grapheditmenu,#layoutmenu,#shaderchoices) button:is(:hover,:focus-visible):not(:disabled){background:var(--ui-hover,var(--ui-tone-menu-hover));outline:none}
