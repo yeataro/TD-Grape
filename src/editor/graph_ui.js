@@ -1999,9 +1999,11 @@ function pasteGraphSelection(text,position=null){
 }
 function closeGraphMenu(){graphEditMenu?.remove();graphEditMenu=null;}
 function graphMenuIcon(action){
-  const buttonId={copy:'graphcopy',paste:'graphpaste',group:'graphgroup',delete:'graphdelete',collapse:'graphcollapseselection',expand:'graphexpandselection',arrange:'grapharrange',fit:'graphfitselection',frame:'graphframe',joinFrame:'graphjoinframe',detachFrame:'graphdetachframe'}[action];
-  const existing=buttonId&&document.getElementById(buttonId)?.querySelector('svg');
+  const buttonId={copy:'graphcopy',paste:'graphpaste',group:'graphgroup',delete:'graphdelete',collapse:'graphcollapseselection',expand:'graphexpandselection',arrange:'grapharrange',fit:'graphfitselection',frame:'graphframe',joinFrame:'graphjoinframe',detachFrame:'graphdetachframe',fullscreen:'uifullscreen'}[action];
+  const existing=buttonId&&document.getElementById(buttonId)?.querySelector('svg:not([hidden])');
   if(existing)return existing.cloneNode(true);
+  if(action==='fitAll')return selectionIcon('M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5');
+  if(action==='focus')return selectionIcon('M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M9 9 3 3m12 6 6-6M9 15l-6 6m12-6 6 6');
   if(action==='duplicate'){
     const icon=document.getElementById('graphcopy').querySelector('svg').cloneNode(true);
     const plus=document.createElementNS(icon.namespaceURI,'path');plus.setAttribute('d','M11 14h6m-3-3v6');icon.append(plus);return icon;
@@ -2026,12 +2028,16 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
     ['collapse',t('node.collapse'),'',!editorMutationBlocked()&&canCollapse,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),true)],
     ['expand',t('node.expand'),'',!editorMutationBlocked()&&canExpand,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),false)],
     ['arrange',t('arrange.title'),'›',!editorMutationBlocked()&&count>1,()=>{}],
-    ['fit',t('action.fitSelection'),'',count>0,fitSelection],
   ],[
     ['frame',t('frame.create'),shortcutLabel('groupFrame'),!editorMutationBlocked()&&canCreateGroupFrame(),createGroupFrame],
     ['joinFrame',t('frame.join'),shortcutLabel('joinFrame'),!editorMutationBlocked(),joinGroupFrameSelection],
     ['detachFrame',t('frame.detach'),shortcutLabel('detachFrame'),!editorMutationBlocked(),detachGroupFrameSelection],
     ['group',t('function.group'),shortcutLabel('group'),!readonly&&count>0,groupSelection],
+  ],[
+    ['fitAll',t('action.fit'),shortcutLabel('fit'),true,()=>$('#fit').click()],
+    ['fit',t('action.fitSelection'),'',count>0,fitSelection],
+    ['focus',t(graphFocused?'view.restoreLayout':'view.graphFocus'),'',true,()=>$('#graphfocus').click()],
+    ['fullscreen',$('#uifullscreen').title,'',!$('#uifullscreen').disabled,()=>$('#uifullscreen').click()],
   ],[
     ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
   ]];
@@ -2040,7 +2046,9 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
     for(const[key,label,shortcut,enabled,action]of rows){
       if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length||['frame','arrange'].includes(key)&&count<2||key==='fit'&&!count||key==='joinFrame'&&!groupFrameJoinTarget()||key==='detachFrame'&&!canDetachGroupFrameSelection())continue;
       if(first){if(menu.childElementCount)menu.append(el('div',{role:'separator',class:'popup-separator'}));first=false;}
-      const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
+      const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));
+      if(key!=='fit')decorateShortcutButton(b,key==='fitAll'?'fit':key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
+      if(key==='focus'||key==='fullscreen'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(key==='focus'?graphFocused:!!document.fullscreenElement));}
       b.onclick=()=>{const valid=sameContext();closeGraphMenu();$('#canvas').focus({preventScroll:true});if(valid)action();};menu.append(b);
     }
   }
