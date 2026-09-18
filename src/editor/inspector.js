@@ -158,7 +158,7 @@ function installValueLadder(entry,commit){
     const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!readonly;
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
     if(e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
-    const initial=entry.value,initialValue=Number(initial),steps=[10,1,.1,.01,.001];
+    const initial=entry.value,initialValue=Number(initial),steps=entry.step==='1'?[100,10,1]:[10,1,.1,.01,.001];
     const popup=el('div',{id:'valueladder',role:'tooltip'}),rows=el('div',{class:'ladder-rows'});
     const readout=el('div',{class:'ladder-readout'}),number=el('output',{class:'ladder-value'}),increment=el('span',{class:'ladder-step'});
     readout.append(number,increment);
@@ -289,7 +289,7 @@ function updateUniformFields(forceKeys=new Set()){
   for(const section of document.querySelectorAll('.uniform-live')){
     const id=section.dataset.declaration,row=liveParameterRow(id);
     const ready=!!row&&uniformSnapshot.revision===revision&&!dirty&&!submitBusy&&!editorMutationBlocked();
-    for(const entry of section.querySelectorAll('input[data-component]')){
+    for(const entry of section.querySelectorAll('[data-component]')){
       const index=Number(entry.dataset.component),item=row?.components[index],key=id+':'+index,pending=uniformPending.has(key);
       entry.disabled=readonly||!ready||!item?.writable||pending||uniformReadbacks.has(key);
       if(item&&!entry.numericGestureActive&&(document.activeElement!==entry||forceKeys.has(key))&&!pending){
@@ -364,7 +364,7 @@ function liveUniformFields(decl){
   const components=texture?['']:Array.isArray(decl.value)?decl.value:[decl.value],box=el('div',{class:'components'+(components.length===1?' scalar':'')});
   box.style.setProperty('--component-count',components.length);
   components.forEach((value,index)=>{
-    const entry=input('',next=>writeUniformInput(entry,next),texture?'text':'number');if(texture){entry.dataset.texture='true';entry.placeholder=t('texture.currentEmpty');}
+    const commit=next=>writeUniformInput(entry,next),entry=texture?input('',commit):typedScalarInput('',typeFamily(decl.type),commit);if(texture){entry.dataset.texture='true';entry.placeholder=t('texture.currentEmpty');}
     entry.dataset.component=index;entry.disabled=true;
     entry.setAttribute('aria-label',t(texture?'texture.current':'uniform.current')+(components.length===1?'':' '+'XYZW'[index]));
     const row=field('',entry),label=el('span',{class:'component-label','aria-hidden':'true'},components.length===1?decl.type:'XYZW'[index]);
@@ -378,7 +378,7 @@ function defaultInput(n,port,type){
   if(isResourceType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
   const key=definition(n)?.key;
-  if(['combine','replace'].includes(key)&&port!=='value'){const start='xyzw'.indexOf(port),values=(n.params.components||[0,0,0,0]).slice(start,start+typeComponents(type));return type==='float'?values[0]:values;}
+  if(['combine','replace'].includes(key)&&port!=='value'){const start='xyzw'.indexOf(port),values=(n.params.components||[0,0,0,0]).slice(start,start+typeComponents(type));return shapedValue(values,type);}
   if(key==='replace'&&port==='value')return null;
   if(key==='function_call')return clone(FunctionModel.find(graph,n.params.functionId)?.inputs.find(p=>p.id===port)?.default??0);
   if(key==='function_output')return clone(currentFunction()?.outputs.find(p=>p.id===port)?.default??0);
@@ -420,15 +420,29 @@ function pixelBufferNames(box,n){
   box.append(group);
 }
 
-function numbers(value,label,callback,disabled=false,labels='XYZW'){
+// Shared scalar controls keep graph defaults, declarations and live TD values
+// consistent. Integer parsing stays exact through the complete 32-bit range.
+function typedScalarInput(value,family,commit){
+  if(family==='bool'){
+    const entry=select([['false','false'],['true','true']],String(!!value),next=>commit(next==='true'));
+    entry.setSyncedValue=next=>{entry.value=String(!!next);};return entry;
+  }
+  const entry=input(value,commit,'number');entry.validateValue=next=>validScalarValue(next,family);
+  if(family==='int'||family==='uint'){
+    entry.step='1';entry.min=family==='uint'?'0':'-2147483648';entry.max=family==='uint'?'4294967295':'2147483647';
+    entry.refreshNumericSlider?.();
+  }
+  return entry;
+}
+function numbers(value,label,callback,disabled=false,labels='XYZW',type=null){
   const values=Array.isArray(value)?value:[value],box=el('div',{class:'components'+(values.length===1?' scalar':'')});
+  const family=type?typeFamily(type):typeof values[0]==='boolean'?'bool':'float';
   box.style.setProperty('--component-count',values.length);
   values.forEach((v,index)=>{
-    const entry=input(v,next=>{
-      if(!Number.isFinite(next))return;
+    const entry=typedScalarInput(v,family,next=>{
       const updated=values.slice();updated[index]=next;
       callback(Array.isArray(value)?updated:next);
-    },'number');
+    });
     entry.setAttribute('aria-label',label+(values.length>1?' '+labels[index]:''));
     entry.disabled=disabled||readonly;
     const row=field('',entry),caption=el('span',{class:'component-label','aria-hidden':'true'},values.length>1?labels[index]:label);
@@ -495,7 +509,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW'){
   const compact=el('div',{class:'parameter-value-controls'}),entries=[];let syncing=false;
   const row=parameterControlRow(label,compact,type);row.classList.add('parameter-value-row');box.append(row);
   if(key!=='$value')applyPortLabelColorHint(row.querySelector('.parameter-value-label'),n,'inputs',key);
-  const scalarType=/^[iu]vec/.test(type)?(type[0]==='u'?'uint':'int'):/^bvec/.test(type)?'bool':vector?'float':type;
+  const scalarType=typeFamily(type)||'float';
   const own=entry=>!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n);
   const currentValues=()=>{const value=read();return Array.isArray(value)?value:[value];};
   function syncPreview(entry,index){
@@ -813,7 +827,7 @@ function declarationFields(box,decl,settings=false,{live=true}={}){
   }else{
     if(live)box.append(liveUniformFields(decl));
     box.append(el('h4',{},t('uniform.default')));
-    box.append(numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value)));
+    box.append(numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type));
     const control=el('button',{},t('controls.fromUniform'));control.onclick=()=>openUniformControl(decl.id);box.append(control);
   }
 }
@@ -883,7 +897,7 @@ function glslCodeInspector(box,n){
       const row=el('div',{class:'code-port','data-code-port':p.id});
       const entry=input(p.name,value=>change(()=>CustomGLSL.update(n,direction,p.id,{name:value})));
       entry.maxLength=48;entry.disabled=readonly;entry.setAttribute('aria-label',t('code.portName'));entry.title=t('code.renameHint');
-      const types=direction==='inputs'?interfaceTypes():numericTypes();
+      const types=direction==='inputs'?interfaceTypes():valueTypes();
       const type=select(types.map(type=>[type,type]),p.type,value=>change(()=>CustomGLSL.update(n,direction,p.id,{type:value}),{typeChange:true}));
       type.disabled=readonly;type.setAttribute('aria-label',t('node.type'));
       row.append(entry,type);
@@ -933,7 +947,7 @@ function nodeTypeSelector(n,d){
   const composed=['combine','vector','replace'].includes(d.key),automatic=n.ui?.typeMode==='auto',auto=supportsAutoType(d);
   const control=select(auto?[['auto',t('type.auto')+' · '+n.params.type],...options]:options,auto&&automatic?'auto':n.params.type,value=>{
     if(auto)setMathType(n,value);
-    else change(()=>{if(composed)n.params.type=value;else{const old=clone(n.inputValues||{});n.params.type=value;for(const [port,type]of Object.entries(ports(n,'inputs'))){if(Object.hasOwn(old,port))n.inputValues[port]=shapedValue(old[port],type);}}},{typeChange:true});
+    else change(()=>{const old=clone(n.inputValues||{});n.params.type=value;normalizeNodeValues(n,d);for(const [port,type]of Object.entries(ports(n,'inputs'))){if(Object.hasOwn(old,port))n.inputValues[port]=shapedValue(old[port],type);}},{typeChange:true});
   });control.disabled=readonly;control.title=t(auto?'type.operation':composed?'vector.outputType':'node.type');
   if(isVectorOperation(d))control.dataset.vectorType=n.id;else if(auto)control.dataset.mathType=n.id;
   return control;
@@ -941,12 +955,24 @@ function nodeTypeSelector(n,d){
 function nodePrimarySelector(n,d){
   if(!d)return null;let control=null;
   if(d.key==='compare')control=compareOperatorSelector(n);
+  else if(d.key==='convert')control=convertTypeSelector(n,'toType');
   else if(n.params.type)control=nodeTypeSelector(n,d);
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
   else if(n.params.declarationId){const source=nodeSourceDeclaration(n);if(source)control=select(graph.declarations.filter(item=>item.kind===source.kind).map(item=>[item.id,item.name]),source.id,value=>change(()=>n.params.declarationId=value));}
   else if(n.params.inputId)control=select(topInputsView().map(item=>[item.id,item.name]),n.params.inputId,value=>change(()=>n.params.inputId=value));
   if(!control)return null;control.classList.add('node-primary-selector');control.dataset.nodeSelector=n.id;control.disabled=readonly;control.setAttribute('aria-label',control.title||t('node.declaration'));
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
+}
+function convertTypeSelector(n,parameter){
+  const options=valueTypes().filter(type=>parameter==='fromType'||typeComponents(n.params.fromType)===1||typeComponents(type)===typeComponents(n.params.fromType));
+  const control=select(options.map(type=>[type,type]),n.params[parameter],type=>change(()=>{
+    n.params[parameter]=type;
+    if(parameter==='fromType'){
+      if(typeComponents(type)>1&&typeComponents(n.params.toType)!==typeComponents(type))n.params.toType=typeForShape(typeFamily(n.params.toType),typeComponents(type));
+      if(Object.hasOwn(n.inputValues||{},'value'))n.inputValues.value=shapedValue(n.inputValues.value,type);
+    }
+  },{typeChange:true}));
+  control.dataset.convertType=parameter;control.disabled=readonly;control.title=t(parameter==='fromType'?'convert.fromType':'convert.toType');return control;
 }
 function compareOperatorSelector(n){
   const control=select([['>','>'],['>=','≥'],['<','<'],['<=','≤'],['==','=='],['!=','!=']],n.params.operator,value=>{
@@ -997,11 +1023,20 @@ function queueInlineValueRender(){
 }
 function inlineNumericFields(n,port,value,write,labels='XYZW'){
   const values=Array.isArray(value)?value:[value],box=el('span',{class:'node-inline-values'});
-  const type=port==='$value'?Object.values(ports(n,'outputs'))[0]:ports(n,'inputs')[port],integer=['int','uint'].includes(type);
+  const type=port==='$value'?Object.values(ports(n,'outputs'))[0]:ports(n,'inputs')[port],family=typeFamily(type),integer=['int','uint'].includes(family);
   values.forEach((v,index)=>{
-    const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:''),entry=el('input',{type:'number',step:integer?'1':'any','aria-label':label});
+    const label=(port==='$value'?t('declaration.value'):portLabel(n,'inputs',port))+(values.length>1?' '+labels[index]:'');
+    if(family==='bool'){
+      const entry=typedScalarInput(v,family,next=>{if(!editorMutationBlocked()&&entry.isConnected&&current().nodes.includes(n))change(()=>write(index,next));});
+      entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.setAttribute('aria-label',label);
+      applyValueComponentHint(entry,n,port,index,values.length>1,labels);
+      for(const event of ['pointerdown','click','dblclick','keydown'])entry.addEventListener(event,e=>e.stopPropagation());
+      if(values.length>1){const component=el('label',{class:'node-inline-component'}),caption=el('span',{'aria-hidden':'true'},labels[index]);applyValueComponentHint(caption,n,port,index,true,labels);component.append(caption,entry);box.append(component);}else box.append(entry);
+      return;
+    }
+    const entry=el('input',{type:'number',step:integer?'1':'any','aria-label':label});
     entry.dataset.inlineNode=n.id;entry.dataset.inlinePort=port;entry.dataset.component=String(index);entry.disabled=readonly;entry.value=String(v);
-    if(integer){entry.min=type==='uint'?'0':'-2147483648';entry.max=type==='uint'?'4294967295':'2147483647';}
+    if(integer){entry.min=family==='uint'?'0':'-2147483648';entry.max=family==='uint'?'4294967295':'2147483647';}
     applyValueComponentHint(entry,n,port,index,values.length>1,labels);
     let committed=entry.value;
     entry.hasPendingEdit=()=>entry.value!==committed;
@@ -1060,13 +1095,13 @@ function nodeInlineValues(n,port){
   },key==='replace'?vectorNames(n):'XYZW');
 }
 function nodeFixedValueEditor(n){
-  const key=definition(n)?.key;if(!['float','color','vector','vec2','vec3','vec4'].includes(key))return null;
+  const key=definition(n)?.key;if(!['scalar','float','color','vector','vec2','vec3','vec4'].includes(key))return null;
   const isVector=key==='vector',value=isVector?(n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)):n.params.value;
   const fields=inlineNumericFields(n,'$value',value,(index,next)=>{
     if(isVector){n.params.components||=[0,0,0,0];n.params.components[index]=next;}
     else if(Array.isArray(n.params.value)){n.params.value=n.params.value.slice();n.params.value[index]=next;}else n.params.value=next;
   },key==='color'?'RGBA':isVector?vectorNames(n):'XYZW');fields.classList.add('node-fixed-values');
-  if(key==='float')return fields;
+  if(key==='float'||key==='scalar')return fields;
   const expanded=n.ui?.componentsExpanded===true,box=el('div',{class:'node-manual-value-group'+(expanded?' expanded':''),'data-manual-values':n.id}),toggle=el('button',{class:'node-values-toggle',type:'button','aria-expanded':String(expanded),'aria-label':t('node.expandValues'),title:t('node.expandValues'),'data-value-expand':n.id},expanded?'▾':'▸');
   toggle.onpointerdown=e=>e.stopPropagation();toggle.ondblclick=e=>e.stopPropagation();toggle.onclick=e=>{e.stopPropagation();change(()=>{n.ui||={};n.ui.componentsExpanded=!expanded;},{localize:false});};box.append(toggle,fields);
   if(key==='color'){box.classList.add('node-color-values');for(const entry of fields.querySelectorAll('input')){entry.title=entry.getAttribute('aria-label');entry.dataset.colorComponent='rgba'[Number(entry.dataset.component)];}}
@@ -1123,6 +1158,8 @@ function inspector(){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
       const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
+    if(d.key==='scalar')box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
+    if(d.key==='convert')for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
     if(d.key==='compare')box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
     pixelBufferFields(box,n);
     if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(ordinary?parameterControlRow('',split):split);}
@@ -1162,7 +1199,7 @@ function inspector(){
       const typeInfo=inputTypeDisplay(n,port);
       const label=portLabel(n,'inputs',port),heading=el('h4',{class:'input-heading'});heading.append(el('span',ordinary?{class:'parameter-value-label',title:label}:{},label),el('small',ordinary?{class:'parameter-value-type',title:typeInfo.text}:{},typeInfo.text));section.append(heading);
       applyPortLabelColorHint(heading.firstElementChild,n,'inputs',port);
-      if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(hint(t(typeInfo.conversion==='splat'?'type.splat':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target),'conversion-hint'));
+      if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(hint(t(typeInfo.conversion==='splat'?'type.splat':typeInfo.conversion==='cast'?'type.cast':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target),'conversion-hint'));
       const value=defaultInput(n,port,type);
       if(isResourceType(type)){
         if(!connection)section.append(hint(t('sampler.fallbackHint')));
@@ -1176,7 +1213,7 @@ function inspector(){
           heading.remove();section.prepend(parameterValueRow(n,port,portLabel(n,'inputs',port),typeInfo.text,()=>defaultInput(n,port,type),(index,next)=>{
             const old=defaultInput(n,port,type);if(Array.isArray(old)){old[index]=next;setNodeInputValue(n,port,old);}else setNodeInputValue(n,port,next);
           },port==='color'?'RGBA':isVectorOperation(d)?vectorNames(n):'XYZW'));
-        }else {const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>setNodeInputValue(n,port,next)),false,port==='color'?'RGBA':'XYZW');values.classList.add('input-values');section.append(values);}
+        }else {const values=numbers(value,portLabel(n,'inputs',port),next=>change(()=>setNodeInputValue(n,port,next)),false,port==='color'?'RGBA':'XYZW',type);values.classList.add('input-values');section.append(values);}
       }
       if(connection){
         const source=current().nodes.find(other=>other.id===connection.from[0]),connectionRow=el('div',{class:'connection-row'});
@@ -1192,8 +1229,8 @@ function inspector(){
   }else{
     if(d.key==='comment')noteAppearanceSettings(box,n);
     if(n.params.type&&!supportsAutoType(d)&&!isVectorOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
-    if(isVectorOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],...(n.params.type==='vec2'?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
-    if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','vector','float','vec2','vec3','vec4','color'].includes(d.key)){
+    if(isVectorOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],...(typeComponents(n.params.type)===2?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
+    if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','scalar','vector','float','vec2','vec3','vec4','color'].includes(d.key)){
       const requirement=el('input',{type:'checkbox','data-require-constant':n.id});requirement.checked=!!n.params.requireConstant;requirement.disabled=readonly;
       requirement.onchange=()=>change(()=>{if(requirement.checked)n.params.requireConstant=true;else delete n.params.requireConstant;});
       const row=field(t('vector.requireConstant'),requirement);row.classList.add('constant-requirement');row.title=t('vector.constantHint');box.append(row,el('p',{class:'muted'},t('vector.constantHint')));
@@ -1770,10 +1807,7 @@ function renderNativeSourceValues(){
   for(const item of document.querySelectorAll('[data-input-create]'))item.disabled=editorMutationBlocked()||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16);
   for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
 }
-function specValueField(value,type,commit){
-  const entry=type==='bool'?select([['false','false'],['true','true']],String(!!value),v=>commit(v==='true')):input(value,commit,'number');
-  if(['int','uint'].includes(type)){entry.step='1';entry.min=type==='uint'?'0':'-2147483648';entry.max=type==='uint'?'4294967295':'2147483647';}return field(t('declaration.value'),entry);
-}
+function specValueField(value,type,commit){return field(t('declaration.value'),typedScalarInput(value,typeFamily(type),commit));}
 function nativeInputFields(box,decl){
   const row=nativeSourceRows().find(r=>r.id===decl.id);
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
@@ -1784,11 +1818,14 @@ function nativeInputFields(box,decl){
     const values=el('div',{class:'source-components'});
     row.components.forEach((item,index)=>{
       const commit=value=>nativeSourceRequest('source-value',{id:decl.id,component:index,value,expected:entry.sourceExpected});
-      const entry=decl.type==='bool'?select([['false','false'],['true','true']],String(!!item.value),value=>commit(value==='true')):input(item.value,commit,'number');
-      if(decl.type==='bool')entry.setSyncedValue=value=>{entry.value=String(!!value);};else if(['int','uint'].includes(decl.type)){entry.step='1';entry.min=decl.type==='uint'?'0':'-2147483648';entry.max=decl.type==='uint'?'4294967295':'2147483647';}
+      const entry=typedScalarInput(item.value,typeFamily(decl.type),commit);
       entry.dataset.sourceComponent=index;entry.sourceExpected=clone(item);entry.setAttribute('aria-label',decl.name+' '+'XYZW'[index]);
       const f=field('XYZW'[index],entry);if(index>=count)f.classList.add('source-dormant');values.append(f);
     });card.append(values);
+    if(decl.kind==='uniform'&&['int','uint'].includes(typeFamily(decl.type))){
+      card.append(el('p',{class:'muted'},t('inputs.integerUniformHint')));
+      const maximum=nativeSourceSnapshot?.uniformLimits?.uintMaximum;if(typeFamily(decl.type)==='uint'&&Number.isFinite(maximum)&&maximum<4294967295)card.append(el('p',{class:'muted'},t('inputs.integerUniformMaximum').replace('{value}',String(maximum))));
+    }
     if(decl.kind!=='spec_constant'){const drivers=el('details',{class:'input-drivers'});drivers.append(el('summary',{},t('inputs.drivers')));
     row.components.forEach((item,index)=>{
       const line=el('div',{class:'source-driver'}),expr=input(item.expression||'',expression=>nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression,expected:expr.sourceExpected}));
@@ -1809,9 +1846,9 @@ function inputSourceInspector(box,decl){
     else changeDeclaration(()=>decl.name=name);
   });rename.dataset.sourceName='true';rename.dataset.inputName=decl.id;rename.disabled=readonly||(['uniform','spec_constant'].includes(decl.kind)&&row&&!row.pending&&(!sourceReady()||!row.nameWritable));box.append(field(t('declaration.name'),rename));
   if(decl.kind==='uniform'){
-    box.append(field(t('node.type'),select(['float','vec2','vec3','vec4'].map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),el('small',{class:'muted'},row?.sequence==='color'?t('inputs.nativeColor'):t('inputs.nativeVector')));
+    box.append(field(t('node.type'),select(valueTypes().map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),el('small',{class:'muted'},row?.sequence==='color'?t('inputs.nativeColor'):t('inputs.nativeVector')));
     nativeInputFields(box,decl);
-    const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value)));box.append(defaults);
+    const defaults=el('details',{class:'input-defaults'});defaults.append(el('summary',{},t('uniform.default')),numbers(decl.value,t('uniform.default'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type));box.append(defaults);
     const custom=el('button',{'data-source-custom':decl.id,class:'wide'},t('controls.fromUniform'));custom.onclick=()=>openUniformControl(decl.id);box.append(custom);
   }else if(decl.kind==='spec_constant'){
     box.append(field(t('node.type'),select((typeContract?.specConstantTypes||['int','uint','bool','float']).map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=specDefaultValue(decl.value,value);}))),el('small',{class:'muted'},'constant_id = '+decl.constantId));
@@ -1946,7 +1983,7 @@ function renderNativeSources(){
 function installNativeSources(){
   $('#inputsearch').oninput=renderNativeSources;
   $('#closesourcecreate').onclick=()=>$('#sourcecreatedialog').close();
-  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):['float','vec2','vec3','vec4'];$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
     e.preventDefault();if(readonly)return;const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value,existing=inputPresetSource(kind);
     if(existing){finishInputCreate(kind,existing.id);return;}

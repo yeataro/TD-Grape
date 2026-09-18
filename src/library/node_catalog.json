@@ -1,9 +1,90 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.84",
+  "catalogVersion": "0.8.85",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
+    {
+      "definition": {
+        "key": "scalar",
+        "label": "Scalar",
+        "inputs": {},
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float",
+          "value": 0
+        },
+        "descriptionKey": "help.scalar",
+        "definitionUuid": "sgrape.builtin.scalar",
+        "revisionHash": "5349f6d53a10051ed36a17d049c8830642f2c1c5ae76939c741f1cc85aa952b9"
+      },
+      "emitter": {
+        "id": "scalar",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "float",
+          "int",
+          "uint",
+          "bool",
+          "integer",
+          "unsigned",
+          "boolean",
+          "value"
+        ],
+        "glslName": "scalar",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "convert",
+        "label": "Convert",
+        "inputs": {
+          "value": "float"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "fromType": "float",
+          "toType": "int"
+        },
+        "descriptionKey": "help.convert",
+        "definitionUuid": "sgrape.builtin.convert",
+        "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc"
+      },
+      "emitter": {
+        "id": "convert",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "cast",
+          "constructor",
+          "convert type",
+          "float to int",
+          "int to float"
+        ],
+        "glslName": "convert",
+        "secondaryCategories": []
+      }
+    },
     {
       "definition": {
         "key": "compare",

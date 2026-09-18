@@ -10,9 +10,13 @@ import math
 import re
 import struct
 import uuid
+from contextlib import nullcontext
 
 STORE = 'grapeNativeUniformsV1'
-TYPES = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
+# Native vector rows contain up to four scalar components. Their GLSL family is
+# declared by the graph, independent of the native page's numeric widgets.
+TYPES = {name: count for scalar, prefix in (('float','vec'), ('int','ivec'), ('uint','uvec'), ('bool','bvec'))
+         for count in range(1,5) for name in (scalar if count == 1 else prefix+str(count),)}
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
 SOURCE_KINDS = ('uniform', 'spec_constant')
 PRESETS = {'time': 'me.time.seconds', 'frame': 'me.time.frame',
@@ -43,8 +47,69 @@ def spec_native_limits(kind):
     return {'nonnegativeIntegers': True, 'integerFloat32Exact': kind == 'mat'}
 
 
+def uniform_native_limits(kind='top'):
+    """Vectors transport observed on TD 2025.32820, TOP and MAT."""
+    return {'integerFloat32Exact': True, 'uintMaximum':2147483648 if kind=='mat' else 4294967295, 'booleanValues': [0, 1]}
+
+
+def source_family(ty):
+    if ty not in TYPES: raise RuntimeError('Unsupported native source type.')
+    return 'bool' if ty == 'bool' or ty.startswith('bvec') else 'uint' if ty == 'uint' or ty.startswith('uvec') else 'int' if ty == 'int' or ty.startswith('ivec') else 'float'
+
+
+def validate_uniform_component(declaration, value, role='value', kind='top'):
+    """Check transport without reducing the GLSL type's range or changing values."""
+    family = source_family(declaration['type'])
+    name = declaration.get('name', 'Uniform')
+    if family == 'bool':
+        if not isinstance(value, (bool, int, float)) or value not in (0, 1):
+            raise RuntimeError('Uniform '+name+': native boolean '+role+' must be 0 or 1.')
+        return
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise RuntimeError('Uniform '+name+': native '+role+' must be a finite number.')
+    if family == 'float': return
+    low, high = (-2147483648, 2147483647) if family == 'int' else (0, 4294967295)
+    if int(value) != value or not low <= value <= high:
+        raise RuntimeError('Uniform '+name+': native '+role+' must be a whole '+family+' value from '+str(low)+' to '+str(high)+'.')
+    if family == 'uint' and kind == 'mat' and value > 2147483648:
+        raise RuntimeError('Uniform '+name+': this TD GLSL MAT Vectors transport cannot deliver uint values above 2147483648 correctly. Its previous value was preserved; Graph Constants retain the full uint range.')
+    if struct.unpack('f', struct.pack('f', value))[0] != value:
+        raise RuntimeError('Uniform '+name+': TD Vectors requires integers exactly representable in float32. This value loses precision during GPU upload; its previous value was preserved. Graph Constants retain the full 32-bit range.')
+
+
+def validate_uniform_native(declaration, value, role='value', kind='top'):
+    values = [value] if source_components(declaration) == 1 else value
+    if not isinstance(values, (list, tuple)) or len(values) != source_components(declaration):
+        raise RuntimeError('Uniform '+declaration.get('name', '')+': invalid native component count.')
+    for component in values: validate_uniform_component(declaration, component, role, kind)
+
+
 def native_kind(runtime, comp, graph=None):
     return runtime.shader_kind(comp) if hasattr(runtime, 'shader_kind') else (graph or {}).get('target', 'mat')
+
+
+def source_graph(runtime, comp):
+    # Native TD Undo runs after the HTTP shader context has already exited.
+    # Always resolve metadata against the original Shader, never the manager's
+    # current target or a declaration captured before a type change.
+    with runtime.shader_context(comp) if hasattr(runtime, 'shader_context') else nullcontext():
+        return runtime.state()['graph']
+
+
+def validate_source_value(runtime, comp, ident, value, index=0):
+    graph = source_graph(runtime, comp)
+    declaration = next((d for d in graph['declarations'] if d['id'] == ident and d.get('kind') in SOURCE_KINDS), None)
+    if not declaration or declaration.get('sourceMissing') or not 0 <= index < source_components(declaration):
+        raise RuntimeError('The native source or its component is no longer available.')
+    kind = native_kind(runtime, comp, graph)
+    if declaration['kind'] == 'uniform':
+        validate_uniform_component(declaration, value, kind=kind)
+    elif declaration['type'] == 'bool':
+        validate_uniform_component(declaration, value, kind=kind)
+    elif declaration['type'] == 'float':
+        runtime.core().number(value)
+    else:
+        validate_spec_native(declaration, value, kind)
 
 
 def validate_spec_native(declaration, value, kind, role='value'):
@@ -213,9 +278,20 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
     if comp.op('graph') and comp.op('graph').text:
         old_graph = {d['id']: d for d in json.loads(comp.op('graph').text).get('declarations', [])}
     declarations = [d for d in graph['declarations'] if d['kind'] in SOURCE_KINDS]
+    kind = native_kind(runtime, comp, graph)
     # Validate the whole batch before creating/renaming any native row. Defaults
     # must also travel safely when this graph is opened in a fresh Shader.
     for decl in declarations:
+        if decl['kind'] == 'uniform' and not decl.get('sourceMissing'):
+            validate_uniform_native(decl, decl['value'], 'default', kind)
+            source = locate(original, original_registry.get(decl['id']))
+            if source is None:
+                matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] != 'const']
+                source = matches[0] if len(matches) == 1 else None
+            if source:
+                for component in source['components'][:source_components(decl)]:
+                    validate_uniform_component(decl, component['value'], kind=kind)
+            elif decl['id'] in (preserve or {}): validate_uniform_native(decl, preserve[decl['id']], kind=kind)
         if decl['kind'] != 'spec_constant' or decl.get('sourceMissing'): continue
         kind = native_kind(runtime, comp, graph)
         validate_spec_native(decl, decl['value'], kind, 'default')
@@ -319,6 +395,10 @@ def snapshot(runtime):
         if decl['kind']=='spec_constant' and row:
             try: validate_spec_native(decl, row['components'][0]['value'], kind)
             except RuntimeError as exc: issues.append({'id':decl['id'], 'code':'spec-native-value', 'message':str(exc)})
+        elif row:
+            try:
+                for component in row['components'][:source_components(decl)]:validate_uniform_component(decl, component['value'], kind=kind)
+            except RuntimeError as exc:issues.append({'id':decl['id'], 'code':'uniform-native-value', 'message':str(exc)})
         destination = spec_rows if decl['kind']=='spec_constant' else rows
         destination.append({'id': decl['id'], 'kind':decl['kind'], 'name': decl['name'], 'type': decl['type'],
                      **({'constantId':decl['constantId']} if decl['kind']=='spec_constant' else {}),
@@ -330,7 +410,7 @@ def snapshot(runtime):
                      'expected': edit_token(row) if row else None})
     return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows, 'specConstants': spec_rows,
             'declarations': current['graph']['declarations'], 'graph': current['graph'], 'sourceChanged': current.get('sourceChanged', False),
-            'issues': issues, 'specConstantLimits': spec_native_limits(kind), 'enabled': comp.fetch(STORE, None) is not None}
+            'issues': issues, 'specConstantLimits': spec_native_limits(kind), 'uniformLimits': uniform_native_limits(kind), 'enabled': comp.fetch(STORE, None) is not None}
 
 
 def write_value(runtime, body):
@@ -347,7 +427,10 @@ def write_value(runtime, body):
     if rows[0].get('kind')=='spec_constant':
         runtime.core().literal(value, rows[0]['type'])
         validate_spec_native(rows[0], value, native_kind(runtime, runtime.target(), seen['graph']))
-    else:runtime.core().number(value)
+    else:
+        family = runtime.core().TYPE_DESCRIPTORS[rows[0]['type']]['family']
+        runtime.core().literal(value, family)
+        validate_uniform_component(rows[0], value, kind=native_kind(runtime, runtime.target(), seen['graph']))
     p = getattr(runtime.shader_operator(runtime.target()).par, item['parameter'])
     comp = runtime.target(); ident = rows[0]['id']; operator = runtime.shader_operator(comp)
     def validate(value):
@@ -361,6 +444,7 @@ def write_value(runtime, body):
         original_validate(value)
         current=editable_parameter(p)
         if current is None or not current.isSamePar(target): raise RuntimeError('The custom control was detached or replaced.')
+        validate_source_value(runtime, comp, ident, value, index)
     runtime.set_parameter_with_undo(target, value, validate=validate)
     return snapshot(runtime)
 
@@ -419,7 +503,7 @@ def edit(runtime, body):
                 raise RuntimeError('Use a unique GLSL Uniform name.')
             if kind not in SOURCE_KINDS or ty not in (SPEC_TYPES if kind=='spec_constant' else TYPES): raise RuntimeError('Unsupported native source type.')
             decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
-                    'value': False if ty=='bool' else 0 if kind=='spec_constant' else 0.0 if TYPES[ty] == 1 else [0.0] * TYPES[ty]}
+                    'value': runtime.core().filled_value(ty)}
             if kind=='spec_constant':decl.update(constantId=next_constant_id(graph['declarations']), nativeSequence='const')
             if body.get('sequence'):
                 if body['sequence'] not in (('const',) if kind=='spec_constant' else ('vec','color')):raise RuntimeError('Unsupported native source page.')
@@ -455,6 +539,7 @@ def edit(runtime, body):
             else:
                 value=p.eval();runtime.core().number(value);p.mode=ParMode.CONSTANT;p.val=value
             runtime.core().number(p.eval())
+            validate_uniform_component(decl, p.eval(), kind=native_kind(runtime, comp, graph))
         except Exception:
             p.val=before[1];p.expr=before[2];p.mode=before[0]
             raise RuntimeError('Expression must evaluate to a finite numeric value; the previous driver was restored.')

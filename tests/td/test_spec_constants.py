@@ -50,7 +50,17 @@ try:
             redone=restore(undone,changed,['mode'],delta=(initial,changed));assert native.eval()==3
             checks.append(kind+': Spec current value changes and Undo/Redo edit one native Par, preserve generated source and constant ID')
             for ty,default,current in [('int',2,5),('uint',2,5),('bool',False,True),('float',.25,.75)]:
+                # Keep the retained native override in the new family's domain.
+                if ty=='bool':value('mode',0)
                 g=copy.deepcopy(r.state()['graph']);d=next(d for d in g['declarations'] if d['id']=='mode');d.update(type=ty,value=default)
+                stage=g['stages']['pixel']
+                stage['nodes']=[node for node in stage['nodes'] if node['id']!='mode_color']
+                stage['edges']=[edge for edge in stage['edges'] if edge['from'][0] not in ('mode','mode_color') and edge['to'][0]!='mode_color']
+                if ty=='bool':
+                    # Boolean-to-color conversion is explicit in the graph.
+                    stage['nodes'].append(c.node('convert','mode_color',fromType='bool',toType='vec4'))
+                    stage['edges'].extend([c.edge('mode','mode_color','value'),c.edge('mode_color','output','color')])
+                else:stage['edges'].append(c.edge('mode','output','color'))
                 assert r.deploy(g,r.state()['revision'])['ok']
                 value('mode',current)
                 assert abs(float(par('mode').eval())-float(current))<1e-6

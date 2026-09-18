@@ -23,9 +23,9 @@ const identical=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
 function rejectsWire(a,b,p,o='out'){const before=clone({graph,past,future,dirty});assert.equal(connect(a,b,p,o),false);identical({graph,past,future,dirty},before);}
 
 assert.equal(supportsAutoType(d('compare')),true);assert.equal(supportsAutoType(d('if')),true);
-identical(selectableNodeTypes(d('compare')),['float','int','uint']);identical(selectableNodeTypes(d('if')),['float','vec2','vec3','vec4']);
+identical(selectableNodeTypes(d('compare')),['float','int','uint']);identical(selectableNodeTypes(d('if')),valueTypes());
 for(const ty of selectableNodeTypes(d('compare'))){const compare=node('compare','compare',{type:ty});assert.equal(defaultInput(compare,'a',ty),0);assert.equal(defaultInput(compare,'b',ty),0);identical(resolvedNodePorts(d('compare'),compare.params,null,'outputs'),{out:'bool'});}
-for(const ty of numericTypes()){const branch=node('if','branch',{type:ty});assert.equal(defaultInput(branch,'condition','bool'),false);identical(defaultInput(branch,'true',ty),filledValue(ty,1));identical(defaultInput(branch,'false',ty),filledValue(ty,0));}
+for(const ty of valueTypes()){const branch=node('if','branch',{type:ty});assert.equal(defaultInput(branch,'condition','bool'),false);identical(defaultInput(branch,'true',ty),filledValue(ty,1));identical(defaultInput(branch,'false',ty),filledValue(ty,0));}
 
 // Integer sources preserve exact integer comparison, while defaults retain a
 // separate cache for each scalar type across automatic promotion/demotion.
@@ -35,16 +35,16 @@ for(const ty of ['int','uint']){
   n('compare').inputValues={a:.75,b:-2.25};const before=clone(graph);
   assert.equal(connect('source','compare','a'),true);assert.equal(n('compare').params.type,ty);assert.equal(n('compare').inputValues.a,0);assert.equal(n('compare').inputValues.b,ty==='int'?-2:0);assert.equal(past.length,1);
   const typed=clone(graph);undo();identical(graph,before);undo(true);identical(graph,typed);
-  assert.equal(connect('compare','result','color'),true);graphs.push(clone(graph));
+  current().nodes.push(node('convert','boolCast',{fromType:'bool',toType:'vec4'}));assert.equal(connect('compare','boolCast','value'),true);assert.equal(connect('boolCast','result','color'),true);graphs.push(clone(graph));
   assert.equal(change(()=>current().edges=current().edges.filter(e=>e.to[0]!=='compare')),true);assert.equal(n('compare').params.type,'float');identical(n('compare').inputValues,{a:.75,b:-2.25});
   assert.equal(connect('source','compare','a'),true);assert.equal(n('compare').params.type,ty);assert.equal(n('compare').inputValues.b,ty==='int'?-2:0);
 }
 
-// Existing conversions deliberately make a mixed signed/unsigned comparison
-// float, with explicit source/target cast metadata visible to the editor.
+// Auto prioritizes an exact input type; mixed signed/unsigned inputs need one
+// cast rather than converting both sides to float. A locked type stays available.
 setup([node('spec_constant','signed',{declarationId:'signed'}),node('spec_constant','unsigned',{declarationId:'unsigned'}),node('compare','compare')]);
 graph.declarations=[{id:'signed',kind:'spec_constant',name:'sSigned',type:'int',value:-1,constantId:0},{id:'unsigned',kind:'spec_constant',name:'sUnsigned',type:'uint',value:4294967295,constantId:1}];
-assert.equal(connect('signed','compare','a'),true);assert.equal(n('compare').params.type,'int');assert.equal(connect('unsigned','compare','b'),true);assert.equal(n('compare').params.type,'float');assert.equal(inputTypeDisplay(n('compare'),'a').conversion,'cast');assert.equal(inputTypeDisplay(n('compare'),'b').conversion,'cast');assert.equal(connect('compare','result','color'),true);graphs.push(clone(graph));
+assert.equal(connect('signed','compare','a'),true);assert.equal(n('compare').params.type,'int');assert.equal(connect('unsigned','compare','b'),true);assert.equal(n('compare').params.type,'int');assert.equal(inputTypeDisplay(n('compare'),'a').conversion,null);assert.equal(inputTypeDisplay(n('compare'),'b').conversion,'cast');current().nodes.push(node('convert','boolCast',{fromType:'bool',toType:'vec4'}));assert.equal(connect('compare','boolCast','value'),true);assert.equal(connect('boolCast','result','color'),true);graphs.push(clone(graph));
 
 setup([node('compare','condition'),node('if','branch'),node('vec3','vector',{value:[.1,.2,.3]}),node('float','scalar'),node('length','length')]);
 assert.equal(connect('condition','branch','condition'),true);assert.equal(n('branch').params.type,'float');assert.equal(connect('vector','branch','true'),true);assert.equal(connect('scalar','branch','false'),true);assert.equal(n('branch').params.type,'vec3');
@@ -56,9 +56,9 @@ assert.equal(change(()=>current().nodes.push(node('compare','other'))),true);rej
 assert.throws(()=>creatorTypePlan(d('compare'),typeVariants(d('compare'))[0],'a',info('condition','outputs','out'),false));
 assert.equal(change(()=>current().nodes.push(node('vec2','pair'))),true);rejectsWire('pair','branch','false');
 
-// A boolean value branch may use the existing explicit numeric cast, but a
-// numeric value can never replace the strict boolean condition.
-assert.equal(connect('condition','branch','false'),true);assert.equal(n('branch').params.type,'vec3');assert.equal(inputTypeDisplay(n('branch'),'false').conversion,'cast');graphs.push(clone(graph));
+// Boolean-to-numeric conversion is always explicit; a numeric value cannot
+// replace the strict Boolean condition.
+rejectsWire('condition','branch','false');current().nodes.push(node('convert','boolCast',{fromType:'bool',toType:'vec3'}));assert.equal(connect('condition','boolCast','value'),true);assert.equal(connect('boolCast','branch','false'),true);assert.equal(n('branch').params.type,'vec3');graphs.push(clone(graph));
 setup([node('compare','condition'),node('if','branch',{type:'vec4'}),node('float','scalar')]);n('branch').ui.typeMode='locked';
 assert.equal(connect('condition','branch','condition'),true);assert.equal(connect('scalar','branch','true'),true);assert.equal(n('branch').params.type,'vec4');assert.equal(connect('branch','result','color'),true);graphs.push(clone(graph));
 

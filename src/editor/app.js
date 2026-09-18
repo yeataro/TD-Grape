@@ -323,7 +323,7 @@ function field(label,control){const f=el('label',{class:'field'},label);f.append
 function select(options,value,onchange){const s=el('select');for(const [id,label]of options){const o=el('option',{value:id},label);s.append(o);}s.value=value;s.onchange=()=>onchange(s.value);return s;}
 function input(value,cb,type='text'){
   const i=el('input',{type});i.value=value;let committed=i.value;
-  const commit=()=>{if(editorMutationBlocked()||i.numericGestureActive||i.value===committed)return;const next=type==='number'?Number(i.value):i.value;if(type==='number'&&(!i.value.trim()||!Number.isFinite(next)))return;committed=i.value;cb(next);};
+  const commit=()=>{if(editorMutationBlocked()||i.numericGestureActive||i.value===committed)return;const next=type==='number'?Number(i.value):i.value;if(type==='number'&&(!i.value.trim()||!Number.isFinite(next)||i.validateValue&&!i.validateValue(next))){i.setAttribute('aria-invalid','true');return;}i.removeAttribute('aria-invalid');committed=i.value;cb(next);};
   i.onchange=commit;i.onblur=commit;
   i.hasPendingEdit=()=>i.value!==committed;
   i.setSyncedValue=value=>{if(i.numericGestureActive)return;i.value=value??'';committed=i.value;};

@@ -15,9 +15,9 @@ function node(key,id,params={}){const d=catalog.find(d=>d.key===key);return {id,
 const n=id=>current().nodes.find(n=>n.id===id),info=(id,kind,port)=>({node:id,kind,port,type:ports(n(id),kind)[port]});
 const identical=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
 for(const key of payload.keys){
- const d=catalog.find(d=>d.key===key),port=Object.keys(d.inputs)[0];assert.equal(supportsAutoType(d),true);identical(selectableNodeTypes(d),['float','vec2','vec3','vec4']);
+ const d=catalog.find(d=>d.key===key),port=Object.keys(d.inputs)[0];assert.equal(supportsAutoType(d),true);identical(selectableNodeTypes(d),numericTypes().filter(type=>key==='mod'||typeFamily(type)==='float'||key==='sign'&&typeFamily(type)==='int'));
  assert.ok(typeContract.constantExpressions.includes(key));
- for(const ty of numericTypes())for(const p of Object.keys(d.inputs))identical(defaultInput(node(key,'sample',{type:ty}),p,ty),filledValue(ty,p==='b'?1:0));
+ for(const ty of selectableNodeTypes(d))for(const p of Object.keys(d.inputs))identical(defaultInput(node(key,'sample',{type:ty}),p,ty),filledValue(ty,p==='b'?1:0));
  graph={schemaVersion:1,target:'top',topSourceVersion:1,topInputs:[],declarations:[],functions:[],stages:{pixel:{nodes:[node('vec3','source',{value:[.25,.5,.75]}),node(key,'operation'),node('length','measure'),node('pixel_out','result')],edges:[]}}};
  graphTrail=[];past=[];future=[];selected=null;selection.clear();selectedEdge=null;dirty=false;
  n('operation').inputValues={[port]:.375,...(key==='mod'?{b:.75}:{})};const before=clone(graph);

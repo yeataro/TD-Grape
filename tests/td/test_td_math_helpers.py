@@ -117,7 +117,7 @@ try:
             apply_graph(graph_for(kind, back, 'vec3', [.2, .4, .6], [rgb], [c.edge('hsv', 'operation', 'hsv')]))
             expect_pixels(shader, kind + ': RGB to HSV to RGB roundtrip')
 
-            for ty in c.TYPES:
+            for ty in c.FLOAT_TYPES:
                 fill = lambda value: c.filled_value(ty, value)
                 cases = [
                     ('remap', dict(value=fill(.375), fromMin=fill(.25), fromMax=fill(.75), toMin=fill(.2), toMax=fill(.8)), fill(.35), 'mapped value'),
@@ -144,7 +144,7 @@ try:
                 stage = graph['stages']['vertex']
                 source = 'projection'
                 for key in ('rgb_to_hsv', 'hsv_to_rgb', 'remap', 'range_from', 'range_to', 'loop', 'zigzag'):
-                    for ty in (('vec3',) if key in ('rgb_to_hsv', 'hsv_to_rgb') else c.TYPES):
+                    for ty in (('vec3',) if key in ('rgb_to_hsv', 'hsv_to_rgb') else c.FLOAT_TYPES):
                         ident = key + '_' + ty
                         stage['nodes'].extend([c.node(key, ident, type=ty), c.node('length', ident + '_length', type=ty), c.node('multiply', ident + '_zero', type='float'), c.node('add', ident + '_position', type='vec4')])
                         stage['nodes'][-2]['inputValues'] = {'b': 0}

@@ -10,7 +10,9 @@ RESERVED = {'Openeditor','Openinbrowser','Glslparameters','Version','Material','
             'Resolution','Width','Height','Pixelformat','Extenduv','Texturestatus'}
 STYLES = {'float': ('appendFloat',1), 'vec2': ('appendFloat',2), 'vec3': ('appendFloat',3),
           'vec4': ('appendFloat',4), 'rgba': ('appendRGBA',4), 'int': ('appendInt',1),
-          'toggle': ('appendToggle',1), 'text': ('appendStr',1)}
+          'uint': ('appendInt',1), 'bool': ('appendToggle',1),
+          'toggle': ('appendToggle',1), 'text': ('appendStr',1),
+          **{prefix+str(size): ('appendInt',size) for prefix in ('ivec','uvec','bvec') for size in (2,3,4)}}
 
 
 def token(data):
@@ -121,9 +123,31 @@ def create_group(comp, page, hint, style, values=None, defaults=None):
     args={'size':size} if method in ('appendFloat','appendInt') else {}
     group=getattr(page,method)(name,label=hint,replace=False,**args)
     for i,p in enumerate(group):
+        if style=='uint' or style.startswith('uvec'):
+            p.min=0;p.max=4294967295;p.clampMin=True;p.clampMax=True
+        elif style=='int' or style.startswith('ivec'):
+            p.min=-2147483648;p.max=2147483647;p.clampMin=True;p.clampMax=True
+        elif style.startswith('bvec'):
+            # TD Toggle groups are scalar. A boolean vector uses one native
+            # integer tuple restricted to 0/1; the web editor uses checkboxes.
+            p.min=0;p.max=1;p.clampMin=True;p.clampMax=True
         if defaults is not None:p.default=defaults[i]
         if values is not None:p.val=values[i]
     return group
+
+
+def validate_bound_value(runtime, comp, model, control, value):
+    sources = runtime.source_module()
+    declarations = {d['id']:d for d in sources.source_graph(runtime,comp)['declarations']}
+    for ident, link in comp.fetch(model.STORE, {}).items():
+        if any(item['control'] == control.name for item in link['components']):
+            declaration = declarations.get(ident)
+            if declaration and declaration['kind'] == 'uniform':
+                sources.validate_uniform_component(declaration, value, kind=sources.native_kind(runtime,comp))
+    for ident, link in comp.fetch('sgrapePublicUniforms', {}).items():
+        declaration = declarations.get(ident)
+        if control.name in link['parameters'] and declaration and declaration.get('expose'):
+            sources.validate_uniform_component(declaration,value,kind=sources.native_kind(runtime,comp))
 
 
 def edit(runtime,body):
@@ -167,6 +191,8 @@ def edit(runtime,body):
                 drivers=[p.expr if str(p.mode).endswith('EXPRESSION') else '' for p in pars[:count]]
                 values=[p.eval() for p in pars[:count]]
                 defaults=[row['default']] if count==1 else row['default']
+                for value in values+defaults:
+                    runtime.source_module().validate_uniform_component(row,value,kind=runtime.source_module().native_kind(runtime,comp))
                 group=create_group(comp,page,row['name'],row['type'],values,defaults)
                 for control,driver,p in zip(group,drivers,pars):
                     if driver:control.expr=driver.replace('me.time.', 'me.op('+repr(p.owner.name)+').time.')
@@ -181,9 +207,11 @@ def edit(runtime,body):
             item=row['components'][index];p=g[index]
             if not item['writable'] or body.get('expectedValue')!=item:raise RuntimeError('This value changed or is controlled by TD.')
             value=body.get('value')
-            if p.isNumber:runtime.core().number(value)
+            if p.isNumber:
+                runtime.core().number(int(value) if isinstance(value,bool) else value)
+                validate_bound_value(runtime,comp,model,p,value)
             elif not isinstance(value,str) or len(value)>4096:raise RuntimeError('Enter a text value up to 4096 characters.')
-            runtime.set_parameter_with_undo(p,value)
+            runtime.set_parameter_with_undo(p,value,validate=lambda value:validate_bound_value(runtime,comp,model,p,value))
         elif action=='label':
             label=body.get('label')
             if not isinstance(label,str) or len(label)>160:raise RuntimeError('Enter a label up to 160 characters.')
@@ -215,7 +243,9 @@ def edit(runtime,body):
         elif action=='default':
             index=body.get('component');value=body.get('value')
             if type(index)is not int or not 0<=index<len(g):raise RuntimeError('Select a control component.')
-            if g[index].isNumber:runtime.core().number(value)
+            if g[index].isNumber:
+                runtime.core().number(int(value) if isinstance(value,bool) else value)
+                validate_bound_value(runtime,comp,model,g[index],value)
             elif not isinstance(value,str) or len(value)>4096:raise RuntimeError('Enter a text default up to 4096 characters.')
             g[index].default=value
         else:raise RuntimeError('Unknown custom-control operation.')

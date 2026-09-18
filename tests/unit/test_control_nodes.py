@@ -10,6 +10,9 @@ import sgrape_core as c
 def control_graph(nodes, edges=(), target='top', stage='pixel'):
     graph=c.demo_graph('color',target)
     graph['declarations']=[]
+    if nodes[-1]['definitionUuid']==c.CATALOG['compare']['definitionUuid']:
+        edges=[*edges,c.edge(nodes[-1]['id'],'display','value')]
+        nodes=[*nodes,c.node('convert','display',fromType='bool',toType='float')]
     graph['stages'][stage]={'nodes':[*nodes,c.node(stage+'_out','result')],
                             'edges':[*edges,c.edge(nodes[-1]['id'],'result','color' if stage=='pixel' else 'position')]}
     return graph
@@ -31,7 +34,7 @@ class ControlNodes(unittest.TestCase):
                         self.assertEqual(result,c.compile_graph(json.loads(json.dumps(graph))))
 
     def test_if_unconnected_defaults_and_all_numeric_result_types(self):
-        for ty in c.TYPES:
+        for ty in c.FLOAT_TYPES:
             branch=c.node('if','branch',type=ty)
             reduction=c.node('length','length',type=ty)
             graph=control_graph([branch,reduction],[c.edge('branch','length','value')])
@@ -62,7 +65,7 @@ class ControlNodes(unittest.TestCase):
         with self.assertRaisesRegex(c.GraphError,'boolean constant'):c.compile_graph(graph)
         graph=control_graph([c.node('vec3','value'),c.node('if','branch',type='vec2')],[c.edge('value','branch','true')])
         with self.assertRaisesRegex(c.GraphError,'vec3 cannot connect to vec2'):c.compile_graph(graph)
-        for ty in ['int','uint','bool','sampler2D']:
+        for ty in ['sampler2D']:
             with self.subTest(type=ty),self.assertRaises(c.GraphError):c.compile_graph(control_graph([c.node('if','branch',type=ty)]))
 
     def test_runtime_and_specialization_conditions_keep_both_dependencies(self):
@@ -97,11 +100,11 @@ class ControlNodes(unittest.TestCase):
     def test_compare_if_constant_requirements_and_explicit_branch_casts(self):
         compare=c.node('compare','condition',requireConstant=True)
         branch=c.node('if','branch',requireConstant=True,type='vec4')
-        graph=control_graph([compare,c.node('float','value'),branch],[c.edge('condition','branch','condition'),c.edge('condition','branch','false'),c.edge('value','branch','true')])
+        graph=control_graph([compare,c.node('float','value'),c.node('convert','cast',fromType='bool',toType='vec4'),branch],[c.edge('condition','branch','condition'),c.edge('condition','cast','value'),c.edge('cast','branch','false'),c.edge('value','branch','true')])
         code=c.compile_graph(graph)['pixel']
         self.assertIn('const bool sg_n_condition',code)
-        self.assertIn('const vec4 sg_n_branch = (sg_n_condition ? vec4(sg_n_value) : vec4(sg_n_condition));',code)
-        for ty,value in [('int',2147483647),('uint',4294967295),('bool',True)]:
+        self.assertIn('const vec4 sg_n_branch = (sg_n_condition ? vec4(sg_n_value) : sg_n_cast);',code)
+        for ty,value in [('int',2147483647),('uint',4294967295)]:
             branch=c.node('if','branch')
             graph=control_graph([c.node('spec_constant','source',declarationId='source'),branch],[c.edge('source','branch','true')])
             graph['declarations']=[dict(id='source',kind='spec_constant',name='sValue',type=ty,value=value,constantId=2)]

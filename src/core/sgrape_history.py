@@ -180,9 +180,7 @@ def _project(runtime, entry, declaration):
     value = declaration.get('value'); count = sources.source_components(declaration); values = [value] if count == 1 else value
     if not isinstance(values, list) or len(values) != count:
         raise RuntimeError('Invalid Uniform defaults in editor history.')
-    if declaration.get('kind')=='spec_constant':runtime.core().literal(value,declaration['type'])
-    else:
-        for value in values: runtime.core().number(value)
+    runtime.core().literal(value,declaration['type'])
     operator = runtime.shader_operator(runtime.target()); index = getattr(operator.seq, sequence).numBlocks
     params = {'name': {'val': declaration['name'], 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}}
     for i, suffix in enumerate(sources.CHANNELS[sequence]):
@@ -441,6 +439,10 @@ def restore(runtime, body):
             if after['kind'] == 'sampler' and wanted['parameter']['val']:
                 comp = runtime.target(); top = comp.parent().op(wanted['parameter']['val']); helper = comp.op('texture_sources')
                 if top is None or top.id != wanted.get('topId') or not helper or not helper.module._external_allowed(comp, top): _conflict()
+            elif after['kind'] == 'uniform':
+                declaration = right_decl.get(ident)
+                if not declaration or declaration['kind'] != 'uniform':_conflict()
+                sources.validate_uniform_component(declaration,wanted['parameter']['val'],kind=sources.native_kind(runtime,runtime.target()))
             value_plan.append((par, wanted['parameter']))
     # A failed type/default Apply can leave a browser-only Spec draft between
     # two equal native checkpoints. Undo must reach that draft without turning
@@ -451,24 +453,43 @@ def restore(runtime, body):
         and _entry_semantic(projected[ident]) == _entry_semantic(old['data']['entries'].get(ident))
         for ident, plan in plans.items())
     for ident, declaration in right_decl.items():
-        if ident not in plans or declaration.get('kind') != 'spec_constant': continue
+        if ident not in plans or declaration.get('kind') not in sources.SOURCE_KINDS: continue
         plan = plans[ident]; after = projected[ident]
         effective = copy.deepcopy(after if plan['structural'] else entries.get(ident))
         if effective and effective['native'] and not plan['structural']:
             for suffix in plan['params']:
                 effective['native']['params'][suffix] = after['native']['params'][suffix]
         try:
-            kind = sources.native_kind(runtime, runtime.target())
-            sources.validate_spec_native(declaration, declaration.get('value'), kind, 'default')
-            value = ((effective or {}).get('native') or {}).get('params', {}).get('value', {})
-            if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'), kind)
+            native = (effective or {}).get('native') or {}
+            if declaration['kind'] == 'spec_constant':
+                kind = sources.native_kind(runtime, runtime.target())
+                sources.validate_spec_native(declaration, declaration.get('value'), kind, 'default')
+                value = native.get('params', {}).get('value', {})
+                if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'), kind)
+            else:
+                kind = sources.native_kind(runtime, runtime.target())
+                sources.validate_uniform_native(declaration, declaration.get('value'), 'default', kind)
+                for channel in sources.CHANNELS.get(native.get('sequence'), ())[:sources.source_components(declaration)]:
+                    value = native.get('params', {}).get(channel, {})
+                    if value.get('mode') == 'CONSTANT':sources.validate_uniform_component(declaration, value.get('val'), kind=kind)
+                    elif value.get('mode') == 'BIND':
+                        index = sources.CHANNELS[native['sequence']].index(channel)
+                        item = next((item for item in (effective.get('link') or {}).get('components',[]) if item['index']==index),None)
+                        if item and value.get('bindExpr') == 'parent().par.'+item['control']:
+                            name = item['control']; control = getattr(runtime.target().par,name,None)
+                            if control is None:_conflict()
+                            wanted = after['controls'][name]['parameter'] if name in plan['controls'] else None
+                            if wanted and wanted['mode']=='CONSTANT':
+                                sources.validate_uniform_component(declaration,wanted['val'],kind=kind)
+                            else:
+                                sources.validate_uniform_component(declaration,control.eval(),kind=kind)
         except RuntimeError:
             previous = left_decl.get(ident, {})
             changes = {key for key in previous.keys() | declaration.keys() if previous.get(key) != declaration.get(key)}
             checkpoints_equal = all(
                 _entry_semantic(before['data']['entries'].get(ident)) == _entry_semantic(after['data']['entries'].get(ident))
                 for before, after in ((old, target), (delta_old, delta_target)))
-            if not (no_native_writes and checkpoints_equal and previous.get('kind') == 'spec_constant'
+            if not (no_native_writes and checkpoints_equal and previous.get('kind') == declaration['kind']
                     and changes and changes.issubset({'type', 'value'}) and effective and effective['native']):
                 raise
             native_draft = True

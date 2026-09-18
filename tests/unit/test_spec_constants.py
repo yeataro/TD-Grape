@@ -13,6 +13,9 @@ def graph(ty='int', value=2):
                              'value':value,'constantId':7,'nativeSequence':'const'}]
     result['stages']['pixel']={'nodes':[c.node('spec_constant','mode',declarationId='mode'),c.node('pixel_out','output')],
                                'edges':[{'from':['mode','out'],'to':['output','color']}]}
+    if ty=='bool':
+        result['stages']['pixel']['nodes'].insert(1,c.node('convert','display',fromType='bool',toType='vec4'))
+        result['stages']['pixel']['edges']=[c.edge('mode','display','value'),c.edge('display','output','color')]
     return result
 
 

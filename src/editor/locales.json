@@ -18,6 +18,14 @@
     "Graph"
   ],
   "messages": {
+    "inputs.integerUniformMaximum": {"zh-Hant":"目前宿主的 uint Uniform 上限為 {value}。", "en":"The current host limits uint Uniforms to {value}."},
+    "convert.fromType": {"zh-Hant": "輸入型別", "en": "Input type"},
+    "convert.toType": {"zh-Hant": "輸出型別", "en": "Output type"},
+    "type.cast": {"zh-Hant": "將 {source} 轉換為 {target}；整數轉換會截去小數。", "en": "Convert {source} to {target}; integer conversion truncates fractional parts."},
+    "inputs.integerUniformHint": {"zh-Hant": "TD 的 Uniform 數值經過 float32 儲存；只有能精確表示的整數可套用。Graph Constant 保留完整 32 位元整數。", "en": "TD stores Uniform values through float32; only exactly representable integers can be applied. Graph Constants preserve the full 32-bit integer range."},
+    "help.scalar": {"zh-Hant": "單一常數值，型別可選 float、int、uint 或 bool。整數使用完整 32 位元範圍；bool 直接切換 false／true。需要多個分量時使用 Vector。", "en": "A single constant value with float, int, uint or bool type. Integers use the full 32-bit range; Boolean values switch directly between false and true. Use Vector for multiple components."},
+    "help.convert": {"zh-Hant": "明確轉換輸入與輸出型別。支援 float、int、uint、bool 與各自的 2～4 維向量。向量必須保持相同維度；純量可轉成向量並複製至各分量。數值 0 轉 bool 為 false，其餘為 true；bool 轉數值為 0 或 1。整數轉換截去小數；不會自動限制範圍。", "en": "Explicitly convert between float, int, uint, bool and their 2–4 component vectors. Vectors must keep the same width; a scalar can fill every component of a vector. Numeric zero becomes false and other values become true; Boolean values become 0 or 1. Integer conversion truncates fractions; values are not clamped."},
+
     "compare.operator": {
       "zh-Hant": "比較方式",
       "en": "Comparison"
@@ -27,8 +35,8 @@
       "en": "Compare A and B and output a `bool`. Supports `>`, `≥`, `<`, `≤`, `==`, and `!=` with float, int, or uint inputs. Auto resolves the type from connections, or you can lock it. Extract a component before comparing vectors. Floating-point equality is exact, with no tolerance.\n\n[Khronos GLSL · Operators](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)"
     },
     "help.if": {
-      "zh-Hant": "Condition 為 true 時輸出 True，否則輸出 False。Condition 只接受 `bool`；未接線時可直接選擇。結果支援 float、vec2、vec3、vec4，沿用 Auto／鎖定型別及既有數值轉換。\n\n這是數值選擇：上游節點可能已先計算，不能保證未選分支完全不執行。Spec Constant 的預設值不會用來提前刪除另一側。\n\n[Khronos GLSL · Selection operator](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)",
-      "en": "Output True when Condition is true; otherwise output False. Condition accepts only `bool` and can be set directly while unconnected. The result supports float, vec2, vec3, and vec4, using the existing Auto/locked type and numeric conversion rules.\n\nThis selects a value: upstream nodes may already have been evaluated, so it does not guarantee skipping an entire unselected branch. A Spec Constant default never prunes the other branch in generated code.\n\n[Khronos GLSL · Selection operator](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)"
+      "zh-Hant": "Condition 為 true 時輸出 True，否則輸出 False。Condition 只接受 `bool`；未接線時可直接選擇。結果支援 float、int、uint、bool 與各自的 2～4 維向量，沿用 Auto／鎖定型別及既有數值轉換。\n\n這是數值選擇：上游節點可能已先計算，不能保證未選分支完全不執行。Spec Constant 的預設值不會用來提前刪除另一側。\n\n[Khronos GLSL · Selection operator](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)",
+      "en": "Output True when Condition is true; otherwise output False. Condition accepts only `bool` and can be set directly while unconnected. The result supports float, int, uint, bool and their 2–4 component vectors, using the existing Auto/locked type and numeric conversion rules.\n\nThis selects a value: upstream nodes may already have been evaluated, so it does not guarantee skipping an entire unselected branch. A Spec Constant default never prunes the other branch in generated code.\n\n[Khronos GLSL · Selection operator](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)"
     },
     "experiments.title": {"zh-Hant": "實驗功能", "en": "Experimental features"},
     "experiments.reset": {"zh-Hant": "還原預設", "en": "Reset defaults"},
@@ -2622,8 +2630,8 @@
       "en": "Assign results to the output variables. Leave the field or press Ctrl / ⌘ + Enter to apply the body."
     },
     "help.glsl_code": {
-      "zh-Hant": "**GLSL Code** 是手寫的函式節點。在 Parameter 編輯輸入、輸出的名稱與型別，再編寫中間的函式內容。多個輸出使用 `out` 參數，預設為零；例如 `c = a + b;`。\n\n支援 `float`、`vec2`、`vec3`、`vec4`，以及 `sampler2D` 輸入。數值、Uniform 與貼圖可透過接線傳入。GLSL / TD 函式能否使用由目前的 Vertex / Pixel 與 TOP / MAT 決定。\n\n改名或排序保留接線；改名後需同步修改程式。刪除接點前先斷線。函式的外框由 UI 產生，這版不接受前處理指令、行接續或額外的全域函式。可將節點包入 Subgraph 保存到函式庫。編譯失敗時保留上次成功輸出。",
-      "en": "**GLSL Code** is a handwritten function node. Edit input/output names and types in Parameter, then write the function body. Multiple results use `out` parameters initialized to zero; for example, `c = a + b;`.\n\nSupports `float`, `vec2`, `vec3`, `vec4`, and `sampler2D` inputs. Connect values, Uniforms and textures through inputs. GLSL / TD function availability depends on the current Vertex / Pixel stage and TOP / MAT target.\n\nRenaming and reordering preserve wires; update body references after renaming. Disconnect a port before removing it. The UI generates the function boundary. This version does not accept preprocessor directives, line continuations or additional global functions. Package the node into a Subgraph to save it to the library. Compile failures retain the last successful output."
+      "zh-Hant": "**GLSL Code** 是手寫的函式節點。在 Parameter 編輯輸入、輸出的名稱與型別，再編寫中間的函式內容。多個輸出使用 `out` 參數，預設為零；例如 `c = a + b;`。\n\n支援 `float`、`int`、`uint`、`bool` 與各自的 2～4 維向量，以及 `sampler2D` 輸入。數值、Uniform 與貼圖可透過接線傳入。GLSL / TD 函式能否使用由目前的 Vertex / Pixel 與 TOP / MAT 決定。\n\n改名或排序保留接線；改名後需同步修改程式。刪除接點前先斷線。函式的外框由 UI 產生，這版不接受前處理指令、行接續或額外的全域函式。可將節點包入 Subgraph 保存到函式庫。編譯失敗時保留上次成功輸出。",
+      "en": "**GLSL Code** is a handwritten function node. Edit input/output names and types in Parameter, then write the function body. Multiple results use `out` parameters initialized to zero; for example, `c = a + b;`.\n\nSupports `float`, `int`, `uint`, `bool`, their 2–4 component vectors, and `sampler2D` inputs. Connect values, Uniforms and textures through inputs. GLSL / TD function availability depends on the current Vertex / Pixel stage and TOP / MAT target.\n\nRenaming and reordering preserve wires; update body references after renaming. Disconnect a port before removing it. The UI generates the function boundary. This version does not accept preprocessor directives, line continuations or additional global functions. Package the node into a Subgraph to save it to the library. Compile failures retain the last successful output."
     },
     "function.quickInput": {
       "en": "Add Subgraph input",
@@ -2753,10 +2761,7 @@
       "zh-Hant": "圖儲存失敗：",
       "en": "Could not save graph: "
     },
-    "vector.invalidType": {
-      "zh-Hant": "請選擇 vec2、vec3 或 vec4。",
-      "en": "Choose vec2, vec3 or vec4."
-    },
+    "vector.invalidType": {"zh-Hant": "請選擇 float、int、uint 或 bool 的 2～4 維向量。", "en": "Choose a 2–4 component float, int, uint or bool vector."},
     "vector.overlap": {
       "zh-Hant": "分量範圍或接孔配置無效；請確認起始接孔與輸出型別。",
       "en": "The component range or port layout is invalid. Check the starting input and output type."
@@ -2822,12 +2827,12 @@
       "en": "A fixed vec4 value edited as X/Y/Z/W. It has the same type as Color RGBA without a color picker. Changing the value requires recompilation."
     },
     "help.combine": {
-      "zh-Hant": "依固定分量位置組成 `vec2`、`vec3` 或 `vec4`。將 vec2 接到 X 會占用 XY；接到 Y 會占用 YZ。新接線會取代範圍重疊的整條舊線，保留來源節點與其他連線，整次替換可一步 Undo；不自動截斷向量。\n\n未接線的分量可在節點或 Parameter 輸入；移除連線會恢復原本的值。輸出維度由你決定。所有輸入都是合法常數時，結果也保留常數性；Settings 可要求必須是常數。",
-      "en": "Build vec2, vec3 or vec4 at fixed component positions. A vec2 connected to X occupies XY; connected to Y it occupies YZ. A new wire replaces whole overlapping wires, keeping their source nodes and other connections, as one Undo step. Vectors are never silently truncated.\n\nEdit unconnected components on the node or in Parameter. Disconnecting restores their values. Choose the output type explicitly. Legal constant inputs preserve constantness; Settings can require it."
+      "zh-Hant": "依固定分量位置組成 float、int、uint 或 bool 的 2～4 維向量；分量接線須與輸出相同型別族。將 vec2 接到 X 會占用 XY；接到 Y 會占用 YZ。新接線會取代範圍重疊的整條舊線，保留來源節點與其他連線，整次替換可一步 Undo；不自動截斷向量。\n\n未接線的分量可在節點或 Parameter 輸入；移除連線會恢復原本的值。輸出維度由你決定。所有輸入都是合法常數時，結果也保留常數性；Settings 可要求必須是常數。",
+      "en": "Build 2–4 component float, int, uint or bool vectors at fixed component positions. Component wires must use the same type family as the output. A vec2 connected to X occupies XY; connected to Y it occupies YZ. A new wire replaces whole overlapping wires, keeping their source nodes and other connections, as one Undo step. Vectors are never silently truncated.\n\nEdit unconnected components on the node or in Parameter. Disconnecting restores their values. Choose the output type explicitly. Legal constant inputs preserve constantness; Settings can require it."
     },
     "help.vector_split": {
-      "zh-Hant": "將 vec2／vec3／vec4 拆為各個 float 分量。Auto 跟隨接線的向量型別；Settings 可切換 XYZW、RGBA 或 UV 名稱，資料與端口身分不變。\n\n例如只改 UV 的 V：UV → Split，保留 U，調整 V，再接到 Combine 的 X／Y。若縮小型別會使既有接線失效，修改會被拒絕並保留原圖。",
-      "en": "Split vec2/vec3/vec4 into float components. Auto follows the connected vector type. Settings can label the same components XYZW, RGBA or UV.\n\nTo edit only UV V: connect UV to Split, keep U, modify V, and connect both to Combine. Type changes that invalidate existing wires are rejected without changing the graph."
+      "zh-Hant": "將 2～4 維向量拆為各個同型別族的分量（float、int、uint 或 bool）。Auto 跟隨接線的向量型別；Settings 可切換 XYZW、RGBA 或 UV 名稱，資料與端口身分不變。\n\n例如只改 UV 的 V：UV → Split，保留 U，調整 V，再接到 Combine 的 X／Y。若縮小型別會使既有接線失效，修改會被拒絕並保留原圖。",
+      "en": "Split any 2–4 component vector into scalar components of its float, int, uint or bool family. Auto follows the connected vector type. Settings can label the same components XYZW, RGBA or UV.\n\nTo edit only UV V: connect UV to Split, keep U, modify V, and connect both to Combine. Type changes that invalidate existing wires are rejected without changing the graph."
     },
     "help.swizzle": {
       "zh-Hant": "從向量挑選、重排或重複 1–4 個分量，例如 YX、XYZ、XXXX。每個下拉欄由左至右對應一個輸出分量；加減按鈕調整輸出數量。\n\n型別由分量數決定。只能選擇輸入中存在的分量；改變輸出數量若影響既有下游接線，需要先解除該連線。常數輸入可保留編譯期常數性。",
@@ -2850,8 +2855,8 @@
       "en": "Inherited from the whole vector input. Connect this component to replace it."
     },
     "help.vector": {
-      "zh-Hant": "手填 vec2、vec3 或 vec4 常數。此節點沒有輸入，只輸出整體向量；頂端可切換維度。展開三角形可顯示分量標籤，數值支援 Value Ladder。用輸出旁的 Split 快捷新增拆分節點；需要基底與分量覆寫時使用 Replace。",
-      "en": "Enter a vec2, vec3 or vec4 constant. This node has no inputs and outputs the whole vector; choose its size in the header. Expand the triangle for labelled component rows. Values support Value Ladder. Use the Split shortcut beside the output to add a Split node; use Replace for a base vector with component overrides."
+      "zh-Hant": "手填 float、int、uint 或 bool 的 2～4 維向量常數。此節點沒有輸入，只輸出整體向量；頂端可切換維度。展開三角形可顯示分量標籤，數值支援 Value Ladder。用輸出旁的 Split 快捷新增拆分節點；需要基底與分量覆寫時使用 Replace。",
+      "en": "Enter a 2–4 component float, int, uint or bool vector constant. This node has no inputs and outputs the whole vector; choose its size in the header. Expand the triangle for labelled component rows. Values support Value Ladder. Use the Split shortcut beside the output to add a Split node; use Replace for a base vector with component overrides."
     },
     "view.graphFocus": {"zh-Hant": "專注編輯", "en": "Focus graph"},
     "view.restoreLayout": {"zh-Hant": "還原介面", "en": "Restore layout"},
@@ -3094,10 +3099,7 @@
       "zh-Hant": "逐分量去除小數，向零截斷。例如 −1.75 得到 −1，1.75 得到 1。對應 TD Math 的 int(A) 取整用途，但輸出仍為 float 或向量，不是 GLSL int 型別轉換。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/trunc.xhtml)",
       "en": "Discard the fractional part toward zero per component: −1.75 becomes −1, and 1.75 becomes 1. Corresponds to the rounding use of TD Math int(A), while retaining float or vector type; this is not a GLSL int cast.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/trunc.xhtml)"
     },
-    "help.mod": {
-      "zh-Hant": "逐分量計算 GLSL `mod(a, b)`：`a − b × floor(a / b)`。例如 `mod(-0.25, 1)` 得到 0.75，與向零截斷的餘數不同。b 預設為 1；b 為 0 時結果未定義。\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml)",
-      "en": "Compute GLSL `mod(a, b)` per component: `a − b × floor(a / b)`. For example, `mod(-0.25, 1)` is 0.75, unlike a remainder based on truncation toward zero. The default b is 1; results with b = 0 are undefined.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml)"
-    },
+    "help.mod": {"zh-Hant": "float／vec 使用 GLSL `mod(a, b)`：`a − b × floor(a / b)`；例如 `mod(-0.25, 1)` 得到 0.75。int／uint 及整數向量使用 `%` 餘數；整數 `%` 任一運算元為負時，結果不保證。b 預設為 1；b 為 0 時結果未定義。", "en": "float/vec use GLSL `mod(a, b)`: `a − b × floor(a / b)`; for example, `mod(-0.25, 1)` is 0.75. int/uint and integer vectors use `%` remainder. Integer `%` results are not guaranteed if either operand is negative. The default b is 1; results with b = 0 are undefined."},
     "help.rgb_to_hsv": {
       "zh-Hant": "使用 `TDRGBToHSV(rgb)` 將 RGB 轉為 HSV。輸入與輸出皆為 vec3；HSV 分量順序為 Hue、Saturation、Value，一般以 0–1 表示。不做額外截限或色彩空間轉換。RGBA 請先取 RGB，再視需要接回 Alpha。\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)",
       "en": "Convert RGB to HSV with `TDRGBToHSV(rgb)`. Input and output are vec3; HSV components are Hue, Saturation, and Value, conventionally in 0–1. No additional clamp or color-space conversion is applied. Extract RGB from RGBA and recombine alpha separately when needed.\n\n[TouchDesigner GLSL Reference](https://docs.derivative.ca/GLSL_Reference)"

@@ -117,7 +117,7 @@ try:
         shader = r.create_shader(area, 'BasicMath_' + kind, graph_for(kind, 'sign', 'float'), kind)
         with r.shader_context(shader):
             for key in CASES:
-                for ty in c.TYPES:
+                for ty in c.FLOAT_TYPES:
                     apply_graph(graph_for(kind, key, ty))
                     assert key+'(' in shader.op('pixel_shader').text
                     expect_pixels(shader, kind+': '+key+' '+ty+' native component values')

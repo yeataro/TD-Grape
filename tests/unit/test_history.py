@@ -5,6 +5,7 @@ from unittest.mock import patch
 import sgrape_history as h
 import sgrape_sources as sources
 import sgrape_parameter_links as links
+import sgrape_core as core
 
 
 class Par:
@@ -85,7 +86,7 @@ class History(unittest.TestCase):
             if graph.get('invalid'): raise ValueError('Incomplete graph')
         self.runtime = SimpleNamespace(target=lambda: self.comp, shader_operator=lambda comp: self.operator,
             source_module=lambda: sources, state=lambda: copy.deepcopy(self.current), checked_state=lambda: copy.deepcopy(self.current),
-            write_state=self.write, core=lambda: SimpleNamespace(compile_graph=compile_graph, number=lambda value: float(value)))
+            write_state=self.write, core=lambda: SimpleNamespace(compile_graph=compile_graph, number=lambda value: float(value),literal=core.literal))
         self.mode_patch = patch.object(links, 'ParMode', SimpleNamespace(CONSTANT='CONSTANT'), create=True)
         self.mode_patch.start(); self.addCleanup(self.mode_patch.stop)
         self.add('A', 3)

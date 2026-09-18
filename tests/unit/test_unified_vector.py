@@ -165,7 +165,7 @@ class VectorAndReplace(unittest.TestCase):
         self.assertTrue(review['candidate']['functions'][0]['graph']['nodes'][0]['ui']['componentsExpanded'])
 
     def test_vector_is_value_only_for_every_width(self):
-        for ty in c.VECTOR_TYPES:
+        for ty in c.FLOAT_VECTOR_TYPES:
             node=c.node('vector','vector',type=ty,components=[.1,.2,.3,.4])
             interface=c.vector_interface('vector',node['params'])
             self.assertEqual(interface,{'inputs':{},'outputs':{'out':ty}})

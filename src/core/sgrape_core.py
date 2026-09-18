@@ -6,23 +6,26 @@ import math
 import re
 
 VERSION = 1
+TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec'}
+SCALAR_TYPES = tuple(TYPE_PREFIXES)
 TYPE_DESCRIPTORS = {
-    'float': {'family': 'float', 'components': 1},
-    'vec2': {'family': 'float', 'components': 2},
-    'vec3': {'family': 'float', 'components': 3},
-    'vec4': {'family': 'float', 'components': 4},
+    (family if count==1 else prefix+str(count)):
+        {'family':family, 'components':count, 'scalarType':family, 'vectorPrefix':prefix}
+    for family,prefix in TYPE_PREFIXES.items() for count in range(1,5)
 }
 TYPES = tuple(TYPE_DESCRIPTORS)
+FLOAT_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['family']=='float')
+NUMERIC_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['family']!='bool')
+SIGNED_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['family'] in ('float','int'))
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
 COMPARE_TYPES = ('float', 'int', 'uint')
 COMPARE_OPERATORS = ('>', '>=', '<', '<=', '==', '!=')
-TYPE_DESCRIPTORS.update({ty: {'family': ty, 'components': 1} for ty in SPEC_TYPES if ty not in TYPE_DESCRIPTORS})
 RESOURCE_TYPES = ('sampler2D',)
-PORT_TYPES = TYPES + tuple(ty for ty in SPEC_TYPES if ty not in TYPES) + RESOURCE_TYPES
+PORT_TYPES = TYPES + RESOURCE_TYPES
 CONVERSIONS = {(ty, ty): 'identity' for ty in TYPES}
-CONVERSIONS.update({(ty, ty): 'identity' for ty in SPEC_TYPES})
-CONVERSIONS.update({(source, target): 'cast' for source in ('int','uint','bool') for target in TYPES})
-CONVERSIONS.update({('float', ty): 'splat' for ty in TYPES if ty != 'float'})
+CONVERSIONS.update({(source,target):'cast' for source in NUMERIC_TYPES for target in NUMERIC_TYPES
+                    if source!=target and (TYPE_DESCRIPTORS[source]['components']==TYPE_DESCRIPTORS[target]['components'] or TYPE_DESCRIPTORS[source]['components']==1)})
+CONVERSIONS.update({(d['family'],ty):'splat' for ty,d in TYPE_DESCRIPTORS.items() if d['components']>1})
 CONVERSIONS[('sampler2D', 'sampler2D')] = 'identity'
 ID = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,47}$')
@@ -50,16 +53,17 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
-    'perlin_noise','simplex_noise'))
+    'perlin_noise','simplex_noise','scalar','convert'))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
 CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
     'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
-    'range_from','range_to'))
+    'range_from','range_to','scalar','convert'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
-VECTOR_TYPES = ('vec2','vec3','vec4')
+VECTOR_TYPES = tuple(ty for ty,d in TYPE_DESCRIPTORS.items() if d['components']>1)
+FLOAT_VECTOR_TYPES = tuple(ty for ty in VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['family']=='float')
 VECTOR_COMPONENTS = 'xyzw'
 NOISE_HELPERS = {'perlin_noise':'TDPerlinNoise','simplex_noise':'TDSimplexNoise'}
 
@@ -72,31 +76,37 @@ def combine_layouts(ty):
         else:
             for size in range(1,count-start+1):
                 for rest in partitions(start+size):
-                    yield {VECTOR_COMPONENTS[start]:'float' if size==1 else 'vec'+str(size),**rest}
-    return [{'inputs':ports,'groups':{p:t for p,t in ports.items() if t!='float'}} for ports in partitions(0)]
+                    yield {VECTOR_COMPONENTS[start]:shaped_type(TYPE_DESCRIPTORS[ty]['family'],size),**rest}
+    return [{'inputs':ports,'groups':{p:t for p,t in ports.items() if TYPE_DESCRIPTORS[t]['components']>1}} for ports in partitions(0)]
+
+def shaped_type(family,count):
+    return family if count==1 else TYPE_PREFIXES[family]+str(count)
+
+def vector_values(params,ty):
+    return params.get('components',filled_value(shaped_type(TYPE_DESCRIPTORS[ty]['family'],4)))
 
 def vector_interface(key,params):
     ty=params.get('type','vec2')
-    if ty not in VECTOR_TYPES:raise GraphError('Select vec2, vec3 or vec4')
+    if ty not in VECTOR_TYPES:raise GraphError('Select a 2, 3 or 4 component vector type')
+    family=TYPE_DESCRIPTORS[ty]['family']
     components=VECTOR_COMPONENTS[:TYPE_DESCRIPTORS[ty]['components']]
     if key=='vector':
-        literal(params.get('components',[0,0,0,0]),'vec4')
+        literal(vector_values(params,ty),shaped_type(family,4))
         return {'inputs':{},'outputs':{'out':ty}}
     if key in ('combine','replace'):
         groups=params.get('groups',{})
         layout=next((row for row in combine_layouts(ty) if row['groups']==groups),None)
         if layout is None:raise GraphError(('Replace' if key=='replace' else 'Combine')+': component groups overlap or exceed the output size')
-        values=params.get('components',[0,0,0,0])
-        literal(values,'vec4')
+        literal(vector_values(params,ty),shaped_type(family,4))
         if key=='replace':
             return {'inputs':{'value':ty,**layout['inputs']},'outputs':{'out':ty}}
         return {'inputs':layout['inputs'],'outputs':{'out':ty}}
     if key=='vector_split':
-        return {'inputs':{'value':ty},'outputs':dict.fromkeys(components,'float')}
+        return {'inputs':{'value':ty},'outputs':dict.fromkeys(components,family)}
     mask=params.get('mask','xy')
     if not isinstance(mask,str) or not 1<=len(mask)<=4 or any(c not in components for c in mask):
         raise GraphError('Swizzle: choose 1 to 4 components that exist in the input')
-    return {'inputs':{'value':ty},'outputs':{'out':'float' if len(mask)==1 else 'vec'+str(len(mask))}}
+    return {'inputs':{'value':ty},'outputs':{'out':shaped_type(family,len(mask))}}
 
 def _definition_signature(d):
     # Presentation changes do not change port/default behavior.
@@ -330,14 +340,29 @@ def pixel_buffer_count(params):
 
 def definition_ports(definition, params):
     if definition['key'] in VECTOR_KEYS:return vector_interface(definition['key'],params)
+    if definition['key']=='convert':
+        source=params.get('fromType','float');target=params.get('toType','int')
+        if not explicit_conversion_valid(source,target):raise GraphError('Convert: use matching dimensions or a scalar input')
+        return {'inputs':{'value':source},'outputs':{'out':target}}
     if definition['key']=='glsl_code':return glsl_code_interface(params)
     if definition['key']=='pixel_out':
         return {'inputs':dict.fromkeys(PIXEL_BUFFER_PORTS[:pixel_buffer_count(params)],'vec4'),'outputs':{}}
     return {kind:definition[kind] for kind in ('inputs','outputs')}
 
 def node_parameter_types(definition):
-    if definition['key'] in NOISE_HELPERS:return VECTOR_TYPES
-    return PORT_TYPES if definition['key']=='relay' else COMPARE_TYPES if definition['key']=='compare' else TYPES
+    key=definition['key']
+    if key=='relay':return PORT_TYPES
+    if key=='compare':return COMPARE_TYPES
+    if key=='scalar':return SCALAR_TYPES
+    if key in VECTOR_KEYS:return VECTOR_TYPES
+    if key in NOISE_HELPERS:return FLOAT_VECTOR_TYPES
+    if key in ('if','uniform','constant','spec_constant','convert'):return TYPES
+    if key in ('add','subtract','multiply','divide','min','max','clamp','mod'):return NUMERIC_TYPES
+    if key in ('abs','sign'):return SIGNED_TYPES
+    return FLOAT_TYPES
+
+def explicit_conversion_valid(source,target):
+    return source in TYPES and target in TYPES and (type_components(source)==1 or type_components(source)==type_components(target))
 
 def resolved_ports(definition, params, declaration=None):
     selected = params.get('type', 'float')
@@ -363,18 +388,24 @@ def type_contract():
         tokens = set(definition['inputs'].values()) | set(definition['outputs'].values())
         selector = 'parameter' if 'T' in tokens or definition['key'] in VECTOR_KEYS else 'declaration' if 'D' in tokens else 'fixed'
         default = definition['defaults'].get('type', 'float')
-        choices = [default] + [ty for ty in TYPES if ty != default] if selector != 'fixed' else [None]
+        choices = [default] + [ty for ty in node_parameter_types(definition) if ty != default] if selector != 'fixed' else [None]
         if definition['key'] in VECTOR_KEYS:choices=list(VECTOR_TYPES)
-        if definition['key'] in NOISE_HELPERS:choices=list(VECTOR_TYPES)
+        if definition['key'] in NOISE_HELPERS:choices=list(FLOAT_VECTOR_TYPES)
         if definition['key']=='compare':choices=list(COMPARE_TYPES)
         if definition['key']=='spec_constant':choices=list(SPEC_TYPES)
-        variants[definition['definitionUuid']] = {'selector': selector, 'variants': [
-            dict(type=ty, **resolved_ports(definition, dict(definition['defaults'],type='float' if definition['key']=='spec_constant' else ty or 'float'), {'type': ty})) for ty in choices]}
-    result = {'version': 1, 'numericTypes': list(TYPES), 'specConstantTypes': list(SPEC_TYPES), 'resourceTypes': list(RESOURCE_TYPES),
+        def variant(ty):
+            params=dict(definition['defaults'],type='float' if definition['key']=='spec_constant' else ty or 'float')
+            if definition['key'] in ('vector','combine','replace'):
+                params['components']=filled_value(shaped_type(TYPE_DESCRIPTORS[params['type']]['family'],4))
+            return dict(type=ty,**resolved_ports(definition,params,{'type':ty}))
+        variants[definition['definitionUuid']] = {'selector': selector, 'variants': [variant(ty) for ty in choices]}
+    result = {'version': 1, 'valueTypes':list(TYPES), 'numericTypes': list(NUMERIC_TYPES), 'specConstantTypes': list(SPEC_TYPES), 'resourceTypes': list(RESOURCE_TYPES),
               'types': dict(copy.deepcopy(TYPE_DESCRIPTORS), sampler2D={'family':'sampler','components':0}),
               'glslCode':{'maxPorts':GLSL_CODE_MAX_PORTS,'maxLength':GLSL_CODE_MAX_LENGTH,'reservedNames':sorted(GLSL_CODE_RESERVED)},
               'vectors':{'version':1,'types':list(VECTOR_TYPES),'components':VECTOR_COMPONENTS,
+                         'scalarTypes':{ty:TYPE_DESCRIPTORS[ty]['family'] for ty in VECTOR_TYPES},
                          'layouts':{ty:combine_layouts(ty) for ty in VECTOR_TYPES}},
+              'convert':{'types':list(TYPES),'fromParameter':'fromType','toParameter':'toType'},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
@@ -384,6 +415,10 @@ def type_contract():
 
 def node(key, ident, x=0, y=0, **params):
     d=CATALOG[key]
+    selected=params.get('type',d['defaults'].get('type','float'))
+    if key in ('vector','combine','replace') and 'components' not in params:
+        params['components']=filled_value(shaped_type(TYPE_DESCRIPTORS.get(selected,{'family':'float'})['family'],4))
+    if key=='scalar' and 'value' not in params:params['value']=filled_value(selected)
     return dict(id=ident, definitionUuid=d['definitionUuid'], revisionHash=d['revisionHash'],
                 params=copy.deepcopy(dict(d['defaults'], **params)), ui={'x':x,'y':y})
 
@@ -449,7 +484,7 @@ def type_components(ty):
 
 def filled_value(ty, value=0):
     count = type_components(ty)
-    if ty=='bool':return bool(value)
+    if TYPE_DESCRIPTORS[ty]['family']=='bool':value=bool(value)
     return value if count == 1 else [value] * count
 
 def literal(value, ty):
@@ -467,7 +502,8 @@ def literal(value, ty):
     count = type_components(ty)
     if count == 1: return number(value)
     if not isinstance(value,list) or len(value)!=count: raise GraphError('Expected '+str(count)+' components')
-    return ty+'('+', '.join(number(v) for v in value)+')'
+    scalar=TYPE_DESCRIPTORS[ty]['family']
+    return ty+'('+', '.join(literal(v,scalar) for v in value)+')'
 
 def input_default(key,port,ty):
     if key in ('texture','texture_sample') and port=='uv': return None  # Implicit interpolated UV.
@@ -689,8 +725,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 if ty not in node_parameter_types(d): raise GraphError('Unsupported numeric type',ident)
                 if d['key']=='compare' and params.get('operator','>') not in COMPARE_OPERATORS:
                     raise GraphError('Compare: choose >, >=, <, <=, == or !=',ident)
-                if d['key'] in ('float','vec2','vec3','vec4','color'):
-                    literal(params.get('value'),next(iter(d['outputs'].values())))
+                if d['key'] in ('float','vec2','vec3','vec4','color','scalar'):
+                    literal(params.get('value'),ty if d['key']=='scalar' else next(iter(d['outputs'].values())))
                 if type(params.get('requireConstant',False)) is not bool:
                     raise GraphError('Require Constant must be a boolean',ident)
                 declaration=None
@@ -727,7 +763,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 if defs[dst]['key']=='compare' and a not in COMPARE_TYPES:
                     raise GraphError('Compare accepts float, int or uint scalar inputs',dst)
                 if defs[dst]['key'] in VECTOR_KEYS and a!=b:
-                    raise GraphError('Vector components require an exact type; use Combine or Swizzle explicitly',dst)
+                    raise GraphError('Vector components require an exact type; use Convert, Combine or Swizzle explicitly',dst)
                 if conversion_kind(a,b) is None: raise GraphError(a+' cannot connect to '+b,dst)
                 links[(dst,dp)]=(src,sp)
             # Each visible vector group is one actual wire, never a persisted
@@ -829,7 +865,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 if port in saved: return literal(saved[port],target)
                 if defs[ident]['key']=='combine':
                     start=VECTOR_COMPONENTS.index(port);size=type_components(target)
-                    values=nodes[ident]['params'].get('components',[0,0,0,0])[start:start+size]
+                    values=vector_values(nodes[ident]['params'],nodes[ident]['params']['type'])[start:start+size]
                     return literal(values[0] if size==1 else values,target)
                 default=([0,0,0,0] if defs[ident]['key']=='pixel_out' and graph_target(graph)=='mat'
                          else input_default(defs[ident]['key'],port,target))
@@ -840,8 +876,10 @@ def _compile_flat(graph,annotation_scopes=None):
                 note=nodes[ident].get('ui',{});note=note if isinstance(note,dict) else {}
                 d=defs[ident]; k=emitter_id(d); p=nodes[ident]['params']; ty=ports[ident]['out'].get('out'); expr=None
                 a=lambda port:inp(ident,port)
-                if k in ('float','vec2','vec3','vec4','color'): expr=literal(p.get('value'),ty)
+                if k in ('float','vec2','vec3','vec4','color','scalar'): expr=literal(p.get('value'),ty)
+                elif k=='convert':expr=ty+'('+a('value')+')'
                 elif k in ('add','subtract','multiply','divide'): expr='('+a('a')+{'add':' + ','subtract':' - ','multiply':' * ','divide':' / '}[k]+a('b')+')'
+                elif k=='mod' and TYPE_DESCRIPTORS[ty]['family'] in ('int','uint'):expr='('+a('a')+' % '+a('b')+')'
                 elif k in ('min','max','dot','mod'): expr=k+'('+a('a')+', '+a('b')+')'
                 elif k=='clamp': expr='clamp('+a('value')+', '+a('min')+', '+a('max')+')'
                 elif k=='smoothstep': expr='smoothstep('+a('edge0')+', '+a('edge1')+', '+a('value')+')'
@@ -865,14 +903,14 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='relay': expr=a('value')
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
                 elif k=='combine':expr=ty+'('+', '.join(a(port) for port in ports[ident]['in'])+')'
-                elif k=='vector':expr=literal(p.get('components',[0,0,0,0])[:type_components(ty)],ty)
+                elif k=='vector':expr=literal(vector_values(p,ty)[:type_components(ty)],ty)
                 elif k=='replace':
                     mapped=component_sources[ident]
                     def component_expression(index):
                         port,offset=mapped[index]
-                        if port is None:return number(p.get('components',[0,0,0,0])[index])
+                        if port is None:return literal(vector_values(p,ty)[index],TYPE_DESCRIPTORS[ty]['family'])
                         value=a(port)
-                        return value if ports[ident]['in'][port]=='float' else '('+value+').'+VECTOR_COMPONENTS[offset]
+                        return value if type_components(ports[ident]['in'][port])==1 else '('+value+').'+VECTOR_COMPONENTS[offset]
                     if 'out' in needed_outputs[ident]:
                         # Preserve groups in the constructor so the generated
                         # expression mirrors XY / ZW sockets rather than an

@@ -1,18 +1,21 @@
 from pathlib import Path
 import json,copy,uuid
 w=Path(GRAPE_TEST_OUTPUT);w.mkdir(parents=True,exist_ok=True)
-original=next(n for n in op('/project1').findChildren() if n.storage.get('sgrapeManager', False)).op('runtime').module
+AREA='/grape_custom_test'
+assert not op(AREA), 'Existing custom-parameter fixture must not be overwritten'
+managers=[n for n in op('/').findChildren() if n.storage.get('sgrapeManager', False) and not n.path.startswith(AREA+'/')]
+assert len(managers)==1, 'Expected one existing TD-Grape manager outside the test fixture'
+original=managers[0].op('runtime').module
 before={s.path:{n:s.op(n).text for n in ('state','graph','manifest','pixel_shader','vertex_shader') if s.op(n)} for s in original.shaders()}
-assert not op('/grape_custom_test')
 root=op('/').create(baseCOMP,'grape_custom_test');checks=[]
 try:
     manager=root.create(baseCOMP,'manager');manager.store('sgrapeManager',True);manager.store('sgrapeManagerId',uuid.uuid4().hex)
     page=manager.appendCustomPage('Test');page.appendStr('Updatestatus');page.appendFolder('Personalfolder');manager.par.Personalfolder=str(w/'empty_personal')
-    mapping={'node_catalog':'node_catalog.json','core':'sgrape_core.py','personal_library':'sgrape_library.py','document':'sgrape_document.py','sources':'sgrape_sources.py','runtime':'sgrape_runtime.py','shader_controls':'shader_controls.py','parameters':'sgrape_parameters.py','parameter_links':'sgrape_parameter_links.py'}
+    mapping=json.loads((GRAPE_ROOT/'src/td/embedded_sources.json').read_text(encoding='utf-8'))
     for dat,file in mapping.items():manager.create(textDAT,dat).text=source_path(file).read_text(encoding='utf-8')
     r=manager.op('runtime').module;r._owner=manager;c=r.core();sources=manager.op('sources').module;q=manager.op('parameters').module
     for kind in ('mat','top'):
-        graph=c.demo_graph('color',target=kind)
+        graph=c.normalize_top_sources(c.demo_graph('color',target=kind))[0]
         graph['declarations']=[{'id':'gain','kind':'uniform','name':'uGain','type':'float','value':.25,'expose':True}, {'id':'tint','kind':'uniform','name':'uTint','type':'vec4','value':[.1,.2,.3,.4]}]
         shader=r.create_shader(root,'Test_'+kind,graph,kind);native=r.shader_operator(shader)
         with r.shader_context(shader):

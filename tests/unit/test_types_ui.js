@@ -9,7 +9,7 @@ vm.runInContext(`
 assert.equal(compatible('float','float'),false,'no private fallback before the contract loads');
 setTypeContract(payload.contract);
 for(const a of [...Object.keys(typeContract.types),'?'])for(const b of [...Object.keys(typeContract.types),'?'])
- assert.equal(compatible(a,b),(a===b&&Object.hasOwn(typeContract.types,a))||(numericTypes().includes(b)&&['float','int','uint','bool'].includes(a)));
+ assert.equal(compatible(a,b),(a===b&&Object.hasOwn(typeContract.types,a))||(numericTypes().includes(a)&&numericTypes().includes(b)&&(typeComponents(a)===1||typeComponents(a)===typeComponents(b)))||(a==='bool'&&['bvec2','bvec3','bvec4'].includes(b)));
 for(const row of payload.rows)for(const kind of ['inputs','outputs'])assert.equal(JSON.stringify(resolvedNodePorts(row.definition,row.params,row.declaration,kind)),JSON.stringify(row.expected[kind]));
 const uniform=payload.catalog.find(d=>d.key==='uniform');assert.equal(resolvedNodePorts(uniform,{},null,'outputs').out,'?');
 const fn={definitionUuid:FunctionModel.CALL,inputs:{x:'vec2'},outputs:{y:'float'}};assert.equal(resolvedNodePorts(fn,{},null,'inputs').x,'vec2');
@@ -17,12 +17,13 @@ const original=JSON.stringify(typeContract);payload.contract.numericTypes.push('
 for(const bad of [{}, {...typeContract,version:2},{...typeContract,conversions:[{from:'?',to:'float',kind:'splat'}]}, {...typeContract,definitions:{bad:{selector:'other',variants:[]}}}]){
  assert.throws(()=>setTypeContract(bad));assert.equal(JSON.stringify(typeContract),original,'invalid refresh must leave prior contract intact');
 }
-for(const type of numericTypes()){
- const size=typeContract.types[type].components;
+for(const type of valueTypes()){
+ const size=typeContract.types[type].components,family=typeFamily(type),quarter=family==='float'?.25:family==='bool'?true:0;
+ const values=family==='bool'?[true,true,true,true]:[1,2,3,4],repeat=family==='bool'?[true,true,true,true]:[1,2,1,1];
  assert.equal(typeComponents(type),size);
- assert.equal(JSON.stringify(filledValue(type,.25)),JSON.stringify(size===1?.25:Array(size).fill(.25)));
- assert.equal(JSON.stringify(shapedValue([1,2,3,4],type)),JSON.stringify(size===1?1:[1,2,3,4].slice(0,size)));
- assert.equal(JSON.stringify(shapedValue([1,2],type)),JSON.stringify(size===1?1:[1,2,1,1].slice(0,size)));
+ assert.equal(JSON.stringify(filledValue(type,.25)),JSON.stringify(size===1?quarter:Array(size).fill(quarter)));
+ assert.equal(JSON.stringify(shapedValue([1,2,3,4],type)),JSON.stringify(size===1?values[0]:values.slice(0,size)));
+ assert.equal(JSON.stringify(shapedValue([1,2],type)),JSON.stringify(size===1?repeat[0]:repeat.slice(0,size)));
 }
 for(const type of ['int','uint','bool'])assert.equal(typeComponents(type),1);
 for(const type of ['?','toString'])assert.throws(()=>typeComponents(type));

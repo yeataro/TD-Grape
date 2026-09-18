@@ -123,7 +123,7 @@ const wire=info('source','outputs','out'),combine=catalog.find(d=>d.key==='combi
 const variant=creatorVariants(combine,wire).find(v=>v.type==='vec4');
 identical(creatorTypePlan(combine,variant,'y',wire,false).inputs,{x:'float',y:'vec2',w:'float'});
 const back=info('dest','inputs','x'),swizzle=catalog.find(d=>d.key==='swizzle');
-assert.ok(creatorVariants(swizzle,back).every(v=>v.outputs.out==='float'));
+assert.ok(creatorVariants(swizzle,back).every(v=>v.outputs.out===typeFamily(v.type)));
 assert.ok(creatorPriority({d:catalog.find(d=>d.key==='vector_split')},wire)<creatorPriority({d:catalog.find(d=>d.key==='add')},wire));
 const beforePlan=JSON.stringify(graph);creatorTypePlan(combine,variant,'x',wire,false);assert.equal(JSON.stringify(graph),beforePlan);
 
@@ -190,11 +190,10 @@ const vector=catalog.find(d=>d.key==='vector');identical(vectorPorts(vector.key,
 setup([node('uv','uv'),node('vector_split','old',{type:'vec2'})],[edge('uv','old','value')]);
 before=clone(graph);addVectorSplit(n('uv'),'out');assert.equal(selected,'old');identical(graph,before);
 
-// Three direct insertion presets share one compiler definition, but retain an
+// All family/dimension insertion presets share one compiler definition, but retain an
 // exact dimension through all creation paths and never serialize UI identities.
 const vectorEntries=availableEntries().filter(d=>d.key==='vector');
-identical(vectorEntries.map(d=>[browserEntryKey(d),d.label,d.presetType]),[
-  ['vector:vec2','Vector 2','vec2'],['vector:vec3','Vector 3','vec3'],['vector:vec4','Vector 4','vec4']]);
+identical(vectorEntries.map(d=>[browserEntryKey(d),d.label,d.presetType]),typeContract.vectors.types.map(type=>['vector:'+type,'Vector '+typeComponents(type)+(typeFamily(type)==='float'?'':' · '+typeFamily(type)),type]));
 for(const entry of vectorEntries){
   identical(creatorVariants(entry,null).map(v=>v.type),[entry.presetType]);
   setup([]);assert.equal(change(()=>instantiate(entry,100,100)),true);

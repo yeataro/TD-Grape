@@ -152,7 +152,11 @@ const GraphClipboard=(()=>{
       if(!['uniform','sampler','constant','spec_constant'].includes(d.kind)||!types.includes(d.type)&&d.type!=='sampler2D'&&!(['int','uint','bool'].includes(d.type)&&d.kind==='spec_constant')||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
       const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
-      if(['uniform','constant'].includes(d.kind)){const count=d.type==='float'?1:Number(d.type.slice(-1));if(count===1?!number(d.value):!Array.isArray(d.value)||d.value.length!==count||!d.value.every(number))fail('clipboard.invalid');}
+      if(['uniform','constant'].includes(d.kind)){
+        const vector=/^(i|u|b)?vec([234])$/.exec(d.type),family=vector?({i:'int',u:'uint',b:'bool'}[vector[1]]||'float'):d.type,count=vector?Number(vector[2]):1;
+        const scalar=v=>family==='bool'?typeof v==='boolean':number(v)&&(family==='float'||['int','uint'].includes(family)&&Number.isInteger(v)&&v>=(family==='uint'?0:-2147483648)&&v<=(family==='uint'?4294967295:2147483647));
+        if(count===1?!scalar(d.value):!Array.isArray(d.value)||d.value.length!==count||!d.value.every(scalar))fail('clipboard.invalid');
+      }
       if(d.kind==='spec_constant'&&(!['int','uint','bool','float'].includes(d.type)||!Number.isInteger(d.constantId)||d.constantId<0||(d.type==='bool'?typeof d.value!=='boolean':!number(d.value)||(d.type!=='float'&&(!Number.isInteger(d.value)||d.value<(d.type==='uint'?0:-2147483648)||d.value>(d.type==='uint'?4294967295:2147483647))))))fail('clipboard.invalid');
       if(d.kind==='sampler'&&(!source(d.source)||d.defaultSource!==undefined&&!source(d.defaultSource)))fail('clipboard.invalid');
       const next=copy(d);next.id=id();let name=d.name,index=1;while(names.has(name))name=d.name.slice(0,36)+'_copy'+index++;next.name=name;names.add(name);

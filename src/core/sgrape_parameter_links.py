@@ -94,7 +94,7 @@ def sync(comp, changed=None, previous=None):
                             p.bindExpr = expression(control.name)
                 if control is None:
                     value = item['last']
-                    if changed is not None and changed.isSamePar(p) and finite(previous) and abs(float(previous)-value)>1e-6*max(1,abs(value)):
+                    if changed is not None and changed.isSamePar(p) and finite(previous) and float(previous)!=value:
                         value = previous
                     p.mode = ParMode.CONSTANT; p.val = value
                     continue

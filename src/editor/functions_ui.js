@@ -59,13 +59,13 @@ function functionEntry(f,source=false){
 }
 function nodeTypeLabel(d,params=d?.defaults){
   if(d?.key==='comment')return 'Note';
-  if(d?.key==='vector')return 'Vector '+typeComponents(params?.type||'vec2');
+  if(d?.key==='vector')return 'Vector '+typeComponents(params?.type||'vec2')+(typeFamily(params?.type||'vec2')==='float'?'':' · '+typeFamily(params.type));
   const label=d?.label||t('node.unknown');
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
 }
 function availableEntries(){
   const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
-    if(d.key==='vector')return ['vec2','vec3','vec4'].map(type=>({...d,entryKey:'vector:'+type,presetType:type,label:nodeTypeLabel(d,{type}),defaults:{...d.defaults,type},category:nodeCategory(d)}));
+    if(d.key==='vector')return typeContract.vectors.types.map(type=>({...d,entryKey:'vector:'+type,presetType:type,label:nodeTypeLabel(d,{type}),defaults:{...d.defaults,type},category:nodeCategory(d)}));
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
   for(const f of librarySources().filter(f=>f.stages.includes(stage)))entries.push(functionEntry(f,true));
@@ -143,7 +143,7 @@ function topInputsView(){
 function ensureTopInputs(){if(editorTarget!=='top')throw Error('TOP Inputs require Grape TOP.');graph.topInputs||=clone(topInputsView());if(graph.declarations.some(d=>d.source==='input:0')&&graph.topInputs.length)graph.topInputLegacyId||=graph.topInputs[0].id;return graph.topInputs;}
 function allInputSources(){return [...topInputsView().map((s,index)=>({...s,kind:'top_input',type:'sampler2D',index})),...graph.declarations];}
 function constantFields(box,decl){
-  box.append(field(t('node.type'),select(['float','vec2','vec3','vec4'].map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value)),el('p',{class:'muted'},t('inputs.constantHint')));
+  box.append(field(t('node.type'),select(valueTypes().map(v=>[v,v]),decl.type,value=>changeDeclaration(()=>{decl.type=value;decl.value=shapedValue(decl.value,value);}))),numbers(decl.value,t('declaration.value'),value=>changeDeclaration(()=>decl.value=value),false,'XYZW',decl.type),el('p',{class:'muted'},t('inputs.constantHint')));
 }
 function specDefaultValue(value,type){const n=Number(Array.isArray(value)?value[0]:value)||0;return type==='bool'?!!n:type==='int'?Math.max(-2147483648,Math.min(2147483647,Math.trunc(n))):type==='uint'?Math.max(0,Math.min(4294967295,Math.trunc(n))):n;}
 function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence}={}){
@@ -174,6 +174,7 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
     if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;
   }
   const n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
+  normalizeNodeValues(n,d);
   if(d.revisionHash)n.revisionHash=d.revisionHash;current().nodes.push(n);assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
 }
 function newFunction(){
@@ -271,7 +272,7 @@ function functionInspector(box,n,d){
     // Port-definition tables retain their own grouped authoring layout.
     section.append(field(t('function.portName'),input(p.name||p.id,v=>change(()=>p.name=v))));
     if(isResourceType(p.type))section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
-    else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>p.default=v)));
+    else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>p.default=v),false,'XYZW',p.type));
     if(inspectorTab==='settings'){
       section.append(field(t('node.type'),select(interfaceTypes().map(t=>[t,t]),p.type,type=>change(()=>{
         p.type=type;p.default=convertValue(p.default,type);

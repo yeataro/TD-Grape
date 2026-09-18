@@ -57,9 +57,10 @@ function renderSelectionToolbar(){
   const collapseState=nodeCollapseSelectionState();
   for(const [action,available]of [['collapse',collapseState.canCollapse],['expand',collapseState.canExpand]]){
     const button=$('#graph'+action+'selection'),label=t('selection.'+action);
-    button.hidden=!EDITOR_DEV_SETTINGS.selectionCollapseTools;
+    button.hidden=!EDITOR_DEV_SETTINGS.selectionCollapseTools||!available;
     button.disabled=editorMutationBlocked()||!available;button.title=label;button.setAttribute('aria-label',label);
   }
+  $('#graphcollapseseparator').hidden=!EDITOR_DEV_SETTINGS.selectionCollapseTools||!(collapseState.canCollapse||collapseState.canExpand);
   bar.hidden=mode==='off'||!nodes.length||(mode==='multiple'&&!multiple);
   bar.setAttribute('aria-label',t('selection.toolbar'));edit.setAttribute('aria-label',t('selection.editTools'));multi.setAttribute('aria-label',t('selection.nodeTools'));
   $('#grapharrange').title=t('arrange.title');$('#grapharrange').setAttribute('aria-label',t('arrange.title'));
@@ -82,9 +83,6 @@ function positionSelectionToolbar(){
   const gap=6,frame=completeGroupFrames(nodes).find(item=>item.nodes.length===nodes.length);
   outline.hidden=!!(EDITOR_DEV_SETTINGS.hideGroupedSelectionBounds&&frame)||!(persistent||!bar.hidden&&(selectionToolbarHover||selectionBoundsHover||selectionSpreadActive||bar.querySelector(':focus-visible')||$('#arrangemenu').matches(':popover-open')));
   for(const handle of outline.children){handle.hidden=nodes.length<2||editorMutationBlocked();handle.title=t('selection.spread');handle.setAttribute('aria-label',handle.title);}
-  const frameElement=frame&&$('#groupframes')?.querySelector(`[data-frame="${CSS.escape(frame.id)}"]`);
-  // Keep the outer selection curve concentric with a single complete frame at any graph zoom.
-  outline.style.borderRadius=frameElement?parseFloat(getComputedStyle(frameElement).borderTopLeftRadius)*scale+gap+'px':'';
   outline.style.left=(bounds.left-r.left)/zoom-gap+'px';outline.style.top=(bounds.top-r.top)/zoom-gap+'px';
   outline.style.width=(bounds.right-bounds.left)/zoom+gap*2+'px';outline.style.height=(bounds.bottom-bounds.top)/zoom+gap*2+'px';
   if(bar.hidden)return;
@@ -347,7 +345,9 @@ function installSelectionToolbar(){
   for(const name of ['click','dblclick','contextmenu','mousedown','touchstart'])outline.addEventListener(name,e=>{e.stopPropagation();});
   const multi=el('div',{class:'graph-tool-group','data-tool-group':'selection',role:'group',hidden:''});
   const arrange=el('button',{id:'grapharrange',class:'icon-button',type:'button','aria-haspopup':'menu','aria-controls':'arrangemenu','aria-expanded':'false'});
-  arrange.append(selectionIcon('M4 3v18M8 5h12v4H8zM8 11h8v3H8zM8 16h10v3H8z'));arrange.onclick=openArrangeMenu;
+  const arrangeIcon=selectionIcon('M4 3v18M8 5h12v4H8zM8 11h8v3H8zM8 16h10v3H8z'),dropdown=document.createElementNS(arrangeIcon.namespaceURI,'path');
+  dropdown.setAttribute('d','M18.5 20h5L21 23z');dropdown.setAttribute('fill','currentColor');dropdown.setAttribute('stroke','none');arrangeIcon.append(dropdown);
+  arrange.append(arrangeIcon);arrange.onclick=openArrangeMenu;
   const frame=el('button',{id:'graphfitselection',class:'icon-button',type:'button'});
   frame.append(selectionIcon('M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5M8 8h8v8H8z'));frame.onclick=fitSelection;
   const groupFrame=el('button',{id:'graphframe',class:'icon-button',type:'button'});groupFrame.append(selectionIcon('M7 2v20M17 2v20M2 7h20M2 17h20'));groupFrame.onclick=createGroupFrame;
@@ -359,7 +359,7 @@ function installSelectionToolbar(){
     const button=el('button',{id:'graph'+action+'selection',class:'icon-button',type:'button'});button.append(selectionIcon(path));
     button.onclick=()=>{if(setNodesCollapsed(nodeCollapseSelection().map(n=>n.id),action==='collapse'))$('#canvas').focus({preventScroll:true});};multi.append(button);
   }
-  multi.append(groupFrame,join,detach,$('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
+  multi.append(el('span',{id:'graphcollapseseparator',class:'graph-tool-separator',role:'separator','aria-orientation':'vertical'}),groupFrame,join,detach,$('#graphgroup'),arrange,frame);top.insertBefore(multi,top.querySelector('[data-tool-group="view"]'));canvas.append(outline,bar);
   const menu=el('div',{id:'arrangemenu',class:'popup-menu arrangement-menu',popover:'auto',role:'menu'});document.body.append(menu);
   for(const control of [bar,menu]){
     for(const event of ['pointerdown','mousedown','touchstart','dblclick'])control.addEventListener(event,e=>e.stopPropagation());

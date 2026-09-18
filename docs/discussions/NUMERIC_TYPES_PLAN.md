@@ -1,8 +1,34 @@
 # 最新使用者決定（2026-09-18）
 
+本輪實作順序再確認：先接通 float／int／uint／bool 及其 2–4 分量向量、合法運算、來源、共用編輯與型別轉換。使用者對矩陣及陣列的介面仍在評估；不在這批鋪滿矩陣／陣列選單。矩陣下一步以 `mat3`／`mat4` 的旋轉、座標變換為使用案例，`Matrix` 是介面名稱，`mat3`／`mat4` 是 GLSL 具體型別；`vec3`／`vec4` 可在乘法左／右側充當行／列向量，不另建 1×N／N×1 型別。陣列待使用情境及初始化／取值介面一起決定。
+
+跨族接線採同維度數值 constructor 轉換，沿用接孔轉型提示；Auto 優先保留實際输入家族。數值 scalar → vector 亦可 constructor splat，布林與數字之間由明確 Convert 處理。Convert 使用 GLSL constructor 本來的語意（float → int 向零截斷），不把 Floor／Round／Ceil 混成隱藏選項。這是依使用者「符合 GLSL 習慣、可以自行判斷」所作的實作取捨，可在實測後調整。不同向量長度使用 Split／Combine／Swizzle，不默默丟掉分量。參考：[GLSL constructors](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#constructors)。
+
+### 本輪已完成
+
+16 種 scalar／vector 值型別已接通：共用 family／components 契約、精確 literal、Scalar／Convert、Graph Constant／Uniform、各族向量組拆、共用值編輯、Auto、Subgraph／GLSL Code、剪貼簿與保存。Vector／Combine／Split／Swizzle／Replace 的分量與分組保留相同家族及精確型別；數值跨族接線使用 constructor，布林與數值之間以 Convert 明確處理。Add／Subtract／Multiply／Divide／Min／Max／Clamp／Modulo 開放 numeric 12 型別，Abs／Sign 開放 float／int 家族；其餘既有浮點函式保留實際合法簽名。Compare 維持 float／int／uint scalar → bool，If 為 scalar bool 條件與全部 16 種結果型別。矩陣與陣列仍按上方最新決定另行設計，不屬於這批已交付能力。
+
+原生 typed values 394 項、native sources 21 項、Spec Constants 18 項、custom parameters 18 項通過；portable 327 項 Python 檢查通過，其後追加的型別 Undo 重現測試與相關測試共 52 項通過。瀏覽器型別通路 12 組通過。完整驗收範圍與實測限制見 [TESTING.md](../development/TESTING.md)；下方早期方案保留為歷史推演，不代表目前實作仍未啟用。
+
+### 本輪原生傳輸實測
+
+TD 2025.32820 的隔離 TOP、MAT pixel、MAT vertex 已以 GPU 內整數比較確認 330 組傳輸案例（CONSTANT 與 EXPRESSION），包含正負端點及所有向量分量。編譯、CPU 參數儲存成功，不等於 GPU 值正確。
+
+| 來源 | 已確認的有效傳輸範圍 |
+|---|---|
+| 圖內 Constant／Scalar／Vector、GLSL 運算 | int／uint 完整 32 位範圍，literal 不經 float32 |
+| TOP／MAT Vectors int／ivec | 必須是 float32 可精確表示的整數；支援負值與 INT_MIN，不是簡單限制到 2²⁴ |
+| TOP Vectors uint／uvec | 必須是 float32 可精確表示的 uint；例如 4294967040 正確，UINT_MAX 失真 |
+| MAT Vectors uint／uvec | 同上，且不得超過 2147483648；更大的精確 uint 實測被傳成 2147483648 |
+| TOP／MAT Vectors bool／bvec | 以 0／1 傳送，所有分量通過；不把原生任意小數轉布林當成可攜保證 |
+
+產品在套用、直接寫值、driver 修改及歷史還原前檢查這些宿主限制，外部 TD 修改造成不合法值則在來源狀態報告。不因此縮減語言型別本身；任意 32 位整數的動態傳值若需要另一通道，另立後端工作，不暗中改成浮點常數。維護測試：`tests/td/test_typed_uniform_transport.py`。本機驗證不代表已在 Metal 或其他 GPU 上測試。
+
+整數 Mod 產生 `%`，浮點 Mod 產生 `mod()`。GLSL 不保證負運算元的整數 `%` 結果；不得把某個 GPU 的負餘數結果寫成跨平台語意。參考：[GLSL expressions](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)。
+
 優先完成型別能力，再做數字顯示、Switch Case 等快捷／控制功能。既有數學節點也應在型別批一起核對並补齊合法的輸入／輸出組合，避免每加一個功能又回頭補型別。設計以最大可用能力為先，再尋找最簡潔、統一的操作方式；不因 UI 暫時不好做而先刪除底層能力。以下歷史「最小範圍／初版排除」是研究起點，不能當成最新需求的永久限制；各型別與 TD 宿主能力仍須分別實測。
 
-目前不是完全沒有 int／uint／bool：Spec Constant、Compare、literal 驗證及 Subgraph 接口已有部分支援，但一般 Constant／Uniform、向量家族、運算、輸入編輯及轉型尚未形成完整通路。「完成型別」應涵蓋純量、各家族向量、矩陣與陣列的表示／形狀、合法簽名、值來源、常數分類、Cast／Auto、共用值編輯、Subgraph／GLSL Code、保存與原生 TOP／MAT 驗證；不能只在下拉清單增加名稱。資源型別與數值型別分清楚，依實際目標支援列能力表，不假定 GLSL 的所有型別都能透過 TD 的同一種 Uniform 通道輸送。
+實作前只有 Spec Constant、Compare、literal 驗證及 Subgraph 接口部分支援 int／uint／bool，一般來源、向量、運算、編輯及轉型尚未形成完整通路；這些 scalar／vector 缺口已由本輪接通。後續矩陣／陣列仍須一起考慮表示／形狀、合法簽名、值來源、常數分類、共用編輯、介面、保存及原生驗證，不能只在下拉清單增加名稱。資源型別與數值型別分清楚，依實際目標支援列能力表，不假定 GLSL 的所有型別都能透過 TD 的同一種 Uniform 通道輸送。
 
 Alpha 前既有圖皆為可重建的試驗資料，可直接整理不合理的型別集合、契約及圖格式，不為未發布的舊格式增加相容層；詳見 [升級政策](../architecture/UPGRADE_POLICY.md)。歷史指紋是偵測非預期變動的工具，不阻止有意識的模型改進。
 
@@ -16,9 +42,9 @@ Alpha 前既有圖皆為可重建的試驗資料，可直接整理不合理的�
 
 使用者希望以輸出型別作為節點的主要識別，避免改輸入造成不明確的下游變動。現行 float → vecN 是顯式產生 vecN(value) 的 splat，兩個 float 接入已鎖定 vec4 Multiply 仍合法並輸出四分量。介面要區分輸出型別、輸入來源型別及轉換，不可把所有輸入口籠統改成 any；Auto 解析、已連下游的衝突處理與顯式鎖定需共用同一合法簽名契約。先補清楚顯示，再實作推導，不回寫舊圖。
 
-# 顯式數值型別：下一批實作依據
+# 歷史：顯式數值型別的前置設計
 
-目前產品只支援 float／vec2／vec3／vec4。0.8.5 增加共用 family／components，沒有啟用新型別或 Auto。本文件是下一批設計及實測紀錄。
+以下記錄形成時，產品只支援 float／vec2／vec3／vec4；0.8.5 增加共用 family／components，尚未啟用新型別或 Auto。保留早期設計及實測依據；型別、跨族接線及矩陣／陣列排程以本文件上方 2026-09-18 的完成狀態與最新決定為準。
 
 GLSL 分成浮點、帶號整數、無號整數與布林家族。不同函式有不同簽名；例如 abs 有整數版本，而 min／max／clamp 包含整數與無號整數。只看函式名稱能否編譯不足以判定回傳型別，因為可能經過隱式數值轉換。依據：[GLSL 4.60 規範，Common Functions](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#common-functions)。
 
@@ -49,7 +75,7 @@ GLSL 分成浮點、帶號整數、無號整數與布林家族。不同函式有
 
 ## 型別批依賴與可分段邊界
 
-狀態：實作前審查；以下新型別尚未啟用。整體排程以 [Inputs 設計](INPUTS_UI_NEXT_ROUND.md#下一輪實作型別批) 為準；本節補充編譯與原生依賴，不另訂 UI 規格。UI 批可先獨立交付，型別批按以下完整能力分段。
+歷史狀態：以下是新型別啟用前的依賴審查，不是目前能力表；scalar／vector 已完成情況見上方。本節保留與 [Inputs 設計](INPUTS_UI_NEXT_ROUND.md#下一輪實作型別批) 對照的編譯及原生依賴，矩陣／陣列範圍以最新使用者決定為準。
 
 | 範圍 | 已有證據 | 最小可交付邊界／准入條件 |
 |---|---|---|

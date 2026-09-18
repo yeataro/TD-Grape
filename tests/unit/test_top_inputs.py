@@ -30,7 +30,7 @@ class TopInputs(unittest.TestCase):
   g['topInputLegacyId']='a';g['topInputs'].reverse();self.assertIn('texture(sTD2DInputs[1]',c.compile_graph(g)['pixel'])
  def test_named_constants_are_constant_expressions_and_not_uniforms(self):
   for target in ['top','mat']:
-   for ty in c.TYPES:
+   for ty in c.FLOAT_TYPES:
     g=c.demo_graph('color',target);g['declarations']=[{'id':'c','kind':'constant','name':'cValue','type':ty,'value':c.filled_value(ty,.25)}]
     g['stages']['pixel']={'nodes':[c.node('constant','c',declarationId='c'),c.node('length','length',type=ty),c.node('pixel_out','output')],'edges':[c.edge('c','length','value'),c.edge('length','output','color')]}
     code=c.compile_graph(g)['pixel'];self.assertIn('const '+ty+' cValue = ',code);self.assertIn('length(cValue)',code);self.assertNotIn('uniform '+ty+' cValue',code);self.assertNotIn('sg_n_c =',code)

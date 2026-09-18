@@ -139,7 +139,7 @@ function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['unifo
 function nodeCategory(d){
   if(d.key==='comment')return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
-  if(['constant','spec_constant','vector'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
+  if(['constant','spec_constant','scalar','vector'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
@@ -168,7 +168,7 @@ const CustomGLSL=(()=>{
       for(const p of list){
         if(!p||typeof p.id!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id)||ids.has(p.id))throw Error(t('code.invalidPort'));
         if(!isName(p.name)||names.has(p.name))throw Error(t('code.invalidName'));
-        if(!(direction==='inputs'?interfaceTypes():numericTypes()).includes(p.type))throw Error(t('code.invalidType'));
+        if(!(direction==='inputs'?interfaceTypes():valueTypes()).includes(p.type))throw Error(t('code.invalidType'));
         ids.add(p.id);names.add(p.name);
       }
     }
@@ -215,12 +215,13 @@ function setTypeContract(contract){
   if(!Array.isArray(resourceTypes)||resourceTypes.some(t=>t!=='sampler2D')||new Set(resourceTypes).size!==resourceTypes.length)throw Error(t('contract.invalid'));
   const specTypes=contract.specConstantTypes||[];
   if(!Array.isArray(specTypes)||specTypes.some(t=>!['int','uint','bool','float'].includes(t))||new Set(specTypes).size!==specTypes.length)throw Error(t('contract.invalid'));
-  const valueTypes=[...new Set([...contract.numericTypes,...specTypes])],known=t=>valueTypes.includes(t)||resourceTypes.includes(t);
+  const valueTypes=contract.valueTypes||[...new Set([...contract.numericTypes,...specTypes])],known=t=>valueTypes.includes(t)||resourceTypes.includes(t);
+  if(!Array.isArray(valueTypes)||new Set(valueTypes).size!==valueTypes.length||!contract.numericTypes.every(t=>valueTypes.includes(t)))throw Error(t('contract.invalid'));
   if(Object.keys(contract.types).length!==valueTypes.length+resourceTypes.length)throw Error(t('contract.invalid'));
-  for(const type of contract.numericTypes){
-    const descriptor=contract.types[type];
-    if(!Object.hasOwn(contract.types,type)||!descriptor||descriptor.family!=='float'||
-        !Number.isInteger(descriptor.components)||descriptor.components<1||descriptor.components>4)throw Error(t('contract.invalid'));
+  for(const type of valueTypes){
+    const descriptor=contract.types[type],vector=/^(i|u|b)?vec([234])$/.exec(type);
+    const family=vector?({i:'int',u:'uint',b:'bool'}[vector[1]]||'float'):type,count=vector?Number(vector[2]):1;
+    if(!Object.hasOwn(contract.types,type)||!descriptor||!['float','int','uint','bool'].includes(family)||descriptor.family!==family||descriptor.components!==count)throw Error(t('contract.invalid'));
   }
   for(const type of specTypes.filter(t=>!contract.numericTypes.includes(t)))if(contract.types[type]?.family!==type||contract.types[type]?.components!==1)throw Error(t('contract.invalid'));
   for(const type of resourceTypes)if(contract.types[type]?.family!=='sampler'||contract.types[type]?.components!==0)throw Error(t('contract.invalid'));
@@ -237,11 +238,11 @@ function setTypeContract(contract){
   if(contract.glslCode&&(contract.glslCode.maxPorts!==16||contract.glslCode.maxLength!==16384||!Array.isArray(contract.glslCode.reservedNames)||!contract.glslCode.reservedNames.every(n=>typeof n==='string')))throw Error(t('contract.invalid'));
   if(contract.vectors){
     const spec=contract.vectors;
-    if(spec.version!==1||spec.components!=='xyzw'||JSON.stringify(spec.types)!==JSON.stringify(['vec2','vec3','vec4']))throw Error(t('contract.invalid'));
+    if(spec.version!==1||spec.components!=='xyzw'||!Array.isArray(spec.types)||spec.types.length!==new Set(spec.types).size||spec.types.some(type=>!valueTypes.includes(type)||contract.types[type].components<2))throw Error(t('contract.invalid'));
     for(const type of spec.types){
       const layouts=spec.layouts?.[type];if(!Array.isArray(layouts)||layouts.length!==2**(contract.types[type].components-1))throw Error(t('contract.invalid'));
       for(const row of layouts){let cursor=0;const groups={};
-        for(const [port,ty]of Object.entries(row.inputs||{})){if(port!==spec.components[cursor]||!contract.numericTypes.includes(ty))throw Error(t('contract.invalid'));cursor+=contract.types[ty].components;if(ty!=='float')groups[port]=ty;}
+        for(const [port,ty]of Object.entries(row.inputs||{})){if(port!==spec.components[cursor]||!valueTypes.includes(ty)||contract.types[ty].family!==contract.types[type].family)throw Error(t('contract.invalid'));cursor+=contract.types[ty].components;if(contract.types[ty].components>1)groups[port]=ty;}
         if(cursor!==contract.types[type].components||JSON.stringify(groups)!==JSON.stringify(row.groups))throw Error(t('contract.invalid'));
       }
     }
@@ -249,7 +250,21 @@ function setTypeContract(contract){
   typeContract=JSON.parse(JSON.stringify(contract));
 }
 const numericTypes=()=>typeContract?.numericTypes||[];
-const interfaceTypes=()=>[...new Set([...numericTypes(),...(typeContract?.specConstantTypes||[]),...(typeContract?.resourceTypes||[])])];
+const valueTypes=()=>typeContract?.valueTypes||[...new Set([...numericTypes(),...(typeContract?.specConstantTypes||[])])];
+const interfaceTypes=()=>[...valueTypes(),...(typeContract?.resourceTypes||[])];
+const typeFamily=type=>typeContract?.types?.[type]?.family;
+const typeForShape=(family,count)=>valueTypes().find(type=>typeFamily(type)===family&&typeComponents(type)===count);
+function scalarValue(value,family){
+  if(family==='bool')return !!value;
+  const number=Number(value)||0;
+  if(family==='int'||family==='uint'){const low=family==='uint'?0:-2147483648,high=family==='uint'?4294967295:2147483647;return Math.max(low,Math.min(high,Math.trunc(number)));}
+  return Number.isFinite(number)?number:0;
+}
+function validScalarValue(value,family){
+  if(family==='bool')return typeof value==='boolean';
+  if(typeof value!=='number'||!Number.isFinite(value))return false;
+  return family==='float'||Number.isInteger(value)&&value>=(family==='uint'?0:-2147483648)&&value<=(family==='uint'?4294967295:2147483647);
+}
 const isResourceType=type=>(typeContract?.resourceTypes||[]).includes(type);
 function typeComponents(type){
   if(!typeContract||!Object.hasOwn(typeContract.types,type))throw Error(t('contract.invalid'));
@@ -258,7 +273,8 @@ function typeComponents(type){
 function shapedValue(value,type){
   if(isResourceType(type))return null;
   const count=typeComponents(type),components=Array.isArray(value)?value:[value];
-  return count===1?components[0]:Array.from({length:count},(_,i)=>components[i]??components[0]);
+  const scalar=value=>scalarValue(value,typeFamily(type));
+  return count===1?scalar(components[0]):Array.from({length:count},(_,i)=>scalar(components[i]??components[0]));
 }
 const filledValue=(type,value=0)=>shapedValue(value,type);
 const selectableNodeTypes=d=>[...new Set(typeVariants(d).map(v=>v.type).filter(type=>type!==null))];
@@ -272,6 +288,7 @@ function typeVariants(d){
 }
 function resolvedNodePorts(d,params,decl,kind){
   if(isVectorOperation(d))return vectorPorts(d.key,params)[kind];
+  if(d.key==='convert')return kind==='inputs'?{value:params.fromType||'float'}:{out:params.toType||'int'};
   if(d.key==='glsl_code')return Object.fromEntries((Array.isArray(params[kind])?params[kind]:[]).map(p=>[p.id,p.type]));
   if(d.key==='pixel_out'&&kind==='inputs'&&typeContract?.pixelBufferOutputs){
     const spec=typeContract.pixelBufferOutputs,count=params[spec.parameter]??1;
@@ -296,17 +313,17 @@ function vectorPorts(key,params){
     return key==='replace'?{inputs:{value:type,...layout.inputs},outputs:{out:type}}:{inputs:layout.inputs,outputs:{out:type}};
   }
   const components=spec.components.slice(0,typeComponents(type));
-  if(key==='vector_split')return {inputs:{value:type},outputs:Object.fromEntries([...components].map(p=>[p,'float']))};
+  if(key==='vector_split')return {inputs:{value:type},outputs:Object.fromEntries([...components].map(p=>[p,typeFamily(type)]))};
   const mask=params.mask??'xy';
   if(typeof mask!=='string'||!mask.length||mask.length>4||[...mask].some(p=>!components.includes(p)))throw Error(t('vector.invalidMask'));
-  return {inputs:{value:type},outputs:{out:mask.length===1?'float':'vec'+mask.length}};
+  return {inputs:{value:type},outputs:{out:typeForShape(typeFamily(type),mask.length)}};
 }
 // A type draft can retain groups or swizzles that no longer fit. These are
 // display ports only; strict vectorPorts still validates compiler/wire layouts.
 function draftVectorPorts(key,params){
   const type=typeContract?.vectors?.types.includes(params.type)?params.type:'vec2',components='xyzw'.slice(0,typeComponents(type));
-  if(key==='combine'||key==='replace'){const inputs=Object.fromEntries([...components].map(p=>[p,'float']));return {inputs:key==='replace'?{value:type,...inputs}:inputs,outputs:{out:type}};}
-  if(key==='swizzle'){const count=Math.max(1,Math.min(4,String(params.mask||'xy').length));return {inputs:{value:type},outputs:{out:count===1?'float':'vec'+count}};}
+  if(key==='combine'||key==='replace'){const inputs=Object.fromEntries([...components].map(p=>[p,typeFamily(type)]));return {inputs:key==='replace'?{value:type,...inputs}:inputs,outputs:{out:type}};}
+  if(key==='swizzle'){const count=Math.max(1,Math.min(4,String(params.mask||'xy').length));return {inputs:{value:type},outputs:{out:typeForShape(typeFamily(type),count)}};}
   return vectorPorts(key,{...params,type});
 }
 function displayNodePorts(d,params,decl,kind){
@@ -440,15 +457,16 @@ function reshapeTypedInputs(n,d,nextType){
     if(!oldPorts[port]||!newPorts[port]||oldPorts[port]===newPorts[port])continue;
     n.ui||={};const cache=n.ui.inputValuesByType||={};const values=cache[port]||={};values[oldPorts[port]]=clone(value);
     let nextValue=shapedValue(value,newPorts[port]);
-    if(d.key==='compare'&&['int','uint'].includes(newPorts[port])){
-      const [low,high]=newPorts[port]==='int'?[-2147483648,2147483647]:[0,4294967295];
-      nextValue=Math.max(low,Math.min(high,Math.trunc(Number(nextValue))));
-    }
     n.inputValues[port]=Object.hasOwn(values,newPorts[port])?clone(values[newPorts[port]]):nextValue;
   }
   n.params.type=nextType;
+  normalizeNodeValues(n,d);
 }
-function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.inputs,n.params.outputs,n.ui?.typeMode]),data.edges])});}
+function normalizeNodeValues(n,d){
+  if(['vector','combine','replace'].includes(d.key))n.params.components=Array.from({length:4},(_,i)=>scalarValue(n.params.components?.[i]??0,typeFamily(n.params.type)));
+  if(d.key==='scalar')n.params.value=shapedValue(n.params.value,n.params.type);
+}
+function autoTopology(document){return JSON.stringify({declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>[key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.inputs,n.params.outputs,n.ui?.typeMode]),data.edges])});}
 function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
   if(autoTopology(document)===autoTopology(previous))return;
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
@@ -488,11 +506,11 @@ function planWireTypes(from,to,extra=null){
   if(['combine','replace'].includes(autoDefinition(graph,target,owner)?.key)&&to.port!=='value'){
     const targetPorts=safeConcretePorts(graph,target,owner,target.params.type,overrides.get(target.id));
     const first='xyzw'.indexOf(to.port),type=sourcePorts?.outputs[from.port];
-    if(first<0||!Object.hasOwn(targetPorts.inputs,to.port)||!numericTypes().includes(type)||first+typeComponents(type)>typeComponents(target.params.type))throw Error(t('vector.overlap'));
+    if(first<0||!Object.hasOwn(targetPorts.inputs,to.port)||!valueTypes().includes(type)||first+typeComponents(type)>typeComponents(target.params.type))throw Error(t('vector.overlap'));
     const end=first+typeComponents(type);
     replaced=e=>{
       if(e.to[0]!==to.node||e.to[1]==='value')return false;
-      const start='xyzw'.indexOf(e.to[1]),oldType=oldPorts.get(e.from[0])?.outputs[e.from[1]],width=numericTypes().includes(oldType)?typeComponents(oldType):typeComponents(targetPorts.inputs[e.to[1]]||'float');
+      const start='xyzw'.indexOf(e.to[1]),oldType=oldPorts.get(e.from[0])?.outputs[e.from[1]],width=valueTypes().includes(oldType)?typeComponents(oldType):typeComponents(targetPorts.inputs[e.to[1]]||'float');
       return start<end&&start+width>first;
     };
   }
@@ -519,8 +537,13 @@ function creatorTypePlan(d,variant,port,wire,locked){
 }
 function creatorVariants(d,wire){
   if(d.presetType)return typeVariants(d).filter(variant=>variant.type===d.presetType);
+  if(d.key==='convert'){
+    const from=wire?.kind==='outputs'?wire.type:d.defaults.fromType,to=wire?.kind==='inputs'?wire.type:d.defaults.toType;
+    const pairs=wire?valueTypes().map(type=>wire.kind==='outputs'?[from,type]:[type,to]):[[from,to]];
+    return pairs.filter(([a,b])=>valueTypes().includes(a)&&valueTypes().includes(b)&&(typeComponents(a)===1||typeComponents(a)===typeComponents(b))).map(([a,b])=>({type:null,inputs:{value:a},outputs:{out:b},params:{fromType:a,toType:b}}));
+  }
   if(d.key!=='swizzle')return typeVariants(d);
-  const count=wire&&numericTypes().includes(wire.type)?typeComponents(wire.type):2;
+  const count=wire&&valueTypes().includes(wire.type)?typeComponents(wire.type):2;
   return typeVariants(d).flatMap(variant=>{
     if(count>typeComponents(variant.type))return [];
     const available=typeContract.vectors.components.slice(0,typeComponents(variant.type));
@@ -530,7 +553,7 @@ function creatorVariants(d,wire){
 }
 function creatorPriority(match,wire){
   if(!wire)return 99;
-  const count=numericTypes().includes(wire.type)?typeComponents(wire.type):0;
+  const count=valueTypes().includes(wire.type)?typeComponents(wire.type):0;
   const order=wire.kind==='outputs'?(count>1?['vector_split','replace','swizzle','combine','multiply','add','mix']:['multiply','add','replace','combine','mix']):count>1?['vector','combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','vector','add','multiply'];
   const index=order.indexOf(match.d.key);
   // Exact whole-vector matches precede scalar fallbacks across preset entries.
@@ -548,12 +571,12 @@ function portTypeCaption(n,kind,name){
   const info=inputTypeDisplay(n,name),caption=el('small',{class:'port-type'},info.text);
   if(info.source&&info.source!==info.target){
     caption.classList.add('has-conversion');caption.dataset.conversion=info.conversion||'invalid';
-    caption.title=t(info.conversion==='splat'?'type.splat':'type.incompatible').replace('{source}',info.source).replace('{target}',info.target);
+    caption.title=t(info.conversion==='splat'?'type.splat':info.conversion==='cast'?'type.cast':'type.incompatible').replace('{source}',info.source).replace('{target}',info.target);
     caption.replaceChildren(el('span',{'data-source-type':info.source},info.source),el('span',{class:'conversion-arrow','aria-hidden':'true'},'→'),document.createTextNode(info.target));
   }
   return caption;
 }
-function vectorNames(n){return n.ui?.componentNames==='rgba'?'RGBA':n.ui?.componentNames==='uv'&&n.params.type==='vec2'?'UV':'XYZW';}
+function vectorNames(n){return n.ui?.componentNames==='rgba'?'RGBA':n.ui?.componentNames==='uv'&&typeComponents(n.params.type)===2?'UV':'XYZW';}
 // Display hints come from known component ports, never arbitrary labels or upstream nodes.
 function portColorComponent(n,kind,port){
   if(ports(n,kind)[port]!=='float')return null;
@@ -570,7 +593,7 @@ function applyPortColorHint(element,n,kind,port){
   const component=portColorComponent(n,kind,port);
   if(component)element.dataset.colorComponent=component;
   const d=definition(n),label=vectorPortLabel(n,kind,port);
-  const index=component?'rgba'.indexOf(component):isVectorOperation(d)&&ports(n,kind)[port]==='float'&&label?.length===1?vectorNames(n).indexOf(label):-1;
+  const index=component?'rgba'.indexOf(component):isVectorOperation(d)&&typeContract?.types?.[ports(n,kind)[port]]?.components===1&&label?.length===1?vectorNames(n).indexOf(label):-1;
   if(index>=0)element.dataset.vectorComponent=String(index);
 }
 function applyComponentColorHint(element,index,rgba=false){
@@ -596,8 +619,8 @@ function vectorManualComponents(n){
     for(let i=start;i<start+typeComponents(type);i++)covered.add(i);
   }
   return [...'xyzw'.slice(0,typeComponents(n.params.type))].flatMap((port,index)=>{
-    const value=defaultInput(n,port,'float');
-    return !covered.has(index)&&Number.isFinite(value)?[{name:names[index],value}]:[];
+    const value=defaultInput(n,port,typeFamily(n.params.type));
+    return !covered.has(index)&&(typeof value==='boolean'||Number.isFinite(value))?[{name:names[index],value}]:[];
   });
 }
 function updateVectorManualSummary(n,summary=null){
@@ -999,7 +1022,7 @@ function browserMeta(d){
   const raw=authored||(d.key==='comment'?{category:'data',source:'editor',aliases:['note','annotation','text','註解','注释','備註'],descriptionKey:'help.comment'}:d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
   const source=f?(f.scope==='local'?'project':f.scope==='personal'?'personal':'editor'):(raw.source||'editor');
   const path=stringList(raw.categoryPath);
-  const aliases=stringList(raw.aliases).filter(alias=>!d.presetType||!/^vec(?:tor)?\s*[234]$/i.test(alias)||alias.replace(/tor|\s/gi,'').toLowerCase()===d.presetType);
+  const aliases=stringList(raw.aliases).filter(alias=>!d.presetType||!/^[iub]?vec(?:tor)?\s*[234]$/i.test(alias)||alias.replace(/tor|\s/gi,'').toLowerCase()===d.presetType);
   if(d.key==='comment')aliases.push('comment','筆記');
   return {category,path:path[0]===category?path:[category],source,secondary:stringList(raw.secondaryCategories).filter(known),aliases,tags:stringList(raw.tags),glslName:d.presetType||raw.glslName||'',descriptionKey:d.descriptionKey||f?.descriptionKey||raw.descriptionKey||'help.function',subgraph:!!f,saved:!!f&&!d.source&&f.scope!=='local',project:!!f&&!d.source};
 }
@@ -1013,8 +1036,8 @@ function browserIndex(){
 function browserSearchScore(entry,query){
   const q=normalizeSearch(query);if(!q)return 0;
   const {d,meta:m}=entry,names=[d.label,m.glslName].map(normalizeSearch),aliases=m.aliases.map(normalizeSearch);
-  const requestedVector=q.match(/\bvec(?:tor)?\s*([234])\b/);
-  if(d.presetType&&requestedVector&&d.presetType!=='vec'+requestedVector[1])return Infinity;
+  const requestedVector=q.match(/\b([iub]?vec)(?:tor)?\s*([234])\b/);
+  if(d.presetType&&requestedVector&&d.presetType!==requestedVector[1]+requestedVector[2])return Infinity;
   if(names.includes(q))return 0;if(aliases.includes(q))return 1;
   const terms=q.split(/\s+/),contains=values=>terms.every(term=>values.some(v=>v.includes(term)));
   if(contains([...names,...aliases]))return 2;
@@ -1222,13 +1245,13 @@ function renderCreator(){
       else for(const[name,type]of p){try{const plan=creatorTypePlan(d,variant,name,wire,typeFilter!=='all'),actual=plan[wire.kind==='inputs'?'outputs':'inputs'][name];if(typeFilter==='all'||actual===typeFilter)candidates.push({d,type:variant.type,port:name,portType:actual,params:variant.params,variant:plan});}catch{}}
     }
     if(candidates.length){
-      const sizeScore=m=>d.key==='combine'&&wire?.kind==='outputs'&&numericTypes().includes(wire.type)?Math.abs(typeComponents(m.type)-Math.min(4,typeComponents(wire.type)+1)):0;
+      const sizeScore=m=>d.key==='combine'&&wire?.kind==='outputs'&&valueTypes().includes(wire.type)?Math.abs(typeComponents(m.type)-Math.min(4,typeComponents(wire.type)+1)):0;
       candidates.sort((a,b)=>Number(b.portType===wire?.type)-Number(a.portType===wire?.type)||sizeScore(a)-sizeScore(b));creatorMatches.push(candidates[0]);
     }
   }
   if(!query.trim())creatorMatches.sort((a,b)=>creatorPriority(a,wire)-creatorPriority(b,wire));
   creatorIndex=Math.min(creatorIndex,Math.max(0,creatorMatches.length-1));const list=$('#createresults');list.replaceChildren();
-  creatorMatches.forEach((match,i)=>{const label=match.d.key==='vector'?'Vector '+typeComponents(match.type):match.d.label,b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':browserEntryKey(match.d)},label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
+  creatorMatches.forEach((match,i)=>{const label=match.d.key==='vector'?nodeTypeLabel(match.d,{type:match.type}):match.d.label,b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':browserEntryKey(match.d)},label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
   if(!creatorMatches.length)list.append(el('p',{class:'muted'},t('create.empty')));
   for(const button of document.querySelectorAll('[data-create-category]')){const active=button.dataset.createCategory===(query.trim()?'all':category);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;}
   renderCreatorDetails();
@@ -1536,6 +1559,16 @@ function pasteGraphSelection(text,position=null){
   if(changed){pasteCount++;status(t('clipboard.pasted'));$('#canvas').focus({preventScroll:true});}return changed;
 }
 function closeGraphMenu(){graphEditMenu?.remove();graphEditMenu=null;}
+function graphMenuIcon(action){
+  const buttonId={copy:'graphcopy',paste:'graphpaste',group:'graphgroup',delete:'graphdelete',collapse:'graphcollapseselection',expand:'graphexpandselection'}[action];
+  const existing=buttonId&&document.getElementById(buttonId)?.querySelector('svg');
+  if(existing)return existing.cloneNode(true);
+  if(action==='duplicate'){
+    const icon=document.getElementById('graphcopy').querySelector('svg').cloneNode(true);
+    const plus=document.createElementNS(icon.namespaceURI,'path');plus.setAttribute('d','M11 14h6m-3-3v6');icon.append(plus);return icon;
+  }
+  return selectionIcon(action==='rename'?'m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4':'M12 4v16M4 12h16');
+}
 function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
   closeGraphMenu();closeCreator();cancelConnection();
   if(nodeId&&!selection.has(nodeId)){selectNode(current().nodes.find(n=>n.id===nodeId));render();}
@@ -1553,7 +1586,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
     ['group',t('function.group'),shortcutLabel('group'),!readonly&&count>0,groupSelection],
     ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
   ];
-  for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length)continue;const b=el('button',{role:'menuitem','data-edit':key},label);b.append(el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
+  for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length)continue;const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
   menu.onkeydown=e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeGraphMenu();$('#canvas').focus();}};
   document.body.append(menu);graphEditMenu=menu;const uiScale=uiScaleFactor();menu.style.left=Math.max(4,Math.min(x/uiScale,innerWidth/uiScale-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/uiScale,innerHeight/uiScale-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
 }

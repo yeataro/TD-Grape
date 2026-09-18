@@ -1,5 +1,15 @@
 # 測試
 
+2026-09-18 純量／向量型別與介面收尾：整輪 portable checks 通過（327 Python tests 及既有 editor／metadata／JS／Remote Panel 檢查）。其後追加 `test_typed_undo.py` 的 7 項重現測試，與 typed sources／history／Spec 共 52 項通過；驗證原 Shader context、型別變更後的原生 Undo、綁定控制項及舊 exposed Uniform 歷史值，並確認不合法還原在任何写入前拒絕。原生整數快照的 integral float 與布林 0／1 仍接受；綁定新 Int／Toggle 控制項前先驗值，避免控制項靜默截斷。
+
+TD 2025.32820 隔離原生驗證：typed values 394 項、native sources 21 項、Spec Constants 18 項及 custom parameters 18 項通過。typed values 涵蓋 16 型別、constructor、完整範圍圖內常數、If、合法數學運算、向量組拆、GLSL Code／Subgraph、動態 Uniform、原生 Undo／Redo，以及不合法寫值保留原狀。另有 330 組原生傳輸探針，190 組精確、140 組確認預期失真，用於界定 TOP／MAT Vectors 的 float32 整數精度與 MAT uint 上限；這 140 組不是宣稱可用的傳輸值。使用者 Shader 保留，本輪沒有 Metal／其他 GPU 實測。報告位於私人 `work/reports/type-expansion` 的 typed-values／uniform-transport／native-sources／spec-constants／custom-parameters。
+
+瀏覽器 typed values 12、context menu 3、control nodes 10、Note appearance 16、selection spread 8、selection collapse 6 組通過。涵蓋型別切換與 Auto、Scalar／Convert、右鍵圖示、收合／展開按鈕與分隔線一起隱藏、完整群組外範圍的直角、排列小三角及 Note 預設純灰／自訂色／透明外觀；Note 與選區截圖已檢視。自動排列演算法保持不變。
+
+仍有兩份舊 browser 腳本待維護，不能將本輪描述為全部 browser 全綠：`inline_vector_values` 尚使用已改名的 `data-vector-expand`（目前為 `data-value-expand`）；`glsl_code` 的可變 fixture／介面假設造成 timeout。新型別通路測試已涵蓋相應編輯與 GLSL Code 流程，這兩份旧腳本本輪未列為通過。
+
+已同步並保存 TD：31 份內嵌來源與 9 份服務資源一致，TOP／MAT Master current、core 無錯誤，兩份使用者 Shader 保留；服務 GET 200。正式 TOE 807,516 bytes，SHA-256 `d0d28244cd83b1e2a03f73955182e5818d3f2815fb8fb727dc73b8dab30caa53`；本輪 audit／save 證據位於私人 `work/reports/type-expansion`。
+
 2026-09-18 Math／TD helper／Noise 與選取操作：完整可攜檢查通過（313 Python tests、628 個雙語字串、editor launch／metadata／JS model／Remote Panel checks）。本機 TD 2025.32820 的基本數學 77、TD helper 97、Noise 54 項，共 228 項原生檢查通過；涵蓋 TOP Pixel、MAT Pixel／Vertex、實際數值、常數界線、Noise 品質模式。此結果不代表 Metal／AMD 硬體已驗證。
 
 瀏覽器新增基本數學 8、TD helper 5、Noise 7、選區拉點 8、收合工具 6 組檢查。拉點涵蓋八方向、不同尺寸、對側錨點、3,200 組幾何、取消／Undo／觸控；收合工具涵蓋混合狀態、按鈕停用、設定保存、唯讀、Note／Group 及窄螢幕。既有 node collapse 9、selection toolbar 12、UI experiments 19 組在合併後通過；畫面截圖已檢視。自動排列程式未改。

@@ -21,7 +21,7 @@ def math_graph(key,ty):
 class MathCatalog(unittest.TestCase):
     def test_every_type_has_matching_output_and_stable_saved_graph(self):
         for key in NEW:
-            for ty in c.TYPES:
+            for ty in c.FLOAT_TYPES:
                 with self.subTest(key=key,type=ty):
                     g=math_graph(key,ty);before=copy.deepcopy(g);compiled=c.compile_graph(g)
                     self.assertEqual(g,before)
@@ -33,7 +33,7 @@ class MathCatalog(unittest.TestCase):
     def test_defaults_match_parameter_panel_for_every_type(self):
         rows=[]
         for key in NEW:
-            for ty in c.TYPES:
+            for ty in c.FLOAT_TYPES:
                 for port,t in c.CATALOG[key]['inputs'].items():
                     t=ty if t=='T' else t
                     rows.append({'node':c.node(key,'probe',type=ty),'port':port,'type':t,'expected':c.input_default(key,port,t)})

@@ -26,7 +26,7 @@ def graph_for(key, ty='float', target='top', stage='pixel', **params):
 class BasicMathNodes(unittest.TestCase):
     def test_every_type_and_stage_uses_native_glsl_without_graph_mutation(self):
         for key in KEYS:
-            for ty in c.TYPES:
+            for ty in c.FLOAT_TYPES:
                 for target, stage in [('top', 'pixel'), ('mat', 'pixel'), ('mat', 'vertex')]:
                     with self.subTest(key=key, type=ty, target=target, stage=stage):
                         graph = graph_for(key, ty, target, stage)
@@ -69,8 +69,9 @@ class BasicMathNodes(unittest.TestCase):
     def test_type_errors_remain_the_shared_numeric_contract(self):
         for key in KEYS:
             for ty in ('int', 'uint', 'bool', 'sampler2D', 'mat4'):
-                with self.subTest(key=key, type=ty), self.assertRaises(c.GraphError):
-                    c.compile_graph(graph_for(key, ty))
+                if ty not in c.node_parameter_types(c.CATALOG[key]):
+                    with self.subTest(key=key, type=ty), self.assertRaises(c.GraphError):
+                        c.compile_graph(graph_for(key, ty))
 
     def test_ui_defaults_type_plans_undo_and_export_compile(self):
         root = Path(__file__).resolve().parents[2]

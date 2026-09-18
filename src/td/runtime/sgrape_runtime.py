@@ -1056,7 +1056,12 @@ def public_uniforms(comp,graph,preserve=None):
             if getattr(comp.par,name,None) is not None: raise RuntimeError('Public Uniform parameter name collision')
             page=next((p for p in comp.customPages if p.name=='Uniforms'),None) or comp.appendCustomPage('Uniforms')
             count=core().type_components(decl['type'])
-            group=page.appendFloat(name,label=label,size=count)
+            family=core().TYPE_DESCRIPTORS[decl['type']]['family']
+            if family=='bool' and count==1:group=page.appendToggle(name,label=label)
+            else:group=(page.appendFloat if family=='float' else page.appendInt)(name,label=label,size=count)
+            if family!='float':
+                low,high=(0,1) if family=='bool' else (0,4294967295) if family=='uint' else (-2147483648,2147483647)
+                for p in group:p.min=low;p.max=high;p.clampMin=True;p.clampMax=True
             value=(preserve or {}).get(ident,decl['value'])
             values=[value] if count==1 else value
             for p,value in zip(group,values): p.val=value
@@ -1569,9 +1574,15 @@ def set_uniform_value(body):
         raise RuntimeError('This value is controlled by TD. Its Expression, Export or Bind was preserved.')
     if not isinstance(expected,dict) or any(expected.get(key)!=item[key] for key in ('value','mode','parameter')):
         raise RuntimeError('Uniform value changed in TD or another editor. Review the latest value and try again.')
-    value=body.get('value');core().number(value)
-    p=getattr(target().par,item['parameter'])
-    set_parameter_with_undo(p,value)
+    value=body.get('value');core().literal(value,core().TYPE_DESCRIPTORS[row['type']]['family'])
+    if source_module():source_module().validate_uniform_component(row,value,kind=shader_kind(target()))
+    comp=target();p=getattr(comp.par,item['parameter']);ident=body['declarationId']
+    def validate(value):
+        binding=comp.fetch('sgrapePublicUniforms',{}).get(ident,{})
+        if index>=len(binding.get('parameters',[])) or binding['parameters'][index]!=p.name:
+            raise RuntimeError('The exposed Uniform control changed.')
+        if source_module():source_module().validate_source_value(_owner.op('runtime').module,comp,ident,value,index)
+    set_parameter_with_undo(p,value,validate=validate)
     return uniform_snapshot()
 
 def process_shader_request(method,path,body):

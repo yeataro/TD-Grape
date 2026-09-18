@@ -28,7 +28,7 @@ def graph_for(key, ty='float', target='top', stage='pixel'):
 class TDMathHelpers(unittest.TestCase):
     def test_types_targets_stages_and_json_roundtrip(self):
         for key in KEYS:
-            for ty in (('vec3',) if key in KEYS[:2] else c.TYPES):
+            for ty in (('vec3',) if key in KEYS[:2] else c.FLOAT_TYPES):
                 for target, stage in [('top', 'pixel'), ('mat', 'pixel'), ('mat', 'vertex')]:
                     with self.subTest(key=key, type=ty, target=target, stage=stage):
                         graph = graph_for(key, ty, target, stage)
@@ -51,13 +51,13 @@ class TDMathHelpers(unittest.TestCase):
 
     def test_scalar_td_calls_vector_component_calls_and_guarded_range(self):
         for key, function in [('loop', 'TDLoop'), ('zigzag', 'TDZigZag')]:
-            for ty in c.TYPES:
+            for ty in c.FLOAT_TYPES:
                 code = c.compile_graph(graph_for(key, ty))['pixel']
                 self.assertEqual(code.count(function + '('), c.type_components(ty))
                 if ty != 'float':
                     for component in 'xyzw'[:c.type_components(ty)]:
                         self.assertIn(').' + component, code)
-        for ty in c.TYPES:
+        for ty in c.FLOAT_TYPES:
             graph = graph_for('range_from', ty)
             graph['stages']['pixel']['nodes'][0]['inputValues'] = {
                 'value': c.filled_value(ty, .8), 'min': c.filled_value(ty, .5), 'max': c.filled_value(ty, .5)}
@@ -69,7 +69,7 @@ class TDMathHelpers(unittest.TestCase):
 
     def test_range_formulas_are_constants_but_td_calls_never_are(self):
         for key in KEYS:
-            for ty in (('vec3',) if key in KEYS[:2] else c.TYPES):
+            for ty in (('vec3',) if key in KEYS[:2] else c.FLOAT_TYPES):
                 graph = graph_for(key, ty)
                 graph['stages']['pixel']['nodes'][0]['params']['requireConstant'] = True
                 with self.subTest(key=key, type=ty):
@@ -90,7 +90,7 @@ class TDMathHelpers(unittest.TestCase):
         document = json.loads((root / 'src/library/node_catalog.json').read_text('utf-8'))
         rows = []
         for key in KEYS:
-            for ty in (('vec3',) if key in KEYS[:2] else c.TYPES):
+            for ty in (('vec3',) if key in KEYS[:2] else c.FLOAT_TYPES):
                 for port, token in c.CATALOG[key]['inputs'].items():
                     port_type = ty if token == 'T' else token
                     rows.append({'node': c.node(key, 'probe', **({'type': ty} if key not in KEYS[:2] else {})),
