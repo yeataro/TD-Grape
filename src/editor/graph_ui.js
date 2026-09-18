@@ -1999,7 +1999,7 @@ function pasteGraphSelection(text,position=null){
 }
 function closeGraphMenu(){graphEditMenu?.remove();graphEditMenu=null;}
 function graphMenuIcon(action){
-  const buttonId={copy:'graphcopy',paste:'graphpaste',group:'graphgroup',delete:'graphdelete',collapse:'graphcollapseselection',expand:'graphexpandselection'}[action];
+  const buttonId={copy:'graphcopy',paste:'graphpaste',group:'graphgroup',delete:'graphdelete',collapse:'graphcollapseselection',expand:'graphexpandselection',arrange:'grapharrange',fit:'graphfitselection',frame:'graphframe',joinFrame:'graphjoinframe',detachFrame:'graphdetachframe'}[action];
   const existing=buttonId&&document.getElementById(buttonId)?.querySelector('svg');
   if(existing)return existing.cloneNode(true);
   if(action==='duplicate'){
@@ -2009,11 +2009,12 @@ function graphMenuIcon(action){
   return selectionIcon(action==='rename'?'m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4':'M12 4v16M4 12h16');
 }
 function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
-  closeGraphMenu();closeCreator();cancelConnection();
+  closeGraphMenu();closeArrangeMenu();closeCreator();cancelConnection();
   if(nodeId&&!selection.has(nodeId)){selectNode(current().nodes.find(n=>n.id===nodeId));render();}
   const position=graphPoint(x,y);
   const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
   const {nodes:collapseNodes,canCollapse,canExpand}=nodeCollapseSelectionState();
+  const owner=graph,level=current(),ids=selectedCanvasNodes().map(n=>n.id).join('\0'),sameContext=()=>graph===owner&&current()===level&&selectedCanvasNodes().map(n=>n.id).join('\0')===ids;
   const rows=[
     ['add',t('action.nodes'),shortcutLabel('add'),!readonly,()=>openCreator(x,y)],
     ['collapse',t('node.collapse'),'',!editorMutationBlocked()&&canCollapse,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),true)],
@@ -2022,12 +2023,51 @@ function openGraphMenu(x,y,nodeId=null,{touch=false}={}){
     ['paste',t('edit.paste'),shortcutLabel('paste'),!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),()=>pasteGraphFromClipboard(position)],
     ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
     ['duplicate',t('edit.duplicate'),shortcutLabel('duplicate'),!readonly&&count>0,duplicateSelection],
+    ['frame',t('frame.create'),shortcutLabel('groupFrame'),!editorMutationBlocked()&&canCreateGroupFrame(),createGroupFrame],
+    ['joinFrame',t('frame.join'),shortcutLabel('joinFrame'),!editorMutationBlocked(),joinGroupFrameSelection],
+    ['detachFrame',t('frame.detach'),shortcutLabel('detachFrame'),!editorMutationBlocked(),detachGroupFrameSelection],
+    ['arrange',t('arrange.title'),'›',!editorMutationBlocked()&&count>1,()=>{}],
+    ['fit',t('action.fitSelection'),'',count>0,fitSelection],
     ['group',t('function.group'),shortcutLabel('group'),!readonly&&count>0,groupSelection],
     ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
   ];
-  for(const[key,label,shortcut,enabled,action]of rows){if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length)continue;const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;b.onclick=()=>{closeGraphMenu();$('#canvas').focus({preventScroll:true});action();};menu.append(b);}
-  menu.onkeydown=e=>{if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeGraphMenu();$('#canvas').focus();}};
-  document.body.append(menu);graphEditMenu=menu;const uiScale=uiScaleFactor();menu.style.left=Math.max(4,Math.min(x/uiScale,innerWidth/uiScale-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/uiScale,innerHeight/uiScale-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
+  for(const[key,label,shortcut,enabled,action]of rows){
+    if(key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length||['frame','arrange'].includes(key)&&count<2||key==='fit'&&!count||key==='joinFrame'&&!groupFrameJoinTarget()||key==='detachFrame'&&!canDetachGroupFrameSelection())continue;
+    const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));decorateShortcutButton(b,key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
+    b.onclick=()=>{const valid=sameContext();closeGraphMenu();$('#canvas').focus({preventScroll:true});if(valid)action();};menu.append(b);
+  }
+  const arrange=menu.querySelector('[data-edit="arrange"]'),submenu=el('div',{id:'grapharrangesubmenu',class:'popup-menu graph-menu-submenu',role:'menu','aria-label':t('arrange.title'),hidden:''});
+  const hideSubmenu=(focus=false)=>{submenu.hidden=true;arrange?.setAttribute('aria-expanded','false');if(focus)arrange?.focus({preventScroll:true});};
+  const showSubmenu=(focus=false)=>{
+    if(!arrange||arrange.disabled||!sameContext()){hideSubmenu();return;}submenu.hidden=false;arrange.setAttribute('aria-expanded','true');
+    const r=arrange.getBoundingClientRect(),z=uiScaleFactor(),margin=4;submenu.style.maxHeight=Math.max(0,innerHeight/z-margin*2)+'px';
+    const right=r.right/z+2,left=r.left/z-submenu.offsetWidth-2;
+    submenu.style.left=Math.max(margin,Math.min(right+submenu.offsetWidth<=innerWidth/z-margin?right:left,innerWidth/z-submenu.offsetWidth-margin))+'px';
+    submenu.style.top=Math.max(margin,Math.min(r.top/z,innerHeight/z-submenu.offsetHeight-margin))+'px';
+    if(focus)submenu.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
+  };
+  if(arrange){
+    arrange.setAttribute('aria-haspopup','menu');arrange.setAttribute('aria-controls',submenu.id);arrange.setAttribute('aria-expanded','false');
+    for(const[kind,path]of ARRANGE_ACTIONS){
+      if(['left','top','spaceX'].includes(kind))submenu.append(el('div',{role:'separator',class:'popup-separator'}));
+      const item=el('button',{type:'button',role:'menuitem','data-arrange':kind}),caption=el('span',{class:'graph-menu-label'});caption.append(selectionIcon(path),el('span',{},t('arrange.'+kind)));item.append(caption);
+      if(kind==='auto')decorateShortcutButton(item,'autoArrange');if(kind==='autoReverse')decorateShortcutButton(item,'autoArrangeReverse');
+      item.disabled=(kind==='spaceX'||kind==='spaceY')&&count<3;
+      item.onclick=()=>{const valid=sameContext();closeGraphMenu();if(valid)arrangeSelection(kind);$('#canvas').focus({preventScroll:true});};submenu.append(item);
+    }
+    arrange.onclick=()=>showSubmenu(true);
+    arrange.onpointerenter=e=>{if(e.pointerType==='mouse')showSubmenu();};menu.append(submenu);
+    for(const button of menu.querySelectorAll(':scope>button'))if(button!==arrange)button.onpointerenter=e=>{if(e.pointerType==='mouse')hideSubmenu();};
+    menu.addEventListener('scroll',()=>hideSubmenu());
+  }
+  menu.onkeydown=e=>{
+    const activeMenu=e.target.closest('[role="menu"]'),inSubmenu=activeMenu===submenu;
+    if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...activeMenu.querySelectorAll(':scope>button:not(:disabled)')],at=items.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length;items[next]?.focus();}
+    if(e.key==='ArrowRight'&&e.target===arrange){e.preventDefault();e.stopPropagation();showSubmenu(true);}
+    if(e.key==='ArrowLeft'&&inSubmenu||e.key==='Escape'){e.preventDefault();e.stopPropagation();if(inSubmenu)hideSubmenu(true);else{closeGraphMenu();$('#canvas').focus();}}
+    if(e.key==='Tab')closeGraphMenu();
+  };
+  document.body.append(menu);graphEditMenu=menu;const uiScale=uiScaleFactor();menu.style.maxHeight=Math.max(0,innerHeight/uiScale-8)+'px';menu.style.left=Math.max(4,Math.min(x/uiScale,innerWidth/uiScale-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/uiScale,innerHeight/uiScale-menu.offsetHeight-4))+'px';menu.querySelector('button:not(:disabled)')?.focus();
 }
 function installGraphClipboard(){
   $('#graphcopy').onclick=copyGraphToClipboard;

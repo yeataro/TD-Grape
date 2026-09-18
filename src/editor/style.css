@@ -499,6 +499,9 @@ header .brand small{min-width:0}.brand-tagline{overflow:hidden;text-overflow:ell
 #grapheditmenu button{display:flex;align-items:center;justify-content:space-between;gap:20px;width:100%;text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:4px}
 #grapheditmenu button:hover:not(:disabled),#grapheditmenu button:focus-visible{background:#ad91e329}
 #grapheditmenu small{color:var(--muted);font-size:10px}
+#grapheditmenu{overflow:auto;overscroll-behavior:contain;max-width:calc(100vw - 8px)}
+#grapheditmenu .graph-menu-submenu{position:fixed;z-index:1;min-width:190px;max-width:calc(100vw - 8px);overflow:auto;overscroll-behavior:contain}
+#grapheditmenu .graph-menu-submenu[hidden]{display:none}
 .parameter-scope{display:flex;gap:5px;margin-bottom:14px;border-bottom:1px solid var(--border,#474052);padding-bottom:5px}
 .parameter-scope button{flex:1;background:none;border:0;border-bottom:2px solid transparent;border-radius:0;font-size:12px}
 .parameter-scope button.active{border-bottom-color:var(--purple);color:var(--purple)}
@@ -880,7 +883,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 #canvas :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 /* Annotation readers and editors scroll/select locally, outside graph gestures. */
 #canvas :is(.comment-node-preview,.comment-node-preview *,.comment-node-editor){-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;touch-action:pan-x pan-y}
-#grapheditmenu[data-input="touch"] button{min-height:44px;font-size:14px;touch-action:manipulation}
+#grapheditmenu[data-input="touch"] [role="menuitem"]{min-height:44px;font-size:14px;touch-action:manipulation}
 #grapheditmenu[data-input="touch"] button small{display:none}
 
 /* Keep graph edit commands together, with larger targets on touch devices. */
