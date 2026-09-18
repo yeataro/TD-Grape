@@ -919,9 +919,9 @@ function renderCards(){
     }
     const title=el('div',{class:'node-title'}),text=el('div',{class:'node-title-text'});
     const collapseToggle=nodeCollapseToggle(n);if(collapseToggle)text.append(collapseToggle);
-    const displayName=nodeDisplayName(n);
-    const name=el('span',{class:d?.key==='function_call'?'node-function-name':'node-function-title'},displayName);
-    name.title=displayName;
+    const displayName=nodeDisplayName(n),canvasTitle=nodeCanvasTitle(n);
+    const name=el('span',{class:d?.key==='function_call'?'node-function-name':'node-function-title'},canvasTitle);
+    name.title=canvasTitle;
     if(d?.key==='function_call'){const icon=$('#subgraph-icon').content.firstElementChild.cloneNode(true),local=FunctionModel.find(graph,n.params.functionId)?.scope==='local';icon.classList.toggle('source-subgraph',!local);text.append(icon);text.title=t(local?'function.local':'function.source');}
     text.append(name);title.append(text);
     if(customNodeNamesEnabled()&&!isSourceReferenceNode(n)){name.onpointerdown=e=>e.stopPropagation();name.ondblclick=e=>{e.preventDefault();e.stopPropagation();beginNodeRename(n,name);};}

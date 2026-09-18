@@ -85,6 +85,12 @@ function nodeDisplayName(n){
   const source=nodeSourceDeclaration(n);if(source)return source.name;
   return customNodeNamesEnabled()&&n?.name?n.name:nodeTypeLabel(definition(n),n?.params);
 }
+function nodeCanvasTitle(n){
+  if(customNodeNamesEnabled()||definition(n)?.key!=='compare')return nodeDisplayName(n);
+  // Presentation only: node names and references keep the Compare identity.
+  const operator=n.params.operator||'>';
+  return 'A '+({'>=':'≥','<=':'≤'}[operator]||operator)+' B';
+}
 function nodeNameValid(value){
   return typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(value)&&!value.includes('__')&&
     !/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(value)&&!(typeContract?.glslCode?.reservedNames||[]).includes(value);
