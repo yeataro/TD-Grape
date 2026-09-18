@@ -27,6 +27,9 @@
     "type.cast": {"zh-Hant": "將 {source} 轉換為 {target}；整數轉換會截去小數。", "en": "Convert {source} to {target}; integer conversion truncates fractional parts."},
     "inputs.integerUniformHint": {"zh-Hant": "大整數的 Uniform 傳輸可能失去精度；結果依 TD 原生行為。圖內常數保留完整 32 位元整數。", "en": "Large integers may lose precision during Uniform transfer; results follow native TD behavior. Graph Constants preserve the full 32-bit integer range."},
     "help.scalar": {"zh-Hant": "單一常數值，型別可選 float、int、uint 或 bool。整數使用完整 32 位元範圍；bool 直接切換 false／true。需要多個分量時使用 Vector。", "en": "A single constant value with float, int, uint or bool type. Integers use the full 32-bit range; Boolean values switch directly between false and true. Use Vector for multiple components."},
+    "help.fixedScalar": {"zh-Hant": "固定型別的單一常數值，可直接修改數值。整數使用完整 32 位元範圍；bool 切換 false／true。需要可選型別的節點時使用 Scalar。", "en": "A scalar constant with a fixed type and editable value. Integers use the full 32-bit range; Boolean values switch between false and true. Use Scalar when you want to choose the type."},
+    "help.fixedVector": {"zh-Hant": "固定型別與維度的向量常數，可直接修改各分量。展開數值或使用輸出旁的 Split 快捷拆分；需要可選型別與維度的節點時使用 Vector。", "en": "A vector constant with a fixed type and dimension and editable components. Expand its values or use the Split shortcut beside the output. Use Vector when you want to choose the type and dimension."},
+    "type.fixedValue": {"zh-Hant": "此數值節點的型別固定。", "en": "This value node has a fixed type."},
     "help.convert": {"zh-Hant": "明確轉換輸入與輸出型別。支援 float、int、uint、bool 與各自的 2～4 維向量。向量必須保持相同維度；純量可轉成向量並複製至各分量。數值 0 轉 bool 為 false，其餘為 true；bool 轉數值為 0 或 1。整數轉換截去小數；不會自動限制範圍。", "en": "Explicitly convert between float, int, uint, bool and their 2–4 component vectors. Vectors must keep the same width; a scalar can fill every component of a vector. Numeric zero becomes false and other values become true; Boolean values become 0 or 1. Integer conversion truncates fractions; values are not clamped."},
 
     "compare.operator": {

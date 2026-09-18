@@ -6,20 +6,25 @@
 
 | 節點 | 輸入 | 輸出 | 用途 |
 | --- | --- | --- | --- |
-| Vector 2／3／4（`vector`） | 無接孔；手填分量 | 一個完整向量 | 建立固定向量數值 |
-| Combine | float 或連續 vec 分組，未接部分可手填 | 一個完整向量 | 接線組合資料 |
+| Scalar（`scalar`） | 無接孔；手填數值 | 一個純量 | 可選 float／int／uint／bool |
+| Vector（`vector`） | 無接孔；手填分量 | 一個完整向量 | 可選四種數值家族、2～4 分量 |
+| float／int／uint／bool | 無接孔；手填數值 | 名稱所示的固定型別 | 直接建立固定型別的純量值 |
+| vec2～4／ivec2～4／uvec2～4／bvec2～4 | 無接孔；手填分量 | 名稱所示的固定型別 | 直接建立固定型別與維度的向量值 |
+| Combine | 相同家族的純量或連續向量分組，未接部分可手填 | 一個完整向量 | 接線組合資料 |
 | Replace | 完整向量基底及分量覆寫 | 一個完整向量 | 替換既有向量的一部分 |
 | Split | 一個完整向量 | X／Y／Z／W 等分量 | 拆分資料 |
 | Swizzle | 一個完整向量 | 選取、重排或重複後的結果 | 表達 `.yx`、`.xyxy` 等操作 |
 | Color RGBA | 無接孔；手填 RGBA 與調色 | 一個 vec4 | 建立色彩數值 |
 
-新增清單直接提供 Vector 2、3、4 入口，建立時設定需要的維度。舊固定 `vec2`／`vec3`／`vec4` 定義仍可辨識，新增清單不再同時提供外觀重複的「Vector · Constant」。
+新增清單提供 16 種固定型別入口，同時保留 Scalar 與 Vector。固定入口共用 Scalar／Vector backend，保存 `params.fixedType` 與相同的 `params.type`；核心拒絕兩者不一致，畫布標題與 Parameter 都不提供型別切換。固定身分隨 JSON、剪貼簿與 Undo／Redo 保存。舊 `float`／`vec2`／`vec3`／`vec4` 定義仍可辨識，但新增清單只提供新的固定入口。
+
+Generic Scalar／Vector 的標題固定為 **Scalar／Vector**，更改型別或維度不重新命名。搜尋 `int` 會找到 `int` 與 Scalar，搜尋 `vec3` 會找到 `vec3` 與 Vector；alias 只影響搜尋。一般新增時 Scalar 使用 float、Vector 使用 vec2，查詢文字不暗改預設配置。明確從接孔新增仍可依連線上下文選擇相容型別；固定入口始終維持其型別。使用者的自訂名稱保持獨立。
 
 舊的完整輸入、覆寫與拆分共存的 `vector` 介面已移除。使用者明確允許這次 Alpha 前例外，不建立舊 Vector 圖遷移或相容分支；含舊接孔的圖需刪除或重建，不靜默改變計算結果。這不延伸為 Alpha 以後的相容性政策。
 
 ## Vector 與 Color 的分量編輯
 
-Vector 保存 `params.type`（vec2／vec3／vec4）與四分量 `params.components`。有效維度決定顯示與產碼，縮小後仍保留其餘手填分量，之後放大可以恢復。
+Vector 保存 `params.type`（vec／ivec／uvec／bvec 的 2～4 分量型別）與四分量 `params.components`。有效維度決定顯示與產碼，generic Vector 縮小後仍保留其餘手填分量，之後放大可以恢復。固定向量使用相同的分量編輯、標籤、Split 快捷與數值行為，只限制型別切換；Color RGBA 保留現有獨立色彩編輯入口，不增加新的 fixed type。
 
 - 收合時數值同列排列，提供緊湊但可直接編輯的欄位。
 - 展開時每個分量各占一列，附上 X／Y／Z／W 或 R／G／B／A 名稱。
@@ -27,7 +32,7 @@ Vector 保存 `params.type`（vec2／vec3／vec4）與四分量 `params.componen
 - `ui.componentsExpanded` 只改畫布呈現，不改接線、常數性、GLSL 或套用語意；Subgraph 內相同。
 - 一般多分量輸入不增加一整排內嵌欄位；完整值仍在 Parameter 編輯。
 
-Replace 分量維持展開，輸入與完整輸出分列。主輸入預設 Auto，僅依完整基底推導 vec2／vec3／vec4，亦可手動鎖定；未接基底時保留目前型別。手填分量與零初值維持，接上基底後未覆寫分量沿用基底。
+Replace 分量維持展開，輸入與完整輸出分列。主輸入預設 Auto，僅依完整基底推導向量型別，亦可手動鎖定；未接基底時保留目前型別。手填分量與零初值維持，接上基底後未覆寫分量沿用基底。
 
 ## Replace：基底與連續覆寫
 

@@ -4,23 +4,26 @@
 
 | 契約欄位／功能 | 目前範圍 |
 | --- | --- |
-| `numericTypes` | float、vec2、vec3、vec4；一般數學、Graph Constants、Uniform 及既有型別選單維持此範圍 |
+| `valueTypes` | float／int／uint／bool，各含純量與 2～4 分量向量，共 16 種 |
+| `numericTypes` | float／int／uint 三家族的純量與向量，共 12 種；各運算可用型別仍依其定義變體 |
 | `specConstantTypes` | int、uint、bool、float；Spec Constants 的建立／引用及 TD Constants 原生值 |
-| `types` | 上述 scalar／vector，加 sampler2D；整數／布林為各自 family、單分量 |
+| `types` | 16 種值型別，加 sampler2D；每種記錄 family 與 components |
 | `resourceTypes` | sampler2D；其他貼圖維度尚未實作 |
-| `conversions` | 同型別 identity；float → vec2／3／4 的 splat；int／uint／bool → float／vec2／3／4 的明確 GLSL constructor cast |
+| `conversions` | 同型別 identity；數值家族間同寬 cast、數值純量到數值向量 constructor；同家族純量到向量 splat（含 bool → bvec） |
 
-型別轉換方向是明確清單，不允許任意反向轉換或靠同分量數猜測相容性。沒有開放 float → int、int ↔ uint、數值 → bool，也沒有因此開放所有整數／布林數學 overload。Vector 分量組合／Replace 的接孔維持既有精確型別規則，不能因一般接線允許 cast 而偷偷改變組合分量。
+型別轉換方向是明確清單，不靠同分量數猜測相容性。數值與 bool 之間須使用 Convert；Convert 允許同寬跨家族或純量到向量，不允許向量到純量或不同寬向量。Combine／Replace 的接孔維持既有精確型別規則，不能因一般接線允許 cast 而偷偷改變組合分量。各數學 overload、Compare 與 Convert 的規則不因新增固定型別入口而改變。
+
+固定型別入口以 `scalar`／`vector` 定義加 `params.fixedType` 保存，型別必須在該定義允許的純量／向量集合內，且與 `params.type` 相同。這不是僅存在於新增選單的 preset。核心驗證所有節點（含未接線的節點）；前端不提供固定值節點的型別選單，也不讓型別重整改變其固定型別。沒有 `fixedType` 的 Scalar／Vector 保持可選型別，標題與自訂名稱不因型別變動而更新。搜尋 alias 不寫入節點參數。
 
 Spec Constant 引用的輸出型別來自來源宣告。`constantId` 是該 Shader 內穩定、唯一的非負 ID；名稱變更、原生列重排與新增引用不重新配置它。跨 Shader 貼上建立新來源時配置未使用 ID；匯入若重用既有來源則保留原 ID，新來源發生衝突才在該匯入操作配置新 ID。輪詢與 Undo 不維護另一份來源清單，也不重建來源身分。
 
-int／uint literal 使用 32 位元範圍；uint 帶 `u` 後綴，bool 必須是布林值並輸出 `true`／`false`。最小 signed int 以 `(-2147483647 - 1)` 表示，避免先解析超出 signed 範圍的正值。手寫 GLSL 輸入口／內部 Function 介面及 relay 可辨識這些純量，但公開建立工具仍依個別定義的可用型別呈現；矩陣、陣列與完整整數節點編輯尚未納入。
+int／uint literal 使用 32 位元範圍；uint 帶 `u` 後綴，bool 必須是布林值並輸出 `true`／`false`。最小 signed int 以 `(-2147483647 - 1)` 表示，避免先解析超出 signed 範圍的正值。手寫 GLSL 輸入口／Function 介面及 relay 可辨識 16 種值型別；矩陣與陣列尚未納入。
 
 TD 原生 Uniform／Spec Constant 的傳輸精度由 TD 決定；編輯器接受完整 GLSL int／uint 32 位範圍，包括負 int、大整數與 UINT_MAX。明確寫值、套用、綁定及 Undo 保留有限值、型別與完整範圍檢查，不附加 float32 round-trip、非負 int 或 MAT uint 上限。`/sources` 不驗證讀取中的即時值，也不回傳傳輸限制或精度 issue。TD 2025.32820 曾實測部分合法整數傳到 GPU 後失真，這是宿主能力紀錄，不是編輯限制，也不因此改寫或截斷使用者數值；圖內整數 literal 保持精確。
 
 Spec Constants 沒有加入一般 `constantExpressions` 白名單。它是特化時可提供的常數，但任意函式作用於它的結果不一定符合 GLSL 的特化表達式限制；不能直接套用「一般常數鏈」的所有推導。目前 `requireConstant` 仍檢查原有普通常數規則。
 
-核心的 `PORT_TYPES`、`resolved_ports`、`literal` 與 `convert_expression` 使用同一份契約；前端必須接受 scalar 描述與 cast，但 `numericTypes` 仍維持原四種順序。無效契約 refresh 保留上次有效資料。相關回歸為 `test_type_contract.py`、`test_spec_constants.py`、`test_spec_import.js` 及真實 TD `test_spec_constants.py`；後者確認 TOP／MAT 的四種 Spec 純量，不代表全面整數控制項已完成。
+核心的 `PORT_TYPES`、`resolved_ports`、`literal` 與 `convert_expression` 使用同一份契約；無效契約 refresh 保留上次有效資料。固定／generic 入口回歸為 `test_fixed_value_nodes.py`、`test_vector_nodes.js` 與 `test_fixed_value_nodes.cjs`；完整型別能力另由 `test_value_type_foundation.py` 及 `test_type_foundation.cjs` 覆蓋。以下舊版段落保留歷史背景，型別範圍與轉換以本節和目前核心為準。
 
 ## 0.8.5 型別值形狀（歷史）
 

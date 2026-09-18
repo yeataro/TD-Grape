@@ -25,7 +25,7 @@ const[source,stateFile,folder]=process.argv.slice(2);
     const browserRows=JSON.parse(fs.readFileSync(path.resolve(source,'../library/node_catalog.json'),'utf8')).definitions.filter(row=>['scalar','convert'].includes(row.definition.key));
     for(const row of browserRows)assert.deepEqual(await page.evaluate(id=>browserData().nodes[id],row.definition.definitionUuid),row.browser);
     await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openCreator(r.left+160,r.top+140);});
-    await page.locator('#createsearch').fill('ivec3');assert.equal(await page.locator('[data-create-entry^="vector:"]').count(),1);assert.equal(await page.locator('[data-create-entry="vector:ivec3"]').count(),1);assert.match(await page.locator('[data-create-entry="vector:ivec3"]').innerText(),/int/);await page.locator('[data-create-entry="vector:ivec3"]').click();await settle();assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id===selected).params.type),'ivec3');
+    await page.locator('#createsearch').fill('ivec3');assert.equal(await page.locator('[data-create-entry="vector"]').count(),1);assert.equal(await page.locator('[data-create-entry="ivec3"]').count(),1);await page.locator('[data-create-entry="ivec3"]').click();await settle();assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id===selected).params.type),'ivec3');
     const sourceId=await page.evaluate(()=>selected);await page.evaluate(id=>{const r=$('#canvas').getBoundingClientRect();openCreator(r.left+460,r.top+180,{kind:'outputs',node:id,port:'out',type:'ivec3'});},sourceId);await page.locator('#createsearch').fill('Convert');await page.locator('[data-create-entry="convert"]').click();await settle();
     assert.deepEqual(await page.evaluate(()=>{const n=current().nodes.find(n=>n.id===selected);return n.params;}),{fromType:'ivec3',toType:'vec3'});
     assert.equal(await page.evaluate(id=>current().edges.some(e=>e.from[0]===id&&e.to[0]===selected),sourceId),true);
@@ -49,7 +49,7 @@ const[source,stateFile,folder]=process.argv.slice(2);
     await page.locator('#undo').click();await settle();assert.equal((await state('s')).params.value,true);await page.locator('#redo').click();await settle();assert.equal((await state('s')).params.value,false);
     checks.push('Scalar supports full signed/unsigned 32-bit boundaries, rejects fractions/out-of-range without history entries, and shares Boolean controls with one-step Undo/Redo');
 
-    await reset();await page.evaluate(()=>{for(const [index,type] of typeContract.vectors.types.entries())instantiate(availableEntries().find(d=>d.presetType===type),80+(index%4)*260,60+Math.floor(index/4)*230);render();});await settle();
+    await reset();await page.evaluate(()=>{for(const [index,type] of typeContract.vectors.types.entries())instantiate(availableEntries().find(d=>d.key==='vector'&&!d.fixedType),80+(index%4)*260,60+Math.floor(index/4)*230,type);render();});await settle();
     const allVectors=await page.evaluate(()=>current().nodes.filter(n=>definition(n).key==='vector').map(n=>({id:n.id,type:n.params.type,components:n.params.components})));
     for(const n of allVectors){assert.equal(n.components.length,4);assert.ok(n.components.every(v=>typeof v===(n.type.startsWith('b')?'boolean':'number')));}
     const b=allVectors.find(n=>n.type==='bvec3');await choose(b.id);assert.equal(await page.locator('#inspector [data-parameter-port="$value"] select').count(),0);
@@ -58,7 +58,7 @@ const[source,stateFile,folder]=process.argv.slice(2);
     await page.locator(`#inspector [data-vector-type="${b.id}"]`).selectOption('ivec3');await settle();assert.deepEqual((await state(b.id)).params.components,[0,1,0,0]);
     await page.screenshot({path:path.join(folder,'typed-vectors.png')});
     const colors=await page.evaluate(()=>['vec2','ivec2','uvec2','bvec2'].map(type=>{const socket=document.querySelector(`[data-kind="outputs"][data-type="${type}"]`);return socket?getComputedStyle(socket).backgroundColor:null;}));assert.ok(colors.every(c=>c&&c===colors[0]),JSON.stringify(colors));
-    checks.push('All 12 Vector presets create family-correct defaults; Boolean components edit individually and convert on type changes; socket dimension colors match across families');
+    checks.push('All 12 generic Vector configurations create family-correct defaults; Boolean components edit individually and convert on type changes; socket dimension colors match across families');
 
     await reset();await page.evaluate(()=>{addTyped('i','vector',{type:'ivec3',components:[1,2,3,0]});addTyped('add','add',{}, {typeMode:'auto'});addTyped('split','vector_split',{}, {typeMode:'auto'});addTyped('swizzle','swizzle',{mask:'yx'},{typeMode:'auto'});render();});await settle();
     await connect('i','out','add','a');assert.equal((await state('add')).params.type,'ivec3');

@@ -282,11 +282,12 @@ const compatible=(a,b)=>!!typeContract?.conversions.some(rule=>rule.from===a&&ru
 function typeVariants(d){
   if(d.inputPreset)return [{type:'float',inputs:{},outputs:{out:'float'}}];
   if(d.inputSourceId)return [{type:d.inputType,inputs:{},outputs:d.inputKind==='top_input'?d.outputs:{out:d.inputType}}];
-  const entry=typeContract?.definitions[d.definitionUuid];if(entry)return entry.variants;
+  const entry=typeContract?.definitions[d.definitionUuid];if(entry)return d.fixedType?entry.variants.filter(v=>v.type===d.fixedType):entry.variants;
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(d.definitionUuid))return [];
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
 }
 function resolvedNodePorts(d,params,decl,kind){
+  if(params.fixedType&&params.type!==params.fixedType)throw Error(t('type.fixedValue'));
   if(isVectorOperation(d))return vectorPorts(d.key,params)[kind];
   if(d.key==='convert')return kind==='inputs'?{value:params.fromType||'float'}:{out:params.toType||'int'};
   if(d.key==='glsl_code')return Object.fromEntries((Array.isArray(params[kind])?params[kind]:[]).map(p=>[p.id,p.type]));
@@ -330,7 +331,7 @@ function displayNodePorts(d,params,decl,kind){
   try{return resolvedNodePorts(d,params,decl,kind);}catch(error){if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,params)[kind];}
 }
 function nodeTypeVariants(d,params){
-  return typeVariants(d).flatMap(v=>{try{return [{...v,...(isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
+  return typeVariants(d).filter(v=>!params?.fixedType||v.type===params.fixedType).flatMap(v=>{try{return [{...v,...(isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
 }
 function vectorConnectionExact(d,source,target){
   if(d?.key==='compare'&&!selectableNodeTypes(d).includes(source))return false;
@@ -452,6 +453,7 @@ function rejectNewTypeIssues(data,ports,oldData,oldPorts){
   for(const e of invalidTypeEdges(data,ports))if(!old.has(typeEdgeKey(e,ports)))throw autoTypeError('type.autoDownstream',`${ports.get(e.from[0])?.outputs[e.from[1]]||'?'} → ${ports.get(e.to[0])?.inputs[e.to[1]]||'?'}`);
 }
 function reshapeTypedInputs(n,d,nextType){
+  if(n.params.fixedType&&nextType!==n.params.fixedType)throw Error(t('type.fixedValue'));
   const previous=n.params.type||'float';if(previous===nextType)return;
   const oldPorts=typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
   // Retain manually entered defaults per dimension, including dormant connected inputs.
@@ -538,7 +540,7 @@ function creatorTypePlan(d,variant,port,wire,locked){
   const plan=planWireTypes(from,to,{node,ports:variant});return plan.ports.get(id);
 }
 function creatorVariants(d,wire){
-  if(d.presetType)return typeVariants(d).filter(variant=>variant.type===d.presetType);
+  if(d.fixedType)return typeVariants(d);
   if(d.key==='convert'){
     const from=wire?.kind==='outputs'?wire.type:d.defaults.fromType,to=wire?.kind==='inputs'?wire.type:d.defaults.toType;
     const pairs=wire?valueTypes().map(type=>wire.kind==='outputs'?[from,type]:[type,to]):[[from,to]];
@@ -559,7 +561,7 @@ function creatorPriority(match,wire){
   const order=wire.kind==='outputs'?(count>1?['vector_split','replace','swizzle','combine','multiply','add','mix']:['multiply','add','replace','combine','mix']):count>1?['vector','combine',wire.type==='vec4'?'vec4':wire.type,'swizzle']:['float','vector','add','multiply'];
   const index=order.indexOf(match.d.key);
   // Exact whole-vector matches precede scalar fallbacks across preset entries.
-  return index<0?99:index+(match.d.presetType&&match.portType!==wire.type?0.5:0);
+  return index<0?99:index+(match.d.fixedType&&match.portType!==wire.type?0.5:0);
 }
 
 function inputTypeDisplay(n,port){
@@ -961,7 +963,7 @@ function renderCards(){
     if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=label+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     else {
       const subtitles=[];
-      if(customNodeNamesEnabled()&&n.name)subtitles.push(d?.key==='vector'?'Vector':d?.key==='comment'?nodeTypeLabel(d):d?.label||'');
+      if(customNodeNamesEnabled()&&n.name)subtitles.push(nodeTypeLabel(d,n.params));
       if(d?.key==='uv')subtitles.push(builtInSourceLabel(d));
       if(subtitles.length){const subtitle=subtitles.join(' · ');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     }
@@ -1027,9 +1029,10 @@ function browserMeta(d){
   const raw=authored||(d.key==='comment'?{category:'data',source:'editor',aliases:['note','annotation','text','註解','注释','備註'],descriptionKey:'help.comment'}:d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
   const source=f?(f.scope==='local'?'project':f.scope==='personal'?'personal':'editor'):(raw.source||'editor');
   const path=stringList(raw.categoryPath);
-  const aliases=stringList(raw.aliases).filter(alias=>!d.presetType||!/^[iub]?vec(?:tor)?\s*[234]$/i.test(alias)||alias.replace(/tor|\s/gi,'').toLowerCase()===d.presetType);
+  const aliases=stringList(raw.aliases).filter(alias=>!d.fixedType||!/^(float|int|uint|bool|integer|unsigned|boolean|[iub]?vec(?:tor)?\s*[234])$/i.test(alias));
+  if(['scalar','vector'].includes(d.key))aliases.push(...(d.fixedType?[d.fixedType]:selectableNodeTypes(d)));
   if(d.key==='comment')aliases.push('comment','筆記');
-  return {category,path:path[0]===category?path:[category],source,secondary:stringList(raw.secondaryCategories).filter(known),aliases,tags:stringList(raw.tags),glslName:d.presetType||raw.glslName||'',descriptionKey:d.descriptionKey||f?.descriptionKey||raw.descriptionKey||'help.function',subgraph:!!f,saved:!!f&&!d.source&&f.scope!=='local',project:!!f&&!d.source};
+  return {category,path:path[0]===category?path:[category],source,secondary:stringList(raw.secondaryCategories).filter(known),aliases,tags:stringList(raw.tags),glslName:d.fixedType||raw.glslName||'',descriptionKey:d.descriptionKey||f?.descriptionKey||raw.descriptionKey||'help.function',subgraph:!!f,saved:!!f&&!d.source&&f.scope!=='local',project:!!f&&!d.source};
 }
 const browserEntryKey=d=>d.entryKey||d.key;
 function browserIndex(){
@@ -1041,8 +1044,7 @@ function browserIndex(){
 function browserSearchScore(entry,query){
   const q=normalizeSearch(query);if(!q)return 0;
   const {d,meta:m}=entry,names=[d.label,m.glslName].map(normalizeSearch),aliases=m.aliases.map(normalizeSearch);
-  const requestedVector=q.match(/\b([iub]?vec)(?:tor)?\s*([234])\b/);
-  if(d.presetType&&requestedVector&&d.presetType!==requestedVector[1]+requestedVector[2])return Infinity;
+  if(d.fixedType&&valueTypes().includes(q)&&d.fixedType!==q)return Infinity;
   if(names.includes(q))return 0;if(aliases.includes(q))return 1;
   const terms=q.split(/\s+/),contains=values=>terms.every(term=>values.some(v=>v.includes(term)));
   if(contains([...names,...aliases]))return 2;
@@ -1256,7 +1258,7 @@ function renderCreator(){
   }
   if(!query.trim())creatorMatches.sort((a,b)=>creatorPriority(a,wire)-creatorPriority(b,wire));
   creatorIndex=Math.min(creatorIndex,Math.max(0,creatorMatches.length-1));const list=$('#createresults');list.replaceChildren();
-  creatorMatches.forEach((match,i)=>{const label=match.d.key==='vector'?nodeTypeLabel(match.d,{type:match.type}):match.d.label,b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':browserEntryKey(match.d)},label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
+  creatorMatches.forEach((match,i)=>{const b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':browserEntryKey(match.d)},match.d.label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
   if(!creatorMatches.length)list.append(el('p',{class:'muted'},t('create.empty')));
   for(const button of document.querySelectorAll('[data-create-category]')){const active=button.dataset.createCategory===(query.trim()?'all':category);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;}
   renderCreatorDetails();

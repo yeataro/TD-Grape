@@ -59,13 +59,13 @@ function functionEntry(f,source=false){
 }
 function nodeTypeLabel(d,params=d?.defaults){
   if(d?.key==='comment')return 'Note';
-  if(d?.key==='vector')return 'Vector '+typeComponents(params?.type||'vec2')+(typeFamily(params?.type||'vec2')==='float'?'':' · '+typeFamily(params.type));
+  if(['scalar','vector'].includes(d?.key))return params?.fixedType||(d.key==='scalar'?'Scalar':'Vector');
   const label=d?.label||t('node.unknown');
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
 }
 function availableEntries(){
-  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
-    if(d.key==='vector')return typeContract.vectors.types.map(type=>({...d,entryKey:'vector:'+type,presetType:type,label:nodeTypeLabel(d,{type}),defaults:{...d.defaults,type},category:nodeCategory(d)}));
+  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+    if(['scalar','vector'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:d.key==='scalar'?'help.fixedScalar':'help.fixedVector',defaults:{...d.defaults,type,fixedType:type},category:nodeCategory(d)}))];
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
   for(const f of librarySources().filter(f=>f.stages.includes(stage)))entries.push(functionEntry(f,true));
@@ -100,7 +100,7 @@ function uniqueNodeName(hint,n=null,nodes=current().nodes){
   return name;
 }
 function assignCreatedNodeNames(nodes){
-  for(const n of nodes){if(isSourceReferenceNode(n)){delete n.name;continue;}n.name=uniqueNodeName(n.name||nodeTypeLabel(definition(n),n.params),n);}
+  for(const n of nodes){if(isSourceReferenceNode(n)){delete n.name;continue;}let hint=n.name;if(!hint){hint=nodeTypeLabel(definition(n),n.params);if(n.params?.fixedType)hint=hint[0].toUpperCase()+hint.slice(1);}n.name=uniqueNodeName(hint,n);}
 }
 function commitNodeName(n,raw){
   if(editorMutationBlocked()||isSourceReferenceNode(n))return false;
@@ -156,9 +156,9 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
 }
 function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={}}={}){
   const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});
-  // Presets are insertion choices only; the saved graph retains the canonical
-  // definition UUID and concrete type, never an extra preset node identity.
-  type=d.presetType||type;
+  // Fixed entries retain their identity in params; generic entries keep their
+  // stable default unless an explicit wire/type context requests another type.
+  type=d.fixedType||type;
   if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
   if(type&&params.type)params.type=type;
   if(['uniform','constant','spec_constant'].includes(d.key)){

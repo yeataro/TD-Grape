@@ -875,6 +875,7 @@ function renderHelp(){
   const source=!n&&graph.declarations.find(d=>d.id===selectedInputId);
   if(source){help.append(el('h3',{},source.name+' · '+source.type),markdown(t('help.'+source.kind)));return;}
   if(nodeComment(n)){const note=el('section',{class:'node-comment-help'});note.append(el('strong',{},t('node.comment')),el('p',{},nodeComment(n)));help.append(note);}
+  if(n?.params.fixedType&&['scalar','vector'].includes(d?.key)){help.append(markdown(t(d.key==='scalar'?'help.fixedScalar':'help.fixedVector')));return;}
   help.append(markdown(t(d?(editorTarget==='top'&&['uv','texture','pixel_out'].includes(d.key)?'help.top.'+d.key:(d.descriptionKey||'help.'+d.key)):'help.select')));
 }
 function showPreviewHelp(){if(!graph)return;helpContext='preview';previewHelpSelection=selected;renderHelp();}
@@ -948,6 +949,7 @@ function glslCodeInspector(box,n){
 }
 
 function nodeTypeSelector(n,d){
+  if(n.params.fixedType)return null;
   const options=selectableNodeTypes(d).map(type=>[type,type]);if(!options.length)return null;
   const composed=['combine','vector','replace'].includes(d.key),automatic=n.ui?.typeMode==='auto',auto=supportsAutoType(d);
   const control=select(auto?[['auto',t('type.auto')+' · '+n.params.type],...options]:options,auto&&automatic?'auto':n.params.type,value=>{
@@ -988,7 +990,7 @@ function compareOperatorSelector(n){
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;
   const composed=['combine','vector','replace'].includes(d.key),control=nodeTypeSelector(n,d);
-  box.append(parameterControlRow(t(composed?'vector.outputType':'vector.inputType'),control));
+  if(control)box.append(parameterControlRow(t(composed?'vector.outputType':'vector.inputType'),control));
   if(d.key==='swizzle'){
     const slots=el('div',{class:'swizzle-components'}),names=vectorNames(n),components='xyzw'.slice(0,typeComponents(n.params.type));
     [...n.params.mask].forEach((value,index)=>{
@@ -1163,7 +1165,7 @@ function inspector(){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
       const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
-    if(d.key==='scalar')box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
+    if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
     if(d.key==='convert')for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
     if(d.key==='compare')box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
     pixelBufferFields(box,n);
@@ -1233,7 +1235,7 @@ function inspector(){
     }
   }else{
     if(d.key==='comment')noteAppearanceSettings(box,n);
-    if(n.params.type&&!supportsAutoType(d)&&!isVectorOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
+    if(n.params.type&&!n.params.fixedType&&!supportsAutoType(d)&&!isVectorOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
     if(isVectorOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],...(typeComponents(n.params.type)===2?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
     if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','scalar','vector','float','vec2','vec3','vec4','color'].includes(d.key)){
       const requirement=el('input',{type:'checkbox','data-require-constant':n.id});requirement.checked=!!n.params.requireConstant;requirement.disabled=readonly;

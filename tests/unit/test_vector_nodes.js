@@ -190,19 +190,28 @@ const vector=catalog.find(d=>d.key==='vector');identical(vectorPorts(vector.key,
 setup([node('uv','uv'),node('vector_split','old',{type:'vec2'})],[edge('uv','old','value')]);
 before=clone(graph);addVectorSplit(n('uv'),'out');assert.equal(selected,'old');identical(graph,before);
 
-// All family/dimension insertion presets share one compiler definition, but retain an
-// exact dimension through all creation paths and never serialize UI identities.
-const vectorEntries=availableEntries().filter(d=>d.key==='vector');
-identical(vectorEntries.map(d=>[browserEntryKey(d),d.label,d.presetType]),typeContract.vectors.types.map(type=>['vector:'+type,'Vector '+typeComponents(type)+(typeFamily(type)==='float'?'':' · '+typeFamily(type)),type]));
-for(const entry of vectorEntries){
-  identical(creatorVariants(entry,null).map(v=>v.type),[entry.presetType]);
+// Fixed entries and generic Scalar/Vector share behavior, with a persistent fixed
+// type only on fixed entries. Search never changes a generic entry's defaults.
+const valueEntries=availableEntries().filter(d=>['scalar','vector'].includes(d.key)),fixedEntries=valueEntries.filter(d=>d.fixedType);
+identical(fixedEntries.map(d=>d.fixedType).sort(),valueTypes().slice().sort());
+for(const entry of fixedEntries){
+  identical(creatorVariants(entry,null).map(v=>v.type),[entry.fixedType]);
   setup([]);assert.equal(change(()=>instantiate(entry,100,100)),true);
-  const created=n(selected);assert.equal(created.params.type,entry.presetType);assert.equal(created.definitionUuid,'sgrape.builtin.vector');
-  identical(ports(created,'inputs'),{});identical(ports(created,'outputs'),{out:entry.presetType});
-  assert.equal(Object.hasOwn(created,'entryKey'),false);assert.equal(Object.hasOwn(created.params,'presetType'),false);
+  const created=n(selected);assert.equal(created.params.type,entry.fixedType);assert.equal(created.params.fixedType,entry.fixedType);
+  assert.equal(nodeTypeLabel(definition(created),created.params),entry.fixedType);
+  identical(ports(created,'inputs'),{});identical(ports(created,'outputs'),{out:entry.fixedType});
+  assert.equal(nodeTypeSelector(created,definition(created)),null);
+  const saved=clone(created);assert.throws(()=>reshapeTypedInputs(created,definition(created),entry.fixedType==='float'?'int':'float'));identical(created,saved);
+  const after=clone(graph);undo();assert.ok(!n(created.id));undo(true);identical(graph,after);
+  assert.equal(Object.hasOwn(created,'entryKey'),false);
 }
-for(const key of ['vec2','vec3','vec4'])assert.ok(!availableEntries().some(d=>d.key===key));
-const preset3=vectorEntries.find(d=>d.presetType==='vec3'),preset2=vectorEntries.find(d=>d.presetType==='vec2');
+for(const entry of valueEntries.filter(d=>!d.fixedType)){
+  setup([]);change(()=>instantiate(entry,100,100));const created=n(selected),name=created.name;
+  assert.equal(created.params.type,entry.key==='scalar'?'float':'vec2');assert.equal(Object.hasOwn(created.params,'fixedType'),false);
+  for(const type of selectableNodeTypes(entry)){reshapeTypedInputs(created,entry,type);assert.equal(created.name,name);assert.equal(nodeTypeLabel(entry,created.params),entry.key==='scalar'?'Scalar':'Vector');}
+}
+for(const key of ['float','vec2','vec3','vec4'])assert.ok(!availableEntries().some(d=>d.key===key));
+const preset3=fixedEntries.find(d=>d.fixedType==='vec3'),preset2=fixedEntries.find(d=>d.fixedType==='vec2');
 assert.ok(creatorPriority({d:preset3,portType:'vec3'},{kind:'inputs',type:'vec3'})<creatorPriority({d:preset2,portType:'float'},{kind:'inputs',type:'vec3'}));
 console.log(JSON.stringify({passed:true,graphs}));
 `,context);

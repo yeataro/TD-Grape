@@ -339,6 +339,13 @@ def pixel_buffer_count(params):
     return count
 
 def definition_ports(definition, params):
+    # Fixed value entries share the Scalar/Vector implementation, but their
+    # saved identity cannot silently become another type through an edit.
+    if 'fixedType' in params:
+        fixed=params['fixedType']; key=definition['key']
+        choices=SCALAR_TYPES if key=='scalar' else VECTOR_TYPES if key=='vector' else ()
+        if fixed not in choices or params.get('type')!=fixed:
+            raise GraphError('Fixed value type cannot change')
     if definition['key'] in VECTOR_KEYS:return vector_interface(definition['key'],params)
     if definition['key']=='convert':
         source=params.get('fromType','float');target=params.get('toType','int')
