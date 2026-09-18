@@ -1,10 +1,14 @@
 # 測試
 
+2026-09-18 Matrix Convert／double 第二批 0.8.90 已同步 TD 並保存：31 份內嵌來源、9 份服務資源一致，core 無錯誤，TOP／MAT Master current，三份使用者 Shader 保留。正式 TOE 865,718 bytes，SHA-256 `c79c0833fb8d2cf1560b6029fd1cd11856d9a1ac2c283fdb7ebb7f4f904abc6a`，排除一份私人助手；現有 Editor 未強制刷新。原生交付報告為 matrix-convert-{refresh,catalog-audit,masters,audit,save}-20260918。
+
+交付途中 Git index 曾拒寫，檔案已落地但 HEAD 未移動；核對工作樹／index 完全等於已驗證的 0e242b9 後，以原 HEAD 比對完成快轉，未丟棄其他變更。TD 切换來源期間曾輸出 Unknown catalog identity，另作唯讀 catalog／DAT／純編譯核對後確認 valid、core 前後無錯誤、使用者圖不變，才繼續模板更新与保存。
+
 2026-09-18 Matrix Convert 與搜尋修正整合：保留新版 Convert 配對與同形狀排序，前端新增操作 9 組、type foundation 13 組、搜尋效能及副作用 11 組全過；Matrix editor 10 組、metadata／syntax／diff check 通過。正式搜尋測試補入合法 Matrix→Matrix Replace fixture、double／dvec3／非方形 dmat 及非空候選斷言，另實際驗證兩 Convert 入口的 7 組建立／拒絕／單筆 Undo 情況。101 節點正反向且有／無常數要求，清單開啟 12.3–21.8ms，32 次查詢 1.1–6.4ms；文字變更沒有 planner 呼叫。未因前端合併重跑未改動核心的 237 項 GPU 檢查；此前已全過。報告位於私人 `work/matrix-perf-integration` 及 `work/matrix-creator-performance/final`。
 
 搜尋修正補充：舊 `test_node_browser.cjs` 的 .library-tabs 三頁籤假設、`test_creator_palette.cjs` 的未展開 tree 內 UV 項目選擇器仍失敗；固定 pre-change ead882e 資產及相同 fixture 重現同一失敗。這兩支列為既有測試維護待辦，不列為本次通過項目。
 
-2026-09-18 未交付的既有運算擴充：portable checks 383 項 Python unit、656 個雙語鍵、14 個 launch 檢查、既有 JS 與 26 個 Remote Panel 測試通過。第二批隔離 browser 新功能 7、basic math 8、control 11、type foundation 13 共 39 組通過；包括 Convert 1,109 個合法配對、If matrix 預設 true identity／false zero、double 簽名，以及保留拖線建立 Convert 的同形狀優先。
+2026-09-18 第二批既有運算擴充交付前驗證：portable checks 383 項 Python unit、656 個雙語鍵、14 個 launch 檢查、既有 JS 與 26 個 Remote Panel 測試通過。第二批隔離 browser 新功能 7、basic math 8、control 11、type foundation 13 共 39 組通過；包括 Convert 1,109 個合法配對、If matrix 預設 true identity／false zero、double 簽名，以及保留拖線建立 Convert 的同形狀優先。
 
 新增 `tests/td/test_matrix_double_operations.py` 有 73 個圖案例、219 份 core GLSL 編譯及 237 次 GPU 檢查。首次提交曾在請求進入佇列前遇到 Windows 存取拒絕（WinError 5）；完成 Convert／Matrix Convert 分流後重新提交成功，237 項 TOP Pixel／MAT Pixel／MAT Vertex GPU 檢查全過，existingShadersPreserved／registryPreserved／fixtureRemoved 均為 true。包含 scalar 對角矩陣、Matrix 擴縮／精度、Matrix 擷取、If 原生動態切换、double Dot／Length／Mix／Range 等。這是工作樹的隔離驗證，尚未同步產品來源。
 
