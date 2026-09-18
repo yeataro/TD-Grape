@@ -1,5 +1,15 @@
 # 最新使用者決定（2026-09-18）
 
+## 陣列討論補充：元素型別與 TD 既有結構
+
+使用者確認陣列的概念是同一元素型別的有序列表，元素不限於純量／向量／矩陣，也可以是結構或其他自訂型別。使用者自行定義型別的功能可以先不處理；TD 已提供的結構型別及其陣列仍需納入來源能力盤點，不能因自訂型別編輯器延後而一起排除。
+
+官方文件中的例子包括 TOP 的 `TDTexInfo`／`uTD2DInfos[]`，以及 MAT 的 `TDMatrix`、`TDCameraInfo`、`TDLight` 等。它們是 TD 提供的具名結構，應引用既有定義；具體圖接口、欄位存取、Stage 適用性及版本差異尚待設計／驗證。[TOP built-in uniforms](https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built_In_Uniforms)、[MAT specific uniforms](https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms)。
+
+陣列與迴圈高度互補，但來源傳入／整體傳遞、索引取項與逐項遍歷是不同能力。使用者目前希望先了解能力，再決定實作；Array／迴圈的節點与 UI 尚未定案。型別模型應將元素型別、陣列形狀及來源分開；Sampler 陣列、一般資料陣列及 Buffer 的讀寫／索引能力也須分別盤點，不以可索引就假定其操作完全相同。
+
+## 先前型別批決議與紀錄
+
 本輪實作順序再確認：先接通 float／int／uint／bool 及其 2–4 分量向量、合法運算、來源、共用編輯與型別轉換。使用者對矩陣及陣列的介面仍在評估；不在這批鋪滿矩陣／陣列選單。矩陣下一步以 `mat3`／`mat4` 的旋轉、座標變換為使用案例，`Matrix` 是介面名稱，`mat3`／`mat4` 是 GLSL 具體型別；`vec3`／`vec4` 可在乘法左／右側充當行／列向量，不另建 1×N／N×1 型別。陣列待使用情境及初始化／取值介面一起決定。
 
 跨族接線採同維度數值 constructor 轉換，沿用接孔轉型提示；Auto 優先保留實際输入家族。數值 scalar → vector 亦可 constructor splat，布林與數字之間由明確 Convert 處理。Convert 使用 GLSL constructor 本來的語意（float → int 向零截斷），不把 Floor／Round／Ceil 混成隱藏選項。這是依使用者「符合 GLSL 習慣、可以自行判斷」所作的實作取捨，可在實測後調整。不同向量長度使用 Split／Combine／Swizzle，不默默丟掉分量。參考：[GLSL constructors](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#constructors)。
