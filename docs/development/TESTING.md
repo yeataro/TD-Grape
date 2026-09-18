@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-18 Compare／If browser projection 補正：控制節點檢查擴至 10 組，實際驗證 Logic 分類、comparison／branch／ternary 搜尋、正確說明及瀏覽不改圖／歷史；browser metadata integration、606 個雙語引用、語法與 diff 檢查通過。TD 再同步保存，31 份來源／9 份資源一致，兩份 Master current、使用者 Shader 保留。正式 TOE 775,964 bytes，SHA-256 `c78952d4de8faeeb8d2b3247493de6da4a06cfcff5f51ff52ac0645feebe9e12`；報告位於 control-node-browser-metadata-round。
+
 本輪最終同步並保存 TD：31 份內嵌來源、9 份服務資源一致，TOP／MAT Master current，兩份使用者 Shader 保留，core 無錯誤，現有 Editor 未強制重載。正式 TOE 775,884 bytes，SHA-256 `18bea942f6cc14945a9d96fd4390ad62238c38d26e851358f2e8a9da7c434843`；私人助手排除。最終原生報告位於 clipboard-focus-round 的 refresh／audit／save；Note／排列中途保存報告位於 note-layout-round。
 
 2026-09-18 剪貼簿焦點：新增 `test_clipboard_keyboard.cjs`，修正前以實際 Ctrl＋C 和 trusted copy event 重現「Note 文字 range 殘留後點選節點，節點複製未執行」。修正後 8 組通過，涵蓋點選、已選節點拖移、群組框、Ctrl＋V 及單次 Undo；Note／input 文字事件仍保留原生處理，navigator.clipboard 呼叫為 0。測試僅重導事件的資料至隔離 DataTransfer，不讀取主機剪貼簿。群組框 13 組、Markdown 9 組及 edit-shortcuts 10 組回歸通過，零頁面錯誤。

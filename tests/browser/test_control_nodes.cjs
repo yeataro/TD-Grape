@@ -33,6 +33,19 @@ const[source,stateFile,folder]=process.argv.slice(2);
       graph.stages.pixel={nodes:[testNode('scalar','float',25,120,{value:.25}),testNode('vector','vec3',25,390,{value:[.2,.4,.6]}),testNode('ordinary','add',820,430),testNode('output','pixel_out',1180,160)],edges:[]};
       selected=null;selection.clear();past=[];future=[];dirty=false;rememberSavedGraph(graph);render();scale=.75;pan={x:20,y:30};transform();
     });await settle();
+    const browserRows=JSON.parse(fs.readFileSync(path.resolve(source,'../library/node_catalog.json'),'utf8')).definitions.filter(row=>['compare','if'].includes(row.definition.key));
+    for(const row of browserRows)assert.deepEqual(await page.evaluate(id=>browserData().nodes[id],row.definition.definitionUuid),row.browser);
+    const beforeBrowsing=await snapshot();
+    await page.locator('#canvas').focus();await page.keyboard.press('Tab');await page.locator('#creator').waitFor({state:'visible'});
+    await page.locator('[data-create-path=\'["logic"]\']').click();
+    for(const key of ['compare','if'])assert.equal(await page.locator(`[data-create-entry="${key}"]`).getAttribute('data-browser-category'),'logic');
+    for(const [query,key] of [['comparison','compare'],['branch','if'],['ternary','if']]){
+      await page.locator('#createsearch').fill(query);const entry=page.locator(`[data-create-entry="${key}"]`);assert.equal(await entry.count(),1);await entry.hover();
+      assert.equal(await page.locator('#createdetail .browser-category-path').innerText(),'Logic');
+      const help=await page.evaluate(key=>markdown(t('help.'+key)).textContent,key);assert.ok(help&&!help.startsWith('help.'));assert.equal(await page.locator('#createdetail .help-markdown').textContent(),help);
+    }
+    await page.screenshot({path:path.join(folder,'if-alias-search.png')});await page.keyboard.press('Escape');assert.equal(await snapshot(),beforeBrowsing);
+    checks.push('Compare and If browser metadata matches the catalog; Logic category and comparison/branch/ternary searches show the right nodes and help without graph/history edits');
     for(const key of ['compare','if']){
       await page.locator('#canvas').focus();await page.keyboard.press('Tab');await page.locator('#creator').waitFor({state:'visible'});
       await page.locator('#createsearch').fill(key);await page.locator(`[data-create-entry="${key}"]`).click();await settle();

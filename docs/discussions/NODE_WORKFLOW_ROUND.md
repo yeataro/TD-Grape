@@ -296,3 +296,20 @@ Swizzle 待議（2026-09-17）：是否保留獨立節點尚未決定；可考�
 使用者確認保留現行排列，再新增從鏈路結果往回決定層級的第二種方式；多個最終節點也應支援。兩者接線仍由左到右：`自動排列：由來源` 將來源放在左侧，`自動排列：由結果` 將末端放在右側，再讓較短支路靠近下游。共用選區範圍、實際尺寸、接孔上下順序、間距及一次 Undo，不增加外部排版函式庫。快捷鍵為 L／Shift＋L，選單提示及快捷鍵列表保持一致。
 
 使用者另討論被一併選取的零散節點是否可在下方由左至右或 grid 排列，以免結果過高；先表示擱置，隨後明確授權簡單實作為第二階段整理。兩個方向共用：完全沒有選區內連線的節點集中到主圖下方，由左至右依合適寬度換行；有連線的獨立小鏈路保留原本鏈路排列。全為零散節點時也採緊湊格狀，不堆成單一直欄；只改位置，沿用同一次 Undo。
+
+## 2026-09-18 下一批範圍草稿：POP Math 對應
+
+使用者希望依照 Math Combine／Math POP 的經驗找到相同能力，同時要求先界定哪些值得新增、哪些可組合，並區分 GLSL 標準函式與 TD helper。最新階段是盤點及正式實作範圍回應，以下尚未實作。
+
+- 已有算術、Mix、Clamp、Smoothstep、Compare／If 等保持實作；補可辨識的 TD 名稱與搜尋別名。需要交換輸入或設定數值的公式不能只加 alias 就宣稱是等價快捷入口。
+- 建議第一批基礎缺口：Sign、Sqrt、Floor、Round、Ceil、Truncate、Modulo；包裝 GLSL 原生函式。原生 GLSL 與 POP 的角度單位、負值／零值處理差異應明列，不默默改現有節點。
+- 優先 TD helper：RGB to HSV、HSV to RGB、Remap、Loop、Zigzag。顏色轉換先 vec3，不混入 sRGB transfer 或 alpha 規則；Loop／Zigzag 是數值循環／往返，不是控制流。
+- 保留 Range From／Range To 的明確入口與 TD 語意；可共用實作但不能讓使用者自行猜五個 Remap 參數。Range From 等端點回傳輸入 A；Range To 允許外插，兩者不自動 clamp。
+- Component 運算是將同一向量的分量化為一個數值，適合共用一套加／減／乘／除／平均／最小／最大實作，保留 Component Add 等可讀名稱和 compadd 等搜尋名。與陣列、跨點分析分開。
+- 三角／指數／對數其餘缺口、Angle、dB 換算及快捷複合公式列後續；None／A 或反序減除不新增重複原語。array 系列涉及目前不存在的陣列接孔，不在這批擴張資料模型。
+
+依據：[GLSL 4.60 標準函式](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#built-in-functions)、[TD Math Mix Combine 公式](https://docs.derivative.ca/Math_Mix_Combine_Functions)、[TOP Common Functions](https://docs.derivative.ca/Write_a_GLSL_TOP#Common_Functions)、[MAT Common Functions](https://docs.derivative.ca/Write_a_GLSL_MAT#Common_Functions)。
+
+隔離 TD 2025.32820 探針確認 TOP Pixel／MAT Pixel＋Vertex：TDRGBToHSV／TDHSVToRGB 只有 vec3 overload；TDLoop／TDZigZag／TDAverage 只有 float；TDRemap 支援 float／vec2／vec3／vec4。向量 Loop 若提供，需要逐分量呼叫。TDRemap(A,B,C,0,1) 在 B=C=.5 時回傳 .5，不能無條件代替官方 Range From 的 A fallback。負值 Zigzag 由實際 helper 正確反射，不照抄官文有疑義的 parity 範例。等端點 Loop／Zigzag 不將本機數值當跨平台保證。
+
+TD helper 可初始化區域 const，但不能初始化全域常數表達式；不可加入目前一般 GLSL constant-expression 白名單。探針只驗本機語意及支援介面，不宣稱 Metal／AMD 最佳化。測試區已清除、使用者 Shader 快照保持一致，報告位於私人 math-helper-probe；未因調查改動產品或保存 TOE。
