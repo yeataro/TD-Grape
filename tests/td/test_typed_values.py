@@ -287,8 +287,37 @@ try:
                 assert current_par.isSamePar(parameter)
                 assert shader.op('pixel_shader').text == code, 'Runtime Uniform write rewrote GLSL'
                 checks.append(kind + ': live ' + ty + ' component ' + str(component) + ' GPU value and exact native Undo/Redo')
-            invalid = [('int', 16777217), ('int', 2147483647), ('uint', -1), ('uint', 4294967295), ('bool', .5), ('ivec4', -16777217), ('uvec4', 4294967294), ('bvec4', -1)]
-            if kind == 'mat': invalid += [('uint', 2147483904), ('uvec4', 4294967040)]
+            # Legal 32-bit values remain editable even when this native TD
+            # build loses precision during GPU upload. Verify raw storage and
+            # replay here; exact GPU transport is a separate capability test.
+            accepted = [('int', 16777217), ('int', 2147483647), ('uint', 4294967295),
+                        ('ivec4', -16777217), ('uvec4', 4294967294),
+                        ('uint', 2147483904), ('uvec4', 4294967040)]
+            for ty, raw in accepted:
+                initial = api('GET', 'sources')
+                row = next(row for row in initial['uniforms'] if row['type'] == ty)
+                ident = row['id']
+                parameter = getattr(r.shader_operator(shader).par, row['components'][0]['parameter'])
+                default = parameter.eval()
+                changed = write_source(ident, 0, raw)
+                assert parameter.eval() == raw
+                assert source_row(changed, ident)['components'][0]['value'] == raw
+                undone = restore(changed, initial, ident)
+                assert parameter.eval() == default
+                redone = restore(undone, changed, ident, (initial, changed))
+                assert parameter.eval() == raw
+                assert source_row(redone, ident)['components'][0]['value'] == raw
+                restore(redone, initial, ident)
+                assert parameter.eval() == default
+                current_par = getattr(r.shader_operator(shader).par, source_row(api('GET', 'sources'), ident)['components'][0]['parameter'])
+                assert current_par.isSamePar(parameter)
+                assert shader.op('pixel_shader').text == code, 'Raw Uniform value replay rewrote GLSL'
+                checks.append(kind + ': native ' + ty + ' accepts raw ' + str(raw) + ' with exact storage and Undo/Redo regardless of GPU precision')
+            assert_pixel(shader, [1, 1, 1, 1], 'raw-value replay restored all exact defaults')
+            invalid = [('int', .5), ('int', -2147483649), ('int', 2147483648),
+                       ('uint', -1), ('uint', 4294967296), ('bool', .5),
+                       ('ivec4', -.5), ('uvec4', -1), ('bvec4', -1),
+                       ('float', float('inf')), ('vec4', float('nan'))]
             for ty, bad in invalid:
                 seen = api('GET', 'sources')
                 row = next(row for row in seen['uniforms'] if row['type'] == ty)
@@ -296,7 +325,7 @@ try:
                 rejected = False
                 try: write_source(row['id'], 0, bad)
                 except (RuntimeError, ValueError): rejected = True
-                assert rejected, 'Unsafe or ill-typed native value accepted: ' + ty + ' ' + str(bad)
+                assert rejected, 'Out-of-domain native value accepted: ' + ty + ' ' + str(bad)
                 assert old == (shader.op('state').text, r.source_module().native_rows(r.shader_operator(shader)))
                 assert shader.op('pixel_shader').text == code
                 checks.append(kind + ': native ' + ty + ' rejects ' + str(bad) + ' without changing state or shader')

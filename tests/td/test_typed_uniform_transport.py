@@ -191,9 +191,9 @@ finally:
 # Native XYZW parameters store doubles but this TD build converts their values
 # through float32 before uploading typed integer uniforms. MAT additionally
 # transports uint values above 2^31 as 2^31 (both pixel and vertex stages).
-# These assertions document this native build; a TD fix should update the test
-# and the corresponding source-value guard together. Expected losses
-# remain explicit regression evidence, not silent pass/fail omissions.
+# These assertions document this native build; a TD fix should update these
+# capability expectations. They do not restrict values accepted by the editor.
+# Expected losses remain explicit evidence, not silent pass/fail omissions.
 for row in report['records']:
     assert row['compiled'], row
     integer = row['type'] in ('int', 'uint') or row['type'].startswith(('ivec', 'uvec'))

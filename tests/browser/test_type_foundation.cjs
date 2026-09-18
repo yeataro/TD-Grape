@@ -114,6 +114,29 @@ const[source,stateFile,folder]=process.argv.slice(2);
     assert.deepEqual(live.before,[{value:'false',expected:0},{value:'true',expected:1}]);assert.equal(live.request.value,true);assert.equal(live.request.expected.value,0);assert.equal(live.exposed,2);
     checks.push('Native and Exposed Boolean vector controls display bool values, submit real booleans, and preserve raw numeric optimistic-concurrency snapshots');
 
+    const liveIntegers=await page.evaluate(()=>{
+      const previous=nativeSourceSnapshot,request=nativeSourceRequest,requests=[],rows=[];
+      nativeSourceRequest=(endpoint,body)=>requests.push(clone(body));
+      try{
+        for(const [kind,type,values] of [
+          ['uniform','int',[-2147483648,16777217,2147483647]],
+          ['uniform','uint',[16777217,2147483649,4294967295]],
+          ['uniform','uvec2',[2147483649,4294967295]],
+          ['spec_constant','int',[-2147483648,-1,16777217,2147483647]],
+          ['spec_constant','uint',[16777217,2147483649,4294967295]]]){
+          const decl={id:'integerLive',name:'uInteger',kind,type,value:0},raw={value:16777219,mode:'CONSTANT',writable:true,expression:''};
+          nativeSourceSnapshot={revision,enabled:true,uniforms:[],specConstants:[]};
+          nativeSourceSnapshot[kind==='uniform'?'uniforms':'specConstants']=[{id:decl.id,components:[raw]}];
+          const box=document.createElement('div');nativeInputFields(box,decl);
+          const input=box.querySelector('[data-source-component]');
+          for(const value of values){input.value=String(value);input.onchange();rows.push({kind,type,value,min:input.min,max:input.max,invalid:input.getAttribute('aria-invalid'),request:requests.at(-1)});}
+        }
+        return rows;
+      }finally{nativeSourceSnapshot=previous;nativeSourceRequest=request;}
+    });
+    for(const row of liveIntegers){const unsigned=/uint|uvec/.test(row.type);assert.equal(row.min,unsigned?'0':'-2147483648');assert.equal(row.max,unsigned?'4294967295':'2147483647');assert.notEqual(row.invalid,'true');assert.equal(row.request.value,row.value);assert.equal(row.request.expected.value,16777219);}
+    checks.push('Native Uniform/Spec inputs accept full int/uint ranges, negative signed Spec values and precision-boundary values without altering raw concurrency snapshots');
+
     assert.equal(await page.evaluate(()=>{
       const decl=createInputDeclaration('uniform','bvec2'),box=document.createElement('div');
       const payload=clone({revision:0,uniforms:{},textures:{}});

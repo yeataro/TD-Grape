@@ -64,14 +64,14 @@ class TypedUndo(unittest.TestCase):
             history.restore(f.runtime,f.request(before,after))
         self.assertEqual(master.val,2);self.assertEqual(f.current,state)
 
-    def test_editor_history_rejects_unsafe_legacy_exposed_value(self):
+    def test_editor_history_restores_large_legacy_exposed_integer(self):
         f=self.f;self.declaration('int')['expose']=True
         master=Par(f.comp,'Amount',16777217);f.comp.par.Amount=master
         f.storage['sgrapePublicUniforms']={'A':{'type':'int','parameters':['Amount']}}
-        before=f.token();master.val=2;after=f.token();state=copy.deepcopy(f.current)
+        before=f.token();master.val=2;after=f.token()
         request=f.request(before,after,ids=());request['valueIds']=['A']
-        with self.assertRaisesRegex(RuntimeError,'float32'):history.restore(f.runtime,request)
-        self.assertEqual(master.val,2);self.assertEqual(f.current,state)
+        self.assertTrue(history.restore(f.runtime,request)['ok'])
+        self.assertEqual(master.val,16777217)
 
     def test_editor_history_accepts_native_boolean_master_values(self):
         f=self.f;self.declaration('bool')
@@ -107,7 +107,7 @@ class TypedUndo(unittest.TestCase):
             create.assert_not_called()
         self.assertEqual(f.par('A').val,1.5)
 
-    def test_legacy_exposed_native_undo_checks_value_transport(self):
+    def test_legacy_exposed_native_undo_accepts_large_integers_in_original_context(self):
         f=self.f;f.runtime.core=lambda:core;self.declaration('int')['expose']=True
         master=Par(f.comp,'Amount',16777217);f.comp.par.Amount=master
         f.storage['sgrapePublicUniforms']={'A':{'type':'int','parameters':['Amount']}}
@@ -120,8 +120,11 @@ class TypedUndo(unittest.TestCase):
                 ensure_supported_shader=lambda comp:None,set_parameter_with_undo=commit,_owner=owner):
             runtime_module.set_uniform_value(dict(declarationId='A',component=0,revision=1,expected=item,value=2))
             self.context_required()
-            with self.assertRaisesRegex(RuntimeError,'float32'):callbacks[0](16777217.0)
-            callbacks[0](16777218.0)
+            callbacks[0](16777217.0);callbacks[0](2147483647.0)
+            with self.assertRaisesRegex(RuntimeError,'whole int'):callbacks[0](2147483648.0)
+            self.declaration('uint')['expose']=True
+            callbacks[0](4294967295.0)
+            with self.assertRaisesRegex(RuntimeError,'whole uint'):callbacks[0](4294967296.0)
         self.assertEqual(master.val,2)
 
 

@@ -8,7 +8,6 @@ import hashlib
 import json
 import math
 import re
-import struct
 import uuid
 from contextlib import nullcontext
 
@@ -38,27 +37,13 @@ def next_constant_id(declarations):
     return next(i for i in range(len(used) + 1) if i not in used)
 
 
-def spec_native_limits(kind):
-    """TD 2025.32820 native override limits verified by GPU bit readback.
-
-    The GLSL language retains its full scalar ranges. This is the actual TD
-    Constants parameter transport, not a change to declaration types.
-    """
-    return {'nonnegativeIntegers': True, 'integerFloat32Exact': kind == 'mat'}
-
-
-def uniform_native_limits(kind='top'):
-    """Vectors transport observed on TD 2025.32820, TOP and MAT."""
-    return {'integerFloat32Exact': True, 'uintMaximum':2147483648 if kind=='mat' else 4294967295, 'booleanValues': [0, 1]}
-
-
 def source_family(ty):
     if ty not in TYPES: raise RuntimeError('Unsupported native source type.')
     return 'bool' if ty == 'bool' or ty.startswith('bvec') else 'uint' if ty == 'uint' or ty.startswith('uvec') else 'int' if ty == 'int' or ty.startswith('ivec') else 'float'
 
 
-def validate_uniform_component(declaration, value, role='value', kind='top'):
-    """Check transport without reducing the GLSL type's range or changing values."""
+def validate_uniform_component(declaration, value, role='value'):
+    """Validate an editor write's declared type; native transport is TD-owned."""
     family = source_family(declaration['type'])
     name = declaration.get('name', 'Uniform')
     if family == 'bool':
@@ -71,21 +56,13 @@ def validate_uniform_component(declaration, value, role='value', kind='top'):
     low, high = (-2147483648, 2147483647) if family == 'int' else (0, 4294967295)
     if int(value) != value or not low <= value <= high:
         raise RuntimeError('Uniform '+name+': native '+role+' must be a whole '+family+' value from '+str(low)+' to '+str(high)+'.')
-    if family == 'uint' and kind == 'mat' and value > 2147483648:
-        raise RuntimeError('Uniform '+name+': this TD GLSL MAT Vectors transport cannot deliver uint values above 2147483648 correctly. Its previous value was preserved; Graph Constants retain the full uint range.')
-    if struct.unpack('f', struct.pack('f', value))[0] != value:
-        raise RuntimeError('Uniform '+name+': TD Vectors requires integers exactly representable in float32. This value loses precision during GPU upload; its previous value was preserved. Graph Constants retain the full 32-bit range.')
 
 
-def validate_uniform_native(declaration, value, role='value', kind='top'):
+def validate_uniform_native(declaration, value, role='value'):
     values = [value] if source_components(declaration) == 1 else value
     if not isinstance(values, (list, tuple)) or len(values) != source_components(declaration):
         raise RuntimeError('Uniform '+declaration.get('name', '')+': invalid native component count.')
-    for component in values: validate_uniform_component(declaration, component, role, kind)
-
-
-def native_kind(runtime, comp, graph=None):
-    return runtime.shader_kind(comp) if hasattr(runtime, 'shader_kind') else (graph or {}).get('target', 'mat')
+    for component in values: validate_uniform_component(declaration, component, role)
 
 
 def source_graph(runtime, comp):
@@ -101,28 +78,25 @@ def validate_source_value(runtime, comp, ident, value, index=0):
     declaration = next((d for d in graph['declarations'] if d['id'] == ident and d.get('kind') in SOURCE_KINDS), None)
     if not declaration or declaration.get('sourceMissing') or not 0 <= index < source_components(declaration):
         raise RuntimeError('The native source or its component is no longer available.')
-    kind = native_kind(runtime, comp, graph)
     if declaration['kind'] == 'uniform':
-        validate_uniform_component(declaration, value, kind=kind)
+        validate_uniform_component(declaration, value)
     elif declaration['type'] == 'bool':
-        validate_uniform_component(declaration, value, kind=kind)
+        validate_uniform_component(declaration, value)
     elif declaration['type'] == 'float':
         runtime.core().number(value)
     else:
-        validate_spec_native(declaration, value, kind)
+        validate_spec_native(declaration, value)
 
 
-def validate_spec_native(declaration, value, kind, role='value'):
+def validate_spec_native(declaration, value, role='value'):
     ty = declaration.get('type')
     if ty not in ('int', 'uint'): return
     name = declaration.get('name', 'Spec Constant')
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or int(value) != value:
         raise RuntimeError('Spec Constant '+name+': native '+role+' must be a whole '+ty+' value.')
-    maximum = 2147483647 if ty == 'int' else 4294967295
-    if not 0 <= value <= maximum:
-        raise RuntimeError('Spec Constant '+name+': TD native integer overrides require a value from 0 to '+str(maximum)+'. Negative int overrides do not reach the GPU correctly in this TD build.')
-    if kind == 'mat' and struct.unpack('f', struct.pack('f', value))[0] != value:
-        raise RuntimeError('Spec Constant '+name+': GLSL MAT requires an integer exactly representable in float32. This value loses precision in the TD Constants parameter; its previous value was preserved.')
+    minimum, maximum = (-2147483648, 2147483647) if ty == 'int' else (0, 4294967295)
+    if not minimum <= value <= maximum:
+        raise RuntimeError('Spec Constant '+name+': '+role+' must be a whole '+ty+' value from '+str(minimum)+' to '+str(maximum)+'.')
 
 
 def valid_name(name):
@@ -278,29 +252,27 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
     if comp.op('graph') and comp.op('graph').text:
         old_graph = {d['id']: d for d in json.loads(comp.op('graph').text).get('declarations', [])}
     declarations = [d for d in graph['declarations'] if d['kind'] in SOURCE_KINDS]
-    kind = native_kind(runtime, comp, graph)
-    # Validate the whole batch before creating/renaming any native row. Defaults
-    # must also travel safely when this graph is opened in a fresh Shader.
+    # Validate candidate types before creating/renaming native rows.
+    # Precision and numerical conversion remain the host's responsibility.
     for decl in declarations:
         if decl['kind'] == 'uniform' and not decl.get('sourceMissing'):
-            validate_uniform_native(decl, decl['value'], 'default', kind)
+            validate_uniform_native(decl, decl['value'], 'default')
             source = locate(original, original_registry.get(decl['id']))
             if source is None:
                 matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] != 'const']
                 source = matches[0] if len(matches) == 1 else None
             if source:
                 for component in source['components'][:source_components(decl)]:
-                    validate_uniform_component(decl, component['value'], kind=kind)
-            elif decl['id'] in (preserve or {}): validate_uniform_native(decl, preserve[decl['id']], kind=kind)
+                    validate_uniform_component(decl, component['value'])
+            elif decl['id'] in (preserve or {}): validate_uniform_native(decl, preserve[decl['id']])
         if decl['kind'] != 'spec_constant' or decl.get('sourceMissing'): continue
-        kind = native_kind(runtime, comp, graph)
-        validate_spec_native(decl, decl['value'], kind, 'default')
+        validate_spec_native(decl, decl['value'], 'default')
         source = locate(original, original_registry.get(decl['id']))
         if source is None:
             matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] == 'const']
             source = matches[0] if len(matches) == 1 else None
-        if source: validate_spec_native(decl, source['components'][0]['value'], kind)
-        elif decl['id'] in (preserve or {}): validate_spec_native(decl, preserve[decl['id']], kind)
+        if source: validate_spec_native(decl, source['components'][0]['value'])
+        elif decl['id'] in (preserve or {}): validate_spec_native(decl, preserve[decl['id']])
     # Legacy builds only instantiated used uniforms. Adopt those exact native
     # names; don't reuse arbitrary blank slots carrying expressions/exports.
     for decl in declarations:
@@ -388,17 +360,9 @@ def snapshot(runtime):
     if links: links.module.sync(comp)
     registry = comp.fetch(STORE, {})
     rows = []; spec_rows = []; issues = copy.deepcopy(comp.fetch('grapeSourceIssues', []))
-    kind = native_kind(runtime, comp, current['graph'])
     for decl in current['graph']['declarations']:
         if decl['kind'] not in SOURCE_KINDS: continue
         row = locate(operator, registry.get(decl['id']))
-        if decl['kind']=='spec_constant' and row:
-            try: validate_spec_native(decl, row['components'][0]['value'], kind)
-            except RuntimeError as exc: issues.append({'id':decl['id'], 'code':'spec-native-value', 'message':str(exc)})
-        elif row:
-            try:
-                for component in row['components'][:source_components(decl)]:validate_uniform_component(decl, component['value'], kind=kind)
-            except RuntimeError as exc:issues.append({'id':decl['id'], 'code':'uniform-native-value', 'message':str(exc)})
         destination = spec_rows if decl['kind']=='spec_constant' else rows
         destination.append({'id': decl['id'], 'kind':decl['kind'], 'name': decl['name'], 'type': decl['type'],
                      **({'constantId':decl['constantId']} if decl['kind']=='spec_constant' else {}),
@@ -410,7 +374,7 @@ def snapshot(runtime):
                      'expected': edit_token(row) if row else None})
     return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows, 'specConstants': spec_rows,
             'declarations': current['graph']['declarations'], 'graph': current['graph'], 'sourceChanged': current.get('sourceChanged', False),
-            'issues': issues, 'specConstantLimits': spec_native_limits(kind), 'uniformLimits': uniform_native_limits(kind), 'enabled': comp.fetch(STORE, None) is not None}
+            'issues': issues, 'enabled': comp.fetch(STORE, None) is not None}
 
 
 def write_value(runtime, body):
@@ -426,11 +390,11 @@ def write_value(runtime, body):
     value = body.get('value')
     if rows[0].get('kind')=='spec_constant':
         runtime.core().literal(value, rows[0]['type'])
-        validate_spec_native(rows[0], value, native_kind(runtime, runtime.target(), seen['graph']))
+        validate_spec_native(rows[0], value)
     else:
         family = runtime.core().TYPE_DESCRIPTORS[rows[0]['type']]['family']
         runtime.core().literal(value, family)
-        validate_uniform_component(rows[0], value, kind=native_kind(runtime, runtime.target(), seen['graph']))
+        validate_uniform_component(rows[0], value)
     p = getattr(runtime.shader_operator(runtime.target()).par, item['parameter'])
     comp = runtime.target(); ident = rows[0]['id']; operator = runtime.shader_operator(comp)
     def validate(value):
@@ -539,7 +503,7 @@ def edit(runtime, body):
             else:
                 value=p.eval();runtime.core().number(value);p.mode=ParMode.CONSTANT;p.val=value
             runtime.core().number(p.eval())
-            validate_uniform_component(decl, p.eval(), kind=native_kind(runtime, comp, graph))
+            validate_uniform_component(decl, p.eval())
         except Exception:
             p.val=before[1];p.expr=before[2];p.mode=before[0]
             raise RuntimeError('Expression must evaluate to a finite numeric value; the previous driver was restored.')

@@ -18,11 +18,10 @@
     "Graph"
   ],
   "messages": {
-    "inputs.integerUniformMaximum": {"zh-Hant":"目前宿主的 uint Uniform 上限為 {value}。", "en":"The current host limits uint Uniforms to {value}."},
     "convert.fromType": {"zh-Hant": "輸入型別", "en": "Input type"},
     "convert.toType": {"zh-Hant": "輸出型別", "en": "Output type"},
     "type.cast": {"zh-Hant": "將 {source} 轉換為 {target}；整數轉換會截去小數。", "en": "Convert {source} to {target}; integer conversion truncates fractional parts."},
-    "inputs.integerUniformHint": {"zh-Hant": "TD 的 Uniform 數值經過 float32 儲存；只有能精確表示的整數可套用。Graph Constant 保留完整 32 位元整數。", "en": "TD stores Uniform values through float32; only exactly representable integers can be applied. Graph Constants preserve the full 32-bit integer range."},
+    "inputs.integerUniformHint": {"zh-Hant": "大整數的 Uniform 傳輸可能失去精度；結果依 TD 原生行為。圖內常數保留完整 32 位元整數。", "en": "Large integers may lose precision during Uniform transfer; results follow native TD behavior. Graph Constants preserve the full 32-bit integer range."},
     "help.scalar": {"zh-Hant": "單一常數值，型別可選 float、int、uint 或 bool。整數使用完整 32 位元範圍；bool 直接切換 false／true。需要多個分量時使用 Vector。", "en": "A single constant value with float, int, uint or bool type. Integers use the full 32-bit range; Boolean values switch directly between false and true. Use Vector for multiple components."},
     "help.convert": {"zh-Hant": "明確轉換輸入與輸出型別。支援 float、int、uint、bool 與各自的 2～4 維向量。向量必須保持相同維度；純量可轉成向量並複製至各分量。數值 0 轉 bool 為 false，其餘為 true；bool 轉數值為 0 或 1。整數轉換截去小數；不會自動限制範圍。", "en": "Explicitly convert between float, int, uint, bool and their 2–4 component vectors. Vectors must keep the same width; a scalar can fill every component of a vector. Numeric zero becomes false and other values become true; Boolean values become 0 or 1. Integer conversion truncates fractions; values are not clamped."},
 
@@ -125,8 +124,8 @@
     "inputs.newShort": {"zh-Hant": "新增", "en": "New"},
     "node.renamed": {"zh-Hant": "已更新節點名稱", "en": "Node name updated"},
     "help.spec_constant": {
-      "zh-Hant": "引用 Inputs 中的特化常數，保留固定 constant_id。它的數值在 Shader 特化時確定，可用於常數分支。\n\n目前 TD 版本的原生限制：int 的目前值需非負；MAT 的大整數須可由 32-bit float 精確表示。不支援值會拒絕套用。",
-      "en": "Reference an Inputs specialization constant with a stable constant_id. Its value is fixed at specialization and can control constant branches.\n\nCurrent TD native limitation: int current values must be nonnegative; large MAT integers must be exactly representable as 32-bit float. Unsupported values are rejected."
+      "zh-Hant": "引用 Inputs 中的特化常數，保留固定 constant_id。它的數值在 Shader 特化時確定，可用於常數分支。\n\n數值傳輸與精度依 TD 原生行為；大整數可能失去精度。",
+      "en": "Reference an Inputs specialization constant with a stable constant_id. Its value is fixed at specialization and can control constant branches.\n\nValue transfer and precision follow native TD behavior; large integers may lose precision."
     },
     "help.replace": {
       "zh-Hant": "整體向量提供基底；分量接線取代對應的連續分量。新線會移除重疊的分量接線，來源節點保留，整個替換是一次復原操作。輸出只有最終向量。Auto 僅依完整基底推導型別；未接基底時保留目前型別並可手填各分量。",

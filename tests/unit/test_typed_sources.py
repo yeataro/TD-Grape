@@ -6,27 +6,60 @@ from unittest.mock import patch
 import sgrape_core as core
 import sgrape_sources as sources
 import sgrape_parameters as parameters
+import test_history as history_fixtures
 
 
 class TypedSources(unittest.TestCase):
-    def test_integer_native_transport_checks_precision_not_a_small_range(self):
+    def test_integer_native_values_accept_full_glsl_range(self):
         for ty in ('int', 'ivec3', 'uint', 'uvec4'):
             declaration = {'name': 'uValue', 'type': ty}
-            for value in (0, 16777215, 16777216, 16777218, 1073741824):
+            for value in (0, 16777215, 16777216, 16777217, 16777218, 1073741824, 2147483647):
                 sources.validate_uniform_component(declaration, value)
-            for value in (16777217, 2147483647):
-                with self.assertRaisesRegex(RuntimeError, 'float32'):
-                    sources.validate_uniform_component(declaration, value)
-            with self.assertRaises(RuntimeError):sources.validate_uniform_component(declaration, 1.5)
+            for value in (1.5, float('inf'), float('nan'), True, '2'):
+                with self.assertRaises(RuntimeError):sources.validate_uniform_component(declaration, value)
         sources.validate_uniform_component({'type': 'int'}, -2147483648)
         sources.validate_uniform_component({'type': 'uint'}, 2147483648)
-        sources.validate_uniform_component({'type': 'uint'}, 4294967040, kind='top')
-        with self.assertRaisesRegex(RuntimeError, 'GLSL MAT'):
-            sources.validate_uniform_component({'type': 'uint'}, 4294967040, kind='mat')
-        with self.assertRaises(RuntimeError):sources.validate_uniform_component({'type': 'uint'}, -1)
+        sources.validate_uniform_component({'type': 'uint'}, 4294967040)
+        sources.validate_uniform_component({'type': 'uint'}, 4294967295)
+        sources.validate_uniform_native({'type': 'ivec3'}, [-2147483648, 16777217, 2147483647])
+        sources.validate_uniform_native({'type': 'uvec4'}, [0, 16777217, 2147483648, 4294967295])
+        for ty, value in [('int', -2147483649), ('int', 2147483648), ('uint', -1), ('uint', 4294967296)]:
+            with self.assertRaises(RuntimeError):sources.validate_uniform_component({'type': ty}, value)
         for value in (False, True, 0.0, 1.0):sources.validate_uniform_component({'type': 'bvec4'}, value)
         for value in (-.5, .5, 2):
             with self.assertRaises(RuntimeError):sources.validate_uniform_component({'type': 'bool'}, value)
+
+    def test_snapshot_reads_uniform_values_without_validating_them(self):
+        fixture = history_fixtures.History('test_value_undo_redo_and_unrelated_external_value')
+        fixture.setUp(); self.addCleanup(fixture.doCleanups)
+        fixture.current['graph']['declarations'][0].update(type='int', value=0)
+        fixture.par('A').val = 16777217
+        with patch.object(sources, 'validate_uniform_component', side_effect=AssertionError('Snapshot must not validate Uniform values')) as validate:
+            seen = sources.snapshot(fixture.runtime)
+        validate.assert_not_called()
+        self.assertEqual(seen['uniforms'][0]['components'][0]['value'], 16777217)
+        self.assertNotIn('uniformLimits', seen)
+
+    def test_source_writes_accept_full_integer_range_without_changing_the_value(self):
+        fixture = history_fixtures.History('test_value_undo_redo_and_unrelated_external_value')
+        fixture.setUp(); self.addCleanup(fixture.doCleanups)
+        fixture.runtime.core = lambda: core
+        def commit(par, value, validate=None):
+            if validate: validate(value)
+            par.val = value
+        fixture.runtime.set_parameter_with_undo = commit
+        declaration = fixture.current['graph']['declarations'][0]
+        for ty, values in [('int', [-2147483648, 16777217, 2147483647]),
+                           ('uint', [16777217, 2147483649, 4294967295])]:
+            declaration.update(type=ty, value=0)
+            for value in values:
+                with self.subTest(type=ty, value=value):
+                    seen = sources.snapshot(fixture.runtime)
+                    row = next(row for row in seen['uniforms'] if row['id'] == 'A')
+                    result = sources.write_value(fixture.runtime, dict(revision=seen['revision'], id='A', component=0,
+                        expected=row['components'][0], value=value))
+                    self.assertEqual(fixture.par('A').val, value)
+                    self.assertEqual(result['uniforms'][0]['components'][0]['value'], value)
 
     def test_native_shapes_match_shared_value_types(self):
         self.assertEqual(set(sources.TYPES), set(core.TYPES))

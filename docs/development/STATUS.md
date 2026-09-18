@@ -2,7 +2,7 @@
 
 2026-09-18 純量／向量型別基礎完成：共用契約接通 float／int／uint／bool 與各自 2–4 分量向量，共 16 種值型別。新增 Scalar 與 Convert，既有 Float 保留；Graph Constant、Uniform、Vector／Combine／Split／Swizzle／Replace、共用值編輯、Auto、Subgraph／GLSL Code 及保存路徑同步。數學節點按合法簽名開放型別，Compare 維持 scalar 比較與 bool 輸出，If 的結果支援全部 16 型別。Auto 優先保留輸入家族；同維度數值與 numeric scalar splat 可接線轉換，bool／numeric 使用 Convert，不默默丟棄向量分量。矩陣、陣列、Switch Case 與 UV 數字顯示留後續。
 
-原生 TD Vectors 的 int／uint 必須能以 float32 精確傳輸；MAT 的 uint／uvec 另限制不超過 2147483648，bool／bvec 使用 0／1。Graph Constant／Scalar／Vector 的整數 literal 保留完整 32 位範圍。套用、寫值、綁定及 Undo 前會驗證宿主限制；原生 Undo 回到原 Shader，依目前型別驗證，而非沿用編輯前的型別。詳見 [數值型別計畫](../discussions/NUMERIC_TYPES_PLAN.md) 與 [測試紀錄](TESTING.md)。本機結果不代表 Metal／其他 GPU 已驗證。
+2026-09-18 後續隔離修正（尚未部署）：依使用者決定移除額外整數傳輸限制；Uniform／Spec Constant 接受完整 GLSL int／uint 32 位範圍，包含負 Spec int 與 UINT_MAX。保留明確寫入的有限值、型別、範圍及 bool／bvec 0／1 檢查；snapshot 不驗值。傳輸精度依 TD 原生行為，大整數可能失真；Graph Constant／Scalar／Vector literal 保持精確。原生 Undo 仍回到原 Shader 並依目前型別驗證。詳見 [數值型別計畫](../discussions/NUMERIC_TYPES_PLAN.md) 與 [測試紀錄](TESTING.md)。本機結果不代表 Metal／其他 GPU 已驗證。
 
 同輪介面收尾：右鍵功能加入圖示；選取工具列全展開時只顯示收合、全收合時只顯示展開、混合時顯示兩者；關閉該組設定時連同分隔線一起隱藏。完整群組的多選外範圍保留並使用直角；排列入口增加小三角。Note 預設標題及暗色模式 body 改為純灰，色盤預設同步；既有自訂背景及透明設定保留。自動排列演算法未改。
 

@@ -14,15 +14,15 @@
 
 TD 2025.32820 的隔離 TOP、MAT pixel、MAT vertex 已以 GPU 內整數比較確認 330 組傳輸案例（CONSTANT 與 EXPRESSION），包含正負端點及所有向量分量。編譯、CPU 參數儲存成功，不等於 GPU 值正確。
 
-| 來源 | 已確認的有效傳輸範圍 |
+| 來源 | 已觀察的傳輸行為（不是編輯器輸入限制） |
 |---|---|
 | 圖內 Constant／Scalar／Vector、GLSL 運算 | int／uint 完整 32 位範圍，literal 不經 float32 |
-| TOP／MAT Vectors int／ivec | 必須是 float32 可精確表示的整數；支援負值與 INT_MIN，不是簡單限制到 2²⁴ |
-| TOP Vectors uint／uvec | 必須是 float32 可精確表示的 uint；例如 4294967040 正確，UINT_MAX 失真 |
-| MAT Vectors uint／uvec | 同上，且不得超過 2147483648；更大的精確 uint 實測被傳成 2147483648 |
+| TOP／MAT Vectors int／ivec | float32 可精確表示的整數傳輸正確；負值與 INT_MIN 可正確傳輸，其他整數可能失真 |
+| TOP Vectors uint／uvec | float32 可精確表示的 uint 傳輸正確；例如 4294967040 正確，UINT_MAX 失真 |
+| MAT Vectors uint／uvec | 除 float32 精度外，大於 2147483648 的 uint 實測被傳成 2147483648 |
 | TOP／MAT Vectors bool／bvec | 以 0／1 傳送，所有分量通過；不把原生任意小數轉布林當成可攜保證 |
 
-產品在套用、直接寫值、driver 修改及歷史還原前檢查這些宿主限制，外部 TD 修改造成不合法值則在來源狀態報告。不因此縮減語言型別本身；任意 32 位整數的動態傳值若需要另一通道，另立後端工作，不暗中改成浮點常數。維護測試：`tests/td/test_typed_uniform_transport.py`。本機驗證不代表已在 Metal 或其他 GPU 上測試。
+2026-09-18 使用者決定：移除額外的傳輸精度限制，Grape 接受完整 GLSL int／uint 範圍，Spec int 也允許負值；傳輸結果依 TD 原生行為。套用、明確寫值、driver 修改、綁定及歷史還原只保留有限值、型別及完整 32 位範圍檢查。讀取 snapshot 不掃描驗值、不回報精度 issue，前端不顯示額外宿主上限。上表是能力探針的實測紀錄，不限制使用者輸入，也不暗中改值。維護測試：`tests/td/test_typed_uniform_transport.py`。本機驗證不代表已在 Metal 或其他 GPU 上測試。
 
 整數 Mod 產生 `%`，浮點 Mod 產生 `mod()`。GLSL 不保證負運算元的整數 `%` 結果；不得把某個 GPU 的負餘數結果寫成跨平台語意。參考：[GLSL expressions](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html#expressions)。
 

@@ -16,7 +16,7 @@ Spec Constant 引用的輸出型別來自來源宣告。`constantId` 是該 Shad
 
 int／uint literal 使用 32 位元範圍；uint 帶 `u` 後綴，bool 必須是布林值並輸出 `true`／`false`。最小 signed int 以 `(-2147483647 - 1)` 表示，避免先解析超出 signed 範圍的正值。手寫 GLSL 輸入口／內部 Function 介面及 relay 可辨識這些純量，但公開建立工具仍依個別定義的可用型別呈現；矩陣、陣列與完整整數節點編輯尚未納入。
 
-TD 原生 Constants 的輸送能力與 GLSL literal 能力分開驗證。2025.32820 的 TOP／MAT 負 int 原生覆寫會在 GPU 變成 0；MAT 的整數路徑另外經過 float32，不能保證超過連續精確範圍的任意整數，但可接受 `2^30` 等仍能精確表示的大整數。因此來源服務要求 int／uint 非負、在各自型別範圍內；MAT 另要求 float32 round-trip 完全相等。建立／套用先檢查預設與目前值，寫值／歷史恢復也預檢，不改寫或截斷使用者數值。`/sources` 的 `specConstantLimits` 回報 `nonnegativeIntegers`、`integerFloat32Exact`；外部 TD 值超出能力時追加 `issues[].code = spec-native-value`。這是已實測的 TD 原生限制，不縮減核心 GLSL literal 的合法範圍。
+TD 原生 Uniform／Spec Constant 的傳輸精度由 TD 決定；編輯器接受完整 GLSL int／uint 32 位範圍，包括負 int、大整數與 UINT_MAX。明確寫值、套用、綁定及 Undo 保留有限值、型別與完整範圍檢查，不附加 float32 round-trip、非負 int 或 MAT uint 上限。`/sources` 不驗證讀取中的即時值，也不回傳傳輸限制或精度 issue。TD 2025.32820 曾實測部分合法整數傳到 GPU 後失真，這是宿主能力紀錄，不是編輯限制，也不因此改寫或截斷使用者數值；圖內整數 literal 保持精確。
 
 Spec Constants 沒有加入一般 `constantExpressions` 白名單。它是特化時可提供的常數，但任意函式作用於它的結果不一定符合 GLSL 的特化表達式限制；不能直接套用「一般常數鏈」的所有推導。目前 `requireConstant` 仍檢查原有普通常數規則。
 

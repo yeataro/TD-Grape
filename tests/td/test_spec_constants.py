@@ -98,24 +98,38 @@ try:
             # The existing float value is fractional, so first set a valid
             # value through its present float declaration, then change type.
             value('mode',2.0);assert r.deploy(g,r.state()['revision'])['ok']
-            native=par('mode');before=(native.eval(),shader.op('state').text,shader.op('pixel_shader').text)
-            for invalid in [-1]+([16777217,2147483647] if kind=='mat' else []):
-                try:value('mode',invalid);raise AssertionError('Unsafe native integer was accepted')
-                except RuntimeError:pass
+            native=par('mode');code=shader.op('pixel_shader').text
+            # Native upload precision is a device capability, not an editing
+            # restriction. Preserve every legal signed 32-bit value and replay.
+            for raw in [-1,-2147483648,16777217,2147483647]:
+                initial=snap();default=native.eval()
+                changed=value('mode',raw)
+                assert native.eval()==raw and item(changed,'mode')['components'][0]['value']==raw
+                undone=restore(changed,initial,['mode']);assert native.eval()==default
+                redone=restore(undone,changed,['mode'],delta=(initial,changed))
+                assert native.eval()==raw and item(redone,'mode')['components'][0]['value']==raw
+                restore(redone,initial,['mode'])
+                assert native.eval()==default and native.isSamePar(par('mode'))
+                assert shader.op('pixel_shader').text==code
+                checks.append(kind+': legal Spec int '+str(raw)+' preserves raw native storage and Undo/Redo without rewriting GLSL')
+            before=(native.eval(),shader.op('state').text,shader.op('pixel_shader').text)
+            for invalid in [-2147483649,2147483648,.5]:
+                try:value('mode',invalid);raise AssertionError('Out-of-domain native integer was accepted')
+                except (RuntimeError,ValueError):pass
                 assert before==(native.eval(),shader.op('state').text,shader.op('pixel_shader').text)
             value('mode',1073741824);assert native.eval()==1073741824
-            checks.append(kind+': native integer transport guard rejects unsafe values without mutation and permits exact large float32 integers')
+            checks.append(kind+': native integer validation rejects out-of-range and fractional values without mutation')
             before=(native.eval(),shader.op('state').text,shader.op('pixel_shader').text)
-            invalid_graph=copy.deepcopy(r.state()['graph']);next(d for d in invalid_graph['declarations'] if d['id']=='mode')['value']=-1
-            try:r.deploy(invalid_graph,r.state()['revision']);raise AssertionError('Unsafe native default was accepted')
-            except RuntimeError:pass
+            invalid_graph=copy.deepcopy(r.state()['graph']);next(d for d in invalid_graph['declarations'] if d['id']=='mode')['value']=-2147483649
+            try:r.deploy(invalid_graph,r.state()['revision']);raise AssertionError('Out-of-domain native default was accepted')
+            except (RuntimeError,ValueError):pass
             assert before==(native.eval(),shader.op('state').text,shader.op('pixel_shader').text)
             checks.append(kind+': invalid native default fails candidate validation before changing the source, state or shader')
             native.val=-1
             external=snap();assert item(external,'mode')['components'][0]['value']==-1
-            assert any(issue.get('code')=='spec-native-value' and issue.get('id')=='mode' for issue in external['issues'])
+            assert not any(issue.get('code')=='spec-native-value' and issue.get('id')=='mode' for issue in external['issues'])
             value('mode',2);assert native.eval()==2
-            checks.append(kind+': invalid external TD value is reported without clamping and can be repaired through the same source')
+            checks.append(kind+': legal negative external TD int is preserved without a precision issue and remains editable')
         r._shaders.pop(shader.fetch('sgrapeShaderId'),None);shader.destroy()
     assert saved()==before_user
     result={'passed':True,'checks':checks,'existingShadersPreserved':True}

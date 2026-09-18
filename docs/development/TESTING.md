@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-18 整數傳輸限制移除，隔離 worktree 驗證：`test_typed_sources`、`test_typed_undo`、`test_spec_constants`、`test_sources`、`test_history` 共 73 項通過。覆蓋完整 int／uint 範圍、負 Spec int、大整數直接寫入與 Undo、非法型別／超界拒絕，以及 Uniform／Spec snapshot 不呼叫驗值。隔離 fixture 的 `test_type_foundation.cjs` 13 組通過、零頁面錯誤，新增原生來源欄位的完整整數上下限、精度邊界值及原始 expected 值保存；631 個雙語鍵通過。原生 TD 腳本已改成驗證合法值不被拒絕，能力探針仍記錄宿主失真；本次沒有執行原生 TD 測試、部署或保存。下方先前的傳輸限制／拒絕測試是舊版實測紀錄，不能作為目前編輯器輸入限制。
+
 2026-09-18 純量／向量型別與介面收尾：整輪 portable checks 通過（327 Python tests 及既有 editor／metadata／JS／Remote Panel 檢查）。其後追加 `test_typed_undo.py` 的 7 項重現測試，與 typed sources／history／Spec 共 52 項通過；驗證原 Shader context、型別變更後的原生 Undo、綁定控制項及舊 exposed Uniform 歷史值，並確認不合法還原在任何写入前拒絕。原生整數快照的 integral float 與布林 0／1 仍接受；綁定新 Int／Toggle 控制項前先驗值，避免控制項靜默截斷。
 
 TD 2025.32820 隔離原生驗證：typed values 394 項、native sources 21 項、Spec Constants 18 項及 custom parameters 18 項通過。typed values 涵蓋 16 型別、constructor、完整範圍圖內常數、If、合法數學運算、向量組拆、GLSL Code／Subgraph、動態 Uniform、原生 Undo／Redo，以及不合法寫值保留原狀。另有 330 組原生傳輸探針，190 組精確、140 組確認預期失真，用於界定 TOP／MAT Vectors 的 float32 整數精度與 MAT uint 上限；這 140 組不是宣稱可用的傳輸值。使用者 Shader 保留，本輪沒有 Metal／其他 GPU 實測。報告位於私人 `work/reports/type-expansion` 的 typed-values／uniform-transport／native-sources／spec-constants／custom-parameters。

@@ -442,7 +442,7 @@ def restore(runtime, body):
             elif after['kind'] == 'uniform':
                 declaration = right_decl.get(ident)
                 if not declaration or declaration['kind'] != 'uniform':_conflict()
-                sources.validate_uniform_component(declaration,wanted['parameter']['val'],kind=sources.native_kind(runtime,runtime.target()))
+                sources.validate_uniform_component(declaration,wanted['parameter']['val'])
             value_plan.append((par, wanted['parameter']))
     # A failed type/default Apply can leave a browser-only Spec draft between
     # two equal native checkpoints. Undo must reach that draft without turning
@@ -462,16 +462,14 @@ def restore(runtime, body):
         try:
             native = (effective or {}).get('native') or {}
             if declaration['kind'] == 'spec_constant':
-                kind = sources.native_kind(runtime, runtime.target())
-                sources.validate_spec_native(declaration, declaration.get('value'), kind, 'default')
+                sources.validate_spec_native(declaration, declaration.get('value'), 'default')
                 value = native.get('params', {}).get('value', {})
-                if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'), kind)
+                if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'))
             else:
-                kind = sources.native_kind(runtime, runtime.target())
-                sources.validate_uniform_native(declaration, declaration.get('value'), 'default', kind)
+                sources.validate_uniform_native(declaration, declaration.get('value'), 'default')
                 for channel in sources.CHANNELS.get(native.get('sequence'), ())[:sources.source_components(declaration)]:
                     value = native.get('params', {}).get(channel, {})
-                    if value.get('mode') == 'CONSTANT':sources.validate_uniform_component(declaration, value.get('val'), kind=kind)
+                    if value.get('mode') == 'CONSTANT':sources.validate_uniform_component(declaration, value.get('val'))
                     elif value.get('mode') == 'BIND':
                         index = sources.CHANNELS[native['sequence']].index(channel)
                         item = next((item for item in (effective.get('link') or {}).get('components',[]) if item['index']==index),None)
@@ -480,9 +478,9 @@ def restore(runtime, body):
                             if control is None:_conflict()
                             wanted = after['controls'][name]['parameter'] if name in plan['controls'] else None
                             if wanted and wanted['mode']=='CONSTANT':
-                                sources.validate_uniform_component(declaration,wanted['val'],kind=kind)
+                                sources.validate_uniform_component(declaration,wanted['val'])
                             else:
-                                sources.validate_uniform_component(declaration,control.eval(),kind=kind)
+                                sources.validate_uniform_component(declaration,control.eval())
         except RuntimeError:
             previous = left_decl.get(ident, {})
             changes = {key for key in previous.keys() | declaration.keys() if previous.get(key) != declaration.get(key)}

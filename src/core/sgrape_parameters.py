@@ -143,11 +143,11 @@ def validate_bound_value(runtime, comp, model, control, value):
         if any(item['control'] == control.name for item in link['components']):
             declaration = declarations.get(ident)
             if declaration and declaration['kind'] == 'uniform':
-                sources.validate_uniform_component(declaration, value, kind=sources.native_kind(runtime,comp))
+                sources.validate_uniform_component(declaration, value)
     for ident, link in comp.fetch('sgrapePublicUniforms', {}).items():
         declaration = declarations.get(ident)
         if control.name in link['parameters'] and declaration and declaration.get('expose'):
-            sources.validate_uniform_component(declaration,value,kind=sources.native_kind(runtime,comp))
+            sources.validate_uniform_component(declaration,value)
 
 
 def edit(runtime,body):
@@ -192,7 +192,7 @@ def edit(runtime,body):
                 values=[p.eval() for p in pars[:count]]
                 defaults=[row['default']] if count==1 else row['default']
                 for value in values+defaults:
-                    runtime.source_module().validate_uniform_component(row,value,kind=runtime.source_module().native_kind(runtime,comp))
+                    runtime.source_module().validate_uniform_component(row,value)
                 group=create_group(comp,page,row['name'],row['type'],values,defaults)
                 for control,driver,p in zip(group,drivers,pars):
                     if driver:control.expr=driver.replace('me.time.', 'me.op('+repr(p.owner.name)+').time.')

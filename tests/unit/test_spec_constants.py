@@ -1,6 +1,7 @@
 import copy
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 import sgrape_core as c
 import sgrape_sources as sources
 import sgrape_history as history
@@ -112,28 +113,51 @@ class NativeSpecHistory(unittest.TestCase):
             sources.configure(f.runtime,f.comp,g,{})
         self.assertEqual(f.storage,before)
 
-    def test_negative_native_default_rejected_before_any_write(self):
-        f=self.fixture;g=copy.deepcopy(f.current['graph']);g['declarations'][-1]['value']=-1
+    def test_out_of_range_native_default_rejected_before_any_write(self):
+        f=self.fixture;g=copy.deepcopy(f.current['graph']);g['declarations'][-1]['value']=-2147483649
         before=copy.deepcopy(f.storage)
-        with self.assertRaisesRegex(RuntimeError,'Negative int overrides'):
+        with self.assertRaises(RuntimeError):
             sources.configure(f.runtime,f.comp,g,{})
         self.assertEqual(f.storage,before);self.assertEqual(f.operator.par.const0value.eval(),2)
 
-    def test_invalid_current_value_api_is_noop_and_external_value_has_issue(self):
-        f=self.fixture;seen=sources.snapshot(f.runtime);component=seen['specConstants'][0]['components'][0]
-        with self.assertRaisesRegex(RuntimeError,'Negative int overrides'):
-            sources.write_value(f.runtime,{'revision':seen['revision'],'id':'spec','component':0,'value':-1,'expected':component})
-        self.assertEqual(f.operator.par.const0value.eval(),2)
-        f.operator.par.const0value.val=-1
-        seen=sources.snapshot(f.runtime)
-        self.assertEqual(seen['specConstants'][0]['components'][0]['value'],-1)
-        self.assertTrue(any(issue.get('code')=='spec-native-value' for issue in seen['issues']))
+    def test_negative_and_large_native_defaults_are_accepted(self):
+        f=self.fixture
+        for value in (-2147483648, -1, 16777217, 2147483647):
+            with self.subTest(value=value):
+                g=copy.deepcopy(f.current['graph']);g['declarations'][-1]['value']=value
+                sources.configure(f.runtime,f.comp,g,{})
+                self.assertEqual(f.operator.par.const0value.eval(),2)
 
-    def test_history_rejects_return_to_unsafe_external_native_value(self):
-        f=self.fixture;g=copy.deepcopy(f.current['graph']);f.operator.par.const0value.val=-1;unsafe=f.token()
-        f.operator.par.const0value.val=2;safe=f.token()
-        with self.assertRaisesRegex(RuntimeError,'Negative int overrides'):self.restore(safe,unsafe,g)
+    def test_invalid_current_value_api_is_noop(self):
+        f=self.fixture;seen=sources.snapshot(f.runtime);component=seen['specConstants'][0]['components'][0]
+        with self.assertRaises((c.GraphError,RuntimeError)):
+            sources.write_value(f.runtime,{'revision':seen['revision'],'id':'spec','component':0,'value':-2147483649,'expected':component})
         self.assertEqual(f.operator.par.const0value.eval(),2)
+
+    def test_snapshot_reads_native_spec_without_validation_scan(self):
+        f=self.fixture
+        f.operator.par.const0value.val=-1
+        with patch.object(sources,'validate_spec_native',side_effect=AssertionError('Snapshot must not validate Spec values')) as validate:
+            seen=sources.snapshot(f.runtime)
+        validate.assert_not_called()
+        self.assertEqual(seen['specConstants'][0]['components'][0]['value'],-1)
+        self.assertNotIn('specConstantLimits',seen)
+        self.assertFalse(any(issue.get('code')=='spec-native-value' for issue in seen['issues']))
+
+    def test_history_rejects_return_to_out_of_range_external_value(self):
+        f=self.fixture;g=copy.deepcopy(f.current['graph']);f.operator.par.const0value.val=-2147483649;unsafe=f.token()
+        f.operator.par.const0value.val=2;safe=f.token()
+        with self.assertRaises(RuntimeError):self.restore(safe,unsafe,g)
+        self.assertEqual(f.operator.par.const0value.eval(),2)
+
+    def test_history_restores_negative_and_large_native_integers(self):
+        f=self.fixture;g=copy.deepcopy(f.current['graph'])
+        for value in (-2147483648, -1, 16777217, 2147483647):
+            with self.subTest(value=value):
+                f.operator.par.const0value.val=value;before=f.token()
+                f.operator.par.const0value.val=2;after=f.token()
+                self.restore(after,before,g)
+                self.assertEqual(f.operator.par.const0value.eval(),value)
 
     def test_type_undo_returns_invalid_spec_draft_without_changing_native_value(self):
         f=self.fixture;f.current['graph']['declarations'][-1].update(type='float',value=0.0)
@@ -149,7 +173,7 @@ class NativeSpecHistory(unittest.TestCase):
 
     def test_default_undo_keeps_invalid_native_default_in_working_graph(self):
         f=self.fixture;applied=copy.deepcopy(f.current['graph']);token=f.token()
-        draft=copy.deepcopy(applied);draft['declarations'][-1]['value']=-1
+        draft=copy.deepcopy(applied);draft['declarations'][-1]['value']=-2147483649
         result=self.restore(token,token,draft)
         self.assertEqual(result['workingGraph'],draft);self.assertEqual(f.current['graph'],applied)
         self.assertEqual(f.operator.par.const0value.eval(),2)
@@ -157,17 +181,17 @@ class NativeSpecHistory(unittest.TestCase):
     def test_spec_draft_exception_rejects_native_delta_or_identity_change(self):
         f=self.fixture;applied=copy.deepcopy(f.current['graph']);before=f.token()
         f.operator.par.const0value.val=3;after=f.token()
-        draft=copy.deepcopy(applied);draft['declarations'][-1]['value']=-1
-        with self.assertRaisesRegex(RuntimeError,'Negative int overrides'):self.restore(after,before,draft)
+        draft=copy.deepcopy(applied);draft['declarations'][-1]['value']=-2147483649
+        with self.assertRaises(RuntimeError):self.restore(after,before,draft)
         self.assertEqual(f.operator.par.const0value.eval(),3);self.assertEqual(f.current['graph'],applied)
         draft['declarations'][-1]['constantId']=6
-        with self.assertRaisesRegex(RuntimeError,'Negative int overrides'):self.restore(after,after,draft)
+        with self.assertRaises(RuntimeError):self.restore(after,after,draft)
         self.assertEqual(f.operator.par.const0value.eval(),3);self.assertEqual(f.current['graph'],applied)
 
     def test_spec_draft_exception_rejects_mixed_native_write_before_mutation(self):
         f=self.fixture;before=f.token();f.par('A').val=6;after=f.token()
-        applied=copy.deepcopy(f.current['graph']);draft=copy.deepcopy(applied);draft['declarations'][-1]['value']=-1
-        with self.assertRaisesRegex(RuntimeError,'Negative int overrides'):
+        applied=copy.deepcopy(f.current['graph']);draft=copy.deepcopy(applied);draft['declarations'][-1]['value']=-2147483649
+        with self.assertRaises(RuntimeError):
             history.restore(f.runtime,{'requestId':'spec-mixed-draft','revision':f.current['revision'],
                 'fromToken':after,'toToken':before,'sourceIds':['spec','A'],'graph':draft,'currentGraph':applied})
         self.assertEqual(f.par('A').eval(),6);self.assertEqual(f.operator.par.const0value.eval(),2)
@@ -175,22 +199,19 @@ class NativeSpecHistory(unittest.TestCase):
 
 
 class NativeIntegerLimits(unittest.TestCase):
-    def test_top_and_mat_bounds_differ_from_glsl_literal_range(self):
-        for kind in ('top','mat'):
-            with self.assertRaises(RuntimeError):sources.validate_spec_native({'type':'int'},-1,kind)
-            sources.validate_spec_native({'type':'int'},2**30,kind)
-            sources.validate_spec_native({'type':'float'},-.5,kind)
-            self.assertEqual(c.literal(-1,'int'),'-1')
-        for ty,value in [('int',16777217),('int',2147483647),('uint',4294967295)]:
-            sources.validate_spec_native({'type':ty},value,'top')
-            with self.assertRaisesRegex(RuntimeError,'exactly representable'):
-                sources.validate_spec_native({'type':ty},value,'mat')
-        sources.validate_spec_native({'type':'uint'},4294967040,'mat')
+    def test_native_integer_values_accept_full_glsl_range(self):
+        for ty,value in [('int',-2147483648),('int',-1),('int',16777217),('int',2147483647),
+                         ('uint',16777217),('uint',2147483648),('uint',4294967040),('uint',4294967295)]:
+            with self.subTest(type=ty,value=value):
+                sources.validate_spec_native({'type':ty},value)
+        sources.validate_spec_native({'type':'float'},-.5)
+        self.assertEqual(c.literal(-1,'int'),'-1')
 
     def test_fractional_or_out_of_range_external_integers_are_rejected(self):
-        for ty,value in [('int',.5),('uint',-1),('uint',4294967296),('int',2147483648),('int',float('inf'))]:
+        for ty,value in [('int',.5),('uint',-1),('uint',4294967296),('int',-2147483649),('int',2147483648),
+                         ('int',float('inf')),('uint',float('nan')),('int',True),('uint','2')]:
             with self.subTest(type=ty,value=value),self.assertRaises(RuntimeError):
-                sources.validate_spec_native({'type':ty},value,'top')
+                sources.validate_spec_native({'type':ty},value)
 
 
 if __name__=='__main__':unittest.main()

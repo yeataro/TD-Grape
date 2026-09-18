@@ -1824,7 +1824,6 @@ function nativeInputFields(box,decl){
     });card.append(values);
     if(decl.kind==='uniform'&&['int','uint'].includes(typeFamily(decl.type))){
       card.append(el('p',{class:'muted'},t('inputs.integerUniformHint')));
-      const maximum=nativeSourceSnapshot?.uniformLimits?.uintMaximum;if(typeFamily(decl.type)==='uint'&&Number.isFinite(maximum)&&maximum<4294967295)card.append(el('p',{class:'muted'},t('inputs.integerUniformMaximum').replace('{value}',String(maximum))));
     }
     if(decl.kind!=='spec_constant'){const drivers=el('details',{class:'input-drivers'});drivers.append(el('summary',{},t('inputs.drivers')));
     row.components.forEach((item,index)=>{

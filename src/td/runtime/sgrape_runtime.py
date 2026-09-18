@@ -1575,7 +1575,7 @@ def set_uniform_value(body):
     if not isinstance(expected,dict) or any(expected.get(key)!=item[key] for key in ('value','mode','parameter')):
         raise RuntimeError('Uniform value changed in TD or another editor. Review the latest value and try again.')
     value=body.get('value');core().literal(value,core().TYPE_DESCRIPTORS[row['type']]['family'])
-    if source_module():source_module().validate_uniform_component(row,value,kind=shader_kind(target()))
+    if source_module():source_module().validate_uniform_component(row,value)
     comp=target();p=getattr(comp.par,item['parameter']);ident=body['declarationId']
     def validate(value):
         binding=comp.fetch('sgrapePublicUniforms',{}).get(ident,{})
