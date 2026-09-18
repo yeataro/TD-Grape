@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.106 交付檢查點：`5319560` 已整合 main，32 份來源中 6 份更新，9 份服務資源一致，core 無錯誤；TOP／MAT Master current、revision 54，三份使用者 Shader 保留。TOE 已保存 907,878 bytes，SHA-256 `0929cdebe607ddcc2b1ac07dde6fbb794f925f269e62acf0165cdb96f98f4a2e`，排除一份私人助手。分層型別選單與矩陣四則均已在 TD 0.8.106。使用者既有 Editor 頁面未強制重載，避免丟失未套用草稿。
+
 2026-09-19 矩陣四則（0.8.106 實作檢查點）：既有 Add／Subtract／Multiply／Divide 新增 mat／dmat 異型輸入簽名，補 double／dvec；Auto 依輸入順序與矩陣形狀推導結果。手動選單鎖定輸出型別；核心、接口與拉線搜尋共用有限型別表，沒有值求解或 TD 輪詢。一般圖的 138 組編譯基準不變。完整 portable（451 項 Python）通過；352 組簽名編譯與存檔往返、4 組新瀏覽器操作、11 組搜尋回歸通過；360 項 TOP／MAT Pixel／MAT Vertex GPU 檢查通過，使用者 Shader／registry 保留、fixture 清除。101 節點清單開啟 24.8–37.9 ms，查詢 1.3–11.1 ms，文字變更零 planner 呼叫。同步與保存另記。[矩陣規格](../features/MATRIX_NODES.md)
 
 2026-09-19 0.8.105 交付檢查點：`d66a575` 已整合 main，同步 32 份來源中的 8 份變更；Master 為 0.8.105、core 無錯誤、三份使用者 Shader 保留。保存 TOE 905,854 bytes，SHA-256 `49c73dacac644ca6f4c33ab76263fa262552ae98c06d5a5eaa3b27c45d085b9f`，排除一份私人助手。沒有重載使用者目前的 Editor 頁面；矩陣四則運算接續進行。
