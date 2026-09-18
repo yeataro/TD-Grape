@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.93 交付檢查點：實作提交 `97efae2` 已整合 main 並同步 TD。32 份內嵌來源、9 份服務資源核對一致，core 無錯誤、TOP／MAT Master current；三份使用者 Shader 保留。保存 TOE 891,054 bytes，SHA-256 `0a6b12efa0a7365d6ff060630d6957525b0350af01a8b93fc577ff3d465b8c83`，排除一份私人助手。本機無 Git 遠端，未做遠端推送。
+
 2026-09-19 符號長度陣列（0.8.93，實作檢查點）：Array 長度可引用整數 Graph Constant／Specialization Constant，未知顯示 N，內部保留來源 ID；Get／Replace／Length、Subgraph、GLSL Code、剪貼簿與來源引用追蹤已接通，不新增 CPU 求值器或持續 TD 長度同步。48 項 TD GPU 檢查、10 組瀏覽器操作通過；435 項 Python 與完整 portable 檢查通過，後補原生宿主巨集診斷以 11 項符號陣列單元測試驗證。TD 2025.32820 的 specialization 長度 CHOP Uniform Array 已重現「長度正確、資料為零」，目前明確拒絕該 native 組合，不把圖內 specialization 陣列一起禁用。任意常數運算鏈長度接孔、Array Fill 與 SSBO 尚未提供。同步／保存另外記錄。[使用方式](../features/ARRAYS_AND_STRUCTURES.md)、[宿主觀察及重現](../features/TD_ARRAY_SOURCES.md)。
 
 2026-09-19 Open Editor Viewer 修正（0.8.92，已同步並保存）：Open Editor 不寫入或更動既有 OP 的 Viewer 開關，沒有記住再還原的流程；新建仍使用原預設。TOP／MAT 的開、關、再關共 6 項原生檢查通過，使用者 Shader 與 registry 保留。32 份來源刷新完成、兩份 Master current，Master 編譯檢查通過；保存的 TOE 為 887,534 bytes，SHA-256 `a0107ccbd8a9c6e48e5c1833bd22ace935e9002dccf739540c19000f05f81d40`，三份使用者 Shader 保留、排除一份私人助手。實作提交 `432beed`，獨立於進行中的符號長度陣列。這是目前未證明開啟 Viewer 有必要的判斷；若未來實測特定操作需要觸發 cook，再針對該操作處理，不視為永久禁止。[開啟流程及其他既有副作用](../ui/EDITOR_LAUNCH.md)。
