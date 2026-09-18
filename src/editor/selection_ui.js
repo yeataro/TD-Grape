@@ -397,7 +397,7 @@ function closeGraphMore(focus=false){
   const menu=$('#graphmoremenu');if(!menu?.matches(':popover-open'))return;
   focus||=menu.contains(document.activeElement);
   closeArrangeMenu();menu.hidePopover();$('#graphmore').setAttribute('aria-expanded','false');
-  if(focus)$('#graphmore').focus({preventScroll:true});
+  if(focus)($('#graphmore').hidden?$('#canvas'):$('#graphmore')).focus({preventScroll:true});
 }
 function positionGraphMore(){
   const menu=$('#graphmoremenu'),r=$('#graphmore').getBoundingClientRect(),z=uiScaleFactor(),margin=8;
@@ -411,15 +411,21 @@ function layoutGraphToolbar(){
   const groups=GRAPH_TOOL_GROUPS.map(key=>document.querySelector(`[data-tool-group="${key}"]`)).filter(g=>g.parentElement===top||g.parentElement===menu);
   // One bounded measurement pass for six groups, never graph traversal or TD IO.
   for(const group of groups)top.insertBefore(group,more);
+  more.hidden=false;
   const visible=groups.filter(g=>!g.hidden),style=getComputedStyle(toolbar),gap=parseFloat(getComputedStyle(top).gap)||0;
   const location=$('.graph-location-tools'),stages=location.querySelector('.stage-tabs'),path=$('#graphpath');
   const naturalPath=[...path.children].reduce((sum,child)=>sum+child.offsetWidth,0)+Math.max(0,path.childElementCount-1)*(parseFloat(getComputedStyle(path).gap)||0);
   const pathWidth=graphTrail.length?Math.min(220,naturalPath)+($('#graphup').disabled?0:$('#graphup').offsetWidth)+10:0;
   const locationWidth=stages.offsetWidth+(pathWidth?pathWidth+(parseFloat(getComputedStyle(location).gap)||0):0);
-  const available=toolbar.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-(parseFloat(style.gap)||0)-locationWidth-more.offsetWidth;
+  const available=toolbar.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-(parseFloat(style.gap)||0)-locationWidth;
   const widths=new Map(visible.map(g=>[g,g.offsetWidth+gap]));let used=[...widths.values()].reduce((a,b)=>a+b,0);
   const collapsed=new Set();
-  for(const key of GRAPH_TOOL_RETREAT){if(used<=available)break;const group=visible.find(g=>g.dataset.toolGroup===key);if(group){collapsed.add(group);used-=widths.get(group);}}
+  // First try every tool without reserving a button or its gap. Only overflow
+  // needs the dropdown's space; don't let that space cause premature collapse.
+  if(Math.max(0,used-gap)>available){
+    const remaining=available-more.offsetWidth;
+    for(const key of GRAPH_TOOL_RETREAT){if(used<=remaining)break;const group=visible.find(g=>g.dataset.toolGroup===key);if(group){collapsed.add(group);used-=widths.get(group);}}
+  }
   for(const group of groups){
     const overflow=collapsed.has(group);if(overflow)menu.append(group);
     for(const button of group.querySelectorAll('button')){
@@ -427,24 +433,25 @@ function layoutGraphToolbar(){
       else{button.removeAttribute('role');button.removeAttribute('aria-checked');}
     }
   }
-  const hint=$('#graphmoreempty');hint.hidden=collapsed.size>0;hint.textContent=t('toolbar.allVisible');
+  more.hidden=collapsed.size===0;if(more.hidden)closeGraphMore();
   more.title=t('toolbar.more');more.setAttribute('aria-label',t('toolbar.more'));menu.setAttribute('aria-label',t('toolbar.more'));
   // Focus can be lost when a button changes parent. Keep it on a reachable control.
-  if(active?.closest?.('.graph-tool-group')){
+  if(active===more&&more.hidden)$('#canvas').focus({preventScroll:true});
+  else if(active?.closest?.('.graph-tool-group')){
     if(active.closest('#graphmoremenu')&&!open)more.focus({preventScroll:true});
     else if(active.getClientRects().length)active.focus({preventScroll:true});
   }
-  if(open)positionGraphMore();
+  if(open&&!more.hidden)positionGraphMore();
 }
 function installGraphToolbarOverflow(){
   const top=$('.toolbar .graph-tools'),toolbar=top.closest('.toolbar');
-  const more=el('button',{id:'graphmore',class:'icon-button',type:'button','aria-haspopup':'menu','aria-controls':'graphmoremenu','aria-expanded':'false','data-overflow':'permanent'});
+  const more=el('button',{id:'graphmore',class:'icon-button',type:'button','aria-haspopup':'menu','aria-controls':'graphmoremenu','aria-expanded':'false','data-overflow':'when-needed',hidden:''});
   more.append(selectionIcon('M3 5h16M3 10h16M3 15h8m3 3 4 4 4-4'));top.append(more);
-  const menu=el('div',{id:'graphmoremenu',class:'popup-menu',popover:'manual',role:'menu'}),hint=el('p',{id:'graphmoreempty'});menu.append(hint);document.body.append(menu);
+  const menu=el('div',{id:'graphmoremenu',class:'popup-menu',popover:'manual',role:'menu'});document.body.append(menu);
   for(const key of GRAPH_TOOL_GROUPS)document.querySelector(`[data-tool-group="${key}"]`).dataset.overflow='collapsible';
   for(const item of toolbar.querySelectorAll('.stage-tabs,.graph-navigation'))item.dataset.overflow='permanent';
   const items=()=>[...menu.querySelectorAll('button:not(:disabled)')].filter(b=>b.getClientRects().length);
-  const open=()=>{layoutGraphToolbar();menu.showPopover();more.setAttribute('aria-expanded','true');positionGraphMore();(items()[0]||menu).focus({preventScroll:true});};
+  const open=()=>{layoutGraphToolbar();if(more.hidden)return;menu.showPopover();more.setAttribute('aria-expanded','true');positionGraphMore();(items()[0]||menu).focus({preventScroll:true});};
   menu.tabIndex=-1;more.onclick=()=>menu.matches(':popover-open')?closeGraphMore(true):open();
   more.onkeydown=e=>{if(e.key==='ArrowDown'){e.preventDefault();e.stopPropagation();open();}};
   menu.onkeydown=e=>{

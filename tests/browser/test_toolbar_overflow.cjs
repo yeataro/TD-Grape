@@ -18,10 +18,15 @@ const [source,stateFile,folder]=process.argv.slice(2);
       setUIExperiments({selectionToolbar:'off',editToolbar:true,floatingToolbar:false});render();fit();
     });await resize(1900);const before=await graphState();
     assert.equal(await page.locator('#graphmoremenu .graph-tool-group').count(),0);assert.equal(await page.locator('.toolbar #customnames').isVisible(),true);assert.equal(await page.locator('.toolbar #code').isVisible(),true);
-    await page.locator('#graphmore').click();assert.equal(await page.locator('#graphmoreempty').isVisible(),true);await page.keyboard.press('Escape');
-    checks.push('Wide toolbar exposes all controls while the permanent dropdown remains available');
+    assert.equal(await page.locator('#graphmore').isVisible(),false);assert.equal(await page.locator('#graphmoreempty').count(),0);
+    const fitWidth=await page.evaluate(()=>{const bar=$('.toolbar'),style=getComputedStyle(bar),tools=$('.graph-tools');return Math.ceil(innerWidth-bar.clientWidth+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight)+(parseFloat(style.gap)||0)+$('.stage-tabs').offsetWidth+tools.offsetWidth+4);});
+    await resize(fitWidth);assert.equal(await page.locator('#graphmore').isVisible(),false,'Do not reserve space for an unused dropdown');
+    await resize(fitWidth-16);assert.equal(await page.locator('#graphmore').isVisible(),true);await page.locator('#graphmore').click();
+    await resize(fitWidth);assert.equal(await page.locator('#graphmore').isVisible(),false);assert.equal(await menu().isVisible(),false);
+    assert.equal(await page.evaluate(()=>document.activeElement.getClientRects().length>0),true);
+    checks.push('All tools fit without an empty dropdown or reserved gap; crossing the real width threshold opens space by collapsing groups and widening removes the entry again');
     for(const width of [1200,900,660,390,320]){
-      await resize(width);const b=await bounds();assert.ok(b.stage.y>=b.toolbar.y&&b.stage.bottom<=b.toolbar.bottom+1);assert.ok(Math.abs((b.stage.y+b.stage.bottom)/2-(b.more.y+b.more.bottom)/2)<2,JSON.stringify(b));
+      await resize(width);const b=await bounds();assert.ok(b.stage.y>=b.toolbar.y&&b.stage.bottom<=b.toolbar.bottom+1);assert.ok(Math.abs((b.stage.y+b.stage.bottom)/2-(b.tools.y+b.tools.bottom)/2)<2,JSON.stringify(b));
       assert.ok(b.more.right<=width+1&&b.stage.right<=b.tools.x+1,JSON.stringify(b));
       assert.equal(await page.evaluate(()=>$('#undo').parentElement===$('#redo').parentElement),true);
       assert.equal(await page.evaluate(()=>$('#undo').parentElement.parentElement.id),await page.evaluate(()=>$('#redo').parentElement.parentElement.id));

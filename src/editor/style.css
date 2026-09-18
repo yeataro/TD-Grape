@@ -1218,6 +1218,7 @@ footer .footer-preferences svg[hidden]{display:none}
 .floating-toolbar .toolbar .graph-navigation{text-shadow:0 1px 2px var(--canvas-bg,var(--ui-tone-canvas))}
 /* Stage/path stay in place; explicitly classified command groups retreat whole. */
 #graphmore{flex:none}
+#graphmore[hidden]{display:none}
 #graphmoremenu{position:fixed;inset:auto;margin:0;width:max-content;min-width:190px;max-width:calc(100vw - 16px);overflow:auto}
 #graphmoremenu .graph-tool-group{display:flex;flex-direction:column;align-items:stretch;gap:0;border:0;padding:0;margin:0}
 #graphmoremenu .graph-tool-group[hidden]{display:none}
@@ -1227,8 +1228,6 @@ footer .footer-preferences svg[hidden]{display:none}
 #graphmoremenu .ui-icon{flex:none;width:16px;height:16px}
 #graphmoremenu .graph-tool-separator{display:none}
 #graphmoremenu [aria-pressed="true"]{color:var(--purple);background:var(--ui-selected,var(--ui-tone-control-hover))}
-#graphmoreempty{margin:8px;color:var(--muted);font-size:12px}
-#graphmoreempty[hidden]{display:none}
 :root[data-ui-size="comfortable"] #graphmoremenu button{min-height:44px}
 @media(pointer:coarse){#graphmoremenu button{min-height:44px}}
 @media(max-width:800px){.graph-workspace .toolbar{min-height:0}}
