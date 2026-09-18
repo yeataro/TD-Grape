@@ -70,7 +70,7 @@
     "experiments.style.legendary": {"zh-Hant": "Legendary · 傳奇", "en": "Legendary"},
     "experiments.style.godlike": {"zh-Hant": "Godlike · 神級", "en": "Godlike"},
     "experiments.systemClock": {"zh-Hant": "顯示系統時鐘", "en": "Show system clock"},
-    "experiments.systemClock.hint": {"zh-Hant": "在底部全螢幕按鈕左側顯示本機時間，使用 24 小時制，每分鐘更新。", "en": "Show local time to the left of the footer fullscreen button in 24-hour format, updated every minute."},
+    "experiments.systemClock.hint": {"zh-Hant": "在全螢幕按鈕左側顯示本機時間，使用 24 小時制，每分鐘更新。全螢幕期間自動顯示，退出後恢復此設定。", "en": "Show local time beside the fullscreen button in 24-hour format, updated every minute. Fullscreen shows it automatically; exiting restores this preference."},
     "experiments.finishGesture": {"zh-Hant": "請先結束畫布拖曳，再切換實驗功能。", "en": "Finish the canvas drag before changing experimental features."},
     "experiments.canvasTrash": {"zh-Hant": "畫布垃圾桶", "en": "Canvas trash"},
     "experiments.canvasTrash.hint": {"zh-Hant": "將節點或接線拖到垃圾桶刪除。開啟後，輸入線拖到空白處會開啟新增節點。", "en": "Drag nodes or wires to the trash to delete them. Dragging an input wire to blank canvas opens Add Node while enabled."},

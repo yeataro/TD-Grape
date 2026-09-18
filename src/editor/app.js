@@ -682,7 +682,11 @@ function refreshSystemClock(){
 }
 function refreshVisibleSystemClock(){if(!document.hidden)refreshSystemClock();}
 function applySystemClock(){
-  const enabled=EDITOR_DEV_SETTINGS.systemClock;$('#uisystemclock').hidden=!enabled;
+  const clock=$('#uisystemclock'),fullscreen=$('#uifullscreen'),footer=$('.footer-preferences');
+  const active=!!document.fullscreenElement,enabled=EDITOR_DEV_SETTINGS.systemClock||active;
+  clock.hidden=!enabled;
+  if(active&&document.body.classList.contains('graph-focused'))fullscreen.before(clock);
+  else footer.insertBefore(clock,fullscreen.parentElement===footer?fullscreen:null);
   clearTimeout(systemClockTimer);systemClockTimer=null;
   document.removeEventListener('visibilitychange',refreshVisibleSystemClock);
   if(enabled){refreshSystemClock();document.addEventListener('visibilitychange',refreshVisibleSystemClock);}
@@ -947,6 +951,7 @@ function renderViewModes(){
   fullscreen.setAttribute('aria-label',fullscreen.title);fullscreen.setAttribute('aria-pressed',String(active));
   fullscreen.querySelector('.fullscreen-enter').toggleAttribute('hidden',active);
   fullscreen.querySelector('.fullscreen-exit').toggleAttribute('hidden',!active);
+  applySystemClock();
 }
 function setGraphFocus(enabled){
   graphFocused=!!enabled;document.body.classList.toggle('graph-focused',graphFocused);
