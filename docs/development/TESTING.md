@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-18 Matrix 0.8.86 第一批交付核對：最後一輪 portable checks 374 項 Python unit、656 個雙語引用、editor launch／browser metadata／既有 JS／26 項 Remote Panel 全過。刷新後 31 份內嵌來源、9 份服務資源一致，core 無錯誤、TOP／MAT Master current，三份使用者 Shader 保留。正式 TOE 860,150 bytes，SHA-256 `c1dd7bbb6b1117120fd691b3a5e789411321e59d04ae7b64f7d248298c483fb3`，私人助手排除。
+
+來源切換過程曾輸出 `Unknown catalog identity`；先做獨立唯讀一致性檢查，確認當前 catalog 驗證及純編譯成功、core 前後均無錯誤、全部 DAT 與來源一致，才繼續模板同步。模板同步與最終 audit 均通過，非忽略錯誤後直接保存。交付報告為 matrix-batch1-refresh／catalog-audit／masters／audit／save-20260918。
+
 2026-09-18 Matrix 第一批：374 項 portable Python unit、656 個雙語引用、editor launch／browser metadata／brand 與既有 JS／Remote Panel checks 通過。矩陣 editor JS 驗證 18 型別與接孔／值規則；隔離矩陣 UI 13 組、來源 UI 7 組、既有 numeric scrub 32 組通過。交付前以實際 GLSL Code／Subgraph／Transpose 選單驗證 mat2x3 → mat3x2 的座標保留、暫存形狀往返與單筆 Undo／Redo；修正 GLSL Code 與 Auto 輸入預設值原先按平坦陣列重排的錯位，矩陣 editor JS 10 組亦通過。
 
 TD 2025.32820 隔離原生結果：新矩陣節點 408 records 全過；float Matrix Uniform 的九形狀 × 三載體 × TOP Pixel／MAT Pixel／MAT Vertex 共 81 項正確；圖內雙精度及 float 原生來源經 GLSL 轉 double 78 項通過。原生 double／dvec／dmat 直接 Uniform 載體另 105 項編譯成功但讀值錯誤，作為宿主限制揭露，不以攔截或隱性轉型改變能力。來源建立／手填／Expression／DAT 動態／Binding／Undo／Redo 八組通過，保留使用者 Shader 與 registry。節點測試最初的 MAT TDDither 及 Vector fixture 儲存欄位錯誤已修正，產品運算未因探針誤判而修改。

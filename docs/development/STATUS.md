@@ -1,6 +1,8 @@
 # 開發狀態
 
-2026-09-18 Matrix／double 第一批（0.8.86）已實作，交付核對中，尚未同步 TD：新增 18 種 mat／dmat、double／dvec 與 Matrix、Combine、Replace、Split、Get／Set、Transpose、Inverse、Determinant、Matrix Comp Mult、Outer Product。涵蓋 Column／分量介面、固定與通用建立入口、來源／宣告、Subgraph／GLSL Code、保存與剪貼簿。既有算術、Compare、If、Convert 的能力擴充留第二批獨立提交，不因型別表增加而直接放寬舊簽名。規則及 TD 雙精度 Uniform 原生載體實測限制見 [Matrix 能力](../features/MATRIX_NODES.md)。
+2026-09-18 Matrix／double 第一批（0.8.86）已獨立提交、同步 TD 並保存 TOE：新增 18 種 mat／dmat、double／dvec 與 Matrix、Combine、Replace、Split、Get／Set、Transpose、Inverse、Determinant、Matrix Comp Mult、Outer Product。涵蓋 Column／分量介面、固定與通用建立入口、來源／宣告、Subgraph／GLSL Code、保存與剪貼簿。既有算術、Compare、If、Convert 的能力擴充留第二批獨立提交，不因型別表增加而直接放寬舊簽名。規則及 TD 雙精度 Uniform 原生載體實測限制見 [Matrix 能力](../features/MATRIX_NODES.md)。
+
+本批交付已核對 31 份內嵌來源、9 份服務資源與主倉一致，core 無錯誤，TOP／MAT Master current；三份使用者 Shader 與模板身分保留。正式 TOE 860,150 bytes，SHA-256 `c1dd7bbb6b1117120fd691b3a5e789411321e59d04ae7b64f7d248298c483fb3`，排除一份私人助手。未操作桌面或強制重新整理現有 Editor。新能力提交為 `ed31700`，獨立調查筆記為 `03da4d3`；舊運算擴充仍未交付。
 
 Uniform 連續編輯／雙向通訊另為[調查評估](../discussions/UNIFORM_LIVE_EDITING.md)。已記錄多處控制項一起閃動的成因與未來持續同步的驗收要求，尚未修改 Uniform 提交流程或來源控制權；Sources 名稱／引用圖示留介面後續設計。
 
