@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 陣列／結構 0.8.91 已整合 main、同步 TD 並保存：32 份內嵌來源、9 份服務資源一致，core 無錯誤，TOP／MAT Master current，三份使用者 Shader 與模板身分保留。正式 TOE 889,438 bytes，SHA-256 `fb8b99f706b93881204131d759022d2e0e29272b1414a67dc565dc11f57de648`，排除一份私人助手。原生交付報告為 `array-{refresh,masters,audit,save}-20260919`；功能提交 `60f71f8`、掛起修正 `4c3d921`。沒有重新載入使用者現有 Editor。
+
 2026-09-19 陣列／結構 0.8.91 交付前驗證：完整 portable checks 通過，包含 425 項 Python unit、678 個雙語鍵、14 項 launch、metadata／brand／JS 模型及 26 項 Remote Panel 檢查。既有 138 個圖編譯指紋保持不變。複合型別新增動態描述，保留原 38 種數值型別；覆蓋零初始化、讀取 Clamp、Replace 越界不修改、明確 int／uint 索引設定、型別隔離、結構欄位 ID、宣告依賴、匯入／Undo／原生綁定與最後成功 Shader 的保護。
 
 本輪 browser 檢查：Array／結構 8 組、Function／Subgraph／GLSL Code／剪貼簿整合 5 組、搜尋效能及副作用 11 組、GLSL Code 9 組通過；兩份瀏覽器生成的複合型別圖另經 core 編譯成功。最終搜尋測試的 101 節點圖，正反向、有／無常數限制的開啟時間約 13.9–23.7ms；沒有完整圖 planner 呼叫，搜尋文字沿用局部配對結果。這是本機隔離測量，不代表所有設備上限。GLSL Code 舊測試的 fixture 改為關閉不存在的 Remote Panel 預覽，避免啟動等待阻擋測試操作；產品預览行為未更改。
