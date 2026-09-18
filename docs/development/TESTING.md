@@ -1,10 +1,22 @@
 # 測試
 
+2026-09-18 Matrix Convert 與搜尋修正整合：保留新版 Convert 配對與同形狀排序，前端新增操作 9 組、type foundation 13 組、搜尋效能及副作用 11 組全過；Matrix editor 10 組、metadata／syntax／diff check 通過。正式搜尋測試補入合法 Matrix→Matrix Replace fixture、double／dvec3／非方形 dmat 及非空候選斷言，另實際驗證兩 Convert 入口的 7 組建立／拒絕／單筆 Undo 情況。101 節點正反向且有／無常數要求，清單開啟 12.3–21.8ms，32 次查詢 1.1–6.4ms；文字變更沒有 planner 呼叫。未因前端合併重跑未改動核心的 237 項 GPU 檢查；此前已全過。報告位於私人 `work/matrix-perf-integration` 及 `work/matrix-creator-performance/final`。
+
+搜尋修正補充：舊 `test_node_browser.cjs` 的 .library-tabs 三頁籤假設、`test_creator_palette.cjs` 的未展開 tree 內 UV 項目選擇器仍失敗；固定 pre-change ead882e 資產及相同 fixture 重現同一失敗。這兩支列為既有測試維護待辦，不列為本次通過項目。
+
 2026-09-18 未交付的既有運算擴充：portable checks 383 項 Python unit、656 個雙語鍵、14 個 launch 檢查、既有 JS 與 26 個 Remote Panel 測試通過。第二批隔離 browser 新功能 7、basic math 8、control 11、type foundation 13 共 39 組通過；包括 Convert 1,109 個合法配對、If matrix 預設 true identity／false zero、double 簽名，以及保留拖線建立 Convert 的同形狀優先。
 
 新增 `tests/td/test_matrix_double_operations.py` 有 73 個圖案例、219 份 core GLSL 編譯及 237 次 GPU 檢查。首次提交曾在請求進入佇列前遇到 Windows 存取拒絕（WinError 5）；完成 Convert／Matrix Convert 分流後重新提交成功，237 項 TOP Pixel／MAT Pixel／MAT Vertex GPU 檢查全過，existingShadersPreserved／registryPreserved／fixtureRemoved 均為 true。包含 scalar 對角矩陣、Matrix 擴縮／精度、Matrix 擷取、If 原生動態切换、double Dot／Length／Mix／Range 等。這是工作樹的隔離驗證，尚未同步產品來源。
 
-分流後完整 portable checks 再次通過，另有 60 項核心／契約／catalog／歷史指紋 focused checks；前端新增功能 9 組及 type foundation 13 組共 22 組通過，Matrix editor unit 10 組、metadata、syntax／diff check 通過。Matrix Convert 的 28 個有效來源沒有 vec2／vec3 無合法目的的死路；全部 1,109 個配對由兩個入口聯集完整覆蓋。
+分流後完整 portable checks 再次通過（384 項 Python unit、657 個雙語鍵），另有 60 項核心／契約／catalog／歷史指紋 focused checks；前端新增功能 9 組及 type foundation 13 組共 22 組通過，Matrix editor unit 10 組、metadata、syntax／diff check 通過。Matrix Convert 的 28 個有效來源沒有 vec2／vec3 無合法目的的死路；全部 1,109 個配對由兩個入口聯集完整覆蓋。
+
+2026-09-18 搜尋修正 0.8.89 已同步 TD 並保存：31 份內嵌來源、9 份服務資源一致，core 無錯誤，TOP／MAT Master current，三份使用者 Shader 保留。正式 TOE 863,390 bytes，SHA-256 `b0698e620bf75acf46116185cd1c808379c160cd4beb63c518d88359cdd3c817`，排除一份私人助手。creator_position 既有回歸另通過 13 組。未重新整理使用者現有 Editor；私人原生報告為 creator-performance-{refresh,masters,audit,save}-20260918。
+
+2026-09-18 拉線新增搜尋效能：完整 portable checks 通過（374 項 Python unit、656 個雙語鍵、14 項 editor launch、metadata／JS model／26 項 Remote Panel）。新增 `test_creator_performance.cjs`，10 組 headless Chromium 檢查全過、零頁面錯誤。涵蓋正反向純量／向量／矩陣候選与舊完整 planner 的結果／排序對照、文字／來源／指定型別篩選、Combine／Replace 重疊接線、If bool 接口、圖值／宣告／函式庫／契約／Undo 失效，以及過期候選與常數／下游限制拒絕時 graph／history 不變。正常建立仍執行 fresh 全圖驗證並只有一筆 Undo。
+
+效能 fixture 為來源加 100 個 Auto Add，正反向均含有／無 requireConstant：每次重開清單約 12.5–23.1ms，後續輸入约 1.1–7.1ms；候選完整圖 planner 呼叫為 0，文字變更 Auto planner 也為 0。另一支獨立 profiler 同樣 101 節點，舊版 standalone 開啟 12ms、往下游 773ms，修正後往下游 14ms；mat 查詢由 635ms 降為 5ms，standalone 約 2ms。這是本機隔離合成圖及工具計時，並非使用者實際圖或跨設備保證。計時路徑沒有 TD API 搜尋請求。報告位於私人 `work/creator-performance-regression`、`work/wire-creator-profile` 與 `work/wire-creator-independent`。
+
+獨立原始碼審查未發現資料正確性問題；已接受的小幅行為差異是僅受整圖常數或下游限制影響的項目可先出現在清單，點選時才回報限制，完整提交驗證及 rollback 保持不變。搜尋仍使用同一份型別契約，沒有新增後端索引、背景監看或改動 cast 規則。
 
 2026-09-18 Matrix 覆寫標記試行（0.8.88）：15 組隔離 Matrix UI 檢查通過。Combine 單獨接 X 時保持三格，顯示 `↳ X` 並帶來源提示；mat4 Replace 的 Value 與 Y 分量同時接入時，收合列精確為 `—｜↳ Y｜—｜—`，其他欄仍為四個沿用標記。數值編輯、Undo、接孔與各形狀檢查保持通過，實際 Replace 截圖已檢視。主線另以已交付 core 重驗同 15 組通過。TD 核對 31 份內嵌來源與 9 份服務資源、core 無錯誤、TOP／MAT Master current；三份使用者 Shader 保留。正式 TOE 861,518 bytes，SHA-256 `c6f87fbad7c6ecf59676c60e0294a25c3a6c619f489ed8f73d9a8d218848d655`，排除一份私人助手。交付報告為 matrix-marker-refresh／masters／audit／save-20260918。
 

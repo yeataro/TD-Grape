@@ -1,6 +1,8 @@
 # 開發狀態
 
-2026-09-18 第二批既有運算擴充已依同意的試行方案完成：Convert 輸出 scalar／vector，新增 Matrix Convert 輸出 matrix，完整保留 1,109 個合法 constructor 配對；If 支援矩陣／double，19 種 double 數學多載維持 Auto 主路徑及手動指定。完整 portable 與隔離 UI 檢查通過，TD TOP Pixel／MAT Pixel／MAT Vertex 的 237 項原生 GPU 檢查全過，既有 Shader、registry 保留，臨時 fixture 移除。尚未部署；先完成使用者新回報的拉線新增搜尋效能修正，兩批分開提交／交付。試行決議見 [最新 review](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)。
+2026-09-18 第二批既有運算擴充已依同意的試行方案完成：Convert 輸出 scalar／vector，新增 Matrix Convert 輸出 matrix，完整保留 1,109 個合法 constructor 配對；If 支援矩陣／double，19 種 double 數學多載維持 Auto 主路徑及手動指定。完整 portable 與隔離 UI 檢查通過，TD TOP Pixel／MAT Pixel／MAT Vertex 的 237 項原生 GPU 檢查全過，既有 Shader、registry 保留，臨時 fixture 移除。拉線搜尋修正已先以 0.8.89 交付；此批整合最新搜尋規則並准备以 0.8.90 獨立交付。試行決議見 [最新 review](../discussions/CONVERSION_AND_RUNTIME_NEXT.md)。
+
+2026-09-18 拉線新增搜尋效能（0.8.89，已同步並保存）：以共用型別契約做局部候選配對，搜尋文字沿用同一上下文的結果，不再對每個候選複製／規劃整張圖；實際建立仍沿用完整交易驗證。新舊普通圖候選一致，常數或下游限制可延至選定時拒絕，拒絕不改圖、不新增 Undo。10 組專項瀏覽器檢查通過，101 節點正反向開啟約 12.5–23.1ms；獨立量測往下游開啟由 773ms 降至 14ms、搜尋 mat 由 635ms 降至 5ms。這些是隔離合成圖的本機量測，非所有設備的上限。搜尋排序未改；Matrix Convert 分流及運算擴充保留獨立交付。規則見 [Node Browser](../ui/NODE_BROWSER.md)。本筆提交 9106140；31 份內嵌來源／9 份服務資源一致、core 無錯誤、TOP／MAT Master current，三份使用者 Shader 保留。
 
 2026-09-18 Matrix 覆寫標記試行（0.8.88）：使用者同意先試收合格內的 `↳ X／Y／Z／W`，辨識該分量有獨立接線；沿用 Matrix／Column 的格子維持橫槓，分量接口仍保留，來源節點可由提示查看。15 組 Matrix UI 檢查在分支及主線通過，已同步 TD、核對來源與資源並保存 TOE；三份使用者 Shader 保留。這筆視覺試行提交為 20fc6f2，與格數修正、既有運算擴充分開。
 
