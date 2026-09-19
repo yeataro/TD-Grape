@@ -27,6 +27,10 @@
 
 使用者認為 Graph Constants 的名稱不自然；助手建議簡化為 Constants／常數，將圖內定義與編譯期行為留在說明，尚待確認。使用者另接受特化常數的簡寫顯示名稱 Spec Constants；完整名稱 Specialization Constants 保留於提示與說明。此命名筆記不改動內部識別或原生 Constants 頁面的名稱，尚未修改產品文案。
 
+使用者比較 TOP Inputs 改稱 Texture Inputs 或 Sampler Inputs，並要求先看 ISF 的取樣方式；補充 Texture 代表複合能力，包含來源本身的 info。助手因此建議 Texture Inputs／紋理輸入：同一來源提供取樣所需引用與尺寸等資訊，Sampler 保留為 GLSL 接孔／存取型別的描述。這是來源概念與分類命名，不表示新增一個必須打包到 GPU 的 struct，也不表示 sampler 無法供 textureSize 等查詢。名稱尚未實作，現有 TOP 來源與 info 對應保持。
+
+ISF 對照：INPUTS 以 TYPE=image 宣告具名圖片來源，宿主準備底層紋理與宣告；Shader 使用 IMG_NORM_PIXEL(name, uv)、IMG_PIXEL(name, pixelCoord) 取樣，以 IMG_SIZE(name) 查該輸入的尺寸。ISF 以這層取樣介面適配宿主使用的 2D／rectangle 紋理，不應直接假定固定 sampler2D 與 texture() 可跨所有 ISF 宿主。音訊／FFT 也透過影像資料提供；標準 image 輸入不等於已保證任意 3D／Cube／Array sampler 能力。輸入來源尺寸與 RENDERSIZE／TD uTDOutputInfo 的繪製目標尺寸分開。此調查不要求現在實作 ISF 後端；參考 [ISF 輸入宣告](https://docs.isf.video/ref_json)、[圖片取樣與尺寸](https://docs.isf.video/ref_functions)、[宿主紋理差異](https://docs.isf.video/ref_converting)。
+
 以下是調查後的候選建議，不是實作授權或跨宿主支援承諾；本輪先以影像 Shader（TD GLSL TOP）對照，MAT 的 render context 另行核對。
 
 | 候選名稱 | 型別與目的 | ISF | Shadertoy | TD 映射界線 |
