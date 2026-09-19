@@ -357,24 +357,30 @@ function stopCanvasMotion(finish=false){
 }
 function stepCanvasMotion(now){
   canvasMotionFrame=0;const motion=canvasMotion;if(!motion)return;
-  const progress=Math.min(1,Math.max(0,(now-motion.start)/motion.duration)),amount=1-Math.pow(1-progress,3);
-  const {from,to}=motion;
-  pan={x:from.x+(to.x-from.x)*amount,y:from.y+(to.y-from.y)*amount};scale=from.scale+(to.scale-from.scale)*amount;
+  // Retargeting preserves the last displayed frame's time. Pointer events may
+  // arrive after this RAF's timestamp; restarting the clock there starves motion.
+  const progress=Math.min(1,Math.max(0,(now-motion.lastTime)/(motion.end-motion.lastTime))),amount=1-Math.pow(1-progress,3);
+  const {to}=motion;
+  pan={x:pan.x+(to.x-pan.x)*amount,y:pan.y+(to.y-pan.y)*amount};scale+=(to.scale-scale)*amount;
+  motion.lastTime=Math.max(motion.lastTime,now);
   if(progress===1){pan={x:to.x,y:to.y};scale=to.scale;canvasMotion=null;}
   transform();
   if(canvasMotion)canvasMotionFrame=requestAnimationFrame(stepCanvasMotion);
 }
-function moveCanvas(nextPan,nextScale=scale){
+function moveCanvas(nextPan,nextScale=scale,setting='canvasDamping'){
   // Disabled takes the original immediate path: no target, timer or frame callback.
-  if(!EDITOR_DEV_SETTINGS.canvasDamping){pan=nextPan;scale=nextScale;transform();return;}
+  if(!setting||!EDITOR_DEV_SETTINGS[setting]){stopCanvasMotion();pan=nextPan;scale=nextScale;transform();return;}
+  if(canvasMotion&&canvasMotion.setting!==setting)stopCanvasMotion();
   const to={...nextPan,scale:nextScale},target=canvasMotion?.to||{...pan,scale};
   if(to.x===target.x&&to.y===target.y&&to.scale===target.scale)return;
-  canvasMotion={from:{...pan,scale},to,start:performance.now(),duration:EDITOR_DEV_SETTINGS.canvasDampingMs};
+  const now=performance.now(),duration=EDITOR_DEV_SETTINGS[setting+'Ms'];
+  if(canvasMotion){canvasMotion.to=to;canvasMotion.end=now+duration;}
+  else canvasMotion={to,lastTime:now,end:now+duration,duration,setting};
   if(!canvasMotionFrame)canvasMotionFrame=requestAnimationFrame(stepCanvasMotion);
 }
 function applyCanvasDamping(){
   stopCanvasMotion(true);canvasMotionEvents?.abort();canvasMotionEvents=null;
-  if(!EDITOR_DEV_SETTINGS.canvasDamping)return;
+  if(!EDITOR_DEV_SETTINGS.canvasDamping&&!EDITOR_DEV_SETTINGS.frameDamping)return;
   canvasMotionEvents=new AbortController();const options={capture:true,signal:canvasMotionEvents.signal};
   // Freeze where the user actually clicked before a node, wire or new gesture takes over.
   document.addEventListener('pointerdown',event=>{if(event.target.closest?.('#canvas')&&!event.target.closest('.toolbar,.canvas-view-tools,.selection-toolbar'))stopCanvasMotion();},options);
@@ -577,14 +583,13 @@ function nodeLayoutBounds(n){
   const card=document.querySelector(`#cards [data-node="${CSS.escape(n.id)}"]`);
   return {x:n.ui?.x||0,y:n.ui?.y||0,width:card?.offsetWidth||(Number.isFinite(n.ui?.width)&&n.ui.width>0?n.ui.width:190),height:card?.offsetHeight||180};
 }
-function fitNodes(nodes){
+function fitNodes(nodes,animate=false){
   if(!nodes.length)return;
-  stopCanvasMotion();
   const bounds=[...nodes.map(nodeLayoutBounds),...completeGroupFrames(nodes).map(groupFrameBounds).filter(Boolean)],minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));
-  scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);
-  pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();
+  const nextScale=Math.max(.25,Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY)));
+  moveCanvas({x:($('#canvas').clientWidth-(maxX-minX)*nextScale)/2-minX*nextScale,y:($('#canvas').clientHeight-(maxY-minY)*nextScale)/2-minY*nextScale},nextScale,animate?'frameDamping':null);
 }
-function fit(){if(graph)fitNodes(current().nodes);}
+function fit(animate=false){if(graph)fitNodes(current().nodes,animate);}
 async function load(){
   const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
   try{
@@ -709,7 +714,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping']]
+  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
@@ -832,7 +837,7 @@ function parseUIExperiments(raw){
   if(!saved||typeof saved!=='object'||Array.isArray(saved))return result;
   for(const key of Object.keys(result)){
     const value=saved[key];
-    if(key==='canvasDampingMs'){if(typeof value==='number'&&Number.isFinite(value))result[key]=Math.max(10,Math.min(1000,Math.round(value)));}
+    if(key==='canvasDampingMs'||key==='frameDampingMs'){if(typeof value==='number'&&Number.isFinite(value))result[key]=Math.max(10,Math.min(1000,Math.round(value)));}
     else if(experimentChoices[key]?experimentChoices[key].some(([choice])=>choice===value):typeof value==='boolean')result[key]=value;
   }
   return result;
@@ -844,7 +849,7 @@ function renderUIExperiments(){
     const key=entry.dataset.experiment;
     if(entry.type==='checkbox')entry.checked=key==='floatingToolbar'?!EDITOR_DEV_SETTINGS[key]:EDITOR_DEV_SETTINGS[key];
     else if(entry.setSyncedValue)entry.setSyncedValue(EDITOR_DEV_SETTINGS[key]);else entry.value=EDITOR_DEV_SETTINGS[key];
-    if(key==='canvasDampingMs')entry.disabled=!EDITOR_DEV_SETTINGS.canvasDamping;
+    if(key==='canvasDampingMs'||key==='frameDampingMs')entry.disabled=!EDITOR_DEV_SETTINGS[key.slice(0,-2)];
     entry.closest('.experiment-option').title=t('experiments.'+key+'.hint');
   }
   $('#experimentsreset').disabled=Object.keys(EDITOR_DEV_DEFAULTS).every(key=>EDITOR_DEV_SETTINGS[key]===EDITOR_DEV_DEFAULTS[key]);
@@ -854,8 +859,8 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','canvasDamping','canvasDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
-  const dampingChanged=next.canvasDamping!==EDITOR_DEV_SETTINGS.canvasDamping||next.canvasDampingMs!==EDITOR_DEV_SETTINGS.canvasDampingMs;
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const dampingChanged=['canvasDamping','canvasDampingMs','frameDamping','frameDampingMs'].some(key=>next[key]!==EDITOR_DEV_SETTINGS[key]);
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){
     cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();
@@ -889,13 +894,14 @@ function installUIExperiments(){
     group.append(el('h3',{id:headingId,'data-i18n':'experiments.group.'+name},t('experiments.group.'+name)));
     for(const key of keys){
       if(!Object.hasOwn(EDITOR_DEV_DEFAULTS,key))continue;
-      if(key==='canvasDamping'){
+      if(key==='canvasDamping'||key==='frameDamping'){
+        const durationKey=key+'Ms';
         const row=el('div',{class:'experiment-option experiment-damping'}),label=el('label',{class:'experiment-toggle'});
-        const toggle=el('input',{type:'checkbox','data-experiment':key});toggle.onchange=()=>setUIExperiments({canvasDamping:toggle.checked});
-        label.append(toggle,el('span',{'data-i18n':'experiments.canvasDamping'},t('experiments.canvasDamping')));
-        const number=input(EDITOR_DEV_SETTINGS.canvasDampingMs,value=>setUIExperiments({canvasDampingMs:value}),'number',{local:true});
+        const toggle=el('input',{type:'checkbox','data-experiment':key});toggle.onchange=()=>setUIExperiments({[key]:toggle.checked});
+        label.append(toggle,el('span',{'data-i18n':'experiments.'+key},t('experiments.'+key)));
+        const number=input(EDITOR_DEV_SETTINGS[durationKey],value=>setUIExperiments({[durationKey]:value}),'number',{local:true});
         Object.assign(number,{min:'10',max:'1000',step:'1',numericRange:{min:10,max:1000,step:1}});
-        number.dataset.experiment='canvasDampingMs';number.dataset.i18nLabel='experiments.canvasDampingMs';number.dataset.i18nTitle='experiments.canvasDampingMs.hint';number.setAttribute('aria-label',t('experiments.canvasDampingMs'));number.refreshNumericSlider();
+        number.dataset.experiment=durationKey;number.dataset.i18nLabel='experiments.'+durationKey;number.dataset.i18nTitle='experiments.'+durationKey+'.hint';number.setAttribute('aria-label',t('experiments.'+durationKey));number.refreshNumericSlider();
         const value=el('div',{class:'experiment-value'});value.append(number,el('span',{},'ms'));row.append(label,value);group.append(row);continue;
       }
       const row=el('label',{class:'experiment-option'}),choices=experimentChoices[key];
@@ -1056,7 +1062,7 @@ function setGraphZoom(value){
   const rect=$('#canvas').getBoundingClientRect();zoomCanvasAt(value,rect.width/uiScaleFactor()/2,rect.height/uiScaleFactor()/2);
 }
 function zoomCanvasAt(value,x,y){
-  const target=canvasMotion?.to,previous=target?.scale??scale,origin=target||pan,next=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,value));
+  const target=canvasMotion?.setting==='canvasDamping'?canvasMotion.to:null,previous=target?.scale??scale,origin=target||pan,next=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,value));
   moveCanvas({x:x-(x-origin.x)*next/previous,y:y-(y-origin.y)*next/previous},next);
 }
 function installGraphZoom(){
@@ -1167,13 +1173,13 @@ $('#save').onclick=async()=>{try{const r=await api('save',{});status(r.saved?t('
 installAppliedGraphReload();
 
 $('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();fit();});
-$('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=fit;$('#search').oninput=library;
+$('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=()=>fit(true);$('#search').oninput=library;
 $('#adduniform').onclick=()=>newUniform();
 $('#export').onclick=openExport;
 installImportUI();
 installSavedStateUI();
 $('#code').onclick=async()=>{try{const code=await api('validate',{graph});renderGLSL((code.vertex?'// VERTEX\n'+code.vertex+'\n':'')+'// PIXEL\n'+code.pixel);$('#source').showModal();}catch(e){status(e.message,true);}};$('#closecode').onclick=()=>$('#source').close();
-$('#canvas').addEventListener('wheel',e=>{e.preventDefault();const rect=$('#canvas').getBoundingClientRect();zoomCanvasAt((canvasMotion?.to.scale??scale)*Math.exp(-e.deltaY*.001),(e.clientX-rect.left)/uiScaleFactor(),(e.clientY-rect.top)/uiScaleFactor());},{passive:false});
+$('#canvas').addEventListener('wheel',e=>{e.preventDefault();const rect=$('#canvas').getBoundingClientRect();zoomCanvasAt((canvasMotion?.setting==='canvasDamping'?canvasMotion.to.scale:scale)*Math.exp(-e.deltaY*.001),(e.clientX-rect.left)/uiScaleFactor(),(e.clientY-rect.top)/uiScaleFactor());},{passive:false});
 installUpgradeUI();
 installGraphInteractions();
 installLibraryTabs();

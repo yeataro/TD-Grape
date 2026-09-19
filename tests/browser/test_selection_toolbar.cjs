@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {harness}=require('./test_glsl_code.cjs');
 async function run(){
-  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder,{touch:true}),{page,checks,errors,settle}=h;
+  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder,{touch:true,skipPreview:true}),{page,checks,errors,settle}=h;
   page.setDefaultTimeout(6000);
   const near=(a,b,label)=>assert.ok(Math.abs(a-b)<.02,`${label}: ${a} vs ${b}`);
   const select=async ids=>{await page.evaluate(ids=>{selection=new Set(ids);selected=ids.at(-1)||null;selectedEdge=null;render();},ids);await settle();};
@@ -92,7 +92,7 @@ async function run(){
     await page.locator('#fit').click();await settle();assert.deepEqual(await viewState(),allView,'existing frame-all button still includes all nodes');
     await page.locator('#graphfitselection').click();await page.locator('#canvas').focus();await page.keyboard.press('h');await settle();assert.deepEqual(await viewState(),allView,'H still frames all nodes');assert.deepEqual(await editState(),frameBefore);
     await page.evaluate(()=>{arrangeSelection('left');arrangeSelection('top');});await page.locator('#undo').click();await settle();const pendingBefore=await editState();assert.equal(JSON.parse(pendingBefore.past).length,1);assert.equal(JSON.parse(pendingBefore.future).length,1);assert.equal(pendingBefore.dirty,true);await page.locator('#graphfitselection').click();await settle();await framed();assert.deepEqual(await editState(),pendingBefore,'framing preserves pending changes and both Undo/Redo branches');
-    for(const[language,label]of [['en','Frame selection'],['zh-Hant','置中選取']]){await page.selectOption('#language',language);assert.equal(await page.locator('#graphfitselection').getAttribute('title'),label);assert.equal(await page.locator('#graphfitselection').getAttribute('aria-label'),label);assert.equal(await page.locator('#graphfitselection').getAttribute('aria-keyshortcuts'),null,'Frame selection has no new shortcut');}
+    for(const language of ['en','zh-Hant']){await page.selectOption('#language',language);const hint=await page.evaluate(()=>t('action.fitSelection.hint')+'　F');assert.equal(await page.locator('#graphfitselection').getAttribute('title'),hint);assert.equal(await page.locator('#graphfitselection').getAttribute('aria-label'),hint);assert.equal(await page.locator('#graphfitselection').getAttribute('aria-keyshortcuts'),'F');}
     checks.push('Frame selection centers only selected nodes and zooms past distant unselected nodes without changing graph/selection/history/dirty state; frame-all and H stay unchanged and hints translate');
 
     await reset();await mode('all');await page.evaluate(()=>{const note=current().nodes.find(n=>n.id==='d');note.ui.width=500;note.ui.height=1200;render();});await select(['d']);
@@ -100,9 +100,9 @@ async function run(){
     await page.evaluate(()=>{current().nodes.find(n=>n.id==='d').ui.collapsed=true;render();});await settle();
     const collapsedBefore=await editState();await page.locator('#graphfitselection').click();await settle();const collapsed=await framed();assert.ok(collapsed.bounds.bottom-collapsed.bounds.top<tall.bounds.bottom-tall.bounds.top,'collapsed node uses its actual rendered height');assert.ok((await viewState()).scale>tallScale,'collapsed height allows a closer frame');assert.deepEqual(await editState(),collapsedBefore);
     await page.evaluate(()=>{readonly=true;render();scale=.3;pan={x:100,y:100};transform();});assert.equal(await page.locator('#graphfitselection').isEnabled(),true);const lockedBefore=await editState();await page.locator('#graphfitselection').click();await settle();await framed();assert.deepEqual(await editState(),lockedBefore,'readonly still permits view-only framing');await page.evaluate(()=>{readonly=false;render();});
-    await select([]);const emptyView=await viewState(),emptyState=await editState();await page.evaluate(()=>fitSelection());assert.deepEqual(await viewState(),emptyView);assert.deepEqual(await editState(),emptyState);
-    await select(['a','b']);await page.evaluate(()=>{selectedEdge=0;render();});const edgeView=await viewState(),edgeState=await editState();await page.evaluate(()=>fitSelection());assert.deepEqual(await viewState(),edgeView);assert.deepEqual(await editState(),edgeState);
-    checks.push('single/tall/collapsed selections frame their real bounds, readonly remains available, and empty or edge selections leave the viewport and editor state unchanged');
+    await select([]);await page.evaluate(()=>fit());const fallbackView=await viewState(),emptyState=await editState();await page.evaluate(()=>{pan={x:0,y:0};transform();fitSelection();});assert.deepEqual(await viewState(),fallbackView);assert.deepEqual(await editState(),emptyState);
+    await select(['a','b']);await page.evaluate(()=>{selectedEdge=0;render();});const edgeState=await editState();await page.evaluate(()=>{pan={x:0,y:0};transform();fitSelection();});assert.deepEqual(await viewState(),fallbackView);assert.deepEqual(await editState(),edgeState);
+    checks.push('single/tall/collapsed selections frame their real bounds, readonly remains available, and empty or edge selections frame all nodes without editing state');
 
     await reset();await mode('all');await select(['a','b']);await page.evaluate(()=>{scale=.5;pan={x:35,y:180};transform();$('#canvas').focus();});await page.mouse.move(2,2);await settle();
     let first=await visual();assert.equal(first.visible,true);

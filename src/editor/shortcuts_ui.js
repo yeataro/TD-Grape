@@ -15,7 +15,8 @@ const EDITOR_SHORTCUTS=Object.freeze({
   autoArrange:{label:'arrange.auto',keys:['L'],section:'edit'},
   autoArrangeReverse:{label:'arrange.autoReverse',keys:['Shift+L'],section:'edit'},
   add:{label:'action.nodes',keys:['Tab'],section:'navigation'},
-  fit:{label:'action.fit',keys:['H'],section:'navigation'},
+  fit:{label:'action.fit',hint:'action.fit.hint',keys:['H'],section:'navigation'},
+  fitSelection:{label:'action.fitSelection',hint:'action.fitSelection.hint',keys:['F'],section:'navigation'},
   up:{label:'navigation.up',keys:['Alt+ArrowUp'],section:'navigation'},
   menu:{label:'edit.menu',keys:['Shift+F10','ContextMenu'],section:'navigation'},
   cancel:{label:'shortcuts.cancel',keys:['Escape'],section:'navigation'},
@@ -30,13 +31,13 @@ function shortcutKeyParts(key){
 function shortcutLabel(action){return EDITOR_SHORTCUTS[action]?.keys.map(key=>shortcutKeyParts(key).join('＋')).join(' / ')||'';}
 function decorateShortcutButton(button,action,labelKey){
   const command=EDITOR_SHORTCUTS[action];if(!button||!command)return;
-  const label=t(labelKey||command.label)+(button.dataset.shortcutContext?' · '+button.dataset.shortcutContext:''),hint=label+'　'+shortcutLabel(action);
+  const label=t(labelKey||command.hint||command.label)+(button.dataset.shortcutContext?' · '+button.dataset.shortcutContext:''),hint=label+'　'+shortcutLabel(action);
   button.title=hint;button.setAttribute('aria-label',hint);button.dataset.shortcutAction=action;
   if(labelKey)button.dataset.shortcutLabel=labelKey;else delete button.dataset.shortcutLabel;
   button.setAttribute('aria-keyshortcuts',command.keys.flatMap(key=>key.includes('Mod')?[key.replace('Mod','Control'),key.replace('Mod','Meta')]:[key]).join(' '));
 }
 function renderShortcutButtonHints(){
-  for(const [id,action]of Object.entries({undo:'undo',redo:'redo',graphcopy:'copy',graphpaste:'paste',graphgroup:'group',graphdelete:'delete',fit:'fit',graphup:'up',group:'group'})){
+  for(const [id,action]of Object.entries({undo:'undo',redo:'redo',graphcopy:'copy',graphpaste:'paste',graphgroup:'group',graphdelete:'delete',fit:'fit',graphfitselection:'fitSelection',graphup:'up',group:'group'})){
     const label=id==='graphdelete'&&typeof selectedEdge!=='undefined'&&selectedEdge!==null?'wire.disconnectSelected':undefined;
     decorateShortcutButton(document.getElementById(id),action,label);
   }
@@ -54,7 +55,7 @@ function renderShortcutHelp(){
       if(command.section!==section)continue;
       const row=el('div',{class:'shortcuts-row','data-shortcut':action}),keys=el('dd');
       command.keys.forEach((key,index)=>{if(index)keys.append(el('span',{class:'shortcuts-or'},'/'));const chord=el('span',{class:'shortcuts-chord'});shortcutKeyParts(key).forEach(part=>chord.append(el('kbd',{},part)));keys.append(chord);});
-      row.append(el('dt',{},t(command.label)),keys);list.append(row);
+      row.append(el('dt',{},t(command.hint||command.label)),keys);list.append(row);
     }
     group.append(heading,list);contents.append(group);
   }

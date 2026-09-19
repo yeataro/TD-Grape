@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {harness}=require('./test_glsl_code.cjs');
 async function run(){
-  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder,{touch:true}),{page,checks,errors,settle}=h;
+  const[source,stateFile,folder]=process.argv.slice(2),h=await harness(source,stateFile,folder,{touch:true,skipPreview:true}),{page,checks,errors,settle}=h;
   page.setDefaultTimeout(6000);
   const panel=()=>page.locator('#shortcutspanel');
   const state=()=>page.evaluate(()=>({graph:JSON.stringify(graph),past:JSON.stringify(past),future:JSON.stringify(future),selection:[...selection],selected,pan:{...pan},scale,stage}));
@@ -34,7 +34,7 @@ async function run(){
     assert.equal(await page.locator('[data-shortcut="autoArrange"] dt').innerText(),'Auto arrange: from sources');assert.equal(await page.locator('[data-shortcut="autoArrange"] kbd').innerText(),'L');
     assert.equal(await page.locator('[data-shortcut="autoArrangeReverse"] dt').innerText(),'Auto arrange: from outputs');assert.deepEqual(await page.locator('[data-shortcut="autoArrangeReverse"] kbd').allTextContents(),['Shift','L']);
     assert.equal(Object.values(labels).some(label=>label.includes('Ctrl＋Y')),false);
-    for(const key of ['Delete','Control+g','Control+d','Control+a','h','l','Shift+l','Tab'])await page.keyboard.press(key);
+    for(const key of ['Delete','Control+g','Control+d','Control+a','h','f','l','Shift+l','Tab'])await page.keyboard.press(key);
     await settle();assert.deepEqual(await state(),before);assert.equal(await page.locator('#creator').isVisible(),false);
     assert.equal(await panel().evaluate(e=>e.contains(document.activeElement)),true);
     checks.push('reference contains existing graph and field commands only; modal help traps focus and graph edit/navigation hotkeys do not leak through');

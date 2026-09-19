@@ -19,7 +19,7 @@ function selectionIcon(path){
   const shape=document.createElementNS(svg.namespaceURI,'path');shape.setAttribute('d',path);svg.append(shape);return svg;
 }
 function selectedCanvasNodes(){return graph&&selectedEdge===null?current().nodes.filter(n=>selection.has(n.id)):[];}
-function fitSelection(){fitNodes(selectedCanvasNodes());}
+function fitSelection(){const nodes=selectedCanvasNodes();if(nodes.length)fitNodes(nodes,true);else fit(true);}
 function selectedCanvasBounds(){
   const rects=selectedCanvasNodes().map(n=>$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`)?.getBoundingClientRect()).filter(Boolean);
   for(const frame of completeGroupFrames(selectedCanvasNodes())){const rect=$('#groupframes')?.querySelector(`[data-frame="${CSS.escape(frame.id)}"]`)?.getBoundingClientRect();if(rect)rects.push(rect);}
@@ -64,7 +64,7 @@ function renderSelectionToolbar(){
   bar.hidden=mode==='off'||!nodes.length||(mode==='multiple'&&!multiple);
   bar.setAttribute('aria-label',t('selection.toolbar'));edit.setAttribute('aria-label',t('selection.editTools'));multi.setAttribute('aria-label',t('selection.nodeTools'));
   $('#grapharrange').title=t('arrange.title');$('#grapharrange').setAttribute('aria-label',t('arrange.title'));
-  $('#graphfitselection').title=t('action.fitSelection');$('#graphfitselection').setAttribute('aria-label',t('action.fitSelection'));
+  decorateShortcutButton($('#graphfitselection'),'fitSelection');
   if(!arrangeContextMatches()||editorMutationBlocked()||!multiple)closeArrangeMenu();
   if(bar.hidden)selectionToolbarHover=selectionBoundsHover=false;
   scheduleSelectionToolbarPosition();
