@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.111 交付檢查點：`79cbcb9` 已整合 main，32 份來源更新 3 份、9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 59），三份使用者 Shader 保留。正式 TOE 910,982 bytes，SHA-256 `9df82a4c7c6ca35a7715604182f9659d3949085b7025d9d83f8b1886c6682d29`，排除一份私人助手。實際 TD Shader 頁面獨立瀏覽器點擊空白畫布，16 個節點 DOM 保留、graph 不變、零完整 render／POST／JS errors。未重新整理使用者目前的頁面。
+
 2026-09-19 畫布放開掉幀（0.8.111 實作檢查點）：空白畫布 pointerup 無條件呼叫 render，連無選取變化也重建節點／接線並刷新側欄；隔離 16 節點量測 20.5–23.1ms、101 節點 124.4–138.6ms，均在放開時。改為無選取時直接返回；取消單／多節點或接線選取、完成滑鼠框選時只更新選取 class、Parameter 與操作狀態，保留節點／wire／群組框 DOM；触控空白點擊共用取消流程。修正後同探針 16／101 節點均零完整 render／renderCards／wires／library／來源面板呼叫。7 組新 browser、12 組 selection toolbar、15 組 Parameter 與 syntax 通過；真實硬體整體 FPS 尚不據此保證。保存交付另記。
 
 2026-09-19 0.8.110 交付檢查點：`df999fb` 已整合 main，32 份來源更新 2 份，9 份資源一致，core 無錯誤；TOP／MAT Master current（revision 58），三份使用者 Shader 保留。正式 TOE 910,790 bytes，SHA-256 `5fad9243009e949328e90f91ef327a74c5c3225fbf21aeb8e099cf06997cc40a`，排除一份私人助手。實際 Shader 頁面獨立 Chromium 連續載入／reload 10 次，均有兩個語言選項與 16 個節點，零失敗請求／JS errors。未重新載入使用者目前的 Editor。
