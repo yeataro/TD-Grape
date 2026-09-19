@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.108 交付檢查點：`9fcc471` 已整合 main，32 份來源中更新 6 份，9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 56），三份使用者 Shader 保留。TOE 保存 909,526 bytes，SHA-256 `ef6c44be30bd493926170287b994fced0878752c5a1150561ff2f3542bd56a9b`，排除一份私人助手。曲線為圖編輯區左下的小型 overlay，不佔節點布局，窄版避開底部操作鍵。未強制重新載入使用者 Editor。
+
 2026-09-19 FPS 歷史曲線（0.8.108 實作檢查點）：依使用者最後確認，只保留 FPS 數字及一條幀間隔曲線，不加入卡頓計數／最長間隔等統計面板。沿用原實驗開關、預設關閉；每幀取樣，每秒更新 FPS，曲線最多 10 Hz，300 個 100ms 時間格保存最近 30 秒的區間尖峰。固定 typed arrays、每幀 O(1) 寫入，不搬移歷史、不查節點、不連 TD；繪圖只掃固定 300 格。停頓缺口不補造樣本，尖峰仍留下；關閉釋放 canvas，背景停止並於恢復時重建歷史。390／320px 避開底部操作鍵。FPS browser 3 組、既有 experiments 20 組、690 雙語鍵與 JS syntax 通過。7,200 個合成 120Hz callback 的本機 Chromium JS／Canvas 提交耗時平均約 0.002ms、最大約 0.30ms；非 GPU 完成時間，也不能代表實機 iOS 或總電力／幀率影響。同步與保存另記。
 
 2026-09-19 0.8.107 交付檢查點：`de87400` 已整合 main，32 份來源中更新 7 份，9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 55），三份使用者 Shader 保留。TOE 保存 908,470 bytes，SHA-256 `47dc7be5e26619105e8cc77ce1ced86d44c3b3d2fe53c0e0f79b2fdadd5f6f49`；排除一份私人助手。沒有強制重載既有 Editor 頁面。
