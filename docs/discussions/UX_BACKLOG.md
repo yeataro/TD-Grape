@@ -31,6 +31,10 @@
 
 ISF 對照：INPUTS 以 TYPE=image 宣告具名圖片來源，宿主準備底層紋理與宣告；Shader 使用 IMG_NORM_PIXEL(name, uv)、IMG_PIXEL(name, pixelCoord) 取樣，以 IMG_SIZE(name) 查該輸入的尺寸。ISF 以這層取樣介面適配宿主使用的 2D／rectangle 紋理，不應直接假定固定 sampler2D 與 texture() 可跨所有 ISF 宿主。音訊／FFT 也透過影像資料提供；標準 image 輸入不等於已保證任意 3D／Cube／Array sampler 能力。輸入來源尺寸與 RENDERSIZE／TD uTDOutputInfo 的繪製目標尺寸分開。此調查不要求現在實作 ISF 後端；參考 [ISF 輸入宣告](https://docs.isf.video/ref_json)、[圖片取樣與尺寸](https://docs.isf.video/ref_functions)、[宿主紋理差異](https://docs.isf.video/ref_converting)。
 
+來源命名風格補充：使用者提出同一來源可有「通用／TD」兩套顯示名稱，以選擇器切換節點標題，類似既有「顯示自訂名稱」；不改能力、來源 ID、接孔、內容或產碼。別名必須指同一語意，不把行為不同的時間來源只改名當作等價。助手提出自訂名稱顯示優先、搜尋接受兩套名稱，這些仍屬候選規則，尚未實作。
+
+分類入口的最新界線：使用者曾考慮連分類名稱一起切換，後續要求先保持入口穩定。通用／TD 名稱對應可以預先準備，但目前不啟用分類名稱的風格切換；分類歸屬與入口位置也不因顯示風格而變動。理由是使用者依賴熟悉的名稱與入口辨識位置，既有顏色不能完全取代這些線索。這不否定未來固定更名的討論，也不等於現在已實作節點標題切換；本次只記錄決策與可預留方向。
+
 以下是調查後的候選建議，不是實作授權或跨宿主支援承諾；本輪先以影像 Shader（TD GLSL TOP）對照，MAT 的 render context 另行核對。
 
 | 候選名稱 | 型別與目的 | ISF | Shadertoy | TD 映射界線 |
@@ -85,6 +89,8 @@ GitHub Pages 的 HTTPS 靜態檔案託管可以提供 manifest 與 service worke
 參考：[WebRTC signaling 與 peer connection](https://webrtc.org/getting-started/peer-connections)、[TURN 的資料中繼角色](https://webrtc.org/getting-started/turn-server)。
 
 ### 網頁執行、圖交換與 ISF 匯出（延伸假設，未決定實作）
+
+後續釐清：此處的獨立 Online 版本不依賴 TD 安裝、啟動或連線，也不是操控 TD 時的遠端預覽。瀏覽器宿主自行供應來源值、紋理、資訊與必要函數，評估相容 TD GLSL TOP 常用環境；純靜態／離線方案也須讓產碼能力在瀏覽器可用。使用者指出自動產生 ISF 可接現成執行器，因而 ISF 除了匯出，也可作為 Online 執行中介候選。已查到官方列出的 [ISF-JS Renderer](https://github.com/msfeldstein/interactive-shader-format-js) 提供載入、輸入設定、紋理上傳與繪製介面；尚未驗證完整相容性或效能。ISF 2.0 是格式／宿主介面版本，與 GLSL／GLSL ES 版本分開，符合格式仍須符合所選執行器的底層能力。此可行性討論用來考慮目前 Sources 的呈現風格，不代表已決定宿主架構或啟動 Online 實作。
 
 使用者補充釐清三種可組合的能力：在網頁執行 Shader、下載圖供 TD 使用，以及額外匯出 ISF。網頁執行不必以 ISF 為中介格式；ISF 是另外增加的輸出能力，不是整個產品或所有執行路徑必須採用的格式。圖仍是可編輯的圖資料，與產出的 Shader／ISF 分開。此方向新增的是產碼目標／執行宿主及圖交換能力，與前述 Portable／Online 前端託管及直連方式分屬不同層次，不要求互相取代。
 
