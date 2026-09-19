@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 操作 review 定稿（0.8.114）：`test_canvas_framing.cjs` 7 組驗證 Home 在四種開關組合均立即到位，鍵盤／按鈕／右鍵選單中斷 active Frame 後零待執行回呼；F 有選取與無選取都使用 Frame 設定，保留編輯／IME／手勢隔離及只讀操作。`test_canvas_damping.cjs` 10 組更新預設與 Reset 為 150／333 ms，保存並 reload 自訂 100／450 ms 不覆寫；既有 UI experiments 20、zoom menu 7 組通過，共 44 組。檢查 971 組雙語鍵及 JS 語法，窄版標籤顯示正常。私人結果位於 `reports/canvas-motion-defaults`。插值演算法未變，本輪測試針對呼叫路徑、預設／偏好與關閉狀態。
+
 2026-09-19 畫布插值 review／H、F（0.8.113）：連續輸入回放 `test_canvas_motion_input.cjs` 在舊版失敗、修正後 2 組通過；20 幀 pointer input 每次在該幀 RAF timestamp 後 2 ms 到達，舊版位置不變，新版第二幀開始持續移動，停止後精確到位。`test_canvas_framing.cjs` 6 組涵蓋 H 全圖／F 單選、多選、無選取回退、唯讀、文字／數值／contenteditable／IME／修飾鍵／手勢隔離、兩組開關的四種組合與獨立 200／450 ms、重複 F 不重啟計時、關閉組直接中斷另一組動畫、系統 fit 仍立即、無 DOM／graph／history 改動。更新 damping 10 組含兩列 UI／各自保存與 Reset 250 ms；既有 experiments 20、selection toolbar 12、shortcut help 7、zoom menu 7、canvas selection 7 組通過。私人輸入時序與結果位於 `reports/canvas-damping-review`；舊版 before 為預期失敗的根因證據。時間回放只控制相機 RAF，保留一般瀏覽器工作；另有真實 RAF 的完成檢查。未聲稱已驗收實體 iOS 或 TD 般手感。
 
 2026-09-19 畫布阻尼（0.8.112）：`test_canvas_damping.cjs` 9 組通過。檢查預設關閉／100 ms、10–1000 ms 共用數值滑桿與唯讀圖的本機設定、快速 wheel 累積／單一 rAF、插值中游標錨點與 graphPoint、實際滑鼠平移不重建 DOM／改圖／送 POST、關閉後零插值 target／rAF／專用 listeners、背景／blur、兩指縮放接一指放開不遺失倍率、設定持久化／Reset／窄版及真實 scheduler 收尾。測試用可控制的插值回呼驗證中間狀態，最後另走實際 rAF；不是硬體 FPS 或實機 iOS 手感驗證。既有 experiments 20、zoom menu 7、canvas selection 7、numeric scrub 32、numeric presets 7、numeric touch 20 組通過。舊 `test_value_ladder.cjs` 依賴帶有 uniform_tint 的專用 fixture，誤以本輪矩陣 fixture 執行於該欄位等待逾時，未列為通過；中鍵 Ladder 與唯讀／取消行為已由上述共用 numeric scrub 回歸涵蓋。私人結果位於 `reports/canvas-damping-round`。

@@ -17,13 +17,13 @@ const {harness}=require('./test_glsl_code.cjs');
       window.requestAnimationFrame=cb=>{if(cb!==stepCanvasMotion)return framingTest.raf.call(window,cb);const id=--framingTest.id;framingTest.frames.set(id,cb);return id;};
       window.cancelAnimationFrame=id=>{if(!framingTest.frames.delete(id))framingTest.cancel.call(window,id);};
     });
-    assert.deepEqual(await page.evaluate(()=>[EDITOR_DEV_SETTINGS.canvasDamping,EDITOR_DEV_SETTINGS.canvasDampingMs,EDITOR_DEV_SETTINGS.frameDamping,EDITOR_DEV_SETTINGS.frameDampingMs]),[false,250,false,250]);
+    assert.deepEqual(await page.evaluate(()=>[EDITOR_DEV_SETTINGS.canvasDamping,EDITOR_DEV_SETTINGS.canvasDampingMs,EDITOR_DEV_SETTINGS.frameDamping,EDITOR_DEV_SETTINGS.frameDampingMs]),[false,150,false,333]);
     await reset();await page.keyboard.press('h');const home=await view();
     await reset();await page.keyboard.press('f');const single=await view();assert.ok(single.scale>home.scale);
     await page.evaluate(()=>{selection=new Set(['a','b']);selected='b';refreshCanvasSelection();});await reset();await page.keyboard.press('f');const multi=await view();assert.notDeepEqual(multi,home);assert.notDeepEqual(multi,single);
     await page.keyboard.press('h');assert.deepEqual(await view(),home);
     await page.evaluate(()=>{selection.clear();selected=null;refreshCanvasSelection();});await reset();await page.keyboard.press('f');assert.deepEqual(await view(),home);
-    checks.push('H always frames all; F frames one/multiple selections or falls back to Home; both work read-only with defaults off / 250 ms');
+    checks.push('H frames all; F frames one/multiple selections or all if none are selected; both work read-only with defaults off / 150 and 333 ms');
 
     // Use the existing keyboard route; navigation must not steal field input or browser chords.
     await reset();const unchanged=await view();
@@ -54,14 +54,29 @@ const {harness}=require('./test_glsl_code.cjs');
         await tick(.5);const midway=await view();assert.ok(midway.scale>.4&&midway.scale<single.scale);await tick(1);
       }
       assert.deepEqual(await view(),single);
+      await reset();await page.keyboard.press('h');assert.deepEqual(await view(),home);assert.equal(await page.evaluate(()=>canvasMotion),null,'Home is immediate in every setting combination');
+      await page.evaluate(()=>{selection.clear();selected=null;refreshCanvasSelection();});
+      await reset();await page.keyboard.press('f');assert.equal(await page.evaluate(()=>!!canvasMotion),frameDamping,'unselected Frame keeps its own transition setting');
+      if(frameDamping)await tick(1);assert.deepEqual(await view(),home);
+      await page.evaluate(()=>{selection=new Set(['a']);selected='a';refreshCanvasSelection();});
       await reset();await page.evaluate(()=>zoomCanvasAt(.8,200,200));assert.equal(await page.evaluate(()=>!!canvasMotion),canvasDamping);
       if(canvasDamping){assert.equal(await page.evaluate(()=>canvasMotion.duration),200);await tick(1);}
       assert.equal((await view()).scale,.8);assert.equal(await page.evaluate(()=>framingTest.frames.size),0);
     }
-    checks.push('all four checkbox combinations route pan/zoom and H/F independently, use 200/450 ms respectively, stop exactly, and do not restart for repeated F');
+    checks.push('all four checkbox combinations: Home immediate, selected/unselected Frame follows its setting, pan/zoom independent; 200/450 ms and repeated F verified');
+
+    await page.evaluate(()=>setUIExperiments({canvasDamping:true,frameDamping:true}));
+    for(const entry of ['key','button','menu']){
+      await reset();await page.keyboard.press('f');await tick(.25);
+      if(entry==='key')await page.keyboard.press('h');
+      else if(entry==='button')await page.locator('#fit').click();
+      else {await page.evaluate(()=>openGraphMenu(700,400));await page.locator('#grapheditmenu [data-edit="fitAll"]').click();}
+      assert.deepEqual(await view(),home,entry);assert.deepEqual(await page.evaluate(()=>[canvasMotion,canvasMotionFrame,framingTest.frames.size]),[null,0,0],entry);
+    }
+    checks.push('Home keyboard, button and context menu immediately interrupt active Frame motion and leave no pending callback');
 
     // An immediate command must cancel the other group's pending transition.
-    await page.evaluate(()=>setUIExperiments({canvasDamping:false,frameDamping:true}));await reset();await page.keyboard.press('h');await tick(.25);
+    await page.evaluate(()=>setUIExperiments({canvasDamping:false,frameDamping:true}));await reset();await page.keyboard.press('f');await tick(.25);
     const current=await view();await page.evaluate(()=>zoomCanvasAt(.8,200,200));const zoomed=await view();
     assert.equal(zoomed.scale,.8);assert.ok(Math.abs(zoomed.pan.x-(200-(200-current.pan.x)*.8/current.scale))<.02);assert.equal(await page.evaluate(()=>canvasMotion),null);
     await reset();await page.keyboard.press('f');await page.evaluate(()=>fit());assert.deepEqual(await view(),home);assert.equal(await page.evaluate(()=>canvasMotion),null,'system framing is immediate');

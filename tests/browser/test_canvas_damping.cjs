@@ -24,10 +24,10 @@ const {harness}=require('./test_glsl_code.cjs');
       window.cancelAnimationFrame=id=>{if(!cameraTest.frames.delete(id))cameraTest.cancel.call(window,id);};
       window.beforeCameraGraph=JSON.stringify({graph,past,future,dirty});window.cameraNodes=[...$('#cards').children];window.cameraWires=[...$('#wires').children];
     });
-    await open();assert.equal(await control('canvasDamping').isChecked(),false);assert.equal(await control('canvasDampingMs').inputValue(),'250');assert.equal(await control('canvasDampingMs').isDisabled(),true);
+    await open();assert.equal(await control('canvasDamping').isChecked(),false);assert.equal(await control('canvasDampingMs').inputValue(),'150');assert.equal(await control('canvasDampingMs').isDisabled(),true);
     assert.deepEqual(await control('canvasDampingMs').evaluate(e=>[e.min,e.max,e.step,e.classList.contains('numeric-slider')]),['10','1000','1',true]);
     await close();await wheel(-100);let v=await view();near(v.scale,.6*Math.exp(.1));assert.equal(v.active,false);assert.equal(v.frames,0);assert.equal(v.listeners,false);
-    assert.equal(await page.evaluate(()=>cameraTest.count),0);checks.push('default off / 250 ms; disabled zoom is immediate with zero damping callbacks, target or listeners');
+    assert.equal(await page.evaluate(()=>cameraTest.count),0);checks.push('default off / 150 ms; disabled zoom is immediate with zero damping callbacks, target or listeners');
 
     await open();await control('canvasDamping').check();await control('canvasDampingMs').fill('200');await control('canvasDampingMs').press('Enter');
     assert.equal(await page.evaluate(()=>EDITOR_DEV_SETTINGS.canvasDampingMs),200);await close();
@@ -74,10 +74,10 @@ const {harness}=require('./test_glsl_code.cjs');
     const pinchTarget=await page.evaluate(()=>({...canvasMotion.to}));near(pinchTarget.scale,.96);await tick(.5);await touch('touchEnd',[[1,p.x-130,p.y]]);await touch('touchEnd',[]);await tick(1);v=await view();near(v.scale,pinchTarget.scale);near(v.pan.x,pinchTarget.x);near(v.pan.y,pinchTarget.y);assert.equal(v.frames,0);
     checks.push('touch pinch shares damping and preserves its final target through finger release');
 
-    await open();assert.equal(await control('frameDampingMs').isDisabled(),true);assert.equal(await control('frameDampingMs').inputValue(),'250');
+    await open();assert.equal(await control('frameDampingMs').isDisabled(),true);assert.equal(await control('frameDampingMs').inputValue(),'333');
     await control('frameDamping').check();await control('frameDampingMs').fill('450');await control('frameDampingMs').press('Enter');
     assert.equal(await control('canvasDampingMs').inputValue(),'100');await control('frameDamping').uncheck();assert.equal(await control('frameDampingMs').inputValue(),'450');
-    checks.push('Home/Frame shares the numeric control layout but has an independent checkbox and saved duration');
+    checks.push('Frame shares the numeric control layout but has an independent checkbox and saved duration');
     await page.selectOption('#language','en');await open();await control('canvasDampingMs').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(folder,'damping-desktop.png')});
     await page.setViewportSize({width:390,height:844});await page.evaluate(()=>setUIAppearance('scale',125));await open();await control('canvasDampingMs').scrollIntoViewIfNeeded();
     assert.equal(await page.locator('#experimentspanel').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);await page.screenshot({path:path.join(folder,'damping-mobile.png')});
@@ -86,9 +86,9 @@ const {harness}=require('./test_glsl_code.cjs');
     assert.deepEqual(await page.evaluate(()=>[EDITOR_DEV_SETTINGS.frameDamping,EDITOR_DEV_SETTINGS.frameDampingMs]),[false,450]);
     const realStart=await page.evaluate(()=>scale);await wheel(-10);await page.waitForFunction(()=>canvasMotion===null);near(await page.evaluate(()=>scale),Math.min(1.7,realStart*Math.exp(.01)));
     assert.equal(await page.evaluate(()=>canvasMotionFrame),0);checks.push('the real browser animation scheduler also reaches the final zoom and stops');
-    await open();await page.locator('#experimentsreset').click();assert.equal(await control('canvasDamping').isChecked(),false);assert.equal(await control('canvasDampingMs').inputValue(),'250');assert.equal(await page.evaluate(()=>canvasMotionEvents),null);
-    assert.equal(await control('frameDamping').isChecked(),false);assert.equal(await control('frameDampingMs').inputValue(),'250');
-    checks.push('local preference survives reload, narrow layout fits, and Reset restores completely disabled / 250 ms');
+    await open();await page.locator('#experimentsreset').click();assert.equal(await control('canvasDamping').isChecked(),false);assert.equal(await control('canvasDampingMs').inputValue(),'150');assert.equal(await page.evaluate(()=>canvasMotionEvents),null);
+    assert.equal(await control('frameDamping').isChecked(),false);assert.equal(await control('frameDampingMs').inputValue(),'333');
+    checks.push('local preference survives reload, narrow layout fits, and Reset restores both disabled / 150 and 333 ms');
     assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
   }catch(error){await h.finish(error);throw error;}
 })().catch(error=>{console.error(error.stack);process.exitCode=1;});

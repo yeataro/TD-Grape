@@ -19,7 +19,7 @@ function selectionIcon(path){
   const shape=document.createElementNS(svg.namespaceURI,'path');shape.setAttribute('d',path);svg.append(shape);return svg;
 }
 function selectedCanvasNodes(){return graph&&selectedEdge===null?current().nodes.filter(n=>selection.has(n.id)):[];}
-function fitSelection(){const nodes=selectedCanvasNodes();if(nodes.length)fitNodes(nodes,true);else fit(true);}
+function fitSelection(){if(!graph)return;const nodes=selectedCanvasNodes();fitNodes(nodes.length?nodes:current().nodes,true);}
 function selectedCanvasBounds(){
   const rects=selectedCanvasNodes().map(n=>$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`)?.getBoundingClientRect()).filter(Boolean);
   for(const frame of completeGroupFrames(selectedCanvasNodes())){const rect=$('#groupframes')?.querySelector(`[data-frame="${CSS.escape(frame.id)}"]`)?.getBoundingClientRect();if(rect)rects.push(rect);}

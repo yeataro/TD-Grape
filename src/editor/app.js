@@ -589,7 +589,7 @@ function fitNodes(nodes,animate=false){
   const nextScale=Math.max(.25,Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY)));
   moveCanvas({x:($('#canvas').clientWidth-(maxX-minX)*nextScale)/2-minX*nextScale,y:($('#canvas').clientHeight-(maxY-minY)*nextScale)/2-minY*nextScale},nextScale,animate?'frameDamping':null);
 }
-function fit(animate=false){if(graph)fitNodes(current().nodes,animate);}
+function fit(){if(graph)fitNodes(current().nodes);}
 async function load(){
   const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
   try{
@@ -1173,7 +1173,7 @@ $('#save').onclick=async()=>{try{const r=await api('save',{});status(r.saved?t('
 installAppliedGraphReload();
 
 $('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();fit();});
-$('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=()=>fit(true);$('#search').oninput=library;
+$('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=()=>fit();$('#search').oninput=library;
 $('#adduniform').onclick=()=>newUniform();
 $('#export').onclick=openExport;
 installImportUI();
