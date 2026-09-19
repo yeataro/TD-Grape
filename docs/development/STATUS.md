@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.117 交付檢查點：來源 `8ff5708` 已整合 main；32 份來源更新 7 份、9 份服務資源一致，core 無錯誤。TOP／MAT Master current（revision 65），三份使用者 Shader 保留。正式 TOE 915,318 bytes，SHA-256 `05f116db86f22413034b86e49072f5d0eeaa63a22c94ecbc98545420e8779629`，排除一份私人助手。完整 portable checks、65 組瀏覽器檢查、45 組原生條件通過。此次 A／B-C／E 分別有來源與 TOE 檢查點，修改前可回到 `checkpoint/pre-sync-performance-0.8.114`。未強制重新載入使用者頁面；新磁碟暫存與高頻值通道仍延後。
+
 2026-09-19 同步效能 E 首批（0.8.117，來源檢查點）：普通 Uniform／原生值寫入沿用 HTTP、互斥、版本與 expected 值核對及現有 Undo；短暫鎖定改以 inert 保持無關控制項原外觀，真正唯讀／不可用及結構修改仍保留 disabled 樣式。來源與歷史快照逐批建立唯一名稱索引，消除每一來源再讀完整 TD 來源表，reconcile 同時改用名稱計數／索引；不跨請求保留 native 值。值更新在 1／100／200 來源測試均零產碼、零 state／graph DAT 寫入。200 來源仍約 203–221 ms，保留完整快照／歷史保護的線性工作與 TD API 成本尚在，不宣稱達成高頻即時值通道；WebSocket／連續手勢、單值歷史專用協定另行評估。新磁碟暫存仍未實作。
 
 2026-09-19 0.8.116 交付檢查點：來源 `91040dd` 已整合 main，32 份來源更新 2 份、9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 64），三份使用者 Shader 保留。正式 TOE 914,750 bytes，SHA-256 `3dd1d6cd908f270acaa247df0a7393eb05e95074c5fd3b90791d074ed56b20bf`，排除一份私人助手。未重新載入使用者頁面。
