@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 實驗 FPS（0.8.107 實作檢查點）：「實驗功能 → 色彩與顯示 → 顯示 FPS」預設關閉，偏好只保存在該瀏覽器。開啟後於圖編輯區左下角顯示 requestAnimationFrame 回呼頻率，以實際經過時間計算，每秒更新一次文字；不是 TD cook／預覽影片 FPS，也不是 GPU 呈現完成率。關閉不啟動採樣，背景分頁暫停並於回前景重新計時；不發送 TD 請求，不更動 graph／Undo 或重畫 wires。`test_fps_display.cjs` 2 組及既有 experiments 20 組通過，涵蓋真實幀、停頓、重複開啟、暫停恢復、預設與 390px 位置；690 locale keys 通過。同步與 TOE 保存另記。
+
 2026-09-19 0.8.106 交付檢查點：`5319560` 已整合 main，32 份來源中 6 份更新，9 份服務資源一致，core 無錯誤；TOP／MAT Master current、revision 54，三份使用者 Shader 保留。TOE 已保存 907,878 bytes，SHA-256 `0929cdebe607ddcc2b1ac07dde6fbb794f925f269e62acf0165cdb96f98f4a2e`，排除一份私人助手。分層型別選單與矩陣四則均已在 TD 0.8.106。使用者既有 Editor 頁面未強制重載，避免丟失未套用草稿。
 
 2026-09-19 矩陣四則（0.8.106 實作檢查點）：既有 Add／Subtract／Multiply／Divide 新增 mat／dmat 異型輸入簽名，補 double／dvec；Auto 依輸入順序與矩陣形狀推導結果。手動選單鎖定輸出型別；核心、接口與拉線搜尋共用有限型別表，沒有值求解或 TD 輪詢。一般圖的 138 組編譯基準不變。完整 portable（451 項 Python）通過；352 組簽名編譯與存檔往返、4 組新瀏覽器操作、11 組搜尋回歸通過；360 項 TOP／MAT Pixel／MAT Vertex GPU 檢查通過，使用者 Shader／registry 保留、fixture 清除。101 節點清單開啟 24.8–37.9 ms，查詢 1.3–11.1 ms，文字變更零 planner 呼叫。同步與保存另記。[矩陣規格](../features/MATRIX_NODES.md)

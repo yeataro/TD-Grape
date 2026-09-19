@@ -671,8 +671,32 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock']]
+  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock','showFps']]
 ];
+let fpsFrame=null;
+function applyFpsDisplay(){
+  const label=$('#uifps'),enabled=EDITOR_DEV_SETTINGS.showFps;
+  label.hidden=!enabled;
+  document.removeEventListener('visibilitychange',applyFpsDisplay);
+  if(enabled)document.addEventListener('visibilitychange',applyFpsDisplay);
+  if(!enabled||document.hidden){
+    if(fpsFrame!==null)cancelAnimationFrame(fpsFrame);
+    fpsFrame=null;label.textContent='FPS —';return;
+  }
+  if(fpsFrame!==null)return;
+  label.textContent='FPS —';let start=null,frames=0;
+  // Browser frame-callback cadence, not TD or video FPS. Count only; write
+  // one small text node per second, without inspecting or redrawing the graph.
+  function sample(now){
+    if(start===null)start=now;
+    else{
+      frames++;
+      if(now-start>=1000){label.textContent='FPS '+(frames*1000/(now-start)).toFixed(1);start=now;frames=0;}
+    }
+    fpsFrame=requestAnimationFrame(sample);
+  }
+  fpsFrame=requestAnimationFrame(sample);
+}
 let systemClockTimer=null;
 function refreshSystemClock(){
   const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
@@ -716,7 +740,7 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){
     cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();
@@ -724,7 +748,7 @@ function setUIExperiments(values){
   }
   Object.assign(EDITOR_DEV_SETTINGS,next);
   try{localStorage.setItem(experimentsStorageKey,JSON.stringify(next));}catch{}
-  applyFloatingToolbar();applyGraphUISettings();applySystemClock();clearGraphTrash();
+  applyFloatingToolbar();applyGraphUISettings();applySystemClock();applyFpsDisplay();clearGraphTrash();
   if(graph&&redrawWires){
     for(const card of document.querySelectorAll('#cards .node')){
       const node=current().nodes.find(node=>node.id===card.dataset.node);if(!node)continue;
@@ -766,7 +790,7 @@ function installUIExperiments(){
   });
   opener.onclick=()=>requestAnimationFrame(()=>{if(panel.matches(':popover-open'))list.querySelector('input,select')?.focus({preventScroll:true});});
   window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);});
-  applyGraphUISettings();applySystemClock();clearGraphTrash();renderUIExperiments();
+  applyGraphUISettings();applySystemClock();applyFpsDisplay();clearGraphTrash();renderUIExperiments();
 }
 /* One immutable palette per base theme. Only root color tokens are transformed;
    image pixels, authored color swatches and GLSL syntax colors never pass here. */

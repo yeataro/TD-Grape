@@ -1785,3 +1785,5 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .node-body-controls [data-struct-field]{width:100%;min-width:0}
 .source-array-fields{display:grid;gap:8px}
 .source-array-fields[hidden]{display:none}
+
+#uifps{align-self:flex-start;min-width:9ch;padding:3px 6px;border:1px solid var(--line);border-radius:4px;background:var(--ui-tone-canvas);color:var(--ui-tone-text);font:11px/1.4 ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums;pointer-events:none}
