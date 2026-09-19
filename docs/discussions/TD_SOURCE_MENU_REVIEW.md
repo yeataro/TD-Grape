@@ -2,6 +2,8 @@
 
 2026-09-19。依 [來源與命名總表](TD_SOURCE_NAMING_RESEARCH.md) 及本輪使用者審查整理；對照產品 0.8.120。這份文件提出選單分類，尚未修改 UI 或新增來源能力。原始 311 筆盤點保留於 [CSV](TD_SOURCE_NAMING_CATALOG.csv)，新增分類與審查欄位供逐項查閱。
 
+2026-09-20 補充：[來源建構與型別共識](SOURCE_ARCHITECTURE_REVIEW.md) 決定以資料區分分類與建構行為，並允許來源節點同時提供完整結構與欄位出口。因此下表「先沿用 Array／Field」描述當時可用方式，不限制後續必須額外接 Field 才能讀欄位；具體快捷出口與 MAT Attribute 預置仍待整理。本表與 CSV 仍是審查資料，不是已實作的來源 registry。
+
 ## 本輪已收斂的方向
 
 - 時間基本預置保留六項；Timeline Rate 移出，保留 Delta Time。Clock／CHOP 的時間細項、播放範圍、Loop、Play、Tempo、拍號與 Timecode 留在研究表，交由使用者自行新增。

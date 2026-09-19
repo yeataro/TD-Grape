@@ -9,6 +9,8 @@
 - [TD 陣列來源](features/TD_ARRAY_SOURCES.md)：CHOP Uniform Arrays、TD 內建結構、TOP／MAT 可用範圍及宿主限制。
 - [TD 來源分類與命名總表](discussions/TD_SOURCE_NAMING_RESEARCH.md)：GLSL TOP／MAT 的 TD 名、Python 來源、共通別名候選、結構欄位與現況；附可篩選 CSV，研究完成、命名待審。
 - [來源選單分類表](discussions/TD_SOURCE_MENU_REVIEW.md)：總表審查後的第一級／第二級分組、六個時間預置、Texture 維度與來源集合；具體分類提案，尚未套用 UI。
+- [來源建構、型別與 MAT Attribute](discussions/SOURCE_ARCHITECTURE_REVIEW.md)：來源表／共用方法、建立與引用、結構雙出口及可擴充型別的討論共識；Attribute 預置與配置待釐清，尚未重構。
+- [Loop 與控制流程筆記](discussions/LOOPS_DISCUSSION.md)：Loop 子圖、bool 停止接口、Break／Discard／Return 邊界及自訂碼診斷；後續設計，不插入目前來源主線。
 - [陣列與結構後續計畫](discussions/ARRAY_AND_STRUCT_PLAN.md)：原始決策及執行期間補充定案；最新交付狀態以開發狀態為準。
 - [自含式圖封存提案](discussions/GRAPH_ARCHIVE_PROPOSAL.md)：另行評估隨圖打包節點實作與相依定義，尚未實作。
 - [接線轉換與背景工作提案](discussions/CONVERSION_AND_RUNTIME_NEXT.md)：現況、推薦方向與尚未定案的規則。
