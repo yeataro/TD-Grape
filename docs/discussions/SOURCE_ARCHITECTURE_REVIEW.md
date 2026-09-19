@@ -91,6 +91,12 @@ Matrix（矩陣）與 Attribute 的來源歸屬、各自配置及 Array Size 的
 
 輸入缺失需分辨「入口存在」「資料／Attribute 可用」與「Shader 可以讀取」；UI 可保留來源配置並提示未就緒，不自行把缺失內容當成零值。外部輸入在已套用後被拔除時，保留最後成功的 Shader 程式碼不等於保證 TD 仍能產生最後成功畫面。缺失輸入的產品行為與 recovery 仍需和來源功能一併驗證。
 
+### 本輪 Buffer 範圍定案
+
+Buffer 由使用者在 TD 端建立及配置；網頁讀取、顯示現有配置，並提供圖內引用／讀取能力。缺少來源、Attribute 或發生編譯錯誤時，呈現 TD 診斷，不自動補齊資料。網頁本輪不提供 Buffer 原生配置的建立／修改／刪除，也不自動增加 In CHOP／In POP、Attribute POP 或空資料 fallback。相同 POP 路徑被多個原生 Buffer 配置列使用，各列選取不同 Attribute 的情況依原生配置呈現，不額外建立一組輸入網路。此範圍僅針對 Buffer，不撤回 Uniform 的建立／編輯與 MAT Attribute 的已定範圍。
+
+隔離可行性探測另確認：TD 2025.32820 中，零點 Point Generator → Attribute POP → In POP 的路徑未能讓 GLSL TOP Buffer 找到自訂欄位；外接一點且有欄位的 POP 則能編譯及讀到預期值。此結果只描述測試路徑，不概括所有空 POP。使用者已決定不再為 Buffer 實作自動 fallback，該方案停止。私人報告：`work/reports/source-buffers/native-fallback-probe/result.json`。
+
 ## 接續順序
 
 ### 本輪執行範圍
@@ -120,7 +126,7 @@ TD vector Uniform 的 UI 依宣告型別顯示有效分量（float 一格、vec2
 - [ ] 共用來源資料表、預置初始化與分類資料，保留既有來源識別／原生值所有權。
 - [ ] Common Uniform 與一般 Uniform 的建立／引用流程、缺少的基本時間預置。
 - [ ] MAT Attribute 的原生配置、引用／修改、圖產碼、失敗保護及 UI。
-- [ ] Buffer 來源的配置／引用、讀取與長度能力：POP attribute buffer 與 CHOP Texture Buffer 分別確認及驗證。
+- [ ] Buffer 來源：讀取並顯示 TD 既有配置、圖內引用／讀取與長度能力、TD 診斷呈現；POP attribute buffer 與 CHOP Texture Buffer 分別驗證。建立及配置由使用者在 TD 操作，不建置自動輸入或 fallback。
 - [ ] 結構定義面板、巢狀型別引用、完整結構／欄位接口與局部 UI 更新。
 - [ ] 可沿用機制的來源內容補齊，TOP／MAT 回歸、TD 同步、逐批 Git／TOE 檢查點與交付說明。
 
