@@ -229,16 +229,26 @@ function mark(){
   try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}
   scheduleGraphApply();
 }
-function change(fn,{localize=true,redraw=true,typeChange=false}={}){
+// Only these node fields can bypass semantic editing. Keep labels, comments,
+// typeMode, interfaces, sources and unknown fields in the comparison.
+function layoutContent(document){
+  const fields=new Set(['x','y','width','height','collapsed','componentsExpanded','matrixColumnsExpanded']);
+  const scope=data=>({...data,nodes:data.nodes.map(node=>{
+    const copy={...node};if(node.ui){const ui=Object.fromEntries(Object.entries(node.ui).filter(([key])=>!fields.has(key)));if(Object.keys(ui).length)copy.ui=ui;else delete copy.ui;}return copy;
+  })});
+  return JSON.stringify({...document,stages:Object.fromEntries(Object.entries(document.stages).map(([key,data])=>[key,scope(data)])),...(document.functions?{functions:document.functions.map(fn=>({...fn,graph:scope(fn.graph)}))}:{})});
+}
+function change(fn,{localize=true,redraw=true,typeChange=false,layout=false}={}){
   if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
-  try{if(localize)prepareSemanticEdit();fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges});if(!typeChange)rejectNewConstantIssues(graph,previous);}
+  let layoutOnly=false;
+  try{if(localize)prepareSemanticEdit();fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges});if(!typeChange)rejectNewConstantIssues(graph,previous);}}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
   }
-  if(!recordGraphHistory(previous)){if(redraw)render();return true;}
-  mark();if(redraw)render();return true;
+  if(!recordGraphHistory(previous)){if(redraw)render({layoutOnly});return true;}
+  mark();if(redraw)render({layoutOnly});return true;
 }
 async function undo(redo=false){
   if(editorMutationBlocked())return false;
@@ -400,12 +410,12 @@ function transform(){
   $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;renderGraphZoom();wireGesture?.refresh?.();scheduleSelectionToolbarPosition();}
 function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();}
 function library(){renderLibrary();}
-function render(){renderCompileDiagnostics();
+function render({layoutOnly=false}={}){renderCompileDiagnostics();
   if(!graph)return;if(!graph.stages?.[stage])stage='pixel';
   document.querySelectorAll('[data-stage]').forEach(b=>{b.hidden=!graph.stages?.[b.dataset.stage];b.classList.toggle('active',b.dataset.stage===stage);});
   $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';
   $('#previewtitle').dataset.i18n=editorTarget==='top'?'preview.top':'preview.material';$('#previewtitle').textContent=t($('#previewtitle').dataset.i18n);renderPreviewAppearance();
-  tidyTrail();renderCards();renderGroupFrames();wires();inspector();library();declarations();renderNativeSources();transform();renderNavigation();renderSavedStateIssue();
+  tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();declarations();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();
 }
 function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('texture.input0')]]:[]),...[['builtin:banana',t('texture.banana')],['builtin:jellybeans',t('texture.jellybeans')],['builtin:white',t('texture.white')],['builtin:black',t('texture.black')],['external',t('texture.custom')]]]; }
 function declarations(){const box=$('#declarations');box.replaceChildren();for(const d of graph.declarations){const card=el('div',{class:'decl'});card.append(el('small',{},d.type+' · '+d.id));card.append(field(t('declaration.name'),input(d.name,v=>change(()=>d.name=v))));declarationFields(card,d);box.append(card);}}

@@ -224,7 +224,7 @@ function dragGroupFrame(event,frame,heading){
   window.addEventListener('pointermove',move,options);
   window.addEventListener('pointerup',e=>{
     if(e.pointerId!==event.pointerId||closed)return;move(e);if(closed)return;restore();finish();
-    if(moved&&(dx||dy)&&graph===owner&&current()===data&&!editorMutationBlocked())change(()=>{for(const p of positions){p.node.ui||={};p.node.ui.x=p.x+dx;p.node.ui.y=p.y+dy;}},{localize:false});else wires();
+    if(moved&&(dx||dy)&&graph===owner&&current()===data&&!editorMutationBlocked())change(()=>{for(const p of positions){p.node.ui||={};p.node.ui.x=p.x+dx;p.node.ui.y=p.y+dy;}},{localize:false,layout:true});else wires();
   },options);
   window.addEventListener('pointercancel',e=>{if(e.pointerId===event.pointerId)cancel();},options);
   heading.addEventListener('lostpointercapture',cancel,options);

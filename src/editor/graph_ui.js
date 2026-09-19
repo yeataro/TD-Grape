@@ -128,7 +128,7 @@ function dragNodeTitle(event,node,title,cards,onFinish){
     if(editorMutationBlocked()||graph!==owner||current()!==data){wires();return;}
     if(drop){commitGraphTrash(drop);wires();return;}
     if(library){render();savePersonalFunction(FunctionModel.find(graph,node.params.functionId));return;}
-    if(moved&&positions.some(p=>p.x!==p.nextX||p.y!==p.nextY))change(()=>{for(const p of positions){p.node.ui||={};p.node.ui.x=p.nextX;p.node.ui.y=p.nextY;}},{localize:false});else wires();
+    if(moved&&positions.some(p=>p.x!==p.nextX||p.y!==p.nextY))change(()=>{for(const p of positions){p.node.ui||={};p.node.ui.x=p.nextX;p.node.ui.y=p.nextY;}},{localize:false,layout:true});else wires();
   };
   title.onpointercancel=title.onlostpointercapture=cancel;
   nodeDragGesture={cancel};title.setPointerCapture(event.pointerId);window.addEventListener('blur',cancel);window.addEventListener('resize',cancel);document.addEventListener('keydown',key,true);
@@ -533,7 +533,7 @@ function appendMatrixNodeRows(list,n,portRow){
     const caption=parent.querySelector('.port-label'),toggle=el('button',{type:'button',class:'matrix-column-toggle','data-matrix-expand':String(column),'aria-expanded':String(expanded),'aria-label':t('node.expandValues')+' · '+matrixPortLabel(port),title:t('node.expandValues')+' · '+matrixPortLabel(port)});
     caption.replaceWith(toggle);toggle.append(el('span',{'aria-hidden':'true'},expanded?'▾':'▸'),caption);
     for(const event of ['pointerdown','dblclick'])toggle.addEventListener(event,e=>e.stopPropagation());
-    toggle.onclick=e=>{e.stopPropagation();change(()=>{n.ui||={};n.ui.matrixColumnsExpanded||=[];n.ui.matrixColumnsExpanded[column]=!expanded;},{localize:false});};
+    toggle.onclick=e=>{e.stopPropagation();change(()=>{n.ui||={};n.ui.matrixColumnsExpanded||=[];n.ui.matrixColumnsExpanded[column]=!expanded;},{localize:false,layout:true});};
     const values=el('span',{class:'matrix-compact-values node-inline-values'}),children=el('div',{class:'matrix-column-children'});
     for(let row=0;row<shape.rows;row++){
       const childPort=port+'xyzw'[row],connected=current().edges.some(e=>e[side][0]===n.id&&e[side][1]===childPort),visible=expanded||connected;
@@ -1237,7 +1237,7 @@ function setNodesCollapsed(ids,collapsed){
   const wanted=new Set(ids),nodes=current().nodes.filter(n=>wanted.has(n.id)&&(n.ui?.collapsed===true)!==collapsed);
   if(!nodes.length)return false;
   cancelValueLadder();cancelConnection();
-  return change(()=>{for(const node of nodes){node.ui||={};node.ui.collapsed=collapsed;}},{localize:false});
+  return change(()=>{for(const node of nodes){node.ui||={};node.ui.collapsed=collapsed;}},{localize:false,layout:true});
 }
 function nodeCollapseToggle(node){
   const collapsed=node.ui?.collapsed===true;
@@ -1380,7 +1380,7 @@ function dragNodeWidth(event,node,card,handle){
     if(e.pointerId!==event.pointerId||closed)return;move(e);if(closed)return;
     restore();finish();
     if(!editorMutationBlocked()&&graph===owner&&current()===data&&data.nodes.includes(node)&&moved&&(Math.abs(nextWidth-initialWidth)>.5||resizeHeight&&Math.abs(nextHeight-initialHeight)>.5)){
-      change(()=>{node.ui||={};node.ui.width=nextWidth;if(resizeHeight)node.ui.height=nextHeight;},{localize:false});
+      change(()=>{node.ui||={};node.ui.width=nextWidth;if(resizeHeight)node.ui.height=nextHeight;},{localize:false,layout:true});
       // A focused numeric draft can intentionally defer card replacement.
       if(card.isConnected)applyNodeWidth(card,node);
     }
@@ -1970,7 +1970,7 @@ function installTouchNavigation(canvas){
     if(g.mode==='edge'){clearPreview(g);wires();return;}
     if(g.mode==='node'){
       clearPreview(g);if(!editorMutationBlocked()&&current()===g.data&&g.positions.some(item=>item.x!==item.nextX||item.y!==item.nextY)){
-        change(()=>{for(const item of g.positions){item.node.ui||={};item.node.ui.x=item.nextX;item.node.ui.y=item.nextY;}},{localize:false});
+        change(()=>{for(const item of g.positions){item.node.ui||={};item.node.ui.x=item.nextX;item.node.ui.y=item.nextY;}},{localize:false,layout:true});
       }else wires();
     }else if(g.mode==='wire'){
       clearPreview(g);if(target)connectPorts(g.port,target);

@@ -177,7 +177,7 @@ function dragSelectionSpread(event,handle){
     restore();finish();
     if(valid()&&moved&&items.some(n=>Math.abs(positions.get(n.id).x-n.x)>.001||Math.abs(positions.get(n.id).y-n.y)>.001))change(()=>{
       for(const n of items){const p=positions.get(n.id);n.node.ui||={};n.node.ui.x=p.x;n.node.ui.y=p.y;}
-    },{localize:false});else wires();
+    },{localize:false,layout:true});else wires();
   },options);
   window.addEventListener('pointercancel',e=>{if(e.pointerId===event.pointerId)cancel();},options);handle.addEventListener('lostpointercapture',cancel,options);
   window.addEventListener('pointerdown',e=>{if(e.pointerId!==event.pointerId)cancel();},{...options,capture:true});
@@ -314,7 +314,7 @@ function arrangeSelection(kind){
       batch.forEach((n,col)=>{positions.set(n.id,{x,y});x+=widths[col]+GRID*2;});y+=Math.max(...batch.map(n=>n.height))+GRID*2;
     }
   }
-  return change(()=>{for(const n of current().nodes){const p=positions.get(n.id);if(p){n.ui||={};n.ui.x=Math.round(p.x*1000)/1000;n.ui.y=Math.round(p.y*1000)/1000;}}},{localize:false});
+  return change(()=>{for(const n of current().nodes){const p=positions.get(n.id);if(p){n.ui||={};n.ui.x=Math.round(p.x*1000)/1000;n.ui.y=Math.round(p.y*1000)/1000;}}},{localize:false,layout:true});
 }
 function openArrangeMenu(){
   const button=$('#grapharrange'),menu=$('#arrangemenu');if(button.disabled)return;
