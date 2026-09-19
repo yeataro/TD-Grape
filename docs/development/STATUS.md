@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.116 交付檢查點：來源 `91040dd` 已整合 main，32 份來源更新 2 份、9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 64），三份使用者 Shader 保留。正式 TOE 914,750 bytes，SHA-256 `3dd1d6cd908f270acaa247df0a7393eb05e95074c5fd3b90791d074ed56b20bf`，排除一份私人助手。未重新載入使用者頁面。
+
 2026-09-19 同步效能 B／C（0.8.116，來源檢查點）：保持原 API、650 ms 排程、成功 state／DAT 與原生套用保護，僅重用同編譯器／節點庫下已通過的純圖產碼結果，以及單份完全相同的成功 state 檢查。有限布局欄位不進產碼鍵；Label／註解、未知 UI、來源、函式與數值仍在鍵內。冷啟動／失效會完整檢查；沒有常駐 worker／輪詢或新增存檔。快取上限 8 份／序列化鍵與結果合计 4 MiB，另單份成功 state 最多 1 MiB 原文；不是 Python heap 大小保證。原生來源、版本競爭、manifest／shader DAT 核對照常執行。原生 TOP／MAT 的 16／101 節點布局同步暖態均由 6 次 Python 產碼降到 0，未新增 native compile／cook；完整 portable checks 通過。
 
 2026-09-19 0.8.115 交付檢查點：來源 `f6d2b68` 已整合 main，32 份嵌入來源更新 6 份、9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 63），三份使用者 Shader 保留。正式 TOE 913,294 bytes，SHA-256 `d8d148be42e4ffe51b631ea8e4bbdbd504861e70654a4deba4945e3641c1f37f`，排除一份私人助手。完整 portable checks 與 74 組瀏覽器檢查通過；未重新載入使用者 Editor。後端同步效能接續處理。
