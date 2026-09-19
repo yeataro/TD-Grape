@@ -93,7 +93,7 @@ Matrix（矩陣）與 Attribute 的來源歸屬、各自配置及 Array Size 的
 
 ### 本輪 Buffer 範圍定案
 
-Buffer 由使用者在 TD 端建立及配置；網頁讀取、顯示現有配置，並提供圖內引用／讀取能力。缺少來源、Attribute 或發生編譯錯誤時，呈現 TD 診斷，不自動補齊資料。網頁本輪不提供 Buffer 原生配置的建立／修改／刪除，也不自動增加 In CHOP／In POP、Attribute POP 或空資料 fallback。相同 POP 路徑被多個原生 Buffer 配置列使用，各列選取不同 Attribute 的情況依原生配置呈現，不額外建立一組輸入網路。此範圍僅針對 Buffer，不撤回 Uniform 的建立／編輯與 MAT Attribute 的已定範圍。
+實際資料來源 POP 與 CHOP 均由使用者在 TD 自行建立並指定；網頁使用指定來源，讀取、顯示並提供圖內引用／讀取能力。缺少來源、Attribute 或發生編譯錯誤時，呈現 TD 診斷，不自動補齊資料。不自動增加 In CHOP／In POP、Attribute POP 或空資料 fallback。相同 POP 路徑被多個原生 Buffer 配置列使用，各列選取不同 Attribute 的情況依原生配置呈現，不額外建立一組輸入網路。「不建立來源」指不代建實際資料 OP，不應據此推導出所有 Buffer 綁定設定都禁止編輯；Buffer 綁定入口與來源 OP 建立需分清楚。此範圍不撤回 Uniform 的建立／編輯與 MAT Attribute 的已定範圍。空 CHOP 本身不要求自動補通道或資料，仍依真正的 TD 診斷處理。
 
 隔離可行性探測另確認：TD 2025.32820 中，零點 Point Generator → Attribute POP → In POP 的路徑未能讓 GLSL TOP Buffer 找到自訂欄位；外接一點且有欄位的 POP 則能編譯及讀到預期值。此結果只描述測試路徑，不概括所有空 POP。使用者已決定不再為 Buffer 實作自動 fallback，該方案停止。私人報告：`work/reports/source-buffers/native-fallback-probe/result.json`。
 
