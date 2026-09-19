@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 0.8.120 原生交付：34 份 DAT、10 份服務資源、Master current、core／Uniform 通道及三份 Shader 保留核對通過。熱更新過程中一筆舊 HTTP 連線於 503 回應序列化時出現 `NameError: json`（私人 refresh 報告保留）；同步後確認 runtime globals／accepting 正常，以新 HTTP 連線連續讀取 HTML、CSS、JS 均為 200，JSON 回應正常（未指定 Shader 的根 API 回預期 422）。此次未更改熱更新程序；這筆更新期間的錯誤不視為已修正，也未推定為使用者之前連線提示的根因。TOE 保存成功，未操作使用者瀏覽器。
+
 2026-09-19 連線提示卡（0.8.120）：完整 `tools/dev/run_tests.py` 通過；`test_connection_recovery.cjs` 既有 8 組通過，涵蓋 401／403／503、逾時、版本衝突、422 與失去回覆時不重送 Apply、不覆蓋草稿。私人 `work/connection-card/inspect.cjs` 在桌面、專注編輯、390px 手機、手機專注、橫向、125% 淺色與非浮動工具列等 7 情境檢查：提示顯示／隱藏／展開不改 canvas、toolbar、stage、路徑及底部控制項矩形；卡片留在畫布內、工具列下，不隨 pan／zoom 移動。點擊、拖曳、wheel、文字區快捷鍵與觸控展開不改圖／Undo／選取／視野；窄版說明可捲動。已檢視桌面、手機與淺色截圖；此為隔離 Chromium 及觸控模擬，不是 iOS 實機驗收。頁首、About 與 runtime 版號一致核對為 0.8.120。
 
 ## Uniform 完整即時通道回歸

@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.120 交付檢查點：來源 `9c71185` 已整合 main，同步 6 份 DAT；34 份來源及 10 份核對的服務資源一致，TOP／MAT Master current（revision 68），core 與 Uniform WebSocket 無錯誤，三份使用者 Shader 保留。頁首、About、TD runtime 實際服務版號均為 0.8.120。正式 TOE 925,846 bytes，SHA-256 `e95529a82104bbdbcb125140ceaa41149a40109dc09bcbefe7b9529699bd26a2`，排除一份私人助手。私人報告 `connection-card-{refresh,masters,audit,version,save}-20260919`；未重新整理使用者既有 Editor。
+
 2026-09-19 0.8.120 來源檢查點：TD 連線提示改為畫布上方、工具列下方的半透明浮動卡片，加入靜態警告三角形；一般／專注編輯皆可見，不佔版面或推動工具列。沿用工具列 ResizeObserver 的高度資料定位，卡片文字、捲動、按鈕與觸控不觸發畫布操作。連線判斷、重試、同步與編輯規則未變。修正頁首與 About 長期停留 0.8.90 的版號，與 runtime 統一為 0.8.120，將三處核對納入交付流程。完整 portable checks、既有連線恢復 8 組、隔離版面與互動 7 情境通過；TD 同步與 TOE 保存另記。
 
 2026-09-19 研究檢查點：完成 [TD 來源分類與命名總表](../discussions/TD_SOURCE_NAMING_RESEARCH.md) 與 CSV，涵蓋 GLSL TOP／MAT 公開來源家族、結構欄位、函數附表及既有版本差異。命名與分類為審查稿；沒有產品程式、UI、版本或 TOE 變更，也未執行新 Shader 驗證。產品仍以以下 0.8.119 交付狀態為準。
