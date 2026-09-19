@@ -12,9 +12,6 @@ import socket
 import time
 from urllib.parse import urlsplit, parse_qs
 
-service = None
-
-
 def constant(p):
     return str(p.mode).endswith('CONSTANT')
 
@@ -128,7 +125,7 @@ class Live:
         dat = self.runtime._owner.create(parameterexecuteDAT, 'uniform_watch_'+secrets.token_hex(6))
         dat.store('grapeUniformWatcher', True)
         dat.par.active = False
-        dat.text = "def onValueChange(par, *args):\n    live = parent().op('live').module.service\n    if live: live.metadata_changed(par)\ndef onModeChange(par, prev):\n    onValueChange(par)\n"
+        dat.text = "def onValueChange(par, *args):\n    live = parent().op('runtime').module._live\n    if live: live.metadata_changed(par)\ndef onModeChange(par, prev):\n    onValueChange(par)\n"
         dat.par.op = self.runtime.shader_operator(comp).path
         dat.par.pars = 'vec*name vec*type color*name color*type matrix*name array*name array*type array*chop array*arraytype const*name const*type'
         dat.par.builtin = True; dat.par.custom = False
@@ -353,7 +350,9 @@ class Live:
 
 
 def start(runtime, lan, preserve_port=False):
-    global service
+    # The runtime owns the session. TD can recreate the callback DAT's Python
+    # namespace independently; a second module global would lose its tickets.
+    service = runtime._live
     if service: service.stop()
     owner = runtime._owner
     for dat in list(owner.children):
@@ -381,6 +380,7 @@ def start(runtime, lan, preserve_port=False):
     else:
         service.runtime, service.server, service.lan = runtime, server, lan
         service.model = runtime.source_module()
+    runtime._live = service
     server.par.active = True
     return port
 
@@ -391,15 +391,18 @@ def onHTTPRequest(dat, request, response):
 
 
 def onWebSocketOpen(dat, client, uri):
+    service = dat.parent().op('runtime').module._live
     if service: service.open(client, uri)
     else: dat.webSocketClose(client)
 
 
 def onWebSocketClose(dat, client):
+    service = dat.parent().op('runtime').module._live
     if service: service.close(client)
 
 
 def onWebSocketReceiveText(dat, client, data):
+    service = dat.parent().op('runtime').module._live
     if service: service.message(client, data)
 
 

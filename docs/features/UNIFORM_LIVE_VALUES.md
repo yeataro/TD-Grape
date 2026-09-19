@@ -1,6 +1,8 @@
-# Uniform 即時數值（0.8.118）
+# Uniform 即時數值（0.8.119）
 
 2026-09-19：先交付 Uniform 連續編輯，再從實際需求抽出共用能力；不先建立完整 TD 遠端 OP／Parameter 管理架構。開始前固定 `checkpoint/pre-uniform-live-0.8.117`（`c9212f6`，含已驗證 TOE）。
+
+0.8.119 修正實際交付後的連線失敗：HTTP 持有有效的 `runtime._live`，但 WebSocket 回呼所讀取的 `live` DAT 模組全域 `service` 為空，導致票證簽發成功後立即斷線。頁面因而退回放開才送出的 HTTP 編輯與定時讀值。現在由 `runtime._live` 單一持有服務；WebSocket 與 metadata 回呼都從 runtime 取得同一實例，不依賴回呼 DAT 的 Python namespace 存活。先前原生／模擬瀏覽器／獨立 wire 測試未覆蓋完整交付入口，不能作為實際連續同步成功的證明。
 
 ## 本批範圍
 
@@ -32,6 +34,7 @@ HTTP 維持既有入口；經過現有 Host／Origin／token 驗證的 `live-tic
 - `tests/td/test_uniform_live.py`：200 來源成本、ticket 重播拒絕、gesture／Undo／Escape／斷線回執、外部衝突、owned Bind／master mode 變更、原使用者 Shader 保留。
 - `tests/browser/test_uniform_live.cjs`：按住即更新、一次 history、取消、慢回覆合併／最終值、文字輸入、TD 值回傳、連線故障與圖狀態隔離。
 - `tests/browser/test_uniform_wire.cjs`：獨立 TD fixture 的原生 WebSocket 連線、雙 subscriber、同分量 writer 衝突。
+- `tests/browser/test_uniform_editor_live.cjs` 搭配 `tests/td/uniform_editor_fixture.py`：完整產品 HTTP 初始化與簽票、原生 WebSocket、實際瀏覽器滑鼠按住時多次檢查 TD Par，直接改 TD Par 後確認 UI 推送、一次 Undo／Redo、重新整理後重連。0.8.119 在 loopback 與本機 Tailscale 位址通過；圖、版本與 Shader DAT 不變，未走 HTTP `source-value` fallback。fixture 清除並核對原使用者 Shader 不變。
 - 真實 iOS／平板的操作手感由使用者驗收；本批不宣稱已完成實機 iOS 測試。
 
 後續以同樣契約擴充其他可即時編輯的宿主值；matrix／array／通用 Parameter 頁面仍各自界定，不把值、來源結構、圖文件混成同一種更新。

@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.118'
+PRODUCT_VERSION='0.8.119'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1950,14 +1950,14 @@ def local_viewer_request(peer, destination, host, headers, body):
 
 def start_uniform_live(owner,enabled,session=None):
     global _live_port,_live,_live_error
-    _live_port=_live=None;_live_error=''
+    _live_port=None;_live_error=''
     node=owner.op('live')
     if node:
         try:
             _live_port=node.module.start(owner.op('runtime').module,enabled,preserve_port=bool(session))
-            _live=node.module.service
         except Exception as exc:
             # The HTTP editor remains available when the live service fails.
+            _live=None
             _live_error=str(exc)
 
 def start(owner,session=None):

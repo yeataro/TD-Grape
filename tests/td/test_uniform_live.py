@@ -22,15 +22,20 @@ try:
     with r.shader_context(shader): seen = r.process_shader_request('GET', '/api/sources', {})
     class Server:
         def __init__(self): self.messages=[]; self.closed=[]
+        def parent(self): return manager
         def webSocketSendText(self, client, text): self.messages.append((client,json.loads(text)))
         def webSocketClose(self, client): self.closed.append(client)
     server = Server(); live = module.Live(r, server, False)
-    module.service = live
+    r._live = live
     live.tickets['ticket']=(time.monotonic()+10,shader)
-    live.open('127.0.0.1:5000','/uniforms?ticket=ticket'); client='127.0.0.1:5000'
+    # TD callbacks may run in a fresh DAT namespace, outside dat.module.
+    callbacks = {}
+    exec(compile(manager.op('live').text, 'fresh-live-callbacks', 'exec'), callbacks)
+    callbacks['onWebSocketOpen'](server,'127.0.0.1:5000','/uniforms?ticket=ticket'); client='127.0.0.1:5000'
     assert server.messages[-1][1]['type']=='ready'
     live.open('127.0.0.1:5001','/uniforms?ticket=ticket'); assert '127.0.0.1:5001' in server.closed
     checks.append('authenticated, one-use tickets; replay rejected')
+    checks.append('fresh callback namespace uses the HTTP runtime session and tickets')
     def send(kind, **body):
         live.message(client,json.dumps(dict(type=kind,request=len(server.messages),**body)))
         return server.messages[-1][1]

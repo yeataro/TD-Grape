@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.119 來源檢查點：使用者回報 Uniform 仍放開才同步，完整真實網頁入口重現票證 200、WebSocket 立即關閉。HTTP 的 `runtime._live` 存在而回呼 DAT 的 `service` 為空；改由 runtime 統一持有，HTTP／WebSocket／metadata 回呼共用同一實例。完整 portable checks（466 Python 單元測試）與 10 組 TD 回歸通過；新增完整網頁／TD fixture，在 loopback 與 Tailscale 位址各驗證按住時連續更新、TD 改值推送、單次 Undo／Redo、reload 重連。值更新不寫圖或 Shader，三份使用者 Shader 保留。同步與 TOE 保存另記；未宣稱偶發卡頓已解決或已完成 iOS 實機驗收。
+
 2026-09-19 0.8.118 交付檢查點：來源 `83dfec0`、連線生命週期 `7e859b1`、延遲取消／Undo `78bb716` 已整合 main。34 份內嵌來源與 10 份核對的服務資源一致；core／Uniform WebSocket 無錯誤，TOP／MAT Master current（revision 66），三份使用者 Shader 保留。正式 TOE 924,550 bytes，SHA-256 `771e20e2363cccfc6a64aee5ad8e59b4a17069eeae4bde91ea6f2377817f317f`，排除一份私人助手。最終 portable checks 通過；回歸與範圍見下文。未強制重新載入使用者頁面。
 
 2026-09-19 Uniform 即時數值（0.8.118，來源檢查點）：先交付 scalar／vector／Color Uniform 的數值通道，保留 HTTP 圖提交與其他設定。TD 原生 Web Server DAT、一次性 ticket、按需來源訂閱；連續拖曳合併為最多一個在途更新，結束只記一筆 Undo。值不進圖／版本／產碼；控件不作全域 busy 切換。名稱／型別改用 Parameter Execute 通知，排除實測約 26 ms 的 200 來源定時掃描；改後訂閱讀取與 sequence 數檢查約 0.07 ms。原生 9 組、真實 WebSocket 4 組、既有 TD 來源／history 42 組、瀏覽器 38 組通過；完整 portable checks 通過。功能與限制見 [Uniform 即時數值](../features/UNIFORM_LIVE_VALUES.md)。修改前版本固定於 `checkpoint/pre-uniform-live-0.8.117`。來源提交後再同步與保存 TOE；iOS 實機仍待使用者 review。
