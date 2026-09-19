@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-19 畫布選取：`test_canvas_selection.cjs` 7 組驗證無選取／单／多／群組／接線取消、pan、marquee、觸控雙擊與拉線開啟 creator，以及失焦提交數值仍是一筆 Undo；比對 graph／history／dirty、DOM identity 與 API 請求，防止透過整圖 render 處理純選取。12 組既有 selection toolbar、15 組 Parameter 通過。私人 `reports/canvas-click-round/{before,after}.json` 保存 16／101 節點的同探針前後計時；沒有將單次 JS 耗時等同於實際 GPU 幀率。
+
+同輪擴大回歸的限制：舊 `test_inline_vector_values.cjs` 仍尋找已不存在的 `data-vector-expand`，`test_touch_editing.cjs` 在開啟無實體預覽的 fixture 中拖曳未提交；兩者使用修改前 HEAD 的 editor 亦於相同位置失敗，並非本次新增通過項目。關閉 fixture 預覽後，touch 測試可前進至第二指取消接線的既有失敗；後續需獨立更新這兩份舊測試，本輪不擴大修改產品行為。
+
 2026-09-19 HTTP 初始化：`test_lan_access.py` 新增同一 socket 連續讀 24 個資源／API、未授權 POST 關閉且不寫入、帶 body 的靜態 GET 關閉、rebind 後舊 keep-alive 連線回 503 且不執行寫入。與 share links 共 21 項通過。私人 `reports/canvas-click-round/reload-http10.json`／`reload-http11.json` 保留實際 TD 服務 Chromium A/B：前者 5/6 次腳本連線失敗，後者 6/6 次資源完整；根路徑 API 的 422 是未指定 Shader，與資源載入失敗分開記錄。完整 Shader 頁面驗證隨正式同步執行。
 
 2026-09-19 FPS Low／Min：`test_fps_display.cjs` 4 組驗證 99／100 幀暖機界線、200 幀中兩個慢幀的平均換算、單幀 Min、讀取不改變樣本、精確 10 秒淘汰、buffer wrap／極端容量溢出；使用假的 rAF 驗證 FPS 回復 60 時 Low=2、Min=1 保留之前的 1,000ms 單幀尖峰，過期後均恢復 60。維持 10Hz 曲線／每秒數字、背景暫停、無 graph／history／wires 變更與 320／390px 排版。既有 experiments 20 組與 693 雙語鍵通過，tooltip 使用共用翻譯處理。私人 `reports/fps-low-round` 保留結果、截圖及 7,200 次合成 120Hz callback 的命令提交計時；不是 GPU／實機 iOS 效能保證。

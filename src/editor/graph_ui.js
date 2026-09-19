@@ -1131,6 +1131,19 @@ function selectNode(n,toggle=false){
   else {selection=new Set([n.id]);selected=n.id;}
   selectedEdge=null;renderGraphEditActions();
 }
+function refreshCanvasSelection(){
+  // Selection changes do not change node contents, port geometry or the library.
+  // Keep those DOM trees intact; only update selection decoration and controls.
+  for(const card of document.querySelectorAll('#cards .node'))card.classList.toggle('selected',selection.has(card.dataset.node));
+  for(const path of document.querySelectorAll('#wires path.selected'))path.classList.remove('selected');
+  const frames=new Map(GraphFrames.read(current()).map(frame=>[frame.id,frame]));
+  for(const card of document.querySelectorAll('#groupframes .group-frame'))card.classList.toggle('selected',frames.get(card.dataset.frame)?.nodes.every(id=>selection.has(id))||false);
+  inspector();renderNavigation();
+}
+function clearCanvasSelection(){
+  if(selected===null&&selectedEdge===null&&selection.size===0)return;
+  selected=selectedEdge=null;selection.clear();refreshCanvasSelection();
+}
 function connectionProblem(start,end){
   if(start.kind===end.kind)return 'direction';
   const from=start.kind==='outputs'?start:end,to=start.kind==='inputs'?start:end;
@@ -1774,8 +1787,8 @@ function installGraphInteractions(){
       }else {pan={x:ox+(ev.clientX-sx)/uiScaleFactor(),y:oy+(ev.clientY-sy)/uiScaleFactor()};transform();}
     };
     canvas.onpointerup=ev=>{canvas.onpointermove=null;canvas.onpointerup=null;$('#marquee').hidden=true;
-      if(boxSelect&&moved){selected=[...selection].at(-1)||null;selectedEdge=null;suppressContext=e.button===2;render();}
-      else if(!moved&&e.button===0){if(linkStart)finishWireOnBlank(linkStart,ev.clientX,ev.clientY);else {selected=null;selection.clear();selectedEdge=null;render();}}
+      if(boxSelect&&moved){selected=[...selection].at(-1)||null;selectedEdge=null;suppressContext=e.button===2;refreshCanvasSelection();}
+      else if(!moved&&e.button===0){if(linkStart)finishWireOnBlank(linkStart,ev.clientX,ev.clientY);else clearCanvasSelection();}
     };
     canvas.onpointercancel=()=>{canvas.onpointermove=null;canvas.onpointerup=null;$('#marquee').hidden=true;};
   };
@@ -1924,7 +1937,7 @@ function installTouchNavigation(canvas){
       if(double){if(g.rename){const label=$('#cards').querySelector('[data-node="'+g.node.id+'"] .node-title-text>span');if(label)beginNodeRename(g.node,label);}else if(definition(g.node)?.key==='function_call')enterFunction(g.node);}
     }else if(g.edge>=0)selectEdge(g.edge);
     else if(double||linkStart){const start=linkStart;lastTap=null;if(start)finishWireOnBlank(start,p.x,p.y);else openCreator(p.x,p.y);}
-    else {selected=selectedEdge=null;selection.clear();syncSelection();inspector();renderNavigation();}
+    else clearCanvasSelection();
   };
   canvas.addEventListener('pointerdown',e=>{
     if(e.pointerType!=='touch'||!graph||editable(e.target))return;stop(e);lastDevice='touch';lastTouch=performance.now();canvas.dataset.input='touch';
