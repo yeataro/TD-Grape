@@ -97,6 +97,10 @@ Matrix（矩陣）與 Attribute 的來源歸屬、各自配置及 Array Size 的
 
 隔離可行性探測另確認：TD 2025.32820 中，零點 Point Generator → Attribute POP → In POP 的路徑未能讓 GLSL TOP Buffer 找到自訂欄位；外接一點且有欄位的 POP 則能編譯及讀到預期值。此結果只描述測試路徑，不概括所有空 POP。使用者已決定不再為 Buffer 實作自動 fallback，該方案停止。私人報告：`work/reports/source-buffers/native-fallback-probe/result.json`。
 
+空清單提示：成功取得的相關來源清單沒有已配置項目時，在清單下方顯示「請先在 TouchDesigner 建立並配置來源」；已有項目即隱藏該提示。只在搜尋後沒有結果、仍在載入或連線失敗時，不誤顯示成尚未建立來源；既有項目的錯誤診斷也不因清單非空而隱藏。
+
+使用者另要求區分未指定 CHOP 路徑與指定空 In CHOP。同版 TD 的補測結果：CHOP 路徑完全留白時，Texture Buffer 與固定長度 Uniform Array 均可編譯，但 TD 會警告 Uniform 未指派、要求在 Arrays 頁設定；POP 路徑留白時，本次讀取程式因缺少 TDBuffer 函式而編譯失敗。上述結果不代表空資源取值有保證，產品應保留原生警告／錯誤。重現腳本與報告沿用 `probe_buffer_sources.py`／`native-empty-probe`。
+
 ## 接續順序
 
 ### 本輪執行範圍

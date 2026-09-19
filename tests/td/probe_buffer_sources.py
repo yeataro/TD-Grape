@@ -63,12 +63,13 @@ try:
     native.par.buffer0name = 'Probe'
     native.par.buffer0attrclass = 'point'
     for label, pop_source, attribute in (
+        ('pop_unspecified', None, 'P'),
         ('pop_missing_input', empty_pop, 'P'),
         ('pop_valid_position', data_pop, 'P'),
         ('pop_missing_attribute', data_pop, 'DefinitelyMissing'),
     ):
         note('case.before', label=label)
-        native.par.buffer0pop = pop_source
+        native.par.buffer0pop = pop_source if pop_source is not None else ''
         native.par.buffer0attr = attribute
         pixel.text = ('layout(location=0) out vec4 fragColor;\n'
                       'void main(){ vec3 v = TDBuffer_Probe(0); '
@@ -90,9 +91,9 @@ try:
     native.par.array0name = 'uProbe'
     native.par.array0type = 'float'
     native.par.array0arraytype = 'texturebuffer'
-    for label, chop_source in (('chop_missing_input', empty_chop), ('chop_valid', data_chop)):
+    for label, chop_source in (('chop_unspecified', None), ('chop_missing_input', empty_chop), ('chop_valid', data_chop)):
         note('case.before', label=label)
-        native.par.array0chop = chop_source
+        native.par.array0chop = chop_source if chop_source is not None else ''
         pixel.text = ('uniform samplerBuffer uProbe;\nlayout(location=0) out vec4 fragColor;\n'
                       'void main(){ fragColor=TDOutputSwizzle(texelFetch(uProbe,0)); }\n')
         cook(native)
@@ -100,6 +101,15 @@ try:
         report['cases'].append(dict(label=label, **state(native), compile=info.text))
         (output / 'result.json').write_text(json.dumps(report, indent=2, default=str), encoding='utf-8')
         note('case.after', label=label)
+    native.par.array0arraytype = 'uniformarray'
+    native.par.array0chop = ''
+    pixel.text = ('uniform float uProbe[4];\nlayout(location=0) out vec4 fragColor;\n'
+                  'void main(){ fragColor=TDOutputSwizzle(vec4(uProbe[0])); }\n')
+    note('case.before', label='uniform_array_unspecified')
+    cook(native)
+    cook(info)
+    report['cases'].append(dict(label='uniform_array_unspecified', **state(native), compile=info.text))
+    note('case.after', label='uniform_array_unspecified')
 finally:
     note('cleanup.before', op=area.path)
     area.destroy()
@@ -107,6 +117,10 @@ finally:
     (output / 'result.json').write_text(json.dumps(report, indent=2, default=str), encoding='utf-8')
 
 cases = {case['label']: case for case in report['cases']}
+assert 'ERROR:' in cases['pop_unspecified']['compile'], cases['pop_unspecified']
+for label in ('chop_unspecified', 'uniform_array_unspecified'):
+    assert not cases[label]['errors'] and 'ERROR:' not in cases[label]['compile'], cases[label]
+    assert 'uProbe' in cases[label]['warnings'] and 'Arrays page' in cases[label]['warnings'], cases[label]
 assert not cases['pop_valid_position']['errors'], cases['pop_valid_position']
 for label in ('pop_missing_input', 'pop_missing_attribute'):
     assert 'not found' in cases[label]['errors'], cases[label]
