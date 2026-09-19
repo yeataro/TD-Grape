@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.119 交付檢查點：來源 `b5295d2` 已整合 main，同步 runtime／live 兩份 DAT；34 份來源與 10 份服務資產一致，TOP／MAT Master current（revision 67），三份使用者 Shader 保留。正式入口保存前後均確認 WebSocket ready／來源訂閱成功、無頁面錯誤。TOE 已保存 924,694 bytes，SHA-256 `5e7feaf088364a714269eb9299d250eeadecf1466000723caf0adf082229b649`，排除一份私人助手。本批只改後端，既有 0.8.118 網頁可自動重連；沒有強制重新整理使用者頁面。
+
 2026-09-19 0.8.119 來源檢查點：使用者回報 Uniform 仍放開才同步，完整真實網頁入口重現票證 200、WebSocket 立即關閉。HTTP 的 `runtime._live` 存在而回呼 DAT 的 `service` 為空；改由 runtime 統一持有，HTTP／WebSocket／metadata 回呼共用同一實例。完整 portable checks（466 Python 單元測試）與 10 組 TD 回歸通過；新增完整網頁／TD fixture，在 loopback 與 Tailscale 位址各驗證按住時連續更新、TD 改值推送、單次 Undo／Redo、reload 重連。值更新不寫圖或 Shader，三份使用者 Shader 保留。同步與 TOE 保存另記；未宣稱偶發卡頓已解決或已完成 iOS 實機驗收。
 
 2026-09-19 0.8.118 交付檢查點：來源 `83dfec0`、連線生命週期 `7e859b1`、延遲取消／Undo `78bb716` 已整合 main。34 份內嵌來源與 10 份核對的服務資源一致；core／Uniform WebSocket 無錯誤，TOP／MAT Master current（revision 66），三份使用者 Shader 保留。正式 TOE 924,550 bytes，SHA-256 `771e20e2363cccfc6a64aee5ad8e59b4a17069eeae4bde91ea6f2377817f317f`，排除一份私人助手。最終 portable checks 通過；回歸與範圍見下文。未強制重新載入使用者頁面。
