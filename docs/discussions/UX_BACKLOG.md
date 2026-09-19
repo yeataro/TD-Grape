@@ -19,9 +19,13 @@
 
 陣列（含 Array Create）已由使用者操作確認本輪功能正常並暫告一段落；搜尋效能與排序、矩陣四則／分層型別選單、右鍵分組與既有操作入口、工具列收納、Open Editor 不更動既有 Viewer、H／F 與插值、FPS 面板及重新整理缺 UI 的已交付修正，均不因舊文件的「待辦」用語重開。完整交付紀錄見 [開發狀態](../development/STATUS.md)。
 
-### Common Uniforms（命名方向已確認，能力清單待討論）
+### Common Sources 與 Custom Uniforms（分類整理中，尚未實作）
 
-使用者採用 Common Uniforms／共通 Uniform 的名稱，詢問以 ISF、TD、Shadertoy 的共同能力應選哪些。以下是調查後的候選建議，不是實作授權或跨宿主支援承諾；本輪先以影像 Shader（TD GLSL TOP）對照，MAT 的 render context 另行核對。
+使用者最初採用 Common Uniforms／共通 Uniform 的名稱，詢問以 ISF、TD、Shadertoy 的共同能力應選哪些；後續指出現有 Texture Coordinates 也適合歸入這類，但它不是 Uniform。因此助手建議分類使用 Common Sources／共通來源，以共同的環境來源入口涵蓋時間、解析度、座標；保留 Uniform、varying、片段內建值各自的 GLSL 性質，不因分到同類就轉成 Uniform。
+
+使用者明確指定原本自行建立與設定的 Uniform 類別改稱 Custom Uniform／自訂 Uniform；分類英文採複數 Custom Uniforms，單一項目為 Custom Uniform。此為 UI 分類命名方向，不更動 TD Parameter 所有權、來源 ID、圖引用、GLSL 宣告或控制模式；也不把 TD Built In 的全部內容直接併入 Common。實際入口、分類範圍與既有時間預置如何呈現仍隨本輪整理，未批次更名或遷移來源。
+
+以下是調查後的候選建議，不是實作授權或跨宿主支援承諾；本輪先以影像 Shader（TD GLSL TOP）對照，MAT 的 render context 另行核對。
 
 | 候選名稱 | 型別與目的 | ISF | Shadertoy | TD 映射界線 |
 | --- | --- | --- | --- | --- |
