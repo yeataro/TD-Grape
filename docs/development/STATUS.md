@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.122 Uniform 分量 UI 檢查點：Parameter 依宣告顯示 1–4 格，使用一般數值元件的共同分量排版；隱藏的原生分量不修改。Expression／CHOP Export 不再顯示數值滑桿，改顯示模式（窄格 Export，提示完整 CHOP Export）；Constant 與原本允許寫入的 Bind 保留控制。值更新不重建控制、靜態模式文字或驅動說明；模式改變只替換自己的格子。完整 portable checks、來源互動 13 組、即時通道 8 組與新分量顯示 6 組通過。來源互動測試中舊 Uniform 出口名稱預期在既有版本也已失效，調整為目前 out 出口規則後全數通過。本批尚未擴大 Bind 寫入支援，也未加入來源卡片或圖內控制；後续需一併整理可見來源即時訂閱。
+
 2026-09-20 0.8.121 交付檢查點：`0fbbcca` 與熱更新修正 `9784c97` 已同步 TD。首次熱更新因新 DAT 晚於引用模組建立而載入失敗；已修正依賴順序並在刷新後檢查 type contract，按依賴順序重載恢復。之後 36 份 DAT／9 份 HTTP 資源、TOP／MAT Master（revision 69）、core 無錯誤與三份使用者 Shader 保留均通過。正式 TOE 941,414 bytes，SHA-256 `4eae8a6fdee465daefe7932dea0b437d1be4355a2cee3c40bdaf762d912ba38b`。報告 `work/reports/source-catalog/`；未重新整理使用者網頁。
 
 2026-09-20 0.8.121 來源表檢查點：新增共用 `source_catalog.json`，編譯器、TD 初始化與 UI 由同一份表讀取預置。既有四個時間來源保留 ID／名稱，新增 Delta Time（`absTime.stepSeconds`）與 Frame Step（`absTime.step`），只在新來源建立時填入 Expression；既有 TD 值／模式不重設。內建結構、來源陣列與長度巨集搬入同表，舊型別與產碼維持相容。完整 portable checks（470 個 Python 測試及 JS／整合檢查）與隔離 TOP／MAT 六項原生檢查通過。這一批完成共用資料入口；來源卡片、結構編輯面板、圖內 Uniform 控制、MAT Attribute 與 Buffer UI 仍接續實作。

@@ -1000,8 +1000,8 @@
       "en": "Synced with TD; edit the current value in either interface."
     },
     "uniform.driven": {
-      "zh-Hant": "由 TD Expression / Export / Bind 控制的分量只顯示結果，其餘分量仍可編輯。",
-      "en": "Components driven by TD Expression / Export / Bind show evaluated values; other components remain editable."
+      "zh-Hant": "Constant／可寫入的 Bind 分量可編輯；Expression／CHOP Export 顯示模式。",
+      "en": "Edit Constant or writable Bind components. Expression / CHOP Export components show their mode."
     },
     "uniform.waiting": {
       "zh-Hant": "等待已套用圖的 TD 參數；圖有變更時請先完成套用。",

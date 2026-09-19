@@ -42,3 +42,8 @@
 `src/library/source_catalog.json` owns preset names, initialization expressions, UI label keys and host/stage availability. `sgrape_source_catalog` reads the embedded DAT in TD or the same file in portable tools. Native setup and compiler validation share these keys; UI receives the preset projection through the type contract. Initialization does not query or serialize live TD values.
 
 The six presets are absolute time/frame, timeline time/frame, Delta Time (`absTime.stepSeconds`), and Frame Step (`absTime.step`). All retain float output. Existing sources keep their native values and modes across graph Apply. Duplicate native creation still rejects instead of overwriting an existing source.
+
+
+## Declared components (0.8.122)
+
+The Parameter view uses the same component grid and scalar input behavior as ordinary values. It presents only the declared dimensions; dormant TD components remain untouched. Each Expression or CHOP Export component displays its mode in place of a slider. Constant and supported Bind components remain independently editable. Value updates patch controls in place; mode changes replace only the affected slot. The existing native write-permission and live gesture rules are unchanged. Source cards, inline graph controls and broader Bind-target support remain separate follow-up work.

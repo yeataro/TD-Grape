@@ -458,6 +458,15 @@ function typedScalarInput(value,family,commit){
   }
   return entry;
 }
+function componentGrid(count){
+  const box=el('div',{class:'components'+(count===1?' scalar':'')});
+  box.style.setProperty('--component-count',count);return box;
+}
+function componentField(entry,index,count,label,labels='XYZW'){
+  const row=field('',entry),caption=el('span',{class:'component-label','aria-hidden':'true'},count>1?labels[index]:label);
+  if(count>1){applyComponentColorHint(caption,index,labels==='RGBA');applyComponentColorHint(entry,index,labels==='RGBA');}
+  row.prepend(caption);return row;
+}
 function numbers(value,label,callback,disabled=false,labels='XYZW',type=null){
   const shape=typeContract?.types?.[type];
   if(shape?.shape==='matrix'){
@@ -469,9 +478,8 @@ function numbers(value,label,callback,disabled=false,labels='XYZW',type=null){
     }
     return box;
   }
-  const values=Array.isArray(value)?value:[value],box=el('div',{class:'components'+(values.length===1?' scalar':'')});
+  const values=Array.isArray(value)?value:[value],box=componentGrid(values.length);
   const family=type?typeFamily(type):typeof values[0]==='boolean'?'bool':'float';
-  box.style.setProperty('--component-count',values.length);
   values.forEach((v,index)=>{
     const entry=typedScalarInput(v,family,next=>{
       const updated=values.slice();updated[index]=next;
@@ -479,8 +487,7 @@ function numbers(value,label,callback,disabled=false,labels='XYZW',type=null){
     });
     entry.setAttribute('aria-label',label+(values.length>1?' '+labels[index]:''));
     entry.disabled=disabled||readonly;
-    const row=field('',entry),caption=el('span',{class:'component-label','aria-hidden':'true'},values.length>1?labels[index]:label);
-    if(values.length>1){applyComponentColorHint(caption,index,labels==='RGBA');applyComponentColorHint(entry,index,labels==='RGBA');}row.prepend(caption);box.append(row);
+    box.append(componentField(entry,index,values.length,label,labels));
   });
   return box;
 }
@@ -1992,9 +1999,10 @@ async function nativeSourceRequest(endpoint,body){
   return result;
 }
 function renderNativeSourceValues(){
-  const ready=sourceReady(true);
-  for(const card of document.querySelectorAll('#inspector [data-native-source]')){
-    const row=nativeSourceRows().find(r=>r.id===card.dataset.nativeSource);if(!row)continue;
+  const ready=sourceReady(true),rows=new Map(nativeSourceRows().map(row=>[row.id,row]));
+  for(const card of document.querySelectorAll('[data-native-source]')){
+    const row=rows.get(card.dataset.nativeSource);if(!row)continue;
+    for(const grid of card.querySelectorAll('[data-native-components]'))syncNativeComponentControls(grid,row,ready);
     for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
       const item=row.components[Number(entry.dataset.matrixSourceComponent)],binding=row.matrixBinding;
       entry.disabled=!ready||!binding?.writable||!binding.literalValues;
@@ -2019,23 +2027,18 @@ function renderNativeSourceValues(){
       }
       entry.placeholder=t(mode.value==='EXPRESSION'?'matrix.expression':'array.chopPath');entry.title=binding?.binding||binding?.expression||binding?.mode||'';
     }
-    for(const entry of card.querySelectorAll('[data-source-component]')){
-      const item=row.components[Number(entry.dataset.sourceComponent)];entry.disabled=!ready||!item?.writable;
-      if(document.activeElement!==entry&&!entry.numericGestureActive){entry.setSyncedValue(item?.value);entry.sourceExpected=item?clone(item):null;}
-      entry.title=[!ready?nativeSourceHintText():'',item?.expression||item?.mode||''].filter(Boolean).join(' · ');
-    }
     for(const label of card.querySelectorAll('[data-source-mode]')){
-      const item=row.components[Number(label.dataset.sourceMode)];label.textContent=item?.mode==='CONSTANT'?t('inputs.valueMode'):item?.mode||'';label.title=item?.binding||item?.expression||'';
+      const item=row.components[Number(label.dataset.sourceMode)],text=nativeComponentMode(item);if(label.textContent!==text)label.textContent=text;label.title=item?.binding||item?.expression||'';
     }
     for(const entry of card.querySelectorAll('[data-source-expression]')){
       const item=row.components[Number(entry.dataset.sourceExpression)];entry.disabled=!ready||!item?.modeWritable;
       if(document.activeElement!==entry){entry.setSyncedValue(item?.expression||'');entry.sourceExpected=item?.modeExpected;}
     }
     for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
-    const state=card.querySelector('.native-source-state');if(state)state.textContent=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.arrayBinding?t('uniform.driven'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');
+    const state=card.querySelector('.native-source-state');if(state){const text=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.arrayBinding?t('uniform.driven'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.slice(0,typeComponents(row.type)||1).some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');if(state.textContent!==text)state.textContent=text;}
   }
   for(const entry of document.querySelectorAll('#inspector [data-input-name]')){
-    const row=nativeSourceRows().find(r=>r.id===entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
+    const row=rows.get(entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
   }
   for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
   for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))setEditorDisabled(item,editorMutationBlocked(),editorMutationBlocked(true));
@@ -2105,6 +2108,49 @@ function nativeMatrixFields(card,decl,row){
   if(shape.family==='double')card.append(el('p',{class:'muted'},t('inputs.doubleUniformHint')));
   card.append(el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
 }
+// One live component view for Parameter, source cards and graph references.
+// Only a mode change replaces a control; numeric updates retain focus and DOM.
+function nativeComponentMode(item){
+  return item?.mode==='EXPRESSION'?'Expression':item?.mode==='EXPORT'?'CHOP Export':item?.mode==='BIND'?'Bind':item?.mode==='CONSTANT'?t('inputs.valueMode'):item?.mode||'';
+}
+function nativeComponentControls(decl,row){
+  const count=typeComponents(decl.type)||1,grid=componentGrid(count);
+  grid.dataset.nativeComponents=decl.id;grid.nativeDeclaration=decl;
+  for(let i=0;i<count;i++)grid.append(el('div',{'data-native-component-slot':i}));
+  syncNativeComponentControls(grid,row,sourceReady(true));return grid;
+}
+function syncNativeComponentControls(grid,row,ready){
+  const decl=grid.nativeDeclaration,count=grid.children.length;
+  for(const slot of grid.children){
+    const index=Number(slot.dataset.nativeComponentSlot),item=row.components[index];
+    const numeric=!!item&&['CONSTANT','BIND'].includes(item.mode),kind=numeric?'numeric':'mode';
+    if(slot.dataset.presentation!==kind){
+      slot.dataset.presentation=kind;
+      let entry;
+      if(numeric){
+        const commit=value=>{if(!entry.liveCommit?.(value))nativeSourceRequest('source-value',{id:decl.id,component:index,value,expected:entry.sourceExpected});};
+        entry=typedScalarInput(item.value,typeFamily(decl.type),commit);
+        entry.dataset.sourceComponent=index;
+        entry.setAttribute('aria-label',decl.name+(count>1?' '+'XYZW'[index]:''));
+        if(decl.kind==='uniform'&&typeof uniformLive!=='undefined')uniformLive.attach(entry,decl.id,index);
+      }else entry=el('span',{class:'source-component-mode','data-component-mode-label':''});
+      slot.replaceChildren(componentField(entry,index,count,'','XYZW'));
+    }
+    const entry=slot.querySelector(numeric?'[data-source-component]':'[data-component-mode-label]');
+    slot.dataset.mode=item?.mode||'unknown';
+    if(numeric){
+      entry.disabled=!ready||!item.writable;
+      if(document.activeElement!==entry&&!entry.numericGestureActive){
+        if(!Object.is(entry.nativeValue,item.value)||entry.value!==entry.nativeDisplay){entry.setSyncedValue(item.value);entry.nativeValue=item.value;entry.nativeDisplay=entry.value;}
+        entry.sourceExpected=clone(item);
+      }
+      entry.title=[!ready?nativeSourceHintText():'',nativeComponentMode(item),item.binding||''].filter(Boolean).join(' · ');
+    }else{
+      const text=item?.mode==='EXPORT'?'Export':nativeComponentMode(item)||'—';if(entry.textContent!==text)entry.textContent=text;
+      entry.title=item?.expression||nativeComponentMode(item)||text;
+    }
+  }
+}
 function nativeInputFields(box,decl){
   const row=nativeSourceRows().find(r=>r.id===decl.id);
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
@@ -2114,14 +2160,7 @@ function nativeInputFields(box,decl){
   if(isMatrixType(decl.type)){nativeMatrixFields(card,decl,row);return;}
   const count=typeContract?.types?.[decl.type]?.components||1;
   if(!row.missing){
-    const values=el('div',{class:'source-components'});
-    row.components.forEach((item,index)=>{
-      const commit=value=>{if(!entry.liveCommit?.(value))nativeSourceRequest('source-value',{id:decl.id,component:index,value,expected:entry.sourceExpected});};
-      const entry=typedScalarInput(item.value,typeFamily(decl.type),commit);
-      entry.dataset.sourceComponent=index;entry.sourceExpected=clone(item);entry.setAttribute('aria-label',decl.name+' '+'XYZW'[index]);
-      if(decl.kind==='uniform'&&typeof uniformLive!=='undefined')uniformLive.attach(entry,decl.id,index);
-      const f=field('XYZW'[index],entry);if(index>=count)f.classList.add('source-dormant');values.append(f);
-    });card.append(values);
+    card.append(nativeComponentControls(decl,row));
     if(decl.kind==='uniform'&&typeof uniformLive!=='undefined'){
       card.append(el('small',{'data-uniform-live-status':''}));uniformLive.watch(decl.id);uniformLive.render();
     }
@@ -2130,7 +2169,7 @@ function nativeInputFields(box,decl){
     }
     if(decl.kind==='uniform'&&typeFamily(decl.type)==='double')card.append(el('p',{class:'muted'},t('inputs.doubleUniformHint')));
     if(decl.kind!=='spec_constant'){const drivers=el('details',{class:'input-drivers'});drivers.append(el('summary',{},t('inputs.drivers')));
-    row.components.forEach((item,index)=>{
+    row.components.slice(0,count).forEach((item,index)=>{
       const line=el('div',{class:'source-driver'}),expr=input(item.expression||'',expression=>nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression,expected:expr.sourceExpected}));
       expr.dataset.sourceExpression=index;expr.sourceExpected=item.modeExpected;expr.placeholder=t('inputs.expression');expr.setAttribute('aria-label',decl.name+' '+'XYZW'[index]+' Python');
       const freeze=el('button',{'data-source-freeze':index},t('inputs.freeze'));
@@ -2285,7 +2324,7 @@ function renderNativeSources(){
   }
   // Native row availability can arrive after an apply without changing graph revision.
   const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;
-  const row=nativeSourceRows().find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.components.map(c=>[c.mode,c.control,c.modeWritable]),row?.matrixBinding&&[row.matrixBinding.mode,!!row.matrixBinding.literalValues,row.matrixBinding.writable],row?.arrayBinding&&[row.arrayBinding.mode,row.arrayBinding.writable]]);
+  const row=nativeSourceRows().find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.matrixBinding&&[row.matrixBinding.mode,!!row.matrixBinding.literalValues,row.matrixBinding.writable],row?.arrayBinding&&[row.arrayBinding.mode,row.arrayBinding.writable]]);
   if($('#inspector').dataset.inputState!==signature&&!$('#inspector').contains(document.activeElement)){$('#inspector').dataset.inputState=signature;if(active)inspector();}
   renderNativeSourceValues();
 }
@@ -2308,7 +2347,7 @@ function installNativeSources(){
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);
   setInterval(()=>{
     if(typeof uniformLive!=='undefined'){
-      const card=document.querySelector('#inspector [data-native-source]:has([data-source-component])');
+      const card=document.querySelector('#inspector [data-native-source]:has([data-native-components])');
       const row=card&&nativeSourceRows().find(r=>r.id===card.dataset.nativeSource);
       uniformLive.watch(row?.kind==='uniform'?row.id:null);
       if(uniformLive.ready&&nativeSourceSnapshot?.revision===revision&&!nativeSourceError)return;
