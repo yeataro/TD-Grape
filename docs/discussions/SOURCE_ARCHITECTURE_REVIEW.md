@@ -79,6 +79,14 @@ Texture 的程式入口可共用，再分派 TOP／MAT 各自方法。TOP 的 sl
 
 Matrix（矩陣）與 Attribute 的來源歸屬、各自配置及 Array Size 的適用對象，接續依宿主介面整理。
 
+## 6. Buffer 來源缺口
+
+來源總表已列出 Buffer 家族，但此前執行清單未單獨列入，目前也未實作完整的配置／引用／讀取流程。需要區分兩種已列來源：TD Buffers 頁配置的 POP attribute buffer（POP 路徑、Point／Vertex／Primitive class、Attribute 名與 Shader 名），以及 Arrays 頁由 CHOP 提供的 Texture Buffer（samplerBuffer／texelFetch）。它們均不可因資料像陣列就當成既有 Uniform Array；原生 Uniform Array 匯入目前會診斷並拒絕 Texture Buffer 模式。
+
+卡片外觀、選取、Help 與右鍵操作可共用來源 UI；來源配置、可用型別、讀取／長度及錯誤處理需各自適配。補齊目前 TOP／MAT 的來源能力不等於實作整個 GLSL POP 宿主，也不包含任意可寫 SSBO。Buffer 的型別／讀取策略仍需實機確認，不能標為已完成。
+
+官方依據：[GLSL TOP 的 Buffers 與 Arrays 參數頁](https://derivative.ca/UserGuide/GLSL_TOP)。研究表既有列 S150、S158–S160。
+
 ## 接續順序
 
 ### 本輪執行範圍
@@ -104,6 +112,7 @@ TD vector Uniform 的 UI 依宣告型別顯示有效分量（float 一格、vec2
 - [ ] 共用來源資料表、預置初始化與分類資料，保留既有來源識別／原生值所有權。
 - [ ] Common Uniform 與一般 Uniform 的建立／引用流程、缺少的基本時間預置。
 - [ ] MAT Attribute 的原生配置、引用／修改、圖產碼、失敗保護及 UI。
+- [ ] Buffer 來源的配置／引用、讀取與長度能力：POP attribute buffer 與 CHOP Texture Buffer 分別確認及驗證。
 - [ ] 結構定義面板、巢狀型別引用、完整結構／欄位接口與局部 UI 更新。
 - [ ] 可沿用機制的來源內容補齊，TOP／MAT 回歸、TD 同步、逐批 Git／TOE 檢查點與交付說明。
 
