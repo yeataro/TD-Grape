@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 分類審查檢查點：完成 [來源選單分類表](../discussions/TD_SOURCE_MENU_REVIEW.md)，提出六大入口與二級用途／Texture 維度分組；時間預置保留六項、Timeline Rate 移出，低頻 Clock／CHOP 時間細項等記為使用者自行新增。Project Rate／System Time 等助手建議另標待確認。原始研究總表保留，38 筆時間列新增審查欄；CSV 的 311 筆全部補上分類、項目性質與審查決策，原 13 欄資料不變。集合欄位、運算／取樣、可寫資料、歷史與未支援 stage 分開處理，不把每列當成來源入口。本批只更新文件，尚未改產品分類、命名或支援能力，版號維持 0.8.120。
+
 2026-09-19 0.8.120 交付檢查點：來源 `9c71185` 已整合 main，同步 6 份 DAT；34 份來源及 10 份核對的服務資源一致，TOP／MAT Master current（revision 68），core 與 Uniform WebSocket 無錯誤，三份使用者 Shader 保留。頁首、About、TD runtime 實際服務版號均為 0.8.120。正式 TOE 925,846 bytes，SHA-256 `e95529a82104bbdbcb125140ceaa41149a40109dc09bcbefe7b9529699bd26a2`，排除一份私人助手。私人報告 `connection-card-{refresh,masters,audit,version,save}-20260919`；未重新整理使用者既有 Editor。
 
 2026-09-19 0.8.120 來源檢查點：TD 連線提示改為畫布上方、工具列下方的半透明浮動卡片，加入靜態警告三角形；一般／專注編輯皆可見，不佔版面或推動工具列。沿用工具列 ResizeObserver 的高度資料定位，卡片文字、捲動、按鈕與觸控不觸發畫布操作。連線判斷、重試、同步與編輯規則未變。修正頁首與 About 長期停留 0.8.90 的版號，與 runtime 統一為 0.8.120，將三處核對納入交付流程。完整 portable checks、既有連線恢復 8 組、隔離版面與互動 7 情境通過；TD 同步與 TOE 保存另記。

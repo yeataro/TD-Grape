@@ -16,6 +16,8 @@
 
 ## 分類建議（固定入口，尚待審查）
 
+2026-09-19 審查進展：具體第一級／第二級與來源歸屬見 [來源選單分類表](TD_SOURCE_MENU_REVIEW.md)。時間基本預置收斂為六項，Timeline Rate 移出；Clock／CHOP 時間細項及低頻時間控制改列自行新增。下方六大入口仍作概覽；逐組內容、非來源排除與未定案項以新版分類表為準。CSV 新增分類／審查欄位；原 `status` 保留研究時的支援現況，不能單憑「待擴充」視為要實作。
+
 | 入口 | 收納內容 | 界線 |
 | --- | --- | --- |
 | Common Sources／共通來源 | 選定的時間、座標、輸出資訊等便利入口 | 同一來源可有通用／TD 主標題；不新增第二份值實體 |
@@ -40,46 +42,47 @@
 
 ## 01 時間與日期｜Common Sources 候選
 
-| TD 主名稱／原生識別 | 共通名候選 | 型別 | 適用範圍 | 現況／性質 | 語意與證據 |
-| --- | --- | --- | --- | --- | --- |
-| `absTime.seconds` | Absolute Time | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 秒；TD 全域播放時間，會隨 Power／root timeline 暫停。不是電腦開機時間或牆鐘。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) |
-| `absTime.frame` | Absolute Frame | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 原生 float；是時間幀數，不是每個 Shader 真正完成的渲染次數。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) |
-| `absTime.stepSeconds` | Delta Time | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | TD 前後全域 frame 起點的秒差；應標註時鐘，不能保證等於此 TOP 兩次 cook 間隔。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) |
-| `absTime.step` | Frame Step | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | TD 全域時間前進的幀數，可能大於 1；不是 FPS。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.seconds` | Timeline Time | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 當前 OP 所屬時間軸；保留循環、跳轉、暫停語意。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.frame` | Timeline Frame | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 原生 float，不能未經決定就轉為零起算整數渲染計數。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.rate` | Timeline Rate | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 時間軸設定速率，不代表實際顯示 FPS。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.play` | Timeline Playing | bool | TOP／MAT，CPU → Uniform | 待擴充；來源 | 播放狀態；不是 Shader 正在 cook 的證據。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.fraction` | — | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | TD 定義 frame/end；不冒充 (frame-start)/(end-start) 的一般進度。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.start` | Timeline Start | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 主範圍起點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.end` | Timeline End | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 主範圍終點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.rangeStart` | Playback Range Start | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 子播放範圍起點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.rangeEnd` | Playback Range End | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 子播放範圍終點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.loop` | Timeline Looping | bool | TOP／MAT，CPU → Uniform | 待擴充；來源 | 所屬時間軸是否循環。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.independent` | — | float（文件型別） | TOP／MAT，CPU → Uniform | 待擴充；來源 | 時間軸是否獨立；保留 TD 屬性名，實作時再核對值型別，不由名稱推成 bool。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.tempo` | Tempo | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 每分鐘拍數；僅為節拍設定，不代表已有連續 Beat Phase 來源。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.signature1` | Time Signature Numerator | int | TOP／MAT，CPU → Uniform | 待擴充；來源 | 拍號第一數。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.signature2` | Time Signature Denominator | int | TOP／MAT，CPU → Uniform | 待擴充；來源 | 拍號第二數。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `me.time.timecode` | — | str | CPU／UI | 待擴充；UI 資訊 | 可作 UI 資訊；不是可直接送入 GLSL 的數值來源。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) |
-| `project.cookRate` | Project Rate | float | CPU → Uniform | 待擴充；來源 | 專案設定 cook rate，不是實測 FPS，也不同於所有 local timeline 的 rate。 [FR](https://docs.derivative.ca/Frame_Rate) |
-| `op('<clock>')['msec'].eval()` | Millisecond | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–999，限 Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['sec'].eval()` | Second | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 秒分量，限 Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['min'].eval()` | Minute | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 分鐘分量，限 Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['hour'].eval()` | Hour | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 必須選定 12／24 小時制與 Hour Adjust。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['ampm'].eval()` | AM/PM | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0／1；僅在有意義的時制下顯示。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['wday'].eval()` | Day of Week | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | TD Units 模式以 Monday=0；跨宿主需保持約定。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['day'].eval()` | Day of Month | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 日序，Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['yday'].eval()` | Day of Year | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | TD 由 0 起算。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['week'].eval()` | Week | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | TD 的週序規則，不默認為 ISO week。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['month'].eval()` | Month | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | Units 模式 1–12。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['year'].eval()` | — | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 相對 Start Reference；預設不是完整西元年，不能直接當 ISF DATE.x。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['moonphase'].eval()` | Moon Phase | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–1；0/1 新月，0.5 滿月。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['sunphase'].eval()` | Sun Phase | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 日出為 0、日落為 1，之後下降至下一次日出的 0。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['sunrise'].eval()` | Sunrise | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–1 日內時間；依地理位置與設定。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['sunset'].eval()` | Sunset | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–1 日內時間；依地理位置與設定。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<clock>')['declination'].eval()` | Solar Declination | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 太陽赤緯；文件以角度表示。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) |
-| `op('<feedback>')['dt'].eval()` | — | float | CPU → Uniform | 原生可用；非預置；來源 | 該 Feedback CHOP 兩次 cook 的秒差；沒有單一共通 Delta Time 語意，不為取得它而自動建立 Feedback 網路。 [F](https://docs.derivative.ca/Feedback_CHOP) |
-| `System Time／Date（來源待選）` | System Time | 待定 | CPU → Uniform | 未定案；待決概念 | 概念已提出，精確 TD Python 主標題尚不能填；輸出格式、時區、時鐘與組合方式待決。不是原生自動 GLSL Uniform。 [C](https://derivative.ca/UserGuide/Clock_CHOP) [A](https://docs.derivative.ca/AbsTime_Class) [I](https://github.com/mrRay/ISF_Spec) |
+| TD 主名稱／原生識別 | 共通名候選 | 型別 | 適用範圍 | 現況／性質 | 語意與證據 | 擴充／選單審查（2026-09-19） |
+| --- | --- | --- | --- | --- | --- | --- |
+| `absTime.seconds` | Absolute Time | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 秒；TD 全域播放時間，會隨 Power／root timeline 暫停。不是電腦開機時間或牆鐘。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) | 保留基本預置 |
+| `absTime.frame` | Absolute Frame | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 原生 float；是時間幀數，不是每個 Shader 真正完成的渲染次數。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) | 保留基本預置 |
+| `absTime.stepSeconds` | Delta Time | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | TD 前後全域 frame 起點的秒差；應標註時鐘，不能保證等於此 TOP 兩次 cook 間隔。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) | 保留基本預置 |
+| `absTime.step` | Frame Step | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | TD 全域時間前進的幀數，可能大於 1；不是 FPS。 [A](https://docs.derivative.ca/AbsTime_Class) [P](../../src/core/sgrape_sources.py) | 保留基本預置 |
+| `me.time.seconds` | Timeline Time | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 當前 OP 所屬時間軸；保留循環、跳轉、暫停語意。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 保留基本預置 |
+| `me.time.frame` | Timeline Frame | float | TOP／MAT，CPU → Uniform | 已有預置；來源 | 原生 float，不能未經決定就轉為零起算整數渲染計數。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 保留基本預置 |
+| `me.time.rate` | Timeline Rate | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 時間軸設定速率，不代表實際顯示 FPS。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.play` | Timeline Playing | bool | TOP／MAT，CPU → Uniform | 待擴充；來源 | 播放狀態；不是 Shader 正在 cook 的證據。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.fraction` | — | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | TD 定義 frame/end；不冒充 (frame-start)/(end-start) 的一般進度。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 建議使用者自行新增，待確認 |
+| `me.time.start` | Timeline Start | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 主範圍起點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.end` | Timeline End | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 主範圍終點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.rangeStart` | Playback Range Start | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 子播放範圍起點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.rangeEnd` | Playback Range End | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 子播放範圍終點，單位幀。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.loop` | Timeline Looping | bool | TOP／MAT，CPU → Uniform | 待擴充；來源 | 所屬時間軸是否循環。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.independent` | — | float（文件型別） | TOP／MAT，CPU → Uniform | 待擴充；來源 | 時間軸是否獨立；保留 TD 屬性名，實作時再核對值型別，不由名稱推成 bool。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 建議使用者自行新增，待確認 |
+| `me.time.tempo` | Tempo | float | TOP／MAT，CPU → Uniform | 待擴充；來源 | 每分鐘拍數；僅為節拍設定，不代表已有連續 Beat Phase 來源。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.signature1` | Time Signature Numerator | int | TOP／MAT，CPU → Uniform | 待擴充；來源 | 拍號第一數。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.signature2` | Time Signature Denominator | int | TOP／MAT，CPU → Uniform | 待擴充；來源 | 拍號第二數。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `me.time.timecode` | — | str | CPU／UI | 待擴充；UI 資訊 | 可作 UI 資訊；不是可直接送入 GLSL 的數值來源。 [TC](https://derivative.ca/UserGuide/TimeCOMP_Class) [OP](https://derivative.ca/UserGuide/OP_Class) [P](../../src/core/sgrape_sources.py) | 使用者自行新增；本輪不列專用預置 |
+| `project.cookRate` | Project Rate | float | CPU → Uniform | 待擴充；來源 | 專案設定 cook rate，不是實測 FPS，也不同於所有 local timeline 的 rate。 [FR](https://docs.derivative.ca/Frame_Rate) | 建議使用者自行新增，待確認 |
+| `op('<clock>')['msec'].eval()` | Millisecond | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–999，限 Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['sec'].eval()` | Second | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 秒分量，限 Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['min'].eval()` | Minute | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 分鐘分量，限 Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['hour'].eval()` | Hour | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 必須選定 12／24 小時制與 Hour Adjust。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['ampm'].eval()` | AM/PM | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0／1；僅在有意義的時制下顯示。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['wday'].eval()` | Day of Week | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | TD Units 模式以 Monday=0；跨宿主需保持約定。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['day'].eval()` | Day of Month | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 日序，Units 模式。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['yday'].eval()` | Day of Year | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | TD 由 0 起算。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['week'].eval()` | Week | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | TD 的週序規則，不默認為 ISO week。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['month'].eval()` | Month | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | Units 模式 1–12。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['year'].eval()` | — | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 相對 Start Reference；預設不是完整西元年，不能直接當 ISF DATE.x。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['moonphase'].eval()` | Moon Phase | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–1；0/1 新月，0.5 滿月。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['sunphase'].eval()` | Sun Phase | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 日出為 0、日落為 1，之後下降至下一次日出的 0。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['sunrise'].eval()` | Sunrise | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–1 日內時間；依地理位置與設定。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['sunset'].eval()` | Sunset | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 0–1 日內時間；依地理位置與設定。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<clock>')['declination'].eval()` | Solar Declination | float | TOP／MAT，CPU → Uniform | 原生可用；來源設定待定；來源 | 太陽赤緯；文件以角度表示。 <clock> 必須由已選定的 Clock CHOP 取代，非內建固定路徑。 [C](https://derivative.ca/UserGuide/Clock_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `op('<feedback>')['dt'].eval()` | — | float | CPU → Uniform | 原生可用；非預置；來源 | 該 Feedback CHOP 兩次 cook 的秒差；沒有單一共通 Delta Time 語意，不為取得它而自動建立 Feedback 網路。 [F](https://docs.derivative.ca/Feedback_CHOP) | 使用者自行新增；本輪不列專用預置 |
+| `System Time／Date（來源待選）` | System Time | 待定 | CPU → Uniform | 未定案；待決概念 | 概念已提出，精確 TD Python 主標題尚不能填；輸出格式、時區、時鐘與組合方式待決。不是原生自動 GLSL Uniform。 [C](https://derivative.ca/UserGuide/Clock_CHOP) [A](https://docs.derivative.ca/AbsTime_Class) [I](https://github.com/mrRay/ISF_Spec) | 建議使用者自行新增，待確認 |
+
 
 <a id="catalog-02"></a>
 
