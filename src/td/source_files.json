@@ -45,5 +45,7 @@
   "selection_ui.js": "src/editor/selection_ui.js",
   "frames_ui.js": "src/editor/frames_ui.js",
   "sgrape_live.py": "src/td/runtime/sgrape_live.py",
-  "uniform_live.js": "src/editor/uniform_live.js"
+  "uniform_live.js": "src/editor/uniform_live.js",
+  "source_catalog.json": "src/library/source_catalog.json",
+  "sgrape_source_catalog.py": "src/core/sgrape_source_catalog.py"
 }

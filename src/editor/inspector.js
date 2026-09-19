@@ -1901,7 +1901,7 @@ function installPanelWorkspace(){
 /* Inputs are a source inventory. Graph nodes reference these identities; native
    Uniform values/modes continue to belong to the actual GLSL OP. */
 let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceError='',nativeSourceRetryAt=0,selectedInputId=null;
-const inputPresets={time:['uTime','me.time.seconds'],frame:['uFrame','me.time.frame'],absTime:['uAbsTime','absTime.seconds'],absFrame:['uAbsFrame','absTime.frame']};
+function inputPresets(){return Object.fromEntries(Object.entries(typeContract?.sources?.uniformPresets||{}).filter(([,entry])=>entry.availability?.[editorTarget]?.includes(stage)).map(([key,entry])=>[key,[entry.name,entry.initialize.expression]]));}
 const inputCollapsedGroups=(()=>{try{const saved=JSON.parse(localStorage.getItem('sgrapeInputCollapsedGroups'));return new Set(Array.isArray(saved)?saved:[]);}catch{return new Set();}})();
 function setInputGroupCollapsed(kind,collapsed){
   if(collapsed)inputCollapsedGroups.add(kind);else inputCollapsedGroups.delete(kind);
@@ -1917,7 +1917,7 @@ function finishInputCreate(kind,id){
 function openInputCreate(kind){
   if(editorMutationBlocked()||!graph||!['constant','spec_constant','uniform',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
   closeCreator();const dialog=$('#sourcecreatedialog'),choice=$('#sourcekind');
-  const options=kind==='uniform'?[['uniform','Uniform'],['array',t('array.uniformSource')],['color','Color · vec4'],...Object.keys(inputPresets).map(p=>['preset:'+p,t('inputs.preset.'+p)])]:[[kind,inputGroupLabel(kind)]];
+  const options=kind==='uniform'?[['uniform','Uniform'],['array',t('array.uniformSource')],['color','Color · vec4'],...Object.keys(inputPresets()).map(p=>['preset:'+p,t('inputs.preset.'+p)])]:[[kind,inputGroupLabel(kind)]];
   choice.replaceChildren(...options.map(([value,label])=>el('option',{value},label)));choice.value=kind;
   $('#sourcekindfield').hidden=options.length===1;$('#sourcecreatetitle').textContent=t('inputs.new')+' · '+inputGroupLabel(kind);
   $('#sourcecreateerror').textContent='';choice.onchange();dialog.showModal();
@@ -2295,7 +2295,7 @@ function installNativeSources(){
   arrayFields.append(lengthField,pathField,el('p',{class:'muted','data-i18n':'array.nativeHint'},t('array.nativeHint')));arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);
   $('#inputsearch').oninput=renderNativeSources;
   $('#closesourcecreate').onclick=()=>$('#sourcecreatedialog').close();
-  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='array'?['float','vec2','vec3','vec4']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':kind==='array'?'uArray':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];arrayFields.hidden=kind!=='array';arrayLength.required=arraySource.required=kind==='array';arrayLength.max=String(typeContract?.composites?.array?.maxLength||1024);$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets()[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='array'?['float','vec2','vec3','vec4']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':kind==='array'?'uArray':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];arrayFields.hidden=kind!=='array';arrayLength.required=arraySource.required=kind==='array';arrayLength.max=String(typeContract?.composites?.array?.maxLength||1024);$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
     e.preventDefault();if(readonly)return;const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value,existing=inputPresetSource(kind);
     if(existing){finishInputCreate(kind,existing.id);return;}

@@ -1,0 +1,464 @@
+{
+  "version": 1,
+  "hostProfile": "TouchDesigner 2025.32820",
+  "uniformPresets": {
+    "absTime": {
+      "name": "uAbsTime",
+      "type": "float",
+      "labelKey": "inputs.preset.absTime",
+      "path": [
+        "common",
+        "time"
+      ],
+      "availability": {
+        "top": [
+          "pixel"
+        ],
+        "mat": [
+          "vertex",
+          "pixel"
+        ]
+      },
+      "initialize": {
+        "mode": "EXPRESSION",
+        "component": 0,
+        "expression": "absTime.seconds"
+      }
+    },
+    "absFrame": {
+      "name": "uAbsFrame",
+      "type": "float",
+      "labelKey": "inputs.preset.absFrame",
+      "path": [
+        "common",
+        "time"
+      ],
+      "availability": {
+        "top": [
+          "pixel"
+        ],
+        "mat": [
+          "vertex",
+          "pixel"
+        ]
+      },
+      "initialize": {
+        "mode": "EXPRESSION",
+        "component": 0,
+        "expression": "absTime.frame"
+      }
+    },
+    "time": {
+      "name": "uTime",
+      "type": "float",
+      "labelKey": "inputs.preset.time",
+      "path": [
+        "common",
+        "time"
+      ],
+      "availability": {
+        "top": [
+          "pixel"
+        ],
+        "mat": [
+          "vertex",
+          "pixel"
+        ]
+      },
+      "initialize": {
+        "mode": "EXPRESSION",
+        "component": 0,
+        "expression": "me.time.seconds"
+      }
+    },
+    "frame": {
+      "name": "uFrame",
+      "type": "float",
+      "labelKey": "inputs.preset.frame",
+      "path": [
+        "common",
+        "time"
+      ],
+      "availability": {
+        "top": [
+          "pixel"
+        ],
+        "mat": [
+          "vertex",
+          "pixel"
+        ]
+      },
+      "initialize": {
+        "mode": "EXPRESSION",
+        "component": 0,
+        "expression": "me.time.frame"
+      }
+    },
+    "deltaTime": {
+      "name": "uDeltaTime",
+      "type": "float",
+      "labelKey": "inputs.preset.deltaTime",
+      "path": [
+        "common",
+        "time"
+      ],
+      "availability": {
+        "top": [
+          "pixel"
+        ],
+        "mat": [
+          "vertex",
+          "pixel"
+        ]
+      },
+      "initialize": {
+        "mode": "EXPRESSION",
+        "component": 0,
+        "expression": "absTime.stepSeconds"
+      }
+    },
+    "frameStep": {
+      "name": "uFrameStep",
+      "type": "float",
+      "labelKey": "inputs.preset.frameStep",
+      "path": [
+        "common",
+        "time"
+      ],
+      "availability": {
+        "top": [
+          "pixel"
+        ],
+        "mat": [
+          "vertex",
+          "pixel"
+        ]
+      },
+      "initialize": {
+        "mode": "EXPRESSION",
+        "component": 0,
+        "expression": "absTime.step"
+      }
+    }
+  },
+  "structures": {
+    "TDTexInfo": {
+      "id": "TDTexInfo",
+      "name": "TDTexInfo",
+      "provider": "external",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "fields": [
+        {
+          "id": "res",
+          "name": "res",
+          "type": "vec4"
+        },
+        {
+          "id": "depth",
+          "name": "depth",
+          "type": "vec4"
+        }
+      ]
+    },
+    "TDMatrix": {
+      "id": "TDMatrix",
+      "name": "TDMatrix",
+      "provider": "external",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "fields": [
+        {
+          "id": "world",
+          "name": "world",
+          "type": "mat4"
+        },
+        {
+          "id": "worldInverse",
+          "name": "worldInverse",
+          "type": "mat4"
+        },
+        {
+          "id": "worldCam",
+          "name": "worldCam",
+          "type": "mat4"
+        },
+        {
+          "id": "worldCamInverse",
+          "name": "worldCamInverse",
+          "type": "mat4"
+        },
+        {
+          "id": "cam",
+          "name": "cam",
+          "type": "mat4"
+        },
+        {
+          "id": "camInverse",
+          "name": "camInverse",
+          "type": "mat4"
+        },
+        {
+          "id": "camProj",
+          "name": "camProj",
+          "type": "mat4"
+        },
+        {
+          "id": "camProjInverse",
+          "name": "camProjInverse",
+          "type": "mat4"
+        },
+        {
+          "id": "proj",
+          "name": "proj",
+          "type": "mat4"
+        },
+        {
+          "id": "projInverse",
+          "name": "projInverse",
+          "type": "mat4"
+        },
+        {
+          "id": "worldCamProj",
+          "name": "worldCamProj",
+          "type": "mat4"
+        },
+        {
+          "id": "worldCamProjInverse",
+          "name": "worldCamProjInverse",
+          "type": "mat4"
+        },
+        {
+          "id": "quadReproject",
+          "name": "quadReproject",
+          "type": "mat4"
+        },
+        {
+          "id": "worldForNormals",
+          "name": "worldForNormals",
+          "type": "mat3"
+        },
+        {
+          "id": "camForNormals",
+          "name": "camForNormals",
+          "type": "mat3"
+        },
+        {
+          "id": "worldCamForNormals",
+          "name": "worldCamForNormals",
+          "type": "mat3"
+        },
+        {
+          "id": "clipDistances",
+          "name": "clipDistances",
+          "type": "vec4"
+        }
+      ]
+    },
+    "TDCameraInfo": {
+      "id": "TDCameraInfo",
+      "name": "TDCameraInfo",
+      "provider": "external",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "fields": [
+        {
+          "id": "nearFar",
+          "name": "nearFar",
+          "type": "vec4"
+        },
+        {
+          "id": "fog",
+          "name": "fog",
+          "type": "vec4"
+        },
+        {
+          "id": "fogColor",
+          "name": "fogColor",
+          "type": "vec4"
+        },
+        {
+          "id": "renderTOPCameraIndex",
+          "name": "renderTOPCameraIndex",
+          "type": "int"
+        },
+        {
+          "id": "ipdShift",
+          "name": "ipdShift",
+          "type": "float"
+        }
+      ]
+    },
+    "TDLight": {
+      "id": "TDLight",
+      "name": "TDLight",
+      "provider": "external",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "fields": [
+        {
+          "id": "position",
+          "name": "position",
+          "type": "vec4"
+        },
+        {
+          "id": "direction",
+          "name": "direction",
+          "type": "vec3"
+        },
+        {
+          "id": "diffuse",
+          "name": "diffuse",
+          "type": "vec3"
+        },
+        {
+          "id": "nearFar",
+          "name": "nearFar",
+          "type": "vec4"
+        },
+        {
+          "id": "lightSize",
+          "name": "lightSize",
+          "type": "vec4"
+        },
+        {
+          "id": "misc",
+          "name": "misc",
+          "type": "vec4"
+        },
+        {
+          "id": "coneLookupScaleBias",
+          "name": "coneLookupScaleBias",
+          "type": "vec4"
+        },
+        {
+          "id": "attenScaleBiasRoll",
+          "name": "attenScaleBiasRoll",
+          "type": "vec4"
+        },
+        {
+          "id": "shadowMapMatrix",
+          "name": "shadowMapMatrix",
+          "type": "mat4"
+        },
+        {
+          "id": "shadowMapCamMatrix",
+          "name": "shadowMapCamMatrix",
+          "type": "mat4"
+        },
+        {
+          "id": "shadowMapRes",
+          "name": "shadowMapRes",
+          "type": "vec4"
+        },
+        {
+          "id": "projMapMatrix",
+          "name": "projMapMatrix",
+          "type": "mat4"
+        }
+      ]
+    }
+  },
+  "builtins": {
+    "uTD2DInfos": {
+      "type": "TDTexInfo[TD_NUM_2D_INPUTS]",
+      "expression": "uTD2DInfos",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ]
+    },
+    "sTD2DInputs": {
+      "type": "sampler2D[TD_NUM_2D_INPUTS]",
+      "expression": "sTD2DInputs",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ]
+    },
+    "uTDMats": {
+      "type": "TDMatrix[TD_NUM_CAMERAS]",
+      "expression": "uTDMats",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ]
+    },
+    "uTDCamInfos": {
+      "type": "TDCameraInfo[TD_NUM_CAMERAS]",
+      "expression": "uTDCamInfos",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ]
+    },
+    "uTDLights": {
+      "type": "TDLight[TD_NUM_LIGHTS]",
+      "expression": "uTDLights",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ]
+    }
+  },
+  "lengthMacros": {
+    "TD_NUM_2D_INPUTS": {
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ]
+    },
+    "TD_NUM_CAMERAS": {
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ]
+    },
+    "TD_NUM_LIGHTS": {
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ]
+    }
+  }
+}

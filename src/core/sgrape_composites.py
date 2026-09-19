@@ -40,29 +40,15 @@ def creation_lengths(graph):
             bindings[(scope,ident)]=length
     return expressions,bindings
 
-def fields(*items):
-    return [dict(id=name,name=name,type=ty) for name,ty in items]
+if 'me' in globals():
+    _source_catalog = me.parent().op('sgrape_source_catalog').module
+else:
+    import sgrape_source_catalog as _source_catalog
 
-BUILTIN_STRUCTS = {
-    'TDTexInfo':dict(id='TDTexInfo',name='TDTexInfo',provider='external',targets=['top'],stages=['pixel'],
-                     fields=fields(('res','vec4'),('depth','vec4'))),
-    'TDMatrix':dict(id='TDMatrix',name='TDMatrix',provider='external',targets=['mat'],stages=['vertex','pixel'],
-                   fields=fields(*[(name,'mat4') for name in ('world','worldInverse','worldCam','worldCamInverse','cam','camInverse','camProj','camProjInverse','proj','projInverse','worldCamProj','worldCamProjInverse','quadReproject')],('worldForNormals','mat3'),('camForNormals','mat3'),('worldCamForNormals','mat3'),('clipDistances','vec4'))),
-    'TDCameraInfo':dict(id='TDCameraInfo',name='TDCameraInfo',provider='external',targets=['mat'],stages=['vertex','pixel'],
-                       fields=fields(('nearFar','vec4'),('fog','vec4'),('fogColor','vec4'),('renderTOPCameraIndex','int'),('ipdShift','float'))),
-    'TDLight':dict(id='TDLight',name='TDLight',provider='external',targets=['mat'],stages=['vertex','pixel'],
-                  fields=fields(('position','vec4'),('direction','vec3'),('diffuse','vec3'),('nearFar','vec4'),('lightSize','vec4'),('misc','vec4'),('coneLookupScaleBias','vec4'),('attenScaleBiasRoll','vec4'),('shadowMapMatrix','mat4'),('shadowMapCamMatrix','mat4'),('shadowMapRes','vec4'),('projMapMatrix','mat4'))),
-}
-SOURCES = {
-    'uTD2DInfos':dict(type='TDTexInfo[TD_NUM_2D_INPUTS]',expression='uTD2DInfos',targets=['top'],stages=['pixel']),
-    'sTD2DInputs':dict(type='sampler2D[TD_NUM_2D_INPUTS]',expression='sTD2DInputs',targets=['top'],stages=['pixel']),
-    'uTDMats':dict(type='TDMatrix[TD_NUM_CAMERAS]',expression='uTDMats',targets=['mat'],stages=['vertex','pixel']),
-    'uTDCamInfos':dict(type='TDCameraInfo[TD_NUM_CAMERAS]',expression='uTDCamInfos',targets=['mat'],stages=['vertex','pixel']),
-    'uTDLights':dict(type='TDLight[TD_NUM_LIGHTS]',expression='uTDLights',targets=['mat'],stages=['vertex','pixel']),
-}
-LENGTH_MACROS = {'TD_NUM_2D_INPUTS':dict(targets=['top'],stages=['pixel']),
-                 'TD_NUM_CAMERAS':dict(targets=['mat'],stages=['vertex','pixel']),
-                 'TD_NUM_LIGHTS':dict(targets=['mat'],stages=['vertex','pixel'])}
+# Shared source metadata is loaded once; each graph gets its own Registry copy.
+BUILTIN_STRUCTS = _source_catalog.CATALOG['structures']
+SOURCES = _source_catalog.CATALOG['builtins']
+LENGTH_MACROS = _source_catalog.CATALOG['lengthMacros']
 
 class Registry:
     def __init__(self,base_types,definitions=(),error=ValueError,declarations=(),graph=None):

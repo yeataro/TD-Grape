@@ -104,6 +104,10 @@ class CatalogTests(unittest.TestCase):
                     class Module:
                         module=c._composites
                     return Module()
+                if name=='sgrape_source_catalog':
+                    class Module:
+                        module=c._source_catalog
+                    return Module()
                 return None
         class Me:
             def parent(self):return Parent()

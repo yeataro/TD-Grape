@@ -12,6 +12,11 @@ import re
 import uuid
 from contextlib import nullcontext
 
+if 'me' in globals():
+    _source_catalog = me.parent().op('sgrape_source_catalog').module
+else:
+    import sgrape_source_catalog as _source_catalog
+
 STORE = 'grapeNativeUniformsV1'
 # Native vector rows contain up to four scalar components. Their GLSL family is
 # declared by the graph, independent of the native page's numeric widgets.
@@ -22,8 +27,7 @@ MATRIX_SHAPES = {prefix+str(c)+(('x'+str(r)) if c != r else ''): (c,r)
 TYPES.update({ty:c*r for ty,(c,r) in MATRIX_SHAPES.items()})
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
 SOURCE_KINDS = ('uniform', 'spec_constant')
-PRESETS = {'time': 'me.time.seconds', 'frame': 'me.time.frame',
-           'absTime': 'absTime.seconds', 'absFrame': 'absTime.frame'}
+PRESETS = {key: entry['initialize']['expression'] for key, entry in _source_catalog.PRESETS.items()}
 CHANNELS = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'),
             'color': ('rgbr', 'rgbg', 'rgbb', 'alpha'), 'const': ('value',), 'matrix': ('value',)}
 ARRAY_ELEMENT_TYPES = ('float', 'vec2', 'vec3', 'vec4')

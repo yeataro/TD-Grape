@@ -1494,7 +1494,7 @@ const browserSourceLabel=key=>t('browser.source.'+key);
 const normalizeSearch=value=>String(value||'').normalize('NFKC').toLowerCase().trim();
 function browserMeta(d){
   if(isCompositeOperation(d))return {category:'data',path:['data'],source:d.key==='builtin_source'?'td':'editor',secondary:[],aliases:d.key==='builtin_source'?[d.defaults.source,'TD source','array source']:({array:['list','create array','陣列'],array_get:['array index','get','陣列取項'],array_replace:['array set','replace','陣列替換'],array_length:['array size','length','陣列長度'],struct_field:['struct','field','member','結構欄位']})[d.key]||[],tags:[],glslName:d.key==='builtin_source'?d.defaults.source:d.label,descriptionKey:d.descriptionKey||'help.'+d.key,subgraph:false,saved:false,project:false};
-  if(d.inputPreset)return {category:'shader',path:['shader'],source:'td',secondary:[],aliases:[inputPresets[d.inputPreset][0],'uniform','time','frame'],tags:[],glslName:inputPresets[d.inputPreset][1],descriptionKey:'inputs.clockHint',subgraph:false,saved:false,project:false};
+  if(d.inputPreset)return {category:'shader',path:['shader'],source:'td',secondary:[],aliases:[inputPresets()[d.inputPreset][0],'uniform','time','frame'],tags:[],glslName:inputPresets()[d.inputPreset][1],descriptionKey:'inputs.clockHint',subgraph:false,saved:false,project:false};
   if(d.inputSourceId)return {category:'shader',path:['shader'],source:'project',secondary:[],aliases:['input','reference'],tags:[],glslName:d.label,descriptionKey:'inputs.referenceHint',subgraph:false,saved:false,project:true};
   const f=d.definitionUuid===FunctionModel.CALL?(d.source||FunctionModel.find(graph,d.functionId)):null;
   const authored=f?(f.browser||browserData().functions[f.source?.id]||browserData().functions[f.origin?.id]):browserData().nodes[d.definitionUuid];
@@ -1711,7 +1711,7 @@ function renderCreator(){
   const validation=wire?creatorValidationContext():null;
   creatorMatches=[];
   const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant','spec_constant'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
-  for(const preset of Object.keys(inputPresets)){
+  for(const preset of Object.keys(inputPresets())){
     const base=catalog.find(d=>d.key==='uniform');if(!base)continue;
     const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:creatorMeta(d)});
   }
@@ -1751,7 +1751,7 @@ function chooseCreator(index){
   const match=creatorMatches[index],state=creatorState;if(!match||!state)return;
   const changed=change(()=>{
     const d=match.d.inputSourceId||match.d.inputPreset?catalog.find(d=>d.definitionUuid===match.d.definitionUuid):match.d;
-    const inputSeed=match.d.inputPreset?{name:inputPresets[match.d.inputPreset][0],preset:match.d.inputPreset}:creatorInputSeed(state.wire);
+    const inputSeed=match.d.inputPreset?{name:inputPresets()[match.d.inputPreset][0],preset:match.d.inputPreset}:creatorInputSeed(state.wire);
     const n=instantiate(d,state.x,state.y,match.type,{locked:$('#createtype').value!=='all',declarationId:match.d.inputSourceId,inputSeed});Object.assign(n.params,clone(match.params||{}));
     if(state.wire){
       if(isVectorOperation(match.d)){const peer=current().nodes.find(p=>p.id===state.wire.node);n.ui.componentNames=definition(peer)?.key==='uv'?'uv':definition(peer)?.key==='color'?'rgba':peer.ui?.componentNames||'xyzw';}

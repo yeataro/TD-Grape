@@ -35,3 +35,10 @@
 參考：[GLSL MAT Vectors](https://derivative.ca/UserGuide/GLSL_MAT)、本機 TD 2025.32820 Sequence 實測。
 
 區網補充（2026-09-12）：啟用主元件的 Allow LAN Connections 後，可使用 [LAN URLs](LAN_ACCESS.md) 直接使用全部原生來源／控制 API。舊私人代理仍不轉送這些新入口，兩者網址不同。
+
+
+## Shared source catalog (0.8.121)
+
+`src/library/source_catalog.json` owns preset names, initialization expressions, UI label keys and host/stage availability. `sgrape_source_catalog` reads the embedded DAT in TD or the same file in portable tools. Native setup and compiler validation share these keys; UI receives the preset projection through the type contract. Initialization does not query or serialize live TD values.
+
+The six presets are absolute time/frame, timeline time/frame, Delta Time (`absTime.stepSeconds`), and Frame Step (`absTime.step`). All retain float output. Existing sources keep their native values and modes across graph Apply. Duplicate native creation still rejects instead of overwriting an existing source.

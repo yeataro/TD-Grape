@@ -9,8 +9,10 @@ from contextvars import ContextVar
 
 if 'me' in globals():
     _composites = me.parent().op('sgrape_composites').module
+    _source_catalog = me.parent().op('sgrape_source_catalog').module
 else:
     import sgrape_composites as _composites
+    import sgrape_source_catalog as _source_catalog
 
 VERSION = 1
 TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
@@ -621,7 +623,7 @@ def _type_contract():
               'specializationExpressions':sorted(SPECIALIZATION_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
-              'definitions': variants,'composites':type_registry().contract()}
+              'definitions': variants,'composites':type_registry().contract(),'sources':_source_catalog.contract()}
     result['hash'] = digest(result)
     return result
 
@@ -931,7 +933,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 if not isinstance(source,str) or len(source)>4096 or any(ord(c)<32 for c in source):raise GraphError('Array source must be a CHOP path')
             elif compound_type(d['type']):raise GraphError('Compound Uniforms require a supported native array source')
             if d.get('nativeSequence')=='matrix' and d['type'] not in MATRIX_TYPES:raise GraphError('The Matrices page requires a matrix Uniform type')
-            if 'initialDriver' in d and d['initialDriver'] not in ('time','frame','absTime','absFrame'):raise GraphError('Unsupported initial Uniform driver')
+            if 'initialDriver' in d and d['initialDriver'] not in _source_catalog.PRESETS:raise GraphError('Unsupported initial Uniform driver')
             if d.get('nativeSequence')!='array' or d.get('value') is not None:literal(d.get('value'), d['type'])
             if not isinstance(d.get('expose',False),bool): raise GraphError('Expose must be a boolean')
             label=d.get('exposeName','')
