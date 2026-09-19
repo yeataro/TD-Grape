@@ -30,11 +30,19 @@
 | Frame | int，從零開始的渲染幀序號 | FRAMEINDEX | iFrame | me.time.frame／absTime.frame 是時間計數，會跳幀且起點不同；若要求渲染計數須另外對齊，不直接改名當作等價 |
 | Resolution | vec2，當前繪製目標的像素寬高 | RENDERSIZE | iResolution.xy | TOP 可使用 uTDOutputInfo.res.zw，不是網頁 viewport／CSS 尺寸 |
 
-Time／Resolution 是優先候選；Delta Time／Frame 在時鐘及重設規則明確後再納入，不能為湊共同表而隱藏差異。Date（vec4，年／月／日／日內秒數）可列選配：ISF DATE、Shadertoy iDate，TD 由宿主供值；月份起算、時區等慣例還需統一。上述共通來源不要求所有目標都新增實體 Uniform：可直接使用宿主既有符號，只在需要且被圖引用時建立必要供值。值由執行宿主維護，不靠網頁每幀輪詢再送回 TD。
+上述是最初跨宿主對照，不是把時間限制為單一 Time 的定案。使用者後續希望細分 Absolute Time（Abs Time）、System Time、Timeline Time、Frame 與 Delta Time，並指出 TD 已有原生時間／CHOP 資料，應直接提供，無須自行計時或保存上一幀再求差。Delta Time 列入能力討論，不因前述語意差異而排除。
+
+- Absolute Time：TD 的 absTime.seconds；保留 TD 的暫停規則，不描述成永不暫停的系統時鐘。
+- Timeline Time：選定時間軸的時間，沿用宿主播放、循環、跳轉行為；目前 TD 預置使用 me.time.seconds。
+- System Time：系統時鐘／日期時間的方向；輸出格式、時區及與 Date 的關係尚未定案，不默認為單一 Unix timestamp float。
+- Frame：保留此能力；使用哪一時鐘的 frame、名稱及型別再界定，不強迫沿用助手先前提出的「從零起渲染次數」。現有 Timeline／Absolute Frame 不因本次討論改動。
+- Delta Time：直接使用符合需求的宿主原生步進。已確認 absTime.stepSeconds 提供前後全域 frame 起點的秒數差；Feedback CHOP 的 Delta Time 開關可輸出自該 CHOP 上次 cook 以來的 dt。它們是可用原生來源的例子，尚未確認使用者所指的特定 CHOP，也不因此新增 Feedback 網路或假定其 cook 間隔等於 Shader 的 cook 間隔。此處須選定與說明來源，沒有自建計時器的需求。
+
+Resolution 維持輸出尺寸；使用者已確認 uTDOutputInfo 與輸入貼圖資訊是不同來源，前者正好提供這項能力。Date（vec4，年／月／日／日內秒數）原為選配候選：ISF DATE、Shadertoy iDate，與上述 System Time 一併討論，月份起算、時區等慣例還需統一。共通來源不要求所有目標都新增實體 Uniform：可直接使用宿主既有符號，只在需要且被圖引用時建立必要供值。值由執行宿主維護，不靠網頁每幀輪詢再送回 TD；各目標對時間種類的可用性另行映射，不假定 ISF／Shadertoy 原生提供 TD 的全部時間軸能力。以上仍是能力整理，未實作或遷移現有來源。
 
 Pixel Size（1/Resolution）及 Aspect Ratio（寬/高）可由 Resolution 推導，無需獨立供值；這裡的 Aspect Ratio 是尺寸比，不等於 Shadertoy iResolution.z 的 pixel aspect ratio。輸入貼圖尺寸留在各貼圖來源／查詢能力。Mouse／Pointer、音訊／FFT、Pass Index 及 Frame Rate 不列首批共同必備項：三方的提供方式或語意不同，須另外設計。UV／Fragment Coordinates 隨片段變動，不是 Uniform。
 
-參考：[ISF 內建變數](https://docs.isf.video/ref_variables)、[ISF 輸入類型](https://docs.isf.video/ref_json)、[Shadertoy 官方編輯器 Inputs 說明](https://www.shadertoy.com/view/XsfcWj)、[TD GLSL TOP](https://docs.derivative.ca/Write_a_GLSL_TOP)、[TD Frame](https://docs.derivative.ca/Frame)、[TD absTime](https://docs.derivative.ca/AbsTime_Class)。
+參考：[ISF 內建變數](https://docs.isf.video/ref_variables)、[ISF 輸入類型](https://docs.isf.video/ref_json)、[Shadertoy 官方編輯器 Inputs 說明](https://www.shadertoy.com/view/XsfcWj)、[TD GLSL TOP](https://docs.derivative.ca/Write_a_GLSL_TOP)、[TD Frame](https://docs.derivative.ca/Frame)、[TD absTime](https://docs.derivative.ca/AbsTime_Class)、[TD Feedback CHOP 原生 dt](https://docs.derivative.ca/Feedback_CHOP)。
 
 ### 靜態 Online 入口／PWA（假設性構想，未決定實作）
 
