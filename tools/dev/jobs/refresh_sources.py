@@ -43,6 +43,8 @@ if changed:
             setattr(runtime, key, value)
         runtime.start(owner, session=session)
         assert (runtime._port, runtime._token, runtime._lan_enabled) == (session['port'], session['token'], session['lan'])
+        # A running HTTP worker does not prove its lazily loaded modules work.
+        runtime.core().type_contract()
         assert snapshot() == before, 'Refresh changed a saved Shader'
     except Exception:
         if getattr(runtime, '_server', None):

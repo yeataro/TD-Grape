@@ -1,4 +1,6 @@
 {
+  "source_catalog": "source_catalog.json",
+  "sgrape_source_catalog": "sgrape_source_catalog.py",
   "node_catalog": "node_catalog.json",
   "sgrape_composites": "sgrape_composites.py",
   "core": "sgrape_core.py",
@@ -32,7 +34,5 @@
   "selection_ui_js": "selection_ui.js",
   "frames_ui_js": "frames_ui.js",
   "live": "sgrape_live.py",
-  "uniform_live_js": "uniform_live.js",
-  "source_catalog": "source_catalog.json",
-  "sgrape_source_catalog": "sgrape_source_catalog.py"
+  "uniform_live_js": "uniform_live.js"
 }
