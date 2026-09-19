@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 HTTP 初始化：`test_lan_access.py` 新增同一 socket 連續讀 24 個資源／API、未授權 POST 關閉且不寫入、帶 body 的靜態 GET 關閉、rebind 後舊 keep-alive 連線回 503 且不執行寫入。與 share links 共 21 項通過。私人 `reports/canvas-click-round/reload-http10.json`／`reload-http11.json` 保留實際 TD 服務 Chromium A/B：前者 5/6 次腳本連線失敗，後者 6/6 次資源完整；根路徑 API 的 422 是未指定 Shader，與資源載入失敗分開記錄。完整 Shader 頁面驗證隨正式同步執行。
+
 2026-09-19 FPS Low／Min：`test_fps_display.cjs` 4 組驗證 99／100 幀暖機界線、200 幀中兩個慢幀的平均換算、單幀 Min、讀取不改變樣本、精確 10 秒淘汰、buffer wrap／極端容量溢出；使用假的 rAF 驗證 FPS 回復 60 時 Low=2、Min=1 保留之前的 1,000ms 單幀尖峰，過期後均恢復 60。維持 10Hz 曲線／每秒數字、背景暫停、無 graph／history／wires 變更與 320／390px 排版。既有 experiments 20 組與 693 雙語鍵通過，tooltip 使用共用翻譯處理。私人 `reports/fps-low-round` 保留結果、截圖及 7,200 次合成 120Hz callback 的命令提交計時；不是 GPU／實機 iOS 效能保證。
 
 2026-09-19 FPS trail：`test_fps_display.cjs` 擴充一幀 1,000ms 停頓、FPS 恢復後尖峰仍保留、30 秒到期、57 秒缺口無舊資料混入、最多 10Hz 繪圖與固定最多 300 格；關閉 canvas 寬度歸零，背景／恢復無假尖峰，390／320px 不遮擋 view controls。3 組通過，另有 experiments 20 組回歸與 690 雙語鍵。私人 `reports/fps-history-round/recorder-cost.json` 記錄 7,200 次合成 callback 的 JS／Canvas 命令提交計時；不包含延後執行的 GPU／合成成本，低於計時解析度的樣本會顯示零，不當作實機效能保證。

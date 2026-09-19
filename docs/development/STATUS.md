@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 重新整理缺少介面（0.8.110 實作檢查點）：在實際 TD HTTP 服務的獨立 Chromium 頁面重現部分腳本 `ERR_CONNECTION_REFUSED`，缺少 app.js／依賴時初始化中斷，留下未翻譯的空介面。六次同條件對照，HTTP/1.0 有五次載入不完整，HTTP/1.1 六次資源完整；尚未據此判定 Windows／TD 內部拒絕連線的機制。改為重用 HTTP/1.1 連線，沿用 5 秒 idle timeout、Content-Length、Host／Origin／token 邊界；錯誤回覆與帶有未讀 body 的靜態 GET 關閉連線，避免下個請求邊界混淆。21 項 LAN／share 測試通過，包含重用、拒絕寫入不改狀態及重啟後舊連線拒絕寫入。連線 backlog 的試驗沒有改善，已還原，未納入產品。保存交付另記；畫布放開滑鼠的全圖重建問題接續修正。
+
 2026-09-19 0.8.109 交付檢查點：`a3b675f` 已整合 main，32 份來源中更新 6 份、9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 57），三份使用者 Shader 保留。正式 TOE 保存 910,558 bytes，SHA-256 `eb75c7c78080ef46488b6f0641542a4369798fd7c4f6d42bf43cc254df92edf6`，排除一份私人助手。未重新載入使用者 Editor；圖／參數／連線保留。
 
 2026-09-19 FPS 精簡指標（0.8.109 實作檢查點）：使用者將歷史改為 10 秒，並同意 FPS／1% Low／Min 三個數字。FPS 為最近約 1 秒的回呼數除以實際經過時間；Low／Min 使用最近 10 秒的原始幀間隔，每秒更新。Low 取最慢 ceil(N×1%) 幀間隔平均後倒數換算 FPS（1000×K／sum(dt)），不足 100 個樣本先顯示「—」；Min 為 1000／最大單幀間隔，不是最小的一秒平均 FPS。參考 [FrameView 的慢幀平均概念](https://images.nvidia.com/content/geforce/technologies/frameview/frameview-1-4-user-guide-web-version.pdf)，不混用 percentile 或時間權重定義。圖仍為 10Hz 繪製的區間尖峰，縮為 100 格，統計不從這些降採樣格反推。原始樣本固定 16,384 格循環緩衝，取樣 O(1)，只在每秒統計時複製至重用 scratch 並以原生 typed-array 排序；三個 Float64Array 共 384KiB，仅開啟時分配，若極端回呼率使 10 秒樣本超容量則顯示「—」，不偷偷縮短窗口。背景／關閉既有清理行為保留。4 組 FPS、20 組 experiments、693 雙語鍵及 JS syntax 通過；實機 iOS／其他硬體尚未量測。同步保存另記。

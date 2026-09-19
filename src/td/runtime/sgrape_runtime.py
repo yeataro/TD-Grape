@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.109'
+PRODUCT_VERSION='0.8.110'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1931,6 +1931,9 @@ def start(owner,session=None):
             deploy(current['graph'],current['revision'])
     refresh_assets(owner)
     class Handler(http.server.BaseHTTPRequestHandler):
+        # A reload fetches many scripts. Reuse bounded, idle-timed connections
+        # instead of a new TCP handshake for every asset (unreliable on Windows).
+        protocol_version='HTTP/1.1'
         def setup(self):
             self.request.settimeout(5)
             super().setup()
@@ -1951,6 +1954,9 @@ def start(owner,session=None):
             if self.command=='GET' and path.startswith('/shader/') and len(path.strip('/').split('/'))==2:
                 path='/'
             if self.command=='GET' and path in _assets:
+                # Static GETs do not consume request bodies. Do not parse an
+                # unread body as the next request on a persistent connection.
+                if self.headers.get('Content-Length','0')!='0':self.close_connection=True
                 value,mime=_assets[path]
                 return self.reply(200,value,mime)
             supplied=self.headers.get('X-Sgrape-Token','')
@@ -1978,9 +1984,13 @@ def start(owner,session=None):
             value=job['result']; return self.reply(200,value,'image/png' if isinstance(value,bytes) else None)
         def reply(self,status,value,mime=None):
             data=value if isinstance(value,bytes) else json.dumps(value,ensure_ascii=False,allow_nan=False).encode('utf-8')
+            # Early Host/auth/framing failures can leave a body unread. Close
+            # the connection rather than reusing it with an ambiguous boundary.
+            if status>=400:self.close_connection=True
             try:
                 self.send_response(status); self.send_header('Content-Type',mime or 'application/json; charset=utf-8')
                 self.send_header('Content-Length',str(len(data))); self.send_header('Cache-Control','no-store')
+                if self.close_connection:self.send_header('Connection','close')
                 self.send_header('X-Content-Type-Options','nosniff'); self.send_header('Referrer-Policy','no-referrer')
                 # The socket destination was validated against Host above; no TD calls on this worker.
                 remote=' ws://'+self.connection.getsockname()[0]+':'+str(_remote_port) if _remote_port else ''

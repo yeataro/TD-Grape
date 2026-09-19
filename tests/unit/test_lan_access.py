@@ -61,6 +61,58 @@ class LanTests(unittest.TestCase):
         self.assertEqual(self.request(headers={'X-Sgrape-Token':None})[0],200)
         self.assertEqual(self.request(headers={'X-Sgrape-Token':'stale-token'})[0],200)
         self.assertEqual(json.loads(self.request()[1]),self.original)
+    def test_reload_assets_and_api_reuse_one_connection(self):
+        self.r._assets['/app.js']=(b'/* editor */','text/javascript')
+        conn=http.client.HTTPConnection('127.0.0.1',self.r._port,timeout=3)
+        try:
+            connection=None
+            for path in ['/', '/app.js', '/api/test/state']*8:
+                conn.request('GET',path)
+                response=conn.getresponse();body=response.read()
+                self.assertEqual(response.status,200)
+                self.assertEqual(response.version,11)
+                self.assertEqual(int(response.getheader('Content-Length')),len(body))
+                self.assertFalse(response.will_close)
+                if connection is None:connection=conn.sock
+                self.assertIs(conn.sock,connection)
+        finally:conn.close()
+    def test_rejected_write_closes_connection_without_consuming_or_applying_body(self):
+        self.owner.par.Requiretoken.val=True;self.r.service_network()
+        conn=http.client.HTTPConnection('127.0.0.1',self.r._port,timeout=3)
+        try:
+            conn.request('POST','/api/test/state',body=json.dumps({'value':99}),headers={'Content-Type':'application/json'})
+            response=conn.getresponse();response.read()
+            self.assertEqual(response.status,401)
+            self.assertEqual(response.getheader('Connection'),'close')
+            self.assertTrue(response.will_close)
+            self.assertEqual(self.state,self.original)
+            conn.request('GET','/api/test/state',headers={'X-Sgrape-Token':self.r._token})
+            response=conn.getresponse()
+            self.assertEqual(response.status,200)
+            self.assertEqual(json.loads(response.read()),self.original)
+        finally:conn.close()
+    def test_static_get_with_body_closes_connection(self):
+        conn=http.client.HTTPConnection('127.0.0.1',self.r._port,timeout=3)
+        try:
+            conn.request('GET','/',body='unconsumed')
+            response=conn.getresponse()
+            self.assertEqual(response.read(),b'editor')
+            self.assertEqual(response.getheader('Connection'),'close')
+            self.assertTrue(response.will_close)
+        finally:conn.close()
+    def test_rebind_rejects_requests_on_old_keepalive_connection(self):
+        conn=http.client.HTTPConnection('127.0.0.1',self.r._port,timeout=3)
+        try:
+            conn.request('GET','/');response=conn.getresponse();response.read()
+            self.assertFalse(response.will_close)
+            self.r.set_lan_enabled(True)
+            conn.request('POST','/api/test/state',body=json.dumps({'value':99}),headers={'Content-Type':'application/json'})
+            response=conn.getresponse();response.read()
+            self.assertEqual(response.status,503)
+            self.assertTrue(response.will_close)
+            self.assertEqual(self.state,self.original)
+            self.assertEqual(json.loads(self.request()[1]),self.original)
+        finally:conn.close()
     def test_auth_toggle_controls_reads_and_writes_without_restarting(self):
         r=self.r;server,worker,port,token,work=r._server,r._worker,r._port,r._token,r._queue
         for required in (True,False,True,False):
