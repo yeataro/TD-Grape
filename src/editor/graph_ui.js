@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 100 });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1784,7 +1784,7 @@ function installGraphInteractions(){
     canvas.onpointermove=ev=>{moved=Math.hypot(ev.clientX-sx,ev.clientY-sy)>3;
       if(boxSelect){const rect=canvas.getBoundingClientRect(),box=$('#marquee'),uiScale=uiScaleFactor();box.hidden=false;box.style.left=(Math.min(sx,ev.clientX)-rect.left)/uiScale+'px';box.style.top=(Math.min(sy,ev.clientY)-rect.top)/uiScale+'px';box.style.width=Math.abs(ev.clientX-sx)/uiScale+'px';box.style.height=Math.abs(ev.clientY-sy)/uiScale+'px';
         selection=new Set(previous);document.querySelectorAll('.node').forEach(card=>{const r=card.getBoundingClientRect();if(r.right>=Math.min(sx,ev.clientX)&&r.left<=Math.max(sx,ev.clientX)&&r.bottom>=Math.min(sy,ev.clientY)&&r.top<=Math.max(sy,ev.clientY))selection.add(card.dataset.node);card.classList.toggle('selected',selection.has(card.dataset.node));});
-      }else {pan={x:ox+(ev.clientX-sx)/uiScaleFactor(),y:oy+(ev.clientY-sy)/uiScaleFactor()};transform();}
+      }else {moveCanvas({x:ox+(ev.clientX-sx)/uiScaleFactor(),y:oy+(ev.clientY-sy)/uiScaleFactor()});}
     };
     canvas.onpointerup=ev=>{canvas.onpointermove=null;canvas.onpointerup=null;$('#marquee').hidden=true;
       if(boxSelect&&moved){selected=[...selection].at(-1)||null;selectedEdge=null;suppressContext=e.button===2;refreshCanvasSelection();}
@@ -1851,7 +1851,13 @@ function installTouchNavigation(canvas){
   const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview,.group-frame-title');
   const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
   const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
-  const rebase=()=>{const p=sample();gesture.origin={...p,point:graphPoint(p.x,p.y),pan:{...pan},scale};};
+  const rebase=()=>{
+    const p=sample(),target=canvasMotion?.to;
+    if(target){
+      const r=canvas.getBoundingClientRect(),zoom=uiScaleFactor();
+      gesture.origin={...p,point:{x:((p.x-r.left)/zoom-target.x)/target.scale,y:((p.y-r.top)/zoom-target.y)/target.scale},pan:{x:target.x,y:target.y},scale:target.scale};
+    }else gesture.origin={...p,point:graphPoint(p.x,p.y),pan:{...pan},scale};
+  };
   const stopHold=()=>{clearTimeout(holdTimer);holdTimer=0;};
   const clearPreview=g=>{
     clearGraphTrash();clearVectorWirePreview();
@@ -1887,11 +1893,11 @@ function installTouchNavigation(canvas){
     const p=sample(),dx=p.x-g.start.x,dy=p.y-g.start.y;
     if(points.size>=2){
       const o=g.origin,r=canvas.getBoundingClientRect(),uiScale=uiScaleFactor();
-      scale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,o.scale*p.distance/Math.max(1,o.distance)));
-      pan={x:(p.x-r.left)/uiScale-o.point.x*scale,y:(p.y-r.top)/uiScale-o.point.y*scale};transform();return;
+      const nextScale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,o.scale*p.distance/Math.max(1,o.distance)));
+      moveCanvas({x:(p.x-r.left)/uiScale-o.point.x*nextScale,y:(p.y-r.top)/uiScale-o.point.y*nextScale},nextScale);return;
     }
     if(g.mode==='pan'){
-      const o=g.origin;pan={x:o.pan.x+(p.x-o.x)/uiScaleFactor(),y:o.pan.y+(p.y-o.y)/uiScaleFactor()};transform();
+      const o=g.origin;moveCanvas({x:o.pan.x+(p.x-o.x)/uiScaleFactor(),y:o.pan.y+(p.y-o.y)/uiScaleFactor()},EDITOR_DEV_SETTINGS.canvasDamping?o.scale:scale);
     }else if(g.mode==='node'){
       const anchor=g.positions.find(item=>item.node===g.node),screenScale=g.origin.scale*uiScaleFactor(),mx=snap(anchor.x+dx/screenScale)-anchor.x,my=snap(anchor.y+dy/screenScale)-anchor.y;
       for(const item of g.positions){item.nextX=item.x+mx;item.nextY=item.y+my;item.card.style.left=item.nextX+'px';item.card.style.top=item.nextY+'px';}updateGraphTrash(p.x,p.y);wires();

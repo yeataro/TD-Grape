@@ -122,6 +122,7 @@ function nodeHasCompileError(id){
 }
 function locateCompileIssue(issue){
   const location=diagnosticLocation(issue);if(!location)return;
+  stopCanvasMotion();
   stage=issue.stage;graphTrail=[...location.trail];selected=location.node.id;selection=new Set([selected]);selectedEdge=null;
   cancelConnection();closeCreator();document.querySelectorAll('.stage').forEach(button=>button.classList.toggle('active',button.dataset.stage===stage));
   $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();
@@ -321,14 +322,14 @@ async function performApplyGraph(){
 function el(tag,attrs={},text=''){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else e.setAttribute(k,v);}e.textContent=text;return e;}
 function field(label,control){const f=el('label',{class:'field'},label);f.append(control);return f;}
 function select(options,value,onchange){const s=el('select');for(const [id,label]of options){const o=el('option',{value:id},label);s.append(o);}s.value=value;s.onchange=()=>onchange(s.value);return s;}
-function input(value,cb,type='text'){
+function input(value,cb,type='text',{local=false}={}){
   const i=el('input',{type});i.value=value;let committed=i.value;
-  const commit=()=>{if(editorMutationBlocked()||i.numericGestureActive||i.value===committed)return;const next=type==='number'?Number(i.value):i.value;if(type==='number'&&(!i.value.trim()||!Number.isFinite(next)||i.validateValue&&!i.validateValue(next))){i.setAttribute('aria-invalid','true');return;}i.removeAttribute('aria-invalid');committed=i.value;cb(next);};
+  const commit=()=>{if((!local&&editorMutationBlocked())||i.numericGestureActive||i.value===committed)return;const next=type==='number'?Number(i.value):i.value;if(type==='number'&&(!i.value.trim()||!Number.isFinite(next)||i.validateValue&&!i.validateValue(next))){i.setAttribute('aria-invalid','true');return;}i.removeAttribute('aria-invalid');committed=i.value;cb(next);};
   i.onchange=commit;i.onblur=commit;
   i.hasPendingEdit=()=>i.value!==committed;
   i.setSyncedValue=value=>{if(i.numericGestureActive)return;i.value=value??'';committed=i.value;};
   i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}};
-  if(type==='number'){i.step='0.05';installValueLadder(i,commit);}return i;
+  if(type==='number'){i.step='0.05';installValueLadder(i,commit,{local});}return i;
 }
 function current(){return currentFunction()?.graph||graph.stages[stage];}
 function ports(n,kind){if(!definition(n))return{};return safeConcretePorts(graph,n,currentFunction())[kind];}
@@ -344,6 +345,42 @@ function point(n,port,kind){
   if(!socket)return null;
   const rect=socket.getBoundingClientRect();
   return graphPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+}
+// pan/scale always describe the displayed view, including during interpolation.
+// The optional target exists only while damping is enabled and actually moving.
+let canvasMotion=null,canvasMotionFrame=0,canvasMotionEvents=null;
+function stopCanvasMotion(finish=false){
+  if(!canvasMotion)return;
+  const target=canvasMotion.to;
+  cancelAnimationFrame(canvasMotionFrame);canvasMotionFrame=0;canvasMotion=null;
+  if(finish){pan={x:target.x,y:target.y};scale=target.scale;transform();}
+}
+function stepCanvasMotion(now){
+  canvasMotionFrame=0;const motion=canvasMotion;if(!motion)return;
+  const progress=Math.min(1,Math.max(0,(now-motion.start)/motion.duration)),amount=1-Math.pow(1-progress,3);
+  const {from,to}=motion;
+  pan={x:from.x+(to.x-from.x)*amount,y:from.y+(to.y-from.y)*amount};scale=from.scale+(to.scale-from.scale)*amount;
+  if(progress===1){pan={x:to.x,y:to.y};scale=to.scale;canvasMotion=null;}
+  transform();
+  if(canvasMotion)canvasMotionFrame=requestAnimationFrame(stepCanvasMotion);
+}
+function moveCanvas(nextPan,nextScale=scale){
+  // Disabled takes the original immediate path: no target, timer or frame callback.
+  if(!EDITOR_DEV_SETTINGS.canvasDamping){pan=nextPan;scale=nextScale;transform();return;}
+  const to={...nextPan,scale:nextScale},target=canvasMotion?.to||{...pan,scale};
+  if(to.x===target.x&&to.y===target.y&&to.scale===target.scale)return;
+  canvasMotion={from:{...pan,scale},to,start:performance.now(),duration:EDITOR_DEV_SETTINGS.canvasDampingMs};
+  if(!canvasMotionFrame)canvasMotionFrame=requestAnimationFrame(stepCanvasMotion);
+}
+function applyCanvasDamping(){
+  stopCanvasMotion(true);canvasMotionEvents?.abort();canvasMotionEvents=null;
+  if(!EDITOR_DEV_SETTINGS.canvasDamping)return;
+  canvasMotionEvents=new AbortController();const options={capture:true,signal:canvasMotionEvents.signal};
+  // Freeze where the user actually clicked before a node, wire or new gesture takes over.
+  document.addEventListener('pointerdown',event=>{if(event.target.closest?.('#canvas')&&!event.target.closest('.toolbar,.canvas-view-tools,.selection-toolbar'))stopCanvasMotion();},options);
+  for(const name of ['blur','resize'])window.addEventListener(name,()=>stopCanvasMotion(true),options);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCanvasMotion(true);},options);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape')stopCanvasMotion();},options);
 }
 function transform(){
   // Hide intermediate grid lines at distant zoom; snapping stays in world units.
@@ -542,6 +579,7 @@ function nodeLayoutBounds(n){
 }
 function fitNodes(nodes){
   if(!nodes.length)return;
+  stopCanvasMotion();
   const bounds=[...nodes.map(nodeLayoutBounds),...completeGroupFrames(nodes).map(groupFrameBounds).filter(Boolean)],minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));
   scale=Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY));scale=Math.max(.25,scale);
   pan={x:($('#canvas').clientWidth-(maxX-minX)*scale)/2-minX*scale,y:($('#canvas').clientHeight-(maxY-minY)*scale)/2-minY*scale};transform();
@@ -671,7 +709,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock','showFps']]
+  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
@@ -794,7 +832,8 @@ function parseUIExperiments(raw){
   if(!saved||typeof saved!=='object'||Array.isArray(saved))return result;
   for(const key of Object.keys(result)){
     const value=saved[key];
-    if(experimentChoices[key]?experimentChoices[key].some(([choice])=>choice===value):typeof value==='boolean')result[key]=value;
+    if(key==='canvasDampingMs'){if(typeof value==='number'&&Number.isFinite(value))result[key]=Math.max(10,Math.min(1000,Math.round(value)));}
+    else if(experimentChoices[key]?experimentChoices[key].some(([choice])=>choice===value):typeof value==='boolean')result[key]=value;
   }
   return result;
 }
@@ -803,8 +842,10 @@ function renderUIExperiments(){
   opener.title=t('experiments.title');opener.setAttribute('aria-expanded',String(panel.matches(':popover-open')));
   for(const entry of panel.querySelectorAll('[data-experiment]')){
     const key=entry.dataset.experiment;
-    if(entry.type==='checkbox')entry.checked=key==='floatingToolbar'?!EDITOR_DEV_SETTINGS[key]:EDITOR_DEV_SETTINGS[key];else entry.value=EDITOR_DEV_SETTINGS[key];
-    entry.closest('label').title=t('experiments.'+key+'.hint');
+    if(entry.type==='checkbox')entry.checked=key==='floatingToolbar'?!EDITOR_DEV_SETTINGS[key]:EDITOR_DEV_SETTINGS[key];
+    else if(entry.setSyncedValue)entry.setSyncedValue(EDITOR_DEV_SETTINGS[key]);else entry.value=EDITOR_DEV_SETTINGS[key];
+    if(key==='canvasDampingMs')entry.disabled=!EDITOR_DEV_SETTINGS.canvasDamping;
+    entry.closest('.experiment-option').title=t('experiments.'+key+'.hint');
   }
   $('#experimentsreset').disabled=Object.keys(EDITOR_DEV_DEFAULTS).every(key=>EDITOR_DEV_SETTINGS[key]===EDITOR_DEV_DEFAULTS[key]);
   if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);
@@ -813,13 +854,15 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','canvasDamping','canvasDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const dampingChanged=next.canvasDamping!==EDITOR_DEV_SETTINGS.canvasDamping||next.canvasDampingMs!==EDITOR_DEV_SETTINGS.canvasDampingMs;
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){
     cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();
     if(linkStart||wireDrag||wireGesture)cancelConnection();
   }
   Object.assign(EDITOR_DEV_SETTINGS,next);
+  if(dampingChanged)applyCanvasDamping();
   try{localStorage.setItem(experimentsStorageKey,JSON.stringify(next));}catch{}
   applyFloatingToolbar();applyGraphUISettings();applySystemClock();applyFpsDisplay();clearGraphTrash();
   if(graph&&redrawWires){
@@ -846,6 +889,15 @@ function installUIExperiments(){
     group.append(el('h3',{id:headingId,'data-i18n':'experiments.group.'+name},t('experiments.group.'+name)));
     for(const key of keys){
       if(!Object.hasOwn(EDITOR_DEV_DEFAULTS,key))continue;
+      if(key==='canvasDamping'){
+        const row=el('div',{class:'experiment-option experiment-damping'}),label=el('label',{class:'experiment-toggle'});
+        const toggle=el('input',{type:'checkbox','data-experiment':key});toggle.onchange=()=>setUIExperiments({canvasDamping:toggle.checked});
+        label.append(toggle,el('span',{'data-i18n':'experiments.canvasDamping'},t('experiments.canvasDamping')));
+        const number=input(EDITOR_DEV_SETTINGS.canvasDampingMs,value=>setUIExperiments({canvasDampingMs:value}),'number',{local:true});
+        Object.assign(number,{min:'10',max:'1000',step:'1',numericRange:{min:10,max:1000,step:1}});
+        number.dataset.experiment='canvasDampingMs';number.dataset.i18nLabel='experiments.canvasDampingMs';number.dataset.i18nTitle='experiments.canvasDampingMs.hint';number.setAttribute('aria-label',t('experiments.canvasDampingMs'));number.refreshNumericSlider();
+        const value=el('div',{class:'experiment-value'});value.append(number,el('span',{},'ms'));row.append(label,value);group.append(row);continue;
+      }
       const row=el('label',{class:'experiment-option'}),choices=experimentChoices[key];
       const entry=choices?el('select',{'data-experiment':key}):el('input',{type:'checkbox','data-experiment':key});
       if(choices)for(const [value,label]of choices)entry.append(el('option',{value,'data-i18n':label},t(label)));
@@ -863,7 +915,7 @@ function installUIExperiments(){
   });
   opener.onclick=()=>requestAnimationFrame(()=>{if(panel.matches(':popover-open'))list.querySelector('input,select')?.focus({preventScroll:true});});
   window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);});
-  applyGraphUISettings();applySystemClock();applyFpsDisplay();clearGraphTrash();renderUIExperiments();
+  applyGraphUISettings();applySystemClock();applyFpsDisplay();applyCanvasDamping();clearGraphTrash();renderUIExperiments();
 }
 /* One immutable palette per base theme. Only root color tokens are transformed;
    image pixels, authored color swatches and GLSL syntax colors never pass here. */
@@ -1001,9 +1053,11 @@ function renderGraphZoom(){
 }
 function setGraphZoom(value){
   if(!graph||!Number.isFinite(value))return;
-  const rect=$('#canvas').getBoundingClientRect(),x=rect.width/uiScaleFactor()/2,y=rect.height/uiScaleFactor()/2,previous=scale;
-  scale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,value));
-  pan={x:x-(x-pan.x)*scale/previous,y:y-(y-pan.y)*scale/previous};transform();
+  const rect=$('#canvas').getBoundingClientRect();zoomCanvasAt(value,rect.width/uiScaleFactor()/2,rect.height/uiScaleFactor()/2);
+}
+function zoomCanvasAt(value,x,y){
+  const target=canvasMotion?.to,previous=target?.scale??scale,origin=target||pan,next=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,value));
+  moveCanvas({x:x-(x-origin.x)*next/previous,y:y-(y-origin.y)*next/previous},next);
 }
 function installGraphZoom(){
   const opener=$('#zoom'),menu=$('#canvaszoommenu'),presets=[25,50,75,100,125,150,170];
@@ -1119,7 +1173,7 @@ $('#export').onclick=openExport;
 installImportUI();
 installSavedStateUI();
 $('#code').onclick=async()=>{try{const code=await api('validate',{graph});renderGLSL((code.vertex?'// VERTEX\n'+code.vertex+'\n':'')+'// PIXEL\n'+code.pixel);$('#source').showModal();}catch(e){status(e.message,true);}};$('#closecode').onclick=()=>$('#source').close();
-$('#canvas').addEventListener('wheel',e=>{e.preventDefault();const rect=$('#canvas').getBoundingClientRect(),x=(e.clientX-rect.left)/uiScaleFactor(),y=(e.clientY-rect.top)/uiScaleFactor(),old=scale;scale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,scale*Math.exp(-e.deltaY*.001)));pan={x:x-(x-pan.x)*scale/old,y:y-(y-pan.y)*scale/old};transform();},{passive:false});
+$('#canvas').addEventListener('wheel',e=>{e.preventDefault();const rect=$('#canvas').getBoundingClientRect();zoomCanvasAt((canvasMotion?.to.scale??scale)*Math.exp(-e.deltaY*.001),(e.clientX-rect.left)/uiScaleFactor(),(e.clientY-rect.top)/uiScaleFactor());},{passive:false});
 installUpgradeUI();
 installGraphInteractions();
 installLibraryTabs();

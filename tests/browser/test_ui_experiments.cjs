@@ -47,8 +47,9 @@ const [source,stateFile,folder]=process.argv.slice(2);
 
     const unchanged=await snapshot();
     for(const [key,value]of Object.entries(defaults)){
-      const changed=typeof value==='boolean'?!value:key==='uiStyle'?'cool':key==='selectionToolbar'?'multiple':'move';
-      if(typeof value==='boolean')await control(key).setChecked(key==='floatingToolbar'?!changed:changed);else await control(key).selectOption(changed);
+      const changed=typeof value==='boolean'?!value:typeof value==='number'?250:key==='uiStyle'?'cool':key==='selectionToolbar'?'multiple':'move';
+      if(typeof value==='boolean')await control(key).setChecked(key==='floatingToolbar'?!changed:changed);
+      else if(typeof value==='number'){await control(key).fill(String(changed));await control(key).press('Enter');}else await control(key).selectOption(changed);
       await settle();assert.equal((await settings())[key],changed);
     }
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),await settings());
@@ -170,7 +171,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
 
     for(const locale of ['en','zh-Hant']){
       await page.selectOption('#language',locale);await open();const title=await page.evaluate(()=>t('experiments.title'));assert.equal(await opener.getAttribute('aria-label'),title);assert.equal(await opener.getAttribute('title'),title);
-      const labels=await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(e=>({key:e.dataset.experiment,label:e.closest('label').querySelector('span').textContent,title:e.closest('label').title})));
+      const labels=await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(e=>({key:e.dataset.experiment,label:e.getAttribute('aria-label')||e.closest('.experiment-option').querySelector('span').textContent,title:e.closest('.experiment-option').title})));
       assert.ok(labels.every(x=>x.label.trim()&&x.title.trim()&&!x.label.startsWith('experiments.')&&!x.title.startsWith('experiments.')));
       assert.ok(await panel.locator('select option,[data-experiment-group] h3').evaluateAll(entries=>entries.every(entry=>entry.textContent.trim()&&!entry.textContent.startsWith('experiments.'))));
       assert.equal(await control('floatingToolbar').locator('..').locator('span').textContent(),locale==='en'?'Show toolbar background':'顯示工具列底色');await close();

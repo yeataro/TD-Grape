@@ -2,9 +2,9 @@
 let valueLadder=null,pendingValueLadder=null,numericPresetMenu=null,numericTouchTap=null;
 document.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch'||!e.isPrimary||e.target!==numericTouchTap?.entry)numericTouchTap=null;},true);
 function cancelValueLadder(){pendingValueLadder?.cancel();valueLadder?.cancel();numericPresetMenu?.close();}
-function openNumericPresets(entry,commit,event){
+function openNumericPresets(entry,commit,event,{local=false}={}){
   event.preventDefault();event.stopPropagation();cancelValueLadder();
-  const owner=current(),documentGraph=graph,writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner;
+  const owner=local?null:current(),documentGraph=graph,writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&(local||!editorMutationBlocked()&&graph===documentGraph&&current()===owner);
   if(!writable())return;
   const values=(entry.step==='1'?[0,1,-1]:[0,1,.5,-.5,-1]).filter(value=>(entry.min===''||value>=Number(entry.min))&&(entry.max===''||value<=Number(entry.max)));
   if(!values.length)return;
@@ -53,8 +53,8 @@ function openNumericPresets(entry,commit,event){
 function beginValueLadder(entry,e,adapter){
   const button=e.button,mask=button===1?4:button===2?2:1;
   e.preventDefault();e.stopPropagation();cancelValueLadder();
-  const owner=current(),documentGraph=graph;
-  const writable=()=>entry.isConnected&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner&&(!adapter.writable||adapter.writable());
+  const owner=adapter.local?null:current(),documentGraph=graph;
+  const writable=()=>entry.isConnected&&(adapter.local||!editorMutationBlocked()&&graph===documentGraph&&current()===owner)&&(!adapter.writable||adapter.writable());
   if(!writable()||!Number.isFinite(adapter.read()))return;
   if(adapter.focus!==false&&e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
   const initialValue=adapter.read(),steps=adapter.integer?[100,10,1]:[10,1,.1,.01,.001];
@@ -134,7 +134,8 @@ function beginValueLadder(entry,e,adapter){
   try{if(!entry.hasPointerCapture(e.pointerId))entry.setPointerCapture(e.pointerId);}catch{finish(false);}
 }
 
-function installValueLadder(entry,commit){
+function installValueLadder(entry,commit,{local=false}={}){
+  const blocked=()=>!local&&editorMutationBlocked();
   entry.title=t('ladder.hint');
   entry.classList.add('numeric-slider');
   const paintSlider=()=>{
@@ -150,8 +151,8 @@ function installValueLadder(entry,commit){
   entry.addEventListener('input',paintSlider);entry.addEventListener('change',paintSlider);
   if(entry.setSyncedValue){const sync=entry.setSyncedValue;entry.setSyncedValue=value=>{sync(value);paintSlider();};}
   function beginScrub(e,firstMove){
-    const owner=current(),documentGraph=graph;
-    const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()&&graph===documentGraph&&current()===owner;
+    const owner=local?null:current(),documentGraph=graph;
+    const writable=()=>entry.isConnected&&!entry.disabled&&!entry.readOnly&&(local||!editorMutationBlocked()&&graph===documentGraph&&current()===owner);
     if(!writable()||!entry.value.trim()||!Number.isFinite(Number(entry.value)))return;
     if(e.pointerType!=='touch')entry.focus({preventScroll:true});if(!writable())return;
     const initial=entry.value,initialValue=Number(initial),integer=entry.step==='1',range=entry.numericRange;
@@ -240,6 +241,7 @@ function installValueLadder(entry,commit){
     cancelValueLadder();const initial=entry.value;
     if(!initial.trim()||!Number.isFinite(Number(initial)))return;
     beginValueLadder(entry,e,{
+      local,
       read:()=>Number(entry.value),integer:entry.step==='1',min:entry.min===''?-Infinity:Number(entry.min),max:entry.max===''?Infinity:Number(entry.max),range:entry.numericRange,
       writable:()=>!entry.disabled&&!entry.readOnly,
       preview:value=>{entry.value=String(value);paintSlider();},restore:()=>{entry.value=initial;paintSlider();},commit,
@@ -247,12 +249,12 @@ function installValueLadder(entry,commit){
     });
   }
   let suppressContextUntil=0;
-  entry.addEventListener('contextmenu',e=>{if(performance.now()<suppressContextUntil||e.altKey){e.preventDefault();e.stopPropagation();return;}openNumericPresets(entry,commit,e);});
+  entry.addEventListener('contextmenu',e=>{if(performance.now()<suppressContextUntil||e.altKey){e.preventDefault();e.stopPropagation();return;}openNumericPresets(entry,commit,e,{local});});
   entry.addEventListener('pointerdown',e=>{
     const touch=e.pointerType==='touch';
     if(touch&&!e.isPrimary){e.preventDefault();e.stopPropagation();return;}
     if(!touch&&(e.button===1||(e.button===2&&e.altKey))){suppressContextUntil=performance.now()+1200;beginLadder(e);return;}
-    if(e.button!==0||e.metaKey||e.altKey||entry.disabled||entry.readOnly||editorMutationBlocked())return;
+    if(e.button!==0||e.metaKey||e.altKey||entry.disabled||entry.readOnly||blocked())return;
     cancelValueLadder();
     const textEditing=document.activeElement===entry,canScrub=!textEditing&&entry.value.trim()&&Number.isFinite(Number(entry.value));
     // Once explicitly editing, leave caret placement and selection to the browser.
@@ -269,13 +271,13 @@ function installValueLadder(entry,commit){
       if(canScrub&&(!touch||!moved)&&(touch?Math.hypot(dx,dy)>8:Math.abs(dx)>4)&&Math.abs(dx)>=Math.abs(dy)){cleanup();beginScrub(e,ev);return;}
       if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>8){moved=true;clearTimeout(timer);if(!touch){cleanup();return;}}
       if(touch){ev.preventDefault();ev.stopPropagation();if(moved&&scroller)scroller.scrollTop=scrollTop-(ev.clientY-sy)/uiScaleFactor();
-        else if(moved&&inlineCanvas){pan={x:initialPan.x+(ev.clientX-sx)/uiScaleFactor(),y:initialPan.y+(ev.clientY-sy)/uiScaleFactor()};transform();}}
+        else if(moved&&inlineCanvas){moveCanvas({x:initialPan.x+(ev.clientX-sx)/uiScaleFactor(),y:initialPan.y+(ev.clientY-sy)/uiScaleFactor()});}}
     },options);
     window.addEventListener('pointerup',ev=>{
       if(ev.pointerId!==e.pointerId)return;cleanup();
       if(touch||canScrub){
         ev.preventDefault();ev.stopPropagation();
-        if(!moved&&entry.isConnected&&!entry.disabled&&!entry.readOnly&&!editorMutationBlocked()){
+        if(!moved&&entry.isConnected&&!entry.disabled&&!entry.readOnly&&!blocked()){
           if(!touch)entry.focus({preventScroll:true});
           else if(previousTap?.entry===entry&&performance.now()-previousTap.time<=350&&Math.hypot(sx-previousTap.x,sy-previousTap.y)<=24)entry.focus({preventScroll:true});
           else numericTouchTap={entry,time:performance.now(),x:sx,y:sy};

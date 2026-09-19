@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 畫布阻尼（0.8.112）：`test_canvas_damping.cjs` 9 組通過。檢查預設關閉／100 ms、10–1000 ms 共用數值滑桿與唯讀圖的本機設定、快速 wheel 累積／單一 rAF、插值中游標錨點與 graphPoint、實際滑鼠平移不重建 DOM／改圖／送 POST、關閉後零插值 target／rAF／專用 listeners、背景／blur、兩指縮放接一指放開不遺失倍率、設定持久化／Reset／窄版及真實 scheduler 收尾。測試用可控制的插值回呼驗證中間狀態，最後另走實際 rAF；不是硬體 FPS 或實機 iOS 手感驗證。既有 experiments 20、zoom menu 7、canvas selection 7、numeric scrub 32、numeric presets 7、numeric touch 20 組通過。舊 `test_value_ladder.cjs` 依賴帶有 uniform_tint 的專用 fixture，誤以本輪矩陣 fixture 執行於該欄位等待逾時，未列為通過；中鍵 Ladder 與唯讀／取消行為已由上述共用 numeric scrub 回歸涵蓋。私人結果位於 `reports/canvas-damping-round`。
+
 2026-09-19 畫布選取：`test_canvas_selection.cjs` 7 組驗證無選取／单／多／群組／接線取消、pan、marquee、觸控雙擊與拉線開啟 creator，以及失焦提交數值仍是一筆 Undo；比對 graph／history／dirty、DOM identity 與 API 請求，防止透過整圖 render 處理純選取。12 組既有 selection toolbar、15 組 Parameter 通過。私人 `reports/canvas-click-round/{before,after}.json` 保存 16／101 節點的同探針前後計時；沒有將單次 JS 耗時等同於實際 GPU 幀率。
 
 同輪擴大回歸的限制：舊 `test_inline_vector_values.cjs` 仍尋找已不存在的 `data-vector-expand`，`test_touch_editing.cjs` 在開啟無實體預覽的 fixture 中拖曳未提交；兩者使用修改前 HEAD 的 editor 亦於相同位置失敗，並非本次新增通過項目。關閉 fixture 預覽後，touch 測試可前進至第二指取消接線的既有失敗；後續需獨立更新這兩份舊測試，本輪不擴大修改產品行為。

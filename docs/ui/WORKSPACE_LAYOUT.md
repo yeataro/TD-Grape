@@ -1,5 +1,17 @@
 # Workspace layout and column creator
 
+## Optional canvas damping (0.8.112)
+
+Experimental features → Colors and display adds **Pan/zoom damping**: checkbox on the left and the shared draggable numeric input on the right, 10–1000 ms, default 100 ms with the checkbox off. This supersedes the initial proposal to use zero as the off switch. The preference is browser-local; neither the graph nor TD stores it. Existing appearance-mode switches remain immediate.
+
+When enabled, mouse/touch panning, wheel/pinch zoom and zoom presets share one cubic ease-out interpolation of displayed translation and scale. Each new input retargets from the displayed view; wheel deltas accumulate against the pending target. The duration is the time to finish after the last input, not an inertia or velocity setting. Actual hit testing, wires and grid use the displayed coordinates. A new pointer interaction with graph content freezes the displayed view before editing; explicit framing and diagnostic navigation remain immediate.
+
+The animation only updates the existing view transform, without rebuilding nodes/wires, altering graph history, compiling or communicating with TD. It stops on arrival. Disabling cancels the pending frame, applies the last target once, clears interpolation state and aborts all dedicated event listeners. The disabled movement path updates pan/scale immediately, with no damping frame loop or CSS transition; the saved duration is retained. Backgrounding or window blur also ends pending motion. Reuse of the numeric control includes a local-preference option so read-only graphs do not prevent adjusting this browser setting; ordinary graph value controls retain their mutation guards.
+
+Nine isolated browser checks cover the disabled path, continuous input, intermediate hit coordinates, touch handoff, cleanup, persistence and the real frame scheduler. Desktop and narrow layout were inspected; physical iOS/TD-like feel awaits user review.
+
+## Panel layout
+
 The editor retains left sidebar, central graph and right sidebar. Panel titles can move across sidebars. Drop on a group's upper/lower edge to stack it, or its body to combine tabs. Drop on a tab strip to insert at the shown vertical marker, including reordering within the same group. The top 3px of a strip remain a stacking target. Overflowing strips scroll near their edges. Escape or releasing outside a target cancels a move.
 
 Panel headings select and expand their panel in both single-panel and tabbed groups. Repeated clicks never collapse an open panel; the separate right-hand chevron controls collapse. Keyboard activation follows the same rule, and title dragging still moves panels.
