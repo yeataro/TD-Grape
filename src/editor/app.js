@@ -95,6 +95,11 @@ async function retryConnection(){
   finally{connectionRetrying=false;renderConnectionNotice();}
 }
 function installConnectionRecovery(){
+  // Card interactions stay local: text selection, scrolling and Retry must not
+  // reach canvas gestures or graph shortcuts. Native controls remain usable.
+  const notice=$('#connectionnotice');
+  for(const event of ['pointerdown','mousedown','touchstart','dblclick','contextmenu','keydown','dragover','drop'])notice.addEventListener(event,e=>e.stopPropagation());
+  notice.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   $('#connectionretry').onclick=retryConnection;
   setInterval(()=>{
     if(!document.hidden&&(connectionInterrupted||applyNeedsReview)&&!['auth','forbidden','changed'].includes(connectionIssue)&&Date.now()>=connectionRetryAt)retryConnection();
@@ -412,7 +417,7 @@ function applyCanvasDamping(){
   if(!EDITOR_DEV_SETTINGS.canvasDamping&&!EDITOR_DEV_SETTINGS.frameDamping)return;
   canvasMotionEvents=new AbortController();const options={capture:true,signal:canvasMotionEvents.signal};
   // Freeze where the user actually clicked before a node, wire or new gesture takes over.
-  document.addEventListener('pointerdown',event=>{if(event.target.closest?.('#canvas')&&!event.target.closest('.toolbar,.canvas-view-tools,.selection-toolbar'))stopCanvasMotion();},options);
+  document.addEventListener('pointerdown',event=>{if(event.target.closest?.('#canvas')&&!event.target.closest('.toolbar,.canvas-view-tools,.selection-toolbar,#connectionnotice'))stopCanvasMotion();},options);
   for(const name of ['blur','resize'])window.addEventListener(name,()=>stopCanvasMotion(true),options);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCanvasMotion(true);},options);
   document.addEventListener('keydown',event=>{if(event.key==='Escape')stopCanvasMotion();},options);

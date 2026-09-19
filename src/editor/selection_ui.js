@@ -465,6 +465,12 @@ function installGraphToolbarOverflow(){
   document.addEventListener('pointerdown',e=>{if(!e.target.closest('#graphmore,#graphmoremenu,#arrangemenu'))closeGraphMore();},true);
   window.addEventListener('blur',()=>closeGraphMore());
   window.addEventListener('resize',()=>{closeGraphMore();scheduleGraphToolbarOverflow();});
-  let width=-1;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){if(width>=0)closeGraphMore();width=next;scheduleGraphToolbarOverflow();}}).observe(toolbar);
+  let width=-1,height=-1;new ResizeObserver(entries=>{
+    const next=entries[0].contentRect.width;
+    if(next!==width){if(width>=0)closeGraphMore();width=next;scheduleGraphToolbarOverflow();}
+    // Reuse toolbar observation; no polling or per-frame position measurement.
+    const nextHeight=toolbar.offsetHeight;
+    if(nextHeight!==height){height=nextHeight;$('#canvas').style.setProperty('--graph-toolbar-height',height+'px');}
+  }).observe(toolbar);
   document.fonts.ready.then(scheduleGraphToolbarOverflow);scheduleGraphToolbarOverflow();
 }

@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 連線提示卡（0.8.120）：完整 `tools/dev/run_tests.py` 通過；`test_connection_recovery.cjs` 既有 8 組通過，涵蓋 401／403／503、逾時、版本衝突、422 與失去回覆時不重送 Apply、不覆蓋草稿。私人 `work/connection-card/inspect.cjs` 在桌面、專注編輯、390px 手機、手機專注、橫向、125% 淺色與非浮動工具列等 7 情境檢查：提示顯示／隱藏／展開不改 canvas、toolbar、stage、路徑及底部控制項矩形；卡片留在畫布內、工具列下，不隨 pan／zoom 移動。點擊、拖曳、wheel、文字區快捷鍵與觸控展開不改圖／Undo／選取／視野；窄版說明可捲動。已檢視桌面、手機與淺色截圖；此為隔離 Chromium 及觸控模擬，不是 iOS 實機驗收。頁首、About 與 runtime 版號一致核對為 0.8.120。
+
 ## Uniform 完整即時通道回歸
 
 開啟本機開發橋接後，`tests/browser/test_uniform_editor_live.cjs` 依序接受來源 checkout、橋接 checkout、私人 work、報告目錄四個路徑。以 `PLAYWRIGHT_MODULE`、`CHROME_EXECUTABLE`、`PYTHON_EXECUTABLE` 指定本機工具。它透過私人 bridge wrapper 執行 `tests/td/uniform_editor_fixture.py`，建立完整 HTTP／WebSocket／GLSL TOP fixture，從瀏覽器普通入口測試拖曳、原生 Par 回傳、Undo／Redo、reload。測試結束移除 fixture 並比對使用者 Shader；不在產品 API 加測試入口。用於補足 isolated mock／直接發票 wire test 未涵蓋的整合邊界。
