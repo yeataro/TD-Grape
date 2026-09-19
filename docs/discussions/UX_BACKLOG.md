@@ -25,6 +25,8 @@
 
 使用者明確指定原本自行建立與設定的 Uniform 類別改稱 Custom Uniform／自訂 Uniform；分類英文採複數 Custom Uniforms，單一項目為 Custom Uniform。此為 UI 分類命名方向，不更動 TD Parameter 所有權、來源 ID、圖引用、GLSL 宣告或控制模式；也不把 TD Built In 的全部內容直接併入 Common。實際入口、分類範圍與既有時間預置如何呈現仍隨本輪整理，未批次更名或遷移來源。
 
+使用者認為 Graph Constants 的名稱不自然；助手建議簡化為 Constants／常數，將圖內定義與編譯期行為留在說明，尚待確認。使用者另接受特化常數的簡寫顯示名稱 Spec Constants；完整名稱 Specialization Constants 保留於提示與說明。此命名筆記不改動內部識別或原生 Constants 頁面的名稱，尚未修改產品文案。
+
 以下是調查後的候選建議，不是實作授權或跨宿主支援承諾；本輪先以影像 Shader（TD GLSL TOP）對照，MAT 的 render context 另行核對。
 
 | 候選名稱 | 型別與目的 | ISF | Shadertoy | TD 映射界線 |
