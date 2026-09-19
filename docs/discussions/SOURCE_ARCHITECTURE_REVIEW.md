@@ -64,7 +64,7 @@ Texture 的程式入口可共用，再分派 TOP／MAT 各自方法。TOP 的 sl
 - 「定義了而未使用也沒差」先保留為使用者預期，不當成已驗證所有宿主配置都零成本、無名稱衝突或無相容性影響。
 - 後續區分宿主本來就提供的 accessor，與需要使用者指定名稱／型別的 Attribute；不因顯示預置而重複建立原生資源。
 
-### 文件核對與名詞補正
+### 官方介面核對
 
 2026-09-20 核對官方文件，未操作 TD、未做新 Attribute 實機驗證：
 
@@ -77,7 +77,7 @@ Texture 的程式入口可共用，再分派 TOP／MAT 各自方法。TOP 的 sl
 
 來源：[GLSL MAT 參數](https://derivative.ca/UserGuide/GLSL_MAT)、[Write a GLSL MAT](https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes)。
 
-同日使用者補正：語音中的「Metric」指 **Matrix（矩陣）**；Array 才是陣列。名詞已確認。Matrix 與 Attribute 在來源整理中的具體歸屬、各自配置及 Array Size 的適用對象，仍依實際宿主介面釐清；本次名稱補正不代表已確認一個名為「Matrix Attribute」的原生來源家族。
+Matrix（矩陣）與 Attribute 的來源歸屬、各自配置及 Array Size 的適用對象，接續依宿主介面整理。
 
 ## 接續順序
 

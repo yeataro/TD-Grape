@@ -1,6 +1,6 @@
 # 開發狀態
 
-2026-09-20 討論檢查點：已記錄[來源建構、型別與 MAT Attribute](../discussions/SOURCE_ARCHITECTURE_REVIEW.md)，區分 UI 分類與建構方法、首次初始化與引用／修改、結構完整／欄位雙出口、資料可擴充的型別檢查及產碼責任。MAT Attribute 回到來源主線，常用預置是否預建、清單與原生配置的區別仍待確認；同日使用者補正「Metric」是 Matrix（矩陣），來源歸屬與配置接續整理。官方文件已核對 Name／Type／Array Size 與內建 accessor，沒有 TD 實機驗證。延伸的 [Loop／控制流程](../discussions/LOOPS_DISCUSSION.md) 已補入既有筆記，明確區分子圖／函式、bool 停止條件與待決的執行順序；不插入本輪實作。本批只有文件，版號維持 0.8.120。
+2026-09-20 討論檢查點：已記錄[來源建構、型別與 MAT Attribute](../discussions/SOURCE_ARCHITECTURE_REVIEW.md)，區分 UI 分類與建構方法、首次初始化與引用／修改、結構完整／欄位雙出口、資料可擴充的型別檢查及產碼責任。MAT Attribute 回到來源主線，常用預置是否預建、清單與原生配置的區別仍待確認；Matrix 與 Attribute 的來源歸屬及配置接續整理。官方文件已核對 Name／Type／Array Size 與內建 accessor，沒有 TD 實機驗證。延伸的 [Loop／控制流程](../discussions/LOOPS_DISCUSSION.md) 已補入既有筆記，明確區分子圖／函式、bool 停止條件與待決的執行順序；不插入本輪實作。本批只有文件，版號維持 0.8.120。
 
 2026-09-19 分類審查檢查點：完成 [來源選單分類表](../discussions/TD_SOURCE_MENU_REVIEW.md)，提出六大入口與二級用途／Texture 維度分組；時間預置保留六項、Timeline Rate 移出，低頻 Clock／CHOP 時間細項等記為使用者自行新增。Project Rate／System Time 等助手建議另標待確認。原始研究總表保留，38 筆時間列新增審查欄；CSV 的 311 筆全部補上分類、項目性質與審查決策，原 13 欄資料不變。集合欄位、運算／取樣、可寫資料、歷史與未支援 stage 分開處理，不把每列當成來源入口。本批只更新文件，尚未改產品分類、命名或支援能力，版號維持 0.8.120。
 
