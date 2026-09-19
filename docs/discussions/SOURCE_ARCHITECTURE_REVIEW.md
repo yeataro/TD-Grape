@@ -87,6 +87,10 @@ Matrix（矩陣）與 Attribute 的來源歸屬、各自配置及 Array Size 的
 
 官方依據：[GLSL TOP 的 Buffers 與 Arrays 參數頁](https://derivative.ca/UserGuide/GLSL_TOP)。研究表既有列 S150、S158–S160。
 
+2026-09-20 使用 `tests/td/probe_buffer_sources.py` 在 TD 2025.32820 的隔離元件實測：未接線的 In CHOP 為 0 channels、1 sample，自身無錯誤；空的 In POP 自身亦無錯誤，但將其 P 綁定至 GLSL TOP Buffer 後會報 Attribute not found，讀取函式編譯失敗。有效 Line POP 的 P 可以成功編譯；指定不存在的 Attribute 亦會報錯。空 In CHOP 綁定為 Texture Buffer 時，此版 TD 允許 samplerBuffer／texelFetch 編譯，但測試未驗證取值內容，不能推論一定補零或可安全讀取空 buffer。測試元件已清除，未更動使用者圖。私人報告：`work/reports/source-buffers/native-empty-probe/result.json`。
+
+輸入缺失需分辨「入口存在」「資料／Attribute 可用」與「Shader 可以讀取」；UI 可保留來源配置並提示未就緒，不自行把缺失內容當成零值。外部輸入在已套用後被拔除時，保留最後成功的 Shader 程式碼不等於保證 TD 仍能產生最後成功畫面。缺失輸入的產品行為與 recovery 仍需和來源功能一併驗證。
+
 ## 接續順序
 
 ### 本輪執行範圍
@@ -106,6 +110,10 @@ Uniform 來源本體與圖上的來源引用是兩個操作對象：兩者可開
 UI 不必要求使用者區分「本體／引用」：面板卡片與圖上的相關節點可以直接呈現同一個來源或型別，從任一入口編輯共同內容。實作仍以穩定 ID 維持單一內容與各使用處的關係。刪除動作用語需明確區分「移除節點」與「刪除來源／結構」，避免移除一處畫布呈現時意外刪除共用內容。
 
 TD vector Uniform 的 UI 依宣告型別顯示有效分量（float 一格、vec2 兩格、vec3 三格、vec4 四格），不因原生列提供四格就全部畫出。面板卡片及圖內 Uniform 節點可使用共用的分量數值輸入／滑桿，直接編輯同一原生來源；維持拖動即時傳值與 TD 回傳同步，更新數值不觸發圖存檔、產碼或無關 UI 重建。隱藏未使用分量不代表清除或重設 TD 中的值；Expression／Export／Bind 等原生驅動狀態仍沿用既有編輯權限。
+
+畫布分量各自依原生模式呈現：Constant 與 Bind 可編輯數值／滑桿，Bind 寫入不得切換或解除綁定；Python Expression 與 CHOP Export 不呈現分量編輯滑桿，原位置直接標示 Expression／CHOP Export，說明可提供 expression 或來源通道。此輪先以模式提示為主，是否額外顯示即時結果留待使用回饋；不要把整個 Uniform 因其中一格被驅動而全數鎖定，也不要只靠顏色表達狀態。
+
+節點內與 Parameter 面板均沿用一般有分量節點的共用編輯元件，依宣告型別顯示分量數，排列與操作一致。Uniform 在該元件上接入原生來源同步與逐分量模式辨識／可編輯性，不另造一套 Uniform 專用數值控制。
 
 執行分批與完成檢查點：
 
