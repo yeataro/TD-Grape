@@ -21,7 +21,7 @@ import sgrape_core
 refs.update(d['descriptionKey'] for d in sgrape_core.CATALOG.values())
 refs.update(f['descriptionKey'] for f in sgrape_core.function_library() if f.get('descriptionKey'))
 refs.update(['panel.parameters','panel.settings'])
-refs.update(re.findall(r'data-i18n(?:-placeholder|-label|-alt)?="([^"]+)"',(root/'index.html').read_text(encoding='utf-8')))
+refs.update(re.findall(r'data-i18n(?:-placeholder|-label|-alt|-title)?="([^"]+)"',(root/'index.html').read_text(encoding='utf-8')))
 refs.update('texture.'+key for key in ('current','currentEmpty','effective','invalid','connected','updated','mode','filterMode','sourceMode','default','filterHint','sourceHint'))
 refs.discard('browser.category.');refs.discard('browser.source.')
 refs.update('browser.category.'+key for key in ('inputs','math','vector','matrix','logic','color','coordinate','texture','data','shader','uncategorized'))

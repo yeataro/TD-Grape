@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 FPS 精簡指標（0.8.109 實作檢查點）：使用者將歷史改為 10 秒，並同意 FPS／1% Low／Min 三個數字。FPS 為最近約 1 秒的回呼數除以實際經過時間；Low／Min 使用最近 10 秒的原始幀間隔，每秒更新。Low 取最慢 ceil(N×1%) 幀間隔平均後倒數換算 FPS（1000×K／sum(dt)），不足 100 個樣本先顯示「—」；Min 為 1000／最大單幀間隔，不是最小的一秒平均 FPS。參考 [FrameView 的慢幀平均概念](https://images.nvidia.com/content/geforce/technologies/frameview/frameview-1-4-user-guide-web-version.pdf)，不混用 percentile 或時間權重定義。圖仍為 10Hz 繪製的區間尖峰，縮為 100 格，統計不從這些降採樣格反推。原始樣本固定 16,384 格循環緩衝，取樣 O(1)，只在每秒統計時複製至重用 scratch 並以原生 typed-array 排序；三個 Float64Array 共 384KiB，仅開啟時分配，若極端回呼率使 10 秒樣本超容量則顯示「—」，不偷偷縮短窗口。背景／關閉既有清理行為保留。4 組 FPS、20 組 experiments、693 雙語鍵及 JS syntax 通過；實機 iOS／其他硬體尚未量測。同步保存另記。
+
 2026-09-19 0.8.108 交付檢查點：`9fcc471` 已整合 main，32 份來源中更新 6 份，9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 56），三份使用者 Shader 保留。TOE 保存 909,526 bytes，SHA-256 `ef6c44be30bd493926170287b994fced0878752c5a1150561ff2f3542bd56a9b`，排除一份私人助手。曲線為圖編輯區左下的小型 overlay，不佔節點布局，窄版避開底部操作鍵。未強制重新載入使用者 Editor。
 
 2026-09-19 FPS 歷史曲線（0.8.108 實作檢查點）：依使用者最後確認，只保留 FPS 數字及一條幀間隔曲線，不加入卡頓計數／最長間隔等統計面板。沿用原實驗開關、預設關閉；每幀取樣，每秒更新 FPS，曲線最多 10 Hz，300 個 100ms 時間格保存最近 30 秒的區間尖峰。固定 typed arrays、每幀 O(1) 寫入，不搬移歷史、不查節點、不連 TD；繪圖只掃固定 300 格。停頓缺口不補造樣本，尖峰仍留下；關閉釋放 canvas，背景停止並於恢復時重建歷史。390／320px 避開底部操作鍵。FPS browser 3 組、既有 experiments 20 組、690 雙語鍵與 JS syntax 通過。7,200 個合成 120Hz callback 的本機 Chromium JS／Canvas 提交耗時平均約 0.002ms、最大約 0.30ms；非 GPU 完成時間，也不能代表實機 iOS 或總電力／幀率影響。同步與保存另記。

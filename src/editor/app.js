@@ -11,7 +11,7 @@ const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='zh-Hant';
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
 async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
@@ -673,28 +673,59 @@ const experimentGroups=[
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
   ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock','showFps']]
 ];
+// Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
+// be used for percentiles or averages of frames. Only read/sort once a second.
+function createFpsStats(){
+  const capacity=16384,windowMs=10000;
+  const times=new Float64Array(capacity),intervals=new Float64Array(capacity),scratch=new Float64Array(capacity);
+  let write=0,size=0,overwrittenAt=-Infinity;
+  return {
+    push(now,elapsed){
+      if(!(elapsed>0))return;
+      if(size===capacity)overwrittenAt=times[write];else size++;
+      times[write]=now;intervals[write]=elapsed;write=(write+1)%capacity;
+    },
+    read(now){
+      let n=0;
+      for(let offset=1;offset<=size;offset++){
+        const slot=(write-offset+capacity)%capacity;
+        if(times[slot]<=now-windowMs)break;
+        scratch[n++]=intervals[slot];
+      }
+      // Never silently report a shorter window if an extreme callback rate
+      // exceeds the fixed buffer. Normal 60–1000 Hz displays fit in 10 seconds.
+      if(!n||overwrittenAt>now-windowMs)return {low:null,min:null};
+      const ordered=scratch.subarray(0,n);ordered.sort();
+      const min=1000/ordered[n-1];
+      if(n<100)return {low:null,min};
+      const slowCount=Math.ceil(n/100);let slowTime=0;
+      for(let i=n-slowCount;i<n;i++)slowTime+=ordered[i];
+      return {low:1000*slowCount/slowTime,min};
+    }
+  };
+}
 let fpsFrame=null;
 function applyFpsDisplay(){
-  const panel=$('#uifps'),label=$('#uifpsvalue'),canvas=$('#uifpstrail'),enabled=EDITOR_DEV_SETTINGS.showFps;
+  const panel=$('#uifps'),label=$('#uifpsvalue'),low=$('#uifpslow'),minimum=$('#uifpsmin'),canvas=$('#uifpstrail'),enabled=EDITOR_DEV_SETTINGS.showFps;
   panel.hidden=!enabled;
   document.removeEventListener('visibilitychange',applyFpsDisplay);
   if(enabled)document.addEventListener('visibilitychange',applyFpsDisplay);
   if(!enabled||document.hidden){
     if(fpsFrame!==null)cancelAnimationFrame(fpsFrame);
-    fpsFrame=null;label.textContent='FPS —';
+    fpsFrame=null;label.textContent='—';low.textContent=minimum.textContent='—';
     // Do not initialize a drawing context when the default-off feature is unused.
     if(canvas.width)canvas.width=0;
     return;
   }
   if(fpsFrame!==null)return;
-  label.textContent='FPS —';
+  label.textContent='—';low.textContent=minimum.textContent='—';
   const width=200,height=52,ratio=Math.min(window.devicePixelRatio||1,2);
   canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);
   const ctx=canvas.getContext('2d');ctx.scale(ratio,ratio);
   // Every callback is sampled. The 100 ms buckets retain the worst interval,
   // so limiting the chart to 10 Hz cannot average away a single-frame stall.
   // Timestamp tags expire old slots without shifting or clearing a history.
-  const count=300,bucketMs=100,peaks=new Float32Array(count),tags=new Float64Array(count).fill(-1);
+  const count=100,bucketMs=100,peaks=new Float32Array(count),tags=new Float64Array(count).fill(-1),stats=createFpsStats();
   let start=null,previous=null,frames=0,lastPaint=-Infinity;
   function drawTrail(bin){
     const first=Math.max(0,bin-count+1),left=2,right=width-2,top=13,bottom=height-11;
@@ -703,7 +734,7 @@ function applyFpsDisplay(){
     ceiling=Math.ceil(ceiling/50)*50;
     ctx.clearRect(0,0,width,height);ctx.strokeStyle=ctx.fillStyle='#9273bb';
     ctx.font='9px ui-monospace, Consolas, monospace';ctx.textBaseline='top';
-    ctx.fillText(ceiling+' ms',left,0);ctx.fillText('30 s',left,height-9);
+    ctx.fillText(ceiling+' ms',left,0);ctx.fillText('10 s',left,height-9);
     ctx.textAlign='right';ctx.fillText('0',right,height-9);ctx.textAlign='left';
     ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(left,bottom);ctx.lineTo(right,bottom);ctx.stroke();ctx.globalAlpha=1;
     ctx.beginPath();let connected=false;
@@ -718,14 +749,21 @@ function applyFpsDisplay(){
     ctx.stroke();
   }
   // Browser callback cadence, not TD/video FPS or GPU completion. Sampling is
-  // constant work; only this small canvas scans the fixed 300 slots, at 10 Hz.
+  // constant work; only this small canvas scans the fixed 100 slots, at 10 Hz.
   function sample(now){
     if(start===null){start=previous=now;drawTrail(Math.floor(now/bucketMs));lastPaint=now;}
     else{
       const bin=Math.floor(now/bucketMs),slot=bin%count,elapsed=now-previous;previous=now;
       if(tags[slot]!==bin){tags[slot]=bin;peaks[slot]=elapsed;}else peaks[slot]=Math.max(peaks[slot],elapsed);
+      stats.push(now,elapsed);
       frames++;
-      if(now-start>=1000){label.textContent='FPS '+(frames*1000/(now-start)).toFixed(1);start=now;frames=0;}
+      if(now-start>=1000){
+        const summary=stats.read(now);
+        label.textContent=(frames*1000/(now-start)).toFixed(1);
+        low.textContent=summary.low===null?'—':summary.low.toFixed(1);
+        minimum.textContent=summary.min===null?'—':summary.min.toFixed(1);
+        start=now;frames=0;
+      }
       if(now-lastPaint>=bucketMs){drawTrail(bin);lastPaint=now;}
     }
     fpsFrame=requestAnimationFrame(sample);

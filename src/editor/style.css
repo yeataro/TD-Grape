@@ -1790,3 +1790,6 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 #uifpstrail{display:block;width:200px;max-width:100%;height:52px}
 @media(max-width:800px){.canvas-caption:has(#uifps:not([hidden])){bottom:62px}}
+
+#uifps .fps-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:4px;pointer-events:auto}
+#uifps .fps-label{color:var(--muted);font-size:9px;white-space:nowrap}
