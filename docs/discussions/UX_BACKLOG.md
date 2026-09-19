@@ -16,6 +16,18 @@
 
 參考：[GitHub Pages 靜態託管](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)、[Chrome 本地網路存取](https://developer.chrome.com/blog/local-network-access)、[PWA 安裝條件](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)、[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)、[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve)。
 
+#### 配對入口與離線啟動（需求補充，未決定實作）
+
+使用者希望研究讓 TD 與 Online 網頁快速連接的入口，包括拖入 TOX 後的提示／彈窗、Parameter 上的說明、複製連線資訊，以及兩端均提供指引；尚未指定最終互動。另詢問 GitHub Pages 是否能提供 PWA，以及安裝後離線能否開啟。
+
+候選建議（尚待審查）：TD Parameter 保留 Open Editor、Copy Connection 與手機可掃描的 QR 入口；網頁保留 Connect to TD 與貼上連線資訊入口。共用同一份配對資訊，由 TD 提供可用端點與短效配對授權，再由網頁顯示連線目標與結果；桌面直接開啟、手機掃碼、既有 PWA 貼上皆可使用。是否在初次拖入時提示另行決定，不把每次工程載入或節點複製自動彈窗當作既定行為。連結／QR 只簡化配對，不取代 HTTPS／CORS／網路可達性驗證；不能保證系統會把連結導向已安裝的 PWA。若使用只含短碼的跨裝置配對而不攜端點，仍須有可尋址的配對服務，不能視為 GitHub Pages 自帶能力。
+
+GitHub Pages 的 HTTPS 靜態檔案託管可以提供 manifest 與 service worker，具備建置可安裝、可離線啟動 PWA 的條件；安裝與離線能力需各自實作，安裝本身不自動快取全部資源。首次線上載入後須完成必要前端／節點定義等資源的本機快取，離線入口也不能等待 TD 回應才初始化；快取更新需保持版本一致。圖的本機保存則另行設計，不能把快取介面等同保存使用者圖。PWA 安裝到使用者裝置，由瀏覽器／系統管理，安裝入口隨平台不同。若離線資源被清除，需重新下載。
+
+離線能力分別看待：沒有 Internet 但本機／LAN 仍能連到 TD，完成快取的前端可繼續使用可達的宿主，前提是不依賴外部 signaling／授權服務；完全沒有 TD 連線時，可規劃瀏覽與編輯本機圖，但現有初始化、資料依賴須解耦。完全離線重新產碼與 WebGL 執行還需要本機可用的產碼器、執行器及所需資源，PWA 本身不會把現有 TD／Python 能力搬到瀏覽器。
+
+參考：[GitHub Pages HTTPS](https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https)、[PWA 安裝與平台差異](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)、[離線運作與快取](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Offline_and_background_operation)。
+
 ### 僅協助直連的服務（延伸假設，未決定實作）
 
 使用者補充：可考慮一個只協助 WebRTC 建立連線的中間服務，直連失敗時不回退至資料轉送。對應設計為 signaling 交換配對／SDP／ICE 資訊，可搭配 STUN 探索位址，不配置 TURN 資料中繼；業務資料与預覽在瀏覽器和 TD 之間直接傳輸。此服務需要另行部署，靜態 GitHub Pages 本身不提供動態 signaling。
