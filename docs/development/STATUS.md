@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.121 交付檢查點：`0fbbcca` 與熱更新修正 `9784c97` 已同步 TD。首次熱更新因新 DAT 晚於引用模組建立而載入失敗；已修正依賴順序並在刷新後檢查 type contract，按依賴順序重載恢復。之後 36 份 DAT／9 份 HTTP 資源、TOP／MAT Master（revision 69）、core 無錯誤與三份使用者 Shader 保留均通過。正式 TOE 941,414 bytes，SHA-256 `4eae8a6fdee465daefe7932dea0b437d1be4355a2cee3c40bdaf762d912ba38b`。報告 `work/reports/source-catalog/`；未重新整理使用者網頁。
+
 2026-09-20 0.8.121 來源表檢查點：新增共用 `source_catalog.json`，編譯器、TD 初始化與 UI 由同一份表讀取預置。既有四個時間來源保留 ID／名稱，新增 Delta Time（`absTime.stepSeconds`）與 Frame Step（`absTime.step`），只在新來源建立時填入 Expression；既有 TD 值／模式不重設。內建結構、來源陣列與長度巨集搬入同表，舊型別與產碼維持相容。完整 portable checks（470 個 Python 測試及 JS／整合檢查）與隔離 TOP／MAT 六項原生檢查通過。這一批完成共用資料入口；來源卡片、結構編輯面板、圖內 Uniform 控制、MAT Attribute 與 Buffer UI 仍接續實作。
 
 2026-09-20 討論檢查點：已記錄[來源建構、型別與 MAT Attribute](../discussions/SOURCE_ARCHITECTURE_REVIEW.md)，區分 UI 分類與建構方法、首次初始化與引用／修改、結構完整／欄位雙出口、資料可擴充的型別檢查及產碼責任。MAT Attribute 回到來源主線，常用預置是否預建、清單與原生配置的區別仍待確認；Matrix 與 Attribute 的來源歸屬及配置接續整理。官方文件已核對 Name／Type／Array Size 與內建 accessor，沒有 TD 實機驗證。延伸的 [Loop／控制流程](../discussions/LOOPS_DISCUSSION.md) 已補入既有筆記，明確區分子圖／函式、bool 停止條件與待決的執行順序；不插入本輪實作。本批只有文件，版號維持 0.8.120。
