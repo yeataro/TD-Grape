@@ -8,6 +8,8 @@
 
 命名補充：使用者希望 H 的短按鈕名稱為 **Home**，F 考慮 Frame／Focus；建議採 **Frame**，讓 Focus 保留給既有 Focus Graph，Home 不再接 All。完整提示補充用途，例如 Home：`Fit all nodes in view`，Frame：`Frame selected nodes, or all nodes if none are selected`。名稱與快捷鍵可分開維護；此輪先記錄命名方向，尚未更改產品文字或加入 F。先前「無選取時 F 不動作」的建議已由使用者的 Home 回退規則取代。
 
+決策理由（使用者經驗）：使用 TD 約十年，幾乎沒有使用 Shift+H／Shift+F；帶修飾鍵使這類視圖操作較不容易成為順手習慣，也降低主動使用的意願。因此本專案優先用 H／F 兩個單鍵涵蓋整圖總覽與選取內容，讓 F 依選取狀態回退 Home，減少需要記憶及組合按鍵的操作。這是本次視圖導航的取捨，不推廣為所有修飾鍵都不適用，也不依此推論其他使用者的 TD 操作習慣。
+
 ## DevTools FPS 與實驗面板讀數差異（2026-09-19，使用者觀察，未重現）
 
 - 畫布靜止時，DevTools Frame Rate 曾顯示約 18 FPS、時間線多為黃色；同時內建面板約 120 FPS、1% Low 116.8、Min 109.9。沒有操作時未感到明顯卡頓。
