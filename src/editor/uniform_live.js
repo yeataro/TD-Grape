@@ -102,8 +102,9 @@ const uniformLive={
       });
       // Reserve the step now, so a later graph edit cannot reorder this gesture.
       const oldFuture=future;
-      const step=g.load===editorLoadGeneration?recordHistory({kind:'liveValue',before,after:clone(before),sourceIds:[],liveReceipt:done}):null;
+      const step=g.load===editorLoadGeneration?recordHistory({kind:'liveValue',before,after:clone(before),sourceIds:[],liveReceipt:done,liveEmptyFuture:oldFuture}):null;
       done.then(receipt=>{
+        if(receipt&&step)delete step.liveEmptyFuture;
         if(!receipt&&step&&!historyBusy){const index=past.indexOf(step);if(index>=0){
           if(index===past.length-1&&!future.length)future=oldFuture;
           past.splice(index,1);renderHistoryActions();

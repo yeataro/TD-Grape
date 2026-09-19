@@ -1,6 +1,6 @@
 # 測試
 
-2026-09-19 Uniform live 首批：`test_uniform_live.py` 9 組原生測試（含 200 來源成本、Bind、取消、外部 mode／value 衝突、斷線回執）；`test_uniform_wire.cjs` 4 組真實原生 WebSocket 條件（雙訂閱者、writer 衝突、值回傳）；`test_uniform_live.cjs` 7 組瀏覽器測試（持續拖曳、history、取消、慢 ACK 合併與 final value、文字提交、TD 回傳、通道失效）。既有 browser parameter values 15、input history 10、uniform pending 5，以及 TD native sources 21、input history 21 組通過；完整 portable checks 466 Python unit 與其餘 integration／locales／Node suites 通過。私人原始報告在 work/reports/uniform-live 與暫存 grape-uniform-live；未宣稱真實 iOS 驗證。
+2026-09-19 Uniform live 首批：`test_uniform_live.py` 9 組原生測試（含 200 來源成本、Bind、取消、外部 mode／value 衝突、斷線回執）；`test_uniform_wire.cjs` 4 組真實原生 WebSocket 條件（雙訂閱者、writer 衝突、值回傳）；`test_uniform_live.cjs` 8 組瀏覽器測試（持續拖曳、history、取消、慢 ACK 合併與 final value、文字提交、TD 回傳、通道失效）。既有 browser parameter values 15、input history 10、uniform pending 5，以及 TD native sources 21、input history 21 組通過；完整 portable checks 466 Python unit 與其餘 integration／locales／Node suites 通過。私人原始報告在 work/reports/uniform-live 與暫存 grape-uniform-live；未宣稱真實 iOS 驗證。
 
 2026-09-19 同步效能 E（0.8.117）：完整 `tools/dev/run_tests.py` 通過（466 Python unit、integration／locales／Node suites）。`test_uniform_pending.cjs` 5 組驗證慢回覆期間 Apply／節點數值／來源按鈕等顏色與透明度不變，但 inert／寫入互斥仍有效；成功與失敗不改 graph／revision／dirty，保留單步值歷史，唯讀與舊 Expose 路徑不被解除。既有 browser input history 10、selection toolbar 12、parameter values 15、type drafts 15、reload applied graph 8 組通過，共 65 組。舊 `test_uniform_recovery.cjs` 的專用 fixture／選取入口已不符合目前 Uniform Source inspector，於取得 legacy 欄位前失敗，未列為通過；本批 legacy 欄位由新 pending 測試直接驗證，TD 真實值／模式衝突由 native sources 與 history 回歸涵蓋。
 

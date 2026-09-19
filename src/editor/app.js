@@ -263,7 +263,16 @@ async function undo(redo=false){
     // Wait for its receipts before deciding whether this one step is local.
     if(applyInFlight)await applyInFlight;
     if(generation!==editorLoadGeneration)return false;
-    const entry=from.at(-1),expected=redo?entry.before:entry.after,desired=redo?entry.after:entry.before;
+    let entry=from.at(-1);
+    // A canceled live gesture can finish while Undo waits for its receipt.
+    // Discard that empty reservation and replay the real preceding edit.
+    while(entry?.liveReceipt&&!(await entry.liveReceipt)){
+      if(generation!==editorLoadGeneration)return false;
+      from.pop();if(!redo&&!future.length&&entry.liveEmptyFuture)future.push(...entry.liveEmptyFuture);
+      entry=from.at(-1);
+    }
+    if(!entry||generation!==editorLoadGeneration)return false;
+    const expected=redo?entry.before:entry.after,desired=redo?entry.after:entry.before;
     if(entry.epoch!==historyEpoch||historyGraphKey(graph)!==historyGraphKey(expected))throw Error(t('history.changed'));
     const previousGraph=historyGraphKey(graph);let needsApply=false;
     if(entry.liveReceipt){

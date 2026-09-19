@@ -1,6 +1,6 @@
 # 開發狀態
 
-2026-09-19 Uniform 即時數值（0.8.118，來源檢查點）：先交付 scalar／vector／Color Uniform 的數值通道，保留 HTTP 圖提交與其他設定。TD 原生 Web Server DAT、一次性 ticket、按需來源訂閱；連續拖曳合併為最多一個在途更新，結束只記一筆 Undo。值不進圖／版本／產碼；控件不作全域 busy 切換。名稱／型別改用 Parameter Execute 通知，排除實測約 26 ms 的 200 來源定時掃描；改後訂閱讀取與 sequence 數檢查約 0.07 ms。原生 9 組、真實 WebSocket 4 組、既有 TD 來源／history 42 組、瀏覽器 37 組通過；完整 portable checks 通過。功能與限制見 [Uniform 即時數值](../features/UNIFORM_LIVE_VALUES.md)。修改前版本固定於 `checkpoint/pre-uniform-live-0.8.117`。來源提交後再同步與保存 TOE；iOS 實機仍待使用者 review。
+2026-09-19 Uniform 即時數值（0.8.118，來源檢查點）：先交付 scalar／vector／Color Uniform 的數值通道，保留 HTTP 圖提交與其他設定。TD 原生 Web Server DAT、一次性 ticket、按需來源訂閱；連續拖曳合併為最多一個在途更新，結束只記一筆 Undo。值不進圖／版本／產碼；控件不作全域 busy 切換。名稱／型別改用 Parameter Execute 通知，排除實測約 26 ms 的 200 來源定時掃描；改後訂閱讀取與 sequence 數檢查約 0.07 ms。原生 9 組、真實 WebSocket 4 組、既有 TD 來源／history 42 組、瀏覽器 38 組通過；完整 portable checks 通過。功能與限制見 [Uniform 即時數值](../features/UNIFORM_LIVE_VALUES.md)。修改前版本固定於 `checkpoint/pre-uniform-live-0.8.117`。來源提交後再同步與保存 TOE；iOS 實機仍待使用者 review。
 
 2026-09-19 0.8.117 交付檢查點：來源 `8ff5708` 已整合 main；32 份來源更新 7 份、9 份服務資源一致，core 無錯誤。TOP／MAT Master current（revision 65），三份使用者 Shader 保留。正式 TOE 915,318 bytes，SHA-256 `05f116db86f22413034b86e49072f5d0eeaa63a22c94ecbc98545420e8779629`，排除一份私人助手。完整 portable checks、65 組瀏覽器檢查、45 組原生條件通過。此次 A／B-C／E 分別有來源與 TOE 檢查點，修改前可回到 `checkpoint/pre-sync-performance-0.8.114`。未強制重新載入使用者頁面；新磁碟暫存與高頻值通道仍延後。
 
