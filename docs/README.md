@@ -7,6 +7,7 @@
 - [矩陣與雙精度值](features/MATRIX_NODES.md)：矩陣型別、Column 介面、新節點及 TD 原生傳輸實測；既有運算擴充分批交付。
 - [陣列與結構](features/ARRAYS_AND_STRUCTURES.md)：建立、Array[i]、Replace、Length、Field、共用型別及保存規則。
 - [TD 陣列來源](features/TD_ARRAY_SOURCES.md)：CHOP Uniform Arrays、TD 內建結構、TOP／MAT 可用範圍及宿主限制。
+- [TD 來源分類與命名總表](discussions/TD_SOURCE_NAMING_RESEARCH.md)：GLSL TOP／MAT 的 TD 名、Python 來源、共通別名候選、結構欄位與現況；附可篩選 CSV，研究完成、命名待審。
 - [陣列與結構後續計畫](discussions/ARRAY_AND_STRUCT_PLAN.md)：原始決策及執行期間補充定案；最新交付狀態以開發狀態為準。
 - [自含式圖封存提案](discussions/GRAPH_ARCHIVE_PROPOSAL.md)：另行評估隨圖打包節點實作與相依定義，尚未實作。
 - [接線轉換與背景工作提案](discussions/CONVERSION_AND_RUNTIME_NEXT.md)：現況、推薦方向與尚未定案的規則。

@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 研究檢查點：完成 [TD 來源分類與命名總表](../discussions/TD_SOURCE_NAMING_RESEARCH.md) 與 CSV，涵蓋 GLSL TOP／MAT 公開來源家族、結構欄位、函數附表及既有版本差異。命名與分類為審查稿；沒有產品程式、UI、版本或 TOE 變更，也未執行新 Shader 驗證。產品仍以以下 0.8.119 交付狀態為準。
+
 2026-09-19 0.8.119 交付檢查點：來源 `b5295d2` 已整合 main，同步 runtime／live 兩份 DAT；34 份來源與 10 份服務資產一致，TOP／MAT Master current（revision 67），三份使用者 Shader 保留。正式入口保存前後均確認 WebSocket ready／來源訂閱成功、無頁面錯誤。TOE 已保存 924,694 bytes，SHA-256 `5e7feaf088364a714269eb9299d250eeadecf1466000723caf0adf082229b649`，排除一份私人助手。本批只改後端，既有 0.8.118 網頁可自動重連；沒有強制重新整理使用者頁面。
 
 2026-09-19 0.8.119 來源檢查點：使用者回報 Uniform 仍放開才同步，完整真實網頁入口重現票證 200、WebSocket 立即關閉。HTTP 的 `runtime._live` 存在而回呼 DAT 的 `service` 為空；改由 runtime 統一持有，HTTP／WebSocket／metadata 回呼共用同一實例。完整 portable checks（466 Python 單元測試）與 10 組 TD 回歸通過；新增完整網頁／TD fixture，在 loopback 與 Tailscale 位址各驗證按住時連續更新、TD 改值推送、單次 Undo／Redo、reload 重連。值更新不寫圖或 Shader，三份使用者 Shader 保留。同步與 TOE 保存另記；未宣稱偶發卡頓已解決或已完成 iOS 實機驗收。
