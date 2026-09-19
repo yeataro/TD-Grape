@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.117'
+PRODUCT_VERSION='0.8.118'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -136,6 +136,9 @@ _last_tick=0
 _worker=None
 _assets={}
 _remote_port=None
+_live_port=None
+_live=None
+_live_error=''
 _lan_enabled=False
 _require_token=False
 _network_refresh=0.0
@@ -300,6 +303,7 @@ def state():
 
 def write_state(data):
     (_shader or _owner).op('state').text=json.dumps(data,ensure_ascii=False,indent=2,allow_nan=False)
+    if _live: _live.graph_changed(_shader or _owner,data)
 
 def target():
     if _shader is not None: return _shader
@@ -1012,6 +1016,13 @@ def set_parameter_with_undo(parameter, value, validate=None):
     if not ui.undo.globalState:
         _set_parameter_without_native_capture(parameter, value)
         return
+    _set_parameter_without_native_capture(parameter, value)
+    record_parameter_undo(parameter, before, parameter.val, validate)
+
+
+def record_parameter_undo(parameter, before, after, validate=None):
+    """Close one completed value edit without rewriting its final value."""
+    if before == after or not ui.undo.globalState: return
     owner = parameter.owner
     entry = {'parameter': parameter, 'owner': owner, 'ownerId': owner.id,
              'name': parameter.name, 'index': parameter.index, 'before': before, 'applied': True, 'blocked': False,
@@ -1019,8 +1030,7 @@ def set_parameter_with_undo(parameter, value, validate=None):
              'range': (parameter.min, parameter.max, parameter.clampMin, parameter.clampMax) if parameter.isNumber else None}
     ui.undo.startBlock('Grape: ' + owner.name + ' / ' + parameter.label)
     try:
-        _set_parameter_without_native_capture(parameter, value)
-        entry['after'] = parameter.val
+        entry['after'] = after
         if before != entry['after']:
             ui.undo.addCallback(_parameter_undo, entry)
     finally:
@@ -1648,6 +1658,10 @@ def process_shader_request(method,path,body):
 
 
 def _process_shader_request(method,path,body):
+    if method=='POST' and path in ('/api/live-ticket','/api/live-restore','/api/live-seal'):
+        live=_live
+        if live is None: raise RuntimeError('Uniform live connection is unavailable. '+_live_error)
+        return live.ticket(target()) if path.endswith('live-ticket') else live.seal(target(),body) if path.endswith('live-seal') else live.restore(target(),body)
     if method=='GET' and path=='/api/shaders':return shader_choices()
     if method=='GET' and path=='/api/share-links':return share_links()
     if method=='GET' and path=='/api/state-source':
@@ -1855,6 +1869,7 @@ def tick():
     _last_tick=time.monotonic()
     service_network()
     service_family_startup()
+    if _live: _live.tick()
     deferred=[]
     for _ in range(2):
         try: job=_queue.get_nowait()
@@ -1891,6 +1906,7 @@ def tick():
 
 def stop():
     global _server,_worker
+    if _live: _live.stop()
     if _server is not None:_server.accepting=False
     _server=None  # Worker closes its socket within its bounded receive loop.
     if _worker and _worker is not threading.current_thread(): _worker.join(1)
@@ -1913,7 +1929,7 @@ def refresh_assets(owner):
         _assets['/favicon.svg']=(owner.op('favicon_svg').text.encode('utf-8'),'image/svg+xml')
     if owner.op('inspector_js'):
         _assets['/inspector.js']=(owner.op('inspector_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
-    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui','frames_ui'):
+    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui','frames_ui','uniform_live'):
         if owner.op(name+'_js'):
             _assets['/'+name+'.js']=(owner.op(name+'_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
 
@@ -1931,6 +1947,18 @@ def local_viewer_request(peer, destination, host, headers, body):
     origin='http://'+host
     return headers.get('Origin')==origin and body.get('editorOrigin')==origin
 
+
+def start_uniform_live(owner,enabled):
+    global _live_port,_live,_live_error
+    _live_port=_live=None;_live_error=''
+    node=owner.op('live')
+    if node:
+        try:
+            _live_port=node.module.start(owner.op('runtime').module,enabled)
+            _live=node.module.service
+        except Exception as exc:
+            # The HTTP editor remains available when the live service fails.
+            _live_error=str(exc)
 
 def start(owner,session=None):
     global _owner,_server,_token,_port,_last_tick,_worker,_lan_enabled,_require_token
@@ -1955,6 +1983,7 @@ def start(owner,session=None):
         if not target():
             current=state()
             deploy(current['graph'],current['revision'])
+    start_uniform_live(owner,enabled)
     refresh_assets(owner)
     class Handler(http.server.BaseHTTPRequestHandler):
         # A reload fetches many scripts. Reuse bounded, idle-timed connections
@@ -2019,7 +2048,7 @@ def start(owner,session=None):
                 if self.close_connection:self.send_header('Connection','close')
                 self.send_header('X-Content-Type-Options','nosniff'); self.send_header('Referrer-Policy','no-referrer')
                 # The socket destination was validated against Host above; no TD calls on this worker.
-                remote=' ws://'+self.connection.getsockname()[0]+':'+str(_remote_port) if _remote_port else ''
+                remote=''.join(' ws://'+self.connection.getsockname()[0]+':'+str(port) for port in (_remote_port,_live_port) if port)
                 self.send_header('Content-Security-Policy',"default-src 'self'; connect-src 'self'"+remote+"; media-src 'self' blob:; img-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'")
                 self.end_headers(); self.wfile.write(data)
             except (BrokenPipeError,ConnectionResetError): pass

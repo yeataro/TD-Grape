@@ -163,14 +163,14 @@ def editable_parameter(p):
     return links.module.editable(p) if links else None
 
 
-def component(p):
+def component(p, resolve=editable_parameter):
     try:
         value = float(p.eval())
         if not math.isfinite(value): raise ValueError('Non-finite value')
     except Exception:
         value = None
     mode = str(p.mode).split('.')[-1].upper()
-    edit=editable_parameter(p)
+    edit=resolve(p)
     expression=p.expr if mode=='EXPRESSION' else ''
     return {'parameter': p.name, 'value': value, 'mode': mode,
             'expression': expression, 'binding':p.bindExpr if mode=='BIND' else '',

@@ -30,5 +30,7 @@
   "shortcuts_ui_js": "shortcuts_ui.js",
   "select_ui_js": "select_ui.js",
   "selection_ui_js": "selection_ui.js",
-  "frames_ui_js": "frames_ui.js"
+  "frames_ui_js": "frames_ui.js",
+  "live": "sgrape_live.py",
+  "uniform_live_js": "uniform_live.js"
 }

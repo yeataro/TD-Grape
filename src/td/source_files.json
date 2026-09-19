@@ -43,5 +43,7 @@
   "tdfam_menu_colors.py": "src/td/runtime/tdfam_menu_colors.py",
   "web_icons.json": "src/editor/web_icons.json",
   "selection_ui.js": "src/editor/selection_ui.js",
-  "frames_ui.js": "src/editor/frames_ui.js"
+  "frames_ui.js": "src/editor/frames_ui.js",
+  "sgrape_live.py": "src/td/runtime/sgrape_live.py",
+  "uniform_live.js": "src/editor/uniform_live.js"
 }

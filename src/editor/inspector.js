@@ -87,11 +87,12 @@ function beginValueLadder(entry,e,adapter){
   function finish(accept){
     if(finished)return;finished=true;controller.abort();observer.disconnect();valueLadder=null;
     const allowed=accept&&writable();if(allowed)adapter.preview(value);else adapter.restore();entry.numericGestureActive=false;adapter.end?.();
+    const liveHandled=entry.onNumericFinish?.(allowed);
     popup.remove();document.body.classList.remove('scrubbing-value');entry.classList.remove('scrubbing');
     if(oldDescription===null)entry.removeAttribute('aria-describedby');else entry.setAttribute('aria-describedby',oldDescription);
     if(oldTitle!==null)entry.setAttribute('title',oldTitle);
     if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
-    if(allowed&&value!==initialValue)adapter.commit(value);
+    if(!liveHandled&&allowed&&value!==initialValue)adapter.commit(value);
     if(e.pointerType==='touch'){entry.endNumericEdit?.();document.activeElement?.beginNumericEdit?.();}
   }
   function move(ev){
@@ -174,15 +175,16 @@ function installValueLadder(entry,commit,{local=false}={}){
     };
     const decimalPlaces=value=>{const [digits,exponent='0']=String(value).toLowerCase().split('e');return Math.max(0,(digits.split('.')[1]?.length||0)-Number(exponent));};
     let value=initialValue,baseValue=initialValue,boundedValue=initialValue,deltaUnits=0,segmentPixels=0,segmentTicks=0,sensitivity='',lastX=e.clientX,finished=false;
-    entry.numericGestureActive=true;if(e.pointerType==='touch')entry.beginNumericEdit?.();document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
+    entry.numericGestureActive=true;entry.onNumericBegin?.();if(e.pointerType==='touch')entry.beginNumericEdit?.();document.body.classList.add('scrubbing-value');entry.classList.add('scrubbing','numeric-dragging');
     const controller=new AbortController(),options={capture:true,signal:controller.signal};
     const observer=new MutationObserver(()=>{if(!writable()||!entry.getClientRects().length)finish(false);});
     function finish(accept){
       if(finished)return;finished=true;controller.abort();observer.disconnect();valueLadder=null;
       const allowed=accept&&writable();entry.value=allowed?String(integer?Math.round(value):value):initial;paintSlider();
       entry.numericGestureActive=false;document.body.classList.remove('scrubbing-value');entry.classList.remove('scrubbing','numeric-dragging');
+      const liveHandled=entry.onNumericFinish?.(allowed);
       if(entry.hasPointerCapture(e.pointerId))entry.releasePointerCapture(e.pointerId);
-      if(allowed&&Number(entry.value)!==initialValue)commit();
+      if(!liveHandled&&allowed&&Number(entry.value)!==initialValue)commit();
       // A drag leaves the control ready for another drag. A click instead enters text editing.
       if(document.activeElement===entry)entry.blur();
       if(e.pointerType==='touch'){entry.endNumericEdit?.();document.activeElement?.beginNumericEdit?.();}
@@ -242,6 +244,7 @@ function installValueLadder(entry,commit,{local=false}={}){
     if(!initial.trim()||!Number.isFinite(Number(initial)))return;
     beginValueLadder(entry,e,{
       local,
+      begin:()=>entry.onNumericBegin?.(),
       read:()=>Number(entry.value),integer:entry.step==='1',min:entry.min===''?-Infinity:Number(entry.min),max:entry.max===''?Infinity:Number(entry.max),range:entry.numericRange,
       writable:()=>!entry.disabled&&!entry.readOnly,
       preview:value=>{entry.value=String(value);paintSlider();},restore:()=>{entry.value=initial;paintSlider();},commit,
@@ -2113,11 +2116,15 @@ function nativeInputFields(box,decl){
   if(!row.missing){
     const values=el('div',{class:'source-components'});
     row.components.forEach((item,index)=>{
-      const commit=value=>nativeSourceRequest('source-value',{id:decl.id,component:index,value,expected:entry.sourceExpected});
+      const commit=value=>{if(!entry.liveCommit?.(value))nativeSourceRequest('source-value',{id:decl.id,component:index,value,expected:entry.sourceExpected});};
       const entry=typedScalarInput(item.value,typeFamily(decl.type),commit);
       entry.dataset.sourceComponent=index;entry.sourceExpected=clone(item);entry.setAttribute('aria-label',decl.name+' '+'XYZW'[index]);
+      if(decl.kind==='uniform'&&typeof uniformLive!=='undefined')uniformLive.attach(entry,decl.id,index);
       const f=field('XYZW'[index],entry);if(index>=count)f.classList.add('source-dormant');values.append(f);
     });card.append(values);
+    if(decl.kind==='uniform'&&typeof uniformLive!=='undefined'){
+      card.append(el('small',{'data-uniform-live-status':''}));uniformLive.watch(decl.id);uniformLive.render();
+    }
     if(decl.kind==='uniform'&&['int','uint'].includes(typeFamily(decl.type))){
       card.append(el('p',{class:'muted'},t('inputs.integerUniformHint')));
     }
@@ -2299,7 +2306,15 @@ function installNativeSources(){
     if(changed)finishInputCreate(kind,id);else $('#sourcecreateerror').textContent=$('#status').textContent;
   };
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);
-  setInterval(refreshNativeSources,1000);
+  setInterval(()=>{
+    if(typeof uniformLive!=='undefined'){
+      const card=document.querySelector('#inspector [data-native-source]:has([data-source-component])');
+      const row=card&&nativeSourceRows().find(r=>r.id===card.dataset.nativeSource);
+      uniformLive.watch(row?.kind==='uniform'?row.id:null);
+      if(uniformLive.ready&&nativeSourceSnapshot?.revision===revision&&!nativeSourceError)return;
+    }
+    refreshNativeSources();
+  },1000);
 }
 
 

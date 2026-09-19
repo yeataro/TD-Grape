@@ -201,7 +201,7 @@ function renderHistoryActions(){
   if(typeof renderSelectionToolbar==='function')renderSelectionToolbar();
 }
 function recordHistory(entry){
-  if(historyGraphKey(entry.before)===historyGraphKey(entry.after)&&(!entry.nativeApplied||entry.nativeBefore===entry.nativeAfter))return null;
+  if(!entry.liveReceipt&&historyGraphKey(entry.before)===historyGraphKey(entry.after)&&(!entry.nativeApplied||entry.nativeBefore===entry.nativeAfter))return null;
   const step={id:crypto.randomUUID(),epoch:historyEpoch,...entry};
   if(step.nativeApplied){step.deltaBefore=step.nativeBefore;step.deltaAfter=step.nativeAfter;}
   past.push(step);if(past.length>60)past.shift();future=[];renderHistoryActions();return step;
@@ -266,7 +266,13 @@ async function undo(redo=false){
     const entry=from.at(-1),expected=redo?entry.before:entry.after,desired=redo?entry.after:entry.before;
     if(entry.epoch!==historyEpoch||historyGraphKey(graph)!==historyGraphKey(expected))throw Error(t('history.changed'));
     const previousGraph=historyGraphKey(graph);let needsApply=false;
-    if(entry.nativeApplied&&(entry.sourceIds.length||entry.valueIds?.length)){
+    if(entry.liveReceipt){
+      const receipt=await entry.liveReceipt;
+      if(receipt){
+        if(!entry.liveRequest||entry.liveRequest.undo!==!redo)entry.liveRequest={requestId:crypto.randomUUID(),undo:!redo};
+        await api('live-restore',{receipt,...entry.liveRequest});entry.liveRequest=null;
+      }
+    }else if(entry.nativeApplied&&(entry.sourceIds.length||entry.valueIds?.length)){
       const fromToken=redo?entry.nativeBefore:entry.nativeAfter,toToken=redo?entry.nativeAfter:entry.nativeBefore;
       if(!fromToken||!toToken)throw Error(t('history.unavailable'));
       // Receipts rebase CAS expectations, but may include unrelated external
@@ -605,6 +611,7 @@ function fitNodes(nodes,animate=false){
 }
 function fit(){if(graph)fitNodes(current().nodes);}
 async function load(){
+  if(typeof uniformLive!=='undefined')uniformLive.disconnect();
   const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
   try{
     const data=await api('state');if(generation!==editorLoadGeneration)return;

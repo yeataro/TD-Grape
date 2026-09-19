@@ -3242,6 +3242,10 @@
     "selection.expand": {
       "zh-Hant": "展開選取節點",
       "en": "Expand selected nodes"
-    }
+    },
+    "live.ready": {"en": "Uniform live", "zh-Hant": "Uniform 即時連線"},
+    "live.connecting": {"en": "Connecting Uniform live…", "zh-Hant": "Uniform 即時連線中…"},
+    "live.offline": {"en": "Uniform live offline · single edits available", "zh-Hant": "Uniform 即時連線中斷 · 可單次修改"},
+    "live.changed": {"en": "The Uniform source changed. Review its current value.", "zh-Hant": "Uniform 來源已變更，請確認目前的值。"}
   }
 }
