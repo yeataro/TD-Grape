@@ -2003,11 +2003,11 @@ function renderGraphEditActions(){
   const edge=graph&&selectedEdge!==null&&!!current().edges[selectedEdge];
   for(const [id,key,enabled] of [
     ['graphcopy','edit.copy',count>0],
-    ['graphpaste','edit.paste',graph&&!editorMutationBlocked()&&(!!editorClipboard||!!navigator.clipboard?.readText)],
-    ['graphgroup','function.group',graph&&!editorMutationBlocked()&&selectedEdge===null&&current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog))],
-    ['graphdelete',edge?'wire.disconnectSelected':'node.delete',!editorMutationBlocked()&&(count>0||edge)]
+    ['graphpaste','edit.paste',graph&&!editorMutationBlocked(true)&&(!!editorClipboard||!!navigator.clipboard?.readText)],
+    ['graphgroup','function.group',graph&&!editorMutationBlocked(true)&&selectedEdge===null&&current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog))],
+    ['graphdelete',edge?'wire.disconnectSelected':'node.delete',!editorMutationBlocked(true)&&(count>0||edge)]
   ]){
-    const button=$('#'+id);button.disabled=!enabled;button.title=t(key);button.setAttribute('aria-label',t(key));
+    const button=$('#'+id);setEditorDisabled(button,!enabled||(nativeValueBusy&&id!=='graphcopy'),!enabled);button.title=t(key);button.setAttribute('aria-label',t(key));
   }
   if(typeof renderSelectionToolbar==='function')renderSelectionToolbar();
   if(typeof renderShortcutButtonHints==='function')renderShortcutButtonHints();

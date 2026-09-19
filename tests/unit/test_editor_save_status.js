@@ -1,7 +1,7 @@
 /* Verify user-visible save states through real handlers, including in-flight edits. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const dir=path.resolve(__dirname,'../../src/editor'),elements=new Map();
-const element=()=>({textContent:'',title:'',disabled:false,hidden:false,addEventListener(){},replaceChildren(){},
+const element=()=>({setAttribute(){},textContent:'',title:'',disabled:false,hidden:false,addEventListener(){},replaceChildren(){},
   classList:{add(){},remove(){},toggle(){}}});
 const context=vm.createContext({assert,console,crypto:globalThis.crypto,location:{pathname:'/',hash:''},history:{replaceState(){}},window:{addEventListener(){}},
   document:{addEventListener(){},querySelector(s){if(!elements.has(s))elements.set(s,element());return elements.get(s);},querySelectorAll(){return [];}},

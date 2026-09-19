@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.116'
+PRODUCT_VERSION='0.8.117'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1130,8 +1130,9 @@ def ensure_supported_shader(comp):
 def compiled_is_current(comp,compiled,graph=None):
     if source_module() and comp.fetch('grapeNativeUniformsV1',None) is None: return False
     if source_module() and graph is not None:
+        index=source_module().native_index(shader_operator(comp))
         for decl in graph['declarations']:
-            if decl['kind'] in ('uniform','spec_constant') and not decl.get('sourceMissing') and not source_module().locate(shader_operator(comp),comp.fetch('grapeNativeUniformsV1',{}).get(decl['id'])): return False
+            if decl['kind'] in ('uniform','spec_constant') and not decl.get('sourceMissing') and not source_module().locate(shader_operator(comp),comp.fetch('grapeNativeUniformsV1',{}).get(decl['id']),index): return False
     manifest=json.loads(comp.op('manifest').text or '{}')
     actual_vertex=comp.op('vertex_shader').text if comp.op('vertex_shader') else ''
     return bool(comp.op('texture_sources')) and comp.op('texture_sources').text==TEXTURE_SOURCE_CODE and manifest.get('compilerBuild')==PRODUCT_VERSION and manifest.get('catalogContractHash')==core().catalog_contract()['hash'] and manifest.get('compiledFingerprint')==compiled_fingerprint(compiled) and comp.op('pixel_shader').text==compiled['pixel'] and actual_vertex==compiled['vertex']

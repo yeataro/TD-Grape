@@ -72,9 +72,9 @@ def _live(runtime):
     sources = runtime.source_module(); comp = runtime.target(); operator = runtime.shader_operator(comp)
     registry = comp.fetch(sources.STORE, {}) or {}; links = comp.fetch(LINKS, {})
     declarations = {d['id']: d for d in runtime.state()['graph']['declarations'] if d.get('kind') in sources.SOURCE_KINDS}
-    entries = {}; handles = {}
+    entries = {}; handles = {}; native_index = sources.native_index(operator)
     for ident in set(declarations) | set(registry):
-        record = copy.deepcopy(registry.get(ident)); native = sources.locate(operator, record)
+        record = copy.deepcopy(registry.get(ident)); native = sources.locate(operator, record, native_index)
         link = copy.deepcopy(links.get(ident)); controls = {}
         if link:
             for item in link.get('components', []):

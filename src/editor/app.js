@@ -176,7 +176,7 @@ function renderGraphSaveState(){
   badge.classList.toggle('pending',dirty);renderStatusVisibility();
 }
 // History follows user commits, independently of Apply's compilation debounce.
-let editorLoadGeneration=0,historyNativeToken=null,historyBusy=false,nativeMutationBusy=false,applyInFlight=null,historyEpoch=0;
+let editorLoadGeneration=0,historyNativeToken=null,historyBusy=false,nativeMutationBusy=false,nativeValueBusy=false,applyInFlight=null,historyEpoch=0;
 function historyValueKey(value){
   const ordered=v=>Array.isArray(v)?v.map(ordered):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,ordered(v[k])])):v;
   return JSON.stringify(ordered(value));
@@ -187,13 +187,17 @@ function historySourceIds(before,after){
   const a=sources(before),b=sources(after);
   return [...new Set([...a.keys(),...b.keys()])].filter(id=>historyValueKey(a.get(id))!==historyValueKey(b.get(id)));
 }
-function editorMutationBlocked(){return readonly||historyBusy||nativeMutationBusy;}
+function editorMutationBlocked(ignoreValueWrite=false){return readonly||historyBusy||(nativeMutationBusy&&!(ignoreValueWrite&&nativeValueBusy));}
+// A brief value-write lock still blocks clicks/keyboard focus, without changing
+// unrelated controls to their permanently unavailable appearance.
+function setEditorDisabled(control,blocked,idleBlocked=blocked){control.disabled=!!idleBlocked;control.inert=!!blocked&&!idleBlocked;}
 function renderHistoryActions(){
-  const busy=editorMutationBlocked();
-  $('#undo').disabled=busy||!past.length;$('#redo').disabled=busy||!future.length;
-  $('#reload').disabled=submitBusy||historyBusy||nativeMutationBusy;$('#apply').disabled=readonly||submitBusy||historyBusy||nativeMutationBusy;
-  $('#inspector').inert=historyBusy||nativeMutationBusy;
-  for(const input of document.querySelectorAll('#cards .node-inline-values input'))input.disabled=busy;
+  const busy=editorMutationBlocked(),idleBusy=editorMutationBlocked(true);
+  setEditorDisabled($('#undo'),busy||!past.length,idleBusy||!past.length);setEditorDisabled($('#redo'),busy||!future.length,idleBusy||!future.length);
+  setEditorDisabled($('#reload'),submitBusy||historyBusy||nativeMutationBusy,submitBusy||historyBusy||(nativeMutationBusy&&!nativeValueBusy));
+  setEditorDisabled($('#apply'),readonly||submitBusy||historyBusy||nativeMutationBusy,readonly||submitBusy||historyBusy||(nativeMutationBusy&&!nativeValueBusy));
+  $('#inspector').inert=historyBusy||nativeMutationBusy;$('#inspector').setAttribute('aria-busy',String(nativeValueBusy));
+  for(const input of document.querySelectorAll('#cards .node-inline-values input'))setEditorDisabled(input,busy,idleBusy);
   if(typeof renderSelectionToolbar==='function')renderSelectionToolbar();
 }
 function recordHistory(entry){
@@ -610,7 +614,7 @@ async function load(){
     graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);
     editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
-    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeMutationBusy=false;applyInFlight=null;submitBusy=false;
+    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;
     uniformGeneration++;uniformPolling=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();uniformSnapshot={revision:-1,uniforms:{}};
     customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
     readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();

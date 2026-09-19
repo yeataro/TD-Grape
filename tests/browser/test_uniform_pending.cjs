@@ -1,0 +1,60 @@
+const assert=require('node:assert/strict');
+const {harness}=require('./test_glsl_code.cjs');
+(async()=>{
+ const [source,state,folder]=process.argv.slice(2),h=await harness(source,state,folder,{skipPreview:true}),{page,checks,errors}=h;
+ try{
+  await page.evaluate(()=>{
+   clearTimeout(autoTimer);autoTimer=null;nativeSourcePolling=uniformPolling=customPolling=true;
+   graph.declarations=[{id:'live',kind:'uniform',name:'uLive',type:'float',value:.25}];graph.functions=[];graphTrail=[];
+   graph.stages.pixel={nodes:[testNode('scalar','scalar',0,0,{type:'float',value:1}),testNode('pixel','pixel_out',400,0)],edges:[]};
+   dirty=false;readonly=false;selectedInputId='live';selected=null;selection.clear();past=[];future=[];
+   nativeSourceSnapshot={revision,enabled:true,sourceChanged:false,graph:clone(graph),declarations:clone(graph.declarations),issues:[],history:{token:'before'},uniforms:[{id:'live',kind:'uniform',name:'uLive',type:'float',default:.25,nameWritable:true,sequence:'vec',components:[0,1,2,3].map(i=>({value:i?0:.25,parameter:'vec0value'+i,mode:'CONSTANT',writable:true,modeWritable:true}))}]};
+   nativeSourceError='';nativeMutationBusy=nativeValueBusy=nativeSourceBusy=false;render();renderGraphEditActions();
+   window.pendingGraph=JSON.stringify(graph);window.pendingRevision=revision;
+   window.pendingApi=api;window.pendingWrites=0;
+   api=async(name,body)=>{if(name==='source-value'){pendingWrites++;return new Promise((resolve,reject)=>{window.releaseValue=()=>{const result=clone(nativeSourceSnapshot);result.uniforms[0].components[0].value=body.value;result.history={token:'after',beforeToken:'before'};resolve(result);};window.rejectValue=()=>reject(Error('Injected conflict'));});}if(name==='sources')return clone(nativeSourceSnapshot);return pendingApi(name,body);};
+   window.controlStyles=()=>Object.fromEntries(['#apply','#undo','#redo','#cards [data-node="scalar"] input','[data-input-reference="live"]','[data-source-component="0"]'].map(selector=>{const e=document.querySelector(selector),s=getComputedStyle(e);return[selector,[s.opacity,s.backgroundColor,s.color,s.borderColor]];}));
+   window.pendingStyles=controlStyles();
+   window.valuePromise=nativeSourceRequest('source-value',{id:'live',component:0,value:.75,expected:clone(nativeSourceSnapshot.uniforms[0].components[0])});
+  });
+  assert.deepEqual(await page.evaluate(()=>controlStyles()),await page.evaluate(()=>pendingStyles));
+  assert.equal(await page.evaluate(()=>$('#apply').inert&&!$('#apply').disabled&&$('#inspector').inert&&editorMutationBlocked()&&!sourceReady()),true);
+  assert.equal(await page.evaluate(()=>change(()=>current().nodes[0].params.value=9)),false);
+  await page.evaluate(()=>{window.extraWrite=nativeSourceRequest('source-value',{});});
+  assert.equal(await page.evaluate(()=>pendingWrites),1);
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)),await page.evaluate(()=>pendingGraph));
+  checks.push('held value reply keeps unrelated control colors/opacity while inert and mutation guards block edits and duplicate writes');
+  await page.evaluate(async()=>{releaseValue();await valuePromise;clearTimeout(autoTimer);autoTimer=null;});
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)),await page.evaluate(()=>pendingGraph));
+  assert.equal(await page.evaluate(()=>revision),await page.evaluate(()=>pendingRevision));
+  assert.deepEqual(await page.evaluate(()=>[dirty,past.length,past[0].kind,nativeSourceSnapshot.uniforms[0].components[0].value,$('#apply').inert,nativeValueBusy]),[false,1,'source',.75,false,false]);
+  checks.push('successful value write changes TD value receipt only; graph, revision and dirty state stay unchanged with one source history entry');
+  await page.evaluate(()=>{window.valuePromise=nativeSourceRequest('source-value',{id:'live',component:0,value:.9,expected:clone(nativeSourceSnapshot.uniforms[0].components[0])});rejectValue();});
+  await page.evaluate(async()=>{await valuePromise;});
+  assert.equal(await page.evaluate(()=>nativeValueBusy||nativeMutationBusy||nativeSourceBusy||$('#apply').inert||$('#inspector').inert),false);
+  assert.equal(await page.evaluate(()=>past.length),1);
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)),await page.evaluate(()=>pendingGraph));
+  checks.push('failed write restores controls, keeps graph and history intact, and reads source state back');
+  await page.evaluate(()=>{readonly=true;nativeValueBusy=nativeMutationBusy=true;renderGraphEditActions();renderNativeSourceValues();});
+  assert.equal(await page.locator('#apply').isDisabled(),true);
+  checks.push('read-only remains visibly disabled and never becomes a temporary value lock');
+  await page.evaluate(()=>{
+   readonly=false;nativeValueBusy=nativeMutationBusy=false;nativeSourceError='';dirty=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();
+   uniformSnapshot={revision,history:{token:'legacy-before'},uniforms:{live:{type:'float',components:[{parameter:'Live',value:.25,mode:'CONSTANT',writable:true}]}},textures:{}};
+   $('#inspector').replaceChildren(liveUniformFields(graph.declarations[0]));renderGraphEditActions();updateUniformFields();
+   window.legacyStyles=[getComputedStyle($('#apply')).opacity,getComputedStyle($('#cards input')).opacity];
+   api=async(name,body)=>{if(name==='uniform-value')return new Promise(resolve=>window.releaseLegacy=()=>{const data=clone(uniformSnapshot);data.uniforms.live.components[0].value=body.value;data.history={token:'legacy-after',beforeToken:'legacy-before'};resolve(data);});return pendingApi(name,body);};
+   preview=async()=>{};
+   writeUniformInput($('#inspector .uniform-live input'),.6);
+  });
+  await page.waitForFunction(()=>typeof releaseLegacy==='function');
+  assert.equal(await page.locator('#inspector .uniform-live input').isDisabled(),true);
+  assert.deepEqual(await page.evaluate(()=>[getComputedStyle($('#apply')).opacity,getComputedStyle($('#cards input')).opacity]),await page.evaluate(()=>legacyStyles));
+  await page.evaluate(async()=>{releaseLegacy();await uniformWrites;});
+  assert.equal(await page.evaluate(()=>nativeValueBusy||nativeMutationBusy||$('#apply').inert),false);
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)),await page.evaluate(()=>pendingGraph));
+  assert.equal(await page.evaluate(()=>uniformSnapshot.uniforms.live.components[0].value),.6);
+  checks.push('legacy exposed Uniform uses the same temporary lock and preserves graph, readback and source-value history');
+  assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length,checks}));
+ }catch(e){await h.finish(e);throw e;}
+})().catch(e=>{console.error(e);process.exitCode=1;});

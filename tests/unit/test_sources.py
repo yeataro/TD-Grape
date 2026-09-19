@@ -174,4 +174,20 @@ class SourceRemoval(unittest.TestCase):
         self.assertEqual([r['id'] for r in s.edit(self.runtime, self.request())['uniforms']], ['B'])
 
 
+
+
+class SourceSnapshotCost(unittest.TestCase):
+    def test_lookup_scans_once_per_snapshot_and_preserves_ambiguity(self):
+        for count in (1, 100, 200):
+            rows = [{'sequence': 'vec', 'name': 'u'+str(i), 'index': i} for i in range(count)]
+            with patch.object(s, 'native_rows', return_value=rows) as read:
+                index = s.native_index(None)
+                for row in rows:
+                    self.assertIs(s.locate(None, row, index), row)
+                self.assertEqual(read.call_count, 1)
+                rows.append(dict(rows[0]))
+                self.assertIsNone(s.locate(None, rows[0], s.native_index(None)))
+                self.assertIsNone(s.locate(None, dict(rows[-2], missing=True), index))
+
+
 if __name__=='__main__':unittest.main()

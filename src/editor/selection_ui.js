@@ -45,20 +45,20 @@ function renderSelectionToolbar(){
   multi.hidden=!nodes.length;
   $('#graphgroup').hidden=!multiple;$('#grapharrange').hidden=!multiple;$('#graphframe').hidden=!multiple;
   const joinTarget=groupFrameJoinTarget(),joinButton=$('#graphjoinframe');
-  joinButton.hidden=!joinTarget;joinButton.disabled=editorMutationBlocked();
+  joinButton.hidden=!joinTarget;setEditorDisabled(joinButton,editorMutationBlocked(),editorMutationBlocked(true));
   joinButton.dataset.shortcutContext=joinTarget?.name||'';decorateShortcutButton(joinButton,'joinFrame');
   $('#graphdetachframe').hidden=!canDetachGroupFrameSelection();
-  $('#graphdetachframe').disabled=editorMutationBlocked();
+  setEditorDisabled($('#graphdetachframe'),editorMutationBlocked(),editorMutationBlocked(true));
   decorateShortcutButton($('#graphdetachframe'),'detachFrame');
-  $('#graphframe').disabled=editorMutationBlocked()||!canCreateGroupFrame();
+  setEditorDisabled($('#graphframe'),editorMutationBlocked()||!canCreateGroupFrame(),editorMutationBlocked(true)||!canCreateGroupFrame());
   decorateShortcutButton($('#graphframe'),'groupFrame',canCreateGroupFrame()?'frame.create':'frame.unframedOnly');
-  $('#grapharrange').disabled=!multiple||editorMutationBlocked();
+  setEditorDisabled($('#grapharrange'),!multiple||editorMutationBlocked(),!multiple||editorMutationBlocked(true));
   $('#graphfitselection').disabled=!nodes.length;
   const collapseState=nodeCollapseSelectionState();
   for(const [action,available]of [['collapse',collapseState.canCollapse],['expand',collapseState.canExpand]]){
     const button=$('#graph'+action+'selection'),label=t('selection.'+action);
     button.hidden=!EDITOR_DEV_SETTINGS.selectionCollapseTools||!available;
-    button.disabled=editorMutationBlocked()||!available;button.title=label;button.setAttribute('aria-label',label);
+    setEditorDisabled(button,editorMutationBlocked()||!available,editorMutationBlocked(true)||!available);button.title=label;button.setAttribute('aria-label',label);
   }
   $('#graphcollapseseparator').hidden=!EDITOR_DEV_SETTINGS.selectionCollapseTools||!(collapseState.canCollapse||collapseState.canExpand);
   bar.hidden=mode==='off'||!nodes.length||(mode==='multiple'&&!multiple);

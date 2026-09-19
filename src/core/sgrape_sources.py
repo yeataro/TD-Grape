@@ -305,10 +305,15 @@ def reconcile(declarations, registry, rows, operator=None):
     unchanged sequence can retain its ID. Ambiguous edits stay missing.
     """
     declarations = copy.deepcopy(declarations)
-    registry = {ident: copy.deepcopy(record) for ident, record in registry.items() if any(d['id'] == ident for d in declarations)}
+    identities = {d['id'] for d in declarations}
+    registry = {ident: copy.deepcopy(record) for ident, record in registry.items() if ident in identities}
+    names = {}; slots = {}
+    for i, row in enumerate(rows):
+        names[row['name']] = names.get(row['name'], 0) + 1
+        slots.setdefault((row['sequence'], row['name']), []).append(i)
     matches = {}; taken = set(); issues = []
     for ident, record in registry.items():
-        found = [i for i, row in enumerate(rows) if row['name'] == record['name'] and row['sequence'] == record['sequence']]
+        found = slots.get((record['sequence'], record['name']), [])
         if len(found) == 1:
             matches[ident] = found[0]; taken.add(found[0])
     for sequence in SEQUENCE_CHANNELS:
@@ -329,7 +334,7 @@ def reconcile(declarations, registry, rows, operator=None):
         decl = by_id.get(ident)
         if not decl: continue
         row = rows[matches[ident]] if ident in matches else None
-        duplicate = row is not None and sum(r['name'] == row['name'] for r in rows) != 1
+        duplicate = row is not None and names[row['name']] != 1
         array_invalid = row is not None and row['sequence'] == 'array' and (not array_shape(decl['type']) or row['arrayBinding']['arrayType'] != 'uniformarray' or row['arrayBinding']['elementType'] != array_shape(decl['type'])[0])
         if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied or array_invalid:
             decl['sourceMissing'] = True; record['missing'] = True
@@ -342,7 +347,7 @@ def reconcile(declarations, registry, rows, operator=None):
     for i, row in enumerate(rows):
         if i in taken: continue
         name = row['name']
-        if not valid_name(name) or name in known or sum(r['name'] == name for r in rows) != 1:
+        if not valid_name(name) or name in known or names[name] != 1:
             issues.append({'message': 'Review the native Uniform name: ' + name}); continue
         kind = 'spec_constant' if row['sequence'] == 'const' else 'uniform'
         ident = kind + '_' + uuid.uuid4().hex
@@ -380,10 +385,23 @@ def reconcile(declarations, registry, rows, operator=None):
     return declarations, registry, issues
 
 
-def locate(operator, record):
+def native_index(operator):
+    """One synchronous snapshot; duplicate names remain unresolvable.
+
+    Callers must rebuild this index after native writes. Never retain it across
+    requests: TD expressions, controls and sequence rows can change externally.
+    """
+    result = {}
+    for row in native_rows(operator):
+        key = (row['sequence'], row['name'])
+        result[key] = None if key in result else row
+    return result
+
+
+def locate(operator, record, index=None):
     if not record or record.get('missing'): return None
-    rows = [row for row in native_rows(operator) if row['name'] == record['name'] and row['sequence'] == record['sequence']]
-    return rows[0] if len(rows) == 1 else None
+    rows = native_index(operator) if index is None else index
+    return rows.get((record['sequence'], record['name']))
 
 
 def capture_configuration(runtime, comp):
@@ -596,11 +614,11 @@ def snapshot(runtime):
     comp = runtime.target(); current = runtime.state(); operator = runtime.shader_operator(comp)
     links=comp.op('parameter_links')
     if links: links.module.sync(comp)
-    registry = comp.fetch(STORE, {})
+    registry = comp.fetch(STORE, {}); index = native_index(operator)
     rows = []; spec_rows = []; issues = copy.deepcopy(comp.fetch('grapeSourceIssues', []))
     for decl in current['graph']['declarations']:
         if decl['kind'] not in SOURCE_KINDS: continue
-        row = locate(operator, registry.get(decl['id']))
+        row = locate(operator, registry.get(decl['id']), index)
         destination = spec_rows if decl['kind']=='spec_constant' else rows
         destination.append({'id': decl['id'], 'kind':decl['kind'], 'name': decl['name'], 'type': decl['type'],
                      **({'constantId':decl['constantId']} if decl['kind']=='spec_constant' else {}),

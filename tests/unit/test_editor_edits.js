@@ -1,7 +1,7 @@
 /* Exercise the editor's actual edit handlers, with only DOM/render/network effects stubbed. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const dir=process.argv[2]||path.resolve(__dirname,'../../src/editor');
-const element={addEventListener(){},textContent:'',title:'',disabled:false,replaceChildren(){},classList:{add(){},toggle(){}}};
+const element={setAttribute(){},addEventListener(){},textContent:'',title:'',disabled:false,replaceChildren(){},classList:{add(){},toggle(){}}};
 let timers=0,writes=0;
 const context=vm.createContext({console,crypto:globalThis.crypto,assert,
   location:{pathname:'/',hash:''},history:{replaceState(){}},window:{addEventListener(){}},

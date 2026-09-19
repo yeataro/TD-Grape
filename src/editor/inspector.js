@@ -301,7 +301,7 @@ const uniformPending=new Map(),uniformReadbacks=new Set();
 function updateUniformFields(forceKeys=new Set()){
   for(const section of document.querySelectorAll('.uniform-live')){
     const id=section.dataset.declaration,row=liveParameterRow(id);
-    const ready=!!row&&uniformSnapshot.revision===revision&&!dirty&&!submitBusy&&!editorMutationBlocked();
+    const ready=!!row&&uniformSnapshot.revision===revision&&!dirty&&!submitBusy&&!editorMutationBlocked(true);
     for(const entry of section.querySelectorAll('[data-component]')){
       const index=Number(entry.dataset.component),item=row?.components[index],key=id+':'+index,pending=uniformPending.has(key);
       entry.disabled=readonly||!ready||!item?.writable||pending||uniformReadbacks.has(key);
@@ -344,7 +344,7 @@ function writeUniformInput(entry,value){
   const id=entry.closest('.uniform-live').dataset.declaration,index=Number(entry.dataset.component),key=id+':'+index;
   if(editorMutationBlocked()||submitBusy||dirty||uniformPending.has(key)||uniformReadbacks.has(key))return;
   const generation=editorLoadGeneration,before=clone(graph),nativeBefore=uniformSnapshot.history?.token||nativeSourceSnapshot?.history?.token||historyNativeToken;
-  uniformGeneration++;uniformPending.set(key,1);nativeMutationBusy=true;clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();updateUniformFields();
+  uniformGeneration++;uniformPending.set(key,1);nativeMutationBusy=true;nativeValueBusy=true;clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();updateUniformFields();
   uniformWrites=uniformWrites.then(async()=>{
     if(generation!==editorLoadGeneration)return;
     try{
@@ -366,7 +366,7 @@ function writeUniformInput(entry,value){
       if(generation!==editorLoadGeneration)return;
       const remaining=uniformPending.get(key)-1;
       if(remaining)uniformPending.set(key,remaining);else uniformPending.delete(key);
-      nativeMutationBusy=false;renderGraphEditActions();updateUniformFields();if(uniformReadbacks.size)refreshUniforms();scheduleGraphApply();
+      nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();updateUniformFields();if(uniformReadbacks.size)refreshUniforms();scheduleGraphApply();
     }
   });
 }
@@ -1931,7 +1931,7 @@ function nativeSourceGraphOnly(){
   return !!(nativeSourceSnapshot?.sourceChanged&&nativeSourceSnapshot.revision===revision&&nativeSourceSnapshot.graph&&historyGraphKey(graph)===historyGraphKey(nativeSourceSnapshot.graph));
 }
 function sourceGraphPending(){return dirty&&!nativeSourceGraphOnly();}
-function sourceReady(){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!sourceGraphPending()&&!submitBusy&&!nativeSourceBusy&&!editorMutationBlocked()&&nativeSourceSnapshot.revision===revision;}
+function sourceReady(ignoreValueWrite=false){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!sourceGraphPending()&&!submitBusy&&(!nativeSourceBusy||ignoreValueWrite&&nativeValueBusy)&&!editorMutationBlocked(ignoreValueWrite)&&nativeSourceSnapshot.revision===revision;}
 function sourceMissingHint(decl){return t(sourceReferences(decl.id).length?'sources.missing':'sources.missingUnused');}
 let nativeSourceHint='';
 function nativeSourceHintText(){
@@ -1977,7 +1977,7 @@ async function refreshNativeSources(){
 async function nativeSourceRequest(endpoint,body){
   if(!sourceReady()){showNativeSourceHint();return null;}
   const generation=editorLoadGeneration,before=clone(graph),nativeBefore=nativeSourceSnapshot.history?.token||historyNativeToken;
-  nativeSourceBusy=true;nativeMutationBusy=true;clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();renderNativeSourceValues();let result=null;
+  nativeSourceBusy=true;nativeMutationBusy=true;nativeValueBusy=endpoint==='source-value';clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();renderNativeSourceValues();let result=null;
   try{
     result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});if(generation!==editorLoadGeneration)return null;
     nativeSourceError='';receiveNativeSources(result,{own:true});
@@ -1985,11 +1985,11 @@ async function nativeSourceRequest(endpoint,body){
     status(t('uniform.updated'),false,{clearError:'operation'});
   }
   catch(e){if(generation!==editorLoadGeneration)return null;nativeSourceError=e.message;status(e.message,true);}
-  finally{if(generation===editorLoadGeneration){nativeSourceBusy=false;nativeMutationBusy=false;renderGraphEditActions();renderNativeSourceValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
+  finally{if(generation===editorLoadGeneration){nativeSourceBusy=false;nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();renderNativeSourceValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
   return result;
 }
 function renderNativeSourceValues(){
-  const ready=sourceReady();
+  const ready=sourceReady(true);
   for(const card of document.querySelectorAll('#inspector [data-native-source]')){
     const row=nativeSourceRows().find(r=>r.id===card.dataset.nativeSource);if(!row)continue;
     for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
@@ -2035,15 +2035,15 @@ function renderNativeSourceValues(){
     const row=nativeSourceRows().find(r=>r.id===entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
   }
   for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
-  for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))item.disabled=editorMutationBlocked();
-  if($('#sourcetype'))$('#sourcetype').disabled=editorMutationBlocked()||!['uniform','array','constant','spec_constant'].includes($('#sourcekind').value);
+  for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))setEditorDisabled(item,editorMutationBlocked(),editorMutationBlocked(true));
+  if($('#sourcetype'))setEditorDisabled($('#sourcetype'),editorMutationBlocked()||!['uniform','array','constant','spec_constant'].includes($('#sourcekind').value),editorMutationBlocked(true)||!['uniform','array','constant','spec_constant'].includes($('#sourcekind').value));
   if($('#sourcekind').value==='top_input'){$('#sourcename').value='sTD2DInputs['+topInputsView().length+']';$('#sourcename').disabled=true;}
   const presetSource=inputPresetSource($('#sourcekind').value);if(presetSource){$('#sourcename').value=presetSource.name;$('#sourcename').disabled=true;}
   $('#sourcecreate button[type=submit]').textContent=t(presetSource?'inputs.useExisting':'inputs.create');
   // Polls may clear this source hint after recovery; they never publish it over another action.
   if(nativeSourceHint&&(!nativeSourceHintText()||!selectedInputId))clearNativeSourceHint();
-  for(const item of document.querySelectorAll('[data-input-reference]'))item.disabled=editorMutationBlocked();
-  for(const item of document.querySelectorAll('[data-input-create]'))item.disabled=editorMutationBlocked()||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16);
+  for(const item of document.querySelectorAll('[data-input-reference]'))setEditorDisabled(item,editorMutationBlocked(),editorMutationBlocked(true));
+  for(const item of document.querySelectorAll('[data-input-create]'))setEditorDisabled(item,editorMutationBlocked()||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16),editorMutationBlocked(true)||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16));
   for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
 }
 function specValueField(value,type,commit){return field(t('declaration.value'),typedScalarInput(value,typeFamily(type),commit));}
