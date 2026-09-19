@@ -19,6 +19,23 @@
 
 陣列（含 Array Create）已由使用者操作確認本輪功能正常並暫告一段落；搜尋效能與排序、矩陣四則／分層型別選單、右鍵分組與既有操作入口、工具列收納、Open Editor 不更動既有 Viewer、H／F 與插值、FPS 面板及重新整理缺 UI 的已交付修正，均不因舊文件的「待辦」用語重開。完整交付紀錄見 [開發狀態](../development/STATUS.md)。
 
+### Common Uniforms（命名方向已確認，能力清單待討論）
+
+使用者採用 Common Uniforms／共通 Uniform 的名稱，詢問以 ISF、TD、Shadertoy 的共同能力應選哪些。以下是調查後的候選建議，不是實作授權或跨宿主支援承諾；本輪先以影像 Shader（TD GLSL TOP）對照，MAT 的 render context 另行核對。
+
+| 候選名稱 | 型別與目的 | ISF | Shadertoy | TD 映射界線 |
+| --- | --- | --- | --- | --- |
+| Time | float，Shader 使用的時間，單位秒 | TIME | iTime | 由宿主時鐘供值；時間軸與 Absolute Time 的起點、暫停／循環不同，不能默默合併 |
+| Delta Time | float，相鄰渲染幀的時間步進，單位秒 | TIMEDELTA | iTimeDelta | absTime.stepSeconds 是 TD 全域步進，未必等於某個 TOP 的相鄰 cook／渲染間隔；不能用固定 1/FPS 冒充 |
+| Frame | int，從零開始的渲染幀序號 | FRAMEINDEX | iFrame | me.time.frame／absTime.frame 是時間計數，會跳幀且起點不同；若要求渲染計數須另外對齊，不直接改名當作等價 |
+| Resolution | vec2，當前繪製目標的像素寬高 | RENDERSIZE | iResolution.xy | TOP 可使用 uTDOutputInfo.res.zw，不是網頁 viewport／CSS 尺寸 |
+
+Time／Resolution 是優先候選；Delta Time／Frame 在時鐘及重設規則明確後再納入，不能為湊共同表而隱藏差異。Date（vec4，年／月／日／日內秒數）可列選配：ISF DATE、Shadertoy iDate，TD 由宿主供值；月份起算、時區等慣例還需統一。上述共通來源不要求所有目標都新增實體 Uniform：可直接使用宿主既有符號，只在需要且被圖引用時建立必要供值。值由執行宿主維護，不靠網頁每幀輪詢再送回 TD。
+
+Pixel Size（1/Resolution）及 Aspect Ratio（寬/高）可由 Resolution 推導，無需獨立供值；這裡的 Aspect Ratio 是尺寸比，不等於 Shadertoy iResolution.z 的 pixel aspect ratio。輸入貼圖尺寸留在各貼圖來源／查詢能力。Mouse／Pointer、音訊／FFT、Pass Index 及 Frame Rate 不列首批共同必備項：三方的提供方式或語意不同，須另外設計。UV／Fragment Coordinates 隨片段變動，不是 Uniform。
+
+參考：[ISF 內建變數](https://docs.isf.video/ref_variables)、[ISF 輸入類型](https://docs.isf.video/ref_json)、[Shadertoy 官方編輯器 Inputs 說明](https://www.shadertoy.com/view/XsfcWj)、[TD GLSL TOP](https://docs.derivative.ca/Write_a_GLSL_TOP)、[TD Frame](https://docs.derivative.ca/Frame)、[TD absTime](https://docs.derivative.ca/AbsTime_Class)。
+
 ### 靜態 Online 入口／PWA（假設性構想，未決定實作）
 
 使用者提出 GitHub Pages 提供線上編輯器、PWA 安裝及 TOX 下載；TOX 可考慮完整 Portable 版或供 Online 前端連線的版本。使用者可指定本機、LAN 或遠端通道的 TD 位址。GitHub 僅分發前端與下載檔，瀏覽器直接與 TD 通訊，不因此要求雲端代管圖、產碼或轉送資料。
