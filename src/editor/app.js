@@ -675,23 +675,58 @@ const experimentGroups=[
 ];
 let fpsFrame=null;
 function applyFpsDisplay(){
-  const label=$('#uifps'),enabled=EDITOR_DEV_SETTINGS.showFps;
-  label.hidden=!enabled;
+  const panel=$('#uifps'),label=$('#uifpsvalue'),canvas=$('#uifpstrail'),enabled=EDITOR_DEV_SETTINGS.showFps;
+  panel.hidden=!enabled;
   document.removeEventListener('visibilitychange',applyFpsDisplay);
   if(enabled)document.addEventListener('visibilitychange',applyFpsDisplay);
   if(!enabled||document.hidden){
     if(fpsFrame!==null)cancelAnimationFrame(fpsFrame);
-    fpsFrame=null;label.textContent='FPS —';return;
+    fpsFrame=null;label.textContent='FPS —';
+    // Do not initialize a drawing context when the default-off feature is unused.
+    if(canvas.width)canvas.width=0;
+    return;
   }
   if(fpsFrame!==null)return;
-  label.textContent='FPS —';let start=null,frames=0;
-  // Browser frame-callback cadence, not TD or video FPS. Count only; write
-  // one small text node per second, without inspecting or redrawing the graph.
+  label.textContent='FPS —';
+  const width=200,height=52,ratio=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);
+  const ctx=canvas.getContext('2d');ctx.scale(ratio,ratio);
+  // Every callback is sampled. The 100 ms buckets retain the worst interval,
+  // so limiting the chart to 10 Hz cannot average away a single-frame stall.
+  // Timestamp tags expire old slots without shifting or clearing a history.
+  const count=300,bucketMs=100,peaks=new Float32Array(count),tags=new Float64Array(count).fill(-1);
+  let start=null,previous=null,frames=0,lastPaint=-Infinity;
+  function drawTrail(bin){
+    const first=Math.max(0,bin-count+1),left=2,right=width-2,top=13,bottom=height-11;
+    let ceiling=50;
+    for(let b=first;b<=bin;b++){const slot=b%count;if(tags[slot]===b)ceiling=Math.max(ceiling,peaks[slot]);}
+    ceiling=Math.ceil(ceiling/50)*50;
+    ctx.clearRect(0,0,width,height);ctx.strokeStyle=ctx.fillStyle='#9273bb';
+    ctx.font='9px ui-monospace, Consolas, monospace';ctx.textBaseline='top';
+    ctx.fillText(ceiling+' ms',left,0);ctx.fillText('30 s',left,height-9);
+    ctx.textAlign='right';ctx.fillText('0',right,height-9);ctx.textAlign='left';
+    ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(left,bottom);ctx.lineTo(right,bottom);ctx.stroke();ctx.globalAlpha=1;
+    ctx.beginPath();let connected=false;
+    for(let b=first;b<=bin;b++){
+      const slot=b%count;
+      if(tags[slot]!==b){connected=false;continue;}
+      const x=right-(bin-b)*(right-left)/(count-1),y=bottom-peaks[slot]/ceiling*(bottom-top);
+      if(connected)ctx.lineTo(x,y);else ctx.moveTo(Math.max(left,x-1),y);
+      // Give an isolated sample after a stall a visible mark, even across a gap.
+      ctx.lineTo(x,y);connected=true;
+    }
+    ctx.stroke();
+  }
+  // Browser callback cadence, not TD/video FPS or GPU completion. Sampling is
+  // constant work; only this small canvas scans the fixed 300 slots, at 10 Hz.
   function sample(now){
-    if(start===null)start=now;
+    if(start===null){start=previous=now;drawTrail(Math.floor(now/bucketMs));lastPaint=now;}
     else{
+      const bin=Math.floor(now/bucketMs),slot=bin%count,elapsed=now-previous;previous=now;
+      if(tags[slot]!==bin){tags[slot]=bin;peaks[slot]=elapsed;}else peaks[slot]=Math.max(peaks[slot],elapsed);
       frames++;
       if(now-start>=1000){label.textContent='FPS '+(frames*1000/(now-start)).toFixed(1);start=now;frames=0;}
+      if(now-lastPaint>=bucketMs){drawTrail(bin);lastPaint=now;}
     }
     fpsFrame=requestAnimationFrame(sample);
   }

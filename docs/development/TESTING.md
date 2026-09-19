@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 FPS trail：`test_fps_display.cjs` 擴充一幀 1,000ms 停頓、FPS 恢復後尖峰仍保留、30 秒到期、57 秒缺口無舊資料混入、最多 10Hz 繪圖與固定最多 300 格；關閉 canvas 寬度歸零，背景／恢復無假尖峰，390／320px 不遮擋 view controls。3 組通過，另有 experiments 20 組回歸與 690 雙語鍵。私人 `reports/fps-history-round/recorder-cost.json` 記錄 7,200 次合成 callback 的 JS／Canvas 命令提交計時；不包含延後執行的 GPU／合成成本，低於計時解析度的樣本會顯示零，不當作實機效能保證。
+
 2026-09-19 `tests/browser/test_fps_display.cjs`：隔離瀏覽器驗證 FPS 預設關閉且無採樣、顯示開关不修改圖與歷史、不重畫 wires、每秒按實際幀間隔顯示讀值，模擬主執行緒停頓與分頁隱藏／恢復；另驗證 390px 左下位置。沿用 `test_ui_experiments.cjs` 的 20 組設定回歸。FPS 衡量瀏覽器回呼節奏，不能據此斷言 TD 或 GPU 的實際幀率。
 
 2026-09-19 矩陣四則與分層型別選單：`test_matrix_arithmetic.py`／`.js` 檢查 352 組完整簽名、輸入形狀、序列化、預設數值與非法配對；`tests/browser/test_matrix_arithmetic.cjs` 實際連線、切換操作數、Undo／Redo、拉線新增；`test_creator_performance.cjs` 持續檢查候選配對與 101 節點的搜尋成本。既有 138 圖編譯基準保持一致。TD 的 `tests/td/test_matrix_arithmetic.py` 比對 360 個 TOP Pixel／MAT Pixel／MAT Vertex 結果（包含 12 個未接線預設），使用獨立 fixture，結束核對既有 Shader、registry 並清理 fixture。前端使用共用的 type contract；若用舊 browser state，先以 `tests/browser/export_editor_fixture.py` 更新 fixture，避免測到舊簽名。
