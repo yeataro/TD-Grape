@@ -4,19 +4,21 @@ This module never writes a DAT, touches TD operators, or modifies the input.
 The caller must obtain acceptance before using a returned candidate.
 """
 import copy
+from collections import OrderedDict
+from contextlib import contextmanager
 import json
 import math
 
 
-def inspect_document(document, core, expected_target):
+def inspect_document(document, core, expected_target, compiler=None):
     try:
         with core.type_context(document):
-            return _inspect_document(document, core, expected_target)
+            return _inspect_document(document, core, expected_target, compiler)
     except Exception as exc:
         return {'status':'blocked', 'issues':[{'code':'types', 'message':str(exc)}], 'repairs':[], 'candidate':None}
 
 
-def _inspect_document(document, core, expected_target):
+def _inspect_document(document, core, expected_target, compiler):
     report = {'status': 'blocked', 'repairs': [], 'issues': [], 'candidate': None}
 
     def issue(code, message, **context):
@@ -113,7 +115,7 @@ def _inspect_document(document, core, expected_target):
                     kept.append(edge)
             data['edges'] = kept
         # Full compiler validation includes unused Functions, cycles and port types.
-        core.compile_graph(candidate)
+        (compiler or core.compile_graph)(candidate)
         report.update(status='repairable' if report['repairs'] else 'valid', candidate=candidate,
                       definitionReview=core.inspect_graph_definitions(candidate))
         if 'archive' in candidate:
@@ -126,7 +128,7 @@ def _inspect_document(document, core, expected_target):
     return report
 
 
-def inspect_saved_state(raw, core, expected_target):
+def inspect_saved_state(raw, core, expected_target, compiler=None):
     """Check saved DAT text without repairing, normalizing or deploying it."""
     report = {'status': 'blocked', 'state': None, 'issues': []}
     def blocked(message):
@@ -154,7 +156,7 @@ def inspect_saved_state(raw, core, expected_target):
             return blocked('Saved state needs a non-negative, safe integer revision.')
         # Also rejects overflowed 1e999 and malformed non-JSON values in extras.
         json.dumps(current, allow_nan=False)
-        inspected = inspect_document(current.get('graph'), core, expected_target)
+        inspected = inspect_document(current.get('graph'), core, expected_target, compiler)
         if inspected['status'] != 'valid':
             report['issues'] = inspected['issues']
             if inspected.get('repairs'):
@@ -203,15 +205,15 @@ def _snapshot_valid(snapshot, core):
         return False
 
 
-def inspect_upgrade(graph, core, expected_target, baseline=None, require_baseline=True):
+def inspect_upgrade(graph, core, expected_target, baseline=None, require_baseline=True, compiler=None):
     try:
         with core.type_context(graph):
-            return _inspect_upgrade(graph, core, expected_target, baseline, require_baseline)
+            return _inspect_upgrade(graph, core, expected_target, baseline, require_baseline, compiler)
     except Exception as exc:
         return {'required':False, 'blocked':True, 'changes':[], 'issues':[{'code':'types','message':str(exc)}], 'localizedFunctions':[], 'candidate':None}
 
 
-def _inspect_upgrade(graph, core, expected_target, baseline=None, require_baseline=True):
+def _inspect_upgrade(graph, core, expected_target, baseline, require_baseline, compiler):
     """Propose a version change without TD writes or guessed edge repairs.
 
     A legacy local manifest can prove the *current* catalog hash. Otherwise a
@@ -313,7 +315,7 @@ def _inspect_upgrade(graph, core, expected_target, baseline=None, require_baseli
             for node in data['nodes']:
                 if node.get('definitionUuid') == core.CALL and node.get('params', {}).get('functionId') in mapping:
                     node['params']['functionId'] = mapping[node['params']['functionId']]
-        inspected = inspect_document(candidate, core, expected_target)
+        inspected = inspect_document(candidate, core, expected_target, compiler)
         if inspected['status'] != 'valid':
             report['blocked'] = True
             report['issues'] = inspected['issues'] + ([{'code': 'repair', 'message': 'This version cannot safely migrate the graph. Original connections were preserved.'}] if inspected.get('repairs') else [])
@@ -346,3 +348,104 @@ def saved_envelope(raw):
     if not isinstance(result.get('graph'), dict):
         raise ValueError('Missing saved Graph')
     return result
+
+
+class GraphChecks:
+    """Bounded reuse of pure graph work, never of native source or write guards.
+
+    A session is one synchronous TD operation. Dependencies are checked once at
+    entry; no background task or persistent cache is created. Outside a session
+    each call checks dependencies itself. Returned dictionaries are owned by the
+    caller, so source reconciliation cannot mutate cached validation evidence.
+    """
+    MAX_ENTRIES = 8
+    MAX_BYTES = 4 * 1024 * 1024
+
+    def __init__(self, core):
+        self.core = core
+        self._dependency = None
+        self._depth = 0
+        self._compiled = OrderedDict()
+        self._bytes = 0
+        self._saved = None
+
+    @contextmanager
+    def session(self):
+        if not self._depth:
+            dependency = (self.core.compile_graph, self.core.catalog_contract()['hash'])
+            if dependency != self._dependency:
+                self._compiled.clear()
+                self._bytes = 0
+                self._saved = None
+                self._dependency = dependency
+        self._depth += 1
+        try:
+            yield self
+        finally:
+            self._depth -= 1
+
+    @staticmethod
+    def _key(graph):
+        # Keep the compiler's whole-document finite JSON/size guard before
+        # removing only known geometry fields. Unknown UI, labels, comments,
+        # typeMode, frame metadata and Function/source identities remain keyed.
+        raw = json.dumps(graph, allow_nan=False)
+        if len(raw) > 512000:
+            return None
+        value = dict(graph)
+        def scope(data):
+            data = dict(data)
+            nodes = []
+            for node in data['nodes']:
+                node = dict(node)
+                if isinstance(node.get('ui'), dict):
+                    ui = dict(node['ui'])
+                    for key in ('x', 'y', 'width', 'height'):
+                        if type(ui.get(key)) in (int, float):
+                            ui.pop(key)
+                    for key in ('collapsed', 'componentsExpanded'):
+                        if type(ui.get(key)) is bool:
+                            ui.pop(key)
+                    columns = ui.get('matrixColumnsExpanded')
+                    if isinstance(columns, list) and all(v is None or type(v) is bool for v in columns):
+                        ui.pop('matrixColumnsExpanded')
+                    if ui:
+                        node['ui'] = ui
+                    else:
+                        node.pop('ui')
+                nodes.append(node)
+            return dict(data, nodes=nodes)
+        value['stages'] = {key: scope(data) for key, data in graph['stages'].items()}
+        if 'functions' in graph:
+            value['functions'] = [dict(fn, graph=scope(fn['graph'])) for fn in graph['functions']]
+        return json.dumps(value, allow_nan=False)
+
+    def compile(self, graph):
+        with self.session():
+            try:
+                key = self._key(graph)
+            except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+                key = None  # Original compiler owns malformed-input errors.
+            if key is not None and key in self._compiled:
+                result, size = self._compiled.pop(key)
+                self._compiled[key] = (result, size)
+                return copy.deepcopy(result)
+            result = self.core.compile_graph(graph)
+            if key is not None:
+                size = len(key.encode('utf-8')) + len(json.dumps(result, ensure_ascii=False).encode('utf-8'))
+                if size <= self.MAX_BYTES:
+                    while self._compiled and (len(self._compiled) >= self.MAX_ENTRIES or self._bytes + size > self.MAX_BYTES):
+                        _, (_, old_size) = self._compiled.popitem(last=False)
+                        self._bytes -= old_size
+                    self._compiled[key] = (copy.deepcopy(result), size)
+                    self._bytes += size
+            return result
+
+    def saved(self, raw, expected_target):
+        with self.session():
+            if self._saved is not None and self._saved[:2] == (raw, expected_target):
+                return copy.deepcopy(self._saved[2])
+            checked = inspect_saved_state(raw, self.core, expected_target, self.compile)
+            # Only one successful exact DAT text is retained, at most 1 MB.
+            self._saved = (raw, expected_target, copy.deepcopy(checked)) if checked['status'] == 'valid' else None
+            return checked

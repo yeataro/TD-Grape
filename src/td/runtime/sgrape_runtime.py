@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.115'
+PRODUCT_VERSION='0.8.116'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -272,9 +272,21 @@ def saved_state_source():
     dat=(_shader or _owner).op('state')
     return dat.text if dat else None
 
+_graph_checks = None
+
+
+def graph_checks():
+    global _graph_checks
+    document = _owner.op('document').module
+    compiler = core()
+    if not isinstance(_graph_checks, document.GraphChecks) or _graph_checks.core is not compiler:
+        _graph_checks = document.GraphChecks(compiler)
+    return _graph_checks
+
+
 def inspect_saved_state():
     raw=saved_state_source()
-    checked=_owner.op('document').module.inspect_saved_state(raw,core(),shader_kind(target()) if target() else _owner.fetch('sgrapeTarget','mat'))
+    checked=graph_checks().saved(raw,shader_kind(target()) if target() else _owner.fetch('sgrapeTarget','mat'))
     return raw,checked
 
 def checked_state():
@@ -1338,8 +1350,8 @@ def upgrade_review(graph=None):
     current = document.saved_envelope(saved_state_source())
     manifest = json.loads(target().op('manifest').text)
     baseline = manifest.get('catalogSnapshot', {'catalogHash': manifest.get('catalogContractHash')})
-    saved = document.inspect_upgrade(current['graph'], core(), shader_kind(target()), baseline=baseline)
-    requested = saved if graph is None else document.inspect_upgrade(graph, core(), shader_kind(target()))
+    saved = document.inspect_upgrade(current['graph'], core(), shader_kind(target()), baseline=baseline, compiler=graph_checks().compile)
+    requested = saved if graph is None else document.inspect_upgrade(graph, core(), shader_kind(target()), compiler=graph_checks().compile)
     report = copy.deepcopy(requested)
     if graph is not None:
         # Replacing a graph is not permission to silently change the old runtime.
@@ -1418,6 +1430,11 @@ def begin_material_preview_update(comp):
 
 
 def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
+    with graph_checks().session():
+        return _deploy(graph,expected_revision,inject_failure,upgrade_token)
+
+
+def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
     if source_module(): source_module().sync(_owner.op('runtime').module)
     current=checked_state()
     current_raw=saved_state_source()
@@ -1436,7 +1453,7 @@ def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
     if backup_dat_before and not backup_dat_before.fetch('sgrapeUpgradeBackup',False):
         raise RuntimeError('The upgrade_backup name is already used by another operator. Rename it before upgrading.')
     backup_text_before=backup_dat_before.text if backup_dat_before else None
-    compiled=core().compile_graph(graph)
+    compiled=graph_checks().compile(graph)
     if any(b.get('sourceMissing') for b in compiled['bindings']):
         raise RuntimeError('A used Input source is missing. Restore or reassign its reference before applying.')
     if target() and core().graph_target(graph)!=shader_kind(target()): raise RuntimeError('Import a graph for the same Shader target')
@@ -1622,6 +1639,14 @@ def set_uniform_value(body):
     return uniform_snapshot()
 
 def process_shader_request(method,path,body):
+    # Preview/network/raw recovery endpoints must not acquire a graph dependency.
+    if path in ('/api/state','/api/apply','/api/sources','/api/source-value','/api/source-edit','/api/uniform-value','/api/history-restore'):
+        with graph_checks().session():
+            return _process_shader_request(method,path,body)
+    return _process_shader_request(method,path,body)
+
+
+def _process_shader_request(method,path,body):
     if method=='GET' and path=='/api/shaders':return shader_choices()
     if method=='GET' and path=='/api/share-links':return share_links()
     if method=='GET' and path=='/api/state-source':

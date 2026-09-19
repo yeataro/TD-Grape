@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-19 同步效能 B／C（0.8.116）：新增 `test_graph_checks.py` 6 組，涵蓋 TOP／MAT／函式布局輸出完全比對、註解與非布局失效、複本隔離、契約及 compiler 更新、損壞／重複鍵／大小上限與有界快取。完整 portable checks 通過（465 Python unit）。`tests/td/test_graph_sync_performance.py` 在獨立元件通過 8 組條件，核對版本、graph／DAT、原碼不變、過期拒絕、破損原文保護、數值／comment 更新與外部修改 shader 後重新驗證；既有使用者 Shader／registry 未改。三次相同操作的中位數：TOP 16 節點 53.2→22.3 ms、101 節點 72.8→31.2 ms；MAT 16 節點 47.1→21.9 ms、101 節點 72.9→31.5 ms。此為 TD 主執行緒 request 耗時、不是整體 FPS；比較透過同路徑停用／啟用純計算重用。preview／native viewer／分享／state 原文下載不新增圖依賴。私人 native 報告 `sync-perf-bc-native-20260919`。
+
 2026-09-19 同步效能 A（0.8.115）：新增 `test_layout_edits.cjs` 5 組，比較 16／101 節點以舊入口／布局入口執行相同編輯後的 graph、Undo before／after、sourceIds 與立即草稿；驗證零 Auto／常數檢查、零無關 sidebar 建立、Undo／Redo、誤標語意／Label 回退及唯讀。既有 node width 15、selection collapse 6、spread 8、arrange 15、canvas selection 7、matrix values 15、node notes 3 組通過，共 74 組；完整 `tools/dev/run_tests.py` 通過。單次 Chromium JS 計時 16 節點 25.4→14.9 ms、101 節點 77.3→70.3 ms，只作局部探針，不代表 FPS／穩定硬體效能。`test_node_collapse.cjs` 尋找已不存在的 `.node-collapse-toggle` 超時，修改前基線也在同處失敗，未列為通過。私人報告位於系統暫存 `grape-sync-perf`；未操作使用者瀏覽器。
 
 2026-09-19 操作 review 定稿（0.8.114）：`test_canvas_framing.cjs` 7 組驗證 Home 在四種開關組合均立即到位，鍵盤／按鈕／右鍵選單中斷 active Frame 後零待執行回呼；F 有選取與無選取都使用 Frame 設定，保留編輯／IME／手勢隔離及只讀操作。`test_canvas_damping.cjs` 10 組更新預設與 Reset 為 150／333 ms，保存並 reload 自訂 100／450 ms 不覆寫；既有 UI experiments 20、zoom menu 7 組通過，共 44 組。檢查 971 組雙語鍵及 JS 語法，窄版標籤顯示正常。私人結果位於 `reports/canvas-motion-defaults`。插值演算法未變，本輪測試針對呼叫路徑、預設／偏好與關閉狀態。
