@@ -16,6 +16,14 @@
 
 參考：[GitHub Pages 靜態託管](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)、[Chrome 本地網路存取](https://developer.chrome.com/blog/local-network-access)、[PWA 安裝條件](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)、[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)、[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve)。
 
+### 僅協助直連的服務（延伸假設，未決定實作）
+
+使用者補充：可考慮一個只協助 WebRTC 建立連線的中間服務，直連失敗時不回退至資料轉送。對應設計為 signaling 交換配對／SDP／ICE 資訊，可搭配 STUN 探索位址，不配置 TURN 資料中繼；業務資料与預覽在瀏覽器和 TD 之間直接傳輸。此服務需要另行部署，靜態 GitHub Pages 本身不提供動態 signaling。
+
+取捨：不承担預覽／圖／Uniform 的中繼頻寬，但部分 NAT／防火牆環境可能無法連線，須明確顯示失敗；不保證透過 signaling／STUN 一定能直連。若圖操作與 Uniform 也要沿用 WebRTC，需透過 DataChannel 接入既有命令／回覆與即時值契約，不能假設現有 HTTP／WebSocket 會自動被打通。現有 Remote Panel 已使用 TD WebRTC DAT 的 DataChannel 接收操作，可作為評估基礎；不代表完整編輯器通道已具備。僅記錄構想，不啟動改造。
+
+參考：[WebRTC signaling 與 peer connection](https://webrtc.org/getting-started/peer-connections)、[TURN 的資料中繼角色](https://webrtc.org/getting-started/turn-server)。
+
 ## 偶發卡頓與追蹤（2026-09-19，待調查）
 
 使用者仍偶爾感受到卡頓，無穩定復現步驟，也不確定是否與 Uniform 有關。建議後續對齊卡頓時間與瀏覽器 Performance trace 的 JavaScript、layout／paint 及通訊事件，仿照 TD 即時效能排查；不以 FPS 數字單獨歸因。本輪優先完成 Uniform 連續雙向同步，不加入常駐效能探針或展開其他優化。
