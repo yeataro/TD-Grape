@@ -4,9 +4,9 @@
 
 ## H／F 置中快捷鍵（2026-09-19，僅記錄）
 
-原先提出多選時 H 置中選取、單選待定；後續使用者改採簡單的 F／H 兩個鍵，不引入 Shift+F。整理方向為 H 置中整張圖，F 置中選取（單選／多選皆適用），H 不隨選取狀態改變。無選取時 F 的行為尚未指定。這是平移／縮放阻尼驗收前的旁支筆記，本輪不實作快捷鍵；不將使用者對 TD／Unity 快捷鍵的回憶視為已驗證的外部規格。
+原先提出多選時 H 置中選取、單選待定；後續使用者改採簡單的 F／H 兩個鍵，不引入 Shift+F。規則為 H 置中整張圖，F 有選取節點時置中選取（單選／多選皆適用），沒有選取節點時與 Home 相同、置中整張圖。H 不隨選取狀態改變。這是平移／縮放阻尼驗收前的旁支筆記，本輪不實作快捷鍵；不將使用者對 TD／Unity 快捷鍵的回憶視為已驗證的外部規格。
 
-命名補充：使用者希望 H 的短按鈕名稱為 **Home**，F 考慮 Frame／Focus；建議採 **Frame**，讓 Focus 保留給既有 Focus Graph，Home 不再接 All。完整提示補充用途，例如 Home：`Fit all nodes in view`，Frame：`Frame selected nodes`。名稱與快捷鍵可分開維護；此輪先記錄命名方向，尚未更改產品文字或加入 F。無選取時 F 不動作是建議，仍未定案。
+命名補充：使用者希望 H 的短按鈕名稱為 **Home**，F 考慮 Frame／Focus；建議採 **Frame**，讓 Focus 保留給既有 Focus Graph，Home 不再接 All。完整提示補充用途，例如 Home：`Fit all nodes in view`，Frame：`Frame selected nodes, or all nodes if none are selected`。名稱與快捷鍵可分開維護；此輪先記錄命名方向，尚未更改產品文字或加入 F。先前「無選取時 F 不動作」的建議已由使用者的 Home 回退規則取代。
 
 ## DevTools FPS 與實驗面板讀數差異（2026-09-19，使用者觀察，未重現）
 
