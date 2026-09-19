@@ -6,6 +6,16 @@
 
 使用者初步判斷 Alpha 前可能主要剩下 Uniform 與 Inputs 區域需要整理，部分功能可能需要重構，但尚未確定。後續由使用者逐步補充想法，再歸納範圍與方案；目前僅記錄，不視為完整 Alpha 待辦清單、發布條件或重構授權。
 
+### 靜態 Online 入口／PWA（假設性構想，未決定實作）
+
+使用者提出 GitHub Pages 提供線上編輯器、PWA 安裝及 TOX 下載；TOX 可考慮完整 Portable 版或供 Online 前端連線的版本。使用者可指定本機、LAN 或遠端通道的 TD 位址。GitHub 僅分發前端與下載檔，瀏覽器直接與 TD 通訊，不因此要求雲端代管圖、產碼或轉送資料。
+
+初步可行性：靜態託管足以執行前端；TD 端仍提供 API、Uniform 即時服務與預覽。現有前端使用同源 `/api/` 及網頁 hostname 推导 WebSocket，TD HTTP 拒絕跨站 Origin／Sec-Fetch-Site；需另設連線目標、明確授權與 CORS，並處理 Online 前端與已下載 TOX 的版本相容。若精簡 TOX，尚不能假設可刪除目前仍在 Python 的產碼能力。
+
+主要待驗證點是 HTTPS Online 頁面連到本機／LAN HTTP、WS 的 mixed-content 與本地網路權限限制。Chrome 已提供部分本地請求的授權與 mixed-content 豁免，但不可據此推定所有瀏覽器、WebSocket 或 iOS PWA 均適用。PWA 安裝本身不解除瀏覽器的網路存取規則。可評估可信任的 HTTPS／WSS 入口（例如 Tailscale Serve），但這仍需端點／代理相容，且 HTTPS 不取代 CORS 或連線授權。後續若要驗證，可先以最小 Online 頁面測 HTTP、Uniform WebSocket 與 WebRTC，再決定打包方式；目前不調整產品或部署網站。
+
+參考：[GitHub Pages 靜態託管](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)、[Chrome 本地網路存取](https://developer.chrome.com/blog/local-network-access)、[PWA 安裝條件](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable)、[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS)、[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve)。
+
 ## 偶發卡頓與追蹤（2026-09-19，待調查）
 
 使用者仍偶爾感受到卡頓，無穩定復現步驟，也不確定是否與 Uniform 有關。建議後續對齊卡頓時間與瀏覽器 Performance trace 的 JavaScript、layout／paint 及通訊事件，仿照 TD 即時效能排查；不以 FPS 數字單獨歸因。本輪優先完成 Uniform 連續雙向同步，不加入常駐效能探針或展開其他優化。
