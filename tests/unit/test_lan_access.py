@@ -30,7 +30,7 @@ class LanTests(unittest.TestCase):
         self.r.shaders=lambda:[];self.r.request_family_registration=lambda **kwargs:None
         self.r.update_network_links=lambda:None
         self.r.refresh_assets=lambda owner:setattr(self.r,'_assets',{'/':(b'editor','text/html')})
-        self.r.start_uniform_live=lambda owner,enabled:None
+        self.r.start_uniform_live=lambda owner,enabled,session=None:None
         self.r.start(self.owner)
         self.running=True
         def pump():

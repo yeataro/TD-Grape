@@ -128,7 +128,7 @@ class Live:
         dat = self.runtime._owner.create(parameterexecuteDAT, 'uniform_watch_'+secrets.token_hex(6))
         dat.store('grapeUniformWatcher', True)
         dat.par.active = False
-        dat.text = "def onValueChange(par, *args):\n    parent().op('live').module.service.metadata_changed(par)\ndef onModeChange(par, prev):\n    onValueChange(par)\n"
+        dat.text = "def onValueChange(par, *args):\n    live = parent().op('live').module.service\n    if live: live.metadata_changed(par)\ndef onModeChange(par, prev):\n    onValueChange(par)\n"
         dat.par.op = self.runtime.shader_operator(comp).path
         dat.par.pars = 'vec*name vec*type color*name color*type matrix*name array*name array*type array*chop array*arraytype const*name const*type'
         dat.par.builtin = True; dat.par.custom = False
@@ -352,7 +352,7 @@ class Live:
         self.tickets.clear()
 
 
-def start(runtime, lan):
+def start(runtime, lan, preserve_port=False):
     global service
     if service: service.stop()
     owner = runtime._owner
@@ -361,7 +361,9 @@ def start(runtime, lan):
     server = owner.op('uniform_socket')
     if server and not server.fetch('grapeUniformSocket', False):
         raise RuntimeError('A user operator occupies the Uniform service name.')
-    port = int(server.par.port.eval()) if server else None
+    # A newly opened/copied TOE chooses a fresh port. In-process rebinds retain
+    # the port already permitted by the open editor's Content Security Policy.
+    port = int(server.par.port.eval()) if server and preserve_port else None
     if not server:
         server = owner.create(webserverDAT, 'uniform_socket')
         server.store('grapeUniformSocket', True)
@@ -390,6 +392,7 @@ def onHTTPRequest(dat, request, response):
 
 def onWebSocketOpen(dat, client, uri):
     if service: service.open(client, uri)
+    else: dat.webSocketClose(client)
 
 
 def onWebSocketClose(dat, client):

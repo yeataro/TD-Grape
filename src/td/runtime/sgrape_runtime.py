@@ -1948,13 +1948,13 @@ def local_viewer_request(peer, destination, host, headers, body):
     return headers.get('Origin')==origin and body.get('editorOrigin')==origin
 
 
-def start_uniform_live(owner,enabled):
+def start_uniform_live(owner,enabled,session=None):
     global _live_port,_live,_live_error
     _live_port=_live=None;_live_error=''
     node=owner.op('live')
     if node:
         try:
-            _live_port=node.module.start(owner.op('runtime').module,enabled)
+            _live_port=node.module.start(owner.op('runtime').module,enabled,preserve_port=bool(session))
             _live=node.module.service
         except Exception as exc:
             # The HTTP editor remains available when the live service fails.
@@ -1983,7 +1983,7 @@ def start(owner,session=None):
         if not target():
             current=state()
             deploy(current['graph'],current['revision'])
-    start_uniform_live(owner,enabled)
+    start_uniform_live(owner,enabled,session)
     refresh_assets(owner)
     class Handler(http.server.BaseHTTPRequestHandler):
         # A reload fetches many scripts. Reuse bounded, idle-timed connections
