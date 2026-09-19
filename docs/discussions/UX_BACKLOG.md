@@ -24,11 +24,11 @@
 
 參考：[WebRTC signaling 與 peer connection](https://webrtc.org/getting-started/peer-connections)、[TURN 的資料中繼角色](https://webrtc.org/getting-started/turn-server)。
 
-### ISF 產碼與瀏覽器執行器（延伸假設，未決定實作）
+### 網頁執行、圖交換與 ISF 匯出（延伸假設，未決定實作）
 
-使用者再提出：產碼器可增加 ISF 輸出，再提供以 WebGL 執行 ISF 的網頁宿主。此方向新增的是產碼目標／執行宿主，與前述 Portable／Online 前端託管及直連方式分屬不同層次，不要求互相取代。
+使用者補充釐清三種可組合的能力：在網頁執行 Shader、下載圖供 TD 使用，以及額外匯出 ISF。網頁執行不必以 ISF 為中介格式；ISF 是另外增加的輸出能力，不是整個產品或所有執行路徑必須採用的格式。圖仍是可編輯的圖資料，與產出的 Shader／ISF 分開。此方向新增的是產碼目標／執行宿主及圖交換能力，與前述 Portable／Online 前端託管及直連方式分屬不同層次，不要求互相取代。
 
-需區分兩個成果：瀏覽器播放已產出的 ISF 可以不連 TD；要在沒有 TD 時繼續編輯圖並即時重新產碼，現有 Python 產碼能力還需能在瀏覽器或另一個獨立服務執行。ISF 宿主負責其 JSON 輸入描述、時間／尺寸、材質及宣告的 pass／buffer 等執行資源；ISF 格式本身不保證任意桌面 GLSL 能在 WebGL 執行。可攜運算可共用圖能力，但 TD 專用函式、來源、Parameter／Python Expression、TOP／MAT 環境與 WebGL GLSL ES 能力差異需另外映射或標示不支援，不默默改變語義。此想法僅收集，不列入已確定 Alpha 範圍。
+需區分兩個成果：瀏覽器執行已產出的相容 Shader 可以不連 TD；要在沒有 TD 時繼續編輯圖並即時重新產碼，現有 Python 產碼能力還需能在瀏覽器或另一個獨立服務執行。若另外提供 ISF 執行能力，其宿主負責 JSON 輸入描述、時間／尺寸、材質及宣告的 pass／buffer 等執行資源；ISF 格式本身不保證任意桌面 GLSL 能在 WebGL 執行。可攜運算可共用圖能力，但 TD 專用函式、來源、Parameter／Python Expression、TOP／MAT 環境與 WebGL GLSL ES 能力差異需另外映射或標示不支援，不默默改變語義。此想法僅收集，不列入已確定 Alpha 範圍。
 
 參考：[ISF 格式](https://docs.isf.video/)、[ISF 輸入描述](https://docs.isf.video/ref_json)、[ISF 開發者資源](https://isf.video/developers/)、[WebGL 2 規範](https://registry.khronos.org/webgl/specs/latest/2.0/)。
 
