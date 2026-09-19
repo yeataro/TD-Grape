@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-19 0.8.110 交付檢查點：`df999fb` 已整合 main，32 份來源更新 2 份，9 份資源一致，core 無錯誤；TOP／MAT Master current（revision 58），三份使用者 Shader 保留。正式 TOE 910,790 bytes，SHA-256 `5fad9243009e949328e90f91ef327a74c5c3225fbf21aeb8e099cf06997cc40a`，排除一份私人助手。實際 Shader 頁面獨立 Chromium 連續載入／reload 10 次，均有兩個語言選項與 16 個節點，零失敗請求／JS errors。未重新載入使用者目前的 Editor。
+
 2026-09-19 重新整理缺少介面（0.8.110 實作檢查點）：在實際 TD HTTP 服務的獨立 Chromium 頁面重現部分腳本 `ERR_CONNECTION_REFUSED`，缺少 app.js／依賴時初始化中斷，留下未翻譯的空介面。六次同條件對照，HTTP/1.0 有五次載入不完整，HTTP/1.1 六次資源完整；尚未據此判定 Windows／TD 內部拒絕連線的機制。改為重用 HTTP/1.1 連線，沿用 5 秒 idle timeout、Content-Length、Host／Origin／token 邊界；錯誤回覆與帶有未讀 body 的靜態 GET 關閉連線，避免下個請求邊界混淆。21 項 LAN／share 測試通過，包含重用、拒絕寫入不改狀態及重啟後舊連線拒絕寫入。連線 backlog 的試驗沒有改善，已還原，未納入產品。保存交付另記；畫布放開滑鼠的全圖重建問題接續修正。
 
 2026-09-19 0.8.109 交付檢查點：`a3b675f` 已整合 main，32 份來源中更新 6 份、9 份服務資源一致，core 無錯誤；TOP／MAT Master current（revision 57），三份使用者 Shader 保留。正式 TOE 保存 910,558 bytes，SHA-256 `eb75c7c78080ef46488b6f0641542a4369798fd7c4f6d42bf43cc254df92edf6`，排除一份私人助手。未重新載入使用者 Editor；圖／參數／連線保留。
