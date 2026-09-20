@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.133 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，TOP／MAT master revision 81；三份使用者 Shader 保留。TOE 973014 bytes，SHA256 `f20b78ee0c477b337f33ef89d76820d8d1d2e9bb81af81ccaee98998bb3c990d`。熱更新時一個既有 HTTP 回應遇到 json 模組重載時間窗，完成後唯讀 audit 正常，HTTP 無 Shader context 請求返回預期 JSON 錯誤。報告 `work/reports/source-colors/`。
+
 2026-09-20 來源 UI 審查 0.8.133 DEV：Colors 共用色盤、緊湊／展開分量，一次 RGB 修改保留 Alpha，原生值不進圖；Expression／Export 保護、既有 Bind 及 Undo 已驗證。分類數量排除灰底未建立與不可用，0 隱藏；「＋ Add」淡底色無邊框及完整提示。502 Python、14 附加及 portable checks；新 UI 4 組、原有卡片 8 與分量 6 組回歸；原生 TOP／MAT 6 組，三份使用者 Shader 保留。方向鍵線路導覽／自動 Frame、亮度與 glow 分離只記入 UX_BACKLOG，未實作。同步與保存另記。
 
 2026-09-20 0.8.132 DEV 交付檢查點：37 份嵌入來源、10 份服務資產一致，TOP／MAT master revision 80，三份使用者 Shader 保留。TOE 970910 bytes，SHA256 `e7e8b04d695eec6445e5e23d4ef2d2e9ce8a7539c6b96ba11bdd36775869c546`。報告 `work/reports/structures/`，未強制刷新使用者網頁。
