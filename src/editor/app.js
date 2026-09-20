@@ -462,9 +462,36 @@ function transform(){
   $('#canvas').style.setProperty('--grid-dot',dot+'px');
   $('#canvas').style.setProperty('--wire-ring',3/scale+'px');
   $('#canvas').style.setProperty('--wire-glow',7/scale+'px');
+  $('#wires').style.setProperty('--wire-hit-width',Math.max(2.5,2.5/(scale*uiScaleFactor()))+'px');
   $('#canvas').dataset.gridStep=displayGrid;
   $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;renderGraphZoom();wireGesture?.refresh?.();scheduleSelectionToolbarPosition();}
-function wires(){const svg=$('#wires');svg.replaceChildren();current().edges.forEach((edge,index)=>{const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;const dx=Math.max(70,Math.abs(q.x-p.x)*.5);const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}if(selectedEdge===index)path.classList.add('selected');path.onpointerdown=e=>dragExistingWire(path,e,index);path.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};svg.append(path);});drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();}
+function wirePathFromTarget(target){
+  const path=target.closest('#wires path');
+  return path?.classList.contains('wire-hit')?path.nextElementSibling:path?.dataset.from?path:null;
+}
+function wires(){
+  const svg=$('#wires');svg.replaceChildren();
+  current().edges.forEach((edge,index)=>{
+    const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;
+    const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;
+    const dx=Math.max(70,Math.abs(q.x-p.x)*.5),ns='http://www.w3.org/2000/svg';
+    const pair=document.createElementNS(ns,'g'),hit=document.createElementNS(ns,'path'),path=document.createElementNS(ns,'path');
+    path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);
+    hit.setAttribute('d',path.getAttribute('d'));hit.classList.add('wire-hit');hit.setAttribute('aria-hidden','true');
+    path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);
+    const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];
+    if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}
+    if(selectedEdge===index)path.classList.add('selected');
+    // Keep each hit/paint pair in the original edge order and wire layer.
+    pair.onpointerenter=()=>path.classList.add('wire-hover');pair.onpointerleave=()=>path.classList.remove('wire-hover');
+    for(const surface of [hit,path]){
+      surface.onpointerdown=e=>dragExistingWire(path,e,index);
+      surface.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};
+    }
+    pair.append(hit,path);svg.append(pair);
+  });
+  drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();
+}
 function library(){renderLibrary();}
 function render({layoutOnly=false}={}){renderCompileDiagnostics();
   if(!graph)return;if(!graph.stages?.[stage])stage='pixel';

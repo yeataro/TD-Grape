@@ -1902,7 +1902,7 @@ function installGraphInteractions(){
     e.preventDefault();if(suppressContext){suppressContext=false;return;}
     const port=e.target.closest('#cards .port[data-port]');
     if(port){if(!port.disabled&&!port.dataset.addPort)openCreator(e.clientX,e.clientY,portInfo(port),{place:true});return;}
-    const path=e.target.closest('#wires path[data-from][data-to]'),edge=path&&current().edges.find(edge=>edge.from.join(':')===path.dataset.from&&edge.to.join(':')===path.dataset.to);
+    const path=wirePathFromTarget(e.target),edge=path&&current().edges.find(edge=>edge.from.join(':')===path.dataset.from&&edge.to.join(':')===path.dataset.to);
     openGraphMenu(e.clientX,e.clientY,e.target.closest('.node')?.dataset.node,{edge});
   };
   canvas.onpointerdown=e=>{
@@ -2079,7 +2079,7 @@ function installTouchNavigation(canvas){
     if(!points.size){
       clearWireGesture();closeCreator();closeGraphMenu();focusGraphCanvas();
       const button=touchPort(e.clientX,e.clientY),card=(button||e.target).closest('.node'),node=card&&current().nodes.find(n=>n.id===card.dataset.node);
-      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,canDragNode:!!card&&isNodeDragSurface(e.target,card),port:button?portInfo(button):null,rename:customNodeNamesEnabled()&&!isSourceReferenceNode(node)&&!!e.target.closest('.node-function-title,.node-function-name'),edge:edgeIndex(e.target.closest('#wires path[data-from]')),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
+      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,canDragNode:!!card&&isNodeDragSurface(e.target,card),port:button?portInfo(button):null,rename:customNodeNamesEnabled()&&!isSourceReferenceNode(node)&&!!e.target.closest('.node-function-title,.node-function-name'),edge:edgeIndex(wirePathFromTarget(e.target)),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
       touchGraphGesture={cancel};
       if(!button)holdTimer=setTimeout(()=>{holdTimer=0;if(gesture&&!gesture.moved&&points.size===1)openMenu(gesture,sample());},holdDelay);
     }

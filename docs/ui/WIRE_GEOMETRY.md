@@ -1,5 +1,7 @@
 # Canvas wire geometry
 
+Each edge keeps a transparent hit path immediately behind its painted path in the same SVG group and original edge order. Screen hit width is at least 2.5 CSS px, growing with graph/UI zoom above the baseline; the painted stroke still scales normally. Only the painted path carries endpoint/type metadata. Pointer, touch, context menu and trash gestures resolve the hit surface to that path, while hover decorates the painted path only. Hit paths have no Glow or visible stroke, and stay in the existing wire layer below nodes and controls.
+
 Nodes, sockets and SVG paths share the `#world` element. Wire coordinates are
 measured from the sockets' actual HTML bounds relative to that world, whose
 explicit 1px square provides the effective horizontal and vertical scale.
