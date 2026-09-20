@@ -248,11 +248,11 @@ function layoutContent(document){
   })});
   return JSON.stringify({...document,stages:Object.fromEntries(Object.entries(document.stages).map(([key,data])=>[key,scope(data)])),...(document.functions?{functions:document.functions.map(fn=>({...fn,graph:scope(fn.graph)}))}:{})});
 }
-function change(fn,{localize=true,redraw=true,typeChange=false,layout=false}={}){
+function change(fn,{localize=true,redraw=true,typeChange=false,layout=false,disconnectInvalid=null}={}){
   if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
   let layoutOnly=false;
-  try{if(localize)prepareSemanticEdit();fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges});if(!typeChange)rejectNewConstantIssues(graph,previous);}}
+  try{if(localize)prepareSemanticEdit();fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});if(!typeChange)rejectNewConstantIssues(graph,previous);}}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;

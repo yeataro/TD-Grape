@@ -14,7 +14,7 @@ TYPE_ID = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 GLSL_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,47}$')
 RESERVED_NAMES = frozenset('struct uniform const buffer shared in out inout void if else for while do switch case default break continue return discard layout true false attribute varying precision highp mediump lowp bool int uint float double'.split())
 ARRAY_TYPE = re.compile(r'^([^\[\]]+)\[([A-Za-z_][A-Za-z0-9_]*|[0-9]+)\](.*)$')
-KEYS = ('array', 'array_create', 'array_get', 'array_replace', 'array_length', 'struct_field', 'builtin_source')
+KEYS = ('array', 'array_create', 'array_get', 'array_replace', 'array_length', 'struct_create', 'struct_field', 'builtin_source')
 
 def expression_length(scope,source):
     return 'sg_extent_'+('\0'.join((scope,*source))).encode('utf-8').hex()
@@ -67,6 +67,7 @@ class Registry:
             ident=item.get('id'); name=item.get('name')
             if not isinstance(ident,str) or not TYPE_ID.fullmatch(ident) or 'struct:'+ident in self.structs:self.fail('Invalid or duplicate structure identity')
             if not isinstance(name,str) or not name.strip() or len(name)>80:self.fail('Structure name must contain 1–80 characters')
+            if not isinstance(item.get('description',''),str) or len(item.get('description',''))>4000:self.fail('Structure notes must contain at most 4000 characters')
             if item.get('provider','generated')!='generated':self.fail('Project structures must use generated declarations')
             members=item.get('fields')
             if not isinstance(members,list) or not 1<=len(members)<=64:self.fail('Structure must have 1–64 fields')
@@ -257,9 +258,15 @@ class Registry:
         return lines
 
     def interface(self,key,params):
+        if key=='struct_create':
+            ty=params.get('type','TDTexInfo');desc=self.describe(ty)
+            if desc['kind']!='struct':self.fail('Choose a structure')
+            fields={'f_'+f['id']:f['type'] for f in desc['definition']['fields']}
+            return dict(inputs=fields,outputs=dict(out=ty,**fields))
         if key=='builtin_source':
             source=self.source(params.get('source','uTD2DInfos'))
-            return dict(inputs=dict(source.get('inputs',{})),outputs={'out':source['type']})
+            desc=self.describe(source['type']);fields={'f_'+f['id']:f['type'] for f in desc['definition']['fields']} if desc['kind']=='struct' else {}
+            return dict(inputs=dict(source.get('inputs',{})),outputs=dict(out=source['type'],**fields))
         if key in ('array','array_create'):
             element=params.get('elementType','float');length=params.get('length',4)
             self.describe(element)

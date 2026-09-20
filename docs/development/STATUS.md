@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 結構作者能力 0.8.132 DEV：完成來源第五輪，左側結構卡片、彈出編輯、巢狀結構／陣列欄位、完整／欄位輸出、使用處與循環檢查。欄位 ID 和接線保留，失效修改不更新已套用 Shader；備註／名稱不改 GLSL，無關畫布節點 DOM 保留。動態接口匯入檢查補齊。499 Python、14 附加及 portable checks；新結構瀏覽器 5 組，面板 7、來源卡片 8、分類 3 組回歸；原生 TOP／MAT 7 組通過，三份使用者 Shader 保留。同步與 TOE 保存另記；Colors／數量標籤／Add 按鈕接續使用者新回饋。
+
 2026-09-20 0.8.131 DEV 交付檢查點：版號加 DEV，視窗標題原樣保留。36 份嵌入來源、9 份服務資產一致，TOP／MAT master revision 79；三份使用者 Shader 保留。TOE 963886 bytes，SHA256 `d43c486c3b5acb637e70dbe3c7f2015055783dc770dd9d887855b61c02059549`。報告 `work/reports/source-catalog/`。
 
 2026-09-20 來源分類與內容 0.8.131：分類、別名、宿主／Stage、索引 accessor 與資源型別由來源表供應；Common／Texture／TD Built-ins 分組，具名 Attribute 與內建 accessor 分開。311 筆研究資料逐項記錄實作狀態，不把運算／輸出當来源。73 組原生宿主／Stage 編譯通過，三份使用者 Shader 保留；495 Python、14 附加及 JS／portable checks 通過，來源分類瀏覽器 3 組與卡片 8 組通過。MAT 非 2D sampler 管理等界線列於來源計畫；尚未完成第五輪結構作者 UI。同步及 TOE 保存另記。

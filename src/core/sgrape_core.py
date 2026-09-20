@@ -677,6 +677,8 @@ def demo_graph(preset='banana',target='mat'):
 def clean_semantic(graph):
     g=copy.deepcopy(graph)
     g.pop('catalogSnapshot',None)
+    for definition in g.get('typeDefinitions',[]):
+        definition.pop('description',None);definition.pop('name',None)
     for s in g['stages'].values():
         s.pop('ui',None)
         s['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in s['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
@@ -1238,6 +1240,13 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='builtin_source':
                     source=type_registry().source(p['source'],graph_target(graph),stage)
                     expr=source['expression'].format(**{port:a(port) for port in source.get('inputs',{})})
+                    desc=type_registry().describe(ty)
+                    if desc['kind']=='struct':
+                        for member in desc['definition']['fields']:expressions[(ident,'f_'+member['id'])]='('+expr+').'+member['name']
+                elif k=='struct_create':
+                    members=type_registry().describe(ty)['definition']['fields']
+                    expr=type_registry().glsl_type(ty)+'('+', '.join(a('f_'+f['id']) for f in members)+')'
+                    for member in members:expressions[(ident,'f_'+member['id'])]=symbols[(ident,'out')]+'.'+member['name']
                 elif k in ('array_get','array_replace','array_length'):
                     array_type=ports[ident]['in']['Array'];shape=type_registry().describe(array_type);length=type_registry().extent(shape['length'])
                     # Host lengths are compile-time macros. No per-element CPU or GPU scan.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.131",
+  "catalogVersion": "0.8.132",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -3479,6 +3479,36 @@
         ],
         "glslName": "TDAttrib",
         "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "struct_create",
+        "label": "Structure",
+        "inputs": {},
+        "outputs": {},
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "TDTexInfo"
+        },
+        "descriptionKey": "help.struct_create",
+        "definitionUuid": "sgrape.builtin.struct_create",
+        "revisionHash": "49826ff735600514af18f265e60e52b8d37357fe59abc598d3a75a0a4a703ed5"
+      },
+      "emitter": {
+        "id": "struct_create",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "aliases": [
+          "struct",
+          "structure",
+          "constructor"
+        ]
       }
     }
   ],

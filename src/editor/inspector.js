@@ -955,6 +955,7 @@ function exposedInspector(box){
 let helpContext='node',previewHelpSelection=null,sourceHelpPreset=null;
 function renderHelp(){
   const help=$('#nodehelp');help.replaceChildren();
+  if(helpContext==='structure'){StructureUI.help();return;}
   if(helpContext==='personal'){
     help.append(el('h3',{},t('browser.source.personal')),markdown(t('personal.hint')),markdown(t('personal.help')));return;
   }
@@ -967,6 +968,7 @@ function renderHelp(){
     help.append(el('h3',{},t(editorTarget==='top'?'preview.top':'preview.material')),markdown(t(editorTarget==='top'?'preview.helpTop':'preview.helpMaterial')));return;
   }
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
+  if(d?.key==='struct_create'&&n.params.type.startsWith('struct:')){StructureUI.help(n.params.type.slice(7));return;}
   const source=!n&&graph.declarations.find(d=>d.id===selectedInputId);
   if(source){help.append(el('h3',{},source.name+' · '+source.type),markdown(t(source.type==='samplerBuffer'?'buffer.nativeHint':'help.'+source.kind)));return;}
   if(n&&graph.declarations.find(source=>source.id===n.params.declarationId)?.type==='samplerBuffer'){help.append(markdown(t('buffer.nativeHint')));return;}
@@ -1080,7 +1082,12 @@ function structFieldSelector(n){
 }
 function compositeInspector(box,n,d){
   if(!isCompositeOperation(d))return;
-  if(d.key==='array'){
+  if(d.key==='struct_create'){
+    const choices=Object.keys(compositeStructs()).filter(type=>typeAvailable(type));
+    const picker=typeSelect(choices.map(type=>[type,displayType(type)]),n.params.type,type=>change(()=>{n.params.type=type;},{typeChange:true}));picker.disabled=readonly;
+    box.append(parameterControlRow(t('struct.type'),picker));
+    const id=n.params.type.slice(7);if(n.params.type.startsWith('struct:')){const edit=el('button',{class:'wide'},t('struct.edit'));edit.onclick=()=>StructureUI.edit(id);box.append(edit);}
+  }else if(d.key==='array'){
     box.append(parameterControlRow(t('array.elementType'),arrayElementSelector(n)));
     const length=arrayLengthControl(n.params.length??4,value=>change(()=>n.params.length=value,{typeChange:true}));
     const lengthInput=length.querySelector('input');if(lengthInput)lengthInput.dataset.arrayLength=n.id;
@@ -1710,11 +1717,11 @@ function installBrowserDetailResize(){
 
 /* Limited two-sidebar workspace. All persisted data is presentation only. */
 function installPanelWorkspace(){
-  const ids=['browser','parameters','uniforms','controls','live','help'],key='grapeWorkspaceV1',presetsKey='grapeWorkspacePresetsV1';
+  const ids=['browser','parameters','uniforms','controls','live','help','structures'],key='grapeWorkspaceV1',presetsKey='grapeWorkspacePresetsV1';
   const hosts={left:$('#sidebar-left'),right:$('#parameter-sidebar')},panes={browser:$('#nodelibrary')},heads={};
   const copy=value=>JSON.parse(JSON.stringify(value)),read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
   const write=(k,value)=>{try{localStorage.setItem(k,JSON.stringify(value));return true;}catch{status(t('layout.storageError'),true);return false;}};
-  const defaults=()=>({version:1,left:[{panels:['browser','uniforms'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:220,right:340},visibility:{left:true,right:true},hidden:[]});
+  const defaults=()=>({version:1,left:[{panels:['browser','uniforms','structures'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:220,right:340},visibility:{left:true,right:true},hidden:[]});
   function validate(raw){
     if(!raw||raw.version!==1)throw Error(t('layout.invalid'));
     const value=defaults(),seen=[];
@@ -1730,6 +1737,7 @@ function installPanelWorkspace(){
     }
     if(seen.length===4&&!seen.includes('uniforms')&&new Set(seen).size===4){const group=[...value.left,...value.right].find(g=>g.panels.includes('browser'));group.panels.push('uniforms');seen.push('uniforms');}
     if(seen.length===5&&!seen.includes('controls')&&new Set(seen).size===5){const group=[...value.left,...value.right].find(g=>g.panels.includes('parameters'));group.panels.push('controls');seen.push('controls');}
+    if(seen.length===6&&!seen.includes('structures')&&new Set(seen).size===6){if(!value.left.length)value.left.push({panels:[],active:'structures',collapsed:false,weight:1});value.left[0].panels.push('structures');seen.push('structures');}
     if(seen.length!==ids.length||new Set(seen).size!==ids.length)throw Error(t('layout.invalid'));
     if(raw.hidden!==undefined&&(!Array.isArray(raw.hidden)||raw.hidden.some(id=>!ids.includes(id))||new Set(raw.hidden).size!==raw.hidden.length))throw Error(t('layout.invalid'));
     value.hidden=[...(raw.hidden||[])];
@@ -1745,7 +1753,7 @@ function installPanelWorkspace(){
   // Upgrade only the former stock arrangement, once. Personal layouts and named presets stay put.
   const inputsPlacementKey='grapeInputsDefaultLeftV1';
   if(!read(inputsPlacementKey,false)){
-    const topology=JSON.stringify([state.left,state.right].map(groups=>groups.map(g=>g.panels)));
+    const topology=JSON.stringify([state.left,state.right].map(groups=>groups.map(g=>g.panels.filter(id=>id!=='structures'))));
     if(topology==='[[["browser"]],[["parameters","uniforms","controls"],["live"],["help"]]]'){
       state.left[0].panels.push('uniforms');state.right[0].panels=state.right[0].panels.filter(id=>id!=='uniforms');
       if(state.right[0].active==='uniforms'){state.left[0].active='uniforms';state.right[0].active='parameters';}
@@ -1761,7 +1769,7 @@ function installPanelWorkspace(){
   for(const id of ids.slice(1)){panes[id]=$('#pane-'+id);heads[id]=panes[id].querySelector('.panel-heading');heads[id].remove();}
   for(const id of ids){panes[id].classList.remove('inspector-panel','collapsed');panes[id].classList.add('workspace-pane');panes[id].style.flex='';panes[id].setAttribute('role','tabpanel');panes[id].setAttribute('aria-labelledby',heads[id].id);heads[id].setAttribute('aria-controls',panes[id].id);heads[id].classList.add('workspace-tab');heads[id].dataset.workspacePanel=id;heads[id].type='button';}
   for(const [side,host]of Object.entries(hosts)){host.dataset.workspaceSide=side;host.classList.add('workspace-sidebar');}
-  function title(id){return id==='browser'?t('panel.addNode'):id==='uniforms'?t('sources.title'):id==='controls'?t('controls.title'):id==='parameters'?t('panel.parameterTitle'):id==='help'?t('panel.helpTitle'):$('#previewtitle').textContent;}
+  function title(id){return id==='browser'?t('panel.addNode'):id==='uniforms'?t('sources.title'):id==='structures'?t('struct.title'):id==='controls'?t('controls.title'):id==='parameters'?t('panel.parameterTitle'):id==='help'?t('panel.helpTitle'):$('#previewtitle').textContent;}
   function locate(id){for(const side of ['left','right']){const index=state[side].findIndex(g=>g.panels.includes(id));if(index>=0)return {side,index,group:state[side][index]};}}
   function persist(){if(restoring)return;state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};if(!matchMedia('(max-width:800px)').matches)state.visibility={left:isSidebarOpen('left'),right:isSidebarOpen('right')};write(key,state);}
   const parking=el('div',{hidden:true});document.body.append(parking);
@@ -2562,6 +2570,7 @@ function renderSourceCards(box,query){
 
 function renderNativeSources(){
   const box=$('#nativeuniforms');if(!box||!graph)return;
+  if(typeof StructureUI!=='undefined')StructureUI.render();
   syncNativeReferenceControls();
   renderSourceCards(box,normalizeSearch($('#inputsearch')?.value));
   // Native row availability can arrive after an apply without changing graph revision.

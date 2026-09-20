@@ -34,5 +34,6 @@
   "selection_ui_js": "selection_ui.js",
   "frames_ui_js": "frames_ui.js",
   "live": "sgrape_live.py",
-  "uniform_live_js": "uniform_live.js"
+  "uniform_live_js": "uniform_live.js",
+  "structures_ui_js": "structures_ui.js"
 }

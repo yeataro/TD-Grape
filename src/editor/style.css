@@ -1833,3 +1833,9 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .confirmation-dialog>.confirmation-actions{justify-content:flex-end;gap:10px;padding:12px 0 0}
 .native-reference-values>.components{width:100%}
 .native-reference-values .field{margin:0}
+
+#structuredialog{width:min(560px,calc(94 * var(--ui-vw)))}
+#structuredialog .custom-dialog-heading{height:auto;padding:0;background:none;border:0}#structuredialog textarea{width:100%;resize:vertical}
+.structure-field{display:grid;grid-template-columns:minmax(80px,1fr) minmax(90px,1fr);gap:6px;border-top:1px solid var(--line);padding:8px 0}.structure-field .field{margin:0}.structure-field-actions{display:flex;gap:6px;grid-column:1/-1}.structure-notes{white-space:pre-wrap}#structureslist{margin-top:12px}
+
+#structuredialog textarea{width:100%;box-sizing:border-box;background:var(--ui-tone-field);color:var(--ui-tone-text);border:1px solid var(--ui-tone-divider);border-radius:6px;padding:8px;font:inherit;resize:vertical}

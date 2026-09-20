@@ -65,6 +65,7 @@ function nodeTypeLabel(d,params=d?.defaults){
 }
 function availableEntries(){
   const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+    if(d.key==='struct_create')return (graph.typeDefinitions||[]).map(item=>({...d,label:item.name,entryKey:'structure:'+item.id,defaults:{type:'struct:'+item.id}}));
     if(d.key==='builtin_source')return builtinSourceEntries(d);
     if(['scalar','vector','matrix'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:({scalar:'help.fixedScalar',vector:'help.fixedVector',matrix:'help.fixedMatrix'})[d.key],defaults:{...d.defaults,...(d.key==='matrix'?{values:matrixReshapeValue(d.defaults.values,d.defaults.type,type)}:{}),type,fixedType:type},category:nodeCategory(d)}))];
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
@@ -85,6 +86,7 @@ function isSourceReferenceNode(n){return !!(n?.params&&('declarationId' in n.par
 function nodeDisplayName(n){
   const source=nodeSourceDeclaration(n);if(source)return source.name;
   if(n.definitionUuid==='sgrape.builtin.builtin_source')return n.params.source;
+  if(n.definitionUuid==='sgrape.builtin.struct_create')return displayType(n.params.type);
   return customNodeNamesEnabled()&&n?.name?n.name:nodeTypeLabel(definition(n),n?.params);
 }
 function nodeCanvasTitle(n){
@@ -336,6 +338,7 @@ function functionInspector(box,n,d){
 function convertValue(value,type,previous=null){return value===null&&!isResourceType(type)?filledValue(type):isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(value,previous,type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  if(['struct_create','builtin_source'].includes(definition(n)?.key)&&id.startsWith('f_'))return typeDescriptor(n.definitionUuid==='sgrape.builtin.struct_create'?n.params.type:typeContract.composites.sources[n.params.source]?.type)?.fields?.find(f=>'f_'+f.id===id)?.name||id;
   if(isMatrixOperation(definition(n))&&/^c[0-3](?:[xyzw])?$/.test(id))return matrixPortLabel(id);
   if(kind==='inputs'&&id==='position'&&['sgrape.builtin.perlin_noise','sgrape.builtin.simplex_noise'].includes(n.definitionUuid))return t('noise.position');
   if(kind==='inputs'&&['sgrape.builtin.compare','sgrape.builtin.if'].includes(n.definitionUuid))return ({a:'A',b:'B',condition:'Condition',true:'True',false:'False'})[id]||id;

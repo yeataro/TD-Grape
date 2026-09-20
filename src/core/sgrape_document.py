@@ -96,7 +96,7 @@ def _inspect_document(document, core, expected_target, compiler):
                     # Compound operations have stable port IDs, while their
                     # types follow upstream connections. Stored fallback types
                     # must not cause import to remove valid edges prematurely.
-                    templates = definition if definition['key'] in core.COMPOSITE_KEYS else core.definition_ports(definition, node.get('params', {}))
+                    templates = definition if definition['key'] in core.COMPOSITE_KEYS and definition['key'] not in ('struct_create', 'builtin_source') else core.definition_ports(definition, node.get('params', {}))
                     ports[ident] = (set(templates['inputs']), set(templates['outputs']))
             kept = []
             for index, edge in enumerate(data['edges']):

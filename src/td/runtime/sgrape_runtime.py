@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.131'
+PRODUCT_VERSION='0.8.132'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1932,7 +1932,7 @@ def refresh_assets(owner):
         _assets['/favicon.svg']=(owner.op('favicon_svg').text.encode('utf-8'),'image/svg+xml')
     if owner.op('inspector_js'):
         _assets['/inspector.js']=(owner.op('inspector_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
-    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui','frames_ui','uniform_live'):
+    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui','frames_ui','uniform_live','structures_ui'):
         if owner.op(name+'_js'):
             _assets['/'+name+'.js']=(owner.op(name+'_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
 

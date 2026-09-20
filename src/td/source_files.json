@@ -47,5 +47,6 @@
   "sgrape_live.py": "src/td/runtime/sgrape_live.py",
   "uniform_live.js": "src/editor/uniform_live.js",
   "source_catalog.json": "src/library/source_catalog.json",
-  "sgrape_source_catalog.py": "src/core/sgrape_source_catalog.py"
+  "sgrape_source_catalog.py": "src/core/sgrape_source_catalog.py",
+  "structures_ui.js": "src/editor/structures_ui.js"
 }
