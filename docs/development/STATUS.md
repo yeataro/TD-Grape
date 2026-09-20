@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.126 交付檢查點：來源 refresh、TOP／MAT master 同步與唯讀 audit 成功，36 份嵌入來源、9 個主要資源與版本一致；master revision 74，三份使用者 Shader 保留。TOE 948750 bytes，SHA256 `36ffc39882b8cec6450142e4fa365f297ed479a09f02a427ec9483d48d732352`。報告 `work/reports/source-cards/`；未強制刷新使用者網頁。
+
 2026-09-20 來源第二輪卡片檢查點 0.8.126：Common 六項時間預置以 TD Python 名稱顯示；未建立卡片保留類型色並降低亮度，首次引用才初始化。同名相容來源重用、不覆寫值／模式；衝突不偷偷建立改名副本。Custom Uniforms 分 Values／Matrices／Arrays，保留 Colors 原生頁標示。來源卡片可收合，右鍵與觸控操作共用選單、刪除沿用產品 overlay；缺失警告收合後仍可見。來源 DOM 依 ID 與 metadata 更新，選取／數值不重建卡片，改名只替換該卡片；一般新增不再混入時間預置。原生 TOP／MAT 六項初始化回歸、來源卡片 8 組、既有來源 13 組、即時控制 10 組、缺失 5 組、刪除／Colors 5 組通過。完整 portable checks：474 Python 測試及 JS／整合檢查、716 雙語鍵驗證通過；已檢視窄面板截圖。同步與 TOE 保存另記。下一輪為 Texture Buffer／POP Buffer，不插入 GLSL OP 狀態卡筆記。
 
 2026-09-20 0.8.125 交付檢查點：refresh／master 同步／唯讀 audit 成功，36 份嵌入來源、9 個主要網頁資源與版本一致，TOP／MAT master revision 73；三份使用者 Shader 保留。TOE 保存 944966 bytes，SHA256 `47ccc3a948546444860b3d22f9dd15f06351d442de98d3f2e94f659cfc79695c`。報告 `work/reports/source-multi/`。master 第一次送出前遇到工作佇列檔案暫時鎖定，尚未執行，單獨重送成功；未強制刷新使用者網頁。
