@@ -30,7 +30,7 @@ const {harness}=require('./test_glsl_code.cjs');
    window.componentGridBefore=$('#inspector [data-native-components]');window.driverBefore=$('#inspector .input-drivers');
    window.constantBefore=$('#inspector [data-source-component="3"]');
   });
-  assert.deepEqual(await page.locator('#inspector [data-component-mode-label]').allTextContents(),['Expression','Export']);
+  assert.deepEqual(await page.locator('#inspector [data-component-mode-label]').allTextContents(),['Expression: absTime.seconds','CHOP Export']);
   assert.equal(await page.locator('#inspector [data-native-component-slot="1"] [data-component-mode-label]').getAttribute('title'),'CHOP Export');
   assert.equal(await page.locator('#inspector [data-source-component]').count(),2);
   assert.equal(await page.locator('#inspector [data-source-component="2"]').isEnabled(),true);

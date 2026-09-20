@@ -2,6 +2,18 @@
 
 這裡記錄機制本身合理、但使用體驗仍值得評估的情境；不代表已確認為程式錯誤，也不代表已接受為永久限制。
 
+
+## 來源 UI 後續與連線喚醒（2026-09-20）
+
+- 先整理來源清單，再回頭 review Add Nodes 分類；本輪不調整 Add Nodes。
+- 數量標籤定義暫沿用「可引用來源」，與圖中使用數分開；常駐內建與已配置 Texture 是否需要顯示數量，使用者仍在考慮。只修正依卡片 category 顏色拆分計數，不因未引用而扣掉可用來源。
+- 已建立來源卡片沿用節點式 Body／輸出列，收合標題保留型別，展開標題先隱藏重複型別；型別 DOM 保留，日後可取消 CSS 隱藏規則恢復。未建立 Common 卡片壓暗為 33%，展開說明保留；已建立的說明及 TD 頁面資訊移至 Help。
+- 來源接孔目前沿用既有「新增引用」操作，點選或拖到畫布建立引用；直接跨面板接線仍需另外設計，不暗中改成新的圖連接模式。
+- Texture Inputs 的已配置 TOP Inputs／MAT Sampler／Texture Buffer 直接可達；內建 2D／3D／2D Array 等歸入 TD Inputs & Info。分類不改來源或產碼契約。
+- Expression 顯示實際 expression 字串，卡片截斷、Parameter 完整可複製；CHOP Export 來源路徑顯示為後續候選，現有資料尚未提供該路徑，不能虛構。
+- 斷線卡片的「嘗試喚醒 TD」是候選，尚未實作。需分別驗證 Timeline 暫停、全域 Cooking、COMP Cooking、最小化及網路失聯。現行背景 HTTP 執行緒只收件，TD 操作在 runtime.tick 主執行緒處理；若執行佇列本身停住，不能假設同管道的喚醒要求會執行。未為此切換使用者工程的播放／Cooking／視窗狀態。
+- 文件依據：[最小化偏好](https://docs.derivative.ca/Dialogs%3APreferences_Dialog)、[原生 Web Server DAT 最小化停止回應案例](https://forum.derivative.ca/t/resolved-web-server-stops-responding-when-td-window-is-minimized/184586)。後者是既有版本的直接案例，不冒充目前安裝版本或 TD-Grape 的實測結果。
+
 ## 選取動作與修飾鍵（2026-09-20，候選）
 
 Ctrl+A 的全選是否放入右鍵選單尚未定案。另提議「選取實際參與 GLSL 產碼的節點」，快捷鍵 Ctrl+Shift+A 只是候選；使用者要再考慮修飾鍵用途，目前不實作／不綁鍵。實作前應以編譯器實際依賴結果定義選取範圍，不用是否有任何接線來猜測。

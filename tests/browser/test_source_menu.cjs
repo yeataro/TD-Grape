@@ -19,6 +19,8 @@ const {harness}=require('./test_glsl_code.cjs');
   checks.push('changing Stage removes Vertex-only references while preserving Pixel common sources');
   await page.evaluate(()=>{editorTarget='top';stage='pixel';render();});
   for(const kind of ['2d','3d','2dArray','cube'])assert.equal(await page.locator(`[data-input-group="textures.${kind}"]`).count(),1);
+  assert.equal(await page.locator('[data-input-group="textures"] > .input-group-items > [data-input-group="top_input"]').count(),1);
+  assert.equal(await page.locator('[data-input-group="textures.tdInputs"] [data-input-group="textures.2d"]').count(),1);
   assert.equal(await page.locator('[data-input-group="textures.1d"]').count(),0);
   assert.equal(await page.locator('[data-input-group="attribute"]').count(),0);
   await page.evaluate(()=>{window.savedBuiltin=document.querySelector('[data-builtin-reference="uTDOutputInfo"]');renderNativeSources();});

@@ -1002,12 +1002,18 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .source-card .input-source-select{flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:6px 4px}
 .source-card .input-source-select span{white-space:normal;overflow-wrap:anywhere;width:100%}
 .source-card-head{display:flex;align-items:stretch;min-width:0;background:var(--category-bg)}
-.source-card[data-dormant=true] .source-card-head{background:color-mix(in srgb,var(--category-bg) 50%,var(--ui-tone-node))}
-.source-card[data-dormant=true] .input-source-select{opacity:.5}
+.source-card[data-dormant=true] .source-card-head{opacity:.33}
 .source-card :is(.source-card-toggle,.source-card-menu-button){flex:none;width:22px;padding:2px;border:0;border-radius:0;background:transparent;color:var(--category-fg)}
 .source-card-toggle[aria-expanded=false] .input-group-arrow{transform:none}
 .source-card-body{padding:8px;color:var(--ui-tone-text);border-top:1px solid var(--ui-tone-node-divider)}
 .source-card-body[hidden],.source-card .input-source-status[hidden]{display:none}
+.source-card[data-input-source][data-expanded=true] .input-source-select small{display:none}
+.source-card[data-input-source][data-expanded=true] .input-source-select{padding-block:4px}
+.source-card[data-input-source][data-expanded=true] .input-reference{min-height:30px}
+.source-card-outputs{margin:6px -8px -4px;padding:0}
+.source-card-outputs .port-row.output{padding-right:20px}
+.source-card-outputs .output .port{right:2px}
+.source-card-outputs .port:disabled{opacity:.4}
 .source-card-body .components{width:100%}.source-card-body .field{margin:0}
 .source-card-meta{font-size:11px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere;margin:0 0 6px}.source-card-meta:last-child{margin-bottom:0}
 .source-card .input-source-status{padding:7px 8px}.source-card[data-source-state=missing] .source-card-head{background:color-mix(in srgb,var(--category-bg) 50%,var(--ui-tone-node))}
@@ -1825,7 +1831,10 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 /* Driven native components occupy the same slots as ordinary value fields. */
 [data-native-component-slot]{min-width:0}
-.source-component-mode{display:flex;align-items:center;min-height:32px;padding:6px 5px;background:var(--ui-tone-field);border:1px solid var(--line);border-radius:5px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ui-tone-port-muted)}
+.source-component-mode{display:block;min-width:0;max-width:100%;min-height:32px;padding:6px 5px;background:var(--ui-tone-field);border:1px solid var(--line);border-radius:5px;font-size:10px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ui-tone-port-muted)}
+#inspector .source-component-mode{white-space:normal;overflow-wrap:anywhere;user-select:text}
+.node-size-probe .source-component-mode{width:120px;max-width:120px}
+.node-size-probe .components:not(.scalar) .source-component-mode{width:72px;max-width:72px}
 .components:not(.scalar) .source-component-mode{padding-left:18px}
 [data-native-component-slot][data-mode="EXPRESSION"] .source-component-mode{color:var(--type-vec2,#83badf)}
 [data-native-component-slot][data-mode="EXPORT"] .source-component-mode{color:var(--green)}
@@ -1843,7 +1852,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 /* Shared native color views keep their numeric controls alive across updates. */
 .native-color-controls{width:100%;min-width:0}.native-color-line{display:flex;align-items:center;gap:4px}.native-color-line>.components{flex:1;min-width:0}.native-color-line>.node-values-toggle{position:static;flex:none;width:14px;padding:0}.native-color-controls>.color-swatch{height:22px;margin-top:6px}.native-color-expanded{grid-template-columns:1fr!important;margin-top:6px;gap:5px}.native-color-expanded[hidden]{display:none}
-.source-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:1.5em;padding:1px 5px;border-radius:4px;background:var(--category-bg,var(--node-shader-bg));color:var(--category-fg,var(--node-shader-fg));font-size:10px;line-height:1.2;font-variant-numeric:tabular-nums}.source-count[hidden]{display:none}
+.source-counts{display:inline-flex;flex-wrap:wrap;gap:3px}.source-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:1.5em;padding:1px 5px;border-radius:4px;background:var(--category-bg,var(--node-shader-bg));color:var(--category-fg,var(--node-shader-fg));font-size:10px;line-height:1.2;font-variant-numeric:tabular-nums}.source-count[hidden]{display:none}
 .input-group-add,:root[data-ui-theme="light"] .input-group-add{background:color-mix(in srgb,var(--ui-tone-control-text) 7%,transparent);border:0;border-radius:5px;min-width:40px;padding-inline:7px;height:24px;white-space:nowrap}
 .input-group-add:enabled:hover,:root[data-ui-theme="light"] .input-group-add:enabled:hover{background:color-mix(in srgb,var(--ui-tone-control-text) 13%,transparent)}
 @media(pointer:coarse){.input-group-add{min-height:36px}.native-color-line>.node-values-toggle{min-height:36px;width:20px}}
