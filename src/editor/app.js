@@ -10,8 +10,19 @@ const GRID=24;
 const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='zh-Hant';
+let editorProjectFile=null;
+function updateEditorTitle(){
+  const target=$('#target')?.textContent||'',project=editorProjectFile===null?'':editorProjectFile||t('project.unsaved');
+  document.title=target||project?['TD-Grape',project,target].filter(Boolean).join(' · '):'TD-Grape · Shader Editor';
+}
+function setEditorTargetPath(path){$('#target').textContent=path||'';updateEditorTitle();}
+function receiveProjectSummary(result){
+  editorProjectFile=result.projectFile||'';
+  const label=$('#projectfile');label.textContent=editorProjectFile||t('project.unsaved');label.title=label.textContent;
+  const active=result.shaders?.find(s=>s.id===(shaderId||result.current));if(active)setEditorTargetPath(active.path);else updateEditorTitle();
+}
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
+function translatePage(){document.documentElement.lang=language;updateEditorTitle();document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
 async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
@@ -347,7 +358,7 @@ async function performApplyGraph(){
     rememberSavedGraph(sentGraph,shaderUpdated?'graph.applied':'graph.saved');
     if(editVersion===sentVersion){dirty=false;sessionStorage.removeItem(draftKey);}
     else {try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}}
-    renderGraphSaveState();$('#target').textContent=data.target;await preview().catch(()=>{});
+    renderGraphSaveState();setEditorTargetPath(data.target);await preview().catch(()=>{});
     if(generation!==editorLoadGeneration)return;
     if(!connectionInterrupted)status(t(dirty?graphPendingKey():shaderUpdated?'material.applied':lastGraphSaveKey),false,{clearError:true});
     document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
@@ -464,7 +475,7 @@ window.addEventListener('resize',()=>{if(!$('#shaderchoices').hidden)sizeShaderM
 async function openShaderMenu(last=false){
   const request=++shaderMenuRequest,menu=$('#shaderchoices');menu.hidden=false;$('#shaderpicker').setAttribute('aria-expanded','true');menu.replaceChildren(el('p',{class:'muted'},t('switch.loading')));sizeShaderMenu();
   try{
-    const data=await api('shaders');if(request!==shaderMenuRequest)return;
+    const data=await api('shaders');if(request!==shaderMenuRequest)return;receiveProjectSummary(data);
     const rows=(data.shaders||[]).filter(row=>/^[a-f0-9]{32}$/.test(row.id)&&typeof row.path==='string'&&['mat','top'].includes(row.kind));
     menu.replaceChildren();
     for(const row of rows){
@@ -640,7 +651,7 @@ async function load(){
     uniformGeneration++;uniformPolling=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();uniformSnapshot={revision:-1,uniforms:{}};
     customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
     readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();
-    $('#target').textContent=data.target;$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});
+    setEditorTargetPath(data.target);$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});
     if(generation!==editorLoadGeneration)return;
     status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):data.readOnlyReason||t('connection.ready'),readonly,{clearError:true});
     if(!savedStateIssue&&$('#savedreview').open)$('#savedreview').close();
@@ -1290,6 +1301,6 @@ $('#refreshpreview').onclick=()=>setPreviewEnabled(true);
 showPreviewBusy();
 
 async function refreshProjectFile(){
-  try{const result=await api('shaders');const label=$('#projectfile');label.textContent=result.projectFile||t('project.unsaved');label.title=label.textContent;}catch{const label=$('#projectfile');if(!label.textContent)label.textContent=t('project.unavailable');}
+  try{receiveProjectSummary(await api('shaders'));}catch{const label=$('#projectfile');if(!label.textContent)label.textContent=t('project.unavailable');}
 }
 refreshProjectFile();setInterval(()=>{if(!document.hidden)refreshProjectFile();},30000);
