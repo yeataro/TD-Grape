@@ -1052,7 +1052,12 @@ function nodeComponentNames(n){
   if(key==='color'||source?.kind==='uniform'&&source.nativeSequence==='color')return 'rgba';
   return key==='uv'?'uv':'xyzw';
 }
-function vectorNames(n){const names=nodeComponentNames(n);return names==='rgba'?'RGBA':names==='stpq'?'STPQ':names==='uv'&&typeComponents(n.params.type||nodeSourceDeclaration(n)?.type)===2?'UV':'XYZW';}
+function vectorNames(n){
+  const names=nodeComponentNames(n);
+  // Fixed sources such as UV have no params.type or source declaration.
+  const type=n.params.type||nodeSourceDeclaration(n)?.type||definition(n)?.outputs?.out;
+  return names==='rgba'?'RGBA':names==='stpq'?'STPQ':names==='uv'&&typeDescriptor(type)?.components===2?'UV':'XYZW';
+}
 // Display hints come from known component ports, never arbitrary labels or upstream nodes.
 function portColorComponent(n,kind,port){
   if(ports(n,kind)[port]!=='float')return null;

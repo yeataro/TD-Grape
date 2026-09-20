@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.152 DEV 緊急修正：0.8.150 共用分量名稱讓固定 UV 預設走 UV 模式，卻只從 params.type／來源宣告取得型別；UV 的 params 為空，初始化 renderCards 在 typeComponents(undefined) 拋出 contract.invalid，使用者重開也無法進入。型別規則本身有效。修正改由固定輸出口取得型別描述，不放寬契約驗證或改寫圖。0.8.151 原始碼已重現相同錯誤與堆疊；新增初始載入／重新開啟／UV Split 回歸 2 組，Color 分量 8 組通過；現有 Grape_MAT1／TOP1／TOP2／TOP3 的實際圖在隔離瀏覽器完整渲染 4／25／30／4 個節點。報告 Documents 工作區 `reports/contract-load/`，TD 唯讀擷取在 `work/reports/contract-load/inspect/`。未交付的 Uniform 外觀保存保護調整已隔離，未混入熱修正；同步保存另記。
+
 2026-09-20 0.8.151 DEV 交付檢查點：程式提交 `ae2d17b`；37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 98，三份使用者 Shader 保留。TOE 984214 bytes，SHA256 `a14a28cbb32ba46b369e1bac328025a7e86f81ee5338c6fc9b353cc57cdc55d5`。原生報告 `work/reports/review-polish-151/`；未重新整理使用者網頁。
 
 2026-09-20 0.8.151 DEV 小修：Spec Constant 新建預設 specValue，共用入口與對話框一致，保留既有名稱及重名編號；Appearance 左右等寬置中，與 Dark／Light 共用中線，Appearance／Language 列下加入水平分隔線，Light 隱藏列時不殘留線條。Language 原排列保留。中英與 320／390／1000px 截圖核對、預設名稱與重名檢查通過；既有外觀 10、觸控 1 組檢查通過。報告 Documents 工作區 `reports/review-polish-151/`；同步保存另記。
