@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.114",
+  "catalogVersion": "0.8.127",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -3314,6 +3314,85 @@
           "array fill",
           "make array"
         ]
+      }
+    },
+    {
+      "definition": {
+        "key": "buffer_fetch",
+        "label": "Buffer Fetch",
+        "inputs": {
+          "buffer": "samplerBuffer",
+          "index": "int"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.buffer_fetch",
+        "definitionUuid": "sgrape.builtin.buffer_fetch",
+        "revisionHash": "ac8d1e54d04d6a99d377eac6921993225d5cd32c0c69150214b931af4cc412f3"
+      },
+      "emitter": {
+        "id": "buffer_fetch",
+        "version": 1
+      },
+      "browser": {
+        "category": "texture",
+        "categoryPath": [
+          "texture",
+          "buffer"
+        ],
+        "source": "glsl",
+        "aliases": [
+          "texture buffer",
+          "CHOP",
+          "texelFetch"
+        ],
+        "glslName": "texelFetch",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "buffer_length",
+        "label": "Buffer Length",
+        "inputs": {
+          "buffer": "samplerBuffer"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.buffer_length",
+        "definitionUuid": "sgrape.builtin.buffer_length",
+        "revisionHash": "fb87333cac38a5726c276b3d374454cfc685a813a0883a76d76e452ea6b94bdb"
+      },
+      "emitter": {
+        "id": "buffer_length",
+        "version": 1
+      },
+      "browser": {
+        "category": "texture",
+        "categoryPath": [
+          "texture",
+          "buffer"
+        ],
+        "source": "glsl",
+        "aliases": [
+          "texture buffer",
+          "CHOP",
+          "textureSize"
+        ],
+        "glslName": "textureSize",
+        "secondaryCategories": []
       }
     }
   ],

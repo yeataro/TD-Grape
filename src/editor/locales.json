@@ -18,6 +18,12 @@
     "Graph"
   ],
   "messages": {
+    "help.buffer_fetch": {"zh-Hant": "以從 0 起的整數索引讀取 Texture Buffer，輸出 vec4。只接受 samplerBuffer；索引範圍遵循 GLSL，不自動截斷或補值。", "en": "Fetch a vec4 from a Texture Buffer with a zero-based index. Requires samplerBuffer. Indices follow GLSL bounds; no clamping or fallback values."},
+    "help.buffer_length": {"zh-Hant": "查詢 Texture Buffer 的 texel 數量；由 GLSL 在執行期查詢，不從網頁讀回 CHOP 樣本。", "en": "Returns the Texture Buffer texel count at runtime. Does not read CHOP samples into the editor."},
+    "array.bindingState": {"zh-Hant": "資料來源由 TD Arrays 頁面管理。", "en": "Source managed on the TD Arrays page."},
+    "sources.textureBuffers": {"zh-Hant": "Texture Buffers", "en": "Texture Buffers"},
+    "buffer.nativeHint": {"zh-Hant": "請自行在 TD 建立 CHOP 並指定路徑。Texture Buffer 為 samplerBuffer 資源，使用 Buffer Fetch 讀取、Buffer Length 查詢長度；不是可填值的一般陣列。空來源的警告／資料行為依 TD，不建立補位來源。", "en": "Create a CHOP in TD and set its path. Use Buffer Fetch and Buffer Length with this samplerBuffer. It is not a value array. Empty-source behavior follows TD; no fallback source is created."},
+    "browser.category.texture.buffer": {"zh-Hant": "Buffer", "en": "Buffer"},
     "sources.common": {"zh-Hant": "共同來源", "en": "Common Sources"},
     "sources.time": {"zh-Hant": "時間", "en": "Time"},
     "sources.customUniforms": {"zh-Hant": "自訂 Uniform", "en": "Custom Uniforms"},

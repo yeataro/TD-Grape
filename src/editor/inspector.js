@@ -906,6 +906,7 @@ function setTextureMode(decl,mode){
 }
 
 function declarationFields(box,decl,settings=false,{live=true}={}){
+  if(decl.type==='samplerBuffer'){nativeInputFields(box,decl);return;}
   if(settings){
     box.append(field(t('declaration.name'),input(decl.name,value=>changeDeclaration(()=>decl.name=value))));
     box.append(el('p',{class:'muted'},decl.type+' · '+decl.id));return;
@@ -967,7 +968,8 @@ function renderHelp(){
   }
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   const source=!n&&graph.declarations.find(d=>d.id===selectedInputId);
-  if(source){help.append(el('h3',{},source.name+' · '+source.type),markdown(t('help.'+source.kind)));return;}
+  if(source){help.append(el('h3',{},source.name+' · '+source.type),markdown(t(source.type==='samplerBuffer'?'buffer.nativeHint':'help.'+source.kind)));return;}
+  if(n&&graph.declarations.find(source=>source.id===n.params.declarationId)?.type==='samplerBuffer'){help.append(markdown(t('buffer.nativeHint')));return;}
   if(nodeComment(n)){const note=el('section',{class:'node-comment-help'});note.append(el('strong',{},t('node.comment')),el('p',{},nodeComment(n)));help.append(note);}
   if(n?.params.fixedType&&['scalar','vector'].includes(d?.key)){help.append(markdown(t(d.key==='scalar'?'help.fixedScalar':'help.fixedVector')));return;}
   help.append(markdown(t(d?(editorTarget==='top'&&['uv','texture','pixel_out'].includes(d.key)?'help.top.'+d.key:(d.descriptionKey||'help.'+d.key)):'help.select')));
@@ -1924,14 +1926,14 @@ function nativeSourceIndex(){
   if(nativeIndexedSnapshot!==nativeSourceSnapshot){nativeIndexedSnapshot=nativeSourceSnapshot;nativeRowsIndex=new Map(nativeSourceRows().map(row=>[row.id,row]));}
   return nativeRowsIndex;
 }
-function inputGroupLabel(kind){return ({top_input:'TOP Inputs',constant:t('inputs.graphConstants'),spec_constant:t('inputs.specConstants'),uniform:t('sources.customUniforms'),sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind];}
+function inputGroupLabel(kind){return ({texture_buffer:t('sources.textureBuffers'),top_input:'TOP Inputs',constant:t('inputs.graphConstants'),spec_constant:t('inputs.specConstants'),uniform:t('sources.customUniforms'),sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind];}
 function inputSourceGroup(kind){return kind==='color'||kind==='array'||kind.startsWith('preset:')?'uniform':kind;}
 function inputPresetSource(kind){const key=kind.startsWith('preset:')?kind.slice(7):null,entry=typeContract?.sources?.uniformPresets?.[key];return entry?graph.declarations.find(d=>d.kind==='uniform'&&d.type===entry.type&&(d.initialDriver===key||d.name===entry.name)):null;}
 function finishInputCreate(kind,id){
   setInputGroupCollapsed(inputSourceGroup(kind),false);$('#inputsearch').value='';$('#nativeuniforms').dataset.sourceStructure='';$('#sourcecreatedialog').close();selectInputSource(id);
 }
 function openInputCreate(kind){
-  if(editorMutationBlocked()||!graph||!['constant','spec_constant','uniform',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
+  if(editorMutationBlocked()||!graph||!['constant','spec_constant','uniform','texture_buffer',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
   closeCreator();const dialog=$('#sourcecreatedialog'),choice=$('#sourcekind');
   const options=kind==='uniform'?[['uniform','Uniform'],['array',t('array.uniformSource')],['color','Color']]:[[kind,inputGroupLabel(kind)]];
   choice.replaceChildren(...options.map(([value,label])=>el('option',{value},label)));choice.value=kind;
@@ -2069,7 +2071,7 @@ function renderNativeSourceValues(changed=null){
       if(document.activeElement!==entry){entry.setSyncedValue(item?.expression||'');entry.sourceExpected=item?.modeExpected;}
     }
     for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
-    const state=card.querySelector('.native-source-state');if(state){const text=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.arrayBinding?t('uniform.driven'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.slice(0,typeComponents(row.type)||1).some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');if(state.textContent!==text)state.textContent=text;}
+    const state=card.querySelector('.native-source-state');if(state){const text=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.arrayBinding?t('array.bindingState'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.slice(0,typeComponents(row.type)||1).some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');if(state.textContent!==text)state.textContent=text;}
   }
   if(changed)return;
   for(const entry of document.querySelectorAll('#inspector [data-input-name]')){
@@ -2077,7 +2079,7 @@ function renderNativeSourceValues(changed=null){
   }
   for(const entry of document.querySelectorAll('#inspector [data-source-remove]'))entry.disabled=!ready;
   for(const item of $('#sourcecreate').querySelectorAll('input,select,button'))setEditorDisabled(item,editorMutationBlocked(),editorMutationBlocked(true));
-  if($('#sourcetype'))setEditorDisabled($('#sourcetype'),editorMutationBlocked()||!['uniform','array','color','constant','spec_constant'].includes($('#sourcekind').value),editorMutationBlocked(true)||!['uniform','array','color','constant','spec_constant'].includes($('#sourcekind').value));
+  if($('#sourcetype'))setEditorDisabled($('#sourcetype'),editorMutationBlocked()||!['uniform','array','color','texture_buffer','constant','spec_constant'].includes($('#sourcekind').value),editorMutationBlocked(true)||!['uniform','array','color','texture_buffer','constant','spec_constant'].includes($('#sourcekind').value));
   if($('#sourcekind').value==='top_input'){$('#sourcename').value='sTD2DInputs['+topInputsView().length+']';$('#sourcename').disabled=true;}
   const presetSource=inputPresetSource($('#sourcekind').value);if(presetSource){$('#sourcename').value=presetSource.name;$('#sourcename').disabled=true;}
   $('#sourcecreate button[type=submit]').textContent=t(presetSource?'inputs.useExisting':'inputs.create');
@@ -2103,7 +2105,7 @@ function nativeArrayFields(card,decl,row){
     entry.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();apply.click();}else if(event.key==='Escape'){nativeArrayDrafts.delete(key);editor.bindingDirty=false;entry.blur();renderNativeSourceValues();}};
     editor.append(field(t('matrix.bindingMode'),mode),field(t('array.chopPath'),entry),apply);card.append(editor);
   }
-  card.append(el('p',{class:'muted'},t('array.nativeHint')),el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
+  card.append(el('p',{class:'muted'},t(decl.type==='samplerBuffer'?'buffer.nativeHint':'array.nativeHint')),el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
 }
 function nativeMatrixFields(card,decl,row){
   const shape=typeContract.types[decl.type],binding=row.matrixBinding;
@@ -2212,7 +2214,7 @@ function nativeInputFields(box,decl){
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
   card.addEventListener('pointerdown',()=>{if(!sourceReady())showNativeSourceHint();},true);
   if(!row||row.pending){card.append(el('p',{class:'muted'},t('sources.pending')));return;}
-  if(typeDescriptor(decl.type)?.shape==='array'){nativeArrayFields(card,decl,row);return;}
+  if(decl.type==='samplerBuffer'||typeDescriptor(decl.type)?.shape==='array'){nativeArrayFields(card,decl,row);return;}
   if(isMatrixType(decl.type)){nativeMatrixFields(card,decl,row);return;}
   const count=typeContract?.types?.[decl.type]?.components||1;
   if(!row.missing){
@@ -2244,7 +2246,8 @@ function inputSourceInspector(box,decl){
     else changeDeclaration(()=>decl.name=name);
   });rename.dataset.sourceName='true';rename.dataset.inputName=decl.id;rename.disabled=readonly||(['uniform','spec_constant'].includes(decl.kind)&&row&&!row.pending&&(!sourceReady()||!row.nameWritable));box.append(field(t('declaration.name'),rename));
   if(decl.kind==='uniform'){
-    if(typeDescriptor(decl.type)?.shape==='array'){
+    if(decl.type==='samplerBuffer'){box.append(field(t('node.type'),el('span',{},decl.type)));nativeInputFields(box,decl);}
+    else if(typeDescriptor(decl.type)?.shape==='array'){
       const shape=typeDescriptor(decl.type);
       box.append(field(t('node.type'),el('span',{},displayType(decl.type))),field(t('array.length'),arrayLengthControl(shape.length,value=>changeDeclaration(()=>{decl.type=arrayType(shape.elementType,value);decl.value=null;}),false)),el('small',{class:'muted'},t('array.nativeSpecializationLimit')));nativeInputFields(box,decl);
     }else{
@@ -2412,7 +2415,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
   let cached=sourceCardCache.get(key);
   if(!cached||cached.signature!==signature){
     const id=decl?.id,label=entry?.initialize.expression||decl.name,type=decl?.type||entry.type;
-    const card=el('div',{class:'input-source-row source-card','data-category':nodeCategory({key:decl?.kind||'uniform'}),'data-source-card':key}),head=el('div',{class:'source-card-head'}),body=el('div',{class:'source-card-body'}),toggle=el('button',{class:'source-card-toggle','aria-label':t('sources.details')}),pick=el('button',{class:'input-source-select','aria-pressed':'false'}),more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
+    const card=el('div',{class:'input-source-row source-card','data-category':decl?.type==='samplerBuffer'?'texture':nodeCategory({key:decl?.kind||'uniform'}),'data-source-card':key}),head=el('div',{class:'source-card-head'}),body=el('div',{class:'source-card-body'}),toggle=el('button',{class:'source-card-toggle','aria-label':t('sources.details')}),pick=el('button',{class:'input-source-select','aria-pressed':'false'}),more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
     if(id)card.dataset.inputSource=id;if(preset)card.dataset.preset=preset;
     if(dormant)card.dataset.dormant='true';
     const name=el('span');if(entry){const parts=label.split('.');parts.forEach((part,index)=>{if(index)name.append('.',el('wbr'));name.append(part);});}else name.textContent=label;
@@ -2431,7 +2434,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
       if(entry)body.append(el('p',{class:'source-card-meta'},t(entry.labelKey)+' · '+(decl?.name||entry.name)));
       const sequence=row?.sequence||decl?.nativeSequence;
       if(sequence)body.append(el('p',{class:'source-card-meta'},'TD · '+({color:'Colors',matrix:'Matrices',array:'Arrays',vec:'Vectors',const:'Constants'}[sequence]||sequence)));
-      if(decl&&row&&!row.pending&&!row.missing&&!isMatrixType(decl.type)&&typeDescriptor(decl.type)?.shape!=='array'&&['uniform','spec_constant'].includes(decl.kind)){
+      if(decl&&row&&!row.pending&&!row.missing&&!isResourceType(decl.type)&&!isMatrixType(decl.type)&&typeDescriptor(decl.type)?.shape!=='array'&&['uniform','spec_constant'].includes(decl.kind)){
         body.dataset.nativeSource=id;body.append(nativeComponentControls(decl,row));
       }else if(dormant)body.append(el('p',{class:'source-card-meta'},t('sources.presetDormant')));
       else if(decl)body.append(el('p',{class:'source-card-meta'},t('inputs.editReference')));
@@ -2462,8 +2465,8 @@ function renderSourceCards(box,query){
     if(matches(entry.name,entry.initialize.expression,t(entry.labelKey),decl?.name,'common uniform'))common.push(sourceCard(decl,preset,decl&&issueById.get(decl.id),decl&&rows.get(decl.id),conflict));
   }
   if(common.length)sections.push(sourceGroup('common',t('sources.common'),[sourceGroup('common.time',t('sources.time'),common,null,query)],null,query));
-  const groups=new Map();for(const decl of decls){if(used.has(decl.id)||!['uniform','sampler','constant','spec_constant','top_input'].includes(decl.kind))continue;keys.add(decl.id);if(!matches(decl.name,decl.kind,decl.type,rows.get(decl.id)?.sequence,decl.nativeSequence))continue;const group=groups.get(decl.kind)||[];group.push(decl);groups.set(decl.kind,group);}
-  for(const kind of ['top_input','constant','spec_constant','uniform','sampler']){
+  const groups=new Map();for(const decl of decls){if(used.has(decl.id)||!['uniform','sampler','constant','spec_constant','top_input'].includes(decl.kind))continue;keys.add(decl.id);if(!matches(decl.name,decl.kind,decl.type,rows.get(decl.id)?.sequence,decl.nativeSequence))continue;const kind=decl.type==='samplerBuffer'?'texture_buffer':decl.kind,group=groups.get(kind)||[];group.push(decl);groups.set(kind,group);}
+  for(const kind of ['top_input','texture_buffer','constant','spec_constant','uniform','sampler']){
     const group=groups.get(kind)||[],canCreate=kind!==(editorTarget==='top'?'sampler':'top_input');if((!canCreate||query)&&!group.length)continue;
     const cards=d=>sourceCard(d,null,issueById.get(d.id),rows.get(d.id));
     const children=kind==='uniform'?['values','matrices','arrays'].map(name=>{const list=group.filter(d=>sourceUniformGroup(d,rows.get(d.id))===name);return list.length?sourceGroup('uniform.'+name,t('sources.'+name),list.map(cards),null,query):null;}).filter(Boolean):group.map(cards);
@@ -2494,17 +2497,17 @@ function renderNativeSources(){
 function installNativeSources(){
   const arrayFields=el('section',{id:'sourcearrayfields',class:'source-array-fields'}),arrayLength=el('input',{id:'sourcearraylength',type:'number',min:1,max:1024,step:1,value:4}),arraySource=el('input',{id:'sourcearraypath',type:'text',maxlength:4096,spellcheck:'false',placeholder:'/project1/constant1'});
   const lengthField=field('',arrayLength),pathField=field('',arraySource);lengthField.prepend(el('span',{'data-i18n':'array.length'},t('array.length')));pathField.prepend(el('span',{'data-i18n':'array.chopPath'},t('array.chopPath')));
-  arrayFields.append(lengthField,pathField,el('p',{class:'muted','data-i18n':'array.nativeHint'},t('array.nativeHint')));arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);
+  const arrayHint=el('p',{class:'muted'});arrayFields.append(lengthField,pathField,arrayHint);arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);
   $('#inputsearch').oninput=renderNativeSources;
   $('#closesourcecreate').onclick=()=>$('#sourcecreatedialog').close();
-  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets()[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:['array','color'].includes(kind)?['float','vec2','vec3','vec4']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':kind==='array'?'uArray':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];arrayFields.hidden=kind!=='array';arrayLength.required=arraySource.required=kind==='array';arrayLength.max=String(typeContract?.composites?.array?.maxTypeLength||typeContract?.composites?.array?.maxLength||1024);$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets()[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:['array','color','texture_buffer'].includes(kind)?['float','vec2','vec3','vec4']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':kind==='array'?'uArray':kind==='texture_buffer'?'uBuffer':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];arrayFields.hidden=!['array','texture_buffer'].includes(kind);lengthField.hidden=kind==='texture_buffer';arrayHint.textContent=t(kind==='texture_buffer'?'buffer.nativeHint':'array.nativeHint');arrayLength.required=arraySource.required=kind==='array';arrayLength.max=String(typeContract?.composites?.array?.maxTypeLength||typeContract?.composites?.array?.maxLength||1024);$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
     e.preventDefault();if(readonly)return;const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value,existing=inputPresetSource(kind);
     if(existing){finishInputCreate(kind,existing.id);return;}
     if(kind!=='top_input'&&(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)||graph.declarations.some(d=>d.name===name&&!(kind.startsWith('preset:')&&d.kind==='uniform'&&d.initialDriver===kind.slice(7))))){$('#sourcecreateerror').textContent=t('inputs.invalidName');return;}
     const count=Number(arrayLength.value),arrayPath=arraySource.value.trim();
     if(kind==='array'&&(!Number.isInteger(count)||count<1||count>(typeContract?.composites?.array?.maxTypeLength||typeContract?.composites?.array?.maxLength||1024)||!arrayPath)){$('#sourcecreateerror').textContent=t('array.invalidSource');return;}
-    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','spec_constant','top_input'].includes(kind)?kind:'uniform',kind==='array'?$('#sourcetype').value+'['+count+']':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='array'?{nativeSequence:'array',elementType:$('#sourcetype').value,length:count,arraySource:arrayPath}:kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});
+    let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','spec_constant','top_input'].includes(kind)?kind:'uniform',kind==='texture_buffer'?'samplerBuffer':kind==='array'?$('#sourcetype').value+'['+count+']':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='texture_buffer'?{nativeSequence:'array',elementType:$('#sourcetype').value,arraySource:arrayPath}:kind==='array'?{nativeSequence:'array',elementType:$('#sourcetype').value,length:count,arraySource:arrayPath}:kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});
     if(changed)finishInputCreate(kind,id);else $('#sourcecreateerror').textContent=$('#status').textContent;
   };
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);

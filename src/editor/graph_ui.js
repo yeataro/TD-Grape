@@ -332,7 +332,7 @@ function setTypeContract(contract){
       new Set(contract.numericTypes).size!==contract.numericTypes.length||!contract.numericTypes.every(t=>typeof t==='string')||
       !Array.isArray(contract.conversions)||!contract.definitions||!contract.types)throw Error(t('contract.unsupported'));
   const resourceTypes=contract.resourceTypes||[];
-  if(!Array.isArray(resourceTypes)||resourceTypes.some(t=>t!=='sampler2D')||new Set(resourceTypes).size!==resourceTypes.length)throw Error(t('contract.invalid'));
+  if(!Array.isArray(resourceTypes)||resourceTypes.some(t=>!['sampler2D','samplerBuffer'].includes(t))||new Set(resourceTypes).size!==resourceTypes.length)throw Error(t('contract.invalid'));
   const specTypes=contract.specConstantTypes||[];
   if(!Array.isArray(specTypes)||specTypes.some(t=>!['int','uint','bool','float'].includes(t))||new Set(specTypes).size!==specTypes.length)throw Error(t('contract.invalid'));
   const valueTypes=contract.valueTypes||[...new Set([...contract.numericTypes,...specTypes])];

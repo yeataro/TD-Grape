@@ -78,6 +78,7 @@ def native_array_length(declaration, declarations):
 
 
 def source_components(declaration):
+    if declaration.get('type')=='samplerBuffer':return 0
     shape = array_shape(declaration.get('type'))
     if shape: return TYPES[shape[0]] * shape[1] if isinstance(shape[1],int) else 0
     return 1 if declaration.get('kind') == 'spec_constant' else TYPES[declaration['type']]
@@ -110,6 +111,9 @@ def validate_uniform_component(declaration, value, role='value'):
 
 
 def validate_uniform_native(declaration, value, role='value'):
+    if declaration.get('type')=='samplerBuffer':
+        if value is not None:raise SourceError('Texture Buffer values belong to the native CHOP.')
+        return
     shape = array_shape(declaration.get('type'))
     if shape:
         if value is None: return  # The CHOP owns data; no sampled JSON default.
@@ -351,7 +355,7 @@ def reconcile(declarations, registry, rows, operator=None):
         if not decl: continue
         row = rows[matches[ident]] if ident in matches else None
         duplicate = row is not None and names[row['name']] != 1
-        array_invalid = row is not None and row['sequence'] == 'array' and (not array_shape(decl['type']) or row['arrayBinding']['arrayType'] != 'uniformarray' or row['arrayBinding']['elementType'] != array_shape(decl['type'])[0])
+        array_invalid = row is not None and row['sequence'] == 'array' and (row['arrayBinding']['arrayType'] != ('texturebuffer' if decl['type']=='samplerBuffer' else 'uniformarray') or (decl['type']!='samplerBuffer' and (not array_shape(decl['type']) or row['arrayBinding']['elementType'] != array_shape(decl['type'])[0])))
         if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied or array_invalid:
             decl['sourceMissing'] = True; record['missing'] = True
             message = ('Native Array storage or element type differs from '+decl['type']+': ' if array_invalid else 'Native source is missing or ambiguous: ') + decl['name']
@@ -359,6 +363,7 @@ def reconcile(declarations, registry, rows, operator=None):
         else:
             decl['name'] = row['name']; decl.pop('sourceMissing', None)
             if row['sequence'] in ('color','matrix','array'):decl['nativeSequence']=row['sequence']
+            if decl['type']=='samplerBuffer':decl['elementType']=row['arrayBinding']['elementType']
             record.update(name=row['name'], index=row['index']); record.pop('missing', None)
     known = {d['name'] for d in declarations}
     for i, row in enumerate(rows):
@@ -370,8 +375,13 @@ def reconcile(declarations, registry, rows, operator=None):
         ident = kind + '_' + uuid.uuid4().hex
         if row['sequence'] == 'array':
             binding = row['arrayBinding']
+            if binding['arrayType']=='texturebuffer' and binding['elementType'] in ARRAY_ELEMENT_TYPES:
+                declarations.append(dict(id=ident,kind='uniform',name=name,type='samplerBuffer',nativeSequence='array',elementType=binding['elementType'],value=None))
+                registry[ident]={k:row[k] for k in ('sequence','index','name')}
+                known.add(name)
+                continue
             if binding['arrayType'] != 'uniformarray' or binding['elementType'] not in ARRAY_ELEMENT_TYPES:
-                issues.append(dict(source_issue(row,'Texture Buffer access is not supported yet: ' + name),status='unsupported'))
+                issues.append(dict(source_issue(row,'Unsupported native Array format: ' + name),status='unsupported'))
                 continue
             try:
                 if operator is None: raise SourceError('Refresh native sources to inspect the CHOP length.')
@@ -481,6 +491,9 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
             if source is None:
                 matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] != 'const']
                 source = matches[0] if len(matches) == 1 else None
+            if decl['type']=='samplerBuffer':
+                if source and (source['sequence']!='array' or source['arrayBinding']['arrayType']!='texturebuffer'):raise SourceError('Native Texture Buffer storage differs from its declaration: '+decl['name'])
+                continue
             if array_shape(decl['type']):
                 if source:
                     if source['sequence'] != 'array' or source['arrayBinding']['arrayType'] != 'uniformarray':
@@ -522,7 +535,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
             sequence = existing['sequence']; index = existing['index']
             if (sequence=='const') != (decl['kind']=='spec_constant'):
                 raise SourceError('Native source kind differs from its declaration: ' + decl['name'])
-            if (sequence == 'array') != bool(array_shape(decl['type'])):
+            if (sequence == 'array') != bool(array_shape(decl['type']) or decl['type']=='samplerBuffer'):
                 raise SourceError('Create a new Uniform when changing native source pages: '+decl['name'])
             if (sequence=='matrix') != (decl['type'] in MATRIX_SHAPES):
                 raise SourceError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
@@ -566,8 +579,8 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
             candidates = [r for r in native_rows(original) if r['name'] == decl['name']]
             source = candidates[0] if len(candidates) == 1 and original != operator else None
         if sequence == 'array':
-            parameter(operator, sequence, index, 'type').val = array_shape(decl['type'])[0]
-            parameter(operator, sequence, index, 'arraytype').val = 'uniformarray'
+            parameter(operator, sequence, index, 'type').val = (source['arrayBinding']['elementType'] if source else decl.get('elementType','float')) if decl['type']=='samplerBuffer' else array_shape(decl['type'])[0]
+            parameter(operator, sequence, index, 'arraytype').val = 'texturebuffer' if decl['type']=='samplerBuffer' else 'uniformarray'
             p = parameter(operator, sequence, index, 'chop')
             if source and original != operator:
                 helper = runtime._owner.op('sources').path
@@ -578,7 +591,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
                 p.val = resolved.path
             else:
                 p.val = decl.get('arraySource', '')
-            if ident in validate_data and array_source_length(operator, index) < array_lengths[decl['id']]:
+            if decl['type']!='samplerBuffer' and ident in validate_data and array_source_length(operator, index) < array_lengths[decl['id']]:
                 raise SourceError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
             registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
             continue
@@ -651,7 +664,7 @@ def snapshot(runtime):
                      'sequence': row['sequence'] if row else '',
                      'components': (matrix_components(row['matrixBinding'],decl['type']) if row.get('matrixBinding') else row['components']) if row else [],
                      **({'matrixBinding':row['matrixBinding']} if row and row.get('matrixBinding') else {}),
-                     **({'arrayBinding':dict(row['arrayBinding'], length=array_shape(decl['type'])[1])} if row and row.get('arrayBinding') and array_shape(decl['type']) else {}),
+                     **({'arrayBinding':dict(row['arrayBinding'], **({'length':array_shape(decl['type'])[1]} if array_shape(decl['type']) else {}))} if row and row.get('arrayBinding') else {}),
                      'nameWritable': row is not None and row['nameMode'] == 'CONSTANT',
                      'expected': edit_token(row) if row else None})
     return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows, 'specConstants': spec_rows,
@@ -753,17 +766,21 @@ def edit(runtime, body):
             name = body.get('name'); ty = body.get('type'); kind = body.get('kind', 'uniform')
             if not valid_name(name) or name in {d['name'] for d in graph['declarations']} or any(r['name'] == name for r in native_rows(operator)):
                 raise SourceError('Use a unique GLSL Uniform name.')
-            if kind not in SOURCE_KINDS or not (ty in SPEC_TYPES if kind=='spec_constant' else ty in TYPES or array_shape(ty)): raise SourceError('Unsupported native source type.')
+            if kind not in SOURCE_KINDS or not (ty in SPEC_TYPES if kind=='spec_constant' else ty in TYPES or array_shape(ty) or ty=='samplerBuffer'): raise SourceError('Unsupported native source type.')
             decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
-                    'value': None if array_shape(ty) else runtime.core().filled_value(ty)}
+                    'value': None if array_shape(ty) or ty=='samplerBuffer' else runtime.core().filled_value(ty)}
             if kind=='spec_constant':decl.update(constantId=next_constant_id(graph['declarations']), nativeSequence='const')
-            elif array_shape(ty):
+            elif array_shape(ty) or ty=='samplerBuffer':
+                if ty=='samplerBuffer':
+                    element=body.get('elementType','float')
+                    if element not in ARRAY_ELEMENT_TYPES:raise SourceError('Choose a floating CHOP element type.')
+                    decl['elementType']=element
                 path = body.get('arraySource', '')
                 if not isinstance(path, str) or len(path)>4096 or any(ord(c)<32 for c in path): raise SourceError('Choose a CHOP path for the Uniform Array.')
                 decl.update(nativeSequence='array', arraySource=path)
             elif ty in MATRIX_SHAPES:decl['nativeSequence']='matrix'
             if body.get('sequence'):
-                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('array',) if array_shape(ty) else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise SourceError('Unsupported native source page.')
+                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('array',) if array_shape(ty) or ty=='samplerBuffer' else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise SourceError('Unsupported native source page.')
                 decl['nativeSequence']=body['sequence']
             if body.get('preset'):
                 if kind!='uniform' or body['preset'] not in PRESETS or ty!='float':raise SourceError('Unsupported time preset.')
@@ -783,7 +800,7 @@ def edit(runtime, body):
         return snapshot(runtime)
     if row is None: raise SourceError('This Uniform source is missing.')
     if action == 'arrayBinding':
-        if row['sequence'] != 'array' or not array_shape(decl['type']): raise SourceError('Select a CHOP Uniform Array source.')
+        if row['sequence'] != 'array' or not (array_shape(decl['type']) or decl['type']=='samplerBuffer'): raise SourceError('Select a CHOP Uniform Array source.')
         binding = row['arrayBinding']
         if not binding['writable'] or body.get('expected') != binding['expected']:
             raise SourceError('The array source changed or is owned by Bind / Export. Refresh or use native Parameters.')
@@ -796,7 +813,7 @@ def edit(runtime, body):
         try:
             if mode == 'EXPRESSION': p.expr = value
             else: p.mode = ParMode.CONSTANT; p.val = value
-            if array_source_length(operator,row['index']) < native_array_length(decl,{d['id']:d for d in runtime.state()['graph']['declarations']}):
+            if decl['type']!='samplerBuffer' and array_source_length(operator,row['index']) < native_array_length(decl,{d['id']:d for d in runtime.state()['graph']['declarations']}):
                 raise SourceError('The CHOP has fewer samples than the declared Uniform Array length.')
         except Exception:
             for key in ('val','expr','bindExpr','mode'): setattr(p,key,before[key])

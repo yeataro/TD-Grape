@@ -237,10 +237,12 @@ const GraphClipboard=(()=>{
     for(const [key,d]of sourceDeclarations){
       if(graph.topSourceVersion===1&&d.kind==='sampler')fail('clipboard.stage');
       if(same&&graph.declarations.some(x=>x.id===key)){declarationMap.set(key,key);continue;}
-      if(!['uniform','sampler','constant','spec_constant'].includes(d.kind)||!validType(d.type)&&d.type!=='sampler2D'&&!(['int','uint','bool'].includes(d.type)&&d.kind==='spec_constant')||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
+      if(!['uniform','sampler','constant','spec_constant'].includes(d.kind)||!validType(d.type)&&!['sampler2D','samplerBuffer'].includes(d.type)&&!(['int','uint','bool'].includes(d.type)&&d.kind==='spec_constant')||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
       const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
-      if(d.kind==='uniform'&&d.nativeSequence==='array'){
+      if(d.kind==='uniform'&&d.type==='samplerBuffer'){
+        if(d.nativeSequence!=='array'||d.value!==null||!['float','vec2','vec3','vec4'].includes(d.elementType||'float')||typeof(d.arraySource||'')!=='string'||(d.arraySource||'').length>4096||/[\x00-\x1f]/.test(d.arraySource||''))fail('clipboard.invalid');
+      }else if(d.kind==='uniform'&&d.nativeSequence==='array'){
         if(!/^(float|vec[234])\[([1-9][0-9]*|sg_len_[A-Za-z][A-Za-z0-9_]{0,63})\]$/.test(d.type)||typeof d.arraySource!=='string'||d.arraySource.length>2048||/[\x00-\x1f]/.test(d.arraySource))fail('clipboard.invalid');
       }else if(['uniform','constant'].includes(d.kind)){
         const vector=/^(i|u|b|d)?vec([234])$/.exec(d.type),matrix=/^(d)?mat([234])(?:x([234]))?$/.exec(d.type),family=matrix?(matrix[1]?'double':'float'):vector?({i:'int',u:'uint',b:'bool',d:'double'}[vector[1]]||'float'):d.type,count=matrix?Number(matrix[2])*Number(matrix[3]||matrix[2]):vector?Number(vector[2]):1;

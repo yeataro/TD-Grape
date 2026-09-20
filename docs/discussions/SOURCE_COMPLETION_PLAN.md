@@ -1,6 +1,6 @@
 # 來源功能接續計畫
 
-2026-09-20。整合本輪操作回報與[來源建構共識](SOURCE_ARCHITECTURE_REVIEW.md)。目前交付版為 0.8.126，第一輪與第二輪已完成；本文件是接續工作與驗收清單，不表示以下功能已完成。分類仍以[來源選單分類表](TD_SOURCE_MENU_REVIEW.md)為依據。
+2026-09-20。整合本輪操作回報與[來源建構共識](SOURCE_ARCHITECTURE_REVIEW.md)。第一輪與第二輪已完成；第三輪先完成 CHOP Texture Buffer（0.8.127），POP Buffer 接續。本文件是接續工作與驗收清單，不表示以下功能已完成。分類仍以[來源選單分類表](TD_SOURCE_MENU_REVIEW.md)為依據。
 
 ## 已完成的基礎
 
@@ -75,12 +75,14 @@ Colors 的新建／編輯型別入口限制為 `float`（R）、`vec2`（RG）�
 
 ### 第三輪：Texture Buffer 與 POP Buffer
 
-- [ ] CHOP Texture Buffer 原生配置清單、圖內引用、合法型別、取值及長度；與 Uniform Array 分開。
+- [x] CHOP Texture Buffer 原生配置清單、圖內引用、合法型別、取值及長度；與 Uniform Array 分開。
 - [ ] POP attribute buffer 的路徑、Attribute class／name、Shader 名及讀取／長度／Attribute Array Size 能力。
 - [ ] 空路徑、空資料、缺少 Attribute、變更儲存模式及來源恢復分別驗證，顯示原生診斷。
 - [ ] 清單確實為空時提示使用者在 TD 建立並配置；不代建 CHOP／POP 或 Attribute fallback。
 
 驗收：TOP／MAT 實際取值與宿主允許的 Stage 正確；同一 POP 可配置多個 Attribute；沒有「清單有項目但只能看不能讀」的半完成交付。
+
+0.8.127 子步驟：CHOP Texture Buffer 以原生 `samplerBuffer` 引用，提供 Buffer Fetch（`texelFetch`，vec4）與 Buffer Length（`textureSize`，int）。沿用 Uniform 的原生來源實體管理，UI 單獨列為 Texture Buffers；不放入可填值的 Custom Uniform Arrays，不查詢 CHOP 樣本／長度來建立圖型別，不建立替代 CHOP。TOP／MAT 隔離原生驗證通過：讀取、長度、Expression 綁定、空路徑及儲存模式失配保護。TOP 另實際讀到 0.375 與長度 8；MAT 本次驗證產碼與原生編譯。已追蹤來源切換 Uniform Array／Texture Buffer 時保持舊宣告與接線、標明失配並阻擋使用中的來源；恢復原模式即可恢復原識別，不默默改型別。顯式採用新儲存模式與完整分類整理接續來源工作。
 
 ### 第四輪：MAT Attribute 與來源內容補齊
 

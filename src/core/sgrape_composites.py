@@ -101,7 +101,7 @@ class Registry:
         if not isinstance(ty,str) or len(ty)>512:self.fail('Invalid type reference')
         if ty in self.cache:return self.cache[ty]
         if ty in self.base:result=dict(kind='value',type=ty)
-        elif ty=='sampler2D':result=dict(kind='resource',type=ty)
+        elif ty in ('sampler2D','samplerBuffer'):result=dict(kind='resource',type=ty)
         elif ty in self.structs:result=dict(kind='struct',type=ty,definition=self.structs[ty])
         else:
             match=ARRAY_TYPE.fullmatch(ty)

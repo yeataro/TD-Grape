@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.126'
+PRODUCT_VERSION='0.8.127'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1329,7 +1329,7 @@ def existing_values(comp,new_graph):
         values={}; operator=shader_operator(comp)
         for decl in new_graph['declarations']:
             if decl['kind']!='uniform': continue
-            if source_module().array_shape(decl['type']): continue
+            if source_module().array_shape(decl['type']) or decl['type']=='samplerBuffer': continue
             row=source_module().locate(operator,comp.fetch('grapeNativeUniformsV1',{}).get(decl['id']))
             if row:
                 components=source_module().matrix_components(row['matrixBinding'],decl['type']) if row.get('matrixBinding') else row['components']
@@ -1610,7 +1610,7 @@ def uniform_snapshot():
         current=state()
         for row in native['uniforms']:
             if not row['missing'] and row['id'] not in rows:
-                rows[row['id']]={'type':row['type'],'default':row['default'],'components':row['components'][:core().type_components(row['type'])],
+                rows[row['id']]={'type':row['type'],'default':row['default'],'components':row['components'][:source_module().source_components(row)],
                                  **({'matrixBinding':row['matrixBinding']} if row.get('matrixBinding') else {}),
                                  **({'arrayBinding':row['arrayBinding']} if row.get('arrayBinding') else {})}
     return {'revision':current['revision'],'uniforms':rows,'textures':texture_snapshot(comp,current['graph'])}

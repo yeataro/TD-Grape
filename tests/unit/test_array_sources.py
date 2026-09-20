@@ -103,7 +103,8 @@ class ArraySources(unittest.TestCase):
         f, declaration, block = self.fixture(); block['arraytype'].val = 'texturebuffer'
         row = next(r for r in sources.native_rows(f.operator) if r['sequence']=='array')
         declarations, registry, issues = sources.reconcile([],{},[row],f.operator)
-        self.assertEqual((declarations,registry),([],{})); self.assertIn('Texture Buffer',issues[0]['message'])
+        self.assertEqual(len(declarations),1); self.assertEqual(declarations[0]['type'],'samplerBuffer')
+        self.assertIsNone(declarations[0]['value']); self.assertEqual(issues,[]); self.assertIn(declarations[0]['id'],registry)
         block['chop'].eval.assert_not_called()
         declarations, _, _ = sources.reconcile([declaration],f.storage[sources.STORE],[row],f.operator)
         self.assertTrue(declarations[0]['sourceMissing'])

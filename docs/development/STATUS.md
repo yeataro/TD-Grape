@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 Texture Buffer 子功能 0.8.127：CHOP Arrays 的 Texture Buffer 可匯入／建立為 samplerBuffer，使用 Buffer Fetch / Buffer Length；沒有數值預設、CPU 樣本查詢或補位 CHOP。候選編譯保留原生 Expression 與格式，舊數值快照流程排除資源。儲存模式失配保留舊宣告接線並攔截使用中的來源。479 Python、14 附加檢查、JS／整合與 720 雙語鍵通過；Buffer 瀏覽器 3 組、来源卡片 8 組，TD TOP／MAT 8 組（TOP 實讀 0.375 與長度 8）通過，既有 Shader 保留。第三輪仍有 POP Buffer、顯式採用儲存模式及分類整理；不代表五輪來源工作完成。同步與 TOE 保存另記。
+
 2026-09-20 0.8.126 交付檢查點：來源 refresh、TOP／MAT master 同步與唯讀 audit 成功，36 份嵌入來源、9 個主要資源與版本一致；master revision 74，三份使用者 Shader 保留。TOE 948750 bytes，SHA256 `36ffc39882b8cec6450142e4fa365f297ed479a09f02a427ec9483d48d732352`。報告 `work/reports/source-cards/`；未強制刷新使用者網頁。
 
 2026-09-20 來源第二輪卡片檢查點 0.8.126：Common 六項時間預置以 TD Python 名稱顯示；未建立卡片保留類型色並降低亮度，首次引用才初始化。同名相容來源重用、不覆寫值／模式；衝突不偷偷建立改名副本。Custom Uniforms 分 Values／Matrices／Arrays，保留 Colors 原生頁標示。來源卡片可收合，右鍵與觸控操作共用選單、刪除沿用產品 overlay；缺失警告收合後仍可見。來源 DOM 依 ID 與 metadata 更新，選取／數值不重建卡片，改名只替換該卡片；一般新增不再混入時間預置。原生 TOP／MAT 六項初始化回歸、來源卡片 8 組、既有來源 13 組、即時控制 10 組、缺失 5 組、刪除／Colors 5 組通過。完整 portable checks：474 Python 測試及 JS／整合檢查、716 雙語鍵驗證通過；已檢視窄面板截圖。同步與 TOE 保存另記。下一輪為 Texture Buffer／POP Buffer，不插入 GLSL OP 狀態卡筆記。

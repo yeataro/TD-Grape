@@ -41,7 +41,7 @@ SIGNED_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family']
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
 COMPARE_TYPES = ('float', 'int', 'uint')
 COMPARE_OPERATORS = ('>', '>=', '<', '<=', '==', '!=')
-RESOURCE_TYPES = ('sampler2D',)
+RESOURCE_TYPES = ('sampler2D', 'samplerBuffer')
 PORT_TYPES = TYPES + RESOURCE_TYPES
 CONVERT_OUTPUT_TYPES = {'convert':SCALAR_VECTOR_TYPES,'matrix_convert':MATRIX_TYPES}
 CONVERT_KEYS = tuple(CONVERT_OUTPUT_TYPES)
@@ -49,7 +49,7 @@ CONVERSIONS = {(ty, ty): 'identity' for ty in TYPES}
 CONVERSIONS.update({(source,target):'cast' for source in NUMERIC_TYPES for target in NUMERIC_TYPES
                     if source!=target and (TYPE_DESCRIPTORS[source]['components']==TYPE_DESCRIPTORS[target]['components'] or TYPE_DESCRIPTORS[source]['components']==1)})
 CONVERSIONS.update({(TYPE_DESCRIPTORS[ty]['family'],ty):'splat' for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1})
-CONVERSIONS[('sampler2D', 'sampler2D')] = 'identity'
+CONVERSIONS.update({(ty,ty):'identity' for ty in RESOURCE_TYPES})
 ID = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,47}$')
 
@@ -104,7 +104,7 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','constant','top_input','glsl_code',
+    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
@@ -568,7 +568,7 @@ def resolved_ports(definition, params, declaration=None):
         if token == 'T': return selected
         if token == 'D':
             ty = declaration.get('type') if declaration else None
-            if not valid_port_type(ty,resources=False): raise GraphError('Select a matching declaration')
+            if not valid_port_type(ty,resources=definition['key']=='uniform' and ty=='samplerBuffer'): raise GraphError('Select a matching declaration')
             return ty
         return token
     return {kind: {port: resolve(ty) for port, ty in definition_ports(definition, params)[kind].items()}
@@ -599,8 +599,9 @@ def _type_contract():
         if definition['key'] in NOISE_HELPERS:choices=list(FLOAT_VECTOR_TYPES)
         if definition['key']=='compare':choices=list(COMPARE_TYPES)
         if definition['key']=='spec_constant':choices=list(SPEC_TYPES)
+        if definition['key']=='uniform':choices=list(choices)+['samplerBuffer']
         def variant(ty):
-            params=dict(definition['defaults'],type='float' if definition['key']=='spec_constant' else ty or 'float')
+            params=dict(definition['defaults'],type='float' if definition['key']=='spec_constant' or ty=='samplerBuffer' else ty or 'float')
             if definition['key'] in ('vector','combine','replace'):
                 params['components']=filled_value(shaped_type(TYPE_DESCRIPTORS[params['type']]['family'],4))
             if definition['key'] in ('matrix','matrix_combine','matrix_replace'):
@@ -608,7 +609,7 @@ def _type_contract():
             return dict(type=ty,**resolved_ports(definition,params,{'type':ty}))
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [variant(ty) for ty in choices]}
     result = {'version': 1, 'valueTypes':list(TYPES), 'numericTypes': list(NUMERIC_TYPES), 'specConstantTypes': list(SPEC_TYPES), 'resourceTypes': list(RESOURCE_TYPES),
-              'types': dict(copy.deepcopy(TYPE_DESCRIPTORS), sampler2D={'family':'sampler','components':0}),
+              'types': dict(copy.deepcopy(TYPE_DESCRIPTORS), **{ty:{'family':'sampler','components':0} for ty in RESOURCE_TYPES}),
               'glslCode':{'maxPorts':GLSL_CODE_MAX_PORTS,'maxLength':GLSL_CODE_MAX_LENGTH,'reservedNames':sorted(GLSL_CODE_RESERVED)},
               'vectors':{'version':1,'types':list(VECTOR_TYPES),'components':VECTOR_COMPONENTS,
                          'scalarTypes':{ty:TYPE_DESCRIPTORS[ty]['family'] for ty in VECTOR_TYPES},
@@ -921,9 +922,13 @@ def _compile_flat(graph,annotation_scopes=None):
             if d.get('initialDriver') or d.get('expose'):raise GraphError('Spec Constants do not expose Uniform drivers')
             if d.get('nativeSequence','const')!='const':raise GraphError('Spec Constants use the native Constants page')
         elif d.get('kind')=='uniform':
-            if not valid_port_type(d.get('type'),resources=False): raise GraphError('Unsupported uniform type')
+            if not valid_port_type(d.get('type'),resources=d.get('type')=='samplerBuffer'): raise GraphError('Unsupported uniform type')
             if d.get('nativeSequence','vec') not in ('vec','color','matrix','array'):raise GraphError('Unsupported native Uniform page')
-            if d.get('nativeSequence')=='array':
+            if d.get('type')=='samplerBuffer':
+                if d.get('nativeSequence')!='array' or d.get('elementType','float') not in FLOAT_TYPES or d.get('value') is not None or d.get('expose') or d.get('initialDriver'):raise GraphError('Texture Buffers require a native CHOP source and no numeric defaults or drivers')
+                source=d.get('arraySource','')
+                if not isinstance(source,str) or len(source)>4096 or any(ord(c)<32 for c in source):raise GraphError('Buffer source must be a CHOP path')
+            elif d.get('nativeSequence')=='array':
                 shape=type_registry().describe(d['type'])
                 if shape['kind']!='array' or shape['elementType'] not in FLOAT_TYPES:
                     raise GraphError('The Arrays page supports arrays of float or vec2/3/4')
@@ -1166,6 +1171,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     val=expressions[source]
                     return convert_expression(val, ports[source[0]]['out'][source[1]], target)
                 if target in RESOURCE_TYPES:
+                    if target=='samplerBuffer':raise GraphError('Connect a Texture Buffer source',ident)
                     if managed:
                         diagnostics.append({'node':ident,'stage':stage,'message':'Sampler input is unconnected; sampling returns opaque black without allocating a TOP Input'})
                         return 'sg_unconnectedSampler'
@@ -1340,6 +1346,8 @@ def _compile_flat(graph,annotation_scopes=None):
                     expr='sTD2DInputs['+str(index)+']'
                     expressions[(ident,'size')]='uTD2DInfos['+str(index)+'].res.zw'
                     expressions[(ident,'pixelSize')]='uTD2DInfos['+str(index)+'].res.xy'
+                elif k=='buffer_fetch':expr='texelFetch('+a('buffer')+', '+a('index')+')'
+                elif k=='buffer_length':expr='textureSize('+a('buffer')+')'
                 elif k=='texture_sample':
                     sampler=a('sampler')
                     expr='vec4(0.0, 0.0, 0.0, 1.0)' if sampler=='sg_unconnectedSampler' else 'texture('+sampler+', '+a('uv')+')'

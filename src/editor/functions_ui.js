@@ -172,6 +172,7 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
   const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'sValue'})[kind]||'uValue')};
   if(kind==='spec_constant'){const ids=new Set(graph.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;Object.assign(decl,{value:specDefaultValue(value??0,type),constantId,nativeSequence:'const'});}
   else if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
+  else if(kind==='uniform'&&type==='samplerBuffer')Object.assign(decl,{value:null,expose:false,nativeSequence:'array',elementType:elementType||'float',arraySource:arraySource||''});
   else if(kind==='uniform'&&(nativeSequence==='array'||/\[[0-9]+\]$/.test(type))){
     if(elementType&&length)decl.type=elementType+'['+length+']';
     Object.assign(decl,{value:null,expose:false,nativeSequence:'array',arraySource:arraySource||''});

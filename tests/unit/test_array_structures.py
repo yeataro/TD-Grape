@@ -34,7 +34,7 @@ class ArrayStructures(unittest.TestCase):
     def test_contract_keeps_numeric_types_and_dynamic_nodes_bounded(self):
         contract=c.type_contract({'typeDefinitions':[SAMPLE]})
         self.assertEqual(len(contract['valueTypes']),38)
-        self.assertEqual(len(contract['types']),39)
+        self.assertEqual(len(contract['types']),40)
         self.assertIn('struct:sample',contract['composites']['structs'])
         for key in c.COMPOSITE_KEYS:
             row=contract['definitions'][c.CATALOG[key]['definitionUuid']]
