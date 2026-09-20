@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.125 交付檢查點：refresh／master 同步／唯讀 audit 成功，36 份嵌入來源、9 個主要網頁資源與版本一致，TOP／MAT master revision 73；三份使用者 Shader 保留。TOE 保存 944966 bytes，SHA256 `47ccc3a948546444860b3d22f9dd15f06351d442de98d3f2e94f659cfc79695c`。報告 `work/reports/source-multi/`。master 第一次送出前遇到工作佇列檔案暫時鎖定，尚未執行，單獨重送成功；未強制刷新使用者網頁。
+
 2026-09-20 來源第二輪即時控制檢查點 0.8.125：图內 Uniform scalar／vector 引用共用 Parameter 數值元件與 TD 實體；可見控制依來源 ID 去重訂閱，離開視野退訂，值訊息合併到一幀更新且不保存圖。批次訂閱只讀一次圖；原生每輪只評估宣告的分量。保留值／模式／Parameter 身分衝突檢查及 Bind、手勢合併與 Undo。訂閱失效通知若碰到忙碌或已在請求，會保留刷新需求；沒有提高全清單輪詢頻率。474 Python 與 JS／整合 portable checks、原生 13 組及瀏覽器 10 組、刪除／Colors 5 組通過，已檢視圖內控制截圖。200 來源初始化約 14.21 ms、一次全來源 tick 約 4.86 ms（本機單次量測），成本拆解見[即時 Uniform 紀錄](../discussions/UNIFORM_LIVE_EDITING.md)。完整 Common／Custom 卡片尚在第二輪主線，非宣稱本輪已完成。同步與保存另記。
 
 2026-09-20 0.8.124 交付檢查點：refresh／master 同步／唯讀 audit 全部成功，36 份嵌入來源與 9 個主要網頁資源一致，TOP／MAT master 為 revision 72；三份使用者 Shader 保留。TOE 已保存（943710 bytes，SHA256 `14882dc15bfda4bc4ccde5c41c1e498332e58dcdcbfc602e76e6887036ce40f0`），沒有強制刷新使用者網頁。報告 `work/reports/source-review/`。
