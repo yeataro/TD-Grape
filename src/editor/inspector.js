@@ -2185,9 +2185,12 @@ function nativeValueControls(decl,row){
     const components=values.slice(0,Math.min(3,count)).map((value,component)=>({component,value,expected:clone(items[component])})).filter(edit=>edit.value!==edit.expected.value);
     if(components.length)nativeSourceRequest('source-value',{id:decl.id,components});
   }),picker=swatch.querySelector('input'),load=editorLoadGeneration;
-  picker.onpointerdown=()=>picker.colorExpected=clone(nativeSourceIndex().get(decl.id)?.components);
+  picker.onpointerdown=()=>{picker.value=colorDisplay(read()).hex;picker.colorExpected=clone(nativeSourceIndex().get(decl.id)?.components);};
   picker.onkeydown=e=>{if(['Enter',' '].includes(e.key))picker.onpointerdown();};
-  picker.onblur=()=>{picker.colorExpected=null;const live=nativeSourceIndex().get(decl.id);if(live)syncNativeColorControls(box,live,sourceReady(true));};
+  // Native color dialogs may blur before change. Keep the edit snapshot through
+  // blur/polling; a new opening recaptures it even if the previous one canceled.
+  picker.oninput=()=>{picker.colorExpected??=clone(nativeSourceIndex().get(decl.id)?.components);};
+  const commit=picker.onchange;picker.onchange=()=>{try{commit();}finally{picker.colorExpected=null;}};
   line.append(toggle,compact);box.append(line,swatch);box.colorRead=read;syncNativeColorControls(box,row,sourceReady(true));return box;
 }
 function syncNativeColorControls(box,row,ready){
