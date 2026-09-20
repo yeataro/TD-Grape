@@ -5,6 +5,7 @@ are owned by TD and are deliberately absent from this catalog.
 """
 import copy
 import json
+import re
 from pathlib import Path
 
 
@@ -14,6 +15,18 @@ def validate(data):
     for name in ('uniformPresets', 'structures', 'builtins', 'lengthMacros'):
         if not isinstance(data.get(name), dict):
             raise ValueError('Invalid source catalog section: ' + name)
+    groups = data.get('menuGroups', {})
+    for key, entry in data['builtins'].items():
+        inputs = entry.get('inputs', {})
+        expression = entry.get('expression')
+        if (not isinstance(expression, str) or not isinstance(inputs, dict)
+                or set(re.findall(r'\{(\w+)\}', expression)) != set(inputs)
+                or any(not re.fullmatch(r'[A-Za-z]\w*', port) or ty not in ('int', 'uint') for port, ty in inputs.items())
+                or not entry.get('targets') or not entry.get('stages')
+                or any(target not in ('top', 'mat') for target in entry['targets'])
+                or any(stage not in ('vertex', 'pixel') for stage in entry['stages'])
+                or any(part not in groups for part in entry.get('path', []))):
+            raise ValueError('Invalid built-in source: ' + key)
     for key, entry in data['uniformPresets'].items():
         init = entry.get('initialize', {})
         if (not isinstance(key, str) or not key or entry.get('type') != 'float'
@@ -42,4 +55,4 @@ PRESETS = CATALOG['uniformPresets']
 
 def contract():
     """UI projection; no second mutable catalog and no native value snapshot."""
-    return {'version': 1, 'uniformPresets': copy.deepcopy(PRESETS)}
+    return {key: copy.deepcopy(CATALOG[key]) for key in ('version', 'uniformPresets', 'menuGroups', 'nodeSources')}

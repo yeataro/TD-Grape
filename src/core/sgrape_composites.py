@@ -101,7 +101,7 @@ class Registry:
         if not isinstance(ty,str) or len(ty)>512:self.fail('Invalid type reference')
         if ty in self.cache:return self.cache[ty]
         if ty in self.base:result=dict(kind='value',type=ty)
-        elif ty in ('sampler2D','samplerBuffer'):result=dict(kind='resource',type=ty)
+        elif ty in _source_catalog.CATALOG['resourceTypes']:result=dict(kind='resource',type=ty)
         elif ty in self.structs:result=dict(kind='struct',type=ty,definition=self.structs[ty])
         else:
             match=ARRAY_TYPE.fullmatch(ty)
@@ -257,7 +257,9 @@ class Registry:
         return lines
 
     def interface(self,key,params):
-        if key=='builtin_source':return dict(inputs={},outputs={'out':self.source(params.get('source','uTD2DInfos'))['type']})
+        if key=='builtin_source':
+            source=self.source(params.get('source','uTD2DInfos'))
+            return dict(inputs=dict(source.get('inputs',{})),outputs={'out':source['type']})
         if key in ('array','array_create'):
             element=params.get('elementType','float');length=params.get('length',4)
             self.describe(element)

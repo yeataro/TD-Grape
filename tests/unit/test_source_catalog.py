@@ -50,6 +50,34 @@ class SourceCatalog(unittest.TestCase):
             self.assertEqual(registry.structs[name], spec)
         self.assertEqual(sources.CATALOG['builtins']['uTD2DInfos']['type'], 'TDTexInfo[TD_NUM_2D_INPUTS]')
 
+    def test_builtin_catalog_ports_and_availability(self):
+        registry = core.type_registry()
+        for name, spec in sources.CATALOG['builtins'].items():
+            with self.subTest(source=name):
+                ports = registry.interface('builtin_source', {'source': name})
+                self.assertEqual(ports['inputs'], spec.get('inputs', {}))
+                for target in spec['targets']:
+                    for stage in spec['stages']:
+                        registry.check_environment(spec['type'], target, stage)
+                self.assertTrue(spec['path'])
+        with self.assertRaises(core.GraphError):
+            registry.source('TDNormal', 'top', 'pixel')
+        with self.assertRaises(core.GraphError):
+            registry.source('TDTexCoord', 'mat', 'pixel')
+
+    def test_accessor_emits_connected_index_without_native_declarations(self):
+        from test_array_structures import graph
+        g = graph([core.node('scalar','index',type='uint',value=2),core.node('builtin_source','get',source='TDTexCoord')],
+                  [core.edge('index','get','layer')],ty='vec3',target='mat',stage='vertex')
+        result=core.compile_graph(g)['vertex']
+        self.assertIn('TDTexCoord(sg_n_index)',result)
+        self.assertNotIn('uniform vec3 TDTexCoord',result)
+
+    def test_catalog_rejects_incomplete_accessor_or_menu_path(self):
+        for mutation in (lambda x:x.update(expression='TDTexCoord({missing})'),lambda x:x.update(path=['unknown'])):
+            data=copy.deepcopy(sources.CATALOG);mutation(data['builtins']['TDTexCoord'])
+            with self.assertRaises(ValueError):sources.validate(data)
+
 
 if __name__ == '__main__':
     unittest.main()

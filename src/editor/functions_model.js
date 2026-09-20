@@ -50,6 +50,8 @@ const GraphFrames=(()=>{
 /* Graph-owned type definitions travel with portable graph fragments. */
 const GraphTypeDefinitions=(()=>{
   const copy=v=>JSON.parse(JSON.stringify(v));
+  let hostTypes=['TDTexInfo','TDMatrix','TDCameraInfo','TDLight'],hostLengths=['TD_NUM_2D_INPUTS','TD_NUM_CAMERAS','TD_NUM_LIGHTS'];
+  function configure(composites){hostTypes=Object.keys(composites?.structs||{});hostLengths=Object.keys(composites?.array?.lengthMacros||{});}
   const canonical=v=>JSON.stringify(Array.isArray(v)?v.map(normalize):normalize(v));
   function normalize(v){return v&&typeof v==='object'?Array.isArray(v)?v.map(normalize):Object.fromEntries(Object.keys(v).sort().map(k=>[k,normalize(v[k])])):v;}
   function merge(existing=[],incoming=[]){
@@ -66,9 +68,9 @@ const GraphTypeDefinitions=(()=>{
   }
   function valid(type,base,definitions=[],depth=0,declarations=[]){
     if(typeof type!=='string'||depth>8)return false;
-    if(base.includes(type)||['TDTexInfo','TDMatrix','TDCameraInfo','TDLight'].includes(type)||definitions.some(d=>'struct:'+d.id===type))return true;
-    const match=/^(.+)\[([1-9][0-9]*|TD_NUM_2D_INPUTS|TD_NUM_CAMERAS|TD_NUM_LIGHTS|sg_len_[A-Za-z][A-Za-z0-9_]{0,63}|sg_extent_(?:[0-9a-f]{2})+)\]$/.exec(type);
-    return !!(match&&(!match[2].startsWith('sg_len_')||declarations.some(d=>d.id===match[2].slice(7)&&['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type)))&&(!/^\d+$/.test(match[2])||Number(match[2])<=1024)&&valid(match[1],base,definitions,depth+1,declarations));
+    if(base.includes(type)||hostTypes.includes(type)||definitions.some(d=>'struct:'+d.id===type))return true;
+    const match=/^(.+)\[([1-9][0-9]*|[A-Za-z][A-Za-z0-9_]*)\]$/.exec(type);
+    return !!(match&&(hostLengths.includes(match[2])||/^sg_extent_(?:[0-9a-f]{2})+$/.test(match[2])||/^sg_len_/.test(match[2])&&declarations.some(d=>d.id===match[2].slice(7)&&['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type))||/^\d+$/.test(match[2])&&Number(match[2])<=2147483647)&&valid(match[1],base,definitions,depth+1,declarations));
   }
   function reachable(definitions=[],fragment){
     const available=new Map(definitions.map(d=>[d.id,d])),seen=new Set();
@@ -88,7 +90,7 @@ const GraphTypeDefinitions=(()=>{
     }
     walk(fragment);return definitions.filter(d=>seen.has(d.id)).map(copy);
   }
-  return {merge,valid,reachable};
+  return {merge,valid,reachable,configure};
 })();
 /* Pure graph operations, shared by the editor and model tests. */
 const FunctionModel=(()=>{

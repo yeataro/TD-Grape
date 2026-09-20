@@ -41,7 +41,7 @@ SIGNED_TYPES = tuple(ty for ty in LEGACY_TYPES if TYPE_DESCRIPTORS[ty]['family']
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
 COMPARE_TYPES = ('float', 'int', 'uint')
 COMPARE_OPERATORS = ('>', '>=', '<', '<=', '==', '!=')
-RESOURCE_TYPES = ('sampler2D', 'samplerBuffer')
+RESOURCE_TYPES = tuple(_source_catalog.CATALOG['resourceTypes'])
 PORT_TYPES = TYPES + RESOURCE_TYPES
 CONVERT_OUTPUT_TYPES = {'convert':SCALAR_VECTOR_TYPES,'matrix_convert':MATRIX_TYPES}
 CONVERT_KEYS = tuple(CONVERT_OUTPUT_TYPES)
@@ -1189,7 +1189,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     val=expressions[source]
                     return convert_expression(val, ports[source[0]]['out'][source[1]], target)
                 if target in RESOURCE_TYPES:
-                    if target=='samplerBuffer':raise GraphError('Connect a Texture Buffer source',ident)
+                    if target!='sampler2D':raise GraphError('Connect a '+('Texture Buffer' if target=='samplerBuffer' else target)+' source',ident)
                     if managed:
                         diagnostics.append({'node':ident,'stage':stage,'message':'Sampler input is unconnected; sampling returns opaque black without allocating a TOP Input'})
                         return 'sg_unconnectedSampler'
@@ -1235,7 +1235,9 @@ def _compile_flat(graph,annotation_scopes=None):
                     lines.append('    for (int sg_fill_i = 0; sg_fill_i < '+length+'; ++sg_fill_i) {')
                     lines.extend('    '+line for line in type_registry().copy_value(variable+'[sg_fill_i]',a('value'),shape['elementType']))
                     lines.append('    }');expressions[(ident,'out')]=variable
-                elif k=='builtin_source':expr=type_registry().source(p['source'],graph_target(graph),stage)['expression']
+                elif k=='builtin_source':
+                    source=type_registry().source(p['source'],graph_target(graph),stage)
+                    expr=source['expression'].format(**{port:a(port) for port in source.get('inputs',{})})
                 elif k in ('array_get','array_replace','array_length'):
                     array_type=ports[ident]['in']['Array'];shape=type_registry().describe(array_type);length=type_registry().extent(shape['length'])
                     # Host lengths are compile-time macros. No per-element CPU or GPU scan.

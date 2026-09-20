@@ -376,6 +376,54 @@
           "type": "mat4"
         }
       ]
+    },
+    "TDGeneral": {
+      "id": "TDGeneral",
+      "name": "TDGeneral",
+      "provider": "external",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "fields": [
+        {
+          "id": "ambientColor",
+          "name": "ambientColor",
+          "type": "vec4"
+        },
+        {
+          "id": "viewport",
+          "name": "viewport",
+          "type": "vec4"
+        }
+      ]
+    },
+    "TDEnvLight": {
+      "id": "TDEnvLight",
+      "name": "TDEnvLight",
+      "provider": "external",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "fields": [
+        {
+          "id": "color",
+          "name": "color",
+          "type": "vec3"
+        },
+        {
+          "id": "rotate",
+          "name": "rotate",
+          "type": "mat3"
+        }
+      ]
     }
   },
   "builtins": {
@@ -387,6 +435,10 @@
       ],
       "stages": [
         "pixel"
+      ],
+      "path": [
+        "textures",
+        "2d"
       ]
     },
     "sTD2DInputs": {
@@ -397,6 +449,10 @@
       ],
       "stages": [
         "pixel"
+      ],
+      "path": [
+        "textures",
+        "2d"
       ]
     },
     "uTDMats": {
@@ -408,6 +464,10 @@
       "stages": [
         "vertex",
         "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "matrices"
       ]
     },
     "uTDCamInfos": {
@@ -419,6 +479,10 @@
       "stages": [
         "vertex",
         "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "cameras"
       ]
     },
     "uTDLights": {
@@ -430,6 +494,805 @@
       "stages": [
         "vertex",
         "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "lights"
+      ]
+    },
+    "TD_NUM_2D_INPUTS": {
+      "type": "int",
+      "expression": "TD_NUM_2D_INPUTS",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "2d"
+      ]
+    },
+    "sTD3DInputs": {
+      "type": "sampler3D[TD_NUM_3D_INPUTS]",
+      "expression": "sTD3DInputs",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "3d"
+      ]
+    },
+    "uTD3DInfos": {
+      "type": "TDTexInfo[TD_NUM_3D_INPUTS]",
+      "expression": "uTD3DInfos",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "3d"
+      ]
+    },
+    "TD_NUM_3D_INPUTS": {
+      "type": "int",
+      "expression": "TD_NUM_3D_INPUTS",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "3d"
+      ]
+    },
+    "sTD2DArrayInputs": {
+      "type": "sampler2DArray[TD_NUM_2D_ARRAY_INPUTS]",
+      "expression": "sTD2DArrayInputs",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "2dArray"
+      ]
+    },
+    "uTD2DArrayInfos": {
+      "type": "TDTexInfo[TD_NUM_2D_ARRAY_INPUTS]",
+      "expression": "uTD2DArrayInfos",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "2dArray"
+      ]
+    },
+    "TD_NUM_2D_ARRAY_INPUTS": {
+      "type": "int",
+      "expression": "TD_NUM_2D_ARRAY_INPUTS",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "2dArray"
+      ]
+    },
+    "sTDCubeInputs": {
+      "type": "samplerCube[TD_NUM_CUBE_INPUTS]",
+      "expression": "sTDCubeInputs",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "cube"
+      ]
+    },
+    "uTDCubeInfos": {
+      "type": "TDTexInfo[TD_NUM_CUBE_INPUTS]",
+      "expression": "uTDCubeInfos",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "cube"
+      ]
+    },
+    "TD_NUM_CUBE_INPUTS": {
+      "type": "int",
+      "expression": "TD_NUM_CUBE_INPUTS",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "textures",
+        "cube"
+      ]
+    },
+    "uTDOutputInfo": {
+      "type": "TDTexInfo",
+      "expression": "uTDOutputInfo",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "render"
+      ],
+      "aliases": [
+        "Output Info"
+      ]
+    },
+    "uTDOutputInfo.res.zw": {
+      "type": "vec2",
+      "expression": "uTDOutputInfo.res.zw",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "output"
+      ],
+      "aliases": [
+        "Output Resolution"
+      ]
+    },
+    "uTDOutputInfo.res.xy": {
+      "type": "vec2",
+      "expression": "uTDOutputInfo.res.xy",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "output"
+      ],
+      "aliases": [
+        "Output Pixel Size"
+      ]
+    },
+    "vUV": {
+      "type": "vec3",
+      "expression": "vUV",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "coordinates"
+      ],
+      "aliases": [
+        "Texture Coordinates"
+      ]
+    },
+    "uTDPass": {
+      "type": "int",
+      "expression": "uTDPass",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "render"
+      ],
+      "aliases": [
+        "Pass Index"
+      ]
+    },
+    "uTDCurrentDepth": {
+      "type": "int",
+      "expression": "uTDCurrentDepth",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "render"
+      ],
+      "aliases": [
+        "Output Slice"
+      ]
+    },
+    "sTDNoiseMap": {
+      "type": "sampler2D",
+      "expression": "sTDNoiseMap",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "resources"
+      ],
+      "aliases": [
+        "Noise Map"
+      ]
+    },
+    "sTDSineLookup": {
+      "type": "sampler1D",
+      "expression": "sTDSineLookup",
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "resources"
+      ],
+      "aliases": [
+        "Sine Lookup"
+      ]
+    },
+    "gl_FragCoord": {
+      "type": "vec4",
+      "expression": "gl_FragCoord",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "coordinates"
+      ],
+      "aliases": [
+        "Fragment Coordinates"
+      ]
+    },
+    "gl_FrontFacing": {
+      "type": "bool",
+      "expression": "gl_FrontFacing",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "shaderInfo"
+      ],
+      "aliases": [
+        "Front Facing"
+      ]
+    },
+    "gl_SampleID": {
+      "type": "int",
+      "expression": "gl_SampleID",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "shaderInfo"
+      ],
+      "aliases": [
+        "Sample ID"
+      ]
+    },
+    "gl_SamplePosition": {
+      "type": "vec2",
+      "expression": "gl_SamplePosition",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "shaderInfo"
+      ],
+      "aliases": [
+        "Sample Position"
+      ]
+    },
+    "gl_HelperInvocation": {
+      "type": "bool",
+      "expression": "gl_HelperInvocation",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "shaderInfo"
+      ],
+      "aliases": [
+        "Helper Invocation"
+      ]
+    },
+    "TDNormal": {
+      "type": "vec3",
+      "expression": "TDNormal()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "Normal"
+      ]
+    },
+    "TDPointColor": {
+      "type": "vec4",
+      "expression": "TDPointColor()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "Point Color"
+      ]
+    },
+    "TDUVUnwrapCoord": {
+      "type": "vec3",
+      "expression": "TDUVUnwrapCoord()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "UV Unwrap"
+      ]
+    },
+    "TDInstanceID": {
+      "type": "int",
+      "expression": "TDInstanceID()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "aliases": [
+        "Instance ID"
+      ]
+    },
+    "TDCameraIndex": {
+      "type": "int",
+      "expression": "TDCameraIndex()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "cameras"
+      ],
+      "aliases": [
+        "Camera Index"
+      ]
+    },
+    "TDTrueCameraIndex": {
+      "type": "int",
+      "expression": "TDTrueCameraIndex()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "cameras"
+      ],
+      "aliases": [
+        "True Camera Index"
+      ]
+    },
+    "TDTexCoord": {
+      "type": "vec3",
+      "expression": "TDTexCoord({layer})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "common",
+        "coordinates"
+      ],
+      "inputs": {
+        "layer": "uint"
+      },
+      "aliases": [
+        "Texture Coordinates"
+      ]
+    },
+    "TDBoneMat": {
+      "type": "mat4",
+      "expression": "TDBoneMat({boneIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "inputs": {
+        "boneIndex": "int"
+      },
+      "aliases": [
+        "Bone Matrix"
+      ]
+    },
+    "TDInstanceMat": {
+      "type": "mat4",
+      "expression": "TDInstanceMat({instanceIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "inputs": {
+        "instanceIndex": "int"
+      }
+    },
+    "TDInstanceMat3": {
+      "type": "mat3",
+      "expression": "TDInstanceMat3({instanceIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "inputs": {
+        "instanceIndex": "int"
+      }
+    },
+    "TDInstanceTextureIndex": {
+      "type": "uint",
+      "expression": "TDInstanceTextureIndex({instanceIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "inputs": {
+        "instanceIndex": "int"
+      }
+    },
+    "TDInstanceCustomAttrib0": {
+      "type": "vec4",
+      "expression": "TDInstanceCustomAttrib0({instanceIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "inputs": {
+        "instanceIndex": "int"
+      }
+    },
+    "TDInstanceCustomAttrib1": {
+      "type": "vec4",
+      "expression": "TDInstanceCustomAttrib1({instanceIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "inputs": {
+        "instanceIndex": "int"
+      }
+    },
+    "TDInstanceCustomAttrib2": {
+      "type": "vec4",
+      "expression": "TDInstanceCustomAttrib2({instanceIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "inputs": {
+        "instanceIndex": "int"
+      }
+    },
+    "TDInstanceCustomAttrib3": {
+      "type": "vec4",
+      "expression": "TDInstanceCustomAttrib3({instanceIndex})",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "instances"
+      ],
+      "inputs": {
+        "instanceIndex": "int"
+      }
+    },
+    "TDPointCoord": {
+      "type": "vec2",
+      "expression": "TDPointCoord()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "coordinates"
+      ]
+    },
+    "uTDGeneral": {
+      "type": "TDGeneral",
+      "expression": "uTDGeneral",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "render"
+      ]
+    },
+    "uTDGeneral.ambientColor": {
+      "type": "vec4",
+      "expression": "uTDGeneral.ambientColor",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "lights"
+      ]
+    },
+    "Viewport Origin": {
+      "type": "vec2",
+      "expression": "uTDGeneral.viewport.xy",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "output"
+      ]
+    },
+    "Viewport Resolution": {
+      "type": "vec2",
+      "expression": "(1.0 / uTDGeneral.viewport.zw)",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "common",
+        "output"
+      ]
+    },
+    "uTDEnvLights": {
+      "type": "TDEnvLight[TD_NUM_ENV_LIGHTS]",
+      "expression": "uTDEnvLights",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "lights"
+      ]
+    },
+    "TD_NUM_LIGHTS": {
+      "type": "int",
+      "expression": "TD_NUM_LIGHTS",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "lights"
+      ]
+    },
+    "TD_NUM_ENV_LIGHTS": {
+      "type": "int",
+      "expression": "TD_NUM_ENV_LIGHTS",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "lights"
+      ]
+    },
+    "TD_NUM_CAMERAS": {
+      "type": "int",
+      "expression": "TD_NUM_CAMERAS",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "cameras"
+      ]
+    },
+    "TD_NUM_COLOR_BUFFERS": {
+      "type": "int",
+      "expression": "TD_NUM_COLOR_BUFFERS",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "render"
+      ]
+    },
+    "uTDEnvLightBuffers.shCoeffs": {
+      "type": "vec3[9]",
+      "expression": "uTDEnvLightBuffers[{lightIndex}].shCoeffs",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "inputs": {
+        "lightIndex": "int"
+      },
+      "path": [
+        "tdBuiltin",
+        "lights"
       ]
     }
   },
@@ -459,6 +1322,89 @@
         "vertex",
         "pixel"
       ]
+    },
+    "TD_NUM_3D_INPUTS": {
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ]
+    },
+    "TD_NUM_2D_ARRAY_INPUTS": {
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ]
+    },
+    "TD_NUM_CUBE_INPUTS": {
+      "targets": [
+        "top"
+      ],
+      "stages": [
+        "pixel"
+      ]
+    },
+    "TD_NUM_ENV_LIGHTS": {
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex",
+        "pixel"
+      ]
     }
-  }
+  },
+  "menuGroups": {
+    "time": "sources.time",
+    "common": "sources.common",
+    "textures": "sources.textures",
+    "tdBuiltin": "inputs.tdBuiltIn",
+    "coordinates": "sources.coordinates",
+    "output": "sources.output",
+    "shaderInfo": "sources.shaderInfo",
+    "geometry": "sources.geometry",
+    "instances": "sources.instances",
+    "matrices": "sources.matrices",
+    "cameras": "sources.cameras",
+    "lights": "sources.lights",
+    "render": "sources.render",
+    "resources": "sources.resources",
+    "2d": "sources.2d",
+    "3d": "sources.3d",
+    "2dArray": "sources.2dArray",
+    "cube": "sources.cube",
+    "buffer": "sources.buffer"
+  },
+  "nodeSources": {
+    "uv": {
+      "path": [
+        "common",
+        "coordinates"
+      ],
+      "aliases": [
+        "Texture Coordinates"
+      ]
+    },
+    "position": {
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "Position",
+        "TDPos"
+      ]
+    }
+  },
+  "resourceTypes": [
+    "sampler2D",
+    "samplerBuffer",
+    "sampler1D",
+    "sampler3D",
+    "sampler2DArray",
+    "samplerCube"
+  ]
 }

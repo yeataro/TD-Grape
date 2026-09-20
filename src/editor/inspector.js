@@ -2400,19 +2400,22 @@ function installCanvasItemDrag(button,label,dropItem,clickItem){
   };
 }
 function tdBuiltInEntries(query=''){
-  return catalog.filter(d=>['uv','position','builtin_source'].includes(d.key)&&d.stages.includes(stage)).flatMap(d=>d.key==='builtin_source'?builtinSourceEntries(d):[d]).filter(d=>normalizeSearch(d.label+' '+d.key+' '+builtInSourceLabel(d)).includes(query));
+  return catalog.filter(d=>['uv','position','builtin_source'].includes(d.key)&&d.stages.includes(stage)).flatMap(d=>d.key==='builtin_source'?builtinSourceEntries(d):[{...d,sourcePath:typeContract.sources.nodeSources[d.key]?.path,sourceAliases:typeContract.sources.nodeSources[d.key]?.aliases||[]}]).filter(d=>normalizeSearch([d.label,d.key,builtInSourceLabel(d),...d.sourceAliases].join(' ')).includes(query));
 }
 function addBuiltInReference(d,x=null,y=null){
   const rect=$('#canvas').getBoundingClientRect(),point=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!point)return;
   change(()=>{selectedInputId=null;selectNode(instantiate(d,point.x,point.y));});
 }
-function appendBuiltInInputs(box,query){
-  const entries=tdBuiltInEntries(query),kind='tdBuiltin';
-  if(query&&!entries.length)return;
-  const section=el('section',{class:'input-group','data-input-group':kind}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind}),toggle=el('button',{class:'input-group-toggle','aria-controls':list.id});
-  list.hidden=!query&&inputCollapsedGroups.has(kind);toggle.setAttribute('aria-expanded',String(!list.hidden));toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},t('inputs.tdBuiltIn')));
-  toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!query)setInputGroupCollapsed(kind,list.hidden);};head.append(toggle);section.append(head,list);
-  for(const d of entries){const row=el('div',{class:'input-source-row','data-category':nodeCategory(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.key});button.append(el('span',{},d.label),el('small',{},builtInSourceLabel(d)));installCanvasItemDrag(button,()=>d.label,(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));row.append(button);list.append(row);}box.append(section);
+function sourceMenuEntries(query){
+  if(sourceBuiltinCache?.query===query&&sourceBuiltinCache.catalog===catalog&&sourceBuiltinCache.contract===typeContract)return sourceBuiltinCache.groups;
+  const groups=new Map();
+  for(const d of tdBuiltInEntries(query)){
+    const path=d.sourcePath?.join('.')||'tdBuiltin.render',rows=groups.get(path)||[];
+    const row=el('div',{class:'input-source-row','data-category':nodeCategory(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.builtinSource||d.key});
+    button.append(el('span',{},d.label),el('small',{},builtInSourceLabel(d)||displayType(d.outputs.out)));button.disabled=readonly;
+    installCanvasItemDrag(button,()=>d.label,(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));row.append(button);rows.push(row);groups.set(path,rows);
+  }
+  sourceBuiltinCache={query,catalog,contract:typeContract,groups};return groups;
 }
 // Source presentation is keyed independently from graph selection and native values.
 // Reconcile only membership/order; untouched cards keep their controls and focus.
@@ -2518,31 +2521,42 @@ function renderSourceCards(box,query){
   if(context!==sourcePresentationContext){sourcePresentationContext=context;sourceCardCache.clear();sourceGroupCache.clear();sourceBuiltinCache=null;}
   const decls=allInputSources(),rows=nativeSourceIndex(),issues=nativeSourceSnapshot?.issues||[],issueById=new Map(issues.filter(i=>i.id).map(i=>[i.id,i]));
   const byDriver=new Map(),byName=new Map();for(const decl of decls){if(decl.initialDriver){const matches=byDriver.get(decl.initialDriver)||[];matches.push(decl);byDriver.set(decl.initialDriver,matches);}const matches=byName.get(decl.name)||[];matches.push(decl);byName.set(decl.name,matches);}
-  const used=new Set(),keys=new Set(),sections=[],common=[];
+  const used=new Set(),keys=new Set(),sections=[],common=new Map();
   const matches=(...text)=>normalizeSearch(text.join(' ')).includes(query);
   for(const preset of Object.keys(inputPresets())){
     const entry=typeContract.sources.uniformPresets[preset],candidates=[...new Set([...(byDriver.get(preset)||[]),...(byName.get(entry.name)||[])])],decl=candidates.length===1&&candidates[0].kind==='uniform'&&candidates[0].type===entry.type?candidates[0]:null,conflict=!!candidates.length&&!decl;
     if(decl)used.add(decl.id);keys.add('preset:'+preset);
-    if(matches(entry.name,entry.initialize.expression,t(entry.labelKey),decl?.name,'common uniform'))common.push(sourceCard(decl,preset,decl&&issueById.get(decl.id),decl&&rows.get(decl.id),conflict));
+    if(matches(entry.name,entry.initialize.expression,t(entry.labelKey),decl?.name,'common uniform')){const path=entry.path.join('.'),cards=common.get(path)||[];cards.push(sourceCard(decl,preset,decl&&issueById.get(decl.id),decl&&rows.get(decl.id),conflict));common.set(path,cards);}
   }
-  if(common.length)sections.push(sourceGroup('common',t('sources.common'),[sourceGroup('common.time',t('sources.time'),common,null,query)],null,query));
+  const menu=new Map([...sourceMenuEntries(query)].map(([path,rows])=>[path,[...rows]]));
+  for(const [path,cards]of common)menu.set(path,[...(menu.get(path)||[]),...cards]);
+  const addMenu=(path,section)=>{const list=menu.get(path)||[];list.push(section);menu.set(path,list);};
   const groups=new Map();for(const decl of decls){if(used.has(decl.id)||!['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(decl.kind))continue;keys.add(decl.id);if(!matches(decl.name,decl.kind,decl.type,rows.get(decl.id)?.sequence,decl.nativeSequence))continue;const kind=decl.type==='samplerBuffer'?'texture_buffer':decl.kind,group=groups.get(kind)||[];group.push(decl);groups.set(kind,group);}
   for(const kind of ['top_input','texture_buffer','pop_buffer','attribute','constant','spec_constant','uniform','sampler']){
     const group=groups.get(kind)||[],canCreate=kind==='attribute'?editorTarget==='mat':kind!==(editorTarget==='top'?'sampler':'top_input');if((!canCreate||query)&&!group.length)continue;
     const cards=d=>sourceCard(d,null,issueById.get(d.id),rows.get(d.id));
     const children=kind==='uniform'?['values','matrices','arrays'].map(name=>{const list=group.filter(d=>sourceUniformGroup(d,rows.get(d.id))===name);return list.length?sourceGroup('uniform.'+name,t('sources.'+name),list.map(cards),null,query):null;}).filter(Boolean):group.map(cards);
     if(['texture_buffer','pop_buffer'].includes(kind)&&!group.length&&!query&&nativeSourceSnapshot?.enabled&&!connectionInterrupted&&!nativeSourceError&&!issues.some(i=>i.sequence===(kind==='pop_buffer'?'buffer':'array')))children.push(el('p',{class:'muted'},t('buffer.empty')));
-    sections.push(sourceGroup(kind,inputGroupLabel(kind),children,canCreate?kind:null,query));
+    const section=sourceGroup(kind,inputGroupLabel(kind),children,canCreate?kind:null,query);
+    if(['top_input','sampler','texture_buffer'].includes(kind))addMenu('textures.'+(kind==='texture_buffer'?'buffer':'2d'),section);
+    else if(['pop_buffer','attribute'].includes(kind))addMenu('tdBuiltin.'+(kind==='attribute'?'geometry':'buffer'),section);
+    else sections.push(section);
   }
+  const menuSections=[];
+  for(const root of ['common','textures','tdBuiltin']){
+    const children=[];
+    for(const key of Object.keys(typeContract.sources.menuGroups)){const path=root+'.'+key,rows=menu.get(path);if(rows?.length)children.push(sourceGroup(path,t(typeContract.sources.menuGroups[key]),rows,null,query));}
+    if(children.length)menuSections.push(sourceGroup(root,t(typeContract.sources.menuGroups[root]),children,null,query));
+  }
+  sections.unshift(...menuSections);
   const unimported=issues.filter(i=>!i.id&&matches(i.name,i.message));
   if(unimported.length){
     const issueKey=JSON.stringify(unimported),previous=sourceGroupCache.get('issues');let section=previous?.section;
     if(previous?.issueKey!==issueKey){section=el('section',{class:'input-group','data-source-issues':''});section.append(el('div',{class:'input-group-title'},t('sources.unavailable')));for(const issue of unimported){const card=el('div',{class:'input-source-row','data-source-state':issue.status||'invalid','data-source-issue':issue.name||'','data-category':'shader'}),head=el('div',{class:'input-source-select'});head.append(el('span',{},issue.name||t('sources.unavailable')),el('small',{},issue.type||''));card.append(head,el('div',{class:'input-source-status'},'⚠ '+issue.message));section.append(card);}sourceGroupCache.set('issues',{issueKey,section});}sections.push(section);
   }
-  const builtinKey=query;if(sourceBuiltinCache?.key!==builtinKey||sourceBuiltinCache?.catalog!==catalog){const holder=el('div');appendBuiltInInputs(holder,query);sourceBuiltinCache={key:builtinKey,catalog,section:holder.firstElementChild};}
-  if(sourceBuiltinCache.section)sections.push(sourceBuiltinCache.section);
   if(query&&!sections.length)sections.push(el('p',{class:'muted'},t('create.empty')));
   reconcileSourceChildren(box,sections);for(const key of sourceCardCache.keys())if(!keys.has(key))sourceCardCache.delete(key);
+  for(const button of box.querySelectorAll('[data-builtin-reference]'))button.disabled=readonly;
   for(const button of box.querySelectorAll('[data-preset-reference]'))button.disabled=editorMutationBlocked()||button.dataset.sourceMissing==='true';
 }
 

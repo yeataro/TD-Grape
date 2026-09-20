@@ -1,5 +1,7 @@
 # 來源選單分類表（審查稿）
 
+2026-09-20 實作更新：0.8.131 已依來源表建立分類、索引 accessor 與別名搜尋；下方保留最初審查過程。最新逐項現況請看 CSV 的 `implementation`／`implementation_note` 欄及 [五輪計畫](SOURCE_COMPLETION_PLAN.md)。分類不代表所有原生能力已實作，MAT 非 2D sampler 等剩餘項目已明列。
+
 2026-09-19。依 [來源與命名總表](TD_SOURCE_NAMING_RESEARCH.md) 及本輪使用者審查整理；對照產品 0.8.120。這份文件提出選單分類，尚未修改 UI 或新增來源能力。原始 311 筆盤點保留於 [CSV](TD_SOURCE_NAMING_CATALOG.csv)，新增分類與審查欄位供逐項查閱。
 
 2026-09-20 補充：[來源建構與型別共識](SOURCE_ARCHITECTURE_REVIEW.md) 決定以資料區分分類與建構行為，並允許來源節點同時提供完整結構與欄位出口。因此下表「先沿用 Array／Field」描述當時可用方式，不限制後續必須額外接 Field 才能讀欄位；具體快捷出口與 MAT Attribute 預置仍待整理。本表與 CSV 仍是審查資料，不是已實作的來源 registry。

@@ -95,15 +95,19 @@ Colors 的新建／編輯型別入口限制為 `float`（R）、`vec2`（RG）�
 ### 第四輪：MAT Attribute 與來源內容補齊
 
 - [x] MAT Attribute 名稱／型別／宿主支援的 Array Size 配置、引用、修改、產碼與 UI；共用數值型別及來源操作基礎。
-- [ ] 常用內建 accessor 與需配置的具名 Attribute 分開，預置入口不代表提前建立所有原生列。
-- [ ] 依來源總表逐項標示已支援、可沿用機制補齊、使用者自行新增及本輪不適用；涵蓋現有 TOP／MAT 與已支援 Stage。
-- [ ] 整理 Texture 維度、共通來源及 TD 內建的分類／名稱；來源、運算、未支援 Stage 不混成同一份新增清單。
+- [x] 常用內建 accessor 與需配置的具名 Attribute 分開，預置入口不代表提前建立所有原生列。
+- [x] 依來源總表逐項標示已支援、可沿用機制補齊、使用者自行新增及本輪不適用；涵蓋現有 TOP／MAT 與已支援 Stage。
+- [x] 整理 Texture 維度、共通來源及 TD 內建的分類／名稱；來源、運算、未支援 Stage 不混成同一份新增清單。
 
 0.8.130 子步驟：具名 MAT Attribute 與 Matrix Attribute 接入共用來源清單、建立表單、Parameter、引用、Help、型別檢查與 Undo。數值來自幾何體，不建立 Uniform 值或預置幾何體。Vertex 產碼使用 `TDAttrib_Name(arrayIndex)`，提供值與 Array Size 出口；僅使用大小不產生取值。TD 外部改型別保留舊圖與接線並提示明確採用，網頁修改原生型別也先返回圖草稿，合法後套用。原生型別修改限同一個 Attribute／Matrix Attribute 頁面；跨頁改為另建來源。
 
 安裝版 2025.32820 的一般 Attribute menu token 是 float2 等，矩陣則是 `mattr*cols`／`mattr*comps`。兩頁沒有 Array Size 欄位；介面顯示不支援、不提供無效欄位，API 在寫入前拒絕大於 1。兼容有 size 欄位的 metadata／配置分支有保留，尚未宣稱已在其他版本原生驗證。矩陣 Attribute 目前由宿主提供 float 矩陣，不冒充 double 矩陣輸入。隔離場景驗證 accessor／矩陣參照、型別編輯與 Undo、外部改型別採用、建立與刪除。幾何體缺少 Attribute 的各種實際預設值仍依使用者要求留待整體驗收。
 
 驗收：提供 TOP／MAT 可用能力表與實際產碼案例；不以新分類外觀冒充新能力，也不以來源研究表的總筆數作為完成數。
+
+0.8.131 子步驟：來源分類／排序、別名搜尋、內建型別與 accessor 索引由同一來源表供應。Common 的時間、座標、輸出與 Shader Info，TOP Texture 的 2D／3D／2D Array／Cube 及 Buffer，TD 內建的幾何／實例／相機／矩陣／燈光／繪製資訊分組；具名 Attribute 保留獨立新增配置。新增頂層來源及 accessor 經 73 組宿主／Stage 原生編譯測試，原有三份 Shader 未改動。集合來源只驗證長度與部分欄位，不宣稱已讀取所有原生資料或遍歷所有場景。TDFrontFacing(position, normal) 是運算，沒有放入來源。
+
+總表 311 筆新增實作欄位；74 筆已有直接入口、52 筆沿用集合／欄位機制、32 筆自行建立；109 筆是運算，34 筆本輪不適用，5 筆是原生／後端對照，另明列 1 筆部分支援及 4 筆可擴充項。這些是研究列的歸屬，不是新節點數量。MAT 具名 sampler 管理仍限 sampler2D；其他 Texture 原生集合可引用並透過 GLSL Code 取樣，既有 Texture Sample 快捷仍為 2D。具名 sampler3D／POffset 管理、texture-layer Attribute accessor、Primitive ID／Sample Mask 尚未新增；環境燈 SSBO 以 shCoeffs 陣列 accessor 提供，不把 block 偽裝成一般 struct。來源內容補齊有上述界線，後續先完成結構作者能力。
 
 ### 第五輪：結構編輯與整體收尾
 

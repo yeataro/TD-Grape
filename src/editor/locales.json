@@ -3318,6 +3318,21 @@
     "attribute.driven": {
       "zh-Hant": "此配置受 TD 驅動，請在 TD 編輯。",
       "en": "This configuration is driven by TD. Edit it in TD."
-    }
+    },
+    "sources.textures": {"zh-Hant": "紋理輸入", "en": "Texture Inputs"},
+    "sources.coordinates": {"zh-Hant": "座標", "en": "Coordinates"},
+    "sources.output": {"zh-Hant": "輸出資訊", "en": "Output"},
+    "sources.shaderInfo": {"zh-Hant": "Shader 資訊", "en": "Shader Info"},
+    "sources.geometry": {"zh-Hant": "幾何", "en": "Geometry"},
+    "sources.instances": {"zh-Hant": "實例", "en": "Instances"},
+    "sources.cameras": {"zh-Hant": "相機", "en": "Cameras"},
+    "sources.lights": {"zh-Hant": "燈光", "en": "Lights"},
+    "sources.render": {"zh-Hant": "繪製資訊", "en": "Render"},
+    "sources.resources": {"zh-Hant": "內建紋理", "en": "Built-in Textures"},
+    "sources.2d": {"zh-Hant": "2D", "en": "2D"},
+    "sources.3d": {"zh-Hant": "3D", "en": "3D"},
+    "sources.2dArray": {"zh-Hant": "2D Array", "en": "2D Array"},
+    "sources.cube": {"zh-Hant": "Cube", "en": "Cube"},
+    "sources.buffer": {"zh-Hant": "緩衝區", "en": "Buffers"}
   }
 }
