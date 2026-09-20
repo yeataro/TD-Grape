@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.149 DEV 修正：Color Uniform 自動 Split 及接線建立選單共用來源分量命名，依宣告 nativeSequence=color 預設 RGBA，與 Color RGBA 一致；一般向量及 UV 原樣保留。只設定新建节点的 UI 名稱，既有手動設定、port ID 與接線不覆寫。新命名回歸 5、分量配色 10、Color 控制 5 組通過；507 Python 與完整 portable checks 通過。報告 Documents 工作區 `reports/color-components-149/`。Uniform 在移動／調整節點大小後短暫灰掉／鎖住已補記 UX_BACKLOG，仍待獨立處理，未宣稱修復來源保護範圍。同步保存另記。
+
 2026-09-20 0.8.148 DEV 交付檢查點：程式提交 `0050dd6`；37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 95，三份使用者 Shader 保留。TOE 983486 bytes，SHA256 `af16b415c811691abbd50cf2b29d2bed8bd0966be369d415e2d91382f03ab8ae`。原生報告 `work/reports/note-title-148/`；未重新整理使用者網頁。
 
 2026-09-20 0.8.148 DEV 修正：依使用者澄清撤銷 0.8.146 的 Note 內文補位方式。展開 Note 的尺寸從頭到尾只計 body，Title 為上緣 24px 浮層，常駐／選取式皆不參與正文最小高度、Group 或排版尺寸。標題顯隱時 body 與 reader 的位置、寬高完全相同；選取工具列只避讓浮動 Title 的顯示範圍。群組與一般節點尺寸公式不改、既有尺寸資料不重寫，保留收合入口。Note 外觀 16、縮放 14、幾何 5、選取工具列 12、Group 13、對齊 3 組通過，另含標題加高不影響 body／Group 的回歸。507 Python、767 雙語鍵與完整 portable checks 通過；報告 Documents 工作區 `reports/note-title-148/`。Uniform B 已於 0.8.147 保存，這輪保留。同步保存另記。

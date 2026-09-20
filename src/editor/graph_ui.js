@@ -1045,6 +1045,12 @@ function portTypeCaption(n,kind,name){
   }
   return caption;
 }
+function nodeComponentNames(n){
+  if(!n)return 'xyzw';
+  const key=definition(n)?.key,source=key==='uniform'&&nodeSourceDeclaration(n);
+  if(key==='color'||source?.kind==='uniform'&&source.nativeSequence==='color')return 'rgba';
+  return key==='uv'?'uv':n?.ui?.componentNames||'xyzw';
+}
 function vectorNames(n){return n.ui?.componentNames==='rgba'?'RGBA':n.ui?.componentNames==='uv'&&typeComponents(n.params.type)===2?'UV':'XYZW';}
 // Display hints come from known component ports, never arbitrary labels or upstream nodes.
 function portColorComponent(n,kind,port){
@@ -1114,7 +1120,7 @@ function addVectorSplit(source,port){
   const existing=current().edges.find(e=>e.from[0]===source.id&&e.from[1]===port&&e.to[1]==='value'&&definition(current().nodes.find(n=>n.id===e.to[0]))?.key==='vector_split');
   if(existing){selectNode(current().nodes.find(n=>n.id===existing.to[0]));render();return;}
   change(()=>{const node=instantiate(catalog.find(d=>d.key==='vector_split'),(source.ui?.x||0)+260,source.ui?.y||0,type);
-    node.ui.componentNames=definition(source)?.key==='color'?'rgba':definition(source)?.key==='uv'?'uv':source.ui?.componentNames||'xyzw';node.ui.componentsExpanded=true;
+    node.ui.componentNames=nodeComponentNames(source);node.ui.componentsExpanded=true;
     commitPlannedWire({node:source.id,port},{node:node.id,port:'value'});});
 }
 function clearVectorWirePreview(){document.querySelectorAll('.vector-drop-range,.vector-drop-replaced').forEach(row=>row.classList.remove('vector-drop-range','vector-drop-replaced'));}
@@ -1779,7 +1785,7 @@ function chooseCreator(index){
     const inputSeed=match.d.inputPreset?{name:inputPresets()[match.d.inputPreset][0],preset:match.d.inputPreset}:creatorInputSeed(state.wire);
     const n=instantiate(d,state.x,state.y,match.type,{locked:$('#createtype').value!=='all',declarationId:match.d.inputSourceId,inputSeed});Object.assign(n.params,clone(match.params||{}));
     if(state.wire){
-      if(isVectorOperation(match.d)){const peer=current().nodes.find(p=>p.id===state.wire.node);n.ui.componentNames=definition(peer)?.key==='uv'?'uv':definition(peer)?.key==='color'?'rgba':peer.ui?.componentNames||'xyzw';}
+      if(isVectorOperation(match.d)){const peer=current().nodes.find(p=>p.id===state.wire.node);n.ui.componentNames=nodeComponentNames(peer);}
       const from=state.wire.kind==='outputs'?{node:state.wire.node,port:state.wire.port}:{node:n.id,port:match.port};
       const to=state.wire.kind==='inputs'?{node:state.wire.node,port:state.wire.port}:{node:n.id,port:match.port};commitPlannedWire(from,to);
     }
