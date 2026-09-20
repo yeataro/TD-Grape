@@ -1,6 +1,6 @@
 # 待辦總整理：0.8.161 盤點與 0.8.162 review
 
-2026-09-21 最新 review：使用者已讀並大致接受此盤點；下一輪優先調查／補齊 TD 內建 GLSL 函式節點，其優先序高於本文建議順序。0.8.163 另補 Frame 無動畫，導覽視角現為五選一。本文保留作索引，不自動啟動舊待辦。
+2026-09-21 最新 review：使用者已讀並大致接受此盤點；Alpha 前希望補齊 GLSL／TD 函式節點、MAT Attribute 與來源能力、Inputs → Sources／來源命名、名稱切換入口，以及自訂參數重構。詳見[Alpha 範圍筆記](ALPHA_SCOPE_2026-09-21.md)；使用者仍在補充，等補充完再安排修改順序，本文舊建議不直接當成排程。[TD 函式缺口盤點](TD_FUNCTION_NODE_GAPS.md)已另列，標準 GLSL 缺口尚待完整核對。0.8.163 另補 Frame 無動畫，導覽視角現為五選一。本文保留作索引，不自動啟動舊待辦。
 
 2026-09-21。依目前程式、Git 交付紀錄與討論文件交叉整理；相同需求合併，較新的明確決定優先。這是待辦狀態盤點，不是授權把所有提案一併實作，也不把所有遠期能力列為 Alpha 發布條件。
 
@@ -10,7 +10,7 @@
 
 | 項目 | 現在的行為 |
 | --- | --- |
-| 方向鍵導覽 | 實驗功能提供「原版路徑／雙向分支／依畫面位置」三版，0.8.162 改預設依畫面位置，其他兩版保留。一般方向鍵只接受單選，不選線、不循環；按鍵時搜尋。雙向分支版的上下切換同一分支組，返回後仍能選剛經過節點的其他上游。視角獨立選擇不移動、Frame 有動畫、Center 有動畫、Center 無動畫；Center 只平移不縮放。 |
+| 方向鍵導覽 | 實驗功能提供「原版路徑／雙向分支／依畫面位置」三版，0.8.162 改預設依畫面位置，其他兩版保留。一般方向鍵只接受單選，不選線、不循環；按鍵時搜尋。雙向分支版的上下切換同一分支組，返回後仍能選剛經過節點的其他上游。0.8.163 視角獨立選擇不移動、Frame 有動畫、Frame 無動畫、Center 有動畫、Center 無動畫；Center 只平移不縮放。 |
 | Ctrl＋左／右 | 選取全部上游／下游，包含起點。實驗選項「Ctrl＋左右逐階擴展選取」預設關閉；開啟後保留既有單選／多選，每按一次加入直接相鄰的一階，下一次再繼續向外擴展；端點保留選取。0.8.162 修正了 161 的替換選取。 |
 | Ctrl＋上／下 | 上：選取全部相連節點。下：選取目前圖層中不屬於那些相連區塊的節點。多選以各起點的聯集計算；Group 成員關係不算接線，不跨 Stage／子圖。 |
 | 專注編輯 | 畫布 Ctrl＋Enter 反覆切換。Esc 保留取消／關閉操作，不再退出專注。文字輸入與對話框有自己的提交／取消規則；Alt＋Enter 全螢幕保留。 |
@@ -62,7 +62,7 @@
 | --- | --- | --- | --- |
 | D01 | 插入已接好的線 | 雙端相容檢查、單筆原子交易、失敗回復、fan-out 插哪一支。線右鍵的選來源／選目的／Disconnect 已完成，不能把「插入」也報完成。 | [放置 review](NODE_PLACEMENT_REVIEW.md)。 |
 | D02 | Group-aware 自動排列 | 是否把 Group 作為排列約束，避免以整框寬度造成巨大間距；目前依節點／接孔排列後再包 Group，使用者也接受可先不改。 | [UX_BACKLOG](UX_BACKLOG.md)。 |
-| D03 | 來源 UI | TD Names／Common Names 位置、Language 置中、Common 單擊／展開／新增分工、Graph Constant 卡片滑桿、Custom Uniforms 置頂／分類拖曳、POP 分類、常駐來源數量 tag、Add Node 分類 review、CHOP Export 路徑顯示。已完成數量正確性不代表所有展示選擇皆定案。 | [UX_BACKLOG](UX_BACKLOG.md)、[來源計畫](SOURCE_COMPLETION_PLAN.md)。 |
+| D03 | 來源 UI | Inputs → Sources／來源與 TD Names／Common Names 入口改善已由最新 Alpha 需求明確提出，實際布局待 review；名稱切換緊貼搜尋框造成誤解仍未修。其他 Language 置中、Common 單擊／展開／新增分工、Graph Constant 卡片滑桿、Custom Uniforms 置頂／分類拖曳、POP 分類、常駐來源數量 tag、Add Node 分類 review、CHOP Export 路徑顯示仍是候選。 | [Alpha 範圍](ALPHA_SCOPE_2026-09-21.md)、[UX_BACKLOG](UX_BACKLOG.md)、[來源計畫](SOURCE_COMPLETION_PLAN.md)。 |
 | D04 | 額外選取動作 | Ctrl+A 是否加入右鍵選單；選取真正參與產碼的節點與快捷鍵。**Ctrl＋上是接線相連區塊，不等於從 Output 回推的編譯依賴**，後者沒有因此完成。 | [UX_BACKLOG](UX_BACKLOG.md)。 |
 | D05 | 外观與預設偏好 | 全域 Glow／亮度分離仍待低成本方案；Uniform Slider 及放置高亮已有獨立配色。Damping 預設開啟需先決定既有偏好政策，現行預設關閉是刻意保留；Double 入口隱藏也未定案，不能刪除型別能力。 | [UX_BACKLOG](UX_BACKLOG.md)。 |
 | D06 | 通用 UI 整理 | 數值草稿共用之外的 Binding／選單重複、英文文案基準 0.8.101 的 63 個候選、操作區誤選文字。需對目前版本重新篩選；不可全域禁止文字選取或把整份舊稽核當批次修改單。 | [UI 共用調查](UI_COMPONENT_REUSE_AUDIT.md)、[UX_BACKLOG](UX_BACKLOG.md)、[Inputs UI](INPUTS_UI_NEXT_ROUND.md)。 |

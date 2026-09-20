@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-21 文件盤點（產品仍為 0.8.163）：完成 TD 函式名稱／家族 124 項與現行 catalog／編譯器的對照，見[TD 函式缺口](../discussions/TD_FUNCTION_NODE_GAPS.md)及 CSV。記錄最新[Alpha 範圍](../discussions/ALPHA_SCOPE_2026-09-21.md)：GLSL／TD 節點、MAT Attribute／來源、Sources 命名、名稱切換入口、自訂參數重構。使用者仍在補充，修改順序之後再排；標準 GLSL 全量盘點與新增函式原生 probe 尚未執行。本批只改文件，未同步／保存新的 TD 產品版本。
+
 2026-09-21 0.8.163 交付檢查點：程式 5972d5a；視角 9 組及完整 portable checks（510 Python）通過。37 份來源與 11 份實際 HTTP 資產一致，core 無錯誤；TOP／MAT master revision 110，四份使用者 Shader 保留。TOE 1028542 bytes，SHA256 bf25c1e7f9728895f31cc79d37f3b07ca103e5903a2ac6e5f129393aff974389，排除一份私人助手。報告 navigation-view-163/；未刷新使用者瀏覽器。
 
 2026-09-21 0.8.163 DEV：依使用者截圖 review 補上 Frame 無動畫，視角共五項；立即置中並縮放，不受一般 Frame 動畫開關影響。TD 內建 GLSL 函式缺口調查列為下一輪優先，先整理待辦，不擴張本次產品修改。

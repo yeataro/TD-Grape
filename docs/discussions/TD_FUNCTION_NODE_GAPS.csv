@@ -1,0 +1,125 @@
+﻿function,category,coverage,current_entry,documented_return,documented_scope,remaining_work,evidence_urls
+TDAlphaTest,輸出／宿主流程,編譯器自動呼叫,MAT pixel_out,void,MAT P,已在產碼流程使用；若補手動入口須避免自動流程重複執行。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDAttenuateLight,MAT 光照／陰影,缺獨立入口,,float,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDAttrib_<name>,來源,部分支援,attribute,依配置,MAT V,現行 emitter 僅傳 arrayIndex；尚無指定其他 vertexIndex 的入口，TDTexAttrib 家族另列。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/GLSL_MAT
+TDAverage,數值與矩陣,缺獨立入口,,float,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDAxisAngleToQuaternion,Quaternion,缺獨立入口,,vec4,M／T；stage 依原生 overload,以現有 vec4／mat3 表達；明定分量及角度約定，不必先新增全域 quaternion 型別。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDBicubicInterpolation,取樣與座標映射,缺獨立入口,,vec4,M／T；stage 依原生 overload,分開純座標運算與 sampler overload；檢查 2D／3D 資源取得及 Stage。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDBoneMat,來源,已有來源入口,builtin_source:TDBoneMat,mat4,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDBufferLength_<name>,來源,已有家族入口,pop_buffer.length,uint（文件標 const）,TOP／MAT，Buffers 配置後,家族中使用者命名不逐一算函式；資料索引歸來源。,https://derivative.ca/UserGuide/Write_a_GLSL_TOP ; https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDBuffer_<name>,來源,已有家族入口,pop_buffer,依配置,TOP／MAT，Buffers 配置後,家族中使用者命名不逐一算函式；資料索引歸來源。,https://derivative.ca/UserGuide/Write_a_GLSL_TOP ; https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/GLSL_TOP
+TDCameraIndex,來源,已有來源入口,builtin_source:TDCameraIndex,int,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDCheckDiscard,輸出／宿主流程,編譯器自動呼叫,MAT pixel main,void,MAT P,已在產碼流程使用；若補手動入口須避免自動流程重複執行。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDCheckOrderIndTrans,宿主版本關係待核對,版本／既有流程關係待核對,,void,MAT P,目前指南仍列此入口；先核對目標 TD build 及與現用 TDCheckDiscard 的關係，不標成已棄用或重複插入。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDCompareShadowTexture,MAT 光照／陰影,缺獨立入口,,float,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDCompareShadowTextureProj,MAT 光照／陰影,缺獨立入口,,float,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDConeLookup,MAT 光照／陰影,缺獨立入口,,float,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDCreateRotMatrix,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDCreateTBNMatrix,MAT 幾何／Instancing,缺獨立入口,,mat3,M／T；stage 依原生 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDCubeMapToEquirectangular,取樣與座標映射,缺獨立入口,,vec2,M／T；stage 依原生 overload,分開純座標運算與 sampler overload；檢查 2D／3D 資源取得及 Stage。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDDeform,運算,已有節點,deform,vec3／vec4,MAT V；依 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDDeformNorm,MAT 幾何／Instancing,缺獨立入口,,vec3,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDDeformVec,MAT 幾何／Instancing,缺獨立入口,,vec3,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDDither,輸出／宿主流程,編譯器自動呼叫,MAT color output 0,vec4,M／T；stage 依原生 overload,已在產碼流程使用；若補手動入口須避免自動流程重複執行。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDEnvLightTextureLod,MAT 光照／陰影,缺獨立入口,,vec4,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDEnvLightingPBR,MAT 光照／陰影,缺獨立入口,,TDPBRResult,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDEquirectangularToCubeMap,取樣與座標映射,缺獨立入口,,vec3,M／T；stage 依原生 overload,分開純座標運算與 sampler overload；檢查 2D／3D 資源取得及 Stage。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDExtractRotation,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDFade,Noise／Fade,缺獨立入口,,float,M／T；stage 依原生 overload,補 overload；4D 的 out noise 與導數回傳須依同一次呼叫分配輸出。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDFadeDeriv,Noise／Fade,缺獨立入口,,float,M／T；stage 依原生 overload,補 overload；4D 的 out noise 與導數回傳須依同一次呼叫分配輸出。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDFog,MAT 光照／陰影,缺獨立入口,,vec4,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDFrontFacing,MAT 幾何／Instancing,缺獨立入口,,bool,MAT P,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDGamutRec2020ToRec709,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDGamutRec709ToRec2020,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDHSVToRGB,運算,已有節點,hsv_to_rgb,vec3,M／T；stage 依原生 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDHardShadow,MAT 光照／陰影,缺獨立入口,,float,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDImageLoadOutput,其他 Stage,其他 Stage／待定範圍,,vec4,TOP C,目前 Grape 主要 TOP Pixel／MAT Vertex+Pixel；Compute／TOP Vertex 是否納入另界定。,https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDImageLoad_<name>,Render Image,缺獨立入口,,vec4,MAT，Render TOP image output context,需有效 Render TOP image 配置；store 為副作用，不能只用一般值節點包裝。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDImageStoreOutput,其他 Stage,其他 Stage／待定範圍,,void,TOP C,目前 Grape 主要 TOP Pixel／MAT Vertex+Pixel；Compute／TOP Vertex 是否納入另界定。,https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDImageStore_Name,Render Image,缺獨立入口,,void,M；stage 依原生 overload,需有效 Render TOP image 配置；store 為副作用，不能只用一般值節點包裝。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceColor,MAT 幾何／Instancing,缺獨立入口,,vec4,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceCustomAttrib0,來源,已有來源入口,builtin_source:TDInstanceCustomAttrib0,vec4,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceCustomAttrib1,來源,已有來源入口,builtin_source:TDInstanceCustomAttrib1,vec4,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceCustomAttrib2,來源,已有來源入口,builtin_source:TDInstanceCustomAttrib2,vec4,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceCustomAttrib3,來源,已有來源入口,builtin_source:TDInstanceCustomAttrib3,vec4,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceDeform,MAT 幾何／Instancing,缺獨立入口,,vec4,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceDeformVec,MAT 幾何／Instancing,缺獨立入口,,vec3,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceID,來源,已有來源入口,builtin_source:TDInstanceID,int,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDInstanceMat,來源,已有來源入口,builtin_source:TDInstanceMat,mat4,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDInstanceMat3,來源,已有來源入口,builtin_source:TDInstanceMat3,mat3,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDInstanceTexCoord,MAT 幾何／Instancing,缺獨立入口,,vec3,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceTexture,MAT 幾何／Instancing,缺獨立入口,,vec4,MAT V 隱式／V+G+P 顯式 index,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDInstanceTextureIndex,來源,已有來源入口,builtin_source:TDInstanceTextureIndex,uint,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDInterpolateTransformMatrices,數值與矩陣,缺獨立入口,,mat4,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDLighting,MAT 光照／陰影,缺獨立入口,,TDPhongResult,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDLightingPBR,MAT 光照／陰影,缺獨立入口,,TDPBRResult,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDLoop,運算,已有節點,loop,float,M／T；stage 依原生 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDLuminance,色彩／Transfer／Gamut,缺獨立入口,,float,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDNormal,來源,已有來源入口,builtin_source:TDNormal,vec3,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDOutputSwizzle,輸出／宿主流程,編譯器自動呼叫,TOP／MAT color outputs,vec4,M／T；stage 依原生 overload,已在產碼流程使用；若補手動入口須避免自動流程重複執行。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDPerlinNoise,運算,已有節點,perlin_noise,float,M／T；stage 依原生 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDPerlinNoiseDeriv,Noise／Fade,缺獨立入口,,vec4,M／T；stage 依原生 overload,補 overload；4D 的 out noise 與導數回傳須依同一次呼叫分配輸出。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDPickAdjust,Picking,缺獨立入口,,vec4,M；stage 依原生 overload,需 Render Pick 執行分支與 payload／輸出契約，不能只補函式名稱。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDPixelColor,MAT 幾何／Instancing,缺獨立入口,,vec4,MAT P,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDPointColor,來源,已有來源入口,builtin_source:TDPointColor,vec4,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDPointCoord,來源,已有來源入口,builtin_source:TDPointCoord,vec2,MAT P,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDPos,來源,已有來源入口,position,vec3,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDProjMap,MAT 光照／陰影,缺獨立入口,,vec4,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDProjTexture,MAT 光照／陰影,缺獨立入口,,vec4,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDProjTextureProj,MAT 光照／陰影,缺獨立入口,,vec4,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDQuadReproject,MAT 幾何／Instancing,缺獨立入口,,vec4,M；stage 依原生 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDQuaternionFromTo,Quaternion,缺獨立入口,,vec4,M／T；stage 依原生 overload,以現有 vec4／mat3 表達；明定分量及角度約定，不必先新增全域 quaternion 型別。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDQuaternionMultiply,Quaternion,缺獨立入口,,vec4,M／T；stage 依原生 overload,以現有 vec4／mat3 表達；明定分量及角度約定，不必先新增全域 quaternion 型別。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDQuaternionToRotMatrix,Quaternion,缺獨立入口,,mat3,M／T；stage 依原生 overload,以現有 vec4／mat3 表達；明定分量及角度約定，不必先新增全域 quaternion 型別。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRGBToHSV,運算,已有節點,rgb_to_hsv,vec3,M／T；stage 依原生 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRemap,運算,已有節點,remap,float／vec2／vec3／vec4,M／T；stage 依原生 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRotMatrixToQuaternion,Quaternion,缺獨立入口,,vec4,M／T；stage 依原生 overload,以現有 vec4／mat3 表達；明定分量及角度約定，不必先新增全域 quaternion 型別。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRotateFromQuaternion,Quaternion,缺獨立入口,,vec3,M／T；stage 依原生 overload,以現有 vec4／mat3 表達；明定分量及角度約定，不必先新增全域 quaternion 型別。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRotateOnAxis,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRotateToVector,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRotateX,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRotateY,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDRotateZ,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDSOPToProj,其他 Stage,其他 Stage／待定範圍,,TOP vertex 範例函數,依歷史與版本,目前 Grape 主要 TOP Pixel／MAT Vertex+Pixel；Compute／TOP Vertex 是否納入另界定。,https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDScale,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDShadowTexture,MAT 光照／陰影,缺獨立入口,,float,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDShadowTextureProj,MAT 光照／陰影,缺獨立入口,,float,MAT P（指南所在範圍）,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDSimplexNoise,運算,已有節點,simplex_noise,float,M／T；stage 依原生 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDSimplexNoiseDeriv,Noise／Fade,缺獨立入口,,vec4,M／T；stage 依原生 overload,補 overload；4D 的 out noise 與導數回傳須依同一次呼叫分配輸出。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDSineLookup,取樣與座標映射,缺獨立入口,,float,M／T；stage 依原生 overload,分開純座標運算與 sampler overload；檢查 2D／3D 資源取得及 Stage。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDSkinnedDeform,MAT 幾何／Instancing,缺獨立入口,,vec4,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDSkinnedDeformVec,MAT 幾何／Instancing,缺獨立入口,,vec3,MAT V；依 overload,逐項確認 Vertex／Pixel 可用性、座標語意與 Instancing 場景；跨 Stage 需要既有或新增的傳遞契約。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDSlerpQuaternions,Quaternion,缺獨立入口,,vec4,M／T；stage 依原生 overload,以現有 vec4／mat3 表達；明定分量及角度約定，不必先新增全域 quaternion 型別。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDSlerpRotationMatrices,數值與矩陣,缺獨立入口,,mat3,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDSoftShadow,MAT 光照／陰影,缺獨立入口,,float,MAT P,補原生燈光場景測試；TDPBRResult／TDPhongResult 尚未登記，struct 與 inout 簽名要核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDTexAttrib_<name>,來源／Attribute,缺獨立入口,,依配置,MAT V,補 texture-layer accessor 與來源配置適配；只有 layer 選擇，歸來源。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDTexCoord,來源,已有來源入口,builtin_source:TDTexCoord,vec3,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDTexGenSphere,取樣與座標映射,缺獨立入口,,vec2,M／T；stage 依原生 overload,分開純座標運算與 sampler overload；檢查 2D／3D 資源取得及 Stage。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferACESproxyToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferBT2100HLGToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferGamma1_8ToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferGamma2_2ToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferGamma2_4ToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferGamma2_6ToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferGamma2_8ToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToACESproxy,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToBT2100HLG,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToGamma1_8,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToGamma2_2,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToGamma2_4,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToGamma2_6,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToGamma2_8,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToRec709,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToSRGB,色彩／Transfer／Gamut,缺獨立入口,,vec3／vec4,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferLinearToST2084PQ,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferRec709ToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferSRGBToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3／vec4,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTransferST2084PQToLinear,色彩／Transfer／Gamut,缺獨立入口,,vec3,M／T；stage 依原生 overload,依原生精度及 overload 設接口；vec4 的 alpha／預乘行為需要驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTranslate,數值與矩陣,缺獨立入口,,mat4,M／T；stage 依原生 overload,沿用現有純量／矩陣型別；補節點定義、overload 與原生編譯／數值驗證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTricubicInterpolation,取樣與座標映射,缺獨立入口,,vec4,M／T；stage 依原生 overload,分開純座標運算與 sampler overload；檢查 2D／3D 資源取得及 Stage。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTriplanarBlend,取樣與座標映射,缺獨立入口,,vec4,M／T；stage 依原生 overload,分開純座標運算與 sampler overload；檢查 2D／3D 資源取得及 Stage。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
+TDTrueCameraIndex,來源,已有來源入口,builtin_source:TDTrueCameraIndex,int,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDUVUnwrapCoord,來源,已有來源入口,builtin_source:TDUVUnwrapCoord,vec3,MAT V,無資料運算輸入或只有 index／layer；全部 overload／Stage 仍須另核對。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; ../../src/core/sgrape_core.py
+TDWorldToProj,運算,已有節點,to_clip,vec4,MAT V／G；G 需 camera index,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDWritePickingValues,Picking,缺獨立入口,,void,M；stage 依原生 overload,需 Render Pick 執行分支與 payload／輸出契約，不能只補函式名稱。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT
+TDZigZag,運算,已有節點,zigzag,float,M／T；stage 依原生 overload,按函式名稱已有入口；不是全部原生 overload／Stage 的完成保證。,https://derivative.ca/UserGuide/Write_a_GLSL_MAT ; https://derivative.ca/UserGuide/Write_a_GLSL_TOP
