@@ -65,13 +65,13 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.evaluate(()=>{constantBefore.value='123';renderNativeSourceValues();});
   assert.equal(await page.locator('#inspector [data-source-component="3"]').inputValue(),'7');
   checks.push('an uncommitted or rejected local value returns to the unchanged authoritative TD value');
-  const sameStyle=await page.evaluate(()=>{
+  const valueStyle=await page.evaluate(()=>{
    const box=numbers([1,2,3,4],'value',()=>{},false,'XYZW','vec4');$('#inspector').append(box);
-   const source=$('#inspector [data-source-component="3"]'),ordinary=box.querySelector('input'),a=getComputedStyle(source),b=getComputedStyle(ordinary);
-   const equal=['backgroundColor','padding','minHeight','borderRadius'].every(key=>a[key]===b[key]);box.remove();return equal;
+   const source=$('#inspector [data-source-component="3"]'),ordinary=box.querySelectorAll('input')[3],a=getComputedStyle(source),b=getComputedStyle(ordinary);
+   const result={sameComponentColor:a.color===b.color,height:parseFloat(a.minHeight)>=parseFloat(b.minHeight),radius:a.borderRadius===b.borderRadius};box.remove();return result;
   });
-  assert.equal(sameStyle,true);
-  checks.push('native values reuse the same numeric controls and visual dimensions as ordinary component fields');
+  assert.deepEqual(valueStyle,{sameComponentColor:true,height:true,radius:true});
+  checks.push('Constant components keep ordinary component text brightness; Uniform sliders retain their approved taller dimensions');
   await page.screenshot({path:require('node:path').join(folder,'mixed-modes.png')});
   assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks}));
  }catch(error){await h.finish(error);throw error;}

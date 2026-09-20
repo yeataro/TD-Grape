@@ -1,6 +1,6 @@
 """Native Uniform gestures, conflicts and bounded per-update work."""
 from pathlib import Path
-import json, time, uuid
+import copy, json, time, uuid
 
 original = op('/TD_Grape/runtime').module
 before = {s.path:{n:s.op(n).text for n in ('state','graph','manifest','pixel_shader','vertex_shader') if s.op(n)} for s in original._shaders.values() if s and s.valid}
@@ -133,6 +133,36 @@ try:
     assert native.par.vec2valuex.eval()==.555
     checks.append('shrinking subscriptions stops removed sources and retained sources remain editable')
     module.Source.values=real_values
+    # Layout saves advance the graph revision but must preserve live Par identities.
+    bound=native.par.vec2valuex;bound.bindExpr="op('"+external.path+"').par.const0value"
+    binding=bound.bindExpr;native_id=native.id
+    with r.shader_context(shader):
+        seen=m.snapshot(r)
+        send('subscribe',sources=['u2']);source=live.clients[client]['sources']['u2']
+        initial=bound.eval()
+        assert 'error' not in send('begin',source='u2',component=0,expected=source.values()[0])
+        assert 'error' not in send('update',sequence=0,value=.48)
+        moved=copy.deepcopy(r.state()['graph']);ui=moved['stages']['pixel']['nodes'][0].setdefault('ui',{})
+        ui.update(x=ui.get('x',0)+25,y=ui.get('y',0)+40,width=340,height=220)
+        applied=r.deploy(moved,seen['revision'])
+        assert applied['ok'] and applied['shaderUpdated'] is False,applied
+        assert r.shader_operator(shader).id==native_id and bound.bindExpr==binding
+        assert live.clients[client]['sources']['u2'] is source
+        assert 'error' not in send('update',sequence=1,value=.61)
+        committed=send('commit',sequence=2,value=.62);assert 'error' not in committed,committed
+        assert abs(bound.eval()-.62)<1e-6 and bound.bindExpr==binding
+        live.restore(shader,{'receipt':committed['receipt'],'undo':True});assert abs(bound.eval()-initial)<1e-6
+        live.restore(shader,{'receipt':committed['receipt'],'undo':False});assert abs(bound.eval()-.62)<1e-6
+        checks.append('layout position/size save preserves native identity and Bind; held live update/commit and value Undo/Redo remain valid')
+        current=m.snapshot(r);item=next(row for row in current['uniforms'] if row['id']=='u2')['components'][0]
+        request=dict(id='u2',component=0,value=.73,expected=item,revision=seen['revision'])
+        try:m.write_value(r,request);raise AssertionError('Stale layout revision accepted')
+        except RuntimeError:pass
+        assert abs(bound.eval()-.62)<1e-6
+        m.write_value(r,{**request,'revision':current['revision']})
+        assert abs(bound.eval()-.73)<1e-6 and bound.bindExpr==binding
+        assert r.state()['graph']==applied['state']['graph']
+        checks.append('REST fallback rejects a pre-layout revision and accepts the acknowledged revision without altering binding or graph')
     result={'checks':checks,'updates':100,'meanMs':sum(timings)/len(timings),'maxMs':max(timings),'counts':counts}
     result['inventoryAndSelectedValuesMs']=inventory_ms
     result.update(multiSubscribeMs=subscribe_ms,multiTickMs=multi_tick_ms)

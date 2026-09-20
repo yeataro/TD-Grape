@@ -184,12 +184,12 @@ function renderCompileDiagnostics(){
   bar.append(details);pre.scrollTop=scroll;
 }
 
-let editVersion=0,submitBusy=false,autoTimer=null,conflicted=false;
+let editVersion=0,submitBusy=false,applyLayoutOnly=false,autoTimer=null,conflicted=false;
 let savedGraphContent=null,lastGraphSaveKey='graph.saved';
 function graphContent(document){
   const content=clone(document);delete content.catalogSnapshot;
   // Coordinates and component expansion are presentation-only. Labels and type settings may
-  // affect generated GLSL, so keep them when choosing the progress message.
+  // affect generated GLSL, so keep them when distinguishing layout saves.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
     delete data.ui;
     data.nodes=data.nodes.filter(node=>node.definitionUuid!=='sgrape.builtin.comment');
@@ -342,9 +342,9 @@ function applyGraph(){
 }
 async function performApplyGraph(){
   clearTimeout(autoTimer);autoTimer=null;if(readonly||submitBusy||!dirty)return;
-  const generation=editorLoadGeneration,sentVersion=editVersion,sentGraph=clone(graph),layoutOnly=!hasShaderChanges(sentGraph);
+  const generation=editorLoadGeneration,sentVersion=editVersion,sentGraph=clone(graph),sentRevision=revision,layoutOnly=!hasShaderChanges(sentGraph);
   const sentEntries=past.filter(entry=>entry.kind==='graph'&&!entry.nativeApplied),beforeToken=historyNativeToken;
-  submitBusy=true;$('#apply').disabled=true;$('#reload').disabled=true;status(t(layoutOnly?'graph.saving':'material.compiling'));
+  submitBusy=true;applyLayoutOnly=layoutOnly;$('#apply').disabled=true;$('#reload').disabled=true;status(t(layoutOnly?'graph.saving':'material.compiling'));
   try{
     const data=await api('apply',{graph:sentGraph,revision});
     if(generation!==editorLoadGeneration)return;
@@ -369,6 +369,11 @@ async function performApplyGraph(){
     if(data.state.graph.catalogSnapshot)graph.catalogSnapshot=clone(data.state.graph.catalogSnapshot);
     revision=data.state.revision;conflicted=false;clearCompileDiagnostics();
     const shaderUpdated=data.shaderUpdated??(data.compileInfo!=='Graph layout saved');
+    // A confirmed layout save kept the native source configuration intact.
+    // Advance this exact snapshot, not an older poll or a rebuilt Shader's controls.
+    if(layoutOnly&&!shaderUpdated&&nativeSourceSnapshot?.revision===sentRevision&&nativeSourceSnapshot.graph&&graphContent(nativeSourceSnapshot.graph)===graphContent(sentGraph)){
+      nativeSourceSnapshot={...nativeSourceSnapshot,revision,graph:clone(data.state.graph),declarations:clone(data.state.graph.declarations),sourceChanged:false};
+    }
     rememberSavedGraph(sentGraph,shaderUpdated?'graph.applied':'graph.saved');
     if(editVersion===sentVersion){dirty=false;sessionStorage.removeItem(draftKey);}
     else {try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}}
@@ -377,7 +382,7 @@ async function performApplyGraph(){
     if(!connectionInterrupted)status(t(dirty?graphPendingKey():shaderUpdated?'material.applied':lastGraphSaveKey),false,{clearError:true});
     document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
   }catch(e){if(generation!==editorLoadGeneration)return;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
-  finally{if(generation===editorLoadGeneration){submitBusy=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();refreshUniforms();if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
+  finally{if(generation===editorLoadGeneration){submitBusy=false;applyLayoutOnly=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();renderNativeSourceValues();refreshUniforms();if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
 }
 function el(tag,attrs={},text=''){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else e.setAttribute(k,v);}e.textContent=text;return e;}
 function field(label,control){const f=el('label',{class:'field'},label);f.append(control);return f;}
@@ -661,7 +666,7 @@ async function load(){
     graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);
     editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
-    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;
+    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;applyLayoutOnly=false;
     uniformGeneration++;uniformPolling=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();uniformSnapshot={revision:-1,uniforms:{}};
     customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
     readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();

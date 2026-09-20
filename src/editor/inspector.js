@@ -1975,6 +1975,12 @@ function nativeSourceGraphOnly(){
 }
 function sourceGraphPending(){return dirty&&!nativeSourceGraphOnly();}
 function sourceReady(ignoreValueWrite=false){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!sourceGraphPending()&&!submitBusy&&(!nativeSourceBusy||ignoreValueWrite&&nativeValueBusy)&&!editorMutationBlocked(ignoreValueWrite)&&nativeSourceSnapshot.revision===revision;}
+function uniformValueReady(ignoreValueWrite=false){
+  // A layout draft does not change the native Uniform identity. Configuration
+  // edits still use sourceReady; unknown outcomes and revision conflicts stay locked.
+  return sourceReady(ignoreValueWrite)||nativeSourceSnapshot?.enabled&&!nativeSourceError&&!conflicted&&!applyNeedsReview&&!hasShaderChanges()&&(!submitBusy||applyLayoutOnly)&&(!nativeSourceBusy||ignoreValueWrite&&nativeValueBusy)&&!editorMutationBlocked(ignoreValueWrite)&&nativeSourceSnapshot.revision===revision;
+}
+function nativeValueReady(decl,ignoreValueWrite=false){return decl?.kind==='uniform'?uniformValueReady(ignoreValueWrite):sourceReady(ignoreValueWrite);}
 function sourceMissingHint(decl){return t(sourceReferences(decl.id).length?'sources.missing':'sources.missingUnused');}
 // Product dialogs stay inside the editor; callers recheck their live context
 // after awaiting, because native state can change while the card is open.
@@ -2057,8 +2063,13 @@ async function refreshNativeSources({required=false}={}){
   finally{if(generation===editorLoadGeneration){nativeSourcePolling=false;if(nativeSourceRefreshPending&&!nativeSourceError)queueMicrotask(()=>refreshNativeSources());else if(typeof uniformLive!=='undefined')uniformLive.subscribe();}}
 }
 async function nativeSourceRequest(endpoint,body){
-  if(!sourceReady()){showNativeSourceHint();return null;}
-  const generation=editorLoadGeneration,before=clone(graph),nativeBefore=nativeSourceSnapshot.history?.token||historyNativeToken;
+  const generation=editorLoadGeneration,ready=()=>endpoint==='source-value'?nativeValueReady(graph.declarations.find(d=>d.id===body.id)):sourceReady();
+  if(!ready()){showNativeSourceHint();return null;}
+  // REST still uses the graph revision CAS. Queue behind our layout save instead
+  // of sending an obsolete revision; live gestures pin native identities directly.
+  if(applyInFlight)await applyInFlight;
+  if(generation!==editorLoadGeneration||!ready())return null;
+  const before=clone(graph),nativeBefore=nativeSourceSnapshot.history?.token||historyNativeToken;
   nativeSourceBusy=true;nativeMutationBusy=true;nativeValueBusy=endpoint==='source-value';clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();renderNativeSourceValues();let result=null;
   try{
     result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});if(generation!==editorLoadGeneration)return null;
@@ -2072,13 +2083,14 @@ async function nativeSourceRequest(endpoint,body){
   return result;
 }
 function renderNativeSourceValues(changed=null){
-  const ready=sourceReady(true),rows=nativeSourceIndex();
+  const ready=sourceReady(true),valueReady=uniformValueReady(true),rows=nativeSourceIndex();
   let geometryChanged=false;
   for(const card of document.querySelectorAll('[data-native-source]')){
     if(changed&&!changed.has(card.dataset.nativeSource))continue;
     const row=rows.get(card.dataset.nativeSource);if(!row)continue;
-    for(const grid of card.querySelectorAll('[data-native-components]'))if(syncNativeComponentControls(grid,row,ready)&&card.closest('#cards'))geometryChanged=true;
-    for(const color of card.querySelectorAll('[data-native-color]'))syncNativeColorControls(color,row,ready);
+    const editableValue=row.kind==='uniform'?valueReady:ready;
+    for(const grid of card.querySelectorAll('[data-native-components]'))if(syncNativeComponentControls(grid,row,editableValue)&&card.closest('#cards'))geometryChanged=true;
+    for(const color of card.querySelectorAll('[data-native-color]'))syncNativeColorControls(color,row,editableValue);
     for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
       const item=row.components[Number(entry.dataset.matrixSourceComponent)],binding=row.matrixBinding;
       entry.disabled=!ready||!binding?.writable||!binding.literalValues;
@@ -2207,7 +2219,7 @@ function nativeComponentControls(decl,row,names=null){
   const count=typeComponents(decl.type)||1,grid=componentGrid(count);
   grid.dataset.nativeComponents=decl.id;grid.dataset.nativeKind=decl.kind;grid.nativeDeclaration=decl;grid.componentNames=names;
   for(let i=0;i<count;i++)grid.append(el('div',{'data-native-component-slot':i}));
-  syncNativeComponentControls(grid,row,sourceReady(true));
+  syncNativeComponentControls(grid,row,nativeValueReady(decl,true));
   if(decl.kind==='uniform'&&!row.pending&&typeof uniformLive!=='undefined')queueMicrotask(()=>{if(grid.isConnected)uniformLive.registerView(grid);});
   return grid;
 }
@@ -2220,7 +2232,7 @@ function nativeValueControls(decl,row,names=null){
   const count=typeComponents(decl.type),read=()=>{const live=nativeSourceIndex().get(decl.id);return [0,1,2,3].map(i=>i<count?Number(live?.components[i]?.value??(i===3?1:0)):i===3?1:0);};
   const swatch=colorPickerSwatch(read,values=>{
     const live=nativeSourceIndex().get(decl.id),items=picker.colorExpected||live?.components;picker.colorExpected=null;
-    if(!sourceReady()||!items||editorLoadGeneration!==load)return;
+    if(!nativeValueReady(decl)||!items||editorLoadGeneration!==load)return;
     const components=values.slice(0,Math.min(3,count)).map((value,component)=>({component,value,expected:clone(items[component])})).filter(edit=>edit.value!==edit.expected.value);
     if(components.length)nativeSourceRequest('source-value',{id:decl.id,components});
   }),picker=swatch.querySelector('input'),load=editorLoadGeneration;
@@ -2230,7 +2242,7 @@ function nativeValueControls(decl,row,names=null){
   // blur/polling; a new opening recaptures it even if the previous one canceled.
   picker.oninput=()=>{picker.colorExpected??=clone(nativeSourceIndex().get(decl.id)?.components);};
   const commit=picker.onchange;picker.onchange=()=>{try{commit();}finally{picker.colorExpected=null;}};
-  line.append(toggle,compact);box.append(line,swatch);box.colorRead=read;syncNativeColorControls(box,row,sourceReady(true));return box;
+  line.append(toggle,compact);box.append(line,swatch);box.colorRead=read;syncNativeColorControls(box,row,nativeValueReady(decl,true));return box;
 }
 function syncNativeColorControls(box,row,ready){
   const picker=box.querySelector('input[type=color]'),display=colorDisplay(box.colorRead()),count=Math.min(3,typeComponents(box.querySelector('[data-native-components]').nativeDeclaration.type));
@@ -2338,7 +2350,7 @@ function nativeBufferFields(card,decl,row){
 function nativeInputFields(box,decl,node=null){
   const row=nativeSourceRows().find(r=>r.id===decl.id);
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
-  card.addEventListener('pointerdown',()=>{if(!sourceReady())showNativeSourceHint();},true);
+  card.addEventListener('pointerdown',event=>{if(!(event.target.closest('[data-native-components],[data-native-color]')?nativeValueReady(decl):sourceReady()))showNativeSourceHint();},true);
   if(!row||row.pending){card.append(el('p',{class:'muted'},t('sources.pending')));return;}
   if(decl.kind==='attribute'){nativeAttributeFields(card,decl,row);return;}
   if(decl.kind==='pop_buffer'){nativeBufferFields(card,decl,row);return;}

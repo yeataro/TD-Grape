@@ -2,6 +2,7 @@ const assert=require('node:assert/strict');
 const {harness}=require('./test_glsl_code.cjs');
 (async()=>{
  const[source,state,folder]=process.argv.slice(2),h=await harness(source,state,folder,{skipPreview:true}),{page,checks,errors}=h;
+ page.setDefaultTimeout(10000);
  try{
   await page.evaluate(()=>{
    clearTimeout(autoTimer);autoTimer=null;nativeSourcePolling=false;uniformPolling=customPolling=true;
@@ -111,6 +112,30 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.waitForFunction(()=>uniformLive.subscriptions.size===1);
   assert.deepEqual(await page.evaluate(()=>[...uniformLive.subscriptions]),['live']);
   checks.push('offscreen controls stop subscribing; duplicate references still use one source');
+  await page.evaluate(()=>{
+   scheduleGraphApply=()=>{clearTimeout(autoTimer);autoTimer=null;};preview=async()=>{};
+   rememberSavedGraph(graph);nativeSourceSnapshot.graph=clone(graph);nativeSourceSnapshot.revision=revision;
+   past=[];future=[];conflicted=applyNeedsReview=false;window.beforeLayoutLive=liveValue;
+   const original=api;api=(route,body)=>route==='apply'?new Promise(resolve=>{window.releaseLiveLayout=()=>resolve({state:{graph:clone(body.graph),revision:body.revision+1},shaderUpdated:false,history:{beforeToken:'layout-before',token:'layout-after'}});}):original(route,body);
+   change(()=>{current().nodes.find(n=>n.id==='scalar').ui.x+=25;},{localize:false,layout:true});
+   window.layoutLiveGraph=JSON.stringify(graph);window.layoutLiveRevision=revision;window.liveLayoutApply=applyGraph();
+  });
+  assert.equal(await page.locator(selector).isEnabled(),true);
+  await h.settle();
+  await page.waitForFunction(()=>uniformLive.ready&&uniformLive.subscriptions.has('live')&&!uniformLive.subscribing);
+  const layoutPoint=await h.at(selector);await page.mouse.move(layoutPoint.x,layoutPoint.y);await page.mouse.down();await page.mouse.move(layoutPoint.x+25,layoutPoint.y,{steps:5});
+  await page.waitForFunction(()=>uniformLive.gesture?.sequence>0);
+  await page.evaluate(async()=>{releaseLiveLayout();await liveLayoutApply;});
+  assert.equal(await page.locator(selector).isEnabled(),true);
+  assert.equal(await page.evaluate(()=>revision===layoutLiveRevision+1&&nativeSourceSnapshot.revision===revision),true);
+  await page.mouse.move(layoutPoint.x+55,layoutPoint.y,{steps:5});await page.mouse.up();await page.waitForFunction(()=>!uniformLive.gesture);
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)===layoutLiveGraph&&!dirty),true);
+  assert.deepEqual(await page.evaluate(()=>past.map(e=>e.kind)),['graph','liveValue']);
+  await page.evaluate(()=>undo());assert.equal(await page.evaluate(()=>liveValue===beforeLayoutLive),true);
+  await page.evaluate(()=>undo());assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='scalar').ui.x),0);
+  assert.equal(await page.locator(selector).isEnabled(),true);
+  await page.evaluate(async()=>{await undo(true);await undo(true);});assert.notEqual(await page.evaluate(()=>liveValue===beforeLayoutLive),true);
+  checks.push('a held live gesture survives a layout save and revision change; interleaved Undo/Redo restores value and position independently');
   await page.evaluate(()=>{uniformLive.disconnect();});
   assert.equal(await page.evaluate(()=>uniformLive.ready),false);
   assert.equal(await page.evaluate(()=>editorMutationBlocked()),false);

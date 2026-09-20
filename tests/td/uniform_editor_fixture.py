@@ -57,6 +57,17 @@ else:
     p = r.shader_operator(shader).par.vec0valuex
     if action == 'external': p.val = .731
     assert saved(original._shaders.values()) == root.fetch('originalShaders'), 'User shaders changed'
+    if action == 'layout':
+        previous=root.fetch('fixtureShader')[shader.path];current=saved([shader])[shader.path]
+        assert all(current[n]==text for n,text in previous.items() if n not in ('state','graph')), 'Layout changed generated code'
+        def without_geometry(text):
+            document=json.loads(text)
+            for data in document['stages'].values():
+                for node in data['nodes']:
+                    for field in ('x','y','width','height'):node.get('ui',{}).pop(field,None)
+            return document
+        assert without_geometry(previous['graph'])==without_geometry(current['graph']), 'Layout changed graph content'
+        root.store('fixtureShader',saved([shader]))
     assert saved([shader]) == root.fetch('fixtureShader'), 'Value editing changed graph or generated code'
     result = {'value':p.eval(), 'undoCount':root.fetch('undoCount'), 'clients':len(r._live.clients),
               'errors':root.op('manager/uniform_socket').errors(), 'shadersPreserved':True}

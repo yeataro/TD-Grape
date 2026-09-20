@@ -103,7 +103,7 @@ const uniformLive={
   attach(entry,source,component){
     const read=()=>entry.tagName==='SELECT'?(entry.value==='true'?1:0):Number(entry.value);
     const begin=()=>{
-      if(!this.ready||!this.subscriptions.has(source)||this.gesture)return false;
+      if(!this.ready||!this.subscriptions.has(source)||this.gesture||!uniformValueReady())return false;
       const g={id:crypto.randomUUID(),entry,source,component,sequence:0,latest:null,inFlight:false,closed:false,error:null,receipt:null,load:editorLoadGeneration,chain:Promise.resolve()};
       g.fail=error=>{g.error=error;if(error.receipt)g.receipt=error.receipt;};
       g.chain=this.request('begin',{source,component,expected:clone(entry.sourceExpected),gesture:g.id}).catch(g.fail);

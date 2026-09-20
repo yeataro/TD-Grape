@@ -51,6 +51,32 @@ function job(action){
    checks.push(`${host}: direct native Par edit pushes to browser; value-only Undo/Redo`);
    assert.equal(await page.evaluate(()=>JSON.stringify(graph)===testGraph&&revision===testRevision&&dirty===testDirty),true);
    assert.equal(requests.some(x=>['source-value','apply','graph','validate'].includes(x)),false);
+   // Hold the layout response after TD accepted it, then drag through the acknowledgement.
+   let releaseLayout,layoutAccepted;const accepted=new Promise(resolve=>layoutAccepted=resolve);
+   const applyRoute=url=>url.pathname.startsWith('/api/')&&url.pathname.endsWith('/apply');
+   await page.route(applyRoute,async route=>{
+    const response=await route.fetch();await new Promise(resolve=>{releaseLayout=resolve;layoutAccepted();});await route.fulfill({response});
+   });
+   await page.evaluate(()=>{
+    scheduleGraphApply=()=>{clearTimeout(autoTimer);autoTimer=null;};
+    change(()=>{const ui=current().nodes[0].ui;ui.x+=25;ui.width=(ui.width||220)+30;},{localize:false,layout:true});
+    window.layoutPromise=applyGraph();
+   });
+   let acceptTimeout;try{await Promise.race([accepted,new Promise((_,reject)=>{acceptTimeout=setTimeout(()=>reject(Error('Layout response was not intercepted')),15000);})]);}finally{clearTimeout(acceptTimeout);}
+   job('layout');
+   await page.waitForFunction(()=>uniformLive.ready&&uniformLive.subscriptions.has('live'));
+   assert.equal(await entry.isEnabled(),true);
+   const layoutBox=await entry.boundingBox();await page.mouse.move(layoutBox.x+layoutBox.width*.4,layoutBox.y+layoutBox.height*.5);await page.mouse.down();
+   await page.mouse.move(layoutBox.x+layoutBox.width*.4+25,layoutBox.y+layoutBox.height*.5,{steps:6});
+   await page.waitForFunction(()=>uniformLive.gesture?.sequence>0&&!uniformLive.gesture.inFlight);
+   const duringLayout=job('inspect');assert.notEqual(duringLayout.value,.731);
+   releaseLayout();await page.evaluate(()=>layoutPromise);assert.equal(await entry.isEnabled(),true);
+   await page.mouse.move(layoutBox.x+layoutBox.width*.4+50,layoutBox.y+layoutBox.height*.5,{steps:5});await page.mouse.up();
+   await page.waitForFunction(()=>!uniformLive.gesture);
+   assert.notEqual(job('inspect').value,duringLayout.value);
+   assert.equal(await page.evaluate(()=>!dirty&&nativeSourceSnapshot.revision===revision),true);
+   await page.unroute(applyRoute);
+   checks.push(`${host}: position/size save keeps real native live edits active before and after its revision acknowledgement`);
    // A fresh page runs ordinary HTTP initialization and must reconnect itself.
    await page.reload();await page.waitForFunction(()=>nativeSourceRows().some(r=>r.id==='live'));
    await page.evaluate(()=>{selectedInputId='live';render();});
