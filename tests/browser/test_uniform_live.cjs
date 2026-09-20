@@ -4,7 +4,8 @@ const {harness}=require('./test_glsl_code.cjs');
  const[source,state,folder]=process.argv.slice(2),h=await harness(source,state,folder,{skipPreview:true}),{page,checks,errors}=h;
  try{
   await page.evaluate(()=>{
-   clearTimeout(autoTimer);autoTimer=null;nativeSourcePolling=uniformPolling=customPolling=true;
+   clearTimeout(autoTimer);autoTimer=null;nativeSourcePolling=false;uniformPolling=customPolling=true;
+   refreshNativeSources=async()=>{nativeSourceRefreshPending=false;};
    uniformLive.disconnect();uniformLive.retryAt=0;
    window.liveMessages=[];window.liveReceipts=new Map();window.liveValue=.25;window.liveBefore=.25;window.liveSequence=-1;window.livePause=false;
    window.WebSocket=class{
@@ -14,7 +15,7 @@ const {harness}=require('./test_glsl_code.cjs');
     deliver(data){this.onmessage?.({data:JSON.stringify(data)});}
     send(text){const msg=JSON.parse(text);liveMessages.push(msg);let result={};
      if(msg.type==='begin'){liveBefore=liveValue;liveSequence=-1;this.gesture=msg.gesture;}
-     if(msg.type==='subscribe')result={components:clone(nativeSourceSnapshot.uniforms[0].components)};
+     if(msg.type==='subscribe')result=msg.sources?{values:Object.fromEntries(msg.sources.map(id=>[id,clone(nativeSourceIndex().get(id).components)]))}:{components:clone(nativeSourceIndex().get(msg.source).components)};
      if(['update','commit'].includes(msg.type)){liveValue=msg.value;liveSequence=msg.sequence;result.value=liveValue;}
      if(msg.type==='commit'){liveReceipts.set(this.gesture,{before:liveBefore,after:liveValue});result.receipt=this.gesture;}
      if(msg.type==='cancel')liveValue=liveBefore;
@@ -84,6 +85,32 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.equal(await page.locator(selector).inputValue(),'0.876');
   assert.equal(await page.evaluate(()=>JSON.stringify(graph)===savedLiveGraph&&!dirty),true);
   checks.push('TD value messages update visible controls without graph persistence');
+  await page.evaluate(()=>{
+   graph.declarations.push({id:'second',kind:'uniform',name:'uSecond',type:'vec2',value:[.1,.2]});
+   nativeSourceSnapshot={...nativeSourceSnapshot,uniforms:[...nativeSourceSnapshot.uniforms,{id:'second',kind:'uniform',name:'uSecond',type:'vec2',sequence:'vec',components:[.1,.2].map(value=>({value,mode:'CONSTANT',writable:true}))}]};
+   const d=catalog.find(d=>d.key==='uniform');
+   instantiate(d,20,40,null,{declarationId:'live'});instantiate(d,230,40,null,{declarationId:'live'});instantiate(d,20,220,null,{declarationId:'second'});
+   selected=null;selection.clear();selectedInputId='live';scale=1;pan={x:30,y:30};render();workspaceLayout.reveal('parameters');
+   window.multiGraph=JSON.stringify(graph);window.multiList=$('#nativeuniforms').firstElementChild;
+  });
+  await page.waitForFunction(()=>uniformLive.subscriptions.size===2);
+  assert.deepEqual(await page.evaluate(()=>[...uniformLive.subscriptions].sort()),['live','second']);
+  assert.equal(await page.locator('#cards [data-native-source="live"] [data-source-component]').count(),2);
+  await page.evaluate(()=>{
+   fakeLiveSocket.deliver({type:'values',source:'live',components:[{value:.932,mode:'CONSTANT',writable:true}]});
+   fakeLiveSocket.deliver({type:'values',source:'second',components:[{value:.123,mode:'CONSTANT',writable:true},{value:.456,mode:'CONSTANT',writable:true}]});
+  });
+  await page.waitForFunction(()=>[...document.querySelectorAll('[data-native-source="live"] [data-source-component="0"]')].every(e=>e.value==='0.932'));
+  assert.deepEqual(await page.locator('#cards [data-native-source="second"] input').evaluateAll(es=>es.map(e=>e.value)),['0.123','0.456']);
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)===multiGraph&&!dirty&&$('#nativeuniforms').firstElementChild===multiList),true);
+  checks.push('multiple graph references and Parameter share unique subscriptions; TD values update all copies without graph saves or list rebuilds');
+  await page.screenshot({path:require('node:path').join(folder,'uniform-references.png')});
+  await page.evaluate(()=>{
+   const n=current().nodes.find(n=>n.params?.declarationId==='second');n.ui.x=100000;render();
+  });
+  await page.waitForFunction(()=>uniformLive.subscriptions.size===1);
+  assert.deepEqual(await page.evaluate(()=>[...uniformLive.subscriptions]),['live']);
+  checks.push('offscreen controls stop subscribing; duplicate references still use one source');
   await page.evaluate(()=>{uniformLive.disconnect();});
   assert.equal(await page.evaluate(()=>uniformLive.ready),false);
   assert.equal(await page.evaluate(()=>editorMutationBlocked()),false);

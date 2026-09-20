@@ -1414,6 +1414,7 @@ function renderCards(){
   touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();clearWireGesture();clearGraphTrash();const cards=$('#cards');cards.replaceChildren();
   selection=new Set([...selection].filter(id=>current().nodes.some(n=>n.id===id)));
   if(selected&&!current().nodes.some(n=>n.id===selected))selected=null;
+  const nativeDeclarations=new Map(graph.declarations.map(d=>[d.id,d]));
   for(const n of current().nodes){
     const collapsed=n.ui?.collapsed===true,d=definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
@@ -1480,6 +1481,7 @@ function renderCards(){
     appendSparePort(list,n);card.append(list);
     if(n.params?.value!==undefined||d?.key==='vector'){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
     if(d?.key==='color'&&Array.isArray(n.params.value))card.append(nodeColorPicker(n));
+    if(d?.key==='uniform'){const control=nativeReferenceControls(n,nativeDeclarations.get(n.params.declarationId));if(control)card.append(control);}
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
     if(d?.key==='comment')card.append(commentNodeEditor(n,true));
     else if(nodeComment(n))card.append(nodeCanvasComment(n));

@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 來源第二輪即時控制檢查點 0.8.125：图內 Uniform scalar／vector 引用共用 Parameter 數值元件與 TD 實體；可見控制依來源 ID 去重訂閱，離開視野退訂，值訊息合併到一幀更新且不保存圖。批次訂閱只讀一次圖；原生每輪只評估宣告的分量。保留值／模式／Parameter 身分衝突檢查及 Bind、手勢合併與 Undo。訂閱失效通知若碰到忙碌或已在請求，會保留刷新需求；沒有提高全清單輪詢頻率。474 Python 與 JS／整合 portable checks、原生 13 組及瀏覽器 10 組、刪除／Colors 5 組通過，已檢視圖內控制截圖。200 來源初始化約 14.21 ms、一次全來源 tick 約 4.86 ms（本機單次量測），成本拆解見[即時 Uniform 紀錄](../discussions/UNIFORM_LIVE_EDITING.md)。完整 Common／Custom 卡片尚在第二輪主線，非宣稱本輪已完成。同步與保存另記。
+
 2026-09-20 0.8.124 交付檢查點：refresh／master 同步／唯讀 audit 全部成功，36 份嵌入來源與 9 個主要網頁資源一致，TOP／MAT master 為 revision 72；三份使用者 Shader 保留。TOE 已保存（943710 bytes，SHA256 `14882dc15bfda4bc4ccde5c41c1e498332e58dcdcbfc602e76e6887036ce40f0`），沒有強制刷新使用者網頁。報告 `work/reports/source-review/`。
 
 2026-09-20 來源第二輪審查檢查點 0.8.124：來源刪除改為頁面內 overlay 確認卡，取消／Esc 不送出請求，確認保留原生 edit token；切換圖或引用數變更時不執行過期刪除。Colors 新建／編輯只提供 float／vec2／vec3／vec4，分量使用 R／RG／RGB／RGBA 語意，既有其他型別原樣保留並提示調整，不自動改接線。新瀏覽器驗證 5 組、既有來源 13 組、705 個雙語鍵驗證通過；已檢視 overlay 截圖。Ucc 殘留回報已確認仍在 TD Colors，使用者撤回同步問題。另記 GLSL OP 狀態卡為五輪完成後的獨立待辦。本檢查點沒有改輪詢、WS、原生值／模式、GLSL 產碼或使用者圖；Common 卡片與多來源即時控制接續第二輪。同步與保存另記。

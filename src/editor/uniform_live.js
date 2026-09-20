@@ -1,6 +1,30 @@
 /* Uniform values belong to TD. This client never marks or serializes the graph. */
 const uniformLive={
   socket:null,ready:false,source:null,subscribed:null,subscribing:false,pending:new Map(),serial:0,retryAt:0,connecting:false,gesture:null,generation:0,lastSeen:0,connectTimer:null,
+  sources:[],subscriptions:new Set(),subscribedKey:null,views:new Map(),viewObserver:null,valueFrame:null,changedValues:new Set(),
+  registerView(grid){
+    if(!this.viewObserver)this.viewObserver=new IntersectionObserver(entries=>{
+      for(const entry of entries)if(this.views.has(entry.target))this.views.set(entry.target,entry.isIntersecting);
+      this.watchVisible();
+    });
+    this.views.set(grid,false);this.viewObserver.observe(grid);
+  },
+  watchVisible(){
+    const ids=new Set(),rows=nativeSourceIndex();
+    for(const [grid,visible]of this.views){
+      if(!grid.isConnected){this.viewObserver.unobserve(grid);this.views.delete(grid);continue;}
+      const row=rows.get(grid.dataset.nativeComponents);
+      if(visible&&row?.kind==='uniform'&&!row.missing&&!row.pending)ids.add(row.id);
+    }
+    this.watchSources([...ids]);
+  },
+  acceptValues(values){
+    const rows=nativeSourceIndex();
+    for(const [id,components]of Object.entries(values)){const row=rows.get(id);if(row){row.components=components;this.changedValues.add(id);}}
+    if(this.changedValues.size&&!this.valueFrame)this.valueFrame=requestAnimationFrame(()=>{
+      this.valueFrame=null;const changed=this.changedValues;this.changedValues=new Set();renderNativeSourceValues(changed);
+    });
+  },
   render(){
     for(const hint of document.querySelectorAll('[data-uniform-live-status]'))hint.textContent=t(this.ready?'live.ready':this.connecting?'live.connecting':'live.offline');
   },
@@ -14,7 +38,8 @@ const uniformLive={
     });
   },
   disconnect(){
-    const socket=this.socket;this.socket=null;this.ready=false;this.connecting=false;this.subscribed=null;this.generation++;
+    const socket=this.socket;this.socket=null;this.ready=false;this.connecting=false;this.subscribed=null;this.subscribedKey=null;this.subscriptions.clear();this.generation++;
+    if(this.valueFrame)cancelAnimationFrame(this.valueFrame);this.valueFrame=null;this.changedValues.clear();
     clearTimeout(this.connectTimer);this.connectTimer=null;
     if(socket)socket.close();
     for(const item of this.pending.values()){clearTimeout(item.timer);item.reject(Error(t('live.offline')));}this.pending.clear();
@@ -41,36 +66,44 @@ const uniformLive={
           const item=this.pending.get(message.request);if(!item)return;this.pending.delete(message.request);clearTimeout(item.timer);
           if(message.error)item.reject(Object.assign(Error(message.error),{receipt:message.receipt}));else item.resolve(message);
         }else if(message.type==='values'){
-          const row=nativeSourceRows().find(r=>r.id===message.source);
-          if(row){row.components=message.components;renderNativeSourceValues();}
-        }else if(message.type==='inventory')refreshNativeSources();
+          this.acceptValues({[message.source]:message.components});
+        }else if(message.type==='inventory')refreshNativeSources({required:true});
         else if(message.type==='invalidated'){
-          this.subscribed=null;this.gesture?.fail(Error(t('live.changed')));refreshNativeSources();
+          this.subscribed=null;this.subscribedKey=null;
+          for(const id of message.sources||this.subscriptions)this.subscriptions.delete(id);
+          if(this.gesture&&(!message.sources||message.sources.includes(this.gesture.source)))this.gesture.fail(Object.assign(Error(t('live.changed')),{receipt:message.receipt}));
+          refreshNativeSources({required:true});
         }
       };
     }catch{if(generation===this.generation){this.connecting=false;this.retryAt=Date.now()+5000;this.render();}}
   },
   watch(source){
-    if(this.source===source){if(this.ready)this.subscribe();else this.connect();return;}
-    this.source=source;
-    if(!source){this.disconnect();return;}
+    this.watchSources(source?[source]:[]);
+  },
+  watchSources(sources){
+    this.sources=[...new Set(sources)].sort();this.source=this.sources[0]||null;
+    if(!this.source&&!this.gesture){if(this.socket||this.connecting)this.disconnect();return;}
     if(this.ready)this.subscribe();else this.connect();
   },
   async subscribe(){
-    if(this.gesture||this.subscribing||!this.ready||this.source===this.subscribed)return;
+    const key=JSON.stringify(this.sources);
+    if(this.gesture||this.subscribing||!this.ready||nativeSourceRefreshPending||nativeSourcePolling||key===this.subscribedKey)return;
     this.subscribing=true;
-    const source=this.source;
+    const sources=[...this.sources],generation=this.generation;
     try{
-      const reply=await this.request('subscribe',{source});this.subscribed=source;
-      const row=nativeSourceRows().find(r=>r.id===source);if(row&&reply.components){row.components=reply.components;renderNativeSourceValues();}
+      const reply=await this.request('subscribe',sources.length===1?{source:sources[0]}:{sources});
+      if(generation!==this.generation)return;
+      const values=reply.values||(sources.length===1?{[sources[0]]:reply.components}:{});
+      this.subscribedKey=key;this.subscriptions=new Set(Object.keys(values));this.subscribed=sources[0]||null;this.acceptValues(values);
+      if(reply.unavailable?.length)refreshNativeSources({required:true});
     }
-    catch{this.subscribed=null;}
-    finally{this.subscribing=false;if(this.ready&&this.source!==source)this.subscribe();}
+    catch{this.subscribed=null;this.subscribedKey=null;}
+    finally{this.subscribing=false;if(this.ready&&JSON.stringify(this.sources)!==key)this.subscribe();}
   },
   attach(entry,source,component){
     const read=()=>entry.tagName==='SELECT'?(entry.value==='true'?1:0):Number(entry.value);
     const begin=()=>{
-      if(!this.ready||this.subscribed!==source||this.gesture)return false;
+      if(!this.ready||!this.subscriptions.has(source)||this.gesture)return false;
       const g={id:crypto.randomUUID(),entry,source,component,sequence:0,latest:null,inFlight:false,closed:false,error:null,receipt:null,load:editorLoadGeneration,chain:Promise.resolve()};
       g.fail=error=>{g.error=error;if(error.receipt)g.receipt=error.receipt;};
       g.chain=this.request('begin',{source,component,expected:clone(entry.sourceExpected),gesture:g.id}).catch(g.fail);

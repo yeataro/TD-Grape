@@ -1907,7 +1907,7 @@ function installPanelWorkspace(){
 
 /* Inputs are a source inventory. Graph nodes reference these identities; native
    Uniform values/modes continue to belong to the actual GLSL OP. */
-let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceError='',nativeSourceRetryAt=0,selectedInputId=null;
+let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceRefreshPending=false,nativeSourceError='',nativeSourceRetryAt=0,selectedInputId=null;
 function inputPresets(){return Object.fromEntries(Object.entries(typeContract?.sources?.uniformPresets||{}).filter(([,entry])=>entry.availability?.[editorTarget]?.includes(stage)).map(([key,entry])=>[key,[entry.name,entry.initialize.expression]]));}
 const inputCollapsedGroups=(()=>{try{const saved=JSON.parse(localStorage.getItem('sgrapeInputCollapsedGroups'));return new Set(Array.isArray(saved)?saved:[]);}catch{return new Set();}})();
 function setInputGroupCollapsed(kind,collapsed){
@@ -1915,6 +1915,11 @@ function setInputGroupCollapsed(kind,collapsed){
   try{localStorage.setItem('sgrapeInputCollapsedGroups',JSON.stringify([...inputCollapsedGroups]));}catch{}
 }
 function nativeSourceRows(){return [...(nativeSourceSnapshot?.uniforms||[]),...(nativeSourceSnapshot?.specConstants||[])];}
+let nativeIndexedSnapshot=null,nativeRowsIndex=new Map();
+function nativeSourceIndex(){
+  if(nativeIndexedSnapshot!==nativeSourceSnapshot){nativeIndexedSnapshot=nativeSourceSnapshot;nativeRowsIndex=new Map(nativeSourceRows().map(row=>[row.id,row]));}
+  return nativeRowsIndex;
+}
 function inputGroupLabel(kind){return ({top_input:'TOP Inputs',constant:t('inputs.graphConstants'),spec_constant:t('inputs.specConstants'),uniform:'Uniforms',sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind];}
 function inputSourceGroup(kind){return kind==='color'||kind==='array'||kind.startsWith('preset:')?'uniform':kind;}
 function inputPresetSource(kind){return kind.startsWith('preset:')?graph.declarations.find(d=>d.kind==='uniform'&&d.type==='float'&&d.initialDriver===kind.slice(7)):null;}
@@ -2000,12 +2005,13 @@ function receiveNativeSources(data,{own=false}={}){
   }
   renderNativeSources();
 }
-async function refreshNativeSources(){
+async function refreshNativeSources({required=false}={}){
+  if(required)nativeSourceRefreshPending=true;
   if(!graph||readonly||nativeSourcePolling||nativeSourceBusy||historyBusy||nativeMutationBusy||document.hidden||submitBusy||Date.now()<nativeSourceRetryAt)return;
-  nativeSourcePolling=true;const generation=editorLoadGeneration;
+  nativeSourcePolling=true;nativeSourceRefreshPending=false;const generation=editorLoadGeneration;
   try{const data=await api('sources');if(generation!==editorLoadGeneration)return;nativeSourceError='';receiveNativeSources(data);}
   catch(e){if(generation!==editorLoadGeneration)return;nativeSourceError=e.status===404?t('sources.connectionUnsupported'):e.message;nativeSourceRetryAt=Date.now()+5000;renderNativeSourceValues();}
-  finally{if(generation===editorLoadGeneration)nativeSourcePolling=false;}
+  finally{if(generation===editorLoadGeneration){nativeSourcePolling=false;if(nativeSourceRefreshPending&&!nativeSourceError)queueMicrotask(()=>refreshNativeSources());else if(typeof uniformLive!=='undefined')uniformLive.subscribe();}}
 }
 async function nativeSourceRequest(endpoint,body){
   if(!sourceReady()){showNativeSourceHint();return null;}
@@ -2021,9 +2027,10 @@ async function nativeSourceRequest(endpoint,body){
   finally{if(generation===editorLoadGeneration){nativeSourceBusy=false;nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();renderNativeSourceValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
   return result;
 }
-function renderNativeSourceValues(){
-  const ready=sourceReady(true),rows=new Map(nativeSourceRows().map(row=>[row.id,row]));
+function renderNativeSourceValues(changed=null){
+  const ready=sourceReady(true),rows=nativeSourceIndex();
   for(const card of document.querySelectorAll('[data-native-source]')){
+    if(changed&&!changed.has(card.dataset.nativeSource))continue;
     const row=rows.get(card.dataset.nativeSource);if(!row)continue;
     for(const grid of card.querySelectorAll('[data-native-components]'))syncNativeComponentControls(grid,row,ready);
     for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
@@ -2060,6 +2067,7 @@ function renderNativeSourceValues(){
     for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
     const state=card.querySelector('.native-source-state');if(state){const text=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.arrayBinding?t('uniform.driven'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.slice(0,typeComponents(row.type)||1).some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');if(state.textContent!==text)state.textContent=text;}
   }
+  if(changed)return;
   for(const entry of document.querySelectorAll('#inspector [data-input-name]')){
     const row=rows.get(entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
   }
@@ -2140,7 +2148,28 @@ function nativeComponentControls(decl,row){
   const count=typeComponents(decl.type)||1,grid=componentGrid(count);
   grid.dataset.nativeComponents=decl.id;grid.nativeDeclaration=decl;
   for(let i=0;i<count;i++)grid.append(el('div',{'data-native-component-slot':i}));
-  syncNativeComponentControls(grid,row,sourceReady(true));return grid;
+  syncNativeComponentControls(grid,row,sourceReady(true));
+  if(decl.kind==='uniform'&&typeof uniformLive!=='undefined')queueMicrotask(()=>{if(grid.isConnected)uniformLive.registerView(grid);});
+  return grid;
+}
+function nativeReferenceControls(node,decl){
+  if(!decl||decl.kind!=='uniform'||isMatrixType(decl.type)||!['float','double','int','uint','bool'].includes(typeFamily(decl.type)))return null;
+  const row=nativeSourceIndex().get(decl.id);if(!row||row.pending||row.missing)return null;
+  const body=el('div',{class:'node-fixed-values native-reference-values','data-native-source':decl.id});
+  body.dataset.sourcePresentation=JSON.stringify([decl.id,decl.type,decl.name,row.sequence]);
+  body.append(nativeComponentControls(decl,row));return body;
+}
+function syncNativeReferenceControls(){
+  const declarations=new Map(graph.declarations.map(d=>[d.id,d])),nodes=new Map(current().nodes.map(n=>[n.id,n])),rows=nativeSourceIndex();
+  for(const card of document.querySelectorAll('#cards .node:not(.collapsed)')){
+    const node=nodes.get(card.dataset.node),decl=declarations.get(node?.params?.declarationId);if(decl?.kind!=='uniform')continue;
+    const row=rows.get(decl.id),body=card.querySelector('.native-reference-values');
+    const signature=row&&!row.pending&&!row.missing?JSON.stringify([decl.id,decl.type,decl.name,row.sequence]):null;
+    if(body?.dataset.sourcePresentation===signature)continue;
+    const replacement=nativeReferenceControls(node,decl);
+    if(body){if(replacement)body.replaceWith(replacement);else body.remove();}
+    else if(replacement)card.querySelector('.ports').after(replacement);
+  }
 }
 function syncNativeComponentControls(grid,row,ready){
   const decl=grid.nativeDeclaration,count=grid.children.length,names=row.sequence==='color'?'RGBA':'XYZW';
@@ -2185,7 +2214,7 @@ function nativeInputFields(box,decl){
   if(!row.missing){
     card.append(nativeComponentControls(decl,row));
     if(decl.kind==='uniform'&&typeof uniformLive!=='undefined'){
-      card.append(el('small',{'data-uniform-live-status':''}));uniformLive.watch(decl.id);uniformLive.render();
+      card.append(el('small',{'data-uniform-live-status':''}));uniformLive.render();
     }
     if(decl.kind==='uniform'&&['int','uint'].includes(typeFamily(decl.type))){
       card.append(el('p',{class:'muted'},t('inputs.integerUniformHint')));
@@ -2320,6 +2349,7 @@ function appendBuiltInInputs(box,query){
 }
 function renderNativeSources(){
   const box=$('#nativeuniforms');if(!box||!graph)return;
+  syncNativeReferenceControls();
   const query=normalizeSearch($('#inputsearch')?.value),decls=allInputSources().filter(d=>['uniform','sampler','constant','spec_constant','top_input'].includes(d.kind)&&normalizeSearch(d.name+' '+d.kind+' '+d.type).includes(query));
   const issues=nativeSourceSnapshot?.issues||[],issueById=new Map(issues.filter(i=>i.id).map(i=>[i.id,i]));
   const unimported=issues.filter(i=>!i.id&&normalizeSearch((i.name||'')+' '+i.message).includes(query));
@@ -2376,10 +2406,8 @@ function installNativeSources(){
   $('#canvas').addEventListener('pointerdown',()=>{selectedInputId=null;},true);
   setInterval(()=>{
     if(typeof uniformLive!=='undefined'){
-      const card=document.querySelector('#inspector [data-native-source]:has([data-native-components])');
-      const row=card&&nativeSourceRows().find(r=>r.id===card.dataset.nativeSource);
-      uniformLive.watch(row?.kind==='uniform'?row.id:null);
-      if(uniformLive.ready&&nativeSourceSnapshot?.revision===revision&&!nativeSourceError)return;
+      uniformLive.watchVisible();
+      if(uniformLive.ready&&nativeSourceSnapshot?.revision===revision&&!nativeSourceError&&!nativeSourceRefreshPending)return;
     }
     refreshNativeSources();
   },1000);

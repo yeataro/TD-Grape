@@ -17,15 +17,17 @@ def constant(p):
 
 
 class Source:
-    def __init__(self, live, comp, ident):
+    def __init__(self, live, comp, ident, declarations=None, type_pars=None):
         self.live, self.comp, self.ident = live, comp, ident
         r, m = live.runtime, live.model
         self.operator = r.shader_operator(comp)
         self.record = copy.deepcopy(comp.fetch(m.STORE, {}).get(ident))
         if not self.record or self.record.get('missing') or self.record['sequence'] not in ('vec', 'color'):
             raise RuntimeError('This source has no live numeric components.')
-        with r.shader_context(comp):
-            self.declaration = next((d for d in r.state()['graph']['declarations'] if d['id'] == ident), None)
+        if declarations is None:
+            with r.shader_context(comp):
+                declarations = {d['id']:d for d in r.state()['graph']['declarations']}
+        self.declaration = declarations.get(ident)
         if not self.declaration or self.declaration['kind'] != 'uniform':
             raise RuntimeError('Only Uniform values use live editing.')
         # The inventory reconciler has already established this unique source.
@@ -34,8 +36,9 @@ class Source:
         self.index = self.record['index']
         if not 0 <= self.index < getattr(self.operator.seq, seq).numBlocks: raise RuntimeError('The Uniform row moved.')
         self.name = m.parameter(self.operator, seq, self.index, 'name')
-        self.pars = [m.parameter(self.operator, seq, self.index, suffix) for suffix in m.CHANNELS[seq]]
-        self.typepar = getattr(self.operator.par, seq + str(self.index) + 'type', None)
+        self.pars = [m.parameter(self.operator, seq, self.index, suffix) for suffix in m.CHANNELS[seq][:m.source_components(self.declaration)]]
+        type_name = seq + str(self.index) + 'type'
+        self.typepar = type_pars.get(type_name) if type_pars is not None else getattr(self.operator.par, type_name, None)
         self.native_type = self.typepar.eval() if self.typepar is not None else None
         self.epoch = live.metadata_epochs.get(comp.id, 0)
 
@@ -59,7 +62,7 @@ class Source:
         # Only bindings created and owned by Grape can be edited through their master.
         link = self.comp.fetch('grapeControlLinksV1', {}).get(self.ident, {})
         for item in link.get('components', []):
-            if self.pars[item['index']].isSamePar(p) and str(p.mode).endswith('BIND') and p.bindExpr == 'parent().par.' + item['control']:
+            if 0 <= item['index'] < len(self.pars) and self.pars[item['index']].isSamePar(p) and str(p.mode).endswith('BIND') and p.bindExpr == 'parent().par.' + item['control']:
                 master = p.bindMaster
                 if master is not None and master.owner == self.comp and constant(master): return master
         return None
@@ -161,7 +164,7 @@ class Live:
             ticket = self.tickets.pop(key[0], None) if len(key) == 1 else None
             if path.path != '/uniforms' or not ticket or ticket[0] <= time.monotonic() or not ticket[1].valid or len(self.clients) >= 8:
                 raise RuntimeError('Live connection expired; reconnect.')
-            self.clients[client] = {'comp':ticket[1], 'identity':ticket[1].id, 'source':None, 'gesture':None, 'last':None, 'seen':time.monotonic()}
+            self.clients[client] = {'comp':ticket[1], 'identity':ticket[1].id, 'source':None, 'sources':{}, 'gesture':None, 'last':{}, 'seen':time.monotonic()}
             self.watch(ticket[1])
             self.send(client, {'type':'ready'})
         except Exception:
@@ -242,7 +245,7 @@ class Live:
         if not session: return
         request = {}
         try:
-            if len(text) > 8192: raise RuntimeError('Live message too large.')
+            if len(text) > 131072: raise RuntimeError('Live message too large.')
             request = json.loads(text)
             if not isinstance(request, dict): raise RuntimeError('Invalid live message.')
             kind = request.get('type')
@@ -250,12 +253,36 @@ class Live:
             if kind == 'ping': result = {}
             elif kind == 'subscribe':
                 if session['gesture']: raise RuntimeError('Finish this edit before changing sources.')
-                session['source'] = Source(self, session['comp'], request['source']) if request.get('source') else None
-                session['last'] = None
-                result = {'source':request.get('source'), 'components':session['source'].values() if session['source'] else []}
+                multiple = 'sources' in request
+                ids = request['sources'] if multiple else [request['source']] if request.get('source') else []
+                if not isinstance(ids, list) or len(ids) > 1024 or any(not isinstance(i,str) or len(i)>128 for i in ids):
+                    raise RuntimeError('Invalid Uniform subscription.')
+                # One graph read and one lookup per unique identity, not one
+                # full graph parse/search for every displayed reference.
+                with self.runtime.shader_context(session['comp']):
+                    declarations = {d['id']:d for d in self.runtime.state()['graph']['declarations']}
+                # Looking up a nonexistent TD Par repeatedly is expensive.
+                # Discover optional type controls once for the whole batch.
+                operator = self.runtime.shader_operator(session['comp'])
+                type_pars = {p.name:p for p in operator.pars('vec*type','color*type')}
+                sources = {}; values = {}; failures = []
+                for ident in dict.fromkeys(ids):
+                    try:
+                        source = session['sources'].get(ident)
+                        if source:
+                            try: source.check()
+                            except Exception: source = None
+                        source = source or Source(self, session['comp'], ident, declarations, type_pars)
+                        values[ident] = source.values(); sources[ident] = source
+                    except Exception as exc:
+                        if not multiple: raise
+                        failures.append({'source':ident,'error':str(exc)})
+                session['sources'] = sources; session['last'] = values
+                session['source'] = sources.get(request.get('source'))
+                result = {'values':values,'unavailable':failures} if multiple else {'source':request.get('source'),'components':values.get(request.get('source'),[])}
             elif kind == 'begin':
                 if session['gesture']: raise RuntimeError('Another Uniform edit is active.')
-                source = session['source']
+                source = session['sources'].get(request.get('source'))
                 if not source or source.ident != request.get('source'): raise RuntimeError('Subscribe to this Uniform first.')
                 # A component has one writer; independent components may be edited together.
                 for peer in self.clients.values():
@@ -316,15 +343,23 @@ class Live:
                     self.send(client, {'type':'inventory'})
                 if now - session['seen'] > 20:
                     self.close(client); self.server.webSocketClose(client); continue
-                source = session['source']
-                if source:
-                    values = source.values()
-                    if values != session['last']:
-                        self.send(client, {'type':'values', 'source':source.ident, 'components':values})
-                        session['last'] = values
+                invalid = []
+                for ident, source in list(session['sources'].items()):
+                    try:
+                        values = source.values()
+                        if values != session['last'].get(ident):
+                            self.send(client, {'type':'values', 'source':ident, 'components':values})
+                            session['last'][ident] = values
+                    except Exception:
+                        invalid.append(ident); session['sources'].pop(ident); session['last'].pop(ident,None)
+                if invalid:
+                    g = session['gesture']
+                    receipt = self.finish(session) if g and g.source.ident in invalid else None
+                    if session['source'] and session['source'].ident in invalid: session['source'] = None
+                    self.send(client, {'type':'invalidated','sources':invalid,'receipt':receipt})
             except Exception:
                 receipt = self.finish(session)
-                session['source'] = None
+                session['source'] = None; session['sources'] = {}; session['last'] = {}
                 self.send(client, {'type':'invalidated', 'receipt':receipt})
         self.metadata_dirty.clear()
 
@@ -332,13 +367,15 @@ class Live:
         if not self.clients: return
         declarations = {d['id']:d for d in data.get('graph',{}).get('declarations',[])}
         for client, session in list(self.clients.items()):
-            source = session['source']
-            if session['comp'] != comp or source is None: continue
-            current = declarations.get(source.ident, {})
-            if any(current.get(k) != source.declaration.get(k) for k in ('type','name','kind','sourceMissing')):
-                receipt = self.finish(session)
-                session['source'] = None
-                self.send(client, {'type':'invalidated', 'receipt':receipt})
+            if session['comp'] != comp: continue
+            invalid = [ident for ident, source in session['sources'].items()
+                       if any(declarations.get(ident,{}).get(k) != source.declaration.get(k) for k in ('type','name','kind','sourceMissing'))]
+            if invalid:
+                for ident in invalid: session['sources'].pop(ident); session['last'].pop(ident,None)
+                g = session['gesture']
+                receipt = self.finish(session) if g and g.source.ident in invalid else None
+                if session['source'] and session['source'].ident in invalid: session['source'] = None
+                self.send(client, {'type':'invalidated','sources':invalid,'receipt':receipt})
 
     def stop(self):
         for client in list(self.clients): self.close(client)

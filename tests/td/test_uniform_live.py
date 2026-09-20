@@ -96,8 +96,35 @@ try:
     checks.append('a newly controlled master rejects the gesture without changing its Expression or Bind')
     live.next_poll=live.next_inventory=0;start=time.perf_counter();live.tick();inventory_ms=(time.perf_counter()-start)*1000
     assert any(message.get('type')=='values' for _,message in server.messages)
+    old_counts=dict(counts)
+    start=time.perf_counter()
+    batch=send('subscribe',sources=['u'+str(i) for i in range(200)]+['u1','u1','missing'])
+    subscribe_ms=(time.perf_counter()-start)*1000
+    assert len(batch['values'])==200 and len(batch['unavailable'])==1,batch
+    assert counts['state']==old_counts['state']+1 and counts['scan']==old_counts['scan'] and counts['compile']==old_counts['compile'],counts
+    checks.append('200 unique visible sources plus duplicates: one graph read, no inventory scan, missing identity isolated')
+    evaluations={};real_values=module.Source.values
+    def values(source):evaluations[source.ident]=evaluations.get(source.ident,0)+1;return real_values(source)
+    module.Source.values=values
+    old_counts=dict(counts);server.messages.clear()
+    native=r.shader_operator(shader);native.par.vec1valuex=.333;native.par.vec2valuex=.444
+    live.next_poll=0;start=time.perf_counter();live.tick();multi_tick_ms=(time.perf_counter()-start)*1000
+    assert len(evaluations)==200 and set(evaluations.values())=={1},evaluations
+    assert counts==old_counts,counts
+    pushed={msg['source']:msg for _,msg in server.messages if msg['type']=='values'}
+    assert set(pushed)=={'u1','u2'},pushed
+    assert all(shader.op(n).text==text for n,text in saved.items())
+    checks.append('one evaluation per unique source per tick; only changed values sent; no graph read/write, compilation or inventory scan')
+    smaller=send('subscribe',sources=['u2']);assert set(live.clients[client]['sources'])=={'u2'}
+    source=live.clients[client]['sources']['u2']
+    assert 'error' not in send('begin',source='u2',component=0,expected=source.values()[0])
+    assert 'error' not in send('commit',sequence=0,value=.555)
+    assert native.par.vec2valuex.eval()==.555
+    checks.append('shrinking subscriptions stops removed sources and retained sources remain editable')
+    module.Source.values=real_values
     result={'checks':checks,'updates':100,'meanMs':sum(timings)/len(timings),'maxMs':max(timings),'counts':counts}
     result['inventoryAndSelectedValuesMs']=inventory_ms
+    result.update(multiSubscribeMs=subscribe_ms,multiTickMs=multi_tick_ms)
 finally:
     root.destroy()
     assert all(op(path) and all(op(path).op(n).text==text for n,text in saved.items()) for path,saved in before.items())

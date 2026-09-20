@@ -636,7 +636,7 @@ async function load(){
     graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);
     editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
-    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;
+    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;
     uniformGeneration++;uniformPolling=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();uniformSnapshot={revision:-1,uniforms:{}};
     customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
     readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();

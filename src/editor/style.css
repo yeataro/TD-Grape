@@ -1812,3 +1812,5 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .confirmation-dialog{width:min(460px,calc(100 * var(--ui-vw) - 24px));padding:20px}
 .confirmation-dialog>p{line-height:1.7;overflow-wrap:anywhere}
 .confirmation-dialog>.confirmation-actions{justify-content:flex-end;gap:10px;padding:12px 0 0}
+.native-reference-values>.components{width:100%}
+.native-reference-values .field{margin:0}
