@@ -158,7 +158,7 @@
     "experiments.group.nodes": {"zh-Hant": "節點與接線", "en": "Nodes and wires"},
     "experiments.group.appearance": {"zh-Hant": "色彩與顯示", "en": "Colors and display"},
     "experiments.uiStyle": {"zh-Hant": "表現能力", "en": "Visual Capability"},
-    "experiments.uiStyle.hint": {"zh-Hant": "Professional 維持原貌；Cool 讓接線、選取框、葡萄圖示與套用 Shader 發光；Excellent 再加上節點與其他介面；Legendary 加上緩慢呼吸；Godlike 讓更強的彩色外光持續環繞。切換表現模式以 1 秒過渡；選取與按鈕等操作立即反應。只在深色模式生效。", "en": "Professional keeps the original look; Cool lights up wires, selection outlines, the grape logo and Apply Shader; Excellent adds nodes and other interface accents; Legendary adds a slow breathing glow; Godlike moves a stronger colored halo around the edges. Visual mode changes fade over one second; selection and button feedback stay immediate. Dark mode only."},
+    "experiments.uiStyle.hint": {"zh-Hant": "Professional 維持原貌；Cool 只讓接線與選取框發光；Excellent 再加上節點與其他介面，選取光暈優先於節點類別光暈；Legendary 加上緩慢呼吸；Godlike 讓更強的彩色外光持續環繞。模式切換立即生效，沒有過渡。只在深色模式生效。", "en": "Professional keeps the original look. Cool adds glow to wires and selection outlines. Excellent also lights up nodes and interface accents; selection glow overrides the node category. Legendary adds breathing; Godlike adds a stronger orbiting glow. Modes switch instantly. Dark mode only."},
     "experiments.style.professional": {"zh-Hant": "Professional · 專業", "en": "Professional"},
     "experiments.style.cool": {"zh-Hant": "Cool · 酷", "en": "Cool"},
     "experiments.style.excellent": {"zh-Hant": "Excellent · 卓越", "en": "Excellent"},

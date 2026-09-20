@@ -1722,7 +1722,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 @keyframes ui-glow-orbit{from{--cool-orbit-angle:0deg}to{--cool-orbit-angle:360deg}}
 @media(prefers-reduced-motion:reduce){:root:is([data-ui-style="legendary"],[data-ui-style="godlike"])[data-ui-theme="dark"]{animation:none;--cool-glow-x:0px;--cool-glow-y:0px}}
 
-/* Optional glow tiers: Cool lights wires, selection, logo and Apply; Excellent adds nodes and interface. Dark only. */
+/* Optional glow tiers: Cool lights wires and selection; Excellent adds nodes and interface. Dark only. */
 :root[data-ui-theme="dark"]:where([data-ui-style="cool"],[data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]){--cool-node-depth:0 6px 20px #0004;--cool-input-depth:0 2px 6px #0003}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) :is(.node,.node-inspector-title,.input-source-row){--cool-accent:color-mix(in srgb,var(--category-bg) 65%,var(--category-fg) 35%)}
 @supports(color:hsl(from red h s l)){
@@ -1745,10 +1745,11 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 /* Cool only adds a selection halo. Unselected nodes retain their base styles. */
 :root[data-ui-theme="dark"][data-ui-style="cool"] #canvas .node.selected{--cool-selection:var(--selection);box-shadow:0 0 0 1px var(--cool-selection),var(--cool-node-depth),0 0 20px color-mix(in srgb,var(--cool-selection) var(--cool-glow-alpha),transparent)}
 :root[data-ui-theme="dark"][data-ui-style="cool"] #canvas .node.selected.error{--cool-selection:var(--danger,#ef8d8d)}
-/* Detailed tiers add category halos, without a separate transparent selection halo. */
+/* Detailed tiers add category halos; selection overrides the category accent. */
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node{--cool-node-glow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent);--cool-note-shadow:var(--note-body-shadow),var(--cool-node-glow);box-shadow:var(--cool-node-depth),var(--cool-node-glow)}
-:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.selected{box-shadow:0 0 0 1px var(--selection),var(--cool-node-depth),var(--cool-node-glow)}
+:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.selected{--cool-accent:var(--selection);box-shadow:0 0 0 1px var(--selection),var(--cool-node-depth),var(--cool-node-glow)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.error,:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.selected.error{box-shadow:0 0 0 1px var(--danger,#ef8d8d),var(--cool-node-depth),var(--cool-node-glow)}
+:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.selected.error{--cool-accent:var(--danger,#ef8d8d)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .node-inspector-title{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) :is(.node-title-text>span,.node-inspector-name,.input-source-select>span){text-shadow:calc(var(--cool-glow-x,0px) * .3) calc(var(--cool-glow-y,0px) * .3) 12px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .input-source-row{box-shadow:var(--cool-input-depth),var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
@@ -1756,12 +1757,12 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]):where(.rgba-component-tint) .port-row:where([data-color-component="r"],[data-color-component="g"],[data-color-component="b"]) .port:not(.wire-target):not(.aggregate),
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]):where(.vector-component-tint) .port-row:where([data-vector-component="0"],[data-vector-component="1"],[data-vector-component="2"]) .port:not(.wire-target):not(.aggregate){box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 10px color-mix(in srgb,var(--socket) var(--cool-glow-alpha),transparent)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .port.wire-target{box-shadow:0 0 0 var(--wire-glow,7px) var(--wire-ready-glow),var(--cool-glow-x,0px) var(--cool-glow-y,0px) 14px color-mix(in srgb,var(--wire-ready) var(--cool-glow-alpha),transparent)}
-:root[data-ui-theme="dark"]:where([data-ui-style="cool"],[data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #apply:enabled{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent)}
+:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #apply:enabled{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent)}
 
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .toolbar .stage.active:enabled{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 16px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .toolbar button[aria-pressed="true"]:enabled{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 24px 2px color-mix(in srgb,var(--selection) var(--cool-glow-alpha),transparent)}
 
-:root[data-ui-theme="dark"]:where([data-ui-style="cool"],[data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .brand-mark{filter:drop-shadow(calc(var(--cool-glow-x,0px) * .4) calc(var(--cool-glow-y,0px) * .4) 8px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent))}
+:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .brand-mark{filter:drop-shadow(calc(var(--cool-glow-x,0px) * .4) calc(var(--cool-glow-y,0px) * .4) 8px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent))}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .brand strong{text-shadow:calc(var(--cool-glow-x,0px) * .3) calc(var(--cool-glow-y,0px) * .3) 12px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent)}
 
 /* Shortcut reference remains readable independently of graph zoom. */
