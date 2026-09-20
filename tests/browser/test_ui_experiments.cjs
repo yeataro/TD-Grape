@@ -10,10 +10,11 @@ const [source,stateFile,folder]=process.argv.slice(2);
   const writes=[];
   page.on('request',request=>{const route=new URL(request.url()).pathname;if(request.method()==='POST'&&route.startsWith('/api/')&&!route.endsWith('/remote-preview'))writes.push(route);});
   const panel=page.locator('#experimentspanel'),opener=page.locator('#uiexperiments');
-  const control=key=>panel.locator(`[data-experiment="${key}"]`);
+  const control=key=>key==='uiStyle'?page.locator('#uistyle'):panel.locator(`[data-experiment="${key}"]`);
   const snapshot=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty}));
   const settings=()=>page.evaluate(()=>({...EDITOR_DEV_SETTINGS}));
   const open=async()=>{if(!await panel.isVisible())await opener.click();await settle();};
+  const chooseStyle=async value=>{const reopen=await panel.isVisible();await page.locator('#uitheme').click();await control('uiStyle').selectOption(value);if(reopen)await open();await settle();};
   const close=async()=>{if(await panel.isVisible()){await control('canvasTrash').focus();await page.keyboard.press('Escape');await settle();}};
   const set=async values=>{await page.evaluate(values=>setUIExperiments(values),values);await settle();};
   const setup=async()=>{await page.evaluate(()=>{
@@ -28,8 +29,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await setup();const defaults=await page.evaluate(()=>({...EDITOR_DEV_DEFAULTS}));
     assert.deepEqual(await settings(),defaults);assert.equal(defaults.uiStyle,'professional');assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
     assert.equal(defaults.floatingToolbar,true);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(defaults.systemClock,false);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);
-    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),Object.values(defaults).filter(value=>typeof value==='boolean').length);assert.equal(await panel.locator('select').count(),Object.values(defaults).filter(value=>typeof value==='string').length);
-    assert.deepEqual(await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment).sort()),Object.keys(defaults).sort());
+    await open();assert.equal(await panel.locator('input[type=checkbox]').count(),Object.values(defaults).filter(value=>typeof value==='boolean').length);assert.equal(await panel.locator('select').count(),Object.values(defaults).filter(value=>typeof value==='string').length-1);
+    assert.deepEqual(await panel.locator('[data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment).sort()),Object.keys(defaults).filter(key=>key!=='uiStyle').sort());
     assert.deepEqual(await panel.locator('[data-experiment-group]').evaluateAll(groups=>groups.map(group=>group.dataset.experimentGroup)),['toolbars','nodes','appearance']);
     assert.deepEqual(await panel.locator('[data-experiment-group="toolbars"] [data-experiment]').evaluateAll(entries=>entries.map(entry=>entry.dataset.experiment)),['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash'].filter(key=>Object.hasOwn(defaults,key)));
     assert.equal(defaults.persistentSelectionBounds,true);assert.equal(await control('persistentSelectionBounds').isChecked(),true);
@@ -39,17 +40,17 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.equal(await panel.locator('details').count(),0);assert.equal(await control('floatingToolbar').isChecked(),false);
     if(Object.hasOwn(defaults,'selectionToolbar')){assert.equal(defaults.selectionToolbar,'all');assert.equal(await control('selectionToolbar').inputValue(),'all');assert.equal(defaults.editToolbar,true);assert.deepEqual(await control('selectionToolbar').locator('option').evaluateAll(options=>options.map(option=>option.value)),['off','multiple','all']);}
     assert.deepEqual(await control('nodeDragCursor').locator('option').evaluateAll(options=>options.map(o=>o.value)),['default','move']);
-    assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['professional','cool','excellent','legendary','godlike']);
+    assert.deepEqual(await control('uiStyle').locator('option').evaluateAll(options=>options.map(o=>o.value)),['simple','professional','cool','excellent','legendary','godlike']);
     assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.equal(await opener.getAttribute('aria-expanded'),'true');
     assert.equal(await control('floatingToolbar').evaluate(e=>e===document.activeElement),true);const openedGraph=await snapshot();await page.keyboard.press('Tab');assert.equal(await control(Object.hasOwn(defaults,'editToolbar')?'editToolbar':'canvasTrash').evaluate(e=>e===document.activeElement),true);await page.keyboard.press('Delete');assert.equal(await snapshot(),openedGraph);
-    checks.push('fresh editors keep the toolbar background off and Professional style; all registered preferences appear once in three ordered, open groups with toolbar controls first');
+    checks.push('fresh editors keep the toolbar background off and Professional style; experimental preferences appear once in three ordered, open groups; Appearance is outside them with toolbar controls first');
     checks.push('mouse opening focuses the first option, Tab stays in the panel and Delete does not delete selected graph nodes');
 
     const unchanged=await snapshot();
     for(const [key,value]of Object.entries(defaults)){
       const changed=typeof value==='boolean'?!value:typeof value==='number'?250:key==='uiStyle'?'cool':key==='selectionToolbar'?'multiple':'move';
       if(typeof value==='boolean')await control(key).setChecked(key==='floatingToolbar'?!changed:changed);
-      else if(typeof value==='number'){await control(key).fill(String(changed));await control(key).press('Enter');}else await control(key).selectOption(changed);
+      else if(typeof value==='number'){await control(key).fill(String(changed));await control(key).press('Enter');}else if(key==='uiStyle')await chooseStyle(changed);else await control(key).selectOption(changed);
       await settle();assert.equal((await settings())[key],changed);
     }
     assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),await settings());
@@ -98,8 +99,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.evaluate(()=>{window.experimentStyleDOM=[...document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')];});
     const styleGeometry=()=>page.locator('#cards .node,#wires path,#inspector input,.toolbar').evaluateAll(elements=>elements.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
     const geometry=await styleGeometry();
-    for(const uiStyle of ['professional','cool','excellent','legendary','godlike','cool','excellent','godlike','legendary','professional']){
-      await control('uiStyle').selectOption(uiStyle);await settle();
+    for(const uiStyle of ['simple','professional','cool','excellent','legendary','godlike','cool','excellent','godlike','legendary','professional']){
+      await chooseStyle(uiStyle);await settle();
       assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);
       assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1')).uiStyle),uiStyle);
       assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')[index]===element)),true);
@@ -115,7 +116,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
       assert.equal(await page.evaluate(()=>experimentStyleDOM.every((element,index)=>element.isConnected&&document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')[index]===element)),true);
       assert.deepEqual(await styleGeometry(),geometry);assert.equal(await snapshot(),unchanged);
     }
-    checks.push('Professional, Cool, Excellent, Legendary and Godlike apply and persist without rebuilding node/wire/Parameter/toolbar DOM; style, clock-only and theme switches preserve geometry, graph and Undo');
+    checks.push('Simple, Professional, Cool, Excellent, Legendary and Godlike apply and persist without rebuilding node/wire/Parameter/toolbar DOM; style, clock-only and theme switches preserve geometry, graph and Undo');
 
     for(const expanded of[false,true])for(const collapsed of[false,true]){
       await set({nodeCollapseExpandedHint:expanded,nodeCollapseCollapsedHint:collapsed});
@@ -179,21 +180,21 @@ const [source,stateFile,folder]=process.argv.slice(2);
     checks.push('English and Traditional Chinese expose translated names, hints, cursor/style choices and opener labels');
 
     await set({canvasTrash:true,floatingToolbar:false,selectionToolbar:'off',persistentSelectionBounds:false,hideGroupedSelectionBounds:true,nodeBodyDrag:false,nodeDragCursor:'move',nodeResizeHint:false,nodeCollapseExpandedHint:true,nodeCollapseCollapsedHint:false,rgbaComponentTint:false,vectorComponentTint:false,autoDisconnectInvalidEdges:false,uiStyle:'godlike',systemClock:true});const saved=await settings();
-    for(const uiStyle of ['professional','cool','excellent','legendary','godlike']){
+    for(const uiStyle of ['simple','professional','cool','excellent','legendary','godlike']){
       await set({...saved,uiStyle});await reload();assert.deepEqual(await settings(),{...saved,uiStyle});assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);assert.equal(await page.locator('#canvas>.toolbar').count(),0);assert.equal(await page.locator('.graph-workspace>.toolbar').count(),1);assert.equal(await page.locator('#graphtrash').isVisible(),true);assert.equal(await page.locator('#uisystemclock').isVisible(),true);
-      await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),defaults);
+      await open();await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),{...defaults,uiStyle});assert.equal(await page.locator('#canvas>.toolbar').count(),1);assert.equal(await page.locator('#uisystemclock').isVisible(),false);assert.equal(await page.evaluate(()=>systemClockTimer),null);assert.equal(await page.locator('html').getAttribute('data-ui-style'),uiStyle);assert.equal(await page.locator('#experimentsreset').isDisabled(),true);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...defaults,uiStyle});
     }
     await page.evaluate(()=>localStorage.setItem('sgrapeExperimentsV1','{ broken'));await reload();assert.deepEqual(await settings(),defaults);
     const malformed={canvasTrash:'true',floatingToolbar:1,persistentSelectionBounds:'true',hideGroupedSelectionBounds:'true',nodeBodyDrag:null,nodeDragCursor:'url(https://invalid.test/cursor)',uiStyle:'glow',systemClock:'true',nodeResizeHint:false,unknown:true};
     assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),JSON.stringify(malformed)),{...defaults,nodeResizeHint:false});
     for(const raw of ['null','[]','true','"text"'])assert.deepEqual(await page.evaluate(raw=>parseUIExperiments(raw),raw),defaults);
-    checks.push('all five UI styles and an explicitly disabled floating toolbar survive isolated reload; reset restores floating toolbar/Professional defaults and malformed storage is ignored');
+    checks.push('all six UI styles and an explicitly disabled floating toolbar survive isolated reload; reset restores experimental defaults while preserving Appearance and malformed storage is ignored');
 
     const legacy={...saved};for(const key of ['uiStyle','systemClock','floatingToolbar','selectionToolbar','persistentSelectionBounds','nodeCollapseExpandedHint','vectorComponentTint'])delete legacy[key];
     await page.evaluate(legacy=>localStorage.setItem('sgrapeExperimentsV1',JSON.stringify(legacy)),legacy);await reload();
     assert.deepEqual(await settings(),{...defaults,...legacy});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');assert.equal(await page.locator('#canvas>.toolbar').count(),1);
-    await open();for(const uiStyle of ['cool','excellent','legendary','godlike']){await control('uiStyle').selectOption(uiStyle);await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...defaults,...legacy,uiStyle});}
-    await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),defaults);assert.equal(await page.locator('html').getAttribute('data-ui-style'),'professional');
+    await open();for(const uiStyle of ['cool','excellent','legendary','godlike']){await chooseStyle(uiStyle);await settle();assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('sgrapeExperimentsV1'))),{...defaults,...legacy,uiStyle});}
+    await page.locator('#experimentsreset').click();await settle();assert.deepEqual(await settings(),{...defaults,uiStyle:'godlike'});assert.equal(await page.locator('html').getAttribute('data-ui-style'),'godlike');
     checks.push('explicit old preferences survive reload; missing V1 keys and reset use the new selection toolbar, persistent bounds, expanded-hint and vector tint defaults');
 
     await setup();await set({systemClock:true});assert.equal(await page.evaluate(()=>matchMedia('(pointer:coarse)').matches),true);

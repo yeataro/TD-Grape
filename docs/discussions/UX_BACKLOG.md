@@ -3,6 +3,13 @@
 這裡記錄機制本身合理、但使用體驗仍值得評估的情境；不代表已確認為程式錯誤，也不代表已接受為永久限制。
 
 
+## 外觀與底部入口（2026-09-20，0.8.139 已實作）
+
+- Appearance／外觀從實驗設定移到主題面板，在 Dark／Light 下方、亮度滑桿上方；只在 Dark 顯示／生效，Light 保留所選模式。保留舊儲存鍵相容已有偏好，實驗設定還原不再重設它。
+- 模式順序為 Simple、Professional、Cool、Excellent、Legendary、Godlike；Professional 保持推薦預設，Simple 移除陰影，選取／錯誤／焦點等必要識別改用細外框。
+- AA 介面大小面板上方增加語言選單，保留標題列入口；共用切換流程與設定。快捷鍵說明入口使用 K 鍵帽圖示，避免 Enter 的執行／確認語意；並未新增 K 快捷鍵。
+- 頁面 Title 已於 0.8.138 改為應用名、工程檔名、OP 路徑，支援工作列識別；版號與 DEV 保留頁面版本區／About。
+
 ## 來源 UI 後續與連線喚醒（2026-09-20）
 
 - 先整理來源清單，再回頭 review Add Nodes 分類；本輪不調整 Add Nodes。
@@ -251,7 +258,7 @@ Frame 過渡預設 333 ms；Home 永遠立即顯示整圖，以工作效率為�
 
 調查基準為 0.8.101／`5696fc0`：盤點 952 個英文語系項目、82 個基礎節點與 4 個內建圖函數名稱，提出 63 項候選（37 項可見介面、10 項術語／狀態、13 項提示／輔助名稱、3 項準確性問題）。完整對照為本次對話交付的《English UI audit.md》與 CSV；數量表示調查候選，不表示全部接受或逐項完成實機排版驗證。
 
-例如 `Show Custom Names → Custom names`、`Visual Capability → Visual effects`、`Add reference to graph → Add reference` 均仍待審。保留必要的操作／目的地差異；Function／Subgraph 等術語及依狀態顯示的動作名稱另行確認，不全域替換節點定義或 ID。模式切換不做過渡已是確定行為，舊的一秒過渡提示列入文案修正候選，尚未藉這次調查改動。
+例如 `Show Custom Names → Custom names`、`Add reference to graph → Add reference` 均仍待審。保留必要的操作／目的地差異；Function／Subgraph 等術語及依狀態顯示的動作名稱另行確認，不全域替換節點定義或 ID。模式切換不做過渡已是確定行為，舊的一秒過渡提示列入文案修正候選，尚未藉這次調查改動。
 
 ## 右鍵選單補齊既有操作（2026-09-19）
 

@@ -22,8 +22,22 @@ function receiveProjectSummary(result){
   const active=result.shaders?.find(s=>s.id===(shaderId||result.current));if(active)setEditorTargetPath(active.path);else updateEditorTitle();
 }
 function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
-function translatePage(){document.documentElement.lang=language;updateEditorTitle();document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
-async function initLocale(){localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;if(!localeData.languages[language])language=localeData.defaultLanguage;const picker=$('#language');for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));picker.value=language;picker.onchange=()=>{language=picker.value;localStorage.setItem('sgrapeLanguage',language);translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);};translatePage();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-language-picker]').forEach(picker=>picker.value=language);updateEditorTitle();document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
+function setLanguage(value){
+  if(!localeData.languages[value]||value===language)return;
+  language=value;localStorage.setItem('sgrapeLanguage',language);
+  translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();
+  status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);
+}
+async function initLocale(){
+  localeData=await (await fetch('/locales.json')).json();language=localStorage.getItem('sgrapeLanguage')||localeData.defaultLanguage;
+  if(!localeData.languages[language])language=localeData.defaultLanguage;
+  for(const picker of document.querySelectorAll('[data-language-picker]')){
+    for(const [id,label]of Object.entries(localeData.languages))picker.append(el('option',{value:id},label));
+    picker.onchange=()=>setLanguage(picker.value);
+  }
+  translatePage();
+}
 
 let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
 let graph=null, catalog=[], examples={}, revision=0, selected=null, selectedEdge=null, stage='pixel', dirty=false, readonly=false;
@@ -756,12 +770,12 @@ const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
   selectionToolbar:[['off','experiments.selection.off'],['multiple','experiments.selection.multiple'],['all','experiments.selection.all']],
   nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],
-  uiStyle:[['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent'],['legendary','experiments.style.legendary'],['godlike','experiments.style.godlike']]
+  uiStyle:[['simple','experiments.style.simple'],['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent'],['legendary','experiments.style.legendary'],['godlike','experiments.style.godlike']]
 };
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['uiStyle','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping']]
+  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
@@ -899,7 +913,9 @@ function renderUIExperiments(){
     if(key==='canvasDampingMs'||key==='frameDampingMs')entry.disabled=!EDITOR_DEV_SETTINGS[key.slice(0,-2)];
     entry.closest('.experiment-option').title=t('experiments.'+key+'.hint');
   }
-  $('#experimentsreset').disabled=Object.keys(EDITOR_DEV_DEFAULTS).every(key=>EDITOR_DEV_SETTINGS[key]===EDITOR_DEV_DEFAULTS[key]);
+  // Keep the legacy storage key; Appearance is now outside the experimental UI/reset.
+  $('#uistyle').value=EDITOR_DEV_SETTINGS.uiStyle;$('#uistyle').title=t('experiments.uiStyle.hint');
+  $('#experimentsreset').disabled=Object.keys(EDITOR_DEV_DEFAULTS).filter(key=>key!=='uiStyle').every(key=>EDITOR_DEV_SETTINGS[key]===EDITOR_DEV_DEFAULTS[key]);
   if(panel.matches(':popover-open'))positionAppearancePanel(panel,opener);
 }
 function setUIExperiments(values){
@@ -959,7 +975,7 @@ function installUIExperiments(){
     }
     list.append(group);
   }
-  $('#experimentsreset').onclick=()=>setUIExperiments(EDITOR_DEV_DEFAULTS);
+  $('#experimentsreset').onclick=()=>setUIExperiments({...EDITOR_DEV_DEFAULTS,uiStyle:EDITOR_DEV_SETTINGS.uiStyle});
   panel.addEventListener('beforetoggle',event=>{if(event.newState==='open')positionAppearancePanel(panel,opener);});
   panel.addEventListener('toggle',renderUIExperiments);
   panel.addEventListener('keydown',event=>{
@@ -1035,6 +1051,7 @@ function positionAppearancePanel(panel=$('#appearancepanel'),opener=$('#uitheme'
 function renderUIAppearance(){
   const root=document.documentElement,{size,theme,tone}=uiAppearance;
   root.dataset.uiSize=size;root.dataset.uiTheme=theme;
+  $('#uistylerow').hidden=theme!=='dark';
   root.style.setProperty('--ui-scale',uiScaleFactor());
   applyUITone(theme,tone);
   for(const [id,key,value]of [['uisize','size',size],['uitheme','theme',theme]]){
@@ -1074,6 +1091,9 @@ function setUIAppearance(key,value){
   if(graph&&(key==='size'||key==='scale'))requestAnimationFrame(wires);
 }
 function installUIAppearance(){
+  const style=$('#uistyle');
+  for(const [value,label]of experimentChoices.uiStyle)style.append(el('option',{value,'data-i18n':label},t(label)));
+  style.value=EDITOR_DEV_SETTINGS.uiStyle;style.onchange=()=>setUIExperiments({uiStyle:style.value});
   try{uiAppearance=parseUIAppearance(localStorage.getItem(appearanceStorageKey));}catch{}
   renderUIAppearance();
   for(const [panelId,openerId,choice,key,inputId,adjustKey,neutral,step]of [

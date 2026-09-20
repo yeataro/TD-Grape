@@ -1587,6 +1587,10 @@ footer .footer-preferences svg[hidden]{display:none}
 .appearance-presets button:hover{background:var(--ui-hover,var(--ui-tone-control-hover));color:inherit}
 .appearance-presets button[aria-pressed="true"]{background:var(--ui-selected,var(--ui-tone-menu-hover));color:inherit}
 .appearance-panel button:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
+.appearance-field{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:12px}
+.appearance-field[hidden]{display:none}
+.appearance-field:first-child{margin-top:0}
+.appearance-field select{flex:1;min-width:0;margin-left:auto}
 .appearance-adjustment{display:flex;align-items:center;gap:8px;margin-top:8px}
 .appearance-adjustment button{display:flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;padding:6px;border:0;border-radius:5px;background:transparent;color:inherit}
 .appearance-adjustment button:enabled:hover{background:var(--ui-hover,var(--ui-tone-control-hover))}
@@ -1728,6 +1732,18 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 @keyframes ui-glow-breathe{0%,100%{--cool-glow-alpha:33%}50%{--cool-glow-alpha:50%}}
 @keyframes ui-glow-orbit{from{--cool-orbit-angle:0deg}to{--cool-orbit-angle:360deg}}
 @media(prefers-reduced-motion:reduce){:root:is([data-ui-style="legendary"],[data-ui-style="godlike"])[data-ui-theme="dark"]{animation:none;--cool-glow-x:0px;--cool-glow-y:0px}}
+
+/* Simple suppresses all UI box/text shadows, including transient and pseudo-element
+   decorations. Semantic rings use outlines instead; preview filters stay untouched. */
+:root[data-ui-theme="dark"][data-ui-style="simple"] *,
+:root[data-ui-theme="dark"][data-ui-style="simple"] *::before,
+:root[data-ui-theme="dark"][data-ui-style="simple"] *::after{box-shadow:none!important;text-shadow:none!important}
+:root[data-ui-theme="dark"][data-ui-style="simple"] .node.selected{outline:1px solid var(--selection)}
+:root[data-ui-theme="dark"][data-ui-style="simple"] .node.selected.error{outline-color:var(--danger,#ef8d8d)}
+:root[data-ui-theme="dark"][data-ui-style="simple"] .node.trash-pending{outline:2px solid #ff9999}
+:root[data-ui-theme="dark"][data-ui-style="simple"] #canvas.drop-ready{outline:2px solid var(--purple);outline-offset:-2px}
+:root[data-ui-theme="dark"][data-ui-style="simple"] :is(.side-divider,.panel-divider,.browser-detail-divider):focus-visible{outline:1px solid var(--purple);outline-offset:-1px}
+:root[data-ui-theme="dark"][data-ui-style="simple"] #shaderchoices>button[aria-checked="true"]{outline:1px solid var(--selection);outline-offset:-2px}
 
 /* Optional glow tiers: Cool lights wires and selection; Excellent adds nodes and interface. Dark only. */
 :root[data-ui-theme="dark"]:where([data-ui-style="cool"],[data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]){--cool-node-depth:0 6px 20px #0004;--cool-input-depth:0 2px 6px #0003}
