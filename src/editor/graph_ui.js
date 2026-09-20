@@ -1323,9 +1323,8 @@ function nodeCanResizeHeight(node){return definition(node)?.key==='comment';}
 function nodeHeightLimits(card){
   const preview=card.querySelector('.comment-node-preview');
   if(preview&&!card.classList.contains('collapsed')){
+    // The floating Note title never contributes to body size, even when visible.
     // Reserve one actual reading line, not an H1-sized estimate for all text.
-    // The selected header fits inside the same stored bounds; hiding it frees body space.
-    const titleHeight=card.querySelector('.node-title').offsetHeight;card.style.setProperty('--note-title-height',titleHeight+'px');
     if(!preview.hidden||!card.dataset.noteMinimumHeight){
       const body=preview.parentElement,first=preview.querySelector('p,h1,h2,h3,h4,h5,h6,pre,li')||preview;
       const style=getComputedStyle(first),sum=(element,properties)=>{const css=getComputedStyle(element);return properties.reduce((total,key)=>total+(parseFloat(css[key])||0),0);};
@@ -1333,7 +1332,7 @@ function nodeHeightLimits(card){
       const scrollbar=element=>Math.max(0,element.offsetHeight-element.clientHeight-sum(element,borders));
       const line=parseFloat(style.lineHeight)||parseFloat(style.fontSize)*1.5;
       const block=first===preview?0:sum(first,[...padding,...borders,'marginTop'])+scrollbar(first);
-      const minimum=Math.ceil(sum(card,borders)+titleHeight+sum(body,['marginTop','marginBottom'])+sum(preview,[...padding,...borders])+line+block+scrollbar(preview));
+      const minimum=Math.ceil(sum(card,borders)+sum(body,['marginTop','marginBottom'])+sum(preview,[...padding,...borders])+line+block+scrollbar(preview));
       card.dataset.noteMinimumHeight=String(minimum);card.style.setProperty('--node-min-height',minimum+'px');
     }
   }

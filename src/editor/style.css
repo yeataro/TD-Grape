@@ -689,10 +689,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .note-title-actions>button:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
 .note-color-button>span{display:block;width:14px;height:14px;border-radius:50%;background:var(--note-default-bg);box-shadow:inset 0 0 0 1px #ffffff30}
 .note-color-button>.note-transparent-swatch,.note-setting-color-swatch.note-transparent-swatch,.group-frame-palette .note-color-transparent>span{background:conic-gradient(#a5a5ab 25%,#56565f 0 50%,#a5a5ab 0 75%,#56565f 0);background-size:8px 8px}
-/* Selection-only Note titles share the existing card bounds, without a hidden row. */
-.node[data-note-title-on-selection="true"]:not(.collapsed)>.node-title{position:absolute;left:0;right:0;top:0;z-index:1;visibility:hidden;pointer-events:none}
-.node[data-note-title-on-selection="true"]:not(.collapsed).selected>.node-title{visibility:visible;pointer-events:auto}
-.node[data-note-title-on-selection="true"]:not(.collapsed).selected>.comment-node-canvas-content{padding-top:var(--note-title-height,41px)}
+/* Note bounds always describe the body. Its compact title floats in the group inset. */
+.node[data-category="annotation"]:not(.collapsed)>.node-title{position:absolute;left:-1px;right:-1px;bottom:100%;z-index:1;box-sizing:border-box;height:24px;min-height:24px;padding:3px 8px}
+.node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected)>.node-title{visibility:hidden;pointer-events:none}
 .node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected) .note-title-actions{visibility:hidden}
 :root #canvas .node[data-category="annotation"].note-colored{--note-body-bg:color-mix(in srgb,var(--note-color) 55%,var(--node-body,var(--ui-tone-node)));background:var(--note-body-bg)}
 .node.note-colored:not([data-note-transparent="true"])>.comment-node-canvas-content>.comment-node-preview{color:var(--note-ink,var(--ui-text,var(--ui-tone-text)))}

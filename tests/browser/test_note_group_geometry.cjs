@@ -10,7 +10,7 @@ const {harness}=require('./test_glsl_code.cjs');
    Object.assign(note.ui,{width:300,height:200,noteTitleOnSelection:true,noteColor:'#72a6a5',comment:'Group note\n\nNo reserved title row.'});
    graph.stages.pixel={nodes:[note,a,outside],edges:[]};GraphFrames.write(current(),[{id:'test_group',name:'Group',nodes:['note','a']}]);
    selection.clear();selected=selectedInputId=null;past=[];future=[];dirty=false;rememberSavedGraph(graph);setGraphFocus(true);setUIExperiments({groupCornerSelect:true,selectionToolbar:'all'});render();scale=.9;pan={x:50,y:40};transform();
-   window.noteGraph=JSON.stringify(graph);window.measureNote=()=>{const rect=e=>({x:e.offsetLeft,y:e.offsetTop,w:e.offsetWidth,h:e.offsetHeight});return{note:rect($('#cards [data-node="note"]')),group:rect($('#groupframes [data-frame="test_group"]'))};};
+   window.noteGraph=JSON.stringify(graph);window.measureNote=()=>{const rect=e=>({x:e.offsetLeft,y:e.offsetTop,w:e.offsetWidth,h:e.offsetHeight});return{note:rect($('#cards [data-node="note"]')),body:rect($('#cards [data-node="note"] .comment-node-canvas-content')),reader:rect($('#cards [data-node="note"] .comment-node-preview')),group:rect($('#groupframes [data-frame="test_group"]'))};};
   });
   const initial=await page.evaluate(()=>measureNote()),corner=page.locator('[data-frame-select="test_group"]'),note=page.locator('#cards [data-node="note"]');
   assert.equal(await note.locator('.node-title').isVisible(),false);await note.hover();assert.equal(await note.locator('.node-title').isVisible(),false);
@@ -27,6 +27,15 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.evaluate(()=>setUIExperiments({groupCornerSelect:true}));assert.equal(await corner.isVisible(),true);
   const r=await corner.boundingBox();await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await page.mouse.move(r.x+80,r.y+60,{steps:5});await page.mouse.up();await settle();assert.deepEqual(await page.evaluate(()=>measureNote()),initial);
   checks.push('experiment toggles and persists the corner without rebuilding nodes; dragging the selection handle does not resize or move the group');
+  const floating=await page.evaluate(()=>{
+   const card=$('#cards [data-node="note"]'),title=card.querySelector('.node-title'),groupTitle=$('[data-frame="test_group"] .group-frame-title'),minimum=nodeHeightLimits(card).minimum;
+   const fitsGroup=title.getBoundingClientRect().top>=groupTitle.getBoundingClientRect().bottom-.1;
+   title.style.height=title.style.minHeight='90px';const stable=measureNote(),enlargedMinimum=nodeHeightLimits(card).minimum;title.style.height=title.style.minHeight='';
+   selection=new Set(['note']);selected='note';render();positionSelectionToolbar();
+   const bar=$('#selectiontoolbar').getBoundingClientRect(),t=$('#cards [data-node="note"] .node-title').getBoundingClientRect();
+   return{fitsGroup,stable,minimum,enlargedMinimum,toolbarClear:bar.bottom<=t.top||bar.top>=t.bottom};
+  });assert.equal(floating.fitsGroup,true);assert.deepEqual(floating.stable,initial);assert.equal(floating.minimum,floating.enlargedMinimum);assert.equal(floating.toolbarClear,true);
+  checks.push('floating title fits inside the group inset; even a taller title changes no body/minimum/group bounds and the single-Note toolbar avoids it');
   for(const theme of ['dark','light'])for(const color of ['#72a6a5','#ffffff','#000000','#ff0000','#ffff00'])for(const tone of [-100,0,100]){
    const ratio=await page.evaluate(({theme,color,tone})=>{
     current().nodes.find(n=>n.id==='note').ui.noteColor=color;render();setUIAppearance('theme',theme);setUIAppearance('tone',tone);

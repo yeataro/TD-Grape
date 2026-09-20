@@ -93,7 +93,10 @@ function positionSelectionToolbar(){
   bar.style.maxWidth=Math.max(40,w-margin*2)+'px';
   bar.style.maxHeight=Math.max(40,bottom-top)+'px';
   const x=Math.max(margin,Math.min(((bounds.left+bounds.right)/2-r.left)/zoom-bar.offsetWidth/2,w-bar.offsetWidth-margin));
-  const above=(bounds.top-r.top)/zoom-bar.offsetHeight-12,below=(bounds.bottom-r.top)/zoom+12;
+  // Floating Note titles are toolbar obstacles, not node/group/selection bounds.
+  const titles=nodes.map(n=>$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"][data-category="annotation"]:not(.collapsed)>.node-title`)).filter(title=>title&&getComputedStyle(title).visibility==='visible');
+  const topEdge=Math.min(bounds.top,...titles.map(title=>title.getBoundingClientRect().top));
+  const above=(topEdge-r.top)/zoom-bar.offsetHeight-12,below=(bounds.bottom-r.top)/zoom+12;
   const fits=y=>y>=top&&y+bar.offsetHeight<=bottom;
   const preferred=fits(above)?above:fits(below)?below:above;
   const y=Math.max(top,Math.min(preferred,bottom-bar.offsetHeight));

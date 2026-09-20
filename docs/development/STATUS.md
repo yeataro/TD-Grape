@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.148 DEV 修正：依使用者澄清撤銷 0.8.146 的 Note 內文補位方式。展開 Note 的尺寸從頭到尾只計 body，Title 為上緣 24px 浮層，常駐／選取式皆不參與正文最小高度、Group 或排版尺寸。標題顯隱時 body 與 reader 的位置、寬高完全相同；選取工具列只避讓浮動 Title 的顯示範圍。群組與一般節點尺寸公式不改、既有尺寸資料不重寫，保留收合入口。Note 外觀 16、縮放 14、幾何 5、選取工具列 12、Group 13、對齊 3 組通過，另含標題加高不影響 body／Group 的回歸。507 Python、767 雙語鍵與完整 portable checks 通過；報告 Documents 工作區 `reports/note-title-148/`。Uniform B 已於 0.8.147 保存，這輪保留。同步保存另記。
+
 2026-09-20 0.8.147 DEV 交付檢查點：程式提交 `9410020`；37 份嵌入來源、10 份服務資產一致，TOP／MAT master revision 94，三份使用者 Shader 保留。TOE 983622 bytes，SHA256 `2103004e68111f4b9bcb0335698c9d149f43a753fedc9042fc21622be572d6fc`。報告 `work/reports/uniform-palette-147/`；未重新整理使用者網頁。
 
 2026-09-20 0.8.147 DEV 實作：使用者選定 Uniform B「灰青提亮」，套用預覽的底色 #393843、實色填色 #526165 及把手 #b9d2d4。只調整共用深色配色，保留 Light、32px 高度、原值映射與 Bind／Master 標示；整體亮度不影響滑桿。現有滑桿驗證 4 組與精確色碼核對通過，已檢視截圖；報告 Documents 工作區 `reports/uniform-palette-147/`。同步保存另記。

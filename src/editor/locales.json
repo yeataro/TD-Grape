@@ -3140,8 +3140,8 @@
       "en": "Show title only when selected"
     },
     "note.titleOnSelection.hint": {
-      "zh-Hant": "未選取時不預留標題空間；選取後在筆記內顯示標題，外框大小不變。",
-      "en": "Use the full note body when unselected. Show the title inside the note on selection without changing its outer bounds."
+      "zh-Hant": "選取後顯示上緣的浮動標題；標題不計入筆記尺寸，顯示或隱藏時內文位置與大小均不變。",
+      "en": "Show the floating title above the note on selection. The title is excluded from note size; showing or hiding it never moves or resizes the body."
     },
     "note.transparent": {
       "zh-Hant": "透明背景",
