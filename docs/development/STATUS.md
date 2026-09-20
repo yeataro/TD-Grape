@@ -1,6 +1,6 @@
 # 開發狀態
 
-2026-09-20 0.8.145 DEV：依最新回饋縮窄左下角 ⋮ 左右留白，Standard 20 × 24px、Comfortable 24 × 32px；保留高度、圖示與中線。
+2026-09-20 0.8.145 DEV：依最新回饋縮窄左下角 ⋮ 左右留白，Standard 20 × 24px、Comfortable 24 × 32px；保留高度、圖示與中線。Footer 幾何 3 組（兩密度、多倍率、390px 與選單操作）通過。程式提交 `60e9e26`；37 份來源及 10 份服務資產一致、master revision 92、三份 Shader 保留。TOE 982782 bytes，SHA256 `a2146b042f354ce4ea5d9d58e8b5350c5b0081b2735c0c31f47da19d1b4dfcd8`。報告 `work/reports/footer-width-145/`，未重新整理使用者網頁。
 
 2026-09-20 0.8.144 DEV 交付檢查點：程式提交 `1ea77a1`，37 份嵌入來源與 10 份服務資產核對一致，TOP／MAT master revision 91；三份使用者 Shader 保留。TOE 982734 bytes，SHA256 `a24f1894b7b9b31008da4db3f4041724a54478f5d9ecd278eece6927995934cf`。原生交付報告 `work/reports/uniform-slider-144/`，瀏覽器報告在 Documents 工作區 `reports/uniform-slider-144/`。未重新整理使用者網頁。
 
