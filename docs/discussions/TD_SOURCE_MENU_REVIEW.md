@@ -6,6 +6,8 @@
 
 ## 本輪已收斂的方向
 
+2026-09-20 使用者覆核：Custom Uniforms 保留 Values／Matrices／Arrays 三個 UI 分組，Uniform Array 的資料身分仍是 Uniform。Common 預置卡片尚未建立時偏灰且保留類型色，首次操作才初始化。0.8.121 已補上六個時間預置，以下「待擴充」時間狀態是本表初稿記錄；最新完成狀態及後續工作見[來源接續計畫](SOURCE_COMPLETION_PLAN.md)。
+
 - 時間基本預置保留六項；Timeline Rate 移出，保留 Delta Time。Clock／CHOP 的時間細項、播放範圍、Loop、Play、Tempo、拍號與 Timecode 留在研究表，交由使用者自行新增。
 - 共通來源、Texture 與 TD 內建來源按用途分組；分類入口固定，TD 名稱／共同別名的切換只影響顯示名稱。
 - 同一來源有一個主要分類。搜尋可命中別名，不因此新增一份來源。

@@ -1,6 +1,6 @@
 # 來源建構、型別與 MAT Attribute：討論共識
 
-2026-09-20。接續[來源選單分類表](TD_SOURCE_MENU_REVIEW.md)與[來源命名總表](TD_SOURCE_NAMING_RESEARCH.md)。本頁記錄設計方向與待決項，不代表已完成來源重構或新增能力；產品基線仍為 0.8.120，交付狀態以 [STATUS](../development/STATUS.md) 為準。
+2026-09-20。接續[來源選單分類表](TD_SOURCE_MENU_REVIEW.md)與[來源命名總表](TD_SOURCE_NAMING_RESEARCH.md)。本頁記錄設計方向與待決項，不代表已完成來源重構或新增能力；討論自 0.8.120 開始，目前已交付 0.8.122 的部分基礎，狀態以 [STATUS](../development/STATUS.md) 為準。最新回報、原生實測與五輪工作清單見[來源接續計畫](SOURCE_COMPLETION_PLAN.md)，後續執行順序以該清單為準。
 
 本輪回到的主線是來源資料模型、共用建構方法，以及 MAT Attribute。延伸的 Loop／控制流程先收進[迴圈筆記](LOOPS_DISCUSSION.md)，不因此插入本輪實作。
 
@@ -125,9 +125,9 @@ TD vector Uniform 的 UI 依宣告型別顯示有效分量（float 一格、vec2
 
 節點內與 Parameter 面板均沿用一般有分量節點的共用編輯元件，依宣告型別顯示分量數，排列與操作一致。Uniform 在該元件上接入原生來源同步與逐分量模式辨識／可編輯性，不另造一套 Uniform 專用數值控制。
 
-執行分批與完成檢查點：
+執行分批與完成檢查點（0.8.122 核對；詳細分輪與最新 UI 調整見[接續計畫](SOURCE_COMPLETION_PLAN.md)）：
 
-- [ ] 共用來源資料表、預置初始化與分類資料，保留既有來源識別／原生值所有權。
+- [x] 共用來源資料表與預置初始化基礎，保留既有來源識別／原生值所有權；完整 UI 分類與卡片仍待接續。
 - [ ] Common Uniform 與一般 Uniform 的建立／引用流程、缺少的基本時間預置。
 - [ ] MAT Attribute 的原生配置、引用／修改、圖產碼、失敗保護及 UI。
 - [ ] Buffer 來源：讀取並顯示 TD 既有配置、圖內引用／讀取與長度能力、TD 診斷呈現；POP attribute buffer 與 CHOP Texture Buffer 分別驗證。建立及配置由使用者在 TD 操作，不建置自動輸入或 fallback。

@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 來源審查／探測檢查點：記錄[五輪接續計畫](../discussions/SOURCE_COMPLETION_PLAN.md)，區分已交付的共用來源表／Parameter 分量控制與未完成的卡片、圖內控制、Buffer、MAT Attribute、結構 UI。原生實測 float Spec Constant 可用；固定 float Uniform Array 1024–10000 個元素的五組測試均編譯成功並抽查到正確值。已定位新 TD Constants 一律匯入 int、Uniform Array 被產品 1024 上限拒絕、Texture Buffer 缺少引用／讀取支援。新增重現探測腳本，詳見計畫；產品修正尚未實作。缺失來源的視覺、引用及恢復規則標示為提案，來源管理與圖上引用暫維持分開。本批僅文件及探測腳本，產品／TOE 仍為 0.8.122，未操作使用者圖或刷新網頁。
+
 2026-09-20 0.8.122 交付：`cd4d2b5` 已同步 5 份 DAT；36 份來源、9 份服務資源、TOP／MAT Master（revision 70）與三份使用者 Shader 保留核對通過，刷新沒有模組錯誤。TOE 942,110 bytes，SHA-256 `c5d67b92689cd135ecc0eb55f9fe07b05ecfca754608ea45d4c85c2856331837`，已保存。首次保存請求在外部橋接 request.json 替換時遇到 Windows 檔案占用、尚未送入 TD；重送成功。詳細紀錄 `work/reports/source-controls/`；沒有重新整理使用者 Editor，也沒有改動 Uniform 寫入權限或訂閱協定。
 
 2026-09-20 0.8.122 Uniform 分量 UI 檢查點：Parameter 依宣告顯示 1–4 格，使用一般數值元件的共同分量排版；隱藏的原生分量不修改。Expression／CHOP Export 不再顯示數值滑桿，改顯示模式（窄格 Export，提示完整 CHOP Export）；Constant 與原本允許寫入的 Bind 保留控制。值更新不重建控制、靜態模式文字或驅動說明；模式改變只替換自己的格子。完整 portable checks、來源互動 13 組、即時通道 8 組與新分量顯示 6 組通過。來源互動測試中舊 Uniform 出口名稱預期在既有版本也已失效，調整為目前 out 出口規則後全數通過。本批尚未擴大 Bind 寫入支援，也未加入來源卡片或圖內控制；後续需一併整理可見來源即時訂閱。
