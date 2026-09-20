@@ -1972,9 +1972,10 @@ async function nativeSourceAction(action,decl){
   const live=nativeSourceRows().find(r=>r.id===decl.id);if(!live||!sourceReady())return;
   const load=editorLoadGeneration,expected=clone(live.expected),count=sourceReferences(decl.id).length;
   if(action==='remove'&&!await confirmOverlay({title:t('sources.remove'),message:t(count?'sources.removeConfirm':'sources.removeUnusedConfirm').replace('{name}',live.name).replace('{count}',count),confirmLabel:t('sources.remove')}))return;
+  if(action==='adoptFormat'&&!await confirmOverlay({title:t('sources.adoptFormat'),message:t('sources.adoptFormatConfirm'),confirmLabel:t('sources.adoptFormat')}))return;
   if(load!==editorLoadGeneration||!sourceReady()||!graph.declarations.some(d=>d.id===decl.id))return;
   if(sourceReferences(decl.id).length!==count){status(t('live.changed'),true);return;}
-  return nativeSourceRequest('source-edit',{action,id:decl.id,expected});
+  return nativeSourceRequest('source-edit',{action,id:decl.id,expected:action==='adoptFormat'?live.formatChange?.expected:expected});
 }
 let nativeSourceHint='';
 function nativeSourceHintText(){
@@ -2026,8 +2027,9 @@ async function nativeSourceRequest(endpoint,body){
   try{
     result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});if(generation!==editorLoadGeneration)return null;
     nativeSourceError='';receiveNativeSources(result,{own:true});
-    recordHistory({kind:'source',before,after:clone(graph),nativeBefore:result.history?.beforeToken||nativeBefore,nativeAfter:result.history?.token||null,nativeApplied:true,sourceIds:body.id?[body.id]:historySourceIds(before,graph)});
-    status(t('uniform.updated'),false,{clearError:'operation'});
+    if(result.proposal)recordGraphHistory(before);
+    else recordHistory({kind:'source',before,after:clone(graph),nativeBefore:result.history?.beforeToken||nativeBefore,nativeAfter:result.history?.token||null,nativeApplied:true,sourceIds:body.id?[body.id]:historySourceIds(before,graph)});
+    status(t(result.proposal?'sources.formatAdopted':'uniform.updated'),false,{clearError:'operation'});
   }
   catch(e){if(generation!==editorLoadGeneration)return null;nativeSourceError=e.message;status(e.message,true);}
   finally{if(generation===editorLoadGeneration){nativeSourceBusy=false;nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();renderNativeSourceValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
@@ -2306,12 +2308,16 @@ function inputSourceInspector(box,decl){
   reference.disabled=readonly||!!decl.sourceMissing;reference.dataset.sourceMissing=String(!!decl.sourceMissing);
   actions.append(reference);box.append(actions,el('p',{class:'muted'},t('inputs.references').replace('{count}',sourceReferences(decl.id).length)));
   if(['uniform','spec_constant','pop_buffer'].includes(decl.kind)&&row&&!row.pending){
+    if(row.formatChange){
+      const adopt=el('button',{class:'wide','data-source-adopt-format':decl.id},t('sources.adoptFormat'));
+      adopt.disabled=!sourceReady();adopt.onclick=()=>nativeSourceAction('adoptFormat',decl).then(()=>inspector());box.append(adopt);
+    }
     const sourceAction=action=>{
       const button=el('button',{class:'wide danger','data-source-remove':decl.id,'data-source-action':action},t(action==='restore'?'sources.restore':'sources.remove'));
       button.disabled=!sourceReady();
       button.onclick=()=>nativeSourceAction(action,decl).then(()=>inspector());box.append(button);
     };
-    if(row.missing)sourceAction('restore');
+    if(row.missing&&!row.formatChange)sourceAction('restore');
     if(!row.missing||!sourceReferences(decl.id).length)sourceAction('remove');
   }
   else {

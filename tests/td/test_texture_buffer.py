@@ -62,6 +62,32 @@ try:
             native.par.array0arraytype='texturebuffer';native.par.array0chop=samples
             assert not next(d for d in sources.snapshot(r)['declarations'] if d['id']==ident).get('sourceMissing')
             checks.append(kind+': storage mismatch blocks used source, keeps last Shader and restores stable identity')
+            native.par.array0arraytype='uniformarray';snap=sources.snapshot(r)
+            old_graph=copy.deepcopy(snap['graph']);history=manager.op('history').module
+            before_token=history.capture(r)['token'];saved_state=shader.op('state').text
+            live=next(row for row in snap['uniforms'] if row['id']==ident)
+            draft=sources.edit(r,dict(action='adoptFormat',id=ident,revision=snap['revision'],expected=live['formatChange']['expected']))['workingGraph']
+            assert shader.op('state').text==saved_state and shader.op('pixel_shader').text==previous
+            assert draft['stages']==old_graph['stages']
+            assert next(d for d in draft['declarations'] if d['id']==ident)['type']=='float[8]'
+            try:c.compile_graph(draft);raise AssertionError('Incompatible Buffer consumer was accepted')
+            except c.GraphError:pass
+            draft['stages']['pixel']['nodes'][1]=c.node('array_get','read',type='float[8]')
+            draft['stages']['pixel']['edges'][0]=c.edge('source','read','Array')
+            assert r.deploy(draft,r.state()['revision'])['ok']
+            assert native.seq.array.numBlocks==1 and native.par.array0chop.eval()==samples
+            after_token=history.capture(r)['token']
+            undone=history.restore(r,dict(requestId=uuid.uuid4().hex,revision=r.state()['revision'],fromToken=after_token,toToken=before_token,sourceIds=[ident],graph=old_graph,currentGraph=draft))
+            assert native.seq.array.numBlocks==1 and native.par.array0arraytype.eval()=='uniformarray' and native.par.array0chop.eval()==samples
+            assert next(d for d in undone['graph']['declarations'] if d['id']==ident)['sourceMissing']
+            redone=history.restore(r,dict(requestId=uuid.uuid4().hex,revision=r.state()['revision'],fromToken=undone['history']['token'],toToken=after_token,sourceIds=[ident],graph=draft,currentGraph=old_graph))
+            assert native.seq.array.numBlocks==1 and native.par.array0arraytype.eval()=='uniformarray'
+            assert r.deploy(redone.get('workingGraph',redone['graph']),r.state()['revision'])['ok']
+            native.par.array0arraytype='texturebuffer';snap=sources.snapshot(r);live=next(row for row in snap['uniforms'] if row['id']==ident)
+            reverse=sources.edit(r,dict(action='adoptFormat',id=ident,revision=snap['revision'],expected=live['formatChange']['expected']))['workingGraph']
+            reverse['stages']=g['stages'];assert r.deploy(reverse,r.state()['revision'])['ok']
+            assert native.seq.array.numBlocks==1 and native.par.array0arraytype.eval()=='texturebuffer'
+            checks.append(kind+': explicit format adoption preserves wires and native configuration; valid edits apply and Undo/Redo retain one native row')
         r._shaders.pop(shader.fetch('sgrapeShaderId'),None);shader.destroy()
     assert saved()==before
     (w/'results.json').write_text(json.dumps(dict(passed=True,checks=checks,existingShadersPreserved=True),indent=2),encoding='utf-8')

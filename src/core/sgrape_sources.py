@@ -492,6 +492,21 @@ def locate(operator, record, index=None):
     return rows.get((record['sequence'], record['name']))
 
 
+def changed_array_format(declaration, record, rows):
+    """Offer explicit adoption only for the same uniquely named native row.
+
+    Inspect configuration, not CHOP data. Length is read only when adopting an
+    Array. A missing/ambiguous row is never a format-change candidate.
+    """
+    if not declaration.get('sourceMissing') or not record or record['sequence'] != 'array': return None
+    matches = [row for row in rows if row['name'] == record['name']]
+    if len(matches) != 1 or matches[0]['sequence'] != 'array': return None
+    row = matches[0]; binding = row['arrayBinding']
+    if binding['arrayType'] not in ('uniformarray', 'texturebuffer') or binding['elementType'] not in ARRAY_ELEMENT_TYPES: return None
+    return dict(arrayType=binding['arrayType'], elementType=binding['elementType'],
+                expected=token([edit_token(row), binding['expected']]))
+
+
 def capture_configuration(runtime, comp):
     operator = runtime.shader_operator(comp)
     return {'registry': copy.deepcopy(comp.fetch(STORE, None)),
@@ -595,7 +610,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
             if record: record['missing'] = True
             continue
         existing = locate(operator, record)
-        if existing is None and not record:
+        if existing is None and (not record or record.get('missing') and record['sequence'] == 'array' and (array_shape(decl['type']) or decl['type'] == 'samplerBuffer')):
             candidates = [r for r in native_rows(operator) if r['name'] == decl['name']]
             if len(candidates) > 1: raise SourceError('Duplicate native Uniform: ' + decl['name'])
             existing = candidates[0] if candidates else None
@@ -739,9 +754,14 @@ def snapshot(runtime):
         ident=by_slot.get((issue['sequence'],issue['name']))
         if ident:issue['id']=ident
         if not any(existing.get('sequence')==issue['sequence'] and existing.get('index')==issue['index'] for existing in issues):issues.append(issue)
+    native_by_name = {}
+    for item in index.values():
+        if item: native_by_name.setdefault(item['name'], []).append(item)
     for decl in current['graph']['declarations']:
         if decl['kind'] not in SOURCE_KINDS: continue
         row = locate(operator, registry.get(decl['id']), index)
+        record = registry.get(decl['id'])
+        format_change = changed_array_format(decl, record, native_by_name.get(record['name'], []) if record else [])
         destination = spec_rows if decl['kind']=='spec_constant' else rows
         destination.append({'id': decl['id'], 'kind':decl['kind'], 'name': decl['name'], 'type': decl['type'],
                      **({'constantId':decl['constantId']} if decl['kind']=='spec_constant' else {}),
@@ -752,6 +772,7 @@ def snapshot(runtime):
                      **({'matrixBinding':row['matrixBinding']} if row and row.get('matrixBinding') else {}),
                      **({'arrayBinding':dict(row['arrayBinding'], **({'length':array_shape(decl['type'])[1]} if array_shape(decl['type']) else {}))} if row and row.get('arrayBinding') else {}),
                      **({'bufferBinding':row['bufferBinding']} if row and row.get('bufferBinding') else {}),
+                     **({'formatChange':format_change} if format_change else {}),
                      'nameWritable': row is not None and row['nameMode'] == 'CONSTANT',
                      'expected': edit_token(row) if row else None})
     return {'revision': current['revision'], 'operator': operator.path, 'uniforms': rows, 'specConstants': spec_rows,
@@ -883,6 +904,24 @@ def edit(runtime, body):
         if not result.get('ok'): raise SourceError('Review the Shader version before changing sources.')
         return snapshot(runtime)
     if not decl: raise SourceError('Select an existing Uniform source.')
+    if action == 'adoptFormat':
+        record = comp.fetch(STORE, {}).get(decl['id']); native = native_rows(operator)
+        change = changed_array_format(decl, record, native)
+        if not change or body.get('expected') != change['expected']:
+            raise SourceError('The native Array format changed. Refresh and review it again.')
+        row = next(row for row in native if row['sequence'] == 'array' and row['name'] == record['name'])
+        if change['arrayType'] == 'texturebuffer':
+            decl.update(type='samplerBuffer', elementType=change['elementType'])
+        else:
+            length = array_source_length(operator, row['index'])
+            if length > MAX_NATIVE_ARRAY_LENGTH: raise SourceError('The CHOP length exceeds the GLSL signed 32-bit range.')
+            decl['type'] = change['elementType'] + '[' + str(length) + ']'
+            decl.pop('elementType', None)
+        decl.update(value=None, nativeSequence='array'); decl.pop('sourceMissing', None)
+        # This can invalidate existing consumers. Keep all edges in a browser
+        # draft; ordinary Apply validates it before changing authoritative DATs.
+        # TD configuration and source identity are not changed by adoption.
+        return dict(seen, workingGraph=graph, proposal=True)
     row = locate(operator, comp.fetch(STORE, {}).get(decl['id']))
     if action == 'remove' and row is None:
         if body.get('expected') is not None: raise SourceError('The Uniform changed in TD. Refresh and try again.')

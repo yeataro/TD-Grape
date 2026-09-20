@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 儲存格式採用 0.8.129：第三輪來源能力完成。格式失配可明確採用 TD 設定，保留來源 ID、接線與原生配置；先產生可撤銷草稿，合法後沿用 Apply。歷史紀錄保留仍存在的失配來源，防止 Undo／Redo 誤刪／重建。TOP／MAT 原生 10 組及瀏覽器 4 組通過；完整 portable checks 通過（488 Python、14 附加檢查、729 雙語鍵與 JS／整合檢查）。原生測試保留三份使用者 Shader。報告 `work/reports/buffer-format/native-final/`。來源提交後同步與保存 TOE，第四輪 MAT Attribute／分類及第五輪結構編輯接續。
+
 2026-09-20 0.8.128 交付檢查點：36 份嵌入來源、9 份服務資產與版本一致，TOP／MAT master revision 76，三份使用者 Shader 保留。熱更新短暫的 catalog 訊息已以唯讀 audit 核對，現行 core 無錯誤、兩份範本產碼及正式交付 audit 通過。TOE 955878 bytes，SHA256 `7a72a76458e95771780fde8aac286ca209ebdb1bca65eab589fde2836143e573`。報告 `work/reports/pop-buffer/`；沒有強制重新整理使用者網頁。
 
 2026-09-20 POP Buffer 子功能 0.8.128：TOP／MAT 可匯入、建立、修改及引用原生 Buffer 配置，提供 index／arrayIndex 與 out／length／arraySize；只查長度時不產生 Attribute 取值。來源表單、右鍵、型別選單、歷史與匯入流程沿用既有機制，沒有代建 POP／CHOP。值不進圖，配置讀取只用 Attribute metadata；驅動模式在網頁唯讀。485 Python、14 附加檢查及 JS／整合 portable checks、726 雙語鍵通過；POP 瀏覽器 4 組、Texture Buffer 3 組及來源卡片 8 組通過。原生 TOP／MAT 10 組通過，TOP 實讀 0.375、Attribute Array Size 2；MAT 驗證含原生場景渲染，未宣稱已測幾何體 Attribute 缺失預設值。已配置但 Attribute 不存在時 TD 即使未引用也報錯，明確歸類來源配置錯誤並保留原生配置。報告 `work/reports/pop-buffer/native-final/`。同步與 TOE 保存另記；第三輪仍有儲存模式顯式採用，第四／五輪尚未完成。

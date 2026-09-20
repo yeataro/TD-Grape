@@ -3286,6 +3286,18 @@
     "live.offline": {"en": "Uniform live offline · single edits available", "zh-Hant": "Uniform 即時連線中斷 · 可單次修改"},
     "live.changed": {"en": "The Uniform source changed. Review its current value.", "zh-Hant": "Uniform 來源已變更，請確認目前的值。"},
     "inputs.preset.deltaTime": {"zh-Hant": "Delta Time · 幀間秒數", "en": "Delta Time"},
-    "inputs.preset.frameStep": {"zh-Hant": "Frame Step · 幀步長", "en": "Frame Step"}
+    "inputs.preset.frameStep": {"zh-Hant": "Frame Step · 幀步長", "en": "Frame Step"},
+    "sources.adoptFormat": {
+      "zh-Hant": "採用 TD 儲存格式",
+      "en": "Use TD format"
+    },
+    "sources.adoptFormatConfirm": {
+      "zh-Hant": "依 TD 目前的儲存格式更新圖內宣告。保留來源識別與所有接線；不相容的接線會顯示型別錯誤，修正後才能套用。此操作不更動 TD 的 CHOP 或儲存設定。",
+      "en": "Update the graph declaration to match TD. Source identity and wires are kept. Incompatible connections must be fixed before applying. TD settings stay unchanged."
+    },
+    "sources.formatAdopted": {
+      "zh-Hant": "已採用 TD 儲存格式，請檢查接線。",
+      "en": "TD format adopted. Review the connections."
+    }
   }
 }

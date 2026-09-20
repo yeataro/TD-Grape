@@ -34,6 +34,30 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.deepEqual(await page.evaluate(()=>{const ports=(i,kind)=>{const n=current().nodes[i];return resolvedNodePorts(catalog.find(d=>d.definitionUuid===n.definitionUuid),n.params,graph.declarations.find(d=>d.id===n.params.declarationId),kind);};return {source:ports(0,'outputs'),read:ports(1,'inputs'),count:ports(2,'outputs')};}),{source:{out:'samplerBuffer'},read:{buffer:'samplerBuffer',index:'int'},count:{out:'int'}});
   assert.equal(await page.locator('.node [data-native-source] input').count(),0);
   checks.push('reference resolves to samplerBuffer and connects to Fetch/Length without live numeric subscriptions');
+  await page.evaluate(id=>{
+    dirty=false;nativeSourceError='';nativeSourcePolling=false;past=[];future=[];
+    const decl=graph.declarations.find(d=>d.id===id);decl.sourceMissing=true;
+    nativeSourceSnapshot.graph=clone(graph);nativeSourceSnapshot.sourceChanged=false;
+    Object.assign(nativeSourceSnapshot.uniforms[0],{missing:true,formatChange:{arrayType:'uniformarray',elementType:'float',expected:'format-token'}});
+    window.formatBefore=clone(graph);window.formatCalls=[];
+    api=async(endpoint,body)=>{formatCalls.push({endpoint,body});const state=clone(nativeSourceSnapshot);if(endpoint==='source-edit'){
+      state.workingGraph=clone(graph);const d=state.workingGraph.declarations.find(d=>d.id===id);d.type='float[8]';delete d.elementType;delete d.sourceMissing;state.proposal=true;
+    }return state;};
+    scheduleGraphApply=()=>{};render();selectInputSource(id);
+  },decl.id);
+  await page.locator('#inspector [data-source-adopt-format]').click();
+  await page.locator('.confirmation-dialog button').first().click();
+  assert.equal(await page.evaluate(()=>formatCalls.length),0);
+  await page.locator('#inspector [data-source-adopt-format]').click();
+  await page.locator('.confirmation-dialog button').last().click();
+  await page.waitForFunction(()=>past.length===1);
+  assert.deepEqual(await page.evaluate(()=>({type:graph.declarations.find(d=>d.id===formatBefore.declarations.find(d=>d.type==='samplerBuffer').id).type,wires:JSON.stringify(graph.stages)===JSON.stringify(formatBefore.stages),native:!!past[0].nativeApplied,token:formatCalls.find(c=>c.endpoint==='source-edit').body.expected})),{type:'float[8]',wires:true,native:false,token:'format-token'});
+  await page.evaluate(()=>undo());
+  assert.equal(await page.evaluate(()=>historyGraphKey(graph)===historyGraphKey(formatBefore)),true);
+  await page.evaluate(()=>undo(true));
+  assert.equal(await page.evaluate(()=>graph.declarations.some(d=>d.type==='float[8]')),true);
+  assert.equal(await page.evaluate(()=>formatCalls.some(c=>c.endpoint==='history-restore')),false);
+  checks.push('format adoption uses product confirmation, preserves wires, and local Undo/Redo makes no native writes');
   await page.screenshot({path:path.join(folder,'texture-buffer.png')});
   assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
  }catch(e){await h.finish(e);throw e;}

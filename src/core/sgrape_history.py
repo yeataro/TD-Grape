@@ -73,8 +73,15 @@ def _live(runtime):
     registry = comp.fetch(sources.STORE, {}) or {}; links = comp.fetch(LINKS, {})
     declarations = {d['id']: d for d in runtime.state()['graph']['declarations'] if d.get('kind') in sources.SOURCE_KINDS}
     entries = {}; handles = {}; native_index = sources.native_index(operator)
+    native_by_name = {}
+    for row in native_index.values():
+        if row: native_by_name.setdefault(row['name'], []).append(row)
     for ident in set(declarations) | set(registry):
         record = copy.deepcopy(registry.get(ident)); native = sources.locate(operator, record, native_index)
+        if native is None and sources.changed_array_format(declarations.get(ident, {}), record, native_by_name.get((record or {}).get('name'), [])):
+            # A format mismatch is still an existing TD resource. Capture it so
+            # Undo of graph-only adoption never deletes or recreates that row.
+            native = native_by_name[record['name']][0]
         link = copy.deepcopy(links.get(ident)); controls = {}
         if link:
             for item in link.get('components', []):
@@ -566,7 +573,7 @@ def restore(runtime, body):
                         _apply_par(_row_pars(runtime, sequence, index)[suffix], value)
         for ident, plan in plans.items():
             entry = projected[ident]
-            if not plan['structural'] and entry and entry['native']:
+            if not plan['structural'] and entry and entry['native'] and plan['params']:
                 operator = runtime.shader_operator(comp)
                 located = sources.locate(operator, entries[ident]['record'])
                 if located is None: _conflict()
