@@ -1867,13 +1867,13 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 [data-native-component-slot][data-bind-master="true"]>.field::after{content:"";position:absolute;left:3px;bottom:3px;width:5px;height:5px;background:var(--uniform-slider-accent,var(--purple));clip-path:polygon(0 0,0 100%,100% 100%);pointer-events:none}
 /* Uniform controls keep the base theme palette while the surrounding UI tone changes.
    These local colors intentionally do not reference the adjusted root tokens. */
-[data-native-kind="uniform"]{--uniform-slider-field:#191920;--uniform-slider-text:#e5dff0;--uniform-slider-border:#30303b;--uniform-slider-fill:#24454d;--uniform-slider-handle:#d0edef;--uniform-slider-accent:#b39cfb;--uniform-slider-muted:#9390a5}
-:root[data-ui-theme="light"] [data-native-kind="uniform"]{--uniform-slider-field:#fafbfc;--uniform-slider-text:#303640;--uniform-slider-border:#c2c8d1;--uniform-slider-fill:#cddfe0;--uniform-slider-handle:#28575b;--uniform-slider-accent:#694b91;--uniform-slider-muted:#626b78}
+[data-native-kind="uniform"]{--uniform-slider-field:#393843;--uniform-slider-text:#e5dff0;--uniform-slider-border:#30303b;--uniform-slider-fill:#526165;--uniform-slider-handle:#b9d2d4;--uniform-slider-accent:#b39cfb;--uniform-slider-muted:#9390a5}
+:root[data-ui-theme="light"] [data-native-kind="uniform"]{--uniform-slider-field:#fafbfc;--uniform-slider-text:#303640;--uniform-slider-border:#c2c8d1;--uniform-slider-fill:color-mix(in srgb,#cddfe0 70%,transparent);--uniform-slider-handle:#28575b;--uniform-slider-accent:#694b91;--uniform-slider-muted:#626b78}
 :root .components[data-native-kind="uniform"] input.numeric-slider{
  --purple:var(--uniform-slider-accent);
  --uniform-slider-position:clamp(3px,calc(var(--numeric-fill,0%) - 1px),calc(100% - 5px));
  background-color:var(--uniform-slider-field);color:var(--uniform-slider-text);border-color:var(--uniform-slider-border);
- background-image:linear-gradient(to right,transparent 0 var(--uniform-slider-position),var(--uniform-slider-handle) var(--uniform-slider-position) calc(var(--uniform-slider-position) + 2px),transparent calc(var(--uniform-slider-position) + 2px) 100%),linear-gradient(to right,color-mix(in srgb,var(--uniform-slider-fill) 70%,transparent) 0 var(--numeric-fill,0%),transparent var(--numeric-fill,0%) 100%);
+ background-image:linear-gradient(to right,transparent 0 var(--uniform-slider-position),var(--uniform-slider-handle) var(--uniform-slider-position) calc(var(--uniform-slider-position) + 2px),transparent calc(var(--uniform-slider-position) + 2px) 100%),linear-gradient(to right,var(--uniform-slider-fill) 0 var(--numeric-fill,0%),transparent var(--numeric-fill,0%) 100%);
  background-size:100% calc(100% - 8px),100% 100%;background-position:center;background-repeat:no-repeat;
 }
 :root [data-native-kind="uniform"] .component-label{color:var(--uniform-slider-muted)}
