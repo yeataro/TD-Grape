@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.147 DEV 交付檢查點：程式提交 `9410020`；37 份嵌入來源、10 份服務資產一致，TOP／MAT master revision 94，三份使用者 Shader 保留。TOE 983622 bytes，SHA256 `2103004e68111f4b9bcb0335698c9d149f43a753fedc9042fc21622be572d6fc`。報告 `work/reports/uniform-palette-147/`；未重新整理使用者網頁。
+
 2026-09-20 0.8.147 DEV 實作：使用者選定 Uniform B「灰青提亮」，套用預覽的底色 #393843、實色填色 #526165 及把手 #b9d2d4。只調整共用深色配色，保留 Light、32px 高度、原值映射與 Bind／Master 標示；整體亮度不影響滑桿。現有滑桿驗證 4 組與精確色碼核對通過，已檢視截圖；報告 Documents 工作區 `reports/uniform-palette-147/`。同步保存另記。
 
 2026-09-20 0.8.146 DEV 交付檢查點：程式提交 `58fb452`；37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 93，三份使用者 Shader 保留。TOE 983646 bytes，SHA256 `5384e042a89b5d6f56f062d96bb09646e8c8b67e30aeeea076cbffa7043a175e`。原生報告 `work/reports/note-group-146/`；未重新整理使用者網頁。
