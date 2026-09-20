@@ -1809,3 +1809,6 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .components:not(.scalar) .source-component-mode{padding-left:18px}
 [data-native-component-slot][data-mode="EXPRESSION"] .source-component-mode{color:var(--type-vec2,#83badf)}
 [data-native-component-slot][data-mode="EXPORT"] .source-component-mode{color:var(--green)}
+.confirmation-dialog{width:min(460px,calc(100 * var(--ui-vw) - 24px));padding:20px}
+.confirmation-dialog>p{line-height:1.7;overflow-wrap:anywhere}
+.confirmation-dialog>.confirmation-actions{justify-content:flex-end;gap:10px;padding:12px 0 0}

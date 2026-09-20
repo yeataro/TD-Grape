@@ -2488,8 +2488,12 @@
       "en": "Edits the GLSL OP Python expression. Manage Bind / Export in native Parameters."
     },
     "inputs.nativeColor": {
-      "zh-Hant": "TD Colors · vec4（含 TD 色彩轉換）",
-      "en": "TD Colors · vec4 (TD color conversion applies)"
+      "zh-Hant": "TD Colors · R／RG／RGB／RGBA（含 TD 色彩轉換）",
+      "en": "TD Colors · R / RG / RGB / RGBA (TD color conversion applies)"
+    },
+    "inputs.legacyColorType": {
+      "zh-Hant": "此顏色來源保留了舊版型別。請選擇 float、vec2、vec3 或 vec4；調整前不會自動改變既有接線。",
+      "en": "This color source retains a legacy type. Choose float, vec2, vec3 or vec4 to update it. Existing connections are unchanged until then."
     },
     "inputs.nativeVector": {
       "zh-Hant": "TD Vectors · 保留四個原生分量",

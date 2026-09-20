@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 來源第二輪審查檢查點 0.8.124：來源刪除改為頁面內 overlay 確認卡，取消／Esc 不送出請求，確認保留原生 edit token；切換圖或引用數變更時不執行過期刪除。Colors 新建／編輯只提供 float／vec2／vec3／vec4，分量使用 R／RG／RGB／RGBA 語意，既有其他型別原樣保留並提示調整，不自動改接線。新瀏覽器驗證 5 組、既有來源 13 組、705 個雙語鍵驗證通過；已檢視 overlay 截圖。Ucc 殘留回報已確認仍在 TD Colors，使用者撤回同步問題。另記 GLSL OP 狀態卡為五輪完成後的獨立待辦。本檢查點沒有改輪詢、WS、原生值／模式、GLSL 產碼或使用者圖；Common 卡片與多來源即時控制接續第二輪。同步與保存另記。
+
 2026-09-20 0.8.123 交付：`13dd2f0` 已同步 9 份 DAT；36 份來源、9 份服務資產、TOP／MAT Master（revision 71）及三份使用者 Shader 保留核對通過。原生來源 6 組、Spec 回歸 26 組均通過；舊測試的拒絕結果判讀已在 0.8.122 對照確認。正式 TOE 943,206 bytes，SHA-256 `ee03e559772d9db62452189371877d64f53633e7da1056bb759c15e184dc24e1`，已保存並排除私人助手；未重新整理使用者 Editor。第一輪完成，第二輪接續 Common／Custom 卡片與 Uniform 引用 UI。
 
 2026-09-20 0.8.123 來源檢查點：完成來源計畫第一輪。原生陣列型別與 constructor／預設值展開上限分開，一萬元素 TOP／MAT Uniform Array 匯入及產碼通過，不保存 CHOP 樣本。新 TD Constants 列以 float 匯入，既有型別／constant_id 保留；來源驗證、GLSL 編譯、一般套用失敗分開標示。拒絕匯入的原生項目可搜尋並顯示原因，缺失卡片保留且不再新增引用；使用到的缺失來源阻擋套用，未使用的既有無效資料不阻擋無關有效 Shader。來源快照仍不做 Spec 值驗證掃描。完整 portable checks（474 Python 及 JS／整合）、既有來源瀏覽器 13 組、新狀態 5 組、TOP／MAT 原生 6 組通過。Spec 原生回歸中一項舊測試只接受例外；已在 0.8.122 證明原流程回傳 `ok:false / blocked:true`，修正測試接受明確拒絕並核對原生值／state／GLSL 不變，沒有放寬產品驗證。報告 `work/reports/source-inventory/`；同步 TD 與保存 TOE 另記。Texture Buffer 完整能力仍待第三輪。
