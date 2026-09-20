@@ -896,10 +896,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 
 /* Selection actions remain in screen space, independent of graph zoom. */
 #groupframes{position:absolute;left:0;top:0;width:1px;height:1px;pointer-events:none}
-/* Group bodies stay behind wires; only their controls sit above wire hit areas.
-   Cards retain priority over Group controls where they overlap. */
+/* Group bodies and titles stay behind wires; corner handles sit above hit areas.
+   Cards retain priority over Group handles where they overlap. */
 #cards{z-index:2}
-.group-frame-title{position:relative;z-index:1}
 .group-select-handle{z-index:1}
 .group-frame{position:absolute;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--frame-color) 55%,transparent);border-radius:10px;background:color-mix(in srgb,var(--frame-color) 7%,transparent);pointer-events:none}
 .group-frame.selected{border-color:var(--frame-color)}

@@ -2,9 +2,9 @@
 
 The SVG appends all transparent hit paths first, followed by all painted paths, preserving original edge order within each set. The stacking order is nodes, visible wires, transparent hit areas, then Group bodies. A visible stroke therefore wins over every other edge's invisible extension. Each hit path directly references its painted path; only painted paths carry endpoint/type metadata. Screen hit width is at least 6 CSS px, growing with graph/UI zoom above the baseline; painted strokes still scale normally. Pointer, touch, context menu and trash gestures resolve the hit surface to the painted path, while hover decorates that path only. Hit paths have no Glow or visible stroke.
 
-Group bodies remain behind wires; Group title/corner controls are above wire hit areas, with node cards above them. This prevents the widened target from intercepting a Group control. The original 0.8.157 minimum was 2.5 CSS px; user review increased it to 6 in 0.8.158.
+Group bodies and titles remain behind wires. After visual review, 0.8.160 restores the title's original stacking by removing its elevated position/z-index. Corner handles retain their 0.8.158 priority above wires, with node cards above them. The original 0.8.157 minimum was 2.5 CSS px; user review increased it to 6 in 0.8.158 and confirmed it in 0.8.159.
 
-Visibility is the interaction boundary: the Group body does not block a visible wire running through it. Only covering nodes or controls take priority. Regression checks exercise both Group controls winning and visible wires inside the Group remaining hoverable.
+Visibility is the interaction boundary: Group bodies and titles do not block wires running through them. Covering nodes and corner handles take priority. Regression checks exercise these layers and visible wires inside the Group remaining hoverable.
 
 Nodes, sockets and SVG paths share the `#world` element. Wire coordinates are
 measured from the sockets' actual HTML bounds relative to that world, whose
