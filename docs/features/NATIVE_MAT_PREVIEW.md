@@ -1,5 +1,7 @@
 # MAT 原生預覽（0.8.72）
 
+2026-09-21 校正：本頁記錄 0.8.72 的 PNG 預覽階段。主 Editor 已於 0.8.74 改用共用 [Remote Panel](../../src/remote_panel/README.md)；驗證 Renderer 移到 manager。現行預覽／Lock 限制見[預覽筆記](../discussions/PREVIEW_UI_NOTES.md)，不要把下面的當時流程當成現在主 UI。
+
 網頁 Material Preview 使用內部 `grape_material_preview` OP Viewer TOP 擷取同一個 `material` GLSL MAT 的原生 Viewer，輸出 512 × 512 RGBA PNG，開啟 Preserve Alpha。Grape MAT 的 COMP Viewer 也直接指向 material。TOP 仍使用既有的限尺寸 TOP 預覽。
 
 預覽幾何、視角及光照由 TD 原生 Viewer 決定，可能與使用者 Render TOP 的場景不同；它不代表指定 Render 的所有輸出。MAT 的 Viewer 有自己的渲染成本，本輪未宣稱全面降低 GPU 使用量。

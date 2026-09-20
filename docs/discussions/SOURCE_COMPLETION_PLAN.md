@@ -1,6 +1,6 @@
 # 來源功能接續計畫
 
-2026-09-20。整合本輪操作回報與[來源建構共識](SOURCE_ARCHITECTURE_REVIEW.md)。第一輪與第二輪已完成；第三輪完成 CHOP Texture Buffer（0.8.127）、POP Buffer（0.8.128）及儲存格式顯式採用（0.8.129）；完整分類與 MAT Attribute 接續第四輪。本文件是接續工作與驗收清單，不表示以下功能已完成。分類仍以[來源選單分類表](TD_SOURCE_MENU_REVIEW.md)為依據。
+2026-09-21 狀態校正：**五輪已完成至 0.8.132，Color／數量 UI 於 0.8.133 交付**，後續還有來源 UI review。下面保留 2026-09-20 的階段筆記、各輪驗收與宿主限制；較早的「尚未」不代表目前未完成。MAT 幾何缺失 Attribute 的補驗、自訂分類排序等仍保留，見[待辦總整理](TODO_AUDIT_2026-09-21.md)。原始範圍依[來源建構共識](SOURCE_ARCHITECTURE_REVIEW.md)與[來源分類表](TD_SOURCE_MENU_REVIEW.md)。
 
 ## 已完成的基礎
 
