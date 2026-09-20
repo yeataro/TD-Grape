@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-21 0.8.156 DEV 交付檢查點：程式提交 ca6c782；37 份內嵌來源一致，11 份資產經實際 HTTP 200 及 SHA256 核對，core errors 為空，TOP／MAT master revision 103。刷新、同步及保存均保留四份使用者 Shader。TOE 1024510 bytes，SHA256 cd9aa993d4c83a7a96c10d1d9bf352f7d00d468bbaaa81922133b61c6f6646b7；私人開發助手已排除。交付報告 work/reports/node-placement-156/，隔離回歸 reports/placement-156/。未重新整理使用者現有網頁或操作其草稿。
+
 2026-09-21 0.8.156 DEV：本輪審查定案已實作。數值精度不再驅動節點寬度；滑桿雙擊直接全選。接孔右鍵選擇節點後進入實際尺寸的線框放置預覽（固定亮紫、實線外框與分隔線、型別原色虛線、無外陰影；Simple 無 Glow，Professional 及之後有 Glow），點擊才建立及接線，一次 Undo。連線右鍵選來源／目的及中斷指定線；不可用 Source 不發光。新瀏覽器 18 組、相關既有回歸與 510 Python／14 附加／26 Node 可攜檢查通過。調查、細節及後續項目見 [節點與接線操作審查](../discussions/NODE_PLACEMENT_REVIEW.md)。TD 同步與保存另記。
 
 2026-09-20 0.8.155 DEV 交付檢查點：程式提交 eb29a2a；37 份內嵌來源一致，11 份服務資產（含 uniform_live.js）經實際 HTTP 200 及 SHA256 核對，core errors 為空，TOP／MAT master revision 102。來源刷新、模板同步及保存前後四份使用者 Shader 均保留。TOE 1020902 bytes，SHA256 eb9aed3d704cc6fc04a668567d2728edf23e9cb0185f07e29a88f1098b80f5e5；私人開發助手已排除。來源刷新當下的一個舊 HTTP GET 遇到 runtime 重載的 json NameError，後續服務已恢復且 11 份實際 HTTP 資產核對全部通過。報告 work/reports/uniform-boundaries-155/。未重新整理使用者現有網頁或操作其草稿。
