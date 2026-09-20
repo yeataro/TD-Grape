@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.137 DEV 交付檢查點：37 份嵌入來源與 10 份服务資產一致，master revision 85，三份使用者 Shader 保留。TOE 974334 bytes，SHA256 `f1d0816d04d886c2c74bb66166115be424498b084e4fcf147e0284e8f70df68f`。報告 `work/reports/source-references/`。
+
 2026-09-20 引用選取 0.8.137 DEV：來源卡片及內建來源選單新增「選取所有引用」，僅選目前畫布並沿用既有 Frame／Framing 設定。無引用停用，唯讀仍可導航；不切 Stage／子圖，不更動圖、GLSL 或歷史，不重建節點 DOM。瀏覽器 4 組新檢查及卡片 8、分類 3 組回歸通過。Ctrl+Shift+A、方向鍵導航及自動 Frame 偏好仍是未實作筆記。
 
 2026-09-20 0.8.136 DEV 交付檢查點：37 份嵌入來源、10 份服務資產一致，master revision 84；三份使用者 Shader 保留。TOE 973958 bytes，SHA256 `6d4b3547e90cd0ec4f90ef10daca188086f0226bb99352eafb9742a69197c8d0`。報告 `work/reports/source-presentation/`。
