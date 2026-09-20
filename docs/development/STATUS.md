@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-21 0.8.160 交付檢查點：程式 7a20d67；9 組選線／層級檢查及完整 portable checks 通過。37 份內嵌來源、11 份實際 HTTP 資產一致，core 無錯誤；TOP／MAT master revision 107，四份使用者 Shader 保留。TOE 1026022 bytes，SHA256 522ff2cdf00b487084f9c9cee08bb661692ba178ea1f6c8e766584ff0a051293，私人助手已排除。報告 group-title-160/；未重新載入使用者瀏覽器。
+
 2026-09-21 0.8.160 DEV：依使用者視覺 review，移除 Group 標題列在 0.8.158 新增的 position／z-index，恢復標題列位於線下。保留已確認的最小 6 CSS px 命中區、可見線／透明線順序及右下角把手層級。同步修正既有命中檢查與層級文件。
 
 2026-09-21 0.8.159 交付檢查點：程式 3874f50；37 份內嵌來源及 11 份實際 HTTP 資產一致，core 無錯誤，TOP／MAT master revision 106，四份使用者 Shader 保留。TOE 1026350 bytes，SHA256 b170ccabb63c8e4dfd11e832541f5ab1a309d8bddcd9d42404695609a8c68fcb，私人助手已排除。報告 work/reports/wire-layers-159/ 與 Documents reports/wire-layers-159/。未重新載入使用者瀏覽器。
