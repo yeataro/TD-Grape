@@ -18,6 +18,18 @@
     "Graph"
   ],
   "messages": {
+    "sources.common": {"zh-Hant": "共同來源", "en": "Common Sources"},
+    "sources.time": {"zh-Hant": "時間", "en": "Time"},
+    "sources.customUniforms": {"zh-Hant": "自訂 Uniform", "en": "Custom Uniforms"},
+    "sources.values": {"zh-Hant": "數值", "en": "Values"},
+    "sources.matrices": {"zh-Hant": "矩陣", "en": "Matrices"},
+    "sources.arrays": {"zh-Hant": "陣列", "en": "Arrays"},
+    "sources.details": {"zh-Hant": "展開／收合來源", "en": "Source details"},
+    "sources.actions": {"zh-Hant": "來源操作", "en": "Source actions"},
+    "sources.presetDormant": {"zh-Hant": "新增引用時才建立此來源。", "en": "Created on first reference."},
+    "sources.presetHelp": {"zh-Hant": "首次引用才建立原生 Uniform 並填入預設 Expression；後續引用共用同一來源，不覆寫既有值或模式。", "en": "The first reference creates a native Uniform with this expression. Later references reuse it without changing its value or mode."},
+    "sources.presetConflict": {"zh-Hant": "已有同名或相衝突的來源；請先在來源設定確認名稱與型別。", "en": "A source conflicts with this preset. Check its name and type."},
+    "sources.connectionUnknown": {"zh-Hant": "連線中斷，來源狀態尚未確認。", "en": "Disconnected; source status is unknown."},
     "help.array_create": {"zh-Hant": "以整數常數長度建立陣列，每一項填入 value。length 可接 Graph Constant、Spec Constant 或合法常數運算；value 可接執行期資料。", "en": "Creates an array filled with value. Length accepts integral constant expressions; value may vary at runtime."},
     "array.createHint": {"zh-Hant": "length 須為整數常數；value 填入每個元素，可接 Uniform 等執行期數值。", "en": "Length must be an integral constant expression. Value fills every element and may come from a Uniform."},
     "array.elementType": {"zh-Hant":"元素型別", "en":"Element type"},

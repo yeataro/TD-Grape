@@ -157,7 +157,17 @@ function specDefaultValue(value,type){const n=Number(Array.isArray(value)?value[
 function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence,arraySource,elementType,length}={}){
   if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'sTD2DInputs['+slots.length+']',defaultSource:'builtin:black'};slots.push(slot);return slot;}
   if(kind==='sampler'&&editorTarget==='top')throw Error(t('inputs.chooseTop'));
-  if(kind==='uniform'&&preset){const existing=graph.declarations.find(d=>d.kind==='uniform'&&d.type===type&&d.initialDriver===preset);if(existing)return existing;}
+  if(kind==='uniform'&&preset){
+    const entry=typeContract?.sources?.uniformPresets?.[preset];if(!entry)throw Error('Unknown Uniform preset.');
+    const matches=graph.declarations.filter(d=>d.initialDriver===preset||d.name===entry.name);
+    if(matches.length){
+      const existing=matches[0];
+      if(matches.length!==1||existing.kind!=='uniform'||existing.type!==entry.type)throw Error(t('sources.presetConflict'));
+      if(existing.sourceMissing)throw Error(t('sources.missing'));
+      return existing; // Reuse the entity without applying its initial driver again.
+    }
+    type=entry.type;name=entry.name;
+  }
   const id=kind+'_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'sValue'})[kind]||'uValue')};
   if(kind==='spec_constant'){const ids=new Set(graph.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;Object.assign(decl,{value:specDefaultValue(value??0,type),constantId,nativeSequence:'const'});}

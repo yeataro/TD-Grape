@@ -951,11 +951,15 @@ function exposedInspector(box){
   }
   updateUniformFields();
 }
-let helpContext='node',previewHelpSelection=null;
+let helpContext='node',previewHelpSelection=null,sourceHelpPreset=null;
 function renderHelp(){
   const help=$('#nodehelp');help.replaceChildren();
   if(helpContext==='personal'){
     help.append(el('h3',{},t('browser.source.personal')),markdown(t('personal.hint')),markdown(t('personal.help')));return;
+  }
+  if(helpContext==='sourcePreset'&&sourceHelpPreset){
+    const entry=typeContract?.sources?.uniformPresets?.[sourceHelpPreset];
+    if(entry){help.append(el('h3',{},entry.initialize.expression),el('p',{},t(entry.labelKey)+' · '+entry.name+' · '+entry.type),markdown(t('inputs.clockHint')),markdown(t('sources.presetHelp')));return;}
   }
   if(helpContext==='preview'&&selected!==previewHelpSelection)helpContext='node';
   if(helpContext==='preview'){
@@ -1920,16 +1924,16 @@ function nativeSourceIndex(){
   if(nativeIndexedSnapshot!==nativeSourceSnapshot){nativeIndexedSnapshot=nativeSourceSnapshot;nativeRowsIndex=new Map(nativeSourceRows().map(row=>[row.id,row]));}
   return nativeRowsIndex;
 }
-function inputGroupLabel(kind){return ({top_input:'TOP Inputs',constant:t('inputs.graphConstants'),spec_constant:t('inputs.specConstants'),uniform:'Uniforms',sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind];}
+function inputGroupLabel(kind){return ({top_input:'TOP Inputs',constant:t('inputs.graphConstants'),spec_constant:t('inputs.specConstants'),uniform:t('sources.customUniforms'),sampler:editorTarget==='top'?t('inputs.legacySamplers'):'Samplers'})[kind];}
 function inputSourceGroup(kind){return kind==='color'||kind==='array'||kind.startsWith('preset:')?'uniform':kind;}
-function inputPresetSource(kind){return kind.startsWith('preset:')?graph.declarations.find(d=>d.kind==='uniform'&&d.type==='float'&&d.initialDriver===kind.slice(7)):null;}
+function inputPresetSource(kind){const key=kind.startsWith('preset:')?kind.slice(7):null,entry=typeContract?.sources?.uniformPresets?.[key];return entry?graph.declarations.find(d=>d.kind==='uniform'&&d.type===entry.type&&(d.initialDriver===key||d.name===entry.name)):null;}
 function finishInputCreate(kind,id){
   setInputGroupCollapsed(inputSourceGroup(kind),false);$('#inputsearch').value='';$('#nativeuniforms').dataset.sourceStructure='';$('#sourcecreatedialog').close();selectInputSource(id);
 }
 function openInputCreate(kind){
   if(editorMutationBlocked()||!graph||!['constant','spec_constant','uniform',editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
   closeCreator();const dialog=$('#sourcecreatedialog'),choice=$('#sourcekind');
-  const options=kind==='uniform'?[['uniform','Uniform'],['array',t('array.uniformSource')],['color','Color · vec4'],...Object.keys(inputPresets()).map(p=>['preset:'+p,t('inputs.preset.'+p)])]:[[kind,inputGroupLabel(kind)]];
+  const options=kind==='uniform'?[['uniform','Uniform'],['array',t('array.uniformSource')],['color','Color']]:[[kind,inputGroupLabel(kind)]];
   choice.replaceChildren(...options.map(([value,label])=>el('option',{value},label)));choice.value=kind;
   $('#sourcekindfield').hidden=options.length===1;$('#sourcecreatetitle').textContent=t('inputs.new')+' · '+inputGroupLabel(kind);
   $('#sourcecreateerror').textContent='';choice.onchange();dialog.showModal();
@@ -2347,40 +2351,140 @@ function appendBuiltInInputs(box,query){
   toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!query)setInputGroupCollapsed(kind,list.hidden);};head.append(toggle);section.append(head,list);
   for(const d of entries){const row=el('div',{class:'input-source-row','data-category':nodeCategory(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.key});button.append(el('span',{},d.label),el('small',{},builtInSourceLabel(d)));installCanvasItemDrag(button,()=>d.label,(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));row.append(button);list.append(row);}box.append(section);
 }
+// Source presentation is keyed independently from graph selection and native values.
+// Reconcile only membership/order; untouched cards keep their controls and focus.
+const sourceCardCache=new Map(),sourceGroupCache=new Map(),sourceCardCollapsed=new Map();
+let sourcePresentationContext='',sourceBuiltinCache=null;
+function reconcileSourceChildren(parent,children){
+  const wanted=new Set(children);for(const child of [...parent.children])if(!wanted.has(child))child.remove();
+  children.forEach((child,index)=>{if(parent.children[index]!==child)parent.insertBefore(child,parent.children[index]||null);});
+}
+function sourceGroup(kind,label,children,create=null,query=''){
+  let group=sourceGroupCache.get(kind);
+  if(!group){
+    const section=el('section',{class:'input-group','data-input-group':kind}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind}),toggle=el('button',{class:'input-group-toggle','aria-controls':list.id});
+    toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},label));head.append(toggle);section.append(head,list);
+    group={section,list,toggle,query};
+    toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!group.query)setInputGroupCollapsed(kind,list.hidden);};
+    if(create){const add=el('button',{class:'input-group-add','data-input-create':create,'aria-label':t('inputs.create')+' · '+label},t('inputs.newShort'));add.onclick=()=>openInputCreate(create);head.append(add);}
+    sourceGroupCache.set(kind,group);
+  }
+  group.query=query;group.list.hidden=!query&&inputCollapsedGroups.has(kind);group.toggle.setAttribute('aria-expanded',String(!group.list.hidden));
+  reconcileSourceChildren(group.list,children);return group.section;
+}
+function sourceUniformGroup(decl,row){
+  const sequence=row?.sequence||decl.nativeSequence;
+  return sequence==='array'||typeDescriptor(decl.type)?.shape==='array'?'arrays':sequence==='matrix'||isMatrixType(decl.type)?'matrices':'values';
+}
+function referenceCommonSource(preset,x=null,y=null){
+  if(editorMutationBlocked())return;
+  const entry=typeContract?.sources?.uniformPresets?.[preset],definition=catalog.find(d=>d.key==='uniform');if(!entry||!definition)return;
+  const rect=$('#canvas').getBoundingClientRect(),point=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!point)return;
+  change(()=>{const decl=createInputDeclaration('uniform',entry.type,{preset});selectedInputId=null;selectNode(instantiate(definition,point.x,point.y,null,{declarationId:decl.id}));});
+}
+function sourceCardHelp(id,preset){
+  if(id)selectInputSource(id);
+  if(preset){sourceHelpPreset=preset;helpContext='sourcePreset';renderHelp();}
+  workspaceLayout?.reveal('help');
+}
+function openSourceCardMenu(card,id,preset,event){
+  event?.preventDefault();event?.stopPropagation();document.querySelector('#sourcecardmenu')?.remove();
+  const menu=el('div',{id:'sourcecardmenu',class:'popup-menu source-card-menu',popover:'auto',role:'menu'}),load=editorLoadGeneration;
+  const decl=allInputSources().find(d=>d.id===id),reference=()=>preset?referenceCommonSource(preset):inputReference(id);
+  const add=(label,action,disabled=false)=>{const item=el('button',{type:'button',role:'menuitem'},label);item.disabled=disabled;item.onclick=()=>{menu.hidePopover();if(load===editorLoadGeneration)action();};menu.append(item);};
+  add(t('sources.reference'),reference,editorMutationBlocked()||!!decl?.sourceMissing||card.dataset.sourceState==='conflict');
+  if(decl)add(t('inputs.edit'),()=>selectInputSource(id));
+  add(t('panel.helpTitle'),()=>sourceCardHelp(id,preset));
+  const row=nativeSourceIndex().get(id);
+  if(decl&&row&&['uniform','spec_constant'].includes(decl.kind)){
+    menu.append(el('div',{class:'popup-separator',role:'separator'}));
+    if(row.missing)add(t('sources.restore'),()=>nativeSourceAction('restore',decl),!sourceReady());
+    if(!row.missing||!sourceReferences(id).length)add(t('sources.remove'),()=>nativeSourceAction('remove',decl),!sourceReady());
+  }
+  menu.onkeydown=e=>{const items=[...menu.querySelectorAll('button:not(:disabled)')],i=items.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();items[e.key==='Home'?0:e.key==='End'?items.length-1:(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();}};
+  menu.addEventListener('toggle',e=>{if(e.newState==='closed'){menu.remove();if(card.isConnected)card.querySelector('.source-card-menu-button')?.focus({preventScroll:true});}});
+  document.body.append(menu);menu.showPopover();const rect=card.getBoundingClientRect(),z=uiScaleFactor(),x=event?.type==='contextmenu'?event.clientX:rect.right,y=event?.type==='contextmenu'?event.clientY:rect.top;
+  menu.style.left=Math.max(8,Math.min(x,innerWidth-menu.offsetWidth*z-8))/z+'px';menu.style.top=Math.max(8,Math.min(y,innerHeight-menu.offsetHeight*z-8))/z+'px';menu.querySelector('button:not(:disabled)')?.focus();
+}
+function sourceCard(decl,preset,issue,row,conflict=false){
+  const entry=preset&&typeContract.sources.uniformPresets[preset],key=preset?'preset:'+preset:decl.id,dormant=!decl&&!!entry;
+  const signature=JSON.stringify([decl&&[decl.id,decl.name,decl.type,decl.kind,decl.nativeSequence,decl.index,decl.sourceMissing],row&&[row.sequence,row.missing,row.pending],issue,preset,conflict]);
+  let cached=sourceCardCache.get(key);
+  if(!cached||cached.signature!==signature){
+    const id=decl?.id,label=entry?.initialize.expression||decl.name,type=decl?.type||entry.type;
+    const card=el('div',{class:'input-source-row source-card','data-category':nodeCategory({key:decl?.kind||'uniform'}),'data-source-card':key}),head=el('div',{class:'source-card-head'}),body=el('div',{class:'source-card-body'}),toggle=el('button',{class:'source-card-toggle','aria-label':t('sources.details')}),pick=el('button',{class:'input-source-select','aria-pressed':'false'}),more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
+    if(id)card.dataset.inputSource=id;if(preset)card.dataset.preset=preset;
+    if(dormant)card.dataset.dormant='true';
+    const name=el('span');if(entry){const parts=label.split('.');parts.forEach((part,index)=>{if(index)name.append('.',el('wbr'));name.append(part);});}else name.textContent=label;
+    pick.append(name,el('small',{},type));pick.title=label+' · '+type;
+    const reference=el('button',{class:'input-reference','aria-label':t('sources.reference')+' '+label,title:t('inputs.dragReference')},'+');
+    if(id)reference.dataset.inputReference=id;else reference.dataset.presetReference=preset;
+    reference.dataset.sourceMissing=String(!!decl?.sourceMissing||conflict);reference.disabled=editorMutationBlocked()||!!decl?.sourceMissing||conflict;
+    const add=(x,y)=>preset?referenceCommonSource(preset,x,y):inputReference(id,x,y);
+    installCanvasItemDrag(reference,()=>label,add,()=>add());
+    installCanvasItemDrag(pick,()=>label,add,()=>id?selectInputSource(id):sourceCardHelp(null,preset));const pointer=pick.onpointerdown;pick.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
+    toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'));
+    let bodyBuilt=false;
+    const showBody=collapsed=>{
+      body.hidden=collapsed;toggle.setAttribute('aria-expanded',String(!collapsed));
+      if(collapsed||bodyBuilt)return;bodyBuilt=true;
+      if(entry)body.append(el('p',{class:'source-card-meta'},t(entry.labelKey)+' · '+(decl?.name||entry.name)));
+      const sequence=row?.sequence||decl?.nativeSequence;
+      if(sequence)body.append(el('p',{class:'source-card-meta'},'TD · '+({color:'Colors',matrix:'Matrices',array:'Arrays',vec:'Vectors',const:'Constants'}[sequence]||sequence)));
+      if(decl&&row&&!row.pending&&!row.missing&&!isMatrixType(decl.type)&&typeDescriptor(decl.type)?.shape!=='array'&&['uniform','spec_constant'].includes(decl.kind)){
+        body.dataset.nativeSource=id;body.append(nativeComponentControls(decl,row));
+      }else if(dormant)body.append(el('p',{class:'source-card-meta'},t('sources.presetDormant')));
+      else if(decl)body.append(el('p',{class:'source-card-meta'},t('inputs.editReference')));
+    };
+    showBody(sourceCardCollapsed.get(key)??dormant);toggle.onclick=()=>{sourceCardCollapsed.set(key,!body.hidden);showBody(!body.hidden);};
+    more.onclick=e=>openSourceCardMenu(card,id,preset,e);head.oncontextmenu=e=>openSourceCardMenu(card,id,preset,e);
+    head.append(toggle,pick,reference,more);card.append(head,body);
+    const state=el('div',{class:'input-source-status'});card.append(state);
+    cached={card,signature,state,decl,preset,issue,conflict};sourceCardCache.set(key,cached);
+  }
+  const {card,state}=cached,native=decl&&['uniform','spec_constant'].includes(decl.kind);
+  const sourceState=conflict?'conflict':issue?.status||decl?.sourceMissing&&'missing'||native&&(connectionInterrupted||nativeSourceError)&&'unknown'||native&&(!row||row.pending)&&'pending'||dormant&&'dormant'||'ready';
+  const message=conflict?t('sources.presetConflict'):issue?.message||decl?.sourceMissing&&t('sources.missing')||sourceState==='unknown'&&t('sources.connectionUnknown')||sourceState==='pending'&&t('sources.enable')||'';
+  card.dataset.sourceState=sourceState;state.hidden=!message;const text=message?'⚠ '+message:'';if(state.textContent!==text)state.textContent=text;
+  const pick=card.querySelector('.input-source-select'),pressed=String(!!decl&&selectedInputId===decl.id);if(pick.getAttribute('aria-pressed')!==pressed)pick.setAttribute('aria-pressed',pressed);
+  return card;
+}
+function renderSourceCards(box,query){
+  const context=JSON.stringify([language,editorTarget,stage,editorLoadGeneration]);
+  if(context!==sourcePresentationContext){sourcePresentationContext=context;sourceCardCache.clear();sourceGroupCache.clear();sourceBuiltinCache=null;}
+  const decls=allInputSources(),rows=nativeSourceIndex(),issues=nativeSourceSnapshot?.issues||[],issueById=new Map(issues.filter(i=>i.id).map(i=>[i.id,i]));
+  const byDriver=new Map(),byName=new Map();for(const decl of decls){if(decl.initialDriver){const matches=byDriver.get(decl.initialDriver)||[];matches.push(decl);byDriver.set(decl.initialDriver,matches);}const matches=byName.get(decl.name)||[];matches.push(decl);byName.set(decl.name,matches);}
+  const used=new Set(),keys=new Set(),sections=[],common=[];
+  const matches=(...text)=>normalizeSearch(text.join(' ')).includes(query);
+  for(const preset of Object.keys(inputPresets())){
+    const entry=typeContract.sources.uniformPresets[preset],candidates=[...new Set([...(byDriver.get(preset)||[]),...(byName.get(entry.name)||[])])],decl=candidates.length===1&&candidates[0].kind==='uniform'&&candidates[0].type===entry.type?candidates[0]:null,conflict=!!candidates.length&&!decl;
+    if(decl)used.add(decl.id);keys.add('preset:'+preset);
+    if(matches(entry.name,entry.initialize.expression,t(entry.labelKey),decl?.name,'common uniform'))common.push(sourceCard(decl,preset,decl&&issueById.get(decl.id),decl&&rows.get(decl.id),conflict));
+  }
+  if(common.length)sections.push(sourceGroup('common',t('sources.common'),[sourceGroup('common.time',t('sources.time'),common,null,query)],null,query));
+  const groups=new Map();for(const decl of decls){if(used.has(decl.id)||!['uniform','sampler','constant','spec_constant','top_input'].includes(decl.kind))continue;keys.add(decl.id);if(!matches(decl.name,decl.kind,decl.type,rows.get(decl.id)?.sequence,decl.nativeSequence))continue;const group=groups.get(decl.kind)||[];group.push(decl);groups.set(decl.kind,group);}
+  for(const kind of ['top_input','constant','spec_constant','uniform','sampler']){
+    const group=groups.get(kind)||[],canCreate=kind!==(editorTarget==='top'?'sampler':'top_input');if((!canCreate||query)&&!group.length)continue;
+    const cards=d=>sourceCard(d,null,issueById.get(d.id),rows.get(d.id));
+    const children=kind==='uniform'?['values','matrices','arrays'].map(name=>{const list=group.filter(d=>sourceUniformGroup(d,rows.get(d.id))===name);return list.length?sourceGroup('uniform.'+name,t('sources.'+name),list.map(cards),null,query):null;}).filter(Boolean):group.map(cards);
+    sections.push(sourceGroup(kind,inputGroupLabel(kind),children,canCreate?kind:null,query));
+  }
+  const unimported=issues.filter(i=>!i.id&&matches(i.name,i.message));
+  if(unimported.length){
+    const issueKey=JSON.stringify(unimported),previous=sourceGroupCache.get('issues');let section=previous?.section;
+    if(previous?.issueKey!==issueKey){section=el('section',{class:'input-group','data-source-issues':''});section.append(el('div',{class:'input-group-title'},t('sources.unavailable')));for(const issue of unimported){const card=el('div',{class:'input-source-row','data-source-state':issue.status||'invalid','data-source-issue':issue.name||'','data-category':'shader'}),head=el('div',{class:'input-source-select'});head.append(el('span',{},issue.name||t('sources.unavailable')),el('small',{},issue.type||''));card.append(head,el('div',{class:'input-source-status'},'⚠ '+issue.message));section.append(card);}sourceGroupCache.set('issues',{issueKey,section});}sections.push(section);
+  }
+  const builtinKey=query;if(sourceBuiltinCache?.key!==builtinKey||sourceBuiltinCache?.catalog!==catalog){const holder=el('div');appendBuiltInInputs(holder,query);sourceBuiltinCache={key:builtinKey,catalog,section:holder.firstElementChild};}
+  if(sourceBuiltinCache.section)sections.push(sourceBuiltinCache.section);
+  if(query&&!sections.length)sections.push(el('p',{class:'muted'},t('create.empty')));
+  reconcileSourceChildren(box,sections);for(const key of sourceCardCache.keys())if(!keys.has(key))sourceCardCache.delete(key);
+  for(const button of box.querySelectorAll('[data-preset-reference]'))button.disabled=editorMutationBlocked()||button.dataset.sourceMissing==='true';
+}
+
 function renderNativeSources(){
   const box=$('#nativeuniforms');if(!box||!graph)return;
   syncNativeReferenceControls();
-  const query=normalizeSearch($('#inputsearch')?.value),decls=allInputSources().filter(d=>['uniform','sampler','constant','spec_constant','top_input'].includes(d.kind)&&normalizeSearch(d.name+' '+d.kind+' '+d.type).includes(query));
-  const issues=nativeSourceSnapshot?.issues||[],issueById=new Map(issues.filter(i=>i.id).map(i=>[i.id,i]));
-  const unimported=issues.filter(i=>!i.id&&normalizeSearch((i.name||'')+' '+i.message).includes(query));
-  const identity=JSON.stringify([language,editorTarget,stage,query,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing,d.kind,d.index,d.sourceMissing?sourceReferences(d.id).length:0]),selectedInputId,issues]);
-  if(box.dataset.sourceStructure!==identity&&!box.querySelector(':active')){
-    box.dataset.sourceStructure=identity;box.replaceChildren();
-    for(const kind of ['top_input','constant','spec_constant','uniform','sampler']){
-      const group=decls.filter(d=>d.kind===kind),canCreate=kind!==(editorTarget==='top'?'sampler':'top_input');if(!canCreate&&!group.length)continue;
-      const section=el('section',{class:'input-group','data-input-group':kind,'data-browser-category':kind==='top_input'||kind==='sampler'?'texture':['constant','spec_constant'].includes(kind)?'data':'shader'}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind});
-      list.hidden=!query&&inputCollapsedGroups.has(kind);
-      if(group.length){
-        const toggle=el('button',{class:'input-group-toggle','aria-expanded':String(!list.hidden),'aria-controls':list.id});toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},inputGroupLabel(kind)));
-        toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!query)setInputGroupCollapsed(kind,list.hidden);};head.append(toggle);
-      }else head.append(el('span',{class:'input-group-empty'},inputGroupLabel(kind)));
-      if(canCreate){const add=el('button',{class:'input-group-add','data-input-create':kind,'aria-label':t('inputs.create')+' · '+inputGroupLabel(kind),title:t('inputs.create')+' · '+inputGroupLabel(kind)},t('inputs.newShort'));add.onclick=()=>openInputCreate(kind);head.append(add);}
-      section.append(head,list);box.append(section);
-      for(const decl of group){
-        const card=el('div',{class:'input-source-row','data-input-source':decl.id,'data-category':nodeCategory({key:kind})}),pick=el('button',{class:'input-source-select','aria-pressed':String(selectedInputId===decl.id)});
-        pick.append(el('span',{},decl.name));if(kind!=='top_input')pick.append(el('small',{},decl.type));pick.title=decl.name+' · '+decl.type+' · '+t('inputs.editReference');
-        installCanvasItemDrag(pick,()=>allInputSources().find(d=>d.id===decl.id)?.name||'',(x,y)=>inputReference(decl.id,x,y),()=>selectInputSource(decl.id));const pointer=pick.onpointerdown;pick.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
-        const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');reference.disabled=readonly||!!decl.sourceMissing;reference.dataset.sourceMissing=String(!!decl.sourceMissing);installInputDrag(reference,decl.id);card.append(pick,reference);
-        const issue=issueById.get(decl.id);if(issue||decl.sourceMissing){card.dataset.sourceState=issue?.status||'missing';card.append(el('div',{class:'input-source-status'},'⚠ '+(issue?.message||sourceMissingHint(decl))));}list.append(card);
-      }
-    }
-    if(unimported.length){
-      const section=el('section',{class:'input-group','data-source-issues':''});section.append(el('div',{class:'input-group-title'},t('sources.unavailable')));
-      for(const issue of unimported){const card=el('div',{class:'input-source-row','data-source-state':issue.status||'invalid','data-source-issue':issue.name||'','data-category':'shader'}),heading=el('div',{class:'input-source-select'});heading.append(el('span',{},issue.name||t('sources.unavailable')),el('small',{},issue.type||''));card.append(heading,el('div',{class:'input-source-status'},'⚠ '+issue.message));section.append(card);}box.append(section);
-    }
-    appendBuiltInInputs(box,query);
-    if(query&&!decls.length&&!unimported.length&&!tdBuiltInEntries(query).length)box.append(el('p',{class:'muted'},t('create.empty')));
-  }
+  renderSourceCards(box,normalizeSearch($('#inputsearch')?.value));
   // Native row availability can arrive after an apply without changing graph revision.
   const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;
   const row=nativeSourceRows().find(r=>r.id===active),signature=JSON.stringify([active,row?.missing,row?.pending,row?.sequence,row?.matrixBinding&&[row.matrixBinding.mode,!!row.matrixBinding.literalValues,row.matrixBinding.writable],row?.arrayBinding&&[row.arrayBinding.mode,row.arrayBinding.writable]]);
