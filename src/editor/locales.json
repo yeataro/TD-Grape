@@ -2419,6 +2419,18 @@
       "zh-Hant": "斷開連線",
       "en": "Disconnect wire"
     },
+    "wire.selectSource": {
+      "zh-Hant": "選取來源",
+      "en": "Select source"
+    },
+    "wire.selectDestination": {
+      "zh-Hant": "選取目的",
+      "en": "Select destination"
+    },
+    "create.place": {
+      "zh-Hant": "點擊放置節點 · Esc 取消",
+      "en": "Click to place node · Esc to cancel"
+    },
     "wire.disconnectShort": {
       "zh-Hant": "斷開",
       "en": "Disconnect"

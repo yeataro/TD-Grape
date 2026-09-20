@@ -179,7 +179,7 @@ for(const key of ['combine','replace']){
   setup([node('float','z'),node(key,'value',{type:'vec4'})]);assert.equal(connect('z','value','z'),true);
   const sourceDefinition=catalog.find(d=>d.key==='vec2'),sourceVariant=typeVariants(sourceDefinition)[0],destination=info('value','inputs','y');
   before=clone(graph);creatorTypePlan(sourceDefinition,sourceVariant,'out',destination,false);identical(graph,before);
-  creatorState={x:80,y:80,wire:destination};creatorMatches=[{d:sourceDefinition,type:sourceVariant.type,port:'out',variant:sourceVariant}];historySize=past.length;
+  creatorState={x:80,y:80,wire:destination,owner:graph,level:current(),stage,version:editVersion};creatorMatches=[{d:sourceDefinition,type:sourceVariant.type,port:'out',variant:sourceVariant}];historySize=past.length;
   chooseCreator(0);assert.equal(past.length,historySize+1);identical(n('value').params.groups,{y:'vec2'});assert.ok(n('z'));
   assert.ok(!current().edges.some(e=>e.from[0]==='z'));combined=clone(graph);undo();identical(graph,before);undo(true);identical(graph,combined);
   assert.equal(connect('value','result','color'),true);graphs.push(clone(graph));

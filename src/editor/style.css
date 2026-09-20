@@ -1498,6 +1498,18 @@ footer .footer-preferences svg[hidden]{display:none}
 .node-title .node-title-meta :is(.node-prototype,.node-meta-separator,.node-primary-selector){font:inherit;color:inherit;opacity:1}
 /* Intrinsic measurement uses visible values, not native input's 20-character default. */
 .node.node-size-probe{position:absolute;visibility:hidden;pointer-events:none;width:max-content!important;min-width:0;max-width:none}
+.node-placement-measure{position:absolute;visibility:hidden;pointer-events:none}
+/* Placement is transient feedback: dedicated colors do not follow UI brightness. */
+.node-placement{position:absolute;inset:0;width:1px;height:1px;pointer-events:none;z-index:20;--placement-color:#b39cfb;--placement-glow:color-mix(in srgb,var(--placement-color) 65%,transparent);color:var(--placement-color)}
+:root[data-ui-theme="light"] .node-placement{--placement-color:#7452aa;--placement-glow:color-mix(in srgb,var(--placement-color) 45%,transparent)}
+.node-placement>svg{position:absolute;inset:0;width:1px;height:1px;overflow:visible;pointer-events:none}
+.node-placement>svg path{fill:none;stroke-width:2;stroke-dasharray:6 5;pointer-events:none}
+.node-placement-outline{position:absolute;border:1.5px solid currentColor;border-radius:var(--node-radius);background:transparent;box-shadow:0 0 16px var(--placement-glow);pointer-events:none}
+.node-placement-title{position:relative;display:flex;align-items:center;padding:0 12px;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 16px var(--placement-glow)}
+.node-placement-title::after{content:'';position:absolute;bottom:0;left:0;right:0;border-bottom:1.5px solid currentColor;box-shadow:0 0 16px var(--placement-glow)}
+.node-placement-port{position:absolute;transform:translate(-50%,-50%);width:10px;height:10px;border:1.5px solid currentColor;border-radius:50%;background:var(--bg);box-shadow:0 0 16px var(--placement-glow)}
+:root[data-ui-style="simple"] .node-placement :is(.node-placement-outline,.node-placement-port),:root[data-ui-style="simple"] .node-placement-title::after{box-shadow:none}
+:root[data-ui-style="simple"] .node-placement-title{text-shadow:none}
 .node-size-probe .node-title-text,.node-size-probe .node-title-meta{flex:none;max-width:none}
 .node-size-probe .node-prototype,.node-size-probe .port-label{flex:none;max-width:none}
 .node-size-probe .node-inline-values,.node-size-probe .node-fixed-values,.node-size-probe .node-inline-component{flex:none}
@@ -1782,12 +1794,13 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.error,:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.selected.error{box-shadow:0 0 0 1px var(--danger,#ef8d8d),var(--cool-node-depth),var(--cool-node-glow)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #canvas .node.selected.error{--cool-accent:var(--danger,#ef8d8d)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .node-inspector-title{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
-:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) :is(.node-title-text>span,.node-inspector-name,.input-source-select>span){text-shadow:calc(var(--cool-glow-x,0px) * .3) calc(var(--cool-glow-y,0px) * .3) 12px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
-:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .input-source-row{box-shadow:var(--cool-input-depth),var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
+:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) :is(.node-title-text>span,.node-inspector-name,.input-source-row:not([data-source-available="false"]) .input-source-select>span){text-shadow:calc(var(--cool-glow-x,0px) * .3) calc(var(--cool-glow-y,0px) * .3) 12px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
+:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .input-source-row:not([data-source-available="false"]){box-shadow:var(--cool-input-depth),var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px 1px color-mix(in srgb,var(--cool-accent) var(--cool-glow-alpha),transparent)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .port-row:where([data-type$="vec2"],[data-type$="vec3"],[data-type$="vec4"],[data-type="sampler2D"]) .port:not(.wire-target):not(.aggregate),
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]):where(.rgba-component-tint) .port-row:where([data-color-component="r"],[data-color-component="g"],[data-color-component="b"]) .port:not(.wire-target):not(.aggregate),
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]):where(.vector-component-tint) .port-row:where([data-vector-component="0"],[data-vector-component="1"],[data-vector-component="2"]) .port:not(.wire-target):not(.aggregate){box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 10px color-mix(in srgb,var(--socket) var(--cool-glow-alpha),transparent)}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .port.wire-target{box-shadow:0 0 0 var(--wire-glow,7px) var(--wire-ready-glow),var(--cool-glow-x,0px) var(--cool-glow-y,0px) 14px color-mix(in srgb,var(--wire-ready) var(--cool-glow-alpha),transparent)}
+:root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .source-card[data-source-available="false"] .port{box-shadow:none}
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) #apply:enabled{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 20px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent)}
 
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .toolbar .stage.active:enabled{box-shadow:var(--cool-glow-x,0px) var(--cool-glow-y,0px) 16px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent)}

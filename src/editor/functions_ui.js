@@ -19,7 +19,10 @@ async function savePersonalFunction(f){
   }finally{personalBusy=false;renderLibrary();}
 }
 const currentFunction=()=>FunctionModel.find(graph,graphTrail.at(-1));
+// Detached placement cards read projected metadata, never the live graph model.
+const nodeRenderProjections=new WeakMap();
 function nodeDefinition(n){
+  if(nodeRenderProjections.has(n))return nodeRenderProjections.get(n).definition;
   if(n.definitionUuid===FunctionModel.CALL){
     const f=FunctionModel.find(graph,n.params.functionId);if(!f)return null;
     return {key:'function_call',label:f.name,descriptionKey:f.scope==='local'?'help.function':(f.descriptionKey||'help.function'),inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),stages:f.stages,defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id};
@@ -78,6 +81,7 @@ function availableEntries(){
   return entries.filter(d=>!d.functionId||!graphTrail.includes(d.functionId));
 }
 function nodeSourceDeclaration(n){
+  if(nodeRenderProjections.has(n))return nodeRenderProjections.get(n).source;
   if(n?.params?.declarationId)return graph.declarations.find(d=>d.id===n.params.declarationId)||null;
   if(n?.params?.inputId)return topInputsView().find(d=>d.id===n.params.inputId)||null;
   return null;
@@ -187,8 +191,8 @@ function setDeclarationType(decl,type){
   }
 }
 function specDefaultValue(value,type){const n=Number(Array.isArray(value)?value[0]:value)||0;return type==='bool'?!!n:type==='int'?Math.max(-2147483648,Math.min(2147483647,Math.trunc(n))):type==='uint'?Math.max(0,Math.min(4294967295,Math.trunc(n))):n;}
-function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence,arraySource,elementType,length,popSource,attributeClass,attribute}={}){
-  if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'sTD2DInputs['+slots.length+']',defaultSource:'builtin:black'};slots.push(slot);return slot;}
+function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence,arraySource,elementType,length,popSource,attributeClass,attribute,preview=false}={}){
+  if(kind==='top_input'){const slots=preview?topInputsView():ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'sTD2DInputs['+slots.length+']',defaultSource:'builtin:black'};if(!preview)slots.push(slot);return slot;}
   if(kind==='attribute'&&editorTarget!=='mat')throw Error('Attributes require a MAT graph.');
   if(kind==='sampler'&&editorTarget==='top')throw Error(t('inputs.chooseTop'));
   if(kind==='uniform'&&preset){
@@ -213,28 +217,30 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
     Object.assign(decl,{value:null,expose:false,nativeSequence:'array',arraySource:arraySource||''});
   }
   else {Object.assign(decl,{value:shapedValue(value??(typeContract?.types?.[type]?.shape==='matrix'?1:0),type),expose:false});if(kind==='uniform'){if(preset)decl.initialDriver=preset;if(nativeSequence)decl.nativeSequence=nativeSequence;else if(typeContract?.types?.[type]?.shape==='matrix')decl.nativeSequence='matrix';}}
-  graph.declarations.push(decl);return decl;
+  if(!preview)graph.declarations.push(decl);return decl;
 }
-function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={}}={}){
-  const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});
+function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={},preview=false}={}){
+  const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});let source=null;
   // Fixed entries retain their identity in params; generic entries keep their
   // stable default unless an explicit wire/type context requests another type.
   type=d.fixedType||type;
-  if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
+  if(d.source)params.functionId=FunctionModel.importLibrary(preview?clone(graph):graph,d.source).id;
   if(type&&params.type){if(isMatrixType(params.type)&&isMatrixType(type)&&params.values)params.values=matrixReshapeValue(params.values,params.type,type);params.type=type;}
   if(['uniform','constant','spec_constant','pop_buffer','attribute'].includes(d.key)){
-    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||(d.key==='spec_constant'?'int':'float'),inputSeed);
-    if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;
+    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||(d.key==='spec_constant'?'int':'float'),{...inputSeed,preview});
+    if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;source=decl;
   }
-  if(d.key==='top_input'){const slots=ensureTopInputs();const slot=declarationId?slots.find(s=>s.id===declarationId):slots.find(s=>s.id===selectedInputId)||slots[0];if(!slot)throw Error(t('inputs.chooseTop'));params.inputId=slot.id;}
+  if(d.key==='top_input'){const slots=preview?topInputsView():ensureTopInputs();const slot=declarationId?slots.find(s=>s.id===declarationId):slots.find(s=>s.id===selectedInputId)||slots[0];if(!slot)throw Error(t('inputs.chooseTop'));params.inputId=slot.id;source=slot;}
   if(d.key==='sampler'){
-    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='sampler'):createInputDeclaration('sampler','sampler2D',inputSeed);
-    if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;
+    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='sampler'):createInputDeclaration('sampler','sampler2D',{...inputSeed,preview});
+    if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;source=decl;
   }
   const n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
   if(d.key==='comment')n.ui.noteTitleOnSelection=true;
   normalizeNodeValues(n,d);
-  if(d.revisionHash)n.revisionHash=d.revisionHash;current().nodes.push(n);assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
+  if(d.revisionHash)n.revisionHash=d.revisionHash;
+  if(preview){if(!isSourceReferenceNode(n))n.name=uniqueNodeName(nodeTypeLabel(d,n.params));return {node:n,source,definition:n.definitionUuid===FunctionModel.CALL?{...d,key:'function_call'}:d};}
+  current().nodes.push(n);assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
 }
 function newFunction(){
   change(()=>{const id=FunctionModel.uid();graph.functions||=[];

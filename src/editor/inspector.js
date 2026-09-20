@@ -251,7 +251,8 @@ function installValueLadder(entry,commit,{local=false}={}){
       end:()=>{if(e.button===2||e.pointerType==='touch')suppressContextUntil=performance.now()+400;}
     });
   }
-  let suppressContextUntil=0;
+  let suppressContextUntil=0,lastMouseTap=null;
+  entry.addEventListener('dblclick',e=>{if(e.button===0&&!entry.disabled&&!entry.readOnly&&!blocked()){e.preventDefault();e.stopPropagation();entry.focus({preventScroll:true});entry.select();}});
   entry.addEventListener('contextmenu',e=>{if(performance.now()<suppressContextUntil||e.altKey){e.preventDefault();e.stopPropagation();return;}openNumericPresets(entry,commit,e,{local});});
   entry.addEventListener('pointerdown',e=>{
     const touch=e.pointerType==='touch';
@@ -271,13 +272,20 @@ function installValueLadder(entry,commit,{local=false}={}){
     timer=setTimeout(()=>{cleanup();if(!entry.isConnected||entry.disabled||entry.readOnly||!entry.getClientRects().length)return;beginLadder(e);},450);
     window.addEventListener('pointermove',ev=>{if(ev.pointerId!==e.pointerId)return;
       const dx=ev.clientX-sx,dy=ev.clientY-sy;
-      if(canScrub&&(!touch||!moved)&&(touch?Math.hypot(dx,dy)>8:Math.abs(dx)>4)&&Math.abs(dx)>=Math.abs(dy)){cleanup();beginScrub(e,ev);return;}
+      if(canScrub&&(!touch||!moved)&&(touch?Math.hypot(dx,dy)>8:Math.abs(dx)>4)&&Math.abs(dx)>=Math.abs(dy)){lastMouseTap=null;cleanup();beginScrub(e,ev);return;}
       if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>8){moved=true;clearTimeout(timer);if(!touch){cleanup();return;}}
       if(touch){ev.preventDefault();ev.stopPropagation();if(moved&&scroller)scroller.scrollTop=scrollTop-(ev.clientY-sy)/uiScaleFactor();
         else if(moved&&inlineCanvas){moveCanvas({x:initialPan.x+(ev.clientX-sx)/uiScaleFactor(),y:initialPan.y+(ev.clientY-sy)/uiScaleFactor()});}}
     },options);
     window.addEventListener('pointerup',ev=>{
       if(ev.pointerId!==e.pointerId)return;cleanup();
+      // The first pointerdown is prevented to distinguish scrubbing from editing,
+      // so browsers may not generate dblclick for the first two physical clicks.
+      if(!touch&&!moved&&entry.isConnected&&!entry.disabled&&!entry.readOnly&&!blocked()){
+        const now=performance.now(),double=lastMouseTap&&now-lastMouseTap.time<500&&Math.hypot(sx-lastMouseTap.x,sy-lastMouseTap.y)<5;
+        lastMouseTap={time:now,x:sx,y:sy};
+        if(double){ev.preventDefault();entry.focus({preventScroll:true});entry.select();}
+      }
       if(touch||canScrub){
         ev.preventDefault();ev.stopPropagation();
         if(!moved&&entry.isConnected&&!entry.disabled&&!entry.readOnly&&!blocked()){

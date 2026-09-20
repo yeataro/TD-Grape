@@ -72,6 +72,12 @@ const {harness}=require('./test_glsl_code.cjs');
   });
   assert.deepEqual(valueStyle,{sameComponentColor:true,height:true,radius:true});
   checks.push('Constant components keep ordinary component text brightness and match ordinary Parameter control height');
+  const nativeNumber=page.locator('#inspector [data-source-component="3"]');
+  await nativeNumber.dblclick();await page.keyboard.type('0.625');
+  assert.equal(await nativeNumber.inputValue(),'0.625');
+  await nativeNumber.evaluate(entry=>{entry.value='7';entry.blur();});
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)===savedNativeGraph&&!dirty&&!past.length),true);
+  checks.push('native Uniform double-click selects the complete number for replacement; the uncommitted draft does not change graph/history');
   await page.screenshot({path:require('node:path').join(folder,'mixed-modes.png')});
   assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks}));
  }catch(error){await h.finish(error);throw error;}

@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-21 0.8.156 DEV：本輪審查定案已實作。數值精度不再驅動節點寬度；滑桿雙擊直接全選。接孔右鍵選擇節點後進入實際尺寸的線框放置預覽（固定亮紫、實線外框與分隔線、型別原色虛線、無外陰影；Simple 無 Glow，Professional 及之後有 Glow），點擊才建立及接線，一次 Undo。連線右鍵選來源／目的及中斷指定線；不可用 Source 不發光。新瀏覽器 18 組、相關既有回歸與 510 Python／14 附加／26 Node 可攜檢查通過。調查、細節及後續項目見 [節點與接線操作審查](../discussions/NODE_PLACEMENT_REVIEW.md)。TD 同步與保存另記。
+
 2026-09-20 0.8.155 DEV 交付檢查點：程式提交 eb29a2a；37 份內嵌來源一致，11 份服務資產（含 uniform_live.js）經實際 HTTP 200 及 SHA256 核對，core errors 為空，TOP／MAT master revision 102。來源刷新、模板同步及保存前後四份使用者 Shader 均保留。TOE 1020902 bytes，SHA256 eb9aed3d704cc6fc04a668567d2728edf23e9cb0185f07e29a88f1098b80f5e5；私人開發助手已排除。來源刷新當下的一個舊 HTTP GET 遇到 runtime 重載的 json NameError，後續服務已恢復且 11 份實際 HTTP 資產核對全部通過。報告 work/reports/uniform-boundaries-155/。未重新整理使用者現有網頁或操作其草稿。
 
 2026-09-20 0.8.155 DEV Uniform 邊界第一版：依使用者批准實作方案 B 第一階段。數值 Uniform／Color 逐一核對來源定義與分量可寫性，一般圖草稿及真實重新編譯不再停用未變動來源；REST 等候 Apply 成功、讀取新來源 revision 並保留原 expected 值，外部圖更新不混入調值 Undo。HTTP 與 WebSocket 明確分配數值接收，阻止寫入／Undo／訂閱交接前的舊回覆蓋掉新值；重畫等待新控制項量測，避免短暫取消訂閱。加入 session-only 原生 identity，同時核對 Par、Binding 目標及捕獲的 owner ID／index，防止 TD 同名 wrapper 重用使舊請求寫入重建目標。圖格式、編譯語義、完整 Apply、原生來源設定及特殊來源入口保留。原生列表共用 metadata_epoch 的局部恢復屬第二階段，本版未做。
