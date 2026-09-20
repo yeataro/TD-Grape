@@ -202,7 +202,7 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
     type=entry.type;name=entry.name;
   }
   const id=kind+'_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
-  const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'sValue'})[kind]||'uValue')};
+  const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'specValue'})[kind]||'uValue')};
   if(kind==='spec_constant'){const ids=new Set(graph.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;Object.assign(decl,{value:specDefaultValue(value??0,type),constantId,nativeSequence:'const'});}
   else if(kind==='attribute')Object.assign(decl,{value:null,nativeSequence:isMatrixType(type)?'mattr':'attr',arraySize:1});
   else if(kind==='pop_buffer')Object.assign(decl,{value:null,nativeSequence:'buffer',popSource:popSource||'',attributeClass:attributeClass||'point',attribute:attribute||''});
