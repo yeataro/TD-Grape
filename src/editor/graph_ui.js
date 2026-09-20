@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333, arrowNavigationMode: 'branches', ctrlArrowAdjacent: false, arrowNavigationFrame: false });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1175,7 +1175,7 @@ function navigateSpatialArrow(key,node,nodes){
       next=candidate;best=rank;
     }
   }
-  if(next){selectNode(next);refreshCanvasSelection();if(EDITOR_DEV_SETTINGS.arrowNavigationFrame)fitNodes([next],true);}
+  if(next){selectNode(next);refreshCanvasSelection();moveArrowNavigationView(next);}
   return true;
 }
 function selectConnectedNodes(direction,excludeLinked=false){
@@ -1189,8 +1189,8 @@ function selectConnectedNodes(direction,excludeLinked=false){
     if(direction>=0)add(from,to);if(direction<=0)add(to,from);
   }
   if(direction!==0&&EDITOR_DEV_SETTINGS.ctrlArrowAdjacent){
-    reached=new Set([...reached].flatMap(id=>neighbors.get(id)||[]));
-    if(!reached.size)return true;
+    // Snapshot the current selection: each press adds exactly one layer.
+    for(const id of [...reached])for(const neighbor of neighbors.get(id)||[])reached.add(neighbor);
   }else{
     const pending=[...reached];
     for(let index=0;index<pending.length;index++)for(const id of neighbors.get(pending[index])||[]){
@@ -1248,7 +1248,7 @@ function navigateArrow(key){
   else steps.push({from:id,to:next.id,direction});
   selectNode(next);refreshCanvasSelection();
   arrowNavigation={...route,node:next.id,steps,branch:bidirectional?{from:vertical?branch.from:id,to:next.id,direction}:undefined};
-  if(EDITOR_DEV_SETTINGS.arrowNavigationFrame)fitNodes([next],true);
+  moveArrowNavigationView(next);
   return true;
 }
 function selectNode(n,toggle=false){

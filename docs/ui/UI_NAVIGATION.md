@@ -1,14 +1,14 @@
 # UI navigation development checkpoint
 
-## Navigation trials and connected selection (0.8.161)
+## Navigation trials and connected selection (0.8.162)
 
 The browser-local “Arrow navigation mode (trial)” selector offers three alternatives. Switching modes clears navigation memory, preserves canvas DOM, and does not edit graph/history data. All plain-arrow modes require one selected node; input fields, menus, dialogs, gestures, placement and modified arrows retain their own handling. Optional automatic Frame works in every mode.
 
 | Mode | Behavior |
 | --- | --- |
 | Original path | The original 0.8.158 behavior below, retained for comparison. |
-| Bidirectional branches (default) | Uses connections and retains a separate reference for the latest horizontal move, including after a return. |
-| Spatial neighbors | Uses current node centers, without connection/history requirements. Searches the pressed direction, preferring its forward 90-degree sector, then nearest distance; if that sector is empty, permits diagonals in the same half-plane. Ties use Y/X/ID. No wraparound. |
+| Bidirectional branches | Uses connections and retains a separate reference for the latest horizontal move, including after a return. |
+| Spatial neighbors (default) | Uses current node centers, without connection/history requirements. Searches the pressed direction, preferring its forward 90-degree sector, then nearest distance; if that sector is empty, permits diagonals in the same half-plane. Ties use Y/X/ID. No wraparound. |
 
 In bidirectional mode, each successful horizontal move records its origin and direction separately from the return-path stack. Up/Down searches that origin's adjacent nodes by current Y/X/ID order, including after retracing a step. For A → B and C → B, A → Right → B → Left → A → Up/Down can now reach C. Reversing the latest horizontal move returns to its actual origin, including a lower branch selected with Up/Down.
 
@@ -23,7 +23,11 @@ Ctrl-arrow selection works in all three modes, starting from one or more selecte
 | Ctrl + Up | Entire connected components of all starting nodes, following both directions. |
 | Ctrl + Down | Every node in the current graph outside those connected components. May clear selection if nothing remains. |
 
-The separate “Ctrl + Left/Right: one step only” experiment defaults off. When on, Left/Right replaces selection with the union of immediate neighbors, keeping selection at an endpoint with no candidates. Up/Down always keeps its full-component meaning. Key repeats are suppressed for Ctrl-arrow selection so holding Down cannot toggle the complement, and one-step mode advances once per press. Shortcut Help reflects the active navigation and depth modes. L and Shift+L retain both original auto-arrange commands; neither Alt+L nor Ctrl+L is bound.
+The separate “Ctrl + Left/Right: grow selection one step” experiment defaults off. When on, Left/Right keeps the current selection and adds all its immediate upstream/downstream neighbors. Each press snapshots the selected starts before expansion, so newly added nodes expand only on the next press. Multiple selections, isolated starts, merges and direction changes work the same way; endpoints keep selection. This corrects 0.8.161's replacement behavior. Up/Down always keeps its full-component meaning. Key repeats are suppressed for Ctrl-arrow selection so holding Down cannot toggle the complement, and growth advances once per press. Shortcut Help reflects the active navigation and depth modes. L and Shift+L retain both original auto-arrange commands; neither Alt+L nor Ctrl+L is bound.
+
+### View after plain-arrow navigation
+
+The independent selector offers keep the view (default), animated Frame, animated Center, and instant Center. Frame calls `fitNodes` to pan and fit bounds; the separate `centerNodes` capability only pans at the current zoom. Center supports animation or immediate positioning independently of arrow navigation. Both share bounds and camera interpolation, not sizing behavior. Animated navigation choices animate even when general Frame damping is disabled; animated Frame uses its configured duration, Center uses 333 ms. H/F behavior is unchanged. Escape or a new pointer gesture can cancel motion; subsequent arrows retarget the view. Preferences never modify graph/history or rebuild nodes/wires. An old enabled `arrowNavigationFrame` preference maps to animated Frame; the old disabled default maps to keeping the view. Existing explicit navigation-mode preferences are preserved; new/reset preferences use Spatial.
 
 Ctrl+Enter toggles graph focus from the canvas; press it again to restore the layout. Escape remains cancellation/dismissal only and no longer exits graph focus. Text editors retain their Ctrl/Cmd+Enter commit behavior; dialogs, IME composition, repeated keys and active gestures do not toggle focus. Alt+Enter remains browser fullscreen.
 

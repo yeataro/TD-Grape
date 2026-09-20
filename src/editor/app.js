@@ -440,20 +440,21 @@ function stepCanvasMotion(now){
   transform();
   if(canvasMotion)canvasMotionFrame=requestAnimationFrame(stepCanvasMotion);
 }
-function moveCanvas(nextPan,nextScale=scale,setting='canvasDamping'){
+function moveCanvas(nextPan,nextScale=scale,setting='canvasDamping',forceAnimation=false){
   // Disabled takes the original immediate path: no target, timer or frame callback.
-  if(!setting||!EDITOR_DEV_SETTINGS[setting]){stopCanvasMotion();pan=nextPan;scale=nextScale;transform();return;}
+  if(!setting||(!forceAnimation&&!EDITOR_DEV_SETTINGS[setting])){stopCanvasMotion();pan=nextPan;scale=nextScale;transform();return;}
+  if(forceAnimation&&!canvasMotionEvents)applyCanvasDamping(true);
   if(canvasMotion&&canvasMotion.setting!==setting)stopCanvasMotion();
   const to={...nextPan,scale:nextScale},target=canvasMotion?.to||{...pan,scale};
   if(to.x===target.x&&to.y===target.y&&to.scale===target.scale)return;
-  const now=performance.now(),duration=EDITOR_DEV_SETTINGS[setting+'Ms'];
+  const now=performance.now(),duration=EDITOR_DEV_SETTINGS[setting+'Ms']??333;
   if(canvasMotion){canvasMotion.to=to;canvasMotion.end=now+duration;}
   else canvasMotion={to,lastTime:now,end:now+duration,duration,setting};
   if(!canvasMotionFrame)canvasMotionFrame=requestAnimationFrame(stepCanvasMotion);
 }
-function applyCanvasDamping(){
+function applyCanvasDamping(force=false){
   stopCanvasMotion(true);canvasMotionEvents?.abort();canvasMotionEvents=null;
-  if(!EDITOR_DEV_SETTINGS.canvasDamping&&!EDITOR_DEV_SETTINGS.frameDamping)return;
+  if(!force&&!EDITOR_DEV_SETTINGS.canvasDamping&&!EDITOR_DEV_SETTINGS.frameDamping&&!['frame','centerAnimated'].includes(EDITOR_DEV_SETTINGS.arrowNavigationView))return;
   canvasMotionEvents=new AbortController();const options={capture:true,signal:canvasMotionEvents.signal};
   // Freeze where the user actually clicked before a node, wire or new gesture takes over.
   document.addEventListener('pointerdown',event=>{if(event.target.closest?.('#canvas')&&!event.target.closest('.toolbar,.canvas-view-tools,.selection-toolbar,#connectionnotice'))stopCanvasMotion();},options);
@@ -685,11 +686,28 @@ function nodeLayoutBounds(n){
   const card=document.querySelector(`#cards [data-node="${CSS.escape(n.id)}"]`);
   return {x:n.ui?.x||0,y:n.ui?.y||0,width:card?.offsetWidth||(Number.isFinite(n.ui?.width)&&n.ui.width>0?n.ui.width:190),height:card?.offsetHeight||180};
 }
-function fitNodes(nodes,animate=false){
+function canvasNodeBounds(nodes){
+  const bounds=[...nodes.map(nodeLayoutBounds),...completeGroupFrames(nodes).map(groupFrameBounds).filter(Boolean)];
+  return {minX:Math.min(...bounds.map(n=>n.x)),minY:Math.min(...bounds.map(n=>n.y)),maxX:Math.max(...bounds.map(n=>n.x+n.width)),maxY:Math.max(...bounds.map(n=>n.y+n.height))};
+}
+function centeredNodePan({minX,minY,maxX,maxY},zoom){
+  return {x:$('#canvas').clientWidth/2-(minX+maxX)*zoom/2,y:$('#canvas').clientHeight/2-(minY+maxY)*zoom/2};
+}
+function centerNodes(nodes,animate=false){
   if(!nodes.length)return;
-  const bounds=[...nodes.map(nodeLayoutBounds),...completeGroupFrames(nodes).map(groupFrameBounds).filter(Boolean)],minX=Math.min(...bounds.map(n=>n.x)),minY=Math.min(...bounds.map(n=>n.y)),maxX=Math.max(...bounds.map(n=>n.x+n.width)),maxY=Math.max(...bounds.map(n=>n.y+n.height));
+  // Center only pans; the current zoom is preserved throughout the motion.
+  moveCanvas(centeredNodePan(canvasNodeBounds(nodes),scale),scale,animate?'center':null,animate);
+}
+function fitNodes(nodes,animate=false,forceAnimation=false){
+  if(!nodes.length)return;
+  const bounds=canvasNodeBounds(nodes),{minX,minY,maxX,maxY}=bounds;
   const nextScale=Math.max(.25,Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY)));
-  moveCanvas({x:($('#canvas').clientWidth-(maxX-minX)*nextScale)/2-minX*nextScale,y:($('#canvas').clientHeight-(maxY-minY)*nextScale)/2-minY*nextScale},nextScale,animate?'frameDamping':null);
+  moveCanvas(centeredNodePan(bounds,nextScale),nextScale,animate?'frameDamping':null,forceAnimation);
+}
+function moveArrowNavigationView(node){
+  const mode=EDITOR_DEV_SETTINGS.arrowNavigationView;
+  if(mode==='frame')fitNodes([node],true,true);
+  else if(mode==='centerAnimated'||mode==='centerInstant')centerNodes([node],mode==='centerAnimated');
 }
 function fit(){if(graph)fitNodes(current().nodes);}
 async function load(){
@@ -810,6 +828,7 @@ function applyFloatingToolbar(){
 }
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
+  arrowNavigationView:[['none','experiments.navigationView.none'],['frame','experiments.navigationView.frame'],['centerAnimated','experiments.navigationView.centerAnimated'],['centerInstant','experiments.navigationView.centerInstant']],
   arrowNavigationMode:[['legacy','experiments.navigation.legacy'],['branches','experiments.navigation.branches'],['spatial','experiments.navigation.spatial']],
   selectionToolbar:[['off','experiments.selection.off'],['multiple','experiments.selection.multiple'],['all','experiments.selection.all']],
   nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],
@@ -818,7 +837,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationFrame']]
+  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
@@ -939,6 +958,7 @@ function parseUIExperiments(raw){
   let saved;try{saved=JSON.parse(raw);}catch{}
   const result={...EDITOR_DEV_DEFAULTS};
   if(!saved||typeof saved!=='object'||Array.isArray(saved))return result;
+  if(saved.arrowNavigationView===undefined&&saved.arrowNavigationFrame===true)result.arrowNavigationView='frame';
   for(const key of Object.keys(result)){
     const value=saved[key];
     if(key==='canvasDampingMs'||key==='frameDampingMs'){if(typeof value==='number'&&Number.isFinite(value))result[key]=Math.max(10,Math.min(1000,Math.round(value)));}
@@ -965,8 +985,8 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationFrame','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
-  const dampingChanged=['canvasDamping','canvasDampingMs','frameDamping','frameDampingMs'].some(key=>next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const dampingChanged=['arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs'].some(key=>next[key]!==EDITOR_DEV_SETTINGS[key]);
   if(next.arrowNavigationMode!==EDITOR_DEV_SETTINGS.arrowNavigationMode)resetArrowNavigation();
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){

@@ -8,7 +8,7 @@ const reset=async(bidirectional=false)=>{await page.evaluate(bidirectional=>{
   const n=(id,x,y)=>testNode(id,id==='a'?'scalar':'add',x,y),edge=(a,b,port='a')=>({from:[a,'out'],to:[b,port]});
   graph.stages.pixel={nodes:[n('a',0,60),n('b',360,0),n('c',360,210),n('d',360,420),n('e',740,0),n('f',740,210),n('other',0,-200)],edges:[edge('a','d'),edge('a','c'),edge('a','b'),edge('a','c','b'),edge('b','e'),edge('b','f'),edge('other','b','b')]};
   past=[];future=[];selected=null;selectedEdge=null;selection.clear();dirty=false;render();setGraphFocus(true);scale=.7;pan={x:80,y:200};transform();
-  EDITOR_DEV_SETTINGS.arrowNavigationMode=bidirectional?'branches':'legacy';EDITOR_DEV_SETTINGS.arrowNavigationFrame=false;EDITOR_DEV_SETTINGS.frameDamping=false;selectNode(current().nodes[0]);refreshCanvasSelection();
+  EDITOR_DEV_SETTINGS.arrowNavigationMode=bidirectional?'branches':'legacy';EDITOR_DEV_SETTINGS.arrowNavigationView='none';EDITOR_DEV_SETTINGS.frameDamping=false;selectNode(current().nodes[0]);refreshCanvasSelection();
 },bidirectional);await settle();};
 const chosen=()=>page.evaluate(()=>({selected,selection:[...selection],edge:selectedEdge}));
 const key=async(k,id)=>{await page.keyboard.press(k);assert.deepEqual(await chosen(),{selected:id,selection:[id],edge:null},k+' -> '+id);};
@@ -46,12 +46,12 @@ await page.evaluate(()=>{const e=document.createElement('div');e.id='editable-ar
 await page.evaluate(()=>setGraphFocus(false));await page.locator('#uishortcuts').click();await page.keyboard.press('ArrowDown');assert.equal((await chosen()).selected,'b');assert.deepEqual(await page.locator('[data-shortcut="arrowPath"] kbd').allTextContents(),['←','→']);await page.keyboard.press('Escape');
 await page.evaluate(()=>{$('#canvas').focus();});await page.keyboard.press('Shift+ArrowDown');assert.equal((await chosen()).selected,'b');
 checks.push('number fields, contenteditable, modal Help and modified arrows keep their own key handling; Help lists the new keys');
-await reset();before=await state();await page.evaluate(()=>{setUIExperiments({arrowNavigationFrame:true});$('#canvas').focus();});await key('ArrowRight','b');await settle();
+await reset();before=await state();await page.evaluate(()=>{setUIExperiments({arrowNavigationView:'frame',frameDampingMs:80});$('#canvas').focus();});await key('ArrowRight','b');await page.waitForFunction(()=>!canvasMotion);
 const center=await page.evaluate(()=>{const card=$('#cards [data-node="b"]').getBoundingClientRect(),canvas=$('#canvas').getBoundingClientRect();return Math.hypot(card.left+card.width/2-canvas.left-canvas.width/2,card.top+card.height/2-canvas.top-canvas.height/2);});assert.ok(center<2,center);
-assert.equal(await state(),before);assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(experimentsStorageKey)).arrowNavigationFrame),true);
-await page.evaluate(()=>{setUIExperiments({frameDamping:true,frameDampingMs:80});$('#canvas').focus();});await key('ArrowDown','c');assert.equal(await page.evaluate(()=>!!canvasMotion),true);await page.waitForFunction(()=>!canvasMotion);
-checks.push('optional persisted auto Frame centers the new node and reuses the existing transition without graph/history writes');
-assert.equal(await page.evaluate(()=>EDITOR_DEV_DEFAULTS.arrowNavigationMode),'branches');
+assert.equal(await state(),before);assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(experimentsStorageKey)).arrowNavigationView),'frame');
+await key('ArrowDown','c');assert.equal(await page.evaluate(()=>!!canvasMotion),true);await page.waitForFunction(()=>!canvasMotion);
+checks.push('animated auto Frame persists and animates even with the general Frame toggle off, without graph/history writes');
+assert.equal(await page.evaluate(()=>EDITOR_DEV_DEFAULTS.arrowNavigationMode),'spatial');
 await reset(true);before=await state();
 await key('ArrowRight','b');await key('ArrowLeft','a');await key('ArrowUp','other');await key('ArrowUp','other');await key('ArrowDown','a');await key('ArrowDown','a');
 assert.equal(await page.evaluate(()=>arrowNavigation.branch.from),'b');await key('ArrowRight','b');await key('ArrowDown','c');

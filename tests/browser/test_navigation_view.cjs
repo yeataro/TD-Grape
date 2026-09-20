@@ -1,0 +1,52 @@
+/* Navigation view choices reuse camera motion without touching the graph. */
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const {harness}=require('./test_glsl_code.cjs');
+const [source,stateFile,folder]=process.argv.slice(2);
+(async()=>{const h=await harness(source,stateFile,folder,{skipPreview:true}),{page,checks,errors}=h;
+page.setDefaultTimeout(6000);const writes=[];
+page.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname.startsWith('/api/'))writes.push(r.url());});
+const snapshot=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty,revision}));
+const view=()=>page.evaluate(()=>({pan:{...pan},scale,moving:!!canvasMotion}));
+const centered=async()=>assert.ok(await page.evaluate(()=>{const node=nodeLayoutBounds(current().nodes.find(n=>n.id===selected));return Math.abs(pan.x+(node.x+node.width/2)*scale-$('#canvas').clientWidth/2)<.01&&Math.abs(pan.y+(node.y+node.height/2)*scale-$('#canvas').clientHeight/2)<.01;}));
+const setup=async mode=>page.evaluate(mode=>{
+  setUIExperiments({arrowNavigationMode:'spatial',arrowNavigationView:mode,canvasDamping:false,frameDamping:false,frameDampingMs:100});
+  stopCanvasMotion();pan={x:30,y:40};scale=.42;transform();selectNode(current().nodes[0]);refreshCanvasSelection();$('#canvas').focus();
+},mode);
+try{
+await page.evaluate(()=>{
+  stage='pixel';graphTrail=[];graph.functions=[];graph.declarations=[];readonly=true;
+  graph.stages.pixel={nodes:[testNode('a','add',0,0),testNode('b','add',500,0),testNode('c','add',1000,0)],edges:[]};
+  past=[];future=[];dirty=false;render();setGraphFocus(true);window.viewCard=$('#cards .node');
+});
+await setup('none');const before=await snapshot(),initial=await view();await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>selected),'b');assert.deepEqual(await view(),initial);
+checks.push('default spatial navigation and Keep view select without panning or zooming on a readonly graph');
+await setup('centerInstant');await page.keyboard.press('ArrowRight');assert.equal((await view()).scale,.42);assert.equal((await view()).moving,false);await centered();
+checks.push('instant Center pans to the node without changing zoom or scheduling animation');
+await setup('centerAnimated');await page.keyboard.press('ArrowRight');assert.equal((await view()).moving,true);assert.equal((await view()).scale,.42);
+await page.waitForFunction(()=>!canvasMotion);assert.equal((await view()).scale,.42);await centered();
+checks.push('animated Center preserves zoom during and after motion even when both generic damping toggles are off');
+await setup('centerAnimated');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>selected),'c');await page.waitForFunction(()=>!canvasMotion);assert.equal((await view()).scale,.42);await centered();
+checks.push('rapid navigation retargets the latest node and finishes at the original zoom');
+await setup('frame');await page.keyboard.press('ArrowRight');assert.equal((await view()).moving,true);await page.waitForFunction(()=>!canvasMotion);assert.notEqual((await view()).scale,.42);await centered();
+checks.push('animated Frame remains separate and adjusts zoom to fit the selected node');
+await setup('centerAnimated');await page.keyboard.press('ArrowRight');await page.keyboard.press('Escape');assert.equal((await view()).moving,false);assert.equal(await page.evaluate(()=>graphFocused),true);
+await page.evaluate(()=>centerNodes([current().nodes[2]],true));assert.equal((await view()).moving,true);
+const canvas=await page.locator('#canvas').boundingBox();await page.mouse.move(canvas.x+canvas.width-20,canvas.y+canvas.height-40);await page.mouse.down({button:'middle'});await page.mouse.up({button:'middle'});assert.equal((await view()).moving,false);
+checks.push('Escape and a new canvas pointer gesture cancel Center motion; Escape retains graph focus');
+await setup('centerAnimated');await page.keyboard.press('ArrowRight');await page.evaluate(()=>setUIExperiments({arrowNavigationView:'none'}));assert.equal((await view()).moving,false);
+const stopped=await view();await page.keyboard.press('ArrowRight');assert.deepEqual(await view(),stopped);
+assert.equal(await snapshot(),before);assert.equal(await page.evaluate(()=>window.viewCard===$('#cards .node')),true);
+checks.push('changing the view option ends motion, preserves canvas DOM and leaves graph/history/revision unchanged');
+await page.evaluate(()=>setGraphFocus(false));await page.locator('#uiexperiments').click();
+const options=page.locator('[data-experiment="arrowNavigationView"]');assert.equal(await options.locator('option').count(),4);
+await options.selectOption('centerInstant');assert.equal(await page.evaluate(()=>parseUIExperiments(localStorage.getItem(experimentsStorageKey)).arrowNavigationView),'centerInstant');
+assert.deepEqual(await page.evaluate(()=>[parseUIExperiments('{}').arrowNavigationMode,parseUIExperiments('{}').arrowNavigationView,parseUIExperiments('{"arrowNavigationFrame":true}').arrowNavigationView,parseUIExperiments('{"arrowNavigationView":"bogus"}').arrowNavigationView]),['spatial','none','frame','none']);
+await options.selectOption('frame');await page.setViewportSize({width:390,height:844});await page.evaluate(()=>setUIAppearance('scale',125));
+await options.scrollIntoViewIfNeeded();assert.equal(await options.evaluate(e=>e.getBoundingClientRect().right<=innerWidth),true);
+assert.equal(await page.locator('#experimentspanel').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);
+await page.screenshot({path:path.join(folder,'navigation-options-mobile.png')});
+await page.keyboard.press('Escape');assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
+checks.push('all four view choices persist, Spatial is the fresh default, and the old enabled Frame preference is retained');
+await h.finish();console.log(JSON.stringify({passed:true,checks:checks.length}));
+}catch(error){await h.finish(error);console.error(error);process.exitCode=1;}})();
