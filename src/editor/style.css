@@ -1839,3 +1839,12 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .structure-field{display:grid;grid-template-columns:minmax(80px,1fr) minmax(90px,1fr);gap:6px;border-top:1px solid var(--line);padding:8px 0}.structure-field .field{margin:0}.structure-field-actions{display:flex;gap:6px;grid-column:1/-1}.structure-notes{white-space:pre-wrap}#structureslist{margin-top:12px}
 
 #structuredialog textarea{width:100%;box-sizing:border-box;background:var(--ui-tone-field);color:var(--ui-tone-text);border:1px solid var(--ui-tone-divider);border-radius:6px;padding:8px;font:inherit;resize:vertical}
+
+/* Shared native color views keep their numeric controls alive across updates. */
+.native-color-controls{width:100%;min-width:0}.native-color-line{display:flex;align-items:center;gap:4px}.native-color-line>.components{flex:1;min-width:0}.native-color-line>.node-values-toggle{position:static;flex:none;width:14px;padding:0}.native-color-controls>.color-swatch{height:22px;margin-top:6px}.native-color-expanded{grid-template-columns:1fr!important;margin-top:6px;gap:5px}.native-color-expanded[hidden]{display:none}
+.source-count{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:1.5em;padding:1px 5px;border-radius:4px;background:var(--category-bg,var(--node-shader-bg));color:var(--category-fg,var(--node-shader-fg));font-size:10px;line-height:1.2;font-variant-numeric:tabular-nums}.source-count[hidden]{display:none}
+.input-group-add,:root[data-ui-theme="light"] .input-group-add{background:color-mix(in srgb,var(--ui-tone-control-text) 7%,transparent);border:0;border-radius:5px;min-width:40px;padding-inline:7px;height:24px;white-space:nowrap}
+.input-group-add:enabled:hover,:root[data-ui-theme="light"] .input-group-add:enabled:hover{background:color-mix(in srgb,var(--ui-tone-control-text) 13%,transparent)}
+@media(pointer:coarse){.input-group-add{min-height:36px}.native-color-line>.node-values-toggle{min-height:36px;width:20px}}
+
+.node-size-probe .native-color-controls input:not([type=color]){max-width:72px}.native-color-line:has(.native-color-expanded){align-items:flex-start}

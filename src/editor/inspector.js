@@ -2050,6 +2050,7 @@ function renderNativeSourceValues(changed=null){
     if(changed&&!changed.has(card.dataset.nativeSource))continue;
     const row=rows.get(card.dataset.nativeSource);if(!row)continue;
     for(const grid of card.querySelectorAll('[data-native-components]'))syncNativeComponentControls(grid,row,ready);
+    for(const color of card.querySelectorAll('[data-native-color]'))syncNativeColorControls(color,row,ready);
     for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
       const item=row.components[Number(entry.dataset.matrixSourceComponent)],binding=row.matrixBinding;
       entry.disabled=!ready||!binding?.writable||!binding.literalValues;
@@ -2171,12 +2172,37 @@ function nativeComponentControls(decl,row){
   if(decl.kind==='uniform'&&typeof uniformLive!=='undefined')queueMicrotask(()=>{if(grid.isConnected)uniformLive.registerView(grid);});
   return grid;
 }
+function nativeValueControls(decl,row){
+  const compact=nativeComponentControls(decl,row);
+  if(row.sequence!=='color'||!['float','vec2','vec3','vec4'].includes(decl.type))return compact;
+  const box=el('div',{class:'native-color-controls','data-native-color':decl.id}),line=el('div',{class:'native-color-line'});
+  const toggle=el('button',{type:'button',class:'node-values-toggle','aria-expanded':'false','aria-label':t('node.expandValues'),title:t('node.expandValues')},'▸');
+  toggle.onclick=e=>{e.stopPropagation();const expanded=compact.classList.toggle('native-color-expanded');toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
+  const count=typeComponents(decl.type),read=()=>{const live=nativeSourceIndex().get(decl.id);return [0,1,2,3].map(i=>i<count?Number(live?.components[i]?.value??(i===3?1:0)):i===3?1:0);};
+  const swatch=colorPickerSwatch(read,values=>{
+    const live=nativeSourceIndex().get(decl.id),items=picker.colorExpected||live?.components;picker.colorExpected=null;
+    if(!sourceReady()||!items||editorLoadGeneration!==load)return;
+    const components=values.slice(0,Math.min(3,count)).map((value,component)=>({component,value,expected:clone(items[component])})).filter(edit=>edit.value!==edit.expected.value);
+    if(components.length)nativeSourceRequest('source-value',{id:decl.id,components});
+  }),picker=swatch.querySelector('input'),load=editorLoadGeneration;
+  picker.onpointerdown=()=>picker.colorExpected=clone(nativeSourceIndex().get(decl.id)?.components);
+  picker.onkeydown=e=>{if(['Enter',' '].includes(e.key))picker.onpointerdown();};
+  picker.onblur=()=>{picker.colorExpected=null;const live=nativeSourceIndex().get(decl.id);if(live)syncNativeColorControls(box,live,sourceReady(true));};
+  line.append(toggle,compact);box.append(line,swatch);box.colorRead=read;syncNativeColorControls(box,row,sourceReady(true));return box;
+}
+function syncNativeColorControls(box,row,ready){
+  const picker=box.querySelector('input[type=color]'),display=colorDisplay(box.colorRead()),count=Math.min(3,typeComponents(box.querySelector('[data-native-components]').nativeDeclaration.type));
+  const writable=row.components.slice(0,count).length===count&&row.components.slice(0,count).every(c=>c.writable&&['CONSTANT','BIND'].includes(c.mode));
+  picker.disabled=!ready||!writable;picker.title=writable?t('color.choose'):t('color.nativeDriven');
+  if(!picker.colorExpected)picker.value=display.hex;
+  box.querySelector('.color-ink').style.backgroundColor=display.css;
+}
 function nativeReferenceControls(node,decl){
   if(!decl||decl.kind!=='uniform'||isMatrixType(decl.type)||!['float','double','int','uint','bool'].includes(typeFamily(decl.type)))return null;
   const row=nativeSourceIndex().get(decl.id);if(!row||row.pending||row.missing)return null;
   const body=el('div',{class:'node-fixed-values native-reference-values','data-native-source':decl.id});
   body.dataset.sourcePresentation=JSON.stringify([decl.id,decl.type,decl.name,row.sequence]);
-  body.append(nativeComponentControls(decl,row));return body;
+  body.append(nativeValueControls(decl,row));return body;
 }
 function syncNativeReferenceControls(){
   const declarations=new Map(graph.declarations.map(d=>[d.id,d])),nodes=new Map(current().nodes.map(n=>[n.id,n])),rows=nativeSourceIndex();
@@ -2264,7 +2290,7 @@ function nativeInputFields(box,decl){
   if(isMatrixType(decl.type)){nativeMatrixFields(card,decl,row);return;}
   const count=typeContract?.types?.[decl.type]?.components||1;
   if(!row.missing){
-    card.append(nativeComponentControls(decl,row));
+    card.append(nativeValueControls(decl,row));
     if(decl.kind==='uniform'&&typeof uniformLive!=='undefined'){
       card.append(el('small',{'data-uniform-live-status':''}));uniformLive.render();
     }
@@ -2438,13 +2464,18 @@ function sourceGroup(kind,label,children,create=null,query=''){
   if(!group){
     const section=el('section',{class:'input-group','data-input-group':kind}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind}),toggle=el('button',{class:'input-group-toggle','aria-controls':list.id});
     toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},label));head.append(toggle);section.append(head,list);
-    group={section,list,toggle,query};
+    const badge=el('span',{class:'source-count',hidden:true});toggle.append(badge);
+    const category=kind.startsWith('uniform')||kind.startsWith('common')?'uniform':kind.startsWith('textures')?'texture':kind==='constant'||kind==='spec_constant'?'constant':kind==='tdBuiltin'?'shader':nodeCategory({key:create||kind});badge.dataset.category=category;
+    group={section,list,toggle,badge,query};
     toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!group.query)setInputGroupCollapsed(kind,list.hidden);};
-    if(create){const add=el('button',{class:'input-group-add','data-input-create':create,'aria-label':t('inputs.create')+' · '+label},t('inputs.newShort'));add.onclick=()=>openInputCreate(create);head.append(add);}
+    if(create){const add=el('button',{class:'input-group-add','data-input-create':create,'aria-label':t('inputs.addSource').replace('{category}',label),title:t('inputs.addSource').replace('{category}',label)},'＋ '+t('inputs.newShort'));add.onclick=()=>openInputCreate(create);head.append(add);}
     sourceGroupCache.set(kind,group);
   }
   group.query=query;group.list.hidden=!query&&inputCollapsedGroups.has(kind);group.toggle.setAttribute('aria-expanded',String(!group.list.hidden));
-  reconcileSourceChildren(group.list,children);return group.section;
+  reconcileSourceChildren(group.list,children);
+  const count=children.reduce((total,child)=>total+(child.matches('[data-source-card]')?Number(child.dataset.sourceAvailable==='true'):child.dataset.sourceCount!==undefined?Number(child.dataset.sourceCount):Number(!!child.querySelector('[data-builtin-reference]'))),0);
+  group.section.dataset.sourceCount=count;group.badge.hidden=count===0;const number=String(count);if(group.badge.textContent!==number)group.badge.textContent=number;
+  const hint=t('sources.availableCount').replace('{count}',number);group.badge.title=hint;group.badge.setAttribute('aria-label',hint);return group.section;
 }
 function sourceUniformGroup(decl,row){
   const sequence=row?.sequence||decl.nativeSequence;
@@ -2507,7 +2538,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
       const sequence=row?.sequence||decl?.nativeSequence;
       if(sequence)body.append(el('p',{class:'source-card-meta'},'TD · '+({color:'Colors',matrix:'Matrices',array:'Arrays',buffer:'Buffers',attr:'Attributes',mattr:'Matrix Attributes',vec:'Vectors',const:'Constants'}[sequence]||sequence)));
       if(decl&&row&&!row.pending&&!row.missing&&!isResourceType(decl.type)&&!isMatrixType(decl.type)&&typeDescriptor(decl.type)?.shape!=='array'&&['uniform','spec_constant'].includes(decl.kind)){
-        body.dataset.nativeSource=id;body.append(nativeComponentControls(decl,row));
+        body.dataset.nativeSource=id;body.append(nativeValueControls(decl,row));
       }else if(dormant)body.append(el('p',{class:'source-card-meta'},t('sources.presetDormant')));
       else if(decl)body.append(el('p',{class:'source-card-meta'},t('inputs.editReference')));
     };
@@ -2520,7 +2551,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
   const {card,state}=cached,native=decl&&['uniform','spec_constant','pop_buffer','attribute'].includes(decl.kind);
   const sourceState=conflict?'conflict':issue?.status||decl?.sourceMissing&&'missing'||native&&(connectionInterrupted||nativeSourceError)&&'unknown'||native&&(!row||row.pending)&&'pending'||dormant&&'dormant'||'ready';
   const message=conflict?t('sources.presetConflict'):issue?.message||decl?.sourceMissing&&t('sources.missing')||sourceState==='unknown'&&t('sources.connectionUnknown')||sourceState==='pending'&&t('sources.enable')||'';
-  card.dataset.sourceState=sourceState;state.hidden=!message;const text=message?'⚠ '+message:'';if(state.textContent!==text)state.textContent=text;
+  card.dataset.sourceState=sourceState;card.dataset.sourceAvailable=String(sourceState==='ready'&&!(decl?.kind==='attribute'&&stage!=='vertex'));state.hidden=!message;const text=message?'⚠ '+message:'';if(state.textContent!==text)state.textContent=text;
   const pick=card.querySelector('.input-source-select'),pressed=String(!!decl&&selectedInputId===decl.id);if(pick.getAttribute('aria-pressed')!==pressed)pick.setAttribute('aria-pressed',pressed);
   return card;
 }

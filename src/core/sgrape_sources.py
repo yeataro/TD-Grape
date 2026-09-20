@@ -853,22 +853,39 @@ def write_value(runtime, body):
     seen = snapshot(runtime)
     if body.get('revision') != seen['revision']: raise SourceError('Conflict: refresh sources before editing.')
     rows = [r for r in seen['uniforms'] + seen.get('specConstants', []) if r['id'] == body.get('id')]
-    index = body.get('component')
-    if len(rows) != 1 or type(index) is not int or not 0 <= index < len(rows[0]['components']) or rows[0]['missing']:
-        raise SourceError('Select an existing native source component.')
-    item = rows[0]['components'][index]
+    if len(rows)!=1 or rows[0]['missing']:raise SourceError('Select an existing native source.')
+    row=rows[0]
+    if 'components' not in body:
+        parameter,value,validate=_value_write_plan(runtime,row,body)
+        runtime.set_parameter_with_undo(parameter,value,validate=validate)
+    else:
+        edits=body['components']
+        if row.get('kind')!='uniform' or row.get('sequence')!='color' or row['type'] not in ('float','vec2','vec3','vec4'):
+            raise SourceError('Select a Color Uniform for a palette edit.')
+        if not isinstance(edits,list) or not 1<=len(edits)<=3 or any(not isinstance(e,dict) for e in edits):raise SourceError('Invalid color components.')
+        indices=[e.get('component') for e in edits]
+        if any(type(i) is not int or not 0<=i<min(3,source_components(row)) for i in indices) or len(set(indices))!=len(indices):raise SourceError('Invalid color components.')
+        plans=[_value_write_plan(runtime,row,edit) for edit in edits]
+        runtime.set_parameters_with_undo(plans)
+    return snapshot(runtime)
+
+
+def _value_write_plan(runtime,row,body):
+    index=body.get('component')
+    if type(index) is not int or not 0<=index<len(row['components']):raise SourceError('Select an existing native source component.')
+    item = row['components'][index]
     if not item['writable']: raise SourceError('This value is controlled by TD; its Expression, Export or Bind was preserved.')
     if body.get('expected') != item: raise SourceError('The value changed in TD. Refresh and try again.')
     value = body.get('value')
-    if rows[0].get('kind')=='spec_constant':
-        runtime.core().literal(value, rows[0]['type'])
-        validate_spec_native(rows[0], value)
+    if row.get('kind')=='spec_constant':
+        runtime.core().literal(value, row['type'])
+        validate_spec_native(row, value)
     else:
-        family = runtime.core().TYPE_DESCRIPTORS[rows[0]['type']]['family']
+        family = runtime.core().TYPE_DESCRIPTORS[row['type']]['family']
         runtime.core().literal(value, family)
-        validate_uniform_component(rows[0], value)
+        validate_uniform_component(row, value)
     p = getattr(runtime.shader_operator(runtime.target()).par, item['parameter'])
-    comp = runtime.target(); ident = rows[0]['id']; operator = runtime.shader_operator(comp)
+    comp = runtime.target(); ident = row['id']; operator = runtime.shader_operator(comp)
     def validate(value):
         row = locate(operator, comp.fetch(STORE, {}).get(ident))
         if row is None or row['components'][index]['parameter'] != p.name:
@@ -881,8 +898,7 @@ def write_value(runtime, body):
         current=editable_parameter(p)
         if current is None or not current.isSamePar(target): raise SourceError('The custom control was detached or replaced.')
         validate_source_value(runtime, comp, ident, value, index)
-    runtime.set_parameter_with_undo(target, value, validate=validate)
-    return snapshot(runtime)
+    return target,value,validate
 
 
 def source_references(graph, ident):

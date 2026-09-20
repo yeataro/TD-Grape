@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 來源 UI 審查 0.8.133 DEV：Colors 共用色盤、緊湊／展開分量，一次 RGB 修改保留 Alpha，原生值不進圖；Expression／Export 保護、既有 Bind 及 Undo 已驗證。分類數量排除灰底未建立與不可用，0 隱藏；「＋ Add」淡底色無邊框及完整提示。502 Python、14 附加及 portable checks；新 UI 4 組、原有卡片 8 與分量 6 組回歸；原生 TOP／MAT 6 組，三份使用者 Shader 保留。方向鍵線路導覽／自動 Frame、亮度與 glow 分離只記入 UX_BACKLOG，未實作。同步與保存另記。
+
 2026-09-20 0.8.132 DEV 交付檢查點：37 份嵌入來源、10 份服務資產一致，TOP／MAT master revision 80，三份使用者 Shader 保留。TOE 970910 bytes，SHA256 `e7e8b04d695eec6445e5e23d4ef2d2e9ce8a7539c6b96ba11bdd36775869c546`。報告 `work/reports/structures/`，未強制刷新使用者網頁。
 
 2026-09-20 結構作者能力 0.8.132 DEV：完成來源第五輪，左側結構卡片、彈出編輯、巢狀結構／陣列欄位、完整／欄位輸出、使用處與循環檢查。欄位 ID 和接線保留，失效修改不更新已套用 Shader；備註／名稱不改 GLSL，無關畫布節點 DOM 保留。動態接口匯入檢查補齊。499 Python、14 附加及 portable checks；新結構瀏覽器 5 組，面板 7、來源卡片 8、分類 3 組回歸；原生 TOP／MAT 7 組通過，三份使用者 Shader 保留。同步與 TOE 保存另記；Colors／數量標籤／Add 按鈕接續使用者新回饋。

@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.132'
+PRODUCT_VERSION='0.8.133'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1018,6 +1018,31 @@ def set_parameter_with_undo(parameter, value, validate=None):
         return
     _set_parameter_without_native_capture(parameter, value)
     record_parameter_undo(parameter, before, parameter.val, validate)
+
+
+def set_parameters_with_undo(plans):
+    """Preflight one palette commit and roll back all values if a write fails."""
+    unique=[]
+    for parameter,value,validate in plans:
+        validate(value)
+        for previous,other,_ in unique:
+            if parameter.isSamePar(previous):
+                if value!=other:raise RuntimeError('Color components share one control with conflicting values.')
+                break
+        else:unique.append((parameter,value,validate))
+    originals=[parameter.val for parameter,_,_ in unique]
+    written=[]
+    try:
+        for (parameter,value,_),before in zip(unique,originals):
+            written.append((parameter,before));_set_parameter_without_native_capture(parameter,value)
+    except Exception:
+        for parameter,before in reversed(written):_set_parameter_without_native_capture(parameter,before)
+        raise
+    if ui.undo.globalState:
+        ui.undo.startBlock('Grape: Color')
+        try:
+            for (parameter,_,validate),before in zip(unique,originals):record_parameter_undo(parameter,before,parameter.val,validate)
+        finally:ui.undo.endBlock()
 
 
 def record_parameter_undo(parameter, before, after, validate=None):

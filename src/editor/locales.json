@@ -233,7 +233,10 @@
     "share.lan": {"zh-Hant": "區域網路", "en": "LAN"},
     "share.current": {"zh-Hant": "目前網址", "en": "Current address"},
     "type.missingPort": {"zh-Hant": "連接埠 {port} 不存在於目前型別；原接線仍保留。", "en": "Port {port} does not exist for the current type; its wire is retained."},
-    "inputs.newShort": {"zh-Hant": "新增", "en": "New"},
+    "inputs.addSource": {"zh-Hant": "新增來源：{category}", "en": "Add source: {category}"},
+    "sources.availableCount": {"zh-Hant": "已建立且可用：{count}", "en": "Available sources: {count}"},
+    "color.nativeDriven": {"zh-Hant": "部分顏色分量由 TD 控制，請使用可編輯的分量欄位。", "en": "Some color components are controlled by TD. Use the editable component fields."},
+    "inputs.newShort": {"zh-Hant": "新增", "en": "Add"},
     "node.renamed": {"zh-Hant": "已更新節點名稱", "en": "Node name updated"},
     "help.spec_constant": {
       "zh-Hant": "引用 Inputs 中的特化常數，保留固定 constant_id。它的數值在 Shader 特化時確定，可用於常數分支。\n\n數值傳輸與精度依 TD 原生行為；大整數可能失去精度。",
