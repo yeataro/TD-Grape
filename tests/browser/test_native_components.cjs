@@ -26,6 +26,7 @@ const {harness}=require('./test_glsl_code.cjs');
    Object.assign(row.components[0],{mode:'EXPRESSION',expression:'absTime.seconds',writable:false});
    Object.assign(row.components[1],{mode:'EXPORT',writable:false});
    Object.assign(row.components[2],{mode:'BIND',binding:'parent().par.Value',writable:true});
+   row.components[3].hasBindReferences=true;
    renderNativeSourceValues();
    window.componentGridBefore=$('#inspector [data-native-components]');window.driverBefore=$('#inspector .input-drivers');
    window.constantBefore=$('#inspector [data-source-component="3"]');
@@ -36,6 +37,12 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.equal(await page.locator('#inspector [data-source-component="2"]').isEnabled(),true);
   assert.equal(await page.locator('#inspector [data-source-component="3"]').isEnabled(),true);
   checks.push('mixed modes keep four slots: Expression/CHOP Export labels, Bind and Constant value controls');
+  assert.equal(await page.evaluate(()=>{
+   const grid=$('#inspector [data-native-components]'),bound=grid.querySelector('[data-source-component="2"]'),master=grid.querySelector('[data-native-component-slot="3"]');
+   const probe=el('span');probe.style.color='var(--purple)';grid.append(probe);const color=getComputedStyle(probe).color;probe.remove();
+   return getComputedStyle(bound).color===color&&master.dataset.mode==='CONSTANT'&&getComputedStyle(master.querySelector('.field'),'::after').backgroundColor===color&&getComputedStyle(master.querySelector('.field'),'::after').pointerEvents==='none';
+  }),true);
+  checks.push('Bind values are purple; an editable constant master keeps its own mode and shows a noninteractive purple corner');
   const stable=await page.evaluate(()=>{
    const observer=new MutationObserver(()=>{});observer.observe($('#inspector'),{childList:true,subtree:true});
    nativeSourceSnapshot.uniforms[3].components[0].value=99;

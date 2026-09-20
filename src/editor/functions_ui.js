@@ -90,8 +90,18 @@ function commonSourceLabel(spec,fallback){
   return sourceNameMode==='common'&&spec?.commonName?spec.commonName:native;
 }
 function commonPresetLabel(key){const entry=typeContract?.sources?.uniformPresets?.[key];return entry?commonSourceLabel(entry,entry.initialize.expression):'';}
+function resolveCommonPreset(key,declarations=graph.declarations){
+  const entry=typeContract?.sources?.uniformPresets?.[key];if(!entry)return {decl:null,conflict:false};
+  // An initialization recipe is copyable; it is not a unique source identity.
+  // Prefer the preset's exact native name, then an unambiguous renamed source.
+  const named=declarations.filter(decl=>decl.name===entry.name);
+  const nativeNames=new Set(Object.values(typeContract.sources.uniformPresets).map(spec=>spec.name));
+  const candidates=named.length?named:declarations.filter(decl=>decl.initialDriver===key&&!nativeNames.has(decl.name));
+  const decl=candidates.length===1&&candidates[0].kind==='uniform'&&candidates[0].type===entry.type?candidates[0]:null;
+  return {decl,conflict:candidates.length>0&&!decl};
+}
 function commonPresetForDeclaration(decl){
-  return decl?.kind==='uniform'?Object.keys(typeContract?.sources?.uniformPresets||{}).find(key=>{const entry=typeContract.sources.uniformPresets[key];return decl.type===entry.type&&(decl.initialDriver===key||decl.name===entry.name);}):null;
+  return decl?.kind==='uniform'?Object.keys(typeContract?.sources?.uniformPresets||{}).find(key=>{const entry=typeContract.sources.uniformPresets[key];return decl.type===entry.type&&(decl.initialDriver===key||decl.name===entry.name)&&resolveCommonPreset(key).decl?.id===decl.id;}):null;
 }
 function builtInSourceSpec(d){return d.key==='builtin_source'?typeContract?.composites?.sources?.[d.builtinSource||d.defaults?.source]:typeContract?.sources?.nodeSources?.[d.key];}
 function builtInSourceName(d){
@@ -183,10 +193,9 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
   if(kind==='sampler'&&editorTarget==='top')throw Error(t('inputs.chooseTop'));
   if(kind==='uniform'&&preset){
     const entry=typeContract?.sources?.uniformPresets?.[preset];if(!entry)throw Error('Unknown Uniform preset.');
-    const matches=graph.declarations.filter(d=>d.initialDriver===preset||d.name===entry.name);
-    if(matches.length){
-      const existing=matches[0];
-      if(matches.length!==1||existing.kind!=='uniform'||existing.type!==entry.type)throw Error(t('sources.presetConflict'));
+    const {decl:existing,conflict}=resolveCommonPreset(preset);
+    if(conflict)throw Error(t('sources.presetConflict'));
+    if(existing){
       if(existing.sourceMissing)throw Error(t('sources.missing'));
       return existing; // Reuse the entity without applying its initial driver again.
     }

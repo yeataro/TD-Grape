@@ -182,9 +182,19 @@ def parameter(operator, sequence, index, suffix):
 
 
 def editable_parameter(p):
-    if str(p.mode).endswith('CONSTANT'): return p
-    links=p.owner.parent().op('parameter_links')
-    return links.module.editable(p) if links else None
+    # Bind is a value link, not a Grape-owned-control requirement. Follow native
+    # parameter chains without changing modes or overwriting driven masters.
+    seen=[]
+    for _ in range(64):
+        if p is None or not hasattr(p,'isSamePar') or not p.valid or not p.enable or p.readOnly:
+            return None
+        if any(previous.isSamePar(p) for previous in seen):return None
+        seen.append(p)
+        mode=str(p.mode).split('.')[-1].upper()
+        if mode=='CONSTANT':return p
+        if mode!='BIND':return None
+        p=p.bindMaster
+    return None
 
 
 def component(p, resolve=editable_parameter):
@@ -197,12 +207,13 @@ def component(p, resolve=editable_parameter):
     edit=resolve(p)
     expression=p.expr if mode=='EXPRESSION' else ''
     return {'parameter': p.name, 'value': value, 'mode': mode,
+            'hasBindReferences': bool(getattr(p,'bindReferences',[])),
             'expression': expression, 'binding':p.bindExpr if mode=='BIND' else '',
             'modeWritable': mode in ('CONSTANT','EXPRESSION') and bool(p.enable) and not p.readOnly,
             'modeExpected': token({'parameter':p.name,'mode':mode,'expression':expression,
                                    'bind':p.bindExpr if mode=='BIND' else ''}),
             'writable': value is not None and edit is not None and bool(edit.enable) and not edit.readOnly,
-            **({'control':edit.name} if edit is not None and not edit.isSamePar(p) else {})}
+            **({'control':edit.name,'controlPath':edit.owner.path+'.par.'+edit.name} if edit is not None and not edit.isSamePar(p) else {})}
 
 
 def matrix_literal(expression):

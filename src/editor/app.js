@@ -1232,6 +1232,35 @@ function installEditorChrome(){
   document.addEventListener('change',()=>queueMicrotask(clearFinishedDraftNotice));
 }
 function addNode(d,x,y){const changed=change(()=>instantiate(d,x,y));if(changed&&matchMedia('(max-width:800px)').matches)workspaceLayout.closeBrowser();return changed;}
+function installFooterActions(){
+  const trigger=$('#editormenu'),menu=$('#editoractionsmenu'),proxies=[...menu.querySelectorAll('[data-editor-action]')];let invoked=false;
+  const sync=()=>{for(const button of proxies){const target=$('#'+button.dataset.editorAction);button.disabled=target.disabled||target.inert;}};
+  const observer=new MutationObserver(sync);for(const button of proxies){
+    const target=$('#'+button.dataset.editorAction);observer.observe(target,{attributes:true,attributeFilter:['disabled','inert']});
+    button.onclick=()=>{if(!target.disabled&&!target.inert)target.click();};
+  }
+  const items=()=>[...menu.querySelectorAll('button:not(:disabled)')];
+  function position(){
+    if(!menu.matches(':popover-open'))return;
+    const rect=trigger.getBoundingClientRect(),zoom=uiScaleFactor(),margin=8,width=innerWidth/zoom,height=innerHeight/zoom;
+    const above=Math.max(0,rect.top/zoom-margin-4),below=Math.max(0,height-rect.bottom/zoom-margin-4),upward=menu.scrollHeight>below&&above>below;
+    menu.style.maxHeight=(upward?above:below)+'px';
+    menu.style.left=Math.max(margin,Math.min(rect.left/zoom,width-menu.offsetWidth-margin))+'px';
+    menu.style.top=Math.max(margin,upward?rect.top/zoom-menu.offsetHeight-4:rect.bottom/zoom+4)+'px';
+  }
+  function open(last=false){invoked=false;sync();menu.showPopover();position();if(!pendingEditorField())(last?items().at(-1):items()[0])?.focus({preventScroll:true});}
+  trigger.onpointerdown=e=>{if(pendingEditorField())e.preventDefault();};
+  trigger.onclick=()=>menu.matches(':popover-open')?menu.hidePopover():open();
+  trigger.onkeydown=e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();open(e.key==='ArrowUp');}};
+  menu.addEventListener('click',e=>{const button=e.target.closest('button');if(button&&!button.disabled){invoked=true;menu.hidePopover();}},true);
+  menu.onkeydown=e=>{
+    const list=items(),at=list.indexOf(document.activeElement);
+    if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();list[e.key==='Home'?0:e.key==='End'?list.length-1:(at+(e.key==='ArrowDown'?1:-1)+list.length)%list.length]?.focus();}
+    if(e.key==='Tab')menu.hidePopover();
+  };
+  menu.addEventListener('toggle',e=>{trigger.setAttribute('aria-expanded',String(e.newState==='open'));if(e.newState==='closed'&&!invoked&&menu.contains(document.activeElement))trigger.focus({preventScroll:true});});
+  window.addEventListener('resize',position);sync();
+}
 $('#canvas').addEventListener('dragover',e=>{if(Array.from(e.dataTransfer.types).includes('application/x-sgrape-node')){e.preventDefault();e.dataTransfer.dropEffect='copy';}});
 $('#canvas').addEventListener('drop',e=>{const key=e.dataTransfer.getData('application/x-sgrape-node'),d=availableEntries().find(d=>browserEntryKey(d)===key||(key==='vector'&&d.key==='vector'&&d.presetType==='vec2'));$('#canvas').classList.remove('drop-ready');if(!d||!d.stages.includes(stage)||readonly)return;e.preventDefault();const point=graphPoint(e.clientX,e.clientY);if(point&&addNode(d,point.x-95,point.y-18))status(t('node.added')+d.label);});
 
@@ -1257,6 +1286,7 @@ installSidebarWidths();
 installShaderNavigation();
 installConnectionRecovery();
 installEditorChrome();
+installFooterActions();
 window.addEventListener('beforeunload',e=>{if(!editorReloading&&!switchingShader&&(dirty||pendingEditorField())){e.preventDefault();e.returnValue='';}});
 installSidebarVisibility();
 // Resizing (including browser fullscreen) keeps the user's pan and zoom; Center fits explicitly.

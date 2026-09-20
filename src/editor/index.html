@@ -14,7 +14,7 @@
   <circle cx="20" cy="23" r="11" fill="#bfa5f4"/>
   <circle cx="44" cy="23" r="11" fill="#a98be2"/>
   <circle cx="32" cy="44" r="11" fill="#b499ef"/>
-</svg><!-- sgrape-brand:end --><div class="brand-text"><strong>TD-Grape</strong><small><span class="brand-tagline">A Shader Editor for TouchDesigner</span><span class="brand-version">0.8.141 DEV</span><span class="brand-separator" aria-hidden="true">·</span><button id="about" type="button">About</button></small></div></div><div class="actions"><div class="secondary-actions"><select id="language" data-language-picker data-i18n-label="locale.language"></select><button id="import"><span data-i18n="action.import"></span></button><button id="export"><span data-i18n="action.export"></span></button><button id="save"><span data-i18n="action.save"></span></button></div><button id="apply" class="primary"><span data-i18n="action.apply"></span></button></div></header>
+</svg><!-- sgrape-brand:end --><div class="brand-text"><strong>TD-Grape</strong><small><span class="brand-tagline">A Shader Editor for TouchDesigner</span><span class="brand-version">0.8.142 DEV</span><span class="brand-separator" aria-hidden="true">·</span><button id="about" type="button">About</button></small></div></div><div class="actions"><div class="secondary-actions"><select id="language" data-language-picker data-i18n-label="locale.language"></select><button id="import"><span data-i18n="action.import"></span></button><button id="export"><span data-i18n="action.export"></span></button><button id="save"><span data-i18n="action.save"></span></button></div><button id="apply" class="primary"><span data-i18n="action.apply"></span></button></div></header>
 <div class="location-bar"><div class="location-start"><button id="togglelibrary" type="button" class="sidebar-toggle" aria-controls="sidebar-left" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/><path class="sidebar-icon-fill" d="M6 4h3v16H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg></button><span id="projectfile" class="project-file"></span><div class="shader-selector">
 <button id="shaderpicker" aria-haspopup="menu" aria-expanded="false" aria-controls="shaderchoices" data-i18n-label="switch.choose" disabled><span id="target" class="target"></span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 10 5 5 5-5"/></svg></button>
 <div id="shaderchoices" role="menu" data-i18n-label="switch.choose" hidden></div>
@@ -104,7 +104,7 @@
     <div class="panel-scroll" id="helpbody" role="region" aria-labelledby="helptoggle" tabindex="0"><div id="nodehelp"></div></div>
   </section>
 </aside></main>
-<footer><div class="footer-start"><div class="footer-actions"><button id="editorrefresh" type="button" class="sidebar-toggle" data-i18n-label="editorReload.action"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 4v6h-6M20 10a8 8 0 1 0 0 6"/></svg></button><button id="reload"><span data-i18n="action.reload"></span></button></div><span id="dirty" class="tag" role="status"><span data-i18n="connection.connecting"></span></span><span id="status" role="status"><span data-i18n="connection.starting"></span></span></div><div class="footer-preferences" role="group" data-i18n-label="appearance.controls">
+<footer><div class="footer-start"><div class="footer-actions"><button id="editormenu" type="button" class="sidebar-toggle" aria-haspopup="menu" aria-controls="editoractionsmenu" aria-expanded="false" data-i18n-label="action.menu"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button></div><span id="dirty" class="tag" role="status"><span data-i18n="connection.connecting"></span></span><span id="status" role="status"><span data-i18n="connection.starting"></span></span></div><div class="footer-preferences" role="group" data-i18n-label="appearance.controls">
   <button id="uiexperiments" type="button" popovertarget="experimentspanel" aria-haspopup="dialog" aria-controls="experimentspanel" aria-expanded="false" data-i18n-label="experiments.title"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9.5 3-.5 2-2 .9-1.8-.6-2 3.4 1.5 1.4v2.8l-1.5 1.4 2 3.4 1.8-.6 2 .9.5 2h4l.5-2 2-.9 1.8.6 2-3.4-1.5-1.4v-2.8l1.5-1.4-2-3.4-1.8.6-2-.9-.5-2Z"/><circle cx="11.5" cy="11.5" r="3"/></svg></button>
   <button id="uishortcuts" type="button" aria-haspopup="dialog" aria-controls="shortcutspanel" aria-expanded="false" data-i18n-label="shortcuts.title"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 15.5c0 1.5 1.3 2.5 3 2.5h12c1.7 0 3-1 3-2.5M9 7v7m6-7-6 3.5 6 3.5"/></svg></button>
   <button id="uishare" type="button" aria-haspopup="dialog" aria-controls="sharepanel" aria-expanded="false" data-i18n-label="share.title"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="6" height="6" rx=".5"/><rect x="15" y="3" width="6" height="6" rx=".5"/><rect x="3" y="15" width="6" height="6" rx=".5"/><path d="M13 13h4v4h4v4h-4m-4-4v4m8-8v1M6 5v2m12-2v2M6 17v2"/></svg></button>
@@ -123,12 +123,22 @@
   <div id="experimentoptions"></div>
   <p class="experiments-note" data-i18n="experiments.note"></p>
 </div>
+<div id="editoractionsmenu" class="popup-menu" popover="auto" role="menu" data-i18n-label="action.menu">
+  <button id="editorrefresh" type="button" role="menuitem" data-i18n="editorReload.action"></button>
+  <button id="reload" type="button" role="menuitem" data-i18n="action.reload"></button>
+  <div class="popup-separator" role="separator"></div>
+  <button type="button" role="menuitem" data-editor-action="import" data-i18n="action.import"></button>
+  <button type="button" role="menuitem" data-editor-action="export" data-i18n="action.export"></button>
+  <div class="popup-separator" role="separator"></div>
+  <button type="button" role="menuitem" data-editor-action="save" data-i18n="action.save"></button>
+  <button type="button" role="menuitem" data-editor-action="apply" data-i18n="action.apply"></button>
+</div>
 <div id="appearancepanel" class="appearance-panel" popover role="dialog" data-i18n-label="appearance.panel">
+  <label id="uistylerow" class="appearance-field"><span data-i18n="experiments.uiStyle"></span><select id="uistyle"></select></label>
   <div class="appearance-presets" role="group" data-i18n-label="appearance.mode">
     <button type="button" data-ui-theme-choice="dark" aria-pressed="true" data-i18n="appearance.mode.dark"></button>
     <button type="button" data-ui-theme-choice="light" aria-pressed="false" data-i18n="appearance.mode.light"></button>
   </div>
-  <label id="uistylerow" class="appearance-field"><span data-i18n="experiments.uiStyle"></span><select id="uistyle"></select></label>
   <div class="appearance-adjustment">
     <button id="uitoneminus" type="button" data-i18n-label="appearance.tone.decrease"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12h12"/></svg></button>
     <input id="uitone" type="range" min="-100" max="100" step="1" value="0" data-i18n-label="appearance.tone">
@@ -186,7 +196,7 @@
   <circle cx="44" cy="23" r="11" fill="#a98be2"/>
   <circle cx="32" cy="44" r="11" fill="#b499ef"/>
 </svg><!-- sgrape-brand:end --><strong id="abouttitle">TD-Grape</strong></div><button id="closeabout" data-i18n="action.close"></button></div>
-  <p class="about-version">0.8.141 DEV · TouchDesigner Shader Editor</p>
+  <p class="about-version">0.8.142 DEV · TouchDesigner Shader Editor</p>
   <p data-i18n="about.description"></p>
   <dl class="about-author"><dt data-i18n="about.author"></dt><dd>Yea Chen (yeataro)</dd></dl>
   <nav class="about-links" data-i18n-label="about.authorLinks"><a href="mailto:yeataro@gmail.com">yeataro@gmail.com</a><a href="https://github.com/yeataro" target="_blank" rel="noopener noreferrer">GitHub · yeataro</a></nav>

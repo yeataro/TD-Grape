@@ -94,6 +94,17 @@ try:
     send('begin',source='u0',component=0,expected=source.values()[0]);control.expr='0.5'
     answer=send('update',sequence=0,value=.9);assert 'error' in answer and control.expr=='0.5' and p.bindExpr==binding
     checks.append('a newly controlled master rejects the gesture without changing its Expression or Bind')
+    external=root.create(constantCHOP,'ExternalMaster');external.par.const0value=.31
+    p.bindExpr="op('"+external.path+"').par.const0value";binding=p.bindExpr
+    send('subscribe',source='u0');source=live.clients[client]['source']
+    assert source.values()[0]['writable'] and source.values()[0]['mode']=='BIND'
+    answer=send('begin',source='u0',component=0,expected=source.values()[0]);assert 'error' not in answer,answer
+    answer=send('commit',sequence=0,value=.57);assert 'error' not in answer,answer
+    assert abs(external.par.const0value.eval()-.57)<1e-6 and p.bindExpr==binding
+    live.restore(shader,{'receipt':answer['receipt'],'undo':True});assert abs(external.par.const0value.eval()-.31)<1e-6 and p.bindExpr==binding
+    send('begin',source='u0',component=0,expected=source.values()[0]);p.bindExpr='parent().par.Livevalue'
+    answer=send('update',sequence=0,value=.9);assert 'error' in answer and abs(external.par.const0value.eval()-.31)<1e-6
+    checks.append('external Bind master supports live edits and Undo; retargeting mid-gesture rejects further writes')
     live.next_poll=live.next_inventory=0;start=time.perf_counter();live.tick();inventory_ms=(time.perf_counter()-start)*1000
     assert any(message.get('type')=='values' for _,message in server.messages)
     old_counts=dict(counts)

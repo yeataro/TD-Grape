@@ -58,14 +58,7 @@ class Source:
             if current is None or not p.isSamePar(current): raise RuntimeError('The Uniform parameter was replaced.')
 
     def editable(self, p):
-        if constant(p): return p
-        # Only bindings created and owned by Grape can be edited through their master.
-        link = self.comp.fetch('grapeControlLinksV1', {}).get(self.ident, {})
-        for item in link.get('components', []):
-            if 0 <= item['index'] < len(self.pars) and self.pars[item['index']].isSamePar(p) and str(p.mode).endswith('BIND') and p.bindExpr == 'parent().par.' + item['control']:
-                master = p.bindMaster
-                if master is not None and master.owner == self.comp and constant(master): return master
-        return None
+        return self.live.model.editable_parameter(p)
 
     def values(self):
         self.check()

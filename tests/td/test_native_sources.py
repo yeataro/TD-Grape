@@ -133,6 +133,19 @@ try:
             assert r.deploy(g,r.state()['revision'])['ok']
             assert (p.mode,p.bindExpr,p.eval(),master.default)==binding
             checks.append(kind+': native Bind and independent COMP control/default survive recompilation')
+            external=root.create(constantCHOP,'BindingMaster_'+kind);external.par.const0value=.31
+            master.bindExpr="op('"+external.path+"').par.const0value"
+            seen=m.snapshot(r);gain=next(x for x in seen['uniforms'] if x['id']==gain_id)
+            assert gain['components'][0]['writable'] and gain['components'][0]['mode']=='BIND'
+            state_before=shader.op('state').text;bindings=(p.bindExpr,master.bindExpr)
+            m.write_value(r,dict(id=gain_id,revision=seen['revision'],component=0,value=.61,expected=gain['components'][0]))
+            assert abs(external.par.const0value.eval()-.61)<1e-6 and abs(p.eval()-.61)<1e-6
+            assert (p.bindExpr,master.bindExpr)==bindings and str(p.mode).endswith('BIND') and str(master.mode).endswith('BIND')
+            assert shader.op('state').text==state_before
+            external.par.const0value.expr='0.7'
+            assert not next(x for x in m.snapshot(r)['uniforms'] if x['id']==gain_id)['components'][0]['writable']
+            assert external.par.const0value.expr=='0.7'
+            checks.append(kind+': external native Bind chains write their master without changing bindings or graph; driven masters remain read-only')
             if kind=='mat':
                 fixture=r.process_shader_request('GET','/api/state',{})
                 fixture['upgradeReview']=None

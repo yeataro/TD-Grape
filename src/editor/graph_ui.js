@@ -1135,7 +1135,7 @@ function focusGraphCanvas(){
   window.getSelection()?.removeAllRanges();
 }
 function selectNode(n,toggle=false){
-  selectedInputId=null;helpContext='node';
+  selectedInputId=null;refreshSourceSelection();helpContext='node';
   focusGraphCanvas();
   if(toggle){if(selection.has(n.id))selection.delete(n.id);else selection.add(n.id);selected=selection.has(n.id)?n.id:[...selection].at(-1)||null;}
   else {selection=new Set([n.id]);selected=n.id;}
@@ -1148,7 +1148,7 @@ function refreshCanvasSelection(){
   for(const path of document.querySelectorAll('#wires path.selected'))path.classList.remove('selected');
   const frames=new Map(GraphFrames.read(current()).map(frame=>[frame.id,frame]));
   for(const card of document.querySelectorAll('#groupframes .group-frame'))card.classList.toggle('selected',frames.get(card.dataset.frame)?.nodes.every(id=>selection.has(id))||false);
-  inspector();renderNavigation();
+  refreshSourceSelection();inspector();renderNavigation();
 }
 function clearCanvasSelection(){
   if(selected===null&&selectedEdge===null&&selection.size===0)return;
