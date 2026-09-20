@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.140 DEV 交付檢查點：常數刪除 4、既有來源卡片 8、原生來源確認 5 組瀏覽器檢查通過；37 份嵌入來源與 10 份服務資產一致，master revision 88，三份使用者 Shader 保留。TOE 975446 bytes，SHA256 `7580d00e5e7138198dfcd5b33928de1d40df245b399a69a3b371a1f9bdc4aaa1`。報告 `work/reports/constant-actions/`。
+
 2026-09-20 Graph Constants 0.8.140 DEV：已建立來源移除重複操作說明；常數卡片選單補上移除／還原，Parameter 共用本地動作與確認卡片。無引用移除，有引用保留缺失記錄／接線；Undo、取消、唯讀、切換 context 與確認途中引用數變更均驗證。卡片滑桿與預設 sValue 命名未改，決策記入 UX_BACKLOG。同步保存另記。
 
 2026-09-20 0.8.139 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，master revision 87，三份使用者 Shader 保留。TOE 975294 bytes，SHA256 `152b1be92e11b145827daebae4bfcb9b6b4dd98af58c48966f6eedd033228345`。報告 `work/reports/appearance-controls/`。
