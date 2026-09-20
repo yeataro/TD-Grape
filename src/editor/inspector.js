@@ -2066,10 +2066,11 @@ async function nativeSourceRequest(endpoint,body){
 }
 function renderNativeSourceValues(changed=null){
   const ready=sourceReady(true),rows=nativeSourceIndex();
+  let geometryChanged=false;
   for(const card of document.querySelectorAll('[data-native-source]')){
     if(changed&&!changed.has(card.dataset.nativeSource))continue;
     const row=rows.get(card.dataset.nativeSource);if(!row)continue;
-    for(const grid of card.querySelectorAll('[data-native-components]'))syncNativeComponentControls(grid,row,ready);
+    for(const grid of card.querySelectorAll('[data-native-components]'))if(syncNativeComponentControls(grid,row,ready)&&card.closest('#cards'))geometryChanged=true;
     for(const color of card.querySelectorAll('[data-native-color]'))syncNativeColorControls(color,row,ready);
     for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
       const item=row.components[Number(entry.dataset.matrixSourceComponent)],binding=row.matrixBinding;
@@ -2107,6 +2108,7 @@ function renderNativeSourceValues(changed=null){
     for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
     const state=card.querySelector('.native-source-state');if(state){const text=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.bufferBinding?t('buffer.popState'):row.arrayBinding?t('array.bindingState'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.slice(0,typeComponents(row.type)||1).some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');if(state.textContent!==text)state.textContent=text;}
   }
+  if(geometryChanged)wires();
   if(changed)return;
   for(const entry of document.querySelectorAll('#inspector [data-input-name]')){
     const row=rows.get(entry.dataset.inputName);entry.disabled=readonly||(row&&!row.pending&&(!ready||!row.nameWritable));
@@ -2199,7 +2201,7 @@ function nativeComponentControls(decl,row){
   grid.dataset.nativeComponents=decl.id;grid.nativeDeclaration=decl;
   for(let i=0;i<count;i++)grid.append(el('div',{'data-native-component-slot':i}));
   syncNativeComponentControls(grid,row,sourceReady(true));
-  if(decl.kind==='uniform'&&typeof uniformLive!=='undefined')queueMicrotask(()=>{if(grid.isConnected)uniformLive.registerView(grid);});
+  if(decl.kind==='uniform'&&!row.pending&&typeof uniformLive!=='undefined')queueMicrotask(()=>{if(grid.isConnected)uniformLive.registerView(grid);});
   return grid;
 }
 function nativeValueControls(decl,row){
@@ -2207,7 +2209,7 @@ function nativeValueControls(decl,row){
   if(row.sequence!=='color'||!['float','vec2','vec3','vec4'].includes(decl.type))return compact;
   const box=el('div',{class:'native-color-controls','data-native-color':decl.id}),line=el('div',{class:'native-color-line'});
   const toggle=el('button',{type:'button',class:'node-values-toggle','aria-expanded':'false','aria-label':t('node.expandValues'),title:t('node.expandValues')},'▸');
-  toggle.onclick=e=>{e.stopPropagation();const expanded=compact.classList.toggle('native-color-expanded');toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));};
+  toggle.onclick=e=>{e.stopPropagation();const expanded=compact.classList.toggle('native-color-expanded');toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));if(box.closest('#cards'))wires();};
   const count=typeComponents(decl.type),read=()=>{const live=nativeSourceIndex().get(decl.id);return [0,1,2,3].map(i=>i<count?Number(live?.components[i]?.value??(i===3?1:0)):i===3?1:0);};
   const swatch=colorPickerSwatch(read,values=>{
     const live=nativeSourceIndex().get(decl.id),items=picker.colorExpected||live?.components;picker.colorExpected=null;
@@ -2230,31 +2232,43 @@ function syncNativeColorControls(box,row,ready){
   if(!picker.colorExpected)picker.value=display.hex;
   box.querySelector('.color-ink').style.backgroundColor=display.css;
 }
-function nativeReferenceControls(node,decl){
+function nativeReferencePresentation(decl,row){
   if(!decl||decl.kind!=='uniform'||isMatrixType(decl.type)||!['float','double','int','uint','bool'].includes(typeFamily(decl.type)))return null;
-  const row=nativeSourceIndex().get(decl.id);if(!row||row.pending||row.missing)return null;
+  if(row?.pending||row?.missing)return null;
+  return JSON.stringify([decl.id,decl.type,decl.name,row?.sequence||decl.nativeSequence||'vec',!!row]);
+}
+function nativeReferenceControls(node,decl){
+  const row=decl&&nativeSourceIndex().get(decl.id),signature=nativeReferencePresentation(decl,row);if(!signature)return null;
   const body=el('div',{class:'node-fixed-values native-reference-values','data-native-source':decl.id});
-  body.dataset.sourcePresentation=JSON.stringify([decl.id,decl.type,decl.name,row.sequence]);
-  body.append(nativeValueControls(decl,row));return body;
+  body.dataset.sourcePresentation=signature;
+  // Layout comes from the declaration, before the asynchronous TD snapshot.
+  // Reuse the real control layout, but never show invented live values or subscribe it.
+  if(!row){body.classList.add('native-reference-loading');body.inert=true;body.setAttribute('aria-hidden','true');}
+  body.append(nativeValueControls(decl,row||{sequence:decl.nativeSequence||'vec',pending:true,components:[]}));return body;
 }
 function syncNativeReferenceControls(){
   const declarations=new Map(graph.declarations.map(d=>[d.id,d])),nodes=new Map(current().nodes.map(n=>[n.id,n])),rows=nativeSourceIndex();
+  let geometryChanged=false;
   for(const card of document.querySelectorAll('#cards .node:not(.collapsed)')){
     const node=nodes.get(card.dataset.node),decl=declarations.get(node?.params?.declarationId);if(decl?.kind!=='uniform')continue;
     const row=rows.get(decl.id),body=card.querySelector('.native-reference-values');
-    const signature=row&&!row.pending&&!row.missing?JSON.stringify([decl.id,decl.type,decl.name,row.sequence]):null;
-    if(body?.dataset.sourcePresentation===signature)continue;
+    const signature=nativeReferencePresentation(decl,row);
+    if((body?.dataset.sourcePresentation||null)===signature)continue;
     const replacement=nativeReferenceControls(node,decl);
     if(body){if(replacement)body.replaceWith(replacement);else body.remove();}
     else if(replacement)card.querySelector('.ports').after(replacement);
+    delete card.dataset.nodeDefaultWidth;applyNodeWidth(card,node);geometryChanged=true;
   }
+  if(geometryChanged)wires();
 }
 function syncNativeComponentControls(grid,row,ready){
   const decl=grid.nativeDeclaration,count=grid.children.length,names=row.sequence==='color'?'RGBA':'XYZW';
+  let changed=false;
   for(const slot of grid.children){
     const index=Number(slot.dataset.nativeComponentSlot),item=row.components[index];
     const numeric=!!item&&['CONSTANT','BIND'].includes(item.mode),kind=numeric?'numeric':'mode';
     if(slot.dataset.presentation!==kind){
+      changed=true;
       slot.dataset.presentation=kind;
       let entry;
       if(numeric){
@@ -2281,6 +2295,7 @@ function syncNativeComponentControls(grid,row,ready){
       entry.title=item?.expression||nativeComponentMode(item)||text;
     }
   }
+  return changed;
 }
 function bufferConfigurationFields(initial={}){
   const element=el('section',{class:'source-array-fields'}),entries={};

@@ -1205,8 +1205,8 @@ footer #status{flex:1;min-width:0;padding:0;font-size:11px}
 .footer-start:has(#status.error) #dirty{display:none}
 footer #reload{flex:0 1 auto;min-width:0;height:24px;max-width:100%;padding:0 8px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .footer-actions{display:flex;align-items:center;flex:0 1 auto;min-width:0;gap:5px}
-footer #editorrefresh{flex:none;width:25px;height:24px;padding:4px;margin-left:-5px;border:0;background:transparent;border-radius:3px}
-footer #editorrefresh svg{width:16px;height:16px}
+footer #editorrefresh,footer #editormenu{flex:none;width:25px;height:24px;padding:4px;margin-left:-5px;border:0;background:transparent;border-radius:3px}
+footer #editorrefresh svg,footer #editormenu svg{width:16px;height:16px}
 .footer-preferences{display:flex;align-items:center;justify-content:flex-end;gap:4px}
 footer .footer-preferences button{display:flex;align-items:center;justify-content:center;flex:none;width:25px;height:24px;padding:4px;border:0;border-radius:3px;background:transparent;color:var(--muted)}
 footer .footer-preferences button:hover{background:#ffffff0b;color:var(--ui-tone-text)}
@@ -1423,8 +1423,10 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-size="comfortable"] footer #status{font-size:12px}
 :root[data-ui-size="comfortable"] footer #reload{height:32px;padding-inline:10px;font-size:12px}
 :root[data-ui-size="comfortable"] footer #editorrefresh,
+:root[data-ui-size="comfortable"] footer #editormenu,
 :root[data-ui-size="comfortable"] footer .footer-preferences button{width:32px;height:32px;padding:5px}
 :root[data-ui-size="comfortable"] footer #editorrefresh svg,
+:root[data-ui-size="comfortable"] footer #editormenu svg,
 :root[data-ui-size="comfortable"] footer .footer-preferences button svg{width:20px;height:20px}
 
 :root[data-ui-size="comfortable"] .graph-workspace .toolbar{padding-block:8px;gap:8px}
@@ -1865,6 +1867,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .confirmation-dialog>.confirmation-actions{justify-content:flex-end;gap:10px;padding:12px 0 0}
 .native-reference-values>.components{width:100%}
 .native-reference-values .field{margin:0}
+.native-reference-loading{visibility:hidden;pointer-events:none}
 
 #structuredialog{width:min(560px,calc(94 * var(--ui-vw)))}
 #structuredialog .custom-dialog-heading{height:auto;padding:0;background:none;border:0}#structuredialog textarea{width:100%;resize:vertical}
