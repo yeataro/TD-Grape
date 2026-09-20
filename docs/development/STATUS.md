@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.144 DEV 實作：採用使用者選定的 Uniform 滑桿 C（淡分類色填色＋兩端內縮把手），保留 32px 高度，滑桿完整配色不受介面亮度調整影響；來源卡片／Parameter／画布引用共用，Bind 及 Master 識別保留。新增 Alt + Enter 全螢幕及雙語提示，編輯草稿不被提交。亮度與顯示 4 組、全螢幕 4 組；原生分量 7、Colors 5、即時通道 10、幾何 7、外觀 10＋觸控 1 組通過。快捷鍵說明 7 組與完整 portable checks（507 Python）通過。報告 Documents 工作區 reports/uniform-slider-144/。既有 test_editor_chrome 仍期待舊的 footer Refresh／Reload 直出入口，於首個排版斷言失敗；本輪使用獨立全螢幕回歸驗證新快捷鍵與既有瀏覽器生命週期，不宣稱舊腳本全過。同步保存另記。
+
 2026-09-20 0.8.143 DEV 交付檢查點：程式提交 `25547b0`，37 份嵌入來源與 10 份服務資產核對一致，TOP／MAT master revision 90；三份使用者 Shader 保留。TOE 982142 bytes，SHA256 `1e8c0f1c91d2e85a3ce38ad8220fb371515be5b24e4948ae7b0f10a427caf362`。原生交付報告 `work/reports/source-geometry-143/`；瀏覽器幾何報告在 Documents 工作區 `reports/uniform-geometry/` 與 `reports/footer-geometry/`。507 Python 與完整 portable checks 通過；外觀 10 組及觸控 1 組通過。外觀測試原先仍要求已移入功能表的 Reload／Refresh 隱藏項可直接點擊，已改驗證目前可见的 ⋮ 入口。未自動重新整理使用者網頁。
 
 2026-09-20 0.8.143 DEV 實作檢查點：修正 Uniform 非同步來源載入時先漏算控制列，再增高但未刷新 Group 的初始化順序。依宣告預留不可互動的共用控制排版；來源可用性改變重新量測寬度，模式切換／Color 分量展開沿用接線、Group 與選取工具列的共同更新。100 次值更新沒有幾何重繪或圖／歷史變更。新幾何 7 組、Group 13、membership 6、原生分量 7、Color 5、來源卡片 8、即時控制 10 組通過。footer ⋮ 改用對應密度的 footer 尺寸，修正全列下移並縮小留白；新幾何 3 組涵蓋兩種密度及 100／125／175% 縮放、390px。舊 wire_geometry 的節點拖曳斷言在未修改的 0.8.142 基準也失敗，本輪不宣稱該腳本全過；其前段接線幾何檢查通過，另以新回歸直接核對原生來源接孔、接線與邊界。Uniform 32px 高度及產品滑桿配色未改。同步與 TOE 保存另記。

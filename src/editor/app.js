@@ -1171,8 +1171,8 @@ function renderViewModes(){
   focused.setAttribute('aria-pressed',String(graphFocused));
   const supported=!!document.documentElement.requestFullscreen&&document.fullscreenEnabled!==false;
   fullscreen.disabled=fullscreenBusy||(!active&&!supported);
-  fullscreen.title=t(active?'view.exitFullscreen':supported?'view.fullscreen':'view.fullscreenUnavailable');
-  fullscreen.setAttribute('aria-label',fullscreen.title);fullscreen.setAttribute('aria-pressed',String(active));
+  decorateShortcutButton(fullscreen,'fullscreen',active?'view.exitFullscreen':supported?'view.fullscreen':'view.fullscreenUnavailable');
+  fullscreen.setAttribute('aria-pressed',String(active));
   fullscreen.querySelector('.fullscreen-enter').toggleAttribute('hidden',active);
   fullscreen.querySelector('.fullscreen-exit').toggleAttribute('hidden',!active);
   applySystemClock();
@@ -1198,6 +1198,12 @@ function installViewModes(){
     finally{fullscreenBusy=false;renderViewModes();}
   };
   document.addEventListener('fullscreenchange',()=>{renderViewModes();if(graph)requestAnimationFrame(wires);});
+  // A view shortcut also works while editing, without submitting an Enter draft.
+  document.addEventListener('keydown',event=>{
+    if(event.key!=='Enter'||!event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||event.isComposing)return;
+    event.preventDefault();event.stopPropagation();
+    if(!event.repeat)$('#uifullscreen').click();
+  },true);
   renderViewModes();
 }
 function installEditorChrome(){

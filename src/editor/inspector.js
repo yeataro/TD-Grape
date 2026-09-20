@@ -2198,7 +2198,7 @@ function selectSourceReferences(id,builtin=null){
 function nativeSourceSequenceName(sequence){return {color:'Colors',matrix:'Matrices',array:'Arrays',buffer:'Buffers',attr:'Attributes',mattr:'Matrix Attributes',vec:'Vectors',const:'Constants'}[sequence]||sequence;}
 function nativeComponentControls(decl,row){
   const count=typeComponents(decl.type)||1,grid=componentGrid(count);
-  grid.dataset.nativeComponents=decl.id;grid.nativeDeclaration=decl;
+  grid.dataset.nativeComponents=decl.id;grid.dataset.nativeKind=decl.kind;grid.nativeDeclaration=decl;
   for(let i=0;i<count;i++)grid.append(el('div',{'data-native-component-slot':i}));
   syncNativeComponentControls(grid,row,sourceReady(true));
   if(decl.kind==='uniform'&&!row.pending&&typeof uniformLive!=='undefined')queueMicrotask(()=>{if(grid.isConnected)uniformLive.registerView(grid);});
