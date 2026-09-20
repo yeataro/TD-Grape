@@ -3,6 +3,13 @@
 這裡記錄機制本身合理、但使用體驗仍值得評估的情境；不代表已確認為程式錯誤，也不代表已接受為永久限制。
 
 
+## 共同來源名稱與內建卡片（2026-09-20，0.8.141）
+
+- Inputs 搜尋旁提供 TD Names／Common Names，窄面板移到下一列，預設 TD。共同名稱維護在 source_catalog 的顯示欄位，與搜尋別名分開；沒有明確共同名稱者保留原名，vUV 三分量不冒稱二維 Texture Coordinates。
+- 名稱切換只更新來源清單／畫布標題，保留分類、ID、TD 實體、值、圖與 Undo；原生與共同名称均可搜尋，選擇保存於瀏覽器。共同來源 hover 提供簡短用途、TD 名稱與型別。Output 類別改名 Output Info／輸出資訊。
+- 內建卡片單擊改為選取／Help、加號與把手專責引用；展開只放型別／輸出口。這是使用者仍在思考的操作方案，本輪先不改單擊行為。
+- POP Buffers 放在 TD Built In 容易被理解成現成內建變量；提議 Buffers 升到 Inputs 第一層、保留 POP Buffers 子組。CHOP Uniform Arrays 與 Texture Buffers 保持原類別。分類移動尚未實作。
+
 ## Graph Constants review（2026-09-20，0.8.140）
 
 - 已建立來源不再顯示「點擊編輯／拖入畫布」段落；操作入口與缺失狀態仍保留。

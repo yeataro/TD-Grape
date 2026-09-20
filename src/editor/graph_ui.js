@@ -252,7 +252,7 @@ function typeContainsResource(type,document=activeTypeDocument(),seen=new Set())
 }
 const graphValueTypes=(document=activeTypeDocument())=>graphInterfaceTypes(document).filter(type=>!typeContainsResource(type,document));
 function builtinSourceEntries(d){
-  return Object.entries(typeContract?.composites?.sources||{}).filter(([,source])=>(source.targets||['top','mat']).includes(editorTarget)&&(source.stages||['pixel','vertex']).includes(stage)).map(([id,source])=>({...d,entryKey:'builtin:'+id,label:id,defaults:{...d.defaults,source:id},builtinSource:id,inputs:source.inputs||{},outputs:{out:source.type},sourcePath:source.path,sourceAliases:source.aliases||[],category:'builtin'}));
+  return Object.entries(typeContract?.composites?.sources||{}).filter(([,source])=>(source.targets||['top','mat']).includes(editorTarget)&&(source.stages||['pixel','vertex']).includes(stage)).map(([id,source])=>({...d,entryKey:'builtin:'+id,label:id,defaults:{...d.defaults,source:id},builtinSource:id,inputs:source.inputs||{},outputs:{out:source.type},sourcePath:source.path,sourceAliases:[...(source.aliases||[]),source.commonName||'',source.tdName||''],category:'builtin'}));
 }
 function compositePorts(key,params,document=activeTypeDocument(),incoming={}){
   if(key==='struct_create'){

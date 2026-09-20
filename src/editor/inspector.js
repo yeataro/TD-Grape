@@ -2466,7 +2466,7 @@ function installCanvasItemDrag(button,label,dropItem,clickItem){
   };
 }
 function tdBuiltInEntries(query=''){
-  return catalog.filter(d=>['uv','position','builtin_source'].includes(d.key)&&d.stages.includes(stage)).flatMap(d=>d.key==='builtin_source'?builtinSourceEntries(d):[{...d,sourcePath:typeContract.sources.nodeSources[d.key]?.path,sourceAliases:typeContract.sources.nodeSources[d.key]?.aliases||[]}]).filter(d=>normalizeSearch([d.label,d.key,builtInSourceLabel(d),...d.sourceAliases].join(' ')).includes(query));
+  return catalog.filter(d=>['uv','position','builtin_source'].includes(d.key)&&d.stages.includes(stage)).flatMap(d=>d.key==='builtin_source'?builtinSourceEntries(d):[{...d,sourcePath:typeContract.sources.nodeSources[d.key]?.path,sourceAliases:[...(typeContract.sources.nodeSources[d.key]?.aliases||[]),typeContract.sources.nodeSources[d.key]?.commonName||'']}]).filter(d=>normalizeSearch([d.label,d.key,builtInSourceLabel(d),builtInSourceName(d),...d.sourceAliases].join(' ')).includes(query));
 }
 function addBuiltInReference(d,x=null,y=null){
   const rect=$('#canvas').getBoundingClientRect(),point=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!point)return;
@@ -2478,8 +2478,8 @@ function sourceMenuEntries(query){
   for(const d of tdBuiltInEntries(query)){
     const path=d.sourcePath?.join('.')||'tdBuiltin.render',rows=groups.get(path)||[];
     const row=el('div',{class:'input-source-row','data-category':nodeCategory(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.builtinSource||d.key});
-    button.append(el('span',{},d.label),el('small',{},builtInSourceLabel(d)||displayType(d.outputs.out)));button.disabled=readonly;
-    installCanvasItemDrag(button,()=>d.label,(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));
+    button.append(el('span',{},builtInSourceName(d)),el('small',{},builtInSourceLabel(d)||displayType(d.outputs.out)));row.sourceDefinition=d;button.disabled=readonly;
+    installCanvasItemDrag(button,()=>builtInSourceName(d),(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));
     const more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
     more.onclick=e=>openSourceCardMenu(row,null,null,e,d);row.oncontextmenu=e=>openSourceCardMenu(row,null,null,e,d);
     row.append(button,more);rows.push(row);groups.set(path,rows);
@@ -2567,7 +2567,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
   const signature=JSON.stringify([decl&&[decl.id,decl.name,decl.type,decl.kind,decl.nativeSequence,decl.index,decl.sourceMissing],row&&[row.sequence,row.missing,row.pending],issue,preset,conflict]);
   let cached=sourceCardCache.get(key);
   if(!cached||cached.signature!==signature){
-    const id=decl?.id,label=entry?.initialize.expression||decl.name,type=decl?.type||entry.type;
+    const id=decl?.id,label=entry?commonPresetLabel(preset):decl.name,type=decl?.type||entry.type;
     const card=el('div',{class:'input-source-row source-card','data-category':decl?.type==='samplerBuffer'?'texture':nodeCategory({key:decl?.kind||'uniform'}),'data-source-card':key}),head=el('div',{class:'source-card-head'}),body=el('div',{class:'source-card-body'}),toggle=el('button',{class:'source-card-toggle','aria-label':t('sources.details')}),pick=el('button',{class:'input-source-select','aria-pressed':'false'}),more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
     if(id)card.dataset.inputSource=id;if(preset)card.dataset.preset=preset;
     if(dormant)card.dataset.dormant='true';
@@ -2577,8 +2577,8 @@ function sourceCard(decl,preset,issue,row,conflict=false){
     if(id)reference.dataset.inputReference=id;else reference.dataset.presetReference=preset;
     reference.dataset.sourceMissing=String(!!decl?.sourceMissing||conflict);reference.disabled=editorMutationBlocked()||!!decl?.sourceMissing||conflict;
     const add=(x,y)=>preset?referenceCommonSource(preset,x,y):inputReference(id,x,y);
-    installCanvasItemDrag(reference,()=>label,add,()=>add());
-    installCanvasItemDrag(pick,()=>label,add,()=>id?selectInputSource(id):sourceCardHelp(null,preset));const pointer=pick.onpointerdown;pick.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
+    installCanvasItemDrag(reference,()=>preset?commonPresetLabel(preset):decl.name,add,()=>add());
+    installCanvasItemDrag(pick,()=>preset?commonPresetLabel(preset):decl.name,add,()=>id?selectInputSource(id):sourceCardHelp(null,preset));const pointer=pick.onpointerdown;pick.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
     toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'));
     let bodyBuilt=false;
     const showBody=collapsed=>{
@@ -2596,7 +2596,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
           for(const [name,type]of Object.entries(outputs)){
             const output=el('div',{class:'port-row output','data-type':type}),socket=el('button',{type:'button',class:'port','aria-label':t('sources.reference')+' '+label,title:t('inputs.dragReference')});
             socket.dataset.sourceOutput=decl.id;socket.disabled=editorMutationBlocked()||!!decl.sourceMissing||conflict||decl.kind==='attribute'&&stage!=='vertex';
-            installCanvasItemDrag(socket,()=>label,add,()=>add());
+            installCanvasItemDrag(socket,()=>preset?commonPresetLabel(preset):decl.name,add,()=>add());
             output.append(socket,el('span',{class:'port-label'},portLabel(node,'outputs',name)),el('small',{class:'port-type'},displayType(type)));list.append(output);
           }
           body.append(list);
@@ -2617,6 +2617,31 @@ function sourceCard(decl,preset,issue,row,conflict=false){
   for(const socket of card.querySelectorAll('[data-source-output]'))socket.disabled=editorMutationBlocked()||sourceState!=='ready'||decl?.kind==='attribute'&&stage!=='vertex';
   return card;
 }
+function refreshSourceNames(){
+  const text=(element,value)=>{if(element&&element.textContent!==value)element.textContent=value;};
+  for(const {card,preset}of sourceCardCache.values())if(preset){
+    const label=commonPresetLabel(preset),pick=card.querySelector('.input-source-select');
+    text(pick.querySelector('span'),label);pick.title=label+' · '+typeContract.sources.uniformPresets[preset].initialize.expression;
+    for(const button of card.querySelectorAll('.input-reference,[data-source-output]'))button.setAttribute('aria-label',t('sources.reference')+' '+label);
+  }
+  for(const rows of sourceBuiltinCache?.groups.values()||[])for(const row of rows){
+    const d=row.sourceDefinition,button=row.querySelector('[data-builtin-reference]'),label=builtInSourceName(d);
+    text(button.querySelector('span'),label);button.title=builtInSourceHint(d);
+  }
+}
+function setSourceNameMode(mode){
+  if(!['td','common'].includes(mode)||mode===sourceNameMode)return;
+  sourceNameMode=mode;$('#sourcenames').value=mode;try{localStorage.setItem(sourceNamesStorageKey,mode);}catch{}
+  // Patch labels only: live inputs, selection, source identities and history survive.
+  renderSourceCards($('#nativeuniforms'),normalizeSearch($('#inputsearch').value));
+  const nodes=new Map(current().nodes.map(node=>[node.id,node]));let resized=false;
+  for(const card of document.querySelectorAll('#cards .node')){
+    const node=nodes.get(card.dataset.node),name=card.querySelector('.node-function-title');if(!node||!name)continue;
+    const label=nodeCanvasTitle(node);if(name.textContent===label)continue;
+    name.textContent=label;name.title=label;delete card.dataset.nodeDefaultWidth;applyNodeWidth(card,node);resized=true;
+  }
+  if(resized)wires();
+}
 function renderSourceCards(box,query){
   const context=JSON.stringify([language,editorTarget,stage,editorLoadGeneration]);
   if(context!==sourcePresentationContext){sourcePresentationContext=context;sourceCardCache.clear();sourceGroupCache.clear();sourceBuiltinCache=null;}
@@ -2627,7 +2652,7 @@ function renderSourceCards(box,query){
   for(const preset of Object.keys(inputPresets())){
     const entry=typeContract.sources.uniformPresets[preset],candidates=[...new Set([...(byDriver.get(preset)||[]),...(byName.get(entry.name)||[])])],decl=candidates.length===1&&candidates[0].kind==='uniform'&&candidates[0].type===entry.type?candidates[0]:null,conflict=!!candidates.length&&!decl;
     if(decl)used.add(decl.id);keys.add('preset:'+preset);
-    if(matches(entry.name,entry.initialize.expression,t(entry.labelKey),decl?.name,'common uniform')){const path=entry.path.join('.'),cards=common.get(path)||[];cards.push(sourceCard(decl,preset,decl&&issueById.get(decl.id),decl&&rows.get(decl.id),conflict));common.set(path,cards);}
+    if(matches(entry.name,entry.initialize.expression,entry.commonName,t(entry.labelKey),decl?.name,'common uniform')){const path=entry.path.join('.'),cards=common.get(path)||[];cards.push(sourceCard(decl,preset,decl&&issueById.get(decl.id),decl&&rows.get(decl.id),conflict));common.set(path,cards);}
   }
   const menu=new Map([...sourceMenuEntries(query)].map(([path,rows])=>[path,[...rows]]));
   for(const [path,cards]of common)menu.set(path,[...(menu.get(path)||[]),...cards]);
@@ -2657,7 +2682,7 @@ function renderSourceCards(box,query){
     if(previous?.issueKey!==issueKey){section=el('section',{class:'input-group','data-source-issues':''});section.append(el('div',{class:'input-group-title'},t('sources.unavailable')));for(const issue of unimported){const card=el('div',{class:'input-source-row','data-source-state':issue.status||'invalid','data-source-issue':issue.name||'','data-category':'shader'}),head=el('div',{class:'input-source-select'});head.append(el('span',{},issue.name||t('sources.unavailable')),el('small',{},issue.type||''));card.append(head,el('div',{class:'input-source-status'},'⚠ '+issue.message));section.append(card);}sourceGroupCache.set('issues',{issueKey,section});}sections.push(section);
   }
   if(query&&!sections.length)sections.push(el('p',{class:'muted'},t('create.empty')));
-  reconcileSourceChildren(box,sections);for(const key of sourceCardCache.keys())if(!keys.has(key))sourceCardCache.delete(key);
+  reconcileSourceChildren(box,sections);refreshSourceNames();for(const key of sourceCardCache.keys())if(!keys.has(key))sourceCardCache.delete(key);
   for(const button of box.querySelectorAll('[data-builtin-reference]'))button.disabled=readonly;
   for(const button of box.querySelectorAll('[data-preset-reference]'))button.disabled=editorMutationBlocked()||button.dataset.sourceMissing==='true';
 }
@@ -2674,6 +2699,8 @@ function renderNativeSources(){
   renderNativeSourceValues();
 }
 function installNativeSources(){
+  try{sourceNameMode=localStorage.getItem(sourceNamesStorageKey)==='common'?'common':'td';}catch{}
+  $('#sourcenames').value=sourceNameMode;$('#sourcenames').onchange=()=>setSourceNameMode($('#sourcenames').value);
   const arrayFields=el('section',{id:'sourcearrayfields',class:'source-array-fields'}),arrayLength=el('input',{id:'sourcearraylength',type:'number',min:1,max:1024,step:1,value:4}),arraySource=el('input',{id:'sourcearraypath',type:'text',maxlength:4096,spellcheck:'false',placeholder:'/project1/constant1'});
   const lengthField=field('',arrayLength),pathField=field('',arraySource);lengthField.prepend(el('span',{'data-i18n':'array.length'},t('array.length')));pathField.prepend(el('span',{'data-i18n':'array.chopPath'},t('array.chopPath')));
   const arrayHint=el('p',{class:'muted'});arrayFields.append(lengthField,pathField,arrayHint);arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);

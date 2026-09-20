@@ -1875,3 +1875,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 @media(pointer:coarse){.input-group-add{min-height:36px}.native-color-line>.node-values-toggle{min-height:36px;width:20px}}
 
 .node-size-probe .native-color-controls input:not([type=color]){max-width:72px}.native-color-line:has(.native-color-expanded){align-items:flex-start}
+
+.input-search-tools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.input-search-tools #inputsearch{flex:1 1 130px;width:0;margin:0}
+.input-search-tools select{flex:1 0 auto;max-width:100%;font-size:11px;padding:6px}

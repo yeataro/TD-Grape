@@ -23,7 +23,8 @@
         "mode": "EXPRESSION",
         "component": 0,
         "expression": "absTime.seconds"
-      }
+      },
+      "commonName": "Absolute Time"
     },
     "absFrame": {
       "name": "uAbsFrame",
@@ -46,7 +47,8 @@
         "mode": "EXPRESSION",
         "component": 0,
         "expression": "absTime.frame"
-      }
+      },
+      "commonName": "Absolute Frame"
     },
     "time": {
       "name": "uTime",
@@ -69,7 +71,8 @@
         "mode": "EXPRESSION",
         "component": 0,
         "expression": "me.time.seconds"
-      }
+      },
+      "commonName": "Timeline Time"
     },
     "frame": {
       "name": "uFrame",
@@ -92,7 +95,8 @@
         "mode": "EXPRESSION",
         "component": 0,
         "expression": "me.time.frame"
-      }
+      },
+      "commonName": "Timeline Frame"
     },
     "deltaTime": {
       "name": "uDeltaTime",
@@ -115,7 +119,8 @@
         "mode": "EXPRESSION",
         "component": 0,
         "expression": "absTime.stepSeconds"
-      }
+      },
+      "commonName": "Delta Time"
     },
     "frameStep": {
       "name": "uFrameStep",
@@ -138,7 +143,8 @@
         "mode": "EXPRESSION",
         "component": 0,
         "expression": "absTime.step"
-      }
+      },
+      "commonName": "Frame Step"
     }
   },
   "structures": {
@@ -672,7 +678,12 @@
       ],
       "aliases": [
         "Output Resolution"
-      ]
+      ],
+      "commonName": "Output Resolution",
+      "hint": {
+        "zh-Hant": "輸出影像的寬、高，單位為像素。",
+        "en": "Output width and height in pixels."
+      }
     },
     "uTDOutputInfo.res.xy": {
       "type": "vec2",
@@ -689,7 +700,12 @@
       ],
       "aliases": [
         "Output Pixel Size"
-      ]
+      ],
+      "commonName": "Output Pixel Size",
+      "hint": {
+        "zh-Hant": "輸出影像寬、高的倒數。",
+        "en": "Reciprocal output width and height."
+      }
     },
     "vUV": {
       "type": "vec3",
@@ -706,7 +722,11 @@
       ],
       "aliases": [
         "Texture Coordinates"
-      ]
+      ],
+      "hint": {
+        "zh-Hant": "TOP 的原始三分量貼圖座標。",
+        "en": "The original three-component TOP texture coordinates."
+      }
     },
     "uTDPass": {
       "type": "int",
@@ -792,7 +812,12 @@
       ],
       "aliases": [
         "Fragment Coordinates"
-      ]
+      ],
+      "commonName": "Fragment Coordinates",
+      "hint": {
+        "zh-Hant": "目前片段的視窗座標。",
+        "en": "The current fragment position in window coordinates."
+      }
     },
     "gl_FrontFacing": {
       "type": "bool",
@@ -810,7 +835,12 @@
       ],
       "aliases": [
         "Front Facing"
-      ]
+      ],
+      "commonName": "Front Facing",
+      "hint": {
+        "zh-Hant": "目前片段是否位於圖元正面。",
+        "en": "Whether this fragment belongs to a front-facing primitive."
+      }
     },
     "gl_SampleID": {
       "type": "int",
@@ -828,7 +858,12 @@
       ],
       "aliases": [
         "Sample ID"
-      ]
+      ],
+      "commonName": "Sample Index",
+      "hint": {
+        "zh-Hant": "目前多重取樣樣本的索引。",
+        "en": "Index of the current multisample sample."
+      }
     },
     "gl_SamplePosition": {
       "type": "vec2",
@@ -846,7 +881,12 @@
       ],
       "aliases": [
         "Sample Position"
-      ]
+      ],
+      "commonName": "Sample Position",
+      "hint": {
+        "zh-Hant": "目前樣本在像素內的位置。",
+        "en": "The current sample position within its pixel."
+      }
     },
     "gl_HelperInvocation": {
       "type": "bool",
@@ -864,7 +904,11 @@
       ],
       "aliases": [
         "Helper Invocation"
-      ]
+      ],
+      "hint": {
+        "zh-Hant": "是否為計算導數而執行的輔助片段。",
+        "en": "Whether this is a helper invocation used for derivatives."
+      }
     },
     "TDNormal": {
       "type": "vec3",
@@ -986,7 +1030,13 @@
       },
       "aliases": [
         "Texture Coordinates"
-      ]
+      ],
+      "tdName": "TDTexCoord(layer)",
+      "commonName": "Texture Coordinates",
+      "hint": {
+        "zh-Hant": "指定 UV 層的貼圖座標。",
+        "en": "Texture coordinates from the selected UV layer."
+      }
     },
     "TDBoneMat": {
       "type": "mat4",
@@ -1140,7 +1190,13 @@
       "path": [
         "common",
         "coordinates"
-      ]
+      ],
+      "tdName": "TDPointCoord()",
+      "commonName": "Point Coordinates",
+      "hint": {
+        "zh-Hant": "目前繪製點內部的座標。",
+        "en": "Coordinates within the point being rendered."
+      }
     },
     "uTDGeneral": {
       "type": "TDGeneral",
@@ -1185,7 +1241,13 @@
       "path": [
         "common",
         "output"
-      ]
+      ],
+      "tdName": "uTDGeneral.viewport.xy",
+      "commonName": "Viewport Origin",
+      "hint": {
+        "zh-Hant": "目前 viewport 的起點座標。",
+        "en": "Origin of the current viewport."
+      }
     },
     "Viewport Resolution": {
       "type": "vec2",
@@ -1200,7 +1262,13 @@
       "path": [
         "common",
         "output"
-      ]
+      ],
+      "tdName": "1.0 / uTDGeneral.viewport.zw",
+      "commonName": "Viewport Resolution",
+      "hint": {
+        "zh-Hant": "目前 viewport 的寬、高。",
+        "en": "Width and height of the current viewport."
+      }
     },
     "uTDEnvLights": {
       "type": "TDEnvLight[TD_NUM_ENV_LIGHTS]",
@@ -1386,7 +1454,16 @@
       ],
       "aliases": [
         "Texture Coordinates"
-      ]
+      ],
+      "commonName": "Texture Coordinates",
+      "tdNames": {
+        "top": "vUV.st",
+        "mat": "UV 0"
+      },
+      "hint": {
+        "zh-Hant": "用於貼圖取樣的二維 UV 座標。",
+        "en": "Two-dimensional UV coordinates for texture sampling."
+      }
     },
     "position": {
       "path": [

@@ -83,11 +83,32 @@ function nodeSourceDeclaration(n){
   return null;
 }
 function isSourceReferenceNode(n){return !!(n?.params&&('declarationId' in n.params||'inputId' in n.params||n.definitionUuid==='sgrape.builtin.builtin_source'));}
+let sourceNameMode='td';
+const sourceNamesStorageKey='sgrapeSourceNamesV1';
+function commonSourceLabel(spec,fallback){
+  const native=spec?.tdNames?.[editorTarget]||spec?.tdName||fallback;
+  return sourceNameMode==='common'&&spec?.commonName?spec.commonName:native;
+}
+function commonPresetLabel(key){const entry=typeContract?.sources?.uniformPresets?.[key];return entry?commonSourceLabel(entry,entry.initialize.expression):'';}
+function commonPresetForDeclaration(decl){
+  return decl?.kind==='uniform'?Object.keys(typeContract?.sources?.uniformPresets||{}).find(key=>{const entry=typeContract.sources.uniformPresets[key];return decl.type===entry.type&&(decl.initialDriver===key||decl.name===entry.name);}):null;
+}
+function builtInSourceSpec(d){return d.key==='builtin_source'?typeContract?.composites?.sources?.[d.builtinSource||d.defaults?.source]:typeContract?.sources?.nodeSources?.[d.key];}
+function builtInSourceName(d){
+  const id=d.builtinSource||d.defaults?.source,spec=builtInSourceSpec(d);
+  return spec?.path?.[0]==='common'?commonSourceLabel(spec,id||builtInSourceLabel(d)||d.label):d.label;
+}
+function builtInSourceHint(d){
+  const spec=builtInSourceSpec(d),native=spec?.tdNames?.[editorTarget]||spec?.tdName||d.builtinSource||builtInSourceLabel(d)||d.label;
+  return [spec?.hint?.[language]||spec?.hint?.en,native+' · '+displayType(d.outputs.out)].filter(Boolean).join('\n');
+}
+
 function nodeDisplayName(n){
-  const source=nodeSourceDeclaration(n);if(source)return source.name;
-  if(n.definitionUuid==='sgrape.builtin.builtin_source')return n.params.source;
+  const source=nodeSourceDeclaration(n);if(source)return commonPresetLabel(commonPresetForDeclaration(source))||source.name;
+  if(n.definitionUuid==='sgrape.builtin.builtin_source')return builtInSourceName({...definition(n),builtinSource:n.params.source,label:n.params.source});
   if(n.definitionUuid==='sgrape.builtin.struct_create')return displayType(n.params.type);
-  return customNodeNamesEnabled()&&n?.name?n.name:nodeTypeLabel(definition(n),n?.params);
+  if(customNodeNamesEnabled()&&n?.name)return n.name;
+  const d=definition(n);return typeContract?.sources?.nodeSources?.[d?.key]?.path?.[0]==='common'?builtInSourceName(d):nodeTypeLabel(d,n?.params);
 }
 function nodeCanvasTitle(n){
   return nodeDisplayName(n);
