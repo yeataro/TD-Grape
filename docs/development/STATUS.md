@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.139 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，master revision 87，三份使用者 Shader 保留。TOE 975294 bytes，SHA256 `152b1be92e11b145827daebae4bfcb9b6b4dd98af58c48966f6eedd033228345`。報告 `work/reports/appearance-controls/`。
+
 2026-09-20 外觀入口 0.8.139 DEV：Appearance 從實驗設定搬到深色模式亮度滑桿上方，Light 隱藏並保留選擇；Simple 位於 Professional 前，移除陰影且保留選取／錯誤／焦點外框，Professional 仍為預設。實驗還原不更動 Appearance。AA 面板新增語言入口，與標題列共用切換流程；快捷鍵圖示改為 K 鍵帽。既有外觀 10、觸控 1、實驗設定 20 組瀏覽器檢查，以及入口同步、320／390px、Simple 陰影／節點 DOM 保留檢查通過；中英 locale 與截圖核對通過。同步保存另記。
 
 2026-09-20 0.8.138 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，master revision 86，三份使用者 Shader 保留。TOE 974726 bytes，SHA256 `91123b3cd69b5c1cedfb0b01abe9da852f1101a5d20071d526c943c7b1ab855a`。報告 `work/reports/work/reports/editor-title/`。
