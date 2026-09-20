@@ -467,29 +467,31 @@ function transform(){
   $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;renderGraphZoom();wireGesture?.refresh?.();scheduleSelectionToolbarPosition();}
 function wirePathFromTarget(target){
   const path=target.closest('#wires path');
-  return path?.classList.contains('wire-hit')?path.nextElementSibling:path?.dataset.from?path:null;
+  return path?.classList.contains('wire-hit')?(path.wirePaintPath?.isConnected?path.wirePaintPath:null):path?.dataset.from?path:null;
 }
 function wires(){
-  const svg=$('#wires');svg.replaceChildren();
+  const svg=$('#wires'),hits=document.createDocumentFragment(),paint=document.createDocumentFragment();svg.replaceChildren();
   current().edges.forEach((edge,index)=>{
     const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;
     const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;
     const dx=Math.max(70,Math.abs(q.x-p.x)*.5),ns='http://www.w3.org/2000/svg';
-    const pair=document.createElementNS(ns,'g'),hit=document.createElementNS(ns,'path'),path=document.createElementNS(ns,'path');
+    const hit=document.createElementNS(ns,'path'),path=document.createElementNS(ns,'path');
     path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);
-    hit.setAttribute('d',path.getAttribute('d'));hit.classList.add('wire-hit');hit.setAttribute('aria-hidden','true');
+    hit.setAttribute('d',path.getAttribute('d'));hit.classList.add('wire-hit');hit.setAttribute('aria-hidden','true');hit.wirePaintPath=path;
     path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);
     const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];
     if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}
     if(selectedEdge===index)path.classList.add('selected');
-    // Keep each hit/paint pair in the original edge order and wire layer.
-    pair.onpointerenter=()=>path.classList.add('wire-hover');pair.onpointerleave=()=>path.classList.remove('wire-hover');
     for(const surface of [hit,path]){
+      surface.onpointerenter=()=>path.classList.add('wire-hover');surface.onpointerleave=()=>path.classList.remove('wire-hover');
       surface.onpointerdown=e=>dragExistingWire(path,e,index);
       surface.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};
     }
-    pair.append(hit,path);svg.append(pair);
+    hits.append(hit);paint.append(path);
   });
+  // All visible strokes outrank all transparent hit areas. Preserve edge order
+  // within each layer; both remain above Group bodies and below nodes/controls.
+  svg.append(hits,paint);
   drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();
 }
 function library(){renderLibrary();}

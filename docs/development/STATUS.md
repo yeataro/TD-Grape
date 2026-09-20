@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-21 0.8.159 DEV：依使用者澄清，SVG 先放所有透明命中線，再放所有可見線；保留 0.8.158 的節點與 Group 控制項層級。移除逐條 SVG group，命中路徑直接引用可見路徑。相鄰線的可見部分優先於別條線的透明區；沒有新增 Group 命中特例。命中 9、方向鍵 11、放置 10、Group 13 組瀏覽器檢查與完整 portable checks 通過。使用者確認目前 6 CSS px 選線區操作良好，保留此值。查核 0.8.156：原先整個 Group（含標題列）位於線下，標題與右下角把手是 0.8.158 才提高；已向使用者說明，保留目前層級。報告 reports/wire-layers-159/；交付檢查另記。
+
 2026-09-21 0.8.158 交付檢查點：程式 bac5db9；37 份內嵌來源與 11 份實際 HTTP 資產一致，core 無錯誤，TOP／MAT master revision 105，四份使用者 Shader 保留。TOE 1026134 bytes，SHA256 d5bcdb5af9c29fa26a8f15ed4be04183179cde163142241ccdd3469d08d887b2，私人助手已排除。補上 Group 內可見線仍能 hover，命中區共 8 組檢查通過。報告 work/reports/arrow-navigation-158/ 與 Documents reports/arrow-navigation-158/。未重新載入使用者瀏覽器；右鍵框選放開於 Slider 的已知問題仍為後續筆記。
 
 2026-09-21 0.8.158 DEV：單選節點方向鍵導覽已實作；左右沿接線／原路返回，上下切換上一段分支，不預排序、不循環。新滑鼠選取先左右開始，多選與輸入／選單／手勢不介入；Stage、圖替換及接線失效清理暫存路徑。新增預設關閉的自動 Frame 選項，沿用既有過渡。命中區依使用者實測提高至最小 6 CSS px，補上 Group 標題／角落控制的層級，節點仍優先。臨時放置保留綠色＋32% 黑底，Excellent 及之後加 6px 毛玻璃。方向鍵 11、命中 7、放置 10、設定 20、Group 13、選取／工具列／快捷鍵及數值 32 組回歸，510 Python／772 雙語鍵／完整 portable checks 通過。報告 reports/arrow-navigation-158/；TD 交付另記。

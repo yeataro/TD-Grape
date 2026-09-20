@@ -40,10 +40,19 @@ await page.mouse.move(p.x,p.y+2.4);await page.mouse.down();await page.mouse.move
 assert.equal(await page.evaluate(()=>!!graphTrash),true);await page.keyboard.press('Escape');await page.mouse.up();
 assert.equal(await page.evaluate(()=>current().edges.length),2);await page.evaluate(()=>{EDITOR_DEV_SETTINGS.canvasTrash=false;});
 checks.push('touch selects the expanded target and wire dragging/cancellation still uses the original edge');
-const styles=await page.evaluate(()=>{document.documentElement.dataset.uiStyle='godlike';const hit=$('.wire-hit');return{stroke:getComputedStyle(hit).stroke,filter:getComputedStyle(hit).filter,metadata:hit.hasAttribute('data-from'),pairs:[...$('#wires').children].map(g=>g.children.length)};});
-assert.equal(styles.stroke,'rgba(0, 0, 0, 0)');assert.equal(styles.filter,'none');assert.equal(styles.metadata,false);assert.deepEqual(styles.pairs,[2,2]);
+const styles=await page.evaluate(()=>{document.documentElement.dataset.uiStyle='godlike';const hit=$('.wire-hit');return{stroke:getComputedStyle(hit).stroke,filter:getComputedStyle(hit).filter,metadata:hit.hasAttribute('data-from'),layers:[...$('#wires').children].map(p=>p.classList.contains('wire-hit')?'hit':'paint')};});
+assert.equal(styles.stroke,'rgba(0, 0, 0, 0)');assert.equal(styles.filter,'none');assert.equal(styles.metadata,false);assert.deepEqual(styles.layers,['hit','hit','paint','paint']);
 assert.equal(await page.evaluate(()=>JSON.stringify({graph,past,future,dirty})),before);
 checks.push('hit paths have no Glow, semantic duplicates, graph edits, dirty state or Undo entries');
+// Put the later edge's invisible extension across an earlier visible stroke.
+// The visible stroke must win, independent of the edge insertion order.
+await page.evaluate(()=>{current().nodes.find(n=>n.id==='c').ui.y+=4;selectedEdge=null;selection.clear();suppressWireClick=false;scale=1;pan={x:20,y:100};render();});
+const visiblePoint=await page.locator('#wires path[data-to="b:a"]').evaluate(e=>{const p=e.getPointAtLength(e.getTotalLength()/2),r=$('#world').getBoundingClientRect();return{x:r.left+p.x*r.width,y:r.top+p.y*r.width};});
+await page.mouse.move(visiblePoint.x,visiblePoint.y);assert.equal(await page.evaluate(p=>wirePathFromTarget(document.elementFromPoint(p.x,p.y))?.dataset.to,visiblePoint),'b:a');
+await page.mouse.click(visiblePoint.x,visiblePoint.y);assert.equal(await page.evaluate(()=>selectedEdge),0);
+await page.mouse.click(visiblePoint.x,visiblePoint.y,{button:'right'});await page.locator('#grapheditmenu [data-edit="selectDestination"]').click();assert.deepEqual(await page.evaluate(()=>[...selection]),['b']);
+await page.evaluate(()=>{current().nodes.find(n=>n.id==='c').ui.y-=4;scale=.125;pan={x:30,y:180};render();});
+checks.push('an earlier visible wire wins over a later wire hit area for hover, click and context menu');
 await page.evaluate(()=>{const path=$('#wires path[data-from]'),p=path.getPointAtLength(path.getTotalLength()/2),n=testNode('cover','scalar',p.x-90,p.y-45);current().nodes.push(n);render();});await settle();p=await midpoint();
 assert.equal(await page.evaluate(p=>document.elementFromPoint(p.x,p.y)?.closest('.node')?.dataset.node,p),'cover');
 const port=page.locator('#cards [data-node="a"] .port');const r=await port.boundingBox();assert.equal(await page.evaluate(r=>document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.classList.contains('port'),r),true);
