@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.127 交付檢查點：36 份來源／9 份服務資源一致，TOP／MAT master revision 75，三份使用者 Shader 保留。熱更新曾輸出 Unknown catalog identity；隨後唯讀核對目前 core 無錯誤、新 Buffer 契約及兩份範本產碼均有效，補足證據後同步範本與正式 audit 通過。TOE 951134 bytes，SHA256 `7a80c5fca361a4cf07da39adc8a633a95bd8c1459993e9c6375ed48fba78b633`。報告 `work/reports/texture-buffer/`；未強制刷新使用者網頁。
+
 2026-09-20 Texture Buffer 子功能 0.8.127：CHOP Arrays 的 Texture Buffer 可匯入／建立為 samplerBuffer，使用 Buffer Fetch / Buffer Length；沒有數值預設、CPU 樣本查詢或補位 CHOP。候選編譯保留原生 Expression 與格式，舊數值快照流程排除資源。儲存模式失配保留舊宣告接線並攔截使用中的來源。479 Python、14 附加檢查、JS／整合與 720 雙語鍵通過；Buffer 瀏覽器 3 組、来源卡片 8 組，TD TOP／MAT 8 組（TOP 實讀 0.375 與長度 8）通過，既有 Shader 保留。第三輪仍有 POP Buffer、顯式採用儲存模式及分類整理；不代表五輪來源工作完成。同步與 TOE 保存另記。
 
 2026-09-20 0.8.126 交付檢查點：來源 refresh、TOP／MAT master 同步與唯讀 audit 成功，36 份嵌入來源、9 個主要資源與版本一致；master revision 74，三份使用者 Shader 保留。TOE 948750 bytes，SHA256 `36ffc39882b8cec6450142e4fa365f297ed479a09f02a427ec9483d48d732352`。報告 `work/reports/source-cards/`；未強制刷新使用者網頁。
