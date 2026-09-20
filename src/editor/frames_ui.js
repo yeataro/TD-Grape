@@ -264,7 +264,11 @@ function renderGroupFrames(){
     heading.ondblclick=e=>{e.preventDefault();e.stopPropagation();if(current()===data)beginGroupFrameRename(frame);};
     heading.onclick=e=>e.stopPropagation();heading.oncontextmenu=e=>e.stopPropagation();
     heading.onkeydown=e=>{if(e.target===heading&&e.key.toLowerCase()==='g'&&(e.ctrlKey||e.metaKey||e.altKey))return;e.stopPropagation();if(e.target!==heading)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();selectGroupFrame(frame);}if(e.key==='F2'){e.preventDefault();beginGroupFrameRename(frame);}};
-    heading.append(name,color,rename,remove);card.append(heading);layer.append(card);
+    const corner=el('button',{type:'button',class:'group-select-handle','data-frame-select':frame.id,'aria-label':t('frame.selectMembers'),title:t('frame.selectMembers')});
+    corner.onpointerdown=corner.ondblclick=corner.oncontextmenu=e=>e.stopPropagation();
+    corner.onkeydown=e=>e.stopPropagation();
+    corner.onclick=e=>{e.stopPropagation();if(current()===data&&EDITOR_DEV_SETTINGS.groupCornerSelect)selectGroupFrame(frame);};
+    heading.append(name,color,rename,remove);card.append(heading,corner);layer.append(card);
   }
   positionGroupFrames();
 }

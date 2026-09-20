@@ -232,6 +232,7 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
     if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;
   }
   const n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
+  if(d.key==='comment')n.ui.noteTitleOnSelection=true;
   normalizeNodeValues(n,d);
   if(d.revisionHash)n.revisionHash=d.revisionHash;current().nodes.push(n);assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
 }

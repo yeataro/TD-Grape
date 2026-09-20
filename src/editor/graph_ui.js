@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333 });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333 });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1284,6 +1284,17 @@ function nodeCanvasComment(n){
 }
 function noteFontScale(node){return Math.max(1,Math.min(10,Number.isFinite(node.ui?.noteFontScale)?node.ui.noteFontScale:1));}
 function noteTextAlign(node){return ['center','right'].includes(node.ui?.noteTextAlign)?node.ui.noteTextAlign:'left';}
+function applyNoteColorContrast(card){
+  if(!card.classList.contains('note-colored')||card.dataset.noteTransparent==='true'){card.style.removeProperty('--note-ink');return;}
+  const color=getComputedStyle(card).backgroundColor,srgb=color.match(/^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/),rgb=color.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/);
+  const channels=srgb?srgb.slice(1).map(Number):rgb?rgb.slice(1).map(n=>Number(n)/255):null;if(!channels)return;
+  const luminance=values=>values.map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0),background=luminance(channels);
+  const choices=[[25,25,32],[229,228,237]],contrast=values=>{const ink=luminance(values.map(v=>v/255));return (Math.max(background,ink)+.05)/(Math.min(background,ink)+.05);};
+  let ink=contrast(choices[0])>contrast(choices[1])?choices[0]:choices[1];
+  // Mid-tone backgrounds can fall between both normal ink colors; keep body text readable there too.
+  if(contrast(ink)<4.5)ink=contrast([0,0,0])>contrast([255,255,255])?[0,0,0]:[255,255,255];
+  card.style.setProperty('--note-ink',`rgb(${ink.join(',')})`);
+}
 function setNoteTitleOnSelection(node,enabled,owner=current()){
   if(editorMutationBlocked()||current()!==owner||!owner.nodes.includes(node))return false;
   return change(()=>{node.ui||={};if(enabled)node.ui.noteTitleOnSelection=true;else delete node.ui.noteTitleOnSelection;},{localize:false});
@@ -1313,7 +1324,8 @@ function nodeHeightLimits(card){
   const preview=card.querySelector('.comment-node-preview');
   if(preview&&!card.classList.contains('collapsed')){
     // Reserve one actual reading line, not an H1-sized estimate for all text.
-    // The title keeps its layout space even when hidden; stored sizes stay intact.
+    // The selected header fits inside the same stored bounds; hiding it frees body space.
+    const titleHeight=card.querySelector('.node-title').offsetHeight;card.style.setProperty('--note-title-height',titleHeight+'px');
     if(!preview.hidden||!card.dataset.noteMinimumHeight){
       const body=preview.parentElement,first=preview.querySelector('p,h1,h2,h3,h4,h5,h6,pre,li')||preview;
       const style=getComputedStyle(first),sum=(element,properties)=>{const css=getComputedStyle(element);return properties.reduce((total,key)=>total+(parseFloat(css[key])||0),0);};
@@ -1321,7 +1333,7 @@ function nodeHeightLimits(card){
       const scrollbar=element=>Math.max(0,element.offsetHeight-element.clientHeight-sum(element,borders));
       const line=parseFloat(style.lineHeight)||parseFloat(style.fontSize)*1.5;
       const block=first===preview?0:sum(first,[...padding,...borders,'marginTop'])+scrollbar(first);
-      const minimum=Math.ceil(sum(card,borders)+card.querySelector('.node-title').offsetHeight+sum(body,['marginTop','marginBottom'])+sum(preview,[...padding,...borders])+line+block+scrollbar(preview));
+      const minimum=Math.ceil(sum(card,borders)+titleHeight+sum(body,['marginTop','marginBottom'])+sum(preview,[...padding,...borders])+line+block+scrollbar(preview));
       card.dataset.noteMinimumHeight=String(minimum);card.style.setProperty('--node-min-height',minimum+'px');
     }
   }
@@ -1411,6 +1423,7 @@ function applyGraphUISettings(){
   document.documentElement.classList.toggle('rgba-component-tint',EDITOR_DEV_SETTINGS.rgbaComponentTint);
   document.documentElement.classList.toggle('vector-component-tint',EDITOR_DEV_SETTINGS.vectorComponentTint);
   document.documentElement.classList.toggle('node-resize-hints',EDITOR_DEV_SETTINGS.nodeResizeHint);
+  document.documentElement.classList.toggle('group-corner-select',EDITOR_DEV_SETTINGS.groupCornerSelect);
   document.documentElement.style.setProperty('--node-drag-cursor',EDITOR_DEV_SETTINGS.nodeDragCursor);
 }
 function renderCards({only=null}={}){
@@ -1494,7 +1507,7 @@ function renderCards({only=null}={}){
     else if(nodeComment(n))card.append(nodeCanvasComment(n));
     }
     card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};
-    card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};const previous=only&&cards.querySelector('[data-node="'+n.id+'"]');if(previous)previous.replaceWith(card);else cards.append(card);appendNodeResizeHandle(card,n);
+    card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};const previous=only&&cards.querySelector('[data-node="'+n.id+'"]');if(previous)previous.replaceWith(card);else cards.append(card);appendNodeResizeHandle(card,n);if(d?.key==='comment')applyNoteColorContrast(card);
   }
 }
 /* Node Browser: one definition index, multiple views, global search. */

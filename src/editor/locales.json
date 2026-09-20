@@ -217,6 +217,8 @@
     "experiments.cursor.default": {"zh-Hant": "一般箭頭", "en": "Arrow"},
     "experiments.cursor.move": {"zh-Hant": "移動", "en": "Move"},
     "experiments.nodeResizeHint": {"zh-Hant": "節點調寬提示", "en": "Node resize hint"},
+    "experiments.groupCornerSelect": {"zh-Hant": "群組角落選取把手", "en": "Group corner selection handle"},
+    "experiments.groupCornerSelect.hint": {"zh-Hant": "在群組框右下角顯示圓角把手；點擊可選取群組內全部節點，與標題列的選取行為相同。", "en": "Show a curved handle at the lower-right corner of a group frame. Click to select all members, just like selecting the title."},
     "experiments.nodeResizeHint.hint": {"zh-Hant": "顯示右下角圓弧；關閉後仍可拖曳調寬。", "en": "Show the lower-right arc. Resizing remains available when hidden."},
     "experiments.nodeCollapseExpandedHint": {"zh-Hant": "展開時顯示收合三角形", "en": "Triangle on expanded nodes"},
     "experiments.nodeCollapseExpandedHint.hint": {"zh-Hant": "在展開節點的名稱左側顯示三角形。", "en": "Show a collapse triangle beside an expanded node name."},
@@ -3094,6 +3096,7 @@
     "frame.create": {"zh-Hant": "建立群組框", "en": "Create group frame"},
     "frame.unframedOnly": {"zh-Hant": "選取至少兩個尚未分組的節點", "en": "Select at least two ungrouped nodes"},
     "frame.name": {"zh-Hant": "群組框名稱", "en": "Group frame name"},
+    "frame.selectMembers": {"zh-Hant": "選取群組內全部節點", "en": "Select all nodes in this group"},
     "frame.rename": {"zh-Hant": "重新命名群組框 · F2（或雙擊標題）", "en": "Rename group frame · F2 (or double-click title)"},
     "frame.remove": {"zh-Hant": "移除群組框（保留節點）", "en": "Remove group frame (keep nodes)"},
     "frame.color": {"zh-Hant": "群組框顏色", "en": "Group frame color"},
@@ -3137,8 +3140,8 @@
       "en": "Show title only when selected"
     },
     "note.titleOnSelection.hint": {
-      "zh-Hant": "未選取時隱藏標題；選取後在原位顯示，筆記大小與內文位置均不改變。",
-      "en": "Hide the title when unselected and show it in its original position when selected, without moving the text or resizing the note."
+      "zh-Hant": "未選取時不預留標題空間；選取後在筆記內顯示標題，外框大小不變。",
+      "en": "Use the full note body when unselected. Show the title inside the note on selection without changing its outer bounds."
     },
     "note.transparent": {
       "zh-Hant": "透明背景",

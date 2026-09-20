@@ -774,7 +774,7 @@ const experimentChoices={
 };
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
-  ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
+  ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
   ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
@@ -922,7 +922,7 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
   const dampingChanged=['canvasDamping','canvasDampingMs','frameDamping','frameDampingMs'].some(key=>next[key]!==EDITOR_DEV_SETTINGS[key]);
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){
@@ -1054,6 +1054,7 @@ function renderUIAppearance(){
   $('#uistylerow').hidden=theme!=='dark';
   root.style.setProperty('--ui-scale',uiScaleFactor());
   applyUITone(theme,tone);
+  document.querySelectorAll('#cards .node[data-category="annotation"]').forEach(applyNoteColorContrast);
   for(const [id,key,value]of [['uisize','size',size],['uitheme','theme',theme]]){
     const button=$('#'+id);if(!button)continue;
     const label=t('appearance.'+key+'.'+value);

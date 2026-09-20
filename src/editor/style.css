@@ -689,15 +689,13 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .note-title-actions>button:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
 .note-color-button>span{display:block;width:14px;height:14px;border-radius:50%;background:var(--note-default-bg);box-shadow:inset 0 0 0 1px #ffffff30}
 .note-color-button>.note-transparent-swatch,.note-setting-color-swatch.note-transparent-swatch,.group-frame-palette .note-color-transparent>span{background:conic-gradient(#a5a5ab 25%,#56565f 0 50%,#a5a5ab 0 75%,#56565f 0);background-size:8px 8px}
-/* Keep the original title in layout. Only paint the remaining body when hidden. */
-.node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected){visibility:hidden;pointer-events:none}
+/* Selection-only Note titles share the existing card bounds, without a hidden row. */
+.node[data-note-title-on-selection="true"]:not(.collapsed)>.node-title{position:absolute;left:0;right:0;top:0;z-index:1;visibility:hidden;pointer-events:none}
+.node[data-note-title-on-selection="true"]:not(.collapsed).selected>.node-title{visibility:visible;pointer-events:auto}
+.node[data-note-title-on-selection="true"]:not(.collapsed).selected>.comment-node-canvas-content{padding-top:var(--note-title-height,41px)}
 .node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected) .note-title-actions{visibility:hidden}
-.node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected)>.comment-node-canvas-content{position:relative;isolation:isolate;visibility:visible;pointer-events:auto}
-:where(.node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected))>.comment-node-canvas-content::before{content:'';position:absolute;inset:calc(0px - var(--note-inset)) calc(-1px - var(--note-inset)) calc(-1px - var(--note-inset));z-index:-1;pointer-events:auto;background:var(--note-body-bg);border:1px solid var(--node-border,var(--ui-tone-node-border));border-radius:var(--node-radius);box-shadow:var(--cool-note-shadow,var(--note-body-shadow))}
-.node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected):hover>.node-resize-handle{visibility:visible;pointer-events:auto}
-.node[data-note-title-on-selection="true"][data-note-transparent="true"]>.comment-node-canvas-content::before{border-color:transparent;box-shadow:none}
-.node[data-note-title-on-selection="true"][data-note-transparent="true"]:hover>.comment-node-canvas-content::before{border-color:var(--node-border,var(--ui-tone-node-border))}
-:root #canvas .node[data-category="annotation"].note-colored{--note-body-bg:color-mix(in srgb,var(--note-color) 24%,var(--node-body,var(--ui-tone-node)));background:var(--note-body-bg)}
+:root #canvas .node[data-category="annotation"].note-colored{--note-body-bg:color-mix(in srgb,var(--note-color) 55%,var(--node-body,var(--ui-tone-node)));background:var(--note-body-bg)}
+.node.note-colored:not([data-note-transparent="true"])>.comment-node-canvas-content>.comment-node-preview{color:var(--note-ink,var(--ui-text,var(--ui-tone-text)))}
 :root #canvas .node[data-category="annotation"][data-note-transparent="true"]{--note-body-bg:transparent;background:transparent;border-color:transparent}
 :root #canvas .node[data-category="annotation"][data-note-transparent="true"]:hover{border-color:var(--ui-tone-node-border)}
 :root #canvas .node[data-category="annotation"][data-note-transparent="true"].selected{border-color:var(--selection)}
@@ -1523,14 +1521,17 @@ footer .footer-preferences svg[hidden]{display:none}
 .collapsed-wire-anchor{position:absolute;top:0;width:11px;height:11px;transform:translateY(-50%);visibility:hidden;pointer-events:none}
 .input .collapsed-wire-anchor{left:-6px}
 .output .collapsed-wire-anchor{right:-6px}
-.node>.node-resize-handle{--resize-hit-offset:1px;position:absolute;right:var(--resize-hit-offset);bottom:var(--resize-hit-offset);width:15px;height:15px;min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--muted);cursor:ew-resize;touch-action:none;opacity:.28}
+:is(.node>.node-resize-handle,.group-frame>.group-select-handle){--resize-hit-offset:1px;position:absolute;right:var(--resize-hit-offset);bottom:var(--resize-hit-offset);width:15px;height:15px;min-width:0;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--muted);cursor:ew-resize;touch-action:none;opacity:.28}
 /* The hint sits 3px inside the outer border: subtract the 1px node border and handle offset. */
-.node>.node-resize-handle::after{content:none;position:absolute;right:calc(2px - var(--resize-hit-offset));bottom:calc(2px - var(--resize-hit-offset));width:calc(var(--node-radius) - 3px);height:calc(var(--node-radius) - 3px);border-right:1px solid currentColor;border-bottom:1px solid currentColor;border-bottom-right-radius:100%;pointer-events:none}
-.node-resize-hints .node>.node-resize-handle::after{content:''}
+:is(.node>.node-resize-handle,.group-frame>.group-select-handle)::after{content:none;position:absolute;right:calc(2px - var(--resize-hit-offset));bottom:calc(2px - var(--resize-hit-offset));width:calc(var(--node-radius) - 3px);height:calc(var(--node-radius) - 3px);border-right:1px solid currentColor;border-bottom:1px solid currentColor;border-bottom-right-radius:100%;pointer-events:none}
+.node-resize-hints .node>.node-resize-handle::after,.group-frame>.group-select-handle::after{content:''}
+.group-frame>.group-select-handle{display:none;cursor:pointer;pointer-events:auto}
+.group-corner-select .group-frame>.group-select-handle{display:block}
+.group-frame:hover>.group-select-handle,.group-frame.selected>.group-select-handle,.group-frame>.group-select-handle:focus-visible{opacity:.75}
 .node:hover>.node-resize-handle,.node.selected>.node-resize-handle,.node>.node-resize-handle:focus-visible{opacity:.75}
-.node>.node-resize-handle:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
+:is(.node>.node-resize-handle,.group-frame>.group-select-handle):focus-visible{outline:1px solid var(--purple);outline-offset:1px}
 .node[data-category="annotation"]>.node-resize-handle{cursor:nwse-resize}
-@media(pointer:coarse){.node>.node-resize-handle{--resize-hit-offset:-7px;width:24px;height:24px}}
+@media(pointer:coarse){.node>.node-resize-handle{--resize-hit-offset:-7px;width:24px;height:24px}.group-frame>.group-select-handle{width:24px;height:24px}}
 
 /* Numeric fields preview a clamped 0–1 proportion; the value itself stays unrestricted. */
 :root{--numeric-slider-fill:#c4c0df24}
