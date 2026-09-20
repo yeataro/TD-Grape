@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.134 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，TOP／MAT master revision 82；三份使用者 Shader 保留。TOE 973014 bytes，SHA256 `762f567e36df5e1ba4e52d678c55d94e96a2dfc6511e529ddb7ec9104a52abfa`。報告 `work/reports/glow-review/`。
+
 2026-09-20 光暈審查 0.8.134 DEV：Excellent 以上的選取節點以選取色覆蓋類別光暈；既有錯誤提示及正常深度陰影保留。Cool 限接線與選取框，移除 Apply／Logo 發光，未加入零強度濾鏡或過渡。瀏覽器 computed style 及截圖核對通過；介面提示同步移除過時的一秒過渡敘述。UI 亮度／glow 分離仍只記錄。
 
 2026-09-20 0.8.133 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，TOP／MAT master revision 81；三份使用者 Shader 保留。TOE 973014 bytes，SHA256 `f20b78ee0c477b337f33ef89d76820d8d1d2e9bb81af81ccaee98998bb3c990d`。熱更新時一個既有 HTTP 回應遇到 json 模組重載時間窗，完成後唯讀 audit 正常，HTTP 無 Shader context 請求返回預期 JSON 錯誤。報告 `work/reports/source-colors/`。
