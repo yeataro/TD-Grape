@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.135 DEV 交付檢查點：未引用 Color 原生 TOP／MAT 6 組回歸通過；37 份嵌入來源與 10 份服務資產一致，master revision 83，三份使用者 Shader 保留。TOE 973110 bytes，SHA256 `f767d8d0f41f0bbd1f768c6a84fbea2d065d07481b00cdc3328d542604be0471`。報告 `work/reports/color-picker-blur/`。
+
 2026-09-20 Colors 調色盤 0.8.135 DEV：修正原生調色盤 blur 先於 change 時，舊 TD 值覆蓋待提交顏色的競態。開啟時擷取驗證快照、input／blur／同步期間保留，change 後清除；取消後重開重新讀取 TD。未引用來源、blur／polling、取消重開、Alpha／圖內容保留及 Expression／Bind 共 5 組瀏覽器檢查通過。原生來源寫入 API 不變；尚未斷言使用者當時只有此一成因。
 
 2026-09-20 0.8.134 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，TOP／MAT master revision 82；三份使用者 Shader 保留。TOE 973014 bytes，SHA256 `762f567e36df5e1ba4e52d678c55d94e96a2dfc6511e529ddb7ec9104a52abfa`。報告 `work/reports/glow-review/`。
