@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.138 DEV 交付檢查點：37 份嵌入來源與 10 份服務資產一致，master revision 86，三份使用者 Shader 保留。TOE 974726 bytes，SHA256 `91123b3cd69b5c1cedfb0b01abe9da852f1101a5d20071d526c943c7b1ab855a`。報告 `work/reports/work/reports/editor-title/`。
+
 2026-09-20 頁面 Title 0.8.138 DEV：App 模式／分頁標題為 TD-Grape · 工程檔名 · OP 路徑，沿用既有載入／來源選擇清單／30 秒工程資訊刷新，不新增輪詢。工程改名、OP 改名、斷線保留最後身份的瀏覽器驗證通過；版號仍留頁面版本與 About。
 
 2026-09-20 0.8.137 DEV 交付檢查點：37 份嵌入來源與 10 份服务資產一致，master revision 85，三份使用者 Shader 保留。TOE 974334 bytes，SHA256 `f1d0816d04d886c2c74bb66166115be424498b084e4fcf147e0284e8f70df68f`。報告 `work/reports/source-references/`。
