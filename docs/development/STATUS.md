@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.132 DEV 交付檢查點：37 份嵌入來源、10 份服務資產一致，TOP／MAT master revision 80，三份使用者 Shader 保留。TOE 970910 bytes，SHA256 `e7e8b04d695eec6445e5e23d4ef2d2e9ce8a7539c6b96ba11bdd36775869c546`。報告 `work/reports/structures/`，未強制刷新使用者網頁。
+
 2026-09-20 結構作者能力 0.8.132 DEV：完成來源第五輪，左側結構卡片、彈出編輯、巢狀結構／陣列欄位、完整／欄位輸出、使用處與循環檢查。欄位 ID 和接線保留，失效修改不更新已套用 Shader；備註／名稱不改 GLSL，無關畫布節點 DOM 保留。動態接口匯入檢查補齊。499 Python、14 附加及 portable checks；新結構瀏覽器 5 組，面板 7、來源卡片 8、分類 3 組回歸；原生 TOP／MAT 7 組通過，三份使用者 Shader 保留。同步與 TOE 保存另記；Colors／數量標籤／Add 按鈕接續使用者新回饋。
 
 2026-09-20 0.8.131 DEV 交付檢查點：版號加 DEV，視窗標題原樣保留。36 份嵌入來源、9 份服務資產一致，TOP／MAT master revision 79；三份使用者 Shader 保留。TOE 963886 bytes，SHA256 `d43c486c3b5acb637e70dbe3c7f2015055783dc770dd9d887855b61c02059549`。報告 `work/reports/source-catalog/`。
