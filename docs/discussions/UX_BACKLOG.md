@@ -269,3 +269,5 @@ Frame 過渡預設 333 ms；Home 永遠立即顯示整圖，以工作效率為�
 使用者指出 `float sg_n_na6621b4e852c = uValue;`、`float sg_n_na8634ad03e48 = uAbsTime;` 難以辨識來源。希望評估直接引用 Uniform；若中間變數有必要，名稱應包含 Uniform 名稱，長一點可以接受。不要假定每次傳遞都有必要，也不要為此取消必要的型別轉換。
 
 現況核對：`sgrape_core.py` 的 Uniform emitter 先回傳宣告名稱，再由一般節點的輸出規則建立數值暫存變數；opaque resource、constant、builtin 及 compound Uniform 已有直接引用分支。`node_output_symbols()` 優先用 scoped symbol／節點 name，沒有才回退節點 ID；重名另補穩定雜湊。因此 ID 並不是經過 relay 或轉型的證據。使用者給的純 Uniform 讀取範例可直接引用；後續實作前需核對重名、Subgraph、註解及編譯錯誤定位，不能把直接引用推廣成所有運算都內嵌。此筆與來源五輪主線分開，本次只記錄，不修改數值 Uniform 的產碼規則。
+
+補充共識：同一 Shader 的 Uniform 宣告名稱本來就必須唯一，產碼優先使用來源實體自己的 Uniform 名稱，不需另外建立一份自訂名稱來描述同一來源。多個引用節點可共用這個識別；只有選擇保留各引用的中間變數時，才需要處理這些區域變數間的重名。此筆不表示自動覆寫既有節點自訂名稱。
