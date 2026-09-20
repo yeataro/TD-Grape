@@ -1990,6 +1990,19 @@ async function nativeSourceAction(action,decl){
   if(sourceReferences(decl.id).length!==count){status(t('live.changed'),true);return;}
   return nativeSourceRequest('source-edit',{action,id:decl.id,expected:action==='adoptFormat'?live.formatChange?.expected:expected});
 }
+async function localSourceAction(action,decl){
+  if(!['remove','restore'].includes(action)||editorMutationBlocked()||!graph.declarations.includes(decl))return;
+  const load=editorLoadGeneration,count=sourceReferences(decl.id).length;
+  if(action==='remove'&&!await confirmOverlay({title:t('sources.remove'),message:t(count?'sources.removeConfirm':'sources.removeUnusedConfirm').replace('{name}',decl.name).replace('{count}',count),confirmLabel:t('sources.remove')}))return;
+  if(load!==editorLoadGeneration||editorMutationBlocked()||!graph.declarations.includes(decl))return;
+  const native=nativeSourceIndex().get(decl.id);
+  if(sourceReferences(decl.id).length!==count||native&&!native.pending){status(t('live.changed'),true);return;}
+  return changeDeclaration(()=>{
+    if(action==='restore')delete decl.sourceMissing;
+    else if(count)decl.sourceMissing=true;
+    else {graph.declarations=graph.declarations.filter(d=>d!==decl);if(selectedInputId===decl.id)selectedInputId=null;}
+  });
+}
 let nativeSourceHint='';
 function nativeSourceHintText(){
   return nativeSourceError||(!nativeSourceSnapshot?.enabled?t('sources.enable'):sourceGraphPending()||nativeSourceSnapshot.revision!==revision?t('sources.nativePending'):(nativeSourceSnapshot.issues||[]).map(i=>i.message).join(' '));
@@ -2394,11 +2407,11 @@ function inputSourceInspector(box,decl){
   else {
     if(decl.sourceMissing){
       const restore=el('button',{class:'wide danger','data-input-restore':decl.id},t('sources.restore'));
-      restore.onclick=()=>changeDeclaration(()=>delete decl.sourceMissing);box.append(restore);
+      restore.onclick=()=>localSourceAction('restore',decl);box.append(restore);
     }
     if(!decl.sourceMissing||!sourceReferences(decl.id).length){
       const remove=el('button',{class:'wide danger','data-input-remove':decl.id},t('sources.remove'));
-      remove.onclick=()=>changeDeclaration(()=>{if(sourceReferences(decl.id).length)decl.sourceMissing=true;else {graph.declarations=graph.declarations.filter(d=>d.id!==decl.id);selectedInputId=null;}});box.append(remove);
+      remove.onclick=()=>localSourceAction('remove',decl);box.append(remove);
     }
   }
   sourceLocations(box,decl.id);
@@ -2539,6 +2552,11 @@ function openSourceCardMenu(card,id,preset,event,builtin=null){
     if(row.missing&&!row.formatChange)add(t('sources.restore'),()=>nativeSourceAction('restore',decl),!sourceReady());
     if(!row.missing||!sourceReferences(id).length)add(t('sources.remove'),()=>nativeSourceAction('remove',decl),!sourceReady());
   }
+  if(decl?.kind==='constant'){
+    menu.append(el('div',{class:'popup-separator',role:'separator'}));
+    if(decl.sourceMissing)add(t('sources.restore'),()=>localSourceAction('restore',decl),editorMutationBlocked());
+    if(!decl.sourceMissing||!sourceReferences(id).length)add(t('sources.remove'),()=>localSourceAction('remove',decl),editorMutationBlocked());
+  }
   menu.onkeydown=e=>{const items=[...menu.querySelectorAll('button:not(:disabled)')],i=items.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();items[e.key==='Home'?0:e.key==='End'?items.length-1:(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();}};
   menu.addEventListener('toggle',e=>{if(e.newState==='closed'){menu.remove();if(menu.returnToCard!==false&&card.isConnected)card.querySelector('.source-card-menu-button')?.focus({preventScroll:true});}});
   document.body.append(menu);menu.showPopover();const rect=card.getBoundingClientRect(),z=uiScaleFactor(),x=event?.type==='contextmenu'?event.clientX:rect.right,y=event?.type==='contextmenu'?event.clientY:rect.top;
@@ -2570,7 +2588,6 @@ function sourceCard(decl,preset,issue,row,conflict=false){
       if(decl&&row&&!row.pending&&!row.missing&&!isResourceType(decl.type)&&!isMatrixType(decl.type)&&typeDescriptor(decl.type)?.shape!=='array'&&['uniform','spec_constant'].includes(decl.kind)){
         body.dataset.nativeSource=id;body.append(nativeValueControls(decl,row));
       }else if(dormant)body.append(el('p',{class:'source-card-meta'},t('sources.presetDormant')));
-      else if(decl)body.append(el('p',{class:'source-card-meta'},t('inputs.editReference')));
       if(decl){
         const definition=catalog.find(d=>d.key===decl.kind);
         if(definition){
