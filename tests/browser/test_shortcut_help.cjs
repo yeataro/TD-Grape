@@ -51,9 +51,22 @@ async function run(){
     await page.selectOption('#language','zh-Hant');await open();assert.equal(await page.locator('#shortcutstitle').innerText(),'快捷鍵');assert.match(await page.locator('#graphcopy').getAttribute('title'),/Ctrl＋C$/);
     assert.equal(await page.locator('[data-shortcut="autoArrange"] dt').innerText(),'自動排列：由來源');assert.equal(await page.locator('[data-shortcut="autoArrange"] kbd').innerText(),'L');
     assert.equal(await page.locator('[data-shortcut="autoArrangeReverse"] dt').innerText(),'自動排列：由結果');assert.deepEqual(await page.locator('[data-shortcut="autoArrangeReverse"] kbd').allTextContents(),['Shift','L']);
-    await close();await page.evaluate(()=>{Object.defineProperty(navigator,'platform',{configurable:true,value:'MacIntel'});renderShortcutHelp();});
+    await close();await page.evaluate(()=>{Object.defineProperty(navigator,'userAgentData',{configurable:true,value:undefined});Object.defineProperty(navigator,'platform',{configurable:true,value:'MacIntel'});translatePage();});
     assert.match(await page.locator('#graphcopy').getAttribute('title'),/Cmd＋C$/);await open();assert.ok((await page.locator('[data-shortcut="copy"] dd').innerText()).includes('Cmd'));
-    await close();await page.evaluate(()=>{delete navigator.platform;renderShortcutHelp();});checks.push('dialog and tooltip labels translate, with Mac Cmd hints derived from the same action metadata');
+    for(const action of ['selectLinked','selectUpstream','selectDownstream','selectUnlinked','focusGraph'])assert.equal(await page.locator(`[data-shortcut="${action}"] kbd`).first().innerText(),'Cmd');
+    assert.doesNotMatch(await page.locator('#shortcutshint').innerText(),/Mac|Cmd|Ctrl/);
+    assert.match(await page.locator('[data-experiment="ctrlArrowAdjacent"]').locator('..').innerText(),/Cmd/);
+    assert.match(await page.evaluate(()=>t('comment.hint')),/Cmd/);assert.doesNotMatch(await page.evaluate(()=>t('code.hint')),/Ctrl|⌘/);
+    await close();const platforms=await page.evaluate(()=>{
+      const samples=[['macOS','Win32','', 'Cmd'],['Windows','MacIntel','', 'Ctrl'],[null,'Linux x86_64','', 'Ctrl'],[null,'iPad','', 'Cmd'],[null,'','Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/605.1.15 Safari/605.1.15','Cmd'],[null,'','','Ctrl']];
+      return samples.map(([data,platform,agent,expected])=>{
+        Object.defineProperty(navigator,'userAgentData',{configurable:true,value:data?{platform:data}:undefined});Object.defineProperty(navigator,'platform',{configurable:true,value:platform});Object.defineProperty(navigator,'userAgent',{configurable:true,value:agent});
+        return {actual:shortcutModifierLabel(),expected};
+      });
+    });for(const result of platforms)assert.equal(result.actual,result.expected);
+    await page.evaluate(()=>{delete navigator.userAgentData;delete navigator.platform;delete navigator.userAgent;translatePage();});
+    assert.match(await page.locator('#graphcopy').getAttribute('title'),/Ctrl＋C$/);
+    checks.push('OS-derived modifier labels cover client hints plus Safari-style platform/UA fallbacks; commands, experimental labels and text hints agree, without a Mac exception paragraph');
 
     await page.evaluate(()=>{selection=new Set(current().nodes.slice(0,2).map(n=>n.id));selected=[...selection].at(-1);selectedEdge=null;readonly=false;historyBusy=false;nativeMutationBusy=false;render();});
     for(const[language,labels]of [['en',['Auto arrange: from sources','Auto arrange: from outputs']],['zh-Hant',['自動排列：由來源','自動排列：由結果']]]){

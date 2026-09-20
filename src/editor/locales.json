@@ -189,6 +189,21 @@
     "experiments.canvasDampingMs": {"zh-Hant": "阻尼時間（ms）", "en": "Damping time (ms)"},
     "experiments.canvasDampingMs.hint": {"zh-Hant": "10–1000 ms，預設 150 ms。停止輸入後，在設定時間內抵達目標並停止動畫迴圈。可拖曳或直接輸入數字。", "en": "10–1000 ms; default 150 ms. Reaches the target and stops animating within this time after the last input. Drag or type a value."},
     "experiments.arrowNavigationFrame": {"zh-Hant": "方向鍵導覽自動置中", "en": "Frame on arrow navigation"},
+    "experiments.arrowNavigationMode": {"zh-Hant": "方向鍵導覽方式（試用）", "en": "Arrow navigation mode (trial)"},
+    "experiments.arrowNavigationMode.hint": {"zh-Hant": "原版沿記憶路徑；雙向分支在返回後仍可切換剛經過節點的分支；依畫面位置則按方向選取鄰近節點。只影響單選時的方向鍵。", "en": "Original follows the remembered path; bidirectional keeps branch context after returning; spatial chooses nearby nodes in the pressed direction. Applies only to plain arrows with one node selected."},
+    "experiments.navigation.legacy": {"zh-Hant": "原版路徑", "en": "Original path"},
+    "experiments.navigation.branches": {"zh-Hant": "雙向分支", "en": "Bidirectional branches"},
+    "experiments.navigation.spatial": {"zh-Hant": "依畫面位置", "en": "Spatial neighbors"},
+    "navigation.arrowHorizontalSpatial": {"zh-Hant": "依位置選取左／右方節點（單選）", "en": "Select a node to the left / right (single selection)"},
+    "navigation.arrowVerticalSpatial": {"zh-Hant": "依位置選取上／下方節點（單選）", "en": "Select a node above / below (single selection)"},
+    "selection.linked": {"zh-Hant": "選取全部相連節點（包含起點）", "en": "Select all connected nodes (including starting nodes)"},
+    "selection.upstream": {"zh-Hant": "選取全部上游（包含起點）", "en": "Select all upstream nodes (including starting nodes)"},
+    "selection.downstream": {"zh-Hant": "選取全部下游（包含起點）", "en": "Select all downstream nodes (including starting nodes)"},
+    "selection.unlinked": {"zh-Hant": "選取全部不相連節點", "en": "Select all unconnected nodes"},
+    "selection.upstreamAdjacent": {"zh-Hant": "改選直接相連的全部上游", "en": "Select all immediate upstream nodes"},
+    "selection.downstreamAdjacent": {"zh-Hant": "改選直接相連的全部下游", "en": "Select all immediate downstream nodes"},
+    "experiments.ctrlArrowAdjacent": {"zh-Hant": "{modifier}＋左右只選下一階", "en": "{modifier} + Left/Right: one step only"},
+    "experiments.ctrlArrowAdjacent.hint": {"zh-Hant": "每按一次改選直接相連的全部上游／下游；沒有下一階時保留選取。關閉則選取所有上游／下游（包含起點）。{modifier}＋上下仍選全部相連／不相連節點。", "en": "Replace selection with immediate upstream/downstream neighbors per press; keep selection at endpoints. Off selects all ancestors/descendants including starting nodes. {modifier} + Up/Down still selects all connected/unconnected nodes."},
     "experiments.arrowNavigationFrame.hint": {"zh-Hant": "方向鍵選到新節點時自動置中，沿用 Frame 過渡設定；預設關閉。", "en": "Frame each new node selected with arrow keys, using the Frame transition setting. Off by default."},
     "navigation.arrowPath": {"zh-Hant": "沿接線導覽／循原路返回（單選）", "en": "Follow connections / retrace path (single selection)"},
     "navigation.arrowBranch": {"zh-Hant": "切換上一步的分支（先用左右開始）", "en": "Switch branches of the last step (start with Left/Right)"},
@@ -752,8 +767,8 @@
       "en": "Drag a wire to a socket or empty space to create"
     },
     "hint.move": {
-      "zh-Hant": "拖動節點 · Shift 框選 · Ctrl 多選",
-      "en": "Drag nodes · Shift-drag to select · Ctrl-click to add"
+      "zh-Hant": "拖動節點 · Shift 框選 · {modifier} 多選",
+      "en": "Drag nodes · Shift-drag to select · {modifier}-click to add"
     },
     "hint.navigate": {
       "zh-Hant": "滾輪縮放 · 空白處拖動 · Tab 新增",
@@ -1739,12 +1754,12 @@
       "zh-Hant": "已複製選取的節點。"
     },
     "clipboard.localCopy": {
-      "en": "Nodes copied in this editor. Use Ctrl+C to copy between browsers.",
-      "zh-Hant": "已在此編輯器複製節點。跨瀏覽器複製請使用 Ctrl+C。"
+      "en": "Nodes copied in this editor. Use {modifier}+C to copy between browsers.",
+      "zh-Hant": "已在此編輯器複製節點。跨瀏覽器複製請使用 {modifier}+C。"
     },
     "clipboard.useShortcut": {
-      "en": "Use Ctrl+V to paste from the system clipboard.",
-      "zh-Hant": "請使用 Ctrl+V 從系統剪貼簿貼上。"
+      "en": "Use {modifier}+V to paste from the system clipboard.",
+      "zh-Hant": "請使用 {modifier}+V 從系統剪貼簿貼上。"
     },
     "clipboard.pasted": {
       "en": "Nodes pasted.",
@@ -2072,8 +2087,8 @@
       "en": "Comment"
     },
     "node.commentHint": {
-      "en": "Emitted below this node’s GLSL; editing the note recompiles the shader. Ctrl+Enter commits.",
-      "zh-Hant": "放在此節點 GLSL 下方；修改註解會重新編譯。Ctrl+Enter 完成編輯。"
+      "en": "Emitted below this node’s GLSL; editing the note recompiles the shader. {modifier}+Enter commits.",
+      "zh-Hant": "放在此節點 GLSL 下方；修改註解會重新編譯。{modifier}+Enter 完成編輯。"
     },
     "node.commentInvalid": {
       "zh-Hant": "註記最多 2000 字元，不能包含控制字元。",
@@ -2788,8 +2803,8 @@
       "en": "Input values and connections"
     },
     "code.hint": {
-      "zh-Hant": "將結果寫入輸出變數。離開欄位或按 Ctrl / ⌘ + Enter 套用內容。",
-      "en": "Assign results to the output variables. Leave the field or press Ctrl / ⌘ + Enter to apply the body."
+      "zh-Hant": "將結果寫入輸出變數。離開欄位或按 {modifier} + Enter 套用內容。",
+      "en": "Assign results to the output variables. Leave the field or press {modifier} + Enter to apply the body."
     },
     "help.glsl_code": {
       "zh-Hant": "**GLSL Code** 是手寫的函式節點。在 Parameter 編輯輸入、輸出的名稱與型別，再編寫中間的函式內容。多個輸出使用 `out` 參數，預設為零；例如 `c = a + b;`。\n\n支援 `float`、`int`、`uint`、`bool` 與各自的 2～4 維向量，以及 `sampler2D` 輸入。數值、Uniform 與貼圖可透過接線傳入。GLSL / TD 函式能否使用由目前的 Vertex / Pixel 與 TOP / MAT 決定。\n\n改名或排序保留接線；改名後需同步修改程式。刪除接點前先斷線。函式的外框由 UI 產生，這版不接受前處理指令、行接續或額外的全域函式。可將節點包入 Subgraph 保存到函式庫。編譯失敗時保留上次成功輸出。",
@@ -3023,7 +3038,8 @@
     "view.graphFocus": {"zh-Hant": "專注編輯", "en": "Focus graph"},
     "view.restoreLayout": {"zh-Hant": "還原介面", "en": "Restore layout"},
     "view.graphFocusHint": {"zh-Hant": "只顯示網路圖與工具列", "en": "Show only the graph and toolbar"},
-    "view.restoreLayoutHint": {"zh-Hant": "還原介面（Esc）", "en": "Restore layout (Esc)"},
+    "view.restoreLayoutHint": {"zh-Hant": "還原介面", "en": "Restore layout"},
+    "view.graphFocusShortcut": {"zh-Hant": "切換專注編輯（畫布）", "en": "Toggle focused graph (canvas)"},
     "view.fullscreen": {"zh-Hant": "全螢幕", "en": "Fullscreen"},
     "view.exitFullscreen": {"zh-Hant": "離開全螢幕", "en": "Exit fullscreen"},
     "view.fullscreenUnavailable": {"zh-Hant": "此瀏覽器不支援全螢幕", "en": "Fullscreen is unavailable in this browser"},
@@ -3144,8 +3160,8 @@
       "en": "Write a note…"
     },
     "comment.hint": {
-      "zh-Hant": "畫布以 Markdown 顯示，glsl 程式區塊會高亮。移開焦點或 Ctrl／Cmd＋Enter 套用；Esc 取消。筆記不參與 Shader 計算。",
-      "en": "The canvas renders Markdown and highlights glsl code blocks. Leave the field or press Ctrl/Cmd+Enter to apply; Esc cancels. Notes do not affect Shader calculations."
+      "zh-Hant": "畫布以 Markdown 顯示，glsl 程式區塊會高亮。移開焦點或 {modifier}＋Enter 套用；Esc 取消。筆記不參與 Shader 計算。",
+      "en": "The canvas renders Markdown and highlights glsl code blocks. Leave the field or press {modifier}+Enter to apply; Esc cancels. Notes do not affect Shader calculations."
     },
     "comment.edit": {
       "zh-Hant": "雙擊／點兩下編輯筆記；鍵盤可按 Enter",
@@ -3200,8 +3216,8 @@
       "en": "Keyboard shortcuts"
     },
     "shortcuts.hint": {
-      "zh-Hant": "畫布快捷鍵在文字輸入及對話框中不會執行。Mac 也可用 Cmd 取代 Ctrl。",
-      "en": "Graph shortcuts are inactive while editing text or using a dialog. Mac also supports Cmd instead of Ctrl."
+      "zh-Hant": "畫布快捷鍵在文字輸入及對話框中不會執行。",
+      "en": "Graph shortcuts are inactive while editing text or using a dialog."
     },
     "shortcuts.section.edit": {
       "zh-Hant": "編輯",

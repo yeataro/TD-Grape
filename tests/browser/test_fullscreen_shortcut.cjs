@@ -45,6 +45,23 @@ const {harness}=require('./test_glsl_code.cjs');
   await toggle(true);await page.evaluate(()=>document.exitFullscreen());await settle();
   assert.equal(await page.locator('#uifullscreen').getAttribute('aria-pressed'),'false');assert.equal(await view(),before);
   checks.push('denied/unsupported requests and external fullscreen exit retain correct button state and leave the graph untouched');
+  await page.evaluate(()=>$('#canvas').focus());await page.keyboard.press('Control+Enter');await settle();
+  assert.equal(await page.evaluate(()=>graphFocused),true);assert.match(await page.locator('#graphfocus').getAttribute('title'),/Ctrl＋Enter$/);assert.doesNotMatch(await page.locator('#graphfocus').getAttribute('title'),/Esc/);
+  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>graphFocused),true);
+  await page.keyboard.press('Tab');assert.equal(await page.locator('#creator').isVisible(),true);await page.keyboard.press('Escape');assert.equal(await page.locator('#creator').isVisible(),false);assert.equal(await page.evaluate(()=>graphFocused),true);
+  await page.evaluate(()=>$('#canvas').focus());await page.keyboard.press('Control+Enter');await settle();assert.equal(await page.evaluate(()=>graphFocused),false);assert.equal(await view(),before);
+  checks.push('Ctrl Enter toggles graph focus both ways; Escape cancels Creator but never exits focus, without modifying layout, graph or selection');
+  await page.evaluate(()=>{
+   $('#canvas').focus();
+   for(const modifiers of [{repeat:true},{isComposing:true},{shiftKey:true},{altKey:true},{metaKey:true}])
+    $('#canvas').dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'Enter',ctrlKey:true,...modifiers}));
+   window.focusTextCommits=0;const e=document.createElement('textarea');e.id='focus-draft';e.value='draft';e.onkeydown=event=>{if(event.ctrlKey&&event.key==='Enter'){focusTextCommits++;event.preventDefault();}};$('#canvas').append(e);e.focus();
+  });await page.keyboard.press('Control+Enter');assert.equal(await page.evaluate(()=>focusTextCommits),1);assert.equal(await page.evaluate(()=>graphFocused),false);await page.evaluate(()=>$('#focus-draft').remove());
+  await page.locator('#uishortcuts').click();await page.keyboard.press('Control+Enter');assert.equal(await page.evaluate(()=>graphFocused),false);assert.deepEqual(await page.locator('[data-shortcut="focusGraph"] kbd').allTextContents(),['Ctrl','Enter']);await page.keyboard.press('Escape');
+  await page.evaluate(()=>{$('#canvas').focus();$('#canvas').onpointermove=()=>{};});await page.keyboard.press('Control+Enter');assert.equal(await page.evaluate(()=>graphFocused),false);await page.evaluate(()=>{$('#canvas').onpointermove=null;});
+  await page.keyboard.press('Meta+Enter');assert.equal(await page.evaluate(()=>graphFocused),true);await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>graphFocused),true);await page.keyboard.press('Meta+Enter');assert.equal(await page.evaluate(()=>graphFocused),false);
+  assert.equal(await view(),before);
+  checks.push('focus shortcut ignores repeat/composition/extra modifiers and active gestures, respects modal Help and preserves Ctrl Enter text commit');
   assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks}));
  }catch(error){await h.finish(error);throw error;}
 })().catch(error=>{console.error(error);process.exitCode=1;});

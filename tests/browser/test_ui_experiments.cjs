@@ -48,7 +48,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
 
     const unchanged=await snapshot();
     for(const [key,value]of Object.entries(defaults)){
-      const changed=typeof value==='boolean'?!value:typeof value==='number'?250:key==='uiStyle'?'cool':key==='selectionToolbar'?'multiple':'move';
+      const changed=typeof value==='boolean'?!value:typeof value==='number'?250:key==='uiStyle'?'cool':key==='selectionToolbar'?'multiple':key==='arrowNavigationMode'?'legacy':'move';
       if(typeof value==='boolean')await control(key).setChecked(key==='floatingToolbar'?!changed:changed);
       else if(typeof value==='number'){await control(key).fill(String(changed));await control(key).press('Enter');}else if(key==='uiStyle')await chooseStyle(changed);else await control(key).selectOption(changed);
       await settle();assert.equal((await settings())[key],changed);

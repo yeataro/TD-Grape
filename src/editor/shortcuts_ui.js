@@ -8,6 +8,10 @@ const EDITOR_SHORTCUTS=Object.freeze({
   duplicate:{label:'edit.duplicate',keys:['Mod+D'],section:'edit'},
   delete:{label:'node.delete',keys:['Delete','Backspace'],section:'edit'},
   selectAll:{label:'shortcuts.selectAll',keys:['Mod+A'],section:'edit'},
+  selectLinked:{label:'selection.linked',keys:['Mod+ArrowUp'],section:'edit'},
+  selectUpstream:{label:'selection.upstream',keys:['Mod+ArrowLeft'],section:'edit'},
+  selectDownstream:{label:'selection.downstream',keys:['Mod+ArrowRight'],section:'edit'},
+  selectUnlinked:{label:'selection.unlinked',keys:['Mod+ArrowDown'],section:'edit'},
   groupFrame:{label:'frame.create',keys:['Mod+G'],section:'edit'},
   joinFrame:{label:'frame.join',keys:['Alt+Shift+G'],section:'edit'},
   detachFrame:{label:'frame.detach',keys:['Alt+G'],section:'edit'},
@@ -18,6 +22,7 @@ const EDITOR_SHORTCUTS=Object.freeze({
   fit:{label:'action.fit',hint:'action.fit.hint',keys:['H'],section:'navigation'},
   fitSelection:{label:'action.fitSelection',hint:'action.fitSelection.hint',keys:['F'],section:'navigation'},
   fullscreen:{label:'view.fullscreen',keys:['Alt+Enter'],section:'navigation'},
+  focusGraph:{label:'view.graphFocus',hint:'view.graphFocusShortcut',keys:['Mod+Enter'],section:'navigation'},
   up:{label:'navigation.up',keys:['Alt+ArrowUp'],section:'navigation'},
   arrowPath:{label:'navigation.arrowPath',keys:['ArrowLeft','ArrowRight'],section:'navigation'},
   arrowBranch:{label:'navigation.arrowBranch',keys:['ArrowUp','ArrowDown'],section:'navigation'},
@@ -28,8 +33,7 @@ const EDITOR_SHORTCUTS=Object.freeze({
   textApply:{label:'shortcuts.textApply',keys:['Mod+Enter'],section:'values'}
 });
 function shortcutKeyParts(key){
-  const mac=/Mac|iPhone|iPad|iPod/.test(navigator.platform||'');
-  return key.split('+').map(part=>part==='Mod'?(mac?'Cmd':'Ctrl'):({ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→'})[part]|| (part==='Escape'?'Esc':part==='ContextMenu'?t('shortcuts.contextKey'):part));
+  return key.split('+').map(part=>part==='Mod'?shortcutModifierLabel():({ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→'})[part]|| (part==='Escape'?'Esc':part==='ContextMenu'?t('shortcuts.contextKey'):part));
 }
 function shortcutLabel(action){return EDITOR_SHORTCUTS[action]?.keys.map(key=>shortcutKeyParts(key).join('＋')).join(' / ')||'';}
 function decorateShortcutButton(button,action,labelKey){
@@ -58,7 +62,9 @@ function renderShortcutHelp(){
       if(command.section!==section)continue;
       const row=el('div',{class:'shortcuts-row','data-shortcut':action}),keys=el('dd');
       command.keys.forEach((key,index)=>{if(index)keys.append(el('span',{class:'shortcuts-or'},'/'));const chord=el('span',{class:'shortcuts-chord'});shortcutKeyParts(key).forEach(part=>chord.append(el('kbd',{},part)));keys.append(chord);});
-      row.append(el('dt',{},t(command.hint||command.label)),keys);list.append(row);
+      const spatialLabel=EDITOR_DEV_SETTINGS.arrowNavigationMode==='spatial'&&({arrowPath:'navigation.arrowHorizontalSpatial',arrowBranch:'navigation.arrowVerticalSpatial'})[action];
+      const adjacentLabel=EDITOR_DEV_SETTINGS.ctrlArrowAdjacent&&({selectUpstream:'selection.upstreamAdjacent',selectDownstream:'selection.downstreamAdjacent'})[action];
+      row.append(el('dt',{},t(spatialLabel||adjacentLabel||command.hint||command.label)),keys);list.append(row);
     }
     group.append(heading,list);contents.append(group);
   }

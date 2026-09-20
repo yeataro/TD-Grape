@@ -21,7 +21,14 @@ function receiveProjectSummary(result){
   const label=$('#projectfile');label.textContent=editorProjectFile||t('project.unsaved');label.title=label.textContent;
   const active=result.shaders?.find(s=>s.id===(shaderId||result.current));if(active)setEditorTargetPath(active.path);else updateEditorTitle();
 }
-function t(key){return localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;}
+function shortcutModifierLabel(){
+  const nav=globalThis.navigator||{},platform=nav.userAgentData?.platform||nav.platform||nav.userAgent||'';
+  return /Mac|iPhone|iPad|iPod/i.test(platform)?'Cmd':'Ctrl';
+}
+function t(key){
+  const text=localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;
+  return text.includes('{modifier}')?text.replaceAll('{modifier}',shortcutModifierLabel()):text;
+}
 function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-language-picker]').forEach(picker=>picker.value=language);updateEditorTitle();document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
 function setLanguage(value){
   if(!localeData.languages[value]||value===language)return;
@@ -803,6 +810,7 @@ function applyFloatingToolbar(){
 }
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
+  arrowNavigationMode:[['legacy','experiments.navigation.legacy'],['branches','experiments.navigation.branches'],['spatial','experiments.navigation.spatial']],
   selectionToolbar:[['off','experiments.selection.off'],['multiple','experiments.selection.multiple'],['all','experiments.selection.all']],
   nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],
   uiStyle:[['simple','experiments.style.simple'],['professional','experiments.style.professional'],['cool','experiments.style.cool'],['excellent','experiments.style.excellent'],['legendary','experiments.style.legendary'],['godlike','experiments.style.godlike']]
@@ -810,7 +818,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationFrame']]
+  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationFrame']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
@@ -957,8 +965,9 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','arrowNavigationFrame','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationFrame','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
   const dampingChanged=['canvasDamping','canvasDampingMs','frameDamping','frameDampingMs'].some(key=>next[key]!==EDITOR_DEV_SETTINGS[key]);
+  if(next.arrowNavigationMode!==EDITOR_DEV_SETTINGS.arrowNavigationMode)resetArrowNavigation();
   // Display preferences preserve graph elements and in-progress numeric drafts.
   if(redrawWires){
     cancelValueLadder();touchGraphGesture?.cancel();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();
@@ -1203,7 +1212,7 @@ let graphFocused=false,fullscreenBusy=false;
 function renderViewModes(){
   const focused=$('#graphfocus'),fullscreen=$('#uifullscreen'),active=!!document.fullscreenElement;
   focused.textContent=t(graphFocused?'view.restoreLayout':'view.graphFocus');
-  focused.title=t(graphFocused?'view.restoreLayoutHint':'view.graphFocusHint');
+  decorateShortcutButton(focused,'focusGraph',graphFocused?'view.restoreLayoutHint':'view.graphFocusHint');
   focused.setAttribute('aria-pressed',String(graphFocused));
   const supported=!!document.documentElement.requestFullscreen&&document.fullscreenEnabled!==false;
   fullscreen.disabled=fullscreenBusy||(!active&&!supported);

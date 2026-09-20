@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333, arrowNavigationFrame: false });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333, arrowNavigationMode: 'branches', ctrlArrowAdjacent: false, arrowNavigationFrame: false });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1146,7 +1146,8 @@ function focusGraphCanvas(){
   // a stale Note/Help range even after a node title was clicked or dragged.
   window.getSelection()?.removeAllRanges();
 }
-// A branch step keeps its origin while Up/Down replaces only its destination.
+// Branch navigation remembers the last horizontal relation independently from
+// the return path, so retracing a step still exposes that destination's inputs.
 // This is view state: never serialize it into the graph or editing history.
 let arrowNavigation=null;
 function resetArrowNavigation(){arrowNavigation=null;}
@@ -1158,24 +1159,72 @@ function arrowNodeOrder(a,b){
   const position=(n,axis)=>Number.isFinite(n.ui?.[axis])?n.ui[axis]:0;
   return position(a,'y')-position(b,'y')||position(a,'x')-position(b,'x')||(a.id<b.id?-1:a.id>b.id?1:0);
 }
+function navigateSpatialArrow(key,node,nodes){
+  resetArrowNavigation();
+  const center=n=>{const r=nodeLayoutBounds(n);return{x:r.x+r.width/2,y:r.y+r.height/2};};
+  const origin=center(node),horizontal=key==='ArrowLeft'||key==='ArrowRight',sign=key==='ArrowLeft'||key==='ArrowUp'?-1:1;
+  let next=null,best=null;
+  for(const candidate of nodes){
+    if(candidate.id===node.id)continue;
+    const p=center(candidate),along=sign*(horizontal?p.x-origin.x:p.y-origin.y),across=Math.abs(horizontal?p.y-origin.y:p.x-origin.x);
+    if(along<=.001)continue;
+    // Prefer the forward 90-degree sector, then distance; use diagonals only
+    // when that sector is empty. All coordinates stay independent of zoom.
+    const rank=[across<=along?0:1,along*along+across*across];
+    if(!best||rank[0]<best[0]||rank[0]===best[0]&&(rank[1]<best[1]||rank[1]===best[1]&&arrowNodeOrder(candidate,next)<0)){
+      next=candidate;best=rank;
+    }
+  }
+  if(next){selectNode(next);refreshCanvasSelection();if(EDITOR_DEV_SETTINGS.arrowNavigationFrame)fitNodes([next],true);}
+  return true;
+}
+function selectConnectedNodes(direction,excludeLinked=false){
+  if(!graph||selectedEdge!==null||!selection.size)return false;
+  const data=current(),ids=new Set(data.nodes.map(node=>node.id));
+  let reached=new Set([...selection].filter(id=>ids.has(id)));
+  if(!reached.size)return false;
+  const neighbors=new Map(),add=(from,to)=>{if(!neighbors.has(from))neighbors.set(from,[]);neighbors.get(from).push(to);};
+  for(const edge of data.edges){
+    const from=edge.from[0],to=edge.to[0];if(!ids.has(from)||!ids.has(to))continue;
+    if(direction>=0)add(from,to);if(direction<=0)add(to,from);
+  }
+  if(direction!==0&&EDITOR_DEV_SETTINGS.ctrlArrowAdjacent){
+    reached=new Set([...reached].flatMap(id=>neighbors.get(id)||[]));
+    if(!reached.size)return true;
+  }else{
+    const pending=[...reached];
+    for(let index=0;index<pending.length;index++)for(const id of neighbors.get(pending[index])||[]){
+      if(reached.has(id))continue;reached.add(id);pending.push(id);
+    }
+  }
+  resetArrowNavigation();selectedInputId=null;helpContext='node';focusGraphCanvas();
+  selection=new Set(data.nodes.filter(node=>reached.has(node.id)!==excludeLinked).map(node=>node.id));
+  if(!selection.has(selected))selected=selection.values().next().value??null;
+  renderGraphEditActions();refreshCanvasSelection();return true;
+}
 function navigateArrow(key){
   if(!graph||selectedEdge!==null||selection.size!==1){resetArrowNavigation();return false;}
   const data=current(),nodes=new Map(data.nodes.map(n=>[n.id,n])),id=[...selection][0],node=nodes.get(id);
   if(!node){resetArrowNavigation();return false;}
+  const mode=EDITOR_DEV_SETTINGS.arrowNavigationMode,bidirectional=mode==='branches';
+  if(mode==='spatial')return navigateSpatialArrow(key,node,data.nodes);
   const trail=JSON.stringify(graphTrail),pair=(a,b)=>JSON.stringify([a,b]);
   const links=new Set(data.edges.map(edge=>pair(edge.from[0],edge.to[0])));
+  const valid=step=>nodes.has(step.from)&&nodes.has(step.to)&&links.has(step.direction===1?pair(step.from,step.to):pair(step.to,step.from));
   let route=arrowNavigation;
-  if(!route||route.owner!==graph||route.data!==data||route.stage!==stage||route.trail!==trail||route.node!==id||
-    route.steps.some(step=>!nodes.has(step.from)||!nodes.has(step.to)||!links.has(step.direction===1?pair(step.from,step.to):pair(step.to,step.from)))){
-    route={owner:graph,data,stage,trail,node:id,steps:[]};
+  if(!route||route.mode!==mode||route.owner!==graph||route.data!==data||route.stage!==stage||route.trail!==trail||route.node!==id||
+    route.steps.some(step=>!valid(step))||(route.branch&&!valid(route.branch))){
+    route={owner:graph,data,stage,trail,node:id,steps:[],mode};
   }
   const steps=route.steps.slice(),last=steps.at(-1),vertical=key==='ArrowUp'||key==='ArrowDown';
+  const branch=bidirectional?route.branch:last;
   let next=null;
-  if(vertical&&!last){arrowNavigation=route;return true;}
-  const direction=vertical?last.direction:key==='ArrowRight'?1:-1;
-  if(!vertical&&last&&direction===-last.direction){next=nodes.get(last.from);steps.pop();}
+  if(vertical&&!branch){arrowNavigation=route;return true;}
+  const direction=vertical?branch.direction:key==='ArrowRight'?1:-1;
+  if(!vertical&&branch&&direction===-branch.direction)next=nodes.get(branch.from);
+  else if(!vertical&&last&&direction===-last.direction)next=nodes.get(last.from);
   else{
-    const origin=vertical?last.from:id,seen=new Set(),ancestors=new Set(steps.map(step=>step.from));
+    const origin=vertical?branch.from:id,seen=new Set(),ancestors=new Set(bidirectional&&vertical?[]:steps.map(step=>step.from));
     // Search only on demand. Keep one best candidate, never sort the graph.
     for(const edge of data.edges){
       const from=edge[direction===1?'from':'to'][0],to=edge[direction===1?'to':'from'][0];
@@ -1187,14 +1236,18 @@ function navigateArrow(key){
       }
       if(!next||(key==='ArrowUp'?arrowNodeOrder(candidate,next)>0:arrowNodeOrder(candidate,next)<0))next=candidate;
     }
-    if(next){
-      if(vertical)steps[steps.length-1]={...last,to:next.id};
-      else steps.push({from:id,to:next.id,direction});
-    }
   }
   if(!next){arrowNavigation=route;return true;}
+  if(vertical){
+    const step={...branch,to:next.id};
+    if(last?.from===branch.from&&last.direction===direction&&!steps.slice(0,-1).some(item=>item.from===next.id))steps[steps.length-1]=step;
+    // Switching after a return establishes a new path from the shared neighbor.
+    // Earlier history belongs to the old branch and cannot be reused here.
+    else steps.splice(0,steps.length,step);
+  }else if(last?.from===next.id&&last.direction===-direction)steps.pop();
+  else steps.push({from:id,to:next.id,direction});
   selectNode(next);refreshCanvasSelection();
-  arrowNavigation={...route,node:next.id,steps};
+  arrowNavigation={...route,node:next.id,steps,branch:bidirectional?{from:vertical?branch.from:id,to:next.id,direction}:undefined};
   if(EDITOR_DEV_SETTINGS.arrowNavigationFrame)fitNodes([next],true);
   return true;
 }
@@ -1991,8 +2044,18 @@ function installGraphInteractions(){
     const plainKey=e.key.toLowerCase();
     const inGraph=e.target===document.body||e.target===document.documentElement||e.target.closest('.graph-workspace');
     const graphCommandReady=inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open],:popover-open');
+    const graphNavigationReady=graphCommandReady&&!nodePlacement&&!e.target.closest('button,a,[role="slider"],[role="listbox"],[role="menu"],[role="tablist"]');
+    const commandModifier=(e.ctrlKey||e.metaKey)&&!(e.ctrlKey&&e.metaKey)&&!e.altKey&&!e.shiftKey;
+    if(e.key==='Enter'&&commandModifier){
+      if(graphCommandReady&&!nodePlacement){e.preventDefault();if(!e.repeat){setGraphFocus(!graphFocused);focusGraphCanvas();}}
+      return;
+    }
+    if(commandModifier&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+      if(graphNavigationReady&&(e.repeat||selectConnectedNodes(e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0,e.key==='ArrowDown')))e.preventDefault();
+      return;
+    }
     if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
-      if(graphCommandReady&&!nodePlacement&&!e.target.closest('button,a,[role="slider"],[role="listbox"],[role="menu"],[role="tablist"]')&&navigateArrow(e.key))e.preventDefault();
+      if(graphNavigationReady&&navigateArrow(e.key))e.preventDefault();
       return;
     }
     if(['h','f','l'].includes(plainKey)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&(!e.shiftKey||plainKey==='l')){
@@ -2015,9 +2078,7 @@ function installGraphInteractions(){
     if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')){e.preventDefault();const r=canvas.getBoundingClientRect();openGraphMenu(r.left+r.width/2,r.top+r.height/3);return;}
     if(e.key==='Tab'){e.preventDefault();const r=canvas.getBoundingClientRect();openCreator(r.left+r.width/2,r.top+r.height/3);}
     if(e.key==='Escape'){
-      const interaction=!!linkStart||!!creatorState;
       cancelConnection();closeCreator();
-      if(!interaction&&graphFocused&&!document.fullscreenElement&&!document.querySelector('dialog[open],:popover-open')){e.preventDefault();setGraphFocus(false);$('#graphfocus').focus({preventScroll:true});}
       return;
     }
     if(e.altKey&&e.key==='ArrowUp'){e.preventDefault();if(graphTrail.length)navigateGraph(graphTrail.length-1);}

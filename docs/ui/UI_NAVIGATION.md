@@ -1,5 +1,34 @@
 # UI navigation development checkpoint
 
+## Navigation trials and connected selection (0.8.161)
+
+The browser-local “Arrow navigation mode (trial)” selector offers three alternatives. Switching modes clears navigation memory, preserves canvas DOM, and does not edit graph/history data. All plain-arrow modes require one selected node; input fields, menus, dialogs, gestures, placement and modified arrows retain their own handling. Optional automatic Frame works in every mode.
+
+| Mode | Behavior |
+| --- | --- |
+| Original path | The original 0.8.158 behavior below, retained for comparison. |
+| Bidirectional branches (default) | Uses connections and retains a separate reference for the latest horizontal move, including after a return. |
+| Spatial neighbors | Uses current node centers, without connection/history requirements. Searches the pressed direction, preferring its forward 90-degree sector, then nearest distance; if that sector is empty, permits diagonals in the same half-plane. Ties use Y/X/ID. No wraparound. |
+
+In bidirectional mode, each successful horizontal move records its origin and direction separately from the return-path stack. Up/Down searches that origin's adjacent nodes by current Y/X/ID order, including after retracing a step. For A → B and C → B, A → Right → B → Left → A → Up/Down can now reach C. Reversing the latest horizontal move returns to its actual origin, including a lower branch selected with Up/Down.
+
+Ordinary nested backtracking still uses the existing stack. Switching peers after a return starts a fresh path from their shared neighbor, since earlier history belongs to the old branch. This also permits a shared input that appeared earlier in the route. Connection modes start with Left/Right after a fresh mouse selection. Deleted connections, graph/Stage/subgraph changes, selection changes, and mode switches invalidate navigation memory. The independent branch anchor is validated even when the return stack is empty. All modes search on keypress, without a presorted cache.
+
+Ctrl-arrow selection works in all three modes, starting from one or more selected nodes in the current graph/Stage/subgraph. Empty and wire-only selections do nothing. Group membership is not a connection; readonly graphs permit selection. Iterative adjacency traversal uses O(V + E) work and terminates on duplicates/cycles/dangling edges. It does not write graph data, Undo, or TD state, rebuild canvas cards/wires, or move the viewport.
+
+| Shortcut | Default result |
+| --- | --- |
+| Ctrl + Left | All upstream nodes, including starting nodes. |
+| Ctrl + Right | All downstream nodes, including starting nodes. |
+| Ctrl + Up | Entire connected components of all starting nodes, following both directions. |
+| Ctrl + Down | Every node in the current graph outside those connected components. May clear selection if nothing remains. |
+
+The separate “Ctrl + Left/Right: one step only” experiment defaults off. When on, Left/Right replaces selection with the union of immediate neighbors, keeping selection at an endpoint with no candidates. Up/Down always keeps its full-component meaning. Key repeats are suppressed for Ctrl-arrow selection so holding Down cannot toggle the complement, and one-step mode advances once per press. Shortcut Help reflects the active navigation and depth modes. L and Shift+L retain both original auto-arrange commands; neither Alt+L nor Ctrl+L is bound.
+
+Ctrl+Enter toggles graph focus from the canvas; press it again to restore the layout. Escape remains cancellation/dismissal only and no longer exits graph focus. Text editors retain their Ctrl/Cmd+Enter commit behavior; dialogs, IME composition, repeated keys and active gestures do not toggle focus. Alt+Enter remains browser fullscreen.
+
+Command shortcuts display Ctrl on Windows/Linux and Cmd on Apple platforms. Platform detection uses `navigator.userAgentData.platform` when available, then `navigator.platform`, then the user agent; it does not infer the OS from browser name alone. The same modifier label is used in shortcut Help, buttons, experimental settings and supported clipboard/text-editor hints. Both Control and Meta dispatch the new command shortcuts. Literal Ctrl-only numeric-drag modifiers remain literal, matching their existing behavior. Tests simulate platform metadata and exercise Control/Meta dispatch in Chromium on Windows; physical macOS/Safari validation is explicitly pending user review.
+
 ## Arrow navigation (0.8.158)
 
 With one node selected, Left/Right follows direct connections. A fresh step chooses the uppermost neighbor (ties use X then node ID); reversing direction retraces the actual path through multi-input nodes. Up/Down switches the destination of the latest step among that origin's neighbors, preserving its origin and earlier steps. After a fresh mouse selection, first use Left/Right to establish a step. There is no wraparound; parallel edges to the same node are one stop. Multiple/empty selections and selected wires do not enter this node navigation mode.
