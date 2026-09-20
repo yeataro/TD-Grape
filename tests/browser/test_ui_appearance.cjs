@@ -250,15 +250,15 @@ async function run() {
         const layout=await page.evaluate(()=>{
           const rect=selector=>{const r=$(selector).getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};};
           const footerStyle=getComputedStyle($('footer'));
-          return {width:innerWidth,height:innerHeight,footer:rect('footer'),start:rect('.footer-start'),preferences:rect('.footer-preferences'),actions:rect('.footer-actions'),refresh:rect('#editorrefresh'),reload:rect('#reload'),panel:rect('#appearancepanel'),range:rect('#uitone'),
+          return {width:innerWidth,height:innerHeight,footer:rect('footer'),start:rect('.footer-start'),preferences:rect('.footer-preferences'),actions:rect('.footer-actions'),menu:rect('#editormenu'),panel:rect('#appearancepanel'),range:rect('#uitone'),
             rightInset:parseFloat(footerStyle.paddingRight)+parseFloat(footerStyle.borderRightWidth),overflow:document.documentElement.scrollWidth>innerWidth+1,
-            clickable:['uisize','uitheme','uifullscreen','editorrefresh','reload','uitoneminus','uitoneplus'].every(id=>{const e=$('#'+id),r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===e;})};
+            clickable:['uisize','uitheme','uifullscreen','editormenu','uitoneminus','uitoneplus'].every(id=>{const e=$('#'+id),r=e.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===e;})};
         });
         assert.equal(layout.overflow,false,JSON.stringify({size,theme,layout}));
         assert.ok(Math.abs(layout.preferences.right-(layout.footer.right-layout.rightInset))<=1);
         assert.ok(layout.start.left>=layout.footer.left-1&&layout.start.right<=layout.preferences.left+1);
         assert.ok(layout.actions.left>=layout.footer.left-1&&layout.actions.right<=layout.start.right+1);
-        assert.ok(layout.refresh.right<=layout.reload.left+1&&layout.reload.right<=layout.preferences.left+1);
+        assert.ok(layout.menu.left>=layout.footer.left&&layout.menu.right<=layout.preferences.left+1);
         assert.ok(layout.panel.left>=0&&layout.panel.right<=layout.width&&layout.panel.top>=0&&layout.panel.bottom<=layout.footer.top+1,'popover must fit above the footer at every viewport');
         assert.ok(layout.range.left>=layout.panel.left&&layout.range.right<=layout.panel.right&&layout.range.width>=100,'range must have usable width and fit its panel');
         assert.equal(layout.clickable,true,'footer and popover buttons must remain hit-testable');
