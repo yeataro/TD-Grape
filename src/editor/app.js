@@ -707,6 +707,7 @@ function fitNodes(nodes,animate=false,forceAnimation=false){
 function moveArrowNavigationView(node){
   const mode=EDITOR_DEV_SETTINGS.arrowNavigationView;
   if(mode==='frame')fitNodes([node],true,true);
+  else if(mode==='frameInstant')fitNodes([node]);
   else if(mode==='centerAnimated'||mode==='centerInstant')centerNodes([node],mode==='centerAnimated');
 }
 function fit(){if(graph)fitNodes(current().nodes);}
@@ -828,7 +829,7 @@ function applyFloatingToolbar(){
 }
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
-  arrowNavigationView:[['none','experiments.navigationView.none'],['frame','experiments.navigationView.frame'],['centerAnimated','experiments.navigationView.centerAnimated'],['centerInstant','experiments.navigationView.centerInstant']],
+  arrowNavigationView:[['none','experiments.navigationView.none'],['frame','experiments.navigationView.frame'],['frameInstant','experiments.navigationView.frameInstant'],['centerAnimated','experiments.navigationView.centerAnimated'],['centerInstant','experiments.navigationView.centerInstant']],
   arrowNavigationMode:[['legacy','experiments.navigation.legacy'],['branches','experiments.navigation.branches'],['spatial','experiments.navigation.spatial']],
   selectionToolbar:[['off','experiments.selection.off'],['multiple','experiments.selection.multiple'],['all','experiments.selection.all']],
   nodeDragCursor:[['default','experiments.cursor.default'],['move','experiments.cursor.move']],

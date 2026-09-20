@@ -191,6 +191,7 @@
     "experiments.arrowNavigationView": {"zh-Hant": "方向鍵導覽視角", "en": "View on arrow navigation"},
     "experiments.navigationView.none": {"zh-Hant": "不移動畫面", "en": "Keep the view"},
     "experiments.navigationView.frame": {"zh-Hant": "Frame：置中並縮放，有動畫", "en": "Frame: center and zoom, animated"},
+    "experiments.navigationView.frameInstant": {"zh-Hant": "Frame：置中並縮放，無動畫", "en": "Frame: center and zoom, instant"},
     "experiments.navigationView.centerAnimated": {"zh-Hant": "Center：只置中，有動畫", "en": "Center: pan only, animated"},
     "experiments.navigationView.centerInstant": {"zh-Hant": "Center：只置中，無動畫", "en": "Center: pan only, instant"},
     "experiments.arrowNavigationMode": {"zh-Hant": "方向鍵導覽方式（試用）", "en": "Arrow navigation mode (trial)"},

@@ -1,6 +1,6 @@
 # UI navigation development checkpoint
 
-## Navigation trials and connected selection (0.8.162)
+## Navigation trials and connected selection (0.8.163)
 
 The browser-local “Arrow navigation mode (trial)” selector offers three alternatives. Switching modes clears navigation memory, preserves canvas DOM, and does not edit graph/history data. All plain-arrow modes require one selected node; input fields, menus, dialogs, gestures, placement and modified arrows retain their own handling. The independent view options below work in every mode.
 
@@ -27,7 +27,7 @@ The separate “Ctrl + Left/Right: grow selection one step” experiment default
 
 ### View after plain-arrow navigation
 
-The independent selector offers keep the view (default), animated Frame, animated Center, and instant Center. Frame calls `fitNodes` to pan and fit bounds; the separate `centerNodes` capability only pans at the current zoom. Center supports animation or immediate positioning independently of arrow navigation. Both share bounds and camera interpolation, not sizing behavior. Animated navigation choices animate even when general Frame damping is disabled; animated Frame uses its configured duration, Center uses 333 ms. H/F behavior is unchanged. Escape or a new pointer gesture can cancel motion; subsequent arrows retarget the view. Preferences never modify graph/history or rebuild nodes/wires. An old enabled `arrowNavigationFrame` preference maps to animated Frame; the old disabled default maps to keeping the view. Existing explicit navigation-mode preferences are preserved; new/reset preferences use Spatial.
+The independent selector offers keep the view (default), animated Frame, instant Frame, animated Center, and instant Center. Frame calls `fitNodes` to pan and fit bounds; the separate `centerNodes` capability only pans at the current zoom. Center supports animation or immediate positioning independently of arrow navigation. Both share bounds and camera interpolation, not sizing behavior. Animated navigation choices animate even when general Frame damping is disabled; animated Frame uses its configured duration, Center uses 333 ms. Instant Frame fits without animation even when the general Frame toggle is enabled. H/F behavior is unchanged. Escape or a new pointer gesture can cancel motion; subsequent arrows retarget the view. Preferences never modify graph/history or rebuild nodes/wires. An old enabled `arrowNavigationFrame` preference maps to animated Frame; the old disabled default maps to keeping the view. Existing explicit navigation-mode preferences are preserved; new/reset preferences use Spatial.
 
 Ctrl+Enter toggles graph focus from the canvas; press it again to restore the layout. Escape remains cancellation/dismissal only and no longer exits graph focus. Text editors retain their Ctrl/Cmd+Enter commit behavior; dialogs, IME composition, repeated keys and active gestures do not toggle focus. Alt+Enter remains browser fullscreen.
 
