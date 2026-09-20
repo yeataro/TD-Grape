@@ -130,7 +130,7 @@ class Live:
         dat.par.active = False
         dat.text = "def onValueChange(par, *args):\n    live = parent().op('runtime').module._live\n    if live: live.metadata_changed(par)\ndef onModeChange(par, prev):\n    onValueChange(par)\n"
         dat.par.op = self.runtime.shader_operator(comp).path
-        dat.par.pars = 'vec*name vec*type color*name color*type matrix*name array*name array*type array*chop array*arraytype const*name const*type'
+        dat.par.pars = 'vec*name vec*type color*name color*type matrix*name array*name array*type array*chop array*arraytype const*name const*type buffer*name buffer*pop buffer*attr buffer*attrclass'
         dat.par.builtin = True; dat.par.custom = False
         dat.par.valuechange = True; dat.par.modechange = True
         self.watchers[comp.id] = dat

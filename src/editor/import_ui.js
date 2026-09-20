@@ -191,7 +191,7 @@ async function reviewImportFile(file){
 }
 function prepareGraphReplacement(document){
   const replacement=clone(document),snapshot=nativeSourceSnapshot;
-  const nativeKind=kind=>['uniform','spec_constant'].includes(kind);
+  const nativeKind=kind=>['uniform','spec_constant','pop_buffer'].includes(kind);
   if(!snapshot&&graph.declarations.some(d=>nativeKind(d.kind)&&!d.sourceMissing))throw Error(t('sources.nativePending'));
   if(!snapshot?.enabled)return replacement;
   if(snapshot.revision!==revision)throw Error(t('sources.nativePending'));

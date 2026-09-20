@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 POP Buffer 子功能 0.8.128：TOP／MAT 可匯入、建立、修改及引用原生 Buffer 配置，提供 index／arrayIndex 與 out／length／arraySize；只查長度時不產生 Attribute 取值。來源表單、右鍵、型別選單、歷史與匯入流程沿用既有機制，沒有代建 POP／CHOP。值不進圖，配置讀取只用 Attribute metadata；驅動模式在網頁唯讀。485 Python、14 附加檢查及 JS／整合 portable checks、726 雙語鍵通過；POP 瀏覽器 4 組、Texture Buffer 3 組及來源卡片 8 組通過。原生 TOP／MAT 10 組通過，TOP 實讀 0.375、Attribute Array Size 2；MAT 驗證含原生場景渲染，未宣稱已測幾何體 Attribute 缺失預設值。已配置但 Attribute 不存在時 TD 即使未引用也報錯，明確歸類來源配置錯誤並保留原生配置。報告 `work/reports/pop-buffer/native-final/`。同步與 TOE 保存另記；第三輪仍有儲存模式顯式採用，第四／五輪尚未完成。
+
 2026-09-20 0.8.127 交付檢查點：36 份來源／9 份服務資源一致，TOP／MAT master revision 75，三份使用者 Shader 保留。熱更新曾輸出 Unknown catalog identity；隨後唯讀核對目前 core 無錯誤、新 Buffer 契約及兩份範本產碼均有效，補足證據後同步範本與正式 audit 通過。TOE 951134 bytes，SHA256 `7a80c5fca361a4cf07da39adc8a633a95bd8c1459993e9c6375ed48fba78b633`。報告 `work/reports/texture-buffer/`；未強制刷新使用者網頁。
 
 2026-09-20 Texture Buffer 子功能 0.8.127：CHOP Arrays 的 Texture Buffer 可匯入／建立為 samplerBuffer，使用 Buffer Fetch / Buffer Length；沒有數值預設、CPU 樣本查詢或補位 CHOP。候選編譯保留原生 Expression 與格式，舊數值快照流程排除資源。儲存模式失配保留舊宣告接線並攔截使用中的來源。479 Python、14 附加檢查、JS／整合與 720 雙語鍵通過；Buffer 瀏覽器 3 組、来源卡片 8 組，TD TOP／MAT 8 組（TOP 實讀 0.375 與長度 8）通過，既有 Shader 保留。第三輪仍有 POP Buffer、顯式採用儲存模式及分類整理；不代表五輪來源工作完成。同步與 TOE 保存另記。

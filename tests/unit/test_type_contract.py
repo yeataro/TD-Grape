@@ -20,7 +20,7 @@ class TypeContract(unittest.TestCase):
   first=c.type_contract();self.assertEqual(first,c.type_contract())
   expected=dict(first);expected.pop('hash');self.assertEqual(first['hash'],c.digest(expected))
   first['definitions'].clear();self.assertEqual(len(c.type_contract()['definitions']),len(c.CATALOG))
-  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in (*c.COMPOSITE_KEYS,*c.MATRIX_KEYS,'matrix_convert','buffer_fetch','buffer_length','sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod','rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag','perlin_noise','simplex_noise','scalar','convert')}),baseline['catalogHash']);self.assertEqual(c.digest(legacy_function_library()),baseline['libraryHash'])
+  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in (*c.COMPOSITE_KEYS,*c.MATRIX_KEYS,'matrix_convert','buffer_fetch','buffer_length','pop_buffer','sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod','rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag','perlin_noise','simplex_noise','scalar','convert')}),baseline['catalogHash']);self.assertEqual(c.digest(legacy_function_library()),baseline['libraryHash'])
 
  def test_value_descriptors_and_literals(self):
   descriptor=c.type_contract()['types'];self.assertEqual(tuple(descriptor),c.PORT_TYPES)
@@ -50,7 +50,7 @@ class TypeContract(unittest.TestCase):
  def test_existing_graphs_produce_identical_results(self):
   graphs=[c.demo_graph(preset,target) for target in ('mat','top') for preset in ('banana','color','tint')]
   for key,d in c.CATALOG.items():
-   if key in (*c.COMPOSITE_KEYS,*c.MATRIX_KEYS,'matrix_convert','buffer_fetch','buffer_length','sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod','rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag','perlin_noise','simplex_noise','scalar','convert'):continue  # New nodes have dedicated tests; keep all 138 old fingerprints.
+   if key in (*c.COMPOSITE_KEYS,*c.MATRIX_KEYS,'matrix_convert','buffer_fetch','buffer_length','pop_buffer','sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod','rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag','perlin_noise','simplex_noise','scalar','convert'):continue  # New nodes have dedicated tests; keep all 138 old fingerprints.
    for ty in c.FLOAT_TYPES:
     g=c.demo_graph('color');stage=d['stages'][0];node=c.node(key,'probe',type=ty)
     if key=='uniform':g['declarations'].append({'id':'test_uniform','kind':'uniform','name':'uTest','type':ty,'value':.25 if ty=='float' else [.25]*int(ty[-1])});node['params']['declarationId']='test_uniform'
@@ -75,7 +75,7 @@ class TypeContract(unittest.TestCase):
   for d in c.CATALOG.values():
    for ty in (c.VECTOR_TYPES if d['key'] in c.VECTOR_KEYS else c.node_parameter_types(d)):
     node=c.node(d['key'],'probe',type=ty)
-    for decltype in (c.SPEC_TYPES if d['key']=='spec_constant' else c.TYPES):
+    for decltype in (c.SPEC_TYPES if d['key']=='spec_constant' else c.NUMERIC_TYPES+c.MATRIX_TYPES if d['key']=='pop_buffer' else c.TYPES):
      decl={'type':decltype};rows.append({'definition':d,'params':node['params'],'declaration':decl,'expected':c.resolved_ports(d,node['params'],decl)})
   payload={'contract':c.type_contract(),'rows':rows,'catalog':list(c.CATALOG.values())}
   result=subprocess.check_output(['node',str(root/'test_types_ui.js'),str(root.parents[1]/'src/editor/graph_ui.js')],input=json.dumps(payload),text=True)

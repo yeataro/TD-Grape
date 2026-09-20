@@ -140,7 +140,7 @@ def _checkpoint(runtime, token):
 
 
 def _declarations(graph):
-    return {d['id']: d for d in graph['declarations'] if d.get('kind') in ('uniform','spec_constant')}
+    return {d['id']: d for d in graph['declarations'] if d.get('kind') in ('uniform','spec_constant','pop_buffer')}
 
 
 def _validate_graph(graph):
@@ -164,6 +164,7 @@ def _project(runtime, entry, declaration):
     if declaration is None: return None
     types = sources.SPEC_TYPES if declaration.get('kind')=='spec_constant' else sources.TYPES
     is_buffer=declaration.get('kind')=='uniform' and declaration.get('type')=='samplerBuffer'
+    is_pop=declaration.get('kind')=='pop_buffer'
     is_array = declaration.get('kind') == 'uniform' and bool(sources.array_shape(declaration.get('type')) or is_buffer)
     if (declaration.get('type') not in types and not is_array) or not sources.valid_name(declaration.get('name')):
         raise RuntimeError('Invalid native source declaration in editor history.')
@@ -180,10 +181,11 @@ def _project(runtime, entry, declaration):
     sequence = sources.source_sequence(declaration)
     if sequence not in sources.SEQUENCE_CHANNELS: raise RuntimeError('Unsupported native Uniform sequence.')
     value = declaration.get('value'); count = sources.source_components(declaration); values = [value] if count == 1 else value
+    if is_pop:values=[declaration.get('popSource',''),declaration.get('attributeClass','point'),declaration.get('attribute','')]
     if is_array: values = [declaration.get('elementType','float') if is_buffer else sources.array_shape(declaration['type'])[0], declaration.get('arraySource', ''), 'texturebuffer' if is_buffer else 'uniformarray']
-    if not isinstance(values, list) or (not is_array and len(values) != count):
+    if not isinstance(values, list) or (not is_array and not is_pop and len(values) != count):
         raise RuntimeError('Invalid Uniform defaults in editor history.')
-    if not is_array: runtime.core().literal(value,declaration['type'])
+    if not is_array and not is_pop: runtime.core().literal(value,declaration['type'])
     operator = runtime.shader_operator(runtime.target()); index = getattr(operator.seq, sequence).numBlocks
     params = {'name': {'val': declaration['name'], 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}}
     for i, suffix in enumerate(sources.SEQUENCE_CHANNELS[sequence]):
@@ -470,7 +472,7 @@ def restore(runtime, body):
                 sources.validate_spec_native(declaration, declaration.get('value'), 'default')
                 value = native.get('params', {}).get('value', {})
                 if value.get('mode') == 'CONSTANT': sources.validate_spec_native(declaration, value.get('val'))
-            else:
+            elif declaration['kind']=='uniform':
                 sources.validate_uniform_native(declaration, declaration.get('value'), 'default')
                 for channel in (() if native.get('sequence') in ('matrix','array') else sources.CHANNELS.get(native.get('sequence'), ())[:sources.source_components(declaration)]):
                     value = native.get('params', {}).get(channel, {})

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.127",
+  "catalogVersion": "0.8.128",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -3392,6 +3392,51 @@
           "textureSize"
         ],
         "glslName": "textureSize",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "pop_buffer",
+        "label": "POP Buffer",
+        "inputs": {
+          "index": "uint",
+          "arrayIndex": "uint"
+        },
+        "outputs": {
+          "out": "D",
+          "length": "uint",
+          "arraySize": "uint"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float",
+          "declarationId": ""
+        },
+        "descriptionKey": "help.pop_buffer",
+        "definitionUuid": "sgrape.builtin.pop_buffer",
+        "revisionHash": "d6a6ebb5f33eaf1d1eedab8c1b2d36e684bdf91724efcac649e9506173957e14"
+      },
+      "emitter": {
+        "id": "pop_buffer",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "buffers"
+        ],
+        "source": "touchdesigner",
+        "aliases": [
+          "pop",
+          "buffer",
+          "attribute"
+        ],
+        "glslName": "TDBuffer",
         "secondaryCategories": []
       }
     }

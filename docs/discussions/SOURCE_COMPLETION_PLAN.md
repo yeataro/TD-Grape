@@ -1,6 +1,6 @@
 # 來源功能接續計畫
 
-2026-09-20。整合本輪操作回報與[來源建構共識](SOURCE_ARCHITECTURE_REVIEW.md)。第一輪與第二輪已完成；第三輪先完成 CHOP Texture Buffer（0.8.127），POP Buffer 接續。本文件是接續工作與驗收清單，不表示以下功能已完成。分類仍以[來源選單分類表](TD_SOURCE_MENU_REVIEW.md)為依據。
+2026-09-20。整合本輪操作回報與[來源建構共識](SOURCE_ARCHITECTURE_REVIEW.md)。第一輪與第二輪已完成；第三輪完成 CHOP Texture Buffer（0.8.127）及 POP Buffer（0.8.128），儲存模式顯式採用與完整分類整理接續。本文件是接續工作與驗收清單，不表示以下功能已完成。分類仍以[來源選單分類表](TD_SOURCE_MENU_REVIEW.md)為依據。
 
 ## 已完成的基礎
 
@@ -76,13 +76,19 @@ Colors 的新建／編輯型別入口限制為 `float`（R）、`vec2`（RG）�
 ### 第三輪：Texture Buffer 與 POP Buffer
 
 - [x] CHOP Texture Buffer 原生配置清單、圖內引用、合法型別、取值及長度；與 Uniform Array 分開。
-- [ ] POP attribute buffer 的路徑、Attribute class／name、Shader 名及讀取／長度／Attribute Array Size 能力。
+- [x] POP attribute buffer 的路徑、Attribute class／name、Shader 名及讀取／長度／Attribute Array Size 能力。
 - [ ] 空路徑、空資料、缺少 Attribute、變更儲存模式及來源恢復分別驗證，顯示原生診斷。
 - [ ] 清單確實為空時提示使用者在 TD 建立並配置；不代建 CHOP／POP 或 Attribute fallback。
 
 驗收：TOP／MAT 實際取值與宿主允許的 Stage 正確；同一 POP 可配置多個 Attribute；沒有「清單有項目但只能看不能讀」的半完成交付。
 
 0.8.127 子步驟：CHOP Texture Buffer 以原生 `samplerBuffer` 引用，提供 Buffer Fetch（`texelFetch`，vec4）與 Buffer Length（`textureSize`，int）。沿用 Uniform 的原生來源實體管理，UI 單獨列為 Texture Buffers；不放入可填值的 Custom Uniform Arrays，不查詢 CHOP 樣本／長度來建立圖型別，不建立替代 CHOP。TOP／MAT 隔離原生驗證通過：讀取、長度、Expression 綁定、空路徑及儲存模式失配保護。TOP 另實際讀到 0.375 與長度 8；MAT 本次驗證產碼與原生編譯。已追蹤來源切換 Uniform Array／Texture Buffer 時保持舊宣告與接線、標明失配並阻擋使用中的來源；恢復原模式即可恢復原識別，不默默改型別。顯式採用新儲存模式與完整分類整理接續來源工作。
+
+0.8.128 子步驟：新增 POP Buffer 來源管理與引用，兩個 uint 索引及取值／長度／Attribute Array Size 出口。只使用 Attribute 定義 metadata，不讀回 POP 的數值或點資料；僅查長度時不產生 Attribute 取值指令。輸出型別由圖選擇、產碼明確轉換，Python metadata 無法區分 float／double、int／uint 的精確原生型別，因此不聲稱自動辨識精度。建立／修改共用來源表單與歷史機制；Expression／Bind／Export 的 POP 配置保留並在網頁唯讀。
+
+原生限制實測：**已配置的 POP Attribute 不存在**，即使 Shader 沒讀它，TD 仍會讓整個 GLSL OP 報錯；這與「原生來源列已移除、圖留下未使用引用」不同。前者不能承諾不阻擋套用，必須提示使用者修正 TD 配置，不偷偷清除原生列、建立替代資料或偽裝成 GLSL 語法錯誤。TOP／MAT 分別驗證通過（MAT 包含驗證場景渲染，TOP 另抽查實際像素）。
+
+2026-09-20 最新筆記：目前 POP／CHOP 仍由使用者自行建立。建立一個帶基本 Attribute 的預設 POP、之後由使用者修改，只是備選方案，未定案。TOP／MAT 宿主能力分開核對，共用已證實相同的欄位流程。**MAT 的渲染幾何體缺少 Attribute 時的原生預設行為**與 Buffers 頁面的 POP 綁定分開；使用者要求先完成來源能力，相關差異留到整體實際行為驗收，不以 Buffer 結果推定 MAT 幾何體規則。
 
 ### 第四輪：MAT Attribute 與來源內容補齊
 
