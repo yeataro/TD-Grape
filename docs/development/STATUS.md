@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.145 DEV：依最新回饋縮窄左下角 ⋮ 左右留白，Standard 20 × 24px、Comfortable 24 × 32px；保留高度、圖示與中線。
+
 2026-09-20 0.8.144 DEV 交付檢查點：程式提交 `1ea77a1`，37 份嵌入來源與 10 份服務資產核對一致，TOP／MAT master revision 91；三份使用者 Shader 保留。TOE 982734 bytes，SHA256 `a24f1894b7b9b31008da4db3f4041724a54478f5d9ecd278eece6927995934cf`。原生交付報告 `work/reports/uniform-slider-144/`，瀏覽器報告在 Documents 工作區 `reports/uniform-slider-144/`。未重新整理使用者網頁。
 
 2026-09-20 0.8.144 DEV 實作：採用使用者選定的 Uniform 滑桿 C（淡分類色填色＋兩端內縮把手），保留 32px 高度，滑桿完整配色不受介面亮度調整影響；來源卡片／Parameter／画布引用共用，Bind 及 Master 識別保留。新增 Alt + Enter 全螢幕及雙語提示，編輯草稿不被提交。亮度與顯示 4 組、全螢幕 4 組；原生分量 7、Colors 5、即時通道 10、幾何 7、外觀 10＋觸控 1 組通過。快捷鍵說明 7 組與完整 portable checks（507 Python）通過。報告 Documents 工作區 reports/uniform-slider-144/。既有 test_editor_chrome 仍期待舊的 footer Refresh／Reload 直出入口，於首個排版斷言失敗；本輪使用獨立全螢幕回歸驗證新快捷鍵與既有瀏覽器生命週期，不宣稱舊腳本全過。同步保存另記。

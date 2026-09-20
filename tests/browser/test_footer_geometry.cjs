@@ -15,8 +15,8 @@ const {harness}=require('./test_glsl_code.cjs');
   fs.writeFileSync(path.join(folder,'measurements.json'),JSON.stringify(measurements,null,2));
   for(const measurement of measurements)for(const button of measurement.buttons){assert(Math.abs(button.offset)<=.6,JSON.stringify({size:measurement.size,scale:measurement.scale,button}));assert(button.bottom>=2);}
   checks.push('menu and all footer controls share the vertical center in Standard/Comfortable at 100/125/175%');
-  for(const measurement of measurements){const menu=measurement.buttons.find(b=>b.id==='editormenu'),peer=measurement.buttons.find(b=>b.id==='uisize');assert.equal(menu.height,peer.height);assert.equal(menu.width,peer.width);}
-  checks.push('left menu uses the same compact dimensions as the other footer icons');
+  for(const measurement of measurements){const menu=measurement.buttons.find(b=>b.id==='editormenu'),peer=measurement.buttons.find(b=>b.id==='uisize');assert.equal(menu.height,peer.height);assert(menu.width<peer.width);assert(menu.width<menu.height);}
+  checks.push('left menu keeps the footer icon height while using a narrower rectangular hit area');
   await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{setUIAppearance('scale',100);setUIAppearance('size','standard');});await settle();
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);assert.equal(overflow,false);
   await page.locator('#editormenu').click();assert.equal(await page.locator('#editoractionsmenu').isVisible(),true);await page.keyboard.press('Escape');
