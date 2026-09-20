@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.152 DEV 熱修正交付檢查點：程式提交 `664ba0b`；507 Python 與完整 portable checks 通過。37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 99，現有四份使用者 Shader 保留。TOE 1014358 bytes，SHA256 `ce15f9f18375bec666aefd6e4749450611de21b9224c82a91dc94e47d246efae`。原生報告 `work/reports/uv-load-152/`。錯誤報告見 `UV_INITIALIZATION_INCIDENT.md`；已告知使用者修正版可重新整理載入，未代為重新整理或覆蓋網頁草稿。
+
 2026-09-20 0.8.152 DEV 緊急修正：0.8.150 共用分量名稱讓固定 UV 預設走 UV 模式，卻只從 params.type／來源宣告取得型別；UV 的 params 為空，初始化 renderCards 在 typeComponents(undefined) 拋出 contract.invalid，使用者重開也無法進入。型別規則本身有效。修正改由固定輸出口取得型別描述，不放寬契約驗證或改寫圖。0.8.151 原始碼已重現相同錯誤與堆疊；新增初始載入／重新開啟／UV Split 回歸 2 組，Color 分量 8 組通過；現有 Grape_MAT1／TOP1／TOP2／TOP3 的實際圖在隔離瀏覽器完整渲染 4／25／30／4 個節點。報告 Documents 工作區 `reports/contract-load/`，TD 唯讀擷取在 `work/reports/contract-load/inspect/`。未交付的 Uniform 外觀保存保護調整已隔離，未混入熱修正；同步保存另記。
 
 2026-09-20 0.8.151 DEV 交付檢查點：程式提交 `ae2d17b`；37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 98，三份使用者 Shader 保留。TOE 984214 bytes，SHA256 `a14a28cbb32ba46b369e1bac328025a7e86f81ee5338c6fc9b353cc57cdc55d5`。原生報告 `work/reports/review-polish-151/`；未重新整理使用者網頁。

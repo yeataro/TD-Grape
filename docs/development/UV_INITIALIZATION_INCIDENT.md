@@ -1,6 +1,6 @@
 # UV 初始化錯誤報告
 
-日期：2026-09-20。受影響版本：0.8.150、0.8.151。修正版本：0.8.152。
+日期：2026-09-20。受影響版本：0.8.150、0.8.151。修正版本：0.8.152，已同步 TD 並保存 TOE。
 
 ## 使用者要求與影響
 
@@ -34,7 +34,7 @@ initializeEditor → load → render → renderCards
 
 ## 為什麼原本測試沒攔下
 
-原有分量測試覆蓋 Color Uniform、Color RGBA、一般向量、Split／Swizzle、STPQ、Undo／Redo 與重新載入，但啟動樣本以 Color 圖為主，沒有固定 UV 節點。其他 UV 命名測試使用帶有 `params.type=vec2` 的一般向量，也未涵蓋固定 UV 的空參數情況。這是測試覆蓋缺口；可攜測試通過並不足以证明實際圖能載入。
+原有分量測試覆蓋 Color Uniform、Color RGBA、一般向量、Split／Swizzle、STPQ、Undo／Redo 與重新載入，但啟動樣本以 Color 圖為主，沒有固定 UV 節點。其他 UV 命名測試使用帶有 `params.type=vec2` 的一般向量，也未涵蓋固定 UV 的空參數情況。這是測試覆蓋缺口；可攜測試通過並不足以證明實際圖能載入。
 
 ## 修正後驗證
 
@@ -44,3 +44,5 @@ initializeEditor → load → render → renderCards
 - 507 項 Python 測試、14 項附加檢查及完整可攜檢查通過。
 
 瀏覽器重現及驗證報告位於 Documents 工作區 `reports/contract-load/`。TD 唯讀擷取位於私人工作區 `work/reports/contract-load/inspect/`；正式同步、來源核對與 TOE 保存結果記錄在 [STATUS.md](STATUS.md)。
+
+交付核對：37 份嵌入來源、10 份服務資產一致；四份使用者 Shader 保留。實際使用中的瀏覽器未被強制重新整理。
