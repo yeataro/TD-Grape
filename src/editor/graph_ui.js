@@ -170,7 +170,7 @@ function typeDescriptor(type,document=activeTypeDocument(),seen=new Set()){
   if(array){
     const elementType=array[1]+array[3],element=typeDescriptor(elementType,document,new Set([...seen,type]));if(!element)return null;
     const count=/^[0-9]+$/.test(array[2])?Number(array[2]):array[2];
-    if(typeof count==='number'&&(!Number.isInteger(count)||String(count)!==array[2]||count<1||count>(typeContract?.composites?.array?.maxLength||1024)))return null;
+    if(typeof count==='number'&&(!Number.isInteger(count)||String(count)!==array[2]||count<1||count>(typeContract?.composites?.array?.maxTypeLength||typeContract?.composites?.array?.maxLength||1024)))return null;
     if(typeof count==='string'&&!arrayLengthDeclaration(count,document)&&!typeContract?.composites?.array?.lengthMacros?.[count]&&!Object.values(typeContract?.composites?.sources||{}).some(source=>source.type?.includes('['+count+']')))return null;
     if(element.shape==='array'&&arrayLengthDeclaration(element.length,document)?.kind==='spec_constant')return null;
     return {shape:'array',family:'array',components:0,elementType,length:count};
@@ -193,7 +193,7 @@ function compositeValue(value,type,document=activeTypeDocument(),budget={remaini
   if(--budget.remaining<0||active.has(type))throw Error(t('composite.valueTooLarge'));
   const descriptor=typeDescriptor(type,document);if(!descriptor||typeContainsResource(type,document))return null;
   if(descriptor.shape==='array'){
-    if(typeof descriptor.length!=='number')return null;
+    if(typeof descriptor.length!=='number'||descriptor.length>(typeContract?.composites?.array?.maxLength||1024))return null;
     return Array.from({length:descriptor.length},(_,index)=>compositeValue(Array.isArray(value)?value[index]:undefined,descriptor.elementType,document,budget,new Set([...active,type])));
   }
   if(descriptor.shape==='struct')return Object.fromEntries((descriptor.fields||[]).map(field=>[field.id,compositeValue(value?.[field.id],field.type,document,budget,new Set([...active,type]))]));
@@ -215,10 +215,14 @@ function glslTypeName(type){
   return descriptor?.shape==='struct'?descriptor.glslName||(type.startsWith('struct:')?'sg_type_'+descriptor.id:descriptor.name):type;
 }
 function glslPortDeclaration(type,name){const descriptor=typeDescriptor(type);return descriptor?.shape==='array'?glslPortDeclaration(descriptor.elementType,name+'['+arrayLengthExpression(descriptor.length)+']'):glslTypeName(type)+' '+name;}
-function glslZeroLiteral(type){
+function glslZeroLiteral(type,budget={remaining:65536}){
+  if(--budget.remaining<0)throw Error(t('composite.valueTooLarge'));
   const descriptor=typeDescriptor(type);
-  if(descriptor?.shape==='array')return glslTypeName(type)+'('+Array.from({length:typeof descriptor.length==='number'?descriptor.length:0},()=>glslZeroLiteral(descriptor.elementType)).join(', ')+')';
-  if(descriptor?.shape==='struct')return glslTypeName(type)+'('+(descriptor.fields||[]).map(field=>glslZeroLiteral(field.type)).join(', ')+')';
+  if(descriptor?.shape==='array'){
+    if(descriptor.length>budget.remaining)throw Error(t('composite.valueTooLarge'));
+    return glslTypeName(type)+'('+Array.from({length:typeof descriptor.length==='number'?descriptor.length:0},()=>glslZeroLiteral(descriptor.elementType,budget)).join(', ')+')';
+  }
+  if(descriptor?.shape==='struct')return glslTypeName(type)+'('+(descriptor.fields||[]).map(field=>glslZeroLiteral(field.type,budget)).join(', ')+')';
   if(type==='bool')return 'false';if(type==='int')return '0';if(type==='uint')return '0u';if(type==='double')return '0.0LF';if(type==='float')return '0.0';
   return type+'('+Array.from({length:descriptor?.components||1},()=>glslZeroLiteral(descriptor?.family||'float')).join(', ')+')';
 }
@@ -337,7 +341,7 @@ function setTypeContract(contract){
     if(!contract.composites||typeof type!=='string'||(type.match(/\[/g)||[]).length>8)return false;
     const array=/^([^\[\]]+)\[([A-Za-z_][A-Za-z0-9_]*|[0-9]+)\](.*)$/.exec(type);if(!array)return false;
     const count=/^[0-9]+$/.test(array[2])?Number(array[2]):array[2];
-    return (typeof count==='number'?String(count)===array[2]&&count>0&&count<=(contract.composites.array?.maxLength||1024):Object.hasOwn(contract.composites.array?.lengthMacros||{},count))&&known(array[1]+array[3]);
+    return (typeof count==='number'?String(count)===array[2]&&count>0&&count<=(contract.composites.array?.maxTypeLength||contract.composites.array?.maxLength||1024):Object.hasOwn(contract.composites.array?.lengthMacros||{},count))&&known(array[1]+array[3]);
   };
   if(!Array.isArray(valueTypes)||new Set(valueTypes).size!==valueTypes.length||!contract.numericTypes.every(t=>valueTypes.includes(t)))throw Error(t('contract.invalid'));
   if(Object.keys(contract.types).length!==valueTypes.length+resourceTypes.length)throw Error(t('contract.invalid'));

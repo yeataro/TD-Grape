@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.123 來源檢查點：完成來源計畫第一輪。原生陣列型別與 constructor／預設值展開上限分開，一萬元素 TOP／MAT Uniform Array 匯入及產碼通過，不保存 CHOP 樣本。新 TD Constants 列以 float 匯入，既有型別／constant_id 保留；來源驗證、GLSL 編譯、一般套用失敗分開標示。拒絕匯入的原生項目可搜尋並顯示原因，缺失卡片保留且不再新增引用；使用到的缺失來源阻擋套用，未使用的既有無效資料不阻擋無關有效 Shader。來源快照仍不做 Spec 值驗證掃描。完整 portable checks（474 Python 及 JS／整合）、既有來源瀏覽器 13 組、新狀態 5 組、TOP／MAT 原生 6 組通過。Spec 原生回歸中一項舊測試只接受例外；已在 0.8.122 證明原流程回傳 `ok:false / blocked:true`，修正測試接受明確拒絕並核對原生值／state／GLSL 不變，沒有放寬產品驗證。報告 `work/reports/source-inventory/`；同步 TD 與保存 TOE 另記。Texture Buffer 完整能力仍待第三輪。
+
 2026-09-20 來源審查／探測檢查點：記錄[五輪接續計畫](../discussions/SOURCE_COMPLETION_PLAN.md)，區分已交付的共用來源表／Parameter 分量控制與未完成的卡片、圖內控制、Buffer、MAT Attribute、結構 UI。原生實測 float Spec Constant 可用；固定 float Uniform Array 1024–10000 個元素的五組測試均編譯成功並抽查到正確值。已定位新 TD Constants 一律匯入 int、Uniform Array 被產品 1024 上限拒絕、Texture Buffer 缺少引用／讀取支援。新增重現探測腳本，詳見計畫；產品修正尚未實作。缺失來源的視覺、引用及恢復規則標示為提案，來源管理與圖上引用暫維持分開。本批僅文件及探測腳本，產品／TOE 仍為 0.8.122，未操作使用者圖或刷新網頁。
 
 2026-09-20 0.8.122 交付：`cd4d2b5` 已同步 5 份 DAT；36 份來源、9 份服務資源、TOP／MAT Master（revision 70）與三份使用者 Shader 保留核對通過，刷新沒有模組錯誤。TOE 942,110 bytes，SHA-256 `c5d67b92689cd135ecc0eb55f9fe07b05ecfca754608ea45d4c85c2856331837`，已保存。首次保存請求在外部橋接 request.json 替換時遇到 Windows 檔案占用、尚未送入 TD；重送成功。詳細紀錄 `work/reports/source-controls/`；沒有重新整理使用者 Editor，也沒有改動 Uniform 寫入權限或訂閱協定。

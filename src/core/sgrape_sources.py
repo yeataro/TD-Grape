@@ -31,9 +31,21 @@ PRESETS = {key: entry['initialize']['expression'] for key, entry in _source_cata
 CHANNELS = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'),
             'color': ('rgbr', 'rgbg', 'rgbb', 'alpha'), 'const': ('value',), 'matrix': ('value',)}
 ARRAY_ELEMENT_TYPES = ('float', 'vec2', 'vec3', 'vec4')
-MAX_NATIVE_ARRAY_LENGTH = 1024
+MAX_NATIVE_ARRAY_LENGTH = 2147483647  # GLSL length representation, not a GPU capacity claim.
 # Configuration channels are deliberately separate from editable numeric values.
 SEQUENCE_CHANNELS = dict(CHANNELS, array=('type', 'chop', 'arraytype'))
+
+
+class SourceError(RuntimeError):
+    phase = 'source'
+
+
+def source_issue(row, message, ident=None):
+    """Keep rejected native rows visible without inventing a graph declaration."""
+    binding = row.get('arrayBinding', {})
+    return dict(message=message, name=row['name'], sequence=row['sequence'], index=row['index'],
+                status='invalid', **({'id':ident} if ident else {}),
+                **({'type':'samplerBuffer' if binding.get('arrayType')=='texturebuffer' else binding.get('elementType','')+'[N]'} if binding else {}))
 
 
 def array_shape(ty):
@@ -54,14 +66,14 @@ def native_array_length(declaration, declarations):
     if isinstance(length,int):return length
     source=declarations.get(length[7:])
     if not source or source.get('kind') not in ('constant','spec_constant') or source.get('type') not in ('int','uint'):
-        raise RuntimeError('Uniform Array length source is missing or is not an integer constant.')
+        raise SourceError('Uniform Array length source is missing or is not an integer constant.')
     if source['kind']=='spec_constant':
         # TD 2025.32820 probe: length specializes, but the CHOP values arrive as
         # zero; MAT also fails linking identical declarations across stages.
         # Do not silently replace the symbol with its default value.
-        raise RuntimeError('TouchDesigner CHOP Uniform Arrays do not correctly upload specialization-sized arrays on the verified host build. Use a literal or Graph Constant length; graph-local specialization-sized arrays remain supported.')
+        raise SourceError('TouchDesigner CHOP Uniform Arrays do not correctly upload specialization-sized arrays on the verified host build. Use a literal or Graph Constant length; graph-local specialization-sized arrays remain supported.')
     value=source.get('value')
-    if type(value) is not int or value<1:raise RuntimeError('Uniform Array length constant must be positive.')
+    if type(value) is not int or value<1:raise SourceError('Uniform Array length constant must be positive.')
     return value
 
 
@@ -77,7 +89,7 @@ def next_constant_id(declarations):
 
 
 def source_family(ty):
-    if ty not in TYPES: raise RuntimeError('Unsupported native source type.')
+    if ty not in TYPES: raise SourceError('Unsupported native source type.')
     return 'double' if ty.startswith('d') else 'bool' if ty == 'bool' or ty.startswith('bvec') else 'uint' if ty == 'uint' or ty.startswith('uvec') else 'int' if ty == 'int' or ty.startswith('ivec') else 'float'
 
 
@@ -87,14 +99,14 @@ def validate_uniform_component(declaration, value, role='value'):
     name = declaration.get('name', 'Uniform')
     if family == 'bool':
         if not isinstance(value, (bool, int, float)) or value not in (0, 1):
-            raise RuntimeError('Uniform '+name+': native boolean '+role+' must be 0 or 1.')
+            raise SourceError('Uniform '+name+': native boolean '+role+' must be 0 or 1.')
         return
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-        raise RuntimeError('Uniform '+name+': native '+role+' must be a finite number.')
+        raise SourceError('Uniform '+name+': native '+role+' must be a finite number.')
     if family in ('float','double'): return
     low, high = (-2147483648, 2147483647) if family == 'int' else (0, 4294967295)
     if int(value) != value or not low <= value <= high:
-        raise RuntimeError('Uniform '+name+': native '+role+' must be a whole '+family+' value from '+str(low)+' to '+str(high)+'.')
+        raise SourceError('Uniform '+name+': native '+role+' must be a whole '+family+' value from '+str(low)+' to '+str(high)+'.')
 
 
 def validate_uniform_native(declaration, value, role='value'):
@@ -102,12 +114,12 @@ def validate_uniform_native(declaration, value, role='value'):
     if shape:
         if value is None: return  # The CHOP owns data; no sampled JSON default.
         if not isinstance(value, (list, tuple)) or len(value) != shape[1]:
-            raise RuntimeError('Uniform '+declaration.get('name', '')+': invalid native array length.')
+            raise SourceError('Uniform '+declaration.get('name', '')+': invalid native array length.')
         for element in value: validate_uniform_native(dict(declaration, type=shape[0]), element, role)
         return
     values = [value] if source_components(declaration) == 1 else value
     if not isinstance(values, (list, tuple)) or len(values) != source_components(declaration):
-        raise RuntimeError('Uniform '+declaration.get('name', '')+': invalid native component count.')
+        raise SourceError('Uniform '+declaration.get('name', '')+': invalid native component count.')
     for component in values: validate_uniform_component(declaration, component, role)
 
 
@@ -123,7 +135,7 @@ def validate_source_value(runtime, comp, ident, value, index=0):
     graph = source_graph(runtime, comp)
     declaration = next((d for d in graph['declarations'] if d['id'] == ident and d.get('kind') in SOURCE_KINDS), None)
     if not declaration or declaration.get('sourceMissing') or not 0 <= index < source_components(declaration):
-        raise RuntimeError('The native source or its component is no longer available.')
+        raise SourceError('The native source or its component is no longer available.')
     if declaration['kind'] == 'uniform':
         validate_uniform_component(declaration, value)
     elif declaration['type'] == 'bool':
@@ -139,10 +151,10 @@ def validate_spec_native(declaration, value, role='value'):
     if ty not in ('int', 'uint'): return
     name = declaration.get('name', 'Spec Constant')
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or int(value) != value:
-        raise RuntimeError('Spec Constant '+name+': native '+role+' must be a whole '+ty+' value.')
+        raise SourceError('Spec Constant '+name+': native '+role+' must be a whole '+ty+' value.')
     minimum, maximum = (-2147483648, 2147483647) if ty == 'int' else (0, 4294967295)
     if not minimum <= value <= maximum:
-        raise RuntimeError('Spec Constant '+name+': '+role+' must be a whole '+ty+' value from '+str(minimum)+' to '+str(maximum)+'.')
+        raise SourceError('Spec Constant '+name+': '+role+' must be a whole '+ty+' value from '+str(minimum)+' to '+str(maximum)+'.')
 
 
 def valid_name(name):
@@ -273,9 +285,9 @@ def array_source_length(operator, index):
     """Used once on import/apply, never to poll individual CHOP samples."""
     source = array_driver_value(parameter(operator, 'array', index, 'chop'))
     if source is None or getattr(source, 'family', None) != 'CHOP':
-        raise RuntimeError('Choose an existing CHOP for the Uniform Array source.')
+        raise SourceError('Choose an existing CHOP for the Uniform Array source.')
     length = int(source.numSamples)
-    if length < 1: raise RuntimeError('The Uniform Array source has no samples.')
+    if length < 1: raise SourceError('The Uniform Array source has no samples.')
     return length
 
 
@@ -342,7 +354,8 @@ def reconcile(declarations, registry, rows, operator=None):
         array_invalid = row is not None and row['sequence'] == 'array' and (not array_shape(decl['type']) or row['arrayBinding']['arrayType'] != 'uniformarray' or row['arrayBinding']['elementType'] != array_shape(decl['type'])[0])
         if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied or array_invalid:
             decl['sourceMissing'] = True; record['missing'] = True
-            issues.append({'id': ident, 'message': ('Native Array storage or element type differs from '+decl['type']+': ' if array_invalid else 'Native source is missing or ambiguous: ') + decl['name']})
+            message = ('Native Array storage or element type differs from '+decl['type']+': ' if array_invalid else 'Native source is missing or ambiguous: ') + decl['name']
+            issues.append(source_issue(row,message,ident) if row else {'id':ident,'name':decl['name'],'status':'missing','message':message})
         else:
             decl['name'] = row['name']; decl.pop('sourceMissing', None)
             if row['sequence'] in ('color','matrix','array'):decl['nativeSequence']=row['sequence']
@@ -352,21 +365,21 @@ def reconcile(declarations, registry, rows, operator=None):
         if i in taken: continue
         name = row['name']
         if not valid_name(name) or name in known or names[name] != 1:
-            issues.append({'message': 'Review the native Uniform name: ' + name}); continue
+            issues.append(source_issue(row,'Review the native Uniform name: ' + name)); continue
         kind = 'spec_constant' if row['sequence'] == 'const' else 'uniform'
         ident = kind + '_' + uuid.uuid4().hex
         if row['sequence'] == 'array':
             binding = row['arrayBinding']
             if binding['arrayType'] != 'uniformarray' or binding['elementType'] not in ARRAY_ELEMENT_TYPES:
-                issues.append({'message': 'Texture Buffer sources require buffer access, not a value array: ' + name})
+                issues.append(dict(source_issue(row,'Texture Buffer access is not supported yet: ' + name),status='unsupported'))
                 continue
             try:
-                if operator is None: raise RuntimeError('Refresh native sources to inspect the CHOP length.')
+                if operator is None: raise SourceError('Refresh native sources to inspect the CHOP length.')
                 length = array_source_length(operator, row['index'])
                 if length > MAX_NATIVE_ARRAY_LENGTH:
-                    raise RuntimeError('The CHOP exceeds the supported fixed-array length of '+str(MAX_NATIVE_ARRAY_LENGTH)+'.')
+                    raise SourceError('The CHOP length exceeds the GLSL signed 32-bit range.')
             except RuntimeError as exc:
-                issues.append({'message': name + ': ' + str(exc)}); continue
+                issues.append(source_issue(row,name + ': ' + str(exc))); continue
             element = binding['elementType']
             declarations.append({'id': ident, 'kind': 'uniform', 'name': name,
                                  'type': element+'['+str(length)+']', 'nativeSequence': 'array',
@@ -377,7 +390,9 @@ def reconcile(declarations, registry, rows, operator=None):
         ty = 'mat4' if row['sequence'] == 'matrix' else 'vec4' if row['sequence'] == 'color' else 'float'
         values = [c['value'] if c['value'] is not None and abs(c['value']) <= 1e20 else 0.0 for c in row['components']]
         if kind == 'spec_constant':
-            ty = 'int'; values = [max(-2147483648, min(2147483647, int(values[0])))]
+            # TD has a numeric value but no declaration type on this page.
+            # New imports use float; an existing graph's chosen type is kept.
+            ty = 'float'; values = [float(values[0])]
         elif ty == 'mat4':
             values = row['matrixBinding']['literalValues'] or [float(c == r) for c in range(4) for r in range(4)]
         declarations.append({'id': ident, 'kind': kind, 'name': name, 'type': ty,
@@ -436,7 +451,7 @@ def restore_configuration(runtime, comp, before):
     else: comp.store(STORE, before['registry'])
 
 
-def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
+def configure(runtime, comp, graph, public, preserve=None, input_owner=None, used=None):
     """Create missing declarations once; never reset existing rows/modes.
 
     Candidates get effective values for validation. Existing destination Par
@@ -452,40 +467,45 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
     declarations = [d for d in graph['declarations'] if d['kind'] in SOURCE_KINDS]
     declaration_map={d['id']:d for d in graph['declarations']}
     array_lengths={d['id']:native_array_length(d,declaration_map) for d in declarations if array_shape(d.get('type'))}
+    original_index=native_index(original)
+    # Existing unused native data must not block an unrelated valid Shader.
+    # New sources still validate their data when first configured.
+    validate_data={d['id'] for d in declarations if used is None or d['id'] in used or
+                   locate(original,original_registry.get(d['id']),original_index) is None}
     # Validate candidate types before creating/renaming native rows.
     # Precision and numerical conversion remain the host's responsibility.
     for decl in declarations:
         if decl['kind'] == 'uniform' and not decl.get('sourceMissing'):
             validate_uniform_native(decl, decl['value'], 'default')
-            source = locate(original, original_registry.get(decl['id']))
+            source = locate(original, original_registry.get(decl['id']),original_index)
             if source is None:
                 matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] != 'const']
                 source = matches[0] if len(matches) == 1 else None
             if array_shape(decl['type']):
                 if source:
                     if source['sequence'] != 'array' or source['arrayBinding']['arrayType'] != 'uniformarray':
-                        raise RuntimeError('Create a new Uniform Array when changing native source pages: '+decl['name'])
+                        raise SourceError('Create a new Uniform Array when changing native source pages: '+decl['name'])
                     if source['arrayBinding']['elementType'] != array_shape(decl['type'])[0]:
-                        raise RuntimeError('The CHOP Uniform Array element type differs from its graph declaration: '+decl['name'])
-                    if array_source_length(original, source['index']) < array_lengths[decl['id']]:
-                        raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
+                        raise SourceError('The CHOP Uniform Array element type differs from its graph declaration: '+decl['name'])
+                    if decl['id'] in validate_data and array_source_length(original, source['index']) < array_lengths[decl['id']]:
+                        raise SourceError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
                 continue
             if source and source['sequence'] == 'array':
-                raise RuntimeError('Create a new Uniform when changing native source pages: '+decl['name'])
+                raise SourceError('Create a new Uniform when changing native source pages: '+decl['name'])
             if source and (source['sequence'] == 'matrix') != (decl['type'] in MATRIX_SHAPES):
-                raise RuntimeError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
-            if source and source['sequence'] != 'matrix':
+                raise SourceError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
+            if source and source['sequence'] != 'matrix' and decl['id'] in validate_data:
                 for component in source['components'][:source_components(decl)]:
                     validate_uniform_component(decl, component['value'])
-            elif decl['id'] in (preserve or {}): validate_uniform_native(decl, preserve[decl['id']])
+            elif not source and decl['id'] in (preserve or {}): validate_uniform_native(decl, preserve[decl['id']])
         if decl['kind'] != 'spec_constant' or decl.get('sourceMissing'): continue
         validate_spec_native(decl, decl['value'], 'default')
-        source = locate(original, original_registry.get(decl['id']))
+        source = locate(original, original_registry.get(decl['id']),original_index)
         if source is None:
             matches = [r for r in native_rows(original) if r['name'] == decl['name'] and r['sequence'] == 'const']
             source = matches[0] if len(matches) == 1 else None
-        if source: validate_spec_native(decl, source['components'][0]['value'])
-        elif decl['id'] in (preserve or {}): validate_spec_native(decl, preserve[decl['id']])
+        if source and decl['id'] in validate_data: validate_spec_native(decl, source['components'][0]['value'])
+        elif not source and decl['id'] in (preserve or {}): validate_spec_native(decl, preserve[decl['id']])
     # Legacy builds only instantiated used uniforms. Adopt those exact native
     # names; don't reuse arbitrary blank slots carrying expressions/exports.
     for decl in declarations:
@@ -496,18 +516,18 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
         existing = locate(operator, record)
         if existing is None and not record:
             candidates = [r for r in native_rows(operator) if r['name'] == decl['name']]
-            if len(candidates) > 1: raise RuntimeError('Duplicate native Uniform: ' + decl['name'])
+            if len(candidates) > 1: raise SourceError('Duplicate native Uniform: ' + decl['name'])
             existing = candidates[0] if candidates else None
         if existing:
             sequence = existing['sequence']; index = existing['index']
             if (sequence=='const') != (decl['kind']=='spec_constant'):
-                raise RuntimeError('Native source kind differs from its declaration: ' + decl['name'])
+                raise SourceError('Native source kind differs from its declaration: ' + decl['name'])
             if (sequence == 'array') != bool(array_shape(decl['type'])):
-                raise RuntimeError('Create a new Uniform when changing native source pages: '+decl['name'])
+                raise SourceError('Create a new Uniform when changing native source pages: '+decl['name'])
             if (sequence=='matrix') != (decl['type'] in MATRIX_SHAPES):
-                raise RuntimeError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
+                raise SourceError('Create a new Uniform when changing between Matrix and Vector sources: '+decl['name'])
             if existing['name'] != decl['name']:
-                if existing['nameMode'] != 'CONSTANT': raise RuntimeError('The Uniform name is controlled by TD.')
+                if existing['nameMode'] != 'CONSTANT': raise SourceError('The Uniform name is controlled by TD.')
                 parameter(operator, sequence, index, 'name').val = decl['name']
             if sequence == 'array':
                 registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
@@ -534,7 +554,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
             registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
             continue
         if record and not record.get('missing'):
-            raise RuntimeError('Uniform changed in TD. Refresh sources before applying: ' + decl['name'])
+            raise SourceError('Uniform changed in TD. Refresh sources before applying: ' + decl['name'])
         sequence = source_sequence(decl); seq = getattr(operator.seq,sequence)
         index = seq.numBlocks
         # The untouched initial blank row is safe; edited blank rows survive.
@@ -554,12 +574,12 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None):
                 p.expr = 'op('+repr(helper)+').module.array_driver_value(op('+repr(original.path)+').par.array'+str(source['index'])+'chop)'
             elif input_owner and decl.get('arraySource'):
                 resolved = input_owner.op(decl['arraySource'])
-                if resolved is None: raise RuntimeError('Choose an existing CHOP for the Uniform Array source.')
+                if resolved is None: raise SourceError('Choose an existing CHOP for the Uniform Array source.')
                 p.val = resolved.path
             else:
                 p.val = decl.get('arraySource', '')
-            if array_source_length(operator, index) < array_lengths[decl['id']]:
-                raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
+            if ident in validate_data and array_source_length(operator, index) < array_lengths[decl['id']]:
+                raise SourceError('The CHOP has fewer samples than the declared Uniform Array length: '+decl['name'])
             registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
             continue
         default = decl['value']; values = [default] if source_components(decl) == 1 else list(default)
@@ -641,14 +661,14 @@ def snapshot(runtime):
 
 def write_value(runtime, body):
     seen = snapshot(runtime)
-    if body.get('revision') != seen['revision']: raise RuntimeError('Conflict: refresh sources before editing.')
+    if body.get('revision') != seen['revision']: raise SourceError('Conflict: refresh sources before editing.')
     rows = [r for r in seen['uniforms'] + seen.get('specConstants', []) if r['id'] == body.get('id')]
     index = body.get('component')
     if len(rows) != 1 or type(index) is not int or not 0 <= index < len(rows[0]['components']) or rows[0]['missing']:
-        raise RuntimeError('Select an existing native source component.')
+        raise SourceError('Select an existing native source component.')
     item = rows[0]['components'][index]
-    if not item['writable']: raise RuntimeError('This value is controlled by TD; its Expression, Export or Bind was preserved.')
-    if body.get('expected') != item: raise RuntimeError('The value changed in TD. Refresh and try again.')
+    if not item['writable']: raise SourceError('This value is controlled by TD; its Expression, Export or Bind was preserved.')
+    if body.get('expected') != item: raise SourceError('The value changed in TD. Refresh and try again.')
     value = body.get('value')
     if rows[0].get('kind')=='spec_constant':
         runtime.core().literal(value, rows[0]['type'])
@@ -662,14 +682,14 @@ def write_value(runtime, body):
     def validate(value):
         row = locate(operator, comp.fetch(STORE, {}).get(ident))
         if row is None or row['components'][index]['parameter'] != p.name:
-            raise RuntimeError('The Uniform row moved or its source was removed.')
+            raise SourceError('The Uniform row moved or its source was removed.')
     target=editable_parameter(p)
-    if target is None: raise RuntimeError('The native control changed.')
+    if target is None: raise SourceError('The native control changed.')
     original_validate=validate
     def validate(value):
         original_validate(value)
         current=editable_parameter(p)
-        if current is None or not current.isSamePar(target): raise RuntimeError('The custom control was detached or replaced.')
+        if current is None or not current.isSamePar(target): raise SourceError('The custom control was detached or replaced.')
         validate_source_value(runtime, comp, ident, value, index)
     runtime.set_parameter_with_undo(target, value, validate=validate)
     return snapshot(runtime)
@@ -699,9 +719,9 @@ def purge_missing_source(runtime, ident):
     graph = before['graph']
     decl = next((d for d in graph['declarations'] if d['id'] == ident and d['kind'] in SOURCE_KINDS), None)
     if not decl or not decl.get('sourceMissing'):
-        raise RuntimeError('Select a missing Uniform source to remove from Inputs.')
+        raise SourceError('Select a missing Uniform source to remove from Inputs.')
     if source_references(graph, ident):
-        raise RuntimeError('This Uniform still has graph references. Remove or reassign them before removing the missing source.')
+        raise SourceError('This Uniform still has graph references. Remove or reassign them before removing the missing source.')
     registry_before = copy.deepcopy(comp.fetch(STORE, {}))
     issues_before = copy.deepcopy(comp.fetch('grapeSourceIssues', []))
     registry = copy.deepcopy(registry_before); registry.pop(ident, None)
@@ -718,13 +738,13 @@ def purge_missing_source(runtime, ident):
         comp.store(STORE, registry_before)
         comp.store('grapeSourceIssues', issues_before)
         runtime.write_state(before)
-        raise RuntimeError('Could not remove the missing Uniform from Inputs. Its missing record was retained; refresh and retry.') from exc
+        raise SourceError('Could not remove the missing Uniform from Inputs. Its missing record was retained; refresh and retry.') from exc
 
 
 def edit(runtime, body):
     seen = snapshot(runtime)
-    if not seen['enabled']: raise RuntimeError('Apply this Shader once to enable native Uniform sources.')
-    if body.get('revision') != seen['revision']: raise RuntimeError('Conflict: refresh sources before editing.')
+    if not seen['enabled']: raise SourceError('Apply this Shader once to enable native Uniform sources.')
+    if body.get('revision') != seen['revision']: raise SourceError('Conflict: refresh sources before editing.')
     action = body.get('action'); comp = runtime.target(); operator = runtime.shader_operator(comp)
     graph = copy.deepcopy(runtime.state()['graph'])
     decl = next((d for d in graph['declarations'] if d['id'] == body.get('id') and d['kind'] in SOURCE_KINDS), None)
@@ -732,65 +752,65 @@ def edit(runtime, body):
         if action == 'create':
             name = body.get('name'); ty = body.get('type'); kind = body.get('kind', 'uniform')
             if not valid_name(name) or name in {d['name'] for d in graph['declarations']} or any(r['name'] == name for r in native_rows(operator)):
-                raise RuntimeError('Use a unique GLSL Uniform name.')
-            if kind not in SOURCE_KINDS or not (ty in SPEC_TYPES if kind=='spec_constant' else ty in TYPES or array_shape(ty)): raise RuntimeError('Unsupported native source type.')
+                raise SourceError('Use a unique GLSL Uniform name.')
+            if kind not in SOURCE_KINDS or not (ty in SPEC_TYPES if kind=='spec_constant' else ty in TYPES or array_shape(ty)): raise SourceError('Unsupported native source type.')
             decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
                     'value': None if array_shape(ty) else runtime.core().filled_value(ty)}
             if kind=='spec_constant':decl.update(constantId=next_constant_id(graph['declarations']), nativeSequence='const')
             elif array_shape(ty):
                 path = body.get('arraySource', '')
-                if not isinstance(path, str) or len(path)>4096 or any(ord(c)<32 for c in path): raise RuntimeError('Choose a CHOP path for the Uniform Array.')
+                if not isinstance(path, str) or len(path)>4096 or any(ord(c)<32 for c in path): raise SourceError('Choose a CHOP path for the Uniform Array.')
                 decl.update(nativeSequence='array', arraySource=path)
             elif ty in MATRIX_SHAPES:decl['nativeSequence']='matrix'
             if body.get('sequence'):
-                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('array',) if array_shape(ty) else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise RuntimeError('Unsupported native source page.')
+                if body['sequence'] not in (('const',) if kind=='spec_constant' else ('array',) if array_shape(ty) else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise SourceError('Unsupported native source page.')
                 decl['nativeSequence']=body['sequence']
             if body.get('preset'):
-                if kind!='uniform' or body['preset'] not in PRESETS or ty!='float':raise RuntimeError('Unsupported time preset.')
+                if kind!='uniform' or body['preset'] not in PRESETS or ty!='float':raise SourceError('Unsupported time preset.')
                 decl['initialDriver']=body['preset']
             graph['declarations'].append(decl)
         elif not decl or not decl.get('sourceMissing'):
-            raise RuntimeError('Select a missing Uniform to restore.')
+            raise SourceError('Select a missing Uniform to restore.')
         else: decl.pop('sourceMissing', None)
         result = runtime.deploy(graph, seen['revision'])
-        if not result.get('ok'): raise RuntimeError('Review the Shader version before changing sources.')
+        if not result.get('ok'): raise SourceError('Review the Shader version before changing sources.')
         return snapshot(runtime)
-    if not decl: raise RuntimeError('Select an existing Uniform source.')
+    if not decl: raise SourceError('Select an existing Uniform source.')
     row = locate(operator, comp.fetch(STORE, {}).get(decl['id']))
     if action == 'remove' and row is None:
-        if body.get('expected') is not None: raise RuntimeError('The Uniform changed in TD. Refresh and try again.')
+        if body.get('expected') is not None: raise SourceError('The Uniform changed in TD. Refresh and try again.')
         purge_missing_source(runtime, decl['id'])
         return snapshot(runtime)
-    if row is None: raise RuntimeError('This Uniform source is missing.')
+    if row is None: raise SourceError('This Uniform source is missing.')
     if action == 'arrayBinding':
-        if row['sequence'] != 'array' or not array_shape(decl['type']): raise RuntimeError('Select a CHOP Uniform Array source.')
+        if row['sequence'] != 'array' or not array_shape(decl['type']): raise SourceError('Select a CHOP Uniform Array source.')
         binding = row['arrayBinding']
         if not binding['writable'] or body.get('expected') != binding['expected']:
-            raise RuntimeError('The array source changed or is owned by Bind / Export. Refresh or use native Parameters.')
+            raise SourceError('The array source changed or is owned by Bind / Export. Refresh or use native Parameters.')
         mode = body.get('mode'); value = body.get('expression') if mode == 'EXPRESSION' else body.get('value')
         if mode not in ('CONSTANT', 'EXPRESSION') or not isinstance(value, str) or len(value)>4096:
-            raise RuntimeError('Enter a CHOP path or Python expression up to 4096 characters.')
-        if mode == 'CONSTANT' and any(ord(c)<32 for c in value): raise RuntimeError('Choose a CHOP path without control characters.')
+            raise SourceError('Enter a CHOP path or Python expression up to 4096 characters.')
+        if mode == 'CONSTANT' and any(ord(c)<32 for c in value): raise SourceError('Choose a CHOP path without control characters.')
         p = parameter(operator, 'array', row['index'], 'chop')
         before = {key:getattr(p,key) for key in ('val','mode','expr','bindExpr')}
         try:
             if mode == 'EXPRESSION': p.expr = value
             else: p.mode = ParMode.CONSTANT; p.val = value
             if array_source_length(operator,row['index']) < native_array_length(decl,{d['id']:d for d in runtime.state()['graph']['declarations']}):
-                raise RuntimeError('The CHOP has fewer samples than the declared Uniform Array length.')
+                raise SourceError('The CHOP has fewer samples than the declared Uniform Array length.')
         except Exception:
             for key in ('val','expr','bindExpr','mode'): setattr(p,key,before[key])
             raise
         return snapshot(runtime)
     if action in ('matrixBinding','matrixValue'):
         if row['sequence'] != 'matrix' or decl['type'] not in MATRIX_SHAPES:
-            raise RuntimeError('Select a Matrix Uniform source.')
+            raise SourceError('Select a Matrix Uniform source.')
         binding = row['matrixBinding']
         if not binding['writable'] or body.get('expected') != binding['expected']:
-            raise RuntimeError('The matrix source changed or is owned by Bind / Export. Refresh or use native Parameters.')
+            raise SourceError('The matrix source changed or is owned by Bind / Export. Refresh or use native Parameters.')
         p = parameter(operator, 'matrix', row['index'], 'value')
         if action == 'matrixValue':
-            if binding['literalValues'] is None: raise RuntimeError('This matrix is driven by TD. Edit its source binding instead.')
+            if binding['literalValues'] is None: raise SourceError('This matrix is driven by TD. Edit its source binding instead.')
             runtime.core().literal(body.get('value'), decl['type'])
             expression = matrix_expression(decl, body['value'], binding['literalValues'])
             p.expr = expression
@@ -798,21 +818,21 @@ def edit(runtime, body):
             mode = body.get('mode')
             value = body.get('expression') if mode == 'EXPRESSION' else body.get('value')
             if mode not in ('CONSTANT','EXPRESSION') or not isinstance(value,str) or len(value)>4096:
-                raise RuntimeError('Enter a Matrix source path or Python expression up to 4096 characters.')
+                raise SourceError('Enter a Matrix source path or Python expression up to 4096 characters.')
             # TD owns evaluation and error reporting. Do not sample drivers or
             # impose additional numerical/transport rules on accepted sources.
             if mode == 'EXPRESSION':p.expr = value
             else:p.mode = ParMode.CONSTANT;p.val = value
         return snapshot(runtime)
     if action == 'driver':
-        if row['sequence'] in ('matrix','array'): raise RuntimeError('Use the source binding to edit this driver.')
-        if decl['kind']=='spec_constant':raise RuntimeError('Spec Constants are intended for infrequent integer mode changes; edit native drivers in TD.')
+        if row['sequence'] in ('matrix','array'): raise SourceError('Use the source binding to edit this driver.')
+        if decl['kind']=='spec_constant':raise SourceError('Spec Constants are intended for infrequent integer mode changes; edit native drivers in TD.')
         index=body.get('component');expression=body.get('expression')
         if type(index) is not int or not 0<=index<4 or not isinstance(expression,str) or len(expression)>4096:
-            raise RuntimeError('Select a component and enter a Python expression up to 4096 characters.')
+            raise SourceError('Select a component and enter a Python expression up to 4096 characters.')
         item=row['components'][index]
         if not item['modeWritable'] or body.get('expected')!=item['modeExpected']:
-            raise RuntimeError('The driver changed or is owned by Bind / Export. Refresh or use native Parameters.')
+            raise SourceError('The driver changed or is owned by Bind / Export. Refresh or use native Parameters.')
         p=getattr(operator.par,item['parameter']);before=(p.mode,p.val,p.expr)
         try:
             if expression.strip():p.expr=expression
@@ -822,14 +842,14 @@ def edit(runtime, body):
             validate_uniform_component(decl, p.eval())
         except Exception:
             p.val=before[1];p.expr=before[2];p.mode=before[0]
-            raise RuntimeError('Expression must evaluate to a finite numeric value; the previous driver was restored.')
+            raise SourceError('Expression must evaluate to a finite numeric value; the previous driver was restored.')
         return snapshot(runtime)
-    if body.get('expected') != edit_token(row): raise RuntimeError('The Uniform changed in TD. Refresh and try again.')
+    if body.get('expected') != edit_token(row): raise SourceError('The Uniform changed in TD. Refresh and try again.')
     if action == 'rename':
         name = body.get('name')
         if not valid_name(name) or any(d['name'] == name and d['id'] != decl['id'] for d in graph['declarations']) or any(r['name'] == name and (r['sequence'], r['index']) != (row['sequence'], row['index']) for r in native_rows(operator)):
-            raise RuntimeError('Use a unique GLSL Uniform name.')
-        if row['nameMode'] != 'CONSTANT': raise RuntimeError('The native Uniform name is controlled by TD.')
+            raise SourceError('Use a unique GLSL Uniform name.')
+        if row['nameMode'] != 'CONSTANT': raise SourceError('The native Uniform name is controlled by TD.')
         parameter(operator, row['sequence'], row['index'], 'name').val = name
         registry = copy.deepcopy(comp.fetch(STORE)); registry[decl['id']]['name'] = name
         comp.store(STORE, registry)
@@ -852,5 +872,5 @@ def edit(runtime, body):
             purge_missing_source(runtime, decl['id'])
             return snapshot(runtime)
         return removed
-    else: raise RuntimeError('Unknown source operation.')
+    else: raise SourceError('Unknown source operation.')
     return snapshot(runtime)

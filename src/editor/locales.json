@@ -1580,9 +1580,12 @@
       "en": "No matching items."
     },
     "diagnostic.failed": {
-      "en": "Compile failed · previous output retained",
-      "zh-Hant": "編譯失敗 · 保留上次成功輸出"
+      "en": "Cannot apply · last successful Shader retained",
+      "zh-Hant": "無法套用 · 保留上次成功的 Shader"
     },
+    "diagnostic.sourceFailed": {"en":"Source validation failed · last successful Shader retained", "zh-Hant":"來源驗證失敗 · 保留上次成功的 Shader"},
+    "diagnostic.shaderFailed": {"en":"GLSL compile failed · last successful Shader retained", "zh-Hant":"GLSL 編譯失敗 · 保留上次成功的 Shader"},
+    "sources.unavailable": {"en":"Unavailable sources", "zh-Hant":"無法使用的來源"},
     "diagnostic.locate": {
       "en": "Go to node",
       "zh-Hant": "前往節點"

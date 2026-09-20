@@ -10,10 +10,11 @@ let graph={target:'top',declarations:[{id:'weights',kind:'uniform',type:'float[8
 let editorTarget='top',stage='pixel',catalog=payload.catalog;
 const same=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
 assert.equal(typeDescriptor('float[2][3]').length,2);assert.equal(typeDescriptor('float[2][3]').elementType,'float[3]');
-assert.equal(arrayType('float[3]',2),'float[2][3]');assert.equal(typeDescriptor('float[04]'),null);assert.equal(typeDescriptor('float[0]'),null);assert.equal(typeDescriptor('float[1025]'),null);assert.equal(typeDescriptor('float[2][2][2][2][2][2][2][2][2]'),null);
+assert.equal(arrayType('float[3]',2),'float[2][3]');assert.equal(typeDescriptor('float[04]'),null);assert.equal(typeDescriptor('float[0]'),null);assert.equal(typeDescriptor('float[1025]').length,1025);assert.equal(typeDescriptor('float[2147483648]'),null);assert.equal(compositeZeroValue('float[1000000]'),null);assert.equal(typeDescriptor('float[2][2][2][2][2][2][2][2][2]'),null);
 same(compositeZeroValue('float[2][3]'),[[0,0,0],[0,0,0]]);same(compositeZeroValue('bool[2]'),[false,false]);same(compositeZeroValue('mat2[2]'),[[0,0,0,0],[0,0,0,0]]);
 same(compositeZeroValue('struct:sample[1]'),[{position:[0,0],matrix:[0,0,0,0]}]);assert.equal(compositeZeroValue('sampler2D[TD_NUM_2D_INPUTS]'),null);
 assert.throws(()=>compositeZeroValue('float[1024][1024]'),/composite.valueTooLarge/);
+assert.throws(()=>glslZeroLiteral('float[1000000]'),/composite.valueTooLarge/);
 assert.equal(displayType('struct:sample[2][3]'),'Sample[2][3]');assert.equal(glslPortDeclaration('struct:sample[2][3]','items'),'sg_type_sample items[2][3]');
 const header=CustomGLSL.header({functionName:'readSamples',inputs:[{id:'a',name:'items',type:'struct:sample[2]'}],outputs:[{id:'b',name:'weights',type:'float[2]'}]});
 assert.ok(header.includes('in sg_type_sample items[2]'));assert.ok(header.includes('out float weights[2]'));assert.ok(header.includes('for (int sg_init_0 = 0; sg_init_0 < 2; ++sg_init_0)'));assert.ok(header.includes('weights[sg_init_0] = 0.0;'));assert.ok(!header.includes('struct:sample'));

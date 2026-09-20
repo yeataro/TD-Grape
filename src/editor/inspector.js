@@ -1963,6 +1963,7 @@ function selectInputSource(id){
 }
 function inputReference(id,x=null,y=null){
   const decl=allInputSources().find(d=>d.id===id),d=decl&&catalog.find(d=>d.key===decl.kind);if(!d)return;
+  if(decl.sourceMissing){status(sourceMissingHint(decl),true);return;}
   const rect=$('#canvas').getBoundingClientRect(),p=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!p)return;
   change(()=>{selectedInputId=null;const n=instantiate(d,p.x,p.y,null,{declarationId:id});selectNode(n);});
 }
@@ -2048,7 +2049,7 @@ function renderNativeSourceValues(){
   $('#sourcecreate button[type=submit]').textContent=t(presetSource?'inputs.useExisting':'inputs.create');
   // Polls may clear this source hint after recovery; they never publish it over another action.
   if(nativeSourceHint&&(!nativeSourceHintText()||!selectedInputId))clearNativeSourceHint();
-  for(const item of document.querySelectorAll('[data-input-reference]'))setEditorDisabled(item,editorMutationBlocked(),editorMutationBlocked(true));
+  for(const item of document.querySelectorAll('[data-input-reference]')){const missing=item.dataset.sourceMissing==='true';setEditorDisabled(item,missing||editorMutationBlocked(),missing||editorMutationBlocked(true));}
   for(const item of document.querySelectorAll('[data-input-create]'))setEditorDisabled(item,editorMutationBlocked()||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16),editorMutationBlocked(true)||(item.dataset.inputCreate==='top_input'&&topInputsView().length>=16));
   for(const item of document.querySelectorAll('[data-source-custom]'))item.disabled=!ready;
 }
@@ -2205,6 +2206,7 @@ function inputSourceInspector(box,decl){
   }else if(decl.kind==='constant')constantFields(box,decl);
   else declarationFields(box,decl);
   const actions=el('div',{class:'source-actions'}),reference=el('button',{'data-input-reference':decl.id},t('sources.reference'));reference.onclick=()=>inputReference(decl.id);
+  reference.disabled=readonly||!!decl.sourceMissing;reference.dataset.sourceMissing=String(!!decl.sourceMissing);
   actions.append(reference);box.append(actions,el('p',{class:'muted'},t('inputs.references').replace('{count}',sourceReferences(decl.id).length)));
   if(['uniform','spec_constant'].includes(decl.kind)&&row&&!row.pending){
     const sourceAction=action=>{
@@ -2266,7 +2268,7 @@ function installCanvasItemDrag(button,label,dropItem,clickItem){
   let suppressClick=0;
   button.onclick=()=>{if(performance.now()>suppressClick)clickItem();};
   button.onpointerdown=e=>{
-    if(readonly||e.button!==0)return;e.preventDefault();e.stopPropagation();
+    if(readonly||button.disabled||e.button!==0)return;e.preventDefault();e.stopPropagation();
     const start={x:e.clientX,y:e.clientY},pointer=e.pointerId,ghost=el('div',{class:'input-drag-preview'},label());let moved=false,done=false;
     button.setPointerCapture(pointer);
     const cancel=()=>finish(null),escape=ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopImmediatePropagation();cancel();}},second=ev=>{if(ev.pointerId!==pointer)cancel();};
@@ -2299,7 +2301,9 @@ function appendBuiltInInputs(box,query){
 function renderNativeSources(){
   const box=$('#nativeuniforms');if(!box||!graph)return;
   const query=normalizeSearch($('#inputsearch')?.value),decls=allInputSources().filter(d=>['uniform','sampler','constant','spec_constant','top_input'].includes(d.kind)&&normalizeSearch(d.name+' '+d.kind+' '+d.type).includes(query));
-  const identity=JSON.stringify([language,editorTarget,stage,query,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing,d.kind,d.index,d.sourceMissing?sourceReferences(d.id).length:0]),selectedInputId]);
+  const issues=nativeSourceSnapshot?.issues||[],issueById=new Map(issues.filter(i=>i.id).map(i=>[i.id,i]));
+  const unimported=issues.filter(i=>!i.id&&normalizeSearch((i.name||'')+' '+i.message).includes(query));
+  const identity=JSON.stringify([language,editorTarget,stage,query,decls.map(d=>[d.id,d.name,d.type,d.sourceMissing,d.kind,d.index,d.sourceMissing?sourceReferences(d.id).length:0]),selectedInputId,issues]);
   if(box.dataset.sourceStructure!==identity&&!box.querySelector(':active')){
     box.dataset.sourceStructure=identity;box.replaceChildren();
     for(const kind of ['top_input','constant','spec_constant','uniform','sampler']){
@@ -2314,13 +2318,18 @@ function renderNativeSources(){
       section.append(head,list);box.append(section);
       for(const decl of group){
         const card=el('div',{class:'input-source-row','data-input-source':decl.id,'data-category':nodeCategory({key:kind})}),pick=el('button',{class:'input-source-select','aria-pressed':String(selectedInputId===decl.id)});
-        pick.append(el('span',{},decl.name));if(kind!=='top_input')pick.append(el('small',{},decl.type+(decl.sourceMissing?' · '+sourceMissingHint(decl):'')));pick.title=decl.name+' · '+decl.type+' · '+t('inputs.editReference');
+        pick.append(el('span',{},decl.name));if(kind!=='top_input')pick.append(el('small',{},decl.type));pick.title=decl.name+' · '+decl.type+' · '+t('inputs.editReference');
         installCanvasItemDrag(pick,()=>allInputSources().find(d=>d.id===decl.id)?.name||'',(x,y)=>inputReference(decl.id,x,y),()=>selectInputSource(decl.id));const pointer=pick.onpointerdown;pick.onpointerdown=e=>{if(e.pointerType==='mouse')pointer(e);};
-        const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');installInputDrag(reference,decl.id);card.append(pick,reference);list.append(card);
+        const reference=el('button',{class:'input-reference','data-input-reference':decl.id,'aria-label':t('sources.reference')+' '+decl.name,title:t('inputs.dragReference')},'+');reference.disabled=readonly||!!decl.sourceMissing;reference.dataset.sourceMissing=String(!!decl.sourceMissing);installInputDrag(reference,decl.id);card.append(pick,reference);
+        const issue=issueById.get(decl.id);if(issue||decl.sourceMissing){card.dataset.sourceState=issue?.status||'missing';card.append(el('div',{class:'input-source-status'},'⚠ '+(issue?.message||sourceMissingHint(decl))));}list.append(card);
       }
     }
+    if(unimported.length){
+      const section=el('section',{class:'input-group','data-source-issues':''});section.append(el('div',{class:'input-group-title'},t('sources.unavailable')));
+      for(const issue of unimported){const card=el('div',{class:'input-source-row','data-source-state':issue.status||'invalid','data-source-issue':issue.name||'','data-category':'shader'}),heading=el('div',{class:'input-source-select'});heading.append(el('span',{},issue.name||t('sources.unavailable')),el('small',{},issue.type||''));card.append(heading,el('div',{class:'input-source-status'},'⚠ '+issue.message));section.append(card);}box.append(section);
+    }
     appendBuiltInInputs(box,query);
-    if(query&&!decls.length&&!tdBuiltInEntries(query).length)box.append(el('p',{class:'muted'},t('create.empty')));
+    if(query&&!decls.length&&!unimported.length&&!tdBuiltInEntries(query).length)box.append(el('p',{class:'muted'},t('create.empty')));
   }
   // Native row availability can arrive after an apply without changing graph revision.
   const active=selectedInputId||current().nodes.find(n=>n.id===selected)?.params?.declarationId;
@@ -2334,13 +2343,13 @@ function installNativeSources(){
   arrayFields.append(lengthField,pathField,el('p',{class:'muted','data-i18n':'array.nativeHint'},t('array.nativeHint')));arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);
   $('#inputsearch').oninput=renderNativeSources;
   $('#closesourcecreate').onclick=()=>$('#sourcecreatedialog').close();
-  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets()[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='array'?['float','vec2','vec3','vec4']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':kind==='array'?'uArray':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];arrayFields.hidden=kind!=='array';arrayLength.required=arraySource.required=kind==='array';arrayLength.max=String(typeContract?.composites?.array?.maxLength||1024);$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
+  $('#sourcekind').onchange=()=>{const kind=$('#sourcekind').value,preset=inputPresets()[kind.slice(7)],types=['sampler','top_input'].includes(kind)?['sampler2D']:kind==='array'?['float','vec2','vec3','vec4']:kind==='spec_constant'?(typeContract?.specConstantTypes||['int','uint','bool','float']):valueTypes();$('#sourcename').value=uniqueInputName(preset?.[0]||(kind==='top_input'?'Input'+topInputsView().length:kind==='constant'?'cValue':kind==='spec_constant'?'sValue':kind==='sampler'?'uTexture':kind==='color'?'uColor':kind==='array'?'uArray':'uValue'));$('#sourcetype').replaceChildren(...types.map(value=>el('option',{value},value)));$('#sourcetype').value=kind==='color'?'vec4':types[0];arrayFields.hidden=kind!=='array';arrayLength.required=arraySource.required=kind==='array';arrayLength.max=String(typeContract?.composites?.array?.maxTypeLength||typeContract?.composites?.array?.maxLength||1024);$('#sourcepresethint').textContent=preset?preset[1]:kind==='spec_constant'?t('inputs.specHint'):'';$('#sourcecreateerror').textContent='';renderNativeSourceValues();};
   $('#sourcecreate').onsubmit=async e=>{
     e.preventDefault();if(readonly)return;const name=$('#sourcename').value.trim(),kind=$('#sourcekind').value,existing=inputPresetSource(kind);
     if(existing){finishInputCreate(kind,existing.id);return;}
     if(kind!=='top_input'&&(!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name)||/^(gl_|TD|sg_|sTD)/.test(name)||graph.declarations.some(d=>d.name===name&&!(kind.startsWith('preset:')&&d.kind==='uniform'&&d.initialDriver===kind.slice(7))))){$('#sourcecreateerror').textContent=t('inputs.invalidName');return;}
     const count=Number(arrayLength.value),arrayPath=arraySource.value.trim();
-    if(kind==='array'&&(!Number.isInteger(count)||count<1||count>(typeContract?.composites?.array?.maxLength||1024)||!arrayPath)){$('#sourcecreateerror').textContent=t('array.invalidSource');return;}
+    if(kind==='array'&&(!Number.isInteger(count)||count<1||count>(typeContract?.composites?.array?.maxTypeLength||typeContract?.composites?.array?.maxLength||1024)||!arrayPath)){$('#sourcecreateerror').textContent=t('array.invalidSource');return;}
     let id;const changed=changeDeclaration(()=>{id=createInputDeclaration(['sampler','constant','spec_constant','top_input'].includes(kind)?kind:'uniform',kind==='array'?$('#sourcetype').value+'['+count+']':kind==='color'?'vec4':kind.startsWith('preset:')?'float':$('#sourcetype').value,{name,...(kind==='array'?{nativeSequence:'array',elementType:$('#sourcetype').value,length:count,arraySource:arrayPath}:kind==='color'?{nativeSequence:'color'}:kind.startsWith('preset:')?{preset:kind.slice(7)}:{})}).id;});
     if(changed)finishInputCreate(kind,id);else $('#sourcecreateerror').textContent=$('#status').textContent;
   };

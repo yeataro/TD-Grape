@@ -79,13 +79,25 @@ class ArraySources(unittest.TestCase):
         self.assertEqual(next(iter(registry.values()))['sequence'],'array')
         block['chop'].eval.assert_called_once()
 
-    def test_unreadable_empty_and_over_limit_native_sources_stay_diagnostic(self):
+    def test_unreadable_empty_and_out_of_range_native_sources_stay_diagnostic(self):
         f, declaration, block = self.fixture()
-        for source in (None, SimpleNamespace(family='TOP'), SimpleNamespace(family='CHOP',numSamples=0), SimpleNamespace(family='CHOP',numSamples=1025)):
+        for source in (None, SimpleNamespace(family='TOP'), SimpleNamespace(family='CHOP',numSamples=0), SimpleNamespace(family='CHOP',numSamples=2147483648)):
             block['chop'].eval=Mock(return_value=source)
             row=next(r for r in sources.native_rows(f.operator) if r['sequence']=='array')
             declarations,registry,issues=sources.reconcile([],{},[row],f.operator)
             self.assertEqual((declarations,registry),([],{}));self.assertEqual(len(issues),1)
+            self.assertEqual(issues[0]['name'],'uPoints')
+
+    def test_large_native_array_import_keeps_only_type_and_binding(self):
+        f, _, block=self.fixture()
+        for length in (1025,10000,1000000):
+            block['chop'].eval=Mock(return_value=SimpleNamespace(family='CHOP',numSamples=length))
+            row=next(r for r in sources.native_rows(f.operator) if r['sequence']=='array')
+            declarations,registry,issues=sources.reconcile([],{},[row],f.operator)
+            self.assertEqual(issues,[]);self.assertEqual(declarations[0]['type'],'vec3['+str(length)+']')
+            self.assertIsNone(declarations[0]['value'])
+            self.assertEqual(sources.array_shape(declarations[0]['type']),('vec3',length))
+            block['chop'].eval.assert_called_once()
 
     def test_texture_buffer_is_not_imported_as_a_replaceable_value_array(self):
         f, declaration, block = self.fixture(); block['arraytype'].val = 'texturebuffer'

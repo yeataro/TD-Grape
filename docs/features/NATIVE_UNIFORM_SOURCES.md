@@ -47,3 +47,12 @@ The six presets are absolute time/frame, timeline time/frame, Delta Time (`absTi
 ## Declared components (0.8.122)
 
 The Parameter view uses the same component grid and scalar input behavior as ordinary values. It presents only the declared dimensions; dormant TD components remain untouched. Each Expression or CHOP Export component displays its mode in place of a slider. Constant and supported Bind components remain independently editable. Value updates patch controls in place; mode changes replace only the affected slot. The existing native write-permission and live gesture rules are unchanged. Source cards, inline graph controls and broader Bind-target support remain separate follow-up work.
+
+
+## Source import and diagnostics (0.8.123)
+
+New native Constants rows import as `float`: TD exposes a floating value control but no declaration-type parameter. Existing `int`, `uint`, `bool` and `float` declarations retain their types and constant IDs. A decimal value on an existing integer declaration is a source validation failure, not a GLSL compiler failure. Source errors, native GLSL compilation errors and other apply failures now have distinct diagnostic headings.
+
+Rejected native imports remain searchable in an unavailable-source section with their names and reasons. Existing missing sources retain declarations and graph references, display a separate status line without expanding the card, and cannot create more references until restored. An existing invalid but unused native value does not block an unrelated valid Shader; newly configured sources and used bindings still validate. Source reads do not add value-validation scans. No automatic data fallback or native OP recreation is introduced.
+
+Texture Buffer access remains pending; this checkpoint exposes the unsupported row and its reason, rather than misrepresenting it as a Uniform Array. Full source cards and grouped classification follow in the next UI checkpoint.

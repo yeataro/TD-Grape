@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.122'
+PRODUCT_VERSION='0.8.123'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1227,7 +1227,8 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
             getattr(mat.par,'sampler'+str(i)+'top').val=reference
     if kind=='top':mat.par.tops.val=' '.join(top_paths) if graph.get('topInputs') or graph.get('topSourceVersion')==1 else ''
     if source_module():
-        source_module().configure(_owner.op('runtime').module,comp,graph,public,preserve,input_owner)
+        source_module().configure(_owner.op('runtime').module,comp,graph,public,preserve,input_owner,
+                                  used={b['id'] for b in compiled['bindings']})
     else:
         for i,b in enumerate(uniforms):
             getattr(mat.par,'vec'+str(i)+'name').val=b['name']
@@ -1311,6 +1312,7 @@ def validate_material(comp,compiled=None):
     succeeded=('Pixel Shader Compile Results:' in info and info.count('Compiled Successfully')>=2) if kind=='top' else 'Linked Successfully' in info
     if error or 'ERROR:' in info or not succeeded:
         exc=RuntimeError((error+'\n'+info).strip() or 'Shader has not compiled')
+        exc.phase='shader'
         if compiled:
             paths={stage:comp.op(stage+'_shader').path for stage in ('vertex','pixel') if comp.op(stage+'_shader') and comp.op(stage+'_shader').text==compiled.get(stage)}
             exc.diagnostics=core().native_compile_diagnostics(info,compiled,paths)
@@ -1466,7 +1468,7 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
     backup_text_before=backup_dat_before.text if backup_dat_before else None
     compiled=graph_checks().compile(graph)
     if any(b.get('sourceMissing') for b in compiled['bindings']):
-        raise RuntimeError('A used Input source is missing. Restore or reassign its reference before applying.')
+        raise source_module().SourceError('A used Input source is missing. Restore or reassign its reference before applying.')
     if target() and core().graph_target(graph)!=shader_kind(target()): raise RuntimeError('Import a graph for the same Shader target')
     if not inject_failure and not accepted and current.get('appliedHash')==compiled['hash'] and target() and compiled_is_current(target(),compiled,graph):
         new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,lastError='',sourceChanged=False)
@@ -1894,7 +1896,7 @@ def tick():
             deferred.append(job)
             continue
         except Exception as exc:
-            job['error']={'error':str(exc),**{key:getattr(exc,key,None) for key in ('node','functionId','stage','trail','diagnostics')}}
+            job['error']={'error':str(exc),**{key:getattr(exc,key,None) for key in ('node','functionId','stage','trail','diagnostics','phase')}}
         job['done'].set()
     for job in deferred:
         with job['lock']:

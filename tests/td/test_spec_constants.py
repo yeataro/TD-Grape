@@ -121,10 +121,12 @@ try:
             checks.append(kind+': native integer validation rejects out-of-range and fractional values without mutation')
             before=(native.eval(),shader.op('state').text,shader.op('pixel_shader').text)
             invalid_graph=copy.deepcopy(r.state()['graph']);next(d for d in invalid_graph['declarations'] if d['id']=='mode')['value']=-2147483649
-            try:r.deploy(invalid_graph,r.state()['revision']);raise AssertionError('Out-of-domain native default was accepted')
+            try:
+                rejected=r.deploy(invalid_graph,r.state()['revision'])
+                assert rejected.get('ok') is False and rejected.get('upgradeReview',{}).get('blocked'), 'Out-of-domain native default was accepted'
             except (RuntimeError,ValueError):pass
             assert before==(native.eval(),shader.op('state').text,shader.op('pixel_shader').text)
-            checks.append(kind+': invalid native default fails candidate validation before changing the source, state or shader')
+            checks.append(kind+': invalid native default is rejected before changing the source, state or shader')
             native.val=-1
             external=snap();assert item(external,'mode')['components'][0]['value']==-1
             assert not any(issue.get('code')=='spec-native-value' and issue.get('id')=='mode' for issue in external['issues'])

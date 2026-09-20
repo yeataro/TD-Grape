@@ -106,7 +106,7 @@ function installConnectionRecovery(){
   },1000);
   window.addEventListener('online',()=>{if(connectionInterrupted)retryConnection();});
 }
-let compileIssues=[],compileIssueText='',compileIssueVersion=-1,compileDetailsOpen=false;
+let compileIssues=[],compileIssueText='',compileIssueVersion=-1,compileDetailsOpen=false,compileIssuePhase='validation';
 function clearCompileDiagnostics(){compileIssues=[];compileIssueText='';compileIssueVersion=-1;compileDetailsOpen=false;errorNode=null;renderCompileDiagnostics();}
 function diagnosticGraphMatches(){return !!graph&&compileIssueVersion===editVersion;}
 function diagnosticLocation(issue){
@@ -119,6 +119,7 @@ function diagnosticLocation(issue){
 function setCompileDiagnostics(result,snapshot){
   if(!graph||snapshot!==JSON.stringify(graph))return;
   compileIssueText=typeof result.error==='string'?result.error:'';compileIssueVersion=editVersion;compileDetailsOpen=false;
+  compileIssuePhase=['source','shader'].includes(result.phase)?result.phase:'validation';
   compileIssues=Array.isArray(result.diagnostics)&&result.diagnostics.length?result.diagnostics:[{node:result.node,functionId:result.functionId,stage:result.stage,trail:result.trail,message:result.error}];
   errorNode=compileIssues.find(issue=>issue.node)?.node||null;render();
 }
@@ -140,7 +141,7 @@ function locateCompileIssue(issue){
 function renderCompileDiagnostics(){
   const bar=$('#diagnosticbar');if(!bar)return;
   const scroll=bar.querySelector?.('pre')?.scrollTop||0;bar.replaceChildren();bar.hidden=!compileIssues.length||!diagnosticGraphMatches();if(bar.hidden)return;
-  const row=el('div',{class:'diagnostic-summary',role:'status'});row.append(el('strong',{},t('diagnostic.failed')));bar.append(row);
+  const row=el('div',{class:'diagnostic-summary',role:'status'});row.append(el('strong',{},t(compileIssuePhase==='source'?'diagnostic.sourceFailed':compileIssuePhase==='shader'?'diagnostic.shaderFailed':'diagnostic.failed')));bar.append(row);
   const shown=new Set();
   for(const issue of compileIssues){
     const location=diagnosticLocation(issue);if(!location)continue;

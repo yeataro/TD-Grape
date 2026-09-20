@@ -71,6 +71,19 @@ class CompileSpecConstants(unittest.TestCase):
         declarations,mapping,issues=sources.reconcile(existing,{'mode':{'sequence':'const','index':0,'name':'sMode'}},rows)
         self.assertFalse(issues);self.assertEqual(declarations[1]['kind'],'spec_constant')
         self.assertEqual(declarations[1]['constantId'],0);self.assertEqual(declarations[1]['value'],4)
+        self.assertEqual(declarations[1]['type'],'float')
+
+    def test_new_fractional_native_constant_is_not_truncated_or_retyped_later(self):
+        rows=[dict(sequence='const',index=0,name='sAmount',nameMode='CONSTANT',components=[dict(value=.625)])]
+        declarations,registry,issues=sources.reconcile([],{},rows)
+        self.assertEqual(issues,[]);self.assertEqual(declarations[0]['type'],'float');self.assertEqual(declarations[0]['value'],.625)
+        rows[0]['components'][0]['value']=2
+        self.assertEqual(sources.reconcile(declarations,registry,rows)[0],declarations)
+        declarations[0].update(type='int',value=0);rows[0]['components'][0]['value']=.375
+        updated,_,issues=sources.reconcile(declarations,registry,rows)
+        self.assertEqual(updated,declarations);self.assertEqual(issues,[])  # Reading values is not validation.
+        with self.assertRaises(sources.SourceError) as error:sources.validate_spec_native(declarations[0],.375)
+        self.assertEqual(error.exception.phase,'source')
 
 
 class NativeSpecHistory(unittest.TestCase):
@@ -89,6 +102,12 @@ class NativeSpecHistory(unittest.TestCase):
         return history.restore(f.runtime,{'requestId':'spec'+str(f.current['revision']), 'revision':f.current['revision'],
             'fromToken':current,'toToken':target,'sourceIds':['spec'],'graph':copy.deepcopy(graph),
             'currentGraph':copy.deepcopy(f.current['graph'])})
+
+    def test_unused_native_decimal_does_not_block_other_valid_sources(self):
+        f=self.fixture;f.operator.par.const0value.val=.625
+        sources.configure(f.runtime,f.comp,f.current['graph'],{},used={'A'})
+        self.assertEqual(f.operator.par.const0value.eval(),.625)
+        with self.assertRaises(sources.SourceError):sources.configure(f.runtime,f.comp,f.current['graph'],{},used={'spec'})
 
     def test_value_undo_keeps_native_par_and_uniform_external_value(self):
         f=self.fixture;g=copy.deepcopy(f.current['graph']);before=f.token();par=f.operator.par.const0value

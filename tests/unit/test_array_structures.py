@@ -21,6 +21,16 @@ def graph(nodes,edges=(),result='get',ty='float',target='top',stage='pixel',defi
 
 
 class ArrayStructures(unittest.TestCase):
+    def test_large_external_array_type_does_not_expand_default_values(self):
+        g=graph([c.node('uniform','source',declarationId='samples'),c.node('array_get','get')],
+                [c.edge('source','get','Array')])
+        g['declarations']=[dict(id='samples',kind='uniform',name='uSamples',type='float[10000]',nativeSequence='array',value=None)]
+        result=c.compile_graph(g)
+        self.assertIn('uniform float uSamples[10000];',result['pixel'])
+        self.assertEqual(result['stages']['pixel']['ports']['get']['in']['Array'],'float[10000]')
+        self.assertIsNone(c.filled_value('float[10000]'))
+        self.assertLess(len(result['pixel']),10000)
+
     def test_contract_keeps_numeric_types_and_dynamic_nodes_bounded(self):
         contract=c.type_contract({'typeDefinitions':[SAMPLE]})
         self.assertEqual(len(contract['valueTypes']),38)
@@ -155,7 +165,7 @@ class ArrayStructures(unittest.TestCase):
         with self.assertRaisesRegex(c.GraphError,'Opaque'):c.compile_graph(g)
 
     def test_invalid_lengths_structure_recursion_and_identity(self):
-        for ty in ('float[0]','float[-1]','float[1+1]','float[UNTRUSTED]','float[1025]','float[02]'):
+        for ty in ('float[0]','float[-1]','float[1+1]','float[UNTRUSTED]','float[2147483648]','float[02]'):
             self.assertFalse(c.valid_port_type(ty),ty)
         cyc={'id':'cyclic','name':'Cyclic','fields':[{'id':'self','name':'selfValue','type':'struct:cyclic'}]}
         with self.assertRaisesRegex(c.GraphError,'Recursive'):c.type_contract({'typeDefinitions':[cyc]})

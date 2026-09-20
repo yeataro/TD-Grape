@@ -7,6 +7,9 @@ import copy
 import re
 
 MAX_ARRAY_LENGTH = 1024
+# Type references do not allocate their elements. Keep the authoring/default
+# expansion limit separate from the GLSL signed length/index representation.
+MAX_ARRAY_TYPE_LENGTH = 2147483647
 TYPE_ID = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,63}$')
 GLSL_NAME = re.compile(r'^[A-Za-z][A-Za-z0-9_]{0,47}$')
 RESERVED_NAMES = frozenset('struct uniform const buffer shared in out inout void if else for while do switch case default break continue return discard layout true false attribute varying precision highp mediump lowp bool int uint float double'.split())
@@ -107,7 +110,7 @@ class Registry:
             if ty.count('[')>8:self.fail('Array nesting exceeds 8 dimensions')
             if raw.isdigit():
                 length=int(raw)
-                if str(length)!=raw or not 1<=length<=MAX_ARRAY_LENGTH:self.fail('Array length must be an integer from 1 to '+str(MAX_ARRAY_LENGTH))
+                if str(length)!=raw or not 1<=length<=MAX_ARRAY_TYPE_LENGTH:self.fail('Array length must be a positive signed 32-bit integer')
             elif raw in LENGTH_MACROS or raw in self.lengths:length=raw
             else:self.fail('Array length must be a positive literal or a supported host length')
             child=self.describe(element)
@@ -202,7 +205,7 @@ class Registry:
         if budget[0]>65536:self.fail('Composite default exceeds 65536 values')
         d=self.describe(ty)
         if d['kind']=='array':
-            if not isinstance(d['length'],int) or self.opaque(ty):return None
+            if not isinstance(d['length'],int) or d['length']>MAX_ARRAY_LENGTH or self.opaque(ty):return None
             return [self.value(d['elementType'],base_value,scalar,budget) for _ in range(d['length'])]
         if d['kind']=='struct':return {f['id']:self.value(f['type'],base_value,scalar,budget) for f in d['definition']['fields']}
         if d['kind']=='resource':return None
@@ -211,6 +214,7 @@ class Registry:
     def literal(self,value,ty,base_literal):
         d=self.describe(ty)
         if d['kind']=='array':
+            if value is None and isinstance(d['length'],int) and d['length']>MAX_ARRAY_LENGTH:return None
             if self.opaque(ty) or not isinstance(d['length'],int):
                 if value is None:return None
                 self.fail('This array requires a connected source')
@@ -258,6 +262,7 @@ class Registry:
             element=params.get('elementType','float');length=params.get('length',4)
             self.describe(element)
             if type(length) is not int and (not isinstance(length,str) or length not in self.lengths and length not in LENGTH_MACROS):self.fail('Array length must be an integer or a constant reference')
+            if type(length) is int and length>MAX_ARRAY_LENGTH:self.fail('Array constructor length exceeds '+str(MAX_ARRAY_LENGTH)+'; larger external arrays can be referenced directly')
             ty=self.array_type(element,length);self.describe(ty)
             if self.opaque(ty):self.fail('Opaque resources must come from a source; they cannot be initialized')
             return dict(inputs={'length':'int','value':element} if key=='array_create' else {},outputs={'out':ty})
@@ -277,4 +282,4 @@ class Registry:
 
     def contract(self):
         return dict(version=1,hostProfile={'product':'TouchDesigner','build':'2025.32820'},structs=copy.deepcopy(self.structs),sources=copy.deepcopy(SOURCES),
-                    array=dict(maxLength=MAX_ARRAY_LENGTH,indexTypes=['int','uint'],lengthMacros=copy.deepcopy(LENGTH_MACROS)))
+                    array=dict(maxLength=MAX_ARRAY_LENGTH,maxTypeLength=MAX_ARRAY_TYPE_LENGTH,indexTypes=['int','uint'],lengthMacros=copy.deepcopy(LENGTH_MACROS)))
