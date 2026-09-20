@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333 });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'professional', systemClock: false, showFps: false, canvasDamping: false, canvasDampingMs: 150, frameDamping: false, frameDampingMs: 333, arrowNavigationFrame: false });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1146,7 +1146,60 @@ function focusGraphCanvas(){
   // a stale Note/Help range even after a node title was clicked or dragged.
   window.getSelection()?.removeAllRanges();
 }
+// A branch step keeps its origin while Up/Down replaces only its destination.
+// This is view state: never serialize it into the graph or editing history.
+let arrowNavigation=null;
+function resetArrowNavigation(){arrowNavigation=null;}
+function syncArrowNavigationContext(){
+  const route=arrowNavigation;if(!route)return;
+  if(route.owner!==graph||route.data!==current()||route.stage!==stage||route.trail!==JSON.stringify(graphTrail)||selectedEdge!==null||selection.size!==1||!selection.has(route.node))resetArrowNavigation();
+}
+function arrowNodeOrder(a,b){
+  const position=(n,axis)=>Number.isFinite(n.ui?.[axis])?n.ui[axis]:0;
+  return position(a,'y')-position(b,'y')||position(a,'x')-position(b,'x')||(a.id<b.id?-1:a.id>b.id?1:0);
+}
+function navigateArrow(key){
+  if(!graph||selectedEdge!==null||selection.size!==1){resetArrowNavigation();return false;}
+  const data=current(),nodes=new Map(data.nodes.map(n=>[n.id,n])),id=[...selection][0],node=nodes.get(id);
+  if(!node){resetArrowNavigation();return false;}
+  const trail=JSON.stringify(graphTrail),pair=(a,b)=>JSON.stringify([a,b]);
+  const links=new Set(data.edges.map(edge=>pair(edge.from[0],edge.to[0])));
+  let route=arrowNavigation;
+  if(!route||route.owner!==graph||route.data!==data||route.stage!==stage||route.trail!==trail||route.node!==id||
+    route.steps.some(step=>!nodes.has(step.from)||!nodes.has(step.to)||!links.has(step.direction===1?pair(step.from,step.to):pair(step.to,step.from)))){
+    route={owner:graph,data,stage,trail,node:id,steps:[]};
+  }
+  const steps=route.steps.slice(),last=steps.at(-1),vertical=key==='ArrowUp'||key==='ArrowDown';
+  let next=null;
+  if(vertical&&!last){arrowNavigation=route;return true;}
+  const direction=vertical?last.direction:key==='ArrowRight'?1:-1;
+  if(!vertical&&last&&direction===-last.direction){next=nodes.get(last.from);steps.pop();}
+  else{
+    const origin=vertical?last.from:id,seen=new Set(),ancestors=new Set(steps.map(step=>step.from));
+    // Search only on demand. Keep one best candidate, never sort the graph.
+    for(const edge of data.edges){
+      const from=edge[direction===1?'from':'to'][0],to=edge[direction===1?'to':'from'][0];
+      if(from!==origin||to===id||to===origin||seen.has(to)||ancestors.has(to))continue;
+      seen.add(to);const candidate=nodes.get(to);if(!candidate)continue;
+      if(vertical){
+        const delta=arrowNodeOrder(candidate,node);
+        if(key==='ArrowDown'?delta<=0:delta>=0)continue;
+      }
+      if(!next||(key==='ArrowUp'?arrowNodeOrder(candidate,next)>0:arrowNodeOrder(candidate,next)<0))next=candidate;
+    }
+    if(next){
+      if(vertical)steps[steps.length-1]={...last,to:next.id};
+      else steps.push({from:id,to:next.id,direction});
+    }
+  }
+  if(!next){arrowNavigation=route;return true;}
+  selectNode(next);refreshCanvasSelection();
+  arrowNavigation={...route,node:next.id,steps};
+  if(EDITOR_DEV_SETTINGS.arrowNavigationFrame)fitNodes([next],true);
+  return true;
+}
 function selectNode(n,toggle=false){
+  resetArrowNavigation();
   selectedInputId=null;refreshSourceSelection();helpContext='node';
   focusGraphCanvas();
   if(toggle){if(selection.has(n.id))selection.delete(n.id);else selection.add(n.id);selected=selection.has(n.id)?n.id:[...selection].at(-1)||null;}
@@ -1163,6 +1216,7 @@ function refreshCanvasSelection(){
   refreshSourceSelection();inspector();renderNavigation();
 }
 function clearCanvasSelection(){
+  resetArrowNavigation();
   if(selected===null&&selectedEdge===null&&selection.size===0)return;
   selected=selectedEdge=null;selection.clear();refreshCanvasSelection();
 }
@@ -1898,6 +1952,7 @@ function installGraphInteractions(){
   installTouchNavigation(canvas);
   canvas.ondblclick=e=>{if(!e.target.closest('.node')&&!e.target.closest('path'))openCreator(e.clientX,e.clientY);};
   let suppressContext=false;
+  canvas.addEventListener('pointerdown',e=>{if(e.target.closest('.node,#wires path,.group-frame-title'))resetArrowNavigation();},true);
   canvas.oncontextmenu=e=>{
     e.preventDefault();if(suppressContext){suppressContext=false;return;}
     const port=e.target.closest('#cards .port[data-port]');
@@ -1936,6 +1991,10 @@ function installGraphInteractions(){
     const plainKey=e.key.toLowerCase();
     const inGraph=e.target===document.body||e.target===document.documentElement||e.target.closest('.graph-workspace');
     const graphCommandReady=inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open],:popover-open');
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
+      if(graphCommandReady&&!nodePlacement&&!e.target.closest('button,a,[role="slider"],[role="listbox"],[role="menu"],[role="tablist"]')&&navigateArrow(e.key))e.preventDefault();
+      return;
+    }
     if(['h','f','l'].includes(plainKey)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&(!e.shiftKey||plainKey==='l')){
       if(graphCommandReady){
         if(plainKey==='h'){e.preventDefault();fit();}

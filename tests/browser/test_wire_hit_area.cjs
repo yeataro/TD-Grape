@@ -18,25 +18,25 @@ const midpoint=()=>page.locator('#wires path[data-from]').last().evaluate(e=>{
 for(const ui of [75,100,125])for(const zoom of [.125,.25,.5,1,2]){
   await page.evaluate(({ui,zoom})=>{uiAppearance.scale=ui;renderUIAppearance();scale=zoom;pan={x:40-zoom*700,y:160};transform();},{ui,zoom});await settle();
   const p=await midpoint(),width=await page.locator('.wire-hit').first().evaluate(e=>parseFloat(getComputedStyle(e).strokeWidth));
-  assert.ok(Math.abs(width*p.z-Math.max(2.5,2.5*p.z))<.01);
+  assert.ok(Math.abs(width*p.z-Math.max(6,6*p.z))<.01);
   const hit=await page.evaluate(({p,width})=>{
     const target=document.elementFromPoint(p.x,p.y+width*p.z*.4),outside=document.elementFromPoint(p.x,p.y+Math.max(width,5)*p.z/2+1);
     return{to:wirePathFromTarget(target)?.dataset.to,outside:!!wirePathFromTarget(outside)};
   },{p,width});assert.equal(hit.to,'c:a');assert.equal(hit.outside,false);
 }
-checks.push('15 graph/UI scale combinations retain a 2.5 CSS px minimum and grow when zoomed in; overlap chooses the original last wire');
+checks.push('15 graph/UI scale combinations retain a 6 CSS px minimum and grow when zoomed in; overlap chooses the original last wire');
 await page.evaluate(()=>{uiAppearance.scale=100;renderUIAppearance();scale=.125;pan={x:30,y:180};transform();});await settle();
-let p=await midpoint();await page.mouse.move(p.x,p.y+.9);await settle();
+let p=await midpoint();await page.mouse.move(p.x,p.y+2.4);await settle();
 assert.equal(await page.locator('#wires path[data-to="c:a"]').evaluate(e=>e.classList.contains('wire-hover')),true);
-await page.mouse.click(p.x,p.y+.9);assert.equal(await page.evaluate(()=>selectedEdge),1);
-await page.mouse.click(p.x,p.y+.9,{button:'right'});await page.locator('#grapheditmenu [data-edit="selectDestination"]').click();assert.deepEqual(await page.evaluate(()=>[...selection]),['c']);
+await page.mouse.click(p.x,p.y+2.4);assert.equal(await page.evaluate(()=>selectedEdge),1);
+await page.mouse.click(p.x,p.y+2.4,{button:'right'});await page.locator('#grapheditmenu [data-edit="selectDestination"]').click();assert.deepEqual(await page.evaluate(()=>[...selection]),['c']);
 checks.push('the transparent extension supports real hover, click and the correct branch context menu at 12.5%');
 await page.evaluate(()=>{selection.clear();selected=selectedEdge=null;wires();});
 const cdp=await page.context().newCDPSession(page);await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true});
-await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y+.9}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settle();
+await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y+2.4}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settle();
 assert.equal(await page.evaluate(()=>selectedEdge),1);await cdp.detach();
 await page.evaluate(()=>{EDITOR_DEV_SETTINGS.canvasTrash=true;});
-await page.mouse.move(p.x,p.y+.9);await page.mouse.down();await page.mouse.move(p.x+35,p.y+40,{steps:4});
+await page.mouse.move(p.x,p.y+2.4);await page.mouse.down();await page.mouse.move(p.x+35,p.y+40,{steps:4});
 assert.equal(await page.evaluate(()=>!!graphTrash),true);await page.keyboard.press('Escape');await page.mouse.up();
 assert.equal(await page.evaluate(()=>current().edges.length),2);await page.evaluate(()=>{EDITOR_DEV_SETTINGS.canvasTrash=false;});
 checks.push('touch selects the expanded target and wire dragging/cancellation still uses the original edge');
@@ -51,5 +51,10 @@ checks.push('nodes and sockets keep priority over both visible and transparent w
 await page.evaluate(()=>{current().nodes=current().nodes.filter(n=>n.id!=='cover');current().edges.splice(1,1);render();});
 assert.equal(await page.locator('.wire-hit').count(),1);assert.equal(await page.locator('#wires path[data-from]').count(),1);
 checks.push('redraw after removing an edge removes its paired hit path');
+await page.evaluate(()=>{current().ui={frames:[{id:'hit_group',name:'Group',nodes:['a','b'],color:'#7f8797'}]};renderGroupFrames();const path=$('#wires path[data-from]'),p=path.getPointAtLength(path.getTotalLength()/2),frame=$('[data-frame="hit_group"]');frame.style.left=(p.x-50)+'px';frame.style.top=(p.y+2.4/scale-14)+'px';});
+p=await midpoint();assert.equal(await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y+2.4)?.closest('.group-frame-title'),p),true);
+await page.evaluate(p=>{const f=$('[data-frame="hit_group"]'),h=f.querySelector('.group-select-handle').getBoundingClientRect();f.style.left=(f.offsetLeft+(p.x-h.left-h.width/2)/p.z)+'px';f.style.top=(f.offsetTop+(p.y+2.4-h.top-h.height/2)/p.z)+'px';},p);
+assert.equal(await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y+2.4)?.closest('.group-select-handle'),p),true);
+checks.push('Group title controls retain priority where only the wider transparent stroke overlaps them');
 assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks:checks.length}));
 }catch(error){await h.finish(error);console.error(error);process.exitCode=1;}})();

@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-21 0.8.158 DEV：單選節點方向鍵導覽已實作；左右沿接線／原路返回，上下切換上一段分支，不預排序、不循環。新滑鼠選取先左右開始，多選與輸入／選單／手勢不介入；Stage、圖替換及接線失效清理暫存路徑。新增預設關閉的自動 Frame 選項，沿用既有過渡。命中區依使用者實測提高至最小 6 CSS px，補上 Group 標題／角落控制的層級，節點仍優先。臨時放置保留綠色＋32% 黑底，Excellent 及之後加 6px 毛玻璃。方向鍵 11、命中 7、放置 10、設定 20、Group 13、選取／工具列／快捷鍵及數值 32 組回歸，510 Python／772 雙語鍵／完整 portable checks 通過。報告 reports/arrow-navigation-158/；TD 交付另記。
+
+2026-09-21 0.8.157 交付檢查點：程式 3bca30c、TOE 7f7a335；37 份內嵌來源與 11 份實際 HTTP 資產一致，core 無錯誤，兩份 master revision 104，四份使用者 Shader 保留。TOE 1024950 bytes，SHA256 e018632c17e03b7f3781f27d6930d7391b8b4a9fd22624c3e8cdc63bf1ff8902。已提醒使用者自行刷新，未重載其瀏覽器。
+
 2026-09-21 0.8.157 DEV：連線加入同層、同順序的透明命中路徑，最小 2.5 CSS px，保留可見縮放線寬。hover、點擊、右鍵、觸控與拖曳映射至原線；節點／接孔优先權保留。放置預覽沿用選取綠色，原紫色已記 UX_BACKLOG 供恢復。新增 6 組實際瀏覽器檢查（含 15 組縮放），放置 10、Group 13 與完整 portable checks 通過。既有 wire geometry 的拖節點檢查在原 0.8.156 同樣失敗，未列為通過；前面的端點幾何檢查均已執行。報告 reports/wire-navigation-157/；TD 交付另記。
 
 2026-09-21 0.8.156 DEV 交付檢查點：程式提交 ca6c782；37 份內嵌來源一致，11 份資產經實際 HTTP 200 及 SHA256 核對，core errors 為空，TOP／MAT master revision 103。刷新、同步及保存均保留四份使用者 Shader。TOE 1024510 bytes，SHA256 cd9aa993d4c83a7a96c10d1d9bf352f7d00d468bbaaa81922133b61c6f6646b7；私人開發助手已排除。交付報告 work/reports/node-placement-156/，隔離回歸 reports/placement-156/。未重新整理使用者現有網頁或操作其草稿。

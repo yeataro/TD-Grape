@@ -47,6 +47,7 @@ function enterFunction(n){
   graphTrail.push(f.id);selected=null;selection.clear();selectedEdge=null;cancelConnection();closeCreator();render();fit();
 }
 function renderNavigation(){
+  syncArrowNavigationContext();
   renderGraphEditActions();
   tidyTrail();const nav=$('#graphpath');nav.replaceChildren();$('#graphup').disabled=graphTrail.length===0;
   const crumbs=graphTrail.map(id=>FunctionModel.find(graph,id)?.name||'?');

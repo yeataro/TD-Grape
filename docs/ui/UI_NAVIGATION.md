@@ -1,5 +1,13 @@
 # UI navigation development checkpoint
 
+## Arrow navigation (0.8.158)
+
+With one node selected, Left/Right follows direct connections. A fresh step chooses the uppermost neighbor (ties use X then node ID); reversing direction retraces the actual path through multi-input nodes. Up/Down switches the destination of the latest step among that origin's neighbors, preserving its origin and earlier steps. After a fresh mouse selection, first use Left/Right to establish a step. There is no wraparound; parallel edges to the same node are one stop. Multiple/empty selections and selected wires do not enter this node navigation mode.
+
+Candidates are searched on key presses, never presorted. The temporary route belongs to the current graph, Stage and subgraph; replacement, selection changes or deleted connections invalidate stale records. Graph data, Undo, GLSL and TD synchronization are unchanged. Text fields, menus, dialogs, active gestures and modified arrows keep their own handling. Existing Alt+Up still exits a subgraph.
+
+The browser-local “Frame on arrow navigation” option defaults off. When enabled, only successful moves call the existing Frame behavior and use its optional transition. Shortcut Help includes both horizontal traversal and vertical branch switching.
+
 This is development after sealed v0.6.3; old release archives remain unchanged.
 
 ## Implemented

@@ -95,7 +95,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
     assert.equal(await snapshot(),unchanged);checks.push('system clock rolls over midnight at the next minute boundary, keeps exactly one minute timer, refreshes on visibility restoration and clears timer/listener when disabled');
     checks.push('fullscreen temporarily enables the same clock, keeps it visible in graph focus with one timer, and restores the saved off preference on external exit without graph/history changes');await open();
 
-    assert.equal(await page.locator('#wires path').count(),1);
+    assert.equal(await page.locator('#wires path[data-from]').count(),1);
+    assert.equal(await page.locator('#wires .wire-hit').count(),1);
     await page.evaluate(()=>{window.experimentStyleDOM=[...document.querySelectorAll('#cards .node,#wires path,#inspector input,.toolbar')];});
     const styleGeometry=()=>page.locator('#cards .node,#wires path,#inspector input,.toolbar').evaluateAll(elements=>elements.map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height];}));
     const geometry=await styleGeometry();

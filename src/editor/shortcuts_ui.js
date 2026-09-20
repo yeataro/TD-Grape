@@ -19,6 +19,8 @@ const EDITOR_SHORTCUTS=Object.freeze({
   fitSelection:{label:'action.fitSelection',hint:'action.fitSelection.hint',keys:['F'],section:'navigation'},
   fullscreen:{label:'view.fullscreen',keys:['Alt+Enter'],section:'navigation'},
   up:{label:'navigation.up',keys:['Alt+ArrowUp'],section:'navigation'},
+  arrowPath:{label:'navigation.arrowPath',keys:['ArrowLeft','ArrowRight'],section:'navigation'},
+  arrowBranch:{label:'navigation.arrowBranch',keys:['ArrowUp','ArrowDown'],section:'navigation'},
   menu:{label:'edit.menu',keys:['Shift+F10','ContextMenu'],section:'navigation'},
   cancel:{label:'shortcuts.cancel',keys:['Escape'],section:'navigation'},
   valueApply:{label:'shortcuts.valueApply',keys:['Enter'],section:'values'},
@@ -27,7 +29,7 @@ const EDITOR_SHORTCUTS=Object.freeze({
 });
 function shortcutKeyParts(key){
   const mac=/Mac|iPhone|iPad|iPod/.test(navigator.platform||'');
-  return key.split('+').map(part=>part==='Mod'?(mac?'Cmd':'Ctrl'):part==='ArrowUp'?'↑':part==='Escape'?'Esc':part==='ContextMenu'?t('shortcuts.contextKey'):part);
+  return key.split('+').map(part=>part==='Mod'?(mac?'Cmd':'Ctrl'):({ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→'})[part]|| (part==='Escape'?'Esc':part==='ContextMenu'?t('shortcuts.contextKey'):part));
 }
 function shortcutLabel(action){return EDITOR_SHORTCUTS[action]?.keys.map(key=>shortcutKeyParts(key).join('＋')).join(' / ')||'';}
 function decorateShortcutButton(button,action,labelKey){

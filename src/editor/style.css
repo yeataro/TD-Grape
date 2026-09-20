@@ -895,7 +895,12 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 @media(pointer:coarse){.graph-workspace .toolbar .graph-tools button,.graph-workspace .toolbar .stage{height:38px;min-height:38px}.graph-workspace .graph-tools .icon-button{width:38px}}
 
 /* Selection actions remain in screen space, independent of graph zoom. */
-#groupframes{position:absolute;left:0;top:0;width:1px;height:1px;z-index:0;pointer-events:none}
+#groupframes{position:absolute;left:0;top:0;width:1px;height:1px;pointer-events:none}
+/* Group bodies stay behind wires; only their controls sit above wire hit areas.
+   Cards retain priority over Group controls where they overlap. */
+#cards{z-index:2}
+.group-frame-title{position:relative;z-index:1}
+.group-select-handle{z-index:1}
 .group-frame{position:absolute;box-sizing:border-box;border:1px solid color-mix(in srgb,var(--frame-color) 55%,transparent);border-radius:10px;background:color-mix(in srgb,var(--frame-color) 7%,transparent);pointer-events:none}
 .group-frame.selected{border-color:var(--frame-color)}
 .group-frame-title{height:28px;display:flex;align-items:center;gap:5px;padding:3px 7px;color:var(--ui-text,var(--ui-tone-text));background:color-mix(in srgb,var(--frame-color) 22%,var(--ui-tone-node));border-radius:9px 9px 0 0;pointer-events:auto;cursor:move;font-size:12px;line-height:1.3}
@@ -1504,7 +1509,8 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] .node-placement{--placement-glow:color-mix(in srgb,var(--placement-color) 45%,transparent)}
 .node-placement>svg{position:absolute;inset:0;width:1px;height:1px;overflow:visible;pointer-events:none}
 .node-placement>svg path{fill:none;stroke-width:2;stroke-dasharray:6 5;pointer-events:none}
-.node-placement-outline{position:absolute;border:1.5px solid currentColor;border-radius:var(--node-radius);background:transparent;box-shadow:0 0 16px var(--placement-glow);pointer-events:none}
+.node-placement-outline{position:absolute;border:1.5px solid currentColor;border-radius:var(--node-radius);background:rgb(0 0 0 / 32%);box-shadow:0 0 16px var(--placement-glow);pointer-events:none}
+:root:is([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .node-placement-outline{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .node-placement-title{position:relative;display:flex;align-items:center;padding:0 12px;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 16px var(--placement-glow)}
 .node-placement-title::after{content:'';position:absolute;bottom:0;left:0;right:0;border-bottom:1.5px solid currentColor;box-shadow:0 0 16px var(--placement-glow)}
 .node-placement-port{position:absolute;transform:translate(-50%,-50%);width:10px;height:10px;border:1.5px solid currentColor;border-radius:50%;background:var(--bg);box-shadow:0 0 16px var(--placement-glow)}
@@ -1931,4 +1937,4 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #editormenu svg circle{fill:currentColor;stroke:none}
 
 /* Hit surfaces never inherit visible wire highlights or Glow. */
-#wires path.wire-hit{fill:none!important;stroke:transparent!important;stroke-width:var(--wire-hit-width,2.5px)!important;stroke-dasharray:none!important;filter:none!important;pointer-events:stroke}
+#wires path.wire-hit{fill:none!important;stroke:transparent!important;stroke-width:var(--wire-hit-width,6px)!important;stroke-dasharray:none!important;filter:none!important;pointer-events:stroke}
