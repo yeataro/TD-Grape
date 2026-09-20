@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-21 0.8.158 交付檢查點：程式 bac5db9；37 份內嵌來源與 11 份實際 HTTP 資產一致，core 無錯誤，TOP／MAT master revision 105，四份使用者 Shader 保留。TOE 1026134 bytes，SHA256 d5bcdb5af9c29fa26a8f15ed4be04183179cde163142241ccdd3469d08d887b2，私人助手已排除。補上 Group 內可見線仍能 hover，命中區共 8 組檢查通過。報告 work/reports/arrow-navigation-158/ 與 Documents reports/arrow-navigation-158/。未重新載入使用者瀏覽器；右鍵框選放開於 Slider 的已知問題仍為後續筆記。
+
 2026-09-21 0.8.158 DEV：單選節點方向鍵導覽已實作；左右沿接線／原路返回，上下切換上一段分支，不預排序、不循環。新滑鼠選取先左右開始，多選與輸入／選單／手勢不介入；Stage、圖替換及接線失效清理暫存路徑。新增預設關閉的自動 Frame 選項，沿用既有過渡。命中區依使用者實測提高至最小 6 CSS px，補上 Group 標題／角落控制的層級，節點仍優先。臨時放置保留綠色＋32% 黑底，Excellent 及之後加 6px 毛玻璃。方向鍵 11、命中 7、放置 10、設定 20、Group 13、選取／工具列／快捷鍵及數值 32 組回歸，510 Python／772 雙語鍵／完整 portable checks 通過。報告 reports/arrow-navigation-158/；TD 交付另記。
 
 2026-09-21 0.8.157 交付檢查點：程式 3bca30c、TOE 7f7a335；37 份內嵌來源與 11 份實際 HTTP 資產一致，core 無錯誤，兩份 master revision 104，四份使用者 Shader 保留。TOE 1024950 bytes，SHA256 e018632c17e03b7f3781f27d6930d7391b8b4a9fd22624c3e8cdc63bf1ff8902。已提醒使用者自行刷新，未重載其瀏覽器。

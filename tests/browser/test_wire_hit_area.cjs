@@ -56,5 +56,9 @@ p=await midpoint();assert.equal(await page.evaluate(p=>!!document.elementFromPoi
 await page.evaluate(p=>{const f=$('[data-frame="hit_group"]'),h=f.querySelector('.group-select-handle').getBoundingClientRect();f.style.left=(f.offsetLeft+(p.x-h.left-h.width/2)/p.z)+'px';f.style.top=(f.offsetTop+(p.y+2.4-h.top-h.height/2)/p.z)+'px';},p);
 assert.equal(await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y+2.4)?.closest('.group-select-handle'),p),true);
 checks.push('Group title controls retain priority where only the wider transparent stroke overlaps them');
+await page.evaluate(()=>{const path=$('#wires path[data-from]'),p=path.getPointAtLength(path.getTotalLength()/2),f=$('[data-frame="hit_group"]');f.style.left=(p.x-50)+'px';f.style.top=(p.y-80)+'px';});
+p=await midpoint();await page.mouse.move(p.x,p.y+2.4);await settle();assert.equal(await page.evaluate(p=>wirePathFromTarget(document.elementFromPoint(p.x,p.y+2.4))?.dataset.to,p),'b:a');
+assert.equal(await page.locator('#wires path[data-to="b:a"]').evaluate(e=>e.classList.contains('wire-hover')),true);
+checks.push('visible wires inside the Group body still hover; the Group itself is not an interaction blocker');
 assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks:checks.length}));
 }catch(error){await h.finish(error);console.error(error);process.exitCode=1;}})();

@@ -4,6 +4,8 @@ Each edge keeps a transparent hit path immediately behind its painted path in th
 
 Group bodies remain behind wires; Group title/corner controls are above wire hit areas, with node cards above them. This prevents the widened target from intercepting a Group control. The original 0.8.157 minimum was 2.5 CSS px; user review increased it to 6 in 0.8.158.
 
+Visibility is the interaction boundary: the Group body does not block a visible wire running through it. Only covering nodes or controls take priority. Regression checks exercise both Group controls winning and visible wires inside the Group remaining hoverable.
+
 Nodes, sockets and SVG paths share the `#world` element. Wire coordinates are
 measured from the sockets' actual HTML bounds relative to that world, whose
 explicit 1px square provides the effective horizontal and vertical scale.
