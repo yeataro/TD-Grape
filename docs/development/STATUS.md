@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.151 DEV 交付檢查點：程式提交 `ae2d17b`；37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 98，三份使用者 Shader 保留。TOE 984214 bytes，SHA256 `a14a28cbb32ba46b369e1bac328025a7e86f81ee5338c6fc9b353cc57cdc55d5`。原生報告 `work/reports/review-polish-151/`；未重新整理使用者網頁。
+
 2026-09-20 0.8.151 DEV 小修：Spec Constant 新建預設 specValue，共用入口與對話框一致，保留既有名稱及重名編號；Appearance 左右等寬置中，與 Dark／Light 共用中線，Appearance／Language 列下加入水平分隔線，Light 隱藏列時不殘留線條。Language 原排列保留。中英與 320／390／1000px 截圖核對、預設名稱與重名檢查通過；既有外觀 10、觸控 1 組檢查通過。報告 Documents 工作區 `reports/review-polish-151/`；同步保存另記。
 
 2026-09-20 0.8.150 DEV 交付檢查點：程式提交 `04352cd`；507 Python 與完整 portable checks 通過。37 份嵌入來源、10 份服務資產一致，TOP／MAT master revision 97，三份使用者 Shader 保留。TOE 984182 bytes，SHA256 `fd12e5b84354938c2183b60119402e227ee179e372519430b14bbb2f9ad05818`。原生報告 `work/reports/color-components-150/`；刷新期間曾有進行中的 HTTP 請求遇到 runtime 重載的 json NameError，後續服務資產核對及 coreErrors 檢查正常。未重新整理使用者網頁。
