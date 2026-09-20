@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.129'
+PRODUCT_VERSION='0.8.130'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1143,7 +1143,7 @@ def compiled_is_current(comp,compiled,graph=None):
         index=source_module().native_index(shader_operator(comp))
         source_module().validate_buffer_sources(shader_operator(comp),index.values())
         for decl in graph['declarations']:
-            if decl['kind'] in ('uniform','spec_constant','pop_buffer') and not decl.get('sourceMissing') and not source_module().locate(shader_operator(comp),comp.fetch('grapeNativeUniformsV1',{}).get(decl['id']),index): return False
+            if decl['kind'] in source_module().SOURCE_KINDS and not decl.get('sourceMissing') and not source_module().locate(shader_operator(comp),comp.fetch('grapeNativeUniformsV1',{}).get(decl['id']),index): return False
     manifest=json.loads(comp.op('manifest').text or '{}')
     actual_vertex=comp.op('vertex_shader').text if comp.op('vertex_shader') else ''
     return bool(comp.op('texture_sources')) and comp.op('texture_sources').text==TEXTURE_SOURCE_CODE and manifest.get('compilerBuild')==PRODUCT_VERSION and manifest.get('catalogContractHash')==core().catalog_contract()['hash'] and manifest.get('compiledFingerprint')==compiled_fingerprint(compiled) and comp.op('pixel_shader').text==compiled['pixel'] and actual_vertex==compiled['vertex']

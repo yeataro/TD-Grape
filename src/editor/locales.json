@@ -3288,16 +3288,36 @@
     "inputs.preset.deltaTime": {"zh-Hant": "Delta Time · 幀間秒數", "en": "Delta Time"},
     "inputs.preset.frameStep": {"zh-Hant": "Frame Step · 幀步長", "en": "Frame Step"},
     "sources.adoptFormat": {
-      "zh-Hant": "採用 TD 儲存格式",
-      "en": "Use TD format"
+      "zh-Hant": "採用 TD 配置",
+      "en": "Use TD configuration"
     },
     "sources.adoptFormatConfirm": {
       "zh-Hant": "依 TD 目前的儲存格式更新圖內宣告。保留來源識別與所有接線；不相容的接線會顯示型別錯誤，修正後才能套用。此操作不更動 TD 的 CHOP 或儲存設定。",
       "en": "Update the graph declaration to match TD. Source identity and wires are kept. Incompatible connections must be fixed before applying. TD settings stay unchanged."
     },
     "sources.formatAdopted": {
-      "zh-Hant": "已採用 TD 儲存格式，請檢查接線。",
-      "en": "TD format adopted. Review the connections."
+      "zh-Hant": "已採用 TD 配置，請檢查接線。",
+      "en": "TD configuration adopted. Review the connections."
+    },
+    "sources.attributes": {
+      "zh-Hant": "Attributes／屬性",
+      "en": "Attributes"
+    },
+    "help.attribute": {
+      "zh-Hant": "引用 MAT 幾何體的具名 Attribute。數值由幾何體提供；這裡只配置名稱、型別與宿主支援的陣列大小。僅可在 Vertex Stage 新增引用，Pixel 需要經由 Varying 傳遞。一般 Attribute 與 Matrix Attribute 各自使用 TD 的配置頁面。",
+      "en": "Read a named MAT geometry attribute in the Vertex stage. Values belong to the geometry. Configure its name, type and supported array size here. Use a Varying to pass values to Pixel. Scalar/vector and matrix attributes use separate TD configurations."
+    },
+    "attribute.vertexOnly": {
+      "zh-Hant": "Attribute 引用只能新增到 Vertex Stage。",
+      "en": "Attribute references require the Vertex stage."
+    },
+    "attribute.noArraySize": {
+      "zh-Hant": "此 TD 版本沒有 Attribute Array Size 設定。",
+      "en": "This TD version has no Attribute Array Size setting."
+    },
+    "attribute.driven": {
+      "zh-Hant": "此配置受 TD 驅動，請在 TD 編輯。",
+      "en": "This configuration is driven by TD. Edit it in TD."
     }
   }
 }

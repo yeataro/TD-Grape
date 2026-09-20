@@ -65,6 +65,6 @@ class SamplerSplit(unittest.TestCase):
  def test_legacy_definition_identity_preserved(self):
   import pathlib
   baseline=json.loads((pathlib.Path(__file__).resolve().parents[1]/'fixtures/type_contract_baseline.json').read_text(encoding='utf-8'))
-  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in (*c.COMPOSITE_KEYS,*c.MATRIX_KEYS,'matrix_convert','buffer_fetch','buffer_length','pop_buffer','sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod','rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag','perlin_noise','simplex_noise','scalar','convert')}),baseline['catalogHash'])
+  self.assertEqual(c.digest({k:v for k,v in c.CATALOG.items() if k not in (*c.COMPOSITE_KEYS,*c.MATRIX_KEYS,'matrix_convert','buffer_fetch','buffer_length','pop_buffer','attribute','sampler','texture_sample','constant','top_input','glsl_code','vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod','rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag','perlin_noise','simplex_noise','scalar','convert')}),baseline['catalogHash'])
 
 if __name__=='__main__':unittest.main()

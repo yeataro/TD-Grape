@@ -78,7 +78,7 @@ def _live(runtime):
         if row: native_by_name.setdefault(row['name'], []).append(row)
     for ident in set(declarations) | set(registry):
         record = copy.deepcopy(registry.get(ident)); native = sources.locate(operator, record, native_index)
-        if native is None and sources.changed_array_format(declarations.get(ident, {}), record, native_by_name.get((record or {}).get('name'), [])):
+        if native is None and sources.changed_source_format(declarations.get(ident, {}), record, native_by_name.get((record or {}).get('name'), [])):
             # A format mismatch is still an existing TD resource. Capture it so
             # Undo of graph-only adoption never deletes or recreates that row.
             native = native_by_name[record['name']][0]
@@ -147,7 +147,7 @@ def _checkpoint(runtime, token):
 
 
 def _declarations(graph):
-    return {d['id']: d for d in graph['declarations'] if d.get('kind') in ('uniform','spec_constant','pop_buffer')}
+    return {d['id']: d for d in graph['declarations'] if d.get('kind') in ('uniform','spec_constant','pop_buffer','attribute')}
 
 
 def _validate_graph(graph):
@@ -171,7 +171,7 @@ def _project(runtime, entry, declaration):
     if declaration is None: return None
     types = sources.SPEC_TYPES if declaration.get('kind')=='spec_constant' else sources.TYPES
     is_buffer=declaration.get('kind')=='uniform' and declaration.get('type')=='samplerBuffer'
-    is_pop=declaration.get('kind')=='pop_buffer'
+    is_pop=declaration.get('kind') in ('pop_buffer','attribute')
     is_array = declaration.get('kind') == 'uniform' and bool(sources.array_shape(declaration.get('type')) or is_buffer)
     if (declaration.get('type') not in types and not is_array) or not sources.valid_name(declaration.get('name')):
         raise RuntimeError('Invalid native source declaration in editor history.')
@@ -188,7 +188,10 @@ def _project(runtime, entry, declaration):
     sequence = sources.source_sequence(declaration)
     if sequence not in sources.SEQUENCE_CHANNELS: raise RuntimeError('Unsupported native Uniform sequence.')
     value = declaration.get('value'); count = sources.source_components(declaration); values = [value] if count == 1 else value
-    if is_pop:values=[declaration.get('popSource',''),declaration.get('attributeClass','point'),declaration.get('attribute','')]
+    if declaration.get('kind')=='attribute':
+        mapped=sources.attribute_parameters(runtime.shader_operator(runtime.target()),sequence,0,declaration)
+        values=[mapped[key] for key in sources.SEQUENCE_CHANNELS[sequence]]
+    elif is_pop:values=[declaration.get('popSource',''),declaration.get('attributeClass','point'),declaration.get('attribute','')]
     if is_array: values = [declaration.get('elementType','float') if is_buffer else sources.array_shape(declaration['type'])[0], declaration.get('arraySource', ''), 'texturebuffer' if is_buffer else 'uniformarray']
     if not isinstance(values, list) or (not is_array and not is_pop and len(values) != count):
         raise RuntimeError('Invalid Uniform defaults in editor history.')
@@ -267,7 +270,10 @@ def _restrict_delta(runtime, before, after, scope_before, scope_after, logical_b
                if _semantic_par((left or {}).get('params', {}).get(key, {})) != _semantic_par((right or {}).get('params', {}).get(key, {}))}
     if logical_before and logical_after and logical_before != logical_after:
         changes = {key for key in logical_before.keys() | logical_after.keys() if logical_before.get(key) != logical_after.get(key)}
-        if changes.issubset({'name', 'type', 'value', 'exposeName'}):
+        if logical_before.get('kind')==logical_after.get('kind')=='attribute':
+            fields=({'name'} if 'name' in changes else set())|({'type','cols','comps'} if 'type' in changes else set())|({'size'} if 'arraySize' in changes else set())
+            allowed &= fields
+        elif changes.issubset({'name', 'type', 'value', 'exposeName'}):
             allowed = {'name'} if 'name' in changes else set()
     if result['native'] and before and before['native']:
         for key in result['native']['params']:

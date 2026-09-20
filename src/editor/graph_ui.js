@@ -135,12 +135,12 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 }
 
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
-function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','pop_buffer','top_input'].includes(d.key)?d.key:null);}
+function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
   if(d.key==='comment')return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
   if(['constant','spec_constant','scalar','vector','matrix','array'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
-  if(d.key==='builtin_source'||d.key==='pop_buffer')return 'builtin';
+  if(d.key==='builtin_source'||['pop_buffer','attribute'].includes(d.key))return 'builtin';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
@@ -1434,7 +1434,7 @@ function renderCards(){
     text.append(name);title.append(text);
     if(customNodeNamesEnabled()&&!isSourceReferenceNode(n)){name.onpointerdown=e=>e.stopPropagation();name.ondblclick=e=>{e.preventDefault();e.stopPropagation();beginNodeRename(n,name);};}
     const meta=el('div',{class:'node-title-meta'}),source=nodeSourceDeclaration(n),quick=source?null:nodePrimarySelector(n,d);
-    if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',pop_buffer:'POP Buffer',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=label+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
+    if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',pop_buffer:'POP Buffer',attribute:'Attribute',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=label+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     else {
       const subtitles=[];
       if(customNodeNamesEnabled()&&n.name)subtitles.push(nodeTypeLabel(d,n.params));
@@ -1716,12 +1716,12 @@ function renderCreator(){
   if(!creatorState)return;const query=$('#createsearch').value.toLowerCase(),category=creatorCategory,typeFilter=$('#createtype').value,wire=creatorState.wire;
   const validation=wire?creatorValidationContext():null;
   creatorMatches=[];
-  const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant','spec_constant','pop_buffer'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
+  const entries=browserIndex().map(({d})=>{if(['uniform','sampler','constant','spec_constant','pop_buffer','attribute'].includes(d.key))d={...d,label:t('inputs.new')+' · '+d.label};return {d,meta:creatorMeta(d)};});
   for(const preset of Object.keys(inputPresets())){
     const base=catalog.find(d=>d.key==='uniform');if(!base)continue;
     const d={...base,key:'preset:'+preset,label:t('inputs.preset.'+preset),inputPreset:preset};entries.push({d,meta:creatorMeta(d)});
   }
-  for(const decl of allInputSources().filter(d=>['uniform','sampler','constant','spec_constant','pop_buffer','top_input'].includes(d.kind)&&!d.sourceMissing)){
+  for(const decl of allInputSources().filter(d=>['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.kind)&&!d.sourceMissing)){
     const base=catalog.find(d=>d.key===decl.kind);if(!base?.stages.includes(stage))continue;
     const d={...base,key:'input:'+decl.id,label:decl.name,inputSourceId:decl.id,inputKind:decl.kind,inputType:decl.type};entries.push({d,meta:creatorMeta(d)});
   }
@@ -2158,7 +2158,7 @@ function installGraphClipboard(){
 }
 
 function creatorMeta(d){
-  if(['constant','spec_constant','pop_buffer','top_input'].includes(d.inputKind||d.key)){const branch=({constant:'constants',spec_constant:'specConstants',top_input:'topInputs'})[d.inputKind||d.key];return {...browserMeta(d),category:'inputs',path:['inputs',branch],secondary:[],descriptionKey:'help.'+(d.inputKind||d.key)};}
+  if(['constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.inputKind||d.key)){const branch=({constant:'constants',spec_constant:'specConstants',pop_buffer:'buffers',attribute:'geometry',top_input:'topInputs'})[d.inputKind||d.key];return {...browserMeta(d),category:'inputs',path:['inputs',branch],secondary:[],descriptionKey:'help.'+(d.inputKind||d.key)};}
   const meta=browserMeta(d),kind=inputSourceKind(d);
   return kind?{...meta,category:'inputs',path:['inputs',kind==='uniform'?'uniforms':'samplers'],secondary:[]}:meta;
 }

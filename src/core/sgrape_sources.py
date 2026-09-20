@@ -26,14 +26,17 @@ MATRIX_SHAPES = {prefix+str(c)+(('x'+str(r)) if c != r else ''): (c,r)
                  for prefix in ('mat','dmat') for c in range(2,5) for r in range(2,5)}
 TYPES.update({ty:c*r for ty,(c,r) in MATRIX_SHAPES.items()})
 SPEC_TYPES = ('int', 'uint', 'bool', 'float')
-SOURCE_KINDS = ('uniform', 'spec_constant', 'pop_buffer')
+SOURCE_KINDS = ('uniform', 'spec_constant', 'pop_buffer', 'attribute')
+ATTRIBUTE_TYPES = tuple(ty for ty in TYPES if not ty.startswith(('bool','bvec','dmat')))
+ATTRIBUTE_TOKENS = {family + (str(size) if size > 1 else ''): family if size == 1 else prefix + str(size)
+                    for family,prefix in (('float','vec'),('double','dvec'),('int','ivec'),('uint','uvec')) for size in range(1,5)}
 PRESETS = {key: entry['initialize']['expression'] for key, entry in _source_catalog.PRESETS.items()}
 CHANNELS = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'),
             'color': ('rgbr', 'rgbg', 'rgbb', 'alpha'), 'const': ('value',), 'matrix': ('value',)}
 ARRAY_ELEMENT_TYPES = ('float', 'vec2', 'vec3', 'vec4')
 MAX_NATIVE_ARRAY_LENGTH = 2147483647  # GLSL length representation, not a GPU capacity claim.
 # Configuration channels are deliberately separate from editable numeric values.
-SEQUENCE_CHANNELS = dict(CHANNELS, array=('type', 'chop', 'arraytype'), buffer=('pop','attrclass','attr'))
+SEQUENCE_CHANNELS = dict(CHANNELS, array=('type', 'chop', 'arraytype'), buffer=('pop','attrclass','attr'), attr=('type',), mattr=('cols','comps'))
 
 
 class SourceError(RuntimeError):
@@ -56,6 +59,7 @@ def array_shape(ty):
 
 
 def source_sequence(declaration):
+    if declaration.get('kind')=='attribute':return 'mattr' if declaration['type'] in MATRIX_SHAPES else 'attr'
     return 'buffer' if declaration.get('kind')=='pop_buffer' else 'const' if declaration.get('kind') == 'spec_constant' else 'array' if array_shape(declaration.get('type')) else 'matrix' if declaration.get('type') in MATRIX_SHAPES else declaration.get('nativeSequence', 'vec')
 
 
@@ -78,7 +82,7 @@ def native_array_length(declaration, declarations):
 
 
 def source_components(declaration):
-    if declaration.get('type')=='samplerBuffer' or declaration.get('kind')=='pop_buffer':return 0
+    if declaration.get('type')=='samplerBuffer' or declaration.get('kind') in ('pop_buffer','attribute'):return 0
     shape = array_shape(declaration.get('type'))
     if shape: return TYPES[shape[0]] * shape[1] if isinstance(shape[1],int) else 0
     return 1 if declaration.get('kind') == 'spec_constant' else TYPES[declaration['type']]
@@ -353,6 +357,9 @@ def native_rows(operator):
             p = parameter(operator, sequence, index, 'name')
             name = str(p.eval())
             if not name: continue
+            if sequence in ('attr','mattr'):
+                rows.append(dict(sequence=sequence,index=index,name=name,nameMode=str(p.mode).split('.')[-1].upper(),components=[],attributeBinding=attribute_binding(operator,sequence,index)))
+                continue
             if sequence == 'buffer':
                 rows.append(dict(sequence=sequence,index=index,name=name,nameMode=str(p.mode).split('.')[-1].upper(),components=[],bufferBinding=buffer_binding(operator,index)))
                 continue
@@ -368,6 +375,38 @@ def native_rows(operator):
                          'components': matrix_components(binding) if binding else [component(parameter(operator, sequence, index, c)) for c in channels],
                          **({'matrixBinding':binding} if binding else {})})
     return rows
+
+
+def attribute_binding(operator, sequence, index):
+    pars={key:parameter(operator,sequence,index,key) for key in SEQUENCE_CHANNELS[sequence]}
+    size=getattr(operator.par,sequence+str(index)+'size',None)
+    if size is not None:pars['size']=size
+    fields={key:dict(value=p.eval(),mode=str(p.mode).split('.')[-1].upper()) for key,p in pars.items()}
+    if sequence=='attr':
+        native=str(fields['type']['value']);ty=ATTRIBUTE_TOKENS.get(native,native)
+    else:
+        cols=int(fields['cols']['value']);rows=int(fields['comps']['value'])
+        ty='mat'+str(cols)+('x'+str(rows) if cols!=rows else '')
+    return dict(type=ty,arraySize=int(size.eval()) if size is not None else 1,sizeSupported=size is not None,
+                writable=all(str(p.mode).endswith('CONSTANT') and bool(p.enable) and not p.readOnly for p in pars.values()),
+                expected=token(fields))
+
+
+def attribute_parameters(operator, sequence, index, declaration):
+    """Map graph types to the installed TD parameter layout, including old menus."""
+    ty=declaration['type'];size=declaration.get('arraySize',1)
+    if ty not in ATTRIBUTE_TYPES or source_sequence(declaration)!=sequence:raise SourceError('Choose a supported Attribute type on this native page.')
+    if type(size) is not int or not 1<=size<=MAX_NATIVE_ARRAY_LENGTH:raise SourceError('Attribute array size must be a positive integer.')
+    if sequence=='attr':
+        menu=parameter(operator,sequence,index,'type').menuNames
+        native=ty if ty in menu else next((key for key,value in ATTRIBUTE_TOKENS.items() if value==ty and key in menu),None)
+        if native is None:raise SourceError('This TD version does not support Attribute type '+ty)
+        result={'type':native}
+    else:
+        cols,rows=MATRIX_SHAPES[ty];result={'cols':cols,'comps':rows}
+    if getattr(operator.par,sequence+str(index)+'size',None) is not None:result['size']=size
+    elif size!=1:raise SourceError('This TD version has no Attribute Array Size parameter.')
+    return result
 
 
 def reconcile(declarations, registry, rows, operator=None):
@@ -408,9 +447,10 @@ def reconcile(declarations, registry, rows, operator=None):
         row = rows[matches[ident]] if ident in matches else None
         duplicate = row is not None and names[row['name']] != 1
         array_invalid = row is not None and row['sequence'] == 'array' and (row['arrayBinding']['arrayType'] != ('texturebuffer' if decl['type']=='samplerBuffer' else 'uniformarray') or (decl['type']!='samplerBuffer' and (not array_shape(decl['type']) or row['arrayBinding']['elementType'] != array_shape(decl['type'])[0])))
-        if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied or array_invalid:
+        attribute_invalid = row is not None and row['sequence'] in ('attr','mattr') and (decl['kind']!='attribute' or row['attributeBinding']['type']!=decl['type'] or row['attributeBinding']['arraySize']!=decl.get('arraySize',1))
+        if row is None or duplicate or not valid_name(row['name']) or row['name'] in occupied or array_invalid or attribute_invalid:
             decl['sourceMissing'] = True; record['missing'] = True
-            message = ('Native Array storage or element type differs from '+decl['type']+': ' if array_invalid else 'Native source is missing or ambiguous: ') + decl['name']
+            message = ('Native Attribute configuration differs from '+decl['type']+': ' if attribute_invalid else 'Native Array storage or element type differs from '+decl['type']+': ' if array_invalid else 'Native source is missing or ambiguous: ') + decl['name']
             issues.append(source_issue(row,message,ident) if row else {'id':ident,'name':decl['name'],'status':'missing','message':message})
         else:
             decl['name'] = row['name']; decl.pop('sourceMissing', None)
@@ -425,6 +465,13 @@ def reconcile(declarations, registry, rows, operator=None):
             issues.append(source_issue(row,'Review the native Uniform name: ' + name)); continue
         kind = 'spec_constant' if row['sequence'] == 'const' else 'uniform'
         ident = kind + '_' + uuid.uuid4().hex
+        if row['sequence'] in ('attr','mattr'):
+            binding=row['attributeBinding']
+            if binding['type'] not in ATTRIBUTE_TYPES or not 1<=binding['arraySize']<=MAX_NATIVE_ARRAY_LENGTH:
+                issues.append(source_issue(row,'Unsupported native Attribute configuration: '+name));continue
+            ident='attribute_'+uuid.uuid4().hex
+            declarations.append(dict(id=ident,kind='attribute',name=name,type=binding['type'],arraySize=binding['arraySize'],value=None,nativeSequence=row['sequence']))
+            registry[ident]={k:row[k] for k in ('sequence','index','name')};known.add(name);continue
         if row['sequence']=='buffer':
             try:metadata=buffer_attribute(operator,row['index'])
             except SourceError as exc:
@@ -492,16 +539,21 @@ def locate(operator, record, index=None):
     return rows.get((record['sequence'], record['name']))
 
 
-def changed_array_format(declaration, record, rows):
-    """Offer explicit adoption only for the same uniquely named native row.
+def changed_source_format(declaration, record, rows):
+    """Inspect configuration of the same unique native row, without data reads.
 
-    Inspect configuration, not CHOP data. Length is read only when adopting an
-    Array. A missing/ambiguous row is never a format-change candidate.
+    Array length is read only on explicit adoption. A missing/ambiguous row is
+    never a format-change candidate.
     """
-    if not declaration.get('sourceMissing') or not record or record['sequence'] != 'array': return None
+    if not declaration.get('sourceMissing') or not record or record['sequence'] not in ('array','attr','mattr'): return None
     matches = [row for row in rows if row['name'] == record['name']]
-    if len(matches) != 1 or matches[0]['sequence'] != 'array': return None
-    row = matches[0]; binding = row['arrayBinding']
+    if len(matches) != 1 or matches[0]['sequence'] != record['sequence']: return None
+    row = matches[0]
+    if record['sequence'] in ('attr','mattr'):
+        binding=row['attributeBinding']
+        if binding['type'] not in ATTRIBUTE_TYPES:return None
+        return dict(type=binding['type'],arraySize=binding['arraySize'],expected=token([edit_token(row),binding['expected']]))
+    binding = row['arrayBinding']
     if binding['arrayType'] not in ('uniformarray', 'texturebuffer') or binding['elementType'] not in ARRAY_ELEMENT_TYPES: return None
     return dict(arrayType=binding['arrayType'], elementType=binding['elementType'],
                 expected=token([edit_token(row), binding['expected']]))
@@ -521,6 +573,11 @@ def capture_configuration(runtime, comp):
                                   {key:getattr(parameter(operator,'buffer',i,suffix),key) for key in ('val','mode','expr','bindExpr')})
                                  for i in range(getattr(getattr(operator.seq,'buffer',None),'numBlocks',0))
                                  for suffix in SEQUENCE_CHANNELS['buffer']],
+            'attributeParameters': [(p,{key:getattr(p,key) for key in ('val','mode','expr','bindExpr')})
+                                    for sequence in ('attr','mattr')
+                                    for i in range(getattr(getattr(operator.seq,sequence,None),'numBlocks',0))
+                                    for suffix in (*SEQUENCE_CHANNELS[sequence],'size')
+                                    if (p:=getattr(operator.par,sequence+str(i)+suffix,None)) is not None],
             'sequences': {name: [(parameter(operator, name, i, 'name'), parameter(operator, name, i, 'name').val)
                                 for i in range(getattr(operator.seq, name).numBlocks)]
                           for name in SEQUENCE_CHANNELS if getattr(operator.seq, name, None) is not None}}
@@ -532,7 +589,7 @@ def restore_configuration(runtime, comp, before):
         getattr(operator.seq, name).numBlocks = len(pars)
         for p, value in pars:
             if p.val != value: p.val = value
-    for p, state in before.get('matrixParameters',[]) + before.get('arrayParameters',[]) + before.get('bufferParameters',[]):
+    for p, state in before.get('matrixParameters',[]) + before.get('arrayParameters',[]) + before.get('bufferParameters',[]) + before.get('attributeParameters',[]):
         for key in ('val','expr','bindExpr','mode'):
             if getattr(p,key) != state[key]:setattr(p,key,state[key])
     if before['registry'] is None: comp.unstore(STORE)
@@ -564,6 +621,13 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
     # Validate candidate types before creating/renaming native rows.
     # Precision and numerical conversion remain the host's responsibility.
     for decl in declarations:
+        if decl['kind']=='attribute' and not decl.get('sourceMissing'):
+            sequence=source_sequence(decl)
+            if getattr(original.seq,sequence,None) is None:raise SourceError('Attributes require GLSL MAT.')
+            attribute_parameters(original,sequence,0,decl)
+            source=original_index.get((sequence,decl['name']))
+            if source and (source['attributeBinding']['type']!=decl['type'] or source['attributeBinding']['arraySize']!=decl.get('arraySize',1)):
+                raise SourceError('The native Attribute format differs. Review and adopt it before applying: '+decl['name'])
         if decl['kind']=='pop_buffer' and not decl.get('sourceMissing'):
             source=locate(original,original_registry.get(decl['id']),original_index)
             if source and source['sequence']!='buffer':raise SourceError('Native Buffer source kind differs: '+decl['name'])
@@ -610,7 +674,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
             if record: record['missing'] = True
             continue
         existing = locate(operator, record)
-        if existing is None and (not record or record.get('missing') and record['sequence'] == 'array' and (array_shape(decl['type']) or decl['type'] == 'samplerBuffer')):
+        if existing is None and (not record or record.get('missing') and (decl['kind']=='attribute' or record['sequence'] == 'array' and (array_shape(decl['type']) or decl['type'] == 'samplerBuffer'))):
             candidates = [r for r in native_rows(operator) if r['name'] == decl['name']]
             if len(candidates) > 1: raise SourceError('Duplicate native Uniform: ' + decl['name'])
             existing = candidates[0] if candidates else None
@@ -626,7 +690,8 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
                 if existing['nameMode'] != 'CONSTANT': raise SourceError('The Uniform name is controlled by TD.')
                 parameter(operator, sequence, index, 'name').val = decl['name']
             if (sequence=='buffer') != (decl['kind']=='pop_buffer'):raise SourceError('Native Buffer source kind differs: '+decl['name'])
-            if sequence in ('array','buffer'):
+            if (sequence in ('attr','mattr')) != (decl['kind']=='attribute'):raise SourceError('Native Attribute source kind differs: '+decl['name'])
+            if sequence in ('array','buffer','attr','mattr'):
                 registry[ident] = {'sequence': sequence, 'index': index, 'name': decl['name']}
                 continue
             previous = old_graph.get(ident, {})
@@ -662,6 +727,9 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
         if source is None:
             candidates = [r for r in native_rows(original) if r['name'] == decl['name']]
             source = candidates[0] if len(candidates) == 1 and original != operator else None
+        if sequence in ('attr','mattr'):
+            for suffix,value in attribute_parameters(operator,sequence,index,decl).items():parameter(operator,sequence,index,suffix).val=value
+            registry[ident]=dict(sequence=sequence,index=index,name=decl['name']);continue
         if sequence=='buffer':
             for suffix,field in (('attrclass','attributeClass'),('attr','attribute')):
                 parameter(operator,sequence,index,suffix).val=parameter(original,sequence,source['index'],suffix).eval() if source else decl.get(field,'point' if suffix=='attrclass' else '')
@@ -761,7 +829,7 @@ def snapshot(runtime):
         if decl['kind'] not in SOURCE_KINDS: continue
         row = locate(operator, registry.get(decl['id']), index)
         record = registry.get(decl['id'])
-        format_change = changed_array_format(decl, record, native_by_name.get(record['name'], []) if record else [])
+        format_change = changed_source_format(decl, record, native_by_name.get(record['name'], []) if record else [])
         destination = spec_rows if decl['kind']=='spec_constant' else rows
         destination.append({'id': decl['id'], 'kind':decl['kind'], 'name': decl['name'], 'type': decl['type'],
                      **({'constantId':decl['constantId']} if decl['kind']=='spec_constant' else {}),
@@ -772,6 +840,7 @@ def snapshot(runtime):
                      **({'matrixBinding':row['matrixBinding']} if row and row.get('matrixBinding') else {}),
                      **({'arrayBinding':dict(row['arrayBinding'], **({'length':array_shape(decl['type'])[1]} if array_shape(decl['type']) else {}))} if row and row.get('arrayBinding') else {}),
                      **({'bufferBinding':row['bufferBinding']} if row and row.get('bufferBinding') else {}),
+                     **({'attributeBinding':row['attributeBinding']} if row and row.get('attributeBinding') else {}),
                      **({'formatChange':format_change} if format_change else {}),
                      'nameWritable': row is not None and row['nameMode'] == 'CONSTANT',
                      'expected': edit_token(row) if row else None})
@@ -876,8 +945,10 @@ def edit(runtime, body):
                 raise SourceError('Use a unique GLSL Uniform name.')
             if kind not in SOURCE_KINDS or not (ty in SPEC_TYPES if kind=='spec_constant' else ty in TYPES or array_shape(ty) or ty=='samplerBuffer'): raise SourceError('Unsupported native source type.')
             decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
-                    'value': None if kind=='pop_buffer' or array_shape(ty) or ty=='samplerBuffer' else runtime.core().filled_value(ty)}
-            if kind=='pop_buffer':
+                    'value': None if kind in ('pop_buffer','attribute') or array_shape(ty) or ty=='samplerBuffer' else runtime.core().filled_value(ty)}
+            if kind=='attribute':
+                decl.update(nativeSequence=source_sequence(decl),arraySize=body.get('arraySize',1))
+            elif kind=='pop_buffer':
                 if ty not in TYPES or numeric_family(ty)=='bool':raise SourceError('Choose a numeric Buffer output type.')
                 decl.update(nativeSequence='buffer',popSource=body.get('popSource',''),attributeClass=body.get('attributeClass','point'),attribute=body.get('attribute',''))
             elif kind=='spec_constant':decl.update(constantId=next_constant_id(graph['declarations']), nativeSequence='const')
@@ -891,7 +962,7 @@ def edit(runtime, body):
                 decl.update(nativeSequence='array', arraySource=path)
             elif ty in MATRIX_SHAPES:decl['nativeSequence']='matrix'
             if body.get('sequence'):
-                if body['sequence'] not in (('buffer',) if kind=='pop_buffer' else ('const',) if kind=='spec_constant' else ('array',) if array_shape(ty) or ty=='samplerBuffer' else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise SourceError('Unsupported native source page.')
+                if body['sequence'] not in ((source_sequence(decl),) if kind=='attribute' else ('buffer',) if kind=='pop_buffer' else ('const',) if kind=='spec_constant' else ('array',) if array_shape(ty) or ty=='samplerBuffer' else ('matrix',) if ty in MATRIX_SHAPES else ('vec','color')):raise SourceError('Unsupported native source page.')
                 decl['nativeSequence']=body['sequence']
             if body.get('preset'):
                 if kind!='uniform' or body['preset'] not in PRESETS or ty!='float':raise SourceError('Unsupported time preset.')
@@ -906,18 +977,20 @@ def edit(runtime, body):
     if not decl: raise SourceError('Select an existing Uniform source.')
     if action == 'adoptFormat':
         record = comp.fetch(STORE, {}).get(decl['id']); native = native_rows(operator)
-        change = changed_array_format(decl, record, native)
+        change = changed_source_format(decl, record, native)
         if not change or body.get('expected') != change['expected']:
             raise SourceError('The native Array format changed. Refresh and review it again.')
-        row = next(row for row in native if row['sequence'] == 'array' and row['name'] == record['name'])
-        if change['arrayType'] == 'texturebuffer':
+        row = next(row for row in native if row['sequence'] == record['sequence'] and row['name'] == record['name'])
+        if decl['kind']=='attribute':
+            decl.update(type=change['type'],arraySize=change['arraySize'])
+        elif change['arrayType'] == 'texturebuffer':
             decl.update(type='samplerBuffer', elementType=change['elementType'])
         else:
             length = array_source_length(operator, row['index'])
             if length > MAX_NATIVE_ARRAY_LENGTH: raise SourceError('The CHOP length exceeds the GLSL signed 32-bit range.')
             decl['type'] = change['elementType'] + '[' + str(length) + ']'
             decl.pop('elementType', None)
-        decl.update(value=None, nativeSequence='array'); decl.pop('sourceMissing', None)
+        decl.update(value=None, nativeSequence=row['sequence']); decl.pop('sourceMissing', None)
         # This can invalidate existing consumers. Keep all edges in a browser
         # draft; ordinary Apply validates it before changing authoritative DATs.
         # TD configuration and source identity are not changed by adoption.
@@ -928,6 +1001,22 @@ def edit(runtime, body):
         purge_missing_source(runtime, decl['id'])
         return snapshot(runtime)
     if row is None: raise SourceError('This Uniform source is missing.')
+    if action=='attributeConfig':
+        binding=row.get('attributeBinding')
+        if decl['kind']!='attribute' or not binding or not binding['writable'] or body.get('expected')!=binding['expected']:
+            raise SourceError('The Attribute configuration changed or is driven by TD. Refresh or edit it in TD.')
+        decl.update(type=body.get('type'),arraySize=body.get('arraySize',1))
+        values=attribute_parameters(operator,row['sequence'],row['index'],decl)
+        pars={key:parameter(operator,row['sequence'],row['index'],key) for key in values}
+        before={key:p.val for key,p in pars.items()}
+        try:
+            for key,p in pars.items():p.val=values[key]
+            result=snapshot(runtime)
+        except Exception:
+            for key,p in pars.items():p.val=before[key]
+            raise
+        decl.pop('sourceMissing',None)
+        return dict(result,workingGraph=graph)
     if action=='bufferBinding':
         binding=row.get('bufferBinding')
         if not binding or not binding['writable'] or body.get('expected')!=binding['expected']:raise SourceError('Buffer configuration changed or is controlled in TD. Refresh and retry.')
@@ -989,7 +1078,7 @@ def edit(runtime, body):
             else:p.mode = ParMode.CONSTANT;p.val = value
         return snapshot(runtime)
     if action == 'driver':
-        if row['sequence'] in ('matrix','array','buffer'): raise SourceError('Use the source binding to edit this driver.')
+        if row['sequence'] in ('matrix','array','buffer','attr','mattr'): raise SourceError('Use the source binding to edit this driver.')
         if decl['kind']=='spec_constant':raise SourceError('Spec Constants are intended for infrequent integer mode changes; edit native drivers in TD.')
         index=body.get('component');expression=body.get('expression')
         if type(index) is not int or not 0<=index<4 or not isinstance(expression,str) or len(expression)>4096:

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.129",
+  "catalogVersion": "0.8.130",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -3437,6 +3437,47 @@
           "attribute"
         ],
         "glslName": "TDBuffer",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "attribute",
+        "label": "Attribute",
+        "inputs": {
+          "arrayIndex": "uint"
+        },
+        "outputs": {
+          "out": "D",
+          "arraySize": "uint"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {
+          "type": "float",
+          "declarationId": ""
+        },
+        "descriptionKey": "help.attribute",
+        "definitionUuid": "sgrape.builtin.attribute",
+        "revisionHash": "8a9e9cb13d40538d5047f30e82e6abad82e7cc7859f996c7605b12fa565b3fc1"
+      },
+      "emitter": {
+        "id": "attribute",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "geometry"
+        ],
+        "source": "touchdesigner",
+        "aliases": [
+          "attribute",
+          "geometry"
+        ],
+        "glslName": "TDAttrib",
         "secondaryCategories": []
       }
     }

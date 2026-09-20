@@ -94,10 +94,14 @@ Colors 的新建／編輯型別入口限制為 `float`（R）、`vec2`（RG）�
 
 ### 第四輪：MAT Attribute 與來源內容補齊
 
-- [ ] MAT Attribute 名稱／型別／Array Size 的配置、引用、修改、產碼與 UI；共用數值型別及來源操作基礎。
+- [x] MAT Attribute 名稱／型別／宿主支援的 Array Size 配置、引用、修改、產碼與 UI；共用數值型別及來源操作基礎。
 - [ ] 常用內建 accessor 與需配置的具名 Attribute 分開，預置入口不代表提前建立所有原生列。
 - [ ] 依來源總表逐項標示已支援、可沿用機制補齊、使用者自行新增及本輪不適用；涵蓋現有 TOP／MAT 與已支援 Stage。
 - [ ] 整理 Texture 維度、共通來源及 TD 內建的分類／名稱；來源、運算、未支援 Stage 不混成同一份新增清單。
+
+0.8.130 子步驟：具名 MAT Attribute 與 Matrix Attribute 接入共用來源清單、建立表單、Parameter、引用、Help、型別檢查與 Undo。數值來自幾何體，不建立 Uniform 值或預置幾何體。Vertex 產碼使用 `TDAttrib_Name(arrayIndex)`，提供值與 Array Size 出口；僅使用大小不產生取值。TD 外部改型別保留舊圖與接線並提示明確採用，網頁修改原生型別也先返回圖草稿，合法後套用。原生型別修改限同一個 Attribute／Matrix Attribute 頁面；跨頁改為另建來源。
+
+安裝版 2025.32820 的一般 Attribute menu token 是 float2 等，矩陣則是 `mattr*cols`／`mattr*comps`。兩頁沒有 Array Size 欄位；介面顯示不支援、不提供無效欄位，API 在寫入前拒絕大於 1。兼容有 size 欄位的 metadata／配置分支有保留，尚未宣稱已在其他版本原生驗證。矩陣 Attribute 目前由宿主提供 float 矩陣，不冒充 double 矩陣輸入。隔離場景驗證 accessor／矩陣參照、型別編輯與 Undo、外部改型別採用、建立與刪除。幾何體缺少 Attribute 的各種實際預設值仍依使用者要求留待整體驗收。
 
 驗收：提供 TOP／MAT 可用能力表與實際產碼案例；不以新分類外觀冒充新能力，也不以來源研究表的總筆數作為完成數。
 

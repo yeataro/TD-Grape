@@ -189,7 +189,7 @@ function historyValueKey(value){
 }
 function historyGraphKey(document){const value=clone(document);delete value.catalogSnapshot;return historyValueKey(value);}
 function historySourceIds(before,after){
-  const sources=document=>new Map((document.declarations||[]).filter(d=>['uniform','spec_constant','pop_buffer'].includes(d.kind)).map(d=>[d.id,d]));
+  const sources=document=>new Map((document.declarations||[]).filter(d=>['uniform','spec_constant','pop_buffer','attribute'].includes(d.kind)).map(d=>[d.id,d]));
   const a=sources(before),b=sources(after);
   return [...new Set([...a.keys(),...b.keys()])].filter(id=>historyValueKey(a.get(id))!==historyValueKey(b.get(id)));
 }

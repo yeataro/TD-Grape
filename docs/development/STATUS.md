@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 MAT Attribute 子功能 0.8.130：具名一般／矩陣 Attribute 共用來源管理、Vertex 引用、型別選單、Help 與歷史；值留在幾何體。外部型別差異須明確採用，不默改接線。宿主沒有 Array Size 時保留大小 1 並提示限制。完整 portable checks 通過（492 Python、14 附加檢查、732 雙語鍵及 JS／整合）；隔離原生 6 組、瀏覽器 4 組通過。三份使用者 Shader 保留。報告 `work/reports/mat-attributes/native-final/`。來源內容／分類整理與結構作者 UI 尚未完成；同步及 TOE 保存另記。
+
 2026-09-20 0.8.129 交付檢查點：36 份嵌入來源、9 份服務資產核對一致，TOP／MAT master revision 77；三份使用者 Shader 保留。TOE 957182 bytes，SHA256 `df1bcd86f080631216fe6effa15727a475476f3234101cabc296903df73197f9`。報告 `work/reports/buffer-format/`，未強制重新整理使用者網頁。
 
 2026-09-20 儲存格式採用 0.8.129：第三輪來源能力完成。格式失配可明確採用 TD 設定，保留來源 ID、接線與原生配置；先產生可撤銷草稿，合法後沿用 Apply。歷史紀錄保留仍存在的失配來源，防止 Undo／Redo 誤刪／重建。TOP／MAT 原生 10 組及瀏覽器 4 組通過；完整 portable checks 通過（488 Python、14 附加檢查、727 雙語鍵與 JS／整合檢查）。原生測試保留三份使用者 Shader。報告 `work/reports/buffer-format/native-final/`。來源提交後同步與保存 TOE，第四輪 MAT Attribute／分類及第五輪結構編輯接續。

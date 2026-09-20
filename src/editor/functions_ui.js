@@ -156,6 +156,7 @@ function setDeclarationType(decl,type){
 function specDefaultValue(value,type){const n=Number(Array.isArray(value)?value[0]:value)||0;return type==='bool'?!!n:type==='int'?Math.max(-2147483648,Math.min(2147483647,Math.trunc(n))):type==='uint'?Math.max(0,Math.min(4294967295,Math.trunc(n))):n;}
 function createInputDeclaration(kind='uniform',type='float',{name,value,preset,nativeSequence,arraySource,elementType,length,popSource,attributeClass,attribute}={}){
   if(kind==='top_input'){const slots=ensureTopInputs();if(slots.length>=16)throw Error(t('inputs.topLimit'));const slot={id:'input_'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'sTD2DInputs['+slots.length+']',defaultSource:'builtin:black'};slots.push(slot);return slot;}
+  if(kind==='attribute'&&editorTarget!=='mat')throw Error('Attributes require a MAT graph.');
   if(kind==='sampler'&&editorTarget==='top')throw Error(t('inputs.chooseTop'));
   if(kind==='uniform'&&preset){
     const entry=typeContract?.sources?.uniformPresets?.[preset];if(!entry)throw Error('Unknown Uniform preset.');
@@ -171,6 +172,7 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
   const id=kind+'_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const decl={id,kind,type:kind==='sampler'?'sampler2D':type,name:uniqueInputName(name||({sampler:'uTexture',constant:'cValue',spec_constant:'sValue'})[kind]||'uValue')};
   if(kind==='spec_constant'){const ids=new Set(graph.declarations.filter(d=>d.kind==='spec_constant').map(d=>d.constantId));let constantId=0;while(ids.has(constantId))constantId++;Object.assign(decl,{value:specDefaultValue(value??0,type),constantId,nativeSequence:'const'});}
+  else if(kind==='attribute')Object.assign(decl,{value:null,nativeSequence:isMatrixType(type)?'mattr':'attr',arraySize:1});
   else if(kind==='pop_buffer')Object.assign(decl,{value:null,nativeSequence:'buffer',popSource:popSource||'',attributeClass:attributeClass||'point',attribute:attribute||''});
   else if(kind==='sampler')Object.assign(decl,{source:'builtin:black',fallback:'opaque-black'});
   else if(kind==='uniform'&&type==='samplerBuffer')Object.assign(decl,{value:null,expose:false,nativeSequence:'array',elementType:elementType||'float',arraySource:arraySource||''});
@@ -188,7 +190,7 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
   type=d.fixedType||type;
   if(d.source)params.functionId=FunctionModel.importLibrary(graph,d.source).id;
   if(type&&params.type){if(isMatrixType(params.type)&&isMatrixType(type)&&params.values)params.values=matrixReshapeValue(params.values,params.type,type);params.type=type;}
-  if(['uniform','constant','spec_constant','pop_buffer'].includes(d.key)){
+  if(['uniform','constant','spec_constant','pop_buffer','attribute'].includes(d.key)){
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||(d.key==='spec_constant'?'int':'float'),inputSeed);
     if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;
   }

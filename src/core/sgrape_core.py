@@ -104,7 +104,7 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','constant','top_input','glsl_code',
+    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
@@ -537,6 +537,7 @@ def node_parameter_types(definition):
     if key=='compare':return COMPARE_TYPES
     if key=='scalar':return SCALAR_TYPES
     if key=='pop_buffer':return NUMERIC_TYPES+MATRIX_TYPES
+    if key=='attribute':return NUMERIC_TYPES+tuple(t for t in MATRIX_TYPES if not t.startswith('d'))
     if key in VECTOR_KEYS:return VECTOR_TYPES
     if key in ('inverse','determinant'):return SQUARE_MATRIX_TYPES
     if key in MATRIX_KEYS:return MATRIX_TYPES
@@ -569,7 +570,7 @@ def resolved_ports(definition, params, declaration=None):
         if token == 'T': return selected
         if token == 'D':
             ty = declaration.get('type') if declaration else None
-            if definition['key']=='pop_buffer' and ty not in NUMERIC_TYPES+MATRIX_TYPES:raise GraphError('Choose a numeric POP Buffer output type')
+            if definition['key'] in ('pop_buffer','attribute') and ty not in node_parameter_types(definition):raise GraphError('Choose a supported '+definition['label']+' type')
             if not valid_port_type(ty,resources=definition['key']=='uniform' and ty=='samplerBuffer'): raise GraphError('Select a matching declaration')
             return ty
         return token
@@ -601,7 +602,7 @@ def _type_contract():
         if definition['key'] in NOISE_HELPERS:choices=list(FLOAT_VECTOR_TYPES)
         if definition['key']=='compare':choices=list(COMPARE_TYPES)
         if definition['key']=='spec_constant':choices=list(SPEC_TYPES)
-        if definition['key']=='pop_buffer':choices=list(NUMERIC_TYPES+MATRIX_TYPES)
+        if definition['key'] in ('pop_buffer','attribute'):choices=list(node_parameter_types(definition))
         if definition['key']=='uniform':choices=list(choices)+['samplerBuffer']
         def variant(ty):
             params=dict(definition['defaults'],type='float' if definition['key']=='spec_constant' or ty=='samplerBuffer' else ty or 'float')
@@ -611,7 +612,7 @@ def _type_contract():
                 params['values']=matrix_identity(params['type'])
             return dict(type=ty,**resolved_ports(definition,params,{'type':ty}))
         variants[definition['definitionUuid']] = {'selector': selector, 'variants': [variant(ty) for ty in choices]}
-    result = {'version': 1, 'valueTypes':list(TYPES), 'numericTypes': list(NUMERIC_TYPES), 'popBufferTypes':list(NUMERIC_TYPES+MATRIX_TYPES), 'specConstantTypes': list(SPEC_TYPES), 'resourceTypes': list(RESOURCE_TYPES),
+    result = {'version': 1, 'valueTypes':list(TYPES), 'numericTypes': list(NUMERIC_TYPES), 'popBufferTypes':list(NUMERIC_TYPES+MATRIX_TYPES), 'attributeTypes':list(NUMERIC_TYPES+tuple(t for t in MATRIX_TYPES if not t.startswith('d'))), 'specConstantTypes': list(SPEC_TYPES), 'resourceTypes': list(RESOURCE_TYPES),
               'types': dict(copy.deepcopy(TYPE_DESCRIPTORS), **{ty:{'family':'sampler','components':0} for ty in RESOURCE_TYPES}),
               'glslCode':{'maxPorts':GLSL_CODE_MAX_PORTS,'maxLength':GLSL_CODE_MAX_LENGTH,'reservedNames':sorted(GLSL_CODE_RESERVED)},
               'vectors':{'version':1,'types':list(VECTOR_TYPES),'components':VECTOR_COMPONENTS,
@@ -924,6 +925,12 @@ def _compile_flat(graph,annotation_scopes=None):
             specialization_ids.add(constant_id)
             if d.get('initialDriver') or d.get('expose'):raise GraphError('Spec Constants do not expose Uniform drivers')
             if d.get('nativeSequence','const')!='const':raise GraphError('Spec Constants use the native Constants page')
+        elif d.get('kind')=='attribute':
+            if graph_target(graph)!='mat':raise GraphError('Attributes require a MAT graph')
+            if d.get('type') not in node_parameter_types(CATALOG['attribute']) or d.get('value') is not None:raise GraphError('Choose a supported Attribute type')
+            if d.get('nativeSequence', 'mattr' if d['type'] in MATRIX_TYPES else 'attr')!=('mattr' if d['type'] in MATRIX_TYPES else 'attr'):raise GraphError('Invalid native Attribute page')
+            if type(d.get('arraySize',1)) is not int or not 1<=d.get('arraySize',1)<=2147483647:raise GraphError('Invalid Attribute array size')
+            if d.get('initialDriver') or d.get('expose'):raise GraphError('Attribute values belong to the geometry')
         elif d.get('kind')=='pop_buffer':
             if d.get('type') not in NUMERIC_TYPES+MATRIX_TYPES or d.get('value') is not None:raise GraphError('Choose a numeric POP Buffer output type')
             if d.get('nativeSequence','buffer')!='buffer' or d.get('initialDriver') or d.get('expose'):raise GraphError('POP Buffers use native Buffer configuration')
@@ -994,9 +1001,9 @@ def _compile_flat(graph,annotation_scopes=None):
                 if type(params.get('requireConstant',False)) is not bool:
                     raise GraphError('Require Constant must be a boolean',ident)
                 declaration=None
-                if d['key'] in ('uniform','constant','spec_constant','pop_buffer','texture','sampler'):
+                if d['key'] in ('uniform','constant','spec_constant','pop_buffer','attribute','texture','sampler'):
                     declaration=declarations.get('grapeTop_'+str(params['inputId'])) if managed and d['key']=='texture' and params.get('inputId') else declarations.get(params.get('declarationId'))
-                    expected=d['key'] if d['key'] in ('uniform','constant','spec_constant','pop_buffer') else 'sampler'
+                    expected=d['key'] if d['key'] in ('uniform','constant','spec_constant','pop_buffer','attribute') else 'sampler'
                     if not declaration or declaration['kind']!=expected: raise GraphError('Select a matching declaration',ident)
                 if d['key']=='top_input' and not any(slot['id']==params.get('inputId') for slot in slots):
                     raise GraphError('Select an existing TOP Input',ident)
@@ -1067,7 +1074,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 matrix_sources[ident]=mapped
             def effective_inputs(ident,output=None):
                 if defs[ident]['key']=='array_length':return set()  # Fixed/host-macro extent, independent of stored values.
-                if defs[ident]['key']=='pop_buffer' and output in ('length','arraySize'):return set()
+                if defs[ident]['key'] in ('pop_buffer','attribute') and output in ('length','arraySize'):return set()
                 if ident in matrix_sources:return {port for port,offset in matrix_sources[ident] if port is not None}
                 if defs[ident]['key']!='replace':return set(ports[ident]['in'])
                 mapped=component_sources[ident]
@@ -1357,6 +1364,10 @@ def _compile_flat(graph,annotation_scopes=None):
                     expr='sTD2DInputs['+str(index)+']'
                     expressions[(ident,'size')]='uTD2DInfos['+str(index)+'].res.zw'
                     expressions[(ident,'pixelSize')]='uTD2DInfos['+str(index)+'].res.xy'
+                elif k=='attribute':
+                    decl=declarations[p['declarationId']];used.add(decl['id']);name=decl['name']
+                    expr='TDAttrib_'+name+'('+a('arrayIndex')+')' if 'out' in needed_outputs[ident] else None
+                    expressions[(ident,'arraySize')]=str(decl.get('arraySize',1))+'u'
                 elif k=='pop_buffer':
                     decl=declarations[p['declarationId']];used.add(decl['id']);name=decl['name']
                     expr=decl['type']+'(TDBuffer_'+name+'('+a('index')+', '+a('arrayIndex')+'))' if 'out' in needed_outputs[ident] else None
@@ -1463,7 +1474,7 @@ def _compile_flat(graph,annotation_scopes=None):
         for i,d in list(enumerate(samplers))+[(next((j for j,slot in enumerate(slots) if slot['id']==graph.get('topInputLegacyId')),0),declarations[ident]) for ident in aliases]:
             pixel='\n'.join(re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',code)+marker+comment for code,marker,comment in (line.partition('//') for line in pixel.split('\n')))
     else:
-        headers=[header(declarations[i]) for i in sorted(used-length_used) if declarations[i]['kind']!='pop_buffer']
+        headers=[header(declarations[i]) for i in sorted(used-length_used) if declarations[i]['kind'] not in ('pop_buffer','attribute')]
         vertex='\n'.join(type_headers['vertex']+headers+['out vec2 sg_uv;']+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
         pixel='\n'.join(type_headers['pixel']+headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+stages['pixel']['helpers']+[
                                  'void main() {','    TDCheckDiscard();']+stages['pixel']['lines']+['}',''])
