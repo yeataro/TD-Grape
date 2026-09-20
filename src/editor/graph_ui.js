@@ -1047,11 +1047,12 @@ function portTypeCaption(n,kind,name){
 }
 function nodeComponentNames(n){
   if(!n)return 'xyzw';
+  if(['xyzw','rgba','stpq','uv'].includes(n.ui?.componentNames))return n.ui.componentNames;
   const key=definition(n)?.key,source=key==='uniform'&&nodeSourceDeclaration(n);
   if(key==='color'||source?.kind==='uniform'&&source.nativeSequence==='color')return 'rgba';
-  return key==='uv'?'uv':n?.ui?.componentNames||'xyzw';
+  return key==='uv'?'uv':'xyzw';
 }
-function vectorNames(n){return n.ui?.componentNames==='rgba'?'RGBA':n.ui?.componentNames==='uv'&&typeComponents(n.params.type)===2?'UV':'XYZW';}
+function vectorNames(n){const names=nodeComponentNames(n);return names==='rgba'?'RGBA':names==='stpq'?'STPQ':names==='uv'&&typeComponents(n.params.type||nodeSourceDeclaration(n)?.type)===2?'UV':'XYZW';}
 // Display hints come from known component ports, never arbitrary labels or upstream nodes.
 function portColorComponent(n,kind,port){
   if(ports(n,kind)[port]!=='float')return null;

@@ -1175,6 +1175,13 @@ function changeMatrixAccess(n,key,value){
     for(const [port,type] of Object.entries(ports(n,'inputs')))if(Object.hasOwn(n.inputValues||{},port))n.inputValues[port]=shapedValue(n.inputValues[port],type);
   },{typeChange:true});
 }
+function nodeComponentNameSettings(n){
+  const count=typeComponents(n.params.type||nodeSourceDeclaration(n)?.type);
+  const control=select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],['stpq','S / T / P / Q'],...(count===2?[['uv','U / V']]:[])],vectorNames(n).toLowerCase(),value=>{
+    if(!editorMutationBlocked()&&current().nodes.includes(n))change(()=>{n.ui||={};n.ui.componentNames=value;});
+  });
+  control.dataset.nodeComponentNames=n.id;control.disabled=readonly;return field(t('vector.names'),control);
+}
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;
   const composed=['combine','vector','replace'].includes(d.key),control=nodeTypeSelector(n,d);
@@ -1415,7 +1422,7 @@ function inspector(){
       source.onclick=()=>selectInputSource(decl.id);box.append(source);
       if(decl.kind==='sampler')declarationFields(box,decl);
       else if(decl.kind==='constant')constantFields(box,decl);
-      else nativeInputFields(box,decl);
+      else nativeInputFields(box,decl,n);
     }
     if(n.params.inputId){
       const sources=topInputsView(),source=sources.find(s=>s.id===n.params.inputId);
@@ -1468,7 +1475,7 @@ function inspector(){
   }else{
     if(d.key==='comment')noteAppearanceSettings(box,n);
     if(n.params.type&&!n.params.fixedType&&!supportsAutoType(d)&&!isVectorOperation(d)&&!isCompositeOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
-    if(isVectorOperation(d)||isMatrixOperation(d))box.append(field(t('vector.names'),select([['xyzw','X / Y / Z / W'],['rgba','R / G / B / A'],['stpq','S / T / P / Q'],...(typeComponents(n.params.type)===2?[['uv','U / V']]:[])],n.ui?.componentNames||'xyzw',value=>change(()=>n.ui.componentNames=value))));
+    if(isVectorOperation(d)||isMatrixOperation(d)||d.key==='uniform'&&nodeSourceDeclaration(n)?.nativeSequence==='color')box.append(nodeComponentNameSettings(n));
     if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','scalar','vector','matrix','float','vec2','vec3','vec4','color'].includes(d.key)){
       const requirement=el('input',{type:'checkbox','data-require-constant':n.id});requirement.checked=!!n.params.requireConstant;requirement.disabled=readonly;
       requirement.onchange=()=>change(()=>{if(requirement.checked)n.params.requireConstant=true;else delete n.params.requireConstant;});
@@ -2196,16 +2203,16 @@ function selectSourceReferences(id,builtin=null){
   focusGraphCanvas();refreshCanvasSelection();renderGraphEditActions();fitSelection();
 }
 function nativeSourceSequenceName(sequence){return {color:'Colors',matrix:'Matrices',array:'Arrays',buffer:'Buffers',attr:'Attributes',mattr:'Matrix Attributes',vec:'Vectors',const:'Constants'}[sequence]||sequence;}
-function nativeComponentControls(decl,row){
+function nativeComponentControls(decl,row,names=null){
   const count=typeComponents(decl.type)||1,grid=componentGrid(count);
-  grid.dataset.nativeComponents=decl.id;grid.dataset.nativeKind=decl.kind;grid.nativeDeclaration=decl;
+  grid.dataset.nativeComponents=decl.id;grid.dataset.nativeKind=decl.kind;grid.nativeDeclaration=decl;grid.componentNames=names;
   for(let i=0;i<count;i++)grid.append(el('div',{'data-native-component-slot':i}));
   syncNativeComponentControls(grid,row,sourceReady(true));
   if(decl.kind==='uniform'&&!row.pending&&typeof uniformLive!=='undefined')queueMicrotask(()=>{if(grid.isConnected)uniformLive.registerView(grid);});
   return grid;
 }
-function nativeValueControls(decl,row){
-  const compact=nativeComponentControls(decl,row);
+function nativeValueControls(decl,row,names=null){
+  const compact=nativeComponentControls(decl,row,names);
   if(row.sequence!=='color'||!['float','vec2','vec3','vec4'].includes(decl.type))return compact;
   const box=el('div',{class:'native-color-controls','data-native-color':decl.id}),line=el('div',{class:'native-color-line'});
   const toggle=el('button',{type:'button',class:'node-values-toggle','aria-expanded':'false','aria-label':t('node.expandValues'),title:t('node.expandValues')},'▸');
@@ -2232,19 +2239,19 @@ function syncNativeColorControls(box,row,ready){
   if(!picker.colorExpected)picker.value=display.hex;
   box.querySelector('.color-ink').style.backgroundColor=display.css;
 }
-function nativeReferencePresentation(decl,row){
+function nativeReferencePresentation(decl,row,names=null){
   if(!decl||decl.kind!=='uniform'||isMatrixType(decl.type)||!['float','double','int','uint','bool'].includes(typeFamily(decl.type)))return null;
   if(row?.pending||row?.missing)return null;
-  return JSON.stringify([decl.id,decl.type,decl.name,row?.sequence||decl.nativeSequence||'vec',!!row]);
+  return JSON.stringify([decl.id,decl.type,decl.name,row?.sequence||decl.nativeSequence||'vec',!!row,names]);
 }
 function nativeReferenceControls(node,decl){
-  const row=decl&&nativeSourceIndex().get(decl.id),signature=nativeReferencePresentation(decl,row);if(!signature)return null;
+  const row=decl&&nativeSourceIndex().get(decl.id),names=vectorNames(node),signature=nativeReferencePresentation(decl,row,names);if(!signature)return null;
   const body=el('div',{class:'node-fixed-values native-reference-values','data-native-source':decl.id});
   body.dataset.sourcePresentation=signature;
   // Layout comes from the declaration, before the asynchronous TD snapshot.
   // Reuse the real control layout, but never show invented live values or subscribe it.
   if(!row){body.classList.add('native-reference-loading');body.inert=true;body.setAttribute('aria-hidden','true');}
-  body.append(nativeValueControls(decl,row||{sequence:decl.nativeSequence||'vec',pending:true,components:[]}));return body;
+  body.append(nativeValueControls(decl,row||{sequence:decl.nativeSequence||'vec',pending:true,components:[]},names));return body;
 }
 function syncNativeReferenceControls(){
   const declarations=new Map(graph.declarations.map(d=>[d.id,d])),nodes=new Map(current().nodes.map(n=>[n.id,n])),rows=nativeSourceIndex();
@@ -2252,7 +2259,7 @@ function syncNativeReferenceControls(){
   for(const card of document.querySelectorAll('#cards .node:not(.collapsed)')){
     const node=nodes.get(card.dataset.node),decl=declarations.get(node?.params?.declarationId);if(decl?.kind!=='uniform')continue;
     const row=rows.get(decl.id),body=card.querySelector('.native-reference-values');
-    const signature=nativeReferencePresentation(decl,row);
+    const signature=nativeReferencePresentation(decl,row,vectorNames(node));
     if((body?.dataset.sourcePresentation||null)===signature)continue;
     const replacement=nativeReferenceControls(node,decl);
     if(body){if(replacement)body.replaceWith(replacement);else body.remove();}
@@ -2262,7 +2269,7 @@ function syncNativeReferenceControls(){
   if(geometryChanged)wires();
 }
 function syncNativeComponentControls(grid,row,ready){
-  const decl=grid.nativeDeclaration,count=grid.children.length,names=row.sequence==='color'?'RGBA':'XYZW';
+  const decl=grid.nativeDeclaration,count=grid.children.length,names=grid.componentNames||(row.sequence==='color'?'RGBA':'XYZW');
   let changed=false;
   for(const slot of grid.children){
     const index=Number(slot.dataset.nativeComponentSlot),item=row.components[index];
@@ -2328,7 +2335,7 @@ function nativeBufferFields(card,decl,row){
   }
   card.append(el('p',{class:'muted native-source-state'}));
 }
-function nativeInputFields(box,decl){
+function nativeInputFields(box,decl,node=null){
   const row=nativeSourceRows().find(r=>r.id===decl.id);
   const card=el('section',{'data-native-source':decl.id,class:'native-input-fields'});box.append(card);
   card.addEventListener('pointerdown',()=>{if(!sourceReady())showNativeSourceHint();},true);
@@ -2337,9 +2344,9 @@ function nativeInputFields(box,decl){
   if(decl.kind==='pop_buffer'){nativeBufferFields(card,decl,row);return;}
   if(decl.type==='samplerBuffer'||typeDescriptor(decl.type)?.shape==='array'){nativeArrayFields(card,decl,row);return;}
   if(isMatrixType(decl.type)){nativeMatrixFields(card,decl,row);return;}
-  const count=typeContract?.types?.[decl.type]?.components||1;
+  const count=typeContract?.types?.[decl.type]?.components||1,names=node?vectorNames(node):row.sequence==='color'?'RGBA':'XYZW';
   if(!row.missing){
-    card.append(nativeValueControls(decl,row));
+    card.append(nativeValueControls(decl,row,names));
     if(decl.kind==='uniform'&&typeof uniformLive!=='undefined'){
       card.append(el('small',{'data-uniform-live-status':''}));uniformLive.render();
     }
@@ -2350,10 +2357,10 @@ function nativeInputFields(box,decl){
     if(decl.kind!=='spec_constant'){const drivers=el('details',{class:'input-drivers'});drivers.append(el('summary',{},t('inputs.drivers')));
     row.components.slice(0,count).forEach((item,index)=>{
       const line=el('div',{class:'source-driver'}),expr=input(item.expression||'',expression=>nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression,expected:expr.sourceExpected}));
-      expr.dataset.sourceExpression=index;expr.sourceExpected=item.modeExpected;expr.placeholder=t('inputs.expression');expr.setAttribute('aria-label',decl.name+' '+'XYZW'[index]+' Python');
+      expr.dataset.sourceExpression=index;expr.sourceExpected=item.modeExpected;expr.placeholder=t('inputs.expression');expr.setAttribute('aria-label',decl.name+' '+names[index]+' Python');
       const freeze=el('button',{'data-source-freeze':index},t('inputs.freeze'));
       freeze.onclick=()=>{const live=nativeSourceRows().find(r=>r.id===decl.id)?.components[index];nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression:'',expected:live?.modeExpected});};
-      line.append(field('XYZW'[index],expr),el('small',{'data-source-mode':index}),freeze);drivers.append(line);
+      line.append(field(names[index],expr),el('small',{'data-source-mode':index}),freeze);drivers.append(line);
     });drivers.append(el('p',{class:'muted'},t('inputs.driverHint')));card.append(drivers);}
   }
   card.append(el('p',{class:'muted native-source-state'}));renderNativeSourceValues();

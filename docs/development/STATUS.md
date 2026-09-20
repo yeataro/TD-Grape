@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.150 DEV 修正：Uniform Color 沿用既有 Settings → 分量名稱，預設 RGBA，可選 XYZW／RGBA／STPQ；畫布與 Parameter 同步使用，建立 Split／Swizzle 時繼承。修正共用名稱轉換漏接 STPQ，既有接孔 ID／接線及其他引用保留。命名 8、分量配色 10、Color 控制 5、初始化幾何 7、Uniform 即時 10 組通過，報告 Documents 工作區 `reports/color-components-150/`。0.8.149 建立入口修正一併交付；同步保存另記。
+
 2026-09-20 0.8.149 DEV 修正：Color Uniform 自動 Split 及接線建立選單共用來源分量命名，依宣告 nativeSequence=color 預設 RGBA，與 Color RGBA 一致；一般向量及 UV 原樣保留。只設定新建节点的 UI 名稱，既有手動設定、port ID 與接線不覆寫。新命名回歸 5、分量配色 10、Color 控制 5 組通過；507 Python 與完整 portable checks 通過。報告 Documents 工作區 `reports/color-components-149/`。Uniform 在移動／調整節點大小後短暫灰掉／鎖住已補記 UX_BACKLOG，仍待獨立處理，未宣稱修復來源保護範圍。同步保存另記。
 
 2026-09-20 0.8.148 DEV 交付檢查點：程式提交 `0050dd6`；37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 95，三份使用者 Shader 保留。TOE 983486 bytes，SHA256 `af16b415c811691abbd50cf2b29d2bed8bd0966be369d415e2d91382f03ab8ae`。原生報告 `work/reports/note-title-148/`；未重新整理使用者網頁。

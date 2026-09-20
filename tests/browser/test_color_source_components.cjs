@@ -1,4 +1,4 @@
-/* Color-source labels share the fixed Color RGBA naming convention; port IDs stay XYZW. */
+/* Uniform Color reuses component naming settings; display names never change port IDs or TD values. */
 const assert=require('node:assert/strict'),path=require('node:path');
 const {harness}=require('./test_glsl_code.cjs');
 (async()=>{
@@ -26,8 +26,11 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.evaluate(()=>addVectorSplit(current().nodes.find(n=>n.id==='color'),'out'));assert.equal(await page.evaluate(()=>past.length),1);assert.equal(await page.evaluate(()=>selected),made.id);
   checks.push('automatic Split matches Color RGBA labels/expansion, is one Undo/Redo, and reuses an existing Split');
   await page.evaluate(()=>{inspectorTab='settings';inspector();});
-  const names=page.locator('#inspector select').filter({has:page.locator('option[value=rgba]')});await names.selectOption('xyzw');assert.deepEqual(await labels(made.id),['X','Y','Z','W']);await page.evaluate(()=>undo());assert.deepEqual(await labels(made.id),['R','G','B','A']);
-  checks.push('manually selecting XYZW on a Color-connected Split remains effective and Undo restores RGBA');
+  const names=page.locator('#inspector [data-node-component-names]');await names.selectOption('stpq');assert.deepEqual(await labels(made.id),['S','T','P','Q']);
+  assert.deepEqual(await page.locator(`#cards [data-node="${made.id}"] .output .port`).evaluateAll(es=>es.map(e=>e.dataset.port)),['x','y','z','w']);
+  await page.evaluate(()=>undo());assert.deepEqual(await labels(made.id),['R','G','B','A']);await page.evaluate(()=>undo(true));assert.deepEqual(await labels(made.id),['S','T','P','Q']);
+  await names.selectOption('xyzw');assert.deepEqual(await labels(made.id),['X','Y','Z','W']);
+  checks.push('existing Split settings really display STPQ and XYZW, keep stable socket IDs, and support Undo/Redo');
   for(const [id,expected] of [['vector','xyzw'],['fixed','rgba']]){
    const created=await page.evaluate(id=>{addVectorSplit(current().nodes.find(n=>n.id===id),'out');return{id:selected,names:current().nodes.find(n=>n.id===selected).ui.componentNames};},id);
    assert.equal(created.names,expected);assert.deepEqual(await labels(created.id),expected.toUpperCase().split(''));
@@ -37,7 +40,37 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.locator('#createsearch').fill('Split');await page.locator('[data-create-entry="vector_split"]').click();await settle();
   const creator=await page.evaluate(()=>({id:selected,names:current().nodes.find(n=>n.id===selected).ui.componentNames}));assert.equal(creator.names,'rgba');assert.deepEqual(await labels(creator.id),['R','G','B','A']);
   checks.push('drag-wire creator uses the same Color Uniform naming as the automatic Split action');
-  await page.evaluate(()=>{readonly=true;render();});assert.deepEqual(await labels(creator.id),['R','G','B','A']);
+  await page.evaluate(()=>{
+   nativeSourceSnapshot={revision,enabled:true,uniforms:graph.declarations.map(d=>({...d,sequence:d.nativeSequence||'vec',components:[.2,.4,.6,.7].map((value,i)=>({value,mode:'CONSTANT',writable:true,parameter:'color0'+i}))})),issues:[]};
+   current().nodes.push(testNode('secondColor','uniform',40,850,{declarationId:'color_source'}));
+   selected='color';selection=new Set(['color']);inspectorTab='settings';inputCollapsedGroups.clear();render();window.colorBefore=JSON.stringify({declarations:graph.declarations,snapshot:nativeSourceSnapshot,edges:current().edges});
+  });
+  assert.equal(await names.inputValue(),'rgba');await names.selectOption('stpq');
+  const componentLabels=id=>page.locator(`#cards [data-node="${id}"] .native-reference-values .component-label`).allTextContents();
+  assert.deepEqual(await componentLabels('color'),['S','T','P','Q']);assert.deepEqual(await componentLabels('secondColor'),['R','G','B','A']);
+  assert.deepEqual(await page.locator('[data-input-source="color_source"] .component-label').allTextContents(),['R','G','B','A']);
+  assert.deepEqual(await labels(made.id),['X','Y','Z','W']);assert.deepEqual(await labels(creator.id),['R','G','B','A']);
+  assert.equal(await page.evaluate(()=>JSON.stringify({declarations:graph.declarations,snapshot:nativeSourceSnapshot,edges:current().edges})===colorBefore),true);
+  await page.evaluate(()=>{inspectorTab='parameters';inspector();});assert.deepEqual(await page.locator('#inspector .component-label').allTextContents(),['S','T','P','Q']);
+  assert.deepEqual(await page.locator('#inspector [data-source-expression]').evaluateAll(es=>es.map(e=>e.getAttribute('aria-label'))),['uColor S Python','uColor T Python','uColor P Python','uColor Q Python']);
+  await page.evaluate(()=>{nativeSourceIndex().get('color_source').components[2].value=.8;renderNativeSourceValues();graph=JSON.parse(JSON.stringify(graph));render();});
+  assert.deepEqual(await componentLabels('color'),['S','T','P','Q']);assert.deepEqual(await componentLabels('secondColor'),['R','G','B','A']);
+  checks.push('Uniform Color settings share native canvas/Parameter labels, survive polling/reload, and leave sources, values, other references and existing Splits unchanged');
+  await page.evaluate(()=>{current().edges=current().edges.filter(e=>e.from[0]!=='color');addVectorSplit(current().nodes.find(n=>n.id==='color'),'out');});
+  const customSplit=await page.evaluate(()=>selected);assert.deepEqual(await labels(customSplit),['S','T','P','Q']);
+  await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openCreator(r.left+200,r.top+200,{node:'color',port:'out',type:'vec4',kind:'outputs'});});
+  await page.locator('#createsearch').fill('Swizzle');await page.locator('[data-create-entry="swizzle"]').click();await settle();
+  await page.evaluate(()=>{inspectorTab='parameters';inspector();});
+  assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id===selected).ui.componentNames),'stpq');
+  assert.deepEqual(await page.locator('#inspector [data-swizzle-component]').first().locator('option').allTextContents(),['S','T','P','Q']);
+  checks.push('automatic Split and drag-wire Swizzle inherit the Uniform Color choice through the existing naming rule');
+  await page.evaluate(()=>{selected='color';selection=new Set(['color']);inspectorTab='settings';inspector();});
+  await names.selectOption('xyzw');assert.deepEqual(await componentLabels('color'),['X','Y','Z','W']);await page.evaluate(()=>undo());assert.deepEqual(await componentLabels('color'),['S','T','P','Q']);
+  await names.selectOption('rgba');assert.deepEqual(await componentLabels('color'),['R','G','B','A']);
+  await page.evaluate(()=>{readonly=true;render();window.readonlyBefore=JSON.stringify({graph,past,future});});assert.equal(await names.isDisabled(),true);
+  await names.evaluate(e=>{e.value='stpq';e.dispatchEvent(new Event('change',{bubbles:true}));});assert.equal(await page.evaluate(()=>JSON.stringify({graph,past,future})===readonlyBefore),true);
+  checks.push('Uniform Color can return to XYZW/RGBA with Undo; read-only settings cannot mutate graph or history');
+  await page.evaluate(()=>inspector());
   await page.screenshot({path:path.join(folder,'color-source-splits.png')});assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks}));
  }catch(e){await h.finish(e);throw e;}
 })().catch(e=>{console.error(e);process.exitCode=1;});
