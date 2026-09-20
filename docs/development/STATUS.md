@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 引用選取 0.8.137 DEV：來源卡片及內建來源選單新增「選取所有引用」，僅選目前畫布並沿用既有 Frame／Framing 設定。無引用停用，唯讀仍可導航；不切 Stage／子圖，不更動圖、GLSL 或歷史，不重建節點 DOM。瀏覽器 4 組新檢查及卡片 8、分類 3 組回歸通過。Ctrl+Shift+A、方向鍵導航及自動 Frame 偏好仍是未實作筆記。
+
 2026-09-20 0.8.136 DEV 交付檢查點：37 份嵌入來源、10 份服務資產一致，master revision 84；三份使用者 Shader 保留。TOE 973958 bytes，SHA256 `6d4b3547e90cd0ec4f90ef10daca188086f0226bb99352eafb9742a69197c8d0`。報告 `work/reports/source-presentation/`。
 
 2026-09-20 來源卡片 review 0.8.136 DEV：可用數量依既有 category 分色累加；已配置 Texture 入口上移，內建分類收至 TD Inputs & Info。未建立 Common 壓暗 33%，已建立卡片移除說明／頁面雜訊，Help 保留；展開型別移到共用樣式的輸出列，收合保留標題型別，輸出把手沿用新增引用。Expression 顯示來源字串且不重建未改變的標籤，沒有增設輪詢。Portable checks 通過；瀏覽器新展示 4、分類 3、既有卡片 8、Colors 5、原生分量 6 組檢查通過，長 Expression 不撐大畫布節點，截圖已核對。

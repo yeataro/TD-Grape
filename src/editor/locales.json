@@ -238,6 +238,8 @@
     "category.attribute": {"zh-Hant": "Attribute", "en": "Attribute"},
     "category.texture": {"zh-Hant": "Texture", "en": "Texture"},
     "sources.tdInputsInfo": {"zh-Hant": "TD Inputs & Info", "en": "TD Inputs & Info"},
+    "sources.selectReferences": {"zh-Hant": "選取所有引用", "en": "Select references"},
+    "sources.selectReferencesHint": {"zh-Hant": "選取目前畫布中的引用並執行 Frame", "en": "Select references in this graph and Frame them"},
     "color.nativeDriven": {"zh-Hant": "部分顏色分量由 TD 控制，請使用可編輯的分量欄位。", "en": "Some color components are controlled by TD. Use the editable component fields."},
     "inputs.newShort": {"zh-Hant": "新增", "en": "Add"},
     "node.renamed": {"zh-Hant": "已更新節點名稱", "en": "Node name updated"},

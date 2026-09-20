@@ -14,6 +14,10 @@
 - 斷線卡片的「嘗試喚醒 TD」是候選，尚未實作。需分別驗證 Timeline 暫停、全域 Cooking、COMP Cooking、最小化及網路失聯。現行背景 HTTP 執行緒只收件，TD 操作在 runtime.tick 主執行緒處理；若執行佇列本身停住，不能假設同管道的喚醒要求會執行。未為此切換使用者工程的播放／Cooking／視窗狀態。
 - 文件依據：[最小化偏好](https://docs.derivative.ca/Dialogs%3APreferences_Dialog)、[原生 Web Server DAT 最小化停止回應案例](https://forum.derivative.ca/t/resolved-web-server-stops-responding-when-td-window-is-minimized/184586)。後者是既有版本的直接案例，不冒充目前安裝版本或 TD-Grape 的實測結果。
 
+## 來源選取所有引用（2026-09-20，0.8.137 已實作）
+
+來源／內建來源右鍵與選單提供目前畫布的引用選取，並沿用 Frame；Common 依實際來源 ID 選取。無引用停用、唯讀可導航。不跨 Stage／子圖，也不新增快捷鍵。
+
 ## 選取動作與修飾鍵（2026-09-20，候選）
 
 Ctrl+A 的全選是否放入右鍵選單尚未定案。另提議「選取實際參與 GLSL 產碼的節點」，快捷鍵 Ctrl+Shift+A 只是候選；使用者要再考慮修飾鍵用途，目前不實作／不綁鍵。實作前應以編譯器實際依賴結果定義選取範圍，不用是否有任何接線來猜測。

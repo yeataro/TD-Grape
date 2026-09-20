@@ -1004,6 +1004,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .source-card-head{display:flex;align-items:stretch;min-width:0;background:var(--category-bg)}
 .source-card[data-dormant=true] .source-card-head{opacity:.33}
 .source-card :is(.source-card-toggle,.source-card-menu-button){flex:none;width:22px;padding:2px;border:0;border-radius:0;background:transparent;color:var(--category-fg)}
+.input-source-row>.source-card-menu-button{align-self:stretch;flex:none;width:22px;padding:2px;border:0;border-radius:0;background:transparent;color:var(--category-fg)}
 .source-card-toggle[aria-expanded=false] .input-group-arrow{transform:none}
 .source-card-body{padding:8px;color:var(--ui-tone-text);border-top:1px solid var(--ui-tone-node-divider)}
 .source-card-body[hidden],.source-card .input-source-status[hidden]{display:none}
