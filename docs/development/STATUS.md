@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-20 0.8.146 DEV 交付檢查點：程式提交 `58fb452`；37 份嵌入來源及 10 份服務資產一致，TOP／MAT master revision 93，三份使用者 Shader 保留。TOE 983646 bytes，SHA256 `5384e042a89b5d6f56f062d96bb09646e8c8b67e30aeeea076cbffa7043a175e`。原生報告 `work/reports/note-group-146/`；未重新整理使用者網頁。
+
 2026-09-20 0.8.146 DEV 實作：Group 右下角新增選取全體的圓角把手，獨立實驗選項預設開啟；只選取、不調整大小，觸控範圍留在群組框內。Note 選取式標題改在自身外框內顯示，隱藏時內文使用完整高度；新建 Note 預設啟用，既有設定保留，沒有改全域 Group／選取幾何，也沒有加入 hover 顯示。Note 底色混合比例 24% → 55%，內文依實際底色自動選深／淺字並補足中間明度對比。Note 外觀 16、縮放 14、Group 13、對齊 3、實驗設定 20、新幾何／對比 4、節點備註 3、Uniform 初始化幾何 7 組通過；507 Python 與完整 portable checks、767 雙語鍵通過。報告 Documents 工作區 `reports/note-group-146/`。Uniform 更亮配色仍僅供完整節點 Visualizer 比較，尚未套入產品。同步保存另記。
 
 2026-09-20 0.8.145 DEV：依最新回饋縮窄左下角 ⋮ 左右留白，Standard 20 × 24px、Comfortable 24 × 32px；保留高度、圖示與中線。Footer 幾何 3 組（兩密度、多倍率、390px 與選單操作）通過。程式提交 `60e9e26`；37 份來源及 10 份服務資產一致、master revision 92、三份 Shader 保留。TOE 982782 bytes，SHA256 `a2146b042f354ce4ea5d9d58e8b5350c5b0081b2735c0c31f47da19d1b4dfcd8`。報告 `work/reports/footer-width-145/`，未重新整理使用者網頁。
