@@ -2,7 +2,7 @@
 
 ## Navigation trials and connected selection (0.8.162)
 
-The browser-local “Arrow navigation mode (trial)” selector offers three alternatives. Switching modes clears navigation memory, preserves canvas DOM, and does not edit graph/history data. All plain-arrow modes require one selected node; input fields, menus, dialogs, gestures, placement and modified arrows retain their own handling. Optional automatic Frame works in every mode.
+The browser-local “Arrow navigation mode (trial)” selector offers three alternatives. Switching modes clears navigation memory, preserves canvas DOM, and does not edit graph/history data. All plain-arrow modes require one selected node; input fields, menus, dialogs, gestures, placement and modified arrows retain their own handling. The independent view options below work in every mode.
 
 | Mode | Behavior |
 | --- | --- |
