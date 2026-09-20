@@ -8,7 +8,7 @@ const{harness}=require('./test_glsl_code.cjs');
   graph.declarations=[{id:'tint',name:'uTint',kind:'uniform',type:'vec4',nativeSequence:'color',value:null},{id:'gain',name:'uGain',kind:'uniform',type:'float',value:null},{id:'lost',name:'uLost',kind:'uniform',type:'float',value:null,sourceMissing:true}];
   graph.stages.pixel={nodes:[testNode('colorReference','uniform',50,50,{declarationId:'tint'}),testNode('output','pixel_out',500,50)],edges:[]};graph.functions=[];graphTrail=[];stage='pixel';
   readonly=false;dirty=false;connectionInterrupted=false;selected=null;selection.clear();selectedInputId=null;past=[];future=[];
-  nativeSourceSnapshot={revision,enabled:true,uniforms:graph.declarations.map(d=>({...d,sequence:d.nativeSequence||'vec',missing:!!d.sourceMissing,pending:false,components:[.2,.4,.6,.7].map((value,i)=>({value,mode:'CONSTANT',writable:true,parameter:'color0'+i}))})),issues:[]};
+  nativeSourceSnapshot={revision,enabled:true,declarations:clone(graph.declarations),uniforms:graph.declarations.map(d=>({...d,sequence:d.nativeSequence||'vec',missing:!!d.sourceMissing,pending:false,components:[.2,.4,.6,.7].map((value,i)=>({value,mode:'CONSTANT',writable:true,parameter:'color0'+i}))})),issues:[]};
   inputCollapsedGroups.clear();render();workspaceLayout.reveal('uniforms');window.initialGraph=JSON.stringify(graph);
   window.calls=[];nativeSourceRequest=async(endpoint,body)=>{calls.push({endpoint,body});const row=nativeSourceIndex().get(body.id);for(const e of body.components)row.components[e.component].value=e.value;renderNativeSourceValues(new Set([body.id]));};
  });

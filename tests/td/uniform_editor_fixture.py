@@ -30,6 +30,7 @@ if action == 'start':
         shader = r.create_shader(root, 'Live', graph, 'top')
         with r.shader_context(shader): r.process_shader_request('GET','/api/sources',{})
         root.store('fixtureShader', saved([shader]))
+        root.store('fixturePar', r.shader_operator(shader).par.vec0valuex)
         root.store('undoCount', 0)
         real_record = r.record_parameter_undo
         def record(*args, **kwargs):
@@ -55,18 +56,21 @@ else:
     r = root.op('manager/runtime').module
     shader = root.op('Live')
     p = r.shader_operator(shader).par.vec0valuex
+    assert p.isSamePar(root.fetch('fixturePar')), 'Uniform Par identity changed'
     if action == 'external': p.val = .731
     assert saved(original._shaders.values()) == root.fetch('originalShaders'), 'User shaders changed'
-    if action == 'layout':
+    if action in ('layout', 'graph'):
         previous=root.fetch('fixtureShader')[shader.path];current=saved([shader])[shader.path]
-        assert all(current[n]==text for n,text in previous.items() if n not in ('state','graph')), 'Layout changed generated code'
+        if action == 'layout':
+            assert all(current[n]==text for n,text in previous.items() if n not in ('state','graph')), 'Layout changed generated code'
         def without_geometry(text):
             document=json.loads(text)
             for data in document['stages'].values():
                 for node in data['nodes']:
                     for field in ('x','y','width','height'):node.get('ui',{}).pop(field,None)
             return document
-        assert without_geometry(previous['graph'])==without_geometry(current['graph']), 'Layout changed graph content'
+        if action == 'layout':
+            assert without_geometry(previous['graph'])==without_geometry(current['graph']), 'Layout changed graph content'
         root.store('fixtureShader',saved([shader]))
     assert saved([shader]) == root.fetch('fixtureShader'), 'Value editing changed graph or generated code'
     result = {'value':p.eval(), 'undoCount':root.fetch('undoCount'), 'clients':len(r._live.clients),

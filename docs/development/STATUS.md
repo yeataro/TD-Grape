@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-20 0.8.155 DEV Uniform 邊界第一版：依使用者批准實作方案 B 第一階段。數值 Uniform／Color 逐一核對來源定義與分量可寫性，一般圖草稿及真實重新編譯不再停用未變動來源；REST 等候 Apply 成功、讀取新來源 revision 並保留原 expected 值，外部圖更新不混入調值 Undo。HTTP 與 WebSocket 明確分配數值接收，阻止寫入／Undo／訂閱交接前的舊回覆蓋掉新值；重畫等待新控制項量測，避免短暫取消訂閱。加入 session-only 原生 identity，同時核對 Par、Binding 目標及捕獲的 owner ID／index，防止 TD 同名 wrapper 重用使舊請求寫入重建目標。圖格式、編譯語義、完整 Apply、原生來源設定及特殊來源入口保留。原生列表共用 metadata_epoch 的局部恢復屬第二階段，本版未做。
+
+驗證：93 組隔離瀏覽器檢查、510 Python、14 ancillary、26 Node 與完整 portable checks 通過；TD 原生 19 組，含 200 個來源／100 次更新無逐次清單掃描或編譯，以及同路徑同值 master 重建拒絕 REST／既有手勢；真正 Editor→TD loopback／私人網路 16 組，含延遲真實編譯回覆、持續拖曳、REST 排隊、舊 HTTP、連續鍵入、重開及圖／值 Undo、Redo。測試使用可清除元件，核對使用者 Shader 保留。報告 Documents 工作區 reports/uniform-boundaries-155/、私人 work/reports/uniform-boundaries-155/。研究及實作界線見 docs/discussions/UNIFORM_SYNC_BOUNDARY_STUDY.md。同步保存另記。
+
 2026-09-20 0.8.154 DEV 交付檢查點：程式提交 `6c8b166`；37 份嵌入來源與 10 份服務資產一致、core errors 為空，TOP／MAT master revision 101。目前三份使用者 Shader 在來源刷新、模板同步與保存前後均保留。TOE 984462 bytes，SHA256 `323397b4a03f5a77d1ce0f3f383f26875a71da7506d3cf385dd738b2ccd24fdf`；私人開發助手已由保存工具排除。報告 `work/reports/ui-notes-154/`。未重新整理使用者現有網頁，待使用者自行載入新版。
 
 2026-09-20 0.8.154 DEV UI 小修：Uniform 移除分界把手，畫布高度與一般滑桿一致（滑鼠 24px／觸控 30px），保留灰青填色及介面亮暗度獨立性；初始化佔位、模式文字與分量標籤同步採用對應高度，避免資料到達後節點／Group 跳動。Vertex Stage 按鈕沿用 TD Position 的 attribute 系列配色。Note 移除右侧小字原型名稱，標題可見時接合 body 上緣，選取輪廓包住標題及正文；body／Group 尺寸與選取式標題行為不變。Note 外觀 16、Group 幾何 5、來源分量 7、Uniform 幾何 7、外觀保存 9、即時 11、UV 初始化 2、介面外觀 11，加上本批滑鼠／觸控深淺色與亮暗度核對 6，共 74 組瀏覽器檢查通過，已檢視截圖。507 Python、14 ancillary、26 Node 及 portable checks 通過。Uniform 保護機制與圖更新架構僅記錄待討論方案，本批未修改。報告 Documents 工作區 `reports/ui-notes-154/`；同步保存另記。

@@ -7,7 +7,7 @@ const {harness}=require('./test_glsl_code.cjs');
    clearTimeout(autoTimer);autoTimer=null;nativeSourcePolling=uniformPolling=customPolling=true;
    graph.declarations=[{id:'live',kind:'uniform',name:'uLive',type:'float',value:.25}];graph.functions=[];graphTrail=[];
    graph.stages.pixel={nodes:[testNode('scalar','scalar',0,0,{type:'float',value:1}),testNode('pixel','pixel_out',400,0)],edges:[]};
-   dirty=false;readonly=false;selectedInputId='live';selected=null;selection.clear();past=[];future=[];
+   dirty=false;readonly=false;connectionInterrupted=false;selectedInputId='live';selected=null;selection.clear();past=[];future=[];
    nativeSourceSnapshot={revision,enabled:true,sourceChanged:false,graph:clone(graph),declarations:clone(graph.declarations),issues:[],history:{token:'before'},uniforms:[{id:'live',kind:'uniform',name:'uLive',type:'float',default:.25,nameWritable:true,sequence:'vec',components:[0,1,2,3].map(i=>({value:i?0:.25,parameter:'vec0value'+i,mode:'CONSTANT',writable:true,modeWritable:true}))}]};
    nativeSourceError='';nativeMutationBusy=nativeValueBusy=nativeSourceBusy=false;render();renderGraphEditActions();
    window.pendingGraph=JSON.stringify(graph);window.pendingRevision=revision;

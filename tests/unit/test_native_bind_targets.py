@@ -66,5 +66,30 @@ class NativeBindTargets(unittest.TestCase):
         self.assertTrue(item['writable'])
         self.assertNotIn('controlPath',item)
 
+    def test_recreated_same_path_master_cannot_accept_an_old_value_expectation(self):
+        native=Parameter('/shader',mode='BIND',master=Parameter('/master'))
+        before=sources.component(native)
+        self.assertEqual(sources.component(native),before)
+        native.bindMaster=Parameter('/master')
+        current=sources.component(native)
+        self.assertEqual(current['value'],before['value'])
+        self.assertEqual(current['controlPath'],before['controlPath'])
+        self.assertNotEqual(current['identity'],before['identity'])
+        with self.assertRaisesRegex(sources.SourceError,'changed in TD'):
+            sources._value_write_plan(None,{'components':[current]},dict(component=0,value=.8,expected=before))
+
+    def test_native_identity_survives_value_changes_but_not_par_recreation(self):
+        native=Parameter('/shader');before=sources.component(native)
+        native.val=.8
+        self.assertEqual(sources.component(native)['identity'],before['identity'])
+        replacement=Parameter('/shader');replacement.val=.8
+        self.assertNotEqual(sources.component(replacement)['identity'],before['identity'])
+
+    def test_aliased_td_wrapper_still_detects_recreated_parameter_index(self):
+        native=Parameter('/shader');native.index=1
+        before=sources.component(native)
+        native.index=2  # TD may keep the same wrapper after custom Par recreation.
+        self.assertNotEqual(sources.component(native)['identity'],before['identity'])
+
 
 if __name__=='__main__':unittest.main()

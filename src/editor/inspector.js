@@ -1936,6 +1936,8 @@ function installPanelWorkspace(){
 /* Inputs are a source inventory. Graph nodes reference these identities; native
    Uniform values/modes continue to belong to the actual GLSL OP. */
 let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,nativeSourceRefreshPending=false,nativeSourceError='',nativeSourceRetryAt=0,selectedInputId=null;
+// HTTP reads started before a write or a live hand-off cannot restore old values.
+let nativeSourceReadEpoch=0,nativeSourceUncertain=false;
 function inputPresets(){return Object.fromEntries(Object.entries(typeContract?.sources?.uniformPresets||{}).filter(([,entry])=>entry.availability?.[editorTarget]?.includes(stage)).map(([key,entry])=>[key,[entry.name,entry.initialize.expression]]));}
 const inputCollapsedGroups=(()=>{try{const saved=JSON.parse(localStorage.getItem('sgrapeInputCollapsedGroups'));return new Set(Array.isArray(saved)?saved:[]);}catch{return new Set();}})();
 function setInputGroupCollapsed(kind,collapsed){
@@ -1975,12 +1977,24 @@ function nativeSourceGraphOnly(){
 }
 function sourceGraphPending(){return dirty&&!nativeSourceGraphOnly();}
 function sourceReady(ignoreValueWrite=false){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!sourceGraphPending()&&!submitBusy&&(!nativeSourceBusy||ignoreValueWrite&&nativeValueBusy)&&!editorMutationBlocked(ignoreValueWrite)&&nativeSourceSnapshot.revision===revision;}
-function uniformValueReady(ignoreValueWrite=false){
-  // A layout draft does not change the native Uniform identity. Configuration
-  // edits still use sourceReady; unknown outcomes and revision conflicts stay locked.
-  return sourceReady(ignoreValueWrite)||nativeSourceSnapshot?.enabled&&!nativeSourceError&&!conflicted&&!applyNeedsReview&&!hasShaderChanges()&&(!submitBusy||applyLayoutOnly)&&(!nativeSourceBusy||ignoreValueWrite&&nativeValueBusy)&&!editorMutationBlocked(ignoreValueWrite)&&nativeSourceSnapshot.revision===revision;
+function uniformDeclarationKey(decl){
+  return decl&&JSON.stringify([decl.id,decl.kind,decl.name,decl.type,decl.nativeSequence||'vec',!!decl.expose,!!decl.sourceMissing]);
 }
-function nativeValueReady(decl,ignoreValueWrite=false){return decl?.kind==='uniform'?uniformValueReady(ignoreValueWrite):sourceReady(ignoreValueWrite);}
+function nativeSourceValueKey(row){return row&&JSON.stringify([row.id,row.kind,row.name,row.type,row.sequence,row.expected,!!row.pending,!!row.missing]);}
+function uniformValueReady(id,ignoreValueWrite=false,component=null){
+  const decl=graph?.declarations.find(d=>d.id===id),row=nativeSourceIndex().get(id);
+  const saved=(nativeSourceSnapshot?.declarations||nativeSourceSnapshot?.graph?.declarations)?.find(d=>d.id===id);
+  // The draft and TD document may have different graph revisions. Only the
+  // native source definition, not unrelated nodes or a compile, gates its values.
+  if(!decl||decl.kind!=='uniform'||!row||row.pending||row.missing||decl.sourceMissing||!['vec','color'].includes(row.sequence)||
+     uniformDeclarationKey(decl)!==uniformDeclarationKey(saved)||decl.name!==row.name||decl.type!==row.type||(decl.nativeSequence||'vec')!==row.sequence)return false;
+  if(!nativeSourceSnapshot.enabled||nativeSourceError||nativeSourceUncertain||connectionInterrupted||typeof uniformLive!=='undefined'&&uniformLive.invalidSources.has(id)||
+     (nativeSourceBusy&&!(ignoreValueWrite&&nativeValueBusy))||editorMutationBlocked(ignoreValueWrite))return false;
+  const writable=item=>item?.writable&&['CONSTANT','BIND'].includes(item.mode);
+  const count=typeComponents(decl.type);
+  return component===null?row.components.slice(0,count).some(writable):Number.isInteger(component)&&component>=0&&component<count&&writable(row.components[component]);
+}
+function nativeValueReady(decl,ignoreValueWrite=false,component=null){return !!decl&&(decl.kind==='uniform'?uniformValueReady(decl.id,ignoreValueWrite,component):sourceReady(ignoreValueWrite));}
 function sourceMissingHint(decl){return t(sourceReferences(decl.id).length?'sources.missing':'sources.missingUnused');}
 // Product dialogs stay inside the editor; callers recheck their live context
 // after awaiting, because native state can change while the card is open.
@@ -2043,52 +2057,73 @@ function inputReference(id,x=null,y=null){
   const rect=$('#canvas').getBoundingClientRect(),p=graphPoint(x??rect.left+rect.width/2,y??rect.top+rect.height/2);if(!p)return;
   change(()=>{selectedInputId=null;const n=instantiate(d,p.x,p.y,null,{declarationId:id});selectNode(n);});
 }
-function receiveNativeSources(data,{own=false}={}){
-  if(data.revision<revision)return; // A pre-Apply poll must not roll back its result.
-  const acceptGraph=!dirty||nativeSourceGraphOnly();
+function installNativeSourceSnapshot(data){
+  // Subscribed sources have one value authority. HTTP still updates metadata,
+  // but its sampling order cannot be inferred from the graph revision.
+  if(typeof uniformLive!=='undefined')for(const row of data.uniforms||[]){
+    const previous=nativeSourceIndex().get(row.id);
+    if(previous&&uniformLive.ownsValues(row))row.components=previous.components;
+  }
   nativeSourceSnapshot=data;
+  nativeSourceUncertain=false;
+  if(typeof uniformLive!=='undefined')uniformLive.receiveInventory();
+}
+function receiveNativeSources(data,{own=false,readEpoch=nativeSourceReadEpoch}={}){
+  if(readEpoch!==nativeSourceReadEpoch||data.revision<Math.max(revision,nativeSourceSnapshot?.revision??-1))return false;
+  const acceptGraph=!dirty||nativeSourceGraphOnly();
+  installNativeSourceSnapshot(data);
   if(data.history?.token&&(own||!historyNativeToken))historyNativeToken=data.history.token;
   if((data.revision!==revision||own&&data.workingGraph)&&acceptGraph&&!submitBusy&&data.graph){
     adoptHistoryGraph(own&&data.workingGraph||data.graph);revision=data.revision;render();
     if(data.sourceChanged||data.workingGraph){mark();}else{rememberSavedGraph(graph);dirty=false;renderGraphSaveState();}
   }
   renderNativeSources();
+  return true;
 }
 async function refreshNativeSources({required=false}={}){
   if(required)nativeSourceRefreshPending=true;
   if(!graph||readonly||nativeSourcePolling||nativeSourceBusy||historyBusy||nativeMutationBusy||document.hidden||submitBusy||Date.now()<nativeSourceRetryAt)return;
-  nativeSourcePolling=true;nativeSourceRefreshPending=false;const generation=editorLoadGeneration;
-  try{const data=await api('sources');if(generation!==editorLoadGeneration)return;nativeSourceError='';receiveNativeSources(data);}
-  catch(e){if(generation!==editorLoadGeneration)return;nativeSourceError=e.status===404?t('sources.connectionUnsupported'):e.message;nativeSourceRetryAt=Date.now()+5000;renderNativeSourceValues();}
+  nativeSourcePolling=true;nativeSourceRefreshPending=false;const generation=editorLoadGeneration,readEpoch=nativeSourceReadEpoch;
+  try{const data=await api('sources');if(generation!==editorLoadGeneration)return;if(readEpoch===nativeSourceReadEpoch)nativeSourceError='';if(!receiveNativeSources(data,{readEpoch}))nativeSourceRefreshPending=true;}
+  catch(e){if(generation!==editorLoadGeneration)return;if(readEpoch!==nativeSourceReadEpoch){nativeSourceRefreshPending=true;return;}nativeSourceError=e.status===404?t('sources.connectionUnsupported'):e.message;nativeSourceRetryAt=Date.now()+5000;renderNativeSourceValues();}
   finally{if(generation===editorLoadGeneration){nativeSourcePolling=false;if(nativeSourceRefreshPending&&!nativeSourceError)queueMicrotask(()=>refreshNativeSources());else if(typeof uniformLive!=='undefined')uniformLive.subscribe();}}
 }
 async function nativeSourceRequest(endpoint,body){
-  const generation=editorLoadGeneration,ready=()=>endpoint==='source-value'?nativeValueReady(graph.declarations.find(d=>d.id===body.id)):sourceReady();
+  body=clone(body);
+  const generation=editorLoadGeneration,valueWrite=endpoint==='source-value',declarationKey=uniformDeclarationKey(graph.declarations.find(d=>d.id===body.id));
+  const sourceKey=nativeSourceValueKey(nativeSourceIndex().get(body.id)),ready=()=>valueWrite?
+    (body.components||[{component:body.component}]).every(edit=>nativeValueReady(graph.declarations.find(d=>d.id===body.id),false,edit.component)):sourceReady();
   if(!ready()){showNativeSourceHint();return null;}
-  // REST still uses the graph revision CAS. Queue behind our layout save instead
-  // of sending an obsolete revision; live gestures pin native identities directly.
-  if(applyInFlight)await applyInFlight;
+  // REST retains revision CAS and the user's original expected values. A queued
+  // edit never silently rebases onto a newer value, target, or failed Apply.
+  const pendingApply=applyInFlight;
+  if(pendingApply&&await pendingApply!==true)return null;
   if(generation!==editorLoadGeneration||!ready())return null;
-  const before=clone(graph),nativeBefore=nativeSourceSnapshot.history?.token||historyNativeToken;
-  nativeSourceBusy=true;nativeMutationBusy=true;nativeValueBusy=endpoint==='source-value';clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();renderNativeSourceValues();let result=null;
+  nativeSourceBusy=true;nativeMutationBusy=true;nativeValueBusy=valueWrite;++nativeSourceReadEpoch;clearTimeout(autoTimer);autoTimer=null;renderGraphEditActions();renderNativeSourceValues();let result=null;
   try{
+    if(valueWrite&&(pendingApply||nativeSourceSnapshot.revision<revision)){
+      const data=await api('sources');if(generation!==editorLoadGeneration)return null;
+      if(!receiveNativeSources(data)||nativeSourceValueKey(nativeSourceIndex().get(body.id))!==sourceKey||uniformDeclarationKey(graph.declarations.find(d=>d.id===body.id))!==declarationKey)return null;
+      if(!(body.components||[{component:body.component}]).every(edit=>nativeValueReady(graph.declarations.find(d=>d.id===body.id),true,edit.component)))return null;
+    }
+    const before=clone(graph),nativeBefore=nativeSourceSnapshot.history?.token||historyNativeToken;
     result=await api(endpoint,{...body,revision:nativeSourceSnapshot.revision});if(generation!==editorLoadGeneration)return null;
-    nativeSourceError='';receiveNativeSources(result,{own:true});
+    ++nativeSourceReadEpoch;nativeSourceError='';receiveNativeSources(result,{own:true});
     if(result.proposal)recordGraphHistory(before);
     else recordHistory({kind:'source',before,after:clone(graph),nativeBefore:result.history?.beforeToken||nativeBefore,nativeAfter:result.history?.token||null,nativeApplied:true,sourceIds:body.id?[body.id]:historySourceIds(before,graph)});
     status(t(result.proposal?'sources.formatAdopted':'uniform.updated'),false,{clearError:'operation'});
   }
   catch(e){if(generation!==editorLoadGeneration)return null;nativeSourceError=e.message;status(e.message,true);}
-  finally{if(generation===editorLoadGeneration){nativeSourceBusy=false;nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();renderNativeSourceValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
+  finally{if(generation===editorLoadGeneration){++nativeSourceReadEpoch;nativeSourceBusy=false;nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();renderNativeSourceValues();await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}}
   return result;
 }
 function renderNativeSourceValues(changed=null){
-  const ready=sourceReady(true),valueReady=uniformValueReady(true),rows=nativeSourceIndex();
+  const ready=sourceReady(true),rows=nativeSourceIndex();
   let geometryChanged=false;
   for(const card of document.querySelectorAll('[data-native-source]')){
     if(changed&&!changed.has(card.dataset.nativeSource))continue;
     const row=rows.get(card.dataset.nativeSource);if(!row)continue;
-    const editableValue=row.kind==='uniform'?valueReady:ready;
+    const editableValue=row.kind==='uniform'?uniformValueReady(row.id,true):ready;
     for(const grid of card.querySelectorAll('[data-native-components]'))if(syncNativeComponentControls(grid,row,editableValue)&&card.closest('#cards'))geometryChanged=true;
     for(const color of card.querySelectorAll('[data-native-color]'))syncNativeColorControls(color,row,editableValue);
     for(const entry of card.querySelectorAll('[data-matrix-source-component]')){
@@ -2304,7 +2339,9 @@ function syncNativeComponentControls(grid,row,ready){
     slot.dataset.bindMaster=String(!!item?.hasBindReferences);
     if(numeric){
       entry.disabled=!ready||!item.writable;
-      if(document.activeElement!==entry&&!entry.numericGestureActive){
+      // A focused but already committed field can follow its acknowledgement;
+      // preserve text that is still being typed and values in an active gesture.
+      if(!entry.numericGestureActive&&(document.activeElement!==entry||!entry.hasPendingEdit?.()&&!entry.inert&&!nativeValueBusy&&!entry.uniformGesture)){
         if(!Object.is(entry.nativeValue,item.value)||entry.value!==entry.nativeDisplay){entry.setSyncedValue(item.value);entry.nativeValue=item.value;entry.nativeDisplay=entry.value;}
         entry.sourceExpected=clone(item);
       }

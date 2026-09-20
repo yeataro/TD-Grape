@@ -8,10 +8,20 @@ const [source,bridge,work,report]=process.argv.slice(2);
 const python=process.env.PYTHON_EXECUTABLE||'python';
 const fixture=path.join(work,'jobs','uniform_editor_browser_fixture.py');
 fs.mkdirSync(report,{recursive:true});
+async function bounded(promise,label){let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Timed out: '+label)),20000);})]);}finally{clearTimeout(timer);}}
 function job(action){
  const script=`from pathlib import Path\nimport json\nGRAPE_ROOT=Path(${JSON.stringify(source)})\nmapping=json.loads((GRAPE_ROOT/'src/td/source_files.json').read_text())\nsource_path=lambda name: GRAPE_ROOT/mapping[name]\nGRAPE_TEST_ACTION=${JSON.stringify(action)}\nexec(compile((GRAPE_ROOT/'tests/td/uniform_editor_fixture.py').read_text(encoding='utf-8'),'uniform_editor_fixture.py','exec'))\n`;
  fs.writeFileSync(fixture,script);
- const result=JSON.parse(execFileSync(python,[path.join(bridge,'tools/dev/submit_job.py'),fixture,'--report','uniform-live/editor-e2e','--timeout','20'],{cwd:bridge,encoding:'utf8'}));
+ let output;
+ for(let attempt=0;attempt<3;attempt++){
+  try{output=execFileSync(python,[path.join(bridge,'tools/dev/submit_job.py'),fixture,'--report','uniform-live/editor-e2e','--timeout','20'],{cwd:bridge,encoding:'utf8',stdio:'pipe'});break;}
+  catch(error){
+   // Dropbox can briefly lock the queue file. Retry only a failed atomic
+   // replacement: the job was not dispatched. Never retry a response timeout.
+   if(attempt===2||!String(error.stderr).includes('temporary.replace')||!String(error.stderr).includes('PermissionError: [WinError 5]'))throw error;
+  }
+ }
+ const result=JSON.parse(output);
  assert.equal(result.ok,true,JSON.stringify(result));return result.result;
 }
 (async()=>{
@@ -30,6 +40,7 @@ function job(action){
    await page.waitForFunction(()=>typeof nativeSourceRows==='function'&&nativeSourceRows().some(r=>r.id==='live'));
    await page.evaluate(()=>{selectedInputId='live';selected=null;selection.clear();render();});
    await page.waitForFunction(()=>uniformLive.ready&&uniformLive.subscribed==='live');
+   await page.evaluate(()=>{window.liveDisconnects=[];const disconnect=uniformLive.disconnect;uniformLive.disconnect=function(){liveDisconnects.push({stack:new Error().stack,submitBusy,subscriptions:[...this.subscriptions],views:[...this.views].map(([grid,visible])=>[grid.isConnected,visible])});return disconnect.call(this);};});
    const entry=page.locator('#inspector [data-source-component="0"]');
    await page.evaluate(()=>{window.testGraph=JSON.stringify(graph);window.testRevision=revision;window.testDirty=dirty;});
    let initial=job('inspect');const b=await entry.boundingBox();
@@ -77,6 +88,58 @@ function job(action){
    assert.equal(await page.evaluate(()=>!dirty&&nativeSourceSnapshot.revision===revision),true);
    await page.unroute(applyRoute);
    checks.push(`${host}: position/size save keeps real native live edits active before and after its revision acknowledgement`);
+   // A real compile changes GLSL but must not detach unchanged native controls.
+   let releaseCompile,compileAccepted;const compiled=new Promise(resolve=>compileAccepted=resolve);
+   await page.route(applyRoute,async route=>{
+    const response=await route.fetch(),data=await response.json();assert.equal(data.shaderUpdated,true);
+    await new Promise(resolve=>{releaseCompile=resolve;compileAccepted();});await route.fulfill({response});
+   });
+   const beforeCompile=job('inspect').value;
+   await page.evaluate(()=>{
+    change(()=>{const n=current().nodes.find(n=>Array.isArray(n.params.value));n.params.value[0]=n.params.value[0]===.19?.29:.19;});
+    window.compilePromise=applyGraph();
+   });
+   await bounded(compiled,'compile response');job('graph');assert.equal(await entry.isEnabled(),true);
+   const cb=await entry.boundingBox();await page.mouse.move(cb.x+cb.width*.4,cb.y+cb.height*.5);await page.mouse.down();
+   await page.mouse.move(cb.x+cb.width*.4+25,cb.y+cb.height*.5,{steps:5});
+   await page.waitForFunction(()=>uniformLive.gesture?.sequence>0&&!uniformLive.gesture.inFlight);
+   const duringCompile=job('inspect').value;assert.notEqual(duringCompile,beforeCompile);
+   releaseCompile();await page.evaluate(()=>compilePromise);assert.equal(await entry.isEnabled(),true);
+   await page.mouse.move(cb.x+cb.width*.4+55,cb.y+cb.height*.5,{steps:5});await page.mouse.up();
+   await page.waitForFunction(()=>!uniformLive.gesture);const afterCompile=job('inspect').value;assert.notEqual(afterCompile,duringCompile);
+   await page.unroute(applyRoute);
+   await page.evaluate(()=>undo());assert.equal(job('inspect').value,beforeCompile);
+   await page.evaluate(async()=>{await undo();await applyGraph();});job('graph');
+   await page.evaluate(async()=>{await undo(true);await applyGraph();await undo(true);});job('graph');assert.equal(job('inspect').value,afterCompile);
+   checks.push(`${host}: real GLSL compile retains the Par and held gesture; graph/value Undo and Redo preserve their separate effects`);
+   // Queued REST fallback must confirm the new revision without replacing expected values.
+   let releaseRestApply,restApplyAccepted;const restAccepted=new Promise(resolve=>restApplyAccepted=resolve);
+   await page.route(applyRoute,async route=>{
+    const response=await route.fetch();await new Promise(resolve=>{releaseRestApply=resolve;restApplyAccepted();});await route.fulfill({response});
+   });
+   await page.evaluate(()=>{
+    change(()=>{const values=current().nodes.find(n=>Array.isArray(n.params.value)).params.value;values[1]=values[1]===.37?.47:.37;});window.restApplyPromise=applyGraph();
+    window.restValuePromise=nativeSourceRequest('source-value',{id:'live',component:0,value:.618,expected:clone(nativeSourceIndex().get('live').components[0])});
+   });
+   await bounded(restAccepted,'REST Apply response');job('graph');assert.equal(job('inspect').value,afterCompile);
+   releaseRestApply();await page.evaluate(async()=>{await restApplyPromise;await restValuePromise;});
+   assert.ok(Math.abs(job('inspect').value-.618)<1e-6);
+   await page.waitForFunction(()=>Math.abs(Number(document.querySelector('#inspector [data-source-component="0"]').value)-.618)<1e-6);
+   await page.unroute(applyRoute);
+   checks.push(`${host}: REST fallback waits for a real compile acknowledgement and writes the same native Par using the confirmed revision`);
+   // Return a source snapshot sampled before a newer native live edit.
+   let releaseOldRead,oldReadAccepted;const readAccepted=new Promise(resolve=>oldReadAccepted=resolve);
+   const sourceRoute=url=>url.pathname.startsWith('/api/')&&url.pathname.endsWith('/sources');
+   await page.waitForFunction(()=>!nativeSourcePolling);
+   await page.route(sourceRoute,async route=>{const response=await route.fetch();await new Promise(resolve=>{releaseOldRead=resolve;oldReadAccepted();});await route.fulfill({response});});
+   await page.evaluate(()=>{window.oldSourcesPromise=refreshNativeSources({required:true});});await bounded(readAccepted,'delayed sources read');
+   await entry.fill('0.643');await entry.press('Enter');await page.waitForFunction(()=>!uniformLive.gesture&&Math.abs(nativeSourceIndex().get('live').components[0].value-.643)<1e-6);
+   releaseOldRead();await page.evaluate(()=>oldSourcesPromise);assert.ok(Math.abs(Number(await entry.inputValue())-.643)<1e-6);
+   await page.unroute(sourceRoute);
+   checks.push(`${host}: delayed real HTTP source snapshot cannot replace a newer WebSocket value`);
+   await entry.fill('0.673');await entry.press('Enter');await page.waitForFunction(()=>!uniformLive.gesture&&Math.abs(nativeSourceIndex().get('live').components[0].value-.673)<1e-6);
+   assert.ok(Math.abs(job('inspect').value-.673)<1e-6);
+   checks.push(`${host}: successive typed commits in one focused field use the acknowledged native expectation`);
    // A fresh page runs ordinary HTTP initialization and must reconnect itself.
    await page.reload();await page.waitForFunction(()=>nativeSourceRows().some(r=>r.id==='live'));
    await page.evaluate(()=>{selectedInputId='live';render();});
@@ -86,7 +149,7 @@ function job(action){
   }
   assert.deepEqual(errors,[]);
  }catch(error){
-  console.error(JSON.stringify({checks,errors,responses,body:lastPage&&!lastPage.isClosed()?(await lastPage.locator('body').innerText()).slice(-2400):''}));throw error;
+  console.error(JSON.stringify({checks,errors,responses,debug:lastPage&&!lastPage.isClosed()?await lastPage.evaluate(()=>({disconnects:window.liveDisconnects,ready:uniformLive.ready,invalid:[...uniformLive.invalidSources],polling:nativeSourcePolling,refreshPending:nativeSourceRefreshPending,sourceError:nativeSourceError,uncertain:nativeSourceUncertain,connectionInterrupted,readonly,historyBusy,nativeMutationBusy})):null,body:lastPage&&!lastPage.isClosed()?(await lastPage.locator('body').innerText()).slice(-2400):''}));throw error;
  }finally{
   if(browser)await browser.close();
   if(started){const result=job('cleanup');assert.equal(result.shadersPreserved,true);assert.equal(result.errors,'');}

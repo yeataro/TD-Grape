@@ -11,7 +11,7 @@ const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');
 vm.runInContext(app.slice(0,app.indexOf("$('#canvas').addEventListener('dragover'")),context);
 vm.runInContext(`
 (async()=>{
-render=()=>{};preview=async()=>{};refreshUniforms=()=>{};renderNativeSourceValues=()=>{};
+render=()=>{};preview=async()=>{};refreshUniforms=()=>{};refreshNativeSources=async()=>{};renderNativeSourceValues=()=>{};
 const fixture={schemaVersion:1,target:'top',declarations:[],functions:[{id:'f',graph:{nodes:[{id:'inner',params:{value:1},ui:{x:0,y:0}}],edges:[]}}],
   stages:{pixel:{nodes:[{id:'value',params:{value:1},ui:{x:0,y:0}}],edges:[]}}};
 const setup=()=>{graph=clone(fixture);revision=41;dirty=false;readonly=false;submitBusy=false;conflicted=false;connectionInterrupted=false;applyNeedsReview=false;

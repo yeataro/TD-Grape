@@ -74,6 +74,7 @@ class Gesture:
         self.native = source.pars[index]
         current = source.live.model.component(self.native, resolve=source.editable)
         if current != expected or not current['writable']: raise RuntimeError('The value or its control changed in TD.')
+        self.identity = current['identity']
         self.parameter = source.editable(self.native)
         self.before = self.after = self.parameter.val
         self.mode = (str(self.native.mode), self.native.bindExpr)
@@ -86,7 +87,7 @@ class Gesture:
         if not p.valid or not constant(p) or not p.enable or p.readOnly:
             raise RuntimeError('This value is now controlled or unavailable.')
         current = self.source.editable(self.native)
-        if current is None or not current.isSamePar(p) or (str(self.native.mode), self.native.bindExpr) != self.mode:
+        if current is None or not current.isSamePar(p) or self.source.live.model.value_identity(self.native,current)!=self.identity or (str(self.native.mode), self.native.bindExpr) != self.mode:
             raise RuntimeError('The Uniform binding changed.')
         if (p.min, p.max, p.clampMin, p.clampMax) != self.limits or p.val != expected:
             raise RuntimeError('The value or limits changed outside this gesture.')
@@ -191,7 +192,7 @@ class Live:
                 fresh = Source(self, gesture.source.comp, gesture.source.ident)
                 if fresh.declaration['type'] != gesture.source.declaration['type']: raise RuntimeError('The Uniform type changed.')
                 current = fresh.editable(fresh.pars[gesture.index])
-                if current is None or not current.isSamePar(gesture.parameter): raise RuntimeError('The Uniform control was replaced.')
+                if current is None or not current.isSamePar(gesture.parameter) or self.model.value_identity(fresh.pars[gesture.index],current)!=gesture.identity: raise RuntimeError('The Uniform control was replaced.')
                 self.model.validate_uniform_component(fresh.declaration, value)
             self.runtime.record_parameter_undo(gesture.parameter, gesture.before, gesture.after, validate=validate)
         return key if gesture.before != gesture.after else None

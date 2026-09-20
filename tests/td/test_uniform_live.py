@@ -163,6 +163,32 @@ try:
         assert abs(bound.eval()-.73)<1e-6 and bound.bindExpr==binding
         assert r.state()['graph']==applied['state']['graph']
         checks.append('REST fallback rejects a pre-layout revision and accepts the acknowledged revision without altering binding or graph')
+        changed=copy.deepcopy(r.state()['graph'])
+        color=next(n for n in changed['stages']['pixel']['nodes'] if isinstance(n['params'].get('value'),list))
+        color['params']['value'][0]=.193
+        before_identity=item['identity']
+        send('subscribe',sources=['u2']);source=live.clients[client]['sources']['u2']
+        assert 'error' not in send('begin',source='u2',component=0,expected=source.values()[0])
+        rebuilt=r.deploy(changed,r.state()['revision']);assert rebuilt['shaderUpdated']
+        assert 'error' not in send('commit',sequence=0,value=.79)
+        item=next(row for row in m.snapshot(r)['uniforms'] if row['id']=='u2')['components'][0]
+        assert item['identity']==before_identity and abs(bound.eval()-.79)<1e-6
+        checks.append('real GLSL change retains component identity and supports an already-held Bind gesture')
+        expected=copy.deepcopy(item);old_value=external.par.const0value.eval()
+        assert 'error' not in send('begin',source='u2',component=0,expected=expected)
+        external.destroy()
+        external=root.create(constantCHOP,'ExternalMaster');external.par.const0value=old_value
+        current=m.snapshot(r);item=next(row for row in current['uniforms'] if row['id']=='u2')['components'][0]
+        assert item['controlPath']==expected['controlPath'] and item['identity']!=expected['identity'],dict(before=expected,after=item)
+        try:
+            m.write_value(r,dict(id='u2',component=0,value=.91,expected=expected,revision=current['revision']))
+            raise AssertionError('Recreated same-path master accepted stale expectation')
+        except m.SourceError:pass
+        assert abs(external.par.const0value.eval()-old_value)<1e-6
+        checks.append('recreated same-path, same-value Bind master rejects stale REST expectations without overwriting its value')
+        rejected=send('update',sequence=0,value=.92)
+        assert 'error' in rejected and abs(external.par.const0value.eval()-old_value)<1e-6,rejected
+        checks.append('a held live gesture also refuses a recreated same-path master with an identical value')
     result={'checks':checks,'updates':100,'meanMs':sum(timings)/len(timings),'maxMs':max(timings),'counts':counts}
     result['inventoryAndSelectedValuesMs']=inventory_ms
     result.update(multiSubscribeMs=subscribe_ms,multiTickMs=multi_tick_ms)

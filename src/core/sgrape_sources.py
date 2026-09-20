@@ -11,6 +11,7 @@ import math
 import re
 import uuid
 from contextlib import nullcontext
+from collections import OrderedDict
 
 if 'me' in globals():
     _source_catalog = me.parent().op('sgrape_source_catalog').module
@@ -197,6 +198,31 @@ def editable_parameter(p):
     return None
 
 
+# Session-only handles distinguish a recreated Par / Binding target even when
+# its path, mode and value are identical. Nothing is persisted in the graph/TOE.
+_value_handles = OrderedDict()
+
+
+def value_identity(p, target):
+    key = (getattr(p.owner, 'id', p.owner.path), p.name)
+    def address(par):
+        return None if par is None else (getattr(par.owner, 'id', par.owner.path), par.name, getattr(par, 'index', None))
+    # TD can alias an old Par wrapper to a recreated same-named parameter.
+    # Capture owner/index values now, rather than reading them from that wrapper later.
+    address_pair = (address(p), address(target))
+    previous = _value_handles.get(key)
+    if (previous is None or not previous[0].valid or not previous[0].isSamePar(p)
+            or previous[3] != address_pair
+            or (previous[1] is None) != (target is None)
+            or target is not None and (not previous[1].valid or not previous[1].isSamePar(target))):
+        previous = (p, target, uuid.uuid4().hex, address_pair)
+        _value_handles[key] = previous
+    _value_handles.move_to_end(key)
+    while len(_value_handles) > 16384:
+        _value_handles.popitem(last=False)
+    return previous[2]
+
+
 def component(p, resolve=editable_parameter):
     try:
         value = float(p.eval())
@@ -206,7 +232,7 @@ def component(p, resolve=editable_parameter):
     mode = str(p.mode).split('.')[-1].upper()
     edit=resolve(p)
     expression=p.expr if mode=='EXPRESSION' else ''
-    return {'parameter': p.name, 'value': value, 'mode': mode,
+    return {'parameter': p.name, 'identity': value_identity(p, edit), 'value': value, 'mode': mode,
             'hasBindReferences': bool(getattr(p,'bindReferences',[])),
             'expression': expression, 'binding':p.bindExpr if mode=='BIND' else '',
             'modeWritable': mode in ('CONSTANT','EXPRESSION') and bool(p.enable) and not p.readOnly,
@@ -907,7 +933,7 @@ def _value_write_plan(runtime,row,body):
     def validate(value):
         original_validate(value)
         current=editable_parameter(p)
-        if current is None or not current.isSamePar(target): raise SourceError('The custom control was detached or replaced.')
+        if current is None or not current.isSamePar(target) or value_identity(p,current)!=item['identity']: raise SourceError('The custom control was detached or replaced.')
         validate_source_value(runtime, comp, ident, value, index)
     return target,value,validate
 

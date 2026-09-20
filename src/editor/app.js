@@ -288,7 +288,7 @@ function change(fn,{localize=true,redraw=true,typeChange=false,layout=false,disc
 async function undo(redo=false){
   if(editorMutationBlocked())return false;
   const from=redo?future:past,to=redo?past:future;if(!from.length)return false;
-  const generation=editorLoadGeneration;let replayed=false;historyBusy=true;clearTimeout(autoTimer);autoTimer=null;renderHistoryActions();
+  const generation=editorLoadGeneration;let replayed=false;historyBusy=true;++nativeSourceReadEpoch;clearTimeout(autoTimer);autoTimer=null;renderHistoryActions();
   try{
     // An in-flight Apply may materialize sources for several pending entries.
     // Wait for its receipts before deciding whether this one step is local.
@@ -320,7 +320,7 @@ async function undo(redo=false){
       const deltaFromToken=redo?entry.deltaBefore:entry.deltaAfter,deltaToToken=redo?entry.deltaAfter:entry.deltaBefore;
       const result=await api('history-restore',{requestId:crypto.randomUUID(),revision,fromToken,toToken,deltaFromToken,deltaToToken,sourceIds:entry.sourceIds,valueIds:entry.valueIds||[],graph:clone(desired),currentGraph:clone(graph)});
       if(generation!==editorLoadGeneration)return false;
-      nativeSourceError='';nativeSourceSnapshot=result;revision=result.revision;
+      nativeSourceError='';installNativeSourceSnapshot(result);revision=result.revision;
       const restored=result.workingGraph||result.graph||desired;adoptHistoryGraph(restored);
       needsApply=!!(result.sourceChanged||result.workingGraph);
       historyNativeToken=result.history?.token||toToken;
@@ -332,7 +332,7 @@ async function undo(redo=false){
     const neighbor=from.at(-1);if(neighbor?.nativeApplied&&historyNativeToken){if(redo)neighbor.nativeBefore=historyNativeToken;else neighbor.nativeAfter=historyNativeToken;}
     if(needsApply||previousGraph!==historyGraphKey(graph))mark();render();replayed=true;status(t(dirty?graphPendingKey():lastGraphSaveKey),false,{clearError:'operation'});return true;
   }catch(error){if(generation===editorLoadGeneration)status(t('history.failed')+error.message,true);return false;}
-  finally{if(generation===editorLoadGeneration){historyBusy=false;renderHistoryActions();renderNativeSourceValues();if(replayed){await refreshUniforms();if(generation===editorLoadGeneration)scheduleGraphApply();}}}
+  finally{if(generation===editorLoadGeneration){++nativeSourceReadEpoch;historyBusy=false;renderHistoryActions();renderNativeSourceValues();if(replayed){await refreshUniforms();if(generation===editorLoadGeneration){refreshNativeSources({required:true});scheduleGraphApply();}}}}
 }
 function applyGraph(){
   if(applyInFlight)return applyInFlight;
@@ -381,8 +381,9 @@ async function performApplyGraph(){
     if(generation!==editorLoadGeneration)return;
     if(!connectionInterrupted)status(t(dirty?graphPendingKey():shaderUpdated?'material.applied':lastGraphSaveKey),false,{clearError:true});
     document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
-  }catch(e){if(generation!==editorLoadGeneration)return;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
-  finally{if(generation===editorLoadGeneration){submitBusy=false;applyLayoutOnly=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();renderNativeSourceValues();refreshUniforms();if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
+    return true;
+  }catch(e){if(generation!==editorLoadGeneration)return;nativeSourceUncertain=true;++nativeSourceReadEpoch;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
+  finally{if(generation===editorLoadGeneration){submitBusy=false;applyLayoutOnly=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();renderNativeSourceValues();refreshUniforms();refreshNativeSources({required:true});if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
 }
 function el(tag,attrs={},text=''){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else e.setAttribute(k,v);}e.textContent=text;return e;}
 function field(label,control){const f=el('label',{class:'field'},label);f.append(control);return f;}
@@ -666,7 +667,7 @@ async function load(){
     graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);
     editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
-    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;applyLayoutOnly=false;
+    nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeSourceUncertain=false;++nativeSourceReadEpoch;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;applyLayoutOnly=false;
     uniformGeneration++;uniformPolling=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();uniformSnapshot={revision:-1,uniforms:{}};
     customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
     readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();

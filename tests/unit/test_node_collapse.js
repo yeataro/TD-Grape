@@ -6,7 +6,7 @@ const context=vm.createContext({assert,payload,console,TextEncoder,crypto:global
 for(const file of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js'])vm.runInContext(fs.readFileSync(path.join(dir,file),'utf8'),context);
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');vm.runInContext(app.slice(0,app.indexOf("$('#canvas').addEventListener('dragover'")),context);
 vm.runInContext(`(async()=>{
-render=()=>{};wires=()=>{};renderGraphEditActions=()=>{};renderHistoryActions=()=>{};inspector=()=>{};renderNavigation=()=>{};renderNativeSourceValues=()=>{};refreshUniforms=()=>{};
+render=()=>{};wires=()=>{};renderGraphEditActions=()=>{};renderHistoryActions=()=>{};inspector=()=>{};renderNavigation=()=>{};renderNativeSourceValues=()=>{};refreshUniforms=()=>{};refreshNativeSources=async()=>{};
 catalog=payload.catalog;setTypeContract(payload.contract);editorTarget='top';graph=clone(payload.graph);stage='pixel';graphTrail=[];past=[];future=[];readonly=false;
 const equal=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b)),n=id=>current().nodes.find(n=>n.id===id),checks=[],pairs=[];
 rememberSavedGraph(graph);const baseline=clone(graph),semantic=graphContent(graph);
