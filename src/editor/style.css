@@ -674,7 +674,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 :root[data-ui-theme="dark"]{--note-default-bg:#262626}
 :root[data-ui-theme="light"]{--note-body-shadow:0 3px 9px #29384d20}
 :where([data-category="annotation"]){--category-bg:#303030;--category-fg:#e5e5e5}
-.node[data-category="annotation"]{--note-body-bg:var(--note-default-bg);--note-inset:10px}
+.node[data-category="annotation"]{--note-body-bg:var(--note-default-bg);--note-inset:10px;--note-title-height:24px}
 :root[data-ui-theme="dark"] #canvas .node[data-category="annotation"]{background:var(--note-body-bg)}
 .node[data-category="annotation"]:not(.collapsed){--node-min-height:80px;--node-max-height:1200px;display:flex;flex-direction:column;height:180px;min-height:var(--node-min-height);max-height:var(--node-max-height)}
 .node[data-category="annotation"][data-note-transparent="true"]{--note-inset:5px}
@@ -690,7 +690,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .note-color-button>span{display:block;width:14px;height:14px;border-radius:50%;background:var(--note-default-bg);box-shadow:inset 0 0 0 1px #ffffff30}
 .note-color-button>.note-transparent-swatch,.note-setting-color-swatch.note-transparent-swatch,.group-frame-palette .note-color-transparent>span{background:conic-gradient(#a5a5ab 25%,#56565f 0 50%,#a5a5ab 0 75%,#56565f 0);background-size:8px 8px}
 /* Note bounds always describe the body. Its compact title floats in the group inset. */
-.node[data-category="annotation"]:not(.collapsed)>.node-title{position:absolute;left:-1px;right:-1px;bottom:100%;z-index:1;box-sizing:border-box;height:24px;min-height:24px;padding:3px 8px}
+.node[data-category="annotation"]:not(.collapsed)>.node-title{position:absolute;left:-1px;right:-1px;bottom:100%;z-index:1;box-sizing:border-box;height:var(--note-title-height);min-height:var(--note-title-height);padding:3px 8px}
 .node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected)>.node-title{visibility:hidden;pointer-events:none}
 .node[data-note-title-on-selection="true"]:not(.collapsed):not(.selected) .note-title-actions{visibility:hidden}
 :root #canvas .node[data-category="annotation"].note-colored{--note-body-bg:color-mix(in srgb,var(--note-color) 55%,var(--node-body,var(--ui-tone-node)));background:var(--note-body-bg)}
@@ -1106,7 +1106,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .port-row.input:has(.node-inline-values) .port-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .port-row.input:has(.node-inline-values) .port-type{flex:none}
 .node-inline-values{display:inline-flex;min-width:0;gap:4px;align-items:center;flex:1 1 60px;margin-left:auto;justify-content:flex-end;cursor:default;user-select:text}
-:is(.node-inline-values,.node-body-controls) :is(input,select){width:100%;min-width:42px;max-width:100%;height:24px;padding:2px 5px;border:0;border-radius:4px;background:var(--node-value-bg);color:var(--ui-tone-value-text);text-align:left;font-size:11px;font-variant-numeric:tabular-nums}
+:is(.node-inline-values,.node-body-controls,.native-reference-values) :is(input,select){width:100%;min-width:42px;max-width:100%;height:24px;padding:2px 5px;border:0;border-radius:4px;background:var(--node-value-bg);color:var(--ui-tone-value-text);text-align:left;font-size:11px;font-variant-numeric:tabular-nums}
 .node-inline-values input{cursor:text;appearance:textfield}
 .node-inline-values select{cursor:pointer;min-width:64px}
 .node-inline-values input::-webkit-inner-spin-button,.node-inline-values input::-webkit-outer-spin-button{appearance:none;margin:0}
@@ -1869,14 +1869,12 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 [data-native-component-slot][data-bind-master="true"]>.field::after{content:"";position:absolute;left:3px;bottom:3px;width:5px;height:5px;background:var(--uniform-slider-accent,var(--purple));clip-path:polygon(0 0,0 100%,100% 100%);pointer-events:none}
 /* Uniform controls keep the base theme palette while the surrounding UI tone changes.
    These local colors intentionally do not reference the adjusted root tokens. */
-[data-native-kind="uniform"]{--uniform-slider-field:#393843;--uniform-slider-text:#e5dff0;--uniform-slider-border:#30303b;--uniform-slider-fill:#526165;--uniform-slider-handle:#b9d2d4;--uniform-slider-accent:#b39cfb;--uniform-slider-muted:#9390a5}
-:root[data-ui-theme="light"] [data-native-kind="uniform"]{--uniform-slider-field:#fafbfc;--uniform-slider-text:#303640;--uniform-slider-border:#c2c8d1;--uniform-slider-fill:color-mix(in srgb,#cddfe0 70%,transparent);--uniform-slider-handle:#28575b;--uniform-slider-accent:#694b91;--uniform-slider-muted:#626b78}
+[data-native-kind="uniform"]{--uniform-slider-field:#393843;--uniform-slider-text:#e5dff0;--uniform-slider-border:#30303b;--uniform-slider-fill:#526165;--uniform-slider-accent:#b39cfb;--uniform-slider-muted:#9390a5}
+:root[data-ui-theme="light"] [data-native-kind="uniform"]{--uniform-slider-field:#fafbfc;--uniform-slider-text:#303640;--uniform-slider-border:#c2c8d1;--uniform-slider-fill:color-mix(in srgb,#cddfe0 70%,transparent);--uniform-slider-accent:#694b91;--uniform-slider-muted:#626b78}
 :root .components[data-native-kind="uniform"] input.numeric-slider{
  --purple:var(--uniform-slider-accent);
- --uniform-slider-position:clamp(3px,calc(var(--numeric-fill,0%) - 1px),calc(100% - 5px));
  background-color:var(--uniform-slider-field);color:var(--uniform-slider-text);border-color:var(--uniform-slider-border);
- background-image:linear-gradient(to right,transparent 0 var(--uniform-slider-position),var(--uniform-slider-handle) var(--uniform-slider-position) calc(var(--uniform-slider-position) + 2px),transparent calc(var(--uniform-slider-position) + 2px) 100%),linear-gradient(to right,var(--uniform-slider-fill) 0 var(--numeric-fill,0%),transparent var(--numeric-fill,0%) 100%);
- background-size:100% calc(100% - 8px),100% 100%;background-position:center;background-repeat:no-repeat;
+ background-image:linear-gradient(to right,var(--uniform-slider-fill) 0 var(--numeric-fill,0%),transparent var(--numeric-fill,0%) 100%);
 }
 :root [data-native-kind="uniform"] .component-label{color:var(--uniform-slider-muted)}
 .confirmation-dialog{width:min(460px,calc(100 * var(--ui-vw) - 24px));padding:20px}
@@ -1884,7 +1882,18 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .confirmation-dialog>.confirmation-actions{justify-content:flex-end;gap:10px;padding:12px 0 0}
 .native-reference-values>.components{width:100%}
 .native-reference-values .field{margin:0}
+.native-reference-values .components :is(input,select){min-width:0;min-height:24px}
+.native-reference-values .components:not(.scalar) .component-label{top:50%}
+.native-reference-values .source-component-mode{height:24px;min-height:24px;padding-block:2px}
+@media(pointer:coarse){.native-reference-values .components :is(input,select){height:30px;min-height:30px;font-size:13px}.native-reference-values .source-component-mode{height:30px;min-height:30px;padding-block:5px}}
 .native-reference-loading{visibility:hidden;pointer-events:none}
+/* Note selection follows its visible silhouette; its measured bounds stay body-only. */
+.node[data-category="annotation"]:not(.collapsed):is([data-note-title-on-selection="false"],.selected){border-top-left-radius:0;border-top-right-radius:0}
+:root #canvas .node[data-category="annotation"].selected:not(.collapsed){border-color:transparent;box-shadow:none;outline:none}
+:root #canvas .node[data-category="annotation"].selected:not(.collapsed)::before{content:"";position:absolute;pointer-events:none;z-index:2;inset:calc(-1 * var(--note-title-height) - 1px) -1px -1px;border:1px solid var(--selection);border-radius:var(--node-radius);box-shadow:0 0 0 1px var(--selection),var(--note-body-shadow)}
+/* Vertex uses the existing TD Position/attribute family palette. */
+.graph-workspace .toolbar .stage[data-stage="vertex"]{--purple:var(--node-attribute-fg)}
+:root .graph-workspace .toolbar .stage[data-stage="vertex"].active{background:var(--node-attribute-bg);color:var(--node-attribute-fg)}
 
 #structuredialog{width:min(560px,calc(94 * var(--ui-vw)))}
 #structuredialog .custom-dialog-heading{height:auto;padding:0;background:none;border:0}#structuredialog textarea{width:100%;resize:vertical}

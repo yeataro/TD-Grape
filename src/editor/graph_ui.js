@@ -1468,7 +1468,7 @@ function renderCards({only=null}={}){
     if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',pop_buffer:'POP Buffer',attribute:'Attribute',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=label+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     else {
       const subtitles=[];
-      if(customNodeNamesEnabled()&&n.name)subtitles.push(nodeTypeLabel(d,n.params));
+      if(d?.key!=='comment'&&customNodeNamesEnabled()&&n.name)subtitles.push(nodeTypeLabel(d,n.params));
       if(d?.key==='uv')subtitles.push(builtInSourceLabel(d));
       if(subtitles.length){const subtitle=subtitles.join(' · ');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     }
