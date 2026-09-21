@@ -13,11 +13,11 @@ TouchDesigner 的 GLSL MAT／TOP 節點編輯器。
 ## 安裝與開啟
 
 1. 安裝並開啟 TouchDesigner。
-2. 前往本倉庫的 **Releases**，下載發布的 `.tox` 元件。
-3. 將 `.tox` 拖入 TouchDesigner 的 **Network Editor（節點網路畫布）**。
-4. 選取新增的 Grape 元件，在參數頁按下 **Open Editor**，開啟瀏覽器編輯介面。
-
-**下載連結：待補**
+2. 前往本倉庫的 [Releases](https://github.com/yeataro/TD-Grape/releases)，從該版本的 **Assets** 下載 `.tox` 元件。
+3. 將 `.tox` 拖入 TouchDesigner 的 **Network Editor（節點網路畫布）**，加入 TD-Grape 管理元件。
+4. 在 Network Editor 按 **Tab**，開啟 **OP Create Dialog**。
+5. 在 **Grape → Shaders** 中，選擇用於紋理／影像處理的 **Grape TOP**，或用於材質的 **Grape MAT**，並放置到網路中。
+6. 選取剛建立的 operator，在它的 **Grape TOP** 或 **Grape MAT** 參數頁按下 **Open Editor**，開啟瀏覽器編輯介面。
 
 ## 為什麼公開這份倉庫
 

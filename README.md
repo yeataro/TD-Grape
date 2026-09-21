@@ -15,11 +15,11 @@ Development along the original architecture has stopped. The existing work is re
 ## Installation and Launch
 
 1. Install and open TouchDesigner.
-2. Go to this repository's **Releases** and download the released `.tox` component.
-3. Drag the `.tox` into TouchDesigner's **Network Editor**.
-4. Select the newly added Grape component and click **Open Editor** on its parameter page to open the browser editor.
-
-**Download link: to be added**
+2. Go to this repository's [Releases](https://github.com/yeataro/TD-Grape/releases) and download the `.tox` component from the release's **Assets**.
+3. Drag the `.tox` into TouchDesigner's **Network Editor** to add the TD-Grape manager component.
+4. Press **Tab** in the Network Editor to open the **OP Create Dialog**.
+5. Under **Grape → Shaders**, create a **Grape TOP** for texture/image processing or a **Grape MAT** for materials, then place it in the network.
+6. Select the newly created operator. On its **Grape TOP** or **Grape MAT** parameter page, click **Open Editor** to open the browser editor.
 
 ## Why Make This Repository Public?
 
