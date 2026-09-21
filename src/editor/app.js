@@ -9,7 +9,7 @@ sessionStorage.setItem('sgrapeToken',token);history.replaceState(null,'',locatio
 const GRID=24;
 const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
 const snap=value=>Math.round(value/GRID)*GRID;
-let localeData=null,language='zh-Hant';
+let localeData=null,language='en';
 let editorProjectFile=null;
 function updateEditorTitle(){
   const target=$('#target')?.textContent||'',project=editorProjectFile===null?'':editorProjectFile||t('project.unsaved');
