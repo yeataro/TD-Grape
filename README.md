@@ -1,49 +1,122 @@
 # TD-Grape
 
-TouchDesigner 的 GLSL MAT／TOP 節點編輯器。圖、參數關聯與產生的 Shader 保存在 TD 專案中，Web Editor 提供編輯介面。
+[繁體中文](README.zh-TW.md)
 
-目前產品版本 **0.8.81**，持續開發中，尚未進入 Alpha。功能與待辦見 [開發狀態](docs/development/STATUS.md)；本版修正即時 MAT 預覽在套用 Shader 時可能使 TD 掛起的問題。
+A GLSL MAT/TOP node editor for TouchDesigner.
 
-## 開啟開發專案
+**Version: 0.8.163 · Development preview · Not yet Alpha**
 
-以 TouchDesigner 開啟 **`src/td/TD-Grape-dev.toe`**。在 Grape MAT／TOP 的參數頁按 **Open Editor**。服務由 TD 啟動；跨裝置編輯可由管理元件的 **Allow LAN Connections** 控制。
+This repository preserves an exploration of building a node-based shader editor, including its code, interface, specifications, and design discussions.
 
-管理元件的 **連線需要憑證**（`Requiretoken`）目前預設關閉，方便開發期間跨瀏覽器與裝置驗證；可連到服務的裝置可以讀取與修改工程。開啟後要求有效的 Editor 連結憑證。切換於 TD 正常運作時生效，不重啟服務，也不改變目前 port 或憑證；設定隨 TOE 保存，適用於該服務管理的所有 Shader。是否在後續版本加入關閉憑證時的警示視窗，仍待討論。
+Development along the original architecture has stopped. The existing work is retained for preview and reference. It can also be viewed as an exploratory draft for the next open-source project, documenting what was completed, the problems encountered, and the direction to be reconsidered next.
 
-這份原始碼專案可以整個複製到其他位置，不需要舊專案資料夾、Agent 工作資料或外部私人代理。TOE 內保存目前可運行的程式；修改原始碼後，要透過開發工具更新內嵌 DAT，再保存 TOE。詳細流程見 [開發說明](docs/development/DEVELOPMENT.md)。
+> This version still has unfinished features and gaps in validation. See [Known Limitations and Unfinished Features](#known-limitations-and-unfinished-features).
 
-目前已在 Windows、TouchDesigner 2025.32820 驗證。macOS 為目標平台，仍需實機驗證。
+## Installation and Launch
 
-## 目錄
+1. Install and open TouchDesigner.
+2. Go to this repository's **Releases** and download the released `.tox` component.
+3. Drag the `.tox` into TouchDesigner's **Network Editor**.
+4. Select the newly added Grape component and click **Open Editor** on its parameter page to open the browser editor.
 
-| 位置 | 用途 |
+**Download link: to be added**
+
+## Why Make This Repository Public?
+
+The repository is being made public so that anyone interested can explore the work so far, understand how the project reached this point, and see why its direction is changing.
+
+This is not a stable release or an endorsement of every existing design decision. The code, interface, and discussion records are preserved together as a preview and a record of this stage.
+
+## Why Stop Building on the Original Architecture?
+
+The original goal was for humans to describe node types, behavior, and code generation primarily by maintaining a node definition table. The editor and code generator would consume those definitions within clearly defined responsibilities.
+
+During implementation by Codex, the architecture substantially departed from the boundaries set by the original specification. Some node behavior and decision logic became scattered across the code generator and frontend instead of being fully represented in node definitions. Features were gradually completed, but maintaining or extending nodes still required humans to understand and modify code in multiple places.
+
+This did not achieve the project's most important goal:
+
+**Make node definitions understandable, maintainable, and extensible by humans.**
+
+This version will therefore no longer serve as the architectural foundation for further development. The next step is to clarify the responsibilities of node definitions, the code generator, the editor, and host integration, validate a minimal structure, and then expand gradually.
+
+## The Next Project
+
+The next open-source project is tentatively called **Grape (name not final)**. Neither its name nor its concrete structure has been finalized.
+
+The new starting point will center on human-maintainable node definitions and the tools used to edit them. Before building a minimal implementation, it will establish how data describes nodes and how each part uses that data.
+
+Other areas of functionality may eventually develop within the same project. For now, the focus remains on clarifying the basic structure and responsibility boundaries.
+
+## Creation and Collaboration
+
+- **Project initiation, requirements, design decisions, and review:** [@yeataro](https://github.com/yeataro)
+- **Initial specification collaboration:** Fable 5.1
+- **Code implementation and subsequent revisions:** OpenAI Codex (GPT-6 Astra), in collaboration with [@yeataro](https://github.com/yeataro).
+
+These credits document the work contributed by the human author and AI tools, while also acknowledging that the implementation departed from the intended architecture.
+
+## Third-Party Acknowledgments
+
+This project uses [TDFam](https://github.com/dotsimulate/TDFam), developed by **Lyell Hintz ([dotsimulate](https://dotsimulate.com))**, **Dan Molnar ([Function Store](https://www.functionstore.xyz/link-in-bio))**, and other contributors. Thank you for providing this open-source foundation.
+
+TDFam provides foundational capabilities for custom operator families in TouchDesigner and is licensed under **Apache-2.0**. See the accompanying [LICENSE](src/third_party/TDFam/LICENSE) and [NOTICE](src/third_party/TDFam/NOTICE) for details.
+
+## Stages and Revision History
+
+| Stage / Version | Description |
 | --- | --- |
-| `src/td/` | 正式開發 TOE、TD 執行程式與內嵌來源對照表 |
-| `src/core/` | 圖資料、GLSL 編譯與參數模型 |
-| `src/editor/` | Web Editor、樣式、翻譯與網站圖示 |
-| `src/library/` | 節點定義資料 |
-| `src/assets/` | 原始品牌素材 |
-| `src/third_party/` | 第三方授權與來源說明 |
-| `tests/` | 核心、UI、TD 測試及可攜測試資料 |
-| `tools/` | 開發、驗證與素材建置工具 |
-| `docs/` | 使用、開發、功能與設計文件 |
-| `agent/` | 通用 Agent 工作入口與協作規則 |
-| `dist/` | 交付檔位置；打包與安裝方式另行決策 |
+| Initial specification | Established the architectural goal of node definitions driving behavior, with clearly separated responsibilities. |
+| Implementation and feature revisions | Codex and @yeataro collaborated to progressively implement and review features. |
+| 0.8.163 | The currently preserved development version; not yet Alpha. |
+| 2026-09-22 | Revisited architectural goals and responsibility boundaries, and planned the starting point for the next project. |
 
-## 驗證與文件
+For a more detailed version history, see [Development Status](docs/development/STATUS.md). Development plans in existing documents are retained as historical records, not as a roadmap that is still committed to delivery.
 
-安裝 Python 3.11+ 與 Node.js 後，在專案根目錄執行：
+## Development and Testing
 
-```text
-python tools/dev/run_tests.py
-```
+To inspect or modify the source code, see:
 
-此命令使用這份專案的程式與測試，不啟動 TD，也不寫入使用者的 Shader。瀏覽器與 TD 實測的操作另見 [測試說明](docs/development/TESTING.md)。
+- [Development Guide](docs/development/DEVELOPMENT.md)
+- [Testing Guide](docs/development/TESTING.md)
+- [Documentation Index](docs/README.md)
 
-- [文件索引](docs/README.md)
-- [目前能力與未完成範圍](docs/development/STATUS.md)
-- [資料結構與保存邊界](docs/development/PROJECT_LAYOUT.md)
-- [Agent 工作入口](agent/README.md)
-- [TDFam 第三方說明](src/third_party/TDFam/NOTICE)
+## Known Limitations and Unfinished Features
 
-TD-Sgrape 是本專案的舊名稱。既有 TD OP 路徑、序列化身分及內部模組名稱仍保留相容性；資料夾遷移不批次改寫既有圖中的引用。
+The following is based on the records for `0.8.163`. It describes the limitations and unfinished scope of this version. It is neither a repair schedule nor a direct commitment to features in the next project.
+
+### Preview and Save Risk
+
+When applying a shader to a MAT, preview capture is temporarily locked. If a `.toe` is saved during this period, it remains unverified whether that transient state is saved with it and whether normal operation resumes after reopening.
+
+This risk has not been ruled out. Passing the earlier preview crash regression does not mean this save scenario has been validated.
+
+### Platform Validation Coverage
+
+- **Windows:** The primary development and testing environment.
+- **macOS / Safari:** Validation on actual hardware is incomplete, including startup, keyboard shortcuts, browser behavior, and TouchDesigner integration. Simulating a platform in a browser does not replace testing on actual hardware.
+- **iOS / iPadOS:** Some touch and connection interactions have been tested, but the virtual keyboard, focus, page zoom, and value ladder interactions have not been fully validated.
+
+### Reported Interface Issues
+
+- Starting a right-button marquee selection on the canvas and releasing over a slider may accidentally open the value preset menu.
+- The Array Parameter length field does not yet handle Esc cancellation and loss of focus consistently with node numeric inputs.
+- In light mode, some source cards, Expression fields, and note areas still have dark backgrounds or insufficient contrast. A complete visual review is pending.
+
+### Reports Awaiting Diagnosis or Further Validation
+
+- Occasional pauses and delays when resizing the preview have not yet been fully measured or diagnosed.
+- There have been reports of the HTTP status indicating that TD is unresponsive while Uniform / WebSocket functionality remains available. Reproduction conditions and status classification still need clarification.
+- MAT scenarios involving missing attributes, different geometry, and combinations with instancing require further validation.
+
+### Unfinished Features and Cleanup
+
+- **Built-in node coverage:** Nodes and overloads for GLSL and TD native functions are not yet complete.
+- **MAT sources and attributes:** Complete workflows for data across stages, instancing, and non-2D textures are still incomplete. Reading existing TD data does not imply the ability to configure and manage that data.
+- **Help:** The shared Built-in Source help does not yet fully provide basic explanations and links to official documentation sections for the currently selected source.
+- **Node insertion:** Inserting a node into an existing connection with compatibility checks on both sides has not been implemented.
+- **Group auto-layout:** Nodes and connections are currently arranged first, then Groups are wrapped around them. Group boundaries are not yet included as layout constraints.
+- **Custom parameters:** Related functionality exists, but the workflow and previously planned restructuring are incomplete.
+- **Naming and search interface:** Renaming Inputs to Sources / 來源 and reorganizing the placement of the TD name / common name switch are unfinished. The current switch can be mistaken for a search option.
+- **TD Pane:** An editor embedded in a TD Pane has not been provided. The editor currently runs in an external browser.
+
+For the detailed inventory, see the [TODO Audit](docs/discussions/TODO_AUDIT_2026-09-21.md) and [Alpha Scope Record](docs/discussions/ALPHA_SCOPE_2026-09-21.md).
