@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.197'
+PRODUCT_VERSION='0.8.198'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1129,9 +1129,9 @@ def public_uniforms(comp,graph,preserve=None):
         if ident in bindings and bindings[ident]['type']!=decl['type']:
             raise RuntimeError('Create a new Uniform when changing the type of an exposed parameter: '+decl['name'])
     for ident,decl in exposed.items():
-        label=decl.get('exposeName') or decl['name']
+        label=_owner.op('parameters').module.source_label(decl.get('exposeName') or decl['name'])
         if ident not in bindings:
-            name='U'+hashlib.sha256(ident.encode()).hexdigest()[:16]
+            name=_owner.op('parameters').module.available_name(comp,decl['name'])
             if getattr(comp.par,name,None) is not None: raise RuntimeError('Public Uniform parameter name collision')
             page=next((p for p in comp.customPages if p.name=='Uniforms'),None) or comp.appendCustomPage('Uniforms')
             count=core().type_components(decl['type'])
@@ -1144,7 +1144,7 @@ def public_uniforms(comp,graph,preserve=None):
             elif decl.get('nativeSequence')=='color' and family=='float' and 1<=count<=4:
                 group=page.appendRGBA(name,label=label,size=count)
             elif family=='bool' and count==1:group=page.appendToggle(name,label=label)
-            else:group=(page.appendFloat if family in ('float','double') else page.appendInt)(name,label=label,size=count)
+            else:group=(page.appendFloat if family in ('float','double','uint') else page.appendInt)(name,label=label,size=count)
             if family not in ('float','double'):
                 low,high=(0,1) if family=='bool' else (0,4294967295) if family=='uint' else (-2147483648,2147483647)
                 for p in group:p.min=low;p.max=high;p.clampMin=True;p.clampMax=True

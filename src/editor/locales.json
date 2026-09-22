@@ -18,6 +18,15 @@
     "Graph"
   ],
   "messages": {
+    "controls.historyChanged": {"en":"Definitions changed in TD or another editor. Earlier Undo/Redo is paused to preserve those changes.","zh-Hant":"參數定義已在 TD 或其他編輯器修改；較早的 Undo／Redo 暫停使用，以保留這些修改。"},
+    "controls.normMin": {"en": "Range Min", "zh-Hant": "範圍最小值"},
+    "controls.normMax": {"en": "Range Max", "zh-Hant": "範圍最大值"},
+    "controls.min": {"en": "Minimum", "zh-Hant": "最小值"},
+    "controls.max": {"en": "Maximum", "zh-Hant": "最大值"},
+    "controls.clampMin": {"en": "Clamp Min", "zh-Hant": "限制最小值"},
+    "controls.clampMax": {"en": "Clamp Max", "zh-Hant": "限制最大值"},
+    "controls.dragSort": {"en": "Drag to reorder", "zh-Hant": "拖曳排序"},
+
     "controls.dropSources": {"en":"Drag a Uniform or Spec Constant from Sources here.","zh-Hant":"從來源面板拖入 Uniform 或特化常數。"},
     "controls.pulse": {"en":"Pulse","zh-Hant":"觸發"},
     "controls.rename": {"en":"Rename Page","zh-Hant":"重新命名頁面"},
@@ -2331,10 +2340,7 @@
       "en": "This connection does not support source editing yet. Use Open Editor in TouchDesigner.",
       "zh-Hant": "此連線尚不支援來源編輯，請從 TouchDesigner 的 Open Editor 開啟。"
     },
-    "controls.title": {
-      "en": "Custom Parameters",
-      "zh-Hant": "自訂參數"
-    },
+    "controls.title": {"en":"OP Parameter","zh-Hant":"OP Parameter"},
     "controls.page": {
       "en": "Page",
       "zh-Hant": "頁面"

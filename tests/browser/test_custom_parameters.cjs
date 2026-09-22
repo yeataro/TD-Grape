@@ -4,8 +4,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const[src,stateFile,sourcesFile,customFile,out]=process.argv.slice(2);fs.mkdirSync(out,{recursive:true});
 const read=f=>JSON.parse(fs.readFileSync(f,'utf8').replace(/^\uFEFF/,'')),fixture=read(stateFile),sources=read(sourcesFile),custom=read(customFile);
 fixture.state.graph=sources.graph;fixture.state.revision=sources.revision;fixture.shaderKind='top';fixture.target=custom.operator;fixture.upgradeReview=null;fixture.readOnlyReason='';fixture.savedStateIssue=null;
+const undoStack=[],redoStack=[];const capture=()=>JSON.parse(JSON.stringify({controls:custom.controls,pages:custom.pages}));
 let serial=0;const requests=[],checks=[],errors=[];
-function refresh(){custom.expectedPages='pages-'+serial;for(const row of custom.controls)row.expected='control-'+serial+'-'+row.name;for(const p of custom.pages)p.empty=!custom.controls.some(g=>g.page===p.name);}
+function refresh(){custom.history={undo:!!undoStack.length,redo:!!redoStack.length,expected:'history-'+serial};custom.expectedPages='pages-'+serial;for(const row of custom.controls)row.expected='control-'+serial+'-'+row.name;for(const p of custom.pages)p.empty=!custom.controls.some(g=>g.page===p.name);}
 function place(row,page,before){custom.controls=custom.controls.filter(g=>g!==row);row.page=page;const i=before?custom.controls.findIndex(g=>g.name===before):-1;custom.controls.splice(i<0?custom.controls.length:i,0,row);}
 refresh();
 const server=http.createServer(async(req,res)=>{try{
@@ -18,9 +19,10 @@ const server=http.createServer(async(req,res)=>{try{
   if(op==='preview'){res.statusCode=204;return res.end();}
   if(op==='custom-parameters'){
    if(req.method==='POST'){
-    requests.push(body);assert.equal(body.revision,custom.revision);const row=custom.controls.find(r=>r.name===body.name);
+    const saved=capture();requests.push(body);assert.equal(body.revision,custom.revision);const row=custom.controls.find(r=>r.name===body.name);
     if(['page-create','page-rename','page-remove','page-reorder','bind','place'].includes(body.action))assert.equal(body.expectedPages,custom.expectedPages);
-    if(body.action==='page-create')custom.pages.push({name:body.name,editable:true});
+    if(['undo','redo'].includes(body.action)){assert.equal(body.expectedHistory,custom.history.expected);const from=body.action==='undo'?undoStack:redoStack,to=body.action==='undo'?redoStack:undoStack;to.push(saved);Object.assign(custom,from.pop());}
+    else if(body.action==='page-create')custom.pages.push({name:body.name,editable:true});
     else if(body.action==='page-rename'){custom.pages.find(p=>p.name===body.page).name=body.name;custom.controls.filter(r=>r.page===body.page).forEach(r=>r.page=body.name);}
     else if(body.action==='page-remove')custom.pages=custom.pages.filter(p=>p.name!==body.page);
     else if(body.action==='page-reorder'){const page=custom.pages.find(p=>p.name===body.page);custom.pages=custom.pages.filter(p=>p!==page);const i=custom.pages.findIndex(p=>p.name===body.before);custom.pages.splice(i<0?custom.pages.length:i,0,page);}
@@ -35,10 +37,11 @@ const server=http.createServer(async(req,res)=>{try{
      if(body.action==='value'){assert.deepEqual(body.expectedValue,row.components[body.component]);row.components[body.component].value=body.value;}
      if(body.action==='color')body.components.forEach(e=>{assert.deepEqual(e.expectedValue,row.components[e.component]);row.components[e.component].value=e.value;});
      if(body.action==='default')row.components[body.component].default=body.value;
+     if(body.action==='range')row.components[body.component][body.field]=body.value;
      if(body.action==='place')place(row,body.page,body.before);
      if(body.action==='remove')custom.controls=custom.controls.filter(r=>r!==row);
     }
-    serial++;refresh();
+    if(!['undo','redo','value','color','pulse'].includes(body.action)){undoStack.push(saved);redoStack.length=0;}serial++;refresh();
    }
    return res.end(JSON.stringify(custom));
   }
@@ -68,7 +71,7 @@ const server=http.createServer(async(req,res)=>{try{
   await page.locator('#custompage').getByRole('tab',{name:'Grape TOP',exact:true}).click();assert.ok(await page.locator('#customcontrols [data-control-field=pulse]').count());assert.ok(await page.locator('#customcontrols [data-custom-control=Version] input').isDisabled());
   await page.locator('#customizeparameters').click();await page.locator('#customdialog').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>$('#customdialog').matches(':modal')),false);
   assert.equal(await page.locator('#customeditorpages [data-custom-page="Grape TOP"]').count(),0);assert.equal(await page.locator('#customeditorpages [data-custom-page="Output"]').count(),0);
-  checks.push('Upper-right pencil opens a nonmodal editor; protected pages remain operable in sidebar and absent from definition lists');
+  checks.push('Upper-right text button opens a nonmodal editor; protected pages remain operable in sidebar and absent from definition lists');
   const before=await page.locator('#customdialog').boundingBox();await drag(await at('.custom-editor-heading strong'),{x:before.x+180,y:before.y+85});const after=await page.locator('#customdialog').boundingBox();assert.notEqual(Math.round(before.y),Math.round(after.y));
   await page.evaluate(()=>{Object.assign($('#customdialog').style,{left:'720px',top:'180px',right:'auto'});});
   const canvas=await page.locator('#canvas').boundingBox();await page.mouse.click(canvas.x+70,canvas.y+80);await page.keyboard.press('Control+a');assert.ok(await page.evaluate(()=>selection.size>0));assert.ok(await page.locator('#customdialog').isVisible());
@@ -82,18 +85,32 @@ const server=http.createServer(async(req,res)=>{try{
   checks.push('Dragging from Sources moves an existing control without duplicating a master or changing graph nodes; Style/Size are display-only');
   const label=page.locator('#customdialog [data-control-field=label]');await label.fill('Gain amount');await label.press('Enter');await idle();await label.blur();
   const def=page.locator('#customdialog [data-control-field=default]').first();await def.fill('0.2');await def.press('Enter');await idle();await def.blur();assert.equal(custom.controls.find(g=>g.name===gain).label,'Gain amount');assert.equal(custom.controls.find(g=>g.name===gain).components[0].default,.2);
+  const range=page.locator('#customdialog [data-control-field=normMax]').first();await range.fill('10');await range.press('Enter');await idle();await range.blur();
+  assert.equal(custom.controls.find(g=>g.name===gain).components[0].normMax,10);
+  await page.locator('#customundo').click();await idle();assert.equal(custom.controls.find(g=>g.name===gain).components[0].normMax,1);
+  await page.locator('#customredo').click();await idle();assert.equal(custom.controls.find(g=>g.name===gain).components[0].normMax,10);
+  const graphHistory=await page.evaluate(()=>JSON.stringify([past,future]));
+  await page.locator('#customundo').focus();await page.keyboard.press('Control+z');await idle();assert.equal(custom.controls.find(g=>g.name===gain).components[0].normMax,1);
+  assert.equal(await page.evaluate(()=>JSON.stringify([past,future])),graphHistory);
+  await page.locator('#customredo').click();await idle();
+  await def.fill('3');await def.press('Enter');await idle();await def.blur();
+  assert.equal(await def.evaluate(e=>e.numericRange),undefined);
+  const d=await def.boundingBox();await page.mouse.move(d.x+d.width/2,d.y+d.height/2);await page.mouse.down();await page.mouse.move(d.x+d.width/2+60,d.y+d.height/2,{steps:8});await page.mouse.up();await idle();
+  assert.ok(custom.controls.find(g=>g.name===gain).components[0].default>3);
+  await page.screenshot({path:path.join(out,'parameter-definition.png')});
+  checks.push('Range controls and independent history buttons/shortcuts work; ordinary numeric dragging exceeds one without a clamp');
   await drag(await at('[data-input-source=tint] .input-source-select'),await at('#customeditorparameters .custom-drop-hint'));assert.equal(custom.controls.find(g=>g.name===color).page,'Performance');
-  await drag(await at('[data-custom-parameter='+color+'] button'),await at('[data-custom-parameter='+gain+'] button'));assert.ok(custom.controls.indexOf(custom.controls.find(g=>g.name===color))<custom.controls.indexOf(custom.controls.find(g=>g.name===gain)));
-  await drag(await at('[data-custom-parameter='+gain+'] button'),await at('[data-custom-page=Look] button'));assert.equal(custom.controls.find(g=>g.name===gain).page,'Look');
-  await drag(await at('[data-custom-page=Performance] button'),await at('[data-custom-page=Look] button'));assert.ok(custom.pages.findIndex(p=>p.name==='Performance')<custom.pages.findIndex(p=>p.name==='Look'));
+  await drag(await at('[data-custom-parameter='+color+'] .custom-row-pick'),await at('[data-custom-parameter='+gain+'] .custom-row-pick'));assert.ok(custom.controls.indexOf(custom.controls.find(g=>g.name===color))<custom.controls.indexOf(custom.controls.find(g=>g.name===gain)));
+  await drag(await at('[data-custom-parameter='+gain+'] .custom-row-pick'),await at('[data-custom-page=Look] .custom-row-pick'));assert.equal(custom.controls.find(g=>g.name===gain).page,'Look');
+  await drag(await at('[data-custom-page=Performance] .custom-row-pick'),await at('[data-custom-page=Look] .custom-row-pick'));assert.ok(custom.pages.findIndex(p=>p.name==='Performance')<custom.pages.findIndex(p=>p.name==='Look'));
   checks.push('Parameter labels/defaults edit independently; actual pointer drags reorder controls, move across pages and reorder user pages');
-  await page.locator('[data-custom-page=Performance] button').click();await idle();
+  await page.locator('[data-custom-page=Performance] .custom-row-pick').click();await idle();
   await page.evaluate(()=>{$('#inputsearch').value='sFloat';$('#inputsearch').dispatchEvent(new Event('input'));});
   await page.waitForSelector('[data-input-source=spec_float] .input-source-select');await drag(await at('[data-input-source=spec_float] .input-source-select'),await at('#customeditorparameters .custom-drop-hint'));assert.ok(custom.controls.some(g=>g.sources.includes('spec_float')));
   checks.push('Specialization constants can be dragged from Sources into native parameter pages');
   const originalRequests=requests.length;const a=await at('[data-input-source=spec_float] .input-source-select'),b=await at('#customeditorparameters .custom-drop-hint');await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.keyboard.press('Escape');await page.mouse.up();await idle();assert.equal(requests.length,originalRequests);
   assert.equal(await page.evaluate(()=>customSourceAllowed('not-a-source')),undefined);
-  const preRemove=sources.graph.declarations.length;await page.locator('#customdialog [data-i18n="controls.remove"]').click();await idle();assert.ok(!custom.controls.some(g=>g.sources.includes('spec_float')));assert.equal(sources.graph.declarations.length,preRemove);
+  const preRemove=sources.graph.declarations.length;await page.locator('[data-custom-parameter='+custom.controls.find(g=>g.sources.includes('spec_float')).name+'] .custom-row-delete').click();await idle();assert.ok(!custom.controls.some(g=>g.sources.includes('spec_float')));assert.equal(sources.graph.declarations.length,preRemove);
   checks.push('Removing a selected control leaves its source declaration intact');
   checks.push('Escape cancels a source drop without any native mutation');
   await page.locator('#custompage').getByRole('tab',{name:'Performance',exact:true}).click();await page.screenshot({path:path.join(out,'parameter-editor.png')});

@@ -24,7 +24,7 @@ try:
             model=q.ensure(r)
             def snap():return q.snapshot(r)
             def action(action,**body):
-                data=snap();body.setdefault('revision',data['revision']);body.setdefault('expectedPages',data['expectedPages'])
+                data=snap();body.setdefault('expectedHistory',data['history'].get('expected'));body.setdefault('revision',data['revision']);body.setdefault('expectedPages',data['expectedPages'])
                 if body.get('name'):
                     row=next((g for g in data['controls'] if g['name']==body['name']),None)
                     if row:body.setdefault('expected',row['expected'])
@@ -94,6 +94,40 @@ try:
             (out/(kind+'-controls.json')).write_text(json.dumps(snap(),ensure_ascii=False,indent=2),encoding='utf-8')
             (out/(kind+'-sources.json')).write_text(json.dumps(sources.snapshot(r),ensure_ascii=False,indent=2),encoding='utf-8')
             checks.append(kind+': externally edited metadata rejects stale UI writes')
+            # Definition history is separate from graph/native value history.
+            assert q.source_label('uBaseColor')=='UBase Color' and q.source_label('base_color')=='Base color' and q.source_label('baseColor')=='Base Color'
+            assert q.initial_range(3)==(0,10) and q.initial_range(-3)==(-10,0)
+            saved_state=copy.deepcopy(r.state());group=shader.parGroup[moved['name']];control_name=group.name
+            action('label',name=control_name,label='History label');action('default',name=control_name,component=0,value=3)
+            action('undo');assert group[0].default==.12
+            action('undo');assert group.label=='Native label'
+            action('redo');action('redo');assert group.label=='History label' and group[0].default==3
+            action('range',name=control_name,component=0,field='normMax',value=10)
+            action('range',name=control_name,component=0,field='max',value=20)
+            action('range',name=control_name,component=0,field='clampMax',value=True)
+            action('undo');assert not group[0].clampMax
+            action('redo');assert group[0].clampMax
+            assert r.state()==saved_state
+            native=model.source_pars(shader,'gain')[0];group[0].val=2.5
+            errors_before={o.path:o.errors() for o in shader.findChildren()}
+            action('remove',name=control_name);assert native.eval()==2.5 and not native.bindExpr
+            native.owner.cook(force=True)
+            assert {o.path:o.errors() for o in shader.findChildren()}==errors_before
+            native.val=4
+            action('undo');restored=shader.parGroup[control_name];assert restored[0].eval()==4 and native.bindMaster.isSamePar(restored[0])
+            assert restored[0].default==3 and restored[0].normMax==10
+            action('redo');assert native.eval()==4 and not native.bindExpr
+            action('undo');assert native.eval()==4
+            action('page-create',name='Temporary');assert snap()['pages'][0]['editable']
+            action('page-rename',page='Temporary',name='RenamedPage');action('undo');assert any(p.name=='Temporary' for p in shader.customPages)
+            action('redo');action('page-remove',page='RenamedPage');action('undo');action('redo')
+            assert not any(p.name=='RenamedPage' for p in shader.customPages)
+            old_label=shader.parGroup[control_name].label;shader.parGroup[control_name].label='Changed outside editor'
+            try:action('undo');raise AssertionError('History overwrote native change')
+            except RuntimeError as e:assert 'history' in str(e)
+            assert shader.parGroup[control_name].label=='Changed outside editor'
+            checks.append(kind+': independent multi-step Undo/Redo, range/clamp edits, deletion/cook/restore with live values, page rename/delete and external conflict protection')
+
     after={s.path:{n:s.op(n).text for n in ('state','graph','manifest','pixel_shader','vertex_shader') if s.op(n)} for s in original.shaders()}
     assert after==before
     result={'passed':True,'checks':checks,'userShadersPreserved':True};(out/'results.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8');print(json.dumps(result))

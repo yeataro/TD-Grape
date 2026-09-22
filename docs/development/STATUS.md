@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-23 0.8.198：OP Parameter 操作面板置頂、右上文字編輯入口；浮窗預設置中約 34% × 75%，清单拖曳提供前後插入位置與每列右側刪除。新頁置於系統頁前。新增獨立定義 Undo／Redo、Range／Clamp 編輯與外部修改保護；拉桿取消假性的 0–1 限制。刪除先解除原生 Bind 表達式與回呼所有權，再移除控制，保留來源目前值；復原不回捲數值。來源可讀名稱與 Label 格式取代新增 UUID 名稱，既有受管理 Expose 原地遷移。詳見[自訂參數規格](../features/CUSTOM_PARAMETER_EDITOR.md)。
+
+TOP／MAT 原生 14 組、舊 Expose／原生 Bind 相容 16 組、頁面配置 2 組，瀏覽器 9 組及 532 項 Python／完整 portable checks 通過；歷程後續補強另以原生測試覆核。測試報告位於私人 reports/parameter-editor-198/。原生刪除後強制 cook 未新增錯誤；未宣稱已復現使用者原先每一種 cooking 情境。觸控／macOS 未新增驗證。
+
+39 份來源同步、四份 Master 保留身分與位置，三份使用者 Shader 保存內容不變；正式 TOE 已保存（1535922 bytes；SHA256 fc386fb182dbe13ef2c57005718739e92935bce90ac106f82ae86f6c3a3e6867），五份登記狀態保留，私人助手排除。雙語 1048 鍵檢查通過。未推送。
+
 2026-09-23 0.8.197：自訂參數側邊面板改為原生頁面的操作入口；右上鉛筆開啟不遮暗、不封鎖畫布的浮動編輯器。只從來源面板拖入數值 Uniform／Spec Constant，Graph Constants 排除。Pages／Parameters 拖曳排序及跨頁移動、重複拖入移動同一控制、Label／Default 編輯、Style／Size 自動跟隨來源與刪除保留來源值已完成。整頁保護 Grape／Output 等系統頁，Apply 保留原生頁面順序。uint／uvec 使用可承載完整範圍的 Float 控制，維持整數檢查並自動開啟 Clamp Min 0。詳見[自訂參數規格](../features/CUSTOM_PARAMETER_EDITOR.md)。
 
 TOP／MAT 新流程 12 組、既有控制相容 16 組、頁面配置 2 組原生檢查通過；瀏覽器新流程 8 組及多選回歸 9 組通過，包含非模態畫布操作、來源拖入、排序、取消、雙語和較窄視窗。532 項 Python 單元、14 項 Editor Launch、其餘可攜檢查及雙語 1046 鍵通過。舊 Editor edits 測試指定不存在的接線索引，HEAD 對照亦失敗；fixture 改為空接線選取後通過，實際接線選取另由多選瀏覽器回歸覆蓋。測試報告位於私人 reports/parameter-editor-197/。

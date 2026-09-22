@@ -3,6 +3,23 @@ import hashlib
 import json
 import math
 import re
+import copy
+
+_histories = {}
+
+
+def source_label(name):
+    label=re.sub(r'(?<=..)(?=[A-Z])',' ',name).replace('_',' ')
+    return label[:1].upper()+label[1:]
+
+
+def initial_range(value):
+    extent=10**math.ceil(math.log10(abs(value))) if abs(value)>1 else 1
+    return (-extent,0) if value<0 else (0,extent)
+
+
+def user_pages_first(comp):
+    comp.sortCustomPages(*([p.name for p in comp.customPages if editable_page(p)]+[p.name for p in comp.customPages if not editable_page(p)]))
 
 MIGRATED = 'grapeCustomMigratedV1'
 RESERVED = {'Openeditor','Openinbrowser','Glslparameters','Version','Material','Outputtop',
@@ -108,9 +125,28 @@ def ensure(runtime):
             if p is not None and p.page.name=='Inactive Uniforms' and not p.enableExpr:p.enable=True
         migrated.add(ident)
     if sorted(migrated)!=comp.fetch(MIGRATED,[]):comp.store(MIGRATED,sorted(migrated))
+    migrate_names(runtime,comp,model,graph)
     sync_shapes(runtime,comp,model)
     model.sync(comp)
     return model
+
+
+def migrate_names(runtime,comp,model,graph):
+    registry=copy.deepcopy(comp.fetch('sgrapePublicUniforms',{}));changed=False
+    for ident,record in registry.items():
+        decl=graph.get(ident);owned=comp.fetch(model.STORE,{}).get(ident)
+        if not decl or not owned or not record['parameters']:continue
+        control=getattr(comp.par,record['parameters'][0],None)
+        if control is None or not re.fullmatch(r'U[0-9a-f]{16}',control.parGroup.name):continue
+        group=control.parGroup
+        if not editable_group(group):continue
+        try:removable(comp,model,group)
+        except RuntimeError:continue  # Native external Bind ownership wins.
+        name=available_name(comp,decl['name'])
+        model.detach(comp,ident);group.name=name
+        if group.label in (decl['name'],decl.get('exposeName')):group.label=source_label(decl.get('exposeName') or decl['name'])
+        record['parameters']=[p.name for p in group];model.bind(comp,ident,list(group));changed=True
+    if changed:comp.store('sgrapePublicUniforms',registry)
 
 
 def component(p):
@@ -146,7 +182,7 @@ def snapshot(runtime):
                      'styleEditable':False})
     pages=[{'name':p.name,'editable':editable_page(p),'empty':not bool(p.parGroups)} for p in comp.customPages]
     return {'operator':comp.path,'enabled':comp.fetch('grapeNativeUniformsV1',None) is not None,
-            'revision':runtime.state()['revision'],'pages':pages,'controls':rows,
+            'revision':runtime.state()['revision'],'pages':pages,'controls':rows,'history':history_status(runtime),
             'expectedPages':token([(p.name,[g.name for g in p.parGroups]) for p in comp.customPages])}
 
 
@@ -157,7 +193,7 @@ def create_group(comp, page, hint, style, values=None, defaults=None, color=Fals
         if style not in ('float','vec2','vec3','vec4'):raise RuntimeError('Color controls require floating-point components.')
         method='appendRGBA'
     args={'size':size} if method in ('appendFloat','appendInt','appendRGBA') else {}
-    group=getattr(page,method)(name,label=hint,replace=False,**args)
+    group=getattr(page,method)(name,label=source_label(hint),replace=False,**args)
     for i,p in enumerate(group):
         if style=='uint' or style.startswith('uvec'):
             p.min=0;p.max=4294967295;p.clampMin=True;p.clampMax=True
@@ -169,6 +205,7 @@ def create_group(comp, page, hint, style, values=None, defaults=None, color=Fals
             p.min=0;p.max=1;p.clampMin=True;p.clampMax=True
         if defaults is not None:p.default=float(defaults[i])
         if values is not None:p.val=float(values[i])
+        p.normMin,p.normMax=initial_range(float(values[i] if values is not None else defaults[i] if defaults is not None else 0))
     return group
 
 
@@ -209,7 +246,7 @@ def shape_plans(runtime,comp,graph):
         color=decl.get('nativeSequence',comp.fetch('grapeNativeUniformsV1',{}).get(ident,{}).get('sequence'))=='color'
         method=STYLES[style][0] if not color else 'appendRGBA'
         target={'appendRGBA':'RGBA','appendToggle':'Toggle','appendInt':'Int','appendFloat':'Float'}[method]
-        if group.style==target and len(group)==size and not (style.startswith(('uint','uvec')) and any(not p.clampMin or p.min!=0 for p in group)):continue
+        if group.style==target and len(group)==size:continue
         if not editable_group(group):raise RuntimeError('Cannot change a source whose control is on a protected page: '+group.name)
         own=set(native)
         if any(ref.valid and ref not in own for p in group for ref in p.bindReferences):
@@ -260,7 +297,7 @@ def sync_shapes(runtime,comp,model):
     apply_shapes(comp,model,shape_plans(runtime,comp,runtime.state()['graph']))
 
 
-def edit(runtime,body):
+def edit_operation(runtime,body):
     seen=snapshot(runtime);comp=runtime.target();model=comp.op('parameter_links').module
     if not seen['enabled']:raise RuntimeError('Apply this Shader once before editing custom controls.')
     if body.get('revision')!=seen['revision']:raise RuntimeError('Conflict: refresh before editing controls.')
@@ -272,6 +309,7 @@ def edit(runtime,body):
         name=page_name(body.get('name'))
         if name in PROTECTED_PAGES or any(p.name==name for p in comp.customPages):raise RuntimeError('Use a unique user page name.')
         comp.appendCustomPage(name)
+        user_pages_first(comp)
     elif action.startswith('page-'):
         page=user_page(comp,body.get('page'))
         if action=='page-rename':
@@ -291,7 +329,7 @@ def edit(runtime,body):
                 before=body.get('before');names.remove(page.name)
                 if before is not None and before not in names:raise RuntimeError('Select a user page drop position.')
                 names.insert(names.index(before) if before else len(names),page.name)
-            it=iter(names);comp.sortCustomPages(*(next(it) if name in names else name for name in all_names))
+            comp.sortCustomPages(*(names+[name for name in all_names if name not in names]))
         else:raise RuntimeError('Unknown page operation.')
     elif action=='bind':
         page=user_page(comp,body.get('page'));native=runtime.source_module().snapshot(runtime)
@@ -356,8 +394,22 @@ def edit(runtime,body):
             names=[item.name for item in g.page.parGroups];i=names.index(g.name);j=i+(-1 if body.get('direction')==-1 else 1)
             if 0<=j<len(names):names[i],names[j]=names[j],names[i];g.page.sort(*names)
         elif action=='remove':
+            removable(comp,model,g)
             for ident in row['sources']:model.detach(comp,ident)
             g.destroy()
+        elif action=='range':
+            index=body.get('component');key=body.get('field');value=body.get('value')
+            if type(index)is not int or not 0<=index<len(g) or not g[index].isNumber:raise RuntimeError('Select a numeric component.')
+            if key not in ('normMin','normMax','min','max','clampMin','clampMax'):raise RuntimeError('Unknown range field.')
+            if key.startswith('clamp'):
+                if type(value)is not bool:raise RuntimeError('Choose whether to clamp this component.')
+            else:runtime.core().number(value)
+            proposed={k:getattr(g[index],k) for k in ('normMin','normMax','min','max','clampMin','clampMax')};proposed[key]=value
+            if proposed['normMin']>=proposed['normMax']:raise RuntimeError('Range minimum must be less than maximum.')
+            if proposed['clampMin'] and proposed['clampMax'] and proposed['min']>proposed['max']:raise RuntimeError('Clamp minimum must not exceed maximum.')
+            current=g[index].eval()
+            if (proposed['clampMin'] and current<proposed['min']) or (proposed['clampMax'] and current>proposed['max']):raise RuntimeError('This clamp would change the current source value. Adjust the value first.')
+            setattr(g[index],key,value)
         elif action=='default':
             index=body.get('component');value=body.get('value')
             if type(index)is not int or not 0<=index<len(g):raise RuntimeError('Select a control component.')
@@ -367,3 +419,120 @@ def edit(runtime,body):
         else:raise RuntimeError('Unknown custom-control operation.')
     model.sync(comp)
     return snapshot(runtime)
+
+
+def removable(comp,model,group):
+    if group.style not in ('Float','Int','RGBA','Toggle','Str','Menu','StrMenu','Pulse'):
+        raise RuntimeError('Remove this parameter style in TD so its complete definition can be preserved: '+group.style)
+    own={p for ident,link in comp.fetch(model.STORE,{}).items() if any(i['control'] in [c.name for c in group] for i in link['components']) for p in model.source_pars(comp,ident)}
+    if any(ref.valid and ref not in own for p in group for ref in p.bindReferences):
+        raise RuntimeError('This parameter has external Bind references. Disconnect them in TD before removing it.')
+
+
+def history_capture(runtime):
+    comp=runtime.target();model=comp.op('parameter_links').module
+    return {'pages':[p.name for p in comp.customPages],
+            'groups':{g.name:{'meta':metadata(g),'attrs':[{k:getattr(p,k) for k in CONTROL_ATTRS} for p in g]} for g in groups(comp) if editable_group(g)},
+            'links':copy.deepcopy(comp.fetch(model.STORE,{})),
+            'sources':[(d['id'],d['kind'],d['type']) for d in runtime.state()['graph']['declarations']]}
+
+
+def history_signature(data):
+    # Live values do not invalidate definition history. TD definition edits,
+    # Bind ownership and source type/identity changes do.
+    return token({'pages':data['pages'],'groups':{n:{'meta':g['meta'],'definitions':[{k:(v if isinstance(v,(str,int,float,bool,type(None))) else str(v)) for k,v in attrs.items() if k!='val'} for attrs in g['attrs']]} for n,g in data['groups'].items()},
+                  'links':{i:[{k:v for k,v in p.items() if k!='last'} for p in l['components']] for i,l in data['links'].items()},'sources':data['sources']})
+
+
+def history_entry(runtime):
+    comp=runtime.target();key=(comp.path,comp.id)
+    return _histories.setdefault(key,{'undo':[],'redo':[]})
+
+
+def history_status(runtime):
+    h=history_entry(runtime)
+    if not h['undo'] and not h['redo']:return {'undo':False,'redo':False}
+    signature=history_signature(history_capture(runtime))
+    available={kind:bool(h[kind]) and h[kind][-1]['expected']==signature for kind in ('undo','redo')}
+    return {**available,'expected':signature,'changed':not any(available.values())}
+
+
+def restore_definition(runtime,target):
+    comp=runtime.target();model=comp.op('parameter_links').module;current=history_capture(runtime)
+    before=current['groups'];after=target['groups']
+    removed=set(before)-set(after);added=set(after)-set(before)
+    for name in removed:removable(comp,model,getattr(comp.parGroup,name))
+    for name in set(before)&set(after):
+        if (before[name]['meta']['style'],before[name]['meta']['size'])!=(after[name]['meta']['style'],after[name]['meta']['size']):
+            raise RuntimeError('The parameter shape changed. Refresh before editing definitions.')
+        group=getattr(comp.parGroup,name)
+        for p,attrs in zip(group,after[name]['attrs']):
+            if p.isNumber and ((attrs['clampMin'] and p.eval()<attrs['min']) or (attrs['clampMax'] and p.eval()>attrs['max'])):
+                raise RuntimeError('Restoring this clamp would change the current source value. Adjust the value first.')
+    for name in added:
+        if getattr(comp.parGroup,name,None) is not None or comp.pars(name+'*'):raise RuntimeError('The parameter name is now in use: '+name)
+        if after[name]['meta']['style'] not in ('Float','Int','RGBA','Toggle','Str','Menu','StrMenu','Pulse'):raise RuntimeError('Restore this parameter style in TD: '+name)
+    changed_links={i for i in set(current['links'])|set(target['links']) if current['links'].get(i)!=target['links'].get(i)}
+    # Compare ownership separately from last-value recovery samples.
+    changed_links={i for i in changed_links if [(p['index'],p['control']) for p in current['links'].get(i,{}).get('components',[])]!=[(p['index'],p['control']) for p in target['links'].get(i,{}).get('components',[])]}
+    source_values={i:[p.eval() for p in model.source_pars(comp,i)] for i in changed_links}
+    for i in changed_links:model.detach(comp,i)
+    for name in removed:getattr(comp.parGroup,name).destroy()
+    user_names={g['meta']['page'] for g in after.values()}|{p for p in target['pages'] if p not in PROTECTED_PAGES and not any(x.name==p and not editable_page(x) for x in comp.customPages)}
+    for name in target['pages']:
+        if name in user_names and not any(p.name==name for p in comp.customPages):comp.appendCustomPage(name)
+    for name,saved in after.items():
+        meta=saved['meta'];group=getattr(comp.parGroup,name,None)
+        if name in added:
+            args={'size':meta['size']} if meta['style'] in ('Float','Int','RGBA') else {}
+            group=getattr(user_page(comp,meta['page']),'append'+meta['style'])(name,label=meta['label'],**args)
+            if meta['style'] in ('Menu','StrMenu'):
+                group[0].menuNames=meta['menuNames'];group[0].menuLabels=meta['menuLabels']
+        if group.page.name!=meta['page']:group.page=user_page(comp,meta['page'])
+        if group.label!=meta['label']:group.label=meta['label']
+        for index,(p,attrs) in enumerate(zip(group,saved['attrs'])):
+            for attr,value in attrs.items():
+                # Definition undo does not rewind live values or native drivers.
+                if name not in added and attr in ('val','expr','bindExpr','mode'):continue
+                if name in added or before[name]['attrs'][index][attr]!=value:setattr(p,attr,value)
+    for i in changed_links:
+        link=target['links'].get(i)
+        if not link:continue
+        controls=[getattr(comp.par,p['control']) for p in link['components']]
+        for p,item in zip(controls,link['components']):
+            if p.parGroup.name in added and str(p.mode).endswith('CONSTANT') and item['index']<len(source_values[i]):p.val=source_values[i][item['index']]
+        model.bind(comp,i,controls)
+    for page in list(comp.customPages):
+        if editable_page(page) and page.name not in target['pages'] and not page.parGroups:page.destroy()
+    for page in comp.customPages:
+        if editable_page(page):page.sort(*(n for n,g in sorted(after.items(),key=lambda pair:pair[1]['meta']['order']) if g['meta']['page']==page.name))
+    comp.sortCustomPages(*target['pages']);model.sync(comp)
+
+
+def edit(runtime,body):
+    action=body.get('action')
+    if action in ('value','pulse','color'):return edit_operation(runtime,body)
+    # Validate the request before starting a definition transaction.
+    seen=snapshot(runtime)
+    if body.get('revision')!=seen['revision']:raise RuntimeError('Conflict: refresh before editing controls.')
+    before=history_capture(runtime);h=history_entry(runtime)
+    if action in ('undo','redo'):
+        if body.get('expectedHistory')!=history_signature(before) or not h[action] or h[action][-1]['expected']!=history_signature(before):raise RuntimeError('Definitions changed in TD or another editor. This history cannot overwrite them.')
+        entry=h[action][-1]
+        try:restore_definition(runtime,entry['state'])
+        except Exception:
+            restore_definition(runtime,before);raise
+        h[action].pop();other='redo' if action=='undo' else 'undo'
+        h[other].append({'state':before,'expected':history_signature(history_capture(runtime))})
+        return snapshot(runtime)
+    try:result=edit_operation(runtime,body)
+    except Exception:
+        # Most rejections occur during preflight and require no mutation.
+        if history_signature(history_capture(runtime))!=history_signature(before):restore_definition(runtime,before)
+        raise
+    after=history_capture(runtime)
+    if history_signature(before)!=history_signature(after):
+        if h['undo'] and h['undo'][-1]['expected']!=history_signature(before):h['undo'].clear()
+        h['undo'].append({'state':before,'expected':history_signature(after)});del h['undo'][:-50];h['redo'].clear()
+    result['history']=history_status(runtime)
+    return result

@@ -33,8 +33,8 @@ try:
         with r.shader_context(shader):
             data=q.snapshot(r)
             q.edit(r,{'action':'page-create','name':'Later','expectedPages':data['expectedPages'],'revision':data['revision']})
-            assert [p.name for p in shader.customPages]==expected+['Later']
-        checks.append(kind+': new Uniforms stay internal; native page order and protected slots stay unchanged; sort preserves Par objects, expressions, defaults and shader data')
+            assert [p.name for p in shader.customPages]==['My Controls','Uniforms','Later']+names
+        checks.append(kind+': new Uniforms stay internal; normal Apply preserves native page order; new pages precede protected pages; sort preserves Par objects, expressions, defaults and shader data')
     after={s.path:{n:s.op(n).text for n in before[s.path]} for s in original.shaders()};assert after==before
     result={'passed':True,'checks':checks,'existingShadersPreserved':True}
 finally:root.destroy()

@@ -19,10 +19,16 @@ try:
         graph['declarations']=[{'id':'gain','kind':'uniform','name':'uGain','type':'float','value':.25,'expose':True}, {'id':'tint','kind':'uniform','name':'uTint','type':'vec4','value':[.1,.2,.3,.4]}]
         shader=r.create_shader(root,'Test_'+kind,graph,kind);native=r.shader_operator(shader)
         with r.shader_context(shader):
+            assert shader.fetch('sgrapePublicUniforms')['gain']['parameters']==['Ugain']
+            # Recreate an older UUID name and its generated expression for migration.
+            shader.parGroup.Ugain.name='U1234567890abcdef'
+            shader.store('sgrapePublicUniforms',{'gain':{'type':'float','parameters':['U1234567890abcdef']}})
+            native.par.vec0valuex.expr='parent().par.U1234567890abcdef'
             legacy_name=shader.fetch('sgrapePublicUniforms')['gain']['parameters'][0];legacy=getattr(shader.par,legacy_name);legacy.val=.62;legacy.default=.13;legacy.label='Existing label'
             data=q.snapshot(r);model=shader.op('parameter_links').module
             assert legacy.val==.62 and legacy.default==.13 and legacy.label=='Existing label'
             assert native.par.vec0valuex.bindMaster.isSamePar(legacy)
+            assert legacy.name=='Ugain' and shader.fetch('sgrapePublicUniforms')['gain']['parameters']==['Ugain']
             checks.append(kind+': old Expose adopts existing custom Par, label, current value and default')
             def action(action,**body):
                 data=q.snapshot(r)

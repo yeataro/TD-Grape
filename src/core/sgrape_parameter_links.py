@@ -46,16 +46,20 @@ def owned(par, item):
 
 
 def detach(comp, ident, current=True):
+    global _busy
     links = copy.deepcopy(comp.fetch(STORE, {})); link = links.pop(ident, None)
     if not link: return
     native = source_pars(comp, ident)
-    for item in link['components']:
-        if not native or item['index']>=len(native): continue
-        p = native[item['index']]
-        if owned(p, item):
-            value = p.eval() if current and p.bindMaster is not None else item['last']
-            p.mode = ParMode.CONSTANT; p.val = value
-    comp.store(STORE, links); _handles.pop(ident, None)
+    # Evaluate all masters before changing any component. Publish ownership
+    # first so callbacks cannot reconnect a master that is being removed.
+    values=[(native[item['index']],native[item['index']].eval() if current and native[item['index']].bindMaster is not None else item['last'])
+            for item in link['components'] if item['index']<len(native) and owned(native[item['index']],item)]
+    previous_busy=_busy;_busy=True
+    try:
+        comp.store(STORE, links); _handles.pop(ident, None)
+        for p,value in values:
+            p.bindExpr='';p.mode=ParMode.CONSTANT;p.val=value
+    finally:_busy=previous_busy
 
 
 def bind(comp, ident, controls):
@@ -99,7 +103,7 @@ def sync(comp, changed=None, previous=None):
                     value = item['last']
                     if changed is not None and changed.isSamePar(p) and finite(previous) and float(previous)!=value:
                         value = previous
-                    p.mode = ParMode.CONSTANT; p.val = value
+                    p.bindExpr = ''; p.mode = ParMode.CONSTANT; p.val = value
                     continue
                 _handles.setdefault(ident, {})[i] = control
                 value = p.eval()
