@@ -15,7 +15,7 @@ References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](ht
 | Material composition | Emission, constant contribution, ambient uses diffuse, point/instance color, front/back lighting | Available primitives do not yet constitute an equivalent preset |
 | Texture maps | Color/base color, diffuse, specular/specular level, metallic, roughness, AO, emission, alpha, darkness, rim | 2D bindings and sampling exist; independent map slots and complete presets pending |
 | Sampling settings | Extend U/V/W, nearest/linear/mipmap, anisotropy, chosen channel | Native binding settings need a deliberate exposed interface and preservation across Apply |
-| Coordinates | SOP UV layers, POP coordinate attributes, perspective/linear interpolation, screen-space and triplanar modes | Stage interfaces and attributes exist; mode equivalence requires further work |
+| Coordinates | SOP UV layers, POP coordinate attributes, perspective/linear interpolation, screen-space and triplanar modes | Texture Attribute provides the named SOP/POP accessor; Current Instance UV and stage transport pass 7 native comparisons. Complete preset wiring and other coordinate modes remain pending |
 | Normal mapping | Tangent attribute, deformed TBN, bump scale, back-face orientation | TDCreateTBNMatrix and deformation functions exist; complete connected graph and geometry checks pending |
 | Height mapping | Parallax, parallax occlusion, height channel, scale, vertex displacement and midpoint | Native exports inspected; graph implementation and numeric comparison pending |
 | Phong environment map | Reflection, rotation, supported map dimensions/projections | Sampling signatures alone do not supply every native resource-binding mode |

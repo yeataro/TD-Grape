@@ -232,6 +232,13 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind===d.key):createInputDeclaration(d.key,type||(d.key==='spec_constant'?'int':'float'),{...inputSeed,preview});
     if(!decl)throw Error('Uniform source is unavailable.');params.declarationId=decl.id;source=decl;
   }
+  if(d.key==='tex_attribute'){
+    const valid=x=>x.kind==='attribute'&&x.type==='vec3'&&(x.arraySize||1)===1&&!x.sourceMissing;
+    const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&valid(x)):
+      graph.declarations.find(x=>x.name==='Tex'&&valid(x))||createInputDeclaration('attribute','vec3',{name:'Tex',...inputSeed,preview});
+    if(!decl)throw Error('Texture Attribute requires a non-array vec3 Attribute.');
+    params.declarationId=decl.id;source=decl;
+  }
   if(d.key==='top_input'){const slots=preview?topInputsView():ensureTopInputs();const slot=declarationId?slots.find(s=>s.id===declarationId):slots.find(s=>s.id===selectedInputId)||slots[0];if(!slot)throw Error(t('inputs.chooseTop'));params.inputId=slot.id;source=slot;}
   if(d.key==='sampler'){
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='sampler'):createInputDeclaration('sampler','sampler2D',{...inputSeed,preview});

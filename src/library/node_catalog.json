@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.168",
+  "catalogVersion": "0.8.172",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -13967,6 +13967,104 @@
           "自動遍歷"
         ],
         "glslName": "TDEnvLightingPBR",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "tex_attribute",
+        "label": "Texture Attribute",
+        "inputs": {
+          "layer": "uint"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {
+          "declarationId": ""
+        },
+        "inputDefaults": {
+          "layer": 0
+        },
+        "descriptionKey": "help.tex_attribute",
+        "definitionUuid": "sgrape.builtin.tex_attribute",
+        "revisionHash": "708b33bd4ade710448901f0faea8fa455f9f0a4c34433da9458110d855df2675",
+        "targets": [
+          "mat"
+        ]
+      },
+      "emitter": {
+        "id": "tex_attribute",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "geometry"
+        ],
+        "source": "td",
+        "aliases": [
+          "TDTexAttrib",
+          "Tex",
+          "UV",
+          "POP",
+          "SOP",
+          "紋理屬性",
+          "貼圖座標"
+        ],
+        "glslName": "TDTexAttrib_Name(layer)",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_instance_texcoord_current",
+        "label": "TDInstanceTexCoord (Current)",
+        "inputs": {
+          "uv": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {},
+        "inputDefaults": {
+          "uv": [
+            0,
+            0,
+            0
+          ]
+        },
+        "descriptionKey": "help.td_instance_texcoord_current",
+        "definitionUuid": "sgrape.builtin.td_instance_texcoord_current",
+        "revisionHash": "d3d634d9267a91816ebb5c24e97b5d05b602522deee0fb298a092d353c806c17",
+        "targets": [
+          "mat"
+        ]
+      },
+      "emitter": {
+        "id": "td_instance_texcoord_current",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "geometry"
+        ],
+        "source": "td",
+        "aliases": [
+          "TDInstanceTexCoord",
+          "Current Instance",
+          "目前實例"
+        ],
+        "glslName": "TDInstanceTexCoord",
         "secondaryCategories": []
       }
     }

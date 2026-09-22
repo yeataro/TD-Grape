@@ -1,5 +1,9 @@
 # 開發狀態
 
+0.8.172 交付：520 Python、14 附加測試及完整 portable checks 通過，138 份既有圖指紋保持不變。38 份 TD 來源一致，兩份 Master revision 119，三份使用者 Shader 保留。熱更新中途曾出現節點表／舊 core 尚未同步的暫時載入訊息；更新完成後 live core 編譯新圖成功、errors 為空。TOE 已保存，SHA256 ad5b3f8a3b66366c32418cecc81d538810be6577e24c8369fee1f6e2e0c64951，私人助手排除。未發布或推送。
+
+2026-09-22 0.8.172 DEV：新增 Texture Attribute（TDTexAttrib_名稱(layer)）與 TDInstanceTexCoord (Current)，共 333 個節點入口。沿用共用 Attribute 宣告，預設 Tex、可選其他非陣列 vec3 屬性。SOP／POP／自訂名稱／CHOP 實例座標的 7 組原生像素對照完全相同；負向測試重現舊 TDTexCoord 在 POP 讀到全零。3 組瀏覽器流程與 3 組單元測試通過。保留既有圖與隱含 UV 行為，完整 Phong／PBR 預置尚未交付；預置必須接好這條新路徑。
+
 2026-09-22 0.8.171 DEV：依作者決定保留單一 Vertex Output 節點，在 gl_Position 與傳遞資料接孔之間加入細分隔線；收合顯示維持原狀。Camera Matrix 現有入口為 Built-in Source 的 uTDMats，經 Array Get、Structure Field（camInverse）、Matrix Get（column 3）取得攝影機世界位置；完整材質預置仍需提供接好的 view 路徑。
 
 2026-09-22 0.8.170 DEV：Vertex Output 的固定位置接孔顯示為 gl_Position，雙語說明區分裁切空間位置與傳給 Pixel 的資料。Vertex 邊界的待新增接孔改為半透明灰色，hover 時恢復清晰；既有新增機制保留。7 組瀏覽器檢查通過，包含移除最後接孔後仍保留新增入口、重新繪製不新增圖資料，以及雙向接孔／Undo／Redo／實際 UI 產圖編譯。作者確認深度、混合、剔除與骨骼變形設定留在原生參數頁；Picking 先評估，尚未授權實作。

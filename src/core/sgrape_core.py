@@ -107,7 +107,7 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','vertex_input','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','constant','top_input','glsl_code',
+    'deform','to_clip','vertex_out','vertex_input','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','tex_attribute','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
@@ -1068,10 +1068,12 @@ def _compile_flat(graph,annotation_scopes=None):
                 if type(params.get('requireConstant',False)) is not bool:
                     raise GraphError('Require Constant must be a boolean',ident)
                 declaration=None
-                if d['key'] in ('uniform','constant','spec_constant','pop_buffer','attribute','texture','sampler'):
+                if d['key'] in ('uniform','constant','spec_constant','pop_buffer','attribute','tex_attribute','texture','sampler'):
                     declaration=declarations.get('grapeTop_'+str(params['inputId'])) if managed and d['key']=='texture' and params.get('inputId') else declarations.get(params.get('declarationId'))
-                    expected=d['key'] if d['key'] in ('uniform','constant','spec_constant','pop_buffer','attribute') else 'sampler'
+                    expected='attribute' if d['key']=='tex_attribute' else d['key'] if d['key'] in ('uniform','constant','spec_constant','pop_buffer','attribute') else 'sampler'
                     if not declaration or declaration['kind']!=expected: raise GraphError('Select a matching declaration',ident)
+                    if d['key']=='tex_attribute' and (declaration['type']!='vec3' or declaration.get('arraySize',1)!=1):
+                        raise GraphError('Texture Attribute requires a non-array vec3 Attribute declaration',ident)
                 if d['key']=='top_input' and not any(slot['id']==params.get('inputId') for slot in slots):
                     raise GraphError('Select an existing TOP Input',ident)
                 if d['key']=='pixel_out' and graph_target(graph)=='top' and pixel_buffer_count(params)!=1:
@@ -1451,6 +1453,9 @@ def _compile_flat(graph,annotation_scopes=None):
                     expr='sTD2DInputs['+str(index)+']'
                     expressions[(ident,'size')]='uTD2DInfos['+str(index)+'].res.zw'
                     expressions[(ident,'pixelSize')]='uTD2DInfos['+str(index)+'].res.xy'
+                elif k=='tex_attribute':
+                    decl=declarations[p['declarationId']];used.add(decl['id'])
+                    expr='TDTexAttrib_'+decl['name']+'('+a('layer')+')'
                 elif k=='attribute':
                     decl=declarations[p['declarationId']];used.add(decl['id']);name=decl['name']
                     expr='TDAttrib_'+name+'('+a('arrayIndex')+')' if 'out' in needed_outputs[ident] else None

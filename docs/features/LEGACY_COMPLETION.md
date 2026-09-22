@@ -2,6 +2,14 @@
 
 This work extends the existing TD-Grape architecture for its final archival edition. It does not implement the next project's proposed node-definition architecture.
 
+## 0.8.172 texture attribute checkpoint
+
+`Texture Attribute` exposes `TDTexAttrib_Name(layer)` in MAT Vertex. Creating it reuses a compatible `Tex` declaration or creates a vec3 Attribute; Settings can select a different non-array vec3 declaration. The SOP layer input is not a POP array index. `TDInstanceTexCoord (Current)` applies the current instance's UV settings without manually supplying an instance index. These nodes compose with Vertex Outputs / Vertex Inputs; they do not silently replace UV in existing graphs.
+
+The built-in Phong/PBR presets must eventually include the declaration, named read, current-instance adjustment and stage transport. An empty graph need not add them automatically. The complete presets are still pending.
+
+Seven native image comparisons pass on TD 2025.32820: SOP and POP UV gradients, `Tex` and `AlternateUV`, and instance replacement from a CHOP. All tested interior pixels match an independently written native shader. A negative POP test confirms the old `TDTexCoord(0u)` path yields zero while the named read produces a gradient; the issue is the source accessor, not missing Vertex/Pixel declarations. Tests also check creation/Undo/Redo, declaration reuse and selection, stage filtering, actual UI graph compilation and invalid declaration rejection. This does not certify every geometry configuration or every UV layer.
+
 ## 0.8.164 checkpoint
 
 The catalog contains 293 definitions: the original 88 plus 204 function/material entries and one shared Vertex Inputs boundary. Existing definitions retain their identities and behavior.

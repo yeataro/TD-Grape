@@ -140,7 +140,7 @@ function nodeCategory(d){
   if(d.key==='comment')return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
   if(['constant','spec_constant','scalar','vector','matrix','array'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
-  if(d.key==='builtin_source'||['pop_buffer','attribute'].includes(d.key))return 'builtin';
+  if(d.key==='builtin_source'||['pop_buffer','attribute','tex_attribute'].includes(d.key))return 'builtin';
   if(d.key==='top_input'||d.inputKind==='top_input')return 'sampler';
   const sourceKind=inputSourceKind(d);if(sourceKind)return sourceKind;
   if(d.definitionUuid===FunctionModel.CALL)return 'functions';
@@ -1594,7 +1594,7 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     text.append(name);title.append(text);
     if(customNodeNamesEnabled()&&!isSourceReferenceNode(n)){name.onpointerdown=e=>e.stopPropagation();name.ondblclick=e=>{e.preventDefault();e.stopPropagation();beginNodeRename(n,name);};}
     const meta=el('div',{class:'node-title-meta'}),source=projection?.source||nodeSourceDeclaration(n),quick=source?null:nodePrimarySelector(n,d);
-    if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',pop_buffer:'POP Buffer',attribute:'Attribute',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=label+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
+    if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',pop_buffer:'POP Buffer',attribute:'Attribute',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=(d.key==='tex_attribute'?d.label:label)+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     else {
       const subtitles=[];
       if(d?.key!=='comment'&&customNodeNamesEnabled()&&n.name)subtitles.push(nodeTypeLabel(d,n.params));

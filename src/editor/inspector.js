@@ -1496,7 +1496,7 @@ function inspector(){
       const row=field(t('vector.requireConstant'),requirement);row.classList.add('constant-requirement');row.title=t('vector.constantHint');box.append(row,el('p',{class:'muted'},t('vector.constantHint')));
     }
     if('declarationId'in n.params){
-      const options=graph.declarations.filter(x=>x.kind===(['uniform','constant','spec_constant','pop_buffer','attribute'].includes(d.key)?d.key:'sampler')).map(x=>[x.id,x.name]);
+      const options=graph.declarations.filter(x=>d.key==='tex_attribute'?x.kind==='attribute'&&x.type==='vec3'&&(x.arraySize||1)===1:x.kind===(['uniform','constant','spec_constant','pop_buffer','attribute'].includes(d.key)?d.key:'sampler')).map(x=>[x.id,x.name]);
       box.append(field(t('node.declaration'),select([['',t('select.placeholder')],...options],n.params.declarationId,value=>change(()=>n.params.declarationId=value))));
       const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl)declarationFields(box,decl,true);
     }

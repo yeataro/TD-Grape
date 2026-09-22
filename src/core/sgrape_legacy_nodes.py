@@ -262,6 +262,9 @@ for key,spec in CALLS.items():
         spec['targets']=['mat'];spec['stages']=['pixel']
 
 
+td('td_instance_texcoord_current','TDInstanceTexCoord',[('uv','vec3')],'vec3',targets=('mat',),stages=('vertex',))
+CALLS['td_instance_texcoord_current']['label']='TDInstanceTexCoord (Current)'
+
 def interface(key, ty):
     return copy.deepcopy(CALLS[key]['variants'][ty])
 
