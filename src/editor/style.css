@@ -1963,8 +1963,8 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 /* Hit surfaces never inherit visible wire highlights or Glow. */
 #wires path.wire-hit{fill:none!important;stroke:transparent!important;stroke-width:var(--wire-hit-width,6px)!important;stroke-dasharray:none!important;filter:none!important;pointer-events:stroke}
 /* Link is presentation only: the same connection and the same hit width. */
-:root #wires path.wire-link{stroke:#8e8e96!important;stroke-width:1.25;stroke-dasharray:4 5;vector-effect:non-scaling-stroke;filter:none!important}
-:root #wires path.wire-link:is(:hover,.wire-hover){stroke:var(--wire-hover)!important;stroke-width:2}
+:root #wires path.wire-link{stroke:#8e8e9699!important;stroke-width:1;stroke-dasharray:4 5;vector-effect:non-scaling-stroke;filter:none!important}
+:root #wires path.wire-link:is(:hover,.wire-hover){stroke:color-mix(in srgb,var(--wire-hover) 65%,transparent)!important;stroke-width:1.5}
 :root #wires path.wire-link.selected{stroke:var(--wire-selected)!important;stroke-width:2}
 :root #wires path.wire-link:is(.invalid,.trash-pending){stroke:var(--danger,#ef8d8d)!important}
 .link-port-navigation{position:absolute;top:50%;transform:translateY(-50%);width:20px;height:22px;min-width:20px;padding:0;border:0;border-radius:4px;background:var(--node-body,var(--ui-tone-node));color:var(--muted);font-size:16px;line-height:1;pointer-events:auto;z-index:1}
@@ -1972,8 +1972,8 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .link-port-navigation:is(:hover,:focus-visible){color:var(--ui-tone-text);background:var(--node-value-bg)}
 
 /* Direction triangles share the line's hit behavior and visual state. */
-:root #wires .link-direction{fill:#8e8e96;stroke:none;cursor:pointer;pointer-events:all;filter:none!important}
-:root #wires .wire-link:is(:hover,.wire-hover)+.link-direction{fill:var(--wire-hover)}
+:root #wires .link-direction{fill:#8e8e9699;stroke:none;cursor:pointer;pointer-events:all;filter:none!important}
+:root #wires .wire-link:is(:hover,.wire-hover)+.link-direction{fill:color-mix(in srgb,var(--wire-hover) 65%,transparent)}
 :root #wires .wire-link.selected+.link-direction{fill:var(--wire-selected)}
 :root #wires .wire-link:is(.invalid,.trash-pending)+.link-direction{fill:var(--danger,#ef8d8d)}
 
