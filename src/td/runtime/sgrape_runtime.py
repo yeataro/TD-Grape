@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.166'
+PRODUCT_VERSION='0.8.167'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -364,9 +364,11 @@ def apply_op_color(shader):
     if info and info.text:
         try:data=json.loads(info.text)
         except (TypeError,ValueError):return
-        if isinstance(data,dict) and data.get('op_color')!=list(color):
-            data['op_color']=list(color)
-            info.text=json.dumps(data)
+        if isinstance(data,dict):
+            updated=dict(data,op_color=list(color))
+            if data.get('op_type')=='sgrape_'+shader_kind(shader):
+                updated['compatible_types']=[shader_kind(shader).upper()]
+            if updated!=data:info.text=json.dumps(updated)
 
 def arrange_manager_parameters(owner):
     """Group product controls without replacing parameters or their values."""
@@ -547,6 +549,13 @@ def prepare_masters():
     _owner.color=OP_COLORS['family']
     family=_owner.op('tdfam')
     if family:
+        compatible=getattr(family.par,'Compatibletypes',None)
+        if compatible is not None:
+            types=str(compatible.eval()).replace(',',' ').split()
+            for kind in ('TOP','MAT'):
+                if kind not in types:types.append(kind)
+            value=' '.join(types)
+            if compatible.eval()!=value:compatible.val=value
         for name,value in zip(('Colorr','Colorg','Colorb'),OP_COLORS['family']):
             parameter=getattr(family.par,name)
             if abs(parameter.eval()-value)>1e-6:parameter.val=value
@@ -563,7 +572,7 @@ def prepare_masters():
             raise RuntimeError('Grape '+kind.upper()+' template needs a graph upgrade review; its default graph was not updated.')
         manifest=master.op('FamManifest') or master.create(baseCOMP,'FamManifest')
         values={
-            'OpInfo':{'op_type':'sgrape_'+kind,'op_name':'Grape_'+kind.upper()+'1','op_label':'Grape '+kind.upper(),'op_version':PRODUCT_VERSION,'op_group':'Shaders','summary':'Visual GLSL '+kind.upper()+' editor. Open Editor edits this Shader.','op_color':list(OP_COLORS[kind]),'isFilter':kind=='top','compatible_types':['TOP'] if kind=='top' else [],'search_words':['shader','glsl','grape','sgrape',kind]},
+            'OpInfo':{'op_type':'sgrape_'+kind,'op_name':'Grape_'+kind.upper()+'1','op_label':'Grape '+kind.upper(),'op_version':PRODUCT_VERSION,'op_group':'Shaders','summary':'Visual GLSL '+kind.upper()+' editor. Open Editor edits this Shader.','op_color':list(OP_COLORS[kind]),'isFilter':kind=='top','compatible_types':[kind.upper()],'search_words':['shader','glsl','grape','sgrape',kind]},
             'ParRetain':{'.':['<Uniforms>','<Output>','<Textures>','<Inactive Textures>']},
             'StateRetain':{'.':{'storage':['sgrapeShaderId','sgrapeManagerId','sgrapeTarget'],'dats':['state','graph','manifest']}},
             'Shortcuts':{},
@@ -575,6 +584,13 @@ def prepare_masters():
     _owner.par.Version=PRODUCT_VERSION
     arrange_manager_parameters(_owner)
     return folder
+
+def ensure_mat_output(comp):
+    """Expose the material natively without replacing an author's existing output."""
+    if any(n.family=='MAT' and n.type=='out' for n in comp.children):return
+    output=comp.create(outMAT,'out1');output.inputConnectors[0].connect(comp.op('material'))
+    output.nodeX=comp.op('material').nodeX+220;output.nodeY=comp.op('material').nodeY
+
 
 def make_scene(parent,name,kind='mat'):
     comp=parent.create(baseCOMP,name)
@@ -591,6 +607,7 @@ def make_scene(parent,name,kind='mat'):
     info.name='compile_info';info.par.op='material'
     comp.create(textDAT,'graph'); comp.create(textDAT,'manifest')
     for i,o in enumerate(comp.children): o.nodeX=(i%4)*190; o.nodeY=-(i//4)*150
+    ensure_mat_output(comp)
     return comp
 
 def make_top_scene(comp):
@@ -1201,6 +1218,7 @@ def update_shaders():
 def configure(comp,compiled,graph,preserve=None,input_owner=None):
     kind=shader_kind(comp)
     if core().graph_target(graph)!=kind: raise RuntimeError('Shader target does not match this component')
+    if kind=='mat':ensure_mat_output(comp)
     public=public_uniforms(comp,graph,preserve)
     textures=prepare_textures(comp,graph,input_owner,compiled)
     mat=shader_operator(comp)

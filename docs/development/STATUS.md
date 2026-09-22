@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-22 0.8.167 DEV：修正 Grape MAT 缺少原生 Out MAT，保留作者已新增的出口與接線。TDFam 家族宣告 TOP／MAT 相容，個別元件限制為本身種類。原生出口建立、接到 Null MAT 與作者出口保留測試通過。完整 Phong MAT Graph／PBR MAT Graph 仍在製作；最新驗收範圍是原生 MAT 全部能力，差異與未完成項目見 [MAT 原生對照](../features/MAT_NATIVE_PARITY.md)。
+
 2026-09-22 0.8.166 DEV：新增 35 個入口（共 328），包含逐分量 mix、純量 edge step、布林與整數位元操作、貼圖 offset 與投影 LOD／Grad。新函式累計 1,753 組原生簽名通過；55 個內建來源有個別雙語說明與官方連結。修正 Vertex 接孔型別比對誤讀 live graph 而非指定快照；兩次新增與 UI 實際產圖編譯回歸通過。Phong／PBR 實際像素验证涵蓋零／一／兩盞一般燈。使用者補充交付目標：完成 MAT 後提供對照原生 Phong MAT／PBR MAT 基本功能的節點圖及可重現場景；尚在進行，不能將原生簽名通過視為完整等價。
 
 2026-09-22 0.8.165 DEV：修正自動建立 Vertex Inputs 時將含空格的顯示文字寫入節點名稱，導致 Apply 被拒絕。改用既有 uniqueNodeName 產生合法且不重複的名稱；已建立的草稿可將該節點名稱改成 VertexInputs，保留接線。瀏覽器回歸新增直接編譯 UI 實際產生的圖，同一份圖亦成功在 TD Apply／編譯；Phong／PBR 與跨階段複合值原生回歸通過。

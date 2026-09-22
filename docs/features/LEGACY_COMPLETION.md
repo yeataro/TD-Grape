@@ -45,7 +45,7 @@ Vertex interface type checks now use their supplied graph snapshot, so previous/
 
 Both integrated materials were rendered with zero, one and two regular lights. Pixels are finite, no lights give black, and red/green lights contribute independently. This does not yet establish full equivalence with the native Phong/PBR MAT.
 
-The author additionally requested ready-to-test graphs and scenes corresponding to the basic native Phong MAT and PBR MAT capabilities. That is the next deliverable; isolated signature tests alone do not satisfy it.
+The author clarified that “basic capability” means all native Phong MAT and PBR MAT capabilities. Deliver complete editable graphs and reproducible scenes, with TDFam presets named Phong MAT Graph and PBR MAT Graph. Isolated signature tests and the two current integrated lighting nodes alone do not satisfy this. The [native MAT parity ledger](MAT_NATIVE_PARITY.md) records the required coverage, established differences and pending responsibility decisions.
 
 - Audit remaining GLSL overload/operation forms against the available resource types.
 - Finish selected-source and function Help descriptions and chapter coverage.
