@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-23 0.8.178：一般與最小化來源卡片上下外距統一為 8px；Body 留白、分量與色彩按鈕間距統一 6px，色彩按鈕與數值區對齊。Uniform 移除獨立高亮底色／文字色，恢復共用滑桿，保留 Binding 狀態色與主來源標记。12 組既有來源／色彩瀏覽器檢查通過；兩種顯示模式實測水平／垂直間距均為 6px、色彩區左右對齊、Uniform 與 Constant 底色及填色相同。四份 Master 身分／人工內容／位置、兩份使用者 Shader 保留。TOE 已保存（1311736 bytes；SHA256 1a23db144030a927fd887cd34c512c16697ba894303a3e42b67aaab6cef3788c），未推送。
+
 2026-09-23 0.8.177：Sources 第二批完成，分類上下移動保存為瀏覽器偏好；Graph Constants 卡片直接編輯純量／向量／矩陣、布林與整數，沿用圖編輯與 Undo。最小化依作者新決定縮減標題上下留白及圓角，保持文字大小，隱藏 Output 文字／接孔；數值控制保留，其他卡片折疊，恢復普通模式時回復原折疊狀態。顯示備註可獨立切換，警告仍顯示。詳見 [Sources 面板](../ui/SOURCES_PANEL.md)。
 
 22 組相關瀏覽器檢查通過，包含常數連續分量編輯／Undo／Redo／草稿、過期控制與 readonly、窄面板、最小化切換、分類排序與重新載入。完整 portable checks 通過：526 Python、14 integration、1038 雙語鍵及既有 JS suites。39 份來源同步成功，四份 Master 保留人工內容／OP 身分／位置，兩份使用者 Shader 保留；Phong Master 此時 revision 83，沒有用預置 JSON 覆寫人工圖。TOE 保存（1312144 bytes；SHA256 259fd501ee3616b674eb6fd13ed27d4d9eb10cb3e5952ef8d8a87cf08c436aaa），私人助手排除。未推送。

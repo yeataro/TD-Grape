@@ -986,7 +986,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .input-group{margin:4px 0 10px}.input-group-title{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:34px;font-size:12px;font-weight:400;color:inherit}
 .input-group-toggle{display:flex;align-items:center;gap:5px;flex:1;min-width:0;border:0;background:transparent;text-align:left;padding:5px 2px;color:inherit}.input-group-toggle:hover{background:transparent;color:#e5e0ed}.input-group-empty{padding-left:14px;flex:1}.input-group-arrow{display:inline-block;width:8px;flex:none;transform:rotate(90deg);font-size:15px;line-height:1}.input-group-toggle[aria-expanded=false] .input-group-arrow{transform:none}
 .input-group-add{flex:none;width:24px;height:28px;padding:0;border:0;background:transparent;color:#c3bbd4;font-size:16px}
-.input-source-row{display:flex;gap:0;min-width:0;margin:3px 0;border-radius:var(--node-radius);overflow:hidden;background:var(--category-bg);color:var(--category-fg);box-shadow:0 2px 6px #0003}
+.input-source-row{display:flex;gap:0;min-width:0;margin:8px 0;border-radius:var(--node-radius);overflow:hidden;background:var(--category-bg);color:var(--category-fg);box-shadow:0 2px 6px #0003}
 .input-source-row:has(:focus-visible){outline:1px solid var(--category-fg);outline-offset:-1px}
 .input-source-row:has(.input-source-select[aria-pressed=true]){outline:2px solid var(--selection);outline-offset:-1px}
 .input-source-select{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0;min-height:34px;text-align:left;padding:6px 8px;border:0;border-radius:0;background:transparent;font-size:12px}
@@ -1888,16 +1888,10 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root :is(#cards,#inspector,#uniformsbody) [data-native-component-slot][data-mode="BIND"] [data-source-component]{color:var(--uniform-slider-accent,var(--purple))}
 [data-native-component-slot][data-bind-master="true"]>.field{position:relative}
 [data-native-component-slot][data-bind-master="true"]>.field::after{content:"";position:absolute;left:3px;bottom:3px;width:5px;height:5px;background:var(--uniform-slider-accent,var(--purple));clip-path:polygon(0 0,0 100%,100% 100%);pointer-events:none}
-/* Uniform controls keep the base theme palette while the surrounding UI tone changes.
-   These local colors intentionally do not reference the adjusted root tokens. */
-[data-native-kind="uniform"]{--uniform-slider-field:#393843;--uniform-slider-text:#e5dff0;--uniform-slider-border:#30303b;--uniform-slider-fill:#526165;--uniform-slider-accent:#b39cfb;--uniform-slider-muted:#9390a5}
-:root[data-ui-theme="light"] [data-native-kind="uniform"]{--uniform-slider-field:#fafbfc;--uniform-slider-text:#303640;--uniform-slider-border:#c2c8d1;--uniform-slider-fill:color-mix(in srgb,#cddfe0 70%,transparent);--uniform-slider-accent:#694b91;--uniform-slider-muted:#626b78}
-:root .components[data-native-kind="uniform"] input.numeric-slider{
- --purple:var(--uniform-slider-accent);
- background-color:var(--uniform-slider-field);color:var(--uniform-slider-text);border-color:var(--uniform-slider-border);
- background-image:linear-gradient(to right,var(--uniform-slider-fill) 0 var(--numeric-fill,0%),transparent var(--numeric-fill,0%) 100%);
-}
-:root [data-native-kind="uniform"] .component-label{color:var(--uniform-slider-muted)}
+/* Ordinary Uniform values use the shared slider theme; only binding state
+   keeps its separate accent and corner marker. */
+[data-native-kind="uniform"]{--uniform-slider-accent:#b39cfb}
+:root[data-ui-theme="light"] [data-native-kind="uniform"]{--uniform-slider-accent:#694b91}
 .confirmation-dialog{width:min(460px,calc(100 * var(--ui-vw) - 24px));padding:20px}
 .confirmation-dialog>p{line-height:1.7;overflow-wrap:anywhere}
 .confirmation-dialog>.confirmation-actions{justify-content:flex-end;gap:10px;padding:12px 0 0}
@@ -1947,13 +1941,21 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #nativeuniforms[data-minimal=true] .input-group-title{min-height:22px;gap:3px}
 #nativeuniforms[data-minimal=true] .input-group-toggle{padding-block:1px}
 #nativeuniforms[data-minimal=true] .input-group-add{height:22px}
-#nativeuniforms[data-minimal=true] .input-source-row{margin-block:2px;border-radius:4px;box-shadow:none}
+#nativeuniforms[data-minimal=true] .input-source-row{margin-block:8px;border-radius:4px;box-shadow:none}
 #nativeuniforms[data-minimal=true] :is(.input-source-select,.input-reference){min-height:22px;padding-block:1px}
 #nativeuniforms[data-minimal=true] :is(.source-card-outputs,.source-card-toggle){display:none}
-#nativeuniforms[data-minimal=true] .source-card-body{padding:4px}
-#nativeuniforms[data-minimal=true] .source-card-note{margin:4px -4px -4px;padding:4px}
+#nativeuniforms .source-card-body{--source-control-gap:6px;padding:var(--source-control-gap)}
+#nativeuniforms .source-card-body .components{gap:var(--source-control-gap)}
+#nativeuniforms .source-card-outputs{margin:0 calc(-1 * var(--source-control-gap)) var(--source-control-gap)}
+#nativeuniforms .source-card-note{margin:var(--source-control-gap) calc(-1 * var(--source-control-gap)) calc(-1 * var(--source-control-gap));padding:var(--source-control-gap)}
+#nativeuniforms .native-color-controls{display:grid;grid-template-columns:14px minmax(0,1fr);gap:var(--source-control-gap);align-items:start}
+#nativeuniforms .native-color-line{display:contents}
+#nativeuniforms .native-color-line>.node-values-toggle{min-height:32px}
+#nativeuniforms .native-color-expanded{margin-top:0}
+#nativeuniforms .native-color-controls>.color-swatch{grid-column:2;margin:0}
 #nativeuniforms[data-minimal=true] .input-source-status{padding:3px 4px}
 @media(pointer:coarse){#nativeuniforms[data-minimal=true] :is(.input-group-title,.input-group-toggle,.input-source-select,.input-reference,.source-card-menu-button){min-height:32px}}
+@media(pointer:coarse){#nativeuniforms .native-color-controls{grid-template-columns:20px minmax(0,1fr)}}
 #editoractionsmenu{position:fixed;inset:auto;margin:0;min-width:min(220px,calc(100 * var(--ui-vw) - 16px));max-width:calc(100 * var(--ui-vw) - 16px);overflow:auto}
 #editoractionsmenu button{display:block;width:100%;text-align:left;white-space:normal}
 #editormenu svg circle{fill:currentColor;stroke:none}
