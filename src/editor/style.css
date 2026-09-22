@@ -1241,7 +1241,6 @@ footer .footer-preferences svg[hidden]{display:none}
 .graph-workspace .toolbar #graphup:disabled{display:none}
 .graph-workspace .toolbar #functionscope{display:none}
 .graph-workspace .graph-tools{flex:none;flex-wrap:nowrap;max-width:100%;margin-left:auto;justify-content:flex-end}
-.graph-workspace .toolbar :is(#customnames,#showlinklines)[aria-pressed="true"]{color:var(--purple);border-color:var(--purple)}
 .canvas-view-tools{position:absolute;right:12px;bottom:12px;z-index:6;display:flex;align-items:center;gap:9px;pointer-events:none;color:var(--muted);font-size:11px}
 .canvas-view-tools #zoom{position:static;font-size:11px;letter-spacing:.2px;text-shadow:0 1px 2px var(--canvas-bg,var(--ui-tone-canvas))}
 .canvas-view-tools #fit{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,var(--ui-tone-chrome));color:inherit;border-color:var(--line)}
@@ -1640,8 +1639,10 @@ body.graph-focused>:is(#editorheader,.location-bar,footer){display:none!importan
 body.graph-focused>main{display:flex;width:100%;min-width:0;min-height:0}
 body.graph-focused>main>:not(.graph-workspace){display:none!important}
 body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;min-height:0}
-.canvas-view-tools #graphfocus{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,var(--ui-tone-chrome));color:inherit;border-color:var(--line);white-space:nowrap}
-.canvas-view-tools #graphfocus[aria-pressed="true"]{color:var(--purple)}
+/* View toggles share Restore layout's quiet surface; only text marks the active state. */
+.canvas-view-tools #graphfocus{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;white-space:nowrap}
+:root :is(.canvas-view-tools #graphfocus,.graph-workspace .toolbar :is(#customnames,#showlinklines)){background:var(--ui-chrome,var(--ui-tone-chrome));color:var(--muted);border-color:var(--line);box-shadow:none}
+:root :is(.canvas-view-tools #graphfocus,.graph-workspace .toolbar :is(#customnames,#showlinklines))[aria-pressed="true"]{color:var(--purple)}
 @media(pointer:coarse){.canvas-view-tools #graphfocus{min-height:36px;padding-inline:10px}}
 
 #uisystemclock{flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-inline:3px}
