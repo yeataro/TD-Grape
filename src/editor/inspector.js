@@ -439,6 +439,10 @@ function pixelBufferFields(box,n){
   const entry=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));
   entry.dataset.pixelBufferCount=n.id;entry.disabled=readonly;
   entry.title=t('pixel.buffersHint');box.append(parameterControlRow(t('pixel.bufferCount'),entry));
+  if(typeContract.pixelBufferOutputs.nativeFinishing){
+    const row=toggle(t('pixel.nativeFinishing'),!!n.params.nativeFinishing,value=>change(()=>{n.params.nativeFinishing=value;}));
+    row.title=t('pixel.nativeFinishingHint');row.querySelector('input').dataset.nativeFinishing=n.id;box.append(row);
+  }
 }
 
 function pixelBufferNames(box,n){

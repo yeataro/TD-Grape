@@ -2,6 +2,8 @@
 
 目前狀態以 [STATUS.md](development/STATUS.md) 為準。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
 
+- [基本 Phong／PBR 預置圖](features/BASIC_MATERIAL_PRESETS.md)：TDFam 新增入口、Group、Color 來源、範本與副本的編輯位置、驗證及未完成範圍。
+
 - [待辦總整理（2026-09-21）](discussions/TODO_AUDIT_2026-09-21.md)：目前待辦、候選、已完成與已被取代的舊筆記；開始後續工作前先核對此表。
 - [Alpha 能力範圍](discussions/ALPHA_SCOPE_2026-09-21.md)：最新需求收集中；GLSL／TD 節點、MAT／來源、命名及自訂參數，待使用者補充完再排修改順序。
 - [TD 函式節點缺口](discussions/TD_FUNCTION_NODE_GAPS.md)：0.8.163 與 TOP／MAT 公開函式逐項對照，附 CSV；已有入口、自動產碼、缺口及宿主邊界分開記錄。

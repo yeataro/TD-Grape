@@ -18,6 +18,8 @@
     "Graph"
   ],
   "messages": {
+    "pixel.nativeFinishing": {"en": "Native MAT finishing", "zh-Hant": "原生 MAT 最後處理"},
+    "pixel.nativeFinishingHint": {"en": "Primary color: dither, alpha test, host color-space conversion, then output swizzle. Do not also connect TDConvertColorSpace before this output. Off preserves the existing output behavior.", "zh-Hant": "主色彩依序執行抖色、Alpha Test、宿主色彩轉換與輸出 Swizzle。啟用時，不要在此輸出前再接 TDConvertColorSpace。關閉則保留原有輸出行為。"},
     "sources.popBuffers": {"zh-Hant":"POP Buffers","en":"POP Buffers"},
     "buffer.popPath": {"zh-Hant":"POP 路徑","en":"POP path"},
     "buffer.attributeClass": {"zh-Hant":"Attribute 類別","en":"Attribute class"},

@@ -1,6 +1,6 @@
 # Native MAT parity: completion contract
 
-The archival TD-Grape extension must reproduce the capabilities of native Phong MAT and PBR MAT as editable graphs. The author clarified that “basic capability” means the native materials' complete capabilities, not only their lighting equations. The TDFam entries will be **Phong MAT Graph** and **PBR MAT Graph**. They are not complete yet.
+The archival TD-Grape extension must reproduce the capabilities of native Phong MAT and PBR MAT as editable graphs. The author clarified that “basic capability” means the native materials' complete capabilities, not only their lighting equations. Version 0.8.175 provides initial **Phong MAT Graph** and **PBR MAT Graph** TDFam entries; full native parity remains incomplete. See [basic presets](BASIC_MATERIAL_PRESETS.md) for the delivered subset, Group organization, editing instructions and tests.
 
 2026-09-23 clarification: visual/result equivalence is the overall acceptance criterion. The concrete incremental acceptance units are the functions, data access and operations actually used by native exported GLSL. TD conditionally generates code from material parameters, so a default export is insufficient. Audit enabled features and mutually exclusive alternatives. Reproducing TD's parameter-driven specialization machinery or identical source text is not required. Common and Deform parameter pages remain outside this graph-completion scope; existing graph calls must still honor their native settings.
 
@@ -16,8 +16,8 @@ References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](ht
 
 | Area | Required behavior | Current evidence / remaining work |
 |---|---|---|
-| Phong lighting | Every scene light, diffuse, primary and secondary specular, independent shininess | New Phong Lights preserves all three sums; 9 native pixel comparisons pass; full material composition pending |
-| PBR lighting | Direct and environment lights, base color, specular level, metallic, roughness, AO, environment quality | New PBR Lights and PBR Environment Lights provide independent sums; 10 native pixel comparisons pass; full material composition pending |
+| Phong lighting | Every scene light, diffuse, primary and secondary specular, independent shininess | Basic editable composition delivered in 0.8.175; earlier 9 contribution checks plus new whole-material comparisons pass; advanced branches pending |
+| PBR lighting | Direct and environment lights, base color, specular level, metallic, roughness, AO, environment quality | Basic editable composition delivered in 0.8.175; earlier 10 contribution checks plus new whole-material comparisons pass; advanced branches pending |
 | Material composition | Emission, constant contribution, ambient uses diffuse, point/instance color, front/back lighting | Available primitives do not yet constitute an equivalent preset |
 | Texture maps | Color/base color, diffuse, specular/specular level, metallic, roughness, AO, emission, alpha, darkness, rim | 2D bindings and sampling exist; independent map slots and complete presets pending |
 | Sampling settings | Extend U/V/W, nearest/linear/mipmap, anisotropy, chosen channel | Native binding settings need a deliberate exposed interface and preservation across Apply |
@@ -30,12 +30,12 @@ References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](ht
 | Rim | Multiple rim contributions, color/map, center/width/strength and ramp | Native formula inspected; repeatable graph composition pending |
 | Darkness emission | Color/map and lightness-dependent blend, correct placement after fog | Native export inspected; composition pending |
 | Outputs | Full shading and native auxiliary values, multiple color buffers, camera-depth alpha | Multiple graph buffers exist; output selection mapping and parity pending |
-| Finishing | Fog, dithering, alpha test, output color-space conversion and swizzle | 0.8.173 adds explicit TDConvertColorSpace; native finishing order still needs integration because existing Pixel Output applies dithering after its input. Window/viewer comparison remains pending |
+| Finishing | Fog, dithering, alpha test, output color-space conversion and swizzle | 0.8.175 presets wire fog and enable opt-in native finishing order on Pixel Output; old graphs retain their existing order. Window/viewer comparison remains pending |
 | Deformation | Bone/capture data, instance transform, vertex displacement, matching normals and world position | Author confirmed bone deformation settings remain on native parameter pages; graph deformation calls must still use those settings correctly |
 | Common | Blend factors/operations, alpha behavior, depth, culling, wireframe, polygon offset, parameter color space | Author confirmed depth, blending and culling remain on native parameter pages; preserve these settings across Apply |
 | Host utilities | Substance map assignment, Output Shader action | Authoring shortcuts are not extra GLSL capabilities. The required target is their resulting material behavior, not a clone of the native authoring interface |
 | Picking | Native exports include TD_PICKING_ACTIVE / TDWritePickingValues | Earlier exclusion remains in force. Author requested feasibility assessment; this is not yet authorization to implement. Default picking and graph-displaced positions/normals require separate checks |
-| Delivery | TDFam presets, native MAT outlet, preserved user connections, editable graph, reproducible scene | Outlet fix tested; two final presets and scene not delivered yet |
+| Delivery | TDFam presets, native MAT outlet, preserved user connections, editable graph, reproducible scene | Two initial presets delivered in 0.8.175 under MAT, grouped by calculation purpose; actual placement/outlet checks pass. Reproducible native-comparison fixture is in tests; full presets and a user-facing example scene remain pending |
 
 Sampler binding findings: custom declarations currently accept only `sampler2D`; Cube/3D call signatures do not imply binding support. TD reports an incompatible bound TOP as a warning while still linking, and the render is black. In 0.8.169, Apply treats that specific warning as a resource-type failure and preserves the last working shader (`tests/td/test_mat_sampler_mismatch.py`). Other native warnings remain non-fatal. Live changes outside Apply and additional sampler dimensions still need coverage; this fix alone does not complete texture support.
 

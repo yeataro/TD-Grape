@@ -580,6 +580,7 @@ def definition_ports(definition, params):
             return {'inputs':{**definition['inputs'],'factor':'double'},'outputs':definition['outputs']}
     if definition['key']=='glsl_code':return glsl_code_interface(params)
     if definition['key']=='pixel_out':
+        if not isinstance(params.get('nativeFinishing',False),bool):raise GraphError('Native MAT finishing must be a boolean')
         return {'inputs':dict.fromkeys(PIXEL_BUFFER_PORTS[:pixel_buffer_count(params)],'vec4'),'outputs':{}}
     return {kind:definition[kind] for kind in ('inputs','outputs')}
 
@@ -685,7 +686,7 @@ def _type_contract():
                          'outputTypesByNode':{key:list(types) for key,types in CONVERT_OUTPUT_TYPES.items()}},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'specializationExpressions':sorted(SPECIALIZATION_EXPRESSIONS-{'relay'}),
-              'pixelBufferOutputs': {'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
+              'pixelBufferOutputs': {'nativeFinishing':True,'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
               'conversions': [{'from': a, 'to': b, 'kind': kind} for (a,b),kind in CONVERSIONS.items()],
               'definitions': variants,'composites':type_registry().contract(),'sources':_source_catalog.contract()}
     result['hash'] = digest(result)
@@ -1076,6 +1077,8 @@ def _compile_flat(graph,annotation_scopes=None):
                         raise GraphError('Texture Attribute requires a non-array vec3 Attribute declaration',ident)
                 if d['key']=='top_input' and not any(slot['id']==params.get('inputId') for slot in slots):
                     raise GraphError('Select an existing TOP Input',ident)
+                if d['key']=='pixel_out' and graph_target(graph)=='top' and params.get('nativeFinishing',False):
+                    raise GraphError('Native MAT finishing requires a MAT graph',ident)
                 if d['key']=='pixel_out' and graph_target(graph)=='top' and pixel_buffer_count(params)!=1:
                     raise GraphError('Multiple color buffers are currently supported for MAT only',ident)
                 try:
@@ -1522,11 +1525,15 @@ def _compile_flat(graph,annotation_scopes=None):
                         lines.extend(['    for (int sg_buffer = 0; sg_buffer < TD_NUM_COLOR_BUFFERS; ++sg_buffer) {',
                                       '        fragColor[sg_buffer] = TDOutputSwizzle(vec4(0.0, 0.0, 0.0, 0.0));',
                                       '    }',
-                                      '    vec4 sg_color = '+a('color')+';', '    TDAlphaTest(sg_color.a);'])
+                                      '    vec4 sg_color = '+a('color')+';'])
+                        if not p.get('nativeFinishing',False):lines.append('    TDAlphaTest(sg_color.a);')
                         # Keep primary color dithering; an empty slot must remain exactly zero.
                         saved=nodes[ident].get('inputValues',{})
                         if (ident,'color') in links or any(saved.get('color',[])):
-                            lines.append('    fragColor[0] = TDOutputSwizzle(TDDither(sg_color));')
+                            if p.get('nativeFinishing',False):
+                                lines.extend(['    sg_color = TDDither(sg_color);','    TDAlphaTest(sg_color.a);','    fragColor[0] = TDOutputSwizzle(TDConvertColorSpace(sg_color));'])
+                            else:lines.append('    fragColor[0] = TDOutputSwizzle(TDDither(sg_color));')
+                        elif p.get('nativeFinishing',False):lines.append('    TDAlphaTest(sg_color.a);')
                         for index,port in enumerate(PIXEL_BUFFER_PORTS[1:pixel_buffer_count(p)],1):
                             lines.extend(['#if TD_NUM_COLOR_BUFFERS > '+str(index),
                                           '    fragColor['+str(index)+'] = TDOutputSwizzle('+a(port)+');',
@@ -1577,6 +1584,8 @@ def _compile_flat(graph,annotation_scopes=None):
     for stage in graph_stages(graph):
         includes=sorted({name for n in graph['stages'][stage]['nodes'] if n['id'] in stages[stage]['live']
                          for name in _legacy_nodes.CALLS.get(BY_UUID[n['definitionUuid']]['key'],{}).get('includes',[])})
+        if graph_target(graph)=='mat' and stage=='pixel' and any(BY_UUID[n['definitionUuid']]['key']=='pixel_out' and n.get('params',{}).get('nativeFinishing',False) for n in graph['stages'][stage]['nodes'] if n['id'] in stages[stage]['live']):
+            includes=sorted(set(includes)|{'TDColorSpace'})
         type_headers[stage]=['#include <'+name+'>' for name in includes]+type_headers[stage]
     if graph_target(graph)=='top':
         samplers=[declarations[i] for i in binding_ids if declarations[i]['kind']=='sampler']

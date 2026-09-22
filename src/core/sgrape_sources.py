@@ -818,7 +818,7 @@ def configure(runtime, comp, graph, public, preserve=None, input_owner=None, use
             value = preserve[ident]; values = [value] if source_components(decl) == 1 else list(value)
         for j, suffix in enumerate(CHANNELS[sequence]):
             p = parameter(operator, sequence, index, suffix)
-            p.val = (source['components'][j]['value'] if source and source['components'][j]['value'] is not None else values[j] if j < len(values) else 0)
+            p.val = (source['components'][j]['value'] if source and source['components'][j]['value'] is not None else values[j] if j < len(values) else 1 if sequence=='color' and suffix=='alpha' else 0)
             if ident in public and j < len(public[ident]['parameters']) and not input_owner:
                 p.expr = 'parent().par.' + public[ident]['parameters'][j]
             elif not source and not input_owner and j == 0 and decl.get('initialDriver') in PRESETS:

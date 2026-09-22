@@ -9,10 +9,10 @@ import uuid
 owners=[n for n in op('/').findChildren() if n.storage.get('sgrapeManager',False)]
 assert len(owners)==1, 'Expected one TD-Grape manager'
 owner=owners[0];runtime=owner.op('runtime').module
-masters={kind:runtime.master_template(kind) for kind in ('mat','top')}
+masters={key:runtime.master_template(key) for key in ('mat','top','phong','pbr') if runtime.master_template(key) is not None}
 for kind,master in masters.items():
     assert master and master.parent()==owner.op('masters')
-    assert master.storage.get('sgrapeMaster',False) and runtime.shader_kind(master)==kind
+    assert master.storage.get('sgrapeMaster',False) and runtime.shader_kind(master)==(kind if kind in ('mat','top') else 'mat')
     with runtime.shader_context(master):
         review=runtime.upgrade_review()
         assert not review['blocked'], runtime.upgrade_summary(review)

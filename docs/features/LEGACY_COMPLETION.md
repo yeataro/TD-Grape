@@ -2,6 +2,10 @@
 
 This work extends the existing TD-Grape architecture for its final archival edition. It does not implement the next project's proposed node-definition architecture.
 
+## 0.8.175 basic preset checkpoint
+
+TDFam now offers **Phong MAT Graph** and **PBR MAT Graph** under **MAT**, alongside Grape MAT; Grape TOP is under **TOP**. The initial graphs are editable ordinary nodes, grouped by calculation purpose with single membership. They include explicit named Tex / instance UV transport, camera view, corrected native lighting composition and opt-in native output finishing. Color uniforms use Color sources and matching RGBA controls. See [basic presets](BASIC_MATERIAL_PRESETS.md) for template editing, the 13 native-render comparisons and limitations. This delivers a reviewable basic version, not the complete [native parity scope](MAT_NATIVE_PARITY.md).
+
 ## 0.8.172 texture attribute checkpoint
 
 `Texture Attribute` exposes `TDTexAttrib_Name(layer)` in MAT Vertex. Creating it reuses a compatible `Tex` declaration or creates a vec3 Attribute; Settings can select a different non-array vec3 declaration. The SOP layer input is not a POP array index. `TDInstanceTexCoord (Current)` applies the current instance's UV settings without manually supplying an instance index. These nodes compose with Vertex Outputs / Vertex Inputs; they do not silently replace UV in existing graphs.

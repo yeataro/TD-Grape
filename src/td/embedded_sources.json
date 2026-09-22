@@ -36,5 +36,6 @@
   "frames_ui_js": "frames_ui.js",
   "live": "sgrape_live.py",
   "uniform_live_js": "uniform_live.js",
-  "structures_ui_js": "structures_ui.js"
+  "structures_ui_js": "structures_ui.js",
+  "material_presets": "material_presets.json"
 }

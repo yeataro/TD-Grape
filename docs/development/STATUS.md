@@ -1,5 +1,13 @@
 # 開發狀態
 
+2026-09-23 0.8.175：交付可 review 的基本 Phong MAT Graph／PBR MAT Graph，從 TDFam 的 Grape → MAT 新增；Grape TOP 歸 TOP。兩份圖採一般可編輯節點，Vertex 各 4 個 Group、Pixel 各 7 個 Group，單一歸屬，依計算用途整理。包括具名 Tex／Instance UV 傳遞、攝影機視向、表面法線、正確的 Phong／PBR 基本合成與 opt-in 原生 MAT 最後處理。既有圖輸出行為保持；進階貼圖與完整材質能力尚未完成，見[基本預置與人工整理入口](../features/BASIC_MATERIAL_PRESETS.md)。
+
+色彩宣告改用 Color 來源，RGB 控制為 RGBA Size 3；一般向量保持 Vector。MAT／TOP 的 Expose 及來源建立控制兩條路徑均測試 1–4 分量、雙向修改與 Apply。修正新 Color 來源未使用 Alpha 填 0 導致黑色的問題，改為 1，明確指定 Alpha 0 仍保留；不自動重建既有控制。既有自訂參數 18 項原生回歸通過。
+
+526 Python、14 附加測試、完整 portable checks 與兩組瀏覽器流程通過。13 組實際原生 MAT 渲染對照最大 RGBA 誤差 0.000003338；fixture 關閉抖色，不代表完整材質或 viewer 等價。TDFam 真實新增兩份各兩個副本，分類、獨立性、RGBA 控制、原生 MAT 出口與編譯均通過。
+
+39 份 TD 內嵌來源一致，四份 Master 編譯通過，兩份目前使用者 Shader 保留。本輪首次建立的 Phong／PBR 模板經私人备份及未被人工改動的語意／控制值檢查後完成 Color／Group 整理；原有 MAT／TOP Master OP 身分保持。一般後續同步不重建 Master，人工範本編輯须回存 JSON。TOE 已保存（1302192 bytes；SHA256 18f739dc6319211ec8f91fd57c4d20dfc02d111c6d906c82ca74e763e3e46a49），私人助手排除；未發布或推送。
+
 2026-09-23 0.8.174：補入 TDProjTextureLod／TDProjTextureSize，338 個節點入口，限 MAT Pixel；附雙語 Help。六組 TD 原生對照誤差 0，涵蓋兩盞燈、兩種貼圖尺寸與 LOD 0／3。524 Python、14 附加測試、完整 portable checks 與兩組瀏覽器建立／接線／產碼檢查通過。修正版本研究漏列十個 Quaternion／矩陣簽名失敗紀錄的問題；TDQuaternionMath 標頭亦於目前宿主載入失敗，不能據此推定首次支援版本。完整 Phong／PBR 預置仍未完成。
 
 38 份 TD 來源一致，兩份 Master revision 121，三份使用者 Shader 保留；live core 編譯兩條新路徑成功。TOE 已保存（1192216 bytes；SHA256 5313b6aec6459d46742dc14f54d4390559a2cb666dba79774922265003a7703f），私人助手排除。未發布或推送。

@@ -1,0 +1,3305 @@
+{
+  "phong": {
+    "schemaVersion": 1,
+    "declarations": [
+      {
+        "id": "tex",
+        "kind": "attribute",
+        "name": "Tex",
+        "type": "vec3",
+        "value": null,
+        "nativeSequence": "attr",
+        "arraySize": 1
+      },
+      {
+        "id": "alpha",
+        "kind": "uniform",
+        "name": "uAlpha",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Alpha"
+      },
+      {
+        "id": "shadowStrength",
+        "kind": "uniform",
+        "name": "uShadowStrength",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Shadow Strength"
+      },
+      {
+        "id": "shadowColor",
+        "kind": "uniform",
+        "name": "uShadowColor",
+        "type": "vec3",
+        "value": [
+          0,
+          0,
+          0
+        ],
+        "expose": true,
+        "exposeName": "Shadow Color",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "diffuse",
+        "kind": "uniform",
+        "name": "uDiffuse",
+        "type": "vec3",
+        "value": [
+          0.7,
+          0.7,
+          0.7
+        ],
+        "expose": true,
+        "exposeName": "Diffuse",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "ambient",
+        "kind": "uniform",
+        "name": "uAmbient",
+        "type": "vec3",
+        "value": [
+          0.7,
+          0.7,
+          0.7
+        ],
+        "expose": true,
+        "exposeName": "Ambient",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "specular",
+        "kind": "uniform",
+        "name": "uSpecular",
+        "type": "vec3",
+        "value": [
+          0.3,
+          0.3,
+          0.3
+        ],
+        "expose": true,
+        "exposeName": "Specular",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "specular2",
+        "kind": "uniform",
+        "name": "uSpecular2",
+        "type": "vec3",
+        "value": [
+          0,
+          0,
+          0
+        ],
+        "expose": true,
+        "exposeName": "Specular 2",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "shininess",
+        "kind": "uniform",
+        "name": "uShininess",
+        "type": "float",
+        "value": 100,
+        "expose": true,
+        "exposeName": "Shininess"
+      },
+      {
+        "id": "shininess2",
+        "kind": "uniform",
+        "name": "uShininess2",
+        "type": "float",
+        "value": 100,
+        "expose": true,
+        "exposeName": "Shininess 2"
+      }
+    ],
+    "stages": {
+      "vertex": {
+        "nodes": [
+          {
+            "id": "position",
+            "definitionUuid": "sgrape.builtin.position",
+            "revisionHash": "a8f6e28939535762aafc51e037a7955e38820196984d2084ae580e2fe57267ca",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 52
+            }
+          },
+          {
+            "id": "deform",
+            "definitionUuid": "sgrape.builtin.deform",
+            "revisionHash": "e1342e453626ff6e68766c387acd0ba91e2cd49350681e893fd5a478fa85fcd2",
+            "params": {},
+            "ui": {
+              "x": 284,
+              "y": 52
+            }
+          },
+          {
+            "id": "projection",
+            "definitionUuid": "sgrape.builtin.to_clip",
+            "revisionHash": "e98b9a603c583000dc69373c52f7a30d281d9438fd814692cd3c6b1070be5217",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 237
+            }
+          },
+          {
+            "id": "vertex",
+            "definitionUuid": "sgrape.builtin.vertex_out",
+            "revisionHash": "146d1926bb6e08237503bfb773d5eaea21d327edcc0f45e41afb6898a0710e76",
+            "params": {
+              "outputs": [
+                {
+                  "id": "world",
+                  "name": "world",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "normal",
+                  "name": "normal",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "camera",
+                  "name": "camera",
+                  "type": "int",
+                  "interpolation": "flat"
+                },
+                {
+                  "id": "color",
+                  "name": "color",
+                  "type": "vec4",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "uv",
+                  "name": "uv",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                }
+              ]
+            },
+            "ui": {
+              "x": 1659,
+              "y": 52
+            }
+          },
+          {
+            "id": "world",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 544,
+              "y": 52
+            }
+          },
+          {
+            "id": "normal_source",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDNormal"
+            },
+            "ui": {
+              "x": 24,
+              "y": 548
+            }
+          },
+          {
+            "id": "deform_normal",
+            "definitionUuid": "sgrape.builtin.td_deform_normal",
+            "revisionHash": "cc3939bdaa504d2138276a97620a6c5d5681ee94327c901ea17efd41fe4eac8d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 284,
+              "y": 548
+            }
+          },
+          {
+            "id": "vertex_normal",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 548
+            }
+          },
+          {
+            "id": "camera",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDCameraIndex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 675
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDColor"
+            },
+            "ui": {
+              "x": 962,
+              "y": 52
+            }
+          },
+          {
+            "id": "instance_color",
+            "definitionUuid": "sgrape.builtin.td_instance_color_current",
+            "revisionHash": "5683c093eaf6dc09108a4c4643ceaf285fb4428a76a0e9964fc0a21a9bf95dfb",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1222,
+              "y": 52
+            }
+          },
+          {
+            "id": "tex",
+            "definitionUuid": "sgrape.builtin.tex_attribute",
+            "revisionHash": "708b33bd4ade710448901f0faea8fa455f9f0a4c34433da9458110d855df2675",
+            "params": {
+              "declarationId": "tex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 363
+            },
+            "inputValues": {
+              "layer": 0
+            }
+          },
+          {
+            "id": "instance_uv",
+            "definitionUuid": "sgrape.builtin.td_instance_texcoord_current",
+            "revisionHash": "d3d634d9267a91816ebb5c24e97b5d05b602522deee0fb298a092d353c806c17",
+            "params": {},
+            "ui": {
+              "x": 1222,
+              "y": 363
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "position",
+              "out"
+            ],
+            "to": [
+              "deform",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "projection",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "projection",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "world",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "world",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "normal_source",
+              "out"
+            ],
+            "to": [
+              "deform_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "deform_normal",
+              "out"
+            ],
+            "to": [
+              "vertex_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "vertex_normal",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "camera",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "camera"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "instance_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "instance_color",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "tex",
+              "out"
+            ],
+            "to": [
+              "instance_uv",
+              "uv"
+            ]
+          },
+          {
+            "from": [
+              "instance_uv",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "uv"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_position",
+              "name": "Position",
+              "nodes": [
+                "position",
+                "deform",
+                "world",
+                "projection"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_normal",
+              "name": "Normal",
+              "nodes": [
+                "normal_source",
+                "deform_normal",
+                "vertex_normal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_point_color",
+              "name": "Point Color",
+              "nodes": [
+                "point_color",
+                "instance_color"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_texture_coordinates",
+              "name": "Texture Coordinates",
+              "nodes": [
+                "tex",
+                "instance_uv"
+              ],
+              "color": "#94a574"
+            }
+          ]
+        }
+      },
+      "pixel": {
+        "nodes": [
+          {
+            "id": "inputs",
+            "definitionUuid": "sgrape.builtin.vertex_input",
+            "revisionHash": "bdd71f2e67fa96134a431dbc394697b43fcb6dc40431aa12d6503c405f46f9b7",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 1380
+            }
+          },
+          {
+            "id": "matrices",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "uTDMats"
+            },
+            "ui": {
+              "x": 24,
+              "y": 52
+            }
+          },
+          {
+            "id": "camera_matrix",
+            "definitionUuid": "sgrape.builtin.array_get",
+            "revisionHash": "3160e1e2c4b05cdee96b0904bacbc655a922887592a9759c4255cabfe762bcde",
+            "params": {
+              "type": "TDMatrix[TD_NUM_CAMERAS]",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 284,
+              "y": 52
+            }
+          },
+          {
+            "id": "inverse",
+            "definitionUuid": "sgrape.builtin.struct_field",
+            "revisionHash": "f9e1b1e861d44f77bf514b2c5f1e96299a2ed34c0538e1d73dea88ca22859c56",
+            "params": {
+              "type": "TDMatrix",
+              "field": "camInverse"
+            },
+            "ui": {
+              "x": 544,
+              "y": 52
+            }
+          },
+          {
+            "id": "camera_position4",
+            "definitionUuid": "sgrape.builtin.matrix_get",
+            "revisionHash": "f5b1cee1cb667fd0b5b7a7f1ca73b806bf88a299bfd5cfcdaf5a8cad40ae1d3e",
+            "params": {
+              "type": "mat4",
+              "mode": "column",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 24,
+              "y": 271
+            },
+            "inputValues": {
+              "column": 3
+            }
+          },
+          {
+            "id": "camera_position",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 284,
+              "y": 271
+            }
+          },
+          {
+            "id": "to_camera",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 271
+            }
+          },
+          {
+            "id": "view",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 24,
+              "y": 486
+            }
+          },
+          {
+            "id": "world_normal",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 24,
+              "y": 797
+            }
+          },
+          {
+            "id": "front_facing",
+            "definitionUuid": "sgrape.builtin.td_front_facing",
+            "revisionHash": "6296772a8c0e9bae0c764b6244b6b20b9874baf91aa62a89aeb88e233f21fa55",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 284,
+              "y": 797
+            }
+          },
+          {
+            "id": "back_normal",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 797
+            },
+            "inputValues": {
+              "b": [
+                -1,
+                -1,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "normal",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 24,
+              "y": 1011
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.td_pixel_color",
+            "revisionHash": "fa8109d7d4b86b079f7397baaead42e59595f149eb9d86611abac72b18aa014a",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3464,
+              "y": 278
+            }
+          },
+          {
+            "id": "alpha",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "alpha"
+            },
+            "ui": {
+              "x": 3204,
+              "y": 52,
+              "label": "Alpha"
+            }
+          },
+          {
+            "id": "shadowStrength",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowStrength"
+            },
+            "ui": {
+              "x": 2169,
+              "y": 52,
+              "label": "Shadow Strength"
+            }
+          },
+          {
+            "id": "shadowColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowColor"
+            },
+            "ui": {
+              "x": 2442,
+              "y": 52,
+              "label": "Shadow Color"
+            }
+          },
+          {
+            "id": "diffuse",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "diffuse"
+            },
+            "ui": {
+              "x": 979,
+              "y": 52,
+              "label": "Diffuse"
+            }
+          },
+          {
+            "id": "ambient",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "ambient"
+            },
+            "ui": {
+              "x": 979,
+              "y": 647,
+              "label": "Ambient"
+            }
+          },
+          {
+            "id": "specular",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "specular"
+            },
+            "ui": {
+              "x": 1323,
+              "y": 52,
+              "label": "Specular"
+            }
+          },
+          {
+            "id": "specular2",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "specular2"
+            },
+            "ui": {
+              "x": 1667,
+              "y": 52,
+              "label": "Specular 2"
+            }
+          },
+          {
+            "id": "shininess",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shininess"
+            },
+            "ui": {
+              "x": 2786,
+              "y": 52,
+              "label": "Shininess"
+            }
+          },
+          {
+            "id": "shininess2",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shininess2"
+            },
+            "ui": {
+              "x": 2169,
+              "y": 302,
+              "label": "Shininess 2"
+            }
+          },
+          {
+            "id": "lights",
+            "definitionUuid": "sgrape.builtin.td_lighting_all",
+            "revisionHash": "30eef3de8e0322e42393912b77465315c908dffa4c05dc578066789b2c6b93c5",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2429,
+              "y": 302
+            }
+          },
+          {
+            "id": "diffuse_term",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2689,
+              "y": 302
+            }
+          },
+          {
+            "id": "specular_term",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2169,
+              "y": 719
+            }
+          },
+          {
+            "id": "specular2_term",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2429,
+              "y": 719
+            }
+          },
+          {
+            "id": "general",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "uTDGeneral"
+            },
+            "ui": {
+              "x": 979,
+              "y": 428
+            }
+          },
+          {
+            "id": "ambient_light",
+            "definitionUuid": "sgrape.builtin.struct_field",
+            "revisionHash": "f9e1b1e861d44f77bf514b2c5f1e96299a2ed34c0538e1d73dea88ca22859c56",
+            "params": {
+              "type": "TDGeneral",
+              "field": "ambientColor"
+            },
+            "ui": {
+              "x": 1239,
+              "y": 428
+            }
+          },
+          {
+            "id": "ambient_rgb",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 1499,
+              "y": 428
+            }
+          },
+          {
+            "id": "ambient_term",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1323,
+              "y": 647
+            }
+          },
+          {
+            "id": "specular_sum",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2169,
+              "y": 1059
+            }
+          },
+          {
+            "id": "direct_sum",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2169,
+              "y": 1399
+            }
+          },
+          {
+            "id": "lit",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2169,
+              "y": 1739
+            }
+          },
+          {
+            "id": "alpha3",
+            "definitionUuid": "sgrape.builtin.convert",
+            "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc",
+            "params": {
+              "fromType": "float",
+              "toType": "vec3"
+            },
+            "ui": {
+              "x": 3464,
+              "y": 52
+            }
+          },
+          {
+            "id": "premultiply",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3724,
+              "y": 52
+            }
+          },
+          {
+            "id": "lit_rgba",
+            "definitionUuid": "sgrape.builtin.combine",
+            "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a",
+            "params": {
+              "type": "vec4",
+              "groups": {
+                "x": "vec3"
+              },
+              "components": [
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "ui": {
+              "x": 3204,
+              "y": 278
+            }
+          },
+          {
+            "id": "colored",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec4"
+            },
+            "ui": {
+              "x": 3724,
+              "y": 278
+            }
+          },
+          {
+            "id": "fog",
+            "definitionUuid": "sgrape.builtin.td_fog",
+            "revisionHash": "376fcc882afef49ef81bbc56f149ca88058efd6f3cef4503f33448a6d0cb19e0",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3204,
+              "y": 618
+            }
+          },
+          {
+            "id": "pixel",
+            "definitionUuid": "sgrape.builtin.pixel_out",
+            "revisionHash": "b37335e4e2462dfa4c0e1cf4c3308f9d64d317ce0d916c5c596a1884a44e4f65",
+            "params": {
+              "nativeFinishing": true
+            },
+            "ui": {
+              "x": 3464,
+              "y": 618
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "matrices",
+              "out"
+            ],
+            "to": [
+              "camera_matrix",
+              "Array"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "camera_matrix",
+              "i"
+            ]
+          },
+          {
+            "from": [
+              "camera_matrix",
+              "out"
+            ],
+            "to": [
+              "inverse",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inverse",
+              "out"
+            ],
+            "to": [
+              "camera_position4",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_position4",
+              "out"
+            ],
+            "to": [
+              "camera_position",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_position",
+              "out"
+            ],
+            "to": [
+              "to_camera",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "to_camera",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "to_camera",
+              "out"
+            ],
+            "to": [
+              "view",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "normal"
+            ],
+            "to": [
+              "world_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "front_facing",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "world_normal",
+              "out"
+            ],
+            "to": [
+              "front_facing",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "world_normal",
+              "out"
+            ],
+            "to": [
+              "back_normal",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "front_facing",
+              "out"
+            ],
+            "to": [
+              "normal",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "world_normal",
+              "out"
+            ],
+            "to": [
+              "normal",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "back_normal",
+              "out"
+            ],
+            "to": [
+              "normal",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "color"
+            ],
+            "to": [
+              "point_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "shininess",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "shininess"
+            ]
+          },
+          {
+            "from": [
+              "shininess2",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "shininess2"
+            ]
+          },
+          {
+            "from": [
+              "diffuse",
+              "out"
+            ],
+            "to": [
+              "diffuse_term",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "lights",
+              "diffuse"
+            ],
+            "to": [
+              "diffuse_term",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "specular",
+              "out"
+            ],
+            "to": [
+              "specular_term",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "lights",
+              "specular"
+            ],
+            "to": [
+              "specular_term",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "specular2",
+              "out"
+            ],
+            "to": [
+              "specular2_term",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "lights",
+              "specular2"
+            ],
+            "to": [
+              "specular2_term",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "general",
+              "out"
+            ],
+            "to": [
+              "ambient_light",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "ambient_light",
+              "out"
+            ],
+            "to": [
+              "ambient_rgb",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "ambient_rgb",
+              "out"
+            ],
+            "to": [
+              "ambient_term",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "ambient",
+              "out"
+            ],
+            "to": [
+              "ambient_term",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "specular_term",
+              "out"
+            ],
+            "to": [
+              "specular_sum",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "specular2_term",
+              "out"
+            ],
+            "to": [
+              "specular_sum",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "diffuse_term",
+              "out"
+            ],
+            "to": [
+              "direct_sum",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "specular_sum",
+              "out"
+            ],
+            "to": [
+              "direct_sum",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "direct_sum",
+              "out"
+            ],
+            "to": [
+              "lit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "ambient_term",
+              "out"
+            ],
+            "to": [
+              "lit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "alpha",
+              "out"
+            ],
+            "to": [
+              "alpha3",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "lit",
+              "out"
+            ],
+            "to": [
+              "premultiply",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "alpha3",
+              "out"
+            ],
+            "to": [
+              "premultiply",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "premultiply",
+              "out"
+            ],
+            "to": [
+              "lit_rgba",
+              "x"
+            ]
+          },
+          {
+            "from": [
+              "alpha",
+              "out"
+            ],
+            "to": [
+              "lit_rgba",
+              "w"
+            ]
+          },
+          {
+            "from": [
+              "lit_rgba",
+              "out"
+            ],
+            "to": [
+              "colored",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "colored",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "view",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "view"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrength",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "shadowStrength"
+            ]
+          },
+          {
+            "from": [
+              "shadowColor",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "shadowColor"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "lights",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "colored",
+              "out"
+            ],
+            "to": [
+              "fog",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "fog",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "fog",
+              "camera"
+            ]
+          },
+          {
+            "from": [
+              "fog",
+              "out"
+            ],
+            "to": [
+              "pixel",
+              "color"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_camera_view",
+              "name": "Camera View",
+              "nodes": [
+                "matrices",
+                "camera_matrix",
+                "inverse",
+                "camera_position4",
+                "camera_position",
+                "to_camera",
+                "view"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_surface_normal",
+              "name": "Surface Normal",
+              "nodes": [
+                "world_normal",
+                "front_facing",
+                "back_normal",
+                "normal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_material_colors",
+              "name": "Material Colors",
+              "nodes": [
+                "diffuse",
+                "specular",
+                "specular2"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_ambient_light",
+              "name": "Ambient Light",
+              "nodes": [
+                "general",
+                "ambient_light",
+                "ambient_rgb",
+                "ambient",
+                "ambient_term"
+              ],
+              "color": "#94a574"
+            },
+            {
+              "id": "group_scene_lighting",
+              "name": "Scene Lighting",
+              "nodes": [
+                "shadowStrength",
+                "shadowColor",
+                "shininess",
+                "shininess2",
+                "lights",
+                "diffuse_term",
+                "specular_term",
+                "specular2_term"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_opacity_and_point_color",
+              "name": "Opacity and Point Color",
+              "nodes": [
+                "alpha",
+                "alpha3",
+                "premultiply",
+                "lit_rgba",
+                "point_color",
+                "colored"
+              ],
+              "color": "#9285ad"
+            },
+            {
+              "id": "group_pixel_output",
+              "name": "Pixel Output",
+              "nodes": [
+                "fog",
+                "pixel"
+              ],
+              "color": "#75a28a"
+            }
+          ]
+        }
+      }
+    },
+    "target": "mat"
+  },
+  "pbr": {
+    "schemaVersion": 1,
+    "declarations": [
+      {
+        "id": "tex",
+        "kind": "attribute",
+        "name": "Tex",
+        "type": "vec3",
+        "value": null,
+        "nativeSequence": "attr",
+        "arraySize": 1
+      },
+      {
+        "id": "alpha",
+        "kind": "uniform",
+        "name": "uAlpha",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Alpha"
+      },
+      {
+        "id": "shadowStrength",
+        "kind": "uniform",
+        "name": "uShadowStrength",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Shadow Strength"
+      },
+      {
+        "id": "shadowColor",
+        "kind": "uniform",
+        "name": "uShadowColor",
+        "type": "vec3",
+        "value": [
+          0,
+          0,
+          0
+        ],
+        "expose": true,
+        "exposeName": "Shadow Color",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "baseColor",
+        "kind": "uniform",
+        "name": "uBaseColor",
+        "type": "vec3",
+        "value": [
+          1,
+          1,
+          1
+        ],
+        "expose": true,
+        "exposeName": "Base Color",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "metallic",
+        "kind": "uniform",
+        "name": "uMetallic",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Metallic"
+      },
+      {
+        "id": "roughness",
+        "kind": "uniform",
+        "name": "uRoughness",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Roughness"
+      },
+      {
+        "id": "specularLevel",
+        "kind": "uniform",
+        "name": "uSpecularLevel",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Specular Level"
+      },
+      {
+        "id": "ao",
+        "kind": "uniform",
+        "name": "uAo",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Ambient Occlusion"
+      }
+    ],
+    "stages": {
+      "vertex": {
+        "nodes": [
+          {
+            "id": "position",
+            "definitionUuid": "sgrape.builtin.position",
+            "revisionHash": "a8f6e28939535762aafc51e037a7955e38820196984d2084ae580e2fe57267ca",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 52
+            }
+          },
+          {
+            "id": "deform",
+            "definitionUuid": "sgrape.builtin.deform",
+            "revisionHash": "e1342e453626ff6e68766c387acd0ba91e2cd49350681e893fd5a478fa85fcd2",
+            "params": {},
+            "ui": {
+              "x": 284,
+              "y": 52
+            }
+          },
+          {
+            "id": "projection",
+            "definitionUuid": "sgrape.builtin.to_clip",
+            "revisionHash": "e98b9a603c583000dc69373c52f7a30d281d9438fd814692cd3c6b1070be5217",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 237
+            }
+          },
+          {
+            "id": "vertex",
+            "definitionUuid": "sgrape.builtin.vertex_out",
+            "revisionHash": "146d1926bb6e08237503bfb773d5eaea21d327edcc0f45e41afb6898a0710e76",
+            "params": {
+              "outputs": [
+                {
+                  "id": "world",
+                  "name": "world",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "normal",
+                  "name": "normal",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "camera",
+                  "name": "camera",
+                  "type": "int",
+                  "interpolation": "flat"
+                },
+                {
+                  "id": "color",
+                  "name": "color",
+                  "type": "vec4",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "uv",
+                  "name": "uv",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                }
+              ]
+            },
+            "ui": {
+              "x": 1659,
+              "y": 52
+            }
+          },
+          {
+            "id": "world",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 544,
+              "y": 52
+            }
+          },
+          {
+            "id": "normal_source",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDNormal"
+            },
+            "ui": {
+              "x": 24,
+              "y": 548
+            }
+          },
+          {
+            "id": "deform_normal",
+            "definitionUuid": "sgrape.builtin.td_deform_normal",
+            "revisionHash": "cc3939bdaa504d2138276a97620a6c5d5681ee94327c901ea17efd41fe4eac8d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 284,
+              "y": 548
+            }
+          },
+          {
+            "id": "vertex_normal",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 548
+            }
+          },
+          {
+            "id": "camera",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDCameraIndex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 675
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDColor"
+            },
+            "ui": {
+              "x": 962,
+              "y": 52
+            }
+          },
+          {
+            "id": "instance_color",
+            "definitionUuid": "sgrape.builtin.td_instance_color_current",
+            "revisionHash": "5683c093eaf6dc09108a4c4643ceaf285fb4428a76a0e9964fc0a21a9bf95dfb",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1222,
+              "y": 52
+            }
+          },
+          {
+            "id": "tex",
+            "definitionUuid": "sgrape.builtin.tex_attribute",
+            "revisionHash": "708b33bd4ade710448901f0faea8fa455f9f0a4c34433da9458110d855df2675",
+            "params": {
+              "declarationId": "tex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 363
+            },
+            "inputValues": {
+              "layer": 0
+            }
+          },
+          {
+            "id": "instance_uv",
+            "definitionUuid": "sgrape.builtin.td_instance_texcoord_current",
+            "revisionHash": "d3d634d9267a91816ebb5c24e97b5d05b602522deee0fb298a092d353c806c17",
+            "params": {},
+            "ui": {
+              "x": 1222,
+              "y": 363
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "position",
+              "out"
+            ],
+            "to": [
+              "deform",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "projection",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "projection",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "world",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "world",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "normal_source",
+              "out"
+            ],
+            "to": [
+              "deform_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "deform_normal",
+              "out"
+            ],
+            "to": [
+              "vertex_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "vertex_normal",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "camera",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "camera"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "instance_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "instance_color",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "tex",
+              "out"
+            ],
+            "to": [
+              "instance_uv",
+              "uv"
+            ]
+          },
+          {
+            "from": [
+              "instance_uv",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "uv"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_position",
+              "name": "Position",
+              "nodes": [
+                "position",
+                "deform",
+                "world",
+                "projection"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_normal",
+              "name": "Normal",
+              "nodes": [
+                "normal_source",
+                "deform_normal",
+                "vertex_normal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_point_color",
+              "name": "Point Color",
+              "nodes": [
+                "point_color",
+                "instance_color"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_texture_coordinates",
+              "name": "Texture Coordinates",
+              "nodes": [
+                "tex",
+                "instance_uv"
+              ],
+              "color": "#94a574"
+            }
+          ]
+        }
+      },
+      "pixel": {
+        "nodes": [
+          {
+            "id": "inputs",
+            "definitionUuid": "sgrape.builtin.vertex_input",
+            "revisionHash": "bdd71f2e67fa96134a431dbc394697b43fcb6dc40431aa12d6503c405f46f9b7",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 1380
+            }
+          },
+          {
+            "id": "matrices",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "uTDMats"
+            },
+            "ui": {
+              "x": 24,
+              "y": 52
+            }
+          },
+          {
+            "id": "camera_matrix",
+            "definitionUuid": "sgrape.builtin.array_get",
+            "revisionHash": "3160e1e2c4b05cdee96b0904bacbc655a922887592a9759c4255cabfe762bcde",
+            "params": {
+              "type": "TDMatrix[TD_NUM_CAMERAS]",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 284,
+              "y": 52
+            }
+          },
+          {
+            "id": "inverse",
+            "definitionUuid": "sgrape.builtin.struct_field",
+            "revisionHash": "f9e1b1e861d44f77bf514b2c5f1e96299a2ed34c0538e1d73dea88ca22859c56",
+            "params": {
+              "type": "TDMatrix",
+              "field": "camInverse"
+            },
+            "ui": {
+              "x": 544,
+              "y": 52
+            }
+          },
+          {
+            "id": "camera_position4",
+            "definitionUuid": "sgrape.builtin.matrix_get",
+            "revisionHash": "f5b1cee1cb667fd0b5b7a7f1ca73b806bf88a299bfd5cfcdaf5a8cad40ae1d3e",
+            "params": {
+              "type": "mat4",
+              "mode": "column",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 24,
+              "y": 271
+            },
+            "inputValues": {
+              "column": 3
+            }
+          },
+          {
+            "id": "camera_position",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 284,
+              "y": 271
+            }
+          },
+          {
+            "id": "to_camera",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 271
+            }
+          },
+          {
+            "id": "view",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 24,
+              "y": 486
+            }
+          },
+          {
+            "id": "world_normal",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 24,
+              "y": 797
+            }
+          },
+          {
+            "id": "front_facing",
+            "definitionUuid": "sgrape.builtin.td_front_facing",
+            "revisionHash": "6296772a8c0e9bae0c764b6244b6b20b9874baf91aa62a89aeb88e233f21fa55",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 284,
+              "y": 797
+            }
+          },
+          {
+            "id": "back_normal",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 797
+            },
+            "inputValues": {
+              "b": [
+                -1,
+                -1,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "normal",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 24,
+              "y": 1011
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.td_pixel_color",
+            "revisionHash": "fa8109d7d4b86b079f7397baaead42e59595f149eb9d86611abac72b18aa014a",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1499,
+              "y": 302
+            }
+          },
+          {
+            "id": "alpha",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "alpha"
+            },
+            "ui": {
+              "x": 1323,
+              "y": 52,
+              "label": "Alpha"
+            }
+          },
+          {
+            "id": "shadowStrength",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowStrength"
+            },
+            "ui": {
+              "x": 2001,
+              "y": 52,
+              "label": "Shadow Strength"
+            }
+          },
+          {
+            "id": "shadowColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowColor"
+            },
+            "ui": {
+              "x": 2274,
+              "y": 52,
+              "label": "Shadow Color"
+            }
+          },
+          {
+            "id": "baseColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "baseColor"
+            },
+            "ui": {
+              "x": 979,
+              "y": 52,
+              "label": "Base Color"
+            }
+          },
+          {
+            "id": "metallic",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "metallic"
+            },
+            "ui": {
+              "x": 979,
+              "y": 856,
+              "label": "Metallic"
+            }
+          },
+          {
+            "id": "roughness",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "roughness"
+            },
+            "ui": {
+              "x": 979,
+              "y": 1677,
+              "label": "Roughness"
+            }
+          },
+          {
+            "id": "specularLevel",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "specularLevel"
+            },
+            "ui": {
+              "x": 1239,
+              "y": 1082,
+              "label": "Specular Level"
+            }
+          },
+          {
+            "id": "ao",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "ao"
+            },
+            "ui": {
+              "x": 2001,
+              "y": 428,
+              "label": "Ambient Occlusion"
+            }
+          },
+          {
+            "id": "alpha3",
+            "definitionUuid": "sgrape.builtin.convert",
+            "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc",
+            "params": {
+              "fromType": "float",
+              "toType": "vec3"
+            },
+            "ui": {
+              "x": 1583,
+              "y": 52
+            }
+          },
+          {
+            "id": "base_premultiply",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 979,
+              "y": 302
+            }
+          },
+          {
+            "id": "base_rgba",
+            "definitionUuid": "sgrape.builtin.combine",
+            "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a",
+            "params": {
+              "type": "vec4",
+              "groups": {
+                "x": "vec3"
+              },
+              "components": [
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "ui": {
+              "x": 1239,
+              "y": 302
+            }
+          },
+          {
+            "id": "base_colored",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec4"
+            },
+            "ui": {
+              "x": 979,
+              "y": 516
+            }
+          },
+          {
+            "id": "base_rgb",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 1239,
+              "y": 516
+            }
+          },
+          {
+            "id": "final_alpha",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "w"
+            },
+            "ui": {
+              "x": 1499,
+              "y": 516
+            }
+          },
+          {
+            "id": "nonmetal",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1239,
+              "y": 856
+            },
+            "inputValues": {
+              "a": 1
+            }
+          },
+          {
+            "id": "nonmetal3",
+            "definitionUuid": "sgrape.builtin.convert",
+            "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc",
+            "params": {
+              "fromType": "float",
+              "toType": "vec3"
+            },
+            "ui": {
+              "x": 1499,
+              "y": 856
+            }
+          },
+          {
+            "id": "diffuse_color",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 979,
+              "y": 1082
+            }
+          },
+          {
+            "id": "dielectric",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1499,
+              "y": 1082
+            },
+            "inputValues": {
+              "b": 0.08
+            }
+          },
+          {
+            "id": "dielectric3",
+            "definitionUuid": "sgrape.builtin.convert",
+            "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc",
+            "params": {
+              "fromType": "float",
+              "toType": "vec3"
+            },
+            "ui": {
+              "x": 979,
+              "y": 1308
+            }
+          },
+          {
+            "id": "specular_color",
+            "definitionUuid": "sgrape.builtin.mix",
+            "revisionHash": "33e0787d3178b0d0c1b9aec86f8b4be0de679eaaace04caeb81392dcfe41589c",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1239,
+              "y": 1308
+            }
+          },
+          {
+            "id": "safe_roughness",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1239,
+              "y": 1677
+            },
+            "inputValues": {
+              "b": 0.0001
+            }
+          },
+          {
+            "id": "lights",
+            "definitionUuid": "sgrape.builtin.td_lighting_pbr_all",
+            "revisionHash": "43c6c269f2c669d3fb148f1553e806d9178653aa4dcda1cf69fdce2845bedf17",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2001,
+              "y": 780
+            }
+          },
+          {
+            "id": "environment",
+            "definitionUuid": "sgrape.builtin.td_env_lighting_pbr_all",
+            "revisionHash": "84ac5bef04ccf506956f1638777428f7c0499d1eb8003731b0a6c3bff7c0d6ed",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2001,
+              "y": 1323
+            }
+          },
+          {
+            "id": "direct_sum",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2776,
+              "y": 421
+            }
+          },
+          {
+            "id": "environment_sum",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2776,
+              "y": 761
+            }
+          },
+          {
+            "id": "lit",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2776,
+              "y": 1101
+            }
+          },
+          {
+            "id": "lit_rgba",
+            "definitionUuid": "sgrape.builtin.combine",
+            "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a",
+            "params": {
+              "type": "vec4",
+              "groups": {
+                "x": "vec3"
+              },
+              "components": [
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "ui": {
+              "x": 2776,
+              "y": 52
+            }
+          },
+          {
+            "id": "fog",
+            "definitionUuid": "sgrape.builtin.td_fog",
+            "revisionHash": "376fcc882afef49ef81bbc56f149ca88058efd6f3cef4503f33448a6d0cb19e0",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3036,
+              "y": 52
+            }
+          },
+          {
+            "id": "pixel",
+            "definitionUuid": "sgrape.builtin.pixel_out",
+            "revisionHash": "b37335e4e2462dfa4c0e1cf4c3308f9d64d317ce0d916c5c596a1884a44e4f65",
+            "params": {
+              "nativeFinishing": true
+            },
+            "ui": {
+              "x": 3296,
+              "y": 52
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "matrices",
+              "out"
+            ],
+            "to": [
+              "camera_matrix",
+              "Array"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "camera_matrix",
+              "i"
+            ]
+          },
+          {
+            "from": [
+              "camera_matrix",
+              "out"
+            ],
+            "to": [
+              "inverse",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inverse",
+              "out"
+            ],
+            "to": [
+              "camera_position4",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_position4",
+              "out"
+            ],
+            "to": [
+              "camera_position",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_position",
+              "out"
+            ],
+            "to": [
+              "to_camera",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "to_camera",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "to_camera",
+              "out"
+            ],
+            "to": [
+              "view",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "normal"
+            ],
+            "to": [
+              "world_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "front_facing",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "world_normal",
+              "out"
+            ],
+            "to": [
+              "front_facing",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "world_normal",
+              "out"
+            ],
+            "to": [
+              "back_normal",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "front_facing",
+              "out"
+            ],
+            "to": [
+              "normal",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "world_normal",
+              "out"
+            ],
+            "to": [
+              "normal",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "back_normal",
+              "out"
+            ],
+            "to": [
+              "normal",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "color"
+            ],
+            "to": [
+              "point_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "alpha",
+              "out"
+            ],
+            "to": [
+              "alpha3",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "baseColor",
+              "out"
+            ],
+            "to": [
+              "base_premultiply",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "alpha3",
+              "out"
+            ],
+            "to": [
+              "base_premultiply",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "base_premultiply",
+              "out"
+            ],
+            "to": [
+              "base_rgba",
+              "x"
+            ]
+          },
+          {
+            "from": [
+              "alpha",
+              "out"
+            ],
+            "to": [
+              "base_rgba",
+              "w"
+            ]
+          },
+          {
+            "from": [
+              "base_rgba",
+              "out"
+            ],
+            "to": [
+              "base_colored",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "base_colored",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "base_colored",
+              "out"
+            ],
+            "to": [
+              "base_rgb",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "base_colored",
+              "out"
+            ],
+            "to": [
+              "final_alpha",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "metallic",
+              "out"
+            ],
+            "to": [
+              "nonmetal",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "nonmetal",
+              "out"
+            ],
+            "to": [
+              "nonmetal3",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "base_rgb",
+              "out"
+            ],
+            "to": [
+              "diffuse_color",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "nonmetal3",
+              "out"
+            ],
+            "to": [
+              "diffuse_color",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "specularLevel",
+              "out"
+            ],
+            "to": [
+              "dielectric",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "dielectric",
+              "out"
+            ],
+            "to": [
+              "dielectric3",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "dielectric3",
+              "out"
+            ],
+            "to": [
+              "specular_color",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "base_rgb",
+              "out"
+            ],
+            "to": [
+              "specular_color",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "metallic",
+              "out"
+            ],
+            "to": [
+              "specular_color",
+              "factor"
+            ]
+          },
+          {
+            "from": [
+              "roughness",
+              "out"
+            ],
+            "to": [
+              "safe_roughness",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "diffuse_color",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "diffuseColor"
+            ]
+          },
+          {
+            "from": [
+              "specular_color",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "specularColor"
+            ]
+          },
+          {
+            "from": [
+              "safe_roughness",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "roughness"
+            ]
+          },
+          {
+            "from": [
+              "diffuse_color",
+              "out"
+            ],
+            "to": [
+              "environment",
+              "diffuseColor"
+            ]
+          },
+          {
+            "from": [
+              "specular_color",
+              "out"
+            ],
+            "to": [
+              "environment",
+              "specularColor"
+            ]
+          },
+          {
+            "from": [
+              "safe_roughness",
+              "out"
+            ],
+            "to": [
+              "environment",
+              "roughness"
+            ]
+          },
+          {
+            "from": [
+              "normal",
+              "out"
+            ],
+            "to": [
+              "environment",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "view",
+              "out"
+            ],
+            "to": [
+              "environment",
+              "view"
+            ]
+          },
+          {
+            "from": [
+              "ao",
+              "out"
+            ],
+            "to": [
+              "environment",
+              "ambientOcclusion"
+            ]
+          },
+          {
+            "from": [
+              "lights",
+              "diffuse"
+            ],
+            "to": [
+              "direct_sum",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "lights",
+              "specular"
+            ],
+            "to": [
+              "direct_sum",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "environment",
+              "diffuse"
+            ],
+            "to": [
+              "environment_sum",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "environment",
+              "specular"
+            ],
+            "to": [
+              "environment_sum",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "direct_sum",
+              "out"
+            ],
+            "to": [
+              "lit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "environment_sum",
+              "out"
+            ],
+            "to": [
+              "lit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "lit",
+              "out"
+            ],
+            "to": [
+              "lit_rgba",
+              "x"
+            ]
+          },
+          {
+            "from": [
+              "final_alpha",
+              "out"
+            ],
+            "to": [
+              "lit_rgba",
+              "w"
+            ]
+          },
+          {
+            "from": [
+              "normal",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "view",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "view"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrength",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "shadowStrength"
+            ]
+          },
+          {
+            "from": [
+              "shadowColor",
+              "out"
+            ],
+            "to": [
+              "lights",
+              "shadowColor"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "lights",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "lit_rgba",
+              "out"
+            ],
+            "to": [
+              "fog",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "fog",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "fog",
+              "camera"
+            ]
+          },
+          {
+            "from": [
+              "fog",
+              "out"
+            ],
+            "to": [
+              "pixel",
+              "color"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_camera_view",
+              "name": "Camera View",
+              "nodes": [
+                "matrices",
+                "camera_matrix",
+                "inverse",
+                "camera_position4",
+                "camera_position",
+                "to_camera",
+                "view"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_surface_normal",
+              "name": "Surface Normal",
+              "nodes": [
+                "world_normal",
+                "front_facing",
+                "back_normal",
+                "normal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_base_color_and_opacity",
+              "name": "Base Color and Opacity",
+              "nodes": [
+                "baseColor",
+                "alpha",
+                "alpha3",
+                "base_premultiply",
+                "base_rgba",
+                "point_color",
+                "base_colored",
+                "base_rgb",
+                "final_alpha"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_metallic_surface",
+              "name": "Metallic Surface",
+              "nodes": [
+                "metallic",
+                "nonmetal",
+                "nonmetal3",
+                "diffuse_color",
+                "specularLevel",
+                "dielectric",
+                "dielectric3",
+                "specular_color"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_roughness",
+              "name": "Roughness",
+              "nodes": [
+                "roughness",
+                "safe_roughness"
+              ],
+              "color": "#94a574"
+            },
+            {
+              "id": "group_shadows",
+              "name": "Shadows",
+              "nodes": [
+                "shadowStrength",
+                "shadowColor"
+              ],
+              "color": "#7f8797"
+            },
+            {
+              "id": "group_pixel_output",
+              "name": "Pixel Output",
+              "nodes": [
+                "lit_rgba",
+                "fog",
+                "pixel"
+              ],
+              "color": "#75a28a"
+            }
+          ]
+        }
+      }
+    },
+    "target": "mat"
+  }
+}

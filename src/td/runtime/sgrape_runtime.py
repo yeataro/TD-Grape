@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.174'
+PRODUCT_VERSION='0.8.175'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -436,7 +436,7 @@ def register_shader(shader,fresh=False):
     shader.store('sgrapeManagerId',_owner.fetch('sgrapeManagerId'))
     # Opening a product template in its editor must not turn it into a user
     # Shader. Copies outside masters still register as ordinary new Shaders.
-    is_master=not fresh and shader.parent()==_owner.op('masters') and shader==master_template(shader_kind(shader))
+    is_master=not fresh and shader.parent()==_owner.op('masters') and any(shader==master_template(key) for key in ('mat','top','phong','pbr'))
     shader.store('sgrapeMaster',is_master)
     if is_master:shader.tags.discard('sgrapeShader')
     else:shader.tags.add('sgrapeShader')
@@ -523,7 +523,7 @@ def resolve_shader(identity):
 
 def master_template(kind):
     """Resolve current templates while accepting names from older projects."""
-    if kind not in ('top','mat'):raise ValueError('Unknown Grape template: '+str(kind))
+    if kind not in ('top','mat','phong','pbr'):raise ValueError('Unknown Grape template: '+str(kind))
     return _owner.op('masters/grape_'+kind) or _owner.op('masters/sgrape_'+kind)
 
 def prepare_masters():
@@ -560,8 +560,14 @@ def prepare_masters():
             parameter=getattr(family.par,name)
             if abs(parameter.eval()-value)>1e-6:parameter.val=value
     folder=_owner.op('masters') or _owner.create(baseCOMP,'masters')
-    for kind in ('mat','top'):
-        master=master_template(kind) or create_shader(folder,'grape_'+kind,kind=kind)
+    for key in ('mat','top','phong','pbr'):
+        kind=key if key in ('mat','top') else 'mat'
+        preset=key in ('phong','pbr')
+        label=(('Phong' if key=='phong' else 'PBR')+' MAT Graph') if preset else 'Grape '+kind.upper()
+        master=master_template(key)
+        if master is None:
+            graph=json.loads(_owner.op('material_presets').text)[key] if preset else None
+            master=create_shader(folder,'grape_'+key,graph=graph,kind=kind)
         try:
             register_shader(master)
             updated=update_shader(master)
@@ -572,7 +578,7 @@ def prepare_masters():
             raise RuntimeError('Grape '+kind.upper()+' template needs a graph upgrade review; its default graph was not updated.')
         manifest=master.op('FamManifest') or master.create(baseCOMP,'FamManifest')
         values={
-            'OpInfo':{'op_type':'sgrape_'+kind,'op_name':'Grape_'+kind.upper()+'1','op_label':'Grape '+kind.upper(),'op_version':PRODUCT_VERSION,'op_group':'Shaders','summary':'Visual GLSL '+kind.upper()+' editor. Open Editor edits this Shader.','op_color':list(OP_COLORS[kind]),'isFilter':kind=='top','compatible_types':[kind.upper()],'search_words':['shader','glsl','grape','sgrape',kind]},
+            'OpInfo':{'op_type':'sgrape_'+key,'op_name':(('Phong' if key=='phong' else 'PBR')+'_MAT_Graph1') if preset else 'Grape_'+kind.upper()+'1','op_label':label,'op_version':PRODUCT_VERSION,'op_group':kind.upper(),'summary':('Editable basic '+label+' with geometry, camera and automatic scene lighting. Advanced native material options are not included.' if preset else 'Visual GLSL '+kind.upper()+' editor. Open Editor edits this Shader.'),'op_color':list(OP_COLORS[kind]),'isFilter':kind=='top','compatible_types':[kind.upper()],'search_words':['shader','glsl','grape','sgrape',kind,key]+(['material','lighting','graph'] if preset else [])},
             'ParRetain':{'.':['<Uniforms>','<Output>','<Textures>','<Inactive Textures>']},
             'StateRetain':{'.':{'storage':['sgrapeShaderId','sgrapeManagerId','sgrapeTarget'],'dats':['state','graph','manifest']}},
             'Shortcuts':{},
@@ -1138,6 +1144,8 @@ def public_uniforms(comp,graph,preserve=None):
                 group=[]
                 for column in range(shape['columns']):
                     group.extend(page.appendFloat(name+'c'+str(column),label=label+' C'+str(column),size=shape['rows']))
+            elif decl.get('nativeSequence')=='color' and family=='float' and 1<=count<=4:
+                group=page.appendRGBA(name,label=label,size=count)
             elif family=='bool' and count==1:group=page.appendToggle(name,label=label)
             else:group=(page.appendFloat if family in ('float','double') else page.appendInt)(name,label=label,size=count)
             if family not in ('float','double'):

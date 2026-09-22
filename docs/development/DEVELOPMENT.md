@@ -79,7 +79,9 @@ python tools/dev/submit_job.py tests/td/test_native_naming.py --report master-cr
 python tools/dev/submit_job.py tools/dev/jobs/save_source_project.py
 ```
 
-`sync_masters.py` 只處理目前管理元件的兩份 Master，使用正常的候選圖驗證與 upgrade ticket 流程，並先備份模板。升級的舊內容保存在私人報告目錄，不把模板的 `upgrade_backup` 複製進之後新建的 Shader。使用者實例仍使用既有升級確認流程；產品啟動不自動執行此開發工作。
+`sync_masters.py` 處理目前管理元件既有的 MAT／TOP Master，以及 0.8.175 起的 Phong／PBR Master，使用正常的候選圖驗證與 upgrade ticket 流程，並先備份模板。升級的舊內容保存在私人報告目錄，不把模板的 `upgrade_backup` 複製進之後新建的 Shader。使用者實例仍使用既有升級確認流程；產品啟動不自動執行此開發工作。
+
+Phong／PBR 範本的節點圖來源為 `src/library/material_presets.json`，初始化於 `masters/grape_phong`／`masters/grape_pbr`。一般同步保留 Master 內人工編輯的圖；JSON 只用於建立缺少的 Master。人工整理後應將 Master 的圖回存該 JSON，再一同保存 TOE／提交，參見[範本編輯流程](../features/BASIC_MATERIAL_PRESETS.md)。不要以重建 Master 代替正常升級。
 
 從 Master 開啟 Editor 會保留 Master 身分；複製到其他位置的組件才登記為新 Shader。新建組件仍預設只顯示自訂參數。來源刷新、模板同步與保存工具從專案根層尋找管理元件，支援此次將 `TD_Grape` 搬到根層後的開發工程。
 

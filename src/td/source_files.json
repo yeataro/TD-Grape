@@ -49,5 +49,6 @@
   "uniform_live.js": "src/editor/uniform_live.js",
   "source_catalog.json": "src/library/source_catalog.json",
   "sgrape_source_catalog.py": "src/core/sgrape_source_catalog.py",
-  "structures_ui.js": "src/editor/structures_ui.js"
+  "structures_ui.js": "src/editor/structures_ui.js",
+  "material_presets.json": "src/library/material_presets.json"
 }

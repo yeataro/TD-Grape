@@ -121,10 +121,13 @@ def snapshot(runtime):
             'expectedPages':token([(p.name,[g.name for g in p.parGroups]) for p in comp.customPages])}
 
 
-def create_group(comp, page, hint, style, values=None, defaults=None):
+def create_group(comp, page, hint, style, values=None, defaults=None, color=False):
     if style not in STYLES:raise RuntimeError('Unsupported control style.')
     method,size=STYLES[style]; name=available_name(comp,hint)
-    args={'size':size} if method in ('appendFloat','appendInt') else {}
+    if color:
+        if style not in ('float','vec2','vec3','vec4'):raise RuntimeError('Color controls require floating-point components.')
+        method='appendRGBA'
+    args={'size':size} if method in ('appendFloat','appendInt','appendRGBA') else {}
     group=getattr(page,method)(name,label=hint,replace=False,**args)
     for i,p in enumerate(group):
         if style=='uint' or style.startswith('uvec'):
@@ -199,7 +202,7 @@ def edit(runtime,body):
                 defaults=[row['default']] if count==1 else row['default']
                 for value in values+defaults:
                     runtime.source_module().validate_uniform_component(row,value)
-                group=create_group(comp,page,row['name'],row['type'],values,defaults)
+                group=create_group(comp,page,row['name'],row['type'],values,defaults,color=row.get('sequence')=='color' and row['type'] in ('float','vec2','vec3','vec4'))
                 for control,driver,p in zip(group,drivers,pars):
                     if driver:control.expr=driver.replace('me.time.', 'me.op('+repr(p.owner.name)+').time.')
                 model.bind(comp,row['id'],list(group))
