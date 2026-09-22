@@ -2343,6 +2343,15 @@ function linkConnectionHint(edges){
     return endpoint('from','outputs')+'\n→ '+endpoint('to','inputs');
   }).join('\n\n');
 }
+function linkLocationEdges({node,kind,ports}){
+  const side=kind==='inputs'?'to':'from',names=new Set(ports);
+  return current().edges.filter(edge=>edge.ui?.style==='link'&&edge[side][0]===node&&names.has(edge[side][1]));
+}
+function linksToWires(location){
+  if(editorMutationBlocked())return;
+  const edges=linkLocationEdges(location);if(!edges.length)return;
+  return change(()=>{for(const edge of edges){delete edge.ui.style;if(!Object.keys(edge.ui).length)delete edge.ui;}},{localize:false,layout:true});
+}
 function linkPeerNodes({node,kind,ports}){
   const side=kind==='inputs'?'to':'from',other=side==='to'?'from':'to',names=new Set(ports),ids=new Set();
   for(const edge of current().edges)if(edge.ui?.style==='link'&&edge[side][0]===node&&names.has(edge[side][1]))ids.add(edge[other][0]);
@@ -2359,11 +2368,14 @@ function openLinkTargets(location,x,y){
   const menu=el('div',{id:'grapheditmenu',role:'menu','aria-label':t('wire.linkTargets')});
   for(const node of nodes){
     const label=nodeCanvasTitle(node),button=el('button',{type:'button',role:'menuitem','data-link-target':node.id,title:label+' · '+node.id});
-    button.append(el('span',{class:'graph-menu-label'},label));if(node.name&&node.name!==label)button.append(el('small',{},node.name));
+    const caption=el('span',{class:'graph-menu-label'});caption.append(el('span',{class:'link-target-category','data-category':nodeCategory(definition(node)||{key:''}),'aria-hidden':'true'}),el('span',{},label));button.append(caption);if(node.name&&node.name!==label)button.append(el('small',{},node.name));
     button.onclick=()=>{closeGraphMenu();if(graph===owner&&current()===level)frameLinkPeers(location,node.id);};menu.append(button);
   }
+  menu.append(el('div',{role:'separator',class:'popup-separator'}));
+  const convert=el('button',{type:'button',role:'menuitem','data-link-to-wire':''},t('wire.allToWire'));convert.disabled=editorMutationBlocked();
+  convert.onclick=()=>{closeGraphMenu();if(graph===owner&&current()===level)linksToWires(location);};menu.append(convert);
   menu.onkeydown=e=>{
-    if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button')],at=items.indexOf(document.activeElement);items[e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length]?.focus();}
+    if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement);items[e.key==='Home'?0:e.key==='End'?items.length-1:(at+(e.key==='ArrowUp'?-1:1)+items.length)%items.length]?.focus();}
     if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeGraphMenu();focusGraphCanvas();}if(e.key==='Tab')closeGraphMenu();
   };
   document.body.append(menu);graphEditMenu=menu;const z=uiScaleFactor();menu.style.maxHeight=Math.max(0,innerHeight/z-8)+'px';menu.style.left=Math.max(4,Math.min(x/z,innerWidth/z-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/z,innerHeight/z-menu.offsetHeight-4))+'px';menu.querySelector('button')?.focus();
