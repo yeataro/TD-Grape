@@ -26,7 +26,8 @@ claude-opus/
 ├── README.md                                  # 本文件
 ├── for-human/
 │   ├── value-and-contract-review.md          # 價值審查、失敗原因分析、契約設計原則
-│   └── the-guardrail-and-the-granularity-trap.md  # 為什麼以前有效、這次失效：人作為活護欄與顆粒度陷阱
+│   ├── the-guardrail-and-the-granularity-trap.md  # 為什麼以前有效、這次失效：人作為活護欄與顆粒度陷阱
+│   └── history-check-and-next-actions.md     # 拿實際 git／交付紀錄印證或修正上述說法，導出啟動新專案的行動
 └── for-agent/
     ├── ARCHITECTURE_INVARIANTS.md            # 不變量機制的說明：為何存在、如何擴充
     └── templates/
