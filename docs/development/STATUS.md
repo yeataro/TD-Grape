@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-22 0.8.171 DEV：依作者決定保留單一 Vertex Output 節點，在 gl_Position 與傳遞資料接孔之間加入細分隔線；收合顯示維持原狀。Camera Matrix 現有入口為 Built-in Source 的 uTDMats，經 Array Get、Structure Field（camInverse）、Matrix Get（column 3）取得攝影機世界位置；完整材質預置仍需提供接好的 view 路徑。
+
 2026-09-22 0.8.170 DEV：Vertex Output 的固定位置接孔顯示為 gl_Position，雙語說明區分裁切空間位置與傳給 Pixel 的資料。Vertex 邊界的待新增接孔改為半透明灰色，hover 時恢復清晰；既有新增機制保留。7 組瀏覽器檢查通過，包含移除最後接孔後仍保留新增入口、重新繪製不新增圖資料，以及雙向接孔／Undo／Redo／實際 UI 產圖編譯。作者確認深度、混合、剔除與骨骼變形設定留在原生參數頁；Picking 先評估，尚未授權實作。
 
 2026-09-22 0.8.169 DEV：MAT Apply 現在拒絕 TD 的 Sampler 型別不符警告；TD 原本仍回報連結成功並輸出黑色。原生回歸確認 3D TOP 綁給 sampler2D 時拒絕候選，保留原圖、revision、Shader DAT、manifest，並移除候選元件。這不代表已開放 Cube／3D 自訂 Sampler，也不把其他原生警告一律升級為錯誤。
