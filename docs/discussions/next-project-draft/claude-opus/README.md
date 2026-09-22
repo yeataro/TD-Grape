@@ -29,7 +29,7 @@ claude-opus/
 │   ├── the-guardrail-and-the-granularity-trap.md  # 為什麼以前有效、這次失效：人作為活護欄與顆粒度陷阱
 │   └── history-check-and-next-actions.md     # 拿實際 git／交付紀錄印證或修正上述說法，導出啟動新專案的行動
 └── for-agent/
-    ├── ARCHITECTURE_INVARIANTS.md            # 不變量機制的說明：為何存在、如何擴充
+    ├── ARCHITECTURE_INVARIANTS.md            # 大原則（一節點＝一地方）＋四條可檢查不變量與義務
     └── templates/
         └── architecture-invariant.test.ts    # 可執行的架構不變量測試（核心交付物）
 ```
