@@ -2135,6 +2135,7 @@ async function nativeSourceRequest(endpoint,body){
   return result;
 }
 function renderNativeSourceValues(changed=null){
+  for(const box of document.querySelectorAll('[data-source-constant]'))syncSourceConstantControls(box,graph?.declarations.find(d=>d.id===box.dataset.sourceConstant));
   const ready=sourceReady(true),rows=nativeSourceIndex();
   let geometryChanged=false;
   for(const card of document.querySelectorAll('[data-native-source]')){
@@ -2580,6 +2581,55 @@ function sourceMenuEntries(query){
 // Reconcile only membership/order; untouched cards keep their controls and focus.
 const sourceCardCache=new Map(),sourceGroupCache=new Map(),sourceCardCollapsed=new Map();
 let sourcePresentationContext='',sourceBuiltinCache=null;
+let sourceMinimal=false,sourceGroupOrder={};
+function orderedSourceGroups(parent,children,query){
+  const groups=children.filter(child=>child.dataset.inputGroup),saved=sourceGroupOrder[parent]||[];
+  // Keep absent categories in the preference, so searching and changing stage
+  // cannot silently rewrite the user's order.
+  const order=[...saved,...groups.map(child=>child.dataset.inputGroup).filter(key=>!saved.includes(key))];
+  const sorted=[...groups].sort((a,b)=>order.indexOf(a.dataset.inputGroup)-order.indexOf(b.dataset.inputGroup));
+  sorted.forEach((section,index)=>{
+    const group=sourceGroupCache.get(section.dataset.inputGroup);if(!group?.up)return;
+    group.up.disabled=!!query||index===0;group.down.disabled=!!query||index===sorted.length-1;
+    const move=direction=>{
+      const neighbor=sorted[index+direction];if(query||!neighbor)return;
+      const a=order.indexOf(section.dataset.inputGroup),b=order.indexOf(neighbor.dataset.inputGroup);
+      [order[a],order[b]]=[order[b],order[a]];sourceGroupOrder[parent]=order;
+      try{localStorage.setItem('grapeSourceGroupOrder',JSON.stringify(sourceGroupOrder));}catch{}
+      renderNativeSources();
+    };
+    group.up.onclick=()=>move(-1);group.down.onclick=()=>move(1);
+  });
+  let next=0;return children.map(child=>child.dataset.inputGroup?sorted[next++]:child);
+}
+function sourceConstantControls(decl){
+  const box=el('div',{'data-source-constant':decl.id}),shape=typeDescriptor(decl.type),values=shapedValue(decl.value,decl.type),flat=Array.isArray(values)?values:[values],generation=editorLoadGeneration;
+  const columns=shape?.shape==='matrix'?shape.columns:1,rows=flat.length/columns;
+  for(let column=0;column<columns;column++){
+    const grid=componentGrid(rows);
+    if(columns>1)grid.append(el('div',{class:'parameter-value-label'},t('matrix.column').replace('{index}',column)));
+    for(let row=0;row<rows;row++){
+      const index=column*rows+row,entry=typedScalarInput(flat[index],typeFamily(decl.type),next=>{
+        if(generation!==editorLoadGeneration||editorMutationBlocked())return;
+        const live=graph.declarations.find(d=>d.id===decl.id&&d.kind==='constant'&&d.type===decl.type);if(!live||live.sourceMissing)return;
+        changeDeclaration(()=>{const value=shapedValue(live.value,live.type);if(Array.isArray(value)){value[index]=next;live.value=value;}else live.value=next;});
+      });
+      entry.dataset.constantComponent=String(index);entry.setAttribute('aria-label',decl.name+(flat.length>1?' '+(columns>1?column+' ':'')+'XYZW'[row]:''));
+      grid.append(componentField(entry,row,rows,decl.name));
+    }
+    box.append(grid);
+  }
+  return box;
+}
+function syncSourceConstantControls(card,decl){
+  if(decl?.kind!=='constant')return;
+  const value=shapedValue(decl.value,decl.type),values=Array.isArray(value)?value:[value];
+  for(const entry of card.querySelectorAll('[data-constant-component]')){
+    entry.disabled=editorMutationBlocked()||!!decl.sourceMissing;
+    if(entry.numericGestureActive||document.activeElement===entry&&entry.hasPendingEdit?.())continue;
+    entry.setSyncedValue(values[Number(entry.dataset.constantComponent)]);entry.refreshNumericSlider?.();
+  }
+}
 function reconcileSourceChildren(parent,children){
   const wanted=new Set(children);for(const child of [...parent.children])if(!wanted.has(child))child.remove();
   children.forEach((child,index)=>{if(parent.children[index]!==child)parent.insertBefore(child,parent.children[index]||null);});
@@ -2590,13 +2640,14 @@ function sourceGroup(kind,label,children,create=null,query=''){
     const section=el('section',{class:'input-group','data-input-group':kind}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind}),toggle=el('button',{class:'input-group-toggle','aria-controls':list.id});
     toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},label));head.append(toggle);section.append(head,list);
     const badges=el('span',{class:'source-counts'});toggle.append(badges);
-    group={section,list,toggle,badges,badgeByCategory:new Map(),query};
+    const up=el('button',{class:'source-group-move','aria-label':t('layout.moveUp')+' · '+label,title:t('layout.moveUp')},'↑'),down=el('button',{class:'source-group-move','aria-label':t('layout.moveDown')+' · '+label,title:t('layout.moveDown')},'↓');
+    head.append(up,down);group={section,list,toggle,badges,up,down,badgeByCategory:new Map(),query};
     toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!group.query)setInputGroupCollapsed(kind,list.hidden);};
     if(create){const add=el('button',{class:'input-group-add','data-input-create':create,'aria-label':t('inputs.addSource').replace('{category}',label),title:t('inputs.addSource').replace('{category}',label)},'＋ '+t('inputs.newShort'));add.onclick=()=>openInputCreate(create);head.append(add);}
     sourceGroupCache.set(kind,group);
   }
   group.query=query;group.list.hidden=!query&&inputCollapsedGroups.has(kind);group.toggle.setAttribute('aria-expanded',String(!group.list.hidden));
-  reconcileSourceChildren(group.list,children);
+  reconcileSourceChildren(group.list,orderedSourceGroups(kind,children,query));
   const counts=new Map(),add=(category,count)=>{if(count)counts.set(category,(counts.get(category)||0)+count);};
   for(const child of children){
     if(child.sourceCounts)for(const [category,count]of child.sourceCounts)add(category,count);
@@ -2689,7 +2740,8 @@ function sourceCard(decl,preset,issue,row,conflict=false){
       if(entry&&!decl)body.append(el('p',{class:'source-card-meta'},t(entry.labelKey)+' · '+entry.name));
       if(decl&&row&&!row.pending&&!row.missing&&!isResourceType(decl.type)&&!isMatrixType(decl.type)&&typeDescriptor(decl.type)?.shape!=='array'&&['uniform','spec_constant'].includes(decl.kind)){
         body.dataset.nativeSource=id;body.append(nativeValueControls(decl,row));
-      }else if(dormant)body.append(el('p',{class:'source-card-meta'},t('sources.presetDormant')));
+      }else if(decl?.kind==='constant')body.append(sourceConstantControls(decl));
+      else if(dormant)body.append(el('p',{class:'source-card-meta'},t('sources.presetDormant')));
       if(decl){
         const definition=catalog.find(d=>d.key===decl.kind);
         if(definition){
@@ -2711,9 +2763,12 @@ function sourceCard(decl,preset,issue,row,conflict=false){
     more.onclick=e=>openSourceCardMenu(card,id,preset,e);head.oncontextmenu=e=>openSourceCardMenu(card,id,preset,e);
     head.append(toggle,pick,reference,more);card.append(head,body);
     const state=el('div',{class:'input-source-status'});card.append(state);
-    cached={card,signature,state,decl,preset,issue,conflict};sourceCardCache.set(key,cached);
+    cached={card,signature,state,decl,preset,issue,conflict,showBody};sourceCardCache.set(key,cached);
   }
   const {card,state}=cached,native=decl&&['uniform','spec_constant','pop_buffer','attribute'].includes(decl.kind);
+  const valueCard=decl?.kind==='constant'||decl&&row&&!row.pending&&!row.missing&&!isResourceType(decl.type)&&!isMatrixType(decl.type)&&typeDescriptor(decl.type)?.shape!=='array'&&['uniform','spec_constant'].includes(decl.kind);
+  card.dataset.valueCard=String(!!valueCard);
+  cached.showBody(sourceMinimal?!valueCard:(sourceCardCollapsed.get(key)??dormant));syncSourceConstantControls(card,decl);
   const sourceState=conflict?'conflict':issue?.status||decl?.sourceMissing&&'missing'||native&&(connectionInterrupted||nativeSourceError)&&'unknown'||native&&(!row||row.pending)&&'pending'||dormant&&'dormant'||'ready';
   const message=conflict?t('sources.presetConflict'):issue?.message||decl?.sourceMissing&&t('sources.missing')||sourceState==='unknown'&&t('sources.connectionUnknown')||sourceState==='pending'&&t('sources.enable')||'';
   card.dataset.sourceState=sourceState;card.dataset.sourceAvailable=String(sourceState==='ready'&&!(decl?.kind==='attribute'&&stage!=='vertex'));state.hidden=!message;const text=message?'⚠ '+message:'';if(state.textContent!==text)state.textContent=text;
@@ -2786,7 +2841,7 @@ function renderSourceCards(box,query){
     if(previous?.issueKey!==issueKey){section=el('section',{class:'input-group','data-source-issues':''});section.append(el('div',{class:'input-group-title'},t('sources.unavailable')));for(const issue of unimported){const card=el('div',{class:'input-source-row','data-source-state':issue.status||'invalid','data-source-issue':issue.name||'','data-category':'shader'}),head=el('div',{class:'input-source-select'});head.append(el('span',{},issue.name||t('sources.unavailable')),el('small',{},issue.type||''));card.append(head,el('div',{class:'input-source-status'},'⚠ '+issue.message));section.append(card);}sourceGroupCache.set('issues',{issueKey,section});}sections.push(section);
   }
   if(query&&!sections.length)sections.push(el('p',{class:'muted'},t('create.empty')));
-  reconcileSourceChildren(box,sections);refreshSourceNames();for(const key of sourceCardCache.keys())if(!keys.has(key))sourceCardCache.delete(key);
+  reconcileSourceChildren(box,orderedSourceGroups('root',sections,query));refreshSourceNames();for(const key of sourceCardCache.keys())if(!keys.has(key))sourceCardCache.delete(key);
   for(const button of box.querySelectorAll('[data-builtin-reference]'))button.disabled=readonly;
   for(const button of box.querySelectorAll('[data-preset-reference]'))button.disabled=editorMutationBlocked()||button.dataset.sourceMissing==='true';
 }
@@ -2808,6 +2863,10 @@ function installNativeSources(){
   const notes=$('#sourcenotes');try{notes.checked=localStorage.getItem('grapeSourceNotes')!=='false';}catch{}
   const showNotes=()=>{$('#nativeuniforms').dataset.showNotes=String(notes.checked);};showNotes();
   notes.onchange=()=>{showNotes();try{localStorage.setItem('grapeSourceNotes',String(notes.checked));}catch{}};
+  try{const saved=JSON.parse(localStorage.getItem('grapeSourceGroupOrder'));if(saved&&typeof saved==='object'&&!Array.isArray(saved))sourceGroupOrder=Object.fromEntries(Object.entries(saved).filter(([,value])=>Array.isArray(value)&&value.every(key=>typeof key==='string')));}catch{}
+  const minimal=$('#sourceminimal');try{sourceMinimal=localStorage.getItem('grapeSourceMinimal')==='true';}catch{}
+  minimal.checked=sourceMinimal;$('#nativeuniforms').dataset.minimal=String(sourceMinimal);
+  minimal.onchange=()=>{sourceMinimal=minimal.checked;$('#nativeuniforms').dataset.minimal=String(sourceMinimal);try{localStorage.setItem('grapeSourceMinimal',String(sourceMinimal));}catch{}renderNativeSources();};
   const arrayFields=el('section',{id:'sourcearrayfields',class:'source-array-fields'}),arrayLength=el('input',{id:'sourcearraylength',type:'number',min:1,max:1024,step:1,value:4}),arraySource=el('input',{id:'sourcearraypath',type:'text',maxlength:4096,spellcheck:'false',placeholder:'/project1/constant1'});
   const lengthField=field('',arrayLength),pathField=field('',arraySource);lengthField.prepend(el('span',{'data-i18n':'array.length'},t('array.length')));pathField.prepend(el('span',{'data-i18n':'array.chopPath'},t('array.chopPath')));
   const arrayHint=el('p',{class:'muted'});arrayFields.append(lengthField,pathField,arrayHint);arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);

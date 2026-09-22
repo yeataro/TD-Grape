@@ -1937,6 +1937,23 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .source-view-tools select{min-width:0;max-width:100%;font-size:11px;padding:6px}
 .source-view-tools label{display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap}
 #nativeuniforms[data-show-notes=false] .source-card-note{display:none}
+.source-group-move{flex:none;border:0;background:transparent;padding:2px;width:18px;min-height:24px;font-size:12px;color:var(--muted)}
+.source-group-move:disabled{opacity:.2}
+[data-source-constant]>.components+.components{margin-top:6px}
+[data-source-constant] .parameter-value-label{grid-column:1/-1}
+/* Compact presentation belongs only to Sources. It keeps controls and font
+   sizes, reducing empty space instead of scaling the whole interface. */
+#nativeuniforms[data-minimal=true] .input-group{margin-block:2px 5px}
+#nativeuniforms[data-minimal=true] .input-group-title{min-height:22px;gap:3px}
+#nativeuniforms[data-minimal=true] .input-group-toggle{padding-block:1px}
+#nativeuniforms[data-minimal=true] .input-group-add{height:22px}
+#nativeuniforms[data-minimal=true] .input-source-row{margin-block:2px;border-radius:4px;box-shadow:none}
+#nativeuniforms[data-minimal=true] :is(.input-source-select,.input-reference){min-height:22px;padding-block:1px}
+#nativeuniforms[data-minimal=true] :is(.source-card-outputs,.source-card-toggle){display:none}
+#nativeuniforms[data-minimal=true] .source-card-body{padding:4px}
+#nativeuniforms[data-minimal=true] .source-card-note{margin:4px -4px -4px;padding:4px}
+#nativeuniforms[data-minimal=true] .input-source-status{padding:3px 4px}
+@media(pointer:coarse){#nativeuniforms[data-minimal=true] :is(.input-group-title,.input-group-toggle,.input-source-select,.input-reference,.source-card-menu-button){min-height:32px}}
 #editoractionsmenu{position:fixed;inset:auto;margin:0;min-width:min(220px,calc(100 * var(--ui-vw) - 16px));max-width:calc(100 * var(--ui-vw) - 16px);overflow:auto}
 #editoractionsmenu button{display:block;width:100%;text-align:left;white-space:normal}
 #editormenu svg circle{fill:currentColor;stroke:none}

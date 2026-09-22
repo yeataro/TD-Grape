@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-23 0.8.177：Sources 第二批完成，分類上下移動保存為瀏覽器偏好；Graph Constants 卡片直接編輯純量／向量／矩陣、布林與整數，沿用圖編輯與 Undo。最小化依作者新決定縮減標題上下留白及圓角，保持文字大小，隱藏 Output 文字／接孔；數值控制保留，其他卡片折疊，恢復普通模式時回復原折疊狀態。顯示備註可獨立切換，警告仍顯示。詳見 [Sources 面板](../ui/SOURCES_PANEL.md)。
+
+22 組相關瀏覽器檢查通過，包含常數連續分量編輯／Undo／Redo／草稿、過期控制與 readonly、窄面板、最小化切換、分類排序與重新載入。完整 portable checks 通過：526 Python、14 integration、1038 雙語鍵及既有 JS suites。39 份來源同步成功，四份 Master 保留人工內容／OP 身分／位置，兩份使用者 Shader 保留；Phong Master 此時 revision 83，沒有用預置 JSON 覆寫人工圖。TOE 保存（1312144 bytes；SHA256 259fd501ee3616b674eb6fd13ed27d4d9eb10cb3e5952ef8d8a87cf08c436aaa），私人助手排除。未推送。
+
 2026-09-23 0.8.176：Sources／來源面板改名，搜尋占滿首行，TD／共同名稱及顯示備註在第二行；預設 Uniform、Graph Constants、Specialization Constants 置頂。一般卡片 Output 移至 Body 最上方；節點的編輯來源按鈕移到設定，數值／驅動保持在參數。17 組相關瀏覽器檢查通過，含現有來源卡片 DOM 保留、Undo、引用、搜尋與 MAT／TOP 階段過濾；第一次菜單測試誤用 TOP fixture，改用 MAT fixture 後通過。39 份來源已同步，四份 Master 升級保留人工內容／OP 身分／位置，兩份使用者 Shader 保留；來源刷新期間一個舊 HTTP 請求有模組替換暫時錯誤，刷新完成及 Master 檢查通過。TOE 保存，未推送。分類手動排序、常數卡片數值控制與最小化接續處理，見 [Sources 面板](../ui/SOURCES_PANEL.md)。
 
 2026-09-23 0.8.175：交付可 review 的基本 Phong MAT Graph／PBR MAT Graph，從 TDFam 的 Grape → MAT 新增；Grape TOP 歸 TOP。兩份圖採一般可編輯節點，Vertex 各 4 個 Group、Pixel 各 7 個 Group，單一歸屬，依計算用途整理。包括具名 Tex／Instance UV 傳遞、攝影機視向、表面法線、正確的 Phong／PBR 基本合成與 opt-in 原生 MAT 最後處理。既有圖輸出行為保持；進階貼圖與完整材質能力尚未完成，見[基本預置與人工整理入口](../features/BASIC_MATERIAL_PRESETS.md)。
