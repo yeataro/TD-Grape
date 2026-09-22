@@ -2093,7 +2093,7 @@ function installGraphInteractions(){
     if(e.target.closest('.details')||e.target.closest('#grapheditmenu')||e.target.closest('.library')||e.target.closest('#creator')||e.target.closest('.shader-selector')||e.target.closest('dialog')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
     const plainKey=e.key.toLowerCase();
     const inGraph=e.target===document.body||e.target===document.documentElement||e.target.closest('.graph-workspace');
-    const graphCommandReady=inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open],:popover-open');
+    const graphCommandReady=inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open]:not(#customdialog),:popover-open');
     const graphNavigationReady=graphCommandReady&&!nodePlacement&&!e.target.closest('button,a,[role="slider"],[role="listbox"],[role="menu"],[role="tablist"]');
     const commandModifier=(e.ctrlKey||e.metaKey)&&!(e.ctrlKey&&e.metaKey)&&!e.altKey&&!e.shiftKey;
     if(e.key==='Enter'&&commandModifier){

@@ -15,9 +15,11 @@ vm.runInContext(`
 render=()=>{};renderNativeSourceValues=()=>{};refreshUniforms=()=>{};
 const call=(id,fn)=>({id,definitionUuid:FunctionModel.CALL,params:{functionId:fn},ui:{x:24,y:24}});
 const fn=(id,scope='local')=>({id,name:id,scope,stages:['pixel'],inputs:[],outputs:[],graph:{nodes:[],edges:[]},...(scope==='local'?{}:{source:{id:'source.'+id,version:'1'}})});
+// These fixtures have no edges. Use an empty selection; a dangling edge index
+// is intentionally discarded by the current snapshot-scoped selection model.
 const setup=()=>{
   graph={schemaVersion:1,declarations:[],functions:Array.from({length:64},(_,i)=>fn('f'+i,i===0?'library':'local')),stages:{pixel:{nodes:[call('call','f0')],edges:[]}}};
-  graphTrail=['f0'];past=[{sentinel:'past'}];future=[{sentinel:'future'}];selection=new Set(['selected']);selected='selected';selectedEdge=2;dirty=false;editVersion=5;
+  graphTrail=['f0'];past=[{sentinel:'past'}];future=[{sentinel:'future'}];selection=new Set(['selected']);selected='selected';setSelectedEdges([]);dirty=false;editVersion=5;
 };
 const state=()=>JSON.stringify({graph,graphTrail,past,future,selection:[...selection],selected,selectedEdge,dirty,editVersion});
 setup();let before=state();

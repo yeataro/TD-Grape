@@ -521,6 +521,8 @@ node tests/browser/test_native_viewer.cjs src/editor tests/fixtures/editor-state
 ```text
 python tools/dev/submit_job.py tests/td/test_native_sources.py --timeout 60
 python tools/dev/submit_job.py tests/td/test_custom_parameters.py --timeout 60
+python tools/dev/submit_job.py tests/td/test_parameter_editor.py --timeout 60
+python tools/dev/submit_job.py tests/td/test_parameter_layout.py --timeout 60
 python tools/dev/submit_job.py tests/td/test_glsl_annotations.py --timeout 60
 python tools/dev/submit_job.py tests/td/test_sampler_split.py --timeout 60
 ```

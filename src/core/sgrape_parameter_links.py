@@ -7,7 +7,7 @@ import copy
 import math
 
 STORE = 'grapeControlLinksV1'
-CHANNELS = {'vec': ('valuex','valuey','valuez','valuew'), 'color': ('rgbr','rgbg','rgbb','alpha')}
+CHANNELS = {'vec': ('valuex','valuey','valuez','valuew'), 'color': ('rgbr','rgbg','rgbb','alpha'), 'const': ('value',)}
 _busy = False
 _handles = {}
 
@@ -50,7 +50,7 @@ def detach(comp, ident, current=True):
     if not link: return
     native = source_pars(comp, ident)
     for item in link['components']:
-        if not native: break
+        if not native or item['index']>=len(native): continue
         p = native[item['index']]
         if owned(p, item):
             value = p.eval() if current and p.bindMaster is not None else item['last']
@@ -81,7 +81,9 @@ def sync(comp, changed=None, previous=None):
                 links.pop(ident); _handles.pop(ident, None); continue
             kept = []
             for item in link['components']:
-                i = item['index']; p = native[i]
+                i = item['index']
+                if i>=len(native): continue
+                p = native[i]
                 if not owned(p, item): continue  # A native edit owns its new mode/expression.
                 control = getattr(comp.par, item['control'], None)
                 if control is None:

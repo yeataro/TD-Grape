@@ -18,6 +18,14 @@
     "Graph"
   ],
   "messages": {
+    "controls.dropSources": {"en":"Drag a Uniform or Spec Constant from Sources here.","zh-Hant":"從來源面板拖入 Uniform 或特化常數。"},
+    "controls.pulse": {"en":"Pulse","zh-Hant":"觸發"},
+    "controls.rename": {"en":"Rename Page","zh-Hant":"重新命名頁面"},
+    "controls.size": {"en":"Size","zh-Hant":"分量數"},
+    "controls.parameter": {"en":"Parameter","zh-Hant":"參數名稱"},
+    "controls.parameters": {"en":"Parameters","zh-Hant":"參數"},
+    "controls.pages": {"en":"Pages","zh-Hant":"頁面"},
+    "controls.customize": {"en":"Customize Parameters","zh-Hant":"編輯自訂參數"},
     "sources.showNotes": {"en":"Notes","zh-Hant":"顯示備註"},
     "sources.minimal": {"en":"Minimal","zh-Hant":"最小化顯示"},
     "view.showLinkLines": {"en":"Show Link lines","zh-Hant":"顯示 Link 線"},
@@ -2395,14 +2403,8 @@
       "en": "Remove empty page",
       "zh-Hant": "刪除空白頁面"
     },
-    "controls.fromUniform": {
-      "en": "Add to custom parameters",
-      "zh-Hant": "加入自訂參數"
-    },
-    "controls.hint": {
-      "en": "Edit the COMP’s actual controls. Defaults remain separate from current values.",
-      "zh-Hant": "直接編輯 COMP 的控制參數。預設值與目前值分開保留。"
-    },
+    "controls.fromUniform": {"en":"Customize Parameters…","zh-Hant":"編輯自訂參數…"},
+    "controls.hint": {"en":"Operate the native COMP parameters here.","zh-Hant":"在此操作原生 COMP 參數。"},
     "connection.interrupted": {
       "en": "Connection interrupted. Retrying; your draft is kept.",
       "zh-Hant": "連線中斷，正在重試；編輯草稿已保留。"

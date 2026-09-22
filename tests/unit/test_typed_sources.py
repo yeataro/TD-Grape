@@ -91,6 +91,7 @@ class TypedSources(unittest.TestCase):
         class Page:
             def appendInt(self, name, **kwargs):
                 return [SimpleNamespace() for _ in range(kwargs.get('size', 1))]
+            appendFloat=appendInt
         comp = SimpleNamespace(parGroup=SimpleNamespace(), pars=lambda _: [])
         for ty, low, high, count in [('int', -2147483648, 2147483647, 1), ('uvec4', 0, 4294967295, 4), ('bvec3', 0, 1, 3)]:
             group = parameters.create_group(comp, Page(), 'Value', ty)

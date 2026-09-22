@@ -98,9 +98,9 @@ class TypedUndo(unittest.TestCase):
 
     def test_binding_rejects_invalid_native_value_before_creating_integer_control(self):
         f=self.f;f.runtime.core=lambda:core;self.declaration('int');f.par('A').val=1.5
-        f.comp.customPages=[SimpleNamespace(name='Controls')]
-        seen=dict(enabled=True,revision=1,expectedPages='pages')
-        native=dict(uniforms=[dict(id='A',name='uA',type='int',missing=False,expected='source',default=0)])
+        f.comp.customPages=[SimpleNamespace(name='Controls',parGroups=[])]
+        seen=dict(enabled=True,revision=1,expectedPages='pages',controls=[])
+        native=dict(uniforms=[dict(id='A',name='uA',kind='uniform',sequence='vec',type='int',missing=False,expected='source',default=0)])
         with patch.object(parameters,'snapshot',return_value=seen), patch.object(sources,'snapshot',return_value=native), patch.object(parameters,'create_group') as create:
             with self.assertRaisesRegex(RuntimeError,'whole int'):
                 parameters.edit(f.runtime,dict(action='bind',revision=1,expectedPages='pages',page='Controls',id='A',sourceExpected='source'))

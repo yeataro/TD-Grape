@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.196'
+PRODUCT_VERSION='0.8.197'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -417,11 +417,8 @@ def arrange_shader_parameters(shader):
             if p.order!=index:p.order=index
             section=name in ('Glslparameters','Version')
             if p.startSection!=section:p.startSection=section
-    # Existing custom pages (including adopted legacy controls) keep their order.
-    pages=[p.name for p in shader.customPages]
-    tail=[name for name in ('Output',page_name) if name in pages]
-    ordered=[name for name in pages if name not in tail]+tail
-    if ordered!=pages:shader.sortCustomPages(*ordered)
+    # Page order belongs to the user; Apply must not move protected pages or
+    # overwrite the parameter editor's order.
 
 
 def register_shader(shader,fresh=False):
@@ -1534,6 +1531,8 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         target().op('graph').text=json.dumps(graph,ensure_ascii=False,indent=2)
         return {'ok':True,'state':new,'shaderUpdated':False,'compileInfo':'Graph layout saved','diagnostics':compiled['diagnostics'],'target':target().path}
     old_target=target(); preserve=existing_values(old_target,graph)
+    parameters=_owner.op('parameters').module
+    control_plans=parameters.shape_plans(_owner.op('runtime').module,old_target,graph) if old_target else []
     preview_runtime,preview_token=begin_material_preview_update(old_target)
     candidate=None
     try:
@@ -1555,8 +1554,12 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         destination=old_target or make_scene(_owner.parent(),_owner.fetch('targetName','sgrape_material'),core().graph_target(graph))
         destination.store('sgrapeOwnerName',_owner.name)
         source_before=source_module().capture_configuration(_owner.op('runtime').module,destination) if source_module() else None
+        controls_applied=False
         try:
             configure(destination,compiled,graph,preserve)
+            if control_plans:
+                parameters.apply_shapes(destination,destination.op('parameter_links').module,control_plans)
+                controls_applied=True
             if inject_failure: raise RuntimeError('Injected commit failure')
             validate_material(destination,compiled)
             new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,appliedHash=compiled['hash'],lastError='',sourceChanged=False)
@@ -1567,6 +1570,7 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
                 backup_dat.text = backup
             destination.par.Version = PRODUCT_VERSION
         except Exception:
+            if controls_applied:parameters.restore_shapes(destination,destination.op('parameter_links').module,control_plans)
             if source_before is not None: source_module().restore_configuration(_owner.op('runtime').module,destination,source_before)
             if previous:
                 configure(destination,previous[1],previous[0],previous[2]);validate_material(destination)

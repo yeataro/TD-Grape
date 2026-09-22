@@ -33,7 +33,7 @@ function translatePage(){document.documentElement.lang=language;document.querySe
 function setLanguage(value){
   if(!localeData.languages[value]||value===language)return;
   language=value;localStorage.setItem('sgrapeLanguage',language);
-  translatePage();render();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();
+  translatePage();render();renderCustomParameters();renderGraphSaveState();renderSavedStateIssue();renderUpgradeNotice();renderUpgradeReview();
   status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):t('locale.changed'),!!savedStateIssue);
 }
 async function initLocale(){
@@ -739,7 +739,7 @@ async function load(){
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
     nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeSourceUncertain=false;++nativeSourceReadEpoch;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;applyLayoutOnly=false;
     uniformGeneration++;uniformPolling=false;uniformPending.clear();uniformReadbacks.clear();uniformWrites=Promise.resolve();uniformSnapshot={revision:-1,uniforms:{}};
-    customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
+    customDrag?.cancel();$('#customdialog').close();customSelection='';customEditPage='';customSnapshot=null;customBusy=false;customPolling=false;customError='';customRetryAt=0;$('#customcontrols').dataset.structure='';$('#nativeuniforms').dataset.sourceStructure='';
     readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();
     setEditorTargetPath(data.target);$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});
     if(generation!==editorLoadGeneration)return;

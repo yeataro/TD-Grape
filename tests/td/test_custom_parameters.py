@@ -33,7 +33,7 @@ try:
                 return q.edit(r,{'action':action,**body})
             action('page-create',name='Look');action('page-create',name='Motion')
             action('page',name=legacy.parGroup.name,page='Look');action('label',name=legacy.parGroup.name,label='Brightness')
-            data=action('create',name='Unbound',style='vec4',page='Motion');group=next(g for g in data['controls'] if g['label']=='Unbound')
+            next(p for p in shader.customPages if p.name=='Motion').appendFloat('Unbound',size=4);data=q.snapshot(r);group=next(g for g in data['controls'] if g['name']=='Unbound')
             name=group['name'];action('default',name=name,component=0,value=.12)
             data=q.snapshot(r);row=next(g for g in data['controls'] if g['name']==name)
             action('value',name=name,component=0,value=.48,expectedValue=row['components'][0])
@@ -41,7 +41,7 @@ try:
             action('page-rename',page='Motion',name='Animation');action('page-move',page='Animation',direction=-1)
             try:action('page-remove',page='Animation');raise AssertionError('Nonempty page removed')
             except RuntimeError:pass
-            checks.append(kind+': independent pages and unbound controls edit native values/defaults without a graph node')
+            checks.append(kind+': existing native unbound controls edit native values/defaults without a graph node')
             row=next(x for x in sources.snapshot(r)['uniforms'] if x['id']=='tint')
             data=action('bind',id='tint',page='Look',sourceExpected=row['expected'])
             control=next(g for g in data['controls'] if 'tint' in g['sources']);tint=getattr(shader.parGroup,control['name'])
@@ -54,12 +54,8 @@ try:
             checks.append(kind+': COMP, Uniform panel and actual native Bind write the same control')
             tint.name='Renamed';model.sync(shader)
             assert native.par.vec1valuex.bindMaster.name=='Renamed1' and native.par.vec1valuex.eval()==.77
-            action('style',name='Renamed',style='rgba');tint=shader.parGroup.Renamed
-            assert tint.style=='RGBA' and tint[0].eval()==.77 and tint[0].default==.1
-            assert native.par.vec1valuex.bindMaster.name=='Renamedr'
-            action('style',name='Renamed',style='vec4');tint=shader.parGroup.Renamed
-            assert tint[1].eval()==.81 and tint[1].default==.2
-            checks.append(kind+': native rename and Vector/RGBA conversion preserve owned links, values and defaults')
+            tint=shader.parGroup.Renamed
+            checks.append(kind+': native rename preserves owned links, values and defaults')
             graph=copy.deepcopy(r.state()['graph']);graph['stages']['pixel']['nodes'][0]['params']['value']=[.3,.2,.1,1]
             applied=r.deploy(graph,r.state()['revision']);assert applied['ok'],applied
             assert legacy.page.name=='Look' and legacy.label=='Brightness' and legacy.default==.13
@@ -71,14 +67,6 @@ try:
             except RuntimeError:pass
             assert q.snapshot(r)['controls']==before_controls and shader.fetch(model.STORE)==before_links
             checks.append(kind+': failed Apply preserves custom controls and owned links')
-            outside=root.create(baseCOMP,'external_'+kind);external=outside.appendCustomPage('Controls').appendFloat('Reference')[0]
-            external.bindExpr="op('"+shader.path+"').par.Renamed1"
-            assert abs(external.eval()-.77)<1e-6 and external.bindMaster is not None
-            try:action('style',name='Renamed',style='rgba');raise AssertionError('External Bind silently broken')
-            except RuntimeError:pass
-            assert external.bindMaster.isSamePar(tint[0]);outside.destroy()
-            checks.append(kind+': style changes reject external Bind breakage before mutation')
-
             stale=next(g for g in q.snapshot(r)['controls'] if g['name']=='Renamed');tint.label='Native change'
             try:action('label',name='Renamed',label='Stale',expected=stale['expected']);raise AssertionError('Stale edit accepted')
             except RuntimeError:pass
