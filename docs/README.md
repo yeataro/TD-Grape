@@ -6,6 +6,8 @@
 - [Alpha 能力範圍](discussions/ALPHA_SCOPE_2026-09-21.md)：最新需求收集中；GLSL／TD 節點、MAT／來源、命名及自訂參數，待使用者補充完再排修改順序。
 - [TD 函式節點缺口](discussions/TD_FUNCTION_NODE_GAPS.md)：0.8.163 與 TOP／MAT 公開函式逐項對照，附 CSV；已有入口、自動產碼、缺口及宿主邊界分開記錄。
 - [原生 Phong／PBR 函數清單](features/MAT_NATIVE_FUNCTIONS.md)：依原生功能分支匯出的 GLSL，列出 GLSL 內建函數、TD 原生函數、資料來源、對應節點與未完成項目。
+- [原生材質功能研究](discussions/MAT_FUNCTIONAL_RESEARCH.md)：從外觀需求向下整理資料、運算、階段與宿主依賴；附原生匯出證據，供重構或新專案參考。
+- [TD 2025.32820 原生函數版本查核](discussions/TD_NATIVE_VERSION_REVIEW_2026-09-23.md)：區分宿主版本差異、指南未涵蓋與專案缺少入口；記錄本次官方發布資料查核界線。
 
 - [專案用語表](GLOSSARY.md)：跨功能的中英術語與概念界線；不代替行為規格。
 - [值、節點與來源模型](architecture/VALUE_MODEL.md)：已確認的固定／通用入口、穩定名稱、來源引用及能力邊界。
