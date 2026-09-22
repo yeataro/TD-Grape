@@ -10,6 +10,8 @@ The reference is TouchDesigner 2025.32820. Native parameter inspection finds 240
 
 References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](https://derivative.ca/UserGuide/PBR_MAT), and the installed host's `outputShader()` results.
 
+0.8.174 adds explicit projection-map LOD sampling and size lookup through native Light COMP bindings. Six native-call comparisons pass; this is a resource-access increment, not completion of the material presets.
+
 ## Capability ledger
 
 | Area | Required behavior | Current evidence / remaining work |

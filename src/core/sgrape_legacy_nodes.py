@@ -249,7 +249,7 @@ for model in ('phong','pbr'):
     CALLS['material_'+model]['implicitInputs']={'position':'sg_lighting_position','normal':'sg_lighting_normal','camera':'sg_lighting_camera'}
 
 
-# The online TD documentation is newer than the archive's tested host build.
+# These documented signatures failed on the archive's tested TD 2025.32820.
 # Keep unavailable references explicit, but never advertise an uncallable node.
 UNAVAILABLE = {key:CALLS.pop(key) for key in (
     'td_extract_rotation','td_slerp_rotation_matrices','td_interpolate_transform_matrices',
@@ -272,6 +272,10 @@ td('td_instance_color_pixel','TDInstanceColor',[('instance','int'),('color','vec
 CALLS['td_instance_color_pixel']['label']='TDInstanceColor (Pixel)'
 td('td_convert_color_space','TDConvertColorSpace',[('color','vec4')],'vec4',targets=('mat',),stages=('pixel',))
 CALLS['td_convert_color_space']['includes']=['TDColorSpace']
+
+# Native projection-map accessors introduced in TD 2025.32820.
+td('td_projtexture_lod','TDProjTextureLod',[('light','int'),('uv','vec2'),('lod','float')],'vec4',targets=('mat',),stages=('pixel',),category='texture')
+td('td_projtexture_size','TDProjTextureSize',[('light','int')],'ivec3',targets=('mat',),stages=('pixel',),category='texture')
 
 def interface(key, ty):
     return copy.deepcopy(CALLS[key]['variants'][ty])

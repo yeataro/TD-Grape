@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.173",
+  "catalogVersion": "0.8.174",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -14199,6 +14199,88 @@
           "TDConvertColorSpace"
         ],
         "glslName": "TDConvertColorSpace",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_projtexture_lod",
+        "label": "TDProjTextureLod",
+        "inputs": {
+          "light": "int",
+          "uv": "vec2",
+          "lod": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.td_projtexture_lod",
+        "definitionUuid": "sgrape.builtin.td_projtexture_lod",
+        "revisionHash": "6afa5fd72d28342ff62b3996b56160a9cf93dd3c0bb14c290298517c0f06cdd4",
+        "targets": [
+          "mat"
+        ]
+      },
+      "emitter": {
+        "id": "td_projtexture_lod",
+        "version": 1
+      },
+      "browser": {
+        "category": "texture",
+        "source": "td",
+        "aliases": [
+          "td_projtexture_lod",
+          "TDProjTextureLod",
+          "light projection map"
+        ],
+        "glslName": "TDProjTextureLod",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_projtexture_size",
+        "label": "TDProjTextureSize",
+        "inputs": {
+          "light": "int"
+        },
+        "outputs": {
+          "out": "ivec3"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.td_projtexture_size",
+        "definitionUuid": "sgrape.builtin.td_projtexture_size",
+        "revisionHash": "d748f984d36871d36442326d18efb564c2c1d753673eb44a33672509bdd8a1cc",
+        "targets": [
+          "mat"
+        ]
+      },
+      "emitter": {
+        "id": "td_projtexture_size",
+        "version": 1
+      },
+      "browser": {
+        "category": "texture",
+        "source": "td",
+        "aliases": [
+          "td_projtexture_size",
+          "TDProjTextureSize",
+          "light projection map"
+        ],
+        "glslName": "TDProjTextureSize",
         "secondaryCategories": []
       }
     }

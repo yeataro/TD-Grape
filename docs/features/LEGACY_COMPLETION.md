@@ -35,7 +35,7 @@ An earlier test shader omitted a varying expected by its companion stage. Repeat
 
 ## Host and archive limits
 
-These documented TD functions are absent in the tested build and are not exposed as working nodes: `TDExtractRotation`, `TDSlerpRotationMatrices`, `TDInterpolateTransformMatrices`, `TDAxisAngleToQuaternion`, `TDQuaternionToRotMatrix`, `TDRotMatrixToQuaternion`, `TDRotateFromQuaternion`, `TDQuaternionMultiply`, `TDSlerpQuaternions`, `TDQuaternionFromTo`.
+These documented TD signatures failed direct compilation in the tested build and are not exposed as working nodes: `TDExtractRotation`, `TDSlerpRotationMatrices`, `TDInterpolateTransformMatrices`, `TDAxisAngleToQuaternion`, `TDQuaternionToRotMatrix`, `TDRotMatrixToQuaternion`, `TDRotateFromQuaternion`, `TDQuaternionMultiply`, `TDSlerpQuaternions`, `TDQuaternionFromTo`.
 
 TD transfer/gamut calls compile only in MAT pixel on this build; their nodes are restricted accordingly. New sampling functions require an explicitly connected compatible resource. Existing fallback behavior on older nodes is unchanged. A valid native sampler signature does not by itself add a native texture-binding configuration for that dimension.
 
@@ -65,3 +65,9 @@ The author clarified that “basic capability” means all native Phong MAT and 
 - Other-vertex Attribute lookup follows the basic MAT work, as requested.
 
 The 0.8.163 gap counts in `docs/discussions/TD_FUNCTION_NODE_GAPS.md` are historical inventory, not the current number of missing nodes.
+
+## 0.8.174 projection-map accessors
+
+TDProjTextureLod and TDProjTextureSize are exposed as MAT Pixel nodes (338 definitions total), with individual bilingual Help. They use the Light COMP projection map and zero-based Render TOP light index, not a custom sampler binding. Both remain runtime expressions. Six rendered graph/direct-call comparisons cover two maps (32×16 and 64×32), two light indices and LOD 0/3; maximum absolute difference is zero, with an observable LOD change. Width/height are verified; the Size output's third component is not generalized beyond the tested host. Browser-created connected graphs compile; TOP and Vertex entries are excluded.
+
+The ten Quaternion/matrix exclusions above remain. The version report now records their prior failures and the failed TDQuaternionMath include probe, without claiming an unverified first supported TD version. Full material presets remain incomplete.

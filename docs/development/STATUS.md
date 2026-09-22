@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-23 0.8.174：補入 TDProjTextureLod／TDProjTextureSize，338 個節點入口，限 MAT Pixel；附雙語 Help。六組 TD 原生對照誤差 0，涵蓋兩盞燈、兩種貼圖尺寸與 LOD 0／3。524 Python、14 附加測試、完整 portable checks 與兩組瀏覽器建立／接線／產碼檢查通過。修正版本研究漏列十個 Quaternion／矩陣簽名失敗紀錄的問題；TDQuaternionMath 標頭亦於目前宿主載入失敗，不能據此推定首次支援版本。完整 Phong／PBR 預置仍未完成。
+
+38 份 TD 來源一致，兩份 Master revision 121，三份使用者 Shader 保留；live core 編譯兩條新路徑成功。TOE 已保存（1192216 bytes；SHA256 5313b6aec6459d46742dc14f54d4390559a2cb666dba79774922265003a7703f），私人助手排除。未發布或推送。
+
 2026-09-23 0.8.173 交付：依作者確認的小目標驗收方式，新增原生 Phong／PBR 分支匯出盤點，158 個配置（Phong 85／PBR 73）的原生及匯出材質均編譯成功。函數列表見 [MAT_NATIVE_FUNCTIONS](../features/MAT_NATIVE_FUNCTIONS.md)：9 個 GLSL 內建函數、34 個 TD 呼叫名稱，並區分資料來源、普通運算組合、可用入口與未完成能力。尚未覆蓋的實例貼圖、非 2D 資源與場景分支明列，不能解讀為完整材質已完成。
 
 新增 TDConvertColorSpace、TDInstanceColor (Current)、TDInstanceColor (Pixel)，以及 TDColor、TDScreenSpaceCoord（st）、TDInstanceIndex 共用來源；336 個節點入口。五條接線路徑與直接 TD 呼叫像素對照誤差 0，包含兩個不同顏色實例。522 Python、14 附加測試、完整 portable checks 與 3 組瀏覽器流程通過。原有帶索引 Vertex 節點契約與舊圖產碼保留；完整預置的抖色／色彩轉換順序仍須整合，Window／MAT viewer 的色彩管理尚未做畫面對照。

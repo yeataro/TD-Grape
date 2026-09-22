@@ -107,3 +107,7 @@
 - [TD：Write a GLSL MAT](https://derivative.ca/UserGuide/Write_a_GLSL_MAT)
 - [TD：Phong MAT](https://derivative.ca/UserGuide/Phong_MAT)、[PBR MAT](https://derivative.ca/UserGuide/PBR_MAT)
 - [GLSL 4.60 規格](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf)
+
+## 0.8.174：版本查核補入的投影貼圖入口
+
+`TDProjTextureLod` 與 `TDProjTextureSize` 是 2025.32820 已提供的 API，已補 MAT Pixel 節點與各自的 Help。這兩項來自版本查核，不加入上方「158 個原生匯出配置實際出現的 34 個 TD 名稱」計數。六組 [原生對照](../../tests/td/test_native_projection.py) 驗證兩盞燈、不同貼圖尺寸及 LOD；誤差 0。完整投影光照仍由 TD 的燈光流程負責，這兩個節點只提供貼圖讀取／尺寸查詢。

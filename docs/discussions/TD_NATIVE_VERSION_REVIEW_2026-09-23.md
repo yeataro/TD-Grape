@@ -6,6 +6,8 @@
 
 ## 結論
 
+**更正：初版漏讀了既有十個函數的失敗紀錄。** 目前 Wiki 明列下方十個矩陣／Quaternion 簽名，但它們在本機 2025.32820 的既有 TOP Pixel、MAT Vertex、MAT Pixel 測試皆失敗；本次另測 `TDQuaternionMath` 標頭也無法載入。應保留這個已知限制，不能因未找到新版發布項目就收回先前的失敗事實。尚未確認它們首次可用的版本。
+
 **本次沒有從已查到的新版公開紀錄，確認出「2025.32820 沒有、較新正式版才新增」的 TOP／MAT 原生 GLSL 函數名稱。** 這是查核結果，不是證明新版與舊版 API 完全相同。
 
 官方目前列出的正式版是 **2025.33230，2026-09-01**。查閱它及中間 2025.33070 的發布項目，與本題直接相關的是既有行為修正，例如 Image Load／Store 的範圍檢查，而非一組新函數名稱。[官方版本紀錄](https://derivative.ca/UserGuide/Release_Notes)
@@ -16,15 +18,36 @@
 
 | 入口 | 功能 | 證據與界線 |
 |---|---|---|
-| `vec4 TDProjTextureLod(int lightIndex, vec2 coord, float lod)` | 明確指定 LOD 讀取燈光投影貼圖 | 2025.32820 發布說明列出；本次未另做實際投影場景測試 |
-| `ivec3 TDProjTextureSize(int lightIndex)` | 查詢燈光投影貼圖尺寸 | 同版發布說明列出；回傳各分量的精確語意仍需實測／完整文件，不由名稱猜定 |
+| `vec4 TDProjTextureLod(int lightIndex, vec2 coord, float lod)` | 明確指定 LOD 讀取燈光投影貼圖 | 2025.32820 發布說明列出；0.8.174 已測兩盞燈、LOD 0／3，與直接原生呼叫相同 |
+| `ivec3 TDProjTextureSize(int lightIndex)` | 查詢燈光投影貼圖尺寸 | 0.8.174 已測兩盞燈的 32×16／64×32 貼圖，x/y 為寬／高；z 未泛化定義 |
 | `TDScreenSpaceCoord()` | 取得 viewport 上的正規化座標 | 更早的 2022.33910 發布說明已有；本機 2025.32820 已完成材質存取器像素對照 |
 | `TDTrueCameraIndex()` | 攝影機相關索引入口 | 2022.33910 發布說明已有；不因此把它與 `TDCameraIndex()` 視為完全等價 |
 | `TDColor()` | 原生幾何顏色讀取 | 2023.12230 發布說明已有使用紀錄；本機原生材質匯出與像素對照確認可用 |
 
 依據：[2025.32820](https://derivative.ca/release/202532820/74545)、[2022.33910](https://derivative.ca/release/202233910/67933)、[2023.12230](https://derivative.ca/release/202312230/71440)。版本頁的歷史日期表述可能有修訂；這裡以 build 與所列 API 為依據，不推定最早內部實作日期。
 
-**與 Grape 的差別：** 在 `f6eb393` 的 `src/` 搜尋未找到 `TDProjTextureLod`／`TDProjTextureSize` 引用。這兩項是後續節點入口盤點的候選缺口，不是你的 TouchDesigner 版本不足。本次只記錄，沒有順便修改節點表。
+**與 Grape 的差別：** 在 `f6eb393` 的 `src/` 搜尋未找到 `TDProjTextureLod`／`TDProjTextureSize` 引用。這是專案入口缺口，不是你的 TouchDesigner 版本不足。後續 0.8.174 已補兩個 MAT Pixel 節點及雙語 Help；六組原生對照最大誤差 0，見 [測試](../../tests/td/test_native_projection.py)。
+
+## 1.1 文件有列出、目前本機簽名未通過的十項
+
+| 原生函數 | 已測簽名（回傳型別與參數型別） |
+|---|---|
+| TDExtractRotation | mat3 (mat4) |
+| TDSlerpRotationMatrices | mat3 (mat3, mat3, float) |
+| TDInterpolateTransformMatrices | mat4 (mat4, mat4, float) |
+| TDAxisAngleToQuaternion | vec4 (vec3, float) |
+| TDQuaternionToRotMatrix | mat3 (vec4) |
+| TDRotMatrixToQuaternion | vec4 (mat3) |
+| TDRotateFromQuaternion | vec3 (vec3, vec4) |
+| TDQuaternionMultiply | vec4 (vec4, vec4) |
+| TDSlerpQuaternions | vec4 (vec4, vec4, float) |
+| TDQuaternionFromTo | vec4 (vec3, vec3) |
+
+[官方 MAT 指南](https://derivative.ca/UserGuide/Write_a_GLSL_MAT) 的 TDQuaternionMath 段落與 [TOP 指南](https://derivative.ca/UserGuide/Write_a_GLSL_TOP) 均列出這些簽名。既有 30 組測試的直接呼叫回報 `no matching overloaded function found`。2026-09-23 的 MAT Pixel 補測加入 `#include <TDQuaternionMath>`，十項皆先在標頭載入失敗：`Could not process include directive for header name: TDQuaternionMath`。這只能證明這條引用路徑不可用，不能拿來推定其他未測形式或新增版本。
+
+重現入口：[原生簽名探針](../../tests/td/test_legacy_function_signatures.py)。私人 work 的 `legacy-signature-selection.json` 可指定 `{"target":"mat","stage":"pixel","start":0,"count":10,"unavailable":true}` 重測直接呼叫；再加 `"includeHeaders":["TDQuaternionMath"]` 重測標頭。一次最多十二項，僅使用可丟棄測試場景。既有失敗探針原始報告留在私人工作區，不納入產品依賴。
+
+專案將其保留於 `UNAVAILABLE`，不作為可工作的節點公開；不自行實作同名替代品。待取得可用宿主與數值證據後再解除限制。
 
 ## 2. 已在宿主出現，但本次指南查詢未完整涵蓋
 

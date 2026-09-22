@@ -24,6 +24,8 @@ try:
     for dat,name in json.loads((GRAPE_ROOT/'src/td/embedded_sources.json').read_text(encoding='utf-8')).items():
         manager.create(textDAT,dat).text=source_path(name).read_text(encoding='utf-8')
     r=manager.op('runtime').module;r._owner=manager;c=r.core();m=c._legacy_nodes
+    if selection.get('unavailable'):
+        m.CALLS.update(m.UNAVAILABLE);selection['keys']=list(m.UNAVAILABLE)
     kind=selection['target'];g=c.demo_graph('color',kind)
     if kind=='top':g=c.normalize_top_sources(g)[0]
     mark('create',target=kind)
@@ -31,7 +33,7 @@ try:
     mark('created')
     baseline={kind:{stage:shader.op(stage+'_shader').text for stage in ('pixel','vertex') if shader.op(stage+'_shader')} for kind,shader in fixtures.items()}
     def source(cases,stage,kind):
-        headers=[];body=[]
+        headers=['#include <'+name+'>' for name in selection.get('includeHeaders',[])];body=[]
         for index,(key,ty) in enumerate(cases):
             spec=m.CALLS[key];row=m.interface(key,ty);ident='test'+str(index);args={}
             for port,t in row['inputs'].items():
