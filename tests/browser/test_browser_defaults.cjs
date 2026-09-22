@@ -11,9 +11,39 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.locator('#search').fill('Mix');assert.ok(await page.locator('#browsersearchitems [data-entry=mix]').isVisible());await page.locator('#search').fill('');
   checks.push('Add Node sections and nested categories start collapsed; search results remain directly accessible');
   await page.locator('#browser-section-library > summary').click();
-  for(const tab of ['all','editor','personal','all']){
+  for(const tab of ['all','project','editor','personal','all']){
    await page.locator('[data-function-source='+tab+']').click();assert.equal(await page.locator('#personal-library').count(),tab==='personal'?1:0);
   }
+  assert.equal(await page.locator('#browser-section-project').count(),0);
+  await page.selectOption('#language','en');
+  assert.deepEqual(await page.locator('#functionsources [role=tab]').allTextContents(),['All','This Shader','Built-in','Personal']);
+  await page.evaluate(()=>{
+   window.beforeVertexFixture=graph.stages.vertex;graph.stages.vertex||={nodes:[],edges:[]};graph.functions||=[];window.beforeTabFixture=clone(graph.functions);window.beforePersonalFixture=clone(personalLibrary.items);
+   const source=clone(functionLibrary[0]);
+   for(const [id,name,stages]of [['tab_pixel','Pixel Local',['pixel']],['tab_vertex','Vertex Local',['vertex']]]){const f=clone(source);f.id=id;f.name=name;f.scope='local';f.stages=stages;delete f.source;graph.functions.push(f);}
+   const personal=clone(source);personal.id='tab_personal';personal.name='Personal Sample';personal.scope='personal';personal.source={id:'personal.tabfixture',version:'1'};personalLibrary.items.push(personal);
+   renderLibrary();window.beforeTabBrowse=JSON.stringify(graph);
+  });
+  const localSelector='#libraryentries [data-entry="function:tab_pixel"]';
+  assert.equal(await page.locator(localSelector).count(),1);
+  await page.locator('[data-function-source=project]').click();
+  assert.equal(await page.locator(localSelector).count(),1);
+  assert.equal(await page.locator('#libraryentries [data-entry="function:tab_vertex"]').count(),0);
+  assert.equal(await page.locator('#libraryentries [data-entry^="source:"]').count(),0);
+  assert.equal(await page.locator('#functiontools').isVisible(),false);
+  assert.equal(await page.locator('#shaderlibrarytools').isVisible(),true);
+  await page.locator('[data-function-source=editor]').click();assert.equal(await page.locator(localSelector).count(),0);
+  assert.equal(await page.locator('#shaderlibrarytools').isVisible(),false);
+  await page.locator('[data-function-source=personal]').click();assert.equal(await page.locator('#libraryentries [data-entry^="source:personal:"]').count(),1);
+  await page.locator('[data-function-source=personal]').press('Home');assert.equal(await page.locator('[data-function-source=all]').getAttribute('aria-selected'),'true');
+  await page.locator('[data-function-source=all]').press('ArrowRight');assert.equal(await page.locator('[data-function-source=project]').getAttribute('aria-selected'),'true');
+  await page.evaluate(()=>{stage='vertex';renderLibrary();});
+  assert.equal(await page.locator('#libraryentries [data-entry="function:tab_vertex"]').count(),1);assert.equal(await page.locator(localSelector).count(),0);
+  assert.equal(await page.evaluate(()=>JSON.stringify(graph)),await page.evaluate(()=>beforeTabBrowse));
+  await page.selectOption('#language','zh-Hant');assert.deepEqual(await page.locator('#functionsources [role=tab]').allTextContents(),['全部','此 Shader','內建庫','個人']);
+  await page.locator('#functionsources').screenshot({path:path.join(folder,'library-tabs.png')});
+  await page.evaluate(()=>{stage='pixel';if(beforeVertexFixture)graph.stages.vertex=beforeVertexFixture;else delete graph.stages.vertex;graph.functions=beforeTabFixture;personalLibrary.items=beforePersonalFixture;libraryFunctionSource='all';renderLibrary();});
+  checks.push('Library combines All / This Shader / Built-in / Personal; stage filtering, graph definitions and keyboard tabs remain intact, duplicate creation entries stay hidden');
   assert.equal(await page.locator('#librarydeclarations').count(),0);
   checks.push('Personal controls appear only on the Personal library tab; obsolete declaration editor is removed');
   assert.deepEqual(await page.locator('[data-example]').evaluateAll(es=>es.map(e=>e.dataset.example)),['banana','color','tint']);

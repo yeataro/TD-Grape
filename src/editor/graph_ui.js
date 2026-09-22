@@ -1733,7 +1733,7 @@ function browserSearchScore(entry,query){
 function browseEntries(entries,query,{tab=libraryTab,category=libraryNodeCategory,source=browserSource,librarySource=libraryFunctionSource}={}){
   let found=entries.filter(e=>source==='all'||e.meta.source===source);
   if(normalizeSearch(query))return found.map(e=>({...e,score:browserSearchScore(e,query)})).filter(e=>Number.isFinite(e.score)).sort((a,b)=>a.score-b.score||a.d.label.localeCompare(b.d.label)||a.d.key.localeCompare(b.d.key));
-  if(tab==='library')found=found.filter(e=>e.meta.subgraph&&!e.meta.project&&(librarySource==='all'||e.meta.source===librarySource));
+  if(tab==='library')found=found.filter(e=>e.meta.subgraph&&(librarySource==='all'||(librarySource==='project'?e.meta.project:!e.meta.project&&e.meta.source===librarySource)));
   if(tab==='project')found=found.filter(e=>e.meta.project);
   if(category!=='all')found=found.filter(e=>e.meta.category===category||e.meta.secondary.includes(category));
   return found;
@@ -1844,7 +1844,8 @@ function renderLibrary(){
   const matches=searching?browseEntries(entries,query,{tab:'categories',category:'all',source:browserSource}):[];
   $('#browsersearchitems').replaceChildren(...matches.map(({d})=>paletteEntry(d)));
   if(searching&&!matches.length)$('#browsersearchitems').append(el('p',{class:'muted library-empty'},t('library.noResults')));
-  const sections=[['categories','nodes'],['library','libraryentries'],['project','projectentries']];
+  $('#shaderlibrarytools').hidden=libraryFunctionSource!=='project';
+  const sections=[['categories','nodes'],['library','libraryentries']];
   for(const [tab,id]of sections){
     const container=$('#'+id),section=$('#browser-section-'+tab);container.replaceChildren();
     if(searching||!section.open)continue;

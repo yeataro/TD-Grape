@@ -1612,6 +1612,7 @@
       "zh-Hant": "新增內容分類",
       "en": "Library categories"
     },
+    "library.builtin": {"zh-Hant": "內建庫", "en": "Built-in"},
     "library.sources": {
       "zh-Hant": "Subgraph 來源",
       "en": "Subgraph sources"

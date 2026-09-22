@@ -20,6 +20,7 @@
 | 分量／分量數 | Component／Component count；`components` | vec3 有三個分量，純量有一個。談向量形狀時優先說「分量數」，避免與貼圖維度或矩陣行列混用。 |
 | 純量／向量 | Scalar／Vector | 單一值與有多個分量的值；與名稱相同的節點種類須依上下文區分。 |
 | 接孔 | Port／Socket | 節點上的輸入或輸出端點，帶有具體型別與用途。接線（Edge）連接兩個接孔。 |
+| 待新增接孔（暫稱） | Spare Port | 尾端灰色的預留新增入口；尚不是正式輸入或輸出，接線時建立正式接孔。2026-09-23 在連續四則運算的未來功能筆記中暫定，參考既有 Input／Output 行為；不代表新節點已實作或現有 UI 已改名。 |
 | 函數簽名／節點簽名 | Function signature／Node signature | 一組輸入與輸出型別。相同功能可有多個合法簽名；支援哪些簽名由功能決定。 |
 | 運算型別 | Operation type | 節點選用的運算配置型別，不保證等於輸出型別。例如 Length 可對 vec3 運算而輸出 float。 |
 | 來源型別／接孔型別／輸出型別 | Source type／Input port type／Output type | 分別指上游提供的型別、輸入接孔要求的型別及結果型別。介面上的 `int → float` 表示來源與接孔之間有轉換。 |

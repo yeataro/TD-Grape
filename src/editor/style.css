@@ -367,7 +367,7 @@ input.scrubbing{outline:1px solid var(--purple);background:#2d2538}
 .library :is(.library-tabs,#functionsources) [role=tab][aria-selected=true]::after{content:'';position:absolute;bottom:0;left:7px;right:7px;height:2px;background:var(--purple);border-radius:2px}
 .library :is(.library-tabs,#functionsources) [role=tab]:focus-visible{outline:2px solid var(--green);outline-offset:-2px}
 .library #search{flex:0 0 auto;margin:12px 0;width:100%;font-size:11px}
-#functionsources{border:0;margin:0 0 6px}
+#functionsources{grid-template-columns:repeat(4,minmax(0,1fr));border:0;margin:0 0 6px}
 #functionsources [role=tab]{min-height:30px;border-radius:5px;font-size:10px}
 #librarysearchscope{margin:0 0 8px;font-size:10px;line-height:1.5}
 #librarycontent{min-height:0;min-width:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:0 4px 18px 0;scrollbar-gutter:stable}
@@ -2052,3 +2052,6 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .subgraph-interface{display:flex;flex-direction:column;gap:8px}
 .subgraph-interface>div{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px}
 .subgraph-interface code{white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Creation stays available through canvas commands; library entry points are parked. */
+#functiontools[hidden]{display:none}
