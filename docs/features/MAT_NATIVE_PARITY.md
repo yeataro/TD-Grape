@@ -2,6 +2,10 @@
 
 The archival TD-Grape extension must reproduce the capabilities of native Phong MAT and PBR MAT as editable graphs. The author clarified that “basic capability” means the native materials' complete capabilities, not only their lighting equations. The TDFam entries will be **Phong MAT Graph** and **PBR MAT Graph**. They are not complete yet.
 
+2026-09-23 clarification: visual/result equivalence is the overall acceptance criterion. The concrete incremental acceptance units are the functions, data access and operations actually used by native exported GLSL. TD conditionally generates code from material parameters, so a default export is insufficient. Audit enabled features and mutually exclusive alternatives. Reproducing TD's parameter-driven specialization machinery or identical source text is not required. Common and Deform parameter pages remain outside this graph-completion scope; existing graph calls must still honor their native settings.
+
+The expanded [native-function inventory](MAT_NATIVE_FUNCTIONS.md) records 158 exported configurations, calls, corresponding graph capabilities and remaining gaps. The earlier fifteen-export probe silently skipped unknown parameter names (including `specularmap`, where Phong uses `specmap`); it is preliminary evidence only. The new audit validates parameter names and menu values and records the material compiler diagnostics, not just Render TOP errors.
+
 The reference is TouchDesigner 2025.32820. Native parameter inspection finds 240 Phong and 202 PBR parameter components, including repeated color components, common settings and UI actions; these are not counts of independent features. Fifteen isolated exports with real geometry, a camera and a light cover lighting, surface options, normal mapping, height mapping, parallax occlusion, displacement, texture maps and Phong multi-texturing. Successful export is reference evidence, not proof that Grape implements those features.
 
 References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](https://derivative.ca/UserGuide/PBR_MAT), and the installed host's `outputShader()` results.
@@ -24,10 +28,10 @@ References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](ht
 | Rim | Multiple rim contributions, color/map, center/width/strength and ramp | Native formula inspected; repeatable graph composition pending |
 | Darkness emission | Color/map and lightness-dependent blend, correct placement after fog | Native export inspected; composition pending |
 | Outputs | Full shading and native auxiliary values, multiple color buffers, camera-depth alpha | Multiple graph buffers exist; output selection mapping and parity pending |
-| Finishing | Fog, dithering, alpha test, output color-space conversion and swizzle | Existing output does not perform native window color-space conversion; explicit preset path required |
+| Finishing | Fog, dithering, alpha test, output color-space conversion and swizzle | 0.8.173 adds explicit TDConvertColorSpace; native finishing order still needs integration because existing Pixel Output applies dithering after its input. Window/viewer comparison remains pending |
 | Deformation | Bone/capture data, instance transform, vertex displacement, matching normals and world position | Author confirmed bone deformation settings remain on native parameter pages; graph deformation calls must still use those settings correctly |
 | Common | Blend factors/operations, alpha behavior, depth, culling, wireframe, polygon offset, parameter color space | Author confirmed depth, blending and culling remain on native parameter pages; preserve these settings across Apply |
-| Host utilities | Substance map assignment, Output Shader action | Need distinguish authoring shortcuts from rendered behavior and provide the applicable entry points |
+| Host utilities | Substance map assignment, Output Shader action | Authoring shortcuts are not extra GLSL capabilities. The required target is their resulting material behavior, not a clone of the native authoring interface |
 | Picking | Native exports include TD_PICKING_ACTIVE / TDWritePickingValues | Earlier exclusion remains in force. Author requested feasibility assessment; this is not yet authorization to implement. Default picking and graph-displaced positions/normals require separate checks |
 | Delivery | TDFam presets, native MAT outlet, preserved user connections, editable graph, reproducible scene | Outlet fix tested; two final presets and scene not delivered yet |
 
@@ -45,6 +49,8 @@ These differences require explicit new composition. Existing graph behavior must
 ## Acceptance
 
 Each implemented row needs an editable graph path, relevant source/binding controls, Help, and a comparison against native output under the same scene and parameters. Test zero/one/multiple regular lights, environment lighting, textures, normals, transparency, displacement and non-default options. Compilation coverage alone is insufficient. Preserve the author's current graph and scene; use separate validation scenes. Keep unsupported or unverified items visible and do not label the complete presets finished while required rows remain open.
+
+For each small capability, first verify the correct native signature, stage, inputs, resources and usable graph output. Then compose the complete materials and use rendered comparisons for integration acceptance. A function name present in the catalog does not prove that its required bindings or stage transport work. Export coverage is not Grape feature completion.
 
 ## 0.8.168 lighting evidence
 

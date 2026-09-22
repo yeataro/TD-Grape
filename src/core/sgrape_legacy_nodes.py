@@ -265,6 +265,14 @@ for key,spec in CALLS.items():
 td('td_instance_texcoord_current','TDInstanceTexCoord',[('uv','vec3')],'vec3',targets=('mat',),stages=('vertex',))
 CALLS['td_instance_texcoord_current']['label']='TDInstanceTexCoord (Current)'
 
+td('td_instance_color_current','TDInstanceColor',[('color','vec4')],'vec4',targets=('mat',),stages=('vertex',),defaults={'color':1})
+CALLS['td_instance_color_current']['label']='TDInstanceColor (Current)'
+# Preserve the old node's stage contract; expose the Pixel overload explicitly.
+td('td_instance_color_pixel','TDInstanceColor',[('instance','int'),('color','vec4')],'vec4',targets=('mat',),stages=('pixel',),defaults={'color':1})
+CALLS['td_instance_color_pixel']['label']='TDInstanceColor (Pixel)'
+td('td_convert_color_space','TDConvertColorSpace',[('color','vec4')],'vec4',targets=('mat',),stages=('pixel',))
+CALLS['td_convert_color_space']['includes']=['TDColorSpace']
+
 def interface(key, ty):
     return copy.deepcopy(CALLS[key]['variants'][ty])
 

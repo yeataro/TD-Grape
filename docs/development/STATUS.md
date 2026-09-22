@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-23 0.8.173 交付：依作者確認的小目標驗收方式，新增原生 Phong／PBR 分支匯出盤點，158 個配置（Phong 85／PBR 73）的原生及匯出材質均編譯成功。函數列表見 [MAT_NATIVE_FUNCTIONS](../features/MAT_NATIVE_FUNCTIONS.md)：9 個 GLSL 內建函數、34 個 TD 呼叫名稱，並區分資料來源、普通運算組合、可用入口與未完成能力。尚未覆蓋的實例貼圖、非 2D 資源與場景分支明列，不能解讀為完整材質已完成。
+
+新增 TDConvertColorSpace、TDInstanceColor (Current)、TDInstanceColor (Pixel)，以及 TDColor、TDScreenSpaceCoord（st）、TDInstanceIndex 共用來源；336 個節點入口。五條接線路徑與直接 TD 呼叫像素對照誤差 0，包含兩個不同顏色實例。522 Python、14 附加測試、完整 portable checks 與 3 組瀏覽器流程通過。原有帶索引 Vertex 節點契約與舊圖產碼保留；完整預置的抖色／色彩轉換順序仍須整合，Window／MAT viewer 的色彩管理尚未做畫面對照。
+
+38 份 TD 來源一致，兩份 Master revision 120，三份使用者 Shader 保留；live core 通過五條新路徑編譯，無錯誤。TOE 已保存（1190640 bytes；SHA256 a2f1967ec73d77af5fe7ba6a6d4a3cd110a0aaa5bc156228da2d37ebc3ef57fc），私人助手排除。未發布或推送。完整 Phong／PBR 預置與预覽場景仍未交付。
+
 0.8.172 交付：520 Python、14 附加測試及完整 portable checks 通過，138 份既有圖指紋保持不變。38 份 TD 來源一致，兩份 Master revision 119，三份使用者 Shader 保留。熱更新中途曾出現節點表／舊 core 尚未同步的暫時載入訊息；更新完成後 live core 編譯新圖成功、errors 為空。TOE 已保存，SHA256 ad5b3f8a3b66366c32418cecc81d538810be6577e24c8369fee1f6e2e0c64951，私人助手排除。未發布或推送。
 
 2026-09-22 0.8.172 DEV：新增 Texture Attribute（TDTexAttrib_名稱(layer)）與 TDInstanceTexCoord (Current)，共 333 個節點入口。沿用共用 Attribute 宣告，預設 Tex、可選其他非陣列 vec3 屬性。SOP／POP／自訂名稱／CHOP 實例座標的 7 組原生像素對照完全相同；負向測試重現舊 TDTexCoord 在 POP 讀到全零。3 組瀏覽器流程與 3 組單元測試通過。保留既有圖與隱含 UV 行為，完整 Phong／PBR 預置尚未交付；預置必須接好這條新路徑。

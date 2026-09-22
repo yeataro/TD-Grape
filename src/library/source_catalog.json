@@ -1612,6 +1612,72 @@
         "zh-Hant": "目前頂點的索引。這是頂點身分，不代表讀取另一個頂點的屬性。"
       },
       "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
+    },
+    "TDScreenSpaceCoord": {
+      "type": "vec2",
+      "expression": "TDScreenSpaceCoord().st",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "pixel"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "TDScreenSpaceCoord"
+      ],
+      "hint": {
+        "en": "Screen-space texture coordinates used by native MAT screen-space map sampling. Returns the st components.",
+        "zh-Hant": "原生材質螢幕空間貼圖模式使用的座標，輸出 st 分量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"
+    },
+    "TDInstanceIndex": {
+      "type": "int",
+      "expression": "TDInstanceIndex()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "TDInstanceIndex"
+      ],
+      "hint": {
+        "en": "Current instance index used by native MAT. Pass through a flat Vertex Output to use indexed TDInstanceColor in Pixel Stage.",
+        "zh-Hant": "原生材質使用的目前實例索引。以 flat Vertex Output 傳給 Pixel Stage，供帶索引的 TDInstanceColor 使用。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"
+    },
+    "TDColor": {
+      "type": "vec4",
+      "expression": "TDColor()",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "TDColor"
+      ],
+      "hint": {
+        "en": "Geometry color used by native Phong/PBR before current-instance color is applied. This is the native TDColor accessor, distinct from TDPointColor.",
+        "zh-Hant": "原生 Phong／PBR 套用實例顏色之前使用的幾何顏色。直接呼叫 TDColor，與 TDPointColor 分開保留。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"
     }
   },
   "lengthMacros": {

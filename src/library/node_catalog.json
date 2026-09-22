@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.172",
+  "catalogVersion": "0.8.173",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -14065,6 +14065,140 @@
           "目前實例"
         ],
         "glslName": "TDInstanceTexCoord",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_instance_color_current",
+        "label": "TDInstanceColor (Current)",
+        "inputs": {
+          "color": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "color": 1
+        },
+        "descriptionKey": "help.td_instance_color_current",
+        "definitionUuid": "sgrape.builtin.td_instance_color_current",
+        "revisionHash": "5683c093eaf6dc09108a4c4643ceaf285fb4428a76a0e9964fc0a21a9bf95dfb",
+        "targets": [
+          "mat"
+        ]
+      },
+      "emitter": {
+        "id": "td_instance_color_current",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "geometry"
+        ],
+        "source": "td",
+        "aliases": [
+          "td_instance_color_current",
+          "TDInstanceColor"
+        ],
+        "glslName": "TDInstanceColor",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_instance_color_pixel",
+        "label": "TDInstanceColor (Pixel)",
+        "inputs": {
+          "instance": "int",
+          "color": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "color": 1
+        },
+        "descriptionKey": "help.td_instance_color_pixel",
+        "definitionUuid": "sgrape.builtin.td_instance_color_pixel",
+        "revisionHash": "caab2d6ab4436d80db95a88673333a60e18475863ee3ea85763c95b1f0c7f22e",
+        "targets": [
+          "mat"
+        ]
+      },
+      "emitter": {
+        "id": "td_instance_color_pixel",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "output"
+        ],
+        "source": "td",
+        "aliases": [
+          "td_instance_color_pixel",
+          "TDInstanceColor"
+        ],
+        "glslName": "TDInstanceColor",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_convert_color_space",
+        "label": "TDConvertColorSpace",
+        "inputs": {
+          "color": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.td_convert_color_space",
+        "definitionUuid": "sgrape.builtin.td_convert_color_space",
+        "revisionHash": "ebe8c52edc3ea15d9fe25908f15e2dc98f5aa80bbc5b2fb8a9cef3c6ad346415",
+        "targets": [
+          "mat"
+        ]
+      },
+      "emitter": {
+        "id": "td_convert_color_space",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "output"
+        ],
+        "source": "td",
+        "aliases": [
+          "td_convert_color_space",
+          "TDConvertColorSpace"
+        ],
+        "glslName": "TDConvertColorSpace",
         "secondaryCategories": []
       }
     }

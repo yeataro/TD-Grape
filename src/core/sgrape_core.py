@@ -1574,6 +1574,10 @@ def _compile_flat(graph,annotation_scopes=None):
                 else 'uniform '+glsl_declaration(d['type'],d['name'])+';')
     type_headers={stage:[header(declarations[i]) for i in sorted(length_used)]+type_registry().declarations(stages[stage]['compoundTypes']|{declarations[i]['type'] for i in used if compound_type(declarations[i]['type'])},graph_target(graph),stage)
                   for stage in graph_stages(graph)}
+    for stage in graph_stages(graph):
+        includes=sorted({name for n in graph['stages'][stage]['nodes'] if n['id'] in stages[stage]['live']
+                         for name in _legacy_nodes.CALLS.get(BY_UUID[n['definitionUuid']]['key'],{}).get('includes',[])})
+        type_headers[stage]=['#include <'+name+'>' for name in includes]+type_headers[stage]
     if graph_target(graph)=='top':
         samplers=[declarations[i] for i in binding_ids if declarations[i]['kind']=='sampler']
         if len(samplers)>(32 if slots else 16): raise GraphError('Too many texture sources: up to 16 TOP Inputs plus 16 legacy/fallback sources')
