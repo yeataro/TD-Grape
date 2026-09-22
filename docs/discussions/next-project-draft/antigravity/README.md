@@ -3,9 +3,15 @@
 * **貢獻者**：Antigravity (Google DeepMind) 與 [@yeataro](https://github.com/yeataro) 協作  
 * **專案定位**：TouchDesigner 節點式 Shader 編輯器下一個開源專案 **GrapeL** 的前期架構審查、概念重構與智能體交接包  
 * **開源聲明**：本目錄下所有產出均為開源專案之協作貢獻，嚴格遵守開源精神公開、透明與具名記載  
-* **文件版本**：2026-09-23.r1  
+* **文件版本**：2026-09-23.r2  
 
 ---
+
+> [!IMPORTANT]
+> 🚀 **最新核心推進計畫（必讀）**：  
+> 請優先參閱最新制定之 [《從功能預覽版 (v0.9 FP) 到正式產品：抽象化架構重構與轉換計畫書》](FP_TO_PRODUCT_REFACTOR_PLAN.md)  
+> * **現況定錨**：將現有專案定位為已完成所有互動驗證的 **v0.9 Functional Prototype (FP 版)**。  
+> * **協同機制**：聯合架構委員會（使用者主導 + Antigravity 激發靈感 + Claude 嚴格現實約束）確立典範；委任熟悉底層歷程的 **Codex** 逆向提煉「物件表、API表與手冊」；交由 **Claude 與 人類架構師** 獨立雙重審閱；在新專案「死框架」下全新乾淨實現。
 
 ## 目錄架構與分工原則
 
@@ -14,6 +20,7 @@
 ```text
 docs/discussions/next-project-draft/antigravity/
 ├── README.md                          # 本導航與開源具名宣告
+├── FP_TO_PRODUCT_REFACTOR_PLAN.md     # 🚀【核心計畫】從 FP 版逆向提煉到正式產品之完整重構計畫書
 │
 ├── for-human/                         # 【人類閱讀專用】深度架構審查、概念辨析、UI 討論與歷史草稿
 │   ├── architectural-review.md        # 依照 AGENTS 規約的架構審查報告（嚴肅剖析子集、方言與舊專案病因）
