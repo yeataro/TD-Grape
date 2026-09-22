@@ -1,9 +1,51 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.175",
+  "catalogVersion": "0.8.204",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
+    {
+      "definition": {
+        "key": "switch",
+        "label": "Switch",
+        "inputs": {
+          "default": "T",
+          "index": "int",
+          "case0": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float",
+          "caseCount": 1
+        },
+        "descriptionKey": "help.switch",
+        "definitionUuid": "sgrape.builtin.switch",
+        "revisionHash": "e45b3240b8505029c2a5dfcd66ba91b8bfda4c1d07c8334afc8161edef5851c4"
+      },
+      "emitter": {
+        "id": "switch",
+        "version": 1
+      },
+      "browser": {
+        "category": "logic",
+        "source": "editor",
+        "aliases": [
+          "switch case simple",
+          "index",
+          "multiway",
+          "分支",
+          "多路選擇"
+        ],
+        "glslName": "switch",
+        "secondaryCategories": []
+      }
+    },
     {
       "definition": {
         "key": "scalar",

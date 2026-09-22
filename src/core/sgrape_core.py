@@ -111,7 +111,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','generated_glsl','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
-    'matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
+    'switch','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS,*_legacy_nodes.CALLS))
 
 # These built-ins are GLSL constant expressions when every input is one.
@@ -550,7 +550,16 @@ def varying_headers(direction):
     return result
 
 
+SWITCH_MAX_CASES = 16
+
+def switch_case_count(params):
+    count=params.get('caseCount',1)
+    if type(count) is not int or not 0<=count<=SWITCH_MAX_CASES:raise GraphError('Switch supports 0–16 cases')
+    return count
+
 def definition_ports(definition, params):
+    if definition['key']=='switch':
+        return {'inputs':{'default':'T','index':'int',**{'case'+str(i):'T' for i in range(switch_case_count(params))}},'outputs':{'out':'T'}}
     if definition['key'] in ('vertex_out','vertex_input'):
         values={p['id']:p['type'] for p in varying_ports()}
         return {'inputs':{'position':'vec4',**values},'outputs':{}} if definition['key']=='vertex_out' else {'inputs':{},'outputs':values}
@@ -598,7 +607,7 @@ def node_parameter_types(definition):
     if key in MATRIX_KEYS:return MATRIX_TYPES
     if key in NOISE_HELPERS:return FLOAT_VECTOR_TYPES
     if key in ('uniform','constant'):return TYPES
-    if key in ('if',*CONVERT_KEYS):return TYPES
+    if key in ('if','switch',*CONVERT_KEYS):return TYPES
     if key=='spec_constant':return LEGACY_TYPES
     if key in ARITHMETIC_KEYS:return ARITHMETIC_TYPES
     if key in ('min','max','clamp','mod'):return NUMERIC_TYPES
@@ -684,6 +693,7 @@ def _type_contract():
               'convert':{'types':list(TYPES),'fromParameter':'fromType','toParameter':'toType',
                          'pairs':{source:[target for target in TYPES if explicit_conversion_valid(source,target)] for source in TYPES},
                          'outputTypesByNode':{key:list(types) for key,types in CONVERT_OUTPUT_TYPES.items()}},
+              'switch':{'maxCases':SWITCH_MAX_CASES,'indexType':'int','typeSource':'default'},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'specializationExpressions':sorted(SPECIALIZATION_EXPRESSIONS-{'relay'}),
               'pixelBufferOutputs': {'nativeFinishing':True,'parameter':'bufferCount','ports':list(PIXEL_BUFFER_PORTS),'type':'vec4'},
@@ -1108,6 +1118,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 a=ports[src]['out'][sp]; b=ports[dst]['in'][dp]
                 if defs[dst]['key']=='compare' and a not in COMPARE_TYPES:
                     raise GraphError('Compare accepts float, int or uint scalar inputs',dst)
+                if defs[dst]['key']=='switch' and a!=b:
+                    raise GraphError('Switch inputs require an exact type; Default determines the result type and Index requires int',dst)
                 if defs[dst]['key'] in VECTOR_KEYS and a!=b:
                     raise GraphError('Vector components require an exact type; use Convert, Combine or Swizzle explicitly',dst)
                 if conversion_kind(a,b) is None: raise GraphError(a+' cannot connect to '+b,dst)
@@ -1364,6 +1376,15 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='pow': expr='pow('+a('base')+', '+a('exponent')+')'
                 elif k=='mix': expr='mix('+a('a')+', '+a('b')+', '+a('factor')+')'
                 elif k=='compare': expr='('+a('a')+' '+p.get('operator','>')+' '+a('b')+')'
+                elif k=='switch':
+                    variable=symbols[(ident,'out')]
+                    lines.append('    '+glsl_declaration(ty,variable)+';')
+                    lines.append('    switch ('+a('index')+') {')
+                    for index in range(switch_case_count(p)):
+                        lines.append('        case '+str(index)+': '+variable+' = '+a('case'+str(index))+'; break;')
+                    lines.append('        default: '+variable+' = '+a('default')+'; break;')
+                    lines.append('    }')
+                    expressions[(ident,'out')]=variable
                 elif k=='if': expr='('+a('condition')+' ? '+a('true')+' : '+a('false')+')'
                 elif k in ('rgb_to_hsv','hsv_to_rgb'):
                     expr={'rgb_to_hsv':'TDRGBToHSV','hsv_to_rgb':'TDHSVToRGB'}[k]+'('+a('rgb' if k=='rgb_to_hsv' else 'hsv')+')'

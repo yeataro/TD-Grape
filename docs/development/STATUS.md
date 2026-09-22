@@ -1,5 +1,12 @@
 # 開發狀態
 
+2026-09-23 0.8.204：新增 **Switch**。Default／int Index／Case 0…依序排列，灰色待新增接孔自動建立下一個 Case，最多 16 個。Default 接線主導結果與 Case 型別，未接時可選預設型別；不相容的舊 Case 線自動斷開，與型別修改同次 Undo。負數及範圍外 Index 回到 Default。詳見 [Switch](../features/SWITCH.md)。Math 僅製作對話內操作草圖，尚未實作；節點程式碼預覽與 GLSL／節點雙向高亮列為重構後的未來功能，見[操作體驗筆記](../discussions/UX_BACKLOG.md)。
+
+536 項 Python 與完整 portable checks、2 組 Switch 瀏覽器流程通過；原生 TD 2025.32820 共 159 項檢查通過，包含全部值型別的 TOP 像素結果、執行期 Index 變更、MAT Vertex／Pixel 編譯。MAT 項目只驗證編譯，不宣稱完整外觀驗收。舊版相容測試新增 Switch 排除項後，原本 138 組產碼指紋維持通過。報告位於私人 reports/switch-204/。
+
+39 份來源同步，四份 Master 身分／位置、四份使用者 Shader 保存內容保留；Master 原生編譯檢查通過。更新過程曾出現舊 core 讀取新增 catalog 的暫時診斷，完整同步後 Master 同步與原生建立編譯皆通過。正式 TOE 已保存（1626612 bytes；SHA256 7066932b05591fd62990d06e0e2bca2169157de50300d47dd6068719907c27a8），六份登記狀態保留，私人助手排除。未推送。
+
+
 
 2026-09-23 0.8.203：移除資源瀏覽器獨立的「此專案」區塊，併入資源庫的「全部／此 Shader／內建庫／個人」（All / This Shader / Built-in / Personal）分頁。All 包含此 Shader 項目，此 Shader 使用原本本地定義／保存版本的篩選；Stage 與來源版本去重規則不變。建立 Subgraph／從選取建立的資源庫入口先隱藏，保留圖內與既有編輯命令。Subgraph 分類無編輯入口、未使用定義保留列已知問題；個人庫刪除由資料夾管理。連加／乘／減／除節點僅列未來功能，定位及分類未定。詳見[操作體驗筆記](../discussions/UX_BACKLOG.md)。
 

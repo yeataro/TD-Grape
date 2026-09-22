@@ -467,7 +467,13 @@ function typeVariants(d){
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(d.definitionUuid))return [];
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
 }
+function switchPorts(params){
+  const count=params.caseCount??1,type=params.type||'float';
+  if(!Number.isInteger(count)||count<0||count>(typeContract?.switch?.maxCases||16)||!valueTypes().includes(type))throw Error(t('contract.invalid'));
+  return {inputs:{default:type,index:'int',...Object.fromEntries(Array.from({length:count},(_,i)=>['case'+i,type]))},outputs:{out:type}};
+}
 function resolvedNodePorts(d,params,decl,kind){
+  if(d.key==='switch')return switchPorts(params)[kind];
   if(['vertex_out','vertex_input'].includes(d.key))return vertexBoundaryPorts(d.key)[kind];
   if(isCompositeOperation(d))return compositePorts(d.key,params)[kind];
   if(params.fixedType&&params.type!==params.fixedType)throw Error(t('type.fixedValue'));
@@ -497,7 +503,7 @@ function resolvedNodePorts(d,params,decl,kind){
   return variant?.[kind]||Object.fromEntries(Object.keys(d[kind]||{}).map(port=>[port,'?']));
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
-const supportsAutoType=d=>!!d&&!['combine','vector'].includes(d.key)&&!isMatrixOperation(d)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const supportsAutoType=d=>!!d&&!['combine','vector','switch'].includes(d.key)&&!isMatrixOperation(d)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
 const isArithmetic=d=>['add','subtract','multiply','divide'].includes(d?.key);
 const isVectorOperation=d=>['vector','replace','combine','vector_split','swizzle'].includes(d?.key);
 const isMatrixOperation=d=>['matrix','matrix_combine','matrix_replace','matrix_split'].includes(d?.key);
@@ -612,11 +618,11 @@ function displayNodePorts(d,params,decl,kind){
   try{return resolvedNodePorts(d,params,decl,kind);}catch(error){if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,params)[kind];}
 }
 function nodeTypeVariants(d,params){
-  return typeVariants(d).filter(v=>!params?.fixedType||v.type===params.fixedType).flatMap(v=>{try{return [{...v,...(isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):isMatrixAccess(d)?matrixAccessPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
+  return typeVariants(d).filter(v=>!params?.fixedType||v.type===params.fixedType).flatMap(v=>{try{return [{...v,...(d.key==='switch'?switchPorts({...params,type:v.type}):isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):isMatrixAccess(d)?matrixAccessPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
 }
 function vectorConnectionExact(d,source,target){
   if(d?.key==='compare'&&!selectableNodeTypes(d).includes(source))return false;
-  return isVectorOperation(d)?!!source&&source===target:compatible(source,target);
+  return isVectorOperation(d)||d?.key==='switch'?!!source&&source===target:compatible(source,target);
 }
 function constantRequirementIssues(document){
   if(!autoUnits(document).some(u=>u.data.nodes.some(n=>n.params.requireConstant||n.definitionUuid==='sgrape.builtin.array_create')))return [];
@@ -714,7 +720,7 @@ function safeConcretePorts(document,n,owner=null,type=n.params.type,override=nul
 function invalidTypeEdges(data,portMap){
   const vectors=new Set(data.nodes.filter(n=>['vector','replace','combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
   const comparisons=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.compare').map(n=>n.id));
-  return data.edges.filter(e=>{const source=portMap.get(e.from[0])?.outputs[e.from[1]],target=portMap.get(e.to[0])?.inputs[e.to[1]];return comparisons.has(e.to[0])&&!['float','int','uint'].includes(source)||!(vectors.has(e.to[0])?!!source&&source===target:compatible(source,target));});
+  return data.edges.filter(e=>{const source=portMap.get(e.from[0])?.outputs[e.from[1]],target=portMap.get(e.to[0])?.inputs[e.to[1]];return comparisons.has(e.to[0])&&!['float','int','uint'].includes(source)||!((vectors.has(e.to[0])||data.nodes.some(n=>n.id===e.to[0]&&n.definitionUuid==='sgrape.builtin.switch'))?!!source&&source===target:compatible(source,target));});
 }
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
 function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false}={}){
@@ -730,7 +736,12 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     if(active.has(n.id))throw autoTypeError('wire.cycle');active.add(n.id);
     const links=incoming.get(n.id)||[];let plannedType=n.params.type;
     for(const e of links){const source=nodes.get(e.from[0]);if(source)visit(source);}
-    try{if(isCompositeOperation(autoDefinition(document,n,owner))){
+    try{if(autoDefinition(document,n,owner)?.key==='switch'){
+      const baseline=links.find(e=>e.to[1]==='default'),type=baseline?ports.get(baseline.from[0])?.outputs[baseline.from[1]]:n.params.type;
+      if(!valueTypes().includes(type))throw autoTypeError('type.autoInputs','Switch Default');
+      if(canInfer){choices.set(n.id,type);ports.set(n.id,switchPorts({...n.params,type}));}
+      else ports.set(n.id,switchPorts(n.params));
+    }else if(isCompositeOperation(autoDefinition(document,n,owner))){
       const d=autoDefinition(document,n,owner),incomingTypes=Object.fromEntries(links.map(edge=>[edge.to[1],ports.get(edge.from[0])?.outputs[edge.from[1]]]));
       const params={...n.params};if(d.key==='array_create')params.length=GraphArrayLengths.length(typeDocument,data,n,scope,links,nodes);
       const p=compositePorts(d.key,params,typeDocument,incomingTypes);ports.set(n.id,p);
@@ -765,7 +776,7 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     active.delete(n.id);
   }
   // No policy nodes: existing unresolved/cyclic drafts remain a compiler concern.
-  if(autoNodes.size||combineNodes.size||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))||isArithmetic(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
+  if(autoNodes.size||combineNodes.size||data.nodes.some(n=>n.definitionUuid==='sgrape.builtin.switch')||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))||isArithmetic(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
   else for(const n of data.nodes)ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
   return {choices,ports,operands,groups,issues};
 }
@@ -794,7 +805,7 @@ function reshapeTypedInputs(n,d,nextType,nextOperands=null){
     // cells from the cache while keeping every currently visible cell current.
     for(let c=0;c<Math.min(oldShape.columns,nextShape.columns);c++)for(let r=0;r<Math.min(oldShape.rows,nextShape.rows);r++)n.params.values[c*nextShape.rows+r]=old[c*oldShape.rows+r];
   }
-  const oldPorts=arithmetic?resolvedNodePorts(d,n.params,null,'inputs'):typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=arithmetic?resolvedNodePorts(d,{type:nextType,...(nextOperands?{operandTypes:nextOperands}:{})},null,'inputs'):typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
+  const oldPorts=d.key==='switch'?switchPorts(n.params).inputs:arithmetic?resolvedNodePorts(d,n.params,null,'inputs'):typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=d.key==='switch'?switchPorts({...n.params,type:nextType}).inputs:arithmetic?resolvedNodePorts(d,{type:nextType,...(nextOperands?{operandTypes:nextOperands}:{})},null,'inputs'):typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
   // Retain manually entered defaults per dimension, including dormant connected inputs.
   for(const [port,value]of Object.entries(n.inputValues||{})){
     if(!oldPorts[port]||!newPorts[port]||oldPorts[port]===newPorts[port])continue;
@@ -829,8 +840,14 @@ function autoTopology(document){
   return JSON.stringify({typeDefinitions:document.typeDefinitions?.map(d=>[d.id,d.fields]),declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>{
     const creates=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.array_create').map(n=>n.id));
     const lengthSources=new Set(data.edges.filter(e=>creates.has(e.to[0])&&e.to[1]==='length').map(e=>e.from[0]));
-    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.operandTypes,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
+    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.operandTypes,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.caseCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
   })});
+}
+function pruneSwitchCaseEdges(data,plan,previous){
+  if(!previous)return false;
+  const prior=new Set(previous.edges.map(e=>JSON.stringify([e.from,e.to]))),switches=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.switch').map(n=>n.id));
+  const removed=new Set(data.edges.filter(e=>switches.has(e.to[0])&&/^case[0-9]+$/.test(e.to[1])&&prior.has(JSON.stringify([e.from,e.to]))&&plan.ports.get(e.from[0])?.outputs[e.from[1]]!==plan.ports.get(e.to[0])?.inputs[e.to[1]]));
+  if(!removed.size)return false;data.edges=data.edges.filter(e=>!removed.has(e));return true;
 }
 function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
   if(autoTopology(document)===autoTopology(previous))return;
@@ -838,6 +855,7 @@ function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid
   for(const unit of autoUnits(document)){
     const old=oldUnits.get(unit.key),oldPorts=old?storedTypePorts(previous,old.data,old.owner):new Map();
     let plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true});
+    if((!unit.owner||unit.owner.scope==='local')&&pruneSwitchCaseEdges(unit.data,plan,old?.data))plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true});
     if(disconnectInvalid&&(!unit.owner||unit.owner.scope==='local')){
       const retained=new Set(old?invalidTypeEdges(old.data,oldPorts).map(e=>typeEdgeKey(e,oldPorts)):[]);
       // Infer all downstream Auto nodes before removing newly incompatible
@@ -883,7 +901,9 @@ function planWireTypes(from,to,extra=null){
   // All entry paths (including creator previews) validate the trial before edits.
   const pending=[to.node],seen=new Set();
   while(pending.length){const id=pending.pop();if(id===from.node){const error=autoTypeError('wire.cycle');error.code='cycle';throw error;}if(seen.has(id))continue;seen.add(id);for(const e of candidate.edges)if(e.from[0]===id)pending.push(e.to[0]);}
-  const plan=planAutoGraph(graph,candidate,owner,overrides,{draft:true}),oldPlan=planAutoGraph(graph,data,owner,new Map(),{draft:true});
+  let plan=planAutoGraph(graph,candidate,owner,overrides,{draft:true});
+  if((!owner||owner.scope==='local')&&pruneSwitchCaseEdges(candidate,plan,data))plan=planAutoGraph(graph,candidate,owner,overrides,{draft:true});
+  const oldPlan=planAutoGraph(graph,data,owner,new Map(),{draft:true});
   for(const [id,message]of plan.issues)if(oldPlan.issues.get(id)!==message)throw Error(message);
   rejectNewTypeIssues(candidate,plan.ports,data,storedTypePorts(graph,data,owner));
   for(const n of nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id),plan.operands.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}

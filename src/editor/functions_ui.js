@@ -366,6 +366,7 @@ function vertexBoundaryInspector(box,n,d){
   add.onclick=()=>change(()=>addVertexPort({id:'p'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'Value',type:'float',default:0}));box.append(add);
 }
 function sparePortDirection(n){
+  if(n?.definitionUuid==='sgrape.builtin.switch')return 'outputs';
   if(editorTarget==='mat'&&!currentFunction()){
     if(n?.definitionUuid==='sgrape.builtin.vertex_input')return 'inputs';
     if(n?.definitionUuid==='sgrape.builtin.vertex_out')return 'outputs';
@@ -373,6 +374,7 @@ function sparePortDirection(n){
   return n?.definitionUuid===FunctionModel.INPUT?'inputs':n?.definitionUuid===FunctionModel.OUTPUT?'outputs':null;
 }
 function sparePortInterface(n){
+  if(n?.definitionUuid==='sgrape.builtin.switch')return {outputs:Array.from({length:n.params.caseCount??1},(_,i)=>({id:'case'+i,type:n.params.type}))};
   if(['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n?.definitionUuid)){
     if(!vertexBoundary())return null;
     return {inputs:vertexPortList(),outputs:vertexPortList()};
@@ -382,6 +384,7 @@ function sparePortInterface(n){
 function sparePortProblem(spare,other){
   const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=sparePortInterface(n);
   const peer=current().nodes.find(n=>n.id===other.node),type=peer&&ports(peer,other.kind)[other.port];
+  if(n?.definitionUuid==='sgrape.builtin.switch')return other.add||other.kind!=='outputs'||type!==n.params.type?'autoConflict':(n.params.caseCount??1)>=(typeContract.switch?.maxCases||16)?'portLimit':null;
   if(other.add||!f||!direction||spare.kind!==(direction==='inputs'?'outputs':'inputs')||!graphInterfaceTypes().includes(type))return 'autoConflict';
   if(!currentFunction()&&!vertexPayloadType(type))return 'autoConflict';
   return f[direction].length>=16?'portLimit':null;
@@ -389,6 +392,7 @@ function sparePortProblem(spare,other){
 function materializeSparePort(spare,other){
   const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=sparePortInterface(n);
   const peer=current().nodes.find(n=>n.id===other.node),type=ports(peer,other.kind)[other.port];
+  if(n?.definitionUuid==='sgrape.builtin.switch'){const index=n.params.caseCount??1;n.params.caseCount=index+1;return {...spare,port:'case'+index,type:n.params.type,add:false};}
   const base=(portLabel(peer,other.kind,other.port)||'Value').slice(0,48),names=new Set(f[direction].map(p=>p.name));
   let name=base,index=2;while(names.has(name))name=base+' '+index++;
   const id='p'+crypto.randomUUID().replaceAll('-','').slice(0,12);
@@ -399,7 +403,7 @@ function materializeSparePort(spare,other){
 }
 function appendSparePort(list,n){
   const direction=sparePortDirection(n),f=sparePortInterface(n);if(!f||!direction)return;
-  const kind=direction==='inputs'?'outputs':'inputs',label=t(direction==='inputs'?'function.quickInput':'function.quickOutput');
+  const kind=direction==='inputs'?'outputs':'inputs',label=t(n.definitionUuid==='sgrape.builtin.switch'?'switch.addCase':direction==='inputs'?'function.quickInput':'function.quickOutput');
   const vertexPort=['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid);
   const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'+(vertexPort?' vertex-spare-port-row':'')});
   const b=el('button',{class:'port port-add',title:label+' · '+t('function.quickHint'),'aria-label':label,
@@ -458,6 +462,7 @@ function functionInspector(box,n,d){
 function convertValue(value,type,previous=null){return value===null&&!isResourceType(type)?filledValue(type):isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(value,previous,type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  if(n.definitionUuid==='sgrape.builtin.switch')return id==='default'?'Default':id==='index'?'Index':/^case[0-9]+$/.test(id)?'Case '+id.slice(4):id;
   if(n.definitionUuid==='sgrape.builtin.vertex_out'&&kind==='inputs'&&id==='position')return 'gl_Position';
   if(['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid))return vertexPortList().find(p=>p.id===id)?.name||id;
   if(['struct_create','builtin_source'].includes(definition(n)?.key)&&id.startsWith('f_'))return typeDescriptor(n.definitionUuid==='sgrape.builtin.struct_create'?n.params.type:typeContract.composites.sources[n.params.source]?.type)?.fields?.find(f=>'f_'+f.id===id)?.name||id;

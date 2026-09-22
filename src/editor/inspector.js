@@ -1068,6 +1068,10 @@ function glslCodeInspector(box,n){
 }
 
 function nodeTypeSelector(n,d){
+  if(d.key==='switch'){
+    const control=typeSelect(valueTypes().map(type=>[type,type]),n.params.type,value=>change(()=>reshapeTypedInputs(n,d,value),{typeChange:true}));
+    control.disabled=readonly||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='default');control.title=t('switch.defaultType');control.dataset.switchType=n.id;return control;
+  }
   if(n.params.fixedType)return null;
   const options=selectableNodeTypes(d).map(type=>[type,type]);if(!options.length)return null;
   const composed=['combine','vector','replace'].includes(d.key),automatic=n.ui?.typeMode==='auto',auto=supportsAutoType(d);
@@ -1087,7 +1091,7 @@ function nodePrimarySelector(n,d){
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
   else if(n.params.declarationId){const source=nodeSourceDeclaration(n);if(source)control=select(graph.declarations.filter(item=>item.kind===source.kind).map(item=>[item.id,item.name]),source.id,value=>change(()=>n.params.declarationId=value));}
   else if(n.params.inputId)control=select(topInputsView().map(item=>[item.id,item.name]),n.params.inputId,value=>change(()=>n.params.inputId=value));
-  if(!control)return null;control.classList.add('node-primary-selector');control.dataset.nodeSelector=n.id;control.disabled=readonly;control.setAttribute('aria-label',control.title||t('node.declaration'));
+  if(!control)return null;control.classList.add('node-primary-selector');control.dataset.nodeSelector=n.id;control.disabled=readonly||control.disabled;control.setAttribute('aria-label',control.title||t('node.declaration'));
   for(const event of ['pointerdown','click','dblclick','keydown'])control.addEventListener(event,e=>e.stopPropagation());return control;
 }
 function arrayElementSelector(n){
@@ -1415,6 +1419,7 @@ function inspector(){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
       const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
+    if(d.key==='switch')box.append(parameterControlRow(t('switch.defaultType'),nodeTypeSelector(n,d)));
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
     if(isConvertOperation(d))for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
     if(d.key==='compare')box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
