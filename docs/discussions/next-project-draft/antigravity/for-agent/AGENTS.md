@@ -6,7 +6,7 @@
 
 ---
 
-## 一、 不可逾越的三條架構紅線 (Architecture Guardrails)
+## 一、 不可逾越的四條架構紅線 (Architecture Guardrails)
 
 1. **唯一事實來源（SSOT）**：
    * 所有節點的介面、型別多載、預設值、UI 語意與產碼模板，必須 **100% 聲明於節點定義表（JSON/DSL）**。
@@ -16,6 +16,10 @@
    * 嚴禁在多個語言環境維護平行的型別推導與鏡像測試。
 3. **無副作用的泛型產碼（Generic Emitter）**：
    * 產碼器只能是「依據定義檔進行 AST 代換與模板求值的泛型引擎」，不依節點名稱猜測未描述的行為。
+4. **領域模型與展現能力嚴格分離（Domain-Presentation Decoupling & First-Class Object）**：
+   * 領域核心（`Graph`, `Node`, `Port`, `NodeValue`）必須是純記憶體物件，100% 零 DOM 依賴，可在無瀏覽器環境下獨立測試與運行。
+   * 數值（`Value`）為狀態真身，滑桿／數值天梯（`Slider`／`ValueLadder`）僅為 Presentation 展現能力，嚴禁在 DOM 元素私藏業務狀態。
+   * 詳細介面約束與依賴規則，必須嚴格遵守 [DOMAIN_OBJECT_RULES.md](DOMAIN_OBJECT_RULES.md)。
 
 ---
 
