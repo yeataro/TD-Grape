@@ -2360,12 +2360,13 @@ function openLinkTargets(location,x,y){
   };
   document.body.append(menu);graphEditMenu=menu;const z=uiScaleFactor();menu.style.maxHeight=Math.max(0,innerHeight/z-8)+'px';menu.style.left=Math.max(4,Math.min(x/z,innerWidth/z-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/z,innerHeight/z-menu.offsetHeight-4))+'px';menu.querySelector('button')?.focus();
 }
+let linkPortGradientId=0;
 function refreshLinkPortButtons(){
   const linked=new Set();for(const edge of current().edges)if(edge.ui?.style==='link')for(const [side,kind]of [['from','outputs'],['to','inputs']])linked.add(JSON.stringify([edge[side][0],kind,edge[side][1]]));
   for(const row of document.querySelectorAll('#cards .port-row')){
-    const node=row.closest('[data-node]')?.dataset.node,anchors=[...row.querySelectorAll('[data-kind][data-port]')],kind=anchors[0]?.dataset.kind,ports=[...new Set(anchors.map(port=>port.dataset.port))];
+    const node=row.closest('[data-node]')?.dataset.node,anchors=[...row.querySelectorAll('[data-kind][data-port]')],kind=anchors[0]?.dataset.kind,portNames=[...new Set(anchors.map(port=>port.dataset.port))];
     let button=row.querySelector(':scope>.link-port-navigation');
-    if(showLinkLines||!ports.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
+    if(showLinkLines||!portNames.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
     if(!button){
       button=el('button',{type:'button',class:'link-port-navigation',title:t('wire.linkNavigate'),'aria-label':t('wire.linkNavigate'),'aria-haspopup':'menu'});
       const icon=document.createElementNS('http://www.w3.org/2000/svg','svg'),shape=document.createElementNS(icon.namespaceURI,'path');
@@ -2375,10 +2376,28 @@ function refreshLinkPortButtons(){
       button.onclick=e=>{e.stopPropagation();if(button.isConnected)frameLinkPeers(button.linkLocation);};
       button.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();if(button.isConnected)openLinkTargets(button.linkLocation,e.clientX,e.clientY);};row.append(button);
     }
-    const icon=button.querySelector('svg');icon.dataset.type=row.dataset.type||'';
+    const side=kind==='inputs'?'to':'from',edges=current().edges.filter(edge=>edge.ui?.style==='link'&&edge[side][0]===node&&portNames.includes(edge[side][1]));
+    const aggregate=row.classList.contains('collapsed-port-row')&&portNames.length>1;
+    const owner=current().nodes.find(item=>item.id===node),types=aggregate&&owner?ports(owner,kind):{};
+    // Only the Link ports represented by this button contribute; ordinary Wires and unused ports do not.
+    const linkedTypes=new Set(edges.map(edge=>types[edge[side][1]]||'?')),mixed=aggregate&&linkedTypes.size>1;
+    const icon=button.querySelector('svg');icon.dataset.type=aggregate?([...linkedTypes][0]||''):row.dataset.type||'';
+    icon.classList.toggle('mixed-link-types',mixed);
+    if(mixed){
+      let gradient=icon.querySelector('linearGradient');
+      if(!gradient){
+        const defs=document.createElementNS(icon.namespaceURI,'defs');gradient=document.createElementNS(icon.namespaceURI,'linearGradient');
+        gradient.id='link-port-gradient-'+(++linkPortGradientId);gradient.setAttribute('gradientUnits','userSpaceOnUse');
+        for(const [key,value]of Object.entries({x1:2,y1:3,x2:13,y2:13}))gradient.setAttribute(key,String(value));
+        for(const [offset,color]of [['0%','#bc9c85'],['33%','#b690ac'],['67%','#949fc4'],['100%','#83b4a7']]){
+          const stop=document.createElementNS(icon.namespaceURI,'stop');stop.setAttribute('offset',offset);stop.setAttribute('stop-color',color);gradient.append(stop);
+        }
+        defs.append(gradient);icon.prepend(defs);
+      }
+      icon.style.stroke='url(#'+gradient.id+')';
+    }else icon.style.removeProperty('stroke');
     for(const key of ['colorComponent','vectorComponent']){delete icon.dataset[key];if(row.dataset[key]!==undefined)icon.dataset[key]=row.dataset[key];}
-    button.linkLocation={node,kind,ports};button.dataset.linkNode=node;button.dataset.linkKind=kind;
-    const side=kind==='inputs'?'to':'from',edges=current().edges.filter(edge=>edge.ui?.style==='link'&&edge[side][0]===node&&ports.includes(edge[side][1]));
+    button.linkLocation={node,kind,ports:portNames};button.dataset.linkNode=node;button.dataset.linkKind=kind;
     button.title=linkConnectionHint(edges)+'\n\n'+t('wire.linkNavigate');button.setAttribute('aria-label',button.title);
   }
 }
