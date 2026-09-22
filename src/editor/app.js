@@ -1479,6 +1479,11 @@ function paintGeneratedGLSL(){
   }
 }
 function refreshGeneratedGLSL(force=false){
+  const pane=$('#pane-glsl'),body=$('#glslbody');
+  if(body){
+    if(!graph||pane.hidden||pane.closest('[hidden]'))body.replaceChildren();
+    else if(!body.firstChild)body.append(generatedGLSLView({id:'panel'}));
+  }
   if(!graph||!document.querySelector('[data-generated-glsl]')){clearTimeout(generatedGLSLTimer);generatedGLSLSerial++;if(generatedGLSLCache.state==='loading')generatedGLSLCache={key:null,state:'idle',text:''};return;}
   const key=generatedGLSLKey();
   if(!force&&generatedGLSLCache.key===key){paintGeneratedGLSL();return;}

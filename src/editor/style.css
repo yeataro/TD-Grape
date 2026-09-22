@@ -1994,3 +1994,8 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .generated-glsl-content .generated-glsl-code[data-state="error"]{color:var(--danger,#ef8d8d);white-space:pre-wrap}
 #inspector>.generated-glsl-content{display:flex;flex:1 1 180px;min-height:180px}
 #inspector>.generated-glsl-content>.comment-node-preview{flex:1;max-height:500px}
+
+/* The optional GLSL pane fills its workspace group and uses the shared code view. */
+#glslbody{display:flex;overflow:hidden;padding:0;scrollbar-gutter:auto}
+#glslbody>.generated-glsl-content{display:flex;flex:1;min-width:0;min-height:0}
+#glslbody .comment-node-preview{flex:1;min-width:0;min-height:0;max-height:none;margin:0;border:0;border-radius:0;padding:12px;font-size:12px}

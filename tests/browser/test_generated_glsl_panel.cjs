@@ -1,0 +1,44 @@
+const assert=require('node:assert/strict'),path=require('node:path');
+const {harness}=require('./test_glsl_code.cjs');
+(async()=>{
+ const [source,state,folder]=process.argv.slice(2),h=await harness(source,state,folder,{skipPreview:true}),{page,checks,errors,settle}=h;
+ let calls=0;
+ await page.route('**/api/validate',async route=>{calls++;await route.fulfill({json:{vertex:'// VERTEX\nvoid main() {}',pixel:'// PIXEL\n'+Array.from({length:100},(_,i)=>'float v'+i+' = 0.0;').join('\n')}});});
+ const code=()=>page.locator('#glslbody [data-generated-glsl]');
+ const stopBackground=()=>page.evaluate(()=>{nativeSourcePolling=uniformPolling=customPolling=true;uniformLive.disconnect();uniformLive.connect=()=>{};clearTimeout(autoTimer);scheduleGraphApply=()=>{};readonly=dirty=connectionInterrupted=false;});
+ try{
+  await stopBackground();
+  const before=await page.evaluate(()=>JSON.stringify({graph,past,future,selected,selection:[...selection]}));
+  assert.deepEqual(await page.evaluate(()=>workspaceLayout.snapshot().hidden),['structures','glsl']);
+  assert.equal(await page.locator('[data-workspace-panel=structures]').isVisible(),false);
+  assert.equal(await page.locator('#glsltoggle').isVisible(),false);assert.equal(await code().count(),0);assert.equal(calls,0);
+  assert.deepEqual(await page.evaluate(()=>workspaceLayout.snapshot().right[0].panels),['parameters','controls','glsl']);
+  await page.locator('#workspacelayout').click();const item=page.getByRole('menuitemcheckbox',{name:'GLSL',exact:true});assert.equal(await item.getAttribute('aria-checked'),'false');await item.click();await page.keyboard.press('Escape');
+  await code().filter({hasText:'// PIXEL'}).waitFor();assert.equal(await page.locator('#parameter-sidebar .workspace-group').first().locator('#pane-glsl').count(),1);
+  assert.equal(await page.locator('#glslbody button,#glslbody input,#glslbody textarea').count(),0);assert.equal(await code().evaluate(e=>e.isContentEditable),false);
+  assert.equal(await page.evaluate(()=>JSON.stringify({graph,past,future,selected,selection:[...selection]})),before);
+  checks.push('hidden by default; menu opens code-only top-right tab without changing the graph or selection');
+  const oldHeight=await page.locator('#pane-glsl').evaluate(e=>e.clientHeight);
+  const handle=page.locator('#resize-live'),r=await handle.boundingBox();await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await page.mouse.move(r.x+r.width/2,r.y+r.height/2+65,{steps:8});await page.mouse.up();await settle();
+  assert.notEqual(await page.locator('#pane-glsl').evaluate(e=>e.clientHeight),oldHeight);
+  assert.ok(await code().evaluate(e=>e.parentElement.scrollHeight>e.parentElement.clientHeight));
+  assert.equal(await code().evaluate(e=>e.parentElement.clientHeight),await page.locator('#glslbody').evaluate(e=>e.clientHeight));
+  await page.screenshot({path:path.join(folder,'panel.png')});checks.push('existing divider resizes the group; long GLSL scrolls within the panel');
+  await page.locator('#parametertoggle').click();await settle();assert.equal(await code().count(),0);
+  const count=calls;await page.evaluate(()=>{const n=current().nodes.find(n=>n.definitionUuid==='sgrape.builtin.color');n.params.value[0]=.234;mark();});await page.waitForTimeout(350);assert.equal(calls,count);
+  await page.locator('#glsltoggle').click();await code().filter({hasText:'// PIXEL'}).waitFor();assert.equal(calls,count+1);
+  await page.evaluate(()=>{graph.target='mat';editorTarget='mat';graph.stages.vertex||={nodes:[],edges:[]};stage='vertex';render();});await code().filter({hasText:'// VERTEX'}).waitFor();
+  checks.push('inactive panel does not generate code; reopening and stage switches display current GLSL');
+  const saved=await page.evaluate(()=>workspaceLayout.snapshot());await page.reload();await page.waitForSelector('.node');await stopBackground();await code().filter({hasText:'// PIXEL'}).waitFor();assert.deepEqual(await page.evaluate(()=>workspaceLayout.snapshot()),saved);
+  checks.push('panel visibility, active tab and resized layout persist on reload');
+  const legacy=await page.evaluate(()=>{const v=workspaceLayout.snapshot();for(const side of ['left','right'])for(const g of v[side]){g.panels=g.panels.filter(id=>id!=='glsl');if(g.active==='glsl')g.active=g.panels[0];}v.hidden=[];v.widths.right=410;localStorage.setItem('grapeWorkspaceV1',JSON.stringify(v));return v;});
+  await page.reload();await page.waitForSelector('.node');await stopBackground();
+  const migrated=await page.evaluate(()=>workspaceLayout.snapshot());assert.equal(migrated.hidden.includes('glsl'),true);assert.equal(migrated.widths.right,410);assert.deepEqual(migrated.left,legacy.left);assert.equal(await code().count(),0);
+  for(const side of ['left','right'])for(const g of migrated[side])g.panels=g.panels.filter(id=>id!=='glsl');migrated.hidden=migrated.hidden.filter(id=>id!=='glsl');assert.deepEqual(migrated,legacy);
+  checks.push('existing custom layout gains only a hidden GLSL tab and retains placement, size and selection');
+  await page.evaluate(()=>workspaceLayout.manager());await page.getByRole('button',{name:'Restore default',exact:true}).click();
+  assert.deepEqual(await page.evaluate(()=>workspaceLayout.snapshot().hidden),['structures','glsl']);
+  checks.push('Restore default hides Structures and GLSL while existing visible Structures preference was preserved');
+  assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length}));
+ }catch(e){await h.finish(e);throw e;}
+})().catch(e=>{console.error(e.stack);process.exitCode=1;});

@@ -1748,11 +1748,11 @@ function installBrowserDetailResize(){
 
 /* Limited two-sidebar workspace. All persisted data is presentation only. */
 function installPanelWorkspace(){
-  const ids=['browser','parameters','uniforms','controls','live','help','structures'],key='grapeWorkspaceV1',presetsKey='grapeWorkspacePresetsV1';
+  const ids=['browser','parameters','uniforms','controls','live','help','structures','glsl'],key='grapeWorkspaceV1',presetsKey='grapeWorkspacePresetsV1';
   const hosts={left:$('#sidebar-left'),right:$('#parameter-sidebar')},panes={browser:$('#nodelibrary')},heads={};
   const copy=value=>JSON.parse(JSON.stringify(value)),read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
   const write=(k,value)=>{try{localStorage.setItem(k,JSON.stringify(value));return true;}catch{status(t('layout.storageError'),true);return false;}};
-  const defaults=()=>({version:1,left:[{panels:['browser','uniforms','structures'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:220,right:340},visibility:{left:true,right:true},hidden:[]});
+  const defaults=()=>({version:1,left:[{panels:['browser','uniforms','structures'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls','glsl'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:220,right:340},visibility:{left:true,right:true},hidden:['structures','glsl']});
   function validate(raw){
     if(!raw||raw.version!==1)throw Error(t('layout.invalid'));
     const value=defaults(),seen=[];
@@ -1769,9 +1769,14 @@ function installPanelWorkspace(){
     if(seen.length===4&&!seen.includes('uniforms')&&new Set(seen).size===4){const group=[...value.left,...value.right].find(g=>g.panels.includes('browser'));group.panels.push('uniforms');seen.push('uniforms');}
     if(seen.length===5&&!seen.includes('controls')&&new Set(seen).size===5){const group=[...value.left,...value.right].find(g=>g.panels.includes('parameters'));group.panels.push('controls');seen.push('controls');}
     if(seen.length===6&&!seen.includes('structures')&&new Set(seen).size===6){if(!value.left.length)value.left.push({panels:[],active:'structures',collapsed:false,weight:1});value.left[0].panels.push('structures');seen.push('structures');}
+    const addGLSL=seen.length===7&&!seen.includes('glsl')&&new Set(seen).size===7;
+    if(addGLSL){
+      if(!value.right.length)value.right.push({panels:[],active:'glsl',collapsed:false,weight:1});
+      value.right[0].panels.push('glsl');seen.push('glsl');
+    }
     if(seen.length!==ids.length||new Set(seen).size!==ids.length)throw Error(t('layout.invalid'));
     if(raw.hidden!==undefined&&(!Array.isArray(raw.hidden)||raw.hidden.some(id=>!ids.includes(id))||new Set(raw.hidden).size!==raw.hidden.length))throw Error(t('layout.invalid'));
-    value.hidden=[...(raw.hidden||[])];
+    value.hidden=[...(raw.hidden||[])];if(addGLSL&&!value.hidden.includes('glsl'))value.hidden.push('glsl');
     return value;
   }
   let state=defaults(),sizes=[],drag=null,restoring=false;
@@ -1784,7 +1789,7 @@ function installPanelWorkspace(){
   // Upgrade only the former stock arrangement, once. Personal layouts and named presets stay put.
   const inputsPlacementKey='grapeInputsDefaultLeftV1';
   if(!read(inputsPlacementKey,false)){
-    const topology=JSON.stringify([state.left,state.right].map(groups=>groups.map(g=>g.panels.filter(id=>id!=='structures'))));
+    const topology=JSON.stringify([state.left,state.right].map(groups=>groups.map(g=>g.panels.filter(id=>id!=='structures'&&id!=='glsl'))));
     if(topology==='[[["browser"]],[["parameters","uniforms","controls"],["live"],["help"]]]'){
       state.left[0].panels.push('uniforms');state.right[0].panels=state.right[0].panels.filter(id=>id!=='uniforms');
       if(state.right[0].active==='uniforms'){state.left[0].active='uniforms';state.right[0].active='parameters';}
@@ -1800,7 +1805,7 @@ function installPanelWorkspace(){
   for(const id of ids.slice(1)){panes[id]=$('#pane-'+id);heads[id]=panes[id].querySelector('.panel-heading');heads[id].remove();}
   for(const id of ids){panes[id].classList.remove('inspector-panel','collapsed');panes[id].classList.add('workspace-pane');panes[id].style.flex='';panes[id].setAttribute('role','tabpanel');panes[id].setAttribute('aria-labelledby',heads[id].id);heads[id].setAttribute('aria-controls',panes[id].id);heads[id].classList.add('workspace-tab');heads[id].dataset.workspacePanel=id;heads[id].type='button';}
   for(const [side,host]of Object.entries(hosts)){host.dataset.workspaceSide=side;host.classList.add('workspace-sidebar');}
-  function title(id){return id==='browser'?t('panel.addNode'):id==='uniforms'?t('sources.title'):id==='structures'?t('struct.title'):id==='controls'?t('controls.title'):id==='parameters'?t('panel.parameterTitle'):id==='help'?t('panel.helpTitle'):$('#previewtitle').textContent;}
+  function title(id){return id==='glsl'?t('panel.glsl'):id==='browser'?t('panel.addNode'):id==='uniforms'?t('sources.title'):id==='structures'?t('struct.title'):id==='controls'?t('controls.title'):id==='parameters'?t('panel.parameterTitle'):id==='help'?t('panel.helpTitle'):$('#previewtitle').textContent;}
   function locate(id){for(const side of ['left','right']){const index=state[side].findIndex(g=>g.panels.includes(id));if(index>=0)return {side,index,group:state[side][index]};}}
   function persist(){if(restoring)return;state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};if(!matchMedia('(max-width:800px)').matches)state.visibility={left:isSidebarOpen('left'),right:isSidebarOpen('right')};write(key,state);}
   const parking=el('div',{hidden:true});document.body.append(parking);
@@ -1833,6 +1838,7 @@ function installPanelWorkspace(){
       sizes.push(installPanelHeights(groups,{host,key:'grapeWorkspaceSizes-'+side,weights:Object.fromEntries(state[side].map(g=>[g.panels[0],g.weight])),onSave:weights=>{for(const g of state[side])if(Number.isFinite(weights[g.panels[0]]))g.weight=weights[g.panels[0]];persist();}}));
     }
     if(typeof graph!=='undefined'&&graph)preview().catch(error=>status(error.message,true));
+    queueMicrotask(()=>{if(typeof refreshGeneratedGLSL==='function')refreshGeneratedGLSL();});
   }
   function move(id,side,targetId=null,mode='after',tabIndex=null){
     if(!ids.includes(id)||!hosts[side])return;

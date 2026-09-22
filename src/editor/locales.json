@@ -3703,6 +3703,10 @@
       "en": "Read-only generated GLSL for the current Vertex or Pixel stage. One viewer per canvas, including subgraphs. Updates after graph edits; does not contribute shader code. Move, resize, collapse and style it like a Note.",
       "zh-Hant": "唯讀顯示目前 Vertex 或 Pixel 階段產生的 GLSL。每個畫布（含子圖）最多一個，隨圖編輯更新，不參與產碼。可像 Note 一樣移動、調整大小、折疊及設定外觀。"
     },
+    "panel.glsl": {
+      "zh-Hant": "GLSL",
+      "en": "GLSL"
+    },
     "generatedGLSL.label": {
       "en": "Generated GLSL",
       "zh-Hant": "產生的 GLSL"
