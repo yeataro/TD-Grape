@@ -10,9 +10,11 @@ from contextvars import ContextVar
 if 'me' in globals():
     _composites = me.parent().op('sgrape_composites').module
     _source_catalog = me.parent().op('sgrape_source_catalog').module
+    _legacy_nodes = me.parent().op('sgrape_legacy_nodes').module
 else:
     import sgrape_composites as _composites
     import sgrape_source_catalog as _source_catalog
+    import sgrape_legacy_nodes as _legacy_nodes
 
 VERSION = 1
 TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
@@ -69,6 +71,7 @@ def type_registry():
 def type_context(graph=None):
     if graph is not None and not isinstance(graph,dict):raise GraphError('Invalid Graph structure')
     registry=_composites.Registry(TYPE_DESCRIPTORS,(graph or {}).get('typeDefinitions',[]),error=GraphError,declarations=(graph or {}).get('declarations',[]),graph=graph)
+    registry.graph=graph or {}
     token=_TYPE_CONTEXT.set(registry)
     try:yield registry
     finally:_TYPE_CONTEXT.reset(token)
@@ -104,12 +107,12 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','constant','top_input','glsl_code',
+    'deform','to_clip','vertex_out','vertex_input','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
     'matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
-    'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS))
+    'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS,*_legacy_nodes.CALLS))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
@@ -118,7 +121,8 @@ CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant
     'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'range_from','range_to','scalar','convert','matrix_convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',
-    'array','array_get','array_length','struct_field'))
+    'array','array_get','array_length','struct_field',
+    *(k for k,spec in _legacy_nodes.CALLS.items() if spec['constant'])))
 SPECIALIZATION_EXPRESSIONS = frozenset(('relay','add','subtract','multiply','divide','convert','matrix_convert','scalar','vector','combine','swizzle','split','vector_split','compare','if'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
@@ -502,7 +506,56 @@ def pixel_buffer_count(params):
         raise GraphError('Color buffer count must be an integer from 1 to 8')
     return count
 
+def varying_ports():
+    graph=getattr(type_registry(),'graph',{})
+    boundary=next((n for n in graph.get('stages',{}).get('vertex',{}).get('nodes',[]) if n.get('definitionUuid')=='sgrape.builtin.vertex_out'),None)
+    entries=(boundary or {}).get('params',{}).get('outputs',[])
+    if not isinstance(entries,list) or len(entries)>16:raise GraphError('At most 16 Vertex Output ports are supported')
+    seen=set()
+    for entry in entries:
+        if not isinstance(entry,dict) or not isinstance(entry.get('id'),str) or not ID.fullmatch(entry['id']) or entry['id']=='position' or entry['id'] in seen:
+            raise GraphError('Invalid or duplicate Vertex Output port')
+        seen.add(entry['id'])
+        if not isinstance(entry.get('name',entry['id']),str) or len(entry.get('name',''))>80:raise GraphError('Invalid Vertex Output name')
+        if entry.get('interpolation','smooth') not in ('smooth','flat','noperspective'):raise GraphError('Invalid interpolation mode')
+        varying_leaves(entry.get('type'))
+    return entries
+
+
+def varying_leaves(ty,path=''):
+    """Flatten stage payloads; bool travels as flat int, never an illegal bool varying."""
+    if not isinstance(ty,str):raise GraphError('Stage output type must be a type name')
+    if ty in TYPE_DESCRIPTORS:return [(path,ty)]
+    if not valid_port_type(ty) or type_registry().opaque(ty):raise GraphError('Stage outputs require value types, not samplers')
+    shape=type_registry().describe(ty)
+    if shape['kind']=='array':
+        length=shape['length']
+        if not isinstance(length,int) or length<1 or length>1024:raise GraphError('Stage output arrays require a fixed positive length, up to 1024')
+        result=[leaf for i in range(length) for leaf in varying_leaves(shape['elementType'],path+'['+str(i)+']')]
+    elif shape['kind']=='struct':
+        result=[leaf for field in shape['definition']['fields'] for leaf in varying_leaves(field['type'],path+'.'+field['name'])]
+    else:raise GraphError('Unsupported stage output type')
+    if len(result)>1024:raise GraphError('Stage output payload is too large')
+    return result
+
+
+def varying_headers(direction):
+    result=[]
+    for entry in varying_ports():
+        for index,(_,ty) in enumerate(varying_leaves(entry['type'])):
+            family=TYPE_DESCRIPTORS[ty]['family']
+            wire_type=shaped_type('int',TYPE_DESCRIPTORS[ty]['components']) if family=='bool' else ty
+            qualifier='flat' if family!='float' else entry.get('interpolation','smooth')
+            result.append(qualifier+' '+direction+' '+wire_type+' sg_v_'+entry['id']+'_'+str(index)+';')
+    return result
+
+
 def definition_ports(definition, params):
+    if definition['key'] in ('vertex_out','vertex_input'):
+        values={p['id']:p['type'] for p in varying_ports()}
+        return {'inputs':{'position':'vec4',**values},'outputs':{}} if definition['key']=='vertex_out' else {'inputs':{},'outputs':values}
+    if definition['key'] in _legacy_nodes.CALLS:
+        return _legacy_nodes.interface(definition['key'],params.get('type',definition['defaults'].get('type','float')))
     # Fixed value entries share the Scalar/Vector implementation, but their
     # saved identity cannot silently become another type through an edit.
     if definition['key'] in COMPOSITE_KEYS:return type_registry().interface(definition['key'],params)
@@ -532,6 +585,7 @@ def definition_ports(definition, params):
 
 def node_parameter_types(definition):
     key=definition['key']
+    if key in _legacy_nodes.CALLS:return tuple(_legacy_nodes.CALLS[key]['variants'])
     if key in COMPOSITE_KEYS:return (definition['defaults'].get('type','float'),)
     if key=='relay':return PORT_TYPES
     if key=='compare':return COMPARE_TYPES
@@ -588,6 +642,11 @@ def _type_contract():
     """
     variants = {}
     for definition in CATALOG.values():
+        if definition['key'] in _legacy_nodes.CALLS:
+            spec=_legacy_nodes.CALLS[definition['key']]
+            variants[definition['definitionUuid']]={'selector':'parameter' if spec['parameter'] else 'fixed',
+                'variants':[dict(type=ty if spec['parameter'] else None,**copy.deepcopy(row)) for ty,row in spec['variants'].items()]}
+            continue
         if definition['key'] in ARITHMETIC_KEYS:
             variants[definition['definitionUuid']]={'selector':'parameter','variants':arithmetic_variants(definition['key'])}
             continue
@@ -752,7 +811,10 @@ def input_default(key,port,ty):
             return [component*value for component in matrix_identity(ty)]
         return matrix_identity(ty)
     if key in ('texture','texture_sample') and port=='uv': return None  # Implicit interpolated UV.
-    if key=='vertex_out': return [0,0,0,1]
+    if key=='vertex_out' and port=='position': return [0,0,0,1]
+    if key=='vertex_out':
+        entry=next((p for p in varying_ports() if p['id']==port),{})
+        return entry.get('default',filled_value(ty))
     if key=='pixel_out': return [0,0,0,1]
     value=CATALOG.get(key,{}).get('inputDefaults',{}).get(port,{'factor':.5,'alpha':1}.get(port,0))
     return filled_value(ty, value)
@@ -996,6 +1058,9 @@ def _compile_flat(graph,annotation_scopes=None):
                         raise GraphError('Comment must be plain text up to 2000 characters',ident)
                 ty=params.get('type','float')
                 if not parameter_type_valid(d,params): raise GraphError('Unsupported numeric type',ident)
+                if d['key'] in _legacy_nodes.CALLS and graph_target(graph) not in _legacy_nodes.CALLS[d['key']]['targets']:
+                    raise GraphError('This native function requires a MAT graph',ident)
+                if d['key']=='vertex_input' and graph_target(graph)!='mat':raise GraphError('Vertex Inputs require a MAT graph',ident)
                 if d['key']=='compare' and params.get('operator','>') not in COMPARE_OPERATORS:
                     raise GraphError('Compare: choose >, >=, <, <=, == or !=',ident)
                 if d['key'] in ('float','vec2','vec3','vec4','color','scalar'):
@@ -1122,6 +1187,10 @@ def _compile_flat(graph,annotation_scopes=None):
                         else port in nodes[ident].get('inputValues',{}) or input_default(key,port,ports[ident]['in'][port]) is not None
                         for port in effective_inputs(ident,output)):
                         constant_outputs.add((ident,output))
+                for port in _legacy_nodes.CALLS.get(key,{}).get('constantInputs',[]):
+                    source=links.get((ident,port))
+                    if source and source not in constant_outputs:
+                        raise GraphError('This native function requires a constant '+port,ident)
                 if key in CONSTANT_EXPRESSIONS and all((ident,port) in constant_outputs for port in ports[ident]['out']):
                     constant_nodes.add(ident)
                 if nodes[ident]['params'].get('requireConstant') and ident not in constant_nodes:
@@ -1204,6 +1273,8 @@ def _compile_flat(graph,annotation_scopes=None):
                     diagnostics.append({'node':ident,'stage':stage,'message':'Sampler input is unconnected; using opaque black'})
                     return 'sg_sampler_'+fallback['id'] if graph_target(graph)=='top' else fallback['name']
                 saved=nodes[ident].get('inputValues',{})
+                implicit=_legacy_nodes.CALLS.get(defs[ident]['key'],{}).get('implicitInputs',{})
+                if port not in saved and port in implicit:return implicit[port]
                 if port in saved:
                     rendered=literal(saved[port],target)
                     if rendered is None and compound_type(target):raise GraphError('Connect an array source; this type has no editable default',ident)
@@ -1223,7 +1294,12 @@ def _compile_flat(graph,annotation_scopes=None):
                 d=defs[ident]; k=emitter_id(d); p=nodes[ident]['params']; ty=ports[ident]['out'].get('out'); expr=None
                 compound_used.update(t for direction in ports[ident].values() for t in direction.values() if compound_type(t))
                 a=lambda port:inp(ident,port)
-                if k in ('float','vec2','vec3','vec4','color','scalar'): expr=literal(p.get('value'),ty)
+                if k in _legacy_nodes.CALLS:
+                    for port,port_type in ports[ident]['in'].items():
+                        if port_type in RESOURCE_TYPES and (ident,port) not in links:
+                            raise GraphError('Connect a '+port_type+' source',ident)
+                    expr=_legacy_nodes.emit(k,ports[ident],a,symbols,lines,expressions,ident)
+                elif k in ('float','vec2','vec3','vec4','color','scalar'): expr=literal(p.get('value'),ty)
                 elif k=='array':
                     expr=literal(filled_value(ty),ty)
                     if expr is None:
@@ -1413,7 +1489,25 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='position': expr='TDPos()'
                 elif k=='deform': expr='TDDeform('+a('position')+')'
                 elif k=='to_clip': expr='TDWorldToProj('+a('world')+')'
-                elif k=='vertex_out': lines.append('    gl_Position = '+a('position')+';')
+                elif k=='vertex_out':
+                    lines.append('    gl_Position = '+a('position')+';')
+                    for entry in varying_ports():
+                        value=a(entry['id'])
+                        for index,(path,leaf_type) in enumerate(varying_leaves(entry['type'])):
+                            expr_value='('+value+')'+path
+                            if TYPE_DESCRIPTORS[leaf_type]['family']=='bool':expr_value=shaped_type('int',TYPE_DESCRIPTORS[leaf_type]['components'])+'('+expr_value+')'
+                            lines.append('    sg_v_'+entry['id']+'_'+str(index)+' = '+expr_value+';')
+                elif k=='vertex_input':
+                    for entry in varying_ports():
+                        output=entry['id']
+                        if output not in needed_outputs[ident]:continue
+                        variable=symbols[(ident,output)];out_type=entry['type']
+                        lines.append('    '+glsl_declaration(out_type,variable)+';')
+                        for index,(path,leaf_type) in enumerate(varying_leaves(out_type)):
+                            value='sg_v_'+output+'_'+str(index)
+                            if TYPE_DESCRIPTORS[leaf_type]['family']=='bool':value=leaf_type+'('+value+')'
+                            lines.append('    '+variable+path+' = '+value+';')
+                        expressions[(ident,output)]=variable
                 elif k=='pixel_out':
                     if graph_target(graph)=='top':
                         lines.extend(['    vec4 sg_color = '+a('color')+';','    fragColor = TDOutputSwizzle(sg_color);'])
@@ -1486,16 +1580,22 @@ def _compile_flat(graph,annotation_scopes=None):
             pixel='\n'.join(re.sub(r'\b'+re.escape('sg_sampler_'+d['id'])+r'\b','sTD2DInputs['+str(i)+']',code)+marker+comment for code,marker,comment in (line.partition('//') for line in pixel.split('\n')))
     else:
         headers=[header(declarations[i]) for i in sorted(used-length_used) if declarations[i]['kind'] not in ('pop_buffer','attribute')]
-        vertex='\n'.join(type_headers['vertex']+headers+['out vec2 sg_uv;']+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+stages['vertex']['lines']+['}',''])
-        pixel='\n'.join(type_headers['pixel']+headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+stages['pixel']['helpers']+[
+        lighting=any(n['id'] in stages['pixel']['live'] and _legacy_nodes.CALLS.get(BY_UUID[n['definitionUuid']]['key'],{}).get('lighting') for n in graph['stages']['pixel']['nodes'])
+        lighting_fields=['vec3 sg_lighting_position;','vec3 sg_lighting_normal;','int sg_lighting_camera;'] if lighting else []
+        light_headers=lambda direction:[('flat ' if field.startswith('int') else '')+direction+' '+field for field in lighting_fields]
+        light_init=['    sg_lighting_position = TDDeform(TDPos()).xyz;','    sg_lighting_normal = TDDeformNorm(TDNormal());','    sg_lighting_camera = TDCameraIndex();'] if lighting else []
+        vertex='\n'.join(type_headers['vertex']+headers+['out vec2 sg_uv;']+varying_headers('out')+light_headers('out')+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+light_init+stages['vertex']['lines']+['}',''])
+        pixel='\n'.join(type_headers['pixel']+headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+varying_headers('in')+light_headers('in')+stages['pixel']['helpers']+[
                                  'void main() {','    TDCheckDiscard();']+stages['pixel']['lines']+['}',''])
     source_map={}
     for stage in graph_stages(graph):
         prefix=len(headers)+len(type_headers[stage])+(3 if graph_target(graph)=='top' or stage=='vertex' else 4)
+        if graph_target(graph)=='mat':prefix+=len(varying_headers('out' if stage=='vertex' else 'in'))+len(lighting_fields)
         stages[stage].pop('compoundTypes',None)
         helpers=stages[stage].pop('helpers');helper_nodes=stages[stage].pop('helperNodes')
         source_map[stage]=[dict(location,line=prefix-2+i+1) for i,location in enumerate(helper_nodes)]
-        source_map[stage].extend(dict(location,line=prefix+len(helpers)+i+1) for i,location in enumerate(stages[stage].pop('lineNodes')))
+        init_count=len(light_init) if graph_target(graph)=='mat' and stage=='vertex' else 0
+        source_map[stage].extend(dict(location,line=prefix+len(helpers)+init_count+i+1) for i,location in enumerate(stages[stage].pop('lineNodes')))
     return {'sourceMap':source_map,'vertex':vertex,'pixel':pixel,'hash':digest(clean_semantic(graph)),
             'bindings':[declarations[i] for i in binding_ids],'stages':stages,'diagnostics':diagnostics}
 
@@ -1666,7 +1766,7 @@ def _expand(graph,functions):
                 else:
                     if key not in BY_UUID or key=='sgrape.internal.relay': raise GraphError('Unknown node',ident)
                     d=BY_UUID[key]
-                    if boundary is not None and d['key'].endswith('_out'): raise GraphError('Use Function Output inside a Function',ident)
+                    if boundary is not None and (d['key'].endswith('_out') or d['key']=='vertex_input'): raise GraphError('Use Function boundaries inside a Function',ident)
                     nid=mapped(ident,path); out=copy.deepcopy(n); out['id']=nid
                     out.pop('_symbolStem',None)  # Never trust graph-provided compiler metadata.
                     if symbol_path:out['_symbolStem']=_scoped_symbol_stem(symbol_path+(n.get('name',ident),))

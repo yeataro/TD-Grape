@@ -1,4 +1,5 @@
 {
+  "sgrape_legacy_nodes.py": "src/core/sgrape_legacy_nodes.py",
   "app.js": "src/editor/app.js",
   "controls.py": "src/td/runtime/controls.py",
   "editor_launch.py": "src/td/runtime/editor_launch.py",

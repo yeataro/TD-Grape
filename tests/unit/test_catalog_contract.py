@@ -108,6 +108,10 @@ class CatalogTests(unittest.TestCase):
                     class Module:
                         module=c._source_catalog
                     return Module()
+                if name=='sgrape_legacy_nodes':
+                    class Module:
+                        module=c._legacy_nodes
+                    return Module()
                 return None
         class Me:
             def parent(self):return Parent()

@@ -57,7 +57,7 @@ function renderNavigation(){
   const f=currentFunction();$('#functionscope').textContent=f?(f.scope==='local'?t('function.local'):t('function.source')):'';
   $('#group').disabled=readonly||!current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog));
 }
-function canDeleteNode(n){return !['pixel_out','vertex_out','function_input','function_output'].includes(definition(n)?.key);}
+function canDeleteNode(n){return !['pixel_out','vertex_out','vertex_input','function_input','function_output'].includes(definition(n)?.key);}
 function functionEntry(f,source=false){
   return {key:source?'source:'+f.scope+':'+f.id+':'+(f.source?.version||''):'function:'+f.id,label:f.name,stages:f.stages,inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id,source:source?f:null,category:f.scope==='personal'?'personal':'functions'};
 }
@@ -68,10 +68,11 @@ function nodeTypeLabel(d,params=d?.defaults){
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
 }
 function availableEntries(){
-  const entries=catalog.filter(d=>d.stages.includes(stage)&&!d.key.endsWith('_out')&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+  const entries=catalog.filter(d=>d.stages.includes(stage)&&(!d.targets||d.targets.includes(editorTarget))&&!(graphTrail.length&&d.key==='vertex_input')&&!d.key.endsWith('_out')&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
     if(d.key==='struct_create')return (graph.typeDefinitions||[]).map(item=>({...d,label:item.name,entryKey:'structure:'+item.id,defaults:{type:'struct:'+item.id}}));
     if(d.key==='builtin_source')return builtinSourceEntries(d);
     if(['scalar','vector','matrix'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:({scalar:'help.fixedScalar',vector:'help.fixedVector',matrix:'help.fixedMatrix'})[d.key],defaults:{...d.defaults,...(d.key==='matrix'?{values:matrixReshapeValue(d.defaults.values,d.defaults.type,type)}:{}),type,fixedType:type},category:nodeCategory(d)}))];
+    if(d.key==='vertex_input'&&current().nodes.some(n=>n.definitionUuid===d.definitionUuid))return [];
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
   for(const f of librarySources().filter(f=>f.stages.includes(stage)&&(!f.targets||f.targets.includes(editorTarget))))entries.push(functionEntry(f,true));
@@ -293,27 +294,97 @@ function focusFunctionName(){
   inspectorScope='node';inspectorTab='parameters';inspector();workspaceLayout.reveal('parameters');const field=$('[data-function-name]');field?.scrollIntoView({block:'nearest'});field?.focus();field?.select();
 }
 // Spare sockets are UI-only. A port and its first wire are one graph edit.
+function vertexBoundary(){return graph?.stages?.vertex?.nodes.find(n=>n.definitionUuid==='sgrape.builtin.vertex_out');}
+function vertexPortList(){return vertexBoundary()?.params.outputs||[];}
+function vertexPayloadType(type,seen=new Set()){
+  if(seen.has(type))return false;
+  const d=typeDescriptor(type);if(!d||isResourceType(type))return false;
+  if(!isCompositeType(type))return true;
+  const next=new Set(seen);next.add(type);
+  if(d.shape==='array')return Number.isInteger(d.length)&&d.length>0&&d.length<=1024&&vertexPayloadType(d.elementType,next);
+  return d.shape==='struct'&&(d.fields||[]).every(f=>vertexPayloadType(f.type,next));
+}
+function addVertexPort(entry){
+  const boundary=vertexBoundary();if(!boundary)return;
+  (boundary.params.outputs||=[]).push({...entry,interpolation:'smooth'});
+  const pixel=graph.stages.pixel;
+  if(!pixel.nodes.some(n=>n.definitionUuid==='sgrape.builtin.vertex_input')){
+    const d=catalog.find(d=>d.key==='vertex_input');
+    pixel.nodes.push({id:'n'+crypto.randomUUID().replaceAll('-','').slice(0,12),definitionUuid:d.definitionUuid,
+      revisionHash:d.revisionHash,params:{},name:'Vertex Inputs',ui:{x:48,y:144}});
+  }
+}
+function removeVertexPort(id){
+  const boundary=vertexBoundary();if(!boundary)return;
+  boundary.params.outputs=vertexPortList().filter(p=>p.id!==id);
+  for(const [stageName,data]of Object.entries(graph.stages)){
+    const side=stageName==='vertex'?'to':'from';
+    const ids=new Set(data.nodes.filter(n=>['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid)).map(n=>n.id));
+    data.edges=data.edges.filter(e=>!ids.has(e[side][0])||e[side][1]!==id);
+    for(const n of data.nodes)if(ids.has(n.id)&&n.inputValues)delete n.inputValues[id];
+  }
+}
+function vertexBoundaryInspector(box,n,d){
+  if(!['vertex_out','vertex_input'].includes(d.key)||editorTarget!=='mat'||currentFunction())return;
+  box.append(el('p',{class:'muted'},t('vertex.interfaceHint')));
+  if(inspectorTab!=='settings')return;
+  const list=vertexPortList();
+  for(const p of list){
+    const section=el('section',{class:'input-parameter'});section.append(el('h4',{},p.name+' · '+displayType(p.type)));
+    section.append(field(t('function.portName'),input(p.name||p.id,v=>change(()=>p.name=v))));
+    section.append(field(t('node.type'),typeSelect(graphInterfaceTypes().filter(type=>vertexPayloadType(type)).map(type=>[type,displayType(type)]),p.type,type=>change(()=>{
+      const previous=p.type;p.type=type;p.default=convertValue(p.default,type,previous);
+      const boundary=vertexBoundary();if(Object.hasOwn(boundary.inputValues||{},p.id))boundary.inputValues[p.id]=convertValue(boundary.inputValues[p.id],type,previous);
+    },{typeChange:true}))));
+    section.append(field(t('vertex.interpolation'),select(['smooth','flat','noperspective'].map(k=>[k,t('vertex.'+k)]),p.interpolation||'smooth',value=>change(()=>p.interpolation=value))));
+    section.append(el('small',{class:'muted'},t('vertex.flatHint')));
+    const order=el('div',{class:'function-port-order'});
+    for(const [delta,label]of [[-1,t('code.up')],[1,t('code.down')]]){
+      const b=el('button',{type:'button',title:label},delta<0?'↑':'↓'),index=list.indexOf(p);
+      b.disabled=readonly||index+delta<0||index+delta>=list.length;
+      b.onclick=()=>change(()=>{const index=list.indexOf(p);list.splice(index,1);list.splice(index+delta,0,p);});order.append(b);
+    }
+    section.append(order);
+    const remove=el('button',{class:'wide danger'},t('function.removePort'));remove.disabled=readonly;
+    remove.onclick=()=>change(()=>removeVertexPort(p.id));section.append(remove);box.append(section);
+  }
+  const add=el('button',{class:'wide'},t('function.addPort'));add.disabled=readonly||list.length>=16;
+  add.onclick=()=>change(()=>addVertexPort({id:'p'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'Value',type:'float',default:0}));box.append(add);
+}
 function sparePortDirection(n){
+  if(editorTarget==='mat'&&!currentFunction()){
+    if(n?.definitionUuid==='sgrape.builtin.vertex_input')return 'inputs';
+    if(n?.definitionUuid==='sgrape.builtin.vertex_out')return 'outputs';
+  }
   return n?.definitionUuid===FunctionModel.INPUT?'inputs':n?.definitionUuid===FunctionModel.OUTPUT?'outputs':null;
 }
+function sparePortInterface(n){
+  if(['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n?.definitionUuid)){
+    if(!vertexBoundary())return null;
+    return {inputs:vertexPortList(),outputs:vertexPortList()};
+  }
+  return currentFunction();
+}
 function sparePortProblem(spare,other){
-  const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=currentFunction();
+  const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=sparePortInterface(n);
   const peer=current().nodes.find(n=>n.id===other.node),type=peer&&ports(peer,other.kind)[other.port];
   if(other.add||!f||!direction||spare.kind!==(direction==='inputs'?'outputs':'inputs')||!graphInterfaceTypes().includes(type))return 'autoConflict';
+  if(!currentFunction()&&!vertexPayloadType(type))return 'autoConflict';
   return f[direction].length>=16?'portLimit':null;
 }
 function materializeSparePort(spare,other){
-  const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=currentFunction();
+  const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=sparePortInterface(n);
   const peer=current().nodes.find(n=>n.id===other.node),type=ports(peer,other.kind)[other.port];
   const base=(portLabel(peer,other.kind,other.port)||'Value').slice(0,48),names=new Set(f[direction].map(p=>p.name));
   let name=base,index=2;while(names.has(name))name=base+' '+index++;
   const id='p'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const value=direction==='inputs'?defaultInput(peer,other.port,type):null;
-  f[direction].push({id,name,type,default:isResourceType(type)?null:value??filledValue(type)});
+  const entry={id,name,type,default:isResourceType(type)?null:value??filledValue(type)};
+  if(currentFunction())f[direction].push(entry);else addVertexPort(entry);
   return {...spare,port:id,type,add:false};
 }
 function appendSparePort(list,n){
-  const direction=sparePortDirection(n),f=currentFunction();if(!f||!direction)return;
+  const direction=sparePortDirection(n),f=sparePortInterface(n);if(!f||!direction)return;
   const kind=direction==='inputs'?'outputs':'inputs',label=t(direction==='inputs'?'function.quickInput':'function.quickOutput');
   const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'});
   const b=el('button',{class:'port port-add',title:label+' · '+t('function.quickHint'),'aria-label':label,
@@ -376,6 +447,7 @@ function functionInspector(box,n,d){
 function convertValue(value,type,previous=null){return value===null&&!isResourceType(type)?filledValue(type):isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(value,previous,type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  if(['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid))return vertexPortList().find(p=>p.id===id)?.name||id;
   if(['struct_create','builtin_source'].includes(definition(n)?.key)&&id.startsWith('f_'))return typeDescriptor(n.definitionUuid==='sgrape.builtin.struct_create'?n.params.type:typeContract.composites.sources[n.params.source]?.type)?.fields?.find(f=>'f_'+f.id===id)?.name||id;
   if(isMatrixOperation(definition(n))&&/^c[0-3](?:[xyzw])?$/.test(id))return matrixPortLabel(id);
   if(kind==='inputs'&&id==='position'&&['sgrape.builtin.perlin_noise','sgrape.builtin.simplex_noise'].includes(n.definitionUuid))return t('noise.position');

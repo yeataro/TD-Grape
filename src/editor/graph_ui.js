@@ -254,6 +254,12 @@ const graphValueTypes=(document=activeTypeDocument())=>graphInterfaceTypes(docum
 function builtinSourceEntries(d){
   return Object.entries(typeContract?.composites?.sources||{}).filter(([,source])=>(source.targets||['top','mat']).includes(editorTarget)&&(source.stages||['pixel','vertex']).includes(stage)).map(([id,source])=>({...d,entryKey:'builtin:'+id,label:id,defaults:{...d.defaults,source:id},builtinSource:id,inputs:source.inputs||{},outputs:{out:source.type},sourcePath:source.path,sourceAliases:[...(source.aliases||[]),source.commonName||'',source.tdName||''],category:'builtin'}));
 }
+function builtinSourceHelp(id){
+  const source=typeContract?.composites?.sources?.[id];if(!source)return t('help.builtin_source');
+  const hint=source.hint?.[language]||source.hint?.en||t('sources.builtinValue');
+  const url=source.helpUrl||'https://derivative.ca/UserGuide/'+((source.targets||[]).includes('mat')?'Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms':'Write_a_GLSL_TOP#Built-in_Uniforms');
+  return '`'+id+'` · '+displayType(source.type)+'\n\n'+hint+'\n\n['+t('help.officialReference')+']('+url+')';
+}
 function compositePorts(key,params,document=activeTypeDocument(),incoming={}){
   if(key==='struct_create'){
     const descriptor=typeDescriptor(params.type,document);
@@ -447,7 +453,13 @@ function matrixReshapeValue(value,oldType,newType){
 }
 const selectableNodeTypes=d=>[...new Set(typeVariants(d).map(v=>v.type).filter(type=>type!==null))];
 const compatible=(a,b)=>!!a&&a===b&&!!typeDescriptor(a)||!!typeContract?.conversions.some(rule=>rule.from===a&&rule.to===b);
+function vertexBoundaryPorts(key){
+  const boundary=activeTypeDocument()?.stages?.vertex?.nodes.find(n=>n.definitionUuid==='sgrape.builtin.vertex_out');
+  const values=Object.fromEntries((boundary?.params.outputs||[]).map(p=>[p.id,p.type]));
+  return key==='vertex_out'?{inputs:{position:'vec4',...values},outputs:{}}:{inputs:{},outputs:values};
+}
 function typeVariants(d){
+  if(['vertex_out','vertex_input'].includes(d.key))return [{type:null,...vertexBoundaryPorts(d.key)}];
   if(isCompositeOperation(d))return [{type:null,...compositePorts(d.key,d.defaults||{})}];
   if(d.inputPreset)return [{type:'float',inputs:{},outputs:{out:'float'}}];
   if(d.inputSourceId){const variant=typeContract?.definitions[d.definitionUuid]?.variants.find(v=>v.type===d.inputType);return [variant||{type:d.inputType,inputs:{},outputs:d.inputKind==='top_input'?d.outputs:{out:d.inputType}}];}
@@ -456,6 +468,7 @@ function typeVariants(d){
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
 }
 function resolvedNodePorts(d,params,decl,kind){
+  if(['vertex_out','vertex_input'].includes(d.key))return vertexBoundaryPorts(d.key)[kind];
   if(isCompositeOperation(d))return compositePorts(d.key,params)[kind];
   if(params.fixedType&&params.type!==params.fixedType)throw Error(t('type.fixedValue'));
   if(isArithmetic(d)){
@@ -1765,7 +1778,7 @@ function renderBrowserDetail(entry){
     signature.append(el('code',{},(entry.meta.glslName||entry.d.label)+'('+inputs+')'+(outputs?' → '+outputs:'')));
     if(variants.length>1)signature.append(el('small',{class:'muted'},t('browser.signatureExample')));body.append(signature);
   }
-  body.append(markdown(t(entry.meta.descriptionKey)));
+  body.append(markdown(entry.d.builtinSource?builtinSourceHelp(entry.d.builtinSource):t(entry.meta.descriptionKey)));
   if(entry.meta.aliases.length)body.append(el('p',{class:'browser-aliases'},'Alias: '+entry.meta.aliases.join(', ')));box.append(body);
 }
 function personalSourceHeader(section){
@@ -2441,7 +2454,7 @@ function renderCreatorDetails(){
   box.append(el('strong',{},match.d.label),el('small',{class:'muted'},browserBadges(entry)),el('p',{class:'browser-category-path'},meta.path.map((key,i)=>i?(t('browser.branch.'+key)==='browser.branch.'+key?key:t('browser.branch.'+key)):browserCategoryLabel(key)).join(' › ')));
   const variant=match.variant||typeVariants(match.d).find(v=>v.type===match.type)||typeVariants(match.d)[0];
   if(variant){const inputs=Object.entries(variant.inputs).map(([name,type])=>type+' '+name).join(', '),outputs=Object.entries(variant.outputs).map(([name,type])=>type+' '+name).join(', ');box.append(el('code',{class:'browser-signature'},(meta.glslName||match.d.label)+'('+inputs+')'+(outputs?' → '+outputs:'')));}
-  box.append(markdown(t(meta.descriptionKey)));
+  box.append(markdown(match.d.builtinSource?builtinSourceHelp(match.d.builtinSource):t(meta.descriptionKey)));
   if(meta.aliases.length)box.append(el('p',{class:'browser-aliases'},'Alias: '+meta.aliases.join(', ')));
 }
 function selectCreatorResult(index){creatorIndex=index;$('#createresults').querySelectorAll('.create-entry').forEach((b,i)=>{b.classList.toggle('active',i===index);b.setAttribute('aria-selected',String(i===index));});renderCreatorDetails();}

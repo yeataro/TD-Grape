@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-22 0.8.164 DEV：舊架構封存補齊第一批。保留原 88 個定義，新增 204 個函式／材質入口與 Vertex Inputs，共 293 個定義。MAT 加入 Vertex Index、成對可編輯的跨階段接孔，以及自動遍歷燈光的 Phong／PBR Material。515 Python 與完整 portable checks 通過；1,471 組新原生簽名全部通過，瀏覽器拖接／Undo／Redo 與原生 Attribute、跨階段結構值、材質編譯通過。38 份內嵌來源及 10 份服務資產一致，core 無錯誤，兩份 master revision 111，三份既有使用者 Shader 保留。範圍、版本限制、剩餘項目見 [舊案補齊紀錄](../features/LEGACY_COMPLETION.md)。此為交付檢查點，不代表封存工作全部結束。
+
 2026-09-21 Alpha 筆記補充（文件變更）：所有內建來源／GLSL／TD 函式的 Help 基本說明與官方章節連結納入完成條件。核對 Built-in Source 為共用定義、逐節點保存 source 選擇，Parameter 可切換當前 Target／Stage 可用來源；現行 Help 仍以通用說明為主。記錄於 [Alpha 範圍](../discussions/ALPHA_SCOPE_2026-09-21.md)，未改變來源切換或 Help 的產品行為。
 
 2026-09-21 文件盤點（產品仍為 0.8.163）：完成 TD 函式名稱／家族 124 項與現行 catalog／編譯器的對照，見[TD 函式缺口](../discussions/TD_FUNCTION_NODE_GAPS.md)及 CSV。記錄最新[Alpha 範圍](../discussions/ALPHA_SCOPE_2026-09-21.md)：GLSL／TD 節點、MAT Attribute／來源、Sources 命名、名稱切換入口、自訂參數重構。使用者仍在補充，修改順序之後再排；標準 GLSL 全量盘點與新增函式原生 probe 尚未執行。本批只改文件，未同步／保存新的 TD 產品版本。

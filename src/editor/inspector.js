@@ -402,6 +402,7 @@ function defaultInput(n,port,type){
   if(isResourceType(type)||isCompositeType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
   const key=definition(n)?.key;
+  if(definition(n)?.automaticInputs?.includes(port))return null;
   if(key==='array_create'&&port==='length')return n.params.length??4;
   if(['matrix_combine','matrix_replace'].includes(key)){
     if(port==='value')return null;
@@ -414,7 +415,8 @@ function defaultInput(n,port,type){
   if(key==='function_output')return clone(currentFunction()?.outputs.find(p=>p.id===port)?.default??0);
   if(['texture','texture_sample'].includes(key)&&port==='uv')return null;
   if(key==='pixel_out'&&editorTarget==='mat')return [0,0,0,0];
-  if(key==='pixel_out'||key==='vertex_out')return [0,0,0,1];
+  if(key==='pixel_out'||key==='vertex_out'&&port==='position')return [0,0,0,1];
+  if(key==='vertex_out')return clone(vertexPortList().find(p=>p.id===port)?.default??filledValue(type));
   const value=definition(n)?.inputDefaults?.[port]??(port==='factor'?.5:port==='alpha'?1:0);
   if(isArithmetic(definition(n))&&isMatrixType(type))return key==='multiply'?filledValue(type,1):Array(typeComponents(type)).fill(value);
   if(isConvertOperation(definition(n))&&isMatrixType(type))return filledValue(type,1);
@@ -986,6 +988,7 @@ function renderHelp(){
   }
   if(n&&graph.declarations.find(source=>source.id===n.params.declarationId)?.type==='samplerBuffer'){help.append(markdown(t('buffer.nativeHint')));return;}
   if(nodeComment(n)){const note=el('section',{class:'node-comment-help'});note.append(el('strong',{},t('node.comment')),el('p',{},nodeComment(n)));help.append(note);}
+  if(d?.key==='builtin_source'){help.append(markdown(builtinSourceHelp(n.params.source)));return;}
   if(n?.params.fixedType&&['scalar','vector'].includes(d?.key)){help.append(markdown(t(d.key==='scalar'?'help.fixedScalar':'help.fixedVector')));return;}
   help.append(markdown(t(d?(editorTarget==='top'&&['uv','texture','pixel_out'].includes(d.key)?'help.top.'+d.key:(d.descriptionKey||'help.'+d.key)):'help.select')));
 }
@@ -1394,6 +1397,7 @@ function inspector(){
   if(inspectorTab==='notes'){box.classList.add('notes-parameters');box.append(nodeCommentField(n));return;}
   box.classList.toggle('ordinary-parameters',ordinary&&inspectorTab==='parameters');
   functionInspector(box,n,d);
+  vertexBoundaryInspector(box,n,d);
   if(inspectorTab==='parameters'){
     if(d.key==='comment'){box.classList.add('comment-parameters');const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
     if(d.key==='glsl_code')glslCodeInspector(box,n);
@@ -1456,9 +1460,11 @@ function inspector(){
       if(isCompositeType(type)){
         if(!connection)section.append(hint(compositeInputHint(n,port,type)));
       }else if(isResourceType(type)){
-        if(!connection)section.append(hint(t('sampler.fallbackHint')));
+        if(!connection)section.append(hint(t(d.requiredResourceInputs?.includes(port)?'sampler.connectionRequired':'sampler.fallbackHint')));
       }else if(['replace','matrix_replace'].includes(d.key)&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value'))){
         if(!connection)section.append(hint(t(port==='value'?'vector.baselineHint':'vector.inherited')));
+      }else if(value===null&&d.automaticInputs?.includes(port)){
+        if(!connection)section.append(hint(t('lighting.automatic.'+port)));
       }else if(value===null){
         section.append(hint(t('input.implicitUV')));
         if(!connection){const override=el('button',{class:'wide'+(ordinary?' parameter-control':'')},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}

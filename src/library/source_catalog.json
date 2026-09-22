@@ -924,7 +924,8 @@
         "geometry"
       ],
       "aliases": [
-        "Normal"
+        "Normal",
+        "N"
       ]
     },
     "TDPointColor": {
@@ -941,7 +942,9 @@
         "geometry"
       ],
       "aliases": [
-        "Point Color"
+        "Point Color",
+        "Cd",
+        "Color"
       ]
     },
     "TDUVUnwrapCoord": {
@@ -1029,7 +1032,9 @@
         "layer": "uint"
       },
       "aliases": [
-        "Texture Coordinates"
+        "UV",
+        "Texture Coordinate",
+        "uv"
       ],
       "tdName": "TDTexCoord(layer)",
       "commonName": "Texture Coordinates",
@@ -1362,6 +1367,29 @@
         "tdBuiltin",
         "lights"
       ]
+    },
+    "gl_VertexIndex": {
+      "type": "int",
+      "expression": "gl_VertexIndex",
+      "targets": [
+        "mat"
+      ],
+      "stages": [
+        "vertex"
+      ],
+      "path": [
+        "tdBuiltin",
+        "geometry"
+      ],
+      "aliases": [
+        "Vertex Index",
+        "Vertex ID"
+      ],
+      "hint": {
+        "en": "Index of the current vertex. This is an identity, not an attribute lookup for another vertex.",
+        "zh-Hant": "目前頂點的索引。這是頂點身分，不代表讀取另一個頂點的屬性。"
+      },
+      "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     }
   },
   "lengthMacros": {

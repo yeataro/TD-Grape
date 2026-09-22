@@ -1,4 +1,5 @@
 {
+  "sgrape_legacy_nodes": "sgrape_legacy_nodes.py",
   "source_catalog": "source_catalog.json",
   "sgrape_source_catalog": "sgrape_source_catalog.py",
   "node_catalog": "node_catalog.json",
