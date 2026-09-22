@@ -2459,6 +2459,12 @@
       "zh-Hant": "選取接線來源／目的時自動 Frame",
       "en": "Frame when selecting wire source / destination"
     },
+    "wire.sourceAllLink": {"zh-Hant": "來源全部轉 Link", "en": "Source → all Link"},
+    "wire.convertMenu": {"zh-Hant": "轉換接線", "en": "Convert wires"},
+    "wire.inputsLink": {"zh-Hant": "輸入轉 Link", "en": "Inputs → Link"},
+    "wire.inputsWire": {"zh-Hant": "輸入轉 Wire", "en": "Inputs → Wire"},
+    "wire.outputsLink": {"zh-Hant": "輸出轉 Link", "en": "Outputs → Link"},
+    "wire.outputsWire": {"zh-Hant": "輸出轉 Wire", "en": "Outputs → Wire"},
     "wire.allToWire": {
       "zh-Hant": "全部改回 Wire",
       "en": "Convert all to Wire"
