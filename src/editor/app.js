@@ -522,10 +522,9 @@ function render({layoutOnly=false}={}){renderCompileDiagnostics();
   document.querySelectorAll('[data-stage]').forEach(b=>{b.hidden=!graph.stages?.[b.dataset.stage];b.classList.toggle('active',b.dataset.stage===stage);});
   $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';
   $('#previewtitle').dataset.i18n=editorTarget==='top'?'preview.top':'preview.material';$('#previewtitle').textContent=t($('#previewtitle').dataset.i18n);renderPreviewAppearance();
-  tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();declarations();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();refreshGeneratedGLSL();
+  tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();refreshGeneratedGLSL();
 }
 function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('texture.input0')]]:[]),...[['builtin:banana',t('texture.banana')],['builtin:jellybeans',t('texture.jellybeans')],['builtin:white',t('texture.white')],['builtin:black',t('texture.black')],['external',t('texture.custom')]]]; }
-function declarations(){const box=$('#declarations');box.replaceChildren();for(const d of graph.declarations){const card=el('div',{class:'decl'});card.append(el('small',{},d.type+' · '+d.id));card.append(field(t('declaration.name'),input(d.name,v=>change(()=>d.name=v))));declarationFields(card,d);box.append(card);}}
 function remove(){
   if(selectedEdge===null&&!current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)))return;
   const edges=new Set(selectedCanvasEdges());
@@ -1409,7 +1408,6 @@ installAppliedGraphReload();
 
 $('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();fit();});
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=()=>fit();$('#search').oninput=library;
-$('#adduniform').onclick=()=>newUniform();
 $('#export').onclick=openExport;
 installImportUI();
 installSavedStateUI();

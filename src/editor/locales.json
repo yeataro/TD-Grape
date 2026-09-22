@@ -762,6 +762,14 @@
       "zh-Hant": "香蕉 × 色彩",
       "en": "Banana × Color"
     },
+    "example.phong": {
+      "zh-Hant": "Phong 材質",
+      "en": "Phong material"
+    },
+    "example.pbr": {
+      "zh-Hant": "PBR 材質",
+      "en": "PBR material"
+    },
     "example.color": {
       "zh-Hant": "純色",
       "en": "Solid color"

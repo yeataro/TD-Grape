@@ -1543,7 +1543,7 @@ function installSidebarWidths(){
   const host=document.querySelector('main'),storageKey='sgrapeSidebarWidths',compact=matchMedia('(max-width:800px)');
   const handles={left:$('#libraryresize'),right:$('#detailsresize')};
   const metric=(name,fallback)=>Number.parseFloat(getComputedStyle(host).getPropertyValue(name))||fallback;
-  const settings={left:{min:metric('--sidebar-left-min',180),max:metric('--sidebar-left-max',520),initial:metric('--sidebar-left-default',220)},right:{min:metric('--sidebar-right-min',300),max:metric('--sidebar-right-max',640),initial:metric('--sidebar-right-default',340)}};
+  const settings={left:{min:metric('--sidebar-left-min',180),max:metric('--sidebar-left-max',520),initial:metric('--sidebar-left-default',300)},right:{min:metric('--sidebar-right-min',300),max:metric('--sidebar-right-max',640),initial:metric('--sidebar-right-default',340)}};
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
   let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey))||{};}catch{}
   let preferred=Object.fromEntries(Object.entries(settings).map(([side,s])=>[side,Number.isFinite(saved[side])?clamp(saved[side],s.min,s.max):s.initial]));
@@ -1752,7 +1752,7 @@ function installPanelWorkspace(){
   const hosts={left:$('#sidebar-left'),right:$('#parameter-sidebar')},panes={browser:$('#nodelibrary')},heads={};
   const copy=value=>JSON.parse(JSON.stringify(value)),read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
   const write=(k,value)=>{try{localStorage.setItem(k,JSON.stringify(value));return true;}catch{status(t('layout.storageError'),true);return false;}};
-  const defaults=()=>({version:1,left:[{panels:['browser','uniforms','structures'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls','glsl'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:220,right:340},visibility:{left:true,right:true},hidden:['structures','glsl']});
+  const defaults=()=>({version:1,left:[{panels:['browser','uniforms','structures'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls','glsl'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:300,right:340},visibility:{left:true,right:true},hidden:['structures','glsl']});
   function validate(raw){
     if(!raw||raw.version!==1)throw Error(t('layout.invalid'));
     const value=defaults(),seen=[];
@@ -1964,10 +1964,12 @@ let nativeSourceSnapshot=null,nativeSourceBusy=false,nativeSourcePolling=false,n
 // HTTP reads started before a write or a live hand-off cannot restore old values.
 let nativeSourceReadEpoch=0,nativeSourceUncertain=false;
 function inputPresets(){return Object.fromEntries(Object.entries(typeContract?.sources?.uniformPresets||{}).filter(([,entry])=>entry.availability?.[editorTarget]?.includes(stage)).map(([key,entry])=>[key,[entry.name,entry.initialize.expression]]));}
-const inputCollapsedGroups=(()=>{try{const saved=JSON.parse(localStorage.getItem('sgrapeInputCollapsedGroups'));return new Set(Array.isArray(saved)?saved:[]);}catch{return new Set();}})();
+const sourceCollapsePreferences=(()=>{try{const saved=JSON.parse(localStorage.getItem('sgrapeInputCollapsedGroups'));return Array.isArray(saved)?{defaultCollapsed:false,collapsed:saved,expanded:[]}:saved?.version===2&&typeof saved.defaultCollapsed==='boolean'&&Array.isArray(saved.collapsed)&&Array.isArray(saved.expanded)?saved:{defaultCollapsed:true,collapsed:[],expanded:[]};}catch{return {defaultCollapsed:true,collapsed:[],expanded:[]};}})();
+const inputCollapsedGroups=new Set(sourceCollapsePreferences.collapsed||[]),inputExpandedGroups=new Set(sourceCollapsePreferences.expanded||[]);
+function inputGroupIsCollapsed(kind){return sourceCollapsePreferences.defaultCollapsed?!inputExpandedGroups.has(kind):inputCollapsedGroups.has(kind);}
 function setInputGroupCollapsed(kind,collapsed){
-  if(collapsed)inputCollapsedGroups.add(kind);else inputCollapsedGroups.delete(kind);
-  try{localStorage.setItem('sgrapeInputCollapsedGroups',JSON.stringify([...inputCollapsedGroups]));}catch{}
+  if(collapsed){inputCollapsedGroups.add(kind);inputExpandedGroups.delete(kind);}else{inputCollapsedGroups.delete(kind);inputExpandedGroups.add(kind);}
+  try{localStorage.setItem('sgrapeInputCollapsedGroups',JSON.stringify({version:2,defaultCollapsed:sourceCollapsePreferences.defaultCollapsed,collapsed:[...inputCollapsedGroups],expanded:[...inputExpandedGroups]}));}catch{}
 }
 function nativeSourceRows(){return [...(nativeSourceSnapshot?.uniforms||[]),...(nativeSourceSnapshot?.specConstants||[])];}
 let nativeIndexedSnapshot=null,nativeRowsIndex=new Map();
@@ -1980,6 +1982,9 @@ function inputSourceGroup(kind){return kind==='color'||kind==='array'||kind.star
 function inputPresetSource(kind){return kind.startsWith('preset:')?resolveCommonPreset(kind.slice(7)).decl:null;}
 function finishInputCreate(kind,id){
   setInputGroupCollapsed(inputSourceGroup(kind),false);$('#inputsearch').value='';$('#nativeuniforms').dataset.sourceStructure='';$('#sourcecreatedialog').close();selectInputSource(id);
+  const card=[...$('#nativeuniforms').querySelectorAll('[data-input-source]')].find(e=>e.dataset.inputSource===id);
+  for(let parent=card?.closest('.input-group');parent;parent=parent.parentElement.closest('.input-group'))setInputGroupCollapsed(parent.dataset.inputGroup,false);
+  renderNativeSources();
 }
 function openInputCreate(kind){
   if(editorMutationBlocked()||!graph||!['constant','spec_constant','uniform','texture_buffer','pop_buffer',...(editorTarget==='mat'?['attribute']:[]),editorTarget==='top'?'top_input':'sampler'].includes(kind))return;
@@ -2602,19 +2607,29 @@ function orderedSourceGroups(parent,children,query){
   // cannot silently rewrite the user's order.
   const order=[...saved,...groups.map(child=>child.dataset.inputGroup).filter(key=>!saved.includes(key))];
   const sorted=[...groups].sort((a,b)=>order.indexOf(a.dataset.inputGroup)-order.indexOf(b.dataset.inputGroup));
-  sorted.forEach((section,index)=>{
-    const group=sourceGroupCache.get(section.dataset.inputGroup);if(!group?.up)return;
-    group.up.disabled=!!query||index===0;group.down.disabled=!!query||index===sorted.length-1;
-    const move=direction=>{
-      const neighbor=sorted[index+direction];if(query||!neighbor)return;
-      const a=order.indexOf(section.dataset.inputGroup),b=order.indexOf(neighbor.dataset.inputGroup);
-      [order[a],order[b]]=[order[b],order[a]];sourceGroupOrder[parent]=order;
-      try{localStorage.setItem('grapeSourceGroupOrder',JSON.stringify(sourceGroupOrder));}catch{}
-      renderNativeSources();
-    };
-    group.up.onclick=()=>move(-1);group.down.onclick=()=>move(1);
-  });
+  for(const section of sorted){section.sourceSortContext={parent,order,query};section.querySelector('.input-group-toggle').classList.toggle('source-sortable',!query&&sorted.length>1);}
   let next=0;return children.map(child=>child.dataset.inputGroup?sorted[next++]:child);
+}
+function installSourceGroupDrag(group){
+  const button=group.toggle;let dragged=false;
+  button.addEventListener('click',e=>{if(dragged){e.preventDefault();e.stopImmediatePropagation();dragged=false;}},true);
+  button.addEventListener('pointerdown',e=>{
+    const context=group.section.sourceSortContext;if(e.button!==0||!context||context.query)return;
+    const generation=editorLoadGeneration,currentStage=stage;
+    const abort=new AbortController(),options={signal:abort.signal},start={x:e.clientX,y:e.clientY};let moved=false,target=null;
+    const clean=()=>{abort.abort();document.querySelectorAll('.source-sort-target').forEach(e=>e.classList.remove('source-sort-target'));if(button.hasPointerCapture(e.pointerId))button.releasePointerCapture(e.pointerId);};
+    const cancel=()=>{dragged=moved;clean();};button.setPointerCapture(e.pointerId);
+    button.addEventListener('pointermove',ev=>{if(ev.pointerId!==e.pointerId)return;if(Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>5)moved=true;if(!moved)return;
+      document.querySelectorAll('.source-sort-target').forEach(e=>e.classList.remove('source-sort-target'));target=null;
+      const candidate=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('.input-group-title')?.parentElement;
+      if(candidate&&candidate!==group.section&&candidate.sourceSortContext?.parent===context.parent){const r=candidate.querySelector('.input-group-title').getBoundingClientRect();target={section:candidate,after:ev.clientY>r.top+r.height/2};candidate.dataset.dropEdge=target.after?'after':'before';candidate.classList.add('source-sort-target');}
+    },options);
+    button.addEventListener('pointerup',ev=>{if(ev.pointerId!==e.pointerId)return;dragged=moved;clean();if(!moved||!target||generation!==editorLoadGeneration||currentStage!==stage||!group.section.isConnected||!target.section.isConnected||normalizeSearch($('#inputsearch').value)||group.section.sourceSortContext.parent!==context.parent)return;
+      const name=group.section.dataset.inputGroup,other=target.section.dataset.inputGroup,order=[...context.order].filter(k=>k!==name),at=order.indexOf(other);if(at<0)return;
+      order.splice(at+(target.after?1:0),0,name);sourceGroupOrder[context.parent]=order;try{localStorage.setItem('grapeSourceGroupOrder',JSON.stringify(sourceGroupOrder));}catch{}renderNativeSources();
+    },options);
+    button.addEventListener('pointercancel',cancel,options);button.addEventListener('lostpointercapture',cancel,options);window.addEventListener('blur',cancel,options);document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){ev.preventDefault();ev.stopPropagation();cancel();}},{...options,capture:true});
+  });
 }
 function sourceConstantControls(decl){
   const box=el('div',{'data-source-constant':decl.id}),shape=typeDescriptor(decl.type),values=shapedValue(decl.value,decl.type),flat=Array.isArray(values)?values:[values],generation=editorLoadGeneration;
@@ -2654,13 +2669,12 @@ function sourceGroup(kind,label,children,create=null,query=''){
     const section=el('section',{class:'input-group','data-input-group':kind}),head=el('div',{class:'input-group-title'}),list=el('div',{class:'input-group-items',id:'input-group-'+kind}),toggle=el('button',{class:'input-group-toggle','aria-controls':list.id});
     toggle.append(el('span',{class:'input-group-arrow','aria-hidden':'true'},'›'),el('span',{},label));head.append(toggle);section.append(head,list);
     const badges=el('span',{class:'source-counts'});toggle.append(badges);
-    const up=el('button',{class:'source-group-move','aria-label':t('layout.moveUp')+' · '+label,title:t('layout.moveUp')},'↑'),down=el('button',{class:'source-group-move','aria-label':t('layout.moveDown')+' · '+label,title:t('layout.moveDown')},'↓');
-    head.append(up,down);group={section,list,toggle,badges,up,down,badgeByCategory:new Map(),query};
+    group={section,list,toggle,badges,badgeByCategory:new Map(),query};installSourceGroupDrag(group);
     toggle.onclick=()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));if(!group.query)setInputGroupCollapsed(kind,list.hidden);};
     if(create){const add=el('button',{class:'input-group-add','data-input-create':create,'aria-label':t('inputs.addSource').replace('{category}',label),title:t('inputs.addSource').replace('{category}',label)},'＋ '+t('inputs.newShort'));add.onclick=()=>openInputCreate(create);head.append(add);}
     sourceGroupCache.set(kind,group);
   }
-  group.query=query;group.list.hidden=!query&&inputCollapsedGroups.has(kind);group.toggle.setAttribute('aria-expanded',String(!group.list.hidden));
+  group.query=query;group.list.hidden=!query&&inputGroupIsCollapsed(kind);group.toggle.setAttribute('aria-expanded',String(!group.list.hidden));
   reconcileSourceChildren(group.list,orderedSourceGroups(kind,children,query));
   const counts=new Map(),add=(category,count)=>{if(count)counts.set(category,(counts.get(category)||0)+count);};
   for(const child of children){
@@ -2837,7 +2851,7 @@ function renderSourceCards(box,query){
     if(['texture_buffer','pop_buffer'].includes(kind)&&!group.length&&!query&&nativeSourceSnapshot?.enabled&&!connectionInterrupted&&!nativeSourceError&&!issues.some(i=>i.sequence===(kind==='pop_buffer'?'buffer':'array')))children.push(el('p',{class:'muted'},t('buffer.empty')));
     const section=sourceGroup(kind,inputGroupLabel(kind),children,canCreate?kind:null,query);
     if(['top_input','sampler','texture_buffer'].includes(kind))textureSources.push(section);
-    else if(['pop_buffer','attribute'].includes(kind))addMenu('tdBuiltin.'+(kind==='attribute'?'geometry':'buffer'),section);
+    else if(kind==='attribute')addMenu('tdBuiltin.geometry',section);
     else sections.push(section);
   }
   const menuSections=[];
@@ -2847,7 +2861,8 @@ function renderSourceCards(box,query){
     if(root==='textures')children=[...textureSources,...(children.length?[sourceGroup('textures.tdInputs',t('sources.tdInputsInfo'),children,null,query)]:[])];
     if(children.length)menuSections.push(sourceGroup(root,t(typeContract.sources.menuGroups[root]),children,null,query));
   }
-  sections.sort((a,b)=>['uniform','constant','spec_constant'].indexOf(a.dataset.inputGroup)-['uniform','constant','spec_constant'].indexOf(b.dataset.inputGroup));
+  const sourcePriority=['uniform','constant','spec_constant','pop_buffer'];
+  sections.sort((a,b)=>sourcePriority.indexOf(a.dataset.inputGroup)-sourcePriority.indexOf(b.dataset.inputGroup));
   sections.push(...menuSections);
   const unimported=issues.filter(i=>!i.id&&matches(i.name,i.message));
   if(unimported.length){
@@ -3060,7 +3075,7 @@ function renderCustomEditor(){
   updateCustomValues();
 }
 async function openCustomEditor(sourceId=null){
-  const dialog=$('#customdialog');if(!dialog.open){dialog.show();if(!dialog.dataset.positioned){const r=dialog.getBoundingClientRect(),z=uiScaleFactor();dialog.style.left=Math.max(0,(innerWidth-r.width)/2)/z+'px';dialog.style.top=Math.max(0,(innerHeight-r.height)/2)/z+'px';dialog.dataset.positioned='true';}}
+  const dialog=$('#customdialog');if(!dialog.open){dialog.show();{const r=dialog.getBoundingClientRect(),z=uiScaleFactor();dialog.style.left=Math.max(0,(innerWidth-r.width)/2)/z+'px';dialog.style.top=Math.max(0,(innerHeight-r.height)/2)/z+'px';}}
   renderCustomEditor();await refreshCustomParameters();
   const row=sourceId&&customSnapshot?.controls.find(g=>g.sources.includes(sourceId));
   if(row&&row.editable!==false){customEditPage=row.page;customSelection=row.name;}
@@ -3123,7 +3138,8 @@ function installCustomParameters(){
   for(const [id,label]of [['customeditorpages','controls.pages'],['customeditorparameters','controls.parameters']]){const col=el('section');col.append(el('h4',{'data-i18n':label},t(label)),el('div',{id,role:'list',class:'custom-editor-list'}));lists.append(col);}
   const history=el('div',{class:'custom-history'});
   for(const kind of ['undo','redo']){const b=customWriteButton('action.'+kind,()=>customRequest({action:kind}));b.id='custom'+kind;history.append(b);}
-  dialog.append(header,identity,status,history,create,lists,el('div',{id:'customeditordetails'}));
+  const identityRow=el('div',{class:'custom-editor-identity'});identityRow.append(identity,history);
+  dialog.append(header,identityRow,status,create,lists,el('div',{id:'customeditordetails'}));
   header.onpointerdown=e=>{if(e.button!==0||e.target.closest('button'))return;e.preventDefault();const r=dialog.getBoundingClientRect(),start={x:e.clientX,y:e.clientY};header.setPointerCapture(e.pointerId);
     header.onpointermove=ev=>{const z=uiScaleFactor(),left=Math.max(0,Math.min(innerWidth-80,r.left+ev.clientX-start.x)),top=Math.max(0,Math.min(innerHeight-40,r.top+ev.clientY-start.y));dialog.style.left=left/z+'px';dialog.style.top=top/z+'px';dialog.style.right='auto';};
     header.onpointerup=header.onpointercancel=()=>{header.onpointermove=header.onpointerup=header.onpointercancel=null;if(header.hasPointerCapture(e.pointerId))header.releasePointerCapture(e.pointerId);};

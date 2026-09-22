@@ -269,9 +269,9 @@ async function readSavedStateText(){
 function renderSavedStateIssue(){
   if(typeof savedStateIssue==='undefined')return;
   const locked=!!savedStateIssue;$('#savednotice').hidden=!locked;
-  $('#newfunction').disabled=readonly;$('#adduniform').disabled=readonly;
+  $('#newfunction').disabled=readonly;
   if(locked)for(const button of document.querySelectorAll('.library button:not([role=tab]):not(.personal-refresh)'))button.disabled=true;
-  $('#newfunction').disabled=readonly;$('#adduniform').disabled=readonly;
+  $('#newfunction').disabled=readonly;
   if(locked)for(const button of document.querySelectorAll('.library button:not([role=tab]):not(.personal-refresh)'))button.disabled=true;
   for(const id of ['export','code','import'])$('#'+id).disabled=locked;
   if(!locked)return;

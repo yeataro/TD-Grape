@@ -77,7 +77,7 @@ const server=http.createServer(async(req,res)=>{try{
   const canvas=await page.locator('#canvas').boundingBox();await page.mouse.click(canvas.x+70,canvas.y+80);await page.keyboard.press('Control+a');assert.ok(await page.evaluate(()=>selection.size>0));assert.ok(await page.locator('#customdialog').isVisible());
   checks.push('Floating window moves by its header; canvas selection shortcuts stay active with it open');
   await page.locator('#custompagecreate input').fill('Performance');await page.locator('#custompagecreate button').click();await idle();assert.ok(custom.pages.some(p=>p.name==='Performance'));
-  await page.locator('[data-workspace-panel=uniforms]').click();await page.waitForSelector('[data-input-source=gain] .input-source-select');
+  await page.locator('[data-workspace-panel=uniforms]').click();await page.evaluate(()=>{for(const key of ['uniform','uniform.values'])setInputGroupCollapsed(key,false);renderNativeSources();});await page.waitForSelector('[data-input-source=gain] .input-source-select');
   const count=custom.controls.length,graphBefore=await page.evaluate(()=>JSON.stringify(graph));
   await drag(await at('[data-input-source=gain] .input-source-select'),await at('#customeditorparameters .custom-drop-hint'));
   assert.equal(custom.controls.length,count);assert.equal(custom.controls.find(g=>g.name===gain).page,'Performance');assert.equal(await page.evaluate(()=>JSON.stringify(graph)),graphBefore);
@@ -117,6 +117,17 @@ const server=http.createServer(async(req,res)=>{try{
   await page.selectOption('#language','zh-Hant');await settle();assert.equal(await page.locator('#custompagecreate button').innerText(),'新增頁面');assert.ok((await page.locator('#customeditorparameters').innerText()).includes('從來源面板'));await page.screenshot({path:path.join(out,'parameter-editor-zh.png')});
   await page.setViewportSize({width:1150,height:800});await page.evaluate(()=>{Object.assign($('#customdialog').style,{left:'350px',top:'100px',width:'500px',height:'570px'});});await settle();
   assert.ok((await page.locator('#customdialog').boundingBox()).height>=330);await page.screenshot({path:path.join(out,'parameter-editor-narrow.png')});
+  await page.locator('.custom-editor-heading button').click();await page.setViewportSize({width:900,height:650});await page.evaluate(()=>openCustomEditor());await settle();
+  const centered=await page.locator('#customdialog').boundingBox();assert.ok(Math.abs(centered.x+centered.width/2-450)<2);assert.ok(Math.abs(centered.y+centered.height/2-325)<2);assert.ok(centered.y>=0&&centered.y+centered.height<=650);
+  const identity=await page.locator('#customeditoroperator').boundingBox(),undo=await page.locator('#customundo').boundingBox();assert.ok(Math.abs(identity.y+identity.height/2-undo.y-undo.height/2)<2);assert.ok(undo.x>identity.x);
+  checks.push('Reopening after a smaller viewport centers the window; Undo and Redo share the OP path row');
+  for(const theme of ['dark','light']){
+   await page.evaluate(theme=>document.documentElement.dataset.uiTheme=theme,theme);await settle();
+   const colors=await page.evaluate(()=>({accent:getComputedStyle($('#sourcenotes')).accentColor,minimal:getComputedStyle($('#sourceminimal')).accentColor,title:getComputedStyle($('.custom-editor-heading')).backgroundColor,text:getComputedStyle($('.custom-editor-heading')).color}));
+   assert.equal(colors.accent,colors.minimal);assert.notEqual(colors.accent,'auto');assert.notEqual(colors.title,colors.text);
+   await page.screenshot({path:path.join(out,'parameter-'+theme+'.png')});
+  }
+  checks.push('Source checkboxes use the theme accent in both color modes');
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({passed:true,checks,requestCount:requests.length},null,2));console.log(JSON.stringify({passed:true,checks}));
  }catch(e){if(page)await page.screenshot({path:path.join(out,'failure.png')});fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({passed:false,error:e.stack,checks,errors,requests},null,2));throw e;}
  finally{await browser.close();await new Promise(r=>server.close(r));}

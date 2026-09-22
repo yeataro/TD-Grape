@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.199'
+PRODUCT_VERSION='0.8.200'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -522,6 +522,17 @@ def master_template(kind):
     """Resolve current templates while accepting names from older projects."""
     if kind not in ('top','mat','phong','pbr'):raise ValueError('Unknown Grape template: '+str(kind))
     return _owner.op('masters/grape_'+kind) or _owner.op('masters/sgrape_'+kind)
+
+def shader_examples(kind):
+    if kind=='top':
+        examples={name:core().normalize_top_sources(core().demo_graph(name,target='top'))[0] for name in ('banana','color','tint')}
+    elif kind=='mat':
+        presets=json.loads(_owner.op('material_presets').text)
+        examples={name:copy.deepcopy(presets[name]) for name in ('phong','pbr')}
+    else:raise RuntimeError('Unknown Shader target')
+    for graph in examples.values():graph['target']=kind
+    return {name:_owner.op('document').module.stamp_catalog(graph,core()) for name,graph in examples.items()}
+
 
 def prepare_masters():
     """Refresh product entry points without replacing any user Shader."""
@@ -1763,7 +1774,7 @@ def _process_shader_request(method,path,body):
                 if inspected['required']:upgrade=upgrade_summary(inspected)
             except (ValueError,TypeError,KeyError,AttributeError,RecursionError):pass
         result = {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(current['graph']),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
-                'examples':{name:_owner.op('document').module.stamp_catalog(core().normalize_top_sources(core().demo_graph(name,target=shader_kind(target())))[0],core()) for name in ('banana','color','tint')}}
+                'examples':shader_examples(shader_kind(target()))}
         return history_result(result) if not saved_issue and current is not None else result
     if method=='POST' and path=='/api/remote-preview':
         return remote_preview(target())

@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: false, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1689,7 +1689,7 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
 /* Node Browser: one definition index, multiple views, global search. */
 let libraryTab='categories',libraryFunctionSource='all',libraryNodeCategory='all',browserSource='all',browserSelection=null;
 let browserProjection=null;
-const browserOpenBranches=new Set(['math','math/interpolation']);
+const browserOpenBranches=new Set();
 function browserData(){return browserProjection||=(JSON.parse(document.getElementById('node-browser-data').textContent));}
 const browserCategoryLabel=key=>t('browser.category.'+key);
 const browserSourceLabel=key=>t('browser.source.'+key);
@@ -1823,8 +1823,9 @@ function personalSourceHeader(section){
   const location=el('details',{class:'personal-location'});location.append(el('summary',{},t('personal.location')),el('p',{},personalLibrary.folder||t('personal.unavailable')));
   for(const issue of personalLibrary.issues)location.append(el('p',{class:'error'},issue.file+' · '+issue.error));section.append(location);
 }
+function exampleMatchesTarget(example){return !!example&&(example.target||'mat')===editorTarget;}
 function loadExample(name){
-  if(readonly||!examples[name])return false;
+  if(editorMutationBlocked()||!exampleMatchesTarget(examples[name]))return false;
   if(dirty&&!confirm(t('graph.exampleConfirm')))return false;
   const changed=change(()=>{graph=prepareGraphReplacement(examples[name]);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;},{localize:false});
   if(changed){cancelConnection();closeCreator();fit();if(matchMedia('(max-width:800px)').matches)workspaceLayout.closeBrowser();}return changed;
@@ -1845,10 +1846,15 @@ function renderLibrary(){
     const found=browseEntries(entries,'',{tab,category:'all',source:tab==='categories'?browserSource:'all'});
     if(found.length)container.append(browserTree(found));else container.append(el('p',{class:'muted library-empty'},t('library.noResults')));
     if(tab==='library'){
+      if(libraryFunctionSource==='personal'){
       const personal=el('section',{id:'personal-library',class:'browser-personal'}),heading=el('div',{class:'personal-heading'}),help=el('button',{class:'personal-help','aria-label':t('personal.showHelp'),title:t('personal.showHelp')},'?');
       help.onclick=()=>{helpContext='personal';workspaceLayout?.reveal('help');renderHelp();};heading.append(el('h4',{},t('browser.source.personal')),help);personal.append(heading,el('p',{class:'personal-drop-label'},t('personal.drop')));personalSourceHeader(personal);container.append(personal);
+      }
+      const templateNames=Object.keys(examples).filter(name=>exampleMatchesTarget(examples[name]));
+      if(templateNames.length){
       const templates=el('details',{class:'browser-templates'});templates.append(el('summary',{},t('browser.templates')),el('p',{class:'muted'},t('library.exampleHint')));
-      for(const name of Object.keys(examples)){const b=el('button',{class:'example-entry','data-example':name},t('example.'+name));b.disabled=readonly;b.onclick=()=>loadExample(name);templates.append(b);}container.append(templates);
+      for(const name of templateNames){const b=el('button',{class:'example-entry','data-example':name},t('example.'+name));b.disabled=readonly;b.onclick=()=>loadExample(name);templates.append(b);}container.append(templates);
+      }
     }
   }
   for(const b of document.querySelectorAll('#functionsources [data-function-source]')){const active=b.dataset.functionSource===libraryFunctionSource;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;}

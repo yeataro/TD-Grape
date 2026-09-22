@@ -49,3 +49,7 @@ Help、Enable Expression、Read Only、Section 等進階定義欄位仍交由 TD
 - `tests/browser/test_custom_parameters.cjs src/editor state.json sources.json controls.json report`：側邊操作、非模態浮窗、畫布鍵盤操作、來源拖入、清單拖曳、取消與雙語。sources／controls fixture 由上述原生測試輸出；可用 `PLAYWRIGHT_MODULE`／`CHROME_EXECUTABLE` 指定本機工具。
 
 原生實測平台為 Windows、目前安裝的 TouchDesigner。未宣稱 macOS 或觸控已驗證。
+
+## 視窗與主題調整（0.8.200）
+
+編輯浮窗每次重新開啟均在當前視窗置中，不記憶上次位置；尺寸仍可調整且受目前視窗邊界限制。右上「編輯自訂參數」改為較大的主色按鈕，與套用 Shader 配色一致。獨立 Undo／Redo 放在 OP 路徑列右側。標題、選取列及 OP Parameter 標頭改用深／淺色共用主題色。
