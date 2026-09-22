@@ -1113,7 +1113,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .port-row.input:has(.node-inline-values) .port-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .port-row.input:has(.node-inline-values) .port-type{flex:none}
 .node-inline-values{display:inline-flex;min-width:0;gap:4px;align-items:center;flex:1 1 60px;margin-left:auto;justify-content:flex-end;cursor:default;user-select:text}
-:is(.node-inline-values,.node-body-controls,.native-reference-values) :is(input,select){width:100%;min-width:42px;max-width:100%;height:24px;padding:2px 5px;border:0;border-radius:4px;background:var(--node-value-bg);color:var(--ui-tone-value-text);text-align:left;font-size:11px;font-variant-numeric:tabular-nums}
+:is(.node-inline-values,.node-body-controls,.native-reference-values,.source-card-body) :is(input,select){width:100%;min-width:42px;max-width:100%;height:24px;padding:2px 5px;border:0;border-radius:4px;background:var(--node-value-bg);color:var(--ui-tone-value-text);text-align:left;font-size:11px;font-variant-numeric:tabular-nums}
 .node-inline-values input{cursor:text;appearance:textfield}
 .node-inline-values select{cursor:pointer;min-width:64px}
 .node-inline-values input::-webkit-inner-spin-button,.node-inline-values input::-webkit-outer-spin-button{appearance:none;margin:0}
@@ -1375,7 +1375,7 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-theme="light"] #wires path:is(:hover,.wire-hover){stroke:var(--wire-hover)}
 :root[data-ui-theme="light"] .spare-port-row .port-add{--socket:#717d8f;background:#717d8f;border-color:#717d8f}
 :root[data-ui-theme="light"] .spare-port-row .port-add:is(:hover,.wire-target){background:var(--purple);border-color:var(--purple)}
-:root[data-ui-theme="light"] :is(.node-inline-values,.node-body-controls) :is(input,select){background:var(--node-value-bg);color:var(--ui-text)}
+:root[data-ui-theme="light"] :is(.node-inline-values,.node-body-controls,.native-reference-values,.source-card-body) :is(input,select){background:var(--node-value-bg);color:var(--ui-text)}
 :root[data-ui-theme="light"]:where(.rgba-component-tint) :is(.node-color-values input,.port-row[data-color-component] .node-inline-values input){color:var(--component-color)}
 :root[data-ui-theme="light"] .node-inline-values input[aria-invalid="true"]{outline-color:var(--danger)}
 :root[data-ui-theme="light"] .port-type[data-conversion="invalid"]{text-decoration-color:var(--danger)}
@@ -1897,10 +1897,10 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .confirmation-dialog>.confirmation-actions{justify-content:flex-end;gap:10px;padding:12px 0 0}
 .native-reference-values>.components{width:100%}
 .native-reference-values .field{margin:0}
-.native-reference-values .components :is(input,select){min-width:0;min-height:24px}
-.native-reference-values .components:not(.scalar) .component-label{top:50%}
-.native-reference-values .source-component-mode{height:24px;min-height:24px;padding-block:2px}
-@media(pointer:coarse){.native-reference-values .components :is(input,select){height:30px;min-height:30px;font-size:13px}.native-reference-values .source-component-mode{height:30px;min-height:30px;padding-block:5px}}
+:is(.native-reference-values,.source-card-body) .components :is(input,select){min-width:0;min-height:24px}
+:is(.native-reference-values,.source-card-body) .components:not(.scalar) .component-label{top:50%}
+:is(.native-reference-values,.source-card-body) .source-component-mode{height:24px;min-height:24px;padding-block:2px}
+@media(pointer:coarse){:is(.native-reference-values,.source-card-body) .components :is(input,select){height:30px;min-height:30px;font-size:13px}:is(.native-reference-values,.source-card-body) .source-component-mode{height:30px;min-height:30px;padding-block:5px}}
 .native-reference-loading{visibility:hidden;pointer-events:none}
 /* Note selection follows its visible silhouette; its measured bounds stay body-only. */
 .node[data-category="annotation"]:not(.collapsed):is([data-note-title-on-selection="false"],.selected){border-top-left-radius:0;border-top-right-radius:0}
@@ -1950,7 +1950,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #nativeuniforms .source-card-note{margin:var(--source-control-gap) calc(-1 * var(--source-control-gap)) calc(-1 * var(--source-control-gap));padding:var(--source-control-gap)}
 #nativeuniforms .native-color-controls{display:grid;grid-template-columns:14px minmax(0,1fr);gap:var(--source-control-gap);align-items:start}
 #nativeuniforms .native-color-line{display:contents}
-#nativeuniforms .native-color-line>.node-values-toggle{min-height:32px}
+#nativeuniforms .native-color-line>.node-values-toggle{min-height:24px}
 #nativeuniforms .native-color-expanded{margin-top:0}
 #nativeuniforms .native-color-controls>.color-swatch{grid-column:2;margin:0}
 #nativeuniforms[data-minimal=true] .input-source-status{padding:3px 4px}
