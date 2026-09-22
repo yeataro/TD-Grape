@@ -35,6 +35,10 @@ Compute, image writes, Picking and other new execution flows remain outside this
 
 ## Remaining completion work
 
+### 0.8.168 additions
+
+Three independent light-sum nodes bring the catalog to 331 definitions. Phong Lights retains both specular lobes, PBR Lights sums regular lights, and PBR Environment Lights sums environment lights. Nineteen rendered comparisons against native MATs pass with maximum absolute RGB difference 0.0000681. These do not replace the required complete material presets; see the [parity ledger](MAT_NATIVE_PARITY.md).
+
 ### 0.8.166 additions
 
 The catalog now has 328 definitions. Added component-factor mix, scalar-edge step, scalar boolean operations, integer bitwise/shift/remainder operators, texture offsets and projected LOD/gradient sampling. Ordinary constant offset requirements are checked before GLSL compilation. Native coverage is now 1,753 context/signature combinations (626 MAT pixel, 548 MAT vertex, 579 TOP pixel).

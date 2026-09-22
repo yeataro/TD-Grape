@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.166",
+  "catalogVersion": "0.8.168",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -13803,6 +13803,170 @@
           "Vertex Inputs",
           "Varying"
         ],
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_lighting_all",
+        "label": "Phong Lights",
+        "inputs": {
+          "position": "vec3",
+          "normal": "vec3",
+          "shadowStrength": "float",
+          "shadowColor": "vec3",
+          "view": "vec3",
+          "shininess": "float",
+          "shininess2": "float"
+        },
+        "outputs": {
+          "diffuse": "vec3",
+          "specular": "vec3",
+          "specular2": "vec3"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "shadowStrength": 1,
+          "roughness": 0.5,
+          "shininess": 32,
+          "shininess2": 32
+        },
+        "descriptionKey": "help.td_lighting_all",
+        "definitionUuid": "sgrape.builtin.td_lighting_all",
+        "targets": [
+          "mat"
+        ],
+        "revisionHash": "30eef3de8e0322e42393912b77465315c908dffa4c05dc578066789b2c6b93c5"
+      },
+      "emitter": {
+        "id": "td_lighting_all",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "td_lighting_all",
+          "TDLighting",
+          "All Lights",
+          "Automatic Lighting",
+          "全部燈光",
+          "自動遍歷"
+        ],
+        "glslName": "TDLighting",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_lighting_pbr_all",
+        "label": "PBR Lights",
+        "inputs": {
+          "diffuseColor": "vec3",
+          "specularColor": "vec3",
+          "position": "vec3",
+          "normal": "vec3",
+          "shadowStrength": "float",
+          "shadowColor": "vec3",
+          "view": "vec3",
+          "roughness": "float"
+        },
+        "outputs": {
+          "diffuse": "vec3",
+          "specular": "vec3"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "shadowStrength": 1,
+          "roughness": 0.5,
+          "shininess": 32,
+          "shininess2": 32
+        },
+        "descriptionKey": "help.td_lighting_pbr_all",
+        "definitionUuid": "sgrape.builtin.td_lighting_pbr_all",
+        "targets": [
+          "mat"
+        ],
+        "revisionHash": "43c6c269f2c669d3fb148f1553e806d9178653aa4dcda1cf69fdce2845bedf17"
+      },
+      "emitter": {
+        "id": "td_lighting_pbr_all",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "td_lighting_pbr_all",
+          "TDLightingPBR",
+          "All Lights",
+          "Automatic Lighting",
+          "全部燈光",
+          "自動遍歷"
+        ],
+        "glslName": "TDLightingPBR",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_env_lighting_pbr_all",
+        "label": "PBR Environment Lights",
+        "inputs": {
+          "diffuseColor": "vec3",
+          "specularColor": "vec3",
+          "normal": "vec3",
+          "view": "vec3",
+          "roughness": "float",
+          "ambientOcclusion": "float"
+        },
+        "outputs": {
+          "diffuse": "vec3",
+          "specular": "vec3"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "roughness": 0.5,
+          "ambientOcclusion": 1
+        },
+        "descriptionKey": "help.td_env_lighting_pbr_all",
+        "definitionUuid": "sgrape.builtin.td_env_lighting_pbr_all",
+        "targets": [
+          "mat"
+        ],
+        "revisionHash": "84ac5bef04ccf506956f1638777428f7c0499d1eb8003731b0a6c3bff7c0d6ed"
+      },
+      "emitter": {
+        "id": "td_env_lighting_pbr_all",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "td",
+        "aliases": [
+          "td_env_lighting_pbr_all",
+          "TDEnvLightingPBR",
+          "All Lights",
+          "Automatic Lighting",
+          "全部燈光",
+          "自動遍歷"
+        ],
+        "glslName": "TDEnvLightingPBR",
         "secondaryCategories": []
       }
     }

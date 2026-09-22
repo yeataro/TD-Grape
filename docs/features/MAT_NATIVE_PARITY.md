@@ -10,8 +10,8 @@ References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](ht
 
 | Area | Required behavior | Current evidence / remaining work |
 |---|---|---|
-| Phong lighting | Every scene light, diffuse, primary and secondary specular, independent shininess | Existing material traverses regular lights; secondary specular and independent ambient color still need composition |
-| PBR lighting | Direct and environment lights, base color, specular level, metallic, roughness, AO, environment quality | Existing material traverses both light lists; exact native composition still pending |
+| Phong lighting | Every scene light, diffuse, primary and secondary specular, independent shininess | New Phong Lights preserves all three sums; 9 native pixel comparisons pass; full material composition pending |
+| PBR lighting | Direct and environment lights, base color, specular level, metallic, roughness, AO, environment quality | New PBR Lights and PBR Environment Lights provide independent sums; 10 native pixel comparisons pass; full material composition pending |
 | Material composition | Emission, constant contribution, ambient uses diffuse, point/instance color, front/back lighting | Available primitives do not yet constitute an equivalent preset |
 | Texture maps | Color/base color, diffuse, specular/specular level, metallic, roughness, AO, emission, alpha, darkness, rim | 2D bindings and sampling exist; independent map slots and complete presets pending |
 | Sampling settings | Extend U/V/W, nearest/linear/mipmap, anisotropy, chosen channel | Native binding settings need a deliberate exposed interface and preservation across Apply |
@@ -43,3 +43,9 @@ These differences require explicit new composition. Existing graph behavior must
 ## Acceptance
 
 Each implemented row needs an editable graph path, relevant source/binding controls, Help, and a comparison against native output under the same scene and parameters. Test zero/one/multiple regular lights, environment lighting, textures, normals, transparency, displacement and non-default options. Compilation coverage alone is insufficient. Preserve the author's current graph and scene; use separate validation scenes. Keep unsupported or unverified items visible and do not label the complete presets finished while required rows remain open.
+
+## 0.8.168 lighting evidence
+
+`tests/td/test_native_light_sums.py` compares the rendered interior against native MATs for zero/one/two regular lights. Phong diffuse, primary specular and secondary specular match exactly in these cases. PBR direct-light maximum absolute RGB difference is 0.0000282. `tests/td/test_native_environment_light_sums.py` uses a real environment map with one/two environment lights; maximum difference is 0.0000681. Both use floating-point render targets, disable fixture dithering, and check finite results, an unlit black baseline and nonzero lit references. The initial zero-light baseline check exposed TD's default dithering (about ±0.00195), not an extra lighting contribution. Both suites passed again after disabling that fixture setting. These are contribution tests, not complete material or all-scene equivalence.
+
+`Phong Lights`, `PBR Lights`, and `PBR Environment Lights` require explicit normalized world-space normal/view inputs. They add no material colors, ambient term, emission or alpha. The original integrated material nodes retain their prior behavior. `tests/unit/native_light_sum_fixture.py` demonstrates the connected geometry/camera path using ordinary nodes and the shared Vertex interface.

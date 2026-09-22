@@ -226,6 +226,19 @@ td('td_env_lighting_pbr','TDEnvLightingPBR',
    {'diffuse':'vec3','specular':'vec3','shadowStrength':'float'},targets=('mat',),stages=('pixel',),defaults={'roughness':.5,'ambientOcclusion':1})
 CALLS['td_env_lighting_pbr']['resultStruct']='TDPBRResult'
 
+# Expose native light sums independently of material composition. In particular,
+# no ambient term, alpha multiplication or material-color multiplication is added.
+for source,key,label,bound in (
+    ('td_lighting','td_lighting_all','Phong Lights','TD_NUM_LIGHTS'),
+    ('td_lighting_pbr','td_lighting_pbr_all','PBR Lights','TD_NUM_LIGHTS'),
+    ('td_env_lighting_pbr','td_env_lighting_pbr_all','PBR Environment Lights','TD_NUM_ENV_LIGHTS')):
+    spec=copy.deepcopy(CALLS[source])
+    for variant in spec['variants'].values():
+        variant['inputs'].pop('light')
+        variant['outputs'].pop('shadowStrength')
+    spec['lightLoop']=bound;spec['label']=label
+    CALLS[key]=spec
+
 for model in ('phong','pbr'):
     inputs=[('baseColor','vec3'),('specularColor','vec3')]
     inputs+=([('metallic','float'),('roughness','float'),('ambientOcclusion','float')] if model=='pbr' else [('shininess','float'),('ambient','float')])
@@ -259,6 +272,17 @@ def emit(key, ports, argument, symbols, lines, expressions, ident):
     if spec.get('lighting'):
         return emit_lighting(spec['lighting'],argument,symbols,lines,expressions,ident)
     args = [argument(p) for p in ports['in']]
+    if spec.get('lightLoop'):
+        for port,ty in ports['out'].items():
+            name=symbols[(ident,port)];expressions[(ident,port)]=name
+            lines.append('    '+ty+' '+name+' = '+ty+'(0.0);')
+        index='sg_light_index_'+ident;result='sg_light_result_'+ident
+        lines.extend(['    for (int '+index+' = 0; '+index+' < '+spec['lightLoop']+'; ++'+index+') {',
+                      '        '+spec['resultStruct']+' '+result+' = '+spec['function']+'('+', '.join([index]+args)+');'])
+        for port in ports['out']:
+            lines.append('        '+symbols[(ident,port)]+' += '+result+'.'+port+';')
+        lines.append('    }')
+        return None
     if spec.get('operator'):
         return '('+(spec['operator']+args[0] if len(args)==1 else (' '+spec['operator']+' ').join(args))+')'
     if spec.get('resultStruct'):

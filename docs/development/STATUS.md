@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-22 0.8.168 DEV：新增 Phong Lights、PBR Lights、PBR Environment Lights，分開累加原生光照結果，不改動既有材質節點。Phong 保留獨立第二组 Specular／Shininess。19 組原生像素對照涵蓋零／一／兩盞一般燈與一／兩盞環境燈；最大 RGB 差異 0.0000681。共 331 個節點入口；完整預置、貼圖綁定及其他原生材質能力仍未完成。
+
 2026-09-22 0.8.167 DEV：修正 Grape MAT 缺少原生 Out MAT，保留作者已新增的出口與接線。TDFam 家族宣告 TOP／MAT 相容，個別元件限制為本身種類。原生出口建立、接到 Null MAT 與作者出口保留測試通過。完整 Phong MAT Graph／PBR MAT Graph 仍在製作；最新驗收範圍是原生 MAT 全部能力，差異與未完成項目見 [MAT 原生對照](../features/MAT_NATIVE_PARITY.md)。
 
 2026-09-22 0.8.166 DEV：新增 35 個入口（共 328），包含逐分量 mix、純量 edge step、布林與整數位元操作、貼圖 offset 與投影 LOD／Grad。新函式累計 1,753 組原生簽名通過；55 個內建來源有個別雙語說明與官方連結。修正 Vertex 接孔型別比對誤讀 live graph 而非指定快照；兩次新增與 UI 實際產圖編譯回歸通過。Phong／PBR 實際像素验证涵蓋零／一／兩盞一般燈。使用者補充交付目標：完成 MAT 後提供對照原生 Phong MAT／PBR MAT 基本功能的節點圖及可重現場景；尚在進行，不能將原生簽名通過視為完整等價。
