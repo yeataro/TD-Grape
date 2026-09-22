@@ -31,6 +31,8 @@ References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](ht
 | Picking | Native exports include TD_PICKING_ACTIVE / TDWritePickingValues | Earlier author ruling excludes new Picking execution flow; full-parity wording must not silently revoke that ruling |
 | Delivery | TDFam presets, native MAT outlet, preserved user connections, editable graph, reproducible scene | Outlet fix tested; two final presets and scene not delivered yet |
 
+Sampler binding findings: custom declarations currently accept only `sampler2D`; Cube/3D call signatures do not imply binding support. TD reports an incompatible bound TOP as a warning while still linking, and the render is black. In 0.8.169, Apply treats that specific warning as a resource-type failure and preserves the last working shader (`tests/td/test_mat_sampler_mismatch.py`). Other native warnings remain non-fatal. Live changes outside Apply and additional sampler dimensions still need coverage; this fix alone does not complete texture support.
+
 ## Differences already established
 
 - Existing `material_phong` uses one shininess for both native lobes and discards the second result. Native Phong supports a separately weighted second lobe. Independent ambient color also cannot be represented by its scalar ambient multiplier alone.

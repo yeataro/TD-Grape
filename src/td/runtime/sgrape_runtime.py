@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.168'
+PRODUCT_VERSION='0.8.169'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -1349,6 +1349,12 @@ def validate_material(comp,compiled=None):
             render.cook(force=True)
             info=comp.op('compile_info').text
             error=operator.errors() or render.errors()
+            # TD links a shader with a mismatched sampler binding, warns, and
+            # renders black. This is a resource type failure, not successful
+            # validation. Other native warnings remain non-fatal.
+            mismatch=[line for line in operator.warnings().splitlines()
+                      if 'Sampler type of uniform ' in line and 'does not match' in line]
+            if mismatch:error='\n'.join(filter(None,[error,*mismatch]))
     else:
         comp.op('preview').cook(force=True)
         info=comp.op('compile_info').text

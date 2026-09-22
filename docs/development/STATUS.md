@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-22 0.8.169 DEV：MAT Apply 現在拒絕 TD 的 Sampler 型別不符警告；TD 原本仍回報連結成功並輸出黑色。原生回歸確認 3D TOP 綁給 sampler2D 時拒絕候選，保留原圖、revision、Shader DAT、manifest，並移除候選元件。這不代表已開放 Cube／3D 自訂 Sampler，也不把其他原生警告一律升級為錯誤。
+
 2026-09-22 0.8.168 DEV：新增 Phong Lights、PBR Lights、PBR Environment Lights，分開累加原生光照結果，不改動既有材質節點。Phong 保留獨立第二组 Specular／Shininess。19 組原生像素對照涵蓋零／一／兩盞一般燈與一／兩盞環境燈；最大 RGB 差異 0.0000681。共 331 個節點入口；完整預置、貼圖綁定及其他原生材質能力仍未完成。
 
 2026-09-22 0.8.167 DEV：修正 Grape MAT 缺少原生 Out MAT，保留作者已新增的出口與接線。TDFam 家族宣告 TOP／MAT 相容，個別元件限制為本身種類。原生出口建立、接到 Null MAT 與作者出口保留測試通過。完整 Phong MAT Graph／PBR MAT Graph 仍在製作；最新驗收範圍是原生 MAT 全部能力，差異與未完成項目見 [MAT 原生對照](../features/MAT_NATIVE_PARITY.md)。
