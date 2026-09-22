@@ -148,9 +148,7 @@ function openCanvasColorPalette(session){
     };
     grid.append(reset);
   }
-  const presets=session.node?GROUP_FRAME_COLORS.slice(1):GROUP_FRAME_COLORS;
-  if(session.node&&noteDefaultColor(session.node))presets.unshift(['black','#000000']);
-  for(const [name,value]of presets){
+  for(const [name,value]of(session.node?GROUP_FRAME_COLORS.slice(1):GROUP_FRAME_COLORS)){
     const label=t('frame.colorPreset.'+name)+' · '+value.toUpperCase(),button=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-frame-color-preset':value,'aria-label':label,title:label,'aria-checked':String((!session.node||hasNoteColor)&&session.node?.ui?.noteTransparent!==true&&color.toLowerCase()===value),tabindex:'-1'});
     button.style.setProperty('--swatch-color',value);button.append(el('span',{'aria-hidden':'true'}));
     button.onclick=()=>{closeGroupFramePalette();commitGroupFrameColor(session,value);};grid.append(button);

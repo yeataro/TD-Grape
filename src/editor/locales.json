@@ -3216,10 +3216,6 @@
       "zh-Hant": "將畫布上的 GLSL 字級調整為 0.1–10 倍，不改變標題與側欄字級。",
       "en": "Scale GLSL text on the canvas from 0.1 to 10 times its size, keeping title and inspector text unchanged."
     },
-    "frame.colorPreset.black": {
-      "zh-Hant": "純黑",
-      "en": "Black"
-    },
     "note.fontScale.hint": {
       "zh-Hant": "將畫布上的筆記文字放大為 1–10 倍，不改變標題與編輯欄位的字級。",
       "en": "Scale the note text on the canvas from 1 to 10 times its size, keeping title and editor text unchanged."

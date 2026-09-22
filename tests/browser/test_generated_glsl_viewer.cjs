@@ -25,9 +25,13 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.equal(await page.evaluate(()=>availableEntries().some(d=>d.key==='generated_glsl')),false);
   checks.push('duplicate and paste reject a second viewer atomically; creation entry disappears until removal');
   const card=()=>page.locator('[data-node="'+id+'"]');
+  const blackNoteBackground=()=>page.evaluate(()=>{
+   const n={id:'note-color-comparison',definitionUuid:'sgrape.builtin.comment',params:{},ui:{noteColor:'#000000'}};
+   const card=renderNodeCard(n,$('#cards'),[]),background=getComputedStyle(card).backgroundColor;card.remove();return background;
+  });
   for(const theme of ['light','dark']){
    await page.evaluate(theme=>setUIAppearance('theme',theme),theme);
-   assert.equal(await card().evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(0, 0, 0)');
+   assert.equal(await card().evaluate(e=>getComputedStyle(e).backgroundColor),await blackNoteBackground());
   }
   await page.evaluate(()=>{inspectorTab='settings';inspector();});
   const font=()=>page.locator('#inspector [data-note-font-scale]');
@@ -36,12 +40,15 @@ const {harness}=require('./test_glsl_code.cjs');
   await font().fill('0');await font().press('Enter');await settle();assert.equal(await font().inputValue(),'0.1');
   await font().fill('1');await font().press('Enter');await settle();
   await page.locator('#inspector [data-note-color-setting]').click();
-  await page.locator('[data-frame-color-preset="#000000"]').click();
-  assert.equal(await card().evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(0, 0, 0)');
+  assert.equal(await page.locator('.group-frame-palette-grid .group-frame-preset').count(),12);
+  assert.equal(await page.locator('[data-frame-color-preset="#000000"]').count(),0);
+  assert.equal(await page.locator('[data-note-color-default]').evaluate(e=>getComputedStyle(e).getPropertyValue('--swatch-color')),'#000000');
+  await page.locator('[data-note-color-default]').click();
+  assert.equal(await card().evaluate(e=>getComputedStyle(e).backgroundColor),await blackNoteBackground());
   await page.evaluate(()=>{const n=current().nodes.find(n=>n.id===selected);n.ui.width=2400;n.ui.height=2400;render();});
   assert.deepEqual(await card().evaluate(e=>[e.offsetWidth,e.offsetHeight,nodeMaximumWidth(e),nodeHeightLimits(e).maximum]),[2400,2400,3000,3000]);
   await page.evaluate(()=>{const n=current().nodes.find(n=>n.id===selected);n.ui.width=480;n.ui.height=300;inspectorTab='parameters';render();});
-  checks.push('black default/palette in both themes, 0.1 font scale and enlarged two-axis bounds');
+  checks.push('black default/palette match Note blending in both themes, 0.1 font scale and enlarged two-axis bounds');
   const originalCalls=calls;await page.evaluate(()=>change(()=>{current().nodes.find(n=>n.definitionUuid==='sgrape.builtin.generated_glsl').ui.noteColor='#729ca4';},{localize:false}));
   await page.waitForTimeout(300);assert.equal(calls,originalCalls);assert.equal(await page.locator('[data-node="'+id+'"] .note-color-button').count(),1);
   assert.equal(await page.locator('[data-node="'+id+'"] .node-resize-handle').count(),1);

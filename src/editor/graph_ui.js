@@ -1589,7 +1589,6 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
       const bodyColor=noteBodyColor(n);
       if(bodyColor){card.classList.add('note-colored');card.style.setProperty('--note-color',bodyColor);}
       if(d?.key==='generated_glsl'){
-        card.classList.add('node-generated-glsl');card.classList.toggle('generated-glsl-black',bodyColor.toLowerCase()==='#000000');
         card.style.setProperty('--node-max-width','3000px');card.style.setProperty('--node-max-height','3000px');
       }
     }
