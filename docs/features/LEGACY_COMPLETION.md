@@ -35,7 +35,19 @@ Compute, image writes, Picking and other new execution flows remain outside this
 
 ## Remaining completion work
 
-- Audit the remaining GLSL overload/operation forms, including component-wise blend factors and texture offsets.
+### 0.8.166 additions
+
+The catalog now has 328 definitions. Added component-factor mix, scalar-edge step, scalar boolean operations, integer bitwise/shift/remainder operators, texture offsets and projected LOD/gradient sampling. Ordinary constant offset requirements are checked before GLSL compilation. Native coverage is now 1,753 context/signature combinations (626 MAT pixel, 548 MAT vertex, 579 TOP pixel).
+
+All 55 built-in source choices now carry individual bilingual Help and an official reference. Standard function Help describes operation semantics and required constant operands. Single-light TD calls explicitly point to Phong/PBR Material for automatic traversal; integrated materials are searchable by lighting/material terms.
+
+Vertex interface type checks now use their supplied graph snapshot, so previous/candidate graphs do not accidentally read the live interface. Browser coverage includes a second port added after visiting Pixel. The reported missing-port screenshot has matching `out: vec3` ports at both ends; whether the report refers to the special `position` output or a different new port remains unconfirmed.
+
+Both integrated materials were rendered with zero, one and two regular lights. Pixels are finite, no lights give black, and red/green lights contribute independently. This does not yet establish full equivalence with the native Phong/PBR MAT.
+
+The author additionally requested ready-to-test graphs and scenes corresponding to the basic native Phong MAT and PBR MAT capabilities. That is the next deliverable; isolated signature tests alone do not satisfy it.
+
+- Audit remaining GLSL overload/operation forms against the available resource types.
 - Finish selected-source and function Help descriptions and chapter coverage.
 - Reconcile older gap notes with the delivered catalog; keep actual binding and host limitations explicit.
 - Other-vertex Attribute lookup follows the basic MAT work, as requested.

@@ -445,7 +445,12 @@
       "path": [
         "textures",
         "2d"
-      ]
+      ],
+      "hint": {
+        "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
+        "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "sTD2DInputs": {
       "type": "sampler2D[TD_NUM_2D_INPUTS]",
@@ -459,7 +464,12 @@
       "path": [
         "textures",
         "2d"
-      ]
+      ],
+      "hint": {
+        "en": "Array of connected sampler2D resources, grouped by texture dimension. Select an array item before sampling.",
+        "zh-Hant": "依貼圖維度分組的 sampler2D 資源陣列。先取出陣列項目再取樣。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTDMats": {
       "type": "TDMatrix[TD_NUM_CAMERAS]",
@@ -474,7 +484,12 @@
       "path": [
         "tdBuiltin",
         "matrices"
-      ]
+      ],
+      "hint": {
+        "en": "Camera-indexed transforms between geometry, world, camera and projection spaces. Select a camera entry, then its matrix field.",
+        "zh-Hant": "依相機索引取得幾何、世界、相機與投影空間間的轉換。先取相機項目，再取矩陣欄位。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "uTDCamInfos": {
       "type": "TDCameraInfo[TD_NUM_CAMERAS]",
@@ -489,7 +504,12 @@
       "path": [
         "tdBuiltin",
         "cameras"
-      ]
+      ],
+      "hint": {
+        "en": "Per-camera information supplied by the render pass, including camera projection data.",
+        "zh-Hant": "目前繪製提供的各相機資訊，包含相機投影資料。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "uTDLights": {
       "type": "TDLight[TD_NUM_LIGHTS]",
@@ -504,7 +524,12 @@
       "path": [
         "tdBuiltin",
         "lights"
-      ]
+      ],
+      "hint": {
+        "en": "Per-light data for regular lights in the current render pass. Environment lights have a separate array.",
+        "zh-Hant": "目前繪製的一般燈光資料陣列；環境燈使用另一份陣列。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "TD_NUM_2D_INPUTS": {
       "type": "int",
@@ -518,7 +543,12 @@
       "path": [
         "textures",
         "2d"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of 2d inputs in this shader configuration.",
+        "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "sTD3DInputs": {
       "type": "sampler3D[TD_NUM_3D_INPUTS]",
@@ -532,7 +562,12 @@
       "path": [
         "textures",
         "3d"
-      ]
+      ],
+      "hint": {
+        "en": "Array of connected sampler3D resources, grouped by texture dimension. Select an array item before sampling.",
+        "zh-Hant": "依貼圖維度分組的 sampler3D 資源陣列。先取出陣列項目再取樣。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTD3DInfos": {
       "type": "TDTexInfo[TD_NUM_3D_INPUTS]",
@@ -546,7 +581,12 @@
       "path": [
         "textures",
         "3d"
-      ]
+      ],
+      "hint": {
+        "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
+        "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "TD_NUM_3D_INPUTS": {
       "type": "int",
@@ -560,7 +600,12 @@
       "path": [
         "textures",
         "3d"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of 3d inputs in this shader configuration.",
+        "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "sTD2DArrayInputs": {
       "type": "sampler2DArray[TD_NUM_2D_ARRAY_INPUTS]",
@@ -574,7 +619,12 @@
       "path": [
         "textures",
         "2dArray"
-      ]
+      ],
+      "hint": {
+        "en": "Array of connected sampler2DArray resources, grouped by texture dimension. Select an array item before sampling.",
+        "zh-Hant": "依貼圖維度分組的 sampler2DArray 資源陣列。先取出陣列項目再取樣。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTD2DArrayInfos": {
       "type": "TDTexInfo[TD_NUM_2D_ARRAY_INPUTS]",
@@ -588,7 +638,12 @@
       "path": [
         "textures",
         "2dArray"
-      ]
+      ],
+      "hint": {
+        "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
+        "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "TD_NUM_2D_ARRAY_INPUTS": {
       "type": "int",
@@ -602,7 +657,12 @@
       "path": [
         "textures",
         "2dArray"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of 2d array inputs in this shader configuration.",
+        "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "sTDCubeInputs": {
       "type": "samplerCube[TD_NUM_CUBE_INPUTS]",
@@ -616,7 +676,12 @@
       "path": [
         "textures",
         "cube"
-      ]
+      ],
+      "hint": {
+        "en": "Array of connected samplerCube resources, grouped by texture dimension. Select an array item before sampling.",
+        "zh-Hant": "依貼圖維度分組的 samplerCube 資源陣列。先取出陣列項目再取樣。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTDCubeInfos": {
       "type": "TDTexInfo[TD_NUM_CUBE_INPUTS]",
@@ -630,7 +695,12 @@
       "path": [
         "textures",
         "cube"
-      ]
+      ],
+      "hint": {
+        "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
+        "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "TD_NUM_CUBE_INPUTS": {
       "type": "int",
@@ -644,7 +714,12 @@
       "path": [
         "textures",
         "cube"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of cube inputs in this shader configuration.",
+        "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTDOutputInfo": {
       "type": "TDTexInfo",
@@ -661,7 +736,12 @@
       ],
       "aliases": [
         "Output Info"
-      ]
+      ],
+      "hint": {
+        "en": "Output texture metadata. res.xy contains reciprocal dimensions; res.zw contains width and height.",
+        "zh-Hant": "輸出貼圖資訊。res.xy 為尺寸倒數，res.zw 為寬與高。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTDOutputInfo.res.zw": {
       "type": "vec2",
@@ -683,7 +763,8 @@
       "hint": {
         "zh-Hant": "輸出影像的寬、高，單位為像素。",
         "en": "Output width and height in pixels."
-      }
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTDOutputInfo.res.xy": {
       "type": "vec2",
@@ -705,7 +786,8 @@
       "hint": {
         "zh-Hant": "輸出影像寬、高的倒數。",
         "en": "Reciprocal output width and height."
-      }
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "vUV": {
       "type": "vec3",
@@ -726,7 +808,8 @@
       "hint": {
         "zh-Hant": "TOP 的原始三分量貼圖座標。",
         "en": "The original three-component TOP texture coordinates."
-      }
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTDPass": {
       "type": "int",
@@ -743,7 +826,12 @@
       ],
       "aliases": [
         "Pass Index"
-      ]
+      ],
+      "hint": {
+        "en": "Zero-based GLSL TOP pass index for multipass rendering.",
+        "zh-Hant": "多次繪製時，目前 GLSL TOP 的 pass 索引，從零起算。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "uTDCurrentDepth": {
       "type": "int",
@@ -760,7 +848,12 @@
       ],
       "aliases": [
         "Output Slice"
-      ]
+      ],
+      "hint": {
+        "en": "Current output depth index when producing a layered or 3D TOP texture.",
+        "zh-Hant": "產生分層或 3D TOP 貼圖時，目前的深度索引。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "sTDNoiseMap": {
       "type": "sampler2D",
@@ -777,7 +870,12 @@
       ],
       "aliases": [
         "Noise Map"
-      ]
+      ],
+      "hint": {
+        "en": "TD-provided noise lookup texture; connect it to a compatible texture sampling input.",
+        "zh-Hant": "TD 提供的雜訊查表貼圖，可接入相容的貼圖取樣輸入。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "sTDSineLookup": {
       "type": "sampler1D",
@@ -794,7 +892,12 @@
       ],
       "aliases": [
         "Sine Lookup"
-      ]
+      ],
+      "hint": {
+        "en": "TD-provided one-dimensional sine lookup texture. TDSineLookup provides a direct lookup function.",
+        "zh-Hant": "TD 提供的一維正弦查表貼圖；亦可透過 TDSineLookup 函數直接查表。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
     "gl_FragCoord": {
       "type": "vec4",
@@ -817,7 +920,8 @@
       "hint": {
         "zh-Hant": "目前片段的視窗座標。",
         "en": "The current fragment position in window coordinates."
-      }
+      },
+      "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
     "gl_FrontFacing": {
       "type": "bool",
@@ -840,7 +944,8 @@
       "hint": {
         "zh-Hant": "目前片段是否位於圖元正面。",
         "en": "Whether this fragment belongs to a front-facing primitive."
-      }
+      },
+      "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
     "gl_SampleID": {
       "type": "int",
@@ -863,7 +968,8 @@
       "hint": {
         "zh-Hant": "目前多重取樣樣本的索引。",
         "en": "Index of the current multisample sample."
-      }
+      },
+      "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
     "gl_SamplePosition": {
       "type": "vec2",
@@ -886,7 +992,8 @@
       "hint": {
         "zh-Hant": "目前樣本在像素內的位置。",
         "en": "The current sample position within its pixel."
-      }
+      },
+      "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
     "gl_HelperInvocation": {
       "type": "bool",
@@ -908,7 +1015,8 @@
       "hint": {
         "zh-Hant": "是否為計算導數而執行的輔助片段。",
         "en": "Whether this is a helper invocation used for derivatives."
-      }
+      },
+      "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
     "TDNormal": {
       "type": "vec3",
@@ -926,7 +1034,12 @@
       "aliases": [
         "Normal",
         "N"
-      ]
+      ],
+      "hint": {
+        "en": "Normal of the current vertex before TD geometry deformation. Use TDDeformNorm for a deformed world-space normal.",
+        "zh-Hant": "目前頂點在 TD 幾何變形前的法線。變形後的世界空間法線可使用 TDDeformNorm。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes"
     },
     "TDPointColor": {
       "type": "vec4",
@@ -945,7 +1058,12 @@
         "Point Color",
         "Cd",
         "Color"
-      ]
+      ],
+      "hint": {
+        "en": "Color attribute of the current point, including alpha.",
+        "zh-Hant": "目前點的顏色屬性，包含 alpha。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes"
     },
     "TDUVUnwrapCoord": {
       "type": "vec3",
@@ -962,7 +1080,12 @@
       ],
       "aliases": [
         "UV Unwrap"
-      ]
+      ],
+      "hint": {
+        "en": "Coordinates used for the current UV-unwrapping render configuration.",
+        "zh-Hant": "目前 UV 展開繪製配置使用的座標。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
     "TDInstanceID": {
       "type": "int",
@@ -979,7 +1102,12 @@
       ],
       "aliases": [
         "Instance ID"
-      ]
+      ],
+      "hint": {
+        "en": "Instance index supplied by TD for the geometry being rendered.",
+        "zh-Hant": "TD 提供的目前繪製幾何實例索引。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDCameraIndex": {
       "type": "int",
@@ -996,7 +1124,12 @@
       ],
       "aliases": [
         "Camera Index"
-      ]
+      ],
+      "hint": {
+        "en": "Camera index within the current render pass. Pass it flat to Pixel when indexing camera-specific data there.",
+        "zh-Hant": "目前繪製內的相機索引。Pixel 階段需查相機資料時，應以 flat 傳遞此索引。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
     "TDTrueCameraIndex": {
       "type": "int",
@@ -1013,7 +1146,12 @@
       ],
       "aliases": [
         "True Camera Index"
-      ]
+      ],
+      "hint": {
+        "en": "Camera index in the full camera list, as distinguished from the current pass index.",
+        "zh-Hant": "完整相機清單中的索引，與目前 pass 內的相機索引有所區別。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
     "TDTexCoord": {
       "type": "vec3",
@@ -1041,7 +1179,8 @@
       "hint": {
         "zh-Hant": "指定 UV 層的貼圖座標。",
         "en": "Texture coordinates from the selected UV layer."
-      }
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes"
     },
     "TDBoneMat": {
       "type": "mat4",
@@ -1061,7 +1200,12 @@
       },
       "aliases": [
         "Bone Matrix"
-      ]
+      ],
+      "hint": {
+        "en": "Bone transform matrix for the selected bone index.",
+        "zh-Hant": "指定骨骼索引的變換矩陣。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
     "TDInstanceMat": {
       "type": "mat4",
@@ -1078,7 +1222,12 @@
       ],
       "inputs": {
         "instanceIndex": "int"
-      }
+      },
+      "hint": {
+        "en": "Four-by-four transform matrix for the selected geometry instance.",
+        "zh-Hant": "指定幾何實例的四乘四變換矩陣。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDInstanceMat3": {
       "type": "mat3",
@@ -1095,7 +1244,12 @@
       ],
       "inputs": {
         "instanceIndex": "int"
-      }
+      },
+      "hint": {
+        "en": "Three-by-three transform matrix for the selected geometry instance.",
+        "zh-Hant": "指定幾何實例的三乘三變換矩陣。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDInstanceTextureIndex": {
       "type": "uint",
@@ -1113,7 +1267,12 @@
       ],
       "inputs": {
         "instanceIndex": "int"
-      }
+      },
+      "hint": {
+        "en": "Texture index associated with the selected geometry instance.",
+        "zh-Hant": "指定幾何實例所關聯的貼圖索引。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDInstanceCustomAttrib0": {
       "type": "vec4",
@@ -1130,7 +1289,12 @@
       ],
       "inputs": {
         "instanceIndex": "int"
-      }
+      },
+      "hint": {
+        "en": "Custom instance attribute slot 0 as four components.",
+        "zh-Hant": "自訂實例屬性槽 0 的四分量資料。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDInstanceCustomAttrib1": {
       "type": "vec4",
@@ -1147,7 +1311,12 @@
       ],
       "inputs": {
         "instanceIndex": "int"
-      }
+      },
+      "hint": {
+        "en": "Custom instance attribute slot 1 as four components.",
+        "zh-Hant": "自訂實例屬性槽 1 的四分量資料。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDInstanceCustomAttrib2": {
       "type": "vec4",
@@ -1164,7 +1333,12 @@
       ],
       "inputs": {
         "instanceIndex": "int"
-      }
+      },
+      "hint": {
+        "en": "Custom instance attribute slot 2 as four components.",
+        "zh-Hant": "自訂實例屬性槽 2 的四分量資料。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDInstanceCustomAttrib3": {
       "type": "vec4",
@@ -1181,7 +1355,12 @@
       ],
       "inputs": {
         "instanceIndex": "int"
-      }
+      },
+      "hint": {
+        "en": "Custom instance attribute slot 3 as four components.",
+        "zh-Hant": "自訂實例屬性槽 3 的四分量資料。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
     "TDPointCoord": {
       "type": "vec2",
@@ -1201,7 +1380,8 @@
       "hint": {
         "zh-Hant": "目前繪製點內部的座標。",
         "en": "Coordinates within the point being rendered."
-      }
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
     "uTDGeneral": {
       "type": "TDGeneral",
@@ -1216,7 +1396,12 @@
       "path": [
         "tdBuiltin",
         "render"
-      ]
+      ],
+      "hint": {
+        "en": "General render state, including combined ambient-light color and viewport information.",
+        "zh-Hant": "一般繪製狀態，包含合計環境光顏色與 viewport 資訊。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "uTDGeneral.ambientColor": {
       "type": "vec4",
@@ -1231,7 +1416,12 @@
       "path": [
         "tdBuiltin",
         "lights"
-      ]
+      ],
+      "hint": {
+        "en": "Combined ambient-light color from the ambient lights used by this render pass.",
+        "zh-Hant": "目前繪製所使用的環境光之合計顏色。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "Viewport Origin": {
       "type": "vec2",
@@ -1252,7 +1442,8 @@
       "hint": {
         "zh-Hant": "目前 viewport 的起點座標。",
         "en": "Origin of the current viewport."
-      }
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "Viewport Resolution": {
       "type": "vec2",
@@ -1273,7 +1464,8 @@
       "hint": {
         "zh-Hant": "目前 viewport 的寬、高。",
         "en": "Width and height of the current viewport."
-      }
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "uTDEnvLights": {
       "type": "TDEnvLight[TD_NUM_ENV_LIGHTS]",
@@ -1288,7 +1480,12 @@
       "path": [
         "tdBuiltin",
         "lights"
-      ]
+      ],
+      "hint": {
+        "en": "Environment-light settings for the current render pass.",
+        "zh-Hant": "目前繪製的環境燈設定陣列。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "TD_NUM_LIGHTS": {
       "type": "int",
@@ -1303,7 +1500,12 @@
       "path": [
         "tdBuiltin",
         "lights"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of regular lights in this shader configuration.",
+        "zh-Hant": "此 shader 配置中一般燈光的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
     "TD_NUM_ENV_LIGHTS": {
       "type": "int",
@@ -1318,7 +1520,12 @@
       "path": [
         "tdBuiltin",
         "lights"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of environment lights in this shader configuration.",
+        "zh-Hant": "此 shader 配置中環境燈的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
     "TD_NUM_CAMERAS": {
       "type": "int",
@@ -1333,7 +1540,12 @@
       "path": [
         "tdBuiltin",
         "cameras"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of cameras in this shader configuration.",
+        "zh-Hant": "此 shader 配置中相機的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
     "TD_NUM_COLOR_BUFFERS": {
       "type": "int",
@@ -1348,7 +1560,12 @@
       "path": [
         "tdBuiltin",
         "render"
-      ]
+      ],
+      "hint": {
+        "en": "Compile-time number of color buffers in this shader configuration.",
+        "zh-Hant": "此 shader 配置中色彩緩衝區的編譯期數量。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
     "uTDEnvLightBuffers.shCoeffs": {
       "type": "vec3[9]",
@@ -1366,7 +1583,12 @@
       "path": [
         "tdBuiltin",
         "lights"
-      ]
+      ],
+      "hint": {
+        "en": "Nine RGB spherical-harmonic coefficients for the selected environment light.",
+        "zh-Hant": "指定環境燈的九組 RGB 球諧係數。"
+      },
+      "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
     "gl_VertexIndex": {
       "type": "int",

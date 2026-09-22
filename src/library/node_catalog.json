@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.164",
+  "catalogVersion": "0.8.166",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -4632,6 +4632,553 @@
           "mix"
         ],
         "glslName": "mix",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "mix_components",
+        "label": "Component Mix",
+        "inputs": {
+          "a": "vec2",
+          "b": "vec2",
+          "factor": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.mix_components",
+        "definitionUuid": "sgrape.builtin.mix_components",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "1754e7305264c677bc4ff7d19946771041d761cdd152fcb0a51b702d8f4cfc0e"
+      },
+      "emitter": {
+        "id": "mix_components",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "mix_components",
+          "mix"
+        ],
+        "glslName": "mix",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "step_scalar",
+        "label": "Scalar Edge Step",
+        "inputs": {
+          "edge": "float",
+          "value": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.step_scalar",
+        "definitionUuid": "sgrape.builtin.step_scalar",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "e0741579430dc9b44ed96e51d804f92f8470cf9c0ac596753a2e821bb1b659e2"
+      },
+      "emitter": {
+        "id": "step_scalar",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "step_scalar",
+          "step"
+        ],
+        "glslName": "step",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "bit_and",
+        "label": "Bit And",
+        "inputs": {
+          "a": "int",
+          "b": "int"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "int"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.bit_and",
+        "definitionUuid": "sgrape.builtin.bit_and",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "b2cb2825ae0d8a464537cb555561cc6dac7ad2004e8f03bdceaec753d2ae0596"
+      },
+      "emitter": {
+        "id": "bit_and",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "bit_and",
+          "&"
+        ],
+        "glslName": "&",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "bit_or",
+        "label": "Bit Or",
+        "inputs": {
+          "a": "int",
+          "b": "int"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "int"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.bit_or",
+        "definitionUuid": "sgrape.builtin.bit_or",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "6925c22ab5a7f77db35345dfa0cf4e1ea7cf2a36d9c577babae994abd1d1ec26"
+      },
+      "emitter": {
+        "id": "bit_or",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "bit_or",
+          "|"
+        ],
+        "glslName": "|",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "bit_xor",
+        "label": "Bit Xor",
+        "inputs": {
+          "a": "int",
+          "b": "int"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "int"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.bit_xor",
+        "definitionUuid": "sgrape.builtin.bit_xor",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "5a9797ecd6397914fbfb67ea0cdd8e46ce3c121c15d738343dd59bf90fe73fad"
+      },
+      "emitter": {
+        "id": "bit_xor",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "bit_xor",
+          "^"
+        ],
+        "glslName": "^",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "bit_not",
+        "label": "Bit Not",
+        "inputs": {
+          "value": "int"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "int"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.bit_not",
+        "definitionUuid": "sgrape.builtin.bit_not",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "ba5219080f5cc11e0400c35a39c4f91858158c41e9cd2293ab19bd8809973664"
+      },
+      "emitter": {
+        "id": "bit_not",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "bit_not",
+          "~"
+        ],
+        "glslName": "~",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "shift_left",
+        "label": "Shift Left",
+        "inputs": {
+          "a": "int",
+          "b": "int"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "int"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.shift_left",
+        "definitionUuid": "sgrape.builtin.shift_left",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "3ea753d79c70d20cab3111765e4f466fc66957f12774c108260ed75f658f8e72"
+      },
+      "emitter": {
+        "id": "shift_left",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "shift_left",
+          "<<"
+        ],
+        "glslName": "<<",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "shift_right",
+        "label": "Shift Right",
+        "inputs": {
+          "a": "int",
+          "b": "int"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "int"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.shift_right",
+        "definitionUuid": "sgrape.builtin.shift_right",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "da43533064f46156e475dea932f0dc61711cba766b49099df79b999d631da542"
+      },
+      "emitter": {
+        "id": "shift_right",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "shift_right",
+          ">>"
+        ],
+        "glslName": ">>",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "remainder",
+        "label": "Remainder",
+        "inputs": {
+          "a": "int",
+          "b": "int"
+        },
+        "outputs": {
+          "out": "int"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "int"
+        },
+        "inputDefaults": {
+          "b": 1
+        },
+        "descriptionKey": "help.remainder",
+        "definitionUuid": "sgrape.builtin.remainder",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "72b84f892d448db9ee81250a906825ed6f83e7e2ad6243425e92588c05d86624"
+      },
+      "emitter": {
+        "id": "remainder",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "remainder",
+          "%"
+        ],
+        "glslName": "%",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "boolean_and",
+        "label": "Boolean And",
+        "inputs": {
+          "a": "bool",
+          "b": "bool"
+        },
+        "outputs": {
+          "out": "bool"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "bool"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.boolean_and",
+        "definitionUuid": "sgrape.builtin.boolean_and",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "172b9696f81d715ea48a902482bb6d4336e0792fdc6639be54db759c61f3b895"
+      },
+      "emitter": {
+        "id": "boolean_and",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "boolean_and",
+          "&&"
+        ],
+        "glslName": "&&",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "boolean_or",
+        "label": "Boolean Or",
+        "inputs": {
+          "a": "bool",
+          "b": "bool"
+        },
+        "outputs": {
+          "out": "bool"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "bool"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.boolean_or",
+        "definitionUuid": "sgrape.builtin.boolean_or",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "0ab8e29d3bd8b20e6d264c104986bdd25412a09987cbac56b4a4de2cade4798f"
+      },
+      "emitter": {
+        "id": "boolean_or",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "boolean_or",
+          "||"
+        ],
+        "glslName": "||",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "boolean_xor",
+        "label": "Boolean Xor",
+        "inputs": {
+          "a": "bool",
+          "b": "bool"
+        },
+        "outputs": {
+          "out": "bool"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "bool"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.boolean_xor",
+        "definitionUuid": "sgrape.builtin.boolean_xor",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "1d90935a5cf2ecbf7f671c110c02ba856a722b2695cfd39f83e28c1fa0c04bf1"
+      },
+      "emitter": {
+        "id": "boolean_xor",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "boolean_xor",
+          "^^"
+        ],
+        "glslName": "^^",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "boolean_not",
+        "label": "Boolean Not",
+        "inputs": {
+          "value": "bool"
+        },
+        "outputs": {
+          "out": "bool"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "bool"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.boolean_not",
+        "definitionUuid": "sgrape.builtin.boolean_not",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "revisionHash": "89486e08d9efbb6bab7939b267e505d7b677b046df08b8f36527a27a488e242d"
+      },
+      "emitter": {
+        "id": "boolean_not",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "boolean_not",
+          "!"
+        ],
+        "glslName": "!",
         "secondaryCategories": []
       }
     },
@@ -10227,6 +10774,287 @@
     },
     {
       "definition": {
+        "key": "texture_offset_1d",
+        "label": "textureOffset · sampler1D",
+        "inputs": {
+          "sampler": "sampler1D",
+          "uv": "float",
+          "offset": "int"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_offset_1d",
+        "definitionUuid": "sgrape.builtin.texture_offset_1d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "9038f372bcd91fba50cc7244c4ad604040381e2ea426496e286b967412fa2d6d"
+      },
+      "emitter": {
+        "id": "texture_offset_1d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_offset_1d",
+          "textureOffset"
+        ],
+        "glslName": "textureOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_lod_offset_1d",
+        "label": "textureLodOffset · sampler1D",
+        "inputs": {
+          "sampler": "sampler1D",
+          "uv": "float",
+          "lod": "float",
+          "offset": "int"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_lod_offset_1d",
+        "definitionUuid": "sgrape.builtin.texture_lod_offset_1d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "bd93be51365c48fc1490af5ee2d5eea8cdd23f736a360db4528ea6463caeb2ae"
+      },
+      "emitter": {
+        "id": "texture_lod_offset_1d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_lod_offset_1d",
+          "textureLodOffset"
+        ],
+        "glslName": "textureLodOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_grad_offset_1d",
+        "label": "textureGradOffset · sampler1D",
+        "inputs": {
+          "sampler": "sampler1D",
+          "uv": "float",
+          "dx": "float",
+          "dy": "float",
+          "offset": "int"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_grad_offset_1d",
+        "definitionUuid": "sgrape.builtin.texture_grad_offset_1d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "fffee322741272dc4d19d1050e98dc0c152cbd281804ae4ce30295ba4e367335"
+      },
+      "emitter": {
+        "id": "texture_grad_offset_1d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_grad_offset_1d",
+          "textureGradOffset"
+        ],
+        "glslName": "textureGradOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texel_fetch_offset_1d",
+        "label": "texelFetchOffset · sampler1D",
+        "inputs": {
+          "sampler": "sampler1D",
+          "coord": "int",
+          "lod": "int",
+          "offset": "int"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texel_fetch_offset_1d",
+        "definitionUuid": "sgrape.builtin.texel_fetch_offset_1d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "1017d9e4abbb9443b2c5782f049db1e3a7e8718224ef3353668a68762c6787fa"
+      },
+      "emitter": {
+        "id": "texel_fetch_offset_1d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texel_fetch_offset_1d",
+          "texelFetchOffset"
+        ],
+        "glslName": "texelFetchOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_proj_lod_1d",
+        "label": "textureProjLod · sampler1D",
+        "inputs": {
+          "sampler": "sampler1D",
+          "uv": "vec2",
+          "lod": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_proj_lod_1d",
+        "definitionUuid": "sgrape.builtin.texture_proj_lod_1d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "8d34f3bccf3b766f5a658b8781da899b9996c0f4fc06ecc2733de8f031a95382"
+      },
+      "emitter": {
+        "id": "texture_proj_lod_1d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_proj_lod_1d",
+          "textureProjLod"
+        ],
+        "glslName": "textureProjLod",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_proj_grad_1d",
+        "label": "textureProjGrad · sampler1D",
+        "inputs": {
+          "sampler": "sampler1D",
+          "uv": "vec2",
+          "dx": "float",
+          "dy": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_proj_grad_1d",
+        "definitionUuid": "sgrape.builtin.texture_proj_grad_1d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "b8b8ebce455a0f16742e130647ff73e26e2a2609bbf570ead360ee8d3dd73e38"
+      },
+      "emitter": {
+        "id": "texture_proj_grad_1d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_proj_grad_1d",
+          "textureProjGrad"
+        ],
+        "glslName": "textureProjGrad",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
         "key": "texture_size_2d",
         "label": "textureSize · sampler2D",
         "inputs": {
@@ -10680,6 +11508,287 @@
     },
     {
       "definition": {
+        "key": "texture_offset_2d",
+        "label": "textureOffset · sampler2D",
+        "inputs": {
+          "sampler": "sampler2D",
+          "uv": "vec2",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_offset_2d",
+        "definitionUuid": "sgrape.builtin.texture_offset_2d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "1dccfcdab5e16e15ab9d1f840ed6b90f7ae1ed3aee8edf983c703cbf3fb92f6f"
+      },
+      "emitter": {
+        "id": "texture_offset_2d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_offset_2d",
+          "textureOffset"
+        ],
+        "glslName": "textureOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_lod_offset_2d",
+        "label": "textureLodOffset · sampler2D",
+        "inputs": {
+          "sampler": "sampler2D",
+          "uv": "vec2",
+          "lod": "float",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_lod_offset_2d",
+        "definitionUuid": "sgrape.builtin.texture_lod_offset_2d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "627b607f37528b1c7e19ebd7501fe24a4bf1f5330d7d804e0dd9817a79910bba"
+      },
+      "emitter": {
+        "id": "texture_lod_offset_2d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_lod_offset_2d",
+          "textureLodOffset"
+        ],
+        "glslName": "textureLodOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_grad_offset_2d",
+        "label": "textureGradOffset · sampler2D",
+        "inputs": {
+          "sampler": "sampler2D",
+          "uv": "vec2",
+          "dx": "vec2",
+          "dy": "vec2",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_grad_offset_2d",
+        "definitionUuid": "sgrape.builtin.texture_grad_offset_2d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "6a5e815f59c9e24fd4f649c0921fcdaba04bb3e808ec1bf779e9e77dda12e791"
+      },
+      "emitter": {
+        "id": "texture_grad_offset_2d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_grad_offset_2d",
+          "textureGradOffset"
+        ],
+        "glslName": "textureGradOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texel_fetch_offset_2d",
+        "label": "texelFetchOffset · sampler2D",
+        "inputs": {
+          "sampler": "sampler2D",
+          "coord": "ivec2",
+          "lod": "int",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texel_fetch_offset_2d",
+        "definitionUuid": "sgrape.builtin.texel_fetch_offset_2d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "bf8627c7da7c2dcfce00aa21198635b5b62ba8c0189444f60266cee97461a8fa"
+      },
+      "emitter": {
+        "id": "texel_fetch_offset_2d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texel_fetch_offset_2d",
+          "texelFetchOffset"
+        ],
+        "glslName": "texelFetchOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_proj_lod_2d",
+        "label": "textureProjLod · sampler2D",
+        "inputs": {
+          "sampler": "sampler2D",
+          "uv": "vec4",
+          "lod": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_proj_lod_2d",
+        "definitionUuid": "sgrape.builtin.texture_proj_lod_2d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "c06103b50ab05702e909d5b5b779d849e42ce421b6ecdb515248c2ad859d48a8"
+      },
+      "emitter": {
+        "id": "texture_proj_lod_2d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_proj_lod_2d",
+          "textureProjLod"
+        ],
+        "glslName": "textureProjLod",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_proj_grad_2d",
+        "label": "textureProjGrad · sampler2D",
+        "inputs": {
+          "sampler": "sampler2D",
+          "uv": "vec4",
+          "dx": "vec2",
+          "dy": "vec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_proj_grad_2d",
+        "definitionUuid": "sgrape.builtin.texture_proj_grad_2d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "6f061909e62bd09a1c3218a0524f74fde2bc9820ed7cd4a56644be98aca5f867"
+      },
+      "emitter": {
+        "id": "texture_proj_grad_2d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_proj_grad_2d",
+          "textureProjGrad"
+        ],
+        "glslName": "textureProjGrad",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
         "key": "texture_size_3d",
         "label": "textureSize · sampler3D",
         "inputs": {
@@ -11082,6 +12191,287 @@
           "textureQueryLod"
         ],
         "glslName": "textureQueryLod",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_offset_3d",
+        "label": "textureOffset · sampler3D",
+        "inputs": {
+          "sampler": "sampler3D",
+          "uv": "vec3",
+          "offset": "ivec3"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_offset_3d",
+        "definitionUuid": "sgrape.builtin.texture_offset_3d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "00298ee5256f04d461e49794384135eeb94a37e7237e291e735124e463d11285"
+      },
+      "emitter": {
+        "id": "texture_offset_3d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_offset_3d",
+          "textureOffset"
+        ],
+        "glslName": "textureOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_lod_offset_3d",
+        "label": "textureLodOffset · sampler3D",
+        "inputs": {
+          "sampler": "sampler3D",
+          "uv": "vec3",
+          "lod": "float",
+          "offset": "ivec3"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_lod_offset_3d",
+        "definitionUuid": "sgrape.builtin.texture_lod_offset_3d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "8f81506daf6d051df0d04f3dfcd32b46c26d2c7f776d54af7cd35b8d71c64803"
+      },
+      "emitter": {
+        "id": "texture_lod_offset_3d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_lod_offset_3d",
+          "textureLodOffset"
+        ],
+        "glslName": "textureLodOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_grad_offset_3d",
+        "label": "textureGradOffset · sampler3D",
+        "inputs": {
+          "sampler": "sampler3D",
+          "uv": "vec3",
+          "dx": "vec3",
+          "dy": "vec3",
+          "offset": "ivec3"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_grad_offset_3d",
+        "definitionUuid": "sgrape.builtin.texture_grad_offset_3d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "dd1115c54c7ed5e211bcb7ec20121ea2ee12281e9f73679ad616a41951130411"
+      },
+      "emitter": {
+        "id": "texture_grad_offset_3d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_grad_offset_3d",
+          "textureGradOffset"
+        ],
+        "glslName": "textureGradOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texel_fetch_offset_3d",
+        "label": "texelFetchOffset · sampler3D",
+        "inputs": {
+          "sampler": "sampler3D",
+          "coord": "ivec3",
+          "lod": "int",
+          "offset": "ivec3"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texel_fetch_offset_3d",
+        "definitionUuid": "sgrape.builtin.texel_fetch_offset_3d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "b9eda6bfe7817d7d2e84155960fe8132da0f678102d582261957dfe64918c805"
+      },
+      "emitter": {
+        "id": "texel_fetch_offset_3d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texel_fetch_offset_3d",
+          "texelFetchOffset"
+        ],
+        "glslName": "texelFetchOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_proj_lod_3d",
+        "label": "textureProjLod · sampler3D",
+        "inputs": {
+          "sampler": "sampler3D",
+          "uv": "vec4",
+          "lod": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_proj_lod_3d",
+        "definitionUuid": "sgrape.builtin.texture_proj_lod_3d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "cfafa62424f43a5f7cbe12556119f0eb9541469774fc612f93ef84b53b13497d"
+      },
+      "emitter": {
+        "id": "texture_proj_lod_3d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_proj_lod_3d",
+          "textureProjLod"
+        ],
+        "glslName": "textureProjLod",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_proj_grad_3d",
+        "label": "textureProjGrad · sampler3D",
+        "inputs": {
+          "sampler": "sampler3D",
+          "uv": "vec4",
+          "dx": "vec3",
+          "dy": "vec3"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_proj_grad_3d",
+        "definitionUuid": "sgrape.builtin.texture_proj_grad_3d",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "61e568bcc0be1396e58a48460b780ab82211c5320c72c7ed822c9ad93e2921e8"
+      },
+      "emitter": {
+        "id": "texture_proj_grad_3d",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_proj_grad_3d",
+          "textureProjGrad"
+        ],
+        "glslName": "textureProjGrad",
         "secondaryCategories": []
       }
     },
@@ -11490,6 +12880,194 @@
           "textureGather"
         ],
         "glslName": "textureGather",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_offset_2darray",
+        "label": "textureOffset · sampler2DArray",
+        "inputs": {
+          "sampler": "sampler2DArray",
+          "uv": "vec3",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_offset_2darray",
+        "definitionUuid": "sgrape.builtin.texture_offset_2darray",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "de963b0d56994b0dc82d49411b9a6e66da5a13b61cd80aca3414769bb7739a84"
+      },
+      "emitter": {
+        "id": "texture_offset_2darray",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_offset_2darray",
+          "textureOffset"
+        ],
+        "glslName": "textureOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_lod_offset_2darray",
+        "label": "textureLodOffset · sampler2DArray",
+        "inputs": {
+          "sampler": "sampler2DArray",
+          "uv": "vec3",
+          "lod": "float",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_lod_offset_2darray",
+        "definitionUuid": "sgrape.builtin.texture_lod_offset_2darray",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "605392d766cd200e41e9aa0dd0eaf0b30ea292bf2488f6310188826f9afa827a"
+      },
+      "emitter": {
+        "id": "texture_lod_offset_2darray",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_lod_offset_2darray",
+          "textureLodOffset"
+        ],
+        "glslName": "textureLodOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texture_grad_offset_2darray",
+        "label": "textureGradOffset · sampler2DArray",
+        "inputs": {
+          "sampler": "sampler2DArray",
+          "uv": "vec3",
+          "dx": "vec2",
+          "dy": "vec2",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texture_grad_offset_2darray",
+        "definitionUuid": "sgrape.builtin.texture_grad_offset_2darray",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "9dc78b6494c84ff280c7a8e035df262fd1f9f94c7f37ecf8c27ffd4d9447161a"
+      },
+      "emitter": {
+        "id": "texture_grad_offset_2darray",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texture_grad_offset_2darray",
+          "textureGradOffset"
+        ],
+        "glslName": "textureGradOffset",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "texel_fetch_offset_2darray",
+        "label": "texelFetchOffset · sampler2DArray",
+        "inputs": {
+          "sampler": "sampler2DArray",
+          "coord": "ivec3",
+          "lod": "int",
+          "offset": "ivec2"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.texel_fetch_offset_2darray",
+        "definitionUuid": "sgrape.builtin.texel_fetch_offset_2darray",
+        "targets": [
+          "top",
+          "mat"
+        ],
+        "requiredResourceInputs": [
+          "sampler"
+        ],
+        "revisionHash": "698cff90d067199e77dbd7330d3d338053a104641fc8b45229156f2729b55026"
+      },
+      "emitter": {
+        "id": "texel_fetch_offset_2darray",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+          "texel_fetch_offset_2darray",
+          "texelFetchOffset"
+        ],
+        "glslName": "texelFetchOffset",
         "secondaryCategories": []
       }
     },
@@ -12111,7 +13689,15 @@
         "source": "td",
         "aliases": [
           "material_phong",
-          "Material PHONG"
+          "Material PHONG",
+          "Lighting",
+          "Material",
+          "All Lights",
+          "Automatic Lighting",
+          "光照",
+          "材質",
+          "自動遍歷",
+          "PHONG"
         ],
         "glslName": "Material PHONG",
         "secondaryCategories": []
@@ -12175,7 +13761,15 @@
         "source": "td",
         "aliases": [
           "material_pbr",
-          "Material PBR"
+          "Material PBR",
+          "Lighting",
+          "Material",
+          "All Lights",
+          "Automatic Lighting",
+          "光照",
+          "材質",
+          "自動遍歷",
+          "PBR"
         ],
         "glslName": "Material PBR",
         "secondaryCategories": []

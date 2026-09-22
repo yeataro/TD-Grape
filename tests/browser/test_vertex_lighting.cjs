@@ -32,6 +32,14 @@ const {harness}=require('./test_glsl_code.cjs');
     assert.deepEqual(await page.evaluate(()=>({count:vertexPortList().length,v:graph.stages.vertex.edges.length,p:graph.stages.pixel.edges.length})),{count:0,v:0,p:0});
     await page.locator('#undo').click();await settle();assert.equal(await page.evaluate(()=>vertexPortList().length),1);
     checks.push('Pixel receiver exposes the same interface; removing a port clears both endpoints and Undo restores their wires');
+    await page.locator('.toolbar [data-stage="vertex"]').click();await settle();
+    await h.drag(await h.at('[data-node="source"] [data-kind="outputs"][data-port="out"]'),await h.at('[data-node="vertex"] [data-add-port="true"]'));
+    assert.equal(await page.evaluate(()=>vertexPortList().length),2);
+    await page.locator('.toolbar [data-stage="pixel"]').click();await settle();
+    assert.equal(await page.locator(`[data-node="${receiver.id}"] [data-kind="outputs"]:not([data-add-port])`).count(),2);
+    checks.push('adding a second Vertex output after visiting Pixel creates a second visible Pixel socket');
+    const snapshotTypes=await page.evaluate(receiver=>{const other=clone(graph),boundary=other.stages.vertex.nodes.find(n=>n.definitionUuid==='sgrape.builtin.vertex_out'),input=other.stages.pixel.nodes.find(n=>n.id===receiver);boundary.params.outputs[0].type='vec3';return [Object.values(safeConcretePorts(other,input).outputs)[0],vertexPortList()[0].type];},receiver.id);
+    assert.deepEqual(snapshotTypes,['vec3','float']);checks.push('type checks use the supplied graph snapshot instead of the currently displayed stage interface');
     for(const key of ['material_phong','material_pbr']){
       await page.evaluate(key=>{const d=catalog.find(d=>d.key===key);change(()=>instantiate(d,220,100));inspectorTab='parameters';render();},key);await settle();
       const text=await page.locator('#inspector').innerText();assert.ok(text.includes('world'));assert.ok(!text.includes('input.implicitUV'));assert.ok(!text.includes('lighting.automatic.'));

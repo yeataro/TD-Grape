@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-22 0.8.166 DEV：新增 35 個入口（共 328），包含逐分量 mix、純量 edge step、布林與整數位元操作、貼圖 offset 與投影 LOD／Grad。新函式累計 1,753 組原生簽名通過；55 個內建來源有個別雙語說明與官方連結。修正 Vertex 接孔型別比對誤讀 live graph 而非指定快照；兩次新增與 UI 實際產圖編譯回歸通過。Phong／PBR 實際像素验证涵蓋零／一／兩盞一般燈。使用者補充交付目標：完成 MAT 後提供對照原生 Phong MAT／PBR MAT 基本功能的節點圖及可重現場景；尚在進行，不能將原生簽名通過視為完整等價。
+
 2026-09-22 0.8.165 DEV：修正自動建立 Vertex Inputs 時將含空格的顯示文字寫入節點名稱，導致 Apply 被拒絕。改用既有 uniqueNodeName 產生合法且不重複的名稱；已建立的草稿可將該節點名稱改成 VertexInputs，保留接線。瀏覽器回歸新增直接編譯 UI 實際產生的圖，同一份圖亦成功在 TD Apply／編譯；Phong／PBR 與跨階段複合值原生回歸通過。
 
 2026-09-22 0.8.164 DEV：舊架構封存補齊第一批。保留原 88 個定義，新增 204 個函式／材質入口與 Vertex Inputs，共 293 個定義。MAT 加入 Vertex Index、成對可編輯的跨階段接孔，以及自動遍歷燈光的 Phong／PBR Material。515 Python 與完整 portable checks 通過；1,471 組新原生簽名全部通過，瀏覽器拖接／Undo／Redo 與原生 Attribute、跨階段結構值、材質編譯通過。38 份內嵌來源及 10 份服務資產一致，core 無錯誤，兩份 master revision 111，三份既有使用者 Shader 保留。範圍、版本限制、剩餘項目見 [舊案補齊紀錄](../features/LEGACY_COMPLETION.md)。此為交付檢查點，不代表封存工作全部結束。

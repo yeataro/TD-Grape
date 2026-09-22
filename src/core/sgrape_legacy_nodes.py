@@ -54,6 +54,15 @@ add('modf','modf',[('value','T')],{'out':'T','whole':'T'},types=FLOAT+DOUBLE,con
 add('frexp','frexp',[('value','T')],{'out':'T','exponent':'I'},types=FLOAT+DOUBLE,constant=False,out_args=('exponent',))
 add('ldexp','ldexp',[('value','T'),('exponent','I')],types=FLOAT+DOUBLE)
 add('mix_boolean','mix',[('a','T'),('b','T'),('factor','B')],types=FLOAT+DOUBLE+INT+UINT+BOOL)
+add('mix_components','mix',[('a','T'),('b','T'),('factor','T')],types=FLOAT[1:]+DOUBLE[1:])
+add('step_scalar','step',[('edge','S'),('value','T')],types=FLOAT[1:]+DOUBLE[1:])
+for key,operator,types,unary in [
+    ('bit_and','&',INT+UINT,False),('bit_or','|',INT+UINT,False),('bit_xor','^',INT+UINT,False),
+    ('bit_not','~',INT+UINT,True),('shift_left','<<',INT+UINT,False),('shift_right','>>',INT+UINT,False),
+    ('remainder','%',INT+UINT,False),('boolean_and','&&',('bool',),False),
+    ('boolean_or','||',('bool',),False),('boolean_xor','^^',('bool',),False),('boolean_not','!',('bool',),True)]:
+    add(key,operator,[('value','T')] if unary else [('a','T'),('b','T')],types=types,defaults={'b':1} if key=='remainder' else {},section='5.9')
+    CALLS[key]['operator']=operator
 for fn, types, output in [('floatBitsToInt',FLOAT,'I'),('floatBitsToUint',FLOAT,'U'),('intBitsToFloat',INT,'T'),('uintBitsToFloat',UINT,'T')]:
     add(fn,fn,[('value','T')],output,types=types)
     if fn in ('intBitsToFloat','uintBitsToFloat'):
@@ -190,6 +199,18 @@ for sampler,(uv,size) in SAMPLERS.items():
     if sampler in ('sampler2D','sampler2DArray','samplerCube'):
         fixed('texture_gather_'+suffix,'textureGather',[('sampler',sampler),('uv',uv),('component','int')],'vec4',constant=False,section='8.9')
         CALLS['texture_gather_'+suffix]['constantInputs']=['component']
+    if sampler!='samplerCube':
+        offset='ivec2' if sampler=='sampler2DArray' else size
+        for label,fn,extra in [('offset','textureOffset',[]),('lod_offset','textureLodOffset',[('lod','float')]),('grad_offset','textureGradOffset',[('dx',grad),('dy',grad)])]:
+            key='texture_'+label+'_'+suffix
+            fixed(key,fn,[('sampler',sampler),('uv',uv)]+extra+[('offset',offset)],'vec4',constant=False,section='8.9')
+            CALLS[key]['constantInputs']=['offset']
+        key='texel_fetch_offset_'+suffix
+        fixed(key,'texelFetchOffset',[('sampler',sampler),('coord',size),('lod','int'),('offset',offset)],'vec4',constant=False,section='8.9')
+        CALLS[key]['constantInputs']=['offset']
+    if sampler in ('sampler1D','sampler2D','sampler3D'):
+        for label,fn,extra in [('lod','textureProjLod',[('lod','float')]),('grad','textureProjGrad',[('dx',grad),('dy',grad)])]:
+            fixed('texture_proj_'+label+'_'+suffix,fn,[('sampler',sampler),('uv',proj)]+extra,'vec4',constant=False,section='8.9')
 
 # Lighting results are exposed as individual outputs, so no duplicate host
 # struct declaration or new graph-owned type is required.
@@ -238,6 +259,8 @@ def emit(key, ports, argument, symbols, lines, expressions, ident):
     if spec.get('lighting'):
         return emit_lighting(spec['lighting'],argument,symbols,lines,expressions,ident)
     args = [argument(p) for p in ports['in']]
+    if spec.get('operator'):
+        return '('+(spec['operator']+args[0] if len(args)==1 else (' '+spec['operator']+' ').join(args))+')'
     if spec.get('resultStruct'):
         name='sg_result_'+ident
         lines.append('    '+spec['resultStruct']+' '+name+' = '+spec['function']+'('+', '.join(args)+');')

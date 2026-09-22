@@ -453,8 +453,8 @@ function matrixReshapeValue(value,oldType,newType){
 }
 const selectableNodeTypes=d=>[...new Set(typeVariants(d).map(v=>v.type).filter(type=>type!==null))];
 const compatible=(a,b)=>!!a&&a===b&&!!typeDescriptor(a)||!!typeContract?.conversions.some(rule=>rule.from===a&&rule.to===b);
-function vertexBoundaryPorts(key){
-  const boundary=activeTypeDocument()?.stages?.vertex?.nodes.find(n=>n.definitionUuid==='sgrape.builtin.vertex_out');
+function vertexBoundaryPorts(key,document=activeTypeDocument()){
+  const boundary=document?.stages?.vertex?.nodes.find(n=>n.definitionUuid==='sgrape.builtin.vertex_out');
   const values=Object.fromEntries((boundary?.params.outputs||[]).map(p=>[p.id,p.type]));
   return key==='vertex_out'?{inputs:{position:'vec4',...values},outputs:{}}:{inputs:{},outputs:values};
 }
@@ -694,6 +694,7 @@ function autoTypeError(key,detail=''){const error=Error(t(key)+(detail?' '+detai
 function concretePorts(document,n,owner,type=n.params.type,override=null,seen=new Set()){
   if(override)return override;
   const d=autoDefinition(document,n,owner);if(!d)return {inputs:{},outputs:{}};
+  if(['vertex_out','vertex_input'].includes(d.key))return vertexBoundaryPorts(d.key,document);
   if(isCompositeOperation(d)){
     const data=owner?.graph||Object.values(document.stages||{}).find(data=>data.nodes.some(peer=>peer===n||peer.id===n.id)),incoming={};
     const input=d.key==='struct_field'?'value':'Array';

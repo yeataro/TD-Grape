@@ -11,6 +11,18 @@ def payload_graph(ty='vec3'):
     return g
 
 class MatCompletion(unittest.TestCase):
+    def test_integer_operator_and_texture_constant_operand(self):
+        g=c.demo_graph('color','mat');p=g['stages']['pixel']
+        p['nodes'].append(c.node('bit_and','bits',type='int'));p['edges']=[c.edge('bits','pixel','color')]
+        self.assertIn(' & ',c.compile_graph(g)['pixel'])
+        g=c.demo_graph('banana','mat');p=g['stages']['pixel']
+        p['nodes'] += [c.node('sampler','resource',declarationId='texture_main'),c.node('texture_offset_2d','sample')]
+        p['edges']=[c.edge('resource','sample','sampler'),c.edge('sample','pixel','color')]
+        self.assertIn('textureOffset(',c.compile_graph(g)['pixel'])
+        g['declarations'].append(dict(id='offset',kind='uniform',name='uOffset',type='ivec2',value=[0,0]))
+        p['nodes'].append(c.node('uniform','offset',declarationId='offset'));p['edges'].append(c.edge('offset','sample','offset'))
+        with self.assertRaisesRegex(c.GraphError,'constant offset'):c.compile_graph(g)
+
     def test_value_payloads_round_trip_and_bool_transport(self):
         for ty in ('float','vec4','int','bvec3','mat3x2','float[3]'):
             with self.subTest(type=ty):
