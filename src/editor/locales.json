@@ -18,6 +18,10 @@
     "Graph"
   ],
   "messages": {
+    "browserReset.action": {"en":"Reset browser settings…","zh-Hant":"重設瀏覽器設定…"},
+    "browserReset.confirm": {"en":"Reset TD-Grape settings in this browser and reload?\n\nThis clears appearance, language, panel layout (including saved layouts), Sources preferences and experimental options for this site.\n\nShader graphs, TD parameters, connection access and unsaved graph drafts are kept. Other browsers and site addresses are unaffected.","zh-Hant":"要重設此瀏覽器的 TD-Grape 設定並重新載入嗎？\n\n將清除目前網站的外觀、語言、面板配置（含另存配置）、來源面板偏好及實驗選項。\n\n保留 Shader 圖、TD 參數、連線授權及未提交的圖草稿。不影響其他瀏覽器或網站位址。"},
+    "browserReset.failed": {"en":"Browser settings could not be reset. Previous settings were retained; the page was not reloaded.","zh-Hant":"無法重設瀏覽器設定。已保留原設定，頁面未重新載入。"},
+    "browserReset.partial": {"en":"The browser prevented restoring some settings after the reset failed. Some preferences may have been cleared; the graph and TD parameters were not changed.","zh-Hant":"重設失敗，且瀏覽器阻止還原部分設定。部分偏好可能已清除；節點圖與 TD 參數沒有變動。"},
     "controls.historyChanged": {"en":"Definitions changed in TD or another editor. Earlier Undo/Redo is paused to preserve those changes.","zh-Hant":"參數定義已在 TD 或其他編輯器修改；較早的 Undo／Redo 暫停使用，以保留這些修改。"},
     "controls.normMin": {"en": "Range Min", "zh-Hant": "範圍最小值"},
     "controls.normMax": {"en": "Range Max", "zh-Hant": "範圍最大值"},

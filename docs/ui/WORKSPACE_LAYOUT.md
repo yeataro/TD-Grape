@@ -1,8 +1,18 @@
 # Workspace layout and column creator
 
+## Reset browser settings (0.8.199)
+
+The lower-left Functions menu includes **Reset browser settings…**. Confirmation lists the scope; accepting clears this site's TD-Grape preference keys and reloads the editor. Appearance, language, experimental options, Link/name visibility, Sources presentation, saved workspace layouts, panel widths/heights/collapse state and legacy layout migration keys return to current shipped defaults. This includes named browser layout presets; export a layout first if it should be retained.
+
+The reset does not clear all origin storage. Connection authorization and graph drafts in session storage, other applications' keys, TD parameters, saved graphs and TOE data are retained. Unsaved graph data is checked into the existing draft store before reset; normal draft recovery remains available after reload. Unfinished fields and active writes block the operation. A storage failure prevents reload and attempts to restore the original preference keys; a failed restoration is explicitly reported.
+
+Preferences are scoped to the browser profile and origin (scheme, host, port). This does not reset another browser, an embedded browser with a separate profile, or a different address/port. Graph contents and native defaults carried in the release TOX must still be inspected separately. Resetting also starts a new page session, so transient selection and browser graph Undo history follow normal reload behavior.
+
+`tests/browser/test_browser_preferences_reset.cjs` verifies confirmation/cancel, blocked writes/fields, failed storage rollback, draft-save failure, real reload to stock preferences, named/legacy layout clearing, preserved access/drafts/unrelated storage, no TD write and both languages.
+
 ## Optional canvas motion (0.8.114)
 
-Experimental features → Colors and display has two independent rows: **Pan/zoom damping** and **Frame transition (F)**. Each uses a checkbox on the left and the shared draggable numeric input on the right, 10–1000 ms. Both default off; pan/zoom defaults to 150 ms and Frame to 333 ms. Settings remain browser-local; existing saved durations are retained and Reset restores 150 / 333 ms. The options share animation code, not their enabled state or duration. Existing appearance-mode switches remain immediate.
+Experimental features → Colors and display has two independent rows: **Pan/zoom damping** and **Frame transition (F)**. Each uses a checkbox on the left and the shared draggable numeric input on the right, 10–1000 ms. Both currently default on (release defaults updated after 0.8.114); pan/zoom defaults to 150 ms and Frame to 333 ms. Settings remain browser-local; existing saved durations are retained and Reset restores 150 / 333 ms. The options share animation code, not their enabled state or duration. Existing appearance-mode switches remain immediate.
 
 Mouse/touch panning, wheel/pinch zoom and zoom presets use the pan/zoom option. Frame commands from its button, menu or F use the framing option. Home commands from their button, menu or H are always immediate, ending any active transition at the all-nodes view. Initial loading, stage/subgraph changes and diagnostic navigation remain immediate. H (Home) always shows all nodes; F (Frame) shows selected nodes, or all nodes without a node selection; it keeps the Frame transition setting in both cases. This shares Home's destination, not its immediate timing. No Shift variants are introduced. Editable fields, IME, dialogs/menus and active graph/numeric gestures keep their own keys. These view commands also work read-only.
 

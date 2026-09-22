@@ -785,6 +785,36 @@ function requestEditorReload(){
   }
   clearTimeout(autoTimer);autoTimer=null;editorReloading=true;location.reload();return true;
 }
+// Explicit preference keys: never clear authentication, graph drafts or other
+// applications sharing this origin. Keep legacy layout keys out of migration.
+const browserPreferenceKeys=[
+  'sgrapeLanguage','sgrapeAutoPreview','sgrapeAppearanceV1','sgrapeExperimentsV1',
+  'sgrapeCustomNamesV1','sgrapeLinkLinesV1','sgrapeHeaderVisible','sgrapeSourceNamesV1',
+  'sgrapeInputCollapsedGroups','sgrapeSidebarWidths','sgrapeInspectorPanels','sgrapeInspectorSizes',
+  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right',
+  'grapeInputsDefaultLeftV1','grapeBrowserDetailHeight','grapeSourceGroupOrder','grapeSourceNotes','grapeSourceMinimal'
+];
+function resetBrowserPreferences(){
+  const unfinished=pendingEditorField();
+  if(unfinished||valueLadder||pendingValueLadder){status(t('editorReload.finishField'),true,{kind:'reload'});unfinished?.focus?.({preventScroll:true});return false;}
+  if(reloadAppliedBusy()){status(t('editorReload.busy'));return false;}
+  if(!confirm(t('browserReset.confirm')))return false;
+  if(dirty){
+    try{const draft=JSON.stringify({graph,revision});sessionStorage.setItem(draftKey,draft);if(sessionStorage.getItem(draftKey)!==draft)throw Error();}
+    catch{status(t('editorReload.storageFailed'),true,{kind:'reload'});return false;}
+  }
+  let saved;
+  try{
+    saved=browserPreferenceKeys.map(key=>[key,localStorage.getItem(key)]);
+    for(const [key]of saved)localStorage.removeItem(key);
+    if(saved.some(([key])=>localStorage.getItem(key)!==null))throw Error();
+  }catch{
+    let restored=true;
+    if(saved)for(const [key,value]of saved){try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}catch{restored=false;}}
+    status(t(restored?'browserReset.failed':'browserReset.partial'),true,{kind:'reload'});return false;
+  }
+  clearTimeout(autoTimer);autoTimer=null;editorReloading=true;location.reload();return true;
+}
 // Reloading the applied graph replaces editing state and clears its history.
 let reloadAppliedPending=null;
 function reloadAppliedBusy(){return submitBusy||historyBusy||nativeMutationBusy||uniformPending.size||nativeSourceBusy||customBusy||exportBusy||personalBusy||pendingEditorWrites;}
@@ -1327,6 +1357,8 @@ function installEditorChrome(){
   };
   $('#editorrefresh').onpointerdown=e=>{if(pendingEditorField())e.preventDefault();};
   $('#editorrefresh').onclick=requestEditorReload;
+  $('#resetbrowserpreferences').onpointerdown=e=>{if(pendingEditorField())e.preventDefault();};
+  $('#resetbrowserpreferences').onclick=resetBrowserPreferences;
   const editable=entry=>entry?.matches?.('input:not([type=search]):not([type=button]):not([type=submit]),textarea,select')&&entry.closest('#inspector,#cards,#uniformsbody,#controlsbody,dialog');
   document.addEventListener('focusin',e=>{if(editable(e.target)&&!editorFieldDrafts.has(e.target))editorFieldDrafts.set(e.target,editorFieldValue(e.target));},true);
   document.addEventListener('change',e=>{
