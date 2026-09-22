@@ -311,7 +311,7 @@ function addVertexPort(entry){
   if(!pixel.nodes.some(n=>n.definitionUuid==='sgrape.builtin.vertex_input')){
     const d=catalog.find(d=>d.key==='vertex_input');
     pixel.nodes.push({id:'n'+crypto.randomUUID().replaceAll('-','').slice(0,12),definitionUuid:d.definitionUuid,
-      revisionHash:d.revisionHash,params:{},name:'Vertex Inputs',ui:{x:48,y:144}});
+      revisionHash:d.revisionHash,params:{},name:uniqueNodeName('VertexInputs',null,pixel.nodes),ui:{x:48,y:144}});
   }
 }
 function removeVertexPort(id){

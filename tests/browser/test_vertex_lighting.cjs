@@ -10,7 +10,7 @@ const {harness}=require('./test_glsl_code.cjs');
     await page.evaluate(()=>{
       clearTimeout(autoTimer);scheduleGraphApply=()=>{};connectionInterrupted=true;readonly=false;historyBusy=false;nativeMutationBusy=false;graphTrail=[];editorTarget='mat';graph.target='mat';
       graph.stages={vertex:{nodes:[testNode('source','scalar',60,80,{type:'float',value:.375}),testNode('vertex','vertex_out',450,80)],edges:[]},pixel:{nodes:[testNode('pixel','pixel_out',750,80)],edges:[]}};
-      stage='vertex';past=[];future=[];selected=null;selection.clear();dirty=false;rememberSavedGraph(graph);render();scale=1;pan={x:20,y:30};transform();
+      graph.declarations=[];stage='vertex';past=[];future=[];selected=null;selection.clear();dirty=false;rememberSavedGraph(graph);render();scale=1;pan={x:20,y:30};transform();
     });await settle();
     const before=await page.evaluate(()=>JSON.stringify(graph));
     await h.drag(await h.at('[data-node="source"] [data-kind="outputs"][data-port="out"]'),await h.at('[data-node="vertex"] [data-add-port="true"]'));
@@ -22,6 +22,11 @@ const {harness}=require('./test_glsl_code.cjs');
     checks.push('real drag adds paired ports/receiver in one undoable edit; Undo and Redo restore both stages');
     await page.evaluate(({receiver,id})=>{stage='pixel';render();connectPorts({node:receiver,port:id,kind:'outputs'},{node:'pixel',port:'color',kind:'inputs'});}, {receiver:receiver.id,id});await settle();
     assert.equal(await page.evaluate(({receiver,id})=>ports(current().nodes.find(n=>n.id===receiver),'outputs')[id],{receiver:receiver.id,id}),'float');
+    // Compile the actual UI-created graph, including its names and paired ports.
+    const uiGraph=await page.evaluate(()=>graph);
+    execFileSync(process.env.PYTHON_EXECUTABLE||'python',['-c','import sys,json;sys.path.insert(0,sys.argv[1]);import sgrape_core as c;c.compile_graph(json.load(sys.stdin))',path.resolve(__dirname,'../../src/core')],{input:JSON.stringify(uiGraph)});
+    fs.writeFileSync(path.join(folder,'ui-created-graph.json'),JSON.stringify(uiGraph));
+    checks.push('actual UI-created graph passes compiler validation, including generated node names');
     await page.evaluate(receiver=>{selected=receiver;selection=new Set([receiver]);inspectorTab='settings';render();},receiver.id);await settle();
     await page.locator('#inspector button').filter({hasText:'Remove Port'}).click();await settle();
     assert.deepEqual(await page.evaluate(()=>({count:vertexPortList().length,v:graph.stages.vertex.edges.length,p:graph.stages.pixel.edges.length})),{count:0,v:0,p:0});
