@@ -1012,7 +1012,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .source-card[data-input-source][data-expanded=true] .input-source-select small{display:none}
 .source-card[data-input-source][data-expanded=true] .input-source-select{padding-block:4px}
 .source-card[data-input-source][data-expanded=true] .input-reference{min-height:30px}
-.source-card-outputs{margin:6px -8px -4px;padding:0}
+.source-card-outputs{margin:-4px -8px 6px;padding:0}
 .source-card-outputs .port-row.output{padding-right:20px}
 .source-card-outputs .output .port{right:2px}
 .source-card-outputs .port:disabled{opacity:.4}
@@ -1931,9 +1931,12 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 .node-size-probe .native-color-controls input:not([type=color]){max-width:72px}.native-color-line:has(.native-color-expanded){align-items:flex-start}
 
-.input-search-tools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.input-search-tools #inputsearch{flex:1 1 130px;width:0;margin:0}
-.input-search-tools select{flex:1 0 auto;max-width:100%;font-size:11px;padding:6px}
+.input-search-tools{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.input-search-tools #inputsearch{width:100%;margin:0}
+.source-view-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.source-view-tools select{min-width:0;max-width:100%;font-size:11px;padding:6px}
+.source-view-tools label{display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap}
+#nativeuniforms[data-show-notes=false] .source-card-note{display:none}
 #editoractionsmenu{position:fixed;inset:auto;margin:0;min-width:min(220px,calc(100 * var(--ui-vw) - 16px));max-width:calc(100 * var(--ui-vw) - 16px);overflow:auto}
 #editoractionsmenu button{display:block;width:100%;text-align:left;white-space:normal}
 #editormenu svg circle{fill:currentColor;stroke:none}

@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-23 0.8.176：Sources／來源面板改名，搜尋占滿首行，TD／共同名稱及顯示備註在第二行；預設 Uniform、Graph Constants、Specialization Constants 置頂。一般卡片 Output 移至 Body 最上方；節點的編輯來源按鈕移到設定，數值／驅動保持在參數。17 組相關瀏覽器檢查通過，含現有來源卡片 DOM 保留、Undo、引用、搜尋與 MAT／TOP 階段過濾；第一次菜單測試誤用 TOP fixture，改用 MAT fixture 後通過。39 份來源已同步，四份 Master 升級保留人工內容／OP 身分／位置，兩份使用者 Shader 保留；來源刷新期間一個舊 HTTP 請求有模組替換暫時錯誤，刷新完成及 Master 檢查通過。TOE 保存，未推送。分類手動排序、常數卡片數值控制與最小化接續處理，見 [Sources 面板](../ui/SOURCES_PANEL.md)。
+
 2026-09-23 0.8.175：交付可 review 的基本 Phong MAT Graph／PBR MAT Graph，從 TDFam 的 Grape → MAT 新增；Grape TOP 歸 TOP。兩份圖採一般可編輯節點，Vertex 各 4 個 Group、Pixel 各 7 個 Group，單一歸屬，依計算用途整理。包括具名 Tex／Instance UV 傳遞、攝影機視向、表面法線、正確的 Phong／PBR 基本合成與 opt-in 原生 MAT 最後處理。既有圖輸出行為保持；進階貼圖與完整材質能力尚未完成，見[基本預置與人工整理入口](../features/BASIC_MATERIAL_PRESETS.md)。
 
 色彩宣告改用 Color 來源，RGB 控制為 RGBA Size 3；一般向量保持 Vector。MAT／TOP 的 Expose 及來源建立控制兩條路徑均測試 1–4 分量、雙向修改與 Apply。修正新 Color 來源未使用 Alpha 填 0 導致黑色的問題，改為 1，明確指定 Alpha 0 仍保留；不自動重建既有控制。既有自訂參數 18 項原生回歸通過。

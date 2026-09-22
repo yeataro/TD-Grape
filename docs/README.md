@@ -2,6 +2,8 @@
 
 目前狀態以 [STATUS.md](development/STATUS.md) 為準。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
 
+- [Sources 面板整理](ui/SOURCES_PANEL.md)：2026-09-23 確認的名稱、搜尋、排序、數值控制與最小化顯示，分批實作進度。
+
 - [基本 Phong／PBR 預置圖](features/BASIC_MATERIAL_PRESETS.md)：TDFam 新增入口、Group、Color 來源、範本與副本的編輯位置、驗證及未完成範圍。
 
 - [待辦總整理（2026-09-21）](discussions/TODO_AUDIT_2026-09-21.md)：目前待辦、候選、已完成與已被取代的舊筆記；開始後續工作前先核對此表。

@@ -1434,8 +1434,6 @@ function inspector(){
     }
     const decl=graph.declarations.find(x=>x.id===n.params.declarationId);
     if(decl){
-      const source=el('button',{class:'wide','data-inspect-input':decl.id},t('inputs.edit')+' · '+decl.name);
-      source.onclick=()=>selectInputSource(decl.id);box.append(source);
       if(decl.kind==='sampler')declarationFields(box,decl);
       else if(decl.kind==='constant')constantFields(box,decl);
       else nativeInputFields(box,decl,n);
@@ -1443,7 +1441,6 @@ function inspector(){
     if(n.params.inputId){
       const sources=topInputsView(),source=sources.find(s=>s.id===n.params.inputId);
       box.append(field(t('inputs.referenceSource'),select(sources.map(s=>[s.id,s.name]),n.params.inputId,value=>change(()=>n.params.inputId=value))));
-      if(source){const edit=el('button',{class:'wide'},t('inputs.edit')+' · '+source.name);edit.onclick=()=>selectInputSource(source.id);box.append(edit);}
     }
     if(d.key==='sampler'){const create=el('button',{class:'wide'},t('sampler.create'));create.onclick=()=>newSampler(n);box.append(create);}
     else if(d.key==='uniform'&&!decl){
@@ -1491,6 +1488,8 @@ function inspector(){
       inputBox.append(section);
     }
   }else{
+    const source=allInputSources().find(source=>source.id===(n.params.declarationId||n.params.inputId));
+    if(source){const edit=el('button',{class:'wide','data-inspect-input':source.id},t('inputs.edit')+' · '+source.name);edit.onclick=()=>selectInputSource(source.id);box.append(edit);}
     if(d.key==='comment')noteAppearanceSettings(box,n);
     if(n.params.type&&!n.params.fixedType&&!supportsAutoType(d)&&!isVectorOperation(d)&&!isCompositeOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
     if(isVectorOperation(d)||isMatrixOperation(d)||d.key==='uniform'&&nodeSourceDeclaration(n)?.nativeSequence==='color')box.append(nodeComponentNameSettings(n));
@@ -2702,7 +2701,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
             installCanvasItemDrag(socket,()=>preset?commonPresetLabel(preset):decl.name,add,()=>add());
             output.append(socket,el('span',{class:'port-label'},portLabel(node,'outputs',name)),el('small',{class:'port-type'},displayType(type)));list.append(output);
           }
-          body.append(list);
+          body.prepend(list);
         }
         const description=sourceCardNote(decl,preset);
         if(description){const note=el('div',{class:'node-canvas-comment source-card-note'});note.append(el('p',{},description));body.append(note);}
@@ -2779,7 +2778,8 @@ function renderSourceCards(box,query){
     if(root==='textures')children=[...textureSources,...(children.length?[sourceGroup('textures.tdInputs',t('sources.tdInputsInfo'),children,null,query)]:[])];
     if(children.length)menuSections.push(sourceGroup(root,t(typeContract.sources.menuGroups[root]),children,null,query));
   }
-  sections.unshift(...menuSections);
+  sections.sort((a,b)=>['uniform','constant','spec_constant'].indexOf(a.dataset.inputGroup)-['uniform','constant','spec_constant'].indexOf(b.dataset.inputGroup));
+  sections.push(...menuSections);
   const unimported=issues.filter(i=>!i.id&&matches(i.name,i.message));
   if(unimported.length){
     const issueKey=JSON.stringify(unimported),previous=sourceGroupCache.get('issues');let section=previous?.section;
@@ -2805,6 +2805,9 @@ function renderNativeSources(){
 function installNativeSources(){
   try{sourceNameMode=localStorage.getItem(sourceNamesStorageKey)==='common'?'common':'td';}catch{}
   $('#sourcenames').value=sourceNameMode;$('#sourcenames').onchange=()=>setSourceNameMode($('#sourcenames').value);
+  const notes=$('#sourcenotes');try{notes.checked=localStorage.getItem('grapeSourceNotes')!=='false';}catch{}
+  const showNotes=()=>{$('#nativeuniforms').dataset.showNotes=String(notes.checked);};showNotes();
+  notes.onchange=()=>{showNotes();try{localStorage.setItem('grapeSourceNotes',String(notes.checked));}catch{}};
   const arrayFields=el('section',{id:'sourcearrayfields',class:'source-array-fields'}),arrayLength=el('input',{id:'sourcearraylength',type:'number',min:1,max:1024,step:1,value:4}),arraySource=el('input',{id:'sourcearraypath',type:'text',maxlength:4096,spellcheck:'false',placeholder:'/project1/constant1'});
   const lengthField=field('',arrayLength),pathField=field('',arraySource);lengthField.prepend(el('span',{'data-i18n':'array.length'},t('array.length')));pathField.prepend(el('span',{'data-i18n':'array.chopPath'},t('array.chopPath')));
   const arrayHint=el('p',{class:'muted'});arrayFields.append(lengthField,pathField,arrayHint);arrayFields.hidden=true;$('#sourcepresethint').before(arrayFields);

@@ -18,6 +18,7 @@
     "Graph"
   ],
   "messages": {
+    "sources.showNotes": {"en":"Notes","zh-Hant":"顯示備註"},
     "pixel.nativeFinishing": {"en": "Native MAT finishing", "zh-Hant": "原生 MAT 最後處理"},
     "pixel.nativeFinishingHint": {"en": "Primary color: dither, alpha test, host color-space conversion, then output swizzle. Do not also connect TDConvertColorSpace before this output. Off preserves the existing output behavior.", "zh-Hant": "主色彩依序執行抖色、Alpha Test、宿主色彩轉換與輸出 Swizzle。啟用時，不要在此輸出前再接 TDConvertColorSpace。關閉則保留原有輸出行為。"},
     "sources.popBuffers": {"zh-Hant":"POP Buffers","en":"POP Buffers"},
@@ -2258,8 +2259,8 @@
       "zh-Hant": "每個 Buffer 對應一個 vec4。未連線預設為 (0, 0, 0, 0)；接收額外輸出時，請在 Render TOP 開啟對應數量的 Color Buffers。"
     },
     "sources.title": {
-      "zh-Hant": "Inputs",
-      "en": "Inputs"
+      "zh-Hant": "來源",
+      "en": "Sources"
     },
     "sources.add": {
       "en": "Add Uniform",
@@ -2302,7 +2303,7 @@
       "zh-Hant": "來源缺失，目前沒有圖內引用。"
     },
     "sources.removeUnusedConfirm": {
-      "en": "Remove {name} from Inputs? It has no graph references.",
+      "en": "Remove {name} from Sources? It has no graph references.",
       "zh-Hant": "刪除 {name}？此來源目前沒有圖內引用。"
     },
     "sources.removeConfirm": {
@@ -2518,8 +2519,8 @@
       "zh-Hant": "接到另一個輸出，或點擊空白畫布斷開連線。"
     },
     "inputs.search": {
-      "zh-Hant": "搜尋 Inputs…",
-      "en": "Search Inputs…"
+      "zh-Hant": "搜尋來源…",
+      "en": "Search Sources…"
     },
     "inputs.kind": {
       "zh-Hant": "來源類型",
@@ -2622,8 +2623,8 @@
       "zh-Hant": "具名 GLSL 編譯期常數。修改值會重新編譯 Shader；引用節點使用同一個 const 名稱。"
     },
     "help.top_input": {
-      "en": "Reference an existing TOP Input by its GLSL name, sTD2DInputs[i]. Adding or copying reference nodes does not create texture sources. Manage sources and their order in Inputs. Size and pixel size describe the same source.",
-      "zh-Hant": "以 sTD2DInputs[i] 引用既有 TOP 來源。新增或複製引用節點不會建立額外貼圖；在 Inputs 面板管理來源與順序。解析度與像素大小對應同一來源。"
+      "en": "Reference an existing TOP Input by its GLSL name, sTD2DInputs[i]. Adding or copying reference nodes does not create texture sources. Manage sources and their order in Sources. Size and pixel size describe the same source.",
+      "zh-Hant": "以 sTD2DInputs[i] 引用既有 TOP 來源。新增或複製引用節點不會建立額外貼圖；在 來源面板管理來源與順序。解析度與像素大小對應同一來源。"
     },
     "inputs.constantHint": {
       "en": "Constant values are compiled into GLSL; changing them recompiles the Shader.",
@@ -2882,8 +2883,8 @@
       "en": "Click preview to interact · H resets Viewer"
     },
     "inputs.chooseTop": {
-      "en": "Create a TOP Input in the Inputs panel first. Nodes only reference existing sources.",
-      "zh-Hant": "請先在 Inputs 面板建立 TOP Input；圖內節點只引用既有來源。"
+      "en": "Create a TOP Input in the Sources panel first. Nodes only reference existing sources.",
+      "zh-Hant": "請先在 來源面板建立 TOP Input；圖內節點只引用既有來源。"
     },
     "inputs.referenceSource": {
       "en": "Input source",
