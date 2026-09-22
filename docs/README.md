@@ -38,6 +38,7 @@
 - `architecture/`：編譯、型別、保存與升級契約。
 - `features/`：目前功能與相容行為；[向量拆分、組合與常數](features/VECTOR_NODES.md)。
 - `ui/`：UI 操作及設計。
+- [Generated GLSL 顯示節點](ui/GENERATED_GLSL.md)：每畫布一個、目前階段的唯讀產碼視圖。
 - `discussions/`：設計歷史、已交付的決策與仍待取捨的討論，不能只憑文件存在就判定未完成。
 - [Inputs 面板與工作區設計](discussions/INPUTS_UI_NEXT_ROUND.md)：已確認的 UI 整理方向、型別擴充目標與待決範圍。
 - [節點工作流程 0.8.84](discussions/NODE_WORKFLOW_ROUND.md)：Vector／Replace、名稱、快捷型別、Spec Constants 與導航整合。

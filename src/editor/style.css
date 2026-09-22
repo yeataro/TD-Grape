@@ -1988,3 +1988,13 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .link-port-navigation:is(:hover,:focus-visible) .link-port-arrow{opacity:1}
 .node.selected .link-port-navigation{border-color:var(--selection)}
 .node.error .link-port-navigation{border-color:var(--danger,#ef8d8d)}
+
+/* Generated GLSL shares Note's card chrome and scroll surface, but has no editor. */
+.generated-glsl-content .generated-glsl-code{margin:0;padding:0;border:0;font-family:Consolas,'Courier New',monospace;font-size:inherit;line-height:1.5;white-space:pre;overflow:visible;tab-size:4;text-align:inherit}
+.generated-glsl-content .generated-glsl-code[data-state="error"]{color:var(--danger,#ef8d8d);white-space:pre-wrap}
+#inspector>.generated-glsl-content{display:flex;flex:1 1 180px;min-height:180px}
+#inspector>.generated-glsl-content>.comment-node-preview{flex:1;max-height:500px}
+
+/* Keep the GLSL viewer's black preset literal, including under the light theme. */
+:root #canvas .node.node-generated-glsl.generated-glsl-black:not([data-note-transparent="true"]){--note-body-bg:#000;background:#000}
+:root #canvas .node.generated-glsl-black:not([data-note-transparent="true"]) .comment-markdown{color:#ded8ee;--glsl-comment:#9d99ad;--glsl-keyword:#c5a5f3;--glsl-type:#8dd9c5;--glsl-number:#efc58e;--glsl-function:#9dcbf5;--glsl-directive:#e5aad0;--glsl-string:#d6cb97;--glsl-builtin:#b5c5fc}

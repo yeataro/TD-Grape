@@ -66,6 +66,9 @@ def _inspect_document(document, core, expected_target, compiler):
             if len(data['nodes']) > 256 or len(data['edges']) > 1024:
                 issue('size', 'Graph is too large.', path=label)
                 return report
+            if sum(isinstance(n,dict) and n.get('definitionUuid')=='sgrape.builtin.generated_glsl' for n in data['nodes'])>1:
+                issue('viewer', 'Only one Generated GLSL viewer is allowed per canvas.', path=label)
+                return report
             identities = set()
             ports = {}
             for index, node in enumerate(data['nodes']):

@@ -534,18 +534,19 @@ function noteAppearanceSettings(box,node){
   const value=transparent?t('note.transparent'):explicitColor?node.ui.noteColor.toUpperCase():t('note.defaultColor');
   const color=el('button',{type:'button',class:'note-setting-color','data-note-color':node.id,'data-note-color-setting':'','aria-label':t('note.color')+': '+value,title:t('note.color.hint'),'aria-haspopup':'menu','aria-controls':'groupframepalette','aria-expanded':'false'});
   const swatch=el('span',{class:'note-setting-color-swatch'+(transparent?' note-transparent-swatch':''),'aria-hidden':'true'});
-  if(!transparent)swatch.style.backgroundColor=explicitColor?node.ui.noteColor:'var(--note-default-bg)';
+  if(!transparent)swatch.style.backgroundColor=noteBodyColor(node)||'var(--note-default-bg)';
   color.append(swatch,el('span',{class:'note-setting-color-value'},value));color.disabled=readonly;
   color.onclick=()=>{if(current()===owner&&color.isConnected)openNoteColorPalette(node,color);};
+  const minimumFont=noteMinimumFontScale(node);
   const font=input(noteFontScale(node),value=>{
-    if(!font.isConnected||graph!==documentGraph||current()!==owner||!owner.nodes.includes(node)||definition(node)?.key!=='comment'||editorMutationBlocked())return;
-    const next=Math.round(Math.max(1,Math.min(10,value))*10)/10;
+    if(!font.isConnected||graph!==documentGraph||current()!==owner||!owner.nodes.includes(node)||!isAnnotationNode(node)||editorMutationBlocked())return;
+    const next=Math.round(Math.max(minimumFont,Math.min(10,value))*10)/10;
     change(()=>{node.ui||={};if(next===1)delete node.ui.noteFontScale;else node.ui.noteFontScale=next;},{localize:false});
   },'number');
-  Object.assign(font,{min:'1',max:'10',step:'0.1',disabled:readonly});font.numericRange={min:1,max:10,step:.1};font.refreshNumericSlider();
-  font.dataset.noteFontScale=node.id;font.setAttribute('aria-label',t('note.fontScale'));font.title=t('note.fontScale.hint')+'\n'+font.title;
+  Object.assign(font,{min:String(minimumFont),max:'10',step:'0.1',disabled:readonly});font.numericRange={min:minimumFont,max:10,step:.1};font.refreshNumericSlider();
+  font.dataset.noteFontScale=node.id;font.setAttribute('aria-label',t('note.fontScale'));font.title=t(minimumFont<1?'generatedGLSL.fontScale.hint':'note.fontScale.hint')+'\n'+font.title;
   const align=select(['left','center','right'].map(value=>[value,t('note.align.'+value)]),noteTextAlign(node),value=>{
-    if(!align.isConnected||graph!==documentGraph||current()!==owner||!owner.nodes.includes(node)||definition(node)?.key!=='comment'||editorMutationBlocked())return;
+    if(!align.isConnected||graph!==documentGraph||current()!==owner||!owner.nodes.includes(node)||!isAnnotationNode(node)||editorMutationBlocked())return;
     change(()=>{node.ui||={};if(value==='left')delete node.ui.noteTextAlign;else node.ui.noteTextAlign=value;},{localize:false});
   });
   align.disabled=readonly;align.dataset.noteTextAlign=node.id;align.setAttribute('aria-label',t('note.textAlign'));
@@ -1391,9 +1392,9 @@ function inspector(){
   box.append(nodeInspectorTitle(n,d));
   if(!d)return;
   const ordinary=!isSourceReferenceNode(n);
-  if(d.key==='comment'&&inspectorTab==='notes')inspectorTab='parameters';
+  if(isAnnotationNode(n)&&inspectorTab==='notes')inspectorTab='parameters';
   const tabs=el('div',{class:'parameter-tabs',role:'tablist','aria-label':t('panel.parameters')});
-  for(const key of d.key!=='comment'?['parameters','settings','notes']:['parameters','settings']){
+  for(const key of !isAnnotationNode(n)?['parameters','settings','notes']:['parameters','settings']){
     const button=el('button',{class:inspectorTab===key?'active':'',role:'tab','aria-selected':String(inspectorTab===key)},t('panel.'+key));
     button.onclick=()=>{inspectorTab=key;inspector();};tabs.append(button);
   }
@@ -1403,6 +1404,7 @@ function inspector(){
   functionInspector(box,n,d);
   vertexBoundaryInspector(box,n,d);
   if(inspectorTab==='parameters'){
+    if(d.key==='generated_glsl'){box.classList.add('comment-parameters');box.append(generatedGLSLView(n));const refresh=el('button',{type:'button',class:'wide'},t('generatedGLSL.refresh'));refresh.onclick=()=>refreshGeneratedGLSL(true);box.append(refresh);queueMicrotask(()=>refreshGeneratedGLSL());return;}
     if(d.key==='comment'){box.classList.add('comment-parameters');const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
     if(d.key==='glsl_code')glslCodeInspector(box,n);
     vectorInspector(box,n,d);
@@ -1490,7 +1492,7 @@ function inspector(){
   }else{
     const source=allInputSources().find(source=>source.id===(n.params.declarationId||n.params.inputId));
     if(source){const edit=el('button',{class:'wide','data-inspect-input':source.id},t('inputs.edit')+' · '+source.name);edit.onclick=()=>selectInputSource(source.id);box.append(edit);}
-    if(d.key==='comment')noteAppearanceSettings(box,n);
+    if(isAnnotationNode(n))noteAppearanceSettings(box,n);
     if(n.params.type&&!n.params.fixedType&&!supportsAutoType(d)&&!isVectorOperation(d)&&!isCompositeOperation(d))box.append(field(t('node.type'),nodeTypeSelector(n,d)));
     if(isVectorOperation(d)||isMatrixOperation(d)||d.key==='uniform'&&nodeSourceDeclaration(n)?.nativeSequence==='color')box.append(nodeComponentNameSettings(n));
     if(typeContract?.constantExpressions?.includes(d.key)&&!['constant','spec_constant','scalar','vector','matrix','float','vec2','vec3','vec4','color'].includes(d.key)){

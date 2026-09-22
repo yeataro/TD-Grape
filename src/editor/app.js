@@ -199,7 +199,7 @@ function graphContent(document){
   // affect generated GLSL, so keep them when distinguishing layout saves.
   for(const data of [...Object.values(content.stages),...(content.functions||[]).map(f=>f.graph)]){
     delete data.ui;
-    data.nodes=data.nodes.filter(node=>node.definitionUuid!=='sgrape.builtin.comment');
+    data.nodes=data.nodes.filter(node=>!['sgrape.builtin.comment','sgrape.builtin.generated_glsl'].includes(node.definitionUuid));
     for(const node of data.nodes)if(node.ui){delete node.ui.x;delete node.ui.y;delete node.ui.width;delete node.ui.height;delete node.ui.componentsExpanded;delete node.ui.collapsed;if(!Object.keys(node.ui).length)delete node.ui;}
   }
   return JSON.stringify(content);
@@ -266,6 +266,7 @@ function sealGraphHistory(entries,beforeToken,afterToken){
   }
 }
 function mark(){
+  if(typeof refreshGeneratedGLSL==='function')queueMicrotask(()=>refreshGeneratedGLSL());
   clearCompileDiagnostics();
   dirty=true;editVersion++;renderGraphSaveState();$('#apply').disabled=readonly||submitBusy;
   try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}
@@ -284,7 +285,7 @@ function change(fn,{localize=true,redraw=true,typeChange=false,layout=false,disc
   if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
   let layoutOnly=false;
-  try{if(localize)prepareSemanticEdit();fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});if(!typeChange)rejectNewConstantIssues(graph,previous);}}
+  try{if(localize)prepareSemanticEdit();fn();assertGeneratedGLSLLimit(graph);for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});if(!typeChange)rejectNewConstantIssues(graph,previous);}}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
@@ -520,7 +521,7 @@ function render({layoutOnly=false}={}){renderCompileDiagnostics();
   document.querySelectorAll('[data-stage]').forEach(b=>{b.hidden=!graph.stages?.[b.dataset.stage];b.classList.toggle('active',b.dataset.stage===stage);});
   $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';
   $('#previewtitle').dataset.i18n=editorTarget==='top'?'preview.top':'preview.material';$('#previewtitle').textContent=t($('#previewtitle').dataset.i18n);renderPreviewAppearance();
-  tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();declarations();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();
+  tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();declarations();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();refreshGeneratedGLSL();
 }
 function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('texture.input0')]]:[]),...[['builtin:banana',t('texture.banana')],['builtin:jellybeans',t('texture.jellybeans')],['builtin:white',t('texture.white')],['builtin:black',t('texture.black')],['external',t('texture.custom')]]]; }
 function declarations(){const box=$('#declarations');box.replaceChildren();for(const d of graph.declarations){const card=el('div',{class:'decl'});card.append(el('small',{},d.type+' · '+d.id));card.append(field(t('declaration.name'),input(d.name,v=>change(()=>d.name=v))));declarationFields(card,d);box.append(card);}}
@@ -1033,7 +1034,7 @@ function setUIExperiments(values){
   if(graph&&redrawWires){
     for(const card of document.querySelectorAll('#cards .node')){
       const node=current().nodes.find(node=>node.id===card.dataset.node);if(!node)continue;
-      card.dataset.dragSurface=definition(node)?.key==='comment'||!next.nodeBodyDrag?'header':'body';
+      card.dataset.dragSurface=isAnnotationNode(node)||!next.nodeBodyDrag?'header':'body';
       const title=card.querySelector('.node-title-text'),toggle=title.querySelector('.node-collapse-toggle');
       const visible=node.ui?.collapsed===true?next.nodeCollapseCollapsedHint:next.nodeCollapseExpandedHint;
       if(visible!==!!toggle){
@@ -1458,3 +1459,38 @@ async function refreshProjectFile(){
   try{receiveProjectSummary(await api('shaders'));}catch{const label=$('#projectfile');if(!label.textContent)label.textContent=t('project.unavailable');}
 }
 refreshProjectFile();setInterval(()=>{if(!document.hidden)refreshProjectFile();},30000);
+
+
+let generatedGLSLTimer=null,generatedGLSLSerial=0;
+let generatedGLSLCache={key:null,state:'idle',text:''};
+function generatedGLSLView(node,canvas=false){
+  const box=el('div',{class:'comment-node-content generated-glsl-content'+(canvas?' comment-node-canvas-content':'')}),preview=el('div',{class:'comment-node-preview',tabindex:'0','aria-label':t('generatedGLSL.label')}),code=el('pre',{class:'generated-glsl-code comment-markdown','data-generated-glsl':node.id});
+  preview.append(code);box.append(preview);
+  preview.onpointerdown=e=>{e.stopPropagation();if(canvas&&!selection.has(node.id)){selectNode(node);refreshCanvasSelection();inspector();renderNavigation();}};
+  preview.onclick=preview.ondblclick=e=>e.stopPropagation();preview.onkeydown=e=>e.stopPropagation();box.onwheel=e=>e.stopPropagation();
+  return box;
+}
+function generatedGLSLKey(){return JSON.stringify([editorLoadGeneration,stage,graphContent(graph)]);}
+function paintGeneratedGLSL(){
+  for(const view of document.querySelectorAll('[data-generated-glsl]')){
+    const cache=generatedGLSLCache,text=cache.state==='ready'?cache.text:cache.state==='error'?t('generatedGLSL.error')+'\n'+cache.text:t('generatedGLSL.loading');
+    if(view.textContent!==text){const scroll=view.parentElement,top=scroll.scrollTop,left=scroll.scrollLeft;view.replaceChildren(cache.state==='ready'?glslFragment(text):document.createTextNode(text));scroll.scrollTop=top;scroll.scrollLeft=left;}
+    view.dataset.state=cache.state;
+  }
+}
+function refreshGeneratedGLSL(force=false){
+  if(!graph||!document.querySelector('[data-generated-glsl]')){clearTimeout(generatedGLSLTimer);generatedGLSLSerial++;if(generatedGLSLCache.state==='loading')generatedGLSLCache={key:null,state:'idle',text:''};return;}
+  const key=generatedGLSLKey();
+  if(!force&&generatedGLSLCache.key===key){paintGeneratedGLSL();return;}
+  clearTimeout(generatedGLSLTimer);const serial=++generatedGLSLSerial,source=clone(graph),sourceStage=stage;
+  generatedGLSLCache={key,state:'loading',text:''};paintGeneratedGLSL();
+  generatedGLSLTimer=setTimeout(async()=>{
+    try{
+      const code=await api('validate',{graph:source});
+      if(serial!==generatedGLSLSerial||!graph||generatedGLSLKey()!==key)return;
+      if(typeof code[sourceStage]!=='string')throw Error(t('generatedGLSL.unavailable'));
+      generatedGLSLCache={key,state:'ready',text:code[sourceStage]};
+    }catch(error){if(serial!==generatedGLSLSerial||!graph||generatedGLSLKey()!==key)return;generatedGLSLCache={key,state:'error',text:error.message};}
+    paintGeneratedGLSL();
+  },250);
+}

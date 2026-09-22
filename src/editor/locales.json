@@ -3212,6 +3212,14 @@
       "zh-Hant": "字級倍率",
       "en": "Font scale"
     },
+    "generatedGLSL.fontScale.hint": {
+      "zh-Hant": "將畫布上的 GLSL 字級調整為 0.1–10 倍，不改變標題與側欄字級。",
+      "en": "Scale GLSL text on the canvas from 0.1 to 10 times its size, keeping title and inspector text unchanged."
+    },
+    "frame.colorPreset.black": {
+      "zh-Hant": "純黑",
+      "en": "Black"
+    },
     "note.fontScale.hint": {
       "zh-Hant": "將畫布上的筆記文字放大為 1–10 倍，不改變標題與編輯欄位的字級。",
       "en": "Scale the note text on the canvas from 1 to 10 times its size, keeping title and editor text unchanged."
@@ -3694,6 +3702,34 @@
     "help.td_instance_color_current": {"en": "TDInstanceColor (Current)\n\nApplies the current instance color settings to a vec4 color in Vertex Stage. Connect TDColor to reproduce the native point-color path. To apply instance color in Pixel Stage without point color, pass TDInstanceIndex through a flat Vertex Output and use the indexed TDInstanceColor node.\n\n[Reference](https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing)", "zh-Hant": "TDInstanceColor (Current)\n\n在 Vertex Stage 將目前實例的顏色設定套用到 vec4 顏色。接上 TDColor 可重現原生點顏色路徑。不使用點顏色而在 Pixel Stage 套用實例顏色時，可將 TDInstanceIndex 經由 flat Vertex Output 傳遞，再接帶索引的 TDInstanceColor 節點。\n\n[官方說明](https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing)"},
     "help.td_convert_color_space": {"en": "TDConvertColorSpace\n\nCalls the native MAT output color-space conversion, including the TDColorSpace header only when used. This node only converts color. Pixel Output still applies its existing dithering afterward; the complete native finishing order must be handled when assembling the presets. TD selects the conversion for the active render destination; this is not a fixed sRGB transform. Existing graphs do not receive this conversion automatically.\n\n[Reference](https://derivative.ca/UserGuide/Write_a_GLSL_MAT)", "zh-Hant": "TDConvertColorSpace\n\n呼叫原生材質的輸出色彩空間轉換，僅在使用時載入 TDColorSpace。此節點只轉換顏色。Pixel Output 仍在之後執行既有抖色處理；完整原生收尾順序須在組裝預置時另行處理。TD 依目前繪製目的地選擇轉換，不是固定的 sRGB 轉換。既有圖不會自動加入此處理。\n\n[官方說明](https://derivative.ca/UserGuide/Write_a_GLSL_MAT)"},
     "help.td_projtexture_lod": {"en": "TDProjTextureLod\n\nSamples a light projection map at an explicit floating-point LOD. Inputs: light (int, zero-based index in the render light list), uv (vec2), lod (float); output: vec4. MAT Pixel only. Assign the map and sampling settings on the native Light COMP. This samples the supplied UV directly; it does not calculate projected coordinates or lighting. Available in TD 2025.32820.\n\n[Official release notes](https://derivative.ca/release/202532820/74545)", "zh-Hant": "TDProjTextureLod\n\n以指定的浮點 LOD 取樣燈光投影貼圖。輸入為 light（int，繪製燈光清單中從 0 起算的索引）、uv（vec2）、lod（float），輸出 vec4。僅限 MAT Pixel；貼圖與取樣設定由原生 Light COMP 指定。直接使用輸入 UV，不自動計算投影座標或光照。TD 2025.32820 已提供。\n\n[官方版本說明](https://derivative.ca/release/202532820/74545)"},
-    "help.td_projtexture_size": {"en": "TDProjTextureSize\n\nQueries the native projection-map dimensions for a zero-based render light index (int). Returns the native ivec3 unchanged; x/y are width/height for the tested 2D projection maps. MAT Pixel only. The map belongs to the Light COMP, not a custom Sampler declaration. The size is host data, not a compile-time array length. Available in TD 2025.32820.\n\n[Official release notes](https://derivative.ca/release/202532820/74545)", "zh-Hant": "TDProjTextureSize\n\n以從 0 起算的繪製燈光索引（int）查詢投影貼圖尺寸，原樣輸出原生 ivec3；已測的 2D 投影貼圖以 x/y 表示寬／高。僅限 MAT Pixel。貼圖來自 Light COMP，不是自訂 Sampler 宣告。尺寸是宿主資料，不能當作編譯期陣列長度。TD 2025.32820 已提供。\n\n[官方版本說明](https://derivative.ca/release/202532820/74545)"}
+    "help.td_projtexture_size": {"en": "TDProjTextureSize\n\nQueries the native projection-map dimensions for a zero-based render light index (int). Returns the native ivec3 unchanged; x/y are width/height for the tested 2D projection maps. MAT Pixel only. The map belongs to the Light COMP, not a custom Sampler declaration. The size is host data, not a compile-time array length. Available in TD 2025.32820.\n\n[Official release notes](https://derivative.ca/release/202532820/74545)", "zh-Hant": "TDProjTextureSize\n\n以從 0 起算的繪製燈光索引（int）查詢投影貼圖尺寸，原樣輸出原生 ivec3；已測的 2D 投影貼圖以 x/y 表示寬／高。僅限 MAT Pixel。貼圖來自 Light COMP，不是自訂 Sampler 宣告。尺寸是宿主資料，不能當作編譯期陣列長度。TD 2025.32820 已提供。\n\n[官方版本說明](https://derivative.ca/release/202532820/74545)"},
+    "help.generated_glsl": {
+      "en": "Read-only generated GLSL for the current Vertex or Pixel stage. One viewer per canvas, including subgraphs. Updates after graph edits; does not contribute shader code. Move, resize, collapse and style it like a Note.",
+      "zh-Hant": "唯讀顯示目前 Vertex 或 Pixel 階段產生的 GLSL。每個畫布（含子圖）最多一個，隨圖編輯更新，不參與產碼。可像 Note 一樣移動、調整大小、折疊及設定外觀。"
+    },
+    "generatedGLSL.label": {
+      "en": "Generated GLSL",
+      "zh-Hant": "產生的 GLSL"
+    },
+    "generatedGLSL.limit": {
+      "en": "Only one Generated GLSL viewer is allowed per canvas.",
+      "zh-Hant": "每個畫布只能有一個 Generated GLSL 顯示器。"
+    },
+    "generatedGLSL.loading": {
+      "en": "Updating GLSL…",
+      "zh-Hant": "正在更新 GLSL…"
+    },
+    "generatedGLSL.error": {
+      "en": "Unable to generate current GLSL:",
+      "zh-Hant": "無法產生目前的 GLSL："
+    },
+    "generatedGLSL.unavailable": {
+      "en": "No generated GLSL is available for this stage.",
+      "zh-Hant": "此階段沒有可顯示的 GLSL。"
+    },
+    "generatedGLSL.refresh": {
+      "en": "Refresh GLSL",
+      "zh-Hant": "重新整理 GLSL"
+    }
   }
 }

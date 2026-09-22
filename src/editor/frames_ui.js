@@ -75,10 +75,10 @@ function setGroupFrameColor(frame,color,data=current()){
 }
 function groupFrameColorSessionValid(session){
   return !!session&&graph===session.owner&&current()===session.data&&!editorMutationBlocked()&&
-    (session.node?session.data.nodes.includes(session.node)&&definition(session.node)?.key==='comment':GraphFrames.read(session.data).some(frame=>frame.id===session.frame.id));
+    (session.node?session.data.nodes.includes(session.node)&&isAnnotationNode(session.node):GraphFrames.read(session.data).some(frame=>frame.id===session.frame.id));
 }
 function paletteTargetColor(session){
-  const color=session.node?session.node.ui?.noteColor:GraphFrames.read(session.data).find(frame=>frame.id===session.frame.id)?.color;
+  const color=session.node?noteBodyColor(session.node):GraphFrames.read(session.data).find(frame=>frame.id===session.frame.id)?.color;
   return typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color)?color.toLowerCase():GROUP_FRAME_COLOR;
 }
 function focusGroupFrameColor(session){
@@ -141,14 +141,16 @@ function openCanvasColorPalette(session){
   const hasNoteColor=!!session.node&&typeof session.node.ui?.noteColor==='string'&&/^#[0-9a-f]{6}$/i.test(session.node.ui.noteColor);
   if(session.node){
     const reset=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-note-color-default':'','aria-label':t('note.defaultColor'),title:t('note.defaultColor'),'aria-checked':String(!hasNoteColor&&session.node.ui?.noteTransparent!==true),tabindex:'-1'});
-    reset.style.setProperty('--swatch-color','var(--note-default-bg)');reset.append(el('span',{'aria-hidden':'true'}));
+    reset.style.setProperty('--swatch-color',noteDefaultColor(session.node)||'var(--note-default-bg)');reset.append(el('span',{'aria-hidden':'true'}));
     reset.onclick=()=>{
       closeGroupFramePalette();if(!groupFrameColorSessionValid(session))return;
       change(()=>{if(session.node.ui){delete session.node.ui.noteColor;delete session.node.ui.noteTransparent;}},{localize:false});focusGroupFrameColor(session);
     };
     grid.append(reset);
   }
-  for(const [name,value]of(session.node?GROUP_FRAME_COLORS.slice(1):GROUP_FRAME_COLORS)){
+  const presets=session.node?GROUP_FRAME_COLORS.slice(1):GROUP_FRAME_COLORS;
+  if(session.node&&noteDefaultColor(session.node))presets.unshift(['black','#000000']);
+  for(const [name,value]of presets){
     const label=t('frame.colorPreset.'+name)+' · '+value.toUpperCase(),button=el('button',{type:'button',class:'group-frame-preset',role:'menuitemradio','data-frame-color-preset':value,'aria-label':label,title:label,'aria-checked':String((!session.node||hasNoteColor)&&session.node?.ui?.noteTransparent!==true&&color.toLowerCase()===value),tabindex:'-1'});
     button.style.setProperty('--swatch-color',value);button.append(el('span',{'aria-hidden':'true'}));
     button.onclick=()=>{closeGroupFramePalette();commitGroupFrameColor(session,value);};grid.append(button);

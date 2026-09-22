@@ -137,7 +137,7 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
 function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
-  if(d.key==='comment')return 'annotation';
+  if(['comment','generated_glsl'].includes(d.key))return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
   if(['constant','spec_constant','scalar','vector','matrix','array'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
   if(d.key==='builtin_source'||['pop_buffer','attribute','tex_attribute'].includes(d.key))return 'builtin';
@@ -1415,7 +1415,10 @@ function nodeCanvasComment(n){
   note.ondblclick=e=>e.stopPropagation();
   return note;
 }
-function noteFontScale(node){return Math.max(1,Math.min(10,Number.isFinite(node.ui?.noteFontScale)?node.ui.noteFontScale:1));}
+function noteMinimumFontScale(node){return definition(node)?.key==='generated_glsl'?.1:1;}
+function noteDefaultColor(node){return definition(node)?.key==='generated_glsl'?'#000000':'';}
+function noteBodyColor(node){return /^#[\da-f]{6}$/i.test(node.ui?.noteColor||'')?node.ui.noteColor:noteDefaultColor(node);}
+function noteFontScale(node){return Math.max(noteMinimumFontScale(node),Math.min(10,Number.isFinite(node.ui?.noteFontScale)?node.ui.noteFontScale:1));}
 function noteTextAlign(node){return ['center','right'].includes(node.ui?.noteTextAlign)?node.ui.noteTextAlign:'left';}
 function applyNoteColorContrast(card){
   if(!card.classList.contains('note-colored')||card.dataset.noteTransparent==='true'){card.style.removeProperty('--note-ink');return;}
@@ -1445,14 +1448,14 @@ function noteAppearanceControls(node){
   };
   controls.append(button);
   const color=el('button',{type:'button',class:'note-color-button','data-note-color':node.id,'aria-label':t('note.color'),title:t('note.color')+' · '+t('note.color.hint'),'aria-haspopup':'menu','aria-controls':'groupframepalette','aria-expanded':'false'});
-  const swatch=el('span',{'aria-hidden':'true'});if(node.ui?.noteTransparent===true)swatch.classList.add('note-transparent-swatch');else if(/^#[\da-f]{6}$/i.test(node.ui?.noteColor||''))swatch.style.backgroundColor=node.ui.noteColor;color.append(swatch);color.disabled=readonly;
+  const swatch=el('span',{'aria-hidden':'true'});if(node.ui?.noteTransparent===true)swatch.classList.add('note-transparent-swatch');else if(noteBodyColor(node))swatch.style.backgroundColor=noteBodyColor(node);color.append(swatch);color.disabled=readonly;
   color.onpointerdown=color.ondblclick=e=>e.stopPropagation();color.onclick=e=>{e.stopPropagation();openNoteColorPalette(node,color);};controls.append(color);
   return controls;
 }
-// Note is the only two-axis card; ordinary nodes retain width-only resizing.
+// Annotation cards resize in both axes; ordinary nodes retain width-only resizing.
 // Size is a layout override in graph units, not a Shader parameter. Preview
 // only the DOM until release so cancellation never creates a history entry.
-function nodeCanResizeHeight(node){return definition(node)?.key==='comment';}
+function nodeCanResizeHeight(node){return isAnnotationNode(node);}
 function nodeHeightLimits(card){
   const preview=card.querySelector('.comment-node-preview');
   if(preview&&!card.classList.contains('collapsed')){
@@ -1579,11 +1582,16 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     const collapsed=n.ui?.collapsed===true,d=projection?.definition||definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
     if(isMatrixOperation(d))card.classList.add('node-matrix');
-    if(d?.key==='comment'){
+    if(isAnnotationNode(n)){
       card.dataset.noteTitleOnSelection=String(n.ui?.noteTitleOnSelection===true);card.dataset.noteTransparent=String(n.ui?.noteTransparent===true);
       card.style.setProperty('--note-font-scale',noteFontScale(n));
       card.style.setProperty('--note-text-align',noteTextAlign(n));
-      if(/^#[\da-f]{6}$/i.test(n.ui?.noteColor||'')){card.classList.add('note-colored');card.style.setProperty('--note-color',n.ui.noteColor);}
+      const bodyColor=noteBodyColor(n);
+      if(bodyColor){card.classList.add('note-colored');card.style.setProperty('--note-color',bodyColor);}
+      if(d?.key==='generated_glsl'){
+        card.classList.add('node-generated-glsl');card.classList.toggle('generated-glsl-black',bodyColor.toLowerCase()==='#000000');
+        card.style.setProperty('--node-max-width','3000px');card.style.setProperty('--node-max-height','3000px');
+      }
     }
     const title=el('div',{class:'node-title'}),text=el('div',{class:'node-title-text'});
     const collapseToggle=nodeCollapseToggle(n);if(collapseToggle)text.append(collapseToggle);
@@ -1597,15 +1605,15 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     if(source){const label=({uniform:'Uniform',constant:'Graph Const',spec_constant:'Spec Const',pop_buffer:'POP Buffer',attribute:'Attribute',sampler:'Sampler',top_input:'TOP Input'})[source.kind||(n.params.inputId?'top_input':'')]||d.label;const subtitle=(d.key==='tex_attribute'?d.label:label)+' · '+(source.type||'sampler2D');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     else {
       const subtitles=[];
-      if(d?.key!=='comment'&&customNodeNamesEnabled()&&n.name)subtitles.push(nodeTypeLabel(d,n.params));
+      if(!isAnnotationNode(n)&&customNodeNamesEnabled()&&n.name)subtitles.push(nodeTypeLabel(d,n.params));
       if(d?.key==='uv')subtitles.push(builtInSourceLabel(d));
       if(subtitles.length){const subtitle=subtitles.join(' · ');meta.append(el('small',{class:'node-prototype',title:subtitle},subtitle));}
     }
     if(quick){if(meta.childNodes.length)meta.append(el('small',{class:'node-meta-separator','aria-hidden':'true'},'·'));meta.append(quick);}
     if(meta.childNodes.length)title.append(meta);
-    if(d?.key==='comment')title.append(noteAppearanceControls(n));
+    if(isAnnotationNode(n))title.append(noteAppearanceControls(n));
     let suppressCardClick=false;
-    card.dataset.dragSurface=d?.key==='comment'||!EDITOR_DEV_SETTINGS.nodeBodyDrag?'header':'body';
+    card.dataset.dragSurface=isAnnotationNode(n)||!EDITOR_DEV_SETTINGS.nodeBodyDrag?'header':'body';
     card.onpointerdown=e=>{if(isNodeDragSurface(e.target,card))dragNodeTitle(e,n,card,cards,moved=>{suppressCardClick=moved;});};
     card.append(title);const list=el('div',{class:'ports'+(collapsed?' collapsed-ports':'')});
     const portRow=(kind,name,missing=false,compact=false)=>{
@@ -1647,11 +1655,12 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     if(d?.key==='color'&&Array.isArray(n.params.value))card.append(nodeColorPicker(n));
     if(d?.key==='uniform'){const control=nativeReferenceControls(n,projection?.source||nativeDeclarations.get(n.params.declarationId));if(control)card.append(control);}
     if(['uniform','texture','sampler'].includes(d?.key)){const decl=graph.declarations.find(x=>x.id===n.params.declarationId);if(decl?.expose)card.append(el('div',{class:'expose-badge'},'Exposed · '+(decl.exposeName||(decl.kind==='sampler'&&decl.source==='input:0'?'Input 1 Default TOP':decl.name))));}
-    if(d?.key==='comment')card.append(commentNodeEditor(n,true));
+    if(d?.key==='generated_glsl')card.append(generatedGLSLView(n,true));
+    else if(d?.key==='comment')card.append(commentNodeEditor(n,true));
     else if(nodeComment(n))card.append(nodeCanvasComment(n));
     }
     card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};
-    card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);appendNodeResizeHandle(card,n);if(d?.key==='comment')applyNoteColorContrast(card);
+    card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);appendNodeResizeHandle(card,n);if(isAnnotationNode(n))applyNoteColorContrast(card);
     return card;
 }
 /* Node Browser: one definition index, multiple views, global search. */

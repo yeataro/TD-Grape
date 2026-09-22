@@ -108,7 +108,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
     'deform','to_clip','vertex_out','vertex_input','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','tex_attribute','constant','top_input','glsl_code',
-    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
+    'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','generated_glsl','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
     'matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
@@ -741,12 +741,12 @@ def clean_semantic(graph):
         definition.pop('description',None);definition.pop('name',None)
     for s in g['stages'].values():
         s.pop('ui',None)
-        s['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in s['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
+        s['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in s['nodes'] if n.get('definitionUuid') not in ('sgrape.builtin.comment','sgrape.builtin.generated_glsl')],key=lambda n:n['id'])
         s['edges']=sorted([{k:v for k,v in e.items() if k!='ui'} for e in s['edges']],key=lambda e:tuple(e['to']+e['from']))
     g['declarations']=sorted(g['declarations'],key=lambda d:d['id'])
     for f in g.get('functions',[]):
         f['graph'].pop('ui',None)
-        f['graph']['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in f['graph']['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
+        f['graph']['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in f['graph']['nodes'] if n.get('definitionUuid') not in ('sgrape.builtin.comment','sgrape.builtin.generated_glsl')],key=lambda n:n['id'])
         f['graph']['edges']=sorted([{k:v for k,v in e.items() if k!='ui'} for e in f['graph']['edges']],key=lambda e:tuple(e['to']+e['from']))
     if 'functions' in g: g['functions'].sort(key=lambda f:f['id'])
     return g
@@ -1255,7 +1255,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 if defs[ident]['key'] in (*VECTOR_KEYS,*MATRIX_KEYS,'vec4','compare','if') or nodes[ident]['params'].get('requireConstant'):
                     for output in needed_outputs[ident]:demand_constant(ident,output)
             for ident in sorted(set(nodes)-live):
-                if defs[ident]['key']!='comment':diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
+                if defs[ident]['key'] not in ('comment','generated_glsl'):diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
             symbols=node_output_symbols(nodes,defs,ports)
             expressions={}; lines=[]; line_nodes=[]; helpers=[]; helper_nodes=[];extent_lines=[];extent_nodes=[]
             compound_used=set()
@@ -1907,7 +1907,10 @@ def _compile_graph(graph):
     if len(json.dumps(graph,allow_nan=False))>512000: raise GraphError('Graph exceeds 512 KB')
     if set(graph.get('stages',{}))!=set(graph_stages(graph)): raise GraphError('Shader stages do not match its target')
     functions=_functions(graph)
-    for data in [*graph['stages'].values(),*(fn['graph'] for fn in functions.values())]:validate_graph_frames(data)
+    for data in [*graph['stages'].values(),*(fn['graph'] for fn in functions.values())]:
+        validate_graph_frames(data)
+        if sum(n.get('definitionUuid')=='sgrape.builtin.generated_glsl' for n in data['nodes'])>1:
+            raise GraphError('Only one Generated GLSL viewer is allowed per canvas')
     # Check unused definitions too, before any material is touched.
     for fn in functions.values():
         for stage in fn['stages']:

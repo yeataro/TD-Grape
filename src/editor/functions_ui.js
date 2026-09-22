@@ -61,6 +61,11 @@ function canDeleteNode(n){return !['pixel_out','vertex_out','vertex_input','func
 function functionEntry(f,source=false){
   return {key:source?'source:'+f.scope+':'+f.id+':'+(f.source?.version||''):'function:'+f.id,label:f.name,stages:f.stages,inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id,source:source?f:null,category:f.scope==='personal'?'personal':'functions'};
 }
+function isAnnotationNode(node){return ['comment','generated_glsl'].includes(definition(node)?.key);}
+function assertGeneratedGLSLLimit(document){
+  for(const data of [...Object.values(document.stages),...(document.functions||[]).map(f=>f.graph)])
+    if(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.generated_glsl').length>1)throw Error(t('generatedGLSL.limit'));
+}
 function nodeTypeLabel(d,params=d?.defaults){
   if(d?.key==='comment')return 'Note';
   if(['scalar','vector','matrix'].includes(d?.key))return params?.fixedType||({scalar:'Scalar',vector:'Vector',matrix:'Matrix'})[d.key];
@@ -72,7 +77,7 @@ function availableEntries(){
     if(d.key==='struct_create')return (graph.typeDefinitions||[]).map(item=>({...d,label:item.name,entryKey:'structure:'+item.id,defaults:{type:'struct:'+item.id}}));
     if(d.key==='builtin_source')return builtinSourceEntries(d);
     if(['scalar','vector','matrix'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:({scalar:'help.fixedScalar',vector:'help.fixedVector',matrix:'help.fixedMatrix'})[d.key],defaults:{...d.defaults,...(d.key==='matrix'?{values:matrixReshapeValue(d.defaults.values,d.defaults.type,type)}:{}),type,fixedType:type},category:nodeCategory(d)}))];
-    if(d.key==='vertex_input'&&current().nodes.some(n=>n.definitionUuid===d.definitionUuid))return [];
+    if(['vertex_input','generated_glsl'].includes(d.key)&&current().nodes.some(n=>n.definitionUuid===d.definitionUuid))return [];
     return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)}];
   });
   for(const f of librarySources().filter(f=>f.stages.includes(stage)&&(!f.targets||f.targets.includes(editorTarget))))entries.push(functionEntry(f,true));
@@ -222,6 +227,7 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
   if(!preview)graph.declarations.push(decl);return decl;
 }
 function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={},preview=false}={}){
+  if(d.key==='generated_glsl'&&current().nodes.some(n=>n.definitionUuid===d.definitionUuid))throw Error(t('generatedGLSL.limit'));
   const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});let source=null;
   // Fixed entries retain their identity in params; generic entries keep their
   // stable default unless an explicit wire/type context requests another type.
@@ -245,7 +251,8 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
     if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;source=decl;
   }
   const n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
-  if(d.key==='comment')n.ui.noteTitleOnSelection=true;
+  if(['comment','generated_glsl'].includes(d.key))n.ui.noteTitleOnSelection=true;
+  if(d.key==='generated_glsl')Object.assign(n.ui,{width:480,height:300});
   normalizeNodeValues(n,d);
   if(d.revisionHash)n.revisionHash=d.revisionHash;
   if(preview){if(!isSourceReferenceNode(n))n.name=uniqueNodeName(nodeTypeLabel(d,n.params));return {node:n,source,definition:n.definitionUuid===FunctionModel.CALL?{...d,key:'function_call'}:d};}

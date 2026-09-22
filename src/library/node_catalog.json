@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.174",
+  "catalogVersion": "0.8.175",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
@@ -251,6 +251,41 @@
           "註解",
           "注释",
           "備註"
+        ],
+        "glslName": "",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "generated_glsl",
+        "label": "Generated GLSL",
+        "inputs": {},
+        "outputs": {},
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.generated_glsl",
+        "definitionUuid": "sgrape.builtin.generated_glsl",
+        "revisionHash": "18152c6dc6784720536dfc614dccb379e4e751bf68fc6d3efc1c3b96b2c8d087"
+      },
+      "emitter": {
+        "id": "generated_glsl",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "generated",
+          "GLSL",
+          "viewer",
+          "shader",
+          "產碼",
+          "程式碼",
+          "顯示器"
         ],
         "glslName": "",
         "secondaryCategories": []
