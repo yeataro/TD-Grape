@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-22 0.8.170 DEV：Vertex Output 的固定位置接孔顯示為 gl_Position，雙語說明區分裁切空間位置與傳給 Pixel 的資料。Vertex 邊界的待新增接孔改為半透明灰色，hover 時恢復清晰；既有新增機制保留。7 組瀏覽器檢查通過，包含移除最後接孔後仍保留新增入口、重新繪製不新增圖資料，以及雙向接孔／Undo／Redo／實際 UI 產圖編譯。作者確認深度、混合、剔除與骨骼變形設定留在原生參數頁；Picking 先評估，尚未授權實作。
+
 2026-09-22 0.8.169 DEV：MAT Apply 現在拒絕 TD 的 Sampler 型別不符警告；TD 原本仍回報連結成功並輸出黑色。原生回歸確認 3D TOP 綁給 sampler2D 時拒絕候選，保留原圖、revision、Shader DAT、manifest，並移除候選元件。這不代表已開放 Cube／3D 自訂 Sampler，也不把其他原生警告一律升級為錯誤。
 
 2026-09-22 0.8.168 DEV：新增 Phong Lights、PBR Lights、PBR Environment Lights，分開累加原生光照結果，不改動既有材質節點。Phong 保留獨立第二组 Specular／Shininess。19 組原生像素對照涵蓋零／一／兩盞一般燈與一／兩盞環境燈；最大 RGB 差異 0.0000681。共 331 個節點入口；完整預置、貼圖綁定及其他原生材質能力仍未完成。

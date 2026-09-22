@@ -386,7 +386,8 @@ function materializeSparePort(spare,other){
 function appendSparePort(list,n){
   const direction=sparePortDirection(n),f=sparePortInterface(n);if(!f||!direction)return;
   const kind=direction==='inputs'?'outputs':'inputs',label=t(direction==='inputs'?'function.quickInput':'function.quickOutput');
-  const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'});
+  const vertexPort=['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid);
+  const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'+(vertexPort?' vertex-spare-port-row':'')});
   const b=el('button',{class:'port port-add',title:label+' · '+t('function.quickHint'),'aria-label':label,
     'data-kind':kind,'data-port':'__add__','data-type':'spare','data-add-port':'true'});
   b.disabled=readonly||f[direction].length>=16;
@@ -447,6 +448,7 @@ function functionInspector(box,n,d){
 function convertValue(value,type,previous=null){return value===null&&!isResourceType(type)?filledValue(type):isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(value,previous,type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  if(n.definitionUuid==='sgrape.builtin.vertex_out'&&kind==='inputs'&&id==='position')return 'gl_Position';
   if(['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid))return vertexPortList().find(p=>p.id===id)?.name||id;
   if(['struct_create','builtin_source'].includes(definition(n)?.key)&&id.startsWith('f_'))return typeDescriptor(n.definitionUuid==='sgrape.builtin.struct_create'?n.params.type:typeContract.composites.sources[n.params.source]?.type)?.fields?.find(f=>'f_'+f.id===id)?.name||id;
   if(isMatrixOperation(definition(n))&&/^c[0-3](?:[xyzw])?$/.test(id))return matrixPortLabel(id);

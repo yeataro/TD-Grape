@@ -1612,6 +1612,7 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
       const className=kind==='inputs'?'input':'output',type=(projection?.ports?.[kind]||ports(n,kind))[name]||'?';
       const label=missing?name:isMatrixOperation(d)?matrixPortLabel(name):portLabel(n,kind,name),row=el('div',{class:'port-row '+className+(missing?' missing-port':'')+(compact?' collapsed-port-row':'')}),b=el('button',{class:'port'+(compact?' collapsed-port':''),title:`${displayName} ${className}: ${label} (${type})`,'aria-label':`${n.id} ${className} ${label}`});
       b.dataset.type=type;b.dataset.kind=kind;b.dataset.port=name;row.dataset.type=type;
+      if(d?.key==='vertex_out'&&kind==='inputs'&&name==='position')b.title=row.title=t('vertex.positionHint');
       if(!missing)applyPortColorHint(row,n,kind,name);
       if(d?.key==='replace'){row.dataset.component=name;row.classList.add(name==='value'||name==='out'?'vector-whole':'vector-component');}
       b.disabled=missing;if(missing){b.setAttribute('aria-label',label+' · '+t('type.incompatible'));row.title=t('type.incompatible');}
