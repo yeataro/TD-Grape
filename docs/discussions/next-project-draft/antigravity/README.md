@@ -15,9 +15,14 @@
 docs/discussions/next-project-draft/antigravity/
 ├── README.md                          # 本導航與開源具名宣告
 │
-├── for-human/                         # 【人類閱讀專用】深度架構審查、概念辨析與 UI 討論
+├── for-human/                         # 【人類閱讀專用】深度架構審查、概念辨析、UI 討論與歷史草稿
 │   ├── architectural-review.md        # 依照 AGENTS 規約的架構審查報告（嚴肅剖析子集、方言與舊專案病因）
-│   └── ui-widget-design.md            # 畫布四大卡片幾何原型與三層原子積木（ChannelAtom）設計
+│   ├── ui-widget-design.md            # 畫布四大卡片幾何原型與三層原子積木（ChannelAtom）設計
+│   └── original-drafts/               # 【歷史存檔】重構前期的原始交接草稿、MaterialX 候選案與探索筆記
+│       ├── node-definition-handoff.md
+│       ├── node-definition-candidate-materialx.md
+│       ├── node-definition-future-notes.md
+│       └── node-definition-AGENTS.md
 │
 └── for-agent/                         # 【智能體專用】極致純淨、零歷史雜訊、可直接交接的啟動包
     ├── AGENTS.md                      # 強制工作守則與三條不可逾越的架構紅線 (Architecture Guardrails)
