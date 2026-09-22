@@ -275,7 +275,7 @@ function mark(){
 // typeMode, interfaces, sources and unknown fields in the comparison.
 function layoutContent(document){
   const fields=new Set(['x','y','width','height','collapsed','componentsExpanded','matrixColumnsExpanded']);
-  const scope=data=>({...data,nodes:data.nodes.map(node=>{
+  const scope=data=>({...data,edges:data.edges.map(edge=>{const copy={...edge};if(edge.ui){const ui={...edge.ui};delete ui.style;if(Object.keys(ui).length)copy.ui=ui;else delete copy.ui;}return copy;}),nodes:data.nodes.map(node=>{
     const copy={...node};if(node.ui){const ui=Object.fromEntries(Object.entries(node.ui).filter(([key])=>!fields.has(key)));if(Object.keys(ui).length)copy.ui=ui;else delete copy.ui;}return copy;
   })});
   return JSON.stringify({...document,stages:Object.fromEntries(Object.entries(document.stages).map(([key,data])=>[key,scope(data)])),...(document.functions?{functions:document.functions.map(fn=>({...fn,graph:scope(fn.graph)}))}:{})});
@@ -480,11 +480,13 @@ function wirePathFromTarget(target){
 function wires(){
   const svg=$('#wires'),hits=document.createDocumentFragment(),paint=document.createDocumentFragment();svg.replaceChildren();
   current().edges.forEach((edge,index)=>{
+    const link=edge.ui?.style==='link';if(link&&!EDITOR_DEV_SETTINGS.showLinkLines)return;
     const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;
     const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;
     const dx=Math.max(70,Math.abs(q.x-p.x)*.5),ns='http://www.w3.org/2000/svg';
     const hit=document.createElementNS(ns,'path'),path=document.createElementNS(ns,'path');
-    path.setAttribute('d',`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);
+    path.setAttribute('d',link?`M ${p.x} ${p.y} L ${q.x} ${q.y}`:`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);
+    if(link)path.classList.add('wire-link');
     hit.setAttribute('d',path.getAttribute('d'));hit.classList.add('wire-hit');hit.setAttribute('aria-hidden','true');hit.wirePaintPath=path;
     path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);
     const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];
@@ -500,6 +502,7 @@ function wires(){
   // All visible strokes outrank all transparent hit areas. Preserve edge order
   // within each layer; both remain above Group bodies and below nodes/controls.
   svg.append(hits,paint);
+  refreshLinkPortButtons();
   drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();
 }
 function library(){renderLibrary();}
@@ -838,7 +841,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
+  ['appearance',['showLinkLines','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.

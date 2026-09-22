@@ -3,6 +3,7 @@
 目前狀態以 [STATUS.md](development/STATUS.md) 為準。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
 
 - [Sources 面板整理](ui/SOURCES_PANEL.md)：2026-09-23 確認的名稱、搜尋、排序、數值控制與最小化顯示，分批實作進度。
+- [Wire／Link 接線樣式](ui/WIRE_LINK.md)：直線虛線、接孔箭頭導覽、右鍵對端清單與顯示切換。
 
 - [基本 Phong／PBR 預置圖](features/BASIC_MATERIAL_PRESETS.md)：TDFam 新增入口、Group、Color 來源、範本與副本的編輯位置、驗證及未完成範圍。
 

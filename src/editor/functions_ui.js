@@ -265,11 +265,11 @@ function groupSelection(){
       if(a&&b){edges.push(clone(e));continue;}
       if(!a&&!b){outside.push(clone(e));continue;}
       if(b){const n=chosen.find(n=>n.id===e.to[0]),type=ports(n,'inputs')[e.to[1]],key=e.from.join(':')+':'+type;
-        if(!incoming.has(key)){const p='in'+(inputs.length+1);incoming.set(key,p);const value=defaultInput(n,e.to[1],type);const from=data.nodes.find(n=>n.id===e.from[0]);const name=SubgraphSourcePolicy.isSource(from,catalog)?SubgraphSourcePolicy.inputName(graph,from,e.from[1],e.to[1]):e.to[1];inputs.push({id:p,name,type,default:isResourceType(type)?null:value??filledValue(type)});outside.push({from:clone(e.from),to:[callId,p]});}
-        edges.push({from:['input',incoming.get(key)],to:clone(e.to)});
+        if(!incoming.has(key)){const p='in'+(inputs.length+1);incoming.set(key,p);const value=defaultInput(n,e.to[1],type);const from=data.nodes.find(n=>n.id===e.from[0]);const name=SubgraphSourcePolicy.isSource(from,catalog)?SubgraphSourcePolicy.inputName(graph,from,e.from[1],e.to[1]):e.to[1];inputs.push({id:p,name,type,default:isResourceType(type)?null:value??filledValue(type)});outside.push({...clone(e),from:clone(e.from),to:[callId,p]});}
+        edges.push({...clone(e),from:['input',incoming.get(key)],to:clone(e.to)});
       }else{const n=chosen.find(n=>n.id===e.from[0]),type=ports(n,'outputs')[e.from[1]],key=e.from.join(':');
-        if(!outgoing.has(key)){const p='out'+(outputs.length+1);outgoing.set(key,p);outputs.push({id:p,name:e.from[1],type,default:filledValue(type)});edges.push({from:clone(e.from),to:['output',p]});}
-        outside.push({from:[callId,outgoing.get(key)],to:clone(e.to)});
+        if(!outgoing.has(key)){const p='out'+(outputs.length+1);outgoing.set(key,p);outputs.push({id:p,name:e.from[1],type,default:filledValue(type)});edges.push({...clone(e),from:clone(e.from),to:['output',p]});}
+        outside.push({...clone(e),from:[callId,outgoing.get(key)],to:clone(e.to)});
       }
     }
     const x=Math.min(...chosen.map(n=>n.ui.x)),y=Math.min(...chosen.map(n=>n.ui.y));

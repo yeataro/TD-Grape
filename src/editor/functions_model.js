@@ -297,7 +297,7 @@ const GraphClipboard=(()=>{
     const scope=graph.functions.find(f=>f.graph===data),destination=scope?'fn_'+scope.id:stage;
     GraphArrayLengths.walk([content,newFunctions],(ref,old)=>ref.scope.startsWith('fn_')&&functionMap.has(ref.scope.slice(3))?GraphArrayLengths.token('fn_'+functionMap.get(ref.scope.slice(3)),ref.source):remap.has(ref.source[0])?GraphArrayLengths.token(destination,[remap.get(ref.source[0]),ref.source[1]]):old);
     for(const node of content.nodes){node.id=remap.get(node.id);node.ui={...node.ui,x:node.ui.x-x+anchor.x,y:node.ui.y-y+anchor.y};data.nodes.push(node);}
-    for(const edge of content.edges)data.edges.push({from:[remap.get(edge.from[0]),edge.from[1]],to:[remap.get(edge.to[0]),edge.to[1]]});
+    for(const edge of content.edges)data.edges.push({...copy(edge),from:[remap.get(edge.from[0]),edge.from[1]],to:[remap.get(edge.to[0]),edge.to[1]]});
     if(frames.length)GraphFrames.write(data,[...GraphFrames.read(data),...frames]);
     // Reject recursive function pastes as one failed transaction, including into itself.
     const seen=new Set(),active=new Set();function visit(key){if(active.has(key))fail('clipboard.cycle');if(seen.has(key))return;const f=FunctionModel.find(graph,key);if(!f)fail('clipboard.missing');if(!f.stages.includes(stage))fail('clipboard.stage');active.add(key);for(const n of f.graph.nodes)if(n.definitionUuid===FunctionModel.CALL)visit(n.params.functionId);active.delete(key);seen.add(key);}

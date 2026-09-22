@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-23 0.8.180：接線右鍵可切換 Wire／Link。Link 為直線細灰虛線，兩端接孔箭頭左鍵選取並 Frame 所有 Link 對端、右鍵清單選一個；一般 Wire 不納入。顯示 Link 線偏好預設開啟，隱藏線與命中區時保留箭頭。樣式保存於 edge UI，GLSL 與語意指紋不變；Undo／Redo、複製、剪貼簿與函式庫保留。詳見 [Wire／Link](../ui/WIRE_LINK.md)。
+
+新瀏覽器流程 6 組、既有 wire hit area 9 組通過。完整 portable checks 通過：528 Python、14 integration、1042 雙語鍵與既有 JS suites。擴大檢查的 graph_selection_shortcuts 預設語言斷言、group_frames 平移動畫未結束斷言、edit_shortcuts 行動版貼上選單不可見逾時，均在修改前 0.8.179 相同位置重現失敗，未計入通過；本輪不修改這三份舊測試。
+
+39 份來源同步，四份 Master 人工內容／身分／位置及兩份使用者 Shader 保留；Phong Master revision 182，未以預置 JSON 重建。TOE 已保存（1313888 bytes；SHA256 365a2b7913e288d42b81ddc0bf1d4faf48f02a33d98addbfcb14c83dbca3b4bb），私人助手排除。未推送。
+
 2026-09-23 0.8.179：修正來源卡片取消 Uniform 專用高亮後退回表單暗底色的落差，直接共用畫布數值控制樣式。底色、填色、邊框、圓角、文字、padding 及高度在深／淺色 × 一般／最小化四組實測完全相同；12 組來源與色彩互動回歸通過。卡片外距 8px、內距 6px 及 Binding 識別保留。39 份來源同步，四份 Master 人工內容／身分／位置及兩份使用者 Shader 保留。TOE 保存（1312128 bytes；SHA256 20fdd5beadfe14012f0a85c24e95ff611ff0d336448283b4003abcaa57338bf2），未推送。
 
 2026-09-23 0.8.178：一般與最小化來源卡片上下外距統一為 8px；Body 留白、分量與色彩按鈕間距統一 6px，色彩按鈕與數值區對齊。Uniform 移除獨立高亮底色／文字色，恢復共用滑桿，保留 Binding 狀態色與主來源標记。12 組既有來源／色彩瀏覽器檢查通過；兩種顯示模式實測水平／垂直間距均為 6px、色彩區左右對齊、Uniform 與 Constant 底色及填色相同。四份 Master 身分／人工內容／位置、兩份使用者 Shader 保留。TOE 已保存（1311736 bytes；SHA256 1a23db144030a927fd887cd34c512c16697ba894303a3e42b67aaab6cef3788c），未推送。

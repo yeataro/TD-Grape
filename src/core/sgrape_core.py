@@ -742,12 +742,12 @@ def clean_semantic(graph):
     for s in g['stages'].values():
         s.pop('ui',None)
         s['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in s['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
-        s['edges']=sorted(s['edges'],key=lambda e:tuple(e['to']+e['from']))
+        s['edges']=sorted([{k:v for k,v in e.items() if k!='ui'} for e in s['edges']],key=lambda e:tuple(e['to']+e['from']))
     g['declarations']=sorted(g['declarations'],key=lambda d:d['id'])
     for f in g.get('functions',[]):
         f['graph'].pop('ui',None)
         f['graph']['nodes']=sorted([{k:v for k,v in n.items() if k not in ('ui','revisionHash')} for n in f['graph']['nodes'] if n.get('definitionUuid')!='sgrape.builtin.comment'],key=lambda n:n['id'])
-        f['graph']['edges']=sorted(f['graph']['edges'],key=lambda e:tuple(e['to']+e['from']))
+        f['graph']['edges']=sorted([{k:v for k,v in e.items() if k!='ui'} for e in f['graph']['edges']],key=lambda e:tuple(e['to']+e['from']))
     if 'functions' in g: g['functions'].sort(key=lambda f:f['id'])
     return g
 

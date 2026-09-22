@@ -13,7 +13,7 @@
 | 元素型別 | Element type | 一個容器中單一元素的型別，須指出所談的容器。ivec3 的分量型別是 int；vec3[4] 的陣列元素型別是 vec3；Sample[4] 的元素型別是 Sample。不可把陣列元素型別一律等同 scalar family。 |
 | 分量／分量數 | Component／Component count；`components` | vec3 有三個分量，純量有一個。談向量形狀時優先說「分量數」，避免與貼圖維度或矩陣行列混用。 |
 | 純量／向量 | Scalar／Vector | 單一值與有多個分量的值；與名稱相同的節點種類須依上下文區分。 |
-| 接孔 | Port／Socket | 節點上的輸入或輸出端點，帶有具體型別與用途。接線（Wire／Edge）連接兩個接孔。 |
+| 接孔 | Port／Socket | 節點上的輸入或輸出端點，帶有具體型別與用途。接線（Edge）連接兩個接孔。 |
 | 函數簽名／節點簽名 | Function signature／Node signature | 一組輸入與輸出型別。相同功能可有多個合法簽名；支援哪些簽名由功能決定。 |
 | 運算型別 | Operation type | 節點選用的運算配置型別，不保證等於輸出型別。例如 Length 可對 vec3 運算而輸出 float。 |
 | 來源型別／接孔型別／輸出型別 | Source type／Input port type／Output type | 分別指上游提供的型別、輸入接孔要求的型別及結果型別。介面上的 `int → float` 表示來源與接孔之間有轉換。 |
@@ -26,6 +26,7 @@
 
 | 建議用語 | 英文 | 定義與區分 |
 | --- | --- | --- |
+| 接線顯示樣式 | Wire／Link | 同一接線的兩種呈現：Wire 為曲線；Link 為細灰直線虛線，附接孔箭頭導航。切換不改變資料流或產碼，詳見 [Wire／Link](ui/WIRE_LINK.md)。 |
 | 型別轉換／轉型 | Type conversion／Cast | 在本表的純量／向量例子中，指元素型別改變，例如 int → float、vec3 → ivec3，也包含 bool 與數值的明確轉換。是否合法、自動或需 Convert，是另一個問題。 |
 | 純量展開 | Splat | 把同一純量填入向量每個分量，例如 int → ivec3，得到三個相同整數。不是補零，也不是任意向量擴張或截短。可與元素型別轉換同時發生。 |
 | 分量組合／選取 | Component assembly／Selection；Combine／Swizzle | 明確指定分量的組成、來源或順序。vec2 變 vec4 需要說明新增分量的來源，不能籠統稱為 splat。 |
