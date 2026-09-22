@@ -2451,6 +2451,14 @@
       "zh-Hant": "斷開連線",
       "en": "Disconnect wire"
     },
+    "experiments.frameWireEndpoint.hint": {
+      "zh-Hant": "接線右鍵選單選取來源或目的後，使用一般 Frame 取景。動畫與時間沿用 Frame 過渡；不影響 Link 箭頭導航。",
+      "en": "Frame the endpoint selected from a wire context menu. Uses the regular Frame transition setting and duration; does not change Link arrow navigation."
+    },
+    "experiments.frameWireEndpoint": {
+      "zh-Hant": "選取接線來源／目的時自動 Frame",
+      "en": "Frame when selecting wire source / destination"
+    },
     "wire.selectSource": {
       "zh-Hant": "選取來源",
       "en": "Select source"

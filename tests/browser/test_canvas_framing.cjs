@@ -17,13 +17,14 @@ const {harness}=require('./test_glsl_code.cjs');
       window.requestAnimationFrame=cb=>{if(cb!==stepCanvasMotion)return framingTest.raf.call(window,cb);const id=--framingTest.id;framingTest.frames.set(id,cb);return id;};
       window.cancelAnimationFrame=id=>{if(!framingTest.frames.delete(id))framingTest.cancel.call(window,id);};
     });
-    assert.deepEqual(await page.evaluate(()=>[EDITOR_DEV_SETTINGS.canvasDamping,EDITOR_DEV_SETTINGS.canvasDampingMs,EDITOR_DEV_SETTINGS.frameDamping,EDITOR_DEV_SETTINGS.frameDampingMs]),[false,150,false,333]);
+    assert.deepEqual(await page.evaluate(()=>[EDITOR_DEV_SETTINGS.canvasDamping,EDITOR_DEV_SETTINGS.canvasDampingMs,EDITOR_DEV_SETTINGS.frameDamping,EDITOR_DEV_SETTINGS.frameDampingMs]),[true,150,true,333]);
+    await page.evaluate(()=>setUIExperiments({canvasDamping:false,frameDamping:false}));
     await reset();await page.keyboard.press('h');const home=await view();
     await reset();await page.keyboard.press('f');const single=await view();assert.ok(single.scale>home.scale);
     await page.evaluate(()=>{selection=new Set(['a','b']);selected='b';refreshCanvasSelection();});await reset();await page.keyboard.press('f');const multi=await view();assert.notDeepEqual(multi,home);assert.notDeepEqual(multi,single);
     await page.keyboard.press('h');assert.deepEqual(await view(),home);
     await page.evaluate(()=>{selection.clear();selected=null;refreshCanvasSelection();});await reset();await page.keyboard.press('f');assert.deepEqual(await view(),home);
-    checks.push('H frames all; F frames one/multiple selections or all if none are selected; both work read-only with defaults off / 150 and 333 ms');
+    checks.push('H frames all; F frames one/multiple selections or all if none are selected; both work read-only with transitions disabled explicitly; defaults on / 150 and 333 ms');
 
     // Use the existing keyboard route; navigation must not steal field input or browser chords.
     await reset();const unchanged=await view();

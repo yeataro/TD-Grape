@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: false, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -2432,7 +2432,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
   const {nodes:collapseNodes,canCollapse,canExpand}=nodeCollapseSelectionState();
   const owner=graph,level=current(),ids=selectedCanvasNodes().map(n=>n.id).join('\0'),edgeKey=edge&&JSON.stringify([edge.from,edge.to]);
   const sameContext=()=>graph===owner&&current()===level&&(edge?level.edges.includes(edge)&&JSON.stringify([edge.from,edge.to])===edgeKey:selectedCanvasNodes().map(n=>n.id).join('\0')===ids);
-  const selectEndpoint=side=>{const node=level.nodes.find(n=>n.id===edge[side][0]);if(node){selectNode(node);refreshCanvasSelection();}};
+  const selectEndpoint=side=>{const node=level.nodes.find(n=>n.id===edge[side][0]);if(node){selectNode(node);refreshCanvasSelection();if(EDITOR_DEV_SETTINGS.frameWireEndpoint)fitNodes([node],true);}};
   const groups=edge?[[
     ['wireStyle','Wire','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'wire')],
     ['linkStyle','Link','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'link')],
