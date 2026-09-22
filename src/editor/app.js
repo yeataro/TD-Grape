@@ -474,8 +474,8 @@ function transform(){
   $('#canvas').dataset.gridStep=displayGrid;
   $('#canvas').style.backgroundSize=step+'px '+step+'px';$('#canvas').style.backgroundPosition=(pan.x-step/2)+'px '+(pan.y-step/2)+'px';$('#world').style.transform=`translate(${pan.x}px,${pan.y}px) scale(${scale})`;renderGraphZoom();wireGesture?.refresh?.();scheduleSelectionToolbarPosition();}
 function wirePathFromTarget(target){
-  const path=target.closest('#wires path');
-  return path?.classList.contains('wire-hit')?(path.wirePaintPath?.isConnected?path.wirePaintPath:null):path?.dataset.from?path:null;
+  const path=target.closest('#wires path,#wires polygon.link-direction');
+  return path?.wirePaintPath?(path.wirePaintPath?.isConnected?path.wirePaintPath:null):path?.dataset.from?path:null;
 }
 function wires(){
   const svg=$('#wires'),hits=document.createDocumentFragment(),paint=document.createDocumentFragment();svg.replaceChildren();
@@ -492,12 +492,21 @@ function wires(){
     const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];
     if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}
     if(selectedEdge===index)path.classList.add('selected');
-    for(const surface of [hit,path]){
+    let arrow=null;
+    if(link){
+      arrow=document.createElementNS(ns,'polygon');arrow.classList.add('link-direction');
+      arrow.setAttribute('points','6,0 -4,-4 -4,4');
+      arrow.setAttribute('transform',`translate(${(p.x+q.x)/2} ${(p.y+q.y)/2}) rotate(${Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI})`);
+      arrow.wirePaintPath=path;
+      const hint=linkConnectionHint([edge]);
+      for(const surface of [hit,path,arrow]){const title=document.createElementNS(ns,'title');title.textContent=hint;surface.append(title);surface.setAttribute('aria-label',hint);}
+    }
+    for(const surface of [hit,path,...(arrow?[arrow]:[])]){
       surface.onpointerenter=()=>path.classList.add('wire-hover');surface.onpointerleave=()=>path.classList.remove('wire-hover');
       surface.onpointerdown=e=>dragExistingWire(path,e,index);
       surface.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};
     }
-    hits.append(hit);paint.append(path);
+    hits.append(hit);paint.append(path);if(arrow)paint.append(arrow);
   });
   // All visible strokes outrank all transparent hit areas. Preserve edge order
   // within each layer; both remain above Group bodies and below nodes/controls.

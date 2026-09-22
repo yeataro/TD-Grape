@@ -6,7 +6,7 @@ let touchGraphGesture=null;
 let graphTrash=null,nodeDragGesture=null,nodeResizeGesture=null,suppressWireClick=false;
 function isBlankWireDrop(x,y){
   const hit=document.elementFromPoint(x,y);
-  return !!hit?.closest('#canvas')&&!hit.closest('.node,#wires path,.graph-navigation,.selection-toolbar');
+  return !!hit?.closest('#canvas')&&!hit.closest('.node,#wires path,#wires .link-direction,.graph-navigation,.selection-toolbar');
 }
 function canDisconnectInputOnBlank(start){
   return !EDITOR_DEV_SETTINGS.canvasTrash&&!readonly&&start?.kind==='inputs'&&current().edges.some(e=>e.to[0]===start.node&&e.to[1]===start.port);
@@ -2021,9 +2021,9 @@ function installGraphInteractions(){
   installGraphClipboard();
   const canvas=$('#canvas');canvas.tabIndex=0;
   installTouchNavigation(canvas);
-  canvas.ondblclick=e=>{if(!e.target.closest('.node')&&!e.target.closest('path'))openCreator(e.clientX,e.clientY);};
+  canvas.ondblclick=e=>{if(!e.target.closest('.node')&&!e.target.closest('path,.link-direction'))openCreator(e.clientX,e.clientY);};
   let suppressContext=false;
-  canvas.addEventListener('pointerdown',e=>{if(e.target.closest('.node,#wires path,.group-frame-title'))resetArrowNavigation();},true);
+  canvas.addEventListener('pointerdown',e=>{if(e.target.closest('.node,#wires path,#wires .link-direction,.group-frame-title'))resetArrowNavigation();},true);
   canvas.oncontextmenu=e=>{
     e.preventDefault();if(suppressContext){suppressContext=false;return;}
     const port=e.target.closest('#cards .port[data-port]');
@@ -2032,7 +2032,7 @@ function installGraphInteractions(){
     openGraphMenu(e.clientX,e.clientY,e.target.closest('.node')?.dataset.node,{edge});
   };
   canvas.onpointerdown=e=>{
-    if(e.target.closest('.node')||e.target.closest('path')||e.target.closest('.graph-navigation'))return;
+    if(e.target.closest('.node')||e.target.closest('path,.link-direction')||e.target.closest('.graph-navigation'))return;
     focusGraphCanvas();closeCreator();const boxSelect=(boxSelectMode&&e.button===0)||e.shiftKey||e.button===2,sx=e.clientX,sy=e.clientY,ox=pan.x,oy=pan.y,previous=e.ctrlKey||e.metaKey?new Set(selection):new Set();let moved=false;
     if(![0,1,2].includes(e.button))return;canvas.setPointerCapture(e.pointerId);
     canvas.onpointermove=ev=>{moved=Math.hypot(ev.clientX-sx,ev.clientY-sy)>3;
@@ -2324,6 +2324,17 @@ function setEdgeStyle(edge,style){
   if(editorMutationBlocked()||!current().edges.includes(edge)||!['wire','link'].includes(style)||(edge.ui?.style||'wire')===style)return;
   change(()=>{if(style==='link')edge.ui={...edge.ui,style};else if(edge.ui){delete edge.ui.style;if(!Object.keys(edge.ui).length)delete edge.ui;}},{localize:false,layout:true});
 }
+function linkConnectionHint(edges){
+  return edges.map(edge=>{
+    const endpoint=(side,kind)=>{
+      const [id,port]=edge[side],node=current().nodes.find(node=>node.id===id);
+      if(!node)return id+' · '+port;
+      const label=nodeDisplayName(node),name=node.name&&node.name!==label?' ('+node.name+')':'';
+      return label+name+' · '+portLabel(node,kind,port);
+    };
+    return endpoint('from','outputs')+'\n→ '+endpoint('to','inputs');
+  }).join('\n\n');
+}
 function linkPeerNodes({node,kind,ports}){
   const side=kind==='inputs'?'to':'from',other=side==='to'?'from':'to',names=new Set(ports),ids=new Set();
   for(const edge of current().edges)if(edge.ui?.style==='link'&&edge[side][0]===node&&names.has(edge[side][1]))ids.add(edge[other][0]);
@@ -2354,7 +2365,7 @@ function refreshLinkPortButtons(){
   for(const row of document.querySelectorAll('#cards .port-row')){
     const node=row.closest('[data-node]')?.dataset.node,anchors=[...row.querySelectorAll('[data-kind][data-port]')],kind=anchors[0]?.dataset.kind,ports=[...new Set(anchors.map(port=>port.dataset.port))];
     let button=row.querySelector(':scope>.link-port-navigation');
-    if(!ports.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
+    if(showLinkLines||!ports.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
     if(!button){
       button=el('button',{type:'button',class:'link-port-navigation',title:t('wire.linkNavigate'),'aria-label':t('wire.linkNavigate'),'aria-haspopup':'menu'},kind==='inputs'?'←':'→');
       button.onpointerdown=button.ondblclick=e=>e.stopPropagation();
@@ -2362,6 +2373,8 @@ function refreshLinkPortButtons(){
       button.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();if(button.isConnected)openLinkTargets(button.linkLocation,e.clientX,e.clientY);};row.append(button);
     }
     button.linkLocation={node,kind,ports};button.dataset.linkNode=node;button.dataset.linkKind=kind;
+    const side=kind==='inputs'?'to':'from',edges=current().edges.filter(edge=>edge.ui?.style==='link'&&edge[side][0]===node&&ports.includes(edge[side][1]));
+    button.title=linkConnectionHint(edges)+'\n\n'+t('wire.linkNavigate');button.setAttribute('aria-label',button.title);
   }
 }
 function graphMenuIcon(action){
@@ -2431,7 +2444,10 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
       if(!edge)decorateShortcutButton(b,key==='fitAll'?'fit':key==='fit'?'fitSelection':key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
       if(key==='focus'||key==='fullscreen'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(key==='focus'?graphFocused:!!document.fullscreenElement));}
       if(key==='toggleLinkLines'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(showLinkLines));decorateShortcutButton(b,'toggleLinkLines');}
-      if(key==='wireStyle'||key==='linkStyle'){b.setAttribute('role','menuitemradio');const checked=(edge.ui?.style==='link')===(key==='linkStyle');b.setAttribute('aria-checked',String(checked));b.querySelector('small').textContent=checked?'✓':'';}
+      if(key==='wireStyle'||key==='linkStyle'){b.setAttribute('role','menuitemradio');const checked=(edge.ui?.style==='link')===(key==='linkStyle');b.setAttribute('aria-checked',String(checked));}
+      if(['wireStyle','linkStyle','toggleLinkLines'].includes(key)){
+        b.classList.add('graph-menu-check');const icon=selectionIcon('m5 12 4 4L19 6');icon.classList.add('menu-check-icon');caption.firstElementChild.replaceWith(icon);
+      }
       if(key==='fullscreen')b.title=$('#uifullscreen').title;
       b.onclick=()=>{const valid=sameContext();closeGraphMenu();$('#canvas').focus({preventScroll:true});if(valid)action();};menu.append(b);
     }

@@ -1967,6 +1967,16 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root #wires path.wire-link:is(:hover,.wire-hover){stroke:var(--wire-hover)!important;stroke-width:2}
 :root #wires path.wire-link.selected{stroke:var(--wire-selected)!important;stroke-width:2}
 :root #wires path.wire-link:is(.invalid,.trash-pending){stroke:var(--danger,#ef8d8d)!important}
-.link-port-navigation{position:absolute;top:50%;transform:translateY(-50%);width:20px;height:22px;min-width:20px;padding:0;border:0;border-radius:4px;background:var(--node-body);color:var(--muted);font-size:16px;line-height:1;pointer-events:auto;z-index:1}
+.link-port-navigation{position:absolute;top:50%;transform:translateY(-50%);width:20px;height:22px;min-width:20px;padding:0;border:0;border-radius:4px;background:var(--node-body,var(--ui-tone-node));color:var(--muted);font-size:16px;line-height:1;pointer-events:auto;z-index:1}
 .input>.link-port-navigation{left:-31px}.output>.link-port-navigation{right:-31px}
 .link-port-navigation:is(:hover,:focus-visible){color:var(--ui-tone-text);background:var(--node-value-bg)}
+
+/* Direction triangles share the line's hit behavior and visual state. */
+:root #wires .link-direction{fill:#8e8e96;stroke:none;cursor:pointer;pointer-events:all;filter:none!important}
+:root #wires .wire-link:is(:hover,.wire-hover)+.link-direction{fill:var(--wire-hover)}
+:root #wires .wire-link.selected+.link-direction{fill:var(--wire-selected)}
+:root #wires .wire-link:is(.invalid,.trash-pending)+.link-direction{fill:var(--danger,#ef8d8d)}
+
+:root #grapheditmenu button.graph-menu-check{background:transparent;color:inherit}
+:root #grapheditmenu button.graph-menu-check:is(:hover,:focus-visible):not(:disabled){background:var(--ui-hover,var(--ui-tone-menu-hover))}
+.graph-menu-check:not([aria-checked="true"]) .menu-check-icon{visibility:hidden}

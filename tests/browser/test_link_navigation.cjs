@@ -20,8 +20,38 @@ const {harness}=require('./test_glsl_code.cjs');
   await changeStyle('c','link');assert.equal(await page.locator('#wires .wire-link').count(),2);assert.ok((await wire('d').getAttribute('d')).includes(' C '));
   assert.equal(await wire('b').evaluate(e=>getComputedStyle(e).strokeDasharray),'4px, 5px');
   checks.push('real wire context menu switches only the chosen connection, keeps ordinary wires, and supports one-step Undo/Redo');
+  await page.evaluate(()=>{current().nodes.forEach(n=>n.name='Node_'+n.id);render();});
+  for(const id of ['b','c']){
+   const arrow=page.locator('.link-direction').filter({has:page.locator('title')}).nth(id==='b'?0:1);
+   const hint=await wire(id).locator('title').textContent();assert.match(hint,/Node_a.* · out\n→ .*Node_/);
+   assert.equal(await arrow.locator('title').textContent(),hint);
+   const geometry=await arrow.evaluate(e=>{const p=e.wirePaintPath,a=p.getPointAtLength(0),b=p.getPointAtLength(p.getTotalLength()),m=e.transform.baseVal.consolidate().matrix;return{mid:[m.e,m.f],expected:[(a.x+b.x)/2,(a.y+b.y)/2],direction:[m.a,m.b],delta:[b.x-a.x,b.y-a.y]};});
+   assert.ok(Math.hypot(geometry.mid[0]-geometry.expected[0],geometry.mid[1]-geometry.expected[1])<.01);
+   assert.ok(geometry.direction[0]*geometry.delta[0]+geometry.direction[1]*geometry.delta[1]>0);
+  }
+  const arrow=()=>page.locator('.link-direction').first();
+  await arrow().hover();assert.equal(await wire('b').evaluate(e=>e.classList.contains('wire-hover')),true);
+  await arrow().click({button:'right'});await page.mouse.move(10,10);
+  for(const [key,checked]of [['wireStyle',false],['linkStyle',true],['toggleLinkLines',true]]){
+   const item=page.locator('[data-edit="'+key+'"]');assert.equal(await item.getAttribute('aria-checked'),String(checked));
+   assert.equal(await item.locator('.menu-check-icon').evaluate(e=>getComputedStyle(e).visibility),checked?'visible':'hidden');
+   assert.equal(await item.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+  }
+  await page.screenshot({path:path.join(folder,'link-menu.png')});await page.keyboard.press('Escape');
+  await arrow().click();assert.equal(await page.evaluate(()=>selectedEdge),0);
+  checks.push('midpoint triangles follow source-to-destination direction, share multiline hints and wire interaction; menu state uses left checkmarks without selected fill');
   const outgoing=()=>page.locator('[data-node="a"] .link-port-navigation[data-link-kind="outputs"]');
+  assert.equal(await outgoing().count(),0);assert.equal(await page.locator('.link-direction').count(),2);
+  await page.evaluate(()=>setLinkLinesVisible(false));
   assert.equal(await outgoing().count(),1);assert.equal(await page.locator('[data-node="d"] .link-port-navigation').count(),0);
+  const tooltip=await outgoing().getAttribute('title');assert.match(tooltip,/Node_b/);assert.match(tooltip,/Node_c/);assert.doesNotMatch(tooltip,/Node_d/);
+  for(const theme of ['dark','light']){
+   await page.evaluate(theme=>{uiAppearance.theme=theme;renderUIAppearance();},theme);await page.mouse.move(10,10);
+   const colors=await outgoing().evaluate(e=>[getComputedStyle(e).backgroundColor,getComputedStyle(e.closest('.node')).backgroundColor]);assert.equal(colors[0],colors[1]);
+  }
+  await page.evaluate(()=>{uiAppearance.theme='dark';renderUIAppearance();fit();});
+  await page.screenshot({path:path.join(folder,'links-hidden.png')});
+  checks.push('hidden-link navigation has the node body background in both themes and lists every Link endpoint, excluding Wire peers');
   await page.evaluate(()=>{window.beforeNavigation=JSON.stringify(graph);window.historyCount=past.length;window.oldPan=JSON.stringify(pan);});
   await outgoing().click();assert.deepEqual(await page.evaluate(()=>[...selection]),['b','c']);assert.notEqual(await page.evaluate(()=>JSON.stringify(pan)),await page.evaluate(()=>oldPan));
   // Frame moves the source offscreen; fit the whole graph before testing its next button.
@@ -31,7 +61,7 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.locator('[data-node="c"] .link-port-navigation[data-link-kind="inputs"]').click();assert.deepEqual(await page.evaluate(()=>[...selection]),['a']);
   assert.equal(await page.evaluate(()=>JSON.stringify(graph)===beforeNavigation&&past.length===historyCount),true);
   checks.push('port left-click selects and Frames all Link peers, right-click chooses one, and reverse navigation excludes ordinary Wire peers');
-  await page.evaluate(()=>focusGraphCanvas());await page.keyboard.press('x');
+  await page.evaluate(()=>focusGraphCanvas());await page.keyboard.press('x');assert.equal(await outgoing().count(),0);await page.keyboard.press('x');
   assert.equal(await page.locator('#wires .wire-link').count(),0);assert.equal(await page.locator('#wires .wire-hit').count(),1);
   assert.equal(await outgoing().count(),1);await page.evaluate(()=>fit());await outgoing().click();assert.deepEqual(await page.evaluate(()=>[...selection]),['b','c']);
   assert.equal(await page.evaluate(()=>JSON.stringify(graph)===beforeNavigation&&past.length===historyCount),true);
@@ -65,7 +95,7 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.equal(await page.evaluate(()=>localStorage.getItem(linkLinesStorageKey)),'false');
   await clickDisplayToggle();await page.setViewportSize({width:1600,height:1100});await settle();
   checks.push('narrow toolbar overflow retains the toggle and arrows, and saves the shared visibility preference');
-  await page.evaluate(()=>{setNodesCollapsed(['a','b','c'],true);fit();});
+  await page.evaluate(()=>{setLinkLinesVisible(false);setNodesCollapsed(['a','b','c'],true);fit();});
   await outgoing().click();assert.deepEqual(await page.evaluate(()=>[...selection]),['b','c']);
   await page.locator('[data-node="b"] .link-port-navigation[data-link-kind="inputs"]').click();assert.deepEqual(await page.evaluate(()=>[...selection]),['a']);
   await page.evaluate(()=>{setNodesCollapsed(['a','b','c'],false);selection=new Set(['a','b','c']);selected='c';window.copyPayload=copyGraphSelection();duplicateSelection();});
@@ -75,7 +105,7 @@ const {harness}=require('./test_glsl_code.cjs');
   checks.push('collapsed single/aggregate ports navigate correctly; duplicate and clipboard paste preserve Link styles with remapped node IDs');
   await page.evaluate(()=>{graph.stages.pixel.nodes=graph.stages.pixel.nodes.filter(n=>['a','b','c','d','result'].includes(n.id));graph.stages.pixel.edges=graph.stages.pixel.edges.filter(e=>['b','c','d'].includes(e.to[0])&&e.from[0]==='a');render();fit();});
   await outgoing().click({button:'right'});await page.evaluate(()=>{window.oldSelection=[...selection];graph=clone(graph);});await page.locator('[data-link-target="b"]').click();assert.deepEqual(await page.evaluate(()=>[...selection]),await page.evaluate(()=>oldSelection));
-  await page.evaluate(()=>{render();fit();});await changeStyle('b','wire');assert.equal(await page.locator('[data-node="b"] .link-port-navigation').count(),0);assert.equal(await outgoing().count(),1);
+  await page.evaluate(()=>{render();setLinkLinesVisible(true);fit();});await changeStyle('b','wire');await page.evaluate(()=>setLinkLinesVisible(false));assert.equal(await page.locator('[data-node="b"] .link-port-navigation').count(),0);assert.equal(await outgoing().count(),1);await page.evaluate(()=>setLinkLinesVisible(true));
   await changeStyle('c','wire');assert.equal(await page.locator('.link-port-navigation').count(),0);
   checks.push('stale navigation menus cannot act on a replaced graph; converting back to Wire removes only obsolete arrows');
   await page.evaluate(()=>{setEdgeStyle(current().edges[0],'link');setEdgeStyle(current().edges[1],'link');fit();});
