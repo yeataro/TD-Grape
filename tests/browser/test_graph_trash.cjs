@@ -46,7 +46,7 @@ const server=http.createServer(async(req,res)=>{
     });await page.mouse.click(10,10);await settle();
   };
   for(device of isWebKit?['mouse']:['touch','mouse']){
-    await reset();const clickWireBefore=await state();await start(await wirePoint());await end();assert.equal(await page.evaluate(()=>selectedEdge),0);assert.equal(await state(),clickWireBefore);assert.equal(await page.locator('#graphdelete').getAttribute('title'),await page.evaluate(()=>t('wire.disconnectSelected')));
+    await reset();const clickWireBefore=await state();await start(await wirePoint());await end();assert.equal(await page.evaluate(()=>selectedEdge),0);assert.equal(await state(),clickWireBefore);assert.equal(await page.locator('#graphdelete').getAttribute('title'),await page.evaluate(()=>t('wire.disconnectSelected')+'　'+shortcutLabel('delete')));
     await reset();let before=await state(),p=await at('[data-node="source"] .node-title'),target=await trash();
     await start(p);await move(target);assert.equal(await state(),before);assert.equal(await page.locator('#graphtrash').getAttribute('data-state'),'active');assert.equal(await page.locator('[data-node="source"]').evaluate(n=>n.classList.contains('trash-pending')),true);
     await page.screenshot({path:path.join(folder,`${device}-node-over-trash.png`)});await end();assert.equal(await page.evaluate(()=>current().nodes.some(n=>n.id==='source')),false);assert.equal(await page.evaluate(()=>current().edges.length),0);assert.equal(await page.evaluate(()=>past.length),1);await page.locator('#undo').click();assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='source').ui.x),0);

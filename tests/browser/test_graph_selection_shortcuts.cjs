@@ -64,7 +64,7 @@ checks.push('text fields, contenteditable, other modifiers, active gestures and 
 await page.evaluate(()=>setGraphFocus(false));await page.locator('#uishortcuts').click();await key('Control+ArrowUp',['b']);await page.keyboard.press('Escape');
 await page.locator('#uiexperiments').click();await settle();await page.locator('[data-experiment="ctrlArrowAdjacent"]').check();
 assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(experimentsStorageKey)).ctrlArrowAdjacent),true);await key('Control+ArrowRight',['b']);await page.keyboard.press('Escape');
-await page.locator('#uishortcuts').click();assert.match(await page.locator('[data-shortcut="selectUpstream"] dt').innerText(),/直接相連/);assert.deepEqual(await page.locator('[data-shortcut="selectUnlinked"] kbd').allTextContents(),['Ctrl','↓']);await page.keyboard.press('Escape');
+await page.locator('#uishortcuts').click();assert.match(await page.locator('[data-shortcut="selectUpstream"] dt').innerText(),/immediate upstream/);assert.deepEqual(await page.locator('[data-shortcut="selectUnlinked"] kbd').allTextContents(),['Ctrl','↓']);await page.keyboard.press('Escape');
 checks.push('experimental one-step control persists, Help describes its current meaning, and dialogs/popovers block graph shortcuts');
 await reset();await page.evaluate(()=>{graph.stages.vertex={nodes:[testNode('v1','add',0,0),testNode('v2','add',300,0)],edges:[{from:['v1','out'],to:['v2','a']}]};stage='vertex';render();selectNode(current().nodes[0]);refreshCanvasSelection();});await key('Control+ArrowUp',['v1','v2']);await key('Control+ArrowDown',[]);
 checks.push('selection is scoped to the current Stage, never the entire Shader document');

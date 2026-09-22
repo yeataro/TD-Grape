@@ -615,3 +615,5 @@ TD 2025.32820、Windows 原生 TOP／MAT 的展開與收合均確認：保存 UI
 2026-09-16 收合摘要微調：inline／Vector 瀏覽器套件共 24 項通過，包含 Vector 2／3／4、部分分組覆寫、基底遮蔽與斷線恢復、分量別名、長數字完整提示、Parameter 與 inline Enter 提交同步、焦點及 Undo。摘要 render 不修改圖或歷史；截圖與欄寬檢查通過，零頁面錯誤。另通過 459 個雙語字串檢查及圖面保存狀態檢查。
 
 2026-09-16 Color RGBA 微調：inline／Vector 瀏覽器套件共 31 項通過、零頁面錯誤。新增四框同列與命中區、HDR／負值、Alpha 保留、節點與 Parameter 雙向同步、數字切換調色盤的焦點、Undo／Redo、唯讀及不誤拖節點檢查；100% 縮放截圖確認緊湊排列。調色盤以原生 color input 的事件驗證數值流，未代替各平台原生彈窗實機測試。既有 Color／Label 套件前 11 項通過，其後因已過時的 Expose 選擇器停止，未計為整套通過，也未修改該舊測試。JavaScript 語法與圖面保存狀態檢查通過；24 份內嵌來源／服務資產一致，正式 TOE 已保存且保留使用者圖。
+
+2026-09-23：`test_multiselection.cjs` 驗證 Ctrl／Shift 真實點選 Node／Group／Wire／Link、部分成員補齊及整組移除、右鍵保留多選、批次樣式／刪除及 Undo、快照替換清除選線、Shift 框選、Group 標題壓線命中。選取過程不得修改圖、dirty 或歷史。

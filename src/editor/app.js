@@ -283,11 +283,11 @@ function layoutContent(document){
 }
 function change(fn,{localize=true,redraw=true,typeChange=false,layout=false,disconnectInvalid=null}={}){
   if(editorMutationBlocked())return false;
-  const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,selectedEdge};
+  const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,edges:selectedCanvasEdges().map(edge=>current().edges.indexOf(edge))};
   let layoutOnly=false;
   try{if(localize)prepareSemanticEdit();fn();assertGeneratedGLSLLimit(graph);for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});if(!typeChange)rejectNewConstantIssues(graph,previous);}}
   catch(e){
-    graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;selectedEdge=view.selectedEdge;
+    graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;setSelectedEdges(view.edges.map(index=>current().edges[index]));
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
   }
   if(!recordGraphHistory(previous)){if(redraw)render({layoutOnly});return true;}
@@ -479,6 +479,7 @@ function wirePathFromTarget(target){
   return path?.wirePaintPath?(path.wirePaintPath?.isConnected?path.wirePaintPath:null):path?.dataset.from?path:null;
 }
 function wires(){
+  const selectedEdges=new Set(selectedCanvasEdges());
   const svg=$('#wires'),hits=document.createDocumentFragment(),paint=document.createDocumentFragment();svg.replaceChildren();
   current().edges.forEach((edge,index)=>{
     const link=edge.ui?.style==='link';if(link&&!showLinkLines)return;
@@ -492,7 +493,7 @@ function wires(){
     path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);
     const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];
     if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}
-    if(selectedEdge===index)path.classList.add('selected');
+    path.edgeSelectionItem=edge;if(selectedEdges.has(edge))path.classList.add('selected');
     let arrow=null;
     if(link){
       arrow=document.createElementNS(ns,'polygon');arrow.classList.add('link-direction');
@@ -504,8 +505,8 @@ function wires(){
     }
     for(const surface of [hit,path,...(arrow?[arrow]:[])]){
       surface.onpointerenter=()=>path.classList.add('wire-hover');surface.onpointerleave=()=>path.classList.remove('wire-hover');
-      surface.onpointerdown=e=>dragExistingWire(path,e,index);
-      surface.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectedEdge=index;selected=null;selection.clear();render();};
+      surface.onpointerdown=e=>{if(e.button===0)suppressWireClick=false;dragExistingWire(path,e,index);};
+      surface.onclick=e=>{e.stopPropagation();if(suppressWireClick)return;selectCanvasEdge(edge,selectionModifier(e));};
     }
     hits.append(hit);paint.append(path);if(arrow)paint.append(arrow);
   });
@@ -527,7 +528,8 @@ function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('textur
 function declarations(){const box=$('#declarations');box.replaceChildren();for(const d of graph.declarations){const card=el('div',{class:'decl'});card.append(el('small',{},d.type+' · '+d.id));card.append(field(t('declaration.name'),input(d.name,v=>change(()=>d.name=v))));declarationFields(card,d);box.append(card);}}
 function remove(){
   if(selectedEdge===null&&!current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)))return;
-  change(()=>{if(selectedEdge!==null){current().edges.splice(selectedEdge,1);selectedEdge=null;return;}
+  const edges=new Set(selectedCanvasEdges());
+  change(()=>{if(edges.size){current().edges=current().edges.filter(edge=>!edges.has(edge));setSelectedEdges([]);return;}
     const ids=new Set(current().nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)).map(n=>n.id));
     current().nodes=current().nodes.filter(n=>!ids.has(n.id));current().edges=current().edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));selection.clear();selected=null;
   });

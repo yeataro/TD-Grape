@@ -61,10 +61,10 @@ await page.evaluate(()=>{current().nodes=current().nodes.filter(n=>n.id!=='cover
 assert.equal(await page.locator('.wire-hit').count(),1);assert.equal(await page.locator('#wires path[data-from]').count(),1);
 checks.push('redraw after removing an edge removes its paired hit path');
 await page.evaluate(()=>{current().ui={frames:[{id:'hit_group',name:'Group',nodes:['a','b'],color:'#7f8797'}]};renderGroupFrames();const path=$('#wires path[data-from]'),p=path.getPointAtLength(path.getTotalLength()/2),frame=$('[data-frame="hit_group"]');frame.style.left=(p.x-50)+'px';frame.style.top=(p.y+2.4/scale-14)+'px';});
-p=await midpoint();assert.equal(await page.evaluate(p=>wirePathFromTarget(document.elementFromPoint(p.x,p.y+2.4))?.dataset.to,p),'b:a');
+p=await midpoint();assert.equal(await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y+2.4)?.closest('.group-frame-title'),p),true);
 await page.evaluate(p=>{const f=$('[data-frame="hit_group"]'),h=f.querySelector('.group-select-handle').getBoundingClientRect();f.style.left=(f.offsetLeft+(p.x-h.left-h.width/2)/p.z)+'px';f.style.top=(f.offsetTop+(p.y+2.4-h.top-h.height/2)/p.z)+'px';},p);
 assert.equal(await page.evaluate(p=>!!document.elementFromPoint(p.x,p.y+2.4)?.closest('.group-select-handle'),p),true);
-checks.push('Group titles return below wires while corner handles retain their existing priority');
+checks.push('Group titles and corner handles have priority over wires');
 await page.evaluate(()=>{const path=$('#wires path[data-from]'),p=path.getPointAtLength(path.getTotalLength()/2),f=$('[data-frame="hit_group"]');f.style.left=(p.x-50)+'px';f.style.top=(p.y-80)+'px';});
 p=await midpoint();await page.mouse.move(p.x,p.y+2.4);await settle();assert.equal(await page.evaluate(p=>wirePathFromTarget(document.elementFromPoint(p.x,p.y+2.4))?.dataset.to,p),'b:a');
 assert.equal(await page.locator('#wires path[data-to="b:a"]').evaluate(e=>e.classList.contains('wire-hover')),true);

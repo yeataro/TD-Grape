@@ -1,5 +1,27 @@
 # UI navigation development checkpoint
 
+## Click selection (0.8.196)
+
+Ctrl/Cmd-click and Shift-click both toggle Node, Group and Wire/Link selection.
+Group selection operates on its members: a fully selected Group removes all its
+members; otherwise it adds every member while retaining other selected nodes.
+The title and optional corner handle share this behavior. Shift-drag on blank
+canvas still box-selects nodes. Plain clicks replace selection. Node/Group and
+wire selection remain separate modes; this change does not introduce mixed
+node-and-edge selection or wire box selection.
+
+Multiple selected wires stay highlighted. Right-clicking one of them preserves
+the selection; Wire/Link conversion and disconnect operate on the selected set
+in one Undo step. Source/destination navigation and the source-socket conversion
+remain scoped to the right-clicked connection. Mixed styles have no style
+checkmark. Edge selection is transient and cleared on graph replacement;
+references cannot drift to other edges when indexes change.
+
+Research: the [TD Network Editor documentation](https://docs.derivative.ca/Network_Editor)
+documents Ctrl-click addition and Shift-drag box selection, but does not establish
+Shift-click parity. The author explicitly approved parity for this editor on
+2026-09-23; this is a project decision, not a claim of exact TD behavior.
+
 ## Navigation trials and connected selection (0.8.163)
 
 The browser-local “Arrow navigation mode (trial)” selector offers three alternatives. Switching modes clears navigation memory, preserves canvas DOM, and does not edit graph/history data. All plain-arrow modes require one selected node; input fields, menus, dialogs, gestures, placement and modified arrows retain their own handling. The independent view options below work in every mode.

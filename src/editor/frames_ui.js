@@ -184,11 +184,13 @@ function removeGroupFrame(frame,data=current()){
   if(editorMutationBlocked()||current()!==data||!GraphFrames.read(data).some(item=>item.id===frame.id))return false;
   return change(()=>GraphFrames.write(data,GraphFrames.read(data).filter(item=>item.id!==frame.id)),{localize:false});
 }
-function selectGroupFrame(frame){
+function selectGroupFrame(frame,toggle=false){
   focusGraphCanvas();
-  const members=groupFrameMembers(frame);selection=new Set(members.map(n=>n.id));selected=members[0]?.id||null;selectedEdge=null;
-  document.querySelectorAll('.node').forEach(card=>card.classList.toggle('selected',selection.has(card.dataset.node)));
-  inspector();renderNavigation();positionGroupFrames();
+  const members=groupFrameMembers(frame),remove=toggle&&members.every(n=>selection.has(n.id));
+  if(!toggle)selection.clear();
+  for(const node of members){if(remove)selection.delete(node.id);else selection.add(node.id);}
+  selected=selection.has(selected)?selected:[...selection].at(-1)||null;selectedEdge=null;
+  selectedInputId=null;resetArrowNavigation();refreshCanvasSelection();
 }
 function beginGroupFrameRename(frame){
   if(editorMutationBlocked())return;
@@ -204,7 +206,7 @@ function beginGroupFrameRename(frame){
 function dragGroupFrame(event,frame,heading){
   if(event.button!==0||event.target.closest('input,button'))return;
   event.preventDefault();event.stopPropagation();nodeDragGesture?.cancel();nodeResizeGesture?.cancel();touchGraphGesture?.cancel();clearWireGesture();closeCreator();
-  selectGroupFrame(frame);if(editorMutationBlocked())return;
+  selectGroupFrame(frame,selectionModifier(event));if(selectionModifier(event)||editorMutationBlocked())return;
   const owner=graph,data=current(),zoom=scale*uiScaleFactor(),start={x:event.clientX,y:event.clientY};
   const positions=groupFrameMembers(frame).map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),x:node.ui?.x||0,y:node.ui?.y||0}));
   if(!positions.length||positions.some(p=>!p.card))return;
@@ -263,11 +265,11 @@ function renderGroupFrames(){
     heading.onpointerdown=e=>{if(current()===data)dragGroupFrame(e,frame,heading);};
     heading.ondblclick=e=>{e.preventDefault();e.stopPropagation();if(current()===data)beginGroupFrameRename(frame);};
     heading.onclick=e=>e.stopPropagation();heading.oncontextmenu=e=>e.stopPropagation();
-    heading.onkeydown=e=>{if(e.target===heading&&e.key.toLowerCase()==='g'&&(e.ctrlKey||e.metaKey||e.altKey))return;e.stopPropagation();if(e.target!==heading)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();selectGroupFrame(frame);}if(e.key==='F2'){e.preventDefault();beginGroupFrameRename(frame);}};
+    heading.onkeydown=e=>{if(e.target===heading&&e.key.toLowerCase()==='g'&&(e.ctrlKey||e.metaKey||e.altKey))return;e.stopPropagation();if(e.target!==heading)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();selectGroupFrame(frame,selectionModifier(e));}if(e.key==='F2'){e.preventDefault();beginGroupFrameRename(frame);}};
     const corner=el('button',{type:'button',class:'group-select-handle','data-frame-select':frame.id,'aria-label':t('frame.selectMembers'),title:t('frame.selectMembers')});
     corner.onpointerdown=corner.ondblclick=corner.oncontextmenu=e=>e.stopPropagation();
     corner.onkeydown=e=>e.stopPropagation();
-    corner.onclick=e=>{e.stopPropagation();if(current()===data&&EDITOR_DEV_SETTINGS.groupCornerSelect)selectGroupFrame(frame);};
+    corner.onclick=e=>{e.stopPropagation();if(current()===data&&EDITOR_DEV_SETTINGS.groupCornerSelect)selectGroupFrame(frame,selectionModifier(e));};
     heading.append(name,color,rename,remove);card.append(heading,corner);layer.append(card);
   }
   positionGroupFrames();

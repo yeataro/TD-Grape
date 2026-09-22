@@ -65,10 +65,10 @@ function commitGraphTrash(target){
 }
 function showTrashWireProxy(x,y){if(!EDITOR_DEV_SETTINGS.canvasTrash)return;const proxy=$('#graphtrashproxy');proxy.hidden=false;proxy.style.left=x/uiScaleFactor()+16+'px';proxy.style.top=y/uiScaleFactor()-32+'px';}
 function dragExistingWire(path,event,index){
-  if(!EDITOR_DEV_SETTINGS.canvasTrash||event.button!==0||event.pointerType==='touch'||readonly)return;
+  if(!EDITOR_DEV_SETTINGS.canvasTrash||event.button!==0||event.pointerType==='touch'||readonly||selectionModifier(event))return;
   event.stopPropagation();clearWireGesture();nodeDragGesture?.cancel();suppressWireClick=false;
   const canvas=$('#canvas'),sx=event.clientX,sy=event.clientY,target=trashTarget('edge',index);let moved=false;
-  canvas.focus({preventScroll:true});selectedEdge=index;selected=null;selection.clear();inspector();renderNavigation();wires();
+  canvas.focus({preventScroll:true});setSelectedEdges([current().edges[index]]);selected=null;selection.clear();refreshCanvasSelection();
   const finish=()=>{
     wireGesture=null;clearGraphTrash();
     window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('blur',cancel);window.removeEventListener('resize',cancel);
@@ -95,7 +95,7 @@ function isNodeDragSurface(target,card){
 }
 function dragNodeTitle(event,node,title,cards,onFinish){
   if(event.button!==0)return;event.preventDefault();event.stopPropagation();closeCreator();
-  if(event.ctrlKey||event.metaKey)return;
+  if(selectionModifier(event))return;
   nodeDragGesture?.cancel();clearWireGesture();
   if(!selection.has(node.id))selectNode(node);else {focusGraphCanvas();selected=node.id;selectedEdge=null;}
   document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();
@@ -1265,6 +1265,29 @@ function navigateArrow(key){
   moveArrowNavigationView(next);
   return true;
 }
+function selectionModifier(event){return event.ctrlKey||event.metaKey||event.shiftKey;}
+// Edge references belong only to the current graph snapshot. Never carry indexes
+// across document replacement or let removal select a different edge by accident.
+let canvasEdgeSelection=null;
+function setSelectedEdges(edges){
+  const data=current(),items=[...new Set(edges)].filter(edge=>data.edges.includes(edge));
+  canvasEdgeSelection=items.length?{owner:graph,data,items}:null;
+  selectedEdge=items.length?data.edges.indexOf(items.at(-1)):null;
+}
+function selectedCanvasEdges(){
+  if(selectedEdge===null){canvasEdgeSelection=null;return [];}
+  const data=current();
+  if(!canvasEdgeSelection)setSelectedEdges([data.edges[selectedEdge]]);
+  else if(canvasEdgeSelection.owner!==graph||canvasEdgeSelection.data!==data)setSelectedEdges([]);
+  else setSelectedEdges(canvasEdgeSelection.items);
+  return canvasEdgeSelection?.items||[];
+}
+function selectCanvasEdge(edge,toggle=false){
+  const items=toggle?selectedCanvasEdges():[];
+  setSelectedEdges(toggle&&items.includes(edge)?items.filter(item=>item!==edge):[...items,edge]);
+  selected=null;selection.clear();selectedInputId=null;resetArrowNavigation();focusGraphCanvas();
+  refreshCanvasSelection();
+}
 function selectNode(n,toggle=false){
   resetArrowNavigation();
   selectedInputId=null;refreshSourceSelection();helpContext='node';
@@ -1277,7 +1300,8 @@ function refreshCanvasSelection(){
   // Selection changes do not change node contents, port geometry or the library.
   // Keep those DOM trees intact; only update selection decoration and controls.
   for(const card of document.querySelectorAll('#cards .node'))card.classList.toggle('selected',selection.has(card.dataset.node));
-  for(const path of document.querySelectorAll('#wires path.selected'))path.classList.remove('selected');
+  const edges=new Set(selectedCanvasEdges());
+  for(const path of document.querySelectorAll('#wires path[data-from]'))path.classList.toggle('selected',edges.has(path.edgeSelectionItem));
   const frames=new Map(GraphFrames.read(current()).map(frame=>[frame.id,frame]));
   for(const card of document.querySelectorAll('#groupframes .group-frame'))card.classList.toggle('selected',frames.get(card.dataset.frame)?.nodes.every(id=>selection.has(id))||false);
   refreshSourceSelection();inspector();renderNavigation();
@@ -1613,7 +1637,7 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     if(isAnnotationNode(n))title.append(noteAppearanceControls(n));
     let suppressCardClick=false;
     card.dataset.dragSurface=isAnnotationNode(n)||!EDITOR_DEV_SETTINGS.nodeBodyDrag?'header':'body';
-    card.onpointerdown=e=>{if(isNodeDragSurface(e.target,card))dragNodeTitle(e,n,card,cards,moved=>{suppressCardClick=moved;});};
+    card.onpointerdown=e=>{if(e.button===0)suppressCardClick=false;if(isNodeDragSurface(e.target,card))dragNodeTitle(e,n,card,cards,moved=>{suppressCardClick=moved;});};
     card.append(title);const list=el('div',{class:'ports'+(collapsed?' collapsed-ports':'')});
     const portRow=(kind,name,missing=false,compact=false)=>{
       const className=kind==='inputs'?'input':'output',type=(projection?.ports?.[kind]||ports(n,kind))[name]||'?';
@@ -1658,7 +1682,7 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     else if(d?.key==='comment')card.append(commentNodeEditor(n,true));
     else if(nodeComment(n))card.append(nodeCanvasComment(n));
     }
-    card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,e.ctrlKey||e.metaKey);document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));inspector();renderNavigation();};
+    card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,selectionModifier(e));refreshCanvasSelection();};
     card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);appendNodeResizeHandle(card,n);if(isAnnotationNode(n))applyNoteColorContrast(card);
     return card;
 }
@@ -2156,7 +2180,7 @@ function installTouchNavigation(canvas){
   };
   const touchPort=(x,y)=>findWireTarget([...$('#cards').querySelectorAll('.port')],x,y,22);
   const edgeIndex=path=>path?current().edges.findIndex(e=>e.from.join(':')===path.dataset.from&&e.to.join(':')===path.dataset.to):-1;
-  const selectEdge=index=>{selectedEdge=index;selected=null;selection.clear();syncSelection();inspector();wires();renderNavigation();};
+  const selectEdge=index=>{setSelectedEdges([current().edges[index]]);selected=null;selection.clear();syncSelection();inspector();wires();renderNavigation();};
   const openMenu=(g,p)=>{
     if(g.node&&!selection.has(g.node.id)){selectNode(g.node);syncSelection();inspector();}
     else if(g.edge>=0)selectEdge(g.edge);
@@ -2436,26 +2460,27 @@ function graphMenuIcon(action){
 }
 function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
   closeGraphMenu();closeArrangeMenu();closeCreator();cancelNodePlacement();cancelConnection();
-  if(edge){selectedEdge=current().edges.indexOf(edge);selected=null;selection.clear();refreshCanvasSelection();}
+  if(edge){if(!selectedCanvasEdges().includes(edge))setSelectedEdges([edge]);selected=null;selection.clear();refreshCanvasSelection();}
   if(nodeId&&!selection.has(nodeId)){selectNode(current().nodes.find(n=>n.id===nodeId));render();}
   const position=graphPoint(x,y);
   const menu=el('div',{id:'grapheditmenu',role:'menu','data-input':touch?'touch':'mouse','aria-label':t('edit.menu')}),count=clipboardSelection().length;
   const {nodes:collapseNodes,canCollapse,canExpand}=nodeCollapseSelectionState();
   const owner=graph,level=current(),ids=selectedCanvasNodes().map(n=>n.id).join('\0'),edgeKey=edge&&JSON.stringify([edge.from,edge.to]);
-  const sameContext=()=>graph===owner&&current()===level&&(edge?level.edges.includes(edge)&&JSON.stringify([edge.from,edge.to])===edgeKey:selectedCanvasNodes().map(n=>n.id).join('\0')===ids);
+  const sameContext=()=>graph===owner&&current()===level&&(edge?level.edges.includes(edge)&&JSON.stringify([edge.from,edge.to])===edgeKey&&selectedCanvasEdges().length===menuEdges.length&&selectedCanvasEdges().every((item,i)=>item===menuEdges[i]):selectedCanvasNodes().map(n=>n.id).join('\0')===ids);
   const nodeIds=new Set(selectedCanvasNodes().map(node=>node.id));
   const nodeEdges=side=>level.edges.filter(edge=>nodeIds.has(edge[side][0]));
   const sourceEdges=()=>level.edges.filter(item=>item.from[0]===edge.from[0]&&item.from[1]===edge.from[1]);
   const selectEndpoint=side=>{const node=level.nodes.find(n=>n.id===edge[side][0]);if(node){selectNode(node);refreshCanvasSelection();if(EDITOR_DEV_SETTINGS.frameWireEndpoint)fitNodes([node],true);}};
+  const menuEdges=edge?[...selectedCanvasEdges()]:[];
   const groups=edge?[[
-    ['wireStyle','Wire','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'wire')],
-    ['linkStyle','Link','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'link')],
+    ['wireStyle','Wire','',!editorMutationBlocked(),()=>setEdgeStyles(menuEdges,'wire')],
+    ['linkStyle','Link','',!editorMutationBlocked(),()=>setEdgeStyles(menuEdges,'link')],
   ],[
     ['selectSource',t('wire.selectSource'),'',true,()=>selectEndpoint('from')],
     ['selectDestination',t('wire.selectDestination'),'',true,()=>selectEndpoint('to')],
     ['sourceLinks',t('wire.sourceAllLink'),'',!editorMutationBlocked()&&sourceEdges().some(item=>item.ui?.style!=='link'),()=>setEdgeStyles(sourceEdges(),'link')],
   ],[
-    ['delete',t('wire.disconnectSelected'),'',!editorMutationBlocked(),()=>change(()=>{const index=level.edges.indexOf(edge);if(index>=0)level.edges.splice(index,1);selectedEdge=null;})]
+    ['delete',t('wire.disconnectSelected'),'',!editorMutationBlocked(),remove]
   ]]:[[
     ['add',t('action.nodes'),shortcutLabel('add'),!readonly,()=>openCreator(x,y)],
   ],[
@@ -2491,7 +2516,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
       if(!edge)decorateShortcutButton(b,key==='fitAll'?'fit':key==='fit'?'fitSelection':key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
       if(key==='focus'||key==='fullscreen'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(key==='focus'?graphFocused:!!document.fullscreenElement));}
       if(key==='toggleLinkLines'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(showLinkLines));decorateShortcutButton(b,'toggleLinkLines');}
-      if(key==='wireStyle'||key==='linkStyle'){b.setAttribute('role','menuitemradio');const checked=(edge.ui?.style==='link')===(key==='linkStyle');b.setAttribute('aria-checked',String(checked));}
+      if(key==='wireStyle'||key==='linkStyle'){b.setAttribute('role','menuitemradio');const checked=menuEdges.every(item=>(item.ui?.style==='link')===(key==='linkStyle'));b.setAttribute('aria-checked',String(checked));}
       if(['wireStyle','linkStyle','toggleLinkLines'].includes(key)){
         b.classList.add('graph-menu-check');const icon=selectionIcon('m5 12 4 4L19 6');icon.classList.add('menu-check-icon');caption.firstElementChild.replaceWith(icon);
       }
