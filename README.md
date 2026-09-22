@@ -49,7 +49,7 @@ This version will therefore no longer serve as the architectural foundation for 
 
 ## The Next Project
 
-The next open-source project is tentatively called **Grape (name not final)**. Neither its name nor its concrete structure has been finalized.
+The next open-source project is tentatively called **GrapeL (name not final)**. Neither its name nor its concrete structure has been finalized.
 
 The new starting point will center on human-maintainable node definitions and the tools used to edit them. Before building a minimal implementation, it will establish how data describes nodes and how each part uses that data.
 

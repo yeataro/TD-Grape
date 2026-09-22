@@ -1,0 +1,104 @@
+{
+  "$schema": "https://grapel.org/schemas/node-definition.v1.json",
+  "schemaVersion": 1,
+  "id": "compare",
+  "display": {
+    "label": "Compare",
+    "help": "比較兩個數值或向量；向量比較輸出對應分量的布林向量結果。"
+  },
+  "options": {
+    "op": {
+      "default": "lt",
+      "choices": [
+        { "id": "lt", "label": "<" },
+        { "id": "le", "label": "<=" },
+        { "id": "gt", "label": ">" },
+        { "id": "ge", "label": ">=" },
+        { "id": "eq", "label": "==" },
+        { "id": "ne", "label": "!=" }
+      ]
+    }
+  },
+  "environments": {
+    "webgl2": {
+      "stages": ["fragment"],
+      "subsets": ["scalar", "vector"]
+    },
+    "td_glsl_top": {
+      "stages": ["fragment"],
+      "subsets": ["scalar", "vector"]
+    }
+  },
+  "subsets": {
+    "scalar": {
+      "signatures": [
+        {
+          "id": "float",
+          "inputs": {
+            "a": { "type": "float", "default": 0.0 },
+            "b": { "type": "float", "default": 0.0 }
+          },
+          "outputs": {
+            "out": { "type": "bool" }
+          }
+        },
+        {
+          "id": "int",
+          "inputs": {
+            "a": { "type": "int", "default": 0 },
+            "b": { "type": "int", "default": 0 }
+          },
+          "outputs": {
+            "out": { "type": "bool" }
+          }
+        }
+      ],
+      "emit": {
+        "capability": "glsl.expression",
+        "mappings": {
+          "op": {
+            "lt": "<",
+            "le": "<=",
+            "gt": ">",
+            "ge": ">=",
+            "eq": "==",
+            "ne": "!="
+          }
+        },
+        "outputs": {
+          "out": "({{input.a}} {{option.op}} {{input.b}})"
+        }
+      }
+    },
+    "vector": {
+      "signatureTemplates": [
+        {
+          "types": ["vec2", "vec3", "vec4"],
+          "inputs": {
+            "a": { "type": "$T", "default": 0.0 },
+            "b": { "type": "$T", "default": 0.0 }
+          },
+          "outputs": {
+            "out": { "type": "b$T" }
+          }
+        }
+      ],
+      "emit": {
+        "capability": "glsl.expression",
+        "mappings": {
+          "op": {
+            "lt": "lessThan",
+            "le": "lessThanEqual",
+            "gt": "greaterThan",
+            "ge": "greaterThanEqual",
+            "eq": "equal",
+            "ne": "notEqual"
+          }
+        },
+        "outputs": {
+          "out": "{{option.op}}({{input.a}}, {{input.b}})"
+        }
+      }
+    }
+  }
+}
