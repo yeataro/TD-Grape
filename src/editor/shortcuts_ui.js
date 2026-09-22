@@ -19,6 +19,7 @@ const EDITOR_SHORTCUTS=Object.freeze({
   autoArrange:{label:'arrange.auto',keys:['L'],section:'edit'},
   autoArrangeReverse:{label:'arrange.autoReverse',keys:['Shift+L'],section:'edit'},
   add:{label:'action.nodes',keys:['Tab'],section:'navigation'},
+  toggleLinkLines:{label:'view.showLinkLines',hint:'view.showLinkLines.hint',keys:['X'],section:'navigation'},
   fit:{label:'action.fit',hint:'action.fit.hint',keys:['H'],section:'navigation'},
   fitSelection:{label:'action.fitSelection',hint:'action.fitSelection.hint',keys:['F'],section:'navigation'},
   fullscreen:{label:'view.fullscreen',keys:['Alt+Enter'],section:'navigation'},

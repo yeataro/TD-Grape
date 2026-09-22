@@ -20,8 +20,8 @@
   "messages": {
     "sources.showNotes": {"en":"Notes","zh-Hant":"顯示備註"},
     "sources.minimal": {"en":"Minimal","zh-Hant":"最小化顯示"},
-    "experiments.showLinkLines": {"en":"Show Link lines","zh-Hant":"顯示 Link 線"},
-    "experiments.showLinkLines.hint": {"en":"Show straight dashed Link lines. Port navigation arrows remain available when hidden.","zh-Hant":"顯示直線虛線的 Link；隱藏線條時，接孔導覽箭頭仍保留。"},
+    "view.showLinkLines": {"en":"Show Link lines","zh-Hant":"顯示 Link 線"},
+    "view.showLinkLines.hint": {"en":"Show straight dashed Link lines. Port navigation arrows remain available when hidden.","zh-Hant":"顯示直線虛線的 Link；隱藏線條時，接孔導覽箭頭仍保留。"},
     "wire.linkNavigate": {"en":"Link: click to select and Frame all connected nodes; right-click to choose one","zh-Hant":"Link：左鍵選取並 Frame 所有對端節點；右鍵選擇一個節點"},
     "wire.linkTargets": {"en":"Link connected nodes","zh-Hant":"Link 連接的節點"},
     "pixel.nativeFinishing": {"en": "Native MAT finishing", "zh-Hant": "原生 MAT 最後處理"},

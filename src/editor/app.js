@@ -480,7 +480,7 @@ function wirePathFromTarget(target){
 function wires(){
   const svg=$('#wires'),hits=document.createDocumentFragment(),paint=document.createDocumentFragment();svg.replaceChildren();
   current().edges.forEach((edge,index)=>{
-    const link=edge.ui?.style==='link';if(link&&!EDITOR_DEV_SETTINGS.showLinkLines)return;
+    const link=edge.ui?.style==='link';if(link&&!showLinkLines)return;
     const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;
     const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;
     const dx=Math.max(70,Math.abs(q.x-p.x)*.5),ns='http://www.w3.org/2000/svg';
@@ -802,7 +802,27 @@ const appearanceStorageKey='sgrapeAppearanceV1';
 const customNamesStorageKey='sgrapeCustomNamesV1';
 let showCustomNodeNames=false;
 function customNodeNamesEnabled(){return showCustomNodeNames;}
+const linkLinesStorageKey='sgrapeLinkLinesV1';
+let showLinkLines=true;
+function renderLinkLinesVisibility(){
+  const button=$('#showlinklines');if(!button)return;
+  button.setAttribute('aria-pressed',String(showLinkLines));
+  if(button.getAttribute('role')==='menuitemcheckbox')button.setAttribute('aria-checked',String(showLinkLines));
+  decorateShortcutButton(button,'toggleLinkLines');
+}
+function setLinkLinesVisible(visible){
+  showLinkLines=!!visible;
+  try{localStorage.setItem(linkLinesStorageKey,String(showLinkLines));}catch{}
+  renderLinkLinesVisibility();if(graph)wires();
+}
+function toggleLinkLines(){setLinkLinesVisible(!showLinkLines);}
 function installGraphChrome(){
+  try{
+    const saved=localStorage.getItem(linkLinesStorageKey);
+    showLinkLines=saved===null?JSON.parse(localStorage.getItem(experimentsStorageKey)||'{}').showLinkLines!==false:saved!=='false';
+    if(saved===null)localStorage.setItem(linkLinesStorageKey,String(showLinkLines));
+  }catch{}
+  $('#showlinklines').onclick=toggleLinkLines;renderLinkLinesVisibility();
   try{showCustomNodeNames=localStorage.getItem(customNamesStorageKey)==='true';}catch{}
   const button=$('#customnames'),toolbar=$('.toolbar');
   button.setAttribute('aria-pressed',String(showCustomNodeNames));
@@ -841,7 +861,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['showLinkLines','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
+  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.

@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, showLinkLines: true, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -2076,6 +2076,10 @@ function installGraphInteractions(){
       if(graphNavigationReady&&navigateArrow(e.key))e.preventDefault();
       return;
     }
+    if(plainKey==='x'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
+      if(graphCommandReady&&!nodePlacement){e.preventDefault();if(!e.repeat)toggleLinkLines();}
+      return;
+    }
     if(['h','f','l'].includes(plainKey)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&(!e.shiftKey||plainKey==='l')){
       if(graphCommandReady){
         if(plainKey==='h'){e.preventDefault();fit();}
@@ -2388,6 +2392,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
     ['wireStyle','Wire','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'wire')],
     ['linkStyle','Link','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'link')],
   ],[
+    ['toggleLinkLines',t('view.showLinkLines'),shortcutLabel('toggleLinkLines'),true,toggleLinkLines],
     ['selectSource',t('wire.selectSource'),'',true,()=>selectEndpoint('from')],
     ['selectDestination',t('wire.selectDestination'),'',true,()=>selectEndpoint('to')],
   ],[
@@ -2409,6 +2414,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
     ['detachFrame',t('frame.detach'),shortcutLabel('detachFrame'),!editorMutationBlocked(),detachGroupFrameSelection],
     ['group',t('function.group'),shortcutLabel('group'),!readonly&&count>0,groupSelection],
   ],[
+    ['toggleLinkLines',t('view.showLinkLines'),shortcutLabel('toggleLinkLines'),true,toggleLinkLines],
     ['fitAll',t('action.fit'),shortcutLabel('fit'),true,()=>$('#fit').click()],
     ['fit',t('action.fitSelection'),shortcutLabel('fitSelection'),true,fitSelection],
     ['focus',t(graphFocused?'view.restoreLayout':'view.graphFocus'),'',true,()=>$('#graphfocus').click()],
@@ -2424,6 +2430,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
       const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));
       if(!edge)decorateShortcutButton(b,key==='fitAll'?'fit':key==='fit'?'fitSelection':key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
       if(key==='focus'||key==='fullscreen'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(key==='focus'?graphFocused:!!document.fullscreenElement));}
+      if(key==='toggleLinkLines'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(showLinkLines));decorateShortcutButton(b,'toggleLinkLines');}
       if(key==='wireStyle'||key==='linkStyle'){b.setAttribute('role','menuitemradio');const checked=(edge.ui?.style==='link')===(key==='linkStyle');b.setAttribute('aria-checked',String(checked));b.querySelector('small').textContent=checked?'✓':'';}
       if(key==='fullscreen')b.title=$('#uifullscreen').title;
       b.onclick=()=>{const valid=sameContext();closeGraphMenu();$('#canvas').focus({preventScroll:true});if(valid)action();};menu.append(b);
