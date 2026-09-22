@@ -32,11 +32,12 @@ const {harness}=require('./test_glsl_code.cjs');
   const arrow=()=>page.locator('.link-direction').first();
   await arrow().hover();assert.equal(await wire('b').evaluate(e=>e.classList.contains('wire-hover')),true);
   await arrow().click({button:'right'});await page.mouse.move(10,10);
-  for(const [key,checked]of [['wireStyle',false],['linkStyle',true],['toggleLinkLines',true]]){
+  for(const [key,checked]of [['wireStyle',false],['linkStyle',true]]){
    const item=page.locator('[data-edit="'+key+'"]');assert.equal(await item.getAttribute('aria-checked'),String(checked));
    assert.equal(await item.locator('.menu-check-icon').evaluate(e=>getComputedStyle(e).visibility),checked?'visible':'hidden');
    assert.equal(await item.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
   }
+  assert.equal(await page.locator('#grapheditmenu [data-edit="toggleLinkLines"]').count(),0);
   await page.screenshot({path:path.join(folder,'link-menu.png')});await page.keyboard.press('Escape');
   await arrow().click();assert.equal(await page.evaluate(()=>selectedEdge),0);
   checks.push('midpoint triangles follow source-to-destination direction, share multiline hints and wire interaction; menu state uses left checkmarks without selected fill');

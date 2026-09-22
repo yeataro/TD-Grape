@@ -2410,7 +2410,6 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
     ['wireStyle','Wire','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'wire')],
     ['linkStyle','Link','',!editorMutationBlocked(),()=>setEdgeStyle(edge,'link')],
   ],[
-    ['toggleLinkLines',t('view.showLinkLines'),shortcutLabel('toggleLinkLines'),true,toggleLinkLines],
     ['selectSource',t('wire.selectSource'),'',true,()=>selectEndpoint('from')],
     ['selectDestination',t('wire.selectDestination'),'',true,()=>selectEndpoint('to')],
   ],[
