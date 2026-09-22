@@ -19,7 +19,7 @@ def reachable(core,functions,root):
     found={f['id']:f for f in functions};seen=set();order=[]
     def visit(ident):
         if ident in seen:return
-        if ident not in found:raise ValueError('Missing nested Function: '+str(ident))
+        if ident not in found:raise ValueError('Missing nested Subgraph: '+str(ident))
         seen.add(ident);order.append(ident)
         for n in found[ident]['graph']['nodes']:
             if n['definitionUuid']==core.CALL:visit(n['params']['functionId'])
@@ -58,12 +58,12 @@ def validate_functions(core,functions,root,type_definitions=None):
     probe=core.demo_graph('color');probe['declarations']=[];probe['functions']=functions
     if type_definitions:probe['typeDefinitions']=copy.deepcopy(type_definitions)
     checked=core._functions(probe)
-    if root not in checked:raise ValueError('Missing root Function')
-    if len(reachable(core,functions,root))!=len(functions):raise ValueError('Unrelated Function in personal snapshot')
+    if root not in checked:raise ValueError('Missing root Subgraph')
+    if len(reachable(core,functions,root))!=len(functions):raise ValueError('Unrelated Subgraph in personal snapshot')
     for f in functions:
         for n in f['graph']['nodes']:
             if n.get('definitionUuid') in ('sgrape.builtin.uniform','sgrape.builtin.texture','sgrape.builtin.sampler','sgrape.builtin.constant','sgrape.builtin.top_input','sgrape.builtin.builtin_source'):
-                raise ValueError('Personal Functions must be self-contained. Place Uniform and Texture 2D outside the Function and pass their values through Function Input.')
+                raise ValueError('Personal Subgraphs must be self-contained. Place Uniform and Texture 2D outside the Subgraph and pass their values through Subgraph Input.')
     # A TOP-only host type is valid in a portable function; it must not be
     # tested exclusively in a MAT shell. Each accepted target still validates
     # every promised stage, including disconnected contents and dependencies.
@@ -78,7 +78,7 @@ def validate_functions(core,functions,root,type_definitions=None):
         else:targets.append(target)
     if not targets:
         if errors:raise ValueError('No supported Shader target: '+'; '.join(target.upper()+': '+str(exc) for target,exc in errors))
-        raise ValueError('Function has no supported Shader target')
+        raise ValueError('Subgraph has no supported Shader target')
     return targets
 
 def build(core,graph,root):
@@ -101,16 +101,16 @@ def build(core,graph,root):
     payload={'format':FORMAT,'formatVersion':1,'root':'fn0','functions':definitions}
     if type_definitions:payload['typeDefinitions']=type_definitions
     packet={**payload,'contentHash':core.digest(payload)}
-    if len(encode(packet))>MAX_BYTES:raise ValueError('Personal Function exceeds 256 KB')
+    if len(encode(packet))>MAX_BYTES:raise ValueError('Personal Subgraph exceeds 256 KB')
     return packet
 
 def _validate_packet(core,packet):
     if not isinstance(packet,dict) or packet.get('format')!=FORMAT or packet.get('formatVersion')!=1:
-        raise ValueError('Unsupported personal Function format')
-    if set(packet)-{'typeDefinitions'}!={'format','formatVersion','root','functions','contentHash'}:raise ValueError('Unexpected personal Function fields')
-    if len(encode(packet))>MAX_BYTES:raise ValueError('Personal Function exceeds 256 KB')
+        raise ValueError('Unsupported personal Subgraph format')
+    if set(packet)-{'typeDefinitions'}!={'format','formatVersion','root','functions','contentHash'}:raise ValueError('Unexpected personal Subgraph fields')
+    if len(encode(packet))>MAX_BYTES:raise ValueError('Personal Subgraph exceeds 256 KB')
     payload={key:value for key,value in packet.items() if key!='contentHash'}
-    if core.digest(payload)!=packet['contentHash']:raise ValueError('Personal Function checksum mismatch')
+    if core.digest(payload)!=packet['contentHash']:raise ValueError('Personal Subgraph checksum mismatch')
     return validate_functions(core,packet['functions'],packet['root'],packet.get('typeDefinitions'))
 
 def validate(core,packet):
@@ -137,16 +137,16 @@ def read(core,folder):
     if not folder.exists():return {'items':items,'issues':issues,'folder':str(folder)}
     if not folder.is_dir():raise ValueError('Personal Folder must be a directory')
     paths=sorted(folder.glob('*'+SUFFIX),key=lambda p:p.name.casefold())
-    if len(paths)>MAX_FILES:issues.append({'file':'','error':'Only the first 64 personal Function files are loaded.'})
+    if len(paths)>MAX_FILES:issues.append({'file':'','error':'Only the first 64 personal Subgraph files are loaded.'})
     seen=set()
     for path in paths[:MAX_FILES]:
         try:
             if path.is_symlink() or path.resolve().parent!=folder.resolve():raise ValueError('Linked files outside Personal Folder are not loaded')
-            if not path.is_file() or path.stat().st_size>MAX_BYTES:raise ValueError('Personal Function exceeds 256 KB or is not a file')
+            if not path.is_file() or path.stat().st_size>MAX_BYTES:raise ValueError('Personal Subgraph exceeds 256 KB or is not a file')
             total+=path.stat().st_size
             if total>MAX_TOTAL_BYTES:raise ValueError('Personal library exceeds 4 MB load limit')
             with path.open('rb') as handle:data=handle.read(MAX_BYTES+1)
-            if len(data)>MAX_BYTES:raise ValueError('Personal Function exceeds 256 KB')
+            if len(data)>MAX_BYTES:raise ValueError('Personal Subgraph exceeds 256 KB')
             packet=validate(core,json.loads(data))
             if packet['contentHash'] in seen:continue
             seen.add(packet['contentHash']);items.append(entry(core,packet))

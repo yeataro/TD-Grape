@@ -1810,7 +1810,12 @@ function renderBrowserDetail(entry){
   const body=el('div',{class:'browser-detail-body',tabindex:'0'});body.append(el('small',{class:'muted'},browserBadges(entry)));
   body.append(el('p',{class:'browser-category-path'},entry.meta.path.map((key,i)=>i?t('browser.branch.'+key):browserCategoryLabel(key)).join(' › ')));
   const variants=creatorVariants(entry.d,null),variant=variants[0];
-  if(variant){
+  if(variant&&entry.meta.subgraph){
+    const ports=el('div',{class:'browser-signature subgraph-interface'});
+    for(const [direction,label]of [['inputs','browser.inputs'],['outputs','browser.outputs']]){
+      const row=el('div',{});row.append(el('small',{class:'muted'},t(label)),el('code',{},Object.entries(variant[direction]).map(([name,type])=>name+' · '+displayType(type)).join('\n')||'—'));ports.append(row);
+    }body.append(ports);
+  }else if(variant){
     const signature=el('div',{class:'browser-signature'}),inputs=Object.entries(variant.inputs).map(([name,type])=>type+' '+name).join(', '),outputs=Object.entries(variant.outputs).map(([name,type])=>type+(Object.keys(variant.outputs).length>1?' '+name:'')).join(', ');
     signature.append(el('code',{},(entry.meta.glslName||entry.d.label)+'('+inputs+')'+(outputs?' → '+outputs:'')));
     if(variants.length>1)signature.append(el('small',{class:'muted'},t('browser.signatureExample')));body.append(signature);

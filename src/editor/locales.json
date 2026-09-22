@@ -394,8 +394,8 @@
       "en": "PNG · Download diagram with graph data"
     },
     "png.scope": {
-      "zh-Hant": "圖片顯示目前這一層的所有節點，內含完整 Shader（含 Function）的 Graph 資料，可透過「匯入」還原。外部 TOP 貼圖仍保留為參照。",
-      "en": "The image shows every node on this graph level. Embedded data contains the full Shader, including Functions, and can be restored through Import. External TOP textures remain references."
+      "zh-Hant": "圖片顯示目前這一層的所有節點，內含完整 Shader（含 Subgraph）的 Graph 資料，可透過「匯入」還原。外部 TOP 貼圖仍保留為參照。",
+      "en": "The image shows every node on this graph level. Embedded data contains the full Shader, including Subgraphs, and can be restored through Import. External TOP textures remain references."
     },
     "png.metadata": {
       "zh-Hant": "PNG 內的 Graph JSON",
@@ -1001,28 +1001,28 @@
       "en": "New Subgraph"
     },
     "function.local": {
-      "zh-Hant": "Shader 本地 Function · 共用定義",
-      "en": "Shader Function · shared definition"
+      "zh-Hant": "Shader 本地 Subgraph · 共用定義",
+      "en": "Shader Subgraph · shared definition"
     },
     "function.source": {
-      "zh-Hant": "函式庫來源 · 首次編修會建立本地版本",
+      "zh-Hant": "資源庫來源 · 首次編修會建立本地版本",
       "en": "Library source · creates a local version on first edit"
     },
     "function.cycle": {
-      "zh-Hant": "無法進入循環引用的 Function",
-      "en": "Cannot enter a recursive Function reference"
+      "zh-Hant": "無法進入循環引用的 Subgraph",
+      "en": "Cannot enter a recursive Subgraph reference"
     },
     "function.open": {
-      "zh-Hant": "進入 Function",
-      "en": "Open Function"
+      "zh-Hant": "進入 Subgraph",
+      "en": "Open Subgraph"
     },
     "function.independent": {
       "zh-Hant": "建立獨立副本",
       "en": "Make Independent"
     },
     "function.name": {
-      "zh-Hant": "Function 名稱",
-      "en": "Function name"
+      "zh-Hant": "Subgraph 名稱",
+      "en": "Subgraph name"
     },
     "function.portName": {
       "zh-Hant": "連接埠名稱",
@@ -1033,12 +1033,12 @@
       "en": "Default value"
     },
     "help.function": {
-      "zh-Hant": "**Function** 將可重用的子圖封裝為一次呼叫。雙擊可進入；同一個 Shader 內引用相同本地定義的節點會一起更新。\n\n函式庫來源在第一次編修時建立本地版本，保留原始來源。`Make Independent` 只為選取的呼叫建立獨立定義。",
-      "en": "A **Function** packages a reusable graph as a call. Double-click to enter. Calls sharing a local definition update together within this Shader.\n\nEditing a library source creates a local version and preserves the source. `Make Independent` creates a separate definition for the selected call."
+      "zh-Hant": "**Subgraph** 將一組節點封裝為可重用的子圖。雙擊可進入；同一個 Shader 內引用相同本地定義的節點會一起更新。編譯時，子圖會在各使用位置展開成目前階段的 GLSL。\n\n編輯資源庫來源會建立本地版本，保留原始來源。`Make Independent` 為選取的子圖節點建立獨立定義。",
+      "en": "A **Subgraph** contains a reusable group of nodes. Double-click to enter. Nodes sharing a local definition update together within this Shader. Compilation expands the subgraph at each use into the current stage’s GLSL.\n\nEditing a library source creates a local version and preserves the source. `Make Independent` creates a separate definition for the selected subgraph node."
     },
     "help.functionPorts": {
-      "zh-Hant": "**Function Input / Output** 定義子圖與呼叫節點之間的介面。每個連接埠都有型別與預設值；連線優先使用來源值。\n\n圖內的上一層只回到 Shader 或呼叫所在的 Function；TD 元件位置另行顯示。",
-      "en": "**Function Input / Output** define the interface between a subgraph and its call nodes. Each port has a type and a default; a wire takes precedence.\n\nParent navigation stays within this Shader. The TD component location is shown separately."
+      "zh-Hant": "**Subgraph Input / Output** 定義子圖與外部節點之間的介面。每個連接埠都有型別與預設值；連線優先使用來源值。\n\n圖內的上一層只回到 Shader 或所在的上層 Subgraph；TD 元件位置另行顯示。",
+      "en": "**Subgraph Input / Output** define the interface between a subgraph and its external nodes. Each port has a type and a default; a wire takes precedence.\n\nParent navigation stays within this Shader. The TD component location is shown separately."
     },
     "wire.incompatible": {
       "zh-Hant": "型別不相容",
@@ -1069,8 +1069,8 @@
       "en": "TD Built-ins"
     },
     "category.functions": {
-      "zh-Hant": "圖函式",
-      "en": "Graph Functions"
+      "zh-Hant": "Subgraph",
+      "en": "Subgraphs"
     },
     "create.title": {
       "zh-Hant": "新增節點",
@@ -1209,16 +1209,16 @@
       "en": "Scale a nonzero vector to unit length. Avoid zero vectors; the unconnected default is nonzero.\n\n[Khronos GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/normalize.xhtml) · [The Book of Shaders](https://thebookofshaders.com/glossary/?search=normalize)"
     },
     "help.filter.invert": {
-      "zh-Hant": "計算 `1 − RGB`，保留 alpha。雙擊查看 Function；首次修改內容才建立 Shader 本地副本。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
+      "zh-Hant": "計算 `1 − RGB`，保留 alpha。雙擊查看 Subgraph；首次修改內容才建立 Shader 本地副本。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
       "en": "Compute `1 − RGB` while preserving alpha. Double-click to inspect; the first content edit creates a Shader-local copy.\n\n[The Book of Shaders: Color](https://thebookofshaders.com/06/)"
     },
     "help.filter.contrast": {
-      "zh-Hant": "以 Pivot 為中心計算 `(RGB − Pivot) × Contrast + Pivot`，保留 alpha。Contrast = 1 保持原色，0 得到 Pivot。此 Function 不裁切 HDR 值，也不轉換色彩空間。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
+      "zh-Hant": "以 Pivot 為中心計算 `(RGB − Pivot) × Contrast + Pivot`，保留 alpha。Contrast = 1 保持原色，0 得到 Pivot。此 Subgraph 不裁切 HDR 值，也不轉換色彩空間。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
       "en": "Compute `(RGB − Pivot) × Contrast + Pivot`, preserving alpha. Contrast 1 keeps the input; 0 gives Pivot. No HDR clipping or color-space conversion is applied.\n\n[The Book of Shaders: Color](https://thebookofshaders.com/06/)"
     },
     "help.filter.color_clamp": {
-      "zh-Hant": "只限制 RGB 至 Minimum／Maximum，保留 alpha。請保持 Minimum ≤ Maximum。這是可查看與本地編修的 Function。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
-      "en": "Limit RGB to Minimum–Maximum and preserve alpha. Keep Minimum ≤ Maximum. This Function can be inspected and edited locally.\n\n[The Book of Shaders: Color](https://thebookofshaders.com/06/)"
+      "zh-Hant": "只限制 RGB 至 Minimum／Maximum，保留 alpha。請保持 Minimum ≤ Maximum。這是可查看與本地編修的 Subgraph。\n\n[The Book of Shaders：Color](https://thebookofshaders.com/06/?lan=ch)",
+      "en": "Limit RGB to Minimum–Maximum and preserve alpha. Keep Minimum ≤ Maximum. This Subgraph can be inspected and edited locally.\n\n[The Book of Shaders: Color](https://thebookofshaders.com/06/)"
     },
     "preview.top": {
       "zh-Hant": "Output Preview",
@@ -1265,12 +1265,12 @@
       "en": "Refresh Personal"
     },
     "personal.refreshed": {
-      "zh-Hant": "已重新讀取個人 Function；現有 Shader 保留原快照。",
-      "en": "Personal Functions refreshed. Existing Shaders keep their snapshots."
+      "zh-Hant": "已重新讀取個人 Subgraph；現有 Shader 保留原快照。",
+      "en": "Personal Subgraphs refreshed. Existing Shaders keep their snapshots."
     },
     "personal.saved": {
-      "zh-Hant": "已建立個人 Function 快照；目前 Shader 沒有改變。",
-      "en": "Personal Function snapshot saved. The current Shader is unchanged."
+      "zh-Hant": "已建立個人 Subgraph 快照；目前 Shader 沒有改變。",
+      "en": "Personal Subgraph snapshot saved. The current Shader is unchanged."
     },
     "personal.reused": {
       "zh-Hant": "個人調色盤已有相同快照，已重用。",
@@ -1305,16 +1305,16 @@
       "en": "Some Personal files could not be loaded. Expand Source folder and load status for details."
     },
     "personal.external": {
-      "zh-Hant": "這個 Function 引用了 Shader 的 Uniform 或貼圖。請把 Uniform／Texture 2D 放在 Function 外，經由 Function Input 傳入數值或顏色後再保存。",
-      "en": "This Function references Shader Uniforms or textures. Place Uniform / Texture 2D outside it and pass their values or colors through Function Input before saving."
+      "zh-Hant": "這個 Subgraph 引用了 Shader 的 Uniform 或貼圖。請把 Uniform／Texture 2D 放在 Subgraph 外，經由 Subgraph Input 傳入數值或顏色後再保存。",
+      "en": "This Subgraph references Shader Uniforms or textures. Place Uniform / Texture 2D outside it and pass their values or colors through Subgraph Input before saving."
     },
     "edit.failed": {
       "zh-Hant": "未套用此操作，已保留原圖。",
       "en": "This edit was not applied. The graph is unchanged. "
     },
     "function.limit": {
-      "zh-Hant": "每個 Shader 最多保留 64 個 Function 定義；本地化也需要保留來源快照。",
-      "en": "A Shader supports up to 64 Function definitions; local edits also retain source snapshots."
+      "zh-Hant": "每個 Shader 最多保留 64 個 Subgraph 定義；本地化也需要保留來源快照。",
+      "en": "A Shader supports up to 64 Subgraph definitions; local edits also retain source snapshots."
     },
     "import.title": {
       "zh-Hant": "匯入前檢查",
@@ -1405,8 +1405,8 @@
       "zh-Hant": "無法讀取型別規則，請從 TouchDesigner 重新開啟編輯器。"
     },
     "function.create": {
-      "zh-Hant": "建立 Function",
-      "en": "Create Function"
+      "zh-Hant": "建立 Subgraph",
+      "en": "Create Subgraph"
     },
     "texture.current": {
       "zh-Hant": "目前的 TOP 參數",
@@ -1613,16 +1613,16 @@
       "en": "Library categories"
     },
     "library.sources": {
-      "zh-Hant": "圖函式來源",
-      "en": "Graph function sources"
+      "zh-Hant": "Subgraph 來源",
+      "en": "Subgraph sources"
     },
     "library.tab.nodes": {
       "zh-Hant": "節點",
       "en": "Nodes"
     },
     "library.tab.functions": {
-      "zh-Hant": "圖函式",
-      "en": "Graph Functions"
+      "zh-Hant": "Subgraph",
+      "en": "Subgraphs"
     },
     "library.tab.examples": {
       "zh-Hant": "範例",
@@ -1657,16 +1657,16 @@
       "en": "Search nodes…"
     },
     "library.search.functions": {
-      "zh-Hant": "搜尋圖函式…",
-      "en": "Search graph functions…"
+      "zh-Hant": "搜尋 Subgraph…",
+      "en": "Search subgraphs…"
     },
     "library.search.examples": {
       "zh-Hant": "搜尋範例…",
       "en": "Search examples…"
     },
     "library.searchAllSources": {
-      "zh-Hant": "搜尋全部圖函式來源",
-      "en": "Searching all graph function sources"
+      "zh-Hant": "搜尋全部 Subgraph 來源",
+      "en": "Searching all subgraph sources"
     },
     "library.exampleHint": {
       "zh-Hant": "範例會載入整張 Shader 圖。未套用的變更會先詢問；載入後可 Undo。",
@@ -1685,12 +1685,12 @@
       "en": "Wrap the selected nodes in a reusable graph."
     },
     "library.noLocal": {
-      "zh-Hant": "此 Shader 尚無本地圖函式。可建立空白圖函式，或從選取的節點建立。",
-      "en": "This Shader has no local graph functions. Create one or group selected nodes."
+      "zh-Hant": "此 Shader 尚無本地 Subgraph。可建立空白 Subgraph，或從選取的節點建立。",
+      "en": "This Shader has no local subgraphs. Create one or group selected nodes."
     },
     "library.empty": {
-      "zh-Hant": "這個來源目前沒有可加入的圖函式。",
-      "en": "No graph functions are available from this source."
+      "zh-Hant": "這個來源目前沒有可加入的 Subgraph。",
+      "en": "No subgraphs are available from this source."
     },
     "library.noResults": {
       "zh-Hant": "沒有符合的項目。",
@@ -1812,8 +1812,8 @@
       "zh-Hant": "剪貼簿不是有效的 TD-Grape 節點選取資料。"
     },
     "clipboard.missing": {
-      "en": "The copied selection is missing a node, Function or declaration.",
-      "zh-Hant": "複製資料缺少節點、圖函式或宣告。"
+      "en": "The copied selection is missing a node, Subgraph or declaration.",
+      "zh-Hant": "複製資料缺少節點、Subgraph 或宣告。"
     },
     "clipboard.size": {
       "en": "The copied selection exceeds the supported graph size.",
@@ -1824,16 +1824,16 @@
       "zh-Hant": "這些節點不相容於目前的 Shader 階段。"
     },
     "clipboard.boundary": {
-      "en": "Fixed graph outputs and Function boundaries cannot be pasted.",
-      "zh-Hant": "不能貼上固定輸出或圖函式邊界節點。"
+      "en": "Fixed graph outputs and Subgraph boundaries cannot be pasted.",
+      "zh-Hant": "不能貼上固定輸出或 Subgraph 邊界節點。"
     },
     "clipboard.revision": {
       "en": "These nodes use a different definition version; use graph Import to review the differences.",
       "zh-Hant": "節點定義版本不同；請透過匯入圖來檢視差異。"
     },
     "clipboard.cycle": {
-      "en": "Pasting here would make a Function call itself.",
-      "zh-Hant": "貼在這裡會造成圖函式遞迴呼叫。"
+      "en": "Pasting here would create a Subgraph reference cycle.",
+      "zh-Hant": "貼在這裡會造成 Subgraph 循環引用。"
     },
     "parameter.node": {
       "en": "Node",
@@ -1864,16 +1864,16 @@
       "zh-Hant": "目前輸出尚未使用此參數，因此還沒有啟用的 TD 參數。"
     },
     "function.nameInvalid": {
-      "en": "Use a Function name of 1–80 characters without control characters.",
-      "zh-Hant": "函式名稱需為 1–80 個字元，不可包含控制字元。"
+      "en": "Use a Subgraph name of 1–80 characters without control characters.",
+      "zh-Hant": "Subgraph 名稱需為 1–80 個字元，不可包含控制字元。"
     },
     "function.rename": {
-      "en": "Rename Function",
-      "zh-Hant": "重新命名圖函式"
+      "en": "Rename Subgraph",
+      "zh-Hant": "重新命名 Subgraph"
     },
     "function.renameSource": {
-      "en": "Renaming creates a local version shared by this Shader’s calls. The library source stays unchanged.",
-      "zh-Hant": "改名會建立此 Shader 共用的本地版本，保留原函式庫來源。"
+      "en": "Renaming creates a local version shared by this Shader’s subgraph nodes. The library source stays unchanged.",
+      "zh-Hant": "改名會建立此 Shader 共用的本地版本，保留原資源庫來源。"
     },
     "preview.caption": {
       "en": "Preview",
@@ -2609,9 +2609,10 @@
       "zh-Hant": "請使用不重複、有效的 GLSL 名稱。",
       "en": "Use a unique, valid GLSL name."
     },
+    "inputs.bindExpression": {"zh-Hant": "Bind Expression", "en": "Bind Expression"},
     "inputs.drivers": {
-      "zh-Hant": "數值來源 / Python Expression",
-      "en": "Value source / Python Expression"
+      "zh-Hant": "數值來源",
+      "en": "Value source"
     },
     "inputs.expression": {
       "zh-Hant": "未使用 Expression",

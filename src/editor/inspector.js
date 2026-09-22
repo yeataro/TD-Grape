@@ -2185,11 +2185,11 @@ function renderNativeSourceValues(changed=null){
       entry.placeholder=t(mode.value==='EXPRESSION'?'matrix.expression':'array.chopPath');entry.title=binding?.binding||binding?.expression||binding?.mode||'';
     }
     for(const label of card.querySelectorAll('[data-source-mode]')){
-      const item=row.components[Number(label.dataset.sourceMode)],text=nativeComponentMode(item);if(label.textContent!==text)label.textContent=text;label.title=item?.binding||item?.expression||'';
+      const item=row.components[Number(label.dataset.sourceMode)],text=label.dataset.sourceDriver!==undefined?(item?.mode==='EXPORT'?nativeComponentMode(item):t(item?.mode==='BIND'?'inputs.bindExpression':'matrix.expression')):nativeComponentMode(item);if(label.textContent!==text)label.textContent=text;label.title=item?.binding||item?.expression||'';
     }
     for(const entry of card.querySelectorAll('[data-source-expression]')){
-      const item=row.components[Number(entry.dataset.sourceExpression)];entry.disabled=!ready||!item?.modeWritable;
-      if(document.activeElement!==entry){entry.setSyncedValue(item?.expression||'');entry.sourceExpected=item?.modeExpected;}
+      const item=row.components[Number(entry.dataset.sourceExpression)];entry.disabled=!ready||!item?.modeWritable;entry.setAttribute('aria-label',row.name+' '+entry.dataset.sourceComponent+' '+t(item?.mode==='BIND'?'inputs.bindExpression':'matrix.expression'));
+      if(document.activeElement!==entry){entry.setSyncedValue(item?.mode==='BIND'?item.binding||'':item?.expression||'');entry.sourceExpected=item?.modeExpected;}
     }
     for(const button of card.querySelectorAll('[data-source-freeze]'))button.disabled=!ready||!row.components[Number(button.dataset.sourceFreeze)]?.modeWritable;
     const state=card.querySelector('.native-source-state');if(state){const text=row.pending?t('sources.enable'):row.missing?sourceMissingHint(row):row.bufferBinding?t('buffer.popState'):row.arrayBinding?t('array.bindingState'):row.matrixBinding?!row.matrixBinding.literalValues?t('uniform.driven'):t('uniform.synced'):row.components.slice(0,typeComponents(row.type)||1).some(c=>!c.writable)?t('uniform.driven'):t('uniform.synced');if(state.textContent!==text)state.textContent=text;}
@@ -2438,11 +2438,12 @@ function nativeInputFields(box,decl,node=null){
     if(decl.kind==='uniform'&&typeFamily(decl.type)==='double')card.append(el('p',{class:'muted'},t('inputs.doubleUniformHint')));
     if(decl.kind!=='spec_constant'){const drivers=el('details',{class:'input-drivers'});drivers.append(el('summary',{},t('inputs.drivers')));
     row.components.slice(0,count).forEach((item,index)=>{
-      const line=el('div',{class:'source-driver'}),expr=input(item.expression||'',expression=>nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression,expected:expr.sourceExpected}));
-      expr.dataset.sourceExpression=index;expr.sourceExpected=item.modeExpected;expr.placeholder=t('inputs.expression');expr.setAttribute('aria-label',decl.name+' '+names[index]+' Python');
+      const line=el('div',{class:'source-driver'}),expr=input(item.mode==='BIND'?item.binding||'':item.expression||'',expression=>{const live=nativeSourceRows().find(r=>r.id===decl.id)?.components[index];if(live?.modeWritable)nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression,expected:expr.sourceExpected});});
+      expr.dataset.sourceExpression=index;expr.dataset.sourceComponent=names[index];expr.sourceExpected=item.modeExpected;expr.placeholder=t('inputs.expression');expr.setAttribute('aria-label',decl.name+' '+names[index]+' Python');
       const freeze=el('button',{'data-source-freeze':index},t('inputs.freeze'));
       freeze.onclick=()=>{const live=nativeSourceRows().find(r=>r.id===decl.id)?.components[index];nativeSourceRequest('source-edit',{action:'driver',id:decl.id,component:index,expression:'',expected:live?.modeExpected});};
-      line.append(field(names[index],expr),el('small',{'data-source-mode':index}),freeze);drivers.append(line);
+      const label=el('span',{class:'source-driver-label'});label.append(el('span',{},names[index]),el('small',{'data-source-mode':index,'data-source-driver':''}));
+      const editor=field('',expr);editor.prepend(label);line.append(editor,freeze);drivers.append(line);
     });drivers.append(el('p',{class:'muted'},t('inputs.driverHint')));card.append(drivers);}
   }
   card.append(el('p',{class:'muted native-source-state'}));renderNativeSourceValues();
@@ -2461,6 +2462,7 @@ function nativeAttributeFields(card,decl,row){
   if(!binding.writable)card.append(el('p',{class:'muted'},t('attribute.driven')));
 }
 function inputSourceInspector(box,decl){
+  const content=el('div',{class:'source-inspector-content'});box.append(content);box=content;
   const heading=el('div',{class:'input-inspector-title'});heading.append(el('strong',{},decl.name),el('small',{},(decl.kind==='attribute'?'Attribute':decl.kind==='pop_buffer'?'POP Buffer':decl.kind==='uniform'?'Uniform':decl.kind==='spec_constant'?t('inputs.specConstants'):decl.kind==='constant'?t('inputs.graphConstants'):'Sampler')+' · '+decl.type));box.append(heading);
   const row=nativeSourceRows().find(r=>r.id===decl.id);
   const rename=input(decl.name,name=>{
@@ -2496,7 +2498,8 @@ function inputSourceInspector(box,decl){
   else declarationFields(box,decl);
   const actions=el('div',{class:'source-actions'}),reference=el('button',{'data-input-reference':decl.id},t('sources.reference'));reference.onclick=()=>inputReference(decl.id);
   reference.disabled=readonly||!!decl.sourceMissing||decl.kind==='attribute'&&stage!=='vertex';reference.dataset.sourceMissing=String(!!decl.sourceMissing);
-  actions.append(reference);box.append(actions,el('p',{class:'muted'},t('inputs.references').replace('{count}',sourceReferences(decl.id).length)));
+  const references=el('section',{class:'source-reference-section'});reference.classList.add('wide');
+  actions.append(reference);references.append(actions,el('p',{class:'muted'},t('inputs.references').replace('{count}',sourceReferences(decl.id).length)));sourceLocations(references,decl.id);box.append(references);
   if(['uniform','spec_constant','pop_buffer','attribute'].includes(decl.kind)&&row&&!row.pending){
     if(row.formatChange){
       const adopt=el('button',{class:'wide','data-source-adopt-format':decl.id},t('sources.adoptFormat'));
@@ -2520,7 +2523,6 @@ function inputSourceInspector(box,decl){
       remove.onclick=()=>localSourceAction('remove',decl);box.append(remove);
     }
   }
-  sourceLocations(box,decl.id);
   if(readonly)for(const field of box.querySelectorAll('input,select,button'))field.disabled=true;
   renderNativeSourceValues();
 }

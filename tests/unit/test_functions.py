@@ -37,7 +37,7 @@ class Functions(unittest.TestCase):
         fn['graph']['nodes'].append(call('cycle'))
         with self.assertRaisesRegex(c.GraphError,'reference cycle'): c.compile_graph(g)
         fn['graph']['nodes'][-1]['params']['functionId']='missing'
-        with self.assertRaisesRegex(c.GraphError,'Missing Function'): c.compile_graph(g)
+        with self.assertRaisesRegex(c.GraphError,'Missing Subgraph'): c.compile_graph(g)
 
     def test_interface_types_and_bad_defaults(self):
         for mutation in ('type','port','default','output'):

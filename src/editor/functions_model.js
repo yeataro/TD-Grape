@@ -99,7 +99,7 @@ const FunctionModel=(()=>{
   const uid=()=> 'fn_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const find=(graph,id)=>(graph.functions||[]).find(f=>f.id===id);
   function ensureCapacity(graph,additional=0){
-    if((graph.functions||[]).length+additional>64){const error=Error('At most 64 Function definitions are supported');error.code='function.limit';throw error;}
+    if((graph.functions||[]).length+additional>64){const error=Error('At most 64 Subgraph definitions are supported');error.code='function.limit';throw error;}
   }
   function allGraphs(graph){return [...Object.values(graph.stages),...(graph.functions||[]).filter(f=>f.scope==='local').map(f=>f.graph)];}
   function localize(graph,id){
@@ -132,7 +132,7 @@ const FunctionModel=(()=>{
     const bundle=[source,...(source.dependencies||[])],mapping=new Map(),pending=[];
     const occupied=new Set(graph.functions.map(f=>f.id));
     for(const item of bundle){
-      if(mapping.has(item.id))throw Error('Duplicate Function in library snapshot');
+      if(mapping.has(item.id))throw Error('Duplicate Subgraph in library snapshot');
       const reused=graph.functions.find(f=>f.scope===item.scope&&f.source?.id===item.source?.id&&f.source?.version===item.source?.version);
       if(reused){mapping.set(item.id,reused.id);continue;}
       const imported=copy(item);delete imported.dependencies;
@@ -144,7 +144,7 @@ const FunctionModel=(()=>{
       if(node.definitionUuid!==CALL)continue;
       const mapped=mapping.get(node.params.functionId);
       // Older built-in callers can reference a snapshot already in this Shader.
-      if(!mapped&&!find(graph,node.params.functionId))throw Error('Missing nested Function in library snapshot');
+      if(!mapped&&!find(graph,node.params.functionId))throw Error('Missing nested Subgraph in library snapshot');
       if(mapped)node.params.functionId=mapped;
     }
     if(typeDefinitions.length)graph.typeDefinitions=typeDefinitions;

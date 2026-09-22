@@ -1,10 +1,10 @@
 # Subgraph I/O 快捷與節點拖曳
 
-0.8.73 在 Subgraph **內部**的 Function Input／Function Output 尾端增加灰色接口。
+0.8.73 在 Subgraph **內部**的 Subgraph Input／Subgraph Output 尾端增加灰色接口。
 
 ## 灰點接線
 
-- 把節點輸入接到 Function Input 的灰點，新增一個 Subgraph 輸入；把節點輸出接到 Function Output 的灰點，新增一個 Subgraph 輸出。可由任一端開始拖線，亦可使用既有逐點連線操作。
+- 把節點輸入接到 Subgraph Input 的灰點，新增一個 Subgraph 輸入；把節點輸出接到 Subgraph Output 的灰點，新增一個 Subgraph 輸出。可由任一端開始拖線，亦可使用既有逐點連線操作。
 - 放開才建立接口與第一條線，整個動作是一步 Undo／Redo。取消、拖至空白處或灰點接灰點，不建立項目。
 - 型別依另一端的實際接口決定，包含 `sampler2D`。名稱沿用該接口的可見名稱；同側重名時加序號。
 - 新輸入沿用另一端的未接數值；未提供明確數值時使用該型別的零值。Sampler 沿用現有缺接處理。新輸出的未接預設為零。

@@ -29,7 +29,7 @@ function nodeDefinition(n){
   }
   if([FunctionModel.INPUT,FunctionModel.OUTPUT].includes(n.definitionUuid)){
     const f=currentFunction();if(!f)return null;const input=n.definitionUuid===FunctionModel.INPUT;
-    return {definitionUuid:n.definitionUuid,key:input?'function_input':'function_output',label:input?'Function Input':'Function Output',descriptionKey:'help.functionPorts',inputs:input?{}:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),outputs:input?Object.fromEntries(f.inputs.map(p=>[p.id,p.type])):{},stages:f.stages};
+    return {definitionUuid:n.definitionUuid,key:input?'function_input':'function_output',label:input?'Subgraph Input':'Subgraph Output',descriptionKey:'help.functionPorts',inputs:input?{}:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),outputs:input?Object.fromEntries(f.inputs.map(p=>[p.id,p.type])):{},stages:f.stages};
   }
   return catalog.find(d=>d.definitionUuid===n.definitionUuid);
 }
@@ -260,7 +260,7 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
 }
 function newFunction(){
   change(()=>{const id=FunctionModel.uid();graph.functions||=[];
-    const f={id,name:'Function '+(graph.functions.filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],graph:{nodes:[{id:'input',name:'Input',definitionUuid:FunctionModel.INPUT,params:{},ui:{x:48,y:144}},{id:'output',name:'Output',definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:624,y:144}}],edges:[{from:['input','value'],to:['output','value']}]}};
+    const f={id,name:'Subgraph '+(graph.functions.filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],graph:{nodes:[{id:'input',name:'Input',definitionUuid:FunctionModel.INPUT,params:{},ui:{x:48,y:144}},{id:'output',name:'Output',definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:624,y:144}}],edges:[{from:['input','value'],to:['output','value']}]}};
     graph.functions.push(f);instantiate(functionEntry(f),200,180);
   });
 }
@@ -282,7 +282,7 @@ function groupSelection(){
     const x=Math.min(...chosen.map(n=>n.ui.x)),y=Math.min(...chosen.map(n=>n.ui.y));
     const nodes=chosen.map(n=>({...clone(n),ui:{...clone(n.ui),x:n.ui.x-x+288,y:n.ui.y-y+144}}));
     nodes.push({id:'input',name:uniqueNodeName('Input',null,nodes),definitionUuid:FunctionModel.INPUT,params:{},ui:{x:24,y:144}},{id:'output',name:uniqueNodeName('Output',null,nodes),definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:Math.max(...nodes.map(n=>n.ui.x))+288,y:144}});
-    const f={id,name:'Function '+((graph.functions||[]).filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs,outputs,graph:{nodes,edges}};
+    const f={id,name:'Subgraph '+((graph.functions||[]).filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs,outputs,graph:{nodes,edges}};
     GraphFrames.write(f.graph,GraphFrames.copy(data,ids));
     const owner=(graph.functions||[]).find(item=>item.graph===data),oldScope=owner?'fn_'+owner.id:stage;
     graph.functions||=[];graph.functions.push(f);data.nodes=data.nodes.filter(n=>!ids.has(n.id));data.nodes.push({id:callId,definitionUuid:FunctionModel.CALL,params:{functionId:id},ui:{x,y}});assignCreatedNodeNames([data.nodes.at(-1)]);data.edges=outside;selected=callId;selection=new Set([callId]);selectedEdge=null;

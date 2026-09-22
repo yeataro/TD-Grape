@@ -1207,7 +1207,7 @@ def _compile_flat(graph,annotation_scopes=None):
                 inputs={port:expression_identity(links[(ident,port)]) if (ident,port) in links else n.get('inputValues',{}).get(port,input_default(defs[ident]['key'],port,ports[ident]['in'][port])) for port in effective_inputs(ident,output)}
                 identity=digest([defs[ident]['key'],n['params'],output,inputs]);expression_ids[source]=identity;return identity
             for token,sources in data.get('extentAlternatives',{}).items():
-                if len(sources)>1 and len({expression_identity(source) for source in sources})>1:raise GraphError('Function instances require the same array length source; use a shared constant or separate definitions',sources[-1][0])
+                if len(sources)>1 and len({expression_identity(source) for source in sources})>1:raise GraphError('Subgraph instances require the same array length source; use a shared constant or separate definitions',sources[-1][0])
             # Follow output-specific dependencies before choosing node order.
             # A fully replaced baseline (or an unused runtime component) is not
             # evaluated just because its wire remains visible in the editor.
@@ -1670,29 +1670,29 @@ def _functions(graph):
 
 def _functions_scoped(graph):
     entries=graph.get('functions',[])
-    if not isinstance(entries,list) or len(entries)>64: raise GraphError('At most 64 Function definitions are supported')
+    if not isinstance(entries,list) or len(entries)>64: raise GraphError('At most 64 Subgraph definitions are supported')
     functions={}
     for fn in entries:
         ident=fn.get('id','') if isinstance(fn,dict) else ''
-        if not ID.fullmatch(ident) or ident in functions: raise GraphError('Invalid or duplicate Function ID')
-        if fn.get('scope') not in ('local','library','personal'): raise GraphError('Invalid Function scope')
-        if not isinstance(fn.get('name'),str) or not 1<=len(fn['name'])<=80: raise GraphError('Function name must contain 1–80 characters')
-        if not isinstance(fn.get('stages'),list) or not fn['stages'] or set(fn['stages'])-{'vertex','pixel'}: raise GraphError('Invalid Function stages')
+        if not ID.fullmatch(ident) or ident in functions: raise GraphError('Invalid or duplicate Subgraph ID')
+        if fn.get('scope') not in ('local','library','personal'): raise GraphError('Invalid Subgraph scope')
+        if not isinstance(fn.get('name'),str) or not 1<=len(fn['name'])<=80: raise GraphError('Subgraph name must contain 1–80 characters')
+        if not isinstance(fn.get('stages'),list) or not fn['stages'] or set(fn['stages'])-{'vertex','pixel'}: raise GraphError('Invalid Subgraph stages')
         for direction in ('inputs','outputs'):
             ports=fn.get(direction); seen=set()
-            if not isinstance(ports,list) or len(ports)>16: raise GraphError('Function supports at most 16 ports per direction')
+            if not isinstance(ports,list) or len(ports)>16: raise GraphError('Subgraph supports at most 16 ports per direction')
             for p in ports:
-                if not isinstance(p,dict) or not ID.fullmatch(p.get('id','')) or p['id'] in seen: raise GraphError('Invalid or duplicate Function port')
-                if not valid_port_type(p.get('type')): raise GraphError('Unsupported Function port type')
+                if not isinstance(p,dict) or not ID.fullmatch(p.get('id','')) or p['id'] in seen: raise GraphError('Invalid or duplicate Subgraph port')
+                if not valid_port_type(p.get('type')): raise GraphError('Unsupported Subgraph port type')
                 literal(p.get('default'),p['type']); seen.add(p['id'])
         functions[ident]=fn
     active=set(); done=set()
     def visit(ident):
-        if ident in active: raise GraphError('Function reference cycle: '+ident)
+        if ident in active: raise GraphError('Subgraph reference cycle: '+ident)
         if ident in done: return
-        if ident not in functions: raise GraphError('Missing Function: '+ident)
+        if ident not in functions: raise GraphError('Missing Subgraph: '+ident)
         active.add(ident); fn=functions[ident]; data=fn.get('graph')
-        if not isinstance(data,dict) or not isinstance(data.get('nodes'),list) or not isinstance(data.get('edges'),list): raise GraphError('Invalid Function graph')
+        if not isinstance(data,dict) or not isinstance(data.get('nodes'),list) or not isinstance(data.get('edges'),list): raise GraphError('Invalid Subgraph graph')
         for n in data['nodes']:
             if n.get('definitionUuid')==CALL: visit(n.get('params',{}).get('functionId',''))
         active.remove(ident); done.add(ident)
@@ -1713,7 +1713,7 @@ def _expand(graph,functions):
             return identity
         def add(n,path,scopes):
             budget[0]+=1
-            if budget[0]>2048: raise GraphError('Expanded Function graph exceeds 2048 nodes')
+            if budget[0]>2048: raise GraphError('Expanded Subgraph graph exceeds 2048 nodes')
             n['_annotationScopes']=list(scopes)
             flat['nodes'].append(n)
             if path: origins[(stage,n['id'])]={'node':path[-1][1],'functionId':path[-2][0] if len(path)>1 else None,'trail':[step[0] for step in path[:-1]]}
@@ -1744,7 +1744,7 @@ def _expand(graph,functions):
                     node_names.add(name)
                 if not isinstance(params,dict): raise GraphError('Invalid node parameters',ident)
                 if key in (FUNCTION_INPUT,FUNCTION_OUTPUT):
-                    if boundary is None: raise GraphError('Function ports belong inside a Function',ident)
+                    if boundary is None: raise GraphError('Subgraph ports belong inside a Subgraph',ident)
                     annotation=scope_record(digest([stage,path,'interface',ident]),n,path,ident,len(path)*2+1)
                     if annotation:
                         endpoints=boundary[0] if key==FUNCTION_INPUT else boundary[1]
@@ -1754,16 +1754,16 @@ def _expand(graph,functions):
                     kinds.append(key)
                     maps[ident]={'in':{},'out':boundary[0]} if key==FUNCTION_INPUT else {'in':boundary[1],'out':{}}
                     values=n.get('inputValues',{})
-                    if not isinstance(values,dict) or set(values)-set(maps[ident]['in']): raise GraphError('Invalid Function port defaults',ident)
+                    if not isinstance(values,dict) or set(values)-set(maps[ident]['in']): raise GraphError('Invalid Subgraph port defaults',ident)
                     for port,value in values.items():
                         target=next(x for x in flat['nodes'] if x['id']==boundary[1][port][0])
                         literal(value,target['params']['type']); target['inputValues']['value']=copy.deepcopy(value)
                     continue
                 if key==CALL:
                     fn=functions.get(params.get('functionId'))
-                    if not fn or stage not in fn['stages']: raise GraphError('Missing Function or wrong shader stage',ident)
+                    if not fn or stage not in fn['stages']: raise GraphError('Missing Subgraph or wrong shader stage',ident)
                     saved=n.get('inputValues',{})
-                    if not isinstance(saved,dict) or set(saved)-{p['id'] for p in fn['inputs']}: raise GraphError('Invalid Function input values',ident)
+                    if not isinstance(saved,dict) or set(saved)-{p['id'] for p in fn['inputs']}: raise GraphError('Invalid Subgraph input values',ident)
                     inside=path+((fn['id'],ident),); ins={}; outs={}; local_in={}; local_out={}
                     # A readable namespace starts at an explicitly named call.
                     # Unnamed legacy calls retain their original generated text.
@@ -1784,7 +1784,7 @@ def _expand(graph,functions):
                 else:
                     if key not in BY_UUID or key=='sgrape.internal.relay': raise GraphError('Unknown node',ident)
                     d=BY_UUID[key]
-                    if boundary is not None and (d['key'].endswith('_out') or d['key']=='vertex_input'): raise GraphError('Use Function boundaries inside a Function',ident)
+                    if boundary is not None and (d['key'].endswith('_out') or d['key']=='vertex_input'): raise GraphError('Use Subgraph boundaries inside a Subgraph',ident)
                     nid=mapped(ident,path); out=copy.deepcopy(n); out['id']=nid
                     out.pop('_symbolStem',None)  # Never trust graph-provided compiler metadata.
                     if symbol_path:out['_symbolStem']=_scoped_symbol_stem(symbol_path+(n.get('name',ident),))
@@ -1794,7 +1794,7 @@ def _expand(graph,functions):
                     except GraphError as exc:
                         exc.node=ident;raise
                     maps[ident]={'in':{p:[nid,p] for p in templates['inputs']},'out':{p:[nid,p] for p in templates['outputs']}}
-            if boundary is not None and (kinds.count(FUNCTION_INPUT)!=1 or kinds.count(FUNCTION_OUTPUT)!=1): raise GraphError('Exactly one Function Input and Output are required')
+            if boundary is not None and (kinds.count(FUNCTION_INPUT)!=1 or kinds.count(FUNCTION_OUTPUT)!=1): raise GraphError('Exactly one Subgraph Input and Output are required')
             scope='fn_'+path[-1][0] if path else stage
             for token,info in type_registry().lengths.items():
                 if info.get('kind')=='expression' and info['scope']==scope:

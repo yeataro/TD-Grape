@@ -1,5 +1,7 @@
 # Function 建立與 Sgrape TOP 預設輸入
 
+> 0.8.201 術語更新：本文保留早期實作紀錄；其中 Function UI 現在統一稱為 Subgraph。子圖依使用位置展開，並非獨立 GLSL 函式；現行定義見[用語表](../GLOSSARY.md)。
+
 2026-09-10；左側 UI 整理與 Texture Expose 已納入 0.6.2。使用者最新指示確認活用 In TOP 預設輸入，來源優先順序不再等待回覆。
 
 ## 左側 Function 區域

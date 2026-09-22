@@ -1,5 +1,12 @@
 # 開發狀態
 
+
+2026-09-23 0.8.201：Subgraph 的新建預設名稱、邊界、選單、錯誤訊息及說明統一用語，資源庫改以輸入／輸出列表顯示介面，明示各使用位置展開產碼。真正的 GLSL Code 函式標籤保留，舊資料識別碼及使用者名稱不遷移。來源設定將新增引用、引用數量與定位引用集中，移除來源隔開；統一卡片內間距。Expression 模式標示移到輸入欄上方，Bind 顯示實際 Bind Expression 並維持原生編輯權限，CHOP Export 模式仍保留標示。
+
+532 項 Python、完整 portable checks（含 14 項 Editor Launch、26 項遠端面板）、來源面板 8 組及新增瀏覽器流程 3 組通過；新增檢查包含窄面板深／淺色、Bind／Expression 切換、Subgraph 命名與真正 GLSL Function 名稱保留。雙語 1047 鍵通過。報告位於私人 reports/subgraph-naming-201/。Swizzle 操作一致性只列已知問題；個人分類與額外保存入口仍待處理。Sampler 拖入自訂參數建立 TOP 控制尚未實作，仍為下一項。
+
+39 份來源同步，四份 Master 身分／位置保留，四份使用者 Shader 保存內容不變。正式 TOE 已保存（1623252 bytes；SHA256 daa43301904eeaac17aa120b29fd6ecc075e28aa51a217c460e315879cf3edc1），六份登記狀態保留，私人助手排除。未推送。
+
 2026-09-23 0.8.200：參數編輯浮窗每次置中、主色入口、OP 路徑同行 Undo／Redo，修正淺色標頭與選取。來源與新增節點預設折疊，來源分類改拖曳排序、POP Buffers 根層獨立、左側預設 300px、勾選框主題紫色；自動 Frame 接線端點預設開啟。個人庫管理區僅在個人分頁顯示，移除重複 Shader 宣告入口。TOP 範例與 MAT Phong／PBR 範例分開供應、顯示及載入。個人庫分類／儲存入口及 Subgraph 攤平說明問題已記入 [UX 待辦](../discussions/UX_BACKLOG.md)，本批未增加那些功能。
 
 來源 8 組、參數 11 組、預設／範例 4 組、瀏覽器重設 6 組檢查通過；深／淺色截圖已核對。原生建立及 API 驗證 TOP 三份、MAT 兩份範例皆通過，使用者 Shader 保存內容未變。532 項 Python 與完整可攜檢查通過。舊 browser-tree 套件依賴未提供的 local_tint／personal fixture，未計入通過；本批行為由現行隔離預設測試覆蓋。Sampler 拖入自訂參數的後端能力仍待下一批完成。
