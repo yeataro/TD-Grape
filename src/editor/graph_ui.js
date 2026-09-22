@@ -2479,6 +2479,8 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
   const owner=graph,level=current(),ids=selectedCanvasNodes().map(n=>n.id).join('\0'),edgeKey=edge&&JSON.stringify([edge.from,edge.to]);
   const sameContext=()=>graph===owner&&current()===level&&(edge?level.edges.includes(edge)&&JSON.stringify([edge.from,edge.to])===edgeKey&&selectedCanvasEdges().length===menuEdges.length&&selectedCanvasEdges().every((item,i)=>item===menuEdges[i]):selectedCanvasNodes().map(n=>n.id).join('\0')===ids);
   const nodeIds=new Set(selectedCanvasNodes().map(node=>node.id));
+  const subgraphNode=!edge&&count===1?selectedCanvasNodes().find(n=>definition(n)?.key==='function_call'):null;
+  const subgraphDefinition=subgraphNode&&FunctionModel.find(graph,subgraphNode.params.functionId);
   const nodeEdges=side=>level.edges.filter(edge=>nodeIds.has(edge[side][0]));
   const sourceEdges=()=>level.edges.filter(item=>item.from[0]===edge.from[0]&&item.from[1]===edge.from[1]);
   const selectEndpoint=side=>{const node=level.nodes.find(n=>n.id===edge[side][0]);if(node){selectNode(node);refreshCanvasSelection();if(EDITOR_DEV_SETTINGS.frameWireEndpoint)fitNodes([node],true);}};
@@ -2498,6 +2500,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
     ['copy',t('edit.copy'),shortcutLabel('copy'),count>0,copyGraphToClipboard],
     ['paste',t('edit.paste'),shortcutLabel('paste'),!readonly&&(!!editorClipboard||!!navigator.clipboard?.readText),()=>pasteGraphFromClipboard(position)],
     ['duplicate',t('edit.duplicate'),shortcutLabel('duplicate'),!readonly&&count>0,duplicateSelection],
+    ['independent',t(subgraphDefinition?.scope==='local'?'function.independent':'function.makeLocal'),'',!editorMutationBlocked()&&!!subgraphDefinition,()=>change(()=>FunctionModel.independent(graph,subgraphNode))],
     ['rename',t('function.rename'),'',!readonly&&count===1&&definition(current().nodes.find(n=>selection.has(n.id)))?.key==='function_call',focusFunctionName],
   ],[
     ['collapse',t('node.collapse'),'',!editorMutationBlocked()&&canCollapse,()=>setNodesCollapsed(collapseNodes.map(n=>n.id),true)],
@@ -2521,9 +2524,10 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
   for(const rows of groups){
     let first=true;
     for(const[key,label,shortcut,enabled,action]of rows){
+      if(key==='independent'&&!subgraphDefinition)continue;
       if(key==='convertWires'&&!nodeIds.size||key==='rename'&&!enabled||['collapse','expand'].includes(key)&&!collapseNodes.length||['frame','arrange'].includes(key)&&count<2||key==='fit'&&!count||key==='joinFrame'&&!groupFrameJoinTarget()||key==='detachFrame'&&!canDetachGroupFrameSelection())continue;
       if(first){if(menu.childElementCount)menu.append(el('div',{role:'separator',class:'popup-separator'}));first=false;}
-      const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));
+      const b=el('button',{role:'menuitem','data-edit':key}),caption=el('span',{class:'graph-menu-label'});caption.append(graphMenuIcon(key==='independent'?'duplicate':key),el('span',{},label.replace(/^[＋+]\s*/,'')));b.append(caption,el('small',{},shortcut));
       if(!edge)decorateShortcutButton(b,key==='fitAll'?'fit':key==='fit'?'fitSelection':key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
       if(key==='focus'||key==='fullscreen'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(key==='focus'?graphFocused:!!document.fullscreenElement));}
       if(key==='toggleLinkLines'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(showLinkLines));decorateShortcutButton(b,'toggleLinkLines');}

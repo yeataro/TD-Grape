@@ -38,7 +38,7 @@ try{
  await page.evaluate(()=>{const f=FunctionModel.importLibrary(graph,functionLibrary[0]);current().nodes.push({id:'source_test',definitionUuid:FunctionModel.CALL,params:{functionId:f.id},ui:{x:100,y:100}});selectNode(current().nodes.at(-1));render();fit();});
  assert.equal(await page.locator('[data-node=source_test] .subgraph-icon').evaluate(e=>getComputedStyle(e).opacity),'0.5');
  const beforeSource=await page.evaluate(()=>JSON.stringify(FunctionModel.find(graph,current().nodes.find(n=>n.id==='source_test').params.functionId)));
- await page.locator('[data-action=local-subgraph]').click();assert.equal(await page.locator('[data-node=source_test] .subgraph-icon').evaluate(e=>getComputedStyle(e).opacity),'1');
+ await page.evaluate(()=>openGraphMenu(500,200,'source_test'));await page.locator('[data-edit=independent]').click();assert.equal(await page.locator('[data-node=source_test] .subgraph-icon').evaluate(e=>getComputedStyle(e).opacity),'1');
  assert.equal(await page.evaluate(()=>JSON.stringify(graph.functions.find(f=>f.scope!=='local'))),beforeSource);checks.push('Source Subgraph icon is dimmed; local copy becomes editable while the source stays unchanged');
  for(const width of [1100,800,560,420]){
   await page.setViewportSize({width,height:900});await page.selectOption('#language','zh-Hant');

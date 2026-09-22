@@ -5,6 +5,22 @@ try{
 await page.selectOption('#language','en');
 await page.evaluate(()=>{nativeSourcePolling=uniformPolling=customPolling=true;uniformLive.disconnect();uniformLive.connect=()=>{};clearTimeout(autoTimer);scheduleGraphApply=()=>{};readonly=dirty=connectionInterrupted=false;graph.functions=[];graphTrail=[];stage='pixel';graph.stages.pixel={nodes:[testNode('output','pixel_out',450,0)],edges:[]};graph.declarations=[];selected=null;selection.clear();render();newFunction();});
 assert.equal(await page.evaluate(()=>graph.functions.at(-1).name),'Subgraph 1');
+for(const tab of ['parameters','settings']){
+ await page.evaluate(tab=>{inspectorTab=tab;inspector();},tab);
+ assert.equal(await page.locator('[data-function-name]').inputValue(),'Subgraph 1');
+ assert.equal(await page.locator('#inspector [data-action="local-subgraph"],#inspector [data-action="save-personal"]').count(),0);
+ assert.ok(!(await page.locator('#inspector').innerText()).includes('Open Subgraph'));
+}
+await page.evaluate(()=>{dirty=false;nativeSourceError='';window.sharedBefore=clone(graph);window.sharedNode=current().nodes.find(n=>n.definitionUuid===FunctionModel.CALL);selected=sharedNode.id;selection=new Set([selected]);window.sharedFunctionId=sharedNode.params.functionId;openGraphMenu(500,200,selected);});
+await page.locator('[data-edit="independent"]').click();
+assert.ok(await page.evaluate(()=>current().nodes.find(n=>n.id===sharedNode.id).params.functionId!==sharedFunctionId));
+await page.locator('#undo').click();
+assert.deepEqual(await page.evaluate(()=>graph.functions),await page.evaluate(()=>sharedBefore.functions));
+await page.evaluate(()=>{readonly=true;openGraphMenu(500,200,sharedNode.id);});
+assert.equal(await page.locator('[data-edit="independent"]').isDisabled(),true);
+await page.evaluate(()=>{closeGraphMenu();readonly=false;inspectorTab='parameters';});
+checks.push('Both Subgraph inspector tabs retain naming without action buttons; right-click independent copy supports Undo and read-only protection');
+
 await page.evaluate(()=>{const fn=graph.functions.at(-1);window.namingNode=current().nodes.find(n=>n.params.functionId===fn.id);enterFunction(namingNode);});
 assert.ok((await page.locator('#cards').innerText()).includes('Subgraph Input'));
 assert.ok(!(await page.locator('#cards').innerText()).includes('Function Input'));

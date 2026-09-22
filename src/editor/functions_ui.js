@@ -414,13 +414,9 @@ function appendSparePort(list,n){
 }
 function functionInspector(box,n,d){
   const parameterPage=inspectorTab==='parameters',row=parameterPage?parameterControlRow:field;
-  const action=button=>parameterPage?parameterControlRow('',button):button;
   if(d.key==='function_call'){
     const f=FunctionModel.find(graph,n.params.functionId);box.append(functionNameField(f,row));
     const scope=f.scope==='local'?t('function.local'):t('function.source');box.append(parameterPage?parameterControlRow('',parameterHint(scope)):el('p',{class:'muted'},scope));
-    const open=el('button',{class:'wide'},t('function.open'));open.onclick=()=>enterFunction(n);box.append(action(open));
-    const separate=el('button',{class:'wide','data-action':'local-subgraph'},t(f.scope==='local'?'function.independent':'function.makeLocal'));separate.disabled=readonly;separate.onclick=()=>change(()=>FunctionModel.independent(graph,n));box.append(action(separate));
-    const save=el('button',{class:'wide','data-action':'save-personal'},t('personal.save'));save.disabled=readonly;save.onclick=()=>savePersonalFunction(f);box.append(action(save));
   }
   const f=currentFunction();if(!f||!['function_input','function_output'].includes(d.key))return;
   box.append(functionNameField(f,row));
