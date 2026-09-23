@@ -6,6 +6,90 @@ import re
 import copy
 
 _histories = {}
+TEXTURES = 'grapeCustomTexturesV1'
+_texture_handles = {}
+
+
+def texture_controls(comp):
+    records=copy.deepcopy(comp.fetch(TEXTURES,{}))
+    for key,record in records.items():
+        name=record.get('parameter')
+        if not name:continue
+        handle_key=(comp.id,key)
+        p=getattr(comp.par,name,None)
+        remembered=_texture_handles.get(handle_key)
+        if p is None and remembered is not None and remembered.valid:
+            p=remembered;record['parameter']=p.name
+        if p is not None:
+            _texture_handles[handle_key]=p
+            value=p.eval()
+            if value is not None and hasattr(value,'path'):record['last']=value.path
+            elif str(p.mode).endswith('CONSTANT') and not str(p.val).strip():record['last']=''
+        else:
+            record['parameter']=None
+    if records!=comp.fetch(TEXTURES,{}):comp.store(TEXTURES,records)
+    return records
+
+
+def sampler_rows(runtime):
+    comp=runtime.target();records=texture_controls(comp);rows=[]
+    for d in runtime.state()['graph']['declarations']:
+        if d['kind']!='sampler' or d['type']!='sampler2D':continue
+        key=runtime.texture_key(d);record=records.get(key)
+        legacy=comp.fetch('sgrapePublicTextures',{}).get(key,{})
+        name=(record or legacy).get('parameter');p=getattr(comp.par,name,None) if name else None
+        rows.append({'id':d['id'],'key':key,'name':d['name'],'type':d['type'],'managed':record is not None,
+                     'expected':token([d,record and {k:v for k,v in record.items() if k!='last'},metadata(p.parGroup) if p is not None else None])})
+    return rows
+
+
+def validate_texture_path(comp,value):
+    if not isinstance(value,str) or len(value)>2048 or any(ord(c)<32 for c in value):
+        raise RuntimeError('Choose a TOP path or leave it empty for the graph default.')
+    if value and not comp.op('texture_sources').module._external_allowed(comp,comp.parent().op(value)):
+        raise RuntimeError('Choose an existing TOP outside this Shader and the editor.')
+
+
+def bind_texture(runtime,body,seen,page):
+    comp=runtime.target();row=next((r for r in sampler_rows(runtime) if r['id']==body.get('id')),None)
+    if row is None or row['expected']!=body.get('sourceExpected'):raise RuntimeError('The Sampler changed. Refresh first.')
+    before=body.get('before')
+    if before is not None and before not in [g.name for g in page.parGroups]:raise RuntimeError('The parameter drop position changed. Refresh first.')
+    records=texture_controls(comp);key=row['key'];record=records.get(key)
+    legacy=comp.fetch('sgrapePublicTextures',{}).get(key,{})
+    name=(record or legacy).get('parameter');p=getattr(comp.par,name,None) if name else None
+    if p is not None and not editable_group(p.parGroup) and not (not record and p.page.name in ('Textures','Inactive Textures') and p.style=='TOP'):
+        raise RuntimeError('Built-in pages are protected.')
+    if p is None:
+        spec=runtime.texture_specs(runtime.state()['graph'])[key]
+        default=spec['default'][3:] if spec['default'].startswith('op:') else ''
+        value=record.get('last','') if record else default
+        validate_texture_path(comp,value)
+        p=page.appendTOP(available_name(comp,row['name']),label=source_label(row['name']))[0]
+        p.default=default;p.val=value
+    if p.style!='TOP':raise RuntimeError('The native texture control must be a TOP parameter.')
+    # Only the recognized legacy texture control may leave its protected page.
+    # Other system parameters, including Texture Status, remain untouched.
+    group=p.parGroup
+    if editable_group(group):place_group(comp,group,page,before)
+    else:
+        group.page=page;place_group(comp,group,page,before)
+    value=p.eval();last=value.path if hasattr(value,'path') else ''
+    records[key]={'parameter':p.name,'last':last}
+    comp.store(TEXTURES,records);_texture_handles[(comp.id,key)]=p
+    legacy_specs=copy.deepcopy(comp.fetch('sgrapeTextureSources',{}))
+    if key in legacy_specs:
+        legacy_specs[key]['parameter']=p.name;comp.store('sgrapeTextureSources',legacy_specs)
+    user_pages_first(comp)
+
+
+def detach_texture(comp,group):
+    records=texture_controls(comp)
+    for key,record in records.items():
+        if record.get('parameter') in [p.name for p in group]:
+            record['parameter']=None;_texture_handles.pop((comp.id,key),None)
+    comp.store(TEXTURES,records)
+
 
 
 def source_label(name):
@@ -82,6 +166,8 @@ def place_group(comp, group, page, before=None):
 def ensure(runtime):
     comp=runtime.target();runtime.ensure_supported_shader(comp);runtime.checked_state()
     runtime.source_module().sync(runtime)
+    texture_helper=comp.op('texture_sources')
+    if texture_helper is not None and texture_helper.text!=runtime.TEXTURE_SOURCE_CODE:texture_helper.text=runtime.TEXTURE_SOURCE_CODE
     source=runtime._owner.op('parameter_links')
     if source is None:raise RuntimeError('Update the Grape manager to edit custom controls.')
     links=comp.op('parameter_links')
@@ -128,6 +214,7 @@ def ensure(runtime):
     migrate_names(runtime,comp,model,graph)
     sync_shapes(runtime,comp,model)
     model.sync(comp)
+    texture_controls(comp)
     return model
 
 
@@ -175,14 +262,15 @@ def metadata(g):
 
 def snapshot(runtime):
     model=ensure(runtime);comp=runtime.target();rows=[];bindings=comp.fetch(model.STORE,{})
+    textures=texture_controls(comp);samplers=sampler_rows(runtime)
     for g in groups(comp):
         meta=metadata(g);names={p.name for p in g}
         rows.append({**meta,'expected':token(meta),'components':[component(p) for p in g],
-                     'sources':[ident for ident,link in bindings.items() if any(i['control'] in names for i in link['components'])],
+                     'sources':[ident for ident,link in bindings.items() if any(i['control'] in names for i in link['components'])]+[r['id'] for r in samplers if textures.get(r['key'],{}).get('parameter') in names],
                      'styleEditable':False})
     pages=[{'name':p.name,'editable':editable_page(p),'empty':not bool(p.parGroups)} for p in comp.customPages]
     return {'operator':comp.path,'enabled':comp.fetch('grapeNativeUniformsV1',None) is not None,
-            'revision':runtime.state()['revision'],'pages':pages,'controls':rows,'history':history_status(runtime),
+            'samplerSources':samplers,'revision':runtime.state()['revision'],'pages':pages,'controls':rows,'history':history_status(runtime),
             'expectedPages':token([(p.name,[g.name for g in p.parGroups]) for p in comp.customPages])}
 
 
@@ -216,6 +304,7 @@ def validate_source_value(runtime, declaration, value):
 
 
 def validate_bound_value(runtime, comp, model, control, value):
+    if control.style=='TOP':validate_texture_path(comp,value);return
     declarations={d['id']:d for d in runtime.source_module().source_graph(runtime,comp)['declarations']}
     for ident,link in comp.fetch(model.STORE,{}).items():
         if any(item['control']==control.name for item in link['components']) and ident in declarations:
@@ -332,7 +421,10 @@ def edit_operation(runtime,body):
             comp.sortCustomPages(*(names+[name for name in all_names if name not in names]))
         else:raise RuntimeError('Unknown page operation.')
     elif action=='bind':
-        page=user_page(comp,body.get('page'));native=runtime.source_module().snapshot(runtime)
+        page=user_page(comp,body.get('page'))
+        if any(r['id']==body.get('id') for r in seen.get('samplerSources',[])):
+            bind_texture(runtime,body,seen,page);return snapshot(runtime)
+        native=runtime.source_module().snapshot(runtime)
         row=next((r for r in native['uniforms']+native.get('specConstants',[]) if r['id']==body.get('id')),None)
         if row is None or row['missing'] or row['expected']!=body.get('sourceExpected'):raise RuntimeError('The source changed. Refresh first.')
         if row['type'] not in STYLES or row.get('sequence') not in ('vec','color','const'):raise RuntimeError('Only numeric Uniforms and Spec Constants can become custom parameters.')
@@ -383,7 +475,11 @@ def edit_operation(runtime,body):
                 if p.isNumber or p.style in ('Toggle','Menu'):
                     runtime.core().number(int(value) if isinstance(value,bool) else value);validate_bound_value(runtime,comp,model,p,value)
                 elif not isinstance(value,str) or len(value)>4096:raise RuntimeError('Enter a text value up to 4096 characters.')
-                runtime.set_parameter_with_undo(p,value,validate=lambda value:validate_bound_value(runtime,comp,model,p,value))
+                validate=lambda value:validate_bound_value(runtime,comp,model,p,value)
+                if p.style=='TOP':
+                    validate_texture_path(comp,value)
+                    validate=runtime._texture_undo_validator(comp,p,value,comp.op('texture_sources').module._external_allowed)
+                runtime.set_parameter_with_undo(p,value,validate=validate)
         elif action=='label':
             label=body.get('label')
             if not isinstance(label,str) or len(label)>160:raise RuntimeError('Enter a label up to 160 characters.')
@@ -396,6 +492,7 @@ def edit_operation(runtime,body):
         elif action=='remove':
             removable(comp,model,g)
             for ident in row['sources']:model.detach(comp,ident)
+            detach_texture(comp,g)
             g.destroy()
         elif action=='range':
             index=body.get('component');key=body.get('field');value=body.get('value')
@@ -415,6 +512,7 @@ def edit_operation(runtime,body):
             if type(index)is not int or not 0<=index<len(g):raise RuntimeError('Select a control component.')
             if g[index].isNumber or g.style=='Toggle':runtime.core().number(int(value) if isinstance(value,bool) else value);validate_bound_value(runtime,comp,model,g[index],value)
             elif not isinstance(value,str) or len(value)>4096:raise RuntimeError('Enter a text default up to 4096 characters.')
+            if g[index].style=='TOP':validate_texture_path(comp,value)
             g[index].default=float(value) if g[index].isNumber or g.style=='Toggle' else value
         else:raise RuntimeError('Unknown custom-control operation.')
     model.sync(comp)
@@ -422,17 +520,28 @@ def edit_operation(runtime,body):
 
 
 def removable(comp,model,group):
-    if group.style not in ('Float','Int','RGBA','Toggle','Str','Menu','StrMenu','Pulse'):
+    if group.style not in ('Float','Int','RGBA','Toggle','Str','Menu','StrMenu','Pulse','TOP'):
         raise RuntimeError('Remove this parameter style in TD so its complete definition can be preserved: '+group.style)
     own={p for ident,link in comp.fetch(model.STORE,{}).items() if any(i['control'] in [c.name for c in group] for i in link['components']) for p in model.source_pars(comp,ident)}
     if any(ref.valid and ref not in own for p in group for ref in p.bindReferences):
         raise RuntimeError('This parameter has external Bind references. Disconnect them in TD before removing it.')
 
 
+def legacy_texture_group(comp,group):
+    return group.style=='TOP' and any(r.get('parameter')==group.name for r in comp.fetch('sgrapePublicTextures',{}).values()) and group.page.name in ('Textures','Inactive Textures')
+
+
+def history_page(comp,meta):
+    page=next((p for p in comp.customPages if p.name==meta['page']),None)
+    if page is not None and meta['style']=='TOP' and meta['page'] in ('Textures','Inactive Textures') and any(r.get('parameter')==meta['name'] for r in comp.fetch('sgrapePublicTextures',{}).values()):return page
+    return user_page(comp,meta['page'])
+
+
 def history_capture(runtime):
     comp=runtime.target();model=comp.op('parameter_links').module
     return {'pages':[p.name for p in comp.customPages],
-            'groups':{g.name:{'meta':metadata(g),'attrs':[{k:getattr(p,k) for k in CONTROL_ATTRS} for p in g]} for g in groups(comp) if editable_group(g)},
+            'groups':{g.name:{'meta':metadata(g),'attrs':[{k:getattr(p,k) for k in CONTROL_ATTRS} for p in g]} for g in groups(comp) if editable_group(g) or legacy_texture_group(comp,g)},
+            'textures':copy.deepcopy(texture_controls(comp)),
             'links':copy.deepcopy(comp.fetch(model.STORE,{})),
             'sources':[(d['id'],d['kind'],d['type']) for d in runtime.state()['graph']['declarations']]}
 
@@ -441,7 +550,7 @@ def history_signature(data):
     # Live values do not invalidate definition history. TD definition edits,
     # Bind ownership and source type/identity changes do.
     return token({'pages':data['pages'],'groups':{n:{'meta':g['meta'],'definitions':[{k:(v if isinstance(v,(str,int,float,bool,type(None))) else str(v)) for k,v in attrs.items() if k!='val'} for attrs in g['attrs']]} for n,g in data['groups'].items()},
-                  'links':{i:[{k:v for k,v in p.items() if k!='last'} for p in l['components']] for i,l in data['links'].items()},'sources':data['sources']})
+                  'links':{i:[{k:v for k,v in p.items() if k!='last'} for p in l['components']] for i,l in data['links'].items()},'sources':data['sources'],'textures':{k:{n:v for n,v in r.items() if n!='last'} for k,r in data.get('textures',{}).items() if r.get('parameter')}})
 
 
 def history_entry(runtime):
@@ -471,13 +580,14 @@ def restore_definition(runtime,target):
                 raise RuntimeError('Restoring this clamp would change the current source value. Adjust the value first.')
     for name in added:
         if getattr(comp.parGroup,name,None) is not None or comp.pars(name+'*'):raise RuntimeError('The parameter name is now in use: '+name)
-        if after[name]['meta']['style'] not in ('Float','Int','RGBA','Toggle','Str','Menu','StrMenu','Pulse'):raise RuntimeError('Restore this parameter style in TD: '+name)
+        if after[name]['meta']['style'] not in ('Float','Int','RGBA','Toggle','Str','Menu','StrMenu','Pulse','TOP'):raise RuntimeError('Restore this parameter style in TD: '+name)
     changed_links={i for i in set(current['links'])|set(target['links']) if current['links'].get(i)!=target['links'].get(i)}
     # Compare ownership separately from last-value recovery samples.
     changed_links={i for i in changed_links if [(p['index'],p['control']) for p in current['links'].get(i,{}).get('components',[])]!=[(p['index'],p['control']) for p in target['links'].get(i,{}).get('components',[])]}
     source_values={i:[p.eval() for p in model.source_pars(comp,i)] for i in changed_links}
     for i in changed_links:model.detach(comp,i)
-    for name in removed:getattr(comp.parGroup,name).destroy()
+    for name in removed:
+        group=getattr(comp.parGroup,name);detach_texture(comp,group);group.destroy()
     user_names={g['meta']['page'] for g in after.values()}|{p for p in target['pages'] if p not in PROTECTED_PAGES and not any(x.name==p and not editable_page(x) for x in comp.customPages)}
     for name in target['pages']:
         if name in user_names and not any(p.name==name for p in comp.customPages):comp.appendCustomPage(name)
@@ -485,10 +595,10 @@ def restore_definition(runtime,target):
         meta=saved['meta'];group=getattr(comp.parGroup,name,None)
         if name in added:
             args={'size':meta['size']} if meta['style'] in ('Float','Int','RGBA') else {}
-            group=getattr(user_page(comp,meta['page']),'append'+meta['style'])(name,label=meta['label'],**args)
+            group=getattr(history_page(comp,meta),'append'+meta['style'])(name,label=meta['label'],**args)
             if meta['style'] in ('Menu','StrMenu'):
                 group[0].menuNames=meta['menuNames'];group[0].menuLabels=meta['menuLabels']
-        if group.page.name!=meta['page']:group.page=user_page(comp,meta['page'])
+        if group.page.name!=meta['page']:group.page=history_page(comp,meta)
         if group.label!=meta['label']:group.label=meta['label']
         for index,(p,attrs) in enumerate(zip(group,saved['attrs'])):
             for attr,value in attrs.items():
@@ -506,6 +616,20 @@ def restore_definition(runtime,target):
         if editable_page(page) and page.name not in target['pages'] and not page.parGroups:page.destroy()
     for page in comp.customPages:
         if editable_page(page):page.sort(*(n for n,g in sorted(after.items(),key=lambda pair:pair[1]['meta']['order']) if g['meta']['page']==page.name))
+    records=copy.deepcopy(target.get('textures',{}))
+    for key,record in records.items():
+        live=current.get('textures',{}).get(key,{})
+        if 'last' in live:record['last']=live['last']
+        name=record.get('parameter');p=getattr(comp.par,name,None) if name else None
+        if p is not None:
+            if name in added and str(p.mode).endswith('CONSTANT'):p.val=record.get('last','')
+            _texture_handles[(comp.id,key)]=p
+    # Undoing the initial creation also retains the last selected texture.
+    for key,record in current.get('textures',{}).items():
+        if key not in records:
+            legacy=comp.fetch('sgrapePublicTextures',{}).get(key,{})
+            if legacy.get('parameter') not in after:records[key]={'parameter':None,'last':record.get('last','')}
+    comp.store(TEXTURES,records)
     comp.sortCustomPages(*target['pages']);model.sync(comp)
 
 

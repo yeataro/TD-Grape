@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.214'
+PRODUCT_VERSION='0.8.215'
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -50,7 +50,8 @@ def describe(key):
     spec = comp.fetch('sgrapeTextureSources', {}).get(key)
     if spec is None:
         return {'valid': False, 'status': 'inactive', 'path': '', 'source': None}
-    parameter = getattr(comp.par, spec.get('parameter') or '_missing', None)
+    custom = comp.fetch('grapeCustomTexturesV1', {}).get(key)
+    parameter = getattr(comp.par, (custom.get('parameter') if custom is not None else spec.get('parameter')) or '_missing', None)
     fallback = comp.op(spec['asset'])
     value = None
     blank = False
@@ -59,7 +60,7 @@ def describe(key):
             value = parameter.eval()
             blank = parameter.mode == ParMode.CONSTANT and not str(parameter.val).strip()
         else:
-            raw = spec['default']
+            raw = ('op:'+custom['last']) if custom and custom.get('last') else spec['default']
             value = comp.op(raw[3:]) if raw.startswith('op:') else fallback
         if blank:
             raw = spec['default']
@@ -888,6 +889,8 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
         if not comp.op('input_router'):comp.create(nullTOP,'input_router')
     projected=dict(graph,declarations=graph['declarations']+[b for b in (compiled or {}).get('bindings',[]) if b.get('internal')])
     bindings=copy.deepcopy(comp.fetch('sgrapePublicTextures',{}));specs=texture_specs(projected)
+    custom=_owner.op('parameters').module.texture_controls(input_owner or comp)
+    if input_owner:comp.store('grapeCustomTexturesV1',copy.deepcopy(custom))
     if managed:
         previous=(input_owner or comp).fetch('sgrapePublicTextures',{})
         for slot in graph['topInputs']:
@@ -897,6 +900,18 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
     if graph.get('topInputs') and 'input:0' in bindings:
         bindings.setdefault('slot:'+graph.get('topInputLegacyId',graph['topInputs'][0]['id']),bindings['input:0'])
     for key,spec in specs.items():
+        if key in custom:
+            record=custom[key];name=record.get('parameter');owner=input_owner or comp
+            original=getattr(owner.par,name,None) if name else None
+            spec['expose']=original is not None
+            if original is not None:
+                if input_owner:
+                    page=next((p for p in comp.customPages if p.name=='Textures'),None) or comp.appendCustomPage('Textures')
+                    p=getattr(comp.par,name,None) or page.appendTOP(name)[0]
+                    value=original.eval();p.val=value.path if hasattr(value,'path') else '' if str(original.mode).endswith('CONSTANT') and not str(original.val).strip() else '/__sgrape_invalid_texture_reference__'
+                spec['parameter']=name
+            else:spec.pop('parameter',None)
+            continue
         if not spec['expose']:continue
         legacy_key='slot:'+graph.get('topInputLegacyId',graph['topInputs'][0]['id']) if graph.get('topInputs') else None
         if key==legacy_key and 'input:0' in bindings:bindings.setdefault(key,bindings['input:0'])
@@ -924,6 +939,7 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
                 else:p.val='/__sgrape_invalid_texture_reference__'
         spec['parameter']=p.name
     for key,binding in bindings.items():
+        if key in custom:continue
         if key not in specs or not specs[key]['expose']:
             if any(spec.get('parameter')==binding['parameter'] for spec in specs.values()):continue
             p=getattr(comp.par,binding['parameter'],None)
@@ -983,10 +999,13 @@ def prepare_textures(comp,graph,input_owner=None,compiled=None):
 def texture_snapshot(comp,graph):
     rows={};bindings=comp.fetch('sgrapePublicTextures',{});helper=comp.op('texture_sources')
     if not helper:return rows
+    custom=_owner.op('parameters').module.texture_controls(comp)
     for decl in graph['declarations']:
-        if decl['kind']!='sampler' or not decl.get('expose'):continue
-        key=texture_key(decl);binding=bindings.get(key)
-        p=getattr(comp.par,binding['parameter'],None) if binding else None
+        if decl['kind']!='sampler':continue
+        key=texture_key(decl)
+        if not decl.get('expose') and key not in custom:continue
+        binding=custom.get(key,bindings.get(key))
+        p=getattr(comp.par,binding['parameter'],None) if binding and binding.get('parameter') else None
         if p is None:continue
         row=helper.module.effective(key);fallback=helper.module.describe(key)
         mode=str(p.mode).split('.')[-1].upper()

@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-23 0.8.215：Sources 的 sampler2D 可拖入自訂參數浮窗建立 TOP 路徑控制；重複拖入移動同一控制，舊 Expose 沿用原 Par。支援跨頁排序、文字預設、刪除與獨立 Undo／Redo，Apply 保留頁面／Label／Default／原生控制，刪除保留最後貼圖。Expression／Bind、原生改名、外部 Bind 與過期寫入保護已核對。Cube／3D／Array 綁定及 TOP Input 拖入未擴充。
+
+8 組 Sampler 原生流程、14 組既有 TOP／MAT 數值參數回歸、2 組瀏覽器實際拖曳／定義操作，以及雙語檢查通過。無效路徑的首次測試發現僅在 Undo 檢查，已補當次寫入前驗證；修正後通過。已同步 39 份來源與四份 Master，使用者 Shader、Master 身分與位置保留；TOE 保存 1641884 bytes（SHA256 46589f475ff418579cd5a5e6c6825ab7a8c745a74a447706e97f7cbdbde5787f）。私人驗證紀錄 reports/sampler-215/。
+
 2026-09-23 0.8.214：新增節點主分類 Source／Editor，Editor 收 Router、Note、Generated GLSL；來源沿用 Sources 的 Common／Textures／TD Built In 階層。其餘使用子分類整理 Math、Texture、Data、Shader 等，Vector／Coordinate 保持平坦；Matrix 分建立與存取、代數、變換，依操作而非只看名稱歸類。側邊與浮動新增共用分類、標籤和排序。修復內建未分類與 POP Buffer 来源 token，新增可重現分類投影工具及全定義一致性檢查。現行規則見 [Node Browser](../ui/NODE_BROWSER.md)。
 
 4 組瀏覽器流程、14 項 catalog／math 測試、分類投影／Matrix 搜尋 integration、1105 個雙語鍵及 JS 語法通過。TOP Pixel／MAT Vertex／MAT Pixel 分類、來源篩選、Editor 新增／Undo、深淺色畫面核對完成；342 份運算定義與修改前完全相同。測試 fixture 首次缺少 Vertex 圖層，補齊隔離情境後通過。純分類／呈現修改，未重跑原生數值或全套測試。私人報告位於 reports/classification-214/。

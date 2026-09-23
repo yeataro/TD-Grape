@@ -12,8 +12,8 @@ Pages 與 Parameters 均可拖曳排序；參數拖到另一個頁面可跨頁�
 
 ## 從來源建立控制
 
-- 只從**來源面板**拖曳 Uniform 或 Spec Constant 到 Parameters 清單。畫布拖曳不建立自訂參數。
-- 支援數值純量與向量；Graph Constants 不支援。Matrix、Array、Buffer、Sampler 與 Attribute 不在此次新增控制的範圍。
+- 只從**來源面板**拖曳 Uniform、Spec Constant 或 2D Sampler 到 Parameters 清單。畫布拖曳不建立自訂參數。
+- 支援數值純量與向量；Graph Constants 不支援。Matrix、Array、Buffer 與 Attribute 不在此次新增控制的範圍。Sampler 支援界線見下方 0.8.215 補充。
 - 沒有獨立 Add Parameter、Style／Size 選擇器。控制形態由來源決定：一般浮點使用 Float、帶符號整數使用 Int、布林純量使用 Toggle、Color 使用 RGBA 與對應分量數。
 - TD 原生 Int 無法承載完整 `uint` 範圍，因此 `uint`／`uvec` 使用 Float 控制，值仍須是合法無號整數；自動開啟 Clamp Min，最小值 0，並以 4294967295 為上界。這不改變既有 GLSL 原生 Uniform 傳輸的精度限制。
 - 重複拖入同一來源，移動**同一個**控制，保留名稱、Label、值、Default 與綁定，不建立第二個 Binding Master。
@@ -53,3 +53,15 @@ Help、Enable Expression、Read Only、Section 等進階定義欄位仍交由 TD
 ## 視窗與主題調整（0.8.200）
 
 編輯浮窗每次重新開啟均在當前視窗置中，不記憶上次位置；尺寸仍可調整且受目前視窗邊界限制。右上「編輯自訂參數」改為較大的主色按鈕，與套用 Shader 配色一致。獨立 Undo／Redo 放在 OP 路徑列右側。標題、選取列及 OP Parameter 標頭改用深／淺色共用主題色。
+
+## 2D Sampler 控制（0.8.215）
+
+從 Sources 的 Samplers 拖入 Parameters，建立原生 TOP 路徑控制；Style 為 TOP、Size 為 1，皆只讀。不顯示數值 Range／Clamp。Label 與預設 TOP 路徑可編輯，OP Parameter 操作目前 TOP 路徑；空白沿用圖的預設貼圖。Graph 的貼圖預設與原生參數的 Reset 預設是不同設定。
+
+重複拖入會移動同一控制。已由舊 Expose 建立的 TOP 控制會沿用原 Par，保留其值、Label、Default、Expression／Bind。只允許移出可識別的舊貼圖控制，不開放編修其所在系統頁或 Texture Status。接管後 Apply 不再把控制搬回 Textures，也不覆寫 TD 修改的定義。管理資料存在 Shader COMP 的 `grapeCustomTexturesV1`；實際取圖仍沿用原本的 texture_sources 解析與 Select TOP，沒有新增逐幀 Python 輪詢。
+
+刪除只移除控制，保留 Sampler 與最後解析的 TOP 路徑；獨立定義 Undo／Redo 支援 TOP 控制與跨頁移動。外部 Bind 引用仍阻止刪除；TD 定義修改使舊歷程失效。無效 TOP、Shader 內部或管理元件內部路徑被拒絕。移除來源則留下原生控制供使用者處理。
+
+本次接入現有 `sampler2D` 宣告；不擴充 Cube／3D／Array 綁定，也不將 TOP Input 或 Buffer 視為 Sampler 宣告。既有來源失效及非 2D 貼圖的原生限制仍適用。
+
+驗證：`tests/td/test_sampler_custom_parameters.py` 使用隔離 MAT，涵蓋新建／舊 Expose、移動、刪除與復原、失敗 Apply 還原、TD 原生修改及來源保護；`tests/browser/test_sampler_custom_parameters.cjs` 使用原生快照驗證真實滑鼠拖入、重複拖入、文字預設值、刪除與 Undo／Redo、雙語與深淺色。既有 `test_parameter_editor.py` 同時回歸 TOP／MAT 數值控制。

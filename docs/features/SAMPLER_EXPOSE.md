@@ -1,5 +1,7 @@
 # Texture Expose — 0.6.2
 
+> 舊 Expose 流程紀錄。0.8.215 可由 Sources 拖入自訂參數浮窗並沿用舊 TOP 控制；接管後頁面、Label、Default 由原生參數／浮窗管理，不再按本頁的舊規則搬回 Textures。見[自訂參數編輯器](CUSTOM_PARAMETER_EDITOR.md#2d-sampler-控制08215)。
+
 Sgrape TOP 可作為原生濾鏡接進 TD 線路。選取 Texture 2D，在右側 Parameter 設定來源、預設貼圖與 Expose；Sgrape MAT 也支援把獨立貼圖來源暴露成 TD 的 TOP Parameter。
 
 ## 使用方式

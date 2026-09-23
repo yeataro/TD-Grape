@@ -927,13 +927,15 @@ function declarationFields(box,decl,settings=false,{live=true}={}){
     box.append(el('p',{class:'muted'},decl.type+' · '+decl.id));return;
   }
   if(decl.kind==='sampler'){
-    if(decl.expose&&live)box.append(liveUniformFields(decl));
+    if((decl.expose||customSnapshot?.controls.some(g=>g.sources.includes(decl.id)))&&live)box.append(liveUniformFields(decl));
     if(editorTarget==='top')box.append(field(t('texture.mode'),select([['input:0',t('texture.filterMode')],['source',t('texture.sourceMode')]],decl.source==='input:0'?'input:0':'source',value=>setTextureMode(decl,value))));
     const source=decl.source==='input:0'?(decl.defaultSource||'builtin:banana'):decl.source;
     box.append(field(t('texture.default'),select(textureOptions().filter(([key])=>key!=='input:0'),source.startsWith('op:')?'external':source,value=>changeTextureSettings(decl,d=>{const next=value==='external'?'op:/project1/texture':value;if(d.source==='input:0')d.defaultSource=next;else d.source=next;}))));
     if(source.startsWith('op:'))box.append(field(t('texture.path'),input(source.slice(3),value=>changeTextureSettings(decl,d=>{if(d.source==='input:0')d.defaultSource='op:'+value;else d.source='op:'+value;}))));
-    box.append(toggle(t('uniform.expose'),decl.expose,value=>changeTextureSettings(decl,d=>setDeclarationExposed(d,value))));
-    if(decl.expose)box.append(field(t('uniform.publicName'),input(decl.exposeName||(decl.source==='input:0'?'Input 1 Default TOP':decl.name),value=>changeTextureSettings(decl,d=>d.exposeName=value))));
+    const managedTexture=customSnapshot?.samplerSources?.some(r=>r.id===decl.id&&r.managed);
+    if(!managedTexture)box.append(toggle(t('uniform.expose'),decl.expose,value=>changeTextureSettings(decl,d=>setDeclarationExposed(d,value))));
+    if(decl.expose&&!managedTexture)box.append(field(t('uniform.publicName'),input(decl.exposeName||(decl.source==='input:0'?'Input 1 Default TOP':decl.name),value=>changeTextureSettings(decl,d=>d.exposeName=value))));
+    const control=el('button',{},t('controls.fromUniform'));control.onclick=()=>openCustomEditor(decl.id);box.append(control);
     box.append(el('p',{class:'muted'},t(decl.source==='input:0'?'texture.filterHint':'texture.sourceHint')));
   }else{
     if(live)box.append(liveUniformFields(decl));
@@ -3127,10 +3129,10 @@ function customListDrop(target,list,key,y){
   row.dataset.dropEdge=after?'after':'before';
   return {element:row,before:after?next?.dataset[key]||null:row.dataset[key]};
 }
-function customSourceAllowed(id){const d=allInputSources().find(d=>d.id===id);return d&&['uniform','spec_constant'].includes(d.kind)&&!d.sourceMissing&&/^(float|double|int|uint|bool|[diub]?vec[234])$/.test(d.type);}
+function customSourceAllowed(id){const d=allInputSources().find(d=>d.id===id);return d&&!d.sourceMissing&&(d.kind==='sampler'&&d.type==='sampler2D'||['uniform','spec_constant'].includes(d.kind)&&/^(float|double|int|uint|bool|[diub]?vec[234])$/.test(d.type));}
 async function dropCustomSource(id,target,context){
   if(!customReady()||!customSourceAllowed(id)||context.owner!==graph||context.shader!==shaderId||context.generation!==editorLoadGeneration)return;
-  const row=nativeSourceRows().find(r=>r.id===id);if(!row||row.missing||row.pending)return;
+  const row=[...nativeSourceRows(),...(customSnapshot?.samplerSources||[])].find(r=>r.id===id);if(!row||row.missing||row.pending)return;
   const existing=customSnapshot.controls.find(g=>g.sources.includes(id));if(existing?.name===target.before)return;
   if(await customRequest({action:'bind',id,page:target.page,before:target.before,sourceExpected:row.expected})){
     customSelection=customSnapshot.controls.find(g=>g.sources.includes(id))?.name||'';customEditPage=target.page;customPage=target.page;renderCustomParameters();
