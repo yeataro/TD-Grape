@@ -2061,3 +2061,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .math-operation-row select{width:100%;min-width:0}
 
 .reverse-input-link-hover .link-port-navigation[data-link-kind="inputs"]:hover .link-port-arrow{transform:scaleX(-1)}
+
+/* Named spare inputs remain a quiet, visible invitation before the outputs. */
+.spare-port-row.named-spare-port-row .port-label{opacity:.72;color:var(--muted)}
+.spare-port-row.named-spare-port-row:hover .port-label{opacity:1}

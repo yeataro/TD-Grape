@@ -409,7 +409,8 @@ function appendSparePort(list,n){
   const direction=sparePortDirection(n),f=sparePortInterface(n);if(!f||!direction)return;
   const kind=direction==='inputs'?'outputs':'inputs',label=t(n.definitionUuid==='sgrape.builtin.math'?'math.addInput':n.definitionUuid==='sgrape.builtin.switch'?'switch.addCase':direction==='inputs'?'function.quickInput':'function.quickOutput');
   const vertexPort=['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid);
-  const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'+(vertexPort?' vertex-spare-port-row':'')});
+  const named=n.definitionUuid==='sgrape.builtin.math';
+  const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'+(vertexPort?' vertex-spare-port-row':'')+(named?' named-spare-port-row':'')});
   const b=el('button',{class:'port port-add',title:label+' · '+t('function.quickHint'),'aria-label':label,
     'data-kind':kind,'data-port':'__add__','data-type':'spare','data-add-port':'true'});
   const limit=n.definitionUuid==='sgrape.builtin.math'?typeContract.math.maxInputs:16;
@@ -419,7 +420,7 @@ function appendSparePort(list,n){
   b.onclick=e=>{e.stopPropagation();if(b.disabled||suppressPortClick)return;const info=portInfo(b);
     if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);
     else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t('function.quickHint');}};
-  row.append(b,el('span',{class:'port-label'},'+'));list.append(row);
+  row.append(b,el('span',{class:'port-label'},named?label:'+'));list.append(row);
 }
 function functionInspector(box,n,d){
   const parameterPage=inspectorTab==='parameters',row=parameterPage?parameterControlRow:field;

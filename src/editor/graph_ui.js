@@ -479,7 +479,11 @@ function mathPorts(params){
   if(!typeContract.math.types.includes(type)||isMatrixType(type)&&shape.columns!==shape.rows&&steps.some(s=>s.operator==='multiply'))throw Error(t('math.invalid'));
   return {inputs:Object.fromEntries(Array.from({length:steps.length+1},(_,i)=>['input'+i,type])),outputs:{out:type}};
 }
-function mathFormula(params){return mathSteps(params).reduce((value,step)=>'('+value+' '+({add:'+',subtract:'−',multiply:'×',divide:'÷'}[step.operator])+' '+mathInputName(step.input)+')','A');}
+function mathFormula(params){
+  const steps=mathSteps(params),symbols={add:'+',subtract:'−',multiply:'×',divide:'÷'};
+  if(params.mode==='shared')return ['A',...steps.map(step=>mathInputName(step.input))].join(' '+symbols[params.operation||'add']+' ');
+  return steps.reduce((value,step)=>'('+value+' '+symbols[step.operator]+' '+mathInputName(step.input)+')','A');
+}
 function syncMathNotes(document,previous){
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u]));
   for(const unit of autoUnits(document)){
@@ -487,7 +491,7 @@ function syncMathNotes(document,previous){
     const oldNodes=new Map((oldUnits.get(unit.key)?.data.nodes||[]).map(n=>[n.id,n]));
     for(const n of unit.data.nodes){if(n.definitionUuid!=='sgrape.builtin.math')continue;
       const before=oldNodes.get(n.id),formula=mathFormula(n.params);
-      if(before&&mathFormula(before.params)===formula)continue;
+      if(before&&mathFormula(before.params)===formula&&n.ui?.mathFormula===formula)continue;
       n.ui||={};const old=n.ui.mathFormula||'',comment=n.ui.comment||'';
       n.ui.comment=old&&comment.includes(old)?comment.replace(old,formula):comment?comment+'\n'+formula:formula;n.ui.mathFormula=formula;
     }
@@ -1720,8 +1724,9 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
       const known=projection?.ports?.[kind]||ports(n,kind);if(!isMatrixOperation(d))for(const name of Object.keys(known))list.append(portRow(kind,name));
       const side=kind==='inputs'?'to':'from',missing=new Set(current().edges.filter(e=>e[side][0]===n.id&&!Object.hasOwn(known,e[side][1])).map(e=>e[side][1]));
       for(const name of missing)list.append(portRow(kind,name,true));
+      if(sparePortDirection(n)===(kind==='inputs'?'outputs':'inputs'))appendSparePort(list,n);
     }
-    appendSparePort(list,n);card.append(list);
+    card.append(list);
     if(n.params?.value!==undefined||d?.key==='vector'){const control=typeof nodeFixedValueEditor==='function'?nodeFixedValueEditor(n):null;card.append(control||el('div',{class:'node-value'},Array.isArray(n.params.value)?n.params.value.join(' · '):String(n.params.value)));}
     if(d?.key==='color'&&Array.isArray(n.params.value))card.append(nodeColorPicker(n));
     if(d?.key==='uniform'){const control=nativeReferenceControls(n,projection?.source||nativeDeclarations.get(n.params.declarationId));if(control)card.append(control);}

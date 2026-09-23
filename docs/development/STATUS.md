@@ -1,5 +1,12 @@
 # 開發狀態
 
+2026-09-23 0.8.206：待新增接孔跟隨對應方向的接孔列表，Math 排為現有輸入 → 灰色待新增輸入 → Result。Math 的「新增輸入」提示常態以較暗灰色顯示，hover 時提高辨識度。單一運算的註記簡化為 `A + B + C`，逐列混合運算保留括號；計算及產碼不變。詳見 [Math](../features/MATH.md)。
+
+Math 3 組與 Switch 2 組瀏覽器流程、實際接孔點選新增輸入、深／淺色外觀及 14 項 Editor Launch 通過，雙語 1060 鍵與 JS 語法通過。此輪只調整 UI 排列及算式文字，未重跑原生運算與全套 Python。私人報告在 reports/math-port-206/。
+
+39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保存內容保留。正式 TOE 已保存（1629612 bytes；SHA256 1d0b8d98d0721199abd1047ace3262f8ecd7dfd09e47f020cf263ff4974630e1），六份登記狀態保留，私人助手排除。未推送。
+
+
 2026-09-23 0.8.205：新增 [Math](../features/MATH.md)，預設加法、逐列或共用運算、A…Z／AA…動態輸入，Output 保持在輸入下方。簡单的運算元關係文字直接寫入既有註記，跟隨運算修改及 Undo，不涉及 GLSL 程式碼預覽。新增兩個預設關閉的 Link 實驗選項：顯示線時保留接孔箭頭並從來源按鈕中心起線、Input 箭頭 hover 反向。多對象 Link 提示按來源接孔分組，只寫一次來源，見 [Wire／Link](../ui/WIRE_LINK.md)。
 
 540 項 Python 與完整 portable checks、Math 3 組及 Link 13 組瀏覽器流程通過；後續型別驗證修訂另以 17 項相關 Python 及 Math 瀏覽器覆核。原生 TD 2025.32820 的 Math 共 127 項驗證通過，包括四則、重複運算元、矩陣 TOP 像素及 MAT Vertex／Pixel 編譯；MAT 項目不宣稱完整外觀驗收。雙語 1060 鍵通過。報告位於私人 reports/math-205/。

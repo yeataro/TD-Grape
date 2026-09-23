@@ -3784,7 +3784,7 @@
     "math.subtract": {"en": "− Subtract", "zh-Hant": "− 減"},
     "math.multiply": {"en": "× Multiply", "zh-Hant": "× 乘"},
     "math.divide": {"en": "÷ Divide", "zh-Hant": "÷ 除"},
-    "math.addInput": {"en": "Add Math input", "zh-Hant": "新增 Math 輸入"},
+    "math.addInput": {"en": "Add input", "zh-Hant": "新增輸入"},
     "math.removeLast": {"en": "Remove last input", "zh-Hant": "移除末尾輸入"},
     "math.portLimit": {"en": "Math supports up to 32 inputs", "zh-Hant": "Math 最多支援 32 個輸入"},
     "math.invalid": {"en": "Math: invalid operands or unsupported operation for this type", "zh-Hant": "Math：運算元無效，或此型別不支援選擇的運算"},
