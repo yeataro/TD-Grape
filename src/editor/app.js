@@ -489,7 +489,7 @@ function wires(){
   current().edges.forEach((edge,index)=>{
     const link=edge.ui?.style==='link';if(link&&!showLinkLines)return;
     const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;
-    const endpoint=link&&EDITOR_DEV_SETTINGS.linkArrowsWithLines?linkPortPoint:point;
+    const endpoint=link&&EDITOR_DEV_SETTINGS.linkArrowDisplay==='always'?linkPortPoint:point;
     const p=endpoint(a,edge.from[1],'outputs'),q=endpoint(b,edge.to[1],'inputs');if(!p||!q)return;
     const dx=Math.max(70,Math.abs(q.x-p.x)*.5),ns='http://www.w3.org/2000/svg';
     const hit=document.createElementNS(ns,'path'),path=document.createElementNS(ns,'path');
@@ -898,6 +898,7 @@ function applyFloatingToolbar(){
 }
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
+  linkArrowDisplay:[['always','experiments.linkArrowDisplay.always'],['hover','experiments.linkArrowDisplay.hover'],['hidden','experiments.linkArrowDisplay.hidden']],
   arrowNavigationView:[['none','experiments.navigationView.none'],['frame','experiments.navigationView.frame'],['frameInstant','experiments.navigationView.frameInstant'],['centerAnimated','experiments.navigationView.centerAnimated'],['centerInstant','experiments.navigationView.centerInstant']],
   arrowNavigationMode:[['legacy','experiments.navigation.legacy'],['branches','experiments.navigation.branches'],['spatial','experiments.navigation.spatial']],
   selectionToolbar:[['off','experiments.selection.off'],['multiple','experiments.selection.multiple'],['all','experiments.selection.all']],
@@ -907,7 +908,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','linkArrowsWithLines','reverseInputLinkArrowOnHover','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
+  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','linkArrowDisplay','reverseInputLinkArrowOnHover','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
@@ -1029,6 +1030,7 @@ function parseUIExperiments(raw){
   const result={...EDITOR_DEV_DEFAULTS};
   if(!saved||typeof saved!=='object'||Array.isArray(saved))return result;
   if(saved.arrowNavigationView===undefined&&saved.arrowNavigationFrame===true)result.arrowNavigationView='frame';
+  if(saved.linkArrowDisplay===undefined)result.linkArrowDisplay=saved.linkArrowsOnHover===true?'hover':saved.linkArrowsWithLines===true?'always':'hidden';
   for(const key of Object.keys(result)){
     const value=saved[key];
     if(key==='canvasDampingMs'||key==='frameDampingMs'){if(typeof value==='number'&&Number.isFinite(value))result[key]=Math.max(10,Math.min(1000,Math.round(value)));}

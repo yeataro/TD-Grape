@@ -1720,11 +1720,18 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 @media(pointer:coarse){:root{--popup-row-height:40px}}
 
 /* Experimental flags share compact rows grouped by the part of the UI they affect. */
-.experiments-panel{width:340px;padding:8px}
+.experiments-panel{width:800px;padding:8px;container-type:inline-size}
+#experimentoptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.experiment-group{min-width:0}
+.experiment-group[data-experiment-group=appearance]{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;border-top:1px solid var(--line);padding-top:8px}
+.experiment-group[data-experiment-group=appearance]>h3{grid-column:1/-1}
+@container(max-width:560px){
+  #experimentoptions{grid-template-columns:1fr}
+  .experiment-group[data-experiment-group=appearance]{grid-template-columns:1fr}
+}
 .experiments-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 6px 8px;font-size:13px}
 .experiments-heading button{padding:4px 6px;border:0;background:transparent;color:var(--muted);font-size:11px;white-space:nowrap}
 .experiments-heading button:disabled{cursor:default}
-.experiment-group+.experiment-group{margin-top:10px}
 .experiment-group h3{margin:0;padding:4px 8px;color:var(--muted);font-size:12px;font-weight:500;line-height:1.5}
 .experiment-option{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:34px;padding:6px 8px;border-radius:6px;font-size:14px;line-height:1.4;cursor:pointer}
 .experiment-option:hover{background:var(--ui-hover,var(--ui-tone-menu-hover))}
@@ -2065,3 +2072,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 /* Named spare inputs remain a quiet, visible invitation before the outputs. */
 .spare-port-row.named-spare-port-row .port-label{opacity:.72;color:var(--muted)}
 .spare-port-row.named-spare-port-row:hover .port-label{opacity:1}
+
+/* Hover-only Link navigation keeps the existing socket as the line endpoint. */
+.link-port-navigation.link-hover-reveal{opacity:0}
+.port-row:hover>.link-port-navigation.link-hover-reveal,.link-port-navigation.link-hover-reveal:focus-visible{opacity:1}

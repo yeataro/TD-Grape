@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowsWithLines: false, reverseInputLinkArrowOnHover: false, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'hidden', reverseInputLinkArrowOnHover: false, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -2473,7 +2473,7 @@ function refreshLinkPortButtons(){
   for(const row of document.querySelectorAll('#cards .port-row')){
     const node=row.closest('[data-node]')?.dataset.node,anchors=[...row.querySelectorAll('[data-kind][data-port]')],kind=anchors[0]?.dataset.kind,portNames=[...new Set(anchors.map(port=>port.dataset.port))];
     let button=row.querySelector(':scope>.link-port-navigation');
-    if((showLinkLines&&!EDITOR_DEV_SETTINGS.linkArrowsWithLines)||!portNames.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
+    if((showLinkLines&&EDITOR_DEV_SETTINGS.linkArrowDisplay==='hidden')||!portNames.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
     if(!button){
       button=el('button',{type:'button',class:'link-port-navigation',title:t('wire.linkNavigate'),'aria-label':t('wire.linkNavigate'),'aria-haspopup':'menu'});
       const icon=document.createElementNS('http://www.w3.org/2000/svg','svg'),shape=document.createElementNS(icon.namespaceURI,'path');
@@ -2504,6 +2504,7 @@ function refreshLinkPortButtons(){
       icon.style.stroke='url(#'+gradient.id+')';
     }else icon.style.removeProperty('stroke');
     for(const key of ['colorComponent','vectorComponent']){delete icon.dataset[key];if(row.dataset[key]!==undefined)icon.dataset[key]=row.dataset[key];}
+    button.classList.toggle('link-hover-reveal',showLinkLines&&EDITOR_DEV_SETTINGS.linkArrowDisplay==='hover');
     button.linkLocation={node,kind,ports:portNames};button.dataset.linkNode=node;button.dataset.linkKind=kind;
     button.title=linkConnectionHint(edges)+'\n\n'+t('wire.linkNavigate');button.setAttribute('aria-label',button.title);
   }
