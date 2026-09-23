@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-23 0.8.217：Sources 預設順序改為共同來源、TD 內建來源、自訂 Uniform、紋理輸入、Spec Constants、Graph Constants、POP Buffers；紋理輸入內 Samplers 先於 Texture Buffers，保留 TOP Inputs 優先與已有自訂排序。Router 拖曳標題增高為一般標題的 41px，標題底部到最上方接孔中心為 21.5px，單點／多點一致；間隙保留連續 hover 範圍。
+
+隔離瀏覽器核對 MAT／TOP 預設與保存排序、Router 六組互動回歸、單點／多點幾何、跨間距 hover 與拖曳／Undo，皆通過；深淺色截圖保存於私人 reports/router-217，排序紀錄於 reports/source-order-217。來源刷新期間有一次舊 HTTP 請求遇到 runtime 重載的 json 名稱暫時不可用，刷新完成後四份 Master 同步成功；四份使用者 Shader、Master 身分／位置保留。正式 TOE 已保存（1810220 bytes；SHA256 75e6429353169ca836b8aad85c16bd13d114dc039026ab5a0000e3a03f59e614），六份登記狀態保留。未推送。
+
 2026-09-23 0.8.216：MAT Vertex main 結尾加入 `TD_PICKING_ACTIVE` 條件式 `TDWritePickingValues()`；Pixel／TOP 程式不變。Target shell 2 → 3，既有 Shader 沿用明確升級檢查；四份 Master 升級並保留節點、OP 身分與位置，四份使用者 Shader 未改寫。自訂頂點變形與 Picking payload 可能不一致列已知限制，拾取專用流水線、Input／Output 的型別／座標空間與可用操作留待未來設計。
 
 4 種圖（純色、貼圖、Phong、PBR）的 Render Pick 原生對照通過：命中／未命中、未變換及平移／旋轉幾何，SOP／World／Camera 位置與法線、UV、色彩、非實例 ID；正常渲染移除／加入條件段的像素完全相同。46 項核心／註記／升級／檢查測試、2 項 Picking 殼測試、分類投影與 Master 原生檢查通過。測試首次使用舊欄名與未重算雜湊的升級 fixture，已修正測試資料後通過；來源刷新換版中出現一次舊 core 讀新 catalog 的暫時訊息，刷新最終核心檢查及 Master 原生驗證通過。已保存正式 TOE（1642060 bytes；SHA256 f6a79a439185bd789626d6ae3878602bc3d33cced067c142c7112129875b2994）。私人紀錄 reports/picking-216/。

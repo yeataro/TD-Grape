@@ -2629,11 +2629,17 @@ function sourceMenuEntries(query){
 const sourceCardCache=new Map(),sourceGroupCache=new Map(),sourceCardCollapsed=new Map();
 let sourcePresentationContext='',sourceBuiltinCache=null;
 let sourceMinimal=false,sourceGroupOrder={};
+const sourceGroupDefaults={
+  root:['common','tdBuiltin','uniform','textures','spec_constant','constant','pop_buffer'],
+  textures:['top_input','sampler','texture_buffer','textures.tdInputs']
+};
 function orderedSourceGroups(parent,children,query){
   const groups=children.filter(child=>child.dataset.inputGroup),saved=sourceGroupOrder[parent]||[];
   // Keep absent categories in the preference, so searching and changing stage
   // cannot silently rewrite the user's order.
-  const order=[...saved,...groups.map(child=>child.dataset.inputGroup).filter(key=>!saved.includes(key))];
+  const defaults=sourceGroupDefaults[parent]||[],present=groups.map(child=>child.dataset.inputGroup);
+  const base=[...defaults,...present.filter(key=>!defaults.includes(key))];
+  const order=[...saved,...base.filter(key=>!saved.includes(key))];
   const sorted=[...groups].sort((a,b)=>order.indexOf(a.dataset.inputGroup)-order.indexOf(b.dataset.inputGroup));
   for(const section of sorted){section.sourceSortContext={parent,order,query};section.querySelector('.input-group-toggle').classList.toggle('source-sortable',!query&&sorted.length>1);}
   let next=0;return children.map(child=>child.dataset.inputGroup?sorted[next++]:child);
@@ -2889,8 +2895,6 @@ function renderSourceCards(box,query){
     if(root==='textures')children=[...textureSources,...(children.length?[sourceGroup('textures.tdInputs',t('sources.tdInputsInfo'),children,null,query)]:[])];
     if(children.length)menuSections.push(sourceGroup(root,t(typeContract.sources.menuGroups[root]),children,null,query));
   }
-  const sourcePriority=['uniform','constant','spec_constant','pop_buffer'];
-  sections.sort((a,b)=>sourcePriority.indexOf(a.dataset.inputGroup)-sourcePriority.indexOf(b.dataset.inputGroup));
   sections.push(...menuSections);
   const unimported=issues.filter(i=>!i.id&&matches(i.name,i.message));
   if(unimported.length){

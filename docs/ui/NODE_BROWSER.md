@@ -86,3 +86,7 @@ Candidate previews match the selected socket against a small local signature gra
 The preview deliberately does not validate the entire downstream graph or propagate constants for every result. A locally compatible item can therefore appear even when a downstream or constant-only constraint will reject it after selection. This is a candidate-list difference, not permission to create an invalid graph: actual creation still uses the existing full connection validation inside the atomic edit transaction. Rejection restores the graph and does not add Undo history. Search ranking, explicit conversions, automatic casts and the graph format are unchanged.
 
 The performance requirement covers opening the creator and successive keystrokes in both directions. Regression checks must also cover fresh validation after edits, rejected creation, explicit type filters, assembly sockets and candidate parity on ordinary valid graphs. Timing evidence and delivery status are recorded in [TESTING.md](../development/TESTING.md).
+
+## Sources 預設排序（0.8.217）
+
+共同來源 → TD 內建來源 → 自訂 Uniform → 紋理輸入 → Spec Constants → Graph Constants → POP Buffers。紋理輸入內為 TOP Inputs（適用時）→ Samplers → Texture Buffers → TD 輸入。已有瀏覽器自訂排序優先；新設定或重設為預設時使用此順序。
