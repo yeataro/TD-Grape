@@ -3791,7 +3791,7 @@
     "math.noteHint": {"en": "The operand relationship is written to this node’s Notes automatically.", "zh-Hant": "運算元的關係會自動寫入此節點的註記。"},
     "help.math": {"en": "Math combines A, B, C… in row order. Choose one shared operation or an operator and operand per row. New rows default to Add. Connect the spare input to add another operand; up to 32. The simple relationship text is written to Notes. Scalar/vector arithmetic follows normal type conversion; matrices must share a shape, and multiplication requires a square matrix. This is not a GLSL code preview.", "zh-Hant": "Math 依列順序運算 A、B、C…；可共用一種運算，或每列選擇運算與運算元。新列預設為加法，拖線至待新增接孔可增加輸入，最多 32 個。簡單的運算關係文字會寫入註記。純量／向量沿用一般型別轉換；矩陣需同形，矩陣相乘需為方陣。這不是 GLSL 程式碼預覽。"},
     "experiments.linkArrowsWithLines": {"en": "Show port arrows with Link lines", "zh-Hant": "顯示 Link 線時同時顯示接孔箭頭"},
-    "experiments.linkArrowsWithLines.hint": {"en": "Keep Link navigation arrows visible with the lines. Each line starts at the source arrow button’s center.", "zh-Hant": "Link 線顯示時保留導覽箭頭；線從來源箭頭按鈕中心出發。"},
+    "experiments.linkArrowsWithLines.hint": {"en": "Keep Link navigation arrows visible with the lines. Each line connects the centers of the source and destination arrow buttons.", "zh-Hant": "Link 線顯示時保留導覽箭頭；線連接來源與目的箭頭按鈕的中心。"},
     "experiments.reverseInputLinkArrowOnHover": {"en": "Reverse Input Link arrow on hover", "zh-Hant": "Input Link 箭頭在 hover 時反向"},
     "experiments.reverseInputLinkArrowOnHover.hint": {"en": "Reverse only the Input navigation arrow visually while hovering. Connections and actions stay the same.", "zh-Hant": "滑鼠移入時只反轉 Input 導覽箭頭的外觀，連線與操作不變。"}
   }

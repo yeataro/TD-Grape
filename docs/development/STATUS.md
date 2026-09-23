@@ -1,5 +1,12 @@
 # 開發狀態
 
+2026-09-23 0.8.207：啟用「顯示 Link 線時同時顯示接孔箭頭」時，來源與目的兩端都連到各自箭頭按鈕中心。一般 Wire、關閉實驗選項及隱藏 Link 的既有行為保留；中央方向標記沿兩端的新位置計算。詳見 [Wire／Link](../ui/WIRE_LINK.md)。
+
+13 組 Link 瀏覽器流程通過，包含兩端中心、來源與目的折疊、縮放、Input hover 反向與既有左右鍵導航。14 項 Editor Launch、雙語 1060 鍵及 diff 檢查通過。純接線顯示修改，未重跑全套 Python／原生運算。私人報告位於 reports/link-endpoints-207/。
+
+39 份來源同步，四份 Master 身分／位置與四份使用者 Shader 保存內容保留。正式 TOE 已保存（1629620 bytes；SHA256 5b8a297bdc3d60aabfd1b79021dcd66c91efe687a3eb4e6d0ff1f42731aa21b2），六份登記狀態保留，私人助手排除。未推送。
+
+
 2026-09-23 0.8.206：待新增接孔跟隨對應方向的接孔列表，Math 排為現有輸入 → 灰色待新增輸入 → Result。Math 的「新增輸入」提示常態以較暗灰色顯示，hover 時提高辨識度。單一運算的註記簡化為 `A + B + C`，逐列混合運算保留括號；計算及產碼不變。詳見 [Math](../features/MATH.md)。
 
 Math 3 組與 Switch 2 組瀏覽器流程、實際接孔點選新增輸入、深／淺色外觀及 14 項 Editor Launch 通過，雙語 1060 鍵與 JS 語法通過。此輪只調整 UI 排列及算式文字，未重跑原生運算與全套 Python。私人報告在 reports/math-port-206/。

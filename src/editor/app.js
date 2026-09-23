@@ -478,9 +478,9 @@ function wirePathFromTarget(target){
   const path=target.closest('#wires path,#wires polygon.link-direction');
   return path?.wirePaintPath?(path.wirePaintPath?.isConnected?path.wirePaintPath:null):path?.dataset.from?path:null;
 }
-function linkStartPoint(node,port){
-  const button=[...document.querySelectorAll('#cards .link-port-navigation')].find(b=>b.linkLocation?.node===node.id&&b.linkLocation.kind==='outputs'&&b.linkLocation.ports.includes(port));
-  if(!button)return point(node,port,'outputs');const rect=button.getBoundingClientRect();return graphPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+function linkPortPoint(node,port,kind){
+  const button=[...document.querySelectorAll('#cards .link-port-navigation')].find(b=>b.linkLocation?.node===node.id&&b.linkLocation.kind===kind&&b.linkLocation.ports.includes(port));
+  if(!button)return point(node,port,kind);const rect=button.getBoundingClientRect();return graphPoint(rect.left+rect.width/2,rect.top+rect.height/2);
 }
 function wires(){
   refreshLinkPortButtons();
@@ -489,7 +489,8 @@ function wires(){
   current().edges.forEach((edge,index)=>{
     const link=edge.ui?.style==='link';if(link&&!showLinkLines)return;
     const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;
-    const p=link&&EDITOR_DEV_SETTINGS.linkArrowsWithLines?linkStartPoint(a,edge.from[1]):point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;
+    const endpoint=link&&EDITOR_DEV_SETTINGS.linkArrowsWithLines?linkPortPoint:point;
+    const p=endpoint(a,edge.from[1],'outputs'),q=endpoint(b,edge.to[1],'inputs');if(!p||!q)return;
     const dx=Math.max(70,Math.abs(q.x-p.x)*.5),ns='http://www.w3.org/2000/svg';
     const hit=document.createElementNS(ns,'path'),path=document.createElementNS(ns,'path');
     path.setAttribute('d',link?`M ${p.x} ${p.y} L ${q.x} ${q.y}`:`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);

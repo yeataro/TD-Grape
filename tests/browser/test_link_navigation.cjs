@@ -117,15 +117,22 @@ const {harness}=require('./test_glsl_code.cjs');
   const visibleSource=page.locator('[data-node="a"] .link-port-navigation[data-link-kind="outputs"]');
   assert.equal(await visibleSource.count(),1);
   const groupedHint=await visibleSource.getAttribute('title');assert.equal((groupedHint.match(/Node_a/g)||[]).length,1);assert.match(groupedHint,/→ .*Node_b.*\n→ .*Node_c/);
-  async function assertStart(){assert.ok(await page.evaluate(()=>{const e=current().edges.find(e=>e.ui?.style==='link'),path=[...document.querySelectorAll('#wires .wire-link')].find(p=>p.dataset.from===e.from.join(':')),button=[...document.querySelectorAll('.link-port-navigation')].find(b=>b.linkLocation?.node===e.from[0]&&b.linkLocation.kind==='outputs'),r=button.getBoundingClientRect(),start=path.getPointAtLength(0),screen=new DOMPoint(start.x,start.y).matrixTransform(path.getScreenCTM());return Math.hypot(screen.x-r.left-r.width/2,screen.y-r.top-r.height/2)<.5;}));}
-  await assertStart();await page.evaluate(()=>{current().nodes.find(n=>n.id==='a').ui.collapsed=true;render();scale=.7;pan={x:90,y:140};transform();});await assertStart();
-  await page.evaluate(()=>{current().nodes.find(n=>n.id==='a').ui.collapsed=false;render();fit();});
+  async function assertEndpoints(){assert.ok(await page.evaluate(()=>[...document.querySelectorAll('#wires .wire-link')].every(path=>{
+    const edge=path.edgeSelectionItem;
+    return [['from','outputs',0],['to','inputs',path.getTotalLength()]].every(([side,kind,distance])=>{
+      const button=[...document.querySelectorAll('.link-port-navigation')].find(b=>b.linkLocation?.node===edge[side][0]&&b.linkLocation.kind===kind&&b.linkLocation.ports.includes(edge[side][1]));
+      if(!button)return false;const r=button.getBoundingClientRect(),end=path.getPointAtLength(distance),screen=new DOMPoint(end.x,end.y).matrixTransform(path.getScreenCTM());
+      return Math.hypot(screen.x-r.left-r.width/2,screen.y-r.top-r.height/2)<.5;
+    });
+  })));}
+  await assertEndpoints();await page.evaluate(()=>{for(const id of ['a','b'])current().nodes.find(n=>n.id===id).ui.collapsed=true;render();scale=.7;pan={x:90,y:140};transform();});await assertEndpoints();
+  await page.evaluate(()=>{for(const id of ['a','b'])current().nodes.find(n=>n.id===id).ui.collapsed=false;render();fit();});
   const incoming=page.locator('[data-node="b"] .link-port-navigation[data-link-kind="inputs"]');await incoming.hover();assert.equal(await incoming.locator('svg').evaluate(e=>getComputedStyle(e).transform),'matrix(-1, 0, 0, 1, 0, 0)');
   await page.mouse.move(10,10);assert.equal(await incoming.locator('svg').evaluate(e=>getComputedStyle(e).transform),'none');
   await page.evaluate(()=>setUIExperiments({reverseInputLinkArrowOnHover:false}));await incoming.hover();assert.equal(await incoming.locator('svg').evaluate(e=>getComputedStyle(e).transform),'none');
   await visibleSource.click({button:'right'});assert.deepEqual(await page.locator('#grapheditmenu [data-link-target]').evaluateAll(es=>es.map(e=>e.dataset.linkTarget)),['b','c']);await page.keyboard.press('Escape');
   await page.evaluate(()=>setUIExperiments({linkArrowsWithLines:false}));assert.equal(await visibleSource.count(),0);
-  checks.push('independent experimental arrows preserve menus, start Link at button center including collapsed/zoomed nodes; Input hover reverses only when enabled; grouped hint lists source once');
+  checks.push('independent experimental arrows preserve menus, connect both Link endpoints to button centers including collapsed/zoomed nodes; Input hover reverses only when enabled; grouped hint lists source once');
   await page.screenshot({path:path.join(folder,'links.png')});assert.deepEqual(errors,[]);await page.evaluate(()=>{setLinkLinesVisible(false);setUIExperiments({...EDITOR_DEV_DEFAULTS});});
   await page.reload();await page.waitForSelector('.node');assert.equal(await page.evaluate(()=>showLinkLines),false);
   assert.equal(await page.locator('#showlinklines').getAttribute('aria-pressed'),'false');
