@@ -449,7 +449,9 @@
       "hint": {
         "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
         "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。",
-        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。"
+        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。",
+        "fr": "Métadonnées de chaque texture d’entrée de cette dimension. res.xy est l’inverse de la taille et res.zw est la taille.",
+        "ko": "해당 차원의 각 입력 텍스처 메타데이터입니다. res.xy는 크기의 역수이고 res.zw는 크기입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -469,7 +471,9 @@
       "hint": {
         "en": "Array of connected sampler2D resources, grouped by texture dimension. Select an array item before sampling.",
         "zh-Hant": "依貼圖維度分組的 sampler2D 資源陣列。先取出陣列項目再取樣。",
-        "ja": "テクスチャの次元で分類された sampler2D リソースの配列です。サンプリング前に配列要素を選んでください。"
+        "ja": "テクスチャの次元で分類された sampler2D リソースの配列です。サンプリング前に配列要素を選んでください。",
+        "fr": "Tableau de ressources sampler2D connectées, regroupées par dimension de texture. Sélectionnez un élément avant l’échantillonnage.",
+        "ko": "텍스처 차원별로 묶인 연결된 sampler2D 리소스 배열입니다. 샘플링 전에 배열 요소를 선택하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -490,7 +494,9 @@
       "hint": {
         "en": "Camera-indexed transforms between geometry, world, camera and projection spaces. Select a camera entry, then its matrix field.",
         "zh-Hant": "依相機索引取得幾何、世界、相機與投影空間間的轉換。先取相機項目，再取矩陣欄位。",
-        "ja": "カメラインデックスごとのジオメトリ・ワールド・カメラ・投影空間の変換です。カメラ要素を選んでから行列フィールドを選びます。"
+        "ja": "カメラインデックスごとのジオメトリ・ワールド・カメラ・投影空間の変換です。カメラ要素を選んでから行列フィールドを選びます。",
+        "fr": "Transformations indexées par caméra entre les espaces géométrie, monde, caméra et projection. Sélectionnez une caméra, puis son champ matriciel.",
+        "ko": "지오메트리, 월드, 카메라 및 투영 공간 사이의 카메라 인덱스별 변환입니다. 카메라 항목을 선택한 다음 행렬 필드를 선택하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -511,7 +517,9 @@
       "hint": {
         "en": "Per-camera information supplied by the render pass, including camera projection data.",
         "zh-Hant": "目前繪製提供的各相機資訊，包含相機投影資料。",
-        "ja": "レンダーパスが提供する各カメラの情報です。カメラの投影データを含みます。"
+        "ja": "レンダーパスが提供する各カメラの情報です。カメラの投影データを含みます。",
+        "fr": "Informations par caméra fournies par la passe de rendu, dont les données de projection.",
+        "ko": "렌더 패스가 제공하는 카메라별 정보이며 카메라 투영 데이터를 포함합니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -532,7 +540,9 @@
       "hint": {
         "en": "Per-light data for regular lights in the current render pass. Environment lights have a separate array.",
         "zh-Hant": "目前繪製的一般燈光資料陣列；環境燈使用另一份陣列。",
-        "ja": "現在のレンダーパスの通常ライトのデータです。環境ライトには別の配列があります。"
+        "ja": "現在のレンダーパスの通常ライトのデータです。環境ライトには別の配列があります。",
+        "fr": "Données par lumière ordinaire de la passe de rendu actuelle. Les lumières d’environnement ont un tableau séparé.",
+        "ko": "현재 렌더 패스의 일반 조명별 데이터입니다. 환경 조명은 별도의 배열을 사용합니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -552,7 +562,9 @@
       "hint": {
         "en": "Compile-time number of 2d inputs in this shader configuration.",
         "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。",
-        "ja": "このシェーダー構成の 2D 入力数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成の 2D 入力数を表すコンパイル時定数です。",
+        "fr": "Nombre d’entrées 2D à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 2D 입력 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -572,7 +584,9 @@
       "hint": {
         "en": "Array of connected sampler3D resources, grouped by texture dimension. Select an array item before sampling.",
         "zh-Hant": "依貼圖維度分組的 sampler3D 資源陣列。先取出陣列項目再取樣。",
-        "ja": "テクスチャの次元で分類された sampler3D リソースの配列です。サンプリング前に配列要素を選んでください。"
+        "ja": "テクスチャの次元で分類された sampler3D リソースの配列です。サンプリング前に配列要素を選んでください。",
+        "fr": "Tableau de ressources sampler3D connectées, regroupées par dimension de texture. Sélectionnez un élément avant l’échantillonnage.",
+        "ko": "텍스처 차원별로 묶인 연결된 sampler3D 리소스 배열입니다. 샘플링 전에 배열 요소를 선택하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -592,7 +606,9 @@
       "hint": {
         "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
         "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。",
-        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。"
+        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。",
+        "fr": "Métadonnées de chaque texture d’entrée de cette dimension. res.xy est l’inverse de la taille et res.zw est la taille.",
+        "ko": "해당 차원의 각 입력 텍스처 메타데이터입니다. res.xy는 크기의 역수이고 res.zw는 크기입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -612,7 +628,9 @@
       "hint": {
         "en": "Compile-time number of 3d inputs in this shader configuration.",
         "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。",
-        "ja": "このシェーダー構成の 3D 入力数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成の 3D 入力数を表すコンパイル時定数です。",
+        "fr": "Nombre d’entrées 3D à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 3D 입력 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -632,7 +650,9 @@
       "hint": {
         "en": "Array of connected sampler2DArray resources, grouped by texture dimension. Select an array item before sampling.",
         "zh-Hant": "依貼圖維度分組的 sampler2DArray 資源陣列。先取出陣列項目再取樣。",
-        "ja": "テクスチャの次元で分類された sampler2DArray リソースの配列です。サンプリング前に配列要素を選んでください。"
+        "ja": "テクスチャの次元で分類された sampler2DArray リソースの配列です。サンプリング前に配列要素を選んでください。",
+        "fr": "Tableau de ressources sampler2DArray connectées, regroupées par dimension de texture. Sélectionnez un élément avant l’échantillonnage.",
+        "ko": "텍스처 차원별로 묶인 연결된 sampler2DArray 리소스 배열입니다. 샘플링 전에 배열 요소를 선택하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -652,7 +672,9 @@
       "hint": {
         "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
         "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。",
-        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。"
+        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。",
+        "fr": "Métadonnées de chaque texture d’entrée de cette dimension. res.xy est l’inverse de la taille et res.zw est la taille.",
+        "ko": "해당 차원의 각 입력 텍스처 메타데이터입니다. res.xy는 크기의 역수이고 res.zw는 크기입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -672,7 +694,9 @@
       "hint": {
         "en": "Compile-time number of 2d array inputs in this shader configuration.",
         "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。",
-        "ja": "このシェーダー構成の 2D 配列入力数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成の 2D 配列入力数を表すコンパイル時定数です。",
+        "fr": "Nombre d’entrées de tableaux 2D à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 2D 배열 입력 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -692,7 +716,9 @@
       "hint": {
         "en": "Array of connected samplerCube resources, grouped by texture dimension. Select an array item before sampling.",
         "zh-Hant": "依貼圖維度分組的 samplerCube 資源陣列。先取出陣列項目再取樣。",
-        "ja": "テクスチャの次元で分類された samplerCube リソースの配列です。サンプリング前に配列要素を選んでください。"
+        "ja": "テクスチャの次元で分類された samplerCube リソースの配列です。サンプリング前に配列要素を選んでください。",
+        "fr": "Tableau de ressources samplerCube connectées, regroupées par dimension de texture. Sélectionnez un élément avant l’échantillonnage.",
+        "ko": "텍스처 차원별로 묶인 연결된 samplerCube 리소스 배열입니다. 샘플링 전에 배열 요소를 선택하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -712,7 +738,9 @@
       "hint": {
         "en": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.",
         "zh-Hant": "此維度各輸入貼圖的資訊。res.xy 為尺寸倒數，res.zw 為尺寸。",
-        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。"
+        "ja": "この次元の各入力テクスチャの情報です。res.xy はサイズの逆数、res.zw はサイズです。",
+        "fr": "Métadonnées de chaque texture d’entrée de cette dimension. res.xy est l’inverse de la taille et res.zw est la taille.",
+        "ko": "해당 차원의 각 입력 텍스처 메타데이터입니다. res.xy는 크기의 역수이고 res.zw는 크기입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -732,7 +760,9 @@
       "hint": {
         "en": "Compile-time number of cube inputs in this shader configuration.",
         "zh-Hant": "此 shader 配置中對應維度的輸入貼圖的編譯期數量。",
-        "ja": "このシェーダー構成のキューブ入力数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成のキューブ入力数を表すコンパイル時定数です。",
+        "fr": "Nombre d’entrées cube à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 큐브 입력 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -755,7 +785,9 @@
       "hint": {
         "en": "Output texture metadata. res.xy contains reciprocal dimensions; res.zw contains width and height.",
         "zh-Hant": "輸出貼圖資訊。res.xy 為尺寸倒數，res.zw 為寬與高。",
-        "ja": "出力テクスチャの情報です。res.xy は寸法の逆数、res.zw は幅と高さです。"
+        "ja": "出力テクスチャの情報です。res.xy は寸法の逆数、res.zw は幅と高さです。",
+        "fr": "Métadonnées de la texture de sortie. res.xy contient l’inverse des dimensions ; res.zw contient largeur et hauteur.",
+        "ko": "출력 텍스처 메타데이터입니다. res.xy는 크기의 역수, res.zw는 너비와 높이입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -779,7 +811,9 @@
       "hint": {
         "zh-Hant": "輸出影像的寬、高，單位為像素。",
         "en": "Output width and height in pixels.",
-        "ja": "出力の幅と高さ（ピクセル単位）です。"
+        "ja": "出力の幅と高さ（ピクセル単位）です。",
+        "fr": "Largeur et hauteur de sortie en pixels.",
+        "ko": "픽셀 단위의 출력 너비와 높이입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -803,7 +837,9 @@
       "hint": {
         "zh-Hant": "輸出影像寬、高的倒數。",
         "en": "Reciprocal output width and height.",
-        "ja": "出力の幅と高さの逆数です。"
+        "ja": "出力の幅と高さの逆数です。",
+        "fr": "Inverse de la largeur et de la hauteur de sortie.",
+        "ko": "출력 너비와 높이의 역수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -826,7 +862,9 @@
       "hint": {
         "zh-Hant": "TOP 的原始三分量貼圖座標。",
         "en": "The original three-component TOP texture coordinates.",
-        "ja": "TOP 本来の 3 成分テクスチャ座標です。"
+        "ja": "TOP 本来の 3 成分テクスチャ座標です。",
+        "fr": "Coordonnées de texture TOP originales à trois composantes.",
+        "ko": "원래의 3성분 TOP 텍스처 좌표입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -849,7 +887,9 @@
       "hint": {
         "en": "Zero-based GLSL TOP pass index for multipass rendering.",
         "zh-Hant": "多次繪製時，目前 GLSL TOP 的 pass 索引，從零起算。",
-        "ja": "マルチパス描画における GLSL TOP のパス番号です。0 から始まります。"
+        "ja": "マルチパス描画における GLSL TOP のパス番号です。0 から始まります。",
+        "fr": "Index de passe GLSL TOP à partir de zéro pour le rendu multipasse.",
+        "ko": "다중 패스 렌더링에 사용하는 0부터 시작하는 GLSL TOP 패스 인덱스입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -872,7 +912,9 @@
       "hint": {
         "en": "Current output depth index when producing a layered or 3D TOP texture.",
         "zh-Hant": "產生分層或 3D TOP 貼圖時，目前的深度索引。",
-        "ja": "レイヤーまたは 3D の TOP テクスチャを生成する際の現在の深度インデックスです。"
+        "ja": "レイヤーまたは 3D の TOP テクスチャを生成する際の現在の深度インデックスです。",
+        "fr": "Index de profondeur de sortie actuel pour une texture TOP multicouche ou 3D.",
+        "ko": "레이어 또는 3D TOP 텍스처를 생성할 때의 현재 출력 깊이 인덱스입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -895,7 +937,9 @@
       "hint": {
         "en": "TD-provided noise lookup texture; connect it to a compatible texture sampling input.",
         "zh-Hant": "TD 提供的雜訊查表貼圖，可接入相容的貼圖取樣輸入。",
-        "ja": "TD が提供するノイズ参照テクスチャです。互換性のあるテクスチャサンプリング入力へ接続してください。"
+        "ja": "TD が提供するノイズ参照テクスチャです。互換性のあるテクスチャサンプリング入力へ接続してください。",
+        "fr": "Texture de recherche de bruit fournie par TD ; connectez-la à une entrée d’échantillonnage compatible.",
+        "ko": "TD가 제공하는 노이즈 룩업 텍스처입니다. 호환되는 텍스처 샘플링 입력에 연결하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -918,7 +962,9 @@
       "hint": {
         "en": "TD-provided one-dimensional sine lookup texture. TDSineLookup provides a direct lookup function.",
         "zh-Hant": "TD 提供的一維正弦查表貼圖；亦可透過 TDSineLookup 函數直接查表。",
-        "ja": "TD が提供する 1 次元の正弦参照テクスチャです。TDSineLookup で直接参照することもできます。"
+        "ja": "TD が提供する 1 次元の正弦参照テクスチャです。TDSineLookup で直接参照することもできます。",
+        "fr": "Texture de recherche sinusoïdale unidimensionnelle fournie par TD. TDSineLookup fournit une fonction de consultation directe.",
+        "ko": "TD가 제공하는 1차원 사인 룩업 텍스처입니다. TDSineLookup은 직접 조회하는 함수를 제공합니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms"
     },
@@ -943,7 +989,9 @@
       "hint": {
         "zh-Hant": "目前片段的視窗座標。",
         "en": "The current fragment position in window coordinates.",
-        "ja": "現在のフラグメントのウィンドウ座標です。"
+        "ja": "現在のフラグメントのウィンドウ座標です。",
+        "fr": "Position du fragment actuel en coordonnées de fenêtre.",
+        "ko": "창 좌표에서의 현재 프래그먼트 위치입니다."
       },
       "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
@@ -968,7 +1016,9 @@
       "hint": {
         "zh-Hant": "目前片段是否位於圖元正面。",
         "en": "Whether this fragment belongs to a front-facing primitive.",
-        "ja": "現在のフラグメントが表向きのプリミティブに属するかを示します。"
+        "ja": "現在のフラグメントが表向きのプリミティブに属するかを示します。",
+        "fr": "Indique si ce fragment appartient à une primitive orientée vers l’avant.",
+        "ko": "이 프래그먼트가 앞면 프리미티브에 속하는지 나타냅니다."
       },
       "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
@@ -993,7 +1043,9 @@
       "hint": {
         "zh-Hant": "目前多重取樣樣本的索引。",
         "en": "Index of the current multisample sample.",
-        "ja": "現在のマルチサンプルのインデックスです。"
+        "ja": "現在のマルチサンプルのインデックスです。",
+        "fr": "Index de l’échantillon multisample actuel.",
+        "ko": "현재 멀티샘플의 인덱스입니다."
       },
       "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
@@ -1018,7 +1070,9 @@
       "hint": {
         "zh-Hant": "目前樣本在像素內的位置。",
         "en": "The current sample position within its pixel.",
-        "ja": "現在のサンプルのピクセル内の位置です。"
+        "ja": "現在のサンプルのピクセル内の位置です。",
+        "fr": "Position de l’échantillon actuel dans son pixel.",
+        "ko": "픽셀 내부의 현재 샘플 위치입니다."
       },
       "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
@@ -1042,7 +1096,9 @@
       "hint": {
         "zh-Hant": "是否為計算導數而執行的輔助片段。",
         "en": "Whether this is a helper invocation used for derivatives.",
-        "ja": "微分計算のための補助フラグメントかどうかを示します。"
+        "ja": "微分計算のための補助フラグメントかどうかを示します。",
+        "fr": "Indique s’il s’agit d’une invocation auxiliaire utilisée pour les dérivées.",
+        "ko": "미분 계산에 사용하는 보조 호출인지 나타냅니다."
       },
       "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
@@ -1066,7 +1122,9 @@
       "hint": {
         "en": "Normal of the current vertex before TD geometry deformation. Use TDDeformNorm for a deformed world-space normal.",
         "zh-Hant": "目前頂點在 TD 幾何變形前的法線。變形後的世界空間法線可使用 TDDeformNorm。",
-        "ja": "TD のジオメトリ変形前の現在の頂点法線です。変形後のワールド空間の法線には TDDeformNorm を使います。"
+        "ja": "TD のジオメトリ変形前の現在の頂点法線です。変形後のワールド空間の法線には TDDeformNorm を使います。",
+        "fr": "Normale du sommet actuel avant déformation de géométrie TD. Utilisez TDDeformNorm pour une normale déformée en espace monde.",
+        "ko": "TD 지오메트리 변형 전 현재 정점의 법선입니다. 변형된 월드 공간 법선에는 TDDeformNorm을 사용하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes"
     },
@@ -1091,7 +1149,9 @@
       "hint": {
         "en": "Color attribute of the current point, including alpha.",
         "zh-Hant": "目前點的顏色屬性，包含 alpha。",
-        "ja": "現在のポイントの色属性です。アルファを含みます。"
+        "ja": "現在のポイントの色属性です。アルファを含みます。",
+        "fr": "Attribut couleur du point actuel, alpha inclus.",
+        "ko": "alpha를 포함한 현재 포인트의 색상 속성입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes"
     },
@@ -1114,7 +1174,9 @@
       "hint": {
         "en": "Coordinates used for the current UV-unwrapping render configuration.",
         "zh-Hant": "目前 UV 展開繪製配置使用的座標。",
-        "ja": "現在の UV 展開レンダー構成で使用する座標です。"
+        "ja": "現在の UV 展開レンダー構成で使用する座標です。",
+        "fr": "Coordonnées utilisées par la configuration actuelle de rendu de dépliage UV.",
+        "ko": "현재 UV 펼치기 렌더 설정에서 사용하는 좌표입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
@@ -1137,7 +1199,9 @@
       "hint": {
         "en": "Instance index supplied by TD for the geometry being rendered.",
         "zh-Hant": "TD 提供的目前繪製幾何實例索引。",
-        "ja": "描画中のジオメトリに対して TD が提供するインスタンス番号です。"
+        "ja": "描画中のジオメトリに対して TD が提供するインスタンス番号です。",
+        "fr": "Index d’instance fourni par TD pour la géométrie rendue.",
+        "ko": "렌더링 중인 지오메트리에 대해 TD가 제공하는 인스턴스 인덱스입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1160,7 +1224,9 @@
       "hint": {
         "en": "Camera index within the current render pass. Pass it flat to Pixel when indexing camera-specific data there.",
         "zh-Hant": "目前繪製內的相機索引。Pixel 階段需查相機資料時，應以 flat 傳遞此索引。",
-        "ja": "現在のレンダーパス内のカメラ番号です。Pixel でカメラ固有のデータを参照する場合は flat で渡してください。"
+        "ja": "現在のレンダーパス内のカメラ番号です。Pixel でカメラ固有のデータを参照する場合は flat で渡してください。",
+        "fr": "Index de caméra dans la passe de rendu actuelle. Transmettez-le en flat à Pixel pour y indexer les données propres à la caméra.",
+        "ko": "현재 렌더 패스 내의 카메라 인덱스입니다. Pixel에서 카메라별 데이터를 인덱싱하려면 flat으로 전달하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
@@ -1183,7 +1249,9 @@
       "hint": {
         "en": "Camera index in the full camera list, as distinguished from the current pass index.",
         "zh-Hant": "完整相機清單中的索引，與目前 pass 內的相機索引有所區別。",
-        "ja": "カメラ一覧全体のインデックスです。現在のパス内のインデックスとは異なります。"
+        "ja": "カメラ一覧全体のインデックスです。現在のパス内のインデックスとは異なります。",
+        "fr": "Index de caméra dans la liste complète, distinct de l’index de la passe actuelle.",
+        "ko": "전체 카메라 목록의 카메라 인덱스이며 현재 패스 인덱스와 구별됩니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
@@ -1213,7 +1281,9 @@
       "hint": {
         "zh-Hant": "指定 UV 層的貼圖座標。",
         "en": "Texture coordinates from the selected UV layer.",
-        "ja": "選択した UV レイヤーのテクスチャ座標です。"
+        "ja": "選択した UV レイヤーのテクスチャ座標です。",
+        "fr": "Coordonnées de texture de la couche UV sélectionnée.",
+        "ko": "선택한 UV 레이어의 텍스처 좌표입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes"
     },
@@ -1239,7 +1309,9 @@
       "hint": {
         "en": "Bone transform matrix for the selected bone index.",
         "zh-Hant": "指定骨骼索引的變換矩陣。",
-        "ja": "選択したボーン番号の変換行列です。"
+        "ja": "選択したボーン番号の変換行列です。",
+        "fr": "Matrice de transformation de l’os sélectionné par index.",
+        "ko": "선택한 본 인덱스의 본 변환 행렬입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
@@ -1262,7 +1334,9 @@
       "hint": {
         "en": "Four-by-four transform matrix for the selected geometry instance.",
         "zh-Hant": "指定幾何實例的四乘四變換矩陣。",
-        "ja": "選択したジオメトリインスタンスの 4×4 変換行列です。"
+        "ja": "選択したジオメトリインスタンスの 4×4 変換行列です。",
+        "fr": "Matrice de transformation 4 × 4 de l’instance de géométrie sélectionnée.",
+        "ko": "선택한 지오메트리 인스턴스의 4×4 변환 행렬입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1285,7 +1359,9 @@
       "hint": {
         "en": "Three-by-three transform matrix for the selected geometry instance.",
         "zh-Hant": "指定幾何實例的三乘三變換矩陣。",
-        "ja": "選択したジオメトリインスタンスの 3×3 変換行列です。"
+        "ja": "選択したジオメトリインスタンスの 3×3 変換行列です。",
+        "fr": "Matrice de transformation 3 × 3 de l’instance de géométrie sélectionnée.",
+        "ko": "선택한 지오메트리 인스턴스의 3×3 변환 행렬입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1309,7 +1385,9 @@
       "hint": {
         "en": "Texture index associated with the selected geometry instance.",
         "zh-Hant": "指定幾何實例所關聯的貼圖索引。",
-        "ja": "選択したジオメトリインスタンスに関連付けられたテクスチャ番号です。"
+        "ja": "選択したジオメトリインスタンスに関連付けられたテクスチャ番号です。",
+        "fr": "Index de texture associé à l’instance de géométrie sélectionnée.",
+        "ko": "선택한 지오메트리 인스턴스와 연결된 텍스처 인덱스입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1332,7 +1410,9 @@
       "hint": {
         "en": "Custom instance attribute slot 0 as four components.",
         "zh-Hant": "自訂實例屬性槽 0 的四分量資料。",
-        "ja": "カスタムインスタンス属性スロット 0 の 4 成分データです。"
+        "ja": "カスタムインスタンス属性スロット 0 の 4 成分データです。",
+        "fr": "Emplacement 0 d’attribut d’instance personnalisé, à quatre composantes.",
+        "ko": "4성분으로 구성된 사용자 정의 인스턴스 속성 슬롯 0입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1355,7 +1435,9 @@
       "hint": {
         "en": "Custom instance attribute slot 1 as four components.",
         "zh-Hant": "自訂實例屬性槽 1 的四分量資料。",
-        "ja": "カスタムインスタンス属性スロット 1 の 4 成分データです。"
+        "ja": "カスタムインスタンス属性スロット 1 の 4 成分データです。",
+        "fr": "Emplacement 1 d’attribut d’instance personnalisé, à quatre composantes.",
+        "ko": "4성분으로 구성된 사용자 정의 인스턴스 속성 슬롯 1입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1378,7 +1460,9 @@
       "hint": {
         "en": "Custom instance attribute slot 2 as four components.",
         "zh-Hant": "自訂實例屬性槽 2 的四分量資料。",
-        "ja": "カスタムインスタンス属性スロット 2 の 4 成分データです。"
+        "ja": "カスタムインスタンス属性スロット 2 の 4 成分データです。",
+        "fr": "Emplacement 2 d’attribut d’instance personnalisé, à quatre composantes.",
+        "ko": "4성분으로 구성된 사용자 정의 인스턴스 속성 슬롯 2입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1401,7 +1485,9 @@
       "hint": {
         "en": "Custom instance attribute slot 3 as four components.",
         "zh-Hant": "自訂實例屬性槽 3 的四分量資料。",
-        "ja": "カスタムインスタンス属性スロット 3 の 4 成分データです。"
+        "ja": "カスタムインスタンス属性スロット 3 の 4 成分データです。",
+        "fr": "Emplacement 3 d’attribut d’instance personnalisé, à quatre composantes.",
+        "ko": "4성분으로 구성된 사용자 정의 인스턴스 속성 슬롯 3입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing"
     },
@@ -1423,7 +1509,9 @@
       "hint": {
         "zh-Hant": "目前繪製點內部的座標。",
         "en": "Coordinates within the point being rendered.",
-        "ja": "描画中のポイント内の座標です。"
+        "ja": "描画中のポイント内の座標です。",
+        "fr": "Coordonnées dans le point en cours de rendu.",
+        "ko": "렌더링 중인 포인트 내부의 좌표입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions"
     },
@@ -1444,7 +1532,9 @@
       "hint": {
         "en": "General render state, including combined ambient-light color and viewport information.",
         "zh-Hant": "一般繪製狀態，包含合計環境光顏色與 viewport 資訊。",
-        "ja": "環境光の合計色やビューポート情報を含む、全般的なレンダー状態です。"
+        "ja": "環境光の合計色やビューポート情報を含む、全般的なレンダー状態です。",
+        "fr": "État général du rendu, dont la couleur ambiante combinée et les informations de la fenêtre d’affichage.",
+        "ko": "합산된 주변광 색상과 뷰포트 정보를 포함하는 일반 렌더 상태입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -1465,7 +1555,9 @@
       "hint": {
         "en": "Combined ambient-light color from the ambient lights used by this render pass.",
         "zh-Hant": "目前繪製所使用的環境光之合計顏色。",
-        "ja": "現在のレンダーパスで使用する環境光の合計色です。"
+        "ja": "現在のレンダーパスで使用する環境光の合計色です。",
+        "fr": "Couleur ambiante combinée des lumières ambiantes utilisées par cette passe de rendu.",
+        "ko": "이 렌더 패스에서 사용하는 주변 조명의 합산된 주변광 색상입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -1488,7 +1580,9 @@
       "hint": {
         "zh-Hant": "目前 viewport 的起點座標。",
         "en": "Origin of the current viewport.",
-        "ja": "現在のビューポートの原点です。"
+        "ja": "現在のビューポートの原点です。",
+        "fr": "Origine de la fenêtre d’affichage actuelle.",
+        "ko": "현재 뷰포트의 원점입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -1511,7 +1605,9 @@
       "hint": {
         "zh-Hant": "目前 viewport 的寬、高。",
         "en": "Width and height of the current viewport.",
-        "ja": "現在のビューポートの幅と高さです。"
+        "ja": "現在のビューポートの幅と高さです。",
+        "fr": "Largeur et hauteur de la fenêtre d’affichage actuelle.",
+        "ko": "현재 뷰포트의 너비와 높이입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -1532,7 +1628,9 @@
       "hint": {
         "en": "Environment-light settings for the current render pass.",
         "zh-Hant": "目前繪製的環境燈設定陣列。",
-        "ja": "現在のレンダーパスの環境ライト設定です。"
+        "ja": "現在のレンダーパスの環境ライト設定です。",
+        "fr": "Réglages des lumières d’environnement pour la passe de rendu actuelle.",
+        "ko": "현재 렌더 패스의 환경 조명 설정입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -1553,7 +1651,9 @@
       "hint": {
         "en": "Compile-time number of regular lights in this shader configuration.",
         "zh-Hant": "此 shader 配置中一般燈光的編譯期數量。",
-        "ja": "このシェーダー構成の通常ライト数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成の通常ライト数を表すコンパイル時定数です。",
+        "fr": "Nombre de lumières ordinaires à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 일반 조명 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
@@ -1574,7 +1674,9 @@
       "hint": {
         "en": "Compile-time number of environment lights in this shader configuration.",
         "zh-Hant": "此 shader 配置中環境燈的編譯期數量。",
-        "ja": "このシェーダー構成の環境ライト数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成の環境ライト数を表すコンパイル時定数です。",
+        "fr": "Nombre de lumières d’environnement à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 환경 조명 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
@@ -1595,7 +1697,9 @@
       "hint": {
         "en": "Compile-time number of cameras in this shader configuration.",
         "zh-Hant": "此 shader 配置中相機的編譯期數量。",
-        "ja": "このシェーダー構成のカメラ数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成のカメラ数を表すコンパイル時定数です。",
+        "fr": "Nombre de caméras à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 카메라 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
@@ -1616,7 +1720,9 @@
       "hint": {
         "en": "Compile-time number of color buffers in this shader configuration.",
         "zh-Hant": "此 shader 配置中色彩緩衝區的編譯期數量。",
-        "ja": "このシェーダー構成のカラーバッファー数を表すコンパイル時定数です。"
+        "ja": "このシェーダー構成のカラーバッファー数を表すコンパイル時定数です。",
+        "fr": "Nombre de buffers de couleur à la compilation dans cette configuration de shader.",
+        "ko": "이 셰이더 설정에서 컴파일 시 결정되는 색상 버퍼 수입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines"
     },
@@ -1640,7 +1746,9 @@
       "hint": {
         "en": "Nine RGB spherical-harmonic coefficients for the selected environment light.",
         "zh-Hant": "指定環境燈的九組 RGB 球諧係數。",
-        "ja": "選択した環境ライトの 9 組の RGB 球面調和係数です。"
+        "ja": "選択した環境ライトの 9 組の RGB 球面調和係数です。",
+        "fr": "Neuf coefficients RGB d’harmoniques sphériques pour la lumière d’environnement sélectionnée.",
+        "ko": "선택한 환경 조명의 RGB 구면 조화 계수 9개입니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms"
     },
@@ -1664,7 +1772,9 @@
       "hint": {
         "en": "Index of the current vertex. This is an identity, not an attribute lookup for another vertex.",
         "zh-Hant": "目前頂點的索引。這是頂點身分，不代表讀取另一個頂點的屬性。",
-        "ja": "現在の頂点のインデックスです。頂点の識別情報であり、別の頂点の属性を参照するものではありません。"
+        "ja": "現在の頂点のインデックスです。頂点の識別情報であり、別の頂点の属性を参照するものではありません。",
+        "fr": "Index du sommet actuel. Identifie ce sommet, sans rechercher un attribut d’un autre sommet.",
+        "ko": "현재 정점의 인덱스입니다. 식별 정보이며 다른 정점의 속성을 조회하는 기능이 아닙니다."
       },
       "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf"
     },
@@ -1687,7 +1797,9 @@
       "hint": {
         "en": "Screen-space texture coordinates used by native MAT screen-space map sampling. Returns the st components.",
         "zh-Hant": "原生材質螢幕空間貼圖模式使用的座標，輸出 st 分量。",
-        "ja": "標準 MAT の画面空間マップサンプリング用のテクスチャ座標です。st 成分を返します。"
+        "ja": "標準 MAT の画面空間マップサンプリング用のテクスチャ座標です。st 成分を返します。",
+        "fr": "Coordonnées de texture en espace écran pour l’échantillonnage natif des textures MAT en espace écran. Renvoie les composantes st.",
+        "ko": "기본 MAT 화면 공간 맵 샘플링에 사용하는 화면 공간 텍스처 좌표입니다. st 성분을 반환합니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"
     },
@@ -1710,7 +1822,9 @@
       "hint": {
         "en": "Current instance index used by native MAT. Pass through a flat Vertex Output to use indexed TDInstanceColor in Pixel Stage.",
         "zh-Hant": "原生材質使用的目前實例索引。以 flat Vertex Output 傳給 Pixel Stage，供帶索引的 TDInstanceColor 使用。",
-        "ja": "標準 MAT が使用する現在のインスタンス番号です。Pixel ステージでインデックス付きの TDInstanceColor を使うには、flat の Vertex Output から渡してください。"
+        "ja": "標準 MAT が使用する現在のインスタンス番号です。Pixel ステージでインデックス付きの TDInstanceColor を使うには、flat の Vertex Output から渡してください。",
+        "fr": "Index d’instance actuel utilisé par le MAT natif. Transmettez-le via une Vertex Output flat pour utiliser TDInstanceColor indexé dans l’étape Pixel.",
+        "ko": "기본 MAT에서 사용하는 현재 인스턴스 인덱스입니다. Pixel 단계에서 인덱스형 TDInstanceColor를 사용하려면 flat Vertex Output으로 전달하세요."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"
     },
@@ -1733,7 +1847,9 @@
       "hint": {
         "en": "Geometry color used by native Phong/PBR before current-instance color is applied. This is the native TDColor accessor, distinct from TDPointColor.",
         "zh-Hant": "原生 Phong／PBR 套用實例顏色之前使用的幾何顏色。直接呼叫 TDColor，與 TDPointColor 分開保留。",
-        "ja": "標準 Phong／PBR が現在のインスタンス色を適用する前のジオメトリ色です。TDColor を直接読み取り、TDPointColor とは区別されます。"
+        "ja": "標準 Phong／PBR が現在のインスタンス色を適用する前のジオメトリ色です。TDColor を直接読み取り、TDPointColor とは区別されます。",
+        "fr": "Couleur de géométrie utilisée par Phong/PBR natif avant application de la couleur d’instance actuelle. Accesseur natif TDColor, distinct de TDPointColor.",
+        "ko": "현재 인스턴스 색상 적용 전 기본 Phong/PBR에서 사용하는 지오메트리 색상입니다. 기본 TDColor 접근자이며 TDPointColor와 다릅니다."
       },
       "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT"
     }
@@ -1837,7 +1953,9 @@
       "hint": {
         "zh-Hant": "用於貼圖取樣的二維 UV 座標。",
         "en": "Two-dimensional UV coordinates for texture sampling.",
-        "ja": "テクスチャのサンプリングに使用する 2 次元 UV 座標です。"
+        "ja": "テクスチャのサンプリングに使用する 2 次元 UV 座標です。",
+        "fr": "Coordonnées UV bidimensionnelles pour l’échantillonnage de texture.",
+        "ko": "텍스처 샘플링용 2차원 UV 좌표입니다."
       }
     },
     "position": {

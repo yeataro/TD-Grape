@@ -50,7 +50,8 @@ def validate_translations(key,values):
         assert placeholders(values[lang])==placeholders(values['en']),(key,lang,'placeholders')
     # Reference URLs are content, not translated identifiers (including URL fragments).
     links=lambda text: sorted(re.findall(r'\]\((https?://[^\s]+)\)',text))
-    assert links(values['ja'])==links(values['en']),(key,'ja','reference links')
+    for lang in ('ja','fr','ko'):
+        assert links(values[lang])==links(values['en']),(key,lang,'reference links')
 for key,values in data['messages'].items(): validate_translations(key,values)
 sources=json.loads((root.parent/'library/source_catalog.json').read_text('utf-8'))
 source_hints=0
