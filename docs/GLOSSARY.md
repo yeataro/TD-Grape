@@ -34,6 +34,7 @@
 | 建議用語 | 英文 | 定義與區分 |
 | --- | --- | --- |
 | 接線顯示樣式 | Wire／Link | 同一接線的兩種呈現：Wire 為曲線；Link 為細灰直線虛線，附接孔箭頭導航。切換不改變資料流或產碼，詳見 [Wire／Link](ui/WIRE_LINK.md)。 |
+| 接線整理節點 | Router | 圖中實際存在的節點，輸入、輸出邊分別保存；產碼直接沿用來源，不新增 GLSL 運算。最多十個圓為外觀限制，不是連接數量限制。詳見 [Router](features/ROUTER.md)。 |
 | 型別轉換／轉型 | Type conversion／Cast | 在本表的純量／向量例子中，指元素型別改變，例如 int → float、vec3 → ivec3，也包含 bool 與數值的明確轉換。是否合法、自動或需 Convert，是另一個問題。 |
 | 純量展開 | Splat | 把同一純量填入向量每個分量，例如 int → ivec3，得到三個相同整數。不是補零，也不是任意向量擴張或截短。可與元素型別轉換同時發生。 |
 | 分量組合／選取 | Component assembly／Selection；Combine／Swizzle | 明確指定分量的組成、來源或順序。vec2 變 vec4 需要說明新增分量的來源，不能籠統稱為 splat。 |

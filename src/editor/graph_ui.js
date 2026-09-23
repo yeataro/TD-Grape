@@ -91,7 +91,7 @@ function dragExistingWire(path,event,index){
 function isNodeDragSurface(target,card){
   if(!target||target.closest('.node')!==card)return false;
   if(target.closest('button,input,textarea,select,a,summary,[contenteditable="true"],[role="button"],.node-alias,.node-inline-values'))return false;
-  return card.dataset.category==='annotation'?!!target.closest('.node-title'):EDITOR_DEV_SETTINGS.nodeBodyDrag||!!target.closest('.node-title');
+  return card.classList.contains('node-router')|| (card.dataset.category==='annotation'?!!target.closest('.node-title'):EDITOR_DEV_SETTINGS.nodeBodyDrag||!!target.closest('.node-title'));
 }
 function dragNodeTitle(event,node,title,cards,onFinish){
   if(event.button!==0)return;event.preventDefault();event.stopPropagation();closeCreator();
@@ -503,6 +503,7 @@ function switchPorts(params){
   return {inputs:{default:type,index:'int',...Object.fromEntries(Array.from({length:count},(_,i)=>['case'+i,type]))},outputs:{out:type}};
 }
 function resolvedNodePorts(d,params,decl,kind){
+  if(d.key==='router')return kind==='inputs'?{value:params.type||'float'}:{out:params.type||'float'};
   if(d.key==='math')return mathPorts(params)[kind];
   if(d.key==='switch')return switchPorts(params)[kind];
   if(['vertex_out','vertex_input'].includes(d.key))return vertexBoundaryPorts(d.key)[kind];
@@ -534,7 +535,7 @@ function resolvedNodePorts(d,params,decl,kind){
   return variant?.[kind]||Object.fromEntries(Object.keys(d[kind]||{}).map(port=>[port,'?']));
 }
 /* Auto is editor policy. Each saved node retains a concrete compiler type. */
-const supportsAutoType=d=>!!d&&!['combine','vector','switch'].includes(d.key)&&!isMatrixOperation(d)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
+const supportsAutoType=d=>!!d&&!['router','combine','vector','switch'].includes(d.key)&&!isMatrixOperation(d)&&['math','logic'].includes(nodeCategory(d))&&typeContract?.definitions[d.definitionUuid]?.selector==='parameter';
 const isArithmetic=d=>['add','subtract','multiply','divide'].includes(d?.key);
 const isVectorOperation=d=>['vector','replace','combine','vector_split','swizzle'].includes(d?.key);
 const isMatrixOperation=d=>['matrix','matrix_combine','matrix_replace','matrix_split'].includes(d?.key);
@@ -767,7 +768,11 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     if(active.has(n.id))throw autoTypeError('wire.cycle');active.add(n.id);
     const links=incoming.get(n.id)||[];let plannedType=n.params.type;
     for(const e of links){const source=nodes.get(e.from[0]);if(source)visit(source);}
-    try{if(autoDefinition(document,n,owner)?.key==='switch'){
+    try{if(autoDefinition(document,n,owner)?.key==='router'){
+      const source=links.find(e=>e.to[1]==='value'),type=source?ports.get(source.from[0])?.outputs[source.from[1]]:n.params.type||'float';
+      if(!type||type==='?')throw autoTypeError('type.autoInputs','Router');
+      choices.set(n.id,type);ports.set(n.id,{inputs:{value:type},outputs:{out:type}});
+    }else if(autoDefinition(document,n,owner)?.key==='switch'){
       const baseline=links.find(e=>e.to[1]==='default'),type=baseline?ports.get(baseline.from[0])?.outputs[baseline.from[1]]:n.params.type;
       if(!valueTypes().includes(type))throw autoTypeError('type.autoInputs','Switch Default');
       if(canInfer){choices.set(n.id,type);ports.set(n.id,switchPorts({...n.params,type}));}
@@ -807,7 +812,7 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     active.delete(n.id);
   }
   // No policy nodes: existing unresolved/cyclic drafts remain a compiler concern.
-  if(autoNodes.size||combineNodes.size||data.nodes.some(n=>n.definitionUuid==='sgrape.builtin.switch')||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))||isArithmetic(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
+  if(autoNodes.size||combineNodes.size||data.nodes.some(n=>['sgrape.builtin.switch','sgrape.builtin.router'].includes(n.definitionUuid))||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))||isArithmetic(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
   else for(const n of data.nodes)ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
   return {choices,ports,operands,groups,issues};
 }
@@ -1042,6 +1047,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
   }catch(error){context.plans.set(trialKey,{error});throw error;}
 }
 function creatorVariants(d,wire){
+  if(d.key==='router'&&wire?.type&&wire.type!=='?')return [{type:wire.type,inputs:{value:wire.type},outputs:{out:wire.type},params:{type:wire.type}}];
   if(isCompositeOperation(d)){
     const params={...clone(d.defaults||{})},descriptor=wire&&typeDescriptor(wire.type),variants=[];
     const add=params=>{try{variants.push({type:null,...compositePorts(d.key,params),params});}catch{}};
@@ -1383,14 +1389,17 @@ function connectPorts(start,end){
     commitPlannedWire(from,to);
   });if(changed)cancelConnection();return changed;
 }
-function portInfo(button){
-  const node=button.closest('[data-node]');return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type,...(button.dataset.addPort?{add:true}:{})};
+function portInfo(button,start=null){
+  const node=button.closest('[data-node]');
+  if(node.classList.contains('node-router')){const kind=start?(start.kind==='outputs'?'inputs':'outputs'):button.dataset.kind;return {node:node.dataset.node,kind,port:kind==='inputs'?'value':'out',type:button.dataset.type};}
+  return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type,...(button.dataset.addPort?{add:true}:{})};
 }
 function findWireTarget(candidates,x,y,radius=14){
   const hit=document.elementFromPoint(x,y);
   if(!hit?.closest('#canvas'))return null;
   const direct=hit.closest('.port');
   if(direct)return !direct.disabled&&candidates.includes(direct)?direct:null;
+  const router=hit.closest('.node-router');if(router)return candidates.find(p=>p.closest('.node-router')===router)||null;
   let nearest=null,distance=radius; // Screen pixels, independent of graph zoom.
   for(const candidate of candidates){
     if(candidate.disabled)continue;
@@ -1404,7 +1413,7 @@ function dragWire(button,event){
   if(event.button!==0||readonly)return;event.stopPropagation();
   clearWireGesture();suppressPortClick=false;
   const start=portInfo(button),sx=event.clientX,sy=event.clientY;
-  const candidates=[...$('#cards').querySelectorAll('.port')].filter(p=>!connectionProblem(start,portInfo(p)));
+  const candidates=[...$('#cards').querySelectorAll('.port')].filter(p=>!connectionProblem(start,portInfo(p,start)));
   let moved=false,target=null,frame=0,lastEvent=null;
   const finish=()=>{
     wireGesture=null;clearVectorWirePreview();clearGraphTrash();cancelAnimationFrame(frame);target?.classList.remove('wire-target');target=null;
@@ -1430,7 +1439,7 @@ function dragWire(button,event){
   button.onpointermove=e=>{if(e.pointerId!==event.pointerId)return;lastEvent=e;if(!frame)frame=requestAnimationFrame(()=>{frame=0;update(lastEvent);});};
   button.onpointerup=e=>{
     if(e.pointerId!==event.pointerId)return;update(e);
-    const end=target&&portInfo(target),hit=document.elementFromPoint(e.clientX,e.clientY),wasMoved=moved,drop=moved&&graphTrashDrop(e.clientX,e.clientY);
+    const end=target&&portInfo(target,start),hit=document.elementFromPoint(e.clientX,e.clientY),wasMoved=moved,drop=moved&&graphTrashDrop(e.clientX,e.clientY);
     suppressPortClick=wasMoved;finish();
     if(!wasMoved)return;
     if(drop){commitGraphTrash(drop);wires();return;}
@@ -1445,14 +1454,14 @@ function drawWireDrag(svg){
   const a=wireDrag.kind==='outputs'?p:wireDrag.q,b=wireDrag.kind==='outputs'?wireDrag.q:p,dx=Math.max(60,Math.abs(a.x-b.x)*.5),path=document.createElementNS('http://www.w3.org/2000/svg','path');
   path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);if(wireDrag.kind==='outputs')applyPortColorHint(path,n,'outputs',wireDrag.port);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
 }
-function nodeCollapseSelection(){return graph&&selectedEdge===null?current().nodes.filter(n=>selection.has(n.id)):[];}
+function nodeCollapseSelection(){return graph&&selectedEdge===null?current().nodes.filter(n=>selection.has(n.id)&&n.definitionUuid!=='sgrape.builtin.router'):[];}
 function nodeCollapseSelectionState(){
   const nodes=nodeCollapseSelection();
   return {nodes,canCollapse:nodes.some(n=>n.ui?.collapsed!==true),canExpand:nodes.some(n=>n.ui?.collapsed===true)};
 }
 function setNodesCollapsed(ids,collapsed){
   if(editorMutationBlocked())return false;
-  const wanted=new Set(ids),nodes=current().nodes.filter(n=>wanted.has(n.id)&&(n.ui?.collapsed===true)!==collapsed);
+  const wanted=new Set(ids),nodes=current().nodes.filter(n=>wanted.has(n.id)&&n.definitionUuid!=='sgrape.builtin.router'&&(n.ui?.collapsed===true)!==collapsed);
   if(!nodes.length)return false;
   cancelValueLadder();cancelConnection();
   return change(()=>{for(const node of nodes){node.ui||={};node.ui.collapsed=collapsed;}},{localize:false,layout:true});
@@ -1654,7 +1663,46 @@ function renderCards({only=null}={}){
   }
 }
 // The placement outline measures this same renderer without adding a model node.
+function routerLayout(n){
+  const count=current().edges.filter(e=>e.from[0]===n.id).length,layers=Math.max(1,Math.min(4,count)),pitch=14,dx=pitch*Math.sqrt(3)/2;
+  return {count,layers,pitch,dx,width:11+(layers-1)*dx,height:11+(layers-1)*pitch};
+}
+let routerWirePoints=null;
+function routerPoint(n,kind,edge=null){
+  const cached=kind==='outputs'&&routerWirePoints?.get(n.id);if(cached)return cached.get(edge)||cached.values().next().value;
+  const card=$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`);if(!card)return null;
+  const layout=routerLayout(n),rect=card.getBoundingClientRect(),origin=graphPoint(rect.left,rect.top);if(!origin)return null;
+  if(kind==='inputs')return {x:origin.x+8+5.5,y:origin.y+8+layout.height/2};
+  const ordered=current().edges.filter(e=>e.from[0]===n.id).map(e=>{
+    const target=current().nodes.find(node=>node.id===e.to[0]),p=target&&point(target,e.to[1],'inputs');
+    return {edge:e,y:p?.y??target?.ui?.y??0};
+  }).sort((a,b)=>a.y-b.y||a.edge.to[0].localeCompare(b.edge.to[0])||a.edge.to[1].localeCompare(b.edge.to[1]));
+  const points=new Map((ordered.length?ordered:[{edge:null}]).map((item,index)=>[item.edge,{x:origin.x+8+layout.width-5.5,y:origin.y+8+5.5+Math.floor(index*layout.layers/Math.max(1,ordered.length))*layout.pitch}]));
+  routerWirePoints?.set(n.id,points);return points.get(edge)||points.values().next().value;
+}
+function renderRouterCard(n,cards){
+  const layout=routerLayout(n),type=ports(n,'outputs').out||'float';
+  const card=el('article',{class:'node node-router'+(selection.has(n.id)?' selected':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id,'data-category':'data','aria-label':nodeDisplayName(n)});
+  card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';card.style.width=(layout.width+16)+'px';card.style.height=(layout.height+16)+'px';
+  card.dataset.routerLayers=layout.layers;card.dataset.dragSurface='body';
+  const input=el('div',{class:'port-row input router-input','data-type':type}),output=el('div',{class:'port-row output router-output','data-type':type});
+  input.append(el('span',{'data-kind':'inputs','data-port':'value','aria-hidden':'true'}));
+  let suppressClick=false;
+  for(let col=0;col<layout.layers;col++)for(let row=0;row<=col;row++){
+    const isOutput=col===layout.layers-1,kind=isOutput?'outputs':'inputs';
+    const button=el('button',{type:'button',class:'port router-dot'+(isOutput?' router-output-dot':' router-hollow'),'data-kind':kind,'data-port':isOutput?'out':'value','data-type':type,'aria-label':nodeDisplayName(n)+' · '+t(isOutput?'router.output':'router.input'),title:t('help.router')});
+    button.style.left=(8+col*layout.dx)+'px';button.style.top=(8+(layout.layers-1-col)*layout.pitch/2+row*layout.pitch)+'px';
+    button.onpointerdown=e=>{if(selectionModifier(e)){e.stopPropagation();return;}dragWire(button,e);};
+    button.onclick=e=>{e.stopPropagation();if(selectionModifier(e)){selectNode(n,true);refreshCanvasSelection();return;}if(readonly||suppressPortClick)return;const info=portInfo(button,linkStart);if(linkStart)connectPorts(linkStart,info);else{linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
+    button.ondblclick=e=>e.stopPropagation();(isOutput?output:input).append(button);
+  }
+  card.append(input,output);
+  card.onpointerdown=e=>{if(e.button===0)suppressClick=false;if(isNodeDragSurface(e.target,card)&&!linkStart)dragNodeTitle(e,n,card,cards,moved=>{suppressClick=moved;});};
+  card.onclick=e=>{e.stopPropagation();if(suppressClick||e.target.closest('button'))return;if(linkStart){connectPorts(linkStart,{node:n.id,kind:linkStart.kind==='outputs'?'inputs':'outputs',port:linkStart.kind==='outputs'?'value':'out',type});return;}selectNode(n,selectionModifier(e));refreshCanvasSelection();};
+  cards.append(card);return card;
+}
 function renderNodeCard(n,cards,nativeDeclarations,projection=null){
+    if(n.definitionUuid==='sgrape.builtin.router')return renderRouterCard(n,cards);
     const collapsed=n.ui?.collapsed===true,d=projection?.definition||definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     card.dataset.category=nodeCategory(d||{key:''});card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
     if(isMatrixOperation(d))card.classList.add('node-matrix');

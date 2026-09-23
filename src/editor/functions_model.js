@@ -171,8 +171,10 @@ const GraphArrayLengths=(()=>{
   const unit=(document,scope)=>scope.startsWith('fn_')?document.functions?.find(f=>f.id===scope.slice(3))?.graph:document.stages?.[scope];
   function find(document,value){const ref=reference(value),data=ref&&unit(document,ref.scope),node=data?.nodes.find(n=>n.id===ref.source[0]);return node?{...ref,node,data,name:value,type:'int',kind:'expression'}:null;}
   function length(document,data,node,scope,links=data.edges,nodes=null){
-    const edge=links.find(e=>e.to[0]===node.id&&e.to[1]==='length');if(!edge)return node.inputValues?.length??node.params.length??4;
-    const source=nodes?nodes.get(edge.from[0]):data.nodes.find(n=>n.id===edge.from[0]),decl=document.declarations?.find(d=>d.id===source?.params.declarationId);
+    let edge=links.find(e=>e.to[0]===node.id&&e.to[1]==='length');if(!edge)return node.inputValues?.length??node.params.length??4;
+    const lookup=id=>nodes?nodes.get(id):data.nodes.find(n=>n.id===id),seen=new Set();
+    while(lookup(edge.from[0])?.definitionUuid==='sgrape.builtin.router'&&edge.from[1]==='out'&&!seen.has(edge.from[0])){seen.add(edge.from[0]);const upstream=data.edges.find(e=>e.to[0]===edge.from[0]&&e.to[1]==='value');if(!upstream)break;edge=upstream;}
+    const source=lookup(edge.from[0]),decl=document.declarations?.find(d=>d.id===source?.params.declarationId);
     if(['sgrape.builtin.constant','sgrape.builtin.spec_constant'].includes(source?.definitionUuid)&&['constant','spec_constant'].includes(decl?.kind)&&['int','uint'].includes(decl.type))return 'sg_len_'+decl.id;
     if(source?.definitionUuid==='sgrape.builtin.scalar'&&['int','uint'].includes(source.params.type)&&Number.isInteger(source.params.value))return source.params.value;
     return token(scope,edge.from);

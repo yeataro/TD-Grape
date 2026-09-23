@@ -2084,3 +2084,12 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 /* Hover-only Link navigation keeps the existing socket as the line endpoint. */
 .link-port-navigation.link-hover-reveal{opacity:0}
 .port-row:hover>.link-port-navigation.link-hover-reveal,.link-port-navigation.link-hover-reveal:focus-visible{opacity:1}
+.node.node-router{--node-min-width:0px;min-width:0;max-width:none;padding:0;overflow:visible;border:0;background:transparent;box-shadow:none;border-radius:7px}
+:root #canvas .node.node-router{background:transparent;border:0;box-shadow:none}
+:root #canvas .node.node-router.selected{outline:1px solid var(--selection);outline-offset:1px}
+:root #canvas .node.node-router.error{outline:1px solid var(--danger,#ef8d8d)}
+.node-router .port-row{position:absolute;inset:0;width:100%;height:100%;min-height:0;padding:0;margin:0;pointer-events:none}
+.node-router .router-dot{position:absolute;box-sizing:border-box;width:11px;height:11px;min-width:0;min-height:0;padding:0;margin:0;border:2px solid var(--socket);border-radius:50%;transform:none;right:auto;pointer-events:auto}
+.node-router .router-dot.router-output-dot{background:var(--socket)}
+.node-router .router-dot.router-hollow{background:var(--node-body,var(--ui-tone-node))}
+.node-router .link-port-navigation{pointer-events:auto}

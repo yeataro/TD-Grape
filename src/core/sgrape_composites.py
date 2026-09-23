@@ -31,6 +31,12 @@ def creation_lengths(graph):
         for ident,n in nodes.items():
             if n.get('definitionUuid')!='sgrape.builtin.array_create':continue
             length=n.get('inputValues',{}).get('length',n.get('params',{}).get('length',4));source=incoming.get((ident,'length'))
+            visited=set()
+            while source and source not in visited and nodes.get(source[0],{}).get('definitionUuid')=='sgrape.builtin.router' and source[1]=='out':
+                visited.add(source)
+                upstream=incoming.get((source[0],'value'))
+                if not upstream:break
+                source=upstream
             if source:
                 upstream=nodes.get(source[0],{});params=upstream.get('params',{});decl=declarations.get(params.get('declarationId'),{})
                 if upstream.get('definitionUuid') in ('sgrape.builtin.constant','sgrape.builtin.spec_constant') and decl.get('kind') in ('constant','spec_constant') and decl.get('type') in ('int','uint'):

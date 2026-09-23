@@ -18,6 +18,10 @@
     "Graph"
   ],
   "messages": {
+    "help.router": {"en": "A real graph node for routing wires. Follows its source type without adding GLSL operations. Up to four layers and ten dots; additional targets share output sockets in vertical order. Drag the gaps to move it.", "zh-Hant": "整理接線的實際節點；型別跟隨來源，不新增 GLSL 運算。最多四層十個圓，更多目標按上下位置共用輸出孔。拖曳空隙可移動節點。"},
+    "router.input": {"en": "Input", "zh-Hant": "輸入"},
+    "router.output": {"en": "Output", "zh-Hant": "輸出"},
+
     "browserReset.action": {"en":"Reset browser settings…","zh-Hant":"重設瀏覽器設定…"},
     "browserReset.confirm": {"en":"Reset TD-Grape settings in this browser and reload?\n\nThis clears appearance, language, panel layout (including saved layouts), Sources preferences and experimental options for this site.\n\nShader graphs, TD parameters, connection access and unsaved graph drafts are kept. Other browsers and site addresses are unaffected.","zh-Hant":"要重設此瀏覽器的 TD-Grape 設定並重新載入嗎？\n\n將清除目前網站的外觀、語言、面板配置（含另存配置）、來源面板偏好及實驗選項。\n\n保留 Shader 圖、TD 參數、連線授權及未提交的圖草稿。不影響其他瀏覽器或網站位址。"},
     "browserReset.failed": {"en":"Browser settings could not be reset. Previous settings were retained; the page was not reloaded.","zh-Hant":"無法重設瀏覽器設定。已保留原設定，頁面未重新載入。"},

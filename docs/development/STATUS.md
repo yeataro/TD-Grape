@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-23 0.8.212：依確認的示意新增 [Router](../features/ROUTER.md)。圖中保存實際節點及前後兩段接線，型別跟隨來源；產碼直接沿用來源，不新增 GLSL 變數或運算。外觀採現有 11px 接孔、3px 圓邊間距、非輸出圓空心、最多四層十個圓；更多目標依畫面上下位置分組共用最右列的四個输出位置。可在 Add Node 搜尋 Router，不增加實驗開關，不實作 Link 略過 Router。保留每段 Wire／Link、導覽、移動、多選、保存及 Undo／Redo。
+
+Router 核心 7 組、瀏覽器 5 組及 TD 原生 3 組通過：包含所有數值／矩陣型別、Sampler、陣列／結構、特化常數長度、Subgraph、連鎖／分接、GLSL 全文相同、TOP 像素相同、MAT 兩階段編譯、共用輸出與移動排序。既有 Link 16 組、多選 9 組回歸通過；深淺色畫面已檢視。可攜檢查完成：首輪 545 項 Python 有三項歷史範圍檢查需排除新增 Router，更新範圍後相關 18 項及新增兩項通過，原 138 份產碼指紋保留；其餘 integration／locale／Node suites 通過。私人報告位於 reports/router-212/。尚未將觸控／Safari 實機操作列為本輪驗收。
+
+39 份來源一致，四份 Master 身分／位置及四份使用者 Shader 保存內容保留。熱更新新 catalog 時舊 core 曾短暫輸出 Unknown catalog identity；同步完成後已確認 live core 的 Router 產碼、core／composites／runtime 零錯誤。正式 TOE 保存成功（1632828 bytes；SHA256 348a1a5c3fb1a7f855c40f78716050a5337a251278e06b02eff602a6467fac47），六份登記狀態保留、私人助手排除。本批本機提交後停下供 review，未推送。
+
 2026-09-23 0.8.211：快捷鍵說明的副標題移到主標題旁同一行，維持較淡的小字；窄視窗自動換行。8 組快捷鍵瀏覽器流程通過，包含不同尺寸／縮放／深淺色、分組、焦點與关闭行為；已檢視桌面截图。報告在私人 reports/shortcut-heading-211/。
 
 39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保存內容保留。正式 TOE 已保存（1630124 bytes；SHA256 69b1a6b23dc3c031cb7d85f422e5c5d31bc9b302043fccee83d3cc4adbbce9f2），六份登記狀態保留，私人助手排除。同步請求曾遇短暫檔案鎖，重試成功並重新保存。未推送。

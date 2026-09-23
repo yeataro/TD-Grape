@@ -88,7 +88,7 @@ def glsl_declaration(ty,name):
 def parameter_type_valid(definition,params):
     ty=params.get('type','float');key=definition['key']
     if key in COMPOSITE_KEYS:return True  # Its interface validates the complete shape.
-    if key=='relay':return valid_port_type(ty)
+    if key in ('relay','router'):return valid_port_type(ty)
     if key in ('uniform','constant') and compound_type(ty):return not type_registry().opaque(ty)
     return ty in node_parameter_types(definition)
 
@@ -111,19 +111,19 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','generated_glsl','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
-    'math','switch','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
+    'router','math','switch','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS,*_legacy_nodes.CALLS))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
-CONSTANT_EXPRESSIONS = frozenset(('math','float','vec2','vec3','vec4','color','constant','relay',
+CONSTANT_EXPRESSIONS = frozenset(('router','math','float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
     'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'range_from','range_to','scalar','convert','matrix_convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',
     'array','array_get','array_length','struct_field',
     *(k for k,spec in _legacy_nodes.CALLS.items() if spec['constant'])))
-SPECIALIZATION_EXPRESSIONS = frozenset(('math','relay','add','subtract','multiply','divide','convert','matrix_convert','scalar','vector','combine','swizzle','split','vector_split','compare','if'))
+SPECIALIZATION_EXPRESSIONS = frozenset(('router','math','relay','add','subtract','multiply','divide','convert','matrix_convert','scalar','vector','combine','swizzle','split','vector_split','compare','if'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
 MATRIX_KEYS = ('matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
@@ -428,6 +428,7 @@ def node_output_symbols(nodes, definitions, ports):
     """
     candidates={}
     for ident,n in nodes.items():
+        if definitions[ident]['key']=='router':continue
         stem=n.get('_symbolStem',n.get('name',ident))
         for port in ports[ident]['out']:
             candidate='sg_n_'+stem+('_'+port if definitions[ident]['key']=='glsl_code' else '' if port=='out' else '_'+port)
@@ -617,7 +618,7 @@ def node_parameter_types(definition):
     key=definition['key']
     if key in _legacy_nodes.CALLS:return tuple(_legacy_nodes.CALLS[key]['variants'])
     if key in COMPOSITE_KEYS:return (definition['defaults'].get('type','float'),)
-    if key=='relay':return PORT_TYPES
+    if key in ('relay','router'):return PORT_TYPES
     if key=='compare':return COMPARE_TYPES
     if key=='scalar':return SCALAR_TYPES
     if key=='pop_buffer':return NUMERIC_TYPES+MATRIX_TYPES
@@ -1237,6 +1238,7 @@ def _compile_flat(graph,annotation_scopes=None):
             def expression_identity(source):
                 if source in expression_ids:return expression_ids[source]
                 ident,output=source;n=nodes[ident]
+                if defs[ident]['key']=='router' and (ident,'value') in links:return expression_identity(links[(ident,'value')])
                 inputs={port:expression_identity(links[(ident,port)]) if (ident,port) in links else n.get('inputValues',{}).get(port,input_default(defs[ident]['key'],port,ports[ident]['in'][port])) for port in effective_inputs(ident,output)}
                 identity=digest([defs[ident]['key'],n['params'],output,inputs]);expression_ids[source]=identity;return identity
             for token,sources in data.get('extentAlternatives',{}).items():
@@ -1423,6 +1425,9 @@ def _compile_flat(graph,annotation_scopes=None):
                         lambda *values:helper+'('+', '.join(values)+')')
                 elif k in ('sin','cos','abs','fract','length','normalize','sign','sqrt','floor','round','ceil','trunc'): expr=k+'('+a('value')+')'
                 elif k in NOISE_HELPERS: expr=NOISE_HELPERS[k]+'('+a('position')+')'
+                elif k=='router':
+                    if (ident,'value') not in links:raise GraphError('Connect a source to Router',ident)
+                    expr=a('value')
                 elif k=='relay': expr=a('value')
                 elif k=='rgba': expr='vec4('+a('rgb')+', '+a('alpha')+')'
                 elif k=='combine':expr=ty+'('+', '.join(a(port) for port in ports[ident]['in'])+')'
@@ -1583,13 +1588,14 @@ def _compile_flat(graph,annotation_scopes=None):
                             lines.extend(['#if TD_NUM_COLOR_BUFFERS > '+str(index),
                                           '    fragColor['+str(index)+'] = TDOutputSwizzle('+a(port)+');',
                                           '#endif'])
-                if expr is not None and (type_registry().opaque(ty) or k in ('constant','spec_constant','builtin_source') or (k in ('uniform','relay') and compound_type(ty))):
+                if expr is not None and (type_registry().opaque(ty) or k in ('router','constant','spec_constant','builtin_source') or (k in ('uniform','relay') and compound_type(ty))):
                     # Opaque GLSL samplers are references, never local variables.
                     expressions[(ident,'out')]=expr
                 elif expr is not None:
                     variable=symbols[(ident,'out')]
                     lines.append('    '+('const ' if ident in const_emit else '')+glsl_declaration(ty,variable)+' = '+expr+';')
                     expressions[(ident,'out')]=variable
+                if k=='router':note={}  # Routing annotations never add GLSL text.
                 label_lines=_comment_lines(note.get('label'),None)
                 if label_lines:
                     if len(lines)>line_start:
@@ -1878,7 +1884,7 @@ def validate_graph_frames(data):
 
 def _infer_graph_types(graph):
     """Resolve compound nodes from upstream ports without persisting derived type state."""
-    dynamic={CATALOG[key]['definitionUuid'] for key in ('array_create','array_get','array_replace','array_length','struct_field')}
+    dynamic={CATALOG[key]['definitionUuid'] for key in ('router','array_create','array_get','array_replace','array_length','struct_field')}
     scoped=list(graph.get('stages',{}).values())+[f.get('graph',{}) for f in graph.get('functions',[]) if isinstance(f,dict)]
     if not any(n.get('definitionUuid') in dynamic for data in scoped if isinstance(data,dict)
                for n in data.get('nodes',[]) if isinstance(n,dict)):
@@ -1914,8 +1920,8 @@ def _infer_graph_types(graph):
                     edge=incoming.get((ident,port))
                     if not isinstance(edge,list) or len(edge)!=2:return None
                     return ports(edge[0])['outputs'].get(edge[1])
-                if key in ('array_get','array_replace','array_length','struct_field'):
-                    source=source_type('value' if key=='struct_field' else 'Array')
+                if key in ('router','array_get','array_replace','array_length','struct_field'):
+                    source=source_type('value' if key in ('router','struct_field') else 'Array')
                     if source:p['type']=source
                 if key=='array_create':
                     source=source_type('length')

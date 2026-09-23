@@ -1,9 +1,49 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.205",
+  "catalogVersion": "0.8.212",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
+    {
+      "definition": {
+        "key": "router",
+        "label": "Router",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.router",
+        "definitionUuid": "sgrape.builtin.router",
+        "revisionHash": "460411fb0c04ea7d492aa79541fa1ad6447a738fdea9e9c1fe289ff26e6fc1d3"
+      },
+      "emitter": {
+        "id": "router",
+        "version": 1
+      },
+      "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+          "reroute",
+          "knot",
+          "routing",
+          "整理接線",
+          "轉接",
+          "路由"
+        ],
+        "glslName": "",
+        "secondaryCategories": []
+      }
+    },
     {
       "definition": {
         "key": "math",

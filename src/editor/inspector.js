@@ -1421,6 +1421,7 @@ function inspector(){
   }
   box.append(tabs);
   if(inspectorTab==='notes'){box.classList.add('notes-parameters');box.append(nodeCommentField(n));return;}
+  if(d.key==='router'){box.append(el('p',{class:'muted'},t('help.router')),parameterControlRow(t('node.type'),el('span',{},displayType(n.params.type||'float'))));return;}
   box.classList.toggle('ordinary-parameters',ordinary&&inspectorTab==='parameters');
   functionInspector(box,n,d);
   vertexBoundaryInspector(box,n,d);
