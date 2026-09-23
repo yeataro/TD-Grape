@@ -56,6 +56,7 @@ function renderShortcutHelp(){
   opener.title=t('shortcuts.title');opener.setAttribute('aria-label',t('shortcuts.title'));opener.setAttribute('aria-expanded',String(panel.open));
   document.getElementById('shortcutsclose').title=t('action.close')+'　Esc';
   const contents=document.getElementById('shortcutslist');contents.replaceChildren();
+  const columns=[el('div',{class:'shortcuts-column'}),el('div',{class:'shortcuts-column'})];contents.append(...columns);
   for(const section of ['edit','navigation','values']){
     const group=el('section',{class:'shortcuts-section'}),heading=el('h3',{id:'shortcuts-'+section},t('shortcuts.section.'+section)),list=el('dl',{class:'shortcuts-commands'});
     group.setAttribute('aria-labelledby',heading.id);
@@ -67,7 +68,7 @@ function renderShortcutHelp(){
       const adjacentLabel=EDITOR_DEV_SETTINGS.ctrlArrowAdjacent&&({selectUpstream:'selection.upstreamAdjacent',selectDownstream:'selection.downstreamAdjacent'})[action];
       row.append(el('dt',{},t(spatialLabel||adjacentLabel||command.hint||command.label)),keys);list.append(row);
     }
-    group.append(heading,list);contents.append(group);
+    group.append(heading,list);columns[section==='edit'?0:1].append(group);
   }
   renderShortcutButtonHints();
 }

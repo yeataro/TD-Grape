@@ -3,7 +3,17 @@ const {harness}=require('./test_glsl_code.cjs');
 (async()=>{
  const[source,state,folder]=process.argv.slice(2),h=await harness(source,state,folder,{skipPreview:true}),{page,checks,errors,settle}=h;
  try{
+  assert.deepEqual(await page.evaluate(()=>[EDITOR_DEV_SETTINGS.linkArrowDisplay,EDITOR_DEV_SETTINGS.reverseInputLinkArrowOnHover]),['always',true]);
+  await page.locator('#uiexperiments').click();
+  assert.equal(await page.locator('[data-experiment="linkArrowDisplay"]').inputValue(),'always');
+  assert.equal(await page.locator('[data-experiment="reverseInputLinkArrowOnHover"]').isChecked(),true);
+  await page.evaluate(()=>setUIExperiments({linkArrowDisplay:'hidden',reverseInputLinkArrowOnHover:false}));
+  await page.locator('#experimentsreset').click();
+  assert.deepEqual(await page.evaluate(()=>[EDITOR_DEV_SETTINGS.linkArrowDisplay,EDITOR_DEV_SETTINGS.reverseInputLinkArrowOnHover]),['always',true]);
+  await page.keyboard.press('Escape');
+  checks.push('fresh browser and Reset defaults select always-visible arrows and enabled input hover reversal');
   await page.evaluate(()=>{
+   setUIExperiments({linkArrowDisplay:'hidden',reverseInputLinkArrowOnHover:false});
    nativeSourcePolling=uniformPolling=customPolling=true;uniformLive.disconnect();uniformLive.connect=()=>{};clearTimeout(autoTimer);scheduleGraphApply=()=>{};
    stage='pixel';graphTrail=[];graph.functions=[];graph.declarations=[];readonly=dirty=connectionInterrupted=false;past=[];future=[];selected=selectedEdge=null;selection.clear();
    graph.stages.pixel={nodes:[testNode('a','scalar',0,150),testNode('b','add',600,-100),testNode('c','add',600,220),testNode('d','add',600,550),testNode('result','pixel_out',950,550)],edges:[{from:['a','out'],to:['b','a']},{from:['a','out'],to:['c','a']},{from:['a','out'],to:['d','a']}]};
@@ -147,7 +157,7 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(experimentsStorageKey)).linkArrowDisplay),'hover');
   await page.evaluate(()=>setUIExperiments({linkArrowDisplay:'always'}));assert.equal(await visibleSource.evaluate(e=>getComputedStyle(e).opacity),'1');await assertEndpoints();
   checks.push('hover-only arrows reveal at either endpoint and retain navigation, use socket anchors without jumping, preserve hidden-line navigation and do not edit graph history');
-  assert.deepEqual(await page.evaluate(()=>[{}, {linkArrowsWithLines:true}, {linkArrowsOnHover:true,linkArrowsWithLines:true}, {linkArrowDisplay:'hidden',linkArrowsWithLines:true}, {linkArrowDisplay:'invalid'}].map(saved=>parseUIExperiments(JSON.stringify(saved)).linkArrowDisplay)),['hidden','always','hover','hidden','hidden']);
+  assert.deepEqual(await page.evaluate(()=>[{}, {linkArrowsWithLines:false}, {linkArrowsWithLines:true}, {linkArrowsOnHover:true,linkArrowsWithLines:true}, {linkArrowDisplay:'hidden',linkArrowsWithLines:true}, {linkArrowDisplay:'invalid'}].map(saved=>parseUIExperiments(JSON.stringify(saved)).linkArrowDisplay)),['always','hidden','always','hover','hidden','always']);
   await page.locator('#uiexperiments').click();
   const mode=page.locator('[data-experiment="linkArrowDisplay"]');
   assert.deepEqual(await mode.locator('option').evaluateAll(es=>es.map(e=>e.value)),['always','hover','hidden']);

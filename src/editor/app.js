@@ -1030,7 +1030,7 @@ function parseUIExperiments(raw){
   const result={...EDITOR_DEV_DEFAULTS};
   if(!saved||typeof saved!=='object'||Array.isArray(saved))return result;
   if(saved.arrowNavigationView===undefined&&saved.arrowNavigationFrame===true)result.arrowNavigationView='frame';
-  if(saved.linkArrowDisplay===undefined)result.linkArrowDisplay=saved.linkArrowsOnHover===true?'hover':saved.linkArrowsWithLines===true?'always':'hidden';
+  if(saved.linkArrowDisplay===undefined&&(typeof saved.linkArrowsWithLines==='boolean'||typeof saved.linkArrowsOnHover==='boolean'))result.linkArrowDisplay=saved.linkArrowsOnHover===true?'hover':saved.linkArrowsWithLines===true?'always':'hidden';
   for(const key of Object.keys(result)){
     const value=saved[key];
     if(key==='canvasDampingMs'||key==='frameDampingMs'){if(typeof value==='number'&&Number.isFinite(value))result[key]=Math.max(10,Math.min(1000,Math.round(value)));}

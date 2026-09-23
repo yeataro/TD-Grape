@@ -26,6 +26,9 @@ async function run(){
 
     await open();
     assert.equal(await panel().evaluate(e=>e.matches(':modal')),true);
+    const columns=await page.locator('.shortcuts-column').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,border:getComputedStyle(e).borderLeftWidth,groups:[...e.querySelectorAll('h3')].map(h=>h.id)};}));
+    assert.equal(columns.length,2);assert.equal(columns[0].y,columns[1].y);assert.ok(columns[1].x>columns[0].right);assert.equal(columns[1].border,'1px');assert.deepEqual(columns.map(c=>c.groups),[['shortcuts-edit'],['shortcuts-navigation','shortcuts-values']]);
+    checks.push('shortcut groups remain intact in two side-by-side columns with a vertical divider');
     assert.equal(await page.locator('#uishortcuts').getAttribute('aria-expanded'),'true');
     assert.equal(await panel().evaluate(e=>e.contains(document.activeElement)),true);
     const labels=await page.locator('[data-shortcut]').evaluateAll(rows=>Object.fromEntries(rows.map(e=>[e.dataset.shortcut,e.innerText])));

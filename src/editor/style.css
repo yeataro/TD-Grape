@@ -1823,14 +1823,20 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root[data-ui-theme="dark"]:where([data-ui-style="excellent"],[data-ui-style="legendary"],[data-ui-style="godlike"]) .brand strong{text-shadow:calc(var(--cool-glow-x,0px) * .3) calc(var(--cool-glow-y,0px) * .3) 12px color-mix(in srgb,var(--purple) var(--cool-glow-alpha),transparent)}
 
 /* Shortcut reference remains readable independently of graph zoom. */
-#shortcutspanel{width:min(520px,calc(100 * var(--ui-vw) - 28px));max-height:calc(100 * var(--ui-dvh) - 28px);box-sizing:border-box;margin:auto;padding:18px 20px;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px #0005;overflow:auto}
+#shortcutspanel{container-type:inline-size;width:min(1000px,calc(100 * var(--ui-vw) - 28px));max-height:calc(100 * var(--ui-dvh) - 28px);box-sizing:border-box;margin:auto;padding:18px 20px;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px #0005;overflow:auto}
 #shortcutspanel[open]{display:flex;flex-direction:column;overflow:hidden}
 #shortcutspanel .shortcuts-heading{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0}
 .shortcuts-heading h2{margin:0;font-size:16px;font-weight:600}
 #shortcutsclose{display:flex;align-items:center;justify-content:center;flex:none;min-width:32px;min-height:32px;padding:6px;border:0;background:transparent}
 #shortcutsclose:hover{background:var(--ui-hover,var(--ui-tone-control-hover))}
 #shortcutshint{flex:none;margin:10px 0 16px;color:var(--muted);font-size:12px;line-height:1.5}
-#shortcutspanel #shortcutslist{display:block;min-height:0;padding:0;overflow:auto;overscroll-behavior:contain}
+#shortcutspanel #shortcutslist{display:grid;align-items:stretch;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;min-height:0;padding:0;overflow:auto;overscroll-behavior:contain}
+#shortcutspanel .shortcuts-column{display:block;min-width:0;padding:0}
+#shortcutspanel .shortcuts-column+.shortcuts-column{border-left:1px solid var(--line);padding-left:24px}
+@container(max-width:660px){
+  #shortcutspanel #shortcutslist{grid-template-columns:1fr}
+  #shortcutspanel .shortcuts-column+.shortcuts-column{border-left:0;padding-left:0}
+}
 .shortcuts-section+.shortcuts-section{margin-top:18px}
 .shortcuts-section h3{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--muted)}
 .shortcuts-commands{margin:0}
