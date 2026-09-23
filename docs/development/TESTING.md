@@ -627,3 +627,10 @@ TD 2025.32820、Windows 原生 TOP／MAT 的展開與收合均確認：保存 UI
 
 
 2026-09-23 法文／韓文 0.8.222：全部 1481 項文字、1107 個 UI 引用、59 項來源提示的五語完整性與占位符通過；日／法／韓文參考連結均與英文一致。既有英／中／日文字及來源語意未改，技術程式範例保留。`test_locales.cjs` 擴充至 8 組：兩處選單五語清單、法韓面板／About／Layout／Stage 規則、英文分類、切換記憶、圖與歷史保留、無 API 寫入，並核對深淺色、1133×744 面板及 430×932 窄畫面。初次檢查發現法文 Parameter 面板單複數預期不一致，統一為 Paramètres 後通過。截圖已目視；窄畫面為 Chromium 模擬，未宣稱 iOS／Safari 實機測試。私人報告 reports/locale-222/。
+
+
+2026-09-23 手機 Router／長按接線 0.8.223：新增 `test_router_touch.cjs SOURCE_DIR STATE_JSON REPORT_DIR [chromium|webkit]`。Chromium 真實觸控事件 6 組通過，包含按下時的邊身分、已選另一條線後長按、Wire／Link 個別切換與 Undo、長按中邊陣列換序、單點 Router 接入／再次點選取消、拖曳接入及 pointercancel。WebKit 2 組核對實際幾何與原生 tap；不以合成事件宣稱 WebKit 長按驗收。兩引擎各核對 120 種組合：430／1133 寬、75／100／125／150% UI 比例、33／100／165% 圖縮放、一至四階及八條輸出，SVG 端點與 DOM 圓點／箭頭中心誤差小於 0.8 CSS px。
+
+修改前的隔離版本可重現缺少長按 Wire／Link 選單，以及 WebKit 單圓 Router 無法 tap-tap 接入。使用者手機截圖中的幾何偏移未在目前 Chromium／WebKit 完全重現；已將固定偏移改為量測實際接孔，手機 Safari 實機仍待 review。既有 `test_router` 6、`test_router_link_layout` 5、`test_wire_hit_area` 9、`test_link_navigation` 16 組通過。命中區測試停用新預設的端點 Frame，避免固定測試座標被導覽移動。
+
+舊 `test_touch_editing` 使用目前 fixture 在修改前後都於第一項歷史檢查失敗；私人診斷排除未提供的 preview/native 請求後，仍在雙指取消情境出現 fixture 狀態回寫差異，未列為通過，未改該舊測試。此次新增測試使用隔離背景同步的 fixture。JS 語法、五語檢查與 diff 通過，圖格式及 GLSL 產碼未改；私人結果／截圖在 reports/router-touch-223/。

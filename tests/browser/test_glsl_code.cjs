@@ -2,8 +2,8 @@
  * node test_glsl_code.cjs SOURCE_DIR STATE_JSON REPORT_DIR
  */
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-async function harness(source,stateFile,folder,{headerOnly=false,touch=false,autoDisconnectInvalidEdges,skipPreview=false}={}){
+const playwright=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+async function harness(source,stateFile,folder,{headerOnly=false,touch=false,autoDisconnectInvalidEdges,skipPreview=false,engine='chromium'}={}){
   const state=JSON.parse(fs.readFileSync(stateFile,'utf8').replace(/^\uFEFF/,''));fs.mkdirSync(folder,{recursive:true});
   const errors=[],checks=[];
   const server=http.createServer(async(req,res)=>{
@@ -23,7 +23,7 @@ async function harness(source,stateFile,folder,{headerOnly=false,touch=false,aut
     let body=fs.readFileSync(file);if(headerOnly&&fileName==='graph_ui.js')body=body.toString().replace('nodeBodyDrag: true','nodeBodyDrag: false');if(typeof autoDisconnectInvalidEdges==='boolean'&&fileName==='graph_ui.js')body=body.toString().replace('autoDisconnectInvalidEdges: true','autoDisconnectInvalidEdges: '+autoDisconnectInvalidEdges);res.end(body);
   });
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
-  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});
+  const browser=await playwright[engine].launch({headless:true,...(engine==='chromium'?{executablePath:process.env.CHROME_EXECUTABLE}:{})});
   const page=await browser.newPage({viewport:{width:1600,height:1100},hasTouch:touch});page.on('pageerror',e=>errors.push(e.message));
   if(skipPreview)await page.addInitScript(()=>localStorage.setItem('sgrapeAutoPreview','false'));
   await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForSelector('.node');await page.evaluate(()=>document.fonts.ready);

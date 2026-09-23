@@ -11,4 +11,6 @@ Router 是實際保存於圖中的節點，方便整理接線。來源 → Route
 
 設計比較圖中的目標數量、間距、空心與 Link 略過控制是設計工具，不是本版產品設定。
 
-驗證入口：`tests/unit/test_router.py`、`tests/browser/test_router.cjs`、`tests/browser/test_router_link_layout.cjs`、`tests/td/test_router.py`。
+驗證入口：`tests/unit/test_router.py`、`tests/browser/test_router.cjs`、`tests/browser/test_router_link_layout.cjs`、`tests/browser/test_router_touch.cjs`、`tests/td/test_router.py`。
+
+0.8.223：接線端點改由實際圓點的畫面圓心換算，避免將量測座標與固定偏移混用。觸控拖線及點選接線沿用相同的 Router 雙向接孔判斷；單點也可接入，再次點選同一 Router 取消待接線。長按接線時保存按下當刻的邊物件，依該邊開啟 Wire／Link 選單，不以稍後的陣列索引替代；線本身優先於鄰近接孔的擴大觸控範圍。

@@ -5,6 +5,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
 (async()=>{const h=await harness(source,stateFile,folder,{skipPreview:true}),{page,checks,errors,settle}=h;
 try{
 await page.evaluate(()=>{
+  EDITOR_DEV_SETTINGS.frameWireEndpoint=false;EDITOR_DEV_SETTINGS.frameDamping=false;EDITOR_DEV_SETTINGS.canvasDamping=false;
   stage='pixel';graphTrail=[];graph.functions=[];graph.declarations=[];readonly=false;
   graph.stages.pixel={nodes:[testNode('a','scalar',0,100),testNode('b','add',1400,100),testNode('c','add',1400,100)],edges:[{from:['a','out'],to:['b','a']},{from:['a','out'],to:['c','a']}]};
   past=[];future=[];selected=null;selectedEdge=null;selection.clear();dirty=false;render();setGraphFocus(true);

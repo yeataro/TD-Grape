@@ -1673,8 +1673,13 @@ let routerWirePoints=null;
 function routerPoint(n,kind,edge=null){
   const cached=kind==='outputs'&&routerWirePoints?.get(n.id);if(cached)return cached.get(edge)||cached.values().next().value;
   const card=$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`);if(!card)return null;
-  const layout=routerLayout(n),rect=card.getBoundingClientRect(),origin=graphPoint(rect.left,rect.top);if(!origin)return null;
-  if(kind==='inputs')return {x:origin.x+8+5.5,y:origin.y+8+layout.height/2};
+  // Measure the painted sockets, just like ordinary nodes. Mixing a measured
+  // card origin with fixed offsets drifts under browser zoom/layout rounding.
+  const center=element=>{if(!element)return null;const r=element.getBoundingClientRect();return graphPoint(r.left+r.width/2,r.top+r.height/2);};
+  if(kind==='inputs')return center(card.querySelector('.router-dot'));
+  const layout=routerLayout(n),outputs=[...card.querySelectorAll('.router-output-dot')].map(center);
+  if(!outputs.length||outputs.some(p=>!p))return null;
+  const first=outputs[0],last=outputs.at(-1),linkPoint=layout.layers===2?last:{x:(first.x+last.x)/2,y:(first.y+last.y)/2};
   const ordered=current().edges.filter(e=>e.from[0]===n.id).map(e=>{
     const target=current().nodes.find(node=>node.id===e.to[0]),p=target&&point(target,e.to[1],'inputs');
     return {edge:e,y:p?.y??target?.ui?.y??0};
@@ -1686,9 +1691,9 @@ function routerPoint(n,kind,edge=null){
   let wireIndex=0;
   for(const item of ordered){
     const link=item.edge.ui?.style==='link',slot=link?0:slots[Math.floor(wireIndex++*slots.length/Math.max(1,wires.length))];
-    points.set(item.edge,{x:origin.x+8+layout.width-5.5,y:origin.y+(link?layout.linkY:8+5.5+slot*layout.pitch)});
+    points.set(item.edge,link?linkPoint:outputs[slot]);
   }
-  if(!points.size)points.set(null,{x:origin.x+8+layout.width-5.5,y:origin.y+8+5.5});
+  if(!points.size)points.set(null,first);
   routerWirePoints?.set(n.id,points);return points.get(edge)||points.values().next().value;
 }
 function renderRouterCard(n,cards){
@@ -2325,12 +2330,14 @@ function installTouchNavigation(canvas){
     if(!gesture)return;const g=finish();clearPreview(g);lastTap=null;if(graph)wires();
   };
   const touchPort=(x,y)=>findWireTarget([...$('#cards').querySelectorAll('.port')],x,y,22);
-  const edgeIndex=path=>path?current().edges.findIndex(e=>e.from.join(':')===path.dataset.from&&e.to.join(':')===path.dataset.to):-1;
-  const selectEdge=index=>{setSelectedEdges([current().edges[index]]);selected=null;selection.clear();syncSelection();inspector();wires();renderNavigation();};
+  const selectEdge=edge=>{if(current().edges.includes(edge))selectCanvasEdge(edge);};
   const openMenu=(g,p)=>{
-    if(g.node&&!selection.has(g.node.id)){selectNode(g.node);syncSelection();inspector();}
-    else if(g.edge>=0)selectEdge(g.edge);
-    g.mode='menu';lastTap=null;cancelConnection();openGraphMenu(p.x,p.y,g.node?.id||null,{touch:true});
+    if(current()!==g.data||g.edge&&!g.data.edges.includes(g.edge)){cancel();return;}
+    g.mode='menu';lastTap=null;
+    if(g.edge)selectEdge(g.edge);
+    else if(g.node&&!selection.has(g.node.id)){selectNode(g.node);syncSelection();inspector();}
+    // Keep the pointer-down edge identity through redraws and menu actions.
+    openGraphMenu(p.x,p.y,g.node?.id||null,{touch:true,edge:g.edge});
   };
   const beginPinch=()=>{
     const g=gesture;stopHold();cancelAnimationFrame(frame);frame=0;clearPreview(g);
@@ -2365,12 +2372,12 @@ function installTouchNavigation(canvas){
     const g=gesture,p=sample();if(!g||g.mode==='menu')return;
     if(!g.moved&&Math.hypot(p.x-g.start.x,p.y-g.start.y)>=slop){
       g.moved=true;stopHold();lastTap=null;
-      if(g.port&&!readonly){g.mode='wire';cancelConnection();beginGraphTrash(trashTarget('port',g.port));g.candidates=[...$('#cards').querySelectorAll('.port')].filter(b=>!connectionProblem(g.port,portInfo(b)));}
+      if(g.port&&!readonly){g.mode='wire';cancelConnection();beginGraphTrash(trashTarget('port',g.port));g.candidates=[...$('#cards').querySelectorAll('.port')].filter(b=>!connectionProblem(g.port,portInfo(b,g.port)));}
       else if(g.node&&g.canDragNode&&!readonly){
         g.mode='node';if(!selection.has(g.node.id))selectNode(g.node);else selected=g.node.id;selectedEdge=null;syncSelection();inspector();cancelConnection();
         g.positions=current().nodes.filter(n=>selection.has(n.id)).map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),x:node.ui?.x||0,y:node.ui?.y||0,nextX:node.ui?.x||0,nextY:node.ui?.y||0}));
         beginGraphTrash(trashTarget('nodes',g.positions.map(p=>p.node)));
-      }else if(EDITOR_DEV_SETTINGS.canvasTrash&&g.edge>=0&&!readonly){g.mode='edge';selectEdge(g.edge);cancelConnection();beginGraphTrash(trashTarget('edge',g.edge));
+      }else if(EDITOR_DEV_SETTINGS.canvasTrash&&g.edge&&!readonly){g.mode='edge';selectEdge(g.edge);cancelConnection();beginGraphTrash(trashTarget('edge',current().edges.indexOf(g.edge)));
       }else if(!g.node){g.mode=boxSelectMode?'box':'pan';cancelConnection();}
       else g.mode='blocked';
     }
@@ -2379,18 +2386,18 @@ function installTouchNavigation(canvas){
   const tap=(g,p)=>{
     if(g.port){
       lastTap=null;if(readonly)return;
-      if(linkStart?.node===g.port.node&&linkStart.port===g.port.port&&linkStart.kind===g.port.kind){cancelConnection();return;}
+      if(linkStart?.node===g.port.node&&(g.node?.definitionUuid==='sgrape.builtin.router'||linkStart.port===g.port.port&&linkStart.kind===g.port.kind)){cancelConnection();return;}
       if(linkStart&&linkStart.kind!==g.port.kind)connectPorts(linkStart,g.port);
       else {linkStart=g.port;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(g.port,true));}
       return;
     }
-    const key=g.node?'node:'+g.node.id:g.edge>=0?'edge:'+g.edge:'canvas',now=performance.now();
+    const key=g.node?'node:'+g.node.id:g.edge?'edge:'+JSON.stringify([g.edge.from,g.edge.to]):'canvas',now=performance.now();
     const double=lastTap&&lastTap.key===key&&now-lastTap.time<=doubleDelay&&Math.hypot(p.x-lastTap.x,p.y-lastTap.y)<24;
     lastTap=double?null:{key,time:now,x:p.x,y:p.y};
     if(g.node){
       selectNode(g.node);syncSelection();inspector();renderNavigation();
       if(double){if(g.rename){const label=$('#cards').querySelector('[data-node="'+g.node.id+'"] .node-title-text>span');if(label)beginNodeRename(g.node,label);}else if(definition(g.node)?.key==='function_call')enterFunction(g.node);}
-    }else if(g.edge>=0)selectEdge(g.edge);
+    }else if(g.edge)selectEdge(g.edge);
     else if(double||linkStart){const start=linkStart;lastTap=null;if(start)finishWireOnBlank(start,p.x,p.y);else openCreator(p.x,p.y);}
     else clearCanvasSelection();
   };
@@ -2398,8 +2405,10 @@ function installTouchNavigation(canvas){
     if(e.pointerType!=='touch'||!graph||editable(e.target))return;stop(e);lastDevice='touch';lastTouch=performance.now();canvas.dataset.input='touch';
     if(!points.size){
       clearWireGesture();closeCreator();closeGraphMenu();focusGraphCanvas();
-      const button=touchPort(e.clientX,e.clientY),card=(button||e.target).closest('.node'),node=card&&current().nodes.find(n=>n.id===card.dataset.node);
-      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,canDragNode:!!card&&isNodeDragSurface(e.target,card),port:button?portInfo(button):null,rename:customNodeNamesEnabled()&&!isSourceReferenceNode(node)&&!!e.target.closest('.node-function-title,.node-function-name'),edge:edgeIndex(wirePathFromTarget(e.target)),moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
+      const edge=wirePathFromTarget(e.target)?.edgeSelectionItem||null;
+      // A visible wire under the finger wins over a nearby socket's touch radius.
+      const button=edge?null:touchPort(e.clientX,e.clientY),card=(button||e.target).closest('.node'),node=card&&current().nodes.find(n=>n.id===card.dataset.node);
+      gesture={mode:'pending',start:{x:e.clientX,y:e.clientY},data:current(),node,canDragNode:!!card&&isNodeDragSurface(e.target,card),port:button?portInfo(button,linkStart):null,rename:customNodeNamesEnabled()&&!isSourceReferenceNode(node)&&!!e.target.closest('.node-function-title,.node-function-name'),edge,moved:false,hadPinch:false,selection:new Set(selection),selected,selectedEdge};
       touchGraphGesture={cancel};
       if(!button)holdTimer=setTimeout(()=>{holdTimer=0;if(gesture&&!gesture.moved&&points.size===1)openMenu(gesture,sample());},holdDelay);
     }
@@ -2413,7 +2422,7 @@ function installTouchNavigation(canvas){
     if(!points.has(e.pointerId))return;stop(e);points.set(e.pointerId,{x:e.clientX,y:e.clientY});move();cancelAnimationFrame(frame);paint();
     const g=gesture,p={x:e.clientX,y:e.clientY};
     if(points.size>1){points.delete(e.pointerId);if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);g.mode=points.size>=2?'pinch':'pan';rebase();return;}
-    const target=g.target&&portInfo(g.target),hit=document.elementFromPoint(p.x,p.y),drop=g.moved&&graphTrashDrop(p.x,p.y);finish();
+    const target=g.target&&portInfo(g.target,g.port),hit=document.elementFromPoint(p.x,p.y),drop=g.moved&&graphTrashDrop(p.x,p.y);finish();
     if(drop){clearPreview(g);commitGraphTrash(drop);wires();return;}
     if(g.mode==='edge'){clearPreview(g);wires();return;}
     if(g.mode==='node'){
