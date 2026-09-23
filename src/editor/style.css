@@ -1721,13 +1721,14 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 /* Experimental flags share compact rows grouped by the part of the UI they affect. */
 .experiments-panel{width:800px;padding:8px;container-type:inline-size}
-#experimentoptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+#experimentoptions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"toolbars appearance" "nodes appearance";gap:12px 16px}
 .experiment-group{min-width:0}
-.experiment-group[data-experiment-group=appearance]{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;border-top:1px solid var(--line);padding-top:8px}
-.experiment-group[data-experiment-group=appearance]>h3{grid-column:1/-1}
+.experiment-group[data-experiment-group=toolbars]{grid-area:toolbars}
+.experiment-group[data-experiment-group=nodes]{grid-area:nodes}
+.experiment-group[data-experiment-group=appearance]{grid-area:appearance;border-left:1px solid var(--line);padding-left:16px}
 @container(max-width:560px){
-  #experimentoptions{grid-template-columns:1fr}
-  .experiment-group[data-experiment-group=appearance]{grid-template-columns:1fr}
+  #experimentoptions{grid-template-columns:1fr;grid-template-areas:"toolbars" "nodes" "appearance"}
+  .experiment-group[data-experiment-group=appearance]{border-left:0;padding-left:0}
 }
 .experiments-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 6px 8px;font-size:13px}
 .experiments-heading button{padding:4px 6px;border:0;background:transparent;color:var(--muted);font-size:11px;white-space:nowrap}
