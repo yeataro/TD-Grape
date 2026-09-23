@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowsWithLines: false, reverseInputLinkArrowOnHover: false, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -467,12 +467,39 @@ function typeVariants(d){
   if(![FunctionModel.CALL,FunctionModel.INPUT,FunctionModel.OUTPUT].includes(d.definitionUuid))return [];
   return [{type:null,inputs:d.inputs,outputs:d.outputs}];
 }
+function mathInputName(index){let n=index+1,name='';while(n){n--;name=String.fromCharCode(65+n%26)+name;n=Math.floor(n/26);}return name;}
+function mathStoredSteps(params){const count=params.inputCount??3;if(!Number.isInteger(count)||count<2||count>typeContract.math.maxInputs)throw Error(t('math.invalid'));return Object.hasOwn(params,'steps')?params.steps:Array.from({length:count-1},(_,i)=>({operator:'add',input:i+1}));}
+function mathSteps(params){
+  const count=params.inputCount??3,mode=params.mode||'steps',operation=params.operation||'add',ops=typeContract.math.operators,steps=mathStoredSteps(params);
+  if(!Number.isInteger(count)||count<2||count>typeContract.math.maxInputs||!['steps','shared'].includes(mode)||!Object.hasOwn(ops,operation)||!Array.isArray(steps)||steps.length!==count-1||steps.some(s=>!s||!Object.hasOwn(ops,s.operator)||!Number.isInteger(s.input)||s.input<0||s.input>=count))throw Error(t('math.invalid'));
+  return mode==='shared'?Array.from({length:count-1},(_,i)=>({operator:operation,input:i+1})):steps;
+}
+function mathPorts(params){
+  const steps=mathSteps(params),type=params.type||'float',shape=typeDescriptor(type);
+  if(!typeContract.math.types.includes(type)||isMatrixType(type)&&shape.columns!==shape.rows&&steps.some(s=>s.operator==='multiply'))throw Error(t('math.invalid'));
+  return {inputs:Object.fromEntries(Array.from({length:steps.length+1},(_,i)=>['input'+i,type])),outputs:{out:type}};
+}
+function mathFormula(params){return mathSteps(params).reduce((value,step)=>'('+value+' '+({add:'+',subtract:'−',multiply:'×',divide:'÷'}[step.operator])+' '+mathInputName(step.input)+')','A');}
+function syncMathNotes(document,previous){
+  const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u]));
+  for(const unit of autoUnits(document)){
+    if(unit.owner&&unit.owner.scope!=='local')continue;
+    const oldNodes=new Map((oldUnits.get(unit.key)?.data.nodes||[]).map(n=>[n.id,n]));
+    for(const n of unit.data.nodes){if(n.definitionUuid!=='sgrape.builtin.math')continue;
+      const before=oldNodes.get(n.id),formula=mathFormula(n.params);
+      if(before&&mathFormula(before.params)===formula)continue;
+      n.ui||={};const old=n.ui.mathFormula||'',comment=n.ui.comment||'';
+      n.ui.comment=old&&comment.includes(old)?comment.replace(old,formula):comment?comment+'\n'+formula:formula;n.ui.mathFormula=formula;
+    }
+  }
+}
 function switchPorts(params){
   const count=params.caseCount??1,type=params.type||'float';
   if(!Number.isInteger(count)||count<0||count>(typeContract?.switch?.maxCases||16)||!valueTypes().includes(type))throw Error(t('contract.invalid'));
   return {inputs:{default:type,index:'int',...Object.fromEntries(Array.from({length:count},(_,i)=>['case'+i,type]))},outputs:{out:type}};
 }
 function resolvedNodePorts(d,params,decl,kind){
+  if(d.key==='math')return mathPorts(params)[kind];
   if(d.key==='switch')return switchPorts(params)[kind];
   if(['vertex_out','vertex_input'].includes(d.key))return vertexBoundaryPorts(d.key)[kind];
   if(isCompositeOperation(d))return compositePorts(d.key,params)[kind];
@@ -618,7 +645,7 @@ function displayNodePorts(d,params,decl,kind){
   try{return resolvedNodePorts(d,params,decl,kind);}catch(error){if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,params)[kind];}
 }
 function nodeTypeVariants(d,params){
-  return typeVariants(d).filter(v=>!params?.fixedType||v.type===params.fixedType).flatMap(v=>{try{return [{...v,...(d.key==='switch'?switchPorts({...params,type:v.type}):isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):isMatrixAccess(d)?matrixAccessPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
+  return typeVariants(d).filter(v=>!params?.fixedType||v.type===params.fixedType).flatMap(v=>{try{return [{...v,...(d.key==='math'?mathPorts({...params,type:v.type}):d.key==='switch'?switchPorts({...params,type:v.type}):isVectorOperation(d)?vectorPorts(d.key,{...params,type:v.type}):isMatrixAccess(d)?matrixAccessPorts(d.key,{...params,type:v.type}):{})}];}catch{return [];}});
 }
 function vectorConnectionExact(d,source,target){
   if(d?.key==='compare'&&!selectableNodeTypes(d).includes(source))return false;
@@ -805,7 +832,7 @@ function reshapeTypedInputs(n,d,nextType,nextOperands=null){
     // cells from the cache while keeping every currently visible cell current.
     for(let c=0;c<Math.min(oldShape.columns,nextShape.columns);c++)for(let r=0;r<Math.min(oldShape.rows,nextShape.rows);r++)n.params.values[c*nextShape.rows+r]=old[c*oldShape.rows+r];
   }
-  const oldPorts=d.key==='switch'?switchPorts(n.params).inputs:arithmetic?resolvedNodePorts(d,n.params,null,'inputs'):typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=d.key==='switch'?switchPorts({...n.params,type:nextType}).inputs:arithmetic?resolvedNodePorts(d,{type:nextType,...(nextOperands?{operandTypes:nextOperands}:{})},null,'inputs'):typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
+  const oldPorts=d.key==='math'?mathPorts(n.params).inputs:d.key==='switch'?switchPorts(n.params).inputs:arithmetic?resolvedNodePorts(d,n.params,null,'inputs'):typeVariants(d).find(v=>v.type===previous)?.inputs||{},newPorts=d.key==='math'?mathPorts({...n.params,type:nextType}).inputs:d.key==='switch'?switchPorts({...n.params,type:nextType}).inputs:arithmetic?resolvedNodePorts(d,{type:nextType,...(nextOperands?{operandTypes:nextOperands}:{})},null,'inputs'):typeVariants(d).find(v=>v.type===nextType)?.inputs||{};
   // Retain manually entered defaults per dimension, including dormant connected inputs.
   for(const [port,value]of Object.entries(n.inputValues||{})){
     if(!oldPorts[port]||!newPorts[port]||oldPorts[port]===newPorts[port])continue;
@@ -840,7 +867,7 @@ function autoTopology(document){
   return JSON.stringify({typeDefinitions:document.typeDefinitions?.map(d=>[d.id,d.fields]),declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>{
     const creates=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.array_create').map(n=>n.id));
     const lengthSources=new Set(data.edges.filter(e=>creates.has(e.to[0])&&e.to[1]==='length').map(e=>e.from[0]));
-    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.operandTypes,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.caseCount,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
+    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.operandTypes,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.caseCount,n.params.inputCount,n.params.steps,n.params.operation,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
   })});
 }
 function pruneSwitchCaseEdges(data,plan,previous){
@@ -1601,6 +1628,7 @@ function appendNodeResizeHandle(card,node){
 }
 function applyGraphUISettings(){
   document.documentElement.dataset.uiStyle=EDITOR_DEV_SETTINGS.uiStyle;
+  document.documentElement.classList.toggle('reverse-input-link-hover',EDITOR_DEV_SETTINGS.reverseInputLinkArrowOnHover);
   document.documentElement.classList.toggle('rgba-component-tint',EDITOR_DEV_SETTINGS.rgbaComponentTint);
   document.documentElement.classList.toggle('vector-component-tint',EDITOR_DEV_SETTINGS.vectorComponentTint);
   document.documentElement.classList.toggle('node-resize-hints',EDITOR_DEV_SETTINGS.nodeResizeHint);
@@ -2391,15 +2419,15 @@ function setEdgeStyles(edges,style){
 }
 function setEdgeStyle(edge,style){return setEdgeStyles([edge],style);}
 function linkConnectionHint(edges){
-  return edges.map(edge=>{
-    const endpoint=(side,kind)=>{
-      const [id,port]=edge[side],node=current().nodes.find(node=>node.id===id);
-      if(!node)return id+' · '+port;
-      const label=nodeDisplayName(node),name=node.name&&node.name!==label?' ('+node.name+')':'';
-      return label+name+' · '+portLabel(node,kind,port);
-    };
-    return endpoint('from','outputs')+'\n→ '+endpoint('to','inputs');
-  }).join('\n\n');
+  const endpoint=(edge,side,kind)=>{
+    const [id,port]=edge[side],node=current().nodes.find(node=>node.id===id);
+    if(!node)return id+' · '+port;
+    const label=nodeDisplayName(node),name=node.name&&node.name!==label?' ('+node.name+')':'';
+    return label+name+' · '+portLabel(node,kind,port);
+  };
+  const groups=new Map();
+  for(const edge of edges){const key=JSON.stringify(edge.from);if(!groups.has(key))groups.set(key,[endpoint(edge,'from','outputs')]);groups.get(key).push('→ '+endpoint(edge,'to','inputs'));}
+  return [...groups.values()].map(lines=>lines.join('\n')).join('\n\n');
 }
 function linkLocationEdges({node,kind,ports}){
   const side=kind==='inputs'?'to':'from',names=new Set(ports);
@@ -2440,7 +2468,7 @@ function refreshLinkPortButtons(){
   for(const row of document.querySelectorAll('#cards .port-row')){
     const node=row.closest('[data-node]')?.dataset.node,anchors=[...row.querySelectorAll('[data-kind][data-port]')],kind=anchors[0]?.dataset.kind,portNames=[...new Set(anchors.map(port=>port.dataset.port))];
     let button=row.querySelector(':scope>.link-port-navigation');
-    if(showLinkLines||!portNames.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
+    if((showLinkLines&&!EDITOR_DEV_SETTINGS.linkArrowsWithLines)||!portNames.some(port=>linked.has(JSON.stringify([node,kind,port])))){button?.remove();continue;}
     if(!button){
       button=el('button',{type:'button',class:'link-port-navigation',title:t('wire.linkNavigate'),'aria-label':t('wire.linkNavigate'),'aria-haspopup':'menu'});
       const icon=document.createElementNS('http://www.w3.org/2000/svg','svg'),shape=document.createElementNS(icon.namespaceURI,'path');

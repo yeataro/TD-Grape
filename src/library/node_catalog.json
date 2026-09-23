@@ -1,9 +1,54 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.204",
+  "catalogVersion": "0.8.205",
   "emitterAbiVersion": 1,
   "targetShellVersion": 2,
   "definitions": [
+    {
+      "definition": {
+        "key": "math",
+        "label": "Math",
+        "inputs": {
+          "input0": "T",
+          "input1": "T",
+          "input2": "T"
+        },
+        "outputs": {
+          "out": "T"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float",
+          "inputCount": 3,
+          "mode": "steps",
+          "operation": "add"
+        },
+        "descriptionKey": "help.math",
+        "definitionUuid": "sgrape.builtin.math",
+        "revisionHash": "04cdba0192bf36c63eb8c4ee22fe62f19d3b86098346405b98fc004d35bd85c4"
+      },
+      "emitter": {
+        "id": "math",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "editor",
+        "aliases": [
+          "chain",
+          "arithmetic",
+          "連加",
+          "連減",
+          "連乘",
+          "連除"
+        ],
+        "glslName": "",
+        "secondaryCategories": []
+      }
+    },
     {
       "definition": {
         "key": "switch",

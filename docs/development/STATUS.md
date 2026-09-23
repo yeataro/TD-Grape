@@ -1,5 +1,12 @@
 # 開發狀態
 
+2026-09-23 0.8.205：新增 [Math](../features/MATH.md)，預設加法、逐列或共用運算、A…Z／AA…動態輸入，Output 保持在輸入下方。簡单的運算元關係文字直接寫入既有註記，跟隨運算修改及 Undo，不涉及 GLSL 程式碼預覽。新增兩個預設關閉的 Link 實驗選項：顯示線時保留接孔箭頭並從來源按鈕中心起線、Input 箭頭 hover 反向。多對象 Link 提示按來源接孔分組，只寫一次來源，見 [Wire／Link](../ui/WIRE_LINK.md)。
+
+540 項 Python 與完整 portable checks、Math 3 組及 Link 13 組瀏覽器流程通過；後續型別驗證修訂另以 17 項相關 Python 及 Math 瀏覽器覆核。原生 TD 2025.32820 的 Math 共 127 項驗證通過，包括四則、重複運算元、矩陣 TOP 像素及 MAT Vertex／Pixel 編譯；MAT 項目不宣稱完整外觀驗收。雙語 1060 鍵通過。報告位於私人 reports/math-205/。
+
+39 份來源同步，四份 Master 身分與位置、四份使用者 Shader 保存內容保留。刷新新 catalog 時曾出現舊 core 的暫時識別診斷，完整同步後 Master 原生編譯通過。正式 TOE 已保存（1629188 bytes；SHA256 9dd67f106f0ba50a36f1fdc6c0ff1d0e3608c591ce1da54e1ab99e6e5f212275），六份登記狀態保留，私人助手排除。未推送。本批交付後停下供使用者 review；GLSL 能力盤點尚未開始。
+
+
 2026-09-23 0.8.204：新增 **Switch**。Default／int Index／Case 0…依序排列，灰色待新增接孔自動建立下一個 Case，最多 16 個。Default 接線主導結果與 Case 型別，未接時可選預設型別；不相容的舊 Case 線自動斷開，與型別修改同次 Undo。負數及範圍外 Index 回到 Default。詳見 [Switch](../features/SWITCH.md)。Math 僅製作對話內操作草圖，尚未實作；節點程式碼預覽與 GLSL／節點雙向高亮列為重構後的未來功能，見[操作體驗筆記](../discussions/UX_BACKLOG.md)。
 
 536 項 Python 與完整 portable checks、2 組 Switch 瀏覽器流程通過；原生 TD 2025.32820 共 159 項檢查通過，包含全部值型別的 TOP 像素結果、執行期 Index 變更、MAT Vertex／Pixel 編譯。MAT 項目只驗證編譯，不宣稱完整外觀驗收。舊版相容測試新增 Switch 排除項後，原本 138 組產碼指紋維持通過。報告位於私人 reports/switch-204/。

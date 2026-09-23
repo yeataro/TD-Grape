@@ -1067,6 +1067,23 @@ function glslCodeInspector(box,n){
   box.append(panel);
 }
 
+function mathInspector(box,n){
+  const apply=fn=>change(fn),params=n.params,count=params.inputCount??3;
+  const mode=select([['steps',t('math.steps')],['shared',t('math.shared')]],params.mode||'steps',value=>apply(()=>params.mode=value));mode.dataset.mathMode=n.id;mode.disabled=readonly;
+  box.append(parameterControlRow(t('math.mode'),mode));
+  const operationOptions=Object.keys(typeContract.math.operators).map(key=>[key,t('math.'+key)]);
+  if((params.mode||'steps')==='shared'){
+    const op=select(operationOptions,params.operation||'add',value=>apply(()=>params.operation=value));op.dataset.mathOperation=n.id;op.disabled=readonly;box.append(parameterControlRow(t('math.operation'),op));
+  }else for(const [i,step]of mathStoredSteps(params).entries()){
+    const row=el('div',{class:'math-operation-row','data-math-step':String(i)}),left=el('span',{},i===0?'A':t('math.previous'));
+    const edit=(key,value)=>apply(()=>{params.steps=clone(mathStoredSteps(params));params.steps[i][key]=value;});
+    const op=select(Object.entries({add:'+',subtract:'−',multiply:'×',divide:'÷'}),step.operator,value=>edit('operator',value)),rhs=select(Array.from({length:count},(_,j)=>[String(j),mathInputName(j)]),String(step.input),value=>edit('input',Number(value)));
+    op.disabled=rhs.disabled=readonly;op.setAttribute('aria-label',t('math.operation')+' '+(i+1));rhs.setAttribute('aria-label',t('math.operand')+' '+(i+1));row.append(left,op,rhs);box.append(parameterControlRow(String(i+1),row));
+  }
+  const remove=el('button',{class:'wide','data-math-remove':n.id},t('math.removeLast'));remove.disabled=readonly||count<=2;
+  remove.onclick=()=>apply(()=>{params.steps=clone(mathStoredSteps(params)).slice(0,-1).map((step,i)=>step.input===count-1?{...step,input:i+1}:step);params.inputCount=count-1;delete n.inputValues?.['input'+(count-1)];current().edges=current().edges.filter(e=>e.to[0]!==n.id||e.to[1]!=='input'+(count-1));});
+  box.append(parameterControlRow('',remove),parameterControlRow('',parameterHint(t('math.noteHint'))));
+}
 function nodeTypeSelector(n,d){
   if(d.key==='switch'){
     const control=typeSelect(valueTypes().map(type=>[type,type]),n.params.type,value=>change(()=>reshapeTypedInputs(n,d,value),{typeChange:true}));
@@ -1419,6 +1436,7 @@ function inspector(){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
       const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
+    if(d.key==='math')mathInspector(box,n);
     if(d.key==='switch')box.append(parameterControlRow(t('switch.defaultType'),nodeTypeSelector(n,d)));
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
     if(isConvertOperation(d))for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));

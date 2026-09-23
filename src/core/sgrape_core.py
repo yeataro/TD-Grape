@@ -111,19 +111,19 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','generated_glsl','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
-    'switch','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
+    'math','switch','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS,*_legacy_nodes.CALLS))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
-CONSTANT_EXPRESSIONS = frozenset(('float','vec2','vec3','vec4','color','constant','relay',
+CONSTANT_EXPRESSIONS = frozenset(('math','float','vec2','vec3','vec4','color','constant','relay',
     'add','subtract','multiply','divide','min','max','dot','clamp','smoothstep','pow','mix',
     'sin','cos','abs','fract','length','normalize','rgba','split','combine','vector_split','swizzle','vector','replace','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'range_from','range_to','scalar','convert','matrix_convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',
     'array','array_get','array_length','struct_field',
     *(k for k,spec in _legacy_nodes.CALLS.items() if spec['constant'])))
-SPECIALIZATION_EXPRESSIONS = frozenset(('relay','add','subtract','multiply','divide','convert','matrix_convert','scalar','vector','combine','swizzle','split','vector_split','compare','if'))
+SPECIALIZATION_EXPRESSIONS = frozenset(('math','relay','add','subtract','multiply','divide','convert','matrix_convert','scalar','vector','combine','swizzle','split','vector_split','compare','if'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
 MATRIX_KEYS = ('matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
@@ -550,6 +550,25 @@ def varying_headers(direction):
     return result
 
 
+MATH_MAX_INPUTS = 32
+MATH_OPERATORS = {'add':'+','subtract':'-','multiply':'*','divide':'/'}
+
+def math_steps(params):
+    count=params.get('inputCount',3)
+    if type(count) is not int or not 2<=count<=MATH_MAX_INPUTS:raise GraphError('Math supports 2–32 inputs')
+    mode=params.get('mode','steps');operation=params.get('operation','add')
+    if mode not in ('steps','shared') or not isinstance(operation,str) or operation not in MATH_OPERATORS:raise GraphError('Invalid Math operation')
+    steps=params.get('steps',[{'operator':'add','input':i} for i in range(1,count)])
+    if not isinstance(steps,list) or len(steps)!=count-1:raise GraphError('Math requires one operation per additional input')
+    for step in steps:
+        if not isinstance(step,dict) or not isinstance(step.get('operator'),str) or step.get('operator') not in MATH_OPERATORS or type(step.get('input')) is not int or not 0<=step['input']<count:raise GraphError('Invalid Math operand')
+    return [{'operator':operation,'input':i} for i in range(1,count)] if mode=='shared' else steps
+
+def math_interface(params):
+    steps=math_steps(params);ty=params.get('type','float')
+    if ty not in ARITHMETIC_TYPES or any(arithmetic_result(step['operator'],ty,ty)!=ty for step in steps):raise GraphError('Math operands do not support this operation and type')
+    return {'inputs':{'input'+str(i):ty for i in range(len(steps)+1)},'outputs':{'out':ty}}
+
 SWITCH_MAX_CASES = 16
 
 def switch_case_count(params):
@@ -558,6 +577,7 @@ def switch_case_count(params):
     return count
 
 def definition_ports(definition, params):
+    if definition['key']=='math':return math_interface(params)
     if definition['key']=='switch':
         return {'inputs':{'default':'T','index':'int',**{'case'+str(i):'T' for i in range(switch_case_count(params))}},'outputs':{'out':'T'}}
     if definition['key'] in ('vertex_out','vertex_input'):
@@ -609,7 +629,7 @@ def node_parameter_types(definition):
     if key in ('uniform','constant'):return TYPES
     if key in ('if','switch',*CONVERT_KEYS):return TYPES
     if key=='spec_constant':return LEGACY_TYPES
-    if key in ARITHMETIC_KEYS:return ARITHMETIC_TYPES
+    if key in (*ARITHMETIC_KEYS,'math'):return ARITHMETIC_TYPES
     if key in ('min','max','clamp','mod'):return NUMERIC_TYPES
     if key in ('abs','sign'):return SIGNED_TYPES+DOUBLE_TYPES
     if key in DOUBLE_MATH_KEYS:return FLOAT_TYPES+DOUBLE_TYPES
@@ -693,6 +713,7 @@ def _type_contract():
               'convert':{'types':list(TYPES),'fromParameter':'fromType','toParameter':'toType',
                          'pairs':{source:[target for target in TYPES if explicit_conversion_valid(source,target)] for source in TYPES},
                          'outputTypesByNode':{key:list(types) for key,types in CONVERT_OUTPUT_TYPES.items()}},
+              'math':{'maxInputs':MATH_MAX_INPUTS,'types':list(ARITHMETIC_TYPES),'operators':dict(MATH_OPERATORS)},
               'switch':{'maxCases':SWITCH_MAX_CASES,'indexType':'int','typeSource':'default'},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
               'specializationExpressions':sorted(SPECIALIZATION_EXPRESSIONS-{'relay'}),
@@ -1376,6 +1397,9 @@ def _compile_flat(graph,annotation_scopes=None):
                 elif k=='pow': expr='pow('+a('base')+', '+a('exponent')+')'
                 elif k=='mix': expr='mix('+a('a')+', '+a('b')+', '+a('factor')+')'
                 elif k=='compare': expr='('+a('a')+' '+p.get('operator','>')+' '+a('b')+')'
+                elif k=='math':
+                    expr=a('input0')
+                    for step in math_steps(p):expr='('+expr+' '+MATH_OPERATORS[step['operator']]+' '+a('input'+str(step['input']))+')'
                 elif k=='switch':
                     variable=symbols[(ident,'out')]
                     lines.append('    '+glsl_declaration(ty,variable)+';')

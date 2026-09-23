@@ -2055,3 +2055,9 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 
 /* Creation stays available through canvas commands; library entry points are parked. */
 #functiontools[hidden]{display:none}
+
+/* Math uses the standard inspector rows and keeps operands legible in narrow panels. */
+.math-operation-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);align-items:center;gap:8px;width:100%;min-width:0}
+.math-operation-row select{width:100%;min-width:0}
+
+.reverse-input-link-hover .link-port-navigation[data-link-kind="inputs"]:hover .link-port-arrow{transform:scaleX(-1)}

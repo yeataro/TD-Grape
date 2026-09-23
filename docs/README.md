@@ -16,6 +16,7 @@
 
 - [專案用語表](GLOSSARY.md)：跨功能的中英術語與概念界線；不代替行為規格。
 - [值、節點與來源模型](architecture/VALUE_MODEL.md)：已確認的固定／通用入口、穩定名稱、來源引用及能力邊界。
+- [Math 連續四則運算](features/MATH.md)：逐列／單一運算、動態输入及簡單算式註記。
 - [Switch 多路選擇](features/SWITCH.md)：Default 決定型別、int Index、動態 Case 與斷線復原。
 - [矩陣與雙精度值](features/MATRIX_NODES.md)：矩陣型別、Column 介面、新節點及 TD 原生傳輸實測；既有運算擴充分批交付。
 - [陣列與結構](features/ARRAYS_AND_STRUCTURES.md)：建立、Array[i]、Replace、Length、Field、共用型別及保存規則。

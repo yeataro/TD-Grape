@@ -285,7 +285,7 @@ function change(fn,{localize=true,redraw=true,typeChange=false,layout=false,disc
   if(editorMutationBlocked())return false;
   const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,edges:selectedCanvasEdges().map(edge=>current().edges.indexOf(edge))};
   let layoutOnly=false;
-  try{if(localize)prepareSemanticEdit();fn();assertGeneratedGLSLLimit(graph);for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});if(!typeChange)rejectNewConstantIssues(graph,previous);}}
+  try{if(localize)prepareSemanticEdit();fn();assertGeneratedGLSLLimit(graph);for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});if(typeof syncMathNotes==='function')syncMathNotes(graph,previous);if(!typeChange)rejectNewConstantIssues(graph,previous);}}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;setSelectedEdges(view.edges.map(index=>current().edges[index]));
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
@@ -478,13 +478,18 @@ function wirePathFromTarget(target){
   const path=target.closest('#wires path,#wires polygon.link-direction');
   return path?.wirePaintPath?(path.wirePaintPath?.isConnected?path.wirePaintPath:null):path?.dataset.from?path:null;
 }
+function linkStartPoint(node,port){
+  const button=[...document.querySelectorAll('#cards .link-port-navigation')].find(b=>b.linkLocation?.node===node.id&&b.linkLocation.kind==='outputs'&&b.linkLocation.ports.includes(port));
+  if(!button)return point(node,port,'outputs');const rect=button.getBoundingClientRect();return graphPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+}
 function wires(){
+  refreshLinkPortButtons();
   const selectedEdges=new Set(selectedCanvasEdges());
   const svg=$('#wires'),hits=document.createDocumentFragment(),paint=document.createDocumentFragment();svg.replaceChildren();
   current().edges.forEach((edge,index)=>{
     const link=edge.ui?.style==='link';if(link&&!showLinkLines)return;
     const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return;
-    const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;
+    const p=link&&EDITOR_DEV_SETTINGS.linkArrowsWithLines?linkStartPoint(a,edge.from[1]):point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return;
     const dx=Math.max(70,Math.abs(q.x-p.x)*.5),ns='http://www.w3.org/2000/svg';
     const hit=document.createElementNS(ns,'path'),path=document.createElementNS(ns,'path');
     path.setAttribute('d',link?`M ${p.x} ${p.y} L ${q.x} ${q.y}`:`M ${p.x} ${p.y} C ${p.x+dx} ${p.y}, ${q.x-dx} ${q.y}, ${q.x} ${q.y}`);
@@ -513,7 +518,6 @@ function wires(){
   // All visible strokes outrank all transparent hit areas. Preserve edge order
   // within each layer; both remain above Group bodies and below nodes/controls.
   svg.append(hits,paint);
-  refreshLinkPortButtons();
   drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();
 }
 function library(){renderLibrary();}
@@ -902,7 +906,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
+  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','linkArrowsWithLines','reverseInputLinkArrowOnHover','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
