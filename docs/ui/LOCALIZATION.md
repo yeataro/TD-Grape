@@ -14,8 +14,10 @@
 | Sources | 來源 | ソース |
 | Output Preview | 輸出預覽 | 出力プレビュー |
 | Material Preview | 材質預覽 | マテリアルプレビュー |
-| Layout | 面板配置 | レイアウト |
+| Layout | Layout | Layout |
 
 介面文字集中在 `src/editor/locales.json`；內建來源的描述位於 `src/library/source_catalog.json`。新增文案時同步提供所有已登記語言，保持占位符、程式範例與參考連結。語言切換只更新介面，不改圖資料、參數名稱、接線、GLSL 或 Undo 歷史。日文字型依作業系統可用字型回退，不下載外部字型。
 
 `tools/dev/check_locales.py` 檢查全部語系文字、UI 引用、來源描述、占位符與日文參考連結。`tests/browser/test_locales.cjs` 使用隔離 API fixture 驗證兩處選單同步、面板／動態提示、重新開啟記憶、回切英文及深淺色窄視窗顯示。
+
+0.8.221 起，標題列的 About、Layout 入口／標題，以及畫布角落的 VERTEX STAGE／PIXEL STAGE 在所有語言保持英文；其餘面板與操作說明沿用上述翻譯規則。

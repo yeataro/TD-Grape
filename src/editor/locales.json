@@ -299,8 +299,8 @@
     "node.expand": {"zh-Hant": "展開節點", "en": "Expand nodes", "ja": "ノードを展開"},
     "node.collapsedPorts": {"zh-Hant": "{count} 個接孔；展開節點以新增接線", "en": "{count} ports; expand the node to add connections", "ja": "{count} 個のポート：接続を追加するにはノードを展開してください"},
     "editor.tagline": {"en": "A Shader Editor for TouchDesigner", "zh-Hant": "TouchDesigner 視覺化著色器編輯器", "ja": "TouchDesigner 用シェーダーエディター"},
-    "stage.vertex": {"en": "VERTEX STAGE", "zh-Hant": "Vertex 階段", "ja": "Vertex ステージ"},
-    "stage.pixel": {"en": "PIXEL STAGE", "zh-Hant": "Pixel 階段", "ja": "Pixel ステージ"},
+    "stage.vertex": {"en": "VERTEX STAGE", "zh-Hant": "VERTEX STAGE", "ja": "VERTEX STAGE"},
+    "stage.pixel": {"en": "PIXEL STAGE", "zh-Hant": "PIXEL STAGE", "ja": "PIXEL STAGE"},
     "panel.notes": {"zh-Hant": "註記", "en": "Notes", "ja": "メモ"},
     "share.title": {"zh-Hant": "開啟到其他裝置", "en": "Open on another device", "ja": "別のデバイスで開く"},
     "share.origin": {"zh-Hant": "網址來源", "en": "Address", "ja": "アドレス"},
@@ -1352,9 +1352,9 @@
       "ja": "TD の現在値を更新しました"
     },
     "action.about": {
-      "zh-Hant": "關於",
+      "zh-Hant": "About",
       "en": "About",
-      "ja": "このアプリについて"
+      "ja": "About"
     },
     "panel.addNode": {
       "zh-Hant": "新增節點",
@@ -2644,9 +2644,9 @@
       "ja": "右サイドバーを非表示"
     },
     "layout.title": {
-      "zh-Hant": "面板配置",
+      "zh-Hant": "Layout",
       "en": "Layout",
-      "ja": "レイアウト"
+      "ja": "Layout"
     },
     "layout.storageError": {
       "zh-Hant": "無法儲存瀏覽器配置，請匯出備份。",
