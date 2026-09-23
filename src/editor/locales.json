@@ -18,7 +18,8 @@
     "Graph"
   ],
   "messages": {
-    "help.router": {"en": "A real graph node for routing wires. Follows its source type without adding GLSL operations. Up to four layers and ten dots; additional targets share output sockets in vertical order. Drag the gaps to move it.", "zh-Hant": "整理接線的實際節點；型別跟隨來源，不新增 GLSL 運算。最多四層十個圓，更多目標按上下位置共用輸出孔。拖曳空隙可移動節點。"},
+    "router.move": {"en":"Drag to move Router","zh-Hant":"拖曳以移動 Router"},
+    "help.router": {"en": "A real graph node for routing wires. Follows its source type without adding GLSL operations. Up to four layers and ten dots; additional targets share output sockets in vertical order. Hover or select it to reveal the drag handle.", "zh-Hant": "整理接線的實際節點；型別跟隨來源，不新增 GLSL 運算。最多四層十個圓，更多目標按上下位置共用輸出孔。Hover 或選取後，可拖曳上方的小標題移動節點。"},
     "router.input": {"en": "Input", "zh-Hant": "輸入"},
     "router.output": {"en": "Output", "zh-Hant": "輸出"},
 

@@ -2093,3 +2093,9 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .node-router .router-dot.router-output-dot{background:var(--socket)}
 .node-router .router-dot.router-hollow{background:var(--node-body,var(--ui-tone-node))}
 .node-router .link-port-navigation{pointer-events:auto}
+/* Router has 8px of hit padding; ordinary sockets instead protrude by 6px. */
+.node-router .input>.link-port-navigation{left:-17px}
+.node-router .output>.link-port-navigation{right:-17px}
+.node-router .router-drag-handle{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);min-width:58px;max-width:160px;height:23px;box-sizing:border-box;padding:2px 9px;border:1px solid var(--node-border,var(--ui-tone-node-border));border-radius:5px;background:var(--node-body,var(--ui-tone-node));color:var(--ui-tone-text);font-size:11px;line-height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;opacity:0;pointer-events:none;z-index:2}
+.node-router:is(:hover,.selected,:focus-within) .router-drag-handle{opacity:1;pointer-events:auto}
+.node-router .router-drag-handle:active{cursor:grabbing}

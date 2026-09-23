@@ -1688,6 +1688,10 @@ function renderRouterCard(n,cards){
   const input=el('div',{class:'port-row input router-input','data-type':type}),output=el('div',{class:'port-row output router-output','data-type':type});
   input.append(el('span',{'data-kind':'inputs','data-port':'value','aria-hidden':'true'}));
   let suppressClick=false;
+  const handle=el('button',{type:'button',class:'router-drag-handle',title:t('router.move'),'aria-label':t('router.move')},nodeDisplayName(n));
+  handle.onpointerdown=e=>{if(e.button!==0)return;suppressClick=false;cancelConnection();dragNodeTitle(e,n,card,cards,moved=>{suppressClick=moved;});};
+  handle.onclick=e=>{e.stopPropagation();if(!suppressClick){selectNode(n,selectionModifier(e));refreshCanvasSelection();}};
+  handle.ondblclick=e=>e.stopPropagation();card.append(handle);
   for(let col=0;col<layout.layers;col++)for(let row=0;row<=col;row++){
     const isOutput=col===layout.layers-1,kind=isOutput?'outputs':'inputs';
     const button=el('button',{type:'button',class:'port router-dot'+(isOutput?' router-output-dot':' router-hollow'),'data-kind':kind,'data-port':isOutput?'out':'value','data-type':type,'aria-label':nodeDisplayName(n)+' · '+t(isOutput?'router.output':'router.input'),title:t('help.router')});
