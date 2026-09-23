@@ -621,3 +621,6 @@ TD 2025.32820、Windows 原生 TOP／MAT 的展開與收合均確認：保存 UI
 2026-09-23：`test_multiselection.cjs` 驗證 Ctrl／Shift 真實點選 Node／Group／Wire／Link、部分成員補齊及整組移除、右鍵保留多選、批次樣式／刪除及 Undo、快照替換清除選線、Shift 框選、Group 標題壓線命中。選取過程不得修改圖、dirty 或歷史。
 
 2026-09-23 Router 0.8.218：`tests/browser/test_router_link_layout.cjs` 檢查 1／2／3／4／8／16 輸出分階、第一階空心、原尺寸 Link 按鈕、混合 Wire／Link 分配與自然曲線、三種箭頭顯示模式、隱藏 Link 導覽、多 Link 轉 Wire／Undo／Redo、目的地 Y 排序，以及 Editor 標題深淺色一致。沿用 `test_router.cjs` 檢查拖曳、接線、循環拒絕與序列化；`tests/unit/test_router.py` 核對 GLSL 不因 Router 產生額外運算。
+
+
+2026-09-23 多語介面 0.8.219：`tools/dev/check_locales.py` 現在檢查全部 1481 個文字項目及 59 個來源提示的三語完整性、占位符與日文參考連結，不只檢查靜態 UI 引用。`tests/browser/test_locales.cjs SOURCE_DIR STATE_JSON REPORT_DIR` 使用隔離 fixture，驗證英文預設、兩處下拉清單、日本語同步／重新載入記憶、中文面板名稱、回切英文、圖與 Undo／視角不變、無 API 寫入，以及日文深淺色與窄視窗快捷鍵／實驗功能排版。5 組流程通過，截圖人工核對；純文案呈現未重跑原生 GLSL 數值測試。私人紀錄 reports/locale-219/。

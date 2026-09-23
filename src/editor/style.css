@@ -121,6 +121,7 @@
 .expose-badge{font-size:10px;color:var(--node-uniform-fg);padding:5px 13px 10px;overflow-wrap:anywhere}
 .location-bar{height:32px;display:flex;align-items:center;gap:14px;padding:0 22px;background:var(--ui-tone-chrome);border-bottom:1px solid var(--line);font-size:11px}
 .location-bar>span:first-child{color:var(--muted);flex-shrink:0}
+:root:lang(ja){font-family:Inter,"Segoe UI","Yu Gothic UI","Meiryo","Noto Sans JP",sans-serif}
 .location-bar .target{margin:0;font-size:12px;font-family:Consolas,monospace;color:var(--ui-tone-target);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 main{height:calc(100 * var(--ui-vh) - 199px);grid-template-columns:205px 1fr 308px}
 .graph-location{display:flex;align-items:center;gap:9px;margin-bottom:5px}

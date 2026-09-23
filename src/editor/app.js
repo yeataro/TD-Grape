@@ -29,7 +29,7 @@ function t(key){
   const text=localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;
   return text.includes('{modifier}')?text.replaceAll('{modifier}',shortcutModifierLabel()):text;
 }
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-language-picker]').forEach(picker=>picker.value=language);updateEditorTitle();document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-language-picker]').forEach(picker=>picker.value=language);updateEditorTitle();{const label=$('#projectfile');label.textContent=editorProjectFile===null?t('project.unavailable'):editorProjectFile||t('project.unsaved');label.title=label.textContent;}document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
 function setLanguage(value){
   if(!localeData.languages[value]||value===language)return;
   language=value;localStorage.setItem('sgrapeLanguage',language);
@@ -163,7 +163,7 @@ function locateCompileIssue(issue){
   stopCanvasMotion();
   stage=issue.stage;graphTrail=[...location.trail];selected=location.node.id;selection=new Set([selected]);selectedEdge=null;
   cancelConnection();closeCreator();document.querySelectorAll('.stage').forEach(button=>button.classList.toggle('active',button.dataset.stage===stage));
-  $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();
+  $('#stagecaption').textContent=t(stage==='vertex'?'stage.vertex':'stage.pixel');render();
   const rect=$('#canvas').getBoundingClientRect(),bounds=nodeLayoutBounds(location.node);scale=Math.max(.7,Math.min(1,scale));pan={x:rect.width/uiScaleFactor()/2-(bounds.x+bounds.width/2)*scale,y:rect.height/uiScaleFactor()/2-(bounds.y+bounds.height/2)*scale};transform();
   if(location.node.definitionUuid==='sgrape.builtin.glsl_code'&&Number.isInteger(issue.codeLine)&&issue.codeLine>0){
     inspectorTab='parameters';inspector();workspaceLayout.reveal('parameters');
@@ -528,7 +528,7 @@ function library(){renderLibrary();}
 function render({layoutOnly=false}={}){renderCompileDiagnostics();
   if(!graph)return;if(!graph.stages?.[stage])stage='pixel';
   document.querySelectorAll('[data-stage]').forEach(b=>{b.hidden=!graph.stages?.[b.dataset.stage];b.classList.toggle('active',b.dataset.stage===stage);});
-  $('#stagecaption').textContent=stage.toUpperCase()+' STAGE';
+  $('#stagecaption').textContent=t(stage==='vertex'?'stage.vertex':'stage.pixel');
   $('#previewtitle').dataset.i18n=editorTarget==='top'?'preview.top':'preview.material';$('#previewtitle').textContent=t($('#previewtitle').dataset.i18n);renderPreviewAppearance();
   tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();refreshGeneratedGLSL();
 }
@@ -1416,7 +1416,7 @@ $('#apply').onclick=()=>{conflicted=false;applyNeedsReview=false;if(connectionIs
 $('#save').onclick=async()=>{try{const r=await api('save',{});status(r.saved?t('project.saved')+(dirty?t('project.draft'):''):t('project.saveFailed'),!r.saved);}catch(e){status(e.message,true);}};
 installAppliedGraphReload();
 
-$('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=stage.toUpperCase()+' STAGE';render();fit();});
+$('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=t(stage==='vertex'?'stage.vertex':'stage.pixel');render();fit();});
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=()=>fit();$('#search').oninput=library;
 $('#export').onclick=openExport;
 installImportUI();

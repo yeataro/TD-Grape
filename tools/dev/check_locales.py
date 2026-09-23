@@ -43,5 +43,19 @@ refs.update(['node.resize','comment.resize'])
 refs.update('arrange.'+key for key in ('auto','autoReverse','left','centerX','right','top','centerY','bottom','spaceX','spaceY','grid'))
 for key in refs:
     assert key in data['messages'],key
-    for lang in data['languages']: assert data['messages'][key].get(lang),(key,lang)
-print('Verified',len(refs),'locale keys in',len(data['languages']),'languages')
+def validate_translations(key,values):
+    placeholders=lambda text: sorted(re.findall(r'\{[A-Za-z_]\w*\}',text))
+    for lang in data['languages']:
+        assert isinstance(values.get(lang),str) and values[lang].strip(),(key,lang)
+        assert placeholders(values[lang])==placeholders(values['en']),(key,lang,'placeholders')
+    # Reference URLs are content, not translated identifiers (including URL fragments).
+    links=lambda text: sorted(re.findall(r'\]\((https?://[^\s]+)\)',text))
+    assert links(values['ja'])==links(values['en']),(key,'ja','reference links')
+for key,values in data['messages'].items(): validate_translations(key,values)
+sources=json.loads((root.parent/'library/source_catalog.json').read_text('utf-8'))
+source_hints=0
+for group in ('builtins','nodeSources'):
+    for key,item in sources[group].items():
+        if 'hint' in item:
+            validate_translations('source.'+key,item['hint']);source_hints+=1
+print('Verified',len(data['messages']),'locale keys,',len(refs),'UI references and',source_hints,'source hints in',len(data['languages']),'languages')
