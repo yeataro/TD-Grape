@@ -283,7 +283,7 @@ def validate_catalog(document):
     """Validate shipped data; no graph-provided archive or emitter is executed."""
     if not isinstance(document,dict) or type(document.get('schemaVersion')) is not int or document['schemaVersion']!=1:
         raise GraphError('Unsupported node catalog schema')
-    for key,version in (('emitterAbiVersion',1),('targetShellVersion',2)):
+    for key,version in (('emitterAbiVersion',1),('targetShellVersion',3)):
         if type(document.get(key)) is not int or document[key]!=version:
             raise GraphError('Unsupported '+key)
     if not isinstance(document.get('catalogVersion'),str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',document['catalogVersion']):
@@ -1653,7 +1653,7 @@ def _compile_flat(graph,annotation_scopes=None):
         lighting_fields=['vec3 sg_lighting_position;','vec3 sg_lighting_normal;','int sg_lighting_camera;'] if lighting else []
         light_headers=lambda direction:[('flat ' if field.startswith('int') else '')+direction+' '+field for field in lighting_fields]
         light_init=['    sg_lighting_position = TDDeform(TDPos()).xyz;','    sg_lighting_normal = TDDeformNorm(TDNormal());','    sg_lighting_camera = TDCameraIndex();'] if lighting else []
-        vertex='\n'.join(type_headers['vertex']+headers+['out vec2 sg_uv;']+varying_headers('out')+light_headers('out')+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+light_init+stages['vertex']['lines']+['}',''])
+        vertex='\n'.join(type_headers['vertex']+headers+['out vec2 sg_uv;']+varying_headers('out')+light_headers('out')+stages['vertex']['helpers']+['void main() {','    sg_uv = TDTexCoord(0u).xy;']+light_init+stages['vertex']['lines']+['#ifdef TD_PICKING_ACTIVE','    TDWritePickingValues();','#endif // TD_PICKING_ACTIVE','}',''])
         pixel='\n'.join(type_headers['pixel']+headers+['in vec2 sg_uv;','layout(location=0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];']+varying_headers('in')+light_headers('in')+stages['pixel']['helpers']+[
                                  'void main() {','    TDCheckDiscard();']+stages['pixel']['lines']+['}',''])
     source_map={}

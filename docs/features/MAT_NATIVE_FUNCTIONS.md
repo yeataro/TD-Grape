@@ -70,7 +70,7 @@
 | `TDTriplanarBlend` | pixel | td_triplanar_blend 已有入口；三個投影方向的座標、取樣與法線圖組裝仍待完成。 |
 | `TDUVUnwrapCoord` | vertex | Built-in Source：`TDUVUnwrapCoord` |
 | `TDWorldToProj` | vertex | To Clip 與 td_world_to_proj_uv；完整預置須接 UV Unwrap 座標。 |
-| `TDWritePickingValues` | vertex | 已觀察到 Picking 條件分支；依既有裁定，尚未實作。 |
+| `TDWritePickingValues` | vertex | 0.8.216 已由 MAT Vertex 殼在 Picking 條件分支呼叫，基本原生比較通過；自訂拾取流水線仍延後。 |
 
 ## 不是原生函數、但仍是必要能力
 

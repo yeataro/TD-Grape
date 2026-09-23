@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-23 0.8.216：MAT Vertex main 結尾加入 `TD_PICKING_ACTIVE` 條件式 `TDWritePickingValues()`；Pixel／TOP 程式不變。Target shell 2 → 3，既有 Shader 沿用明確升級檢查；四份 Master 升級並保留節點、OP 身分與位置，四份使用者 Shader 未改寫。自訂頂點變形與 Picking payload 可能不一致列已知限制，拾取專用流水線、Input／Output 的型別／座標空間與可用操作留待未來設計。
+
+4 種圖（純色、貼圖、Phong、PBR）的 Render Pick 原生對照通過：命中／未命中、未變換及平移／旋轉幾何，SOP／World／Camera 位置與法線、UV、色彩、非實例 ID；正常渲染移除／加入條件段的像素完全相同。46 項核心／註記／升級／檢查測試、2 項 Picking 殼測試、分類投影與 Master 原生檢查通過。測試首次使用舊欄名與未重算雜湊的升級 fixture，已修正測試資料後通過；來源刷新換版中出現一次舊 core 讀新 catalog 的暫時訊息，刷新最終核心檢查及 Master 原生驗證通過。已保存正式 TOE（1642060 bytes；SHA256 f6a79a439185bd789626d6ae3878602bc3d33cced067c142c7112129875b2994）。私人紀錄 reports/picking-216/。
+
 2026-09-23 0.8.215：Sources 的 sampler2D 可拖入自訂參數浮窗建立 TOP 路徑控制；重複拖入移動同一控制，舊 Expose 沿用原 Par。支援跨頁排序、文字預設、刪除與獨立 Undo／Redo，Apply 保留頁面／Label／Default／原生控制，刪除保留最後貼圖。Expression／Bind、原生改名、外部 Bind 與過期寫入保護已核對。Cube／3D／Array 綁定及 TOP Input 拖入未擴充。
 
 8 組 Sampler 原生流程、14 組既有 TOP／MAT 數值參數回歸、2 組瀏覽器實際拖曳／定義操作，以及雙語檢查通過。無效路徑的首次測試發現僅在 Undo 檢查，已補當次寫入前驗證；修正後通過。已同步 39 份來源與四份 Master，使用者 Shader、Master 身分與位置保留；TOE 保存 1641884 bytes（SHA256 46589f475ff418579cd5a5e6c6825ab7a8c745a74a447706e97f7cbdbde5787f）。私人驗證紀錄 reports/sampler-215/。

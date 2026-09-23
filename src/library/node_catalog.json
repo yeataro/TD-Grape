@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.212",
+  "catalogVersion": "0.8.216",
   "emitterAbiVersion": 1,
-  "targetShellVersion": 2,
+  "targetShellVersion": 3,
   "definitions": [
     {
       "definition": {

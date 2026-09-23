@@ -8,7 +8,7 @@
 
 | ID | 狀態 | 項目與界線 | 依據 |
 | --- | --- | --- | --- |
-| A01 | 未實作 | **Sampler 從 Sources 拖入自訂參數浮窗**。`customSourceAllowed()` 仍僅接受數值 Uniform／Spec Constant。舊 Sampler Expose／TOP 路徑控制已有基礎，不能說全部後端從零開始；新拖入流程、移動／刪除／歷程與說明仍須接通。多維取樣節點存在不代表可建立同維度的原生綁定。 | [參數編輯器](../features/CUSTOM_PARAMETER_EDITOR.md)、`src/editor/inspector.js`、[Sampler Expose](../features/SAMPLER_EXPOSE.md) |
+| A01 | 已於 0.8.215 交付 | **2D Sampler 從 Sources 拖入自訂參數浮窗**。TOP 路徑控制、舊 Expose 沿用、跨頁排序、刪除／Undo／Redo、Apply 保留及 TD 外部修改保護已驗證。Cube／3D／Array 綁定與 TOP Input 拖入未擴充。 | [參數編輯器](../features/CUSTOM_PARAMETER_EDITOR.md) |
 | A02 | 調查尚未完成 | **完整 GLSL 內建函式／overload／方法覆蓋表**。0.8.164／166 已補大量數學、位元、微分與取樣能力，不能沿用早期「都缺」清單；仍需以目標 GLSL／TD／Stage／資源型別逐項核對。這次只確認此待辦及現有 catalog，沒有冒稱完成標準逐條稽核。 | [補齊紀錄](../features/LEGACY_COMPLETION.md)、[Alpha 範圍](ALPHA_SCOPE_2026-09-21.md) |
 | A03 | 已於 0.8.214 交付 | **節點分類投影與擴充後分類整理**。已新增 Source／Editor，重整子分類、同步全部定義投影並加入一致性檢查；原調查保留歷史。 | [本輪分類與 CSV](NODE_CLASSIFICATION_2026-09-23.md) |
 | A04 | 部分完成 | **原生 Phong／PBR 完整能力與可編修預置圖**。0.8.175 基本版本已交付；法線圖、視差／遮蔽步進、位移、各貼圖槽、Rim、角度 Alpha、多貼圖、輔助輸出與交互組合等仍未全數完成。另需使用者可操作的完整示例場景。 | [原生等價清單](../features/MAT_NATIVE_PARITY.md)、[原生函式清單](../features/MAT_NATIVE_FUNCTIONS.md) |
@@ -35,6 +35,8 @@
 | K11 | 原生 OP Create Dialog 說明與 TDFam 的關係 | 舊 B11 暫緩，未確證因果。 |
 | K12 | 舊瀏覽器測試 fixture／隱藏入口假設 | 若干測試仍依賴過時 fixture 或布局；最新專項通過不能等於所有歷史腳本已維護完。見 [測試紀錄](../development/TESTING.md)。 |
 
+| K13 | 自訂頂點變形與預設 Picking 資料可能不一致 | 使用者接受先記為已知限制；能選到物件不代表回傳位置／法線正確。0.8.216 已在 Vertex main 結尾條件式呼叫 `TDWritePickingValues()`，基本原生 Picking 與正常渲染比較通過；自訂變形 payload 仍不保證一致。見 [Picking 筆記](../features/MAT_NATIVE_PARITY.md#picking-known-limitation-and-future-pipeline-2026-09-23)。 |
+
 K05–K11 沿用既有未結案筆記，本次未重新做原生／跨裝置重現。詳見 [舊待辦 B01–B11](TODO_AUDIT_2026-09-21.md)。
 
 ## 仍保留的候選、能力邊界與延後工作
@@ -54,7 +56,8 @@ K05–K11 沿用既有未結案筆記，本次未重新做原生／跨裝置重�
 
 - **節點本身的程式碼／算式預覽、GLSL 行號與節點雙向高亮**：使用者指定重構後再做。Math 現有註記只是運算元關係文字；編譯錯誤已有部分節點定位，也不等於任意程式碼雙向互動完成。
 - **Link 視覺略過 Router**：最新設計已取消，不列為漏做。Router 是實際保存的節點，前後線段各自保留 Wire／Link。
-- **Picking、Compute／其他 Stage、Image 寫入**：未因補齊數值函式而取得實作範圍。Picking 可行性可再評估，目前依既有排除裁定。
+- **Picking 專用流水線**：2026-09-23 使用者提出未來方向，供拾取資料初始化與自訂寫入，需設計執行順序與允許的操作；不等於新增 GLSL 硬體 Stage。與補預設 picking 的簡單方案分開，本次只記錄、不實作。自訂變形限制見 K13。
+- **Compute／其他 Stage、Image 寫入**：未因補齊數值函式而取得實作範圍。
 - **10 個 TD Quaternion／矩陣函式**：目標 TD 2025.32820 的既有原生 probe 失敗，列宿主版本／簽名界線，不冒充只差 UI。詳見 [補齊紀錄](../features/LEGACY_COMPLETION.md)與 [版本查核](TD_NATIVE_VERSION_REVIEW_2026-09-23.md)。
 - 原生 double／uint 傳輸精度、Attribute Array Size、特化長度等限制按 [來源精度](TD_SOURCE_PRECISION_REVIEW.md)及 [TD Array](../features/TD_ARRAY_SOURCES.md)保留；不能靠分類調整宣稱解除。
 
@@ -65,7 +68,7 @@ K05–K11 沿用既有未結案筆記，本次未重新做原生／跨裝置重�
 | TD 函式「缺 87 個入口」／Noise Deriv 等全缺 | 歷史數字；0.8.164–174 已大量交付。精確剩餘覆蓋另做 A02，不能重用 0.8.163 缺口總數。 |
 | Built-in Source 只有通用 Help | 已有選中來源的專屬說明／連結；全面語意審查仍是 A07。 |
 | Sources 改名、搜尋分行、分類排序、常數控制、緊湊卡片、POP 分類 | 0.8.176–179／200 已交付；分類改拖曳、預設折疊。 |
-| 自訂參數還在側邊新增／只有 Uniform 能用 | 0.8.197–200 已提供非模態浮窗、數值 Uniform＋Spec Constant、排序、獨立歷程、Range／Clamp、原生修改保護與可讀名稱；Sampler 新拖入仍未完成。 |
+| 自訂參數還在側邊新增／只有 Uniform 能用 | 0.8.197–200 已提供非模態浮窗、數值 Uniform＋Spec Constant、排序、獨立歷程、Range／Clamp、原生修改保護與可讀名稱；Sampler 拖入已於 0.8.215 補齊（限 sampler2D）。 |
 | 自訂參數刪除後 cooking 問題完全未處理 | 0.8.198 已修 Bind 解除順序並通過原生刪除／cook 檢查；不宣稱已重現原回報的每一種情境。 |
 | 瀏覽器偏好無法重設 | 0.8.199 已提供範圍明確的重設入口，保留草稿與 TD 資料。 |
 | Link 樣式、導航箭頭、多端 tooltip、顯示選項 | 0.8.180 起分批交付至 210；Router 間距與拖曳 213 補完。 |
@@ -79,7 +82,7 @@ K05–K11 沿用既有未結案筆記，本次未重新做原生／跨裝置重�
 ## 建議後續順序
 
 1. 分類整理已於 0.8.214 交付，供使用者 review。
-2. 完成最近明確留下的 Sampler 拖入控制；同步驗證移動、刪除、Undo／外部 TD 編輯與 Help。
+2. Sampler 拖入控制已於 0.8.215 交付，基本 Picking 已於 0.8.216 交付；供使用者 review，進階拾取流程仍延後。
 3. GLSL 能力逐項盤點，分開「已有入口」「缺 overload」「缺資源管理」「宿主不支援」，再選 Preview 必要能力。
 4. 將 Swizzle／資產分類等 UI 項與材質等價大項分批；觸控／跨平台驗收另排，避免用一次大重構混做。
 

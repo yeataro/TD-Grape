@@ -72,7 +72,7 @@ class CatalogTests(unittest.TestCase):
 
     def test_catalog_rejects_unsupported_emitters_versions_and_duplicates(self):
         cases=[]
-        for key,value in (('schemaVersion',2),('emitterAbiVersion',2),('targetShellVersion',3),('catalogVersion','latest')):
+        for key,value in (('schemaVersion',2),('emitterAbiVersion',2),('targetShellVersion',4),('catalogVersion','latest')):
             d=copy.deepcopy(DOCUMENT);d[key]=value;cases.append(d)
         d=copy.deepcopy(DOCUMENT);d['definitions'][0]['emitter']['id']='execute';cases.append(d)
         d=copy.deepcopy(DOCUMENT);d['definitions'][0]['emitter']['version']=2;cases.append(d)
