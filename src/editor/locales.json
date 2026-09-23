@@ -53,7 +53,7 @@
     "wire.linkTargets": {"en":"Link connected nodes","zh-Hant":"Link 連接的節點", "ja": "Link の接続先ノード"},
     "pixel.nativeFinishing": {"en": "Native MAT finishing", "zh-Hant": "原生 MAT 最後處理", "ja": "MAT 標準の出力処理"},
     "pixel.nativeFinishingHint": {"en": "Primary color: dither, alpha test, host color-space conversion, then output swizzle. Do not also connect TDConvertColorSpace before this output. Off preserves the existing output behavior.", "zh-Hant": "主色彩依序執行抖色、Alpha Test、宿主色彩轉換與輸出 Swizzle。啟用時，不要在此輸出前再接 TDConvertColorSpace。關閉則保留原有輸出行為。", "ja": "主カラーにディザリング、アルファテスト、ホストの色空間変換、出力スウィズルを順に適用します。この出力の前に TDConvertColorSpace を重ねて接続しないでください。オフでは従来の出力動作を維持します。"},
-    "sources.popBuffers": {"zh-Hant":"POP Buffers","en":"POP Buffers", "ja": "POP バッファー"},
+    "sources.popBuffers": {"zh-Hant":"POP Buffers","en":"POP Buffers", "ja": "POP Buffers"},
     "buffer.popPath": {"zh-Hant":"POP 路徑","en":"POP path", "ja": "POP パス"},
     "buffer.attributeClass": {"zh-Hant":"Attribute 類別","en":"Attribute class", "ja": "属性クラス"},
     "buffer.attribute": {"zh-Hant":"Attribute 名稱","en":"Attribute", "ja": "属性"},
@@ -65,14 +65,14 @@
     "buffer.configHint": {"zh-Hant":"請先在 TD 建立 POP 與 Attribute，再指定路徑、類別及名稱。Expression／Export／Bind 配置請在 TD 修改。","en":"Create the POP and attribute in TD, then set their path, class and name. Edit driven bindings in TD.", "ja": "TD で POP と属性を作成し、パス、クラス、名前を設定します。外部制御されたバインドは TD で編集してください。"},
     "buffer.empty": {"zh-Hant":"請自行在 TD 建立資料來源，再新增 Buffer 配置。","en":"Create the data source in TD, then add a Buffer binding.", "ja": "TD でデータソースを作成してから、バッファーのバインドを追加してください。"},
     "help.pop_buffer": {"zh-Hant":"以從 0 起的 index 讀取 POP Attribute；arrayIndex 選擇 Attribute 陣列內的元素。length 為元素數，arraySize 為 Attribute 陣列大小。輸出會明確轉換為所選型別；TD 的 Python metadata 無法完整辨別原生精度，請依需要確認輸出型別。","en":"Read a POP attribute by zero-based index; arrayIndex selects an attribute array element. length is the element count; arraySize is the attribute array size. Values are cast to the selected output type. TD metadata does not fully identify native precision; check the output type.", "ja": "0始まりのインデックスで POP 属性を読み取ります。arrayIndex は属性配列の要素を選択します。length は要素数、arraySize は属性配列のサイズです。値は選択した出力型に変換されます。TD のメタデータでは実際の精度を完全には判別できないため、出力型を確認してください。"},
-    "browser.category.shader.buffers": {"zh-Hant":"Buffers","en":"Buffers", "ja": "バッファー"},
+    "browser.category.shader.buffers": {"zh-Hant":"Buffers","en":"Buffers", "ja": "Buffers"},
     "help.buffer_fetch": {"zh-Hant": "以從 0 起的整數索引讀取 Texture Buffer，輸出 vec4。只接受 samplerBuffer；索引範圍遵循 GLSL，不自動截斷或補值。", "en": "Fetch a vec4 from a Texture Buffer with a zero-based index. Requires samplerBuffer. Indices follow GLSL bounds; no clamping or fallback values.", "ja": "0始まりのインデックスでテクスチャバッファーから vec4 を取得します。samplerBuffer が必要です。インデックスの範囲外の動作は GLSL に従い、制限や代替値は適用しません。"},
     "help.buffer_length": {"zh-Hant": "查詢 Texture Buffer 的 texel 數量；由 GLSL 在執行期查詢，不從網頁讀回 CHOP 樣本。", "en": "Returns the Texture Buffer texel count at runtime. Does not read CHOP samples into the editor.", "ja": "実行時のテクスチャバッファーのテクセル数を返します。CHOP のサンプルをエディターに読み込みません。"},
     "array.bindingState": {"zh-Hant": "資料來源由 TD Arrays 頁面管理。", "en": "Source managed on the TD Arrays page.", "ja": "TD の Arrays ページで管理するソースです。"},
-    "sources.textureBuffers": {"zh-Hant": "Texture Buffers", "en": "Texture Buffers", "ja": "テクスチャバッファー"},
+    "sources.textureBuffers": {"zh-Hant": "Texture Buffers", "en": "Texture Buffers", "ja": "Texture Buffers"},
     "buffer.nativeHint": {"zh-Hant": "請自行在 TD 建立 CHOP 並指定路徑。Texture Buffer 為 samplerBuffer 資源，使用 Buffer Fetch 讀取、Buffer Length 查詢長度；不是可填值的一般陣列。空來源的警告／資料行為依 TD，不建立補位來源。", "en": "Create a CHOP in TD and set its path. Use Buffer Fetch and Buffer Length with this samplerBuffer. It is not a value array. Empty-source behavior follows TD; no fallback source is created.", "ja": "TD で CHOP を作成してパスを設定します。この samplerBuffer は Buffer Fetch と Buffer Length で使用します。値の配列ではありません。空のソースの動作は TD に従い、代替ソースは作成しません。"},
-    "browser.category.texture.buffer": {"zh-Hant": "Buffer", "en": "Buffer", "ja": "バッファー"},
-    "sources.common": {"zh-Hant": "共同來源", "en": "Common Sources", "ja": "共通ソース"},
+    "browser.category.texture.buffer": {"zh-Hant": "Buffer", "en": "Buffer", "ja": "Buffer"},
+    "sources.common": {"zh-Hant": "Common Sources", "en": "Common Sources", "ja": "Common Sources"},
     "sources.nameMode": {"zh-Hant": "共同來源顯示名稱：TD 名稱／共同名稱", "en": "Common source names: TD Names / Common Names", "ja": "共通ソース名：TD 名／一般名"},
     "sources.namesTD": {"zh-Hant": "TD 名稱", "en": "TD Names", "ja": "TD 名"},
     "sources.namesCommon": {"zh-Hant": "共同名稱", "en": "Common Names", "ja": "一般名"},
@@ -87,11 +87,11 @@
     "sources.note.spec_constant": {"zh-Hant": "數值在 Shader 特化時確定，可用於常數分支。", "en": "The value is fixed at Shader specialization and can control constant branches.", "ja": "シェーダーの特殊化時に値が確定し、定数による分岐を制御できます。"},
     "sources.note.attribute": {"zh-Hant": "讀取 MAT 幾何體的具名 Attribute，供 Vertex Stage 使用。", "en": "Reads a named MAT geometry attribute in the Vertex stage.", "ja": "Vertex ステージで名前付きの MAT ジオメトリ属性を読み取ります。"},
     "sources.note.pop_buffer": {"zh-Hant": "從指定 POP Attribute 依索引讀取資料。", "en": "Reads indexed data from the specified POP attribute.", "ja": "指定した POP 属性のデータをインデックスで読み取ります。"},
-    "sources.time": {"zh-Hant": "時間", "en": "Time", "ja": "時間"},
-    "sources.customUniforms": {"zh-Hant": "自訂 Uniform", "en": "Custom Uniforms", "ja": "カスタム Uniform"},
-    "sources.values": {"zh-Hant": "數值", "en": "Values", "ja": "値"},
-    "sources.matrices": {"zh-Hant": "矩陣", "en": "Matrices", "ja": "行列"},
-    "sources.arrays": {"zh-Hant": "陣列", "en": "Arrays", "ja": "配列"},
+    "sources.time": {"zh-Hant": "Time", "en": "Time", "ja": "Time"},
+    "sources.customUniforms": {"zh-Hant": "Custom Uniforms", "en": "Custom Uniforms", "ja": "Custom Uniforms"},
+    "sources.values": {"zh-Hant": "Values", "en": "Values", "ja": "Values"},
+    "sources.matrices": {"zh-Hant": "Matrices", "en": "Matrices", "ja": "Matrices"},
+    "sources.arrays": {"zh-Hant": "Arrays", "en": "Arrays", "ja": "Arrays"},
     "sources.details": {"zh-Hant": "展開／收合來源", "en": "Source details", "ja": "ソースの詳細"},
     "sources.actions": {"zh-Hant": "來源操作", "en": "Source actions", "ja": "ソースの操作"},
     "sources.presetDormant": {"zh-Hant": "新增引用時才建立此來源。", "en": "Created on first reference.", "ja": "最初に参照したときに作成します。"},
@@ -320,9 +320,9 @@
     "type.missingPort": {"zh-Hant": "連接埠 {port} 不存在於目前型別；原接線仍保留。", "en": "Port {port} does not exist for the current type; its wire is retained.", "ja": "現在の型にはポート {port} がありません。接続線は保持しています。"},
     "inputs.addSource": {"zh-Hant": "新增來源：{category}", "en": "Add source: {category}", "ja": "ソースを追加：{category}"},
     "sources.availableCount": {"zh-Hant": "可引用來源：{count}", "en": "Available sources: {count}", "ja": "利用可能なソース：{count}"},
-    "category.attribute": {"zh-Hant": "Attribute", "en": "Attribute", "ja": "属性"},
-    "category.texture": {"zh-Hant": "Texture", "en": "Texture", "ja": "テクスチャ"},
-    "sources.tdInputsInfo": {"zh-Hant": "TD Inputs & Info", "en": "TD Inputs & Info", "ja": "TD 入力と情報"},
+    "category.attribute": {"zh-Hant": "Attribute", "en": "Attribute", "ja": "Attribute"},
+    "category.texture": {"zh-Hant": "Texture", "en": "Texture", "ja": "Texture"},
+    "sources.tdInputsInfo": {"zh-Hant": "TD Inputs & Info", "en": "TD Inputs & Info", "ja": "TD Inputs & Info"},
     "sources.selectReferences": {"zh-Hant": "選取所有引用", "en": "Select references", "ja": "参照を選択"},
     "sources.selectReferencesHint": {"zh-Hant": "選取目前畫布中的引用並執行 Frame", "en": "Select references in this graph and Frame them", "ja": "このグラフ内の参照を選択してフレーム表示"},
     "color.nativeDriven": {"zh-Hant": "部分顏色分量由 TD 控制，請使用可編輯的分量欄位。", "en": "Some color components are controlled by TD. Use the editable component fields.", "ja": "一部の色成分は TD によって制御されています。編集可能な成分欄を使用してください。"},
@@ -341,7 +341,7 @@
     "browser.branch.specConstants": {
       "zh-Hant": "Spec Constants",
       "en": "Spec Constants",
-      "ja": "特殊化定数"
+      "ja": "Spec Constants"
     },
     "inputs.specHint": {
       "zh-Hant": "特化常數用於不常更動的 Shader 選項。變更目前值會選擇新的特化版本，constant_id 維持固定。",
@@ -349,19 +349,19 @@
       "ja": "特殊化定数は変更頻度の低いシェーダー設定に使用します。現在値を変更すると特殊化を選択し直しますが、constant_id は固定です。"
     },
     "inputs.tdBuiltIn": {
-      "zh-Hant": "TD 內建來源",
+      "zh-Hant": "TD Built In",
       "en": "TD Built In",
-      "ja": "TD 組み込み"
+      "ja": "TD Built In"
     },
     "inputs.specConstants": {
       "zh-Hant": "Spec Constants",
       "en": "Spec Constants",
-      "ja": "特殊化定数"
+      "ja": "Spec Constants"
     },
     "inputs.graphConstants": {
       "zh-Hant": "Graph Constants",
       "en": "Graph Constants",
-      "ja": "グラフ定数"
+      "ja": "Graph Constants"
     },
     "node.expandValues": {
       "zh-Hant": "展開或收合分量數值",
@@ -1242,39 +1242,39 @@
       "ja": "型が適合しません"
     },
     "category.all": {
-      "zh-Hant": "全部",
+      "zh-Hant": "All",
       "en": "All",
-      "ja": "すべて"
+      "ja": "All"
     },
     "category.math": {
       "zh-Hant": "Math",
       "en": "Math",
-      "ja": "数学"
+      "ja": "Math"
     },
     "category.constant": {
       "zh-Hant": "Constants",
       "en": "Constants",
-      "ja": "定数"
+      "ja": "Constants"
     },
     "category.uniform": {
       "zh-Hant": "Uniforms",
       "en": "Uniforms",
-      "ja": "Uniform"
+      "ja": "Uniforms"
     },
     "category.sampler": {
       "zh-Hant": "Texture",
       "en": "Texture",
-      "ja": "テクスチャ"
+      "ja": "Texture"
     },
     "category.builtin": {
       "zh-Hant": "TD Built-ins",
       "en": "TD Built-ins",
-      "ja": "TD 組み込み"
+      "ja": "TD Built-ins"
     },
     "category.functions": {
-      "zh-Hant": "Subgraph",
+      "zh-Hant": "Subgraphs",
       "en": "Subgraphs",
-      "ja": "サブグラフ"
+      "ja": "Subgraphs"
     },
     "create.title": {
       "zh-Hant": "新增節點",
@@ -1502,9 +1502,9 @@
       "ja": "TD または別のエディターでこのシェーダーが変更されました。適用済みグラフを再読み込みして最新の状態を確認してください。"
     },
     "category.personal": {
-      "zh-Hant": "個人",
+      "zh-Hant": "Personal",
       "en": "Personal",
-      "ja": "個人"
+      "ja": "Personal"
     },
     "personal.save": {
       "zh-Hant": "存入個人調色盤",
@@ -2492,111 +2492,111 @@
       "ja": "シェーダーテンプレート"
     },
     "browser.branch.1d": {"en":"1D", "zh-Hant":"1D", "ja": "1D"},
-    "browser.category.editor": {"en": "Editor", "zh-Hant": "Editor", "ja": "エディター"},
-    "browser.branch.noise": {"en": "Noise", "zh-Hant": "Noise", "ja": "ノイズ"},
-    "browser.branch.derivatives": {"en": "Derivatives", "zh-Hant": "微分", "ja": "微分"},
-    "browser.branch.construct": {"en": "Construction & Access", "zh-Hant": "建立與存取", "ja": "作成とアクセス"},
-    "browser.branch.algebra": {"en": "Algebra", "zh-Hant": "代數", "ja": "代数"},
-    "browser.branch.transforms": {"en": "Transforms", "zh-Hant": "變換", "ja": "変換"},
-    "browser.branch.conversion": {"en": "Color Conversion", "zh-Hant": "色彩轉換", "ja": "色変換"},
-    "browser.branch.transfer": {"en": "Transfer Functions", "zh-Hant": "轉換曲線", "ja": "伝達関数"},
-    "browser.branch.values": {"en": "Values & Conversion", "zh-Hant": "值與轉型", "ja": "値と型変換"},
-    "browser.branch.bits": {"en": "Bit Operations", "zh-Hant": "位元運算", "ja": "ビット演算"},
-    "browser.branch.packing": {"en": "Packing & Bit Conversion", "zh-Hant": "打包與位元轉換", "ja": "パックとビット変換"},
-    "browser.branch.arrays": {"en": "Arrays", "zh-Hant": "陣列", "ja": "配列"},
-    "browser.branch.structures": {"en": "Structures", "zh-Hant": "結構", "ja": "構造体"},
-    "browser.branch.materials": {"en": "Materials", "zh-Hant": "材質", "ja": "マテリアル"},
-    "browser.branch.lighting": {"en": "Lighting", "zh-Hant": "光照", "ja": "ライティング"},
-    "browser.branch.shadows": {"en": "Shadows", "zh-Hant": "陰影", "ja": "シャドウ"},
-    "browser.branch.stage": {"en": "Stage & Output", "zh-Hant": "階段與輸出", "ja": "ステージと出力"},
-    "browser.branch.code": {"en": "GLSL Code", "zh-Hant": "GLSL Code", "ja": "GLSL コード"},
-    "browser.branch.projection": {"en": "Projection & Environment", "zh-Hant": "投影與環境貼圖", "ja": "投影と環境"},
-    "browser.branch.popBuffers": {"en": "POP Buffers", "zh-Hant": "POP Buffers", "ja": "POP バッファー"},
+    "browser.category.editor": {"en": "Editor", "zh-Hant": "Editor", "ja": "Editor"},
+    "browser.branch.noise": {"en": "Noise", "zh-Hant": "Noise", "ja": "Noise"},
+    "browser.branch.derivatives": {"en": "Derivatives", "zh-Hant": "Derivatives", "ja": "Derivatives"},
+    "browser.branch.construct": {"en": "Construction & Access", "zh-Hant": "Construction & Access", "ja": "Construction & Access"},
+    "browser.branch.algebra": {"en": "Algebra", "zh-Hant": "Algebra", "ja": "Algebra"},
+    "browser.branch.transforms": {"en": "Transforms", "zh-Hant": "Transforms", "ja": "Transforms"},
+    "browser.branch.conversion": {"en": "Color Conversion", "zh-Hant": "Color Conversion", "ja": "Color Conversion"},
+    "browser.branch.transfer": {"en": "Transfer Functions", "zh-Hant": "Transfer Functions", "ja": "Transfer Functions"},
+    "browser.branch.values": {"en": "Values & Conversion", "zh-Hant": "Values & Conversion", "ja": "Values & Conversion"},
+    "browser.branch.bits": {"en": "Bit Operations", "zh-Hant": "Bit Operations", "ja": "Bit Operations"},
+    "browser.branch.packing": {"en": "Packing & Bit Conversion", "zh-Hant": "Packing & Bit Conversion", "ja": "Packing & Bit Conversion"},
+    "browser.branch.arrays": {"en": "Arrays", "zh-Hant": "Arrays", "ja": "Arrays"},
+    "browser.branch.structures": {"en": "Structures", "zh-Hant": "Structures", "ja": "Structures"},
+    "browser.branch.materials": {"en": "Materials", "zh-Hant": "Materials", "ja": "Materials"},
+    "browser.branch.lighting": {"en": "Lighting", "zh-Hant": "Lighting", "ja": "Lighting"},
+    "browser.branch.shadows": {"en": "Shadows", "zh-Hant": "Shadows", "ja": "Shadows"},
+    "browser.branch.stage": {"en": "Stage & Output", "zh-Hant": "Stage & Output", "ja": "Stage & Output"},
+    "browser.branch.code": {"en": "GLSL Code", "zh-Hant": "GLSL Code", "ja": "GLSL Code"},
+    "browser.branch.projection": {"en": "Projection & Environment", "zh-Hant": "Projection & Environment", "ja": "Projection & Environment"},
+    "browser.branch.popBuffers": {"en": "POP Buffers", "zh-Hant": "POP Buffers", "ja": "POP Buffers"},
     "browser.category.math": {
       "zh-Hant": "Math",
       "en": "Math",
-      "ja": "数学"
+      "ja": "Math"
     },
     "browser.category.vector": {
       "zh-Hant": "Vector",
       "en": "Vector",
-      "ja": "ベクトル"
+      "ja": "Vector"
     },
     "browser.category.matrix": {
       "zh-Hant": "Matrix",
       "en": "Matrix",
-      "ja": "行列"
+      "ja": "Matrix"
     },
     "browser.category.logic": {
       "zh-Hant": "Logic",
       "en": "Logic",
-      "ja": "論理"
+      "ja": "Logic"
     },
     "browser.category.color": {
       "zh-Hant": "Color",
       "en": "Color",
-      "ja": "色"
+      "ja": "Color"
     },
     "browser.category.coordinate": {
       "zh-Hant": "Coordinate",
       "en": "Coordinate",
-      "ja": "座標"
+      "ja": "Coordinate"
     },
     "browser.category.texture": {
       "zh-Hant": "Texture",
       "en": "Texture",
-      "ja": "テクスチャ"
+      "ja": "Texture"
     },
     "browser.category.data": {
       "zh-Hant": "Data",
       "en": "Data",
-      "ja": "データ"
+      "ja": "Data"
     },
-    "browser.category.inputs": {"en": "Source", "zh-Hant": "來源", "ja": "ソース"},
+    "browser.category.inputs": {"en": "Source", "zh-Hant": "Source", "ja": "Source"},
     "browser.branch.uniforms": {
       "zh-Hant": "Uniforms",
       "en": "Uniforms",
-      "ja": "Uniform"
+      "ja": "Uniforms"
     },
     "browser.branch.samplers": {
       "zh-Hant": "Samplers",
       "en": "Samplers",
-      "ja": "Sampler"
+      "ja": "Samplers"
     },
     "browser.category.shader": {
       "zh-Hant": "Shader",
       "en": "Shader",
-      "ja": "シェーダー"
+      "ja": "Shader"
     },
     "browser.category.uncategorized": {
-      "zh-Hant": "未分類",
+      "zh-Hant": "Uncategorized",
       "en": "Uncategorized",
-      "ja": "未分類"
+      "ja": "Uncategorized"
     },
     "browser.branch.arithmetic": {
       "en": "Arithmetic",
       "zh-Hant": "Arithmetic",
-      "ja": "四則演算"
+      "ja": "Arithmetic"
     },
     "browser.branch.interpolation": {
       "en": "Interpolation",
       "zh-Hant": "Interpolation",
-      "ja": "補間"
+      "ja": "Interpolation"
     },
     "browser.branch.range": {
       "en": "Range",
       "zh-Hant": "Range",
-      "ja": "範囲"
+      "ja": "Range"
     },
     "browser.branch.trigonometry": {
       "en": "Trigonometry",
       "zh-Hant": "Trigonometry",
-      "ja": "三角関数"
+      "ja": "Trigonometry"
     },
     "browser.branch.exponential": {
       "en": "Exponential",
       "zh-Hant": "Exponential",
-      "ja": "指数関数"
+      "ja": "Exponential"
     },
     "browser.signatureExample": {
       "en": "One supported signature; ports resolve from the connected types.",
@@ -3340,14 +3340,14 @@
     },
     "inputs.legacySamplers": {
       "en": "Samplers · Existing graph",
-      "zh-Hant": "Samplers · 既有圖",
-      "ja": "Samplers · 既存のグラフ"
+      "zh-Hant": "Samplers · Existing graph",
+      "ja": "Samplers · Existing graph"
     },
-    "browser.branch.constants": {"en": "Graph Constants", "zh-Hant": "圖內常數", "ja": "グラフ定数"},
+    "browser.branch.constants": {"en": "Graph Constants", "zh-Hant": "Graph Constants", "ja": "Graph Constants"},
     "browser.branch.topInputs": {
       "en": "TOP Inputs",
-      "zh-Hant": "TOP 輸入",
-      "ja": "TOP 入力"
+      "zh-Hant": "TOP Inputs",
+      "ja": "TOP Inputs"
     },
     "connection.unavailable": {
       "zh-Hant": "連線逾時或服務無法連線",
@@ -4202,9 +4202,9 @@
       "ja": "TD の設定を取り込みました。接続を確認してください。"
     },
     "sources.attributes": {
-      "zh-Hant": "Attributes／屬性",
+      "zh-Hant": "Attributes",
       "en": "Attributes",
-      "ja": "属性"
+      "ja": "Attributes"
     },
     "help.attribute": {
       "zh-Hant": "引用 MAT 幾何體的具名 Attribute。數值由幾何體提供；這裡只配置名稱、型別與宿主支援的陣列大小。僅可在 Vertex Stage 新增引用，Pixel 需要經由 Varying 傳遞。一般 Attribute 與 Matrix Attribute 各自使用 TD 的配置頁面。",
@@ -4226,21 +4226,21 @@
       "en": "This configuration is driven by TD. Edit it in TD.",
       "ja": "この設定は TD によって制御されています。TD で編集してください。"
     },
-    "sources.textures": {"zh-Hant": "紋理輸入", "en": "Texture Inputs", "ja": "テクスチャ入力"},
-    "sources.coordinates": {"zh-Hant": "座標", "en": "Coordinates", "ja": "座標"},
-    "sources.output": {"zh-Hant": "輸出資訊", "en": "Output Info", "ja": "出力情報"},
-    "sources.shaderInfo": {"zh-Hant": "Shader 資訊", "en": "Shader Info", "ja": "シェーダー情報"},
-    "sources.geometry": {"zh-Hant": "幾何", "en": "Geometry", "ja": "ジオメトリ"},
-    "sources.instances": {"zh-Hant": "實例", "en": "Instances", "ja": "インスタンス"},
-    "sources.cameras": {"zh-Hant": "相機", "en": "Cameras", "ja": "カメラ"},
-    "sources.lights": {"zh-Hant": "燈光", "en": "Lights", "ja": "ライト"},
-    "sources.render": {"zh-Hant": "繪製資訊", "en": "Render", "ja": "レンダー"},
-    "sources.resources": {"zh-Hant": "內建紋理", "en": "Built-in Textures", "ja": "内蔵テクスチャ"},
+    "sources.textures": {"zh-Hant": "Texture Inputs", "en": "Texture Inputs", "ja": "Texture Inputs"},
+    "sources.coordinates": {"zh-Hant": "Coordinates", "en": "Coordinates", "ja": "Coordinates"},
+    "sources.output": {"zh-Hant": "Output Info", "en": "Output Info", "ja": "Output Info"},
+    "sources.shaderInfo": {"zh-Hant": "Shader Info", "en": "Shader Info", "ja": "Shader Info"},
+    "sources.geometry": {"zh-Hant": "Geometry", "en": "Geometry", "ja": "Geometry"},
+    "sources.instances": {"zh-Hant": "Instances", "en": "Instances", "ja": "Instances"},
+    "sources.cameras": {"zh-Hant": "Cameras", "en": "Cameras", "ja": "Cameras"},
+    "sources.lights": {"zh-Hant": "Lights", "en": "Lights", "ja": "Lights"},
+    "sources.render": {"zh-Hant": "Render", "en": "Render", "ja": "Render"},
+    "sources.resources": {"zh-Hant": "Built-in Textures", "en": "Built-in Textures", "ja": "Built-in Textures"},
     "sources.2d": {"zh-Hant": "2D", "en": "2D", "ja": "2D"},
     "sources.3d": {"zh-Hant": "3D", "en": "3D", "ja": "3D"},
-    "sources.2dArray": {"zh-Hant": "2D Array", "en": "2D Array", "ja": "2D 配列"},
-    "sources.cube": {"zh-Hant": "Cube", "en": "Cube", "ja": "キューブ"},
-    "sources.buffer": {"zh-Hant": "緩衝區", "en": "Buffers", "ja": "バッファー"},
+    "sources.2dArray": {"zh-Hant": "2D Array", "en": "2D Array", "ja": "2D Array"},
+    "sources.cube": {"zh-Hant": "Cube", "en": "Cube", "ja": "Cube"},
+    "sources.buffer": {"zh-Hant": "Buffers", "en": "Buffers", "ja": "Buffers"},
     "struct.save": {"zh-Hant": "儲存變更", "en": "Save changes", "ja": "変更を保存"},
     "struct.name": {"zh-Hant": "結構名稱", "en": "Structure name", "ja": "構造体名"},
     "struct.fieldType": {"zh-Hant": "欄位型別", "en": "Field type", "ja": "フィールドの型"},

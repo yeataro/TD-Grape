@@ -4,6 +4,8 @@
 
 英文是介面文案的基準。面板名稱、一般操作、提示與說明依選定語言翻譯，不使用「Parameter · 參數」這類雙語面板標題。品牌、API／GLSL 識別碼、型別、節點種類及 Wire／Link 等穩定技術名稱保留原文。使用者自行命名的節點、頁面、參數與來源不翻譯；TD 原生參數標籤亦維持宿主提供的內容。
 
+0.8.220 起，新增節點的主分類／子分類與來源面板的分類名稱，在中文與日文介面都保留英文，例如 Editor、Math、Source、Common Sources、TD Built In、Custom Uniforms、Texture Inputs、Geometry、Matrices。側邊新增、浮動新增選單及分類路徑使用相同名稱。這項規則只適用分類；面板標題、操作按鈕及說明仍依介面語言翻譯。
+
 | English | 繁體中文 | 日本語 |
 | --- | --- | --- |
 | Parameter | 參數 | パラメーター |
