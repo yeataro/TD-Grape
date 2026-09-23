@@ -2090,13 +2090,13 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 :root #canvas .node.node-router.error{outline:1px solid var(--danger,#ef8d8d)}
 .node-router .port-row{position:absolute;inset:0;width:100%;height:100%;min-height:0;padding:0;margin:0;pointer-events:none}
 .node-router .router-dot{position:absolute;box-sizing:border-box;width:11px;height:11px;min-width:0;min-height:0;padding:0;margin:0;border:2px solid var(--socket);border-radius:50%;transform:none;right:auto;pointer-events:auto}
-.node-router .router-dot.router-output-dot{background:var(--socket)}
+.node-router .router-dot.router-solid{background:var(--socket)}
 .node-router .router-dot.router-hollow{background:var(--node-body,var(--ui-tone-node))}
 .node-router .link-port-navigation{pointer-events:auto}
 /* Router has 8px of hit padding; ordinary sockets instead protrude by 6px. */
 .node-router .input>.link-port-navigation{left:-17px}
 .node-router .output>.link-port-navigation{right:-17px}
-.node-router .router-drag-handle{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);min-width:58px;max-width:160px;height:41px;box-sizing:border-box;padding:2px 9px;border:1px solid var(--node-border,var(--ui-tone-node-border));border-radius:5px;background:var(--node-body,var(--ui-tone-node));color:var(--ui-tone-text);font-size:11px;line-height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;opacity:0;pointer-events:none;z-index:2}
+.node-router .router-drag-handle{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);min-width:58px;max-width:160px;height:41px;box-sizing:border-box;padding:2px 9px;border:1px solid var(--node-border,var(--ui-tone-node-border));border-radius:5px;background:var(--category-bg);color:var(--category-fg);font-size:11px;line-height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;opacity:0;pointer-events:none;z-index:2}
 /* Match normal title-to-first-socket spacing: 8px gap + 8px hit padding + 5.5px radius = 21.5px.
    Bridge the gap so moving from the dots to the title keeps the handle visible. */
 .node-router:is(:hover,.selected,:focus-within)::before{content:"";position:absolute;left:0;bottom:100%;width:100%;height:8px}

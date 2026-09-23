@@ -619,3 +619,5 @@ TD 2025.32820、Windows 原生 TOP／MAT 的展開與收合均確認：保存 UI
 2026-09-16 Color RGBA 微調：inline／Vector 瀏覽器套件共 31 項通過、零頁面錯誤。新增四框同列與命中區、HDR／負值、Alpha 保留、節點與 Parameter 雙向同步、數字切換調色盤的焦點、Undo／Redo、唯讀及不誤拖節點檢查；100% 縮放截圖確認緊湊排列。調色盤以原生 color input 的事件驗證數值流，未代替各平台原生彈窗實機測試。既有 Color／Label 套件前 11 項通過，其後因已過時的 Expose 選擇器停止，未計為整套通過，也未修改該舊測試。JavaScript 語法與圖面保存狀態檢查通過；24 份內嵌來源／服務資產一致，正式 TOE 已保存且保留使用者圖。
 
 2026-09-23：`test_multiselection.cjs` 驗證 Ctrl／Shift 真實點選 Node／Group／Wire／Link、部分成員補齊及整組移除、右鍵保留多選、批次樣式／刪除及 Undo、快照替換清除選線、Shift 框選、Group 標題壓線命中。選取過程不得修改圖、dirty 或歷史。
+
+2026-09-23 Router 0.8.218：`tests/browser/test_router_link_layout.cjs` 檢查 1／2／3／4／8／16 輸出分階、第一階空心、原尺寸 Link 按鈕、混合 Wire／Link 分配與自然曲線、三種箭頭顯示模式、隱藏 Link 導覽、多 Link 轉 Wire／Undo／Redo、目的地 Y 排序，以及 Editor 標題深淺色一致。沿用 `test_router.cjs` 檢查拖曳、接線、循環拒絕與序列化；`tests/unit/test_router.py` 核對 GLSL 不因 Router 產生額外運算。

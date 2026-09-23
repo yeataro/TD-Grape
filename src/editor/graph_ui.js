@@ -137,6 +137,7 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
 function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d){
+  if(d.key==='router')return 'editor';
   if(['comment','generated_glsl'].includes(d.key))return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
   if(['constant','spec_constant','scalar','vector','matrix','array'].includes(d.key)||['constant','spec_constant'].includes(d.inputKind))return 'constant';
@@ -1664,8 +1665,9 @@ function renderCards({only=null}={}){
 }
 // The placement outline measures this same renderer without adding a model node.
 function routerLayout(n){
-  const count=current().edges.filter(e=>e.from[0]===n.id).length,layers=Math.max(1,Math.min(4,count)),pitch=14,dx=pitch*Math.sqrt(3)/2;
-  return {count,layers,pitch,dx,width:11+(layers-1)*dx,height:11+(layers-1)*pitch};
+  const edges=current().edges.filter(e=>e.from[0]===n.id),count=edges.length,layers=Math.max(1,Math.min(4,count)),pitch=14,dx=pitch*Math.sqrt(3)/2;
+  const hasLink=edges.some(e=>e.ui?.style==='link'),height=11+(layers-1)*pitch;
+  return {count,layers,pitch,dx,width:11+(layers-1)*dx,height,hasLink,linkY:8+(layers===2?5.5+pitch:height/2)};
 }
 let routerWirePoints=null;
 function routerPoint(n,kind,edge=null){
@@ -1677,12 +1679,21 @@ function routerPoint(n,kind,edge=null){
     const target=current().nodes.find(node=>node.id===e.to[0]),p=target&&point(target,e.to[1],'inputs');
     return {edge:e,y:p?.y??target?.ui?.y??0};
   }).sort((a,b)=>a.y-b.y||a.edge.to[0].localeCompare(b.edge.to[0])||a.edge.to[1].localeCompare(b.edge.to[1]));
-  const points=new Map((ordered.length?ordered:[{edge:null}]).map((item,index)=>[item.edge,{x:origin.x+8+layout.width-5.5,y:origin.y+8+5.5+Math.floor(index*layout.layers/Math.max(1,ordered.length))*layout.pitch}]));
+  // Reserve the lower socket at two tiers, and the middle at three/four tiers,
+  // for Link navigation. Wire bundles keep destination-Y order and the standard curve.
+  const wires=ordered.filter(item=>item.edge.ui?.style!=='link'),slots=layout.hasLink&&layout.layers>1?(layout.layers===2?[0]:[0,layout.layers-1]):Array.from({length:layout.layers},(_,i)=>i);
+  const points=new Map();
+  let wireIndex=0;
+  for(const item of ordered){
+    const link=item.edge.ui?.style==='link',slot=link?0:slots[Math.floor(wireIndex++*slots.length/Math.max(1,wires.length))];
+    points.set(item.edge,{x:origin.x+8+layout.width-5.5,y:origin.y+(link?layout.linkY:8+5.5+slot*layout.pitch)});
+  }
+  if(!points.size)points.set(null,{x:origin.x+8+layout.width-5.5,y:origin.y+8+5.5});
   routerWirePoints?.set(n.id,points);return points.get(edge)||points.values().next().value;
 }
 function renderRouterCard(n,cards){
   const layout=routerLayout(n),type=ports(n,'outputs').out||'float';
-  const card=el('article',{class:'node node-router'+(selection.has(n.id)?' selected':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id,'data-category':'data','aria-label':nodeDisplayName(n)});
+  const card=el('article',{class:'node node-router'+(selection.has(n.id)?' selected':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id,'data-category':'editor','aria-label':nodeDisplayName(n)});
   card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';card.style.width=(layout.width+16)+'px';card.style.height=(layout.height+16)+'px';
   card.dataset.routerLayers=layout.layers;card.dataset.dragSurface='body';
   const input=el('div',{class:'port-row input router-input','data-type':type}),output=el('div',{class:'port-row output router-output','data-type':type});
@@ -1694,7 +1705,7 @@ function renderRouterCard(n,cards){
   handle.ondblclick=e=>e.stopPropagation();card.append(handle);
   for(let col=0;col<layout.layers;col++)for(let row=0;row<=col;row++){
     const isOutput=col===layout.layers-1,kind=isOutput?'outputs':'inputs';
-    const button=el('button',{type:'button',class:'port router-dot'+(isOutput?' router-output-dot':' router-hollow'),'data-kind':kind,'data-port':isOutput?'out':'value','data-type':type,'aria-label':nodeDisplayName(n)+' · '+t(isOutput?'router.output':'router.input'),title:t('help.router')});
+    const button=el('button',{type:'button',class:'port router-dot'+(isOutput?' router-output-dot':'')+(col===0?' router-hollow':' router-solid'),'data-kind':kind,'data-port':isOutput?'out':'value','data-type':type,'aria-label':nodeDisplayName(n)+' · '+t(isOutput?'router.output':'router.input'),title:t('help.router')});
     button.style.left=(8+col*layout.dx)+'px';button.style.top=(8+(layout.layers-1-col)*layout.pitch/2+row*layout.pitch)+'px';
     button.onpointerdown=e=>{if(selectionModifier(e)){e.stopPropagation();return;}dragWire(button,e);};
     button.onclick=e=>{e.stopPropagation();if(selectionModifier(e)){selectNode(n,true);refreshCanvasSelection();return;}if(readonly||suppressPortClick)return;const info=portInfo(button,linkStart);if(linkStart)connectPorts(linkStart,info);else{linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
@@ -2556,6 +2567,7 @@ function refreshLinkPortButtons(){
     const side=kind==='inputs'?'to':'from',edges=current().edges.filter(edge=>edge.ui?.style==='link'&&edge[side][0]===node&&portNames.includes(edge[side][1]));
     const aggregate=row.classList.contains('collapsed-port-row')&&portNames.length>1;
     const owner=current().nodes.find(item=>item.id===node),types=aggregate&&owner?ports(owner,kind):{};
+    if(owner?.definitionUuid==='sgrape.builtin.router'&&kind==='outputs')button.style.top=routerLayout(owner).linkY+'px';
     // Only the Link ports represented by this button contribute; ordinary Wires and unused ports do not.
     const linkedTypes=new Set(edges.map(edge=>types[edge[side][1]]||'?')),mixed=aggregate&&linkedTypes.size>1;
     const icon=button.querySelector('svg');icon.dataset.type=aggregate?([...linkedTypes][0]||''):row.dataset.type||'';

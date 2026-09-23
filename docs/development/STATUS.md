@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-23 0.8.218：Router 以 Wire＋Link 輸出總數維持一至四階、最多十圓；只有第一階空心，其餘實心。Link Out 在二階使用下方位置，三／四階居中；Wire 依目的地 Y 順序分配到上／下輸出孔，沿用原本單段自然曲線。標題改用 Editor Family 的背景／文字色。保留原 11px 接孔、3px 圓邊間距、20×22px Link 按鈕及既有互動，無新增圖資料或 GLSL 運算。
+
+6 組既有 Router 瀏覽器回歸、5 組混合 Link 配置檢查及 7 項 core Router 測試通過。涵蓋 1／2／3／4／8／16 輸出、多 Link 導覽、三種箭頭顯示模式、轉 Wire／Undo／Redo、目標排序、深淺色與實際尺寸；JS 語法與 diff 檢查通過。39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留；正式 TOE 保存 1811292 bytes（SHA256 ba3652c1a565db929437de29de7195f04824912da458c59be653f9da17eae945）。私人報告 reports/router-218/；未推送。
+
 2026-09-23 0.8.217：Sources 預設順序改為共同來源、TD 內建來源、自訂 Uniform、紋理輸入、Spec Constants、Graph Constants、POP Buffers；紋理輸入內 Samplers 先於 Texture Buffers，保留 TOP Inputs 優先與已有自訂排序。Router 拖曳標題增高為一般標題的 41px，標題底部到最上方接孔中心為 21.5px，單點／多點一致；間隙保留連續 hover 範圍。
 
 隔離瀏覽器核對 MAT／TOP 預設與保存排序、Router 六組互動回歸、單點／多點幾何、跨間距 hover 與拖曳／Undo，皆通過；深淺色截圖保存於私人 reports/router-217，排序紀錄於 reports/source-order-217。來源刷新期間有一次舊 HTTP 請求遇到 runtime 重載的 json 名稱暫時不可用，刷新完成後四份 Master 同步成功；四份使用者 Shader、Master 身分／位置保留。正式 TOE 已保存（1810220 bytes；SHA256 75e6429353169ca836b8aad85c16bd13d114dc039026ab5a0000e3a03f59e614），六份登記狀態保留。未推送。
