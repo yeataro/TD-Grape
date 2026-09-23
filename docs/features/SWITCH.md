@@ -10,7 +10,7 @@
 
 產碼使用 GLSL `switch` 與連續整數 Case，包含 Default 與各分支的 `break`。沿用目前先計算上游、再選擇值的架構；不承諾未選中上游會停止執行。Spec Constant 可作為 Index，但不依其預設值剪除其他 Case。
 
-原有 If、Max 及四則運算保持分工。Math 是另外的介面設計提案，本版未實作。
+原有 If、Max 及四則運算保持分工。Math 後續已於 0.8.205 交付，見 [Math](MATH.md)。
 
 ## 驗證
 

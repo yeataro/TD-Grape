@@ -1,5 +1,7 @@
 # TD-Grape Node Browser
 
+> Current inventory: [0.8.213 classification audit](../discussions/NODE_CLASSIFICATION_2026-09-23.md). The sections below preserve historical implementation notes; This Project is now Library → This Shader, and graph assets use Subgraph terminology. The audit records the current metadata/projection discrepancies.
+
 ## Search ranking — 2026-09-19 (0.8.94 trial)
 
 Both the side browser and floating creator rank nonempty queries by: exact display/GLSL name; exact alias; name prefix; name substring (all terms); partial alias/name terms; category/tags; description. Equal scores retain display-name and key ordering. Fixed-type queries retain their existing exact-type filter. There are no Matrix-specific exceptions: `mat3` remains an exact hit, while `mat` now puts `mat…`/`Matrix…` before `dmat…`, then partial aliases such as Determinant. Aliases and descriptions remain searchable. This is the user-approved trial, subject to later usage feedback.

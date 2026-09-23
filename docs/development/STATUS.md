@@ -1,5 +1,7 @@
 # 開發狀態
 
+2026-09-23 文件盤點（產品仍為 0.8.213）：完成 [有效待辦／未實作能力](../discussions/TODO_AUDIT_2026-09-23.md)與 [節點分類整理](../discussions/NODE_CLASSIFICATION_2026-09-23.md)，附 342 份定義的逐項 CSV。隔離 Chromium 核對 TOP Pixel、MAT Vertex／Pixel 的實際入口分類，確認 catalog 與內嵌分類投影漏項及 Math 分類過度集中；分類搬移僅提出建議。舊索引加上歷史提示，修正 Switch 文件的 Math 未交付敘述。342 個 key／UUID 唯一及文件連結核對通過；未改產品、TD／TOE 或版本，未重跑原生運算。私人核對資料位於 reports/audit-213/。
+
 2026-09-23 0.8.213：改善 Router 移動與 Link 箭頭間距。Hover／選取／鍵盤聚焦時顯示小標題把手，可直接拖曳；選取工具列避開把手。Router 的輸入／輸出 Link 箭頭向圓點靠近，邊緣間距與一般節點接孔一致。接線與 GLSL 行為不變。
 
 Router 瀏覽器 6 組通過，包含實際把手拖曳、一次 Undo／Redo、工具列避讓，以及兩側箭頭間距比對；雙語 1062 鍵通過，畫面已檢視。私人報告位於 reports/router-213/。純 UI 修改，未重跑原生產碼／像素測試。
