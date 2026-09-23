@@ -20,4 +20,4 @@
 
 `tools/dev/check_locales.py` 檢查全部語系文字、UI 引用、來源描述、占位符與日文參考連結。`tests/browser/test_locales.cjs` 使用隔離 API fixture 驗證兩處選單同步、面板／動態提示、重新開啟記憶、回切英文及深淺色窄視窗顯示。
 
-0.8.221 起，標題列的 About、Layout 入口／標題，以及畫布角落的 VERTEX STAGE／PIXEL STAGE 在所有語言保持英文；其餘面板與操作說明沿用上述翻譯規則。
+0.8.221 起，標題列的 About、Layout 入口／標題，以及畫布角落的 VERTEX STAGE／PIXEL STAGE，在中文、日文等東亞語系保留英文；未來加入歐洲語系時，這三處可以翻譯。此規則依介面語系決定，不依使用者地區、瀏覽器或字型判斷。其餘面板與操作說明沿用上述翻譯規則。
