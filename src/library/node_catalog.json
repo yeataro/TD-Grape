@@ -30,7 +30,7 @@
         "version": 1
       },
       "browser": {
-        "category": "data",
+        "category": "editor",
         "source": "editor",
         "aliases": [
           "reroute",
@@ -41,7 +41,10 @@
           "路由"
         ],
         "glslName": "",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "editor"
+        ]
       }
     },
     {
@@ -86,7 +89,11 @@
           "連除"
         ],
         "glslName": "",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
       }
     },
     {
@@ -128,7 +135,10 @@
           "多路選擇"
         ],
         "glslName": "switch",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -170,7 +180,11 @@
           "double"
         ],
         "glslName": "scalar",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "values"
+        ]
       }
     },
     {
@@ -210,7 +224,11 @@
           "int to float"
         ],
         "glslName": "convert",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "values"
+        ]
       }
     },
     {
@@ -252,7 +270,11 @@
           "dmat"
         ],
         "glslName": "matrix constructor",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "construct"
+        ]
       }
     },
     {
@@ -299,7 +321,10 @@
           "比較"
         ],
         "glslName": ">, >=, <, <=, ==, !=",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -346,7 +371,10 @@
           "選擇"
         ],
         "glslName": "?:",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -369,7 +397,7 @@
         "version": 1
       },
       "browser": {
-        "category": "data",
+        "category": "editor",
         "source": "editor",
         "aliases": [
           "note",
@@ -380,7 +408,10 @@
           "備註"
         ],
         "glslName": "",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "editor"
+        ]
       }
     },
     {
@@ -403,7 +434,7 @@
         "version": 1
       },
       "browser": {
-        "category": "data",
+        "category": "editor",
         "source": "editor",
         "aliases": [
           "generated",
@@ -415,7 +446,10 @@
           "顯示器"
         ],
         "glslName": "",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "editor"
+        ]
       }
     },
     {
@@ -451,7 +485,11 @@
           "浮點"
         ],
         "glslName": "float",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "values"
+        ]
       }
     },
     {
@@ -489,7 +527,11 @@
           "常數"
         ],
         "glslName": "vec2",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "values"
+        ]
       }
     },
     {
@@ -528,7 +570,11 @@
           "常數"
         ],
         "glslName": "vec3",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "values"
+        ]
       }
     },
     {
@@ -570,7 +616,11 @@
           "色彩"
         ],
         "glslName": "color",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "construct"
+        ]
       }
     },
     {
@@ -1203,7 +1253,10 @@
           "內積"
         ],
         "glslName": "dot",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -1240,7 +1293,10 @@
           "長度"
         ],
         "glslName": "length",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -1280,7 +1336,10 @@
           "正規化"
         ],
         "glslName": "normalize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -1308,7 +1367,7 @@
         "version": 1
       },
       "browser": {
-        "category": "data",
+        "category": "color",
         "source": "editor",
         "aliases": [
           "combine",
@@ -1317,8 +1376,10 @@
           "組合"
         ],
         "glslName": "rgba",
-        "secondaryCategories": [
-          "color"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "construct"
         ]
       }
     },
@@ -1350,7 +1411,7 @@
         "version": 1
       },
       "browser": {
-        "category": "data",
+        "category": "color",
         "source": "editor",
         "aliases": [
           "split",
@@ -1359,8 +1420,10 @@
           "拆分"
         ],
         "glslName": "split",
-        "secondaryCategories": [
-          "color"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "construct"
         ]
       }
     },
@@ -1388,7 +1451,7 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "inputs",
         "source": "editor",
         "aliases": [
           "parameter",
@@ -1396,7 +1459,11 @@
           "公開"
         ],
         "glslName": "uniform",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "inputs",
+          "uniforms"
+        ]
       }
     },
     {
@@ -1420,7 +1487,7 @@
         "version": 1
       },
       "browser": {
-        "category": "coordinate",
+        "category": "inputs",
         "source": "td",
         "aliases": [
           "uv",
@@ -1428,7 +1495,12 @@
           "貼圖座標"
         ],
         "glslName": "uv",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "inputs",
+          "common",
+          "coordinates"
+        ]
       }
     },
     {
@@ -1465,7 +1537,11 @@
           "取樣"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -1489,7 +1565,7 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "inputs",
         "source": "td",
         "aliases": [
           "P",
@@ -1498,7 +1574,12 @@
           "頂點位置"
         ],
         "glslName": "position",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "inputs",
+          "tdBuiltin",
+          "geometry"
+        ]
       }
     },
     {
@@ -1532,7 +1613,10 @@
           "變形"
         ],
         "glslName": "TDDeform",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -1566,7 +1650,10 @@
           "投影"
         ],
         "glslName": "TDWorldToProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -1598,7 +1685,11 @@
           "輸出"
         ],
         "glslName": "vertex_out",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "stage"
+        ]
       }
     },
     {
@@ -1630,7 +1721,11 @@
           "輸出"
         ],
         "glslName": "pixel_out",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "stage"
+        ]
       }
     },
     {
@@ -1656,14 +1751,19 @@
         "version": 1
       },
       "browser": {
-        "category": "texture",
+        "category": "inputs",
         "source": "glsl",
         "aliases": [
           "texture source"
         ],
         "descriptionKey": "help.sampler",
         "glslName": "sampler2D",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "inputs",
+          "textures",
+          "samplers"
+        ]
       }
     },
     {
@@ -1697,7 +1797,11 @@
         ],
         "descriptionKey": "help.texture_sample",
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -1720,6 +1824,20 @@
       "emitter": {
         "id": "constant",
         "version": 1
+      },
+      "browser": {
+        "category": "inputs",
+        "categoryPath": [
+          "inputs",
+          "constants"
+        ],
+        "source": "editor",
+        "aliases": [
+          "graph constant",
+          "圖內常數"
+        ],
+        "secondaryCategories": [],
+        "glslName": ""
       }
     },
     {
@@ -1743,6 +1861,22 @@
       "emitter": {
         "id": "top_input",
         "version": 1
+      },
+      "browser": {
+        "category": "inputs",
+        "categoryPath": [
+          "inputs",
+          "textures",
+          "topInputs"
+        ],
+        "source": "td",
+        "aliases": [
+          "TOP input",
+          "texture input",
+          "貼圖輸入"
+        ],
+        "secondaryCategories": [],
+        "glslName": ""
       }
     },
     {
@@ -1804,7 +1938,11 @@
           "程式碼"
         ],
         "glslName": "void",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "code"
+        ]
       }
     },
     {
@@ -1845,7 +1983,11 @@
           "四維向量"
         ],
         "glslName": "vec4",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "values"
+        ]
       }
     },
     {
@@ -1894,8 +2036,9 @@
           "組合"
         ],
         "glslName": "vecN",
-        "secondaryCategories": [
-          "data"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
         ]
       }
     },
@@ -1937,8 +2080,9 @@
           "UV"
         ],
         "glslName": "vector_split",
-        "secondaryCategories": [
-          "data"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
         ]
       }
     },
@@ -1980,8 +2124,9 @@
           "取分量"
         ],
         "glslName": "swizzle",
-        "secondaryCategories": [
-          "data"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
         ]
       }
     },
@@ -2031,8 +2176,9 @@
           "dvec4"
         ],
         "glslName": "vecN",
-        "secondaryCategories": [
-          "data"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
         ]
       }
     },
@@ -2080,8 +2226,9 @@
           "replace components"
         ],
         "glslName": "vecN",
-        "secondaryCategories": [
-          "data"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
         ]
       }
     },
@@ -2107,6 +2254,21 @@
       "emitter": {
         "id": "spec_constant",
         "version": 1
+      },
+      "browser": {
+        "category": "inputs",
+        "categoryPath": [
+          "inputs",
+          "specConstants"
+        ],
+        "source": "td",
+        "aliases": [
+          "specialization",
+          "spec",
+          "特化常數"
+        ],
+        "secondaryCategories": [],
+        "glslName": "constant_id"
       }
     },
     {
@@ -2438,7 +2600,11 @@
           "hue saturation value"
         ],
         "glslName": "TDRGBToHSV",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "conversion"
+        ]
       }
     },
     {
@@ -2477,7 +2643,11 @@
           "hue saturation value"
         ],
         "glslName": "TDHSVToRGB",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "conversion"
+        ]
       }
     },
     {
@@ -2765,8 +2935,10 @@
           "4D"
         ],
         "glslName": "TDPerlinNoise",
-        "secondaryCategories": [
-          "texture"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
         ]
       }
     },
@@ -2811,8 +2983,10 @@
           "4D"
         ],
         "glslName": "TDSimplexNoise",
-        "secondaryCategories": [
-          "texture"
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
         ]
       }
     },
@@ -2862,7 +3036,11 @@
           "identity"
         ],
         "glslName": "matrix",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "construct"
+        ]
       }
     },
     {
@@ -2908,7 +3086,11 @@
           "assemble"
         ],
         "glslName": "matrix_combine",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "construct"
+        ]
       }
     },
     {
@@ -2956,7 +3138,11 @@
           "columns"
         ],
         "glslName": "matrix_replace",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "construct"
+        ]
       }
     },
     {
@@ -2991,7 +3177,11 @@
           "elements"
         ],
         "glslName": "matrix_split",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "construct"
+        ]
       }
     },
     {
@@ -3031,7 +3221,11 @@
           "get column"
         ],
         "glslName": "matrix_get",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "construct"
+        ]
       }
     },
     {
@@ -3072,7 +3266,11 @@
           "set column"
         ],
         "glslName": "matrix_set",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "construct"
+        ]
       }
     },
     {
@@ -3108,7 +3306,11 @@
           "swap rows columns"
         ],
         "glslName": "transpose",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "algebra"
+        ]
       }
     },
     {
@@ -3143,7 +3345,11 @@
           "matrix inverse"
         ],
         "glslName": "inverse",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "algebra"
+        ]
       }
     },
     {
@@ -3178,7 +3384,11 @@
           "matrix determinant"
         ],
         "glslName": "determinant",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "algebra"
+        ]
       }
     },
     {
@@ -3216,7 +3426,11 @@
           "hadamard"
         ],
         "glslName": "matrixCompMult",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "algebra"
+        ]
       }
     },
     {
@@ -3253,7 +3467,11 @@
           "vector outer product"
         ],
         "glslName": "outerProduct",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "algebra"
+        ]
       }
     },
     {
@@ -3281,8 +3499,19 @@
         "version": 1
       },
       "browser": {
-        "category": "array",
-        "aliases": []
+        "category": "data",
+        "aliases": [
+          "list",
+          "create array",
+          "陣列"
+        ],
+        "categoryPath": [
+          "data",
+          "arrays"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": "Array"
       }
     },
     {
@@ -3313,8 +3542,19 @@
         "version": 1
       },
       "browser": {
-        "category": "array",
-        "aliases": []
+        "category": "data",
+        "aliases": [
+          "array index",
+          "get",
+          "陣列取項"
+        ],
+        "categoryPath": [
+          "data",
+          "arrays"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": "Array[i]"
       }
     },
     {
@@ -3346,8 +3586,19 @@
         "version": 1
       },
       "browser": {
-        "category": "array",
-        "aliases": []
+        "category": "data",
+        "aliases": [
+          "array set",
+          "replace",
+          "陣列替換"
+        ],
+        "categoryPath": [
+          "data",
+          "arrays"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": "Array Replace"
       }
     },
     {
@@ -3376,8 +3627,19 @@
         "version": 1
       },
       "browser": {
-        "category": "array",
-        "aliases": []
+        "category": "data",
+        "aliases": [
+          "array size",
+          "length",
+          "陣列長度"
+        ],
+        "categoryPath": [
+          "data",
+          "arrays"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": "Array Length"
       }
     },
     {
@@ -3407,8 +3669,20 @@
         "version": 1
       },
       "browser": {
-        "category": "array",
-        "aliases": []
+        "category": "data",
+        "aliases": [
+          "struct",
+          "field",
+          "member",
+          "結構欄位"
+        ],
+        "categoryPath": [
+          "data",
+          "structures"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": "Field"
       }
     },
     {
@@ -3435,8 +3709,15 @@
         "version": 1
       },
       "browser": {
-        "category": "array",
-        "aliases": []
+        "category": "inputs",
+        "aliases": [],
+        "categoryPath": [
+          "inputs",
+          "tdBuiltin"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": ""
       }
     },
     {
@@ -3471,11 +3752,18 @@
         "version": 1
       },
       "browser": {
-        "category": "array",
+        "category": "data",
         "aliases": [
           "array fill",
           "make array"
-        ]
+        ],
+        "categoryPath": [
+          "data",
+          "arrays"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": "Array Create"
       }
     },
     {
@@ -3587,12 +3875,12 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "inputs",
         "categoryPath": [
-          "shader",
-          "buffers"
+          "inputs",
+          "popBuffers"
         ],
-        "source": "touchdesigner",
+        "source": "td",
         "aliases": [
           "pop",
           "buffer",
@@ -3629,12 +3917,13 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "inputs",
         "categoryPath": [
-          "shader",
+          "inputs",
+          "tdBuiltin",
           "geometry"
         ],
-        "source": "touchdesigner",
+        "source": "td",
         "aliases": [
           "attribute",
           "geometry"
@@ -3670,7 +3959,14 @@
           "struct",
           "structure",
           "constructor"
-        ]
+        ],
+        "categoryPath": [
+          "data",
+          "structures"
+        ],
+        "source": "editor",
+        "secondaryCategories": [],
+        "glslName": "Structure"
       }
     },
     {
@@ -3707,11 +4003,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "radians",
           "radians"
         ],
         "glslName": "radians",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -3748,11 +4047,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "degrees",
           "degrees"
         ],
         "glslName": "degrees",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -3789,11 +4091,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "tan",
           "tan"
         ],
         "glslName": "tan",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -3830,11 +4135,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "asin",
           "asin"
         ],
         "glslName": "asin",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -3871,11 +4179,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "acos",
           "acos"
         ],
         "glslName": "acos",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -3912,11 +4223,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "atan",
           "atan"
         ],
         "glslName": "atan",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -3953,11 +4267,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "sinh",
           "sinh"
         ],
         "glslName": "sinh",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -3994,11 +4311,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "cosh",
           "cosh"
         ],
         "glslName": "cosh",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -4035,11 +4355,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "tanh",
           "tanh"
         ],
         "glslName": "tanh",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -4076,11 +4399,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "asinh",
           "asinh"
         ],
         "glslName": "asinh",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -4117,11 +4443,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "acosh",
           "acosh"
         ],
         "glslName": "acosh",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -4158,11 +4487,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "atanh",
           "atanh"
         ],
         "glslName": "atanh",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -4206,7 +4538,11 @@
           "atan"
         ],
         "glslName": "atan",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -4243,11 +4579,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "exp",
           "exp"
         ],
         "glslName": "exp",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
       }
     },
     {
@@ -4286,11 +4625,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "log",
           "log"
         ],
         "glslName": "log",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
       }
     },
     {
@@ -4327,11 +4669,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "exp2",
           "exp2"
         ],
         "glslName": "exp2",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
       }
     },
     {
@@ -4370,11 +4715,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "log2",
           "log2"
         ],
         "glslName": "log2",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
       }
     },
     {
@@ -4413,11 +4761,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "inversesqrt",
           "inversesqrt"
         ],
         "glslName": "inversesqrt",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
       }
     },
     {
@@ -4458,7 +4809,11 @@
           "roundEven"
         ],
         "glslName": "roundEven",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
       }
     },
     {
@@ -4496,11 +4851,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "step",
           "step"
         ],
         "glslName": "step",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
       }
     },
     {
@@ -4534,14 +4892,16 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "glsl",
         "aliases": [
-          "isnan",
           "isnan"
         ],
         "glslName": "isnan",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -4575,14 +4935,16 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "glsl",
         "aliases": [
-          "isinf",
           "isinf"
         ],
         "glslName": "isinf",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -4621,11 +4983,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "fma",
           "fma"
         ],
         "glslName": "fma",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
       }
     },
     {
@@ -4663,11 +5028,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "modf",
           "modf"
         ],
         "glslName": "modf",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
       }
     },
     {
@@ -4705,11 +5073,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "frexp",
           "frexp"
         ],
         "glslName": "frexp",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
       }
     },
     {
@@ -4747,11 +5118,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "ldexp",
           "ldexp"
         ],
         "glslName": "ldexp",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "exponential"
+        ]
       }
     },
     {
@@ -4787,14 +5161,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "glsl",
         "aliases": [
           "mix_boolean",
           "mix"
         ],
         "glslName": "mix",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -4837,7 +5214,11 @@
           "mix"
         ],
         "glslName": "mix",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "interpolation"
+        ]
       }
     },
     {
@@ -4879,7 +5260,11 @@
           "step"
         ],
         "glslName": "step",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
       }
     },
     {
@@ -4914,14 +5299,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
           "bit_and",
           "&"
         ],
         "glslName": "&",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -4956,14 +5345,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
           "bit_or",
           "|"
         ],
         "glslName": "|",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -4998,14 +5391,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
           "bit_xor",
           "^"
         ],
         "glslName": "^",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -5039,14 +5436,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
           "bit_not",
           "~"
         ],
         "glslName": "~",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -5081,14 +5482,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
           "shift_left",
           "<<"
         ],
         "glslName": "<<",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -5123,14 +5528,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
           "shift_right",
           ">>"
         ],
         "glslName": ">>",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -5174,7 +5583,11 @@
           "%"
         ],
         "glslName": "%",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "range"
+        ]
       }
     },
     {
@@ -5209,14 +5622,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "glsl",
         "aliases": [
           "boolean_and",
           "&&"
         ],
         "glslName": "&&",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -5251,14 +5667,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "glsl",
         "aliases": [
           "boolean_or",
           "||"
         ],
         "glslName": "||",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -5293,14 +5712,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "glsl",
         "aliases": [
           "boolean_xor",
           "^^"
         ],
         "glslName": "^^",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -5334,14 +5756,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "glsl",
         "aliases": [
           "boolean_not",
           "!"
         ],
         "glslName": "!",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -5375,14 +5800,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "floatBitsToInt",
           "floatBitsToInt"
         ],
         "glslName": "floatBitsToInt",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5416,14 +5844,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "floatBitsToUint",
           "floatBitsToUint"
         ],
         "glslName": "floatBitsToUint",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5457,14 +5888,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "intBitsToFloat",
           "intBitsToFloat"
         ],
         "glslName": "intBitsToFloat",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5498,14 +5932,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "uintBitsToFloat",
           "uintBitsToFloat"
         ],
         "glslName": "uintBitsToFloat",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5539,14 +5976,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "packUnorm2x16",
           "packUnorm2x16"
         ],
         "glslName": "packUnorm2x16",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5580,14 +6020,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "packSnorm2x16",
           "packSnorm2x16"
         ],
         "glslName": "packSnorm2x16",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5621,14 +6064,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "packHalf2x16",
           "packHalf2x16"
         ],
         "glslName": "packHalf2x16",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5662,14 +6108,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "packUnorm4x8",
           "packUnorm4x8"
         ],
         "glslName": "packUnorm4x8",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5703,14 +6152,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "packSnorm4x8",
           "packSnorm4x8"
         ],
         "glslName": "packSnorm4x8",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5744,14 +6196,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "unpackUnorm2x16",
           "unpackUnorm2x16"
         ],
         "glslName": "unpackUnorm2x16",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5785,14 +6240,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "unpackSnorm2x16",
           "unpackSnorm2x16"
         ],
         "glslName": "unpackSnorm2x16",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5826,14 +6284,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "unpackHalf2x16",
           "unpackHalf2x16"
         ],
         "glslName": "unpackHalf2x16",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5867,14 +6328,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "unpackUnorm4x8",
           "unpackUnorm4x8"
         ],
         "glslName": "unpackUnorm4x8",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5908,14 +6372,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "unpackSnorm4x8",
           "unpackSnorm4x8"
         ],
         "glslName": "unpackSnorm4x8",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5949,14 +6416,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "packDouble2x32",
           "packDouble2x32"
         ],
         "glslName": "packDouble2x32",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -5990,14 +6460,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "unpackDouble2x32",
           "unpackDouble2x32"
         ],
         "glslName": "unpackDouble2x32",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "packing"
+        ]
       }
     },
     {
@@ -6032,14 +6505,16 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "vector",
         "source": "glsl",
         "aliases": [
-          "distance",
           "distance"
         ],
         "glslName": "distance",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -6074,14 +6549,16 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "vector",
         "source": "glsl",
         "aliases": [
-          "cross",
           "cross"
         ],
         "glslName": "cross",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -6117,14 +6594,16 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "vector",
         "source": "glsl",
         "aliases": [
-          "faceforward",
           "faceforward"
         ],
         "glslName": "faceforward",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -6159,14 +6638,16 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "vector",
         "source": "glsl",
         "aliases": [
-          "reflect",
           "reflect"
         ],
         "glslName": "reflect",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -6204,14 +6685,16 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "vector",
         "source": "glsl",
         "aliases": [
-          "refract",
           "refract"
         ],
         "glslName": "refract",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "vector"
+        ]
       }
     },
     {
@@ -6249,11 +6732,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "lessThan",
           "lessThan"
         ],
         "glslName": "lessThan",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6291,11 +6776,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "lessThanEqual",
           "lessThanEqual"
         ],
         "glslName": "lessThanEqual",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6333,11 +6820,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "greaterThan",
           "greaterThan"
         ],
         "glslName": "greaterThan",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6375,11 +6864,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "greaterThanEqual",
           "greaterThanEqual"
         ],
         "glslName": "greaterThanEqual",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6417,11 +6908,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "equal",
           "equal"
         ],
         "glslName": "equal",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6459,11 +6952,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "notEqual",
           "notEqual"
         ],
         "glslName": "notEqual",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6500,11 +6995,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "any",
           "any"
         ],
         "glslName": "any",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6541,11 +7038,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "all",
           "all"
         ],
         "glslName": "all",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6582,11 +7081,13 @@
         "category": "logic",
         "source": "glsl",
         "aliases": [
-          "not",
           "not"
         ],
         "glslName": "not",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -6620,14 +7121,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "bitfieldReverse",
           "bitfieldReverse"
         ],
         "glslName": "bitfieldReverse",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6661,14 +7165,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "bitCount",
           "bitCount"
         ],
         "glslName": "bitCount",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6702,14 +7209,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "findLSB",
           "findLSB"
         ],
         "glslName": "findLSB",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6743,14 +7253,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "findMSB",
           "findMSB"
         ],
         "glslName": "findMSB",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6786,14 +7299,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "bitfieldExtract",
           "bitfieldExtract"
         ],
         "glslName": "bitfieldExtract",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6830,14 +7346,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "bitfieldInsert",
           "bitfieldInsert"
         ],
         "glslName": "bitfieldInsert",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6873,14 +7392,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "uaddCarry",
           "uaddCarry"
         ],
         "glslName": "uaddCarry",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6916,14 +7438,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "usubBorrow",
           "usubBorrow"
         ],
         "glslName": "usubBorrow",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -6959,14 +7484,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "umulExtended",
           "umulExtended"
         ],
         "glslName": "umulExtended",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -7002,14 +7530,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "data",
         "source": "glsl",
         "aliases": [
-          "imulExtended",
           "imulExtended"
         ],
         "glslName": "imulExtended",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "data",
+          "bits"
+        ]
       }
     },
     {
@@ -7045,11 +7576,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "dFdx",
           "dFdx"
         ],
         "glslName": "dFdx",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7085,11 +7619,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "dFdy",
           "dFdy"
         ],
         "glslName": "dFdy",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7125,11 +7662,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "fwidth",
           "fwidth"
         ],
         "glslName": "fwidth",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7165,11 +7705,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "dFdxFine",
           "dFdxFine"
         ],
         "glslName": "dFdxFine",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7205,11 +7748,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "dFdyFine",
           "dFdyFine"
         ],
         "glslName": "dFdyFine",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7245,11 +7791,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "fwidthFine",
           "fwidthFine"
         ],
         "glslName": "fwidthFine",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7285,11 +7834,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "dFdxCoarse",
           "dFdxCoarse"
         ],
         "glslName": "dFdxCoarse",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7325,11 +7877,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "dFdyCoarse",
           "dFdyCoarse"
         ],
         "glslName": "dFdyCoarse",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7365,11 +7920,14 @@
         "category": "math",
         "source": "glsl",
         "aliases": [
-          "fwidthCoarse",
           "fwidthCoarse"
         ],
         "glslName": "fwidthCoarse",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "derivatives"
+        ]
       }
     },
     {
@@ -7411,7 +7969,11 @@
           "TDAverage"
         ],
         "glslName": "TDAverage",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "arithmetic"
+        ]
       }
     },
     {
@@ -7453,7 +8015,11 @@
           "TDRotateToVector"
         ],
         "glslName": "TDRotateToVector",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7495,7 +8061,11 @@
           "TDRotateOnAxis"
         ],
         "glslName": "TDRotateOnAxis",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7536,7 +8106,11 @@
           "TDRotateX"
         ],
         "glslName": "TDRotateX",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7577,7 +8151,11 @@
           "TDRotateY"
         ],
         "glslName": "TDRotateY",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7618,7 +8196,11 @@
           "TDRotateZ"
         ],
         "glslName": "TDRotateZ",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7665,7 +8247,11 @@
           "TDScale"
         ],
         "glslName": "TDScale",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7708,7 +8294,11 @@
           "TDTranslate"
         ],
         "glslName": "TDTranslate",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7750,7 +8340,11 @@
           "TDCreateRotMatrix"
         ],
         "glslName": "TDCreateRotMatrix",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7795,7 +8389,11 @@
           "TDCreateTBNMatrix"
         ],
         "glslName": "TDCreateTBNMatrix",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "matrix",
+          "transforms"
+        ]
       }
     },
     {
@@ -7836,7 +8434,11 @@
           "TDFade"
         ],
         "glslName": "TDFade",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
+        ]
       }
     },
     {
@@ -7877,7 +8479,11 @@
           "TDFadeDeriv"
         ],
         "glslName": "TDFadeDeriv",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
+        ]
       }
     },
     {
@@ -7918,7 +8524,11 @@
           "TDSineLookup"
         ],
         "glslName": "TDSineLookup",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "trigonometry"
+        ]
       }
     },
     {
@@ -7959,7 +8569,11 @@
           "TDPerlinNoiseDeriv"
         ],
         "glslName": "TDPerlinNoiseDeriv",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
+        ]
       }
     },
     {
@@ -8001,7 +8615,11 @@
           "TDPerlinNoiseDeriv"
         ],
         "glslName": "TDPerlinNoiseDeriv",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
+        ]
       }
     },
     {
@@ -8042,7 +8660,11 @@
           "TDSimplexNoiseDeriv"
         ],
         "glslName": "TDSimplexNoiseDeriv",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
+        ]
       }
     },
     {
@@ -8084,7 +8706,11 @@
           "TDSimplexNoiseDeriv"
         ],
         "glslName": "TDSimplexNoiseDeriv",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
+        ]
       }
     },
     {
@@ -8125,7 +8751,11 @@
           "TDLuminance"
         ],
         "glslName": "TDLuminance",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "conversion"
+        ]
       }
     },
     {
@@ -8164,7 +8794,11 @@
           "TDGamutRec709ToRec2020"
         ],
         "glslName": "TDGamutRec709ToRec2020",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "conversion"
+        ]
       }
     },
     {
@@ -8203,7 +8837,11 @@
           "TDGamutRec2020ToRec709"
         ],
         "glslName": "TDGamutRec2020ToRec709",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "conversion"
+        ]
       }
     },
     {
@@ -8242,7 +8880,11 @@
           "TDTransferLinearToSRGB"
         ],
         "glslName": "TDTransferLinearToSRGB",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8281,7 +8923,11 @@
           "TDTransferSRGBToLinear"
         ],
         "glslName": "TDTransferSRGBToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8320,7 +8966,11 @@
           "TDTransferLinearToRec709"
         ],
         "glslName": "TDTransferLinearToRec709",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8359,7 +9009,11 @@
           "TDTransferRec709ToLinear"
         ],
         "glslName": "TDTransferRec709ToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8398,7 +9052,11 @@
           "TDTransferLinearToGamma1_8"
         ],
         "glslName": "TDTransferLinearToGamma1_8",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8437,7 +9095,11 @@
           "TDTransferGamma1_8ToLinear"
         ],
         "glslName": "TDTransferGamma1_8ToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8476,7 +9138,11 @@
           "TDTransferLinearToGamma2_2"
         ],
         "glslName": "TDTransferLinearToGamma2_2",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8515,7 +9181,11 @@
           "TDTransferGamma2_2ToLinear"
         ],
         "glslName": "TDTransferGamma2_2ToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8554,7 +9224,11 @@
           "TDTransferLinearToGamma2_4"
         ],
         "glslName": "TDTransferLinearToGamma2_4",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8593,7 +9267,11 @@
           "TDTransferGamma2_4ToLinear"
         ],
         "glslName": "TDTransferGamma2_4ToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8632,7 +9310,11 @@
           "TDTransferLinearToGamma2_6"
         ],
         "glslName": "TDTransferLinearToGamma2_6",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8671,7 +9353,11 @@
           "TDTransferGamma2_6ToLinear"
         ],
         "glslName": "TDTransferGamma2_6ToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8710,7 +9396,11 @@
           "TDTransferLinearToGamma2_8"
         ],
         "glslName": "TDTransferLinearToGamma2_8",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8749,7 +9439,11 @@
           "TDTransferGamma2_8ToLinear"
         ],
         "glslName": "TDTransferGamma2_8ToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8788,7 +9482,11 @@
           "TDTransferLinearToACESproxy"
         ],
         "glslName": "TDTransferLinearToACESproxy",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8827,7 +9525,11 @@
           "TDTransferACESproxyToLinear"
         ],
         "glslName": "TDTransferACESproxyToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8869,7 +9571,11 @@
           "TDTransferLinearToST2084PQ"
         ],
         "glslName": "TDTransferLinearToST2084PQ",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8911,7 +9617,11 @@
           "TDTransferST2084PQToLinear"
         ],
         "glslName": "TDTransferST2084PQToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8955,7 +9665,11 @@
           "TDTransferLinearToBT2100HLG"
         ],
         "glslName": "TDTransferLinearToBT2100HLG",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -8999,7 +9713,11 @@
           "TDTransferBT2100HLGToLinear"
         ],
         "glslName": "TDTransferBT2100HLGToLinear",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "transfer"
+        ]
       }
     },
     {
@@ -9039,14 +9757,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_triplanar_blend",
           "TDTriplanarBlend"
         ],
         "glslName": "TDTriplanarBlend",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9084,14 +9805,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_bicubic",
           "TDBicubicInterpolation"
         ],
         "glslName": "TDBicubicInterpolation",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -9134,14 +9859,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_bicubic_size",
           "TDBicubicInterpolation"
         ],
         "glslName": "TDBicubicInterpolation",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -9179,14 +9908,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_tricubic",
           "TDTricubicInterpolation"
         ],
         "glslName": "TDTricubicInterpolation",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -9229,14 +9962,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_tricubic_size",
           "TDTricubicInterpolation"
         ],
         "glslName": "TDTricubicInterpolation",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -9270,14 +10007,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_texgen_sphere",
           "TDTexGenSphere"
         ],
         "glslName": "TDTexGenSphere",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9311,14 +10051,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_equirectangular_to_cube",
           "TDEquirectangularToCubeMap"
         ],
         "glslName": "TDEquirectangularToCubeMap",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9353,14 +10096,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_cube_to_equirectangular",
           "TDCubeMapToEquirectangular"
         ],
         "glslName": "TDCubeMapToEquirectangular",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9392,14 +10138,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_deform_normal",
           "TDDeformNorm"
         ],
         "glslName": "TDDeformNorm",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9431,14 +10180,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_deform_vector",
           "TDDeformVec"
         ],
         "glslName": "TDDeformVec",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9470,14 +10222,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_skinned_deform",
           "TDSkinnedDeform"
         ],
         "glslName": "TDSkinnedDeform",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9509,14 +10264,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_skinned_vector",
           "TDSkinnedDeformVec"
         ],
         "glslName": "TDSkinnedDeformVec",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9548,14 +10306,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_instance_deform",
           "TDInstanceDeform"
         ],
         "glslName": "TDInstanceDeform",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9587,14 +10348,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_instance_vector",
           "TDInstanceDeformVec"
         ],
         "glslName": "TDInstanceDeformVec",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9627,14 +10391,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_deform_instance",
           "TDDeform"
         ],
         "glslName": "TDDeform",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9667,14 +10434,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_deform_normal_instance",
           "TDDeformNorm"
         ],
         "glslName": "TDDeformNorm",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9707,14 +10477,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_deform_vector_instance",
           "TDDeformVec"
         ],
         "glslName": "TDDeformVec",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9747,14 +10520,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_instance_texcoord",
           "TDInstanceTexCoord"
         ],
         "glslName": "TDInstanceTexCoord",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9787,14 +10563,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_quad_reproject",
           "TDQuadReproject"
         ],
         "glslName": "TDQuadReproject",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9827,14 +10606,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "coordinate",
         "source": "td",
         "aliases": [
           "td_world_to_proj_uv",
           "TDWorldToProj"
         ],
         "glslName": "TDWorldToProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "coordinate"
+        ]
       }
     },
     {
@@ -9867,14 +10649,17 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "logic",
         "source": "td",
         "aliases": [
           "td_front_facing",
           "TDFrontFacing"
         ],
         "glslName": "TDFrontFacing",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "logic"
+        ]
       }
     },
     {
@@ -9906,14 +10691,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "color",
         "source": "td",
         "aliases": [
           "td_pixel_color",
           "TDPixelColor"
         ],
         "glslName": "TDPixelColor",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "conversion"
+        ]
       }
     },
     {
@@ -9947,14 +10736,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_fog",
           "TDFog"
         ],
         "glslName": "TDFog",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "stage"
+        ]
       }
     },
     {
@@ -9987,14 +10780,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_hardshadow",
           "TDHardShadow"
         ],
         "glslName": "TDHardShadow",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "shadows"
+        ]
       }
     },
     {
@@ -10032,14 +10829,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_softshadow",
           "TDSoftShadow"
         ],
         "glslName": "TDSoftShadow",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "shadows"
+        ]
       }
     },
     {
@@ -10073,14 +10874,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_projmap",
           "TDProjMap"
         ],
         "glslName": "TDProjMap",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "projection"
+        ]
       }
     },
     {
@@ -10114,14 +10919,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_compareshadowtexture",
           "TDCompareShadowTexture"
         ],
         "glslName": "TDCompareShadowTexture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "shadows"
+        ]
       }
     },
     {
@@ -10154,14 +10963,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_compareshadowtextureproj",
           "TDCompareShadowTextureProj"
         ],
         "glslName": "TDCompareShadowTextureProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "shadows"
+        ]
       }
     },
     {
@@ -10194,14 +11007,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_shadowtexture",
           "TDShadowTexture"
         ],
         "glslName": "TDShadowTexture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "shadows"
+        ]
       }
     },
     {
@@ -10234,14 +11051,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_shadowtextureproj",
           "TDShadowTextureProj"
         ],
         "glslName": "TDShadowTextureProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "shadows"
+        ]
       }
     },
     {
@@ -10275,14 +11096,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_projtexture",
           "TDProjTexture"
         ],
         "glslName": "TDProjTexture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "projection"
+        ]
       }
     },
     {
@@ -10315,14 +11140,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_projtextureproj",
           "TDProjTextureProj"
         ],
         "glslName": "TDProjTextureProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "projection"
+        ]
       }
     },
     {
@@ -10355,14 +11184,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_conelookup",
           "TDConeLookup"
         ],
         "glslName": "TDConeLookup",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -10396,14 +11229,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_env_light_texture",
           "TDEnvLightTextureLod"
         ],
         "glslName": "TDEnvLightTextureLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "projection"
+        ]
       }
     },
     {
@@ -10436,14 +11273,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_attenuate_light",
           "TDAttenuateLight"
         ],
         "glslName": "TDAttenuateLight",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -10476,14 +11317,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "color",
         "source": "td",
         "aliases": [
           "td_instance_color",
           "TDInstanceColor"
         ],
         "glslName": "TDInstanceColor",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "color",
+          "conversion"
+        ]
       }
     },
     {
@@ -10517,14 +11362,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "td",
         "aliases": [
           "td_instance_texture",
           "TDInstanceTexture"
         ],
         "glslName": "TDInstanceTexture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -10562,14 +11411,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_size_1d",
           "textureSize"
         ],
         "glslName": "textureSize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10606,14 +11459,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_levels_1d",
           "textureQueryLevels"
         ],
         "glslName": "textureQueryLevels",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10651,14 +11508,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_sample_1d",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10697,14 +11558,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_1d",
           "textureLod"
         ],
         "glslName": "textureLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10742,14 +11607,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_bias_1d",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10789,14 +11658,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_1d",
           "textureGrad"
         ],
         "glslName": "textureGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10835,14 +11708,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_1d",
           "texelFetch"
         ],
         "glslName": "texelFetch",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10880,14 +11757,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_1d",
           "textureProj"
         ],
         "glslName": "textureProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10924,14 +11805,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_query_lod_1d",
           "textureQueryLod"
         ],
         "glslName": "textureQueryLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -10970,14 +11855,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_offset_1d",
           "textureOffset"
         ],
         "glslName": "textureOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -11017,14 +11906,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_offset_1d",
           "textureLodOffset"
         ],
         "glslName": "textureLodOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -11065,14 +11958,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_offset_1d",
           "textureGradOffset"
         ],
         "glslName": "textureGradOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -11112,14 +12009,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_offset_1d",
           "texelFetchOffset"
         ],
         "glslName": "texelFetchOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -11158,14 +12059,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_lod_1d",
           "textureProjLod"
         ],
         "glslName": "textureProjLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -11205,14 +12110,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_grad_1d",
           "textureProjGrad"
         ],
         "glslName": "textureProjGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "1d"
+        ]
       }
     },
     {
@@ -11250,14 +12159,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_size_2d",
           "textureSize"
         ],
         "glslName": "textureSize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11294,14 +12207,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_levels_2d",
           "textureQueryLevels"
         ],
         "glslName": "textureQueryLevels",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11339,14 +12256,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_sample_2d",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11385,14 +12306,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_2d",
           "textureLod"
         ],
         "glslName": "textureLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11430,14 +12355,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_bias_2d",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11477,14 +12406,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_2d",
           "textureGrad"
         ],
         "glslName": "textureGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11523,14 +12456,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_2d",
           "texelFetch"
         ],
         "glslName": "texelFetch",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11568,14 +12505,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_2d",
           "textureProj"
         ],
         "glslName": "textureProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11612,14 +12553,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_query_lod_2d",
           "textureQueryLod"
         ],
         "glslName": "textureQueryLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11658,14 +12603,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_gather_2d",
           "textureGather"
         ],
         "glslName": "textureGather",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11704,14 +12653,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_offset_2d",
           "textureOffset"
         ],
         "glslName": "textureOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11751,14 +12704,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_offset_2d",
           "textureLodOffset"
         ],
         "glslName": "textureLodOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11799,14 +12756,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_offset_2d",
           "textureGradOffset"
         ],
         "glslName": "textureGradOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11846,14 +12807,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_offset_2d",
           "texelFetchOffset"
         ],
         "glslName": "texelFetchOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11892,14 +12857,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_lod_2d",
           "textureProjLod"
         ],
         "glslName": "textureProjLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11939,14 +12908,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_grad_2d",
           "textureProjGrad"
         ],
         "glslName": "textureProjGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2d"
+        ]
       }
     },
     {
@@ -11984,14 +12957,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_size_3d",
           "textureSize"
         ],
         "glslName": "textureSize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12028,14 +13005,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_levels_3d",
           "textureQueryLevels"
         ],
         "glslName": "textureQueryLevels",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12073,14 +13054,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_sample_3d",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12119,14 +13104,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_3d",
           "textureLod"
         ],
         "glslName": "textureLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12164,14 +13153,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_bias_3d",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12211,14 +13204,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_3d",
           "textureGrad"
         ],
         "glslName": "textureGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12257,14 +13254,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_3d",
           "texelFetch"
         ],
         "glslName": "texelFetch",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12302,14 +13303,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_3d",
           "textureProj"
         ],
         "glslName": "textureProj",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12346,14 +13351,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_query_lod_3d",
           "textureQueryLod"
         ],
         "glslName": "textureQueryLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12392,14 +13401,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_offset_3d",
           "textureOffset"
         ],
         "glslName": "textureOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12439,14 +13452,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_offset_3d",
           "textureLodOffset"
         ],
         "glslName": "textureLodOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12487,14 +13504,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_offset_3d",
           "textureGradOffset"
         ],
         "glslName": "textureGradOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12534,14 +13555,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_offset_3d",
           "texelFetchOffset"
         ],
         "glslName": "texelFetchOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12580,14 +13605,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_lod_3d",
           "textureProjLod"
         ],
         "glslName": "textureProjLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12627,14 +13656,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_proj_grad_3d",
           "textureProjGrad"
         ],
         "glslName": "textureProjGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "3d"
+        ]
       }
     },
     {
@@ -12672,14 +13705,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_size_2darray",
           "textureSize"
         ],
         "glslName": "textureSize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -12716,14 +13753,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_levels_2darray",
           "textureQueryLevels"
         ],
         "glslName": "textureQueryLevels",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -12761,14 +13802,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_sample_2darray",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -12807,14 +13852,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_2darray",
           "textureLod"
         ],
         "glslName": "textureLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -12852,14 +13901,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_bias_2darray",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -12899,14 +13952,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_2darray",
           "textureGrad"
         ],
         "glslName": "textureGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -12945,14 +14002,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_2darray",
           "texelFetch"
         ],
         "glslName": "texelFetch",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -12989,14 +14050,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_query_lod_2darray",
           "textureQueryLod"
         ],
         "glslName": "textureQueryLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -13035,14 +14100,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_gather_2darray",
           "textureGather"
         ],
         "glslName": "textureGather",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -13081,14 +14150,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_offset_2darray",
           "textureOffset"
         ],
         "glslName": "textureOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -13128,14 +14201,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_offset_2darray",
           "textureLodOffset"
         ],
         "glslName": "textureLodOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -13176,14 +14253,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_offset_2darray",
           "textureGradOffset"
         ],
         "glslName": "textureGradOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -13223,14 +14304,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texel_fetch_offset_2darray",
           "texelFetchOffset"
         ],
         "glslName": "texelFetchOffset",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "2dArray"
+        ]
       }
     },
     {
@@ -13268,14 +14353,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_size_cube",
           "textureSize"
         ],
         "glslName": "textureSize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13312,14 +14401,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_levels_cube",
           "textureQueryLevels"
         ],
         "glslName": "textureQueryLevels",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13357,14 +14450,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_sample_cube",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13403,14 +14500,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_lod_cube",
           "textureLod"
         ],
         "glslName": "textureLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13448,14 +14549,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_bias_cube",
           "texture"
         ],
         "glslName": "texture",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13495,14 +14600,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_grad_cube",
           "textureGrad"
         ],
         "glslName": "textureGrad",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13539,14 +14648,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_query_lod_cube",
           "textureQueryLod"
         ],
         "glslName": "textureQueryLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13585,14 +14698,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_gather_cube",
           "textureGather"
         ],
         "glslName": "textureGather",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "cube"
+        ]
       }
     },
     {
@@ -13629,14 +14746,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "texture",
         "source": "glsl",
         "aliases": [
           "texture_size_buffer",
           "textureSize"
         ],
         "glslName": "textureSize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "buffer"
+        ]
       }
     },
     {
@@ -13682,14 +14803,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_lighting",
           "TDLighting"
         ],
         "glslName": "TDLighting",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -13734,14 +14859,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_lighting_pbr",
           "TDLightingPBR"
         ],
         "glslName": "TDLightingPBR",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -13784,14 +14913,18 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_env_lighting_pbr",
           "TDEnvLightingPBR"
         ],
         "glslName": "TDEnvLightingPBR",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -13847,7 +14980,7 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "material_phong",
@@ -13862,7 +14995,11 @@
           "PHONG"
         ],
         "glslName": "Material PHONG",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "materials"
+        ]
       }
     },
     {
@@ -13919,7 +15056,7 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "material_pbr",
@@ -13934,7 +15071,11 @@
           "PBR"
         ],
         "glslName": "Material PBR",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "materials"
+        ]
       }
     },
     {
@@ -13959,13 +15100,18 @@
         "version": 1
       },
       "browser": {
-        "category": "coordinate",
+        "category": "shader",
         "source": "editor",
         "aliases": [
           "Vertex Inputs",
           "Varying"
         ],
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "stage"
+        ],
+        "glslName": ""
       }
     },
     {
@@ -14010,7 +15156,7 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_lighting_all",
@@ -14021,7 +15167,11 @@
           "自動遍歷"
         ],
         "glslName": "TDLighting",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -14066,7 +15216,7 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_lighting_pbr_all",
@@ -14077,7 +15227,11 @@
           "自動遍歷"
         ],
         "glslName": "TDLightingPBR",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -14118,7 +15272,7 @@
         "version": 1
       },
       "browser": {
-        "category": "math",
+        "category": "shader",
         "source": "td",
         "aliases": [
           "td_env_lighting_pbr_all",
@@ -14129,7 +15283,11 @@
           "自動遍歷"
         ],
         "glslName": "TDEnvLightingPBR",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "lighting"
+        ]
       }
     },
     {
@@ -14163,9 +15321,10 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "inputs",
         "categoryPath": [
-          "shader",
+          "inputs",
+          "tdBuiltin",
           "geometry"
         ],
         "source": "td",
@@ -14215,10 +15374,9 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "coordinate",
         "categoryPath": [
-          "shader",
-          "geometry"
+          "coordinate"
         ],
         "source": "td",
         "aliases": [
@@ -14261,10 +15419,10 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "color",
         "categoryPath": [
-          "shader",
-          "geometry"
+          "color",
+          "conversion"
         ],
         "source": "td",
         "aliases": [
@@ -14307,10 +15465,10 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "color",
         "categoryPath": [
-          "shader",
-          "output"
+          "color",
+          "conversion"
         ],
         "source": "td",
         "aliases": [
@@ -14350,10 +15508,10 @@
         "version": 1
       },
       "browser": {
-        "category": "shader",
+        "category": "color",
         "categoryPath": [
-          "shader",
-          "output"
+          "color",
+          "conversion"
         ],
         "source": "td",
         "aliases": [
@@ -14403,7 +15561,11 @@
           "light projection map"
         ],
         "glslName": "TDProjTextureLod",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "projection"
+        ]
       }
     },
     {
@@ -14443,7 +15605,11 @@
           "light projection map"
         ],
         "glslName": "TDProjTextureSize",
-        "secondaryCategories": []
+        "secondaryCategories": [],
+        "categoryPath": [
+          "texture",
+          "projection"
+        ]
       }
     }
   ],
@@ -14950,5 +16116,98 @@
         "version": 1
       }
     }
-  ]
+  ],
+  "browser": {
+    "categories": [
+      "inputs",
+      "math",
+      "vector",
+      "matrix",
+      "logic",
+      "color",
+      "coordinate",
+      "texture",
+      "data",
+      "shader",
+      "editor",
+      "uncategorized"
+    ],
+    "branches": {
+      "inputs": [
+        "uniforms",
+        "constants",
+        "specConstants",
+        "popBuffers",
+        "common",
+        "textures",
+        "tdBuiltin"
+      ],
+      "inputs/common": [
+        "time",
+        "coordinates",
+        "output",
+        "shaderInfo"
+      ],
+      "inputs/textures": [
+        "topInputs",
+        "samplers",
+        "buffer",
+        "2d",
+        "3d",
+        "2dArray",
+        "cube"
+      ],
+      "inputs/tdBuiltin": [
+        "geometry",
+        "instances",
+        "matrices",
+        "cameras",
+        "lights",
+        "render",
+        "resources"
+      ],
+      "math": [
+        "arithmetic",
+        "interpolation",
+        "range",
+        "trigonometry",
+        "exponential",
+        "noise",
+        "derivatives"
+      ],
+      "matrix": [
+        "construct",
+        "algebra",
+        "transforms"
+      ],
+      "color": [
+        "construct",
+        "conversion",
+        "transfer"
+      ],
+      "texture": [
+        "2d",
+        "3d",
+        "cube",
+        "2dArray",
+        "1d",
+        "buffer",
+        "projection"
+      ],
+      "data": [
+        "values",
+        "bits",
+        "packing",
+        "arrays",
+        "structures"
+      ],
+      "shader": [
+        "materials",
+        "lighting",
+        "shadows",
+        "stage",
+        "code"
+      ]
+    }
+  }
 }

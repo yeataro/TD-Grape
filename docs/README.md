@@ -9,7 +9,8 @@
 - [基本 Phong／PBR 預置圖](features/BASIC_MATERIAL_PRESETS.md)：TDFam 新增入口、Group、Color 來源、範本與副本的編輯位置、驗證及未完成範圍。
 
 - [待辦與未實作功能（2026-09-23）](discussions/TODO_AUDIT_2026-09-23.md)：依 0.8.213 重新核對，區分已完成、有效待辦、已知問題與重構後功能。
-- [目前節點分類（2026-09-23）](discussions/NODE_CLASSIFICATION_2026-09-23.md)：342 份定義、實際 Target／Stage 入口、分類投影落差與建議；附逐節點 CSV。
+- [現行節點分類與新增選單](ui/NODE_BROWSER.md)：0.8.214 的 Source／Editor、功能子分類與 Matrix 判斷界線。
+- [節點分類調查（0.8.213）](discussions/NODE_CLASSIFICATION_2026-09-23.md)：342 份定義、實際 Target／Stage 入口、分類投影落差與建議；附逐節點 CSV。
 - [歷史待辦總整理（2026-09-21）](discussions/TODO_AUDIT_2026-09-21.md)：保留 0.8.161–163 的調查背景；目前狀態改看 9 月 23 日盤點。
 - [Alpha 能力範圍](discussions/ALPHA_SCOPE_2026-09-21.md)：最新需求收集中；GLSL／TD 節點、MAT／來源、命名及自訂參數，待使用者補充完再排修改順序。
 - [TD 函式節點缺口](discussions/TD_FUNCTION_NODE_GAPS.md)：0.8.163 與 TOP／MAT 公開函式逐項對照，附 CSV；已有入口、自動產碼、缺口及宿主邊界分開記錄。

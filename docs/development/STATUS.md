@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-23 0.8.214：新增節點主分類 Source／Editor，Editor 收 Router、Note、Generated GLSL；來源沿用 Sources 的 Common／Textures／TD Built In 階層。其餘使用子分類整理 Math、Texture、Data、Shader 等，Vector／Coordinate 保持平坦；Matrix 分建立與存取、代數、變換，依操作而非只看名稱歸類。側邊與浮動新增共用分類、標籤和排序。修復內建未分類與 POP Buffer 来源 token，新增可重現分類投影工具及全定義一致性檢查。現行規則見 [Node Browser](../ui/NODE_BROWSER.md)。
+
+4 組瀏覽器流程、14 項 catalog／math 測試、分類投影／Matrix 搜尋 integration、1105 個雙語鍵及 JS 語法通過。TOP Pixel／MAT Vertex／MAT Pixel 分類、來源篩選、Editor 新增／Undo、深淺色畫面核對完成；342 份運算定義與修改前完全相同。測試 fixture 首次缺少 Vertex 圖層，補齊隔離情境後通過。純分類／呈現修改，未重跑原生數值或全套測試。私人報告位於 reports/classification-214/。
+
+39 份來源同步、四份 Master 身分／位置及四份使用者 Shader 保存內容保留，未要求升級；正式 TOE 保存成功（1639620 bytes；SHA256 4d1fa8fc9ead549cbc8bb814cb4635d3058552c32a912d755f3db85bba3a93c4），六份登記狀態保留、私人助手排除。未推送。
+
 2026-09-23 文件盤點（產品仍為 0.8.213）：完成 [有效待辦／未實作能力](../discussions/TODO_AUDIT_2026-09-23.md)與 [節點分類整理](../discussions/NODE_CLASSIFICATION_2026-09-23.md)，附 342 份定義的逐項 CSV。隔離 Chromium 核對 TOP Pixel、MAT Vertex／Pixel 的實際入口分類，確認 catalog 與內嵌分類投影漏項及 Math 分類過度集中；分類搬移僅提出建議。舊索引加上歷史提示，修正 Switch 文件的 Math 未交付敘述。342 個 key／UUID 唯一及文件連結核對通過；未改產品、TD／TOE 或版本，未重跑原生運算。私人核對資料位於 reports/audit-213/。
 
 2026-09-23 0.8.213：改善 Router 移動與 Link 箭頭間距。Hover／選取／鍵盤聚焦時顯示小標題把手，可直接拖曳；選取工具列避開把手。Router 的輸入／輸出 Link 箭頭向圓點靠近，邊緣間距與一般節點接孔一致。接線與 GLSL 行為不變。

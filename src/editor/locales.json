@@ -2053,6 +2053,27 @@
       "zh-Hant": "Shader 範例",
       "en": "Shader templates"
     },
+    "browser.branch.1d": {"en":"1D", "zh-Hant":"1D"},
+    "browser.category.editor": {"en": "Editor", "zh-Hant": "Editor"},
+    "browser.branch.noise": {"en": "Noise", "zh-Hant": "Noise"},
+    "browser.branch.derivatives": {"en": "Derivatives", "zh-Hant": "微分"},
+    "browser.branch.construct": {"en": "Construction & Access", "zh-Hant": "建立與存取"},
+    "browser.branch.algebra": {"en": "Algebra", "zh-Hant": "代數"},
+    "browser.branch.transforms": {"en": "Transforms", "zh-Hant": "變換"},
+    "browser.branch.conversion": {"en": "Color Conversion", "zh-Hant": "色彩轉換"},
+    "browser.branch.transfer": {"en": "Transfer Functions", "zh-Hant": "轉換曲線"},
+    "browser.branch.values": {"en": "Values & Conversion", "zh-Hant": "值與轉型"},
+    "browser.branch.bits": {"en": "Bit Operations", "zh-Hant": "位元運算"},
+    "browser.branch.packing": {"en": "Packing & Bit Conversion", "zh-Hant": "打包與位元轉換"},
+    "browser.branch.arrays": {"en": "Arrays", "zh-Hant": "陣列"},
+    "browser.branch.structures": {"en": "Structures", "zh-Hant": "結構"},
+    "browser.branch.materials": {"en": "Materials", "zh-Hant": "材質"},
+    "browser.branch.lighting": {"en": "Lighting", "zh-Hant": "光照"},
+    "browser.branch.shadows": {"en": "Shadows", "zh-Hant": "陰影"},
+    "browser.branch.stage": {"en": "Stage & Output", "zh-Hant": "階段與輸出"},
+    "browser.branch.code": {"en": "GLSL Code", "zh-Hant": "GLSL Code"},
+    "browser.branch.projection": {"en": "Projection & Environment", "zh-Hant": "投影與環境貼圖"},
+    "browser.branch.popBuffers": {"en": "POP Buffers", "zh-Hant": "POP Buffers"},
     "browser.category.math": {
       "zh-Hant": "Math",
       "en": "Math"
@@ -2085,10 +2106,7 @@
       "zh-Hant": "Data",
       "en": "Data"
     },
-    "browser.category.inputs": {
-      "zh-Hant": "Inputs",
-      "en": "Inputs"
-    },
+    "browser.category.inputs": {"en": "Source", "zh-Hant": "來源"},
     "browser.branch.uniforms": {
       "zh-Hant": "Uniforms",
       "en": "Uniforms"
@@ -2723,10 +2741,7 @@
       "en": "Samplers · Existing graph",
       "zh-Hant": "Samplers · 既有圖"
     },
-    "browser.branch.constants": {
-      "en": "Constants",
-      "zh-Hant": "常數"
-    },
+    "browser.branch.constants": {"en": "Graph Constants", "zh-Hant": "圖內常數"},
     "browser.branch.topInputs": {
       "en": "TOP Inputs",
       "zh-Hant": "TOP 輸入"

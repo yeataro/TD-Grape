@@ -1799,14 +1799,32 @@ function browserData(){return browserProjection||=(JSON.parse(document.getElemen
 const browserCategoryLabel=key=>t('browser.category.'+key);
 const browserSourceLabel=key=>t('browser.source.'+key);
 const normalizeSearch=value=>String(value||'').normalize('NFKC').toLowerCase().trim();
+function browserBranchLabel(key){
+  const sourceKey=typeContract?.sources?.menuGroups?.[key];
+  return sourceKey?t(sourceKey):t('browser.branch.'+key);
+}
+function browserBranchOrder(path){return path.length?(browserData().branches?.[path.join('/')]||[]):browserData().categories;}
+function sortBrowserBranches(keys,path){
+  const order=browserBranchOrder(path),rank=key=>{const index=order.indexOf(key);return index<0?999:index;};
+  return keys.sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
+}
+function browserSourcePath(d){
+  if(d.key==='builtin_source')return ['inputs',...(d.sourcePath||typeContract?.composites?.sources?.[d.defaults?.source]?.path||['tdBuiltin'])];
+  if(d.inputPreset)return ['inputs',...(typeContract?.sources?.uniformPresets?.[d.inputPreset]?.path||['common','time'])];
+  const kind=d.inputKind||d.key;
+  if(kind==='uniform')return ['inputs','uniforms'];
+  if(kind==='sampler')return ['inputs','textures',d.inputType==='samplerBuffer'?'buffer':'samplers'];
+  return ({constant:['inputs','constants'],spec_constant:['inputs','specConstants'],pop_buffer:['inputs','popBuffers'],attribute:['inputs','tdBuiltin','geometry'],top_input:['inputs','textures','topInputs']})[kind]||null;
+}
 function browserMeta(d){
-  if(isCompositeOperation(d))return {category:'data',path:['data'],source:d.key==='builtin_source'?'td':'editor',secondary:[],aliases:d.key==='builtin_source'?[d.defaults.source,'TD source','array source']:({array:['list','create array','陣列'],array_get:['array index','get','陣列取項'],array_replace:['array set','replace','陣列替換'],array_length:['array size','length','陣列長度'],struct_field:['struct','field','member','結構欄位']})[d.key]||[],tags:[],glslName:d.key==='builtin_source'?d.defaults.source:d.label,descriptionKey:d.descriptionKey||'help.'+d.key,subgraph:false,saved:false,project:false};
-  if(d.inputPreset)return {category:'shader',path:['shader'],source:'td',secondary:[],aliases:[inputPresets()[d.inputPreset][0],'uniform','time','frame'],tags:[],glslName:inputPresets()[d.inputPreset][1],descriptionKey:'inputs.clockHint',subgraph:false,saved:false,project:false};
-  if(d.inputSourceId)return {category:'shader',path:['shader'],source:'project',secondary:[],aliases:['input','reference'],tags:[],glslName:d.label,descriptionKey:'inputs.referenceHint',subgraph:false,saved:false,project:true};
+  if(d.builtinSource||d.inputPreset||d.inputSourceId){
+    const path=browserSourcePath(d);
+    return {category:'inputs',path,source:d.inputSourceId?'project':'td',secondary:[],aliases:[...(d.sourceAliases||[]),...(d.builtinSource?['TD source','array source']:[]),...(d.inputPreset?['uniform','time','frame']:[]),'source','reference'],tags:[],glslName:d.builtinSource||(d.inputPreset?inputPresets()[d.inputPreset][1]:d.label),descriptionKey:d.builtinSource?'help.builtin_source':d.inputPreset?'inputs.clockHint':'inputs.referenceHint',subgraph:false,saved:false,project:!!d.inputSourceId};
+  }
   const f=d.definitionUuid===FunctionModel.CALL?(d.source||FunctionModel.find(graph,d.functionId)):null;
   const authored=f?(f.browser||browserData().functions[f.source?.id]||browserData().functions[f.origin?.id]):browserData().nodes[d.definitionUuid];
   const stringList=value=>Array.isArray(value)?value.filter(x=>typeof x==='string'):[];
-  const raw=authored||(d.key==='comment'?{category:'data',source:'editor',aliases:['note','annotation','text','註解','注释','備註'],descriptionKey:'help.comment'}:d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
+  const raw=authored||(d.key==='comment'?{category:'editor',source:'editor',aliases:['note','annotation','text','註解','注释','備註'],descriptionKey:'help.comment'}:d.key==='replace'?{category:'vector',source:'glsl',glslName:'vecN',aliases:['override','replace','替換','覆寫'],descriptionKey:'help.replace'}:d.key==='spec_constant'?{category:'shader',source:'td',glslName:'constant_id',aliases:['specialization','spec','特化常數'],descriptionKey:'help.spec_constant'}:{}),known=c=>browserData().categories.includes(c),category=known(raw.category)?raw.category:'uncategorized';
   const source=f?(f.scope==='local'?'project':f.scope==='personal'?'personal':'editor'):(raw.source||'editor');
   const path=stringList(raw.categoryPath);
   const aliases=stringList(raw.aliases).filter(alias=>!d.fixedType||!/^(float|double|int|uint|bool|integer|unsigned|boolean|[iubd]?vec(?:tor)?\s*[234]|d?mat(?:[234](?:x[234])?)?)$/i.test(alias));
@@ -1830,7 +1848,7 @@ function browserSearchScore(entry,query){
   if(names.some(name=>name.startsWith(q)))return 2;
   if(contains(names))return 3;
   if(contains([...names,...aliases]))return 4;
-  const tags=[...m.tags,...m.path,...m.path.slice(1).map(key=>t('browser.branch.'+key)),m.category,...m.secondary,browserCategoryLabel(m.category),...m.secondary.map(browserCategoryLabel)].map(normalizeSearch);
+  const tags=[...m.tags,...m.path,...m.path.slice(1).map(browserBranchLabel),m.category,...m.secondary,browserCategoryLabel(m.category),...m.secondary.map(browserCategoryLabel)].map(normalizeSearch);
   if(contains([...names,...aliases,...tags]))return 5;
   const description=normalizeSearch(t(m.descriptionKey));
   return contains([...names,...aliases,...tags,description])?6:Infinity;
@@ -1872,10 +1890,10 @@ function browserTree(entries){
   }
   const make=(branch,path=[])=>{
     const group=el('div',{class:path.length?'browser-tree-children':'browser-tree'});
-    const children=[...branch.children.values()],order=path.length?['arithmetic','interpolation','range','trigonometry','exponential']:browserData().categories;children.sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key));
+    const children=sortBrowserBranches([...branch.children.keys()],path).map(key=>branch.children.get(key));
     for(const child of children){
       const childPath=[...path,child.key],id=childPath.join('/'),detail=el('details',{'data-branch':id,'data-browser-category':childPath[0],class:'browser-branch'});
-      const summary=el('summary');summary.append(el('span',{class:'tree-chevron','aria-hidden':'true'}),el('span',{},path.length?t('browser.branch.'+child.key):browserCategoryLabel(child.key)));detail.append(summary,make(child,childPath));
+      const summary=el('summary');summary.append(el('span',{class:'tree-chevron','aria-hidden':'true'}),el('span',{},path.length?browserBranchLabel(child.key):browserCategoryLabel(child.key)));detail.append(summary,make(child,childPath));
       detail.open=browserOpenBranches.has(id);summary.onclick=e=>{e.preventDefault();detail.open=!detail.open;if(detail.open)browserOpenBranches.add(id);else browserOpenBranches.delete(id);};group.append(detail);
     }
     for(const entry of branch.entries)group.append(paletteEntry(entry.d));return group;
@@ -1913,7 +1931,7 @@ function renderBrowserDetail(entry){
   const head=el('div',{class:'browser-detail-heading'});head.append(el('strong',{},entry.d.label));
   const close=el('button',{'aria-label':t('browser.closeDetails')},'×');close.onclick=()=>{browserSelection=null;renderLibrary();};head.append(close);box.append(head);
   const body=el('div',{class:'browser-detail-body',tabindex:'0'});body.append(el('small',{class:'muted'},browserBadges(entry)));
-  body.append(el('p',{class:'browser-category-path'},entry.meta.path.map((key,i)=>i?t('browser.branch.'+key):browserCategoryLabel(key)).join(' › ')));
+  body.append(el('p',{class:'browser-category-path'},entry.meta.path.map((key,i)=>i?browserBranchLabel(key):browserCategoryLabel(key)).join(' › ')));
   const variants=creatorVariants(entry.d,null),variant=variants[0];
   if(variant&&entry.meta.subgraph){
     const ports=el('div',{class:'browser-signature subgraph-interface'});
@@ -2700,11 +2718,7 @@ function installGraphClipboard(){
   window.addEventListener('blur',closeGraphMenu);window.addEventListener('resize',closeGraphMenu);
 }
 
-function creatorMeta(d){
-  if(['constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.inputKind||d.key)){const branch=({constant:'constants',spec_constant:'specConstants',pop_buffer:'buffers',attribute:'geometry',top_input:'topInputs'})[d.inputKind||d.key];return {...browserMeta(d),category:'inputs',path:['inputs',branch],secondary:[],descriptionKey:'help.'+(d.inputKind||d.key)};}
-  const meta=browserMeta(d),kind=inputSourceKind(d);
-  return kind?{...meta,category:'inputs',path:['inputs',kind==='uniform'?'uniforms':'samplers'],secondary:[]}:meta;
-}
+function creatorMeta(d){return browserMeta(d);}
 function creatorPaths(entry){return [entry.meta.path,...entry.meta.secondary.map(cat=>[cat])];}
 function renderCreatorColumns(entries,query){
   const container=$('#createcategory'),path=creatorState.path||(creatorState.path=[]),filtered=entries.filter(e=>$('#createsource').value==='all'||e.meta.source===$('#createsource').value);
@@ -2714,11 +2728,11 @@ function renderCreatorColumns(entries,query){
   for(let level=0;level<depth;level++){
     const prefix=path.slice(0,level),keys=[...new Set(paths.filter(p=>prefix.every((key,i)=>p[i]===key)&&p[level]).map(p=>p[level]))];
     if(!keys.length)break;
-    const order=level?['uniforms','samplers','arithmetic','interpolation','range','trigonometry','exponential']:creatorState.wire?['vector','math','inputs',...browserData().categories]:['inputs',...browserData().categories];
+    const order=level?browserBranchOrder(prefix):creatorState.wire?['vector','math',...browserData().categories]:browserData().categories;
     keys.sort((a,b)=>{const ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b);});
     const column=el('div',{class:'create-category-column',role:'listbox','aria-label':t('create.category')+' '+(level+1),'data-level':level});
     for(const key of [null,...keys]){
-      const selected=key===null?!path[level]:path[level]===key,label=key===null?t('category.all'):level?(t('browser.branch.'+key)==='browser.branch.'+key?key:t('browser.branch.'+key)):browserCategoryLabel(key);
+      const selected=key===null?!path[level]:path[level]===key,label=key===null?t('category.all'):level?browserBranchLabel(key):browserCategoryLabel(key);
       const button=el('button',{type:'button',class:'create-category-choice',role:'option','aria-selected':String(selected),tabindex:selected?'0':'-1','data-create-path':JSON.stringify(key===null?prefix:[...prefix,key])},label);
       if(key!==null&&paths.some(p=>[...prefix,key].every((x,i)=>p[i]===x)&&p.length>level+1))button.append(el('span',{'aria-hidden':'true'},'›'));
       button.onclick=()=>{creatorState.path=key===null?prefix:[...prefix,key];creatorCategory=creatorState.path[0]||'all';creatorIndex=0;renderCreator();};column.append(button);
@@ -2729,7 +2743,7 @@ function renderCreatorColumns(entries,query){
 function renderCreatorDetails(){
   const box=$('#createdetail'),match=creatorMatches[creatorIndex];box.replaceChildren();if(!match){box.append(el('p',{class:'muted'},t('create.empty')));return;}
   const entry={d:match.d,meta:creatorMeta(match.d)},meta=entry.meta;
-  box.append(el('strong',{},match.d.label),el('small',{class:'muted'},browserBadges(entry)),el('p',{class:'browser-category-path'},meta.path.map((key,i)=>i?(t('browser.branch.'+key)==='browser.branch.'+key?key:t('browser.branch.'+key)):browserCategoryLabel(key)).join(' › ')));
+  box.append(el('strong',{},match.d.label),el('small',{class:'muted'},browserBadges(entry)),el('p',{class:'browser-category-path'},meta.path.map((key,i)=>i?browserBranchLabel(key):browserCategoryLabel(key)).join(' › ')));
   const variant=match.variant||typeVariants(match.d).find(v=>v.type===match.type)||typeVariants(match.d)[0];
   if(variant){const inputs=Object.entries(variant.inputs).map(([name,type])=>type+' '+name).join(', '),outputs=Object.entries(variant.outputs).map(([name,type])=>type+' '+name).join(', ');box.append(el('code',{class:'browser-signature'},(meta.glslName||match.d.label)+'('+inputs+')'+(outputs?' → '+outputs:'')));}
   box.append(markdown(match.d.builtinSource?builtinSourceHelp(match.d.builtinSource):t(meta.descriptionKey)));

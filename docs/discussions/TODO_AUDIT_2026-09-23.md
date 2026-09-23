@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | A01 | 未實作 | **Sampler 從 Sources 拖入自訂參數浮窗**。`customSourceAllowed()` 仍僅接受數值 Uniform／Spec Constant。舊 Sampler Expose／TOP 路徑控制已有基礎，不能說全部後端從零開始；新拖入流程、移動／刪除／歷程與說明仍須接通。多維取樣節點存在不代表可建立同維度的原生綁定。 | [參數編輯器](../features/CUSTOM_PARAMETER_EDITOR.md)、`src/editor/inspector.js`、[Sampler Expose](../features/SAMPLER_EXPOSE.md) |
 | A02 | 調查尚未完成 | **完整 GLSL 內建函式／overload／方法覆蓋表**。0.8.164／166 已補大量數學、位元、微分與取樣能力，不能沿用早期「都缺」清單；仍需以目標 GLSL／TD／Stage／資源型別逐項核對。這次只確認此待辦及現有 catalog，沒有冒稱完成標準逐條稽核。 | [補齊紀錄](../features/LEGACY_COMPLETION.md)、[Alpha 範圍](ALPHA_SCOPE_2026-09-21.md) |
-| A03 | 已證實分類落差 | **節點分類投影與擴充後分類整理**。Math／Switch／Generated GLSL／Attribute 未同步分類投影；Math 集中過多取樣、光照、幾何等功能。 | [本輪分類與 CSV](NODE_CLASSIFICATION_2026-09-23.md) |
+| A03 | 已於 0.8.214 交付 | **節點分類投影與擴充後分類整理**。已新增 Source／Editor，重整子分類、同步全部定義投影並加入一致性檢查；原調查保留歷史。 | [本輪分類與 CSV](NODE_CLASSIFICATION_2026-09-23.md) |
 | A04 | 部分完成 | **原生 Phong／PBR 完整能力與可編修預置圖**。0.8.175 基本版本已交付；法線圖、視差／遮蔽步進、位移、各貼圖槽、Rim、角度 Alpha、多貼圖、輔助輸出與交互組合等仍未全數完成。另需使用者可操作的完整示例場景。 | [原生等價清單](../features/MAT_NATIVE_PARITY.md)、[原生函式清單](../features/MAT_NATIVE_FUNCTIONS.md) |
 | A05 | 部分完成 | **資源建立／綁定／取樣設定**。具名 sampler 的原生管理仍以 2D 為主；3D／Cube／Array 等取樣入口不等於對應綁定管理完整。Filter／Extend／Anisotropy 的介面與 Apply 保留、實例貼圖有效場景仍需整理。 | [MAT 等價清單](../features/MAT_NATIVE_PARITY.md)、[來源計畫](SOURCE_COMPLETION_PLAN.md) |
 | A06 | 未完成／需補驗 | **MAT Attribute 後續**：指定其他 vertexIndex 的讀取；缺少 Attribute 的不同幾何情境；多攝影機、完整 Instancing／陰影／Fog 等。具名 Texture Attribute、Current Instance UV 及跨 Stage 介面已完成，不重列缺口。 | [補齊紀錄](../features/LEGACY_COMPLETION.md)、[來源計畫](SOURCE_COMPLETION_PLAN.md) |
@@ -78,7 +78,7 @@ K05–K11 沿用既有未結案筆記，本次未重新做原生／跨裝置重�
 
 ## 建議後續順序
 
-1. 先 review 本輪分類：修復投影漏項，再定功能分類的搬移範圍。
+1. 分類整理已於 0.8.214 交付，供使用者 review。
 2. 完成最近明確留下的 Sampler 拖入控制；同步驗證移動、刪除、Undo／外部 TD 編輯與 Help。
 3. GLSL 能力逐項盤點，分開「已有入口」「缺 overload」「缺資源管理」「宿主不支援」，再選 Preview 必要能力。
 4. 將 Swizzle／資產分類等 UI 項與材質等價大項分批；觸控／跨平台驗收另排，避免用一次大重構混做。

@@ -1,6 +1,36 @@
 # TD-Grape Node Browser
 
-> Current inventory: [0.8.213 classification audit](../discussions/NODE_CLASSIFICATION_2026-09-23.md). The sections below preserve historical implementation notes; This Project is now Library → This Shader, and graph assets use Subgraph terminology. The audit records the current metadata/projection discrepancies.
+## Current classification — 0.8.214
+
+The sidebar and floating creator now share the same hierarchy. Only **Source** and **Editor** are new main categories; Uncategorized appears only for assets without metadata. Library provenance tabs remain separate.
+
+| Main category | Subgroups | Catalog definitions |
+| --- | --- | ---: |
+| Source | Uniforms, Graph Constants, Spec Constants, POP Buffers, Common, Textures, TD Built In | 11 |
+| Math | Arithmetic, Interpolation, Range, Trigonometry, Exponential, Noise, Derivatives | 73 |
+| Vector | Kept flat: construction, components and geometric vector operations | 13 |
+| Matrix | Construction & Access, Algebra, Transforms | 21 |
+| Logic | Kept flat: comparison, boolean and selection | 20 |
+| Color | Construction & Access, Color Conversion, Transfer Functions | 33 |
+| Coordinate | Kept flat: spatial mapping, projection and deformation operations | 19 |
+| Texture | 1D, 2D, 3D, 2D Array, Cube, Buffer, Projection & Environment | 83 |
+| Data | Values & Conversion, Bit Operations, Packing & Bit Conversion, Arrays, Structures | 45 |
+| Shader | Materials, Lighting, Shadows, Stage & Output, GLSL Code | 21 |
+| Editor | Router, Note, Generated GLSL | 3 |
+
+Counts cover 342 definitions, including legacy and boundary definitions. Actual menu counts also depend on Target/Stage, fixed-type entries, built-in source choices, library assets and singletons.
+
+Source uses the existing Sources hierarchy and translated group names, including Common → Time/Coordinates/Output/Shader Info and TD Built In → Geometry/Instances/Matrices/Cameras/Lights/Render/Resources. Camera or matrix *data access* belongs here; input count alone does not turn a data accessor into an operation. Shader no longer collects source declarations. Dynamic source references and presets use the same paths in the creator. This does not alter the separate Sources panel or its saved category order.
+
+Matrix classification follows the operation, not just its name or a possible overload. Matrix Replace/Split/Get/Set, Transpose, Inverse, Determinant and Matrix Component Multiply—the entries whose first input is exclusively a matrix in their supported signatures—remain in Matrix. Matrix constructors/conversion and matrix-producing transform helpers also belong here. Generic Add/Multiply/Math retain Math even when they accept matrices. Deforming a position/vector remains Coordinate, and Dot/Cross/Reflect/Refract remain Vector; no separate Camera, Geometry or Compiler main category is added.
+
+`node_catalog.json` now owns navigation order and every definition's browser metadata. `python tools/build/sync_node_browser.py` regenerates the embedded index, including built-in Subgraph metadata; `--check` verifies it. Integration checks compare every definition, not only the old Matrix subset. Both menus share branch ordering/labels. Semantic definitions, UUIDs, revision hashes, compile behavior and existing graphs are unchanged. The [0.8.213 audit](../discussions/NODE_CLASSIFICATION_2026-09-23.md) remains historical evidence of the prior discrepancies.
+
+Validation: four browser groups cover TOP/MAT Stage availability, all effective categories, sidebar/creator agreement, bilingual paths, source filtering, Editor insertion/Undo and Matrix navigation. Fourteen catalog/math tests and the metadata integration checks pass; all 342 semantic definitions compare exactly to the pre-change snapshot. Dark/light screenshots reviewed. No new native numeric validation is claimed for this presentation-only change.
+
+## Historical implementation notes
+
+The sections below preserve earlier behavior; This Project is now Library → This Shader, and graph assets use Subgraph terminology. The current hierarchy above supersedes the earlier lists.
 
 ## Search ranking — 2026-09-19 (0.8.94 trial)
 

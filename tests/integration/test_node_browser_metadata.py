@@ -17,6 +17,10 @@ assert all('browser' not in f for f in normal)
 # correctly catalogued but disappear from the shipped browser UI.
 html=(root/'src/editor/index.html').read_text('utf-8')
 metadata=json.loads(re.search(r'<script id="node-browser-data" type="application/json">(.*?)</script>',html,re.S)[1])
+assert metadata['categories']==document['browser']['categories']
+assert metadata['branches']==document['browser']['branches']
+assert metadata['nodes']=={row['definition']['definitionUuid']:row['browser'] for row in document['definitions']}
+subprocess.run([sys.executable,str(root/'tools/build/sync_node_browser.py'),'--check'],check=True)
 matrix_keys={'matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
              'transpose','inverse','determinant','matrix_comp_mult','outer_product'}
 browser_rows=[row for row in document['definitions'] if row['definition']['key'] in matrix_keys|{'scalar','vector'}]

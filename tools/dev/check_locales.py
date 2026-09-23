@@ -27,6 +27,13 @@ refs.discard('browser.category.');refs.discard('browser.source.')
 refs.update('browser.category.'+key for key in ('inputs','math','vector','matrix','logic','color','coordinate','texture','data','shader','uncategorized'))
 refs.update('browser.source.'+key for key in ('all','glsl','td','editor','personal','project'))
 refs.discard('browser.branch.');refs.update('browser.branch.'+key for key in ('uniforms','samplers','arithmetic','interpolation','range','trigonometry','exponential'))
+# Navigation is generated from catalog metadata; validate every dynamic label.
+browser=json.loads(re.search(r'<script id="node-browser-data" type="application/json">(.*?)</script>',(root/'index.html').read_text('utf-8'),re.S)[1])
+source_groups=json.loads((root.parent/'library/source_catalog.json').read_text('utf-8'))['menuGroups']
+refs.update('browser.category.'+key for key in browser['categories'])
+branch_keys={part for row in browser['nodes'].values() for part in row.get('categoryPath',[])[1:]}
+branch_keys.update(key for values in browser.get('branches',{}).values() for key in values)
+refs.update(source_groups.get(key,'browser.branch.'+key) for key in branch_keys)
 refs.discard('experiments.');refs.discard('experiments.cursor.')
 settings=re.search(r'EDITOR_DEV_DEFAULTS = Object.freeze\(\{(.*?)\}\)',(root/'graph_ui.js').read_text(encoding='utf-8')).group(1)
 for key in re.findall(r'(\w+):',settings): refs.update(['experiments.'+key,'experiments.'+key+'.hint'])
