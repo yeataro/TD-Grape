@@ -2119,7 +2119,11 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
  --node-title-foreground:rgb(255 255 255 / 85%);
  --type-float:#c4c1bc;--type-vec2:#8fc5ee;--type-vec3:#87ceb7;--type-vec4:#c5b2e2;--type-sampler:#cab08b;
 }
-:root:not([data-ui-theme="light"]) :where([data-category="td-source"]){--category-bg:#62414f;--category-fg:#f5dde7}
+/* Source purpose overrides presentation only; data-category remains the node family. */
+:root:not([data-ui-theme="light"]) :where([data-color-role="attribute"]){--category-bg:var(--node-attribute-bg);--category-fg:var(--node-attribute-fg)}
+:root:not([data-ui-theme="light"]) :where([data-color-role="runtime-info"]){--category-bg:#62414f;--category-fg:#f5dde7}
+:root:not([data-ui-theme="light"]) :where([data-color-role="compile-info"]){--category-bg:#526d91;--category-fg:#e3ecfa}
+:root:not([data-ui-theme="light"]) :where([data-color-role="sampler"]){--category-bg:var(--node-sampler-bg);--category-fg:var(--node-sampler-fg)}
 :root:not([data-ui-theme="light"]) :where([data-category="editor"]){--category-bg:var(--ui-tone-node);--category-fg:#e1eaf0}
 :root:not([data-ui-theme="light"]) :where([data-category="annotation"]){--category-bg:#424242}
 :root:not([data-ui-theme="light"]) .node-title{background:var(--category-bg);color:var(--node-title-foreground)}

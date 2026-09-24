@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-25 0.8.227：暗模式來源改依用途配色：屬性／表面座標橄欖色、執行時資訊櫻桃色、TD 編譯期常數霧藍色 #526D91；使用者 Constant 保留原深藍。58 個內建來源使用明確的 UI 顯示對照，Sampler 資源沿用 Sampler 色，自訂 Attribute／Tex 與 TD 屬性一致。移除依 tdBuiltin 選單路徑改写 nodeCategory 的做法，配色獨立於 family、來源樹與編譯契約；節點、來源卡、數量徽章、Inspector、新增入口及 Link 目標標記共用角色。畫布、Router 標題、白色 85% 標題字及淺色節點配色保留。規則見 [Color and labels](../ui/COLOR_AND_LABELS.md)。
+
+隔離 Chromium 6 組檢查涵蓋全部來源角色、TOP／MAT 對照、實際節點色、Inspector／Sources／徽章、淺色幾何與零圖變更；來源卡 8 組操作回歸通過。舊 Sources 測試假設預設展開，私人副本僅調整此初始化；presentation 的卡片高度斷言仍於修改前 HEAD 和本版相同位置失敗，不列為通過。JS／diff 檢查通過。39 份來源已同步，四份 Master 身分／位置及四份使用者 Shader 保留；正式 TOE 保存 2050974 bytes（SHA256 d711e173839144dc7338fc3f4472674b9beb18f8fbf9ec80fda5f35617efb881），六份登記狀態保留、私人助手排除。私人報告 reports/source-colors-227/；未推送。
+
 2026-09-24 0.8.226：修正非整數介面縮放造成的 Router／接線座標漂移。原本以 1px HTML world 的量測寬高換算圖座標，CSS zoom 的布局取整會把 80% 量成 0.796875px，誤差隨圖座標距離放大；改用同一 world 中的 1024px 隱藏座標基準，並讓新增節點的接孔位置預覽共用尺度。保留實際圓心量測、Router 階數／Wire／Link 排序與圖資料。Add Node 的 Categories 外層預設展開，子分類維持折疊；手動收合仍有效。Customize Parameters 主底色與側邊面板一致，關閉按鈕置中，觸控時提供 44px 按鈕與足夠的標題高度。
 
 Chromium／WebKit 各通過 210 組尺寸、介面縮放、圖縮放及 Router 階數組合，另核對正負 8192 圖座標及不重繪路徑的連續縮放／平移。Chromium 7 組、WebKit 3 組 Router 觸控／幾何流程通過，另有 Link 配置 5 組、線路命中 9 組；兩引擎各核對 12 組視窗寬度／UI 尺寸／深淺色的面板同色、關閉按鈕置中與關閉行為。iPhone Safari 實機仍待使用者 review。舊 test_creator_position 在修改前 HEAD 與修改後均於第 47 行等待雙擊選單逾時，不列為本批通過項目；JS 語法與 diff 檢查通過。39 份來源已同步，四份 Master 身分／位置及四份使用者 Shader 保留；正式 TOE 保存 2047014 bytes（SHA256 3aa9af1d5eee7c9a0d43c2e9d420a4cf477e7f2b2c9c4cfccf86f797ab31a2d4），六份登記狀態保留、私人助手排除。私人報告 reports/mobile-226/；未推送。

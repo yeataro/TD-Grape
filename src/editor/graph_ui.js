@@ -137,8 +137,6 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
 function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.key)?d.key:null);}
 function nodeCategory(d,params=d.defaults){
-  const sourcePath=d.sourcePath||(d.key==='builtin_source'?typeContract?.composites?.sources?.[params?.source||d.builtinSource]?.path:typeContract?.sources?.nodeSources?.[d.key]?.path);
-  if(sourcePath?.[0]==='tdBuiltin')return 'td-source';
   if(d.key==='router')return 'editor';
   if(['comment','generated_glsl'].includes(d.key))return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
@@ -154,6 +152,20 @@ function nodeCategory(d,params=d.defaults){
   if(['deform','to_clip'].includes(d.key))return 'builtin';
   if(d.key.endsWith('_out')||d.key==='function_output')return 'output';return 'math';
 }
+// Presentation roles describe what a source supplies, not its node family,
+// browser location, GLSL qualifier or type. Keep this UI-only: no graph/compiler metadata.
+const sourceColorRoles=new Map(Object.entries({
+  attribute:['vUV','TDNormal','TDPointColor','TDUVUnwrapCoord','TDTexCoord','TDColor','TDInstanceCustomAttrib0','TDInstanceCustomAttrib1','TDInstanceCustomAttrib2','TDInstanceCustomAttrib3'],
+  'runtime-info':['uTD2DInfos','uTD3DInfos','uTD2DArrayInfos','uTDCubeInfos','uTDMats','uTDCamInfos','uTDLights','uTDOutputInfo','uTDOutputInfo.res.zw','uTDOutputInfo.res.xy','uTDPass','uTDCurrentDepth','gl_FragCoord','gl_FrontFacing','gl_SampleID','gl_SamplePosition','gl_HelperInvocation','TDInstanceID','TDCameraIndex','TDTrueCameraIndex','TDBoneMat','TDInstanceMat','TDInstanceMat3','TDInstanceTextureIndex','TDPointCoord','uTDGeneral','uTDGeneral.ambientColor','Viewport Origin','Viewport Resolution','uTDEnvLights','uTDEnvLightBuffers.shCoeffs','gl_VertexIndex','TDScreenSpaceCoord','TDInstanceIndex'],
+  'compile-info':['TD_NUM_2D_INPUTS','TD_NUM_3D_INPUTS','TD_NUM_2D_ARRAY_INPUTS','TD_NUM_CUBE_INPUTS','TD_NUM_LIGHTS','TD_NUM_ENV_LIGHTS','TD_NUM_CAMERAS','TD_NUM_COLOR_BUFFERS'],
+  sampler:['sTD2DInputs','sTD3DInputs','sTD2DArrayInputs','sTDCubeInputs','sTDNoiseMap','sTDSineLookup']
+}).flatMap(([role,sources])=>sources.map(source=>[source,role])));
+function nodeColorRole(d,params=d.defaults){
+  if(['attribute','tex_attribute','uv','position'].includes(d.key)||['attribute','tex_attribute'].includes(d.inputKind))return 'attribute';
+  if(d.key==='builtin_source')return sourceColorRoles.get(params?.source||d.builtinSource)||nodeCategory(d,params);
+  return nodeCategory(d,params);
+}
+function nodeColorAttributes(d,params=d.defaults){return {'data-category':nodeCategory(d,params),'data-color-role':nodeColorRole(d,params)};}
 function builtInSourceLabel(d){return d.key==='uv'?(editorTarget==='top'?'vUV.st':'UV 0'):d.key==='position'?'P':'';}
 let typeContract=null;
 // Composite types have stable identities. Ports carry these identities; display
@@ -1726,7 +1738,7 @@ function renderRouterCard(n,cards){
 function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     if(n.definitionUuid==='sgrape.builtin.router')return renderRouterCard(n,cards);
     const collapsed=n.ui?.collapsed===true,d=projection?.definition||definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
-    card.dataset.category=nodeCategory(d||{key:''},n.params);card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
+    Object.entries(nodeColorAttributes(d||{key:''},n.params)).forEach(([key,value])=>card.setAttribute(key,value));card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
     if(isMatrixOperation(d))card.classList.add('node-matrix');
     if(isAnnotationNode(n)){
       card.dataset.noteTitleOnSelection=String(n.ui?.noteTitleOnSelection===true);card.dataset.noteTransparent=String(n.ui?.noteTransparent===true);
@@ -1931,7 +1943,7 @@ function installLibraryTabs(){
 function graphFunctionSource(d){const m=browserMeta(d);return m.source==='project'?'shader':m.source==='personal'?'personal':'builtin';}
 function browserBadges(entry){const m=entry.meta;return [browserSourceLabel(m.source),...(m.subgraph?['Subgraph']:[]),...(m.saved?[t('library.savedVersion')]:[])].join(' · ');}
 function paletteEntry(d){
-  const entry={d,meta:browserMeta(d)},row=el('div',{class:'browser-row','data-category':nodeCategory(d),'data-browser-category':entry.meta.category});
+  const entry={d,meta:browserMeta(d)},row=el('div',{class:'browser-row',...nodeColorAttributes(d),'data-browser-category':entry.meta.category});
   const key=browserEntryKey(d),button=el('button',{'data-entry':key,class:'palette-entry','aria-pressed':String(browserSelection===key)});
   button.append(browserGlyph(entry.meta.subgraph?'subgraph':'node'),el('span',{class:'palette-entry-label'},d.label),el('small',{class:'palette-entry-source'},browserSourceLabel(entry.meta.source)));
   button.title=d.label+' · '+browserBadges(entry)+'\n'+t('browser.inspect');
@@ -2090,7 +2102,7 @@ function renderCreator(){
   }
   if(!query.trim())creatorMatches.sort((a,b)=>creatorPriority(a,wire)-creatorPriority(b,wire));
   creatorIndex=Math.min(creatorIndex,Math.max(0,creatorMatches.length-1));const list=$('#createresults');list.replaceChildren();
-  creatorMatches.forEach((match,i)=>{const b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),'data-category':nodeCategory(match.d),'data-create-entry':browserEntryKey(match.d)},match.d.label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
+  creatorMatches.forEach((match,i)=>{const b=el('button',{class:'create-entry'+(i===creatorIndex?' active':''),...nodeColorAttributes(match.d),'data-create-entry':browserEntryKey(match.d)},match.d.label);if(match.port)b.append(el('small',{},match.port+' · '+match.portType));b.append(el('small',{class:'create-source'},browserBadges({d:match.d,meta:creatorMeta(match.d)})));b.dataset.browserCategory=creatorMeta(match.d).category;b.setAttribute('role','option');b.setAttribute('aria-selected',String(i===creatorIndex));b.onclick=()=>chooseCreator(i);b.onpointerenter=e=>{if(e.pointerType==='mouse')selectCreatorResult(i);};b.onfocus=()=>selectCreatorResult(i);list.append(b);});
   if(!creatorMatches.length)list.append(el('p',{class:'muted'},t('create.empty')));
   for(const button of document.querySelectorAll('[data-create-category]')){const active=button.dataset.createCategory===(query.trim()?'all':category);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;}
   renderCreatorDetails();
@@ -2547,7 +2559,7 @@ function openLinkTargets(location,x,y){
   const menu=el('div',{id:'grapheditmenu',role:'menu','aria-label':t('wire.linkTargets')});
   for(const node of nodes){
     const label=nodeCanvasTitle(node),button=el('button',{type:'button',role:'menuitem','data-link-target':node.id,title:label+' · '+node.id});
-    const caption=el('span',{class:'graph-menu-label'});caption.append(el('span',{class:'link-target-category','data-category':nodeCategory(definition(node)||{key:''},node.params),'aria-hidden':'true'}),el('span',{},label));button.append(caption);if(node.name&&node.name!==label)button.append(el('small',{},node.name));
+    const caption=el('span',{class:'graph-menu-label'});caption.append(el('span',{class:'link-target-category',...nodeColorAttributes(definition(node)||{key:''},node.params),'aria-hidden':'true'}),el('span',{},label));button.append(caption);if(node.name&&node.name!==label)button.append(el('small',{},node.name));
     button.onclick=()=>{closeGraphMenu();if(graph===owner&&current()===level)frameLinkPeers(location,node.id);};menu.append(button);
   }
   menu.append(el('div',{role:'separator',class:'popup-separator'}));

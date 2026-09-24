@@ -727,7 +727,7 @@ function nodeLabelField(n){
   return field(t('node.label'),entry);
 }
 function nodeInspectorTitle(n,d){
-  const title=el('div',{class:'node-inspector-title','data-category':nodeCategory(d||{key:''},n.params)});
+  const title=el('div',{class:'node-inspector-title',...nodeColorAttributes(d||{key:''},n.params)});
   const name=el('h3',{class:'node-inspector-name'},nodeTypeLabel(d,n.params));name.title=name.textContent;title.append(name);
   if(d&&!isSourceReferenceNode(n))title.append(nodeNameEditor(n,inspector));
   else if(d){const source=nodeSourceDeclaration(n),label=source?.name||'';title.append(el('span',{class:'node-inspector-source',title:label},label));}
@@ -2615,7 +2615,7 @@ function sourceMenuEntries(query){
   const groups=new Map();
   for(const d of tdBuiltInEntries(query)){
     const path=d.sourcePath?.join('.')||'tdBuiltin.render',rows=groups.get(path)||[];
-    const row=el('div',{class:'input-source-row','data-category':nodeCategory(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.builtinSource||d.key});
+    const row=el('div',{class:'input-source-row',...nodeColorAttributes(d)}),button=el('button',{class:'input-source-select','data-builtin-reference':d.builtinSource||d.key});
     button.append(el('span',{},builtInSourceName(d)),el('small',{},builtInSourceLabel(d)||displayType(d.outputs.out)));row.sourceDefinition=d;button.disabled=readonly;
     installCanvasItemDrag(button,()=>builtInSourceName(d),(x,y)=>addBuiltInReference(d,x,y),()=>addBuiltInReference(d));
     const more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
@@ -2713,14 +2713,15 @@ function sourceGroup(kind,label,children,create=null,query=''){
   const counts=new Map(),add=(category,count)=>{if(count)counts.set(category,(counts.get(category)||0)+count);};
   for(const child of children){
     if(child.sourceCounts)for(const [category,count]of child.sourceCounts)add(category,count);
-    else if(child.dataset.sourceAvailable==='true'||child.querySelector('[data-builtin-reference]'))add(child.dataset.category,1);
+    else if(child.dataset.sourceAvailable==='true'||child.querySelector('[data-builtin-reference]'))add(child.dataset.colorRole||child.dataset.category,1);
   }
   group.section.sourceCounts=counts;
   const badges=[];for(const [category,count]of counts){
     let badge=group.badgeByCategory.get(category);
-    if(!badge){badge=el('span',{class:'source-count','data-category':category});group.badgeByCategory.set(category,badge);}
+    const infoRole=['runtime-info','compile-info'].includes(category);
+    if(!badge){badge=el('span',{class:'source-count','data-category':infoRole?'builtin':category,'data-color-role':category});group.badgeByCategory.set(category,badge);}
     const number=String(count);if(badge.textContent!==number)badge.textContent=number;
-    const label=t('category.'+category),hint=label+' · '+t('sources.availableCount').replace('{count}',number);badge.title=hint;badge.setAttribute('aria-label',hint);badges.push(badge);
+    const label=category==='runtime-info'?'Runtime Info':category==='compile-info'?'Compile-time Info':t('category.'+category),hint=label+' · '+t('sources.availableCount').replace('{count}',number);badge.title=hint;badge.setAttribute('aria-label',hint);badges.push(badge);
   }
   reconcileSourceChildren(group.badges,badges);return group.section;
 }
@@ -2783,7 +2784,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
   let cached=sourceCardCache.get(key);
   if(!cached||cached.signature!==signature){
     const id=decl?.id,label=entry?commonPresetLabel(preset):decl.name,type=decl?.type||entry.type;
-    const card=el('div',{class:'input-source-row source-card','data-category':decl?.type==='samplerBuffer'?'texture':nodeCategory({key:decl?.kind||'uniform'}),'data-source-card':key}),head=el('div',{class:'source-card-head'}),body=el('div',{class:'source-card-body'}),toggle=el('button',{class:'source-card-toggle','aria-label':t('sources.details')}),pick=el('button',{class:'input-source-select','aria-pressed':'false'}),more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
+    const card=el('div',{class:'input-source-row source-card',...(decl?.type==='samplerBuffer'?{'data-category':'texture','data-color-role':'texture'}:nodeColorAttributes({key:decl?.kind||'uniform'})),'data-source-card':key}),head=el('div',{class:'source-card-head'}),body=el('div',{class:'source-card-body'}),toggle=el('button',{class:'source-card-toggle','aria-label':t('sources.details')}),pick=el('button',{class:'input-source-select','aria-pressed':'false'}),more=el('button',{class:'source-card-menu-button','aria-label':t('sources.actions'),'aria-haspopup':'menu'},'⋯');
     if(id)card.dataset.inputSource=id;if(preset)card.dataset.preset=preset;
     if(dormant)card.dataset.dormant='true';
     const name=el('span');if(entry){const parts=label.split('.');parts.forEach((part,index)=>{if(index)name.append('.',el('wbr'));name.append(part);});}else name.textContent=label;

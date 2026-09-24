@@ -19,3 +19,17 @@ Labels are stored as `node.ui.label`; node IDs, GLSL names, ports, Function refe
 Validation: 14 targeted browser checks, plus 8 Function rename, 12 clipboard and 8 touch/Value Ladder regressions. An actual compiler comparison confirms label-only edits preserve vertex/pixel code, semantic hash and bindings. Tests use an isolated fixture server, not the user's current graph. Static live deployment verifies current Shader data and GLSL unchanged.
 
 This does not introduce a Vector4-to-Color mode, color space conversion, Color Ramp, a new TD picker, sampler resources, or a semantic graph migration.
+
+## Source purpose colors (0.8.227)
+
+Dark-mode source titles use a display role independent of node family and browser category. This replaces 0.8.225's `tdBuiltin` menu-path coloring. `nodeCategory` retains the original family; UI-only `sourceColorRoles` and `data-color-role` project the purpose onto graph nodes, Sources, group-count badges, the inspector, creation entries and Link target markers. The compiler contract and serialized graphs do not contain these roles.
+
+| Purpose | Dark background | Representative sources |
+|---|---|---|
+| Attribute | Olive `#565141` | Position, user Attribute/Tex, TOP/MAT UV, TDNormal, TDColor/TDPointColor, TDTexCoord, instance custom attributes |
+| Runtime Info | Cherry `#62414f` | Camera/Instance Index, fragment/point coordinates, camera matrices, light data, texture/output dimensions |
+| Compile-time Info | Mist blue `#526D91` | TD_NUM_CAMERAS, TD_NUM_LIGHTS, TD_NUM_ENV_LIGHTS, TD_NUM_COLOR_BUFFERS and TOP input counts |
+
+The three roles describe the source's purpose, not strict GLSL qualifiers. Attribute includes convenient surface-coordinate sources, while runtime information can be delivered through uniforms or query functions. Compile-time information is supplied by TD and is visually distinct from user-configurable Constant/Spec Constant (`#384D73`). Sampler resources use the existing sampler palette; Uniforms, buffer resources and processing nodes such as TDInstanceTexCoord, Deform and World to Projection retain their existing families. No additional browser categories or source-tree rearrangement are introduced.
+
+Canvas/grid, Router title body color, socket/type colors and 85% white title names remain unchanged. Light mode retains its existing family palette. The role table explicitly covers the current built-in source inventory; new sources require a presentation decision rather than inferring purpose from a menu path or name prefix. Unknown sources safely fall back to their family color.
