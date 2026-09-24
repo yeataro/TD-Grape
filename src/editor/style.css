@@ -2041,7 +2041,10 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .custom-list-row.custom-drop-target{outline:0}.custom-list-row.custom-drop-target[data-drop-edge=before]{box-shadow:inset 0 2px var(--purple)}.custom-list-row.custom-drop-target[data-drop-edge=after]{box-shadow:inset 0 -2px var(--purple)}
 .custom-definition output{background:transparent;opacity:.6}.custom-definition input{color:var(--ui-text,var(--ui-tone-text))}.custom-history{display:flex;gap:6px;padding:6px 12px 0}.custom-history button{font-size:11px;padding:4px 8px}
 
-#customdialog.custom-editor{background:var(--ui-surface,var(--ui-tone-dialog));color:var(--ui-text,var(--ui-tone-dialog-text))}
+#customdialog.custom-editor{background:var(--ui-surface,var(--ui-tone-sidebar));color:var(--ui-text,var(--ui-tone-dialog-text))}
+#customdialog .custom-editor-heading{height:auto;min-height:44px;flex:none;margin:0}
+#customdialog .custom-editor-heading button{display:grid;place-items:center;flex:none;width:30px;height:30px;min-width:30px;min-height:30px;margin:0;padding:0;line-height:1}
+@media(pointer:coarse){#customdialog .custom-editor-heading{min-height:56px}#customdialog .custom-editor-heading button{width:44px;height:44px;min-width:44px;min-height:44px}}
 #customdialog .custom-editor-identity{display:flex;align-items:center;gap:8px;padding:6px 12px}#customeditoroperator{flex:1;min-width:0;padding:0;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}#customdialog .custom-history{display:flex;flex:none;gap:6px;padding:0}
 #customizeparameters{font-size:12px;min-height:36px;padding:8px 12px;max-width:65%;font-weight:600}
 :root[data-ui-theme=light] #customdialog .custom-row-pick[aria-pressed=true]{background:var(--ui-selected);color:var(--purple)}
@@ -2104,6 +2107,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .node-router:is(:hover,.selected,:focus-within)::before{content:"";position:absolute;left:0;bottom:100%;width:100%;height:8px}
 .node-router:is(:hover,.selected,:focus-within) .router-drag-handle{opacity:1;pointer-events:auto}
 .node-router .router-drag-handle:active{cursor:grabbing}
+#graph-coordinate-basis{position:absolute;left:0;top:0;width:1024px;height:1024px;visibility:hidden;pointer-events:none}
 
 /* Approved sRGB dark palette. Canvas/grid and light mode keep their own values.
    Family foregrounds remain semantic colors; only title text uses translucent white. */

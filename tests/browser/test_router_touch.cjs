@@ -22,12 +22,24 @@ const {harness}=require('./test_glsl_code.cjs');
   });
   for(const width of [430,1133]){
    await page.setViewportSize({width,height:932});
-   for(const ui of [75,100,125,150])for(const zoom of [.33,1,1.65])for(const count of [1,2,3,4,8]){
+   for(const ui of [75,80,95,100,110,125,150])for(const zoom of [.33,1,1.65])for(const count of [1,2,3,4,8]){
     await page.evaluate(({ui,zoom,count})=>{uiAppearance.scale=ui;renderUIAppearance();scale=zoom;pan={x:-45.5,y:43.25};transform();mobileRouterFixture(count,count>1?[1]:[]);},{ui,zoom,count});await settle();
     const distances=await page.evaluate(()=>routerAlignment());assert.ok(distances.every(d=>d<.8),JSON.stringify({engine,width,ui,zoom,count,distances}));
    }
   }
   checks.push('Router incoming/outgoing SVG endpoints meet actual dot/arrow centers across touch layouts, 1–4 tiers/8 edges, graph zoom and interface scale');
+  for(const ui of [80,95,110])for(const offset of [-8192,8192]){
+   await page.evaluate(({ui,offset})=>{
+    uiAppearance.scale=ui;renderUIAppearance();scale=.7;pan={x:0,y:20};mobileRouterFixture(4,[1]);
+    for(const n of current().nodes){n.ui.x+=offset;n.ui.y+=offset;}
+    pan={x:-offset*scale,y:-offset*scale};transform();render();
+   },{ui,offset});await settle();
+   assert.ok((await page.evaluate(()=>routerAlignment())).every(d=>d<.8),'Far-origin fractional-scale alignment');
+   // Zoom and pan an existing graph, without rerendering its nodes or paths.
+   await page.evaluate(offset=>{scale=1.65;pan={x:-offset*scale+25,y:-offset*scale+40};transform();},offset);await settle();
+   assert.ok((await page.evaluate(()=>routerAlignment())).every(d=>d<.8),'Existing wires drifted after zoom');
+  }
+  checks.push('Fractional interface scales preserve far-origin Router endpoints through live zoom/pan without rerendering');
   await page.setViewportSize({width:1133,height:932});
   await page.evaluate(()=>{uiAppearance.scale=100;renderUIAppearance();scale=1;pan={x:0,y:20};mobileRouterFixture(3);setGraphFocus(true);});
   const cdp=engine==='chromium'?await page.context().newCDPSession(page):null;
@@ -87,7 +99,8 @@ const {harness}=require('./test_glsl_code.cjs');
    assert.equal(await page.evaluate(()=>current().edges.length),0);assert.equal(await page.evaluate(()=>past.length),0);assert.equal(await page.locator('.wire-preview').count(),0);
    checks.push('Real touch drag connects the Router in one Undo step; pointer cancellation clears preview without graph changes');
   }
-  await page.evaluate(()=>{mobileRouterFixture(4,[1]);scale=1.65;pan={x:-180,y:30};transform();wires();});
+  await page.setViewportSize({width:430,height:932});
+  await page.evaluate(()=>{uiAppearance.scale=110;renderUIAppearance();mobileRouterFixture(4,[1]);scale=1.65;pan={x:-180,y:-100};transform();wires();});
   await page.screenshot({path:path.join(folder,'router-touch.png')});assert.deepEqual(errors,[]);await cdp?.detach();await h.finish();console.log(JSON.stringify({passed:true,engine,checks}));
  }catch(e){await h.finish(e);throw e;}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

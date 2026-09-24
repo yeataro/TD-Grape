@@ -407,10 +407,15 @@ function input(value,cb,type='text',{local=false}={}){
 }
 function current(){return currentFunction()?.graph||graph.stages[stage];}
 function ports(n,kind){if(nodeRenderProjections.has(n))return nodeRenderProjections.get(n).ports[kind];if(!definition(n))return{};return safeConcretePorts(graph,n,currentFunction())[kind];}
+function graphCoordinateBasis(){
+  // A 1px box is quantized by CSS zoom (e.g. 80% becomes 0.796875px).
+  // Measure a larger HTML basis so that error cannot grow with graph distance.
+  // HTML also avoids older WebKit SVG CTMs omitting ancestor CSS transforms.
+  const rect=$('#graph-coordinate-basis').getBoundingClientRect();
+  return {left:rect.left,top:rect.top,width:rect.width/1024,height:rect.height/1024};
+}
 function graphPoint(clientX,clientY){
-  // The 1px HTML world shares the sockets' coordinate system, including ancestor
-  // scaling. Older WebKit SVG getScreenCTM() can omit that CSS transform.
-  const rect=$('#world').getBoundingClientRect();
+  const rect=graphCoordinateBasis();
   if(!rect.width||!rect.height)return null;
   return {x:(clientX-rect.left)/rect.width,y:(clientY-rect.top)/rect.height};
 }

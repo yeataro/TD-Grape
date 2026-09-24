@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-24 0.8.226：修正非整數介面縮放造成的 Router／接線座標漂移。原本以 1px HTML world 的量測寬高換算圖座標，CSS zoom 的布局取整會把 80% 量成 0.796875px，誤差隨圖座標距離放大；改用同一 world 中的 1024px 隱藏座標基準，並讓新增節點的接孔位置預覽共用尺度。保留實際圓心量測、Router 階數／Wire／Link 排序與圖資料。Add Node 的 Categories 外層預設展開，子分類維持折疊；手動收合仍有效。Customize Parameters 主底色與側邊面板一致，關閉按鈕置中，觸控時提供 44px 按鈕與足夠的標題高度。
+
+Chromium／WebKit 各通過 210 組尺寸、介面縮放、圖縮放及 Router 階數組合，另核對正負 8192 圖座標及不重繪路徑的連續縮放／平移。Chromium 7 組、WebKit 3 組 Router 觸控／幾何流程通過，另有 Link 配置 5 組、線路命中 9 組；兩引擎各核對 12 組視窗寬度／UI 尺寸／深淺色的面板同色、關閉按鈕置中與關閉行為。iPhone Safari 實機仍待使用者 review。舊 test_creator_position 在修改前 HEAD 與修改後均於第 47 行等待雙擊選單逾時，不列為本批通過項目；JS 語法與 diff 檢查通過。39 份來源已同步，四份 Master 身分／位置及四份使用者 Shader 保留；正式 TOE 保存 2047014 bytes（SHA256 3aa9af1d5eee7c9a0d43c2e9d420a4cf477e7f2b2c9c4cfccf86f797ab31a2d4），六份登記狀態保留、私人助手排除。私人報告 reports/mobile-226/；未推送。
+
 2026-09-24 0.8.225：套用已 review 的 sRGB 暗模式節點配色，提高家族標題、本體、邊框與接線／接孔的明度；畫布與網格保持原色。節點、來源卡與 Inspector 的標題名稱統一為 85% 不透明度白色，其他文字維持各自用途的配色，不統一刷白。Router 標題採本體底色。TD Built-in Sources 依來源目錄路徑使用莓色，不連帶改變 Deform、World to Projection、Common 或 POP Buffer 的家族分類。淺色模式不變，圖與 GLSL 無格式或行為變更。
 
 隔離 Chromium 核對標題 alpha、家族範圍、Router 底色、原畫布、桌面／窄畫面及零頁面錯誤；淺色模式實際色彩與尺寸逐項和前版 CSS 相同。既有 Router 六組回歸通過，JS 語法與 diff 檢查通過。39 份來源已核對同步，四份 Master 身分／位置與四份使用者 Shader 保留；正式 TOE 保存 2046198 bytes（SHA256 b05abd589841d49f5b0968983c21b3671f566202425e40fb2935f8fbfea6fc1a），六份登記狀態保留、私人助手排除。私人報告 reports/palette-225/；未推送。

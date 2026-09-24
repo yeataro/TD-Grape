@@ -2146,7 +2146,7 @@ function beginNodePlacement(match,state,locked){
     }
     let card;nodeRenderProjections.set(n,projection);
     try{projection.name=match.d.inputPreset?commonPresetLabel(match.d.inputPreset):nodeCanvasTitle(n);card=renderNodeCard(n,measurement,new Map(graph.declarations.map(d=>[d.id,d])),projection);}finally{nodeRenderProjections.delete(n);}
-    const rect=card.getBoundingClientRect(),unit=$('#world').getBoundingClientRect().width;
+    const rect=card.getBoundingClientRect(),unit=graphCoordinateBasis().width;
     const socket=card.querySelector(`[data-kind="${state.wire.kind==='outputs'?'inputs':'outputs'}"][data-port="${CSS.escape(match.port)}"]`),sr=socket?.getBoundingClientRect();
     if(!sr)throw Error(t('type.incompatible'));
     size={width:rect.width/unit,height:rect.height/unit,title:card.querySelector('.node-title').getBoundingClientRect().height/unit,name:projection.name,port:{x:(sr.left+sr.width/2-rect.left)/unit,y:(sr.top+sr.height/2-rect.top)/unit}};
