@@ -136,7 +136,9 @@ function dragNodeTitle(event,node,title,cards,onFinish){
 
 let selection=new Set(),creatorState=null,creatorIndex=0,creatorMatches=[],creatorCategory='all',wireDrag=null,wireGesture=null,suppressPortClick=false,boxSelectMode=false;
 function inputSourceKind(d){return d.inputPreset?'uniform':d.inputKind||(['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(d.key)?d.key:null);}
-function nodeCategory(d){
+function nodeCategory(d,params=d.defaults){
+  const sourcePath=d.sourcePath||(d.key==='builtin_source'?typeContract?.composites?.sources?.[params?.source||d.builtinSource]?.path:typeContract?.sources?.nodeSources?.[d.key]?.path);
+  if(sourcePath?.[0]==='tdBuiltin')return 'td-source';
   if(d.key==='router')return 'editor';
   if(['comment','generated_glsl'].includes(d.key))return 'annotation';
   if(['compare','if'].includes(d.key))return 'logic';
@@ -1724,7 +1726,7 @@ function renderRouterCard(n,cards){
 function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     if(n.definitionUuid==='sgrape.builtin.router')return renderRouterCard(n,cards);
     const collapsed=n.ui?.collapsed===true,d=projection?.definition||definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
-    card.dataset.category=nodeCategory(d||{key:''});card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
+    card.dataset.category=nodeCategory(d||{key:''},n.params);card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
     if(isMatrixOperation(d))card.classList.add('node-matrix');
     if(isAnnotationNode(n)){
       card.dataset.noteTitleOnSelection=String(n.ui?.noteTitleOnSelection===true);card.dataset.noteTransparent=String(n.ui?.noteTransparent===true);
@@ -2545,7 +2547,7 @@ function openLinkTargets(location,x,y){
   const menu=el('div',{id:'grapheditmenu',role:'menu','aria-label':t('wire.linkTargets')});
   for(const node of nodes){
     const label=nodeCanvasTitle(node),button=el('button',{type:'button',role:'menuitem','data-link-target':node.id,title:label+' · '+node.id});
-    const caption=el('span',{class:'graph-menu-label'});caption.append(el('span',{class:'link-target-category','data-category':nodeCategory(definition(node)||{key:''}),'aria-hidden':'true'}),el('span',{},label));button.append(caption);if(node.name&&node.name!==label)button.append(el('small',{},node.name));
+    const caption=el('span',{class:'graph-menu-label'});caption.append(el('span',{class:'link-target-category','data-category':nodeCategory(definition(node)||{key:''},node.params),'aria-hidden':'true'}),el('span',{},label));button.append(caption);if(node.name&&node.name!==label)button.append(el('small',{},node.name));
     button.onclick=()=>{closeGraphMenu();if(graph===owner&&current()===level)frameLinkPeers(location,node.id);};menu.append(button);
   }
   menu.append(el('div',{role:'separator',class:'popup-separator'}));

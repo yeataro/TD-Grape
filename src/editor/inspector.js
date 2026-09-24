@@ -727,7 +727,7 @@ function nodeLabelField(n){
   return field(t('node.label'),entry);
 }
 function nodeInspectorTitle(n,d){
-  const title=el('div',{class:'node-inspector-title','data-category':nodeCategory(d||{key:''})});
+  const title=el('div',{class:'node-inspector-title','data-category':nodeCategory(d||{key:''},n.params)});
   const name=el('h3',{class:'node-inspector-name'},nodeTypeLabel(d,n.params));name.title=name.textContent;title.append(name);
   if(d&&!isSourceReferenceNode(n))title.append(nodeNameEditor(n,inspector));
   else if(d){const source=nodeSourceDeclaration(n),label=source?.name||'';title.append(el('span',{class:'node-inspector-source',title:label},label));}

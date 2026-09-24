@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-24 0.8.225：套用已 review 的 sRGB 暗模式節點配色，提高家族標題、本體、邊框與接線／接孔的明度；畫布與網格保持原色。節點、來源卡與 Inspector 的標題名稱統一為 85% 不透明度白色，其他文字維持各自用途的配色，不統一刷白。Router 標題採本體底色。TD Built-in Sources 依來源目錄路徑使用莓色，不連帶改變 Deform、World to Projection、Common 或 POP Buffer 的家族分類。淺色模式不變，圖與 GLSL 無格式或行為變更。
+
+隔離 Chromium 核對標題 alpha、家族範圍、Router 底色、原畫布、桌面／窄畫面及零頁面錯誤；淺色模式實際色彩與尺寸逐項和前版 CSS 相同。既有 Router 六組回歸通過，JS 語法與 diff 檢查通過。39 份來源已核對同步，四份 Master 身分／位置與四份使用者 Shader 保留；正式 TOE 保存 2046198 bytes（SHA256 b05abd589841d49f5b0968983c21b3671f566202425e40fb2935f8fbfea6fc1a），六份登記狀態保留、私人助手排除。私人報告 reports/palette-225/；未推送。
+
 2026-09-24 0.8.224：補齊 textureGatherOffset、textureGatherOffsets、textureProjOffset、textureProjLodOffset、textureProjGradOffset，共 13 個維度入口，catalog 共 355 份定義。沿用既有 Texture 分類與 sampler 資源，加入 ivec2[4] 固定陣列輸入及常數中間值資格，五語 Help 說明維度、常數與 Stage 限制。自訂 Sampler 來源仍限 Pixel；其他資源綁定未擴充。詳見 [Offset Sampling](../features/TEXTURE_OFFSET_SAMPLING.md)。
 
 39 組 TD 簽名編譯、20 組 TOP／MAT Pixel 原生取樣對照（最大誤差 0）、常數／動態偏移與失敗保留共 6 組、3 組 Chromium 操作通過。138 份舊圖輸出與修改前相同。完整 Python suite 的三项舊失敗已在 HEAD 重現，未宣稱全套通過，見測試紀錄；其餘可攜檢查通過。39 份來源已同步，四份 Master 身分／位置與四份使用者 Shader 保留。TOE 已保存 1958006 bytes（SHA256 303f4457ad44978426f73d9e0e40ee68577eebdc7f0112623ad0378e9cd75e25）；六份登記狀態保留、私人助手排除。熱更新中舊 core 曾讀到新陣列 catalog 而輸出 Invalid catalog ports；刷新結束後核心契約與四份 Master 原生驗證通過。私人報告 reports/texture-offsets-224/；未推送。
