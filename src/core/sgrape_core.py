@@ -304,7 +304,7 @@ def validate_catalog(document):
             if not isinstance(d.get('defaults'),dict) or not isinstance(d.get('inputDefaults',{}),dict):raise GraphError('Invalid catalog defaults')
             for direction in ('inputs','outputs'):
                 ports=d.get(direction)
-                if not isinstance(ports,dict) or any(not ID.fullmatch(port) or ty not in (*PORT_TYPES,'T','D') for port,ty in ports.items()):raise GraphError('Invalid catalog ports')
+                if not isinstance(ports,dict) or any(not ID.fullmatch(port) or (ty not in ('T','D') and not valid_port_type(ty)) for port,ty in ports.items()):raise GraphError('Invalid catalog ports')
             emitter=entry.get('emitter')
             if not isinstance(emitter,dict) or emitter.get('id')!=key or type(emitter.get('version')) is not int or emitter['version']!=1:
                 raise GraphError('Unsupported catalog emitter')
@@ -1289,6 +1289,10 @@ def _compile_flat(graph,annotation_scopes=None):
             for ident in order:
                 if defs[ident]['key'] in (*VECTOR_KEYS,*MATRIX_KEYS,'vec4','compare','if') or nodes[ident]['params'].get('requireConstant'):
                     for output in needed_outputs[ident]:demand_constant(ident,output)
+                # GLSL requires const-qualified intermediate values as well as
+                # a constant dependency chain for native constant operands.
+                for port in _legacy_nodes.CALLS.get(defs[ident]['key'],{}).get('constantInputs',[]):
+                    if (ident,port) in links:demand_constant(*links[(ident,port)])
             for ident in sorted(set(nodes)-live):
                 if defs[ident]['key'] not in ('comment','generated_glsl'):diagnostics.append({'node':ident,'stage':stage,'message':'Disconnected node is not emitted'})
             symbols=node_output_symbols(nodes,defs,ports)

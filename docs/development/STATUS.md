@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-24 0.8.224：補齊 textureGatherOffset、textureGatherOffsets、textureProjOffset、textureProjLodOffset、textureProjGradOffset，共 13 個維度入口，catalog 共 355 份定義。沿用既有 Texture 分類與 sampler 資源，加入 ivec2[4] 固定陣列輸入及常數中間值資格，五語 Help 說明維度、常數與 Stage 限制。自訂 Sampler 來源仍限 Pixel；其他資源綁定未擴充。詳見 [Offset Sampling](../features/TEXTURE_OFFSET_SAMPLING.md)。
+
+39 組 TD 簽名編譯、20 組 TOP／MAT Pixel 原生取樣對照（最大誤差 0）、常數／動態偏移與失敗保留共 6 組、3 組 Chromium 操作通過。138 份舊圖輸出與修改前相同。完整 Python suite 的三项舊失敗已在 HEAD 重現，未宣稱全套通過，見測試紀錄；其餘可攜檢查通過。39 份來源已同步，四份 Master 身分／位置與四份使用者 Shader 保留。TOE 已保存 1958006 bytes（SHA256 303f4457ad44978426f73d9e0e40ee68577eebdc7f0112623ad0378e9cd75e25）；六份登記狀態保留、私人助手排除。熱更新中舊 core 曾讀到新陣列 catalog 而輸出 Invalid catalog ports；刷新結束後核心契約與四份 Master 原生驗證通過。私人報告 reports/texture-offsets-224/；未推送。
+
 2026-09-23 0.8.223：Router 線端改採實際圓心定位，觸控接線補齊 Router 接孔的雙向判斷。長按保存原邊物件，依該邊開啟 Wire／Link 選單，不受其他選取或邊陣列換序影響；線本身優先於附近接孔的擴大觸控半徑，觸控模式的 Wire／Link 項目也採 44px 最小高度。圖格式、運算與 GLSL 不變。
 
 Chromium 新增觸控 6、既有 Router 6、Link 配置 5、線命中 9、Link 導覽 16 組通過；WebKit 幾何及原生 tap 2 組通過。兩引擎各核對 120 種尺寸／縮放／階數組合。修改前可重現長按選單及單圓接入問題；截圖的手機偏移未在新版測試引擎完整重現，Safari 實機仍待 review。舊綜合觸控測試在修改前後都有 fixture 失敗，詳見測試紀錄，不列為通過。39 份來源同步，四份 Master 身分／位置與四份使用者 Shader 保留。TOE 保存 1942596 bytes（SHA256 3406471b405fdaa834c70f7ad66663b65443baf777b506501038e47f74922122）。私人報告 reports/router-touch-223/；未推送。

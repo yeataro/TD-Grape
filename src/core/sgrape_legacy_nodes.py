@@ -211,6 +211,16 @@ for sampler,(uv,size) in SAMPLERS.items():
     if sampler in ('sampler1D','sampler2D','sampler3D'):
         for label,fn,extra in [('lod','textureProjLod',[('lod','float')]),('grad','textureProjGrad',[('dx',grad),('dy',grad)])]:
             fixed('texture_proj_'+label+'_'+suffix,fn,[('sampler',sampler),('uv',proj)]+extra,'vec4',constant=False,section='8.9')
+        for label,fn,extra in [('offset','textureProjOffset',[]),('lod_offset','textureProjLodOffset',[('lod','float')]),('grad_offset','textureProjGradOffset',[('dx',grad),('dy',grad)])]:
+            key='texture_proj_'+label+'_'+suffix
+            fixed(key,fn,[('sampler',sampler),('uv',proj)]+extra+[('offset',size)],'vec4',constant=False,section='8.9',defaults={'uv':1})
+            CALLS[key]['constantInputs']=['offset']
+    if sampler in ('sampler2D','sampler2DArray'):
+        for label,fn,port,ty in [('offset','textureGatherOffset','offset','ivec2'),('offsets','textureGatherOffsets','offsets','ivec2[4]')]:
+            key='texture_gather_'+label+'_'+suffix
+            fixed(key,fn,[('sampler',sampler),('uv',uv),(port,ty),('component','int')],'vec4',constant=False,section='8.9')
+            # Unlike textureOffset, the single gather offset may be dynamic.
+            CALLS[key]['constantInputs']=['component']+(['offsets'] if port=='offsets' else [])
 
 # Lighting results are exposed as individual outputs, so no duplicate host
 # struct declaration or new graph-owned type is required.

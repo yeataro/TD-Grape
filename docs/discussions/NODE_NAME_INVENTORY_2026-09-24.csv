@@ -1,0 +1,343 @@
+﻿key,label,glsl_name,source,category_path,stages
+router,Router,,editor,editor,vertex/pixel
+math,Math,,editor,math/arithmetic,vertex/pixel
+switch,Switch,switch,editor,logic,vertex/pixel
+scalar,Scalar,scalar,editor,data/values,vertex/pixel
+convert,Convert,convert,editor,data/values,vertex/pixel
+matrix_convert,Matrix Convert,matrix constructor,editor,matrix/construct,vertex/pixel
+compare,Compare,">, >=, <, <=, ==, !=",editor,logic,vertex/pixel
+if,If,?:,editor,logic,vertex/pixel
+comment,Comment,,editor,editor,vertex/pixel
+generated_glsl,Generated GLSL,,editor,editor,vertex/pixel
+float,Float,float,editor,data/values,vertex/pixel
+vec2,Vector 2,vec2,editor,data/values,vertex/pixel
+vec3,Vector 3,vec3,editor,data/values,vertex/pixel
+color,Color RGBA,color,editor,color/construct,vertex/pixel
+add,Add,+,glsl,math/arithmetic,vertex/pixel
+multiply,Multiply,*,glsl,math/arithmetic,vertex/pixel
+mix,Mix,mix,glsl,math/interpolation,vertex/pixel
+sin,Sine,sin,glsl,math/trigonometry,vertex/pixel
+subtract,Subtract,-,glsl,math/arithmetic,vertex/pixel
+divide,Divide,/,glsl,math/arithmetic,vertex/pixel
+min,Minimum,min,glsl,math/range,vertex/pixel
+max,Maximum,max,glsl,math/range,vertex/pixel
+clamp,Clamp,clamp,glsl,math/range,vertex/pixel
+smoothstep,Smoothstep,smoothstep,glsl,math/interpolation,vertex/pixel
+abs,Absolute,abs,glsl,math/arithmetic,vertex/pixel
+fract,Fraction,fract,glsl,math/range,vertex/pixel
+pow,Power,pow,glsl,math/exponential,vertex/pixel
+cos,Cosine,cos,glsl,math/trigonometry,vertex/pixel
+dot,Dot Product,dot,glsl,vector,vertex/pixel
+length,Length,length,glsl,vector,vertex/pixel
+normalize,Normalize,normalize,glsl,vector,vertex/pixel
+rgba,Compose RGBA,rgba,editor,color/construct,vertex/pixel
+split,Split RGBA,split,editor,color/construct,vertex/pixel
+uniform,Uniform,uniform,editor,inputs/uniforms,vertex/pixel
+uv,Texture Coordinates,uv,td,inputs/common/coordinates,pixel
+texture,Texture 2D,texture,glsl,texture/2d,pixel
+position,TD Position,position,td,inputs/tdBuiltin/geometry,vertex
+deform,TD Deform,TDDeform,td,coordinate,vertex
+to_clip,World to Projection,TDWorldToProj,td,coordinate,vertex
+vertex_out,Vertex Output,vertex_out,td,shader/stage,vertex
+pixel_out,Color Output,pixel_out,td,shader/stage,pixel
+sampler,Sampler 2D,sampler2D,glsl,inputs/textures/samplers,pixel
+texture_sample,Texture 2D,texture,glsl,texture/2d,pixel
+constant,Constant,,editor,inputs/constants,vertex/pixel
+top_input,TOP Input,,td,inputs/textures/topInputs,pixel
+glsl_code,GLSL Code,void,editor,shader/code,vertex/pixel
+vec4,Vector 4,vec4,editor,data/values,vertex/pixel
+combine,Combine,vecN,glsl,vector,vertex/pixel
+vector_split,Split,vector_split,glsl,vector,vertex/pixel
+swizzle,Swizzle,swizzle,glsl,vector,vertex/pixel
+vector,Vector,vecN,glsl,vector,vertex/pixel
+replace,Replace,vecN,glsl,vector,vertex/pixel
+spec_constant,Spec Constant,constant_id,td,inputs/specConstants,vertex/pixel
+sign,Sign,sign,glsl,math/arithmetic,vertex/pixel
+sqrt,Sqrt,sqrt,glsl,math/exponential,vertex/pixel
+floor,Floor,floor,glsl,math/range,vertex/pixel
+round,Round,round,glsl,math/range,vertex/pixel
+ceil,Ceil,ceil,glsl,math/range,vertex/pixel
+trunc,Truncate,trunc,glsl,math/range,vertex/pixel
+mod,Modulo,mod,glsl,math/range,vertex/pixel
+rgb_to_hsv,RGB to HSV,TDRGBToHSV,td,color/conversion,vertex/pixel
+hsv_to_rgb,HSV to RGB,TDHSVToRGB,td,color/conversion,vertex/pixel
+remap,Remap,TDRemap,td,math/range,vertex/pixel
+range_from,Range From,(A - B) / (C - B),editor,math/range,vertex/pixel
+range_to,Range To,A * (C - B) + B,editor,math/range,vertex/pixel
+loop,Loop,TDLoop,td,math/range,vertex/pixel
+zigzag,Zigzag,TDZigZag,td,math/range,vertex/pixel
+perlin_noise,Perlin Noise,TDPerlinNoise,td,math/noise,vertex/pixel
+simplex_noise,Simplex Noise,TDSimplexNoise,td,math/noise,vertex/pixel
+matrix,Matrix,matrix,editor,matrix/construct,vertex/pixel
+matrix_combine,Matrix Combine,matrix_combine,editor,matrix/construct,vertex/pixel
+matrix_replace,Matrix Replace,matrix_replace,editor,matrix/construct,vertex/pixel
+matrix_split,Matrix Split,matrix_split,editor,matrix/construct,vertex/pixel
+matrix_get,Matrix Get,matrix_get,editor,matrix/construct,vertex/pixel
+matrix_set,Matrix Set,matrix_set,editor,matrix/construct,vertex/pixel
+transpose,Transpose,transpose,editor,matrix/algebra,vertex/pixel
+inverse,Inverse,inverse,editor,matrix/algebra,vertex/pixel
+determinant,Determinant,determinant,editor,matrix/algebra,vertex/pixel
+matrix_comp_mult,Matrix Component Multiply,matrixCompMult,editor,matrix/algebra,vertex/pixel
+outer_product,Outer Product,outerProduct,editor,matrix/algebra,vertex/pixel
+array,Array,Array,editor,data/arrays,vertex/pixel
+array_get,Array[i],Array[i],editor,data/arrays,vertex/pixel
+array_replace,Array Replace,Array Replace,editor,data/arrays,vertex/pixel
+array_length,Array Length,Array Length,editor,data/arrays,vertex/pixel
+struct_field,Field,Field,editor,data/structures,vertex/pixel
+builtin_source,Built-in Source,,editor,inputs/tdBuiltin,vertex/pixel
+array_create,Array Create,Array Create,editor,data/arrays,vertex/pixel
+buffer_fetch,Buffer Fetch,texelFetch,glsl,texture/buffer,vertex/pixel
+buffer_length,Buffer Length,textureSize,glsl,texture/buffer,vertex/pixel
+pop_buffer,POP Buffer,TDBuffer,td,inputs/popBuffers,vertex/pixel
+attribute,Attribute,TDAttrib,td,inputs/tdBuiltin/geometry,vertex
+struct_create,Structure,Structure,editor,data/structures,vertex/pixel
+radians,radians,radians,glsl,math/trigonometry,vertex/pixel
+degrees,degrees,degrees,glsl,math/trigonometry,vertex/pixel
+tan,tan,tan,glsl,math/trigonometry,vertex/pixel
+asin,asin,asin,glsl,math/trigonometry,vertex/pixel
+acos,acos,acos,glsl,math/trigonometry,vertex/pixel
+atan,atan,atan,glsl,math/trigonometry,vertex/pixel
+sinh,sinh,sinh,glsl,math/trigonometry,vertex/pixel
+cosh,cosh,cosh,glsl,math/trigonometry,vertex/pixel
+tanh,tanh,tanh,glsl,math/trigonometry,vertex/pixel
+asinh,asinh,asinh,glsl,math/trigonometry,vertex/pixel
+acosh,acosh,acosh,glsl,math/trigonometry,vertex/pixel
+atanh,atanh,atanh,glsl,math/trigonometry,vertex/pixel
+atan2,"atan (y, x)",atan,glsl,math/trigonometry,vertex/pixel
+exp,exp,exp,glsl,math/exponential,vertex/pixel
+log,log,log,glsl,math/exponential,vertex/pixel
+exp2,exp2,exp2,glsl,math/exponential,vertex/pixel
+log2,log2,log2,glsl,math/exponential,vertex/pixel
+inversesqrt,inversesqrt,inversesqrt,glsl,math/exponential,vertex/pixel
+round_even,roundEven,roundEven,glsl,math/range,vertex/pixel
+step,step,step,glsl,math/range,vertex/pixel
+isnan,isnan,isnan,glsl,logic,vertex/pixel
+isinf,isinf,isinf,glsl,logic,vertex/pixel
+fma,fma,fma,glsl,math/arithmetic,vertex/pixel
+modf,modf,modf,glsl,math/range,vertex/pixel
+frexp,frexp,frexp,glsl,math/exponential,vertex/pixel
+ldexp,ldexp,ldexp,glsl,math/exponential,vertex/pixel
+mix_boolean,Boolean Mix,mix,glsl,logic,vertex/pixel
+mix_components,Component Mix,mix,glsl,math/interpolation,vertex/pixel
+step_scalar,Scalar Edge Step,step,glsl,math/range,vertex/pixel
+bit_and,Bit And,&,glsl,data/bits,vertex/pixel
+bit_or,Bit Or,|,glsl,data/bits,vertex/pixel
+bit_xor,Bit Xor,^,glsl,data/bits,vertex/pixel
+bit_not,Bit Not,~,glsl,data/bits,vertex/pixel
+shift_left,Shift Left,<<,glsl,data/bits,vertex/pixel
+shift_right,Shift Right,>>,glsl,data/bits,vertex/pixel
+remainder,Remainder,%,glsl,math/range,vertex/pixel
+boolean_and,Boolean And,&&,glsl,logic,vertex/pixel
+boolean_or,Boolean Or,||,glsl,logic,vertex/pixel
+boolean_xor,Boolean Xor,^^,glsl,logic,vertex/pixel
+boolean_not,Boolean Not,!,glsl,logic,vertex/pixel
+floatBitsToInt,floatBitsToInt,floatBitsToInt,glsl,data/packing,vertex/pixel
+floatBitsToUint,floatBitsToUint,floatBitsToUint,glsl,data/packing,vertex/pixel
+intBitsToFloat,intBitsToFloat,intBitsToFloat,glsl,data/packing,vertex/pixel
+uintBitsToFloat,uintBitsToFloat,uintBitsToFloat,glsl,data/packing,vertex/pixel
+packUnorm2x16,packUnorm2x16,packUnorm2x16,glsl,data/packing,vertex/pixel
+packSnorm2x16,packSnorm2x16,packSnorm2x16,glsl,data/packing,vertex/pixel
+packHalf2x16,packHalf2x16,packHalf2x16,glsl,data/packing,vertex/pixel
+packUnorm4x8,packUnorm4x8,packUnorm4x8,glsl,data/packing,vertex/pixel
+packSnorm4x8,packSnorm4x8,packSnorm4x8,glsl,data/packing,vertex/pixel
+unpackUnorm2x16,unpackUnorm2x16,unpackUnorm2x16,glsl,data/packing,vertex/pixel
+unpackSnorm2x16,unpackSnorm2x16,unpackSnorm2x16,glsl,data/packing,vertex/pixel
+unpackHalf2x16,unpackHalf2x16,unpackHalf2x16,glsl,data/packing,vertex/pixel
+unpackUnorm4x8,unpackUnorm4x8,unpackUnorm4x8,glsl,data/packing,vertex/pixel
+unpackSnorm4x8,unpackSnorm4x8,unpackSnorm4x8,glsl,data/packing,vertex/pixel
+packDouble2x32,packDouble2x32,packDouble2x32,glsl,data/packing,vertex/pixel
+unpackDouble2x32,unpackDouble2x32,unpackDouble2x32,glsl,data/packing,vertex/pixel
+distance,distance,distance,glsl,vector,vertex/pixel
+cross,cross,cross,glsl,vector,vertex/pixel
+faceforward,faceforward,faceforward,glsl,vector,vertex/pixel
+reflect,reflect,reflect,glsl,vector,vertex/pixel
+refract,refract,refract,glsl,vector,vertex/pixel
+lessThan,lessThan,lessThan,glsl,logic,vertex/pixel
+lessThanEqual,lessThanEqual,lessThanEqual,glsl,logic,vertex/pixel
+greaterThan,greaterThan,greaterThan,glsl,logic,vertex/pixel
+greaterThanEqual,greaterThanEqual,greaterThanEqual,glsl,logic,vertex/pixel
+equal,equal,equal,glsl,logic,vertex/pixel
+notEqual,notEqual,notEqual,glsl,logic,vertex/pixel
+any,any,any,glsl,logic,vertex/pixel
+all,all,all,glsl,logic,vertex/pixel
+not,not,not,glsl,logic,vertex/pixel
+bitfieldReverse,bitfieldReverse,bitfieldReverse,glsl,data/bits,vertex/pixel
+bitCount,bitCount,bitCount,glsl,data/bits,vertex/pixel
+findLSB,findLSB,findLSB,glsl,data/bits,vertex/pixel
+findMSB,findMSB,findMSB,glsl,data/bits,vertex/pixel
+bitfieldExtract,bitfieldExtract,bitfieldExtract,glsl,data/bits,vertex/pixel
+bitfieldInsert,bitfieldInsert,bitfieldInsert,glsl,data/bits,vertex/pixel
+uaddCarry,uaddCarry,uaddCarry,glsl,data/bits,vertex/pixel
+usubBorrow,usubBorrow,usubBorrow,glsl,data/bits,vertex/pixel
+umulExtended,umulExtended,umulExtended,glsl,data/bits,vertex/pixel
+imulExtended,imulExtended,imulExtended,glsl,data/bits,vertex/pixel
+dFdx,dFdx,dFdx,glsl,math/derivatives,pixel
+dFdy,dFdy,dFdy,glsl,math/derivatives,pixel
+fwidth,fwidth,fwidth,glsl,math/derivatives,pixel
+dFdxFine,dFdxFine,dFdxFine,glsl,math/derivatives,pixel
+dFdyFine,dFdyFine,dFdyFine,glsl,math/derivatives,pixel
+fwidthFine,fwidthFine,fwidthFine,glsl,math/derivatives,pixel
+dFdxCoarse,dFdxCoarse,dFdxCoarse,glsl,math/derivatives,pixel
+dFdyCoarse,dFdyCoarse,dFdyCoarse,glsl,math/derivatives,pixel
+fwidthCoarse,fwidthCoarse,fwidthCoarse,glsl,math/derivatives,pixel
+td_average,TDAverage,TDAverage,td,math/arithmetic,vertex/pixel
+td_rotate_to_vector,TDRotateToVector,TDRotateToVector,td,matrix/transforms,vertex/pixel
+td_rotate_on_axis,TDRotateOnAxis,TDRotateOnAxis,td,matrix/transforms,vertex/pixel
+td_rotate_x,TDRotateX,TDRotateX,td,matrix/transforms,vertex/pixel
+td_rotate_y,TDRotateY,TDRotateY,td,matrix/transforms,vertex/pixel
+td_rotate_z,TDRotateZ,TDRotateZ,td,matrix/transforms,vertex/pixel
+td_scale,TDScale,TDScale,td,matrix/transforms,vertex/pixel
+td_translate,TDTranslate,TDTranslate,td,matrix/transforms,vertex/pixel
+td_create_rot_matrix,TDCreateRotMatrix,TDCreateRotMatrix,td,matrix/transforms,vertex/pixel
+td_create_tbn_matrix,TDCreateTBNMatrix,TDCreateTBNMatrix,td,matrix/transforms,vertex/pixel
+td_fade,TDFade,TDFade,td,math/noise,vertex/pixel
+td_fade_deriv,TDFadeDeriv,TDFadeDeriv,td,math/noise,vertex/pixel
+td_sine_lookup,TDSineLookup,TDSineLookup,td,math/trigonometry,vertex/pixel
+td_perlin_noise_deriv,TDPerlinNoiseDeriv,TDPerlinNoiseDeriv,td,math/noise,vertex/pixel
+td_perlin_noise_deriv_noise,TDPerlinNoiseDeriv,TDPerlinNoiseDeriv,td,math/noise,vertex/pixel
+td_simplex_noise_deriv,TDSimplexNoiseDeriv,TDSimplexNoiseDeriv,td,math/noise,vertex/pixel
+td_simplex_noise_deriv_noise,TDSimplexNoiseDeriv,TDSimplexNoiseDeriv,td,math/noise,vertex/pixel
+td_luminance,TDLuminance,TDLuminance,td,color/conversion,vertex/pixel
+td_gamut_rec709torec2020,TDGamutRec709ToRec2020,TDGamutRec709ToRec2020,td,color/conversion,pixel
+td_gamut_rec2020torec709,TDGamutRec2020ToRec709,TDGamutRec2020ToRec709,td,color/conversion,pixel
+td_transfer_lineartosrgb,TDTransferLinearToSRGB,TDTransferLinearToSRGB,td,color/transfer,pixel
+td_transfer_srgbtolinear,TDTransferSRGBToLinear,TDTransferSRGBToLinear,td,color/transfer,pixel
+td_transfer_lineartorec709,TDTransferLinearToRec709,TDTransferLinearToRec709,td,color/transfer,pixel
+td_transfer_rec709tolinear,TDTransferRec709ToLinear,TDTransferRec709ToLinear,td,color/transfer,pixel
+td_transfer_lineartogamma1_8,TDTransferLinearToGamma1_8,TDTransferLinearToGamma1_8,td,color/transfer,pixel
+td_transfer_gamma1_8tolinear,TDTransferGamma1_8ToLinear,TDTransferGamma1_8ToLinear,td,color/transfer,pixel
+td_transfer_lineartogamma2_2,TDTransferLinearToGamma2_2,TDTransferLinearToGamma2_2,td,color/transfer,pixel
+td_transfer_gamma2_2tolinear,TDTransferGamma2_2ToLinear,TDTransferGamma2_2ToLinear,td,color/transfer,pixel
+td_transfer_lineartogamma2_4,TDTransferLinearToGamma2_4,TDTransferLinearToGamma2_4,td,color/transfer,pixel
+td_transfer_gamma2_4tolinear,TDTransferGamma2_4ToLinear,TDTransferGamma2_4ToLinear,td,color/transfer,pixel
+td_transfer_lineartogamma2_6,TDTransferLinearToGamma2_6,TDTransferLinearToGamma2_6,td,color/transfer,pixel
+td_transfer_gamma2_6tolinear,TDTransferGamma2_6ToLinear,TDTransferGamma2_6ToLinear,td,color/transfer,pixel
+td_transfer_lineartogamma2_8,TDTransferLinearToGamma2_8,TDTransferLinearToGamma2_8,td,color/transfer,pixel
+td_transfer_gamma2_8tolinear,TDTransferGamma2_8ToLinear,TDTransferGamma2_8ToLinear,td,color/transfer,pixel
+td_transfer_lineartoacesproxy,TDTransferLinearToACESproxy,TDTransferLinearToACESproxy,td,color/transfer,pixel
+td_transfer_acesproxytolinear,TDTransferACESproxyToLinear,TDTransferACESproxyToLinear,td,color/transfer,pixel
+td_transfer_lineartost2084pq,TDTransferLinearToST2084PQ,TDTransferLinearToST2084PQ,td,color/transfer,pixel
+td_transfer_st2084pqtolinear,TDTransferST2084PQToLinear,TDTransferST2084PQToLinear,td,color/transfer,pixel
+td_transfer_lineartobt2100hlg,TDTransferLinearToBT2100HLG,TDTransferLinearToBT2100HLG,td,color/transfer,pixel
+td_transfer_bt2100hlgtolinear,TDTransferBT2100HLGToLinear,TDTransferBT2100HLGToLinear,td,color/transfer,pixel
+td_triplanar_blend,TDTriplanarBlend,TDTriplanarBlend,td,coordinate,vertex/pixel
+td_bicubic,TDBicubicInterpolation · sampler2D,TDBicubicInterpolation,td,texture/2d,vertex/pixel
+td_bicubic_size,TDBicubicInterpolation · sampler2D · Size,TDBicubicInterpolation,td,texture/2d,vertex/pixel
+td_tricubic,TDTricubicInterpolation · sampler3D,TDTricubicInterpolation,td,texture/3d,vertex/pixel
+td_tricubic_size,TDTricubicInterpolation · sampler3D · Size,TDTricubicInterpolation,td,texture/3d,vertex/pixel
+td_texgen_sphere,TDTexGenSphere,TDTexGenSphere,td,coordinate,vertex/pixel
+td_equirectangular_to_cube,TDEquirectangularToCubeMap,TDEquirectangularToCubeMap,td,coordinate,vertex/pixel
+td_cube_to_equirectangular,TDCubeMapToEquirectangular,TDCubeMapToEquirectangular,td,coordinate,vertex/pixel
+td_deform_normal,TDDeformNorm,TDDeformNorm,td,coordinate,vertex
+td_deform_vector,TDDeformVec,TDDeformVec,td,coordinate,vertex
+td_skinned_deform,TDSkinnedDeform,TDSkinnedDeform,td,coordinate,vertex
+td_skinned_vector,TDSkinnedDeformVec,TDSkinnedDeformVec,td,coordinate,vertex
+td_instance_deform,TDInstanceDeform,TDInstanceDeform,td,coordinate,vertex
+td_instance_vector,TDInstanceDeformVec,TDInstanceDeformVec,td,coordinate,vertex
+td_deform_instance,TDDeform · Instance,TDDeform,td,coordinate,vertex
+td_deform_normal_instance,TDDeformNorm · Instance,TDDeformNorm,td,coordinate,vertex
+td_deform_vector_instance,TDDeformVec · Instance,TDDeformVec,td,coordinate,vertex
+td_instance_texcoord,TDInstanceTexCoord,TDInstanceTexCoord,td,coordinate,vertex
+td_quad_reproject,TDQuadReproject,TDQuadReproject,td,coordinate,vertex
+td_world_to_proj_uv,TDWorldToProj,TDWorldToProj,td,coordinate,vertex
+td_front_facing,TDFrontFacing,TDFrontFacing,td,logic,pixel
+td_pixel_color,TDPixelColor,TDPixelColor,td,color/conversion,pixel
+td_fog,TDFog,TDFog,td,shader/stage,pixel
+td_hardshadow,TDHardShadow,TDHardShadow,td,shader/shadows,pixel
+td_softshadow,TDSoftShadow,TDSoftShadow,td,shader/shadows,pixel
+td_projmap,TDProjMap,TDProjMap,td,texture/projection,pixel
+td_compareshadowtexture,TDCompareShadowTexture,TDCompareShadowTexture,td,shader/shadows,pixel
+td_compareshadowtextureproj,TDCompareShadowTextureProj,TDCompareShadowTextureProj,td,shader/shadows,pixel
+td_shadowtexture,TDShadowTexture,TDShadowTexture,td,shader/shadows,pixel
+td_shadowtextureproj,TDShadowTextureProj,TDShadowTextureProj,td,shader/shadows,pixel
+td_projtexture,TDProjTexture,TDProjTexture,td,texture/projection,pixel
+td_projtextureproj,TDProjTextureProj,TDProjTextureProj,td,texture/projection,pixel
+td_conelookup,TDConeLookup,TDConeLookup,td,shader/lighting,pixel
+td_env_light_texture,TDEnvLightTextureLod,TDEnvLightTextureLod,td,texture/projection,pixel
+td_attenuate_light,TDAttenuateLight,TDAttenuateLight,td,shader/lighting,pixel
+td_instance_color,TDInstanceColor,TDInstanceColor,td,color/conversion,vertex
+td_instance_texture,TDInstanceTexture,TDInstanceTexture,td,texture/2d,vertex/pixel
+texture_size_1d,textureSize · sampler1D,textureSize,glsl,texture/1d,vertex/pixel
+texture_levels_1d,textureQueryLevels · sampler1D,textureQueryLevels,glsl,texture/1d,vertex/pixel
+texture_sample_1d,texture · sampler1D,texture,glsl,texture/1d,vertex/pixel
+texture_lod_1d,textureLod · sampler1D,textureLod,glsl,texture/1d,vertex/pixel
+texture_bias_1d,texture · sampler1D · Bias,texture,glsl,texture/1d,pixel
+texture_grad_1d,textureGrad · sampler1D,textureGrad,glsl,texture/1d,vertex/pixel
+texel_fetch_1d,texelFetch · sampler1D,texelFetch,glsl,texture/1d,vertex/pixel
+texture_proj_1d,textureProj · sampler1D,textureProj,glsl,texture/1d,vertex/pixel
+texture_query_lod_1d,textureQueryLod · sampler1D,textureQueryLod,glsl,texture/1d,pixel
+texture_offset_1d,textureOffset · sampler1D,textureOffset,glsl,texture/1d,vertex/pixel
+texture_lod_offset_1d,textureLodOffset · sampler1D,textureLodOffset,glsl,texture/1d,vertex/pixel
+texture_grad_offset_1d,textureGradOffset · sampler1D,textureGradOffset,glsl,texture/1d,vertex/pixel
+texel_fetch_offset_1d,texelFetchOffset · sampler1D,texelFetchOffset,glsl,texture/1d,vertex/pixel
+texture_proj_lod_1d,textureProjLod · sampler1D,textureProjLod,glsl,texture/1d,vertex/pixel
+texture_proj_grad_1d,textureProjGrad · sampler1D,textureProjGrad,glsl,texture/1d,vertex/pixel
+texture_size_2d,textureSize · sampler2D,textureSize,glsl,texture/2d,vertex/pixel
+texture_levels_2d,textureQueryLevels · sampler2D,textureQueryLevels,glsl,texture/2d,vertex/pixel
+texture_sample_2d,texture · sampler2D,texture,glsl,texture/2d,vertex/pixel
+texture_lod_2d,textureLod · sampler2D,textureLod,glsl,texture/2d,vertex/pixel
+texture_bias_2d,texture · sampler2D · Bias,texture,glsl,texture/2d,pixel
+texture_grad_2d,textureGrad · sampler2D,textureGrad,glsl,texture/2d,vertex/pixel
+texel_fetch_2d,texelFetch · sampler2D,texelFetch,glsl,texture/2d,vertex/pixel
+texture_proj_2d,textureProj · sampler2D,textureProj,glsl,texture/2d,vertex/pixel
+texture_query_lod_2d,textureQueryLod · sampler2D,textureQueryLod,glsl,texture/2d,pixel
+texture_gather_2d,textureGather · sampler2D,textureGather,glsl,texture/2d,vertex/pixel
+texture_offset_2d,textureOffset · sampler2D,textureOffset,glsl,texture/2d,vertex/pixel
+texture_lod_offset_2d,textureLodOffset · sampler2D,textureLodOffset,glsl,texture/2d,vertex/pixel
+texture_grad_offset_2d,textureGradOffset · sampler2D,textureGradOffset,glsl,texture/2d,vertex/pixel
+texel_fetch_offset_2d,texelFetchOffset · sampler2D,texelFetchOffset,glsl,texture/2d,vertex/pixel
+texture_proj_lod_2d,textureProjLod · sampler2D,textureProjLod,glsl,texture/2d,vertex/pixel
+texture_proj_grad_2d,textureProjGrad · sampler2D,textureProjGrad,glsl,texture/2d,vertex/pixel
+texture_size_3d,textureSize · sampler3D,textureSize,glsl,texture/3d,vertex/pixel
+texture_levels_3d,textureQueryLevels · sampler3D,textureQueryLevels,glsl,texture/3d,vertex/pixel
+texture_sample_3d,texture · sampler3D,texture,glsl,texture/3d,vertex/pixel
+texture_lod_3d,textureLod · sampler3D,textureLod,glsl,texture/3d,vertex/pixel
+texture_bias_3d,texture · sampler3D · Bias,texture,glsl,texture/3d,pixel
+texture_grad_3d,textureGrad · sampler3D,textureGrad,glsl,texture/3d,vertex/pixel
+texel_fetch_3d,texelFetch · sampler3D,texelFetch,glsl,texture/3d,vertex/pixel
+texture_proj_3d,textureProj · sampler3D,textureProj,glsl,texture/3d,vertex/pixel
+texture_query_lod_3d,textureQueryLod · sampler3D,textureQueryLod,glsl,texture/3d,pixel
+texture_offset_3d,textureOffset · sampler3D,textureOffset,glsl,texture/3d,vertex/pixel
+texture_lod_offset_3d,textureLodOffset · sampler3D,textureLodOffset,glsl,texture/3d,vertex/pixel
+texture_grad_offset_3d,textureGradOffset · sampler3D,textureGradOffset,glsl,texture/3d,vertex/pixel
+texel_fetch_offset_3d,texelFetchOffset · sampler3D,texelFetchOffset,glsl,texture/3d,vertex/pixel
+texture_proj_lod_3d,textureProjLod · sampler3D,textureProjLod,glsl,texture/3d,vertex/pixel
+texture_proj_grad_3d,textureProjGrad · sampler3D,textureProjGrad,glsl,texture/3d,vertex/pixel
+texture_size_2darray,textureSize · sampler2DArray,textureSize,glsl,texture/2dArray,vertex/pixel
+texture_levels_2darray,textureQueryLevels · sampler2DArray,textureQueryLevels,glsl,texture/2dArray,vertex/pixel
+texture_sample_2darray,texture · sampler2DArray,texture,glsl,texture/2dArray,vertex/pixel
+texture_lod_2darray,textureLod · sampler2DArray,textureLod,glsl,texture/2dArray,vertex/pixel
+texture_bias_2darray,texture · sampler2DArray · Bias,texture,glsl,texture/2dArray,pixel
+texture_grad_2darray,textureGrad · sampler2DArray,textureGrad,glsl,texture/2dArray,vertex/pixel
+texel_fetch_2darray,texelFetch · sampler2DArray,texelFetch,glsl,texture/2dArray,vertex/pixel
+texture_query_lod_2darray,textureQueryLod · sampler2DArray,textureQueryLod,glsl,texture/2dArray,pixel
+texture_gather_2darray,textureGather · sampler2DArray,textureGather,glsl,texture/2dArray,vertex/pixel
+texture_offset_2darray,textureOffset · sampler2DArray,textureOffset,glsl,texture/2dArray,vertex/pixel
+texture_lod_offset_2darray,textureLodOffset · sampler2DArray,textureLodOffset,glsl,texture/2dArray,vertex/pixel
+texture_grad_offset_2darray,textureGradOffset · sampler2DArray,textureGradOffset,glsl,texture/2dArray,vertex/pixel
+texel_fetch_offset_2darray,texelFetchOffset · sampler2DArray,texelFetchOffset,glsl,texture/2dArray,vertex/pixel
+texture_size_cube,textureSize · samplerCube,textureSize,glsl,texture/cube,vertex/pixel
+texture_levels_cube,textureQueryLevels · samplerCube,textureQueryLevels,glsl,texture/cube,vertex/pixel
+texture_sample_cube,texture · samplerCube,texture,glsl,texture/cube,vertex/pixel
+texture_lod_cube,textureLod · samplerCube,textureLod,glsl,texture/cube,vertex/pixel
+texture_bias_cube,texture · samplerCube · Bias,texture,glsl,texture/cube,pixel
+texture_grad_cube,textureGrad · samplerCube,textureGrad,glsl,texture/cube,vertex/pixel
+texture_query_lod_cube,textureQueryLod · samplerCube,textureQueryLod,glsl,texture/cube,pixel
+texture_gather_cube,textureGather · samplerCube,textureGather,glsl,texture/cube,vertex/pixel
+texture_size_buffer,textureSize · samplerBuffer,textureSize,glsl,texture/buffer,vertex/pixel
+td_lighting,TDLighting,TDLighting,td,shader/lighting,pixel
+td_lighting_pbr,TDLightingPBR,TDLightingPBR,td,shader/lighting,pixel
+td_env_lighting_pbr,TDEnvLightingPBR,TDEnvLightingPBR,td,shader/lighting,pixel
+material_phong,Phong Material,Material PHONG,td,shader/materials,pixel
+material_pbr,PBR Material,Material PBR,td,shader/materials,pixel
+vertex_input,Vertex Inputs,,editor,shader/stage,pixel
+td_lighting_all,Phong Lights,TDLighting,td,shader/lighting,pixel
+td_lighting_pbr_all,PBR Lights,TDLightingPBR,td,shader/lighting,pixel
+td_env_lighting_pbr_all,PBR Environment Lights,TDEnvLightingPBR,td,shader/lighting,pixel
+tex_attribute,Texture Attribute,TDTexAttrib_Name(layer),td,inputs/tdBuiltin/geometry,vertex
+td_instance_texcoord_current,TDInstanceTexCoord (Current),TDInstanceTexCoord,td,coordinate,vertex
+td_instance_color_current,TDInstanceColor (Current),TDInstanceColor,td,color/conversion,vertex
+td_instance_color_pixel,TDInstanceColor (Pixel),TDInstanceColor,td,color/conversion,pixel
+td_convert_color_space,TDConvertColorSpace,TDConvertColorSpace,td,color/conversion,pixel
+td_projtexture_lod,TDProjTextureLod,TDProjTextureLod,td,texture/projection,pixel
+td_projtexture_size,TDProjTextureSize,TDProjTextureSize,td,texture/projection,pixel

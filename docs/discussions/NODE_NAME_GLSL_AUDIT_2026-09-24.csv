@@ -1,0 +1,162 @@
+﻿function,status,node_keys,node_labels
+EmitStreamVertex,資源副作用或其他執行流程,,
+EmitVertex,資源副作用或其他執行流程,,
+EndPrimitive,資源副作用或其他執行流程,,
+EndStreamPrimitive,資源副作用或其他執行流程,,
+abs,已有名稱對應,abs,Absolute
+acos,已有名稱對應,acos,acos
+acosh,已有名稱對應,acosh,acosh
+all,已有名稱對應,all,all
+any,已有名稱對應,any,any
+asin,已有名稱對應,asin,asin
+asinh,已有名稱對應,asinh,asinh
+atan,已有名稱對應,atan; atan2,"atan; atan (y, x)"
+atanh,已有名稱對應,atanh,atanh
+atomicAdd,資源副作用或其他執行流程,,
+atomicAnd,資源副作用或其他執行流程,,
+atomicCompSwap,資源副作用或其他執行流程,,
+atomicCounter,資源副作用或其他執行流程,,
+atomicCounterDecrement,資源副作用或其他執行流程,,
+atomicCounterIncrement,資源副作用或其他執行流程,,
+atomicExchange,資源副作用或其他執行流程,,
+atomicMax,資源副作用或其他執行流程,,
+atomicMin,資源副作用或其他執行流程,,
+atomicOr,資源副作用或其他執行流程,,
+atomicXor,資源副作用或其他執行流程,,
+barrier,資源副作用或其他執行流程,,
+bitCount,已有名稱對應,bitCount,bitCount
+bitfieldExtract,已有名稱對應,bitfieldExtract,bitfieldExtract
+bitfieldInsert,已有名稱對應,bitfieldInsert,bitfieldInsert
+bitfieldReverse,已有名稱對應,bitfieldReverse,bitfieldReverse
+ceil,已有名稱對應,ceil,Ceil
+clamp,已有名稱對應,clamp,Clamp
+cos,已有名稱對應,cos,Cosine
+cosh,已有名稱對應,cosh,cosh
+cross,已有名稱對應,cross,cross
+dFdx,已有名稱對應,dFdx,dFdx
+dFdxCoarse,已有名稱對應,dFdxCoarse,dFdxCoarse
+dFdxFine,已有名稱對應,dFdxFine,dFdxFine
+dFdy,已有名稱對應,dFdy,dFdy
+dFdyCoarse,已有名稱對應,dFdyCoarse,dFdyCoarse
+dFdyFine,已有名稱對應,dFdyFine,dFdyFine
+degrees,已有名稱對應,degrees,degrees
+determinant,已有名稱對應,determinant,Determinant
+distance,已有名稱對應,distance,distance
+dot,已有名稱對應,dot,Dot Product
+equal,已有名稱對應,equal,equal
+exp,已有名稱對應,exp,exp
+exp2,已有名稱對應,exp2,exp2
+faceforward,已有名稱對應,faceforward,faceforward
+findLSB,已有名稱對應,findLSB,findLSB
+findMSB,已有名稱對應,findMSB,findMSB
+floatBitsToInt,已有名稱對應,floatBitsToInt,floatBitsToInt
+floatBitsToUint,已有名稱對應,floatBitsToUint,floatBitsToUint
+floor,已有名稱對應,floor,Floor
+fma,已有名稱對應,fma,fma
+fract,已有名稱對應,fract,Fraction
+frexp,已有名稱對應,frexp,frexp
+fwidth,已有名稱對應,fwidth,fwidth
+fwidthCoarse,已有名稱對應,fwidthCoarse,fwidthCoarse
+fwidthFine,已有名稱對應,fwidthFine,fwidthFine
+greaterThan,已有名稱對應,greaterThan,greaterThan
+greaterThanEqual,已有名稱對應,greaterThanEqual,greaterThanEqual
+groupMemoryBarrier,資源副作用或其他執行流程,,
+imageAtomicAdd,資源副作用或其他執行流程,,
+imageAtomicAnd,資源副作用或其他執行流程,,
+imageAtomicCompSwap,資源副作用或其他執行流程,,
+imageAtomicExchange,資源副作用或其他執行流程,,
+imageAtomicMax,資源副作用或其他執行流程,,
+imageAtomicMin,資源副作用或其他執行流程,,
+imageAtomicOr,資源副作用或其他執行流程,,
+imageAtomicXor,資源副作用或其他執行流程,,
+imageLoad,資源副作用或其他執行流程,,
+imageSamples,資源副作用或其他執行流程,,
+imageSize,資源副作用或其他執行流程,,
+imageStore,資源副作用或其他執行流程,,
+imulExtended,已有名稱對應,imulExtended,imulExtended
+intBitsToFloat,已有名稱對應,intBitsToFloat,intBitsToFloat
+interpolateAtCentroid,需資源或輸入契約,,
+interpolateAtOffset,需資源或輸入契約,,
+interpolateAtSample,需資源或輸入契約,,
+inverse,已有名稱對應,inverse,Inverse
+inversesqrt,已有名稱對應,inversesqrt,inversesqrt
+isinf,已有名稱對應,isinf,isinf
+isnan,已有名稱對應,isnan,isnan
+ldexp,已有名稱對應,ldexp,ldexp
+length,已有名稱對應,length,Length
+lessThan,已有名稱對應,lessThan,lessThan
+lessThanEqual,已有名稱對應,lessThanEqual,lessThanEqual
+log,已有名稱對應,log,log
+log2,已有名稱對應,log2,log2
+matrixCompMult,已有名稱對應,matrix_comp_mult,Matrix Component Multiply
+max,已有名稱對應,max,Maximum
+memoryBarrier,資源副作用或其他執行流程,,
+memoryBarrierAtomicCounter,資源副作用或其他執行流程,,
+memoryBarrierBuffer,資源副作用或其他執行流程,,
+memoryBarrierImage,資源副作用或其他執行流程,,
+memoryBarrierShared,資源副作用或其他執行流程,,
+min,已有名稱對應,min,Minimum
+mix,已有名稱對應,mix; mix_boolean; mix_components,Mix; Boolean Mix; Component Mix
+mod,已有名稱對應,mod,Modulo
+modf,已有名稱對應,modf,modf
+noise1,標準 Noise 未設入口,,
+noise2,標準 Noise 未設入口,,
+noise3,標準 Noise 未設入口,,
+noise4,標準 Noise 未設入口,,
+normalize,已有名稱對應,normalize,Normalize
+not,已有名稱對應,not,not
+notEqual,已有名稱對應,notEqual,notEqual
+outerProduct,已有名稱對應,outer_product,Outer Product
+packDouble2x32,已有名稱對應,packDouble2x32,packDouble2x32
+packHalf2x16,已有名稱對應,packHalf2x16,packHalf2x16
+packSnorm2x16,已有名稱對應,packSnorm2x16,packSnorm2x16
+packSnorm4x8,已有名稱對應,packSnorm4x8,packSnorm4x8
+packUnorm2x16,已有名稱對應,packUnorm2x16,packUnorm2x16
+packUnorm4x8,已有名稱對應,packUnorm4x8,packUnorm4x8
+pow,已有名稱對應,pow,Power
+radians,已有名稱對應,radians,radians
+reflect,已有名稱對應,reflect,reflect
+refract,已有名稱對應,refract,refract
+round,已有名稱對應,round,Round
+roundEven,已有名稱對應,round_even,roundEven
+sign,已有名稱對應,sign,Sign
+sin,已有名稱對應,sin,Sine
+sinh,已有名稱對應,sinh,sinh
+smoothstep,已有名稱對應,smoothstep,Smoothstep
+sqrt,已有名稱對應,sqrt,Sqrt
+step,已有名稱對應,step; step_scalar,step; Scalar Edge Step
+tan,已有名稱對應,tan,tan
+tanh,已有名稱對應,tanh,tanh
+texelFetch,已有名稱對應,buffer_fetch; texel_fetch_1d; texel_fetch_2d; texel_fetch_3d; texel_fetch_2darray,Buffer Fetch; texelFetch · sampler1D; texelFetch · sampler2D; texelFetch · sampler3D; texelFetch · sampler2DArray
+texelFetchOffset,已有名稱對應,texel_fetch_offset_1d; texel_fetch_offset_2d; texel_fetch_offset_3d; texel_fetch_offset_2darray,texelFetchOffset · sampler1D; texelFetchOffset · sampler2D; texelFetchOffset · sampler3D; texelFetchOffset · sampler2DArray
+texture,已有名稱對應,texture; texture_sample; texture_sample_1d; texture_bias_1d; texture_sample_2d; texture_bias_2d; texture_sample_3d; texture_bias_3d; texture_sample_2darray; texture_bias_2darray; texture_sample_cube; texture_bias_cube,Texture 2D; Texture 2D; texture · sampler1D; texture · sampler1D · Bias; texture · sampler2D; texture · sampler2D · Bias; texture · sampler3D; texture · sampler3D · Bias; texture · sampler2DArray; texture · sampler2DArray · Bias; texture · samplerCube; texture · samplerCube · Bias
+textureGather,已有名稱對應,texture_gather_2d; texture_gather_2darray; texture_gather_cube,textureGather · sampler2D; textureGather · sampler2DArray; textureGather · samplerCube
+textureGatherOffset,取樣入口候選,,
+textureGatherOffsets,取樣入口候選,,
+textureGrad,已有名稱對應,texture_grad_1d; texture_grad_2d; texture_grad_3d; texture_grad_2darray; texture_grad_cube,textureGrad · sampler1D; textureGrad · sampler2D; textureGrad · sampler3D; textureGrad · sampler2DArray; textureGrad · samplerCube
+textureGradOffset,已有名稱對應,texture_grad_offset_1d; texture_grad_offset_2d; texture_grad_offset_3d; texture_grad_offset_2darray,textureGradOffset · sampler1D; textureGradOffset · sampler2D; textureGradOffset · sampler3D; textureGradOffset · sampler2DArray
+textureLod,已有名稱對應,texture_lod_1d; texture_lod_2d; texture_lod_3d; texture_lod_2darray; texture_lod_cube,textureLod · sampler1D; textureLod · sampler2D; textureLod · sampler3D; textureLod · sampler2DArray; textureLod · samplerCube
+textureLodOffset,已有名稱對應,texture_lod_offset_1d; texture_lod_offset_2d; texture_lod_offset_3d; texture_lod_offset_2darray,textureLodOffset · sampler1D; textureLodOffset · sampler2D; textureLodOffset · sampler3D; textureLodOffset · sampler2DArray
+textureOffset,已有名稱對應,texture_offset_1d; texture_offset_2d; texture_offset_3d; texture_offset_2darray,textureOffset · sampler1D; textureOffset · sampler2D; textureOffset · sampler3D; textureOffset · sampler2DArray
+textureProj,已有名稱對應,texture_proj_1d; texture_proj_2d; texture_proj_3d,textureProj · sampler1D; textureProj · sampler2D; textureProj · sampler3D
+textureProjGrad,已有名稱對應,texture_proj_grad_1d; texture_proj_grad_2d; texture_proj_grad_3d,textureProjGrad · sampler1D; textureProjGrad · sampler2D; textureProjGrad · sampler3D
+textureProjGradOffset,取樣入口候選,,
+textureProjLod,已有名稱對應,texture_proj_lod_1d; texture_proj_lod_2d; texture_proj_lod_3d,textureProjLod · sampler1D; textureProjLod · sampler2D; textureProjLod · sampler3D
+textureProjLodOffset,取樣入口候選,,
+textureProjOffset,取樣入口候選,,
+textureQueryLevels,已有名稱對應,texture_levels_1d; texture_levels_2d; texture_levels_3d; texture_levels_2darray; texture_levels_cube,textureQueryLevels · sampler1D; textureQueryLevels · sampler2D; textureQueryLevels · sampler3D; textureQueryLevels · sampler2DArray; textureQueryLevels · samplerCube
+textureQueryLod,已有名稱對應,texture_query_lod_1d; texture_query_lod_2d; texture_query_lod_3d; texture_query_lod_2darray; texture_query_lod_cube,textureQueryLod · sampler1D; textureQueryLod · sampler2D; textureQueryLod · sampler3D; textureQueryLod · sampler2DArray; textureQueryLod · samplerCube
+textureSamples,需資源或輸入契約,,
+textureSize,已有名稱對應,buffer_length; texture_size_1d; texture_size_2d; texture_size_3d; texture_size_2darray; texture_size_cube; texture_size_buffer,Buffer Length; textureSize · sampler1D; textureSize · sampler2D; textureSize · sampler3D; textureSize · sampler2DArray; textureSize · samplerCube; textureSize · samplerBuffer
+transpose,已有名稱對應,transpose,Transpose
+trunc,已有名稱對應,trunc,Truncate
+uaddCarry,已有名稱對應,uaddCarry,uaddCarry
+uintBitsToFloat,已有名稱對應,uintBitsToFloat,uintBitsToFloat
+umulExtended,已有名稱對應,umulExtended,umulExtended
+unpackDouble2x32,已有名稱對應,unpackDouble2x32,unpackDouble2x32
+unpackHalf2x16,已有名稱對應,unpackHalf2x16,unpackHalf2x16
+unpackSnorm2x16,已有名稱對應,unpackSnorm2x16,unpackSnorm2x16
+unpackSnorm4x8,已有名稱對應,unpackSnorm4x8,unpackSnorm4x8
+unpackUnorm2x16,已有名稱對應,unpackUnorm2x16,unpackUnorm2x16
+unpackUnorm4x8,已有名稱對應,unpackUnorm4x8,unpackUnorm4x8
+usubBorrow,已有名稱對應,usubBorrow,usubBorrow

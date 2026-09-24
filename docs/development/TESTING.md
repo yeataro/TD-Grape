@@ -1,5 +1,9 @@
 # 測試
 
+2026-09-24 0.8.224：新增五個 Offset Sampling 函式、13 個維度入口。40 項相關 Python 測試、TD 39 組函式簽名與 26 項原生檢查（20 像素對照、4 常數／動態值、2 失敗保留）、Chromium 3 組編輯器流程通過。五語 Help 共 1494 keys；節點分類投影、14 項 Editor launch、品牌、10 份 JS suite 與 26 項 remote panel 測試通過。範圍與重跑方式見 [Offset Sampling](../features/TEXTURE_OFFSET_SAMPLING.md)。
+
+完整 Python suite 為 555 項：552 通過，2 failures／1 error。`test_top_target.test_mat_compatibility` 與 `test_type_contract.test_existing_graphs_produce_identical_results` 的舊 MAT 指紋失配，以及 `test_typed_undo.test_custom_control_native_undo_validates_its_current_bound_source` 的 fake Par 缺少 style，均在修改前 HEAD 07517de 重現，未計為本次通過，也未在本批改寫舊 golden／測試替身。另比對當前與 HEAD 的 138 份舊圖輸出完全相同，原有 342 份 catalog 定義未改。私人報告 reports/texture-offsets-224/ 保存 baseline-failures.txt 與 legacy-current-v-head.json。
+
 2026-09-21 導覽 review（0.8.162）：增量接線選取 14、方向導覽 20、視角模式 8、實驗設定 20、既有阻尼 10、Frame 7、快捷鍵 Help 7、全螢幕／專注 6，共 92 組瀏覽器檢查通過。覆蓋多選逐階增長／保留孤立起點、Frame 與 Center 的倍率差異、動畫開關獨立性、連續改目標、取消、偏好保存／舊 Frame 映射、唯讀／圖歷史不變，以及 390px／125% UI。阻尼腳本第一次並行執行在 pending motion 讀取處失敗，單獨重跑完整 10 組通過，保留兩份結果，未宣稱消除其時序不穩定。Mac／Safari 仍待實機；本輪沒有修改或重跑所有歷史測試負債。
 
 2026-09-19 0.8.120 原生交付：34 份 DAT、10 份服務資源、Master current、core／Uniform 通道及三份 Shader 保留核對通過。熱更新過程中一筆舊 HTTP 連線於 503 回應序列化時出現 `NameError: json`（私人 refresh 報告保留）；同步後確認 runtime globals／accepting 正常，以新 HTTP 連線連續讀取 HTML、CSS、JS 均為 200，JSON 回應正常（未指定 Shader 的根 API 回預期 422）。此次未更改熱更新程序；這筆更新期間的錯誤不視為已修正，也未推定為使用者之前連線提示的根因。TOE 保存成功，未操作使用者瀏覽器。
