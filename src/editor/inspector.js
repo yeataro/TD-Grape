@@ -1404,15 +1404,7 @@ function refreshFloatingParameterPorts(){
   box.querySelectorAll('.parameter-port-slot').forEach(slot=>slot.remove());
   box.querySelectorAll('.parameter-port-anchor').forEach(row=>row.classList.remove('parameter-port-anchor'));
   box.classList.remove('has-parameter-ports');
-  const title=box.querySelector('.node-inspector-title');
-  title?.querySelector('.parameter-ports-toggle')?.remove();title?.classList.remove('has-port-toggle');
-  if(title&&floatingParameterOpen){
-    const toggle=el('button',{type:'button',class:'parameter-ports-toggle','aria-label':t('parameter.inputPorts'),title:t('parameter.inputPorts'),'aria-pressed':String(parameterInputPorts)});
-    toggle.append(selectionIcon('M20 12a8 8 0 1 1-16 0a8 8 0 1 1 16 0'));
-    toggle.onclick=()=>{setParameterInputPorts(!parameterInputPorts);box.querySelector('.parameter-ports-toggle')?.focus({preventScroll:true});};
-    title.prepend(toggle);title.classList.add('has-port-toggle');
-  }
-  if(!graph||!floatingParameterOpen||!parameterInputPorts||inspectorTab!=='parameters')return;
+  if(!graph||!floatingParameterOpen||!EDITOR_DEV_SETTINGS.parameterInputPorts||inspectorTab!=='parameters')return;
   const n=current().nodes.find(node=>node.id===box.dataset.inspectorNode);if(!n)return;
   for(const [port,type]of Object.entries(ports(n,'inputs'))){
     const escaped=CSS.escape(port),section=box.querySelector(`[data-input="${escaped}"]`),value=box.querySelector(`[data-parameter-value="${escaped}"],[data-parameter-matrix="${escaped}"]`);
@@ -1809,12 +1801,6 @@ function installBrowserDetailResize(){
 }
 
 let floatingParameterOpen=false;
-let parameterInputPorts=true;
-function setParameterInputPorts(enabled){
-  parameterInputPorts=!!enabled;
-  try{localStorage.setItem('grapeParameterInputPorts',JSON.stringify(parameterInputPorts));}catch{status(t('layout.storageError'),true);}
-  refreshFloatingParameterPorts();
-}
 function toggleFloatingParameter(){workspaceLayout?.setFloatingParameter(!floatingParameterOpen);}
 /* Limited two-sidebar workspace. All persisted data is presentation only. */
 function installPanelWorkspace(){
@@ -1880,10 +1866,6 @@ function installPanelWorkspace(){
   function persist(){if(restoring)return;state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};if(!matchMedia('(max-width:800px)').matches)state.visibility={left:isSidebarOpen('left'),right:isSidebarOpen('right')};write(key,state);}
   const parking=el('div',{hidden:true});document.body.append(parking);
   floatingParameterOpen=read('grapeFloatingParameter',false)===true;
-  // Preserve the former experiment preference when upgrading, independently
-  // of future experimental-setting resets or workspace presets.
-  parameterInputPorts=read('grapeParameterInputPorts',read('sgrapeExperimentsV1',{})?.parameterInputPorts!==false)!==false;
-  write('grapeParameterInputPorts',parameterInputPorts);
   const savedFloatingWidth=read('grapeFloatingParameterWidth',320);
   let floatingWidth=Number.isFinite(savedFloatingWidth)?Math.max(280,savedFloatingWidth):320;
   const floating=el('section',{id:'floatingparameters',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
