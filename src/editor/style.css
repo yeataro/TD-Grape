@@ -934,6 +934,9 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .selection-toolbar .graph-tool-group+.graph-tool-group{border-left:1px solid var(--line);padding-left:4px}
 .selection-toolbar button.icon-button{width:28px;height:28px;min-height:28px;padding:0;border:0;background:transparent}
 .selection-toolbar button:enabled:is(:hover,:focus-visible){background:var(--ui-hover,var(--ui-tone-menu-hover))}
+.wire-quick-actions .wire-style-toggle{background:var(--ui-field,var(--ui-tone-field));border-radius:7px;border:0;padding:0}
+.wire-quick-actions .wire-style-toggle button[aria-pressed="true"]{background:var(--ui-selected,var(--ui-tone-control-hover));color:var(--purple)}
+@media(pointer:coarse){#wirequickactions button.icon-button{width:calc(44px / var(--ui-scale));height:calc(44px / var(--ui-scale));min-height:calc(44px / var(--ui-scale))}}
 .selection-toolbar button:disabled{opacity:1;color:color-mix(in srgb,var(--muted) 48%,var(--ui-surface,var(--ui-tone-menu)));background:transparent;cursor:default}
 #selectionbounds{position:absolute;z-index:3;border:1px dashed var(--selection);border-radius:0;pointer-events:none}
 .selection-spread-handle{position:absolute;width:18px;height:18px;min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;pointer-events:auto;touch-action:none;transform:translate(-50%,-50%)}

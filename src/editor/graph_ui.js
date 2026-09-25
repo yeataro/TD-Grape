@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, wireQuickActions: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -2323,7 +2323,7 @@ function installTouchNavigation(canvas){
   const points=new Map(),slop=8,holdDelay=550,doubleDelay=320;
   let gesture=null,frame=0,holdTimer=0,lastTap=null,lastTouch=-Infinity,lastDevice='mouse';
   const stop=e=>{if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();};
-  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview,.group-frame-title,#connectionnotice');
+  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview,.group-frame-title,#connectionnotice,.wire-quick-actions');
   const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
   const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
   const rebase=()=>{
@@ -2418,7 +2418,7 @@ function installTouchNavigation(canvas){
     if(g.node){
       selectNode(g.node);syncSelection();inspector();renderNavigation();
       if(double){if(g.rename){const label=$('#cards').querySelector('[data-node="'+g.node.id+'"] .node-title-text>span');if(label)beginNodeRename(g.node,label);}else if(definition(g.node)?.key==='function_call')enterFunction(g.node);}
-    }else if(g.edge)selectEdge(g.edge);
+    }else if(g.edge){selectEdge(g.edge);openWireQuickActions(g.edge,p.x,p.y);}
     else if(double||linkStart){const start=linkStart;lastTap=null;if(start)finishWireOnBlank(start,p.x,p.y);else openCreator(p.x,p.y);}
     else clearCanvasSelection();
   };
@@ -2647,6 +2647,7 @@ function graphMenuIcon(action){
   return selectionIcon(action==='rename'?'m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4':'M12 4v16M4 12h16');
 }
 function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
+  closeWireQuickActions();
   closeGraphMenu();closeArrangeMenu();closeCreator();cancelNodePlacement();cancelConnection();
   if(edge){if(!selectedCanvasEdges().includes(edge))setSelectedEdges([edge]);selected=null;selection.clear();refreshCanvasSelection();}
   if(nodeId&&!selection.has(nodeId)){selectNode(current().nodes.find(n=>n.id===nodeId));render();}

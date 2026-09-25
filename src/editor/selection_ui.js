@@ -1,4 +1,74 @@
 /* Selection actions share the existing buttons and graph transactions. */
+let wireQuickContext=null;
+function closeWireQuickActions(){wireQuickContext=null;const bar=$('#wirequickactions');if(bar)bar.hidden=true;}
+function openWireQuickActions(edge,x,y){
+  if(!EDITOR_DEV_SETTINGS.wireQuickActions||!selectedCanvasEdges().includes(edge))return closeWireQuickActions();
+  wireQuickContext={owner:graph,data:current(),edge,point:graphPoint(x,y)};
+  renderWireQuickActions();scheduleSelectionToolbarPosition();
+}
+function wireQuickEdges(){
+  const context=wireQuickContext;
+  if(!context||!graph||context.owner!==graph||context.data!==current())return [];
+  const edges=selectedCanvasEdges();return edges.includes(context.edge)?edges:[];
+}
+function renderWireQuickActions(){
+  const bar=$('#wirequickactions');if(!bar)return;
+  const edges=wireQuickEdges();
+  if(!EDITOR_DEV_SETTINGS.wireQuickActions||!edges.length){closeWireQuickActions();return;}
+  bar.hidden=false;bar.setAttribute('aria-label',t('experiments.wireQuickActions'));
+  bar.querySelector('.wire-style-toggle').setAttribute('aria-label',t('wire.convertMenu'));
+  for(const button of bar.querySelectorAll('[data-wire-action]')){
+    const action=button.dataset.wireAction,mode=['wire','link'].includes(action);
+    const label=mode?(action==='wire'?'Wire':'Link'):t(action==='source'?'wire.selectSource':action==='target'?'wire.selectDestination':'wire.disconnectSelected');
+    button.title=label+(action==='source'?' · '+shortcutLabel('edgeSource'):action==='target'?' · '+shortcutLabel('edgeDestination'):'');
+    button.setAttribute('aria-label',label);
+    setEditorDisabled(button,(mode||action==='disconnect')&&editorMutationBlocked(),(mode||action==='disconnect')&&editorMutationBlocked(true));
+    if(mode)button.setAttribute('aria-pressed',String(edges.every(edge=>(edge.ui?.style||'wire')===action)));
+  }
+}
+function positionWireQuickActions(){
+  const bar=$('#wirequickactions');if(!bar||bar.hidden)return;
+  if(!wireQuickEdges().length)return closeWireQuickActions();
+  const canvas=$('#canvas'),r=canvas.getBoundingClientRect(),zoom=uiScaleFactor(),point=wireQuickContext.point;
+  const margin=8,x=point.x*scale+pan.x,y=point.y*scale+pan.y;
+  const toolbar=$('#canvas>.toolbar'),tools=$('.canvas-view-tools');
+  const top=toolbar?(toolbar.getBoundingClientRect().bottom-r.top)/zoom+margin:margin;
+  const bottom=tools?(tools.getBoundingClientRect().top-r.top)/zoom-margin:canvas.clientHeight-margin;
+  bar.style.visibility=x<0||x>canvas.clientWidth||y<top||y>bottom?'hidden':'';
+  bar.style.maxWidth=Math.max(40,canvas.clientWidth-margin*2)+'px';
+  const left=Math.max(margin,Math.min(x-bar.offsetWidth/2,canvas.clientWidth-bar.offsetWidth-margin));
+  const above=y-bar.offsetHeight-12,preferred=above>=top?above:y+12;
+  bar.style.left=left+'px';bar.style.top=Math.max(top,Math.min(preferred,bottom-bar.offsetHeight))+'px';
+}
+function installWireQuickActions(){
+  const bar=el('div',{id:'wirequickactions',class:'selection-toolbar wire-quick-actions',role:'toolbar',hidden:''});
+  const modes=el('div',{class:'graph-tool-group wire-style-toggle',role:'group'}),endpoints=el('div',{class:'graph-tool-group'}),edit=el('div',{class:'graph-tool-group'});
+  for(const action of ['wire','link','source','target','disconnect']){
+    const button=el('button',{class:'icon-button',type:'button','data-wire-action':action});
+    const icon=action==='wire'?selectionIcon('M4 18C4 4 20 20 20 6'):action==='link'?selectionIcon('M4 20 20 4'):action==='disconnect'?selectionIcon('m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71M5.17 11.75l-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71M8 2v3M2 8h3M16 19v3M19 16h3'):graphMenuIcon(action==='source'?'selectSource':'selectDestination');
+    if(action==='wire')for(const [x,y]of [[4,20],[20,4]]){const circle=document.createElementNS(icon.namespaceURI,'circle');circle.setAttribute('cx',x);circle.setAttribute('cy',y);circle.setAttribute('r','2');icon.append(circle);}
+    if(action==='link')icon.firstElementChild.setAttribute('stroke-dasharray','4 3');
+    button.append(icon);(action==='wire'||action==='link'?modes:action==='disconnect'?edit:endpoints).append(button);
+    button.onclick=()=>{
+      const edges=wireQuickEdges();if(!edges.length){closeWireQuickActions();return;}
+      focusGraphCanvas();
+      if(action==='wire'||action==='link')setEdgeStyles(edges,action);
+      else if(action==='disconnect'){if(!editorMutationBlocked())remove();}
+      else selectEdgeEndpoints(edges,action==='source'?'from':'to',true);
+      renderWireQuickActions();scheduleSelectionToolbarPosition();
+    };
+  }
+  bar.append(modes,endpoints,edit);$('#canvas').append(bar);
+  for(const name of ['pointerdown','mousedown','touchstart','click','dblclick','contextmenu'])bar.addEventListener(name,event=>event.stopPropagation());
+  bar.addEventListener('wheel',event=>event.stopPropagation(),{passive:true});
+  bar.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeWireQuickActions();focusGraphCanvas();}
+    else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key)){
+      event.preventDefault();event.stopPropagation();const buttons=[...bar.querySelectorAll('button:not(:disabled)')],index=buttons.indexOf(document.activeElement);
+      buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(['ArrowRight','ArrowDown'].includes(event.key)?1:-1)+buttons.length)%buttons.length]?.focus();
+    }
+  });
+}
 const ARRANGE_ACTIONS=[
   ['auto','M3 9h5v6H3zM16 3h5v6h-5zM16 15h5v6h-5zM8 12h4M12 6v12M12 6h4M12 18h4'],
   ['autoReverse','M3 3h5v6H3zM3 15h5v6H3zM16 9h5v6h-5zM8 6h4M8 18h4M12 6v12M12 12h4'],
@@ -34,6 +104,7 @@ function arrangeContextMatches(){
   return !arrangeContext||(arrangeContext.owner===graph&&arrangeContext.level===current()&&arrangeContext.ids.join('\0')===selectedCanvasNodes().map(n=>n.id).join('\0'));
 }
 function renderSelectionToolbar(){
+  renderWireQuickActions();
   const bar=$('#selectiontoolbar'),top=$('.toolbar .graph-tools');if(!bar||!top)return;
   const edit=document.querySelector('[data-tool-group="edit"]'),multi=document.querySelector('[data-tool-group="selection"]');
   const mode=EDITOR_DEV_SETTINGS.selectionToolbar||'off',nodes=selectedCanvasNodes(),multiple=nodes.length>1;
@@ -75,6 +146,7 @@ function scheduleSelectionToolbarPosition(){
   selectionToolbarFrame=requestAnimationFrame(()=>{selectionToolbarFrame=0;positionSelectionToolbar();});
 }
 function positionSelectionToolbar(){
+  positionWireQuickActions();
   const bar=$('#selectiontoolbar'),outline=$('#selectionbounds');if(!bar||!outline)return;
   const nodes=selectedCanvasNodes(),persistent=EDITOR_DEV_SETTINGS.persistentSelectionBounds&&nodes.length>1;
   if(bar.hidden&&!persistent){outline.hidden=true;return;}
@@ -341,6 +413,7 @@ function openArrangeMenu(){
   menu.querySelector('button:not(:disabled)')?.focus({preventScroll:true});scheduleSelectionToolbarPosition();
 }
 function installSelectionToolbar(){
+  installWireQuickActions();
   const canvas=$('#canvas'),top=$('.toolbar .graph-tools'),bar=el('div',{id:'selectiontoolbar',class:'selection-toolbar',role:'toolbar',hidden:''}),outline=el('div',{id:'selectionbounds',hidden:''});
   for(const direction of ['nw','n','ne','e','se','s','sw','w']){
     const handle=el('button',{type:'button',class:'selection-spread-handle','data-selection-spread':direction,tabindex:'-1'});
