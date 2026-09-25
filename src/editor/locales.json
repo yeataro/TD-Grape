@@ -49,6 +49,8 @@
     "controls.customize": {"en":"Customize Parameters","zh-Hant":"編輯自訂參數", "ja": "カスタムパラメーターを編集", "fr": "Personnaliser les paramètres", "ko": "사용자 매개변수 편집"},
     "sources.showNotes": {"en":"Notes","zh-Hant":"顯示備註", "ja": "メモを表示", "fr": "Notes", "ko": "메모"},
     "sources.minimal": {"en":"Minimal","zh-Hant":"最小化顯示", "ja": "最小表示", "fr": "Minimal", "ko": "최소 표시"},
+    "view.floatingParameter": {"en": "Floating Parameter panel", "zh-Hant": "浮動參數面板", "ja": "フローティングパラメーターパネル", "fr": "Panneau de paramètres flottant", "ko": "플로팅 매개변수 패널"},
+    "view.floatingParameter.hint": {"en": "Show or hide the Parameter panel on the canvas.", "zh-Hant": "在畫布上顯示或關閉浮動參數面板。", "ja": "キャンバス上のパラメーターパネルを表示／非表示にします。", "fr": "Afficher ou masquer le panneau de paramètres sur le canevas.", "ko": "캔버스의 매개변수 패널을 표시하거나 숨깁니다."},
     "view.showLinkLines": {"en":"Show Link lines","zh-Hant":"顯示 Link 線", "ja": "Link 線を表示", "fr": "Afficher les lignes Link", "ko": "Link 선 표시"},
     "view.showLinkLines.hint": {"en":"Show straight dashed Link lines. Port navigation arrows remain available when hidden.","zh-Hant":"顯示直線虛線的 Link；隱藏線條時，接孔導覽箭頭仍保留。", "ja": "Link を直線の破線で表示します。線を非表示にしても、ポートの移動用矢印は使用できます。", "fr": "Afficher les lignes droites en pointillés des Link. Les flèches de navigation restent disponibles lorsque les lignes sont masquées.", "ko": "Link를 직선 점선으로 표시합니다. 선을 숨겨도 포트 탐색 화살표는 사용할 수 있습니다."},
     "wire.linkNavigate": {"en":"Link: click to select and Frame all connected nodes; right-click to choose one","zh-Hant":"Link：左鍵選取並 Frame 所有對端節點；右鍵選擇一個節點", "ja": "Link：クリックで接続先をすべて選択してフレーム表示。右クリックで1つ選択", "fr": "Link : cliquez pour sélectionner et cadrer tous les nœuds connectés ; clic droit pour en choisir un", "ko": "Link: 클릭하여 연결된 모든 노드를 선택하고 화면에 맞춥니다. 우클릭하면 하나를 선택합니다"},

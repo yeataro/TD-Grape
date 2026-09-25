@@ -1772,6 +1772,8 @@ function installBrowserDetailResize(){
   layout();
 }
 
+let floatingParameterOpen=false;
+function toggleFloatingParameter(){workspaceLayout?.setFloatingParameter(!floatingParameterOpen);}
 /* Limited two-sidebar workspace. All persisted data is presentation only. */
 function installPanelWorkspace(){
   const ids=['browser','parameters','uniforms','controls','live','help','structures','glsl'],key='grapeWorkspaceV1',presetsKey='grapeWorkspacePresetsV1';
@@ -1835,19 +1837,82 @@ function installPanelWorkspace(){
   function locate(id){for(const side of ['left','right']){const index=state[side].findIndex(g=>g.panels.includes(id));if(index>=0)return {side,index,group:state[side][index]};}}
   function persist(){if(restoring)return;state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};if(!matchMedia('(max-width:800px)').matches)state.visibility={left:isSidebarOpen('left'),right:isSidebarOpen('right')};write(key,state);}
   const parking=el('div',{hidden:true});document.body.append(parking);
+  floatingParameterOpen=read('grapeFloatingParameter',false)===true;
+  const savedFloatingWidth=read('grapeFloatingParameterWidth',320);
+  let floatingWidth=Number.isFinite(savedFloatingWidth)?Math.max(280,savedFloatingWidth):320;
+  const floating=el('section',{id:'floatingparameters',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
+  const floatingHeading=el('div',{class:'floating-parameter-heading'}),floatingTitle=el('strong',{id:'floatingparametertitle'}),floatingClose=el('button',{type:'button',class:'icon-button'});
+  floatingClose.append(selectionIcon('M6 6l12 12M18 6 6 18'));
+  floatingClose.onclick=()=>{setFloatingParameter(false);focusGraphCanvas();};
+  const floatingResizeHandle=el('div',{class:'floating-parameter-resize',role:'separator','aria-orientation':'vertical',tabindex:'0'});
+  floatingHeading.append(floatingTitle,floatingClose);floating.append(floatingHeading,floatingResizeHandle);$('.graph-workspace').append(floating);
+  for(const event of ['pointerdown','mousedown','touchstart','click','dblclick','contextmenu'])floating.addEventListener(event,e=>e.stopPropagation());
+  floating.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+  let floatingFrame=0;
+  function positionFloatingParameter(){
+    floatingFrame=0;if(floating.hidden)return;
+    const canvas=$('#canvas'),bounds=canvas.getBoundingClientRect(),host=floating.offsetParent.getBoundingClientRect(),zoom=uiScaleFactor(),toolbar=$('.graph-workspace>.toolbar')||$('#canvas>.toolbar');
+    const history=[...document.querySelectorAll('.toolbar [data-tool-group="history"]>button')].filter(b=>b.getClientRects().length);
+    const first=history[0]?.getBoundingClientRect(),second=history[1]?.getBoundingClientRect();
+    // Measure the visible gap, then convert it once to this zoomed UI's CSS units.
+    const measured=first&&second?second.left-first.right:NaN;
+    const gap=Number.isFinite(measured)&&measured>0?measured/zoom:parseFloat(getComputedStyle($('.graph-tool-group')).gap)||5;
+    const buttons=toolbar?[...toolbar.querySelectorAll('button,select')].filter(b=>b.getClientRects().length):[];
+    const toolbarBottom=Math.max(bounds.top,...buttons.map(b=>b.getBoundingClientRect().bottom));
+    const top=(toolbarBottom-host.top)/zoom+gap;
+    const viewTools=$('.canvas-view-tools'),viewTop=viewTools?.getClientRects().length?viewTools.getBoundingClientRect().top:bounds.bottom;
+    const bottom=Math.min(bounds.bottom,viewTop);
+    const maxWidth=Math.max(0,bounds.width/zoom-gap*2),width=Math.min(floatingWidth,maxWidth);
+    Object.assign(floating.style,{top:top+'px',right:((host.right-bounds.right)/zoom+gap)+'px',width:width+'px',maxHeight:Math.max(0,(bottom-host.top)/zoom-top-gap)+'px'});
+    floatingResizeHandle.setAttribute('aria-valuemin',Math.round(Math.min(280,maxWidth)));
+    floatingResizeHandle.setAttribute('aria-valuemax',Math.round(maxWidth));
+    floatingResizeHandle.setAttribute('aria-valuenow',Math.round(width));
+  }
+  function scheduleFloatingParameter(){if(!floatingFrame)floatingFrame=requestAnimationFrame(positionFloatingParameter);}
+  function resizeFloatingParameter(width){
+    const max=Number(floatingResizeHandle.getAttribute('aria-valuemax'));
+    floatingWidth=Math.max(Math.min(280,max),Math.min(width,max));positionFloatingParameter();
+  }
+  floatingResizeHandle.onkeydown=e=>{
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+    e.preventDefault();e.stopPropagation();
+    const width=floating.getBoundingClientRect().width/uiScaleFactor();
+    resizeFloatingParameter(e.key==='Home'?280:e.key==='End'?Infinity:width+(e.key==='ArrowLeft'?8:-8));write('grapeFloatingParameterWidth',floatingWidth);
+  };
+  floatingResizeHandle.onpointerdown=e=>{
+    if(e.button!==0)return;e.preventDefault();e.stopPropagation();
+    const start=e.clientX,previous=floatingWidth,width=floating.getBoundingClientRect().width/uiScaleFactor(),zoom=uiScaleFactor(),pointer=e.pointerId;
+    floatingResizeHandle.setPointerCapture(pointer);
+    const move=event=>{if(event.pointerId===pointer)resizeFloatingParameter(width+(start-event.clientX)/zoom);};
+    const finish=event=>{
+      if(event.pointerId!==pointer)return;
+      floatingResizeHandle.removeEventListener('pointermove',move);floatingResizeHandle.removeEventListener('pointerup',finish);floatingResizeHandle.removeEventListener('pointercancel',finish);floatingResizeHandle.removeEventListener('lostpointercapture',finish);
+      if(event.type==='pointerup')write('grapeFloatingParameterWidth',floatingWidth);else{floatingWidth=previous;positionFloatingParameter();}
+      if(floatingResizeHandle.hasPointerCapture(pointer))floatingResizeHandle.releasePointerCapture(pointer);
+    };
+    floatingResizeHandle.addEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])floatingResizeHandle.addEventListener(type,finish);
+  };
+  function setFloatingParameter(enabled){
+    enabled=!!enabled;if(enabled===floatingParameterOpen)return;
+    floatingParameterOpen=enabled;write('grapeFloatingParameter',enabled);build();
+  }
+  const floatingResize=new ResizeObserver(scheduleFloatingParameter);floatingResize.observe($('#canvas'));floatingResize.observe($('.graph-workspace .toolbar'));
+  for(const event of ['resize','sidebarvisibilitychange','workspacewidthschange'])window.addEventListener(event,scheduleFloatingParameter);
   function build(){
     sizes.forEach(s=>s.destroy());sizes=[];
     for(const id of ids){panes[id].hidden=true;parking.append(heads[id],panes[id]);}
     for(const [side,host]of Object.entries(hosts)){
       host.replaceChildren();const groups=[];
-      const canFold=state[side].filter(group=>group.panels.some(id=>!state.hidden.includes(id))).length>1;
+      const visiblePanel=id=>!state.hidden.includes(id)&&!(floatingParameterOpen&&id==='parameters');
+      const canFold=state[side].filter(group=>group.panels.some(visiblePanel)).length>1;
       for(const group of state[side]){
-        const visible=group.panels.filter(id=>!state.hidden.includes(id));if(!visible.length)continue;
-        if(!canFold)group.collapsed=false;
-        if(!visible.includes(group.active))group.active=visible[0];
+        const visible=group.panels.filter(visiblePanel);if(!visible.length)continue;
+        if(!canFold&&!floatingParameterOpen)group.collapsed=false;
+        if(!visible.includes(group.active)&&!(floatingParameterOpen&&group.active==='parameters'))group.active=visible[0];
+        const active=visible.includes(group.active)?group.active:visible[0];
         const groupId=group.panels[0],section=el('section',{class:'inspector-panel workspace-group','data-panel':groupId,'data-workspace-group':groupId,'data-tabbed':String(visible.length>1)});
         const bar=el('div',{class:'workspace-tabs',role:'tablist'});
-        for(const id of visible){const button=heads[id];button.setAttribute('role','tab');button.setAttribute('aria-selected',String(group.active===id));button.setAttribute('aria-expanded',String(!group.collapsed));button.tabIndex=group.active===id?0:-1;
+        for(const id of visible){const button=heads[id];button.setAttribute('role','tab');button.setAttribute('aria-selected',String(active===id));button.setAttribute('aria-expanded',String(!group.collapsed));button.tabIndex=active===id?0:-1;
           button.onclick=()=>{group.active=id;group.collapsed=false;build();persist();heads[id].focus({preventScroll:true});};
           button.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();e.stopPropagation();const at=visible.indexOf(id),next=e.key==='Home'?0:e.key==='End'?visible.length-1:(at+(e.key==='ArrowRight'?1:-1)+visible.length)%visible.length;group.active=visible[next];group.collapsed=false;build();persist();heads[group.active].focus();};
           button.onpointerdown=e=>beginDrag(e,id);bar.append(button);
@@ -1856,13 +1921,21 @@ function installPanelWorkspace(){
         fold.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4 6 4 4 4-4"/></svg>';
         fold.onclick=()=>{group.collapsed=!group.collapsed;build();persist();};if(canFold)bar.append(fold);
         section.append(bar);section.classList.toggle('collapsed',group.collapsed);
-        for(const id of visible){const pane=panes[id];pane.hidden=group.collapsed||group.active!==id;const body=pane.querySelector('.panel-scroll');if(body)body.hidden=false;section.append(pane);}
+        for(const id of visible){const pane=panes[id];pane.hidden=group.collapsed||active!==id;const body=pane.querySelector('.panel-scroll');if(body)body.hidden=false;section.append(pane);}
         const handle=el('div',{class:'panel-divider',id:'resize-'+groupId,'data-panel-resize':groupId,role:'separator','aria-orientation':'horizontal','aria-label':t('layout.resize'),tabindex:'0'});
         if(groups.length)host.append(handle);host.append(section);groups.push(section);
       }
       if(!groups.length){host.append(el('div',{class:'workspace-empty'},t('layout.empty')));continue;}
       sizes.push(installPanelHeights(groups,{host,key:'grapeWorkspaceSizes-'+side,weights:Object.fromEntries(state[side].map(g=>[g.panels[0],g.weight])),onSave:weights=>{for(const g of state[side])if(Number.isFinite(weights[g.panels[0]]))g.weight=weights[g.panels[0]];persist();}}));
     }
+    floating.hidden=!floatingParameterOpen;floatingTitle.textContent=t('panel.parameterTitle');
+    floatingClose.title=t('action.close')+' · '+shortcutLabel('floatingParameter');floatingClose.setAttribute('aria-label',t('action.close'));
+    floatingResizeHandle.setAttribute('aria-label',t('layout.resize'));
+    panes.parameters.setAttribute('role',floatingParameterOpen?'region':'tabpanel');
+    panes.parameters.setAttribute('aria-labelledby',floatingParameterOpen?'floatingparametertitle':heads.parameters.id);
+    $('#parameterbody').setAttribute('aria-labelledby',floatingParameterOpen?'floatingparametertitle':heads.parameters.id);
+    if(floatingParameterOpen){panes.parameters.hidden=false;$('#parameterbody').hidden=false;floating.append(panes.parameters);}
+    scheduleFloatingParameter();
     if(typeof graph!=='undefined'&&graph)preview().catch(error=>status(error.message,true));
     queueMicrotask(()=>{if(typeof refreshGeneratedGLSL==='function')refreshGeneratedGLSL();});
   }
@@ -1981,7 +2054,7 @@ function installPanelWorkspace(){
 
   build();restoring=true;write('sgrapeSidebarWidths',state.widths);if(!matchMedia('(max-width:800px)').matches)for(const side of ['left','right'])setSidebarOpen(side,state.visibility[side]);restoring=false;
   window.addEventListener('workspacepreferenceschange',persist);window.addEventListener('sidebarvisibilitychange',persist);
-  return {move,apply,snapshot:()=>copy(state),closeBrowser(){setSidebarOpen(locate('browser').side,false);},reveal(id){state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);build();persist();},translate(){build();if(dialog.open)manager();if(!menu.hidden)showMenu();},manager};
+  return {move,apply,setFloatingParameter,snapshot:()=>copy(state),closeBrowser(){setSidebarOpen(locate('browser').side,false);},reveal(id){if(id==='parameters'&&floatingParameterOpen)return;state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);build();persist();},translate(){build();if(dialog.open)manager();if(!menu.hidden)showMenu();},manager};
 }
 
 /* Inputs are a source inventory. Graph nodes reference these identities; native

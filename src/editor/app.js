@@ -464,7 +464,7 @@ function applyCanvasDamping(force=false){
   if(!force&&!EDITOR_DEV_SETTINGS.canvasDamping&&!EDITOR_DEV_SETTINGS.frameDamping&&!['frame','centerAnimated'].includes(EDITOR_DEV_SETTINGS.arrowNavigationView))return;
   canvasMotionEvents=new AbortController();const options={capture:true,signal:canvasMotionEvents.signal};
   // Freeze where the user actually clicked before a node, wire or new gesture takes over.
-  document.addEventListener('pointerdown',event=>{if(event.target.closest?.('#canvas')&&!event.target.closest('.toolbar,.canvas-view-tools,.selection-toolbar,#connectionnotice'))stopCanvasMotion();},options);
+  document.addEventListener('pointerdown',event=>{if(event.target.closest?.('#canvas')&&!event.target.closest('.toolbar,.canvas-view-tools,.selection-toolbar,#connectionnotice,#floatingparameters'))stopCanvasMotion();},options);
   for(const name of ['blur','resize'])window.addEventListener(name,()=>stopCanvasMotion(true),options);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCanvasMotion(true);},options);
   document.addEventListener('keydown',event=>{if(event.key==='Escape')stopCanvasMotion();},options);
@@ -804,7 +804,7 @@ const browserPreferenceKeys=[
   'sgrapeLanguage','sgrapeAutoPreview','sgrapeAppearanceV1','sgrapeExperimentsV1',
   'sgrapeCustomNamesV1','sgrapeLinkLinesV1','sgrapeHeaderVisible','sgrapeSourceNamesV1',
   'sgrapeInputCollapsedGroups','sgrapeSidebarWidths','sgrapeInspectorPanels','sgrapeInspectorSizes',
-  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right',
+  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingParameterWidth',
   'grapeInputsDefaultLeftV1','grapeBrowserDetailHeight','grapeSourceGroupOrder','grapeSourceNotes','grapeSourceMinimal'
 ];
 function resetBrowserPreferences(){

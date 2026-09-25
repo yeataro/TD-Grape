@@ -1,5 +1,13 @@
 # Workspace layout and column creator
 
+## Floating Parameter panel (0.8.230)
+
+Plain **P** or **Floating Parameter panel** in the canvas/node/connection context menu toggles the existing Parameter pane above the canvas. It follows selection and retains Parameters, Settings and Notes, field drafts and normal Undo behavior. The original pane moves between its saved sidebar group and the floating container; controls are not duplicated. Closing restores the original docking location. The feature starts closed and remembers its open state locally, independently of saved workspace presets.
+
+The panel anchors below the canvas editing toolbar at the upper right. Top/right spacing uses the toolbar buttons' measured visible gap, accounting for UI scaling. The panel uses the existing panel surface and node corner radius. Width starts at 320 CSS pixels and can be adjusted using its left edge, with a 280 minimum; narrow canvases take precedence over that minimum. The right edge stays anchored. Width is remembered locally; the focused edge also supports Left/Right in 8-pixel steps, Home for minimum and End for available width. Cancelled pointer resizing restores the previous width. Height follows contents, capped above the canvas view controls, with internal scrolling. There is no position dragging or manual height resize.
+
+P respects text fields, composition, dialogs and active graph gestures; the panel and navigation remain available in read-only graphs. The overlay sits outside the canvas gesture container so native touch scrolling is not blocked by canvas pan/zoom handling. It changes neither graph data nor graph history. Reset browser settings clears both its visibility and width preferences. `test_floating_parameter.cjs` checks pane identity, drafts, selection, Undo, menus/keys, layout restoration, horizontal resizing, touch cancellation/scrolling and 18 viewport/scale/theme combinations. Mobile coverage is Chromium touch emulation, not an iOS device claim.
+
 ## Reset browser settings (0.8.199)
 
 The lower-left Functions menu includes **Reset browser settings…**. Confirmation lists the scope; accepting clears this site's TD-Grape preference keys and reloads the editor. Appearance, language, experimental options, Link/name visibility, Sources presentation, saved workspace layouts, panel widths/heights/collapse state and legacy layout migration keys return to current shipped defaults. This includes named browser layout presets; export a layout first if it should be retained.

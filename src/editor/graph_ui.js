@@ -2264,6 +2264,7 @@ function installGraphInteractions(){
     if(e.defaultPrevented)return;
     if(e.target.closest('.details')||e.target.closest('#grapheditmenu')||e.target.closest('.library')||e.target.closest('#creator')||e.target.closest('.shader-selector')||e.target.closest('dialog')||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
     const plainKey=e.key.toLowerCase();
+    if(e.target.closest('#floatingparameters')&&plainKey!=='p')return;
     const inGraph=e.target===document.body||e.target===document.documentElement||e.target.closest('.graph-workspace');
     const graphCommandReady=inGraph&&!e.isComposing&&!e.target.isContentEditable&&!canvas.onpointermove&&!valueLadder&&!pendingValueLadder&&!numericPresetMenu&&!creatorState&&!linkStart&&!wireGesture&&!nodeDragGesture&&!nodeResizeGesture&&!touchGraphGesture&&!document.querySelector('dialog[open]:not(#customdialog),:popover-open');
     const graphNavigationReady=graphCommandReady&&!nodePlacement&&!e.target.closest('button,a,[role="slider"],[role="listbox"],[role="menu"],[role="tablist"]');
@@ -2278,6 +2279,10 @@ function installGraphInteractions(){
     }
     if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
       if(graphNavigationReady&&navigateArrow(e.key))e.preventDefault();
+      return;
+    }
+    if(plainKey==='p'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
+      if(graphCommandReady&&!nodePlacement){e.preventDefault();if(!e.repeat){toggleFloatingParameter();focusGraphCanvas();}}
       return;
     }
     if(plainKey==='x'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
@@ -2323,7 +2328,7 @@ function installTouchNavigation(canvas){
   const points=new Map(),slop=8,holdDelay=550,doubleDelay=320;
   let gesture=null,frame=0,holdTimer=0,lastTap=null,lastTouch=-Infinity,lastDevice='mouse';
   const stop=e=>{if(e.cancelable)e.preventDefault();e.stopImmediatePropagation();};
-  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview,.group-frame-title,#connectionnotice,.wire-quick-actions');
+  const editable=target=>target.closest('input,textarea,select,[contenteditable="true"],a,button:not(.port),.graph-navigation,.node-inline-values,.comment-node-preview,.group-frame-title,#connectionnotice,.wire-quick-actions,#floatingparameters');
   const syncSelection=()=>document.querySelectorAll('.node').forEach(c=>c.classList.toggle('selected',selection.has(c.dataset.node)));
   const sample=()=>{const [a,b=a]=[...points.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(b.x-a.x,b.y-a.y)};};
   const rebase=()=>{
@@ -2471,7 +2476,7 @@ function installTouchNavigation(canvas){
 
 let editorClipboard=null,graphEditMenu=null,pastePoint=null,pasteCount=0;
 let clipboardSource=null;
-const editableText=target=>target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.library,.details,#creator,.comment-node-preview');
+const editableText=target=>target?.closest?.('input,textarea,select,[contenteditable="true"],dialog,.library,.details,#creator,.comment-node-preview,#floatingparameters');
 function clipboardSelection(){return current().nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)).map(n=>n.id);}
 function copyGraphSelection(){const text=GraphClipboard.encode(graph,current(),clipboardSelection(),clipboardSource);if(text){editorClipboard=text;pasteCount=0;renderGraphEditActions();}return text;}
 
@@ -2632,6 +2637,7 @@ function refreshLinkPortButtons(){
   }
 }
 function graphMenuIcon(action){
+  if(action==='floatingParameter')return selectionIcon('M4 3h16v18H4zM4 8h16M8 12h8M8 16h5');
   if(['sourceLinks','convertWires'].includes(action))return selectionIcon('M3 6h14m-4-3 4 3-4 3M3 18h14m-4-3 4 3-4 3');
   if(action==='selectSource')return selectionIcon('M20 12H4m6-6-6 6 6 6');
   if(action==='selectDestination')return selectionIcon('M4 12h16m-6-6 6 6-6 6');
@@ -2699,6 +2705,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
   ],[
     ['delete',t(selectedEdge!==null?'wire.disconnectSelected':'node.delete'),shortcutLabel('delete'),!readonly&&(count>0||selectedEdge!==null),remove]
   ]];
+  groups.push([['floatingParameter',t('view.floatingParameter'),shortcutLabel('floatingParameter'),true,toggleFloatingParameter]]);
   for(const rows of groups){
     let first=true;
     for(const[key,label,shortcut,enabled,action]of rows){
@@ -2709,6 +2716,7 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
       if(!edge)decorateShortcutButton(b,key==='fitAll'?'fit':key==='fit'?'fitSelection':key,key==='delete'&&selectedEdge!==null?'wire.disconnectSelected':undefined);b.disabled=!enabled;
       if(key==='focus'||key==='fullscreen'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(key==='focus'?graphFocused:!!document.fullscreenElement));}
       if(key==='toggleLinkLines'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(showLinkLines));decorateShortcutButton(b,'toggleLinkLines');}
+      if(key==='floatingParameter'){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(floatingParameterOpen));decorateShortcutButton(b,'floatingParameter');}
       if(key==='wireStyle'||key==='linkStyle'){b.setAttribute('role','menuitemradio');const checked=menuEdges.every(item=>(item.ui?.style==='link')===(key==='linkStyle'));b.setAttribute('aria-checked',String(checked));}
       if(['wireStyle','linkStyle','toggleLinkLines'].includes(key)){
         b.classList.add('graph-menu-check');const icon=selectionIcon('m5 12 4 4L19 6');icon.classList.add('menu-check-icon');caption.firstElementChild.replaceWith(icon);
