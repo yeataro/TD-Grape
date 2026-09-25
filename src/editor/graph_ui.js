@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, wireQuickActions: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, wireQuickActions: true, parameterInputPorts: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1414,11 +1414,12 @@ function connectPorts(start,end){
 function portInfo(button,start=null){
   const node=button.closest('[data-node]');
   if(node.classList.contains('node-router')){const kind=start?(start.kind==='outputs'?'inputs':'outputs'):button.dataset.kind;return {node:node.dataset.node,kind,port:kind==='inputs'?'value':'out',type:button.dataset.type};}
-  return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type,...(button.dataset.addPort?{add:true}:{})};
+  return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type,...(button.dataset.addPort?{add:true}:{}),...(button.classList.contains('parameter-input-port')?{panelProxy:true}:{})};
 }
+function wirePortButtons(){return [...document.querySelectorAll('#cards .port,#floatingparameters .parameter-input-port')].filter(button=>!button.disabled&&button.getClientRects().length);}
 function findWireTarget(candidates,x,y,radius=14){
   const hit=document.elementFromPoint(x,y);
-  if(!hit?.closest('#canvas'))return null;
+  if(!hit?.closest('#canvas,#floatingparameters'))return null;
   const direct=hit.closest('.port');
   if(direct)return !direct.disabled&&candidates.includes(direct)?direct:null;
   const router=hit.closest('.node-router');if(router)return candidates.find(p=>p.closest('.node-router')===router)||null;
@@ -1432,10 +1433,10 @@ function findWireTarget(candidates,x,y,radius=14){
 }
 function clearWireGesture(){if(wireGesture)wireGesture.cancel();}
 function dragWire(button,event){
-  if(event.button!==0||readonly)return;event.stopPropagation();
+  if(event.button!==0||readonly||button.disabled||!button.isConnected)return;event.stopPropagation();
   clearWireGesture();suppressPortClick=false;
-  const start=portInfo(button),sx=event.clientX,sy=event.clientY;
-  const candidates=[...$('#cards').querySelectorAll('.port')].filter(p=>!connectionProblem(start,portInfo(p,start)));
+  const start=portInfo(button),sx=event.clientX,sy=event.clientY,owner=graph,data=current();
+  const candidates=wirePortButtons().filter(p=>!connectionProblem(start,portInfo(p,start)));
   let moved=false,target=null,frame=0,lastEvent=null;
   const finish=()=>{
     wireGesture=null;clearVectorWirePreview();clearGraphTrash();cancelAnimationFrame(frame);target?.classList.remove('wire-target');target=null;
@@ -1447,20 +1448,21 @@ function dragWire(button,event){
   const cancel=()=>{suppressPortClick=true;finish();if(graph)wires();};
   const onKey=e=>{if(e.key==='Escape'){e.preventDefault();cancel();}};
   const update=e=>{
+    if(graph!==owner||current()!==data||!button.isConnected){cancel();return;}
     if(e.pointerId!==event.pointerId||(!moved&&Math.hypot(e.clientX-sx,e.clientY-sy)<4))return;
     if(!moved)beginGraphTrash(trashTarget('port',start));moved=true;linkStart=null;
     const over=updateGraphTrash(e.clientX,e.clientY),next=over?null:findWireTarget(candidates,e.clientX,e.clientY);
     if(target!==next){target?.classList.remove('wire-target');target=next;target?.classList.add('wire-target');}
     const r=target?.getBoundingClientRect();
     const q=graphPoint(r?r.left+r.width/2:e.clientX,r?r.top+r.height/2:e.clientY);if(!q)return;
-    wireDrag={...start,q,ready:!!target};wires();const componentRange=previewVectorWire(start,target);
+    wireDrag={...start,q,ready:!!target,anchor:start.panelProxy?button:null,panelProxy:!!(start.panelProxy||target?.classList.contains('parameter-input-port'))};wires();const componentRange=previewVectorWire(start,target);
     $('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(start)&&isBlankWireDrop(e.clientX,e.clientY)?'trash.releaseWire':'wire.connect')+(componentRange?' · '+componentRange:'');
   };
   wireGesture={cancel,refresh:()=>{if(moved&&lastEvent)update(lastEvent);}};button.setPointerCapture(event.pointerId);
   window.addEventListener('blur',cancel);document.addEventListener('keydown',onKey,true);
   button.onpointermove=e=>{if(e.pointerId!==event.pointerId)return;lastEvent=e;if(!frame)frame=requestAnimationFrame(()=>{frame=0;update(lastEvent);});};
   button.onpointerup=e=>{
-    if(e.pointerId!==event.pointerId)return;update(e);
+    if(e.pointerId!==event.pointerId)return;if(graph!==owner||current()!==data||!button.isConnected){cancel();return;}update(e);
     const end=target&&portInfo(target,start),hit=document.elementFromPoint(e.clientX,e.clientY),wasMoved=moved,drop=moved&&graphTrashDrop(e.clientX,e.clientY);
     suppressPortClick=wasMoved;finish();
     if(!wasMoved)return;
@@ -1472,9 +1474,19 @@ function dragWire(button,event){
   button.onpointercancel=button.onlostpointercapture=cancel;
 }
 function drawWireDrag(svg){
-  if(!wireDrag)return;const n=current().nodes.find(n=>n.id===wireDrag.node),p=n&&point(n,wireDrag.port,wireDrag.kind);if(!p)return;
+  document.querySelector('.parameter-wire-preview')?.remove();
+  if(!wireDrag)return;const n=current().nodes.find(n=>n.id===wireDrag.node),r=wireDrag.anchor?.getBoundingClientRect(),p=r?graphPoint(r.left+r.width/2,r.top+r.height/2):n&&point(n,wireDrag.port,wireDrag.kind);if(!p)return;
   const a=wireDrag.kind==='outputs'?p:wireDrag.q,b=wireDrag.kind==='outputs'?wireDrag.q:p,dx=Math.max(60,Math.abs(a.x-b.x)*.5),path=document.createElementNS('http://www.w3.org/2000/svg','path');
   path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);if(wireDrag.kind==='outputs')applyPortColorHint(path,n,'outputs',wireDrag.port);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
+  if(wireDrag.panelProxy){
+    // Only the in-progress preview rises above the panel. Saved edges always
+    // use point() on the real node, never this temporary screen-space surface.
+    const style=getComputedStyle(path),stroke=style.stroke,width=style.strokeWidth,dashes=style.strokeDasharray,overlay=document.createElementNS(svg.namespaceURI,'svg');
+    overlay.classList.add('parameter-wire-preview');overlay.setAttribute('aria-hidden','true');$('.graph-workspace').append(overlay);
+    const bounds=overlay.getBoundingClientRect(),basis=graphCoordinateBasis(),zoom=uiScaleFactor();
+    path.style.stroke=stroke;path.style.strokeWidth=width;path.style.strokeDasharray=dashes;
+    path.setAttribute('transform',`matrix(${basis.width/zoom} 0 0 ${basis.height/zoom} ${(basis.left-bounds.left)/zoom} ${(basis.top-bounds.top)/zoom})`);overlay.append(path);
+  }
 }
 function nodeCollapseSelection(){return graph&&selectedEdge===null?current().nodes.filter(n=>selection.has(n.id)&&n.definitionUuid!=='sgrape.builtin.router'):[];}
 function nodeCollapseSelectionState(){
@@ -2387,7 +2399,7 @@ function installTouchNavigation(canvas){
     }else if(g.mode==='wire'){
       const over=updateGraphTrash(p.x,p.y),target=over?null:findWireTarget(g.candidates,p.x,p.y,22);if(g.target!==target){g.target?.classList.remove('wire-target');g.target=target;target?.classList.add('wire-target');}
       const r=target?.getBoundingClientRect(),q=graphPoint(r?r.left+r.width/2:p.x,r?r.top+r.height/2:p.y);
-      if(q){wireDrag={...g.port,q,ready:!!target};wires();const range=previewVectorWire(g.port,target);$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(g.port)&&isBlankWireDrop(p.x,p.y)?'trash.releaseWire':'wire.touchConnect')+(range?' · '+range:'');}
+      if(q){wireDrag={...g.port,q,ready:!!target,panelProxy:!!target?.classList.contains('parameter-input-port')};wires();const range=previewVectorWire(g.port,target);$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(g.port)&&isBlankWireDrop(p.x,p.y)?'trash.releaseWire':'wire.touchConnect')+(range?' · '+range:'');}
     }else if(g.mode==='box'){
       const r=canvas.getBoundingClientRect(),box=$('#marquee'),uiScale=uiScaleFactor();box.hidden=false;
       box.style.left=(Math.min(g.start.x,p.x)-r.left)/uiScale+'px';box.style.top=(Math.min(g.start.y,p.y)-r.top)/uiScale+'px';box.style.width=Math.abs(dx)/uiScale+'px';box.style.height=Math.abs(dy)/uiScale+'px';
@@ -2398,7 +2410,7 @@ function installTouchNavigation(canvas){
     const g=gesture,p=sample();if(!g||g.mode==='menu')return;
     if(!g.moved&&Math.hypot(p.x-g.start.x,p.y-g.start.y)>=slop){
       g.moved=true;stopHold();lastTap=null;
-      if(g.port&&!readonly){g.mode='wire';cancelConnection();beginGraphTrash(trashTarget('port',g.port));g.candidates=[...$('#cards').querySelectorAll('.port')].filter(b=>!connectionProblem(g.port,portInfo(b,g.port)));}
+      if(g.port&&!readonly){g.mode='wire';cancelConnection();beginGraphTrash(trashTarget('port',g.port));g.candidates=wirePortButtons().filter(b=>!connectionProblem(g.port,portInfo(b,g.port)));}
       else if(g.node&&g.canDragNode&&!readonly){
         g.mode='node';if(!selection.has(g.node.id))selectNode(g.node);else selected=g.node.id;selectedEdge=null;syncSelection();inspector();cancelConnection();
         g.positions=current().nodes.filter(n=>selection.has(n.id)).map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),x:node.ui?.x||0,y:node.ui?.y||0,nextX:node.ui?.x||0,nextY:node.ui?.y||0}));

@@ -1398,11 +1398,38 @@ function nodeColorPicker(n){
   for(const event of ['pointerdown','click','dblclick','contextmenu','keydown'])picker.addEventListener(event,e=>e.stopPropagation());
   strip.append(swatch);return strip;
 }
-function inspector(){
+function refreshFloatingParameterPorts(){
+  const box=$('#inspector');if(!box)return;
+  if(wireDrag?.panelProxy||linkStart?.panelProxy){touchGraphGesture?.cancel();cancelConnection();}
+  box.querySelectorAll('.parameter-port-slot').forEach(slot=>slot.remove());
+  box.querySelectorAll('.parameter-port-anchor').forEach(row=>row.classList.remove('parameter-port-anchor'));
+  box.classList.remove('has-parameter-ports');
+  if(!graph||!floatingParameterOpen||!EDITOR_DEV_SETTINGS.parameterInputPorts||inspectorTab!=='parameters')return;
+  const n=current().nodes.find(node=>node.id===box.dataset.inspectorNode);if(!n)return;
+  for(const [port,type]of Object.entries(ports(n,'inputs'))){
+    const escaped=CSS.escape(port),section=box.querySelector(`[data-input="${escaped}"]`),value=box.querySelector(`[data-parameter-value="${escaped}"],[data-parameter-matrix="${escaped}"]`);
+    let row=section?.querySelector('.parameter-row')||section||value?.querySelector('.parameter-row');
+    // Matrix component rows represent actual c0x/c0y... inputs; ordinary vector
+    // value components do not create extra graph sockets.
+    if(!row&&/^c\d[xyzw]$/.test(port)){
+      const column=box.querySelector(`[data-parameter-value="${port.slice(0,-1)}"]`),index='xyzw'.indexOf(port.at(-1));
+      row=column?.querySelectorAll('.parameter-component-row')[index];
+    }
+    if(!row)continue;
+    const slot=el('span',{class:'parameter-port-slot port-row input','data-type':type}),button=el('button',{type:'button',class:'port parameter-input-port','data-node':n.id,'data-kind':'inputs','data-port':port,'data-type':type,'aria-label':`${nodeDisplayName(n)} input: ${portLabel(n,'inputs',port)} (${type})`});
+    applyPortColorHint(slot,n,'inputs',port);button.disabled=readonly;
+    button.onpointerdown=e=>dragWire(button,e);
+    button.onclick=e=>{e.stopPropagation();if(readonly||suppressPortClick||!button.isConnected)return;const info=portInfo(button);if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);else{linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t(wireStartHint(info));}};
+    slot.append(button);row.classList.add('parameter-port-anchor');row.prepend(slot);box.classList.add('has-parameter-ports');
+  }
+}
+function inspector(){renderInspector();refreshFloatingParameterPorts();}
+function renderInspector(){
   if(deferParameterInspector()||deferCommentNodeEditor(false))return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
   const box=$('#inspector');box.classList.remove('ordinary-parameters','comment-parameters','notes-parameters','parameter-empty');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
+  box.dataset.inspectorNode=n?.id||'';
   if(n||selectedEdge!==null)selectedInputId=null;
   const inputSource=allInputSources().find(d=>d.id===selectedInputId);
   if(inputSource?.kind==='top_input'){topInputInspector(box,inputSource);return;}
@@ -1932,6 +1959,7 @@ function installPanelWorkspace(){
     panes.parameters.setAttribute('aria-labelledby',floatingParameterOpen?'floatingparametertitle':heads.parameters.id);
     $('#parameterbody').setAttribute('aria-labelledby',floatingParameterOpen?'floatingparametertitle':heads.parameters.id);
     if(floatingParameterOpen){panes.parameters.hidden=false;$('#parameterbody').hidden=false;floating.append(panes.parameters);}
+    refreshFloatingParameterPorts();
     scheduleFloatingParameter();
     if(typeof graph!=='undefined'&&graph)preview().catch(error=>status(error.message,true));
     queueMicrotask(()=>{if(typeof refreshGeneratedGLSL==='function')refreshGeneratedGLSL();});

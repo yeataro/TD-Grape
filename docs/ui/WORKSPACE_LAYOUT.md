@@ -10,6 +10,12 @@ Width starts at 320 CSS pixels and can be adjusted using its left edge, with a 2
 
 P respects text fields, composition, dialogs and active graph gestures; the panel and navigation remain available in read-only graphs. The overlay sits outside the canvas gesture container so native touch scrolling is not blocked by canvas pan/zoom handling. It changes neither graph data nor graph history. Reset browser settings clears both its visibility and width preferences. `test_floating_parameter.cjs` checks pane identity, drafts, selection, Undo, menus/keys, layout restoration, horizontal resizing, touch cancellation/scrolling and 36 viewport/scale/theme/density combinations. Mobile coverage is Chromium touch emulation, not an iOS device claim.
 
+### Floating Input sockets (0.8.233)
+
+Experimental features → Nodes and wiring → **Floating Parameter input sockets** defaults on. The floating Parameters tab adds a type-colored Input socket beside existing input parameter rows. These are shortcuts to the selected node's real Inputs: drag a canvas Output onto the panel socket, or drag the panel socket to a canvas Output. Ordinary settings and literal value controls do not acquire ports. Matrix column/component rows expose only their actual graph Inputs. The docked pane is unchanged.
+
+The shared connection planner handles types, cycles, compile-time restrictions, replacement and Undo. Only the temporary drag preview reaches the panel; committed Wire/Link connections keep their original node endpoints. No persistent panel wires, Link arrows or additional labels are introduced. Read-only sockets cannot edit. Closing the panel, changing selection or disabling the experiment cancels a pending proxy gesture, including canvas touch capture. Toggling the option preserves in-progress numeric fields. `test_parameter_input_ports.cjs` exercises these operations using mouse and Chromium touch events, including 80/100/125% UI scaling and matrix scalar overrides.
+
 ## Reset browser settings (0.8.199)
 
 The lower-left Functions menu includes **Reset browser settings…**. Confirmation lists the scope; accepting clears this site's TD-Grape preference keys and reloads the editor. Appearance, language, experimental options, Link/name visibility, Sources presentation, saved workspace layouts, panel widths/heights/collapse state and legacy layout migration keys return to current shipped defaults. This includes named browser layout presets; export a layout first if it should be retained.

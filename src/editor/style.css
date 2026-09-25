@@ -861,6 +861,14 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .floating-parameter-resize{position:absolute;left:0;top:8px;bottom:8px;width:6px;z-index:4;cursor:ew-resize;touch-action:none}
 .floating-parameter-resize:is(:hover,:focus-visible){background:var(--line);outline-offset:-2px}
 @media(pointer:coarse){#floatingparameters{--floating-close-size:44px}.floating-parameter-resize{width:10px}}
+#floatingparameters #inspector.has-parameter-ports{--parameter-inset:26px}
+.parameter-port-anchor{position:relative}
+.parameter-port-slot.port-row.input{position:absolute;left:-18px;top:6px;width:11px;height:11px;padding:0;display:block}
+.parameter-port-slot>.port{left:0;top:0;width:11px;height:11px;min-height:0;border-radius:50%;touch-action:none;cursor:crosshair}
+.parameter-port-slot>.port::after{content:'';position:absolute;inset:-6px;border-radius:50%}
+.parameter-port-slot>.port:disabled{opacity:1;cursor:default}
+.parameter-wire-preview{position:absolute;top:0;left:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:13}
+.parameter-wire-preview path{fill:none;pointer-events:none}
 #inspector{margin:0 0 12px}
 #inspector>:not(.node-inspector-title):not(.parameter-tabs){margin-left:var(--parameter-inset,12px);margin-right:var(--parameter-inset,12px)}
 #inspector>.wide{width:calc(100% - 24px)}
