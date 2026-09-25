@@ -94,7 +94,7 @@ await key('ArrowRight','right');await pick('center');await key('ArrowDown','diag
 await page.evaluate(()=>{current().nodes.find(n=>n.id==='right').ui.x=400;current().nodes.push(testNode('near','add',250,0));render();$('#canvas').focus();});await pick('center');await key('ArrowRight','near');
 checks.push('spatial mode prefers the forward sector, then nearest distance, using current positions independently of zoom');
 await page.evaluate(()=>{selection=new Set(['center','near']);selected='near';refreshCanvasSelection();$('#canvas').focus();});const spatialMulti=await chosen();await page.keyboard.press('ArrowRight');assert.deepEqual(await chosen(),spatialMulti);
-await page.evaluate(()=>setGraphFocus(false));await page.locator('#uishortcuts').click();assert.match(await page.locator('[data-shortcut="arrowPath"] dt').innerText(),/依位置/);assert.match(await page.locator('[data-shortcut="arrowBranch"] dt').innerText(),/依位置/);await page.keyboard.press('Escape');
+await page.evaluate(()=>setGraphFocus(false));await page.selectOption('#language','zh-Hant');await page.locator('#uishortcuts').click();assert.match(await page.locator('[data-shortcut="arrowPath"] dt').innerText(),/依位置/);assert.match(await page.locator('[data-shortcut="arrowBranch"] dt').innerText(),/依位置/);await page.keyboard.press('Escape');
 assert.equal(await page.evaluate(()=>parseUIExperiments(localStorage.getItem(experimentsStorageKey)).arrowNavigationMode),'spatial');
 checks.push('spatial mode remains single-selection only and its persisted setting is reflected in shortcut Help');
 assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks:checks.length}));

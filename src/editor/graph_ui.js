@@ -1289,6 +1289,7 @@ function selectConnectedNodes(direction,excludeLinked=false){
   renderGraphEditActions();refreshCanvasSelection();return true;
 }
 function navigateArrow(key){
+  if(graph&&selectedEdge!==null&&['ArrowLeft','ArrowRight'].includes(key))return selectEdgeEndpoints(selectedCanvasEdges(),key==='ArrowLeft'?'from':'to');
   if(!graph||selectedEdge!==null||selection.size!==1){resetArrowNavigation();return false;}
   const data=current(),nodes=new Map(data.nodes.map(n=>[n.id,n])),id=[...selection][0],node=nodes.get(id);
   if(!node){resetArrowNavigation();return false;}
@@ -1359,6 +1360,12 @@ function selectCanvasEdge(edge,toggle=false){
   setSelectedEdges(toggle&&items.includes(edge)?items.filter(item=>item!==edge):[...items,edge]);
   selected=null;selection.clear();selectedInputId=null;resetArrowNavigation();focusGraphCanvas();
   refreshCanvasSelection();
+}
+function selectEdgeEndpoints(edges,side,frame=true){
+  const data=current(),ids=new Set(edges.filter(edge=>data.edges.includes(edge)).map(edge=>edge[side][0]));
+  const nodes=data.nodes.filter(node=>ids.has(node.id));if(!nodes.length)return false;
+  selectNode(nodes.at(-1));selection=new Set(nodes.map(node=>node.id));refreshCanvasSelection();
+  if(frame)fitNodes(nodes,true);return true;
 }
 function selectNode(n,toggle=false){
   resetArrowNavigation();
@@ -2572,6 +2579,15 @@ function openLinkTargets(location,x,y){
   document.body.append(menu);graphEditMenu=menu;const z=uiScaleFactor();menu.style.maxHeight=Math.max(0,innerHeight/z-8)+'px';menu.style.left=Math.max(4,Math.min(x/z,innerWidth/z-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/z,innerHeight/z-menu.offsetHeight-4))+'px';menu.querySelector('button')?.focus();
 }
 let linkPortGradientId=0;
+function refreshLinkPortHover(){
+  // Match edge objects, not array indices or node IDs: an output can fan out,
+  // and collapsed buttons can represent several ports. Ordinary Wires stay unchanged.
+  const highlighted=new Set();
+  for(const button of document.querySelectorAll('#cards .link-port-navigation:hover')){
+    if(button.linkLocation)for(const edge of linkLocationEdges(button.linkLocation))highlighted.add(edge);
+  }
+  for(const path of document.querySelectorAll('#wires .wire-link'))path.classList.toggle('link-port-hover',highlighted.has(path.edgeSelectionItem));
+}
 function refreshLinkPortButtons(){
   const linked=new Set();for(const edge of current().edges)if(edge.ui?.style==='link')for(const [side,kind]of [['from','outputs'],['to','inputs']])linked.add(JSON.stringify([edge[side][0],kind,edge[side][1]]));
   for(const row of document.querySelectorAll('#cards .port-row')){
@@ -2584,6 +2600,7 @@ function refreshLinkPortButtons(){
       icon.setAttribute('viewBox','0 0 16 16');icon.setAttribute('aria-hidden','true');icon.classList.add('link-port-arrow');
       shape.setAttribute('d','M2 8h11M8 3l5 5-5 5');icon.append(shape);button.append(icon);
       button.onpointerdown=button.ondblclick=e=>e.stopPropagation();
+      button.onpointerenter=button.onpointerleave=refreshLinkPortHover;
       button.onclick=e=>{e.stopPropagation();if(button.isConnected)frameLinkPeers(button.linkLocation);};
       button.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();if(button.isConnected)openLinkTargets(button.linkLocation,e.clientX,e.clientY);};row.append(button);
     }
@@ -2643,14 +2660,14 @@ function openGraphMenu(x,y,nodeId=null,{touch=false,edge=null}={}){
   const subgraphDefinition=subgraphNode&&FunctionModel.find(graph,subgraphNode.params.functionId);
   const nodeEdges=side=>level.edges.filter(edge=>nodeIds.has(edge[side][0]));
   const sourceEdges=()=>level.edges.filter(item=>item.from[0]===edge.from[0]&&item.from[1]===edge.from[1]);
-  const selectEndpoint=side=>{const node=level.nodes.find(n=>n.id===edge[side][0]);if(node){selectNode(node);refreshCanvasSelection();if(EDITOR_DEV_SETTINGS.frameWireEndpoint)fitNodes([node],true);}};
+  const selectEndpoint=side=>selectEdgeEndpoints([edge],side,EDITOR_DEV_SETTINGS.frameWireEndpoint);
   const menuEdges=edge?[...selectedCanvasEdges()]:[];
   const groups=edge?[[
     ['wireStyle','Wire','',!editorMutationBlocked(),()=>setEdgeStyles(menuEdges,'wire')],
     ['linkStyle','Link','',!editorMutationBlocked(),()=>setEdgeStyles(menuEdges,'link')],
   ],[
-    ['selectSource',t('wire.selectSource'),'',true,()=>selectEndpoint('from')],
-    ['selectDestination',t('wire.selectDestination'),'',true,()=>selectEndpoint('to')],
+    ['selectSource',t('wire.selectSource'),shortcutLabel('edgeSource'),true,()=>selectEndpoint('from')],
+    ['selectDestination',t('wire.selectDestination'),shortcutLabel('edgeDestination'),true,()=>selectEndpoint('to')],
     ['sourceLinks',t('wire.sourceAllLink'),'',!editorMutationBlocked()&&sourceEdges().some(item=>item.ui?.style!=='link'),()=>setEdgeStyles(sourceEdges(),'link')],
   ],[
     ['delete',t('wire.disconnectSelected'),'',!editorMutationBlocked(),remove]

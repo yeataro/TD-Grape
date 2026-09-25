@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-25 0.8.228：Link 接孔箭頭 hover 同時高亮對應的 Link 線及中央方向標記，使用直接 hover 線條的相同樣式；輸出多分支、輸入、收合接孔及 Router 共用端點對應，普通 Wire 不受影響，離開與重繪均維持正確狀態。選取 Wire／Link 線後，左右鍵分別選取來源／目標並 Frame；多線去重後一起取景，沿用 Frame 動畫，獨立於一般節點導航和右鍵選單的取景偏好。沿用文字輸入／對話框／手勢避讓，五語快捷鍵表與線選單提示同步更新。
+
+Chromium 56 組檢查通過：Link 17、Router 配置 6、接線方向鍵 5、原有節點方向鍵 20、快捷鍵說明 8；包括唯讀、反向畫面位置、多選、Frame 動畫、過期圖、圖與 Undo 保持不變。舊節點導航測試的中文文字斷言改為先明確選中文，不再假設初始語言。1496 項五語文字／1120 UI 引用／59 項來源提示、JS 與 diff 檢查通過。39 份來源已同步，四份 Master 身分／位置與四份使用者 Shader 保留；正式 TOE 保存 2050950 bytes（SHA256 d058afc3e7a886c7d5e9e39e737552693e58477849c25518550927de2f0ad74e），六份登記狀態保留、私人助手排除。私人報告 reports/link-hover-228/；未推送。
+
 2026-09-25 0.8.227：暗模式來源改依用途配色：屬性／表面座標橄欖色、執行時資訊櫻桃色、TD 編譯期常數霧藍色 #526D91；使用者 Constant 保留原深藍。58 個內建來源使用明確的 UI 顯示對照，Sampler 資源沿用 Sampler 色，自訂 Attribute／Tex 與 TD 屬性一致。移除依 tdBuiltin 選單路徑改写 nodeCategory 的做法，配色獨立於 family、來源樹與編譯契約；節點、來源卡、數量徽章、Inspector、新增入口及 Link 目標標記共用角色。畫布、Router 標題、白色 85% 標題字及淺色節點配色保留。規則見 [Color and labels](../ui/COLOR_AND_LABELS.md)。
 
 隔離 Chromium 6 組檢查涵蓋全部來源角色、TOP／MAT 對照、實際節點色、Inspector／Sources／徽章、淺色幾何與零圖變更；來源卡 8 組操作回歸通過。舊 Sources 測試假設預設展開，私人副本僅調整此初始化；presentation 的卡片高度斷言仍於修改前 HEAD 和本版相同位置失敗，不列為通過。JS／diff 檢查通過。39 份來源已同步，四份 Master 身分／位置及四份使用者 Shader 保留；正式 TOE 保存 2050974 bytes（SHA256 d711e173839144dc7338fc3f4472674b9beb18f8fbf9ec80fda5f35617efb881），六份登記狀態保留、私人助手排除。私人報告 reports/source-colors-227/；未推送。

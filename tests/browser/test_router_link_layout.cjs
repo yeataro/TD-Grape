@@ -37,6 +37,10 @@ const {harness}=require('./test_glsl_code.cjs');
     checks.push('1/2/3/4/8/16 outputs retain the tier cap, first-tier hollow dots, native 20×22 arrows and single natural curves clear of the Link button');
     await page.evaluate(()=>routerFixture(8,[1,3,5]));
     const before=await page.evaluate(()=>JSON.stringify(graph));
+    await page.locator('[data-node="router"] [data-link-kind="outputs"]').hover();
+    assert.deepEqual(await page.locator('#wires .link-port-hover').evaluateAll(es=>es.map(e=>e.dataset.to)),['dst1:value','dst3:value','dst5:value']);
+    await page.mouse.move(10,10);assert.equal(await page.locator('#wires .link-port-hover').count(),0);
+    checks.push('Router output-arrow hover highlights only its three Link segments and clears on leave');
     for(const mode of ['always','hover','hidden']){
       await page.evaluate(mode=>{EDITOR_DEV_SETTINGS.linkArrowDisplay=mode;showLinkLines=true;wires();},mode);
       assert.equal(await page.locator('[data-node="router"] [data-link-kind="outputs"]').count(),mode==='hidden'?0:1);

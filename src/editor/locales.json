@@ -4148,6 +4148,20 @@
       "fr": "Tout convertir en Wire",
       "ko": "모두 Wire로 변환"
     },
+    "shortcuts.edgeSource": {
+      "zh-Hant": "選取接線：選取來源節點並 Frame",
+      "en": "Selected connection: select and Frame source",
+      "ja": "選択中の接続：接続元を選択して Frame",
+      "fr": "Connexion sélectionnée : sélectionner et cadrer la source",
+      "ko": "선택한 연결: 소스 노드 선택 및 Frame"
+    },
+    "shortcuts.edgeDestination": {
+      "zh-Hant": "選取接線：選取目標節點並 Frame",
+      "en": "Selected connection: select and Frame destination",
+      "ja": "選択中の接続：接続先を選択して Frame",
+      "fr": "Connexion sélectionnée : sélectionner et cadrer la destination",
+      "ko": "선택한 연결: 대상 노드 선택 및 Frame"
+    },
     "wire.selectSource": {
       "zh-Hant": "選取來源",
       "en": "Select source",

@@ -26,6 +26,8 @@ const EDITOR_SHORTCUTS=Object.freeze({
   focusGraph:{label:'view.graphFocus',hint:'view.graphFocusShortcut',keys:['Mod+Enter'],section:'navigation'},
   up:{label:'navigation.up',keys:['Alt+ArrowUp'],section:'navigation'},
   arrowPath:{label:'navigation.arrowPath',keys:['ArrowLeft','ArrowRight'],section:'navigation'},
+  edgeSource:{label:'shortcuts.edgeSource',keys:['ArrowLeft'],section:'navigation'},
+  edgeDestination:{label:'shortcuts.edgeDestination',keys:['ArrowRight'],section:'navigation'},
   arrowBranch:{label:'navigation.arrowBranch',keys:['ArrowUp','ArrowDown'],section:'navigation'},
   menu:{label:'edit.menu',keys:['Shift+F10','ContextMenu'],section:'navigation'},
   cancel:{label:'shortcuts.cancel',keys:['Escape'],section:'navigation'},

@@ -526,6 +526,7 @@ function wires(){
   // All visible strokes outrank all transparent hit areas. Preserve edge order
   // within each layer; both remain above Group bodies and below nodes/controls.
   svg.append(hits,paint);
+  refreshLinkPortHover();
   drawWireDrag(svg);paintTrashHighlights();positionGroupFrames();scheduleSelectionToolbarPosition();
   routerWirePoints=null;
 }
