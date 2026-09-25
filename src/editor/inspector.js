@@ -1853,8 +1853,8 @@ function installPanelWorkspace(){
   function positionFloatingParameter(){
     floatingFrame=0;if(floating.hidden)return;
     const canvas=$('#canvas'),bounds=canvas.getBoundingClientRect(),host=floating.offsetParent.getBoundingClientRect(),zoom=uiScaleFactor(),toolbar=$('.graph-workspace>.toolbar')||$('#canvas>.toolbar');
-    const gap=parseFloat(getComputedStyle(floating).getPropertyValue('--floating-parameter-gap'))||12;
-    const buttons=toolbar?[...toolbar.querySelectorAll('button,select')].filter(b=>b.getClientRects().length):[];
+    const gap=parseFloat(getComputedStyle(floating).getPropertyValue('--canvas-ui-inset'))||12;
+    const buttons=toolbar?[...toolbar.querySelectorAll('.graph-tools button,.graph-tools select')].filter(b=>b.getClientRects().length&&!b.closest('[popover]')):[];
     const toolbarBottom=Math.max(bounds.top,...buttons.map(b=>b.getBoundingClientRect().bottom));
     const top=(toolbarBottom-host.top)/zoom+gap;
     const viewTools=$('.canvas-view-tools'),viewTop=viewTools?.getClientRects().length?viewTools.getBoundingClientRect().top:bounds.bottom;

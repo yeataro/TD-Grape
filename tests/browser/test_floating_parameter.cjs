@@ -48,17 +48,18 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.locator('#parameterbody').evaluate(e=>e.scrollTop=200);assert.ok(await page.locator('#parameterbody').evaluate(e=>e.scrollTop>0));
   await page.evaluate(()=>$('#floating-content-probe').remove());await settle();assert.ok(Math.abs((await panel.boundingBox()).height-short.height)<2);
   checks.push('Height follows short content and shrinks back; long content caps at available canvas height and scrolls inside');
-  for(const width of [1600,430,320])for(const ui of [80,100,125])for(const theme of ['dark','light']){
-   await page.setViewportSize({width,height:932});await page.evaluate(({ui,theme,width})=>{uiAppearance.scale=ui;uiAppearance.theme=theme;renderUIAppearance();setSidebarOpen('left',width>800);setSidebarOpen('right',width>800);},{ui,theme,width});await settle();
+  for(const width of [1600,430,320])for(const ui of [80,100,125])for(const theme of ['dark','light'])for(const size of ['standard','comfortable']){
+   await page.setViewportSize({width,height:932});await page.evaluate(({ui,theme,width,size})=>{uiAppearance.scale=ui;uiAppearance.theme=theme;uiAppearance.size=size;renderUIAppearance();setSidebarOpen('left',width>800);setSidebarOpen('right',width>800);},{ui,theme,width,size});await settle();
    const geometry=await page.evaluate(()=>{
-    const panel=$('#floatingparameters').getBoundingClientRect(),canvas=$('#canvas').getBoundingClientRect(),buttons=[...$('.graph-workspace .toolbar').querySelectorAll('button,select')].filter(b=>b.getClientRects().length),bottom=Math.max(...buttons.map(b=>b.getBoundingClientRect().bottom));
-    return{right:canvas.right-panel.right,top:panel.top-bottom,gap:12*uiScaleFactor(),width:panel.width,maxWidth:canvas.width,bottom:panel.bottom,canvasBottom:canvas.bottom,radius:getComputedStyle($('#floatingparameters')).borderRadius,toolbarRadius:getComputedStyle($('.selection-toolbar')).borderRadius};
+    const panel=$('#floatingparameters').getBoundingClientRect(),canvas=$('#canvas').getBoundingClientRect(),buttons=[...$('.graph-workspace .toolbar').querySelectorAll('.graph-tools button,.graph-tools select')].filter(b=>b.getClientRects().length&&!b.closest('[popover]')).map(b=>b.getBoundingClientRect()),bottom=Math.max(...buttons.map(b=>b.bottom));
+    return{right:canvas.right-panel.right,top:panel.top-bottom,toolsRight:canvas.right-Math.max(...buttons.map(b=>b.right)),toolsTop:Math.min(...buttons.map(b=>b.top))-canvas.top,gap:12*uiScaleFactor(),width:panel.width,maxWidth:canvas.width,bottom:panel.bottom,canvasBottom:canvas.bottom,radius:getComputedStyle($('#floatingparameters')).borderRadius,toolbarRadius:getComputedStyle($('.selection-toolbar')).borderRadius};
    });
    assert.ok(Math.abs(geometry.right-geometry.gap)<1.5,JSON.stringify({width,ui,theme,geometry}));assert.ok(Math.abs(geometry.top-geometry.gap)<1.5,JSON.stringify({width,ui,theme,geometry}));
+   assert.ok(Math.abs(geometry.toolsRight-geometry.right)<1.5,JSON.stringify({width,ui,theme,size,geometry}));assert.ok(Math.abs(geometry.toolsTop-geometry.top)<1.5,JSON.stringify({width,ui,theme,size,geometry}));
    assert.ok(geometry.width<=geometry.maxWidth&&geometry.bottom<=geometry.canvasBottom+1);assert.equal(geometry.radius,geometry.toolbarRadius);
-   if(ui===100)await page.screenshot({path:path.join(folder,`panel-${width}-${theme}.png`)});
+   if(ui===100){await page.locator('.floating-parameter-close').hover();await page.screenshot({path:path.join(folder,`panel-${width}-${theme}-${size}.png`)});}
   }
-  checks.push('12px visual insets scale consistently across 18 desktop/mobile and theme combinations; editing toolbar radius matches');
+  checks.push('Toolbar top/right and Parameter top/right gaps match across 36 viewport/scale/theme/density combinations; editing toolbar radius matches');
   await page.setViewportSize({width:430,height:932});await page.evaluate(()=>{setUIAppearance('scale',100);setUIExperiments({floatingToolbar:false});});await settle();
   assert.ok(await panel.evaluate(e=>{const a=e.getBoundingClientRect(),b=$('#canvas').getBoundingClientRect();return a.top>=b.top&&a.right<=b.right;}));
   await page.evaluate(()=>{setUIExperiments({floatingToolbar:true});const n=document.createElement('div');n.id='touch-scroll-probe';n.style.height='1800px';$('#inspector').append(n);});await settle();

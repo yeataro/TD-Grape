@@ -342,7 +342,7 @@ input.scrubbing{outline:1px solid var(--purple);background:#2d2538}
 #savedpath,#savedissues,#savedstatus{overflow-wrap:anywhere}#savedraw{white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;font-size:11px;padding:12px;background:var(--state-code)}
 
 :root{--state-surface:#1d1b26;--state-code:#14141c}
-.graph-workspace{position:relative}
+.graph-workspace{position:relative;--canvas-ui-inset:12px}
 
 /* Version review stays beside the graph it protects. */
 #upgradenotice { flex:0 0 auto; padding:12px 18px; border-bottom:1px solid var(--line); background:var(--state-surface); }
@@ -839,10 +839,13 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .subgraph-icon.source-subgraph{opacity:.5}
 #pane-parameters>.panel-scroll{padding:0;scrollbar-gutter:auto}
 :root{--floating-toolbar-radius:8px}
-#floatingparameters{--floating-parameter-gap:12px;--floating-close-size:32px;--panel-content-bg:var(--node-body,var(--ui-tone-node));--ui-tone-field:var(--node-value-bg);--ui-tone-control:var(--node-value-bg);--ui-field:var(--node-value-bg);--ui-control:var(--node-value-bg);--floating-value-text:var(--ui-text,var(--ui-tone-value-text));position:absolute;z-index:12;display:flex;flex-direction:column;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:var(--floating-toolbar-radius);background:var(--panel-content-bg);color:var(--ui-text,var(--ui-tone-text));box-shadow:0 6px 20px #0004;touch-action:pan-y}
+#floatingparameters{--floating-close-size:32px;--panel-content-bg:var(--node-body,var(--ui-tone-node));--ui-tone-field:var(--node-value-bg);--ui-tone-control:var(--node-value-bg);--ui-field:var(--node-value-bg);--ui-control:var(--node-value-bg);--floating-value-text:var(--ui-text,var(--ui-tone-value-text));position:absolute;z-index:12;display:flex;flex-direction:column;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:var(--floating-toolbar-radius);background:var(--panel-content-bg);color:var(--ui-text,var(--ui-tone-text));box-shadow:0 6px 20px #0004;touch-action:pan-y}
 #floatingparameters[hidden]{display:none}
 .floating-parameter-close.icon-button{position:absolute;right:2px;top:0;z-index:3;width:var(--floating-close-size);height:var(--floating-close-size);min-height:var(--floating-close-size);padding:0;border:0;background:transparent;color:var(--panel-header-fg)}
-.floating-parameter-close.icon-button:hover{background:var(--ui-hover,var(--ui-tone-control-hover))}
+.floating-parameter-close.icon-button:hover{background:transparent}
+.floating-parameter-close::before{content:'';position:absolute;left:50%;top:50%;width:24px;height:24px;transform:translate(-50%,-50%);border-radius:4px;pointer-events:none}
+.floating-parameter-close:hover::before{background:#80808030}
+.floating-parameter-close>.ui-icon{position:relative}
 #floatingparameters:has(.node-inspector-title) .floating-parameter-close{color:var(--node-title-foreground,var(--panel-header-fg))}
 #floatingparameters>.workspace-pane{flex:0 1 auto;min-height:0}
 #floatingparameters .panel-scroll{flex:0 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain}
@@ -1266,6 +1269,7 @@ footer .footer-preferences svg[hidden]{display:none}
 .canvas-view-tools #zoom{position:static;font-size:11px;letter-spacing:.2px;text-shadow:0 1px 2px var(--canvas-bg,var(--ui-tone-canvas))}
 .canvas-view-tools #fit{pointer-events:auto;touch-action:manipulation;font-size:11px;min-height:28px;padding:3px 8px;background:var(--ui-chrome,var(--ui-tone-chrome));color:inherit;border-color:var(--line)}
 .graph-workspace.floating-toolbar .toolbar{position:absolute;inset:0 0 auto;z-index:7;background:transparent;border:0;pointer-events:none}
+.graph-workspace.floating-toolbar .graph-tools{align-self:flex-start}
 .floating-toolbar .toolbar :is(button,select){pointer-events:auto}
 /* Dim disabled controls without making the canvas visible through their surface. */
 .graph-workspace.floating-toolbar .toolbar :is(.graph-tools,.stage-tabs) button:disabled{opacity:1;background:var(--ui-chrome,var(--ui-tone-chrome));color:color-mix(in srgb,var(--muted) 70%,var(--ui-control,var(--ui-tone-control)));border-color:color-mix(in srgb,var(--line) 65%,var(--ui-chrome,var(--ui-tone-chrome)));cursor:default}
@@ -1456,6 +1460,7 @@ footer .footer-preferences svg[hidden]{display:none}
 :root[data-ui-size="comfortable"] footer .footer-preferences button svg{width:20px;height:20px}
 
 :root[data-ui-size="comfortable"] .graph-workspace .toolbar{padding-block:8px;gap:8px}
+:root .graph-workspace.floating-toolbar .toolbar{padding:var(--canvas-ui-inset)}
 :root[data-ui-size="comfortable"] .graph-workspace .toolbar .graph-tools button,
 :root[data-ui-size="comfortable"] .graph-workspace .toolbar .stage{height:38px;min-height:38px;font-size:13px;padding-inline:12px}
 :root[data-ui-size="comfortable"] .graph-workspace .graph-tools .icon-button{width:38px;padding:0}
