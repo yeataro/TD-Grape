@@ -22,7 +22,7 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openGraphMenu(r.left+150,r.top+160);});
   const item=page.locator('#grapheditmenu [data-edit=floatingParameter]');assert.equal(await item.getAttribute('aria-checked'),'false');assert.match(await item.innerText(),/P/);await item.click();await settle();assert.equal(await panel.isVisible(),true);
   await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openGraphMenu(r.left+150,r.top+160,'value');});assert.equal(await item.getAttribute('aria-checked'),'true');await page.keyboard.press('Escape');
-  await page.locator('#floatingparameters .floating-parameter-heading button').click();assert.equal(await panel.isVisible(),false);
+  await page.locator('#floatingparameters .floating-parameter-close').click();assert.equal(await panel.isVisible(),false);
   checks.push('Canvas/node context menus expose the checked P command and the close button restores docking');
   await pressP();const field=page.locator('#inspector [data-parameter-port="$value"][data-parameter-copy=compact]').first();
   await field.fill('0.75');await field.press('Enter');assert.equal(await page.evaluate(()=>current().nodes[0].params.value),.75);assert.equal(await page.evaluate(()=>past.length),1);
@@ -51,14 +51,14 @@ const {harness}=require('./test_glsl_code.cjs');
   for(const width of [1600,430,320])for(const ui of [80,100,125])for(const theme of ['dark','light']){
    await page.setViewportSize({width,height:932});await page.evaluate(({ui,theme,width})=>{uiAppearance.scale=ui;uiAppearance.theme=theme;renderUIAppearance();setSidebarOpen('left',width>800);setSidebarOpen('right',width>800);},{ui,theme,width});await settle();
    const geometry=await page.evaluate(()=>{
-    const panel=$('#floatingparameters').getBoundingClientRect(),canvas=$('#canvas').getBoundingClientRect(),buttons=[...$('.graph-workspace .toolbar').querySelectorAll('button,select')].filter(b=>b.getClientRects().length),bottom=Math.max(...buttons.map(b=>b.getBoundingClientRect().bottom)),a=$('#undo').getBoundingClientRect(),b=$('#redo').getBoundingClientRect();
-    return{right:canvas.right-panel.right,top:panel.top-bottom,gap:b.left-a.right,width:panel.width,maxWidth:canvas.width,bottom:panel.bottom,canvasBottom:canvas.bottom,radius:getComputedStyle($('#floatingparameters')).borderRadius,nodeRadius:getComputedStyle($('.node')).borderRadius};
+    const panel=$('#floatingparameters').getBoundingClientRect(),canvas=$('#canvas').getBoundingClientRect(),buttons=[...$('.graph-workspace .toolbar').querySelectorAll('button,select')].filter(b=>b.getClientRects().length),bottom=Math.max(...buttons.map(b=>b.getBoundingClientRect().bottom));
+    return{right:canvas.right-panel.right,top:panel.top-bottom,gap:12*uiScaleFactor(),width:panel.width,maxWidth:canvas.width,bottom:panel.bottom,canvasBottom:canvas.bottom,radius:getComputedStyle($('#floatingparameters')).borderRadius,toolbarRadius:getComputedStyle($('.selection-toolbar')).borderRadius};
    });
    assert.ok(Math.abs(geometry.right-geometry.gap)<1.5,JSON.stringify({width,ui,theme,geometry}));assert.ok(Math.abs(geometry.top-geometry.gap)<1.5,JSON.stringify({width,ui,theme,geometry}));
-   assert.ok(geometry.width<=geometry.maxWidth&&geometry.bottom<=geometry.canvasBottom+1);assert.equal(geometry.radius,geometry.nodeRadius);
+   assert.ok(geometry.width<=geometry.maxWidth&&geometry.bottom<=geometry.canvasBottom+1);assert.equal(geometry.radius,geometry.toolbarRadius);
    if(ui===100)await page.screenshot({path:path.join(folder,`panel-${width}-${theme}.png`)});
   }
-  checks.push('Visual gaps above/right match actual toolbar button spacing across 18 desktop/mobile, scale and theme combinations; node radius matches');
+  checks.push('12px visual insets scale consistently across 18 desktop/mobile and theme combinations; editing toolbar radius matches');
   await page.setViewportSize({width:430,height:932});await page.evaluate(()=>{setUIAppearance('scale',100);setUIExperiments({floatingToolbar:false});});await settle();
   assert.ok(await panel.evaluate(e=>{const a=e.getBoundingClientRect(),b=$('#canvas').getBoundingClientRect();return a.top>=b.top&&a.right<=b.right;}));
   await page.evaluate(()=>{setUIExperiments({floatingToolbar:true});const n=document.createElement('div');n.id='touch-scroll-probe';n.style.height='1800px';$('#inspector').append(n);});await settle();
@@ -67,7 +67,7 @@ const {harness}=require('./test_glsl_code.cjs');
   for(let i=1;i<=5;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{id:1,x:tx,y:ty-i*25}]});await settle();}
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settle();
   assert.ok(await page.locator('#parameterbody').evaluate(e=>e.scrollTop>0));assert.equal(await unchanged(),touchState);
-  await page.evaluate(()=>$('#touch-scroll-probe').remove());await settle();const close=await page.locator('#floatingparameters .floating-parameter-heading button').boundingBox();await page.touchscreen.tap(close.x+close.width/2,close.y+close.height/2);await settle();assert.equal(await panel.isVisible(),false);await pressP();
+  await page.evaluate(()=>$('#touch-scroll-probe').remove());await settle();const close=await page.locator('#floatingparameters .floating-parameter-close').boundingBox();await page.touchscreen.tap(close.x+close.width/2,close.y+close.height/2);await settle();assert.equal(await panel.isVisible(),false);await pressP();
   checks.push('Docked toolbar stays clear; real touch scroll stays within Parameter and touch close restores the pane without moving the graph');
   const resize=page.locator('.floating-parameter-resize'),startWidth=await panel.boundingBox(),resizeState=await unchanged(),grip=await resize.boundingBox();
   await page.mouse.move(grip.x+3,grip.y+20);await page.mouse.down();await page.mouse.move(grip.x-77,grip.y+20);await page.mouse.up();await settle();

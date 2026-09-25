@@ -1401,13 +1401,14 @@ function nodeColorPicker(n){
 function inspector(){
   if(deferParameterInspector()||deferCommentNodeEditor(false))return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
-  const box=$('#inspector');box.classList.remove('ordinary-parameters','comment-parameters','notes-parameters');box.replaceChildren();renderHelp();
+  const box=$('#inspector');box.classList.remove('ordinary-parameters','comment-parameters','notes-parameters','parameter-empty');box.replaceChildren();renderHelp();
   const n=current().nodes.find(n=>n.id===selected),d=n&&definition(n);
   if(n||selectedEdge!==null)selectedInputId=null;
   const inputSource=allInputSources().find(d=>d.id===selectedInputId);
   if(inputSource?.kind==='top_input'){topInputInspector(box,inputSource);return;}
   if(inputSource){inputSourceInspector(box,inputSource);return;}
   if(!n){
+    box.classList.toggle('parameter-empty',selectedEdge===null);
     box.append(el('p',{class:'muted'},selectedEdge!==null?t('wire.selected'):t('node.select')));
     if(selectedEdge!==null){const disconnect=el('button',{class:'wide danger','data-action':'disconnect-wire'},t('wire.disconnectSelected'));disconnect.disabled=readonly;disconnect.onclick=remove;box.append(disconnect);}
     return;
@@ -1841,22 +1842,18 @@ function installPanelWorkspace(){
   const savedFloatingWidth=read('grapeFloatingParameterWidth',320);
   let floatingWidth=Number.isFinite(savedFloatingWidth)?Math.max(280,savedFloatingWidth):320;
   const floating=el('section',{id:'floatingparameters',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
-  const floatingHeading=el('div',{class:'floating-parameter-heading'}),floatingTitle=el('strong',{id:'floatingparametertitle'}),floatingClose=el('button',{type:'button',class:'icon-button'});
+  const floatingTitle=el('span',{id:'floatingparametertitle',class:'sr-only'}),floatingClose=el('button',{type:'button',class:'icon-button floating-parameter-close'});
   floatingClose.append(selectionIcon('M6 6l12 12M18 6 6 18'));
   floatingClose.onclick=()=>{setFloatingParameter(false);focusGraphCanvas();};
   const floatingResizeHandle=el('div',{class:'floating-parameter-resize',role:'separator','aria-orientation':'vertical',tabindex:'0'});
-  floatingHeading.append(floatingTitle,floatingClose);floating.append(floatingHeading,floatingResizeHandle);$('.graph-workspace').append(floating);
+  floating.append(floatingTitle,floatingClose,floatingResizeHandle);$('.graph-workspace').append(floating);
   for(const event of ['pointerdown','mousedown','touchstart','click','dblclick','contextmenu'])floating.addEventListener(event,e=>e.stopPropagation());
   floating.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   let floatingFrame=0;
   function positionFloatingParameter(){
     floatingFrame=0;if(floating.hidden)return;
     const canvas=$('#canvas'),bounds=canvas.getBoundingClientRect(),host=floating.offsetParent.getBoundingClientRect(),zoom=uiScaleFactor(),toolbar=$('.graph-workspace>.toolbar')||$('#canvas>.toolbar');
-    const history=[...document.querySelectorAll('.toolbar [data-tool-group="history"]>button')].filter(b=>b.getClientRects().length);
-    const first=history[0]?.getBoundingClientRect(),second=history[1]?.getBoundingClientRect();
-    // Measure the visible gap, then convert it once to this zoomed UI's CSS units.
-    const measured=first&&second?second.left-first.right:NaN;
-    const gap=Number.isFinite(measured)&&measured>0?measured/zoom:parseFloat(getComputedStyle($('.graph-tool-group')).gap)||5;
+    const gap=parseFloat(getComputedStyle(floating).getPropertyValue('--floating-parameter-gap'))||12;
     const buttons=toolbar?[...toolbar.querySelectorAll('button,select')].filter(b=>b.getClientRects().length):[];
     const toolbarBottom=Math.max(bounds.top,...buttons.map(b=>b.getBoundingClientRect().bottom));
     const top=(toolbarBottom-host.top)/zoom+gap;
