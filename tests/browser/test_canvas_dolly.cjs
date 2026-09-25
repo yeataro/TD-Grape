@@ -10,11 +10,19 @@ const {harness}=require('./test_glsl_code.cjs');
   const unchanged=await data();
   for(const ui of [80,100,125]){
    await page.evaluate(ui=>{setUIAppearance('scale',ui);scale=.7;pan={x:20,y:20};transform();},ui);await settle();const a=await blank(),p=await page.evaluate(a=>graphPoint(a.x,a.y),a);
-   await start(a);await page.mouse.move(a.x+70*ui/100,a.y+25,{steps:8});near((await view()).scale,.7*Math.exp(.42));
+   await start(a);await page.mouse.move(a.x+70*ui/100,a.y,{steps:8});near((await view()).scale,.7*Math.exp(.42));
    const q=await page.evaluate(a=>graphPoint(a.x,a.y),a);near(q.x,p.x);near(q.y,p.y);
-   await page.mouse.move(a.x,a.y-40,{steps:8});near((await view()).scale,.7);await page.mouse.up({button:'middle'});assert.equal(await data(),unchanged);
+   await page.mouse.move(a.x,a.y,{steps:8});near((await view()).scale,.7);
+   assert.equal(await page.locator('#canvas').evaluate(e=>getComputedStyle(e).cursor),'zoom-out');
+   await page.mouse.move(a.x,a.y-70*ui/100,{steps:8});near((await view()).scale,.7*Math.exp(.42));
+   assert.equal(await page.locator('#canvas').evaluate(e=>getComputedStyle(e).cursor),'zoom-in');
+   const vertical=await page.evaluate(a=>graphPoint(a.x,a.y),a);near(vertical.x,p.x);near(vertical.y,p.y);
+   await page.mouse.move(a.x,a.y,{steps:8});near((await view()).scale,.7);
+   await page.mouse.move(a.x+35*ui/100,a.y-35*ui/100,{steps:8});near((await view()).scale,.7*Math.exp(.42));
+   await page.mouse.move(a.x,a.y,{steps:8});near((await view()).scale,.7);await page.mouse.up({button:'middle'});assert.equal(await data(),unchanged);
+   assert.equal(await page.locator('#canvas.canvas-dolly,#canvas.canvas-dolly-out').count(),0);
   }
-  checks.push('Middle drag right enlarges, left reduces, vertical movement is ignored; anchor stays fixed across UI scales and graph/history/selection do not change');
+  checks.push('Right/up enlarge, left/down reduce, diagonal movement combines both axes; zoom cursors follow direction, anchor stays fixed across UI scales and graph/history/selection do not change');
   await page.evaluate(()=>{setUIAppearance('scale',100);scale=1;transform();});await settle();let a=await blank();await start(a);
   await page.mouse.move(a.x+400,a.y);near((await view()).scale,1.7);await page.mouse.move(a.x+380,a.y);assert.ok((await view()).scale<1.7);
   await page.mouse.move(a.x-400,a.y);near((await view()).scale,.25);await page.mouse.move(a.x-380,a.y);assert.ok((await view()).scale>.25);await page.mouse.up({button:'middle'});

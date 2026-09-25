@@ -2239,12 +2239,12 @@ function beginCanvasDolly(canvas,event){
   const owner=graph,data=current(),originStage=stage,zoom=uiScaleFactor(),rect=canvas.getBoundingClientRect();
   const origin={...pan,scale},anchor={x:(event.clientX-rect.left)/zoom,y:(event.clientY-rect.top)/zoom};
   const controller=new AbortController(),options={capture:true,signal:controller.signal};
-  let lastX=event.clientX,targetScale=scale,finished=false;
+  let lastX=event.clientX,lastY=event.clientY,targetScale=scale,finished=false;
   const valid=()=>graph===owner&&current()===data&&stage===originStage&&uiScaleFactor()===zoom;
   const finish=(restore=false)=>{
     if(finished)return;finished=true;controller.abort();
     canvas.onpointermove=canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=null;
-    canvas.classList.remove('canvas-dolly');
+    canvas.classList.remove('canvas-dolly','canvas-dolly-out');
     if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);
     if(restore&&valid())moveCanvas({x:origin.x,y:origin.y},origin.scale,null);
     else stopCanvasMotion(valid());
@@ -2252,7 +2252,9 @@ function beginCanvasDolly(canvas,event){
   const update=e=>{
     if(e.pointerId!==event.pointerId)return;
     if(!valid()){finish();return;}
-    targetScale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,targetScale*Math.exp((e.clientX-lastX)/zoom*.006)));lastX=e.clientX;
+    const delta=(e.clientX-lastX-(e.clientY-lastY))/zoom;lastX=e.clientX;lastY=e.clientY;
+    if(delta!==0)canvas.classList.toggle('canvas-dolly-out',delta<0);
+    targetScale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,targetScale*Math.exp(delta*.006)));
     zoomCanvasAt(targetScale,anchor.x,anchor.y);
   };
   canvas.classList.add('canvas-dolly');canvas.setPointerCapture(event.pointerId);
