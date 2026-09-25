@@ -804,7 +804,7 @@ const browserPreferenceKeys=[
   'sgrapeLanguage','sgrapeAutoPreview','sgrapeAppearanceV1','sgrapeExperimentsV1',
   'sgrapeCustomNamesV1','sgrapeLinkLinesV1','sgrapeHeaderVisible','sgrapeSourceNamesV1',
   'sgrapeInputCollapsedGroups','sgrapeSidebarWidths','sgrapeInspectorPanels','sgrapeInspectorSizes',
-  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingParameterWidth',
+  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingParameterWidth','grapeParameterInputPorts',
   'grapeInputsDefaultLeftV1','grapeBrowserDetailHeight','grapeSourceGroupOrder','grapeSourceNotes','grapeSourceMinimal'
 ];
 function resetBrowserPreferences(){
@@ -916,7 +916,7 @@ const experimentChoices={
 };
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','wireQuickActions','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
-  ['nodes',['parameterInputPorts','nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
+  ['nodes',['nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
   ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','linkArrowDisplay','reverseInputLinkArrowOnHover','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
@@ -1066,7 +1066,7 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','wireQuickActions','parameterInputPorts','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','wireQuickActions','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
   const dampingChanged=['arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs'].some(key=>next[key]!==EDITOR_DEV_SETTINGS[key]);
   if(next.arrowNavigationMode!==EDITOR_DEV_SETTINGS.arrowNavigationMode)resetArrowNavigation();
   // Display preferences preserve graph elements and in-progress numeric drafts.

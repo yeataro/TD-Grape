@@ -780,6 +780,12 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .workspace-tab.panel-heading::before{display:none}.workspace-tab[aria-selected=true]{background:var(--panel-content-bg);color:var(--panel-header-fg);font-weight:600}
 .workspace-tab.panel-heading[aria-selected=false]:hover{background:var(--ui-tone-field);color:var(--panel-header-fg)}
 .workspace-tab.panel-heading[aria-selected=true]:hover{background:var(--panel-content-bg)}
+.workspace-parameter-tab{display:flex;flex:1 0 auto;min-width:0}
+.workspace-parameter-tab:has([aria-selected=true]){background:var(--panel-content-bg)}
+.workspace-group.collapsed .workspace-parameter-tab{background:var(--panel-header-inactive-bg)}
+.workspace-parameter-tab .parameter-popout{display:grid;place-items:center;align-self:center;flex:0 0 26px;width:26px;height:26px;min-height:0;margin-right:4px;padding:5px;border:0;border-radius:4px;background:transparent;color:var(--muted)}
+.workspace-parameter-tab .parameter-popout:hover{background:var(--panel-header-hover-bg);color:var(--panel-header-fg)}
+.parameter-popout svg,.parameter-ports-toggle svg{display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 
 .workspace-group.collapsed .workspace-tab.panel-heading{background:var(--panel-header-inactive-bg);color:var(--muted);font-weight:400}
 .workspace-group.collapsed .workspace-tabs{background:var(--panel-header-inactive-bg)}
@@ -861,7 +867,10 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .floating-parameter-resize{position:absolute;left:0;top:8px;bottom:8px;width:6px;z-index:4;cursor:ew-resize;touch-action:none}
 .floating-parameter-resize:is(:hover,:focus-visible){background:var(--line);outline-offset:-2px}
 @media(pointer:coarse){#floatingparameters{--floating-close-size:44px}.floating-parameter-resize{width:10px}}
-#floatingparameters #inspector.has-parameter-ports{--parameter-inset:26px}
+#floatingparameters #inspector.has-parameter-ports{--parameter-content-inset:26px}
+#floatingparameters .node-inspector-title.has-port-toggle{grid-template-columns:24px minmax(0,2fr) minmax(0,3fr)}
+#floatingparameters .parameter-ports-toggle{display:grid;place-items:center;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;opacity:1}
+#floatingparameters .parameter-ports-toggle[aria-pressed=false]{opacity:.4}
 .parameter-port-anchor{position:relative}
 .parameter-port-slot.port-row.input{position:absolute;left:-18px;top:6px;width:11px;height:11px;padding:0;display:block}
 .parameter-port-slot>.port{left:0;top:0;width:11px;height:11px;min-height:0;border-radius:50%;touch-action:none;cursor:crosshair}
@@ -870,7 +879,7 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .parameter-wire-preview{position:absolute;top:0;left:0;width:1px;height:1px;overflow:visible;pointer-events:none;z-index:13}
 .parameter-wire-preview path{fill:none;pointer-events:none}
 #inspector{margin:0 0 12px}
-#inspector>:not(.node-inspector-title):not(.parameter-tabs){margin-left:var(--parameter-inset,12px);margin-right:var(--parameter-inset,12px)}
+#inspector>:not(.node-inspector-title):not(.parameter-tabs){margin-left:var(--parameter-content-inset,var(--parameter-inset,12px));margin-right:var(--parameter-content-inset,var(--parameter-inset,12px))}
 #inspector>.wide{width:calc(100% - 24px)}
 /* Parameter pages use quiet text tabs, distinct from workspace panel tabs. */
 #inspector .parameter-tabs{display:flex;gap:2px;margin:0 var(--parameter-inset,12px) 10px;min-height:28px;border-bottom:1px solid color-mix(in srgb,var(--muted) 18%,transparent);background:transparent}

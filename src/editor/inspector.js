@@ -1404,7 +1404,15 @@ function refreshFloatingParameterPorts(){
   box.querySelectorAll('.parameter-port-slot').forEach(slot=>slot.remove());
   box.querySelectorAll('.parameter-port-anchor').forEach(row=>row.classList.remove('parameter-port-anchor'));
   box.classList.remove('has-parameter-ports');
-  if(!graph||!floatingParameterOpen||!EDITOR_DEV_SETTINGS.parameterInputPorts||inspectorTab!=='parameters')return;
+  const title=box.querySelector('.node-inspector-title');
+  title?.querySelector('.parameter-ports-toggle')?.remove();title?.classList.remove('has-port-toggle');
+  if(title&&floatingParameterOpen){
+    const toggle=el('button',{type:'button',class:'parameter-ports-toggle','aria-label':t('parameter.inputPorts'),title:t('parameter.inputPorts'),'aria-pressed':String(parameterInputPorts)});
+    toggle.append(selectionIcon('M20 12a8 8 0 1 1-16 0a8 8 0 1 1 16 0'));
+    toggle.onclick=()=>{setParameterInputPorts(!parameterInputPorts);box.querySelector('.parameter-ports-toggle')?.focus({preventScroll:true});};
+    title.prepend(toggle);title.classList.add('has-port-toggle');
+  }
+  if(!graph||!floatingParameterOpen||!parameterInputPorts||inspectorTab!=='parameters')return;
   const n=current().nodes.find(node=>node.id===box.dataset.inspectorNode);if(!n)return;
   for(const [port,type]of Object.entries(ports(n,'inputs'))){
     const escaped=CSS.escape(port),section=box.querySelector(`[data-input="${escaped}"]`),value=box.querySelector(`[data-parameter-value="${escaped}"],[data-parameter-matrix="${escaped}"]`);
@@ -1801,6 +1809,12 @@ function installBrowserDetailResize(){
 }
 
 let floatingParameterOpen=false;
+let parameterInputPorts=true;
+function setParameterInputPorts(enabled){
+  parameterInputPorts=!!enabled;
+  try{localStorage.setItem('grapeParameterInputPorts',JSON.stringify(parameterInputPorts));}catch{status(t('layout.storageError'),true);}
+  refreshFloatingParameterPorts();
+}
 function toggleFloatingParameter(){workspaceLayout?.setFloatingParameter(!floatingParameterOpen);}
 /* Limited two-sidebar workspace. All persisted data is presentation only. */
 function installPanelWorkspace(){
@@ -1866,6 +1880,10 @@ function installPanelWorkspace(){
   function persist(){if(restoring)return;state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};if(!matchMedia('(max-width:800px)').matches)state.visibility={left:isSidebarOpen('left'),right:isSidebarOpen('right')};write(key,state);}
   const parking=el('div',{hidden:true});document.body.append(parking);
   floatingParameterOpen=read('grapeFloatingParameter',false)===true;
+  // Preserve the former experiment preference when upgrading, independently
+  // of future experimental-setting resets or workspace presets.
+  parameterInputPorts=read('grapeParameterInputPorts',read('sgrapeExperimentsV1',{})?.parameterInputPorts!==false)!==false;
+  write('grapeParameterInputPorts',parameterInputPorts);
   const savedFloatingWidth=read('grapeFloatingParameterWidth',320);
   let floatingWidth=Number.isFinite(savedFloatingWidth)?Math.max(280,savedFloatingWidth):320;
   const floating=el('section',{id:'floatingparameters',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
@@ -1939,7 +1957,14 @@ function installPanelWorkspace(){
         for(const id of visible){const button=heads[id];button.setAttribute('role','tab');button.setAttribute('aria-selected',String(active===id));button.setAttribute('aria-expanded',String(!group.collapsed));button.tabIndex=active===id?0:-1;
           button.onclick=()=>{group.active=id;group.collapsed=false;build();persist();heads[id].focus({preventScroll:true});};
           button.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();e.stopPropagation();const at=visible.indexOf(id),next=e.key==='Home'?0:e.key==='End'?visible.length-1:(at+(e.key==='ArrowRight'?1:-1)+visible.length)%visible.length;group.active=visible[next];group.collapsed=false;build();persist();heads[group.active].focus();};
-          button.onpointerdown=e=>beginDrag(e,id);bar.append(button);
+          button.onpointerdown=e=>beginDrag(e,id);
+          if(id==='parameters'){
+            const tab=el('span',{class:'workspace-parameter-tab',role:'presentation'}),label=t('view.floatingParameter')+' · '+shortcutLabel('floatingParameter');
+            const popout=el('button',{type:'button',class:'parameter-popout',title:label,'aria-label':label});
+            popout.append(selectionIcon('M14 3h7v7M21 3 10 14M10 3H3v18h18v-7'));
+            popout.onclick=()=>{setFloatingParameter(true);floatingClose.focus({preventScroll:true});};
+            tab.append(button,popout);bar.append(tab);
+          }else bar.append(button);
         }
         const fold=el('button',{type:'button',class:'workspace-fold','aria-label':t(group.collapsed?'layout.expand':'layout.collapse'),title:t(group.collapsed?'layout.expand':'layout.collapse'),'aria-expanded':String(!group.collapsed)});
         fold.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4 6 4 4 4-4"/></svg>';
