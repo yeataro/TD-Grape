@@ -28,6 +28,10 @@ Preferences are scoped to the browser profile and origin (scheme, host, port). T
 
 `tests/browser/test_browser_preferences_reset.cjs` verifies confirmation/cancel, blocked writes/fields, failed storage rollback, draft-save failure, real reload to stock preferences, named/legacy layout clearing, preserved access/drafts/unrelated storage, no TD write and both languages.
 
+## Canvas dolly (0.8.237)
+
+Hold the middle mouse button directly on empty canvas and drag right to zoom in or left to zoom out, following [TouchDesigner Network Editor navigation](https://docs.derivative.ca/Network_Editor). Nodes, wires, group frames, controls and panels do not start this gesture; numeric fields retain Value Ladder. Vertical motion is ignored. The initial pointer position anchors zoom; each local CSS pixel changes scale exponentially by `exp(dx * 0.006)`, using the existing 25–170% bounds and canvas damping. Reversing at a bound responds immediately. UI scaling is accounted for. Escape, cancellation or focus loss restores the starting view; pointer capture keeps the gesture working outside the canvas. Dolly is navigation only and works in readonly graphs without graph, selection or Undo changes. Left-drag pan and wheel zoom remain unchanged. The five-language shortcut reference includes MMB + ↔. `test_canvas_dolly.cjs` covers these behaviors with real mouse events.
+
 ## Optional canvas motion (0.8.114)
 
 Experimental features → Colors and display has two independent rows: **Pan/zoom damping** and **Frame transition (F)**. Each uses a checkbox on the left and the shared draggable numeric input on the right, 10–1000 ms. Both currently default on (release defaults updated after 0.8.114); pan/zoom defaults to 150 ms and Frame to 333 ms. Settings remain browser-local; existing saved durations are retained and Reset restores 150 / 333 ms. The options share animation code, not their enabled state or duration. Existing appearance-mode switches remain immediate.

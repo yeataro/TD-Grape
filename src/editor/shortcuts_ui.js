@@ -23,6 +23,7 @@ const EDITOR_SHORTCUTS=Object.freeze({
   floatingParameter:{label:'view.floatingParameter',hint:'view.floatingParameter.hint',keys:['P'],section:'navigation'},
   fit:{label:'action.fit',hint:'action.fit.hint',keys:['H'],section:'navigation'},
   fitSelection:{label:'action.fitSelection',hint:'action.fitSelection.hint',keys:['F'],section:'navigation'},
+  dolly:{label:'shortcuts.dolly',keys:['MMB+↔'],section:'navigation'},
   fullscreen:{label:'view.fullscreen',keys:['Alt+Enter'],section:'navigation'},
   focusGraph:{label:'view.graphFocus',hint:'view.graphFocusShortcut',keys:['Mod+Enter'],section:'navigation'},
   up:{label:'navigation.up',keys:['Alt+ArrowUp'],section:'navigation'},

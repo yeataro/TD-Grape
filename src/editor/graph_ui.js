@@ -2233,6 +2233,37 @@ function duplicateSelection(){
     if(frames.length)GraphFrames.write(current(),[...GraphFrames.read(current()),...frames]);
   });
 }
+function beginCanvasDolly(canvas,event){
+  if(!graph||canvas.onpointermove||wireGesture||linkStart||nodePlacement||touchGraphGesture||nodeDragGesture||nodeResizeGesture)return;
+  event.preventDefault();stopCanvasMotion();closeCreator();focusGraphCanvas();
+  const owner=graph,data=current(),originStage=stage,zoom=uiScaleFactor(),rect=canvas.getBoundingClientRect();
+  const origin={...pan,scale},anchor={x:(event.clientX-rect.left)/zoom,y:(event.clientY-rect.top)/zoom};
+  const controller=new AbortController(),options={capture:true,signal:controller.signal};
+  let lastX=event.clientX,targetScale=scale,finished=false;
+  const valid=()=>graph===owner&&current()===data&&stage===originStage&&uiScaleFactor()===zoom;
+  const finish=(restore=false)=>{
+    if(finished)return;finished=true;controller.abort();
+    canvas.onpointermove=canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=null;
+    canvas.classList.remove('canvas-dolly');
+    if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);
+    if(restore&&valid())moveCanvas({x:origin.x,y:origin.y},origin.scale,null);
+    else stopCanvasMotion(valid());
+  };
+  const update=e=>{
+    if(e.pointerId!==event.pointerId)return;
+    if(!valid()){finish();return;}
+    targetScale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,targetScale*Math.exp((e.clientX-lastX)/zoom*.006)));lastX=e.clientX;
+    zoomCanvasAt(targetScale,anchor.x,anchor.y);
+  };
+  canvas.classList.add('canvas-dolly');canvas.setPointerCapture(event.pointerId);
+  canvas.onpointermove=e=>{if(e.pointerId!==event.pointerId)return;if(!(e.buttons&4)){finish();return;}update(e);};
+  canvas.onpointerup=e=>{if(e.pointerId===event.pointerId&&e.button===1){update(e);finish();}};
+  canvas.onpointercancel=canvas.onlostpointercapture=()=>finish(true);
+  window.addEventListener('blur',()=>finish(true),options);window.addEventListener('resize',()=>finish(true),options);
+  window.addEventListener('wheel',()=>finish(),{...options,passive:true});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)finish(true);},options);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(true);}},options);
+}
 function installGraphInteractions(){
   installGraphClipboard();
   const canvas=$('#canvas');canvas.tabIndex=0;
@@ -2248,9 +2279,16 @@ function installGraphInteractions(){
     openGraphMenu(e.clientX,e.clientY,e.target.closest('.node')?.dataset.node,{edge});
   };
   canvas.onpointerdown=e=>{
+    if(canvas.classList.contains('canvas-dolly')){e.preventDefault();return;}
+    if(e.button===1){
+      // Dolly starts only on an empty canvas surface, never on a node, wire,
+      // group frame, editor control or overlay. Fields keep their Value Ladder.
+      if(['canvas','world','cards','wires','groupframes'].includes(e.target.id))beginCanvasDolly(canvas,e);
+      return;
+    }
     if(e.target.closest('.node')||e.target.closest('path,.link-direction')||e.target.closest('.graph-navigation'))return;
     focusGraphCanvas();closeCreator();const boxSelect=(boxSelectMode&&e.button===0)||e.shiftKey||e.button===2,sx=e.clientX,sy=e.clientY,ox=pan.x,oy=pan.y,previous=e.ctrlKey||e.metaKey?new Set(selection):new Set();let moved=false;
-    if(![0,1,2].includes(e.button))return;canvas.setPointerCapture(e.pointerId);
+    if(![0,2].includes(e.button))return;canvas.setPointerCapture(e.pointerId);
     canvas.onpointermove=ev=>{moved=Math.hypot(ev.clientX-sx,ev.clientY-sy)>3;
       if(boxSelect){const rect=canvas.getBoundingClientRect(),box=$('#marquee'),uiScale=uiScaleFactor();box.hidden=false;box.style.left=(Math.min(sx,ev.clientX)-rect.left)/uiScale+'px';box.style.top=(Math.min(sy,ev.clientY)-rect.top)/uiScale+'px';box.style.width=Math.abs(ev.clientX-sx)/uiScale+'px';box.style.height=Math.abs(ev.clientY-sy)/uiScale+'px';
         selection=new Set(previous);document.querySelectorAll('.node').forEach(card=>{const r=card.getBoundingClientRect();if(r.right>=Math.min(sx,ev.clientX)&&r.left<=Math.max(sx,ev.clientX)&&r.bottom>=Math.min(sy,ev.clientY)&&r.top<=Math.max(sy,ev.clientY))selection.add(card.dataset.node);card.classList.toggle('selected',selection.has(card.dataset.node));});

@@ -158,6 +158,7 @@ input:disabled{opacity:.48;cursor:default}
 .graph-navigation .graph-separator{color:#746b80}
 .canvas-caption{top:auto;bottom:22px;pointer-events:none}
 #canvas:focus{outline:none}
+#canvas.canvas-dolly{cursor:ew-resize}
 .palette-category{font-size:10px;letter-spacing:1px;color:var(--muted);margin:18px 5px 6px}
 #marquee{position:absolute;border:1px solid var(--selection);background:var(--selection-glow);z-index:4;pointer-events:none}
 #wires .wire-preview{stroke-dasharray:6 5;pointer-events:none}
