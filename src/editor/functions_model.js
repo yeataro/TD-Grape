@@ -281,7 +281,7 @@ const GraphClipboard=(()=>{
         if(!object(node.params)||!object(node.ui)||![node.ui.x,node.ui.y].every(Number.isFinite))fail('clipboard.invalid');
         if(node.definitionUuid===FunctionModel.CALL){const key=node.params.functionId;if(!functionMap.has(key))fail('clipboard.missing');node.params.functionId=functionMap.get(key);}
         else if([FunctionModel.INPUT,FunctionModel.OUTPUT].includes(node.definitionUuid)){if(!boundary)fail('clipboard.boundary');}
-        else{const d=defs.get(node.definitionUuid);if(!d)fail('clipboard.missing');if(!d.stages.includes(stage))fail('clipboard.stage');if(d.key.endsWith('_out'))fail('clipboard.boundary');if(node.revisionHash&&node.revisionHash!==d.revisionHash)fail('clipboard.revision');}
+        else{const d=defs.get(node.definitionUuid);if(!d)fail('clipboard.missing');if(!d.stages.includes(stage))fail('clipboard.stage');if(['vertex_out','pixel_out'].includes(d.key))fail('clipboard.boundary');if(node.revisionHash&&node.revisionHash!==d.revisionHash)fail('clipboard.revision');}
         if(node.params.inputId){if(!topMap.has(node.params.inputId))fail('clipboard.missing');node.params.inputId=topMap.get(node.params.inputId);}
         if(node.params.declarationId){if(!declarationMap.has(node.params.declarationId))fail('clipboard.missing');node.params.declarationId=declarationMap.get(node.params.declarationId);}
       }

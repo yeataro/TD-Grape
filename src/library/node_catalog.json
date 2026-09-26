@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.224",
+  "catalogVersion": "0.8.239",
   "emitterAbiVersion": 1,
   "targetShellVersion": 3,
   "definitions": [
@@ -16291,6 +16291,183 @@
           "texture",
           "2dArray"
         ]
+      }
+    },
+    {
+      "definition": {
+        "key": "discard",
+        "label": "Discard",
+        "inputs": {
+          "condition": "bool"
+        },
+        "outputs": {},
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "condition": false
+        },
+        "descriptionKey": "help.discard",
+        "definitionUuid": "sgrape.builtin.discard",
+        "targets": [
+          "mat",
+          "top"
+        ],
+        "revisionHash": "379335db7ed39251e3d4f2566ec8070ce1ef41f90a1456ab0f13be6a29b3ea79"
+      },
+      "emitter": {
+        "id": "discard",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "stage"
+        ],
+        "source": "glsl",
+        "aliases": [
+          "discard",
+          "Discard",
+          "discard"
+        ],
+        "glslName": "discard",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "depth_out",
+        "label": "Depth Output",
+        "inputs": {
+          "depth": "float"
+        },
+        "outputs": {},
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.depth_out",
+        "definitionUuid": "sgrape.builtin.depth_out",
+        "targets": [
+          "mat"
+        ],
+        "automaticInputs": [
+          "depth"
+        ],
+        "revisionHash": "4385f847a9087aa42c858b6b77fd912faf030555c194021a6a1b4262fe5d9e4a"
+      },
+      "emitter": {
+        "id": "depth_out",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "stage"
+        ],
+        "source": "glsl",
+        "aliases": [
+          "depth_out",
+          "Depth Output",
+          "gl_FragDepth"
+        ],
+        "glslName": "gl_FragDepth",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_dither",
+        "label": "TDDither",
+        "inputs": {
+          "color": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.td_dither",
+        "definitionUuid": "sgrape.builtin.td_dither",
+        "targets": [
+          "mat"
+        ],
+        "revisionHash": "53b80a4a3810c7afc10cc0a6ac4b7fdb45531b0d185d1fc93c852b9b42a9312a"
+      },
+      "emitter": {
+        "id": "td_dither",
+        "version": 1
+      },
+      "browser": {
+        "category": "color",
+        "categoryPath": [
+          "color"
+        ],
+        "source": "td",
+        "aliases": [
+          "td_dither",
+          "TDDither",
+          "TDDither"
+        ],
+        "glslName": "TDDither",
+        "secondaryCategories": []
+      }
+    },
+    {
+      "definition": {
+        "key": "td_alpha_test",
+        "label": "TDAlphaTest",
+        "inputs": {
+          "alpha": "float"
+        },
+        "outputs": {},
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "inputDefaults": {
+          "alpha": 1
+        },
+        "descriptionKey": "help.td_alpha_test",
+        "definitionUuid": "sgrape.builtin.td_alpha_test",
+        "targets": [
+          "mat"
+        ],
+        "revisionHash": "75422c8a3aaae32689b94c94b1215d53e803c9bbea2e25d9859d8ac9d8a2f7a6"
+      },
+      "emitter": {
+        "id": "td_alpha_test",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "categoryPath": [
+          "shader",
+          "stage"
+        ],
+        "source": "td",
+        "aliases": [
+          "td_alpha_test",
+          "TDAlphaTest",
+          "TDAlphaTest"
+        ],
+        "glslName": "TDAlphaTest",
+        "secondaryCategories": []
       }
     }
   ],

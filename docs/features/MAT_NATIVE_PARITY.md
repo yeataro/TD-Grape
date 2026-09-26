@@ -48,6 +48,14 @@ Sampler binding findings: custom declarations currently accept only `sampler2D`;
 
 These differences require explicit new composition. Existing graph behavior must not change merely to make the new presets resemble the native materials.
 
+### Integrated PBR Material: pending brightness investigation (2026-09-25)
+
+The author accepts different input defaults between the integrated `PBR Material` node and native PBR MAT; those differences alone are not a defect or a request to align defaults. The reported brighter appearance remains unverified in the user's actual preview context. The additional `uTDGeneral.ambientColor` term is confirmed in source, but its value in that preview is not known, so it must not yet be identified as the cause.
+
+Follow-up validation should inspect the preview's actual regular/environment light bindings and global ambient value. With no regular or environment lighting, zero global ambient and zero emission, the expected RGB lighting result is zero (allow for output dithering when measuring). Determine whether the preview supplies lighting implicitly before judging the node. Keep defaults and shader behavior unchanged pending this investigation.
+
+The reflection model itself uses TD's `TDLightingPBR` and `TDEnvLightingPBR`; Grape prepares their material inputs and sums their results. The integrated node computes `mix(specularColor, baseColor, metallic)` before calling TD. Native exported PBR computes `mix(vec3(0.08 * SpecularLevel), finalBaseColor, metallic)`. Thus `specularColor` is a direct RGB reflectance input rather than native MAT's scalar Specular Level: `vec3(0.04)` corresponds to level `0.5` before metallic blending, when the other material inputs match. This parameterization difference is not evidence of a separate Grape reflection implementation or, by itself, a brightness bug.
+
 ## Acceptance
 
 Each implemented row needs an editable graph path, relevant source/binding controls, Help, and a comparison against native output under the same scene and parameters. Test zero/one/multiple regular lights, environment lighting, textures, normals, transparency, displacement and non-default options. Compilation coverage alone is insufficient. Preserve the author's current graph and scene; use separate validation scenes. Keep unsupported or unverified items visible and do not label the complete presets finished while required rows remain open.

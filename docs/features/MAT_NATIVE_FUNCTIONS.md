@@ -37,7 +37,7 @@
 
 | 原生呼叫 | 階段 | 對應能力／驗證狀態 |
 |---|---|---|
-| `TDAlphaTest` | pixel | Pixel Output 自動呼叫；遵守原生 Alpha Test 參數。 |
+| `TDAlphaTest` | pixel | 0.8.239 提供獨立終端節點；Pixel Output 自動呼叫保持，遵守原生 Alpha Test 參數，允許重複呼叫。 |
 | `TDAttrib_T` | vertex | Attribute 宣告 T:vec4 可讀取；Tangent/TBN 在完整材質圖的組裝與幾何驗證待完成。 |
 | `TDCameraIndex` | vertex | Built-in Source：`TDCameraIndex` |
 | `TDCheckDiscard` | pixel | MAT Pixel 入口自動呼叫；不是一般可移動的運算節點。 |
@@ -47,7 +47,7 @@
 | `TDCubeMapToEquirectangular` | pixel | td_cube_to_equirectangular；包含額外 mipMapBias 輸出，不能只保留 UV。 |
 | `TDDeform` | vertex | Deform 與 td_deform_instance；一般與指定實例的變形入口。 |
 | `TDDeformNorm` | vertex | `td_deform_normal`、`td_deform_normal_instance` |
-| `TDDither` | pixel | Pixel Output 自動呼叫；依繪製環境啟用。 |
+| `TDDither` | pixel | 0.8.239 提供獨立 vec4 運算節點；Pixel Output 自動呼叫保持，依繪製環境啟用，允許重複套用。 |
 | `TDEnvLightingPBR` | pixel | TDEnvLightingPBR／PBR Environment Lights；一／兩盞環境燈的像素對照已通過。 |
 | `TDFog` | pixel | td_fog 已有入口；完整材質須維持原生處理位置，實際 Fog 場景仍待對照。 |
 | `TDFrontFacing` | pixel | `td_front_facing` |

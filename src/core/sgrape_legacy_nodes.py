@@ -283,6 +283,16 @@ CALLS['td_instance_color_pixel']['label']='TDInstanceColor (Pixel)'
 td('td_convert_color_space','TDConvertColorSpace',[('color','vec4')],'vec4',targets=('mat',),stages=('pixel',))
 CALLS['td_convert_color_space']['includes']=['TDColorSpace']
 
+# Fragment effects are explicit terminal nodes, independent of color outputs.
+fixed('discard','discard',[('condition','bool')],{},constant=False,stages=('pixel',),category='shader',section='6.4',defaults={'condition':False})
+CALLS['discard']['fragmentEffect']='discard'
+fixed('depth_out','gl_FragDepth',[('depth','float')],{},constant=False,targets=('mat',),stages=('pixel',),category='shader',section='7.1')
+CALLS['depth_out']['fragmentEffect']='depth'
+CALLS['depth_out']['implicitInputs']={'depth':'gl_FragCoord.z'}
+td('td_dither','TDDither',[('color','vec4')],'vec4',targets=('mat',),stages=('pixel',))
+td('td_alpha_test','TDAlphaTest',[('alpha','float')],{},targets=('mat',),stages=('pixel',),defaults={'alpha':1})
+CALLS['td_alpha_test']['fragmentEffect']='alpha'
+
 # Native projection-map accessors introduced in TD 2025.32820.
 td('td_projtexture_lod','TDProjTextureLod',[('light','int'),('uv','vec2'),('lod','float')],'vec4',targets=('mat',),stages=('pixel',),category='texture')
 td('td_projtexture_size','TDProjTextureSize',[('light','int')],'ivec3',targets=('mat',),stages=('pixel',),category='texture')
@@ -294,6 +304,12 @@ def interface(key, ty):
 def emit(key, ports, argument, symbols, lines, expressions, ident):
     """One native call. Output arguments get distinct writable SSA temporaries."""
     spec = CALLS[key]
+    if spec.get('fragmentEffect')=='discard':
+        lines.append('    if ('+argument('condition')+') { discard; }')
+        return None
+    if spec.get('fragmentEffect')=='depth':
+        lines.append('    gl_FragDepth = '+argument('depth')+';')
+        return None
     if spec.get('lighting'):
         return emit_lighting(spec['lighting'],argument,symbols,lines,expressions,ident)
     args = [argument(p) for p in ports['in']]

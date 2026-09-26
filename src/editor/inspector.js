@@ -1456,6 +1456,7 @@ function renderInspector(){
   functionInspector(box,n,d);
   vertexBoundaryInspector(box,n,d);
   if(inspectorTab==='parameters'){
+    if(d.key==='depth_out')box.append(el('p',{class:'muted','data-depth-warning':'true'},t('depth.earlyZWarning')));
     if(d.key==='generated_glsl'){box.classList.add('comment-parameters');box.append(generatedGLSLView(n));const refresh=el('button',{type:'button',class:'wide'},t('generatedGLSL.refresh'));refresh.onclick=()=>refreshGeneratedGLSL(true);box.append(refresh);queueMicrotask(()=>refreshGeneratedGLSL());return;}
     if(d.key==='comment'){box.classList.add('comment-parameters');const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
     if(d.key==='glsl_code')glslCodeInspector(box,n);
@@ -1521,7 +1522,7 @@ function renderInspector(){
       }else if(['replace','matrix_replace'].includes(d.key)&&(port==='value'||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='value'))){
         if(!connection)section.append(hint(t(port==='value'?'vector.baselineHint':'vector.inherited')));
       }else if(value===null&&d.automaticInputs?.includes(port)){
-        if(!connection)section.append(hint(t('lighting.automatic.'+port)));
+        if(!connection)section.append(hint(t(d.key==='depth_out'?'depth.automatic':'lighting.automatic.'+port)));
       }else if(value===null){
         section.append(hint(t('input.implicitUV')));
         if(!connection){const override=el('button',{class:'wide'+(ordinary?' parameter-control':'')},t('input.setUV'));override.onclick=()=>change(()=>{n.inputValues||={};n.inputValues[port]=[.5,.5];});section.append(override);}

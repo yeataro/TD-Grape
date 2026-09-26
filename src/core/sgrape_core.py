@@ -1132,6 +1132,13 @@ def _compile_flat(graph,annotation_scopes=None):
                 nodes[ident]=n; defs[ident]=d
             outputs=[i for i,d in defs.items() if d['key']==stage+'_out']
             if len(outputs)!=1: raise GraphError('Exactly one '+stage+' output is required')
+            # Terminal nodes are observable roots even without output sockets.
+            # Subgraphs are already expanded, so the one-writer rule is global.
+            effect_priority={'discard':0,'alpha':1,'depth':2}
+            effects=sorted((i for i,d in defs.items() if _legacy_nodes.CALLS.get(d['key'],{}).get('fragmentEffect')),
+                           key=lambda i:(effect_priority[_legacy_nodes.CALLS[defs[i]['key']]['fragmentEffect']],i))
+            depth_writers=[i for i in effects if defs[i]['key']=='depth_out']
+            if len(depth_writers)>1:raise GraphError('Only one Depth Output is allowed per Pixel stage, including Subgraph instances',depth_writers[1])
             for e in data['edges']:
                 try: src,sp=e['from']; dst,dp=e['to']
                 except (KeyError,ValueError,TypeError): raise GraphError('Invalid connection')
@@ -1246,7 +1253,8 @@ def _compile_flat(graph,annotation_scopes=None):
             # Follow output-specific dependencies before choosing node order.
             # A fully replaced baseline (or an unused runtime component) is not
             # evaluated just because its wire remains visible in the editor.
-            needed_outputs={};needed_inputs={};pending=[(outputs[0],None)]
+            roots=effects+[outputs[0]]
+            needed_outputs={};needed_inputs={};pending=[(ident,None) for ident in roots]
             while pending:
                 ident,output=pending.pop()
                 if output in needed_outputs.setdefault(ident,set()):continue
@@ -1261,7 +1269,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     if (ident,port) in links:visit_live(links[(ident,port)][0])
                 for source in sorted(extra_sources[ident]):visit_live(source[0])
                 visited.add(ident);order.append(ident)
-            visit_live(outputs[0])
+            for ident in roots:visit_live(ident)
             live=set(order)
             required_extents=set().union(*(extent_refs[ident] for ident in live))
             global_nodes=set();extent_aliases={}
@@ -1839,7 +1847,7 @@ def _expand(graph,functions):
                 else:
                     if key not in BY_UUID or key=='sgrape.internal.relay': raise GraphError('Unknown node',ident)
                     d=BY_UUID[key]
-                    if boundary is not None and (d['key'].endswith('_out') or d['key']=='vertex_input'): raise GraphError('Use Subgraph boundaries inside a Subgraph',ident)
+                    if boundary is not None and d['key'] in ('vertex_out','pixel_out','vertex_input'): raise GraphError('Use Subgraph boundaries inside a Subgraph',ident)
                     nid=mapped(ident,path); out=copy.deepcopy(n); out['id']=nid
                     out.pop('_symbolStem',None)  # Never trust graph-provided compiler metadata.
                     if symbol_path:out['_symbolStem']=_scoped_symbol_stem(symbol_path+(n.get('name',ident),))

@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-26 0.8.239：新增 Discard（MAT／TOP Pixel bool）、Depth Output（MAT Pixel float）、TDDither（MAT Pixel vec4 運算）及 TDAlphaTest（MAT Pixel float）。三個無輸出接孔節點以 Terminal Node（終端節點）作為編譯根，保留上游鏈路；順序為 Discard → Alpha Test → Depth Output → 色彩輸出，包含已放置 Subgraph。每個展開後 Pixel 階段只允許一個 Depth Output；未連接保留 gl_FragCoord.z。Depth Output 的參數面板與 Help 提醒 Early-Z／運算成本。Output 既有自動處理不變，允許重複 Dither／Alpha Test；TDCheckDiscard、Picking 及材質自動輸入提示未改。新增選單／子圖／剪貼簿只排除真正的階段邊界，避免將 Depth Output 誤認為邊界。終端依賴行為與重構參考見 [FRAGMENT_EFFECTS](../features/FRAGMENT_EFFECTS.md)，用語採 Terminal Node 取代 return label 候選。
+
+8 項終端單元檢查、10 組 TD 原生案例、7 組 Chromium UI 檢查通過；MAT 八組對照的像素最大誤差為零，另含 Alpha Test 開关與兩種深度遮擋；TOP 丟棄露出配置的清除底色。八份既有 MAT／TOP／Phong／PBR 圖完整產碼结果與修改前相同。完整 561 項 Python 測試有 558 通過、3 項舊失敗（兩個歷史產碼快照與 typed-Undo fixture 的 Par.style），在修改前版本同樣重現；後加兩項終端測試已單獨通過。1509 項五語文字／1130 引用／59 來源提示、14 項 Editor launch、分類投影、Subgraph／clipboard 與語法檢查通過。桌面與窄版截圖已目視，未實測 iOS Safari。私人報告 reports/fragment-239/。
+
+39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留；Master 無需圖升級。正式 TOE 已保存 2066718 bytes（SHA256 af8f598a8db850afc0db2248e5d920e41bf12845f0bfe6af2c7929662522106e），六份登記狀態保留、私人助手排除。最終針對性 Python 32 項通過；未推送。
+
 2026-09-25 0.8.238：Dolly 加入垂直拖曳，右／上放大、左／下縮小，斜向使用 dx−dy 合併兩軸。左右調整游標改為 zoom-in／zoom-out，隨有效移動方向切換；放開／取消後清除。快捷說明更新為 MMB＋↔／↕。仍只接受空白畫布中鍵，保持原錨點、限制、阻尼及取消行為。
 
 Dolly 6 組 Chromium 檢查通過，擴充三種 UI 比例的水平／垂直／斜向來回拖曳、錨點及游標方向／清除。1503 項五語文字／1125 引用／59 來源提示、JS 語法及 diff 檢查通過。39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留；TOE 保存 2057806 bytes（SHA256 8986ffeaf46c3956975355394f9610243f74efb4228a1dec3383dc3d27b10bc9），六份登記狀態保留、私人助手排除。私人報告 reports/canvas-dolly-238/；未推送。

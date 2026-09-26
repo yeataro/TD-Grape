@@ -1,5 +1,7 @@
 # TD-Sgrape 迴圈：討論提案
 
+2026-09-26：獨立 Discard、Depth Output、TDAlphaTest 的 **Terminal Node（終端節點）** 規則已另行實作，見[片段效果與重構依據](../features/FRAGMENT_EFFECTS.md)。本頁的 Loop、Break 與一般 return／控制流程設計仍未實作；不可將此次終端依賴追溯視為完整流程系統。
+
 ## 2026-09-20 補充：Loop 子圖、控制出口與函式邊界
 
 狀態：使用者要求先記錄，回到[來源整理及 MAT Attribute](SOURCE_ARCHITECTURE_REVIEW.md)。以下是後續設計方向，沒有實作 Loop 或改動現有 Function；細節未定項不作為已完成的規格。

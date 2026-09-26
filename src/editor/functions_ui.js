@@ -73,7 +73,7 @@ function nodeTypeLabel(d,params=d?.defaults){
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
 }
 function availableEntries(){
-  const entries=catalog.filter(d=>d.stages.includes(stage)&&(!d.targets||d.targets.includes(editorTarget))&&!(graphTrail.length&&d.key==='vertex_input')&&!d.key.endsWith('_out')&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+  const entries=catalog.filter(d=>d.stages.includes(stage)&&(!d.targets||d.targets.includes(editorTarget))&&!(graphTrail.length&&d.key==='vertex_input')&&!['vertex_out','pixel_out'].includes(d.key)&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
     if(d.key==='struct_create')return (graph.typeDefinitions||[]).map(item=>({...d,label:item.name,entryKey:'structure:'+item.id,defaults:{type:'struct:'+item.id}}));
     if(d.key==='builtin_source')return builtinSourceEntries(d);
     if(['scalar','vector','matrix'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:({scalar:'help.fixedScalar',vector:'help.fixedVector',matrix:'help.fixedMatrix'})[d.key],defaults:{...d.defaults,...(d.key==='matrix'?{values:matrixReshapeValue(d.defaults.values,d.defaults.type,type)}:{}),type,fixedType:type},category:nodeCategory(d)}))];
