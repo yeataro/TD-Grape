@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-26 0.8.243：一般介面文字整理為共用黑白透明度層級。Dark 使用白色，標題維持 85%；Light 使用黑色並獨立校準。依既有底色上的合成明度近似換算，再收斂為 primary／title／secondary／soft／muted／faint／value。型別、分量、family／來源、狀態、連結與 GLSL 語法識別色保留；Light 的 family 標題維持原色。文字別名在 Tone 啟用時仍由 CSS 驅動，方便後續風格檔覆寫。畫布、節點、面板、輸入底色及圖行為不變。
+
+10 組桌面／窄版與 1 組觸控 Chromium 外觀檢查、2 組 Tone 下文字基色／透明度覆寫探針、14 項 Editor launch、JS 語法與 diff 檢查通過。前後取樣的背景與識別變數完全一致，兩個主題的桌面與窄版截圖已目視；未實測 iOS Safari。39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留、無需升級圖。TOE 保存 2071998 bytes（SHA256 85e93a3bf4974177799d969f2dd2abf2ed782714429ef65bf3b448f8e00d7200），六份登記狀態保留、私人助手排除。私人報告 reports/text-opacity-243/；未推送。
+
 2026-09-26 0.8.242：MAT Color Output 改為 Dither、Alpha Test、Output Color Space Conversion 三個獨立開關，新增節點預設全勾選。只控制 Buffer 0 的自動呼叫，依序 Dither → Alpha Test → Conversion → Swizzle；Alpha Test 失敗仍丟棄整個 fragment。額外 Buffer／TOP 保留 Swizzle，空主 Buffer 維持零。独立節點照常執行、允許重複。舊圖維持原 nativeFinishing 對應行為與逐字 GLSL，首次修改開關才具體保存三個值並移除舊欄位，可 Undo；節點 UUID／revision／接孔不變。五語 Help／提示同步更新。
 
 21 項相關 Python 測試、5 組新開關／2 組材質範本／7 組片段節點 Chromium 檢查通過；涵蓋八種組合、額外 Buffer、空輸入、獨立與重複呼叫、型別拒絕、Undo、唯讀、序列化、五語及手機／浮動面板。TD 2025.32820 八種組合與手寫 GLSL 像素對照誤差皆為 0，並確認 native Alpha Test 關閉時不剔除；此為 Render TOP 驗證，不包含另行 Window／Viewer 色彩管理實測。8 份舊 MAT／TOP 範例及材質範本的 GLSL／hash 與修改前完全相同。1514 五語 keys／1129 引用／59 來源提示、分類投影、14 項 Editor launch、JS 語法及 diff 檢查通過。

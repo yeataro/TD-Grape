@@ -1166,7 +1166,10 @@ function applyUITone(theme,value){
     // Explicit UI namespaces exclude authoring/preview colors and shader syntax.
     for(const property of style){
       if(!/^--(?:ui-|node-|panel(?:-|$)|canvas-|browser-|state-|scroll-|category-|ladder-|type-|wire-|selection(?:-|$)|muted$|line$|border$|purple$|green$|danger$|help-link$)/.test(property))continue;
-      const color=uiToneColor(style.getPropertyValue(property));if(color)palette.set(property,color);
+      const color=uiToneColor(style.getPropertyValue(property));
+      // Neutral translucent ink follows its background; do not pin its aliases inline.
+      if(color&&color[3]<1&&color.slice(0,3).every(c=>c===0||c===255)&&color[0]===color[1]&&color[1]===color[2])continue;
+      if(color)palette.set(property,color);
     }
     uiTonePalettes.set(theme,palette);
   }

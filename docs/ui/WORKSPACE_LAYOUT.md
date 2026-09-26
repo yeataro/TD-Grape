@@ -96,6 +96,22 @@ Comfortable enlarges editor chrome: the desktop header is 68px high, the locatio
 
 Tone is calculated from immutable base-theme color tokens and applied through root CSS variables, without a page filter or DOM recoloring pass. The main UI surfaces, text, fields, node palettes and graph background follow a restrained tonal curve. For weighted RGB brightness L and slider s in [-1, 1], the target is `pow(L, exp(-strength*s))`. The adjustment strength is 1.5 times the previous range. Brightening uses strength 0.48, blended with the original by `smoothstep(0, protection, L)`; protection is 0.35 in Dark and 0.10 in Light. These are shadow-protection thresholds, not fixed middle-gray anchors. Darkening uses strength 0.60 in Dark and 0.825 in Light without the protection blend. The shared proportion toward white or black retains channel ordering and alpha. Returning to 0 removes all tone overrides. Theme and tone changes remain immediate. A 0.5-second CSS color-transition experiment was removed after a 200-node browser probe showed substantial animation overhead; the user explicitly preferred omitting damping over added cost or complexity. There is no animation loop, delayed color state, layout transition or preview filter. Preview image pixels, authored color swatches and GLSL syntax colors remain independent. Tone dragging does not rerender nodes or wires, change layout/graph zoom, add Undo steps or send API writes. Moving focus away from a numeric field still follows its ordinary blur-commit behavior; appearance updates do not add an extra graph edit.
 
+### Neutral text compositing (0.8.243)
+
+Ordinary text uses shared `--text-*` roles in `style.css`, with white ink in Dark and black ink in Light. Text color alpha blends with each actual surface; parent opacity is not used to recolor children. Existing disabled-state opacity remains independent. The initial values approximate the previous composited relative luminance, rounded by role rather than preserving every old gray-purple shade. RGB compositing and sRGB-to-linear luminance are accounted for; a tinted foreground cannot be matched exactly by neutral ink on every background.
+
+| Role | Dark white alpha | Light black alpha |
+| --- | --- | --- |
+| Primary | .88 | .78 |
+| Title | .85 | .78 |
+| Secondary | .72 | .66 |
+| Soft / help | .62 | .66 |
+| Muted | .54 | .54 |
+| Faint | .32 | .38 |
+| Value / ordinary port label | .74 | .77 |
+
+Theme styles can override `--text-base` and the role alpha values without replacing individual selectors. Neutral translucent text aliases stay CSS-driven even when Tone is active: their ink remains fixed and their perceived shade follows the adjusted background. This qualifies the general tone description above. Semantic family/source/type/component/status/link colors and GLSL syntax retain their existing color rules, including existing transparent blends. Colored Light node titles remain family-colored; Dark node titles retain the approved 85% white. Accent buttons use separately inverted ink. Fixed dark preview overlays retain their own foreground. Canvas, node, panel and input backgrounds are unchanged by this text migration.
+
 The floating Add Node browser uses category, result and detail columns. Authored categories currently reach two levels; additional depth adds fixed 170px columns, with horizontal scrolling on small screens. Search crosses category paths; source/type and connection compatibility are independent filters. Double-click and wire-to-blank creation place the browser horizontally centered on the pointer, with its header midpoint at the pointer height; viewport bounds take precedence near edges. Dragging the header repositions only the browser, retaining the original graph insertion point and optional wire. Search/category updates retain the dragged location; reopening starts from the new invocation point.
 
 The canvas stage/count/help text sits at the lower left. At the lower right, the zoom percentage opens an upward preset menu with 25, 50, 75, 100, 125, 150 and 170 percent, retaining the existing 25–170 percent limits. Selecting a preset zooms about the canvas center without editing the graph or adding history. The controls handle their own pointer events without starting a canvas gesture.
