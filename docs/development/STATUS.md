@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-26 0.8.241：四種右側面板可彈出到畫布；Parameter／OP Parameter 共用右上位置，Preview／Help 共用右下位置，同位置互斥並將前一面板收回原側欄。全部可由標題列收合；Parameter 保留節點專屬標題並新增相同比例的收合三角，其他沿用原面板標題。上下維持至少 12 CSS px 間距，高度不足時優先縮短上方參數類內容並捲動；下方也受可用高度限制。保留 P、參數寬度調整、快捷接孔、輸入草稿及 Preview 原 DOM；收合不修改節點或圖。槽位／收合偏好存於瀏覽器並納入 Reset，Layout 隱藏項目也會關閉相應浮動面板。
+
+浮動槽位 8 組、既有浮動參數 10 組、快捷接孔 9 組、標題／實驗切換 4 組 Chromium 檢查通過；包括 36 組原有外觀／比例／視窗組合與 12 組上下間距配置、鍵盤焦點、OP 內容捲動、草稿保留、手機觸控模擬及重新載入。1510 項五語文字／1131 引用／59 來源提示、14 項 Editor launch、JS 語法及 diff 檢查通過。桌面／手機截圖已目視；未實測 iOS Safari。39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留，無需圖升級。正式 TOE 保存 2070182 bytes（SHA256 4ce57e5a7276261d2bce64b62aa3cb161f566fddf22f500b64e82c48a9c53b08），六份登記狀態保留、私人助手排除。私人報告 reports/floating-panels-241/；未推送。
+
 2026-09-26 0.8.240：Discard、TDAlphaTest 改用與 Depth Output 相同的綠色 Output family，表達終端角色；TDAlphaTest 維持 void、沒有輸出接孔，TDDither 保留一般運算色。五語 Help（TDDither／TDAlphaTest／TDConvertColorSpace／Color Output）及 Native MAT finishing 提示補齊自動呼叫與設定的關係：Dither／Alpha Test 不依賴此選項才呼叫；開啟才加入色彩空間轉換並調整順序，實際抖動／剔除依 TD 繪製及 MAT 設定。允許自行重複套用，編譯與圖接口未變。
 
 7 組既有 Chromium 節點操作檢查、1509 項五語文字／1130 引用／59 來源提示、14 項 Editor launch、JS 語法與 diff 檢查通過；截圖目視确认三個終端同色、Dither 保持原色。39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留，無需圖升級。正式 TOE 保存 2069886 bytes（SHA256 143666d083b6b987d443b99360efbeeb531fa8d1d71a0671b5a54c76701112b5），六份登記狀態保留、私人助手排除。私人報告 reports/fragment-240/；未推送。

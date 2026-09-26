@@ -10,7 +10,7 @@ const {harness}=require('./test_glsl_code.cjs');
   const d=catalog.find(d=>d.key==='add');graph.stages.pixel={nodes:[{id:'target',definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...clone(d.defaults),type:'vec3'},ui:{x:100,y:150}}],edges:[]};past=[];future=[];selectNode(current().nodes[0]);inspectorTab='parameters';render();
  });
  const snapshot=()=>page.evaluate(()=>JSON.stringify({graph,past,future,layout:workspaceLayout.snapshot()}));
- const popout=page.locator('.parameter-popout'),option=page.locator('[data-experiment="parameterInputPorts"]');
+ const popout=page.locator('[data-popout-panel="parameters"]'),option=page.locator('[data-experiment="parameterInputPorts"]');
  const chooseSockets=async enabled=>{await page.locator('#uiexperiments').click();await option.setChecked(enabled);await page.keyboard.press('Escape');await settle();};
  try{
   await setup();const before=await snapshot();await page.evaluate(()=>{window.originalPane=$('#pane-parameters');});

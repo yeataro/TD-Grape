@@ -50,6 +50,7 @@
     "controls.customize": {"en":"Customize Parameters","zh-Hant":"編輯自訂參數", "ja": "カスタムパラメーターを編集", "fr": "Personnaliser les paramètres", "ko": "사용자 매개변수 편집"},
     "sources.showNotes": {"en":"Notes","zh-Hant":"顯示備註", "ja": "メモを表示", "fr": "Notes", "ko": "메모"},
     "sources.minimal": {"en":"Minimal","zh-Hant":"最小化顯示", "ja": "最小表示", "fr": "Minimal", "ko": "최소 표시"},
+    "panel.popout": {"en": "Float panel", "zh-Hant": "彈出面板", "ja": "パネルをフローティング表示", "fr": "Détacher le panneau", "ko": "패널 띄우기"},
     "view.floatingParameter": {"en": "Floating Parameter panel", "zh-Hant": "浮動參數面板", "ja": "フローティングパラメーターパネル", "fr": "Panneau de paramètres flottant", "ko": "플로팅 매개변수 패널"},
     "view.floatingParameter.hint": {"en": "Show or hide the Parameter panel on the canvas.", "zh-Hant": "在畫布上顯示或關閉浮動參數面板。", "ja": "キャンバス上のパラメーターパネルを表示／非表示にします。", "fr": "Afficher ou masquer le panneau de paramètres sur le canevas.", "ko": "캔버스의 매개변수 패널을 표시하거나 숨깁니다."},
     "view.showLinkLines": {"en":"Show Link lines","zh-Hant":"顯示 Link 線", "ja": "Link 線を表示", "fr": "Afficher les lignes Link", "ko": "Link 선 표시"},

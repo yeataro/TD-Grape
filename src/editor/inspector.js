@@ -1404,7 +1404,7 @@ function refreshFloatingParameterPorts(){
   box.querySelectorAll('.parameter-port-slot').forEach(slot=>slot.remove());
   box.querySelectorAll('.parameter-port-anchor').forEach(row=>row.classList.remove('parameter-port-anchor'));
   box.classList.remove('has-parameter-ports');
-  if(!graph||!floatingParameterOpen||!EDITOR_DEV_SETTINGS.parameterInputPorts||inspectorTab!=='parameters')return;
+  if(!graph||!floatingParameterOpen||$('#floatingparameters').classList.contains('is-collapsed')||!EDITOR_DEV_SETTINGS.parameterInputPorts||inspectorTab!=='parameters')return;
   const n=current().nodes.find(node=>node.id===box.dataset.inspectorNode);if(!n)return;
   for(const [port,type]of Object.entries(ports(n,'inputs'))){
     const escaped=CSS.escape(port),section=box.querySelector(`[data-input="${escaped}"]`),value=box.querySelector(`[data-parameter-value="${escaped}"],[data-parameter-matrix="${escaped}"]`);
@@ -1423,7 +1423,7 @@ function refreshFloatingParameterPorts(){
     slot.append(button);row.classList.add('parameter-port-anchor');row.prepend(slot);box.classList.add('has-parameter-ports');
   }
 }
-function inspector(){renderInspector();refreshFloatingParameterPorts();}
+function inspector(){renderInspector();workspaceLayout?.refreshFloatingHeaders();refreshFloatingParameterPorts();}
 function renderInspector(){
   if(deferParameterInspector()||deferCommentNodeEditor(false))return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
@@ -1866,10 +1866,17 @@ function installPanelWorkspace(){
   function locate(id){for(const side of ['left','right']){const index=state[side].findIndex(g=>g.panels.includes(id));if(index>=0)return {side,index,group:state[side][index]};}}
   function persist(){if(restoring)return;state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};if(!matchMedia('(max-width:800px)').matches)state.visibility={left:isSidebarOpen('left'),right:isSidebarOpen('right')};write(key,state);}
   const parking=el('div',{hidden:true});document.body.append(parking);
-  floatingParameterOpen=read('grapeFloatingParameter',false)===true;
+  const floatingSlots={parameters:'upper',controls:'upper',live:'lower',help:'lower'};
+  const savedFloating=read('grapeFloatingPanelsV1',{}),slots={
+    upper:['parameters','controls'].includes(savedFloating?.upper)?savedFloating.upper:savedFloating?.upper===null?null:read('grapeFloatingParameter',false)===true?'parameters':null,
+    lower:['live','help'].includes(savedFloating?.lower)?savedFloating.lower:null
+  };
+  const collapsed=Object.fromEntries(Object.keys(floatingSlots).map(id=>[id,savedFloating?.collapsed?.[id]===true]));
+  const isFloating=id=>!!floatingSlots[id]&&slots[floatingSlots[id]]===id;
+  floatingParameterOpen=isFloating('parameters');
   const savedFloatingWidth=read('grapeFloatingParameterWidth',320);
   let floatingWidth=Number.isFinite(savedFloatingWidth)?Math.max(280,savedFloatingWidth):320;
-  const floating=el('section',{id:'floatingparameters',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
+  const floating=el('section',{id:'floatingparameters',class:'floating-workspace-panel',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
   const floatingTitle=el('span',{id:'floatingparametertitle',class:'sr-only'}),floatingClose=el('button',{type:'button',class:'icon-button floating-parameter-close'});
   floatingClose.append(selectionIcon('M6 6l12 12M18 6 6 18'));
   floatingClose.onclick=()=>{setFloatingParameter(false);focusGraphCanvas();};
@@ -1878,20 +1885,70 @@ function installPanelWorkspace(){
   for(const event of ['pointerdown','mousedown','touchstart','click','dblclick','contextmenu'])floating.addEventListener(event,e=>e.stopPropagation());
   floating.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   let floatingFrame=0;
+  const floats={parameters:{element:floating,close:floatingClose}};
+  for(const id of ['controls','live','help']){
+    const element=el('section',{id:'floating'+id,class:'floating-workspace-panel',role:'region','aria-labelledby':heads[id].id,hidden:true});
+    const close=el('button',{type:'button',class:'icon-button floating-panel-close'});
+    close.append(selectionIcon('M6 6l12 12M18 6 6 18'));
+    close.onclick=()=>{setFloatingPanel(id,false);focusGraphCanvas();};
+    element.append(close);$('.graph-workspace').append(element);floats[id]={element,close};
+    for(const event of ['pointerdown','mousedown','touchstart','click','dblclick','contextmenu'])element.addEventListener(event,e=>e.stopPropagation());
+    element.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+  }
+  function saveFloating(){write('grapeFloatingPanelsV1',{...slots,collapsed});write('grapeFloatingParameter',floatingParameterOpen);}
+  function collapseIcon(){
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 12 12');icon.setAttribute('aria-hidden','true');icon.classList.add('floating-collapse-icon');
+    const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d','M3 1 10 6 3 11Z');icon.append(path);return icon;
+  }
+  const fallback=el('div',{class:'floating-parameter-fallback'});
+  const parameterFold=el('button',{type:'button',class:'node-collapse-toggle floating-parameter-fold','aria-controls':'inspector'});
+  parameterFold.append(collapseIcon());parameterFold.onclick=()=>setFloatingCollapsed('parameters',!collapsed.parameters);
+  function refreshFloatingHeaders(){
+    if(floatingParameterOpen){
+      const header=$('#inspector>.node-inspector-title,#inspector>.input-inspector-title');
+      if(header){fallback.remove();if(parameterFold.parentElement!==header)header.prepend(parameterFold);}
+      else if(!fallback.isConnected){fallback.replaceChildren(parameterFold,el('span',{},title('parameters')));floating.insertBefore(fallback,panes.parameters);}
+      else fallback.lastElementChild.textContent=title('parameters');
+    }else{parameterFold.remove();fallback.remove();}
+    for(const [id,item]of Object.entries(floats)){
+      const label=t(collapsed[id]?'node.expand':'node.collapse');
+      item.element.classList.toggle('is-collapsed',collapsed[id]);
+      const toggle=id==='parameters'?parameterFold:heads[id];
+      if(isFloating(id)){toggle.setAttribute('aria-expanded',String(!collapsed[id]));toggle.setAttribute('aria-label',label+' · '+title(id));toggle.title=label;}
+    }
+    scheduleFloatingParameter();
+  }
+  function setFloatingCollapsed(id,value){
+    if(!isFloating(id))return;collapsed[id]=!!value;saveFloating();refreshFloatingHeaders();if(id==='parameters')refreshFloatingParameterPorts();
+    if(id==='live')preview().catch(error=>status(error.message,true));
+  }
   function positionFloatingParameter(){
-    floatingFrame=0;if(floating.hidden)return;
-    const canvas=$('#canvas'),bounds=canvas.getBoundingClientRect(),host=floating.offsetParent.getBoundingClientRect(),zoom=uiScaleFactor(),toolbar=$('.graph-workspace>.toolbar')||$('#canvas>.toolbar');
+    floatingFrame=0;if(!slots.upper&&!slots.lower)return;
+    const canvas=$('#canvas'),bounds=canvas.getBoundingClientRect(),host=floats[slots.upper||slots.lower].element.offsetParent.getBoundingClientRect(),zoom=uiScaleFactor(),toolbar=$('.graph-workspace>.toolbar')||$('#canvas>.toolbar');
     const gap=parseFloat(getComputedStyle(floating).getPropertyValue('--canvas-ui-inset'))||12;
     const buttons=toolbar?[...toolbar.querySelectorAll('.graph-tools button,.graph-tools select')].filter(b=>b.getClientRects().length&&!b.closest('[popover]')):[];
     const toolbarBottom=Math.max(bounds.top,...buttons.map(b=>b.getBoundingClientRect().bottom));
     const top=(toolbarBottom-host.top)/zoom+gap;
     const viewTools=$('.canvas-view-tools'),viewTop=viewTools?.getClientRects().length?viewTools.getBoundingClientRect().top:bounds.bottom;
-    const bottom=Math.min(bounds.bottom,viewTop);
-    const maxWidth=Math.max(0,bounds.width/zoom-gap*2),width=Math.min(floatingWidth,maxWidth);
-    Object.assign(floating.style,{top:top+'px',right:((host.right-bounds.right)/zoom+gap)+'px',width:width+'px',maxHeight:Math.max(0,(bottom-host.top)/zoom-top-gap)+'px'});
+    const bottom=(Math.min(bounds.bottom,viewTop)-host.top)/zoom-gap,available=Math.max(0,bottom-top);
+    const maxWidth=Math.max(0,bounds.width/zoom-gap*2),right=(host.right-bounds.right)/zoom+gap;
+    for(const [id,item]of Object.entries(floats))if(isFloating(id)){
+      Object.assign(item.element.style,{right:right+'px',width:Math.min(id==='parameters'?floatingWidth:320,maxWidth)+'px'});
+    }
+    const upper=slots.upper&&floats[slots.upper].element,lower=slots.lower&&floats[slots.lower].element;
+    const header=Math.max(32,parseFloat(getComputedStyle(floating).getPropertyValue('--floating-close-size'))||32)+2;
+    let lowerHeight=0;
+    if(lower){
+      // Reserve a usable scroll area for the upper panel before capping the lower one.
+      const upperReserve=upper?header+(collapsed[slots.upper]?0:64):0;
+      const limit=Math.max(0,Math.min(320,available-(upper?gap+Math.min(upperReserve,Math.max(header,(available-gap)/2)):0)));
+      lower.style.maxHeight=limit+'px';lower.style.height=slots.lower==='live'&&!collapsed.live?Math.min(320,limit)+'px':'';
+      lowerHeight=lower.getBoundingClientRect().height/zoom;lower.style.top=(bottom-lowerHeight)+'px';
+    }
+    if(upper)Object.assign(upper.style,{top:top+'px',maxHeight:Math.max(0,available-(lower?lowerHeight+gap:0))+'px'});
     floatingResizeHandle.setAttribute('aria-valuemin',Math.round(Math.min(280,maxWidth)));
     floatingResizeHandle.setAttribute('aria-valuemax',Math.round(maxWidth));
-    floatingResizeHandle.setAttribute('aria-valuenow',Math.round(width));
+    floatingResizeHandle.setAttribute('aria-valuenow',Math.round(Math.min(floatingWidth,maxWidth)));
   }
   function scheduleFloatingParameter(){if(!floatingFrame)floatingFrame=requestAnimationFrame(positionFloatingParameter);}
   function resizeFloatingParameter(width){
@@ -1917,23 +1974,25 @@ function installPanelWorkspace(){
     };
     floatingResizeHandle.addEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])floatingResizeHandle.addEventListener(type,finish);
   };
-  function setFloatingParameter(enabled){
-    enabled=!!enabled;if(enabled===floatingParameterOpen)return;
-    floatingParameterOpen=enabled;write('grapeFloatingParameter',enabled);build();
+  function setFloatingPanel(id,enabled){
+    const slot=floatingSlots[id];if(!slot||isFloating(id)===!!enabled)return;
+    slots[slot]=enabled?id:null;floatingParameterOpen=isFloating('parameters');saveFloating();build();
   }
+  function setFloatingParameter(enabled){setFloatingPanel('parameters',enabled);}
   const floatingResize=new ResizeObserver(scheduleFloatingParameter);floatingResize.observe($('#canvas'));floatingResize.observe($('.graph-workspace .toolbar'));
+  for(const item of Object.values(floats))floatingResize.observe(item.element);
   for(const event of ['resize','sidebarvisibilitychange','workspacewidthschange'])window.addEventListener(event,scheduleFloatingParameter);
   function build(){
     sizes.forEach(s=>s.destroy());sizes=[];
-    for(const id of ids){panes[id].hidden=true;parking.append(heads[id],panes[id]);}
+    for(const id of ids){panes[id].hidden=true;heads[id].classList.remove('floating-heading');heads[id].classList.add('workspace-tab');heads[id].querySelector('.floating-collapse-icon')?.remove();heads[id].removeAttribute('aria-label');heads[id].removeAttribute('title');panes[id].setAttribute('role','tabpanel');parking.append(heads[id],panes[id]);}
     for(const [side,host]of Object.entries(hosts)){
       host.replaceChildren();const groups=[];
-      const visiblePanel=id=>!state.hidden.includes(id)&&!(floatingParameterOpen&&id==='parameters');
+      const visiblePanel=id=>!state.hidden.includes(id)&&!isFloating(id);
       const canFold=state[side].filter(group=>group.panels.some(visiblePanel)).length>1;
       for(const group of state[side]){
         const visible=group.panels.filter(visiblePanel);if(!visible.length)continue;
-        if(!canFold&&!floatingParameterOpen)group.collapsed=false;
-        if(!visible.includes(group.active)&&!(floatingParameterOpen&&group.active==='parameters'))group.active=visible[0];
+        if(!canFold&&!slots.upper&&!slots.lower)group.collapsed=false;
+        if(!visible.includes(group.active)&&!isFloating(group.active))group.active=visible[0];
         const active=visible.includes(group.active)?group.active:visible[0];
         const groupId=group.panels[0],section=el('section',{class:'inspector-panel workspace-group','data-panel':groupId,'data-workspace-group':groupId,'data-tabbed':String(visible.length>1)});
         const bar=el('div',{class:'workspace-tabs',role:'tablist'});
@@ -1941,11 +2000,11 @@ function installPanelWorkspace(){
           button.onclick=()=>{group.active=id;group.collapsed=false;build();persist();heads[id].focus({preventScroll:true});};
           button.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();e.stopPropagation();const at=visible.indexOf(id),next=e.key==='Home'?0:e.key==='End'?visible.length-1:(at+(e.key==='ArrowRight'?1:-1)+visible.length)%visible.length;group.active=visible[next];group.collapsed=false;build();persist();heads[group.active].focus();};
           button.onpointerdown=e=>beginDrag(e,id);
-          if(id==='parameters'){
-            const tab=el('span',{class:'workspace-parameter-tab',role:'presentation'}),label=t('view.floatingParameter')+' · '+shortcutLabel('floatingParameter');
-            const popout=el('button',{type:'button',class:'parameter-popout',title:label,'aria-label':label});
+          if(floatingSlots[id]){
+            const tab=el('span',{class:'workspace-parameter-tab',role:'presentation'}),label=id==='parameters'?t('view.floatingParameter')+' · '+shortcutLabel('floatingParameter'):t('panel.popout')+' · '+title(id);
+            const popout=el('button',{type:'button',class:'parameter-popout','data-popout-panel':id,title:label,'aria-label':label});
             popout.append(selectionIcon('M14 3h7v7M21 3 10 14M10 3H3v18h18v-7'));
-            popout.onclick=()=>{setFloatingParameter(true);floatingClose.focus({preventScroll:true});};
+            popout.onclick=()=>{setFloatingPanel(id,true);floats[id].close.focus({preventScroll:true});};
             tab.append(button,popout);bar.append(tab);
           }else bar.append(button);
         }
@@ -1960,13 +2019,22 @@ function installPanelWorkspace(){
       if(!groups.length){host.append(el('div',{class:'workspace-empty'},t('layout.empty')));continue;}
       sizes.push(installPanelHeights(groups,{host,key:'grapeWorkspaceSizes-'+side,weights:Object.fromEntries(state[side].map(g=>[g.panels[0],g.weight])),onSave:weights=>{for(const g of state[side])if(Number.isFinite(weights[g.panels[0]]))g.weight=weights[g.panels[0]];persist();}}));
     }
-    floating.hidden=!floatingParameterOpen;floatingTitle.textContent=t('panel.parameterTitle');
-    floatingClose.title=t('action.close')+' · '+shortcutLabel('floatingParameter');floatingClose.setAttribute('aria-label',t('action.close'));
+    floatingTitle.textContent=t('panel.parameterTitle');
     floatingResizeHandle.setAttribute('aria-label',t('layout.resize'));
-    panes.parameters.setAttribute('role',floatingParameterOpen?'region':'tabpanel');
-    panes.parameters.setAttribute('aria-labelledby',floatingParameterOpen?'floatingparametertitle':heads.parameters.id);
+    for(const [id,item]of Object.entries(floats)){
+      const open=isFloating(id);item.element.hidden=!open;
+      item.close.title=t('action.close')+(id==='parameters'?' · '+shortcutLabel('floatingParameter'):'');item.close.setAttribute('aria-label',t('action.close'));
+      panes[id].setAttribute('aria-labelledby',open&&id==='parameters'?'floatingparametertitle':heads[id].id);
+      if(!open)continue;
+      panes[id].hidden=false;panes[id].setAttribute('role','region');panes[id].querySelector('.panel-scroll').hidden=false;
+      if(id!=='parameters'){
+        const head=heads[id];head.classList.remove('workspace-tab');head.classList.add('floating-heading');head.prepend(collapseIcon());head.removeAttribute('role');head.removeAttribute('aria-selected');head.tabIndex=0;
+        head.onpointerdown=head.onkeydown=null;head.onclick=()=>setFloatingCollapsed(id,!collapsed[id]);item.element.append(head);
+      }
+      item.element.append(panes[id]);
+    }
     $('#parameterbody').setAttribute('aria-labelledby',floatingParameterOpen?'floatingparametertitle':heads.parameters.id);
-    if(floatingParameterOpen){panes.parameters.hidden=false;$('#parameterbody').hidden=false;floating.append(panes.parameters);}
+    refreshFloatingHeaders();
     refreshFloatingParameterPorts();
     scheduleFloatingParameter();
     if(typeof graph!=='undefined'&&graph)preview().catch(error=>status(error.message,true));
@@ -2072,7 +2140,7 @@ function installPanelWorkspace(){
     const heading=key=>menu.append(el('div',{class:'layout-menu-heading',role:'presentation'},t(key)));
     function choice(label,action,checked=null){const button=el('button',{type:'button',role:checked===null?'menuitem':'menuitemcheckbox'},label);if(checked!==null)button.setAttribute('aria-checked',String(checked));button.onclick=action;menu.append(button);return button;}
     heading('layout.panels');
-    for(const id of ids)choice(title(id),()=>{if(state.hidden.includes(id)){state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);}else state.hidden.push(id);build();persist();showMenu();[...menu.querySelectorAll('button')][ids.indexOf(id)].focus();},!state.hidden.includes(id));
+    for(const id of ids)choice(title(id),()=>{if(state.hidden.includes(id)){state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);}else state.hidden.push(id);if(state.hidden.includes(id)&&isFloating(id)){slots[floatingSlots[id]]=null;floatingParameterOpen=isFloating('parameters');saveFloating();}build();persist();showMenu();[...menu.querySelectorAll('button')][ids.indexOf(id)].focus();},!state.hidden.includes(id));
     heading('layout.presets');
     choice(t('layout.default'),()=>{apply(defaults());closeMenu(true);});
     for(const item of presets)choice(item.name,()=>{apply(item.layout);closeMenu(true);});
@@ -2087,7 +2155,7 @@ function installPanelWorkspace(){
 
   build();restoring=true;write('sgrapeSidebarWidths',state.widths);if(!matchMedia('(max-width:800px)').matches)for(const side of ['left','right'])setSidebarOpen(side,state.visibility[side]);restoring=false;
   window.addEventListener('workspacepreferenceschange',persist);window.addEventListener('sidebarvisibilitychange',persist);
-  return {move,apply,setFloatingParameter,snapshot:()=>copy(state),closeBrowser(){setSidebarOpen(locate('browser').side,false);},reveal(id){if(id==='parameters'&&floatingParameterOpen)return;state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);build();persist();},translate(){build();if(dialog.open)manager();if(!menu.hidden)showMenu();},manager};
+  return {move,apply,setFloatingParameter,setFloatingPanel,setFloatingCollapsed,refreshFloatingHeaders,snapshot:()=>copy(state),closeBrowser(){setSidebarOpen(locate('browser').side,false);},reveal(id){if(isFloating(id)){setFloatingCollapsed(id,false);return;}state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);build();persist();},translate(){build();if(dialog.open)manager();if(!menu.hidden)showMenu();},manager};
 }
 
 /* Inputs are a source inventory. Graph nodes reference these identities; native

@@ -670,7 +670,7 @@ function showPreviewBusy(){
   $('#autopreview').disabled=!graph;
   const key=busy?'connecting':state==='connected'?'connected':state==='replaced'?'replaced':state==='error'?'error':'disconnected';
   $('#previewactivity').textContent=t('preview.'+key);
-  const dot=$('#pane-live .live-dot');if(dot){dot.classList.toggle('is-connected',state==='connected');dot.title=t('preview.'+key);}
+  const dot=$('#livetoggle .live-dot');if(dot){dot.classList.toggle('is-connected',state==='connected');dot.title=t('preview.'+key);}
 }
 $('#preview').addEventListener('panel-state',event=>{
   const {state,message}=event.detail;if(!$('#previewactivity'))return;
@@ -804,7 +804,7 @@ const browserPreferenceKeys=[
   'sgrapeLanguage','sgrapeAutoPreview','sgrapeAppearanceV1','sgrapeExperimentsV1',
   'sgrapeCustomNamesV1','sgrapeLinkLinesV1','sgrapeHeaderVisible','sgrapeSourceNamesV1',
   'sgrapeInputCollapsedGroups','sgrapeSidebarWidths','sgrapeInspectorPanels','sgrapeInspectorSizes',
-  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingParameterWidth','grapeParameterInputPorts',
+  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingPanelsV1','grapeFloatingParameterWidth','grapeParameterInputPorts',
   'grapeInputsDefaultLeftV1','grapeBrowserDetailHeight','grapeSourceGroupOrder','grapeSourceNotes','grapeSourceMinimal'
 ];
 function resetBrowserPreferences(){
