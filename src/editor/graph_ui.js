@@ -150,7 +150,7 @@ function nodeCategory(d,params=d.defaults){
   if(['uv','position'].includes(d.key))return 'attribute';
   if(['texture','texture_sample'].includes(d.key))return 'math';
   if(['deform','to_clip'].includes(d.key))return 'builtin';
-  if(d.key.endsWith('_out')||d.key==='function_output')return 'output';return 'math';
+  if(d.key.endsWith('_out')||['function_output','discard','td_alpha_test'].includes(d.key))return 'output';return 'math';
 }
 // Presentation roles describe what a source supplies, not its node family,
 // browser location, GLSL qualifier or type. Keep this UI-only: no graph/compiler metadata.

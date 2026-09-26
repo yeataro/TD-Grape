@@ -9,6 +9,10 @@
 | TDDither | `color: vec4` | `out: vec4` | MAT Pixel |
 | TDAlphaTest | `alpha: float`, default 1 | None | MAT Pixel |
 
+0.8.240 presentation clarification: Discard and TDAlphaTest use the same green Output family color as Depth Output to identify their terminal role. TDAlphaTest still returns no value; no alpha passthrough port is added. TDDither keeps the ordinary operation color. This changes presentation only, not node signatures or shader behavior.
+
+The five-language Help for TDDither, TDAlphaTest, TDConvertColorSpace and Color Output, plus the Native MAT finishing option hint, distinguishes automatic calls from their effects. MAT Color Output calls Alpha Test and primary-color Dither in both finishing modes; their effects depend on native MAT/testing and rendering settings. Native MAT finishing off uses Alpha Test → Dither → Swizzle; on uses Dither → Alpha Test → output color-space conversion → Swizzle. The color-space conversion is automatic only when this option is on. Empty primary buffers remain zero; extra buffers and TOP Color Output use Swizzle only. The output does not automatically add custom Discard or Depth Output. Independent-node repetition remains the graph author's choice.
+
 ## Terminal behavior: refactor reference
 
 The author explicitly confirmed that a node with no output sockets can still be an endpoint when tracing dependencies. Discard, Depth Output and TDAlphaTest are **terminal nodes**: placing one in a stage or inside a placed Subgraph makes it a compilation root, without requiring a wire to the color output. Follow every required upstream input and emit that chain even if no color result uses it. Ordinary disconnected value computations, including TDDither, remain pruned. A stored Subgraph definition that has no placed instance has no effects. Each placed instance contributes its own terminal nodes, even if that instance's value outputs are unused. A downstream If/Switch selecting a value does not conditionally execute these terminals; connect the condition to Discard itself or compute the desired depth/alpha upstream.
