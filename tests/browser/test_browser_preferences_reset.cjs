@@ -43,6 +43,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
   assert.equal(await page.evaluate(()=>sessionStorage.getItem(draftKey)),draft);
   assert.equal(await page.evaluate(()=>localStorage.getItem('grapeWorkspacePresetsV1')),null);
   assert.equal(await page.evaluate(()=>localStorage.getItem('sgrapeInspectorPanels')),null);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('grapeFloatingLowerSize')),null);
   assert.equal(posts,0);checks.push('Footer action restores factory appearance, language, layout and source/experimental preferences; access, all drafts and unrelated storage survive without a TD write');
   await page.selectOption('#language','zh-Hant');await page.locator('#editormenu').click();assert.equal(await page.locator('#resetbrowserpreferences').innerText(),'重設瀏覽器設定…');
   await page.screenshot({path:path.join(folder,'reset-menu.png')});checks.push('The reset entry is available in the lower-left menu in both languages');

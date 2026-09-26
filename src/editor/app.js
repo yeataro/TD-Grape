@@ -804,7 +804,7 @@ const browserPreferenceKeys=[
   'sgrapeLanguage','sgrapeAutoPreview','sgrapeAppearanceV1','sgrapeExperimentsV1',
   'sgrapeCustomNamesV1','sgrapeLinkLinesV1','sgrapeHeaderVisible','sgrapeSourceNamesV1',
   'sgrapeInputCollapsedGroups','sgrapeSidebarWidths','sgrapeInspectorPanels','sgrapeInspectorSizes',
-  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingPanelsV1','grapeFloatingParameterWidth','grapeParameterInputPorts',
+  'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingPanelsV1','grapeFloatingParameterWidth','grapeFloatingLowerSize','grapeParameterInputPorts',
   'grapeInputsDefaultLeftV1','grapeBrowserDetailHeight','grapeSourceGroupOrder','grapeSourceNotes','grapeSourceMinimal'
 ];
 function resetBrowserPreferences(){

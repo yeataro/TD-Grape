@@ -2208,7 +2208,15 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .floating-collapse-icon{display:block;flex:none;width:18px;height:18px;fill:currentColor;pointer-events:none}
 .floating-heading[aria-expanded=true]>.floating-collapse-icon{transform:rotate(90deg)}
 .floating-workspace-panel.is-collapsed:not(#floatingparameters)>.workspace-pane{display:none}
-#floatinglive:not(.is-collapsed)>.workspace-pane,#floatinglive:not(.is-collapsed) .panel-scroll{flex:1 1 0}
+:is(#floatinglive,#floatinghelp):not(.is-collapsed)>.workspace-pane,:is(#floatinglive,#floatinghelp):not(.is-collapsed) .panel-scroll{flex:1 1 0}
+.floating-panel-resize{position:absolute;z-index:4;touch-action:none}
+.floating-panel-resize-width{left:0;top:8px;bottom:8px;width:6px;cursor:ew-resize}
+.floating-panel-resize-height{top:0;left:8px;right:8px;height:6px;cursor:ns-resize}
+.floating-panel-resize-both{left:0;top:0;width:14px;height:14px;cursor:nwse-resize}
+.floating-panel-resize:is(:hover,:focus-visible){background:var(--line);outline-offset:-2px}
+.floating-panel-resize-both::after{content:'';position:absolute;inset:3px;border-left:1px solid var(--muted);border-top:1px solid var(--muted);border-top-left-radius:3px}
+.is-collapsed :is(.floating-panel-resize-height,.floating-panel-resize-both){display:none}
+@media(pointer:coarse){.floating-panel-resize-width{width:10px}.floating-panel-resize-height{height:10px}.floating-panel-resize-both{width:20px;height:20px}}
 #floatingparameters :is(.node-inspector-title,.input-inspector-title){position:sticky;padding-left:32px}
 .floating-parameter-fold{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px}
 .floating-parameter-fallback{position:relative;display:flex;align-items:center;flex:none;min-height:var(--floating-close-size);padding:0 calc(var(--floating-close-size) + 4px) 0 32px;font-size:13px}

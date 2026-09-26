@@ -1879,6 +1879,9 @@ function installPanelWorkspace(){
   floatingParameterOpen=isFloating('parameters');
   const savedFloatingWidth=read('grapeFloatingParameterWidth',320);
   let floatingWidth=Number.isFinite(savedFloatingWidth)?Math.max(280,savedFloatingWidth):320;
+  const lowerSizeKey='grapeFloatingLowerSize',savedLowerSize=read(lowerSizeKey,{});
+  let lowerSize={width:Number.isFinite(savedLowerSize?.width)?Math.max(280,savedLowerSize.width):320,height:Number.isFinite(savedLowerSize?.height)?Math.max(160,savedLowerSize.height):320};
+  let lowerLimits={width:320,height:320},cancelLowerResize=null;
   const floating=el('section',{id:'floatingparameters',class:'floating-workspace-panel',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
   const floatingTitle=el('span',{id:'floatingparametertitle',class:'sr-only'}),floatingClose=el('button',{type:'button',class:'icon-button floating-parameter-close'});
   floatingClose.append(selectionIcon('M6 6l12 12M18 6 6 18'));
@@ -1895,6 +1898,23 @@ function installPanelWorkspace(){
     close.append(selectionIcon('M6 6l12 12M18 6 6 18'));
     close.onclick=()=>{setFloatingPanel(id,false);focusGraphCanvas();};
     element.append(close);$('.graph-workspace').append(element);floats[id]={element,close};
+    if(floatingSlots[id]==='lower'){
+      floats[id].resizeHandles=['width','height','both'].map(axis=>{
+        const handle=el('div',{class:'floating-panel-resize floating-panel-resize-'+axis,tabindex:'0',role:axis==='both'?'button':'separator',...(axis==='both'?{}:{'aria-orientation':axis==='width'?'vertical':'horizontal'})});
+        handle.dataset.resizeAxis=axis;element.append(handle);
+        handle.onpointerdown=e=>beginLowerResize(e,id,axis,handle);
+        handle.onkeydown=e=>{
+          if(e.key==='Escape'&&cancelLowerResize){e.preventDefault();e.stopPropagation();cancelLowerResize();return;}
+          if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;
+          e.preventDefault();e.stopPropagation();
+          const box=element.getBoundingClientRect(),size={...lowerSize},zoom=uiScaleFactor();
+          if(axis!=='height'&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))size.width=e.key==='Home'?280:e.key==='End'?lowerLimits.width:box.width/zoom+(e.key==='ArrowLeft'?8:-8);
+          if(axis!=='width'&&['ArrowUp','ArrowDown','Home','End'].includes(e.key))size.height=e.key==='Home'?160:e.key==='End'?lowerLimits.height:box.height/zoom+(e.key==='ArrowUp'?8:-8);
+          resizeLower(size,axis);write(lowerSizeKey,lowerSize);
+        };
+        return handle;
+      });
+    }
     for(const event of ['pointerdown','mousedown','touchstart','click','dblclick','contextmenu'])element.addEventListener(event,e=>e.stopPropagation());
     element.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   }
@@ -1922,7 +1942,7 @@ function installPanelWorkspace(){
     scheduleFloatingParameter();
   }
   function setFloatingCollapsed(id,value){
-    if(!isFloating(id))return;collapsed[id]=!!value;saveFloating();refreshFloatingHeaders();if(id==='parameters')refreshFloatingParameterPorts();
+    if(!isFloating(id))return;cancelLowerResize?.();collapsed[id]=!!value;saveFloating();refreshFloatingHeaders();if(id==='parameters')refreshFloatingParameterPorts();
     if(id==='live')preview().catch(error=>status(error.message,true));
   }
   function positionFloatingParameter(){
@@ -1936,7 +1956,7 @@ function installPanelWorkspace(){
     const bottom=(Math.min(bounds.bottom,viewTop)-host.top)/zoom-gap,available=Math.max(0,bottom-top);
     const maxWidth=Math.max(0,bounds.width/zoom-gap*2),right=(host.right-bounds.right)/zoom+gap;
     for(const [id,item]of Object.entries(floats))if(isFloating(id)){
-      Object.assign(item.element.style,{right:right+'px',width:Math.min(id==='parameters'?floatingWidth:320,maxWidth)+'px'});
+      Object.assign(item.element.style,{right:right+'px',width:Math.min(id==='parameters'?floatingWidth:floatingSlots[id]==='lower'?lowerSize.width:320,maxWidth)+'px'});
     }
     const upper=slots.upper&&floats[slots.upper].element,lower=slots.lower&&floats[slots.lower].element;
     const header=Math.max(32,parseFloat(getComputedStyle(floating).getPropertyValue('--floating-close-size'))||32)+2;
@@ -1944,9 +1964,17 @@ function installPanelWorkspace(){
     if(lower){
       // Reserve a usable scroll area for the upper panel before capping the lower one.
       const upperReserve=upper?header+(collapsed[slots.upper]?0:64):0;
-      const limit=Math.max(0,Math.min(320,available-(upper?gap+Math.min(upperReserve,Math.max(header,(available-gap)/2)):0)));
-      lower.style.maxHeight=limit+'px';lower.style.height=slots.lower==='live'&&!collapsed.live?Math.min(320,limit)+'px':'';
+      const limit=Math.max(0,available-(upper?gap+Math.min(upperReserve,Math.max(header,(available-gap)/2)):0));
+      lowerLimits={width:maxWidth,height:limit};
+      lower.style.maxHeight=limit+'px';lower.style.height=!collapsed[slots.lower]?Math.min(lowerSize.height,limit)+'px':'';
       lowerHeight=lower.getBoundingClientRect().height/zoom;lower.style.top=(bottom-lowerHeight)+'px';
+      for(const handle of floats[slots.lower].resizeHandles){
+        const axis=handle.dataset.resizeAxis;
+        if(axis==='both')continue;
+        handle.setAttribute('aria-valuemin',Math.round(Math.min(axis==='width'?280:160,lowerLimits[axis])));
+        handle.setAttribute('aria-valuemax',Math.round(lowerLimits[axis]));
+        handle.setAttribute('aria-valuenow',Math.round(axis==='width'?lower.getBoundingClientRect().width/zoom:lowerHeight));
+      }
     }
     if(upper)Object.assign(upper.style,{top:top+'px',maxHeight:Math.max(0,available-(lower?lowerHeight+gap:0))+'px'});
     floatingResizeHandle.setAttribute('aria-valuemin',Math.round(Math.min(280,maxWidth)));
@@ -1954,6 +1982,24 @@ function installPanelWorkspace(){
     floatingResizeHandle.setAttribute('aria-valuenow',Math.round(Math.min(floatingWidth,maxWidth)));
   }
   function scheduleFloatingParameter(){if(!floatingFrame)floatingFrame=requestAnimationFrame(positionFloatingParameter);}
+  function resizeLower(size,axis){
+    for(const dimension of ['width','height'])if(axis==='both'||axis===dimension)lowerSize[dimension]=Math.max(Math.min(dimension==='width'?280:160,lowerLimits[dimension]),Math.min(size[dimension],lowerLimits[dimension]));
+    positionFloatingParameter();
+  }
+  function beginLowerResize(e,id,axis,handle){
+    if(e.button!==0)return;e.preventDefault();e.stopPropagation();cancelLowerResize?.();
+    const previous={...lowerSize},box=floats[id].element.getBoundingClientRect(),zoom=uiScaleFactor(),pointer=e.pointerId,start={x:e.clientX,y:e.clientY};
+    handle.focus({preventScroll:true});handle.setPointerCapture(pointer);
+    const move=event=>{if(event.pointerId===pointer)resizeLower({width:(box.width+start.x-event.clientX)/zoom,height:(box.height+start.y-event.clientY)/zoom},axis);};
+    const finish=event=>{
+      if(event&&event.pointerId!==pointer)return;
+      handle.removeEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])handle.removeEventListener(type,finish);
+      cancelLowerResize=null;
+      if(event?.type==='pointerup')write(lowerSizeKey,lowerSize);else{lowerSize=previous;positionFloatingParameter();}
+      if(handle.hasPointerCapture(pointer))handle.releasePointerCapture(pointer);
+    };
+    cancelLowerResize=()=>finish();handle.addEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(type,finish);
+  }
   function resizeFloatingParameter(width){
     const max=Number(floatingResizeHandle.getAttribute('aria-valuemax'));
     floatingWidth=Math.max(Math.min(280,max),Math.min(width,max));positionFloatingParameter();
@@ -1979,6 +2025,7 @@ function installPanelWorkspace(){
   };
   function setFloatingPanel(id,enabled){
     const slot=floatingSlots[id];if(!slot||isFloating(id)===!!enabled)return;
+    cancelLowerResize?.();
     slots[slot]=enabled?id:null;floatingParameterOpen=isFloating('parameters');saveFloating();build();
   }
   function setFloatingParameter(enabled){setFloatingPanel('parameters',enabled);}
@@ -2026,6 +2073,7 @@ function installPanelWorkspace(){
     floatingResizeHandle.setAttribute('aria-label',t('layout.resize'));
     for(const [id,item]of Object.entries(floats)){
       const open=isFloating(id);item.element.hidden=!open;
+      for(const handle of item.resizeHandles||[])handle.setAttribute('aria-label',t('layout.resize')+' · '+title(id));
       item.close.title=t('action.close')+(id==='parameters'?' · '+shortcutLabel('floatingParameter'):'');item.close.setAttribute('aria-label',t('action.close'));
       panes[id].setAttribute('aria-labelledby',open&&id==='parameters'?'floatingparametertitle':heads[id].id);
       if(!open)continue;
