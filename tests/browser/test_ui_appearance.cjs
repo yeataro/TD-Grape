@@ -35,6 +35,8 @@ async function run() {
   }));
   const inspectControls = async (size, theme, tone, language) => {
     assert.deepEqual(await appearance(), {size, theme, tone});
+    const pickerBackgrounds=await page.evaluate(()=>['language','sizelanguage'].map(id=>getComputedStyle(document.getElementById(id)).backgroundColor));
+    assert.equal(pickerBackgrounds[0],pickerBackgrounds[1],'popover language picker must use the same themed field surface as the header picker');
     const sizeButton=page.locator('#uisize'), themeButton=page.locator('#uitheme');
     assert.equal(await sizeButton.getAttribute('aria-pressed'),null);
     assert.equal(await sizeButton.getAttribute('aria-haspopup'),'dialog');

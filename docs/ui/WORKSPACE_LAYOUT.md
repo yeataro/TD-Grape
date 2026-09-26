@@ -98,6 +98,8 @@ Tone is calculated from immutable base-theme color tokens and applied through ro
 
 ### Neutral text compositing (0.8.243)
 
+0.8.244 follow-up: appearance-popover selects use the same theme field surface as header selects, including Light. Wire and node selection toolbars share their button dimensions and UI scaling (28 CSS px for fine pointers, 36 for coarse pointers, before UI scale). There is no wire-only inverse scale compensation; at the minimum 75% UI size their button dimensions and toolbar height remain equal, independent of graph zoom.
+
 Ordinary text uses shared `--text-*` roles in `style.css`, with white ink in Dark and black ink in Light. Text color alpha blends with each actual surface; parent opacity is not used to recolor children. Existing disabled-state opacity remains independent. The initial values approximate the previous composited relative luminance, rounded by role rather than preserving every old gray-purple shade. RGB compositing and sRGB-to-linear luminance are accounted for; a tinted foreground cannot be matched exactly by neutral ink on every background.
 
 | Role | Dark white alpha | Light black alpha |

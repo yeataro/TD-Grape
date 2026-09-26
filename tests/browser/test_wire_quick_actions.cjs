@@ -67,16 +67,22 @@ const {harness}=require('./test_glsl_code.cjs');
    graph.stages.pixel={nodes:[testNode('src','scalar',0,0),testNode('router','router',220,170),testNode('dst','add',500,50)],edges:[{from:['src','out'],to:['router','value']},{from:['router','out'],to:['dst','a'],ui:{style:'link'}}]};
    setUIExperiments({wireQuickActions:true,canvasDamping:false,frameDamping:false});showLinkLines=true;selected=selectedEdge=null;selection.clear();
   });
-  for(const width of [430,320])for(const ui of [80,100,125]){
-   await page.setViewportSize({width,height:932});await page.evaluate(ui=>{uiAppearance.scale=ui;renderUIAppearance();setSidebarOpen('left',false);setSidebarOpen('right',false);scale=.35;pan={x:15,y:100};render();},ui);await settle();
+  for(const width of [430,320])for(const ui of [75,100,125]){
+   await page.setViewportSize({width,height:932});await page.evaluate(ui=>{setUIAppearance('theme','light');uiAppearance.scale=ui;renderUIAppearance();setSidebarOpen('left',false);setSidebarOpen('right',false);scale=.25;pan={x:15,y:100};render();},ui);await settle();
    const p=await page.evaluate(()=>{const e=current().edges[1],line=[...$('#wires').querySelectorAll('path[data-from]')].find(p=>p.edgeSelectionItem===e),q=line.getPointAtLength(line.getTotalLength()*.55),m=document.createElementNS(line.namespaceURI,'circle');m.setAttribute('cx',q.x);m.setAttribute('cy',q.y);m.setAttribute('r',1);line.parentNode.append(m);const r=m.getBoundingClientRect();m.remove();return{x:r.left+r.width/2,y:r.top+r.height/2};});
    await page.touchscreen.tap(p.x,p.y);await settle();assert.equal(await bar.isVisible(),true);assert.equal(await action('link').getAttribute('aria-pressed'),'true');
    const box=await bar.boundingBox(),canvas=await page.locator('#canvas').boundingBox();assert.ok(box.x>=canvas.x-1&&box.x+box.width<=canvas.x+canvas.width+1,JSON.stringify({width,ui,box,canvas}));assert.ok(box.y+box.height<p.y+1);
    await action('wire').tap();assert.equal(await page.evaluate(()=>current().edges[1].ui?.style||'wire'),'wire');
    await action('link').tap();assert.equal(await page.evaluate(()=>current().edges[1].ui?.style),'link');
    await page.screenshot({path:path.join(folder,`mobile-${width}-${ui}.png`)});
+   const wireButton=await action('source').boundingBox();
+   await page.evaluate(()=>{selection=new Set(['src']);selected='src';selectedEdge=null;render();});await settle();
+   const nodeButton=await page.locator('#selectiontoolbar button.icon-button:visible').first().boundingBox(),nodeBar=await page.locator('#selectiontoolbar').boundingBox();
+   for(const dimension of ['width','height'])assert.ok(Math.abs(wireButton[dimension]-nodeButton[dimension])<.1,`wire/node button ${dimension} must scale together at ${ui}%`);
+   assert.ok(Math.abs(box.height-nodeBar.height)<.1,'wire and node toolbars share the same padding and height');
+   await page.screenshot({path:path.join(folder,`mobile-node-${width}-${ui}.png`)});
   }
-  checks.push('Real touchscreen selection and toggle on Router Link work at 320/430px and 80/100/125% UI with canvas containment');
+  checks.push('Real touchscreen Router Link selection/toggle works at 320/430px and 75/100/125% UI; wire and node toolbar heights/buttons scale together, including the minimum slider value at 25% graph zoom');
   assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks}));
  }catch(e){await h.finish(e);throw e;}
 })().catch(e=>{console.error(e);process.exitCode=1;});
