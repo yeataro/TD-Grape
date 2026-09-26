@@ -2205,7 +2205,8 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .floating-workspace-panel .panel-scroll{flex:0 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain}
 .floating-workspace-panel .floating-heading{position:relative;flex:0 0 auto;min-height:var(--floating-close-size);padding:0 calc(var(--floating-close-size) + 4px) 0 10px;gap:4px;background:var(--panel-header-bg);color:var(--panel-header-fg)}
 .floating-heading::before{display:none}
-.floating-collapse-icon{display:block;flex:none;width:18px;height:18px;fill:currentColor;pointer-events:none}
+.floating-workspace-panel .floating-collapse-icon{display:block;flex:none;width:13px;height:13px;fill:currentColor;pointer-events:none}
+.floating-heading>.floating-collapse-icon{margin-inline:2.5px}
 .floating-heading[aria-expanded=true]>.floating-collapse-icon{transform:rotate(90deg)}
 .floating-workspace-panel.is-collapsed:not(#floatingparameters)>.workspace-pane{display:none}
 :is(#floatinglive,#floatinghelp):not(.is-collapsed)>.workspace-pane,:is(#floatinglive,#floatinghelp):not(.is-collapsed) .panel-scroll{flex:1 1 0}
