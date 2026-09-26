@@ -24,7 +24,7 @@ Phong includes independent diffuse, ambient, two specular colors and two shinine
 
 Color declarations use native **Color** sources, with RGB custom controls created as **RGBA, Size 3**. Ordinary vectors remain vectors. New Color controls support one through four components in both the expose and create-control workflows. A fresh Color source with fewer than four components uses unused Alpha = 1; an explicitly supplied Alpha, including 0, is retained. Existing controls and bindings are not restyled automatically.
 
-Pixel Output has an opt-in **Native MAT finishing** setting: dither → alpha test → output color-space conversion → swizzle. It is enabled in these presets. Existing graphs retain their previous output behavior. Do not additionally connect a color-space conversion before this setting, which would convert twice. Empty unconnected output remains zero; additional color buffers keep their existing handling.
+As of 0.8.242, Color Output exposes independent **Dither**, **Alpha Test** and **Output Color Space Conversion** switches. New MAT nodes enable all three. These presets retain their equivalent saved `nativeFinishing: true` behavior and show all three checked; editing a switch converts its saved representation in one Undo transaction. Enabled operations run dither → alpha test → output color-space conversion → swizzle. Using an independent conversion node as well applies conversion twice; repeated processing remains the author's choice. Empty unconnected output remains zero; additional color buffers only use Swizzle. See [output finishing behavior](FRAGMENT_EFFECTS.md).
 
 ## Evidence and limits
 

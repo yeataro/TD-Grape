@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-26 0.8.242：MAT Color Output 改為 Dither、Alpha Test、Output Color Space Conversion 三個獨立開關，新增節點預設全勾選。只控制 Buffer 0 的自動呼叫，依序 Dither → Alpha Test → Conversion → Swizzle；Alpha Test 失敗仍丟棄整個 fragment。額外 Buffer／TOP 保留 Swizzle，空主 Buffer 維持零。独立節點照常執行、允許重複。舊圖維持原 nativeFinishing 對應行為與逐字 GLSL，首次修改開關才具體保存三個值並移除舊欄位，可 Undo；節點 UUID／revision／接孔不變。五語 Help／提示同步更新。
+
+21 項相關 Python 測試、5 組新開關／2 組材質範本／7 組片段節點 Chromium 檢查通過；涵蓋八種組合、額外 Buffer、空輸入、獨立與重複呼叫、型別拒絕、Undo、唯讀、序列化、五語及手機／浮動面板。TD 2025.32820 八種組合與手寫 GLSL 像素對照誤差皆為 0，並確認 native Alpha Test 關閉時不剔除；此為 Render TOP 驗證，不包含另行 Window／Viewer 色彩管理實測。8 份舊 MAT／TOP 範例及材質範本的 GLSL／hash 與修改前完全相同。1514 五語 keys／1129 引用／59 來源提示、分類投影、14 項 Editor launch、JS 語法及 diff 檢查通過。
+
+39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留；TOE 保存 2070734 bytes（SHA256 265e7e3b0cb2e887699e0f37614d9593b9776e0a94e07d9460863300fe20f7f1），六份登記狀態保留、私人助手排除。私人報告 reports/output-finishing-242/；未推送。
+
 2026-09-26 0.8.241：四種右側面板可彈出到畫布；Parameter／OP Parameter 共用右上位置，Preview／Help 共用右下位置，同位置互斥並將前一面板收回原側欄。全部可由標題列收合；Parameter 保留節點專屬標題並新增相同比例的收合三角，其他沿用原面板標題。上下維持至少 12 CSS px 間距，高度不足時優先縮短上方參數類內容並捲動；下方也受可用高度限制。保留 P、參數寬度調整、快捷接孔、輸入草稿及 Preview 原 DOM；收合不修改節點或圖。槽位／收合偏好存於瀏覽器並納入 Reset，Layout 隱藏項目也會關閉相應浮動面板。
 
 浮動槽位 8 組、既有浮動參數 10 組、快捷接孔 9 組、標題／實驗切換 4 組 Chromium 檢查通過；包括 36 組原有外觀／比例／視窗組合與 12 組上下間距配置、鍵盤焦點、OP 內容捲動、草稿保留、手機觸控模擬及重新載入。1510 項五語文字／1131 引用／59 來源提示、14 項 Editor launch、JS 語法及 diff 檢查通過。桌面／手機截圖已目視；未實測 iOS Safari。39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留，無需圖升級。正式 TOE 保存 2070182 bytes（SHA256 4ce57e5a7276261d2bce64b62aa3cb161f566fddf22f500b64e82c48a9c53b08），六份登記狀態保留、私人助手排除。私人報告 reports/floating-panels-241/；未推送。

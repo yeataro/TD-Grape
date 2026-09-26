@@ -9,8 +9,8 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.selectOption('#language','en');
   for(const [model,preset] of Object.entries(presets)){
    await page.evaluate(preset=>{clearTimeout(autoTimer);scheduleGraphApply=()=>{};connectionInterrupted=true;readonly=false;historyBusy=false;nativeMutationBusy=false;graphTrail=[];editorTarget='mat';graph=clone(preset);stage='pixel';past=[];future=[];selected='pixel';selection.clear();selection.add('pixel');render();},preset);await settle();
-   const control=page.locator('[data-native-finishing="pixel"]');await assert.equal(await control.count(),1);assert.ok(await control.isChecked());
-   await control.uncheck();await settle();assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='pixel').params.nativeFinishing),false);
+   const control=page.locator('[data-pixel-finishing="convertColorSpace"]');await assert.equal(await control.count(),1);assert.ok(await control.isChecked());
+   await control.uncheck();await settle();assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='pixel').params.convertColorSpace),false);
    await page.evaluate(()=>undo());await settle();assert.ok(await control.isChecked());
    await page.evaluate(()=>{stage='vertex';selected='vertex';selection.clear();selection.add('vertex');render();});await settle();
    const fields=await page.evaluate(()=>current().nodes.find(n=>n.id==='vertex').params.outputs.map(p=>p.id));assert.deepEqual(fields,['world','normal','camera','color','uv']);

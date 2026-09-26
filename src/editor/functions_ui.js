@@ -229,6 +229,7 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
 function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={},preview=false}={}){
   if(d.key==='generated_glsl'&&current().nodes.some(n=>n.definitionUuid===d.definitionUuid))throw Error(t('generatedGLSL.limit'));
   const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});let source=null;
+  if(d.key==='pixel_out'&&editorTarget==='mat')Object.assign(params,typeContract?.pixelBufferOutputs?.finishingDefaults||{});
   // Fixed entries retain their identity in params; generic entries keep their
   // stable default unless an explicit wire/type context requests another type.
   type=d.fixedType||type;
