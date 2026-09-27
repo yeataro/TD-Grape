@@ -4,7 +4,7 @@ const shaderId=location.pathname.match(/^\/shader\/([a-f0-9]{32})\/$/)?.[1]||'';
 const apiRoot='/api/'+(shaderId?shaderId+'/':'');
 const draftKey='sgrapeDraft'+(shaderId?':'+shaderId:'');
 const token=location.hash.slice(1)||sessionStorage.getItem('sgrapeToken')||'';
-sessionStorage.setItem('sgrapeToken',token);history.replaceState(null,'',location.pathname);
+sessionStorage.setItem('sgrapeToken',token);history.replaceState(null,'',location.pathname+(new URLSearchParams(location.search).has('wire-coordinates')?'?wire-coordinates':''));
 
 const GRID=24;
 const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;

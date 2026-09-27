@@ -2268,6 +2268,7 @@ function beginCanvasDolly(canvas,event){
 }
 function installGraphInteractions(){
   installGraphClipboard();
+  installWireCoordinateDiagnostics();
   const canvas=$('#canvas');canvas.tabIndex=0;
   installTouchNavigation(canvas);
   canvas.ondblclick=e=>{if(!e.target.closest('.node')&&!e.target.closest('path,.link-direction'))openCreator(e.clientX,e.clientY);};
@@ -2374,6 +2375,47 @@ function installGraphInteractions(){
   $('#boxselect').onclick=()=>{boxSelectMode=!boxSelectMode;$('#boxselect').setAttribute('aria-pressed',String(boxSelectMode));};
 }
 
+// Opt-in, local-only capture for physical-device coordinate issues. No event
+// rewriting, graph edits, storage, network calls, or normal-mode sampling.
+function installWireCoordinateDiagnostics(){
+  let controller=null,panel=null,marker=null,frame=0,followup=0,origin=null,last=null;
+  const rounded=value=>Math.round(value*100)/100;
+  const xy=p=>p?[rounded(p.x),rounded(p.y)]:null;
+  const center=e=>{const r=e.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};};
+  const sample=()=>{
+    followup=0;const path=document.querySelector('.parameter-wire-preview path,#wires .wire-preview');if(!path||!last||!panel)return;
+    const endpoint=length=>{
+      const q=path.getPointAtLength(length),probe=document.createElementNS(path.namespaceURI,'circle');
+      probe.setAttribute('cx',q.x);probe.setAttribute('cy',q.y);probe.setAttribute('r','1');
+      if(path.hasAttribute('transform'))probe.setAttribute('transform',path.getAttribute('transform'));
+      probe.style.pointerEvents='none';probe.style.visibility='hidden';path.parentNode.append(probe);const p=center(probe);probe.remove();return p;
+    };
+    const a=endpoint(0),b=endpoint(path.getTotalLength()),tip=wireDrag?.kind==='inputs'?a:b,v=window.visualViewport,z=uiScaleFactor(),basis=graphCoordinateBasis();
+    marker.hidden=false;Object.assign(marker.style,{left:last.client[0]/z+'px',top:last.client[1]/z+'px'});
+    const record={ui:uiAppearance.scale,graphZoom:rounded(scale*100),pointer:last.type,event:last.client,page:last.page,screen:last.screen,down:origin,svg:[xy(a),xy(b)],tipDelta:xy({x:tip.x-last.client[0],y:tip.y-last.client[1]}),marker:xy(center(marker)),basis:[rounded(basis.left),rounded(basis.top),rounded(basis.width),rounded(basis.height)],viewport:[innerWidth,innerHeight,devicePixelRatio],visualViewport:v?[rounded(v.scale),rounded(v.offsetLeft),rounded(v.offsetTop)]:null,scroll:[scrollX,scrollY],overlay:!!path.closest('.parameter-wire-preview')};
+    panel.textContent='Wire coordinates · yellow cross = event\n'+Object.entries(record).map(([key,value])=>key+': '+JSON.stringify(value)).join('\n');
+    panel.dataset.sample=JSON.stringify(record);
+  };
+  const schedule=e=>{
+    if(e.target.closest?.('#wire-coordinate-diagnostics'))return;
+    if(e.type==='pointerdown'){
+      const port=e.target.closest?.('.port');origin={event:[rounded(e.clientX),rounded(e.clientY)],socket:port?xy(center(port)):null,type:e.pointerType};
+    }
+    last={type:e.pointerType,client:[e.clientX,e.clientY],page:[rounded(e.pageX),rounded(e.pageY)],screen:[rounded(e.screenX),rounded(e.screenY)]};
+    cancelAnimationFrame(frame);cancelAnimationFrame(followup);followup=0;
+    frame=requestAnimationFrame(()=>{frame=0;followup=requestAnimationFrame(sample);});
+  };
+  const refresh=()=>{
+    const enabled=new URLSearchParams(location.search).has('wire-coordinates');if(enabled===!!controller)return;
+    if(!enabled){controller.abort();controller=null;cancelAnimationFrame(frame);cancelAnimationFrame(followup);frame=followup=0;panel.remove();marker.remove();panel=marker=null;origin=last=null;return;}
+    controller=new AbortController();panel=el('pre',{id:'wire-coordinate-diagnostics'});marker=el('span',{'aria-hidden':'true',hidden:true},'+');
+    Object.assign(panel.style,{position:'fixed',left:'8px',bottom:'48px',zIndex:'2147483647',margin:'0',padding:'8px',font:'13px/1.35 monospace',color:'#fff',background:'#111e',border:'1px solid #888',borderRadius:'6px',maxHeight:'60vh',maxWidth:'85vw',overflow:'hidden',pointerEvents:'none'});
+    Object.assign(marker.style,{position:'fixed',zIndex:'2147483647',transform:'translate(-50%,-50%)',font:'24px/1 monospace',color:'#ffeb3b',pointerEvents:'none'});
+    panel.textContent='Wire coordinates · drag a wire\nRemove ?wire-coordinates from the URL and reload to close.';document.body.append(panel,marker);
+    for(const type of ['pointerdown','pointermove'])window.addEventListener(type,schedule,{capture:true,passive:true,signal:controller.signal});
+  };
+  window.addEventListener('popstate',refresh);refresh();
+}
 function installTouchNavigation(canvas){
   // One owner for a touch sequence. Graph edits remain previews until release;
   // a second finger cancels the preview and takes over as anchored navigation.

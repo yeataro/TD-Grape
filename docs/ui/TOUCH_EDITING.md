@@ -1,5 +1,11 @@
 # Touch graph editing
 
+## Physical-device wire coordinate diagnosis (0.8.247)
+
+An iPad report at the minimum 75% UI scale on iOS 26.5 shows the temporary wire tip away from the pointer. Existing connected wires appear aligned. Root cause is not confirmed: Chromium native touch injection and Windows WebKit mobile-layout/mouse checks at 75–125% UI and 70%/129% graph zoom have not reproduced it. Do not treat this as a fixed bug or infer an iOS result from desktop WebKit.
+
+Adding the `wire-coordinates` query parameter (`?wire-coordinates`, before any existing session fragment) to the current editor URL and reloading enables a local read-only diagnostic overlay. Drag again after enabling it. A yellow cross marks the event coordinates; the report compares event client/page/screen positions, pointer-down/socket positions, SVG endpoints measured through temporary invisible markers, the HTML graph basis, and visual-viewport scale/offset. Its last sample remains after release for a screenshot. Removing the query parameter and reloading disables the overlay. Existing session fragments remain untouched. It does not modify gestures, graph/history, preferences, or send diagnostic data over the network. Root CSS zoom remains unchanged pending physical-device evidence. `test_wire_coordinate_diagnostics.cjs` verifies opt-in behavior, ordinary/proxy wire geometry and graph isolation in Chromium and WebKit.
+
 The canvas has one touch gesture controller. Mouse and pen continue through the
 existing desktop pointer handlers. The established shared HTML/SVG world
 coordinate conversion is unchanged.
