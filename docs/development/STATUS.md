@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-27 0.8.248：依 iPad 實機診斷調整 UI 縮放所在層。78% UI／77.53% 畫布時，HTML 座標基準回報約 0.78 而非 0.605，固定十字的實測 x 約為事件 x÷0.78，y 同樣多除一次 UI 比例再扣 scroll；原本只比 SVG 與事件的 tipDelta=0 無法揭露這個 DOM 座標與可見位置的差異。CSS zoom 由 :root 移至 body，讓根視窗維持未縮放，保留既有 viewport 尺寸補償、事件／接孔／畫布換算。診斷增加 rootZoom、contentZoom、markerDelta，實機修正效果仍待 iPad 回報。
+
+Chromium 5 組、Windows WebKit 4 組診斷檢查通過，涵蓋 75／78／100／125% UI、77.53／129% 畫布下的 viewport／basis、節點與浮動接孔游離端及固定十字，另有 Chromium 原生觸控取消／圖不變檢查。浮動參數 10 組（36 種布局組合）、快捷接孔 9 組、線條工具列 8 組、外觀 10+1 組、14 項 Editor launch 及 JS／diff 檢查通過，78% 截圖已目視。舊 wire_geometry 的節點拖曳斷言、touch_editing 的首次拖曳 Undo 斷言均在修改前樣式同樣失敗，未列為全套通過；幾何測試前五組已通過。Windows WebKit 不代表 iOS 實機驗證。
+
+39 份來源同步，四份 Master 身分／位置及四份使用者 Shader 保留，無需图升級。正式 TOE 保存 2076758 bytes（SHA256 a5dd52925eeb27900f945254706ee9b8c80268823cf609ac8ce5a37743e246cc），六份登記狀態保留、私人助手排除。私人報告 reports/wire-preview-248/；未推送。
+
 2026-09-27 0.8.247：重新排查 iPad／iOS 26.5 最小 75% UI 下臨時接線偏移，尚未確認根因或修復。Chromium 原生觸控注入及 Windows WebKit 行動版面／滑鼠探針，在 75–125% UI、70／129% 畫布縮放及預設緩動下未重現；不可當作 iOS 實機通過。既有縮放、座標與手勢邏輯保持。
 
 新增僅以網址 query `?wire-coordinates` 啟用的本機只讀診斷：顯示游標事件、按下接孔、SVG 端點、HTML 座標基準與視窗縮放數據，黃色十字標出事件位置，最後取樣保留供截圖。啟用與關閉不改圖／Undo／偏好、不傳送診斷資料；網址仍沿用原有 session fragment 讀取與清除流程，僅保留診斷 query。Chromium 4 組、WebKit 3 組診斷檢查及 14 項 Editor launch 通過，含節點／浮動接孔、觸控、圖不變、直接網址載入及連線識別保留；JS 語法與 diff 通過，截圖已目視。仍需使用者 iPad 診斷截圖才能定位原始問題。

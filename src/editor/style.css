@@ -21,7 +21,10 @@
  --text-alpha-soft:.66;--text-alpha-muted:.54;--text-alpha-faint:.38;--text-alpha-value:.77;
  --text-on-accent:rgb(255 255 255 / .95);
 }
-:root{--ui-scale:1;--ui-vw:calc(1vw / var(--ui-scale));--ui-vh:calc(1vh / var(--ui-scale));--ui-dvh:calc(1dvh / var(--ui-scale));zoom:var(--ui-scale)}
+:root{--ui-scale:1;--ui-vw:calc(1vw / var(--ui-scale));--ui-vh:calc(1vh / var(--ui-scale));--ui-dvh:calc(1dvh / var(--ui-scale))}
+/* Keep the viewport/root unzoomed: iOS root zoom can report unscaled DOM
+   bounds while pointer events remain in viewport pixels. Zoom only content. */
+body{zoom:var(--ui-scale)}
 /* UI tone tokens preserve the original palette exactly at the center position.
    Tone changes use root colors only; preview pixels and shader syntax are independent. */
 :root{
