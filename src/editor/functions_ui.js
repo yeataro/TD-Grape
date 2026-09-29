@@ -139,7 +139,7 @@ function nodeNameValid(value){
     !/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(value)&&!(typeContract?.glslCode?.reservedNames||[]).includes(value);
 }
 function uniqueNodeName(hint,n=null,nodes=current().nodes){
-  let base=String(hint||'Node').replace(/[^A-Za-z0-9_]/g,'_').replace(/_+/g,'_').slice(0,38);
+  let base=String(hint||'Node').replace(/[^A-Za-z0-9_]/g,'_').replace(/_+/g,'_').slice(0,38).replace(/_+$/,'');
   if(!nodeNameValid(base))base='Node';
   const names=new Set(nodes.filter(x=>x!==n&&!isSourceReferenceNode(x)).map(x=>x.name).filter(Boolean));
   let index=1,name=base;while(names.has(name))name=base+'_'+index++;

@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-30 0.8.267：修正 `Array[i]` 等標籤產生實例名稱時，尾端底線與碰撞編號組成 `Array_i__1`，被合法 GLSL 名稱驗證拒絕的問題。名稱清理／截斷後先移除尾端底線，再加入編號；新建依序為 `Array_i`、`Array_i_1`，複製／貼上共用修正。顯示標籤保留，既有名稱不自動改寫；已停在網頁草稿的錯誤名稱須手動改名一次。未修改 Router、陣列型別或 GLSL 名稱驗證規則。
+
+6 組新增 Chromium 檢查通過，涵蓋兩顆 Array[i] 建立、uTDCamInfos 直接／Router 接入、Duplicate／Paste／Undo、舊尾端底線名稱保留。四份瀏覽器產生的圖經真實 core 編譯成功，1468 個候選名稱通過前後端規則；原錯誤名稱仍被拒絕。14 項核心節點名稱與 14 項 Editor launch 檢查通過。另跑既有 `test_builtin_subgraph_names`，兩個測試方法共五個失敗（庫清單停在七項、跨 Stage fixture 不符 target）；修改前 `6311d0d` 的隔離來源重現相同失敗，本輪未改寫該舊測試，未列為全套通過。私人紀錄 `reports/generated-names-267/`；未實測 Safari／iPad。
+
+39 份来源核對、三份更新，九份 Shader 狀態保留；六份 Master 同步無圖升級，三份使用者 Shader 及原生身分／位置保留。正式 TOE 保存 2347464 bytes，SHA256 `1be4efb9339c8ffcca928975c0b329559c8037b4a40866bd601a884dca9e0e6c`，私人助手排除。未操作或重新整理使用者網頁，未推送。
+
 2026-09-30 0.8.266：型別配色採作者確認的 B 方案。內建／自訂結構的接孔與 Wire 使用低彩度漸層，型別文字保留中性色；矩陣改為略提亮的冷石板灰，陣列繼承元素型別色。一般節點、Router、Sources、Parameter 快捷接孔、Link 箭頭及拉線預覽共用實際型別分類；Link 灰虛線與選取／hover 回饋保留。明亮模式結構接孔中央沿用一般輸入底色。規則見[配色說明](../ui/COLOR_AND_LABELS.md)。
 
 Parameter 已連接輸入的來源名稱可點擊，選取並 Frame 來源節點；普通輸入與矩陣分量、停駐／浮動、唯讀及鍵盤操作皆適用。沿用既有端點導航，Disconnect 保持獨立，圖與 Undo 不變；過期圖／接線按鈕不導航。Layout 遺漏浮動面板狀態依作者指示留待下一輪，[待辦筆記](../discussions/UX_BACKLOG.md)已記錄，本輪未修改 Layout。

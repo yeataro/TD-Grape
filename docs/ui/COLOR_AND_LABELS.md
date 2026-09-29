@@ -10,6 +10,10 @@ Struct gradients share the existing mixed-type Link-arrow palette: Dark `#BC9C85
 
 These are presentation rules only; type compatibility, graph data and compilation are unchanged. Broader consolidation of historical UI exceptions is deferred to the planned refactor. `tests/browser/test_type_palette_navigation.cjs` checks both themes, native/user types, arrays, state overrides, Link arrows and the floating preview.
 
+## Generated instance names
+
+Automatically generated instance names use GLSL-safe identifiers independently of the displayed node label. Since 0.8.267, name generation strips a trailing separator after sanitizing/truncating the label and before adding a collision suffix: repeated `Array[i]` nodes become `Array_i`, `Array_i_1`, etc. Creation, duplication and paste share this rule; existing node names are not rewritten. A draft containing the older invalid `Array_i__1` needs one explicit rename. `tests/browser/test_generated_node_names.cjs` checks these editor paths and validates their serialized graphs and generated names against the real compiler.
+
 ## RGBA controls and labels
 
 Color RGBA displays four compact numeric fields in one row, ordered R, G, B, A, above an alpha-aware CSS swatch. The swatch opens the same browser-native RGB picker as Parameter. Numeric fields share Parameter's stored values and use the existing inline Enter/blur, Escape, Undo and Value Ladder behavior. Component names remain available in field tooltips and accessible labels. Ordinary vectors retain numeric semantics and do not display a color picker.
