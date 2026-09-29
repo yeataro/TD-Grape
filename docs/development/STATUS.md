@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.249：保留作者已整理的 Phong／PBR MAT Graph，新增兩個 Grape → MAT 入口「Phong Material Textured」「PBR Material Textured」，以既有整合材質節點為 Pixel 核心，分別接入 9／10 個獨立 2D 貼圖来源。各組包含取樣、RGB／R 通道、參數乘法；PBR 明示 Specular Level × 0.08 與 Roughness ≥ 0.0001，不重複節點內的 Metallic 分拆。加入可攜的 Flat normal 來源（float TOP，0.5／0.5／1）；其他貼圖預設白色。切線依作者確認沿用 TD 原生規範：由幾何提供 T，Vertex 執行變形／TDCreateTBNMatrix，再傳到 Pixel；不做微分重建、不補缺少的切線、不修改預覽幾何。原整合節點的 PBR ambient／Phong 單高光行為保留；高度、位移、視差、Rim 等不在本批。使用方式與範圍見 [材質範本](../features/BASIC_MATERIAL_PRESETS.md)。
+
+27 項相關 Python 測試、兩組來源／剪貼簿 JS 回歸、14 項 Editor launch、1515 五語 keys 通過。Chromium 四份範本載入／finishing Undo／再編譯，以及兩份新圖各階段排版檢查通過；截圖已目視、節點無重疊。TD 2025.32820 使用具 UV／切線的隔離幾何，16 組手寫 GLSL 對照涵蓋預設、貼圖、傾斜法線、零法線強度、無燈、發光、背面、PBR 零粗糙度與環境光，RGBA 最大差異皆為 0。此為整合節點組合的驗證，不宣稱完整原生 MAT parity。四個材質入口各新增兩份副本，確認獨立性、MAT outlet、原生編譯、複製後貼圖來源及 Master 身分；排查時補齊新增 Master 的共用身分判斷。
+
+39 份來源同步，六份 Master current；與修改前快照核對，原有四份 Master 圖／身分／位置及四份使用者 Shader 內容保留。正式 TOE 保存 2462560 bytes（SHA256 b80addd8f0389e7c295801fe16abbdb671d02c648d96bf315fa61e5eab5404df），私人橋接排除；未操作或重載使用者網頁。私人報告 reports/textured-materials-249/；未推送。
+
 2026-09-27 0.8.248：依 iPad 實機診斷調整 UI 縮放所在層。78% UI／77.53% 畫布時，HTML 座標基準回報約 0.78 而非 0.605，固定十字的實測 x 約為事件 x÷0.78，y 同樣多除一次 UI 比例再扣 scroll；原本只比 SVG 與事件的 tipDelta=0 無法揭露這個 DOM 座標與可見位置的差異。CSS zoom 由 :root 移至 body，讓根視窗維持未縮放，保留既有 viewport 尺寸補償、事件／接孔／畫布換算。診斷增加 rootZoom、contentZoom、markerDelta，實機修正效果仍待 iPad 回報。
 
 Chromium 5 組、Windows WebKit 4 組診斷檢查通過，涵蓋 75／78／100／125% UI、77.53／129% 畫布下的 viewport／basis、節點與浮動接孔游離端及固定十字，另有 Chromium 原生觸控取消／圖不變檢查。浮動參數 10 組（36 種布局組合）、快捷接孔 9 組、線條工具列 8 組、外觀 10+1 組、14 項 Editor launch 及 JS／diff 檢查通過，78% 截圖已目視。舊 wire_geometry 的節點拖曳斷言、touch_editing 的首次拖曳 Undo 斷言均在修改前樣式同樣失敗，未列為全套通過；幾何測試前五組已通過。Windows WebKit 不代表 iOS 實機驗證。

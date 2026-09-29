@@ -32,4 +32,64 @@ On TD **2025.32820**, `tests/td/test_basic_material_presets.py` compares actual 
 
 `tests/td/test_material_preset_placement.py` uses actual TDFam registration and placement, checking MAT/TOP groups, independent copies, master identity behavior, native MAT outlets, compilation, Color controls and preservation of existing user shaders. Browser tests load both stages, render Groups, toggle/undo finishing and compile the edited graph. Color-control tests cover MAT/TOP, component counts 1–4, both control-creation paths, bidirectional edits, unused/explicit Alpha and unchanged Vector styling. Existing custom-parameter regression checks preservation across Apply, rollback, rename and source deletion.
 
-Texture-map combinations, normal/height/displacement mapping, rim/darkness/emission branches, non-2D bindings, and complete auxiliary-output parity still require further graph composition and verification. Depth, blending, culling and bone deformation settings remain on the native parameter pages. Picking remains excluded pending author decision. macOS has not been verified.
+Texture-map combinations, normal/height/displacement mapping, rim/darkness/emission branches, non-2D bindings, and complete auxiliary-output parity still require further graph composition and verification for the original basic graphs. Depth, blending, culling and bone deformation settings remain on the native parameter pages. The basic presets retain guarded picking initialization; custom deformation payload parity remains limited. macOS has not been verified.
+
+## Integrated textured variants (0.8.249)
+
+Two additional **Grape → MAT** entries use the existing **PBR Material** and
+**Phong Material** nodes as their Pixel-stage lighting core:
+
+- **PBR Material Textured** (`masters/grape_pbr_textured`): Base Color, Specular
+  Level, Metallic, Roughness, Ambient Occlusion, Emission, Alpha, Shadow Strength,
+  Shadow Color and Normal maps (10 independent 2D sources).
+- **Phong Material Textured** (`masters/grape_phong_textured`): Diffuse, Specular
+  Color, Shininess, Ambient, Emission, Alpha, Shadow Strength, Shadow Color and
+  Normal maps (9 independent 2D sources).
+
+The two existing basic templates and already placed user components are preserved.
+Each new entry is an independent editable graph with source, sampling, channel
+selection and multiplication nodes grouped by map purpose. Select the corresponding
+Sampler in Sources, or its exposed TD TOP-path control, to assign a texture. Color
+maps use RGB; scalar maps use red, including Alpha. The Swizzle nodes can be edited
+for other channels or packed textures. All samples use the transported `Tex` UV layer
+0 with current-instance UV adjustment. Normal and other data maps must contain the
+intended numeric values; these graphs do not apply an automatic sRGB decode.
+
+Each sampled material value is multiplied by its exposed material parameter.
+White maps are the neutral defaults. Metallic initially equals 0; Emission and
+Shadow Color initially equal black. Increase those material values when using their
+maps, as multiplying by zero still produces zero. The normal sampler defaults to
+the new portable **Flat normal** source (`builtin:normal`, exactly RGB 0.5, 0.5, 1
+in a float TOP). Normal Strength scales the decoded X/Y components and defaults to 1.
+
+PBR Specular Level is multiplied by 0.08 and converted to RGB before entering the
+material node. Roughness is bounded below by 0.0001 after map multiplication.
+The integrated material already performs the metallic diffuse/specular split; the
+graph does not repeat it. Point/instance color, opacity and fog are wired explicitly,
+and all three Color Output finishing switches start enabled.
+
+**Normal mapping follows TD's native geometry contract.** The geometry must supply
+UVs, normals and `T` (vec4 tangents), for example using Attribute Create SOP.
+Vertex-stage `T.xyz` is deformed with `TDDeformNorm`, normalized and combined with
+the world normal and `T.w` handedness using `TDCreateTBNMatrix`. The matrix is passed
+to Pixel to transform the decoded normal map. There is no derivative reconstruction
+or missing-tangent fallback, and no change to the preview geometry. Missing geometry
+attributes remain the author's responsibility.
+
+These templates deliberately retain the existing integrated-node behavior, including
+PBR's global ambient contribution and Phong's single specular lobe / scalar ambient
+control. They are not full native-MAT parity replacements for the original two graphs.
+Height, displacement, parallax, rim, secondary Phong specular and separate environment
+map workflows are outside this increment. Scene PBR environment lights continue to
+be traversed by PBR Material.
+
+`tools/build/build_textured_material_presets.py` explicitly regenerates only the two
+new JSON entries. It is not run by startup, Apply or source refresh. Manually edited
+masters must still be preserved/exported using the workflow above.
+
+Verification: portable graph compilation/round-trip and sampler regressions;
+browser stage loading, finishing Undo, recompile and non-overlapping layout checks;
+TD 2025.32820 render comparisons against independently written GLSL using the same
+native bindings and vertex data, with a UV/tangent-equipped fixture. Native placement
+checks cover independent copies, TOP-path bindings and preservation of existing graphs.
+The render comparisons verify this composition, not complete native PBR/Phong parity.

@@ -3301,5 +3301,5629 @@
       }
     },
     "target": "mat"
+  },
+  "phong_textured": {
+    "schemaVersion": 1,
+    "target": "mat",
+    "declarations": [
+      {
+        "id": "tex",
+        "kind": "attribute",
+        "name": "Tex",
+        "type": "vec3",
+        "value": null,
+        "nativeSequence": "attr",
+        "arraySize": 1
+      },
+      {
+        "id": "tangent",
+        "kind": "attribute",
+        "name": "T",
+        "type": "vec4",
+        "value": null,
+        "nativeSequence": "attr",
+        "arraySize": 1
+      },
+      {
+        "id": "baseColorMap",
+        "kind": "sampler",
+        "name": "sBaseColorMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Diffuse Map"
+      },
+      {
+        "id": "baseColor",
+        "kind": "uniform",
+        "name": "uBaseColor",
+        "type": "vec3",
+        "value": [
+          0.7,
+          0.7,
+          0.7
+        ],
+        "expose": true,
+        "exposeName": "Diffuse",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "specularColorMap",
+        "kind": "sampler",
+        "name": "sSpecularColorMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Specular Color Map"
+      },
+      {
+        "id": "specularColor",
+        "kind": "uniform",
+        "name": "uSpecularColor",
+        "type": "vec3",
+        "value": [
+          0.3,
+          0.3,
+          0.3
+        ],
+        "expose": true,
+        "exposeName": "Specular Color",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "shininessMap",
+        "kind": "sampler",
+        "name": "sShininessMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Shininess Map"
+      },
+      {
+        "id": "shininess",
+        "kind": "uniform",
+        "name": "uShininess",
+        "type": "float",
+        "value": 100,
+        "expose": true,
+        "exposeName": "Shininess"
+      },
+      {
+        "id": "ambientMap",
+        "kind": "sampler",
+        "name": "sAmbientMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Ambient Map"
+      },
+      {
+        "id": "ambient",
+        "kind": "uniform",
+        "name": "uAmbient",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Ambient"
+      },
+      {
+        "id": "emissionMap",
+        "kind": "sampler",
+        "name": "sEmissionMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Emission Map"
+      },
+      {
+        "id": "emission",
+        "kind": "uniform",
+        "name": "uEmission",
+        "type": "vec3",
+        "value": [
+          0,
+          0,
+          0
+        ],
+        "expose": true,
+        "exposeName": "Emission",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "alphaMap",
+        "kind": "sampler",
+        "name": "sAlphaMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Alpha Map"
+      },
+      {
+        "id": "alpha",
+        "kind": "uniform",
+        "name": "uAlpha",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Alpha"
+      },
+      {
+        "id": "shadowStrengthMap",
+        "kind": "sampler",
+        "name": "sShadowStrengthMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Shadow Strength Map"
+      },
+      {
+        "id": "shadowStrength",
+        "kind": "uniform",
+        "name": "uShadowStrength",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Shadow Strength"
+      },
+      {
+        "id": "shadowColorMap",
+        "kind": "sampler",
+        "name": "sShadowColorMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Shadow Color Map"
+      },
+      {
+        "id": "shadowColor",
+        "kind": "uniform",
+        "name": "uShadowColor",
+        "type": "vec3",
+        "value": [
+          0,
+          0,
+          0
+        ],
+        "expose": true,
+        "exposeName": "Shadow Color",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "normalMap",
+        "kind": "sampler",
+        "name": "sNormalMap",
+        "type": "sampler2D",
+        "source": "builtin:normal",
+        "expose": true,
+        "exposeName": "Normal Map"
+      },
+      {
+        "id": "normalStrength",
+        "kind": "uniform",
+        "name": "uNormalStrength",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Normal Strength"
+      }
+    ],
+    "stages": {
+      "vertex": {
+        "nodes": [
+          {
+            "id": "position",
+            "definitionUuid": "sgrape.builtin.position",
+            "revisionHash": "a8f6e28939535762aafc51e037a7955e38820196984d2084ae580e2fe57267ca",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 52
+            }
+          },
+          {
+            "id": "deform",
+            "definitionUuid": "sgrape.builtin.deform",
+            "revisionHash": "e1342e453626ff6e68766c387acd0ba91e2cd49350681e893fd5a478fa85fcd2",
+            "params": {},
+            "ui": {
+              "x": 284,
+              "y": 52
+            }
+          },
+          {
+            "id": "projection",
+            "definitionUuid": "sgrape.builtin.to_clip",
+            "revisionHash": "e98b9a603c583000dc69373c52f7a30d281d9438fd814692cd3c6b1070be5217",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 237
+            }
+          },
+          {
+            "id": "vertex",
+            "definitionUuid": "sgrape.builtin.vertex_out",
+            "revisionHash": "146d1926bb6e08237503bfb773d5eaea21d327edcc0f45e41afb6898a0710e76",
+            "params": {
+              "outputs": [
+                {
+                  "id": "world",
+                  "name": "world",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "normal",
+                  "name": "normal",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "camera",
+                  "name": "camera",
+                  "type": "int",
+                  "interpolation": "flat"
+                },
+                {
+                  "id": "color",
+                  "name": "color",
+                  "type": "vec4",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "uv",
+                  "name": "uv",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "tbn",
+                  "name": "tangentToWorld",
+                  "type": "mat3",
+                  "interpolation": "smooth"
+                }
+              ]
+            },
+            "ui": {
+              "x": 1950,
+              "y": 450
+            }
+          },
+          {
+            "id": "world",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 544,
+              "y": 52
+            }
+          },
+          {
+            "id": "normal_source",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDNormal"
+            },
+            "ui": {
+              "x": 24,
+              "y": 548
+            }
+          },
+          {
+            "id": "deform_normal",
+            "definitionUuid": "sgrape.builtin.td_deform_normal",
+            "revisionHash": "cc3939bdaa504d2138276a97620a6c5d5681ee94327c901ea17efd41fe4eac8d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 284,
+              "y": 548
+            }
+          },
+          {
+            "id": "vertex_normal",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 548
+            }
+          },
+          {
+            "id": "camera",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDCameraIndex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 675
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDColor"
+            },
+            "ui": {
+              "x": 962,
+              "y": 52
+            }
+          },
+          {
+            "id": "instance_color",
+            "definitionUuid": "sgrape.builtin.td_instance_color_current",
+            "revisionHash": "5683c093eaf6dc09108a4c4643ceaf285fb4428a76a0e9964fc0a21a9bf95dfb",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1222,
+              "y": 52
+            }
+          },
+          {
+            "id": "tex",
+            "definitionUuid": "sgrape.builtin.tex_attribute",
+            "revisionHash": "708b33bd4ade710448901f0faea8fa455f9f0a4c34433da9458110d855df2675",
+            "params": {
+              "declarationId": "tex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 363
+            },
+            "inputValues": {
+              "layer": 0
+            }
+          },
+          {
+            "id": "instance_uv",
+            "definitionUuid": "sgrape.builtin.td_instance_texcoord_current",
+            "revisionHash": "d3d634d9267a91816ebb5c24e97b5d05b602522deee0fb298a092d353c806c17",
+            "params": {},
+            "ui": {
+              "x": 1222,
+              "y": 363
+            }
+          },
+          {
+            "id": "tangent",
+            "definitionUuid": "sgrape.builtin.attribute",
+            "revisionHash": "8a9e9cb13d40538d5047f30e82e6abad82e7cc7859f996c7605b12fa565b3fc1",
+            "params": {
+              "type": "vec4",
+              "declarationId": "tangent"
+            },
+            "ui": {
+              "x": 24,
+              "y": 1290
+            }
+          },
+          {
+            "id": "tangent_xyz",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 314,
+              "y": 1290
+            }
+          },
+          {
+            "id": "handedness",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "w"
+            },
+            "ui": {
+              "x": 314,
+              "y": 1550
+            }
+          },
+          {
+            "id": "tangent_deform",
+            "definitionUuid": "sgrape.builtin.td_deform_normal",
+            "revisionHash": "cc3939bdaa504d2138276a97620a6c5d5681ee94327c901ea17efd41fe4eac8d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 604,
+              "y": 1290
+            }
+          },
+          {
+            "id": "tangent_normalize",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 894,
+              "y": 1290
+            }
+          },
+          {
+            "id": "tbn",
+            "definitionUuid": "sgrape.builtin.td_create_tbn_matrix",
+            "revisionHash": "adf52a47c674c12917efa2a6ab41ddc8982a6007909d7cbdbd8e7d2dfe24d35d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1184,
+              "y": 1290
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "position",
+              "out"
+            ],
+            "to": [
+              "deform",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "projection",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "projection",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "world",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "world",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "normal_source",
+              "out"
+            ],
+            "to": [
+              "deform_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "deform_normal",
+              "out"
+            ],
+            "to": [
+              "vertex_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "vertex_normal",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "camera",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "camera"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "instance_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "instance_color",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "tex",
+              "out"
+            ],
+            "to": [
+              "instance_uv",
+              "uv"
+            ]
+          },
+          {
+            "from": [
+              "instance_uv",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "uv"
+            ]
+          },
+          {
+            "from": [
+              "tangent",
+              "out"
+            ],
+            "to": [
+              "tangent_xyz",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "tangent",
+              "out"
+            ],
+            "to": [
+              "handedness",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "tangent_xyz",
+              "out"
+            ],
+            "to": [
+              "tangent_deform",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "tangent_deform",
+              "out"
+            ],
+            "to": [
+              "tangent_normalize",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "vertex_normal",
+              "out"
+            ],
+            "to": [
+              "tbn",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "tangent_normalize",
+              "out"
+            ],
+            "to": [
+              "tbn",
+              "tangent"
+            ]
+          },
+          {
+            "from": [
+              "handedness",
+              "out"
+            ],
+            "to": [
+              "tbn",
+              "handedness"
+            ]
+          },
+          {
+            "from": [
+              "tbn",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "tbn"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_position",
+              "name": "Position",
+              "nodes": [
+                "position",
+                "deform",
+                "world",
+                "projection"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_normal",
+              "name": "Normal",
+              "nodes": [
+                "normal_source",
+                "deform_normal",
+                "vertex_normal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_point_color",
+              "name": "Point Color",
+              "nodes": [
+                "point_color",
+                "instance_color"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_texture_coordinates",
+              "name": "Texture Coordinates",
+              "nodes": [
+                "tex",
+                "instance_uv"
+              ],
+              "color": "#94a574"
+            },
+            {
+              "id": "group_tangent",
+              "name": "Normal Map Tangent Basis",
+              "nodes": [
+                "tangent",
+                "tangent_xyz",
+                "handedness",
+                "tangent_deform",
+                "tangent_normalize",
+                "tbn"
+              ],
+              "color": "#72a6a5"
+            }
+          ]
+        }
+      },
+      "pixel": {
+        "nodes": [
+          {
+            "id": "inputs",
+            "definitionUuid": "sgrape.builtin.vertex_input",
+            "revisionHash": "bdd71f2e67fa96134a431dbc394697b43fcb6dc40431aa12d6503c405f46f9b7",
+            "params": {},
+            "ui": {
+              "x": 0,
+              "y": -430
+            }
+          },
+          {
+            "id": "uv",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec3",
+              "mask": "xy"
+            },
+            "ui": {
+              "x": 300,
+              "y": -430
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.td_pixel_color",
+            "revisionHash": "fa8109d7d4b86b079f7397baaead42e59595f149eb9d86611abac72b18aa014a",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 620,
+              "y": -430
+            }
+          },
+          {
+            "id": "point_rgb",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 930,
+              "y": -430
+            }
+          },
+          {
+            "id": "point_alpha",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "w"
+            },
+            "ui": {
+              "x": 930,
+              "y": -210
+            }
+          },
+          {
+            "id": "baseColorMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "baseColorMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 140,
+              "label": "Diffuse Map"
+            }
+          },
+          {
+            "id": "baseColorSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 140
+            }
+          },
+          {
+            "id": "baseColorChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 580,
+              "y": 140
+            }
+          },
+          {
+            "id": "baseColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "baseColor"
+            },
+            "ui": {
+              "x": 580,
+              "y": 360,
+              "label": "Diffuse"
+            }
+          },
+          {
+            "id": "baseColorMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 870,
+              "y": 140
+            }
+          },
+          {
+            "id": "specularColorMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "specularColorMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 140,
+              "label": "Specular Color Map"
+            }
+          },
+          {
+            "id": "specularColorSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 140
+            }
+          },
+          {
+            "id": "specularColorChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 140
+            }
+          },
+          {
+            "id": "specularColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "specularColor"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 360,
+              "label": "Specular Color"
+            }
+          },
+          {
+            "id": "specularColorMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 140
+            }
+          },
+          {
+            "id": "shininessMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "shininessMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 620,
+              "label": "Shininess Map"
+            }
+          },
+          {
+            "id": "shininessSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 620
+            }
+          },
+          {
+            "id": "shininessChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 580,
+              "y": 620
+            }
+          },
+          {
+            "id": "shininess",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shininess"
+            },
+            "ui": {
+              "x": 580,
+              "y": 840,
+              "label": "Shininess"
+            }
+          },
+          {
+            "id": "shininessMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 870,
+              "y": 620
+            }
+          },
+          {
+            "id": "ambientMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "ambientMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 620,
+              "label": "Ambient Map"
+            }
+          },
+          {
+            "id": "ambientSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 620
+            }
+          },
+          {
+            "id": "ambientChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 620
+            }
+          },
+          {
+            "id": "ambient",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "ambient"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 840,
+              "label": "Ambient"
+            }
+          },
+          {
+            "id": "ambientMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 620
+            }
+          },
+          {
+            "id": "emissionMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "emissionMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 1100,
+              "label": "Emission Map"
+            }
+          },
+          {
+            "id": "emissionSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 1100
+            }
+          },
+          {
+            "id": "emissionChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1100
+            }
+          },
+          {
+            "id": "emission",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "emission"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1320,
+              "label": "Emission"
+            }
+          },
+          {
+            "id": "emissionMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 870,
+              "y": 1100
+            }
+          },
+          {
+            "id": "alphaMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "alphaMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 1100,
+              "label": "Alpha Map"
+            }
+          },
+          {
+            "id": "alphaSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 1100
+            }
+          },
+          {
+            "id": "alphaChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1100
+            }
+          },
+          {
+            "id": "alpha",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "alpha"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1320,
+              "label": "Alpha"
+            }
+          },
+          {
+            "id": "alphaMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 1100
+            }
+          },
+          {
+            "id": "shadowStrengthMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "shadowStrengthMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 1580,
+              "label": "Shadow Strength Map"
+            }
+          },
+          {
+            "id": "shadowStrengthSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowStrengthChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowStrength",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowStrength"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1800,
+              "label": "Shadow Strength"
+            }
+          },
+          {
+            "id": "shadowStrengthMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 870,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowColorMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "shadowColorMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 1580,
+              "label": "Shadow Color Map"
+            }
+          },
+          {
+            "id": "shadowColorSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowColorChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowColor"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1800,
+              "label": "Shadow Color"
+            }
+          },
+          {
+            "id": "shadowColorMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 1580
+            }
+          },
+          {
+            "id": "normalMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "normalMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 2720,
+              "label": "Normal Map"
+            }
+          },
+          {
+            "id": "normalSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalRGB",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 580,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalCentered",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 870,
+              "y": 2720
+            },
+            "inputValues": {
+              "b": [
+                0.5,
+                0.5,
+                0.5
+              ]
+            }
+          },
+          {
+            "id": "normalDecoded",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1160,
+              "y": 2720
+            },
+            "inputValues": {
+              "b": [
+                2,
+                2,
+                2
+              ]
+            }
+          },
+          {
+            "id": "normalStrength",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "normalStrength"
+            },
+            "ui": {
+              "x": 580,
+              "y": 2960,
+              "label": "Normal Strength"
+            }
+          },
+          {
+            "id": "normalScale",
+            "definitionUuid": "sgrape.builtin.combine",
+            "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a",
+            "params": {
+              "type": "vec3",
+              "groups": {},
+              "components": [
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "ui": {
+              "x": 870,
+              "y": 2960
+            },
+            "inputValues": {
+              "z": 1
+            }
+          },
+          {
+            "id": "normalScaled",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1450,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalWorld",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3",
+              "operandTypes": {
+                "a": "mat3",
+                "b": "vec3"
+              }
+            },
+            "ui": {
+              "x": 1740,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalUnit",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2030,
+              "y": 2720
+            }
+          },
+          {
+            "id": "frontFacing",
+            "definitionUuid": "sgrape.builtin.td_front_facing",
+            "revisionHash": "6296772a8c0e9bae0c764b6244b6b20b9874baf91aa62a89aeb88e233f21fa55",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2030,
+              "y": 2950
+            }
+          },
+          {
+            "id": "normalBack",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2320,
+              "y": 2950
+            },
+            "inputValues": {
+              "b": [
+                -1,
+                -1,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "surfaceNormal",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2610,
+              "y": 2720
+            }
+          },
+          {
+            "id": "finalAlpha",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3270,
+              "y": 100
+            }
+          },
+          {
+            "id": "alphaRGB",
+            "definitionUuid": "sgrape.builtin.convert",
+            "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc",
+            "params": {
+              "fromType": "float",
+              "toType": "vec3"
+            },
+            "ui": {
+              "x": 3270,
+              "y": -180
+            }
+          },
+          {
+            "id": "material",
+            "definitionUuid": "sgrape.builtin.material_phong",
+            "revisionHash": "1434cbe1351a27ffb1559aaf3142e7278c72ba84c312dcf607c11eb0c2800ce3",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3930,
+              "y": 450
+            }
+          },
+          {
+            "id": "litRGB",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 4270,
+              "y": 450
+            }
+          },
+          {
+            "id": "litPremultiplied",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 4570,
+              "y": 450
+            }
+          },
+          {
+            "id": "litPointColor",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 4880,
+              "y": 450
+            }
+          },
+          {
+            "id": "litRGBA",
+            "definitionUuid": "sgrape.builtin.combine",
+            "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a",
+            "params": {
+              "type": "vec4",
+              "groups": {
+                "x": "vec3"
+              },
+              "components": [
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "ui": {
+              "x": 5190,
+              "y": 450
+            }
+          },
+          {
+            "id": "fog",
+            "definitionUuid": "sgrape.builtin.td_fog",
+            "revisionHash": "376fcc882afef49ef81bbc56f149ca88058efd6f3cef4503f33448a6d0cb19e0",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5500,
+              "y": 450
+            }
+          },
+          {
+            "id": "pixel",
+            "definitionUuid": "sgrape.builtin.pixel_out",
+            "revisionHash": "b37335e4e2462dfa4c0e1cf4c3308f9d64d317ce0d916c5c596a1884a44e4f65",
+            "params": {
+              "dither": true,
+              "alphaTest": true,
+              "convertColorSpace": true
+            },
+            "ui": {
+              "x": 5810,
+              "y": 450
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "inputs",
+              "uv"
+            ],
+            "to": [
+              "uv",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "color"
+            ],
+            "to": [
+              "point_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "point_rgb",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "point_alpha",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "baseColorMap",
+              "out"
+            ],
+            "to": [
+              "baseColorSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "baseColorSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "baseColorSample",
+              "out"
+            ],
+            "to": [
+              "baseColorChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "baseColorChannel",
+              "out"
+            ],
+            "to": [
+              "baseColorMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "baseColor",
+              "out"
+            ],
+            "to": [
+              "baseColorMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "specularColorMap",
+              "out"
+            ],
+            "to": [
+              "specularColorSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "specularColorSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "specularColorSample",
+              "out"
+            ],
+            "to": [
+              "specularColorChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "specularColorChannel",
+              "out"
+            ],
+            "to": [
+              "specularColorMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "specularColor",
+              "out"
+            ],
+            "to": [
+              "specularColorMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "shininessMap",
+              "out"
+            ],
+            "to": [
+              "shininessSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "shininessSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shininessSample",
+              "out"
+            ],
+            "to": [
+              "shininessChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "shininessChannel",
+              "out"
+            ],
+            "to": [
+              "shininessMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "shininess",
+              "out"
+            ],
+            "to": [
+              "shininessMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "ambientMap",
+              "out"
+            ],
+            "to": [
+              "ambientSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "ambientSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "ambientSample",
+              "out"
+            ],
+            "to": [
+              "ambientChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "ambientChannel",
+              "out"
+            ],
+            "to": [
+              "ambientMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "ambient",
+              "out"
+            ],
+            "to": [
+              "ambientMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "emissionMap",
+              "out"
+            ],
+            "to": [
+              "emissionSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "emissionSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "emissionSample",
+              "out"
+            ],
+            "to": [
+              "emissionChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "emissionChannel",
+              "out"
+            ],
+            "to": [
+              "emissionMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "emission",
+              "out"
+            ],
+            "to": [
+              "emissionMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "alphaMap",
+              "out"
+            ],
+            "to": [
+              "alphaSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "alphaSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "alphaSample",
+              "out"
+            ],
+            "to": [
+              "alphaChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "alphaChannel",
+              "out"
+            ],
+            "to": [
+              "alphaMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "alpha",
+              "out"
+            ],
+            "to": [
+              "alphaMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrengthMap",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowStrengthSample",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrengthChannel",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrength",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "shadowColorMap",
+              "out"
+            ],
+            "to": [
+              "shadowColorSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "shadowColorSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowColorSample",
+              "out"
+            ],
+            "to": [
+              "shadowColorChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "shadowColorChannel",
+              "out"
+            ],
+            "to": [
+              "shadowColorMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "shadowColor",
+              "out"
+            ],
+            "to": [
+              "shadowColorMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normalMap",
+              "out"
+            ],
+            "to": [
+              "normalSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "normalSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "normalSample",
+              "out"
+            ],
+            "to": [
+              "normalRGB",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "normalRGB",
+              "out"
+            ],
+            "to": [
+              "normalCentered",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normalCentered",
+              "out"
+            ],
+            "to": [
+              "normalDecoded",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normalStrength",
+              "out"
+            ],
+            "to": [
+              "normalScale",
+              "x"
+            ]
+          },
+          {
+            "from": [
+              "normalStrength",
+              "out"
+            ],
+            "to": [
+              "normalScale",
+              "y"
+            ]
+          },
+          {
+            "from": [
+              "normalDecoded",
+              "out"
+            ],
+            "to": [
+              "normalScaled",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normalScale",
+              "out"
+            ],
+            "to": [
+              "normalScaled",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "tbn"
+            ],
+            "to": [
+              "normalWorld",
+              "a"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "normalScaled",
+              "out"
+            ],
+            "to": [
+              "normalWorld",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normalWorld",
+              "out"
+            ],
+            "to": [
+              "normalUnit",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "frontFacing",
+              "position"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "normal"
+            ],
+            "to": [
+              "frontFacing",
+              "normal"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "normalUnit",
+              "out"
+            ],
+            "to": [
+              "normalBack",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "frontFacing",
+              "out"
+            ],
+            "to": [
+              "surfaceNormal",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "normalUnit",
+              "out"
+            ],
+            "to": [
+              "surfaceNormal",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "normalBack",
+              "out"
+            ],
+            "to": [
+              "surfaceNormal",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "alphaMapped",
+              "out"
+            ],
+            "to": [
+              "finalAlpha",
+              "a"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "point_alpha",
+              "out"
+            ],
+            "to": [
+              "finalAlpha",
+              "b"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "alphaMapped",
+              "out"
+            ],
+            "to": [
+              "alphaRGB",
+              "value"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "baseColorMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "baseColor"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "specularColorMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "specularColor"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shininessMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "shininess"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "ambientMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "ambient"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "emissionMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "emission"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "finalAlpha",
+              "out"
+            ],
+            "to": [
+              "material",
+              "alpha"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowStrengthMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "shadowStrength"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowColorMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "shadowColor"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "surfaceNormal",
+              "out"
+            ],
+            "to": [
+              "material",
+              "normal"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "material",
+              "position"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "material",
+              "camera"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "material",
+              "out"
+            ],
+            "to": [
+              "litRGB",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "litRGB",
+              "out"
+            ],
+            "to": [
+              "litPremultiplied",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "alphaRGB",
+              "out"
+            ],
+            "to": [
+              "litPremultiplied",
+              "b"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "litPremultiplied",
+              "out"
+            ],
+            "to": [
+              "litPointColor",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "point_rgb",
+              "out"
+            ],
+            "to": [
+              "litPointColor",
+              "b"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "litPointColor",
+              "out"
+            ],
+            "to": [
+              "litRGBA",
+              "x"
+            ]
+          },
+          {
+            "from": [
+              "finalAlpha",
+              "out"
+            ],
+            "to": [
+              "litRGBA",
+              "w"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "litRGBA",
+              "out"
+            ],
+            "to": [
+              "fog",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "fog",
+              "position"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "fog",
+              "camera"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "fog",
+              "out"
+            ],
+            "to": [
+              "pixel",
+              "color"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_inputs",
+              "name": "Geometry, UV and Point Color",
+              "nodes": [
+                "inputs",
+                "uv",
+                "point_color",
+                "point_rgb",
+                "point_alpha"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_baseColor",
+              "name": "Diffuse Texture",
+              "nodes": [
+                "baseColorMap",
+                "baseColorSample",
+                "baseColorChannel",
+                "baseColor",
+                "baseColorMapped"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_specularColor",
+              "name": "Specular Color Texture",
+              "nodes": [
+                "specularColorMap",
+                "specularColorSample",
+                "specularColorChannel",
+                "specularColor",
+                "specularColorMapped"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_shininess",
+              "name": "Shininess Texture",
+              "nodes": [
+                "shininessMap",
+                "shininessSample",
+                "shininessChannel",
+                "shininess",
+                "shininessMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_ambient",
+              "name": "Ambient Texture",
+              "nodes": [
+                "ambientMap",
+                "ambientSample",
+                "ambientChannel",
+                "ambient",
+                "ambientMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_emission",
+              "name": "Emission Texture",
+              "nodes": [
+                "emissionMap",
+                "emissionSample",
+                "emissionChannel",
+                "emission",
+                "emissionMapped"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_alpha",
+              "name": "Alpha Texture",
+              "nodes": [
+                "alphaMap",
+                "alphaSample",
+                "alphaChannel",
+                "alpha",
+                "alphaMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_shadowStrength",
+              "name": "Shadow Strength Texture",
+              "nodes": [
+                "shadowStrengthMap",
+                "shadowStrengthSample",
+                "shadowStrengthChannel",
+                "shadowStrength",
+                "shadowStrengthMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_shadowColor",
+              "name": "Shadow Color Texture",
+              "nodes": [
+                "shadowColorMap",
+                "shadowColorSample",
+                "shadowColorChannel",
+                "shadowColor",
+                "shadowColorMapped"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_normal",
+              "name": "Tangent-space Normal Map",
+              "nodes": [
+                "normalMap",
+                "normalSample",
+                "normalRGB",
+                "normalCentered",
+                "normalDecoded",
+                "normalStrength",
+                "normalScale",
+                "normalScaled",
+                "normalWorld",
+                "normalUnit",
+                "frontFacing",
+                "normalBack",
+                "surfaceNormal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_color",
+              "name": "Opacity and Point Color",
+              "nodes": [
+                "finalAlpha",
+                "alphaRGB"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_output",
+              "name": "Material and Output",
+              "nodes": [
+                "material",
+                "litRGB",
+                "litPremultiplied",
+                "litPointColor",
+                "litRGBA",
+                "fog",
+                "pixel"
+              ],
+              "color": "#75a28a"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "pbr_textured": {
+    "schemaVersion": 1,
+    "target": "mat",
+    "declarations": [
+      {
+        "id": "tex",
+        "kind": "attribute",
+        "name": "Tex",
+        "type": "vec3",
+        "value": null,
+        "nativeSequence": "attr",
+        "arraySize": 1
+      },
+      {
+        "id": "tangent",
+        "kind": "attribute",
+        "name": "T",
+        "type": "vec4",
+        "value": null,
+        "nativeSequence": "attr",
+        "arraySize": 1
+      },
+      {
+        "id": "baseColorMap",
+        "kind": "sampler",
+        "name": "sBaseColorMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Base Color Map"
+      },
+      {
+        "id": "baseColor",
+        "kind": "uniform",
+        "name": "uBaseColor",
+        "type": "vec3",
+        "value": [
+          1,
+          1,
+          1
+        ],
+        "expose": true,
+        "exposeName": "Base Color",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "specularLevelMap",
+        "kind": "sampler",
+        "name": "sSpecularLevelMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Specular Level Map"
+      },
+      {
+        "id": "specularLevel",
+        "kind": "uniform",
+        "name": "uSpecularLevel",
+        "type": "float",
+        "value": 0.5,
+        "expose": true,
+        "exposeName": "Specular Level"
+      },
+      {
+        "id": "metallicMap",
+        "kind": "sampler",
+        "name": "sMetallicMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Metallic Map"
+      },
+      {
+        "id": "metallic",
+        "kind": "uniform",
+        "name": "uMetallic",
+        "type": "float",
+        "value": 0,
+        "expose": true,
+        "exposeName": "Metallic"
+      },
+      {
+        "id": "roughnessMap",
+        "kind": "sampler",
+        "name": "sRoughnessMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Roughness Map"
+      },
+      {
+        "id": "roughness",
+        "kind": "uniform",
+        "name": "uRoughness",
+        "type": "float",
+        "value": 0.5,
+        "expose": true,
+        "exposeName": "Roughness"
+      },
+      {
+        "id": "ambientOcclusionMap",
+        "kind": "sampler",
+        "name": "sAmbientOcclusionMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Ambient Occlusion Map"
+      },
+      {
+        "id": "ambientOcclusion",
+        "kind": "uniform",
+        "name": "uAmbientOcclusion",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Ambient Occlusion"
+      },
+      {
+        "id": "emissionMap",
+        "kind": "sampler",
+        "name": "sEmissionMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Emission Map"
+      },
+      {
+        "id": "emission",
+        "kind": "uniform",
+        "name": "uEmission",
+        "type": "vec3",
+        "value": [
+          0,
+          0,
+          0
+        ],
+        "expose": true,
+        "exposeName": "Emission",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "alphaMap",
+        "kind": "sampler",
+        "name": "sAlphaMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Alpha Map"
+      },
+      {
+        "id": "alpha",
+        "kind": "uniform",
+        "name": "uAlpha",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Alpha"
+      },
+      {
+        "id": "shadowStrengthMap",
+        "kind": "sampler",
+        "name": "sShadowStrengthMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Shadow Strength Map"
+      },
+      {
+        "id": "shadowStrength",
+        "kind": "uniform",
+        "name": "uShadowStrength",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Shadow Strength"
+      },
+      {
+        "id": "shadowColorMap",
+        "kind": "sampler",
+        "name": "sShadowColorMap",
+        "type": "sampler2D",
+        "source": "builtin:white",
+        "expose": true,
+        "exposeName": "Shadow Color Map"
+      },
+      {
+        "id": "shadowColor",
+        "kind": "uniform",
+        "name": "uShadowColor",
+        "type": "vec3",
+        "value": [
+          0,
+          0,
+          0
+        ],
+        "expose": true,
+        "exposeName": "Shadow Color",
+        "nativeSequence": "color"
+      },
+      {
+        "id": "normalMap",
+        "kind": "sampler",
+        "name": "sNormalMap",
+        "type": "sampler2D",
+        "source": "builtin:normal",
+        "expose": true,
+        "exposeName": "Normal Map"
+      },
+      {
+        "id": "normalStrength",
+        "kind": "uniform",
+        "name": "uNormalStrength",
+        "type": "float",
+        "value": 1,
+        "expose": true,
+        "exposeName": "Normal Strength"
+      }
+    ],
+    "stages": {
+      "vertex": {
+        "nodes": [
+          {
+            "id": "position",
+            "definitionUuid": "sgrape.builtin.position",
+            "revisionHash": "a8f6e28939535762aafc51e037a7955e38820196984d2084ae580e2fe57267ca",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 52
+            }
+          },
+          {
+            "id": "deform",
+            "definitionUuid": "sgrape.builtin.deform",
+            "revisionHash": "e1342e453626ff6e68766c387acd0ba91e2cd49350681e893fd5a478fa85fcd2",
+            "params": {},
+            "ui": {
+              "x": 284,
+              "y": 52
+            }
+          },
+          {
+            "id": "projection",
+            "definitionUuid": "sgrape.builtin.to_clip",
+            "revisionHash": "e98b9a603c583000dc69373c52f7a30d281d9438fd814692cd3c6b1070be5217",
+            "params": {},
+            "ui": {
+              "x": 24,
+              "y": 237
+            }
+          },
+          {
+            "id": "vertex",
+            "definitionUuid": "sgrape.builtin.vertex_out",
+            "revisionHash": "146d1926bb6e08237503bfb773d5eaea21d327edcc0f45e41afb6898a0710e76",
+            "params": {
+              "outputs": [
+                {
+                  "id": "world",
+                  "name": "world",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "normal",
+                  "name": "normal",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "camera",
+                  "name": "camera",
+                  "type": "int",
+                  "interpolation": "flat"
+                },
+                {
+                  "id": "color",
+                  "name": "color",
+                  "type": "vec4",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "uv",
+                  "name": "uv",
+                  "type": "vec3",
+                  "interpolation": "smooth"
+                },
+                {
+                  "id": "tbn",
+                  "name": "tangentToWorld",
+                  "type": "mat3",
+                  "interpolation": "smooth"
+                }
+              ]
+            },
+            "ui": {
+              "x": 1950,
+              "y": 450
+            }
+          },
+          {
+            "id": "world",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 544,
+              "y": 52
+            }
+          },
+          {
+            "id": "normal_source",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDNormal"
+            },
+            "ui": {
+              "x": 24,
+              "y": 548
+            }
+          },
+          {
+            "id": "deform_normal",
+            "definitionUuid": "sgrape.builtin.td_deform_normal",
+            "revisionHash": "cc3939bdaa504d2138276a97620a6c5d5681ee94327c901ea17efd41fe4eac8d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 284,
+              "y": 548
+            }
+          },
+          {
+            "id": "vertex_normal",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 544,
+              "y": 548
+            }
+          },
+          {
+            "id": "camera",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDCameraIndex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 675
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "TDColor"
+            },
+            "ui": {
+              "x": 962,
+              "y": 52
+            }
+          },
+          {
+            "id": "instance_color",
+            "definitionUuid": "sgrape.builtin.td_instance_color_current",
+            "revisionHash": "5683c093eaf6dc09108a4c4643ceaf285fb4428a76a0e9964fc0a21a9bf95dfb",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1222,
+              "y": 52
+            }
+          },
+          {
+            "id": "tex",
+            "definitionUuid": "sgrape.builtin.tex_attribute",
+            "revisionHash": "708b33bd4ade710448901f0faea8fa455f9f0a4c34433da9458110d855df2675",
+            "params": {
+              "declarationId": "tex"
+            },
+            "ui": {
+              "x": 962,
+              "y": 363
+            },
+            "inputValues": {
+              "layer": 0
+            }
+          },
+          {
+            "id": "instance_uv",
+            "definitionUuid": "sgrape.builtin.td_instance_texcoord_current",
+            "revisionHash": "d3d634d9267a91816ebb5c24e97b5d05b602522deee0fb298a092d353c806c17",
+            "params": {},
+            "ui": {
+              "x": 1222,
+              "y": 363
+            }
+          },
+          {
+            "id": "tangent",
+            "definitionUuid": "sgrape.builtin.attribute",
+            "revisionHash": "8a9e9cb13d40538d5047f30e82e6abad82e7cc7859f996c7605b12fa565b3fc1",
+            "params": {
+              "type": "vec4",
+              "declarationId": "tangent"
+            },
+            "ui": {
+              "x": 24,
+              "y": 1290
+            }
+          },
+          {
+            "id": "tangent_xyz",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 314,
+              "y": 1290
+            }
+          },
+          {
+            "id": "handedness",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "w"
+            },
+            "ui": {
+              "x": 314,
+              "y": 1550
+            }
+          },
+          {
+            "id": "tangent_deform",
+            "definitionUuid": "sgrape.builtin.td_deform_normal",
+            "revisionHash": "cc3939bdaa504d2138276a97620a6c5d5681ee94327c901ea17efd41fe4eac8d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 604,
+              "y": 1290
+            }
+          },
+          {
+            "id": "tangent_normalize",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 894,
+              "y": 1290
+            }
+          },
+          {
+            "id": "tbn",
+            "definitionUuid": "sgrape.builtin.td_create_tbn_matrix",
+            "revisionHash": "adf52a47c674c12917efa2a6ab41ddc8982a6007909d7cbdbd8e7d2dfe24d35d",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1184,
+              "y": 1290
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "position",
+              "out"
+            ],
+            "to": [
+              "deform",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "projection",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "projection",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "deform",
+              "out"
+            ],
+            "to": [
+              "world",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "world",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "world"
+            ]
+          },
+          {
+            "from": [
+              "normal_source",
+              "out"
+            ],
+            "to": [
+              "deform_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "deform_normal",
+              "out"
+            ],
+            "to": [
+              "vertex_normal",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "vertex_normal",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "camera",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "camera"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "instance_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "instance_color",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "tex",
+              "out"
+            ],
+            "to": [
+              "instance_uv",
+              "uv"
+            ]
+          },
+          {
+            "from": [
+              "instance_uv",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "uv"
+            ]
+          },
+          {
+            "from": [
+              "tangent",
+              "out"
+            ],
+            "to": [
+              "tangent_xyz",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "tangent",
+              "out"
+            ],
+            "to": [
+              "handedness",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "tangent_xyz",
+              "out"
+            ],
+            "to": [
+              "tangent_deform",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "tangent_deform",
+              "out"
+            ],
+            "to": [
+              "tangent_normalize",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "vertex_normal",
+              "out"
+            ],
+            "to": [
+              "tbn",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "tangent_normalize",
+              "out"
+            ],
+            "to": [
+              "tbn",
+              "tangent"
+            ]
+          },
+          {
+            "from": [
+              "handedness",
+              "out"
+            ],
+            "to": [
+              "tbn",
+              "handedness"
+            ]
+          },
+          {
+            "from": [
+              "tbn",
+              "out"
+            ],
+            "to": [
+              "vertex",
+              "tbn"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_position",
+              "name": "Position",
+              "nodes": [
+                "position",
+                "deform",
+                "world",
+                "projection"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_normal",
+              "name": "Normal",
+              "nodes": [
+                "normal_source",
+                "deform_normal",
+                "vertex_normal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_point_color",
+              "name": "Point Color",
+              "nodes": [
+                "point_color",
+                "instance_color"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_texture_coordinates",
+              "name": "Texture Coordinates",
+              "nodes": [
+                "tex",
+                "instance_uv"
+              ],
+              "color": "#94a574"
+            },
+            {
+              "id": "group_tangent",
+              "name": "Normal Map Tangent Basis",
+              "nodes": [
+                "tangent",
+                "tangent_xyz",
+                "handedness",
+                "tangent_deform",
+                "tangent_normalize",
+                "tbn"
+              ],
+              "color": "#72a6a5"
+            }
+          ]
+        }
+      },
+      "pixel": {
+        "nodes": [
+          {
+            "id": "inputs",
+            "definitionUuid": "sgrape.builtin.vertex_input",
+            "revisionHash": "bdd71f2e67fa96134a431dbc394697b43fcb6dc40431aa12d6503c405f46f9b7",
+            "params": {},
+            "ui": {
+              "x": 0,
+              "y": -430
+            }
+          },
+          {
+            "id": "uv",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec3",
+              "mask": "xy"
+            },
+            "ui": {
+              "x": 300,
+              "y": -430
+            }
+          },
+          {
+            "id": "point_color",
+            "definitionUuid": "sgrape.builtin.td_pixel_color",
+            "revisionHash": "fa8109d7d4b86b079f7397baaead42e59595f149eb9d86611abac72b18aa014a",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 620,
+              "y": -430
+            }
+          },
+          {
+            "id": "point_rgb",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 930,
+              "y": -430
+            }
+          },
+          {
+            "id": "point_alpha",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "w"
+            },
+            "ui": {
+              "x": 930,
+              "y": -210
+            }
+          },
+          {
+            "id": "baseColorMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "baseColorMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 140,
+              "label": "Base Color Map"
+            }
+          },
+          {
+            "id": "baseColorSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 140
+            }
+          },
+          {
+            "id": "baseColorChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 580,
+              "y": 140
+            }
+          },
+          {
+            "id": "baseColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "baseColor"
+            },
+            "ui": {
+              "x": 580,
+              "y": 360,
+              "label": "Base Color"
+            }
+          },
+          {
+            "id": "baseColorMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 870,
+              "y": 140
+            }
+          },
+          {
+            "id": "specularLevelMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "specularLevelMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 140,
+              "label": "Specular Level Map"
+            }
+          },
+          {
+            "id": "specularLevelSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 140
+            }
+          },
+          {
+            "id": "specularLevelChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 140
+            }
+          },
+          {
+            "id": "specularLevel",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "specularLevel"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 360,
+              "label": "Specular Level"
+            }
+          },
+          {
+            "id": "specularLevelMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 140
+            }
+          },
+          {
+            "id": "reflectance",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2740,
+              "y": 140,
+              "label": "Specular Level × 0.08"
+            },
+            "inputValues": {
+              "b": 0.08
+            }
+          },
+          {
+            "id": "reflectanceRGB",
+            "definitionUuid": "sgrape.builtin.convert",
+            "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc",
+            "params": {
+              "fromType": "float",
+              "toType": "vec3"
+            },
+            "ui": {
+              "x": 2740,
+              "y": 360
+            }
+          },
+          {
+            "id": "metallicMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "metallicMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 620,
+              "label": "Metallic Map"
+            }
+          },
+          {
+            "id": "metallicSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 620
+            }
+          },
+          {
+            "id": "metallicChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 580,
+              "y": 620
+            }
+          },
+          {
+            "id": "metallic",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "metallic"
+            },
+            "ui": {
+              "x": 580,
+              "y": 840,
+              "label": "Metallic"
+            }
+          },
+          {
+            "id": "metallicMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 870,
+              "y": 620
+            }
+          },
+          {
+            "id": "roughnessMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "roughnessMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 620,
+              "label": "Roughness Map"
+            }
+          },
+          {
+            "id": "roughnessSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 620
+            }
+          },
+          {
+            "id": "roughnessChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 620
+            }
+          },
+          {
+            "id": "roughness",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "roughness"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 840,
+              "label": "Roughness"
+            }
+          },
+          {
+            "id": "roughnessMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 620
+            }
+          },
+          {
+            "id": "safeRoughness",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2740,
+              "y": 620,
+              "label": "Roughness ≥ 0.0001"
+            },
+            "inputValues": {
+              "b": 0.0001
+            }
+          },
+          {
+            "id": "ambientOcclusionMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "ambientOcclusionMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 1100,
+              "label": "Ambient Occlusion Map"
+            }
+          },
+          {
+            "id": "ambientOcclusionSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 1100
+            }
+          },
+          {
+            "id": "ambientOcclusionChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1100
+            }
+          },
+          {
+            "id": "ambientOcclusion",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "ambientOcclusion"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1320,
+              "label": "Ambient Occlusion"
+            }
+          },
+          {
+            "id": "ambientOcclusionMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 870,
+              "y": 1100
+            }
+          },
+          {
+            "id": "emissionMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "emissionMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 1100,
+              "label": "Emission Map"
+            }
+          },
+          {
+            "id": "emissionSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 1100
+            }
+          },
+          {
+            "id": "emissionChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1100
+            }
+          },
+          {
+            "id": "emission",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "emission"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1320,
+              "label": "Emission"
+            }
+          },
+          {
+            "id": "emissionMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 1100
+            }
+          },
+          {
+            "id": "alphaMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "alphaMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 1580,
+              "label": "Alpha Map"
+            }
+          },
+          {
+            "id": "alphaSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 1580
+            }
+          },
+          {
+            "id": "alphaChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1580
+            }
+          },
+          {
+            "id": "alpha",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "alpha"
+            },
+            "ui": {
+              "x": 580,
+              "y": 1800,
+              "label": "Alpha"
+            }
+          },
+          {
+            "id": "alphaMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 870,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowStrengthMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "shadowStrengthMap"
+            },
+            "ui": {
+              "x": 1580,
+              "y": 1580,
+              "label": "Shadow Strength Map"
+            }
+          },
+          {
+            "id": "shadowStrengthSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 1870,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowStrengthChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowStrength",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowStrength"
+            },
+            "ui": {
+              "x": 2160,
+              "y": 1800,
+              "label": "Shadow Strength"
+            }
+          },
+          {
+            "id": "shadowStrengthMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2450,
+              "y": 1580
+            }
+          },
+          {
+            "id": "shadowColorMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "shadowColorMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 2060,
+              "label": "Shadow Color Map"
+            }
+          },
+          {
+            "id": "shadowColorSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 2060
+            }
+          },
+          {
+            "id": "shadowColorChannel",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 580,
+              "y": 2060
+            }
+          },
+          {
+            "id": "shadowColor",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "shadowColor"
+            },
+            "ui": {
+              "x": 580,
+              "y": 2280,
+              "label": "Shadow Color"
+            }
+          },
+          {
+            "id": "shadowColorMapped",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 870,
+              "y": 2060
+            }
+          },
+          {
+            "id": "normalMap",
+            "definitionUuid": "sgrape.builtin.sampler",
+            "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea",
+            "params": {
+              "declarationId": "normalMap"
+            },
+            "ui": {
+              "x": 0,
+              "y": 2720,
+              "label": "Normal Map"
+            }
+          },
+          {
+            "id": "normalSample",
+            "definitionUuid": "sgrape.builtin.texture_sample",
+            "revisionHash": "cf4eec29c446649e217fe2e58e0b1073e6330716538d48b1f710b8d7a504727e",
+            "params": {},
+            "ui": {
+              "x": 290,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalRGB",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 580,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalCentered",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 870,
+              "y": 2720
+            },
+            "inputValues": {
+              "b": [
+                0.5,
+                0.5,
+                0.5
+              ]
+            }
+          },
+          {
+            "id": "normalDecoded",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1160,
+              "y": 2720
+            },
+            "inputValues": {
+              "b": [
+                2,
+                2,
+                2
+              ]
+            }
+          },
+          {
+            "id": "normalStrength",
+            "definitionUuid": "sgrape.builtin.uniform",
+            "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5",
+            "params": {
+              "declarationId": "normalStrength"
+            },
+            "ui": {
+              "x": 580,
+              "y": 2960,
+              "label": "Normal Strength"
+            }
+          },
+          {
+            "id": "normalScale",
+            "definitionUuid": "sgrape.builtin.combine",
+            "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a",
+            "params": {
+              "type": "vec3",
+              "groups": {},
+              "components": [
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "ui": {
+              "x": 870,
+              "y": 2960
+            },
+            "inputValues": {
+              "z": 1
+            }
+          },
+          {
+            "id": "normalScaled",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1450,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalWorld",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3",
+              "operandTypes": {
+                "a": "mat3",
+                "b": "vec3"
+              }
+            },
+            "ui": {
+              "x": 1740,
+              "y": 2720
+            }
+          },
+          {
+            "id": "normalUnit",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2030,
+              "y": 2720
+            }
+          },
+          {
+            "id": "frontFacing",
+            "definitionUuid": "sgrape.builtin.td_front_facing",
+            "revisionHash": "6296772a8c0e9bae0c764b6244b6b20b9874baf91aa62a89aeb88e233f21fa55",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2030,
+              "y": 2950
+            }
+          },
+          {
+            "id": "normalBack",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2320,
+              "y": 2950
+            },
+            "inputValues": {
+              "b": [
+                -1,
+                -1,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "surfaceNormal",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2610,
+              "y": 2720
+            }
+          },
+          {
+            "id": "finalAlpha",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3270,
+              "y": 100
+            }
+          },
+          {
+            "id": "alphaRGB",
+            "definitionUuid": "sgrape.builtin.convert",
+            "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc",
+            "params": {
+              "fromType": "float",
+              "toType": "vec3"
+            },
+            "ui": {
+              "x": 3270,
+              "y": -180
+            }
+          },
+          {
+            "id": "basePointColor",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3270,
+              "y": 350
+            }
+          },
+          {
+            "id": "basePremultiplied",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3580,
+              "y": 350
+            }
+          },
+          {
+            "id": "material",
+            "definitionUuid": "sgrape.builtin.material_pbr",
+            "revisionHash": "715e548b6fd7f28b304f34dcb9e5da04f4769d66e837391792c7124ce358003b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3930,
+              "y": 450
+            }
+          },
+          {
+            "id": "fog",
+            "definitionUuid": "sgrape.builtin.td_fog",
+            "revisionHash": "376fcc882afef49ef81bbc56f149ca88058efd6f3cef4503f33448a6d0cb19e0",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5500,
+              "y": 450
+            }
+          },
+          {
+            "id": "pixel",
+            "definitionUuid": "sgrape.builtin.pixel_out",
+            "revisionHash": "b37335e4e2462dfa4c0e1cf4c3308f9d64d317ce0d916c5c596a1884a44e4f65",
+            "params": {
+              "dither": true,
+              "alphaTest": true,
+              "convertColorSpace": true
+            },
+            "ui": {
+              "x": 5810,
+              "y": 450
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "inputs",
+              "uv"
+            ],
+            "to": [
+              "uv",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "color"
+            ],
+            "to": [
+              "point_color",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "point_rgb",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "point_color",
+              "out"
+            ],
+            "to": [
+              "point_alpha",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "baseColorMap",
+              "out"
+            ],
+            "to": [
+              "baseColorSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "baseColorSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "baseColorSample",
+              "out"
+            ],
+            "to": [
+              "baseColorChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "baseColorChannel",
+              "out"
+            ],
+            "to": [
+              "baseColorMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "baseColor",
+              "out"
+            ],
+            "to": [
+              "baseColorMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "specularLevelMap",
+              "out"
+            ],
+            "to": [
+              "specularLevelSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "specularLevelSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "specularLevelSample",
+              "out"
+            ],
+            "to": [
+              "specularLevelChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "specularLevelChannel",
+              "out"
+            ],
+            "to": [
+              "specularLevelMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "specularLevel",
+              "out"
+            ],
+            "to": [
+              "specularLevelMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "specularLevelMapped",
+              "out"
+            ],
+            "to": [
+              "reflectance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "reflectance",
+              "out"
+            ],
+            "to": [
+              "reflectanceRGB",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "metallicMap",
+              "out"
+            ],
+            "to": [
+              "metallicSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "metallicSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "metallicSample",
+              "out"
+            ],
+            "to": [
+              "metallicChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "metallicChannel",
+              "out"
+            ],
+            "to": [
+              "metallicMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "metallic",
+              "out"
+            ],
+            "to": [
+              "metallicMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "roughnessMap",
+              "out"
+            ],
+            "to": [
+              "roughnessSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "roughnessSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "roughnessSample",
+              "out"
+            ],
+            "to": [
+              "roughnessChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "roughnessChannel",
+              "out"
+            ],
+            "to": [
+              "roughnessMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "roughness",
+              "out"
+            ],
+            "to": [
+              "roughnessMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "roughnessMapped",
+              "out"
+            ],
+            "to": [
+              "safeRoughness",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "ambientOcclusionMap",
+              "out"
+            ],
+            "to": [
+              "ambientOcclusionSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "ambientOcclusionSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "ambientOcclusionSample",
+              "out"
+            ],
+            "to": [
+              "ambientOcclusionChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "ambientOcclusionChannel",
+              "out"
+            ],
+            "to": [
+              "ambientOcclusionMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "ambientOcclusion",
+              "out"
+            ],
+            "to": [
+              "ambientOcclusionMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "emissionMap",
+              "out"
+            ],
+            "to": [
+              "emissionSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "emissionSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "emissionSample",
+              "out"
+            ],
+            "to": [
+              "emissionChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "emissionChannel",
+              "out"
+            ],
+            "to": [
+              "emissionMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "emission",
+              "out"
+            ],
+            "to": [
+              "emissionMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "alphaMap",
+              "out"
+            ],
+            "to": [
+              "alphaSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "alphaSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "alphaSample",
+              "out"
+            ],
+            "to": [
+              "alphaChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "alphaChannel",
+              "out"
+            ],
+            "to": [
+              "alphaMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "alpha",
+              "out"
+            ],
+            "to": [
+              "alphaMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrengthMap",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowStrengthSample",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrengthChannel",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "shadowStrength",
+              "out"
+            ],
+            "to": [
+              "shadowStrengthMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "shadowColorMap",
+              "out"
+            ],
+            "to": [
+              "shadowColorSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "shadowColorSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowColorSample",
+              "out"
+            ],
+            "to": [
+              "shadowColorChannel",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "shadowColorChannel",
+              "out"
+            ],
+            "to": [
+              "shadowColorMapped",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "shadowColor",
+              "out"
+            ],
+            "to": [
+              "shadowColorMapped",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normalMap",
+              "out"
+            ],
+            "to": [
+              "normalSample",
+              "sampler"
+            ]
+          },
+          {
+            "from": [
+              "uv",
+              "out"
+            ],
+            "to": [
+              "normalSample",
+              "uv"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "normalSample",
+              "out"
+            ],
+            "to": [
+              "normalRGB",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "normalRGB",
+              "out"
+            ],
+            "to": [
+              "normalCentered",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normalCentered",
+              "out"
+            ],
+            "to": [
+              "normalDecoded",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normalStrength",
+              "out"
+            ],
+            "to": [
+              "normalScale",
+              "x"
+            ]
+          },
+          {
+            "from": [
+              "normalStrength",
+              "out"
+            ],
+            "to": [
+              "normalScale",
+              "y"
+            ]
+          },
+          {
+            "from": [
+              "normalDecoded",
+              "out"
+            ],
+            "to": [
+              "normalScaled",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normalScale",
+              "out"
+            ],
+            "to": [
+              "normalScaled",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "tbn"
+            ],
+            "to": [
+              "normalWorld",
+              "a"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "normalScaled",
+              "out"
+            ],
+            "to": [
+              "normalWorld",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normalWorld",
+              "out"
+            ],
+            "to": [
+              "normalUnit",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "frontFacing",
+              "position"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "normal"
+            ],
+            "to": [
+              "frontFacing",
+              "normal"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "normalUnit",
+              "out"
+            ],
+            "to": [
+              "normalBack",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "frontFacing",
+              "out"
+            ],
+            "to": [
+              "surfaceNormal",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "normalUnit",
+              "out"
+            ],
+            "to": [
+              "surfaceNormal",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "normalBack",
+              "out"
+            ],
+            "to": [
+              "surfaceNormal",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "alphaMapped",
+              "out"
+            ],
+            "to": [
+              "finalAlpha",
+              "a"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "point_alpha",
+              "out"
+            ],
+            "to": [
+              "finalAlpha",
+              "b"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "alphaMapped",
+              "out"
+            ],
+            "to": [
+              "alphaRGB",
+              "value"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "baseColorMapped",
+              "out"
+            ],
+            "to": [
+              "basePointColor",
+              "a"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "point_rgb",
+              "out"
+            ],
+            "to": [
+              "basePointColor",
+              "b"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "basePointColor",
+              "out"
+            ],
+            "to": [
+              "basePremultiplied",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "alphaRGB",
+              "out"
+            ],
+            "to": [
+              "basePremultiplied",
+              "b"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "basePremultiplied",
+              "out"
+            ],
+            "to": [
+              "material",
+              "baseColor"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "reflectanceRGB",
+              "out"
+            ],
+            "to": [
+              "material",
+              "specularColor"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "metallicMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "metallic"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "safeRoughness",
+              "out"
+            ],
+            "to": [
+              "material",
+              "roughness"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "ambientOcclusionMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "ambientOcclusion"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "emissionMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "emission"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "finalAlpha",
+              "out"
+            ],
+            "to": [
+              "material",
+              "alpha"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowStrengthMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "shadowStrength"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "shadowColorMapped",
+              "out"
+            ],
+            "to": [
+              "material",
+              "shadowColor"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "surfaceNormal",
+              "out"
+            ],
+            "to": [
+              "material",
+              "normal"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "material",
+              "position"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "material",
+              "camera"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "material",
+              "out"
+            ],
+            "to": [
+              "fog",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "inputs",
+              "world"
+            ],
+            "to": [
+              "fog",
+              "position"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "inputs",
+              "camera"
+            ],
+            "to": [
+              "fog",
+              "camera"
+            ],
+            "ui": {
+              "style": "link"
+            }
+          },
+          {
+            "from": [
+              "fog",
+              "out"
+            ],
+            "to": [
+              "pixel",
+              "color"
+            ]
+          }
+        ],
+        "ui": {
+          "frames": [
+            {
+              "id": "group_inputs",
+              "name": "Geometry, UV and Point Color",
+              "nodes": [
+                "inputs",
+                "uv",
+                "point_color",
+                "point_rgb",
+                "point_alpha"
+              ],
+              "color": "#759bb5"
+            },
+            {
+              "id": "group_baseColor",
+              "name": "Base Color Texture",
+              "nodes": [
+                "baseColorMap",
+                "baseColorSample",
+                "baseColorChannel",
+                "baseColor",
+                "baseColorMapped"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_specularLevel",
+              "name": "Specular Level Texture",
+              "nodes": [
+                "specularLevelMap",
+                "specularLevelSample",
+                "specularLevelChannel",
+                "specularLevel",
+                "specularLevelMapped",
+                "reflectance",
+                "reflectanceRGB"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_metallic",
+              "name": "Metallic Texture",
+              "nodes": [
+                "metallicMap",
+                "metallicSample",
+                "metallicChannel",
+                "metallic",
+                "metallicMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_roughness",
+              "name": "Roughness Texture",
+              "nodes": [
+                "roughnessMap",
+                "roughnessSample",
+                "roughnessChannel",
+                "roughness",
+                "roughnessMapped",
+                "safeRoughness"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_ambientOcclusion",
+              "name": "Ambient Occlusion Texture",
+              "nodes": [
+                "ambientOcclusionMap",
+                "ambientOcclusionSample",
+                "ambientOcclusionChannel",
+                "ambientOcclusion",
+                "ambientOcclusionMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_emission",
+              "name": "Emission Texture",
+              "nodes": [
+                "emissionMap",
+                "emissionSample",
+                "emissionChannel",
+                "emission",
+                "emissionMapped"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_alpha",
+              "name": "Alpha Texture",
+              "nodes": [
+                "alphaMap",
+                "alphaSample",
+                "alphaChannel",
+                "alpha",
+                "alphaMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_shadowStrength",
+              "name": "Shadow Strength Texture",
+              "nodes": [
+                "shadowStrengthMap",
+                "shadowStrengthSample",
+                "shadowStrengthChannel",
+                "shadowStrength",
+                "shadowStrengthMapped"
+              ],
+              "color": "#b6a270"
+            },
+            {
+              "id": "group_shadowColor",
+              "name": "Shadow Color Texture",
+              "nodes": [
+                "shadowColorMap",
+                "shadowColorSample",
+                "shadowColorChannel",
+                "shadowColor",
+                "shadowColorMapped"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_normal",
+              "name": "Tangent-space Normal Map",
+              "nodes": [
+                "normalMap",
+                "normalSample",
+                "normalRGB",
+                "normalCentered",
+                "normalDecoded",
+                "normalStrength",
+                "normalScale",
+                "normalScaled",
+                "normalWorld",
+                "normalUnit",
+                "frontFacing",
+                "normalBack",
+                "surfaceNormal"
+              ],
+              "color": "#72a6a5"
+            },
+            {
+              "id": "group_color",
+              "name": "Opacity and Point Color",
+              "nodes": [
+                "finalAlpha",
+                "alphaRGB",
+                "basePointColor",
+                "basePremultiplied"
+              ],
+              "color": "#ad83a2"
+            },
+            {
+              "id": "group_output",
+              "name": "Material and Output",
+              "nodes": [
+                "material",
+                "fog",
+                "pixel"
+              ],
+              "color": "#75a28a"
+            }
+          ]
+        }
+      }
+    }
   }
 }

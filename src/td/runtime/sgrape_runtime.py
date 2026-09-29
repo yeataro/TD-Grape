@@ -21,7 +21,13 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.248'
+PRODUCT_VERSION='0.8.249'
+
+MATERIAL_PRESETS={
+    'phong':'Phong MAT Graph', 'pbr':'PBR MAT Graph',
+    'phong_textured':'Phong Material Textured', 'pbr_textured':'PBR Material Textured',
+}
+MASTER_KEYS=('mat','top',*MATERIAL_PRESETS)
 
 # Native TD operator colors. Keep the family identity while hinting at MAT/TOP.
 # Graph port/category colors are independently configured in style.css.
@@ -434,7 +440,7 @@ def register_shader(shader,fresh=False):
     shader.store('sgrapeManagerId',_owner.fetch('sgrapeManagerId'))
     # Opening a product template in its editor must not turn it into a user
     # Shader. Copies outside masters still register as ordinary new Shaders.
-    is_master=not fresh and shader.parent()==_owner.op('masters') and any(shader==master_template(key) for key in ('mat','top','phong','pbr'))
+    is_master=not fresh and shader.parent()==_owner.op('masters') and any(shader==master_template(key) for key in MASTER_KEYS)
     shader.store('sgrapeMaster',is_master)
     if is_master:shader.tags.discard('sgrapeShader')
     else:shader.tags.add('sgrapeShader')
@@ -521,7 +527,7 @@ def resolve_shader(identity):
 
 def master_template(kind):
     """Resolve current templates while accepting names from older projects."""
-    if kind not in ('top','mat','phong','pbr'):raise ValueError('Unknown Grape template: '+str(kind))
+    if kind not in MASTER_KEYS:raise ValueError('Unknown Grape template: '+str(kind))
     return _owner.op('masters/grape_'+kind) or _owner.op('masters/sgrape_'+kind)
 
 def shader_examples(kind):
@@ -529,7 +535,7 @@ def shader_examples(kind):
         examples={name:core().normalize_top_sources(core().demo_graph(name,target='top'))[0] for name in ('banana','color','tint')}
     elif kind=='mat':
         presets=json.loads(_owner.op('material_presets').text)
-        examples={name:copy.deepcopy(presets[name]) for name in ('phong','pbr')}
+        examples={name:copy.deepcopy(presets[name]) for name in MATERIAL_PRESETS}
     else:raise RuntimeError('Unknown Shader target')
     for graph in examples.values():graph['target']=kind
     return {name:_owner.op('document').module.stamp_catalog(graph,core()) for name,graph in examples.items()}
@@ -569,10 +575,10 @@ def prepare_masters():
             parameter=getattr(family.par,name)
             if abs(parameter.eval()-value)>1e-6:parameter.val=value
     folder=_owner.op('masters') or _owner.create(baseCOMP,'masters')
-    for key in ('mat','top','phong','pbr'):
+    for key in MASTER_KEYS:
         kind=key if key in ('mat','top') else 'mat'
-        preset=key in ('phong','pbr')
-        label=(('Phong' if key=='phong' else 'PBR')+' MAT Graph') if preset else 'Grape '+kind.upper()
+        preset=key in MATERIAL_PRESETS
+        label=MATERIAL_PRESETS[key] if preset else 'Grape '+kind.upper()
         master=master_template(key)
         if master is None:
             graph=json.loads(_owner.op('material_presets').text)[key] if preset else None
@@ -587,7 +593,7 @@ def prepare_masters():
             raise RuntimeError('Grape '+kind.upper()+' template needs a graph upgrade review; its default graph was not updated.')
         manifest=master.op('FamManifest') or master.create(baseCOMP,'FamManifest')
         values={
-            'OpInfo':{'op_type':'sgrape_'+key,'op_name':(('Phong' if key=='phong' else 'PBR')+'_MAT_Graph1') if preset else 'Grape_'+kind.upper()+'1','op_label':label,'op_version':PRODUCT_VERSION,'op_group':kind.upper(),'summary':('Editable basic '+label+' with geometry, camera and automatic scene lighting. Advanced native material options are not included.' if preset else 'Visual GLSL '+kind.upper()+' editor. Open Editor edits this Shader.'),'op_color':list(OP_COLORS[kind]),'isFilter':kind=='top','compatible_types':[kind.upper()],'search_words':['shader','glsl','grape','sgrape',kind,key]+(['material','lighting','graph'] if preset else [])},
+            'OpInfo':{'op_type':'sgrape_'+key,'op_name':label.replace(' ','_')+'1','op_label':label,'op_version':PRODUCT_VERSION,'op_group':kind.upper(),'summary':('Editable integrated material with independent texture inputs and tangent-space normal mapping.' if key.endswith('_textured') else 'Editable basic '+label+' with geometry, camera and automatic scene lighting. Advanced native material options are not included.' if preset else 'Visual GLSL '+kind.upper()+' editor. Open Editor edits this Shader.'),'op_color':list(OP_COLORS[kind]),'isFilter':kind=='top','compatible_types':[kind.upper()],'search_words':['shader','glsl','grape','sgrape',kind,key]+(['material','lighting','graph'] if preset else [])+(['texture','normal','map',key.split('_')[0]] if key.endswith('_textured') else [])},
             'ParRetain':{'.':['<Uniforms>','<Output>','<Textures>','<Inactive Textures>']},
             'StateRetain':{'.':{'storage':['sgrapeShaderId','sgrapeManagerId','sgrapeTarget'],'dats':['state','graph','manifest']}},
             'Shortcuts':{},
@@ -803,7 +809,7 @@ def prepare_managed_top_slots(comp,graph,input_owner=None):
 
 def managed_top_asset(comp,index,source):
     name='input_'+str(index+1)+'_default'
-    kind=constantTOP if source in ('builtin:white','builtin:black') or source.startswith('op:') else moviefileinTOP
+    kind=constantTOP if source in ('builtin:white','builtin:black','builtin:normal') or source.startswith('op:') else moviefileinTOP
     asset=comp.op(name)
     if asset and not asset.fetch('grapeManagedTopSource',False):raise RuntimeError('An unrelated operator occupies '+asset.path)
     if asset and asset.type!=('constant' if kind==constantTOP else 'moviefilein'):asset.destroy();asset=None
@@ -811,6 +817,8 @@ def managed_top_asset(comp,index,source):
     if kind==constantTOP:
         value=1 if source=='builtin:white' else 0
         asset.par.colorr=value;asset.par.colorg=value;asset.par.colorb=value;asset.par.alpha=1
+        if source=='builtin:normal':
+            asset.par.colorr=.5;asset.par.colorg=.5;asset.par.colorb=1;asset.par.format='rgba32float'
         asset.par.resolutionw=2;asset.par.resolutionh=2
     else:
         file='Jellybeans.1.jpg' if source=='builtin:jellybeans' else 'Banana.tif'
@@ -855,10 +863,12 @@ def texture_asset(comp,key,source):
     # types can coexist upstream when changing from image to constant.
     if not asset:asset=comp.create(selectTOP,name)
     asset.par.format='useinput'
-    if source in ('builtin:white','builtin:black'):
+    if source in ('builtin:white','builtin:black','builtin:normal'):
         internal=comp.op(name+'_constant') or comp.create(constantTOP,name+'_constant')
         value=1 if source=='builtin:white' else 0
         internal.par.colorr=value;internal.par.colorg=value;internal.par.colorb=value;internal.par.alpha=1
+        if source=='builtin:normal':
+            internal.par.colorr=.5;internal.par.colorg=.5;internal.par.colorb=1;internal.par.format='rgba32float'
         internal.par.resolutionw=2;internal.par.resolutionh=2
     else:
         internal=comp.op(name+'_image') or comp.create(moviefileinTOP,name+'_image')

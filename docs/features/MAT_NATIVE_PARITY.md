@@ -14,6 +14,12 @@ References: [Phong MAT](https://derivative.ca/UserGuide/Phong_MAT), [PBR MAT](ht
 
 ## Capability ledger
 
+0.8.249 adds separate **PBR Material Textured** and **Phong Material Textured**
+templates around the existing integrated nodes, with all their material-input maps
+and native tangent-based normal mapping. The original two templates are preserved.
+This does not resolve the integrated-node differences listed below or claim complete
+native option coverage; see [the textured variants](BASIC_MATERIAL_PRESETS.md#integrated-textured-variants-08249).
+
 | Area | Required behavior | Current evidence / remaining work |
 |---|---|---|
 | Phong lighting | Every scene light, diffuse, primary and secondary specular, independent shininess | Basic editable composition delivered in 0.8.175; earlier 9 contribution checks plus new whole-material comparisons pass; advanced branches pending |

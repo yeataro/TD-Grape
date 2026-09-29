@@ -8,7 +8,7 @@ area=op('/').create(baseCOMP,'grape_preset_place_'+uuid.uuid4().hex[:8]);checks=
 try:
  family.Install(True)
  entries=family.GetMasterOps()
- for key,label in [('phong','Phong MAT Graph'),('pbr','PBR MAT Graph')]:
+ for key,label in r.MATERIAL_PRESETS.items():
   typ='sgrape_'+key;assert entries[typ]['op_label']==label,entries
   master=r.master_template(key);assert master.fetch('sgrapeMaster',False)
   manifest=json.loads(master.op('FamManifest/OpInfo').text);assert manifest['compatible_types']==['MAT']
@@ -18,6 +18,16 @@ try:
    clone=family.PlaceOp(area,typ,name=key+str(index));assert clone,typ;clones.append(clone)
    assert clone.fetch('sgrapeGenerated',False) and not clone.fetch('sgrapeMaster',False)
    assert clone.op('graph').text==original
+   if key.endswith('_textured'):
+    graph=json.loads(clone.op('graph').text)
+    samplers=[d for d in graph['declarations'] if d['kind']=='sampler']
+    assert len(samplers)==(10 if key=='pbr_textured' else 9)
+    for d in samplers:
+     row=clone.op('texture_sources').module.effective(d['id'])
+     assert row['valid'] and row['source'].path.startswith(clone.path+'/'),row
+    assert 'TDAttrib_T(' in clone.op('vertex_shader').text
+    assert 'TDCreateTBNMatrix(' in clone.op('vertex_shader').text
+    assert 'dFdx(' not in clone.op('pixel_shader').text
    r.validate_material(clone)
    assert clone.op('out1').inputs==[clone.op('material')]
    output=area.create(nullMAT,key+'_out'+str(index));output.inputConnectors[0].connect(clone.outputConnectors[0]);output.cook(force=True);assert not output.errors(),output.errors()

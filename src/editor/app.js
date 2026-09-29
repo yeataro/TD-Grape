@@ -538,7 +538,7 @@ function render({layoutOnly=false}={}){renderCompileDiagnostics();
   $('#previewtitle').dataset.i18n=editorTarget==='top'?'preview.top':'preview.material';$('#previewtitle').textContent=t($('#previewtitle').dataset.i18n);renderPreviewAppearance();
   tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();refreshGeneratedGLSL();
 }
-function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('texture.input0')]]:[]),...[['builtin:banana',t('texture.banana')],['builtin:jellybeans',t('texture.jellybeans')],['builtin:white',t('texture.white')],['builtin:black',t('texture.black')],['external',t('texture.custom')]]]; }
+function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('texture.input0')]]:[]),...[['builtin:banana',t('texture.banana')],['builtin:jellybeans',t('texture.jellybeans')],['builtin:white',t('texture.white')],['builtin:black',t('texture.black')],['builtin:normal',t('texture.normal')],['external',t('texture.custom')]]]; }
 function remove(){
   if(selectedEdge===null&&!current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)))return;
   const edges=new Set(selectedCanvasEdges());

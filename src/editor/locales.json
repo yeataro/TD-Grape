@@ -832,6 +832,7 @@
       "fr": "Exemple TD · Bonbons",
       "ko": "TD 예제 · 젤리빈"
     },
+    "texture.normal": {"en":"Flat normal","zh-Hant":"平面法線","ja":"フラット法線","fr":"Normale plane","ko":"평면 노멀"},
     "texture.white": {
       "zh-Hant": "白色",
       "en": "White",

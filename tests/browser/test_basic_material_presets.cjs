@@ -13,7 +13,7 @@ const {harness}=require('./test_glsl_code.cjs');
    await control.uncheck();await settle();assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='pixel').params.convertColorSpace),false);
    await page.evaluate(()=>undo());await settle();assert.ok(await control.isChecked());
    await page.evaluate(()=>{stage='vertex';selected='vertex';selection.clear();selection.add('vertex');render();});await settle();
-   const fields=await page.evaluate(()=>current().nodes.find(n=>n.id==='vertex').params.outputs.map(p=>p.id));assert.deepEqual(fields,['world','normal','camera','color','uv']);
+   const fields=await page.evaluate(()=>current().nodes.find(n=>n.id==='vertex').params.outputs.map(p=>p.id));assert.deepEqual(fields,['world','normal','camera','color','uv',...(model.endsWith('_textured')?['tbn']:[])]);
    for(const st of ['vertex','pixel']){
     await page.evaluate(st=>{stage=st;selection.clear();selected=null;render();},st);await settle();
     assert.equal(await page.evaluate(()=>GraphFrames.valid(current())),true);

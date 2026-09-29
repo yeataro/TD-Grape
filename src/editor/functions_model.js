@@ -243,7 +243,7 @@ const GraphClipboard=(()=>{
       if(same&&graph.declarations.some(x=>x.id===key)){declarationMap.set(key,key);continue;}
       if(!['uniform','sampler','constant','spec_constant','pop_buffer','attribute'].includes(d.kind)||!validType(d.type)&&!['sampler2D','samplerBuffer'].includes(d.type)&&!(['int','uint','bool'].includes(d.type)&&d.kind==='spec_constant')||typeof d.name!=='string'||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name))fail('clipboard.invalid');
       const number=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e20;
-      const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
+      const source=v=>typeof v==='string'&&v.length<=2048&&!/[\x00-\x1f]/.test(v)&&(v==='input:0'||['builtin:banana','builtin:white','builtin:black','builtin:normal','builtin:jellybeans'].includes(v)||v.startsWith('op:/'));
       if(d.kind==='attribute'){
         if(target!=='mat'||!/^(float|double|int|uint|[diu]?vec[234]|mat[234](x[234])?)$/.test(d.type)||d.value!==null||d.expose||d.initialDriver||!Number.isInteger(d.arraySize??1)||(d.arraySize??1)<1||(d.arraySize??1)>2147483647)fail('clipboard.invalid');
       }else if(d.kind==='pop_buffer'){

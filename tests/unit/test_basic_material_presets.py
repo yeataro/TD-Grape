@@ -7,6 +7,7 @@ PRESETS=Path(__file__).resolve().parents[2]/'src/library/material_presets.json'
 class BasicMaterialPresets(unittest.TestCase):
  def test_editable_graphs_with_explicit_native_paths(self):
   for model,g in json.loads(PRESETS.read_text(encoding='utf-8')).items():
+   if model not in ('phong','pbr'):continue
    before=copy.deepcopy(g);result=c.compile_graph(g);self.assertEqual(g,before)
    keys=[c.BY_UUID[n['definitionUuid']]['key'] for stage in g['stages'].values() for n in stage['nodes']]
    self.assertNotIn('glsl_code',keys);self.assertNotIn('material_'+model,keys)

@@ -867,7 +867,7 @@ def componentwise_expression(ty, arguments, expression):
                            for axis in VECTOR_COMPONENTS[:type_components(ty)])+')'
 
 def texture_source_valid(source):
-    return isinstance(source,str) and len(source)<=2048 and not any(ord(c)<32 for c in source) and (source in ('builtin:banana','builtin:white','builtin:black','builtin:jellybeans') or (source.startswith('op:/') and len(source)>4))
+    return isinstance(source,str) and len(source)<=2048 and not any(ord(c)<32 for c in source) and (source in ('builtin:banana','builtin:white','builtin:black','builtin:normal','builtin:jellybeans') or (source.startswith('op:/') and len(source)>4))
 
 
 def _comment_lines(text, kind):
