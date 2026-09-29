@@ -3353,7 +3353,7 @@ function renderCustomParameters(){
   const data=customSnapshot,box=$('#customcontrols');
   if(!data){box.replaceChildren();$('#custompage').replaceChildren();renderCustomEditor();updateCustomValues();return;}
   if(!data.pages.some(p=>p.name===customPage))customPage=data.pages[0]?.name||'';
-  const operator=data.operator||'';$('#customoperatorname').textContent=operator.split('/').at(-1);$('#customoperatorpath').textContent=operator;
+  const operator=data.operator||'',operatorName=operator.split('/').at(-1);$('#customoperatorname').textContent=operatorName;$('#customoperatorname').title=operatorName;$('#customoperatorpath').textContent=operator;
   const key=JSON.stringify([language,customPage,data.pages.map(p=>p.name),data.controls.filter(g=>g.page===customPage).map(g=>[g.name,g.label,g.page,g.style,g.size,g.order,g.section,g.menuNames,g.menuLabels,g.components.map(p=>p.name)])]);
   if(box.dataset.structure!==key&&!box.contains(document.activeElement)){
     box.dataset.structure=key;box.replaceChildren();const tabs=$('#custompage');tabs.replaceChildren();
