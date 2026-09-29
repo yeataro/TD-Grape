@@ -153,23 +153,48 @@ def read(core,folder):
         except Exception as exc:issues.append({'file':path.name,'error':str(exc)})
     return {'items':items,'issues':issues,'folder':str(folder)}
 
+def filename_stem(name):
+    """A readable portable filename; the display name and identity stay in JSON."""
+    stem=re.sub(r'[\s<>:"/\\|?*\x00-\x1f\x7f]+','_',name)
+    stem=re.sub(r'_+','_',stem).strip(' ._')
+    # Leave room for the extension and collision suffix on byte-limited filesystems.
+    stem=stem.encode('utf-8')[:180].decode('utf-8','ignore').rstrip(' ._') or 'Subgraph'
+    if re.fullmatch(r'(?i:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])',stem.split('.')[0].rstrip(' ')):
+        stem='_'+stem
+    return stem
+
+def same_snapshot(path,data):
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size>MAX_BYTES:return False
+        with path.open('rb') as handle:existing=handle.read(MAX_BYTES+1)
+        return len(existing)<=MAX_BYTES and encode(json.loads(existing))==data
+    except (OSError,ValueError,RecursionError):return False
+
 def save(core,folder,graph,root):
     packet=build(core,graph,root);data=encode(packet);folder=Path(folder)
-    name=packet['contentHash']+SUFFIX
-    folder.mkdir(parents=True,exist_ok=True);path=folder/name
-    if path.exists():
-        if path.is_symlink() or path.read_bytes()!=data:raise ValueError('A different file already occupies this snapshot name; it was preserved')
-        return {'created':False,'file':name,'entry':entry(core,packet)}
-    if len(list(folder.glob('*'+SUFFIX)))>=MAX_FILES:raise ValueError('Personal Folder contains 64 snapshots; choose another folder or organize existing files first')
+    folder.mkdir(parents=True,exist_ok=True)
+    paths=sorted(folder.glob('*'+SUFFIX),key=lambda p:p.name.casefold())
+    # Reuse by content, including files renamed by the user. Filenames are not IDs.
+    for path in paths[:MAX_FILES]:
+        if same_snapshot(path,data):return {'created':False,'file':path.name,'entry':entry(core,packet)}
+    if len(paths)>=MAX_FILES:raise ValueError('Personal Folder contains 64 snapshots; choose another folder or organize existing files first')
+    root_name=next(f['name'] for f in packet['functions'] if f['id']==packet['root'])
+    stem=filename_stem(root_name)
+    occupied={path.name.casefold() for path in paths}
     temp=None
     try:
         with tempfile.NamedTemporaryFile(prefix='.sgrape-',suffix='.tmp',dir=folder,delete=False) as handle:
             temp=Path(handle.name);handle.write(data);handle.flush();os.fsync(handle.fileno())
         # Atomic publish without overwriting another writer's existing snapshot.
-        try:os.link(temp,path)
-        except FileExistsError:
-            if path.is_symlink() or path.read_bytes()!=data:raise ValueError('Snapshot name conflict; existing file was preserved')
-            return {'created':False,'file':name,'entry':entry(core,packet)}
+        for number in range(1,MAX_FILES+2):
+            name=stem+('' if number==1 else '_'+str(number))+SUFFIX
+            if name.casefold() in occupied:continue
+            path=folder/name
+            try:os.link(temp,path)
+            except FileExistsError:
+                if same_snapshot(path,data):return {'created':False,'file':name,'entry':entry(core,packet)}
+                continue
+            return {'created':True,'file':name,'entry':entry(core,packet)}
+        raise ValueError('No free snapshot name; existing files were preserved')
     finally:
         if temp is not None:temp.unlink(missing_ok=True)
-    return {'created':True,'file':name,'entry':entry(core,packet)}
