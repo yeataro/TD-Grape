@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.263：新增 Shader 分類的 **Subsurface Approx** 內建可編輯子圖，MAT Pixel 限定，搜尋 SSS／Subsurface／Translucency 可找到。以反向正規化法線取得原生 Phong Lights 的背面 diffuse 總和，乘上 Color、Strength 與指數厚度衰減。輸入 Position／Normal／Color／Thickness／Distance／Strength／Shadow Strength；Distance 是與 Thickness 同單位的材質透光衰減距離，不是光源距離。輸出 Color 可與原 Emission 相加後接 Phong／PBR Material；不改 Alpha，不自動重新分配 diffuse 能量。沿用一般燈光衰減與陰影，不含 Ambient／Environment Light；沒有一般燈光時黑色。完整空間 SSS、厚度量測與渲染流程保持待設計。五語說明及[功能文件](../features/BASIC_MATERIAL_PRESETS.md)記錄數值例子、自陰影／漏光限制；原十二份內建快照不變，不改預設圖。
+
+32 項相關 Python 測試、14 項 Editor launch、五組 Chromium 分類／搜尋／接口／展開本地化／Undo／保存編譯檢查通過，截圖已目視。1526 五語 keys／1141 UI 引用／59 來源提示及 browser projection 檢查通過。Windows TD 2025.32820 的 26 組原生驗證通過：TD 光照參考搭配獨立 CPU 衰減，含點光／聚光／方向光、多燈、無光／僅環境光、實際幾何位置、零／非單位法線、HDR 與參數邊界、獨立遮擋物及陰影強度 0／0.5／1、兩種 Material 的 Emission 整合與 Alpha 保留。最大誤差約 9.54e-7。初次陰影 fixture 未正確排除預設幾何／配置繪製，修正測試場景後通過；macOS 尚待實機。
+
+39 份來源同步、六份 Master 無圖升級，五份使用者 Shader 及身分／位置保留。正式 TOE 保存 2534722 bytes，SHA256 ecc3db8ae029d538dec634c6b31c6d700312f0fc03e3de1fbf2eaf3895354409；十一份登記狀態保留、私人助手排除。私人報告 `reports/subsurface-263/`。未操作或重載使用者網頁，未推送。
+
 2026-09-29 0.8.262：內建 Shader 庫新增可編輯 Rim Light 子圖。Normal／View Direction 共用已有向量來源，Color／Strength／Power 控制輪廓；輸出 Color 可接 Material Emission，獨立 Fac 可作遮罩。採雙面 Facing 權重的 Power 次方，屬於不依賴 Light COMP 的藝術視角效果；保留 HDR，非正 Strength／Power 有數值保護。五語 Help、前端分類與[材質子圖說明](../features/BASIC_MATERIAL_PRESETS.md)同步。原十一份內建快照逐份比對不變，不修改預設圖。使用者另要求 SSS，確認本輪只記錄完整設計需求，不實作近似版；[筆記](../discussions/TODO_AUDIT_2026-09-23.md)涵蓋可重用輸入、厚度來源、原生光照整合、散射流程、材質合成及雙平台驗證。
 
 35 項相關 Python 測試、14 項 Editor launch、五組 Chromium 分類／接口／接線／本地化／Undo／保存編譯檢查通過，截圖已目視。1525 五語 keys／1140 UI 引用／59 來源提示、分類投影及 diff 檢查通過。Windows TD 2025.32820 共 80 組 helper 渲染對照通過，其中新增 26 組 Rim Color／Fac 案例，包含正面／背面／掠射、寬窄 Power、HDR、零／負 Strength、非正 Power 與零向量；最大誤差約 1.81e-7。macOS 尚待實機。

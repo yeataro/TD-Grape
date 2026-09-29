@@ -17,7 +17,8 @@
 | **Facing** | 已完成。Normal、View Direction → 雙面邊緣權重，正面 0、掠射 1；與 TDFrontFacing 的正反面布林用途不同。 |
 | **Mapping** | 已完成。Vector、Translation、Rotation、Scale → Vector；縮放 → X／Y／Z 旋轉 → 平移，度數、原點旋轉。先提供正向座標變換，取樣在外部；逆 Texture／Normal 等其他模式未加入。 |
 | **Rim Light** | 0.8.262 完成。Normal、View Direction、Color、Strength、Power → Color／Fac；雙面視角輪廓效果，可接 Material Emission，無場景燈光依賴。 |
-| **Subsurface Scattering（SSS）** | 待設計。使用者選擇先記錄完整 SSS 的需求，不實作 Subsurface Approx；見下方筆記。 |
+| **Subsurface Approx** | 0.8.263 完成。以反向法線的原生背光 × 厚度衰減 × 顏色／強度，輸出可接 Phong／PBR Emission 的 Color；可編輯、MAT Pixel、保留陰影控制。不是空間擴散。 |
+| **Subsurface Scattering（SSS）** | 完整散射／螢幕空間流程仍待設計；與已完成的背光近似分開，見下方筆記。 |
 
 同輪 Color Ramp 已記錄「色標陣列＋插值設定」及 Uniform Array 求值的第一版建議，詳見下方 Color Ramp 設計筆記。使用者要求先保存討論，尚未實作；TD Ramp TOP／Table DAT 引用、自訂參數呈現及正式綁定流程仍待設計。
 
@@ -29,7 +30,7 @@
 
 ## Subsurface Scattering 設計筆記（2026-09-29）
 
-**最新決策：這輪只完成 Rim Light；SSS 先規劃完整需求，不以背光透射或視角遮罩近似品代替。以下輸入是候選，尚未凍結接口或實作。**
+**最新決策（0.8.263）：使用者後續同意先做背光透射近似，命名 Subsurface Approx。這版可與 Phong／PBR 共用，Distance 定義為材質透光衰減距離，已向使用者說明。已實作範圍見[功能說明](../features/BASIC_MATERIAL_PRESETS.md)。完整 SSS 保留以下規劃，不能以近似版完成代替。以下完整 SSS 輸入仍是候選，尚未凍結接口或實作。**
 
 目標是表面入射光進入材質後，在內部散射並從其他位置離開的效果。須先選定可接受的渲染近似與品質／成本，不能把單點 `dot`／`pow` 或 Rim Light 稱為完整 SSS。維持 Windows／macOS 相容前提，不採 Geometry Shader。是否能只用子圖呈現，須由算法和所需宿主資源決定，不能先假定一個普通 Subgraph 就能完成。
 
@@ -46,6 +47,8 @@
 先前檢索的 [TD 公開 GLSL MAT 光照文件](https://docs.derivative.ca/Write_a_GLSL_MAT) 提供表面光照、光源資料及陰影工具，未找到可直接引用的公開 SSS 函式；這不是對所有內部函式或未來版本的斷言。正式實作前需在目標 TD 版本重新確認可用性。
 
 下一輪須決定與驗證：
+
+討論已具體區分輕量的單點背光透射與 EEVEE 類型的跨像素擴散。後者的建議資料契約包括分離的漫反射光照／材質色、Depth＋相機投影、SSS 遮罩與物件或散射群組 ID、Radius RGB／Weight，以及供最後合成的 Specular／Emission。法線是否另存取決於算法；厚度用於透射／內部幾何近似，不等同 Radius。TD 的 MRT／Render Select／深度輸出可作基礎，但需要額外資料輸出、擴散 TOP 和合成流程；此流程尚未實作。
 
 - 散射模型與資料流程：例如螢幕空間擴散、貼圖空間方法或其他方案；所需額外 Render／TOP／深度／法線資產由誰建立、更新與保存。跨像素的擴散不能只靠目前單點材質輸入取得。
 - 材質整合：散射與原本 diffuse 的權重分配、能量重複計算、specular 保留、透明度與預乘時機。輸出是散射貢獻、混合後材質色或其他契約，尚未決定；不能直接加一層完整 diffuse 當作完成。

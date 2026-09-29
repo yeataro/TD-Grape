@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),fs=require(
 const {harness}=require('./test_glsl_code.cjs');
 (async()=>{
  const[source,fixture,folder]=process.argv.slice(2),h=await harness(source,fixture,folder,{skipPreview:true}),{page,settle,checks,errors}=h;
- const names=['View Direction','Fresnel','Facing','Mapping','Rim Light'];
+ const names=['View Direction','Fresnel','Facing','Mapping','Rim Light','Subsurface Approx'];
  try{
   await page.selectOption('#language','en');
   const entries=await page.evaluate(names=>{
@@ -15,13 +15,17 @@ const {harness}=require('./test_glsl_code.cjs');
     return {target,stage:st,names:availableEntries().filter(d=>names.includes(d.label)).map(d=>d.label)};
    });
   },names);
-  for(const e of entries)assert.deepEqual(e.names.sort(),names.filter(n=>e.target==='mat'||n!=='View Direction').sort());
-  checks.push('View Direction is MAT-only; the other helpers appear in TOP Pixel and both MAT stages');
+  for(const e of entries)assert.deepEqual(e.names.sort(),names.filter(n=>n==='Subsurface Approx'?e.target==='mat'&&e.stage==='pixel':e.target==='mat'||n!=='View Direction').sort());
+  checks.push('Subsurface Approx is MAT Pixel-only; View Direction is MAT-only; other helpers support both hosts');
   const meta=await page.evaluate(names=>{
    editorTarget='mat';stage='pixel';
    return availableEntries().filter(d=>names.includes(d.label)).map(d=>({name:d.label,category:browserMeta(d).category}));
   },names);
   for(const m of meta)assert.equal(m.category,['View Direction','Mapping'].includes(m.name)?'vector':'shader');
+  assert.deepEqual(await page.evaluate(()=>{
+   const entry=browserIndex().find(e=>e.d.label==='Subsurface Approx');
+   return ['SSS','Subsurface','Translucency'].map(q=>Number.isFinite(browserSearchScore(entry,q)));
+  }),[true,true,true]);
   checks.push('The actual shipped menu groups camera/mapping in Vector and angle weights in Shader');
   const ids=await page.evaluate(names=>{
    setUIExperiments({canvasDamping:false,frameDamping:false});render();
@@ -30,11 +34,12 @@ const {harness}=require('./test_glsl_code.cjs');
    scale=.60;pan={x:30,y:40};transform();render();return ids;
   },names);await settle();
   const inputs=await page.evaluate(ids=>Object.fromEntries(Object.entries(ids).map(([name,id])=>{const n=current().nodes.find(n=>n.id===id);return[name,Object.keys(definition(n).inputs).map(p=>portLabel(n,'inputs',p))];})),ids);
-  assert.deepEqual(inputs,{'View Direction':['Position','Camera'],Fresnel:['Normal','View Direction','IOR'],Facing:['Normal','View Direction'],Mapping:['Vector','Translation','Rotation','Scale'],'Rim Light':['Normal','View Direction','Color','Strength','Power']});
+  assert.deepEqual(inputs,{'View Direction':['Position','Camera'],Fresnel:['Normal','View Direction','IOR'],Facing:['Normal','View Direction'],Mapping:['Vector','Translation','Rotation','Scale'],'Rim Light':['Normal','View Direction','Color','Strength','Power'],'Subsurface Approx':['Position','Normal','Color','Thickness','Distance','Strength','Shadow Strength']});
   assert.equal(await page.evaluate(()=>current().edges.length),3);
   assert.deepEqual(await page.evaluate(id=>{const n=current().nodes.find(n=>n.id===id);return Object.keys(definition(n).outputs).map(p=>portLabel(n,'outputs',p));},ids['Rim Light']),['Color','Fac']);
+  assert.deepEqual(await page.evaluate(id=>{const n=current().nodes.find(n=>n.id===id);return Object.keys(definition(n).outputs).map(p=>portLabel(n,'outputs',p));},ids['Subsurface Approx']),['Color']);
   await page.screenshot({path:path.join(folder,'helpers.png')});
-  checks.push('All five instantiate with correct ports; Direction connects to Fresnel, Facing and Rim Light');
+  checks.push('All six instantiate with correct ports; Direction connects to Fresnel, Facing and Rim Light');
   for(const name of names){
    await page.locator(`.node[data-node="${ids[name]}"] .node-title`).dblclick();await settle();
    const before=await page.evaluate(()=>({count:current().nodes.length,scope:currentFunction().scope,id:current().nodes[1].id,name:current().nodes[1].name}));

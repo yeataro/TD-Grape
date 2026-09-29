@@ -182,6 +182,46 @@ Emission，已有 Emission 時先相加。保留 HDR，不處理 Alpha 或色彩
 驗證沿用上述三個 helper 測試入口，新增正面／背面／邊緣、寬窄 Power、零與負值保護、
 HDR 顏色及獨立 Fac 的原生渲染對照。Windows TD 2025.32820 已驗證，macOS 尚待實機。
 
+## Subsurface Approx（0.8.263）
+
+Shader 分類新增 **Subsurface Approx**，可用 SSS／Subsurface／Translucency 搜尋。
+它是普通、可展開修改的輔助子圖，僅適用 MAT Pixel，不是獨立 Material，也不加入預設圖。
+
+| 輸入 | 預設／用途 |
+| --- | --- |
+| Position（vec3） | 零；實際使用接 Vertex 傳來的變形後世界位置。 |
+| Normal（vec3） | Z 軸；接世界法線，可共用 Normal Map 結果。內部正規化後反向以取得背光。零向量輸出黑色。 |
+| Color（vec3） | 白色；透光染色，保留 HDR，可共用 Base Color。 |
+| Thickness（float） | 0.1；使用者提供的厚度，不自動量測幾何。負值視為 0。 |
+| Distance（float） | 0.1；材質的透光衰減距離，與 Thickness 使用相同單位。越大越容易透光；下限 0.000001。不是燈到物體的距離。 |
+| Strength（float） | 1；額外透光貢獻的倍率，負值視為 0。 |
+| Shadow Strength（float） | 1；原生陰影強度，限制於 0～1。0 忽略陰影；降低時也會放寬其他物體的遮擋。 |
+
+內部沿用 **Phong Lights**：以 `-unitNormal` 取得 TD 一般燈光的 diffuse 總和，
+再輸出 `Color * max(Strength, 0) * backLight * exp(-max(Thickness, 0) / max(Distance, 0.000001))`。
+Phong Lights 的鏡面結果不使用，因此沒有額外 View Direction／Camera 輸入。
+光向、點光／方向光／聚光、距離衰減與陰影交由原生光照函式處理；不加入 Ambient 或 Environment Light。
+沒有一般燈光時回傳黑色，不會自動補白光。
+
+Thickness＝Distance 時約保留 37% 背光。以 Thickness＝0.1 為例，Distance＝0.05／0.1／0.2
+分別約保留 14%／37%／61%。Thickness、Distance、Color、Strength 均可接常數、Uniform 或外部貼圖取樣；
+Texture 2D 留在子圖外，純量參數由取樣結果選取所需通道。Distance 不隨物件縮放自動改變。
+
+輸出 **Color（vec3）** 接 Phong Material 或 PBR Material 的 **Emission**；已有 Emission 時先相加。
+雖然接在 Emission，這個輸出本身已計算背面光照。原材質繼續處理表面 diffuse／specular 與 Alpha。
+這是額外的近似光照貢獻，不會扣除原 diffuse 或自動保證能量守恆；Strength 由作者控制。
+子圖不修改 Alpha、不做預乘／色彩轉換，也不會自動套用 TD Pixel Color。
+
+這版不跨像素擴散、不追蹤光在幾何內的路徑、不從陰影圖求厚度；不能等同 EEVEE／Cycles SSS。
+自陰影仍可能完全擋住透射。降低 Shadow Strength 只是放寬遮擋，不能區分自陰影與其他遮擋，亦可能漏光。
+較完整的螢幕空間 SSS 與厚度取得流程仍留在[設計筆記](../discussions/TODO_AUDIT_2026-09-23.md)。
+
+驗證入口：`tests/unit/test_subsurface_approx.py`、`tests/browser/test_view_material_helpers.cjs`、
+`tests/td/test_subsurface_approx.py`。原生測試使用 TD 光照參考與獨立 CPU 衰減，
+覆蓋實際點光／方向光／聚光、多燈、無光／僅 Environment Light、幾何位置與法線、
+厚度／距離／強度邊界、HDR、獨立遮擋物及 Shadow Strength，並核對接入兩種 Material 後 Alpha 保留。
+Windows TD 2025.32820 已驗證，macOS 尚待實機。
+
 ## Displacement（0.8.259）
 
 新增獨立的 **Displacement** 內建 Subgraph（Vector 分類，MAT Vertex），不加入或改接預設材質圖。

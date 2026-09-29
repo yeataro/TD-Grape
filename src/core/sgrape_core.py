@@ -1921,17 +1921,42 @@ def function_library(with_browser=False):
     rim_light['graph']['edges'].append(edge(weight[0],'output','factor',weight[1]))
     rim_light['source']['version']=digest({k:v for k,v in rim_light.items() if k!='source'})
 
-    result = [fn]+filters+[color_multiply,normal_map,displacement,view_direction,fresnel,facing,mapping,rim_light]
+    # Local back-light transmission. Keep native light handling in Phong Lights;
+    # only its diffuse output is used, so no camera/view input is needed here.
+    add,finish=helper('subsurface_approx','Subsurface Approx',
+        [vector('position','Position',(0,0,0)),normal,vector('color','Color',(1,1,1)),
+         scalar('thickness','Thickness',.1),scalar('distance','Distance',.1),
+         scalar('strength','Strength',1),scalar('shadowStrength','Shadow Strength',1)],
+        vector('color','Color',(0,0,0)),['mat'])
+    n=unit(add,('input','normal'),'normal')
+    back=add('multiply','back_normal',{'a':n,'b':[-1,-1,-1]},'vec3')
+    shadow=add('clamp','shadow_strength',{'value':('input','shadowStrength'),'min':0,'max':1})
+    light=add('td_lighting_all','back_lights',{'position':('input','position'),'normal':back,
+        'shadowStrength':shadow,'shadowColor':[0,0,0],'view':[0,0,1],'shininess':1,'shininess2':1})
+    thickness=add('max','nonnegative_thickness',{'a':('input','thickness'),'b':0})
+    distance=add('max','positive_distance',{'a':('input','distance'),'b':1e-6})
+    depth=add('divide','optical_depth',{'a':thickness,'b':distance})
+    negative=add('multiply','negative_depth',{'a':depth,'b':-1})
+    transmission=add('exp','transmission',{'value':negative})
+    strength=add('max','nonnegative_strength',{'a':('input','strength'),'b':0})
+    amount=add('multiply','transmission_strength',{'a':transmission,'b':strength})
+    tinted=add('multiply','tinted_light',{'a':(light[0],'diffuse'),'b':('input','color')},'vec3')
+    subsurface_approx=finish(add('multiply','transmitted_color',{'a':tinted,'b':amount},'vec3'))
+    subsurface_approx['stages']=['pixel']
+    subsurface_approx['source']['version']=digest({k:v for k,v in subsurface_approx.items() if k!='source'})
+
+    result = [fn]+filters+[color_multiply,normal_map,displacement,view_direction,fresnel,facing,mapping,rim_light,subsurface_approx]
     if with_browser:
         # Browser-only projection: default library snapshots and versions stay intact.
         for f in result:
-            f['browser'] = {'category':'vector' if f in (displacement,view_direction,mapping) else 'shader' if f in (fresnel,facing,rim_light) else 'texture' if f is normal_map else 'color','source':'editor',
+            f['browser'] = {'category':'vector' if f in (displacement,view_direction,mapping) else 'shader' if f in (fresnel,facing,rim_light,subsurface_approx) else 'texture' if f is normal_map else 'color','source':'editor',
                             'aliases':{'Displacement':['height','normal displacement','vertex displacement','高度','位移'],
                                        'Normal Map':['normal map','TBN','tangent','TDFrontFacing'],
                                        'View Direction':['view vector','camera','orthographic','視線','觀看方向'],
                                        'Fresnel':['IOR','reflection','費涅爾','反射'],
                                        'Facing':['layer weight','rim','edge mask','邊緣','朝向'],
                                        'Rim Light':['rim','edge light','emission','輪廓光','邊緣光'],
+                                       'Subsurface Approx':['SSS','subsurface scattering','translucency','transmission','backlight','次表面散射','透光','背光'],
                                        'Mapping':['UV','transform','rotation','座標','變換']}.get(f['name'],[]),
                             'descriptionKey':f.get('descriptionKey','help.function')}
     return result
