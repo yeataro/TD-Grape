@@ -1,6 +1,6 @@
 # TD-Grape
 
-[English](README.md)
+[English](README.md) | [日本語](README.ja.md)
 
 TouchDesigner 的 GLSL TOP／MAT 節點式 Shader 編輯器。
 

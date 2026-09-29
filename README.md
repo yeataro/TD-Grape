@@ -1,6 +1,6 @@
 # TD-Grape
 
-[繁體中文](README.zh-TW.md)
+[繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
 
 A node-based GLSL TOP/MAT shader editor for TouchDesigner.
 
