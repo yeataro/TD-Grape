@@ -1,5 +1,29 @@
 # UI navigation development checkpoint
 
+## Zoomed-out overview experiment (0.8.252)
+
+Experimental features → Colors and display → **Zoomed-out overview** defaults **off**.
+Enabled, the canvas range is 10–170%; wheel, touch pinch, middle-button Dolly,
+Frame/Home and the zoom menu share the same lower limit. The menu adds 10%, 15%
+and 20%. At exactly 25% the normal card remains; strictly below 25% ordinary
+node cards use their family header color across the whole card, with no visible
+header/body division. Port labels, types and inline controls are hidden.
+
+Names are centered at a uniform **36 graph pixels** (no per-node font fitting),
+wrap to at most two lines (one when collapsed) and then ellipsize. They follow the custom-name display
+preference. Card dimensions, positions, saved collapse state and socket centers
+remain unchanged: original content stays in layout, with an absolute name overlay.
+Sockets, wires, Link navigation, selection and error borders remain visible.
+Router and annotation cards keep their specialized forms. In overview the whole
+ordinary card is a drag surface, including when normal dragging is header-only.
+Zooming back restores the same controls and pending numeric drafts.
+
+The preference is browser-local and included in experiment/browser reset. Turning
+it off below 25% cancels pending view motion and returns to 25%, preserving the
+viewport center. Zoom changes neither graph data nor Undo history. Verification:
+`tests/browser/test_low_zoom_overview.cjs` covers thresholds, geometry, both themes,
+UI scales, input methods, drafts, readonly selection, persistence and reset.
+
 ## Click selection (0.8.196)
 
 Ctrl/Cmd-click and Shift-click both toggle Node, Group and Wire/Link selection.

@@ -2229,3 +2229,14 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #floatingparameters.is-collapsed:has(.floating-parameter-fallback)>.workspace-pane{display:none}
 #floatingparameters.is-collapsed .node-inspector-title{box-shadow:none}
 @media(pointer:coarse){.floating-workspace-panel{--floating-close-size:44px}}
+
+/* Overview changes paint only: retain every layout box and socket center. */
+.node-overview-label{display:none;position:absolute;inset:0 12px;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;color:var(--category-fg);font-size:36px;font-weight:650;line-height:1;text-align:center}
+.node-overview-label>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;max-width:100%;max-height:100%}
+.node.collapsed .node-overview-label>span{-webkit-line-clamp:1}
+:root:not([data-ui-theme="light"]) .node-overview-label{color:var(--text-title)}
+:root #canvas.graph-overview .node:not(.node-router):not([data-category="annotation"]){background:var(--category-bg)}
+#canvas.graph-overview .node:not(.node-router):not([data-category="annotation"]) *{visibility:hidden}
+#canvas.graph-overview .node:not(.node-router):not([data-category="annotation"]) :is(.port,.link-port-navigation,.link-port-navigation *,.node-overview-label,.node-overview-label *){visibility:visible}
+#canvas.graph-overview .node-overview-label{display:flex}
+#canvaszoommenu [hidden]{display:none}

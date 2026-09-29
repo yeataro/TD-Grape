@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, floatingToolbar: true, editToolbar: true, wireQuickActions: true, parameterInputPorts: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, lowZoomOverview: false, floatingToolbar: true, editToolbar: true, wireQuickActions: true, parameterInputPorts: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -91,7 +91,7 @@ function dragExistingWire(path,event,index){
 function isNodeDragSurface(target,card){
   if(!target||target.closest('.node')!==card)return false;
   if(target.closest('button,input,textarea,select,a,summary,[contenteditable="true"],[role="button"],.node-alias,.node-inline-values'))return false;
-  return card.classList.contains('node-router')|| (card.dataset.category==='annotation'?!!target.closest('.node-title'):EDITOR_DEV_SETTINGS.nodeBodyDrag||!!target.closest('.node-title'));
+  return card.classList.contains('node-router')|| (card.dataset.category==='annotation'?!!target.closest('.node-title'):$('#canvas').classList.contains('graph-overview')||EDITOR_DEV_SETTINGS.nodeBodyDrag||!!target.closest('.node-title'));
 }
 function dragNodeTitle(event,node,title,cards,onFinish){
   if(event.button!==0)return;event.preventDefault();event.stopPropagation();closeCreator();
@@ -1837,6 +1837,11 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     else if(nodeComment(n))card.append(nodeCanvasComment(n));
     }
     card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,selectionModifier(e));refreshCanvasSelection();};
+    // Absolute overlay preserves the original layout, socket centers and input DOM.
+    if(!isAnnotationNode(n)){
+      const overview=el('div',{class:'node-overview-label','aria-hidden':'true'});
+      overview.append(el('span',{},displayName));card.append(overview);card.title=displayName;
+    }
     card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);appendNodeResizeHandle(card,n);if(isAnnotationNode(n))applyNoteColorContrast(card);
     return card;
 }
@@ -2254,7 +2259,7 @@ function beginCanvasDolly(canvas,event){
     if(!valid()){finish();return;}
     const delta=(e.clientX-lastX-(e.clientY-lastY))/zoom;lastX=e.clientX;lastY=e.clientY;
     if(delta!==0)canvas.classList.toggle('canvas-dolly-out',delta<0);
-    targetScale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,targetScale*Math.exp(delta*.006)));
+    targetScale=Math.max(graphZoomMinimum(),Math.min(GRAPH_ZOOM_MAX,targetScale*Math.exp(delta*.006)));
     zoomCanvasAt(targetScale,anchor.x,anchor.y);
   };
   canvas.classList.add('canvas-dolly');canvas.setPointerCapture(event.pointerId);
@@ -2469,7 +2474,7 @@ function installTouchNavigation(canvas){
     const p=sample(),dx=p.x-g.start.x,dy=p.y-g.start.y;
     if(points.size>=2){
       const o=g.origin,r=canvas.getBoundingClientRect(),uiScale=uiScaleFactor();
-      const nextScale=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,o.scale*p.distance/Math.max(1,o.distance)));
+      const nextScale=Math.max(graphZoomMinimum(),Math.min(GRAPH_ZOOM_MAX,o.scale*p.distance/Math.max(1,o.distance)));
       moveCanvas({x:(p.x-r.left)/uiScale-o.point.x*nextScale,y:(p.y-r.top)/uiScale-o.point.y*nextScale},nextScale);return;
     }
     if(g.mode==='pan'){

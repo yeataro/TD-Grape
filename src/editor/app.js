@@ -8,6 +8,7 @@ sessionStorage.setItem('sgrapeToken',token);history.replaceState(null,'',locatio
 
 const GRID=24;
 const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
+function graphZoomMinimum(){return EDITOR_DEV_SETTINGS.lowZoomOverview ? .1 : GRAPH_ZOOM_MIN;}
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='en';
 let editorProjectFile=null;
@@ -470,6 +471,7 @@ function applyCanvasDamping(force=false){
   document.addEventListener('keydown',event=>{if(event.key==='Escape')stopCanvasMotion();},options);
 }
 function transform(){
+  $('#canvas').classList.toggle('graph-overview',EDITOR_DEV_SETTINGS.lowZoomOverview&&scale<GRAPH_ZOOM_MIN);
   // Hide intermediate grid lines at distant zoom; snapping stays in world units.
   let displayGrid=GRID;
   while(displayGrid*scale<14)displayGrid*=2;
@@ -729,7 +731,7 @@ function centerNodes(nodes,animate=false){
 function fitNodes(nodes,animate=false,forceAnimation=false){
   if(!nodes.length)return;
   const bounds=canvasNodeBounds(nodes),{minX,minY,maxX,maxY}=bounds;
-  const nextScale=Math.max(.25,Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY)));
+  const nextScale=Math.max(graphZoomMinimum(),Math.min(1,($('#canvas').clientWidth-100)/(maxX-minX),($('#canvas').clientHeight-140)/(maxY-minY)));
   moveCanvas(centeredNodePan(bounds,nextScale),nextScale,animate?'frameDamping':null,forceAnimation);
 }
 function moveArrowNavigationView(node){
@@ -917,7 +919,7 @@ const experimentChoices={
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','wireQuickActions','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
   ['nodes',['parameterInputPorts','nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
-  ['appearance',['rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','linkArrowDisplay','reverseInputLinkArrowOnHover','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
+  ['appearance',['lowZoomOverview','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','linkArrowDisplay','reverseInputLinkArrowOnHover','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not
 // be used for percentiles or averages of frames. Only read/sort once a second.
@@ -1066,7 +1068,8 @@ function setUIExperiments(values){
   if($('#canvas').onpointermove){renderUIExperiments();status(t('experiments.finishGesture'));return;}
   const next=parseUIExperiments(JSON.stringify({...EDITOR_DEV_SETTINGS,...values}));
   if(Object.keys(next).every(key=>next[key]===EDITOR_DEV_SETTINGS[key]))return;
-  const redrawWires=Object.keys(next).some(key=>!['uiStyle','systemClock','showFps','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','wireQuickActions','parameterInputPorts','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
+  const overviewChanged=next.lowZoomOverview!==EDITOR_DEV_SETTINGS.lowZoomOverview;
+  const redrawWires=Object.keys(next).some(key=>!['lowZoomOverview','uiStyle','systemClock','showFps','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs','floatingToolbar','editToolbar','wireQuickActions','parameterInputPorts','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','groupCornerSelect'].includes(key)&&next[key]!==EDITOR_DEV_SETTINGS[key]);
   const dampingChanged=['arrowNavigationView','canvasDamping','canvasDampingMs','frameDamping','frameDampingMs'].some(key=>next[key]!==EDITOR_DEV_SETTINGS[key]);
   if(next.arrowNavigationMode!==EDITOR_DEV_SETTINGS.arrowNavigationMode)resetArrowNavigation();
   // Display preferences preserve graph elements and in-progress numeric drafts.
@@ -1078,11 +1081,19 @@ function setUIExperiments(values){
   if(dampingChanged)applyCanvasDamping();
   try{localStorage.setItem(experimentsStorageKey,JSON.stringify(next));}catch{}
   applyFloatingToolbar();applyGraphUISettings();applySystemClock();applyFpsDisplay();clearGraphTrash();
+  if(overviewChanged){
+    stopCanvasMotion();
+    if(scale<graphZoomMinimum()){
+      const canvas=$('#canvas'),x=canvas.clientWidth/2,y=canvas.clientHeight/2,nextScale=graphZoomMinimum();
+      moveCanvas({x:x-(x-pan.x)*nextScale/scale,y:y-(y-pan.y)*nextScale/scale},nextScale,null);
+    }else transform();
+  }
   if(graph&&redrawWires){
     for(const card of document.querySelectorAll('#cards .node')){
       const node=current().nodes.find(node=>node.id===card.dataset.node);if(!node)continue;
       card.dataset.dragSurface=isAnnotationNode(node)||!next.nodeBodyDrag?'header':'body';
-      const title=card.querySelector('.node-title-text'),toggle=title.querySelector('.node-collapse-toggle');
+      const title=card.querySelector('.node-title-text');if(!title)continue;
+      const toggle=title.querySelector('.node-collapse-toggle');
       const visible=node.ui?.collapsed===true?next.nodeCollapseCollapsedHint:next.nodeCollapseExpandedHint;
       if(visible!==!!toggle){
         if(visible)title.prepend(nodeCollapseToggle(node));else toggle.remove();
@@ -1272,18 +1283,21 @@ function renderGraphZoom(){
   const opener=$('#zoom'),menu=$('#canvaszoommenu'),percent=Math.round(scale*100);
   opener.textContent=percent+'%';opener.title=t('canvas.zoom')+' · '+percent+'%';opener.setAttribute('aria-label',opener.title);
   opener.setAttribute('aria-expanded',String(menu.matches(':popover-open')));
-  for(const button of menu.querySelectorAll('[data-canvas-zoom]'))button.setAttribute('aria-checked',String(Math.abs(Number(button.dataset.canvasZoom)/100-scale)<.000001));
+  for(const button of menu.querySelectorAll('[data-canvas-zoom]')){
+    button.hidden=Number(button.dataset.canvasZoom)/100<graphZoomMinimum();
+    button.setAttribute('aria-checked',String(Math.abs(Number(button.dataset.canvasZoom)/100-scale)<.000001));
+  }
 }
 function setGraphZoom(value){
   if(!graph||!Number.isFinite(value))return;
   const rect=$('#canvas').getBoundingClientRect();zoomCanvasAt(value,rect.width/uiScaleFactor()/2,rect.height/uiScaleFactor()/2);
 }
 function zoomCanvasAt(value,x,y){
-  const target=canvasMotion?.setting==='canvasDamping'?canvasMotion.to:null,previous=target?.scale??scale,origin=target||pan,next=Math.max(GRAPH_ZOOM_MIN,Math.min(GRAPH_ZOOM_MAX,value));
+  const target=canvasMotion?.setting==='canvasDamping'?canvasMotion.to:null,previous=target?.scale??scale,origin=target||pan,next=Math.max(graphZoomMinimum(),Math.min(GRAPH_ZOOM_MAX,value));
   moveCanvas({x:x-(x-origin.x)*next/previous,y:y-(y-origin.y)*next/previous},next);
 }
 function installGraphZoom(){
-  const opener=$('#zoom'),menu=$('#canvaszoommenu'),presets=[25,50,75,100,125,150,170];
+  const opener=$('#zoom'),menu=$('#canvaszoommenu'),presets=[10,15,20,25,50,75,100,125,150,170];
   const close=(focus=false)=>{if(menu.matches(':popover-open'))menu.hidePopover();if(focus)opener.focus({preventScroll:true});};
   const position=()=>{
     const rect=opener.getBoundingClientRect(),zoom=uiScaleFactor(),width=menu.offsetWidth||112;
@@ -1293,16 +1307,16 @@ function installGraphZoom(){
     const button=el('button',{type:'button',role:'menuitemradio','data-canvas-zoom':percent,'aria-checked':'false',tabindex:'-1'},percent+'%');
     button.onclick=()=>{setGraphZoom(percent/100);close(true);};menu.append(button);
   }
-  const buttons=[...menu.querySelectorAll('button')];
+  const visibleButtons=()=>[...menu.querySelectorAll('button')].filter(button=>!button.hidden);
   menu.addEventListener('beforetoggle',event=>{if(event.newState==='open'){renderGraphZoom();position();}});
   menu.addEventListener('toggle',renderGraphZoom);
-  opener.onclick=()=>requestAnimationFrame(()=>{if(menu.matches(':popover-open'))buttons.reduce((best,button)=>Math.abs(Number(button.dataset.canvasZoom)-scale*100)<Math.abs(Number(best.dataset.canvasZoom)-scale*100)?button:best).focus({preventScroll:true});});
+  opener.onclick=()=>requestAnimationFrame(()=>{if(menu.matches(':popover-open'))visibleButtons().reduce((best,button)=>Math.abs(Number(button.dataset.canvasZoom)-scale*100)<Math.abs(Number(best.dataset.canvasZoom)-scale*100)?button:best).focus({preventScroll:true});});
   opener.addEventListener('keydown',event=>{
     if(!['ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();event.stopPropagation();
-    if(!menu.matches(':popover-open'))menu.showPopover();buttons[event.key==='ArrowUp'?buttons.length-1:0].focus({preventScroll:true});
+    if(!menu.matches(':popover-open'))menu.showPopover();const buttons=visibleButtons();buttons[event.key==='ArrowUp'?buttons.length-1:0].focus({preventScroll:true});
   });
   menu.addEventListener('keydown',event=>{
-    event.stopPropagation();const index=buttons.indexOf(document.activeElement);
+    event.stopPropagation();const buttons=visibleButtons(),index=buttons.indexOf(document.activeElement);
     if(event.key==='Escape'){event.preventDefault();close(true);}
     else if(event.key==='Tab')close(true);
     else if(['ArrowUp','ArrowDown','Home','End'].includes(event.key)){

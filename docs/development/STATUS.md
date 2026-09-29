@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.252：新增預設關閉的「縮小總覽」實驗功能。開啟後畫布最低 10%，滾輪／雙指／中鍵 Dolly／Frame／Home／倍率選單共用下限；選單增加 10／15／20%。嚴格低於 25% 時，一般節點整張使用家族標題底色、名稱統一 36 graph px 置中，最多兩行（已收合一行）後省略。原標題、接口文字與控制項隱藏但保留排版，卡片大小、接孔位置、收合狀態及數值草稿不變；名稱跟隨自訂名稱顯示設定。Router／註解保持特殊外觀。關閉時保留視窗中心回到最低 25%；偏好可保存及重設，不寫入圖或 Undo。順便修正圖上有 Router 時切換部分實驗設定查找不存在標題的錯誤。
+
+新增 10 組 Chromium 行為檢查通過，含明暗模式、75／100／125% UI、低縮放重繪、拖曳／Undo／唯讀選取、接線取消、真實觸控事件模擬、動畫與重設。另有 390／1133px 六組窄畫面幾何檢查、既有 Dolly 6 組、Frame 7 組、Editor launch 14 項、1517 五語 keys／1132 UI 引用／59 來源提示及 JS／diff 檢查通過；截圖已目視。舊 node_width suite 在修改前後皆因 wire-hit 與繪製 path 造成選擇器不唯一而中止，未列為全套通過。此環境缺少 Playwright WebKit runtime，未實測 WebKit／iOS。
+
+39 份內嵌來源一致、六份 Master current，無圖定義升級；Master 同步保留九份使用者 Shader、參數身分與原生位置，未覆蓋正在編輯的模板。來源更新保留當時 13 份登記狀態；首次保存遇到 TDFam 預存清理與一筆 OP 失效，重試後 12 份有效登記狀態保留且保存成功。正式 TOE 2971268 bytes，SHA256 8dd13c4d8daa9526dc9cd81dec1a492d073e2f3b7ab50f57effc244c681b808b，私人橋接排除。私人紀錄 reports/low-zoom-252/；未操作或重載使用者網頁，未推送。
+
 2026-09-29 0.8.251：PBR Material 新增可接線的 float 輸入 `ambientStrength`，預設 0；僅縮放額外的 `uTDGeneral.ambientColor × diffuse × AO` 項，1 恢復原強度。一般燈光、Environment Light／IBL 與 Phong 原有 ambient=1 保持不變。依作者決定，舊 PBR 節點升級後也採缺省 0，不插入相容值 1；貼圖範本不額外增加貼圖或 TD Uniform。五語說明同步。PBR／Phong 既有輸入不重排；後續排序討論以「必須由使用者接入的在前」為方向，尚未定案或實作。
 
 30 項相關 Python 測試、5 組材質範本 Chromium 操作與 4 組布局檢查通過；新接孔可填值、接 Uniform、斷線恢復填值及 Undo，截圖已目視。TD 2025.32820 的 21 組獨立手寫 GLSL 渲染對照 RGBA 最大差異皆為 0，包含實際 Ambient Light 的 0／0.5／1／Uniform 0.75 及 Environment Light 獨立性。四個材質入口各新增兩份副本、1515 五語 keys／1130 UI 引用／59 來源提示及節點 metadata 檢查通過。這些為渲染組合驗證，未宣稱已定位原生甜甜圈 Viewer 亮度差異。
