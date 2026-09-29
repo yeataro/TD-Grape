@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.250：MAT 的內建預設貼圖改為每個 COMP 內依來源共用；白圖／平面法線等各留一份，保留每個貼圖欄位的固定 Select 出口、獨立 TOP 路徑與 Expression。移除舊 registry 可辨識的每欄位預設 Select／重複圖，成功部署後才清理，失敗 Apply 不先刪除。PBR Textured 從 30 個 TOP／20 個 Select 降為 12／10；Phong Textured 從 27／18 降為 11／9。GLSL 與採樣行為不變，TOP 元件的來源配置不改。
+
+五份 MAT Master 內部按共用圖 → 兩欄 Select → Shader／輸出分區，程式放上方、控制與圖資料放下方；明確的 `arrange_material_texture_networks.py` 工具只改座標，功能狀態指紋相同、無重疊，平常 Apply 不重排既有節點。當前新建的 PBR_Material_Textured1 同步簡化與排版，逐一核對原圖、GLSL、參數與 Select 身分保留；其餘六份使用者 Shader 保存內容維持原樣。13 份既有圖／程式／參數均核對保留。
+
+16 項相關 Python 單元測試、8 項 TD 共用來源情境（獨立覆寫／清空／Expression／預設切換／穩定出口／失敗復原／TOX 複製／缺少路徑黑圖保護）、8 項既有自訂貼圖控制情境及 sampler 維度不符回滾通過。16 組 PBR／Phong 渲染對照 RGBA 最大差異皆為 0，四份材質入口各新增兩份副本通過。舊 `test_sampler_split.py` fixture 與目前模組／圖版本不相容，未列為通過；未修改該測試。39 份內嵌來源一致、六份 Master current；正式 TOE 保存 2673594 bytes，SHA256 1c0a48814d54b49575564dc49c39e5fde682c558bb063587733412fa8ed112d1，私人橋接排除。私人紀錄 reports/material-textures-250/；未操作或重載使用者網頁，未推送。
+
 2026-09-29 0.8.249：保留作者已整理的 Phong／PBR MAT Graph，新增兩個 Grape → MAT 入口「Phong Material Textured」「PBR Material Textured」，以既有整合材質節點為 Pixel 核心，分別接入 9／10 個獨立 2D 貼圖来源。各組包含取樣、RGB／R 通道、參數乘法；PBR 明示 Specular Level × 0.08 與 Roughness ≥ 0.0001，不重複節點內的 Metallic 分拆。加入可攜的 Flat normal 來源（float TOP，0.5／0.5／1）；其他貼圖預設白色。切線依作者確認沿用 TD 原生規範：由幾何提供 T，Vertex 執行變形／TDCreateTBNMatrix，再傳到 Pixel；不做微分重建、不補缺少的切線、不修改預覽幾何。原整合節點的 PBR ambient／Phong 單高光行為保留；高度、位移、視差、Rim 等不在本批。使用方式與範圍見 [材質範本](../features/BASIC_MATERIAL_PRESETS.md)。
 
 27 項相關 Python 測試、兩組來源／剪貼簿 JS 回歸、14 項 Editor launch、1515 五語 keys 通過。Chromium 四份範本載入／finishing Undo／再編譯，以及兩份新圖各階段排版檢查通過；截圖已目視、節點無重疊。TD 2025.32820 使用具 UV／切線的隔離幾何，16 組手寫 GLSL 對照涵蓋預設、貼圖、傾斜法線、零法線強度、無燈、發光、背面、PBR 零粗糙度與環境光，RGBA 最大差異皆為 0。此為整合節點組合的驗證，不宣稱完整原生 MAT parity。四個材質入口各新增兩份副本，確認獨立性、MAT outlet、原生編譯、複製後貼圖來源及 Master 身分；排查時補齊新增 Master 的共用身分判斷。

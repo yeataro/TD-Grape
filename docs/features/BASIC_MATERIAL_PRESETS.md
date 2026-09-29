@@ -62,6 +62,21 @@ maps, as multiplying by zero still produces zero. The normal sampler defaults to
 the new portable **Flat normal** source (`builtin:normal`, exactly RGB 0.5, 0.5, 1
 in a float TOP). Normal Strength scales the decoded X/Y components and defaults to 1.
 
+Since 0.8.250, built-in images are shared **within each MAT component**. The PBR
+template has one white TOP, one flat-normal TOP and ten map Select TOPs (12 TOPs,
+previously 30); Phong has the same two images and nine Selects (11, previously 27).
+Each map retains one stable Select endpoint for its independent exposed TOP path,
+expression and default resolver. The previous extra per-map default Select and
+duplicate image are removed after a successful deployment. This keeps the existing
+GLSL sampler binding architecture; it is not a requirement that GLSL use Selects.
+Copies retain their own images and work without a reference to the master/manager.
+No map sampling or shader specialization changes are involved.
+
+Native MAT master networks are arranged as shared images → map Selects → shader /
+output, with code above and control/graph data below. New copies inherit this layout.
+The explicit `tools/dev/jobs/arrange_material_texture_networks.py` job only moves
+master OP coordinates; ordinary Apply does not rearrange existing authored nodes.
+
 PBR Specular Level is multiplied by 0.08 and converted to RGB before entering the
 material node. Roughness is bounded below by 0.0001 after map multiplication.
 The integrated material already performs the metallic diffuse/specular split; the

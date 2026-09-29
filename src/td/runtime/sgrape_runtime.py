@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.249'
+PRODUCT_VERSION='0.8.250'
 
 MATERIAL_PRESETS={
     'phong':'Phong MAT Graph', 'pbr':'PBR MAT Graph',
@@ -831,6 +831,15 @@ def managed_top_asset(comp,index,source):
 
 def cleanup_top_sources(comp,graph):
     """After successful deployment only, retire known generated source plumbing."""
+    if shader_kind(comp)=='mat':
+        keep={spec[field] for spec in comp.fetch('sgrapeTextureSources',{}).values()
+              for field in ('asset','blackAsset') if spec.get(field)}
+        retired=set(comp.fetch('grapeRetiredMatTextures',[]))
+        for n in list(comp.children):
+            if n.name not in keep and (n.id in retired or n.storage.get('grapeSharedMatTexture',False)):
+                n.destroy()
+        comp.store('grapeRetiredMatTextures',[])
+        return
     if graph.get('topSourceVersion')!=1:return
     keep={s['node'] for s in comp.fetch('grapeTopSlots',[])}
     keep.update(spec['asset'] for spec in comp.fetch('sgrapeTextureSources',{}).values())
@@ -856,7 +865,53 @@ def top_input_snapshot(comp):
         rows.append({'id':record['id'],'index':index,'connected':row['status']=='connected','status':row['status'],'path':row['path'],'width':image.width,'height':image.height})
     return rows
 
+def shared_mat_texture(comp,source):
+    """One immutable built-in image per MAT; each sampler keeps its own resolver."""
+    choice=source.split(':',1)[1] if source.startswith('builtin:') else 'banana'
+    names={'white':'texture_white','black':'texture_black','normal':'texture_flat_normal',
+           'banana':'texture_banana','jellybeans':'texture_jellybeans'}
+    name=names[choice];asset=comp.op(name)
+    if asset and not asset.storage.get('grapeSharedMatTexture',False):
+        raise RuntimeError('An unrelated operator occupies '+asset.path)
+    if not asset:
+        asset=comp.create(constantTOP if choice in ('white','black','normal') else moviefileinTOP,name)
+        asset.store('grapeSharedMatTexture',True)
+        asset.nodeX=-1100;asset.nodeY=-list(names).index(choice)*200
+        asset.comment='Shared '+choice+' default. Each material map can override this with its own TOP.'
+    if choice in ('white','black','normal'):
+        rgb=(.5,.5,1) if choice=='normal' else (1,1,1) if choice=='white' else (0,0,0)
+        for channel,value in zip('rgb',rgb):getattr(asset.par,'color'+channel).val=value
+        asset.par.alpha=1;asset.par.resolutionw=2;asset.par.resolutionh=2
+        asset.par.format='rgba32float' if choice=='normal' else 'rgba8fixed'
+    else:
+        file='Jellybeans.1.jpg' if choice=='jellybeans' else 'Banana.tif'
+        asset.par.file.expr="app.samplesFolder + '/Map/"+file+"'"
+    return asset
+
+
+def retire_mat_texture_defaults(comp):
+    """Identify the old per-sampler default chain before replacing its registry.
+
+    Keep the stable texture_source Selects. Retire only registry-backed, known
+    default endpoints and their exact generated children after deployment succeeds.
+    """
+    retired=set(comp.fetch('grapeRetiredMatTextures',[]))
+    for key,spec in comp.fetch('sgrapeTextureSources',{}).items():
+        for field,identity in (('asset',key),('blackAsset','black:'+key)):
+            name='texture_default_'+hashlib.sha256(identity.encode()).hexdigest()[:16]
+            endpoint=comp.op(spec.get(field,''))
+            if not endpoint or endpoint.name!=name or endpoint.opType!='selectTOP':continue
+            internal=endpoint.par.top.eval()
+            if not internal or internal.parent()!=comp or internal.name not in (name+'_constant',name+'_image'):continue
+            retired.add(endpoint.id)
+            for suffix,kind in (('_constant','constantTOP'),('_image','moviefileinTOP')):
+                child=comp.op(name+suffix)
+                if child and child.opType==kind:retired.add(child.id)
+    comp.store('grapeRetiredMatTextures',list(retired))
+
+
 def texture_asset(comp,key,source):
+    if shader_kind(comp)=='mat':return shared_mat_texture(comp,source)
     name='texture_default_'+hashlib.sha256(key.encode()).hexdigest()[:16]
     asset=comp.op(name)
     # Use a Select TOP as the stable public endpoint; assets of differing OP
@@ -879,6 +934,7 @@ def texture_asset(comp,key,source):
 
 def prepare_textures(comp,graph,input_owner=None,compiled=None):
     managed=graph.get('topSourceVersion')==1
+    if shader_kind(comp)=='mat':retire_mat_texture_defaults(comp)
     if managed and comp.fetch('grapeTopSourceVersion',0)!=1:
         # Identify old generated objects from the previous resource registry,
         # not a broad name-prefix sweep over potentially user-authored OPs.
@@ -1302,7 +1358,11 @@ def configure(comp,compiled,graph,preserve=None,input_owner=None):
         elif key=='input:0':texture=comp.op('input_router')
         else:
             name='texture_source_'+hashlib.sha256(key.encode()).hexdigest()[:16]
-            texture=comp.op(name) or comp.create(selectTOP,name)
+            texture=comp.op(name)
+            if not texture:
+                texture=comp.create(selectTOP,name)
+                if kind=='mat':texture.nodeX=-640;texture.nodeY=-i*200
+            if kind=='mat':texture.comment=textures[key]['label']+' — independent TOP override, otherwise shared default.'
             texture.par.format='useinput';texture.par.top.expr="mod('texture_sources').resolve("+repr(key)+")"
         reference=texture.name
         if kind=='top':
