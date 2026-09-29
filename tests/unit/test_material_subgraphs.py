@@ -87,10 +87,10 @@ class MaterialSubgraphs(unittest.TestCase):
             self.assertFalse(any(n['definitionUuid'] in ('sgrape.builtin.sampler','sgrape.builtin.uniform','sgrape.builtin.texture_sample') for n in fn['graph']['nodes']))
 
     def test_browser_categories_and_source_versions(self):
-        for f in c.function_library(with_browser=True)[-2:]:
+        for f in c.function_library(with_browser=True)[-3:]:
             browser=f.pop('browser');source=f.pop('source')
             self.assertEqual(c.digest(f),source['version'])
-            self.assertEqual(browser['category'],'texture' if f['name']=='Normal Map' else 'color')
+            self.assertEqual(browser['category'],{'Normal Map':'texture','Color Multiply':'color','Displacement':'vector'}[f['name']])
 
 
 if __name__=='__main__':unittest.main()

@@ -140,3 +140,27 @@ Normal Map 的對接：Texture 2D → Color；Vertex Input 的 `tangentToWorld` 
 測試入口為 `tests/unit/test_material_subgraphs.py`、`tests/browser/test_material_subgraphs.cjs`、
 `tests/td/test_material_subgraphs.py`。原生渲染以獨立 GLSL 比較三個顏色輸出、HDR／零 Alpha、
 單位乘數、平面／傾斜法線、零／部分強度及背面。
+
+## Displacement（0.8.259）
+
+新增獨立的 **Displacement** 內建 Subgraph（Vector 分類，MAT Vertex），不加入或改接預設材質圖。
+輸入依序為 Position（vec3）、Normal（vec3）、Height（float）、Scale（float）、Midlevel（float）；
+輸出位移後的 Position（vec3），計算 `Position + normalize(Normal) * (Height - Midlevel) * Scale`。
+Height／Midlevel 預設 0.5、Scale 預設 1，因此未調整時不位移；Height 與 Scale 不裁切，可接受負值與超出 0–1 的數值。
+Position 預設零，Normal 預設 Z 軸；實際使用請接入相同座標空間的位置與非零法線。
+
+建議鏈路為 Vertex 的 Sampler → `textureLod · sampler2D`（LOD 可從 0 開始）→ 取 R → Height，
+Displacement 的 Position 輸出接 TD Deform。貼圖、UV、Uniform 與取樣都留在 Subgraph 外，
+高度視為資料、不進行色彩空間轉換。TD Deform 後的世界位置也要經 Vertex Output／Input 傳給
+Material 的 Position；Material 未接線的隱含位置不會自動採用自訂位移。
+
+只移動既有頂點，不新增幾何、不重建法線或切線；細節取決於網格密度。輸出仍是同一座標空間的位置，
+不是投影座標。子圖內七個普通節點可展開、修改及本地化。
+
+同輪開放自訂 Sampler 來源在 MAT Vertex／Pixel 使用，同一來源跨 Stage 共用一份資源綁定。
+普通 Texture 2D 維持 Pixel 限制；Vertex 使用 textureLod 等支援該 Stage 的取樣函式。
+保留原 Pixel Sampler 的 UUID、綁定與 GLSL 行為，舊版 revision 收錄為相容歷史；
+catalog 僅允許相同接口／預設／emitter 的 Stage 擴充，不能藉歷史移除已支援的 Stage。
+
+驗證入口：`tests/unit/test_displacement.py`、`tests/browser/test_displacement.cjs`、`tests/td/test_displacement.py`。
+原生測試以獨立 GLSL 比較正負／零位移、負 Scale、範圍外高度、非單位法線、貼圖更新與跨 Stage 綁定。

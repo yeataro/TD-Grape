@@ -19,7 +19,7 @@ All 13 entries return vec4 and appear under the existing Texture dimension categ
 - All projected offsets must be ordinary compile-time constants. Constant expression chains are supported and emitted with the required const qualification. Uniforms and specialization constants do not satisfy these operands.
 - Projection divides spatial coordinates by the last uv component, which must be nonzero. uv is vec2 for 1D and vec4 for 2D/3D. New projected nodes default uv components to 1 so the divisor is initially valid. Explicit gradients describe coordinates after projection.
 - Offset limits depend on the GPU. Native compile validation remains authoritative and failed application retains the previous working Shader.
-- Function signatures support TOP Pixel and MAT Vertex/Pixel. Resource access is a separate constraint: current custom Sampler sources remain Pixel-only. Vertex signature compilation is not proof of a usable custom Vertex Sampler binding.
+- Function signatures support TOP Pixel and MAT Vertex/Pixel. As of 0.8.259, custom Sampler sources also support MAT Vertex, with a shared binding when referenced by both stages. Individual sampling functions retain their own stage restrictions; ordinary Texture 2D remains Pixel-only.
 - 1D/3D/Array entries accept compatible existing sampler inputs; this change does not expand Sources bindings, add shadow/integer/multisample resources, or add Cube offset variants.
 
 The semantic reference is [GLSL 4.60, Texture Functions](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html). Per-function reference links are provided in Help.

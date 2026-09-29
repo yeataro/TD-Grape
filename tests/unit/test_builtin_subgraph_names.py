@@ -20,7 +20,7 @@ def call_graph(function, target='top', stage='pixel'):
         'edges':[c.edge('filter','result','color' if stage=='pixel' else 'position','color')]}
     if function['outputs'][0]['type']=='vec3':
         graph['stages'][stage]['nodes'].append(c.node('rgba','rgba'))
-        graph['stages'][stage]['edges']=[c.edge('filter','rgba','rgb',function['outputs'][0]['id']),c.edge('rgba','result','color')]
+        graph['stages'][stage]['edges']=[c.edge('filter','rgba','rgb',function['outputs'][0]['id']),c.edge('rgba','result','color' if stage=='pixel' else 'position')]
     return graph
 
 
@@ -32,8 +32,8 @@ def canonical_locals(code):
 class BuiltinSubgraphNames(unittest.TestCase):
     def test_all_defaults_have_valid_unique_names_and_fresh_versions(self):
         library=c.function_library();original=copy.deepcopy(library)
-        self.assertEqual([f['name'] for f in library],['Tint','Invert','Contrast','Color Clamp','Color Multiply','Normal Map'])
-        self.assertEqual([len(f['graph']['nodes']) for f in library],[3,5,7,5,5,12])
+        self.assertEqual([f['name'] for f in library],['Tint','Invert','Contrast','Color Clamp','Color Multiply','Normal Map','Displacement'])
+        self.assertEqual([len(f['graph']['nodes']) for f in library],[3,5,7,5,5,12,7])
         legacy_by_id={f['id']:f for f in legacy_function_library()}
         for function in library:
             names=[node.get('name') for node in function['graph']['nodes']]
@@ -70,7 +70,7 @@ class BuiltinSubgraphNames(unittest.TestCase):
         for function in c.function_library():
             with self.subTest(function=function['name']):
                 target='mat' if function.get('targets')==['mat'] else 'top'
-                graph=call_graph(function,target);before=copy.deepcopy(graph)
+                graph=call_graph(function,target,function['stages'][0]);before=copy.deepcopy(graph)
                 report=document.inspect_document(json.loads(json.dumps(graph)),c,target)
                 self.assertEqual(report['status'],'valid',report)
                 self.assertEqual(report['candidate']['functions'],graph['functions'])

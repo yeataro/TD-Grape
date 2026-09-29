@@ -313,7 +313,11 @@ def validate_catalog(document):
                 keys.add(key);identities.add(uid);live[uid]=entry
             else:
                 current=live.get(uid)
-                if current is None or _definition_signature(d)!=_definition_signature(current['definition']) or emitter!=current['emitter']:
+                old_signature=_definition_signature(d);new_signature=_definition_signature(current['definition']) if current else {}
+                old_signature.pop('stages');new_signature.pop('stages',None)
+                # Adding supported stages preserves old uses; removing any does not.
+                if (current is None or old_signature!=new_signature
+                        or not set(d['stages']).issubset(current['definition']['stages']) or emitter!=current['emitter']):
                     raise GraphError('Historical behavior needs a separate supported emitter')
                 if not isinstance(entry.get('observedIn'),list) or not entry['observedIn'] or any(not isinstance(tag,str) for tag in entry['observedIn']):
                     raise GraphError('Historical revision needs provenance')
@@ -1783,12 +1787,31 @@ def function_library(with_browser=False):
         if n['id'] in ('center','decode','scale','back'):
             n['inputValues']={'center':{'b':[.5]*3},'decode':{'b':[2]*3},'scale':{'z':1},'back':{'b':[-1]*3}}[n['id']]
     normal_map['source']={'id':'sgrape.library.normal_map','version':digest(normal_map)}
-    result = [fn]+filters+[color_multiply,normal_map]
+    displacement={'id':'library_displacement_v1','name':'Displacement','scope':'library',
+        'stages':['vertex'],'targets':['mat'],'descriptionKey':'help.subgraph.displacement',
+        'inputs':[{'id':'position','name':'Position','type':'vec3','default':[0,0,0]},
+                  {'id':'normal','name':'Normal','type':'vec3','default':[0,0,1]},
+                  scalar('height','Height',.5),scalar('scale','Scale',1),scalar('midlevel','Midlevel',.5)],
+        'outputs':[{'id':'position','name':'Position','type':'vec3','default':[0,0,0]}],
+        'graph':{'nodes':[
+            {'id':'input','name':'Input','definitionUuid':FUNCTION_INPUT,'params':{},'ui':{'x':48,'y':144}},
+            named_node('normalize','unit','Unit_Normal',360,144,type='vec3'),
+            named_node('subtract','center','Center_Height',360,480,type='float'),
+            named_node('multiply','scale','Scale_Height',672,480,type='float'),
+            named_node('multiply','offset','Normal_Offset',984,144,type='vec3'),
+            named_node('add','position','Displaced_Position',1296,144,type='vec3'),
+            {'id':'output','name':'Output','definitionUuid':FUNCTION_OUTPUT,'params':{},'ui':{'x':1608,'y':144}}],
+            'edges':[edge('input','unit','value','normal'),edge('input','center','a','height'),
+                     edge('input','center','b','midlevel'),edge('center','scale','a'),edge('input','scale','b','scale'),
+                     edge('unit','offset','a'),edge('scale','offset','b'),edge('input','position','a','position'),
+                     edge('offset','position','b'),edge('position','output','position')]}}
+    displacement['source']={'id':'sgrape.library.displacement','version':digest(displacement)}
+    result = [fn]+filters+[color_multiply,normal_map,displacement]
     if with_browser:
         # Browser-only projection: default library snapshots and versions stay intact.
         for f in result:
-            f['browser'] = {'category':'texture' if f is normal_map else 'color','source':'editor',
-                            'aliases':['normal map','TBN','tangent','TDFrontFacing'] if f is normal_map else [],
+            f['browser'] = {'category':'vector' if f is displacement else 'texture' if f is normal_map else 'color','source':'editor',
+                            'aliases':['height','normal displacement','vertex displacement','高度','位移'] if f is displacement else ['normal map','TBN','tangent','TDFrontFacing'] if f is normal_map else [],
                             'descriptionKey':f.get('descriptionKey','help.function')}
     return result
 

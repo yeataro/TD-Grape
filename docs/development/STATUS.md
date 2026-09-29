@@ -1,5 +1,13 @@
 # 開發狀態
 
+2026-09-29 0.8.259：新增 Displacement 內建 Subgraph（Vector 分類，MAT Vertex），提供 Position／Normal／Height／Scale／Midlevel，輸出沿正規化法線位移後的位置。Height／Midlevel 預設 0.5、Scale 預設 1，預設不位移；不細分或重算法線，貼圖取樣留在外部。未加入預設圖。另開放自訂 Sampler 來源在 MAT Vertex 使用，可接 textureLod，跨 Vertex／Pixel 共用綁定；普通 Texture 2D 仍限 Pixel。五語 Help 與[材質輔助子圖說明](../features/BASIC_MATERIAL_PRESETS.md)同步。
+
+71 項相關 Python 測試、14 項 Editor launch、1520 五語 keys／1135 UI 引用／59 來源提示、4 組新增 Chromium 與 4 組既有材質子圖回歸通過。TD 2025.32820 十組獨立 GLSL 渲染對照最大差異皆為 0，涵蓋正負／零位移、負 Scale、範圍外高度、非單位法線、貼圖即時更新及跨 Stage 綁定；十一份使用者／範本登記狀態保留。截圖已目視，未實測 iOS。
+
+相容歷史新增舊 Sampler 定義，僅允許相同運算介面下擴充 Stage。同步檢查曾發現共用 signature 欄位被誤刪而產生無關升級，已收窄到歷史驗證內部；以精確候選比對恢復六份 Master 備份後重新同步，最後僅兩份貼圖 Master 的 19 個 Sampler 有 Stage 版本變更。其餘圖內容、原子圖來源身分、布局／參數／OP 身分均核對保持；未更新五份使用者 Shader。初次熱更新另有舊 core 短暫讀到新 catalog 的載入錯誤，最終來源與正常編譯均核對通過。
+
+39 份來源一致，內建庫七項，六份 Master current。正式 TOE 保存 2420466 bytes，SHA256 5e82d631214cc6809d074a1d564d163c42ecf27d0f18ae74fb7213adc14f0a15；私人助手排除。私人紀錄 `reports/displacement-259/`；未操作或重新整理使用者網頁，未推送。
+
 2026-09-29 0.8.258：OP Create 的五個 MAT 入口統一暖灰紫，TOP 保留藍紫。修正來源重新載入與 Master 整理後未刷新選單色表，造成新增 Material 範本使用家族紫的問題；沿用既有有限重試與普通／hover 明度，不改色票或範本名稱。見[原生 OP 配色](../ui/OP_COLORS.md)。
 
 14 項 Editor launch 通過；TD 2025.32820 核對六份範本、普通／hover callback、重排及回退顏色，模擬過期快取後 Master 同步自動恢復，108 份選單樣式其餘欄位保持。39 份來源同步，六份 Master current，無圖升級；同步期間核對當時四份使用者 Shader、Master 身分／參數／位置保留。背景工作之間的人工圖編輯不回滾；來源刷新與保存各自核對該次快照。未操作或重新整理使用者介面。

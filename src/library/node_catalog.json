@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.251",
+  "catalogVersion": "0.8.259",
   "emitterAbiVersion": 1,
   "targetShellVersion": 3,
   "definitions": [
@@ -1737,6 +1737,7 @@
           "out": "sampler2D"
         },
         "stages": [
+          "vertex",
           "pixel"
         ],
         "defaults": {
@@ -1744,7 +1745,7 @@
         },
         "descriptionKey": "help.sampler",
         "definitionUuid": "sgrape.builtin.sampler",
-        "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea"
+        "revisionHash": "f4698a5279551fb10a8718ffdcbc9e2774aeface1878015652d1cdb079822648"
       },
       "emitter": {
         "id": "sampler",
@@ -16975,6 +16976,32 @@
         "id": "pixel_out",
         "version": 1
       }
+    },
+    {
+      "definition": {
+        "key": "sampler",
+        "label": "Sampler 2D",
+        "inputs": {},
+        "outputs": {
+          "out": "sampler2D"
+        },
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "declarationId": ""
+        },
+        "descriptionKey": "help.sampler",
+        "definitionUuid": "sgrape.builtin.sampler",
+        "revisionHash": "122b3569767bf319ed87f298c6707aeafcf23217d63193047bfc74b3e4cc38ea"
+      },
+      "emitter": {
+        "id": "sampler",
+        "version": 1
+      },
+      "observedIn": [
+        "0.8.258"
+      ]
     }
   ],
   "browser": {

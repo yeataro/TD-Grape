@@ -17,7 +17,7 @@ class CatalogTests(unittest.TestCase):
         b['definitions'][0]['emitter']['version']=99;b['history'].clear()
         self.assertEqual(c.catalog_contract(),before)
         self.assertEqual(len(a['definitions']),len(c.CATALOG))
-        self.assertEqual(len(a['history']),18)
+        self.assertEqual(len(a['history']),19)
 
     def test_known_history_keeps_original_reference_and_compiled_result(self):
         graph=c.demo_graph('tint');normal=c.compile_graph(graph)
