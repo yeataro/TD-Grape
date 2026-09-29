@@ -15,13 +15,100 @@
 | **View Direction** | 封裝相機資訊、表面位置與方向正規化，供 Fresnel／Facing 等運算使用。建議約定世界空間中由表面朝觀看者的單位向量；Position／Camera 的輸入與預設行為、Vertex／Pixel 可用範圍待定。現有 Material 使用 `normalize(uTDMats[camera].camInverse[3].xyz - position)`；正交相機需另行核對，不能宣稱這段位置差算法已涵蓋。查閱目前公開 GLSL MAT 文件未找到直接回傳 View Direction 的專用函式。 |
 | **Mapping** | 整合座標平移、旋轉與縮放，貼圖取樣留在外部。2D／3D、旋轉角度單位與順序、旋轉中心，以及 Point／Texture／Vector／Normal 語意是否分開，實作前再確認。現有 TDTranslate、TDScale、TDRotateX／Y／Z、TDRotateOnAxis、TDRotateToVector、TDCreateRotMatrix 已有 Grape 節點，可作為組合基礎。 |
 
-同輪 Color Ramp 討論仍待定位：圖內編輯色標、位置與插值，或引用 TD Ramp TOP／Table DAT；需區分資料來源、GPU 傳遞方式與漸層求值。使用者提出陣列資料搭配一維求值函式，以及 Texture Buffer 的可能性，目前尚未選定後端或自訂參數呈現方式。
+同輪 Color Ramp 已記錄「色標陣列＋插值設定」及 Uniform Array 求值的第一版建議，詳見下方 Color Ramp 設計筆記。使用者要求先保存討論，尚未實作；TD Ramp TOP／Table DAT 引用、自訂參數呈現及正式綁定流程仍待設計。
 
 自動 Normal 的平台前提另行討論：目前 TD 的 Vulkan 架構在 macOS 經 MoltenVK／Metal 執行，官方明確說明 macOS 所有 GPU 都不支援 Geometry Shader，因此不能把 Geometry Stage 當作 Windows／macOS 共用方案。Pixel 階段由變形後位置的微分重建面法線，與依網格鄰接關係重建平滑頂點法線是不同能力。後者可評估上游 SOP／Normal POP，但它們不會自動讀回之後 MAT Vertex Shader 裡的位移；目前僅記錄限制與候選，未選定自動法線實作。依據：[Vulkan 平台說明](https://derivative.ca/UserGuide/Vulkan)、[Normal POP](https://docs.derivative.ca/Normal_POP)。
 
 原生 PBR 參考核對：重新讀取先前已成功匯出／編譯的 TD 2025.32820 `displaceverts_1` 分支。Vertex 取 Height Map 並沿原法線改寫位置，送入 TDDeform；基底法線仍為 `normalize(TDDeformNorm(TDNormal()))`，TBN 亦由原法線／切線建立。啟用 Normal Map 時，Pixel 將法線圖解碼、套用 Bump Scale，經 TBN 轉為世界空間法線後用於光照。此位移分支沒有根據 Height Map 重建法線；TDDeformNorm 處理原生變形的法線轉換，不知道使用者剛做的高度位移。不能把原生位移視為已有自動法線重算功能。
 
 參考：[TD GLSL Matrix Functions](https://docs.derivative.ca/GLSL_Matrix_Functions)、[Write a GLSL MAT](https://docs.derivative.ca/Write_a_GLSL_MAT)、[Blender Mapping](https://docs.blender.org/manual/en/4.5/render/shader_nodes/vector/mapping.html)。
+
+## Color Ramp 設計筆記（2026-09-29）
+
+**狀態：使用者認可方向並要求先記入筆記；以下資料與 GLSL 是設計範例，不代表功能已實作、編譯驗證或正式格式已凍結。**
+
+### 保存資料
+
+以「色標陣列＋插值設定」作為可保存於圖內的資料，和 GPU 傳遞方式分開。每個色標的核心是 `position: float` 與 `rgba: vec4`，另外保留穩定 ID，拖曳或排序後仍可辨識同一色標。
+
+```json
+{
+  "version": 1,
+  "interpolation": "linear",
+  "extend": "clamp",
+  "colorSpace": "linear-srgb",
+  "alphaMode": "straight",
+  "stops": [
+    { "id": "a", "position": 0.0, "rgba": [0, 0, 0, 1] },
+    { "id": "b", "position": 0.4, "rgba": [1, 0, 0, 1] },
+    { "id": "c", "position": 1.0, "rgba": [1, 1, 1, 1] }
+  ]
+}
+```
+
+- 位置以 0～1 為範圍；RGB 保留浮點／HDR 數值，Alpha 第一版建議使用未預乘形式，RGB 與 Alpha 分別插值。
+- 插值先採整條 Ramp 共用，候選為 Constant、Linear、Ease；暫不展開成每段各自設定。
+- 明確保存色彩空間；`linear-srgb` 是範例值，送入 Shader 前需轉成宿主的工作色彩空間，不能假設所有宿主都使用相同空間。
+- 第一版建議超出色標範圍時延續端點顏色。重疊色標、有效數值、色標數量及排序規則須正式定義；下方範例以位置穩定排序，同位置到達時取排序後最後一個色標。
+- TD Ramp TOP 的 Table DAT 使用位置、R、G、B、A 五欄，可轉接此核心資料；插值、色彩空間等設定需另行保留。引用既有 TD 資源或圖內編輯的 UI 尚待設計。
+
+### Shader 資料與求值
+
+第一版傾向以 Uniform Array 傳遞少量色標：`float positions[N]`、`vec4 colors[N]`、`int count`。預留容量下，修改位置／顏色／有效數量只更新 Uniform；超出容量需重新配置並重新產碼，不能靜默截斷使用者的資料。`N = 16` 僅為討論範例，正式容量、上限及多個 Ramp 的資源預算待決。
+
+節點接收 `Fac: float`，找出左右色標並插值；輸出建議提供 RGBA、RGB、A。Fac 可來自 UV、Noise、Fresnel 等浮點結果。下例示範 Linear 與端點延伸，傳入顏色已統一到工作色彩空間：
+
+```glsl
+const int RAMP_CAPACITY = 16;
+
+uniform int   uRampCount;
+uniform float uRampPositions[RAMP_CAPACITY];
+uniform vec4  uRampColors[RAMP_CAPACITY];
+
+vec4 grapeRamp(float fac)
+{
+    int count = clamp(uRampCount, 0, RAMP_CAPACITY);
+    if (count == 0)
+        return vec4(0.0);
+
+    if (fac < uRampPositions[0])
+        return uRampColors[0];
+
+    for (int i = 1; i < RAMP_CAPACITY; ++i)
+    {
+        if (i >= count)
+            break;
+
+        if (fac < uRampPositions[i])
+        {
+            float left  = uRampPositions[i - 1];
+            float right = uRampPositions[i];
+            float t = (fac - left) / (right - left);
+            return mix(uRampColors[i - 1], uRampColors[i], t);
+        }
+    }
+
+    return uRampColors[count - 1];
+}
+
+// 節點呼叫；factor 由上游圖提供。
+vec4 rampRGBA = grapeRamp(factor);
+vec3 rampRGB  = rampRGBA.rgb;
+float rampA   = rampRGBA.a;
+```
+
+以上呼叫片段放在對應的 Shader 函式／main 內，不是全域 Uniform 初始化。輸入資料須為有效有限值並先排序；嚴格小於的區間搜尋會越過相同位置的色標，使實際插值區間寬度大於零。零色標回透明黑與單色標回該色是範例保護，UI 最少色標數仍待決。
+
+Constant 模式在區間內直接回傳左側色標；Ease 模式先使用 `t = t * t * (3.0 - 2.0 * t)` 再混色。模式要以產碼固定或 Uniform 切換尚未決定。函式不預乘 Alpha、不截掉 HDR RGB；多個 Ramp 實例的函式與 Uniform 名稱需由產碼器處理唯一性。
+
+### 傳遞方式與待辦界線
+
+- TD 已提供 CHOP → Uniform Array 的機制；Grape 仍需新增 Ramp 編輯、資料同步、資源綁定與保存流程。要確保匯出的 GLSL 與綁定資源保存後可以持續運作，不能只把色標留在編輯器記憶體。
+- Texture Buffer 可承載同樣的色標資料，但以 `texelFetch` 讀整數索引，不會自動插值；區間搜尋與混色仍由 Shader 執行。
+- 烘焙成漸層取樣貼圖是另一個候選後端；可沿用原始色標資料，但解析度、過濾、硬切與誤差需另行設計，不宣稱與解析式求值完全相同。
+- 此輪只記錄資料格式與 GLSL 方向，尚未決定 UI、是否為原生節點或子圖、TD 自訂參數呈現方式、外部 Table DAT 綁定、正式容量與跨平台效能；不啟動實作。
+
+依據：[TD Ramp TOP](https://derivative.ca/UserGuide/Ramp_TOP)、[GLSL MAT Arrays](https://docs.derivative.ca/GLSL_MAT)、[Khronos Buffer Texture](https://wikis.khronos.org/opengl/Buffer_Texture)。
 
 ## 目前最直接的未完成工作
 
