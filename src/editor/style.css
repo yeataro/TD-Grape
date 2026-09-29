@@ -1641,7 +1641,7 @@ footer .footer-preferences svg[hidden]{display:none}
 .parameter-control.swizzle-components select{min-width:44px}
 #inspector.ordinary-parameters .input-parameter[data-input]{row-gap:6px;border:0;margin-top:9px;padding:0}
 #inspector.ordinary-parameters .input-heading{display:contents}
-#inspector.ordinary-parameters .input-parameter[data-input]>.parameter-value-group{grid-column:1/-1;margin:0}
+#inspector.ordinary-parameters .input-parameter[data-input]>:is(.parameter-value-group,.matrix-parameter-values){grid-column:1/-1;min-width:0;margin:0}
 #inspector.ordinary-parameters .connection-row{grid-column:4;grid-row:1;min-height:24px;gap:5px;font-size:11px}
 #inspector.ordinary-parameters .connection-row button{min-height:24px;padding:3px 5px;font-size:10px}
 .parameter-value-group{min-width:0;margin-top:9px;margin-bottom:9px}

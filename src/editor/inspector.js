@@ -572,7 +572,7 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW',options={})
   const matrixShape=typeContract?.types?.[type];
   if(matrixShape?.shape==='matrix'){
     const group=el('section',{class:'matrix-parameter-values','data-parameter-matrix':key});
-    group.append(parameterControlRow(label,el('span',{},type)));
+    group.append(parameterControlRow(label,el('span'),type));
     for(let column=0;column<matrixShape.columns;column++){
       const start=column*matrixShape.rows,name=t('matrix.column').replace('{index}',column);
       group.append(parameterValueRow(n,key+':c'+column,name,typeForShape(matrixShape.family,matrixShape.rows),()=>read().slice(start,start+matrixShape.rows),(index,next)=>write(start+index,next),labels,options));

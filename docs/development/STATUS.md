@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.256：修正普通 Parameter 頁的整體矩陣輸入被放入展開按鈕窄欄，導致名稱消失、分量數值框只剩細條的問題。矩陣群組與向量群組一樣跨滿輸入列，矩陣型別回到共用型別欄；固定／浮動面板共用修正。未改變矩陣資料、列主序、Shader 產碼或接孔邏輯。
+
+修改前在固定面板重現：矩陣群組寬 7.5px、外層 242px、名稱寬 0。修正後新 5 組 Chromium 檢查與既有 matrix_values 15 組通過；涵蓋 Normal Map mat3、Transpose mat4／dmat2x3，在固定／浮動、75／100／125% 與快捷接孔開關的 36 組排版，以及分量編輯／展開／Undo／Redo、草稿重繪、矩陣連線／斷開恢復數值與唯讀。窄面板明暗截圖已目視。14 項 Editor launch、1519 五語 keys／1134 UI 引用／59 來源提示及 JS／diff 檢查通過；未實測 iOS。
+
+39 份來源同步，六份 Master current，無圖定義升級；七份使用者 Shader、參數身分及原生位置保留。正式 TOE 保存 2707916 bytes，SHA256 0110806d19defc3795c0797873d6114d79e3ee1d77e7ea8fcaf967555436429d；13 份登記狀態保留，私人助手排除。私人報告 reports/matrix-parameter-256/。未操作或重載使用者網頁，未推送；README 草稿仍未提交。另討論取 R 再乘 float 的輔助 Subgraph，建議名稱 Channel Multiply，尚未新增。
+
 2026-09-29 0.8.255：內建庫新增 Color Multiply 與 Normal Map。Color Multiply 僅以 RGB 乘數調整 RGBA 的 RGB，保留 Alpha，提供 RGBA／RGB／A 三個輸出，預設乘數為白色。Normal Map 僅供 MAT Pixel，輸入取樣結果、Strength、Vertex 的 TBN／世界位置／幾何法線，沿用原貼圖範本的解碼、XY 強度、世界空間轉換、正規化及 TDFrontFacing 背面翻轉；Texture 2D、Sampler 與 Uniform 留在外部，不以微分補切線。兩者是可編輯的普通 Subgraph 快照，不自動替換現有圖或範本。五語 Help 與 Color／Texture 分類同步。另將縮小總覽文字不透明度改為 70%；依作者最後決定維持預設關閉，30% 門檻與 20% 下限不變。使用方式見[材質範本](../features/BASIC_MATERIAL_PRESETS.md)。
 
 30 項相關 Python 測試、4 組 Subgraph Chromium 操作、13 組縮小總覽檢查及 14 項 Editor launch 通過；新內建的接口、階段篩選、展開／本地化／Undo 與保存後編譯已驗證。TD 2025.32820 的 14 組獨立 GLSL 渲染對照，RGBA 最大差異皆為 0，涵蓋三種顏色輸出、HDR／零 Alpha、單位乘數、法線強度與背面。1519 五語 keys、1134 UI 引用、59 來源提示、分類投影與 diff／JS 檢查通過；截圖已目視，未實測 iOS。
