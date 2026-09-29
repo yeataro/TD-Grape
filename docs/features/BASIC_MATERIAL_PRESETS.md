@@ -141,6 +141,27 @@ Normal Map 的對接：Texture 2D → Color；Vertex Input 的 `tangentToWorld` 
 `tests/td/test_material_subgraphs.py`。原生渲染以獨立 GLSL 比較三個顏色輸出、HDR／零 Alpha、
 單位乘數、平面／傾斜法線、零／部分強度及背面。
 
+## View Direction／Fresnel／Facing／Mapping（0.8.261）
+
+四個普通、可打開編輯的內建 Subgraph，不加入或替換預設材質圖。View Direction／Mapping 位於 Vector 分類，Fresnel／Facing 位於 Shader 分類。
+
+| 子圖 | 輸入 → 輸出 | 行為 |
+| --- | --- | --- |
+| View Direction | Position（vec3）、Camera（int）→ Direction（vec3） | MAT Vertex／Pixel。Position 使用變形後世界位置；透視以相機位置減 Position，標準正交投影取相機世界 +Z 軸，再正規化。未接 Position 是世界原點，Camera 預設 0 並限制於有效索引。 |
+| Fresnel | Normal、View Direction（vec3）、IOR（float，1.45）→ Fac（float） | 完整、未偏振的介電質 Fresnel 反射比例，包含全反射。IOR 是透射側／入射側折射率比；IOR＝1 輸出 0，非正值限制至 0.000001。 |
+| Facing | Normal、View Direction（vec3）→ Fac（float） | `1 - abs(dot(unitNormal, unitView))`，限制於 0～1。正對視線為 0、掠射邊緣為 1，正反面對稱；是連續遮罩，與 TDFrontFacing 布林判斷不同。 |
+| Mapping | Vector、Translation、Rotation、Scale（vec3）→ Vector（vec3） | 逐分量縮放 → X／Y／Z 依序旋轉 → 平移。角度用度數，旋轉中心為原點；預設為恆等變換，支援負值與零縮放。 |
+
+Fresnel、Facing、Mapping 可用於 TOP Pixel 與 MAT Vertex／Pixel。Normal 與 View Direction 必須使用相同空間，內部正規化；World Normal 可由 Vertex 傳入或來自 Normal Map。Fresnel 取夾角餘弦絕對值，背面不自動反轉 IOR；要模擬離開介質的介面，明確傳入折射率倒數。它只回傳反射比例，不處理光照、反射貼圖或折射影像。Facing 是簡單雙面邊緣權重，沒有額外 Blend 或 Power 控制。
+
+MAT Pixel 的典型連線為：Vertex 將變形後世界位置及 Normal 傳入 Pixel，Position → View Direction，Direction 和 Normal → Fresnel／Facing。多相機時把 Vertex 的 TDCameraIndex 以 flat 插值傳到 Pixel 的 Camera；沒有自動使用目前相機的隱藏輸入。View Direction 的投影判斷使用原生 `proj[3][3]`，目前涵蓋標準透視／正交，不宣稱自訂非線性投影通用。與相機位置重合時回傳零方向；零 Normal 或 View Direction 在 Facing 中回傳 1。微小向量長度與 Fresnel 分母設有數值保護。
+
+Mapping 是正向位置／座標變換，不是逆向 Texture 變換或 Normal 的 inverse-transpose 變換。UV 可透過 Combine 補上 Z＝0，再取輸出 XY；貼圖取樣仍由外部 Texture 節點處理。
+
+View Direction 的 uTDMats 是目標 MAT 自行提供的唯讀相機區塊，不保存原 Shader 或 OP 路徑，因此可隨此子圖存入個人庫。其他 Uniform、Texture 等外部來源的個人庫限制保持；載入時仍驗證宿主與 Stage。
+
+驗證入口：`tests/unit/test_view_material_helpers.py`、`tests/browser/test_view_material_helpers.cjs`、`tests/td/test_view_material_helpers.py`。TD 渲染對照使用獨立 CPU 的 Rodrigues 旋轉、角度形式 Fresnel 公式及 Camera COMP 世界矩陣，不以相同子圖複製品充當參考。Windows TD 2025.32820 已驗證，macOS 尚待實機；實作只使用一般數學、TD 矩陣來源及已支援的旋轉函式。
+
 ## Displacement（0.8.259）
 
 新增獨立的 **Displacement** 內建 Subgraph（Vector 分類，MAT Vertex），不加入或改接預設材質圖。

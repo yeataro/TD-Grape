@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.261：內建庫新增 View Direction、Fresnel、Facing、Mapping 四個可編輯 Subgraph。View Direction 以世界 Position／Camera 分別處理標準透視與正交相機；Fresnel 使用完整介電質未偏振公式，含全反射與相同介質保護；Facing 為正面 0、掠射 1 的雙面角度遮罩；Mapping 採縮放 → X／Y／Z 度數旋轉 → 平移。View Direction／Mapping 分類在 Vector，Fresnel／Facing 在 Shader；五語 Help 與實際 browser projection 同步。View Direction 所需的 uTDMats 可保存至個人庫，沒有攜帶原圖宣告或 OP 綁定，仍受 MAT／Stage 驗證。原七份內建快照逐份比對保持不變；未替換或加入預設圖。詳見[材質輔助子圖](../features/BASIC_MATERIAL_PRESETS.md)。
+
+34 項相關 Python 測試、14 項 Editor launch、兩份 JS Subgraph 模型檢查、五組 Chromium 建立／分類／接口／編輯本地化／Undo／序列化檢查通過。1524 五語 keys／1139 UI 引用／59 來源提示、分類投影與 diff 檢查通過，四個新子圖介面截圖已目視。Windows TD 2025.32820 的 54 組渲染對照通過：獨立 CPU Rodrigues／角度 Fresnel 公式與 Camera COMP 矩陣核對，涵蓋旋轉相機、標準透視／正交、Vertex／Pixel、世界位置與 flat 相機傳遞、非法相機索引保護、IOR＝1／全反射／Brewster 角、零向量、負／零縮放。最大 RGBA 誤差約 1.81e-7；初次相機參考探針把 TD Python 矩陣索引轉置，修正測試參考後全部通過。macOS 尚待實機，未宣稱驗證自訂非線性投影。
+
+39 份來源同步、六份 Master 無圖升級，五份使用者 Shader 及身分／位置保留。正式 TOE 保存 2523266 bytes，SHA256 6b11333d56e553b230545a1eda09ed7ccc0a3ac66abb5d0bc054d45fb49af8f6；十一份登記狀態保留、私人助手排除。私人報告 `reports/material-helpers-261/` 保留修改前工程與測試資料。未操作或重載使用者網頁，未推送。
+
 2026-09-29 0.8.260：補齊 Displacement 的 Editor 內嵌 browser projection。核心已定義 Vector 分類，但前一輪未重新產生前端分類資料，導致實際顯示為 Uncategorized；現在 Vector 分類與 height 搜尋皆可找到。預設圖與子圖內容不變。
 
 Browser metadata 整合檢查與五組 Chromium Displacement 檢查通過，新增實際分類／搜尋回歸。39 份來源同步、六份 Master 無圖升級，五份使用者 Shader 保留。正式 TOE 保存 2516362 bytes，SHA256 93e60c28c36eff281cdedd8a705bd298dbc9bdc7437cb4dd29d5b1fa1e5098aa；十一份登記狀態保留，私人助手排除。私人紀錄 `reports/displacement-category-260/`；未操作使用者網頁，未推送。

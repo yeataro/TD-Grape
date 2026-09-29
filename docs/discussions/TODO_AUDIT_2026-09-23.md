@@ -4,16 +4,18 @@
 
 狀態分成：**未實作**（有明確缺口）、**部分完成**（已有功能但範圍不足）、**已知問題／待重現**、**待設計／候選**、**重構後／排除**。舊文件寫「尚未完成」不等於目前仍缺；測試通過也不等於所有場景完成。
 
-## 材質快捷子圖待辦（2026-09-29 補充，0.8.260）
+## 材質快捷子圖待辦（2026-09-29 補充，0.8.261）
 
 **最新決策：新增功能必須以 Windows／macOS 雙平台相容為前提，不支援雙平台的功能不做。Geometry Shader 因此排除；自動法線重算暫緩，下面的替代方式僅保留討論背景。**
 
-使用者確認將以下兩項列入待辦，具體接口仍待設計，尚未實作。目標是提供類似 Blender 的常用材質操作便利性。
+以下四項已於 0.8.261 實作為內建、可編輯子圖，未加入預設圖。目標是提供常用材質操作便利性，不宣稱完整複製 Blender 節點的全部模式。具體用法見[材質輔助子圖](../features/BASIC_MATERIAL_PRESETS.md)。
 
 | 項目 | 用途與待決範圍 |
 | --- | --- |
-| **View Direction** | 封裝相機資訊、表面位置與方向正規化，供 Fresnel／Facing 等運算使用。建議約定世界空間中由表面朝觀看者的單位向量；Position／Camera 的輸入與預設行為、Vertex／Pixel 可用範圍待定。現有 Material 使用 `normalize(uTDMats[camera].camInverse[3].xyz - position)`；正交相機需另行核對，不能宣稱這段位置差算法已涵蓋。查閱目前公開 GLSL MAT 文件未找到直接回傳 View Direction 的專用函式。 |
-| **Mapping** | 整合座標平移、旋轉與縮放，貼圖取樣留在外部。2D／3D、旋轉角度單位與順序、旋轉中心，以及 Point／Texture／Vector／Normal 語意是否分開，實作前再確認。現有 TDTranslate、TDScale、TDRotateX／Y／Z、TDRotateOnAxis、TDRotateToVector、TDCreateRotMatrix 已有 Grape 節點，可作為組合基礎。 |
+| **View Direction** | 已完成。MAT Vertex／Pixel；Position 世界座標、Camera 索引 → 表面朝觀看者的單位向量。標準透視與正交相機分開處理，已做 TD 旋轉相機渲染對照。沒有修改現有 Material 內部的方向算法。 |
+| **Fresnel** | 已完成。Normal、View Direction、IOR → 介電質未偏振反射比例；包含 IOR＝1、全反射與數值保護。取角度絕對值，IOR 定義為透射／入射折射率比，離開介質時由使用者提供倒數。 |
+| **Facing** | 已完成。Normal、View Direction → 雙面邊緣權重，正面 0、掠射 1；與 TDFrontFacing 的正反面布林用途不同。 |
+| **Mapping** | 已完成。Vector、Translation、Rotation、Scale → Vector；縮放 → X／Y／Z 旋轉 → 平移，度數、原點旋轉。先提供正向座標變換，取樣在外部；逆 Texture／Normal 等其他模式未加入。 |
 
 同輪 Color Ramp 已記錄「色標陣列＋插值設定」及 Uniform Array 求值的第一版建議，詳見下方 Color Ramp 設計筆記。使用者要求先保存討論，尚未實作；TD Ramp TOP／Table DAT 引用、自訂參數呈現及正式綁定流程仍待設計。
 

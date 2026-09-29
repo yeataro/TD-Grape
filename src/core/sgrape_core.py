@@ -1806,12 +1806,115 @@ def function_library(with_browser=False):
                      edge('unit','offset','a'),edge('scale','offset','b'),edge('input','position','a','position'),
                      edge('offset','position','b'),edge('position','output','position')]}}
     displacement['source']={'id':'sgrape.library.displacement','version':digest(displacement)}
-    result = [fn]+filters+[color_multiply,normal_map,displacement]
+    # These helpers remain ordinary, editable graphs. Host access is isolated to
+    # View Direction; the other helpers accept explicit vectors from any source.
+    def vector(ident,name,value):return dict(id=ident,name=name,type='vec3',default=list(value))
+    def helper(key,name,inputs,output,targets=None):
+        f=dict(id='library_'+key+'_v1',name=name,scope='library',stages=['vertex','pixel'],
+               descriptionKey='help.subgraph.'+key,inputs=copy.deepcopy(inputs),outputs=[copy.deepcopy(output)],
+               graph={'nodes':[{'id':'input','name':'Input','definitionUuid':FUNCTION_INPUT,'params':{},'ui':{'x':48,'y':144}}],'edges':[]})
+        if targets:f['targets']=targets
+        depths={'input':0};rows={}
+        def add(op,ident,args,ty='float',**params):
+            depth=1+max((depths[v[0]] for v in args.values() if isinstance(v,tuple)),default=0)
+            depths[ident]=depth;row=rows.get(depth,0);rows[depth]=row+1
+            n=named_node(op,ident,ident.title(),48+312*depth,144+240*row,type=ty,**params)
+            for port,value in args.items():
+                if isinstance(value,tuple):f['graph']['edges'].append(edge(value[0],ident,port,value[1]))
+                else:n.setdefault('inputValues',{})[port]=value
+            f['graph']['nodes'].append(n)
+            return (ident,'out')
+        def finish(value):
+            f['graph']['nodes'].append({'id':'output','name':'Output','definitionUuid':FUNCTION_OUTPUT,'params':{},
+                                       'ui':{'x':48+312*(max(depths.values())+1),'y':144}})
+            f['graph']['edges'].append(edge(value[0],'output',output['id'],value[1]))
+            f['source']={'id':'sgrape.library.'+key,'version':digest(f)}
+            return f
+        return add,finish
+    def unit(add,source,name):
+        square=add('dot',name+'_length_squared',{'a':source,'b':source},'vec3')
+        safe=add('max',name+'_safe_length_squared',{'a':square,'b':1e-20})
+        length=add('sqrt',name+'_length',{'value':safe})
+        return add('divide',name+'_unit',{'a':source,'b':length},'vec3')
+    normal=vector('normal','Normal',(0,0,1));view=vector('viewDirection','View Direction',(0,0,1))
+    factor=scalar('factor','Fac',0)
+
+    add,finish=helper('view_direction','View Direction',
+        [vector('position','Position',(0,0,0)),dict(id='camera',name='Camera',type='int',default=0)],
+        vector('direction','Direction',(0,0,1)),['mat'])
+    mats=add('builtin_source','camera_matrices',{},source='uTDMats')
+    camera=add('array_get','camera',{'Array':mats,'i':('input','camera')},'TDMatrix[TD_NUM_CAMERAS]')
+    inverse=add('struct_field','camera_inverse',{'value':camera},'TDMatrix',field='camInverse')
+    projection=add('struct_field','projection',{'value':camera},'TDMatrix',field='proj')
+    origin4=add('matrix_get','camera_origin',{'value':inverse,'column':3},'mat4')
+    origin=add('swizzle','camera_position',{'value':origin4},'vec4',mask='xyz')
+    toward_eye=add('subtract','perspective_direction',{'a':origin,'b':('input','position')},'vec3')
+    axis4=add('matrix_get','camera_z_axis',{'value':inverse,'column':2},'mat4')
+    axis=add('swizzle','orthographic_direction',{'value':axis4},'vec4',mask='xyz')
+    proj_w=add('matrix_get','projection_w',{'value':projection,'column':3,'row':3},'mat4',mode='element')
+    ortho=add('compare','is_orthographic',{'a':proj_w,'b':0},operator='!=')
+    direction=add('if','view_vector',{'condition':ortho,'true':axis,'false':toward_eye},'vec3')
+    view_direction=finish(unit(add,direction,'direction'))
+
+    add,finish=helper('facing','Facing',[normal,view],factor)
+    n=unit(add,('input','normal'),'normal');v=unit(add,('input','viewDirection'),'view')
+    cosine=add('dot','view_cosine',{'a':n,'b':v},'vec3')
+    magnitude=add('abs','two_sided_cosine',{'value':cosine})
+    bounded=add('clamp','bounded_cosine',{'value':magnitude,'min':0,'max':1})
+    facing=finish(add('subtract','edge_weight',{'a':1,'b':bounded}))
+
+    add,finish=helper('fresnel','Fresnel',[normal,view,scalar('ior','IOR',1.45)],factor)
+    n=unit(add,('input','normal'),'normal');v=unit(add,('input','viewDirection'),'view')
+    cosine=add('dot','view_cosine',{'a':n,'b':v},'vec3')
+    magnitude=add('abs','two_sided_cosine',{'value':cosine})
+    cosine=add('clamp','incident_cosine',{'value':magnitude,'min':0,'max':1})
+    eta=add('max','relative_ior',{'a':('input','ior'),'b':1e-6})
+    eta2=add('multiply','ior_squared',{'a':eta,'b':eta})
+    cos2=add('multiply','cosine_squared',{'a':cosine,'b':cosine})
+    sin2=add('subtract','incident_sine_squared',{'a':1,'b':cos2})
+    transmitted=add('divide','transmitted_sine_squared',{'a':sin2,'b':eta2})
+    remaining=add('subtract','transmitted_cosine_squared',{'a':1,'b':transmitted})
+    remaining=add('max','safe_cosine_squared',{'a':remaining,'b':0})
+    ct=add('sqrt','transmitted_cosine',{'value':remaining})
+    eta_ct=add('multiply','scaled_transmitted_cosine',{'a':eta,'b':ct})
+    eta_ci=add('multiply','scaled_incident_cosine',{'a':eta,'b':cosine})
+    def reflectance(name,left,right):
+        num=add('subtract',name+'_difference',{'a':left,'b':right})
+        den=add('add',name+'_sum',{'a':left,'b':right})
+        den=add('max',name+'_safe_denominator',{'a':den,'b':1e-8})
+        ratio=add('divide',name+'_amplitude',{'a':num,'b':den})
+        return add('multiply',name+'_reflectance',{'a':ratio,'b':ratio})
+    rs=reflectance('s',cosine,eta_ct);rp=reflectance('p',eta_ci,ct)
+    total=add('add','polarizations',{'a':rs,'b':rp})
+    average=add('multiply','unpolarized_reflectance',{'a':total,'b':.5})
+    tir=add('compare','total_internal_reflection',{'a':transmitted,'b':1},operator='>=')
+    reflected=add('if','interface_reflectance',{'condition':tir,'true':1,'false':average})
+    same=add('compare','equal_media',{'a':eta,'b':1},operator='==')
+    reflected=add('if','equal_media_protection',{'condition':same,'true':0,'false':reflected})
+    fresnel=finish(add('clamp','fresnel_weight',{'value':reflected,'min':0,'max':1}))
+
+    add,finish=helper('mapping','Mapping',
+        [vector('vector','Vector',(0,0,0)),vector('translation','Translation',(0,0,0)),
+         vector('rotation','Rotation',(0,0,0)),vector('scale','Scale',(1,1,1))],vector('vector','Vector',(0,0,0)))
+    mapped=add('multiply','scale_coordinates',{'a':('input','vector'),'b':('input','scale')},'vec3')
+    for axis in 'xyz':
+        angle=add('swizzle','rotation_'+axis,{'value':('input','rotation')},'vec3',mask=axis)
+        radians=add('radians','radians_'+axis,{'value':angle})
+        rotation=add('td_rotate_'+axis,'rotate_'+axis,{'radians':radians})
+        mapped=add('multiply','apply_rotation_'+axis,{'a':rotation,'b':mapped},'vec3',operandTypes={'a':'mat3','b':'vec3'})
+    mapping=finish(add('add','translate_coordinates',{'a':mapped,'b':('input','translation')},'vec3'))
+
+    result = [fn]+filters+[color_multiply,normal_map,displacement,view_direction,fresnel,facing,mapping]
     if with_browser:
         # Browser-only projection: default library snapshots and versions stay intact.
         for f in result:
-            f['browser'] = {'category':'vector' if f is displacement else 'texture' if f is normal_map else 'color','source':'editor',
-                            'aliases':['height','normal displacement','vertex displacement','高度','位移'] if f is displacement else ['normal map','TBN','tangent','TDFrontFacing'] if f is normal_map else [],
+            f['browser'] = {'category':'vector' if f in (displacement,view_direction,mapping) else 'shader' if f in (fresnel,facing) else 'texture' if f is normal_map else 'color','source':'editor',
+                            'aliases':{'Displacement':['height','normal displacement','vertex displacement','高度','位移'],
+                                       'Normal Map':['normal map','TBN','tangent','TDFrontFacing'],
+                                       'View Direction':['view vector','camera','orthographic','視線','觀看方向'],
+                                       'Fresnel':['IOR','reflection','費涅爾','反射'],
+                                       'Facing':['layer weight','rim','edge mask','邊緣','朝向'],
+                                       'Mapping':['UV','transform','rotation','座標','變換']}.get(f['name'],[]),
                             'descriptionKey':f.get('descriptionKey','help.function')}
     return result
 

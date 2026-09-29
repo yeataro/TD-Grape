@@ -36,6 +36,8 @@
 
 Function 若直接含 Uniform 或 Texture 2D，會提示把它們放在 Function 外，經 Function Input 傳入數值或取樣後顏色；巢狀依賴也檢查。不把原 Shader 的 declaration ID 或本機貼圖路徑帶到其他 Shader。UV／TD Built-ins 仍按 Vertex／Pixel 階段驗證。
 
+0.8.261 為 View Direction 允許保存內建 `uTDMats` 相機矩陣來源；它讀取目標 MAT 提供的相機資料，沒有外部宣告或 OP 綁定。此例外不放寬其他 `builtin_source`，且仍由編譯器確認 MAT／Stage 相容性。
+
 Sampler 型別 Function 介面、連同 declarations 的資產封裝、來源版本升級、雲端同步衝突處理仍後續設計。
 
 ## 已驗證

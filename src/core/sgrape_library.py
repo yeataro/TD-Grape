@@ -62,6 +62,10 @@ def validate_functions(core,functions,root,type_definitions=None):
     if len(reachable(core,functions,root))!=len(functions):raise ValueError('Unrelated Subgraph in personal snapshot')
     for f in functions:
         for n in f['graph']['nodes']:
+            # View Direction reads the destination MAT's camera block. This
+            # intrinsic needs no graph declaration, OP path or captured binding;
+            # compilation below still enforces the MAT/stage contract.
+            if n.get('definitionUuid')=='sgrape.builtin.builtin_source' and n.get('params',{}).get('source')=='uTDMats':continue
             if n.get('definitionUuid') in ('sgrape.builtin.uniform','sgrape.builtin.texture','sgrape.builtin.sampler','sgrape.builtin.constant','sgrape.builtin.top_input','sgrape.builtin.builtin_source'):
                 raise ValueError('Personal Subgraphs must be self-contained. Place Uniform and Texture 2D outside the Subgraph and pass their values through Subgraph Input.')
     # A TOP-only host type is valid in a portable function; it must not be

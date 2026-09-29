@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.260'
+PRODUCT_VERSION='0.8.261'
 
 MATERIAL_PRESETS={
     'phong':'Phong MAT Graph', 'pbr':'PBR MAT Graph',
