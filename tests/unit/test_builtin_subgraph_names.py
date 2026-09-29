@@ -18,6 +18,9 @@ def call_graph(function, target='top', stage='pixel'):
     graph['stages'][stage]={
         'nodes':[{'id':'filter','definitionUuid':c.CALL,'params':{'functionId':function['id']},'ui':{'x':48,'y':96}},c.node(stage+'_out','result')],
         'edges':[c.edge('filter','result','color' if stage=='pixel' else 'position','color')]}
+    if function['outputs'][0]['type']=='vec3':
+        graph['stages'][stage]['nodes'].append(c.node('rgba','rgba'))
+        graph['stages'][stage]['edges']=[c.edge('filter','rgba','rgb',function['outputs'][0]['id']),c.edge('rgba','result','color')]
     return graph
 
 
@@ -29,24 +32,27 @@ def canonical_locals(code):
 class BuiltinSubgraphNames(unittest.TestCase):
     def test_all_defaults_have_valid_unique_names_and_fresh_versions(self):
         library=c.function_library();original=copy.deepcopy(library)
-        self.assertEqual([f['name'] for f in library],['Tint','Invert','Contrast','Color Clamp'])
-        self.assertEqual([len(f['graph']['nodes']) for f in library],[3,5,7,5])
-        for function,legacy in zip(library,legacy_function_library(),strict=True):
+        self.assertEqual([f['name'] for f in library],['Tint','Invert','Contrast','Color Clamp','Color Multiply','Normal Map'])
+        self.assertEqual([len(f['graph']['nodes']) for f in library],[3,5,7,5,5,12])
+        legacy_by_id={f['id']:f for f in legacy_function_library()}
+        for function in library:
             names=[node.get('name') for node in function['graph']['nodes']]
             self.assertTrue(all(c.glsl_code_name(name) for name in names),function['name'])
             self.assertEqual(len(names),len(set(names)))
             self.assertEqual(names[0],'Input');self.assertEqual(names[-1],'Output')
             snapshot=copy.deepcopy(function);source=snapshot.pop('source')
             self.assertEqual(source['version'],c.digest(snapshot))
-            self.assertNotEqual(source['version'],legacy['source']['version'])
-            self.assertEqual(source['id'],legacy['source']['id'])
+            if function['id'] in legacy_by_id:
+                legacy=legacy_by_id[function['id']]
+                self.assertNotEqual(source['version'],legacy['source']['version'])
+                self.assertEqual(source['id'],legacy['source']['id'])
         self.assertEqual(library[0]['graph']['nodes'][1]['name'],'Apply_Tint')
         self.assertEqual([f['graph'] for f in c.function_library(with_browser=True)],[f['graph'] for f in library])
         library[0]['graph']['nodes'][1]['name']='Edited_Instance'
         self.assertEqual(c.function_library(),original)
 
     def test_compile_preserves_math_topology_source_mapping_and_authored_graph(self):
-        for function,legacy in zip(c.function_library(),legacy_function_library(),strict=True):
+        for function,legacy in zip(c.function_library()[:4],legacy_function_library(),strict=True):
             for target,stage in [('top','pixel'),('mat','pixel'),('mat','vertex')]:
                 with self.subTest(function=function['name'],target=target,stage=stage):
                     graph=call_graph(function,target,stage);before=copy.deepcopy(graph)
@@ -63,8 +69,9 @@ class BuiltinSubgraphNames(unittest.TestCase):
     def test_document_and_personal_snapshot_round_trip_preserve_names(self):
         for function in c.function_library():
             with self.subTest(function=function['name']):
-                graph=call_graph(function);before=copy.deepcopy(graph)
-                report=document.inspect_document(json.loads(json.dumps(graph)),c,'top')
+                target='mat' if function.get('targets')==['mat'] else 'top'
+                graph=call_graph(function,target);before=copy.deepcopy(graph)
+                report=document.inspect_document(json.loads(json.dumps(graph)),c,target)
                 self.assertEqual(report['status'],'valid',report)
                 self.assertEqual(report['candidate']['functions'],graph['functions'])
                 packet=personal.build(c,graph,function['id'])
@@ -74,7 +81,7 @@ class BuiltinSubgraphNames(unittest.TestCase):
 
     def test_editor_import_isolates_old_versions_and_preserves_names_on_localize(self):
         root=Path(__file__).resolve().parents[2]
-        payload={'library':c.function_library(),'legacy':legacy_function_library(),'graph':c.demo_graph('color','top'),'contract':c.type_contract()}
+        payload={'library':c.function_library()[:4],'legacy':legacy_function_library(),'graph':c.demo_graph('color','top'),'contract':c.type_contract()}
         process=subprocess.run(['node',str(root/'tests/unit/test_builtin_subgraph_names.js')],input=json.dumps(payload),capture_output=True,text=True)
         self.assertEqual(process.returncode,0,process.stderr)
         self.assertIn('20 default node names',process.stdout)

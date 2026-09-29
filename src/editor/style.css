@@ -2231,7 +2231,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 @media(pointer:coarse){.floating-workspace-panel{--floating-close-size:44px}}
 
 /* Overview changes paint only: retain every layout box and socket center. */
-.node-overview-label{display:none;position:absolute;inset:auto 12px 12px;align-items:flex-end;justify-content:flex-start;overflow:hidden;pointer-events:none;color:var(--category-fg);font-size:var(--overview-font-size,36px);font-weight:650;line-height:1;text-align:left}
+.node-overview-label{display:none;position:absolute;inset:auto 12px 12px;align-items:flex-end;justify-content:flex-start;overflow:hidden;pointer-events:none;color:var(--category-fg);opacity:.7;font-size:var(--overview-font-size,36px);font-weight:650;line-height:1;text-align:left}
 .node-overview-label>span{width:100%;min-width:0}
 .node-overview-line{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .node.collapsed .node-overview-label{bottom:2px}

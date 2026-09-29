@@ -116,3 +116,27 @@ TD 2025.32820 render comparisons against independently written GLSL using the sa
 native bindings and vertex data, with a UV/tangent-equipped fixture. Native placement
 checks cover independent copies, TOP-path bindings and preservation of existing graphs.
 The render comparisons verify this composition, not complete native PBR/Phong parity.
+
+## 內建材質輔助 Subgraph（0.8.255）
+
+新增兩個普通、可展開編輯的內建 Subgraph；新增節點可搜尋名稱，或在 Library 的內建庫找到。
+現有材質節點、範本及使用者圖不會自動替換。
+
+- **Color Multiply**（Color 分類）：Color 為 RGBA，Multiplier 為 RGB，預設白色。
+  僅計算 `Color.rgb * Multiplier`，Alpha 原樣保留。輸出 RGBA、RGB 與 A；不裁切 HDR、
+  不預乘 Alpha、不轉換色彩空間。可用於 TOP Pixel 與 MAT Vertex／Pixel。
+- **Normal Map**（Texture 分類，MAT Pixel）：輸入已取樣的 Color（RGBA，忽略 Alpha）、
+  Strength（預設 1）、Tangent to World（mat3）、Position（vec3）、Normal（vec3）；
+  輸出正規化、依正背面調整的世界空間 Normal。
+
+Normal Map 的對接：Texture 2D → Color；Vertex Input 的 `tangentToWorld` → Tangent to World，
+`world` → Position，未套貼圖的世界空間 `normal` → Normal。Strength 可直接填值或接 Uniform。
+內部沿用原貼圖範本的 `(RGB - 0.5) * 2`、XY 強度縮放、TBN 轉換、normalize，
+以及 `TDFrontFacing(Position, Normal)` 的背面翻轉。Texture 2D、Sampler、Uniform 與 Vertex Input
+均留在外部；Vertex 的切線矩陣建立仍遵守上述 TD 原生幾何契約，不以 Pixel 微分補切線。
+法線貼圖是資料，不在此做色彩空間轉換。
+
+兩者沿用庫快照與本地編輯規則：建立時複製定義進圖，修改時本地化，不改寫內建來源。
+測試入口為 `tests/unit/test_material_subgraphs.py`、`tests/browser/test_material_subgraphs.cjs`、
+`tests/td/test_material_subgraphs.py`。原生渲染以獨立 GLSL 比較三個顏色輸出、HDR／零 Alpha、
+單位乘數、平面／傾斜法線、零／部分強度及背面。

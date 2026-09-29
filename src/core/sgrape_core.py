@@ -1739,11 +1739,56 @@ def function_library(with_browser=False):
              color_function('color_clamp','Color Clamp',[scalar('minimum','Minimum',0),scalar('maximum','Maximum',1)],
                  [named_node('clamp','limit','Clamp_RGB',576,144,type='vec3')],
                  [edge('split','limit','value','rgb'),edge('input','limit','min','minimum'),edge('input','limit','max','maximum')],'limit')]
-    result = [fn]+filters
+    color_multiply=color_function('color_multiply','Color Multiply',
+        [{'id':'multiplier','name':'Multiplier','type':'vec3','default':[1,1,1]}],
+        [named_node('multiply','multiply','Multiply_RGB',576,144,type='vec3')],
+        [edge('split','multiply','a','rgb'),edge('input','multiply','b','multiplier')],'multiply')
+    color_multiply['inputs'][0]['default']=[1,1,1,1]
+    color_multiply['outputs']=[{'id':'color','name':'RGBA','type':'vec4','default':[0,0,0,1]},
+                               {'id':'rgb','name':'RGB','type':'vec3','default':[0,0,0]},
+                               {'id':'alpha','name':'A','type':'float','default':1}]
+    color_multiply['graph']['edges'] += [edge('multiply','output','rgb'),edge('split','output','alpha','a')]
+    color_multiply['source']['version']=digest({k:v for k,v in color_multiply.items() if k!='source'})
+
+    # Match the textured MAT graph: geometry supplies TBN; no derivative fallback.
+    normal_map={'id':'library_normal_map_v1','name':'Normal Map','scope':'library',
+        'stages':['pixel'],'targets':['mat'],'descriptionKey':'help.subgraph.normal_map',
+        'inputs':[{'id':'color','name':'Color','type':'vec4','default':[.5,.5,1,1]},
+                  scalar('strength','Strength',1),
+                  {'id':'tangentToWorld','name':'Tangent to World','type':'mat3','default':[1,0,0,0,1,0,0,0,1]},
+                  {'id':'position','name':'Position','type':'vec3','default':[0,0,0]},
+                  {'id':'normal','name':'Normal','type':'vec3','default':[0,0,1]}],
+        'outputs':[{'id':'normal','name':'Normal','type':'vec3','default':[0,0,1]}],
+        'graph':{'nodes':[
+            {'id':'input','name':'Input','definitionUuid':FUNCTION_INPUT,'params':{},'ui':{'x':48,'y':144}},
+            named_node('swizzle','rgb','Normal_RGB',360,144,type='vec4',mask='xyz'),
+            named_node('subtract','center','Center_Normal',648,144,type='vec3'),
+            named_node('multiply','decode','Decode_Normal',936,144,type='vec3'),
+            named_node('combine','scale','XY_Strength',936,432,type='vec3'),
+            named_node('multiply','scaled','Apply_Strength',1224,144,type='vec3'),
+            named_node('multiply','world','Tangent_To_World',1512,144,type='vec3',operandTypes={'a':'mat3','b':'vec3'}),
+            named_node('normalize','unit','Unit_Normal',1800,144,type='vec3'),
+            named_node('td_front_facing','facing','Front_Facing',1512,720),
+            named_node('multiply','back','Back_Normal',2088,432,type='vec3'),
+            named_node('if','surface','Surface_Normal',2376,144,type='vec3'),
+            {'id':'output','name':'Output','definitionUuid':FUNCTION_OUTPUT,'params':{},'ui':{'x':2664,'y':144}}],
+            'edges':[edge('input','rgb','value','color'),edge('rgb','center','a'),edge('center','decode','a'),
+                     edge('input','scale','x','strength'),edge('input','scale','y','strength'),
+                     edge('decode','scaled','a'),edge('scale','scaled','b'),
+                     edge('input','world','a','tangentToWorld'),edge('scaled','world','b'),edge('world','unit','value'),
+                     edge('input','facing','position','position'),edge('input','facing','normal','normal'),
+                     edge('unit','back','a'),edge('facing','surface','condition'),
+                     edge('unit','surface','true'),edge('back','surface','false'),edge('surface','output','normal')]}}
+    for n in normal_map['graph']['nodes']:
+        if n['id'] in ('center','decode','scale','back'):
+            n['inputValues']={'center':{'b':[.5]*3},'decode':{'b':[2]*3},'scale':{'z':1},'back':{'b':[-1]*3}}[n['id']]
+    normal_map['source']={'id':'sgrape.library.normal_map','version':digest(normal_map)}
+    result = [fn]+filters+[color_multiply,normal_map]
     if with_browser:
         # Browser-only projection: default library snapshots and versions stay intact.
         for f in result:
-            f['browser'] = {'category':'color','source':'editor','aliases':[],
+            f['browser'] = {'category':'texture' if f is normal_map else 'color','source':'editor',
+                            'aliases':['normal map','TBN','tangent','TDFrontFacing'] if f is normal_map else [],
                             'descriptionKey':f.get('descriptionKey','help.function')}
     return result
 

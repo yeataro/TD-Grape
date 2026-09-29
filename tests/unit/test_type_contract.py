@@ -8,7 +8,8 @@ def legacy_function_library():
  # The pinned 0.6.0 snapshots predate semantic names in bundled Subgraphs.
  # Restore only that intentional asset change; retain the historical math,
  # topology, IDs, defaults, layout and compiler fingerprints unchanged.
- library=c.function_library()
+ library=[f for f in c.function_library() if f['source']['id'] in (
+  'sgrape.library.tint','sgrape.library.invert','sgrape.library.contrast','sgrape.library.color_clamp')]
  for function in library:
   source=function.pop('source')
   for node in function['graph']['nodes']:node.pop('name',None)

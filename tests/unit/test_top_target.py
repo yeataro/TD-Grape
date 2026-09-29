@@ -28,6 +28,7 @@ class TopTargetTests(unittest.TestCase):
         with self.assertRaises(c.GraphError):c.compile_graph(g)
     def test_filter_library_on_top(self):
         for f in c.function_library():
+            if 'top' not in f.get('targets',['top','mat']):continue
             g=c.demo_graph(target='top');g['functions']=[f]
             g['stages']['pixel']['nodes'].append({'id':'filter','definitionUuid':c.CALL,'params':{'functionId':f['id']}})
             g['stages']['pixel']['edges']=[c.edge('texture','filter','color'),c.edge('filter','pixel','color','color')]

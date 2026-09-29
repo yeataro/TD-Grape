@@ -56,7 +56,7 @@ process.stdout.write(JSON.stringify(data.rows.map(r=>context.defaultInput(r.node
         p['edges'].pop();self.assertIn('0.8 / 0.4',c.compile_graph(g)['pixel'])
 
     def test_new_functions_have_preserved_alpha_and_valid_stages(self):
-        library=c.function_library()
+        library=[f for f in c.function_library() if f['source']['id'] in ('sgrape.library.tint','sgrape.library.invert','sgrape.library.contrast','sgrape.library.color_clamp')]
         self.assertEqual(len(library),4)
         for f in library[1:]:
             self.assertIn(c.edge('split','rgba','alpha','a'),f['graph']['edges'])

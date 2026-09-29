@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.255：內建庫新增 Color Multiply 與 Normal Map。Color Multiply 僅以 RGB 乘數調整 RGBA 的 RGB，保留 Alpha，提供 RGBA／RGB／A 三個輸出，預設乘數為白色。Normal Map 僅供 MAT Pixel，輸入取樣結果、Strength、Vertex 的 TBN／世界位置／幾何法線，沿用原貼圖範本的解碼、XY 強度、世界空間轉換、正規化及 TDFrontFacing 背面翻轉；Texture 2D、Sampler 與 Uniform 留在外部，不以微分補切線。兩者是可編輯的普通 Subgraph 快照，不自動替換現有圖或範本。五語 Help 與 Color／Texture 分類同步。另將縮小總覽文字不透明度改為 70%；依作者最後決定維持預設關閉，30% 門檻與 20% 下限不變。使用方式見[材質範本](../features/BASIC_MATERIAL_PRESETS.md)。
+
+30 項相關 Python 測試、4 組 Subgraph Chromium 操作、13 組縮小總覽檢查及 14 項 Editor launch 通過；新內建的接口、階段篩選、展開／本地化／Undo 與保存後編譯已驗證。TD 2025.32820 的 14 組獨立 GLSL 渲染對照，RGBA 最大差異皆為 0，涵蓋三種顏色輸出、HDR／零 Alpha、單位乘數、法線強度與背面。1519 五語 keys、1134 UI 引用、59 來源提示、分類投影與 diff／JS 檢查通過；截圖已目視，未實測 iOS。
+
+39 份來源同步，六份 Master current，無圖定義升級；Master 同步核對七份使用者 Shader、參數身分與原生位置保留。正式 TOE 保存 2702860 bytes，SHA256 2161e10b0add37b1a5d919585e601f4716d2329b86c64e560ef4910496c689c7；12 份登記狀態保留，私人助手排除。私人報告 reports/material-subgraphs-255/；未操作或重載使用者網頁，未推送。中文版 README 草稿及既有部署筆記維持未提交。
+
 2026-09-29 0.8.254：縮小總覽啟用時的縮放下限調為 20%，仍在嚴格低於 30% 時顯示，預設關閉。名稱保留左下對齊，以原 36 graph px 為基礎加入最低 10 螢幕 CSS px 的補償，包含 75–125% 介面縮放；所有一般節點字級一致。最多兩行，收合或高度不足時一行；僅在空白／合適大小寫斷點換行，無斷點直接省略，每行獨立 ellipsis，不再將 Maximum 拆成 Maximu／m。文字量測按渲染後卡片快取，縮放只更新名稱覆層；卡片、接孔、草稿及 Undo 不變。極矮或收合卡片保留原尺寸，單行文字可略高於上緣，必要時減少底部內距。移除 15% 選項，五語提示同步。
 
 13 組 Chromium 檢查通過，含明暗／75、100、125% UI／20、25、29.9% 畫布的 18 組字級與幾何組合、只調介面大小時的 10px 實測行高、名稱換行及不強制斷字、各縮放入口、草稿、Undo、唯讀與偏好重設；截圖已目視。1517 五語 keys、1132 UI 引用、59 來源提示及 JS／diff 檢查通過，未實測 iOS。39 份來源一致、六份 Master current，無圖定義升級；九份使用者 Shader 及正在編輯的模板保留。正式 TOE 保存 2972268 bytes，SHA256 bb0f06e4638e339d2a4cd479a1c27c268eed23b932267057d8b446d0450f1d05；12 份登記狀態保留，私人助手排除。私人報告 reports/low-zoom-254/；未操作或重載使用者網頁，未推送。
