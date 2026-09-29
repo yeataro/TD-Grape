@@ -4,6 +4,23 @@
 
 狀態分成：**未實作**（有明確缺口）、**部分完成**（已有功能但範圍不足）、**已知問題／待重現**、**待設計／候選**、**重構後／排除**。舊文件寫「尚未完成」不等於目前仍缺；測試通過也不等於所有場景完成。
 
+## 材質快捷子圖待辦（2026-09-29 補充，0.8.260）
+
+使用者確認將以下兩項列入待辦，具體接口仍待設計，尚未實作。目標是提供類似 Blender 的常用材質操作便利性。
+
+| 項目 | 用途與待決範圍 |
+| --- | --- |
+| **View Direction** | 封裝相機資訊、表面位置與方向正規化，供 Fresnel／Facing 等運算使用。建議約定世界空間中由表面朝觀看者的單位向量；Position／Camera 的輸入與預設行為、Vertex／Pixel 可用範圍待定。現有 Material 使用 `normalize(uTDMats[camera].camInverse[3].xyz - position)`；正交相機需另行核對，不能宣稱這段位置差算法已涵蓋。查閱目前公開 GLSL MAT 文件未找到直接回傳 View Direction 的專用函式。 |
+| **Mapping** | 整合座標平移、旋轉與縮放，貼圖取樣留在外部。2D／3D、旋轉角度單位與順序、旋轉中心，以及 Point／Texture／Vector／Normal 語意是否分開，實作前再確認。現有 TDTranslate、TDScale、TDRotateX／Y／Z、TDRotateOnAxis、TDRotateToVector、TDCreateRotMatrix 已有 Grape 節點，可作為組合基礎。 |
+
+同輪 Color Ramp 討論仍待定位：圖內編輯色標、位置與插值，或引用 TD Ramp TOP／Table DAT；需區分資料來源、GPU 傳遞方式與漸層求值。使用者提出陣列資料搭配一維求值函式，以及 Texture Buffer 的可能性，目前尚未選定後端或自訂參數呈現方式。
+
+自動 Normal 的平台前提另行討論：目前 TD 的 Vulkan 架構在 macOS 經 MoltenVK／Metal 執行，官方明確說明 macOS 所有 GPU 都不支援 Geometry Shader，因此不能把 Geometry Stage 當作 Windows／macOS 共用方案。Pixel 階段由變形後位置的微分重建面法線，與依網格鄰接關係重建平滑頂點法線是不同能力。後者可評估上游 SOP／Normal POP，但它們不會自動讀回之後 MAT Vertex Shader 裡的位移；目前僅記錄限制與候選，未選定自動法線實作。依據：[Vulkan 平台說明](https://derivative.ca/UserGuide/Vulkan)、[Normal POP](https://docs.derivative.ca/Normal_POP)。
+
+原生 PBR 參考核對：重新讀取先前已成功匯出／編譯的 TD 2025.32820 `displaceverts_1` 分支。Vertex 取 Height Map 並沿原法線改寫位置，送入 TDDeform；基底法線仍為 `normalize(TDDeformNorm(TDNormal()))`，TBN 亦由原法線／切線建立。啟用 Normal Map 時，Pixel 將法線圖解碼、套用 Bump Scale，經 TBN 轉為世界空間法線後用於光照。此位移分支沒有根據 Height Map 重建法線；TDDeformNorm 處理原生變形的法線轉換，不知道使用者剛做的高度位移。不能把原生位移視為已有自動法線重算功能。
+
+參考：[TD GLSL Matrix Functions](https://docs.derivative.ca/GLSL_Matrix_Functions)、[Write a GLSL MAT](https://docs.derivative.ca/Write_a_GLSL_MAT)、[Blender Mapping](https://docs.blender.org/manual/en/4.5/render/shader_nodes/vector/mapping.html)。
+
 ## 目前最直接的未完成工作
 
 | ID | 狀態 | 項目與界線 | 依據 |
