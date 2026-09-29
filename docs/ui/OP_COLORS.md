@@ -26,6 +26,10 @@ TDFam 實際新增 MAT／TOP 已驗證，正式元件與範本顏色一致；原
 
 ## 重新啟動與保存
 
+2026-09-29／0.8.258：五個 MAT 入口共用暖灰紫，TOP 保留藍紫。先前兩個新增 Material 範本回退為家族紫，是已安裝的選單色表未刷新；現在來源重新載入及 `prepare_masters()` 完成後，都會排入原有的有限註冊／配色重試，依當下 Master 清單重建色表，不另列固定範本名稱。不覆蓋已待處理的明確註冊請求，仍尊重 Install on Startup 與其他家族擁有者。
+
+TD 2025.32820 已核對六份範本色票、普通／hover callback、重排資料及未知項目回退；模擬缺少兩個 Material 的快取後，Master 同步會自動補齊。108 份選單樣式的其他欄位保持，來源刷新及 Master 同步各自核對現有 Shader 保留。本輪以 TD 資料與隔離 callback 驗證，未操作使用者的 OP Create 視窗。私人報告 `reports/menu-colors-258/`。
+
 乾淨 TD-Sgrape-v01-test.38.toe 保存於 2026-09-10T04:40:59.740588，內含 19 個來源 DAT。驗證另開相同已保存內容、額外帶一個唯讀啟動 probe 的工程：新程序自動恢復 TDFam 配色／服務，19 個來源 hash、正式 Shader 圖、revision、ID、GLSL、Uniform 值與模式一致。TOP 像素差 0；MAT 最大差 0.003921598（約一個 8-bit 色階）。兩個 Shader 的 authenticated state／shaders／preview 路由與新 UI 資源皆通過。原 port 被原程序佔用時，新程序選擇其他可用 port。
 
 驗證副本不含私人 helper、bridge 停用，驗證後自動結束；原 TD 程序及原遠端入口保留。乾淨 .38.toe 不含 probe。此為 v0.6.3 後的開發檢查點，舊 ZIP／TOX／tag 保持原封存內容，產品顯示版本暫仍為 0.6.3。

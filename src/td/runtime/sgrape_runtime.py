@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.257'
+PRODUCT_VERSION='0.8.258'
 
 MATERIAL_PRESETS={
     'phong':'Phong MAT Graph', 'pbr':'PBR MAT Graph',
@@ -604,6 +604,8 @@ def prepare_masters():
         master.currentPage='Grape '+kind.upper();master.showCustomOnly=True
     _owner.par.Version=PRODUCT_VERSION
     arrange_manager_parameters(_owner)
+    # The installed menu caches operator colors; include newly prepared Masters.
+    if not _family_pending:request_family_registration(force=False)
     return folder
 
 def ensure_mat_output(comp):
@@ -2136,7 +2138,8 @@ def start(owner,session=None):
         if not owner.fetch('sgrapeManagerId',None): owner.store('sgrapeManagerId',uuid.uuid4().hex)
         if not session or not session.get('rebind'):
             shaders()
-            request_family_registration(force=False)
+        # Refresh the cached menu palette on source rebinds as well as cold starts.
+        if not _family_pending:request_family_registration(force=False)
     else:
         desired=owner.fetch('targetName','sgrape_material')
         existing=owner.parent().op(desired)
