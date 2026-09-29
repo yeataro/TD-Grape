@@ -1,49 +1,52 @@
 # TD-Grape
 
-TouchDesigner 的 GLSL MAT／TOP 節點編輯器。
+[English](README.md)
 
-**版本：0.8.163 · 開發預覽 · 尚未進入 Alpha**
+TouchDesigner 的 GLSL TOP／MAT 節點式 Shader 編輯器。
 
-這份倉庫保存了一次節點式 Shader 編輯器的開發探索，包含程式碼、介面、規格與設計討論。
+透過瀏覽器編輯節點圖、產生 GLSL，並在 TouchDesigner 中預覽結果與調整參數，用於影像處理與材質製作。
 
-目前停止沿原架構推進，保留既有成果供預覽與參考。它也可以視為下一個開源專案的探索草稿，留下已經完成的部分、遇到的問題，以及接下來準備重新整理的方向。
+專案也探索如何讓節點定義更容易被理解、維護與擴充。程式碼、介面、規格與設計討論一併保留，作為後續整理的基礎。
 
-> 本版本仍有未完成項目與驗證缺口，詳見[已知限制與未完成功能](#已知限制與未完成功能)。
+![TD-Grape 節點式 Shader 編輯介面](https://github.com/user-attachments/assets/95fcf86b-d066-4cdf-8b25-ea2c9e91bf74)
+
+## 專案狀態
+
+**功能預覽版開發中，尚未進入 Alpha。**
+
+目前先以完成功能預覽版、整理操作流程與驗證既有功能為主。這個階段完成後，預期將進行較大規模的架構重構，重新整理編輯器、產碼器與宿主整合之間的分工。
+
+重構範圍與時程尚未確定，操作介面與圖資料格式仍可能調整。版本變更及升級注意事項會在 [Releases](https://github.com/yeataro/TD-Grape/releases) 說明；詳細開發狀態與設計紀錄請由[文件索引](docs/README.md)進入。
+
+部分功能與跨平台驗證仍未完成。
+
+## Shader 的保存與相容性
+
+TD-Grape 產出的是靜態 GLSL 程式碼。已產生並套用的 Shader，只要保留執行所需的 TD 節點、貼圖與參數綁定，即使不再使用 TD-Grape 編輯器，或移除了管理主節點，仍可繼續運作。
+
+此項承諾限於已驗證的 TouchDesigner 版本範圍；跨版本升級可能需要調整。圖的編輯與重新產碼仍需要 TD-Grape。
 
 ## 安裝與開啟
 
 1. 安裝並開啟 TouchDesigner。
-2. 前往本倉庫的 [Releases](https://github.com/yeataro/TD-Grape/releases)，從該版本的 **Assets** 下載 `.tox` 元件。
+2. 前往 [Releases](https://github.com/yeataro/TD-Grape/releases)，從該版本的 **Assets** 下載 `.tox` 元件。
 3. 將 `.tox` 拖入 TouchDesigner 的 **Network Editor（節點網路畫布）**，加入 TD-Grape 管理元件。
 4. 在 Network Editor 按 **Tab**，開啟 **OP Create Dialog**。
-5. 在 **Grape → Shaders** 中，選擇用於紋理／影像處理的 **Grape TOP**，或用於材質的 **Grape MAT**，並放置到網路中。
-6. 選取剛建立的 operator，在它的 **Grape TOP** 或 **Grape MAT** 參數頁按下 **Open Editor**，開啟瀏覽器編輯介面。
 
-## 為什麼公開這份倉庫
+   ![TouchDesigner 的 Grape 元件建立選單](https://github.com/user-attachments/assets/b837b4f6-215b-4fee-a301-e3b730b77243)
 
-公開這份倉庫，是為了讓有興趣的人能查看目前的成果，也了解這個專案如何走到現在，以及為什麼決定轉向。
+5. 在 **Grape** 分類中，建立用於紋理／影像處理的 **Grape TOP**，或用於材質的 **Grape MAT**。
+6. 選取剛建立的元件，在其參數頁按下 **Open Editor**，開啟瀏覽器編輯介面。
 
-這不是穩定版本的發布，也不是對所有既有設計的認可。程式碼、介面與討論紀錄一併保留，作為這個階段的預覽與紀錄。
+   ![從 Grape 元件參數頁開啟瀏覽器編輯器](https://github.com/user-attachments/assets/2a47ddcd-9e2f-407a-9d67-9403452cb62c)
 
-## 為什麼停止沿用原架構
+## 開發文件
 
-專案原本希望讓人類主要透過維護節點定義表，描述節點的型別、行為與產碼內容；編輯器與產碼器則依照明確的責任邊界使用這些定義。
+- [文件索引](docs/README.md)
+- [開發說明](docs/development/DEVELOPMENT.md)
+- [測試說明](docs/development/TESTING.md)
 
-在 Codex 的實作過程中，架構大幅偏離了原規格的界定。部分節點行為與判斷分散在產碼器及前端程式中，沒有完整呈現在節點定義裡。功能逐步完成，但人類要維護或擴充節點時，仍需要理解並修改多處程式。
-
-這沒有達到專案最重要的目標：
-
-**讓人類能理解、維護與擴充節點定義。**
-
-因此，這個版本不再作為後續開發的架構基礎。接下來會重新釐清節點定義、產碼器、編輯器與宿主整合之間的責任，從最小結構開始驗證，再逐步擴充。
-
-## 下一個專案
-
-下一個開源專案暫稱 **GrapeL（未定）**，名稱與具體結構都尚未定案。
-
-新的起點會以人類可維護的節點定義，以及用來編輯這些定義的工具為中心。先確認資料如何描述節點、各部分如何使用資料，再開始建立最小實現。
-
-未來可能在同一個專案中發展其他能力方向，但目前仍以釐清基本結構與責任邊界為主。
+文件中的歷史提案與討論保留作為參考，不代表已實作功能或確定的交付計畫。
 
 ## 創作與協作
 
@@ -51,70 +54,10 @@ TouchDesigner 的 GLSL MAT／TOP 節點編輯器。
 - **初始規格書協作：** Fable 5.1
 - **程式實作與後續修訂：** OpenAI Codex（GPT-6 Astra）與 [@yeataro](https://github.com/yeataro) 協作完成。
 
-這份署名記錄人類與 AI 工具各自參與的工作，也保留實作偏離原定架構的事實。
+這份署名記錄人類與 AI 工具各自參與的工作。
 
 ## 第三方致謝
 
 本專案使用 [TDFam](https://github.com/dotsimulate/TDFam)，由 **Lyell Hintz（[dotsimulate](https://dotsimulate.com)）**、**Dan Molnar（[Function Store](https://www.functionstore.xyz/link-in-bio)）** 及其他貢獻者共同開發。感謝他們提供的開源基礎。
 
 TDFam 提供 TouchDesigner 自訂 operator family 的相關基礎能力，採用 **Apache-2.0** 授權。相關資訊見隨附的 [LICENSE](src/third_party/TDFam/LICENSE) 與 [NOTICE](src/third_party/TDFam/NOTICE)。
-
-## 階段與修訂紀錄
-
-| 階段／版本 | 說明 |
-| --- | --- |
-| 初始規格 | 建立節點定義主導、責任分明的架構目標。 |
-| 實作與功能修訂 | Codex 與 @yeataro 協作，逐步實作並檢視功能。 |
-| 0.8.163 | 目前保留的開發版本，尚未進入 Alpha。 |
-| 2026-09-22 | 重新整理架構目標與責任邊界，規劃下一個專案的起點。 |
-
-較詳細的版本紀錄見[開發狀態](docs/development/STATUS.md)。既有文件中的開發計畫保留為歷史紀錄，不代表目前仍承諾執行的路線圖。
-
-## 開發與測試
-
-若要查看或修改原始碼，請參閱：
-
-- [開發說明](docs/development/DEVELOPMENT.md)
-- [測試說明](docs/development/TESTING.md)
-- [文件索引](docs/README.md)
-
-## 已知限制與未完成功能
-
-以下依 `0.8.163` 的紀錄整理，描述目前版本的限制與未完成範圍，不代表後續修復排程，也不直接成為下一個專案的功能承諾。
-
-### 預覽與存檔風險
-
-MAT 套用 Shader 時，目前會暫時鎖定預覽擷取。若在這段期間保存 `.toe`，暫態是否會被一併保存、重開後是否能正常恢復，仍待驗證。
-
-這項風險尚未排除；先前通過的預覽當機回歸，不代表已驗證此存檔情境。
-
-### 平台驗證範圍
-
-- **Windows：** 目前主要的開發與測試環境。
-- **macOS／Safari：** 尚未完成實機驗證，包含啟動、快捷鍵、瀏覽器行為與 TouchDesigner 整合。瀏覽器中的平台模擬不能取代實機驗證。
-- **iOS／iPadOS：** 已做部分觸控與接線測試，但虛擬鍵盤、焦點、頁面縮放與數值階梯操作仍未完整驗證。
-
-### 已回報的介面問題
-
-- 從畫布開始右鍵框選，並在 Slider 上放開時，可能誤開數值預設選單。
-- Array Parameter 的長度輸入，在 Esc 取消與失焦處理上，尚未與節點數值輸入的行為一致。
-- 明亮模式仍有部分來源卡片、Expression 與備註區使用深色底或對比不足的情況，尚未完成整體檢查。
-
-### 尚待定位與補驗的回報
-
-- 偶發停頓與預覽調整尺寸的延遲，原因尚未完成量測與定位。
-- 曾回報 HTTP 狀態顯示 TD 無回應，但 Uniform／WebSocket 仍可使用；重現條件與狀態判定仍待釐清。
-- MAT 缺少 attribute、不同幾何與 Instancing 組合的情境，仍需補驗。
-
-### 未完成的功能與整理
-
-- **內建節點覆蓋：** GLSL 與 TD原生函數的節點及多載尚未補齊。
-- **MAT 來源與 attribute：** 跨階段資料、Instancing 與非 2D 紋理的完整工作流程尚未補齊；讀取既有 TD 資料不代表已具備設定與管理這些資料的能力。
-- **Help：** Built-in Source 共用說明尚未完整對應到目前選取來源的基本說明與官方章節。
-- **插入節點：** 在既有連線中插入節點，並同時檢查兩側相容性的功能尚未實作。
-- **Group 自動排列：** 目前以節點與連線排列後再包覆 Group，尚未將 Group 邊界納入排列限制。
-- **自訂參數：** 已有相關功能，但工作流程與原先規劃的重整尚未完成。
-- **命名與搜尋介面：** Inputs 改稱 Sources／來源，以及 TD 名稱與共同名稱切換的位置整理尚未完成；目前的切換控制容易被誤認為搜尋選項。
-- **TD Pane：** 尚未提供內嵌於 TD Pane 的編輯器，目前使用外部瀏覽器。
-
-詳細盤點見[待辦總整理](docs/discussions/TODO_AUDIT_2026-09-21.md)與 [Alpha 範圍紀錄](docs/discussions/ALPHA_SCOPE_2026-09-21.md)。
