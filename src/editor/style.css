@@ -116,18 +116,28 @@ body{zoom:var(--ui-scale)}
 :where([data-category="output"]){--category-bg:var(--node-output-bg);--category-fg:var(--node-output-fg)}
 .node{border-radius:var(--node-radius)}
 .node-title{background:var(--category-bg);color:var(--category-fg)}
+:root{--type-matrix:#a1adb7;--type-struct-1:#bc9c85;--type-struct-2:#b690ac;--type-struct-3:#949fc4;--type-struct-4:#83b4a7;--type-struct-gradient:linear-gradient(135deg,var(--type-struct-1),var(--type-struct-2) 33%,var(--type-struct-3) 67%,var(--type-struct-4))}
+:root[data-ui-theme="light"]{--type-matrix:#5d6b78;--type-struct-1:#806653;--type-struct-2:#815d78;--type-struct-3:#5d6688;--type-struct-4:#507b6e}
+[data-type-color]{--type-color:var(--type-float);--type-paint:var(--type-color)}
+[data-type-color="vec2"]{--type-color:var(--type-vec2)}
+[data-type-color="vec3"]{--type-color:var(--type-vec3)}
+[data-type-color="vec4"]{--type-color:var(--type-vec4)}
+[data-type-color="matrix"]{--type-color:var(--type-matrix)}
+[data-type-color="sampler"]{--type-color:var(--type-sampler,#c2a47a)}
+[data-type-color="struct"]{--type-color:var(--ui-tone-port-label);--struct-socket-fill:var(--ui-tone-port-fill)}
+:root[data-ui-theme="light"] .port-row[data-type-color="struct"],.node-router .port-row[data-type-color="struct"]{--struct-socket-fill:var(--node-body,var(--ui-tone-node))}
 .port-row{--socket:var(--type-float)}
+.port-row[data-type-color]{--socket:var(--type-color)}
 .port-row .port-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .port-row small{flex-shrink:0}.port-row.output{padding-left:13px}
-/* Vector hues describe dimension across float, integer and boolean families. */
-.port-row[data-type$="vec2"]{--socket:var(--type-vec2)}
-.port-row[data-type$="vec3"]{--socket:var(--type-vec3)}
-.port-row[data-type$="vec4"]{--socket:var(--type-vec4)}
+/* Nodes, Source cards, Parameter proxies and wires share the resolved type palette. */
 .port{border-color:var(--socket)}.output .port{background:var(--socket)}.port-row small{color:var(--socket)}
-:is(#wires path,.link-port-arrow):is([data-type="float"],[data-type="int"],[data-type="uint"],[data-type="bool"]){stroke:var(--type-float)}
-:is(#wires path,.link-port-arrow)[data-type$="vec2"]{stroke:var(--type-vec2)}
-:is(#wires path,.link-port-arrow)[data-type$="vec3"]{stroke:var(--type-vec3)}
-:is(#wires path,.link-port-arrow)[data-type$="vec4"]{stroke:var(--type-vec4)}
+#wires path{stroke:var(--type-float)}
+:is(#wires path,.link-port-arrow)[data-type-color]{stroke:var(--type-paint)}
+/* Struct text stays neutral. Gradient paint belongs only to sockets and connections. */
+:root .port-row[data-type-color="struct"] .port:not(.wire-target){border-color:transparent;background:var(--type-struct-gradient)}
+:root .port-row[data-type-color="struct"].input .port:not(.router-solid):not(.wire-target),
+:root .port-row[data-type-color="struct"] .router-hollow:not(.wire-target){background:linear-gradient(var(--struct-socket-fill),var(--struct-socket-fill)) padding-box,var(--type-struct-gradient) border-box}
 /* RGBA hints affect presentation, not GLSL types or downstream inference. */
 :where([data-color-component="r"],[data-vector-component="0"]){--component-color:#cc989d}
 :where([data-color-component="g"],[data-vector-component="1"]){--component-color:#9bc4a5}
@@ -569,10 +579,7 @@ header .brand small{min-width:0}.brand-tagline{overflow:hidden;text-overflow:ell
 @media(pointer:coarse){.color-picker-row>.color-swatch{height:44px;width:72px}}
 /* A wire retains its source color; the target socket retains its required type. */
 .port-type.has-conversion{display:inline-flex;gap:4px;align-items:center;white-space:nowrap}
-.port-type :is([data-source-type="float"],[data-source-type="int"],[data-source-type="uint"],[data-source-type="bool"]){color:var(--type-float)}
-.port-type [data-source-type$="vec2"]{color:var(--type-vec2)}
-.port-type [data-source-type$="vec3"]{color:var(--type-vec3)}
-.port-type [data-source-type$="vec4"]{color:var(--type-vec4)}
+.port-type [data-type-color]{color:var(--type-color)}
 .port-type .conversion-arrow{color:var(--muted)}
 .port-type[data-conversion="invalid"]{text-decoration:underline wavy #ef8d8d}
 .conversion-hint{font-size:11px;margin:6px 0}
@@ -1953,7 +1960,6 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 .matrix-inherited-value{display:block;min-width:0;color:var(--muted);font-size:11px;text-align:center;width:100%}
 .matrix-component-override{display:block;min-width:0;width:100%;color:var(--ui-tone-port-label);font-size:11px;text-align:center;white-space:nowrap}
 .matrix-ports>.port-row.output:last-child{margin-top:4px}
-.node-matrix .port-row[data-type*="mat"]{--socket:var(--type-vec4)}
 @media(pointer:coarse){.matrix-column-toggle{min-height:32px}.matrix-ports .matrix-column-row,.matrix-component-row{min-height:36px}}
 .node-composite-summary{padding:8px 16px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .node-body-controls [data-struct-field]{width:100%;min-width:0}
@@ -2253,3 +2259,7 @@ body.graph-focused .graph-workspace{display:flex;flex:1;width:100%;min-width:0;m
 #canvas.graph-overview .node:not(.node-router):not([data-category="annotation"]) :is(.port,.link-port-navigation,.link-port-navigation *,.node-overview-label,.node-overview-label *){visibility:visible}
 #canvas.graph-overview .node-overview-label{display:flex}
 #canvaszoommenu [hidden]{display:none}
+
+/* Source names navigate without taking the space or chrome of the Disconnect button. */
+#inspector .connection-row button.connection-source{flex:1;min-width:0;min-height:24px;padding:0;border:0;border-radius:2px;background:transparent;box-shadow:none;text-align:left;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#inspector .connection-row button.connection-source:is(:hover,:focus-visible){text-decoration:underline;text-underline-offset:2px}

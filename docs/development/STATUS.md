@@ -1,5 +1,13 @@
 # 開發狀態
 
+2026-09-30 0.8.266：型別配色採作者確認的 B 方案。內建／自訂結構的接孔與 Wire 使用低彩度漸層，型別文字保留中性色；矩陣改為略提亮的冷石板灰，陣列繼承元素型別色。一般節點、Router、Sources、Parameter 快捷接孔、Link 箭頭及拉線預覽共用實際型別分類；Link 灰虛線與選取／hover 回饋保留。明亮模式結構接孔中央沿用一般輸入底色。規則見[配色說明](../ui/COLOR_AND_LABELS.md)。
+
+Parameter 已連接輸入的來源名稱可點擊，選取並 Frame 來源節點；普通輸入與矩陣分量、停駐／浮動、唯讀及鍵盤操作皆適用。沿用既有端點導航，Disconnect 保持獨立，圖與 Undo 不變；過期圖／接線按鈕不導航。Layout 遺漏浮動面板狀態依作者指示留待下一輪，[待辦筆記](../discussions/UX_BACKLOG.md)已記錄，本輪未修改 Layout。
+
+44 組 Chromium 檢查通過：7 組新型別／導航、9 組 Parameter 快捷接孔、6 組 Router／Link、17 組 Link 導航及 5 組接線方向鍵回歸。另以真實 uTDMats → Array[i] → Field → Transpose 圖核對明暗外觀、Router／浮動接孔及按鈕間距，430px／78% 介面觸控來源導航通過；截圖已目視。14 項 Editor launch 與 JS／diff 檢查通過。未實測 iPad／Safari 或 macOS；私人紀錄 `reports/type-palette-navigation-266/`。
+
+39 份來源核對、六份更新，九份 Shader 狀態保留；六份 Master 同步無圖升級，三份使用者 Shader、原生身分與位置保留。正式 TOE 保存 2347128 bytes，SHA256 `8a05aae309c89015801e9b3337c086d94ce4907a51a4ee5bc0c91143ca2e51fa`，私人助手排除。未重新整理使用者網頁，未推送。
+
 2026-09-30 0.8.265：OP Parameter 頁首保留完整「Customize Parameters／編輯自訂參數」名稱，按鈕依翻譯自然換行、限制寬度並隨內容增加高度；中日文字元間可換行，長單字有斷行保護，不維護逐語言斷行。OP 名稱單行省略並提供完整名稱提示，路徑可換行；面板不足以左右排列時，按鈕移到名稱下方。沿用既有按鈕樣式與自訂參數編輯功能。
 
 Chromium 五語、停駐／浮動、六種面板寬度與三種介面縮放共 180 組檢查通過，涵蓋可見面板邊界、名稱與按鈕不重疊、完整按鈕文字不裁切、字級不縮小及窄版換列；按鈕仍開啟既有編輯器，圖與歷史不變。截圖已目視；未實測 iPad／Safari 或 macOS。私人報告 `reports/custom-header-265/`。

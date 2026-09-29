@@ -194,6 +194,33 @@ function typeDescriptor(type,document=activeTypeDocument(),seen=new Set()){
   return definition?{...definition,shape:'struct',family:'struct',components:0}:null;
 }
 const isCompositeType=(type,document=activeTypeDocument())=>['array','struct'].includes(typeDescriptor(type,document)?.shape);
+// Presentation follows the actual type, including array elements and named structs.
+function typeColorKind(type){
+  let descriptor=typeDescriptor(type);
+  while(descriptor?.shape==='array'){type=descriptor.elementType;descriptor=typeDescriptor(type);}
+  if(descriptor?.shape==='struct')return 'struct';
+  if(descriptor?.shape==='matrix')return 'matrix';
+  if(isResourceType(type))return 'sampler';
+  return descriptor?.components>1?'vec'+descriptor.components:'scalar';
+}
+function applyTypeColorHint(element,type){element.dataset.typeColor=typeColorKind(type);}
+let typeGradientId=0;
+function appendTypeGradient(svg,coordinates=null){
+  let defs=svg.querySelector(':scope > defs');
+  if(!defs){defs=document.createElementNS(svg.namespaceURI,'defs');svg.prepend(defs);}
+  const gradient=document.createElementNS(svg.namespaceURI,'linearGradient');gradient.id='type-gradient-'+(++typeGradientId);
+  for(const [key,value]of Object.entries(coordinates||{x1:'0%',y1:'0%',x2:'100%',y2:'100%'}))gradient.setAttribute(key,String(value));
+  for(const [index,offset]of ['0%','33%','67%','100%'].entries()){
+    const stop=document.createElementNS(svg.namespaceURI,'stop');stop.setAttribute('offset',offset);stop.style.stopColor=`var(--type-struct-${index+1})`;gradient.append(stop);
+  }
+  defs.append(gradient);return gradient;
+}
+function applyWireTypePaint(svg,path,a,b){
+  if(path.dataset.typeColor!=='struct')return null;
+  // User-space coordinates also cover horizontal/vertical wires with a zero-size bounding box.
+  const gradient=appendTypeGradient(svg,{gradientUnits:'userSpaceOnUse',x1:a.x,y1:a.y,x2:b.x===a.x&&b.y===a.y?b.x+1:b.x,y2:b.y});
+  path.style.setProperty('--type-paint',`url(#${gradient.id})`);return gradient;
+}
 const hasValueEditor=type=>valueTypes().includes(type);
 function arrayLengthDeclaration(length,document=activeTypeDocument()){
   return typeof length==='string'&&length.startsWith('sg_len_')?(document?.declarations||[]).find(d=>d.id===length.slice(7)&&['constant','spec_constant'].includes(d.kind)&&['int','uint'].includes(d.type)):typeof length==='string'&&length.startsWith('sg_extent_')?GraphArrayLengths.find(document||{},length):null;
@@ -1127,7 +1154,8 @@ function portTypeCaption(n,kind,name){
   if(info.source&&info.source!==info.target){
     caption.classList.add('has-conversion');caption.dataset.conversion=info.conversion||'invalid';
     caption.title=t(info.conversion==='splat'?'type.splat':info.conversion==='cast'?'type.cast':'type.incompatible').replace('{source}',info.source).replace('{target}',info.target);
-    caption.replaceChildren(el('span',{'data-source-type':info.source},info.source),el('span',{class:'conversion-arrow','aria-hidden':'true'},'→'),document.createTextNode(info.target));
+    const source=el('span',{'data-source-type':info.source},displayType(info.source));applyTypeColorHint(source,info.source);
+    caption.replaceChildren(source,el('span',{class:'conversion-arrow','aria-hidden':'true'},'→'),document.createTextNode(displayType(info.target)));
   }
   return caption;
 }
@@ -1157,6 +1185,7 @@ function portColorComponent(n,kind,port){
   return null;
 }
 function applyPortColorHint(element,n,kind,port){
+  applyTypeColorHint(element,ports(n,kind)[port]);
   const component=portColorComponent(n,kind,port);
   if(component)element.dataset.colorComponent=component;
   const d=definition(n),label=vectorPortLabel(n,kind,port);
@@ -1479,7 +1508,8 @@ function drawWireDrag(svg){
   document.querySelector('.parameter-wire-preview')?.remove();
   if(!wireDrag)return;const n=current().nodes.find(n=>n.id===wireDrag.node),r=wireDrag.anchor?.getBoundingClientRect(),p=r?graphPoint(r.left+r.width/2,r.top+r.height/2):n&&point(n,wireDrag.port,wireDrag.kind);if(!p)return;
   const a=wireDrag.kind==='outputs'?p:wireDrag.q,b=wireDrag.kind==='outputs'?wireDrag.q:p,dx=Math.max(60,Math.abs(a.x-b.x)*.5),path=document.createElementNS('http://www.w3.org/2000/svg','path');
-  path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);if(wireDrag.kind==='outputs')applyPortColorHint(path,n,'outputs',wireDrag.port);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
+  path.setAttribute('d',`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`);path.setAttribute('data-type',wireDrag.type);applyTypeColorHint(path,wireDrag.type);if(wireDrag.kind==='outputs')applyPortColorHint(path,n,'outputs',wireDrag.port);path.classList.add('wire-preview');path.classList.toggle('ready',wireDrag.ready);svg.append(path);
+  const gradient=applyWireTypePaint(svg,path,a,b);
   if(wireDrag.panelProxy){
     // Only the in-progress preview rises above the panel. Saved edges always
     // use point() on the real node, never this temporary screen-space surface.
@@ -1487,6 +1517,7 @@ function drawWireDrag(svg){
     overlay.classList.add('parameter-wire-preview');overlay.setAttribute('aria-hidden','true');$('.graph-workspace').append(overlay);
     const bounds=overlay.getBoundingClientRect(),basis=graphCoordinateBasis(),zoom=uiScaleFactor();
     path.style.stroke=stroke;path.style.strokeWidth=width;path.style.strokeDasharray=dashes;
+    if(gradient){const defs=document.createElementNS(svg.namespaceURI,'defs');defs.append(gradient);overlay.append(defs);}
     path.setAttribute('transform',`matrix(${basis.width/zoom} 0 0 ${basis.height/zoom} ${(basis.left-bounds.left)/zoom} ${(basis.top-bounds.top)/zoom})`);overlay.append(path);
   }
 }
@@ -1774,6 +1805,7 @@ function renderRouterCard(n,cards){
   card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';card.style.width=(layout.width+16)+'px';card.style.height=(layout.height+16)+'px';
   card.dataset.routerLayers=layout.layers;card.dataset.dragSurface='body';
   const input=el('div',{class:'port-row input router-input','data-type':type}),output=el('div',{class:'port-row output router-output','data-type':type});
+  for(const row of [input,output])applyTypeColorHint(row,type);
   input.append(el('span',{'data-kind':'inputs','data-port':'value','aria-hidden':'true'}));
   let suppressClick=false;
   const handle=el('button',{type:'button',class:'router-drag-handle',title:t('router.move'),'aria-label':t('router.move')},nodeDisplayName(n));
@@ -2721,7 +2753,6 @@ function openLinkTargets(location,x,y){
   };
   document.body.append(menu);graphEditMenu=menu;const z=uiScaleFactor();menu.style.maxHeight=Math.max(0,innerHeight/z-8)+'px';menu.style.left=Math.max(4,Math.min(x/z,innerWidth/z-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y/z,innerHeight/z-menu.offsetHeight-4))+'px';menu.querySelector('button')?.focus();
 }
-let linkPortGradientId=0;
 function refreshLinkPortHover(){
   // Match edge objects, not array indices or node IDs: an output can fan out,
   // and collapsed buttons can represent several ports. Ordinary Wires stay unchanged.
@@ -2753,18 +2784,12 @@ function refreshLinkPortButtons(){
     if(owner?.definitionUuid==='sgrape.builtin.router'&&kind==='outputs')button.style.top=routerLayout(owner).linkY+'px';
     // Only the Link ports represented by this button contribute; ordinary Wires and unused ports do not.
     const linkedTypes=new Set(edges.map(edge=>types[edge[side][1]]||'?')),mixed=aggregate&&linkedTypes.size>1;
-    const icon=button.querySelector('svg');icon.dataset.type=aggregate?([...linkedTypes][0]||''):row.dataset.type||'';
+    const icon=button.querySelector('svg');icon.dataset.type=aggregate?([...linkedTypes][0]||''):row.dataset.type||'';applyTypeColorHint(icon,icon.dataset.type);
     icon.classList.toggle('mixed-link-types',mixed);
-    if(mixed){
+    if(mixed||icon.dataset.typeColor==='struct'){
       let gradient=icon.querySelector('linearGradient');
       if(!gradient){
-        const defs=document.createElementNS(icon.namespaceURI,'defs');gradient=document.createElementNS(icon.namespaceURI,'linearGradient');
-        gradient.id='link-port-gradient-'+(++linkPortGradientId);gradient.setAttribute('gradientUnits','userSpaceOnUse');
-        for(const [key,value]of Object.entries({x1:2,y1:3,x2:13,y2:13}))gradient.setAttribute(key,String(value));
-        for(const [offset,color]of [['0%','#bc9c85'],['33%','#b690ac'],['67%','#949fc4'],['100%','#83b4a7']]){
-          const stop=document.createElementNS(icon.namespaceURI,'stop');stop.setAttribute('offset',offset);stop.setAttribute('stop-color',color);gradient.append(stop);
-        }
-        defs.append(gradient);icon.prepend(defs);
+        gradient=appendTypeGradient(icon,{gradientUnits:'userSpaceOnUse',x1:2,y1:3,x2:13,y2:13});
       }
       icon.style.stroke='url(#'+gradient.id+')';
     }else icon.style.removeProperty('stroke');

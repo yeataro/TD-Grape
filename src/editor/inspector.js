@@ -1431,6 +1431,17 @@ function matrixValueInput(n,column,row,{onNode=true,copy='compact'}={}){
   if(!onNode){delete entry.dataset.inlineNode;delete entry.dataset.inlinePort;}
   applyComponentColorHint(entry,row,labels==='RGBA');return entry;
 }
+function parameterConnectionSource(connection,label){
+  const owner=graph,data=current(),endpoints=JSON.stringify([connection.from,connection.to]);
+  const button=el('button',{type:'button',class:'connection-source',title:t('wire.selectSource')+' · '+label,'aria-label':t('wire.selectSource')+' · '+label},label);
+  button.onpointerdown=button.ondblclick=e=>e.stopPropagation();
+  button.onclick=e=>{
+    e.stopPropagation();
+    if(!button.isConnected||graph!==owner||current()!==data||JSON.stringify([connection.from,connection.to])!==endpoints)return;
+    selectEdgeEndpoints([connection],'from',true);
+  };
+  return button;
+}
 function matrixInspector(box,n,d){
   const shape=typeContract?.types?.[n.params.type];if(!shape||!isMatrixOperation(d))return;
   if(!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
@@ -1443,7 +1454,7 @@ function matrixInspector(box,n,d){
     const links=current().edges.filter(e=>e.to[0]===n.id&&(e.to[1]===key||e.to[1].startsWith(key)&&e.to[1].length===3));
     for(const connection of links){
       const peer=current().nodes.find(other=>other.id===connection.from[0]),line=el('div',{class:'connection-row'}),label=portLabel(n,'inputs',connection.to[1]);
-      line.append(el('span',{class:'connection-source'},label+' ← '+nodeDisplayName(peer)+' · '+portLabel(peer,'outputs',connection.from[1])));
+      line.append(parameterConnectionSource(connection,label+' ← '+nodeDisplayName(peer)+' · '+portLabel(peer,'outputs',connection.from[1])));
       const disconnect=el('button',{'aria-label':t('wire.disconnect')+label},t('wire.disconnectShort'));disconnect.disabled=readonly;disconnect.onclick=()=>change(()=>current().edges=current().edges.filter(e=>e!==connection));line.append(disconnect);row.append(line);
     }
     box.append(row);
@@ -1636,7 +1647,7 @@ function renderInspector(){
       if(connection){
         const source=current().nodes.find(other=>other.id===connection.from[0]),connectionRow=el('div',{class:'connection-row'});
         const sourceName=nodeDisplayName(source),outputName=portLabel(source,'outputs',connection.from[1]),sourceLabel=sourceName===outputName?sourceName:sourceName+' · '+outputName;
-        const origin=el('span',{class:'connection-source',title:sourceLabel},sourceLabel);
+        const origin=parameterConnectionSource(connection,sourceLabel);
         const disconnect=el('button',{'aria-label':t('wire.disconnect')+portLabel(n,'inputs',port)},t('wire.disconnectShort'));disconnect.disabled=readonly;
         disconnect.onclick=()=>change(()=>current().edges=current().edges.filter(e=>e!==connection));connectionRow.append(origin,disconnect);section.append(connectionRow);
       }else if(['texture','texture_sample'].includes(d.key)&&port==='uv'&&value!==null){
@@ -3135,6 +3146,7 @@ function sourceCard(decl,preset,issue,row,conflict=false){
           const outputs=safeConcretePorts(graph,node,currentFunction()).outputs,list=el('div',{class:'ports source-card-outputs'});
           for(const [name,type]of Object.entries(outputs)){
             const output=el('div',{class:'port-row output','data-type':type}),socket=el('button',{type:'button',class:'port','aria-label':t('sources.reference')+' '+label,title:t('inputs.dragReference')});
+            applyTypeColorHint(output,type);
             socket.dataset.sourceOutput=decl.id;socket.disabled=editorMutationBlocked()||!!decl.sourceMissing||conflict||decl.kind==='attribute'&&stage!=='vertex';
             installCanvasItemDrag(socket,()=>preset?commonPresetLabel(preset):decl.name,add,()=>add(),id);
             output.append(socket,el('span',{class:'port-label'},portLabel(node,'outputs',name)),el('small',{class:'port-type'},displayType(type)));list.append(output);

@@ -508,6 +508,7 @@ function wires(){
     if(link)path.classList.add('wire-link');
     hit.setAttribute('d',path.getAttribute('d'));hit.classList.add('wire-hit');hit.setAttribute('aria-hidden','true');hit.wirePaintPath=path;
     path.dataset.from=edge.from.join(':');path.dataset.to=edge.to.join(':');path.setAttribute('data-type',ports(a,'outputs')[edge.from[1]]||'');applyPortColorHint(path,a,'outputs',edge.from[1]);
+    if(!link)applyWireTypePaint(svg,path,p,q);
     const fromType=ports(a,'outputs')[edge.from[1]],toType=ports(b,'inputs')[edge.to[1]];
     if(!fromType||!toType||!vectorConnectionExact(definition(b),fromType,toType)){path.classList.add('invalid');path.setAttribute('stroke-dasharray','5 4');}
     path.edgeSelectionItem=edge;if(selectedEdges.has(edge))path.classList.add('selected');

@@ -1,5 +1,17 @@
 # Color RGBA and node labels
 
+## Composite type paint (0.8.266)
+
+Socket, Wire, temporary Wire and Link navigation-arrow paint follows the actual GLSL type. Arrays inherit their element type's palette, including arrays of matrices or structs. Integer/double vectors use the corresponding vector-size colors; scalar and unknown types fall back to neutral scalar paint. Resource types share the sampler palette. Existing component hints and selected/hover/error feedback keep their priority.
+
+Matrices use cool slate gray: `#A1ADB7` in Dark mode and `#5D6B78` in Light mode. Built-in and user-defined structs use a muted four-stop gradient on sockets and Wires, with plain neutral type text. Native `TDMatrix` is a struct; its `mat4` fields use the matrix palette. Hollow struct sockets retain the surrounding theme's ordinary input fill. Router and Parameter shortcut sockets follow the same distinction.
+
+Struct gradients share the existing mixed-type Link-arrow palette: Dark `#BC9C85` → `#B690AC` → `#949FC4` → `#83B4A7`, with darker Light equivalents. Link lines keep their gray dashed presentation; their navigation arrows carry the type paint. Wire gradients use endpoint coordinates so horizontal and vertical Wires remain visible. Floating Parameter drag previews carry their gradient definitions into the temporary overlay.
+
+These are presentation rules only; type compatibility, graph data and compilation are unchanged. Broader consolidation of historical UI exceptions is deferred to the planned refactor. `tests/browser/test_type_palette_navigation.cjs` checks both themes, native/user types, arrays, state overrides, Link arrows and the floating preview.
+
+## RGBA controls and labels
+
 Color RGBA displays four compact numeric fields in one row, ordered R, G, B, A, above an alpha-aware CSS swatch. The swatch opens the same browser-native RGB picker as Parameter. Numeric fields share Parameter's stored values and use the existing inline Enter/blur, Escape, Undo and Value Ladder behavior. Component names remain available in field tooltips and accessible labels. Ordinary vectors retain numeric semantics and do not display a color picker.
 
 All numeric fields on graph nodes use the same neutral background (`--node-value-bg`) without a normal border. Numbers align left; scalar fields fill the remaining row space while retaining the outer node padding and room for socket labels/type captions. Focus and invalid-value outlines remain visible. Component hints reuse subtle red, green, blue and neutral gray colors, with a darker palette in Light mode. Known scalar component ports use the corresponding muted socket/label colors, and their outgoing wires use the source port's color. Grouped RGB/RGBA/vector sockets retain their existing type colors; individual letters in known grouped component labels can be tinted. Arbitrary user labels do not determine component hints.
