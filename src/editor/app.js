@@ -8,7 +8,8 @@ sessionStorage.setItem('sgrapeToken',token);history.replaceState(null,'',locatio
 
 const GRID=24;
 const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
-function graphZoomMinimum(){return EDITOR_DEV_SETTINGS.lowZoomOverview ? .1 : GRAPH_ZOOM_MIN;}
+const GRAPH_OVERVIEW_MIN=.15,GRAPH_OVERVIEW_THRESHOLD=.3;
+function graphZoomMinimum(){return EDITOR_DEV_SETTINGS.lowZoomOverview ? GRAPH_OVERVIEW_MIN : GRAPH_ZOOM_MIN;}
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='en';
 let editorProjectFile=null;
@@ -471,7 +472,7 @@ function applyCanvasDamping(force=false){
   document.addEventListener('keydown',event=>{if(event.key==='Escape')stopCanvasMotion();},options);
 }
 function transform(){
-  $('#canvas').classList.toggle('graph-overview',EDITOR_DEV_SETTINGS.lowZoomOverview&&scale<GRAPH_ZOOM_MIN);
+  $('#canvas').classList.toggle('graph-overview',EDITOR_DEV_SETTINGS.lowZoomOverview&&scale<GRAPH_OVERVIEW_THRESHOLD);
   // Hide intermediate grid lines at distant zoom; snapping stays in world units.
   let displayGrid=GRID;
   while(displayGrid*scale<14)displayGrid*=2;
@@ -1297,7 +1298,7 @@ function zoomCanvasAt(value,x,y){
   moveCanvas({x:x-(x-origin.x)*next/previous,y:y-(y-origin.y)*next/previous},next);
 }
 function installGraphZoom(){
-  const opener=$('#zoom'),menu=$('#canvaszoommenu'),presets=[10,15,20,25,50,75,100,125,150,170];
+  const opener=$('#zoom'),menu=$('#canvaszoommenu'),presets=[15,20,25,50,75,100,125,150,170];
   const close=(focus=false)=>{if(menu.matches(':popover-open'))menu.hidePopover();if(focus)opener.focus({preventScroll:true});};
   const position=()=>{
     const rect=opener.getBoundingClientRect(),zoom=uiScaleFactor(),width=menu.offsetWidth||112;

@@ -1617,6 +1617,24 @@ function nodePreferredWidth(card){
   const width=Math.max(nodeMinimumWidth(card),Math.min(nodeMaximumWidth(card),Math.ceil(probe.offsetWidth)+2));probe.remove();
   card.dataset.nodeDefaultWidth=String(width);return width;
 }
+let overviewTextContext=null;
+function updateNodeOverviewLabel(card){
+  const caption=card.querySelector('.node-overview-label>span');if(!caption)return;
+  const name=card.title,width=Math.max(0,card.clientWidth-24);
+  overviewTextContext||=document.createElement('canvas').getContext('2d');
+  overviewTextContext.font=getComputedStyle(caption).font;
+  const fits=text=>overviewTextContext.measureText(text.trimEnd()).width<=width;
+  let split=0;
+  if(!card.classList.contains('collapsed')&&!fits(name)){
+    // Prefer the last fitting space; only then consider case boundaries. Keep
+    // single-letter prefixes (sRoughness) and numeric suffixes (2D/3D) intact.
+    const spaces=[...name.matchAll(/\s+/gu)].map(m=>m.index+m[0].length);
+    const cases=[...name.matchAll(/(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})/gu)].map(m=>m.index).filter(i=>i>1);
+    split=spaces.reverse().find(i=>fits(name.slice(0,i)))||cases.reverse().find(i=>fits(name.slice(0,i)))||0;
+  }
+  caption.replaceChildren(document.createTextNode(name.slice(0,split||name.length)));
+  if(split)caption.append(el('br'),document.createTextNode(name.slice(split)));
+}
 function applyNodeWidth(card,node){
   const width=node.ui?.collapsed===true?nodePreferredWidth(card):Number.isFinite(node.ui?.width)?node.ui.width:nodePreferredWidth(card);
   card.style.width=Math.max(nodeMinimumWidth(card),Math.min(nodeMaximumWidth(card),width))+'px';
@@ -1624,6 +1642,7 @@ function applyNodeWidth(card,node){
     const {minimum,maximum}=nodeHeightLimits(card),height=node.ui?.height;
     card.style.height=node.ui?.collapsed!==true&&Number.isFinite(height)?Math.max(minimum,Math.min(maximum,height))+'px':'';
   }
+  updateNodeOverviewLabel(card);
 }
 function dragNodeWidth(event,node,card,handle){
   if(event.button!==0||readonly||editorMutationBlocked())return;
@@ -1839,8 +1858,8 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     card.onclick=e=>{e.stopPropagation();if(suppressCardClick||e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;selectNode(n,selectionModifier(e));refreshCanvasSelection();};
     // Absolute overlay preserves the original layout, socket centers and input DOM.
     if(!isAnnotationNode(n)){
-      const overview=el('div',{class:'node-overview-label','aria-hidden':'true'});
-      overview.append(el('span',{},displayName));card.append(overview);card.title=displayName;
+      const overview=el('div',{class:'node-overview-label','aria-hidden':'true'}),caption=el('span');
+      overview.append(caption);card.append(overview);card.title=displayName;
     }
     card.ondblclick=e=>{e.stopPropagation();if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"],[role="button"],.node-inline-values'))return;if(d?.key==='function_call')enterFunction(n);};cards.append(card);appendNodeResizeHandle(card,n);if(isAnnotationNode(n))applyNoteColorContrast(card);
     return card;

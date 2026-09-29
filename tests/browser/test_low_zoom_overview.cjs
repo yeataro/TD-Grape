@@ -20,26 +20,27 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.equal(await page.evaluate(()=>EDITOR_DEV_DEFAULTS.lowZoomOverview),false);
   await page.locator('#uiexperiments').click();assert.equal(await control().isChecked(),false);await page.keyboard.press('Escape');
   await zoom(.1);assert.equal(await page.evaluate(()=>scale),.25);assert.equal(await page.locator('#canvas.graph-overview').count(),0);
-  await page.locator('#zoom').click();await settle();assert.equal(await page.locator('[data-canvas-zoom="10"]').isVisible(),false);await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement.dataset.canvasZoom),'25');await page.keyboard.press('Escape');
+  await page.locator('#zoom').click();await settle();assert.equal(await page.locator('[data-canvas-zoom="15"]').isVisible(),false);await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement.dataset.canvasZoom),'25');await page.keyboard.press('Escape');
   checks.push('Default off retains 25% minimum; hidden extra presets are excluded from keyboard navigation');
 
   await page.locator('#uiexperiments').click();await control().check();await page.keyboard.press('Escape');
   const baseline=await geometry();await page.evaluate(()=>{window.overviewCard=$('#cards [data-node="value"]');window.overviewField=overviewCard.querySelector('input');overviewField.value='0.456789';});
-  for(const value of [.249,.2,.1,.25,.8]){await zoom(value);sameGeometry(baseline,await geometry());assert.equal(await page.locator('#canvas.graph-overview').count(),value<.25?1:0);}
+  for(const value of [.299,.25,.2,.15,.3,.8]){await zoom(value);sameGeometry(baseline,await geometry());assert.equal(await page.locator('#canvas.graph-overview').count(),value<.3?1:0);}
   assert.equal(await page.evaluate(()=>overviewCard===$('#cards [data-node="value"]')&&overviewField===overviewCard.querySelector('input')&&overviewField.value==='0.456789'),true);
   assert.equal(await snapshot(),before);checks.push('Threshold transitions preserve card sizes, socket positions, input DOM/drafts and graph/history');
 
   for(const theme of ['dark','light'])for(const ui of [75,100,125]){
-   await page.evaluate(({theme,ui})=>{setUIAppearance('theme',theme);setUIAppearance('scale',ui);},{theme,ui});await zoom(.25);const g=await geometry();await zoom(.2);sameGeometry(g,await geometry());
+   await page.evaluate(({theme,ui})=>{setUIAppearance('theme',theme);setUIAppearance('scale',ui);},{theme,ui});await zoom(.3);const g=await geometry();await zoom(.2);sameGeometry(g,await geometry());
    const paint=await page.evaluate(()=>[...document.querySelectorAll('#cards .node-overview-label')].map(label=>{
     const card=label.parentElement,probe=document.createElement('span');probe.style.background='var(--category-bg)';card.append(probe);const family=getComputedStyle(probe).backgroundColor;probe.remove();
-    return {font:getComputedStyle(label).fontSize,bg:getComputedStyle(card).backgroundColor,family,visible:getComputedStyle(label).visibility,details:[...card.querySelectorAll('.port-label,.port-type,input,select,.node-title')].every(e=>getComputedStyle(e).visibility==='hidden'),ports:[...card.querySelectorAll('.port')].every(e=>getComputedStyle(e).visibility==='visible')};
+    const frame=label.getBoundingClientRect(),caption=label.firstElementChild.getBoundingClientRect();
+    return {font:getComputedStyle(label).fontSize,bg:getComputedStyle(card).backgroundColor,family,visible:getComputedStyle(label).visibility,align:getComputedStyle(label).textAlign,bottom:frame.bottom-caption.bottom,left:caption.left-frame.left,details:[...card.querySelectorAll('.port-label,.port-type,input,select,.node-title')].every(e=>getComputedStyle(e).visibility==='hidden'),ports:[...card.querySelectorAll('.port')].every(e=>getComputedStyle(e).visibility==='visible')};
    }));
-   assert.equal(new Set(paint.map(p=>p.font)).size,1);assert.equal(paint[0].font,'36px');for(const p of paint){assert.equal(p.bg,p.family);assert.equal(p.visible,'visible');assert.ok(p.details&&p.ports);}
+   assert.equal(new Set(paint.map(p=>p.font)).size,1);assert.equal(paint[0].font,'36px');for(const p of paint){assert.equal(p.bg,p.family);assert.equal(p.visible,'visible');assert.equal(p.align,'left');assert.ok(Math.abs(p.bottom)<.03&&Math.abs(p.left)<.03,'bottom-left name alignment');assert.ok(p.details&&p.ports);}
    assert.equal(await page.locator('.node-router .node-overview-label,.node[data-category="annotation"] .node-overview-label').count(),0);
    await page.screenshot({path:path.join(folder,`overview-${theme}-${ui}.png`)});
   }
-  checks.push('Both themes at 75/100/125% UI use one font size, solid family backgrounds, hidden details and stable geometry; Router/notes retain their form');
+  checks.push('Both themes at 75/100/125% UI use bottom-left names, one font size, solid family backgrounds and stable geometry, including collapsed cards; Router/notes retain their form');
 
   await page.evaluate(()=>{setUIAppearance('scale',100);showCustomNodeNames=false;overviewField.value='0.3';render();});await settle();
   assert.equal(await page.locator('[data-node="math"] .node-overview-label').textContent(),await page.locator('[data-node="math"] .node-function-title').textContent());
@@ -47,21 +48,33 @@ const {harness}=require('./test_glsl_code.cjs');
   const clamp=await page.locator('[data-node="math"] .node-overview-label>span').evaluate(e=>({clamp:getComputedStyle(e).webkitLineClamp,overflow:getComputedStyle(e).overflow,clipped:e.scrollHeight>e.clientHeight}));
   assert.equal(clamp.clamp,'2');assert.equal(clamp.overflow,'hidden');assert.ok(clamp.clipped);sameGeometry(baseline,await geometry());
   checks.push('Names follow the custom-name preference and long names clamp to two lines without growing cards, including rerenders while zoomed out');
+  const originalName=await page.evaluate(()=>current().nodes.find(n=>n.id==='math').name);
+  for(const [name,width,parts] of [['baseColor',220,['baseColor']],['baseColorMap',220,['baseColor','Map']],['baseColor myValue',220,['baseColor ','myValue']],['TDInstanceTexCoord',300,['TDInstanceTex','Coord']],['sRoughnessMap',280,['sRoughness','Map']],['Texture 2D',190,['Texture ','2D']],['Texture 3D',190,['Texture ','3D']]]){
+   await page.evaluate(({name,width})=>{const node=current().nodes.find(n=>n.id==='math');node.name=name;node.ui.width=width;render();},{name,width});await settle();
+   const label=page.locator('[data-node="math"] .node-overview-label>span');assert.equal(await label.textContent(),name);
+   assert.deepEqual(await label.evaluate(e=>[...e.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.textContent)),parts);
+   const lines=await label.evaluate(e=>[...e.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>{const r=document.createRange();r.selectNodeContents(n);return [...r.getClientRects()].map(r=>r.y);}));
+   assert.ok(lines.every(rects=>rects.length===1),'each chosen segment fits on its own line');
+   if(parts.length===2)assert.ok(lines[1][0]>lines[0][0]);
+  }
+  await page.evaluate(name=>{const node=current().nodes.find(n=>n.id==='math');node.name=name;node.ui.width=220;render();},originalName);await settle();sameGeometry(baseline,await geometry());
+  assert.equal(await snapshot(),before);checks.push('Wrapping prefers spaces then the last fitting case boundary, keeps single-letter prefixes and 2D/3D together, and retains the exact name');
+
 
   const center=()=>page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();return graphPoint(r.left+r.width/2,r.top+r.height/2);});
   await zoom(.1);const anchored=await center();await page.locator('#uiexperiments').click();await control().uncheck();await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>scale),.25);const restored=await center();assert.ok(Math.abs(anchored.x-restored.x)<.03&&Math.abs(anchored.y-restored.y)<.03);assert.equal(await page.locator('#canvas.graph-overview').count(),0);
   checks.push('Turning off below 25% restores normal appearance and the original limit while preserving the viewport center');
 
   await page.evaluate(()=>setUIExperiments({lowZoomOverview:true}));await zoom(.2);const canvas=await page.locator('#canvas').boundingBox(),blank={x:canvas.x+canvas.width*.7,y:canvas.y+canvas.height*.8};
-  await page.mouse.move(blank.x,blank.y);await page.mouse.wheel(0,10000);await settle();assert.equal(await page.evaluate(()=>scale),.1);
-  await zoom(.2);await page.mouse.down({button:'middle'});await page.mouse.move(blank.x-240,blank.y);await page.mouse.up({button:'middle'});assert.equal(await page.evaluate(()=>scale),.1);
-  await page.locator('#zoom').click();await settle();await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement.dataset.canvasZoom),'10');await page.locator('[data-canvas-zoom="15"]').click();assert.equal(await page.evaluate(()=>scale),.15);
-  await page.evaluate(()=>{current().nodes.find(n=>n.id==='note').ui.x=15000;render();fit();});assert.equal(await page.evaluate(()=>scale),.1);await page.evaluate(()=>{current().nodes.find(n=>n.id==='note').ui.x=40;render();});
+  await page.mouse.move(blank.x,blank.y);await page.mouse.wheel(0,10000);await settle();assert.equal(await page.evaluate(()=>scale),.15);
+  await zoom(.2);await page.mouse.down({button:'middle'});await page.mouse.move(blank.x-240,blank.y);await page.mouse.up({button:'middle'});assert.equal(await page.evaluate(()=>scale),.15);
+  await page.locator('#zoom').click();await settle();await page.keyboard.press('Home');assert.equal(await page.evaluate(()=>document.activeElement.dataset.canvasZoom),'15');await page.locator('[data-canvas-zoom="15"]').click();assert.equal(await page.evaluate(()=>scale),.15);
+  await page.evaluate(()=>{current().nodes.find(n=>n.id==='note').ui.x=15000;render();fit();});assert.equal(await page.evaluate(()=>scale),.15);await page.evaluate(()=>{current().nodes.find(n=>n.id==='note').ui.x=40;render();});
   const cdp=await page.context().newCDPSession(page);await zoom(.3);
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:blank.x-150,y:blank.y},{id:2,x:blank.x+150,y:blank.y}]});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{id:1,x:blank.x-25,y:blank.y},{id:2,x:blank.x+25,y:blank.y}]});await settle();
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settle();assert.equal(await page.evaluate(()=>scale),.1);
-  assert.equal(await snapshot(),before);checks.push('Wheel, dolly, menu, fit and native touch pinch all reach 10% without changing graph/history');
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settle();assert.equal(await page.evaluate(()=>scale),.15);
+  assert.equal(await snapshot(),before);checks.push('Wheel, dolly, menu, fit and native touch pinch all reach 15% without changing graph/history');
 
   await page.evaluate(()=>{setUIExperiments({nodeBodyDrag:false});scale=.2;pan={x:80,y:120};transform();});await settle();
   const body=await at('#cards [data-node="material"]'),oldPosition=await page.evaluate(()=>clone(current().nodes.find(n=>n.id==='material').ui));
