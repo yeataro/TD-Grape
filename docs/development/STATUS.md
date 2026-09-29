@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.251：PBR Material 新增可接線的 float 輸入 `ambientStrength`，預設 0；僅縮放額外的 `uTDGeneral.ambientColor × diffuse × AO` 項，1 恢復原強度。一般燈光、Environment Light／IBL 與 Phong 原有 ambient=1 保持不變。依作者決定，舊 PBR 節點升級後也採缺省 0，不插入相容值 1；貼圖範本不額外增加貼圖或 TD Uniform。五語說明同步。PBR／Phong 既有輸入不重排；後續排序討論以「必須由使用者接入的在前」為方向，尚未定案或實作。
+
+30 項相關 Python 測試、5 組材質範本 Chromium 操作與 4 組布局檢查通過；新接孔可填值、接 Uniform、斷線恢復填值及 Undo，截圖已目視。TD 2025.32820 的 21 組獨立手寫 GLSL 渲染對照 RGBA 最大差異皆為 0，包含實際 Ambient Light 的 0／0.5／1／Uniform 0.75 及 Environment Light 獨立性。四個材質入口各新增兩份副本、1515 五語 keys／1130 UI 引用／59 來源提示及節點 metadata 檢查通過。這些為渲染組合驗證，未宣稱已定位原生甜甜圈 Viewer 亮度差異。
+
+39 份內嵌來源一致、六份 Master current；兩份現有 PBR Material Textured 圖經正常 upgrade ticket 升級，其他圖內容、參數關聯、身分與原生節點位置核對保留。正式 TOE 保存 2967428 bytes，SHA256 c674603987ddd1b50c403ec4cb6ea3fc18486b179e240b176a66b4279c8ce68a；11 份登記狀態保留，私人橋接排除。私人紀錄 reports/pbr-ambient-251/；未操作或重載使用者網頁，未推送。
+
 2026-09-29 0.8.250：MAT 的內建預設貼圖改為每個 COMP 內依來源共用；白圖／平面法線等各留一份，保留每個貼圖欄位的固定 Select 出口、獨立 TOP 路徑與 Expression。移除舊 registry 可辨識的每欄位預設 Select／重複圖，成功部署後才清理，失敗 Apply 不先刪除。PBR Textured 從 30 個 TOP／20 個 Select 降為 12／10；Phong Textured 從 27／18 降為 11／9。GLSL 與採樣行為不變，TOP 元件的來源配置不改。
 
 五份 MAT Master 內部按共用圖 → 兩欄 Select → Shader／輸出分區，程式放上方、控制與圖資料放下方；明確的 `arrange_material_texture_networks.py` 工具只改座標，功能狀態指紋相同、無重疊，平常 Apply 不重排既有節點。當前新建的 PBR_Material_Textured1 同步簡化與排版，逐一核對原圖、GLSL、參數與 Select 身分保留；其餘六份使用者 Shader 保存內容維持原樣。13 份既有圖／程式／參數均核對保留。

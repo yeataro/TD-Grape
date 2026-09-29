@@ -91,9 +91,17 @@ to Pixel to transform the decoded normal map. There is no derivative reconstruct
 or missing-tangent fallback, and no change to the preview geometry. Missing geometry
 attributes remain the author's responsibility.
 
-These templates deliberately retain the existing integrated-node behavior, including
-PBR's global ambient contribution and Phong's single specular lobe / scalar ambient
-control. They are not full native-MAT parity replacements for the original two graphs.
+Since 0.8.251, PBR Material exposes an `ambientStrength` float input, initially 0.
+It multiplies only the extra `uTDGeneral.ambientColor * diffuse * AO` contribution:
+0 disables that contribution, 1 restores full strength, and a connection can drive
+it dynamically. Regular lights and Environment Light / IBL remain independent.
+The textured PBR template leaves this input unconnected at 0; no extra map is added.
+Older nodes also use 0 after upgrading, by explicit author decision; no compatibility
+value of 1 is inserted. Phong's existing `ambient` input remains unchanged.
+
+These templates retain the integrated nodes' other behavior, including Phong's
+single specular lobe / scalar ambient control. They are not full native-MAT parity
+replacements for the original two graphs.
 Height, displacement, parallax, rim, secondary Phong specular and separate environment
 map workflows are outside this increment. Scene PBR environment lights continue to
 be traversed by PBR Material.

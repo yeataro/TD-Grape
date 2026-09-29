@@ -7688,7 +7688,7 @@
           {
             "id": "material",
             "definitionUuid": "sgrape.builtin.material_pbr",
-            "revisionHash": "715e548b6fd7f28b304f34dcb9e5da04f4769d66e837391792c7124ce358003b",
+            "revisionHash": "d0d38e37171892312e5eb36272238a459b70922d4ea316c58a4bd8daa6cde555",
             "params": {
               "type": "float"
             },

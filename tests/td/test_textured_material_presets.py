@@ -18,10 +18,19 @@ try:
     light=area.create(lightCOMP,'light');light.par.tz=2;light.par.tx=.7
     image=area.create(constantTOP,'environment');image.par.colorr=.4;image.par.colorg=.3;image.par.colorb=.2
     env=area.create(environmentlightCOMP,'environment_light');env.par.envlightmap=image
+    ambient=area.create(ambientlightCOMP,'ambient_light')
+    ambient.par.cr=.2;ambient.par.cg=.3;ambient.par.cb=.4;ambient.par.dimmer=1
     for model in ('phong','pbr'):
         base=presets[model+'_textured'];shader=None
-        for case in ('default','mapped','tilted-normal','zero-normal-strength','unlit','emission','back')+(('zero-roughness','environment') if model=='pbr' else ()):
+        for case in ('default','mapped','tilted-normal','zero-normal-strength','unlit','emission','back')+(('zero-roughness','environment','ambient-zero','ambient-half','ambient-full','ambient-uniform','environment-ambient-on') if model=='pbr' else ()):
             graph=copy.deepcopy(base)
+            ambient_strength={'ambient-half':.5,'ambient-full':1.,'ambient-uniform':.75,'environment-ambient-on':1.}.get(case,0.)
+            if model=='pbr' and case!='ambient-uniform':
+                next(n for n in graph['stages']['pixel']['nodes'] if n['id']=='material').setdefault('inputValues',{})['ambientStrength']=ambient_strength
+            if case=='ambient-uniform':
+                graph['declarations'].append(dict(id='ambientStrength',kind='uniform',name='uAmbientStrength',type='float',value=ambient_strength))
+                graph['stages']['pixel']['nodes'].append(c.node('uniform','ambientStrength',declarationId='ambientStrength'))
+                graph['stages']['pixel']['edges'].append(c.edge('ambientStrength','material','ambientStrength'))
             for d in graph['declarations']:
                 if d['kind']=='uniform':
                     if d['id']=='normalStrength' and case=='zero-normal-strength':d['value']=0
@@ -68,7 +77,7 @@ void main() {
  vec3 f0=mix(vec3(0.08*uSpecularLevel*texture(sSpecularLevelMap,uv).r),base,metal);
  for(int i=0;i<TD_NUM_LIGHTS;++i){TDPBRResult t=TDLightingPBR(i,kd,f0,pos,n,shadow,shadowColor,view,rough);d+=t.diffuse;s+=t.specular;}
  for(int i=0;i<TD_NUM_ENV_LIGHTS;++i){TDPBRResult t=TDEnvLightingPBR(i,kd,f0,n,view,rough,ao);d+=t.diffuse;s+=t.specular;}
- d+=uTDGeneral.ambientColor.rgb*kd*ao;
+ d+=uTDGeneral.ambientColor.rgb*kd*ao*AMBIENT_STRENGTH;
  vec4 result=vec4(d+s+emission,a*pointColor.a);
 '''
             else:
@@ -86,11 +95,12 @@ void main() {
  fragColor[0]=TDOutputSwizzle(result);
 }
 '''
+            body=body.replace('AMBIENT_STRENGTH','uAmbientStrength' if case=='ambient-uniform' else str(ambient_strength))
             dat.text=header+body
             try:
                 with r.validation_scene(shader) as render:
                     render.par.format='rgba32float';render.par.dither=False
-                    render.par.lights='' if case in ('unlit','emission') else env.path if case=='environment' else light.path
+                    render.par.lights='' if case in ('unlit','emission') else ambient.path if case.startswith('ambient-') else env.path if case.startswith('environment') else light.path
                     geo=render.parent().op('geometry');geo.par.ry=180 if case=='back' else 0
                     # The fixture supplies tangents as required by TD native
                     # normal mapping. Production shaders never generate them.
@@ -110,7 +120,7 @@ void main() {
                     assert np.isfinite(actual).all() and np.isfinite(expected).all(),(model,case,'nonfinite')
                     error=float(np.max(np.abs(actual-expected)))
                     assert error<.0001,(model,case,error)
-                    if case=='unlit':assert np.max(actual[:,:,:3])<.0001
+                    if case in ('unlit','ambient-zero'):assert np.max(actual[:,:,:3])<.0001
                     elif case not in ('back',):assert np.max(actual[:,:,:3])>.0001,(model,case,'empty render')
                     if case=='default':
                         normal_source=shader.op('texture_sources').module.effective('normalMap')['source']
@@ -119,6 +129,12 @@ void main() {
                         default=actual.copy()
                     if case=='tilted-normal':assert np.max(np.abs(actual-default))>.001
                     if case=='zero-normal-strength':assert np.max(np.abs(actual-default))<.0001
+                    if case=='ambient-half':ambient_half=actual.copy()
+                    if case=='ambient-full':
+                        ambient_full=actual.copy();assert np.max(np.abs(ambient_half[:,:,:3]-.5*ambient_full[:,:,:3]))<.0001
+                    if case=='ambient-uniform':assert np.max(np.abs(actual[:,:,:3]-.75*ambient_full[:,:,:3]))<.0001
+                    if case=='environment':environment_default=actual.copy()
+                    if case=='environment-ambient-on':assert np.max(np.abs(actual-environment_default))<.0001
                     checks.append(dict(model=model,case=case,maxError=error))
                     geo.par.ry=0
                     tangents.render=tangents.display=False;rect.render=rect.display=True

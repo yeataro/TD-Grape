@@ -48,7 +48,7 @@ Sampler binding findings: custom declarations currently accept only `sampler2D`;
 ## Differences already established
 
 - Existing `material_phong` uses one shininess for both native lobes and discards the second result. Native Phong supports a separately weighted second lobe. Independent ambient color also cannot be represented by its scalar ambient multiplier alone.
-- Existing `material_pbr` adds `uTDGeneral.ambientColor * diffuse * AO`. The inspected native PBR shader adds direct/environment results without that extra term. Native specular level is multiplied by 0.08, roughness is bounded below by 0.0001, and alpha/point color/map processing precedes light evaluation.
+- Since 0.8.251, `material_pbr` optionally adds `uTDGeneral.ambientColor * diffuse * AO * ambientStrength`. The new float input defaults to 0, including upgraded old nodes; 1 restores the previous full ambient contribution. The inspected native PBR shader adds direct/environment results without that extra term. Regular/environment light traversal is not scaled by this input. Native specular level is multiplied by 0.08, roughness is bounded below by 0.0001, and alpha/point color/map processing precedes light evaluation.
 - Native Phong premultiplies the combined lighting by alpha and then applies point color; native PBR incorporates those into base color before lighting. One shared final color multiplier cannot reproduce both.
 - Native node viewers convert output to the window color space. A successful Render TOP compilation does not prove viewer parity.
 
@@ -58,7 +58,13 @@ These differences require explicit new composition. Existing graph behavior must
 
 The author accepts different input defaults between the integrated `PBR Material` node and native PBR MAT; those differences alone are not a defect or a request to align defaults. The reported brighter appearance remains unverified in the user's actual preview context. The additional `uTDGeneral.ambientColor` term is confirmed in source, but its value in that preview is not known, so it must not yet be identified as the cause.
 
-Follow-up validation should inspect the preview's actual regular/environment light bindings and global ambient value. With no regular or environment lighting, zero global ambient and zero emission, the expected RGB lighting result is zero (allow for output dithering when measuring). Determine whether the preview supplies lighting implicitly before judging the node. Keep defaults and shader behavior unchanged pending this investigation.
+Follow-up validation should inspect the preview's actual regular/environment light bindings and global ambient value. With no regular or environment lighting, zero global ambient and zero emission, the expected RGB lighting result is zero (allow for output dithering when measuring). Determine whether the preview supplies lighting implicitly before judging the node. The earlier hold on changing ambient behavior was superseded by the author's explicit 2026-09-29 decision: add a connectable float input with default 0, without preserving the old implicit value 1. The actual native doughnut-viewer brightness cause remains unmeasured; this change is not proof of its cause.
+
+TD 2025.32820 render checks cover ambientStrength 0, 0.5, 1 and a connected Uniform
+at 0.75 with an actual Ambient Light COMP. RGB contributions scale accordingly;
+changing the strength with Environment Light alone leaves the rendered result
+identical. These checks are part of `test_textured_material_presets.py` (21 cases),
+not a native viewer comparison.
 
 The reflection model itself uses TD's `TDLightingPBR` and `TDEnvLightingPBR`; Grape prepares their material inputs and sums their results. The integrated node computes `mix(specularColor, baseColor, metallic)` before calling TD. Native exported PBR computes `mix(vec3(0.08 * SpecularLevel), finalBaseColor, metallic)`. Thus `specularColor` is a direct RGB reflectance input rather than native MAT's scalar Specular Level: `vec3(0.04)` corresponds to level `0.5` before metallic blending, when the other material inputs match. This parameterization difference is not evidence of a separate Grape reflection implementation or, by itself, a brightness bug.
 

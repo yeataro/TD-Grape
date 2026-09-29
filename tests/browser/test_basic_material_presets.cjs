@@ -22,6 +22,17 @@ const {harness}=require('./test_glsl_code.cjs');
    await page.evaluate(()=>{stage='pixel';selected='pixel';selection.clear();selection.add('pixel');render();});await settle();
    const edited=await page.evaluate(()=>graph);execFileSync(process.env.PYTHON_EXECUTABLE||'python',['-c','import json,sys;sys.path.insert(0,sys.argv[1]);import sgrape_core as c;r=c.compile_graph(json.load(sys.stdin));assert "TDConvertColorSpace(sg_color)" in r["pixel"]',path.resolve(__dirname,'../../src/core')],{input:JSON.stringify(edited)});
    checks.push(model+': loads both stages, native finishing toggle/Undo and edited graph compiles');
+   if(model==='pbr_textured'){
+    await page.evaluate(()=>{selected='material';selection.clear();selection.add('material');render();const n=current().nodes.find(n=>n.id==='material');scale=.8;pan={x:250-n.ui.x*scale,y:100-n.ui.y*scale};transform();});await settle();
+    const ambient=()=>page.locator('input[data-inline-node="material"][data-inline-port="ambientStrength"]').first();
+    assert.equal(await ambient().inputValue(),'0');
+    assert.equal(await page.locator('.node[data-node="material"] .port[data-kind="inputs"][data-port="ambientStrength"]').count(),1);
+    await ambient().fill('0.5');await ambient().press('Enter');await settle();
+    assert.equal(await page.evaluate(()=>current().nodes.find(n=>n.id==='material').inputValues.ambientStrength),.5);
+    await page.evaluate(()=>undo());await settle();assert.equal(await ambient().inputValue(),'0');
+    await page.screenshot({path:path.join(folder,'pbr-ambient-input.png')});
+    checks.push('PBR ambientStrength: visible float socket, zero default, direct editing and Undo');
+   }
   }
   assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks}));
  }catch(e){await h.finish(e);throw e;}

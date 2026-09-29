@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": "0.8.239",
+  "catalogVersion": "0.8.251",
   "emitterAbiVersion": 1,
   "targetShellVersion": 3,
   "definitions": [
@@ -15012,6 +15012,7 @@
           "metallic": "float",
           "roughness": "float",
           "ambientOcclusion": "float",
+          "ambientStrength": "float",
           "emission": "vec3",
           "alpha": "float",
           "shadowStrength": "float",
@@ -15037,7 +15038,8 @@
           "roughness": 0.5,
           "ambientOcclusion": 1,
           "alpha": 1,
-          "shadowStrength": 1
+          "shadowStrength": 1,
+          "ambientStrength": 0
         },
         "descriptionKey": "help.material_pbr",
         "definitionUuid": "sgrape.builtin.material_pbr",
@@ -15049,7 +15051,7 @@
           "normal",
           "camera"
         ],
-        "revisionHash": "715e548b6fd7f28b304f34dcb9e5da04f4769d66e837391792c7124ce358003b"
+        "revisionHash": "d0d38e37171892312e5eb36272238a459b70922d4ea316c58a4bd8daa6cde555"
       },
       "emitter": {
         "id": "material_pbr",

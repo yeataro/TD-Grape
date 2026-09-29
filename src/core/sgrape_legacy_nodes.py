@@ -251,10 +251,10 @@ for source,key,label,bound in (
 
 for model in ('phong','pbr'):
     inputs=[('baseColor','vec3'),('specularColor','vec3')]
-    inputs+=([('metallic','float'),('roughness','float'),('ambientOcclusion','float')] if model=='pbr' else [('shininess','float'),('ambient','float')])
+    inputs+=([('metallic','float'),('roughness','float'),('ambientOcclusion','float'),('ambientStrength','float')] if model=='pbr' else [('shininess','float'),('ambient','float')])
     inputs += [('emission','vec3'),('alpha','float'),('shadowStrength','float'),('shadowColor','vec3'),('position','vec3'),('normal','vec3'),('camera','int')]
     td('material_'+model,'Material '+model.upper(),inputs,{'out':'vec4','diffuse':'vec3','specular':'vec3'},targets=('mat',),stages=('pixel',),
-       defaults={'baseColor':.8,'specularColor':.04 if model=='pbr' else 1,'roughness':.5,'ambientOcclusion':1,'shininess':32,'ambient':1,'alpha':1,'shadowStrength':1})
+       defaults={'baseColor':.8,'specularColor':.04 if model=='pbr' else 1,'roughness':.5,'ambientOcclusion':1,'ambientStrength':0,'shininess':32,'ambient':1,'alpha':1,'shadowStrength':1})
     CALLS['material_'+model]['lighting']=model
     CALLS['material_'+model]['implicitInputs']={'position':'sg_lighting_position','normal':'sg_lighting_normal','camera':'sg_lighting_camera'}
 
@@ -359,7 +359,7 @@ def emit_lighting(model,a,symbols,lines,expressions,ident):
                       '    for (int i = 0; i < TD_NUM_ENV_LIGHTS; ++i) {',
                       '        TDPBRResult light = TDEnvLightingPBR(i, '+', '.join([material_diffuse,material_specular,normal,view,a('roughness'),a('ambientOcclusion')])+');',
                       '        '+diffuse+' += light.diffuse;','        '+specular+' += light.specular;','    }',
-                      '    '+diffuse+' += uTDGeneral.ambientColor.rgb * '+material_diffuse+' * '+a('ambientOcclusion')+';'])
+                      '    '+diffuse+' += uTDGeneral.ambientColor.rgb * '+material_diffuse+' * '+a('ambientOcclusion')+' * '+a('ambientStrength')+';'])
     else:
         direct='TDLighting(i, '+', '.join([a('position'),normal,a('shadowStrength'),a('shadowColor'),view,a('shininess'),a('shininess')])+')'
         lines.extend(['    for (int i = 0; i < TD_NUM_LIGHTS; ++i) {','        TDPhongResult light = '+direct+';',
