@@ -4,9 +4,7 @@
 
 A node-based GLSL TOP/MAT shader editor for TouchDesigner.
 
-Edit node graphs and generate GLSL in your browser, then preview results and adjust parameters in TouchDesigner for image processing and material creation.
-
-The project also explores how to make node definitions easier to understand, maintain, and extend. Code, interface, specifications, and design discussions are kept together to inform future development.
+Edit node graphs, generate GLSL, preview results from TouchDesigner, and adjust parameters through a browser for image processing and material creation.
 
 ![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/95fcf86b-d066-4cdf-8b25-ea2c9e91bf74)
 
@@ -19,6 +17,12 @@ The current focus is to complete the functional preview, refine workflows, and v
 The scope and timing of the refactor have not been finalized. The interface and graph data format may still change. Version changes and upgrade notes will be published in [Releases](https://github.com/yeataro/TD-Grape/releases); detailed development status and design records are available through the [Documentation Index](docs/README.md).
 
 Some features and cross-platform validation remain incomplete.
+
+## Interface Languages
+
+The interface supports **English, 繁體中文 (Traditional Chinese), 日本語 (Japanese), Français (French), and 한국어 (Korean)**. Use the language selector in the header or the **AA (language and interface size)** panel to switch languages. Your browser remembers the selection.
+
+Node types, categories, and GLSL/TD technical names retain their original names. User-defined names and native TouchDesigner parameter labels are also preserved when switching languages. See [Interface Languages](docs/ui/LOCALIZATION.md) for details.
 
 ## Shader Preservation and Compatibility
 
@@ -41,6 +45,8 @@ This commitment applies only to verified TouchDesigner versions; upgrading betwe
    ![Opening the browser editor from a Grape component's parameters](https://github.com/user-attachments/assets/2a47ddcd-9e2f-407a-9d67-9403452cb62c)
 
 ## Development Documentation
+
+The project also explores how to make node definitions easier to understand, maintain, and extend. Code, interface, specifications, and design discussions are kept together to inform future development.
 
 - [Documentation Index](docs/README.md)
 - [Development Guide](docs/development/DEVELOPMENT.md)

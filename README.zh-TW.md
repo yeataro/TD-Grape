@@ -4,9 +4,7 @@
 
 TouchDesigner 的 GLSL TOP／MAT 節點式 Shader 編輯器。
 
-透過瀏覽器編輯節點圖、產生 GLSL，並在 TouchDesigner 中預覽結果與調整參數，用於影像處理與材質製作。
-
-專案也探索如何讓節點定義更容易被理解、維護與擴充。程式碼、介面、規格與設計討論一併保留，作為後續整理的基礎。
+透過瀏覽器編輯節點圖、產生 GLSL、預覽 TouchDesigner 的執行結果並調整參數，用於影像處理與材質製作。
 
 ![TD-Grape 節點式 Shader 編輯介面](https://github.com/user-attachments/assets/95fcf86b-d066-4cdf-8b25-ea2c9e91bf74)
 
@@ -19,6 +17,12 @@ TouchDesigner 的 GLSL TOP／MAT 節點式 Shader 編輯器。
 重構範圍與時程尚未確定，操作介面與圖資料格式仍可能調整。版本變更及升級注意事項會在 [Releases](https://github.com/yeataro/TD-Grape/releases) 說明；詳細開發狀態與設計紀錄請由[文件索引](docs/README.md)進入。
 
 部分功能與跨平台驗證仍未完成。
+
+## 介面語言
+
+目前支援 **English、繁體中文、日本語、Français、한국어** 五種介面語言。可在標題列或 **AA（語言與介面大小）** 面板切換，瀏覽器會記住選擇。
+
+節點種類、分類與 GLSL／TD 技術名稱保留原文；使用者命名及 TD 原生參數標籤也不隨介面語言翻譯。詳細規則見[介面語言說明](docs/ui/LOCALIZATION.md)。
 
 ## Shader 的保存與相容性
 
@@ -41,6 +45,8 @@ TD-Grape 產出的是靜態 GLSL 程式碼。已產生並套用的 Shader，只�
    ![從 Grape 元件參數頁開啟瀏覽器編輯器](https://github.com/user-attachments/assets/2a47ddcd-9e2f-407a-9d67-9403452cb62c)
 
 ## 開發文件
+
+專案也探索如何讓節點定義更容易被理解、維護與擴充，並保留程式碼、介面、規格與設計討論，作為後續整理的基礎。
 
 - [文件索引](docs/README.md)
 - [開發說明](docs/development/DEVELOPMENT.md)
