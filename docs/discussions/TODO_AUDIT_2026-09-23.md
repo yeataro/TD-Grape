@@ -16,6 +16,8 @@
 | **Fresnel** | 已完成。Normal、View Direction、IOR → 介電質未偏振反射比例；包含 IOR＝1、全反射與數值保護。取角度絕對值，IOR 定義為透射／入射折射率比，離開介質時由使用者提供倒數。 |
 | **Facing** | 已完成。Normal、View Direction → 雙面邊緣權重，正面 0、掠射 1；與 TDFrontFacing 的正反面布林用途不同。 |
 | **Mapping** | 已完成。Vector、Translation、Rotation、Scale → Vector；縮放 → X／Y／Z 旋轉 → 平移，度數、原點旋轉。先提供正向座標變換，取樣在外部；逆 Texture／Normal 等其他模式未加入。 |
+| **Rim Light** | 0.8.262 完成。Normal、View Direction、Color、Strength、Power → Color／Fac；雙面視角輪廓效果，可接 Material Emission，無場景燈光依賴。 |
+| **Subsurface Scattering（SSS）** | 待設計。使用者選擇先記錄完整 SSS 的需求，不實作 Subsurface Approx；見下方筆記。 |
 
 同輪 Color Ramp 已記錄「色標陣列＋插值設定」及 Uniform Array 求值的第一版建議，詳見下方 Color Ramp 設計筆記。使用者要求先保存討論，尚未實作；TD Ramp TOP／Table DAT 引用、自訂參數呈現及正式綁定流程仍待設計。
 
@@ -24,6 +26,32 @@
 原生 PBR 參考核對：重新讀取先前已成功匯出／編譯的 TD 2025.32820 `displaceverts_1` 分支。Vertex 取 Height Map 並沿原法線改寫位置，送入 TDDeform；基底法線仍為 `normalize(TDDeformNorm(TDNormal()))`，TBN 亦由原法線／切線建立。啟用 Normal Map 時，Pixel 將法線圖解碼、套用 Bump Scale，經 TBN 轉為世界空間法線後用於光照。此位移分支沒有根據 Height Map 重建法線；TDDeformNorm 處理原生變形的法線轉換，不知道使用者剛做的高度位移。不能把原生位移視為已有自動法線重算功能。
 
 參考：[TD GLSL Matrix Functions](https://docs.derivative.ca/GLSL_Matrix_Functions)、[Write a GLSL MAT](https://docs.derivative.ca/Write_a_GLSL_MAT)、[Blender Mapping](https://docs.blender.org/manual/en/4.5/render/shader_nodes/vector/mapping.html)。
+
+## Subsurface Scattering 設計筆記（2026-09-29）
+
+**最新決策：這輪只完成 Rim Light；SSS 先規劃完整需求，不以背光透射或視角遮罩近似品代替。以下輸入是候選，尚未凍結接口或實作。**
+
+目標是表面入射光進入材質後，在內部散射並從其他位置離開的效果。須先選定可接受的渲染近似與品質／成本，不能把單點 `dot`／`pow` 或 Rim Light 稱為完整 SSS。維持 Windows／macOS 相容前提，不採 Geometry Shader。是否能只用子圖呈現，須由算法和所需宿主資源決定，不能先假定一個普通 Subgraph 就能完成。
+
+可重用的輸入與缺口：
+
+| 資料 | 現有可重用入口／限制 |
+| --- | --- |
+| 世界位置、Normal | Vertex → Pixel 的既有傳遞與 Normal Map。必須使用相同空間；幾何法線與著色法線的用途應分清。 |
+| View Direction／Camera | 0.8.261 的 View Direction 子圖與 Camera 索引，可涵蓋標準透視／正交；視線本身不是光源方向。 |
+| 光源 | `uTDLights` 及 TD 原生光照／陰影工具可作為整合入口。`TDLighting`／`TDLightingPBR` 的 diffuse 是已做表面光照的結果，不能直接當未處理的入射輻照度重乘一次。需確認點光、方向光、聚光的方向、衰減、投影、遮擋及多燈累加；不能只讀 diffuse 顏色便宣稱完整燈光整合。 |
+| 顏色、Weight、散射距離／RGB Radius | 可從現有常數、Uniform 或 Texture 2D 取樣輸入；需要定義世界尺度／單位、顏色工作空間、合法範圍及預設。是否有必要同時暴露 Radius 與 Scale 待討論。 |
+| 厚度 | 現有 Material 不提供通用厚度結果。可評估外部厚度貼圖／數值、前後表面深度或其他宿主資料；需說明開放網格、背面、薄物件與鏡頭變化的限制。厚度不能等同 Shadow Strength，也不能保證任意陰影深度就是可靠厚度。 |
+
+先前檢索的 [TD 公開 GLSL MAT 光照文件](https://docs.derivative.ca/Write_a_GLSL_MAT) 提供表面光照、光源資料及陰影工具，未找到可直接引用的公開 SSS 函式；這不是對所有內部函式或未來版本的斷言。正式實作前需在目標 TD 版本重新確認可用性。
+
+下一輪須決定與驗證：
+
+- 散射模型與資料流程：例如螢幕空間擴散、貼圖空間方法或其他方案；所需額外 Render／TOP／深度／法線資產由誰建立、更新與保存。跨像素的擴散不能只靠目前單點材質輸入取得。
+- 材質整合：散射與原本 diffuse 的權重分配、能量重複計算、specular 保留、透明度與預乘時機。輸出是散射貢獻、混合後材質色或其他契約，尚未決定；不能直接加一層完整 diffuse 當作完成。
+- 光照邊界：直接光／Environment Light、陰影、無光場景、正反面、遮擋與離屏資料。缺少資料時的行為須明確，不能自動補白光；厚度輸入亦不意味自動量測幾何厚度。
+- 多相機、位移、動畫與解析度變動的資料一致性；額外通道、取樣數與品質設定的成本，以及 Windows／macOS 實機支持。
+- 驗收場景包含薄葉／薄耳、厚物體、不同 RGB 散射距離、背光／無光／多燈、遮擋與材質邊界，並以可解釋的參考渲染核對，不只看單一預覽圖。
 
 ## Color Ramp 設計筆記（2026-09-29）
 

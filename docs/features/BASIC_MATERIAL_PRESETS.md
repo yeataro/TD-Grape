@@ -162,6 +162,26 @@ View Direction 的 uTDMats 是目標 MAT 自行提供的唯讀相機區塊，不
 
 驗證入口：`tests/unit/test_view_material_helpers.py`、`tests/browser/test_view_material_helpers.cjs`、`tests/td/test_view_material_helpers.py`。TD 渲染對照使用獨立 CPU 的 Rodrigues 旋轉、角度形式 Fresnel 公式及 Camera COMP 世界矩陣，不以相同子圖複製品充當參考。Windows TD 2025.32820 已驗證，macOS 尚待實機；實作只使用一般數學、TD 矩陣來源及已支援的旋轉函式。
 
+## Rim Light（0.8.262）
+
+Shader 分類新增普通、可編輯的 **Rim Light** 子圖；不加入預設圖。
+輸入為 Normal、View Direction、Color（vec3，預設白色）、Strength（float，1）、Power（float，2）；
+輸出 Color（vec3）與 Fac（float）。Normal／View Direction 共用相同座標空間，內部正規化。
+
+沿用 Facing 的雙面邊緣權重，再以 Power 控制集中程度：
+`Fac = pow(clamp(1 - abs(dot(unitNormal, unitView)), 0, 1), max(Power, 0.0001))`，
+`ColorOut = Color * max(Strength, 0) * Fac`。Power 越大越窄，介於 0 與 1 時更寬；
+非正 Power 使用 0.0001，非正 Strength 輸出黑色。Fac 不受 Color／Strength 影響，
+可單獨用作遮罩。零方向向量與 Facing 一致，Fac 為 1；正常使用請提供非零向量。
+
+View Direction 的 Direction 與世界 Normal 可直接接入；Color 接 PBR／Phong Material 的
+Emission，已有 Emission 時先相加。保留 HDR，不處理 Alpha 或色彩空間。
+這是視角驅動的藝術輪廓效果，與場景 Light COMP 無關，也不代表物理 Fresnel 或次表面散射。
+支援 TOP Pixel、MAT Vertex／Pixel；Vertex 求值後插值的視覺結果會受網格密度影響。
+
+驗證沿用上述三個 helper 測試入口，新增正面／背面／邊緣、寬窄 Power、零與負值保護、
+HDR 顏色及獨立 Fac 的原生渲染對照。Windows TD 2025.32820 已驗證，macOS 尚待實機。
+
 ## Displacement（0.8.259）
 
 新增獨立的 **Displacement** 內建 Subgraph（Vector 分類，MAT Vertex），不加入或改接預設材質圖。

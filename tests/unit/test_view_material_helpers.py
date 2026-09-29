@@ -6,15 +6,15 @@ import sgrape_library as library
 from test_material_subgraphs import library as builtin
 
 
-KEYS = ('view_direction', 'fresnel', 'facing', 'mapping')
+KEYS = ('view_direction', 'fresnel', 'facing', 'mapping', 'rim_light')
 
 
-def helper_graph(key, values=None, target='mat', stage='pixel', live_camera=False):
+def helper_graph(key, values=None, target='mat', stage='pixel', live_camera=False, port=None):
     g=c.demo_graph('color',target);g['declarations']=[]
     fn=builtin(key);g['functions']=[fn]
     call={'id':'helper','name':fn['name'].replace(' ','_'),'definitionUuid':c.CALL,
           'params':{'functionId':fn['id']},'inputValues':copy.deepcopy(values or {}),'ui':{'x':600,'y':160}}
-    output=fn['outputs'][0];vector=output['type']=='vec3'
+    output=next(p for p in fn['outputs'] if p['id']==port) if port else fn['outputs'][0];vector=output['type']=='vec3'
     convert=c.node('rgba','as_color') if vector else c.node('convert','as_color',fromType='float',toType='vec4')
     link=c.edge('helper','as_color','rgb' if vector else 'value',output['id'])
     final=c.node('pixel_out','pixel',dither=False,alphaTest=False,convertColorSpace=False)
@@ -55,7 +55,8 @@ class ViewMaterialHelpers(unittest.TestCase):
 
     def test_defaults_and_named_ports(self):
         expected={'view_direction':['position','camera'],'fresnel':['normal','viewDirection','ior'],
-                  'facing':['normal','viewDirection'],'mapping':['vector','translation','rotation','scale']}
+                  'facing':['normal','viewDirection'],'mapping':['vector','translation','rotation','scale'],
+                  'rim_light':['normal','viewDirection','color','strength','power']}
         for key,inputs in expected.items():self.assertEqual([p['id'] for p in builtin(key)['inputs']],inputs)
         self.assertEqual(builtin('fresnel')['inputs'][-1]['default'],1.45)
         self.assertEqual(builtin('mapping')['inputs'][-1]['default'],[1,1,1])
@@ -70,12 +71,21 @@ class ViewMaterialHelpers(unittest.TestCase):
             self.assertNotEqual(f,builtin(key))
 
     def test_metadata_hashes_and_categories(self):
-        expected={'view_direction':'vector','mapping':'vector','fresnel':'shader','facing':'shader'}
+        expected={'view_direction':'vector','mapping':'vector','fresnel':'shader','facing':'shader','rim_light':'shader'}
         for f in c.function_library(with_browser=True):
             key=f['source']['id'].removeprefix('sgrape.library.')
             if key not in KEYS:continue
             browser=f.pop('browser');source=f.pop('source')
             self.assertEqual(c.digest(f),source['version']);self.assertEqual(browser['category'],expected[key])
+
+    def test_rim_mask_is_independent_of_color_and_strength(self):
+        f=builtin('rim_light')
+        self.assertEqual([(p['id'],p['type']) for p in f['outputs']],[('color','vec3'),('factor','float')])
+        for target,stage in [('top','pixel'),('mat','pixel'),('mat','vertex')]:
+            code=c.compile_graph(helper_graph('rim_light',dict(color=[8,4,2],strength=0),target=target,stage=stage,port='factor'))[stage]
+            self.assertIn('pow(',code)
+            self.assertNotIn('Rim_Light_input_color',code)
+            self.assertNotIn('Rim_Light_input_strength',code)
 
 
 if __name__=='__main__':unittest.main()

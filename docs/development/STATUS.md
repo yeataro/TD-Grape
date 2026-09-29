@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-29 0.8.262：內建 Shader 庫新增可編輯 Rim Light 子圖。Normal／View Direction 共用已有向量來源，Color／Strength／Power 控制輪廓；輸出 Color 可接 Material Emission，獨立 Fac 可作遮罩。採雙面 Facing 權重的 Power 次方，屬於不依賴 Light COMP 的藝術視角效果；保留 HDR，非正 Strength／Power 有數值保護。五語 Help、前端分類與[材質子圖說明](../features/BASIC_MATERIAL_PRESETS.md)同步。原十一份內建快照逐份比對不變，不修改預設圖。使用者另要求 SSS，確認本輪只記錄完整設計需求，不實作近似版；[筆記](../discussions/TODO_AUDIT_2026-09-23.md)涵蓋可重用輸入、厚度來源、原生光照整合、散射流程、材質合成及雙平台驗證。
+
+35 項相關 Python 測試、14 項 Editor launch、五組 Chromium 分類／接口／接線／本地化／Undo／保存編譯檢查通過，截圖已目視。1525 五語 keys／1140 UI 引用／59 來源提示、分類投影及 diff 檢查通過。Windows TD 2025.32820 共 80 組 helper 渲染對照通過，其中新增 26 組 Rim Color／Fac 案例，包含正面／背面／掠射、寬窄 Power、HDR、零／負 Strength、非正 Power 與零向量；最大誤差約 1.81e-7。macOS 尚待實機。
+
+39 份來源同步、六份 Master 無圖升級，五份使用者 Shader 及身分／位置保留。正式 TOE 保存 2531522 bytes，SHA256 1f3661ccda9a73c379e2cb1efce89112e8ded38ed0720e6a61eaa2a6e211094e；十一份登記狀態保留、私人助手排除。私人報告 `reports/rim-light-262/`。未操作或重載使用者網頁，未推送。
+
 2026-09-29 0.8.261：內建庫新增 View Direction、Fresnel、Facing、Mapping 四個可編輯 Subgraph。View Direction 以世界 Position／Camera 分別處理標準透視與正交相機；Fresnel 使用完整介電質未偏振公式，含全反射與相同介質保護；Facing 為正面 0、掠射 1 的雙面角度遮罩；Mapping 採縮放 → X／Y／Z 度數旋轉 → 平移。View Direction／Mapping 分類在 Vector，Fresnel／Facing 在 Shader；五語 Help 與實際 browser projection 同步。View Direction 所需的 uTDMats 可保存至個人庫，沒有攜帶原圖宣告或 OP 綁定，仍受 MAT／Stage 驗證。原七份內建快照逐份比對保持不變；未替換或加入預設圖。詳見[材質輔助子圖](../features/BASIC_MATERIAL_PRESETS.md)。
 
 34 項相關 Python 測試、14 項 Editor launch、兩份 JS Subgraph 模型檢查、五組 Chromium 建立／分類／接口／編輯本地化／Undo／序列化檢查通過。1524 五語 keys／1139 UI 引用／59 來源提示、分類投影與 diff 檢查通過，四個新子圖介面截圖已目視。Windows TD 2025.32820 的 54 組渲染對照通過：獨立 CPU Rodrigues／角度 Fresnel 公式與 Camera COMP 矩陣核對，涵蓋旋轉相機、標準透視／正交、Vertex／Pixel、世界位置與 flat 相機傳遞、非法相機索引保護、IOR＝1／全反射／Brewster 角、零向量、負／零縮放。最大 RGBA 誤差約 1.81e-7；初次相機參考探針把 TD Python 矩陣索引轉置，修正測試參考後全部通過。macOS 尚待實機，未宣稱驗證自訂非線性投影。

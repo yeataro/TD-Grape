@@ -28,6 +28,11 @@ def oracle(key,values):
         return [*list(p+values.get('translation',[0,0,0])),1]
     cosine=min(1.0,abs(float(np.dot(unit(values.get('normal',[0,0,1])),unit(values.get('viewDirection',[0,0,1]))))))
     if key=='facing':return [1-cosine]*4
+    if key in ('rim_light','rim_mask'):
+        weight=(1-cosine)**max(float(values.get('power',2)),.0001)
+        if key=='rim_mask':return [weight]*4
+        color=np.array(values.get('color',[1,1,1]),dtype=float)*max(float(values.get('strength',1)),0)*weight
+        return [*list(color),1]
     eta=max(float(values.get('ior',1.45)),1e-6)
     if eta==1:return [0]*4
     if cosine==1:return [((eta-1)/(eta+1))**2]*4
@@ -61,9 +66,18 @@ try:
     for label,values in [('same-medium',dict(ior=1)),('same-grazing',dict(ior=1,viewDirection=[1,0,0])),
                          ('tir',dict(ior=.6666667,viewDirection=[1,0,.3])),('exit',dict(ior=.6666667,viewDirection=[.1,0,1])),
                          ('invalid-ior',dict(ior=0)),('glass',dict(ior=1.5)),('brewster',dict(ior=1.5,viewDirection=[1.5,0,1]))]:cases.append(('fresnel',values,label))
+    for label,values in [('normal',{}),('grazing',dict(viewDirection=[1,0,0])),('back',dict(viewDirection=[0,0,-1])),
+                         ('oblique-hdr',dict(normal=[0,0,4],viewDirection=[1,0,1],color=[8,2,.5],strength=3)),
+                         ('wide',dict(viewDirection=[1,0,1],power=.5)),('narrow',dict(viewDirection=[1,0,1],power=8)),
+                         ('strength-zero',dict(viewDirection=[1,0,0],strength=0)),('strength-negative',dict(viewDirection=[1,0,0],strength=-2)),
+                         ('power-zero-normal',dict(power=0)),('power-negative-grazing',dict(viewDirection=[1,0,0],power=-2)),
+                         ('zero-normal',dict(normal=[0,0,0]))]:cases.append(('rim_light',values,label))
+    cases += [('rim_mask',dict(viewDirection=[1,0,0],color=[8,2,.5],strength=0),'mask-independent'),
+              ('rim_mask',dict(viewDirection=[1,0,1],power=3),'mask-power')]
     for key,values,label in cases:
         for stage in ('pixel','vertex'):
-            graph=fixture.helper_graph(key,values,stage=stage);shader=r.create_shader(area,'helper',graph,'mat')
+            graph=fixture.helper_graph('rim_light' if key=='rim_mask' else key,values,stage=stage,port='factor' if key=='rim_mask' else None)
+            shader=r.create_shader(area,'helper',graph,'mat')
             try:
                 reference=shader.copy(shader.op('material'),name='reference')
                 dat=shader.create(textDAT,'reference_pixel');reference.par.pdat=dat

@@ -1904,16 +1904,34 @@ def function_library(with_browser=False):
         mapped=add('multiply','apply_rotation_'+axis,{'a':rotation,'b':mapped},'vec3',operandTypes={'a':'mat3','b':'vec3'})
     mapping=finish(add('add','translate_coordinates',{'a':mapped,'b':('input','translation')},'vec3'))
 
-    result = [fn]+filters+[color_multiply,normal_map,displacement,view_direction,fresnel,facing,mapping]
+    add,finish=helper('rim_light','Rim Light',
+        [normal,view,vector('color','Color',(1,1,1)),scalar('strength','Strength',1),scalar('power','Power',2)],
+        vector('color','Color',(0,0,0)))
+    n=unit(add,('input','normal'),'normal');v=unit(add,('input','viewDirection'),'view')
+    cosine=add('dot','view_cosine',{'a':n,'b':v},'vec3')
+    magnitude=add('abs','two_sided_cosine',{'value':cosine})
+    bounded=add('clamp','bounded_cosine',{'value':magnitude,'min':0,'max':1})
+    edge_weight=add('subtract','edge_weight',{'a':1,'b':bounded})
+    exponent=add('max','positive_power',{'a':('input','power'),'b':.0001})
+    weight=add('pow','rim_mask',{'base':edge_weight,'exponent':exponent})
+    strength=add('max','nonnegative_strength',{'a':('input','strength'),'b':0})
+    intensity=add('multiply','rim_intensity',{'a':weight,'b':strength})
+    rim_light=finish(add('multiply','rim_color',{'a':('input','color'),'b':intensity},'vec3'))
+    rim_light['outputs'].append(scalar('factor','Fac',0))
+    rim_light['graph']['edges'].append(edge(weight[0],'output','factor',weight[1]))
+    rim_light['source']['version']=digest({k:v for k,v in rim_light.items() if k!='source'})
+
+    result = [fn]+filters+[color_multiply,normal_map,displacement,view_direction,fresnel,facing,mapping,rim_light]
     if with_browser:
         # Browser-only projection: default library snapshots and versions stay intact.
         for f in result:
-            f['browser'] = {'category':'vector' if f in (displacement,view_direction,mapping) else 'shader' if f in (fresnel,facing) else 'texture' if f is normal_map else 'color','source':'editor',
+            f['browser'] = {'category':'vector' if f in (displacement,view_direction,mapping) else 'shader' if f in (fresnel,facing,rim_light) else 'texture' if f is normal_map else 'color','source':'editor',
                             'aliases':{'Displacement':['height','normal displacement','vertex displacement','高度','位移'],
                                        'Normal Map':['normal map','TBN','tangent','TDFrontFacing'],
                                        'View Direction':['view vector','camera','orthographic','視線','觀看方向'],
                                        'Fresnel':['IOR','reflection','費涅爾','反射'],
                                        'Facing':['layer weight','rim','edge mask','邊緣','朝向'],
+                                       'Rim Light':['rim','edge light','emission','輪廓光','邊緣光'],
                                        'Mapping':['UV','transform','rotation','座標','變換']}.get(f['name'],[]),
                             'descriptionKey':f.get('descriptionKey','help.function')}
     return result

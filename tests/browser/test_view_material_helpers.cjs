@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),path=require('node:path'),fs=require(
 const {harness}=require('./test_glsl_code.cjs');
 (async()=>{
  const[source,fixture,folder]=process.argv.slice(2),h=await harness(source,fixture,folder,{skipPreview:true}),{page,settle,checks,errors}=h;
- const names=['View Direction','Fresnel','Facing','Mapping'];
+ const names=['View Direction','Fresnel','Facing','Mapping','Rim Light'];
  try{
   await page.selectOption('#language','en');
   const entries=await page.evaluate(names=>{
@@ -16,7 +16,7 @@ const {harness}=require('./test_glsl_code.cjs');
    });
   },names);
   for(const e of entries)assert.deepEqual(e.names.sort(),names.filter(n=>e.target==='mat'||n!=='View Direction').sort());
-  checks.push('View Direction is MAT-only; Fresnel, Facing and Mapping appear in TOP Pixel and both MAT stages');
+  checks.push('View Direction is MAT-only; the other helpers appear in TOP Pixel and both MAT stages');
   const meta=await page.evaluate(names=>{
    editorTarget='mat';stage='pixel';
    return availableEntries().filter(d=>names.includes(d.label)).map(d=>({name:d.label,category:browserMeta(d).category}));
@@ -25,15 +25,16 @@ const {harness}=require('./test_glsl_code.cjs');
   checks.push('The actual shipped menu groups camera/mapping in Vector and angle weights in Shader');
   const ids=await page.evaluate(names=>{
    setUIExperiments({canvasDamping:false,frameDamping:false});render();
-   const ids={};names.forEach((name,i)=>{change(()=>instantiate(availableEntries().find(d=>d.label===name),30+360*i,140));ids[name]=current().nodes.at(-1).id;});
-   for(const name of ['Fresnel','Facing'])connectPorts({node:ids['View Direction'],kind:'outputs',port:'direction'},{node:ids[name],kind:'inputs',port:'viewDirection'});
+   const ids={};names.forEach((name,i)=>{change(()=>instantiate(availableEntries().find(d=>d.label===name),30+440*(i%3),80+550*Math.floor(i/3)));ids[name]=current().nodes.at(-1).id;});
+   for(const name of ['Fresnel','Facing','Rim Light'])connectPorts({node:ids['View Direction'],kind:'outputs',port:'direction'},{node:ids[name],kind:'inputs',port:'viewDirection'});
    scale=.60;pan={x:30,y:40};transform();render();return ids;
   },names);await settle();
   const inputs=await page.evaluate(ids=>Object.fromEntries(Object.entries(ids).map(([name,id])=>{const n=current().nodes.find(n=>n.id===id);return[name,Object.keys(definition(n).inputs).map(p=>portLabel(n,'inputs',p))];})),ids);
-  assert.deepEqual(inputs,{'View Direction':['Position','Camera'],Fresnel:['Normal','View Direction','IOR'],Facing:['Normal','View Direction'],Mapping:['Vector','Translation','Rotation','Scale']});
-  assert.equal(await page.evaluate(()=>current().edges.length),2);
+  assert.deepEqual(inputs,{'View Direction':['Position','Camera'],Fresnel:['Normal','View Direction','IOR'],Facing:['Normal','View Direction'],Mapping:['Vector','Translation','Rotation','Scale'],'Rim Light':['Normal','View Direction','Color','Strength','Power']});
+  assert.equal(await page.evaluate(()=>current().edges.length),3);
+  assert.deepEqual(await page.evaluate(id=>{const n=current().nodes.find(n=>n.id===id);return Object.keys(definition(n).outputs).map(p=>portLabel(n,'outputs',p));},ids['Rim Light']),['Color','Fac']);
   await page.screenshot({path:path.join(folder,'helpers.png')});
-  checks.push('All four instantiate with correct ports; Direction connects to Fresnel and Facing');
+  checks.push('All five instantiate with correct ports; Direction connects to Fresnel, Facing and Rim Light');
   for(const name of names){
    await page.locator(`.node[data-node="${ids[name]}"] .node-title`).dblclick();await settle();
    const before=await page.evaluate(()=>({count:current().nodes.length,scope:currentFunction().scope,id:current().nodes[1].id,name:current().nodes[1].name}));
