@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-09-29 0.8.260：補齊 Displacement 的 Editor 內嵌 browser projection。核心已定義 Vector 分類，但前一輪未重新產生前端分類資料，導致實際顯示為 Uncategorized；現在 Vector 分類與 height 搜尋皆可找到。預設圖與子圖內容不變。
+
+Browser metadata 整合檢查與五組 Chromium Displacement 檢查通過，新增實際分類／搜尋回歸。39 份來源同步、六份 Master 無圖升級，五份使用者 Shader 保留。正式 TOE 保存 2516362 bytes，SHA256 93e60c28c36eff281cdedd8a705bd298dbc9bdc7437cb4dd29d5b1fa1e5098aa；十一份登記狀態保留，私人助手排除。私人紀錄 `reports/displacement-category-260/`；未操作使用者網頁，未推送。
+
 2026-09-29 0.8.259：新增 Displacement 內建 Subgraph（Vector 分類，MAT Vertex），提供 Position／Normal／Height／Scale／Midlevel，輸出沿正規化法線位移後的位置。Height／Midlevel 預設 0.5、Scale 預設 1，預設不位移；不細分或重算法線，貼圖取樣留在外部。未加入預設圖。另開放自訂 Sampler 來源在 MAT Vertex 使用，可接 textureLod，跨 Vertex／Pixel 共用綁定；普通 Texture 2D 仍限 Pixel。五語 Help 與[材質輔助子圖說明](../features/BASIC_MATERIAL_PRESETS.md)同步。
 
 71 項相關 Python 測試、14 項 Editor launch、1520 五語 keys／1135 UI 引用／59 來源提示、4 組新增 Chromium 與 4 組既有材質子圖回歸通過。TD 2025.32820 十組獨立 GLSL 渲染對照最大差異皆為 0，涵蓋正負／零位移、負 Scale、範圍外高度、非單位法線、貼圖即時更新及跨 Stage 綁定；十一份使用者／範本登記狀態保留。截圖已目視，未實測 iOS。

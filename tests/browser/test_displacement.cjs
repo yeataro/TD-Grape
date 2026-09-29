@@ -13,6 +13,14 @@ const {harness}=require('./test_glsl_code.cjs');
   });
   for(const row of visible){assert.equal(row.entries.some(d=>d.label==='Displacement'),row.target==='mat'&&row.stage==='vertex');if(row.target==='mat')assert.ok(row.entries.some(d=>d.key==='sampler'));}
   checks.push('Displacement is MAT Vertex-only; custom Sampler is offered in both MAT stages');
+  const browsing=await page.evaluate(()=>{
+   editorTarget='mat';stage='vertex';
+   const entries=availableEntries().map(d=>({d,meta:browserMeta(d)}));
+   const inResults=options=>browseEntries(entries,options.query||'',options).some(e=>e.d.label==='Displacement');
+   return {vector:inResults({tab:'categories',category:'vector',source:'all'}),uncategorized:inResults({tab:'categories',category:'uncategorized',source:'all'}),height:inResults({query:'height',source:'all'})};
+  });
+  assert.deepEqual(browsing,{vector:true,uncategorized:false,height:true});
+  checks.push('The shipped browser lists Displacement under Vector, not Uncategorized, and finds it by height');
   const ids=await page.evaluate(()=>{
    editorTarget='mat';stage='vertex';setUIExperiments({canvasDamping:false,frameDamping:false});render();
    const add=(entry,x,y)=>{let n;change(()=>{n=instantiate(entry,x,y);});return current().nodes.at(-1).id;};
