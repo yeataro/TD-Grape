@@ -147,7 +147,7 @@ def run_native():
     name='grape_array_nodes_'+uuid.uuid4().hex[:8];area=op('/').create(baseCOMP,name)
     report=dict(build=str(app.build),records=[])
     try:
-        for dat,file in [('node_catalog','node_catalog.json'),('sgrape_composites','sgrape_composites.py'),('core','sgrape_core.py')]:area.create(textDAT,dat).text=source_path(file).read_text(encoding='utf-8')
+        for dat,file in [(name,filename) for name,filename in json.loads((GRAPE_ROOT/'src/td/embedded_sources.json').read_text('utf-8')).items() if name in ('sgrape_voronoi','sgrape_legacy_nodes','source_catalog','sgrape_source_catalog','node_catalog','sgrape_composites','core')]:area.create(textDAT,dat).text=source_path(file).read_text(encoding='utf-8')
         c=area.op('core').module
         top=area.create(glslTOP,'top_probe');top_pixel=area.create(textDAT,'top_pixel');top.par.pixeldat=top_pixel
         top.par.outputresolution='custom';top.par.resolutionw=32;top.par.resolutionh=16;top.par.format='rgba32float'

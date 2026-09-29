@@ -2993,6 +2993,76 @@
     },
     {
       "definition": {
+        "key": "voronoi",
+        "label": "Voronoi",
+        "inputs": {
+          "vector": "vec3",
+          "scale": "float",
+          "detail": "float",
+          "roughness": "float",
+          "lacunarity": "float",
+          "randomness": "float"
+        },
+        "outputs": {
+          "distance": "float",
+          "color": "vec4",
+          "position": "vec3"
+        },
+        "stages": [
+          "vertex",
+          "pixel"
+        ],
+        "defaults": {
+          "dimensions": 3,
+          "feature": "f1",
+          "metric": "euclidean",
+          "normalize": false
+        },
+        "inputDefaults": {
+          "vector": 0,
+          "w": 0,
+          "scale": 5,
+          "detail": 0,
+          "roughness": 0.5,
+          "lacunarity": 2,
+          "smoothness": 1,
+          "exponent": 0.5,
+          "randomness": 1
+        },
+        "descriptionKey": "help.voronoi",
+        "definitionUuid": "sgrape.builtin.voronoi",
+        "revisionHash": "d48242c6ce31c121ee3d1237de3c3da51ae2fe4e3a82c21f522f221188952d4a"
+      },
+      "emitter": {
+        "id": "voronoi",
+        "version": 1
+      },
+      "browser": {
+        "category": "math",
+        "source": "editor",
+        "aliases": [
+          "Voronoi",
+          "Worley",
+          "Cellular Noise",
+          "F1",
+          "F2",
+          "Distance to Edge",
+          "N-Sphere Radius",
+          "1D",
+          "2D",
+          "3D",
+          "4D"
+        ],
+        "glslName": "",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "math",
+          "noise"
+        ]
+      }
+    },
+    {
+      "definition": {
         "key": "matrix",
         "label": "Matrix",
         "inputs": {},

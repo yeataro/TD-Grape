@@ -1,5 +1,7 @@
 # 測試
 
+2026-09-30 Voronoi（0.8.268）：`tests/unit/test_voronoi.py` 七項涵蓋全部 80 種設定組合、所有輸出與 TOP／MAT Stage、source map、helper 去重、非法設定、解析規則、分形與五語系。`tests/browser/test_voronoi.cjs` 五組檢查實際建立、動態接孔、僅 Parameter 有選單、值快取／Undo、既有失效線政策、五語系；其輸出圖經 core 編譯。`tests/td/test_voronoi.py` 117 組在 Windows TD 2025.32820 通過，GPU 最大絕對誤差 0.0000314，包含負座標、零隨機度、Minkowski 指數上下界、最高 Detail、分數層、三次 Uniform 原碼不變更新，以及 MAT Vertex／Pixel。隔離 fixture 移除，既有三份已登記 Shader 資料保留。另 288 次有限／較大鄰域比較無差異（不據此保證低 Minkowski 指數的全域精確性）。六份既有 TOP／MAT 範例與 HEAD 編譯結果完全相同。舊 `test_type_contract.test_existing_graphs_produce_identical_results` fingerprint 及 `test_noise_nodes.test_javascript_auto_type_transactions` 缺少 URLSearchParams，在 HEAD 隔離副本重現同樣失敗；未更新舊預期值。私人報告 `reports/voronoi-268/`；macOS／Metal 未實測。
+
 2026-09-24 0.8.224：新增五個 Offset Sampling 函式、13 個維度入口。40 項相關 Python 測試、TD 39 組函式簽名與 26 項原生檢查（20 像素對照、4 常數／動態值、2 失敗保留）、Chromium 3 組編輯器流程通過。五語 Help 共 1494 keys；節點分類投影、14 項 Editor launch、品牌、10 份 JS suite 與 26 項 remote panel 測試通過。範圍與重跑方式見 [Offset Sampling](../features/TEXTURE_OFFSET_SAMPLING.md)。
 
 完整 Python suite 為 555 項：552 通過，2 failures／1 error。`test_top_target.test_mat_compatibility` 與 `test_type_contract.test_existing_graphs_produce_identical_results` 的舊 MAT 指紋失配，以及 `test_typed_undo.test_custom_control_native_undo_validates_its_current_bound_source` 的 fake Par 缺少 style，均在修改前 HEAD 07517de 重現，未計為本次通過，也未在本批改寫舊 golden／測試替身。另比對當前與 HEAD 的 138 份舊圖輸出完全相同，原有 342 份 catalog 定義未改。私人報告 reports/texture-offsets-224/ 保存 baseline-failures.txt 與 legacy-current-v-head.json。

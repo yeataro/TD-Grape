@@ -544,7 +544,24 @@ function switchPorts(params){
   if(!Number.isInteger(count)||count<0||count>(typeContract?.switch?.maxCases||16)||!valueTypes().includes(type))throw Error(t('contract.invalid'));
   return {inputs:{default:type,index:'int',...Object.fromEntries(Array.from({length:count},(_,i)=>['case'+i,type]))},outputs:{out:type}};
 }
+function setVoronoiOption(n,key,value){
+  return change(()=>{
+    const before=voronoiPorts(n.params).inputs;
+    n.ui||={};const saved=n.ui.voronoiInputValues||={};
+    for(const port of Object.keys(before))if(Object.hasOwn(n.inputValues||{},port))saved[port]=clone(n.inputValues[port]);else delete saved[port];
+    n.params[key]=value;
+    const after=voronoiPorts(n.params).inputs;
+    n.inputValues=Object.fromEntries(Object.keys(after).filter(port=>Object.hasOwn(saved,port)).map(port=>[port,clone(saved[port])]));
+  },{typeChange:true});
+}
+function voronoiPorts(params){
+  const spec=typeContract?.voronoi,p={...spec?.defaults,...params};
+  if(!spec||!Number.isInteger(p.dimensions)||typeof p.normalize!=='boolean')throw Error(t('contract.invalid'));
+  const value=spec.interfaces[p.dimensions+':'+p.feature+':'+p.metric];
+  if(!value)throw Error(t('contract.invalid'));return {inputs:{...value.inputs},outputs:{...value.outputs}};
+}
 function resolvedNodePorts(d,params,decl,kind){
+  if(d.key==='voronoi')return voronoiPorts(params)[kind];
   if(d.key==='router')return kind==='inputs'?{value:params.type||'float'}:{out:params.type||'float'};
   if(d.key==='math')return mathPorts(params)[kind];
   if(d.key==='switch')return switchPorts(params)[kind];
@@ -918,7 +935,7 @@ function autoTopology(document){
   return JSON.stringify({typeDefinitions:document.typeDefinitions?.map(d=>[d.id,d.fields]),declarations:document.declarations.map(d=>[d.id,d.type]),units:autoUnits(document).map(({key,data,owner})=>{
     const creates=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.array_create').map(n=>n.id));
     const lengthSources=new Set(data.edges.filter(e=>creates.has(e.to[0])&&e.to[1]==='length').map(e=>e.from[0]));
-    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.operandTypes,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.caseCount,n.params.inputCount,n.params.steps,n.params.operation,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
+    return [key,owner?.scope,owner?.inputs.map(p=>[p.id,p.type]),owner?.outputs.map(p=>[p.id,p.type]),data.nodes.map(n=>[n.id,n.definitionUuid,n.params.type,n.params.fromType,n.params.toType,n.params.operandTypes,n.params.declarationId,n.params.functionId,n.params.bufferCount,n.params.caseCount,n.params.inputCount,n.params.steps,n.params.operation,n.params.groups,n.params.mask,n.params.mode,n.params.indexType,n.params.inputs,n.params.outputs,n.params.elementType,n.params.length,n.params.field,n.params.source,n.params.dimensions,n.params.feature,n.params.metric,n.ui?.typeMode,creates.has(n.id)?n.inputValues?.length:undefined,lengthSources.has(n.id)?n.params.value:undefined]),data.edges];
   })});
 }
 function pruneSwitchCaseEdges(data,plan,previous){

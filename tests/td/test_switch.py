@@ -7,7 +7,7 @@ before={s.path:{n:s.op(n).text for n in ('state','graph','manifest','pixel_shade
 area=op('/').create(baseCOMP,'switch_probe_'+uuid.uuid4().hex[:8]);records=[]
 try:
     mapping=json.loads((GRAPE_ROOT/'src/td/embedded_sources.json').read_text(encoding='utf-8'))
-    for dat in ('sgrape_legacy_nodes','source_catalog','sgrape_source_catalog','node_catalog','sgrape_composites','core'):
+    for dat in ('sgrape_voronoi','sgrape_legacy_nodes','source_catalog','sgrape_source_catalog','node_catalog','sgrape_composites','core'):
         area.create(textDAT,dat).text=source_path(mapping[dat]).read_text(encoding='utf-8')
     c=area.op('core').module
     text=(GRAPE_ROOT/'tests/unit/test_switch.py').read_text(encoding='utf-8-sig');ns={'c':c};exec(text[text.index('def fixture('):text.index('class SwitchTests')],ns);fixture=ns['fixture']

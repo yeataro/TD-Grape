@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-30 0.8.268：加入正式內建 [Voronoi](../features/VORONOI.md)，支援 1D–4D、F1／F2／Smooth F1／Distance to Edge／N-Sphere Radius、四種距離算法、分形細節與 Normalize。模式選單只在 Parameter，接孔由後端契約同步；隱藏輸入值切回可恢復，沿用失效連線與 Undo／Redo 政策。GLSL helper 按模式共用，不依賴 TD 雜訊函式，未複製 Blender 程式碼。功能分類對齊、圖樣與分形算法不保證數值相同；有限鄰域、Minkowski 指數範圍、大座標精度與成本限制見功能文件。既有圖／材質範本不改寫。
+
+Windows TD 2025.32820 的 117 組隔離 GPU 檢查通過，涵蓋 TOP、MAT Pixel／Vertex、最高 Detail、正規化、負／零 Scale、Minkowski 邊界與三次 Uniform 更新（產碼不變），對獨立 CPU 參考最大誤差 0.0000314。五組 Chromium 流程、五語系與瀏覽器圖的真實核心編譯通過；六份既有 TOP／MAT 範例與修改前逐字相同。舊型別契約 fingerprint 與舊 noise JS fixture 缺少 URLSearchParams 的失敗，在修改前 HEAD 隔離副本同樣重現；未改寫舊數值基準，也未宣稱全套測試通過。私人結果 `reports/voronoi-268/`；macOS／Metal 尚未實測。
+
+40 份內嵌來源核對、九份更新；同步後另用目前 TD 的核心驗證 20 種維度／特徵組合。六份 Master 同步無圖升級、原生身分／位置保留，三份使用者 Shader 保留。正式 TOE 已保存，私人助手排除；未重新整理使用者網頁，未推送。相關核心檢查 46 項中 44 項通過，上述兩項為修改前已存在的測試失敗。
+
 2026-09-30 0.8.267：修正 `Array[i]` 等標籤產生實例名稱時，尾端底線與碰撞編號組成 `Array_i__1`，被合法 GLSL 名稱驗證拒絕的問題。名稱清理／截斷後先移除尾端底線，再加入編號；新建依序為 `Array_i`、`Array_i_1`，複製／貼上共用修正。顯示標籤保留，既有名稱不自動改寫；已停在網頁草稿的錯誤名稱須手動改名一次。未修改 Router、陣列型別或 GLSL 名稱驗證規則。
 
 6 組新增 Chromium 檢查通過，涵蓋兩顆 Array[i] 建立、uTDCamInfos 直接／Router 接入、Duplicate／Paste／Undo、舊尾端底線名稱保留。四份瀏覽器產生的圖經真實 core 編譯成功，1468 個候選名稱通過前後端規則；原錯誤名稱仍被拒絕。14 項核心節點名稱與 14 項 Editor launch 檢查通過。另跑既有 `test_builtin_subgraph_names`，兩個測試方法共五個失敗（庫清單停在七項、跨 Stage fixture 不符 target）；修改前 `6311d0d` 的隔離來源重現相同失敗，本輪未改寫該舊測試，未列為全套通過。私人紀錄 `reports/generated-names-267/`；未實測 Safari／iPad。

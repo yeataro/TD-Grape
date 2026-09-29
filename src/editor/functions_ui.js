@@ -469,6 +469,7 @@ function functionInspector(box,n,d){
 function convertValue(value,type,previous=null){return value===null&&!isResourceType(type)?filledValue(type):isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(value,previous,type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  if(n.definitionUuid==='sgrape.builtin.voronoi')return t('voronoi.'+id);
   if(n.definitionUuid==='sgrape.builtin.math')return /^input[0-9]+$/.test(id)?mathInputName(Number(id.slice(5))):id==='out'?'Result':id;
   if(n.definitionUuid==='sgrape.builtin.switch')return id==='default'?'Default':id==='index'?'Index':/^case[0-9]+$/.test(id)?'Case '+id.slice(4):id;
   if(n.definitionUuid==='sgrape.builtin.vertex_out'&&kind==='inputs'&&id==='position')return 'gl_Position';

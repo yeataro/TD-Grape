@@ -100,6 +100,10 @@ class CatalogTests(unittest.TestCase):
         class Parent:
             def op(self,name):
                 if name=='node_catalog':return Dat()
+                if name=='sgrape_voronoi':
+                    class Module:
+                        module=c._voronoi
+                    return Module()
                 if name=='sgrape_composites':
                     class Module:
                         module=c._composites

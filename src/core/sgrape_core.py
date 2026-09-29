@@ -11,10 +11,12 @@ if 'me' in globals():
     _composites = me.parent().op('sgrape_composites').module
     _source_catalog = me.parent().op('sgrape_source_catalog').module
     _legacy_nodes = me.parent().op('sgrape_legacy_nodes').module
+    _voronoi = me.parent().op('sgrape_voronoi').module
 else:
     import sgrape_composites as _composites
     import sgrape_source_catalog as _source_catalog
     import sgrape_legacy_nodes as _legacy_nodes
+    import sgrape_voronoi as _voronoi
 
 VERSION = 1
 TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
@@ -110,7 +112,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'deform','to_clip','vertex_out','vertex_input','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','tex_attribute','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','generated_glsl','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
-    'perlin_noise','simplex_noise','scalar','convert','matrix_convert',
+    'perlin_noise','simplex_noise','voronoi','scalar','convert','matrix_convert',
     'router','math','switch','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS,*_legacy_nodes.CALLS))
 
@@ -588,6 +590,9 @@ def switch_case_count(params):
     return count
 
 def definition_ports(definition, params):
+    if definition['key']=='voronoi':
+        try:return _voronoi.interface(params)
+        except (ValueError,TypeError):raise GraphError('Voronoi: invalid mode settings') from None
     if definition['key']=='math':return math_interface(params)
     if definition['key']=='switch':
         return {'inputs':{'default':'T','index':'int',**{'case'+str(i):'T' for i in range(switch_case_count(params))}},'outputs':{'out':'T'}}
@@ -726,6 +731,7 @@ def _type_contract():
               'convert':{'types':list(TYPES),'fromParameter':'fromType','toParameter':'toType',
                          'pairs':{source:[target for target in TYPES if explicit_conversion_valid(source,target)] for source in TYPES},
                          'outputTypesByNode':{key:list(types) for key,types in CONVERT_OUTPUT_TYPES.items()}},
+              'voronoi':_voronoi.contract(),
               'math':{'maxInputs':MATH_MAX_INPUTS,'types':list(ARITHMETIC_TYPES),'operators':dict(MATH_OPERATORS)},
               'switch':{'maxCases':SWITCH_MAX_CASES,'indexType':'int','typeSource':'default'},
               'constantExpressions':sorted(CONSTANT_EXPRESSIONS-{'relay'}),
@@ -1450,6 +1456,25 @@ def _compile_flat(graph,annotation_scopes=None):
                     expr=componentwise_expression(ty,[a(port) for port in ('value','min','max')],
                         lambda *values:helper+'('+', '.join(values)+')')
                 elif k in ('sin','cos','abs','fract','length','normalize','sign','sqrt','floor','round','ceil','trunc'): expr=k+'('+a('value')+')'
+                elif k=='voronoi':
+                    function=_voronoi.specialization(p)
+                    for marker,block in [('uint sg_voronoiHash(uint x) {',_voronoi.COMMON),
+                                         ('float '+function+'_metric(vec4 delta, float exponent) {',_voronoi.helper(p))]:
+                        if marker not in helpers:
+                            source=block.splitlines();helpers.extend(source)
+                            helper_nodes.extend(dict(node=ident,stage=stage,trail=[]) for _ in source)
+                    dim=p.get('dimensions',3)
+                    coordinate=('vec4('+a('w')+', 0.0, 0.0, 0.0)' if dim==1 else
+                                'vec4(('+a('vector')+').xy, 0.0, 0.0)' if dim==2 else
+                                'vec4('+a('vector')+', '+(a('w') if dim==4 else '0.0')+')')
+                    arguments=[coordinate]+[a(port) if port in ports[ident]['in'] else literal(_voronoi.INPUT_DEFAULTS[port],'float')
+                                              for port in ('scale','detail','roughness','lacunarity','smoothness','exponent','randomness')]
+                    variable='sg_voronoi_result_'+ident
+                    lines.append('    sg_VoronoiResult '+variable+' = '+function+'('+', '.join(arguments)+');')
+                    fields={'distance':variable+'.distance','radius':variable+'.distance',
+                            'color':'vec4('+variable+'.color, 1.0)','position':variable+'.position.xyz',
+                            'w':variable+('.position.x' if dim==1 else '.position.w')}
+                    for port in ports[ident]['out']:expressions[(ident,port)]=fields[port]
                 elif k in NOISE_HELPERS: expr=NOISE_HELPERS[k]+'('+a('position')+')'
                 elif k=='router':
                     if (ident,'value') not in links:raise GraphError('Connect a source to Router',ident)

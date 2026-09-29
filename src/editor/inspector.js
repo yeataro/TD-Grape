@@ -661,7 +661,7 @@ function applyValueComponentHint(element,n,port,index,vector,labels){
     applyComponentColorHint(element,Math.max(0,start)+index,labels==='RGBA');
   }else {applyPortColorHint(element,n,'inputs',port);if(element.dataset.vectorComponent!==undefined)element.classList.add('component-tint-label');}
 }
-function nodeInputOptions(n,port){return definition(n)?.key==='array_create'&&port==='length'?{typeChange:true,min:1,max:typeContract.composites.array.maxLength||1024}:{};}
+function nodeInputOptions(n,port){if(definition(n)?.key==='voronoi'){const range={detail:[0,15],roughness:[0,1],lacunarity:[0,16],smoothness:[0,1],exponent:[.125,32],randomness:[0,1]}[port];return range?{min:range[0],max:range[1]}:{};}return definition(n)?.key==='array_create'&&port==='length'?{typeChange:true,min:1,max:typeContract.composites.array.maxLength||1024}:{};}
 function parameterValueRow(n,key,label,type,read,write,labels='XYZW',options={}){
   const matrixShape=typeContract?.types?.[type];
   if(matrixShape?.shape==='matrix'){
@@ -1166,6 +1166,21 @@ function glslCodeInspector(box,n){
   box.append(panel);
 }
 
+function voronoiInspector(box,n){
+  const spec=typeContract.voronoi,p={...spec.defaults,...n.params},nearest=['f1','f2','smooth_f1'].includes(p.feature);
+  for(const [key,choices]of [['dimensions',spec.dimensions],['feature',spec.features],['metric',spec.metrics]]){
+    if(key==='metric'&&(!nearest||p.dimensions===1))continue;
+    const control=select(choices.map(value=>[String(value),key==='dimensions'?value+'D':t('voronoi.'+value)]),String(p[key]),value=>setVoronoiOption(n,key,key==='dimensions'?Number(value):value));
+    control.dataset.voronoiOption=key;control.disabled=readonly;
+    box.append(parameterControlRow(t('voronoi.'+key),control));
+  }
+  if(p.feature!=='n_sphere_radius'){
+    const control=el('input',{type:'checkbox','data-voronoi-option':'normalize'});control.checked=p.normalize;control.disabled=readonly;
+    control.onchange=()=>change(()=>n.params.normalize=control.checked);
+    box.append(parameterControlRow(t('voronoi.normalize'),control));
+  }
+  box.append(parameterControlRow('',parameterHint(t('voronoi.hint'))));
+}
 function mathInspector(box,n){
   const apply=fn=>change(fn),params=n.params,count=params.inputCount??3;
   const mode=select([['steps',t('math.steps')],['shared',t('math.shared')]],params.mode||'steps',value=>apply(()=>params.mode=value));mode.dataset.mathMode=n.id;mode.disabled=readonly;
@@ -1579,6 +1594,7 @@ function renderInspector(){
       const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
       const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
+    if(d.key==='voronoi')voronoiInspector(box,n);
     if(d.key==='math')mathInspector(box,n);
     if(d.key==='switch')box.append(parameterControlRow(t('switch.defaultType'),nodeTypeSelector(n,d)));
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));

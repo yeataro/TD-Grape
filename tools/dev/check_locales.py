@@ -7,7 +7,7 @@ for script in root.glob('*.js'):
     refs.update(re.findall(r"\bt\('([^']+)'\)",script.read_text(encoding='utf-8')))
 refs.discard('code.');refs.discard('code.add.');refs.update('code.'+k for k in ('inputs','outputs','add.inputs','add.outputs','up','down'));
 refs.discard('help.top.'); refs.update(['help.top.uv','help.top.texture','help.top.pixel_out']); refs.discard('help.'); refs.discard('panel.')
-refs.discard('category.')
+refs.discard('category.');refs.discard('voronoi.')
 refs.discard('library.source.');refs.discard('library.search.')
 refs.update('library.source.'+key for key in ('shader','builtin','personal'))
 refs.update('library.search.'+key for key in ('nodes','functions','examples'))
