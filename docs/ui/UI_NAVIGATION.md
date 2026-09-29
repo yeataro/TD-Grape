@@ -1,30 +1,37 @@
 # UI navigation development checkpoint
 
-## Zoomed-out overview experiment (0.8.253)
+## Zoomed-out overview experiment (0.8.254)
 
 Experimental features → Colors and display → **Zoomed-out overview** defaults **off**.
-Enabled, the canvas range is 15–170%; wheel, touch pinch, middle-button Dolly,
-Frame/Home and the zoom menu share the same lower limit. The menu adds 15%
-and 20%. At exactly 30% the normal card remains; strictly below 30% ordinary
+Enabled, the canvas range is 20–170%; wheel, touch pinch, middle-button Dolly,
+Frame/Home and the zoom menu share the same lower limit. The menu adds 20%.
+At exactly 30% the normal card remains; strictly below 30% ordinary
 node cards use their family header color across the whole card, with no visible
 header/body division. Port labels, types and inline controls are hidden.
 
-Names are aligned to the bottom-left at a uniform **36 graph pixels** (no per-node font fitting),
-wrap to at most two lines (one when collapsed) and then ellipsize. They follow the custom-name display
+Names remain bottom-left aligned, starting at **36 graph pixels** with a minimum
+of **10 screen CSS pixels**, including compensation for the UI size slider.
+All ordinary cards use the same font size, with no per-node font fitting.
+Names use at most two lines (one when collapsed or too short for two lines),
+and each line ellipsizes separately. They follow the custom-name display
 preference. Card dimensions, positions, saved collapse state and socket centers
 remain unchanged: original content stays in layout, with an absolute name overlay.
 Sockets, wires, Link navigation, selection and error borders remain visible.
 Router and annotation cards keep their specialized forms. In overview the whole
 ordinary card is a drag surface, including when normal dragging is header-only.
-Zooming back restores the same controls and pending numeric drafts.
+Zooming back restores the same controls and pending numeric drafts. Very short
+or collapsed cards retain their geometry; a single readable line can extend
+slightly above their top edge. Bottom padding contracts only if needed for that line.
 
 Wrapping first chooses the last fitting space. Only when none fits does it look
 backwards through camel/Pascal-case boundaries, keeping single-letter prefixes
 such as `sRoughness` and number/capital combinations such as `2D` or `3D` together.
 For example, `baseColorMap` can wrap as `baseColor|Map`; names that already fit
 remain on one line. The split is measured at the card's current width without
-renaming or inserting spaces. If no suitable boundary fits, ordinary character
-wrapping and the two-line ellipsis limit apply.
+renaming or inserting spaces. If no suitable boundary fits, the name ellipsizes
+on one line; words such as `Maximum` never force their final letter onto another
+line. The second line also ellipsizes instead of adding further breaks. Text
+measurements are cached per rendered card so zooming only adjusts the label.
 
 A centered text block whose individual lines remain left-aligned is a possible
 next iteration; this delivery intentionally uses bottom-left alignment.

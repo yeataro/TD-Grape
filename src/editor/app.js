@@ -8,7 +8,7 @@ sessionStorage.setItem('sgrapeToken',token);history.replaceState(null,'',locatio
 
 const GRID=24;
 const GRAPH_ZOOM_MIN=.25,GRAPH_ZOOM_MAX=1.7;
-const GRAPH_OVERVIEW_MIN=.15,GRAPH_OVERVIEW_THRESHOLD=.3;
+const GRAPH_OVERVIEW_MIN=.2,GRAPH_OVERVIEW_THRESHOLD=.3;
 function graphZoomMinimum(){return EDITOR_DEV_SETTINGS.lowZoomOverview ? GRAPH_OVERVIEW_MIN : GRAPH_ZOOM_MIN;}
 const snap=value=>Math.round(value/GRID)*GRID;
 let localeData=null,language='en';
@@ -473,6 +473,7 @@ function applyCanvasDamping(force=false){
 }
 function transform(){
   $('#canvas').classList.toggle('graph-overview',EDITOR_DEV_SETTINGS.lowZoomOverview&&scale<GRAPH_OVERVIEW_THRESHOLD);
+  updateOverviewTextScale();
   // Hide intermediate grid lines at distant zoom; snapping stays in world units.
   let displayGrid=GRID;
   while(displayGrid*scale<14)displayGrid*=2;
@@ -1248,6 +1249,7 @@ function setUIAppearance(key,value){
   uiAppearance={size,theme,tones,tone:tones[theme],scale};
   try{localStorage.setItem(appearanceStorageKey,JSON.stringify({size,theme,tones,scale}));}catch{}
   renderUIAppearance();
+  if(key==='scale')updateOverviewTextScale();
   // A display preference does not redraw the graph, change its zoom or apply a Shader.
   if(previous.scale!==uiAppearance.scale||previous.size!==size)window.dispatchEvent(new Event('resize'));
   if(graph&&(key==='size'||key==='scale'))requestAnimationFrame(wires);
@@ -1298,7 +1300,7 @@ function zoomCanvasAt(value,x,y){
   moveCanvas({x:x-(x-origin.x)*next/previous,y:y-(y-origin.y)*next/previous},next);
 }
 function installGraphZoom(){
-  const opener=$('#zoom'),menu=$('#canvaszoommenu'),presets=[15,20,25,50,75,100,125,150,170];
+  const opener=$('#zoom'),menu=$('#canvaszoommenu'),presets=[20,25,50,75,100,125,150,170];
   const close=(focus=false)=>{if(menu.matches(':popover-open'))menu.hidePopover();if(focus)opener.focus({preventScroll:true});};
   const position=()=>{
     const rect=opener.getBoundingClientRect(),zoom=uiScaleFactor(),width=menu.offsetWidth||112;

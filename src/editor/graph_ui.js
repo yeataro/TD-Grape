@@ -1617,23 +1617,41 @@ function nodePreferredWidth(card){
   const width=Math.max(nodeMinimumWidth(card),Math.min(nodeMaximumWidth(card),Math.ceil(probe.offsetWidth)+2));probe.remove();
   card.dataset.nodeDefaultWidth=String(width);return width;
 }
-let overviewTextContext=null;
+let overviewTextContext=null,overviewTextSize=36;
+function updateOverviewTextScale(){
+  const size=EDITOR_DEV_SETTINGS.lowZoomOverview&&scale<GRAPH_OVERVIEW_THRESHOLD?Math.max(36,10/(scale*uiScaleFactor())):36;
+  if(size===overviewTextSize)return;
+  overviewTextSize=size;$('#canvas').style.setProperty('--overview-font-size',size+'px');
+  // Reuse measurements while zooming; only the name overlay is updated.
+  for(const caption of document.querySelectorAll('#cards .node-overview-label>span'))layoutNodeOverviewLabel(caption);
+}
 function updateNodeOverviewLabel(card){
   const caption=card.querySelector('.node-overview-label>span');if(!caption)return;
-  const name=card.title,width=Math.max(0,card.clientWidth-24);
+  const name=card.title,style=getComputedStyle(caption);
   overviewTextContext||=document.createElement('canvas').getContext('2d');
-  overviewTextContext.font=getComputedStyle(caption).font;
-  const fits=text=>overviewTextContext.measureText(text.trimEnd()).width<=width;
-  let split=0;
-  if(!card.classList.contains('collapsed')&&!fits(name)){
-    // Prefer the last fitting space; only then consider case boundaries. Keep
-    // single-letter prefixes (sRoughness) and numeric suffixes (2D/3D) intact.
-    const spaces=[...name.matchAll(/\s+/gu)].map(m=>m.index+m[0].length);
-    const cases=[...name.matchAll(/(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})/gu)].map(m=>m.index).filter(i=>i>1);
-    split=spaces.reverse().find(i=>fits(name.slice(0,i)))||cases.reverse().find(i=>fits(name.slice(0,i)))||0;
+  overviewTextContext.font=`${style.fontWeight} 36px ${style.fontFamily}`;
+  const measure=text=>overviewTextContext.measureText(text.trimEnd()).width;
+  const boundary=index=>({index,width:measure(name.slice(0,index))});
+  // Prefer spaces, then case boundaries from the end. Keep single-letter
+  // prefixes (sRoughness) and numeric suffixes (2D/3D) intact.
+  caption.overviewMetrics={name,width:Math.max(0,card.clientWidth-24),height:card.clientHeight,collapsed:card.classList.contains('collapsed'),textWidth:measure(name),
+    spaces:[...name.matchAll(/\s+/gu)].map(m=>boundary(m.index+m[0].length)).reverse(),
+    cases:[...name.matchAll(/(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})/gu)].map(m=>m.index).filter(i=>i>1).map(boundary).reverse()};
+  layoutNodeOverviewLabel(caption);
+}
+function layoutNodeOverviewLabel(caption){
+  const metrics=caption.overviewMetrics;if(!metrics)return;
+  const {name,width,height,collapsed}=metrics,size=overviewTextSize;
+  const gap=Math.min(collapsed?2:12,Math.max(0,height-size));
+  const lines=collapsed?1:Math.max(1,Math.min(2,Math.floor((height-gap)/size)));
+  const available=width*36/size;
+  const split=lines>1&&metrics.textWidth>available?(metrics.spaces.find(p=>p.width<=available)||metrics.cases.find(p=>p.width<=available))?.index||0:0;
+  caption.parentElement.style.bottom=gap+'px';
+  if(caption.overviewName!==name||caption.overviewSplit!==split){
+    const parts=split?[name.slice(0,split),name.slice(split)]:[name];
+    caption.replaceChildren(...parts.map(text=>el('span',{class:'node-overview-line'},text)));
+    caption.overviewName=name;caption.overviewSplit=split;
   }
-  caption.replaceChildren(document.createTextNode(name.slice(0,split||name.length)));
-  if(split)caption.append(el('br'),document.createTextNode(name.slice(split)));
 }
 function applyNodeWidth(card,node){
   const width=node.ui?.collapsed===true?nodePreferredWidth(card):Number.isFinite(node.ui?.width)?node.ui.width:nodePreferredWidth(card);
