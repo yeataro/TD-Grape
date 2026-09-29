@@ -2980,7 +2980,7 @@ const sourceCardCache=new Map(),sourceGroupCache=new Map(),sourceCardCollapsed=n
 let sourcePresentationContext='',sourceBuiltinCache=null;
 let sourceMinimal=false,sourceGroupOrder={};
 const sourceGroupDefaults={
-  root:['common','tdBuiltin','uniform','textures','spec_constant','constant','pop_buffer'],
+  root:['common','tdBuiltin','attribute','uniform','textures','spec_constant','constant','pop_buffer'],
   textures:['top_input','sampler','texture_buffer','textures.tdInputs']
 };
 function orderedSourceGroups(parent,children,query){
@@ -3228,16 +3228,14 @@ function renderSourceCards(box,query){
   }
   const menu=new Map([...sourceMenuEntries(query)].map(([path,rows])=>[path,[...rows]]));
   for(const [path,cards]of common)menu.set(path,[...(menu.get(path)||[]),...cards]);
-  const addMenu=(path,section)=>{const list=menu.get(path)||[];list.push(section);menu.set(path,list);};
   const groups=new Map();for(const decl of decls){if(used.has(decl.id)||!['uniform','sampler','constant','spec_constant','pop_buffer','attribute','top_input'].includes(decl.kind))continue;keys.add(decl.id);if(!matches(decl.name,decl.kind,decl.type,rows.get(decl.id)?.sequence,decl.nativeSequence))continue;const kind=decl.type==='samplerBuffer'?'texture_buffer':decl.kind,group=groups.get(kind)||[];group.push(decl);groups.set(kind,group);}
   for(const kind of ['top_input','texture_buffer','pop_buffer','attribute','constant','spec_constant','uniform','sampler']){
-    const group=groups.get(kind)||[],canCreate=kind==='attribute'?editorTarget==='mat':kind!==(editorTarget==='top'?'sampler':'top_input');if((!canCreate||query)&&!group.length)continue;
+    const group=groups.get(kind)||[],canCreate=kind==='attribute'?editorTarget==='mat':kind!==(editorTarget==='top'?'sampler':'top_input');if(!group.length&&(!canCreate||query&&!matches(inputGroupLabel(kind),kind)))continue;
     const cards=d=>sourceCard(d,null,issueById.get(d.id),rows.get(d.id));
     const children=kind==='uniform'?['values','matrices','arrays'].map(name=>{const list=group.filter(d=>sourceUniformGroup(d,rows.get(d.id))===name);return list.length?sourceGroup('uniform.'+name,t('sources.'+name),list.map(cards),null,query):null;}).filter(Boolean):group.map(cards);
     if(['texture_buffer','pop_buffer'].includes(kind)&&!group.length&&!query&&nativeSourceSnapshot?.enabled&&!connectionInterrupted&&!nativeSourceError&&!issues.some(i=>i.sequence===(kind==='pop_buffer'?'buffer':'array')))children.push(el('p',{class:'muted'},t('buffer.empty')));
     const section=sourceGroup(kind,inputGroupLabel(kind),children,canCreate?kind:null,query);
     if(['top_input','sampler','texture_buffer'].includes(kind))textureSources.push(section);
-    else if(kind==='attribute')addMenu('tdBuiltin.geometry',section);
     else sections.push(section);
   }
   const menuSections=[];

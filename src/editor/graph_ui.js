@@ -161,6 +161,7 @@ const sourceColorRoles=new Map(Object.entries({
   sampler:['sTD2DInputs','sTD3DInputs','sTD2DArrayInputs','sTDCubeInputs','sTDNoiseMap','sTDSineLookup']
 }).flatMap(([role,sources])=>sources.map(source=>[source,role])));
 function nodeColorRole(d,params=d.defaults){
+  if(d.key==='vertex_input')return 'runtime-info';
   if(['attribute','tex_attribute','uv','position'].includes(d.key)||['attribute','tex_attribute'].includes(d.inputKind))return 'attribute';
   if(d.key==='builtin_source')return sourceColorRoles.get(params?.source||d.builtinSource)||nodeCategory(d,params);
   return nodeCategory(d,params);

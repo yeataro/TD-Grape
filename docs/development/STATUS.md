@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-30 0.8.269：Vertex Inputs 套用既有 TD Runtime Info 的櫻桃紅角色，畫布、Parameter 與新增入口共用；明亮模式沿用既有配色。Attributes 移到 Sources 第一層，搜尋可建立來源的分類名稱／kind 時，即使尚無宣告也保留 Add 入口。Attribute 仍僅 MAT 可建立、Vertex 可插入引用；不改圖、來源值、接口或產碼，也未開始 Preview 功能。
+
+16 組 Chromium 檢查通過：來源選單 4、既有 MAT Attribute 4，以及明暗配色／五語分類搜尋／圖與歷史保留 8；14 項 Editor launch 通過，截圖已目視。舊 `test_source_workspace.cjs` 的預設前三個分類斷言仍為 uniform／constant／spec_constant，於修改前 HEAD 的隔離資產同樣失敗；未改写此舊預期，未宣稱整套通過。私人報告 `reports/source-discovery-269/`。未實測 Safari／iPad。
+
+40 份內嵌來源核對、四份更新；三份使用者 Shader 保留，六份 Master 同步無圖升級、原生身分與位置保留。正式 TOE 已保存並排除私人助手；未重新整理使用者網頁，未推送。
+
 2026-09-30 0.8.268：加入正式內建 [Voronoi](../features/VORONOI.md)，支援 1D–4D、F1／F2／Smooth F1／Distance to Edge／N-Sphere Radius、四種距離算法、分形細節與 Normalize。模式選單只在 Parameter，接孔由後端契約同步；隱藏輸入值切回可恢復，沿用失效連線與 Undo／Redo 政策。GLSL helper 按模式共用，不依賴 TD 雜訊函式，未複製 Blender 程式碼。功能分類對齊、圖樣與分形算法不保證數值相同；有限鄰域、Minkowski 指數範圍、大座標精度與成本限制見功能文件。既有圖／材質範本不改寫。
 
 Windows TD 2025.32820 的 117 組隔離 GPU 檢查通過，涵蓋 TOP、MAT Pixel／Vertex、最高 Detail、正規化、負／零 Scale、Minkowski 邊界與三次 Uniform 更新（產碼不變），對獨立 CPU 參考最大誤差 0.0000314。五組 Chromium 流程、五語系與瀏覽器圖的真實核心編譯通過；六份既有 TOP／MAT 範例與修改前逐字相同。舊型別契約 fingerprint 與舊 noise JS fixture 缺少 URLSearchParams 的失敗，在修改前 HEAD 隔離副本同樣重現；未改寫舊數值基準，也未宣稱全套測試通過。私人結果 `reports/voronoi-268/`；macOS／Metal 尚未實測。
