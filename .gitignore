@@ -15,6 +15,8 @@ Backup/
 !src/td/TD-Grape-dev.toe
 *.tox
 !src/remote_panel/TD-Remote-Panel.tox
+!src/remote_panel/viewers/mat_viewer.tox
+!src/remote_panel/viewers/top_viewer.tox
 *.zip
 dist/*
 !dist/README.md

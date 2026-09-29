@@ -11,7 +11,7 @@ import secrets
 import time
 from urllib.parse import urlsplit, parse_qs
 
-VERSION = '0.1.5'
+VERSION = '0.1.6'
 TRACK = 'TDPanel'
 CHANNEL = 'control'
 _client = None
@@ -32,6 +32,7 @@ _status = 'Stopped'
 _error = ''
 _launches = {}
 _source_update = None
+_homed_source = None
 
 
 def owner():
@@ -61,6 +62,33 @@ def event_count():
     return _events
 
 
+def custom_viewer():
+    comp = owner()
+    if comp.par.Source.eval() != 'viewer':
+        return None
+    target = comp.par.Targetop.eval()
+    family = getattr(target, 'family', '') if target and target.valid else ''
+    name = {'MAT': 'mat_viewer', 'TOP': 'top_viewer'}.get(family)
+    return comp.op(name) if name else None
+
+
+def capture_image():
+    # OP View pulls the Panel itself so its interaction callbacks keep cooking.
+    return owner().op('opview1') or owner().op('panel_image')
+
+
+def home_viewer():
+    release_mouse()
+    viewer = custom_viewer()
+    if viewer:
+        home = getattr(viewer.par, 'Home', None)
+        if home is None:
+            home = viewer.op('cameraViewport').par.Home
+        home.pulse()
+    elif _viewer_target and _viewer_target.valid:
+        _viewer_target.resetViewer()
+
+
 def source_panel():
     comp = owner()
     mode = comp.par.Source.eval()
@@ -68,7 +96,7 @@ def source_panel():
         target = comp.par.Targetop.eval()
         if target is None or not target.valid:
             raise ValueError('Choose a valid Target OP in TouchDesigner.')
-        return comp.op('op_viewer')
+        return custom_viewer() or comp.op('op_viewer')
     if mode == 'test':
         return comp.op('test_panel')
     panel = comp.par.Panel.eval()
@@ -79,7 +107,7 @@ def source_panel():
 
 def capture_target():
     comp=owner()
-    return comp.par.Targetop.eval() if comp.par.Source.eval()=='viewer' else source_panel()
+    return (custom_viewer() or comp.par.Targetop.eval()) if comp.par.Source.eval()=='viewer' else source_panel()
 
 
 def _source_update_matches(update):
@@ -120,7 +148,7 @@ def begin_source_update(target):
         _source_update['tokens'].add(token)
         _source_update['frames'] = None
         return token
-    image, video = comp.op('panel_image'), comp.op('video_out')
+    image, video = capture_image(), comp.op('video_out')
     _source_update = {'target': target, 'connection': _connection,
                       'image': image, 'video': video, 'locked': bool(image.lock),
                       'active': bool(video.par.active.eval()), 'tokens': {token},
@@ -175,10 +203,11 @@ def prepare_viewer(target):
 def metadata():
     comp = owner()
     target = comp.par.Targetop.eval() if comp.par.Source.eval() == 'viewer' else _panel
-    geometry_viewer = bool(_viewer_target and _viewer_target.valid and (
+    geometry_viewer = bool(custom_viewer() or _viewer_target and _viewer_target.valid and (
         _viewer_target.family in ('MAT', 'SOP', 'POP') or getattr(_viewer_target, 'isObject', False)))
     return {'type': 'source', 'version': VERSION, 'source': target.path if target else '',
             'panel': _panel.path if _panel else '', 'revision': _revision,
+            'viewerParameters': bool(custom_viewer()),
             'width': int(comp.par.Width.eval()), 'height': int(comp.par.Height.eval()),
             # Matches TD 2025 and the official remote-panel browser example.
             'fps': int(comp.par.Framerate.eval()), 'mirrorX': True, 'status': _status, 'error': _error,
@@ -194,13 +223,16 @@ def send(message, client=None):
 
 def release_mouse():
     global _mouse_down
+    navigation = owner().op('viewer_navigation')
+    if navigation:
+        navigation.module.controller.release()
     if _mouse_down and _panel and _panel.valid:
         _panel.interactMouse(*_last_mouse, left=False, middle=False, right=False)
     _mouse_down = False
 
 
 def refresh_source():
-    global _panel, _viewer_target, _revision, _error, _status
+    global _panel, _viewer_target, _revision, _error, _status, _homed_source
     release_mouse()
     _viewer_target = None
     _revision += 1
@@ -209,12 +241,12 @@ def refresh_source():
         _release_source_update(resume=False)
     try:
         _panel = source_panel()
-        # Capture the target's native viewer directly. In TD 2025, capturing
-        # a 3D viewer through OP Viewer COMP can lose depth ordering. The COMP
-        # remains the mouse receiver and operates that same native viewer state.
-        capture = capture_target()
         if comp.par.Source.eval() == 'viewer':
-            _viewer_target = capture
+            _viewer_target = comp.par.Targetop.eval()
+        source_key = (getattr(_panel, 'id', None), getattr(_viewer_target, 'id', None))
+        if custom_viewer() and source_key != _homed_source:
+            home_viewer()
+        _homed_source = source_key
         _error = ''
         _status = 'Connected' if _connection and comp.op('webrtc').getConnectionState(_connection) == 'connected' else 'Ready'
         comp.op('video_out').par.active = bool(_connection) and _source_update is None
@@ -292,7 +324,7 @@ def tick():
             # Static panels otherwise stop cooking, starving WebRTC of frames
             # and causing its bandwidth estimator to reduce image quality.
             _last_frame = now
-            comp.op('panel_image').cook(force=True)
+            capture_image().cook(force=True)
             comp.op('video_out').cook(force=True)
     if now - _last_tick < 0.5:
         return
@@ -416,6 +448,19 @@ def ws_receive(client, text):
                     _candidates.append(ice)
         elif kind == 'ping':
             send({'type': 'pong', 'status': _status})
+        elif kind in ('viewer-parameters', 'viewer-parameter-value'):
+            # Same peer ownership as mouse input. A replaced socket cannot read
+            # or change the next receiver's viewer, including delayed writes.
+            try:
+                viewer = custom_viewer()
+                if not _connection or not viewer or viewer != _panel or message.get('revision') != _revision:
+                    raise ValueError('The preview source changed. Select the preview again.')
+                module = owner().op('viewer_parameters').module
+                data = (module.write(viewer, _revision, message) if kind == 'viewer-parameter-value'
+                        else module.snapshot(viewer, _revision))
+                send({'type': 'viewer-parameters-result', 'requestId': message.get('requestId'), 'data': data})
+            except (ValueError, TypeError, AttributeError) as exc:
+                send({'type': 'viewer-parameters-result', 'requestId': message.get('requestId'), 'error': str(exc)})
         elif kind == 'disconnect':
             disconnect()
     except (ValueError, KeyError, TypeError) as exc:
@@ -474,7 +519,7 @@ def rtc_data(connection, channel, data):
             comp = owner()
             if comp.par.Source.eval() != 'viewer' or comp.par.Targetop.eval() != _viewer_target:
                 return
-            _viewer_target.resetViewer()
+            home_viewer()
             _last_seen = time.monotonic()
             _events += 1
             return
@@ -487,10 +532,16 @@ def rtc_data(connection, channel, data):
             return
         if not (-1 <= u <= 2 and -1 <= v <= 2):
             return
-        _panel.interactMouse(u, v, left=bool(buttons & 1), middle=bool(buttons & 4),
-                             right=bool(buttons & 2), wheel=max(-10, min(10, wheel)))
+        wheel = max(-10, min(10, wheel))
+        viewer = custom_viewer()
+        if viewer and viewer == _panel:
+            owner().op('viewer_navigation').module.controller.mouse(viewer, u, v, buttons, wheel)
+            _mouse_down = False
+        else:
+            _panel.interactMouse(u, v, left=bool(buttons & 1), middle=bool(buttons & 4),
+                                 right=bool(buttons & 2), wheel=wheel)
+            _mouse_down = bool(buttons)
         _last_mouse = (u, v)
-        _mouse_down = bool(buttons)
         _last_seen = time.monotonic()
         _events += 1
     except (ValueError, KeyError, TypeError):

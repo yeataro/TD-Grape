@@ -109,6 +109,24 @@ test('focused panel keys do not reach graph shortcuts', () => {
   assert.deepEqual(stopped, ['Delete', 'a', 'h', 'up']);
 });
 
+test('focus-driven panel reflow cannot jump a normalized mouse or touch drag', () => {
+  for (const pointerType of ['mouse', 'touch']) {
+    const {panel, events, pointer, frame} = fixture();
+    const focus = panel.video.focus;
+    panel.video.focus = () => {
+      focus();
+      panel.video.getBoundingClientRect = () => ({left: 350, top: 150, width: 300, height: 200});
+    };
+    pointer('pointerdown', 1, 300, 250, pointerType, 1);
+    pointer('pointermove', 1, 320, 250, pointerType, 1);frame();
+    pointer('pointerup', 1, 320, 250, pointerType, 0);
+    assert.ok(events.length >= 2);
+    assert.ok(events.every(e => Math.abs(e.v - .5) < 1e-8 && e.u >= .5 && e.u <= .55));
+    assert.equal(panel.gestureSpace, null);
+    assert.equal(panel.point({clientX: 500, clientY: 250}).u, .5);
+  }
+});
+
 test('docking within the same document preserves the peer; actual removal disconnects', async () => {
   const {panel} = fixture();let closed = 0;
   globalThis.window = {removeEventListener() {}};

@@ -7,6 +7,8 @@ ASSETS = {
     'lifecycle': 'lifecycle.py', 'index_html': 'index.html',
     'remote_panel_js': 'remote-panel.js', 'demo_js': 'demo.js', 'style_css': 'style.css',
     'touch_gestures_js': 'touch-gestures.js', 'panel_size_js': 'panel-size.js',
+    'viewer_parameters': 'viewer_parameters.py',
+    'viewer_navigation': 'viewer_navigation.py',
 }
 
 
@@ -70,16 +72,23 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     p.label = 'Input Events Received'
     p.expr = "me.op('runtime').module.event_count()"
     p.readOnly = True
-    version = par('Str', 'Version', 'Module Version', '0.1.5')
-    version.default = version.val = '0.1.5'
+    version = par('Str', 'Version', 'Module Version', '0.1.6')
+    version.default = version.val = '0.1.6'
     version.readOnly = True
 
     rtc = node(webrtcDAT, 'webrtc', 0, 0)
     server = node(webserverDAT, 'web_server', -240, 0)
     stream = node(videostreamoutTOP, 'video_out', 640, 240)
-    image = node(opviewerTOP, 'panel_image', 400, 240)
+    image = node(opviewerTOP, 'opview1', 400, 240)
     viewer = node(opviewerCOMP, 'op_viewer', 120, 240)
     test = node(containerCOMP, 'test_panel', -200, 240)
+    # Authored viewers are assets, not scenes reconstructed by the builder.
+    # Existing viewer internals, controls and layout always win over templates.
+    for name in ('mat_viewer', 'top_viewer'):
+        custom = comp.op(name)
+        if custom is None:
+            custom = comp.loadTox(str(directory / 'viewers' / (name + '.tox')))
+            custom.name = name
     stream.par.active = rtc.par.active = server.par.active = False
 
     for index, (dat_name, filename) in enumerate(ASSETS.items()):
@@ -141,7 +150,7 @@ def build(parent_comp, name='remote_panel', *, source_dir=None):
     lifecycle.par.create = True
     lifecycle.par.exit = True
     comp.store('tdRemotePanelBuilt', True)
-    comp.par.opviewer = 'panel_image'
+    comp.par.opviewer = image.name
     controls.par.active = lifecycle.par.active = True
     comp.op('runtime').module.start()
     return comp

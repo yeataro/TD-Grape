@@ -1,5 +1,13 @@
 # 開發狀態
 
+2026-09-30 0.8.264：Remote Panel 0.1.6 接上作者整理的 MAT／TOP Viewer，依 Target OP Family 選取，透過 `opview1` 擷取 Panel；不再以 Switch TOP 選取渲染結果。切換來源 Home 一次，H 與 Home All 沿用 Viewer 的 Home。點選預覽在既有停駐／浮動參數面板顯示原生自訂參數，值直接回寫 TD，選回節點恢復原 Inspector。標籤與控制項對齊，沿用原生 startSection 分段，水平線上下留白一致；自動來源、Expression／Bind 保持唯讀，失去接收權或過期來源／值的寫入被拒絕。五語預覽說明及[介面文件](../ui/PREVIEW_DISPLAY.md)同步。
+
+實測發現 `interactMouse` 的 Panel UV 會混入本機游標座標，造成 cameraViewport 拖曳中突然 dolly／pan。新增 Viewer 外層導航轉接器，直接以遠端歸一化座標呼叫既有相機操作方法，按下只建立起點，放開／失焦／來源切換結束操作；保留原生按鍵對應、正交模式及速度設定。網頁手勢期間固定座標基準，避免 Focus 顯示參數面板後重排產生位移。一般 Panel 與其他 OP Viewer 沿用既有輸入路徑。更新前後兩個 Viewer 共 528 個 OP 的身分、接線、參數關聯及 DAT 內容保持，作者資產另存 TOX，建置只補缺少的 Viewer。
+
+15 項 Python 遠端連線／擷取檢查、27 項 JS 手勢／尺寸檢查、31 項 TD standalone 與 39 項 Viewer 原生檢查、5 組 Chromium Inspector／窄版檢查及 MAT／TOP 實際 WebRTC 參數讀寫通過。涵蓋按住不動、小幅移動、Wheel、Home、過期輸入、失去接收權與原生分段；實際 MAT 滑鼠三鍵分階段追蹤確認跳動修正。截圖已目視；1526 五語 keys／1143 UI 引用／59 來源提示通過。未實測 iPad／Safari 或 macOS。
+
+39 份來源同步，六份 Master 無圖升級，三份使用者 Shader 與身分／位置保留。Standalone TOX 已匯出；正式 TOE 保存 2342768 bytes（SHA256 6ec16600c4b24fc326d4ea55b9f232415b2b653e947b0968d75ac798bcc96f0d），九份登記狀態保留、私人助手排除。私人報告 `reports/viewer-settings-264/`。未重新整理使用者網頁，未推送。
+
 2026-09-29 0.8.263：新增 Shader 分類的 **Subsurface Approx** 內建可編輯子圖，MAT Pixel 限定，搜尋 SSS／Subsurface／Translucency 可找到。以反向正規化法線取得原生 Phong Lights 的背面 diffuse 總和，乘上 Color、Strength 與指數厚度衰減。輸入 Position／Normal／Color／Thickness／Distance／Strength／Shadow Strength；Distance 是與 Thickness 同單位的材質透光衰減距離，不是光源距離。輸出 Color 可與原 Emission 相加後接 Phong／PBR Material；不改 Alpha，不自動重新分配 diffuse 能量。沿用一般燈光衰減與陰影，不含 Ambient／Environment Light；沒有一般燈光時黑色。完整空間 SSS、厚度量測與渲染流程保持待設計。五語說明及[功能文件](../features/BASIC_MATERIAL_PRESETS.md)記錄數值例子、自陰影／漏光限制；原十二份內建快照不變，不改預設圖。
 
 32 項相關 Python 測試、14 項 Editor launch、五組 Chromium 分類／搜尋／接口／展開本地化／Undo／保存編譯檢查通過，截圖已目視。1526 五語 keys／1141 UI 引用／59 來源提示及 browser projection 檢查通過。Windows TD 2025.32820 的 26 組原生驗證通過：TD 光照參考搭配獨立 CPU 衰減，含點光／聚光／方向光、多燈、無光／僅環境光、實際幾何位置、零／非單位法線、HDR 與參數邊界、獨立遮擋物及陰影強度 0／0.5／1、兩種 Material 的 Emission 整合與 Alpha 保留。最大誤差約 9.54e-7。初次陰影 fixture 未正確排除預設幾何／配置繪製，修正測試場景後通過；macOS 尚待實機。

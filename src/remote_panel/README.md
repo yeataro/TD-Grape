@@ -1,7 +1,7 @@
-# TD Remote Panel — experimental 0.1.5
+# TD Remote Panel — experimental 0.1.6
 
 One TouchDesigner Panel COMP or native OP Viewer, streamed to one browser over
-WebRTC, with mouse and translated touch events returned to that same panel. The component owns its
+WebRTC, with mouse and translated touch events returned to that viewer. The component owns its
 server, signaling, capture and control channel. It has no dependency on Grape's
 graph, compiler or editor.
 
@@ -15,10 +15,10 @@ The development TOE contains `TD_Grape/remote_panel`. The standalone
 2. Set an unused **Web Port**, then enable **Active**.
 3. Press **Open in Browser** or open **Local URL**. For another device, enable
    **Allow LAN Connections** and use one of **LAN URLs**.
-4. Click the picture to focus it. In **OP Viewer** mode, press **H** to call TD's
-   `resetViewer()` on that target. Click elsewhere or press **Tab** to leave the
-   panel. This is not TD's native H/Home: on the tested MAT it resets display
-   options but leaves the current rotation intact. Native homing remains unresolved.
+4. Click the picture to focus it. MAT/TOP targets use the included custom viewers;
+   **H** invokes their **Home** parameter. A new target also Homes once. Other OP
+   families retain the native `resetViewer()` fallback. Click elsewhere or press
+   **Tab** to leave the panel.
 5. A new connection takes control and disconnects the previous browser. The old
    page shows **Taken over** and stays disconnected until its user presses
    **Connect** again. **Reset Connection** releases a stale receiver.
@@ -34,11 +34,13 @@ service is used. Internet routing and multiple receivers are outside this previe
 - The browser displays the actual TD source path, connection state and received
   resolution. In the standalone page, TD chooses the target. Grape integration
   chooses its current shader when the browser acquires the connection.
-- Mouse buttons, movement and wheel events use native `PanelCOMP.interactMouse`.
-  Viewer gestures keep TD's own behavior. Browser coordinates account for video
-  letterboxing and TD's mirrored video transport.
+- Ordinary panels and native OP viewers use `PanelCOMP.interactMouse`. The custom
+  MAT/TOP viewers use `viewer_navigation.py`, an external adapter calling their
+  existing cameraViewport methods with normalized remote coordinates. Browser
+  coordinates account for video letterboxing and TD's mirrored transport. One
+  coordinate basis is retained through a gesture, including focus-driven reflow.
 - Touch: **tap** clicks, **one-finger drag** performs a left drag. A 3D OP Viewer
-  (MAT, SOP, POP or object COMP) also accepts **two-finger pan** and **pinch zoom**,
+  (custom MAT/TOP, SOP, POP or object COMP) also accepts **two-finger pan** and **pinch zoom**,
   translated to TD's right drag and middle-button dolly. Pinch uses a virtual
   vertical drag rather than wheel events; its horizontal position stays fixed.
   Panel/Test Panel and other viewer types retain single-finger control.
@@ -48,12 +50,12 @@ service is used. Internet routing and multiple receivers are outside this previe
   cancellation, window resize, source changes and disconnection release held
   input and discard queued movement. Browser touch gestures are disabled only
   over the video, leaving the surrounding page scrollable.
-- OP Viewer mode captures the Target OP directly with OP Viewer TOP. Its companion
-  OP Viewer COMP only receives mouse input, changing the same target viewer state.
-  This avoids depth artifacts observed when capturing a MAT through OP Viewer COMP
-  on TD 2025.32820. TOP's deprecated Allow Panel Interaction stays disabled.
-  Keep the internal controller's Center/Scale at their defaults; native viewer
-  pan/zoom/rotate operations are supported, additional COMP-level transforms are not.
+- MAT/TOP targets select `mat_viewer`/`top_viewer` by Family. `opview1` captures
+  that Panel COMP and feeds `video_out`; navigation operates that viewer's camera.
+  Capturing through OP Viewer TOP pulls the Panel. Do not replace
+  this with a Switch TOP selecting the viewers' rendered textures. Other families
+  retain direct target capture with `op_viewer` receiving their native input.
+  The capture TOP's deprecated Allow Panel Interaction stays disabled.
 - The unmodified **H** shortcut only runs while the connected browser panel has
   focus. IME composition, held-key repeats and modifier combinations are ignored.
   Other keys keep their normal browser behavior. Panel and Test Panel modes do
@@ -100,14 +102,42 @@ actions; currently only `reset-viewer` in OP Viewer mode. The `replaced` state
 means a newer receiver took control; hosts should not auto-reconnect that state.
 `index.html`, `demo.js` and `style.css` implement the small test page.
 
-## Viewer follow-up
+## Authored viewers and settings (0.1.6 / Grape 0.8.264)
 
-The user observed that a secondary OP Viewer can defer its updates until a mouse
-gesture ends. This remains a TD viewer behavior to investigate separately. A
-user-built single Universal Viewer or two coordinated viewers may replace this
-prototype's source later. Existing **Panel** source mode can target that custom
-Panel COMP without changing signaling or the browser element; a specialized
-capture/control split would need its own verification.
+The native scenes are maintained in `viewers/mat_viewer.tox` and
+`viewers/top_viewer.tox`. `build.py` loads an asset only when that viewer is missing.
+Existing viewers, parameter hierarchy, expressions, bindings, scene contents and
+layout belong to the author; rebuilding the bridge must not rewrite them. After
+an intentional native edit, export the corresponding viewer asset, then export
+the standalone companion and save the development TOE.
+
+`Targetop` is the source of truth. The authored Select MAT/Select TOP parameters
+resolve it for the matching Family; their internal selectors retain their existing
+bindings. `Home` belongs to each viewer. Changing the source invokes it once;
+resizing, polling and changing viewer parameters do not invoke it again.
+
+Remote camera gestures call `StartTransform` once, `Transform` for later samples,
+and `EndTransform` on release/cancellation. Native button bindings, orthographic
+mode, navigation mode and speed multipliers are retained. Mouse wheel uses the
+remote pointer position rather than `locateMouseUV()` on the host. No DAT or
+parameter inside either viewer is changed by this adapter. This avoids observed
+host mouse UVs replacing remote input during cameraViewport's Panel `whileOn`,
+which could cause extreme dolly/pan jumps. A stationary press cannot move the
+camera. Source changes and receiver replacement end the old gesture.
+
+In Grape, focusing the preview selects its settings in the existing Parameter
+pane (docked or floating). Selecting a node returns to node parameters without
+changing graph selection, history or data. Controls reflect native custom tuplets,
+menus, component values and `startSection` separators. Automatically driven or
+disabled values remain read-only. Supported fields are numeric vectors, toggles,
+menus, text/OP paths and pulses; this is value editing, not parameter definition
+editing.
+
+The element's `viewerParameters` capability and `requestViewerParameters(edit?)`
+use the existing WebSocket. Requests require the active peer, current source
+revision, viewer identity and unchanged expected component. Invalid, stale or
+driven writes are rejected; responses contain native readback. Edits never pass
+through graph Apply or Undo. Polling preserves a focused, unfinished field.
 
 ## Development
 
@@ -122,6 +152,7 @@ node --test tests/unit/test_remote_panel_touch.mjs tests/unit/test_remote_panel_
 python tools/dev/submit_job.py tools/dev/jobs/build_remote_panel.py
 python tools/dev/submit_job.py tools/dev/jobs/export_remote_panel.py
 python tools/dev/submit_job.py tests/td/test_remote_panel.py --report remote-panel
+python tools/dev/submit_job.py tests/td/test_remote_viewers.py --report remote-viewers
 ```
 
 The native test builds the component outside Grape, rebuilds it without duplicate
@@ -140,9 +171,9 @@ Native API references: [WebRTC DAT](https://docs.derivative.ca/WebRTC_DAT),
 ## Grape integration (0.8.74)
 
 Graph UI embeds the same `<td-remote-panel>` element, served as ES modules from
-its own editor origin. There is one `remote_panel` under the manager. Both the
-controller COMP and the capture TOP resolve the same **Target OP**; capture stays
-direct, not nested through the controller.
+its own editor origin. There is one `remote_panel` under the manager. **Target OP**
+selects the source; MAT/TOP capture and input use their authored Panel, while
+other families retain the native fallback described above.
 
 `POST /api/{shaderId}/remote-preview` passes through the editor's existing access
 checks. On TD's main thread it reserves the resolved shader OP for 30 seconds and
@@ -162,8 +193,8 @@ to graph shortcuts. Source path and connection state remain visible above video.
 The editor CSP permits media blobs and only the companion WebSocket port on the
 same host. No worker thread calls the TD API. Change the companion Web Port before
 refreshing embedded sources/reloading an editor, so its asset/CSP snapshot matches.
-A future custom Viewer can replace the source behind this adapter without changing
-Graph UI or duplicating stream encoders in shader components.
+The custom viewers share this adapter and encoder; shader components do not own
+separate stream encoders.
 
 Multiple cloned sources are deferred. Creating them with TD Clone would not alone
 solve resource lifetime: a future design would also need a receiver/source limit

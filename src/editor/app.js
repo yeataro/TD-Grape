@@ -681,10 +681,13 @@ $('#preview').addEventListener('panel-state',event=>{
   $('#previewactivity').title=message||'';
   $('#previewpath').classList.toggle('inactive',state!=='connected');
   showPreviewBusy();
+  if(viewerInspectorActive)syncViewerParameterFields();
 });
+$('#preview').addEventListener('panel-focus',event=>{if(event.detail.focused)selectViewerInspector();});
 $('#preview').addEventListener('panel-source',event=>{
   const {source}=event.detail;
   renderPreviewSource(source);
+  if(viewerInspectorActive){viewerParameterGeneration++;viewerParameterSnapshot=null;viewerParameterError='';inspector();refreshViewerParameters();}
 });
 $('#preview').addEventListener('panel-format',event=>{
   previewFormat=event.detail.width+' × '+event.detail.height;
@@ -744,6 +747,7 @@ function moveArrowNavigationView(node){
 }
 function fit(){if(graph)fitNodes(current().nodes);}
 async function load(){
+  leaveViewerInspector();
   if(typeof uniformLive!=='undefined')uniformLive.disconnect();
   const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
   try{

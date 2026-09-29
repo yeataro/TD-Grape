@@ -19,7 +19,11 @@ export class TDRemotePanel extends HTMLElement {
     this.state = 'disconnected';
     this.lastPoint = {u: .5, v: .5};
     this.buttons = 0;
+    this.gestureSpace = null;
     this.shortcuts = [];
+    this.viewerParameters = false;
+    this.parameterRequests = new Map();
+    this.parameterRequestId = 0;
     this.touch = new TouchGestures(point => this.point(point, true), (point, buttons, wheel) => this.sendMouse(point, buttons, wheel));
     this.touchFrame = 0;
     this.sizeUpdates = new SettledPanelSize(size => {
@@ -169,6 +173,7 @@ export class TDRemotePanel extends HTMLElement {
         if (message.type === 'source') {
           this.release();
           this.revision = message.revision;
+          this.viewerParameters = Boolean(message.viewerParameters);
           this.sizeUpdates.acknowledge(message.width, message.height);
           this.shortcuts = Array.isArray(message.shortcuts) ? message.shortcuts : [];
           this.touch.navigation = message.touchNavigation === '3d';
@@ -179,6 +184,14 @@ export class TDRemotePanel extends HTMLElement {
           else if (pc.connectionState === 'connected') {
             this.message.hidden = true;
             this.report('connected');
+          }
+        } else if (message.type === 'viewer-parameters-result') {
+          const pending = this.parameterRequests.get(message.requestId);
+          if (pending) {
+            this.parameterRequests.delete(message.requestId); clearTimeout(pending.timeout);
+            if (message.error) pending.reject(new Error(message.error));
+            else if (message.data?.revision !== this.revision) pending.reject(new Error('The preview source changed.'));
+            else pending.resolve(message.data);
           }
         } else if (message.type === 'offer') {
           await pc.setRemoteDescription({type: 'offer', sdp: message.sdp});
@@ -211,6 +224,11 @@ export class TDRemotePanel extends HTMLElement {
   }
 
   disconnect(notify = true) {
+    for (const pending of this.parameterRequests.values()) {
+      clearTimeout(pending.timeout); pending.reject(new Error('The preview disconnected.'));
+    }
+    this.parameterRequests.clear();
+    this.viewerParameters = false;
     this.sizeUpdates.setActive(false);
     this.release();
     this.shortcuts = [];
@@ -226,15 +244,35 @@ export class TDRemotePanel extends HTMLElement {
     if (notify) this.report('disconnected', 'Disconnected.');
   }
 
-  point(event, allowOutside = false) {
+  pointSpace() {
     const r = this.video.getBoundingClientRect();
     if (!r.width || !r.height) return null;
     const ratio = this.video.videoWidth / this.video.videoHeight || r.width / r.height;
     const width = Math.min(r.width, r.height * ratio), height = width / ratio;
-    const u = (event.clientX - r.left - (r.width - width) / 2) / width;
-    const v = 1 - (event.clientY - r.top - (r.height - height) / 2) / height;
+    return {left: r.left + (r.width - width) / 2, top: r.top + (r.height - height) / 2, width, height};
+  }
+
+  point(event, allowOutside = false) {
+    const space = this.gestureSpace || this.pointSpace();
+    if (!space) return null;
+    const u = (event.clientX - space.left) / space.width;
+    const v = 1 - (event.clientY - space.top) / space.height;
     if (!allowOutside && (u < 0 || u > 1 || v < 0 || v > 1)) return null;
     return {u: Math.max(-1, Math.min(2, u)), v: Math.max(-1, Math.min(2, v))};
+  }
+
+  requestViewerParameters(edit = null) {
+    if (!this.viewerParameters || this.state !== 'connected' || this.ws?.readyState !== WebSocket.OPEN)
+      return Promise.reject(new Error('Connect to a MAT or TOP preview first.'));
+    const requestId = ++this.parameterRequestId;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.parameterRequests.delete(requestId); reject(new Error('Viewer parameters did not respond.'));
+      }, 5000);
+      this.parameterRequests.set(requestId, {resolve, reject, timeout});
+      this.ws.send(JSON.stringify({type: edit ? 'viewer-parameter-value' : 'viewer-parameters',
+        revision: this.revision, ...edit, requestId}));
+    });
   }
 
   pointer(event) {
@@ -245,6 +283,9 @@ export class TDRemotePanel extends HTMLElement {
     if (!point) return;
     if (event.type === 'pointerdown') {
       event.preventDefault();
+      // Focusing can reveal the inspector and move/resize the preview. Keep
+      // one coordinate basis until release so that reflow cannot become a drag.
+      if (!this.buttons) this.gestureSpace = this.pointSpace();
       this.video.focus({preventScroll: true});
       this.video.play().catch(() => {});
       this.video.setPointerCapture(event.pointerId);
@@ -252,6 +293,7 @@ export class TDRemotePanel extends HTMLElement {
     this.lastPoint = point;
     this.buttons = event.buttons;
     this.sendMouse(point, event.buttons);
+    if (!event.buttons) this.gestureSpace = null;
     if (event.type === 'pointerup' && this.video.hasPointerCapture(event.pointerId)) this.video.releasePointerCapture(event.pointerId);
   }
 
@@ -261,7 +303,7 @@ export class TDRemotePanel extends HTMLElement {
     if (event.type === 'pointerdown') {
       if (this.channel?.readyState !== 'open' || !this.point(event)) return;
       event.preventDefault();
-      if (!this.touch.contacts.size) this.release();
+      if (!this.touch.contacts.size) { this.release(); this.gestureSpace = this.pointSpace(); }
       this.video.focus({preventScroll: true});
       this.video.play().catch(() => {});
       this.touch.down(id, position);
@@ -283,6 +325,7 @@ export class TDRemotePanel extends HTMLElement {
     this.touchFrame = 0;
     if (event.type === 'pointerup') this.touch.up(id, position);
     else this.touch.cancel(id);
+    if (!this.touch.contacts.size) this.gestureSpace = null;
     if (this.video.hasPointerCapture(id)) this.video.releasePointerCapture(id);
   }
 
@@ -321,6 +364,7 @@ export class TDRemotePanel extends HTMLElement {
     }
     if (this.buttons) this.sendMouse(this.lastPoint, 0);
     this.buttons = 0;
+    this.gestureSpace = null;
   }
 }
 

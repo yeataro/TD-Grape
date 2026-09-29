@@ -1151,6 +1151,17 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 /* The same reusable video panel used by the standalone Remote Panel. */
 #livebody{container-type:size;gap:6px}
 #livebody .remote-preview-frame{position:relative;flex:1 1 0;min-height:0;overflow:hidden}
+.viewer-parameter-values{display:flex;gap:4px;min-width:0}
+.viewer-parameter-values>:is(input,select,button){width:100%;min-width:0;flex:1}
+.viewer-parameter-values>input[type=checkbox]{flex:none;width:auto}
+#inspector.viewer-parameters{--parameter-columns:minmax(0,42%) minmax(0,1fr);--parameter-column-gap:8px}
+#inspector .viewer-parameter-row{margin-block:8px}
+#inspector .viewer-parameter-row>.parameter-value-label{grid-column:1}
+#inspector .viewer-parameter-row>.parameter-control{grid-column:2}
+.viewer-parameter-separator{height:1px;margin-block:12px;background:var(--ui-tone-divider)}
+.viewer-parameter-values>input[type=number]{appearance:textfield}
+.viewer-parameter-values>input[type=number]::-webkit-inner-spin-button{appearance:none}
+.viewer-parameter-status:empty{display:none}
 #livebody td-remote-panel{width:100%;height:100%;min-height:0;border:1px solid var(--line);border-radius:6px}
 #livebody .preview-controls{gap:4px;min-height:24px}
 #livebody .preview-path{display:flex;align-items:center;min-width:0;flex:1;padding:2px 0;margin:0;border:0;border-radius:0;background:none;color:var(--muted);font:10px/1.6 ui-monospace,monospace;text-align:left;white-space:nowrap;overflow:hidden}

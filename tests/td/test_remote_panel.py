@@ -32,7 +32,7 @@ try:
     runtime = component.op('runtime').module
     runtime.refresh_source()
     check('capture resolves inside the independent component',
-          component.op('panel_image').par.opviewer.eval() == component.op('test_panel'))
+          component.op('opview1').par.opviewer.eval() == component.op('test_panel'))
     check('loopback boundary includes IPv4 and IPv6',
           runtime.allowed('127.0.0.1:49152') and runtime.allowed('[::1]:49152')
           and not runtime.allowed('192.168.1.50:49152'))
@@ -52,11 +52,11 @@ try:
     check('OP Viewer accepts a configured operator',
           runtime.source_panel() == component.op('op_viewer') and not runtime.metadata()['error'])
     check('OP capture bypasses the controller COMP and deprecated TOP interaction',
-          component.op('panel_image').par.opviewer.eval() == component.par.Targetop.eval()
-          and not component.op('panel_image').par.allowpanel.eval()
+          component.op('opview1').par.opviewer.eval() == component.par.Targetop.eval()
+          and not component.op('opview1').par.allowpanel.eval()
           and component.op('op_viewer').par.interactive.eval())
     check('both viewers follow the one Target OP parameter',
-          component.op('panel_image').par.opviewer.mode==ParMode.EXPRESSION
+          component.op('opview1').par.opviewer.mode==ParMode.EXPRESSION
           and component.op('op_viewer').par.opviewer.eval()==component.par.Targetop.eval())
     check('only OP Viewer advertises the explicit reset shortcut',
           runtime.metadata()['shortcuts'] == ['reset-viewer'])
@@ -100,9 +100,9 @@ try:
               (component.par.Width.eval(), component.par.Height.eval()) == (960, 540)
               and runtime._revision == revision)
         runtime.rtc_data(connection, 'control', json.dumps(resize))
-        component.op('panel_image').cook(force=True)
+        component.op('opview1').cook(force=True)
         check('resize updates both native surfaces and keeps the peer',
-              (component.op('panel_image').width, component.op('panel_image').height) == (640, 360)
+              (component.op('opview1').width, component.op('opview1').height) == (640, 360)
               and (component.op('op_viewer').width, component.op('op_viewer').height) == (640, 360)
               and runtime._connection == connection and not runtime._error)
         check('resize publishes a new coordinate revision', runtime._revision == revision + 1)
@@ -110,10 +110,10 @@ try:
         runtime.rtc_data(connection, 'control', json.dumps(dict(resize, revision=revision)))
         check('unchanged size does not refresh the source again', runtime._revision == revision)
         runtime.rtc_data(connection, 'control', json.dumps(dict(resize, revision=revision, width=64, height=64)))
-        component.op('panel_image').cook(force=True)
+        component.op('opview1').cook(force=True)
         check('the minimum capture size cooks without native errors',
-              (component.op('panel_image').width, component.op('panel_image').height) == (64, 64)
-              and not component.op('panel_image').errors())
+              (component.op('opview1').width, component.op('opview1').height) == (64, 64)
+              and not component.op('opview1').errors())
     finally:
         runtime.disconnect()
         rtc.par.active = False
@@ -136,7 +136,7 @@ try:
     loaded = receiver.loadTox(str(saved))
     loaded.op('runtime').module.refresh_source()
     check('saved TOX reloads with its own target and without Grape',
-          loaded.op('panel_image').par.opviewer.eval() == loaded.op('test_panel'))
+          loaded.op('opview1').par.opviewer.eval() == loaded.op('test_panel'))
     check('all runtime assets survive TOX export', all(
         loaded.op(dat).text == (source.parent / filename).read_text(encoding='utf-8')
         for dat, filename in scope['ASSETS'].items()))

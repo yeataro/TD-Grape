@@ -1227,6 +1227,7 @@ function previewVectorWire(start,button){
   return vectorNames(node).slice(first,first+size);
 }
 function focusGraphCanvas(){
+  const wasViewer=viewerInspectorActive;leaveViewerInspector();if(wasViewer)queueMicrotask(inspector);
   $('#canvas').focus({preventScroll:true});
   // A graph selection ends text selection; otherwise native Copy keeps copying
   // a stale Note/Help range even after a node title was clicked or dragged.
@@ -1368,6 +1369,7 @@ function selectEdgeEndpoints(edges,side,frame=true){
   if(frame)fitNodes(nodes,true);return true;
 }
 function selectNode(n,toggle=false){
+  leaveViewerInspector();
   resetArrowNavigation();
   selectedInputId=null;refreshSourceSelection();helpContext='node';
   focusGraphCanvas();

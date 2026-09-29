@@ -303,6 +303,100 @@ function installValueLadder(entry,commit,{local=false}={}){
 let workspaceLayout=null;
 function installInspectorPanels(){workspaceLayout=installPanelWorkspace();}
 let inspectorTab='parameters',inspectorScope='node';
+let viewerInspectorActive=false,viewerParameterSnapshot=null,viewerParameterError='',viewerParameterPending=false,viewerParameterReading=false,viewerParameterTimer=null,viewerParameterGeneration=0;
+function leaveViewerInspector(){
+  if(!viewerInspectorActive)return;
+  viewerInspectorActive=false;viewerParameterGeneration++;clearTimeout(viewerParameterTimer);
+  delete $('#inspector').dataset.viewerStructure;
+}
+async function refreshViewerParameters(){
+  clearTimeout(viewerParameterTimer);
+  if(!viewerInspectorActive)return;
+  const panel=$('#preview'),generation=viewerParameterGeneration;
+  if(!viewerParameterPending&&!viewerParameterReading&&!document.hidden&&panel.state==='connected'&&panel.viewerParameters){
+    viewerParameterReading=true;
+    try{
+      const data=await panel.requestViewerParameters();
+      if(generation===viewerParameterGeneration&&!viewerParameterPending){viewerParameterSnapshot=data;viewerParameterError='';inspector();}
+    }catch(error){if(generation===viewerParameterGeneration){viewerParameterError=error.message;inspector();}}
+    finally{viewerParameterReading=false;}
+  }
+  if(viewerInspectorActive){clearTimeout(viewerParameterTimer);viewerParameterTimer=setTimeout(refreshViewerParameters,800);}
+}
+function selectViewerInspector(){
+  if(!$('#preview').viewerParameters||viewerInspectorActive)return;
+  cancelValueLadder();viewerInspectorActive=true;viewerParameterGeneration++;
+  viewerParameterSnapshot=null;viewerParameterError='';workspaceLayout?.reveal('parameters');
+  inspector();refreshViewerParameters();
+}
+async function writeViewerParameter(entry,value){
+  const seen=entry.viewerExpected;
+  if(!viewerInspectorActive||viewerParameterPending||!seen||entry.disabled)return;
+  const generation=viewerParameterGeneration;
+  viewerParameterPending=true;syncViewerParameterFields();
+  try{
+    const data=await $('#preview').requestViewerParameters({...seen,value});
+    if(generation===viewerParameterGeneration){viewerParameterSnapshot=data;viewerParameterError='';}
+  }catch(error){if(generation===viewerParameterGeneration){viewerParameterError=error.message;status(error.message,true);}}
+  finally{
+    viewerParameterPending=false;
+    if(generation===viewerParameterGeneration){
+      // A failed write gets a fresh readback without overwriting a new draft.
+      if(viewerParameterError){await refreshViewerParameters();}
+      else syncViewerParameterFields(entry);
+    }
+  }
+}
+function syncViewerParameterFields(forceEntry=null){
+  const panel=$('#preview'),data=viewerParameterSnapshot;
+  const ready=panel.state==='connected'&&panel.viewerParameters&&data?.revision===panel.revision&&!viewerParameterPending;
+  for(const entry of document.querySelectorAll('#inspector [data-viewer-control]')){
+    const row=data?.controls.find(row=>row.name===entry.dataset.viewerControl),index=Number(entry.dataset.viewerComponent),item=row?.components[index];
+    entry.disabled=!ready||!item?.writable;
+    if(!item||entry.numericGestureActive||document.activeElement===entry&&forceEntry!==entry)continue;
+    if(entry.type==='checkbox')entry.checked=!!item.value;
+    else if(row.style!=='Pulse'){if(entry.setSyncedValue)entry.setSyncedValue(item.value);else entry.value=item.value;}
+    entry.viewerExpected={viewerId:data.viewerId,revision:data.revision,name:row.name,component:index,expected:clone(item)};
+  }
+  const message=$('#inspector .viewer-parameter-status');
+  if(message)message.textContent=viewerParameterError||(panel.state!=='connected'?t('preview.disconnected'):!data?t('preview.connecting'):'');
+}
+function renderViewerInspector(box){
+  const data=viewerParameterSnapshot;
+  const structure=JSON.stringify([language,data?.viewerId,data?.controls.map(row=>[row.name,row.label,row.style,row.section,row.menuNames,row.menuLabels,row.components.map(p=>[p.name,p.min,p.max])])]);
+  if(box.dataset.viewerStructure!==structure){
+    cancelValueLadder();box.replaceChildren();
+    box.classList.remove('ordinary-parameters','comment-parameters','notes-parameters','parameter-empty','has-parameter-ports');
+    box.classList.add('viewer-parameters');
+    box.dataset.inspectorNode='';box.dataset.viewerStructure=structure;
+    const title=el('div',{class:'input-inspector-title'});title.append(el('strong',{},data?.label||t('preview.live')));box.append(title);
+    for(const [rowIndex,row]of (data?.controls||[]).entries()){
+      if(row.section&&rowIndex)box.append(el('div',{class:'viewer-parameter-separator',role:'separator'}));
+      const values=el('div',{class:'viewer-parameter-values'});
+      for(const [index,item]of row.components.entries()){
+        let entry;
+        const commit=value=>writeViewerParameter(entry,value);
+        if(row.style==='Menu')entry=select(row.menuNames.map((name,i)=>[name,row.menuLabels[i]||name]),item.value,commit);
+        else if(row.style==='Toggle'){entry=el('input',{type:'checkbox'});entry.checked=!!item.value;entry.onchange=()=>commit(entry.checked);}
+        else if(row.style==='Pulse'){entry=el('button',{type:'button'},row.label);entry.onclick=()=>commit(true);}
+        else{
+          entry=input(item.value,commit,typeof item.value==='number'?'number':'text',{local:true});
+          if(entry.type==='number'){
+            entry.step=row.style==='Int'?'1':'0.01';entry.min=item.min??'';entry.max=item.max??'';
+          }
+        }
+        entry.dataset.viewerControl=row.name;entry.dataset.viewerComponent=index;
+        entry.setAttribute('aria-label',row.label+(row.components.length>1?' '+item.name:''));entry.title=item.name;
+        entry.viewerExpected={viewerId:data.viewerId,revision:data.revision,name:row.name,component:index,expected:clone(item)};
+        values.append(entry);
+      }
+      const field=parameterControlRow(row.label,values);field.classList.add('viewer-parameter-row');
+      box.append(field);
+    }
+    box.append(el('p',{class:'muted viewer-parameter-status',role:'status'}));
+  }
+  syncViewerParameterFields();
+}
 let uniformSnapshot={revision:-1,uniforms:{}},uniformPolling=false,uniformSyncError='',uniformPreviewSignature='';
 const liveParameterRow=id=>uniformSnapshot.uniforms[id]||uniformSnapshot.textures?.[id];
 let uniformWrites=Promise.resolve();
@@ -1428,6 +1522,9 @@ function refreshFloatingParameterPorts(){
 }
 function inspector(){renderInspector();workspaceLayout?.refreshFloatingHeaders();refreshFloatingParameterPorts();}
 function renderInspector(){
+  if(viewerInspectorActive){renderViewerInspector($('#inspector'));return;}
+  $('#inspector').classList.remove('viewer-parameters');
+  delete $('#inspector').dataset.viewerStructure;
   if(deferParameterInspector()||deferCommentNodeEditor(false))return;
   if(!valueLadder?.entry?.dataset.inlineNode&&!pendingValueLadder?.entry?.dataset.inlineNode&&!numericPresetMenu?.entry?.dataset.inlineNode)cancelValueLadder();
   const box=$('#inspector');box.classList.remove('ordinary-parameters','comment-parameters','notes-parameters','parameter-empty');box.replaceChildren();renderHelp();
@@ -2327,6 +2424,7 @@ function clearNativeSourceHint(){
 }
 function selectInputSource(id){
   if(!allInputSources().some(d=>d.id===id))return;
+  leaveViewerInspector();
   helpContext='node';selectedInputId=id;selected=null;selectedEdge=null;selection.clear();cancelConnection();closeCreator();
   workspaceLayout?.reveal('parameters');render();
   if(allInputSources().find(d=>d.id===id)?.kind&&['uniform','spec_constant','pop_buffer','attribute'].includes(allInputSources().find(d=>d.id===id).kind))showNativeSourceHint();else clearNativeSourceHint();
