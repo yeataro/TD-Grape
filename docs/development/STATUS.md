@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-30 0.8.270：Texture 分類新增普通可編輯 Bump 子圖，MAT Pixel 限定。Position／Normal 明確接入相同空間，Height 接外部貼圖通道或程序值；Strength 為 0–1 混合，Distance 可負值反轉凹凸。輸出正規化 Normal，可接 PBR／Phong 或串接於 Normal Map 後。微分退化回退基底法線，不自動取得幾何、翻面、取樣或位移；五語 Help 與[功能文件](../features/BASIC_MATERIAL_PRESETS.md#bump08270)說明占位預設、單位與解析度限制。子圖 targets 現在於編譯時驗證，個人庫匯出保留限制；原十三份庫定義逐份相同，預設材質圖未改。
+
+41 項 Python 核心／函式／個人庫檢查、14 項 Editor launch、四組 Chromium 操作及五語系／分類投影檢查通過。Windows TD 2025.32820 的 21 組隔離驗證涵蓋十九組 GPU 法線對照與 PBR／Phong 編譯；解析高度對獨立 CPU 切向約束求解最大誤差 0.00002093，外部高度貼圖最大誤差 0.001161。首次貼圖 fixture 的 UV 跨越 Repeat 接縫，修正取樣範圍後全過，未以改變 Bump 算法掩蓋接縫。Chromium 檢查庫篩選、五語 Help、本地編輯／Undo、保存圖實際编譯，截圖已目視。私人報告 `reports/bump-270/`；macOS／Metal 未實測。
+
+40 份來源核對、五份更新，六份 Master 同步無圖升級，三份使用者 Shader 及原生身分／位置保留。正式 TOE 已保存並排除私人助手，開始前另備份作者當時的 TOE；未重新整理使用者網頁，未推送。Layout 浮動面板狀態仍依既有待辦延後，本輪僅確認現況。
+
 2026-09-30 0.8.269：Vertex Inputs 套用既有 TD Runtime Info 的櫻桃紅角色，畫布、Parameter 與新增入口共用；明亮模式沿用既有配色。Attributes 移到 Sources 第一層，搜尋可建立來源的分類名稱／kind 時，即使尚無宣告也保留 Add 入口。Attribute 仍僅 MAT 可建立、Vertex 可插入引用；不改圖、來源值、接口或產碼，也未開始 Preview 功能。
 
 16 組 Chromium 檢查通過：來源選單 4、既有 MAT Attribute 4，以及明暗配色／五語分類搜尋／圖與歷史保留 8；14 項 Editor launch 通過，截圖已目視。舊 `test_source_workspace.cjs` 的預設前三個分類斷言仍為 uniform／constant／spec_constant，於修改前 HEAD 的隔離資產同樣失敗；未改写此舊預期，未宣稱整套通過。私人報告 `reports/source-discovery-269/`。未實測 Safari／iPad。

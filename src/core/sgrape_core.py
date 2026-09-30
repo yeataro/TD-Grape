@@ -1864,6 +1864,41 @@ def function_library(with_browser=False):
     normal=vector('normal','Normal',(0,0,1));view=vector('viewDirection','View Direction',(0,0,1))
     factor=scalar('factor','Fac',0)
 
+    # Surface gradient from the supplied position and height derivatives. The
+    # signed determinant handles mirrored coordinates without flipping Normal.
+    add,finish=helper('bump','Bump',
+        [vector('position','Position',(0,0,0)),normal,scalar('height','Height',.5),
+         scalar('strength','Strength',1),scalar('distance','Distance',.1)],normal,['mat'])
+    n=unit(add,('input','normal'),'normal')
+    px=add('dFdx','position_dx',{'value':('input','position')},'vec3')
+    py=add('dFdy','position_dy',{'value':('input','position')},'vec3')
+    hx=add('dFdx','height_dx',{'value':('input','height')})
+    hy=add('dFdy','height_dy',{'value':('input','height')})
+    rx=add('cross','gradient_x_basis',{'a':py,'b':n},'vec3')
+    ry=add('cross','gradient_y_basis',{'a':n,'b':px},'vec3')
+    det=add('dot','surface_determinant',{'a':px,'b':rx},'vec3')
+    magnitude=add('abs','determinant_magnitude',{'value':det})
+    lx=add('length','position_dx_length',{'value':px},'vec3')
+    ly=add('length','position_dy_length',{'value':py},'vec3')
+    area=add('multiply','derivative_scale',{'a':lx,'b':ly})
+    tolerance=add('multiply','relative_tolerance',{'a':area,'b':1e-6})
+    tolerance=add('max','minimum_tolerance',{'a':tolerance,'b':1e-30})
+    valid=add('compare','valid_surface',{'a':magnitude,'b':tolerance},operator='>')
+    denominator=add('if','safe_determinant',{'condition':valid,'true':det,'false':1})
+    gx=add('multiply','height_gradient_x',{'a':rx,'b':hx},'vec3')
+    gy=add('multiply','height_gradient_y',{'a':ry,'b':hy},'vec3')
+    gradient=add('add','height_gradient_sum',{'a':gx,'b':gy},'vec3')
+    gradient=add('divide','surface_gradient',{'a':gradient,'b':denominator},'vec3')
+    gradient=add('multiply','height_distance',{'a':gradient,'b':('input','distance')},'vec3')
+    perturbed=add('subtract','perturbed_normal',{'a':n,'b':gradient},'vec3')
+    perturbed=unit(add,perturbed,'perturbed')
+    strength=add('clamp','bounded_strength',{'value':('input','strength'),'min':0,'max':1})
+    mixed=add('mix','strength_mix',{'a':n,'b':perturbed,'factor':strength},'vec3')
+    mixed=unit(add,mixed,'mixed')
+    bump=finish(add('if','surface_normal',{'condition':valid,'true':mixed,'false':n},'vec3'))
+    bump['stages']=['pixel']
+    bump['source']['version']=digest({k:v for k,v in bump.items() if k!='source'})
+
     add,finish=helper('view_direction','View Direction',
         [vector('position','Position',(0,0,0)),dict(id='camera',name='Camera',type='int',default=0)],
         vector('direction','Direction',(0,0,1)),['mat'])
@@ -1970,13 +2005,14 @@ def function_library(with_browser=False):
     subsurface_approx['stages']=['pixel']
     subsurface_approx['source']['version']=digest({k:v for k,v in subsurface_approx.items() if k!='source'})
 
-    result = [fn]+filters+[color_multiply,normal_map,displacement,view_direction,fresnel,facing,mapping,rim_light,subsurface_approx]
+    result = [fn]+filters+[color_multiply,normal_map,displacement,view_direction,fresnel,facing,mapping,rim_light,subsurface_approx,bump]
     if with_browser:
         # Browser-only projection: default library snapshots and versions stay intact.
         for f in result:
-            f['browser'] = {'category':'vector' if f in (displacement,view_direction,mapping) else 'shader' if f in (fresnel,facing,rim_light,subsurface_approx) else 'texture' if f is normal_map else 'color','source':'editor',
+            f['browser'] = {'category':'vector' if f in (displacement,view_direction,mapping) else 'shader' if f in (fresnel,facing,rim_light,subsurface_approx) else 'texture' if f in (normal_map,bump) else 'color','source':'editor',
                             'aliases':{'Displacement':['height','normal displacement','vertex displacement','高度','位移'],
                                        'Normal Map':['normal map','TBN','tangent','TDFrontFacing'],
+                                       'Bump':['height','surface gradient','normal','凹凸','高度','バンプ','범프'],
                                        'View Direction':['view vector','camera','orthographic','視線','觀看方向'],
                                        'Fresnel':['IOR','reflection','費涅爾','反射'],
                                        'Facing':['layer weight','rim','edge mask','邊緣','朝向'],
@@ -2000,6 +2036,7 @@ def _functions_scoped(graph):
         if fn.get('scope') not in ('local','library','personal'): raise GraphError('Invalid Subgraph scope')
         if not isinstance(fn.get('name'),str) or not 1<=len(fn['name'])<=80: raise GraphError('Subgraph name must contain 1–80 characters')
         if not isinstance(fn.get('stages'),list) or not fn['stages'] or set(fn['stages'])-{'vertex','pixel'}: raise GraphError('Invalid Subgraph stages')
+        if 'targets' in fn and (not isinstance(fn['targets'],list) or not fn['targets'] or any(t not in ('top','mat') for t in fn['targets'])): raise GraphError('Invalid Subgraph targets')
         for direction in ('inputs','outputs'):
             ports=fn.get(direction); seen=set()
             if not isinstance(ports,list) or len(ports)>16: raise GraphError('Subgraph supports at most 16 ports per direction')
@@ -2084,6 +2121,7 @@ def _expand(graph,functions):
                 if key==CALL:
                     fn=functions.get(params.get('functionId'))
                     if not fn or stage not in fn['stages']: raise GraphError('Missing Subgraph or wrong shader stage',ident)
+                    if graph_target(graph) not in fn.get('targets',['top','mat']): raise GraphError('Subgraph does not support this Shader target',ident)
                     saved=n.get('inputValues',{})
                     if not isinstance(saved,dict) or set(saved)-{p['id'] for p in fn['inputs']}: raise GraphError('Invalid Subgraph input values',ident)
                     inside=path+((fn['id'],ident),); ins={}; outs={}; local_in={}; local_out={}

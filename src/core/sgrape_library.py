@@ -96,6 +96,7 @@ def build(core,graph,root):
         original=checked[ident]
         # Only portable definition data is exported; source paths and Shader IDs stay out.
         f={key:copy.deepcopy(original[key]) for key in ('name','stages','inputs','outputs','graph')}
+        if 'targets' in original:f['targets']=copy.deepcopy(original['targets'])
         f['id']=remap[ident];f['scope']='local'
         for n in f['graph']['nodes']:
             if n['definitionUuid']==core.CALL:n['params']['functionId']=remap[n['params']['functionId']]

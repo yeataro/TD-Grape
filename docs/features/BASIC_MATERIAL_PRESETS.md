@@ -141,6 +141,33 @@ Normal Map 的對接：Texture 2D → Color；Vertex Input 的 `tangentToWorld` 
 `tests/td/test_material_subgraphs.py`。原生渲染以獨立 GLSL 比較三個顏色輸出、HDR／零 Alpha、
 單位乘數、平面／傾斜法線、零／部分強度及背面。
 
+## Bump（0.8.270）
+
+Texture 分類的普通、可編輯內建子圖，僅供 MAT Pixel 使用；不加入預設材質圖。
+依序輸入 Position（vec3）、Normal（vec3）、Height（float，預設 0.5）、
+Strength（float，預設 1）、Distance（float，預設 0.1），輸出 Normal（vec3）。
+Position 與 Normal 要明確接入相同空間的資料，通常是 Vertex 傳入的世界位置與法線。
+Position 的零向量與 Normal 的 Z 軸預設只是儲存占位，並非自動幾何來源或通用中性值。
+Normal 也能接 Normal Map 的世界法線結果；子圖保留輸入方向，不另做正背面翻轉。
+
+Height 可接 Texture 2D 取出的單一通道，或 Noise／Voronoi 等程序高度。貼圖取樣與
+來源宣告留在外部，高度視為線性資料，不套顯示色彩轉換。使用 `dFdx`／`dFdy`
+求 Position 與 Height 的螢幕微分，以帶符號的表面行列式還原切平面上的高度梯度；
+Distance 以 Position 的單位縮放該梯度，負值反轉凹凸。先得到擾動後的單位法線，
+再按限制於 0–1 的 Strength 與基底法線混合並正規化。固定高度、零 Strength、
+零 Distance 保留正規化的基底法線。
+
+行列式閾值依位置微分長度乘積的 `1e-6` 設定（絕對下限 `1e-30`），避免以固定
+閾值使效果隨解析度提前消失。退化位置或接近切面的基底法線退回基底法線，零法線
+輸入仍為零。微分運算位於條件選擇之前；退化分母使用安全值。這不移動頂點、
+不改輪廓、不需 Geometry Shader 或切線屬性；高頻高度、貼圖接縫、掠射角與上游
+不一致控制流程仍受螢幕微分限制，不保證等同 Blender 的取樣與濾波結果。
+
+驗證入口：`tests/unit/test_bump.py`、`tests/browser/test_bump.cjs`、`tests/td/test_bump.py`。
+GPU 數值對照使用獨立 CPU 切向約束方程求解，包含正負距離、混合強度、常數高度、
+退化輸入、旋轉表面、外部高度貼圖、Normal Map 串接；另檢查 PBR／Phong 材質銜接。
+子圖的 targets 限制在編譯與個人庫匯出時保留，不能只靠選單隱藏。
+
 ## View Direction／Fresnel／Facing／Mapping（0.8.261）
 
 四個普通、可打開編輯的內建 Subgraph，不加入或替換預設材質圖。View Direction／Mapping 位於 Vector 分類，Fresnel／Facing 位於 Shader 分類。
