@@ -10,6 +10,8 @@ Edit node graphs, generate GLSL, preview results from TouchDesigner, and adjust 
 
 ## Project Status
 
+Current version: **0.8.271**.
+
 **Functional preview in development. Not yet Alpha.**
 
 The current focus is to complete the functional preview, refine workflows, and validate existing features. A substantial architectural refactor is expected after this stage, clarifying the responsibilities of the editor, code generator, and host integration.
