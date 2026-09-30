@@ -6,7 +6,12 @@ A node-based GLSL TOP/MAT shader editor for TouchDesigner.
 
 Edit node graphs, generate GLSL, preview results from TouchDesigner, and adjust parameters through a browser for image processing and material creation.
 
-![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/95fcf86b-d066-4cdf-8b25-ea2c9e91bf74)
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/dd59025e-adc9-4db4-85d0-ceb6bf8c5b76)
+
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/ad814080-98b9-4a5b-b371-744ad936ae3f)
+
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/7b5188d3-dbc3-4b25-804b-1a5d128d5580)
+
 
 ## Project Status
 
@@ -39,7 +44,7 @@ This commitment applies only to verified TouchDesigner versions; upgrading betwe
 3. Drag the `.tox` into TouchDesigner's **Network Editor** to add the TD-Grape manager component.
 4. Press **Tab** in the Network Editor to open the **OP Create Dialog**.
 
-   ![TouchDesigner's Grape operator creation menu](https://github.com/user-attachments/assets/b837b4f6-215b-4fee-a301-e3b730b77243)
+   ![TouchDesigner's Grape operator creation menu](https://github.com/user-attachments/assets/3d2a3727-2f6c-4634-851c-0871496b3618)
 
 5. Under **Grape**, create a **Grape TOP** for texture/image processing or a **Grape MAT** for materials.
 6. Select the newly created component and click **Open Editor** on its parameter page to open the browser editor.
