@@ -7,7 +7,7 @@ const {harness}=require('./test_glsl_code.cjs');
  const box=id=>page.locator('#floating'+id).boundingBox();
  const near=(a,b)=>assert.ok(Math.abs(a-b)<1,`${a} != ${b}`);
  const saved=()=>page.evaluate(()=>localStorage.getItem('grapeFloatingLowerSize'));
- const snapshot=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty,pan,scale,layout:workspaceLayout.snapshot()}));
+ const snapshot=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty,pan,scale,layout:(({floating,...docked})=>docked)(workspaceLayout.snapshot())}));
  const drag=async(id,axis,dx,dy)=>{
   const handle=await page.locator(`#floating${id} .floating-panel-resize-${axis}`).boundingBox();
   await page.mouse.move(handle.x+handle.width/2,handle.y+handle.height/2);await page.mouse.down();await page.mouse.move(handle.x+handle.width/2+dx,handle.y+handle.height/2+dy,{steps:8});await page.mouse.up();await settle();
@@ -28,7 +28,7 @@ const {harness}=require('./test_glsl_code.cjs');
   await drag('help','width',40,0);await drag('help','height',0,30);help=await box('help');near(help.width,enlarged.width-40);near(help.height,enlarged.height-30);
   await show('live');const shared=await box('live');near(shared.width,help.width);near(shared.height,help.height);
   assert.equal(await page.evaluate(()=>originalFloatingPreview===$('#preview')&&originalFloatingHelp===$('#pane-help')),true);assert.equal(await snapshot(),initial);
-  checks.push('Corner and independent edges resize both panes, preserve right/bottom anchors and original DOM, share dimensions, and leave graph/history/layout unchanged; Help scrolls');
+  checks.push('Corner and independent edges resize both panes, preserve right/bottom anchors and original DOM, share dimensions, and leave graph/history/docking unchanged; Help scrolls');
 
   const beforeCancel=await saved(),handle=page.locator('#floatinglive .floating-panel-resize-both'),hr=await handle.boundingBox();
   await page.mouse.move(hr.x+5,hr.y+5);await page.mouse.down();await page.mouse.move(hr.x-50,hr.y-50);await page.keyboard.press('Escape');await page.mouse.up();await settle();
@@ -62,7 +62,7 @@ const {harness}=require('./test_glsl_code.cjs');
   near((await box('live')).width,touchBefore.width+30);near((await box('live')).height,touchBefore.height+24);await cdp.detach();
   await page.screenshot({path:path.join(folder,'preview-resized.png')});await show('help');await page.screenshot({path:path.join(folder,'help-resized.png')});
   checks.push('Trusted touch resizing respects 75% UI scale and read-only graphs; touch cancellation restores size without saving');
-  await page.evaluate(()=>{setUIAppearance('scale',100);localStorage.setItem('grapeFloatingLowerSize',JSON.stringify({width:'broken',height:null}));});
+  await page.evaluate(()=>{setUIAppearance('scale',100);const saved=JSON.parse(localStorage.getItem('grapeWorkspaceV1'));saved.floating.lowerSize={width:'broken',height:null};localStorage.setItem('grapeWorkspaceV1',JSON.stringify(saved));});
   await page.reload();await page.waitForSelector('.node');await settle();await show('help');near((await box('help')).width,320);near((await box('help')).height,320);
   checks.push('Malformed stored dimensions recover to the default size');
   assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,checks}));

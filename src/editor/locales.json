@@ -3756,6 +3756,13 @@
       "fr": "Disposition par défaut",
       "ko": "기본 레이아웃"
     },
+    "layout.minimal": {
+      "zh-Hant": "Minimal",
+      "en": "Minimal",
+      "ja": "Minimal",
+      "fr": "Minimal",
+      "ko": "Minimal"
+    },
     "layout.apply": {
       "zh-Hant": "套用",
       "en": "Apply",

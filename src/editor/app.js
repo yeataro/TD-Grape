@@ -793,6 +793,12 @@ function renderHeaderVisibility(){
   button.setAttribute('aria-expanded',String(shown));button.title=t(shown?'header.hide':'header.show');
   $('#editorrefresh').title=t('editorReload.action');$('#reload').title=t('action.reload');
 }
+function setHeaderVisible(shown){
+  $('#editorheader').hidden=!shown;
+  try{localStorage.setItem('sgrapeHeaderVisible',String(shown));}catch{}
+  renderHeaderVisibility();window.dispatchEvent(new Event('workspacepreferenceschange'));
+  if(graph)requestAnimationFrame(wires);
+}
 function requestEditorReload(){
   const unfinished=pendingEditorField();
   if(unfinished){status(t('editorReload.finishField'),true,{kind:'reload'});unfinished.focus?.({preventScroll:true});return false;}
@@ -1391,11 +1397,7 @@ function installEditorChrome(){
   installGraphToolbarOverflow();
   try{$('#editorheader').hidden=localStorage.getItem('sgrapeHeaderVisible')==='false';}catch{}
   renderHeaderVisibility();
-  $('#toggleheader').onclick=()=>{
-    $('#editorheader').hidden=!$('#editorheader').hidden;
-    try{localStorage.setItem('sgrapeHeaderVisible',String(!$('#editorheader').hidden));}catch{}
-    renderHeaderVisibility();if(graph)requestAnimationFrame(wires);
-  };
+  $('#toggleheader').onclick=()=>setHeaderVisible($('#editorheader').hidden);
   $('#editorrefresh').onpointerdown=e=>{if(pendingEditorField())e.preventDefault();};
   $('#editorrefresh').onclick=requestEditorReload;
   $('#resetbrowserpreferences').onpointerdown=e=>{if(pendingEditorField())e.preventDefault();};

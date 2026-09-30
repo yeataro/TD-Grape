@@ -1,10 +1,10 @@
-/* Floating Parameter uses the existing pane and never changes graph/layout data. */
+/* Floating Parameter uses the existing pane and never changes graph or docked group data. */
 const assert=require('node:assert/strict'),path=require('node:path');
 const {harness}=require('./test_glsl_code.cjs');
 (async()=>{
  const[source,state,folder]=process.argv.slice(2),h=await harness(source,state,folder,{skipPreview:true,touch:true}),{page,checks,errors,settle}=h;
  page.setDefaultTimeout(6000);const panel=page.locator('#floatingparameters');
- const unchanged=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty,pan,scale,layout:workspaceLayout.snapshot()}));
+ const unchanged=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty,pan,scale,layout:(({floating,...docked})=>docked)(workspaceLayout.snapshot())}));
  const pressP=async()=>{await page.evaluate(()=>focusGraphCanvas());await page.keyboard.press('p');await settle();};
  try{
   await page.evaluate(()=>{
@@ -18,7 +18,7 @@ const {harness}=require('./test_glsl_code.cjs');
   assert.equal(await page.evaluate(()=>$('#floatingparameters>#pane-parameters')===originalParameterPane&&$('#parameterbody')===originalParameterBody),true);
   assert.equal(await page.locator('#parameter-sidebar #pane-parameters').count(),0);assert.equal(await unchanged(),before);
   await pressP();assert.equal(await panel.isVisible(),false);assert.equal(await page.locator('#parameter-sidebar #pane-parameters').count(),1);assert.equal(await unchanged(),before);
-  checks.push('P moves the same pane into the canvas and back, without duplicate controls, graph/history/view or saved-layout changes');
+  checks.push('P moves the same pane into the canvas and back, without duplicate controls, graph/history/view or docking changes');
   await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openGraphMenu(r.left+150,r.top+160);});
   const item=page.locator('#grapheditmenu [data-edit=floatingParameter]');assert.equal(await item.getAttribute('aria-checked'),'false');assert.match(await item.innerText(),/P/);await item.click();await settle();assert.equal(await panel.isVisible(),true);
   await page.evaluate(()=>{const r=$('#canvas').getBoundingClientRect();openGraphMenu(r.left+150,r.top+160,'value');});assert.equal(await item.getAttribute('aria-checked'),'true');await page.keyboard.press('Escape');

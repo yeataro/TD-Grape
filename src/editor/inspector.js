@@ -1936,7 +1936,23 @@ function installPanelWorkspace(){
   const hosts={left:$('#sidebar-left'),right:$('#parameter-sidebar')},panes={browser:$('#nodelibrary')},heads={};
   const copy=value=>JSON.parse(JSON.stringify(value)),read=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f;}catch{return f;}};
   const write=(k,value)=>{try{localStorage.setItem(k,JSON.stringify(value));return true;}catch{status(t('layout.storageError'),true);return false;}};
-  const defaults=()=>({version:1,left:[{panels:['browser','uniforms','structures'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls','glsl'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:300,right:340},visibility:{left:true,right:true},hidden:['structures','glsl']});
+  const floatingSlots={parameters:'upper',controls:'upper',live:'lower',help:'lower'};
+  const defaultFloating=()=>({upper:null,lower:null,collapsed:{parameters:false,controls:false,live:false,help:false},parameterWidth:320,lowerSize:{width:320,height:320}});
+  const defaults=()=>({version:1,left:[{panels:['browser','uniforms','structures'],active:'browser',collapsed:false,weight:1}],right:[{panels:['parameters','controls','glsl'],active:'parameters',collapsed:false,weight:5},{panels:['live'],active:'live',collapsed:false,weight:3},{panels:['help'],active:'help',collapsed:false,weight:2}],widths:{left:300,right:340},visibility:{left:true,right:true,header:true},hidden:['structures','glsl'],floating:defaultFloating()});
+  const minimal=()=>({...defaults(),visibility:{left:false,right:false,header:false},floating:{...defaultFloating(),upper:'parameters',lower:'live'}});
+  function validateFloating(raw,hidden=[]){
+    const value=defaultFloating();if(raw===undefined)return value;
+    if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error(t('layout.invalid'));
+    for(const slot of ['upper','lower']){
+      const id=raw[slot];if(id!==undefined&&id!==null&&floatingSlots[id]!==slot)throw Error(t('layout.invalid'));
+      value[slot]=id&&!hidden.includes(id)?id:null;
+    }
+    for(const id of Object.keys(floatingSlots))value.collapsed[id]=raw.collapsed?.[id]===true;
+    const size=(v,min,fallback)=>Number.isFinite(v)?Math.max(min,Math.min(10000,v)):fallback;
+    value.parameterWidth=size(raw.parameterWidth,280,320);
+    value.lowerSize={width:size(raw.lowerSize?.width,280,320),height:size(raw.lowerSize?.height,160,320)};
+    return value;
+  }
   function validate(raw){
     if(!raw||raw.version!==1)throw Error(t('layout.invalid'));
     const value=defaults(),seen=[];
@@ -1961,6 +1977,8 @@ function installPanelWorkspace(){
     if(seen.length!==ids.length||new Set(seen).size!==ids.length)throw Error(t('layout.invalid'));
     if(raw.hidden!==undefined&&(!Array.isArray(raw.hidden)||raw.hidden.some(id=>!ids.includes(id))||new Set(raw.hidden).size!==raw.hidden.length))throw Error(t('layout.invalid'));
     value.hidden=[...(raw.hidden||[])];if(addGLSL&&!value.hidden.includes('glsl'))value.hidden.push('glsl');
+    value.visibility.header=raw.visibility?.header!==false;
+    value.floating=validateFloating(raw.floating,value.hidden);
     return value;
   }
   let state=defaults(),sizes=[],drag=null,restoring=false;
@@ -1970,6 +1988,18 @@ function installPanelWorkspace(){
     for(const g of state.right){g.collapsed=open[g.active]===false;g.weight=weights[g.active]||g.weight;}
     state=validate(state);
   }}catch{}
+  // Only the current workspace inherits the old independent preferences. Old
+  // named/imported layouts restore a visible header and no floating panels.
+  const savedWorkspace=read(key,null);
+  if(savedWorkspace?.visibility?.header===undefined)state.visibility.header=read('sgrapeHeaderVisible',true)!==false;
+  if(savedWorkspace?.floating===undefined){
+    const legacy=read('grapeFloatingPanelsV1',{});
+    state.floating=validateFloating({
+      upper:['parameters','controls'].includes(legacy?.upper)?legacy.upper:legacy?.upper===null?null:read('grapeFloatingParameter',false)===true?'parameters':null,
+      lower:['live','help'].includes(legacy?.lower)?legacy.lower:null,collapsed:legacy?.collapsed,
+      parameterWidth:read('grapeFloatingParameterWidth',320),lowerSize:read('grapeFloatingLowerSize',{})
+    },state.hidden);
+  }
   // Upgrade only the former stock arrangement, once. Personal layouts and named presets stay put.
   const inputsPlacementKey='grapeInputsDefaultLeftV1';
   if(!read(inputsPlacementKey,false)){
@@ -1991,20 +2021,22 @@ function installPanelWorkspace(){
   for(const [side,host]of Object.entries(hosts)){host.dataset.workspaceSide=side;host.classList.add('workspace-sidebar');}
   function title(id){return id==='glsl'?t('panel.glsl'):id==='browser'?t('panel.addNode'):id==='uniforms'?t('sources.title'):id==='structures'?t('struct.title'):id==='controls'?t('controls.title'):id==='parameters'?t('panel.parameterTitle'):id==='help'?t('panel.helpTitle'):$('#previewtitle').textContent;}
   function locate(id){for(const side of ['left','right']){const index=state[side].findIndex(g=>g.panels.includes(id));if(index>=0)return {side,index,group:state[side][index]};}}
-  function persist(){if(restoring)return;state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};if(!matchMedia('(max-width:800px)').matches)state.visibility={left:isSidebarOpen('left'),right:isSidebarOpen('right')};write(key,state);}
+  function capture(){
+    state.widths={...state.widths,...read('sgrapeSidebarWidths',{})};
+    if(!matchMedia('(max-width:800px)').matches)for(const side of ['left','right'])state.visibility[side]=isSidebarOpen(side);
+    state.visibility.header=!$('#editorheader').hidden;
+    state.floating={...slots,collapsed:{...collapsed},parameterWidth:floatingWidth,lowerSize:{...lowerSize}};
+    return state;
+  }
+  function persist(){if(!restoring)write(key,capture());}
   const parking=el('div',{hidden:true});document.body.append(parking);
-  const floatingSlots={parameters:'upper',controls:'upper',live:'lower',help:'lower'};
-  const savedFloating=read('grapeFloatingPanelsV1',{}),slots={
-    upper:['parameters','controls'].includes(savedFloating?.upper)?savedFloating.upper:savedFloating?.upper===null?null:read('grapeFloatingParameter',false)===true?'parameters':null,
-    lower:['live','help'].includes(savedFloating?.lower)?savedFloating.lower:null
-  };
+  const savedFloating=state.floating,slots={upper:savedFloating.upper,lower:savedFloating.lower};
   const collapsed=Object.fromEntries(Object.keys(floatingSlots).map(id=>[id,savedFloating?.collapsed?.[id]===true]));
   const isFloating=id=>!!floatingSlots[id]&&slots[floatingSlots[id]]===id;
   floatingParameterOpen=isFloating('parameters');
-  const savedFloatingWidth=read('grapeFloatingParameterWidth',320);
-  let floatingWidth=Number.isFinite(savedFloatingWidth)?Math.max(280,savedFloatingWidth):320;
-  const lowerSizeKey='grapeFloatingLowerSize',savedLowerSize=read(lowerSizeKey,{});
-  let lowerSize={width:Number.isFinite(savedLowerSize?.width)?Math.max(280,savedLowerSize.width):320,height:Number.isFinite(savedLowerSize?.height)?Math.max(160,savedLowerSize.height):320};
+  let floatingWidth=savedFloating.parameterWidth;
+  const lowerSizeKey='grapeFloatingLowerSize';
+  let lowerSize={...savedFloating.lowerSize};
   let lowerLimits={width:320,height:320},cancelLowerResize=null;
   const floating=el('section',{id:'floatingparameters',class:'floating-workspace-panel',role:'region','aria-labelledby':'floatingparametertitle',hidden:true});
   const floatingTitle=el('span',{id:'floatingparametertitle',class:'sr-only'}),floatingClose=el('button',{type:'button',class:'icon-button floating-parameter-close'});
@@ -2034,7 +2066,7 @@ function installPanelWorkspace(){
           const box=element.getBoundingClientRect(),size={...lowerSize},zoom=uiScaleFactor();
           if(axis!=='height'&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key))size.width=e.key==='Home'?280:e.key==='End'?lowerLimits.width:box.width/zoom+(e.key==='ArrowLeft'?8:-8);
           if(axis!=='width'&&['ArrowUp','ArrowDown','Home','End'].includes(e.key))size.height=e.key==='Home'?160:e.key==='End'?lowerLimits.height:box.height/zoom+(e.key==='ArrowUp'?8:-8);
-          resizeLower(size,axis);write(lowerSizeKey,lowerSize);
+          resizeLower(size,axis);saveFloating();
         };
         return handle;
       });
@@ -2042,7 +2074,10 @@ function installPanelWorkspace(){
     for(const event of ['pointerdown','mousedown','touchstart','click','dblclick','contextmenu'])element.addEventListener(event,e=>e.stopPropagation());
     element.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   }
-  function saveFloating(){write('grapeFloatingPanelsV1',{...slots,collapsed});write('grapeFloatingParameter',floatingParameterOpen);}
+  function saveFloating(){
+    write('grapeFloatingPanelsV1',{...slots,collapsed});write('grapeFloatingParameter',floatingParameterOpen);
+    write('grapeFloatingParameterWidth',floatingWidth);write(lowerSizeKey,lowerSize);persist();
+  }
   function collapseIcon(){
     const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 12 12');icon.setAttribute('aria-hidden','true');icon.classList.add('floating-collapse-icon');
     const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d','M3 1 10 6 3 11Z');icon.append(path);return icon;
@@ -2119,7 +2154,7 @@ function installPanelWorkspace(){
       if(event&&event.pointerId!==pointer)return;
       handle.removeEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])handle.removeEventListener(type,finish);
       cancelLowerResize=null;
-      if(event?.type==='pointerup')write(lowerSizeKey,lowerSize);else{lowerSize=previous;positionFloatingParameter();}
+      if(event?.type==='pointerup')saveFloating();else{lowerSize=previous;positionFloatingParameter();}
       if(handle.hasPointerCapture(pointer))handle.releasePointerCapture(pointer);
     };
     cancelLowerResize=()=>finish();handle.addEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])handle.addEventListener(type,finish);
@@ -2132,7 +2167,7 @@ function installPanelWorkspace(){
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
     e.preventDefault();e.stopPropagation();
     const width=floating.getBoundingClientRect().width/uiScaleFactor();
-    resizeFloatingParameter(e.key==='Home'?280:e.key==='End'?Infinity:width+(e.key==='ArrowLeft'?8:-8));write('grapeFloatingParameterWidth',floatingWidth);
+    resizeFloatingParameter(e.key==='Home'?280:e.key==='End'?Infinity:width+(e.key==='ArrowLeft'?8:-8));saveFloating();
   };
   floatingResizeHandle.onpointerdown=e=>{
     if(e.button!==0)return;e.preventDefault();e.stopPropagation();
@@ -2142,7 +2177,7 @@ function installPanelWorkspace(){
     const finish=event=>{
       if(event.pointerId!==pointer)return;
       floatingResizeHandle.removeEventListener('pointermove',move);floatingResizeHandle.removeEventListener('pointerup',finish);floatingResizeHandle.removeEventListener('pointercancel',finish);floatingResizeHandle.removeEventListener('lostpointercapture',finish);
-      if(event.type==='pointerup')write('grapeFloatingParameterWidth',floatingWidth);else{floatingWidth=previous;positionFloatingParameter();}
+      if(event.type==='pointerup')saveFloating();else{floatingWidth=previous;positionFloatingParameter();}
       if(floatingResizeHandle.hasPointerCapture(pointer))floatingResizeHandle.releasePointerCapture(pointer);
     };
     floatingResizeHandle.addEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])floatingResizeHandle.addEventListener(type,finish);
@@ -2150,6 +2185,7 @@ function installPanelWorkspace(){
   function setFloatingPanel(id,enabled){
     const slot=floatingSlots[id];if(!slot||isFloating(id)===!!enabled)return;
     cancelLowerResize?.();
+    if(enabled)state.hidden=state.hidden.filter(panel=>panel!==id);
     slots[slot]=enabled?id:null;floatingParameterOpen=isFloating('parameters');saveFloating();build();
   }
   function setFloatingParameter(enabled){setFloatingPanel('parameters',enabled);}
@@ -2268,9 +2304,21 @@ function installPanelWorkspace(){
     window.addEventListener('pointercancel',()=>finish(false),options);window.addEventListener('blur',e=>{if(e.target===window)finish(false);},options);window.addEventListener('resize',()=>finish(false),options);
     window.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(false);}},options);
   }
-  function apply(value){state=validate(value);restoring=true;drag?.();write('sgrapeSidebarWidths',state.widths);build();
-    if(!matchMedia('(max-width:800px)').matches)for(const side of ['left','right'])setSidebarOpen(side,state.visibility[side]);
-    window.dispatchEvent(new Event('workspacewidthschange'));restoring=false;persist();}
+  function restoreChrome(){
+    setHeaderVisible(state.visibility.header);
+    const compact=matchMedia('(max-width:800px)').matches;
+    for(const side of ['left','right']){
+      document.body.classList.toggle('hide-'+(side==='left'?'library':'details'),!state.visibility[side]);
+      setSidebarOpen(side,!compact&&state.visibility[side]);
+    }
+  }
+  function apply(value){
+    const next=validate(value);restoring=true;drag?.();cancelLowerResize?.();state=next;
+    Object.assign(slots,{upper:state.floating.upper,lower:state.floating.lower});Object.assign(collapsed,state.floating.collapsed);
+    floatingWidth=state.floating.parameterWidth;lowerSize={...state.floating.lowerSize};floatingParameterOpen=isFloating('parameters');saveFloating();
+    write('sgrapeSidebarWidths',state.widths);restoreChrome();build();
+    window.dispatchEvent(new Event('workspacewidthschange'));restoring=false;persist();
+  }
   const dialog=el('dialog',{id:'layoutdialog','aria-labelledby':'layoutheading'});document.body.append(dialog);
   function manager(){
     closeMenu();
@@ -2292,6 +2340,7 @@ function installPanelWorkspace(){
     const saveRow=el('div',{class:'layout-save'}),name=el('input',{id:'layoutname',maxlength:'80',placeholder:t('layout.name'),'aria-label':t('layout.name')}),save=el('button',{type:'button'},t('layout.save'));
     save.onclick=()=>{const label=name.value.trim();if(!label){name.focus();return;}if(presets.some(p=>p.name===label)){name.setCustomValidity(t('layout.duplicate'));name.reportValidity();return;}persist();presets.push({name:label,layout:copy(state)});write(presetsKey,presets);manager();};name.oninput=()=>name.setCustomValidity('');saveRow.append(name,save);dialog.append(saveRow);
     const list=el('div',{class:'layout-presets'}),defaultRow=el('div',{class:'layout-preset'}),reset=el('button',{type:'button'},t('layout.restore'));reset.onclick=()=>{apply(defaults());manager();};defaultRow.append(el('strong',{},t('layout.default')),reset);list.append(defaultRow);
+    const minimalRow=el('div',{class:'layout-preset'}),applyMinimal=el('button',{type:'button'},t('layout.apply'));applyMinimal.onclick=()=>{apply(minimal());manager();};minimalRow.append(el('strong',{},t('layout.minimal')),applyMinimal);list.append(minimalRow);
     for(const item of presets){const row=el('div',{class:'layout-preset'});row.append(el('span',{},item.name));
       const rename=el('button',{type:'button'},t('layout.rename'));rename.onclick=()=>{
         const entry=el('input',{value:item.name,maxlength:80,'aria-label':t('layout.name')}),save=el('button',{type:'button'},t('layout.save')),cancel=el('button',{type:'button'},t('action.close'));
@@ -2318,6 +2367,7 @@ function installPanelWorkspace(){
     for(const id of ids)choice(title(id),()=>{if(state.hidden.includes(id)){state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);}else state.hidden.push(id);if(state.hidden.includes(id)&&isFloating(id)){slots[floatingSlots[id]]=null;floatingParameterOpen=isFloating('parameters');saveFloating();}build();persist();showMenu();[...menu.querySelectorAll('button')][ids.indexOf(id)].focus();},!state.hidden.includes(id));
     heading('layout.presets');
     choice(t('layout.default'),()=>{apply(defaults());closeMenu(true);});
+    choice(t('layout.minimal'),()=>{apply(minimal());closeMenu(true);});
     for(const item of presets)choice(item.name,()=>{apply(item.layout);closeMenu(true);});
     menu.append(el('hr',{role:'separator'}));
     choice(t('layout.save'),()=>{manager();$('#layoutname').focus();});choice(t('layout.manage'),manager);
@@ -2328,9 +2378,9 @@ function installPanelWorkspace(){
   document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!menu.contains(e.target)&&!menuButton.contains(e.target))closeMenu();});
   window.addEventListener('resize',()=>closeMenu());
 
-  build();restoring=true;write('sgrapeSidebarWidths',state.widths);if(!matchMedia('(max-width:800px)').matches)for(const side of ['left','right'])setSidebarOpen(side,state.visibility[side]);restoring=false;
+  restoring=true;write('sgrapeSidebarWidths',state.widths);restoreChrome();build();restoring=false;persist();
   window.addEventListener('workspacepreferenceschange',persist);window.addEventListener('sidebarvisibilitychange',persist);
-  return {move,apply,setFloatingParameter,setFloatingPanel,setFloatingCollapsed,refreshFloatingHeaders,snapshot:()=>copy(state),closeBrowser(){setSidebarOpen(locate('browser').side,false);},reveal(id){if(isFloating(id)){setFloatingCollapsed(id,false);return;}state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);build();persist();},translate(){build();if(dialog.open)manager();if(!menu.hidden)showMenu();},manager};
+  return {move,apply,setFloatingParameter,setFloatingPanel,setFloatingCollapsed,refreshFloatingHeaders,snapshot:()=>copy(capture()),closeBrowser(){setSidebarOpen(locate('browser').side,false);},reveal(id){if(isFloating(id)){setFloatingCollapsed(id,false);return;}state.hidden=state.hidden.filter(x=>x!==id);const found=locate(id);found.group.active=id;found.group.collapsed=false;setSidebarOpen(found.side,true);build();persist();},translate(){build();if(dialog.open)manager();if(!menu.hidden)showMenu();},manager};
 }
 
 /* Inputs are a source inventory. Graph nodes reference these identities; native

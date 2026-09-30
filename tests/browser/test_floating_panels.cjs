@@ -4,7 +4,7 @@ const {harness}=require('./test_glsl_code.cjs');
 (async()=>{
  const[source,state,folder]=process.argv.slice(2),h=await harness(source,state,folder,{skipPreview:true,touch:true}),{page,checks,errors,settle}=h;
  page.setDefaultTimeout(6000);
- const unchanged=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty,pan,scale,layout:workspaceLayout.snapshot()}));
+ const unchanged=()=>page.evaluate(()=>JSON.stringify({graph,past,future,dirty,pan,scale,layout:(({floating,...docked})=>docked)(workspaceLayout.snapshot())}));
  const show=async id=>{await page.evaluate(id=>workspaceLayout.setFloatingPanel(id,true),id);await settle();};
  const fold=async(id,value)=>{await page.evaluate(({id,value})=>workspaceLayout.setFloatingCollapsed(id,value),{id,value});await settle();};
  try{
@@ -24,7 +24,7 @@ const {harness}=require('./test_glsl_code.cjs');
   await show('live');assert.equal(await page.locator('#floatinghelp').isVisible(),false);assert.equal(await page.locator('#floatinglive').isVisible(),true);
   assert.equal(await page.evaluate(()=>Object.entries(originalPanes).every(([id,pane])=>pane===$('#pane-'+id))&&originalPreview===$('#preview')),true);
   assert.equal(await page.locator('#op-draft-probe').inputValue(),'untouched draft');assert.equal(await unchanged(),before);
-  checks.push('Four tab popouts reuse original panes; Parameter/OP and Preview/Help compete only within their slot, preserving draft, preview DOM and graph/layout');
+  checks.push('Four tab popouts reuse original panes; Parameter/OP and Preview/Help compete only within their slot, preserving draft, preview DOM and graph/docking');
 
   for(const id of ['parameters','controls','live','help']){
    await show(id);const panel=page.locator('#floating'+id),toggle=panel.locator(id==='parameters'?'.floating-parameter-fold':'.floating-heading');

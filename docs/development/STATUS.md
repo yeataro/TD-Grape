@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-09-30 0.8.271：Layout 現在保存浮動面板槽位、各面板收合、Parameter 寬度、Preview／Help 共用尺寸及標題列開關；保存／更新／套用／JSON 匯出匯入共用快照。Default 還原停駐配置並關閉全部浮動面板；新增內建 Minimal，收起上標題列與左右面板、開啟右上 Parameter 及右下 Preview，不改啟動預設。目前瀏覽器的舊獨立偏好遷移保留，舊命名／匯入 Layout 缺欄位時預設浮動全關、標題列顯示。細節見 [Workspace layout](../ui/WORKSPACE_LAYOUT.md)。
+
+30 組 Chromium 檢查通過：新 preset 流程 7、浮動面板 8、Parameter 10、共用尺寸 5；涵蓋五語入口、更新／匯入／重載、舊設定遷移、錯誤資料、窄畫面／介面縮放、原 DOM／草稿及圖歷史保留。14 項 Editor launch、1556 個五語 keys 與 JS／diff 檢查通過，桌面／窄版截圖已目視。既有 `test_workspace_layout.cjs` 的前五組 Layout 檢查通過，其後 Creator 的 `advanced` 分類選項逾時，修改前 HEAD 的隔離資產重現同一失敗；未列整套通過。Safari／iPad 未實測。私人報告 `reports/floating-layout-271/`。
+
+40 份來源核對、五份更新，六份 Master 同步無圖升級，三份使用者 Shader 及原生身分／位置保留。正式 TOE 已保存並排除私人助手，保存前已備份作者原檔；未重新整理使用者網頁，未推送。
+
 2026-09-30 0.8.270：Texture 分類新增普通可編輯 Bump 子圖，MAT Pixel 限定。Position／Normal 明確接入相同空間，Height 接外部貼圖通道或程序值；Strength 為 0–1 混合，Distance 可負值反轉凹凸。輸出正規化 Normal，可接 PBR／Phong 或串接於 Normal Map 後。微分退化回退基底法線，不自動取得幾何、翻面、取樣或位移；五語 Help 與[功能文件](../features/BASIC_MATERIAL_PRESETS.md#bump08270)說明占位預設、單位與解析度限制。子圖 targets 現在於編譯時驗證，個人庫匯出保留限制；原十三份庫定義逐份相同，預設材質圖未改。
 
 41 項 Python 核心／函式／個人庫檢查、14 項 Editor launch、四組 Chromium 操作及五語系／分類投影檢查通過。Windows TD 2025.32820 的 21 組隔離驗證涵蓋十九組 GPU 法線對照與 PBR／Phong 編譯；解析高度對獨立 CPU 切向約束求解最大誤差 0.00002093，外部高度貼圖最大誤差 0.001161。首次貼圖 fixture 的 UV 跨越 Repeat 接縫，修正取樣範圍後全過，未以改變 Bump 算法掩蓋接縫。Chromium 檢查庫篩選、五語 Help、本地編輯／Undo、保存圖實際编譯，截圖已目視。私人報告 `reports/bump-270/`；macOS／Metal 未實測。
