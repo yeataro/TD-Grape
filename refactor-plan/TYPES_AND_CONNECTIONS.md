@@ -29,6 +29,8 @@ Parameter 綁定它要編輯的對象與屬性，提供編輯規則，不另持�
 
 Parameter 可以編輯 Input 的本地值，也可以在節點允許時編輯 Output 的型別或樣式，以及 Source 的相關設定。可選型別與樣式必須受目標能力限制；改變型別後要重新驗證受影響的接線。
 
+NodeDefinition 可明確指定 Input 是否提供 Parameter。提供時，基本編輯規格可從 DataType 與接口樣式取得，再補上特殊範圍、clamp 或樣式設定；不必逐項重寫全部基本規格。接口規格、實際接口及 Parameter 的建立關係見[節點定義與註冊表](NODE_DEFINITIONS.md)。
+
 以下名稱表達討論方向，尚不是完整簽章：
 
 ```ts
