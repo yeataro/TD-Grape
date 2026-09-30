@@ -6,7 +6,11 @@ TouchDesigner 的 GLSL TOP／MAT 節點式 Shader 編輯器。
 
 透過瀏覽器編輯節點圖、產生 GLSL、預覽 TouchDesigner 的執行結果並調整參數，用於影像處理與材質製作。
 
-![TD-Grape 節點式 Shader 編輯介面](https://github.com/user-attachments/assets/95fcf86b-d066-4cdf-8b25-ea2c9e91bf74)
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/dd59025e-adc9-4db4-85d0-ceb6bf8c5b76)
+
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/ad814080-98b9-4a5b-b371-744ad936ae3f)
+
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/7b5188d3-dbc3-4b25-804b-1a5d128d5580)
 
 ## 專案狀態
 
@@ -39,7 +43,7 @@ TD-Grape 產出的是靜態 GLSL 程式碼。已產生並套用的 Shader，只�
 3. 將 `.tox` 拖入 TouchDesigner 的 **Network Editor（節點網路畫布）**，加入 TD-Grape 管理元件。
 4. 在 Network Editor 按 **Tab**，開啟 **OP Create Dialog**。
 
-   ![TouchDesigner 的 Grape 元件建立選單](https://github.com/user-attachments/assets/b837b4f6-215b-4fee-a301-e3b730b77243)
+   ![TouchDesigner's Grape operator creation menu](https://github.com/user-attachments/assets/3d2a3727-2f6c-4634-851c-0871496b3618)
 
 5. 在 **Grape** 分類中，建立用於紋理／影像處理的 **Grape TOP**，或用於材質的 **Grape MAT**。
 6. 選取剛建立的元件，在其參數頁按下 **Open Editor**，開啟瀏覽器編輯介面。
