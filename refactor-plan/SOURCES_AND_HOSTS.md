@@ -107,8 +107,48 @@ Source ID、列表順序與宿主綁定是三個不同概念：
 
 圖模型保存及提供順序，並能通知順序變更。宿主整合層負責解讀這個變更；不能一概認定排序只影響顯示，也不能強制所有宿主都按列表順位改變輸入。
 
-## 尚未決定的宿主物件
+## Host 與通訊責任
 
-`ExecutionTarget`、`TargetBinding`、`HostConnection` 是曾提出的候選名稱，責任切分尚未完整確認。不能把來源與宿主的原則直接當成這幾個 class 已定稿。
+後續討論採用 Host、Connection、Target、Binding。Host 代表可辨識的宿主實例，不只是宿主軟體種類；同一台機器及同一區網都可有多個 TD 實例。未來 FFGL 的 Plugin 實例或 Grape 自己的執行環境，也可按這個角色描述，不強制等同一個 OS 程序。
 
-「同一張 Graph 同時綁定兩個 TD MAT，並各自保留參數」是討論時提出的未來例子，尚未成為已確認功能。多實例連線的可能性、跨宿主移轉，以及同圖多目標同步是不同議題，後者另行討論。
+```text
+Grape.hosts
+└─ Host
+   ├─ connection
+   │  ├─ connect()
+   │  └─ disconnect()
+   ├─ targets
+   └─ bindings
+      └─ Binding
+         ├─ graph
+         ├─ target
+         └─ sync(result)
+```
+
+Connection 負責建立及維持通訊管道、請求與回應。建立物件與真正連線是不同動作；宿主也有自己的通訊端點，雙方可依需要發起訊息。
+
+Target 表示具體接收位置，例如某個 TD OP；其種類與能力是屬性，不能只靠「MAT」這個種類唯一辨認它。Binding 表示 Graph 與該 Host／Target 的對應，負責交付、接收確認及參數回報。`sync()` 是 Binding 的能力，不另增加一個已定案的全域 Sync 或 Sink 管理物件。
+
+不同 Binding 保留各自的待交付與確認狀態。架構容納多個接收對象，不把圖綁死到目前單一連線；同圖多目標的產品介面及控制權仍待細修。斷線時 Graph 仍可編輯。
+
+## 交付內容與回報
+
+完整圖資料、產碼結果、來源需求／綁定描述，以及宿主即時參數值，分開處理。Generator 結果提供宿主需要的程式與描述；宿主不必遍歷完整編輯圖才能套用。完整圖仍可按宿主需求另行保存或同步。
+
+Grape 更新目標後，宿主回覆套用結果；宿主參數被使用者更改時，可主動回報。這些回應不能再次被當作新的使用者輸入而來回重送。實際值回報也不能直接覆寫 Source 預設值。
+
+送出請求不等於成功編譯或套用；Binding 需要能辨認對應請求與結果、處理失敗及區分過期回報。更新頻率、累積及版本進度的原則見[操作與更新](UPDATES_AND_HISTORY.md)，精確協定尚未定稿。
+
+Source 名稱、排序或 style 變更是否需要更新宿主參數、綁定表或 GLSL，依宿主契約與產碼依賴判定。一般節點位置或名稱不預設觸發宿主 Shader 重編譯。
+
+## 連線與部署的能力邊界
+
+以宿主開啟帶有連線資訊的編輯器網址作為預設配對方向；編輯器位置可依部署配置，複製貼上配對資訊也保留作為入口。配對須能區分具體實例，不能只用機器 IP 代表唯一宿主。
+
+這不固定通訊協定、認證或防火牆處理，也不承諾瀏覽器可任意掃描區網。WebRTC、原生 App、靜態網站及 PWA 的具體實作另行評估。架構保持編輯圖與連線分離，沒有連線也能操作模型；瀏覽器、檔案或其他空間的持久儲存方案尚待選擇。
+
+## ISF 來源的對應
+
+ISF 的公開 INPUTS 類型與 GLSL 型別及控制項不是任意獨立組合；例如 ISF `long` 對應 GLSL `int`，可提供數值與顯示標籤的列表。Grape 的 style 再由宿主適配映射，不能保證每種自訂 UI 都能原樣輸出到 ISF。參考 [ISF JSON 規格](https://docs.isf.video/ref_json.html)。
+
+ISF 的 `audio` 與 `audioFFT` 都以圖像／2D texture 供 Shader 取樣；X 是時間樣本或頻率格，Y 是音訊通道。FFT 由宿主提供，不是把同一份資料直接定義為 Uniform 陣列或 Texture Buffer。一般 mesh／頂點索引輸入不在目前採用的 ISF 2.0 可攜範圍內。參考 [ISF 音訊](https://docs.isf.video/primer_chapter_8.html)與[Vertex Shader](https://docs.isf.video/primer_chapter_5.html)。

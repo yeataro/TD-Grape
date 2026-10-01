@@ -4,9 +4,9 @@
 
 ## Graph 與 Stage
 
-Graph 表示完整的 Shader 圖作品，有自己的身分、名稱、種類及圖內共用資料。Graph 的種類包含 TOP、MAT；Stage 是 Graph 內的集合成員，不為了表示不同 Stage 而建立兩張互不相關的 Graph。
+Graph 表示完整的 Shader 圖作品，有自己的身分、名稱、種類及圖內共用資料。Graph 的種類包含 TD TOP、TD MAT 與 ISF；Stage 是 Graph 內的集合成員，不為了表示不同 Stage 而建立兩張互不相關的 Graph。
 
-MAT 類型的 Graph 包含 Vertex 與 Pixel Stage。圖的種類決定需要哪些 Stage；其他種類或未來擴充的具體表格尚未展開。圖的說明與中繼資料應隸屬於圖，具體採用 documentation 或 metadata 等欄位留待細修。
+TOP、MAT 與 ISF 的圖模型都保留 Vertex 與 Pixel Stage。某個 Stage 可使用宿主或產碼器的預設實作，介面以 Pixel 為主不代表模型禁止 Vertex。各圖種類的幾何、資源與可用節點範圍仍有差異。ISF 的 Passes 是圖上的執行與緩衝設定，不是包住 Stage 的容器，詳見[產碼與目標相容](GENERATION_AND_TARGETS.md)。圖的說明與中繼資料應隸屬於圖，具體採用 documentation 或 metadata 等欄位留待細修。
 
 對外可直接建立單張 Graph，再依名稱取得其中 Stage。全域圖清單的登記及移除方式尚未定稿。
 
@@ -105,16 +105,18 @@ network.findNodes(query);  // 搜尋，回傳集合
 
 ## 編輯歷史與修改入口
 
-每張 Graph 有自己的編輯歷史；同一張圖的多個編輯視圖共用該歷史。Undo 不是只存在某個畫布元件裡的功能。
+Graph 內 Node、Edge、Source 等物件的狀態合起來就是圖本身。修改 Node 已經是在修改圖，不必再將資料抄回另一份 Graph 或 Editor 的狀態。
 
-UI 與程式修改模型時使用相同的操作、驗證及變更通知機制。正常編輯預設可撤銷；載入與初始化等操作可以明確排除。修改不應直接繞過模型規則去任意更改集合。
+每張 Graph 持有自己的 `history`；Stage、圖內子圖及來源的修改包含在同一張圖的歷史中。同圖的多個 Editor 共用歷史，但各自保有導覽、視角及選取。
 
-一次使用者操作可以組成一筆歷史，例如一次滑桿拖曳，或一次建立多顆節點及其接線。撤銷刪除節點時，需要能恢復該節點及受影響的接線。Undo／Redo 也會通知所有相關視圖更新。
+Editor 負責把手勢轉成模型操作及界定 Operation 的範圍。例如一次拖曳形成一個操作；滑鼠移動時仍可逐批更新畫面。腳本可使用相同的修改入口，不需要 Editor 存在。
 
-歷史紀錄需要足以還原前後狀態，單純發出「值已改變」事件不足。以可逆變更為主、必要時搭配局部快照是討論方向；尚未固定儲存演算法、套件或跨次啟動的保存政策。
+UI 與程式修改須使用共同的寫入、驗證及通知機制；可由屬性的 setter 或方法提供。正常編輯預設可復原，載入等操作可以排除。確切方法、複合屬性防止繞過寫入的方式仍待細化。
+
+Operation、Change、History 及 `Graph.updates` 的責任，還有 Undo 與必要更新的關係，統一見[操作與更新](UPDATES_AND_HISTORY.md)。History／Updates 不因由 Graph 持有就必須隨圖匯出。Grape 層級若需要復原新增或刪除整張圖，再討論全域 History，現在不預設增加。
 
 ## 節點與定義的關係
 
-Node 是圖內可操作的節點物件，引用可查詢的 NodeDefinition。定義列表先初始化及登記，再供新增選單與節點建立流程使用；多顆 Node 可以引用同一份定義，個別設定、接口及連線仍各自保存。多個提供者與初始化的分工見[節點定義與註冊表](NODE_DEFINITIONS.md)。
+Node 引用可查詢的 NodeType，能追溯來源模組。初始化後的定義可被多顆 Node 共用，個別設定、接口與連線仍各自保存。模組、註冊表、行為與 UI 分工見[節點模組與型別](NODE_DEFINITIONS.md)。
 
-是否由普通節點共用 Node 實作、哪些情況另設子類，以及 NodeDefinition 如何引用與組合行為仍未決定。來源引用的關係已確認，詳見[來源與宿主](SOURCES_AND_HOSTS.md)；它不自動決定所有其他節點的實作架構。
+來源引用節點指向 Graph 的 Source，子圖節點指向圖內子圖定義；這些關係不強制所有 Node 都繼承同一套複雜子類樹。

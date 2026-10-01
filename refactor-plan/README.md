@@ -1,78 +1,88 @@
 # Grape 重構計畫
 
-整理日期：2026-09-30。
+整理日期：2026-10-01。
 
-這個資料夾整理目前討論中已確認的物件關係、責任與行為，供接下來逐題細修及撰寫重構規格使用。這些是未來設計的決策紀錄，不代表現行程式已採用，也不是開始實作、遷移或發布的指令。
+本資料夾記錄重構討論已確認的物件、責任與能力邊界，供後續細化及驗證架構使用。這些是未來設計，不代表功能預覽版已實作，也不是開始遷移、部署或發布的指令。
 
-**決策依據只採用這輪對話中確認的內容。** 舊程式及舊文件可作初期參考，不決定新架構，也不用來填補尚未討論的答案。若對話只確認方向，文件也只記錄該方向，不自行擴成完整規格。
-
-目前已確認節點定義的引用、註冊表與初始化流程，以及 Parameter 基本規格的來源。定義內部如何組織能力、能力的分類與歸屬、產碼契約仍在討論，沒有納入已定案架構。
+**決策以這輪對話的最新確認為準。** 舊程式及舊文件可作參考，不決定新架構，也不用來填補未決答案。名稱與程式片段表達責任及查詢形狀；未明確確認的簽章、格式、演算法與預設值仍可調整。
 
 ## 閱讀入口
 
 | 文件 | 內容 |
 | --- | --- |
-| [圖與編輯器](OBJECT_MODEL.md) | Graph、Stage、Network、子圖、編輯上下文、命名、查找與編輯歷史 |
-| [節點定義與註冊表](NODE_DEFINITIONS.md) | NodeDefinition 引用、多個提供者、定義初始化及已確認的能力設計要求 |
-| [接口與接線](TYPES_AND_CONNECTIONS.md) | DataType、Input、Output、Parameter、Edge、轉換及 Stage 驗證 |
-| [來源與宿主](SOURCES_AND_HOSTS.md) | Source、來源引用節點、分類列表、預設輸入、宿主實際輸入及排序 |
-| [待討論事項](OPEN_QUESTIONS.md) | 尚未決定的物件切分、API 拼法與後續問題 |
+| [圖與編輯器](OBJECT_MODEL.md) | Graph、Stage、Network、子圖、編輯上下文、命名與查找 |
+| [節點模組與型別](NODE_DEFINITIONS.md) | NodeModules、NodeType、註冊與初始化、共用規格、行為與 UI 分工 |
+| [接口與接線](TYPES_AND_CONNECTIONS.md) | DataType 作用域、Input、Output、Parameter、Edge、轉換與 Stage 限制 |
+| [來源與宿主](SOURCES_AND_HOSTS.md) | Source、樣式、預設與實際輸入、Host、Connection、Target、Binding |
+| [產碼與目標相容](GENERATION_AND_TARGETS.md) | Generator、ISF 圖與 Pass、TD 承載、方言節點轉換與相容處理 |
+| [操作與更新](UPDATES_AND_HISTORY.md) | Change、Operation、History、Graph.updates、必要更新、一致狀態與協作擴充 |
+| [驗證與診斷](DIAGNOSTICS.md) | 各層驗證、errors／warnings、保存與產碼門檻、status／log |
+| [待討論事項](OPEN_QUESTIONS.md) | 尚未確認的契約、方法、策略與交付範圍 |
 
 ## 已確認的設計方向
 
-- 產品名稱及對外命名空間是 `Grape`；`Graph` 是其中的圖物件。
-- 以 TypeScript 作為重構的主要語言，核心設計保留在瀏覽器與 Node.js 使用的能力。
-- 以物件的資料歸屬、操作與引用關係規劃架構。接受為清楚分工增加程式碼，不把責任藏在不斷分支的推導流程中。
-- 編輯器使用圖模型的操作入口；介面不是模型的唯一操作者。程式也應能查詢及修改圖。
-- 節點定義可以從不同結構的文件或程式取得，不要求來源、宿主整合、特殊效果與介面行為全部塞進同一張節點表。能力的分類、適合資料化的範圍及格式仍待討論。
-- 先確認淺層結構與責任，再展開方法簽章、事件、序列化及遷移；不把尚未回答的問題補成既定功能。
+- 產品名稱與主要入口是 `Grape`；`Graph` 表示一份完整 Shader 圖作品。
+- 主要語言為 TypeScript，核心能力可供瀏覽器及 Node.js 使用。圖與節點模型不依賴 DOM 或某個 Editor。
+- 先分清物件持有的資料、可執行的操作及引用關係，再展開實作。接受為清楚分工增加程式碼，不以不斷擴大的節點特例分支承擔所有能力。
+- 節點能力由集中管理的 `NodeModules` 提供，初始化成共用的 NodeType 物件後登記。簡單計算可由表格建構，其他能力可由分開維護的 TS 模組直接定義。
+- 正式修改經過共用的模型修改與變更通知入口。History、產碼與同步各自使用變更資訊，不互相充當必要前提。
+- 先保留立即、累積、限頻、操作結束或手動更新的能力，依產碼、宿主編譯與連線的實測成本選擇策略；本輪不固定頻率或自動調整演算法。
+- 優先處理 TouchDesigner，接著 ISF，再考慮 FFGL。現在仍聚焦 Shader；泛用 JavaScript 邏輯節點等另一種產品方向不列為必要架構。
 
 ## 已確認的淺層關係
 
-下圖表示主要的擁有與引用關係，不是完整類別樹。集合的最終屬性名稱仍可調整。
+以下是主要擁有與引用關係，不是完整 class 或正式 API 清單。複數集合及控制物件的最終拼法仍可細修。
 
 ```text
 Grape
-├─ Graph
-│  ├─ Stages
-│  │  └─ Stage extends Network
-│  │     ├─ Nodes
-│  │     │  ├─ Inputs
-│  │     │  ├─ Outputs
-│  │     │  └─ Parameters
-│  │     └─ Edges
-│  ├─ Sources
-│  ├─ 圖內子圖定義
-│  │  └─ 內部 Network
-│  └─ 圖的編輯歷史
-└─ Editor
-   ├─ 目前 Graph 與 Stage 的引用
-   ├─ 目前 Network 的引用
-   └─ 選取集合及主要選取物件
+├─ nodeModules              模組資訊與初始化入口
+├─ nodeTypes                已登記的 NodeType
+├─ dataTypes                共用型別
+├─ generator
+│  ├─ top
+│  ├─ mat
+│  └─ isf
+├─ graphs
+│  └─ Graph
+│     ├─ stages
+│     │  └─ Stage extends Network
+│     │     ├─ nodes ──引用──→ NodeType
+│     │     │  ├─ inputs
+│     │     │  ├─ outputs
+│     │     │  └─ parameters
+│     │     └─ edges
+│     ├─ sources
+│     ├─ dataTypes           本地定義，查詢可往父級
+│     ├─ 圖內子圖定義
+│     │  └─ 內部 Network
+│     ├─ passes              ISF 特化設定；不包住 Stage
+│     ├─ history
+│     └─ updates
+├─ hosts
+│  └─ Host
+│     ├─ connection
+│     ├─ targets
+│     └─ bindings
+├─ diagnostics              診斷收集與歸屬的責任入口
+└─ editor                   引用模型，持有導覽、選取與互動情境
 ```
 
-來源引用節點指向 Graph 內的 Source；子圖節點指向子圖定義。這兩種引用都不表示每個節點各自擁有一份被引用的資料。
+NodeType 的生成行為可供 Generator 查詢；節點、來源及型別登記是不同責任。模組目錄不必與 nodeTypes 的每個項目一對一。
 
-Node 另可查回自己的 NodeDefinition。可用的節點定義先由多個提供者交付並登記，再供選單、節點建立及查詢使用；註冊表的作用範圍尚未固定，因此不將它畫成某一張 Graph 必然擁有的成員。
+Graph 內各物件的狀態合起來就是當前圖，不再建立一份 Editor 專屬的運算真相。History 與 Updates 是 Graph 持有的執行期間能力，不因此必須寫入匯出的圖。保存圖、匯出程式碼、交付宿主與宿主成功編譯，是不同動作。
 
 ## 決策與命名的狀態
 
-各主題文件的責任與行為段落記錄已確認方向。程式片段是討論用的查詢形狀，不是可直接執行的現行 API，也不固定所有大小寫、參數與回傳型別。
+沿用 Grape、Graph、Stage、Network、Node、Input、Output、Parameter、DataType、Source、Edge；本輪以 **NodeType** 表達共用節點定義，以 **NodeModules** 表達模組入口。NodeDefinition 是較早草案的名稱，不與 NodeType 再分成兩層必要物件。
 
-已明確採用 `Grape`、`Graph`、`Stage`、`Network`、`Node`、`NodeDefinition`、`Input`、`Output`、`Parameter`、`DataType`、`Source` 與 `Edge` 這些概念名稱。`Wire`、`Link` 保留為接線顯示樣式。
+Host、Connection、Target、Binding 的責任已確認。Operation 取代這輪早期的 Edit 暫稱，表示一次圖修改操作；Change 表示修改事實，History 管理復原，Updates 管理待處理工作與時機。這裡的 Operation 不等於節點的數學運算選項。
 
-`SourceNode`、`NodeRegistry`、`NodeProvider`、轉換檢查結果的類別名、宿主綁定物件名等仍有候選成分；相關文件會就地標示。子類、集合和查詢能力已討論，不代表每個示例中的成員拼法都已定稿。
+Wire、Link 仍是接線顯示樣式，不作為底層 Edge 的別名。`SourceNode`、註冊表實作名稱、方法大小寫與精確簽章仍可調整；診斷與 Session 的資料結構未定稿。
 
 ## 與舊草稿的關係
 
-[早期物件草稿](../docs/discussions/next-project-draft/OBJECT_MODEL_DRAFT.md)保留作為背景。涉及本資料夾已整理的議題時，以這裡的最新決策為準，尤其是：
+[早期物件草稿](../docs/discussions/next-project-draft/OBJECT_MODEL_DRAFT.md)只保留為背景。本計畫不採用以 GraphDocument 包住每個 Stage 各一張 Graph 的層級；不將 Pass 放在 Stage 上面；不以隱藏替換產碼實作代替明確的方言節點轉換；不讓 History 負責產碼與同步排程。
 
-- 完整作品由 Graph 表示，不再以 GraphDocument 包住每個 Stage 各一張 Graph。
-- Stage 是 Network 的特化；子圖的內部 Network 不等同 Stage。
-- 編輯歷史歸 Graph；Editor 的目前位置及選取可各自獨立。
-- Parameter 是可選的編輯入口；Input 的本地值與 Source 的預設值不是同一件事。
-- 來源的實際輸入由宿主管理；不同宿主的內容不必一致。多目標同時綁定同一張圖尚未定案。
+舊部署筆記不自動成為這次規格。Electron、PWA、離線儲存、原生 WebGL 預覽及 FFGL 的實作和發布時程仍另行決定。多人協作目前保留責任位置與必要擴充點，未承諾本輪實作。
 
-舊稿僅供理解早期想法，不補充本計畫的規範效力。其他歷史部署提案也不自動成為本次共識。Electron、PWA、WebGL 預覽、ISF 及 FFGL 的交付範圍與時程仍需另外決定。
-
-後續每次確認一題，更新對應主題並移除已解決的待討論項目。已被取代的表述不與新決策並列為有效規格。
+已解決的問題寫入對應主題，已被取代的描述移除；其餘集中於[待討論事項](OPEN_QUESTIONS.md)。
