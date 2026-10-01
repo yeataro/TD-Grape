@@ -4,7 +4,7 @@ Source 描述圖所需要的來源。它與引用來源的 Node、值的 DataTyp
 
 ## Source 的歸屬與分類
 
-Source 宣告屬於 Graph，可理解為圖的來源表頭。符合條件的 Stage 與子圖透過節點引用它，不需要在每個使用位置重複建立宣告。
+Source 宣告屬於 Graph，可理解為圖的來源表頭。符合條件的 Stage 根 Network 透過節點引用它，不需要在每個使用位置重複建立宣告。子圖不直接放置來源引用節點，需要的資料由子圖自身接口傳入。
 
 來源種類可有各自的子類，但保留共通的 Source 入口及列表。Uniform 是來源種類；float、vec3、mat4 等是 DataType，不因數值型別不同就各建一種 Source 子類。
 
@@ -64,7 +64,9 @@ node.source === source; // 引用同一個 Source
 
 來源種類宣告哪些 Stage 可以引用它；種類或實例的設定也可能使有效範圍縮小。來源引用節點依據其 Source 的限制接受驗證；節點本身另有需求時一起檢查。
 
-Graph 可以保存一個來源，不表示每個 Stage 都能引用它。子圖內的來源引用也須在實際使用的 Stage 上下文中驗證。完整種類與 Stage 對照表尚未填寫，不把候選子類名稱當成已確認的支援清單。
+Graph 可以保存一個來源，不表示每個 Stage 都能引用它。Source 類引用節點只放在允許的 Stage 根 Network，不得放入子圖；子圖由自己的 Input 接收外部傳入的來源資料。這是 Network 放置限制，與 Stage 執行能力分開檢查，見[接口與接線](TYPES_AND_CONNECTIONS.md)。完整種類與 Stage 對照表尚未填寫，不把候選子類名稱當成已確認的支援清單。
+
+跨 Stage 傳值的接口定義獨立於 Source，不為了共用而將 Stage Input／Output 歸入來源宣告。
 
 ## 預設輸入與實際輸入
 

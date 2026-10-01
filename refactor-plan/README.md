@@ -4,6 +4,8 @@
 
 本資料夾記錄重構討論已確認的物件、責任與能力邊界，供後續細化及驗證架構使用。這些是未來設計，不代表功能預覽版已實作，也不是開始遷移、部署或發布的指令。
 
+本次先整理已確認內容與最新採用的方向，移除已被後續討論取代的描述；尚未完成整體架構的邏輯檢驗。未確認的細節與待檢驗關係保留在各節及待討論事項，不因寫入文件就成為定案。
+
 **決策以這輪對話的最新確認為準。** 舊程式及舊文件可作參考，不決定新架構，也不用來填補未決答案。名稱與程式片段表達責任及查詢形狀；未明確確認的簽章、格式、演算法與預設值仍可調整。
 
 ## 閱讀入口
@@ -11,6 +13,7 @@
 | 文件 | 內容 |
 | --- | --- |
 | [圖與編輯器](OBJECT_MODEL.md) | Graph、Stage、Network、子圖、編輯上下文、命名與查找 |
+| [UI 與佈局](UI_ARCHITECTURE.md) | UI、Manager、Layout、Pane、Tab、Panel、Widget、連結群組與視圖生命週期 |
 | [節點模組與型別](NODE_DEFINITIONS.md) | NodeModules、NodeType、註冊與初始化、共用規格、行為與 UI 分工 |
 | [接口與接線](TYPES_AND_CONNECTIONS.md) | DataType 作用域、Input、Output、Parameter、Edge、轉換與 Stage 限制 |
 | [來源與宿主](SOURCES_AND_HOSTS.md) | Source、樣式、預設與實際輸入、Host、Connection、Target、Binding |
@@ -24,7 +27,12 @@
 - 產品名稱與主要入口是 `Grape`；`Graph` 表示一份完整 Shader 圖作品。
 - 主要語言為 TypeScript，核心能力可供瀏覽器及 Node.js 使用。圖與節點模型不依賴 DOM 或某個 Editor。
 - 先分清物件持有的資料、可執行的操作及引用關係，再展開實作。接受為清楚分工增加程式碼，不以不斷擴大的節點特例分支承擔所有能力。
-- 節點能力由集中管理的 `NodeModules` 提供，初始化成共用的 NodeType 物件後登記。簡單計算可由表格建構，其他能力可由分開維護的 TS 模組直接定義。
+- 節點能力由集中管理的 `NodeModules` 提供，初始化成共用的 NodeType 物件後登記。簡單計算可由表格建構，其他能力可由分開維護的 TS 模組直接定義。固定與動態接口共用核心的建立／更新能力，不強制所有節點採動態接口。
+- Source 與 Stage 接口的節點只放在允許的 Stage 根層；子圖經自身接口接收資料。Stage 接口在畫布上的投影仍是 Node，Edge 端點保持可追溯到 Node。
+- 普通 Edge 的資料依賴不可成環，子圖定義不可遞迴引用；回饋與迴圈須由明確能力表達。
+- 產碼只讀取圖；節點初始化、接口更新及修改由編輯流程處理。模組持有自己的 Shader helpers，Generator 收集與組合。
+- Editor 提供操作及編輯上下文，UI 提供狀態呈現與操作入口。已開啟的圖以 `Grape.graphs` 為準，UI 關閉不自動決定 Graph 的生命週期。
+- UI 目前採 Layout → Pane → Tab → Panel；Canvas、Parameter、Preview 是實際功能面板。Manager 組合預設行為，底層能力也可直接呼叫。
 - 正式修改經過共用的模型修改與變更通知入口。History、產碼與同步各自使用變更資訊，不互相充當必要前提。
 - 先保留立即、累積、限頻、操作結束或手動更新的能力，依產碼、宿主編譯與連線的實測成本選擇策略；本輪不固定頻率或自動調整演算法。
 - 優先處理 TouchDesigner，接著 ISF，再考慮 FFGL。現在仍聚焦 Shader；泛用 JavaScript 邏輯節點等另一種產品方向不列為必要架構。
@@ -52,6 +60,7 @@ Grape
 │     │     │  └─ parameters
 │     │     └─ edges
 │     ├─ sources
+│     ├─ 跨 Stage 傳值定義     獨立於 Source，名稱待定
 │     ├─ dataTypes           本地定義，查詢可往父級
 │     ├─ 圖內子圖定義
 │     │  └─ 內部 Network
@@ -64,10 +73,20 @@ Grape
 │     ├─ targets
 │     └─ bindings
 ├─ diagnostics              診斷收集與歸屬的責任入口
-└─ editor                   引用模型，持有導覽、選取與互動情境
+├─ editor                   操作及編輯上下文，引用 graphs
+└─ ui
+   ├─ manager               預設流程與協調入口
+   ├─ layout
+   │  └─ 分割樹末端 Pane
+   │     └─ tabs
+   │        └─ Tab
+   │           └─ Panel    實際為 Canvas、Parameter、Preview 等
+   └─ 共用 Widgets 與面板模組
 ```
 
 NodeType 的生成行為可供 Generator 查詢；節點、來源及型別登記是不同責任。模組目錄不必與 nodeTypes 的每個項目一對一。
+
+圖內子圖定義持有接口與 Network；共用的 Subgraph NodeType 提供行為；圖內子圖 Node 同時引用兩者。UI 的 Canvas 可切換顯示 `Grape.graphs` 裡的圖，Tab 不與 Graph 綁死為一對一。目前不增加包住多張圖的 Project 儲存層。
 
 Graph 內各物件的狀態合起來就是當前圖，不再建立一份 Editor 專屬的運算真相。History 與 Updates 是 Graph 持有的執行期間能力，不因此必須寫入匯出的圖。保存圖、匯出程式碼、交付宿主與宿主成功編譯，是不同動作。
 
@@ -77,7 +96,7 @@ Graph 內各物件的狀態合起來就是當前圖，不再建立一份 Editor 
 
 Host、Connection、Target、Binding 的責任已確認。Operation 取代這輪早期的 Edit 暫稱，表示一次圖修改操作；Change 表示修改事實，History 管理復原，Updates 管理待處理工作與時機。這裡的 Operation 不等於節點的數學運算選項。
 
-Wire、Link 仍是接線顯示樣式，不作為底層 Edge 的別名。`SourceNode`、註冊表實作名稱、方法大小寫與精確簽章仍可調整；診斷與 Session 的資料結構未定稿。
+Wire、Link 仍是接線顯示樣式，不作為底層 Edge 的別名。UI 的 `Tab.linkGroup` 是面板連動設定，與圖的 Edge 或接線顯示樣式無關。`SourceNode`、註冊表實作名稱、方法大小寫與精確簽章仍可調整；診斷與 Session 的資料結構未定稿。
 
 ## 與舊草稿的關係
 

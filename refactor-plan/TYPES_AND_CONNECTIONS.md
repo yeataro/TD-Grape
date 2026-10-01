@@ -79,7 +79,7 @@ parameter.node; // 所屬節點；與 parameter.target 的概念不同
 
 底層接線物件明確採用 **Edge**。Wire 與 Link 是同一接線的顯示方式，不作為底層物件名稱。
 
-Edge 連接 Output 與 Input，歸所屬 Network 管理。Stage 透過 Network 的能力管理接線。即使在 Output 上提供 connect 快捷方法，建立、驗證及登記的責任仍需回到 Network。
+Edge 連接 Output 與 Input，歸所屬 Network 管理。兩端都是 Node 的接口；Stage 或子圖邊界也透過接口節點表示，端點查詢不新增非 Node 的例外。Stage 透過 Network 的能力管理接線。即使在 Output 上提供 connect 快捷方法，建立、驗證及登記的責任仍需回到 Network。
 
 ```ts
 const edge = output.connect(input);
@@ -90,6 +90,12 @@ edge.network;
 ```
 
 端點應可查詢自己的接線。先前以 `input.connection` 和 `output.connections` 示意；名稱與已佔用 Input 的替換行為仍待細修。
+
+## 依賴循環
+
+普通 Edge 形成的資料依賴不可成環。正常接線檢查 Network 依賴，拒絕造成循環的操作；匯入資料已有循環時保留供修復，回報 Error 並阻止產碼。
+
+子圖定義的直接／間接遞迴也禁止，與同一份定義的多個使用實例不同。明確迴圈能力與 Pass／緩衝回饋不使用普通 Edge 成環來隱含表達。
 
 ## 編輯器的自動轉換
 
@@ -145,6 +151,27 @@ Error 阻止受影響圖與產碼目標的產碼，Warning 不阻止。錯誤狀
 依賴追溯不能只從有輸出接孔的節點開始。本輪沿用的終端行為包括 Discard、TDAlphaTest、Depth Output 這類無輸出也有作用的節點；被使用的子圖可帶入終端效果，未使用的定義不自行生效。
 
 Stage 大類規則與節點註冊的精確合併方式、未宣告能力的意義、子圖逐輸出或逐模式的相容性，以及診斷資料結構仍待細化。尚未完成的圖可以保留為可編輯草稿；各種編輯動作何時阻擋、何時允許保留錯誤，不能在本文件中一概決定。
+
+## Network 的放置範圍
+
+可用 Stage 與可放置的 Network 角色是兩個需要一起檢查的條件。某個節點能在 Pixel 執行，不表示它能放進 Pixel 使用的子圖。
+
+| 節點角色 | 放置範圍 |
+| --- | --- |
+| Source 類引用節點 | 符合來源與 NodeType 限制的 Stage 根 Network |
+| Stage Input／Output 節點 | 對應 Stage 的根 Network |
+| 子圖自身的接口節點 | 對應子圖的內部 Network |
+| 其他節點 | 依其 Stage、Network 角色及能力規則驗證 |
+
+Source 類與 Stage Input／Output 節點不能置入子圖。子圖使用自己的接口接收外部資料，不在內部另外放來源引用或 Stage 端點。這項規則不依賴它們是否被放在同一個新增選單分類。
+
+共用放置驗證涵蓋新增、貼上、匯入與後續編輯／產碼；只過濾新增選單不足以保證規則。放置需求的註冊欄位與各情境的回報 API 尚未定稿。
+
+## Stage 接口仍透過 Node 接線
+
+Stage 接口定義與其在 Network 裡的節點投影分開。實際 Input／Output 仍由 Node 持有並遵守共用身分、型別與 Edge 規則；必要端點節點的不可刪除限制也由模型執行。
+
+跨 Stage 傳值有獨立於 Source 的共用定義，Stage 兩端引用它，Edge 不跨 Network。正式命名、傳遞設定及系統接口與使用者接口的增減規則見[圖與編輯器](OBJECT_MODEL.md)，精確契約仍待細化。
 
 ## DataType 的登記與作用域
 
