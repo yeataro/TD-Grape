@@ -1199,6 +1199,7 @@ function mathInspector(box,n){
   box.append(parameterControlRow('',remove),parameterControlRow('',parameterHint(t('math.noteHint'))));
 }
 function nodeTypeSelector(n,d){
+  if(d.key==='preview')return null;
   if(d.key==='switch'){
     const control=typeSelect(valueTypes().map(type=>[type,type]),n.params.type,value=>change(()=>reshapeTypedInputs(n,d,value),{typeChange:true}));
     control.disabled=readonly||current().edges.some(e=>e.to[0]===n.id&&e.to[1]==='default');control.title=t('switch.defaultType');control.dataset.switchType=n.id;return control;
@@ -1582,6 +1583,7 @@ function renderInspector(){
   functionInspector(box,n,d);
   vertexBoundaryInspector(box,n,d);
   if(inspectorTab==='parameters'){
+    if(d.key==='preview')box.append(el('p',{class:'muted','data-preview-help':'true'},t('help.preview')));
     if(d.key==='depth_out')box.append(el('p',{class:'muted','data-depth-warning':'true'},t('depth.earlyZWarning')));
     if(d.key==='generated_glsl'){box.classList.add('comment-parameters');box.append(generatedGLSLView(n));const refresh=el('button',{type:'button',class:'wide'},t('generatedGLSL.refresh'));refresh.onclick=()=>refreshGeneratedGLSL(true);box.append(refresh);queueMicrotask(()=>refreshGeneratedGLSL());return;}
     if(d.key==='comment'){box.classList.add('comment-parameters');const section=el('section',{class:'comment-node-parameter'});section.append(commentNodeEditor(n),el('small',{class:'muted'},t('comment.hint')));box.append(section);return;}
@@ -1642,7 +1644,9 @@ function renderInspector(){
       applyPortLabelColorHint(heading.firstElementChild,n,'inputs',port);
       if(typeInfo.source&&typeInfo.source!==typeInfo.target)section.append(hint(t(typeInfo.conversion==='splat'?'type.splat':typeInfo.conversion==='cast'?'type.cast':'type.incompatible').replace('{source}',typeInfo.source).replace('{target}',typeInfo.target),'conversion-hint'));
       const value=defaultInput(n,port,type);
-      if(isCompositeType(type)){
+      if(d.key==='preview'){
+        if(!connection)section.append(hint(t('preview.connect')));
+      }else if(isCompositeType(type)){
         if(!connection)section.append(hint(compositeInputHint(n,port,type)));
       }else if(isResourceType(type)){
         if(!connection)section.append(hint(t(d.requiredResourceInputs?.includes(port)?'sampler.connectionRequired':'sampler.fallbackHint')));
@@ -2428,7 +2432,7 @@ function sourceReferences(id){
 function nativeSourceGraphOnly(){
   // A source change may still need compilation. Repair that exact snapshot
   // without treating an unrelated local graph draft as safe to replace.
-  return !!(nativeSourceSnapshot?.sourceChanged&&nativeSourceSnapshot.revision===revision&&nativeSourceSnapshot.graph&&historyGraphKey(graph)===historyGraphKey(nativeSourceSnapshot.graph));
+  return !!(nativeSourceSnapshot?.sourceChanged&&nativeSourceSnapshot.revision===revision&&nativeSourceSnapshot.graph&&historyGraphKey(withoutPixelPreview(graph))===historyGraphKey(withoutPixelPreview(nativeSourceSnapshot.graph)));
 }
 function sourceGraphPending(){return dirty&&!nativeSourceGraphOnly();}
 function sourceReady(ignoreValueWrite=false){return nativeSourceSnapshot?.enabled&&!nativeSourceError&&!sourceGraphPending()&&!submitBusy&&(!nativeSourceBusy||ignoreValueWrite&&nativeValueBusy)&&!editorMutationBlocked(ignoreValueWrite)&&nativeSourceSnapshot.revision===revision;}
@@ -2530,7 +2534,7 @@ function receiveNativeSources(data,{own=false,readEpoch=nativeSourceReadEpoch}={
   installNativeSourceSnapshot(data);
   if(data.history?.token&&(own||!historyNativeToken))historyNativeToken=data.history.token;
   if((data.revision!==revision||own&&data.workingGraph)&&acceptGraph&&!submitBusy&&data.graph){
-    adoptHistoryGraph(own&&data.workingGraph||data.graph);revision=data.revision;render();
+    adoptHistoryGraph(own&&data.workingGraph||data.graph,{preservePreview:true});revision=data.revision;render();
     if(data.sourceChanged||data.workingGraph){mark();}else{rememberSavedGraph(graph);dirty=false;renderGraphSaveState();}
   }
   renderNativeSources();

@@ -3,6 +3,39 @@ const $=s=>document.querySelector(s), clone=v=>JSON.parse(JSON.stringify(v));
 const shaderId=location.pathname.match(/^\/shader\/([a-f0-9]{32})\/$/)?.[1]||'';
 const apiRoot='/api/'+(shaderId?shaderId+'/':'');
 const draftKey='sgrapeDraft'+(shaderId?':'+shaderId:'');
+// Preview belongs to this editor lifetime. Durable documents and exports never
+// carry its node, incident edges, or empty presentation groups.
+function withoutPixelPreview(document){
+  const result=clone(document);
+  for(const data of [...Object.values(result?.stages||{}),...(Array.isArray(result?.functions)?result.functions:[]).map(f=>f?.graph)]){
+    if(!Array.isArray(data?.nodes))continue;
+    const ids=new Set(data.nodes.filter(n=>n?.definitionUuid==='sgrape.builtin.preview').map(n=>n.id));
+    if(!ids.size)continue;
+    data.nodes=data.nodes.filter(n=>!ids.has(n?.id));
+    if(Array.isArray(data.edges))data.edges=data.edges.filter(e=>!ids.has(e?.from?.[0])&&!ids.has(e?.to?.[0]));
+    if(Array.isArray(data.ui?.frames)){
+      data.ui.frames=data.ui.frames.map(f=>Array.isArray(f?.nodes)?{...f,nodes:f.nodes.filter(id=>!ids.has(id))}:f).filter(f=>!Array.isArray(f?.nodes)||f.nodes.length);
+    }
+  }
+  return result;
+}
+function withPixelPreview(document,working){
+  const result=withoutPixelPreview(document),source=working?.stages?.pixel,target=result?.stages?.pixel;
+  const preview=source?.nodes?.find(n=>n.definitionUuid==='sgrape.builtin.preview');
+  if(!preview||!target||target.nodes.some(n=>n.id===preview.id))return result;
+  target.nodes.push(clone(preview));
+  const ids=new Set(target.nodes.map(n=>n.id));
+  target.edges.push(...clone((source.edges||[]).filter(e=>e.to?.[0]===preview.id&&ids.has(e.from?.[0]))));
+  for(const frame of source.ui?.frames||[]){
+    if(!frame.nodes.includes(preview.id))continue;
+    target.ui||={};target.ui.frames||=[];
+    const existing=target.ui.frames.find(f=>f.id===frame.id);
+    if(existing){if(!existing.nodes.includes(preview.id))existing.nodes.push(preview.id);}
+    else target.ui.frames.push({...clone(frame),nodes:frame.nodes.filter(id=>ids.has(id))});
+  }
+  return result;
+}
+function hasPixelPreview(document){return !!document?.stages?.pixel?.nodes?.some(n=>n.definitionUuid==='sgrape.builtin.preview');}
 const token=location.hash.slice(1)||sessionStorage.getItem('sgrapeToken')||'';
 sessionStorage.setItem('sgrapeToken',token);history.replaceState(null,'',location.pathname+(new URLSearchParams(location.search).has('wire-coordinates')?'?wire-coordinates':''));
 
@@ -105,11 +138,16 @@ async function editorRequest(path,data,binary=false){
   }finally{clearTimeout(timer);if(data)pendingEditorWrites--;}
 }
 async function api(path,data){
+  // Durable host operations see only the formal document; validate intentionally
+  // retains the working Preview so Generated GLSL matches the current canvas.
+  if(data&&['export','inspect','personal-save','history-restore'].includes(path)){
+    data={...data};if(data.graph)data.graph=withoutPixelPreview(data.graph);if(data.currentGraph)data.currentGraph=withoutPixelPreview(data.currentGraph);
+  }
   const snapshot=['apply','validate'].includes(path)&&graph?JSON.stringify(graph):null,generation=editorLoadGeneration;
   try{return await editorRequest(path,data);}
   catch(error){
     // Authentication, transport failures and revision conflicts are not GLSL errors.
-    if(generation===editorLoadGeneration&&snapshot&&error.status===422&&!error.message.startsWith('Conflict:'))setCompileDiagnostics(error.result,snapshot);
+    if(pixelPreviewRequestCurrent(data?.pixelPreview,generation)&&snapshot&&error.status===422&&!error.message.startsWith('Conflict:'))setCompileDiagnostics(error.result,snapshot);
     throw error;
   }
 }
@@ -194,7 +232,7 @@ function renderCompileDiagnostics(){
 }
 
 let editVersion=0,submitBusy=false,applyLayoutOnly=false,autoTimer=null,conflicted=false;
-let savedGraphContent=null,lastGraphSaveKey='graph.saved';
+let savedGraphContent=null,savedFormalGraphKey=null,savedFormalShaderContent=null,lastGraphSaveKey='graph.saved';
 function graphContent(document){
   const content=clone(document);delete content.catalogSnapshot;
   // Coordinates and component expansion are presentation-only. Labels and type settings may
@@ -208,7 +246,7 @@ function graphContent(document){
 }
 function hasShaderChanges(document=graph){return !document||graphContent(document)!==savedGraphContent;}
 function graphPendingKey(){return hasShaderChanges()?'graph.pending':'graph.savePending';}
-function rememberSavedGraph(document,key='graph.saved'){savedGraphContent=graphContent(document);lastGraphSaveKey=key;}
+function rememberSavedGraph(document,key='graph.saved'){savedGraphContent=graphContent(document);const formal=withoutPixelPreview(document);savedFormalGraphKey=historyGraphKey(formal);savedFormalShaderContent=graphContent(formal);lastGraphSaveKey=key;}
 function renderGraphSaveState(){
   const badge=$('#dirty');
   badge.textContent=t(savedStateIssue?'saved.locked':dirty?(readonly?'graph.readonly':graphPendingKey()):lastGraphSaveKey);
@@ -227,7 +265,7 @@ function historySourceIds(before,after){
   const a=sources(before),b=sources(after);
   return [...new Set([...a.keys(),...b.keys()])].filter(id=>historyValueKey(a.get(id))!==historyValueKey(b.get(id)));
 }
-function editorMutationBlocked(ignoreValueWrite=false){return readonly||historyBusy||(nativeMutationBusy&&!(ignoreValueWrite&&nativeValueBusy));}
+function editorMutationBlocked(ignoreValueWrite=false){return readonly||pixelPreviewSession?.ending||historyBusy||(nativeMutationBusy&&!(ignoreValueWrite&&nativeValueBusy));}
 // A brief value-write lock still blocks clicks/keyboard focus, without changing
 // unrelated controls to their permanently unavailable appearance.
 function setEditorDisabled(control,blocked,idleBlocked=blocked){control.disabled=!!idleBlocked;control.inert=!!blocked&&!idleBlocked;}
@@ -254,8 +292,8 @@ function scheduleGraphApply(delay=650){
   clearTimeout(autoTimer);autoTimer=null;
   if(dirty&&!readonly&&!submitBusy&&!historyBusy&&!nativeMutationBusy&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,delay);
 }
-function adoptHistoryGraph(document){
-  const snapshot=graph?.catalogSnapshot;graph=clone(document);if(snapshot)graph.catalogSnapshot=clone(snapshot);
+function adoptHistoryGraph(document,{preservePreview=false}={}){
+  const snapshot=graph?.catalogSnapshot;graph=preservePreview?withPixelPreview(document,graph):clone(document);if(snapshot)graph.catalogSnapshot=clone(snapshot);
   if(selectedInputId&&!allInputSources().some(d=>d.id===selectedInputId))selectedInputId=null;
   tidyTrail();
 }
@@ -271,7 +309,7 @@ function mark(){
   if(typeof refreshGeneratedGLSL==='function')queueMicrotask(()=>refreshGeneratedGLSL());
   clearCompileDiagnostics();
   dirty=true;editVersion++;renderGraphSaveState();$('#apply').disabled=readonly||submitBusy;
-  try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}
+  try{sessionStorage.setItem(draftKey,JSON.stringify({graph:withoutPixelPreview(graph),revision}));}catch{}
   scheduleGraphApply();
 }
 // Only these node fields can bypass semantic editing. Keep labels, comments,
@@ -298,7 +336,7 @@ function change(fn,{localize=true,redraw=true,typeChange=false,layout=false,disc
 async function undo(redo=false){
   if(editorMutationBlocked())return false;
   const from=redo?future:past,to=redo?past:future;if(!from.length)return false;
-  const generation=editorLoadGeneration;let replayed=false;historyBusy=true;++nativeSourceReadEpoch;clearTimeout(autoTimer);autoTimer=null;renderHistoryActions();
+  const generation=editorLoadGeneration,previewEpoch=pixelPreviewOverlayEpoch;let replayed=false;historyBusy=true;++nativeSourceReadEpoch;clearTimeout(autoTimer);autoTimer=null;renderHistoryActions();
   try{
     // An in-flight Apply may materialize sources for several pending entries.
     // Wait for its receipts before deciding whether this one step is local.
@@ -331,7 +369,7 @@ async function undo(redo=false){
       const result=await api('history-restore',{requestId:crypto.randomUUID(),revision,fromToken,toToken,deltaFromToken,deltaToToken,sourceIds:entry.sourceIds,valueIds:entry.valueIds||[],graph:clone(desired),currentGraph:clone(graph)});
       if(generation!==editorLoadGeneration)return false;
       nativeSourceError='';installNativeSourceSnapshot(result);revision=result.revision;
-      const restored=result.workingGraph||result.graph||desired;adoptHistoryGraph(restored);
+      const restored=result.workingGraph||result.graph||desired;adoptHistoryGraph(withPixelPreview(restored,previewEpoch===pixelPreviewOverlayEpoch?desired:withoutPixelPreview(desired)));
       needsApply=!!(result.sourceChanged||result.workingGraph);
       historyNativeToken=result.history?.token||toToken;
       if(redo)entry.nativeAfter=historyNativeToken;else entry.nativeBefore=historyNativeToken;
@@ -344,6 +382,67 @@ async function undo(redo=false){
   }catch(error){if(generation===editorLoadGeneration)status(t('history.failed')+error.message,true);return false;}
   finally{if(generation===editorLoadGeneration){++nativeSourceReadEpoch;historyBusy=false;renderHistoryActions();renderNativeSourceValues();if(replayed){await refreshUniforms();if(generation===editorLoadGeneration){refreshNativeSources({required:true});scheduleGraphApply();}}}}
 }
+// A runtime lease owns only the temporary shader override, never the document.
+let pixelPreviewSession=null,pixelPreviewOverlayEpoch=0;
+function pixelPreviewRequestCurrent(metadata,generation=editorLoadGeneration){return generation===editorLoadGeneration&&(!metadata||pixelPreviewSession?.id===metadata.sessionId&&!pixelPreviewSession.ending&&pixelPreviewSession.generation===generation);}
+function stopPixelPreviewHeartbeat(session){if(session?.timer)clearInterval(session.timer);if(session)session.timer=null;}
+function discardPixelPreviewLocal(){
+  if(!graph)return;
+  ++pixelPreviewOverlayEpoch;
+  graph=withoutPixelPreview(graph);
+  const keep=entry=>entry.liveReceipt||entry.nativeApplied&&(entry.sourceIds?.length||entry.valueIds?.length)||historyGraphKey(entry.before)!==historyGraphKey(entry.after);
+  for(const entries of [past,future])for(const entry of entries){entry.before=withoutPixelPreview(entry.before);entry.after=withoutPixelPreview(entry.after);}
+  for(const entries of [past,future])entries.splice(0,entries.length,...entries.filter(keep));
+  const ids=new Set(current().nodes.map(n=>n.id));selection=new Set([...selection].filter(id=>ids.has(id)));if(!ids.has(selected))selected=null;
+  savedGraphContent=savedFormalShaderContent;dirty=historyGraphKey(graph)!==savedFormalGraphKey;
+  if(dirty){try{sessionStorage.setItem(draftKey,JSON.stringify({graph:withoutPixelPreview(graph),revision}));}catch{}}else sessionStorage.removeItem(draftKey);
+  clearCompileDiagnostics();render();renderGraphSaveState();
+}
+function startPixelPreviewHeartbeat(session){
+  stopPixelPreviewHeartbeat(session);
+  session.timer=setInterval(async()=>{
+    if(pixelPreviewSession!==session||session.ending||session.polling||!session.active||submitBusy)return;
+    session.polling=true;const generation=editorLoadGeneration;
+    try{
+      const result=await api('pixel-preview-session',{action:'heartbeat',sessionId:session.id,sequence:++session.sequence,revision});
+      if(pixelPreviewSession!==session||session.ending||generation!==editorLoadGeneration)return;
+      if(result.active===false){stopPixelPreviewHeartbeat(session);pixelPreviewSession=null;discardPixelPreviewLocal();status(t('preview.expired'));}
+    }catch(error){if(pixelPreviewSession===session&&!session.ending&&generation===editorLoadGeneration)status(error.message,true);}
+    finally{session.polling=false;}
+  },3000);
+}
+function pixelPreviewApplyMetadata(document){
+  if(!hasPixelPreview(document))return null;
+  let session=pixelPreviewSession;
+  if(session?.ending)throw Error(t('preview.ending'));
+  if(!session)pixelPreviewSession=session={id:crypto.randomUUID(),sequence:0,generation:editorLoadGeneration,active:false,timer:null,polling:false,ending:false,pendingEnd:null};
+  return {sessionId:session.id,sequence:++session.sequence};
+}
+function acceptPixelPreviewApply(metadata,result){
+  const session=pixelPreviewSession;
+  if(!metadata||!session||session.id!==metadata.sessionId||session.ending||session.generation!==editorLoadGeneration)return;
+  if(result?.active===false){stopPixelPreviewHeartbeat(session);pixelPreviewSession=null;discardPixelPreviewLocal();return;}
+  session.active=true;startPixelPreviewHeartbeat(session);
+}
+function releasePixelPreview({keepalive=false,discard=true}={}){
+  const session=pixelPreviewSession;
+  if(!session){if(discard&&hasPixelPreview(graph))discardPixelPreviewLocal();return Promise.resolve(true);}
+  if(session.pendingEnd&&!keepalive)return session.pendingEnd;
+  session.ending=true;stopPixelPreviewHeartbeat(session);
+  const generation=editorLoadGeneration,body={action:'end',sessionId:session.id,sequence:++session.sequence,revision};
+  if(keepalive){
+    // Closing a page cannot await a receipt. The server tombstone fences a late
+    // first Apply, and the short lease restores output if this request is lost.
+    pixelPreviewSession=null;if(discard)discardPixelPreviewLocal();
+    return fetch(apiRoot+'pixel-preview-session',{method:'POST',keepalive:true,headers:{'X-Sgrape-Token':token,'Content-Type':'application/json'},body:JSON.stringify(body)}).then(()=>true,()=>false);
+  }
+  session.pendingEnd=(async()=>{
+    try{const result=await api('pixel-preview-session',body);if(pixelPreviewSession===session&&generation===editorLoadGeneration){if(Number.isInteger(result.revision))revision=result.revision;pixelPreviewSession=null;if(discard)discardPixelPreviewLocal();}return true;}
+    catch(error){if(pixelPreviewSession===session&&generation===editorLoadGeneration){session.ending=false;session.generation=generation;if(session.active)startPixelPreviewHeartbeat(session);}throw error;}
+    finally{session.pendingEnd=null;}
+  })();return session.pendingEnd;
+}
+window.addEventListener('pagehide',()=>{clearTimeout(autoTimer);autoTimer=null;releasePixelPreview({keepalive:true}).catch(()=>{});});
 function applyGraph(){
   if(applyInFlight)return applyInFlight;
   if(historyBusy||nativeMutationBusy)return Promise.resolve();
@@ -354,10 +453,14 @@ async function performApplyGraph(){
   clearTimeout(autoTimer);autoTimer=null;if(readonly||submitBusy||!dirty)return;
   const generation=editorLoadGeneration,sentVersion=editVersion,sentGraph=clone(graph),sentRevision=revision,layoutOnly=!hasShaderChanges(sentGraph);
   const sentEntries=past.filter(entry=>entry.kind==='graph'&&!entry.nativeApplied),beforeToken=historyNativeToken;
+  let pixelPreview=null;
   submitBusy=true;applyLayoutOnly=layoutOnly;$('#apply').disabled=true;$('#reload').disabled=true;status(t(layoutOnly?'graph.saving':'material.compiling'));
   try{
-    const data=await api('apply',{graph:sentGraph,revision});
+    if(!hasPixelPreview(sentGraph))await releasePixelPreview({discard:false});
     if(generation!==editorLoadGeneration)return;
+    pixelPreview=pixelPreviewApplyMetadata(sentGraph);
+    const data=await api('apply',{graph:sentGraph,revision,...(pixelPreview?{pixelPreview}:{})});
+    if(!pixelPreviewRequestCurrent(pixelPreview,generation))return;
     if(data.upgradeReview){
       const review=data.upgradeReview;
       if(review.required===false&&review.blocked&&!(review.changes||[]).length){
@@ -375,6 +478,7 @@ async function performApplyGraph(){
       }
       upgradePending=review;conflicted=true;renderUpgradeNotice();status(t('upgrade.explanation'));return;
     }
+    acceptPixelPreviewApply(pixelPreview,data.pixelPreview);
     sealGraphHistory(sentEntries,data.history?.beforeToken||beforeToken,data.history?.token||null);
     if(data.state.graph.catalogSnapshot)graph.catalogSnapshot=clone(data.state.graph.catalogSnapshot);
     revision=data.state.revision;conflicted=false;clearCompileDiagnostics();
@@ -386,14 +490,14 @@ async function performApplyGraph(){
     }
     rememberSavedGraph(sentGraph,shaderUpdated?'graph.applied':'graph.saved');
     if(editVersion===sentVersion){dirty=false;sessionStorage.removeItem(draftKey);}
-    else {try{sessionStorage.setItem(draftKey,JSON.stringify({graph,revision}));}catch{}}
+    else {try{sessionStorage.setItem(draftKey,JSON.stringify({graph:withoutPixelPreview(graph),revision}));}catch{}}
     renderGraphSaveState();setEditorTargetPath(data.target);await preview().catch(()=>{});
     if(generation!==editorLoadGeneration)return;
     if(!connectionInterrupted)status(t(dirty?graphPendingKey():shaderUpdated?'material.applied':lastGraphSaveKey),false,{clearError:true});
     document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
     return true;
-  }catch(e){if(generation!==editorLoadGeneration)return;nativeSourceUncertain=true;++nativeSourceReadEpoch;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
-  finally{if(generation===editorLoadGeneration){submitBusy=false;applyLayoutOnly=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();renderNativeSourceValues();refreshUniforms();refreshNativeSources({required:true});if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
+  }catch(e){if(!pixelPreviewRequestCurrent(pixelPreview,generation))return;nativeSourceUncertain=true;++nativeSourceReadEpoch;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
+  finally{if(generation===editorLoadGeneration){submitBusy=false;applyLayoutOnly=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();if(pixelPreviewRequestCurrent(pixelPreview,generation)){renderNativeSourceValues();refreshUniforms();refreshNativeSources({required:true});}if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
 }
 function el(tag,attrs={},text=''){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else e.setAttribute(k,v);}e.textContent=text;return e;}
 function field(label,control){const f=el('label',{class:'field'},label);f.append(control);return f;}
@@ -583,9 +687,11 @@ function closeShaderSwitch(resume=true){
   if(resume&&resumeAfterShaderSwitch&&dirty&&!submitBusy&&!conflicted)autoTimer=setTimeout(applyGraph,650);
   resumeAfterShaderSwitch=false;$('#shaderpicker').focus();
 }
-function leaveForShader(row){
+async function leaveForShader(row){
   if(!/^[a-f0-9]{32}$/.test(row.id))return;
-  clearTimeout(autoTimer);autoTimer=null;switchingShader=true;
+  clearTimeout(autoTimer);autoTimer=null;
+  try{await releasePixelPreview();}catch(error){status(error.message,true);return false;}
+  switchingShader=true;
   // Same-origin navigation reuses this tab's session token, including a private gateway.
   location.assign('/shader/'+row.id+'/');
 }
@@ -614,7 +720,7 @@ function installShaderNavigation(){
   $('#switchkeep').onclick=()=>{
     if(!shaderChoice||submitBusy||uniformPending.size||nativeSourceBusy||historyBusy||nativeMutationBusy)return;
     try{
-      const draft=JSON.stringify({graph,revision});sessionStorage.setItem(draftKey,draft);
+      const draft=JSON.stringify({graph:withoutPixelPreview(graph),revision});sessionStorage.setItem(draftKey,draft);
       if(sessionStorage.getItem(draftKey)!==draft)throw Error('Draft not retained');
       const row=shaderChoice;closeShaderSwitch(false);leaveForShader(row);
     }catch{$('#switchstatus').textContent=t('switch.storageFailed');}
@@ -752,11 +858,12 @@ async function load(){
   if(typeof uniformLive!=='undefined')uniformLive.disconnect();
   const generation=++editorLoadGeneration;clearTimeout(autoTimer);autoTimer=null;historyBusy=true;renderHistoryActions();
   try{
+    await releasePixelPreview();if(generation!==editorLoadGeneration)return;
     const data=await api('state');if(generation!==editorLoadGeneration)return;
     applyNeedsReview=false;connectionIssue='';renderConnectionNotice();setTypeContract(data.typeContract);
     const filter=$('#createtype');filter.replaceChildren(el('option',{value:'all','data-i18n':'create.allTypes'},t('create.allTypes')),...interfaceTypes().map(type=>el('option',{value:type},type)));
     upgradePending=data.upgradeReview||null;closeUpgradeReview();savedStateIssue=data.savedStateIssue||null;editorTarget=data.shaderKind||data.state?.graph?.target||'mat';
-    graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:clone(data.state.graph);
+    graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:withoutPixelPreview(data.state.graph);
     editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
     nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeSourceUncertain=false;++nativeSourceReadEpoch;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;applyLayoutOnly=false;
@@ -799,19 +906,21 @@ function setHeaderVisible(shown){
   renderHeaderVisibility();window.dispatchEvent(new Event('workspacepreferenceschange'));
   if(graph)requestAnimationFrame(wires);
 }
-function requestEditorReload(){
+async function requestEditorReload(){
   const unfinished=pendingEditorField();
   if(unfinished){status(t('editorReload.finishField'),true,{kind:'reload'});unfinished.focus?.({preventScroll:true});return false;}
   if(statusErrorKind==='reload')status(t('connection.ready'),false,{clearError:'reload'});
   if(submitBusy||uniformPending.size||nativeSourceBusy||historyBusy||nativeMutationBusy||customBusy||exportBusy||personalBusy||pendingEditorWrites){status(t('editorReload.busy'));return false;}
   if(dirty){
     try{
-      const draft=JSON.stringify({graph,revision});sessionStorage.setItem(draftKey,draft);
+      const draft=JSON.stringify({graph:withoutPixelPreview(graph),revision});sessionStorage.setItem(draftKey,draft);
       if(sessionStorage.getItem(draftKey)!==draft)throw Error('Draft not retained');
     }catch{status(t('editorReload.storageFailed'),true,{kind:'reload'});return false;}
     if(!confirm(t('editorReload.keepDraft')))return false;
   }
-  clearTimeout(autoTimer);autoTimer=null;editorReloading=true;location.reload();return true;
+  clearTimeout(autoTimer);autoTimer=null;
+  try{await releasePixelPreview();}catch(error){status(error.message,true);return false;}
+  editorReloading=true;location.reload();return true;
 }
 // Explicit preference keys: never clear authentication, graph drafts or other
 // applications sharing this origin. Keep legacy layout keys out of migration.
@@ -822,15 +931,17 @@ const browserPreferenceKeys=[
   'grapeWorkspaceV1','grapeWorkspacePresetsV1','grapeWorkspaceSizes-left','grapeWorkspaceSizes-right','grapeFloatingParameter','grapeFloatingPanelsV1','grapeFloatingParameterWidth','grapeFloatingLowerSize','grapeParameterInputPorts',
   'grapeInputsDefaultLeftV1','grapeBrowserDetailHeight','grapeSourceGroupOrder','grapeSourceNotes','grapeSourceMinimal'
 ];
-function resetBrowserPreferences(){
+async function resetBrowserPreferences(){
   const unfinished=pendingEditorField();
   if(unfinished||valueLadder||pendingValueLadder){status(t('editorReload.finishField'),true,{kind:'reload'});unfinished?.focus?.({preventScroll:true});return false;}
   if(reloadAppliedBusy()){status(t('editorReload.busy'));return false;}
   if(!confirm(t('browserReset.confirm')))return false;
   if(dirty){
-    try{const draft=JSON.stringify({graph,revision});sessionStorage.setItem(draftKey,draft);if(sessionStorage.getItem(draftKey)!==draft)throw Error();}
+    try{const draft=JSON.stringify({graph:withoutPixelPreview(graph),revision});sessionStorage.setItem(draftKey,draft);if(sessionStorage.getItem(draftKey)!==draft)throw Error();}
     catch{status(t('editorReload.storageFailed'),true,{kind:'reload'});return false;}
   }
+  clearTimeout(autoTimer);autoTimer=null;
+  try{await releasePixelPreview();}catch(error){status(error.message,true);return false;}
   let saved;
   try{
     saved=browserPreferenceKeys.map(key=>[key,localStorage.getItem(key)]);
@@ -841,7 +952,7 @@ function resetBrowserPreferences(){
     if(saved)for(const [key,value]of saved){try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);}catch{restored=false;}}
     status(t(restored?'browserReset.failed':'browserReset.partial'),true,{kind:'reload'});return false;
   }
-  clearTimeout(autoTimer);autoTimer=null;editorReloading=true;location.reload();return true;
+  editorReloading=true;location.reload();return true;
 }
 // Reloading the applied graph replaces editing state and clears its history.
 let reloadAppliedPending=null;

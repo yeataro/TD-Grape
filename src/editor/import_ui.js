@@ -72,9 +72,10 @@ function openExport(){
   $('#exportdialog').showModal();
 }
 function graphPngCanvas(){
-  const snapshot=clone(graph),view={stage,functionIds:[...graphTrail]},styles=getComputedStyle(document.documentElement),font=styles.fontFamily;
+  const snapshot=withoutPixelPreview(graph),view={stage,functionIds:[...graphTrail]},styles=getComputedStyle(document.documentElement),font=styles.fontFamily;
   const color=(name,fallback)=>styles.getPropertyValue(name).trim()||fallback;
-  const nodes=current().nodes.map(n=>{
+  const visible=current(),formalNodes=new Set((graphTrail.length?FunctionModel.find(snapshot,graphTrail.at(-1))?.graph:snapshot.stages[stage])?.nodes.map(n=>n.id)||[]);
+  const nodes=visible.nodes.filter(n=>formalNodes.has(n.id)).map(n=>{
     const card=$('#cards').querySelector(`[data-node="${CSS.escape(n.id)}"]`),title=card?.querySelector('.node-title');
     if(!card||!title)throw Error('png.layout');
     const x=n.ui.x,y=n.ui.y,width=card.offsetWidth,height=card.offsetHeight;
@@ -86,7 +87,7 @@ function graphPngCanvas(){
       }),
       extras:[...card.querySelectorAll('.node-value,.expose-badge')].map(e=>({text:e.textContent,y:y+e.offsetTop+e.offsetHeight/2,color:getComputedStyle(e).color}))};
   });
-  const edges=current().edges.map(edge=>{
+  const edges=visible.edges.filter(edge=>formalNodes.has(edge.from[0])&&formalNodes.has(edge.to[0])).map(edge=>{
     const a=current().nodes.find(n=>n.id===edge.from[0]),b=current().nodes.find(n=>n.id===edge.to[0]);if(!a||!b)return null;
     const p=point(a,edge.from[1],'outputs'),q=point(b,edge.to[1],'inputs');if(!p||!q)return null;
     return {p:{x:p.x,y:p.y},q:{x:q.x,y:q.y},dx:Math.max(70,Math.abs(q.x-p.x)*.5),color:color('--type-'+ports(a,'outputs')[edge.from[1]],color('--purple','#b39cfb'))};
@@ -190,7 +191,7 @@ async function reviewImportFile(file){
   }
 }
 function prepareGraphReplacement(document){
-  const replacement=clone(document),snapshot=nativeSourceSnapshot;
+  const replacement=withoutPixelPreview(document),snapshot=nativeSourceSnapshot;
   const nativeKind=kind=>['uniform','spec_constant','pop_buffer','attribute'].includes(kind);
   if(!snapshot&&graph.declarations.some(d=>nativeKind(d.kind)&&!d.sourceMissing))throw Error(t('sources.nativePending'));
   if(!snapshot?.enabled)return replacement;
@@ -225,11 +226,14 @@ function prepareGraphReplacement(document){
   }
   return replacement;
 }
-function acceptImportReview(){
+async function acceptImportReview(){
   const review=importReview;if(!review?.candidate||readonly)return false;
   if(review.target!==editorTarget||review.baseGraph!==JSON.stringify(graph)){
     review.candidate=null;review.message=t('import.changed');renderImportReview();return false;
   }
+  const generation=editorLoadGeneration,before=historyGraphKey(withoutPixelPreview(graph));
+  try{await releasePixelPreview();}catch(error){review.message=error.message;renderImportReview();return false;}
+  if(generation!==editorLoadGeneration||review.target!==editorTarget||before!==historyGraphKey(withoutPixelPreview(graph))){review.message=t('import.changed');renderImportReview();return false;}
   const changed=change(()=>{
     graph=prepareGraphReplacement(review.candidate);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;
   },{localize:false});
@@ -356,20 +360,21 @@ async function acceptUpgradeReview(){
   if(review.baseGraph!==JSON.stringify(graph)||review.baseRevision!==revision){
     review.token=null;review.message=t('upgrade.changed');renderUpgradeReview();return false;
   }
-  const request=upgradeRequest,previous=clone(graph),generation=editorLoadGeneration,nativeBefore=historyNativeToken;
+  const request=upgradeRequest,previous=withoutPixelPreview(graph),generation=editorLoadGeneration,nativeBefore=historyNativeToken;
   const sentEntries=past.filter(entry=>entry.kind==='graph'&&!entry.nativeApplied);
   review.busy=true;submitBusy=true;nativeMutationBusy=true;renderHistoryActions();renderUpgradeReview();$('#apply').disabled=true;$('#reload').disabled=true;
   try{
-    const result=await api('apply',{graph:review.candidate,revision:review.revision,upgradeToken:review.token});
+    await releasePixelPreview();if(generation!==editorLoadGeneration)return false;
+    const result=await api('apply',{graph:withoutPixelPreview(review.candidate),revision:review.revision,upgradeToken:review.token});
     if(generation!==editorLoadGeneration)return false;
     if(!result.ok)throw Error(t('upgrade.changed'));
     // The modal prevents graph edits; still preserve a draft changed by another
     // local callback while the request was in flight instead of overwriting it.
     revision=result.state.revision;
-    if(review.baseGraph!==JSON.stringify(graph)){
+    if(historyGraphKey(previous)!==historyGraphKey(withoutPixelPreview(graph))){
       conflicted=true;dirty=true;review.token=null;review.message=t('upgrade.localChanged');return false;
     }
-    graph=clone(result.state.graph);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;
+    graph=withoutPixelPreview(result.state.graph);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;
     sealGraphHistory(sentEntries,result.history?.beforeToken||nativeBefore,result.history?.token||null);
     recordGraphHistory(previous,{nativeBefore:result.history?.beforeToken||nativeBefore,nativeAfter:result.history?.token||null,nativeApplied:true});
     savedStateIssue=null;upgradePending=null;readonly=!!editorReadOnlyReason;dirty=false;conflicted=false;
@@ -389,7 +394,7 @@ function installUpgradeUI(){
 
 function downloadGraphJson(){
   if(exportBusy||!graph||savedStateIssue)return;
-  try{const snapshot=clone(graph),blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob);
+  try{const snapshot=withoutPixelPreview(graph),blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob);
     const name='Grape-'+(snapshot.target||editorTarget||'mat').toUpperCase()+'.json';el('a',{href:url,download:name}).click();setTimeout(()=>URL.revokeObjectURL(url),1000);closeExport();status(t('export.jsonDownloaded'));
   }catch(error){$('#exportstatus').textContent=t('export.failed')+error.message;}
 }

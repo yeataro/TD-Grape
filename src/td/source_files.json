@@ -36,6 +36,7 @@
   "sgrape_parameter_links.py": "src/core/sgrape_parameter_links.py",
   "sgrape_parameters.py": "src/core/sgrape_parameters.py",
   "sgrape_runtime.py": "src/td/runtime/sgrape_runtime.py",
+  "pixel_preview_recovery.py": "src/td/runtime/pixel_preview_recovery.py",
   "sgrape_sources.py": "src/core/sgrape_sources.py",
   "select_ui.js": "src/editor/select_ui.js",
   "shader_controls.py": "src/td/runtime/shader_controls.py",

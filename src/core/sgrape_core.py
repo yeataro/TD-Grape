@@ -109,7 +109,7 @@ def definition(key, label, inputs, outputs, stages=('vertex', 'pixel'), defaults
 EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','sin',
     'subtract','divide','min','max','clamp','smoothstep','abs','fract','pow','cos',
     'dot','length','normalize','rgba','split','uniform','uv','texture','position',
-    'deform','to_clip','vertex_out','vertex_input','pixel_out','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','tex_attribute','constant','top_input','glsl_code',
+    'deform','to_clip','vertex_out','vertex_input','pixel_out','preview','sampler','texture_sample','buffer_fetch','buffer_length','pop_buffer','attribute','tex_attribute','constant','top_input','glsl_code',
     'vec4','combine','vector_split','swizzle','vector','replace','spec_constant','comment','generated_glsl','compare','if','sign','sqrt','floor','round','ceil','trunc','mod',
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','voronoi','scalar','convert','matrix_convert',
@@ -505,6 +505,18 @@ def glsl_code_body(params):
 
 # Pixel output slots are graph interfaces; Render TOP owns their allocation.
 PIXEL_BUFFER_PORTS = ('color',) + tuple('buffer'+str(i) for i in range(1,8))
+
+def preview_color_expression(expression,ty):
+    """Map one scalar/vector to RGBA, independently of automatic wire casts."""
+    if ty not in SCALAR_VECTOR_TYPES:raise GraphError('Preview accepts scalar or vector values only')
+    count=TYPE_DESCRIPTORS[ty]['components']
+    target=shaped_type('float',count)
+    value=expression if ty==target else target+'('+expression+')'
+    if count==1:return 'vec4(vec3('+value+'), 1.0)'
+    if count==2:return 'vec4('+value+', 0.5, 1.0)'
+    if count==3:return 'vec4('+value+', 1.0)'
+    return value
+
 PIXEL_FINISHING_DEFAULTS = {'dither':True,'alphaTest':True,'convertColorSpace':True}
 
 def pixel_finishing(params):
@@ -590,6 +602,8 @@ def switch_case_count(params):
     return count
 
 def definition_ports(definition, params):
+    if definition['key']=='preview' and params.get('type','float') not in SCALAR_VECTOR_TYPES:
+        raise GraphError('Preview accepts scalar or vector values only')
     if definition['key']=='voronoi':
         try:return _voronoi.interface(params)
         except (ValueError,TypeError):raise GraphError('Voronoi: invalid mode settings') from None
@@ -636,6 +650,7 @@ def node_parameter_types(definition):
     if key in _legacy_nodes.CALLS:return tuple(_legacy_nodes.CALLS[key]['variants'])
     if key in COMPOSITE_KEYS:return (definition['defaults'].get('type','float'),)
     if key in ('relay','router'):return PORT_TYPES
+    if key=='preview':return SCALAR_VECTOR_TYPES
     if key=='compare':return COMPARE_TYPES
     if key=='scalar':return SCALAR_TYPES
     if key=='pop_buffer':return NUMERIC_TYPES+MATRIX_TYPES
@@ -667,7 +682,8 @@ def explicit_conversion_valid(source,target):
 
 def resolved_ports(definition, params, declaration=None):
     selected = params.get('type', 'float')
-    if not parameter_type_valid(definition,params): raise GraphError('Unsupported numeric type')
+    if not parameter_type_valid(definition,params):
+        raise GraphError('Preview accepts scalar or vector values only' if definition['key']=='preview' else 'Unsupported numeric type')
     def resolve(token):
         if token == 'T': return selected
         if token == 'D':
@@ -783,6 +799,44 @@ def demo_graph(preset='banana',target='mat'):
         result['declarations'][0]['source']='input:0'
     elif target!='mat': raise GraphError('Unknown Shader target')
     return result
+
+def without_preview(graph):
+    """Return a detached formal document, excluding session-only Preview nodes.
+
+    This is a persistence projection, not validation or an import repair. It
+    visits every stored graph scope, including unused/invalid-stage Subgraphs,
+    while preserving unrelated and unknown fields for the usual validation.
+    """
+    result=copy.deepcopy(graph)
+    if not isinstance(result,dict):return result
+    stages=result.get('stages')
+    scopes=list(stages.values()) if isinstance(stages,dict) else []
+    functions=result.get('functions')
+    if isinstance(functions,list):scopes.extend(f.get('graph') for f in functions if isinstance(f,dict))
+    for data in scopes:
+        if not isinstance(data,dict) or not isinstance(data.get('nodes'),list):continue
+        preview_nodes=[n for n in data['nodes'] if isinstance(n,dict) and n.get('definitionUuid')=='sgrape.builtin.preview']
+        if not preview_nodes:continue
+        removed={n['id'] for n in preview_nodes if isinstance(n.get('id'),str)}
+        data['nodes']=[n for n in data['nodes'] if not (isinstance(n,dict) and n.get('definitionUuid')=='sgrape.builtin.preview')]
+        def incident(edge):
+            if not isinstance(edge,dict):return False
+            return any(isinstance(edge.get(side),list) and edge[side] and isinstance(edge[side][0],str) and edge[side][0] in removed for side in ('from','to'))
+        if isinstance(data.get('edges'),list):data['edges']=[e for e in data['edges'] if not incident(e)]
+        ui=data.get('ui')
+        if not isinstance(ui,dict) or not isinstance(ui.get('frames'),list):continue
+        frames=[]
+        for frame in ui['frames']:
+            if isinstance(frame,dict) and isinstance(frame.get('nodes'),list):
+                members=frame['nodes']
+                kept=[ident for ident in members if not (isinstance(ident,str) and ident in removed)]
+                if kept!=members:
+                    if not kept:continue  # Only drop a frame made empty by Preview removal.
+                    frame['nodes']=kept
+            frames.append(frame)
+        ui['frames']=frames
+    return result
+
 
 def clean_semantic(graph):
     g=copy.deepcopy(graph)
@@ -1152,6 +1206,8 @@ def _compile_flat(graph,annotation_scopes=None):
                 nodes[ident]=n; defs[ident]=d
             outputs=[i for i,d in defs.items() if d['key']==stage+'_out']
             if len(outputs)!=1: raise GraphError('Exactly one '+stage+' output is required')
+            previews=[i for i,d in defs.items() if d['key']=='preview']
+            if len(previews)>1:raise GraphError('Only one Preview is allowed per Pixel stage',previews[1])
             # Terminal nodes are observable roots even without output sockets.
             # Subgraphs are already expanded, so the one-writer rule is global.
             effect_priority={'discard':0,'alpha':1,'depth':2}
@@ -1173,6 +1229,9 @@ def _compile_flat(graph,annotation_scopes=None):
                     raise GraphError('Vector components require an exact type; use Convert, Combine or Swizzle explicitly',dst)
                 if conversion_kind(a,b) is None: raise GraphError(a+' cannot connect to '+b,dst)
                 links[(dst,dp)]=(src,sp)
+            # An unconnected Preview is inert. Keep the original color branch
+            # live so its ordinary binding rows remain available during Preview.
+            active_preview=next((ident for ident in previews if (ident,'value') in links),None)
             # Each visible vector group is one actual wire, never a persisted
             # constructor mode with missing sockets. Legacy Combine keeps its
             # original ability to hold an unconnected vector default group.
@@ -1273,7 +1332,7 @@ def _compile_flat(graph,annotation_scopes=None):
             # Follow output-specific dependencies before choosing node order.
             # A fully replaced baseline (or an unused runtime component) is not
             # evaluated just because its wire remains visible in the editor.
-            roots=effects+[outputs[0]]
+            roots=effects+([active_preview] if active_preview else [])+[outputs[0]]
             needed_outputs={};needed_inputs={};pending=[(ident,None) for ident in roots]
             while pending:
                 ident,output=pending.pop()
@@ -1617,19 +1676,22 @@ def _compile_flat(graph,annotation_scopes=None):
                             if TYPE_DESCRIPTORS[leaf_type]['family']=='bool':value=leaf_type+'('+value+')'
                             lines.append('    '+variable+path+' = '+value+';')
                         expressions[(ident,output)]=variable
+                elif k=='preview':
+                    lines.append('    vec4 sg_preview_color = '+preview_color_expression(a('value'),ports[ident]['in']['value'])+';')
                 elif k=='pixel_out':
+                    primary=['    vec4 sg_color = '+a('color')+';']
+                    if active_preview:primary.append('    sg_color = sg_preview_color;')
                     if graph_target(graph)=='top':
-                        lines.extend(['    vec4 sg_color = '+a('color')+';','    fragColor = TDOutputSwizzle(sg_color);'])
+                        lines.extend(primary+['    fragColor = TDOutputSwizzle(sg_color);'])
                     else:
                         # Native MAT previews and each Render TOP can allocate a different count.
                         # Initialize every allocated buffer, including slots beyond this graph.
                         lines.extend(['    for (int sg_buffer = 0; sg_buffer < TD_NUM_COLOR_BUFFERS; ++sg_buffer) {',
                                       '        fragColor[sg_buffer] = TDOutputSwizzle(vec4(0.0, 0.0, 0.0, 0.0));',
-                                      '    }',
-                                      '    vec4 sg_color = '+a('color')+';'])
+                                      '    }']+primary)
                         # Keep primary color dithering; an empty slot must remain exactly zero.
                         saved=nodes[ident].get('inputValues',{})
-                        has_color=(ident,'color') in links or any(saved.get('color',[]))
+                        has_color=active_preview is not None or (ident,'color') in links or any(saved.get('color',[]))
                         if any(key in p for key in PIXEL_FINISHING_DEFAULTS):
                             finishing=pixel_finishing(p)
                             if has_color and finishing['dither']:lines.append('    sg_color = TDDither(sg_color);')
@@ -2144,6 +2206,7 @@ def _expand(graph,functions):
                 else:
                     if key not in BY_UUID or key=='sgrape.internal.relay': raise GraphError('Unknown node',ident)
                     d=BY_UUID[key]
+                    if boundary is not None and d['key']=='preview':raise GraphError('Preview is only available in the root Pixel stage',ident)
                     if boundary is not None and d['key'] in ('vertex_out','pixel_out','vertex_input'): raise GraphError('Use Subgraph boundaries inside a Subgraph',ident)
                     nid=mapped(ident,path); out=copy.deepcopy(n); out['id']=nid
                     out.pop('_symbolStem',None)  # Never trust graph-provided compiler metadata.
@@ -2193,7 +2256,7 @@ def validate_graph_frames(data):
 
 def _infer_graph_types(graph):
     """Resolve compound nodes from upstream ports without persisting derived type state."""
-    dynamic={CATALOG[key]['definitionUuid'] for key in ('router','array_create','array_get','array_replace','array_length','struct_field')}
+    dynamic={CATALOG[key]['definitionUuid'] for key in ('router','preview','array_create','array_get','array_replace','array_length','struct_field')}
     scoped=list(graph.get('stages',{}).values())+[f.get('graph',{}) for f in graph.get('functions',[]) if isinstance(f,dict)]
     if not any(n.get('definitionUuid') in dynamic for data in scoped if isinstance(data,dict)
                for n in data.get('nodes',[]) if isinstance(n,dict)):
@@ -2229,8 +2292,8 @@ def _infer_graph_types(graph):
                     edge=incoming.get((ident,port))
                     if not isinstance(edge,list) or len(edge)!=2:return None
                     return ports(edge[0])['outputs'].get(edge[1])
-                if key in ('router','array_get','array_replace','array_length','struct_field'):
-                    source=source_type('value' if key in ('router','struct_field') else 'Array')
+                if key in ('router','preview','array_get','array_replace','array_length','struct_field'):
+                    source=source_type('value' if key in ('router','preview','struct_field') else 'Array')
                     if source:p['type']=source
                 if key=='array_create':
                     source=source_type('length')

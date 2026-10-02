@@ -150,7 +150,7 @@ function nodeCategory(d,params=d.defaults){
   if(['uv','position'].includes(d.key))return 'attribute';
   if(['texture','texture_sample'].includes(d.key))return 'math';
   if(['deform','to_clip'].includes(d.key))return 'builtin';
-  if(d.key.endsWith('_out')||['function_output','discard','td_alpha_test'].includes(d.key))return 'output';return 'math';
+  if(d.key.endsWith('_out')||['function_output','discard','td_alpha_test','preview'].includes(d.key))return 'output';return 'math';
 }
 // Presentation roles describe what a source supplies, not its node family,
 // browser location, GLSL qualifier or type. Keep this UI-only: no graph/compiler metadata.
@@ -564,6 +564,7 @@ function voronoiPorts(params){
 function resolvedNodePorts(d,params,decl,kind){
   if(d.key==='voronoi')return voronoiPorts(params)[kind];
   if(d.key==='router')return kind==='inputs'?{value:params.type||'float'}:{out:params.type||'float'};
+  if(d.key==='preview')return kind==='inputs'?{value:params.type||'float'}:{};
   if(d.key==='math')return mathPorts(params)[kind];
   if(d.key==='switch')return switchPorts(params)[kind];
   if(['vertex_out','vertex_input'].includes(d.key))return vertexBoundaryPorts(d.key)[kind];
@@ -832,6 +833,10 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
       const source=links.find(e=>e.to[1]==='value'),type=source?ports.get(source.from[0])?.outputs[source.from[1]]:n.params.type||'float';
       if(!type||type==='?')throw autoTypeError('type.autoInputs','Router');
       choices.set(n.id,type);ports.set(n.id,{inputs:{value:type},outputs:{out:type}});
+    }else if(autoDefinition(document,n,owner)?.key==='preview'){
+      const source=links.find(e=>e.to[1]==='value'),type=source?ports.get(source.from[0])?.outputs[source.from[1]]:n.params.type||'float';
+      if(!typeVariants(autoDefinition(document,n,owner)).some(v=>v.type===type))throw autoTypeError('preview.type');
+      choices.set(n.id,type);ports.set(n.id,{inputs:{value:type},outputs:{}});
     }else if(autoDefinition(document,n,owner)?.key==='switch'){
       const baseline=links.find(e=>e.to[1]==='default'),type=baseline?ports.get(baseline.from[0])?.outputs[baseline.from[1]]:n.params.type;
       if(!valueTypes().includes(type))throw autoTypeError('type.autoInputs','Switch Default');
@@ -872,7 +877,7 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
     active.delete(n.id);
   }
   // No policy nodes: existing unresolved/cyclic drafts remain a compiler concern.
-  if(autoNodes.size||combineNodes.size||data.nodes.some(n=>['sgrape.builtin.switch','sgrape.builtin.router'].includes(n.definitionUuid))||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))||isArithmetic(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
+  if(autoNodes.size||combineNodes.size||data.nodes.some(n=>['sgrape.builtin.switch','sgrape.builtin.router','sgrape.builtin.preview'].includes(n.definitionUuid))||draft||data.nodes.some(n=>isCompositeOperation(autoDefinition(document,n,owner))||isArithmetic(autoDefinition(document,n,owner))))for(const n of data.nodes)visit(n);
   else for(const n of data.nodes)ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
   return {choices,ports,operands,groups,issues};
 }
@@ -946,6 +951,13 @@ function pruneSwitchCaseEdges(data,plan,previous){
   if(!removed.size)return false;data.edges=data.edges.filter(e=>!removed.has(e));return true;
 }
 function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid=false}={}){
+  // Preview is a deletable root-stage singleton. Enforce this for paste and
+  // duplicate as well as the ordinary Create path, within the edit transaction.
+  for(const unit of autoUnits(document)){
+    const previews=unit.data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.preview');
+    if(previews.length&&(unit.owner||unit.key!=='stage:pixel'))throw Error(t('preview.stage'));
+    if(previews.length>1)throw Error(t('preview.limit'));
+  }
   if(autoTopology(document)===autoTopology(previous))return;
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
   for(const unit of autoUnits(document)){
@@ -1039,7 +1051,7 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
   try{
     const assembling=entry=>['combine','replace'].includes(entry?.key);
     const possibleInputs=(entry,n,name)=>{
-      if(assembling(entry)||isCompositeOperation(entry))return null;
+      if(assembling(entry)||isCompositeOperation(entry)||entry?.key==='preview')return null;
       const automatic=(!context.owner||context.owner.scope==='local')&&n.ui?.typeMode==='auto'&&supportsAutoType(entry);
       return automatic||isArithmetic(entry)?nodeTypeVariants(entry,n.params).filter(v=>automatic||v.type===n.params.type).map(v=>v.inputs[name]):[n.id===id?variant.inputs[name]:context.oldPorts.get(n.id)?.inputs[name]];
     };
@@ -1107,6 +1119,10 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
   }catch(error){context.plans.set(trialKey,{error});throw error;}
 }
 function creatorVariants(d,wire){
+  if(d.key==='preview'){
+    const variants=typeVariants(d);
+    return wire?wire.kind==='outputs'?variants.filter(v=>v.type===wire.type):[]:variants;
+  }
   if(d.key==='router'&&wire?.type&&wire.type!=='?')return [{type:wire.type,inputs:{value:wire.type},outputs:{out:wire.type},params:{type:wire.type}}];
   if(isCompositeOperation(d)){
     const params={...clone(d.defaults||{})},descriptor=wire&&typeDescriptor(wire.type),variants=[];
@@ -1151,6 +1167,7 @@ function creatorVariants(d,wire){
   });
 }
 function creatorPriority(match,wire){
+  if(match.d.key==='preview')return -1;
   if(!wire)return 99;
   const count=valueTypes().includes(wire.type)?typeComponents(wire.type):0;
   if(isMatrixType(wire.type)){const order=wire.kind==='outputs'?['matrix_split','matrix_replace','matrix_get']:['matrix','matrix_combine','matrix_replace'],index=order.indexOf(match.d.key);return index<0?99:index;}
@@ -1848,6 +1865,7 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     const collapsed=n.ui?.collapsed===true,d=projection?.definition||definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     Object.entries(nodeColorAttributes(d||{key:''},n.params)).forEach(([key,value])=>card.setAttribute(key,value));card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
     if(isMatrixOperation(d))card.classList.add('node-matrix');
+    if(d?.key==='preview'){card.classList.add('node-preview');card.style.opacity='.78';}
     if(isAnnotationNode(n)){
       card.dataset.noteTitleOnSelection=String(n.ui?.noteTitleOnSelection===true);card.dataset.noteTransparent=String(n.ui?.noteTransparent===true);
       card.style.setProperty('--note-font-scale',noteFontScale(n));
@@ -1897,7 +1915,8 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
       if(compact){row.append(b);return row;}
       const caption=el('span',{class:'port-label',title:label},label);if(!missing)applyPortLabelColorHint(caption,n,kind,name);
       row.append(b,caption,missing?el('small',{},'?'):portTypeCaption(n,kind,name));
-      if(!missing&&kind==='inputs'&&projection?.connectedInput!==name&&!isMatrixOperation(d)&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
+      if(!missing&&kind==='inputs'&&projection?.connectedInput!==name&&!isMatrixOperation(d)&&d?.key!=='preview'&&typeof nodeInlineValues==='function'){const control=nodeInlineValues(n,name);if(control)row.append(control);}
+      if(d?.key==='preview'&&kind==='inputs'&&projection?.connectedInput!==name&&!current().edges.some(e=>e.to[0]===n.id&&e.to[1]===name))row.append(el('small',{class:'muted'},t('preview.connect')));
       if(kind==='outputs'&&typeContract?.vectors?.types.includes(type)&&!['vector_split','matrix_split'].includes(d?.key)){
         const split=el('button',{class:'vector-split-shortcut',type:'button',title:t('vector.splitShortcut'),'aria-label':t('vector.splitShortcut')+' · '+label});
         const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 16 16');icon.setAttribute('aria-hidden','true');const path=document.createElementNS(icon.namespaceURI,'path');path.setAttribute('d','M2 8h5M7 3v10M7 3h6M7 13h6');icon.append(path);split.append(icon);
@@ -2095,9 +2114,12 @@ function personalSourceHeader(section){
   for(const issue of personalLibrary.issues)location.append(el('p',{class:'error'},issue.file+' · '+issue.error));section.append(location);
 }
 function exampleMatchesTarget(example){return !!example&&(example.target||'mat')===editorTarget;}
-function loadExample(name){
+async function loadExample(name){
   if(editorMutationBlocked()||!exampleMatchesTarget(examples[name]))return false;
   if(dirty&&!confirm(t('graph.exampleConfirm')))return false;
+  const generation=editorLoadGeneration,before=historyGraphKey(withoutPixelPreview(graph));
+  try{await releasePixelPreview();}catch(error){status(error.message,true);return false;}
+  if(generation!==editorLoadGeneration||before!==historyGraphKey(withoutPixelPreview(graph)))return false;
   const changed=change(()=>{graph=prepareGraphReplacement(examples[name]);graphTrail=[];selection.clear();selected=null;selectedEdge=null;errorNode=null;},{localize:false});
   if(changed){cancelConnection();closeCreator();fit();if(matchMedia('(max-width:800px)').matches)workspaceLayout.closeBrowser();}return changed;
 }

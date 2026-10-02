@@ -55,7 +55,7 @@ function renderNavigation(){
     const b=el('button',{'aria-current':depth===graphTrail.length?'location':'false'},label);b.disabled=depth===graphTrail.length;b.onclick=()=>navigateGraph(depth);nav.append(b);
   });
   const f=currentFunction();$('#functionscope').textContent=f?(f.scope==='local'?t('function.local'):t('function.source')):'';
-  $('#group').disabled=readonly||!current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog));
+  $('#group').disabled=readonly||!current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)&&definition(n)?.key!=='preview'&&!SubgraphSourcePolicy.isSource(n,catalog));
 }
 function canDeleteNode(n){return !['pixel_out','vertex_out','vertex_input','function_input','function_output'].includes(definition(n)?.key);}
 function functionEntry(f,source=false){
@@ -73,7 +73,7 @@ function nodeTypeLabel(d,params=d?.defaults){
   return ['vec2','vec3','vec4'].includes(d?.key)?label+' · Constant':label;
 }
 function availableEntries(){
-  const entries=catalog.filter(d=>d.stages.includes(stage)&&(!d.targets||d.targets.includes(editorTarget))&&!(graphTrail.length&&d.key==='vertex_input')&&!['vertex_out','pixel_out'].includes(d.key)&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
+  const entries=catalog.filter(d=>d.stages.includes(stage)&&(!d.targets||d.targets.includes(editorTarget))&&!(graphTrail.length&&['vertex_input','preview'].includes(d.key))&&!['vertex_out','pixel_out'].includes(d.key)&&!['texture','float','vec2','vec3','vec4'].includes(d.key)&&(editorTarget==='top'?d.key!=='sampler':d.key!=='top_input')).flatMap(d=>{
     if(d.key==='struct_create')return (graph.typeDefinitions||[]).map(item=>({...d,label:item.name,entryKey:'structure:'+item.id,defaults:{type:'struct:'+item.id}}));
     if(d.key==='builtin_source')return builtinSourceEntries(d);
     if(['scalar','vector','matrix'].includes(d.key))return [{...d,label:nodeTypeLabel(d),category:nodeCategory(d)},...selectableNodeTypes(d).map(type=>({...d,entryKey:type,fixedType:type,label:type,descriptionKey:({scalar:'help.fixedScalar',vector:'help.fixedVector',matrix:'help.fixedMatrix'})[d.key],defaults:{...d.defaults,...(d.key==='matrix'?{values:matrixReshapeValue(d.defaults.values,d.defaults.type,type)}:{}),type,fixedType:type},category:nodeCategory(d)}))];
@@ -227,6 +227,15 @@ function createInputDeclaration(kind='uniform',type='float',{name,value,preset,n
   if(!preview)graph.declarations.push(decl);return decl;
 }
 function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed={},preview=false}={}){
+  if(d.key==='preview'){
+    if(stage!=='pixel'||graphTrail.length)throw Error(t('preview.stage'));
+    const existing=current().nodes.find(n=>n.definitionUuid===d.definitionUuid);
+    if(existing){
+      const n=preview?clone(existing):existing;n.ui={...n.ui,x:snap(x),y:snap(y)};
+      if(preview)return {node:n,source:null,definition:d};
+      selected=n.id;selection=new Set([n.id]);selectedEdge=null;return n;
+    }
+  }
   if(d.key==='generated_glsl'&&current().nodes.some(n=>n.definitionUuid===d.definitionUuid))throw Error(t('generatedGLSL.limit'));
   const id='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),params=clone(d.defaults||{});let source=null;
   if(d.key==='pixel_out'&&editorTarget==='mat')Object.assign(params,typeContract?.pixelBufferOutputs?.finishingDefaults||{});
@@ -266,7 +275,7 @@ function newFunction(){
   });
 }
 function groupSelection(){
-  const data=current(),chosen=data.nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)&&!SubgraphSourcePolicy.isSource(n,catalog));if(!chosen.length)return;
+  const data=current(),chosen=data.nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)&&definition(n)?.key!=='preview'&&!SubgraphSourcePolicy.isSource(n,catalog));if(!chosen.length)return;
   change(()=>{
     const ids=new Set(chosen.map(n=>n.id)),id=FunctionModel.uid(),callId='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),inputs=[],outputs=[],edges=[],outside=[],incoming=new Map(),outgoing=new Map();
     for(const e of data.edges){const a=ids.has(e.from[0]),b=ids.has(e.to[0]);

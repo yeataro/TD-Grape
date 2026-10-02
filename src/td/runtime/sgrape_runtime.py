@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.271'
+PRODUCT_VERSION='0.8.272'
 
 MATERIAL_PRESETS={
     'phong':'Phong MAT Graph', 'pbr':'PBR MAT Graph',
@@ -156,6 +156,164 @@ _family_pending=False
 _family_next=0
 _family_attempts=0
 _family_force=False
+
+# Editor-only Pixel Preview. Nothing in this registry is part of a graph/TOE.
+_pixel_previews={}
+_pixel_preview_closed=set()
+_pixel_preview_save_depth=0
+PIXEL_PREVIEW_LEASE_SECONDS=15
+PIXEL_PREVIEW_RECOVERY='grapePixelPreviewRecoveryV1'
+
+
+def pixel_preview_identity(descriptor):
+    if not isinstance(descriptor,dict):raise RuntimeError('Pixel Preview requires an editor session.')
+    session=descriptor.get('sessionId');sequence=descriptor.get('sequence')
+    if not isinstance(session,str) or not re.fullmatch(r'[A-Za-z0-9_-]{8,160}',session):
+        raise RuntimeError('Invalid Pixel Preview session.')
+    if type(sequence) is not int or sequence<1:raise RuntimeError('Invalid Pixel Preview sequence.')
+    return session,sequence
+
+
+def pixel_preview_descriptor(graph,descriptor):
+    formal=core().without_preview(graph)
+    if descriptor is None:
+        if formal!=graph:raise RuntimeError('Pixel Preview requires an active editor session; it cannot be saved in a graph.')
+        return formal,None
+    session,sequence=pixel_preview_identity(descriptor)
+    comp=target()
+    if not comp:raise RuntimeError('Pixel Preview requires an existing Shader.')
+    key=comp.id
+    if (key,session) in _pixel_preview_closed:raise RuntimeError('Pixel Preview session has ended. Reload the editor.')
+    previous=_pixel_previews.get(key)
+    if previous and previous['expires']<=time.monotonic():
+        restore_pixel_preview(comp);previous=None
+        if (key,session) in _pixel_preview_closed:raise RuntimeError('Pixel Preview session has expired. Reload the editor.')
+    if previous and (previous['sessionId']!=session or sequence<=previous['sequence']):
+        raise RuntimeError('Conflict: Pixel Preview belongs to another or newer editor operation.')
+    return formal,{'sessionId':session,'sequence':sequence}
+
+
+def ensure_pixel_preview_lifecycle(comp):
+    source=_owner.op('pixel_preview_recovery')
+    if not source:raise RuntimeError('Update the Grape manager to use temporary Pixel Preview.')
+    recovery=comp.op('pixel_preview_recovery')
+    if recovery and not recovery.fetch(PIXEL_PREVIEW_RECOVERY,False):
+        raise RuntimeError('An unrelated operator occupies the Pixel Preview recovery name.')
+    if not recovery:
+        recovery=comp.create(executeDAT,'pixel_preview_recovery')
+        recovery.store(PIXEL_PREVIEW_RECOVERY,True)
+    recovery.text=source.text
+    recovery.par.start=True;recovery.par.create=True;recovery.par.active=True
+    lifecycle=_owner.op('pixel_preview_save')
+    if lifecycle and not lifecycle.fetch(PIXEL_PREVIEW_RECOVERY,False):
+        raise RuntimeError('An unrelated operator occupies the Pixel Preview save callback name.')
+    if not lifecycle:
+        lifecycle=_owner.create(executeDAT,'pixel_preview_save')
+        lifecycle.store(PIXEL_PREVIEW_RECOVERY,True)
+    # These callbacks run synchronously before/after the project is serialized.
+    # Fail closed on builds without save hooks rather than save a live override.
+    for name in ('projectpresave','projectpostsave'):
+        parameter=getattr(lifecycle.par,name,None)
+        if parameter is None:raise RuntimeError('This TouchDesigner build lacks temporary Preview project-save hooks.')
+        parameter.val=True
+    lifecycle.text="def onProjectPreSave():\n    parent().op('runtime').module.suspend_pixel_previews()\ndef onProjectPostSave():\n    parent().op('runtime').module.resume_pixel_previews()\n"
+    lifecycle.par.active=True
+
+
+def capture_pixel_preview_output(comp):
+    return comp.op('pixel_preview_recovery').module.capture(comp)
+
+
+def restore_pixel_preview_output(comp):
+    recovery=comp.op('pixel_preview_recovery')
+    if comp.fetch(PIXEL_PREVIEW_RECOVERY,None):
+        if not recovery:raise RuntimeError('Pixel Preview recovery callback is missing; formal output was not restored.')
+        recovery.module.restore(comp)
+
+
+def restore_pixel_preview(comp,keep_session=False):
+    record=_pixel_previews.get(comp.id)
+    # The shader-local recovery also works after Python/module restart or TOX copy.
+    restore_pixel_preview_output(comp)
+    if record:
+        if keep_session:record['suspended']=True
+        else:
+            _pixel_previews.pop(comp.id,None)
+            _pixel_preview_closed.add((comp.id,record['sessionId']))
+
+
+def pixel_preview_basis_current(record):
+    try:
+        saved=json.loads(record['comp'].op('state').text)
+        return saved.get('revision')==record['revision'] and saved.get('graph')==record['graph']
+    except (ValueError,AttributeError,KeyError):return False
+
+
+def pixel_preview_session(body):
+    session,sequence=pixel_preview_identity(body);comp=target()
+    if not comp:raise RuntimeError('The Pixel Preview Shader no longer exists.')
+    action=body.get('action');key=(comp.id,session);record=_pixel_previews.get(comp.id)
+    try:revision=state().get('revision')
+    except (ValueError,AttributeError):revision=None
+    if action=='end':
+        # An end can arrive ahead of the first Apply. Keep its tombstone so that
+        # queued/in-flight work cannot revive a workspace that was already left.
+        _pixel_preview_closed.add(key)
+        if record and record['sessionId']==session:restore_pixel_preview(comp)
+        return {'active':False,'sessionId':session,'revision':revision}
+    if action!='heartbeat':raise RuntimeError('Unknown Pixel Preview session action.')
+    if record and (record['expires']<=time.monotonic() or not pixel_preview_basis_current(record)):
+        restore_pixel_preview(comp);record=None
+    active=bool(record and record['sessionId']==session and key not in _pixel_preview_closed)
+    if active:record['expires']=time.monotonic()+PIXEL_PREVIEW_LEASE_SECONDS
+    return {'active':active,'sessionId':session,'revision':revision,'leaseMs':PIXEL_PREVIEW_LEASE_SECONDS*1000}
+
+
+def service_pixel_previews():
+    for key,record in list(_pixel_previews.items()):
+        comp=record['comp']
+        if not comp.valid:
+            _pixel_previews.pop(key,None);_pixel_preview_closed.add((key,record['sessionId']));continue
+        if record['expires']<=time.monotonic() or not pixel_preview_basis_current(record):
+            try:restore_pixel_preview(comp)
+            except Exception as exc:record['restoreError']=str(exc) # Retain and retry; never declare restoration successful.
+
+
+def suspend_pixel_previews():
+    global _pixel_preview_save_depth
+    _pixel_preview_save_depth+=1
+    if _pixel_preview_save_depth!=1:return
+    try:
+        for record in list(_pixel_previews.values()):
+            if record['comp'].valid:restore_pixel_preview(record['comp'],keep_session=True)
+    except Exception:
+        # A rejected save preparation must not strand the nesting counter or
+        # leave previously suspended sessions permanently unable to recover.
+        resume_pixel_previews()
+        raise
+
+
+def resume_pixel_previews():
+    global _pixel_preview_save_depth
+    _pixel_preview_save_depth=max(0,_pixel_preview_save_depth-1)
+    if _pixel_preview_save_depth:return
+    for record in list(_pixel_previews.values()):
+        comp=record['comp']
+        if not comp.valid or record['expires']<=time.monotonic() or not pixel_preview_basis_current(record):
+            if comp.valid:restore_pixel_preview(comp)
+            continue
+        if not record.get('suspended'):continue
+        with shader_context(comp):
+            # Reuse the current live values, never the values at Preview creation.
+            output=capture_pixel_preview_output(comp)
+            comp.store(PIXEL_PREVIEW_RECOVERY,{'output':output})
+            try:
+                configure(comp,record['activeCompiled'],record['graph'],existing_values(comp,record['graph']))
+                comp.op('manifest').text=output['manifest']
+                record['suspended']=False
+            except Exception:
+                restore_pixel_preview(comp)
+                raise
 
 def request_family_registration(force=True):
     global _family_pending,_family_next,_family_attempts,_family_force
@@ -1599,17 +1757,19 @@ def begin_material_preview_update(comp):
     return (runtime, begin(shader_operator(comp))) if begin else (None, None)
 
 
-def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
+def deploy(graph,expected_revision,inject_failure=False,upgrade_token=None,pixel_preview=None):
     with graph_checks().session():
-        return _deploy(graph,expected_revision,inject_failure,upgrade_token)
+        return _deploy(graph,expected_revision,inject_failure,upgrade_token,pixel_preview)
 
 
-def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
+def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None,pixel_preview=None):
     if source_module(): source_module().sync(_owner.op('runtime').module)
     current=checked_state()
     current_raw=saved_state_source()
     if expected_revision!=current['revision']: raise RuntimeError('Conflict: this graph changed in another window. Reload before applying.')
     if target():ensure_supported_shader(target())
+    working_graph=graph
+    graph,pixel_preview=pixel_preview_descriptor(graph,pixel_preview)
     accepted = upgrade_token is not None
     if accepted:
         accept_upgrade_ticket(upgrade_token, graph)
@@ -1624,10 +1784,11 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         raise RuntimeError('The upgrade_backup name is already used by another operator. Rename it before upgrading.')
     backup_text_before=backup_dat_before.text if backup_dat_before else None
     compiled=graph_checks().compile(graph)
-    if any(b.get('sourceMissing') for b in compiled['bindings']):
+    active_compiled=graph_checks().compile(working_graph) if pixel_preview else compiled
+    if any(b.get('sourceMissing') for b in active_compiled['bindings']):
         raise source_module().SourceError('A used Input source is missing. Restore or reassign its reference before applying.')
     if target() and core().graph_target(graph)!=shader_kind(target()): raise RuntimeError('Import a graph for the same Shader target')
-    if not inject_failure and not accepted and current.get('appliedHash')==compiled['hash'] and target() and compiled_is_current(target(),compiled,graph):
+    if not pixel_preview and not (target() and target().id in _pixel_previews) and not inject_failure and not accepted and current.get('appliedHash')==compiled['hash'] and target() and compiled_is_current(target(),compiled,graph):
         new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,lastError='',sourceChanged=False)
         write_state(new)
         target().op('graph').text=json.dumps(graph,ensure_ascii=False,indent=2)
@@ -1643,6 +1804,10 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
         candidate=make_scene(_owner,'candidate',core().graph_target(graph))
         configure(candidate,compiled,graph,preserve,input_owner=old_target)
         info=validate_material(candidate,compiled)
+        if pixel_preview:
+            configure(candidate,active_compiled,graph,preserve,input_owner=old_target)
+            info=validate_material(candidate,active_compiled)
+            ensure_pixel_preview_lifecycle(old_target)
         # Candidate validation precedes mutation. Snapshot allows compensation;
         # an undo group alone is not a transaction.
         previous=None
@@ -1650,12 +1815,14 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
             previous_graph=json.loads(old_target.op('graph').text)
             previous_manifest=old_target.op('manifest').text
             saved_manifest=json.loads(previous_manifest)
-            previous_compiled={'vertex':old_target.op('vertex_shader').text if old_target.op('vertex_shader') else '',
+            active_before=_pixel_previews.get(old_target.id)
+            previous_compiled=copy.deepcopy(active_before['activeCompiled']) if active_before and not active_before.get('suspended') else {'vertex':old_target.op('vertex_shader').text if old_target.op('vertex_shader') else '',
                 'pixel':old_target.op('pixel_shader').text,'hash':saved_manifest['hash'],'bindings':saved_manifest['bindings']}
             previous=(previous_graph,previous_compiled,existing_values(old_target,previous_graph),previous_manifest,old_target.op('graph').text)
         destination=old_target or make_scene(_owner.parent(),_owner.fetch('targetName','sgrape_material'),core().graph_target(graph))
         destination.store('sgrapeOwnerName',_owner.name)
         source_before=source_module().capture_configuration(_owner.op('runtime').module,destination) if source_module() else None
+        recovery_before=copy.deepcopy(destination.fetch(PIXEL_PREVIEW_RECOVERY,None))
         controls_applied=False
         try:
             configure(destination,compiled,graph,preserve)
@@ -1664,6 +1831,12 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
                 controls_applied=True
             if inject_failure: raise RuntimeError('Injected commit failure')
             validate_material(destination,compiled)
+            if pixel_preview:
+                output=capture_pixel_preview_output(destination)
+                destination.store(PIXEL_PREVIEW_RECOVERY,{'output':output})
+                configure(destination,active_compiled,graph,existing_values(destination,graph))
+                validate_material(destination,active_compiled)
+                destination.op('manifest').text=output['manifest']
             new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,appliedHash=compiled['hash'],lastError='',sourceChanged=False)
             write_state(new)
             if backup is not None:
@@ -1679,14 +1852,26 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None):
                 destination.op('manifest').text=previous[3]
                 destination.op('graph').text=previous[4]
             else: destination.destroy()
+            if destination and destination.valid:
+                if recovery_before is None:destination.unstore(PIXEL_PREVIEW_RECOVERY)
+                else:destination.store(PIXEL_PREVIEW_RECOVERY,recovery_before)
             (_shader or _owner).op('state').text=current_raw
             if backup is not None:
                 backup_dat=destination.op('upgrade_backup') if destination and destination.valid else None
                 if backup_dat and backup_text_before is None:backup_dat.destroy()
                 elif backup_dat:backup_dat.text=backup_text_before
             raise
-        cleanup_top_sources(destination,graph)
-        return {'ok':True,'state':new,'shaderUpdated':True,'compileInfo':info,'diagnostics':compiled['diagnostics'],'target':destination.path}
+        previous_preview=_pixel_previews.pop(destination.id,None)
+        if previous_preview and (not pixel_preview or previous_preview['sessionId']!=pixel_preview['sessionId']):
+            _pixel_preview_closed.add((destination.id,previous_preview['sessionId']))
+        if pixel_preview:
+            _pixel_previews[destination.id]={**pixel_preview,'comp':destination,'expires':time.monotonic()+PIXEL_PREVIEW_LEASE_SECONDS,
+                'graph':copy.deepcopy(graph),'revision':new['revision'],'compiled':compiled,'activeCompiled':active_compiled,'suspended':False}
+        else:destination.unstore(PIXEL_PREVIEW_RECOVERY)
+        cleanup_top_sources(destination,working_graph if pixel_preview else graph)
+        result={'ok':True,'state':new,'shaderUpdated':True,'compileInfo':info,'diagnostics':active_compiled['diagnostics'],'target':destination.path}
+        if pixel_preview:result['pixelPreview']={**pixel_preview,'active':True,'leaseMs':PIXEL_PREVIEW_LEASE_SECONDS*1000}
+        return result
     finally:
         try:
             if candidate and candidate.valid: candidate.destroy()
@@ -1897,6 +2082,9 @@ def _process_shader_request(method,path,body):
     if method=='POST' and path=='/api/history-restore':
         ensure_supported_shader(target())
         if not history_module(): raise RuntimeError('Update the Grape manager to use native source history.')
+        body=dict(body)
+        for key in ('graph','currentGraph'):
+            if isinstance(body.get(key),dict):body[key]=core().without_preview(body[key])
         with history_native_writes():
             return history_module().restore(_owner.op('runtime').module,body)
     if method=='POST' and path=='/api/native-viewer':
@@ -1917,12 +2105,13 @@ def _process_shader_request(method,path,body):
         if report.get('candidate') is not None:
             report['upgradeReview']=upgrade_summary(_owner.op('document').module.inspect_upgrade(report['candidate'],core(),shader_kind(target())))
         return report
-    if method=='POST' and path=='/api/apply': return history_operation(lambda: deploy(body['graph'],body['revision'],upgrade_token=body.get('upgradeToken')))
+    if method=='POST' and path=='/api/pixel-preview-session':return pixel_preview_session(body)
+    if method=='POST' and path=='/api/apply': return history_operation(lambda: deploy(body['graph'],body['revision'],upgrade_token=body.get('upgradeToken'),pixel_preview=body.get('pixelPreview')))
     if method=='POST' and path=='/api/validate': return core().compile_graph(body['graph'])
     if method=='POST' and path=='/api/export':
         from pathlib import Path
         import uuid
-        graph=body['graph']
+        graph=core().without_preview(body['graph'])
         if not isinstance(graph,dict): raise RuntimeError('Invalid graph document')
         text=json.dumps(graph,ensure_ascii=False,indent=2,allow_nan=False)
         if len(text.encode('utf-8'))>512000: raise RuntimeError('Graph exceeds 512 KB')
@@ -1932,7 +2121,9 @@ def _process_shader_request(method,path,body):
         return {'saved':True,'path':str(path)}
     if method=='POST' and path=='/api/save':
         # Native numbered save avoids a modal overwrite prompt during automation.
-        return {'saved':project.save()}
+        suspend_pixel_previews()
+        try:return {'saved':project.save()}
+        finally:resume_pixel_previews()
     raise RuntimeError('Unknown request')
 
 def ensure_network_controls(owner):
@@ -2035,6 +2226,7 @@ def tick():
     _last_tick=time.monotonic()
     service_network()
     service_family_startup()
+    service_pixel_previews()
     if _live: _live.tick()
     deferred=[]
     for _ in range(2):
@@ -2072,6 +2264,8 @@ def tick():
 
 def stop():
     global _server,_worker
+    for record in list(_pixel_previews.values()):
+        if record['comp'].valid:restore_pixel_preview(record['comp'])
     if _live: _live.stop()
     if _server is not None:_server.accepting=False
     _server=None  # Worker closes its socket within its bounded receive loop.
@@ -2138,6 +2332,8 @@ def start(owner,session=None):
         if not owner.fetch('sgrapeManagerId',None): owner.store('sgrapeManagerId',uuid.uuid4().hex)
         if not session or not session.get('rebind'):
             shaders()
+        for comp in list(_shaders.values()):
+            if comp and comp.valid:restore_pixel_preview(comp)
         # Refresh the cached menu palette on source rebinds as well as cold starts.
         if not _family_pending:request_family_registration(force=False)
     else:

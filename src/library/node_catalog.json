@@ -1694,6 +1694,46 @@
     },
     {
       "definition": {
+        "key": "preview",
+        "label": "Preview",
+        "inputs": {
+          "value": "T"
+        },
+        "outputs": {},
+        "stages": [
+          "pixel"
+        ],
+        "defaults": {
+          "type": "float"
+        },
+        "descriptionKey": "help.preview",
+        "definitionUuid": "sgrape.builtin.preview",
+        "revisionHash": "dc20d7d20eae45ee753eed59dc8565f6f7c36f1cd06da0add885cc0300187f70"
+      },
+      "emitter": {
+        "id": "preview",
+        "version": 1
+      },
+      "browser": {
+        "category": "shader",
+        "source": "editor",
+        "aliases": [
+          "preview",
+          "inspect",
+          "debug",
+          "預覽",
+          "プレビュー"
+        ],
+        "glslName": "",
+        "secondaryCategories": [],
+        "categoryPath": [
+          "shader",
+          "stage"
+        ]
+      }
+    },
+    {
+      "definition": {
         "key": "pixel_out",
         "label": "Color Output",
         "inputs": {

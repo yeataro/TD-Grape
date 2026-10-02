@@ -13,6 +13,7 @@
   "parameters": "sgrape_parameters.py",
   "parameter_links": "sgrape_parameter_links.py",
   "runtime": "sgrape_runtime.py",
+  "pixel_preview_recovery": "pixel_preview_recovery.py",
   "menu_colors": "tdfam_menu_colors.py",
   "index_html": "index.html",
   "favicon_svg": "favicon.svg",

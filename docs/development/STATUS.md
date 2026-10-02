@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-10-02 0.8.272：新增暫時性的 Pixel Stage Preview，MAT／TOP 共用。接受 20 種 scalar／vector GenType，依分量展開 RGBA，只覆蓋 Color Output 主色彩／Buffer 0，保留其餘 buffers、正式輸出 bindings 與 finishing；同一 Stage 重建會移動既有節點。Preview 不進入正式圖、draft 或 JSON／PNG 內嵌圖；工作區離開、lease 到期與服務停止恢復正式 shader／路由，pre/post-save 與 shader-local recovery 防止永久保留臨時輸出。詳見 [Pixel Preview](../features/PIXEL_PREVIEW.md)。隔離 compiler／lifecycle／recovery 與瀏覽器測試通過；完整 Python 回歸仍有與未修改基線一致的 13 failures／3 errors。Windows TD 2025.32820 原生 50 項檢查通過，包含 MAT／TOP 各 20 種型別（含 double）GPU 數值、MAT MRT 第二輸出保持、保存回呼、lease／刪除恢復與獨立 TOX 載入／內部貼圖路徑重定位；15 份既有 Shader 資料保留。原生數值最大誤差 4.77e-8。macOS／Metal、Safari／iPad 未實測。
+
+41 份來源核對、11 份更新，9 份已登記 Shader 的圖與程式碼保留。正式 TOE 在一個 Preview 啟用中保存成功，保存後預覽與 live Uniform 保持；離線展開保存檔，9 份 Shader／42 份 DAT 逐字符合正式輸出快照，沒有 Preview 節點、臨時 shader override 或 Shader 恢復 payload。已備份作者原檔並排除私人助手；未重新整理使用者網頁、未推送。私人證據 `reports/pixel-preview-272/`。
+
 2026-09-30 0.8.271：Layout 現在保存浮動面板槽位、各面板收合、Parameter 寬度、Preview／Help 共用尺寸及標題列開關；保存／更新／套用／JSON 匯出匯入共用快照。Default 還原停駐配置並關閉全部浮動面板；新增內建 Minimal，收起上標題列與左右面板、開啟右上 Parameter 及右下 Preview，不改啟動預設。目前瀏覽器的舊獨立偏好遷移保留，舊命名／匯入 Layout 缺欄位時預設浮動全關、標題列顯示。細節見 [Workspace layout](../ui/WORKSPACE_LAYOUT.md)。
 
 30 組 Chromium 檢查通過：新 preset 流程 7、浮動面板 8、Parameter 10、共用尺寸 5；涵蓋五語入口、更新／匯入／重載、舊設定遷移、錯誤資料、窄畫面／介面縮放、原 DOM／草稿及圖歷史保留。14 項 Editor launch、1556 個五語 keys 與 JS／diff 檢查通過，桌面／窄版截圖已目視。既有 `test_workspace_layout.cjs` 的前五組 Layout 檢查通過，其後 Creator 的 `advanced` 分類選項逾時，修改前 HEAD 的隔離資產重現同一失敗；未列整套通過。Safari／iPad 未實測。私人報告 `reports/floating-layout-271/`。
