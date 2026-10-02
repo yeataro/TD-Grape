@@ -81,6 +81,16 @@ class Gesture:
         self.limits = self.parameter.min, self.parameter.max, self.parameter.clampMin, self.parameter.clampMax
         self.sequence = -1
 
+    @property
+    def members(self):
+        return [self]
+
+    def refresh(self):
+        fresh = Source(self.source.live, self.source.comp, self.source.ident)
+        if fresh.declaration['type'] != self.source.declaration['type']: raise RuntimeError('The Uniform type changed.')
+        if self.index >= len(fresh.pars) or not fresh.pars[self.index].isSamePar(self.native): raise RuntimeError('The original Uniform parameter was replaced.')
+        self.source = fresh
+
     def validate(self, expected):
         self.source.check()
         p = self.parameter
@@ -102,6 +112,77 @@ class Gesture:
         if type(sequence) is not int or sequence <= self.sequence: raise RuntimeError('Out-of-order Uniform update.')
         self.after = self.write(value, self.after)
         self.sequence = sequence
+
+
+class ColorGesture:
+    """One popup owns a bounded set of color channels and one atomic history step."""
+    def __init__(self, source, indices, expected, ident=None):
+        if source.record['sequence'] not in ('color','vec') or source.declaration['type'] not in ('float','vec2','vec3','vec4'):
+            raise RuntimeError('Select floating-point Uniform components.')
+        if not isinstance(indices,list) or not 1 <= len(indices) <= 4 or any(type(i) is not int or not 0 <= i < len(source.pars) for i in indices) or len(set(indices)) != len(indices):
+            raise RuntimeError('Invalid color components.')
+        if not isinstance(expected,list) or len(expected) != len(indices): raise RuntimeError('Invalid color expectations.')
+        self.source, self.indices = source, indices[:]
+        self.ident = ident or secrets.token_urlsafe(18)
+        self.members = [Gesture(source,index,value,self.ident) for index,value in zip(indices,expected)]
+        self.before = [g.before for g in self.members]
+        self.after = self.before[:]
+        self.sequence = -1
+
+    def refresh(self):
+        fresh = Source(self.source.live,self.source.comp,self.source.ident)
+        if fresh.declaration['type'] != self.source.declaration['type']: raise RuntimeError('The Uniform type changed.')
+        for g in self.members:
+            if g.index >= len(fresh.pars) or not fresh.pars[g.index].isSamePar(g.native): raise RuntimeError('The original Uniform parameter was replaced.')
+        self.source = fresh
+        for g in self.members:g.source = fresh
+
+    def write(self, values, expected):
+        if not isinstance(values,list) or len(values) != len(self.members) or not isinstance(expected,list) or len(expected) != len(self.members):
+            raise RuntimeError('Invalid color values.')
+        plans=[]
+        for g,value,before in zip(self.members,values,expected):
+            g.validate(before)
+            self.source.live.model.validate_uniform_component(self.source.declaration,value)
+            for p,other,_ in plans:
+                if p.isSamePar(g.parameter):
+                    if value != other: raise RuntimeError('Color components share one control with conflicting values.')
+                    break
+            else:plans.append((g.parameter,value,before))
+        written=[]
+        try:
+            for parameter,value,before in plans:
+                written.append((parameter,before))
+                self.source.live.runtime._set_parameter_without_native_capture(parameter,value)
+        except Exception:
+            for parameter,before in reversed(written):
+                self.source.live.runtime._set_parameter_without_native_capture(parameter,before)
+            raise
+        return [g.parameter.val for g in self.members]
+
+    def update(self, sequence, values):
+        if type(sequence) is not int or sequence <= self.sequence: raise RuntimeError('Out-of-order Uniform update.')
+        self.after = self.write(values,self.after)
+        self.sequence = sequence
+
+
+def gestures_overlap(left,right):
+    # Also fence distinct Uniforms bound to the same actual control.
+    return any(a.parameter.isSamePar(b.parameter) for a in left.members for b in right.members)
+
+
+def _color_undo(is_undo, entry):
+    if entry['blocked']:return
+    try:
+        if entry['applied'] != bool(is_undo):raise RuntimeError('This color history step is no longer current.')
+        g=entry['gesture'];g.refresh()
+        if any(peer['gesture'] and gestures_overlap(peer['gesture'],g) for peer in g.source.live.clients.values()):
+            raise RuntimeError('Another editor is changing this component.')
+        g.write(g.before if is_undo else g.after,g.after if is_undo else g.before)
+        entry['applied']=not bool(is_undo)
+    except Exception as exc:
+        entry['blocked']=True
+        ui.status='Grape: skipped color Undo/Redo; '+str(exc)
 
 
 class Live:
@@ -178,16 +259,23 @@ class Live:
         gesture, session['gesture'] = session['gesture'], None
         if gesture is None: return None
         if cancel:
+            gesture.cancelled = False
             try:
                 gesture.write(gesture.before, gesture.after)
+                gesture.cancelled = True
                 return None
-            except RuntimeError:
+            except Exception as exc:
                 # An outside edit wins. Its value must never be rolled back.
-                pass
+                gesture.cancel_error = str(exc)
         key = gesture.ident
         self.receipts[key] = {'gesture':gesture, 'applied':True}
         while len(self.receipts) > 256: self.receipts.popitem(last=False)
-        if gesture.before != gesture.after and gesture.parameter.valid:
+        if isinstance(gesture,ColorGesture):
+            if gesture.before != gesture.after and ui.undo.globalState:
+                ui.undo.startBlock('Grape: Color')
+                try:ui.undo.addCallback(_color_undo,{'gesture':gesture,'applied':True,'blocked':False})
+                finally:ui.undo.endBlock()
+        elif gesture.before != gesture.after and gesture.parameter.valid:
             def validate(value):
                 fresh = Source(self, gesture.source.comp, gesture.source.ident)
                 if fresh.declaration['type'] != gesture.source.declaration['type']: raise RuntimeError('The Uniform type changed.')
@@ -222,10 +310,9 @@ class Live:
             receipt['applied'] = not undo
         else:
             # History outlives a subscription and ordinary layout/graph edits.
-            fresh = Source(self, comp, g.source.ident)
-            if fresh.declaration['type'] != g.source.declaration['type']: raise RuntimeError('The Uniform type changed.')
-            if not fresh.pars[g.index].isSamePar(g.native): raise RuntimeError('The original Uniform parameter was replaced.')
-            g.source = fresh
+            g.refresh()
+            if any(peer['gesture'] and gestures_overlap(peer['gesture'],g) for peer in self.clients.values()):
+                raise RuntimeError('Another editor is changing this component.')
             expected, value = (g.after, g.before) if undo else (g.before, g.after)
             g.write(value, expected)
             receipt['applied'] = not undo
@@ -278,15 +365,14 @@ class Live:
                 if session['gesture']: raise RuntimeError('Another Uniform edit is active.')
                 source = session['sources'].get(request.get('source'))
                 if not source or source.ident != request.get('source'): raise RuntimeError('Subscribe to this Uniform first.')
-                # A component has one writer; independent components may be edited together.
-                for peer in self.clients.values():
-                    g = peer['gesture']
-                    if g and g.source.comp == source.comp and g.source.ident == source.ident and g.index == request.get('component'):
-                        raise RuntimeError('Another editor is changing this component.')
                 ident = request.get('gesture')
                 if ident is not None and (not isinstance(ident,str) or not 16 <= len(ident) <= 64 or ident in self.receipts):
                     raise RuntimeError('Invalid or completed gesture identity.')
-                session['gesture'] = Gesture(source, request.get('component'), request.get('expected'), ident)
+                gesture = (ColorGesture(source,request['components'],request.get('expected'),ident) if 'components' in request
+                           else Gesture(source,request.get('component'),request.get('expected'),ident))
+                if any(peer['gesture'] and gestures_overlap(peer['gesture'],gesture) for peer in self.clients.values()):
+                    raise RuntimeError('Another editor is changing this component.')
+                session['gesture'] = gesture
                 result = {}
             elif kind in ('update', 'commit', 'cancel'):
                 g = session['gesture']
@@ -294,6 +380,13 @@ class Live:
                 if kind != 'cancel': g.update(request.get('sequence'), request.get('value'))
                 result = {'value':g.after}
                 if kind != 'update': result['receipt'] = self.finish(session, cancel=kind == 'cancel')
+                if kind == 'cancel' and isinstance(g,ColorGesture):
+                    # A null receipt is also possible after a conflict with no
+                    # local edits. It does not prove the opening color was restored.
+                    result['components'] = g.source.values()
+                    result['value'] = [result['components'][i]['value'] for i in g.indices]
+                    result['cancelled'] = g.cancelled
+                    if not g.cancelled: result['cancelConflict'] = g.cancel_error
             else: raise RuntimeError('Unknown live operation.')
             self.send(client, {'type':'reply', 'request':request.get('request'), **result})
         except Exception as exc:

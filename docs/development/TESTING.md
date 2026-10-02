@@ -1,5 +1,13 @@
 # 測試
 
+## 共用色彩面板（0.8.273）
+
+測試命令與行為契約見 [CUSTOM_COLOR_PICKER](../features/CUSTOM_COLOR_PICKER.md)。`test_custom_color_picker.cjs` 的 16 組隔離檢查包含 RGB/RGBA、HEX 草稿、Apply、live 接受／取消、HDR、失效 anchor／late eyedropper、Canvas 鍵盤隔離、Note／Frame 及 OP Bind／Unbind 入口更新。`test_custom_color_editor_live.cjs` 以真實 HTTP／WebSocket 驗 6 組操作，證明拖曳時 TD 已改值、整個 popup 單一 History／receipt、四分量 Undo／Redo、取消、RGB 的第四原生槽保持，以及外部改值時 CAS 拒絕覆寫。fixture cleanup 核對 graphUnchanged／userShadersPreserved／fixtureRemoved。
+
+`test_uniform_color_live.py/.js` 包含無本地修改但外部值已 broadcast 後 Cancel 的回歸：不能把 null receipt 誤認為還原成功；即使來源 row 先移除仍回報 conflict，且舊 row／新來源不被回覆污染。load／socket、pin identity 與重複 finish 保護保留。`tests/td/test_uniform_color_live.py` 對 MAT／TOP 各做 100 次 preview 並驗證整組 native Undo callback。
+
+全 unit suite 保留既有 13 failures／3 errors；本次以未修改 source 複本執行相關 11 模組共 63 測試，逐名重現相同 16 個失敗，涵蓋舊 VM harness、library／catalog 預期與 Par.style 假物件等。舊 `test_color_labels`、`test_inline_vector_values` 的完整非色彩部分仍保留原斷言；其過時 label／Vector／numeric-drag 預期不因本輪刪除。`--color-only` 提供本輪色彩回歸入口。原始報告、fixture snapshot 及畫面放私人工作區，產品不依賴它們。
+
 2026-09-30 Layout 浮動配置（0.8.271）：`tests/browser/test_layout_floating_presets.cjs` 七組涵蓋 Default／Minimal、命名保存與更新、浮動槽位／收合／尺寸／標題列、JSON 匯出匯入與重載、五語入口、舊偏好遷移、錯誤資料、窄畫面縮放及原 DOM／草稿／圖歷史保留。加上 `test_floating_panels.cjs` 8、`test_floating_parameter.cjs` 10、`test_floating_panel_resize.cjs` 5，共 30 組 Chromium 通過；舊浮動測試保留停駐結構不變的斷言，浮動快照改由新測試驗證。14 項 Editor launch、1556 個五語 keys 與 JS 語法檢查通過。既有 `test_workspace_layout.cjs` 前五組 Layout 檢查通過，後段 Creator 的 `advanced` 選項逾時；修改前 HEAD 隔離資產亦同，未列整套通過。桌面／窄版截圖已核對；Safari／iPad 未實測。私人報告 `reports/floating-layout-271/`。
 
 2026-09-30 Bump（0.8.270）：`tests/unit/test_bump.py` 七項涵蓋外部 Height／幾何、Voronoi 接入、MAT Pixel 限制、Material Normal 接入、可編輯庫往返與個人匯出 target 限制。搭配既有 material/view helpers、functions、personal library 共 41 項通過。`tests/browser/test_bump.cjs` 四組檢查分類／階段、五語說明、展開本地編輯／Undo 與瀏覽器保存圖經真實 core 編譯。`tests/td/test_bump.py` 在 Windows TD 2025.32820 通過 21 組：獨立 CPU 切向約束求解對照十九組法線畫面，另有 Phong／PBR 原生編譯；涵蓋正負 Distance、Strength 混合與上下限、固定高度、零／非單位／斜向法線、退化 Position、旋轉／背面、外部高度貼圖與 Normal Map 串接。程序高度最大誤差 0.00002093，貼圖取樣 0.001161（容許 0.003）。三份使用者 Shader 保留、fixture 移除。原十三份庫定義逐份相同，分類投影與 1555 五語 keys 通過。私人報告 `reports/bump-270/`；macOS／Metal 未實測。

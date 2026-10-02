@@ -52,5 +52,7 @@
   "source_catalog.json": "src/library/source_catalog.json",
   "sgrape_source_catalog.py": "src/core/sgrape_source_catalog.py",
   "structures_ui.js": "src/editor/structures_ui.js",
-  "material_presets.json": "src/library/material_presets.json"
+  "material_presets.json": "src/library/material_presets.json",
+  "color_picker.js": "src/editor/color_picker.js",
+  "color_picker.css": "src/editor/color_picker.css"
 }

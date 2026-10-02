@@ -1,5 +1,11 @@
 # 開發狀態
 
+2026-10-02 0.8.273：以共用網頁色彩面板替換所有瀏覽器原生選色入口。HSV／RGB／HEX 即時連動、RGB 隱藏 Alpha／六碼 HEX，RGBA 顯示 Alpha／八碼 HEX；常用色、色面與能力偵測的畫面滴管沿用已核可圖稿。Uniform（含精確綁定 OP 色彩）即時更新，整個 popup 一次 live Undo；點外面接受，×／Escape 以整組 CAS 還原開啟前值。常數、未綁定 OP 色彩、Note／Group Frame 使用草稿與 Apply，點外面或取消不寫入。詳見 [共用色彩面板](../features/CUSTOM_COLOR_PICKER.md)。
+
+39 項 targeted Python／JS 契約、16 組隔離瀏覽器與 6 組真實 TD UI 流程通過；TD 原生另驗證 MAT／TOP 200 次 grouped previews、單一 receipt／原生 Undo、外部值衝突、Bind master 與 scalar writer 排他。既有 19 組 live 與 6 組 native color 檢查通過，14 項 launch 與 1596 個五語 keys 核對通過。完整 unit suite 的 13 failures／3 errors 已逐項在未修改 canonical source 重現，未混列為全套通過。獨立 fixture 結束皆確認使用者 Shader／Graph 完整保留並清除測試組件；CEF／Safari／iPad 尚未實測。
+
+本輪 43 份內嵌來源逐份核對、12 份更新，HTTP 色彩資產與來源一致；9 份既有 Shader 的圖／程式碼保持。正式 TOE 已保存並排除私人助手，保存前備份作者檔；未重載使用者網頁、未推送。額外 19 組既有色彩入口瀏覽器回歸通過。私人證據 `color-picker-273/`。
+
 2026-10-02 0.8.272：新增暫時性的 Pixel Stage Preview，MAT／TOP 共用。接受 20 種 scalar／vector GenType，依分量展開 RGBA，只覆蓋 Color Output 主色彩／Buffer 0，保留其餘 buffers、正式輸出 bindings 與 finishing；同一 Stage 重建會移動既有節點。Preview 不進入正式圖、draft 或 JSON／PNG 內嵌圖；工作區離開、lease 到期與服務停止恢復正式 shader／路由，pre/post-save 與 shader-local recovery 防止永久保留臨時輸出。詳見 [Pixel Preview](../features/PIXEL_PREVIEW.md)。隔離 compiler／lifecycle／recovery 與瀏覽器測試通過；完整 Python 回歸仍有與未修改基線一致的 13 failures／3 errors。Windows TD 2025.32820 原生 50 項檢查通過，包含 MAT／TOP 各 20 種型別（含 double）GPU 數值、MAT MRT 第二輸出保持、保存回呼、lease／刪除恢復與獨立 TOX 載入／內部貼圖路徑重定位；15 份既有 Shader 資料保留。原生數值最大誤差 4.77e-8。macOS／Metal、Safari／iPad 未實測。
 
 41 份來源核對、11 份更新，9 份已登記 Shader 的圖與程式碼保留。正式 TOE 在一個 Preview 啟用中保存成功，保存後預覽與 live Uniform 保持；離線展開保存檔，9 份 Shader／42 份 DAT 逐字符合正式輸出快照，沒有 Preview 節點、臨時 shader override 或 Shader 恢復 payload。已備份作者原檔並排除私人助手；未重新整理使用者網頁、未推送。私人證據 `reports/pixel-preview-272/`。

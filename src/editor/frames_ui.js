@@ -101,11 +101,7 @@ function commitGroupFrameColor(session,color){
 function ensureGroupFramePalette(){
   if(groupFramePalette)return groupFramePalette;
   const popup=el('div',{id:'groupframepalette',class:'group-frame-palette',popover:'auto',role:'menu','aria-label':t('frame.color')});
-  // Keep the native input connected independently of the popover and frame cards.
-  // Opening or cancelling its chooser must not turn an intermediate input event into an edit.
-  const picker=el('input',{type:'color',class:'group-frame-native-color',tabindex:'-1','data-frame-custom-color':'','aria-label':t('frame.customColor')});
-  const palette=groupFramePalette={popup,picker,context:null,native:null};
-  picker.onchange=()=>{const session=palette.native;palette.native=null;commitGroupFrameColor(session,picker.value);};
+  const palette=groupFramePalette={popup,context:null};
   for(const event of ['pointerdown','mousedown','touchstart','click','dblclick'])popup.addEventListener(event,e=>e.stopPropagation());
   popup.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   popup.addEventListener('keydown',e=>{
@@ -120,7 +116,7 @@ function ensureGroupFramePalette(){
   window.addEventListener('resize',()=>closeGroupFramePalette());
   document.addEventListener('visibilitychange',()=>{if(document.hidden)closeGroupFramePalette();});
   document.addEventListener('wheel',e=>{if(!popup.contains(e.target))closeGroupFramePalette();},{passive:true});
-  document.body.append(popup,picker);return palette;
+  document.body.append(popup);return palette;
 }
 function openGroupFramePalette(frame,trigger,data=current()){
   return openCanvasColorPalette({owner:graph,data,frame,trigger});
@@ -132,7 +128,7 @@ function openCanvasColorPalette(session){
   const {trigger}=session;
   const palette=ensureGroupFramePalette();
   if(palette.context?.trigger===trigger){closeGroupFramePalette(true);return;}
-  closeGroupFramePalette();palette.native=null;
+  closeGroupFramePalette();
   if(!groupFrameColorSessionValid(session))return;
   palette.context=session;trigger.setAttribute('aria-expanded','true');
   const popup=palette.popup,color=paletteTargetColor(session);
@@ -157,12 +153,11 @@ function openCanvasColorPalette(session){
   custom.append(el('span',{class:'group-frame-rainbow','aria-hidden':'true'}),el('span',{},t('frame.customColor')));
   custom.onclick=()=>{
     if(!groupFrameColorSessionValid(session)){closeGroupFramePalette();return;}
-    const rect=custom.getBoundingClientRect(),zoom=uiScaleFactor();
-    Object.assign(palette.picker.style,{left:rect.left/zoom+'px',top:rect.top/zoom+'px'});
-    palette.native=session;palette.picker.value=paletteTargetColor(session);
-    palette.picker.setAttribute('aria-label',t('frame.customColor'));closeGroupFramePalette();
-    // Native pickers require the original trusted click; do not defer this call.
-    if(typeof palette.picker.showPicker==='function')palette.picker.showPicker();else palette.picker.click();
+    closeGroupFramePalette();
+    const hex=paletteTargetColor(session),value=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
+    GrapeColorPicker.open({anchor:session.trigger,value,translate:t,isValid:()=>groupFrameColorSessionValid(session)&&session.trigger.isConnected,
+      // Frame/Note colours are CSS RGB bytes, unlike HDR shader constants.
+      onCommit:next=>commitGroupFrameColor(session,'#'+next.map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join(''))});
   };
   popup.append(grid,el('div',{class:'group-frame-palette-divider',role:'separator'}));
   if(session.node){

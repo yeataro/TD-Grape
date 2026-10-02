@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 import sgrape_core as core
 import sgrape_sources as sources
+import sgrape_parameters as parameters
 import sgrape_runtime as runtime
 import test_history as fixtures
 
@@ -33,6 +34,26 @@ class ColorValues(unittest.TestCase):
         body=self.payload()
         with self.assertRaises(sources.SourceError):sources.write_value(self.f.runtime,body)
         self.assertEqual(self.commits,[])
+    def test_rgba_batch_accepts_alpha_but_stale_alpha_rejects_all_channels(self):
+        body=self.payload();row=next(r for r in sources.snapshot(self.f.runtime)['uniforms'] if r['id']=='C')
+        body['components'].append(dict(component=3,value=.65,expected=copy.deepcopy(row['components'][3])))
+        stale=copy.deepcopy(body);stale['components'][3]['expected']['value']=9
+        with self.assertRaises(sources.SourceError):sources.write_value(self.f.runtime,stale)
+        self.assertEqual(self.commits,[])
+        sources.write_value(self.f.runtime,body);self.assertEqual(len(self.commits[0]),4)
+        self.assertIs(self.commits[0][-1][0],self.f.operator.par.color0alpha)
+
+    def test_custom_rgba_batch_accepts_alpha_and_checks_its_expectation(self):
+        f=self.f;group=[f.operator.par.color0rgbr,f.operator.par.color0rgbg,f.operator.par.color0rgbb,f.operator.par.color0alpha]
+        f.comp.parGroup=SimpleNamespace(Color=group)
+        row=dict(name='Color',style='RGBA',expected='row',components=[dict(writable=True,value=p.val) for p in group])
+        seen=dict(enabled=True,revision=1,controls=[row])
+        body=dict(action='color',revision=1,name='Color',expected='row',components=[dict(component=i,value=.5,expectedValue=copy.deepcopy(v)) for i,v in enumerate(row['components'])])
+        with patch.object(parameters,'snapshot',return_value=seen),patch.object(parameters,'validate_bound_value'):
+            stale=copy.deepcopy(body);stale['components'][3]['expectedValue']['value']=9
+            with self.assertRaises(RuntimeError):parameters.edit_operation(f.runtime,stale)
+            self.assertEqual(self.commits,[])
+            parameters.edit_operation(f.runtime,body);self.assertEqual(len(self.commits[0]),4)
     def test_batch_rolls_back_partial_failure_and_rejects_shared_control_conflict(self):
         class Par:
             def __init__(self,value):self.val=value

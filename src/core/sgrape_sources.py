@@ -899,9 +899,9 @@ def write_value(runtime, body):
         edits=body['components']
         if row.get('kind')!='uniform' or row.get('sequence')!='color' or row['type'] not in ('float','vec2','vec3','vec4'):
             raise SourceError('Select a Color Uniform for a palette edit.')
-        if not isinstance(edits,list) or not 1<=len(edits)<=3 or any(not isinstance(e,dict) for e in edits):raise SourceError('Invalid color components.')
+        if not isinstance(edits,list) or not 1<=len(edits)<=4 or any(not isinstance(e,dict) for e in edits):raise SourceError('Invalid color components.')
         indices=[e.get('component') for e in edits]
-        if any(type(i) is not int or not 0<=i<min(3,source_components(row)) for i in indices) or len(set(indices))!=len(indices):raise SourceError('Invalid color components.')
+        if any(type(i) is not int or not 0<=i<min(4,source_components(row)) for i in indices) or len(set(indices))!=len(indices):raise SourceError('Invalid color components.')
         plans=[_value_write_plan(runtime,row,edit) for edit in edits]
         runtime.set_parameters_with_undo(plans)
     return snapshot(runtime)

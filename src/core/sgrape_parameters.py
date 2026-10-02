@@ -452,11 +452,11 @@ def edit_operation(runtime,body):
         if action not in ('value','pulse','color') and not row['editable']:raise RuntimeError('Built-in pages are protected.')
         if action=='color':
             edits=body.get('components')
-            if row['style']!='RGBA' or not isinstance(edits,list) or not 1<=len(edits)<=min(3,len(g)):raise RuntimeError('Select color components.')
+            if row['style']!='RGBA' or not isinstance(edits,list) or not 1<=len(edits)<=min(4,len(g)):raise RuntimeError('Select color components.')
             plans=[];indices=[]
             for edit in edits:
                 index=edit.get('component');value=edit.get('value')
-                if type(index)is not int or not 0<=index<min(3,len(g)) or index in indices:raise RuntimeError('Select color components.')
+                if type(index)is not int or not 0<=index<min(4,len(g)) or index in indices:raise RuntimeError('Select color components.')
                 item=row['components'][index];p=g[index]
                 if not item['writable'] or edit.get('expectedValue')!=item:raise RuntimeError('This color changed or is controlled by TD.')
                 validate_bound_value(runtime,comp,model,p,value);runtime.core().number(value)

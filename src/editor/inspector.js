@@ -651,6 +651,11 @@ function noteAppearanceSettings(box,node){
   box.append(section);
 }
 function deferParameterInspector(){
+  const picker=$('#inspector')?.querySelector('.color-picker-trigger');
+  if(picker?.colorPicker){
+    if(picker.colorPickerValid?.()){inlineValueRenderPending=true;return true;}
+    picker.colorPicker.dispose();
+  }
   const edit=parameterValueEdit;if(!edit)return false;
   if(edit.entry.isConnected&&!readonly&&selected===edit.node.id&&inspectorTab==='parameters'&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)&&(document.activeElement===edit.entry||edit.entry.numericGestureActive||numericPresetMenu?.entry===edit.entry||edit.committing))return true;
   edit.entry.cancelParameterValue?.();parameterValueEdit=null;return false;
@@ -712,8 +717,8 @@ function parameterValueRow(n,key,label,type,read,write,labels='XYZW',options={})
       const focusedDraft=entries.find(peer=>peer!==entry&&peer===document.activeElement&&peer.hasPendingEdit?.());
       syncing=true;const latest=currentValues();for(const peer of entries)if(peer.dataset.component!==focusedDraft?.dataset.component)peer.setSyncedValue(latest[Number(peer.dataset.component)]);syncing=false;
       if(definition(n)?.key==='color'&&key==='$value'){
-        const display=colorDisplay(n.params.value),ink=box.querySelector('.color-ink'),picker=box.querySelector('input[type=color]');
-        if(ink)ink.style.backgroundColor=display.css;if(picker)picker.value=display.hex;
+        const display=colorDisplay(n.params.value),ink=box.querySelector('.color-ink');
+        if(ink)ink.style.backgroundColor=display.css;
         let hint=box.querySelector('.color-range-hint');
         if(n.params.value.some(v=>v<0||v>1)){if(!hint){hint=parameterControlRow('',parameterHint(t('color.range')));hint.classList.add('color-range-hint');box.append(hint);}}else hint?.remove();
       }
@@ -792,16 +797,39 @@ function colorSwatch(value){
   const swatch=el('span',{class:'color-swatch','aria-hidden':'true'}),ink=el('span',{class:'color-ink'});
   ink.style.backgroundColor=colorDisplay(value).css;swatch.append(ink);return swatch;
 }
-function colorPickerSwatch(value,callback,disabled=false){
-  const read=()=>typeof value==='function'?value():value,display=colorDisplay(read()),swatch=colorSwatch(read());
+// Every colour entry uses the same DOM picker; adapters keep Graph and TD ownership.
+function colorPickerSwatch(value,callback,disabled=false,options={}){
+  const read=()=>typeof value==='function'?value():value,swatch=colorSwatch(read());
   swatch.removeAttribute('aria-hidden');
-  const picker=el('input',{type:'color',value:display.hex,'aria-label':t('color.choose')});picker.disabled=readonly||disabled;
-  picker.onchange=()=>{
-    const current=read();
-    if(readonly||disabled||!picker.isConnected||picker.value===colorDisplay(current).hex||!/^#[0-9a-f]{6}$/i.test(picker.value))return;
-    const rgb=[1,3,5].map(i=>parseInt(picker.value.slice(i,i+2),16)/255);
-    callback([...rgb,current[3]]);
+  const picker=el('button',{type:'button',class:'color-picker-trigger','aria-label':t('color.choose'),'aria-haspopup':'dialog'});
+  picker.disabled=readonly||disabled;
+  let opening=false;
+  picker.onclick=async event=>{
+    event.stopPropagation();if(opening||picker.disabled||!picker.isConnected)return;
+    const generation=editorLoadGeneration,owner=graph,scope=current(),locale=language;
+    const inInspector=!!picker.closest('#inspector'),inspectorSelection=selected,sourceSelection=selectedInputId,tab=inspectorTab;
+    const valid=()=>picker.isConnected&&!readonly&&!disabled&&generation===editorLoadGeneration&&graph===owner&&current()===scope&&language===locale&&
+      (!inInspector||selected===inspectorSelection&&selectedInputId===sourceSelection&&inspectorTab===tab)&&(!options.isValid||options.isValid());
+    if(!valid())return;
+    opening=true;let session;
+    try{
+      session=options.begin?await options.begin(valid):null;
+      if(!valid()){session?.finish(false);return;}
+      if(options.begin&&!session)return;
+      const initial=session?.initial?Array.from({length:session.initial.length===4?4:3},(_,i)=>session.initial[i]??0):read();
+      const handle=GrapeColorPicker.open({anchor:picker,value:initial,live:!!session,translate:t,isValid:valid,
+        onPreview:next=>{if(session?.preview(next)===false)picker.colorPicker?.dispose();},
+        onCommit:next=>{if(valid()&&!picker.disabled)callback(next);},
+        onFinish:accept=>{
+          picker.colorPicker=null;picker.colorPickerValid=null;const done=session?.finish(accept);
+          const after=()=>{if(generation===editorLoadGeneration){options.onFinish?.(accept);if(inlineValueRenderPending)queueInlineValueRender();}};
+          if(done?.then)done.then(after);else after();
+        }
+      });picker.colorPicker=handle;picker.colorPickerValid=valid;
+    }catch(error){session?.finish(false);status(error.message,true);}
+    finally{opening=false;}
   };
+  for(const event of ['pointerdown','mousedown','dblclick','contextmenu','keydown'])picker.addEventListener(event,e=>e.stopPropagation());
   swatch.append(picker);return swatch;
 }
 function colorFields(value,label,callback,disabled=false){
@@ -1368,7 +1396,7 @@ let inlineValueEdit=null,inlineValueRenderPending=false,inlineValueRenderTimer=n
 function inlineValueSignature(n){return JSON.stringify([n.params,n.inputValues,current().edges.filter(e=>e.to[0]===n.id)]);}
 function deferInlineValueRender(){
   const edit=inlineValueEdit;if(!edit)return false;
-  if(edit.entry.isConnected&&(document.activeElement===edit.entry||edit.entry.numericGestureActive||numericPresetMenu?.entry===edit.entry)&&!readonly&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)){
+  if(edit.entry.isConnected&&(document.activeElement===edit.entry||edit.entry.numericGestureActive||edit.entry.colorPicker||numericPresetMenu?.entry===edit.entry)&&!readonly&&edit.owner===current()&&current().nodes.includes(edit.node)&&edit.signature===inlineValueSignature(edit.node)){
     inlineValueRenderPending=true;return true;
   }
   edit.entry.cancelInlineValue?.();inlineValueEdit=null;return false;
@@ -1376,7 +1404,7 @@ function deferInlineValueRender(){
 function queueInlineValueRender(){
   inlineValueRenderPending=true;clearTimeout(inlineValueRenderTimer);
   inlineValueRenderTimer=setTimeout(()=>{
-    inlineValueRenderTimer=null;if(inlineValueEdit?.entry&&(inlineValueEdit.entry===document.activeElement||inlineValueEdit.entry.numericGestureActive||numericPresetMenu?.entry===inlineValueEdit.entry))return;
+    inlineValueRenderTimer=null;if(inlineValueEdit?.entry&&(inlineValueEdit.entry===document.activeElement||inlineValueEdit.entry.numericGestureActive||inlineValueEdit.entry.colorPicker||numericPresetMenu?.entry===inlineValueEdit.entry))return;
     if(inlineValueRenderPending){inlineValueRenderPending=false;render();}
   },0);
 }
@@ -1508,18 +1536,18 @@ function nodeFixedValueEditor(n){
   return box;
 }
 function updateNodeColorPreview(n,card){
-  const display=colorDisplay(n.params.value),ink=card?.querySelector('.node-color .color-ink'),picker=card?.querySelector('.node-color input[type=color]');
-  if(ink)ink.style.backgroundColor=display.css;if(picker)picker.value=display.hex;
+  const ink=card?.querySelector('.node-color .color-ink');
+  if(ink)ink.style.backgroundColor=colorDisplay(n.params.value).css;
 }
 function nodeColorPicker(n){
   const strip=el('div',{class:'node-color'}),swatch=colorPickerSwatch(()=>n.params.value,value=>{
     if(current().nodes.includes(n))change(()=>n.params.value=value);
-  }),picker=swatch.querySelector('input');
-  // Keep the native picker attached when leaving a numeric field schedules a redraw.
+  },false,{isValid:()=>current().nodes.includes(n),onFinish:()=>queueInlineValueRender()}),picker=swatch.querySelector('.color-picker-trigger');
+  // A numeric blur schedules a redraw; keep its next focused control and the
+  // popup's anchor alive until this editing interaction finishes.
   picker.onfocus=()=>{if(!readonly)inlineValueEdit={entry:picker,node:n,owner:current(),signature:inlineValueSignature(n)};};
-  picker.cancelInlineValue=()=>{picker.value=colorDisplay(n.params.value).hex;if(inlineValueEdit?.entry===picker)inlineValueEdit=null;};
-  picker.onblur=()=>{if(inlineValueEdit?.entry===picker)inlineValueEdit=null;queueInlineValueRender();};
-  for(const event of ['pointerdown','click','dblclick','contextmenu','keydown'])picker.addEventListener(event,e=>e.stopPropagation());
+  picker.cancelInlineValue=()=>{picker.colorPicker?.dispose();if(inlineValueEdit?.entry===picker)inlineValueEdit=null;};
+  picker.onblur=()=>queueInlineValueRender();
   strip.append(swatch);return strip;
 }
 function refreshFloatingParameterPorts(){
@@ -2574,7 +2602,7 @@ async function nativeSourceRequest(endpoint,body){
     status(t(result.proposal?'sources.formatAdopted':'uniform.updated'),false,{clearError:'operation'});
   }
   catch(e){if(generation!==editorLoadGeneration)return null;nativeSourceError=e.message;status(e.message,true);}
-  finally{if(generation===editorLoadGeneration){++nativeSourceReadEpoch;nativeSourceBusy=false;nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();renderNativeSourceValues();if(['value','color','pulse','bind','remove','undo','redo'].includes(body.action)){await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}renderCustomEditor();if(keepFocus&&document.activeElement===document.body)$('#customdialog').focus({preventScroll:true});}}
+  finally{if(generation===editorLoadGeneration){++nativeSourceReadEpoch;nativeSourceBusy=false;nativeMutationBusy=false;nativeValueBusy=false;renderGraphEditActions();renderNativeSourceValues();if(['value','color','pulse','bind','remove','undo','redo'].includes(body.action)){await refreshNativeSources();if(generation===editorLoadGeneration)scheduleGraphApply();}renderCustomEditor();}}
   return result;
 }
 function renderNativeSourceValues(changed=null){
@@ -2726,26 +2754,17 @@ function nativeValueControls(decl,row,names=null){
   const box=el('div',{class:'native-color-controls','data-native-color':decl.id}),line=el('div',{class:'native-color-line'});
   const toggle=el('button',{type:'button',class:'node-values-toggle','aria-expanded':'false','aria-label':t('node.expandValues'),title:t('node.expandValues')},'▸');
   toggle.onclick=e=>{e.stopPropagation();const expanded=compact.classList.toggle('native-color-expanded');toggle.textContent=expanded?'▾':'▸';toggle.setAttribute('aria-expanded',String(expanded));if(box.closest('#cards'))wires();};
-  const count=typeComponents(decl.type),read=()=>{const live=nativeSourceIndex().get(decl.id);return [0,1,2,3].map(i=>i<count?Number(live?.components[i]?.value??(i===3?1:0)):i===3?1:0);};
-  const swatch=colorPickerSwatch(read,values=>{
-    const live=nativeSourceIndex().get(decl.id),items=picker.colorExpected||live?.components;picker.colorExpected=null;
-    if(!nativeValueReady(decl)||!items||editorLoadGeneration!==load)return;
-    const components=values.slice(0,Math.min(3,count)).map((value,component)=>({component,value,expected:clone(items[component])})).filter(edit=>edit.value!==edit.expected.value);
-    if(components.length)nativeSourceRequest('source-value',{id:decl.id,components});
-  }),picker=swatch.querySelector('input'),load=editorLoadGeneration;
-  picker.onpointerdown=()=>{picker.value=colorDisplay(read()).hex;picker.colorExpected=clone(nativeSourceIndex().get(decl.id)?.components);};
-  picker.onkeydown=e=>{if(['Enter',' '].includes(e.key))picker.onpointerdown();};
-  // Native color dialogs may blur before change. Keep the edit snapshot through
-  // blur/polling; a new opening recaptures it even if the previous one canceled.
-  picker.oninput=()=>{picker.colorExpected??=clone(nativeSourceIndex().get(decl.id)?.components);};
-  const commit=picker.onchange;picker.onchange=()=>{try{commit();}finally{picker.colorExpected=null;}};
+  const count=typeComponents(decl.type),read=()=>{const live=nativeSourceIndex().get(decl.id);return Array.from({length:count===4?4:3},(_,i)=>i<count?Number(live?.components[i]?.value??0):0);};
+  const swatch=colorPickerSwatch(read,()=>{},false,{
+    isValid:()=>nativeValueReady(decl,true)&&nativeSourceIndex().get(decl.id)?.components.slice(0,count).every(c=>c.writable&&['CONSTANT','BIND'].includes(c.mode)),
+    begin:valid=>uniformLive.prepareColorSession(decl.id,{isValid:valid,onError:error=>status(error.message,true,{kind:'live'})})
+  });
   line.append(toggle,compact);box.append(line,swatch);box.colorRead=read;syncNativeColorControls(box,row,nativeValueReady(decl,true));return box;
 }
 function syncNativeColorControls(box,row,ready){
-  const picker=box.querySelector('input[type=color]'),display=colorDisplay(box.colorRead()),count=Math.min(3,typeComponents(box.querySelector('[data-native-components]').nativeDeclaration.type));
+  const picker=box.querySelector('.color-picker-trigger'),display=colorDisplay(box.colorRead()),count=typeComponents(box.querySelector('[data-native-components]').nativeDeclaration.type);
   const writable=row.components.slice(0,count).length===count&&row.components.slice(0,count).every(c=>c.writable&&['CONSTANT','BIND'].includes(c.mode));
   picker.disabled=!ready||!writable;picker.title=writable?t('color.choose'):t('color.nativeDriven');
-  if(!picker.colorExpected)picker.value=display.hex;
   box.querySelector('.color-ink').style.backgroundColor=display.css;
 }
 function nativeReferencePresentation(decl,row,names=null){
@@ -3403,8 +3422,8 @@ function updateCustomValues(){
         if(entry.type==='number'&&['value','default'].includes(kind)){entry.min=item.clampMin?String(item.min):'';entry.max=item.clampMax?String(item.max):'';entry.refreshNumericSlider?.();}
       }
     }
-    const picker=card.querySelector('input[type=color]');
-    if(picker){const display=colorDisplay(row.components.map(c=>c.value));picker.disabled=!ready||row.components.slice(0,3).some(c=>!c.writable);if(!picker.colorExpected)picker.value=display.hex;card.querySelector('.color-ink').style.backgroundColor=display.css;}
+    const picker=card.querySelector('.color-picker-trigger');
+    if(picker){const display=colorDisplay(row.components.map(c=>c.value));picker.disabled=!ready||row.components.some(c=>!c.writable);card.querySelector('.color-ink').style.backgroundColor=display.css;}
   }
   for(const b of document.querySelectorAll('#customdialog [data-custom-write]'))b.disabled=!ready||b.dataset.unavailable==='true';
   for(const kind of ['undo','redo']){const b=$('#custom'+kind);if(b)b.disabled=!ready||!customSnapshot?.history?.[kind];}
@@ -3429,12 +3448,22 @@ function customValueEntry(row,item,index,kind='value'){
   entry.dataset.controlField=row.style==='Pulse'&&kind==='value'?'pulse':kind;entry.dataset.controlComponent=index;entry.customExpected=row.expected;entry.customExpectedValue=clone(item);entry.setAttribute('aria-label',(row.label||row.name)+' '+(row.size>1?item.name:kind));entry.title=item.help||item.name;
   return entry;
 }
+function customColorSource(row){
+  if(!row||row.style!=='RGBA')return null;
+  const operator=customSnapshot?.operator;
+  return nativeSourceRows().find(source=>row.sources?.includes(source.id)&&source.kind==='uniform'&&typeComponents(source.type)===row.size&&
+    source.components.slice(0,row.size).every((c,i)=>c.controlPath===operator+'.par.'+row.components[i]?.name))||null;
+}
+function customColorBindingKey(row){
+  const source=customColorSource(row);
+  return source?JSON.stringify([nativeSourceValueKey(source),source.components.slice(0,row.size).map(c=>c.controlPath)]):null;
+}
 function renderCustomParameters(){
   const data=customSnapshot,box=$('#customcontrols');
   if(!data){box.replaceChildren();$('#custompage').replaceChildren();renderCustomEditor();updateCustomValues();return;}
   if(!data.pages.some(p=>p.name===customPage))customPage=data.pages[0]?.name||'';
   const operator=data.operator||'',operatorName=operator.split('/').at(-1);$('#customoperatorname').textContent=operatorName;$('#customoperatorname').title=operatorName;$('#customoperatorpath').textContent=operator;
-  const key=JSON.stringify([language,customPage,data.pages.map(p=>p.name),data.controls.filter(g=>g.page===customPage).map(g=>[g.name,g.label,g.page,g.style,g.size,g.order,g.section,g.menuNames,g.menuLabels,g.components.map(p=>p.name)])]);
+  const key=JSON.stringify([language,customPage,data.pages.map(p=>p.name),data.controls.filter(g=>g.page===customPage).map(g=>[g.name,g.label,g.page,g.style,g.size,g.order,g.section,g.menuNames,g.menuLabels,g.components.map(p=>p.name),customColorBindingKey(g)])]);
   if(box.dataset.structure!==key&&!box.contains(document.activeElement)){
     box.dataset.structure=key;box.replaceChildren();const tabs=$('#custompage');tabs.replaceChildren();
     for(const page of data.pages){const b=el('button',{type:'button',role:'tab','aria-selected':String(page.name===customPage)},page.name);b.onclick=()=>{customPage=page.name;document.activeElement?.blur();renderCustomParameters();};tabs.append(b);}
@@ -3442,16 +3471,29 @@ function renderCustomParameters(){
       const card=el('section',{class:'custom-native-row'+(row.section?' section-start':''),'data-custom-control':row.name}),label=el('span',{class:'custom-native-label',title:row.name},row.label||row.name),values=el('div',{class:'custom-native-values','data-components':row.size,'data-color':String(row.style==='RGBA')});
       for(const [index,item]of row.components.entries()){const entry=customValueEntry(row,item,index);values.append(entry);if(entry.customList)values.append(entry.customList);}
       if(row.style==='RGBA'){
-        const read=()=>customCurrent(row.name)?.components.map(c=>c.value)||[],generation=editorLoadGeneration;
+        const read=()=>{const c=customCurrent(row.name)?.components||[];return Array.from({length:row.size===4?4:3},(_,i)=>Number(c[i]?.value??0));};
+        const generation=editorLoadGeneration,operator=data.operator,bindingKey=customColorBindingKey(row);
+        let expected=null;
+        const valid=()=>generation===editorLoadGeneration&&customSnapshot?.operator===operator&&customCurrent(row.name)?.expected===row.expected&&customColorBindingKey(customCurrent(row.name))===bindingKey&&customReady();
+        // A custom control is live only when all channels map to one exact Uniform.
+        // The binding's resolved control path, not its display name, establishes identity.
+        const source=()=>customColorSource(customCurrent(row.name));
         const swatch=colorPickerSwatch(read,value=>{
-          const seen=picker.colorExpected||customCurrent(row.name);picker.colorExpected=null;
-          if(generation!==editorLoadGeneration||!seen||!customReady())return;
-          const components=value.slice(0,Math.min(3,seen.size)).map((value,component)=>({component,value,expectedValue:seen.components[component]})).filter(e=>e.value!==e.expectedValue.value);
+          const seen=expected||customCurrent(row.name);if(!valid()||!seen)return;
+          const components=value.slice(0,seen.size).map((value,component)=>({component,value,expectedValue:seen.components[component]})).filter(e=>e.value!==e.expectedValue.value);
           if(components.length)customRequest({action:'color',name:row.name,expected:seen.expected,components});
-        }),picker=swatch.querySelector('input');
-        picker.onpointerdown=()=>{picker.colorExpected=clone(customCurrent(row.name));};picker.onkeydown=e=>{if(['Enter',' '].includes(e.key))picker.onpointerdown();};
-        picker.oninput=()=>{picker.colorExpected??=clone(customCurrent(row.name));};const commit=picker.onchange;picker.onchange=()=>{try{commit();}finally{picker.colorExpected=null;}};
-        values.append(swatch);
+        },false,{isValid:valid,begin:undefined});
+        const picker=swatch.querySelector('.color-picker-trigger'),open=picker.onclick;
+        picker.onclick=event=>{expected=clone(customCurrent(row.name));return open(event);};
+        // Bound Uniform controls use the same live authority as their source card.
+        // Unbound OP colours retain the existing custom-parameter Apply path.
+        const linked=source();
+        if(linked){
+          const liveRead=()=>{const current=source();return current?Array.from({length:row.size===4?4:3},(_,i)=>Number(current.components[i]?.value??0)):read();};
+          const live=colorPickerSwatch(liveRead,()=>{},false,{isValid:valid,
+            begin:ok=>uniformLive.prepareColorSession(linked.id,{isValid:()=>ok()&&source()?.id===linked.id,onError:error=>status(error.message,true,{kind:'live'})}),
+            onFinish:()=>refreshCustomParameters()});values.append(live);
+        }else values.append(swatch);
       }
       card.append(label,values);box.append(card);
     }

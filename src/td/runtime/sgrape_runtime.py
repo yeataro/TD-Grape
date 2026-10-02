@@ -21,7 +21,7 @@ import zlib
 import uuid
 from contextlib import contextmanager
 
-PRODUCT_VERSION='0.8.272'
+PRODUCT_VERSION='0.8.273'
 
 MATERIAL_PRESETS={
     'phong':'Phong MAT Graph', 'pbr':'PBR MAT Graph',
@@ -2277,6 +2277,8 @@ def refresh_assets(owner):
              '/app.js':(owner.op('app_js').text.encode('utf-8'),'text/javascript; charset=utf-8'),
              '/style.css':(owner.op('style_css').text.encode('utf-8'),'text/css; charset=utf-8'),
              '/locales.json':(owner.op('locales_json').text.encode('utf-8'),'application/json; charset=utf-8')}
+    if owner.op('color_picker_css'):
+        _assets['/color_picker.css']=(owner.op('color_picker_css').text.encode('utf-8'),'text/css; charset=utf-8')
     panel=owner.op('remote_panel')
     _remote_port=int(panel.par.Port.eval()) if panel else None
     if panel:
@@ -2289,7 +2291,7 @@ def refresh_assets(owner):
         _assets['/favicon.svg']=(owner.op('favicon_svg').text.encode('utf-8'),'image/svg+xml')
     if owner.op('inspector_js'):
         _assets['/inspector.js']=(owner.op('inspector_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
-    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui','frames_ui','uniform_live','structures_ui'):
+    for name in ('functions_model','functions_ui','graph_ui','import_ui','qrcode','share_ui','select_ui','shortcuts_ui','selection_ui','frames_ui','uniform_live','structures_ui','color_picker'):
         if owner.op(name+'_js'):
             _assets['/'+name+'.js']=(owner.op(name+'_js').text.encode('utf-8'),'text/javascript; charset=utf-8')
 

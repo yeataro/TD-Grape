@@ -1,0 +1,102 @@
+.grape-color-picker {
+  --gcp-panel: #26252e;
+  --gcp-inset: #1a1921;
+  --gcp-text: #e4e0ea;
+  --gcp-soft: #a69faf;
+  position: fixed;
+  z-index: 10000;
+  box-sizing: border-box;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  padding: 10px 12px 13px;
+  margin: 0;
+  border: 1px solid #393641;
+  border-radius: 12px;
+  background: var(--gcp-panel);
+  color: var(--gcp-text);
+  box-shadow: 0 12px 32px #0005;
+  font: 12px/1.4 "Segoe UI", Arial, sans-serif;
+  color-scheme: dark;
+  container-type: inline-size;
+  text-align: left;
+  user-select: none;
+}
+.grape-color-picker *, .grape-color-picker *::before, .grape-color-picker *::after { box-sizing: border-box; }
+.grape-color-picker [hidden] { display: none !important; }
+.grape-color-picker button, .grape-color-picker input { font: inherit; }
+.grape-color-picker button { color: inherit; cursor: pointer; }
+.grape-color-picker button:disabled, .grape-color-picker input:disabled { cursor: default; opacity: .45; }
+.grape-color-picker button:focus-visible, .grape-color-picker input:focus-visible { outline: 2px solid #b8a0ed; outline-offset: 2px; }
+.grape-color-picker svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.grape-color-picker .gcp-header { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 4px; min-height: 28px; margin-bottom: 8px; }
+.grape-color-picker .gcp-title { color: #c9c1d1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grape-color-picker .gcp-header-tools, .grape-color-picker .gcp-header-actions { display: flex; align-items: center; gap: 2px; }
+.grape-color-picker .gcp-header-tools { padding: 2px; background: var(--gcp-inset); border-radius: 5px; }
+.grape-color-picker .gcp-header-actions { justify-self: end; gap: 4px; }
+.grape-color-picker .gcp-icon { display: grid; place-items: center; width: 26px; height: 24px; padding: 3px; border: 0; border-radius: 4px; background: transparent; color: var(--gcp-soft); }
+.grape-color-picker .gcp-icon:hover { background: #494151; color: var(--gcp-text); }
+.grape-color-picker .gcp-icon[aria-pressed=true] { background: #4b4259; color: #eee5fc; }
+.grape-color-picker .gcp-apply { height: 24px; padding: 2px 7px; border: 1px solid #6c5a83; border-radius: 4px; background: #4b3f5e; font-size: 10px; white-space: nowrap; }
+.grape-color-picker .gcp-apply:hover { background: #615078; }
+.grape-color-picker .gcp-top-region { height: 100px; }
+.grape-color-picker .gcp-top { display: grid; grid-template-columns: 100px minmax(0,1fr); gap: 12px; align-items: start; }
+.grape-color-picker .gcp-preview-checker { position: relative; width: 100px; height: 100px; border-radius: 6px; overflow: hidden; background: repeating-conic-gradient(#74717b 0% 25%, #45424c 0% 50%) 0/12px 12px; }
+.grape-color-picker .gcp-preview { position: absolute; inset: 0; }
+.grape-color-picker .gcp-add { position: absolute; right: 5px; top: 5px; width: 24px; height: 24px; display: grid; place-items: center; padding: 3px; border: 0; border-radius: 4px; color: white; background: #19162085; }
+.grape-color-picker .gcp-add:hover { background: #191620c0; }
+.grape-color-picker .gcp-palette { height: 100px; min-width: 0; }
+.grape-color-picker .gcp-swatches { display: grid; grid-template-columns: repeat(11,minmax(16px,1fr)); grid-template-rows: repeat(4,minmax(20px,1fr)); height: 100%; }
+.grape-color-picker .gcp-swatch { position: relative; min-width: 0; padding: 0; border: 0; border-radius: 0; overflow: hidden; background: repeating-conic-gradient(#74717b 0% 25%, #45424c 0% 50%) 0/8px 8px; }
+.grape-color-picker .gcp-swatch span { position: absolute; inset: 0; background: var(--gcp-swatch); pointer-events: none; }
+.grape-color-picker .gcp-swatch:hover::after, .grape-color-picker .gcp-swatch[aria-pressed=true]::after { content: ""; position: absolute; inset: 2px; border: 1px solid #fff; box-shadow: 0 0 0 1px #000a; pointer-events: none; }
+.grape-color-picker .gcp-hex-row { display: flex; align-items: center; gap: 8px; min-height: 25px; margin-top: 9px; color: var(--gcp-soft); font-size: 10px; }
+.grape-color-picker .gcp-hex-control { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.grape-color-picker .gcp-hex { flex: 1; width: 0; min-width: 0; padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; background: var(--gcp-inset); color: var(--gcp-text); font: 11px/1.4 Consolas, monospace; user-select: text; }
+.grape-color-picker .gcp-saved { display: grid; grid-template-columns: repeat(6,18px); gap: 4px; flex: none; }
+.grape-color-picker .gcp-saved .gcp-swatch { height: 22px; border-radius: 3px; }
+.grape-color-picker .gcp-saved .gcp-empty { background: var(--gcp-inset); border: 1px solid #393641; opacity: 1; }
+.grape-color-picker .gcp-channels { display: grid; gap: 5px; }
+.grape-color-picker .gcp-hsv { margin-top: 11px; }
+.grape-color-picker .gcp-rgb { margin-top: 13px; }
+.grape-color-picker .gcp-alpha-row { margin-top: 11px; padding-top: 10px; border-top: 1px solid #3b3643; }
+.grape-color-picker .gcp-channel { display: grid; grid-template-columns: 13px minmax(0,1fr) 53px; align-items: center; gap: 8px; min-height: 23px; font-size: 11px; }
+.grape-color-picker .gcp-channel > span { color: var(--gcp-soft); }
+.grape-color-picker input[type=range] { appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; height: 10px; margin: 0; border: 0; border-radius: 5px; cursor: ew-resize; touch-action: none; }
+.grape-color-picker input[type=range]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 5px; height: 17px; border: 1px solid #332d3c; border-radius: 2px; background: #eee8f4; box-shadow: 0 1px 2px #0006; }
+.grape-color-picker input[type=range]::-moz-range-thumb { width: 4px; height: 15px; border: 1px solid #332d3c; border-radius: 2px; background: #eee8f4; }
+.grape-color-picker input[type=number] { appearance: textfield; -moz-appearance: textfield; width: 53px; height: 23px; padding: 3px 5px; border: 1px solid transparent; border-radius: 4px; background: var(--gcp-inset); color: var(--gcp-text); font: 11px/1.4 Consolas, monospace; text-align: right; user-select: text; }
+.grape-color-picker input[type=number]::-webkit-inner-spin-button, .grape-color-picker input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.grape-color-picker input[aria-invalid=true] { border-color: #eaa39f; }
+.grape-color-picker .gcp-plane { display: grid; grid-template-columns: minmax(0,1fr) 27px; gap: 8px; height: 100%; }
+.grape-color-picker .gcp-shapes { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.grape-color-picker .gcp-surface { grid-column: 1; grid-row: 1; min-width: 0; height: 100%; padding: 0; overflow: hidden; border: 0; border-radius: 6px; background: var(--gcp-inset); touch-action: none; cursor: crosshair; }
+.grape-color-picker .gcp-surface canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
+.grape-color-picker .gcp-notice { margin-top: 9px; color: #d4bbc3; font-size: 11px; }
+.grape-color-picker .gcp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+@container (max-width: 287px) {
+  .grape-color-picker .gcp-top-region { height: 212px; }
+  .grape-color-picker .gcp-top { grid-template-columns: minmax(0,1fr); }
+  .grape-color-picker .gcp-hex-row { flex-wrap: wrap; }
+  .grape-color-picker .gcp-saved { margin-left: auto; }
+  .grape-color-picker .gcp-title { visibility: hidden; }
+}
+@media (pointer: coarse) {
+  .grape-color-picker .gcp-title { display: none; }
+  .grape-color-picker .gcp-header { grid-template-columns: auto 1fr; min-height: 48px; }
+  .grape-color-picker .gcp-header-tools { justify-self: center; }
+  .grape-color-picker .gcp-icon, .grape-color-picker .gcp-apply, .grape-color-picker .gcp-add { min-width: 44px; height: 44px; }
+  .grape-color-picker .gcp-channel { min-height: 44px; }
+  .grape-color-picker input[type=number] { height: 38px; font-size: 16px; }
+  .grape-color-picker .gcp-hex-row { flex-wrap: wrap; }
+  .grape-color-picker .gcp-hex-control { flex-basis: 100%; }
+  .grape-color-picker .gcp-hex { height: 44px; font-size: 16px; }
+  .grape-color-picker .gcp-top-region { height: auto; }
+  .grape-color-picker .gcp-top { grid-template-columns: minmax(0,1fr); }
+  .grape-color-picker .gcp-palette { height: auto; }
+  .grape-color-picker .gcp-swatches { grid-template-columns: repeat(auto-fit,minmax(44px,1fr)); grid-template-rows: none; grid-auto-rows: 44px; gap: 3px; }
+  .grape-color-picker .gcp-plane { height: 212px; grid-template-columns: minmax(0,1fr) 44px; }
+  .grape-color-picker .gcp-saved { width: 100%; grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .grape-color-picker .gcp-saved .gcp-swatch { height: 44px; }
+}

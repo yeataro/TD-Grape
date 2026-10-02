@@ -566,8 +566,8 @@ header .brand small{min-width:0}.brand-tagline{overflow:hidden;text-overflow:ell
 .color-ink{display:block;position:absolute;inset:0}
 .color-picker-row{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:11px;margin-top:12px}
 .color-picker-row>.color-swatch{width:64px;height:28px;flex:none}
-.color-swatch input[type=color]{opacity:0;position:absolute;inset:0;width:100%;height:100%;padding:0;cursor:pointer}
-.color-swatch input[type=color]:disabled{cursor:default}
+.color-swatch .color-picker-trigger{opacity:0;position:absolute;inset:0;width:100%;height:100%;padding:0;cursor:pointer}
+.color-swatch .color-picker-trigger:disabled{cursor:default}
 .color-swatch:focus-within{outline:2px solid var(--purple);outline-offset:2px}
 .color-range-hint{display:block;line-height:1.5}
 .node-color{padding:0 13px 11px}.node-color>.color-swatch{height:22px}
