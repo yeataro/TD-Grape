@@ -1,6 +1,6 @@
 # 測試
 
-## 接線合法性實驗（2026-10-03，來源完成／TD 交付待同步）
+## 接線合法性實驗（2026-10-03，0.8.274）
 
 [WIRE_VALIDATION_MODES](../features/WIRE_VALIDATION_MODES.md) 說明 all／hover／viewport
 三模式與比較方式；viewport 預設，浮動 Parameter 接孔獨立參與，正式接線交易不變。
@@ -15,8 +15,14 @@
 
 既有 `test_matrix_arithmetic.js`／`test_control_nodes.js` 在 VM 缺少 `URLSearchParams`
 而中止；從本次修改前 Git HEAD 匯出來源與原測試逐一重現，未算整套通過。
-本轮 `connectionProblem`、`planWireTypes`、`commitPlannedWire`、`connectPorts` 與 HEAD 完全相同。
-本機 TD Editor 與開發橋接未回應，尚未同步內嵌來源或保存 TOE；不宣稱運行中產品已更新。
+本輪 `connectionProblem`、`planWireTypes`、`commitPlannedWire`、`connectPorts` 與修改前 `e005f08` 完全相同。
+Bridge 恢復後已同步 TD 2025.32820：43 份內嵌來源逐份一致、5 份更新，
+HTTP 的 HTML／app／graph UI／locales 與來源一致。同步前後 9 張 Shader 的
+state／graph／manifest／GLSL 雜湊一致；正式 TOE 保存成功並排除私人 Bridge。
+較晚的整段比對中，一張活躍圖的 state／graph／manifest 已更新，因而不能宣稱
+從開始到最後所有資料均未變；未回滾該圖。來源同步當下與保存工作本身的保留檢查通過，
+離線展開保存檔再比對 9 張 Shader 的全部上述資料，與保存後運行中的快照一致。
+本輪未重載使用者 Editor，也未量測真實大圖拖線耗時；不將部署檢查當作效能結果。
 
 ## 共用色彩面板（0.8.273）
 

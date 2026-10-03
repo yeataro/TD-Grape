@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-10-03 0.8.274：新增實驗功能「接線合法性」下拉選單，依序為開始接線時判斷全部、Hover 時才判斷、只判斷畫布範圍內（預設）。浮動 Parameter 接孔獨立參與，正式接線合法性、交易與 History 保持原流程。此設定只保存在目前瀏覽器；詳見 [接線合法性實驗](../features/WIRE_VALIDATION_MODES.md)。
+
+19 項候選／真實 planner 與型別基礎檢查、1601 個五語 keys、14 項 Editor launch 與隔離瀏覽器三模式操作通過；既有 VM fixture 缺少 URLSearchParams 的失敗在修改前同樣重現，未宣稱全套通過。43 份內嵌來源核對、5 份更新，HTTP 資產一致，正式 TOE 已保存並排除私人 Bridge。同步當下 9 張 Shader 資料保留；後續一張活躍圖的資料另有變動，保存檔與保存後 9 張運行中圖逐字一致，未回滾。未重新整理使用者網頁，真實大圖效能與實機觸控尚待比對；細節見 [測試紀錄](TESTING.md)。
+
 2026-10-02 0.8.273：以共用網頁色彩面板替換所有瀏覽器原生選色入口。HSV／RGB／HEX 即時連動、RGB 隱藏 Alpha／六碼 HEX，RGBA 顯示 Alpha／八碼 HEX；常用色、色面與能力偵測的畫面滴管沿用已核可圖稿。Uniform（含精確綁定 OP 色彩）即時更新，整個 popup 一次 live Undo；點外面接受，×／Escape 以整組 CAS 還原開啟前值。常數、未綁定 OP 色彩、Note／Group Frame 使用草稿與 Apply，點外面或取消不寫入。詳見 [共用色彩面板](../features/CUSTOM_COLOR_PICKER.md)。
 
 39 項 targeted Python／JS 契約、16 組隔離瀏覽器與 6 組真實 TD UI 流程通過；TD 原生另驗證 MAT／TOP 200 次 grouped previews、單一 receipt／原生 Undo、外部值衝突、Bind master 與 scalar writer 排他。既有 19 組 live 與 6 組 native color 檢查通過，14 項 launch 與 1596 個五語 keys 核對通過。完整 unit suite 的 13 failures／3 errors 已逐項在未修改 canonical source 重現，未混列為全套通過。獨立 fixture 結束皆確認使用者 Shader／Graph 完整保留並清除測試組件；CEF／Safari／iPad 尚未實測。

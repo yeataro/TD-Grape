@@ -10,7 +10,7 @@ Edit node graphs, generate GLSL, preview results from TouchDesigner, and adjust 
 
 ## Project Status
 
-Current version: **0.8.272**.
+Current version: **0.8.274**.
 
 **Functional preview in development. Not yet Alpha.**
 
