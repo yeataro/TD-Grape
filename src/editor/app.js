@@ -259,7 +259,11 @@ function historyValueKey(value){
   const ordered=v=>Array.isArray(v)?v.map(ordered):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,ordered(v[k])])):v;
   return JSON.stringify(ordered(value));
 }
-function historyGraphKey(document){const value=clone(document);delete value.catalogSnapshot;return historyValueKey(value);}
+function historyGraphKey(document){
+  // The catalog is not part of graph equality. Exclude it before the JSON
+  // clone; stored history snapshots still retain the complete document.
+  const value={...document};delete value.catalogSnapshot;return historyValueKey(clone(value));
+}
 function historySourceIds(before,after){
   const sources=document=>new Map((document.declarations||[]).filter(d=>['uniform','spec_constant','pop_buffer','attribute'].includes(d.kind)).map(d=>[d.id,d]));
   const a=sources(before),b=sources(after);
@@ -280,13 +284,18 @@ function renderHistoryActions(){
 }
 function recordHistory(entry){
   if(!entry.liveReceipt&&historyGraphKey(entry.before)===historyGraphKey(entry.after)&&(!entry.nativeApplied||entry.nativeBefore===entry.nativeAfter))return null;
+  return appendHistoryEntry(entry);
+}
+// Call only after the recorder's own no-op check. Native/live and graph
+// recorders have different gates; a confirmed graph edit needs no second key.
+function appendHistoryEntry(entry){
   const step={id:crypto.randomUUID(),epoch:historyEpoch,...entry};
   if(step.nativeApplied){step.deltaBefore=step.nativeBefore;step.deltaAfter=step.nativeAfter;}
   past.push(step);if(past.length>60)past.shift();future=[];renderHistoryActions();return step;
 }
 function recordGraphHistory(before,{nativeBefore=historyNativeToken,nativeAfter=null,nativeApplied=false}={}){
   if(historyGraphKey(before)===historyGraphKey(graph))return null;
-  return recordHistory({kind:'graph',before:clone(before),after:clone(graph),sourceIds:historySourceIds(before,graph),nativeBefore,nativeAfter,nativeApplied});
+  return appendHistoryEntry({kind:'graph',before:clone(before),after:clone(graph),sourceIds:historySourceIds(before,graph),nativeBefore,nativeAfter,nativeApplied});
 }
 function scheduleGraphApply(delay=650){
   clearTimeout(autoTimer);autoTimer=null;

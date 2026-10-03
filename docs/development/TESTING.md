@@ -1,5 +1,17 @@
 # 測試
 
+## History 記錄成本（2026-10-03，0.8.275）
+
+`node tests/unit/test_history_recording.js` 的 11 組直接回歸已納入 `tools/dev/run_tests.py`。涵蓋 Graph no-op 不清 Redo、native-only 改變仍記錄、live receipt reservation／identity 保留、完整快照與輸入隔離、僅排除根層 catalog、JSON 正規化、欄位／陣列順序、sourceIds、delta token、epoch 與 60 筆上限。成功 Graph 記錄維持兩份完整快照，只建立兩次比較 key；比較用 clone 不含 catalog。沒有新增跨呼叫快取，也沒有改 snapshot ownership。
+
+以既有 `PYTHONPATH=src/core;src/td/runtime;tests/unit` 執行 `python -m unittest test_history test_uniform_color_live test_pixel_preview_lifecycle test_pixel_preview_recovery`，63 項通過；Editor launch 14 項通過。`test_uniform_color_live.js` 的 popup／CAS／late reply 回歸通過。隔離 Chromium 的 `test_uniform_live.cjs` 12 組與 `test_pixel_preview_lifetime.cjs` 11 組通過，涵蓋 real editor recorder、live Undo／Redo、取消與慢 ACK、圖／值交錯，以及暫時 Preview／load lifetime。這些 browser 測試的 Host API／WebSocket 是 fixture，不是真實 TD 原生 Undo 的重新驗收。
+
+既有 `test_editor_edits.js`、`test_editor_save_status.js`、`test_import_ui.js` 的 VM 缺少 `URLSearchParams`。僅在私人 runner 注入瀏覽器既有 global 後，editor edits 通過；save-status 的 `respond is not a function` 與 import 將 Promise 當同步布林的斷言仍失敗，修改前 HEAD 複本重現相同結果，未改舊斷言。`test_input_history.cjs` 停於收合群組內的來源按鈕不可見；私人展開群組的變體未完成，不列為通過。未宣稱完整 portable suite 通過。
+
+修改前隔離成本分析採 Node VM 與保存的 JSON 圖，DOM／storage 寫入／network 皆替身。大型樣本 History 中位數約 14.20ms；省掉重複比較約 8.29ms；再於比較 clone 前排除 catalog 約 6.65ms。228 組接線／History baseline 差異比對無差異。這是模型成本，不能當成真實 CEF／TD 效能或完整 Undo 整合驗收。
+
+TD 2025.32820 同步核對 43 份來源與服務資產 cache，一共更新 runtime、HTML 與 app 三份；同步前後 9 張 Shader 的 state／graph／manifest／GLSL 雜湊相同。正式 TOE 保存成功，9 份 state 保留、私人 Bridge 排除。未自動重載使用者網頁。交付證據位於私人 `reports/history-optimization-275/`。
+
 ## 接線合法性實驗（2026-10-03，0.8.274）
 
 [WIRE_VALIDATION_MODES](../features/WIRE_VALIDATION_MODES.md) 說明 all／hover／viewport

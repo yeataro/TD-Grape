@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-10-03 0.8.275：減少 Graph History 記錄的重複工作。Graph 路徑保留原有 no-op 判斷後，直接共用加入紀錄的部分；Host native／live 入口的原有判斷不變。比較用資料在 JSON 深拷貝前排除根層 `catalogSnapshot`，實際前後快照仍完整保存目錄。Undo／Redo、native delta／receipt、來源範圍、load／epoch 與 Preview 清理語意不變；未調整 Auto 推導或接線實驗選項。
+
+11 項直接 History 回歸、63 項 History／Uniform color／Preview Python 測試、14 項 launch、12 組瀏覽器 live 與 11 組 Preview lifetime 通過。部分既有 VM／browser fixture 仍有測試入口問題，未宣稱全套通過；限制見 [測試紀錄](TESTING.md)。43 份 TD 內嵌來源核對一致，3 份更新；9 張既有 Shader 資料保留，正式 TOE 已保存並排除私人 Bridge。未重載使用者 Editor。
+
 2026-10-03 0.8.274：新增實驗功能「接線合法性」下拉選單，依序為開始接線時判斷全部、Hover 時才判斷、只判斷畫布範圍內（預設）。浮動 Parameter 接孔獨立參與，正式接線合法性、交易與 History 保持原流程。此設定只保存在目前瀏覽器；詳見 [接線合法性實驗](../features/WIRE_VALIDATION_MODES.md)。
 
 19 項候選／真實 planner 與型別基礎檢查、1601 個五語 keys、14 項 Editor launch 與隔離瀏覽器三模式操作通過；既有 VM fixture 缺少 URLSearchParams 的失敗在修改前同樣重現，未宣稱全套通過。43 份內嵌來源核對、5 份更新，HTTP 資產一致，正式 TOE 已保存並排除私人 Bridge。同步當下 9 張 Shader 資料保留；後續一張活躍圖的資料另有變動，保存檔與保存後 9 張運行中圖逐字一致，未回滾。未重新整理使用者網頁，真實大圖效能與實機觸控尚待比對；細節見 [測試紀錄](TESTING.md)。
