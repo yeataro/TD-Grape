@@ -1,5 +1,15 @@
 # 測試
 
+## 單輸入乘積預設與 Preview 外觀（2026-10-03，0.8.276）
+
+以 `PYTHONPATH=src/core;src/td/runtime;tests/unit` 執行 `python -m unittest test_wire_validation test_matrix_foundation test_matrix_arithmetic test_matrix_double_operations test_pixel_preview test_pixel_preview_lifecycle test_pixel_preview_recovery`，83 項通過。新 `test_auto_operand_defaults.js` 由 arithmetic Python wrapper 執行：44 組直接預設、44 組 Creator 局部／完整試算，另驗證兩線矩陣乘法、非方陣 Outer Product、Locked、If／Boolean Mix、保存／重載、Undo／Redo，以及巢狀 local Function。測試先抓到無關拓樸編輯會改寫舊 Auto 簽名／手填值的反例，修正後確認旧 Multiply／Outer Product 與其 Auto／Locked 下游完整保留；重新接線、上游改型別及 Locked → Auto 仍採新預設。沒有新增序列化 metadata。
+
+隔離 Chromium `test_matrix_arithmetic.cjs` 5 組通過，其中新增一組包含 32 種 key／向量型別／接入方向的接線與真實 Undo／Redo 按鈕流程；`test_pixel_preview.cjs` 8 組通過，直接檢查節點 computed opacity 為 0.5。`test_math_auto_model.cjs` 26 組、對其輸出執行的 `test_math_auto_compiler.py` 10 組、History recorder 11 組、Editor launch 14 項皆通過。瀏覽器 Host API 是隔離 fixture，這次未重新進行 TD／GPU 數值或 CEF／macOS 驗收。
+
+既有 `test_math_auto_browser.cjs` 的 `[data-library-tab=nodes]` UI 定位已過時，停在新增 Add 的入口；使用修改前 `graph_ui.js` 的隔離 overlay 也重現相同逾時，此支不列為通過。完整 portable suite 未在本輪全部重跑，不宣稱全套通過。
+
+TD 2025.32820 同步更新 runtime／HTML／graph UI 三份，43 份內嵌來源及 Editor 資產 cache 核對一致。同步前後 9 張 Shader 的 state／graph／manifest／pixel／vertex GLSL 雜湊相同。正式 TOE 保存完成，9 份 state 保留、私人 Bridge 排除；未重新整理使用者 Editor。私人交付證據 `reports/auto-defaults-276/`，模型及 Chromium 紀錄另在私人 `work/auto-defaults-276/`。
+
 ## History 記錄成本（2026-10-03，0.8.275）
 
 `node tests/unit/test_history_recording.js` 的 11 組直接回歸已納入 `tools/dev/run_tests.py`。涵蓋 Graph no-op 不清 Redo、native-only 改變仍記錄、live receipt reservation／identity 保留、完整快照與輸入隔離、僅排除根層 catalog、JSON 正規化、欄位／陣列順序、sourceIds、delta token、epoch 與 60 筆上限。成功 Graph 記錄維持兩份完整快照，只建立兩次比較 key；比較用 clone 不含 catalog。沒有新增跨呼叫快取，也沒有改 snapshot ownership。

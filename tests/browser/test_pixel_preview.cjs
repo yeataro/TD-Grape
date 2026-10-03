@@ -20,7 +20,7 @@ const {harness}=require('./test_glsl_code.cjs');
   const id=await page.evaluate(()=>selected);
   assert.equal(await page.locator(`[data-node="${id}"]`).getAttribute('data-color-role'),'output');
   assert.equal(await page.locator(`[data-node="${id}"] .node-primary-selector`).count(),0);
-  assert.ok(Number(await page.locator(`[data-node="${id}"]`).evaluate(e=>getComputedStyle(e).opacity))<1);
+  assert.equal(Number(await page.locator(`[data-node="${id}"]`).evaluate(e=>getComputedStyle(e).opacity)),0.5);
   checks.push('MAT/TOP root Pixel only; Preview is first in blank and exact-name search menus, green and translucent');
   const moved=await page.evaluate(id=>{const n=current().nodes.find(n=>n.id===id);n.ui.comment='keep';change(()=>instantiate(availableEntries().find(d=>d.key==='preview'),501,330));return {ids:current().nodes.filter(n=>n.definitionUuid==='sgrape.builtin.preview').map(n=>n.id),x:n.ui.x,y:n.ui.y,comment:n.ui.comment};},id);
   assert.deepEqual(moved.ids,[id]);assert.equal(moved.x,await page.evaluate(()=>snap(501)));assert.equal(moved.y,await page.evaluate(()=>snap(330)));assert.equal(moved.comment,'keep');

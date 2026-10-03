@@ -13,6 +13,16 @@ const [source,stateFile,folder]=process.argv.slice(2);
   const connect=async(node,port)=>{const ok=await page.evaluate(({node,port})=>connectPorts({node,kind:'outputs',port:'out'},{node:'op',kind:'inputs',port}),{node,port});await settle();return ok;};
   const state=()=>page.evaluate(()=>({params:clone(current().nodes.find(n=>n.id==='op').params),ports:concretePorts(graph,current().nodes.find(n=>n.id==='op'),null),edges:clone(current().edges),history:past.length}));
   try{
+    for(const key of ['multiply','outer_product'])for(const type of ['vec2','vec3','vec4','dvec3'])for(const port of ['a','b']){
+      await reset(key);await page.evaluate(type=>{current().nodes.find(n=>n.id==='vector').params.type=type;render();},type);
+      await connect('vector',port);const connected=await state();
+      const output=key==='multiply'?type:(type.startsWith('d')?'dmat':'mat')+type.at(-1);
+      assert.deepEqual(connected.ports,{inputs:{a:type,b:type},outputs:{out:output}});
+      assert.equal(connected.history,1);
+      await page.locator('#undo').click();assert.equal((await state()).edges.length,0);
+      await page.locator('#redo').click();assert.deepEqual((await state()).ports,connected.ports);
+    }
+    checks.push('Multiply and Outer Product prefer matching vector operands from either side, including double, with one-step Undo/Redo');
     await page.selectOption('#language','en');await reset();await connect('left','a');assert.equal((await state()).ports.outputs.out,'mat2x3');
     await connect('right','b');let seen=await state();assert.deepEqual(seen.ports,{inputs:{a:'mat2x3',b:'mat4x2'},outputs:{out:'mat4x3'}});assert.equal(seen.history,2);
     await page.locator('#undo').click();assert.equal((await state()).ports.outputs.out,'mat2x3');await page.locator('#redo').click();assert.deepEqual((await state()).params,seen.params);

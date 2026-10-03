@@ -816,7 +816,7 @@ function invalidTypeEdges(data,portMap){
   return data.edges.filter(e=>{const source=portMap.get(e.from[0])?.outputs[e.from[1]],target=portMap.get(e.to[0])?.inputs[e.to[1]];return comparisons.has(e.to[0])&&!['float','int','uint'].includes(source)||!((vectors.has(e.to[0])||data.nodes.some(n=>n.id===e.to[0]&&n.definitionUuid==='sgrape.builtin.switch'))?!!source&&source===target:compatible(source,target));});
 }
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
-function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false}={}){
+function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false,baselineDocument=document}={}){
   const nodes=new Map(data.nodes.map(n=>[n.id,n])),incoming=new Map(),ports=new Map(),choices=new Map(),operands=new Map(),groups=new Map(),issues=new Map(),active=new Set();
   const scope=owner?'fn_'+owner.id:Object.keys(document.stages).find(key=>document.stages[key]===data)||stage;
   const typeDocument=owner?{...document,functions:document.functions.map(f=>f.id===owner.id?{...f,graph:data}:f)}:{...document,stages:{...document.stages,[scope]:data}};
@@ -824,6 +824,28 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
   const canInfer=!owner||owner.scope==='local';
   const autoNodes=new Set(data.nodes.filter(n=>canInfer&&n.ui?.typeMode==='auto'&&supportsAutoType(autoDefinition(document,n,owner))).map(n=>n.id));
   const combineNodes=new Set(data.nodes.filter(n=>canInfer&&['combine','replace'].includes(autoDefinition(document,n,owner)?.key)).map(n=>n.id));
+  let baseline;
+  function retainedProduct(n,links,candidates,inputType){
+    // A new default must not reinterpret an untouched, valid saved signature
+    // when an unrelated part of the graph is edited. Compare against the edit
+    // baseline, including the old source type, not the mutable trial graph.
+    if(!baseline){
+      const oldOwner=owner?baselineDocument.functions.find(f=>f.id===owner.id):null;
+      const oldData=owner?oldOwner?.graph:baselineDocument.stages[scope];
+      const oldIncoming=new Map();
+      for(const e of oldData?.edges||[]){if(!oldIncoming.has(e.to[0]))oldIncoming.set(e.to[0],[]);oldIncoming.get(e.to[0]).push(e);}
+      baseline={owner:oldOwner,nodes:new Map((oldData?.nodes||[]).map(node=>[node.id,node])),incoming:oldIncoming};
+    }
+    const old=baseline.nodes.get(n.id),oldLinks=baseline.incoming.get(n.id)||[];
+    if(!old||old.definitionUuid!==n.definitionUuid||old.ui?.typeMode!=='auto'||old.params.type!==n.params.type||JSON.stringify(old.params.operandTypes)!==JSON.stringify(n.params.operandTypes)||oldLinks.length!==1||JSON.stringify([oldLinks[0].from,oldLinks[0].to])!==JSON.stringify([links[0].from,links[0].to]))return null;
+    const source=baseline.nodes.get(oldLinks[0].from[0]);if(!source)return null;
+    try{
+      const oldInputType=concretePorts(baselineDocument,source,baseline.owner).outputs[oldLinks[0].from[1]];
+      const oldPorts=concretePorts(baselineDocument,old,baseline.owner);
+      if(oldInputType!==inputType||oldPorts.inputs[links[0].to[1]]!==inputType)return null;
+      return candidates.find(v=>v.type===old.params.type&&v.inputs.a===oldPorts.inputs.a&&v.inputs.b===oldPorts.inputs.b)||null;
+    }catch{return null;}
+  }
   function visit(n){
     if(ports.has(n.id))return;
     if(active.has(n.id))throw autoTypeError('wire.cycle');active.add(n.id);
@@ -864,12 +886,17 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
       const score=v=>links.reduce((sum,e)=>sum+Number(ports.get(e.from[0])?.outputs[e.from[1]]!==v.inputs[e.to[1]]),0);
       // A single matrix wire keeps a matrix result until the other operand
       // determines it. Otherwise Multiply would prematurely choose a vector.
-      const loneMatrix=links.length===1&&ports.get(links[0].from[0])?.outputs[links[0].from[1]],matrixDefault=v=>arithmetic&&isMatrixType(loneMatrix)?Number(v.type!==loneMatrix):0;
-      candidates.sort((a,b)=>score(a)-score(b)||matrixDefault(a)-matrixDefault(b)||typeComponents(a.type)-typeComponents(b.type));
+      const loneInputType=links.length===1&&ports.get(links[0].from[0])?.outputs[links[0].from[1]],matrixDefault=v=>arithmetic&&isMatrixType(loneInputType)?Number(v.type!==loneInputType):0;
+      // With one scalar/vector operand, these products prefer a matching peer.
+      // This is a default only: actual wires, locked types and matrix rules win.
+      const preferSameOperands=automatic&&links.length===1&&['multiply','outer_product'].includes(d.key)&&['float','double','int','uint'].includes(typeFamily(loneInputType))&&!isMatrixType(loneInputType);
+      const sameOperandDefault=v=>preferSameOperands?Number(v.inputs.a!==loneInputType||v.inputs.b!==loneInputType):0;
+      candidates.sort((a,b)=>score(a)-score(b)||matrixDefault(a)-matrixDefault(b)||sameOperandDefault(a)-sameOperandDefault(b)||typeComponents(a.type)-typeComponents(b.type));
       // Compare starts with integers only when no input can determine its type.
       // Keep the shared ranking unchanged as soon as either input is connected.
       const stored=!automatic&&!links.length&&arithmetic?candidates.find(v=>v.inputs.a===n.params.operandTypes?.a&&v.inputs.b===n.params.operandTypes?.b):null;
-      const chosen=stored||(!links.length&&d.key==='compare'?candidates.find(v=>v.type==='int'):null)||candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
+      const retained=preferSameOperands?retainedProduct(n,links,candidates,loneInputType):null;
+      const chosen=retained||stored||(!links.length&&d.key==='compare'?candidates.find(v=>v.type==='int'):null)||candidates[0];if(!chosen)throw autoTypeError('type.autoInputs',d.label||d.key);
       choices.set(n.id,chosen.type);ports.set(n.id,{inputs:chosen.inputs,outputs:chosen.outputs});
       if(arithmetic)operands.set(n.id,chosen.params?.operandTypes||null);
     }else ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
@@ -962,8 +989,8 @@ function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid
   const oldUnits=new Map(autoUnits(previous).map(u=>[u.key,u])),plans=[];
   for(const unit of autoUnits(document)){
     const old=oldUnits.get(unit.key),oldPorts=old?storedTypePorts(previous,old.data,old.owner):new Map();
-    let plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true});
-    if((!unit.owner||unit.owner.scope==='local')&&pruneSwitchCaseEdges(unit.data,plan,old?.data))plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true});
+    let plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true,baselineDocument:previous});
+    if((!unit.owner||unit.owner.scope==='local')&&pruneSwitchCaseEdges(unit.data,plan,old?.data))plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true,baselineDocument:previous});
     if(disconnectInvalid&&(!unit.owner||unit.owner.scope==='local')){
       const retained=new Set(old?invalidTypeEdges(old.data,oldPorts).map(e=>typeEdgeKey(e,oldPorts)):[]);
       // Infer all downstream Auto nodes before removing newly incompatible
@@ -972,7 +999,7 @@ function resolveAutoEdit(document,previous,{allowInvalid=false,disconnectInvalid
         const invalid=new Set(invalidTypeEdges(unit.data,plan.ports).filter(e=>!retained.has(typeEdgeKey(e,plan.ports))));
         if(!invalid.size)break;
         unit.data.edges=unit.data.edges.filter(e=>!invalid.has(e));
-        plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true});
+        plan=planAutoGraph(document,unit.data,unit.owner,new Map(),{draft:true,baselineDocument:previous});
       }
     }
     if(!allowInvalid){
@@ -1919,7 +1946,7 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
     const collapsed=n.ui?.collapsed===true,d=projection?.definition||definition(n),card=el('article',{class:'node'+(collapsed?' collapsed':'')+(selection.has(n.id)?' selected':'')+(!canDeleteNode(n)?' output':'')+(nodeHasCompileError(n.id)?' error':''),'data-node':n.id});
     Object.entries(nodeColorAttributes(d||{key:''},n.params)).forEach(([key,value])=>card.setAttribute(key,value));card.style.left=(n.ui?.x||0)+'px';card.style.top=(n.ui?.y||0)+'px';
     if(isMatrixOperation(d))card.classList.add('node-matrix');
-    if(d?.key==='preview'){card.classList.add('node-preview');card.style.opacity='.78';}
+    if(d?.key==='preview'){card.classList.add('node-preview');card.style.opacity='.5';}
     if(isAnnotationNode(n)){
       card.dataset.noteTitleOnSelection=String(n.ui?.noteTitleOnSelection===true);card.dataset.noteTransparent=String(n.ui?.noteTransparent===true);
       card.style.setProperty('--note-font-scale',noteFontScale(n));

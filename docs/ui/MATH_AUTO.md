@@ -4,6 +4,10 @@ New polymorphic Math nodes created in the sidebar, canvas/Tab creator or drag-to
 
 Auto chooses the legal signature with the fewest input conversions, then the smallest dimension. With no connected input it resolves to float, except Compare, which starts at int. Inference follows upstream outputs; downstream inputs never pull an upstream node into a wider type. Float + vec4 resolves to vec4 using the existing explicit scalar splat, while two floats resolve to float. Length/Dot still report float output when their operation type is a vector. Different vector dimensions are not silently resized.
 
+Multiply and Outer Product have a narrow single-input default (0.8.276): after conversion cost, prefer a peer operand of the same scalar/vector type. Thus one vec3 wire gives Multiply `vec3 × vec3 → vec3`, or Outer Product `vec3 × vec3 → mat3`; both input directions use this policy. Vec2/vec4 and the supported numeric families behave consistently. Single matrix inputs retain the existing matrix-result preference; two connected inputs, explicit type locks, other operations and the shared ranking are unchanged.
+
+This default does not migrate a saved valid exact-input signature on unrelated topology edits. These two Auto operations retain that signature while their own type/operand parameters, incoming wire identity and upstream output type remain unchanged. Adding another node therefore cannot resize their dormant values or invalidate an existing downstream wire. A new node, changed input connection/type or an explicit Locked-to-Auto change uses the new default. Trial connection/creator validation and committed edits compare against the same pre-edit graph; local Function graphs follow the same rule. No persisted marker is added.
+
 The planner consumes the same versioned type contract as ports/Create/compiler. Direct connection, reversed drag, drag-to-create, connection highlighting and edit commits all use it. Any new incompatible edge, including an existing locked downstream made invalid by inference, rejects the whole edit. No wire is silently removed. Successful inference and connections use one Undo step. Existing invalid drafts can still receive edits that do not introduce a new type conflict.
 
 Saved params.type always contains a concrete GLSL type; ui.typeMode records auto/locked editing policy. No new catalog revision, compiler emitter, graph schema or migration is needed. Read-only library graphs retain their stored concrete types until localized for editing. Typed Graph Function boundaries determine their inputs/outputs independently of the visible graph. Clipboard/duplication retain Auto metadata.
@@ -19,6 +23,8 @@ An Auto Compare with no connected inputs resolves to int. Either connected input
 Manual defaults use the existing per-type cache: switching a float comparison with fractional defaults to unconnected Auto uses integer values, while selecting float again (or reconnecting a float input) restores the saved fractional defaults. Enter fractions with Compare locked to float, or while Auto has inferred float from an input. The common integer editor continues to reject fractional text in int/uint mode.
 
 ## Validation
+
+- `tests/unit/test_auto_operand_defaults.js` (run by `test_matrix_arithmetic.py`): scalar/vector defaults, both operands, creator previews, existing rectangular signatures, unrelated edits with locked/Auto downstream, local Functions, rewire/type changes, save/reload and Undo/Redo. These tests also protect the matrix, two-wire and If/Boolean Mix defaults.
 
 - 20 pure model checks: legacy behavior, widening/narrowing, forward chains, actual scalar outputs, conflicts, locks, cached defaults, cycles, Function boundaries and read-only snapshots.
 - 14 interactive browser checks: palette default, Parameter control, conversions, Undo/Redo, rollback, both drag directions, explicit Create filters, clipboard/duplicate, real pointer highlighting and localization.

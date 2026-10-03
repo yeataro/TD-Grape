@@ -1,5 +1,9 @@
 # 開發狀態
 
+2026-10-03 0.8.276：Multiply／Outer Product 在 Auto 且只有一個純量／向量輸入時，優先選擇同型的另一個輸入；Multiply 保留分量，Outer Product 得到方陣。既有合法精確輸入簽名在無關編輯後保留，避免舊圖被新預設重解而改值或斷線；新節點、輸入換線／改型別與 Locked → Auto 才採新預設。全域排序、矩陣單線、雙線及其他節點規則不變。Preview 整張卡片不透明度由 78% 調成 50%，不改產碼 Alpha。詳見 [Math Auto](../ui/MATH_AUTO.md) 與 [Pixel Preview](../features/PIXEL_PREVIEW.md)。
+
+83 項 targeted Python、26 組 Auto 模型、10 組 compiler 比對、11 組 History recorder、14 項 launch，以及隔離 Chromium matrix 5 組（含 32 種新預設／Undo／Redo 流程）和 Preview 8 組通過。舊 Auto browser 測試的 UI 定位逾時在修改前來源同樣重現，未列全套通過，詳見 [測試紀錄](TESTING.md)。43 份內嵌來源與服務資產 cache 一致、更新 3 份，9 張 Shader 的 state／graph／manifest／GLSL 保留；正式 TOE 已保存並排除私人 Bridge。未重載使用者 Editor。
+
 2026-10-03 0.8.275：減少 Graph History 記錄的重複工作。Graph 路徑保留原有 no-op 判斷後，直接共用加入紀錄的部分；Host native／live 入口的原有判斷不變。比較用資料在 JSON 深拷貝前排除根層 `catalogSnapshot`，實際前後快照仍完整保存目錄。Undo／Redo、native delta／receipt、來源範圍、load／epoch 與 Preview 清理語意不變；未調整 Auto 推導或接線實驗選項。
 
 11 項直接 History 回歸、63 項 History／Uniform color／Preview Python 測試、14 項 launch、12 組瀏覽器 live 與 11 組 Preview lifetime 通過。部分既有 VM／browser fixture 仍有測試入口問題，未宣稱全套通過；限制見 [測試紀錄](TESTING.md)。43 份 TD 內嵌來源核對一致，3 份更新；9 張既有 Shader 資料保留，正式 TOE 已保存並排除私人 Bridge。未重載使用者 Editor。

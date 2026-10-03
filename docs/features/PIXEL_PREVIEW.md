@@ -1,6 +1,6 @@
 # Pixel Stage Preview
 
-Preview 是暫時性的 Pixel Stage 節點，供 MAT／TOP 檢查中間計算結果。它與 Color Output 共用綠色角色，節點呈半透明；搜尋 `Preview` 可建立，空白的相容 GenType 建立／拉線選單優先列出它。每個根 Pixel Stage 只有一個，重新建立會移動原節點；可刪除並 Undo。Vertex 和 Subgraph 內不提供此節點。
+Preview 是暫時性的 Pixel Stage 節點，供 MAT／TOP 檢查中間計算結果。它與 Color Output 共用綠色角色，整張節點卡為 50% 不透明度（含文字／接孔，不改預覽輸出的 Alpha）；搜尋 `Preview` 可建立，空白的相容 GenType 建立／拉線選單優先列出它。每個根 Pixel Stage 只有一個，重新建立會移動原節點；可刪除並 Undo。Vertex 和 Subgraph 內不提供此節點。
 
 ## 輸出行為
 
