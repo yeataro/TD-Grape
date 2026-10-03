@@ -1,5 +1,5 @@
 // Experimental UI defaults; overrides stay in this browser, never in graph/layout data.
-const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, lowZoomOverview: false, floatingToolbar: true, editToolbar: true, wireQuickActions: true, parameterInputPorts: true, selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
+const EDITOR_DEV_DEFAULTS = Object.freeze({ canvasTrash: false, lowZoomOverview: false, floatingToolbar: true, editToolbar: true, wireQuickActions: true, parameterInputPorts: true, wireValidation: 'viewport', selectionToolbar: 'all', selectionCollapseTools: true, persistentSelectionBounds: true, hideGroupedSelectionBounds: false, nodeBodyDrag: true, nodeDragCursor: 'default', nodeResizeHint: true, groupCornerSelect: true, nodeCollapseExpandedHint: false, nodeCollapseCollapsedHint: true, rgbaComponentTint: true, vectorComponentTint: true, autoDisconnectInvalidEdges: true, uiStyle: 'cool', systemClock: false, showFps: false, canvasDamping: true, canvasDampingMs: 150, frameDamping: true, frameDampingMs: 333, frameWireEndpoint: true, linkArrowDisplay: 'always', reverseInputLinkArrowOnHover: true, arrowNavigationMode: 'spatial', ctrlArrowAdjacent: false, arrowNavigationView: 'none' });
 const EDITOR_DEV_SETTINGS = {...EDITOR_DEV_DEFAULTS};
 let touchGraphGesture=null;
 // Experimental canvas drop target. Dropping is the commit; hovering never edits.
@@ -1483,17 +1483,71 @@ function portInfo(button,start=null){
   return {node:node.dataset.node,port:button.dataset.port,kind:button.dataset.kind,type:button.dataset.type,...(button.dataset.addPort?{add:true}:{}),...(button.classList.contains('parameter-input-port')?{panelProxy:true}:{})};
 }
 function wirePortButtons(){return [...document.querySelectorAll('#cards .port,#floatingparameters .parameter-input-port')].filter(button=>!button.disabled&&button.getClientRects().length);}
-function findWireTarget(candidates,x,y,radius=14){
+// Candidate discovery only: the existing planner and connectPorts transaction
+// remain authoritative, including all offscreen nodes and dependencies.
+function createWireCandidates(start,radius=14){
+  const mode=EDITOR_DEV_SETTINGS.wireValidation;
+  const legal=button=>!connectionProblem(start,portInfo(button,start));
+  if(mode==='all'){
+    const candidates=wirePortButtons().filter(legal);
+    return {get:()=>candidates,accept:()=>true,dispose(){}};
+  }
+  let candidates=[],stamp='',dirty=true,disposed=false,hoverResults=new WeakMap();
+  const invalidate=()=>{dirty=true;hoverResults=new WeakMap();};
+  const hasPort=node=>node.nodeType===1&&(node.matches('.port')||node.querySelector('.port'));
+  const changed=records=>{
+    // Ignore wire-target/vector-range decoration and Link-arrow repainting.
+    if(records.some(record=>record.type==='attributes'?(['style','class'].includes(record.attributeName)?record.target.matches('.node,#floatingparameters'):
+      record.attributeName==='hidden'||record.target.matches('.port')):
+      [...record.addedNodes,...record.removedNodes].some(hasPort)))invalidate();
+  };
+  const observer=new MutationObserver(changed);
+  for(const root of [$('#cards'),$('#floatingparameters')])if(root)observer.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled','style','class','data-type','data-port','data-kind','data-add-port','data-node']});
+  document.addEventListener('scroll',invalidate,true);
+  const get=()=>{
+    if(disposed)return [];
+    changed(observer.takeRecords());
+    // Client rectangles include browser/UI/graph scaling; no devicePixelRatio.
+    const r=$('#canvas').getBoundingClientRect(),width=document.documentElement.clientWidth,height=document.documentElement.clientHeight;
+    const next=[r.left,r.top,r.right,r.bottom,width,height,pan.x,pan.y,scale,uiScaleFactor(),editVersion].join('|');
+    if(dirty||stamp!==next){
+      stamp=next;dirty=false;hoverResults=new WeakMap();
+      const bounds={left:Math.max(0,r.left)-radius,top:Math.max(0,r.top)-radius,right:Math.min(width,r.right)+radius,bottom:Math.min(height,r.bottom)+radius};
+      const measurable=Object.values(bounds).every(Number.isFinite)&&bounds.right>bounds.left&&bounds.bottom>bounds.top;
+      candidates=wirePortButtons();
+      if(mode==='viewport')candidates=candidates.filter(button=>{
+        // A floating Parameter socket does not inherit its node's visibility.
+        if(button.classList.contains('parameter-input-port')||!measurable)return true;
+        const p=button.getBoundingClientRect();
+        if(![p.left,p.top,p.right,p.bottom].every(Number.isFinite))return true;
+        return p.right>=bounds.left&&p.left<=bounds.right&&p.bottom>=bounds.top&&p.top<=bounds.bottom;
+      }).filter(legal);
+    }
+    return candidates;
+  };
+  const accept=button=>{
+    if(disposed||button.disabled||!button.isConnected||!button.getClientRects().length)return false;
+    if(mode!=='hover')return true;
+    const info=portInfo(button,start),key=JSON.stringify(info),cached=hoverResults.get(button);
+    // Hover answers live only for this gesture, current model revision and
+    // current socket identity. Final release still runs connectPorts normally.
+    if(cached?.key===key&&cached.version===editVersion)return cached.valid;
+    const valid=!connectionProblem(start,info);hoverResults.set(button,{key,version:editVersion,valid});return valid;
+  };
+  get();
+  return {get,accept,dispose(){disposed=true;candidates=[];hoverResults=new WeakMap();observer.disconnect();document.removeEventListener('scroll',invalidate,true);}};
+}
+function findWireTarget(candidates,x,y,radius=14,accept=()=>true){
   const hit=document.elementFromPoint(x,y);
   if(!hit?.closest('#canvas,#floatingparameters'))return null;
   const direct=hit.closest('.port');
-  if(direct)return !direct.disabled&&candidates.includes(direct)?direct:null;
-  const router=hit.closest('.node-router');if(router)return candidates.find(p=>p.closest('.node-router')===router)||null;
+  if(direct)return !direct.disabled&&candidates.includes(direct)&&accept(direct)?direct:null;
+  const router=hit.closest('.node-router');if(router)return candidates.find(p=>p.closest('.node-router')===router&&accept(p))||null;
   let nearest=null,distance=radius; // Screen pixels, independent of graph zoom.
   for(const candidate of candidates){
     if(candidate.disabled)continue;
     const r=candidate.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,d=Math.hypot(x-cx,y-cy);
-    if(d<distance&&document.elementFromPoint(cx,cy)?.closest('.port')===candidate){nearest=candidate;distance=d;}
+    if(d<distance&&document.elementFromPoint(cx,cy)?.closest('.port')===candidate&&accept(candidate)){nearest=candidate;distance=d;}
   }
   return nearest;
 }
@@ -1502,10 +1556,10 @@ function dragWire(button,event){
   if(event.button!==0||readonly||button.disabled||!button.isConnected)return;event.stopPropagation();
   clearWireGesture();suppressPortClick=false;
   const start=portInfo(button),sx=event.clientX,sy=event.clientY,owner=graph,data=current();
-  const candidates=wirePortButtons().filter(p=>!connectionProblem(start,portInfo(p,start)));
+  const candidates=createWireCandidates(start);
   let moved=false,target=null,frame=0,lastEvent=null;
   const finish=()=>{
-    wireGesture=null;clearVectorWirePreview();clearGraphTrash();cancelAnimationFrame(frame);target?.classList.remove('wire-target');target=null;
+    candidates.dispose();wireGesture=null;clearVectorWirePreview();clearGraphTrash();cancelAnimationFrame(frame);target?.classList.remove('wire-target');target=null;
     button.onpointermove=button.onpointerup=button.onpointercancel=button.onlostpointercapture=null;
     window.removeEventListener('blur',cancel);document.removeEventListener('keydown',onKey,true);
     if(button.hasPointerCapture(event.pointerId))button.releasePointerCapture(event.pointerId);
@@ -1517,7 +1571,7 @@ function dragWire(button,event){
     if(graph!==owner||current()!==data||!button.isConnected){cancel();return;}
     if(e.pointerId!==event.pointerId||(!moved&&Math.hypot(e.clientX-sx,e.clientY-sy)<4))return;
     if(!moved)beginGraphTrash(trashTarget('port',start));moved=true;linkStart=null;
-    const over=updateGraphTrash(e.clientX,e.clientY),next=over?null:findWireTarget(candidates,e.clientX,e.clientY);
+    const over=updateGraphTrash(e.clientX,e.clientY),next=over?null:findWireTarget(candidates.get(),e.clientX,e.clientY,14,candidates.accept);
     if(target!==next){target?.classList.remove('wire-target');target=next;target?.classList.add('wire-target');}
     const r=target?.getBoundingClientRect();
     const q=graphPoint(r?r.left+r.width/2:e.clientX,r?r.top+r.height/2:e.clientY);if(!q)return;
@@ -2558,7 +2612,7 @@ function installTouchNavigation(canvas){
   };
   const finish=()=>{
     stopHold();cancelAnimationFrame(frame);frame=0;
-    const g=gesture,ids=[...points.keys()];gesture=null;touchGraphGesture=null;points.clear();
+    const g=gesture,ids=[...points.keys()];g?.candidates?.dispose();gesture=null;touchGraphGesture=null;points.clear();
     for(const id of ids)if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);
     lastTouch=performance.now();return g;
   };
@@ -2577,7 +2631,7 @@ function installTouchNavigation(canvas){
   };
   const beginPinch=()=>{
     const g=gesture;stopHold();cancelAnimationFrame(frame);frame=0;clearPreview(g);
-    g.positions=null;g.target=null;g.mode='pinch';g.moved=true;g.hadPinch=true;lastTap=null;
+    g.candidates?.dispose();g.candidates=null;g.positions=null;g.target=null;g.mode='pinch';g.moved=true;g.hadPinch=true;lastTap=null;
     closeGraphMenu();cancelConnection();rebase();
   };
   const paint=()=>{
@@ -2595,7 +2649,7 @@ function installTouchNavigation(canvas){
       for(const item of g.positions){item.nextX=item.x+mx;item.nextY=item.y+my;item.card.style.left=item.nextX+'px';item.card.style.top=item.nextY+'px';}updateGraphTrash(p.x,p.y);wires();
     }else if(g.mode==='edge'){showTrashWireProxy(p.x,p.y);updateGraphTrash(p.x,p.y);
     }else if(g.mode==='wire'){
-      const over=updateGraphTrash(p.x,p.y),target=over?null:findWireTarget(g.candidates,p.x,p.y,22);if(g.target!==target){g.target?.classList.remove('wire-target');g.target=target;target?.classList.add('wire-target');}
+      const over=updateGraphTrash(p.x,p.y),target=over?null:findWireTarget(g.candidates.get(),p.x,p.y,22,g.candidates.accept);if(g.target!==target){g.target?.classList.remove('wire-target');g.target=target;target?.classList.add('wire-target');}
       const r=target?.getBoundingClientRect(),q=graphPoint(r?r.left+r.width/2:p.x,r?r.top+r.height/2:p.y);
       if(q){wireDrag={...g.port,q,ready:!!target,panelProxy:!!target?.classList.contains('parameter-input-port')};wires();const range=previewVectorWire(g.port,target);$('#connection').hidden=false;$('#connection').textContent=t(target?'wire.release':canDisconnectInputOnBlank(g.port)&&isBlankWireDrop(p.x,p.y)?'trash.releaseWire':'wire.touchConnect')+(range?' · '+range:'');}
     }else if(g.mode==='box'){
@@ -2608,7 +2662,7 @@ function installTouchNavigation(canvas){
     const g=gesture,p=sample();if(!g||g.mode==='menu')return;
     if(!g.moved&&Math.hypot(p.x-g.start.x,p.y-g.start.y)>=slop){
       g.moved=true;stopHold();lastTap=null;
-      if(g.port&&!readonly){g.mode='wire';cancelConnection();beginGraphTrash(trashTarget('port',g.port));g.candidates=wirePortButtons().filter(b=>!connectionProblem(g.port,portInfo(b,g.port)));}
+      if(g.port&&!readonly){g.mode='wire';cancelConnection();beginGraphTrash(trashTarget('port',g.port));g.candidates=createWireCandidates(g.port,22);}
       else if(g.node&&g.canDragNode&&!readonly){
         g.mode='node';if(!selection.has(g.node.id))selectNode(g.node);else selected=g.node.id;selectedEdge=null;syncSelection();inspector();cancelConnection();
         g.positions=current().nodes.filter(n=>selection.has(n.id)).map(node=>({node,card:$('#cards').querySelector(`[data-node="${CSS.escape(node.id)}"]`),x:node.ui?.x||0,y:node.ui?.y||0,nextX:node.ui?.x||0,nextY:node.ui?.y||0}));

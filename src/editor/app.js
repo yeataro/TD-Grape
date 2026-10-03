@@ -1033,6 +1033,7 @@ function applyFloatingToolbar(){
 }
 const experimentsStorageKey='sgrapeExperimentsV1';
 const experimentChoices={
+  wireValidation:[['all','experiments.wireValidation.all'],['hover','experiments.wireValidation.hover'],['viewport','experiments.wireValidation.viewport']],
   linkArrowDisplay:[['always','experiments.linkArrowDisplay.always'],['hover','experiments.linkArrowDisplay.hover'],['hidden','experiments.linkArrowDisplay.hidden']],
   arrowNavigationView:[['none','experiments.navigationView.none'],['frame','experiments.navigationView.frame'],['frameInstant','experiments.navigationView.frameInstant'],['centerAnimated','experiments.navigationView.centerAnimated'],['centerInstant','experiments.navigationView.centerInstant']],
   arrowNavigationMode:[['legacy','experiments.navigation.legacy'],['branches','experiments.navigation.branches'],['spatial','experiments.navigation.spatial']],
@@ -1042,7 +1043,7 @@ const experimentChoices={
 };
 const experimentGroups=[
   ['toolbars',['floatingToolbar','editToolbar','wireQuickActions','selectionToolbar','selectionCollapseTools','persistentSelectionBounds','hideGroupedSelectionBounds','canvasTrash']],
-  ['nodes',['parameterInputPorts','nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
+  ['nodes',['parameterInputPorts','wireValidation','nodeBodyDrag','nodeDragCursor','nodeResizeHint','groupCornerSelect','nodeCollapseExpandedHint','nodeCollapseCollapsedHint','autoDisconnectInvalidEdges']],
   ['appearance',['lowZoomOverview','rgbaComponentTint','vectorComponentTint','systemClock','showFps','canvasDamping','frameDamping','frameWireEndpoint','linkArrowDisplay','reverseInputLinkArrowOnHover','arrowNavigationMode','ctrlArrowAdjacent','arrowNavigationView']]
 ];
 // Rolling raw frame intervals for Low/Min; the plotted peak buckets must not

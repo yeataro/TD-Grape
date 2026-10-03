@@ -1,5 +1,23 @@
 # 測試
 
+## 接線合法性實驗（2026-10-03，來源完成／TD 交付待同步）
+
+[WIRE_VALIDATION_MODES](../features/WIRE_VALIDATION_MODES.md) 說明 all／hover／viewport
+三模式與比較方式；viewport 預設，浮動 Parameter 接孔獨立參與，正式接線交易不變。
+`python -m unittest test_wire_validation test_matrix_foundation` 共 19 項通過。
+新增測試使用實際候選／hit-test、真實 planner 與交易，驗證候選預檢不改 Graph／History、
+畫布外循環仍拒絕、預檢後狀態失效仍由提交擋下，以及 observer／scroll 清理。
+1601 個五語 keys、14 項 Editor launch、browser metadata、JS 語法與 diff 檢查通過。
+
+隔離瀏覽器（無 TD 連線）以 63 節點 fixture 操作三模式接線／Undo、viewport 與 hover
+浮動 Parameter 接線、選項重載及繁中選項；未見 browser error log。這不是 TD/GPU 效能測量，
+觸控是候選／hit-test 模型測試，尚未實機驗證完整手勢。
+
+既有 `test_matrix_arithmetic.js`／`test_control_nodes.js` 在 VM 缺少 `URLSearchParams`
+而中止；從本次修改前 Git HEAD 匯出來源與原測試逐一重現，未算整套通過。
+本轮 `connectionProblem`、`planWireTypes`、`commitPlannedWire`、`connectPorts` 與 HEAD 完全相同。
+本機 TD Editor 與開發橋接未回應，尚未同步內嵌來源或保存 TOE；不宣稱運行中產品已更新。
+
 ## 共用色彩面板（0.8.273）
 
 測試命令與行為契約見 [CUSTOM_COLOR_PICKER](../features/CUSTOM_COLOR_PICKER.md)。`test_custom_color_picker.cjs` 的 16 組隔離檢查包含 RGB/RGBA、HEX 草稿、Apply、live 接受／取消、HDR、失效 anchor／late eyedropper、Canvas 鍵盤隔離、Note／Frame 及 OP Bind／Unbind 入口更新。`test_custom_color_editor_live.cjs` 以真實 HTTP／WebSocket 驗 6 組操作，證明拖曳時 TD 已改值、整個 popup 單一 History／receipt、四分量 Undo／Redo、取消、RGB 的第四原生槽保持，以及外部改值時 CAS 拒絕覆寫。fixture cleanup 核對 graphUnchanged／userShadersPreserved／fixtureRemoved。
