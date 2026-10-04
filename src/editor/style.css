@@ -1285,10 +1285,10 @@ details[open]>.summary>.tree-chevron,details[open]>summary>.tree-chevron{transfo
 .location-end>.sidebar-toggles{margin:0}
 .editor-view-actions{display:flex;align-items:center;justify-self:center;gap:3px}
 #editorrefresh svg{stroke-linecap:round}
-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;height:44px;min-height:44px;gap:8px;padding:3px 8px}
+footer{display:grid;grid-template-columns:minmax(0,1fr) auto;height:32px;min-height:32px;gap:8px;padding:3px 8px}
 .footer-start{display:flex;align-items:center;gap:8px;min-width:0}
 footer #dirty{flex:0 1 auto;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:10px;white-space:nowrap}
-footer #status{flex:1;min-width:0;padding:0;font-size:11px}
+footer #status{flex:0 1 auto;min-width:0;padding:0;font-size:11px}
 .footer-start:has(#status.error) #dirty{display:none}
 footer #reload{flex:0 1 auto;min-width:0;height:24px;max-width:100%;padding:0 8px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .footer-actions{display:flex;align-items:center;flex:0 1 auto;min-width:0;gap:5px}
@@ -1302,22 +1302,22 @@ footer .footer-preferences button[aria-pressed="true"]{color:var(--purple)}
 footer .footer-preferences button:focus-visible{outline:1px solid var(--purple);outline-offset:1px}
 footer .footer-preferences svg{width:17px;height:17px;stroke-linecap:round;stroke-linejoin:round}
 footer .footer-preferences svg[hidden]{display:none}
-footer #statushistorytoggle{flex:1;min-width:0;max-width:none;margin:0;border:0;background:transparent;padding:2px 6px;text-align:left;line-height:16px}
-.status-current{display:flex;align-items:center;gap:6px;min-width:0}
-footer #generationstatus{display:block;color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+footer #statushistorytoggle{display:flex;align-items:center;gap:8px;flex:1;min-width:0;max-width:none;margin:0;border:0;border-radius:0;background:transparent;padding:0;text-align:left;line-height:16px;height:24px}
+footer #generationstatus{flex:0 1 auto;min-width:0;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+footer #status:not([hidden])+#generationstatus::before{content:'·';margin-right:8px;color:var(--muted)}
 footer #generationstatus[data-state=failed],footer #generationstatus[data-state=applyFailed]{color:var(--danger)}
-footer #statushistorytoggle:hover{background:var(--ui-tone-control-hover)}
-#statushistory{inset:auto;margin:0;padding:12px;width:min(560px,calc(100vw - 16px));max-height:60vh;overflow:hidden;background:var(--ui-tone-dialog);color:var(--ui-tone-dialog-text);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 32px #0005}
+footer #statushistorytoggle:hover{background:transparent}
+footer #statushistorytoggle:focus-visible{outline:1px solid var(--purple);outline-offset:2px}
+#statushistory{inset:auto;margin:0;padding:10px 12px;width:calc(100vw - 16px);max-height:60vh;overflow:hidden;background:var(--ui-tone-dialog);color:var(--ui-tone-dialog-text);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px #0004}
 #statushistory:popover-open{display:flex;flex-direction:column}
 .status-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
-#statushistoryclose{padding:2px 8px;font-size:18px}
-#statushistory>p{color:var(--muted);font-size:11px;margin:4px 0 10px}
+#statushistoryclose{padding:0 5px;font-size:16px;border:0;background:transparent}
+#statushistory>p{color:var(--muted);font-size:11px;margin:4px 0 8px;overflow-wrap:anywhere}
 #statushistorylist{list-style:none;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;min-height:0;font-size:12px}
-#statushistorylist li{padding:9px 4px;border-top:1px solid var(--line);white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
+#statushistorylist li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:baseline;gap:10px;padding:5px 0;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;line-height:1.5}
 #statushistorylist li.error{color:var(--danger)}
-.status-history-meta{display:flex;gap:10px;color:var(--muted);font-size:10px;margin-bottom:3px}
-.status-history-meta>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:600px){footer,:root[data-ui-size="comfortable"] footer{position:relative;height:60px;min-height:60px;padding-bottom:20px}footer #dirty{max-width:72px}footer #generationstatus{position:absolute;bottom:3px;left:8px;right:8px;font-size:10px}}
+#statushistorylist time,.status-history-count{color:var(--muted);font-size:10px;white-space:nowrap}
+@media(max-width:600px){footer #dirty{max-width:72px}footer #status:not(.error){display:none}footer #status:not(.error)+#generationstatus::before{content:none}footer #generationstatus{font-size:10px}}
 @media(max-width:800px){
  .location-start>#projectfile{max-width:72px;font-size:10px}
  .location-bar .shader-selector #shaderpicker{max-width:100%;font-size:10px}
@@ -1515,7 +1515,7 @@ footer #statushistorytoggle:hover{background:var(--ui-tone-control-hover)}
 :root[data-ui-size="comfortable"] #editorheader #apply{padding-inline:16px}
 
 :root[data-ui-size="comfortable"] .location-bar,
-:root[data-ui-size="comfortable"] footer{height:48px;min-height:48px;padding-block:4px}
+:root[data-ui-size="comfortable"] footer{height:42px;min-height:42px;padding-block:4px}
 :root[data-ui-size="comfortable"] .location-bar .sidebar-toggle{width:32px;height:32px;padding:4px}
 :root[data-ui-size="comfortable"] .location-bar .sidebar-toggle svg{width:20px;height:20px}
 :root[data-ui-size="comfortable"] .location-bar #workspacelayout{height:32px;font-size:12px;padding-inline:10px}

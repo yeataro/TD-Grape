@@ -70,7 +70,7 @@ const {harness}=require('./test_glsl_code.cjs');
   await page.locator('#statushistorytoggle').click();await page.screenshot({path:path.join(folder,'status-history-desktop.png')});await page.locator('#statushistoryclose').click();
   await page.setViewportSize({width:390,height:844});await page.locator('#statushistorytoggle').click();
   const narrow=await page.locator('#statushistory').boundingBox();assert.ok(narrow.x>=0&&narrow.x+narrow.width<=391);assert.ok(narrow.y>=0);
-  assert.ok(await page.locator('#generationstatus').evaluate(e=>e.scrollWidth<=e.clientWidth),'Full generation route remains readable on a phone');
+  assert.equal(await page.locator('#statushistorycurrent').textContent(),(await shown()).text,'Expanded history exposes the full route on a phone');
   await page.screenshot({path:path.join(folder,'status-history-mobile.png')});
   await page.locator('#statushistoryclose').click();await page.locator('#statushistorytoggle').click();await page.locator('#canvas').click({position:{x:10,y:10}});assert.equal(await page.locator('#statushistory:popover-open').count(),0);
   checks.push('Traditional Chinese, mobile fit, and outside dismissal work');

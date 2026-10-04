@@ -100,18 +100,18 @@ function recordStatus(message,error=false,target=$('#target').textContent){
 }
 function renderStatusHistory(){
   const list=$('#statushistorylist'),top=list.scrollTop,height=list.scrollHeight;
+  $('#statushistorycurrent').textContent=$('#generationstatus').textContent;
   list.replaceChildren();
   if(!statusHistory.length)list.append(el('li',{},t('statusHistory.empty')));
   for(const item of statusHistory){
-    const row=el('li',{class:item.error?'error':''}),meta=el('div',{class:'status-history-meta'}),date=new Date(item.time);
-    meta.append(el('time',{datetime:date.toISOString()},date.toLocaleTimeString(language)),el('span',{},item.target),el('span',{},item.count>1?'×'+item.count:''));
-    row.append(meta,el('div',{},item.message));list.append(row);
+    const row=el('li',{class:item.error?'error':'',title:item.target}),date=new Date(item.time);
+    row.append(el('time',{datetime:date.toISOString()},date.toLocaleTimeString(language,{hour12:false})),el('div',{},item.message),el('span',{class:'status-history-count'},item.count>1?'×'+item.count:''));list.append(row);
   }
   list.scrollTop=top>0?top+list.scrollHeight-height:0;
 }
 function installStatusHistory(){
   const panel=$('#statushistory'),opener=$('#statushistorytoggle'),list=$('#statushistorylist');
-  const position=()=>{const zoom=uiScaleFactor(),width=Math.min(560,innerWidth/zoom-16);panel.style.width=width+'px';positionAppearancePanel(panel,opener);panel.style.right='auto';panel.style.left=Math.max(8,Math.min(opener.getBoundingClientRect().left/zoom,innerWidth/zoom-width-8))+'px';panel.style.maxHeight=Math.min(420,parseFloat(panel.style.maxHeight))+'px';};
+  const position=()=>{const zoom=uiScaleFactor(),rect=opener.getBoundingClientRect(),viewport=innerWidth/zoom,width=viewport<600?viewport-16:rect.width/zoom;panel.style.width=width+'px';positionAppearancePanel(panel,opener);panel.style.right='auto';panel.style.left=Math.max(8,Math.min(rect.left/zoom,viewport-width-8))+'px';panel.style.maxHeight=Math.min(340,parseFloat(panel.style.maxHeight))+'px';};
   panel.addEventListener('beforetoggle',event=>{if(event.newState==='open'){renderStatusHistory();position();}});
   panel.addEventListener('toggle',()=>opener.setAttribute('aria-expanded',String(panel.matches(':popover-open'))));
   const close=()=>{panel.hidePopover();opener.focus({preventScroll:true});};
@@ -131,6 +131,7 @@ function renderGenerationStatus(){
   label.textContent=graph?generationMessage(activity):'GLSL Generation · '+t('generation.waiting');
   label.dataset.route=graph?activity.route:'';label.dataset.state=graph?activity.state:'waiting';
   label.title=label.textContent+'\n'+t('generation.hint');
+  $('#statushistorycurrent').textContent=label.textContent;
 }
 function beginGeneration(source,route){
   const activity={key:graphContent(source),load:editorLoadGeneration,target:$('#target').textContent,route,state:'running'};
