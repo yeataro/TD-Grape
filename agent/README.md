@@ -1,5 +1,9 @@
 # Agent 工作入口
 
+此工作目錄使用 `refactor` 分支。執行本次重構前讀取 workspace 的[正式流程書](../../REFACTOR-WORKFLOW.md)，依其中的目前階段、固定 Legacy 基準、可寫範圍與 review 節點推進。產品責任以[目標架構共識](../../work/in-place-refactor-design/target-architecture.md)為準；以下舊產品文件提供行為及實作參考。
+
+開發工具使用本目錄 `.local/development.json` 指定獨立輸出；查驗 `work_path()` 指向 workspace 的 `work/refactor` 後才使用開發工具。宿主接入依正式流程書另確認隔離目標，保留原 `main` 與 `legacy` 目錄。
+
 使用者本次要求與最新確認的決策決定工作範圍。歷史筆記、提案及已被取代的規格保留作為背景，不自動成為新任務。
 
 ## 按任務取用文件

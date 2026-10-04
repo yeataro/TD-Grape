@@ -15,6 +15,11 @@ def source_path(name, root=ROOT):
 
 def work_path(root=ROOT):
     root = Path(root).resolve()
+    # A linked worktree can isolate its runner and output from its siblings.
+    local = root / '.local/development.json'
+    if local.is_file():
+        settings = json.loads(local.read_text(encoding='utf-8'))
+        return (local.parent / settings['workDirectory']).resolve()
     # This optional file is outside the public repository. A clone without an
     # enclosing private workspace runs with its own system-temporary directory.
     local = root.parent / 'private/development.json'
