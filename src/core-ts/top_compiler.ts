@@ -6,7 +6,17 @@ namespace GrapeTopCompiler {
   export interface Node {id:string;definitionUuid:string;params:ObjectValue;name?:string;inputValues?:ObjectValue;ui?:ObjectValue}
   export interface Declaration {id:string;kind:string;name:string;type:string;value:Value;[key:string]:Value}
   export interface Graph {schemaVersion:number;target:string;declarations:Declaration[];functions?:unknown[];topInputs?:unknown[];typeDefinitions?:unknown[];stages:Record<string,{nodes:Node[];edges:GrapeWirePlanning.Edge[];ui?:ObjectValue}>}
-  interface Definition {kind:'literal'|'vector'|'uniform'|'binary'|'unary'|'output';type?:Type;operator?:string;port?:string;defaults?:Record<string,number>;constant?:boolean}
+  export interface IdentifierRules {reservedNames:readonly string[]}
+  export class CompilationError extends Error {
+    readonly stage='pixel';readonly trail:string[]=[];
+    constructor(message:string,readonly node?:string){super(message);this.name='CompilationError';}
+  }
+  interface ProductDefinition {label:string;descriptionKey:string;browser:{category:string;source:string;aliases:string[];glslName:string;secondaryCategories:string[];categoryPath:string[]}}
+  type Definition = {type?:Type;defaults?:Record<string,number>;constant?:boolean} & (
+    {kind:'literal'|'vector'|'uniform'|'output'} |
+    {kind:'binary';operator:string} |
+    {kind:'unary';operator:string;port:string;product?:ProductDefinition}
+  );
   // Ordinary nodes using these primitives extend this one registry. The build
   // also exports its IDs for the receiver; there is no second handwritten list.
   export const definitions:Readonly<Record<string,Definition>>={
@@ -14,7 +24,8 @@ namespace GrapeTopCompiler {
     scalar:{kind:'literal'},vector:{kind:'vector',constant:true},uniform:{kind:'uniform'},
     add:{kind:'binary',operator:'+',defaults:{a:0,b:0}},subtract:{kind:'binary',operator:'-',defaults:{a:0,b:0}},
     multiply:{kind:'binary',operator:'*',defaults:{a:0,b:0}},divide:{kind:'binary',operator:'/',defaults:{a:0,b:1}},
-    abs:{kind:'unary',operator:'abs',port:'value'},pixel_out:{kind:'output'}
+    abs:{kind:'unary',operator:'abs',port:'value',product:{label:'Absolute',descriptionKey:'help.abs',browser:{category:'math',source:'glsl',aliases:['abs','absolute','絕對值'],glslName:'abs',secondaryCategories:[],categoryPath:['math','arithmetic']}}},
+    pixel_out:{kind:'output'}
   };
   export const protocol='grape.top.ts.1';
   const types:readonly string[]=['float','vec2','vec3','vec4'];
@@ -24,6 +35,7 @@ namespace GrapeTopCompiler {
   function object(v:Value|undefined):ObjectValue|undefined {return v!==null&&typeof v==='object'&&!Array.isArray(v)?v:undefined;}
   export function supports(g:Graph):boolean {
     if(g.schemaVersion!==1||g.target!=='top'||Object.keys(g.stages).join()!=='pixel'||g.functions?.length||g.topInputs?.length||g.typeDefinitions?.length)return false;
+    if(!g.stages.pixel||g.stages.pixel.nodes.length>256||g.stages.pixel.edges.length>1024)return false;
     if(g.stages.pixel?.ui?.frames)return false;
     if(!g.declarations.every(d=>d.kind==='uniform'&&types.includes(d.type)&&!d.initialDriver&&!d.sourceMissing&&!['array','matrix'].includes(String(d.nativeSequence))))return false;
     // Legacy allocates collision suffixes for implicit IDs versus explicit
@@ -66,7 +78,9 @@ namespace GrapeTopCompiler {
     return t+'('+value.map(number).join(', ')+')';
   }
   function fill(value:number,t:Type):Value {return t==='float'?value:Array.from({length:count(t)},()=>value);}
-  export function compile(g:Graph){
+  export function compile(g:Graph,identifiers?:IdentifierRules){
+    let errorNode:string|undefined;
+    try {
     if(!supports(g))throw Error('Graph is outside the selected frontend compiler capability');
     const data=g.stages.pixel!;if(data.nodes.length>256||data.edges.length>1024||JSON.stringify(g).length>512000)throw Error('Graph is too large');
     const nodes=new Map<string,Node>(),ports:Record<string,{in:Record<string,Type>;out:Record<string,Type>}>=Object.create(null);
@@ -78,34 +92,42 @@ namespace GrapeTopCompiler {
       if(d.exposeName!==undefined&&(typeof d.exposeName!=='string'||d.exposeName.length>80||/[\x00-\x1f]/.test(d.exposeName)))throw Error('Invalid public Uniform label');
       literal(d.value,type(d.type));declarations.set(d.id,d);names.add(d.name);
     }
-    const symbols=new Set<string>();
+    const symbols=new Set<string>(),authoredNames=new Set<string>();
     for(const n of data.nodes){
+      errorNode=n.id;
       if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(n.id)||nodes.has(n.id))throw Error('Invalid or duplicate node ID');
-      const symbol=n.name||n.id;if(!/^[A-Za-z][A-Za-z0-9_]*$/.test(symbol)||symbols.has(symbol))throw Error('Invalid or duplicate node name');symbols.add(symbol);nodes.set(n.id,n);
-      const d=definitions[key(n)]!;let t=d.type||type(n.params.type||'float');const inputs:Record<string,Type>={};
+      if(n.name!==undefined){if(!identifiers||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(n.name)||n.name.includes('__')||/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(n.name)||identifiers.reservedNames.includes(n.name)||authoredNames.has(n.name))throw Error('Invalid or duplicate node name');authoredNames.add(n.name);}
+      const d=definitions[key(n)]!,symbol=n.name||n.id;
+      if(d.kind!=='output'){if(symbols.has(symbol))throw Error('Duplicate output symbol');symbols.add(symbol);}nodes.set(n.id,n);
+      if(n.inputValues!==undefined&&!object(n.inputValues))throw Error('Invalid input default values');
+      if(n.params.requireConstant!==undefined&&typeof n.params.requireConstant!=='boolean')throw Error('Require Constant must be a boolean');
+      let t=d.type||type(n.params.type||'float');const inputs:Record<string,Type>={};
       if(d.kind==='uniform'){const decl=declarations.get(String(n.params.declarationId));if(!decl)throw Error('Select a matching declaration');t=type(decl.type);}
       if(d.kind==='literal')literal(n.params.value,t);
       if(d.kind==='vector'){if(!Array.isArray(n.params.components)||n.params.components.length!==4)throw Error('Vector needs four stored components');n.params.components.forEach(number);literal(n.params.components.slice(0,count(t)),t);}
       if(d.kind==='binary'){const operand=object(n.params.operandTypes);if(n.params.operandTypes!==undefined&&(!operand||Object.keys(operand).sort().join()!=='a,b'))throw Error('Invalid arithmetic operands');inputs.a=type(operand?.a??t);inputs.b=type(operand?.b??t);if(inputs.a!==inputs.b||t!==inputs.a)throw Error('Invalid arithmetic signature');}
       if(d.kind==='unary')inputs[d.port!]=t;
-      if(d.kind==='output'){for(const flag of ['nativeFinishing','convertColorSpace','dither','alphaTest'])if(n.params[flag]!==undefined&&typeof n.params[flag]!=='boolean')throw Error('Output finishing must be a boolean');inputs.color='vec4';}
+      if(d.kind==='output'){if(n.params.bufferCount!==undefined&&n.params.bufferCount!==1)throw Error('TOP has one color output');for(const flag of ['nativeFinishing','convertColorSpace','dither','alphaTest'])if(n.params[flag]!==undefined&&typeof n.params[flag]!=='boolean')throw Error('Output finishing must be a boolean');inputs.color='vec4';}
       ports[n.id]={in:inputs,out:d.kind==='output'?{}:{out:t}};
       for(const [p,v]of Object.entries(n.inputValues||{})){if(!inputs[p])throw Error('Unknown input default');literal(v,inputs[p]);}
     }
+    errorNode=undefined;
     const outputs=data.nodes.filter(n=>definitions[key(n)]!.kind==='output');if(outputs.length!==1)throw Error('Exactly one Pixel Output is required');
     const incoming=new Map<string,GrapeWirePlanning.Edge[]>(),links=new Map<string,GrapeWirePlanning.Edge>();
     for(const e of data.edges){const from=ports[e.from[0]]?.out[e.from[1]],to=ports[e.to[0]]?.in[e.to[1]],k=e.to.join(':');
+      errorNode=e.to[0];
       if(!from||!to)throw Error('Connection endpoint no longer exists');if(links.has(k))throw Error('An input can only have one connection');
       if(from!==to&&from!=='float')throw Error(from+' cannot connect to '+to);links.set(k,e);
       const list=incoming.get(e.to[0])||[];list.push(e);incoming.set(e.to[0],list);
     }
     const order:string[]=[],visited=new Set<string>(),active=new Set<string>();
-    function visit(id:string){if(active.has(id))throw Error('Cycle detected');if(visited.has(id))return;active.add(id);
+    function visit(id:string){errorNode=id;if(active.has(id))throw Error('Cycle detected');if(visited.has(id))return;active.add(id);
       for(const e of [...(incoming.get(id)||[])].sort((a,b)=>a.to[1]<b.to[1]?-1:1))visit(e.from[0]);active.delete(id);visited.add(id);order.push(id);}
     // Validate disconnected cycles too, then separately select the live closure.
     for(const id of nodes.keys())visit(id);visited.clear();order.length=0;visit(outputs[0]!.id);
     const used=new Set<string>(),lines:string[]=[],lineNodes:string[]=[],expressions=new Map<string,string>();
     for(const id of order){const n=nodes.get(id)!,d=definitions[key(n)]!,p=ports[id]!,t=p.out.out;const start=lines.length;
+      errorNode=id;
       const input=(port:string)=>{const target=p.in[port]!,edge=links.get(id+':'+port);if(edge){const value=expressions.get(edge.from[0])!;return ports[edge.from[0]]!.out.out===target?value:target+'('+value+')';}
         return literal(n.inputValues?.[port]??(d.kind==='output'?[0,0,0,1]:fill(d.defaults?.[port]||0,target)),target);};
       let expression='';
@@ -124,5 +146,6 @@ namespace GrapeTopCompiler {
     const diagnostics=data.nodes.filter(n=>!visited.has(n.id)).sort((a,b)=>a.id<b.id?-1:1).map(n=>({node:n.id,stage:'pixel',message:'Disconnected node is not emitted'}));
     const sourceMap={pixel:lineNodes.map((node,i)=>({node,stage:'pixel',trail:[],line:headers.length+4+i}))};
     return {vertex:'',pixel,bindings,sourceMap,stages:{pixel:{lines,ports,live:[...visited].sort()}},diagnostics};
+    } catch(error) {throw new CompilationError(error instanceof Error?error.message:String(error),errorNode);}
   }
 }

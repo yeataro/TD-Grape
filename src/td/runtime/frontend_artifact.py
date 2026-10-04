@@ -25,6 +25,25 @@ def graph_hash(graph, core):
     return core.digest(core.clean_semantic(graph))
 
 
+def input_hash(graph, core):
+    # Keep annotation/viewer nodes and diagnostic inputs that the old semantic
+    # hash intentionally omits. Reuse must never swallow an unsupported edit.
+    source = copy.deepcopy(graph)
+    source.pop('catalogSnapshot', None)
+    for stage in source.get('stages', {}).values():
+        for node in stage.get('nodes', []):
+            ui = node.get('ui')
+            if isinstance(ui, dict):
+                for field in ('x', 'y', 'width', 'height'):
+                    if type(ui.get(field)) in (int, float): ui.pop(field)
+                for field in ('collapsed', 'componentsExpanded'):
+                    if type(ui.get(field)) is bool: ui.pop(field)
+                columns = ui.get('matrixColumnsExpanded')
+                if isinstance(columns, list) and all(v is None or type(v) is bool for v in columns): ui.pop('matrixColumnsExpanded')
+                if not ui: node.pop('ui')
+    return core.digest(source)
+
+
 def checked_artifact(graph, artifact, core):
     """Validate saved or incoming data, returning a detached compiled result."""
     def require(condition, message):
@@ -36,6 +55,7 @@ def checked_artifact(graph, artifact, core):
     require(artifact.get('protocol') == PROTOCOL, 'unsupported compiler protocol')
     require(artifact.get('catalogHash') == core.catalog_contract()['hash'], 'catalog changed; reload the editor')
     require(artifact.get('graphHash') == graph_hash(graph, core), 'result belongs to another graph snapshot')
+    require(artifact.get('inputHash') == input_hash(graph, core), 'compiler input snapshot changed')
     require(graph.get('schemaVersion') == 1 and graph.get('target') == 'top', 'unsupported document target')
     require(set(graph.get('stages', {})) == {'pixel'}, 'unsupported stages')
     require(not any(graph.get(key) for key in ('functions', 'topInputs', 'typeDefinitions')), 'outside compiler capabilities')
@@ -81,7 +101,7 @@ def checked_artifact(graph, artifact, core):
     diagnostics = compiled.get('diagnostics')
     require(isinstance(diagnostics, list) and all(isinstance(row, dict) and row.get('node') in ids and row.get('stage') == 'pixel' and isinstance(row.get('message'), str) and len(row['message']) <= 1000 for row in diagnostics), 'invalid diagnostics')
     result = {key: copy.deepcopy(compiled[key]) for key in ('vertex', 'pixel', 'bindings', 'sourceMap', 'diagnostics')}
-    result.update(hash=artifact['graphHash'], frontendProtocol=PROTOCOL, frontendCatalogHash=artifact['catalogHash'])
+    result.update(hash=artifact['graphHash'], frontendProtocol=PROTOCOL, frontendCatalogHash=artifact['catalogHash'], frontendInputHash=artifact['inputHash'])
     return result
 
 
@@ -94,6 +114,7 @@ def receive(graph, payload, target_id, revision, core):
         raise ValueError('Frontend artifact: snapshot mismatch')
     artifact = {key: copy.deepcopy(payload.get(key)) for key in ('protocol', 'catalogHash', 'compiled')}
     artifact['graphHash'] = graph_hash(graph, core)
+    artifact['inputHash'] = input_hash(graph, core)
     checked_artifact(graph, artifact, core)
     return artifact
 
@@ -103,5 +124,5 @@ def remember(state, compiled):
     result.pop('frontendArtifact', None)
     if compiled.get('frontendProtocol') == PROTOCOL:
         result['frontendArtifact'] = dict(protocol=PROTOCOL, catalogHash=compiled['frontendCatalogHash'],
-            graphHash=compiled['hash'], compiled={key: copy.deepcopy(compiled[key]) for key in ('vertex', 'pixel', 'bindings', 'sourceMap', 'diagnostics')})
+            graphHash=compiled['hash'], inputHash=compiled['frontendInputHash'], compiled={key: copy.deepcopy(compiled[key]) for key in ('vertex', 'pixel', 'bindings', 'sourceMap', 'diagnostics')})
     return result

@@ -1,6 +1,9 @@
 import copy
+import ast
 import json
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 import sgrape_core as c
 import sgrape_document as document
@@ -62,6 +65,42 @@ class FrontendArtifactTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         checks.invalidate(); checks.compile(self.graph)
         self.assertEqual(len(calls), 2)
+
+    def test_semantic_hash_cannot_hide_unsupported_annotation_edits(self):
+        artifact = receiver.receive(self.graph, self.payload, 'target', 7, c)
+        changed = copy.deepcopy(self.graph)
+        changed['stages']['pixel']['nodes'].append(c.node('generated_glsl', 'codeView'))
+        self.assertEqual(receiver.graph_hash(changed, c), artifact['graphHash'])
+        self.assertNotEqual(receiver.input_hash(changed, c), artifact['inputHash'])
+        with self.assertRaisesRegex(ValueError, 'input snapshot'):
+            receiver.checked_artifact(changed, artifact, c)
+
+    def test_runtime_cache_revalidates_external_dat_changes_and_target_switches(self):
+        artifact = receiver.receive(self.graph, self.payload, 'target', 7, c)
+        saved = dict(graph=self.graph, revision=7, frontendArtifact=artifact)
+        live = {'raw': json.dumps(saved)}
+        caps = SimpleNamespace(text=json.dumps(receiver.capabilities()))
+        dats = {'document': SimpleNamespace(module=document), 'frontend_artifact': SimpleNamespace(module=receiver), 'frontend_capabilities': caps}
+        scope = dict(json=json, _owner=SimpleNamespace(id=1, op=dats.get), _shader=SimpleNamespace(id=2),
+                     _graph_checks=None, _graph_provider_state=None, _frontend_request=None,
+                     core=lambda: c, saved_state_source=lambda: live['raw'])
+        path = Path(__file__).resolve().parents[2] / 'src/td/runtime/sgrape_runtime.py'
+        module = ast.parse(path.read_text(encoding='utf-8'))
+        functions = [n for n in module.body if isinstance(n, ast.FunctionDef) and n.name in ('frontend_receiver', 'compile_runtime_graph', 'graph_checks')]
+        exec(compile(ast.Module(body=functions, type_ignores=[]), str(path), 'exec'), scope)
+        def read(): return scope['graph_checks']().saved(live['raw'], 'top')
+        with patch.object(c, 'compile_graph', side_effect=AssertionError('Python emitter used')):
+            self.assertEqual(read()['status'], 'valid')
+            corrupted = copy.deepcopy(saved); corrupted['frontendArtifact']['protocol'] = 'corrupt'
+            live['raw'] = json.dumps(corrupted)
+            self.assertEqual(read()['status'], 'blocked')
+            live['raw'] = json.dumps(saved)
+            self.assertEqual(read()['status'], 'valid')
+            scope['_shader'] = SimpleNamespace(id=3)
+            other = copy.deepcopy(saved); other['frontendArtifact']['compiled']['pixel'] += '// other target\n'
+            live['raw'] = json.dumps(other)
+            self.assertEqual(read()['status'], 'valid')
+            self.assertTrue(scope['graph_checks']().compile(self.graph)['pixel'].endswith('// other target\n'))
 
 
 if __name__ == '__main__': unittest.main()

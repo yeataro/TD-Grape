@@ -50,7 +50,7 @@ class SavedStateTests(unittest.TestCase):
 
     def test_saved_write_guards_run_before_mutating(self):
         for raw in ['{broken',self.raw().replace('"revision": 7','"revision": true')]:
-            owner=SimpleNamespace(op=lambda name:SimpleNamespace(module=d) if name=='document' else None)
+            owner=SimpleNamespace(id=1,op=lambda name:SimpleNamespace(module=d) if name=='document' else None)
             with patch.object(r,'_owner',owner),patch.object(r,'saved_state_source',lambda:raw),patch.object(r,'core',lambda:c),patch.object(r,'target',lambda:object()),patch.object(r,'shader_kind',lambda s:'mat'),patch.object(r,'ensure_supported_shader',lambda s:None):
                 for action in [lambda:r.deploy(c.demo_graph('color'),7),lambda:r.set_uniform_value({}),lambda:r.save_personal({})]:
                     with self.assertRaisesRegex(RuntimeError,'Saved Shader state'):action()

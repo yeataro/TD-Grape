@@ -19,6 +19,25 @@ else:
     import sgrape_voronoi as _voronoi
 
 VERSION = 1
+
+
+def _frontend_ordinary_nodes():
+    """Generated definition data for the temporary legacy compiler adapter."""
+    if 'me' in globals():
+        dat = me.parent().op('frontend_capabilities')
+        raw = dat.text if dat else '{}'
+    else:
+        from pathlib import Path
+        path = Path(__file__).with_name('frontend_capabilities.json')
+        raw = path.read_text(encoding='utf-8') if path.exists() else '{}'
+    entries = json.loads(raw).get('ordinary', {})
+    for key, entry in entries.items():
+        if not all(isinstance(v, str) and re.fullmatch('[A-Za-z][A-Za-z0-9_]{0,63}', v) for v in (key, entry.get('operator'), entry.get('port'))):
+            raise ValueError('Invalid generated ordinary node primitive')
+    return entries
+
+
+FRONTEND_ORDINARY = _frontend_ordinary_nodes()
 TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
 SCALAR_TYPES = tuple(TYPE_PREFIXES)
 TYPE_DESCRIPTORS = {
@@ -114,7 +133,7 @@ EMITTER_IDS = frozenset(('float','vec2','vec3','color','add','multiply','mix','s
     'rgb_to_hsv','hsv_to_rgb','remap','range_from','range_to','loop','zigzag',
     'perlin_noise','simplex_noise','voronoi','scalar','convert','matrix_convert',
     'router','math','switch','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get','matrix_set',
-    'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS,*_legacy_nodes.CALLS))
+    'transpose','inverse','determinant','matrix_comp_mult','outer_product',*COMPOSITE_KEYS,*_legacy_nodes.CALLS,*FRONTEND_ORDINARY))
 
 # These built-ins are GLSL constant expressions when every input is one.
 # User functions, uniforms, texture queries and stage data are intentionally absent.
@@ -124,7 +143,7 @@ CONSTANT_EXPRESSIONS = frozenset(('router','math','float','vec2','vec3','vec4','
     'range_from','range_to','scalar','convert','matrix_convert','matrix','matrix_combine','matrix_replace','matrix_split','matrix_get',
     'transpose','inverse','determinant','matrix_comp_mult','outer_product',
     'array','array_get','array_length','struct_field',
-    *(k for k,spec in _legacy_nodes.CALLS.items() if spec['constant'])))
+    *(k for k,spec in _legacy_nodes.CALLS.items() if spec['constant']),*FRONTEND_ORDINARY))
 SPECIALIZATION_EXPRESSIONS = frozenset(('router','math','relay','add','subtract','multiply','divide','convert','matrix_convert','scalar','vector','combine','swizzle','split','vector_split','compare','if'))
 VECTOR_KEYS = ('combine','vector_split','swizzle','vector','replace')
 VECTOR_TYPES = tuple(ty for ty in SCALAR_VECTOR_TYPES if TYPE_DESCRIPTORS[ty]['components']>1)
@@ -1514,6 +1533,7 @@ def _compile_flat(graph,annotation_scopes=None):
                     helper='TDLoop' if k=='loop' else 'TDZigZag'
                     expr=componentwise_expression(ty,[a(port) for port in ('value','min','max')],
                         lambda *values:helper+'('+', '.join(values)+')')
+                elif k in FRONTEND_ORDINARY: expr=FRONTEND_ORDINARY[k]['operator']+'('+a(FRONTEND_ORDINARY[k]['port'])+')'
                 elif k in ('sin','cos','abs','fract','length','normalize','sign','sqrt','floor','round','ceil','trunc'): expr=k+'('+a('value')+')'
                 elif k=='voronoi':
                     function=_voronoi.specialization(p)

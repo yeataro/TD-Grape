@@ -1074,7 +1074,11 @@
       },
       "emitter": {
         "id": "abs",
-        "version": 1
+        "version": 1,
+        "primitive": {
+          "operator": "abs",
+          "port": "value"
+        }
       },
       "browser": {
         "category": "math",
@@ -17206,5 +17210,8 @@
         "code"
       ]
     }
-  }
+  },
+  "frontendGenerated": [
+    "abs"
+  ]
 }

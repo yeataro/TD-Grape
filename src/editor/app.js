@@ -468,7 +468,7 @@ async function performApplyGraph(){
     if(!hasPixelPreview(sentGraph))await releasePixelPreview({discard:false});
     if(generation!==editorLoadGeneration)return;
     pixelPreview=pixelPreviewApplyMetadata(sentGraph);
-    const frontendArtifact=frontendCompilation(sentGraph)?{protocol:GrapeTopCompiler.protocol,targetId:shaderId,baseRevision:sentRevision,snapshot:JSON.stringify(sentGraph),catalogHash:frontendCompiler.catalogHash,compiled:GrapeTopCompiler.compile(sentGraph)}:null;
+    const frontendArtifact=frontendCompilation(sentGraph)?{protocol:GrapeTopCompiler.protocol,targetId:shaderId,baseRevision:sentRevision,snapshot:JSON.stringify(sentGraph),catalogHash:frontendCompiler.catalogHash,compiled:compileFrontendGraph(sentGraph)}:null;
     const data=await api('apply',{graph:sentGraph,revision:sentRevision,...(pixelPreview?{pixelPreview}:{}),...(frontendArtifact?{frontendArtifact}:{})});
     if(!pixelPreviewRequestCurrent(pixelPreview,generation))return;
     if(data.upgradeReview){
@@ -1670,6 +1670,10 @@ function generatedGLSLView(node,canvas=false){
   return box;
 }
 function frontendCompilation(source){return !!(frontendCompiler&&typeof GrapeTopCompiler!=='undefined'&&frontendCompiler.protocol===GrapeTopCompiler.protocol&&GrapeTopCompiler.supports(source));}
+function compileFrontendGraph(source){
+  try{return GrapeTopCompiler.compile(source,typeContract?.glslCode);}
+  catch(error){setCompileDiagnostics({error:error.message,node:error.node,stage:error.stage,trail:error.trail,phase:'validation'},JSON.stringify(source));throw error;}
+}
 function generatedGLSLKey(){return JSON.stringify([editorLoadGeneration,stage,graphContent(graph)]);}
 function paintGeneratedGLSL(){
   for(const view of document.querySelectorAll('[data-generated-glsl]')){
@@ -1691,7 +1695,7 @@ function refreshGeneratedGLSL(force=false){
   generatedGLSLCache={key,state:'loading',text:''};paintGeneratedGLSL();
   generatedGLSLTimer=setTimeout(async()=>{
     try{
-      const code=frontendCompilation(source)?GrapeTopCompiler.compile(source):await api('validate',{graph:source});
+      const code=frontendCompilation(source)?compileFrontendGraph(source):await api('validate',{graph:source});
       if(serial!==generatedGLSLSerial||!graph||generatedGLSLKey()!==key)return;
       if(typeof code[sourceStage]!=='string')throw Error(t('generatedGLSL.unavailable'));
       generatedGLSLCache={key,state:'ready',text:code[sourceStage]};

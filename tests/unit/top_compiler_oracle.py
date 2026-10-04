@@ -76,4 +76,10 @@ bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'][1]['inputValues'] = {
 bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'].append(c.node('abs', 'dead', type='float')); bad['stages']['pixel']['edges'].append(c.edge('dead', 'dead', 'value')); add('disconnected cycle', bad)
 bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'].pop(); add('missing output', bad)
 bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'].append(c.node('pixel_out', 'second')); add('extra output', bad)
-print(json.dumps(cases, allow_nan=False))
+named = copy.deepcopy(base); named['stages']['pixel']['nodes'][-1]['name'] = 'source'; add('output name shares implicit source ID', named)
+for name in ('main', 'vec4', 'a' * 49, 'TDreserved', 'has__double', 'float'):
+    bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'][0]['name'] = name; add('reserved/invalid name ' + name, bad)
+bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'][0]['params']['requireConstant'] = 0; add('invalid constant flag', bad)
+bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'][-1]['params']['bufferCount'] = 0; add('invalid output count', bad)
+bad = copy.deepcopy(base); bad['stages']['pixel']['nodes'][1]['inputValues'] = None; add('null input defaults', bad)
+print(json.dumps({'cases': cases, 'identifiers': {'reservedNames': sorted(c.GLSL_CODE_RESERVED)}}, allow_nan=False))

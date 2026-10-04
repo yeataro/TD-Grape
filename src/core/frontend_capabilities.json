@@ -15,5 +15,11 @@
     "sgrape.builtin.vec3",
     "sgrape.builtin.vec4",
     "sgrape.builtin.vector"
-  ]
+  ],
+  "ordinary": {
+    "abs": {
+      "operator": "abs",
+      "port": "value"
+    }
+  }
 }

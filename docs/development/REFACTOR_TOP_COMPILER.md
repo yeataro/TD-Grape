@@ -1,6 +1,6 @@
 # TOP frontend compiler: first slice
 
-Work in progress for workflow step 3. The fixed comparison remains Legacy
+Technical candidate for workflow step 3, awaiting human experience review. The fixed comparison remains Legacy
 `90a946bdd2acacbf52c93842806edbc23f76b7ba`; the previous reviewed refactor checkpoint
 is `769d9e2`. Passing offline checks alone does not complete this milestone.
 
@@ -9,7 +9,7 @@ diagnostics and source locations without DOM, Python or TD. The initial scope is
 float/vector literals, arithmetic, numeric Uniforms, Abs and one Color Output.
 Unsupported complete graphs select the existing compiler before compilation.
 Compilation failures do not silently retry the other compiler. Comments,
-functions, textures, MAT, Preview and compound/dynamic interfaces remain outside
+functions, textures, MAT, temporary Preview nodes and compound/dynamic interfaces remain outside
 this slice. Implicit-ID/explicit-name symbol collisions also remain on the old
 path. These adapters are temporary, not the final architecture.
 
@@ -31,12 +31,30 @@ The saved artifact is checked again against its graph and catalog. A source chan
 which invalidates it may still use the legacy path during migration. Native value
 ownership remains independent of graph defaults.
 
-The compiler registry also generates the receiver's capability IDs in
-`frontend_capabilities.json`. Adding a supported emitter for an already defined
-ordinary node uses one registry entry; this is **not yet** proof that a completely
-new product node can be authored in one place. That broader extension check,
-independent receiver review, native preview/Undo/save/reopen, and separated cold/
-warm/TD timings are outstanding until recorded in the workspace evidence.
+Ordinary nodes using the current unary primitive can be authored in one registry
+entry with `product` metadata. The build projects catalog/fingerprint, browser
+search/Creator metadata and receiver IDs; the catalog supplies the existing type
+contract. A temporary Python adapter reads the same generated operator and port
+for whole graphs outside the frontend slice. Abs uses this route now. New
+capabilities and dynamic interfaces still need an explicit implementation.
+`frontendGenerated` tracks owned catalog rows; removing a row removes its
+projection. Removal with historical revisions requires an explicit migration.
+Primitive semantics participate in the catalog contract to invalidate saved
+artifacts after an operator change.
+
+`tests/integration/test_frontend_node_extension.cjs <absolute-evidence-directory>`
+proves this in an isolated source copy: one new entry with a novel input port,
+browser/type/receiver reachability, exact dual-compiler parity, changing an
+existing primitive, removal, and invalid primitive metadata. It does not ship
+the probe node. Module loading by end users is outside this milestone.
+
+The isolated native loop passed with the Python emitter forced to throw after
+initial setup: normal Apply, real GPU output/remote preview, unpromoted Uniform
+Undo/Redo, complete graph+artifact TOX save/reopen, native Bind/Expression
+preservation, late Apply replies, invalid candidate rejection, and injected
+post-configure compensation. Both independent review axes have no remaining
+blocking findings. Evidence is in workspace `work/refactor/compiler-step/REVIEW.md`.
+This does not claim all TD compilation has migrated.
 
 Offline checks:
 
@@ -51,3 +69,7 @@ source locations and diagnostics, including disconnected data, input defaults,
 invalid graphs and numeric rounding boundaries. It is never loaded by the editor.
 Receiver tests check mismatch rejection, stored result validation, owned copies,
 and provider reuse without calling the old emitter.
+
+The full portable suite is not green: the pre-existing failing cases are recorded
+against the archived previous checkpoint. Targeted changed-path checks and native
+evidence are reported separately; do not describe baseline failures as passes.

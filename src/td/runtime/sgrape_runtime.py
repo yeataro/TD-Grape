@@ -441,6 +441,7 @@ def saved_state_source():
     return dat.text if dat else None
 
 _graph_checks = None
+_graph_provider_state = None
 _frontend_request = None
 
 
@@ -455,7 +456,7 @@ def compile_runtime_graph(graph):
         # Whole snapshots only. A rejected artifact never triggers old emission.
         saved = json.loads(saved_state_source() or '{}').get('frontendArtifact')
         for artifact in (_frontend_request, saved):
-            if artifact and artifact.get('graphHash') == receiver.graph_hash(graph, core()):
+            if artifact and artifact.get('inputHash') == receiver.input_hash(graph, core()):
                 return receiver.checked_artifact(graph, artifact, core())
     return core().compile_graph(graph)
 
@@ -469,11 +470,18 @@ def remember_frontend_result(state, compiled):
 
 
 def graph_checks():
-    global _graph_checks
+    global _graph_checks, _graph_provider_state
     document = _owner.op('document').module
     compiler = core()
     if not isinstance(_graph_checks, document.GraphChecks) or _graph_checks.core is not compiler:
         _graph_checks = document.GraphChecks(compiler, compile_runtime_graph)
+        _graph_provider_state = None
+    receiver = frontend_receiver()
+    caps = _owner.op('frontend_capabilities') if receiver else None
+    provider_state = ((_shader or _owner).id, saved_state_source(), receiver.checked_artifact if receiver else None, caps.text if caps else None)
+    if provider_state != _graph_provider_state:
+        _graph_checks.invalidate()
+        _graph_provider_state = provider_state
     return _graph_checks
 
 
