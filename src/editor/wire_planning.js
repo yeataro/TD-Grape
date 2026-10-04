@@ -194,6 +194,7 @@ var node_module_2 = require("./node_module");
 Object.defineProperty(exports, "contextFor", { enumerable: true, get: function () { return node_module_2.contextFor; } });
 const subgraphs_1 = require("./subgraphs");
 const subgraph_operations_1 = require("./subgraph_operations");
+const subgraph_copies_1 = require("./subgraph_copies");
 var scope_references_1 = require("./scope_references");
 Object.defineProperty(exports, "ScopeReferences", { enumerable: true, get: function () { return scope_references_1.ScopeReferences; } });
 function clone(value, immutable = false) {
@@ -374,6 +375,12 @@ class Network {
     }
     instantiateSubgraph(definitionId, id, ui = {}) {
         return this.node((0, subgraph_operations_1.instantiateSubgraph)(this, definitionId, id, ui).id);
+    }
+    independentSubgraph(node, next) {
+        if (node.network !== this)
+            throw Error('Node belongs to another network');
+        const f = (0, subgraph_copies_1.independentSubgraph)(this, node.id, next);
+        return f ? this.graph.subgraph(f.id) : null;
     }
     get context() { var _a; return (0, node_module_1.contextFor)(this.graph.document, (_a = this.graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.graph === this.data)); }
     node(id) { let n = this.nodeHandles.get(id); if (!n) {
@@ -678,6 +685,11 @@ class GraphDocument {
         return this.networkHandles;
     }
     createSubgraph(options) { return this.subgraph((0, subgraph_operations_1.createSubgraph)(this, options).id); }
+    ensureSubgraphCapacity(additional = 0) { (0, subgraph_operations_1.ensureSubgraphCapacity)(this, additional); }
+    appendSubgraphs(definitions, ids = new Map()) {
+        return (0, subgraph_copies_1.appendSubgraphs)(this, definitions, ids).map(f => this.subgraph(f.id));
+    }
+    localizeSubgraph(id, next) { return (0, subgraph_copies_1.localizeSubgraph)(this, id, next); }
     subgraph(id) { return new subgraphs_1.Subgraph(this, id); }
     assertEditable() { if (!this.editable || !this.active)
         throw Error('Graph changes require an active transaction'); }
@@ -713,6 +725,7 @@ function networkEntries(document) {
 }
 function complete(document, previous) {
     const prior = new Map(previous ? networkEntries(previous) : []);
+    const snapshots = new Set((document.functions || []).filter(f => f.scope !== 'local').map(f => f.graph));
     for (const [id, data] of networkEntries(document)) {
         const old = prior.get(id);
         let sequence = Math.max(edgeSequence(data), old ? edgeSequence(old) : 0);
@@ -723,6 +736,10 @@ function complete(document, previous) {
             nodes.add(n.id);
         }
         for (const e of data.edges) {
+            // Source snapshots keep their authored bytes. Their read-only Edge
+            // handles already have temporary identities; only local data gets IDs.
+            if (!e.id && snapshots.has(data))
+                continue;
             if (!e.id) {
                 if (!Number.isSafeInteger(sequence + 1))
                     throw Error('Edge sequence exhausted');
@@ -732,7 +749,7 @@ function complete(document, previous) {
                 throw Error('Duplicate edge ID');
             edges.add(e.id);
         }
-        if (sequence)
+        if (sequence && !snapshots.has(data))
             data.edgeSequence = sequence;
     }
 }
@@ -2788,6 +2805,168 @@ function createSubgraphCompiler(registry, engineFactory) {
 }
 
 },
+"subgraph_copies":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.appendSubgraphs = appendSubgraphs;
+exports.localizeSubgraph = localizeSubgraph;
+exports.independentSubgraph = independentSubgraph;
+const model_1 = require("./model");
+const subgraph_operations_1 = require("./subgraph_operations");
+const scope_references_1 = require("./scope_references");
+const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
+const reference = (graph, n) => { var _a, _b; return (_b = (_a = graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); };
+function parameters(graph, n, id) {
+    var _a;
+    const module = graph.registry.get(n.definitionUuid);
+    if (!(module === null || module === void 0 ? void 0 : module.reference))
+        throw Error('Subgraph module cannot redirect its reference');
+    const params = { ...(0, model_1.copy)(n.params), ...(0, model_1.copy)(module.reference(id)) };
+    if (((_a = module.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(module, { ...n, params })) !== id)
+        throw Error('Subgraph reference operation disagrees with its module');
+    return params;
+}
+function remapScopes(value, ids) {
+    scope_references_1.ScopeReferences.walk(value, (ref, old) => {
+        const id = ref.scope.startsWith('fn_') && ids.get(ref.scope.slice(3));
+        return id ? scope_references_1.ScopeReferences.token('fn_' + id, ref.source) : old;
+    });
+}
+function allocate(used, next) {
+    const id = next();
+    if (!validId(id) || used.has(id))
+        throw Error('Invalid or duplicate Subgraph identity');
+    used.add(id);
+    return id;
+}
+/** Receive authored definitions, not Library files. The adapter decides which
+ * versions to reuse and supplies any ID mapping. All mutation stays here. */
+function appendSubgraphs(graph, definitions, ids = new Map()) {
+    var _a;
+    graph.assertEditable();
+    (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, definitions.length);
+    const pending = definitions.map(f => (0, model_1.copy)(f)), used = new Set((graph.document.functions || []).map(f => f.id));
+    const originalIds = new Set();
+    for (const f of pending) {
+        if (originalIds.has(f.id))
+            throw Error('Duplicate Subgraph identity');
+        originalIds.add(f.id);
+        f.id = ids.get(f.id) || f.id;
+        if (used.has(f.id))
+            throw Error('Duplicate Subgraph identity');
+        used.add(f.id);
+        for (const n of f.graph.nodes) {
+            const old = reference(graph, n), mapped = old && ids.get(old);
+            if (mapped)
+                n.params = parameters(graph, n, mapped);
+        }
+        remapScopes(f, ids);
+        (0, subgraph_operations_1.validateSubgraphData)(f);
+    }
+    const all = new Map([...(graph.document.functions || []), ...pending].map(f => [f.id, f]));
+    const active = new Set(), done = new Set();
+    const visit = (id) => {
+        if (active.has(id))
+            throw Error('Subgraph reference cycle');
+        if (done.has(id))
+            return;
+        const f = all.get(id);
+        if (!f)
+            throw Error('Missing nested Subgraph');
+        active.add(id);
+        for (const n of f.graph.nodes) {
+            const child = reference(graph, n);
+            if (child)
+                visit(child);
+        }
+        active.delete(id);
+        done.add(id);
+    };
+    pending.forEach(f => visit(f.id));
+    if (pending.length)
+        ((_a = graph.document).functions || (_a.functions = [])).push(...pending);
+    return pending;
+}
+/** Turn a source-owned definition and its source callers into editable local
+ * copies. Stored source snapshots remain byte-for-byte authored data. */
+function localizeSubgraph(graph, id, next) {
+    graph.assertEditable();
+    const definitions = graph.document.functions || [], target = definitions.find(f => f.id === id);
+    if (!target || target.scope === 'local')
+        return new Map();
+    const affected = new Set([id]);
+    let added = true;
+    while (added) {
+        added = false;
+        for (const f of definitions) {
+            if (f.scope === 'local' || affected.has(f.id))
+                continue;
+            let depends = f.graph.nodes.some(n => affected.has(reference(graph, n) || ''));
+            scope_references_1.ScopeReferences.walk(f, (ref, old) => { if (ref.scope.startsWith('fn_') && affected.has(ref.scope.slice(3)))
+                depends = true; return old; }, false);
+            if (depends) {
+                affected.add(f.id);
+                added = true;
+            }
+        }
+    }
+    (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, affected.size);
+    const ids = new Map(), used = new Set(definitions.map(f => f.id));
+    for (const old of affected)
+        ids.set(old, allocate(used, next));
+    const changed = definitions.filter(f => affected.has(f.id)), snapshots = changed.map(f => (0, model_1.copy)(f));
+    const writable = definitions.filter(f => f.scope === 'local' || affected.has(f.id));
+    const networks = [...Object.values(graph.document.stages), ...writable.map(f => f.graph)];
+    const patches = [];
+    for (const data of networks)
+        for (const n of data.nodes) {
+            const old = reference(graph, n), mapped = old && ids.get(old);
+            if (mapped)
+                patches.push({ node: n, params: parameters(graph, n, mapped) });
+        }
+    // Prepare all IDs, snapshots and module commands before the first write.
+    // Keep node/data objects alive for current editor callbacks during migration.
+    for (const f of changed) {
+        f.id = ids.get(f.id);
+        f.scope = 'local';
+        if (f.source || f.origin)
+            f.origin = (0, model_1.copy)(f.source || f.origin);
+        delete f.source;
+    }
+    for (const p of patches)
+        p.node.params = p.params;
+    remapScopes([...Object.values(graph.document.stages), ...writable, graph.document.typeDefinitions || []], ids);
+    definitions.push(...snapshots);
+    return ids;
+}
+/** Copy only this instance's definition. Nested children remain shared, as
+ * before; the graph already owns their complete content. */
+function independentSubgraph(network, nodeId, next) {
+    var _a;
+    network.assertEditable();
+    const graph = network.graph, n = network.nodeData(nodeId);
+    if (!n)
+        throw Error('Subgraph instance no longer exists');
+    const id = reference(graph, n), source = (_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id);
+    if (!source)
+        return null;
+    (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, 1);
+    const newId = allocate(new Set(graph.document.functions.map(f => f.id)), next);
+    const f = (0, model_1.copy)(source);
+    f.id = newId;
+    f.name = f.name.slice(0, 75) + ' Copy';
+    f.scope = 'local';
+    if (f.source || f.origin)
+        f.origin = (0, model_1.copy)(f.source || f.origin);
+    delete f.source;
+    remapScopes(f, new Map([[source.id, newId]]));
+    const params = parameters(graph, n, newId);
+    const owned = appendSubgraphs(graph, [f])[0];
+    n.params = params;
+    return owned;
+}
+
+},
 "subgraph_interface":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2844,6 +3023,8 @@ function subgraphPresentation(f, kind) {
 "subgraph_operations":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ensureSubgraphCapacity = ensureSubgraphCapacity;
+exports.validateSubgraphData = validateSubgraphData;
 exports.insertSubgraph = insertSubgraph;
 exports.createSubgraph = createSubgraph;
 exports.instantiateSubgraph = instantiateSubgraph;
@@ -2863,16 +3044,19 @@ function authored(module, id, ui, params = {}) {
     const d = module.catalog.definition;
     return { id, definitionUuid: d.definitionUuid, params: { ...(0, model_1.copy)(d.defaults), ...params }, ui };
 }
-function validate(graph, f) {
-    var _a, _b;
-    graph.assertEditable();
-    if ((((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.length) || 0) >= 64)
+function ensureSubgraphCapacity(graph, additional = 0) {
+    var _a;
+    if (!Number.isInteger(additional) || additional < 0)
+        throw Error('Invalid definition count');
+    if ((((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.length) || 0) + additional > 64)
         throw Object.assign(Error('At most 64 Subgraph definitions are supported'), { code: 'function.limit' });
-    if (!validId(f.id) || ((_b = graph.document.functions) === null || _b === void 0 ? void 0 : _b.some(d => d.id === f.id)))
-        throw Error('Invalid or duplicate Subgraph identity');
+}
+function validateSubgraphData(f) {
+    if (!validId(f.id))
+        throw Error('Invalid Subgraph identity');
     if (!f.name.trim() || f.name.length > 80 || /[\x00-\x1f\x7f]/.test(f.name))
         throw Error('Invalid Subgraph name');
-    if (f.scope !== 'local' || !f.stages.length || f.stages.some(s => !['vertex', 'pixel'].includes(s)))
+    if (!['local', 'library', 'personal'].includes(f.scope) || !f.stages.length || f.stages.some(s => !['vertex', 'pixel'].includes(s)))
         throw Error('Invalid Subgraph scope or stage');
     for (const ports of [f.inputs, f.outputs]) {
         if (ports.length > 16 || new Set(ports.map(p => p.id)).size !== ports.length ||
@@ -2886,6 +3070,14 @@ function validate(graph, f) {
     for (const e of f.graph.edges)
         if (!ids.has(e.from[0]) || !ids.has(e.to[0]))
             throw Error('Invalid Subgraph edge endpoint');
+}
+function validate(graph, f) {
+    var _a;
+    graph.assertEditable();
+    ensureSubgraphCapacity(graph, 1);
+    if (f.scope !== 'local' || ((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.some(d => d.id === f.id)))
+        throw Error('Invalid or duplicate local Subgraph identity');
+    validateSubgraphData(f);
 }
 function insertSubgraph(graph, f) {
     var _a;
@@ -3084,8 +3276,8 @@ function reshape(value, to) {
     return t === 'float' ? (_a = values[0]) !== null && _a !== void 0 ? _a : 0 :
         Array.from({ length: (0, numeric_1.count)(t) }, (_, i) => { var _a, _b; return (_b = (_a = values[i]) !== null && _a !== void 0 ? _a : values[0]) !== null && _b !== void 0 ? _b : 0; });
 }
-/** One graph-owned definition and all its instances. Library localization is
- * still an editor adapter; this operation requires its resulting local copy. */
+/** One graph-owned definition and all its instances. Source edits first use
+ * the graph's localization operation to preserve their stored snapshot. */
 class Subgraph {
     constructor(graph, id) {
         this.graph = graph;
@@ -3094,6 +3286,15 @@ class Subgraph {
     get data() {
         var _a;
         return (_a = this.graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.id === this.id);
+    }
+    rename(name) {
+        this.graph.assertEditable();
+        const f = this.data;
+        if (!f || f.scope !== 'local')
+            throw Error('Rename a local Subgraph definition');
+        if (!name.trim() || name.length > 80 || /[\x00-\x1f\x7f]/.test(name))
+            throw Error('Invalid Subgraph name');
+        f.name = name.trim();
     }
     editInterface(direction, edit) {
         this.graph.assertEditable();

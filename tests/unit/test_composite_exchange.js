@@ -28,7 +28,7 @@ const symbolicTarget=graph();clipboard.paste(symbolicTarget,symbolicTarget.stage
 assert.equal(symbolicTarget.stages.pixel.nodes[0].params.length,'sg_len_'+symbolicTarget.declarations[0].id);
 assert.notEqual(symbolicTarget.declarations[0].id,'count');
 assert.equal(defs.valid('float[sg_len_missing]',['float'],[],0,symbolic.declarations),false);
-const personal={id:'p',name:'Pass',scope:'personal',source:{id:'p',version:'1'},inputs:[{id:'sample',type:'struct:sample'}],outputs:[],graph:{nodes:[],edges:[]},typeDefinitions:[shape]};
+const personal={id:'p',name:'Pass',scope:'personal',stages:['pixel'],source:{id:'p',version:'1'},inputs:[{id:'sample',type:'struct:sample',default:null}],outputs:[],graph:{nodes:[],edges:[]},typeDefinitions:[shape]};
 const imported=graph();fn.importLibrary(imported,personal);
 assert.equal(JSON.stringify(imported.typeDefinitions),JSON.stringify([shape]));
 const plain=graph();plain.typeDefinitions=[shape];plain.stages.pixel.nodes.push({id:'plain',definitionUuid:'scalar',params:{type:'float',value:0},ui:{x:0,y:0}});

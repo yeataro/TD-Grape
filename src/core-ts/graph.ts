@@ -1,4 +1,4 @@
-import { copy, type Graph, type Node as NodeData, type Edge as EdgeData, type ObjectValue, type Value } from './model';
+import { copy, type Graph, type Node as NodeData, type Edge as EdgeData, type ObjectValue, type Value, type SubgraphData } from './model';
 import { contextFor, resolvePorts, configureNode, editNode, type Configuration, type NodeContext, type Registry } from './node_module';
 import { NodePorts, compatible, type PortSpec } from './ports';
 import { plan, type Intent, type Ports } from './wire_planning';
@@ -6,7 +6,8 @@ import { changesBetween, equal, type GraphChanges } from './changes';
 export { changesBetween } from './changes';
 export { contextFor } from './node_module';
 import { Subgraph } from './subgraphs';
-import { createSubgraph, groupSubgraph, instantiateSubgraph, collectSubgraphs, type SubgraphOptions, type GroupOptions } from './subgraph_operations';
+import { createSubgraph, groupSubgraph, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type GroupOptions } from './subgraph_operations';
+import { appendSubgraphs, localizeSubgraph, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
 export { ScopeReferences } from './scope_references';
 
 type NetworkData=Graph['stages'][string];
@@ -138,6 +139,10 @@ export class Network {
   }
   instantiateSubgraph(definitionId:string,id:string,ui:ObjectValue={}):Node {
     return this.node(instantiateSubgraph(this,definitionId,id,ui).id);
+  }
+  independentSubgraph(node:Node,next:AllocateSubgraphId):Subgraph|null {
+    if(node.network!==this)throw Error('Node belongs to another network');
+    const f=independentSubgraph(this,node.id,next);return f?this.graph.subgraph(f.id):null;
   }
   get context():NodeContext {return contextFor(this.graph.document,this.graph.document.functions?.find(f=>f.graph===this.data));}
   node(id:string):Node {let n=this.nodeHandles.get(id);if(!n){n=new Node(this,id);this.nodeHandles.set(id,n);}return n;}
@@ -315,6 +320,11 @@ export class GraphDocument {
     return this.networkHandles;
   }
   createSubgraph(options:SubgraphOptions):Subgraph {return this.subgraph(createSubgraph(this,options).id);}
+  ensureSubgraphCapacity(additional=0):void {ensureSubgraphCapacity(this,additional);}
+  appendSubgraphs(definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):Subgraph[] {
+    return appendSubgraphs(this,definitions,ids).map(f=>this.subgraph(f.id));
+  }
+  localizeSubgraph(id:string,next:AllocateSubgraphId):Map<string,string> {return localizeSubgraph(this,id,next);}
   subgraph(id:string):Subgraph {return new Subgraph(this,id);}
   assertEditable(){if(!this.editable||!this.active)throw Error('Graph changes require an active transaction');}
   close(){this.active=false;}
@@ -339,15 +349,19 @@ function networkEntries(document:Graph):[string,NetworkData][] {
 }
 function complete(document:Graph,previous?:Graph):void {
   const prior=new Map(previous?networkEntries(previous):[]);
+  const snapshots=new Set((document.functions||[]).filter(f=>f.scope!=='local').map(f=>f.graph));
   for(const [id,data] of networkEntries(document)){
     const old=prior.get(id);let sequence=Math.max(edgeSequence(data),old?edgeSequence(old):0);
     const nodes=new Set<string>(),edges=new Set<string>();
     for(const n of data.nodes){if(!n.id||nodes.has(n.id))throw Error('Invalid or duplicate node ID');nodes.add(n.id);}
     for(const e of data.edges){
+      // Source snapshots keep their authored bytes. Their read-only Edge
+      // handles already have temporary identities; only local data gets IDs.
+      if(!e.id&&snapshots.has(data))continue;
       if(!e.id){if(!Number.isSafeInteger(sequence+1))throw Error('Edge sequence exhausted');e.id='edge_'+ ++sequence;}
       if(edges.has(e.id))throw Error('Duplicate edge ID');edges.add(e.id);
     }
-    if(sequence)data.edgeSequence=sequence;
+    if(sequence&&!snapshots.has(data))data.edgeSequence=sequence;
   }
 }
 /** Transitional editor transaction: existing widgets mutate the one active

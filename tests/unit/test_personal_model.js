@@ -1,8 +1,8 @@
 const assert=require('node:assert/strict'),m=require('../../src/editor/functions_model.js');
 const call=(id,fn)=>({id,definitionUuid:m.CALL,params:{functionId:fn}});
 const fresh=()=>({stages:{pixel:{nodes:[],edges:[]}},functions:[]});
-const child={id:'child',scope:'personal',source:{id:'personal.child',version:'v1'},graph:{nodes:[],edges:[]}};
-const root={id:'root',scope:'personal',source:{id:'personal.root',version:'v1'},graph:{nodes:[call('nested','child')],edges:[]},dependencies:[child]};
+const child={id:'child',name:'Child',scope:'personal',stages:['pixel'],inputs:[],outputs:[],source:{id:'personal.child',version:'v1'},graph:{nodes:[],edges:[]}};
+const root={id:'root',name:'Root',scope:'personal',stages:['pixel'],inputs:[],outputs:[],source:{id:'personal.root',version:'v1'},graph:{nodes:[call('nested','child')],edges:[]},dependencies:[child]};
 const graph=fresh();graph.functions.push({id:'child',scope:'local',graph:{nodes:[],edges:[]}});
 const f=m.importLibrary(graph,root),nested=f.graph.nodes[0].params.functionId;
 assert.notEqual(nested,'child');assert.equal(graph.functions.length,3);assert.equal(m.importLibrary(graph,root),f);

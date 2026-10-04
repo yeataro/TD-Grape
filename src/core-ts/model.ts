@@ -6,7 +6,7 @@ export interface Declaration {id:string;kind:string;name:string;type:string;valu
 export interface Edge {id?:string;from:readonly [string,string];to:readonly [string,string]}
 export interface NetworkData {nodes:Node[];edges:Edge[];ui?:ObjectValue;edgeSequence?:number}
 export interface InterfacePort {id:string;name?:string;type:string;default:Value}
-export interface SubgraphData {id:string;name:string;scope:string;descriptionKey?:string;stages:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData}
+export interface SubgraphData {id:string;name:string;scope:string;source?:ObjectValue;origin?:ObjectValue;descriptionKey?:string;stages:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData}
 export interface Graph {schemaVersion:number;target:string;declarations:Declaration[];functions?:SubgraphData[];topInputs?:unknown[];typeDefinitions?:unknown[];stages:Record<string,NetworkData>}
 export function object(v:Value|undefined):ObjectValue|undefined {return v!==null&&typeof v==='object'&&!Array.isArray(v)?v:undefined;}
 /** Own JSON values at mutation boundaries; callers never retain editable state. */

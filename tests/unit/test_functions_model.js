@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const m=require('../../src/editor/functions_model.js');
-const source={id:'library_tint',name:'Tint',scope:'library',source:{id:'tint',version:'v1'},inputs:[],outputs:[],graph:{nodes:[],edges:[]}};
+const source={id:'library_tint',name:'Tint',scope:'library',source:{id:'tint',version:'v1'},stages:['pixel','vertex'],inputs:[],outputs:[],graph:{nodes:[],edges:[]}};
 const call=(id,fn)=>({id,definitionUuid:m.CALL,params:{functionId:fn}});
 const graph=()=>({stages:{pixel:{nodes:[],edges:[]},vertex:{nodes:[],edges:[]}},functions:[]});
 const a=graph(),b=graph();const f=m.importLibrary(a,source);m.importLibrary(b,source);
@@ -23,7 +23,7 @@ console.log('Function model: reuse, Shader isolation, copy-on-write, independent
 
 // Expression-sized interfaces retain provenance through copy-on-write identities.
 const lengths=m.GraphArrayLengths,sized=graph(),token=lengths.token('fn_sized',['sum','out']);
-const sizedFn={...structuredClone(source),id:'sized',outputs:[{id:'array',type:'float['+token+']'}]};
+const sizedFn={...structuredClone(source),id:'sized',outputs:[{id:'array',type:'float['+token+']',default:null}]};
 m.importLibrary(sized,sizedFn);sized.stages.pixel.nodes.push(call('use','sized'));
 const sizedMap=m.localize(sized,'sized'),localized=m.find(sized,sizedMap.get('sized'));
 assert.equal(localized.outputs[0].type,'float['+lengths.token('fn_'+localized.id,['sum','out'])+']');

@@ -16,13 +16,20 @@ function reshape(value:Value,to:string):Value {
     Array.from({length:count(t)},(_,i) => values[i] ?? values[0] ?? 0);
 }
 
-/** One graph-owned definition and all its instances. Library localization is
- * still an editor adapter; this operation requires its resulting local copy. */
+/** One graph-owned definition and all its instances. Source edits first use
+ * the graph's localization operation to preserve their stored snapshot. */
 export class Subgraph {
   constructor(readonly graph:GraphDocument,readonly id:string) {}
 
   get data():SubgraphData|undefined {
     return this.graph.document.functions?.find(f => f.id === this.id);
+  }
+
+  rename(name:string):void {
+    this.graph.assertEditable();const f=this.data;
+    if(!f || f.scope!=='local')throw Error('Rename a local Subgraph definition');
+    if(!name.trim() || name.length>80 || /[\x00-\x1f\x7f]/.test(name))throw Error('Invalid Subgraph name');
+    f.name=name.trim();
   }
 
   editInterface(direction:Direction,edit:InterfaceEdit):void {

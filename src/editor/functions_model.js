@@ -6,6 +6,13 @@ if(!crypto.randomUUID){crypto.randomUUID=()=>{
   return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
 };}
 const graphModelAPI=()=>typeof GrapeGraph!=='undefined'?GrapeGraph:require('./wire_planning.js');
+// Reuse the current transaction. Detached preview/library queries borrow a
+// temporary model over their own document; they never mutate the live graph.
+function withGraphDocument(document,edit){
+  if(typeof editorGraphModel!=='undefined'&&editorGraphModel?.document===document)return edit(editorGraphModel);
+  const api=graphModelAPI(),model=new api.GraphDocument(document,api.registry,undefined,true);
+  try{return edit(model);}finally{model.close();}
+}
 /* Graph-level presentation metadata. Membership is local to one graph. */
 const GraphFrames=(()=>{
   const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
@@ -99,64 +106,34 @@ const FunctionModel=(()=>{
   const copy=x=>JSON.parse(JSON.stringify(x));
   const uid=()=> 'fn_'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const find=(graph,id)=>(graph.functions||[]).find(f=>f.id===id);
-  function ensureCapacity(graph,additional=0){
-    if((graph.functions||[]).length+additional>64){const error=Error('At most 64 Subgraph definitions are supported');error.code='function.limit';throw error;}
-  }
-  function allGraphs(graph){return [...Object.values(graph.stages),...(graph.functions||[]).filter(f=>f.scope==='local').map(f=>f.graph)];}
-  function localize(graph,id){
-    const target=find(graph,id);if(!target||target.scope==='local')return new Map();
-    // Localize library callers too, so nested edits never rewrite a source snapshot.
-    const affected=new Set([id]);let added=true;
-    while(added){added=false;for(const f of graph.functions||[]){
-      if(f.scope==='local'||affected.has(f.id))continue;
-      if(f.graph.nodes.some(n=>n.definitionUuid===CALL&&affected.has(n.params.functionId))){affected.add(f.id);added=true;}
-    }}
-    ensureCapacity(graph,affected.size);
-    const mapping=new Map();
-    for(const old of affected){
-      const f=find(graph,old),snapshot=copy(f),newId=uid();
-      // Keep the edited object alive for pending input callbacks.
-      f.id=newId;f.scope='local';f.origin=f.source||f.origin;delete f.source;
-      graph.functions.push(snapshot);mapping.set(old,newId);
-    }
-    for(const data of allGraphs(graph))for(const n of data.nodes){
-      if(n.definitionUuid===CALL&&mapping.has(n.params.functionId))n.params.functionId=mapping.get(n.params.functionId);
-    }
-    GraphArrayLengths.walk([...Object.values(graph.stages),...graph.functions.filter(f=>f.scope==='local')],(ref,old)=>ref.scope.startsWith('fn_')&&mapping.has(ref.scope.slice(3))?GraphArrayLengths.token('fn_'+mapping.get(ref.scope.slice(3)),ref.source):old);
-    return mapping;
-  }
+  const ensureCapacity=(graph,additional=0)=>withGraphDocument(graph,model=>model.ensureSubgraphCapacity(additional));
+  const localize=(graph,id)=>withGraphDocument(graph,model=>model.localizeSubgraph(id,uid));
   function importLibrary(graph,source){
-    graph.functions||=[];
     const typeDefinitions=GraphTypeDefinitions.merge(graph.typeDefinitions,GraphTypeDefinitions.reachable(source.typeDefinitions,source));
-    const existing=graph.functions.find(f=>f.scope===source.scope&&f.source?.id===source.source?.id&&f.source?.version===source.source?.version);
+    const existing=(graph.functions||[]).find(f=>f.scope===source.scope&&f.source?.id===source.source?.id&&f.source?.version===source.source?.version);
     if(existing)return existing;
     const bundle=[source,...(source.dependencies||[])],mapping=new Map(),pending=[];
-    const occupied=new Set(graph.functions.map(f=>f.id));
+    const occupied=new Set((graph.functions||[]).map(f=>f.id));
     for(const item of bundle){
       if(mapping.has(item.id))throw Error('Duplicate Subgraph in library snapshot');
-      const reused=graph.functions.find(f=>f.scope===item.scope&&f.source?.id===item.source?.id&&f.source?.version===item.source?.version);
+      const reused=(graph.functions||[]).find(f=>f.scope===item.scope&&f.source?.id===item.source?.id&&f.source?.version===item.source?.version);
       if(reused){mapping.set(item.id,reused.id);continue;}
       const imported=copy(item);delete imported.dependencies;
-      if(occupied.has(imported.id))imported.id=uid();occupied.add(imported.id);
-      mapping.set(item.id,imported.id);pending.push(imported);
+      const id=occupied.has(imported.id)?uid():imported.id;occupied.add(id);
+      mapping.set(item.id,id);pending.push(imported);
     }
-    ensureCapacity(graph,pending.length);
-    for(const item of pending)for(const node of item.graph.nodes){
-      if(node.definitionUuid!==CALL)continue;
-      const mapped=mapping.get(node.params.functionId);
-      // Older built-in callers can reference a snapshot already in this Shader.
-      if(!mapped&&!find(graph,node.params.functionId))throw Error('Missing nested Subgraph in library snapshot');
-      if(mapped)node.params.functionId=mapped;
-    }
-    if(typeDefinitions.length)graph.typeDefinitions=typeDefinitions;
-    graph.functions.push(...pending);return find(graph,mapping.get(source.id));
+    return withGraphDocument(graph,model=>{
+      model.appendSubgraphs(pending,mapping);
+      if(typeDefinitions.length)graph.typeDefinitions=typeDefinitions;
+      return find(graph,mapping.get(source.id));
+    });
   }
   function independent(graph,node){
-    const source=find(graph,node.params.functionId);if(!source)return null;
-    ensureCapacity(graph,1);
-    const f=copy(source);f.id=uid();f.name+=' Copy';f.scope='local';f.origin=f.source||f.origin;delete f.source;
-    GraphArrayLengths.walk(f,(ref,old)=>ref.scope==='fn_'+source.id?GraphArrayLengths.token('fn_'+f.id,ref.source):old);
-    graph.functions.push(f);node.params.functionId=f.id;return f;
+    return withGraphDocument(graph,model=>{
+      const network=[...model.networks.values()].find(n=>n.nodeData(node.id)===node);
+      if(!network)throw Error('Subgraph instance no longer exists');
+      return network.independentSubgraph(network.node(node.id),uid)?.data||null;
+    });
   }
   return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity};
 })();

@@ -311,7 +311,7 @@ function renameGraphFunction(id,value){
   const name=value.trim(),original=FunctionModel.find(graph,id);if(!original)return false;
   if(!name||name.length>80||/[\x00-\x1f\x7f]/.test(name)){status(t('function.nameInvalid'),true);return false;}
   if(original.name===name)return true;
-  return change(()=>{const mapping=FunctionModel.localize(graph,id);graphTrail=graphTrail.map(key=>mapping.get(key)||key);FunctionModel.find(graph,mapping.get(id)||id).name=name;},{localize:false});
+  return change(()=>{const mapping=FunctionModel.localize(graph,id);graphTrail=graphTrail.map(key=>mapping.get(key)||key);editorGraphModel.subgraph(mapping.get(id)||id).rename(name);},{localize:false});
 }
 function functionNameField(f,rowBuilder=field){
   const entry=input(f.name,value=>{if(!renameGraphFunction(f.id,value))entry.setSyncedValue(f.name);});entry.dataset.functionName=f.id;entry.maxLength=80;entry.disabled=readonly;

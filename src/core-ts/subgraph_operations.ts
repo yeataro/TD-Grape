@@ -25,15 +25,16 @@ function authored(module:NodeModule,id:string,ui:ObjectValue,params:ObjectValue=
   const d = module.catalog.definition;
   return {id,definitionUuid:d.definitionUuid!,params:{...copy(d.defaults),...params},ui};
 }
-function validate(graph:GraphDocument,f:SubgraphData):void {
-  graph.assertEditable();
-  if ((graph.document.functions?.length || 0) >= 64)
+export function ensureSubgraphCapacity(graph:GraphDocument,additional=0):void {
+  if (!Number.isInteger(additional) || additional < 0) throw Error('Invalid definition count');
+  if ((graph.document.functions?.length || 0) + additional > 64)
     throw Object.assign(Error('At most 64 Subgraph definitions are supported'),{code:'function.limit'});
-  if (!validId(f.id) || graph.document.functions?.some(d => d.id === f.id))
-    throw Error('Invalid or duplicate Subgraph identity');
+}
+export function validateSubgraphData(f:SubgraphData):void {
+  if (!validId(f.id)) throw Error('Invalid Subgraph identity');
   if (!f.name.trim() || f.name.length > 80 || /[\x00-\x1f\x7f]/.test(f.name))
     throw Error('Invalid Subgraph name');
-  if (f.scope !== 'local' || !f.stages.length || f.stages.some(s => !['vertex','pixel'].includes(s)))
+  if (!['local','library','personal'].includes(f.scope) || !f.stages.length || f.stages.some(s => !['vertex','pixel'].includes(s)))
     throw Error('Invalid Subgraph scope or stage');
   for (const ports of [f.inputs,f.outputs]) {
     if (ports.length > 16 || new Set(ports.map(p => p.id)).size !== ports.length ||
@@ -45,6 +46,12 @@ function validate(graph:GraphDocument,f:SubgraphData):void {
       [...ids].some(id => !validId(id))) throw Error('Invalid Subgraph network');
   for (const e of f.graph.edges) if (!ids.has(e.from[0]) || !ids.has(e.to[0]))
     throw Error('Invalid Subgraph edge endpoint');
+}
+function validate(graph:GraphDocument,f:SubgraphData):void {
+  graph.assertEditable();ensureSubgraphCapacity(graph,1);
+  if (f.scope !== 'local' || graph.document.functions?.some(d => d.id === f.id))
+    throw Error('Invalid or duplicate local Subgraph identity');
+  validateSubgraphData(f);
 }
 
 export function insertSubgraph(graph:GraphDocument,f:SubgraphData):SubgraphData {
