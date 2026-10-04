@@ -1,0 +1,33 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),{spawnSync}=require('node:child_process');
+const source=fs.readFileSync(path.join(__dirname,'../../src/editor/wire_planning.js'),'utf8');
+const context=vm.createContext({});vm.runInContext(source,context);
+const compiler=context.GrapeTopCompiler;
+const oracle=spawnSync(process.env.PYTHON||'python',[path.join(__dirname,'top_compiler_oracle.py')],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
+assert.equal(oracle.status,0,oracle.stderr||String(oracle.error));
+const cases=JSON.parse(oracle.stdout),plain=v=>JSON.parse(JSON.stringify(v));
+function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;}
+
+test('frontend compilation matches legacy GLSL, bindings, ports, source map and diagnostics',()=>{
+  for(const row of cases){
+    assert.equal(compiler.supports(row.graph),true,row.name);
+    if(row.error)assert.throws(()=>compiler.compile(freeze(row.graph)),undefined,row.name);
+    else assert.deepEqual(plain(compiler.compile(freeze(row.graph))),row.compiled,row.name);
+  }
+});
+test('capability selection excludes whole graphs before execution',()=>{
+  const base=cases[0].graph;
+  const variants=[
+    g=>g.target='mat',g=>g.functions=[{}],g=>g.topInputs=[{}],g=>g.typeDefinitions=[{}],
+    g=>g.stages.pixel.nodes.push({id:'dynamic',definitionUuid:'sgrape.builtin.glsl_code',params:{inputs:[],outputs:[]}}),
+    g=>g.stages.pixel.nodes.push({id:'matrix',definitionUuid:'sgrape.builtin.multiply',params:{type:'mat4'}}),
+    g=>g.stages.pixel.nodes[0].ui={comment:'Preserve emitted annotations'},
+    g=>g.declarations.push({id:'texture',kind:'sampler',type:'sampler2D',name:'uTexture',value:null}),
+  ];
+  for(const change of variants){const g=plain(base);change(g);assert.equal(compiler.supports(g),false);assert.throws(()=>compiler.compile(g),/outside/);}
+});
+test('result and graph do not share mutable binding data',()=>{
+  const g=plain(cases.find(c=>c.name==='uniform abs float').graph),before=JSON.stringify(g);
+  const result=compiler.compile(g);result.bindings[0].value=999;
+  assert.equal(JSON.stringify(g),before);
+});

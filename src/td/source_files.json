@@ -55,5 +55,7 @@
   "material_presets.json": "src/library/material_presets.json",
   "color_picker.js": "src/editor/color_picker.js",
   "color_picker.css": "src/editor/color_picker.css",
-  "wire_planning.js": "src/editor/wire_planning.js"
+  "wire_planning.js": "src/editor/wire_planning.js",
+  "frontend_artifact.py": "src/td/runtime/frontend_artifact.py",
+  "frontend_capabilities.json": "src/core/frontend_capabilities.json"
 }

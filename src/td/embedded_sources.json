@@ -42,5 +42,7 @@
   "material_presets": "material_presets.json",
   "color_picker_js": "color_picker.js",
   "color_picker_css": "color_picker.css",
-  "wire_planning_js": "wire_planning.js"
+  "wire_planning_js": "wire_planning.js",
+  "frontend_artifact": "frontend_artifact.py",
+  "frontend_capabilities": "frontend_capabilities.json"
 }

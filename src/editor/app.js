@@ -81,7 +81,7 @@ async function initLocale(){
   translatePage();
 }
 
-let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null;
+let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null,frontendCompiler=null;
 let graph=null, catalog=[], examples={}, revision=0, selected=null, selectedEdge=null, stage='pixel', dirty=false, readonly=false;
 let pan={x:40,y:60}, scale=.8, linkStart=null, past=[], future=[], errorNode=null;
 const definition=nodeDefinition;
@@ -468,7 +468,8 @@ async function performApplyGraph(){
     if(!hasPixelPreview(sentGraph))await releasePixelPreview({discard:false});
     if(generation!==editorLoadGeneration)return;
     pixelPreview=pixelPreviewApplyMetadata(sentGraph);
-    const data=await api('apply',{graph:sentGraph,revision,...(pixelPreview?{pixelPreview}:{})});
+    const frontendArtifact=frontendCompilation(sentGraph)?{protocol:GrapeTopCompiler.protocol,targetId:shaderId,baseRevision:sentRevision,snapshot:JSON.stringify(sentGraph),catalogHash:frontendCompiler.catalogHash,compiled:GrapeTopCompiler.compile(sentGraph)}:null;
+    const data=await api('apply',{graph:sentGraph,revision:sentRevision,...(pixelPreview?{pixelPreview}:{}),...(frontendArtifact?{frontendArtifact}:{})});
     if(!pixelPreviewRequestCurrent(pixelPreview,generation))return;
     if(data.upgradeReview){
       const review=data.upgradeReview;
@@ -873,6 +874,7 @@ async function load(){
     const filter=$('#createtype');filter.replaceChildren(el('option',{value:'all','data-i18n':'create.allTypes'},t('create.allTypes')),...interfaceTypes().map(type=>el('option',{value:type},type)));
     upgradePending=data.upgradeReview||null;closeUpgradeReview();savedStateIssue=data.savedStateIssue||null;editorTarget=data.shaderKind||data.state?.graph?.target||'mat';
     graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:withoutPixelPreview(data.state.graph);
+    frontendCompiler=data.frontendCompiler||null;
     editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
     nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeSourceUncertain=false;++nativeSourceReadEpoch;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;applyLayoutOnly=false;
@@ -1667,6 +1669,7 @@ function generatedGLSLView(node,canvas=false){
   preview.onclick=preview.ondblclick=e=>e.stopPropagation();preview.onkeydown=e=>e.stopPropagation();box.onwheel=e=>e.stopPropagation();
   return box;
 }
+function frontendCompilation(source){return !!(frontendCompiler&&typeof GrapeTopCompiler!=='undefined'&&frontendCompiler.protocol===GrapeTopCompiler.protocol&&GrapeTopCompiler.supports(source));}
 function generatedGLSLKey(){return JSON.stringify([editorLoadGeneration,stage,graphContent(graph)]);}
 function paintGeneratedGLSL(){
   for(const view of document.querySelectorAll('[data-generated-glsl]')){
@@ -1688,7 +1691,7 @@ function refreshGeneratedGLSL(force=false){
   generatedGLSLCache={key,state:'loading',text:''};paintGeneratedGLSL();
   generatedGLSLTimer=setTimeout(async()=>{
     try{
-      const code=await api('validate',{graph:source});
+      const code=frontendCompilation(source)?GrapeTopCompiler.compile(source):await api('validate',{graph:source});
       if(serial!==generatedGLSLSerial||!graph||generatedGLSLKey()!==key)return;
       if(typeof code[sourceStage]!=='string')throw Error(t('generatedGLSL.unavailable'));
       generatedGLSLCache={key,state:'ready',text:code[sourceStage]};

@@ -441,6 +441,31 @@ def saved_state_source():
     return dat.text if dat else None
 
 _graph_checks = None
+_frontend_request = None
+
+
+def frontend_receiver():
+    dat = _owner.op('frontend_artifact')
+    return dat.module if dat else None
+
+
+def compile_runtime_graph(graph):
+    receiver = frontend_receiver()
+    if receiver:
+        # Whole snapshots only. A rejected artifact never triggers old emission.
+        saved = json.loads(saved_state_source() or '{}').get('frontendArtifact')
+        for artifact in (_frontend_request, saved):
+            if artifact and artifact.get('graphHash') == receiver.graph_hash(graph, core()):
+                return receiver.checked_artifact(graph, artifact, core())
+    return core().compile_graph(graph)
+
+
+def remember_frontend_result(state, compiled):
+    receiver = frontend_receiver()
+    if receiver:
+        return receiver.remember(state, compiled)
+    result = dict(state); result.pop('frontendArtifact', None)
+    return result
 
 
 def graph_checks():
@@ -448,7 +473,7 @@ def graph_checks():
     document = _owner.op('document').module
     compiler = core()
     if not isinstance(_graph_checks, document.GraphChecks) or _graph_checks.core is not compiler:
-        _graph_checks = document.GraphChecks(compiler)
+        _graph_checks = document.GraphChecks(compiler, compile_runtime_graph)
     return _graph_checks
 
 
@@ -1789,7 +1814,7 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None,pixe
         raise source_module().SourceError('A used Input source is missing. Restore or reassign its reference before applying.')
     if target() and core().graph_target(graph)!=shader_kind(target()): raise RuntimeError('Import a graph for the same Shader target')
     if not pixel_preview and not (target() and target().id in _pixel_previews) and not inject_failure and not accepted and current.get('appliedHash')==compiled['hash'] and target() and compiled_is_current(target(),compiled,graph):
-        new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,lastError='',sourceChanged=False)
+        new=remember_frontend_result(dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,lastError='',sourceChanged=False),compiled)
         write_state(new)
         target().op('graph').text=json.dumps(graph,ensure_ascii=False,indent=2)
         return {'ok':True,'state':new,'shaderUpdated':False,'compileInfo':'Graph layout saved','diagnostics':compiled['diagnostics'],'target':target().path}
@@ -1837,7 +1862,7 @@ def _deploy(graph,expected_revision,inject_failure=False,upgrade_token=None,pixe
                 configure(destination,active_compiled,graph,existing_values(destination,graph))
                 validate_material(destination,active_compiled)
                 destination.op('manifest').text=output['manifest']
-            new=dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,appliedHash=compiled['hash'],lastError='',sourceChanged=False)
+            new=remember_frontend_result(dict(current,graph=copy.deepcopy(graph),revision=current['revision']+1,appliedHash=compiled['hash'],lastError='',sourceChanged=False),compiled)
             write_state(new)
             if backup is not None:
                 backup_dat = destination.op('upgrade_backup') or destination.create(textDAT, 'upgrade_backup')
@@ -2009,6 +2034,7 @@ def process_shader_request(method,path,body):
 
 
 def _process_shader_request(method,path,body):
+    global _frontend_request
     if method=='POST' and path in ('/api/live-ticket','/api/live-restore','/api/live-seal'):
         live=_live
         if live is None: raise RuntimeError('Uniform live connection is unavailable. '+_live_error)
@@ -2051,6 +2077,7 @@ def _process_shader_request(method,path,body):
             except (ValueError,TypeError,KeyError,AttributeError,RecursionError):pass
         result = {'upgradeReview':upgrade,'state':current,'savedStateIssue':saved_issue,'shaderKind':shader_kind(target()),'readOnlyReason':reason,'catalog':list(core().CATALOG.values()),'typeContract':core().type_contract(current['graph']),'catalogContract':core().catalog_contract(),'definitionReview':review,'functionLibrary':core().function_library(),'personalLibrary':personal_library(refresh=True),'target':target().path if target() else '',
                 'examples':shader_examples(shader_kind(target()))}
+        if frontend_receiver():result['frontendCompiler']={'protocol':frontend_receiver().PROTOCOL,'catalogHash':core().catalog_contract()['hash']}
         return history_result(result) if not saved_issue and current is not None else result
     if method=='POST' and path=='/api/remote-preview':
         return remote_preview(target())
@@ -2106,7 +2133,23 @@ def _process_shader_request(method,path,body):
             report['upgradeReview']=upgrade_summary(_owner.op('document').module.inspect_upgrade(report['candidate'],core(),shader_kind(target())))
         return report
     if method=='POST' and path=='/api/pixel-preview-session':return pixel_preview_session(body)
-    if method=='POST' and path=='/api/apply': return history_operation(lambda: deploy(body['graph'],body['revision'],upgrade_token=body.get('upgradeToken'),pixel_preview=body.get('pixelPreview')))
+    if method=='POST' and path=='/api/apply':
+        artifact=body.get('frontendArtifact')
+        if artifact is None:
+            return history_operation(lambda: deploy(body['graph'],body['revision'],upgrade_token=body.get('upgradeToken'),pixel_preview=body.get('pixelPreview')))
+        receiver=frontend_receiver()
+        if not receiver or body.get('pixelPreview'):
+            raise RuntimeError('Frontend compiler is unavailable for this request')
+        received=receiver.receive(body['graph'],artifact,target().fetch('sgrapeShaderId'),body['revision'],core())
+        previous=_frontend_request
+        try:
+            _frontend_request=received
+            # A cached Python result must not shadow this request's producer.
+            graph_checks().invalidate()
+            return history_operation(lambda: deploy(body['graph'],body['revision'],upgrade_token=body.get('upgradeToken')))
+        finally:
+            _frontend_request=previous
+            graph_checks().invalidate()
     if method=='POST' and path=='/api/validate': return core().compile_graph(body['graph'])
     if method=='POST' and path=='/api/export':
         from pathlib import Path

@@ -9,5 +9,5 @@
     "removeComments": false,
     "outFile": "src/editor/wire_planning.js"
   },
-  "files": ["src/core-ts/wire_planning.ts"]
+  "files": ["src/core-ts/wire_planning.ts", "src/core-ts/top_compiler.ts"]
 }

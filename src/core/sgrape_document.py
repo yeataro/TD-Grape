@@ -364,18 +364,25 @@ class GraphChecks:
     MAX_ENTRIES = 8
     MAX_BYTES = 4 * 1024 * 1024
 
-    def __init__(self, core):
+    def __init__(self, core, compiler=None):
         self.core = core
+        self.compiler = compiler
         self._dependency = None
         self._depth = 0
         self._compiled = OrderedDict()
         self._bytes = 0
         self._saved = None
 
+    def invalidate(self):
+        """A caller changed the provider's snapshot; discard prior evidence."""
+        self._compiled.clear()
+        self._bytes = 0
+        self._saved = None
+
     @contextmanager
     def session(self):
         if not self._depth:
-            dependency = (self.core.compile_graph, self.core.catalog_contract()['hash'])
+            dependency = (self.core.compile_graph, self.compiler, self.core.catalog_contract()['hash'])
             if dependency != self._dependency:
                 self._compiled.clear()
                 self._bytes = 0
@@ -433,7 +440,7 @@ class GraphChecks:
                 result, size = self._compiled.pop(key)
                 self._compiled[key] = (result, size)
                 return copy.deepcopy(result)
-            result = self.core.compile_graph(graph)
+            result = (self.compiler or self.core.compile_graph)(graph)
             if key is not None:
                 size = len(key.encode('utf-8')) + len(json.dumps(result, ensure_ascii=False).encode('utf-8'))
                 if size <= self.MAX_BYTES:

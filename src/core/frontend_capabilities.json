@@ -1,0 +1,19 @@
+{
+  "protocol": "grape.top.ts.1",
+  "definitions": [
+    "sgrape.builtin.abs",
+    "sgrape.builtin.add",
+    "sgrape.builtin.color",
+    "sgrape.builtin.divide",
+    "sgrape.builtin.float",
+    "sgrape.builtin.multiply",
+    "sgrape.builtin.pixel_out",
+    "sgrape.builtin.scalar",
+    "sgrape.builtin.subtract",
+    "sgrape.builtin.uniform",
+    "sgrape.builtin.vec2",
+    "sgrape.builtin.vec3",
+    "sgrape.builtin.vec4",
+    "sgrape.builtin.vector"
+  ]
+}

@@ -4,7 +4,7 @@
   "scripts": {
     "build:core": "node tools/build_core.cjs",
     "check:core": "node tools/build_core.cjs --check",
-    "test:core": "node --test tests/unit/test_wire_planning.cjs"
+    "test:core": "node --test tests/unit/test_wire_planning.cjs tests/unit/test_top_compiler.cjs"
   },
   "devDependencies": { "typescript": "5.9.3" }
 }
