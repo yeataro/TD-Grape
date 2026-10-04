@@ -9,13 +9,14 @@ const nodeFiles=files(path.join(src,'nodes'));
 const entryPath=path.join(src,'__composition.ts').replace(/\\/g,'/');
 const entry=`import * as wire from './wire_planning';
 import * as graph from './graph';
+import * as values from './values';
 import {createRegistry,resolvePorts,configureNode} from './node_module';
 import {createCompiler} from './top_compiler';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeWirePlanning=wire;
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,registry,createRegistry,createCompiler,resolvePorts,configureNode};
+export const GrapeGraph={...graph,values,registry,createRegistry,createCompiler,resolvePorts,configureNode};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -73,7 +74,7 @@ const outputs=new Map([
   [path.join(root,'src/editor/wire_planning.js'),bundled],
   [catalogPath,JSON.stringify(catalog,null,2)+'\n'],
   [htmlPath,html.replace(pattern,(_all,open,_json,close)=>open+JSON.stringify(navigation)+close)],
-  [path.join(root,'src/core/frontend_capabilities.json'),JSON.stringify({protocol:context.GrapeTopCompiler.protocol,definitions:context.GrapeGraph.registry.modules.map(m=>m.catalog.definition.definitionUuid).sort(),ordinary,nativeSignatures},null,2)+'\n']
+  [path.join(root,'src/core/frontend_capabilities.json'),JSON.stringify({protocol:context.GrapeTopCompiler.protocol,valueTypes:context.GrapeGraph.values.types,definitions:context.GrapeGraph.registry.modules.map(m=>m.catalog.definition.definitionUuid).sort(),ordinary,nativeSignatures},null,2)+'\n']
 ]);
 // Publish only after all checks and projections have succeeded.
 for(const [file,output] of outputs){

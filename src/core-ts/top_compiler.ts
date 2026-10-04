@@ -2,7 +2,8 @@ import { createSubgraphCompiler } from './subgraph_compiler';
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
 import {GraphDocument,GraphError,type Port,type Edge} from './graph';
 import {object,type Node,type Graph,type Declaration} from './model';
-import {type,types,literal} from './numeric';
+import {type,literal,policy} from './values';
+import {types} from './numeric';
 import type {Registry} from './node_module';
 import {appendNodeComments} from './comments';
 export type {Graph,Node,Declaration} from './model';
@@ -63,7 +64,6 @@ function createFlatCompiler(registry:Registry,limit=256){
     errorNode=undefined;
     const outputs=network.nodes.filter(n=>n.definition!.role==='output');if(outputs.length!==1)throw Error('Exactly one Pixel Output is required');
     const links=new Map<Port,Edge>();
-    const policy={components:{float:1,vec2:2,vec3:3,vec4:4},conversions:['vec2','vec3','vec4'].map(to=>({from:'float',to}))};
     for(const edge of network.edges){
       const target=edge.to!,source=edge.from!;errorNode=target.node.id;
       const checked=edge.connection(policy),k=target;

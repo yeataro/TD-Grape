@@ -33,6 +33,8 @@ export interface NodeControl {
 export interface NodePresentation {
   label?:string;descriptionKey?:string;
   selectorLabel?:string;
+  selector?:{value:string;options:readonly string[];command:string;label:string};
+  inlineControls?:readonly NodeControl[];
   value?:{value:Value;type:string;componentCommand:string;valueCommand:string;names:string;color?:boolean;expandable?:boolean};
   controls?:readonly NodeControl[];
   portLabels?:{inputs?:Record<string,string>;outputs?:Record<string,string>};

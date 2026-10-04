@@ -1,6 +1,6 @@
-import { literalNode, type CatalogRow } from '../node_sdk';
+import { typedNode, output, payload, values } from '../node_sdk';
 
-const catalog:CatalogRow={
+const catalog = {
   "definition": {
     "key": "scalar",
     "label": "Scalar",
@@ -46,4 +46,21 @@ const catalog:CatalogRow={
   }
 };
 
-export default literalNode(catalog);
+export default typedNode(catalog, {
+  types: values.scalars,
+  ports: t => [output('out', t)],
+  configure: (n, t) => { n.params.value = values.reshape(n.params.value ?? 0, t); return n; },
+  edit: (n, command, data) => {
+    if (!['component', 'value'].includes(command)) throw Error('Unknown scalar command');
+    const value = payload(data);
+    values.literal(value, String(n.params.type));
+    n.params.value = value;
+    return n;
+  },
+  validate: n => { values.literal(n.params.value, String(n.params.type)); },
+  presentation: n => ({ value: {
+    value: n.params.value!, type: String(n.params.type),
+    componentCommand: 'component', valueCommand: 'value', names: 'X'
+  }}),
+  emit: n => ({ outputs: {out: values.literal(n.params.value, String(n.params.type))} })
+});

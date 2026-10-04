@@ -4,7 +4,7 @@
   "scripts": {
     "build:core": "node tools/build_core.cjs",
     "check:core": "node tools/build_core.cjs --check",
-    "test:core": "node --test tests/unit/test_wire_planning.cjs tests/unit/test_top_compiler.cjs tests/unit/test_graph_objects.cjs tests/unit/test_model_operations.cjs tests/unit/test_shared_subgraphs.cjs tests/unit/test_subgraph_operations.cjs tests/unit/test_subgraph_deletion.cjs tests/unit/test_subgraph_copies.cjs tests/unit/test_range_nodes.cjs"
+    "test:core": "node --test tests/unit/test_wire_planning.cjs tests/unit/test_top_compiler.cjs tests/unit/test_graph_objects.cjs tests/unit/test_model_operations.cjs tests/unit/test_shared_subgraphs.cjs tests/unit/test_subgraph_operations.cjs tests/unit/test_subgraph_deletion.cjs tests/unit/test_subgraph_copies.cjs tests/unit/test_range_nodes.cjs tests/unit/test_logic_nodes.cjs"
   },
   "devDependencies": { "typescript": "5.9.3" }
 }

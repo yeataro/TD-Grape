@@ -1,7 +1,7 @@
 import type { SubgraphData } from './model';
 import type { NodeContext, NodePresentation } from './node_module';
 import type { PortSpec } from './ports';
-import { literal, type, types } from './numeric';
+import { literal, type, types } from './values';
 
 export function numericInterface(f:SubgraphData|undefined):boolean {
   return !!f && ['inputs','outputs'].every(key =>

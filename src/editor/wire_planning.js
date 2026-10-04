@@ -9,29 +9,43 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GrapeGraph = exports.GrapeTopCompiler = exports.GrapeWirePlanning = exports.registry = void 0;
 const wire = require("./wire_planning");
 const graph = require("./graph");
+const values = require("./values");
 const node_module_1 = require("./node_module");
 const top_compiler_1 = require("./top_compiler");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
+const all_1 = require("./nodes/all");
+const any_1 = require("./nodes/any");
 const ceil_1 = require("./nodes/ceil");
 const clamp_1 = require("./nodes/clamp");
 const color_1 = require("./nodes/color");
+const compare_1 = require("./nodes/compare");
 const cos_1 = require("./nodes/cos");
 const divide_1 = require("./nodes/divide");
 const dot_1 = require("./nodes/dot");
+const equal_1 = require("./nodes/equal");
 const float_1 = require("./nodes/float");
 const floor_1 = require("./nodes/floor");
 const fract_1 = require("./nodes/fract");
 const function_call_1 = require("./nodes/function_call");
 const function_input_1 = require("./nodes/function_input");
 const function_output_1 = require("./nodes/function_output");
+const greaterThan_1 = require("./nodes/greaterThan");
+const greaterThanEqual_1 = require("./nodes/greaterThanEqual");
+const if_1 = require("./nodes/if");
+const isinf_1 = require("./nodes/isinf");
+const isnan_1 = require("./nodes/isnan");
 const length_1 = require("./nodes/length");
+const lessThan_1 = require("./nodes/lessThan");
+const lessThanEqual_1 = require("./nodes/lessThanEqual");
 const math_1 = require("./nodes/math");
 const max_1 = require("./nodes/max");
 const min_1 = require("./nodes/min");
 const mix_1 = require("./nodes/mix");
 const multiply_1 = require("./nodes/multiply");
 const normalize_1 = require("./nodes/normalize");
+const not_1 = require("./nodes/not");
+const notEqual_1 = require("./nodes/notEqual");
 const pixel_out_1 = require("./nodes/pixel_out");
 const round_1 = require("./nodes/round");
 const scalar_1 = require("./nodes/scalar");
@@ -46,10 +60,10 @@ const vec2_1 = require("./nodes/vec2");
 const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, ceil_1.default, clamp_1.default, color_1.default, cos_1.default, divide_1.default, dot_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, length_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, pixel_out_1.default, round_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, sqrt_1.default, subtract_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, compare_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, round_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, sqrt_1.default, subtract_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default]);
 exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode };
+exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode };
 
 },
 "changes":function(require,module,exports){
@@ -881,7 +895,7 @@ function resolvePorts(module, node, context) {
 "node_sdk":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
+exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
 exports.reshapeDefaults = reshapeDefaults;
 exports.literalNode = literalNode;
 exports.vectorNode = vectorNode;
@@ -1099,6 +1113,13 @@ function outputNode(catalog, spec) {
     const { ports, ...implementation } = spec, layout = fixedPorts([...ports]);
     return { ...implementation, catalog, role: 'output', ports: () => layout };
 }
+var value_nodes_1 = require("./value_nodes");
+Object.defineProperty(exports, "typedNode", { enumerable: true, get: function () { return value_nodes_1.typedNode; } });
+Object.defineProperty(exports, "reshapeInputs", { enumerable: true, get: function () { return value_nodes_1.reshapeInputs; } });
+Object.defineProperty(exports, "input", { enumerable: true, get: function () { return value_nodes_1.input; } });
+Object.defineProperty(exports, "output", { enumerable: true, get: function () { return value_nodes_1.output; } });
+Object.defineProperty(exports, "payload", { enumerable: true, get: function () { return value_nodes_1.payload; } });
+Object.defineProperty(exports, "values", { enumerable: true, get: function () { return value_nodes_1.values; } });
 
 },
 "nodes/abs":function(require,module,exports){
@@ -1157,6 +1178,114 @@ const catalog = {
     }
 };
 exports.default = (0, node_sdk_1.binaryNode)(catalog, '+');
+
+},
+"nodes/all":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "all",
+        "label": "all",
+        "inputs": {
+            "value": "bvec2"
+        },
+        "outputs": {
+            "out": "bool"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "bvec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.all",
+        "definitionUuid": "sgrape.builtin.all",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "all",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "all"
+        ],
+        "glslName": "all",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: ['bvec2', 'bvec3', 'bvec4'],
+    ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', 'bool')],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'all(' + c.input('value') + ')' } })
+});
+
+},
+"nodes/any":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "any",
+        "label": "any",
+        "inputs": {
+            "value": "bvec2"
+        },
+        "outputs": {
+            "out": "bool"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "bvec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.any",
+        "definitionUuid": "sgrape.builtin.any",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "any",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "any"
+        ],
+        "glslName": "any",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: ['bvec2', 'bvec3', 'bvec4'],
+    ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', 'bool')],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'any(' + c.input('value') + ')' } })
+});
 
 },
 "nodes/ceil":function(require,module,exports){
@@ -1311,6 +1440,85 @@ const catalog = {
 exports.default = (0, node_sdk_1.literalNode)(catalog, 'vec4', false, { color: true });
 
 },
+"nodes/compare":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "compare",
+        "label": "Compare",
+        "inputs": {
+            "a": "T",
+            "b": "T"
+        },
+        "outputs": {
+            "out": "bool"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float",
+            "operator": ">"
+        },
+        "inputDefaults": {
+            "a": 0,
+            "b": 0
+        },
+        "descriptionKey": "help.compare",
+        "definitionUuid": "sgrape.builtin.compare"
+    },
+    "emitter": {
+        "id": "compare",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "editor",
+        "aliases": [
+            "comparison",
+            "greater",
+            "less",
+            "equal",
+            "bool",
+            "condition",
+            "比較"
+        ],
+        "glslName": ">, >=, <, <=, ==, !=",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+const operators = ['>', '>=', '<', '<=', '==', '!='];
+const control = (operator) => ({
+    kind: 'select', key: 'operator', label: 'compare.operator', command: 'operator', value: operator,
+    options: operators.map(value => ({ value, label: 'A ' + value + ' B', literal: true }))
+});
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: ['float', 'int', 'uint'],
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', 'bool')],
+    validate: n => { var _a; if (!operators.includes(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>')))
+        throw Error('Invalid comparison operator'); },
+    edit: (n, command, data) => {
+        const value = String((0, node_sdk_1.payload)(data));
+        if (command !== 'operator' || !operators.includes(value))
+            throw Error('Invalid comparison operator');
+        n.params.operator = value;
+        return n;
+    },
+    presentation: n => {
+        var _a, _b;
+        return ({ selectorLabel: 'vector.inputType',
+            controls: [control(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>'))], inlineControls: [control(String((_b = n.params.operator) !== null && _b !== void 0 ? _b : '>'))] });
+    },
+    emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('a') + ' ' + String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>') + ' ' + c.input('b') + ')' } }); }
+});
+
+},
 "nodes/cos":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1439,6 +1647,61 @@ exports.default = (0, node_sdk_1.numericCall)({
             "vector"
         ]
     }
+});
+
+},
+"nodes/equal":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "equal",
+        "label": "equal",
+        "inputs": {
+            "a": "vec2",
+            "b": "vec2"
+        },
+        "outputs": {
+            "out": "bvec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.equal",
+        "definitionUuid": "sgrape.builtin.equal",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "equal",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "equal"
+        ],
+        "glslName": "equal",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors,
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'equal(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
 },
@@ -1654,6 +1917,316 @@ const definition = {
 exports.default = definition;
 
 },
+"nodes/greaterThan":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "greaterThan",
+        "label": "greaterThan",
+        "inputs": {
+            "a": "vec2",
+            "b": "vec2"
+        },
+        "outputs": {
+            "out": "bvec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.greaterThan",
+        "definitionUuid": "sgrape.builtin.greaterThan",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "greaterThan",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "greaterThan"
+        ],
+        "glslName": "greaterThan",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'greaterThan(' + c.input('a') + ', ' + c.input('b') + ')' } })
+});
+
+},
+"nodes/greaterThanEqual":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "greaterThanEqual",
+        "label": "greaterThanEqual",
+        "inputs": {
+            "a": "vec2",
+            "b": "vec2"
+        },
+        "outputs": {
+            "out": "bvec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.greaterThanEqual",
+        "definitionUuid": "sgrape.builtin.greaterThanEqual",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "greaterThanEqual",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "greaterThanEqual"
+        ],
+        "glslName": "greaterThanEqual",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'greaterThanEqual(' + c.input('a') + ', ' + c.input('b') + ')' } })
+});
+
+},
+"nodes/if":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "if",
+        "label": "If",
+        "inputs": {
+            "condition": "bool",
+            "true": "T",
+            "false": "T"
+        },
+        "outputs": {
+            "out": "T"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "inputDefaults": {
+            "condition": false,
+            "true": 1,
+            "false": 0
+        },
+        "descriptionKey": "help.if",
+        "definitionUuid": "sgrape.builtin.if"
+    },
+    "emitter": {
+        "id": "if",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "editor",
+        "aliases": [
+            "branch",
+            "conditional",
+            "select",
+            "ternary",
+            "條件",
+            "選擇"
+        ],
+        "glslName": "?:",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.types,
+    ports: t => [(0, node_sdk_1.input)('condition', 'bool', false), (0, node_sdk_1.input)('true', t, 1), (0, node_sdk_1.input)('false', t), (0, node_sdk_1.output)('out', t)],
+    emit: (_n, c) => ({ outputs: { out: '(' + c.input('condition') + ' ? ' + c.input('true') + ' : ' + c.input('false') + ')' } })
+});
+
+},
+"nodes/isinf":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "isinf",
+        "label": "isinf",
+        "inputs": {
+            "value": "float"
+        },
+        "outputs": {
+            "out": "bool"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.isinf",
+        "definitionUuid": "sgrape.builtin.isinf",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "isinf",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "isinf"
+        ],
+        "glslName": "isinf",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+const inputs = ['float', 'vec2', 'vec3', 'vec4'];
+const outputs = ['bool', 'bvec2', 'bvec3', 'bvec4'];
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: inputs,
+    ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: n => ({ selector: {
+            value: outputs[inputs.indexOf(String(n.params.type))], options: outputs,
+            command: 'output', label: 'vector.outputType'
+        } }),
+    edit: (n, command, data) => {
+        var _a;
+        const index = outputs.indexOf(String((0, node_sdk_1.payload)(data)));
+        if (command !== 'output' || index < 0)
+            throw Error('Invalid predicate output');
+        const old = String(n.params.type);
+        n.params.type = inputs[index];
+        if (((_a = n.inputValues) === null || _a === void 0 ? void 0 : _a.value) !== undefined && old !== n.params.type)
+            n.inputValues.value = node_sdk_1.values.reshape(n.inputValues.value, String(n.params.type));
+        return n;
+    },
+    emit: (_n, c) => ({ outputs: { out: 'isinf(' + c.input('value') + ')' } })
+});
+
+},
+"nodes/isnan":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "isnan",
+        "label": "isnan",
+        "inputs": {
+            "value": "float"
+        },
+        "outputs": {
+            "out": "bool"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.isnan",
+        "definitionUuid": "sgrape.builtin.isnan",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "isnan",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "isnan"
+        ],
+        "glslName": "isnan",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+const inputs = ['float', 'vec2', 'vec3', 'vec4'];
+const outputs = ['bool', 'bvec2', 'bvec3', 'bvec4'];
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: inputs,
+    ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: n => ({ selector: {
+            value: outputs[inputs.indexOf(String(n.params.type))], options: outputs,
+            command: 'output', label: 'vector.outputType'
+        } }),
+    edit: (n, command, data) => {
+        var _a;
+        const index = outputs.indexOf(String((0, node_sdk_1.payload)(data)));
+        if (command !== 'output' || index < 0)
+            throw Error('Invalid predicate output');
+        const old = String(n.params.type);
+        n.params.type = inputs[index];
+        if (((_a = n.inputValues) === null || _a === void 0 ? void 0 : _a.value) !== undefined && old !== n.params.type)
+            n.inputValues.value = node_sdk_1.values.reshape(n.inputValues.value, String(n.params.type));
+        return n;
+    },
+    emit: (_n, c) => ({ outputs: { out: 'isnan(' + c.input('value') + ')' } })
+});
+
+},
 "nodes/length":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1702,6 +2275,116 @@ exports.default = (0, node_sdk_1.numericCall)({
             "vector"
         ]
     }
+});
+
+},
+"nodes/lessThan":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "lessThan",
+        "label": "lessThan",
+        "inputs": {
+            "a": "vec2",
+            "b": "vec2"
+        },
+        "outputs": {
+            "out": "bvec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.lessThan",
+        "definitionUuid": "sgrape.builtin.lessThan",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "lessThan",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "lessThan"
+        ],
+        "glslName": "lessThan",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'lessThan(' + c.input('a') + ', ' + c.input('b') + ')' } })
+});
+
+},
+"nodes/lessThanEqual":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "lessThanEqual",
+        "label": "lessThanEqual",
+        "inputs": {
+            "a": "vec2",
+            "b": "vec2"
+        },
+        "outputs": {
+            "out": "bvec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.lessThanEqual",
+        "definitionUuid": "sgrape.builtin.lessThanEqual",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "lessThanEqual",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "lessThanEqual"
+        ],
+        "glslName": "lessThanEqual",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors.filter(t => node_sdk_1.values.family(t) !== 'bool'),
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'lessThanEqual(' + c.input('a') + ', ' + c.input('b') + ')' } })
 });
 
 },
@@ -2077,6 +2760,115 @@ exports.default = (0, node_sdk_1.numericCall)({
 });
 
 },
+"nodes/not":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "not",
+        "label": "not",
+        "inputs": {
+            "value": "bvec2"
+        },
+        "outputs": {
+            "out": "bvec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "bvec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.not",
+        "definitionUuid": "sgrape.builtin.not",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "not",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "not"
+        ],
+        "glslName": "not",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: ['bvec2', 'bvec3', 'bvec4'],
+    ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', t)],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'not(' + c.input('value') + ')' } })
+});
+
+},
+"nodes/notEqual":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "notEqual",
+        "label": "notEqual",
+        "inputs": {
+            "a": "vec2",
+            "b": "vec2"
+        },
+        "outputs": {
+            "out": "bvec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2"
+        },
+        "inputDefaults": {},
+        "descriptionKey": "help.notEqual",
+        "definitionUuid": "sgrape.builtin.notEqual",
+        "targets": [
+            "top",
+            "mat"
+        ]
+    },
+    "emitter": {
+        "id": "notEqual",
+        "version": 1
+    },
+    "browser": {
+        "category": "logic",
+        "source": "glsl",
+        "aliases": [
+            "notEqual"
+        ],
+        "glslName": "notEqual",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "logic"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors,
+    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped('bool', node_sdk_1.values.count(t)))],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (_n, c) => ({ outputs: { out: 'notEqual(' + c.input('a') + ', ' + c.input('b') + ')' } })
+});
+
+},
 "nodes/pixel_out":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2231,7 +3023,25 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.literalNode)(catalog);
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.scalars,
+    ports: t => [(0, node_sdk_1.output)('out', t)],
+    configure: (n, t) => { var _a; n.params.value = node_sdk_1.values.reshape((_a = n.params.value) !== null && _a !== void 0 ? _a : 0, t); return n; },
+    edit: (n, command, data) => {
+        if (!['component', 'value'].includes(command))
+            throw Error('Unknown scalar command');
+        const value = (0, node_sdk_1.payload)(data);
+        node_sdk_1.values.literal(value, String(n.params.type));
+        n.params.value = value;
+        return n;
+    },
+    validate: n => { node_sdk_1.values.literal(n.params.value, String(n.params.type)); },
+    presentation: n => ({ value: {
+            value: n.params.value, type: String(n.params.type),
+            componentCommand: 'component', valueCommand: 'value', names: 'X'
+        } }),
+    emit: n => ({ outputs: { out: node_sdk_1.values.literal(n.params.value, String(n.params.type)) } })
+});
 
 },
 "nodes/sign":function(require,module,exports){
@@ -2862,6 +3672,7 @@ exports.createSubgraphCompiler = createSubgraphCompiler;
 const model_1 = require("./model");
 const node_module_1 = require("./node_module");
 const subgraph_interface_1 = require("./subgraph_interface");
+const values_1 = require("./values");
 const numeric_1 = require("./numeric");
 const relay = {
     catalog: {
@@ -2869,12 +3680,12 @@ const relay = {
         emitter: { id: 'subgraph_relay', version: 1 }, browser: {}
     },
     role: 'value',
-    supports: n => numeric_1.types.includes(String(n.params.type)),
+    supports: n => values_1.types.includes(String(n.params.type)),
     ports: n => [
         { key: 'value', direction: 'input', type: String(n.params.type) },
         { key: 'out', direction: 'output', type: String(n.params.type) }
     ],
-    validate: n => { (0, numeric_1.type)(n.params.type); },
+    validate: n => { (0, values_1.type)(n.params.type); },
     emit: (_n, c) => ({ outputs: { out: c.input('value') } })
 };
 function createSubgraphCompiler(registry, engineFactory) {
@@ -3254,10 +4065,10 @@ exports.numericInterface = numericInterface;
 exports.requireSubgraph = requireSubgraph;
 exports.subgraphPorts = subgraphPorts;
 exports.subgraphPresentation = subgraphPresentation;
-const numeric_1 = require("./numeric");
+const values_1 = require("./values");
 function numericInterface(f) {
     return !!f && ['inputs', 'outputs'].every(key => Array.isArray(f[key]) &&
-        f[key].every(p => numeric_1.types.includes(p.type)));
+        f[key].every(p => values_1.types.includes(p.type)));
 }
 function requireSubgraph(context, id) {
     var _a;
@@ -3272,7 +4083,7 @@ function requireSubgraph(context, id) {
             if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))
                 throw Error('Invalid or duplicate Subgraph port');
             seen.add(p.id);
-            (0, numeric_1.literal)(p.default, (0, numeric_1.type)(p.type));
+            (0, values_1.literal)(p.default, (0, values_1.type)(p.type));
         }
     }
     return f;
@@ -3312,6 +4123,7 @@ exports.groupSubgraph = groupSubgraph;
 exports.collectSubgraphs = collectSubgraphs;
 const model_1 = require("./model");
 const scope_references_1 = require("./scope_references");
+const values_1 = require("./values");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
 function structural(graph, role) {
     const matches = graph.registry.modules.filter(m => m.structural &&
@@ -3391,10 +4203,8 @@ function instantiateSubgraph(network, definitionId, id, ui = {}) {
 function defaultValue(type, options) {
     if (options.defaultValue)
         return options.defaultValue(type);
-    if (type === 'float')
-        return 0;
-    if (/^vec[234]$/.test(type))
-        return Array(Number(type.slice(-1))).fill(0);
+    if (values_1.types.includes(type))
+        return (0, values_1.fill)(0, type);
     throw Error('A default value description is required for ' + type);
 }
 /** Extract selected graph content. UI supplies selection and view metadata;
@@ -3548,14 +4358,7 @@ function collectSubgraphs(graph, roots, active) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Subgraph = void 0;
 const model_1 = require("./model");
-const numeric_1 = require("./numeric");
-function reshape(value, to) {
-    var _a;
-    const t = (0, numeric_1.type)(to);
-    const values = Array.isArray(value) ? value : [value];
-    return t === 'float' ? (_a = values[0]) !== null && _a !== void 0 ? _a : 0 :
-        Array.from({ length: (0, numeric_1.count)(t) }, (_, i) => { var _a, _b; return (_b = (_a = values[i]) !== null && _a !== void 0 ? _a : values[0]) !== null && _b !== void 0 ? _b : 0; });
-}
+const values_1 = require("./values");
 /** One graph-owned definition and all its instances. Source edits first use
  * the graph's localization operation to preserve their stored snapshot. */
 class Subgraph {
@@ -3604,7 +4407,7 @@ class Subgraph {
             const previous = p.type;
             Object.assign(p, (0, model_1.copy)(edit.patch));
             if (p.type !== previous && edit.patch.default === undefined)
-                p.default = reshape(p.default, p.type);
+                p.default = (0, values_1.reshape)(p.default, p.type);
         }
         if (next.length > 16)
             throw Error('Subgraph supports at most 16 ports per direction');
@@ -3613,7 +4416,7 @@ class Subgraph {
             if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(p.id) || seen.has(p.id))
                 throw Error('Invalid or duplicate Subgraph port');
             seen.add(p.id);
-            (0, numeric_1.literal)(p.default, (0, numeric_1.type)(p.type));
+            (0, values_1.literal)(p.default, (0, values_1.type)(p.type));
         }
         // Prepare every patch before mutation, including instance defaults.
         const patches = [];
@@ -3640,7 +4443,7 @@ class Subgraph {
                 if (removed)
                     delete values[removed];
                 if (changed && Object.prototype.hasOwnProperty.call(values, changed.id))
-                    values[changed.id] = reshape(values[changed.id], changed.type);
+                    values[changed.id] = (0, values_1.reshape)(values[changed.id], changed.type);
                 patches.push({ node: n, values });
             }
         f[direction] = next;
@@ -3666,6 +4469,7 @@ const subgraph_compiler_1 = require("./subgraph_compiler");
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
 const graph_1 = require("./graph");
 const model_1 = require("./model");
+const values_1 = require("./values");
 const numeric_1 = require("./numeric");
 const comments_1 = require("./comments");
 class CompilationError extends Error {
@@ -3726,7 +4530,7 @@ function createFlatCompiler(registry, limit = 256) {
                     throw Error('Expose must be a boolean');
                 if (d.exposeName !== undefined && (typeof d.exposeName !== 'string' || d.exposeName.length > 80 || /[\x00-\x1f]/.test(d.exposeName)))
                     throw Error('Invalid public Uniform label');
-                (0, numeric_1.literal)(d.value, (0, numeric_1.type)(d.type));
+                (0, values_1.literal)(d.value, (0, values_1.type)(d.type));
                 declarations.set(d.id, d);
                 names.add(d.name);
             }
@@ -3758,7 +4562,7 @@ function createFlatCompiler(registry, limit = 256) {
                 for (const [p, v] of Object.entries(n.inputValues || {})) {
                     if (!resolved.inputs[p])
                         throw Error('Unknown input default');
-                    (0, numeric_1.literal)(v, (0, numeric_1.type)(resolved.inputs[p].type));
+                    (0, values_1.literal)(v, (0, values_1.type)(resolved.inputs[p].type));
                 }
             }
             errorNode = undefined;
@@ -3766,11 +4570,10 @@ function createFlatCompiler(registry, limit = 256) {
             if (outputs.length !== 1)
                 throw Error('Exactly one Pixel Output is required');
             const links = new Map();
-            const policy = { components: { float: 1, vec2: 2, vec3: 3, vec4: 4 }, conversions: ['vec2', 'vec3', 'vec4'].map(to => ({ from: 'float', to })) };
             for (const edge of network.edges) {
                 const target = edge.to, source = edge.from;
                 errorNode = target.node.id;
-                const checked = edge.connection(policy), k = target;
+                const checked = edge.connection(values_1.policy), k = target;
                 if (!checked.valid)
                     throw Error(checked.reason === 'missing-port' ? 'Connection endpoint no longer exists' : source.type + ' cannot connect to ' + target.type);
                 if (links.has(k))
@@ -3795,7 +4598,7 @@ function createFlatCompiler(registry, limit = 256) {
                             throw Error('Source emitted no output: ' + source.key);
                         return source.type === port.type ? value : port.type + '(' + value + ')';
                     }
-                    return (0, numeric_1.literal)((_b = (_a = n.inputValues) === null || _a === void 0 ? void 0 : _a[key]) !== null && _b !== void 0 ? _b : port.default, (0, numeric_1.type)(port.type));
+                    return (0, values_1.literal)((_b = (_a = n.inputValues) === null || _a === void 0 ? void 0 : _a[key]) !== null && _b !== void 0 ? _b : port.default, (0, values_1.type)(port.type));
                 };
                 if (!d.emit)
                     throw Error('Structural nodes require Subgraph expansion');
@@ -3842,6 +4645,127 @@ function createCompiler(registry) {
         compile: (g, identifiers) => { var _a; return ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
     });
 }
+
+},
+"value_nodes":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.output = exports.input = exports.values = void 0;
+exports.reshapeInputs = reshapeInputs;
+exports.typedNode = typedNode;
+exports.payload = payload;
+const model_1 = require("./model");
+const values = require("./values");
+exports.values = values;
+function reshapeInputs(n, before, after) {
+    var _a;
+    for (const p of after)
+        if (p.direction === 'input' && ((_a = n.inputValues) === null || _a === void 0 ? void 0 : _a[p.key]) !== undefined) {
+            const old = before.find(v => v.direction === 'input' && v.key === p.key);
+            if (old && old.type !== p.type) {
+                n.ui || (n.ui = {});
+                const cache = (0, model_1.object)(n.ui.inputValuesByType) || {};
+                n.ui.inputValuesByType = cache;
+                const stored = (0, model_1.object)(cache[p.key]) || {};
+                cache[p.key] = stored;
+                stored[old.type] = (0, model_1.copy)(n.inputValues[p.key]);
+                n.inputValues[p.key] = stored[p.type] === undefined ? values.reshape(n.inputValues[p.key], p.type) : (0, model_1.copy)(stored[p.type]);
+            }
+        }
+    return n;
+}
+/** A typed value family owns its ports and commands; no node-name dispatch. */
+function typedNode(catalog, spec) {
+    const selected = (n) => { var _a; return String((_a = n.params.type) !== null && _a !== void 0 ? _a : catalog.definition.defaults.type); };
+    const ports = (n) => { const t = selected(n); if (!spec.types.includes(t))
+        throw Error('Unsupported node type'); return spec.ports(t, n); };
+    return { catalog, role: 'value', supports: n => spec.types.includes(selected(n)), ports,
+        configure: (n, s) => {
+            if (!('type' in s) || !spec.types.includes(s.type) || n.params.fixedType && n.params.fixedType !== s.type)
+                throw Error('Invalid manual type');
+            const before = ports(n);
+            n.params.type = s.type;
+            n = spec.configure ? spec.configure(n, s.type) : n;
+            return reshapeInputs(n, before, ports(n));
+        },
+        validate: (n, c) => { var _a; if (n.params.fixedType && n.params.fixedType !== selected(n))
+            throw Error('Fixed node type'); ports(n); (_a = spec.validate) === null || _a === void 0 ? void 0 : _a.call(spec, n, c); },
+        edit: spec.edit, emit: spec.emit,
+        presentation: n => { var _a; return ({ selectorLabel: 'vector.outputType', ...(_a = spec.presentation) === null || _a === void 0 ? void 0 : _a.call(spec, n) }); }
+    };
+}
+const input = (key, t, value = 0) => ({ key, direction: 'input', type: t, default: values.fill(value, t) });
+exports.input = input;
+const output = (key, t) => ({ key, direction: 'output', type: t });
+exports.output = output;
+function payload(value) { const data = (0, model_1.object)(value); if (!data || data.value === undefined)
+    throw Error('Missing command value'); return data.value; }
+
+},
+"values":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.copy = exports.policy = exports.fill = exports.vectors = exports.types = exports.scalars = void 0;
+exports.shaped = shaped;
+exports.type = type;
+exports.count = count;
+exports.family = family;
+exports.literal = literal;
+exports.reshape = reshape;
+exports.explicit = explicit;
+/** Portable scalar/vector values. Resource and native binding policies are separate. */
+const model_1 = require("./model");
+Object.defineProperty(exports, "copy", { enumerable: true, get: function () { return model_1.copy; } });
+const numeric_1 = require("./numeric");
+exports.scalars = ['float', 'int', 'uint', 'bool'];
+exports.types = exports.scalars.flatMap(f => [f, ...[2, 3, 4].map(n => shaped(f, n))]);
+exports.vectors = exports.types.filter(t => count(t) > 1);
+function shaped(f, n) {
+    if (!Number.isInteger(n) || n < 1 || n > 4)
+        throw Error('Invalid component count');
+    return n === 1 ? f : ({ float: 'vec', int: 'ivec', uint: 'uvec', bool: 'bvec' }[f] + n);
+}
+function type(t) { if (typeof t !== 'string' || !exports.types.includes(t))
+    throw Error('Unsupported value type'); return t; }
+function count(t) { return /vec[234]$/.test(t) ? Number(t.slice(-1)) : 1; }
+function family(t) { type(t); return t.startsWith('ivec') ? 'int' : t.startsWith('uvec') ? 'uint' : t.startsWith('bvec') ? 'bool' : t.startsWith('vec') ? 'float' : t; }
+function literal(value, t) {
+    type(t);
+    const n = count(t), f = family(t);
+    if (n > 1) {
+        if (!Array.isArray(value) || value.length !== n)
+            throw Error('Expected ' + n + ' components');
+        return t + '(' + value.map(v => literal(v, f)).join(', ') + ')';
+    }
+    if (f === 'float')
+        return (0, numeric_1.number)(value);
+    if (f === 'bool') {
+        if (typeof value !== 'boolean')
+            throw Error('Expected a boolean');
+        return String(value);
+    }
+    const low = f === 'int' ? -2147483648 : 0, high = f === 'int' ? 2147483647 : 4294967295;
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < low || value > high)
+        throw Error('Expected a 32-bit ' + f);
+    return value === -2147483648 ? '(-2147483647 - 1)' : String(value) + (f === 'uint' ? 'u' : '');
+}
+function reshape(value, t) {
+    const f = family(t), a = Array.isArray(value) ? value : [value];
+    const scalar = (v) => f === 'bool' ? Boolean(v) : f === 'float' ? Number(v) : Math.min(f === 'int' ? 2147483647 : 4294967295, Math.max(f === 'int' ? -2147483648 : 0, Math.trunc(Number(v))));
+    const next = Array.from({ length: count(t) }, (_, i) => { var _a, _b; return scalar((_b = (_a = a[i]) !== null && _a !== void 0 ? _a : a[0]) !== null && _b !== void 0 ? _b : 0); });
+    const result = count(t) === 1 ? next[0] : next;
+    literal(result, t);
+    return result;
+}
+const fill = (v, t) => reshape(v, t);
+exports.fill = fill;
+function explicit(source, target) { return exports.types.includes(source) && exports.types.includes(target) && (count(source) === 1 || count(source) >= count(target)); }
+exports.policy = {
+    components: Object.fromEntries(exports.types.map(t => [t, count(t)])),
+    conversions: exports.types.flatMap(from => exports.types.filter(to => from !== to &&
+        (family(from) !== 'bool' && family(to) !== 'bool' && (count(from) === count(to) || count(from) === 1) ||
+            family(from) === family(to) && count(from) === 1)).map(to => ({ from, to })))
+};
 
 },
 "wire_planning":function(require,module,exports){

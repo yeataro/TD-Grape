@@ -1124,7 +1124,9 @@ function renderHelp(){
   if(nodeComment(n)){const note=el('section',{class:'node-comment-help'});note.append(el('strong',{},t('node.comment')),el('p',{},nodeComment(n)));help.append(note);}
   if(d?.key==='builtin_source'){help.append(markdown(builtinSourceHelp(n.params.source)));return;}
   if(n?.params.fixedType&&['scalar','vector'].includes(d?.key)){help.append(markdown(t(d.key==='scalar'?'help.fixedScalar':'help.fixedVector')));return;}
-  help.append(markdown(t(d?(editorTarget==='top'&&['uv','texture','pixel_out'].includes(d.key)?'help.top.'+d.key:(d.descriptionKey||'help.'+d.key)):'help.select')));
+  const helpText=t(d?(editorTarget==='top'&&['uv','texture','pixel_out'].includes(d.key)?'help.top.'+d.key:(d.descriptionKey||'help.'+d.key)):'help.select');
+  const signature=n?['inputs','outputs'].map(kind=>Object.entries(ports(n,kind)).map(([key,type])=>key+': '+type).join(', ')).join(' → '):'';
+  help.append(markdown(helpText.replace('{ports}',signature)));
 }
 function showPreviewHelp(){if(!graph)return;helpContext='preview';previewHelpSelection=selected;renderHelp();}
 function installPreviewHelp(){
@@ -1211,7 +1213,7 @@ function voronoiInspector(box,n){
   }
   box.append(parameterControlRow('',parameterHint(t('voronoi.hint'))));
 }
-function moduleInspector(box,n,controls){
+function moduleInspector(box,n,controls,{inline=false}={}){
   const label=c=>c.literal?c.label:t(c.label);
   const run=(c,value)=>{if(!readonly&&current().nodes.includes(n))change(()=>editModuleNode(n,c.command,{...c.args,...(value===undefined?{}:{value:c.numeric?Number(value):value})}));};
   const control=c=>{
@@ -1228,7 +1230,7 @@ function moduleInspector(box,n,controls){
     }
     return parameterHint(label(c));
   };
-  for(const c of controls)box.append(parameterControlRow(['button','hint'].includes(c.kind)?'':label(c),control(c)));
+  for(const c of controls)box.append(inline?control(c):parameterControlRow(['button','hint'].includes(c.kind)?'':label(c),control(c)));
 }
 function mathInspector(box,n){
   const apply=fn=>change(fn),params=n.params,count=params.inputCount??3;
@@ -1248,6 +1250,11 @@ function mathInspector(box,n){
   box.append(parameterControlRow('',remove),parameterControlRow('',parameterHint(t('math.noteHint'))));
 }
 function nodeTypeSelector(n,d){
+  const selection=moduleNodePresentation(graph,n)?.selector;
+  if(selection){
+    const control=typeSelect(selection.options.map(value=>[value,value]),selection.value,value=>change(()=>editModuleNode(n,selection.command,{value}),{typeChange:true}));
+    control.title=t(selection.label);control.disabled=readonly;return control;
+  }
   if(d.key==='preview')return null;
   if(d.key==='switch'){
     const control=typeSelect(valueTypes().map(type=>[type,type]),n.params.type,value=>change(()=>reshapeTypedInputs(n,d,value),{typeChange:true}));
@@ -1660,7 +1667,7 @@ function renderInspector(){
     }else if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));
     if(supportsAutoType(d)&&!isVectorOperation(d)){
       const modular=frontendNodeModule(graph,n),automatic=!modular&&n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
-      const row=parameterControlRow(t(modular?'vector.outputType':'type.operation'),control);control.title=t(modular?'vector.outputType':automatic?'type.autoHint':'type.lockedHint');box.append(row);
+      const label=moduleNodePresentation(graph,n)?.selector?.label||moduleNodePresentation(graph,n)?.selectorLabel||(modular?'vector.outputType':'type.operation');const row=parameterControlRow(t(label),control);control.title=t(modular?label:automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
     if(d.key==='voronoi')voronoiInspector(box,n);
     const moduleControls=moduleNodePresentation(graph,n)?.controls;
@@ -1668,7 +1675,7 @@ function renderInspector(){
     if(d.key==='switch')box.append(parameterControlRow(t('switch.defaultType'),nodeTypeSelector(n,d)));
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
     if(isConvertOperation(d))for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
-    if(d.key==='compare')box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
+    if(d.key==='compare'&&!moduleControls)box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
     if(['matrix_get','matrix_set'].includes(d.key)){
       box.append(parameterControlRow(t('matrix.accessMode'),select([['column',t('matrix.wholeColumn')],['element',t('matrix.element')]],n.params.mode||'column',value=>changeMatrixAccess(n,'mode',value))));
       box.append(parameterControlRow(t('matrix.indexType'),select([['int','int'],['uint','uint']],n.params.indexType||'int',value=>changeMatrixAccess(n,'indexType',value))));

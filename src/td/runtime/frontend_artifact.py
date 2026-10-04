@@ -75,7 +75,7 @@ def checked_artifact(graph, artifact, core, *, saved=False):
     functions = core._functions(graph)
     for f in functions.values():
         require('pixel' in f['stages'] and 'top' in f.get('targets', ['top', 'mat']), 'unsupported Subgraph stage/target')
-        require(all(p['type'] in TYPES for key in ('inputs', 'outputs') for p in f[key]), 'unsupported Subgraph interface')
+        require(all(p['type'] in capabilities().get('valueTypes', TYPES) for key in ('inputs', 'outputs') for p in f[key]), 'unsupported Subgraph interface')
     scopes = {'': graph['stages']['pixel'], **{key: f['graph'] for key, f in functions.items()}}
     allowed = set(capabilities()['definitions'])
     scope_ids = {}

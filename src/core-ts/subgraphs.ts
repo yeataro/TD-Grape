@@ -1,5 +1,5 @@
 import { copy, type InterfacePort, type Value, type Node, type SubgraphData } from './model';
-import { type, literal, count } from './numeric';
+import { type, literal, reshape } from './values';
 import type { GraphDocument } from './graph';
 
 type Direction = 'inputs'|'outputs';
@@ -8,13 +8,6 @@ export type InterfaceEdit =
   | {kind:'remove';id:string}
   | {kind:'move';id:string;delta:number}
   | {kind:'update';id:string;patch:Partial<Pick<InterfacePort,'name'|'type'|'default'>>};
-
-function reshape(value:Value,to:string):Value {
-  const t = type(to);
-  const values = Array.isArray(value) ? value : [value];
-  return t === 'float' ? values[0] ?? 0 :
-    Array.from({length:count(t)},(_,i) => values[i] ?? values[0] ?? 0);
-}
 
 /** One graph-owned definition and all its instances. Source edits first use
  * the graph's localization operation to preserve their stored snapshot. */

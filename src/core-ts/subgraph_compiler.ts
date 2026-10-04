@@ -3,7 +3,8 @@
 import { copy, type Graph, type Node, type NetworkData, type SubgraphData } from './model';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
 import { numericInterface, requireSubgraph } from './subgraph_interface';
-import { types, type } from './numeric';
+import { types, type } from './values';
+import { types as bindingTypes } from './numeric';
 
 interface Location {node:string;stage:string;trail:string[];functionId?:string}
 interface Compiled {
@@ -36,7 +37,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
   function supports(g:Graph):boolean {
     if (g.schemaVersion!==1 || g.target!=='top' || Object.keys(g.stages).join()!=='pixel' ||
         g.topInputs?.length || g.typeDefinitions?.length || !Array.isArray(g.functions) || g.functions.length>64) return false;
-    if (!g.declarations.every(d=>d.kind==='uniform'&&types.includes(d.type)&&!d.initialDriver&&!d.sourceMissing&&!['array','matrix'].includes(String(d.nativeSequence)))) return false;
+    if (!g.declarations.every(d=>d.kind==='uniform'&&bindingTypes.includes(d.type)&&!d.initialDriver&&!d.sourceMissing&&!['array','matrix'].includes(String(d.nativeSequence)))) return false;
     const scopes:[NetworkData,SubgraphData|undefined][] = [[g.stages.pixel!,undefined],...g.functions.map(f=>[f.graph,f] as [NetworkData,SubgraphData])];
     return scopes.every(([data,owner])=>{
       if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>256 || data.edges.length>1024 || data.ui?.frames) return false;

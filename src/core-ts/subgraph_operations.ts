@@ -3,6 +3,7 @@ import type { GraphDocument, Network } from './graph';
 import type { NodeModule } from './node_module';
 import type { PortSpec } from './ports';
 import { ScopeReferences } from './scope_references';
+import {types as valueTypes,fill} from './values';
 
 export interface SubgraphOptions {id:string;name:string;stage:string}
 export interface GroupOptions extends SubgraphOptions {
@@ -85,8 +86,7 @@ export function instantiateSubgraph(network:Network,definitionId:string,id:strin
 
 function defaultValue(type:string,options:GroupOptions):Value {
   if (options.defaultValue) return options.defaultValue(type);
-  if (type === 'float') return 0;
-  if (/^vec[234]$/.test(type)) return Array(Number(type.slice(-1))).fill(0) as Value[];
+  if (valueTypes.includes(type)) return fill(0,type);
   throw Error('A default value description is required for ' + type);
 }
 

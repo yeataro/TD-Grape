@@ -958,6 +958,8 @@ function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false
       if(selected.issues.size)throw Error([...selected.issues.values()][0]);
       ports.set(n.id,selected.ports.get(n.id));choices.set(n.id,selected.choices.get(n.id));operands.set(n.id,selected.operands.get(n.id));
       if(selected.signatures.has(n.id))signatures.set(n.id,selected.signatures.get(n.id));
+    }else if(frontendNodeModule(document,n,owner)){
+      ports.set(n.id,concretePorts(document,n,owner,n.params.type,overrides.get(n.id)));
     }else if(autoDefinition(document,n,owner)?.key==='router'){
       const source=links.find(e=>e.to[1]==='value'),type=source?ports.get(source.from[0])?.outputs[source.from[1]]:n.params.type||'float';
       if(!type||type==='?')throw autoTypeError('type.autoInputs','Router');
@@ -2121,7 +2123,9 @@ function renderNodeCard(n,cards,nativeDeclarations,projection=null){
       return row;
     };
     if(collapsed){appendCollapsedPorts(list,n,portRow);card.append(list);}else{
-    if(d?.key==='compare'){const controls=el('div',{class:'node-body-controls'});controls.append(compareOperatorSelector(n));card.append(controls);}
+    const inlineControls=moduleNodePresentation(graph,n)?.inlineControls;
+    if(inlineControls){const controls=el('div',{class:'node-body-controls'});moduleInspector(controls,n,inlineControls,{inline:true});card.append(controls);}
+    else if(d?.key==='compare'){const controls=el('div',{class:'node-body-controls'});controls.append(compareOperatorSelector(n));card.append(controls);}
     if(d?.key==='struct_field'){const controls=el('div',{class:'node-body-controls'});controls.append(structFieldSelector(n));card.append(controls);}
     if(d?.key==='array')card.append(arrayNodeLengthControl(n));
     if(isMatrixOperation(d))appendMatrixNodeRows(list,n,portRow);
