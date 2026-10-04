@@ -1,4 +1,4 @@
-"""Run portable checks using only this checkout, Python, and Node.js."""
+"""Run portable checks after npm ci, using Python, Node.js and the local TS compiler."""
 from pathlib import Path
 import os
 import subprocess
@@ -9,6 +9,8 @@ env = dict(os.environ)
 env['PYTHONPATH'] = os.pathsep.join(str(root / p) for p in ('src/core', 'src/td/runtime', 'tests/unit'))
 env['PYTHONDONTWRITEBYTECODE'] = '1'
 commands = [
+    ['node', 'tools/build_core.cjs', '--check'],
+    ['node', '--test', 'tests/unit/test_wire_planning.cjs'],
     [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/unit', '-p', 'test_*.py'],
     [sys.executable, 'tools/dev/check_locales.py'],
     [sys.executable, 'tests/integration/test_editor_launch.py'],

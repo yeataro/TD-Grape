@@ -125,13 +125,13 @@ class ShareLinkTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         source_files = json.loads((root / 'src/td/source_files.json').read_text(encoding='utf-8'))
         embedded = json.loads((root / 'src/td/embedded_sources.json').read_text(encoding='utf-8'))
-        assets = {name: types.SimpleNamespace(text=name) for name in ('index_html', 'app_js', 'style_css', 'locales_json', 'qrcode_js', 'share_ui_js')}
+        assets = {name: types.SimpleNamespace(text=name) for name in ('index_html', 'app_js', 'style_css', 'locales_json', 'qrcode_js', 'share_ui_js', 'wire_planning_js')}
         # The HTTP fixture substitutes refresh_assets; load the source definition.
         namespace = {}
         source = (root / 'src/td/runtime/sgrape_runtime.py').read_text(encoding='utf-8')
         exec(compile(source, str(root / 'src/td/runtime/sgrape_runtime.py'), 'exec'), namespace)
         namespace['refresh_assets'](types.SimpleNamespace(op=assets.get))
-        for name in ('qrcode', 'share_ui'):
+        for name in ('qrcode', 'share_ui', 'wire_planning'):
             self.assertEqual(source_files[name + '.js'], 'src/editor/' + name + '.js')
             self.assertEqual(embedded[name + '_js'], name + '.js')
             content, mime = namespace['_assets']['/' + name + '.js']

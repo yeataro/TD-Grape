@@ -54,5 +54,6 @@
   "structures_ui.js": "src/editor/structures_ui.js",
   "material_presets.json": "src/library/material_presets.json",
   "color_picker.js": "src/editor/color_picker.js",
-  "color_picker.css": "src/editor/color_picker.css"
+  "color_picker.css": "src/editor/color_picker.css",
+  "wire_planning.js": "src/editor/wire_planning.js"
 }

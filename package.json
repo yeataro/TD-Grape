@@ -1,0 +1,10 @@
+{
+  "name": "grape-refactor",
+  "private": true,
+  "scripts": {
+    "build:core": "node tools/build_core.cjs",
+    "check:core": "node tools/build_core.cjs --check",
+    "test:core": "node --test tests/unit/test_wire_planning.cjs"
+  },
+  "devDependencies": { "typescript": "5.9.3" }
+}

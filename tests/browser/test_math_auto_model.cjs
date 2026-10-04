@@ -2,6 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),asse
 const[source,snapshot,folder,overlay]=process.argv.slice(2),fixture=JSON.parse(fs.readFileSync(snapshot,'utf8')),checks=[],compiled=[];
 const context=vm.createContext({catalog:fixture.catalog,clone:structuredClone,t:key=>key,crypto:require('node:crypto').webcrypto});
 vm.runInContext(fs.readFileSync(path.join(source,'functions_model.js'),'utf8'),context);
+vm.runInContext(fs.readFileSync(path.join(source,'wire_planning.js'),'utf8'),context);
 vm.runInContext(fs.readFileSync(path.join(overlay||source,'graph_ui.js'),'utf8')+'\nthis.model={setTypeContract,resolveAutoEdit,planAutoGraph,autoUnits,storedTypePorts,supportsAutoType};',context);
 const M=context.model;M.setTypeContract(fixture.typeContract);
 const copy=structuredClone;

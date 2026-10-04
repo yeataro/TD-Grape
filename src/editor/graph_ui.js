@@ -816,7 +816,61 @@ function invalidTypeEdges(data,portMap){
   return data.edges.filter(e=>{const source=portMap.get(e.from[0])?.outputs[e.from[1]],target=portMap.get(e.to[0])?.inputs[e.to[1]];return comparisons.has(e.to[0])&&!['float','int','uint'].includes(source)||!((vectors.has(e.to[0])||data.nodes.some(n=>n.id===e.to[0]&&n.definitionUuid==='sgrape.builtin.switch'))?!!source&&source===target:compatible(source,target));});
 }
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
+// Transitional capability adapter. Unsupported scopes are selected before the
+// planner runs; an error from the new planner never retries the legacy path.
+// Definitions still come from the existing catalog/type contract in this slice.
+function scalarVectorPlanning(document,data,owner,overrides,baselineDocument,intent={kind:'infer'}){
+  if(document.target!=='top'||owner)return null;
+  const allowed=type=>{const d=typeContract.types[type];return d&&!d.shape&&d.components>=1&&d.components<=4;};
+  const signatures=new Map();
+  const variantsFor=(d,n)=>{
+    const key=JSON.stringify([d.definitionUuid,n.params.fixedType]);
+    if(!signatures.has(key))signatures.set(key,nodeTypeVariants(d,n.params).filter(v=>allowed(v.type)&&Object.values(v.inputs).every(allowed)&&Object.values(v.outputs).every(allowed)).map(v=>({...v,operands:v.params?.operandTypes})));
+    return signatures.get(key);
+  };
+  const project=(unit,doc,overrideMap)=>{
+    const nodes=[];
+    for(const n of unit.nodes){
+      const d=autoDefinition(doc,n),boundary=n.definitionUuid==='__creator_boundary'&&overrideMap.has(n.id);
+      if(!boundary&&!['scalar','vector','float','vec2','vec3','vec4','pixel_out','add','subtract','multiply','divide'].includes(d?.key))return null;
+      const stored=safeConcretePorts(doc,n,null,n.params.type,overrideMap.get(n.id));
+      if(!Object.values(stored.inputs).every(allowed)||!Object.values(stored.outputs).every(allowed))return null;
+      const node={id:n.id,definition:n.definitionUuid,stored};
+      if(isArithmetic(d))node.arithmetic={automatic:n.ui?.typeMode==='auto',type:n.params.type,operands:n.params.operandTypes,
+        variants:variantsFor(d,n),
+        preferMatchingOperands:d.key==='multiply'};
+      nodes.push(node);
+    }
+    return {nodes,edges:unit.edges};
+  };
+  const projected=project(data,document,overrides);if(!projected)return null;
+  const scope=Object.keys(document.stages).find(key=>document.stages[key]===data)||stage;
+  const oldData=baselineDocument.stages[scope];
+  let previous;
+  if(intent.kind==='wire')previous=oldData&&project(oldData,baselineDocument,new Map());
+  else {
+    // Only saved products can retain an old one-wire signature. Local Creator
+    // trials must not project the entire canvas for every candidate variant.
+    const ids=new Set(projected.nodes.filter(n=>n.arithmetic?.automatic&&n.arithmetic.preferMatchingOperands).map(n=>n.id));
+    const edges=(oldData?.edges||[]).filter(e=>ids.has(e.to[0]));
+    const needed=new Set([...ids,...edges.map(e=>e.from[0])]);
+    previous=project({nodes:(oldData?.nodes||[]).filter(n=>needed.has(n.id)),edges},baselineDocument,new Map());
+  }
+  if(!previous)return null;
+  const capabilities={components:Object.fromEntries(Object.entries(typeContract.types).filter(([type])=>allowed(type)).map(([type,d])=>[type,d.components])),conversions:typeContract.conversions};
+  const diagnostic=issue=>{
+    if(issue.code==='cycle'){const error=autoTypeError('wire.cycle');error.code='cycle';return error;}
+    if(issue.code==='downstream')return autoTypeError('type.autoDownstream',`${issue.sourceType||'?'} → ${issue.targetType||'?'}`);
+    const node=data.nodes.find(n=>n.id===issue.node),d=node&&autoDefinition(document,node);
+    return autoTypeError('type.autoInputs',d?.label||d?.key);
+  };
+  const result=GrapeWirePlanning.plan(projected,capabilities,intent,previous);
+  if(!result.ok)throw diagnostic(result.diagnostic);
+  return {...result.inference,issues:new Map([...result.inference.issues].map(([id,issue])=>[id,diagnostic(issue).message])),groups:new Map(),edges:result.edges,displaced:result.displaced};
+}
 function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false,baselineDocument=document}={}){
+  const modular=scalarVectorPlanning(document,data,owner,overrides,baselineDocument);
+  if(modular){if(!draft&&modular.issues.size)throw Error([...modular.issues.values()][0]);return modular;}
   const nodes=new Map(data.nodes.map(n=>[n.id,n])),incoming=new Map(),ports=new Map(),choices=new Map(),operands=new Map(),groups=new Map(),issues=new Map(),active=new Set();
   const scope=owner?'fn_'+owner.id:Object.keys(document.stages).find(key=>document.stages[key]===data)||stage;
   const typeDocument=owner?{...document,functions:document.functions.map(f=>f.id===owner.id?{...f,graph:data}:f)}:{...document,stages:{...document.stages,[scope]:data}};
@@ -1017,6 +1071,8 @@ function setMathType(n,mode){
 }
 function planWireTypes(from,to,extra=null){
   const data=current(),owner=currentFunction(),nodes=clone(extra?[...data.nodes,extra.node]:data.nodes),overrides=extra?new Map([[extra.node.id,extra.ports]]):new Map();
+  const modular=scalarVectorPlanning(graph,{nodes,edges:data.edges},owner,overrides,graph,{kind:'wire',from,to});
+  if(modular)return finishWirePlan(modular,{nodes,edges:modular.edges},owner,modular.displaced);
   const target=nodes.find(n=>n.id===to.node),oldPorts=storedTypePorts(graph,data,owner),source=nodes.find(n=>n.id===from.node);
   const sourcePorts=source&&safeConcretePorts(graph,source,owner,source.params.type,overrides.get(source.id));
   let replaced=e=>e.to[0]===to.node&&e.to[1]===to.port;
@@ -1041,7 +1097,10 @@ function planWireTypes(from,to,extra=null){
   const oldPlan=planAutoGraph(graph,data,owner,new Map(),{draft:true});
   for(const [id,message]of plan.issues)if(oldPlan.issues.get(id)!==message)throw Error(message);
   rejectNewTypeIssues(candidate,plan.ports,data,storedTypePorts(graph,data,owner));
-  for(const n of nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id),plan.operands.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
+  return finishWirePlan(plan,candidate,owner,displaced);
+}
+function finishWirePlan(plan,candidate,owner,displaced){
+  for(const n of candidate.nodes){if(plan.choices.has(n.id))reshapeTypedInputs(n,autoDefinition(graph,n,owner),plan.choices.get(n.id),plan.operands.get(n.id));if(plan.groups.has(n.id))n.params.groups=clone(plan.groups.get(n.id));}
   if(autoUnits(graph).some(u=>u.data.nodes.some(n=>n.params.requireConstant||n.definitionUuid==='sgrape.builtin.array_create'))){
     const document=owner?{...graph,functions:graph.functions.map(f=>f===owner?{...f,graph:candidate}:f)}:{...graph,stages:{...graph.stages,[stage]:candidate}};
     rejectNewConstantIssues(document,graph);

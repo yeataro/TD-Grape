@@ -41,5 +41,6 @@
   "structures_ui_js": "structures_ui.js",
   "material_presets": "material_presets.json",
   "color_picker_js": "color_picker.js",
-  "color_picker_css": "color_picker.css"
+  "color_picker_css": "color_picker.css",
+  "wire_planning_js": "wire_planning.js"
 }

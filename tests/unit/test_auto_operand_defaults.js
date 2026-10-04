@@ -14,7 +14,7 @@ const context=vm.createContext({assert,payload,console,URLSearchParams,TextEncod
   location:{pathname:'/',hash:'',search:''},history:{replaceState(){}},window:{addEventListener(){},getSelection(){return null;}},
   document:{addEventListener(){},querySelector:element,querySelectorAll:()=>[]},
   sessionStorage:{getItem(){return '';},setItem(){},removeItem(){}},setTimeout(){return 1;},clearTimeout(){},queueMicrotask(){}});
-for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js'])
+for(const name of ['functions_model.js','functions_ui.js','wire_planning.js','graph_ui.js','inspector.js'])
   vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context,{filename:name});
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');
 vm.runInContext(app.slice(0,app.indexOf("$('#canvas').addEventListener('dragover'")),context,{filename:'app.js'});

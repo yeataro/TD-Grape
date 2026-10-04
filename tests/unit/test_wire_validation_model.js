@@ -11,13 +11,15 @@ const context=vm.createContext({assert,payload,console,URLSearchParams,TextEncod
   document:{documentElement:{clientWidth:1200,clientHeight:800},addEventListener(){},removeEventListener(){},querySelector:element,querySelectorAll:()=>[]},
   MutationObserver:class{observe(){}disconnect(){}takeRecords(){return [];}},
   sessionStorage:{getItem(){return '';},setItem(){}},setTimeout(){return 1;},clearTimeout(){}});
-for(const name of ['functions_model.js','functions_ui.js','graph_ui.js','inspector.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
+for(const name of ['functions_model.js','functions_ui.js','wire_planning.js','graph_ui.js','inspector.js'])vm.runInContext(fs.readFileSync(path.join(dir,name),'utf8'),context);
 const app=fs.readFileSync(path.join(dir,'app.js'),'utf8');
 vm.runInContext(app.slice(0,app.indexOf("$('#canvas').addEventListener('dragover'")),context);
 vm.runInContext(`
 render=()=>{};wires=()=>{};renderHistoryActions=()=>{};renderGraphSaveState=()=>{};
 renderNativeSourceValues=()=>{};refreshUniforms=()=>{};clearCompileDiagnostics=()=>{};uiScaleFactor=()=>1;
 catalog=payload.catalog;setTypeContract(payload.contract);editorTarget='top';connectionInterrupted=true;
+const modularPlan=GrapeWirePlanning.plan;let modularCalls=0;
+GrapeWirePlanning.plan=(...args)=>{modularCalls++;return modularPlan(...args);};
 const make=(key,id,params={})=>{const d=catalog.find(d=>d.key===key);return{id,definitionUuid:d.definitionUuid,revisionHash:d.revisionHash,params:{...clone(d.defaults),...params},ui:{x:24,y:24,...(supportsAutoType(d)?{typeMode:'auto'}:{})}};};
 function setup(){graph={schemaVersion:1,target:'top',topSourceVersion:1,topInputs:[],declarations:[],functions:[],stages:{pixel:{nodes:[make('float','source'),make('add','target'),make('add','downstream')],edges:[]}}};graphTrail=[];past=[];future=[];selection.clear();selected=null;selectedEdge=null;dirty=false;readonly=false;}
 const info=(node,kind,port)=>({node,kind,port,type:ports(current().nodes.find(n=>n.id===node),kind)[port]});
@@ -52,5 +54,6 @@ for(const mode of ['all','hover','viewport']){
   assert.equal(invalid.get().includes(available[0])&&invalid.accept(available[0]),false);
   assert.equal(connectPorts(from(),to()),false);assert.equal(snapshot(),badBefore);invalid.dispose();
 }
-console.log('wire model: 3 modes x valid commit/history, offscreen cycle, stale preflight, locked type rejection passed');
+assert.ok(modularCalls>0,'the real editor must exercise the TypeScript planner');
+console.log('wire model: 3 modes x valid commit/history, offscreen cycle, stale preflight, locked type rejection passed; TypeScript planner exercised');
 `,context);
