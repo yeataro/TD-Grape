@@ -92,15 +92,22 @@ export function unaryNode(spec:{key:string;label:string;descriptionKey:string;op
 }
 /** Static floating-point calls with optional, explicitly declared native input
  * alternatives. Saved input tuples never determine an existing output type. */
-export function numericCall(catalog:CatalogRow,options:{alternatives?:Readonly<Record<string,readonly string[]>>}={}):NodeModule {
+export function numericCall(catalog:CatalogRow,options:{alternatives?:Readonly<Record<string,readonly string[]>>;tuples?:readonly Readonly<Record<string,string>>[]}={}):NodeModule {
   const alternatives=options.alternatives||{};
   const call=catalog.emitter.call;
   if(!call||!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(call.operator)||call.ports.join()!==Object.keys(catalog.definition.inputs).join())throw Error('Invalid numeric call');
+  if(options.tuples&&Object.keys(alternatives).length)throw Error('Declare complete tuples or independent alternatives');
+  const keys=Object.keys(catalog.definition.inputs).sort().join();
+  if(options.tuples&&(!options.tuples.length||options.tuples.some(row=>Object.keys(row).sort().join()!==keys)))throw Error('Incomplete numeric input tuple');
+  if(Object.keys(alternatives).some(key=>!Object.prototype.hasOwnProperty.call(catalog.definition.inputs,key)))throw Error('Unknown input alternative');
   const selected=(n:Node)=>type(n.params.type??catalog.definition.defaults.type);
   const layouts=new Map<string,readonly PortSpec[]>();
   const variants=types.flatMap(t=>{
     let inputs:Record<string,string>[]=[{}];
-    for(const [key,declared] of Object.entries(catalog.definition.inputs))inputs=inputs.flatMap(row=>[...new Set((alternatives[key]||[declared]).map(v=>v==='T'?t:v))].map(value=>({...row,[key]:value})));
+    if(options.tuples){
+      inputs=options.tuples.map(row=>Object.fromEntries(call.ports.map(key=>[key,row[key]==='T'?t:row[key]!])));
+      inputs=[...new Map(inputs.map(row=>[JSON.stringify(row),row])).values()];
+    }else for(const [key,declared] of Object.entries(catalog.definition.inputs))inputs=inputs.flatMap(row=>[...new Set((alternatives[key]||[declared]).map(v=>v==='T'?t:v))].map(value=>({...row,[key]:value})));
     const outputs=Object.fromEntries(Object.entries(catalog.definition.outputs).map(([key,v])=>[key,v==='T'?t:v]));
     return inputs.map(input=>{
       const defaults={...object(catalog.definition.inputDefaults),...call.defaults};
@@ -116,7 +123,7 @@ export function numericCall(catalog:CatalogRow,options:{alternatives?:Readonly<R
     if(!chosen)throw Error('Invalid saved input signature');return layouts.get(t+':'+JSON.stringify(chosen.inputs))!;
   };
   return {catalog,role:'value',supports:n=>types.includes(String(n.params.type??catalog.definition.defaults.type)),
-    ...(Object.keys(alternatives).length?{signatures}:{}),ports,validate:()=>{},
+    ...(options.tuples||Object.keys(alternatives).length?{signatures}:{}),ports,validate:()=>{},
     configure:(n,s)=>{
       const before=ports(n);n.params.type=selectedType(n,s);
       if('signature' in s)n.params.inputTypes={...s.signature.inputs};else delete n.params.inputTypes;

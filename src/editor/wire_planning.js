@@ -14,6 +14,7 @@ const top_compiler_1 = require("./top_compiler");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const ceil_1 = require("./nodes/ceil");
+const clamp_1 = require("./nodes/clamp");
 const color_1 = require("./nodes/color");
 const cos_1 = require("./nodes/cos");
 const divide_1 = require("./nodes/divide");
@@ -26,6 +27,8 @@ const function_input_1 = require("./nodes/function_input");
 const function_output_1 = require("./nodes/function_output");
 const length_1 = require("./nodes/length");
 const math_1 = require("./nodes/math");
+const max_1 = require("./nodes/max");
+const min_1 = require("./nodes/min");
 const mix_1 = require("./nodes/mix");
 const multiply_1 = require("./nodes/multiply");
 const normalize_1 = require("./nodes/normalize");
@@ -34,6 +37,7 @@ const round_1 = require("./nodes/round");
 const scalar_1 = require("./nodes/scalar");
 const sign_1 = require("./nodes/sign");
 const sin_1 = require("./nodes/sin");
+const smoothstep_1 = require("./nodes/smoothstep");
 const sqrt_1 = require("./nodes/sqrt");
 const subtract_1 = require("./nodes/subtract");
 const trunc_1 = require("./nodes/trunc");
@@ -42,7 +46,7 @@ const vec2_1 = require("./nodes/vec2");
 const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, ceil_1.default, color_1.default, cos_1.default, divide_1.default, dot_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, length_1.default, math_1.default, mix_1.default, multiply_1.default, normalize_1.default, pixel_out_1.default, round_1.default, scalar_1.default, sign_1.default, sin_1.default, sqrt_1.default, subtract_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, ceil_1.default, clamp_1.default, color_1.default, cos_1.default, divide_1.default, dot_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, length_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, pixel_out_1.default, round_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, sqrt_1.default, subtract_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default]);
 exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
 exports.GrapeGraph = { ...graph, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode };
@@ -1029,12 +1033,24 @@ function numericCall(catalog, options = {}) {
     const call = catalog.emitter.call;
     if (!call || !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(call.operator) || call.ports.join() !== Object.keys(catalog.definition.inputs).join())
         throw Error('Invalid numeric call');
+    if (options.tuples && Object.keys(alternatives).length)
+        throw Error('Declare complete tuples or independent alternatives');
+    const keys = Object.keys(catalog.definition.inputs).sort().join();
+    if (options.tuples && (!options.tuples.length || options.tuples.some(row => Object.keys(row).sort().join() !== keys)))
+        throw Error('Incomplete numeric input tuple');
+    if (Object.keys(alternatives).some(key => !Object.prototype.hasOwnProperty.call(catalog.definition.inputs, key)))
+        throw Error('Unknown input alternative');
     const selected = (n) => { var _a; return (0, numeric_1.type)((_a = n.params.type) !== null && _a !== void 0 ? _a : catalog.definition.defaults.type); };
     const layouts = new Map();
     const variants = numeric_1.types.flatMap(t => {
         let inputs = [{}];
-        for (const [key, declared] of Object.entries(catalog.definition.inputs))
-            inputs = inputs.flatMap(row => [...new Set((alternatives[key] || [declared]).map(v => v === 'T' ? t : v))].map(value => ({ ...row, [key]: value })));
+        if (options.tuples) {
+            inputs = options.tuples.map(row => Object.fromEntries(call.ports.map(key => [key, row[key] === 'T' ? t : row[key]])));
+            inputs = [...new Map(inputs.map(row => [JSON.stringify(row), row])).values()];
+        }
+        else
+            for (const [key, declared] of Object.entries(catalog.definition.inputs))
+                inputs = inputs.flatMap(row => [...new Set((alternatives[key] || [declared]).map(v => v === 'T' ? t : v))].map(value => ({ ...row, [key]: value })));
         const outputs = Object.fromEntries(Object.entries(catalog.definition.outputs).map(([key, v]) => [key, v === 'T' ? t : v]));
         return inputs.map(input => {
             const defaults = { ...(0, model_1.object)(catalog.definition.inputDefaults), ...call.defaults };
@@ -1054,7 +1070,7 @@ function numericCall(catalog, options = {}) {
         return layouts.get(t + ':' + JSON.stringify(chosen.inputs));
     };
     return { catalog, role: 'value', supports: n => { var _a; return numeric_1.types.includes(String((_a = n.params.type) !== null && _a !== void 0 ? _a : catalog.definition.defaults.type)); },
-        ...(Object.keys(alternatives).length ? { signatures } : {}), ports, validate: () => { },
+        ...(options.tuples || Object.keys(alternatives).length ? { signatures } : {}), ports, validate: () => { },
         configure: (n, s) => {
             const before = ports(n);
             n.params.type = selectedType(n, s);
@@ -1169,6 +1185,77 @@ exports.default = (0, node_sdk_1.unaryNode)({
             "range"
         ]
     }
+});
+
+},
+"nodes/clamp":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+exports.default = (0, node_sdk_1.numericCall)({
+    "definition": {
+        "key": "clamp",
+        "label": "Clamp",
+        "inputs": {
+            "value": "T",
+            "min": "T",
+            "max": "T"
+        },
+        "outputs": {
+            "out": "T"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "inputDefaults": {
+            "max": 1
+        },
+        "descriptionKey": "help.clamp",
+        "definitionUuid": "sgrape.builtin.clamp"
+    },
+    "emitter": {
+        "id": "clamp",
+        "version": 1,
+        "call": {
+            "operator": "clamp",
+            "ports": [
+                "value",
+                "min",
+                "max"
+            ]
+        }
+    },
+    "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+            "clamp",
+            "限制"
+        ],
+        "glslName": "clamp",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "math",
+            "range"
+        ]
+    }
+}, {
+    "tuples": [
+        {
+            "value": "T",
+            "min": "T",
+            "max": "T"
+        },
+        {
+            "value": "T",
+            "min": "float",
+            "max": "float"
+        }
+    ]
 });
 
 },
@@ -1709,6 +1796,128 @@ const mathModule = {
 exports.default = mathModule;
 
 },
+"nodes/max":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+exports.default = (0, node_sdk_1.numericCall)({
+    "definition": {
+        "key": "max",
+        "label": "Maximum",
+        "inputs": {
+            "a": "T",
+            "b": "T"
+        },
+        "outputs": {
+            "out": "T"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "descriptionKey": "help.max",
+        "definitionUuid": "sgrape.builtin.max"
+    },
+    "emitter": {
+        "id": "max",
+        "version": 1,
+        "call": {
+            "operator": "max",
+            "ports": [
+                "a",
+                "b"
+            ]
+        }
+    },
+    "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+            "max",
+            "maximum",
+            "最大"
+        ],
+        "glslName": "max",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "math",
+            "range"
+        ]
+    }
+}, {
+    "alternatives": {
+        "b": [
+            "T",
+            "float"
+        ]
+    }
+});
+
+},
+"nodes/min":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+exports.default = (0, node_sdk_1.numericCall)({
+    "definition": {
+        "key": "min",
+        "label": "Minimum",
+        "inputs": {
+            "a": "T",
+            "b": "T"
+        },
+        "outputs": {
+            "out": "T"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "descriptionKey": "help.min",
+        "definitionUuid": "sgrape.builtin.min"
+    },
+    "emitter": {
+        "id": "min",
+        "version": 1,
+        "call": {
+            "operator": "min",
+            "ports": [
+                "a",
+                "b"
+            ]
+        }
+    },
+    "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+            "min",
+            "minimum",
+            "最小"
+        ],
+        "glslName": "min",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "math",
+            "range"
+        ]
+    }
+}, {
+    "alternatives": {
+        "b": [
+            "T",
+            "float"
+        ]
+    }
+});
+
+},
 "nodes/mix":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2078,6 +2287,77 @@ exports.default = (0, node_sdk_1.unaryNode)({
             "trigonometry"
         ]
     }
+});
+
+},
+"nodes/smoothstep":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+exports.default = (0, node_sdk_1.numericCall)({
+    "definition": {
+        "key": "smoothstep",
+        "label": "Smoothstep",
+        "inputs": {
+            "edge0": "T",
+            "edge1": "T",
+            "value": "T"
+        },
+        "outputs": {
+            "out": "T"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "inputDefaults": {
+            "edge1": 1
+        },
+        "descriptionKey": "help.smoothstep",
+        "definitionUuid": "sgrape.builtin.smoothstep"
+    },
+    "emitter": {
+        "id": "smoothstep",
+        "version": 1,
+        "call": {
+            "operator": "smoothstep",
+            "ports": [
+                "edge0",
+                "edge1",
+                "value"
+            ]
+        }
+    },
+    "browser": {
+        "category": "math",
+        "source": "glsl",
+        "aliases": [
+            "smoothstep",
+            "平滑"
+        ],
+        "glslName": "smoothstep",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "math",
+            "interpolation"
+        ]
+    }
+}, {
+    "tuples": [
+        {
+            "edge0": "T",
+            "edge1": "T",
+            "value": "T"
+        },
+        {
+            "edge0": "float",
+            "edge1": "float",
+            "value": "T"
+        }
+    ]
 });
 
 },

@@ -17211,6 +17211,7 @@
     "abs",
     "add",
     "ceil",
+    "clamp",
     "color",
     "cos",
     "divide",
@@ -17220,6 +17221,8 @@
     "fract",
     "length",
     "math",
+    "max",
+    "min",
     "mix",
     "multiply",
     "normalize",
@@ -17228,6 +17231,7 @@
     "scalar",
     "sign",
     "sin",
+    "smoothstep",
     "sqrt",
     "subtract",
     "trunc",
@@ -17237,5 +17241,5 @@
     "vec4",
     "vector"
   ],
-  "frontendHash": "c82ea3b3e49e61539e613d286c41074717b01e883873d1786f0a43c217f527c8"
+  "frontendHash": "f33bd8465db30168a75d1d180e75a744cb2103444d753ddde538bb6e9761bd95"
 }
