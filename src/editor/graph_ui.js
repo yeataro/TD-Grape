@@ -58,8 +58,8 @@ function commitGraphTrash(target){
   const matches=e=>target.edges.some(edge=>edge.from[0]===e.from[0]&&edge.from[1]===e.from[1]&&edge.to[0]===e.to[0]&&edge.to[1]===e.to[1]);
   if(!ids.size&&!current().edges.some(matches))return false;
   return change(()=>{
-    current().nodes=current().nodes.filter(n=>!ids.has(n.id));
-    current().edges=current().edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0])&&!matches(e));
+    FunctionModel.removeNodes(graph,current(),ids);
+    current().edges=current().edges.filter(e=>!matches(e));
     selection=new Set([...selection].filter(id=>!ids.has(id)));selected=selection.has(selected)?selected:[...selection].at(-1)||null;selectedEdge=null;
   });
 }

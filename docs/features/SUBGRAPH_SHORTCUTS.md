@@ -30,3 +30,12 @@ Sampler／TOP 輸入來源保留棕色。Texture 2D 與 Texture Sample 使用既
 ## 驗證
 
 Chromium 使用真實滑鼠事件及 CDP 觸控事件驗證：建立兩側接口、從灰點起拖、取消／空白投放、單步復原、來源保留、型別與預設值、排序、容量、唯讀、整個節點拖曳、接孔優先、Label 編輯、取消及雙指縮放。瀏覽器產出的 Subgraph 圖再交由核心編譯器驗證。這些自動化檢查不等同 iPad 或 macOS 實機驗證。
+
+
+## Refactor：刪除實例與圖內定義
+
+Refactor.4 修正刪除最後一個子圖實例後，圖內定義仍殘留的問題。刪除會一併清理該實例所指的定義與專用子圖依賴；其他 Stage、其他子圖或型別長度表達式仍引用的定義保留。只清理本次刪除的依賴範圍，不掃除其他未使用的可重用定義，也不修改外部 Library。
+
+工具列、鍵盤及畫布垃圾桶使用同一刪除操作，節點、線與定義共用一次 Undo／Redo。載入既有作品不自動清理歷史殘留；已知的舊殘留可重新放入該子圖後刪除，透過同一個可撤銷操作清理。這不代表前端 compiler 已支援仍在使用的子圖。
+
+回歸入口：`node --test tests/unit/test_subgraph_deletion.cjs`；瀏覽器 `tests/browser/test_subgraph_deletion.cjs` 使用隔離 API fixture 驗證刪除、原樣 Undo／Redo、Apply payload 與保存重開，不寫入使用者 TD 圖。

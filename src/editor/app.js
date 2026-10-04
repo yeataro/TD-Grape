@@ -723,7 +723,7 @@ function remove(){
   const edges=new Set(selectedCanvasEdges());
   change(()=>{if(edges.size){current().edges=current().edges.filter(edge=>!edges.has(edge));setSelectedEdges([]);return;}
     const ids=new Set(current().nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)).map(n=>n.id));
-    current().nodes=current().nodes.filter(n=>!ids.has(n.id));current().edges=current().edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));selection.clear();selected=null;
+    FunctionModel.removeNodes(graph,current(),ids);selection.clear();selected=null;
   });
 }
 function cancelConnection(){clearWireGesture();linkStart=null;wireDrag=null;$('#connection').hidden=true;if(graph)wires();}

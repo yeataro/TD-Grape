@@ -157,7 +157,38 @@ const FunctionModel=(()=>{
     GraphArrayLengths.walk(f,(ref,old)=>ref.scope==='fn_'+source.id?GraphArrayLengths.token('fn_'+f.id,ref.source):old);
     graph.functions.push(f);node.params.functionId=f.id;return f;
   }
-  return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity};
+  function removeNodes(graph,data,ids){
+    const roots=data.nodes.filter(n=>ids.has(n.id)&&n.definitionUuid===CALL).map(n=>n.params.functionId);
+    data.nodes=data.nodes.filter(n=>!ids.has(n.id));data.edges=data.edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));
+    if(!roots.length)return;
+    const definitions=new Map((graph.functions||[]).map(f=>[f.id,f]));
+    const references=value=>{
+      const result=new Set();
+      function scan(item){
+        if(!item||typeof item!=='object')return;
+        if(Array.isArray(item)){item.forEach(scan);return;}
+        if(item.definitionUuid===CALL&&item.params?.functionId)result.add(item.params.functionId);
+        for(const [key,child]of Object.entries(item))if(!['ui','source','origin','code','catalogSnapshot'].includes(key))scan(child);
+      }
+      scan(value);
+      // Type expressions can refer to a function scope without a call node.
+      GraphArrayLengths.walk(value,(ref,token)=>{if(ref.scope.startsWith('fn_'))result.add(ref.scope.slice(3));return token;});
+      return result;
+    };
+    const dependencies=new Map([...definitions].map(([id,f])=>[id,references(f)]));
+    function closure(seeds){
+      const seen=new Set(),pending=[...seeds];
+      while(pending.length){const id=pending.pop();if(seen.has(id))continue;seen.add(id);pending.push(...(dependencies.get(id)||[]));}
+      return seen;
+    }
+    const candidates=closure(roots),retained=references({...graph,functions:[],catalogSnapshot:undefined});
+    // Only collect the deleted calls' dependency closure. Unrelated reusable
+    // definitions and the containing edit scope remain independent documents.
+    for(const [id,f]of definitions)if(!candidates.has(id)||f.graph===data)retained.add(id);
+    const keep=closure(retained);
+    graph.functions=(graph.functions||[]).filter(f=>!candidates.has(f.id)||keep.has(f.id));
+  }
+  return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity,removeNodes};
 })();
 if(typeof module!=='undefined'){module.exports=FunctionModel;module.exports.GraphFrames=GraphFrames;module.exports.GraphTypeDefinitions=GraphTypeDefinitions;}
 
