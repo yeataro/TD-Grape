@@ -11,6 +11,19 @@ import frontend_artifact as receiver
 
 
 class FrontendArtifactTests(unittest.TestCase):
+    def runtime(self, saved):
+        live = {'raw': json.dumps(saved)}
+        dats = {'document': SimpleNamespace(module=document), 'frontend_artifact': SimpleNamespace(module=receiver),
+                'frontend_capabilities': SimpleNamespace(text=json.dumps(receiver.capabilities()))}
+        scope = dict(json=json, _owner=SimpleNamespace(id=1, op=dats.get), _shader=SimpleNamespace(id=2),
+                     _graph_checks=None, _graph_provider_state=None, _frontend_request=None,
+                     core=lambda: c, saved_state_source=lambda: live['raw'])
+        path = Path(__file__).resolve().parents[2] / 'src/td/runtime/sgrape_runtime.py'
+        functions = [n for n in ast.parse(path.read_text(encoding='utf-8')).body if isinstance(n, ast.FunctionDef)
+                     and n.name in ('frontend_receiver', 'compile_runtime_graph', 'graph_checks')]
+        exec(compile(ast.Module(body=functions, type_ignores=[]), str(path), 'exec'), scope)
+        return scope, live
+
     def setUp(self):
         self.graph = c.demo_graph('color', 'top')
         self.graph['topInputs'] = []; self.graph['functions'] = []
@@ -74,6 +87,45 @@ class FrontendArtifactTests(unittest.TestCase):
         self.assertNotEqual(receiver.input_hash(changed, c), artifact['inputHash'])
         with self.assertRaisesRegex(ValueError, 'input snapshot'):
             receiver.checked_artifact(changed, artifact, c)
+
+    def test_compiler_update_reopens_saved_work_without_relabeling_or_python_emission(self):
+        artifact = receiver.receive(self.graph, self.payload, 'target', 7, c)
+        artifact['catalogHash'] = '0' * 64
+        saved = dict(graph=self.graph, revision=7, frontendArtifact=artifact)
+        scope, live = self.runtime(saved)
+        original = live['raw']
+        with patch.object(c, 'compile_graph', side_effect=AssertionError('Python emitter used')):
+            checked = scope['graph_checks']().saved(live['raw'], 'top')
+            self.assertEqual(checked['status'], 'valid', checked['issues'])
+            compiled = scope['graph_checks']().compile(self.graph)
+            self.assertEqual(compiled['pixel'], self.result['pixel'])
+            self.assertEqual(compiled['frontendCatalogHash'], artifact['catalogHash'])
+            remembered = receiver.remember(saved, compiled)
+            self.assertEqual(remembered['graph'], saved['graph'])
+            self.assertEqual(remembered['frontendArtifact']['catalogHash'], artifact['catalogHash'])
+            self.assertEqual(remembered['frontendArtifact']['compiled']['pixel'], artifact['compiled']['pixel'])
+            self.assertEqual(live['raw'], original)
+            # New transport and in-flight artifacts remain tied to this catalog.
+            with self.assertRaisesRegex(ValueError, 'catalog changed'):
+                receiver.receive(self.graph, {**self.payload, 'catalogHash': artifact['catalogHash']}, 'target', 7, c)
+            scope['_frontend_request'] = artifact
+            scope['graph_checks']().invalidate()
+            with self.assertRaisesRegex(ValueError, 'catalog changed'):
+                scope['graph_checks']().compile(self.graph)
+
+    def test_saved_older_producer_does_not_bypass_document_binding_or_protocol_checks(self):
+        artifact = receiver.receive(self.graph, self.payload, 'target', 7, c)
+        artifact['catalogHash'] = '0' * 64
+        scope, live = self.runtime(dict(graph=self.graph, revision=7, frontendArtifact=artifact))
+        with patch.object(c, 'compile_graph', side_effect=AssertionError('Python emitter used')):
+            for field, value in [('protocol', 'unknown'), ('graphHash', 'wrong'), ('catalogHash', None)]:
+                damaged = copy.deepcopy(artifact); damaged[field] = value
+                live['raw'] = json.dumps(dict(graph=self.graph, revision=7, frontendArtifact=damaged))
+                with self.subTest(field=field):
+                    self.assertEqual(scope['graph_checks']().saved(live['raw'], 'top')['status'], 'blocked')
+            damaged = copy.deepcopy(artifact); damaged['compiled']['bindings'][0]['value'] = 123
+            live['raw'] = json.dumps(dict(graph=self.graph, revision=7, frontendArtifact=damaged))
+            self.assertEqual(scope['graph_checks']().saved(live['raw'], 'top')['status'], 'blocked')
 
     def test_runtime_cache_revalidates_external_dat_changes_and_target_switches(self):
         artifact = receiver.receive(self.graph, self.payload, 'target', 7, c)

@@ -7,6 +7,7 @@ GPU candidate validation and parameter ownership remain in the deployer.
 import copy
 import json
 import math
+import re
 from pathlib import Path
 
 PROTOCOL = 'grape.top.ts.1'
@@ -44,8 +45,14 @@ def input_hash(graph, core):
     return core.digest(source)
 
 
-def checked_artifact(graph, artifact, core):
-    """Validate saved or incoming data, returning a detached compiled result."""
+def checked_artifact(graph, artifact, core, *, saved=False):
+    """Validate a detached result, retaining its actual producer version.
+
+    An incoming result must use the current catalog. A persisted result already
+    belongs to its saved graph and may predate a compiler update; checking that
+    snapshot must not silently recompile it or relabel it as a new result.
+    All protocol, graph, input, binding and capability checks apply to both.
+    """
     def require(condition, message):
         if not condition:
             raise ValueError('Frontend artifact: ' + message)
@@ -53,7 +60,10 @@ def checked_artifact(graph, artifact, core):
     require(isinstance(artifact, dict), 'missing result')
     require(len(json.dumps(artifact, allow_nan=False).encode('utf-8')) <= 1024 * 1024, 'result exceeds 1 MB')
     require(artifact.get('protocol') == PROTOCOL, 'unsupported compiler protocol')
-    require(artifact.get('catalogHash') == core.catalog_contract()['hash'], 'catalog changed; reload the editor')
+    catalog = artifact.get('catalogHash')
+    require(isinstance(catalog, str) and re.fullmatch('[0-9a-f]{64}', catalog), 'invalid producer catalog hash')
+    if not saved:
+        require(catalog == core.catalog_contract()['hash'], 'catalog changed; reload the editor')
     require(artifact.get('graphHash') == graph_hash(graph, core), 'result belongs to another graph snapshot')
     require(artifact.get('inputHash') == input_hash(graph, core), 'compiler input snapshot changed')
     require(graph.get('schemaVersion') == 1 and graph.get('target') == 'top', 'unsupported document target')

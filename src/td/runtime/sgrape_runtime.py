@@ -455,9 +455,9 @@ def compile_runtime_graph(graph):
     if receiver:
         # Whole snapshots only. A rejected artifact never triggers old emission.
         saved = json.loads(saved_state_source() or '{}').get('frontendArtifact')
-        for artifact in (_frontend_request, saved):
+        for artifact, persisted in ((_frontend_request, False), (saved, True)):
             if artifact and artifact.get('inputHash') == receiver.input_hash(graph, core()):
-                return receiver.checked_artifact(graph, artifact, core())
+                return receiver.checked_artifact(graph, artifact, core(), saved=persisted)
     return core().compile_graph(graph)
 
 
