@@ -73,10 +73,10 @@ class VectorNodes(unittest.TestCase):
         for mask in ('','xyzwx','uv','rgba','x;bad',None):
             with self.assertRaises(c.GraphError):c.vector_interface('swizzle',{'type':'vec4','mask':mask})
         graph=vector_graph([c.node('vec3','source'),c.node('combine','join',type='vec4')],[c.edge('source','join','x')])
-        with self.assertRaisesRegex(c.GraphError,'exact type'):c.compile_graph(graph)
+        with self.assertRaisesRegex(c.GraphError,'cannot connect'):c.compile_graph(graph)
         graph['stages']['pixel']['nodes'][0]=c.node('float','source')
         graph['stages']['pixel']['nodes'][1]['params']['groups']={'x':'vec2'}
-        with self.assertRaisesRegex(c.GraphError,'exact type'):c.compile_graph(graph)
+        self.assertIn('vec2(sg_n_source)',c.compile_graph(graph)['pixel'])
 
     def test_constant_requirement_crosses_a_subgraph_boundary(self):
         graph=vector_graph([c.node('vec2','source',value=[.2,.7]),

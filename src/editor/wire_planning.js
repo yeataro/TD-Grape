@@ -19,7 +19,9 @@ const any_1 = require("./nodes/any");
 const ceil_1 = require("./nodes/ceil");
 const clamp_1 = require("./nodes/clamp");
 const color_1 = require("./nodes/color");
+const combine_1 = require("./nodes/combine");
 const compare_1 = require("./nodes/compare");
+const convert_1 = require("./nodes/convert");
 const cos_1 = require("./nodes/cos");
 const divide_1 = require("./nodes/divide");
 const dot_1 = require("./nodes/dot");
@@ -47,20 +49,26 @@ const normalize_1 = require("./nodes/normalize");
 const not_1 = require("./nodes/not");
 const notEqual_1 = require("./nodes/notEqual");
 const pixel_out_1 = require("./nodes/pixel_out");
+const replace_1 = require("./nodes/replace");
+const rgba_1 = require("./nodes/rgba");
 const round_1 = require("./nodes/round");
+const router_1 = require("./nodes/router");
 const scalar_1 = require("./nodes/scalar");
 const sign_1 = require("./nodes/sign");
 const sin_1 = require("./nodes/sin");
 const smoothstep_1 = require("./nodes/smoothstep");
+const split_1 = require("./nodes/split");
 const sqrt_1 = require("./nodes/sqrt");
 const subtract_1 = require("./nodes/subtract");
+const swizzle_1 = require("./nodes/swizzle");
 const trunc_1 = require("./nodes/trunc");
 const uniform_1 = require("./nodes/uniform");
 const vec2_1 = require("./nodes/vec2");
 const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, compare_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, round_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, sqrt_1.default, subtract_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default]);
+const vector_split_1 = require("./nodes/vector_split");
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
 exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode };
@@ -199,7 +207,7 @@ function appendNodeComments(lines, start, note) {
 "graph":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GraphDocument = exports.GraphError = exports.Network = exports.Edge = exports.Node = exports.Port = exports.ScopeReferences = exports.contextFor = exports.changesBetween = void 0;
+exports.GraphDocument = exports.GraphError = exports.Network = exports.Edge = exports.Node = exports.Port = exports.ScopeReferences = exports.prepareNodeWire = exports.contextFor = exports.changesBetween = void 0;
 exports.transact = transact;
 const model_1 = require("./model");
 const node_module_1 = require("./node_module");
@@ -210,6 +218,7 @@ var changes_2 = require("./changes");
 Object.defineProperty(exports, "changesBetween", { enumerable: true, get: function () { return changes_2.changesBetween; } });
 var node_module_2 = require("./node_module");
 Object.defineProperty(exports, "contextFor", { enumerable: true, get: function () { return node_module_2.contextFor; } });
+Object.defineProperty(exports, "prepareNodeWire", { enumerable: true, get: function () { return node_module_2.prepareNodeWire; } });
 const subgraphs_1 = require("./subgraphs");
 const subgraph_operations_1 = require("./subgraph_operations");
 const subgraph_copies_1 = require("./subgraph_copies");
@@ -304,6 +313,22 @@ class Node {
             this.definition.validate(candidate, this.network.context);
             (0, node_module_1.resolvePorts)(this.definition, candidate, this.network.context);
         }
+        this.replace(candidate);
+    }
+    setInput(key, value) {
+        this.network.assertEditable();
+        const node = this.data, module = this.definition;
+        if (!node || !this.interface.inputs[key])
+            throw Error('Unknown node input');
+        if (!(module === null || module === void 0 ? void 0 : module.editInput)) {
+            this.update({ inputValues: { ...node.inputValues, [key]: (0, model_1.copy)(value) } });
+            return;
+        }
+        const candidate = module.editInput((0, model_1.copy)(node), key, (0, model_1.copy)(value), this.network.context);
+        if (candidate.id !== node.id || candidate.definitionUuid !== node.definitionUuid)
+            throw Error('Input edit changed identity');
+        module.validate(candidate, this.network.context);
+        (0, node_module_1.resolvePorts)(module, candidate, this.network.context);
         this.replace(candidate);
     }
     edit(command, value) {
@@ -501,12 +526,24 @@ class Network {
         (0, subgraph_operations_1.collectSubgraphs)(this.graph, roots, this.data);
     }
     plan(policy, intent, overrides = new Map()) {
+        var _a, _b;
+        const prepared = new Map(), removed = [];
+        if (intent.kind === 'wire') {
+            const target = this.node(intent.to.node), module = target.definition, data = target.data;
+            const sourceType = ((_a = overrides.get(intent.from.node)) === null || _a === void 0 ? void 0 : _a.outputs[intent.from.port]) || ((_b = this.node(intent.from.node).interface.outputs[intent.from.port]) === null || _b === void 0 ? void 0 : _b.type);
+            if (data && sourceType && (module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.wire) {
+                const edit = (0, node_module_1.prepareNodeWire)(module, data, intent.to.port, sourceType, this.context);
+                prepared.set(target.id, edit.node);
+                removed.push(...this.data.edges.filter(e => e.to[0] === target.id && edit.replaceInputs.includes(e.to[1])));
+            }
+        }
         const nodes = this.nodes.map(n => {
             const module = n.definition, data = n.data;
-            return { id: n.id, definition: data.definitionUuid, stored: overrides.get(n.id) || n.interface.types(),
+            return { id: n.id, definition: data.definitionUuid, stored: overrides.get(n.id) || (prepared.has(n.id) ? (0, node_module_1.resolvePorts)(module, prepared.get(n.id), this.context).types() : n.interface.types()),
                 ...((module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.signatures ? { variants: module.signatures(data, this.context) } : {}) };
         });
-        return (0, wire_planning_1.plan)({ nodes, edges: this.data.edges }, policy, intent);
+        const result = (0, wire_planning_1.plan)({ nodes, edges: this.data.edges.filter(e => !removed.includes(e)) }, policy, intent);
+        return result.ok ? { ...result, prepared, displaced: [...removed, ...result.displaced] } : { ...result, prepared };
     }
     identity(e, _index) {
         if (e.id)
@@ -569,7 +606,7 @@ class Network {
         return (((_a = this.adjacency[port.direction].get(port.node.id)) === null || _a === void 0 ? void 0 : _a.get(port.key)) || []).map(id => this.edge(id));
     }
     /** Returns a dependency order and rejects cycles, including disconnected ones. */
-    order(sink) {
+    order(sink, used) {
         const active = new Set(), done = new Set(), ordered = [];
         this.indexEdges();
         const incoming = new Map();
@@ -606,6 +643,9 @@ class Network {
         for (const n of this.nodes)
             visit(n.id);
         if (sink !== undefined) {
+            if (used)
+                for (const [id, edges] of incoming)
+                    incoming.set(id, edges.filter(used));
             ordered.length = 0;
             done.clear();
             visit(sink);
@@ -621,6 +661,9 @@ class Network {
             throw new GraphError(result.diagnostic.code === 'cycle' ? 'Cycle detected' : 'Incompatible connection: ' + result.diagnostic.code, to.node.id);
         const retained = this.edges.find(e => { var _a, _b; return (0, changes_1.equal)((_a = e.data) === null || _a === void 0 ? void 0 : _a.from, from.endpoint) && (0, changes_1.equal)((_b = e.data) === null || _b === void 0 ? void 0 : _b.to, to.endpoint); });
         const signature = result.inference.signatures.get(to.node.id), target = to.node.data, original = (0, model_1.copy)(target);
+        const prepared = result.prepared.get(to.node.id);
+        if (prepared)
+            Object.assign(target, (0, model_1.copy)(prepared));
         if (signature)
             to.node.configure({ signature });
         if (retained && result.displaced.length === 1)
@@ -628,7 +671,7 @@ class Network {
         const before = this.data.edges, sequence = this.data.edgeSequence;
         try {
             const id = this.graph.nextEdgeId(this.data);
-            this.data.edges = before.filter(e => e.to[0] !== to.node.id || e.to[1] !== to.key);
+            this.data.edges = before.filter(e => !result.displaced.includes(e));
             this.data.edges.push({ id, from: from.endpoint, to: to.endpoint });
             return this.edges.find(e => e.id === id);
         }
@@ -813,6 +856,7 @@ exports.contextFor = contextFor;
 exports.createRegistry = createRegistry;
 exports.configureNode = configureNode;
 exports.editNode = editNode;
+exports.prepareNodeWire = prepareNodeWire;
 exports.resolvePorts = resolvePorts;
 const model_1 = require("./model");
 const ports_1 = require("./ports");
@@ -875,6 +919,18 @@ function editNode(module, node, command, value, context) {
     resolvePorts(module, candidate, context);
     return (0, model_1.copy)(candidate);
 }
+function prepareNodeWire(module, node, key, source, context) {
+    if (!module.wire)
+        throw Error('Node has no wire preparation');
+    const before = resolvePorts(module, node, context).types(), edit = module.wire((0, model_1.copy)(node), key, source, context);
+    if (edit.node.id !== node.id || edit.node.definitionUuid !== node.definitionUuid || !module.supports(edit.node, context))
+        throw Error('Wire preparation changed identity/capability');
+    module.validate(edit.node, context);
+    const after = resolvePorts(module, edit.node, context).types();
+    if (!sameTypes(before.outputs, after.outputs) || edit.replaceInputs.some(p => !before.inputs[p]))
+        throw Error('Wire preparation changed outputs or unknown ports');
+    return edit;
+}
 const portTemplates = new WeakMap();
 function resolvePorts(module, node, context) {
     const specs = module.ports(node, context);
@@ -895,7 +951,7 @@ function resolvePorts(module, node, context) {
 "node_sdk":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
+exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
 exports.reshapeDefaults = reshapeDefaults;
 exports.literalNode = literalNode;
 exports.vectorNode = vectorNode;
@@ -1114,12 +1170,15 @@ function outputNode(catalog, spec) {
     return { ...implementation, catalog, role: 'output', ports: () => layout };
 }
 var value_nodes_1 = require("./value_nodes");
+Object.defineProperty(exports, "staticNode", { enumerable: true, get: function () { return value_nodes_1.staticNode; } });
 Object.defineProperty(exports, "typedNode", { enumerable: true, get: function () { return value_nodes_1.typedNode; } });
 Object.defineProperty(exports, "reshapeInputs", { enumerable: true, get: function () { return value_nodes_1.reshapeInputs; } });
 Object.defineProperty(exports, "input", { enumerable: true, get: function () { return value_nodes_1.input; } });
 Object.defineProperty(exports, "output", { enumerable: true, get: function () { return value_nodes_1.output; } });
 Object.defineProperty(exports, "payload", { enumerable: true, get: function () { return value_nodes_1.payload; } });
 Object.defineProperty(exports, "values", { enumerable: true, get: function () { return value_nodes_1.values; } });
+var vector_assembly_1 = require("./vector_assembly");
+Object.defineProperty(exports, "vectorAssembly", { enumerable: true, get: function () { return vector_assembly_1.vectorAssembly; } });
 
 },
 "nodes/abs":function(require,module,exports){
@@ -1440,6 +1499,64 @@ const catalog = {
 exports.default = (0, node_sdk_1.literalNode)(catalog, 'vec4', false, { color: true });
 
 },
+"nodes/combine":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "combine",
+        "label": "Combine",
+        "inputs": {
+            "x": "float",
+            "y": "float"
+        },
+        "outputs": {
+            "out": "vec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2",
+            "groups": {},
+            "components": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        "descriptionKey": "help.combine",
+        "definitionUuid": "sgrape.builtin.combine"
+    },
+    "emitter": {
+        "id": "combine",
+        "version": 1
+    },
+    "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+            "compose",
+            "append",
+            "append vector",
+            "merge",
+            "construct",
+            "合併",
+            "組合"
+        ],
+        "glslName": "vecN",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "vector"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.vectorAssembly)(catalog, false);
+
+},
 "nodes/compare":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -1517,6 +1634,91 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
     },
     emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('a') + ' ' + String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>') + ' ' + c.input('b') + ')' } }); }
 });
+
+},
+"nodes/convert":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "convert",
+        "label": "Convert",
+        "inputs": {
+            "value": "float"
+        },
+        "outputs": {
+            "out": "int"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "fromType": "float",
+            "toType": "int"
+        },
+        "descriptionKey": "help.convert",
+        "definitionUuid": "sgrape.builtin.convert"
+    },
+    "emitter": {
+        "id": "convert",
+        "version": 1
+    },
+    "browser": {
+        "category": "data",
+        "source": "editor",
+        "aliases": [
+            "cast",
+            "constructor",
+            "convert type",
+            "float to int",
+            "int to float"
+        ],
+        "glslName": "convert",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "data",
+            "values"
+        ]
+    }
+};
+const conversion = {
+    catalog, role: 'value',
+    creations: wire => {
+        if (wire && !node_sdk_1.values.types.includes(wire.type))
+            return undefined;
+        const from = (wire === null || wire === void 0 ? void 0 : wire.direction) === 'output' ? wire.type : 'float';
+        const to = (wire === null || wire === void 0 ? void 0 : wire.direction) === 'input' ? wire.type : 'int';
+        const pairs = wire ? node_sdk_1.values.types.map(t => wire.direction === 'output' ? [from, t] : [t, to]) : [[from, to]];
+        const rows = pairs.filter(([a, b]) => node_sdk_1.values.explicit(a, b)).map(([a, b]) => ({ fromType: a, toType: b }));
+        if ((wire === null || wire === void 0 ? void 0 : wire.direction) === 'output')
+            rows.sort((a, b) => Number(node_sdk_1.values.count(b.toType) === node_sdk_1.values.count(from)) - Number(node_sdk_1.values.count(a.toType) === node_sdk_1.values.count(from)));
+        return rows;
+    },
+    supports: n => node_sdk_1.values.types.includes(String(n.params.fromType)) && node_sdk_1.values.types.includes(String(n.params.toType)),
+    ports: n => {
+        const from = String(n.params.fromType), to = String(n.params.toType);
+        if (!node_sdk_1.values.explicit(from, to))
+            throw Error('Source cannot construct the requested output');
+        return [(0, node_sdk_1.input)('value', from), (0, node_sdk_1.output)('out', to)];
+    },
+    validate: () => { },
+    presentation: n => ({
+        selector: { value: String(n.params.toType), options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(String(n.params.fromType), t)), command: 'toType', label: 'convert.toType' },
+        controls: [{ kind: 'select', key: 'fromType', label: 'convert.fromType', command: 'fromType', value: String(n.params.fromType),
+                options: node_sdk_1.values.types.filter(t => node_sdk_1.values.explicit(t, String(n.params.toType))).map(value => ({ value, label: value, literal: true })) }]
+    }),
+    edit: (n, command, data) => {
+        if (!['fromType', 'toType'].includes(command))
+            throw Error('Invalid conversion selection');
+        const before = conversion.ports(n, { declaration: () => undefined });
+        n.params[command] = String((0, node_sdk_1.payload)(data));
+        return (0, node_sdk_1.reshapeInputs)(n, before, conversion.ports(n, { declaration: () => undefined }));
+    },
+    emit: (n, c) => ({ outputs: { out: String(n.params.toType) + '(' + c.input('value') + ')' } })
+};
+exports.default = conversion;
 
 },
 "nodes/cos":function(require,module,exports){
@@ -2946,6 +3148,112 @@ exports.default = (0, node_sdk_1.outputNode)(catalog, {
 });
 
 },
+"nodes/replace":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "replace",
+        "label": "Replace",
+        "inputs": {
+            "value": "vec2",
+            "x": "float",
+            "y": "float"
+        },
+        "outputs": {
+            "out": "vec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2",
+            "groups": {},
+            "components": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        "descriptionKey": "help.replace",
+        "definitionUuid": "sgrape.builtin.replace"
+    },
+    "emitter": {
+        "id": "replace",
+        "version": 1
+    },
+    "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+            "replace",
+            "override",
+            "components",
+            "replace components"
+        ],
+        "glslName": "vecN",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "vector"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.vectorAssembly)(catalog, true);
+
+},
+"nodes/rgba":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "rgba",
+        "label": "Compose RGBA",
+        "inputs": {
+            "rgb": "vec3",
+            "alpha": "float"
+        },
+        "outputs": {
+            "out": "vec4"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.rgba",
+        "definitionUuid": "sgrape.builtin.rgba"
+    },
+    "emitter": {
+        "id": "rgba",
+        "version": 1
+    },
+    "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [
+            "combine",
+            "compose",
+            "rgba",
+            "組合"
+        ],
+        "glslName": "rgba",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "color",
+            "construct"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.staticNode)(catalog, {
+    ports: () => [(0, node_sdk_1.input)('rgb', 'vec3'), (0, node_sdk_1.input)('alpha', 'float', 1), (0, node_sdk_1.output)('out', 'vec4')],
+    emit: (_n, c) => ({ outputs: { out: 'vec4(' + c.input('rgb') + ', ' + c.input('alpha') + ')' } })
+});
+
+},
 "nodes/round":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2971,6 +3279,59 @@ exports.default = (0, node_sdk_1.unaryNode)({
             "range"
         ]
     }
+});
+
+},
+"nodes/router":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "router",
+        "label": "Router",
+        "inputs": {
+            "value": "T"
+        },
+        "outputs": {
+            "out": "T"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "float"
+        },
+        "descriptionKey": "help.router",
+        "definitionUuid": "sgrape.builtin.router"
+    },
+    "emitter": {
+        "id": "router",
+        "version": 1
+    },
+    "browser": {
+        "category": "editor",
+        "source": "editor",
+        "aliases": [
+            "reroute",
+            "knot",
+            "routing",
+            "整理接線",
+            "轉接",
+            "路由"
+        ],
+        "glslName": "",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "editor"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.types,
+    ports: t => [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', t)],
+    emit: (_n, c) => ({ outputs: { out: c.input('value') } })
 });
 
 },
@@ -3171,6 +3532,59 @@ exports.default = (0, node_sdk_1.numericCall)({
 });
 
 },
+"nodes/split":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "split",
+        "label": "Split RGBA",
+        "inputs": {
+            "color": "vec4"
+        },
+        "outputs": {
+            "rgb": "vec3",
+            "r": "float",
+            "g": "float",
+            "b": "float",
+            "a": "float"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.split",
+        "definitionUuid": "sgrape.builtin.split"
+    },
+    "emitter": {
+        "id": "split",
+        "version": 1
+    },
+    "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [
+            "split",
+            "swizzle",
+            "分量",
+            "拆分"
+        ],
+        "glslName": "split",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "color",
+            "construct"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.staticNode)(catalog, {
+    ports: () => [(0, node_sdk_1.input)('color', 'vec4'), (0, node_sdk_1.output)('rgb', 'vec3'), ...'rgba'.split('').map(p => (0, node_sdk_1.output)(p, 'float'))],
+    emit: (_n, c) => ({ outputs: Object.fromEntries(['rgb', ...'rgba'].map(p => [p, '(' + c.input('color') + ').' + p])) })
+});
+
+},
 "nodes/sqrt":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -3245,6 +3659,101 @@ const catalog = {
     }
 };
 exports.default = (0, node_sdk_1.binaryNode)(catalog, '-');
+
+},
+"nodes/swizzle":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "swizzle",
+        "label": "Swizzle",
+        "inputs": {
+            "value": "vec2"
+        },
+        "outputs": {
+            "out": "vec2"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2",
+            "mask": "xy"
+        },
+        "descriptionKey": "help.swizzle",
+        "definitionUuid": "sgrape.builtin.swizzle"
+    },
+    "emitter": {
+        "id": "swizzle",
+        "version": 1
+    },
+    "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+            "component mask",
+            "reorder",
+            "shuffle",
+            "分量",
+            "重排",
+            "取分量"
+        ],
+        "glslName": "swizzle",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "vector"
+        ]
+    }
+};
+const axes = 'xyzw';
+function mask(type, value) {
+    if (typeof value !== 'string' || !value.length || value.length > 4 || [...value].some(p => !axes.slice(0, node_sdk_1.values.count(type)).includes(p)))
+        throw Error('Choose existing vector components');
+    return value;
+}
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors,
+    creations: wire => {
+        if (wire && !node_sdk_1.values.types.includes(wire.type))
+            return undefined;
+        const size = wire ? node_sdk_1.values.count(wire.type) : 2;
+        return node_sdk_1.values.vectors.filter(t => node_sdk_1.values.count(t) >= size).map(type => ({ type, mask: axes.slice(0, size) }));
+    },
+    ports: (t, n) => { var _a; return [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped(node_sdk_1.values.family(t), mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy').length))]; },
+    presentation: n => {
+        var _a;
+        const t = String(n.params.type), selected = mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
+        return { selectorLabel: 'vector.inputType', controls: [{
+                    kind: 'row', key: 'mask', label: 'vector.componentOrder', children: [
+                        ...[...selected].map((value, index) => ({ kind: 'select', key: 'component' + index, label: String(index + 1), literal: true, command: 'mask', args: { index }, value,
+                            options: [...axes.slice(0, node_sdk_1.values.count(t))].map(value => ({ value, label: value.toUpperCase(), literal: true })) })),
+                        { kind: 'button', key: 'remove', label: '−', literal: true, command: 'remove', disabled: selected.length === 1 },
+                        { kind: 'button', key: 'add', label: '+', literal: true, command: 'add', disabled: selected.length === 4 }
+                    ]
+                }] };
+    },
+    edit: (n, command, data) => {
+        var _a;
+        const t = String(n.params.type), previous = mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
+        if (command === 'add' && previous.length < 4)
+            n.params.mask = previous + axes[Math.min(previous.length, node_sdk_1.values.count(t) - 1)];
+        else if (command === 'remove' && previous.length > 1)
+            n.params.mask = previous.slice(0, -1);
+        else if (command === 'mask' && data && typeof data === 'object' && !Array.isArray(data)) {
+            const i = Number(data.index), value = String((0, node_sdk_1.payload)(data));
+            if (!Number.isInteger(i) || i < 0 || i >= previous.length || value.length !== 1)
+                throw Error('Invalid swizzle component');
+            n.params.mask = mask(t, previous.slice(0, i) + value + previous.slice(i + 1));
+        }
+        else
+            throw Error('Invalid swizzle command');
+        return n;
+    },
+    emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('value') + ').' + mask(String(n.params.type), (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy') } }); }
+});
 
 },
 "nodes/trunc":function(require,module,exports){
@@ -3524,7 +4033,94 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.vectorNode)(catalog);
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors,
+    ports: t => [(0, node_sdk_1.output)('out', t)],
+    configure: (n, t) => { var _a; n.params.components = node_sdk_1.values.reshape((_a = n.params.components) !== null && _a !== void 0 ? _a : [0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)); return n; },
+    validate: n => { node_sdk_1.values.literal(n.params.components, node_sdk_1.values.shaped(node_sdk_1.values.family(String(n.params.type)), 4)); },
+    edit: (n, command, data) => {
+        const t = String(n.params.type), old = n.params.components;
+        if (command === 'value') {
+            const value = (0, node_sdk_1.payload)(data);
+            node_sdk_1.values.literal(value, t);
+            n.params.components = [...value, ...old.slice(node_sdk_1.values.count(t))];
+        }
+        else if (command === 'component' && data && typeof data === 'object' && !Array.isArray(data)) {
+            const index = Number(data.index), value = (0, node_sdk_1.payload)(data);
+            if (!Number.isInteger(index) || index < 0 || index >= node_sdk_1.values.count(t))
+                throw Error('Invalid component');
+            node_sdk_1.values.literal(value, node_sdk_1.values.family(t));
+            old[index] = value;
+        }
+        else
+            throw Error('Invalid vector command');
+        return n;
+    },
+    presentation: n => {
+        var _a;
+        return ({ value: {
+                value: n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))),
+                type: String(n.params.type), componentCommand: 'component', valueCommand: 'value',
+                names: String(((_a = n.ui) === null || _a === void 0 ? void 0 : _a.componentNames) || 'XYZW').toUpperCase(), expandable: true
+            } });
+    },
+    emit: n => ({ outputs: { out: node_sdk_1.values.literal(n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))), String(n.params.type)) }, constant: true })
+});
+
+},
+"nodes/vector_split":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+const catalog = {
+    "definition": {
+        "key": "vector_split",
+        "label": "Split",
+        "inputs": {
+            "value": "vec2"
+        },
+        "outputs": {
+            "x": "float",
+            "y": "float"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "type": "vec2"
+        },
+        "descriptionKey": "help.vector_split",
+        "definitionUuid": "sgrape.builtin.vector_split"
+    },
+    "emitter": {
+        "id": "vector_split",
+        "version": 1
+    },
+    "browser": {
+        "category": "vector",
+        "source": "glsl",
+        "aliases": [
+            "separate",
+            "break",
+            "components",
+            "拆分",
+            "分量",
+            "UV"
+        ],
+        "glslName": "vector_split",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "vector"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.typedNode)(catalog, {
+    types: node_sdk_1.values.vectors,
+    ports: t => [(0, node_sdk_1.input)('value', t), ...'xyzw'.slice(0, node_sdk_1.values.count(t)).split('').map(p => (0, node_sdk_1.output)(p, node_sdk_1.values.family(t)))],
+    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    emit: (n, c) => ({ outputs: Object.fromEntries('xyzw'.slice(0, node_sdk_1.values.count(String(n.params.type))).split('').map(p => [p, '(' + c.input('value') + ').' + p])) })
+});
 
 },
 "numeric":function(require,module,exports){
@@ -4580,7 +5176,18 @@ function createFlatCompiler(registry, limit = 256) {
                     throw Error('An input can only have one connection');
                 links.set(k, edge);
             }
-            const order = network.order(outputs[0].id), visited = new Set(order.map(n => n.id));
+            const inputsUsed = new Map();
+            for (const node of network.nodes) {
+                const module = node.definition;
+                if (module.inputsUsed) {
+                    const connected = new Set(node.inputs.filter(p => links.has(p)).map(p => p.key));
+                    const used = module.inputsUsed(node.data, connected, model.context);
+                    if (used.some(key => !node.interface.inputs[key]))
+                        throw Error('Module uses an unknown input');
+                    inputsUsed.set(node.id, new Set(used));
+                }
+            }
+            const order = network.order(outputs[0].id, e => !inputsUsed.has(e.to[0]) || inputsUsed.get(e.to[0]).has(e.to[1])), visited = new Set(order.map(n => n.id));
             const used = new Set(), lines = [], lineNodes = [], expressions = new Map();
             for (const node of order) {
                 const n = node.data, id = node.id, d = node.definition, p = node.interface;
@@ -4602,7 +5209,7 @@ function createFlatCompiler(registry, limit = 256) {
                 };
                 if (!d.emit)
                     throw Error('Structural nodes require Subgraph expansion');
-                const emission = d.emit(n, { ...model.context, ports: p, input, useUniform: declId => {
+                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useUniform: declId => {
                         const declaration = declarations.get(declId);
                         if (!declaration)
                             throw Error('Select a matching declaration');
@@ -4654,6 +5261,7 @@ exports.output = exports.input = exports.values = void 0;
 exports.reshapeInputs = reshapeInputs;
 exports.typedNode = typedNode;
 exports.payload = payload;
+exports.staticNode = staticNode;
 const model_1 = require("./model");
 const values = require("./values");
 exports.values = values;
@@ -4690,7 +5298,7 @@ function typedNode(catalog, spec) {
         },
         validate: (n, c) => { var _a; if (n.params.fixedType && n.params.fixedType !== selected(n))
             throw Error('Fixed node type'); ports(n); (_a = spec.validate) === null || _a === void 0 ? void 0 : _a.call(spec, n, c); },
-        edit: spec.edit, emit: spec.emit,
+        edit: spec.edit, emit: spec.emit, creations: spec.creations,
         presentation: n => { var _a; return ({ selectorLabel: 'vector.outputType', ...(_a = spec.presentation) === null || _a === void 0 ? void 0 : _a.call(spec, n) }); }
     };
 }
@@ -4700,6 +5308,9 @@ const output = (key, t) => ({ key, direction: 'output', type: t });
 exports.output = output;
 function payload(value) { const data = (0, model_1.object)(value); if (!data || data.value === undefined)
     throw Error('Missing command value'); return data.value; }
+function staticNode(catalog, spec) {
+    return { catalog, role: 'value', supports: () => true, validate: () => { }, ...spec };
+}
 
 },
 "values":function(require,module,exports){
@@ -4766,6 +5377,99 @@ exports.policy = {
         (family(from) !== 'bool' && family(to) !== 'bool' && (count(from) === count(to) || count(from) === 1) ||
             family(from) === family(to) && count(from) === 1)).map(to => ({ from, to })))
 };
+
+},
+"vector_assembly":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.vectorAssembly = vectorAssembly;
+const model_1 = require("./model");
+const value_nodes_1 = require("./value_nodes");
+const axes = 'xyzw';
+/** Component partitions are a vector-family concern, never graph-wide inference. */
+function vectorAssembly(catalog, inherit) {
+    function layout(n) {
+        const t = value_nodes_1.values.type(n.params.type), width = value_nodes_1.values.count(t), family = value_nodes_1.values.family(t), groups = (0, model_1.object)(n.params.groups) || {};
+        if (width < 2)
+            throw Error('Expected a vector');
+        const parts = [];
+        for (let start = 0; start < width;) {
+            const key = axes[start], type = String(groups[key] || family), size = value_nodes_1.values.count(value_nodes_1.values.type(type));
+            if (value_nodes_1.values.family(type) !== family || start + size > width || size === 1 && groups[key])
+                throw Error('Invalid component group');
+            parts.push({ key, type, start, size });
+            start += size;
+        }
+        if (Object.keys(groups).some(key => !parts.some(p => p.key === key && p.size > 1)))
+            throw Error('Overlapping component groups');
+        return parts;
+    }
+    const components = (n) => {
+        var _a;
+        const t = String(n.params.type), v = (_a = n.params.components) !== null && _a !== void 0 ? _a : value_nodes_1.values.fill(0, value_nodes_1.values.shaped(value_nodes_1.values.family(t), 4));
+        value_nodes_1.values.literal(v, value_nodes_1.values.shaped(value_nodes_1.values.family(t), 4));
+        return v;
+    };
+    const ports = (n) => [
+        ...(inherit ? [(0, value_nodes_1.input)('value', String(n.params.type))] : []),
+        ...layout(n).map(p => ({ ...(0, value_nodes_1.input)(p.key, p.type), default: p.size === 1 ? components(n)[p.start] : components(n).slice(p.start, p.start + p.size) })),
+        (0, value_nodes_1.output)('out', String(n.params.type))
+    ];
+    return { catalog, role: 'value', supports: n => value_nodes_1.values.vectors.includes(String(n.params.type)), ports,
+        validate: n => { layout(n); components(n); },
+        configure: (n, s) => {
+            if (!('type' in s) || !value_nodes_1.values.vectors.includes(s.type))
+                throw Error('Invalid assembly output');
+            const before = ports(n), old = components(n);
+            n.params.type = s.type;
+            n.params.groups = {};
+            n.params.components = value_nodes_1.values.reshape(old, value_nodes_1.values.shaped(value_nodes_1.values.family(s.type), 4));
+            return (0, value_nodes_1.reshapeInputs)(n, before, ports(n));
+        },
+        wire: (n, key, source) => {
+            if (key === 'value' && inherit)
+                return { node: n, replaceInputs: ['value'] };
+            const parts = layout(n), part = parts.find(p => p.key === key), size = value_nodes_1.values.count(value_nodes_1.values.type(source));
+            if (!part || part.start + size > value_nodes_1.values.count(String(n.params.type)))
+                throw Error('Component group exceeds the output');
+            const end = part.start + size, overlap = parts.filter(p => p.start < end && p.start + p.size > part.start);
+            const groups = { ...(0, model_1.object)(n.params.groups) };
+            for (const p of overlap)
+                delete groups[p.key];
+            if (size > 1)
+                groups[key] = value_nodes_1.values.shaped(value_nodes_1.values.family(String(n.params.type)), size);
+            n.params.groups = groups;
+            return { node: n, replaceInputs: overlap.map(p => p.key) };
+        },
+        editInput: (n, key, value) => {
+            const part = layout(n).find(p => p.key === key);
+            if (!part) {
+                if (!inherit || key !== 'value')
+                    throw Error('Unknown component');
+                n.inputValues = { ...n.inputValues, value: (0, model_1.copy)(value) };
+                return n;
+            }
+            value_nodes_1.values.literal(value, part.type);
+            const next = (0, model_1.copy)(components(n));
+            next.splice(part.start, part.size, ...(Array.isArray(value) ? value : [value]));
+            n.params.components = next;
+            return n;
+        },
+        presentation: () => ({ selectorLabel: 'vector.outputType' }),
+        inputsUsed: (n, connected) => {
+            const parts = layout(n), overrides = parts.filter(p => connected.has(p.key)).map(p => p.key);
+            return inherit && connected.has('value') && overrides.length < parts.length ? ['value', ...overrides] : overrides;
+        },
+        emit: (n, c) => {
+            const args = layout(n).map(p => {
+                if (!inherit || c.connected(p.key) || !c.connected('value'))
+                    return c.input(p.key);
+                return '(' + c.input('value') + ').' + axes.slice(p.start, p.start + p.size);
+            });
+            return { outputs: { out: String(n.params.type) + '(' + args.join(', ') + ')' } };
+        }
+    };
+}
 
 },
 "wire_planning":function(require,module,exports){

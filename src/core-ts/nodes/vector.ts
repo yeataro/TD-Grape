@@ -1,6 +1,6 @@
-import { vectorNode, type CatalogRow } from '../node_sdk';
+import { typedNode, output, payload, values } from '../node_sdk';
 
-const catalog:CatalogRow={
+const catalog = {
   "definition": {
     "key": "vector",
     "label": "Vector",
@@ -52,4 +52,27 @@ const catalog:CatalogRow={
   }
 };
 
-export default vectorNode(catalog);
+export default typedNode(catalog, {
+  types: values.vectors,
+  ports: t => [output('out', t)],
+  configure: (n, t) => { n.params.components = values.reshape(n.params.components ?? [0,0,0,0], values.shaped(values.family(t),4)); return n; },
+  validate: n => { values.literal(n.params.components, values.shaped(values.family(String(n.params.type)),4)); },
+  edit: (n, command, data) => {
+    const t = String(n.params.type), old = n.params.components as (number|boolean)[];
+    if (command === 'value') {
+      const value = payload(data); values.literal(value, t);
+      n.params.components = [...value as (number|boolean)[], ...old.slice(values.count(t))];
+    } else if (command === 'component' && data && typeof data === 'object' && !Array.isArray(data)) {
+      const index = Number(data.index), value = payload(data);
+      if (!Number.isInteger(index) || index < 0 || index >= values.count(t)) throw Error('Invalid component');
+      values.literal(value, values.family(t)); old[index] = value as number|boolean;
+    } else throw Error('Invalid vector command');
+    return n;
+  },
+  presentation: n => ({value: {
+    value: (n.params.components as (number|boolean)[]).slice(0,values.count(String(n.params.type))),
+    type: String(n.params.type), componentCommand: 'component', valueCommand: 'value',
+    names: String(n.ui?.componentNames || 'XYZW').toUpperCase(), expandable: true
+  }}),
+  emit: n => ({outputs: {out: values.literal((n.params.components as (number|boolean)[]).slice(0,values.count(String(n.params.type))),String(n.params.type))},constant:true})
+});

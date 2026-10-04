@@ -1,5 +1,52 @@
 # TOP frontend compiler: first slice
 
+## Current update: Refactor.12 / .13
+
+The initial-slice description below is historical. Current modules live in
+`src/core-ts/nodes/`; the build discovers those files and generates the editor
+bundle, catalog projections and receiver capabilities. There are 53 ordinary and
+3 structural modules. A module owns metadata, ports, explicit configuration,
+controls and emission. The graph owns node/port/edge handles and transactions.
+
+Refactor.12 adds Compare, If, predicates and boolean/vector comparisons, plus
+portable float/int/uint/bool values and Subgraph interfaces. Refactor.13 adds
+Combine, Replace, Vector Split, Swizzle, Convert, Router, RGBA and Split, and
+extends Vector literals to those families. General arithmetic still retains its
+own narrower capability; this is not complete integer arithmetic coverage.
+
+SDK additions are generic contracts, not a second node-name dispatch table:
+
+- `typedNode` / `staticNode`: common module construction; `values` handles the
+  portable scalar/vector literals, shapes and legal connection conversions.
+- `wire`: pure node-local input-layout preparation. Graph planning and commit
+  use the same result, preserve outputs, and remove overlapping incoming wires
+  in the same transaction. Combine/Replace share `vectorAssembly`.
+- `editInput`: translates input edits to the module's authored data. Component
+  defaults live in `params.components`, without a second default-value copy.
+- `creations`: module-owned choices for creation from a wire. Disconnect does
+  not reset that authored choice; existing outputs never follow inputs.
+- `inputsUsed`: effective expression dependencies. Replace can leave a fully
+  overridden base dormant, including its Uniform binding. Cycle validation
+  still sees every wire, including dormant ones.
+
+The temporary Python adapter consumes generated capabilities to preserve these
+rules in mixed graphs: retained component groups, legal numeric casts and fixed
+Router output. Untouched configurations keep the legacy behavior. This adapter
+is not a second extensibility API and is removed when its remaining scope moves.
+
+Validation: 91 core tests; 127 logic and 376 vector complete-graph GPU/binding
+comparisons against fixed Legacy; real editor controls, wiring and Undo; 24
+native TD cases; Library composition with a bool interface, Make Local, TOX
+save/reopen and zero Python emission after initial frontend submission. Detailed
+evidence is in workspace `work/refactor/logic-vectors/RESULTS.md`.
+
+MAT/Vertex, double, matrices/resources, custom GLSL, Require Constant and other
+unsupported whole graphs remain explicitly outside this frontend slice. Native
+Uniform binding types still use the existing float/vector boundary. The human
+requested stopping before the next GLSL/resource/host-binding design step.
+
+## Historical first slice
+
 Technical candidate for workflow step 3, awaiting human experience review. The fixed comparison remains Legacy
 `90a946bdd2acacbf52c93842806edbc23f76b7ba`; the previous reviewed refactor checkpoint
 is `769d9e2`. Passing offline checks alone does not complete this milestone.

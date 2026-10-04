@@ -19,6 +19,7 @@ export function contextFor(graph:Graph,owner?:SubgraphData):NodeContext {
 export interface EmitContext extends NodeContext {
   readonly ports:NodePorts;
   input(key:string):string;
+  connected(key:string):boolean;
   useUniform(id:string):string;
 }
 export interface Emission {outputs:Record<string,string>;constant?:boolean;statements?:readonly string[]}
@@ -59,6 +60,13 @@ export interface NodeModule {
   configure?(node:Node,selection:Configuration,context:NodeContext):Node;
   /** Explicit user commands, including dynamic interface edits, stay local. */
   edit?(node:Node,command:string,value:Value|undefined,context:NodeContext):Node;
+  editInput?(node:Node,key:string,value:Value,context:NodeContext):Node;
+  /** Local port-layout change for a wire gesture; the graph owns displaced edges. */
+  wire?(node:Node,input:string,sourceType:string,context:NodeContext):{node:Node;replaceInputs:readonly string[]};
+  /** Creation-time choices may use a dragged wire, before an output is fixed. */
+  creations?(wire:{direction:'input'|'output';type:string}|undefined):readonly ObjectValue[]|undefined;
+  /** Effective expression inputs; dormant wires still participate in cycle checks. */
+  inputsUsed?(node:Node,connected:ReadonlySet<string>,context:NodeContext):readonly string[];
   presentation?(node:Node,context:NodeContext):NodePresentation;
   validate(node:Node,context:NodeContext):void;
   emit?(node:Node,context:EmitContext):Emission;
@@ -102,6 +110,14 @@ export function editNode(module:NodeModule,node:Node,command:string,value:Value|
   if(candidate.id!==node.id||candidate.definitionUuid!==node.definitionUuid)throw Error('Command cannot change node identity');
   if(!module.supports(candidate,context))throw Error('Unsupported node configuration');
   module.validate(candidate,context);resolvePorts(module,candidate,context);return copy(candidate);
+}
+export function prepareNodeWire(module:NodeModule,node:Node,key:string,source:string,context:NodeContext){
+  if(!module.wire)throw Error('Node has no wire preparation');
+  const before=resolvePorts(module,node,context).types(),edit=module.wire(copy(node),key,source,context);
+  if(edit.node.id!==node.id||edit.node.definitionUuid!==node.definitionUuid||!module.supports(edit.node,context))throw Error('Wire preparation changed identity/capability');
+  module.validate(edit.node,context);const after=resolvePorts(module,edit.node,context).types();
+  if(!sameTypes(before.outputs,after.outputs)||edit.replaceInputs.some(p=>!before.inputs[p]))throw Error('Wire preparation changed outputs or unknown ports');
+  return edit;
 }
 const portTemplates=new WeakMap<readonly PortSpec[],NodePorts>();
 export function resolvePorts(module:NodeModule,node:Node,context:NodeContext):NodePorts {

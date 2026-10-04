@@ -727,6 +727,7 @@ function nodeTypeVariants(d,params){
   }catch{return [];}});
 }
 function vectorConnectionExact(d,source,target){
+  if(typeof GrapeGraph!=='undefined'&&GrapeGraph.registry.get(d?.definitionUuid)&&GrapeGraph.values.types.includes(target))return compatible(source,target);
   if(d?.key==='compare'&&!selectableNodeTypes(d).includes(source))return false;
   return isVectorOperation(d)||d?.key==='switch'?!!source&&source===target:compatible(source,target);
 }
@@ -847,6 +848,7 @@ function removeGraphEdges(document,data,predicate){
   });
 }
 function applyPlannedNode(document,n,d,plan){
+  if(plan.prepared?.has(n.id))Object.assign(n,clone(plan.prepared.get(n.id)));
   const signature=plan.signatures?.get(n.id);
   if(signature)configureModuleNode(document,n,{signature});
   else if(plan.choices.has(n.id))reshapeTypedInputs(n,d,plan.choices.get(n.id),plan.operands.get(n.id));
@@ -875,8 +877,8 @@ function safeConcretePorts(document,n,owner=null,type=n.params.type,override=nul
   try{return concretePorts(document,n,owner,type,override);}catch(error){const d=autoDefinition(document,n,owner);if(isCompositeOperation(d))return compositePorts(d.key,n.params,document);if(!isVectorOperation(d))throw error;return draftVectorPorts(d.key,{...n.params,type});}
 }
 function invalidTypeEdges(data,portMap){
-  const vectors=new Set(data.nodes.filter(n=>['vector','replace','combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
-  const comparisons=new Set(data.nodes.filter(n=>n.definitionUuid==='sgrape.builtin.compare').map(n=>n.id));
+  const vectors=new Set(data.nodes.filter(n=>!frontendNodeModule(graph,n)&&['vector','replace','combine','vector_split','swizzle'].some(key=>n.definitionUuid==='sgrape.builtin.'+key)).map(n=>n.id));
+  const comparisons=new Set(data.nodes.filter(n=>!frontendNodeModule(graph,n)&&n.definitionUuid==='sgrape.builtin.compare').map(n=>n.id));
   return data.edges.filter(e=>{const source=portMap.get(e.from[0])?.outputs[e.from[1]],target=portMap.get(e.to[0])?.inputs[e.to[1]];return comparisons.has(e.to[0])&&!['float','int','uint'].includes(source)||!((vectors.has(e.to[0])||data.nodes.some(n=>n.id===e.to[0]&&n.definitionUuid==='sgrape.builtin.switch'))?!!source&&source===target:compatible(source,target));});
 }
 function typeEdgeKey(edge,ports){return JSON.stringify([edge.from,edge.to,ports.get(edge.from[0])?.outputs[edge.from[1]],ports.get(edge.to[0])?.inputs[edge.to[1]]]);}
@@ -913,7 +915,7 @@ function scalarVectorPlanning(document,data,owner,overrides,baselineDocument,int
   const model=new GrapeGraph.GraphDocument({...document,stages:{planning:data},functions:document.functions?.map(f=>f.id===owner?.id?{...f,graph:data}:f)},GrapeGraph.registry,undefined,true);
   let result;try{result=model.networks.get('planning').plan(capabilities,intent,overrides);}finally{model.close();}
   if(!result.ok)throw diagnostic(result.diagnostic);
-  return {...result.inference,issues:new Map([...result.inference.issues].map(([id,issue])=>[id,diagnostic(issue).message])),groups:new Map(),edges:result.edges,displaced:result.displaced};
+  return {...result.inference,issues:new Map([...result.inference.issues].map(([id,issue])=>[id,diagnostic(issue).message])),groups:new Map(),prepared:result.prepared,edges:result.edges,displaced:result.displaced};
 }
 function planAutoGraph(document,data,owner=null,overrides=new Map(),{draft=false,baselineDocument=document}={}){
   const modular=scalarVectorPlanning(document,data,owner,overrides,baselineDocument);
@@ -1138,9 +1140,15 @@ function planWireTypes(from,to,extra=null){
   if(modular)return finishWirePlan(modular,{nodes,edges:modular.edges},owner,modular.displaced);
   const target=nodes.find(n=>n.id===to.node),oldPorts=storedTypePorts(graph,data,owner),source=nodes.find(n=>n.id===from.node);
   const sourcePorts=source&&safeConcretePorts(graph,source,owner,source.params.type,overrides.get(source.id));
+  const prepared=new Map(),targetModule=frontendNodeModule(graph,target,owner);
   let replaced=e=>e.to[0]===to.node&&e.to[1]===to.port;
+  if(targetModule?.wire){
+    const edit=GrapeGraph.prepareNodeWire(targetModule,target,to.port,sourcePorts.outputs[from.port],moduleContext(graph,target,owner));
+    prepared.set(target.id,edit.node);Object.assign(target,clone(edit.node));
+    replaced=e=>e.to[0]===to.node&&edit.replaceInputs.includes(e.to[1]);
+  }
   // Explicit component drops replace the whole overlapping wire, for both assemblers.
-  if(['combine','replace'].includes(autoDefinition(graph,target,owner)?.key)&&to.port!=='value'){
+  if(!targetModule?.wire&&['combine','replace'].includes(autoDefinition(graph,target,owner)?.key)&&to.port!=='value'){
     const targetPorts=safeConcretePorts(graph,target,owner,target.params.type,overrides.get(target.id));
     const first='xyzw'.indexOf(to.port),type=sourcePorts?.outputs[from.port];
     if(first<0||!Object.hasOwn(targetPorts.inputs,to.port)||!valueTypes().includes(type)||first+typeComponents(type)>typeComponents(target.params.type))throw Error(t('vector.overlap'));
@@ -1160,7 +1168,7 @@ function planWireTypes(from,to,extra=null){
   const oldPlan=planAutoGraph(graph,data,owner,new Map(),{draft:true});
   for(const [id,message]of plan.issues)if(oldPlan.issues.get(id)!==message)throw Error(message);
   rejectNewTypeIssues(candidate,plan.ports,data,storedTypePorts(graph,data,owner));
-  return finishWirePlan(plan,candidate,owner,displaced);
+  return finishWirePlan({...plan,prepared},candidate,owner,displaced);
 }
 function finishWirePlan(plan,candidate,owner,displaced){
   for(const n of candidate.nodes)applyPlannedNode(graph,n,autoDefinition(graph,n,owner),plan);
@@ -1175,7 +1183,10 @@ function commitPlannedWire(from,to){
   if(data.nodes.every(n=>frontendNodeModule(graph,n))){
     const policy={components:Object.fromEntries(Object.entries(typeContract.types).map(([type,d])=>[type,d.components])),conversions:typeContract.conversions};
     withGraphNetwork(graph,data,network=>network.connect(network.node(from.node).port('output',from.port),network.node(to.node).port('input',to.port),policy));
-  }else data.edges=planned.edges;
+  }else {
+    for(const [id,n]of planned.prepared||[])withGraphNetwork(graph,data,network=>network.node(id).update({params:n.params,...(n.inputValues?{inputValues:n.inputValues}:{})}));
+    data.edges=planned.edges;
+  }
 }
 function creatorValidationContext(){
   // Query text does not change signatures. Include the complete document so
@@ -1274,6 +1285,12 @@ function creatorTypePlan(d,variant,port,wire,locked,context=null){
   }catch(error){context.plans.set(trialKey,{error});throw error;}
 }
 function creatorVariants(d,wire){
+  const module=typeof GrapeGraph==='undefined'?null:GrapeGraph.registry.get(d.definitionUuid);
+  const creations=module?.creations?.(wire?{direction:wire.kind==='outputs'?'output':'input',type:wire.type}:undefined);
+  if(creations)return creations.map(params=>{
+    const n={id:'creator',definitionUuid:d.definitionUuid,params:{...d.defaults,...params}};
+    return {type:n.params.type??null,...GrapeGraph.resolvePorts(module,n,moduleContext(graph,n)).types(),params};
+  });
   if(d.key==='preview'){
     const variants=typeVariants(d);
     return wire?wire.kind==='outputs'?variants.filter(v=>v.type===wire.type):[]:variants;

@@ -1274,7 +1274,8 @@ function nodeTypeSelector(n,d){
 }
 function nodePrimarySelector(n,d){
   if(!d)return null;let control=null;
-  if(isCompositeOperation(d))control=['array','array_create'].includes(d.key)?arrayElementSelector(n):null;
+  if(moduleNodePresentation(graph,n)?.selector)control=nodeTypeSelector(n,d);
+  else if(isCompositeOperation(d))control=['array','array_create'].includes(d.key)?arrayElementSelector(n):null;
   else if(isConvertOperation(d))control=convertTypeSelector(n,'toType');
   else if(n.params.type)control=nodeTypeSelector(n,d);
   else if(d.key==='pixel_out'&&editorTarget==='mat'&&typeContract?.pixelBufferOutputs){control=select(typeContract.pixelBufferOutputs.ports.map((_,i)=>[String(i+1),String(i+1)]),String(n.params.bufferCount??1),value=>setPixelBufferCount(n,Number(value)));control.title=t('pixel.bufferCount');}
@@ -1393,6 +1394,7 @@ function nodeComponentNameSettings(n){
 }
 function vectorInspector(box,n,d){
   if(!isVectorOperation(d))return;
+  if(frontendNodeModule(graph,n)){const control=nodeTypeSelector(n,d);if(control)box.append(parameterControlRow(control.title,control));return;}
   const composed=['combine','vector','replace'].includes(d.key),control=nodeTypeSelector(n,d);
   if(control)box.append(parameterControlRow(t(composed?'vector.outputType':'vector.inputType'),control));
   if(d.key==='swizzle'){
@@ -1412,7 +1414,7 @@ function vectorInspector(box,n,d){
 function setNodeInputValue(n,port,next){
   if(frontendNodeModule(graph,n)){
     if(!current().nodes.includes(n))throw Error('Node input belongs to an inactive graph');
-    withGraphNetwork(graph,current(),network=>network.node(n.id).update({inputValues:{...n.inputValues,[port]:next}}));
+    withGraphNetwork(graph,current(),network=>network.node(n.id).setInput(port,next));
   }else if(['matrix_combine','matrix_replace'].includes(definition(n)?.key)&&port!=='value'){
     const shape=typeContract.types[n.params.type],match=/^c([0-3])([xyzw])?$/.exec(port);
     if(!match)return;
@@ -1674,7 +1676,7 @@ function renderInspector(){
     if(moduleControls)moduleInspector(box,n,moduleControls);else if(d.key==='math')mathInspector(box,n);
     if(d.key==='switch')box.append(parameterControlRow(t('switch.defaultType'),nodeTypeSelector(n,d)));
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
-    if(isConvertOperation(d))for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
+    if(isConvertOperation(d)&&!frontendNodeModule(graph,n))for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
     if(d.key==='compare'&&!moduleControls)box.append(parameterControlRow(t('compare.operator'),compareOperatorSelector(n)));
     if(['matrix_get','matrix_set'].includes(d.key)){
       box.append(parameterControlRow(t('matrix.accessMode'),select([['column',t('matrix.wholeColumn')],['element',t('matrix.element')]],n.params.mode||'column',value=>changeMatrixAccess(n,'mode',value))));

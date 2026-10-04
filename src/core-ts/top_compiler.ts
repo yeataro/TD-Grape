@@ -70,7 +70,17 @@ function createFlatCompiler(registry:Registry,limit=256){
       if(!checked.valid)throw Error(checked.reason==='missing-port'?'Connection endpoint no longer exists':source.type+' cannot connect to '+target.type);
       if(links.has(k))throw Error('An input can only have one connection');links.set(k,edge);
     }
-    const order=network.order(outputs[0]!.id),visited=new Set(order.map(n=>n.id));
+    const inputsUsed=new Map<string,Set<string>>();
+    for(const node of network.nodes){
+      const module=node.definition!;
+      if(module.inputsUsed){
+        const connected=new Set(node.inputs.filter(p=>links.has(p)).map(p=>p.key));
+        const used=module.inputsUsed(node.data!,connected,model.context);
+        if(used.some(key=>!node.interface.inputs[key]))throw Error('Module uses an unknown input');
+        inputsUsed.set(node.id,new Set(used));
+      }
+    }
+    const order=network.order(outputs[0]!.id,e=>!inputsUsed.has(e.to[0])||inputsUsed.get(e.to[0])!.has(e.to[1])),visited=new Set(order.map(n=>n.id));
     const used=new Set<string>(),lines:string[]=[],lineNodes:string[]=[],expressions=new Map<Port,string>();
     for(const node of order){const n=node.data!,id=node.id,d=node.definition!,p=node.interface;const start=lines.length;
       errorNode=id;
@@ -80,7 +90,7 @@ function createFlatCompiler(registry:Registry,limit=256){
           return source.type===port.type?value:port.type+'('+value+')';}
         return literal(n.inputValues?.[key]??port.default,type(port.type));};
       if(!d.emit)throw Error('Structural nodes require Subgraph expansion');
-      const emission=d.emit(n,{...model.context,ports:p,input,useUniform:declId=>{
+      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useUniform:declId=>{
         const declaration=declarations.get(declId);if(!declaration)throw Error('Select a matching declaration');used.add(declId);return declaration.name;
       }});
       if(Object.keys(emission.outputs).sort().join()!==Object.keys(p.outputs).sort().join())throw Error('Module emitted a different output interface');

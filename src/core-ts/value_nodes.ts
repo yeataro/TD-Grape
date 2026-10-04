@@ -24,6 +24,7 @@ export function typedNode(catalog:CatalogRow,spec:{
   configure?:(node:Node,type:string)=>Node;
   validate?:NonNullable<NodeModule['validate']>;
   presentation?:(node:Node)=>NodePresentation;
+  creations?:NodeModule['creations'];
 }):NodeModule {
   const selected=(n:Node)=>String(n.params.type??catalog.definition.defaults.type);
   const ports=(n:Node)=>{const t=selected(n);if(!spec.types.includes(t))throw Error('Unsupported node type');return spec.ports(t,n);};
@@ -35,10 +36,14 @@ export function typedNode(catalog:CatalogRow,spec:{
       return reshapeInputs(n,before,ports(n));
     },
     validate:(n,c)=>{if(n.params.fixedType&&n.params.fixedType!==selected(n))throw Error('Fixed node type');ports(n);spec.validate?.(n,c);},
-    edit:spec.edit,emit:spec.emit,
+    edit:spec.edit,emit:spec.emit,creations:spec.creations,
     presentation:n=>({selectorLabel:'vector.outputType',...spec.presentation?.(n)})
   };
 }
 export const input=(key:string,t:string,value:number|boolean=0):PortSpec=>({key,direction:'input',type:t,default:values.fill(value,t)});
 export const output=(key:string,t:string):PortSpec=>({key,direction:'output',type:t});
 export function payload(value:Value|undefined):Value {const data=object(value);if(!data||data.value===undefined)throw Error('Missing command value');return data.value;}
+
+export function staticNode(catalog:CatalogRow,spec:Pick<NodeModule,'ports'|'emit'>):NodeModule {
+  return {catalog,role:'value',supports:()=>true,validate:()=>{},...spec};
+}

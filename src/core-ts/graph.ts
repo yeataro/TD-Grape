@@ -1,10 +1,10 @@
 import { copy, type Graph, type Node as NodeData, type Edge as EdgeData, type ObjectValue, type Value, type SubgraphData } from './model';
-import { contextFor, resolvePorts, configureNode, editNode, type Configuration, type NodeContext, type Registry } from './node_module';
+import { contextFor, resolvePorts, configureNode, editNode, prepareNodeWire, type Configuration, type NodeContext, type Registry } from './node_module';
 import { NodePorts, compatible, type PortSpec } from './ports';
 import { plan, type Intent, type Ports } from './wire_planning';
 import { changesBetween, equal, type GraphChanges } from './changes';
 export { changesBetween } from './changes';
-export { contextFor } from './node_module';
+export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
 import { createSubgraph, groupSubgraph, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type GroupOptions } from './subgraph_operations';
 import { appendSubgraphs, localizeSubgraph, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
@@ -72,6 +72,14 @@ export class Node {
       this.definition.validate(candidate,this.network.context);resolvePorts(this.definition,candidate,this.network.context);
     }
     this.replace(candidate);
+  }
+  setInput(key:string,value:Value):void {
+    this.network.assertEditable();const node=this.data,module=this.definition;
+    if(!node||!this.interface.inputs[key])throw Error('Unknown node input');
+    if(!module?.editInput){this.update({inputValues:{...node.inputValues,[key]:copy(value)}});return;}
+    const candidate=module.editInput(copy(node),key,copy(value),this.network.context);
+    if(candidate.id!==node.id||candidate.definitionUuid!==node.definitionUuid)throw Error('Input edit changed identity');
+    module.validate(candidate,this.network.context);resolvePorts(module,candidate,this.network.context);this.replace(candidate);
   }
   edit(command:string,value?:Value):void {
     this.network.assertEditable();const node=this.data,module=this.definition;
@@ -208,10 +216,21 @@ export class Network {
     collectSubgraphs(this.graph,roots,this.data);
   }
   plan(policy:ConnectionPolicy,intent:Intent,overrides:ReadonlyMap<string,Ports>=new Map()) {
+    const prepared=new Map<string,NodeData>(),removed:EdgeData[]=[];
+    if(intent.kind==='wire'){
+      const target=this.node(intent.to.node),module=target.definition,data=target.data;
+      const sourceType=overrides.get(intent.from.node)?.outputs[intent.from.port]||this.node(intent.from.node).interface.outputs[intent.from.port]?.type;
+      if(data&&sourceType&&module?.supports(data,this.context)&&module.wire){
+        const edit=prepareNodeWire(module,data,intent.to.port,sourceType,this.context);
+        prepared.set(target.id,edit.node);
+        removed.push(...this.data.edges.filter(e=>e.to[0]===target.id&&edit.replaceInputs.includes(e.to[1])));
+      }
+    }
     const nodes=this.nodes.map(n=>{const module=n.definition,data=n.data!;
-      return {id:n.id,definition:data.definitionUuid,stored:overrides.get(n.id)||n.interface.types(),
+      return {id:n.id,definition:data.definitionUuid,stored:overrides.get(n.id)||(prepared.has(n.id)?resolvePorts(module!,prepared.get(n.id)!,this.context).types():n.interface.types()),
         ...(module?.supports(data,this.context)&&module.signatures?{variants:module.signatures(data,this.context)}:{})};});
-    return plan({nodes,edges:this.data.edges},policy,intent);
+    const result=plan({nodes,edges:this.data.edges.filter(e=>!removed.includes(e))},policy,intent);
+    return result.ok?{...result,prepared,displaced:[...removed,...result.displaced]}:{...result,prepared};
   }
   private identity(e:EdgeData,_index:number){
     if(e.id)return e.id;
@@ -248,7 +267,7 @@ export class Network {
     return (this.adjacency[port.direction].get(port.node.id)?.get(port.key)||[]).map(id=>this.edge(id));
   }
   /** Returns a dependency order and rejects cycles, including disconnected ones. */
-  order(sink?:string):Node[] {
+  order(sink?:string,used?:(edge:EdgeData)=>boolean):Node[] {
     const active=new Set<string>(),done=new Set<string>(),ordered:Node[]=[];
     this.indexEdges();
     const incoming=new Map<string,EdgeData[]>();
@@ -266,7 +285,10 @@ export class Network {
       }
     };
     for(const n of this.nodes)visit(n.id);
-    if(sink!==undefined){ordered.length=0;done.clear();visit(sink);}return ordered;
+    if(sink!==undefined){
+      if(used)for(const [id,edges]of incoming)incoming.set(id,edges.filter(used));
+      ordered.length=0;done.clear();visit(sink);
+    }return ordered;
   }
   connect(from:Port,to:Port,policy:ConnectionPolicy):Edge {
     this.assertEditable();
@@ -275,12 +297,13 @@ export class Network {
     if(!result.ok)throw new GraphError(result.diagnostic.code==='cycle'?'Cycle detected':'Incompatible connection: '+result.diagnostic.code,to.node.id);
     const retained=this.edges.find(e=>equal(e.data?.from,from.endpoint)&&equal(e.data?.to,to.endpoint));
     const signature=result.inference.signatures.get(to.node.id),target=to.node.data!,original=copy(target);
+    const prepared=result.prepared.get(to.node.id);if(prepared)Object.assign(target,copy(prepared));
     if(signature)to.node.configure({signature});
     if(retained&&result.displaced.length===1)return retained;
     const before=this.data.edges,sequence=this.data.edgeSequence;
     try{
       const id=this.graph.nextEdgeId(this.data);
-      this.data.edges=before.filter(e=>e.to[0]!==to.node.id||e.to[1]!==to.key);
+      this.data.edges=before.filter(e=>!result.displaced.includes(e));
       this.data.edges.push({id,from:from.endpoint,to:to.endpoint});return this.edges.find(e=>e.id===id)!;
     }catch(e){
       this.data.edges=before;for(const key of Object.keys(target))delete (target as unknown as Record<string,unknown>)[key];Object.assign(target,original);

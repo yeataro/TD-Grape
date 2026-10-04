@@ -36,10 +36,17 @@ def _frontend_ordinary_nodes():
         ports = entry.get('ports', [entry.get('port')])
         if not isinstance(ports, list) or not ports or not all(isinstance(v, str) and re.fullmatch('[A-Za-z][A-Za-z0-9_]{0,63}', v) for v in (key, entry.get('operator'), *ports)):
             raise ValueError('Invalid generated ordinary node primitive')
-    return entries, document.get('nativeSignatures', {})
+    return entries, document.get('nativeSignatures', {}), document
 
 
-FRONTEND_ORDINARY, FRONTEND_SIGNATURES = _frontend_ordinary_nodes()
+FRONTEND_ORDINARY, FRONTEND_SIGNATURES, FRONTEND_CAPABILITIES = _frontend_ordinary_nodes()
+
+
+def frontend_value_node(node, ports):
+    """Temporary fallback adapter follows the migrated value-node boundary."""
+    return (node.get('definitionUuid') in FRONTEND_CAPABILITIES.get('definitions', ())
+            and all(t in FRONTEND_CAPABILITIES.get('valueTypes', ())
+                    for side in ('in', 'out') for t in ports[side].values()))
 TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
 SCALAR_TYPES = tuple(TYPE_PREFIXES)
 TYPE_DESCRIPTORS = {
@@ -1257,21 +1264,20 @@ def _compile_flat(graph,annotation_scopes=None):
                     raise GraphError('Compare accepts float, int or uint scalar inputs',dst)
                 if defs[dst]['key']=='switch' and a!=b:
                     raise GraphError('Switch inputs require an exact type; Default determines the result type and Index requires int',dst)
-                if defs[dst]['key'] in VECTOR_KEYS and a!=b:
+                if defs[dst]['key'] in VECTOR_KEYS and a!=b and not frontend_value_node(nodes[dst],ports[dst]):
                     raise GraphError('Vector components require an exact type; use Convert, Combine or Swizzle explicitly',dst)
                 if conversion_kind(a,b) is None: raise GraphError(a+' cannot connect to '+b,dst)
                 links[(dst,dp)]=(src,sp)
             # An unconnected Preview is inert. Keep the original color branch
             # live so its ordinary binding rows remain available during Preview.
             active_preview=next((ident for ident in previews if (ident,'value') in links),None)
-            # Each visible vector group is one actual wire, never a persisted
-            # constructor mode with missing sockets. Legacy Combine keeps its
-            # original ability to hold an unconnected vector default group.
+            # Migrated nodes retain authored port layouts after disconnect.
+            # Preserve the old restriction for configurations not yet migrated.
             component_sources={}
             for ident,n in nodes.items():
                 if defs[ident]['key']!='replace':continue
                 for port in n['params'].get('groups',{}):
-                    if (ident,port) not in links:
+                    if (ident,port) not in links and not frontend_value_node(n,ports[ident]):
                         raise GraphError('Replace: remove an unconnected component group',ident)
                 components=VECTOR_COMPONENTS[:type_components(ports[ident]['out']['out'])]
                 mapped=[('value',index) if (ident,'value') in links else (None,index) for index in range(len(components))]
@@ -2329,7 +2335,9 @@ def _infer_graph_types(graph):
                     return ports(edge[0])['outputs'].get(edge[1])
                 if key in ('router','preview','array_get','array_replace','array_length','struct_field'):
                     source=source_type('value' if key in ('router','preview','struct_field') else 'Array')
-                    if source:p['type']=source
+                    migrated=(uid in FRONTEND_CAPABILITIES.get('definitions', ())
+                              and p.get('type') in FRONTEND_CAPABILITIES.get('valueTypes', ()))
+                    if source and not migrated:p['type']=source
                 if key=='array_create':
                     source=source_type('length')
                     if source is not None and source not in ('int','uint'):raise GraphError('Array Create length requires int or uint',ident)

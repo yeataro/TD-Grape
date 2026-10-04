@@ -61,13 +61,30 @@ class VectorAndReplace(unittest.TestCase):
         self.assertNotIn('const vec4 sg_n_vector',compiled['pixel'])
         # Disconnect the grouped override: all components inherit the baseline.
         result['stages']['pixel']['edges'].remove(c.edge('pair','vector','y'))
-        node['params']['groups']={}
+        self.assertEqual(node['params']['groups'],{'y':'vec2'})
         self.assertIn('vec4 sg_n_vector = vec4(sg_n_baseline);',c.compile_graph(result)['pixel'])
         # Disconnect the baseline: the saved manual values were never erased.
         result['stages']['pixel']['edges'].remove(c.edge('baseline','vector','value'))
         compiled=c.compile_graph(result)
         self.assertIn('const vec4 sg_n_vector = vec4(0.1, 0.2, 0.3, 0.4);',compiled['pixel'])
         self.assertEqual(compiled['bindings'],[])
+
+    def test_migrated_component_edges_allow_numeric_cast_in_mixed_graph(self):
+        node=c.node('combine','vector',type='vec4',groups={'x':'vec2'},components=[0,0,0,1])
+        result=graph([node,c.node('vector','pair',type='ivec2',components=[1,2,0,0]),c.node('pow','legacy',type='float')],
+                     [c.edge('pair','vector','x')])
+        before=copy.deepcopy(result)
+        self.assertIn('vec2(sg_n_pair)',c.compile_graph(result)['pixel'])
+        self.assertEqual(result,before)
+
+    def test_migrated_router_output_stays_authored_in_fallback(self):
+        result=graph([c.node('scalar','source',type='int',value=2),c.node('router','vector',type='float'),c.node('pow','legacy',type='float')],
+                     [c.edge('source','vector','value')])
+        before=copy.deepcopy(result)
+        compiled=c.compile_graph(result)
+        self.assertEqual(compiled['stages']['pixel']['ports']['vector']['out'],{'out':'float'})
+        self.assertIn('float(sg_n_source)',compiled['pixel'])
+        self.assertEqual(result,before)
 
     def test_baseline_fully_overridden_does_not_taint_or_evaluate(self):
         node=c.node('replace','vector',type='vec4',groups={'x':'vec2','z':'vec2'},requireConstant=True)
@@ -114,7 +131,7 @@ class VectorAndReplace(unittest.TestCase):
         cases=[]
         for groups in ({'x':'vec3','y':'vec2'},{'w':'vec2'},{'z':'vec3'},{'x':'float'},None):
             cases.append(graph([c.node('replace','vector',type='vec4',groups=groups)]))
-        cases.append(graph([c.node('replace','vector',type='vec4',groups={'x':'vec2'})]))
+        cases.append(graph([c.node('replace','vector',type='dvec4',groups={'x':'dvec2'})]))
         cases.append(graph([c.node('replace','vector',type='vec4'),c.node('vec2','source')],[c.edge('source','vector','y')]))
         cases.append(graph([c.node('replace','vector',type='vec4'),c.node('vec3','source')],[c.edge('source','vector','value')]))
         hidden=graph([c.node('replace','vector',type='vec4',groups={'x':'vec2'}),c.node('vec2','source'),c.node('float','hidden')],

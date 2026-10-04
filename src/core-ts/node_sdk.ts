@@ -145,4 +145,6 @@ export function outputNode(catalog:CatalogRow,spec:Omit<NodeModule,'catalog'|'ro
   return {...implementation,catalog,role:'output',ports:()=>layout};
 }
 
-export {typedNode,reshapeInputs,input,output,payload,values} from './value_nodes';
+export {staticNode,typedNode,reshapeInputs,input,output,payload,values} from './value_nodes';
+
+export {vectorAssembly} from './vector_assembly';
