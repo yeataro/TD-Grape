@@ -1308,7 +1308,7 @@ footer #status:not([hidden])+#generationstatus::before{content:'·';margin-right
 footer #generationstatus[data-state=failed],footer #generationstatus[data-state=applyFailed]{color:var(--danger)}
 footer #statushistorytoggle:hover{background:transparent}
 footer #statushistorytoggle:focus-visible{outline:1px solid var(--purple);outline-offset:2px}
-#statushistory{inset:auto;margin:0;padding:10px 12px;width:calc(100vw - 16px);max-height:60vh;overflow:hidden;background:var(--ui-tone-dialog);color:var(--ui-tone-dialog-text);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px #0004}
+#statushistory{inset:auto;margin:0;padding:10px 12px;width:calc(100vw - 16px);max-height:60vh;overflow:hidden;background:color-mix(in srgb,var(--ui-tone-dialog) 25%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--ui-tone-dialog-text);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px #0004}
 #statushistory:popover-open{display:flex;flex-direction:column}
 .status-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #statushistoryclose{padding:0 5px;font-size:16px;border:0;background:transparent}
