@@ -5,6 +5,7 @@ if(!crypto.randomUUID){crypto.randomUUID=()=>{
   const hex=Array.from(bytes,value=>value.toString(16).padStart(2,'0')).join('');
   return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
 };}
+const graphModelAPI=()=>typeof GrapeGraph!=='undefined'?GrapeGraph:require('./wire_planning.js');
 /* Graph-level presentation metadata. Membership is local to one graph. */
 const GraphFrames=(()=>{
   const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
@@ -157,48 +158,14 @@ const FunctionModel=(()=>{
     GraphArrayLengths.walk(f,(ref,old)=>ref.scope==='fn_'+source.id?GraphArrayLengths.token('fn_'+f.id,ref.source):old);
     graph.functions.push(f);node.params.functionId=f.id;return f;
   }
-  function removeNodes(graph,data,ids){
-    const roots=data.nodes.filter(n=>ids.has(n.id)&&n.definitionUuid===CALL).map(n=>n.params.functionId);
-    data.nodes=data.nodes.filter(n=>!ids.has(n.id));data.edges=data.edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));
-    if(!roots.length)return;
-    const definitions=new Map((graph.functions||[]).map(f=>[f.id,f]));
-    const references=value=>{
-      const result=new Set();
-      function scan(item){
-        if(!item||typeof item!=='object')return;
-        if(Array.isArray(item)){item.forEach(scan);return;}
-        if(item.definitionUuid===CALL&&item.params?.functionId)result.add(item.params.functionId);
-        for(const [key,child]of Object.entries(item))if(!['ui','source','origin','code','catalogSnapshot'].includes(key))scan(child);
-      }
-      scan(value);
-      // Type expressions can refer to a function scope without a call node.
-      GraphArrayLengths.walk(value,(ref,token)=>{if(ref.scope.startsWith('fn_'))result.add(ref.scope.slice(3));return token;});
-      return result;
-    };
-    const dependencies=new Map([...definitions].map(([id,f])=>[id,references(f)]));
-    function closure(seeds){
-      const seen=new Set(),pending=[...seeds];
-      while(pending.length){const id=pending.pop();if(seen.has(id))continue;seen.add(id);pending.push(...(dependencies.get(id)||[]));}
-      return seen;
-    }
-    const candidates=closure(roots),retained=references({...graph,functions:[],catalogSnapshot:undefined});
-    // Only collect the deleted calls' dependency closure. Unrelated reusable
-    // definitions and the containing edit scope remain independent documents.
-    for(const [id,f]of definitions)if(!candidates.has(id)||f.graph===data)retained.add(id);
-    const keep=closure(retained);
-    graph.functions=(graph.functions||[]).filter(f=>!candidates.has(f.id)||keep.has(f.id));
-  }
-  return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity,removeNodes};
+  return {CALL,INPUT,OUTPUT,uid,find,localize,importLibrary,independent,ensureCapacity};
 })();
 if(typeof module!=='undefined'){module.exports=FunctionModel;module.exports.GraphFrames=GraphFrames;module.exports.GraphTypeDefinitions=GraphTypeDefinitions;}
 
 /* Array size identities describe their source, not an evaluated numeric value. */
 const GraphArrayLengths=(()=>{
-  const token=(scope,source)=>'sg_extent_'+[...new TextEncoder().encode([scope,...source].join('\0'))].map(v=>v.toString(16).padStart(2,'0')).join('');
-  function reference(value){
-    if(typeof value!=='string'||!/^sg_extent_(?:[0-9a-f]{2})+$/.test(value))return null;
-    try{const parts=new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(value.slice(10).match(/../g),v=>parseInt(v,16))).split('\0');return parts.length===3&&parts.every(p=>/^[A-Za-z][A-Za-z0-9_]{0,70}$/.test(p))?{scope:parts[0],source:parts.slice(1)}:null;}catch{return null;}
-  }
+  const token=(...args)=>graphModelAPI().ScopeReferences.token(...args);
+  const reference=value=>graphModelAPI().ScopeReferences.reference(value);
   const unit=(document,scope)=>scope.startsWith('fn_')?document.functions?.find(f=>f.id===scope.slice(3))?.graph:document.stages?.[scope];
   function find(document,value){const ref=reference(value),data=ref&&unit(document,ref.scope),node=data?.nodes.find(n=>n.id===ref.source[0]);return node?{...ref,node,data,name:value,type:'int',kind:'expression'}:null;}
   function length(document,data,node,scope,links=data.edges,nodes=null){
@@ -210,10 +177,7 @@ const GraphArrayLengths=(()=>{
     if(source?.definitionUuid==='sgrape.builtin.scalar'&&['int','uint'].includes(source.params.type)&&Number.isInteger(source.params.value))return source.params.value;
     return token(scope,edge.from);
   }
-  function walk(value,replace){
-    if(Array.isArray(value)){value.forEach(v=>walk(v,replace));return;}if(!value||typeof value!=='object')return;
-    for(const key of Object.keys(value))if(['type','elementType','fromType','toType','fixedType','length'].includes(key)&&typeof value[key]==='string')value[key]=value[key].replace(/\bsg_extent_(?:[0-9a-f]{2})+\b/g,old=>{const ref=reference(old);return ref?replace(ref,old):old;});else if(!['code','ui','source','origin'].includes(key))walk(value[key],replace);
-  }
+  const walk=(value,replace)=>graphModelAPI().ScopeReferences.walk(value,replace);
   return {token,reference,unit,find,length,walk};
 })();
 if(typeof module!=='undefined')module.exports.GraphArrayLengths=GraphArrayLengths;

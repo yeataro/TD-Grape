@@ -6,6 +6,8 @@ import { changesBetween, equal, type GraphChanges } from './changes';
 export { changesBetween } from './changes';
 export { contextFor } from './node_module';
 import { Subgraph } from './subgraphs';
+import { createSubgraph, groupSubgraph, instantiateSubgraph, collectSubgraphs, type SubgraphOptions, type GroupOptions } from './subgraph_operations';
+export { ScopeReferences } from './scope_references';
 
 type NetworkData=Graph['stages'][string];
 export interface ConnectionPolicy {components:Readonly<Record<string,number>>;conversions:readonly {from:string;to:string}[]}
@@ -55,13 +57,13 @@ export class Node {
   get inputs(){return Object.keys(this.interface.inputs).map(k=>this.port('input',k));}
   get outputs(){return Object.keys(this.interface.outputs).map(k=>this.port('output',k));}
   configure(selection:Configuration):void {
-    this.network.graph.assertEditable();const node=this.data,module=this.definition;
+    this.network.assertEditable();const node=this.data,module=this.definition;
     if(!node||!module)throw Error('Node configuration is unavailable');
     const candidate=configureNode(module,node,selection,this.network.context);
     this.replace(candidate);
   }
   update(patch:{params?:ObjectValue;inputValues?:ObjectValue;ui?:ObjectValue;name?:string}):void {
-    this.network.graph.assertEditable();const node=this.data;if(!node)throw Error('Node no longer exists');
+    this.network.assertEditable();const node=this.data;if(!node)throw Error('Node no longer exists');
     if(Object.keys(patch).some(k=>!['params','inputValues','ui','name'].includes(k)))throw Error('Node update cannot change identity');
     const candidate={...copy(node),...copy(patch)};
     if(this.definition){
@@ -71,7 +73,7 @@ export class Node {
     this.replace(candidate);
   }
   edit(command:string,value?:Value):void {
-    this.network.graph.assertEditable();const node=this.data,module=this.definition;
+    this.network.assertEditable();const node=this.data,module=this.definition;
     if(!node||!module)throw Error('Node command is unavailable');
     const before=this.interface,candidate=editNode(module,node,command,value,this.network.context),after=resolvePorts(module,candidate,this.network.context);
     const removedInputs=new Set(Object.keys(before.inputs).filter(k=>!after.inputs[k])),removedOutputs=new Set(Object.keys(before.outputs).filter(k=>!after.outputs[k]));
@@ -123,6 +125,20 @@ export class Network {
   private readonly temporaryIds=new WeakMap<EdgeData,string>();
   private temporarySequence=0;
   constructor(readonly graph:GraphDocument,readonly id:string,readonly data:NetworkData){}
+  assertEditable():void {
+    this.graph.assertEditable();
+    if (this.graph.networks.get(this.id) !== this) throw Error('Network no longer belongs to this graph');
+  }
+  groupSubgraph(ids:ReadonlySet<string>,options:GroupOptions):Node {
+    this.assertEditable();
+    if(this.removedNodes.has(options.callId))throw Error('Retired node ID');
+    const call=groupSubgraph(this,ids,options);
+    ids.forEach(id=>this.removedNodes.add(id));
+    return this.node(call.id);
+  }
+  instantiateSubgraph(definitionId:string,id:string,ui:ObjectValue={}):Node {
+    return this.node(instantiateSubgraph(this,definitionId,id,ui).id);
+  }
   get context():NodeContext {return contextFor(this.graph.document,this.graph.document.functions?.find(f=>f.graph===this.data));}
   node(id:string):Node {let n=this.nodeHandles.get(id);if(!n){n=new Node(this,id);this.nodeHandles.set(id,n);}return n;}
   nodeData(id:string){
@@ -143,7 +159,7 @@ export class Network {
   /** Insert authored node data through the same validation/ownership seam. */
   insert(authored:NodeData):Node {
     const {id,definitionUuid}=authored;
-    this.graph.assertEditable();if(!id||this.nodeData(id)||this.removedNodes.has(id))throw Error('Invalid, duplicate or retired node ID');
+    this.assertEditable();if(!id||this.nodeData(id)||this.removedNodes.has(id))throw Error('Invalid, duplicate or retired node ID');
     const module=this.graph.registry.get(definitionUuid);if(!module)throw Error('Node module is unavailable');
     const node:NodeData={...copy(authored),params:{...copy(module.catalog.definition.defaults),...copy(authored.params)}};
     if(!module.supports(node,this.context))throw Error('Unsupported node configuration');
@@ -154,7 +170,7 @@ export class Network {
    * the model owns validation, copied state and new edge identities. Missing
    * capabilities may be retained explicitly, without making them executable. */
   insertFragment(fragment:{nodes:readonly NodeData[];edges:readonly EdgeData[]},options:{unavailable?:'preserve'}={}):Node[] {
-    this.graph.assertEditable();
+    this.assertEditable();
     const nodes=fragment.nodes.map(n=>copy(n)),edges=fragment.edges.map(e=>copy(e));
     const ids=new Set(this.data.nodes.map(n=>n.id)),ports=new Set(this.data.edges.map(e=>JSON.stringify(e.to)));
     for(const n of nodes){
@@ -177,12 +193,14 @@ export class Network {
     this.removeAll([node]);
   }
   removeAll(nodes:readonly Node[]):void {
-    this.graph.assertEditable();if(nodes.some(n=>n.network!==this))throw Error('Node belongs to another network');
+    this.assertEditable();if(nodes.some(n=>n.network!==this))throw Error('Node belongs to another network');
     const ids=new Set(nodes.filter(n=>this.nodeData(n.id)).map(n=>n.id));if(!ids.size)return;
+    const roots=this.data.nodes.filter(n=>ids.has(n.id)).map(n=>this.graph.registry.get(n.definitionUuid)?.referencedGraph?.(n)).filter((id):id is string=>!!id);
     const sequence=edgeSequence(this.data);if(sequence)this.data.edgeSequence=sequence;
     ids.forEach(id=>this.removedNodes.add(id));
     this.data.nodes=this.data.nodes.filter(n=>!ids.has(n.id));
     this.data.edges=this.data.edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));
+    collectSubgraphs(this.graph,roots,this.data);
   }
   plan(policy:ConnectionPolicy,intent:Intent,overrides:ReadonlyMap<string,Ports>=new Map()) {
     const nodes=this.nodes.map(n=>{const module=n.definition,data=n.data!;
@@ -246,7 +264,7 @@ export class Network {
     if(sink!==undefined){ordered.length=0;done.clear();visit(sink);}return ordered;
   }
   connect(from:Port,to:Port,policy:ConnectionPolicy):Edge {
-    this.graph.assertEditable();
+    this.assertEditable();
     if(from.node.network!==this||to.node.network!==this||from.direction!=='output'||to.direction!=='input')throw Error('Connection endpoints must belong to this network');
     const result=this.plan(policy,{kind:'wire',from:{node:from.node.id,port:from.key},to:{node:to.node.id,port:to.key}});
     if(!result.ok)throw new GraphError(result.diagnostic.code==='cycle'?'Cycle detected':'Incompatible connection: '+result.diagnostic.code,to.node.id);
@@ -268,7 +286,7 @@ export class Network {
     this.disconnectAll([edge]);
   }
   disconnectAll(edges:readonly Edge[]):void {
-    this.graph.assertEditable();if(edges.some(e=>e.network!==this))throw Error('Edge belongs to another network');
+    this.assertEditable();if(edges.some(e=>e.network!==this))throw Error('Edge belongs to another network');
     this.indexEdges();const targets=new Set(edges.map(e=>this.edgeIndex.get(e.id)).filter(e=>!!e));
     if(!targets.size)return;const sequence=edgeSequence(this.data);if(sequence)this.data.edgeSequence=sequence;
     this.data.edges=this.data.edges.filter(e=>!targets.has(e));
@@ -283,17 +301,20 @@ function edgeSequence(data:NetworkData):number {
 export class GraphError extends Error {constructor(message:string,readonly node?:string){super(message);}}
 export class GraphDocument {
   readonly document:Graph;
-  readonly networks:ReadonlyMap<string,Network>;
+  private readonly networkHandles=new Map<string,Network>();
   readonly context:NodeContext;
   private active=true;
   constructor(document:Graph,readonly registry:Registry,readonly fallback?:PortResolver,readonly editable=false){
     this.document=editable?document:clone(document,true);
     this.context=contextFor(this.document);
-    const networks=new Map<string,Network>();
-    for(const [id,data] of Object.entries(this.document.stages))networks.set(id,new Network(this,id,data));
-    for(const raw of this.document.functions||[]){const f=raw as {id:string;graph:NetworkData};networks.set('function:'+f.id,new Network(this,'function:'+f.id,f.graph));}
-    this.networks=networks;
   }
+  get networks():ReadonlyMap<string,Network> {
+    const current=new Map(networkEntries(this.document));
+    for(const [id,data]of current)if(this.networkHandles.get(id)?.data!==data)this.networkHandles.set(id,new Network(this,id,data));
+    for(const id of this.networkHandles.keys())if(!current.has(id))this.networkHandles.delete(id);
+    return this.networkHandles;
+  }
+  createSubgraph(options:SubgraphOptions):Subgraph {return this.subgraph(createSubgraph(this,options).id);}
   subgraph(id:string):Subgraph {return new Subgraph(this,id);}
   assertEditable(){if(!this.editable||!this.active)throw Error('Graph changes require an active transaction');}
   close(){this.active=false;}

@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const context=vm.createContext({crypto:require('node:crypto').webcrypto,TextEncoder});
+vm.runInContext(fs.readFileSync('src/editor/wire_planning.js','utf8'),context);
 vm.runInContext(fs.readFileSync('src/editor/functions_model.js','utf8')+'\nthis.frames=GraphFrames;this.clip=GraphClipboard;this.model=FunctionModel;',context);
 const {frames,clip,model}=context,plain=value=>JSON.parse(JSON.stringify(value));
 const catalog=JSON.parse(fs.readFileSync('src/library/node_catalog.json','utf8')).definitions.map(d=>d.definition);
@@ -40,10 +41,17 @@ const independent=model.independent(imported,call);assert.deepEqual(plain(indepe
 // Exercise the real extraction/duplicate functions without DOM interactions.
 const sourceUI=fs.readFileSync('src/editor/functions_ui.js','utf8'),sourceGraph=fs.readFileSync('src/editor/graph_ui.js','utf8');
 vm.runInContext(`
-  var graph,selection,selected,selectedEdge,stage='pixel',catalog=[];
+  var graph,selection,selected,selectedEdge,editorGraphModel,stage='pixel',catalog=[];
   const clone=x=>JSON.parse(JSON.stringify(x)),current=()=>graph.stages.pixel,canDeleteNode=()=>true;
+  const definition=n=>GrapeGraph.registry.get(n.definitionUuid)?.catalog.definition;
   const uniqueNodeName=name=>name,assignCreatedNodeNames=()=>{};
-  function change(fn){fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);}
+  function change(fn){
+    GrapeGraph.transact(graph,GrapeGraph.registry,(_,model)=>{
+      editorGraphModel=model;try{fn();for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);return graph;}
+      finally{editorGraphModel=null;}
+    });
+  }
+  ${sourceGraph.slice(sourceGraph.indexOf('function withGraphNetwork('),sourceGraph.indexOf('function removeGraphNodes('))}
   ${sourceUI.slice(sourceUI.indexOf('function groupSelection('),sourceUI.indexOf('function renameGraphFunction('))}
   ${sourceGraph.slice(sourceGraph.indexOf('function duplicateSelection('),sourceGraph.indexOf('function installGraphInteractions('))}
   this.extract=(value,ids)=>{graph=value;selection=new Set(ids);groupSelection();return graph;};

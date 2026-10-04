@@ -276,37 +276,34 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
   assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
 }
 function newFunction(){
-  change(()=>{const id=FunctionModel.uid();graph.functions||=[];
-    const f={id,name:'Subgraph '+(graph.functions.filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],graph:{nodes:[{id:'input',name:'Input',definitionUuid:FunctionModel.INPUT,params:{},ui:{x:48,y:144}},{id:'output',name:'Output',definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:624,y:144}}],edges:[{from:['input','value'],to:['output','value']}]}};
-    graph.functions.push(f);instantiate(functionEntry(f),200,180);
+  change(()=>{
+    const f=editorGraphModel.createSubgraph({id:FunctionModel.uid(),name:'Subgraph '+((graph.functions||[]).filter(f=>f.scope==='local').length+1),stage}).data;
+    const n=withGraphNetwork(graph,current(),network=>network.instantiateSubgraph(f.id,'n'+crypto.randomUUID().replaceAll('-','').slice(0,12),{x:snap(200),y:snap(180)}).data);
+    assignCreatedNodeNames([n]);selected=n.id;selection=new Set([n.id]);selectedEdge=null;
   });
 }
 function groupSelection(){
-  const data=current(),chosen=data.nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)&&definition(n)?.key!=='preview'&&!SubgraphSourcePolicy.isSource(n,catalog));if(!chosen.length)return;
+  const chosenIds=new Set(current().nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)&&definition(n)?.key!=='preview'&&!SubgraphSourcePolicy.isSource(n,catalog)).map(n=>n.id));if(!chosenIds.size)return;
   change(()=>{
-    const ids=new Set(chosen.map(n=>n.id)),id=FunctionModel.uid(),callId='n'+crypto.randomUUID().replaceAll('-','').slice(0,12),inputs=[],outputs=[],edges=[],outside=[],incoming=new Map(),outgoing=new Map();
-    for(const e of data.edges){const a=ids.has(e.from[0]),b=ids.has(e.to[0]);
-      if(a&&b){edges.push(clone(e));continue;}
-      if(!a&&!b){outside.push(clone(e));continue;}
-      if(b){const n=chosen.find(n=>n.id===e.to[0]),type=ports(n,'inputs')[e.to[1]],key=e.from.join(':')+':'+type;
-        if(!incoming.has(key)){const p='in'+(inputs.length+1);incoming.set(key,p);const value=defaultInput(n,e.to[1],type);const from=data.nodes.find(n=>n.id===e.from[0]);const name=SubgraphSourcePolicy.isSource(from,catalog)?SubgraphSourcePolicy.inputName(graph,from,e.from[1],e.to[1]):e.to[1];inputs.push({id:p,name,type,default:isResourceType(type)?null:value??filledValue(type)});outside.push({...clone(e),from:clone(e.from),to:[callId,p]});}
-        edges.push({...clone(e),from:['input',incoming.get(key)],to:clone(e.to)});
-      }else{const n=chosen.find(n=>n.id===e.from[0]),type=ports(n,'outputs')[e.from[1]],key=e.from.join(':');
-        if(!outgoing.has(key)){const p='out'+(outputs.length+1);outgoing.set(key,p);outputs.push({id:p,name:e.from[1],type,default:filledValue(type)});edges.push({...clone(e),from:clone(e.from),to:['output',p]});}
-        outside.push({...clone(e),from:[callId,outgoing.get(key)],to:clone(e.to)});
-      }
-    }
-    const x=Math.min(...chosen.map(n=>n.ui.x)),y=Math.min(...chosen.map(n=>n.ui.y));
-    const nodes=chosen.map(n=>({...clone(n),ui:{...clone(n.ui),x:n.ui.x-x+288,y:n.ui.y-y+144}}));
-    nodes.push({id:'input',name:uniqueNodeName('Input',null,nodes),definitionUuid:FunctionModel.INPUT,params:{},ui:{x:24,y:144}},{id:'output',name:uniqueNodeName('Output',null,nodes),definitionUuid:FunctionModel.OUTPUT,params:{},ui:{x:Math.max(...nodes.map(n=>n.ui.x))+288,y:144}});
-    const f={id,name:'Subgraph '+((graph.functions||[]).filter(f=>f.scope==='local').length+1),scope:'local',stages:[stage],inputs,outputs,graph:{nodes,edges}};
-    GraphFrames.write(f.graph,GraphFrames.copy(data,ids));
-    const owner=(graph.functions||[]).find(item=>item.graph===data),oldScope=owner?'fn_'+owner.id:stage;
-    graph.functions||=[];graph.functions.push(f);data.nodes=data.nodes.filter(n=>!ids.has(n.id));data.nodes.push({id:callId,definitionUuid:FunctionModel.CALL,params:{functionId:id},ui:{x,y}});assignCreatedNodeNames([data.nodes.at(-1)]);data.edges=outside;selected=callId;selection=new Set([callId]);selectedEdge=null;
-    GraphArrayLengths.walk(graph,(ref,old)=>ref.scope===oldScope&&ids.has(ref.source[0])?GraphArrayLengths.token('fn_'+id,ref.source):old);
+    // prepareSemanticEdit may have replaced a Library scope with its local
+    // copy. Resolve the writable data after that step, never mutate the source.
+    const data=current(),chosen=data.nodes.filter(n=>chosenIds.has(n.id));
+    const ids=new Set(chosen.map(n=>n.id)),id=FunctionModel.uid(),metadata={nodes:chosen};
+    GraphFrames.write(metadata,GraphFrames.copy(data,ids));
+    const call=withGraphNetwork(graph,data,network=>network.groupSubgraph(ids,{
+      id,callId:'n'+crypto.randomUUID().replaceAll('-','').slice(0,12),stage,
+      name:'Subgraph '+((graph.functions||[]).filter(f=>f.scope==='local').length+1),ui:metadata.ui,
+      port:(n,direction,key)=>{const type=ports(n,direction+'s')[key];return {key,direction,type,default:direction==='input'?(isResourceType(type)?null:defaultInput(n,key,type)):undefined};},
+      defaultValue:type=>isResourceType(type)?null:filledValue(type),
+      inputName:(source,port,fallback)=>SubgraphSourcePolicy.isSource(source,catalog)?SubgraphSourcePolicy.inputName(graph,source,port,fallback):fallback
+    }).data);
+    assignCreatedNodeNames([call]);selected=call.id;selection=new Set([call.id]);selectedEdge=null;
+    // Unmigrated array inference still supplies its type description. Selection,
+    // rewiring, definition ownership and scope relocation belong to the model.
     if(chosen.some(n=>n.definitionUuid==='sgrape.builtin.array_create')){
-      const plan=planAutoGraph(graph,f.graph,f);
-      for(const port of f.outputs){const edge=edges.find(e=>e.to[0]==='output'&&e.to[1]===port.id);if(edge)port.type=plan.ports.get(edge.from[0]).outputs[edge.from[1]];}
+      const f=FunctionModel.find(graph,id),plan=planAutoGraph(graph,f.graph,f);
+      const output=f.graph.nodes.find(n=>GrapeGraph.registry.get(n.definitionUuid)?.role==='subgraph-output');
+      for(const port of f.outputs){const edge=f.graph.edges.find(e=>e.to[0]===output.id&&e.to[1]===port.id);if(edge)port.type=plan.ports.get(edge.from[0]).outputs[edge.from[1]];}
     }
   });
 }

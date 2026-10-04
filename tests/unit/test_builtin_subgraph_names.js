@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const payload=JSON.parse(fs.readFileSync(0,'utf8'));
 const context=vm.createContext({assert,payload,console,crypto:globalThis.crypto,TextEncoder});
-for(const file of ['functions_model.js','functions_ui.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/editor',file),'utf8'),context);
+for(const file of ['functions_model.js','functions_ui.js','wire_planning.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/editor',file),'utf8'),context);
 vm.runInContext(`
 const clone=value=>JSON.parse(JSON.stringify(value)),equal=(a,b)=>assert.equal(JSON.stringify(a),JSON.stringify(b));
 const originalLibrary=clone(payload.library),graph=clone(payload.graph),typeContract=payload.contract;

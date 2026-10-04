@@ -31,6 +31,7 @@ const definition: NodeModule = {
   role: 'value',
 
   referencedGraph: node => String(node.params.functionId),
+  reference: graphId => ({functionId: graphId}),
 
   supports: (node, context) =>
     numericInterface(context.subgraph?.(String(node.params.functionId))),

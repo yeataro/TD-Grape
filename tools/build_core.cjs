@@ -39,7 +39,7 @@ function load(id){
   },module,module.exports);return module.exports;
 }
 const api=load('__composition');GrapeWirePlanning=api.GrapeWirePlanning;GrapeTopCompiler=api.GrapeTopCompiler;GrapeGraph=api.GrapeGraph;
-})();\n`;
+})();\nif(typeof module!=='undefined'&&module.exports)module.exports=GrapeGraph;\n`;
 const context={};vm.runInNewContext(bundled,context);
 const ordinary={},nativeSignatures={},catalogPath=path.join(root,'src/library/node_catalog.json');
 const catalog=JSON.parse(fs.readFileSync(catalogPath,'utf8'));

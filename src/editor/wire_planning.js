@@ -181,7 +181,7 @@ function appendNodeComments(lines, start, note) {
 "graph":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GraphDocument = exports.GraphError = exports.Network = exports.Edge = exports.Node = exports.Port = exports.contextFor = exports.changesBetween = void 0;
+exports.GraphDocument = exports.GraphError = exports.Network = exports.Edge = exports.Node = exports.Port = exports.ScopeReferences = exports.contextFor = exports.changesBetween = void 0;
 exports.transact = transact;
 const model_1 = require("./model");
 const node_module_1 = require("./node_module");
@@ -193,6 +193,9 @@ Object.defineProperty(exports, "changesBetween", { enumerable: true, get: functi
 var node_module_2 = require("./node_module");
 Object.defineProperty(exports, "contextFor", { enumerable: true, get: function () { return node_module_2.contextFor; } });
 const subgraphs_1 = require("./subgraphs");
+const subgraph_operations_1 = require("./subgraph_operations");
+var scope_references_1 = require("./scope_references");
+Object.defineProperty(exports, "ScopeReferences", { enumerable: true, get: function () { return scope_references_1.ScopeReferences; } });
 function clone(value, immutable = false) {
     if (!value || typeof value !== 'object')
         return value;
@@ -261,7 +264,7 @@ class Node {
     get inputs() { return Object.keys(this.interface.inputs).map(k => this.port('input', k)); }
     get outputs() { return Object.keys(this.interface.outputs).map(k => this.port('output', k)); }
     configure(selection) {
-        this.network.graph.assertEditable();
+        this.network.assertEditable();
         const node = this.data, module = this.definition;
         if (!node || !module)
             throw Error('Node configuration is unavailable');
@@ -269,7 +272,7 @@ class Node {
         this.replace(candidate);
     }
     update(patch) {
-        this.network.graph.assertEditable();
+        this.network.assertEditable();
         const node = this.data;
         if (!node)
             throw Error('Node no longer exists');
@@ -285,7 +288,7 @@ class Node {
         this.replace(candidate);
     }
     edit(command, value) {
-        this.network.graph.assertEditable();
+        this.network.assertEditable();
         const node = this.data, module = this.definition;
         if (!node || !module)
             throw Error('Node command is unavailable');
@@ -356,6 +359,22 @@ class Network {
         this.temporaryIds = new WeakMap();
         this.temporarySequence = 0;
     }
+    assertEditable() {
+        this.graph.assertEditable();
+        if (this.graph.networks.get(this.id) !== this)
+            throw Error('Network no longer belongs to this graph');
+    }
+    groupSubgraph(ids, options) {
+        this.assertEditable();
+        if (this.removedNodes.has(options.callId))
+            throw Error('Retired node ID');
+        const call = (0, subgraph_operations_1.groupSubgraph)(this, ids, options);
+        ids.forEach(id => this.removedNodes.add(id));
+        return this.node(call.id);
+    }
+    instantiateSubgraph(definitionId, id, ui = {}) {
+        return this.node((0, subgraph_operations_1.instantiateSubgraph)(this, definitionId, id, ui).id);
+    }
     get context() { var _a; return (0, node_module_1.contextFor)(this.graph.document, (_a = this.graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.graph === this.data)); }
     node(id) { let n = this.nodeHandles.get(id); if (!n) {
         n = new Node(this, id);
@@ -383,7 +402,7 @@ class Network {
     /** Insert authored node data through the same validation/ownership seam. */
     insert(authored) {
         const { id, definitionUuid } = authored;
-        this.graph.assertEditable();
+        this.assertEditable();
         if (!id || this.nodeData(id) || this.removedNodes.has(id))
             throw Error('Invalid, duplicate or retired node ID');
         const module = this.graph.registry.get(definitionUuid);
@@ -401,7 +420,7 @@ class Network {
      * the model owns validation, copied state and new edge identities. Missing
      * capabilities may be retained explicitly, without making them executable. */
     insertFragment(fragment, options = {}) {
-        this.graph.assertEditable();
+        this.assertEditable();
         const nodes = fragment.nodes.map(n => (0, model_1.copy)(n)), edges = fragment.edges.map(e => (0, model_1.copy)(e));
         const ids = new Set(this.data.nodes.map(n => n.id)), ports = new Set(this.data.edges.map(e => JSON.stringify(e.to)));
         for (const n of nodes) {
@@ -441,18 +460,20 @@ class Network {
         this.removeAll([node]);
     }
     removeAll(nodes) {
-        this.graph.assertEditable();
+        this.assertEditable();
         if (nodes.some(n => n.network !== this))
             throw Error('Node belongs to another network');
         const ids = new Set(nodes.filter(n => this.nodeData(n.id)).map(n => n.id));
         if (!ids.size)
             return;
+        const roots = this.data.nodes.filter(n => ids.has(n.id)).map(n => { var _a, _b; return (_b = (_a = this.graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); }).filter((id) => !!id);
         const sequence = edgeSequence(this.data);
         if (sequence)
             this.data.edgeSequence = sequence;
         ids.forEach(id => this.removedNodes.add(id));
         this.data.nodes = this.data.nodes.filter(n => !ids.has(n.id));
         this.data.edges = this.data.edges.filter(e => !ids.has(e.from[0]) && !ids.has(e.to[0]));
+        (0, subgraph_operations_1.collectSubgraphs)(this.graph, roots, this.data);
     }
     plan(policy, intent, overrides = new Map()) {
         const nodes = this.nodes.map(n => {
@@ -567,7 +588,7 @@ class Network {
         return ordered;
     }
     connect(from, to, policy) {
-        this.graph.assertEditable();
+        this.assertEditable();
         if (from.node.network !== this || to.node.network !== this || from.direction !== 'output' || to.direction !== 'input')
             throw Error('Connection endpoints must belong to this network');
         const result = this.plan(policy, { kind: 'wire', from: { node: from.node.id, port: from.key }, to: { node: to.node.id, port: to.key } });
@@ -602,7 +623,7 @@ class Network {
         this.disconnectAll([edge]);
     }
     disconnectAll(edges) {
-        this.graph.assertEditable();
+        this.assertEditable();
         if (edges.some(e => e.network !== this))
             throw Error('Edge belongs to another network');
         this.indexEdges();
@@ -640,18 +661,23 @@ class GraphDocument {
         this.registry = registry;
         this.fallback = fallback;
         this.editable = editable;
+        this.networkHandles = new Map();
         this.active = true;
         this.document = editable ? document : clone(document, true);
         this.context = (0, node_module_1.contextFor)(this.document);
-        const networks = new Map();
-        for (const [id, data] of Object.entries(this.document.stages))
-            networks.set(id, new Network(this, id, data));
-        for (const raw of this.document.functions || []) {
-            const f = raw;
-            networks.set('function:' + f.id, new Network(this, 'function:' + f.id, f.graph));
-        }
-        this.networks = networks;
     }
+    get networks() {
+        var _a;
+        const current = new Map(networkEntries(this.document));
+        for (const [id, data] of current)
+            if (((_a = this.networkHandles.get(id)) === null || _a === void 0 ? void 0 : _a.data) !== data)
+                this.networkHandles.set(id, new Network(this, id, data));
+        for (const id of this.networkHandles.keys())
+            if (!current.has(id))
+                this.networkHandles.delete(id);
+        return this.networkHandles;
+    }
+    createSubgraph(options) { return this.subgraph((0, subgraph_operations_1.createSubgraph)(this, options).id); }
     subgraph(id) { return new subgraphs_1.Subgraph(this, id); }
     assertEditable() { if (!this.editable || !this.active)
         throw Error('Graph changes require an active transaction'); }
@@ -1441,6 +1467,7 @@ const definition = {
     structural: true,
     role: 'value',
     referencedGraph: node => String(node.params.functionId),
+    reference: graphId => ({ functionId: graphId }),
     supports: (node, context) => { var _a; return (0, node_sdk_1.numericInterface)((_a = context.subgraph) === null || _a === void 0 ? void 0 : _a.call(context, String(node.params.functionId))); },
     ports: (node, context) => (0, node_sdk_1.subgraphPorts)((0, node_sdk_1.requireSubgraph)(context, String(node.params.functionId)), 'call'),
     presentation: (node, context) => (0, node_sdk_1.subgraphPresentation)((0, node_sdk_1.requireSubgraph)(context, String(node.params.functionId)), 'call'),
@@ -2483,6 +2510,52 @@ function compatible(source, target, types, conversions) {
 }
 
 },
+"scope_references":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ScopeReferences = void 0;
+const identifier = /^[A-Za-z][A-Za-z0-9_]{0,70}$/;
+const opaque = new Set(['code', 'ui', 'source', 'origin', 'catalogSnapshot']);
+const fields = new Set(['type', 'elementType', 'fromType', 'toType', 'fixedType', 'length']);
+function token(scope, source) {
+    const parts = [scope, ...source];
+    if (parts.length !== 3 || !parts.every(p => identifier.test(p)))
+        throw Error('Invalid scoped output reference');
+    return 'sg_extent_' + [...parts.join('\0')]
+        .map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+}
+function reference(value) {
+    if (typeof value !== 'string' || !/^sg_extent_(?:[0-9a-f]{2})+$/.test(value))
+        return null;
+    const parts = value.slice(10).match(/../g)
+        .map(v => String.fromCharCode(parseInt(v, 16))).join('').split('\0');
+    return parts.length === 3 && parts.every(p => identifier.test(p)) ?
+        { scope: parts[0], source: [parts[1], parts[2]] } : null;
+}
+function walk(value, replace, mutate = true) {
+    if (Array.isArray(value)) {
+        value.forEach(v => walk(v, replace, mutate));
+        return;
+    }
+    if (!value || typeof value !== 'object')
+        return;
+    const object = value;
+    for (const [key, item] of Object.entries(object)) {
+        if (fields.has(key) && typeof item === 'string') {
+            const next = item.replace(/\bsg_extent_(?:[0-9a-f]{2})+\b/g, old => {
+                const ref = reference(old);
+                return ref ? replace(ref, old) : old;
+            });
+            if (mutate)
+                object[key] = next;
+        }
+        else if (!opaque.has(key))
+            walk(item, replace, mutate);
+    }
+}
+exports.ScopeReferences = { token, reference, walk };
+
+},
 "subgraph_compiler":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2765,6 +2838,236 @@ function subgraphPresentation(f, kind) {
         portLabels: kind === 'call' ? { inputs: names(f.inputs), outputs: names(f.outputs) } :
             kind === 'input' ? { outputs: names(f.inputs) } : { inputs: names(f.outputs) }
     };
+}
+
+},
+"subgraph_operations":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.insertSubgraph = insertSubgraph;
+exports.createSubgraph = createSubgraph;
+exports.instantiateSubgraph = instantiateSubgraph;
+exports.groupSubgraph = groupSubgraph;
+exports.collectSubgraphs = collectSubgraphs;
+const model_1 = require("./model");
+const scope_references_1 = require("./scope_references");
+const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
+function structural(graph, role) {
+    const matches = graph.registry.modules.filter(m => m.structural &&
+        (role === 'call' ? !!m.reference : m.role === 'subgraph-' + role));
+    if (matches.length !== 1)
+        throw Error('Subgraph structural module is unavailable or ambiguous');
+    return matches[0];
+}
+function authored(module, id, ui, params = {}) {
+    const d = module.catalog.definition;
+    return { id, definitionUuid: d.definitionUuid, params: { ...(0, model_1.copy)(d.defaults), ...params }, ui };
+}
+function validate(graph, f) {
+    var _a, _b;
+    graph.assertEditable();
+    if ((((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.length) || 0) >= 64)
+        throw Object.assign(Error('At most 64 Subgraph definitions are supported'), { code: 'function.limit' });
+    if (!validId(f.id) || ((_b = graph.document.functions) === null || _b === void 0 ? void 0 : _b.some(d => d.id === f.id)))
+        throw Error('Invalid or duplicate Subgraph identity');
+    if (!f.name.trim() || f.name.length > 80 || /[\x00-\x1f\x7f]/.test(f.name))
+        throw Error('Invalid Subgraph name');
+    if (f.scope !== 'local' || !f.stages.length || f.stages.some(s => !['vertex', 'pixel'].includes(s)))
+        throw Error('Invalid Subgraph scope or stage');
+    for (const ports of [f.inputs, f.outputs]) {
+        if (ports.length > 16 || new Set(ports.map(p => p.id)).size !== ports.length ||
+            ports.some(p => !validId(p.id) || typeof p.type !== 'string' || !p.type || p.default === undefined))
+            throw Error('Invalid Subgraph interface');
+    }
+    const ids = new Set(f.graph.nodes.map(n => n.id));
+    if (ids.size !== f.graph.nodes.length || f.graph.nodes.length > 256 || f.graph.edges.length > 1024 ||
+        [...ids].some(id => !validId(id)))
+        throw Error('Invalid Subgraph network');
+    for (const e of f.graph.edges)
+        if (!ids.has(e.from[0]) || !ids.has(e.to[0]))
+            throw Error('Invalid Subgraph edge endpoint');
+}
+function insertSubgraph(graph, f) {
+    var _a;
+    validate(graph, f);
+    const owned = (0, model_1.copy)(f);
+    ((_a = graph.document).functions || (_a.functions = [])).push(owned);
+    return owned;
+}
+function createSubgraph(graph, options) {
+    const input = structural(graph, 'input'), output = structural(graph, 'output');
+    return insertSubgraph(graph, {
+        id: options.id, name: options.name, scope: 'local', stages: [options.stage],
+        inputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [1, 1, 1, 1] }],
+        outputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [0, 0, 0, 1] }],
+        graph: { nodes: [{ ...authored(input, 'input', { x: 48, y: 144 }), name: 'Input' }, { ...authored(output, 'output', { x: 624, y: 144 }), name: 'Output' }],
+            edges: [{ from: ['input', 'value'], to: ['output', 'value'] }] }
+    });
+}
+function instantiateSubgraph(network, definitionId, id, ui = {}) {
+    var _a;
+    network.assertEditable();
+    const graph = network.graph, f = (_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.id === definitionId);
+    if (!f)
+        throw Error('Subgraph definition no longer exists');
+    const module = structural(graph, 'call');
+    const n = authored(module, id, (0, model_1.copy)(ui), module.reference(definitionId));
+    // Structural graph editing also preserves interfaces whose compiler has not
+    // migrated yet. Their descriptions remain the explicit editor adapter's job.
+    return network.insertFragment({ nodes: [n], edges: [] }, { unavailable: 'preserve' })[0].data;
+}
+function defaultValue(type, options) {
+    if (options.defaultValue)
+        return options.defaultValue(type);
+    if (type === 'float')
+        return 0;
+    if (/^vec[234]$/.test(type))
+        return Array(Number(type.slice(-1))).fill(0);
+    throw Error('A default value description is required for ' + type);
+}
+/** Extract selected graph content. UI supplies selection and view metadata;
+ * the model owns interface deduplication, rewiring and reference relocation. */
+function groupSubgraph(network, selection, options) {
+    var _a, _b, _c, _d, _e;
+    network.assertEditable();
+    const graph = network.graph, data = network.data;
+    const chosen = data.nodes.filter(n => selection.has(n.id)), ids = new Set(chosen.map(n => n.id));
+    if (!chosen.length || chosen.length !== selection.size)
+        throw Error('Invalid Subgraph selection');
+    if (!validId(options.callId) || data.nodes.some(n => n.id === options.callId))
+        throw Error('Invalid or duplicate instance identity');
+    if (chosen.some(n => {
+        var _a;
+        const role = (_a = graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.role;
+        return role && role !== 'value';
+    }))
+        throw Error('Stage outputs and Subgraph boundaries cannot be grouped');
+    const unique = (base) => { let id = base, i = 0; while (ids.has(id))
+        id = base + '_' + ++i; ids.add(id); return id; };
+    const inputId = unique('input'), outputId = unique('output');
+    // Boundary IDs are not members of the original selection.
+    const selected = new Set(chosen.map(n => n.id));
+    const inputs = [], outputs = [], edges = [], outside = [];
+    const incoming = new Map(), outgoing = new Map();
+    const byId = new Map(data.nodes.map(n => [n.id, n]));
+    const port = (n, direction, key) => {
+        var _a;
+        const projected = network.node(n.id).interface;
+        const spec = (direction === 'input' ? projected.inputs : projected.outputs)[key] || ((_a = options.port) === null || _a === void 0 ? void 0 : _a.call(options, n, direction, key));
+        if (!spec)
+            throw Error('Missing Subgraph endpoint description');
+        return spec;
+    };
+    for (const edge of data.edges) {
+        const e = (0, model_1.copy)(edge), a = selected.has(e.from[0]), b = selected.has(e.to[0]);
+        if (a && b) {
+            edges.push(e);
+            continue;
+        }
+        if (!a && !b) {
+            outside.push(e);
+            continue;
+        }
+        if (b) {
+            const n = byId.get(e.to[0]), spec = port(n, 'input', e.to[1]);
+            const key = JSON.stringify([e.from, spec.type]);
+            if (!incoming.has(key)) {
+                const id = 'in' + (inputs.length + 1);
+                incoming.set(key, id);
+                const value = (_c = (_b = (_a = n.inputValues) === null || _a === void 0 ? void 0 : _a[e.to[1]]) !== null && _b !== void 0 ? _b : spec.default) !== null && _c !== void 0 ? _c : defaultValue(spec.type, options);
+                inputs.push({ id, name: ((_d = options.inputName) === null || _d === void 0 ? void 0 : _d.call(options, byId.get(e.from[0]), e.from[1], e.to[1])) || e.to[1], type: spec.type, default: (0, model_1.copy)(value) });
+                outside.push({ ...e, to: [options.callId, id] });
+            }
+            edges.push({ ...e, from: [inputId, incoming.get(key)] });
+        }
+        else {
+            const n = byId.get(e.from[0]), spec = port(n, 'output', e.from[1]), key = JSON.stringify(e.from);
+            if (!outgoing.has(key)) {
+                const id = 'out' + (outputs.length + 1);
+                outgoing.set(key, id);
+                outputs.push({ id, name: e.from[1], type: spec.type, default: defaultValue(spec.type, options) });
+                edges.push({ ...e, to: [outputId, id] });
+            }
+            outside.push({ ...e, from: [options.callId, outgoing.get(key)] });
+        }
+    }
+    const coordinate = (n, key) => { var _a, _b; return Number((_b = (_a = n.ui) === null || _a === void 0 ? void 0 : _a[key]) !== null && _b !== void 0 ? _b : 0); };
+    const x = Math.min(...chosen.map(n => coordinate(n, 'x'))), y = Math.min(...chosen.map(n => coordinate(n, 'y')));
+    const nodes = chosen.map(n => ({ ...(0, model_1.copy)(n), ui: { ...(0, model_1.copy)(n.ui || {}), x: coordinate(n, 'x') - x + 288, y: coordinate(n, 'y') - y + 144 } }));
+    const boundary = (role, id, ui) => {
+        const n = authored(structural(graph, role), id, ui), base = role === 'input' ? 'Input' : 'Output';
+        n.name = base;
+        let suffix = 0;
+        while (nodes.some(v => v.name === n.name))
+            n.name = base + '_' + ++suffix;
+        nodes.push(n);
+    };
+    boundary('input', inputId, { x: 24, y: 144 });
+    boundary('output', outputId, { x: Math.max(...nodes.map(n => Number(n.ui.x))) + 288, y: 144 });
+    const f = { id: options.id, name: options.name, scope: 'local', stages: [options.stage], inputs, outputs,
+        graph: { nodes, edges, ...(options.ui ? { ui: (0, model_1.copy)(options.ui) } : {}) } };
+    validate(graph, f);
+    const callModule = structural(graph, 'call');
+    const call = authored(callModule, options.callId, { x, y }, callModule.reference(f.id));
+    const owner = (_e = graph.document.functions) === null || _e === void 0 ? void 0 : _e.find(f => f.graph === data), oldScope = owner ? 'fn_' + owner.id : network.id;
+    insertSubgraph(graph, f);
+    // A move must not collect definitions used by the nodes it is moving.
+    data.nodes = data.nodes.filter(n => !selected.has(n.id));
+    data.nodes.push(call);
+    data.edges = outside;
+    scope_references_1.ScopeReferences.walk(graph.document, (ref, old) => ref.scope === oldScope && selected.has(ref.source[0]) ?
+        scope_references_1.ScopeReferences.token('fn_' + f.id, ref.source) : old);
+    return call;
+}
+/** Collect only the dependency closure of removed instances. Other reusable
+ * definitions and the active scope remain independent graph documents. */
+function collectSubgraphs(graph, roots, active) {
+    if (!roots.length)
+        return;
+    const definitions = new Map((graph.document.functions || []).map(f => [f.id, f]));
+    const references = (value) => {
+        const result = new Set();
+        function scan(item) {
+            var _a, _b;
+            if (Array.isArray(item)) {
+                item.forEach(scan);
+                return;
+            }
+            if (!item || typeof item !== 'object')
+                return;
+            const n = item;
+            if (n.definitionUuid && n.params) {
+                const ref = (_b = (_a = graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+                if (ref)
+                    result.add(ref);
+            }
+            for (const [key, child] of Object.entries(item))
+                if (!['ui', 'source', 'origin', 'code', 'catalogSnapshot'].includes(key))
+                    scan(child);
+        }
+        scan(value);
+        scope_references_1.ScopeReferences.walk(value, (ref, old) => { if (ref.scope.startsWith('fn_'))
+            result.add(ref.scope.slice(3)); return old; }, false);
+        return result;
+    };
+    const dependencies = new Map([...definitions].map(([id, f]) => [id, references(f)]));
+    const closure = (seeds) => {
+        const seen = new Set(), pending = [...seeds];
+        while (pending.length) {
+            const id = pending.pop();
+            if (seen.has(id))
+                continue;
+            seen.add(id);
+            pending.push(...(dependencies.get(id) || []));
+        }
+        return seen;
+    };
+    const candidates = closure(roots), retained = references({ ...graph.document, functions: [], catalogSnapshot: undefined });
+    for (const [id, f] of definitions)
+        if (!candidates.has(id) || f.graph === active)
+            retained.add(id);
+    const keep = closure(retained);
+    graph.document.functions = (graph.document.functions || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
 }
 
 },
@@ -3164,3 +3467,4 @@ function load(id){
 }
 const api=load('__composition');GrapeWirePlanning=api.GrapeWirePlanning;GrapeTopCompiler=api.GrapeTopCompiler;GrapeGraph=api.GrapeGraph;
 })();
+if(typeof module!=='undefined'&&module.exports)module.exports=GrapeGraph;

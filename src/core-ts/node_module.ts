@@ -47,6 +47,8 @@ export interface NodeModule {
   /** Structural modules are instantiated from a graph definition, not the palette. */
   readonly structural?:boolean;
   referencedGraph?(node:Node):string;
+  /** Initial parameters for a new instance of a graph definition. */
+  reference?(graphId:string):ObjectValue;
   supports(node:Node,context:NodeContext):boolean;
   ports(node:Node,context:NodeContext):readonly PortSpec[];
   /** Complete native input tuples for the already-selected output interface. */

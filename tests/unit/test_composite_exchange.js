@@ -2,6 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto').webcrypto;
 const code=fs.readFileSync('src/editor/functions_model.js','utf8');
 const context={crypto,TextEncoder,console};vm.createContext(context);
+vm.runInContext(fs.readFileSync('src/editor/wire_planning.js','utf8'),context);
 vm.runInContext(code+'\nglobalThis.models={GraphTypeDefinitions,GraphClipboard,FunctionModel};',context);
 const {GraphClipboard:clipboard,FunctionModel:fn,GraphTypeDefinitions:defs}=context.models;
 const shape={id:'sample',name:'Sample',provider:'generated',fields:[{id:'position',name:'position',type:'vec2'}]};

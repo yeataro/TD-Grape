@@ -838,10 +838,7 @@ function withGraphNetwork(document,data,edit){
   try{return edit(model.networks.get('planning'));}finally{model.close();}
 }
 function removeGraphNodes(document,data,ids){
-  const modules=data.nodes.filter(n=>ids.has(n.id)&&frontendNodeModule(document,n)&&!frontendNodeModule(document,n).structural);
-  if(modules.length)withGraphNetwork(document,data,network=>network.removeAll(modules.map(n=>network.node(n.id))));
-  // Remaining subgraph/legacy nodes retain their ownership and cleanup policy.
-  if(data.nodes.some(n=>ids.has(n.id)))FunctionModel.removeNodes(document,data,ids);
+  withGraphNetwork(document,data,network=>network.removeAll(data.nodes.filter(n=>ids.has(n.id)).map(n=>network.node(n.id))));
 }
 function removeGraphEdges(document,data,predicate){
   withGraphNetwork(document,data,network=>{
