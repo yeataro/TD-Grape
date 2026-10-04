@@ -21,7 +21,6 @@ test('capability selection excludes whole graphs before execution',()=>{
     g=>g.target='mat',g=>g.functions=[{}],g=>g.topInputs=[{}],g=>g.typeDefinitions=[{}],
     g=>g.stages.pixel.nodes.push({id:'dynamic',definitionUuid:'sgrape.builtin.glsl_code',params:{inputs:[],outputs:[]}}),
     g=>g.stages.pixel.nodes.push({id:'matrix',definitionUuid:'sgrape.builtin.multiply',params:{type:'mat4'}}),
-    g=>g.stages.pixel.nodes[0].ui={comment:'Preserve emitted annotations'},
     g=>g.stages.pixel.nodes=Array.from({length:257},(_,i)=>({...g.stages.pixel.nodes[0],id:'n'+i})),
     g=>g.stages.pixel.edges=Array.from({length:1025},()=>g.stages.pixel.edges[0]),
     g=>g.declarations.push({id:'texture',kind:'sampler',type:'sampler2D',name:'uTexture',value:null}),

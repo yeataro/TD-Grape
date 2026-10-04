@@ -23,6 +23,7 @@ const currentFunction=()=>FunctionModel.find(graph,graphTrail.at(-1));
 const nodeRenderProjections=new WeakMap();
 function nodeDefinition(n){
   if(nodeRenderProjections.has(n))return nodeRenderProjections.get(n).definition;
+  const modular=moduleDefinition(graph,n,currentFunction());if(modular)return modular;
   if(n.definitionUuid===FunctionModel.CALL){
     const f=FunctionModel.find(graph,n.params.functionId);if(!f)return null;
     return {key:'function_call',label:f.name,descriptionKey:f.scope==='local'?'help.function':(f.descriptionKey||'help.function'),inputs:Object.fromEntries(f.inputs.map(p=>[p.id,p.type])),outputs:Object.fromEntries(f.outputs.map(p=>[p.id,p.type])),stages:f.stages,defaults:{functionId:f.id},definitionUuid:FunctionModel.CALL,functionId:f.id};
@@ -260,13 +261,19 @@ function instantiate(d,x,y,type=null,{locked=false,declarationId=null,inputSeed=
     const decl=declarationId?graph.declarations.find(x=>x.id===declarationId&&x.kind==='sampler'):createInputDeclaration('sampler','sampler2D',{...inputSeed,preview});
     if(!decl)throw Error('Sampler source is unavailable.');params.declarationId=decl.id;source=decl;
   }
-  const n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
+  let n={id,definitionUuid:d.definitionUuid,params,ui:{x:snap(x),y:snap(y),...(supportsAutoType(d)?{typeMode:locked?'locked':'auto'}:{})}};
+  if(frontendNodeModule(graph,n)&&n.ui.typeMode)n.ui.typeMode='locked';
   if(['comment','generated_glsl'].includes(d.key))n.ui.noteTitleOnSelection=true;
   if(d.key==='generated_glsl')Object.assign(n.ui,{width:480,height:300});
-  normalizeNodeValues(n,d);
+  const module=frontendNodeModule(graph,n);
+  if(module?.configure&&params.type)configureModuleNode(graph,n,{type:params.type});
+  else if(!module)normalizeNodeValues(n,d);
   if(d.revisionHash)n.revisionHash=d.revisionHash;
   if(preview){if(!isSourceReferenceNode(n))n.name=uniqueNodeName(nodeTypeLabel(d,n.params));return {node:n,source,definition:n.definitionUuid===FunctionModel.CALL?{...d,key:'function_call'}:d};}
-  current().nodes.push(n);assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
+  if(module){
+    n=withGraphNetwork(graph,current(),network=>network.insert(n).data);
+  }else current().nodes.push(n);
+  assignCreatedNodeNames([n]);selected=id;selection=new Set([id]);selectedEdge=null;return n;
 }
 function newFunction(){
   change(()=>{const id=FunctionModel.uid();graph.functions||=[];
@@ -376,6 +383,7 @@ function vertexBoundaryInspector(box,n,d){
   add.onclick=()=>change(()=>addVertexPort({id:'p'+crypto.randomUUID().replaceAll('-','').slice(0,12),name:'Value',type:'float',default:0}));box.append(add);
 }
 function sparePortDirection(n){
+  const spare=n&&moduleNodePresentation(graph,n)?.spare;if(spare)return spare.direction==='input'?'outputs':'inputs';
   if(n?.definitionUuid==='sgrape.builtin.math')return 'outputs';
   if(n?.definitionUuid==='sgrape.builtin.switch')return 'outputs';
   if(editorTarget==='mat'&&!currentFunction()){
@@ -385,6 +393,7 @@ function sparePortDirection(n){
   return n?.definitionUuid===FunctionModel.INPUT?'inputs':n?.definitionUuid===FunctionModel.OUTPUT?'outputs':null;
 }
 function sparePortInterface(n){
+  const spare=n&&moduleNodePresentation(graph,n)?.spare;if(spare)return {[spare.direction==='input'?'outputs':'inputs']:Array.from({length:spare.count},()=>({type:spare.type}))};
   if(n?.definitionUuid==='sgrape.builtin.math')return {outputs:Array.from({length:n.params.inputCount??3},(_,i)=>({id:'input'+i,type:n.params.type}))};
   if(n?.definitionUuid==='sgrape.builtin.switch')return {outputs:Array.from({length:n.params.caseCount??1},(_,i)=>({id:'case'+i,type:n.params.type}))};
   if(['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n?.definitionUuid)){
@@ -396,6 +405,8 @@ function sparePortInterface(n){
 function sparePortProblem(spare,other){
   const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=sparePortInterface(n);
   const peer=current().nodes.find(n=>n.id===other.node),type=peer&&ports(peer,other.kind)[other.port];
+  const spec=n&&moduleNodePresentation(graph,n)?.spare;
+  if(spec)return other.add||other.kind!==(spec.direction==='input'?'outputs':'inputs')||!(spec.direction==='input'?compatible(type,spec.type):compatible(spec.type,type))?'autoConflict':spec.count>=spec.limit?'portLimit':null;
   if(n?.definitionUuid==='sgrape.builtin.math')return other.add||other.kind!=='outputs'||!compatible(type,n.params.type)?'autoConflict':(n.params.inputCount??3)>=typeContract.math.maxInputs?'portLimit':null;
   if(n?.definitionUuid==='sgrape.builtin.switch')return other.add||other.kind!=='outputs'||type!==n.params.type?'autoConflict':(n.params.caseCount??1)>=(typeContract.switch?.maxCases||16)?'portLimit':null;
   if(other.add||!f||!direction||spare.kind!==(direction==='inputs'?'outputs':'inputs')||!graphInterfaceTypes().includes(type))return 'autoConflict';
@@ -405,6 +416,8 @@ function sparePortProblem(spare,other){
 function materializeSparePort(spare,other){
   const n=current().nodes.find(n=>n.id===spare.node),direction=sparePortDirection(n),f=sparePortInterface(n);
   const peer=current().nodes.find(n=>n.id===other.node),type=ports(peer,other.kind)[other.port];
+  const spec=moduleNodePresentation(graph,n)?.spare;
+  if(spec){editModuleNode(n,spec.command);return {...spare,port:spec.key,type:spec.type,add:false};}
   if(n?.definitionUuid==='sgrape.builtin.math'){const index=n.params.inputCount??3;n.params.steps=clone(mathStoredSteps(n.params));n.params.steps.push({operator:'add',input:index});n.params.inputCount=index+1;return {...spare,port:'input'+index,type:n.params.type,add:false};}
   if(n?.definitionUuid==='sgrape.builtin.switch'){const index=n.params.caseCount??1;n.params.caseCount=index+1;return {...spare,port:'case'+index,type:n.params.type,add:false};}
   const base=(portLabel(peer,other.kind,other.port)||'Value').slice(0,48),names=new Set(f[direction].map(p=>p.name));
@@ -412,25 +425,36 @@ function materializeSparePort(spare,other){
   const id='p'+crypto.randomUUID().replaceAll('-','').slice(0,12);
   const value=direction==='inputs'?defaultInput(peer,other.port,type):null;
   const entry={id,name,type,default:isResourceType(type)?null:value??filledValue(type)};
-  if(currentFunction())f[direction].push(entry);else addVertexPort(entry);
+  if(currentFunction())editFunctionInterface(f,direction,{kind:'add',port:entry},()=>f[direction].push(entry));else addVertexPort(entry);
   return {...spare,port:id,type,add:false};
 }
 function appendSparePort(list,n){
   const direction=sparePortDirection(n),f=sparePortInterface(n);if(!f||!direction)return;
-  const kind=direction==='inputs'?'outputs':'inputs',label=t(n.definitionUuid==='sgrape.builtin.math'?'math.addInput':n.definitionUuid==='sgrape.builtin.switch'?'switch.addCase':direction==='inputs'?'function.quickInput':'function.quickOutput');
+  const spec=moduleNodePresentation(graph,n)?.spare;
+  const kind=direction==='inputs'?'outputs':'inputs',label=t(spec?.label||(n.definitionUuid==='sgrape.builtin.math'?'math.addInput':n.definitionUuid==='sgrape.builtin.switch'?'switch.addCase':direction==='inputs'?'function.quickInput':'function.quickOutput'));
   const vertexPort=['sgrape.builtin.vertex_out','sgrape.builtin.vertex_input'].includes(n.definitionUuid);
-  const named=n.definitionUuid==='sgrape.builtin.math';
+  const named=!!spec||n.definitionUuid==='sgrape.builtin.math';
   const row=el('div',{class:'port-row '+(kind==='inputs'?'input':'output')+' spare-port-row'+(vertexPort?' vertex-spare-port-row':'')+(named?' named-spare-port-row':'')});
   const b=el('button',{class:'port port-add',title:label+' · '+t('function.quickHint'),'aria-label':label,
     'data-kind':kind,'data-port':'__add__','data-type':'spare','data-add-port':'true'});
-  const limit=n.definitionUuid==='sgrape.builtin.math'?typeContract.math.maxInputs:16;
+  const limit=spec?.limit||(n.definitionUuid==='sgrape.builtin.math'?typeContract.math.maxInputs:16);
   b.disabled=readonly||f[direction].length>=limit;
-  if(f[direction].length>=limit)b.title=t(n.definitionUuid==='sgrape.builtin.math'?'math.portLimit':'wire.portLimit');
+  if(f[direction].length>=limit)b.title=t(spec?.limitLabel||(n.definitionUuid==='sgrape.builtin.math'?'math.portLimit':'wire.portLimit'));
   b.onpointerdown=e=>{if(!b.disabled)dragWire(b,e);};
   b.onclick=e=>{e.stopPropagation();if(b.disabled||suppressPortClick)return;const info=portInfo(b);
     if(linkStart&&linkStart.kind!==info.kind)connectPorts(linkStart,info);
     else {linkStart=info;$('#connection').hidden=false;$('#connection').textContent=t('function.quickHint');}};
   row.append(b,el('span',{class:'port-label'},named?label:'+'));list.append(row);
+}
+// Unsupported interface types keep their existing adapter until migrated.
+function editFunctionInterface(f,direction,edit,legacy){
+  const numeric=['float','vec2','vec3','vec4'];
+  const usable=f[direction].every(p=>numeric.includes(p.type))&&
+    (edit.kind!=='add'||numeric.includes(edit.port.type))&&
+    (edit.kind!=='update'||!edit.patch.type||numeric.includes(edit.patch.type));
+  if(!usable)return legacy();
+  if(!editorGraphModel)throw Error('Subgraph interface edit requires a model transaction');
+  return editorGraphModel.subgraph(f.id).editInterface(direction,edit);
 }
 function functionInspector(box,n,d){
   const parameterPage=inspectorTab==='parameters',row=parameterPage?parameterControlRow:field;
@@ -442,42 +466,43 @@ function functionInspector(box,n,d){
   box.append(functionNameField(f,row));
   const direction=d.key==='function_input'?'inputs':'outputs';
   for(const p of f[direction]){
-    const section=el('section',{class:'input-parameter'});section.append(el('h4',{},p.id+' · '+p.type));
+    const section=el('section',{class:'input-parameter','data-function-port':p.id});section.append(el('h4',{},p.id+' · '+p.type));
     // Port-definition tables retain their own grouped authoring layout.
-    section.append(field(t('function.portName'),input(p.name||p.id,v=>change(()=>p.name=v))));
+    section.append(field(t('function.portName'),input(p.name||p.id,v=>change(()=>editFunctionInterface(currentFunction(),direction,{kind:'update',id:p.id,patch:{name:v}},()=>p.name=v)))));
     if(isCompositeType(p.type))section.append(el('code',{},displayType(p.type)));
     else if(isResourceType(p.type))section.append(el('p',{class:'muted'},t('sampler.fallbackHint')));
-    else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>p.default=v),false,'XYZW',p.type));
+    else section.append(numbers(p.default,t('function.portDefault'),v=>change(()=>editFunctionInterface(currentFunction(),direction,{kind:'update',id:p.id,patch:{default:v}},()=>p.default=v)),false,'XYZW',p.type));
     if(inspectorTab==='settings'){
-      section.append(field(t('node.type'),typeSelect(graphInterfaceTypes().map(type=>[type,displayType(type)]),p.type,type=>change(()=>{
+      section.append(field(t('node.type'),typeSelect(graphInterfaceTypes().map(type=>[type,displayType(type)]),p.type,type=>change(()=>editFunctionInterface(currentFunction(),direction,{kind:'update',id:p.id,patch:{type}},()=>{
         const previous=p.type;p.type=type;p.default=convertValue(p.default,type,previous);
         for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id&&direction==='inputs'&&Object.hasOwn(call.inputValues||{},p.id))call.inputValues[p.id]=convertValue(call.inputValues[p.id],type,previous);
-      },{typeChange:true}))));
+      }),{typeChange:true}))));
       const order=el('div',{class:'function-port-order'});
       for(const [delta,label]of [[-1,t('code.up')],[1,t('code.down')]]){
         const button=el('button',{type:'button',title:label,'aria-label':label,'data-port-move':String(delta),'data-port-id':p.id},delta<0?'↑':'↓');
         const index=f[direction].findIndex(item=>item.id===p.id);button.disabled=readonly||index+delta<0||index+delta>=f[direction].length;
-        button.onclick=()=>change(()=>{const list=currentFunction()[direction],index=list.findIndex(item=>item.id===p.id);const [item]=list.splice(index,1);list.splice(index+delta,0,item);});order.append(button);
+        button.onclick=()=>change(()=>editFunctionInterface(currentFunction(),direction,{kind:'move',id:p.id,delta},()=>{const list=currentFunction()[direction],index=list.findIndex(item=>item.id===p.id);const [item]=list.splice(index,1);list.splice(index+delta,0,item);}));order.append(button);
       }
       section.append(order);
       const removePort=el('button',{class:'wide danger'},t('function.removePort'));
-      removePort.onclick=()=>change(()=>{
+      removePort.onclick=()=>change(()=>editFunctionInterface(currentFunction(),direction,{kind:'remove',id:p.id},()=>{
         f[direction]=f[direction].filter(x=>x!==p);
         const boundary=f.graph.nodes.find(n=>n.definitionUuid===(direction==='inputs'?FunctionModel.INPUT:FunctionModel.OUTPUT));
         if(boundary){const side=direction==='inputs'?'from':'to';f.graph.edges=f.graph.edges.filter(e=>e[side][0]!==boundary.id||e[side][1]!==p.id);if(boundary.inputValues)delete boundary.inputValues[p.id];}
         for(const data of everyGraph())for(const call of data.nodes)if(call.definitionUuid===FunctionModel.CALL&&call.params.functionId===f.id){const side=direction==='inputs'?'to':'from';data.edges=data.edges.filter(e=>e[side][0]!==call.id||e[side][1]!==p.id);if(direction==='inputs'&&call.inputValues)delete call.inputValues[p.id];}
-      });section.append(removePort);
+      }));section.append(removePort);
     }
     box.append(section);
   }
   if(inspectorTab==='settings'){
     const add=el('button',{class:'wide'},t('function.addPort'));add.disabled=f[direction].length>=16;
-    add.onclick=()=>change(()=>f[direction].push({id:'p'+crypto.randomUUID().replaceAll('-','').slice(0,8),name:'Value',type:'float',default:0}));box.append(add);
+    add.onclick=()=>change(()=>{const port={id:'p'+crypto.randomUUID().replaceAll('-','').slice(0,8),name:'Value',type:'float',default:0};editFunctionInterface(currentFunction(),direction,{kind:'add',port},()=>f[direction].push(port));});box.append(add);
   }
 }
 function convertValue(value,type,previous=null){return value===null&&!isResourceType(type)?filledValue(type):isMatrixType(previous)&&isMatrixType(type)?matrixReshapeValue(value,previous,type):shapedValue(value,type);}
 function everyGraph(){return [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)];}
 function portLabel(n,kind,id){
+  const label=moduleNodePresentation(graph,n)?.portLabels?.[kind]?.[id];if(label)return label;
   if(n.definitionUuid==='sgrape.builtin.voronoi')return t('voronoi.'+id);
   if(n.definitionUuid==='sgrape.builtin.math')return /^input[0-9]+$/.test(id)?mathInputName(Number(id.slice(5))):id==='out'?'Result':id;
   if(n.definitionUuid==='sgrape.builtin.switch')return id==='default'?'Default':id==='index'?'Index':/^case[0-9]+$/.test(id)?'Case '+id.slice(4):id;

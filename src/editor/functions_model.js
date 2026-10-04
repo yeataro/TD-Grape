@@ -260,7 +260,7 @@ const GraphClipboard=(()=>{
     if(!p.nodes.length||p.nodes.length>2048||p.edges.length>8192||p.functions.length>64)fail('clipboard.size');
     return p;
   }
-  function paste(graph,data,p,{source,stage,target,catalog,types,anchor}){
+  function paste(graph,data,p,{source,stage,target,catalog,types,anchor,insert}){
     let typeDefinitions;try{typeDefinitions=GraphTypeDefinitions.merge(graph.typeDefinitions,GraphTypeDefinitions.reachable(p.typeDefinitions,p));}catch{fail('clipboard.invalid');}
     const validType=type=>GraphTypeDefinitions.valid(type,types,typeDefinitions,0,p.declarations);
     const same=p.source===source,defs=new Map(catalog.map(d=>[d.definitionUuid,d])),functionMap=new Map(),declarationMap=new Map();
@@ -329,8 +329,9 @@ const GraphClipboard=(()=>{
     const remap=new Map(content.nodes.map(n=>[n.id,id()])),x=Math.min(...content.nodes.map(n=>n.ui.x)),y=Math.min(...content.nodes.map(n=>n.ui.y)),frames=GraphFrames.copy(content,remap.keys(),remap);
     const scope=graph.functions.find(f=>f.graph===data),destination=scope?'fn_'+scope.id:stage;
     GraphArrayLengths.walk([content,newFunctions],(ref,old)=>ref.scope.startsWith('fn_')&&functionMap.has(ref.scope.slice(3))?GraphArrayLengths.token('fn_'+functionMap.get(ref.scope.slice(3)),ref.source):remap.has(ref.source[0])?GraphArrayLengths.token(destination,[remap.get(ref.source[0]),ref.source[1]]):old);
-    for(const node of content.nodes){node.id=remap.get(node.id);node.ui={...node.ui,x:node.ui.x-x+anchor.x,y:node.ui.y-y+anchor.y};data.nodes.push(node);}
-    for(const edge of content.edges)data.edges.push({...copy(edge),from:[remap.get(edge.from[0]),edge.from[1]],to:[remap.get(edge.to[0]),edge.to[1]]});
+    for(const node of content.nodes){node.id=remap.get(node.id);node.ui={...node.ui,x:node.ui.x-x+anchor.x,y:node.ui.y-y+anchor.y};}
+    const fragment={nodes:content.nodes,edges:content.edges.map(edge=>({...copy(edge),id:undefined,from:[remap.get(edge.from[0]),edge.from[1]],to:[remap.get(edge.to[0]),edge.to[1]]}))};
+    if(insert)insert(fragment);else{data.nodes.push(...fragment.nodes);data.edges.push(...fragment.edges);}
     if(frames.length)GraphFrames.write(data,[...GraphFrames.read(data),...frames]);
     // Reject recursive function pastes as one failed transaction, including into itself.
     const seen=new Set(),active=new Set();function visit(key){if(active.has(key))fail('clipboard.cycle');if(seen.has(key))return;const f=FunctionModel.find(graph,key);if(!f)fail('clipboard.missing');if(!f.stages.includes(stage))fail('clipboard.stage');active.add(key);for(const n of f.graph.nodes)if(n.definitionUuid===FunctionModel.CALL)visit(n.params.functionId);active.delete(key);seen.add(key);}

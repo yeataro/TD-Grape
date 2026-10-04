@@ -92,6 +92,9 @@ const server=http.createServer(async(req,res)=>{
  let browser,page,failure;
  try{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE});page=await browser.newPage({viewport:{width:1560,height:1000}});page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>acceptDialog?d.accept():d.dismiss());
+  // This fixture has no TD remote panel. Avoid its unrelated 10-second
+  // registration wait on every reload; actual preview has separate coverage.
+  await page.addInitScript(()=>localStorage.setItem('sgrapeAutoPreview','false'));
   const url='http://127.0.0.1:'+server.address().port;
   await page.exposeFunction('fixtureConfirm',()=>acceptDialog);
   const settle=()=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -99,7 +102,13 @@ const server=http.createServer(async(req,res)=>{
   const position=()=>page.evaluate(()=>current().nodes.find(n=>n.id==='movable').ui.x);
   const cursor=()=>page.evaluate(()=>JSON.stringify({graph,past,future,revision,historyNativeToken}));
   const move=async dx=>{const before=await position(),r=await page.locator('[data-node="movable"] .node-title').boundingBox();await page.mouse.move(r.x+30,r.y+15);await page.mouse.down();await page.mouse.move(r.x+30+dx,r.y+15,{steps:6});await page.mouse.up();await settle();assert.notEqual(await position(),before);return position();};
-  const select=async id=>{await page.locator('[data-input-source="'+id+'"] .input-source-select').click();await settle();};
+  const select=async id=>{
+    // Sources groups now start collapsed. Open the real visible controls,
+    // outermost first, before selecting a row (never force-click hidden UI).
+    const groups=await page.locator('[data-input-source="'+id+'"]').evaluate(e=>{const keys=[];for(let p=e.parentElement;p;p=p.parentElement)if(p.matches('[data-input-group]'))keys.unshift(p.dataset.inputGroup);return keys;});
+    for(const key of groups){const toggle=page.locator('[data-input-group="'+key+'"] > .input-group-title > .input-group-toggle');if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();}
+    await page.locator('[data-input-source="'+id+'"] .input-source-select').click();await settle();
+  };
   const value=async v=>{if(await page.evaluate(()=>dirty))await apply();await select('Live');const input=page.locator('#inspector [data-native-source="Live"] [data-source-component="0"]');await input.fill(String(v));await input.press('Enter');await page.waitForFunction(()=>!nativeSourceBusy&&!nativeMutationBusy);await settle();assert.equal(nativeRows.Live.values[0],v);};
   const replay=async(redo=false)=>{assert.equal(await page.evaluate(redo=>undo(redo),redo),true);await settle();};
   const apply=async()=>{await page.evaluate(()=>applyGraph());await page.waitForFunction(()=>!submitBusy);await settle();assert.equal(await page.evaluate(()=>dirty),false);await page.evaluate(async()=>receiveNativeSources(await api('sources')));};

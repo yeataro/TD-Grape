@@ -3,23 +3,755 @@
   "definitions": [
     "sgrape.builtin.abs",
     "sgrape.builtin.add",
+    "sgrape.builtin.ceil",
     "sgrape.builtin.color",
+    "sgrape.builtin.cos",
     "sgrape.builtin.divide",
+    "sgrape.builtin.dot",
     "sgrape.builtin.float",
+    "sgrape.builtin.floor",
+    "sgrape.builtin.fract",
+    "sgrape.builtin.length",
+    "sgrape.builtin.math",
+    "sgrape.builtin.mix",
     "sgrape.builtin.multiply",
+    "sgrape.builtin.normalize",
     "sgrape.builtin.pixel_out",
+    "sgrape.builtin.round",
     "sgrape.builtin.scalar",
+    "sgrape.builtin.sign",
+    "sgrape.builtin.sin",
+    "sgrape.builtin.sqrt",
     "sgrape.builtin.subtract",
+    "sgrape.builtin.trunc",
     "sgrape.builtin.uniform",
     "sgrape.builtin.vec2",
     "sgrape.builtin.vec3",
     "sgrape.builtin.vec4",
-    "sgrape.builtin.vector"
+    "sgrape.builtin.vector",
+    "sgrape.function.call",
+    "sgrape.function.input",
+    "sgrape.function.output"
   ],
   "ordinary": {
     "abs": {
       "operator": "abs",
       "port": "value"
+    },
+    "ceil": {
+      "operator": "ceil",
+      "port": "value"
+    },
+    "cos": {
+      "operator": "cos",
+      "port": "value"
+    },
+    "dot": {
+      "operator": "dot",
+      "ports": [
+        "a",
+        "b"
+      ]
+    },
+    "floor": {
+      "operator": "floor",
+      "port": "value"
+    },
+    "fract": {
+      "operator": "fract",
+      "port": "value"
+    },
+    "length": {
+      "operator": "length",
+      "ports": [
+        "value"
+      ]
+    },
+    "mix": {
+      "operator": "mix",
+      "defaults": {
+        "factor": 0.5
+      },
+      "ports": [
+        "a",
+        "b",
+        "factor"
+      ]
+    },
+    "normalize": {
+      "operator": "normalize",
+      "ports": [
+        "value"
+      ]
+    },
+    "round": {
+      "operator": "round",
+      "port": "value"
+    },
+    "sign": {
+      "operator": "sign",
+      "port": "value"
+    },
+    "sin": {
+      "operator": "sin",
+      "port": "value"
+    },
+    "sqrt": {
+      "operator": "sqrt",
+      "port": "value"
+    },
+    "trunc": {
+      "operator": "trunc",
+      "port": "value"
     }
+  },
+  "nativeSignatures": {
+    "add": [
+      {
+        "type": "float",
+        "inputs": {
+          "a": "float",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "operands": {
+          "a": "float",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "float",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "float",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "vec4"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "float",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec4"
+        }
+      }
+    ],
+    "divide": [
+      {
+        "type": "float",
+        "inputs": {
+          "a": "float",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "operands": {
+          "a": "float",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "float",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "float",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "vec4"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "float",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec4"
+        }
+      }
+    ],
+    "mix": [
+      {
+        "type": "float",
+        "inputs": {
+          "a": "float",
+          "b": "float",
+          "factor": "float"
+        },
+        "outputs": {
+          "out": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "vec2",
+          "factor": "float"
+        },
+        "outputs": {
+          "out": "vec2"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "vec2",
+          "factor": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "vec3",
+          "factor": "float"
+        },
+        "outputs": {
+          "out": "vec3"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "vec3",
+          "factor": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "vec4",
+          "factor": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "vec4",
+          "factor": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        }
+      }
+    ],
+    "multiply": [
+      {
+        "type": "float",
+        "inputs": {
+          "a": "float",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "operands": {
+          "a": "float",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "float",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "float",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "vec4"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "float",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec4"
+        }
+      }
+    ],
+    "subtract": [
+      {
+        "type": "float",
+        "inputs": {
+          "a": "float",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "float"
+        },
+        "operands": {
+          "a": "float",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "vec2",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "vec2",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec2",
+        "inputs": {
+          "a": "float",
+          "b": "vec2"
+        },
+        "outputs": {
+          "out": "vec2"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec2"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "vec3",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "vec3",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec3",
+        "inputs": {
+          "a": "float",
+          "b": "vec3"
+        },
+        "outputs": {
+          "out": "vec3"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec3"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "vec4"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "vec4",
+          "b": "float"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "vec4",
+          "b": "float"
+        }
+      },
+      {
+        "type": "vec4",
+        "inputs": {
+          "a": "float",
+          "b": "vec4"
+        },
+        "outputs": {
+          "out": "vec4"
+        },
+        "operands": {
+          "a": "float",
+          "b": "vec4"
+        }
+      }
+    ]
   }
 }

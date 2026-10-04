@@ -351,16 +351,45 @@ function appendHistoryEntry(entry){
   if(step.nativeApplied){step.deltaBefore=step.nativeBefore;step.deltaAfter=step.nativeAfter;}
   past.push(step);if(past.length>60)past.shift();future=[];renderHistoryActions();return step;
 }
-function recordGraphHistory(before,{nativeBefore=historyNativeToken,nativeAfter=null,nativeApplied=false}={}){
+// Only the graph transaction transfers its private snapshot. Other callers may
+// retain/mutate their input and keep the default defensive copy.
+function recordGraphHistory(before,{nativeBefore=historyNativeToken,nativeAfter=null,nativeApplied=false,takeBefore=false}={}){
   if(historyGraphKey(before)===historyGraphKey(graph))return null;
-  return appendHistoryEntry({kind:'graph',before:clone(before),after:clone(graph),sourceIds:historySourceIds(before,graph),nativeBefore,nativeAfter,nativeApplied});
+  return appendHistoryEntry({kind:'graph',before:takeBefore?before:clone(before),after:clone(graph),sourceIds:historySourceIds(before,graph),nativeBefore,nativeAfter,nativeApplied});
 }
 function scheduleGraphApply(delay=650){
   clearTimeout(autoTimer);autoTimer=null;
   if(dirty&&!readonly&&!submitBusy&&!historyBusy&&!nativeMutationBusy&&!conflicted&&!connectionInterrupted&&!applyNeedsReview)autoTimer=setTimeout(applyGraph,delay);
 }
+// History owns immutable snapshots; the editor owns the mutable working copy.
+// Keep network/node identities alive across replay so their DOM handlers still
+// refer to current data. CanvasUpdate compares prior display values separately.
+// This runs only on the private clone, never on a stored history document.
+function reuseHistoryNetwork(previous,next){
+  if(!previous)return next;
+  const nodes=new Map(previous.nodes.map(n=>[n.id,n]));
+  next.nodes=next.nodes.map(node=>{
+    const old=nodes.get(node.id);if(!old)return node;
+    for(const key of Object.keys(old))if(!Object.hasOwn(node,key))delete old[key];
+    return Object.assign(old,node);
+  });
+  for(const key of Object.keys(previous))if(!Object.hasOwn(next,key))delete previous[key];
+  return Object.assign(previous,next);
+}
+let graphPublicationVersion=0,editorGraphModel=null;
+function publishGraphChanges(changes){if(changes.changed)CanvasUpdate.publish(changes,{version:++graphPublicationVersion,generation:editorLoadGeneration});}
 function adoptHistoryGraph(document,{preservePreview=false}={}){
-  const snapshot=graph?.catalogSnapshot;graph=preservePreview?withPixelPreview(document,graph):clone(document);if(snapshot)graph.catalogSnapshot=clone(snapshot);
+  const previous=graph,snapshot=previous?.catalogSnapshot,next=preservePreview?withPixelPreview(document,previous):clone(document);
+  if(snapshot)next.catalogSnapshot=clone(snapshot);
+  const changes=GrapeGraph.changesBetween(previous,next,GrapeGraph.registry);
+  for(const [key,data] of Object.entries(next.stages))next.stages[key]=reuseHistoryNetwork(previous?.stages?.[key],data);
+  const functions=new Map((previous?.functions||[]).map(f=>[f.id,f]));
+  for(const f of next.functions||[])f.graph=reuseHistoryNetwork(functions.get(f.id)?.graph,f.graph);
+  // Native controls can capture a declaration as well as their node.
+  const declarations=new Map((previous?.declarations||[]).map(d=>[d.id,d]));
+  next.declarations=next.declarations.map(d=>{const old=declarations.get(d.id);return old&&JSON.stringify(old)===JSON.stringify(d)?old:d;});
+  graph=next;
+  publishGraphChanges(changes);
   if(selectedInputId&&!allInputSources().some(d=>d.id===selectedInputId))selectedInputId=null;
   tidyTrail();
 }
@@ -390,14 +419,31 @@ function layoutContent(document){
 }
 function change(fn,{localize=true,redraw=true,typeChange=false,layout=false,disconnectInvalid=null}={}){
   if(editorMutationBlocked())return false;
-  const previous=clone(graph),view={trail:[...graphTrail],selection:new Set(selection),selected,edges:selectedCanvasEdges().map(edge=>current().edges.indexOf(edge))};
-  let layoutOnly=false;
-  try{if(localize)prepareSemanticEdit();fn();assertGeneratedGLSLLimit(graph);for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);if(!layoutOnly){FunctionModel.ensureCapacity(graph);resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});if(typeof syncMathNotes==='function')syncMathNotes(graph,previous);if(!typeChange)rejectNewConstantIssues(graph,previous);}}
+  const view={trail:[...graphTrail],selection:new Set(selection),selected,edges:selectedCanvasEdges().map(edge=>current().edges.indexOf(edge))};
+  let previous=graph,layoutOnly=false,publication;
+  try{publication=GrapeGraph.transact(graph,GrapeGraph.registry,(before,model)=>{
+    previous=before;const parent=editorGraphModel;editorGraphModel=model;
+    try{
+      if(localize)prepareSemanticEdit();fn();assertGeneratedGLSLLimit(graph);
+      for(const data of [...Object.values(graph.stages),...(graph.functions||[]).map(f=>f.graph)])GraphFrames.prune(data);
+      if(graph.topSourceVersion===1)graph.topInputs.forEach((s,i)=>s.name='sTD2DInputs['+i+']');
+      layoutOnly=layout&&!localize&&!typeChange&&layoutContent(previous)===layoutContent(graph);
+      if(!layoutOnly){
+        FunctionModel.ensureCapacity(graph);
+        resolveAutoEdit(graph,previous,{allowInvalid:typeChange,disconnectInvalid:typeChange&&(disconnectInvalid??EDITOR_DEV_SETTINGS.autoDisconnectInvalidEdges)});
+        if(typeof syncNodeNotes==='function')syncNodeNotes(graph,previous);
+        if(!typeChange)rejectNewConstantIssues(graph,previous);
+      }
+      return graph;
+    }finally{editorGraphModel=parent;}
+  });}
   catch(e){
     graph=previous;graphTrail=view.trail;selection=view.selection;selected=view.selected;setSelectedEdges(view.edges.map(index=>current().edges[index]));
     render();status(t('edit.failed')+(e.code==='function.limit'?t('function.limit'):e.message),true);return false;
   }
-  if(!recordGraphHistory(previous)){if(redraw)render({layoutOnly});return true;}
+  publishGraphChanges(publication.changes);
+  if(!redraw)CanvasUpdate.invalidateChangedNodes(previous,publication.changes);
+  if(!recordGraphHistory(previous,{takeBefore:true})){if(redraw)render({layoutOnly});return true;}
   mark();if(redraw)render({layoutOnly});return true;
 }
 async function undo(redo=false){
@@ -715,15 +761,15 @@ function render({layoutOnly=false}={}){renderCompileDiagnostics();
   document.querySelectorAll('[data-stage]').forEach(b=>{b.hidden=!graph.stages?.[b.dataset.stage];b.classList.toggle('active',b.dataset.stage===stage);});
   $('#stagecaption').textContent=t(stage==='vertex'?'stage.vertex':'stage.pixel');
   $('#previewtitle').dataset.i18n=editorTarget==='top'?'preview.top':'preview.material';$('#previewtitle').textContent=t($('#previewtitle').dataset.i18n);renderPreviewAppearance();
-  tidyTrail();renderCards();renderGroupFrames();wires();inspector();if(!layoutOnly){library();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();refreshGeneratedGLSL();
+  tidyTrail();CanvasUpdate.update();inspector();if(!layoutOnly){library();renderNativeSources();}transform();renderNavigation();renderSavedStateIssue();refreshGeneratedGLSL();
 }
 function textureOptions(){return [...(editorTarget==='top'?[['input:0',t('texture.input0')]]:[]),...[['builtin:banana',t('texture.banana')],['builtin:jellybeans',t('texture.jellybeans')],['builtin:white',t('texture.white')],['builtin:black',t('texture.black')],['builtin:normal',t('texture.normal')],['external',t('texture.custom')]]]; }
 function remove(){
   if(selectedEdge===null&&!current().nodes.some(n=>selection.has(n.id)&&canDeleteNode(n)))return;
   const edges=new Set(selectedCanvasEdges());
-  change(()=>{if(edges.size){current().edges=current().edges.filter(edge=>!edges.has(edge));setSelectedEdges([]);return;}
+  change(()=>{if(edges.size){removeGraphEdges(graph,current(),edge=>edges.has(edge));setSelectedEdges([]);return;}
     const ids=new Set(current().nodes.filter(n=>selection.has(n.id)&&canDeleteNode(n)).map(n=>n.id));
-    FunctionModel.removeNodes(graph,current(),ids);selection.clear();selected=null;
+    removeGraphNodes(graph,current(),ids);selection.clear();selected=null;
   });
 }
 function cancelConnection(){clearWireGesture();linkStart=null;wireDrag=null;$('#connection').hidden=true;if(graph)wires();}

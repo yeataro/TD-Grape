@@ -30,7 +30,7 @@ def input_hash(graph, core):
     # hash intentionally omits. Reuse must never swallow an unsupported edit.
     source = copy.deepcopy(graph)
     source.pop('catalogSnapshot', None)
-    for stage in source.get('stages', {}).values():
+    for stage in [*source.get('stages', {}).values(), *(f['graph'] for f in source.get('functions', []))]:
         for node in stage.get('nodes', []):
             ui = node.get('ui')
             if isinstance(ui, dict):
@@ -58,15 +58,35 @@ def checked_artifact(graph, artifact, core):
     require(artifact.get('inputHash') == input_hash(graph, core), 'compiler input snapshot changed')
     require(graph.get('schemaVersion') == 1 and graph.get('target') == 'top', 'unsupported document target')
     require(set(graph.get('stages', {})) == {'pixel'}, 'unsupported stages')
-    require(not any(graph.get(key) for key in ('functions', 'topInputs', 'typeDefinitions')), 'outside compiler capabilities')
+    require(not any(graph.get(key) for key in ('topInputs', 'typeDefinitions')), 'outside compiler capabilities')
     require(len(json.dumps(graph, allow_nan=False).encode('utf-8')) <= 512000, 'document exceeds 512 KB')
-    nodes = graph['stages']['pixel']['nodes']
-    edges = graph['stages']['pixel']['edges']
-    require(len(nodes) <= 256 and len(edges) <= 1024, 'graph is too large')
+    # Subgraph metadata validation never calls a shader emitter. Authenticated
+    # source still follows the same candidate compile and native binding checks.
+    functions = core._functions(graph)
+    for f in functions.values():
+        require('pixel' in f['stages'] and 'top' in f.get('targets', ['top', 'mat']), 'unsupported Subgraph stage/target')
+        require(all(p['type'] in TYPES for key in ('inputs', 'outputs') for p in f[key]), 'unsupported Subgraph interface')
+    scopes = {'': graph['stages']['pixel'], **{key: f['graph'] for key, f in functions.items()}}
     allowed = set(capabilities()['definitions'])
-    ids = {n['id'] for n in nodes}
-    require(len(ids) == len(nodes) and all(isinstance(i, str) and core.ID.fullmatch(i) for i in ids), 'invalid node identities')
-    require(all(n.get('definitionUuid') in allowed for n in nodes), 'unsupported node definition')
+    scope_ids = {}
+    for key, data in scopes.items():
+        nodes, edges = data['nodes'], data['edges']
+        require(len(nodes) <= 256 and len(edges) <= 1024, 'graph is too large')
+        ids = {n['id'] for n in nodes}
+        require(len(ids) == len(nodes) and all(isinstance(i, str) and core.ID.fullmatch(i) for i in ids), 'invalid node identities')
+        require(all(n.get('definitionUuid') in allowed for n in nodes), 'unsupported node definition')
+        scope_ids[key] = ids
+
+    def valid_location(row):
+        if not isinstance(row, dict) or row.get('stage') != 'pixel': return False
+        trail = row.get('trail', [])
+        if not isinstance(trail, list) or len(trail) > 64: return False
+        scope = ''
+        for key in trail:
+            if not isinstance(key, str) or key not in functions: return False
+            if not any(n.get('definitionUuid') == core.CALL and n.get('params', {}).get('functionId') == key for n in scopes[scope]['nodes']): return False
+            scope = key
+        return row.get('node') in scope_ids[scope] and row.get('functionId') == (scope or None)
 
     # Only exact numeric Uniform declarations reach native configure(). No
     # executable driver, source reference, or arbitrary parameter selector.
@@ -97,9 +117,9 @@ def checked_artifact(graph, artifact, core):
     require(len({b['id'] for b in bindings}) == len(bindings), 'duplicate binding')
     maps = compiled.get('sourceMap', {})
     require(isinstance(maps, dict) and set(maps) == {'pixel'} and isinstance(maps['pixel'], list), 'invalid source map')
-    require(all(isinstance(row, dict) and row.get('node') in ids and row.get('stage') == 'pixel' and row.get('trail') == [] and type(row.get('line')) is int and 0 < row['line'] <= len(compiled['pixel'].splitlines()) for row in maps['pixel']), 'invalid source location')
+    require(all(valid_location(row) and type(row.get('line')) is int and 0 < row['line'] <= len(compiled['pixel'].splitlines()) for row in maps['pixel']), 'invalid source location')
     diagnostics = compiled.get('diagnostics')
-    require(isinstance(diagnostics, list) and all(isinstance(row, dict) and row.get('node') in ids and row.get('stage') == 'pixel' and isinstance(row.get('message'), str) and len(row['message']) <= 1000 for row in diagnostics), 'invalid diagnostics')
+    require(isinstance(diagnostics, list) and all(valid_location(row) and isinstance(row.get('message'), str) and len(row['message']) <= 1000 for row in diagnostics), 'invalid diagnostics')
     result = {key: copy.deepcopy(compiled[key]) for key in ('vertex', 'pixel', 'bindings', 'sourceMap', 'diagnostics')}
     result.update(hash=artifact['graphHash'], frontendProtocol=PROTOCOL, frontendCatalogHash=artifact['catalogHash'], frontendInputHash=artifact['inputHash'])
     return result

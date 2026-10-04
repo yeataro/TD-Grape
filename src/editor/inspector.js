@@ -495,6 +495,8 @@ function liveUniformFields(decl){
 function defaultInput(n,port,type){
   if(isResourceType(type)||isCompositeType(type))return null;
   if(n.inputValues && Object.hasOwn(n.inputValues,port))return clone(n.inputValues[port]);
+  const module=frontendNodeModule(graph,n);
+  if(module){const spec=GrapeGraph.resolvePorts(module,n,moduleContext(graph,n)).inputs[port];if(spec?.default!==undefined)return clone(spec.default);}
   const key=definition(n)?.key;
   if(definition(n)?.automaticInputs?.includes(port))return null;
   if(key==='array_create'&&port==='length')return n.params.length??4;
@@ -1209,6 +1211,25 @@ function voronoiInspector(box,n){
   }
   box.append(parameterControlRow('',parameterHint(t('voronoi.hint'))));
 }
+function moduleInspector(box,n,controls){
+  const label=c=>c.literal?c.label:t(c.label);
+  const run=(c,value)=>{if(!readonly&&current().nodes.includes(n))change(()=>editModuleNode(n,c.command,{...c.args,...(value===undefined?{}:{value:c.numeric?Number(value):value})}));};
+  const control=c=>{
+    if(c.kind==='select'){
+      const input=select(c.options.map(o=>[o.value,label(o)]),c.value,value=>run(c,value));
+      input.dataset.nodeControl=c.key;input.setAttribute('aria-label',label(c));input.disabled=readonly||!!c.disabled;return input;
+    }
+    if(c.kind==='button'){
+      const button=el('button',{class:'wide','data-node-control':c.key},label(c));button.disabled=readonly||!!c.disabled;button.onclick=()=>run(c);return button;
+    }
+    if(c.kind==='row'){
+      const row=el('div',{class:'math-operation-row','data-node-control':c.key});
+      if(c.prefix)row.append(el('span',{},t(c.prefix)));for(const child of c.children||[])row.append(control(child));return row;
+    }
+    return parameterHint(label(c));
+  };
+  for(const c of controls)box.append(parameterControlRow(['button','hint'].includes(c.kind)?'':label(c),control(c)));
+}
 function mathInspector(box,n){
   const apply=fn=>change(fn),params=n.params,count=params.inputCount??3;
   const mode=select([['steps',t('math.steps')],['shared',t('math.shared')]],params.mode||'steps',value=>apply(()=>params.mode=value));mode.dataset.mathMode=n.id;mode.disabled=readonly;
@@ -1234,12 +1255,13 @@ function nodeTypeSelector(n,d){
   }
   if(n.params.fixedType)return null;
   const options=selectableNodeTypes(d).map(type=>[type,type]);if(!options.length)return null;
-  const composed=['combine','vector','replace'].includes(d.key),automatic=n.ui?.typeMode==='auto',auto=supportsAutoType(d);
+  const composed=['combine','vector','replace'].includes(d.key),automatic=n.ui?.typeMode==='auto',auto=!frontendNodeModule(graph,n)&&supportsAutoType(d);
   const control=typeSelect(auto?[['auto',t('type.auto')+' · '+n.params.type],...options]:options,auto&&automatic?'auto':n.params.type,value=>{
     if(auto)setMathType(n,value);
+    else if(frontendNodeModule(graph,n)&&frontendNodeModule(graph,{...n,params:{...n.params,type:value}})?.configure)change(()=>{n.ui||={};n.ui.typeMode='locked';configureModuleNode(graph,n,{type:value});},{typeChange:true});
     else if(isMatrixOperation(d))change(()=>reshapeTypedInputs(n,d,value),{typeChange:true});
-    else change(()=>{const old=clone(n.inputValues||{}),previous=ports(n,'inputs');n.params.type=value;normalizeNodeValues(n,d);for(const [port,type]of Object.entries(ports(n,'inputs'))){if(Object.hasOwn(old,port))n.inputValues[port]=convertValue(old[port],type,previous[port]);}},{typeChange:true});
-  });control.disabled=readonly;control.title=t(auto?'type.operation':composed?'vector.outputType':'node.type');
+    else change(()=>{const old=clone(n.inputValues||{}),previous=ports(n,'inputs');n.params.type=value;delete n.params.inputTypes;normalizeNodeValues(n,d);for(const [port,type]of Object.entries(ports(n,'inputs'))){if(Object.hasOwn(old,port))n.inputValues[port]=convertValue(old[port],type,previous[port]);}},{typeChange:true});
+  });control.disabled=readonly;control.title=t(moduleNodePresentation(graph,n)?.selectorLabel||(auto?'type.operation':composed||frontendNodeModule(graph,n)?'vector.outputType':'node.type'));
   if(isVectorOperation(d))control.dataset.vectorType=n.id;else if(auto)control.dataset.mathType=n.id;
   return control;
 }
@@ -1381,7 +1403,10 @@ function vectorInspector(box,n,d){
   }
 }
 function setNodeInputValue(n,port,next){
-  if(['matrix_combine','matrix_replace'].includes(definition(n)?.key)&&port!=='value'){
+  if(frontendNodeModule(graph,n)){
+    if(!current().nodes.includes(n))throw Error('Node input belongs to an inactive graph');
+    withGraphNetwork(graph,current(),network=>network.node(n.id).update({inputValues:{...n.inputValues,[port]:next}}));
+  }else if(['matrix_combine','matrix_replace'].includes(definition(n)?.key)&&port!=='value'){
     const shape=typeContract.types[n.params.type],match=/^c([0-3])([xyzw])?$/.exec(port);
     if(!match)return;
     n.params.values||=Array.from({length:shape.columns*shape.rows},(_,i)=>Math.floor(i/shape.rows)===i%shape.rows?1:0);
@@ -1522,26 +1547,31 @@ function nodeInlineValues(n,port){
     setNodeInputValue(n,port,Array.isArray(updated)?updated:next);
   },key==='replace'?vectorNames(n):'XYZW',nodeInputOptions(n,port));
 }
+function nodeValueView(n){return moduleNodePresentation(graph,n)?.value;}
+function setNodeValueComponent(n,index,value){
+  const view=nodeValueView(n);if(view)return editModuleNode(n,view.componentCommand,{index,value});
+  if(definition(n)?.key==='vector'){n.params.components||=[0,0,0,0];n.params.components[index]=value;}
+  else if(Array.isArray(n.params.value)){n.params.value=n.params.value.slice();n.params.value[index]=value;}else n.params.value=value;
+}
+function setNodeValue(n,value){const view=nodeValueView(n);if(view)return editModuleNode(n,view.valueCommand,{value});n.params.value=value;}
 function nodeFixedValueEditor(n){
-  const key=definition(n)?.key;if(!['scalar','float','color','vector','vec2','vec3','vec4'].includes(key))return null;
-  const isVector=key==='vector',value=isVector?(n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)):n.params.value;
-  const fields=inlineNumericFields(n,'$value',value,(index,next)=>{
-    if(isVector){n.params.components||=[0,0,0,0];n.params.components[index]=next;}
-    else if(Array.isArray(n.params.value)){n.params.value=n.params.value.slice();n.params.value[index]=next;}else n.params.value=next;
-  },key==='color'?'RGBA':isVector?vectorNames(n):'XYZW');fields.classList.add('node-fixed-values');
-  if(key==='float'||key==='scalar')return fields;
+  const key=definition(n)?.key,view=nodeValueView(n);if(!view&&!['scalar','float','color','vector','vec2','vec3','vec4'].includes(key))return null;
+  const isVector=key==='vector',value=view?view.value:isVector?(n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)):n.params.value;
+  const color=view?view.color:key==='color';
+  const fields=inlineNumericFields(n,'$value',value,(index,next)=>setNodeValueComponent(n,index,next),view?.names||(color?'RGBA':isVector?vectorNames(n):'XYZW'));fields.classList.add('node-fixed-values');
+  if(view?!view.expandable:key==='float'||key==='scalar')return fields;
   const expanded=n.ui?.componentsExpanded===true,box=el('div',{class:'node-manual-value-group'+(expanded?' expanded':''),'data-manual-values':n.id}),toggle=el('button',{class:'node-values-toggle',type:'button','aria-expanded':String(expanded),'aria-label':t('node.expandValues'),title:t('node.expandValues'),'data-value-expand':n.id},expanded?'▾':'▸');
   toggle.onpointerdown=e=>e.stopPropagation();toggle.ondblclick=e=>e.stopPropagation();toggle.onclick=e=>{e.stopPropagation();change(()=>{n.ui||={};n.ui.componentsExpanded=!expanded;},{localize:false,layout:true});};box.append(toggle,fields);
-  if(key==='color'){box.classList.add('node-color-values');for(const entry of fields.querySelectorAll('input')){entry.title=entry.getAttribute('aria-label');entry.dataset.colorComponent='rgba'[Number(entry.dataset.component)];}}
+  if(color){box.classList.add('node-color-values');for(const entry of fields.querySelectorAll('input')){entry.title=entry.getAttribute('aria-label');entry.dataset.colorComponent='rgba'[Number(entry.dataset.component)];}}
   return box;
 }
 function updateNodeColorPreview(n,card){
   const ink=card?.querySelector('.node-color .color-ink');
-  if(ink)ink.style.backgroundColor=colorDisplay(n.params.value).css;
+  if(ink)ink.style.backgroundColor=colorDisplay(nodeValueView(n)?.value||n.params.value).css;
 }
 function nodeColorPicker(n){
-  const strip=el('div',{class:'node-color'}),swatch=colorPickerSwatch(()=>n.params.value,value=>{
-    if(current().nodes.includes(n))change(()=>n.params.value=value);
+  const strip=el('div',{class:'node-color'}),swatch=colorPickerSwatch(()=>nodeValueView(n)?.value||n.params.value,value=>{
+    if(current().nodes.includes(n))change(()=>setNodeValue(n,value));
   },false,{isValid:()=>current().nodes.includes(n),onFinish:()=>queueInlineValueRender()}),picker=swatch.querySelector('.color-picker-trigger');
   // A numeric blur schedules a redraw; keep its next focused control and the
   // popup's anchor alive until this editing interaction finishes.
@@ -1619,13 +1649,22 @@ function renderInspector(){
     vectorInspector(box,n,d);
     matrixInspector(box,n,d);
     compositeInspector(box,n,d);
-    if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));
+    const valueView=nodeValueView(n);
+    if(valueView){
+      const values=parameterValueRow(n,'$value',t('declaration.value'),valueView.type,()=>nodeValueView(n).value,(index,value)=>setNodeValueComponent(n,index,value),valueView.names);
+      if(valueView.color){
+        values.classList.add('color-parameter');values.querySelector('.parameter-value-controls').append(colorPickerSwatch(()=>nodeValueView(n).value,value=>change(()=>setNodeValue(n,value))));
+        if(valueView.value.some(v=>v<0||v>1)){const hint=parameterControlRow('',parameterHint(t('color.range')));hint.classList.add('color-range-hint');values.append(hint);}
+      }
+      box.append(values);
+    }else if(d.key==='vector')box.append(parameterValueRow(n,'$value',t('declaration.value'),n.params.type,()=> (n.params.components||[0,0,0,0]).slice(0,typeComponents(n.params.type)),(index,value)=>{n.params.components||=[0,0,0,0];n.params.components[index]=value;},vectorNames(n)));
     if(supportsAutoType(d)&&!isVectorOperation(d)){
-      const automatic=n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
-      const row=parameterControlRow(t('type.operation'),control);control.title=t(automatic?'type.autoHint':'type.lockedHint');box.append(row);
+      const modular=frontendNodeModule(graph,n),automatic=!modular&&n.ui?.typeMode==='auto',control=nodeTypeSelector(n,d);
+      const row=parameterControlRow(t(modular?'vector.outputType':'type.operation'),control);control.title=t(modular?'vector.outputType':automatic?'type.autoHint':'type.lockedHint');box.append(row);
     }
     if(d.key==='voronoi')voronoiInspector(box,n);
-    if(d.key==='math')mathInspector(box,n);
+    const moduleControls=moduleNodePresentation(graph,n)?.controls;
+    if(moduleControls)moduleInspector(box,n,moduleControls);else if(d.key==='math')mathInspector(box,n);
     if(d.key==='switch')box.append(parameterControlRow(t('switch.defaultType'),nodeTypeSelector(n,d)));
     if(d.key==='scalar'&&!n.params.fixedType)box.append(parameterControlRow(t('node.type'),nodeTypeSelector(n,d)));
     if(isConvertOperation(d))for(const parameter of ['fromType','toType'])box.append(parameterControlRow(t(parameter==='fromType'?'convert.fromType':'convert.toType'),convertTypeSelector(n,parameter)));
@@ -1636,7 +1675,7 @@ function renderInspector(){
     }
     pixelBufferFields(box,n);
     if(d.key==='texture'){const split=el('button',{class:'wide'},t('sampler.split'));split.onclick=()=>splitLegacyTexture(n);box.append(ordinary?parameterControlRow('',split):split);}
-    if('value'in n.params){
+    if(!valueView&&'value'in n.params){
       if(ordinary){
         const values=parameterValueRow(n,'$value',t('declaration.value'),Object.values(ports(n,'outputs'))[0]||n.params.type||'float',()=>n.params.value,(index,value)=>{if(Array.isArray(n.params.value))n.params.value[index]=value;else n.params.value=value;},d.key==='color'?'RGBA':'XYZW');
         if(d.key==='color'){

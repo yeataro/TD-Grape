@@ -30,14 +30,16 @@ def _frontend_ordinary_nodes():
         from pathlib import Path
         path = Path(__file__).with_name('frontend_capabilities.json')
         raw = path.read_text(encoding='utf-8') if path.exists() else '{}'
-    entries = json.loads(raw).get('ordinary', {})
+    document = json.loads(raw)
+    entries = document.get('ordinary', {})
     for key, entry in entries.items():
-        if not all(isinstance(v, str) and re.fullmatch('[A-Za-z][A-Za-z0-9_]{0,63}', v) for v in (key, entry.get('operator'), entry.get('port'))):
+        ports = entry.get('ports', [entry.get('port')])
+        if not isinstance(ports, list) or not ports or not all(isinstance(v, str) and re.fullmatch('[A-Za-z][A-Za-z0-9_]{0,63}', v) for v in (key, entry.get('operator'), *ports)):
             raise ValueError('Invalid generated ordinary node primitive')
-    return entries
+    return entries, document.get('nativeSignatures', {})
 
 
-FRONTEND_ORDINARY = _frontend_ordinary_nodes()
+FRONTEND_ORDINARY, FRONTEND_SIGNATURES = _frontend_ordinary_nodes()
 TYPE_PREFIXES = {'float':'vec', 'int':'ivec', 'uint':'uvec', 'bool':'bvec', 'double':'dvec'}
 SCALAR_TYPES = tuple(TYPE_PREFIXES)
 TYPE_DESCRIPTORS = {
@@ -187,6 +189,8 @@ def arithmetic_result(key,a,b):
     Matrix signatures retain both operand shapes: a scalar is never promoted
     to a diagonal matrix for component-wise arithmetic.
     """
+    for signature in FRONTEND_SIGNATURES.get(key, ()):
+        if signature['inputs']=={'a':a,'b':b}:return signature['outputs']['out']
     if key not in ARITHMETIC_KEYS or a not in ARITHMETIC_TYPES or b not in ARITHMETIC_TYPES:return None
     left=TYPE_DESCRIPTORS[a];right=TYPE_DESCRIPTORS[b]
     if left['family']!=right['family']:return None
@@ -228,7 +232,7 @@ def arithmetic_variants(key):
     pairs+=list(ARITHMETIC_SIGNATURES[key])
     return [dict(type=ARITHMETIC_SIGNATURES[key][pair],inputs=dict(zip(('a','b'),pair)),
                  outputs={'out':ARITHMETIC_SIGNATURES[key][pair]},
-                 **({'params':{'operandTypes':dict(zip(('a','b'),pair))}} if any(t in MATRIX_TYPES for t in pair) else {}))
+                 **({'params':{'operandTypes':dict(zip(('a','b'),pair))}} if pair[0]!=pair[1] or any(t in MATRIX_TYPES for t in pair) else {}))
             for pair in dict.fromkeys(pairs)]
 
 def matrix_identity(ty):
@@ -370,6 +374,8 @@ def catalog_contract():
             'history':[{'definitionUuid':uid,'revisionHash':revision,'currentRevision':BY_UUID[uid]['revisionHash'],
                         'emitter':copy.deepcopy(row['emitter']),'observedIn':list(row['observedIn'])}
                        for (uid,revision),row in sorted(_HISTORY.items())]}
+    if _CATALOG_DOCUMENT.get('frontendHash'):
+        result['frontendHash'] = _CATALOG_DOCUMENT['frontendHash']
     result['hash']=digest(result)
     return result
 
@@ -621,6 +627,13 @@ def switch_case_count(params):
     return count
 
 def definition_ports(definition, params):
+    # Transitional compiler consumes the module's generated native signatures;
+    # it has no separate per-node rule for saved local input alternatives.
+    if 'inputTypes' in params:
+        for signature in FRONTEND_SIGNATURES.get(definition['key'], ()):
+            if signature['type']==params.get('type') and signature['inputs']==params['inputTypes']:
+                return {'inputs':signature['inputs'],'outputs':signature['outputs']}
+        raise GraphError('Invalid saved input signature')
     if definition['key']=='preview' and params.get('type','float') not in SCALAR_VECTOR_TYPES:
         raise GraphError('Preview accepts scalar or vector values only')
     if definition['key']=='voronoi':
@@ -940,7 +953,7 @@ def input_default(key,port,ty):
         entry=next((p for p in varying_ports() if p['id']==port),{})
         return entry.get('default',filled_value(ty))
     if key=='pixel_out': return [0,0,0,1]
-    value=CATALOG.get(key,{}).get('inputDefaults',{}).get(port,{'factor':.5,'alpha':1}.get(port,0))
+    value=FRONTEND_ORDINARY.get(key,{}).get('defaults',{}).get(port,CATALOG.get(key,{}).get('inputDefaults',{}).get(port,{'factor':.5,'alpha':1}.get(port,0)))
     return filled_value(ty, value)
 
 def componentwise_expression(ty, arguments, expression):
@@ -1444,7 +1457,10 @@ def _compile_flat(graph,annotation_scopes=None):
                 d=defs[ident]; k=emitter_id(d); p=nodes[ident]['params']; ty=ports[ident]['out'].get('out'); expr=None
                 compound_used.update(t for direction in ports[ident].values() for t in direction.values() if compound_type(t))
                 a=lambda port:inp(ident,port)
-                if k in _legacy_nodes.CALLS:
+                if k in FRONTEND_ORDINARY:
+                    primitive=FRONTEND_ORDINARY[k]
+                    expr=primitive['operator']+'('+', '.join(a(port) for port in primitive.get('ports',[primitive.get('port')]))+')'
+                elif k in _legacy_nodes.CALLS:
                     for port,port_type in ports[ident]['in'].items():
                         if port_type in RESOURCE_TYPES and (ident,port) not in links:
                             raise GraphError('Connect a '+port_type+' source',ident)
@@ -1533,7 +1549,6 @@ def _compile_flat(graph,annotation_scopes=None):
                     helper='TDLoop' if k=='loop' else 'TDZigZag'
                     expr=componentwise_expression(ty,[a(port) for port in ('value','min','max')],
                         lambda *values:helper+'('+', '.join(values)+')')
-                elif k in FRONTEND_ORDINARY: expr=FRONTEND_ORDINARY[k]['operator']+'('+a(FRONTEND_ORDINARY[k]['port'])+')'
                 elif k in ('sin','cos','abs','fract','length','normalize','sign','sqrt','floor','round','ceil','trunc'): expr=k+'('+a('value')+')'
                 elif k=='voronoi':
                     function=_voronoi.specialization(p)

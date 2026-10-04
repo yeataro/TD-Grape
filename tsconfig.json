@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2018",
-    "module": "none",
-    "lib": ["ES2018"],
+    "module": "CommonJS",
+    "lib": ["ES2019"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noEmitOnError": true,
     "removeComments": false,
-    "outFile": "src/editor/wire_planning.js"
+    "rootDir": "src/core-ts",
+    "outDir": "build/core"
   },
-  "files": ["src/core-ts/wire_planning.ts", "src/core-ts/top_compiler.ts"]
+  "include": ["src/core-ts/**/*.ts"]
 }

@@ -44,5 +44,6 @@
   "color_picker_css": "color_picker.css",
   "wire_planning_js": "wire_planning.js",
   "frontend_artifact": "frontend_artifact.py",
-  "frontend_capabilities": "frontend_capabilities.json"
+  "frontend_capabilities": "frontend_capabilities.json",
+  "canvas_ui_js": "canvas_ui.js"
 }

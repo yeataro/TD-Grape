@@ -11,7 +11,7 @@ const [source,stateFile,folder]=process.argv.slice(2);
       GrapeWirePlanning.plan=(g,c,intent,...rest)=>{plannerCalls[intent.kind]++;return original(g,c,intent,...rest);};
       clearTimeout(autoTimer);scheduleGraphApply=()=>{};connectionInterrupted=true;conflicted=false;readonly=false;historyBusy=nativeMutationBusy=false;
       stage='pixel';graph.target='top';graphTrail=[];graph.functions=[];graph.declarations=[];past=[];future=[];selected=selectedEdge=null;selection.clear();
-      const op=testNode('op','multiply',450,120,{type:'float'});op.ui.typeMode='auto';op.inputValues={b:7};
+      const op=testNode('op','multiply',450,120,{type:'vec3'});op.ui.typeMode='auto';op.inputValues={b:[7,7,7]};
       graph.stages.pixel={nodes:[testNode('source','vector',50,60,{type:'vec3',components:[1,2,3,4]}),testNode('scalar','scalar',50,400,{type:'float',value:2}),op],edges:[]};
       rememberSavedGraph(graph);render();scale=.8;pan={x:20,y:20};transform();
     });await settle();
@@ -23,7 +23,8 @@ const [source,stateFile,folder]=process.argv.slice(2);
     const connected=await page.evaluate(()=>JSON.stringify(graph));
     await page.locator('#undo').click();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),initial);
     await page.locator('#redo').click();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),connected);
-    checks.push('Actual vector drag uses TypeScript, preserves hand-entered defaults, one Undo/Redo restores exact graphs');
+    checks.push('Actual vector drag uses TypeScript with fixed output, preserves hand-entered defaults, one Undo/Redo restores exact graphs');
+    assert.equal(await page.locator('[data-node-selector="op"] option[value="auto"]').count(),0);
     await drag(await at(port('scalar','outputs','out')),await at(port('op','inputs','a')));
     assert.equal(await page.evaluate(()=>current().edges[0].from[0]),'scalar');assert.equal(await page.evaluate(()=>past.length),2);
     await page.locator('#undo').click();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),connected);
@@ -42,25 +43,49 @@ const [source,stateFile,folder]=process.argv.slice(2);
     await page.locator('#createsearch').fill('multiply');
     await page.locator('[data-create-entry="multiply"]').click();await settle();
     assert.equal(await page.evaluate(()=>past.length),pastBefore+1);
-    const created=await page.evaluate(()=>({key:definition(current().nodes.find(n=>n.id===selected)).key,type:ports(current().nodes.find(n=>n.id===selected),'outputs').out}));
-    assert.deepEqual(created,{key:'multiply',type:'vec3'});
+    const created=await page.evaluate(()=>({id:selected,key:definition(current().nodes.find(n=>n.id===selected)).key,type:ports(current().nodes.find(n=>n.id===selected),'outputs').out}));
+    assert.equal(created.key,'multiply');assert.equal(created.type,'vec3');
     await page.screenshot({path:path.join(folder,'wire-creator.png')});
     await page.locator('#undo').click();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),createBefore);
     await page.locator('#redo').click();
     checks.push('Dragging into empty canvas creates Multiply and its wire through the original Creator; one Undo removes both');
+    const createdId=created.id;
+    await page.evaluate(id=>{setSelectedEdges([current().edges.find(e=>e.to[0]===id)]);selection.clear();selected=null;render();},createdId);
+    await page.locator('#canvas').focus();await page.keyboard.press('Delete');await settle();
+    assert.equal(await page.evaluate(id=>current().edges.some(e=>e.to[0]===id),createdId),false);
+    assert.equal(await page.evaluate(id=>current().nodes.find(n=>n.id===id).params.type,createdId),'vec3');
+    await page.evaluate(id=>{selection=new Set([id]);selected=id;selectedEdge=null;render();},createdId);
+    const selector=page.locator('[data-node-selector="'+createdId+'"]');await selector.selectOption('vec4');await settle();
+    assert.equal(await page.evaluate(id=>ports(current().nodes.find(n=>n.id===id),'outputs').out,createdId),'vec4');
+    await page.locator('#undo').click();assert.equal(await page.evaluate(id=>current().nodes.find(n=>n.id===id).params.type,createdId),'vec3');
+    await page.locator('#redo').click();
+    const copied=await page.evaluate(id=>{selection=new Set([id]);selected=id;duplicateSelection();return {id:selected,type:current().nodes.find(n=>n.id===selected).params.type};},createdId);
+    assert.notEqual(copied.id,createdId);assert.equal(copied.type,'vec4');
+    checks.push('Creation choice survives disconnect; explicit output changes, Undo/Redo and duplication preserve the chosen state');
     const failure=await page.evaluate(()=>{
       const original=GrapeWirePlanning.plan,before=JSON.stringify({graph,past,future});
       try{GrapeWirePlanning.plan=()=>{throw Error('test planner failure');};return {ok:connectPorts({node:'source',kind:'outputs',port:'out'},{node:'op',kind:'inputs',port:'b'}),unchanged:before===JSON.stringify({graph,past,future})};}
       finally{GrapeWirePlanning.plan=original;}
     });assert.deepEqual(failure,{ok:false,unchanged:true});checks.push('Planner failures do not silently retry legacy or commit an edit');
+    const ownership=await page.evaluate(async()=>{
+      const original=GrapeGraph.transact,before=JSON.stringify(graph);let owned;
+      try{
+        GrapeGraph.transact=(document,registry,edit)=>original(document,registry,(previous,model)=>{owned=previous;return edit(previous,model);});
+        const ok=change(()=>{current().nodes[0].ui.x+=10;},{localize:false,layout:true});
+        const sameSnapshot=past.at(-1).before===owned,independent=owned!==graph;
+        const restored=await undo();return {ok,sameSnapshot,independent,restored,exact:JSON.stringify(graph)===before};
+      }finally{GrapeGraph.transact=original;}
+    });
+    assert.deepEqual(ownership,{ok:true,sameSnapshot:true,independent:true,restored:true,exact:true});
+    checks.push('Graph transaction transfers its independent before snapshot directly into History; Undo restores the exact graph');
     const calls=await page.evaluate(()=>plannerCalls);assert.ok(calls.wire>0&&calls.infer>0,JSON.stringify(calls));
     await page.evaluate(()=>{graph.target='mat';editorTarget='mat';graph.stages.vertex={nodes:[],edges:[]};render();});await settle();
     const matBefore=await page.evaluate(()=>JSON.stringify(graph));
     await drag(await at(port('scalar','outputs','out')),await at(port('op','inputs','b')));
     assert.notEqual(await page.evaluate(()=>JSON.stringify(graph)),matBefore);
     await page.locator('#undo').click();assert.equal(await page.evaluate(()=>JSON.stringify(graph)),matBefore);
-    assert.deepEqual(await page.evaluate(()=>plannerCalls),calls);
-    checks.push('MAT editor mode still connects and undoes through the original planner; TypeScript route stays unused');
+    assert.ok((await page.evaluate(()=>plannerCalls.wire))>calls.wire);
+    checks.push('Migrated value modules use the same fixed-output planner in MAT; Undo remains exact');
     assert.deepEqual(errors,[]);await h.finish();console.log(JSON.stringify({passed:true,count:checks.length,calls}));
   }catch(error){await h.finish(error);throw error;}
 })().catch(error=>{console.error(error.stack);process.exitCode=1;});

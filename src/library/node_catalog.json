@@ -1074,11 +1074,7 @@
       },
       "emitter": {
         "id": "abs",
-        "version": 1,
-        "primitive": {
-          "operator": "abs",
-          "port": "value"
-        }
+        "version": 1
       },
       "browser": {
         "category": "math",
@@ -17212,6 +17208,34 @@
     }
   },
   "frontendGenerated": [
-    "abs"
-  ]
+    "abs",
+    "add",
+    "ceil",
+    "color",
+    "cos",
+    "divide",
+    "dot",
+    "float",
+    "floor",
+    "fract",
+    "length",
+    "math",
+    "mix",
+    "multiply",
+    "normalize",
+    "pixel_out",
+    "round",
+    "scalar",
+    "sign",
+    "sin",
+    "sqrt",
+    "subtract",
+    "trunc",
+    "uniform",
+    "vec2",
+    "vec3",
+    "vec4",
+    "vector"
+  ],
+  "frontendHash": "4faa74b4f73a97e0912368afd8f97a828903d804e3c9c09e4dab88d0058579e4"
 }
