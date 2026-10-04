@@ -65,7 +65,7 @@ function t(key){
   const text=localeData?.messages[key]?.[language]??localeData?.messages[key]?.[localeData.defaultLanguage]??key;
   return text.includes('{modifier}')?text.replaceAll('{modifier}',shortcutModifierLabel()):text;
 }
-function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-language-picker]').forEach(picker=>picker.value=language);updateEditorTitle();{const label=$('#projectfile');label.textContent=editorProjectFile===null?t('project.unavailable'):editorProjectFile||t('project.unsaved');label.title=label.textContent;}document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();}
+function translatePage(){document.documentElement.lang=language;document.querySelectorAll('[data-language-picker]').forEach(picker=>picker.value=language);updateEditorTitle();{const label=$('#projectfile');label.textContent=editorProjectFile===null?t('project.unavailable'):editorProjectFile||t('project.unsaved');label.title=label.textContent;}document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));document.querySelectorAll('[data-i18n-label]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.i18nLabel)));document.querySelectorAll('[data-i18n-alt]').forEach(e=>e.alt=t(e.dataset.i18nAlt));document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));syncSidebarButtons();workspaceLayout?.translate();renderConnectionNotice();renderHeaderVisibility();renderUIAppearance();renderViewModes();renderGraphZoom();renderUIShare();renderUIExperiments();renderShortcutHelp();renderGenerationStatus();}
 function setLanguage(value){
   if(!localeData.languages[value]||value===language)return;
   language=value;localStorage.setItem('sgrapeLanguage',language);
@@ -87,7 +87,63 @@ let graph=null, catalog=[], examples={}, revision=0, selected=null, selectedEdge
 let pan={x:40,y:60}, scale=.8, linkStart=null, past=[], future=[], errorNode=null;
 const definition=nodeDefinition;
 let persistentStatusError='',statusErrorKind='';
+// Session-only activity, independent of graph Undo and host persistence.
+const statusHistory=[];
+let generationActivity=null;
+function recordStatus(message,error=false,target=$('#target').textContent){
+  if(!message)return;
+  const previous=statusHistory[0];
+  if(previous?.message===message&&previous.error===error&&previous.target===target){previous.count++;previous.time=Date.now();}
+  else statusHistory.unshift({message,error,target,time:Date.now(),count:1});
+  statusHistory.length=Math.min(statusHistory.length,200);
+  if($('#statushistory').matches(':popover-open'))renderStatusHistory();
+}
+function renderStatusHistory(){
+  const list=$('#statushistorylist'),top=list.scrollTop,height=list.scrollHeight;
+  list.replaceChildren();
+  if(!statusHistory.length)list.append(el('li',{},t('statusHistory.empty')));
+  for(const item of statusHistory){
+    const row=el('li',{class:item.error?'error':''}),meta=el('div',{class:'status-history-meta'}),date=new Date(item.time);
+    meta.append(el('time',{datetime:date.toISOString()},date.toLocaleTimeString(language)),el('span',{},item.target),el('span',{},item.count>1?'×'+item.count:''));
+    row.append(meta,el('div',{},item.message));list.append(row);
+  }
+  list.scrollTop=top>0?top+list.scrollHeight-height:0;
+}
+function installStatusHistory(){
+  const panel=$('#statushistory'),opener=$('#statushistorytoggle'),list=$('#statushistorylist');
+  const position=()=>{const zoom=uiScaleFactor(),width=Math.min(560,innerWidth/zoom-16);panel.style.width=width+'px';positionAppearancePanel(panel,opener);panel.style.right='auto';panel.style.left=Math.max(8,Math.min(opener.getBoundingClientRect().left/zoom,innerWidth/zoom-width-8))+'px';panel.style.maxHeight=Math.min(420,parseFloat(panel.style.maxHeight))+'px';};
+  panel.addEventListener('beforetoggle',event=>{if(event.newState==='open'){renderStatusHistory();position();}});
+  panel.addEventListener('toggle',()=>opener.setAttribute('aria-expanded',String(panel.matches(':popover-open'))));
+  const close=()=>{panel.hidePopover();opener.focus({preventScroll:true});};
+  $('#statushistoryclose').onclick=close;
+  opener.onclick=()=>requestAnimationFrame(()=>{if(panel.matches(':popover-open'))list.focus({preventScroll:true});});
+  for(const event of ['pointerdown','mousedown','touchstart','dblclick','contextmenu'])panel.addEventListener(event,e=>e.stopPropagation());
+  panel.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+  panel.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Escape'){event.preventDefault();close();}});
+  window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))position();});
+}
+function generationRouteLabel(route){return t('generation.'+route);}
+function generationMessage(activity){return 'GLSL Generation · '+generationRouteLabel(activity.route)+' · '+t('generation.'+activity.state);}
+function generationMatches(activity){return !!graph&&activity?.load===editorLoadGeneration&&activity.key===graphContent(graph);}
+function renderGenerationStatus(){
+  const label=$('#generationstatus');
+  const activity=generationMatches(generationActivity)?generationActivity:{route:graph&&frontendCompilation(graph)?'frontend':'python',state:'pending'};
+  label.textContent=graph?generationMessage(activity):'GLSL Generation · '+t('generation.waiting');
+  label.dataset.route=graph?activity.route:'';label.dataset.state=graph?activity.state:'waiting';
+  label.title=label.textContent+'\n'+t('generation.hint');
+}
+function beginGeneration(source,route){
+  const activity={key:graphContent(source),load:editorLoadGeneration,target:$('#target').textContent,route,state:'running'};
+  generationActivity=activity;recordStatus(generationMessage(activity));renderGenerationStatus();return activity;
+}
+function finishGeneration(activity,state,error){
+  activity.state=state;
+  const previous=!generationMatches(activity);
+  recordStatus(generationMessage(activity)+(previous?' · '+t('generation.previous'):'')+(error?'\n'+error.message:''),!!error,activity.target);
+  renderGenerationStatus();
+}
 function status(message,error=false,{clearError=false,kind='operation'}={}){
+  recordStatus(message,error);
   if(error){persistentStatusError=message;statusErrorKind=kind;}
   else if(clearError===true||clearError===statusErrorKind){persistentStatusError='';statusErrorKind='';}
   const shown=persistentStatusError||message;
@@ -463,14 +519,16 @@ async function performApplyGraph(){
   clearTimeout(autoTimer);autoTimer=null;if(readonly||submitBusy||!dirty)return;
   const generation=editorLoadGeneration,sentVersion=editVersion,sentGraph=clone(graph),sentRevision=revision,layoutOnly=!hasShaderChanges(sentGraph);
   const sentEntries=past.filter(entry=>entry.kind==='graph'&&!entry.nativeApplied),beforeToken=historyNativeToken;
-  let pixelPreview=null;
+  let pixelPreview=null,hostGeneration=null;
   submitBusy=true;applyLayoutOnly=layoutOnly;$('#apply').disabled=true;$('#reload').disabled=true;status(t(layoutOnly?'graph.saving':'material.compiling'));
   try{
     if(!hasPixelPreview(sentGraph))await releasePixelPreview({discard:false});
     if(generation!==editorLoadGeneration)return;
     pixelPreview=pixelPreviewApplyMetadata(sentGraph);
     const frontendArtifact=frontendCompilation(sentGraph)?{protocol:GrapeTopCompiler.protocol,targetId:shaderId,baseRevision:sentRevision,snapshot:JSON.stringify(sentGraph),catalogHash:frontendCompiler.catalogHash,compiled:compileFrontendGraph(sentGraph)}:null;
+    if(!frontendArtifact&&!layoutOnly)hostGeneration=beginGeneration(sentGraph,'python');
     const data=await api('apply',{graph:sentGraph,revision:sentRevision,...(pixelPreview?{pixelPreview}:{}),...(frontendArtifact?{frontendArtifact}:{})});
+    if(hostGeneration){finishGeneration(hostGeneration,data.upgradeReview?'review':(data.shaderUpdated??(data.compileInfo!=='Graph layout saved'))?'ready':'unchanged');hostGeneration=null;}
     if(!pixelPreviewRequestCurrent(pixelPreview,generation))return;
     if(data.upgradeReview){
       const review=data.upgradeReview;
@@ -507,7 +565,7 @@ async function performApplyGraph(){
     if(!connectionInterrupted)status(t(dirty?graphPendingKey():shaderUpdated?'material.applied':lastGraphSaveKey),false,{clearError:true});
     document.querySelectorAll('.node.error').forEach(e=>e.classList.remove('error'));
     return true;
-  }catch(e){if(!pixelPreviewRequestCurrent(pixelPreview,generation))return;nativeSourceUncertain=true;++nativeSourceReadEpoch;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
+  }catch(e){if(hostGeneration)finishGeneration(hostGeneration,'applyFailed',e);if(!pixelPreviewRequestCurrent(pixelPreview,generation))return;nativeSourceUncertain=true;++nativeSourceReadEpoch;conflicted=e.message.includes('Conflict:');if(e.connection){applyNeedsReview=true;renderConnectionNotice();status(e.message,true,{kind:'connection'});}else status(t(layoutOnly?'graph.saveFailed':'material.failed')+e.message,true,{kind:'compile'});}
   finally{if(generation===editorLoadGeneration){submitBusy=false;applyLayoutOnly=false;$('#apply').disabled=readonly;$('#reload').disabled=false;renderHistoryActions();if(pixelPreviewRequestCurrent(pixelPreview,generation)){renderNativeSourceValues();refreshUniforms();refreshNativeSources({required:true});}if(dirty&&editVersion!==sentVersion)scheduleGraphApply(200);}}
 }
 function el(tag,attrs={},text=''){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='class')e.className=v;else e.setAttribute(k,v);}e.textContent=text;return e;}
@@ -1579,7 +1637,7 @@ $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclic
 $('#export').onclick=openExport;
 installImportUI();
 installSavedStateUI();
-$('#code').onclick=async()=>{try{const code=await api('validate',{graph});renderGLSL((code.vertex?'// VERTEX\n'+code.vertex+'\n':'')+'// PIXEL\n'+code.pixel);$('#source').showModal();}catch(e){status(e.message,true);}};$('#closecode').onclick=()=>$('#source').close();
+$('#code').onclick=async()=>{try{const code=await generateGLSL(clone(graph));renderGLSL((code.vertex?'// VERTEX\n'+code.vertex+'\n':'')+'// PIXEL\n'+code.pixel);$('#source').showModal();}catch(e){status(e.message,true);}};$('#closecode').onclick=()=>$('#source').close();
 $('#canvas').addEventListener('wheel',e=>{e.preventDefault();const rect=$('#canvas').getBoundingClientRect();zoomCanvasAt((canvasMotion?.setting==='canvasDamping'?canvasMotion.to.scale:scale)*Math.exp(-e.deltaY*.001),(e.clientX-rect.left)/uiScaleFactor(),(e.clientY-rect.top)/uiScaleFactor());},{passive:false});
 installUpgradeUI();
 installGraphInteractions();
@@ -1590,6 +1648,7 @@ installPreviewHelp();
 installSidebarWidths();
 installShaderNavigation();
 installConnectionRecovery();
+installStatusHistory();
 installEditorChrome();
 installFooterActions();
 window.addEventListener('beforeunload',e=>{if(!editorReloading&&!switchingShader&&(dirty||pendingEditorField())){e.preventDefault();e.returnValue='';}});
@@ -1672,8 +1731,15 @@ function generatedGLSLView(node,canvas=false){
 }
 function frontendCompilation(source){return !!(frontendCompiler&&typeof GrapeTopCompiler!=='undefined'&&frontendCompiler.protocol===GrapeTopCompiler.protocol&&GrapeTopCompiler.supports(source));}
 function compileFrontendGraph(source){
-  try{return GrapeTopCompiler.compile(source,typeContract?.glslCode);}
-  catch(error){setCompileDiagnostics({error:error.message,node:error.node,stage:error.stage,trail:error.trail,phase:'validation'},JSON.stringify(source));throw error;}
+  const activity=beginGeneration(source,'frontend');
+  try{const result=GrapeTopCompiler.compile(source,typeContract?.glslCode);finishGeneration(activity,'ready');return result;}
+  catch(error){finishGeneration(activity,'failed',error);setCompileDiagnostics({error:error.message,node:error.node,stage:error.stage,trail:error.trail,phase:'validation'},JSON.stringify(source));throw error;}
+}
+async function generateGLSL(source){
+  if(frontendCompilation(source))return compileFrontendGraph(source);
+  const activity=beginGeneration(source,'python');
+  try{const result=await api('validate',{graph:source});finishGeneration(activity,'ready');return result;}
+  catch(error){finishGeneration(activity,'failed',error);throw error;}
 }
 function generatedGLSLKey(){return JSON.stringify([editorLoadGeneration,stage,graphContent(graph)]);}
 function paintGeneratedGLSL(){
@@ -1684,6 +1750,7 @@ function paintGeneratedGLSL(){
   }
 }
 function refreshGeneratedGLSL(force=false){
+  renderGenerationStatus();
   const pane=$('#pane-glsl'),body=$('#glslbody');
   if(body){
     if(!graph||pane.hidden||pane.closest('[hidden]'))body.replaceChildren();
@@ -1696,7 +1763,7 @@ function refreshGeneratedGLSL(force=false){
   generatedGLSLCache={key,state:'loading',text:''};paintGeneratedGLSL();
   generatedGLSLTimer=setTimeout(async()=>{
     try{
-      const code=frontendCompilation(source)?compileFrontendGraph(source):await api('validate',{graph:source});
+      const code=await generateGLSL(source);
       if(serial!==generatedGLSLSerial||!graph||generatedGLSLKey()!==key)return;
       if(typeof code[sourceStage]!=='string')throw Error(t('generatedGLSL.unavailable'));
       generatedGLSLCache={key,state:'ready',text:code[sourceStage]};

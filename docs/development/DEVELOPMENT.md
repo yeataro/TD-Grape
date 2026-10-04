@@ -25,6 +25,10 @@ python tools/dev/submit_job.py tools/dev/jobs/refresh_sources.py
 
 refactor 分支的前端識別採 `0.8.276 Refactor.N`，從 `Refactor.1` 開始逐次遞增；數字基準仍與 `PRODUCT_VERSION` 一致，重構序號用來辨別前端交付，不作 Shader 編譯格式版本。標題列、About 與瀏覽器分頁都顯示這份識別，舊 main／Legacy 的 DEV 標示維持原樣。
 
+`Refactor.2` 的狀態列固定顯示 `GLSL Generation`：前端 TypeScript（新）或宿主 Python（舊），並區分目前圖的待產碼、產碼中、已產碼與失敗。待產碼只代表選定路徑；成功依真正完成的工作記錄，晚回覆不把較新圖標為成功。前端產碼完成不等於 TD 已成功套用，套用／連線結果仍在另一列顯示。程式碼對話框與 GLSL 面板使用相同路徑選擇；尚未支援的整份圖繼續走 Python。
+
+點擊狀態列可開啟向上的狀態歷史，查看時間、目標路徑及訊息。保留本分頁最近 200 筆，相鄰相同訊息合併計數；重新整理後清空，不寫入作品或 Undo。長清單可捲動，Escape／關閉按鈕／點外部可收起。隔離瀏覽器回歸入口：`node tests/browser/test_status_history.cjs EDITOR_SOURCE STATE_JSON REPORT_DIR`，沿用 `test_glsl_code.cjs` 的 Playwright fixture；不對 live TD 寫圖。
+
 目前開發交付依使用者已確認的約定：每一批可交付修改完成必要驗證後，即同步 TD、核對現有 Shader 保留、保存 TOE 並提交交付紀錄，主動回報可 review 的內容，不累積到所有子任務完成才交付。使用者允許在任務需要時使用電腦；開始操作介面時說明用途，結束時明確告知已用完，並區分滑鼠鍵盤操作與背景檔案／測試／TD 同步。詢問是否用完是在確認工作狀態，不代表要求停用電腦或暫停交付；暫停依使用者明確指示。來源同步與重新整理使用者正在編輯的網頁分開處理，不要為了載入新版 UI 擅自丟棄未提交草稿。
 
 正式來源 TOE 不保存私人遠端代理、正在執行的開發 runner、網址憑證或機器路徑。私人開發環境的完整 checkpoint 應存到私人工作區；更新正式 TOE 時使用 `tools/dev/jobs/save_source_project.py`，它會暫時移除已辨識的私人助手並在保存後恢復目前工作環境。
