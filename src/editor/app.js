@@ -48,7 +48,8 @@ let localeData=null,language='en';
 let editorProjectFile=null;
 function updateEditorTitle(){
   const target=$('#target')?.textContent||'',project=editorProjectFile===null?'':editorProjectFile||t('project.unsaved');
-  document.title=target||project?['TD-Grape',project,target].filter(Boolean).join(' · '):'TD-Grape · Shader Editor';
+  const editorName='TD-Grape '+$('.brand-version').textContent;
+  document.title=target||project?[editorName,project,target].filter(Boolean).join(' · '):editorName+' · Shader Editor';
 }
 function setEditorTargetPath(path){$('#target').textContent=path||'';updateEditorTitle();}
 function receiveProjectSummary(result){
