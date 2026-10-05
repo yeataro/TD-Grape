@@ -2,6 +2,10 @@
 
 Set GRAPE_VFS_TEST_OUTPUT to a disposable workspace directory before executing.
 No changes are made to the source component or its VFS.
+
+After deploying the callback to an existing Folder DAT, refresh that DAT and
+press the real Add From Table pulse. On a later TD tick, run with
+GRAPE_VFS_VERIFY_LIVE = True to verify the live button result without changing it.
 """
 from pathlib import Path
 import json
@@ -68,9 +72,21 @@ def check_editor_vfs_paths(source, output):
         probe.destroy()
 
 
-result = check_editor_vfs_paths(op('/TD_Grape/GrapeEditor'), GRAPE_VFS_TEST_OUTPUT)
-print(json.dumps(result, ensure_ascii=False))
-Path(GRAPE_VFS_TEST_OUTPUT, 'latest-result.json').write_text(
-    json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8'
-)
-assert result['passed'], '; '.join(result['failures'])
+if globals().get('GRAPE_VFS_VERIFY_LIVE', False):
+    editor = op('/TD_Grape/GrapeEditor')
+    folder = editor.op('folder1')
+    expected = {
+        folder[row, 'relpath'].val: Path(folder[row, 'path'].val).read_bytes()
+        for row in range(1, folder.numRows)
+    }
+    actual = {file.name: bytes(file.byteArray) for file in editor.op('virtualFile').vfs.find()}
+    assert expected, 'Live asset listing is empty'
+    assert actual == expected, 'Live button result differs from source paths or bytes'
+    print(json.dumps({'liveButtonResultPassed': True, 'fileCount': len(actual)}))
+else:
+    result = check_editor_vfs_paths(op('/TD_Grape/GrapeEditor'), GRAPE_VFS_TEST_OUTPUT)
+    print(json.dumps(result, ensure_ascii=False))
+    Path(GRAPE_VFS_TEST_OUTPUT, 'latest-result.json').write_text(
+        json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8'
+    )
+    assert result['passed'], '; '.join(result['failures'])

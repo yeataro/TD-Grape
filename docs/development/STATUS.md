@@ -1,5 +1,13 @@
 # 開發狀態
 
+## VFS 現場交付補正 — 2026-10-06
+
+人類回報匯入結果仍被攤平。MCP 確認先前已更新 callback，但現場 Folder DAT 的 37 筆 `overrideName` 仍為空；先前隔離測試主動刷新了副本，未覆蓋既有清單的部署狀態。這是交付遺漏，不是人類誤用。
+
+已刷新現場 Folder DAT，备份現有 VFS，再觸發原本的 **Add From Table** 按鈕；下一個 TD tick 後核對 37 份資產的相對名稱與 bytes 全部相符，包括 `icons/` 與 `vendor/`，Editor 子樹無錯誤。未修改匯入規則或擴大服務範圍。`originalFilePath` 仍記錄來源磁碟位置；資產身分看 `name`／`virtualPath`，不可混淆。
+
+既有測試增加 `GRAPE_VFS_VERIFY_LIVE = True` 的只讀現場核對入口。更新 Folder callback 後必須刷新既有 Folder DAT，再從真實按鈕入口驗證；不能只以新建副本測試通過宣稱已交付。已保存 `.16` 及標準 `TD-Grape-dev.toe`（1,534,630 bytes；SHA-256 `ba264de99fd50b786c2f96417a7e7de8f44d3cd6dcb2f0b64abe1f48d0816c87`）。此份包含現場匯入的 37 個網頁資產，但尚未接上網頁服務。
+
 ## Shell 小修正 — 2026-10-06
 
 修改前檢查點為 `c50cf39`。本輪只完成已授權的 VFS 路徑修正與主節點 storage 清理；前端仍為 Refactor.13，新 Shell 尚未接通完整產品。
