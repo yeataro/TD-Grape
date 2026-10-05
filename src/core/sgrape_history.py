@@ -198,7 +198,7 @@ def _project(runtime, entry, declaration):
     if not isinstance(values, list) or (not is_array and not is_pop and len(values) != count):
         raise RuntimeError('Invalid Uniform defaults in editor history.')
     if not is_array and not is_pop:
-        sources.validate_uniform_native(declaration, value, 'default')
+        sources.validate_uniform_default(declaration, value)
     operator = runtime.shader_operator(runtime.target()); index = getattr(operator.seq, sequence).numBlocks
     params = {'name': {'val': declaration['name'], 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}}
     for i, suffix in enumerate(sources.SEQUENCE_CHANNELS[sequence]):

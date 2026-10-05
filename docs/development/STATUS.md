@@ -6,6 +6,12 @@
 
 第一段先整理原生 Undo 的依賴入口：`sgrape_history` 不再自行尋找 core 或產生 GLSL literal，改用原生值檢查及宿主明確提供的文件接受策略。既有宿主的過渡 adapter 保留原 compiler 驗證行為；**這不代表新 Manager 已接通，或整個宿主已移除 Python core 相依**。新 Manager 不部署該 Legacy adapter。32 項 History／typed Undo 測試通過，涵蓋值恢復、結構恢復、外部修改、Expression／Bind／Export 保護、缺少策略時拒絕及驗證失敗回退；尚未部署這次改動至 TD。測試 Par 補足真實 TD 的 style 屬性，修正原 typed Undo fixture 的缺漏。
 
+第一段檢查點為 `e9bd7e2`。人類後續補充：Manager 回來，原子 OP 的編輯能力也恢復；保留圖／身分，不永久停用、不需重建，不重置原生參數。主節點啟動／註冊或再次操作時重新解析即可；此為待實作驗收，不宣稱已完成。
+
+獨立審查發現中間歷史缺少原生快照時，較寬鬆的原生值檢查可能讓不合法的文件預設值建立參數。已分開 portable default 與 TD live value 的檢查，保留既有 float 範圍及 bool／int 表示規則，不載入 compiler、不新增網路等待或逐幀檢查。76 項 History／typed Undo／spec／matrix／POP 測試通過；Spec 審查確認原重現案例已修正，Standards 無發現。人類已確認這項說明；尚未部署至 live TD。
+
+定位方案澄清：子 OP 不設 Global OP Shortcut，主節點可考慮設置，但仍為候選。Manager 可在任意 TD 路徑；图 UUID 與服務定位分開。API 範圍仍在討論，不因此新增或開放公共 API。
+
 接續完成新 Manager／TOP 的開啟、前端產碼、套用／預覽、Undo 與保存重開，加入無 Manager 原生使用驗證及必要診斷。單元測試通過不是人類測試交付；前端仍為 Refactor.13，live Shell 尚只有資產服務。
 
 ## Editor Service 資產供應 — 2026-10-06

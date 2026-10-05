@@ -115,6 +115,27 @@ def validate_uniform_component(declaration, value, role='value'):
         raise SourceError('Uniform '+name+': native '+role+' must be a whole '+family+' value from '+str(low)+' to '+str(high)+'.')
 
 
+def validate_uniform_default(declaration, value):
+    """Check a numeric document default before synthesizing a native row.
+
+    Live TD values allow numeric booleans and whole floats for integer rows.
+    Portable defaults retain their declared JSON types and float range instead.
+    This validates binding data only; it does not compile or infer a graph.
+    """
+    family = source_family(declaration['type'])
+    validate_uniform_native(declaration, value, 'default')
+    values = [value] if source_components(declaration) == 1 else value
+    if not isinstance(values, list):
+        raise SourceError('Uniform default components must be a list.')
+    for component in values:
+        if family == 'bool' and type(component) is not bool:
+            raise SourceError('Uniform boolean default must be true or false.')
+        if family in ('int', 'uint') and type(component) is not int:
+            raise SourceError('Uniform integer default must use an integer value.')
+        if family == 'float' and abs(component) > 1e20:
+            raise SourceError('Uniform float default exceeds supported range.')
+
+
 def validate_uniform_native(declaration, value, role='value'):
     if declaration.get('type')=='samplerBuffer':
         if value is not None:raise SourceError('Texture Buffer values belong to the native CHOP.')

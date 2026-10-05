@@ -178,10 +178,39 @@ class History(unittest.TestCase):
         before = self.token(); self.add('A', 4, 'uFinal'); after = self.token()
         desired = copy.deepcopy(self.current['graph']); declaration = next(d for d in desired['declarations'] if d['id']=='A')
         declaration.update(name='uIntermediate', type='vec2', value=[2, 5])
+        self.runtime.core = lambda: self.fail('Intermediate native history loaded the old Python core')
         h.restore(self.runtime, self.request(before, after, graph=desired))
         self.assertEqual(self.storage[sources.STORE]['A']['name'], 'uIntermediate')
         self.assertEqual(self.par('A').val, 4); self.assertEqual(self.par('A', 'valuey').val, 5)
         self.assertEqual(next(d for d in self.current['graph']['declarations'] if d['id']=='A')['value'], [2, 5])
+
+    def test_invalid_intermediate_default_is_rejected_before_native_mutation(self):
+        # The target checkpoint predates A. Restore must synthesize a row, not
+        # reuse a captured native value. A rejected draft must not seed that row.
+        self.current['graph']['declarations'] = [d for d in self.current['graph']['declarations'] if d['id'] != 'A']
+        self.operator.seq.vec.destroyBlock(0); self.storage[sources.STORE].pop('A'); sources.sync(self.runtime)
+        before = self.token(); self.add('A', 4, 'uFinal'); after = self.token()
+        def policy(graph):
+            for declaration in graph['declarations']:
+                core.literal(declaration['value'], declaration['type'])
+        self.runtime.validate_history_graph = policy
+        self.runtime.core = lambda: self.fail('Native history loaded the old Python core')
+        original = copy.deepcopy(self.current)
+        registry = copy.deepcopy(self.storage[sources.STORE])
+        original_par = self.par('A')
+        blocks = {name: seq.numBlocks for name, seq in self.operator.sequences.items()}
+        for ty, value in [('float', 1e30), ('int', 2.0), ('uint', 2.0), ('bool', 1), ('bvec2', [True, 0])]:
+            with self.subTest(type=ty, value=value):
+                desired = copy.deepcopy(original['graph'])
+                declaration = next(d for d in desired['declarations'] if d['id'] == 'A')
+                declaration.update(name='uIntermediate', type=ty, value=value, nativeSequence='color')
+                with self.assertRaisesRegex(sources.SourceError, 'default'):
+                    h.restore(self.runtime, self.request(before, after, graph=desired, request_id=ty))
+                self.assertEqual(self.current, original)
+                self.assertEqual(self.storage[sources.STORE], registry)
+                self.assertIs(self.par('A'), original_par)
+                self.assertEqual(original_par.val, 4)
+                self.assertEqual({name: seq.numBlocks for name, seq in self.operator.sequences.items()}, blocks)
 
     def test_bound_value_restores_master_without_detaching(self):
         master = Par(self.comp, 'Gain', 0.25); self.comp.par.Gain = master
