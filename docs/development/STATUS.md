@@ -1,5 +1,18 @@
 # 開發狀態
 
+## Shell 小修正 — 2026-10-06
+
+修改前檢查點為 `c50cf39`。本輪只完成已授權的 VFS 路徑修正與主節點 storage 清理；前端仍為 Refactor.13，新 Shell 尚未接通完整產品。
+
+- `GrapeEditor/folder1_callbacks` 現在提供 `overrideName`，名稱相對於所選 Rootfolder，保留 `icons/logo.svg` 等資料夾結構。原本 Rootfolder 的 Bind 已正常，問題是 Palette 匯入器只讀 `path`，不使用原有 `relpath` 欄；同名檔案曾被攤平改名。沿用 Folder DAT 與 Palette VFS，不另造匯入服務。VFS 自帶的 `originalFilePath` 仍是來源紀錄，與內嵌資產名稱分開，不作網頁路由。
+- 主節點清除五個舊殼 storage keys：`sgrapeManager`、`sgrapeManagerId`、`serverPort`、`sgrapeMenuColors`、`sgrapeMenuColorWarning`。這些是旗標／識別／連接埠等資料，未發現活的 Python runtime 物件；修改前已在私人 checkpoint 目錄備份。舊 masters 仍有舊 Manager 引用，留待新版宿主接入處理，不能據此宣稱舊 masters 現在可用。
+- TD 2025.32820 隔離副本實測通過：絕對／專案相對來源資料夾、切換來源、巢狀同名檔案及內嵌 bytes。測試副本已刪除；未向人類的 VFS 塞入測試資產。Editor 子樹無錯誤；受保護 IconGen／icon 的 51 個 OP 在參數、接線、文字、storage 與 handoff 標示核對上完全相同。
+- 已保存 `TD-Grape-dev.15.toe`，標準入口 `src/td/TD-Grape-dev.toe` 同內容（713,158 bytes；SHA-256 `2b8fa19d50e754c925f3ba825baf1cc6da2783407fd39a962b9c5f24f92a00dd`）。未重開工程，未宣稱已完成 HTTP／VFS 服務整合或整體待機效能驗證。
+
+來源：`src/td/runtime/editor_folder_callbacks.py`；其內嵌位置已記入既有 source／embedded mapping。当前 Shell 尚無舊 runtime，**不要對這個 Shell 執行舊 `refresh_sources.py`／`save_source_project.py`**；本輪透過 MCP 只更新該 DAT 並保存開發 TOE。主節點自訂參數全為人類設計參考，後續由實作者按責任與便利調整。
+
+重跑：在 TD Python 環境令 `GRAPE_VFS_TEST_OUTPUT` 指向私人測試目錄，再執行 `tests/td/test_editor_vfs_paths.py`；需提供正常的 `op`、`project` globals。該測試只複製 Editor 到 `/project1` 下，最後刪除副本。
+
 ## Refactor 開工前檢查點 — 2026-10-06
 
 前端來源基準為 `559ae40`（0.8.276 Refactor.13；53 個普通模組＋3 個結構模組），本次沒有變更前端版本或程式。人類已提供根層 `/TD_Grape` 的新宿主 Shell，尚未接通完整產品；以下是開發檢查點，不是新的功能發布。
