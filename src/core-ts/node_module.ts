@@ -78,7 +78,8 @@ export function createRegistry(modules:readonly NodeModule[]){
     if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.key)||table.has(id))throw Error('Invalid or duplicate node definition: '+id);
     if(module.signatures&&!module.configure)throw Error('Signature module needs a configuration operation: '+id);
     const freeze=(value:unknown):void=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}};
-    const catalog=JSON.parse(JSON.stringify(module.catalog)) as CatalogRow;freeze(catalog);
+    const catalog=JSON.parse(JSON.stringify(module.catalog)) as CatalogRow;
+    catalog.definition.definitionUuid=id;freeze(catalog);
     table.set(id,Object.freeze({...module,catalog}));
   }
   // Do not expose a mutable registration table to a compilation in progress.

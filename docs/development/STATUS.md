@@ -16,6 +16,8 @@ Undo 修正提交為 `453e671`。接續移除 `sgrape_sources`／`sgrape_paramet
 
 接續完成新 Manager／TOP 的開啟、前端產碼、套用／預覽、Undo 與保存重開，加入無 Manager 原生使用驗證及必要診斷。單元測試通過不是人類測試交付；前端仍為 Refactor.13，live Shell 尚只有資產服務。
 
+原生參數工具的提交為 `816fd50`。接續新增建置產物 `editor-bootstrap.json`：現有 UI 所需的 catalog／typeContract 從真正註冊的 TypeScript 模組投影，Manager 可提供這份靜態資料，無需呼叫 Python compiler 產生接孔契約。範圍限已遷移的 numeric TOP 模組，不用歷史 catalog 冒充完整支援。模組的 configure 失敗會中止建置並保留來源錯誤；省略 definitionUuid 的普通擴充統一沿用 registry 的身分規則。97 項核心測試及型別檢查通過，獨立 Standards／Spec 審查修正後無發現。這是接入準備，尚未修改 app 的開啟流程或部署 TD，不是完整編輯器交付。
+
 ## Editor Service 資產供應 — 2026-10-06
 
 中間提交：`47dfbc1`。開發 TOE 保存為 `.17`，標準入口已同步（1,550,126 bytes；SHA-256 `abcb6ae4d23ae903cf23037e2d0d054c88771a5307d3e97a4ab9cb70c3b6619e`）。

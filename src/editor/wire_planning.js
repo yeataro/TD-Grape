@@ -12,6 +12,7 @@ const graph = require("./graph");
 const values = require("./values");
 const node_module_1 = require("./node_module");
 const top_compiler_1 = require("./top_compiler");
+const editor_contract_1 = require("./editor_contract");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -71,7 +72,7 @@ const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode };
+exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract };
 
 },
 "changes":function(require,module,exports){
@@ -201,6 +202,96 @@ function appendNodeComments(lines, start, note) {
             lines.push(...labels);
     }
     lines.push(...commentLines(note.comment, 'Comment'));
+}
+
+},
+"editor_contract":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createEditorContract = createEditorContract;
+/** Compatibility data for the existing editor, projected from real modules.
+ * The host serves this build asset; it does not infer node ports or types.
+ */
+const model_1 = require("./model");
+const node_module_1 = require("./node_module");
+const values = require("./values");
+function variants(module, target) {
+    var _a;
+    const definition = module.catalog.definition;
+    const base = { id: 'projection', definitionUuid: definition.definitionUuid, params: (0, model_1.copy)(definition.defaults) };
+    const tokens = [...Object.values(definition.inputs), ...Object.values(definition.outputs)];
+    const selector = tokens.includes('D') ? 'declaration' :
+        tokens.includes('T') || typeof definition.defaults.type === 'string' ? 'parameter' : 'fixed';
+    const result = [];
+    const types = selector === 'fixed' ? [null] : values.types;
+    for (const selected of types) {
+        const context = { target, declaration: () => selector === 'declaration' && selected ?
+                { id: 'source', kind: 'uniform', name: 'uSource', type: selected, value: values.fill(0, selected) } : undefined };
+        let node = (0, model_1.copy)(base);
+        if (selector === 'parameter' && selected) {
+            const requested = { ...node, params: { ...node.params, type: selected } };
+            if (!module.supports(requested, context))
+                continue;
+            if (!module.configure)
+                throw Error('Missing configuration operation for ' + definition.key);
+            try {
+                node = module.configure(node, { type: selected }, context);
+            }
+            catch (error) {
+                throw Object.assign(Error('Editor projection failed for ' + definition.key + ' / ' + selected + ': ' + String(error)), { cause: error });
+            }
+            if (!module.supports(node, context))
+                throw Error('Configuration changed advertised capability: ' + definition.key + ' / ' + selected);
+        }
+        if (selector === 'declaration')
+            node.params.declarationId = 'source';
+        if (!module.supports(node, context))
+            continue;
+        module.validate(node, context);
+        const ports = (0, node_module_1.resolvePorts)(module, node, context).types();
+        const signatures = ((_a = module.signatures) === null || _a === void 0 ? void 0 : _a.call(module, node, context)) || [];
+        const matching = signatures.filter(row => row.type === selected);
+        result.push(...(matching.length ? matching.map(row => ({ type: selected, inputs: { ...row.inputs }, outputs: { ...row.outputs } })) :
+            [{ type: selected, inputs: { ...ports.inputs }, outputs: { ...ports.outputs } }]));
+    }
+    if (!result.length)
+        throw Error('No editor interface for module ' + definition.key);
+    if (selector === 'parameter' && typeof definition.defaults.type === 'string' &&
+        !result.some(row => row.type === definition.defaults.type))
+        throw Error('Unsupported default type for module ' + definition.key);
+    return { selector, variants: result };
+}
+// UI compatibility projection for component grouping. Module callbacks remain
+// authoritative when an actual node changes or accepts a wire.
+function vectorLayouts(type) {
+    const width = values.count(type), family = values.family(type), result = [];
+    const visit = (start, inputs, groups) => {
+        if (start === width) {
+            result.push({ inputs, groups });
+            return;
+        }
+        for (let size = 1; size <= width - start; size++) {
+            const key = 'xyzw'[start], part = values.shaped(family, size);
+            visit(start + size, { ...inputs, [key]: part }, size === 1 ? groups : { ...groups, [key]: part });
+        }
+    };
+    visit(0, {}, {});
+    return result;
+}
+function createEditorContract(registry, target = 'top') {
+    const modules = registry.modules.filter(m => !m.structural && m.catalog.definition.stages.includes('pixel'));
+    return {
+        version: 1, valueTypes: [...values.types], numericTypes: values.types.filter(t => values.family(t) !== 'bool'),
+        resourceTypes: [], specConstantTypes: [],
+        types: Object.fromEntries(values.types.map(t => [t, { family: values.family(t), components: values.count(t) }])),
+        conversions: values.policy.conversions.map(row => ({ ...row, kind: values.count(row.from) === 1 && values.count(row.to) > 1 ? 'splat' : 'cast' })),
+        definitions: Object.fromEntries(modules.map(m => [m.catalog.definition.definitionUuid, variants(m, target)])),
+        convert: { types: [...values.types], fromParameter: 'fromType', toParameter: 'toType',
+            pairs: Object.fromEntries(values.types.map(from => [from, values.types.filter(to => values.explicit(from, to))])) },
+        vectors: { version: 1, types: [...values.vectors], components: 'xyzw',
+            scalarTypes: Object.fromEntries(values.vectors.map(t => [t, values.family(t)])),
+            layouts: Object.fromEntries(values.vectors.map(t => [t, vectorLayouts(t)])) }
+    };
 }
 
 },
@@ -876,6 +967,7 @@ function createRegistry(modules) {
             Object.freeze(value);
         } };
         const catalog = JSON.parse(JSON.stringify(module.catalog));
+        catalog.definition.definitionUuid = id;
         freeze(catalog);
         table.set(id, Object.freeze({ ...module, catalog }));
     }

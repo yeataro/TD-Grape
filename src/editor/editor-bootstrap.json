@@ -1,0 +1,5775 @@
+{
+  "version": 1,
+  "producer": "frontend-modules",
+  "catalogHash": "1b2b0e5b09b41d10ac4f132fd795e2bf28e62eb0b9ac0a4b6ae226448b6eb95b",
+  "catalog": [
+    {
+      "key": "abs",
+      "label": "Absolute",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.abs",
+      "definitionUuid": "sgrape.builtin.abs",
+      "revisionHash": "85df7ec01966ac06cf87685c8c93d8369744f133bdcbe18684b35397f3f141aa"
+    },
+    {
+      "key": "add",
+      "label": "Add",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.add",
+      "definitionUuid": "sgrape.builtin.add",
+      "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf"
+    },
+    {
+      "key": "all",
+      "label": "all",
+      "inputs": {
+        "value": "bvec2"
+      },
+      "outputs": {
+        "out": "bool"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "bvec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.all",
+      "definitionUuid": "sgrape.builtin.all",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "03eda15d01932bd1d23348a4329ec87b3bd79c305a675c96728d06069e820a82"
+    },
+    {
+      "key": "any",
+      "label": "any",
+      "inputs": {
+        "value": "bvec2"
+      },
+      "outputs": {
+        "out": "bool"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "bvec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.any",
+      "definitionUuid": "sgrape.builtin.any",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "dbd6841db92dc9a7971b1e8e9ffd02a19ddc7c5ee5e5e4deb7e9b6f50396fb22"
+    },
+    {
+      "key": "ceil",
+      "label": "Ceil",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.ceil",
+      "definitionUuid": "sgrape.builtin.ceil",
+      "revisionHash": "f14dfc171d179d9d4037965c879b689fb710cda2faabffb768bb7163ee1ca1dd"
+    },
+    {
+      "key": "clamp",
+      "label": "Clamp",
+      "inputs": {
+        "value": "T",
+        "min": "T",
+        "max": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "inputDefaults": {
+        "max": 1
+      },
+      "descriptionKey": "help.clamp",
+      "definitionUuid": "sgrape.builtin.clamp",
+      "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9"
+    },
+    {
+      "key": "color",
+      "label": "Color RGBA",
+      "inputs": {},
+      "outputs": {
+        "out": "vec4"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "value": [
+          0.55,
+          0.28,
+          0.9,
+          1
+        ]
+      },
+      "descriptionKey": "help.color",
+      "definitionUuid": "sgrape.builtin.color",
+      "revisionHash": "248cb1f0646af23e93597f4cb941fccd9fdc65cfb36ce816467635766ccddedc"
+    },
+    {
+      "key": "combine",
+      "label": "Combine",
+      "inputs": {
+        "x": "float",
+        "y": "float"
+      },
+      "outputs": {
+        "out": "vec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2",
+        "groups": {},
+        "components": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "descriptionKey": "help.combine",
+      "definitionUuid": "sgrape.builtin.combine",
+      "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a"
+    },
+    {
+      "key": "compare",
+      "label": "Compare",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "bool"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float",
+        "operator": ">"
+      },
+      "inputDefaults": {
+        "a": 0,
+        "b": 0
+      },
+      "descriptionKey": "help.compare",
+      "definitionUuid": "sgrape.builtin.compare",
+      "revisionHash": "d2010eb23d404212e4ff254b22d71d0259600226604e8cdcbaae93e68e52779f"
+    },
+    {
+      "key": "convert",
+      "label": "Convert",
+      "inputs": {
+        "value": "float"
+      },
+      "outputs": {
+        "out": "int"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "fromType": "float",
+        "toType": "int"
+      },
+      "descriptionKey": "help.convert",
+      "definitionUuid": "sgrape.builtin.convert",
+      "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc"
+    },
+    {
+      "key": "cos",
+      "label": "Cosine",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.cos",
+      "definitionUuid": "sgrape.builtin.cos",
+      "revisionHash": "f105ae3d41c1b1399827394d808a6d878cff66de850968b789cb51773f927366"
+    },
+    {
+      "key": "divide",
+      "label": "Divide",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "inputDefaults": {
+        "b": 1
+      },
+      "descriptionKey": "help.divide",
+      "definitionUuid": "sgrape.builtin.divide",
+      "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81"
+    },
+    {
+      "key": "dot",
+      "label": "Dot Product",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "float"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec3"
+      },
+      "descriptionKey": "help.dot",
+      "definitionUuid": "sgrape.builtin.dot",
+      "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef"
+    },
+    {
+      "key": "equal",
+      "label": "equal",
+      "inputs": {
+        "a": "vec2",
+        "b": "vec2"
+      },
+      "outputs": {
+        "out": "bvec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.equal",
+      "definitionUuid": "sgrape.builtin.equal",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "b3e2b380091c5916f7777550d2792c233cd6822a18930ec30a3aac41237eef8c"
+    },
+    {
+      "key": "float",
+      "label": "Float",
+      "inputs": {},
+      "outputs": {
+        "out": "float"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "value": 0.5
+      },
+      "descriptionKey": "help.float",
+      "definitionUuid": "sgrape.builtin.float",
+      "revisionHash": "61df883534354ac44a35997e42d30db702f339fefe0767ea77ac6330431a553b"
+    },
+    {
+      "key": "floor",
+      "label": "Floor",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.floor",
+      "definitionUuid": "sgrape.builtin.floor",
+      "revisionHash": "26fdcfbb4c290d0e46a521fb6c1154dff209f159c9b9bde6ff490ddc3e4fac86"
+    },
+    {
+      "key": "fract",
+      "label": "Fraction",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.fract",
+      "definitionUuid": "sgrape.builtin.fract",
+      "revisionHash": "f2065cc5ddb317d3f47a2e0cd3f8815e25c05a6175001dd78ac70b746694b302"
+    },
+    {
+      "key": "greaterThan",
+      "label": "greaterThan",
+      "inputs": {
+        "a": "vec2",
+        "b": "vec2"
+      },
+      "outputs": {
+        "out": "bvec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.greaterThan",
+      "definitionUuid": "sgrape.builtin.greaterThan",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "8472cda16304d978adc1f20811f81a892453b350ecf51438abf8dde9ca50d31f"
+    },
+    {
+      "key": "greaterThanEqual",
+      "label": "greaterThanEqual",
+      "inputs": {
+        "a": "vec2",
+        "b": "vec2"
+      },
+      "outputs": {
+        "out": "bvec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.greaterThanEqual",
+      "definitionUuid": "sgrape.builtin.greaterThanEqual",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "d8014bcd8ee2af480efe93b374aa1acddce238f37024d6f2697ad8d9a80077ab"
+    },
+    {
+      "key": "if",
+      "label": "If",
+      "inputs": {
+        "condition": "bool",
+        "true": "T",
+        "false": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "inputDefaults": {
+        "condition": false,
+        "true": 1,
+        "false": 0
+      },
+      "descriptionKey": "help.if",
+      "definitionUuid": "sgrape.builtin.if",
+      "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54"
+    },
+    {
+      "key": "isinf",
+      "label": "isinf",
+      "inputs": {
+        "value": "float"
+      },
+      "outputs": {
+        "out": "bool"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.isinf",
+      "definitionUuid": "sgrape.builtin.isinf",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "94077c41f28233d451fb25d4a35b5e324d4a86c4b2bbebeaefef1efcd9cbdf92"
+    },
+    {
+      "key": "isnan",
+      "label": "isnan",
+      "inputs": {
+        "value": "float"
+      },
+      "outputs": {
+        "out": "bool"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.isnan",
+      "definitionUuid": "sgrape.builtin.isnan",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "baeed4132d74bf0c5107d5a853728f47cad1b775d668ad6d9fce7746b525e7b6"
+    },
+    {
+      "key": "length",
+      "label": "Length",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "float"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec3"
+      },
+      "descriptionKey": "help.length",
+      "definitionUuid": "sgrape.builtin.length",
+      "revisionHash": "fbf3940f68e152a960896d6b69c48f7d81bb5e9ba81c4934e16316e370c145d4"
+    },
+    {
+      "key": "lessThan",
+      "label": "lessThan",
+      "inputs": {
+        "a": "vec2",
+        "b": "vec2"
+      },
+      "outputs": {
+        "out": "bvec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.lessThan",
+      "definitionUuid": "sgrape.builtin.lessThan",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "eb9aa419d2b37496226dfe7b50aae281763cb3732bb94c01ff7a1660c2089907"
+    },
+    {
+      "key": "lessThanEqual",
+      "label": "lessThanEqual",
+      "inputs": {
+        "a": "vec2",
+        "b": "vec2"
+      },
+      "outputs": {
+        "out": "bvec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.lessThanEqual",
+      "definitionUuid": "sgrape.builtin.lessThanEqual",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "71f57a6921fd395143cc0d59174a3e4b465aa4b8df73145754cfdde82d67ac77"
+    },
+    {
+      "key": "math",
+      "label": "Math",
+      "inputs": {
+        "input0": "T",
+        "input1": "T",
+        "input2": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float",
+        "inputCount": 3,
+        "mode": "steps",
+        "operation": "add"
+      },
+      "descriptionKey": "help.math",
+      "definitionUuid": "sgrape.builtin.math",
+      "revisionHash": "04cdba0192bf36c63eb8c4ee22fe62f19d3b86098346405b98fc004d35bd85c4"
+    },
+    {
+      "key": "max",
+      "label": "Maximum",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.max",
+      "definitionUuid": "sgrape.builtin.max",
+      "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b"
+    },
+    {
+      "key": "min",
+      "label": "Minimum",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.min",
+      "definitionUuid": "sgrape.builtin.min",
+      "revisionHash": "ddf41b8ddddb86359a40b88f1215062b9b2d2d4c7cc1124f76db009e89ba6511"
+    },
+    {
+      "key": "mix",
+      "label": "Mix",
+      "inputs": {
+        "a": "T",
+        "b": "T",
+        "factor": "float"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec4"
+      },
+      "descriptionKey": "help.mix",
+      "definitionUuid": "sgrape.builtin.mix",
+      "revisionHash": "33e0787d3178b0d0c1b9aec86f8b4be0de679eaaace04caeb81392dcfe41589c"
+    },
+    {
+      "key": "multiply",
+      "label": "Multiply",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec4"
+      },
+      "descriptionKey": "help.multiply",
+      "definitionUuid": "sgrape.builtin.multiply",
+      "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763"
+    },
+    {
+      "key": "normalize",
+      "label": "Normalize",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec3"
+      },
+      "inputDefaults": {
+        "value": 1
+      },
+      "descriptionKey": "help.normalize",
+      "definitionUuid": "sgrape.builtin.normalize",
+      "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d"
+    },
+    {
+      "key": "not",
+      "label": "not",
+      "inputs": {
+        "value": "bvec2"
+      },
+      "outputs": {
+        "out": "bvec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "bvec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.not",
+      "definitionUuid": "sgrape.builtin.not",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "8abeab61179dfcc65a52fdab9f0d18dd659c3256314a18d2e077123bd112f31f"
+    },
+    {
+      "key": "notEqual",
+      "label": "notEqual",
+      "inputs": {
+        "a": "vec2",
+        "b": "vec2"
+      },
+      "outputs": {
+        "out": "bvec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2"
+      },
+      "inputDefaults": {},
+      "descriptionKey": "help.notEqual",
+      "definitionUuid": "sgrape.builtin.notEqual",
+      "targets": [
+        "top",
+        "mat"
+      ],
+      "revisionHash": "2cdbeac2313e7adf44cce1838ab7947dd6f49052310ee41b4c6051c54c44e32c"
+    },
+    {
+      "key": "pixel_out",
+      "label": "Color Output",
+      "inputs": {
+        "color": "vec4"
+      },
+      "outputs": {},
+      "stages": [
+        "pixel"
+      ],
+      "defaults": {},
+      "descriptionKey": "help.pixel_out",
+      "definitionUuid": "sgrape.builtin.pixel_out",
+      "revisionHash": "b37335e4e2462dfa4c0e1cf4c3308f9d64d317ce0d916c5c596a1884a44e4f65"
+    },
+    {
+      "key": "replace",
+      "label": "Replace",
+      "inputs": {
+        "value": "vec2",
+        "x": "float",
+        "y": "float"
+      },
+      "outputs": {
+        "out": "vec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2",
+        "groups": {},
+        "components": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "descriptionKey": "help.replace",
+      "definitionUuid": "sgrape.builtin.replace",
+      "revisionHash": "7f8301823f0c70bb4e745d3cc12f3d860f82b48dbb227a6e095bff2ab55d75d8"
+    },
+    {
+      "key": "rgba",
+      "label": "Compose RGBA",
+      "inputs": {
+        "rgb": "vec3",
+        "alpha": "float"
+      },
+      "outputs": {
+        "out": "vec4"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {},
+      "descriptionKey": "help.rgba",
+      "definitionUuid": "sgrape.builtin.rgba",
+      "revisionHash": "0514299936663fa533dcc531be299ccd3a8707b2e32fd139225180056613932b"
+    },
+    {
+      "key": "round",
+      "label": "Round",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.round",
+      "definitionUuid": "sgrape.builtin.round",
+      "revisionHash": "4de9f33198e11998397b3d35c87b3bbb11fc63325b8bda0a7b2e44f7326911c1"
+    },
+    {
+      "key": "router",
+      "label": "Router",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.router",
+      "definitionUuid": "sgrape.builtin.router",
+      "revisionHash": "460411fb0c04ea7d492aa79541fa1ad6447a738fdea9e9c1fe289ff26e6fc1d3"
+    },
+    {
+      "key": "scalar",
+      "label": "Scalar",
+      "inputs": {},
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float",
+        "value": 0
+      },
+      "descriptionKey": "help.scalar",
+      "definitionUuid": "sgrape.builtin.scalar",
+      "revisionHash": "5349f6d53a10051ed36a17d049c8830642f2c1c5ae76939c741f1cc85aa952b9"
+    },
+    {
+      "key": "sign",
+      "label": "Sign",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.sign",
+      "definitionUuid": "sgrape.builtin.sign",
+      "revisionHash": "a99638202e9ffce9f6a1bc925ee7052f8092973ff92d85d5a56edddb9dcc2b4d"
+    },
+    {
+      "key": "sin",
+      "label": "Sine",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.sin",
+      "definitionUuid": "sgrape.builtin.sin",
+      "revisionHash": "265f711fce8e25ba2a3b0839fc4fb24ea98c6a458ee80b189d7efc417f75513c"
+    },
+    {
+      "key": "smoothstep",
+      "label": "Smoothstep",
+      "inputs": {
+        "edge0": "T",
+        "edge1": "T",
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "inputDefaults": {
+        "edge1": 1
+      },
+      "descriptionKey": "help.smoothstep",
+      "definitionUuid": "sgrape.builtin.smoothstep",
+      "revisionHash": "fea7bf812453b0b4b0bdacddd389843ddfd8a55ed3f17c2b76341bc5a89d8518"
+    },
+    {
+      "key": "split",
+      "label": "Split RGBA",
+      "inputs": {
+        "color": "vec4"
+      },
+      "outputs": {
+        "rgb": "vec3",
+        "r": "float",
+        "g": "float",
+        "b": "float",
+        "a": "float"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {},
+      "descriptionKey": "help.split",
+      "definitionUuid": "sgrape.builtin.split",
+      "revisionHash": "d7814765c45269fe55b74659af5d55e41843a1ed87c8c3719aca4156bbe00d1a"
+    },
+    {
+      "key": "sqrt",
+      "label": "Sqrt",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.sqrt",
+      "definitionUuid": "sgrape.builtin.sqrt",
+      "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29"
+    },
+    {
+      "key": "subtract",
+      "label": "Subtract",
+      "inputs": {
+        "a": "T",
+        "b": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.subtract",
+      "definitionUuid": "sgrape.builtin.subtract",
+      "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405"
+    },
+    {
+      "key": "swizzle",
+      "label": "Swizzle",
+      "inputs": {
+        "value": "vec2"
+      },
+      "outputs": {
+        "out": "vec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2",
+        "mask": "xy"
+      },
+      "descriptionKey": "help.swizzle",
+      "definitionUuid": "sgrape.builtin.swizzle",
+      "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442"
+    },
+    {
+      "key": "trunc",
+      "label": "Truncate",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.trunc",
+      "definitionUuid": "sgrape.builtin.trunc",
+      "revisionHash": "3edeff6f538eba1c7c796d6c683e907abb4746c8034310e33ee9c5d34faa8302"
+    },
+    {
+      "key": "uniform",
+      "label": "Uniform",
+      "inputs": {},
+      "outputs": {
+        "out": "D"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "declarationId": ""
+      },
+      "descriptionKey": "help.uniform",
+      "definitionUuid": "sgrape.builtin.uniform",
+      "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5"
+    },
+    {
+      "key": "vec2",
+      "label": "Vector 2",
+      "inputs": {},
+      "outputs": {
+        "out": "vec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "value": [
+          0.5,
+          0.5
+        ]
+      },
+      "descriptionKey": "help.vec2",
+      "definitionUuid": "sgrape.builtin.vec2",
+      "revisionHash": "3626d76bfc9b576e593300589c2dcd2c00bdfc79706bedad57f98d530a84cb37"
+    },
+    {
+      "key": "vec3",
+      "label": "Vector 3",
+      "inputs": {},
+      "outputs": {
+        "out": "vec3"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "value": [
+          1,
+          1,
+          1
+        ]
+      },
+      "descriptionKey": "help.vec3",
+      "definitionUuid": "sgrape.builtin.vec3",
+      "revisionHash": "f576162450abafdc51d9ff84531c9689c21236291f9ba65ad8d477366eb1372b"
+    },
+    {
+      "key": "vec4",
+      "label": "Vector 4",
+      "inputs": {},
+      "outputs": {
+        "out": "vec4"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "value": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "descriptionKey": "help.vec4",
+      "definitionUuid": "sgrape.builtin.vec4",
+      "revisionHash": "200c2cd0c628bb254d1a0a4e6b584d42435d6344ff5c1a7b63fcddb452d59656"
+    },
+    {
+      "key": "vector",
+      "label": "Vector",
+      "inputs": {},
+      "outputs": {
+        "out": "vec2"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2",
+        "components": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "descriptionKey": "help.vector",
+      "definitionUuid": "sgrape.builtin.vector",
+      "revisionHash": "d4afc585f94d526bf61a7cf77fcf91ea92136adc0d614f4ef23016b437b0ae67"
+    },
+    {
+      "key": "vector_split",
+      "label": "Split",
+      "inputs": {
+        "value": "vec2"
+      },
+      "outputs": {
+        "x": "float",
+        "y": "float"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "vec2"
+      },
+      "descriptionKey": "help.vector_split",
+      "definitionUuid": "sgrape.builtin.vector_split",
+      "revisionHash": "364abce677961b275edf97cd163dd9ada7a778ac92d369bb19ba39d688a61927"
+    }
+  ],
+  "typeContract": {
+    "version": 1,
+    "valueTypes": [
+      "float",
+      "vec2",
+      "vec3",
+      "vec4",
+      "int",
+      "ivec2",
+      "ivec3",
+      "ivec4",
+      "uint",
+      "uvec2",
+      "uvec3",
+      "uvec4",
+      "bool",
+      "bvec2",
+      "bvec3",
+      "bvec4"
+    ],
+    "numericTypes": [
+      "float",
+      "vec2",
+      "vec3",
+      "vec4",
+      "int",
+      "ivec2",
+      "ivec3",
+      "ivec4",
+      "uint",
+      "uvec2",
+      "uvec3",
+      "uvec4"
+    ],
+    "resourceTypes": [],
+    "specConstantTypes": [],
+    "types": {
+      "float": {
+        "family": "float",
+        "components": 1
+      },
+      "vec2": {
+        "family": "float",
+        "components": 2
+      },
+      "vec3": {
+        "family": "float",
+        "components": 3
+      },
+      "vec4": {
+        "family": "float",
+        "components": 4
+      },
+      "int": {
+        "family": "int",
+        "components": 1
+      },
+      "ivec2": {
+        "family": "int",
+        "components": 2
+      },
+      "ivec3": {
+        "family": "int",
+        "components": 3
+      },
+      "ivec4": {
+        "family": "int",
+        "components": 4
+      },
+      "uint": {
+        "family": "uint",
+        "components": 1
+      },
+      "uvec2": {
+        "family": "uint",
+        "components": 2
+      },
+      "uvec3": {
+        "family": "uint",
+        "components": 3
+      },
+      "uvec4": {
+        "family": "uint",
+        "components": 4
+      },
+      "bool": {
+        "family": "bool",
+        "components": 1
+      },
+      "bvec2": {
+        "family": "bool",
+        "components": 2
+      },
+      "bvec3": {
+        "family": "bool",
+        "components": 3
+      },
+      "bvec4": {
+        "family": "bool",
+        "components": 4
+      }
+    },
+    "conversions": [
+      {
+        "from": "float",
+        "to": "vec2",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "vec3",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "vec4",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "int",
+        "kind": "cast"
+      },
+      {
+        "from": "float",
+        "to": "ivec2",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "ivec3",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "ivec4",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "uint",
+        "kind": "cast"
+      },
+      {
+        "from": "float",
+        "to": "uvec2",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "uvec3",
+        "kind": "splat"
+      },
+      {
+        "from": "float",
+        "to": "uvec4",
+        "kind": "splat"
+      },
+      {
+        "from": "vec2",
+        "to": "ivec2",
+        "kind": "cast"
+      },
+      {
+        "from": "vec2",
+        "to": "uvec2",
+        "kind": "cast"
+      },
+      {
+        "from": "vec3",
+        "to": "ivec3",
+        "kind": "cast"
+      },
+      {
+        "from": "vec3",
+        "to": "uvec3",
+        "kind": "cast"
+      },
+      {
+        "from": "vec4",
+        "to": "ivec4",
+        "kind": "cast"
+      },
+      {
+        "from": "vec4",
+        "to": "uvec4",
+        "kind": "cast"
+      },
+      {
+        "from": "int",
+        "to": "float",
+        "kind": "cast"
+      },
+      {
+        "from": "int",
+        "to": "vec2",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "vec3",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "vec4",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "ivec2",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "ivec3",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "ivec4",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "uint",
+        "kind": "cast"
+      },
+      {
+        "from": "int",
+        "to": "uvec2",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "uvec3",
+        "kind": "splat"
+      },
+      {
+        "from": "int",
+        "to": "uvec4",
+        "kind": "splat"
+      },
+      {
+        "from": "ivec2",
+        "to": "vec2",
+        "kind": "cast"
+      },
+      {
+        "from": "ivec2",
+        "to": "uvec2",
+        "kind": "cast"
+      },
+      {
+        "from": "ivec3",
+        "to": "vec3",
+        "kind": "cast"
+      },
+      {
+        "from": "ivec3",
+        "to": "uvec3",
+        "kind": "cast"
+      },
+      {
+        "from": "ivec4",
+        "to": "vec4",
+        "kind": "cast"
+      },
+      {
+        "from": "ivec4",
+        "to": "uvec4",
+        "kind": "cast"
+      },
+      {
+        "from": "uint",
+        "to": "float",
+        "kind": "cast"
+      },
+      {
+        "from": "uint",
+        "to": "vec2",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "vec3",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "vec4",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "int",
+        "kind": "cast"
+      },
+      {
+        "from": "uint",
+        "to": "ivec2",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "ivec3",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "ivec4",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "uvec2",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "uvec3",
+        "kind": "splat"
+      },
+      {
+        "from": "uint",
+        "to": "uvec4",
+        "kind": "splat"
+      },
+      {
+        "from": "uvec2",
+        "to": "vec2",
+        "kind": "cast"
+      },
+      {
+        "from": "uvec2",
+        "to": "ivec2",
+        "kind": "cast"
+      },
+      {
+        "from": "uvec3",
+        "to": "vec3",
+        "kind": "cast"
+      },
+      {
+        "from": "uvec3",
+        "to": "ivec3",
+        "kind": "cast"
+      },
+      {
+        "from": "uvec4",
+        "to": "vec4",
+        "kind": "cast"
+      },
+      {
+        "from": "uvec4",
+        "to": "ivec4",
+        "kind": "cast"
+      },
+      {
+        "from": "bool",
+        "to": "bvec2",
+        "kind": "splat"
+      },
+      {
+        "from": "bool",
+        "to": "bvec3",
+        "kind": "splat"
+      },
+      {
+        "from": "bool",
+        "to": "bvec4",
+        "kind": "splat"
+      }
+    ],
+    "definitions": {
+      "sgrape.builtin.abs": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.add": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "float",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "float",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "float",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.all": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "bvec2",
+            "inputs": {
+              "value": "bvec2"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "value": "bvec3"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "value": "bvec4"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.any": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "bvec2",
+            "inputs": {
+              "value": "bvec2"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "value": "bvec3"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "value": "bvec4"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.ceil": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.clamp": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float",
+              "min": "float",
+              "max": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2",
+              "min": "vec2",
+              "max": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2",
+              "min": "float",
+              "max": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3",
+              "min": "vec3",
+              "max": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3",
+              "min": "float",
+              "max": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4",
+              "min": "vec4",
+              "max": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4",
+              "min": "float",
+              "max": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.color": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {},
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.combine": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "x": "float",
+              "y": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "x": "float",
+              "y": "float",
+              "z": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "x": "float",
+              "y": "float",
+              "z": "float",
+              "w": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "x": "int",
+              "y": "int"
+            },
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "x": "int",
+              "y": "int",
+              "z": "int"
+            },
+            "outputs": {
+              "out": "ivec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "x": "int",
+              "y": "int",
+              "z": "int",
+              "w": "int"
+            },
+            "outputs": {
+              "out": "ivec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "x": "uint",
+              "y": "uint"
+            },
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "x": "uint",
+              "y": "uint",
+              "z": "uint"
+            },
+            "outputs": {
+              "out": "uvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "x": "uint",
+              "y": "uint",
+              "z": "uint",
+              "w": "uint"
+            },
+            "outputs": {
+              "out": "uvec4"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "x": "bool",
+              "y": "bool"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "x": "bool",
+              "y": "bool",
+              "z": "bool"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "x": "bool",
+              "y": "bool",
+              "z": "bool",
+              "w": "bool"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.compare": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "int",
+            "inputs": {
+              "a": "int",
+              "b": "int"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "uint",
+            "inputs": {
+              "a": "uint",
+              "b": "uint"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.convert": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "int"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.cos": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.divide": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "float",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "float",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "float",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.dot": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.equal": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "a": "ivec2",
+              "b": "ivec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "a": "ivec3",
+              "b": "ivec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "a": "ivec4",
+              "b": "ivec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "a": "uvec2",
+              "b": "uvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "a": "uvec3",
+              "b": "uvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "a": "uvec4",
+              "b": "uvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "a": "bvec2",
+              "b": "bvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "a": "bvec3",
+              "b": "bvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "a": "bvec4",
+              "b": "bvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.float": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {},
+            "outputs": {
+              "out": "float"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.floor": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.fract": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.greaterThan": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "a": "ivec2",
+              "b": "ivec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "a": "ivec3",
+              "b": "ivec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "a": "ivec4",
+              "b": "ivec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "a": "uvec2",
+              "b": "uvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "a": "uvec3",
+              "b": "uvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "a": "uvec4",
+              "b": "uvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.greaterThanEqual": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "a": "ivec2",
+              "b": "ivec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "a": "ivec3",
+              "b": "ivec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "a": "ivec4",
+              "b": "ivec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "a": "uvec2",
+              "b": "uvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "a": "uvec3",
+              "b": "uvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "a": "uvec4",
+              "b": "uvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.if": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "condition": "bool",
+              "true": "float",
+              "false": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "condition": "bool",
+              "true": "vec2",
+              "false": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "condition": "bool",
+              "true": "vec3",
+              "false": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "condition": "bool",
+              "true": "vec4",
+              "false": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "int",
+            "inputs": {
+              "condition": "bool",
+              "true": "int",
+              "false": "int"
+            },
+            "outputs": {
+              "out": "int"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "condition": "bool",
+              "true": "ivec2",
+              "false": "ivec2"
+            },
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "condition": "bool",
+              "true": "ivec3",
+              "false": "ivec3"
+            },
+            "outputs": {
+              "out": "ivec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "condition": "bool",
+              "true": "ivec4",
+              "false": "ivec4"
+            },
+            "outputs": {
+              "out": "ivec4"
+            }
+          },
+          {
+            "type": "uint",
+            "inputs": {
+              "condition": "bool",
+              "true": "uint",
+              "false": "uint"
+            },
+            "outputs": {
+              "out": "uint"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "condition": "bool",
+              "true": "uvec2",
+              "false": "uvec2"
+            },
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "condition": "bool",
+              "true": "uvec3",
+              "false": "uvec3"
+            },
+            "outputs": {
+              "out": "uvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "condition": "bool",
+              "true": "uvec4",
+              "false": "uvec4"
+            },
+            "outputs": {
+              "out": "uvec4"
+            }
+          },
+          {
+            "type": "bool",
+            "inputs": {
+              "condition": "bool",
+              "true": "bool",
+              "false": "bool"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "condition": "bool",
+              "true": "bvec2",
+              "false": "bvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "condition": "bool",
+              "true": "bvec3",
+              "false": "bvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "condition": "bool",
+              "true": "bvec4",
+              "false": "bvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.isinf": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.isnan": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.length": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.lessThan": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "a": "ivec2",
+              "b": "ivec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "a": "ivec3",
+              "b": "ivec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "a": "ivec4",
+              "b": "ivec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "a": "uvec2",
+              "b": "uvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "a": "uvec3",
+              "b": "uvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "a": "uvec4",
+              "b": "uvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.lessThanEqual": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "a": "ivec2",
+              "b": "ivec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "a": "ivec3",
+              "b": "ivec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "a": "ivec4",
+              "b": "ivec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "a": "uvec2",
+              "b": "uvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "a": "uvec3",
+              "b": "uvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "a": "uvec4",
+              "b": "uvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.math": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "input0": "float",
+              "input1": "float",
+              "input2": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "input0": "vec2",
+              "input1": "vec2",
+              "input2": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "input0": "vec3",
+              "input1": "vec3",
+              "input2": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "input0": "vec4",
+              "input1": "vec4",
+              "input2": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.max": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.min": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.mix": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float",
+              "factor": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2",
+              "factor": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2",
+              "factor": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3",
+              "factor": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3",
+              "factor": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4",
+              "factor": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4",
+              "factor": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.multiply": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "float",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "float",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "float",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.normalize": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.not": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "bvec2",
+            "inputs": {
+              "value": "bvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "value": "bvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "value": "bvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.notEqual": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "a": "ivec2",
+              "b": "ivec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "a": "ivec3",
+              "b": "ivec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "a": "ivec4",
+              "b": "ivec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "a": "uvec2",
+              "b": "uvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "a": "uvec3",
+              "b": "uvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "a": "uvec4",
+              "b": "uvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "a": "bvec2",
+              "b": "bvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "a": "bvec3",
+              "b": "bvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "a": "bvec4",
+              "b": "bvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.pixel_out": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {
+              "color": "vec4"
+            },
+            "outputs": {}
+          }
+        ]
+      },
+      "sgrape.builtin.replace": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2",
+              "x": "float",
+              "y": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3",
+              "x": "float",
+              "y": "float",
+              "z": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4",
+              "x": "float",
+              "y": "float",
+              "z": "float",
+              "w": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "value": "ivec2",
+              "x": "int",
+              "y": "int"
+            },
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "value": "ivec3",
+              "x": "int",
+              "y": "int",
+              "z": "int"
+            },
+            "outputs": {
+              "out": "ivec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "value": "ivec4",
+              "x": "int",
+              "y": "int",
+              "z": "int",
+              "w": "int"
+            },
+            "outputs": {
+              "out": "ivec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "value": "uvec2",
+              "x": "uint",
+              "y": "uint"
+            },
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "value": "uvec3",
+              "x": "uint",
+              "y": "uint",
+              "z": "uint"
+            },
+            "outputs": {
+              "out": "uvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "value": "uvec4",
+              "x": "uint",
+              "y": "uint",
+              "z": "uint",
+              "w": "uint"
+            },
+            "outputs": {
+              "out": "uvec4"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "value": "bvec2",
+              "x": "bool",
+              "y": "bool"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "value": "bvec3",
+              "x": "bool",
+              "y": "bool",
+              "z": "bool"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "value": "bvec4",
+              "x": "bool",
+              "y": "bool",
+              "z": "bool",
+              "w": "bool"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.rgba": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {
+              "rgb": "vec3",
+              "alpha": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.round": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.router": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "int",
+            "inputs": {
+              "value": "int"
+            },
+            "outputs": {
+              "out": "int"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "value": "ivec2"
+            },
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "value": "ivec3"
+            },
+            "outputs": {
+              "out": "ivec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "value": "ivec4"
+            },
+            "outputs": {
+              "out": "ivec4"
+            }
+          },
+          {
+            "type": "uint",
+            "inputs": {
+              "value": "uint"
+            },
+            "outputs": {
+              "out": "uint"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "value": "uvec2"
+            },
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "value": "uvec3"
+            },
+            "outputs": {
+              "out": "uvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "value": "uvec4"
+            },
+            "outputs": {
+              "out": "uvec4"
+            }
+          },
+          {
+            "type": "bool",
+            "inputs": {
+              "value": "bool"
+            },
+            "outputs": {
+              "out": "bool"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "value": "bvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "value": "bvec3"
+            },
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "value": "bvec4"
+            },
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.scalar": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {},
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "int",
+            "inputs": {},
+            "outputs": {
+              "out": "int"
+            }
+          },
+          {
+            "type": "uint",
+            "inputs": {},
+            "outputs": {
+              "out": "uint"
+            }
+          },
+          {
+            "type": "bool",
+            "inputs": {},
+            "outputs": {
+              "out": "bool"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.sign": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.sin": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.smoothstep": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "edge0": "float",
+              "edge1": "float",
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "edge0": "vec2",
+              "edge1": "vec2",
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "edge0": "float",
+              "edge1": "float",
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "edge0": "vec3",
+              "edge1": "vec3",
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "edge0": "float",
+              "edge1": "float",
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "edge0": "vec4",
+              "edge1": "vec4",
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "edge0": "float",
+              "edge1": "float",
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.split": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {
+              "color": "vec4"
+            },
+            "outputs": {
+              "rgb": "vec3",
+              "r": "float",
+              "g": "float",
+              "b": "float",
+              "a": "float"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.sqrt": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.subtract": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "a": "float",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "vec2",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "a": "float",
+              "b": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "vec3",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "a": "float",
+              "b": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "vec4",
+              "b": "float"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "a": "float",
+              "b": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.swizzle": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "value": "ivec2"
+            },
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "value": "ivec3"
+            },
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "value": "ivec4"
+            },
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "value": "uvec2"
+            },
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "value": "uvec3"
+            },
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "value": "uvec4"
+            },
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "value": "bvec2"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "value": "bvec3"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "value": "bvec4"
+            },
+            "outputs": {
+              "out": "bvec2"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.trunc": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.uniform": {
+        "selector": "declaration",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {},
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {},
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {},
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.vec2": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.vec3": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {},
+            "outputs": {
+              "out": "vec3"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.vec4": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {},
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.vector": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {},
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {},
+            "outputs": {
+              "out": "vec4"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {},
+            "outputs": {
+              "out": "ivec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {},
+            "outputs": {
+              "out": "ivec3"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {},
+            "outputs": {
+              "out": "ivec4"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {},
+            "outputs": {
+              "out": "uvec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {},
+            "outputs": {
+              "out": "uvec3"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {},
+            "outputs": {
+              "out": "uvec4"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {},
+            "outputs": {
+              "out": "bvec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {},
+            "outputs": {
+              "out": "bvec3"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {},
+            "outputs": {
+              "out": "bvec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.vector_split": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "x": "float",
+              "y": "float"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "x": "float",
+              "y": "float",
+              "z": "float"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "x": "float",
+              "y": "float",
+              "z": "float",
+              "w": "float"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {
+              "value": "ivec2"
+            },
+            "outputs": {
+              "x": "int",
+              "y": "int"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {
+              "value": "ivec3"
+            },
+            "outputs": {
+              "x": "int",
+              "y": "int",
+              "z": "int"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {
+              "value": "ivec4"
+            },
+            "outputs": {
+              "x": "int",
+              "y": "int",
+              "z": "int",
+              "w": "int"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {
+              "value": "uvec2"
+            },
+            "outputs": {
+              "x": "uint",
+              "y": "uint"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {
+              "value": "uvec3"
+            },
+            "outputs": {
+              "x": "uint",
+              "y": "uint",
+              "z": "uint"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {
+              "value": "uvec4"
+            },
+            "outputs": {
+              "x": "uint",
+              "y": "uint",
+              "z": "uint",
+              "w": "uint"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {
+              "value": "bvec2"
+            },
+            "outputs": {
+              "x": "bool",
+              "y": "bool"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {
+              "value": "bvec3"
+            },
+            "outputs": {
+              "x": "bool",
+              "y": "bool",
+              "z": "bool"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {
+              "value": "bvec4"
+            },
+            "outputs": {
+              "x": "bool",
+              "y": "bool",
+              "z": "bool",
+              "w": "bool"
+            }
+          }
+        ]
+      }
+    },
+    "convert": {
+      "types": [
+        "float",
+        "vec2",
+        "vec3",
+        "vec4",
+        "int",
+        "ivec2",
+        "ivec3",
+        "ivec4",
+        "uint",
+        "uvec2",
+        "uvec3",
+        "uvec4",
+        "bool",
+        "bvec2",
+        "bvec3",
+        "bvec4"
+      ],
+      "fromParameter": "fromType",
+      "toParameter": "toType",
+      "pairs": {
+        "float": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ],
+        "vec2": [
+          "float",
+          "vec2",
+          "int",
+          "ivec2",
+          "uint",
+          "uvec2",
+          "bool",
+          "bvec2"
+        ],
+        "vec3": [
+          "float",
+          "vec2",
+          "vec3",
+          "int",
+          "ivec2",
+          "ivec3",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "bool",
+          "bvec2",
+          "bvec3"
+        ],
+        "vec4": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ],
+        "int": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ],
+        "ivec2": [
+          "float",
+          "vec2",
+          "int",
+          "ivec2",
+          "uint",
+          "uvec2",
+          "bool",
+          "bvec2"
+        ],
+        "ivec3": [
+          "float",
+          "vec2",
+          "vec3",
+          "int",
+          "ivec2",
+          "ivec3",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "bool",
+          "bvec2",
+          "bvec3"
+        ],
+        "ivec4": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ],
+        "uint": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ],
+        "uvec2": [
+          "float",
+          "vec2",
+          "int",
+          "ivec2",
+          "uint",
+          "uvec2",
+          "bool",
+          "bvec2"
+        ],
+        "uvec3": [
+          "float",
+          "vec2",
+          "vec3",
+          "int",
+          "ivec2",
+          "ivec3",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "bool",
+          "bvec2",
+          "bvec3"
+        ],
+        "uvec4": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ],
+        "bool": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ],
+        "bvec2": [
+          "float",
+          "vec2",
+          "int",
+          "ivec2",
+          "uint",
+          "uvec2",
+          "bool",
+          "bvec2"
+        ],
+        "bvec3": [
+          "float",
+          "vec2",
+          "vec3",
+          "int",
+          "ivec2",
+          "ivec3",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "bool",
+          "bvec2",
+          "bvec3"
+        ],
+        "bvec4": [
+          "float",
+          "vec2",
+          "vec3",
+          "vec4",
+          "int",
+          "ivec2",
+          "ivec3",
+          "ivec4",
+          "uint",
+          "uvec2",
+          "uvec3",
+          "uvec4",
+          "bool",
+          "bvec2",
+          "bvec3",
+          "bvec4"
+        ]
+      }
+    },
+    "vectors": {
+      "version": 1,
+      "types": [
+        "vec2",
+        "vec3",
+        "vec4",
+        "ivec2",
+        "ivec3",
+        "ivec4",
+        "uvec2",
+        "uvec3",
+        "uvec4",
+        "bvec2",
+        "bvec3",
+        "bvec4"
+      ],
+      "components": "xyzw",
+      "scalarTypes": {
+        "vec2": "float",
+        "vec3": "float",
+        "vec4": "float",
+        "ivec2": "int",
+        "ivec3": "int",
+        "ivec4": "int",
+        "uvec2": "uint",
+        "uvec3": "uint",
+        "uvec4": "uint",
+        "bvec2": "bool",
+        "bvec3": "bool",
+        "bvec4": "bool"
+      },
+      "layouts": {
+        "vec2": [
+          {
+            "inputs": {
+              "x": "float",
+              "y": "float"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "vec2"
+            },
+            "groups": {
+              "x": "vec2"
+            }
+          }
+        ],
+        "vec3": [
+          {
+            "inputs": {
+              "x": "float",
+              "y": "float",
+              "z": "float"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "float",
+              "y": "vec2"
+            },
+            "groups": {
+              "y": "vec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "vec2",
+              "z": "float"
+            },
+            "groups": {
+              "x": "vec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "vec3"
+            },
+            "groups": {
+              "x": "vec3"
+            }
+          }
+        ],
+        "vec4": [
+          {
+            "inputs": {
+              "x": "float",
+              "y": "float",
+              "z": "float",
+              "w": "float"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "float",
+              "y": "float",
+              "z": "vec2"
+            },
+            "groups": {
+              "z": "vec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "float",
+              "y": "vec2",
+              "w": "float"
+            },
+            "groups": {
+              "y": "vec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "float",
+              "y": "vec3"
+            },
+            "groups": {
+              "y": "vec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "vec2",
+              "z": "float",
+              "w": "float"
+            },
+            "groups": {
+              "x": "vec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "vec2",
+              "z": "vec2"
+            },
+            "groups": {
+              "x": "vec2",
+              "z": "vec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "vec3",
+              "w": "float"
+            },
+            "groups": {
+              "x": "vec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "vec4"
+            },
+            "groups": {
+              "x": "vec4"
+            }
+          }
+        ],
+        "ivec2": [
+          {
+            "inputs": {
+              "x": "int",
+              "y": "int"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "ivec2"
+            },
+            "groups": {
+              "x": "ivec2"
+            }
+          }
+        ],
+        "ivec3": [
+          {
+            "inputs": {
+              "x": "int",
+              "y": "int",
+              "z": "int"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "int",
+              "y": "ivec2"
+            },
+            "groups": {
+              "y": "ivec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "ivec2",
+              "z": "int"
+            },
+            "groups": {
+              "x": "ivec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "ivec3"
+            },
+            "groups": {
+              "x": "ivec3"
+            }
+          }
+        ],
+        "ivec4": [
+          {
+            "inputs": {
+              "x": "int",
+              "y": "int",
+              "z": "int",
+              "w": "int"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "int",
+              "y": "int",
+              "z": "ivec2"
+            },
+            "groups": {
+              "z": "ivec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "int",
+              "y": "ivec2",
+              "w": "int"
+            },
+            "groups": {
+              "y": "ivec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "int",
+              "y": "ivec3"
+            },
+            "groups": {
+              "y": "ivec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "ivec2",
+              "z": "int",
+              "w": "int"
+            },
+            "groups": {
+              "x": "ivec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "ivec2",
+              "z": "ivec2"
+            },
+            "groups": {
+              "x": "ivec2",
+              "z": "ivec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "ivec3",
+              "w": "int"
+            },
+            "groups": {
+              "x": "ivec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "ivec4"
+            },
+            "groups": {
+              "x": "ivec4"
+            }
+          }
+        ],
+        "uvec2": [
+          {
+            "inputs": {
+              "x": "uint",
+              "y": "uint"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "uvec2"
+            },
+            "groups": {
+              "x": "uvec2"
+            }
+          }
+        ],
+        "uvec3": [
+          {
+            "inputs": {
+              "x": "uint",
+              "y": "uint",
+              "z": "uint"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "uint",
+              "y": "uvec2"
+            },
+            "groups": {
+              "y": "uvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uvec2",
+              "z": "uint"
+            },
+            "groups": {
+              "x": "uvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uvec3"
+            },
+            "groups": {
+              "x": "uvec3"
+            }
+          }
+        ],
+        "uvec4": [
+          {
+            "inputs": {
+              "x": "uint",
+              "y": "uint",
+              "z": "uint",
+              "w": "uint"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "uint",
+              "y": "uint",
+              "z": "uvec2"
+            },
+            "groups": {
+              "z": "uvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uint",
+              "y": "uvec2",
+              "w": "uint"
+            },
+            "groups": {
+              "y": "uvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uint",
+              "y": "uvec3"
+            },
+            "groups": {
+              "y": "uvec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uvec2",
+              "z": "uint",
+              "w": "uint"
+            },
+            "groups": {
+              "x": "uvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uvec2",
+              "z": "uvec2"
+            },
+            "groups": {
+              "x": "uvec2",
+              "z": "uvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uvec3",
+              "w": "uint"
+            },
+            "groups": {
+              "x": "uvec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "uvec4"
+            },
+            "groups": {
+              "x": "uvec4"
+            }
+          }
+        ],
+        "bvec2": [
+          {
+            "inputs": {
+              "x": "bool",
+              "y": "bool"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "bvec2"
+            },
+            "groups": {
+              "x": "bvec2"
+            }
+          }
+        ],
+        "bvec3": [
+          {
+            "inputs": {
+              "x": "bool",
+              "y": "bool",
+              "z": "bool"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "bool",
+              "y": "bvec2"
+            },
+            "groups": {
+              "y": "bvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bvec2",
+              "z": "bool"
+            },
+            "groups": {
+              "x": "bvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bvec3"
+            },
+            "groups": {
+              "x": "bvec3"
+            }
+          }
+        ],
+        "bvec4": [
+          {
+            "inputs": {
+              "x": "bool",
+              "y": "bool",
+              "z": "bool",
+              "w": "bool"
+            },
+            "groups": {}
+          },
+          {
+            "inputs": {
+              "x": "bool",
+              "y": "bool",
+              "z": "bvec2"
+            },
+            "groups": {
+              "z": "bvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bool",
+              "y": "bvec2",
+              "w": "bool"
+            },
+            "groups": {
+              "y": "bvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bool",
+              "y": "bvec3"
+            },
+            "groups": {
+              "y": "bvec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bvec2",
+              "z": "bool",
+              "w": "bool"
+            },
+            "groups": {
+              "x": "bvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bvec2",
+              "z": "bvec2"
+            },
+            "groups": {
+              "x": "bvec2",
+              "z": "bvec2"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bvec3",
+              "w": "bool"
+            },
+            "groups": {
+              "x": "bvec3"
+            }
+          },
+          {
+            "inputs": {
+              "x": "bvec4"
+            },
+            "groups": {
+              "x": "bvec4"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
