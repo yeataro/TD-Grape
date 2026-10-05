@@ -136,6 +136,17 @@ def validate_uniform_default(declaration, value):
             raise SourceError('Uniform float default exceeds supported range.')
 
 
+def validate_float_input(value):
+    """Retain the editor's numeric-write limits without producing GLSL."""
+    validate_uniform_default({'type': 'float'}, value)
+
+
+def initial_source_value(ty):
+    """Initial native declaration data, not a shader expression."""
+    zero = False if source_family(ty) == 'bool' else 0
+    return zero if TYPES[ty] == 1 else [zero] * TYPES[ty]
+
+
 def validate_uniform_native(declaration, value, role='value'):
     if declaration.get('type')=='samplerBuffer':
         if value is not None:raise SourceError('Texture Buffer values belong to the native CHOP.')
@@ -171,7 +182,7 @@ def validate_source_value(runtime, comp, ident, value, index=0):
     elif declaration['type'] == 'bool':
         validate_uniform_component(declaration, value)
     elif declaration['type'] == 'float':
-        runtime.core().number(value)
+        validate_float_input(value)
     else:
         validate_spec_native(declaration, value)
 
@@ -936,11 +947,11 @@ def _value_write_plan(runtime,row,body):
     if body.get('expected') != item: raise SourceError('The value changed in TD. Refresh and try again.')
     value = body.get('value')
     if row.get('kind')=='spec_constant':
-        runtime.core().literal(value, row['type'])
+        validate_uniform_default(row, value)
         validate_spec_native(row, value)
     else:
-        family = runtime.core().TYPE_DESCRIPTORS[row['type']]['family']
-        runtime.core().literal(value, family)
+        family = source_family(row['type'])
+        validate_uniform_default({'type': family}, value)
         validate_uniform_component(row, value)
     p = getattr(runtime.shader_operator(runtime.target()).par, item['parameter'])
     comp = runtime.target(); ident = row['id']; operator = runtime.shader_operator(comp)
@@ -1019,7 +1030,7 @@ def edit(runtime, body):
                 raise SourceError('Use a unique GLSL Uniform name.')
             if kind not in SOURCE_KINDS or not (ty in SPEC_TYPES if kind=='spec_constant' else ty in TYPES or array_shape(ty) or ty=='samplerBuffer'): raise SourceError('Unsupported native source type.')
             decl = {'id': kind + '_' + uuid.uuid4().hex, 'kind': kind, 'name': name, 'type': ty,
-                    'value': None if kind in ('pop_buffer','attribute') or array_shape(ty) or ty=='samplerBuffer' else runtime.core().filled_value(ty)}
+                    'value': None if kind in ('pop_buffer','attribute') or array_shape(ty) or ty=='samplerBuffer' else initial_source_value(ty)}
             if kind=='attribute':
                 decl.update(nativeSequence=source_sequence(decl),arraySize=body.get('arraySize',1))
             elif kind=='pop_buffer':
@@ -1138,7 +1149,7 @@ def edit(runtime, body):
         p = parameter(operator, 'matrix', row['index'], 'value')
         if action == 'matrixValue':
             if binding['literalValues'] is None: raise SourceError('This matrix is driven by TD. Edit its source binding instead.')
-            runtime.core().literal(body.get('value'), decl['type'])
+            validate_uniform_default(decl, body.get('value'))
             expression = matrix_expression(decl, body['value'], binding['literalValues'])
             p.expr = expression
         else:
@@ -1164,8 +1175,8 @@ def edit(runtime, body):
         try:
             if expression.strip():p.expr=expression
             else:
-                value=p.eval();runtime.core().number(value);p.mode=ParMode.CONSTANT;p.val=value
-            runtime.core().number(p.eval())
+                value=p.eval();validate_float_input(value);p.mode=ParMode.CONSTANT;p.val=value
+            validate_float_input(p.eval())
             validate_uniform_component(decl, p.eval())
         except Exception:
             p.val=before[1];p.expr=before[2];p.mode=before[0]

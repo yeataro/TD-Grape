@@ -43,7 +43,7 @@ class TypedSources(unittest.TestCase):
     def test_source_writes_accept_full_integer_range_without_changing_the_value(self):
         fixture = history_fixtures.History('test_value_undo_redo_and_unrelated_external_value')
         fixture.setUp(); self.addCleanup(fixture.doCleanups)
-        fixture.runtime.core = lambda: core
+        fixture.runtime.core = lambda: self.fail('Native source writes must not load the compiler')
         def commit(par, value, validate=None):
             if validate: validate(value)
             par.val = value
@@ -66,6 +66,22 @@ class TypedSources(unittest.TestCase):
         for ty in core.TYPES:
             self.assertEqual(sources.source_components({'type': ty}), core.type_components(ty))
 
+    def test_binding_defaults_preserve_old_acceptance_without_compiling(self):
+        # Migration oracle only: production native helpers cannot use core.
+        samples = [None, '2', False, True, 0, 1, 2.0, .5, -2147483648,
+                   2147483647, 4294967295, 1e20, 1e30, float('inf'), float('nan')]
+        for ty, count in sources.TYPES.items():
+            for sample in samples:
+                value = sample if count == 1 else [sample] * count
+                with self.subTest(type=ty, value=sample):
+                    try:
+                        core.literal(value, ty)
+                    except (RuntimeError, ValueError):
+                        with self.assertRaises(sources.SourceError):
+                            sources.validate_uniform_default({'type': ty}, value)
+                    else:
+                        sources.validate_uniform_default({'type': ty}, value)
+
     def test_created_defaults_are_valid_for_every_family(self):
         for ty in core.TYPES:
             with self.subTest(ty=ty):
@@ -74,7 +90,7 @@ class TypedSources(unittest.TestCase):
                 native = SimpleNamespace()
                 deployed = []
                 runtime = SimpleNamespace(target=lambda: comp, shader_operator=lambda _: native,
-                    core=lambda: core, state=lambda: {'graph': graph},
+                    core=lambda: self.fail('Native defaults must not load the compiler'), state=lambda: {'graph': graph},
                     deploy=lambda candidate, revision: deployed.append(copy.deepcopy(candidate)) or {'ok': True})
                 seen = {'enabled': True, 'revision': 5}
                 with patch.object(sources, 'snapshot', return_value=seen), patch.object(sources, 'native_rows', return_value=[]):

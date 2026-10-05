@@ -12,6 +12,8 @@
 
 定位方案澄清：子 OP 不設 Global OP Shortcut，主節點可考慮設置，但仍為候選。Manager 可在任意 TD 路徑；图 UUID 與服務定位分開。API 範圍仍在討論，不因此新增或開放公共 API。
 
+Undo 修正提交為 `453e671`。接續移除 `sgrape_sources`／`sgrape_parameters` 對 compiler 的數值、分量數與初始值工具呼叫，改由原生來源模組及既有 custom-control style 定義提供。136 項相關測試通過（含全部 numeric source 型別的舊規則比對與禁止呼叫 core 的寫值／新增預設測試）；獨立 Standards／Spec 審查無發現。仍存在 `sources.edit → runtime.deploy` 的流程相依，尚未改成新 Manager 的前端產物流程；本段不是完整宿主遷移或 live 交付。
+
 接續完成新 Manager／TOP 的開啟、前端產碼、套用／預覽、Undo 與保存重開，加入無 Manager 原生使用驗證及必要診斷。單元測試通過不是人類測試交付；前端仍為 Refactor.13，live Shell 尚只有資產服務。
 
 ## Editor Service 資產供應 — 2026-10-06

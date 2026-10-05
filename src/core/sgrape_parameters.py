@@ -330,8 +330,9 @@ def shape_plans(runtime,comp,graph):
         control=getattr(comp.par,link['components'][0]['control'],None)
         if control is None:continue
         group=control.parGroup
-        style=decl['type'];size=runtime.core().type_components(style)
+        style=decl['type']
         if style not in STYLES:raise RuntimeError('This bound source format is not supported by custom parameters: '+decl['name'])
+        size=STYLES[style][1]
         color=decl.get('nativeSequence',comp.fetch('grapeNativeUniformsV1',{}).get(ident,{}).get('sequence'))=='color'
         method=STYLES[style][0] if not color else 'appendRGBA'
         target={'appendRGBA':'RGBA','appendToggle':'Toggle','appendInt':'Int','appendFloat':'Float'}[method]
@@ -434,7 +435,7 @@ def edit_operation(runtime,body):
         else:
             before=body.get('before')
             if before is not None and before not in [g.name for g in page.parGroups]:raise RuntimeError('The parameter drop position changed. Refresh first.')
-            count=runtime.core().type_components(row['type']);pars=model.source_pars(comp,row['id'])[:count]
+            count=STYLES[row['type']][1];pars=model.source_pars(comp,row['id'])[:count]
             if len(pars)!=count:raise RuntimeError('The source components are unavailable.')
             presets=runtime.source_module().PRESETS.values()
             if any(not str(p.mode).endswith('CONSTANT') and not (str(p.mode).endswith('EXPRESSION') and p.expr in presets) for p in pars):raise RuntimeError('This source is already driven in TD. Keep or detach that control first.')
@@ -459,7 +460,7 @@ def edit_operation(runtime,body):
                 if type(index)is not int or not 0<=index<min(4,len(g)) or index in indices:raise RuntimeError('Select color components.')
                 item=row['components'][index];p=g[index]
                 if not item['writable'] or edit.get('expectedValue')!=item:raise RuntimeError('This color changed or is controlled by TD.')
-                validate_bound_value(runtime,comp,model,p,value);runtime.core().number(value)
+                validate_bound_value(runtime,comp,model,p,value);runtime.source_module().validate_float_input(value)
                 indices.append(index);plans.append((p,value,lambda value,p=p:validate_bound_value(runtime,comp,model,p,value)))
             runtime.set_parameters_with_undo(plans)
         elif action in ('value','pulse'):
@@ -473,7 +474,7 @@ def edit_operation(runtime,body):
             else:
                 value=body.get('value')
                 if p.isNumber or p.style in ('Toggle','Menu'):
-                    runtime.core().number(int(value) if isinstance(value,bool) else value);validate_bound_value(runtime,comp,model,p,value)
+                    runtime.source_module().validate_float_input(int(value) if isinstance(value,bool) else value);validate_bound_value(runtime,comp,model,p,value)
                 elif not isinstance(value,str) or len(value)>4096:raise RuntimeError('Enter a text value up to 4096 characters.')
                 validate=lambda value:validate_bound_value(runtime,comp,model,p,value)
                 if p.style=='TOP':
@@ -500,7 +501,7 @@ def edit_operation(runtime,body):
             if key not in ('normMin','normMax','min','max','clampMin','clampMax'):raise RuntimeError('Unknown range field.')
             if key.startswith('clamp'):
                 if type(value)is not bool:raise RuntimeError('Choose whether to clamp this component.')
-            else:runtime.core().number(value)
+            else:runtime.source_module().validate_float_input(value)
             proposed={k:getattr(g[index],k) for k in ('normMin','normMax','min','max','clampMin','clampMax')};proposed[key]=value
             if proposed['normMin']>=proposed['normMax']:raise RuntimeError('Range minimum must be less than maximum.')
             if proposed['clampMin'] and proposed['clampMax'] and proposed['min']>proposed['max']:raise RuntimeError('Clamp minimum must not exceed maximum.')
@@ -510,7 +511,7 @@ def edit_operation(runtime,body):
         elif action=='default':
             index=body.get('component');value=body.get('value')
             if type(index)is not int or not 0<=index<len(g):raise RuntimeError('Select a control component.')
-            if g[index].isNumber or g.style=='Toggle':runtime.core().number(int(value) if isinstance(value,bool) else value);validate_bound_value(runtime,comp,model,g[index],value)
+            if g[index].isNumber or g.style=='Toggle':runtime.source_module().validate_float_input(int(value) if isinstance(value,bool) else value);validate_bound_value(runtime,comp,model,g[index],value)
             elif not isinstance(value,str) or len(value)>4096:raise RuntimeError('Enter a text default up to 4096 characters.')
             if g[index].style=='TOP':validate_texture_path(comp,value)
             g[index].default=float(value) if g[index].isNumber or g.style=='Toggle' else value
