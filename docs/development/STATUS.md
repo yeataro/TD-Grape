@@ -1,5 +1,19 @@
 # 開發狀態
 
+## Refactor 開工前檢查點 — 2026-10-06
+
+前端來源基準為 `559ae40`（0.8.276 Refactor.13；53 個普通模組＋3 個結構模組），本次沒有變更前端版本或程式。人類已提供根層 `/TD_Grape` 的新宿主 Shell，尚未接通完整產品；以下是開發檢查點，不是新的功能發布。
+
+- 已透過 TDMCP 保存人類目前工程。TD 增量檔為 `src/td/TD-Grape-dev.14.toe`，標準入口 `src/td/TD-Grape-dev.toe` 同步為相同內容（713,518 bytes；SHA-256 `2dcc902a15034140d38167628b9ed115ddca8f77390fec40b0e44ebe369484cd`）。`.14` 是 TD 增量編號，不是前端版本遞增。
+- 修改前完整本機副本保存在 workspace 的 `work/refactor/host-shell-checkpoint-2026-10-06/checkpoint.toe`。較早的 `before-host-cleanup.toe` 保留首次保存；`toeexpand` 已成功讀取該份保存結構；沒有為此重開或替換人類的 live TD。此工程保留開發用 TDMCP；不是已移除開發工具／機器設定的發布 TOE。`.tdmcp/` 本機狀態與認證資料不加入提交。
+- 唯一保護區是已標 handoff 的 `/TD_Grape/IconGen → /TD_Grape/icon`（包括其內部與依賴），不得修改。其餘 Shell／Parameter 是架構示意，可按已確認範圍調整；人類明確允許修改 Remote Panel、TDFam、註冊、舊 masters 與新 Family 子 OP。兩個第三方組件「原樣提供」只描述來源，並非禁止修改。
+- 當前額外授權：修正 Editor 內 VFS 的絕對路徑／資料夾來源反映問題、清理主節點沿用舊殼的 storage 殘留。MCP 或自有開發 bridge 由實作者選擇。尚未啟動主體宿主重構。
+- 下一輪目標是解除前端對宿主舊 Python 編輯／產碼核心的依賴；宿主仍可用 Python 處理網頁提供、連線、原生參數、產物接收、圖保存與預覽。不能把「沒有宿主前端核心依賴」誤讀為「完全禁止 Python」。細部交付先與人類對齊。
+
+最新決議与下一輪草案維護於 workspace 的 `REFACTOR-WORKFLOW.md`、`work/in-place-refactor-design/design-interview.md` Q20、`target-architecture.md`。這些是 workspace 文件，不在本產品 Git 樹中；本機檢查點另保留其快照。固定 Legacy `90a946b` 仍是最終行為驗收基準，main 與 Legacy 未修改。退回時先保留後續人類修改，再從此提交取出開發 TOE／檢查點副本；不直接覆寫正在編輯的工程。
+
+以下為舊主線交付歷史，不代表新 Shell 已具備全部能力。
+
 2026-10-03 0.8.276：Multiply／Outer Product 在 Auto 且只有一個純量／向量輸入時，優先選擇同型的另一個輸入；Multiply 保留分量，Outer Product 得到方陣。既有合法精確輸入簽名在無關編輯後保留，避免舊圖被新預設重解而改值或斷線；新節點、輸入換線／改型別與 Locked → Auto 才採新預設。全域排序、矩陣單線、雙線及其他節點規則不變。Preview 整張卡片不透明度由 78% 調成 50%，不改產碼 Alpha。詳見 [Math Auto](../ui/MATH_AUTO.md) 與 [Pixel Preview](../features/PIXEL_PREVIEW.md)。
 
 83 項 targeted Python、26 組 Auto 模型、10 組 compiler 比對、11 組 History recorder、14 項 launch，以及隔離 Chromium matrix 5 組（含 32 種新預設／Undo／Redo 流程）和 Preview 8 組通過。舊 Auto browser 測試的 UI 定位逾時在修改前來源同樣重現，未列全套通過，詳見 [測試紀錄](TESTING.md)。43 份內嵌來源與服務資產 cache 一致、更新 3 份，9 張 Shader 的 state／graph／manifest／GLSL 保留；正式 TOE 已保存並排除私人 Bridge。未重載使用者 Editor。
