@@ -1,5 +1,15 @@
 # 開發狀態
 
+## Editor Service 資產供應 — 2026-10-06
+
+新 Shell 的 `/TD_Grape/GrapeEditor` 已可從外部完整網頁資料夾或內嵌 VFS 提供 HTTP，支援明確 Reload／Update Embedded、來源／版本／網址顯示、載入失敗保留與冷啟動 VFS fallback。固定 port 65465，允許 LAN 時監聽 `0.0.0.0`；不隨機更換 port。沒有 TD frame callback 或資料夾自動輪詢。TD 主執行緒載入資產，背景 HTTP 只讀 bytes。
+
+新增正式 `build:editor` 入口，組合 41 份真實前端資產與版本清單；Remote Panel 三個瀏覽器模組一併納入，示範／测试及宿主 RTC 保留原處。前端程式和版本維持 Refactor.13，**`/api/*` 尚未接通 Manager，不能作為完整編輯器交付**。人類已同意保留 `/api/state` 相依，離線 Sketch／Pages 可用性延後。
+
+10 項 Python 真實 HTTP／資產測試、6 組 TD 隔離操作，以及 Active TOX 自動啟動／失效外部路徑回退通過。現場外部與 VFS 各 41 份 HTTP bytes 核對通過；4 份嵌入 DAT 與磁碟來源一致，Editor 子樹無錯誤。IconGen／icon 的 51 個 OP 核對無差異。完整使用／驗證入口見 [Editor Service](EDITOR_SERVICE.md)，私人證據在 workspace `work/refactor/editor-service/`。
+
+這是兩段工作中間的資產服務提交。下一段接新 Manager／TOP Family 的開啟、前端產碼、宿主 Apply／預覽、Uniform 及保存重開，不引回舊 Python compiler。尚未遷移能力必須顯示缺口；測試 fixture／清單與新 Shell 舊 masters 不能被當作完整 Legacy 驗收成果。HTTP CSP 中的其他服務連線地址需隨實際 Manager／Remote Panel 接入配置，目前只有同源資產服務。
+
 ## VFS 現場交付補正 — 2026-10-06
 
 人類回報匯入結果仍被攤平。MCP 確認先前已更新 callback，但現場 Folder DAT 的 37 筆 `overrideName` 仍為空；先前隔離測試主動刷新了副本，未覆蓋既有清單的部署狀態。這是交付遺漏，不是人類誤用。
