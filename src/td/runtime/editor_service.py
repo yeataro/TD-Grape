@@ -103,6 +103,7 @@ class EditorHTTP:
         self.snapshot = snapshot
         self.request_count = 0
         self.host_requests = None
+        self.preview_port = None
         self._lock = threading.Lock()
         service = self
 
@@ -200,7 +201,13 @@ class EditorHTTP:
                     self.send_header('Cache-Control', 'no-store')
                     self.send_header('X-Content-Type-Options', 'nosniff')
                     self.send_header('Referrer-Policy', 'no-referrer')
-                    self.send_header('Content-Security-Policy', "default-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'")
+                    peer = ''
+                    hostname = urlsplit('http://' + self.headers.get('Host', '')).hostname
+                    if service.preview_port is not None and hostname:
+                        if ':' in hostname:
+                            hostname = '[' + hostname + ']'
+                        peer = ' http://' + hostname + ':' + str(service.preview_port) + ' ws://' + hostname + ':' + str(service.preview_port)
+                    self.send_header('Content-Security-Policy', "default-src 'self'; connect-src 'self'" + peer + "; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'")
                     if self.close_connection:
                         self.send_header('Connection', 'close')
                     self.end_headers()

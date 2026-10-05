@@ -50,5 +50,6 @@
   "wire_planning_js": "wire_planning.js",
   "frontend_artifact": "frontend_artifact.py",
   "frontend_capabilities": "frontend_capabilities.json",
-  "canvas_ui_js": "canvas_ui.js"
+  "canvas_ui_js": "canvas_ui.js",
+  "builtin_subgraphs": "builtin_subgraphs.json"
 }

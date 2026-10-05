@@ -63,5 +63,6 @@
   "wire_planning.js": "src/editor/wire_planning.js",
   "frontend_artifact.py": "src/td/runtime/frontend_artifact.py",
   "frontend_capabilities.json": "src/core/frontend_capabilities.json",
-  "canvas_ui.js": "src/editor/canvas_ui.js"
+  "canvas_ui.js": "src/editor/canvas_ui.js",
+  "builtin_subgraphs.json": "src/library/builtin_subgraphs.json"
 }

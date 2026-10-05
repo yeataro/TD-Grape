@@ -1,7 +1,114 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "1b2b0e5b09b41d10ac4f132fd795e2bf28e62eb0b9ac0a4b6ae226448b6eb95b",
+  "catalogHash": "be977fb046f5e64c8742b84afdfb187be7172f79aea30e4137fe79da6a61a1b9",
+  "defaultDocument": {
+    "graph": {
+      "schemaVersion": 1,
+      "target": "top",
+      "declarations": [],
+      "functions": [],
+      "stages": {
+        "pixel": {
+          "nodes": [
+            {
+              "id": "color",
+              "definitionUuid": "sgrape.builtin.color",
+              "params": {
+                "value": [
+                  0.55,
+                  0.28,
+                  0.9,
+                  1
+                ]
+              },
+              "ui": {
+                "x": 80,
+                "y": 120
+              }
+            },
+            {
+              "id": "pixel_out",
+              "definitionUuid": "sgrape.builtin.pixel_out",
+              "params": {},
+              "ui": {
+                "x": 440,
+                "y": 120
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "color_output",
+              "from": [
+                "color",
+                "out"
+              ],
+              "to": [
+                "pixel_out",
+                "color"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "compiled": {
+      "vertex": "",
+      "pixel": "layout(location=0) out vec4 fragColor;\nvoid main() {\n    vec2 sg_uv = vUV.st;\n    vec4 sg_n_color = vec4(0.55, 0.28, 0.9, 1.0);\n    vec4 sg_color = sg_n_color;\n    fragColor = TDOutputSwizzle(sg_color);\n}\n",
+      "bindings": [],
+      "sourceMap": {
+        "pixel": [
+          {
+            "node": "color",
+            "stage": "pixel",
+            "trail": [],
+            "line": 4
+          },
+          {
+            "node": "pixel_out",
+            "stage": "pixel",
+            "trail": [],
+            "line": 5
+          },
+          {
+            "node": "pixel_out",
+            "stage": "pixel",
+            "trail": [],
+            "line": 6
+          }
+        ]
+      },
+      "stages": {
+        "pixel": {
+          "lines": [
+            "    vec4 sg_n_color = vec4(0.55, 0.28, 0.9, 1.0);",
+            "    vec4 sg_color = sg_n_color;",
+            "    fragColor = TDOutputSwizzle(sg_color);"
+          ],
+          "ports": {
+            "color": {
+              "in": {},
+              "out": {
+                "out": "vec4"
+              }
+            },
+            "pixel_out": {
+              "in": {
+                "color": "vec4"
+              },
+              "out": {}
+            }
+          },
+          "live": [
+            "color",
+            "pixel_out"
+          ]
+        }
+      },
+      "diagnostics": []
+    }
+  },
   "catalog": [
     {
       "key": "abs",
@@ -1194,6 +1301,136 @@
   ],
   "typeContract": {
     "version": 1,
+    "glslCode": {
+      "maxPorts": 16,
+      "maxLength": 16384,
+      "reservedNames": [
+        "active",
+        "asm",
+        "atomic_uint",
+        "attribute",
+        "bool",
+        "break",
+        "buffer",
+        "bvec2",
+        "bvec3",
+        "bvec4",
+        "case",
+        "cast",
+        "centroid",
+        "class",
+        "coherent",
+        "common",
+        "const",
+        "continue",
+        "default",
+        "discard",
+        "dmat2",
+        "dmat2x3",
+        "dmat2x4",
+        "dmat3",
+        "dmat3x2",
+        "dmat3x4",
+        "dmat4",
+        "dmat4x2",
+        "dmat4x3",
+        "do",
+        "double",
+        "dvec2",
+        "dvec3",
+        "dvec4",
+        "else",
+        "enum",
+        "extern",
+        "external",
+        "false",
+        "filter",
+        "fixed",
+        "flat",
+        "float",
+        "for",
+        "fvec2",
+        "fvec3",
+        "fvec4",
+        "goto",
+        "half",
+        "highp",
+        "hvec2",
+        "hvec3",
+        "hvec4",
+        "if",
+        "in",
+        "inline",
+        "inout",
+        "input",
+        "int",
+        "interface",
+        "invariant",
+        "ivec2",
+        "ivec3",
+        "ivec4",
+        "layout",
+        "long",
+        "lowp",
+        "main",
+        "mat2",
+        "mat2x3",
+        "mat2x4",
+        "mat3",
+        "mat3x2",
+        "mat3x4",
+        "mat4",
+        "mat4x2",
+        "mat4x3",
+        "mediump",
+        "namespace",
+        "noinline",
+        "noperspective",
+        "out",
+        "output",
+        "partition",
+        "patch",
+        "precise",
+        "precision",
+        "public",
+        "readonly",
+        "resource",
+        "restrict",
+        "return",
+        "row_major",
+        "sample",
+        "sampler3DRect",
+        "shared",
+        "short",
+        "sizeof",
+        "smooth",
+        "static",
+        "struct",
+        "subroutine",
+        "superp",
+        "switch",
+        "template",
+        "this",
+        "true",
+        "typedef",
+        "uint",
+        "uniform",
+        "union",
+        "unsigned",
+        "using",
+        "uvec2",
+        "uvec3",
+        "uvec4",
+        "varying",
+        "vec2",
+        "vec3",
+        "vec4",
+        "void",
+        "volatile",
+        "while",
+        "writeonly"
+      ]
+    },
     "valueTypes": [
       "float",
       "vec2",
@@ -5769,6 +6006,209 @@
             }
           }
         ]
+      }
+    },
+    "sources": {
+      "version": 1,
+      "uniformPresets": {
+        "absTime": {
+          "name": "uAbsTime",
+          "type": "float",
+          "labelKey": "inputs.preset.absTime",
+          "path": [
+            "common",
+            "time"
+          ],
+          "availability": {
+            "top": [
+              "pixel"
+            ],
+            "mat": [
+              "vertex",
+              "pixel"
+            ]
+          },
+          "initialize": {
+            "mode": "EXPRESSION",
+            "component": 0,
+            "expression": "absTime.seconds"
+          },
+          "commonName": "Absolute Time"
+        },
+        "absFrame": {
+          "name": "uAbsFrame",
+          "type": "float",
+          "labelKey": "inputs.preset.absFrame",
+          "path": [
+            "common",
+            "time"
+          ],
+          "availability": {
+            "top": [
+              "pixel"
+            ],
+            "mat": [
+              "vertex",
+              "pixel"
+            ]
+          },
+          "initialize": {
+            "mode": "EXPRESSION",
+            "component": 0,
+            "expression": "absTime.frame"
+          },
+          "commonName": "Absolute Frame"
+        },
+        "time": {
+          "name": "uTime",
+          "type": "float",
+          "labelKey": "inputs.preset.time",
+          "path": [
+            "common",
+            "time"
+          ],
+          "availability": {
+            "top": [
+              "pixel"
+            ],
+            "mat": [
+              "vertex",
+              "pixel"
+            ]
+          },
+          "initialize": {
+            "mode": "EXPRESSION",
+            "component": 0,
+            "expression": "me.time.seconds"
+          },
+          "commonName": "Timeline Time"
+        },
+        "frame": {
+          "name": "uFrame",
+          "type": "float",
+          "labelKey": "inputs.preset.frame",
+          "path": [
+            "common",
+            "time"
+          ],
+          "availability": {
+            "top": [
+              "pixel"
+            ],
+            "mat": [
+              "vertex",
+              "pixel"
+            ]
+          },
+          "initialize": {
+            "mode": "EXPRESSION",
+            "component": 0,
+            "expression": "me.time.frame"
+          },
+          "commonName": "Timeline Frame"
+        },
+        "deltaTime": {
+          "name": "uDeltaTime",
+          "type": "float",
+          "labelKey": "inputs.preset.deltaTime",
+          "path": [
+            "common",
+            "time"
+          ],
+          "availability": {
+            "top": [
+              "pixel"
+            ],
+            "mat": [
+              "vertex",
+              "pixel"
+            ]
+          },
+          "initialize": {
+            "mode": "EXPRESSION",
+            "component": 0,
+            "expression": "absTime.stepSeconds"
+          },
+          "commonName": "Delta Time"
+        },
+        "frameStep": {
+          "name": "uFrameStep",
+          "type": "float",
+          "labelKey": "inputs.preset.frameStep",
+          "path": [
+            "common",
+            "time"
+          ],
+          "availability": {
+            "top": [
+              "pixel"
+            ],
+            "mat": [
+              "vertex",
+              "pixel"
+            ]
+          },
+          "initialize": {
+            "mode": "EXPRESSION",
+            "component": 0,
+            "expression": "absTime.step"
+          },
+          "commonName": "Frame Step"
+        }
+      },
+      "menuGroups": {
+        "time": "sources.time",
+        "common": "sources.common",
+        "textures": "sources.textures",
+        "tdBuiltin": "inputs.tdBuiltIn",
+        "coordinates": "sources.coordinates",
+        "output": "sources.output",
+        "shaderInfo": "sources.shaderInfo",
+        "geometry": "sources.geometry",
+        "instances": "sources.instances",
+        "matrices": "sources.matrices",
+        "cameras": "sources.cameras",
+        "lights": "sources.lights",
+        "render": "sources.render",
+        "resources": "sources.resources",
+        "2d": "sources.2d",
+        "3d": "sources.3d",
+        "2dArray": "sources.2dArray",
+        "cube": "sources.cube",
+        "buffer": "sources.buffer"
+      },
+      "nodeSources": {
+        "uv": {
+          "path": [
+            "common",
+            "coordinates"
+          ],
+          "aliases": [
+            "Texture Coordinates"
+          ],
+          "commonName": "Texture Coordinates",
+          "tdNames": {
+            "top": "vUV.st",
+            "mat": "UV 0"
+          },
+          "hint": {
+            "zh-Hant": "用於貼圖取樣的二維 UV 座標。",
+            "en": "Two-dimensional UV coordinates for texture sampling.",
+            "ja": "テクスチャのサンプリングに使用する 2 次元 UV 座標です。",
+            "fr": "Coordonnées UV bidimensionnelles pour l’échantillonnage de texture.",
+            "ko": "텍스처 샘플링용 2차원 UV 좌표입니다."
+          }
+        },
+        "position": {
+          "path": [
+            "tdBuiltin",
+            "geometry"
+          ],
+          "aliases": [
+            "Position",
+            "TDPos"
+          ]
+        }
       }
     }
   }

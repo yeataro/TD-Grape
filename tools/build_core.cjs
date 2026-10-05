@@ -53,6 +53,13 @@ catalog.definitions=catalog.definitions.filter(row=>!removed.has(row.definition.
 const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>canonical(k)+':'+canonical(value[k])).join(',')+'}':JSON.stringify(value).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
 // Callback semantics, not just port metadata, invalidate saved artifacts.
 const implementationHash=createHash('sha256').update(bundled).digest('hex');
+const defaultGraph={schemaVersion:1,target:'top',declarations:[],functions:[],stages:{pixel:{
+  nodes:['color','pixel_out'].map((key,i)=>{const d=context.GrapeGraph.registry.get('sgrape.builtin.'+key).catalog.definition;return {id:key,definitionUuid:d.definitionUuid,params:JSON.parse(JSON.stringify(d.defaults)),ui:{x:80+i*360,y:120}};}),
+  edges:[{id:'color_output',from:['color','out'],to:['pixel_out','color']}]}}};
+const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.compile(defaultGraph)};
+// Native source labels are cold host metadata, independent of Python graph compilation.
+const sourceCatalog=JSON.parse(fs.readFileSync(path.join(root,'src/library/source_catalog.json'),'utf8'));
+const sourceContract=Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]]));
 catalog.frontendHash=implementationHash;
 for(const row of rows){
   const d=row.definition;delete d.revisionHash;d.definitionUuid||='sgrape.builtin.'+d.key;
@@ -72,12 +79,13 @@ const pattern=/(<script id="node-browser-data" type="application\/json">)(.*?)(<
 const match=html.match(pattern);if(!match)throw Error('Missing editor node-browser projection');
 const navigation={...JSON.parse(match[2]),...catalog.browser,nodes:Object.fromEntries(catalog.definitions.map(row=>[row.definition.definitionUuid,row.browser]))};
 const outputs=new Map([
+  [path.join(root,'src/editor/editor-library.json'),fs.readFileSync(path.join(root,'src/library/builtin_subgraphs.json'),'utf8')],
   [path.join(root,'src/editor/wire_planning.js'),bundled],
   [catalogPath,JSON.stringify(catalog,null,2)+'\n'],
   [htmlPath,html.replace(pattern,(_all,open,_json,close)=>open+JSON.stringify(navigation)+close)],
   [path.join(root,'src/editor/editor-bootstrap.json'),JSON.stringify({version:1,producer:'frontend-modules',
-    catalogHash:implementationHash,catalog:rows.map(row=>row.definition),
-    typeContract:context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top')},null,2)+'\n'],
+    catalogHash:implementationHash,defaultDocument,catalog:rows.map(row=>row.definition),
+    typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract}},null,2)+'\n'],
   [path.join(root,'src/core/frontend_capabilities.json'),JSON.stringify({protocol:context.GrapeTopCompiler.protocol,valueTypes:context.GrapeGraph.values.types,definitions:context.GrapeGraph.registry.modules.map(m=>m.catalog.definition.definitionUuid).sort(),ordinary,nativeSignatures},null,2)+'\n']
 ]);
 // Publish only after all checks and projections have succeeded.

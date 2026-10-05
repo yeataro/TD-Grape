@@ -4,6 +4,7 @@
 import {copy,type Node} from './model';
 import {resolvePorts,type Registry,type NodeModule,type NodeContext,type Signature} from './node_module';
 import * as values from './values';
+import {identifierRules} from './identifier_rules';
 
 type Variant={type:string|null;inputs:Record<string,string>;outputs:Record<string,string>};
 
@@ -59,7 +60,7 @@ function vectorLayouts(type:string){
 export function createEditorContract(registry:Registry,target='top'){
   const modules=registry.modules.filter(m=>!m.structural&&m.catalog.definition.stages.includes('pixel'));
   return {
-    version:1,valueTypes:[...values.types],numericTypes:values.types.filter(t=>values.family(t)!=='bool'),
+    version:1,glslCode:identifierRules,valueTypes:[...values.types],numericTypes:values.types.filter(t=>values.family(t)!=='bool'),
     resourceTypes:[],specConstantTypes:[],
     types:Object.fromEntries(values.types.map(t=>[t,{family:values.family(t),components:values.count(t)}])),
     conversions:values.policy.conversions.map(row=>({...row,kind:values.count(row.from)===1&&values.count(row.to)>1?'splat':'cast'})),

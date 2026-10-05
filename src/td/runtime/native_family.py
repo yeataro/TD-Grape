@@ -9,12 +9,23 @@ import uuid
 
 
 class NativeFamily:
-    def __init__(self, comp, *, artifact, document, sources, controls_source=None):
+    def __init__(self, comp, *, artifact, document, sources, controls_source=None, values=None):
         self.comp = comp
         self.artifact = artifact
         self.document = document
         self.sources = sources
         self.controls_source = controls_source
+        self.values = values
+
+    def set_parameter_with_undo(self, parameter, value, validate=None):
+        if self.values is None:
+            raise RuntimeError('The native value writer is not configured.')
+        return self.values.set_parameter_with_undo(parameter, value, validate)
+
+    def set_parameters_with_undo(self, plans):
+        if self.values is None:
+            raise RuntimeError('The native value writer is not configured.')
+        return self.values.set_parameters_with_undo(plans)
 
     def control_helper(self, comp, name='parameter_links'):
         return comp.op('GrapeControls/' + name)
@@ -34,6 +45,7 @@ class NativeFamily:
             raise RuntimeError('The native custom-control adapter is not configured.')
         self.comp.par.parentshortcut = 'GrapeFamily'
         helper = container.create(parameterexecuteDAT, 'parameter_links')
+        helper.nodeX, helper.nodeY = 220, -160
         helper.store('grapeControlHelper', True)
         helper.text = self.controls_source
         helper.par.op.expr = "parent.GrapeFamily.op('shader')"
@@ -44,6 +56,7 @@ class NativeFamily:
         helper.par.modechange = True
         helper.module.prime(self.comp)
         lifecycle = container.create(executeDAT, 'parameter_lifecycle')
+        lifecycle.nodeX, lifecycle.nodeY = 440, -160
         lifecycle.par.start = True
         lifecycle.par.create = True
         lifecycle.par.framestart = False
@@ -72,6 +85,33 @@ class NativeFamily:
 
     def checked_state(self):
         return self.state()
+
+    def configure_sources(self, graph, revision):
+        """Create/restore native rows without generating or replacing GLSL."""
+        current = self.state()
+        if current['revision'] != revision:
+            raise RuntimeError('Conflict: refresh the native source revision.')
+        self.document.validate_graph(graph)
+        # Missing native rows are preserved editing data, not rows to create.
+        self.artifact.validate_declarations([row for row in graph['declarations'] if not row.get('sourceMissing')])
+        before = self.sources.capture_configuration(self, self.comp)
+        try:
+            self.sources.configure(self, self.comp, graph, {})
+            self.write_state(self.document.update(current, graph))
+        except Exception as error:
+            rollback_errors = []
+            try:
+                self.sources.restore_configuration(self, self.comp, before)
+            except Exception as rollback_error:
+                rollback_errors.append('native parameters: ' + str(rollback_error))
+            self.status('rollback-failed' if rollback_errors else 'source-configuration', str(error),
+                        exception=type(error).__name__, rollbackErrors=rollback_errors)
+            if rollback_errors:
+                failure = RuntimeError('Source configuration failed and rollback needs review: ' + str(error))
+                failure.rollback_errors = rollback_errors
+                raise failure from error
+            raise
+        return {'ok': True}
 
     def write_state(self, state):
         # Serialize completely before changing either view. The outer graph DAT

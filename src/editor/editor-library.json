@@ -1,0 +1,6810 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "library_tint_v1",
+      "name": "Tint",
+      "scope": "library",
+      "stages": [
+        "pixel",
+        "vertex"
+      ],
+      "inputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "id": "tint",
+          "name": "Tint",
+          "type": "vec4",
+          "default": [
+            0.7,
+            0.3,
+            1,
+            1
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "multiply",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec4"
+            },
+            "ui": {
+              "x": 336,
+              "y": 144
+            },
+            "name": "Apply_Tint"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 624,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "multiply",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "tint"
+            ],
+            "to": [
+              "multiply",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "multiply",
+              "out"
+            ],
+            "to": [
+              "output",
+              "color"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.tint",
+        "version": "cdc50bc80d53bb2d129be38237c47de20358df941e01e78e72a2c2e3b3496b79"
+      },
+      "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [],
+        "descriptionKey": "help.function"
+      }
+    },
+    {
+      "id": "library_invert_v1",
+      "name": "Invert",
+      "scope": "library",
+      "stages": [
+        "pixel",
+        "vertex"
+      ],
+      "descriptionKey": "help.filter.invert",
+      "inputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0.5,
+            0.5,
+            0.5,
+            1
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "split",
+            "definitionUuid": "sgrape.builtin.split",
+            "revisionHash": "d7814765c45269fe55b74659af5d55e41843a1ed87c8c3719aca4156bbe00d1a",
+            "params": {},
+            "ui": {
+              "x": 288,
+              "y": 144
+            },
+            "name": "Split_Color"
+          },
+          {
+            "id": "invert",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 576,
+              "y": 144
+            },
+            "name": "Invert_RGB",
+            "inputValues": {
+              "a": [
+                1,
+                1,
+                1
+              ]
+            }
+          },
+          {
+            "id": "rgba",
+            "definitionUuid": "sgrape.builtin.rgba",
+            "revisionHash": "0514299936663fa533dcc531be299ccd3a8707b2e32fd139225180056613932b",
+            "params": {},
+            "ui": {
+              "x": 1200,
+              "y": 144
+            },
+            "name": "Compose_Color"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 1440,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "split",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "rgb"
+            ],
+            "to": [
+              "invert",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "invert",
+              "out"
+            ],
+            "to": [
+              "rgba",
+              "rgb"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "a"
+            ],
+            "to": [
+              "rgba",
+              "alpha"
+            ]
+          },
+          {
+            "from": [
+              "rgba",
+              "out"
+            ],
+            "to": [
+              "output",
+              "color"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.invert",
+        "version": "705f7599d3740d078f9a4097a757b0408b66b28936338f846ff16cc4c5716329"
+      },
+      "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [],
+        "descriptionKey": "help.filter.invert"
+      }
+    },
+    {
+      "id": "library_contrast_v1",
+      "name": "Contrast",
+      "scope": "library",
+      "stages": [
+        "pixel",
+        "vertex"
+      ],
+      "descriptionKey": "help.filter.contrast",
+      "inputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0.5,
+            0.5,
+            0.5,
+            1
+          ]
+        },
+        {
+          "id": "contrast",
+          "name": "Contrast",
+          "type": "float",
+          "default": 1
+        },
+        {
+          "id": "pivot",
+          "name": "Pivot",
+          "type": "float",
+          "default": 0.5
+        }
+      ],
+      "outputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "split",
+            "definitionUuid": "sgrape.builtin.split",
+            "revisionHash": "d7814765c45269fe55b74659af5d55e41843a1ed87c8c3719aca4156bbe00d1a",
+            "params": {},
+            "ui": {
+              "x": 288,
+              "y": 144
+            },
+            "name": "Split_Color"
+          },
+          {
+            "id": "center",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 528,
+              "y": 144
+            },
+            "name": "Center_RGB"
+          },
+          {
+            "id": "scale",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 744,
+              "y": 144
+            },
+            "name": "Scale_Contrast"
+          },
+          {
+            "id": "restore",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 960,
+              "y": 144
+            },
+            "name": "Restore_Pivot"
+          },
+          {
+            "id": "rgba",
+            "definitionUuid": "sgrape.builtin.rgba",
+            "revisionHash": "0514299936663fa533dcc531be299ccd3a8707b2e32fd139225180056613932b",
+            "params": {},
+            "ui": {
+              "x": 1200,
+              "y": 144
+            },
+            "name": "Compose_Color"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 1440,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "split",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "rgb"
+            ],
+            "to": [
+              "center",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "pivot"
+            ],
+            "to": [
+              "center",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "center",
+              "out"
+            ],
+            "to": [
+              "scale",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "contrast"
+            ],
+            "to": [
+              "scale",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "scale",
+              "out"
+            ],
+            "to": [
+              "restore",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "pivot"
+            ],
+            "to": [
+              "restore",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "restore",
+              "out"
+            ],
+            "to": [
+              "rgba",
+              "rgb"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "a"
+            ],
+            "to": [
+              "rgba",
+              "alpha"
+            ]
+          },
+          {
+            "from": [
+              "rgba",
+              "out"
+            ],
+            "to": [
+              "output",
+              "color"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.contrast",
+        "version": "18b9963e872a7f22cdb7961e3b42c2c8a995b8f76da51314ee42270554ffef3d"
+      },
+      "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [],
+        "descriptionKey": "help.filter.contrast"
+      }
+    },
+    {
+      "id": "library_color_clamp_v1",
+      "name": "Color Clamp",
+      "scope": "library",
+      "stages": [
+        "pixel",
+        "vertex"
+      ],
+      "descriptionKey": "help.filter.color_clamp",
+      "inputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0.5,
+            0.5,
+            0.5,
+            1
+          ]
+        },
+        {
+          "id": "minimum",
+          "name": "Minimum",
+          "type": "float",
+          "default": 0
+        },
+        {
+          "id": "maximum",
+          "name": "Maximum",
+          "type": "float",
+          "default": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0,
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "split",
+            "definitionUuid": "sgrape.builtin.split",
+            "revisionHash": "d7814765c45269fe55b74659af5d55e41843a1ed87c8c3719aca4156bbe00d1a",
+            "params": {},
+            "ui": {
+              "x": 288,
+              "y": 144
+            },
+            "name": "Split_Color"
+          },
+          {
+            "id": "limit",
+            "definitionUuid": "sgrape.builtin.clamp",
+            "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 576,
+              "y": 144
+            },
+            "name": "Clamp_RGB"
+          },
+          {
+            "id": "rgba",
+            "definitionUuid": "sgrape.builtin.rgba",
+            "revisionHash": "0514299936663fa533dcc531be299ccd3a8707b2e32fd139225180056613932b",
+            "params": {},
+            "ui": {
+              "x": 1200,
+              "y": 144
+            },
+            "name": "Compose_Color"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 1440,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "split",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "rgb"
+            ],
+            "to": [
+              "limit",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "minimum"
+            ],
+            "to": [
+              "limit",
+              "min"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "maximum"
+            ],
+            "to": [
+              "limit",
+              "max"
+            ]
+          },
+          {
+            "from": [
+              "limit",
+              "out"
+            ],
+            "to": [
+              "rgba",
+              "rgb"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "a"
+            ],
+            "to": [
+              "rgba",
+              "alpha"
+            ]
+          },
+          {
+            "from": [
+              "rgba",
+              "out"
+            ],
+            "to": [
+              "output",
+              "color"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.color_clamp",
+        "version": "1008063f583e17e95e4124231c4078419772b75dfb229b8451a1c0ffabb8177b"
+      },
+      "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [],
+        "descriptionKey": "help.filter.color_clamp"
+      }
+    },
+    {
+      "id": "library_color_multiply_v1",
+      "name": "Color Multiply",
+      "scope": "library",
+      "stages": [
+        "pixel",
+        "vertex"
+      ],
+      "descriptionKey": "help.filter.color_multiply",
+      "inputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "id": "multiplier",
+          "name": "Multiplier",
+          "type": "vec3",
+          "default": [
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "color",
+          "name": "RGBA",
+          "type": "vec4",
+          "default": [
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "rgb",
+          "name": "RGB",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "alpha",
+          "name": "A",
+          "type": "float",
+          "default": 1
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "split",
+            "definitionUuid": "sgrape.builtin.split",
+            "revisionHash": "d7814765c45269fe55b74659af5d55e41843a1ed87c8c3719aca4156bbe00d1a",
+            "params": {},
+            "ui": {
+              "x": 288,
+              "y": 144
+            },
+            "name": "Split_Color"
+          },
+          {
+            "id": "multiply",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 576,
+              "y": 144
+            },
+            "name": "Multiply_RGB"
+          },
+          {
+            "id": "rgba",
+            "definitionUuid": "sgrape.builtin.rgba",
+            "revisionHash": "0514299936663fa533dcc531be299ccd3a8707b2e32fd139225180056613932b",
+            "params": {},
+            "ui": {
+              "x": 1200,
+              "y": 144
+            },
+            "name": "Compose_Color"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 1440,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "split",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "rgb"
+            ],
+            "to": [
+              "multiply",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "multiplier"
+            ],
+            "to": [
+              "multiply",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "multiply",
+              "out"
+            ],
+            "to": [
+              "rgba",
+              "rgb"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "a"
+            ],
+            "to": [
+              "rgba",
+              "alpha"
+            ]
+          },
+          {
+            "from": [
+              "rgba",
+              "out"
+            ],
+            "to": [
+              "output",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "multiply",
+              "out"
+            ],
+            "to": [
+              "output",
+              "rgb"
+            ]
+          },
+          {
+            "from": [
+              "split",
+              "a"
+            ],
+            "to": [
+              "output",
+              "alpha"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.color_multiply",
+        "version": "93bd63f0210c3be8c214e9aeebb44950ffa485d9735b351d2426017d3ccb0ea6"
+      },
+      "browser": {
+        "category": "color",
+        "source": "editor",
+        "aliases": [],
+        "descriptionKey": "help.filter.color_multiply"
+      }
+    },
+    {
+      "id": "library_normal_map_v1",
+      "name": "Normal Map",
+      "scope": "library",
+      "stages": [
+        "pixel"
+      ],
+      "targets": [
+        "mat"
+      ],
+      "descriptionKey": "help.subgraph.normal_map",
+      "inputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec4",
+          "default": [
+            0.5,
+            0.5,
+            1,
+            1
+          ]
+        },
+        {
+          "id": "strength",
+          "name": "Strength",
+          "type": "float",
+          "default": 1
+        },
+        {
+          "id": "tangentToWorld",
+          "name": "Tangent to World",
+          "type": "mat3",
+          "default": [
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "position",
+          "name": "Position",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "rgb",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Normal_RGB"
+          },
+          {
+            "id": "center",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 648,
+              "y": 144
+            },
+            "name": "Center_Normal",
+            "inputValues": {
+              "b": [
+                0.5,
+                0.5,
+                0.5
+              ]
+            }
+          },
+          {
+            "id": "decode",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 936,
+              "y": 144
+            },
+            "name": "Decode_Normal",
+            "inputValues": {
+              "b": [
+                2,
+                2,
+                2
+              ]
+            }
+          },
+          {
+            "id": "scale",
+            "definitionUuid": "sgrape.builtin.combine",
+            "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a",
+            "params": {
+              "type": "vec3",
+              "groups": {},
+              "components": [
+                0,
+                0,
+                0,
+                0
+              ]
+            },
+            "ui": {
+              "x": 936,
+              "y": 432
+            },
+            "name": "XY_Strength",
+            "inputValues": {
+              "z": 1
+            }
+          },
+          {
+            "id": "scaled",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1224,
+              "y": 144
+            },
+            "name": "Apply_Strength"
+          },
+          {
+            "id": "world",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3",
+              "operandTypes": {
+                "a": "mat3",
+                "b": "vec3"
+              }
+            },
+            "ui": {
+              "x": 1512,
+              "y": 144
+            },
+            "name": "Tangent_To_World"
+          },
+          {
+            "id": "unit",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1800,
+              "y": 144
+            },
+            "name": "Unit_Normal"
+          },
+          {
+            "id": "facing",
+            "definitionUuid": "sgrape.builtin.td_front_facing",
+            "revisionHash": "6296772a8c0e9bae0c764b6244b6b20b9874baf91aa62a89aeb88e233f21fa55",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1512,
+              "y": 720
+            },
+            "name": "Front_Facing"
+          },
+          {
+            "id": "back",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2088,
+              "y": 432
+            },
+            "name": "Back_Normal",
+            "inputValues": {
+              "b": [
+                -1,
+                -1,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "surface",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2376,
+              "y": 144
+            },
+            "name": "Surface_Normal"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 2664,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "rgb",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "rgb",
+              "out"
+            ],
+            "to": [
+              "center",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "center",
+              "out"
+            ],
+            "to": [
+              "decode",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "strength"
+            ],
+            "to": [
+              "scale",
+              "x"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "strength"
+            ],
+            "to": [
+              "scale",
+              "y"
+            ]
+          },
+          {
+            "from": [
+              "decode",
+              "out"
+            ],
+            "to": [
+              "scaled",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "scale",
+              "out"
+            ],
+            "to": [
+              "scaled",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "tangentToWorld"
+            ],
+            "to": [
+              "world",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "scaled",
+              "out"
+            ],
+            "to": [
+              "world",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "world",
+              "out"
+            ],
+            "to": [
+              "unit",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "position"
+            ],
+            "to": [
+              "facing",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "facing",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "unit",
+              "out"
+            ],
+            "to": [
+              "back",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "facing",
+              "out"
+            ],
+            "to": [
+              "surface",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "unit",
+              "out"
+            ],
+            "to": [
+              "surface",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "back",
+              "out"
+            ],
+            "to": [
+              "surface",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "surface",
+              "out"
+            ],
+            "to": [
+              "output",
+              "normal"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.normal_map",
+        "version": "fe353ff1e4d50aa13900cff13a137afd31e973b7438ca5b2689cbdc9b7490070"
+      },
+      "browser": {
+        "category": "texture",
+        "source": "editor",
+        "aliases": [
+          "normal map",
+          "TBN",
+          "tangent",
+          "TDFrontFacing"
+        ],
+        "descriptionKey": "help.subgraph.normal_map"
+      }
+    },
+    {
+      "id": "library_displacement_v1",
+      "name": "Displacement",
+      "scope": "library",
+      "stages": [
+        "vertex"
+      ],
+      "targets": [
+        "mat"
+      ],
+      "descriptionKey": "help.subgraph.displacement",
+      "inputs": [
+        {
+          "id": "position",
+          "name": "Position",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "height",
+          "name": "Height",
+          "type": "float",
+          "default": 0.5
+        },
+        {
+          "id": "scale",
+          "name": "Scale",
+          "type": "float",
+          "default": 1
+        },
+        {
+          "id": "midlevel",
+          "name": "Midlevel",
+          "type": "float",
+          "default": 0.5
+        }
+      ],
+      "outputs": [
+        {
+          "id": "position",
+          "name": "Position",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "unit",
+            "definitionUuid": "sgrape.builtin.normalize",
+            "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Unit_Normal"
+          },
+          {
+            "id": "center",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 480
+            },
+            "name": "Center_Height"
+          },
+          {
+            "id": "scale",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 480
+            },
+            "name": "Scale_Height"
+          },
+          {
+            "id": "offset",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Normal_Offset"
+          },
+          {
+            "id": "position",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Displaced_Position"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 1608,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "unit",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "height"
+            ],
+            "to": [
+              "center",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "midlevel"
+            ],
+            "to": [
+              "center",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "center",
+              "out"
+            ],
+            "to": [
+              "scale",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "scale"
+            ],
+            "to": [
+              "scale",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "unit",
+              "out"
+            ],
+            "to": [
+              "offset",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "scale",
+              "out"
+            ],
+            "to": [
+              "offset",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "position"
+            ],
+            "to": [
+              "position",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "offset",
+              "out"
+            ],
+            "to": [
+              "position",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "position",
+              "out"
+            ],
+            "to": [
+              "output",
+              "position"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.displacement",
+        "version": "9ec89fe62835f62b3b6ffa3831756968a23d8778962d1eaf6c23b8ad34c52935"
+      },
+      "browser": {
+        "category": "vector",
+        "source": "editor",
+        "aliases": [
+          "height",
+          "normal displacement",
+          "vertex displacement",
+          "高度",
+          "位移"
+        ],
+        "descriptionKey": "help.subgraph.displacement"
+      }
+    },
+    {
+      "id": "library_view_direction_v1",
+      "name": "View Direction",
+      "scope": "library",
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "descriptionKey": "help.subgraph.view_direction",
+      "inputs": [
+        {
+          "id": "position",
+          "name": "Position",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "camera",
+          "name": "Camera",
+          "type": "int",
+          "default": 0
+        }
+      ],
+      "outputs": [
+        {
+          "id": "direction",
+          "name": "Direction",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "camera_matrices",
+            "definitionUuid": "sgrape.builtin.builtin_source",
+            "revisionHash": "8d5c7c4b32944f371d06107436d9f6434c3c09f337cd5c586ada44e706a8ff21",
+            "params": {
+              "source": "uTDMats",
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Camera_Matrices"
+          },
+          {
+            "id": "camera",
+            "definitionUuid": "sgrape.builtin.array_get",
+            "revisionHash": "3160e1e2c4b05cdee96b0904bacbc655a922887592a9759c4255cabfe762bcde",
+            "params": {
+              "type": "TDMatrix[TD_NUM_CAMERAS]",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 672,
+              "y": 144
+            },
+            "name": "Camera"
+          },
+          {
+            "id": "camera_inverse",
+            "definitionUuid": "sgrape.builtin.struct_field",
+            "revisionHash": "f9e1b1e861d44f77bf514b2c5f1e96299a2ed34c0538e1d73dea88ca22859c56",
+            "params": {
+              "type": "TDMatrix",
+              "field": "camInverse"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Camera_Inverse"
+          },
+          {
+            "id": "projection",
+            "definitionUuid": "sgrape.builtin.struct_field",
+            "revisionHash": "f9e1b1e861d44f77bf514b2c5f1e96299a2ed34c0538e1d73dea88ca22859c56",
+            "params": {
+              "type": "TDMatrix",
+              "field": "proj"
+            },
+            "ui": {
+              "x": 984,
+              "y": 384
+            },
+            "name": "Projection"
+          },
+          {
+            "id": "camera_origin",
+            "definitionUuid": "sgrape.builtin.matrix_get",
+            "revisionHash": "f5b1cee1cb667fd0b5b7a7f1ca73b806bf88a299bfd5cfcdaf5a8cad40ae1d3e",
+            "params": {
+              "type": "mat4",
+              "mode": "column",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Camera_Origin",
+            "inputValues": {
+              "column": 3
+            }
+          },
+          {
+            "id": "camera_position",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 144
+            },
+            "name": "Camera_Position"
+          },
+          {
+            "id": "perspective_direction",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 144
+            },
+            "name": "Perspective_Direction"
+          },
+          {
+            "id": "camera_z_axis",
+            "definitionUuid": "sgrape.builtin.matrix_get",
+            "revisionHash": "f5b1cee1cb667fd0b5b7a7f1ca73b806bf88a299bfd5cfcdaf5a8cad40ae1d3e",
+            "params": {
+              "type": "mat4",
+              "mode": "column",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 384
+            },
+            "name": "Camera_Z_Axis",
+            "inputValues": {
+              "column": 2
+            }
+          },
+          {
+            "id": "orthographic_direction",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec4",
+              "mask": "xyz"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 384
+            },
+            "name": "Orthographic_Direction"
+          },
+          {
+            "id": "projection_w",
+            "definitionUuid": "sgrape.builtin.matrix_get",
+            "revisionHash": "f5b1cee1cb667fd0b5b7a7f1ca73b806bf88a299bfd5cfcdaf5a8cad40ae1d3e",
+            "params": {
+              "type": "mat4",
+              "mode": "element",
+              "indexType": "int"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 624
+            },
+            "name": "Projection_W",
+            "inputValues": {
+              "column": 3,
+              "row": 3
+            }
+          },
+          {
+            "id": "is_orthographic",
+            "definitionUuid": "sgrape.builtin.compare",
+            "revisionHash": "d2010eb23d404212e4ff254b22d71d0259600226604e8cdcbaae93e68e52779f",
+            "params": {
+              "type": "float",
+              "operator": "!="
+            },
+            "ui": {
+              "x": 1608,
+              "y": 624
+            },
+            "name": "Is_Orthographic",
+            "inputValues": {
+              "b": 0
+            }
+          },
+          {
+            "id": "view_vector",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 144
+            },
+            "name": "View_Vector"
+          },
+          {
+            "id": "direction_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2544,
+              "y": 144
+            },
+            "name": "Direction_Length_Squared"
+          },
+          {
+            "id": "direction_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2856,
+              "y": 144
+            },
+            "name": "Direction_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "direction_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3168,
+              "y": 144
+            },
+            "name": "Direction_Length"
+          },
+          {
+            "id": "direction_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3480,
+              "y": 144
+            },
+            "name": "Direction_Unit"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 3792,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "camera_matrices",
+              "out"
+            ],
+            "to": [
+              "camera",
+              "Array"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "camera"
+            ],
+            "to": [
+              "camera",
+              "i"
+            ]
+          },
+          {
+            "from": [
+              "camera",
+              "out"
+            ],
+            "to": [
+              "camera_inverse",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera",
+              "out"
+            ],
+            "to": [
+              "projection",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_inverse",
+              "out"
+            ],
+            "to": [
+              "camera_origin",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_origin",
+              "out"
+            ],
+            "to": [
+              "camera_position",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_position",
+              "out"
+            ],
+            "to": [
+              "perspective_direction",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "position"
+            ],
+            "to": [
+              "perspective_direction",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "camera_inverse",
+              "out"
+            ],
+            "to": [
+              "camera_z_axis",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "camera_z_axis",
+              "out"
+            ],
+            "to": [
+              "orthographic_direction",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "projection",
+              "out"
+            ],
+            "to": [
+              "projection_w",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "projection_w",
+              "out"
+            ],
+            "to": [
+              "is_orthographic",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "is_orthographic",
+              "out"
+            ],
+            "to": [
+              "view_vector",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "orthographic_direction",
+              "out"
+            ],
+            "to": [
+              "view_vector",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "perspective_direction",
+              "out"
+            ],
+            "to": [
+              "view_vector",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "view_vector",
+              "out"
+            ],
+            "to": [
+              "direction_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_vector",
+              "out"
+            ],
+            "to": [
+              "direction_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "direction_length_squared",
+              "out"
+            ],
+            "to": [
+              "direction_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "direction_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "direction_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "view_vector",
+              "out"
+            ],
+            "to": [
+              "direction_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "direction_length",
+              "out"
+            ],
+            "to": [
+              "direction_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "direction_unit",
+              "out"
+            ],
+            "to": [
+              "output",
+              "direction"
+            ]
+          }
+        ]
+      },
+      "targets": [
+        "mat"
+      ],
+      "source": {
+        "id": "sgrape.library.view_direction",
+        "version": "49205fca9fcc0d5ec4bf7877552e2ea908b498f3c97751460a3c29ebad5590d4"
+      },
+      "browser": {
+        "category": "vector",
+        "source": "editor",
+        "aliases": [
+          "view vector",
+          "camera",
+          "orthographic",
+          "視線",
+          "觀看方向"
+        ],
+        "descriptionKey": "help.subgraph.view_direction"
+      }
+    },
+    {
+      "id": "library_fresnel_v1",
+      "name": "Fresnel",
+      "scope": "library",
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "descriptionKey": "help.subgraph.fresnel",
+      "inputs": [
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "viewDirection",
+          "name": "View Direction",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "ior",
+          "name": "IOR",
+          "type": "float",
+          "default": 1.45
+        }
+      ],
+      "outputs": [
+        {
+          "id": "factor",
+          "name": "Fac",
+          "type": "float",
+          "default": 0
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "normal_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Normal_Length_Squared"
+          },
+          {
+            "id": "normal_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 144
+            },
+            "name": "Normal_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "normal_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Normal_Length"
+          },
+          {
+            "id": "normal_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Normal_Unit"
+          },
+          {
+            "id": "view_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 384
+            },
+            "name": "View_Length_Squared"
+          },
+          {
+            "id": "view_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 384
+            },
+            "name": "View_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "view_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 384
+            },
+            "name": "View_Length"
+          },
+          {
+            "id": "view_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 384
+            },
+            "name": "View_Unit"
+          },
+          {
+            "id": "view_cosine",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 144
+            },
+            "name": "View_Cosine"
+          },
+          {
+            "id": "two_sided_cosine",
+            "definitionUuid": "sgrape.builtin.abs",
+            "revisionHash": "85df7ec01966ac06cf87685c8c93d8369744f133bdcbe18684b35397f3f141aa",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 144
+            },
+            "name": "Two_Sided_Cosine"
+          },
+          {
+            "id": "incident_cosine",
+            "definitionUuid": "sgrape.builtin.clamp",
+            "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 144
+            },
+            "name": "Incident_Cosine",
+            "inputValues": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "id": "relative_ior",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 624
+            },
+            "name": "Relative_Ior",
+            "inputValues": {
+              "b": 1e-06
+            }
+          },
+          {
+            "id": "ior_squared",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 624
+            },
+            "name": "Ior_Squared"
+          },
+          {
+            "id": "cosine_squared",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2544,
+              "y": 144
+            },
+            "name": "Cosine_Squared"
+          },
+          {
+            "id": "incident_sine_squared",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2856,
+              "y": 144
+            },
+            "name": "Incident_Sine_Squared",
+            "inputValues": {
+              "a": 1
+            }
+          },
+          {
+            "id": "transmitted_sine_squared",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3168,
+              "y": 144
+            },
+            "name": "Transmitted_Sine_Squared"
+          },
+          {
+            "id": "transmitted_cosine_squared",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3480,
+              "y": 144
+            },
+            "name": "Transmitted_Cosine_Squared",
+            "inputValues": {
+              "a": 1
+            }
+          },
+          {
+            "id": "safe_cosine_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3792,
+              "y": 144
+            },
+            "name": "Safe_Cosine_Squared",
+            "inputValues": {
+              "b": 0
+            }
+          },
+          {
+            "id": "transmitted_cosine",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4104,
+              "y": 144
+            },
+            "name": "Transmitted_Cosine"
+          },
+          {
+            "id": "scaled_transmitted_cosine",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4416,
+              "y": 144
+            },
+            "name": "Scaled_Transmitted_Cosine"
+          },
+          {
+            "id": "scaled_incident_cosine",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2544,
+              "y": 384
+            },
+            "name": "Scaled_Incident_Cosine"
+          },
+          {
+            "id": "s_difference",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4728,
+              "y": 144
+            },
+            "name": "S_Difference"
+          },
+          {
+            "id": "s_sum",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4728,
+              "y": 384
+            },
+            "name": "S_Sum"
+          },
+          {
+            "id": "s_safe_denominator",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5040,
+              "y": 144
+            },
+            "name": "S_Safe_Denominator",
+            "inputValues": {
+              "b": 1e-08
+            }
+          },
+          {
+            "id": "s_amplitude",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5352,
+              "y": 144
+            },
+            "name": "S_Amplitude"
+          },
+          {
+            "id": "s_reflectance",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5664,
+              "y": 144
+            },
+            "name": "S_Reflectance"
+          },
+          {
+            "id": "p_difference",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4416,
+              "y": 384
+            },
+            "name": "P_Difference"
+          },
+          {
+            "id": "p_sum",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4416,
+              "y": 624
+            },
+            "name": "P_Sum"
+          },
+          {
+            "id": "p_safe_denominator",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4728,
+              "y": 624
+            },
+            "name": "P_Safe_Denominator",
+            "inputValues": {
+              "b": 1e-08
+            }
+          },
+          {
+            "id": "p_amplitude",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5040,
+              "y": 384
+            },
+            "name": "P_Amplitude"
+          },
+          {
+            "id": "p_reflectance",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5352,
+              "y": 384
+            },
+            "name": "P_Reflectance"
+          },
+          {
+            "id": "polarizations",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5976,
+              "y": 144
+            },
+            "name": "Polarizations"
+          },
+          {
+            "id": "unpolarized_reflectance",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 6288,
+              "y": 144
+            },
+            "name": "Unpolarized_Reflectance",
+            "inputValues": {
+              "b": 0.5
+            }
+          },
+          {
+            "id": "total_internal_reflection",
+            "definitionUuid": "sgrape.builtin.compare",
+            "revisionHash": "d2010eb23d404212e4ff254b22d71d0259600226604e8cdcbaae93e68e52779f",
+            "params": {
+              "type": "float",
+              "operator": ">="
+            },
+            "ui": {
+              "x": 3480,
+              "y": 384
+            },
+            "name": "Total_Internal_Reflection",
+            "inputValues": {
+              "b": 1
+            }
+          },
+          {
+            "id": "interface_reflectance",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 6600,
+              "y": 144
+            },
+            "name": "Interface_Reflectance",
+            "inputValues": {
+              "true": 1
+            }
+          },
+          {
+            "id": "equal_media",
+            "definitionUuid": "sgrape.builtin.compare",
+            "revisionHash": "d2010eb23d404212e4ff254b22d71d0259600226604e8cdcbaae93e68e52779f",
+            "params": {
+              "type": "float",
+              "operator": "=="
+            },
+            "ui": {
+              "x": 672,
+              "y": 864
+            },
+            "name": "Equal_Media",
+            "inputValues": {
+              "b": 1
+            }
+          },
+          {
+            "id": "equal_media_protection",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 6912,
+              "y": 144
+            },
+            "name": "Equal_Media_Protection",
+            "inputValues": {
+              "true": 0
+            }
+          },
+          {
+            "id": "fresnel_weight",
+            "definitionUuid": "sgrape.builtin.clamp",
+            "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 7224,
+              "y": 144
+            },
+            "name": "Fresnel_Weight",
+            "inputValues": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 7536,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_length",
+              "out"
+            ],
+            "to": [
+              "normal_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "view_length_squared",
+              "out"
+            ],
+            "to": [
+              "view_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "view_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_length",
+              "out"
+            ],
+            "to": [
+              "view_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "view_cosine",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_unit",
+              "out"
+            ],
+            "to": [
+              "view_cosine",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "view_cosine",
+              "out"
+            ],
+            "to": [
+              "two_sided_cosine",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "two_sided_cosine",
+              "out"
+            ],
+            "to": [
+              "incident_cosine",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "ior"
+            ],
+            "to": [
+              "relative_ior",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "relative_ior",
+              "out"
+            ],
+            "to": [
+              "ior_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "relative_ior",
+              "out"
+            ],
+            "to": [
+              "ior_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "incident_cosine",
+              "out"
+            ],
+            "to": [
+              "cosine_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "incident_cosine",
+              "out"
+            ],
+            "to": [
+              "cosine_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "cosine_squared",
+              "out"
+            ],
+            "to": [
+              "incident_sine_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "incident_sine_squared",
+              "out"
+            ],
+            "to": [
+              "transmitted_sine_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "ior_squared",
+              "out"
+            ],
+            "to": [
+              "transmitted_sine_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "transmitted_sine_squared",
+              "out"
+            ],
+            "to": [
+              "transmitted_cosine_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "transmitted_cosine_squared",
+              "out"
+            ],
+            "to": [
+              "safe_cosine_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "safe_cosine_squared",
+              "out"
+            ],
+            "to": [
+              "transmitted_cosine",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "relative_ior",
+              "out"
+            ],
+            "to": [
+              "scaled_transmitted_cosine",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "transmitted_cosine",
+              "out"
+            ],
+            "to": [
+              "scaled_transmitted_cosine",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "relative_ior",
+              "out"
+            ],
+            "to": [
+              "scaled_incident_cosine",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "incident_cosine",
+              "out"
+            ],
+            "to": [
+              "scaled_incident_cosine",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "incident_cosine",
+              "out"
+            ],
+            "to": [
+              "s_difference",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "scaled_transmitted_cosine",
+              "out"
+            ],
+            "to": [
+              "s_difference",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "incident_cosine",
+              "out"
+            ],
+            "to": [
+              "s_sum",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "scaled_transmitted_cosine",
+              "out"
+            ],
+            "to": [
+              "s_sum",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "s_sum",
+              "out"
+            ],
+            "to": [
+              "s_safe_denominator",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "s_difference",
+              "out"
+            ],
+            "to": [
+              "s_amplitude",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "s_safe_denominator",
+              "out"
+            ],
+            "to": [
+              "s_amplitude",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "s_amplitude",
+              "out"
+            ],
+            "to": [
+              "s_reflectance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "s_amplitude",
+              "out"
+            ],
+            "to": [
+              "s_reflectance",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "scaled_incident_cosine",
+              "out"
+            ],
+            "to": [
+              "p_difference",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "transmitted_cosine",
+              "out"
+            ],
+            "to": [
+              "p_difference",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "scaled_incident_cosine",
+              "out"
+            ],
+            "to": [
+              "p_sum",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "transmitted_cosine",
+              "out"
+            ],
+            "to": [
+              "p_sum",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "p_sum",
+              "out"
+            ],
+            "to": [
+              "p_safe_denominator",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "p_difference",
+              "out"
+            ],
+            "to": [
+              "p_amplitude",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "p_safe_denominator",
+              "out"
+            ],
+            "to": [
+              "p_amplitude",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "p_amplitude",
+              "out"
+            ],
+            "to": [
+              "p_reflectance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "p_amplitude",
+              "out"
+            ],
+            "to": [
+              "p_reflectance",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "s_reflectance",
+              "out"
+            ],
+            "to": [
+              "polarizations",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "p_reflectance",
+              "out"
+            ],
+            "to": [
+              "polarizations",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "polarizations",
+              "out"
+            ],
+            "to": [
+              "unpolarized_reflectance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "transmitted_sine_squared",
+              "out"
+            ],
+            "to": [
+              "total_internal_reflection",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "total_internal_reflection",
+              "out"
+            ],
+            "to": [
+              "interface_reflectance",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "unpolarized_reflectance",
+              "out"
+            ],
+            "to": [
+              "interface_reflectance",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "relative_ior",
+              "out"
+            ],
+            "to": [
+              "equal_media",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "equal_media",
+              "out"
+            ],
+            "to": [
+              "equal_media_protection",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "interface_reflectance",
+              "out"
+            ],
+            "to": [
+              "equal_media_protection",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "equal_media_protection",
+              "out"
+            ],
+            "to": [
+              "fresnel_weight",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "fresnel_weight",
+              "out"
+            ],
+            "to": [
+              "output",
+              "factor"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.fresnel",
+        "version": "de0f4bb926cd4ec51b16aac6214e0b46d281ab92ad17df5bb96347b5fde03f6d"
+      },
+      "browser": {
+        "category": "shader",
+        "source": "editor",
+        "aliases": [
+          "IOR",
+          "reflection",
+          "費涅爾",
+          "反射"
+        ],
+        "descriptionKey": "help.subgraph.fresnel"
+      }
+    },
+    {
+      "id": "library_facing_v1",
+      "name": "Facing",
+      "scope": "library",
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "descriptionKey": "help.subgraph.facing",
+      "inputs": [
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "viewDirection",
+          "name": "View Direction",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "factor",
+          "name": "Fac",
+          "type": "float",
+          "default": 0
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "normal_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Normal_Length_Squared"
+          },
+          {
+            "id": "normal_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 144
+            },
+            "name": "Normal_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "normal_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Normal_Length"
+          },
+          {
+            "id": "normal_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Normal_Unit"
+          },
+          {
+            "id": "view_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 384
+            },
+            "name": "View_Length_Squared"
+          },
+          {
+            "id": "view_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 384
+            },
+            "name": "View_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "view_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 384
+            },
+            "name": "View_Length"
+          },
+          {
+            "id": "view_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 384
+            },
+            "name": "View_Unit"
+          },
+          {
+            "id": "view_cosine",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 144
+            },
+            "name": "View_Cosine"
+          },
+          {
+            "id": "two_sided_cosine",
+            "definitionUuid": "sgrape.builtin.abs",
+            "revisionHash": "85df7ec01966ac06cf87685c8c93d8369744f133bdcbe18684b35397f3f141aa",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 144
+            },
+            "name": "Two_Sided_Cosine"
+          },
+          {
+            "id": "bounded_cosine",
+            "definitionUuid": "sgrape.builtin.clamp",
+            "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 144
+            },
+            "name": "Bounded_Cosine",
+            "inputValues": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "id": "edge_weight",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2544,
+              "y": 144
+            },
+            "name": "Edge_Weight",
+            "inputValues": {
+              "a": 1
+            }
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 2856,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_length",
+              "out"
+            ],
+            "to": [
+              "normal_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "view_length_squared",
+              "out"
+            ],
+            "to": [
+              "view_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "view_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_length",
+              "out"
+            ],
+            "to": [
+              "view_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "view_cosine",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_unit",
+              "out"
+            ],
+            "to": [
+              "view_cosine",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "view_cosine",
+              "out"
+            ],
+            "to": [
+              "two_sided_cosine",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "two_sided_cosine",
+              "out"
+            ],
+            "to": [
+              "bounded_cosine",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "bounded_cosine",
+              "out"
+            ],
+            "to": [
+              "edge_weight",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "edge_weight",
+              "out"
+            ],
+            "to": [
+              "output",
+              "factor"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.facing",
+        "version": "221d3628c27d87f776bd78a67219e4e6109d7fd8a77e60dc0363261fe1bb5db8"
+      },
+      "browser": {
+        "category": "shader",
+        "source": "editor",
+        "aliases": [
+          "layer weight",
+          "rim",
+          "edge mask",
+          "邊緣",
+          "朝向"
+        ],
+        "descriptionKey": "help.subgraph.facing"
+      }
+    },
+    {
+      "id": "library_mapping_v1",
+      "name": "Mapping",
+      "scope": "library",
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "descriptionKey": "help.subgraph.mapping",
+      "inputs": [
+        {
+          "id": "vector",
+          "name": "Vector",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "translation",
+          "name": "Translation",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "rotation",
+          "name": "Rotation",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "scale",
+          "name": "Scale",
+          "type": "vec3",
+          "default": [
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "id": "vector",
+          "name": "Vector",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "scale_coordinates",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Scale_Coordinates"
+          },
+          {
+            "id": "rotation_x",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec3",
+              "mask": "x"
+            },
+            "ui": {
+              "x": 360,
+              "y": 384
+            },
+            "name": "Rotation_X"
+          },
+          {
+            "id": "radians_x",
+            "definitionUuid": "sgrape.builtin.radians",
+            "revisionHash": "a4e35f918b160cf658541e39e140614e6c66160022bc1e0cc2f0d7aafc05f4de",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 144
+            },
+            "name": "Radians_X"
+          },
+          {
+            "id": "rotate_x",
+            "definitionUuid": "sgrape.builtin.td_rotate_x",
+            "revisionHash": "4ffe31df3e4c455d3222e35ab8fb305a7dfe5660fc0ea5fa1757ce2d973c1029",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Rotate_X"
+          },
+          {
+            "id": "apply_rotation_x",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3",
+              "operandTypes": {
+                "a": "mat3",
+                "b": "vec3"
+              }
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Apply_Rotation_X"
+          },
+          {
+            "id": "rotation_y",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec3",
+              "mask": "y"
+            },
+            "ui": {
+              "x": 360,
+              "y": 624
+            },
+            "name": "Rotation_Y"
+          },
+          {
+            "id": "radians_y",
+            "definitionUuid": "sgrape.builtin.radians",
+            "revisionHash": "a4e35f918b160cf658541e39e140614e6c66160022bc1e0cc2f0d7aafc05f4de",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 384
+            },
+            "name": "Radians_Y"
+          },
+          {
+            "id": "rotate_y",
+            "definitionUuid": "sgrape.builtin.td_rotate_y",
+            "revisionHash": "f26bde5bce32f6faf36b5671f802f87f6cd5ad3f2ab42faf477f211250431f20",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 384
+            },
+            "name": "Rotate_Y"
+          },
+          {
+            "id": "apply_rotation_y",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3",
+              "operandTypes": {
+                "a": "mat3",
+                "b": "vec3"
+              }
+            },
+            "ui": {
+              "x": 1608,
+              "y": 144
+            },
+            "name": "Apply_Rotation_Y"
+          },
+          {
+            "id": "rotation_z",
+            "definitionUuid": "sgrape.builtin.swizzle",
+            "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442",
+            "params": {
+              "type": "vec3",
+              "mask": "z"
+            },
+            "ui": {
+              "x": 360,
+              "y": 864
+            },
+            "name": "Rotation_Z"
+          },
+          {
+            "id": "radians_z",
+            "definitionUuid": "sgrape.builtin.radians",
+            "revisionHash": "a4e35f918b160cf658541e39e140614e6c66160022bc1e0cc2f0d7aafc05f4de",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 624
+            },
+            "name": "Radians_Z"
+          },
+          {
+            "id": "rotate_z",
+            "definitionUuid": "sgrape.builtin.td_rotate_z",
+            "revisionHash": "0850ce5538be469fdb4ac2fee574b93510a341227a005d6b2d5009a2f81e6e45",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 624
+            },
+            "name": "Rotate_Z"
+          },
+          {
+            "id": "apply_rotation_z",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3",
+              "operandTypes": {
+                "a": "mat3",
+                "b": "vec3"
+              }
+            },
+            "ui": {
+              "x": 1920,
+              "y": 144
+            },
+            "name": "Apply_Rotation_Z"
+          },
+          {
+            "id": "translate_coordinates",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 144
+            },
+            "name": "Translate_Coordinates"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 2544,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "vector"
+            ],
+            "to": [
+              "scale_coordinates",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "scale"
+            ],
+            "to": [
+              "scale_coordinates",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "rotation"
+            ],
+            "to": [
+              "rotation_x",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "rotation_x",
+              "out"
+            ],
+            "to": [
+              "radians_x",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "radians_x",
+              "out"
+            ],
+            "to": [
+              "rotate_x",
+              "radians"
+            ]
+          },
+          {
+            "from": [
+              "rotate_x",
+              "out"
+            ],
+            "to": [
+              "apply_rotation_x",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "scale_coordinates",
+              "out"
+            ],
+            "to": [
+              "apply_rotation_x",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "rotation"
+            ],
+            "to": [
+              "rotation_y",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "rotation_y",
+              "out"
+            ],
+            "to": [
+              "radians_y",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "radians_y",
+              "out"
+            ],
+            "to": [
+              "rotate_y",
+              "radians"
+            ]
+          },
+          {
+            "from": [
+              "rotate_y",
+              "out"
+            ],
+            "to": [
+              "apply_rotation_y",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "apply_rotation_x",
+              "out"
+            ],
+            "to": [
+              "apply_rotation_y",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "rotation"
+            ],
+            "to": [
+              "rotation_z",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "rotation_z",
+              "out"
+            ],
+            "to": [
+              "radians_z",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "radians_z",
+              "out"
+            ],
+            "to": [
+              "rotate_z",
+              "radians"
+            ]
+          },
+          {
+            "from": [
+              "rotate_z",
+              "out"
+            ],
+            "to": [
+              "apply_rotation_z",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "apply_rotation_y",
+              "out"
+            ],
+            "to": [
+              "apply_rotation_z",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "apply_rotation_z",
+              "out"
+            ],
+            "to": [
+              "translate_coordinates",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "translation"
+            ],
+            "to": [
+              "translate_coordinates",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "translate_coordinates",
+              "out"
+            ],
+            "to": [
+              "output",
+              "vector"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.mapping",
+        "version": "13dd15714ad7433572a2dfef6f36e23d600db486d0c58a58d5d080016db7695d"
+      },
+      "browser": {
+        "category": "vector",
+        "source": "editor",
+        "aliases": [
+          "UV",
+          "transform",
+          "rotation",
+          "座標",
+          "變換"
+        ],
+        "descriptionKey": "help.subgraph.mapping"
+      }
+    },
+    {
+      "id": "library_rim_light_v1",
+      "name": "Rim Light",
+      "scope": "library",
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "descriptionKey": "help.subgraph.rim_light",
+      "inputs": [
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "viewDirection",
+          "name": "View Direction",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec3",
+          "default": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "id": "strength",
+          "name": "Strength",
+          "type": "float",
+          "default": 1
+        },
+        {
+          "id": "power",
+          "name": "Power",
+          "type": "float",
+          "default": 2
+        }
+      ],
+      "outputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "factor",
+          "name": "Fac",
+          "type": "float",
+          "default": 0
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "normal_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Normal_Length_Squared"
+          },
+          {
+            "id": "normal_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 144
+            },
+            "name": "Normal_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "normal_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Normal_Length"
+          },
+          {
+            "id": "normal_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Normal_Unit"
+          },
+          {
+            "id": "view_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 384
+            },
+            "name": "View_Length_Squared"
+          },
+          {
+            "id": "view_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 384
+            },
+            "name": "View_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "view_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 384
+            },
+            "name": "View_Length"
+          },
+          {
+            "id": "view_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 384
+            },
+            "name": "View_Unit"
+          },
+          {
+            "id": "view_cosine",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 144
+            },
+            "name": "View_Cosine"
+          },
+          {
+            "id": "two_sided_cosine",
+            "definitionUuid": "sgrape.builtin.abs",
+            "revisionHash": "85df7ec01966ac06cf87685c8c93d8369744f133bdcbe18684b35397f3f141aa",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 144
+            },
+            "name": "Two_Sided_Cosine"
+          },
+          {
+            "id": "bounded_cosine",
+            "definitionUuid": "sgrape.builtin.clamp",
+            "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 144
+            },
+            "name": "Bounded_Cosine",
+            "inputValues": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "id": "edge_weight",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2544,
+              "y": 144
+            },
+            "name": "Edge_Weight",
+            "inputValues": {
+              "a": 1
+            }
+          },
+          {
+            "id": "positive_power",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 624
+            },
+            "name": "Positive_Power",
+            "inputValues": {
+              "b": 0.0001
+            }
+          },
+          {
+            "id": "rim_mask",
+            "definitionUuid": "sgrape.builtin.pow",
+            "revisionHash": "2c680fcdde519d36921659604a29100853d1118e503732a049744be62cc15b18",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2856,
+              "y": 144
+            },
+            "name": "Rim_Mask"
+          },
+          {
+            "id": "nonnegative_strength",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 864
+            },
+            "name": "Nonnegative_Strength",
+            "inputValues": {
+              "b": 0
+            }
+          },
+          {
+            "id": "rim_intensity",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 3168,
+              "y": 144
+            },
+            "name": "Rim_Intensity"
+          },
+          {
+            "id": "rim_color",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3480,
+              "y": 144
+            },
+            "name": "Rim_Color"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 3792,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_length",
+              "out"
+            ],
+            "to": [
+              "normal_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "view_length_squared",
+              "out"
+            ],
+            "to": [
+              "view_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "view_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "viewDirection"
+            ],
+            "to": [
+              "view_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_length",
+              "out"
+            ],
+            "to": [
+              "view_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "view_cosine",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "view_unit",
+              "out"
+            ],
+            "to": [
+              "view_cosine",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "view_cosine",
+              "out"
+            ],
+            "to": [
+              "two_sided_cosine",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "two_sided_cosine",
+              "out"
+            ],
+            "to": [
+              "bounded_cosine",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "bounded_cosine",
+              "out"
+            ],
+            "to": [
+              "edge_weight",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "power"
+            ],
+            "to": [
+              "positive_power",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "edge_weight",
+              "out"
+            ],
+            "to": [
+              "rim_mask",
+              "base"
+            ]
+          },
+          {
+            "from": [
+              "positive_power",
+              "out"
+            ],
+            "to": [
+              "rim_mask",
+              "exponent"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "strength"
+            ],
+            "to": [
+              "nonnegative_strength",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "rim_mask",
+              "out"
+            ],
+            "to": [
+              "rim_intensity",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "nonnegative_strength",
+              "out"
+            ],
+            "to": [
+              "rim_intensity",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "rim_color",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "rim_intensity",
+              "out"
+            ],
+            "to": [
+              "rim_color",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "rim_color",
+              "out"
+            ],
+            "to": [
+              "output",
+              "color"
+            ]
+          },
+          {
+            "from": [
+              "rim_mask",
+              "out"
+            ],
+            "to": [
+              "output",
+              "factor"
+            ]
+          }
+        ]
+      },
+      "source": {
+        "id": "sgrape.library.rim_light",
+        "version": "9c1fe63aea7ecc13681d26f2bb476aec86d91e6202a1527a850c07c76753b4cf"
+      },
+      "browser": {
+        "category": "shader",
+        "source": "editor",
+        "aliases": [
+          "rim",
+          "edge light",
+          "emission",
+          "輪廓光",
+          "邊緣光"
+        ],
+        "descriptionKey": "help.subgraph.rim_light"
+      }
+    },
+    {
+      "id": "library_subsurface_approx_v1",
+      "name": "Subsurface Approx",
+      "scope": "library",
+      "stages": [
+        "pixel"
+      ],
+      "descriptionKey": "help.subgraph.subsurface_approx",
+      "inputs": [
+        {
+          "id": "position",
+          "name": "Position",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec3",
+          "default": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "id": "thickness",
+          "name": "Thickness",
+          "type": "float",
+          "default": 0.1
+        },
+        {
+          "id": "distance",
+          "name": "Distance",
+          "type": "float",
+          "default": 0.1
+        },
+        {
+          "id": "strength",
+          "name": "Strength",
+          "type": "float",
+          "default": 1
+        },
+        {
+          "id": "shadowStrength",
+          "name": "Shadow Strength",
+          "type": "float",
+          "default": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": "color",
+          "name": "Color",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "normal_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Normal_Length_Squared"
+          },
+          {
+            "id": "normal_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 144
+            },
+            "name": "Normal_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "normal_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Normal_Length"
+          },
+          {
+            "id": "normal_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Normal_Unit"
+          },
+          {
+            "id": "back_normal",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 144
+            },
+            "name": "Back_Normal",
+            "inputValues": {
+              "b": [
+                -1,
+                -1,
+                -1
+              ]
+            }
+          },
+          {
+            "id": "shadow_strength",
+            "definitionUuid": "sgrape.builtin.clamp",
+            "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 384
+            },
+            "name": "Shadow_Strength",
+            "inputValues": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "id": "back_lights",
+            "definitionUuid": "sgrape.builtin.td_lighting_all",
+            "revisionHash": "30eef3de8e0322e42393912b77465315c908dffa4c05dc578066789b2c6b93c5",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 144
+            },
+            "name": "Back_Lights",
+            "inputValues": {
+              "shadowColor": [
+                0,
+                0,
+                0
+              ],
+              "view": [
+                0,
+                0,
+                1
+              ],
+              "shininess": 1,
+              "shininess2": 1
+            }
+          },
+          {
+            "id": "nonnegative_thickness",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 624
+            },
+            "name": "Nonnegative_Thickness",
+            "inputValues": {
+              "b": 0
+            }
+          },
+          {
+            "id": "positive_distance",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 864
+            },
+            "name": "Positive_Distance",
+            "inputValues": {
+              "b": 1e-06
+            }
+          },
+          {
+            "id": "optical_depth",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 384
+            },
+            "name": "Optical_Depth"
+          },
+          {
+            "id": "negative_depth",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 384
+            },
+            "name": "Negative_Depth",
+            "inputValues": {
+              "b": -1
+            }
+          },
+          {
+            "id": "transmission",
+            "definitionUuid": "sgrape.builtin.exp",
+            "revisionHash": "b1f62363aea2dd26b319647050b2fac6988354fda7e1ddb7c66498e4216ae544",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 384
+            },
+            "name": "Transmission"
+          },
+          {
+            "id": "nonnegative_strength",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 1104
+            },
+            "name": "Nonnegative_Strength",
+            "inputValues": {
+              "b": 0
+            }
+          },
+          {
+            "id": "transmission_strength",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 384
+            },
+            "name": "Transmission_Strength"
+          },
+          {
+            "id": "tinted_light",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 144
+            },
+            "name": "Tinted_Light"
+          },
+          {
+            "id": "transmitted_color",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2544,
+              "y": 144
+            },
+            "name": "Transmitted_Color"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 2856,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_length",
+              "out"
+            ],
+            "to": [
+              "normal_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "back_normal",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "shadowStrength"
+            ],
+            "to": [
+              "shadow_strength",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "position"
+            ],
+            "to": [
+              "back_lights",
+              "position"
+            ]
+          },
+          {
+            "from": [
+              "back_normal",
+              "out"
+            ],
+            "to": [
+              "back_lights",
+              "normal"
+            ]
+          },
+          {
+            "from": [
+              "shadow_strength",
+              "out"
+            ],
+            "to": [
+              "back_lights",
+              "shadowStrength"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "thickness"
+            ],
+            "to": [
+              "nonnegative_thickness",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "distance"
+            ],
+            "to": [
+              "positive_distance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "nonnegative_thickness",
+              "out"
+            ],
+            "to": [
+              "optical_depth",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "positive_distance",
+              "out"
+            ],
+            "to": [
+              "optical_depth",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "optical_depth",
+              "out"
+            ],
+            "to": [
+              "negative_depth",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "negative_depth",
+              "out"
+            ],
+            "to": [
+              "transmission",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "strength"
+            ],
+            "to": [
+              "nonnegative_strength",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "transmission",
+              "out"
+            ],
+            "to": [
+              "transmission_strength",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "nonnegative_strength",
+              "out"
+            ],
+            "to": [
+              "transmission_strength",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "back_lights",
+              "diffuse"
+            ],
+            "to": [
+              "tinted_light",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "color"
+            ],
+            "to": [
+              "tinted_light",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "tinted_light",
+              "out"
+            ],
+            "to": [
+              "transmitted_color",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "transmission_strength",
+              "out"
+            ],
+            "to": [
+              "transmitted_color",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "transmitted_color",
+              "out"
+            ],
+            "to": [
+              "output",
+              "color"
+            ]
+          }
+        ]
+      },
+      "targets": [
+        "mat"
+      ],
+      "source": {
+        "id": "sgrape.library.subsurface_approx",
+        "version": "7c286eb987319640ff4bada6f9c366f16ec8e729385cb772455ae3f32e0d2161"
+      },
+      "browser": {
+        "category": "shader",
+        "source": "editor",
+        "aliases": [
+          "SSS",
+          "subsurface scattering",
+          "translucency",
+          "transmission",
+          "backlight",
+          "次表面散射",
+          "透光",
+          "背光"
+        ],
+        "descriptionKey": "help.subgraph.subsurface_approx"
+      }
+    },
+    {
+      "id": "library_bump_v1",
+      "name": "Bump",
+      "scope": "library",
+      "stages": [
+        "pixel"
+      ],
+      "descriptionKey": "help.subgraph.bump",
+      "inputs": [
+        {
+          "id": "position",
+          "name": "Position",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "height",
+          "name": "Height",
+          "type": "float",
+          "default": 0.5
+        },
+        {
+          "id": "strength",
+          "name": "Strength",
+          "type": "float",
+          "default": 1
+        },
+        {
+          "id": "distance",
+          "name": "Distance",
+          "type": "float",
+          "default": 0.1
+        }
+      ],
+      "outputs": [
+        {
+          "id": "normal",
+          "name": "Normal",
+          "type": "vec3",
+          "default": [
+            0,
+            0,
+            1
+          ]
+        }
+      ],
+      "graph": {
+        "nodes": [
+          {
+            "id": "input",
+            "name": "Input",
+            "definitionUuid": "sgrape.function.input",
+            "params": {},
+            "ui": {
+              "x": 48,
+              "y": 144
+            }
+          },
+          {
+            "id": "normal_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 144
+            },
+            "name": "Normal_Length_Squared"
+          },
+          {
+            "id": "normal_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 672,
+              "y": 144
+            },
+            "name": "Normal_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "normal_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 144
+            },
+            "name": "Normal_Length"
+          },
+          {
+            "id": "normal_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 144
+            },
+            "name": "Normal_Unit"
+          },
+          {
+            "id": "position_dx",
+            "definitionUuid": "sgrape.builtin.dFdx",
+            "revisionHash": "d24558d8cc7848d34ada11e8480484845ed592ccc92437168a353a0fbd0a7270",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 384
+            },
+            "name": "Position_Dx"
+          },
+          {
+            "id": "position_dy",
+            "definitionUuid": "sgrape.builtin.dFdy",
+            "revisionHash": "0a6c5f7836015c5a84ea3423ae84933784af003abb3a5e7db9ba103511bcaf23",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 360,
+              "y": 624
+            },
+            "name": "Position_Dy"
+          },
+          {
+            "id": "height_dx",
+            "definitionUuid": "sgrape.builtin.dFdx",
+            "revisionHash": "d24558d8cc7848d34ada11e8480484845ed592ccc92437168a353a0fbd0a7270",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 864
+            },
+            "name": "Height_Dx"
+          },
+          {
+            "id": "height_dy",
+            "definitionUuid": "sgrape.builtin.dFdy",
+            "revisionHash": "0a6c5f7836015c5a84ea3423ae84933784af003abb3a5e7db9ba103511bcaf23",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 1104
+            },
+            "name": "Height_Dy"
+          },
+          {
+            "id": "gradient_x_basis",
+            "definitionUuid": "sgrape.builtin.cross",
+            "revisionHash": "4f69039cbabfed28d8ba992977800a66934ea1a7b8dcdc17714671664c133d43",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 144
+            },
+            "name": "Gradient_X_Basis"
+          },
+          {
+            "id": "gradient_y_basis",
+            "definitionUuid": "sgrape.builtin.cross",
+            "revisionHash": "4f69039cbabfed28d8ba992977800a66934ea1a7b8dcdc17714671664c133d43",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 384
+            },
+            "name": "Gradient_Y_Basis"
+          },
+          {
+            "id": "surface_determinant",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 144
+            },
+            "name": "Surface_Determinant"
+          },
+          {
+            "id": "determinant_magnitude",
+            "definitionUuid": "sgrape.builtin.abs",
+            "revisionHash": "85df7ec01966ac06cf87685c8c93d8369744f133bdcbe18684b35397f3f141aa",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 144
+            },
+            "name": "Determinant_Magnitude"
+          },
+          {
+            "id": "position_dx_length",
+            "definitionUuid": "sgrape.builtin.length",
+            "revisionHash": "fbf3940f68e152a960896d6b69c48f7d81bb5e9ba81c4934e16316e370c145d4",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 672,
+              "y": 384
+            },
+            "name": "Position_Dx_Length"
+          },
+          {
+            "id": "position_dy_length",
+            "definitionUuid": "sgrape.builtin.length",
+            "revisionHash": "fbf3940f68e152a960896d6b69c48f7d81bb5e9ba81c4934e16316e370c145d4",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 672,
+              "y": 624
+            },
+            "name": "Position_Dy_Length"
+          },
+          {
+            "id": "derivative_scale",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 984,
+              "y": 384
+            },
+            "name": "Derivative_Scale"
+          },
+          {
+            "id": "relative_tolerance",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1296,
+              "y": 384
+            },
+            "name": "Relative_Tolerance",
+            "inputValues": {
+              "b": 1e-06
+            }
+          },
+          {
+            "id": "minimum_tolerance",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 1608,
+              "y": 624
+            },
+            "name": "Minimum_Tolerance",
+            "inputValues": {
+              "b": 1e-30
+            }
+          },
+          {
+            "id": "valid_surface",
+            "definitionUuid": "sgrape.builtin.compare",
+            "revisionHash": "d2010eb23d404212e4ff254b22d71d0259600226604e8cdcbaae93e68e52779f",
+            "params": {
+              "type": "float",
+              "operator": ">"
+            },
+            "ui": {
+              "x": 2544,
+              "y": 144
+            },
+            "name": "Valid_Surface"
+          },
+          {
+            "id": "safe_determinant",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 2856,
+              "y": 144
+            },
+            "name": "Safe_Determinant",
+            "inputValues": {
+              "false": 1
+            }
+          },
+          {
+            "id": "height_gradient_x",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 384
+            },
+            "name": "Height_Gradient_X"
+          },
+          {
+            "id": "height_gradient_y",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 1920,
+              "y": 624
+            },
+            "name": "Height_Gradient_Y"
+          },
+          {
+            "id": "height_gradient_sum",
+            "definitionUuid": "sgrape.builtin.add",
+            "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 2232,
+              "y": 384
+            },
+            "name": "Height_Gradient_Sum"
+          },
+          {
+            "id": "surface_gradient",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3168,
+              "y": 144
+            },
+            "name": "Surface_Gradient"
+          },
+          {
+            "id": "height_distance",
+            "definitionUuid": "sgrape.builtin.multiply",
+            "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3480,
+              "y": 144
+            },
+            "name": "Height_Distance"
+          },
+          {
+            "id": "perturbed_normal",
+            "definitionUuid": "sgrape.builtin.subtract",
+            "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 3792,
+              "y": 144
+            },
+            "name": "Perturbed_Normal"
+          },
+          {
+            "id": "perturbed_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 4104,
+              "y": 144
+            },
+            "name": "Perturbed_Length_Squared"
+          },
+          {
+            "id": "perturbed_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4416,
+              "y": 144
+            },
+            "name": "Perturbed_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "perturbed_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 4728,
+              "y": 144
+            },
+            "name": "Perturbed_Length"
+          },
+          {
+            "id": "perturbed_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 5040,
+              "y": 144
+            },
+            "name": "Perturbed_Unit"
+          },
+          {
+            "id": "bounded_strength",
+            "definitionUuid": "sgrape.builtin.clamp",
+            "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 360,
+              "y": 1344
+            },
+            "name": "Bounded_Strength",
+            "inputValues": {
+              "min": 0,
+              "max": 1
+            }
+          },
+          {
+            "id": "strength_mix",
+            "definitionUuid": "sgrape.builtin.mix",
+            "revisionHash": "33e0787d3178b0d0c1b9aec86f8b4be0de679eaaace04caeb81392dcfe41589c",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 5352,
+              "y": 144
+            },
+            "name": "Strength_Mix"
+          },
+          {
+            "id": "mixed_length_squared",
+            "definitionUuid": "sgrape.builtin.dot",
+            "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 5664,
+              "y": 144
+            },
+            "name": "Mixed_Length_Squared"
+          },
+          {
+            "id": "mixed_safe_length_squared",
+            "definitionUuid": "sgrape.builtin.max",
+            "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 5976,
+              "y": 144
+            },
+            "name": "Mixed_Safe_Length_Squared",
+            "inputValues": {
+              "b": 1e-20
+            }
+          },
+          {
+            "id": "mixed_length",
+            "definitionUuid": "sgrape.builtin.sqrt",
+            "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29",
+            "params": {
+              "type": "float"
+            },
+            "ui": {
+              "x": 6288,
+              "y": 144
+            },
+            "name": "Mixed_Length"
+          },
+          {
+            "id": "mixed_unit",
+            "definitionUuid": "sgrape.builtin.divide",
+            "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 6600,
+              "y": 144
+            },
+            "name": "Mixed_Unit"
+          },
+          {
+            "id": "surface_normal",
+            "definitionUuid": "sgrape.builtin.if",
+            "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54",
+            "params": {
+              "type": "vec3"
+            },
+            "ui": {
+              "x": 6912,
+              "y": 144
+            },
+            "name": "Surface_Normal"
+          },
+          {
+            "id": "output",
+            "name": "Output",
+            "definitionUuid": "sgrape.function.output",
+            "params": {},
+            "ui": {
+              "x": 7224,
+              "y": 144
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "normal_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "normal"
+            ],
+            "to": [
+              "normal_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_length",
+              "out"
+            ],
+            "to": [
+              "normal_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "position"
+            ],
+            "to": [
+              "position_dx",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "position"
+            ],
+            "to": [
+              "position_dy",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "height"
+            ],
+            "to": [
+              "height_dx",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "height"
+            ],
+            "to": [
+              "height_dy",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "position_dy",
+              "out"
+            ],
+            "to": [
+              "gradient_x_basis",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "gradient_x_basis",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "gradient_y_basis",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "position_dx",
+              "out"
+            ],
+            "to": [
+              "gradient_y_basis",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "position_dx",
+              "out"
+            ],
+            "to": [
+              "surface_determinant",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "gradient_x_basis",
+              "out"
+            ],
+            "to": [
+              "surface_determinant",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "surface_determinant",
+              "out"
+            ],
+            "to": [
+              "determinant_magnitude",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "position_dx",
+              "out"
+            ],
+            "to": [
+              "position_dx_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "position_dy",
+              "out"
+            ],
+            "to": [
+              "position_dy_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "position_dx_length",
+              "out"
+            ],
+            "to": [
+              "derivative_scale",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "position_dy_length",
+              "out"
+            ],
+            "to": [
+              "derivative_scale",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "derivative_scale",
+              "out"
+            ],
+            "to": [
+              "relative_tolerance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "relative_tolerance",
+              "out"
+            ],
+            "to": [
+              "minimum_tolerance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "determinant_magnitude",
+              "out"
+            ],
+            "to": [
+              "valid_surface",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "minimum_tolerance",
+              "out"
+            ],
+            "to": [
+              "valid_surface",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "valid_surface",
+              "out"
+            ],
+            "to": [
+              "safe_determinant",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "surface_determinant",
+              "out"
+            ],
+            "to": [
+              "safe_determinant",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "gradient_x_basis",
+              "out"
+            ],
+            "to": [
+              "height_gradient_x",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "height_dx",
+              "out"
+            ],
+            "to": [
+              "height_gradient_x",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "gradient_y_basis",
+              "out"
+            ],
+            "to": [
+              "height_gradient_y",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "height_dy",
+              "out"
+            ],
+            "to": [
+              "height_gradient_y",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "height_gradient_x",
+              "out"
+            ],
+            "to": [
+              "height_gradient_sum",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "height_gradient_y",
+              "out"
+            ],
+            "to": [
+              "height_gradient_sum",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "height_gradient_sum",
+              "out"
+            ],
+            "to": [
+              "surface_gradient",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "safe_determinant",
+              "out"
+            ],
+            "to": [
+              "surface_gradient",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "surface_gradient",
+              "out"
+            ],
+            "to": [
+              "height_distance",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "distance"
+            ],
+            "to": [
+              "height_distance",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "perturbed_normal",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "height_distance",
+              "out"
+            ],
+            "to": [
+              "perturbed_normal",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "perturbed_normal",
+              "out"
+            ],
+            "to": [
+              "perturbed_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "perturbed_normal",
+              "out"
+            ],
+            "to": [
+              "perturbed_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "perturbed_length_squared",
+              "out"
+            ],
+            "to": [
+              "perturbed_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "perturbed_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "perturbed_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "perturbed_normal",
+              "out"
+            ],
+            "to": [
+              "perturbed_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "perturbed_length",
+              "out"
+            ],
+            "to": [
+              "perturbed_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "input",
+              "strength"
+            ],
+            "to": [
+              "bounded_strength",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "strength_mix",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "perturbed_unit",
+              "out"
+            ],
+            "to": [
+              "strength_mix",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "bounded_strength",
+              "out"
+            ],
+            "to": [
+              "strength_mix",
+              "factor"
+            ]
+          },
+          {
+            "from": [
+              "strength_mix",
+              "out"
+            ],
+            "to": [
+              "mixed_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "strength_mix",
+              "out"
+            ],
+            "to": [
+              "mixed_length_squared",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "mixed_length_squared",
+              "out"
+            ],
+            "to": [
+              "mixed_safe_length_squared",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "mixed_safe_length_squared",
+              "out"
+            ],
+            "to": [
+              "mixed_length",
+              "value"
+            ]
+          },
+          {
+            "from": [
+              "strength_mix",
+              "out"
+            ],
+            "to": [
+              "mixed_unit",
+              "a"
+            ]
+          },
+          {
+            "from": [
+              "mixed_length",
+              "out"
+            ],
+            "to": [
+              "mixed_unit",
+              "b"
+            ]
+          },
+          {
+            "from": [
+              "valid_surface",
+              "out"
+            ],
+            "to": [
+              "surface_normal",
+              "condition"
+            ]
+          },
+          {
+            "from": [
+              "mixed_unit",
+              "out"
+            ],
+            "to": [
+              "surface_normal",
+              "true"
+            ]
+          },
+          {
+            "from": [
+              "normal_unit",
+              "out"
+            ],
+            "to": [
+              "surface_normal",
+              "false"
+            ]
+          },
+          {
+            "from": [
+              "surface_normal",
+              "out"
+            ],
+            "to": [
+              "output",
+              "normal"
+            ]
+          }
+        ]
+      },
+      "targets": [
+        "mat"
+      ],
+      "source": {
+        "id": "sgrape.library.bump",
+        "version": "bd7111c8ca716f7bb1f3a9f844fde734a817d0cbc9082773da1a8aca7e12df0c"
+      },
+      "browser": {
+        "category": "texture",
+        "source": "editor",
+        "aliases": [
+          "height",
+          "surface gradient",
+          "normal",
+          "凹凸",
+          "高度",
+          "バンプ",
+          "범프"
+        ],
+        "descriptionKey": "help.subgraph.bump"
+      }
+    }
+  ]
+}

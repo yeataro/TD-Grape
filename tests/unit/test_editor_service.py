@@ -114,6 +114,20 @@ class HTTPTest(unittest.TestCase):
         with self.assertRaises(OSError):
             service.EditorHTTP(self.server.snapshot, port=self.server.port)
 
+    def test_remote_preview_policy_is_limited_to_current_peer_and_port(self):
+        self.server.preview_port = 8920
+        policy = self.request('/')[1]['Content-Security-Policy']
+        self.assertIn("connect-src 'self' http://127.0.0.1:8920 ws://127.0.0.1:8920;", policy)
+        client = http.client.HTTPConnection('127.0.0.1', self.server.port)
+        try:
+            client.putrequest('GET', '/', skip_host=True)
+            client.endheaders()
+            reply = client.getresponse()
+            self.assertEqual(reply.status, 403)
+            reply.read()
+        finally:
+            client.close()
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1067,7 +1067,8 @@ def edit(runtime, body):
         elif not decl or not decl.get('sourceMissing'):
             raise SourceError('Select a missing Uniform to restore.')
         else: decl.pop('sourceMissing', None)
-        result = runtime.deploy(graph, seen['revision'])
+        configure_sources = getattr(runtime, 'configure_sources', None)
+        result = configure_sources(graph, seen['revision']) if callable(configure_sources) else runtime.deploy(graph, seen['revision'])
         if not result.get('ok'): raise SourceError('Review the Shader version before changing sources.')
         return snapshot(runtime)
     if not decl: raise SourceError('Select an existing Uniform source.')

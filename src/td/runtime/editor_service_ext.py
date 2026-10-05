@@ -62,6 +62,8 @@ class EditorServiceExt:
         if self.http:
             self.http.replace(candidate)
         self._show('Serving' if self.http else 'Assets ready', message)
+        if self.http:
+            self._connect_manager()
         return True
 
     def Start(self):
@@ -78,7 +80,17 @@ class EditorServiceExt:
             self._show('Cannot start; requested port unchanged', str(error))
             return False
         self._show('Serving', previous_error)
+        self._connect_manager()
         return True
+
+    def _connect_manager(self):
+        par = getattr(self.ownerComp.par, 'Manager', None)
+        manager = par.eval() if par else None
+        if manager:
+            try:
+                manager.ext.GrapeManagerExt.Connect(self)
+            except Exception as error:
+                self._show('Serving assets; Manager unavailable', str(error))
 
     def Stop(self):
         if self.http:

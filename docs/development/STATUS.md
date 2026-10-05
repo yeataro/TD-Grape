@@ -1,5 +1,21 @@
 # 開發狀態
 
+## Refactor.14 — 新 Manager 與原生 TOP 接通 — 2026-10-06
+
+本段為最新狀態；以下各節保留歷史。正式接入點為 `/TD_Grape/GrapeManager`、`/TD_Grape/GrapeEditor` 與 `/Grape_TOP_Refactor`。已可從實際網頁開圖、操作已遷移的 TOP 節點，由 TypeScript 產碼，再由原生 TD 套用、預覽和保存；新路徑沒有 Python compiler fallback。這是**限定範圍的 TOP 接入檢查點，並非完整產品遷移完成**。
+
+由實際網頁的 Save TD project 保存成 `TD-Grape-dev.18.toe`，標準入口 `src/td/TD-Grape-dev.toe` 同內容：1,652,008 bytes，SHA-256 `8f54b502f4fc30ca3f929b7c19e79747833112d5a3c3563c32ab61df648fee3a`。目前網址 `http://127.0.0.1:65465/shader/37e99ac700f942b4b77425716cc4d0cf/`；此 UUID 屬開發 review Family，並非产品硬編碼路徑。
+
+- 真實瀏覽器驗證：Color RGBA 改值 → 前端 GLSL → TD GPU 像素核對；圖 Undo；Uniform 新增、值更新與原生 Undo；Uniform 接至 Output 的 Edge 轉換；Remote Panel 顯示 Connected。重載 Refactor.14 後仍能讀取原圖、TD Bind 與自訂參數面板。
+- 子 OP 原生運作：實際保存並移除新 Manager，Uniform Bind 和 GPU 輸出繼續正常；Edit callback 明示沒有 Manager。還原 Manager 後保留同一 UUID 與原生參數，不需重建 Family。另以真實 Edit Pulse 跨一個 TD tick 驗證缺席提示。实际網頁建立的 Family 保存成 TOX 再載入，GLSL／圖／自有 Bind 皆可使用。未重開整個 TD 程序，不能將 TOX 驗證寫成完整 TOE 冷開機驗收。
+- 數據來源：`editor-bootstrap.json` 投影真正註冊的 TS 模組，來源名稱／選單由既有 `source_catalog.json` 冷資料投影；`src/library/builtin_subgraphs.json` 保存 14 份原有 Library 資料，建置時產出 `editor-library.json`。不再要求 Python core 產生網頁開啟資料。Library 內容、browser metadata、原有版本均逐份比對一致；今後修改 Library 應修改這份來源並明確更新其版本，不再隨 Python catalog 載入重新產生。
+- 宿主分工：HostAPI 路由、bounded queue、native Family、文件／已套用產物分離。HTTP worker 不呼叫 TD API；主執行緒只處理已收到的請求。Family helpers 集中 `GrapeControls`；沒有逐幀找 Manager。Manager 啟動或明確 Edit 時發現目標，任意 TD 網路路徑均可搜尋；多個相同 UUID 或多個 Manager 目前明確拒絕歧義，尚未宣稱完成複本聯動產品行為。
+- 尚未遷移：TDFAM 舊 masters、MAT／ISF、TOP texture／array／進階來源、舊 `expose` 自動提升旗標、Uniform WebSocket live channel、pixel preview session、Personal Library 與離線 Sketch。一般自訂參數面板的原生 Bind 已接入，不能與 `expose` 混為一談。部分舊 UI 入口仍可見，未接入操作會回報能力未遷移／不支援，不代表網頁斷線。Uniform channel 顯示未遷移，單次改值仍可使用。當前請由 Family 的 Edit 或帶 UUID 的網址進入；Editor Service 根網址不是完整的啟動選擇器。
+- 驗證：97 項 TS／模組測試、66 項 API／queue／文件／產物／HTTP／History／typed Undo 測試通過，生成資料一致性通過。新增來源回退失敗保留原始原因與 rollbackErrors。Standards／Spec 獨立審查無 checkpoint 阻擋。舊 `test_builtin_subgraph_names` 有 5 項基線失敗，已用移動前 producer 重現同樣失敗，不能宣稱全部舊 Library 測試通過。
+- 待機效能仍需獨立量測。已確認空 queue 不進入 Family／參數掃描、子 OP 沒有 frame callback；TD cook 資料含先前初始化／套用成本，不能當作持續待機耗時。尚不宣稱完整 Performance Mode 達標。
+
+重現：`tools/jobs/install_native_manager.py` 只針對此開發 Shell 接入；`tools/jobs/verify_manager_lifecycle.py` 用已經由瀏覽器建立的 review Family 驗證 Manager 移除／還原與 TOX 重載。私人證據位於 workspace `work/refactor/native-manager/`。不執行舊 `refresh_sources.py` 更新新 Shell，不納入 `.tdmcp/` 與人類新增的其他文件。IconGen → icon 受保護，安裝前後核對不變。
+
 ## 新宿主接入進行中 — 2026-10-06
 
 新接入的第二個檢查點：編輯文件 `host_document` 與最後成功套用的產物分開保存；TD 原生修改不冒稱已重新產碼。`host_requests` 以有界佇列把 HTTP 工作交給主執行緒，等待逾時的未執行請求不會事後偷偷套用；已開始但逾時則保留可查的結果。`native_family` 接收真實前端產物、原生 GPU 驗證、套用及回退，沒有載入 Python compiler。原生參數／Undo helper 可集中到 Family 的 GrapeControls，保留舊 adapter 的定位 fallback。

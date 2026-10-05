@@ -52,6 +52,17 @@ def _binding(row):
         'invalid uniform default')
 
 
+def validate_declarations(declarations):
+    require(isinstance(declarations, list), 'invalid declarations')
+    by_id, names = {}, set()
+    for row in declarations:
+        _binding(row)
+        require(row['id'] not in by_id and row['name'] not in names, 'duplicate declaration')
+        by_id[row['id']] = row
+        names.add(row['name'])
+    return by_id
+
+
 def _contents(graph, compiled, catalog_hash):
     require(isinstance(graph, dict) and graph.get('schemaVersion') == 1
             and graph.get('target') == 'top', 'unsupported document target')
@@ -64,13 +75,7 @@ def _contents(graph, compiled, catalog_hash):
     require(0 < len(compiled['pixel'].encode('utf-8')) <= 512000, 'invalid source size')
     require(len(encoded(compiled)) <= 1024 * 1024, 'artifact exceeds 1 MB')
     declarations = graph.get('declarations')
-    require(isinstance(declarations, list), 'invalid declarations')
-    by_id, names = {}, set()
-    for row in declarations:
-        _binding(row)
-        require(row['id'] not in by_id and row['name'] not in names, 'duplicate declaration')
-        by_id[row['id']] = row
-        names.add(row['name'])
+    by_id = validate_declarations(declarations)
     bindings = compiled.get('bindings')
     require(isinstance(bindings, list) and len(bindings) <= len(declarations), 'invalid binding table')
     bound = set()

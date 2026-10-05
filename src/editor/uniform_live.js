@@ -37,7 +37,7 @@ const uniformLive={
     });
   },
   render(){
-    for(const hint of document.querySelectorAll('[data-uniform-live-status]'))hint.textContent=t(this.ready?'live.ready':this.connecting?'live.connecting':'live.offline');
+    for(const hint of document.querySelectorAll('[data-uniform-live-status]'))hint.textContent=typeof hostCapabilities!=='undefined'&&hostCapabilities.uniformLive===false?hostCapabilities.uniformLiveReason:t(this.ready?'live.ready':this.connecting?'live.connecting':'live.offline');
   },
   request(type,body={}){
     if(!this.ready||this.socket?.readyState!==WebSocket.OPEN)return Promise.reject(Error(t('live.offline')));
@@ -61,6 +61,7 @@ const uniformLive={
     this.retryAt=Date.now()+1500;this.render();if(graph)renderNativeSourceValues();
   },
   async connect(){
+    if(hostCapabilities.uniformLive===false)return;
     if(this.socket||this.connecting||document.hidden||!this.source||Date.now()<this.retryAt)return;
     const generation=this.generation,load=editorLoadGeneration;this.connecting=true;this.render();
     try{

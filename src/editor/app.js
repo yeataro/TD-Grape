@@ -82,7 +82,7 @@ async function initLocale(){
   translatePage();
 }
 
-let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null,frontendCompiler=null;
+let editorTarget='mat',editorReadOnlyReason='',savedStateIssue=null,frontendCompiler=null,hostCapabilities={};
 let graph=null, catalog=[], examples={}, revision=0, selected=null, selectedEdge=null, stage='pixel', dirty=false, readonly=false;
 let pan={x:40,y:60}, scale=.8, linkStart=null, past=[], future=[], errorNode=null;
 const definition=nodeDefinition;
@@ -185,9 +185,9 @@ async function editorRequest(path,data,binary=false){
   if(data)pendingEditorWrites++;
   try{
     const r=await fetch(apiRoot+path,{method:data?'POST':'GET',signal:controller.signal,headers:{'X-Sgrape-Token':token,...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});
-    const kind=r.status===401?'auth':r.status===403?'forbidden':r.status===503?'busy':r.status>=500?'unavailable':null;
-    if(kind){observeConnection(kind,serial);throw Object.assign(Error(t('connection.'+kind)),{status:r.status,connection:true});}
     const result=r.ok&&binary?await r.blob():await r.json();
+    const kind=r.status===401?'auth':r.status===403?'forbidden':r.status===503?'busy':r.status>=500&&result.code!=='capability_not_migrated'?'unavailable':null;
+    if(kind){observeConnection(kind,serial);throw Object.assign(Error(result.error||t('connection.'+kind)),{status:r.status,connection:true,result});}
     if(!r.ok)throw Object.assign(Error(result.error||t('connection.failed')),{status:r.status,result});
     observeConnection(null,serial);return result;
   }catch(error){
@@ -981,6 +981,7 @@ async function load(){
     upgradePending=data.upgradeReview||null;closeUpgradeReview();savedStateIssue=data.savedStateIssue||null;editorTarget=data.shaderKind||data.state?.graph?.target||'mat';
     graph=savedStateIssue?{schemaVersion:1,target:editorTarget,declarations:[],functions:[],stages:{...(editorTarget==='mat'?{vertex:{nodes:[],edges:[]}}:{}),pixel:{nodes:[],edges:[]}}}:withoutPixelPreview(data.state.graph);
     frontendCompiler=data.frontendCompiler||null;
+    hostCapabilities=data.hostCapabilities||{};
     editorReadOnlyReason=data.readOnlyReason||'';catalog=data.catalog;examples=data.examples;functionLibrary=data.functionLibrary||[];personalLibrary=data.personalLibrary||{items:[],issues:[],folder:''};
     graphTrail=[];selection.clear();conflicted=false;revision=data.state?.revision??0;dirty=false;past=[];future=[];historyEpoch=0;historyNativeToken=data.history?.token||null;
     nativeSourceSnapshot=null;nativeSourceError='';nativeSourceBusy=false;nativeSourcePolling=false;nativeSourceRefreshPending=false;nativeSourceUncertain=false;++nativeSourceReadEpoch;nativeMutationBusy=false;nativeValueBusy=false;applyInFlight=null;submitBusy=false;applyLayoutOnly=false;
@@ -989,7 +990,7 @@ async function load(){
     readonly=!!savedStateIssue||!!upgradePending||!!data.readOnlyReason||graph.schemaVersion!==1;selected=null;selectedInputId=null;clearCompileDiagnostics();rememberSavedGraph(graph);renderGraphSaveState();
     setEditorTargetPath(data.target);$('#apply').disabled=readonly;render();renderUpgradeNotice();fit();await preview().catch(()=>{});
     if(generation!==editorLoadGeneration)return;
-    status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):data.readOnlyReason||t('connection.ready'),readonly,{clearError:true});
+    status(upgradePending?t('upgrade.explanation'):savedStateIssue?t('saved.explanation'):data.readOnlyReason||data.hostScope||t('connection.ready'),readonly,{clearError:true});
     if(!savedStateIssue&&$('#savedreview').open)$('#savedreview').close();
   }finally{if(generation===editorLoadGeneration){historyBusy=false;renderHistoryActions();}}
 }
@@ -1776,10 +1777,13 @@ function generatedGLSLView(node,canvas=false){
   preview.onclick=preview.ondblclick=e=>e.stopPropagation();preview.onkeydown=e=>e.stopPropagation();box.onwheel=e=>e.stopPropagation();
   return box;
 }
-function frontendCompilation(source){return !!(frontendCompiler&&typeof GrapeTopCompiler!=='undefined'&&frontendCompiler.protocol===GrapeTopCompiler.protocol&&GrapeTopCompiler.supports(source));}
+function frontendCompilation(source){return !!(frontendCompiler&&(frontendCompiler.required||typeof GrapeTopCompiler!=='undefined'&&frontendCompiler.protocol===GrapeTopCompiler.protocol&&GrapeTopCompiler.supports(source)));}
 function compileFrontendGraph(source){
   const activity=beginGeneration(source,'frontend');
-  try{const result=GrapeTopCompiler.compile(source,typeContract?.glslCode);finishGeneration(activity,'ready');return result;}
+  try{
+    if(typeof GrapeTopCompiler==='undefined'||frontendCompiler.protocol!==GrapeTopCompiler.protocol)throw Error('Frontend compiler version mismatch. Reload the editor.');
+    const result=GrapeTopCompiler.compile(source,typeContract?.glslCode);finishGeneration(activity,'ready');return result;
+  }
   catch(error){finishGeneration(activity,'failed',error);setCompileDiagnostics({error:error.message,node:error.node,stage:error.stage,trail:error.trail,phase:'validation'},JSON.stringify(source));throw error;}
 }
 async function generateGLSL(source){

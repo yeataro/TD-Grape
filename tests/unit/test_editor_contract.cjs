@@ -7,7 +7,10 @@ const bootstrap=require('../../src/editor/editor-bootstrap.json');
 test('editor bootstrap comes from registered modules and identifies its actual bundle',()=>{
   const ordinary=graph.registry.modules.filter(m=>!m.structural);
   assert.deepEqual(bootstrap.catalog.map(d=>d.definitionUuid),ordinary.map(m=>m.catalog.definition.definitionUuid));
-  assert.deepEqual(bootstrap.typeContract,graph.createEditorContract(graph.registry));
+  const {sources,...nodeContract}=bootstrap.typeContract;
+  assert.deepEqual(nodeContract,graph.createEditorContract(graph.registry));
+  const sourceCatalog=require('../../src/library/source_catalog.json');
+  assert.deepEqual(sources,Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]])));
   const source=fs.readFileSync(path.join(__dirname,'../../src/editor/wire_planning.js'));
   assert.equal(bootstrap.catalogHash,createHash('sha256').update(source).digest('hex'));
   assert.equal(bootstrap.producer,'frontend-modules');
