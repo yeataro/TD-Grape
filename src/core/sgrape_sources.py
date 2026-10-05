@@ -631,6 +631,11 @@ def changed_source_format(declaration, record, rows):
 def capture_configuration(runtime, comp):
     operator = runtime.shader_operator(comp)
     return {'registry': copy.deepcopy(comp.fetch(STORE, None)),
+            'numericParameters': [(parameter(operator,sequence,i,suffix),
+                                   {key:getattr(parameter(operator,sequence,i,suffix),key) for key in ('val','mode','expr','bindExpr')})
+                                  for sequence in ('vec','color','const')
+                                  for i in range(getattr(getattr(operator.seq,sequence,None),'numBlocks',0))
+                                  for suffix in SEQUENCE_CHANNELS[sequence]],
             'matrixParameters': [(parameter(operator,'matrix',i,'value'),
                                   {key:getattr(parameter(operator,'matrix',i,'value'),key) for key in ('val','mode','expr','bindExpr')})
                                  for i in range(getattr(getattr(operator.seq,'matrix',None),'numBlocks',0))],
@@ -658,7 +663,7 @@ def restore_configuration(runtime, comp, before):
         getattr(operator.seq, name).numBlocks = len(pars)
         for p, value in pars:
             if p.val != value: p.val = value
-    for p, state in before.get('matrixParameters',[]) + before.get('arrayParameters',[]) + before.get('bufferParameters',[]) + before.get('attributeParameters',[]):
+    for p, state in before.get('numericParameters',[]) + before.get('matrixParameters',[]) + before.get('arrayParameters',[]) + before.get('bufferParameters',[]) + before.get('attributeParameters',[]):
         for key in ('val','expr','bindExpr','mode'):
             if getattr(p,key) != state[key]:setattr(p,key,state[key])
     if before['registry'] is None: comp.unstore(STORE)
@@ -879,10 +884,16 @@ def sync(runtime):
     return True
 
 
+def control_helper(runtime, comp, name='parameter_links'):
+    """The host adapter locates native helpers; source logic does not own layout."""
+    locate_helper = getattr(runtime, 'control_helper', None)
+    return locate_helper(comp, name) if callable(locate_helper) else comp.op(name)
+
+
 def snapshot(runtime):
     sync(runtime)
     comp = runtime.target(); current = runtime.state(); operator = runtime.shader_operator(comp)
-    links=comp.op('parameter_links')
+    links=control_helper(runtime, comp)
     if links: links.module.sync(comp)
     registry = comp.fetch(STORE, {}); index = native_index(operator)
     rows = []; spec_rows = []; issues = copy.deepcopy(comp.fetch('grapeSourceIssues', []))

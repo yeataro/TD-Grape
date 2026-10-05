@@ -551,7 +551,7 @@ def restore(runtime, body):
     comp = runtime.target(); registry_before = copy.deepcopy(comp.fetch(sources.STORE, None))
     links_before = copy.deepcopy(comp.fetch(LINKS, None)); issues_before = copy.deepcopy(comp.fetch('grapeSourceIssues', None))
     registry = copy.deepcopy(registry_before or {}); links = copy.deepcopy(links_before or {})
-    link_dat = comp.op('parameter_links'); link_module = link_dat.module if link_dat else None
+    link_dat = sources.control_helper(runtime, comp); link_module = link_dat.module if link_dat else None
     previous_busy = link_module._busy if link_module else False
     sequence_before = {sequence: _sequence_snapshot(runtime, sequence) for sequence in affected}
     sequence_expected = copy.deepcopy(sequence_before)

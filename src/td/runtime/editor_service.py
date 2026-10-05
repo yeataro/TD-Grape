@@ -102,6 +102,7 @@ class EditorHTTP:
     def __init__(self, snapshot, host='127.0.0.1', port=65465):
         self.snapshot = snapshot
         self.request_count = 0
+        self.host_requests = None
         self._lock = threading.Lock()
         service = self
 
@@ -128,6 +129,7 @@ class EditorHTTP:
                 with service._lock:
                     service.request_count += 1
                     snapshot = service.snapshot
+                    host_requests = service.host_requests
                 address = self.connection.getsockname()[0]
                 expected_host = address + ':' + str(self.server.server_port)
                 hosts = self.headers.get_all('Host', [])
@@ -141,17 +143,43 @@ class EditorHTTP:
                     return self.reply(403, {'error': 'Invalid origin'}, head=head)
                 if self.headers.get('Sec-Fetch-Site') == 'cross-site':
                     return self.reply(403, {'error': 'Cross-site request rejected'}, head=head)
-                if self.headers.get('Transfer-Encoding') or self.headers.get('Content-Length', '0') != '0':
-                    return self.reply(400, {'error': 'This service does not accept request bodies yet'}, head=head)
                 path = unquote(urlsplit(self.path).path)
                 if '\\' in path or '..' in path.split('/') or '\0' in path:
                     return self.reply(400, {'error': 'Invalid asset path'}, head=head)
-                if path.startswith('/api/') or self.command == 'POST':
-                    return self.reply(501, {'error': 'Editor assets are ready; the new TD Manager is not connected yet', 'code': 'manager_not_connected'}, head=head)
+                lengths = self.headers.get_all('Content-Length', [])
+                if self.headers.get('Transfer-Encoding') or len(lengths) > 1 or (lengths and not re.fullmatch(r'[0-9]+', lengths[0])):
+                    return self.reply(400, {'error': 'Invalid request length'}, head=head)
+                length = int(lengths[0]) if lengths else 0
+                if length > 2 * 1024 * 1024:
+                    return self.reply(413, {'error': 'Request exceeds 2 MB'}, head=head)
+                if path.startswith('/api/'):
+                    if head:
+                        return self.reply(405, {'error': 'Use GET for host state'}, head=True)
+                    if host_requests is None:
+                        return self.reply(501, {'error': 'Editor assets are ready; the new TD Manager is not connected yet', 'code': 'manager_not_connected'})
+                    if self.command == 'GET' and length:
+                        return self.reply(400, {'error': 'GET must not carry a body'})
+                    body = None
+                    if self.command == 'POST':
+                        if self.headers.get('Content-Type', '').split(';')[0].strip() != 'application/json' or not length:
+                            return self.reply(400, {'error': 'Host actions require a JSON object'})
+                        try:
+                            data = self.rfile.read(length)
+                            if len(data) != length:
+                                raise ValueError('Incomplete request body')
+                            body = json.loads(data)
+                            if not isinstance(body, dict):
+                                raise ValueError('Expected a JSON object')
+                        except (ValueError, UnicodeDecodeError, TimeoutError) as error:
+                            return self.reply(400, {'error': str(error)})
+                    status, result = host_requests.request(self.command, self.path, body)
+                    return self.reply(status, result)
+                if length or self.command == 'POST':
+                    return self.reply(405, {'error': 'Static assets do not accept actions or bodies'}, head=head)
                 if path == '/service-info.json':
                     return self.reply(200, {'service': 'grape-editor-assets', 'source': snapshot.source,
                         'version': snapshot.version, 'digest': snapshot.digest,
-                        'files': len(snapshot.files), 'managerConnected': False}, head=head)
+                        'files': len(snapshot.files), 'managerConnected': host_requests is not None}, head=head)
                 name = path.lstrip('/') or 'index.html'
                 if re.fullmatch(r'shader/[a-f0-9]{32}/', name):
                     name = 'index.html'
@@ -201,7 +229,17 @@ class EditorHTTP:
         with self._lock:
             self.snapshot = snapshot
 
+    def connect(self, host_requests):
+        """The main-thread adapter passes a queue, never a TD callback to workers."""
+        with self._lock:
+            self.host_requests = host_requests
+
     def close(self):
+        with self._lock:
+            host_requests = self.host_requests
+            self.host_requests = None
+        if host_requests:
+            host_requests.close()
         self.server.shutdown()
         self.server.server_close()
         self.worker.join(timeout=1)

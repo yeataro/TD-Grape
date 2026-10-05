@@ -2,6 +2,10 @@
 
 ## 新宿主接入進行中 — 2026-10-06
 
+新接入的第二個檢查點：編輯文件 `host_document` 與最後成功套用的產物分開保存；TD 原生修改不冒稱已重新產碼。`host_requests` 以有界佇列把 HTTP 工作交給主執行緒，等待逾時的未執行請求不會事後偷偷套用；已開始但逾時則保留可查的結果。`native_family` 接收真實前端產物、原生 GPU 驗證、套用及回退，沒有載入 Python compiler。原生參數／Undo helper 可集中到 Family 的 GrapeControls，保留舊 adapter 的定位 fallback。
+
+驗證：25 項文件／產物／HTTP 交接測試及 136 項原生參數／Undo 回歸通過。TD 隔離 fixture 的九項實測涵蓋 GPU、Expression／Bind 保護、失敗回退、實際自訂參數後端操作、Undo、無編輯服務下執行及 TOX 保存重載；測試區已清除。獨立 Standards／Spec 審查無剩餘發現，並以故障注入確認回退各步獨立嘗試及錯誤可追查。**正式 Manager／網頁尚未接通，這些不是人類可用的整體交付。** `expose` 舊自動提升旗標尚未接入，會明確拒絕；不能與已驗證的一般自訂參數綁定混為一談。私人證據：workspace `work/refactor/native-family/`。
+
 人類已授權繼續接通 Manager／TOP Family。TDFAM 舊子 OP 的圖、格式及內部架構均可重寫；產品能力與體驗仍按固定 Legacy 驗收。**Family 對 Manager 只有編輯依賴**：移除／搬離 Manager 後，參數、既有綁定、texture 與原生 Shader 更新／執行正常。兩者透過 TD 內 Python 呼叫交互，Manager 不在就明確返回不可用或略過編輯動作，不增重連／重試機制，不持續搜尋或洗錯誤。此為目前硬性邊界，適用 MAT／TOP／未來 ISF，不是啟動後期脫皮功能。IconGen／icon 仍受保護。
 
 第一段先整理原生 Undo 的依賴入口：`sgrape_history` 不再自行尋找 core 或產生 GLSL literal，改用原生值檢查及宿主明確提供的文件接受策略。既有宿主的過渡 adapter 保留原 compiler 驗證行為；**這不代表新 Manager 已接通，或整個宿主已移除 Python core 相依**。新 Manager 不部署該 Legacy adapter。32 項 History／typed Undo 測試通過，涵蓋值恢復、結構恢復、外部修改、Expression／Bind／Export 保護、缺少策略時拒絕及驗證失敗回退；尚未部署這次改動至 TD。測試 Par 補足真實 TD 的 style 屬性，修正原 typed Undo fixture 的缺漏。

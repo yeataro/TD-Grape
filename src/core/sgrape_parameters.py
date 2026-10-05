@@ -168,27 +168,11 @@ def ensure(runtime):
     runtime.source_module().sync(runtime)
     texture_helper=comp.op('texture_sources')
     if texture_helper is not None and texture_helper.text!=runtime.TEXTURE_SOURCE_CODE:texture_helper.text=runtime.TEXTURE_SOURCE_CODE
-    source=runtime._owner.op('parameter_links')
-    if source is None:raise RuntimeError('Update the Grape manager to edit custom controls.')
-    links=comp.op('parameter_links')
-    if links and not links.fetch('grapeControlHelper',False) and links.text!=source.text:
-        raise RuntimeError('A user DAT occupies the control-helper name; its contents were preserved.')
-    if not links:
-        links=comp.create(parameterexecuteDAT,'parameter_links');links.text=source.text
-        links.par.op=runtime.shader_operator(comp).name
-        links.par.pars='vec*value* color*rgb* color*alpha const*value'
-        links.store('grapeControlHelper',True)
-        links.par.builtin=True;links.par.custom=False;links.par.valuechange=True;links.par.modechange=True
-        links.module.prime(comp)
-    if links.fetch('grapeControlHelper',False):
-        if links.text!=source.text:links.text=source.text;links.module.prime(comp)
-        links.par.pars='vec*value* color*rgb* color*alpha const*value'
-    lifecycle=comp.op('parameter_lifecycle')
-    if not lifecycle:
-        lifecycle=comp.create(executeDAT,'parameter_lifecycle')
-        lifecycle.text="def onStart():\n    parent().op('parameter_links').module.prime(parent())\ndef onCreate():\n    onStart()\n"
-        lifecycle.store('grapeControlHelper',True)
-        lifecycle.par.start=True;lifecycle.par.create=True
+    prepare = getattr(runtime, 'prepare_control_helpers', None)
+    if callable(prepare):
+        links = prepare()
+    else:
+        links = _legacy_helpers(runtime, comp)
     model=links.module
     if comp.fetch('grapeNativeUniformsV1',None) is None: return model
     migrated=set(comp.fetch(MIGRATED,[]))
@@ -216,6 +200,31 @@ def ensure(runtime):
     model.sync(comp)
     texture_controls(comp)
     return model
+
+
+def _legacy_helpers(runtime, comp):
+    source=runtime._owner.op('parameter_links')
+    if source is None:raise RuntimeError('Update the Grape manager to edit custom controls.')
+    links=comp.op('parameter_links')
+    if links and not links.fetch('grapeControlHelper',False) and links.text!=source.text:
+        raise RuntimeError('A user DAT occupies the control-helper name; its contents were preserved.')
+    if not links:
+        links=comp.create(parameterexecuteDAT,'parameter_links');links.text=source.text
+        links.par.op=runtime.shader_operator(comp).name
+        links.par.pars='vec*value* color*rgb* color*alpha const*value'
+        links.store('grapeControlHelper',True)
+        links.par.builtin=True;links.par.custom=False;links.par.valuechange=True;links.par.modechange=True
+        links.module.prime(comp)
+    if links.fetch('grapeControlHelper',False):
+        if links.text!=source.text:links.text=source.text;links.module.prime(comp)
+        links.par.pars='vec*value* color*rgb* color*alpha const*value'
+    lifecycle=comp.op('parameter_lifecycle')
+    if not lifecycle:
+        lifecycle=comp.create(executeDAT,'parameter_lifecycle')
+        lifecycle.text="def onStart():\n    parent().op('parameter_links').module.prime(parent())\ndef onCreate():\n    onStart()\n"
+        lifecycle.store('grapeControlHelper',True)
+        lifecycle.par.start=True;lifecycle.par.create=True
+    return links
 
 
 def migrate_names(runtime,comp,model,graph):
@@ -320,7 +329,7 @@ CONTROL_ATTRS=('val','default','min','max','clampMin','clampMax','normMin','norm
 
 def shape_plans(runtime,comp,graph):
     """Preflight all source-owned shape changes before Apply mutates native data."""
-    helper=comp.op('parameter_links')
+    helper=runtime.source_module().control_helper(runtime, comp)
     if helper is None:return []
     model=helper.module;model.sync(comp)
     declarations={d['id']:d for d in graph['declarations']};plans=[]
@@ -388,7 +397,7 @@ def sync_shapes(runtime,comp,model):
 
 
 def edit_operation(runtime,body):
-    seen=snapshot(runtime);comp=runtime.target();model=comp.op('parameter_links').module
+    seen=snapshot(runtime);comp=runtime.target();model=runtime.source_module().control_helper(runtime, comp).module
     if not seen['enabled']:raise RuntimeError('Apply this Shader once before editing custom controls.')
     if body.get('revision')!=seen['revision']:raise RuntimeError('Conflict: refresh before editing controls.')
     action=body.get('action')
@@ -539,7 +548,7 @@ def history_page(comp,meta):
 
 
 def history_capture(runtime):
-    comp=runtime.target();model=comp.op('parameter_links').module
+    comp=runtime.target();model=runtime.source_module().control_helper(runtime, comp).module
     return {'pages':[p.name for p in comp.customPages],
             'groups':{g.name:{'meta':metadata(g),'attrs':[{k:getattr(p,k) for k in CONTROL_ATTRS} for p in g]} for g in groups(comp) if editable_group(g) or legacy_texture_group(comp,g)},
             'textures':copy.deepcopy(texture_controls(comp)),
@@ -568,7 +577,7 @@ def history_status(runtime):
 
 
 def restore_definition(runtime,target):
-    comp=runtime.target();model=comp.op('parameter_links').module;current=history_capture(runtime)
+    comp=runtime.target();model=runtime.source_module().control_helper(runtime, comp).module;current=history_capture(runtime)
     before=current['groups'];after=target['groups']
     removed=set(before)-set(after);added=set(after)-set(before)
     for name in removed:removable(comp,model,getattr(comp.parGroup,name))

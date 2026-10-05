@@ -117,11 +117,11 @@ def sync(comp, changed=None, previous=None):
 
 def onValueChange(par, *args):
     # TD builds use either (par, prev) or (par, val, prev).
-    sync(parent(), par, args[-1] if args else None)
+    sync(par.owner.parent(), par, args[-1] if args else None)
 
 
 def onModeChange(par, prev):
-    sync(parent())
+    sync(par.owner.parent())
 
 
 def editable(par):
