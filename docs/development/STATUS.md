@@ -2,6 +2,8 @@
 
 ## Editor Service 資產供應 — 2026-10-06
 
+中間提交：`47dfbc1`。開發 TOE 保存為 `.17`，標準入口已同步（1,550,126 bytes；SHA-256 `abcb6ae4d23ae903cf23037e2d0d054c88771a5307d3e97a4ab9cb70c3b6619e`）。
+
 新 Shell 的 `/TD_Grape/GrapeEditor` 已可從外部完整網頁資料夾或內嵌 VFS 提供 HTTP，支援明確 Reload／Update Embedded、來源／版本／網址顯示、載入失敗保留與冷啟動 VFS fallback。固定 port 65465，允許 LAN 時監聽 `0.0.0.0`；不隨機更換 port。沒有 TD frame callback 或資料夾自動輪詢。TD 主執行緒載入資產，背景 HTTP 只讀 bytes。
 
 新增正式 `build:editor` 入口，組合 41 份真實前端資產與版本清單；Remote Panel 三個瀏覽器模組一併納入，示範／测试及宿主 RTC 保留原處。前端程式和版本維持 Refactor.13，**`/api/*` 尚未接通 Manager，不能作為完整編輯器交付**。人類已同意保留 `/api/state` 相依，離線 Sketch／Pages 可用性延後。
@@ -9,6 +11,12 @@
 10 項 Python 真實 HTTP／資產測試、6 組 TD 隔離操作，以及 Active TOX 自動啟動／失效外部路徑回退通過。現場外部與 VFS 各 41 份 HTTP bytes 核對通過；4 份嵌入 DAT 與磁碟來源一致，Editor 子樹無錯誤。IconGen／icon 的 51 個 OP 核對無差異。完整使用／驗證入口見 [Editor Service](EDITOR_SERVICE.md)，私人證據在 workspace `work/refactor/editor-service/`。
 
 這是兩段工作中間的資產服務提交。下一段接新 Manager／TOP Family 的開啟、前端產碼、宿主 Apply／預覽、Uniform 及保存重開，不引回舊 Python compiler。尚未遷移能力必須顯示缺口；測試 fixture／清單與新 Shell 舊 masters 不能被當作完整 Legacy 驗收成果。HTTP CSP 中的其他服務連線地址需隨實際 Manager／Remote Panel 接入配置，目前只有同源資產服務。
+
+### Manager 接入前的相依檢查
+
+`runtime/host_artifact.py` 是下一段的新接收／保存邊界，**尚未嵌入 TD 或接入 HTTP**，不是已完成的 Manager。4 項測試直接以現有 TypeScript compiler 的真实輸出驗證接收、保存重開、舊 revision／目標／snapshot 拒絕及綁定資料限制，不匯入 `sgrape_core`。它保留完整圖與產物，只檢查傳輸身分、配對與宿主會执行的 numeric Uniform 綁定，不重新推導節點或子圖。Checksum 用於偵測圖／產物配對變動，不是認證或 GLSL 正確性證明；GPU 編譯、Parameter 模式保護及原子套用仍由後續 TD adapter 負責。
+
+已發現需要先處理的實際衝突：Legacy `sgrape_history.py` 的 restore 路徑仍在 543／627 行呼叫 `runtime.core().compile_graph()`；`sgrape_sources.py`、`sgrape_parameters.py` 也依賴舊 core 的型別／值規則。因此不能把舊 runtime 移入新 Base 就宣稱無 Python 前端核心，也不能拿掉 Undo 或給虛構面板資料來通過測試。**完整 Manager 接入須連同原生來源／參數歷史的這條相依處理**；目前保留可回退的資產服務與舊 masters，未以實驗接收器改寫產品图。這是依人類「遇到衝突先回報，不硬做」的交付界線。
 
 ## VFS 現場交付補正 — 2026-10-06
 
