@@ -13,6 +13,7 @@ class Par:
         self.owner = owner; self.suffix = suffix; self.block = block; self.val = val; self.index = id(self)
         self.expr = ''; self.bindExpr = ''; self.mode = 'CONSTANT'
         self.valid = True; self.enable = True; self.readOnly = False
+        self.style = 'Float'
         self.exportSource = None; self.bindReferences = []
     @property
     def name(self):
@@ -86,7 +87,8 @@ class History(unittest.TestCase):
             if graph.get('invalid'): raise ValueError('Incomplete graph')
         self.runtime = SimpleNamespace(target=lambda: self.comp, shader_operator=lambda comp: self.operator,
             source_module=lambda: sources, state=lambda: copy.deepcopy(self.current), checked_state=lambda: copy.deepcopy(self.current),
-            write_state=self.write, core=lambda: SimpleNamespace(compile_graph=compile_graph, number=lambda value: float(value),literal=core.literal))
+            write_state=self.write, validate_history_graph=compile_graph,
+            core=lambda: SimpleNamespace(compile_graph=compile_graph, number=lambda value: float(value),literal=core.literal))
         self.mode_patch = patch.object(links, 'ParMode', SimpleNamespace(CONSTANT='CONSTANT'), create=True)
         self.mode_patch.start(); self.addCleanup(self.mode_patch.stop)
         self.add('A', 3)
@@ -207,6 +209,37 @@ class History(unittest.TestCase):
         desired = copy.deepcopy(self.current['graph']); desired['invalid'] = True
         result = h.restore(self.runtime, self.request(before, after, graph=desired))
         self.assertEqual(result['workingGraph'], desired); self.assertNotIn('invalid', self.current['graph']); self.assertEqual(self.par('A').val, 3)
+
+    def test_native_restore_does_not_load_a_python_compiler(self):
+        graph = copy.deepcopy(self.current['graph']); before = self.token()
+        self.operator.seq.vec.destroyBlock(0); self.storage[sources.STORE].pop('A')
+        self.current['graph']['declarations'] = [d for d in graph['declarations'] if d['id'] != 'A']
+        sources.sync(self.runtime); after = self.token()
+        # Both recreating a missing native row and accepting the document must
+        # work with no core object available to the history engine.
+        self.runtime.core = lambda: self.fail('Native history loaded the old Python core')
+        result = h.restore(self.runtime, self.request(before, after, graph=graph))
+        self.assertTrue(result['ok']); self.assertEqual(self.par('A').val, 3)
+
+    def test_missing_document_policy_fails_before_native_mutation(self):
+        before = self.token(); self.par('A').val = 9; after = self.token()
+        state = copy.deepcopy(self.current)
+        del self.runtime.validate_history_graph
+        with self.assertRaisesRegex(RuntimeError, 'explicit document validation policy'):
+            h.restore(self.runtime, self.request(before, after))
+        self.assertEqual(self.par('A').val, 9); self.assertEqual(self.current, state)
+
+    def test_reconciled_document_rejection_rolls_back_native_restore(self):
+        before = self.token(); self.par('A').val = 9; after = self.token()
+        state = copy.deepcopy(self.current); calls = []
+        def policy(graph):
+            calls.append(copy.deepcopy(graph))
+            if len(calls) == 2: raise ValueError('Reconciled document rejected')
+        self.runtime.validate_history_graph = policy
+        with self.assertRaisesRegex(RuntimeError, 'Reconciled document rejected'):
+            h.restore(self.runtime, self.request(before, after))
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(self.par('A').val, 9); self.assertEqual(self.current, state)
 
     def test_failure_rolls_back_values_and_state(self):
         before = self.token(); self.par('A').val = 9; after = self.token(); state = copy.deepcopy(self.current)

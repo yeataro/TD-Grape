@@ -2,6 +2,8 @@
 
 Checkpoints are immutable configuration, not evaluated animation samples. They
 never enter COMP storage/TOE and never invoke TD's global Undo or compile a TOP.
+The host supplies validate_history_graph(graph): document acceptance belongs to
+the host's editing protocol, not to this native Parameter history engine.
 """
 import copy
 import hashlib
@@ -195,7 +197,8 @@ def _project(runtime, entry, declaration):
     if is_array: values = [declaration.get('elementType','float') if is_buffer else sources.array_shape(declaration['type'])[0], declaration.get('arraySource', ''), 'texturebuffer' if is_buffer else 'uniformarray']
     if not isinstance(values, list) or (not is_array and not is_pop and len(values) != count):
         raise RuntimeError('Invalid Uniform defaults in editor history.')
-    if not is_array and not is_pop: runtime.core().literal(value,declaration['type'])
+    if not is_array and not is_pop:
+        sources.validate_uniform_native(declaration, value, 'default')
     operator = runtime.shader_operator(runtime.target()); index = getattr(operator.seq, sequence).numBlocks
     params = {'name': {'val': declaration['name'], 'mode': 'CONSTANT', 'expr': '', 'bindExpr': ''}}
     for i, suffix in enumerate(sources.SEQUENCE_CHANNELS[sequence]):
@@ -403,6 +406,9 @@ def _restore_storage(comp, key, value):
 
 
 def restore(runtime, body):
+    validate_graph = getattr(runtime, 'validate_history_graph', None)
+    if not callable(validate_graph):
+        raise RuntimeError('Native history requires an explicit document validation policy.')
     request_id = body.get('requestId')
     if not isinstance(request_id, str) or not 1 <= len(request_id) <= 160: raise RuntimeError('History requires a request ID.')
     request_key = (_identity(runtime), request_id); fingerprint = hashlib.sha256(_json(body).encode()).hexdigest()
@@ -540,7 +546,7 @@ def restore(runtime, body):
                     raise RuntimeError('This external Bind cannot be recreated by editor history.')
     # Invalid drafts remain browser working data, never authoritative DATs.
     working = desired if native_draft else None
-    try: runtime.core().compile_graph(desired)
+    try: validate_graph(desired)
     except Exception: working = desired
     comp = runtime.target(); registry_before = copy.deepcopy(comp.fetch(sources.STORE, None))
     links_before = copy.deepcopy(comp.fetch(LINKS, None)); issues_before = copy.deepcopy(comp.fetch('grapeSourceIssues', None))
@@ -624,7 +630,7 @@ def restore(runtime, body):
                                          if d.get('kind') in sources.SOURCE_KINDS and d['id'] not in ids and d['id'] not in existing_ids)
         declarations, registry, issues = sources.reconcile(canonical['declarations'], registry, sources.native_rows(runtime.shader_operator(comp)))
         canonical['declarations'] = declarations
-        runtime.core().compile_graph(canonical)
+        validate_graph(canonical)
         after_state = copy.deepcopy(current_state); after_state.update(graph=canonical, revision=current_state['revision'] + 1, sourceChanged=True)
         _json(after_state)
         comp.store(sources.STORE, registry); comp.store('grapeSourceIssues', issues)

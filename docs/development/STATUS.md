@@ -1,5 +1,13 @@
 # 開發狀態
 
+## 新宿主接入進行中 — 2026-10-06
+
+人類已授權繼續接通 Manager／TOP Family。TDFAM 舊子 OP 的圖、格式及內部架構均可重寫；產品能力與體驗仍按固定 Legacy 驗收。**Family 對 Manager 只有編輯依賴**：移除／搬離 Manager 後，參數、既有綁定、texture 與原生 Shader 更新／執行正常。兩者透過 TD 內 Python 呼叫交互，Manager 不在就明確返回不可用或略過編輯動作，不增重連／重試機制，不持續搜尋或洗錯誤。此為目前硬性邊界，適用 MAT／TOP／未來 ISF，不是啟動後期脫皮功能。IconGen／icon 仍受保護。
+
+第一段先整理原生 Undo 的依賴入口：`sgrape_history` 不再自行尋找 core 或產生 GLSL literal，改用原生值檢查及宿主明確提供的文件接受策略。既有宿主的過渡 adapter 保留原 compiler 驗證行為；**這不代表新 Manager 已接通，或整個宿主已移除 Python core 相依**。新 Manager 不部署該 Legacy adapter。32 項 History／typed Undo 測試通過，涵蓋值恢復、結構恢復、外部修改、Expression／Bind／Export 保護、缺少策略時拒絕及驗證失敗回退；尚未部署這次改動至 TD。測試 Par 補足真實 TD 的 style 屬性，修正原 typed Undo fixture 的缺漏。
+
+接續完成新 Manager／TOP 的開啟、前端產碼、套用／預覽、Undo 與保存重開，加入無 Manager 原生使用驗證及必要診斷。單元測試通過不是人類測試交付；前端仍為 Refactor.13，live Shell 尚只有資產服務。
+
 ## Editor Service 資產供應 — 2026-10-06
 
 中間提交：`47dfbc1`。開發 TOE 保存為 `.17`，標準入口已同步（1,550,126 bytes；SHA-256 `abcb6ae4d23ae903cf23037e2d0d054c88771a5307d3e97a4ab9cb70c3b6619e`）。
@@ -16,7 +24,7 @@
 
 `runtime/host_artifact.py` 是下一段的新接收／保存邊界，**尚未嵌入 TD 或接入 HTTP**，不是已完成的 Manager。4 項測試直接以現有 TypeScript compiler 的真实輸出驗證接收、保存重開、舊 revision／目標／snapshot 拒絕及綁定資料限制，不匯入 `sgrape_core`。它保留完整圖與產物，只檢查傳輸身分、配對與宿主會执行的 numeric Uniform 綁定，不重新推導節點或子圖。Checksum 用於偵測圖／產物配對變動，不是認證或 GLSL 正確性證明；GPU 編譯、Parameter 模式保護及原子套用仍由後續 TD adapter 負責。
 
-已發現需要先處理的實際衝突：Legacy `sgrape_history.py` 的 restore 路徑仍在 543／627 行呼叫 `runtime.core().compile_graph()`；`sgrape_sources.py`、`sgrape_parameters.py` 也依賴舊 core 的型別／值規則。因此不能把舊 runtime 移入新 Base 就宣稱無 Python 前端核心，也不能拿掉 Undo 或給虛構面板資料來通過測試。**完整 Manager 接入須連同原生來源／參數歷史的這條相依處理**；目前保留可回退的資產服務與舊 masters，未以實驗接收器改寫產品图。這是依人類「遇到衝突先回報，不硬做」的交付界線。
+此時發現待遷移相依：Legacy `sgrape_history.py` 的 restore 使用 compiler 驗證圖；`sgrape_sources.py`、`sgrape_parameters.py` 也依賴舊 core 的型別／值規則。後續已釐清這兩處 compile 呼叫並非直接寫入 Shader，稱為產品「衝突」過重；人類已同意解除相依後繼續接入，進度見本頁頂部。不能把舊 runtime 移入新 Base 就宣稱無 Python 前端核心，也不能拿掉 Undo 或給虛構面板資料來通過測試。
 
 ## VFS 現場交付補正 — 2026-10-06
 

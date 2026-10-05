@@ -400,6 +400,16 @@ def save_personal(body):
 
 def core(): return _owner.op('core').module
 
+
+def validate_history_graph(graph):
+    """Legacy host policy; the new host must provide its own document boundary.
+
+    Keep the previous validation behavior while native Parameter history is
+    reusable without importing, emitting through, or discovering a Python core.
+    This adapter is not deployed into the new Manager.
+    """
+    return core().compile_graph(graph)
+
 def source_module():
     dat = _owner.op('sources')
     return dat.module if dat else None
