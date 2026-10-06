@@ -11,10 +11,10 @@ TD-Grape 是 TouchDesigner 的 Shader 節點編輯器（瀏覽器前端 + TD 宿
 | 目錄 | 分支 | 規則 |
 | --- | --- | --- |
 | `TD-Grape-refactor/`（本目錄） | `refactor` | **唯一可改動與提交之處** |
-| `../TD-Grape/` | `main` | 只讀。**「舊產品」一律以 main 為準**（最新） |
-| `../TD-Grape-legacy/` | `legacy` | 只讀。main 在 0.8.276 的凍結快照 `90a946b`，作固定驗收基準 |
+| `../TD-Grape/` | `main` | 只讀。仍可能變動，**不作為舊產品基準** |
+| `../TD-Grape-legacy/` | `legacy` | 只讀。**「舊產品」一律指這裡**：凍結於 `90a946b`（0.8.276），不會再變 |
 
-**兩者關係（2026-10-07 核對）：** 程式完全相同（皆 0.8.276）；main 只多 5 個 commit——README 圖片／說明更新，以及 `279f22d`「網頁、PWA 與宿主部署草案」文件。查舊行為、做漏接清查一律讀 main；main 若日後有程式變更，以 main 為準並註明與 legacy 的差異。
+**兩者關係（2026-10-07 核對）：** 程式完全相同（皆 0.8.276）；main 只多 5 個 commit——README 圖片／說明更新，以及 `279f22d`「網頁、PWA 與宿主部署草案」文件。查舊行為、做漏接清查一律讀 legacy。只有需要 main 之後新增的內容（如上述部署草案）才讀 main，並註明出處是 main。
 
 workspace 的其他位置可自由讀取。驗證輸出、私人證據、截圖與一次性腳本放 `../work/refactor/`（由 `tools/dev/paths.py` 的 `work_path()` 指定，開發工具讀 `.local/development.json`），不成為產品執行或建置依賴。`docs/Goose_City_Revelation/` 與專案無關，忽略。
 
