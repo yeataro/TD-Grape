@@ -2,6 +2,8 @@
 
 目前狀態以 [STATUS.md](development/STATUS.md) 為準。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
 
+- [Refactor：React／React Flow 遷移 B 案](development/REFACTOR_REACT_FLOW_PLAN_B.md)：2026-10-06 人類已接受的執行路線；第一個正式 TOP 切片讓核心、應用與 React 共同迭代，包含交易聚合／引用穩定／幾何更新及 Human Takeover 驗收。正式切片尚未開工，評估版原地保留。[A 案](development/REFACTOR_UI_UPDATES.md)原文保留比較，不作並行執行計畫。
+
 - [Sources 面板整理](ui/SOURCES_PANEL.md)：2026-09-23 確認的名稱、搜尋、排序、數值控制與最小化顯示，分批實作進度。
 - [介面語言](ui/LOCALIZATION.md)：中文／日文面板命名、技術名稱保留、語言選單與翻譯驗證。
 - [Wire／Link 接線樣式](ui/WIRE_LINK.md)：直線虛線、接孔箭頭導覽、右鍵對端清單與顯示切換。

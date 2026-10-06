@@ -1213,24 +1213,64 @@ function voronoiInspector(box,n){
   }
   box.append(parameterControlRow('',parameterHint(t('voronoi.hint'))));
 }
+/**
+ * Render controls declared by a node module; dispatch by control kind, not node identity.
+ * 把節點 presentation() 提供的控制項描述畫成 DOM，不在這裡決定某顆節點的專屬選項。
+ * box 是畫面容器，n 是圖中的節點，controls 是模組提供的描述。
+ * inline=true 用於畫布 body 的 inlineControls；預設用於 Parameter 面板的 controls。
+ * 此函式建立當次畫面；操作透過共用編輯流程交回節點模組，不自行管理保存或 Undo。
+ */
 function moduleInspector(box,n,controls,{inline=false}={}){
+  // Literal label or translation key — literal=true 直接顯示文字，否則交給翻譯表。
   const label=c=>c.literal?c.label:t(c.label);
-  const run=(c,value)=>{if(!readonly&&current().nodes.includes(n))change(()=>editModuleNode(n,c.command,{...c.args,...(value===undefined?{}:{value:c.numeric?Number(value):value})}));};
+
+  // Dispatch a module command — 先確認可編輯且節點仍在目前圖內，再送出模組宣告的指令。
+  // change() 接管編輯與歷史流程；editModuleNode() 經圖模型呼叫節點本身的 edit()。
+  // args 是附帶資料；選單的字串值只在 numeric=true 時轉成數字，按鈕可不帶 value。
+  const run=(c,value)=>{
+    if(!readonly&&current().nodes.includes(n))
+      change(()=>editModuleNode(n,c.command,{
+        ...c.args,
+        ...(value===undefined?{}:{value:c.numeric?Number(value):value})
+      }));
+  };
+
+  // Shared control renderer — 只辨認 select／button／row／hint，不辨認節點名稱或 UUID。
   const control=c=>{
     if(c.kind==='select'){
+      // Select — 選項與目前選值皆來自模組，使用者選擇後交給上面的 run()。
       const input=select(c.options.map(o=>[o.value,label(o)]),c.value,value=>run(c,value));
-      input.dataset.nodeControl=c.key;input.setAttribute('aria-label',label(c));input.disabled=readonly||!!c.disabled;return input;
+      input.dataset.nodeControl=c.key;
+      input.setAttribute('aria-label',label(c));
+      input.disabled=readonly||!!c.disabled;
+      return input;
     }
+
     if(c.kind==='button'){
-      const button=el('button',{class:'wide','data-node-control':c.key},label(c));button.disabled=readonly||!!c.disabled;button.onclick=()=>run(c);return button;
+      // Button — 模組提供文字、指令與啟用狀態，這裡只建立按鈕並接上事件。
+      const button=el('button',{class:'wide','data-node-control':c.key},label(c));
+      button.disabled=readonly||!!c.disabled;
+      button.onclick=()=>run(c);
+      return button;
     }
+
     if(c.kind==='row'){
+      // Row — 遞迴繪製 children，排成同一列；目前沿用既有 math-operation-row 樣式名稱。
       const row=el('div',{class:'math-operation-row','data-node-control':c.key});
-      if(c.prefix)row.append(el('span',{},t(c.prefix)));for(const child of c.children||[])row.append(control(child));return row;
+      if(c.prefix)row.append(el('span',{},t(c.prefix)));
+      for(const child of c.children||[])row.append(control(child));
+      return row;
     }
+
+    // Hint — 契約中剩下的是提示文字；此分支目前也是其他 kind 的顯示 fallback。
     return parameterHint(label(c));
   };
-  for(const c of controls)box.append(inline?control(c):parameterControlRow(['button','hint'].includes(c.kind)?'':label(c),control(c)));
+
+  // Placement — body 直接放控制項；面板外包一列標籤，按鈕與提示不重複加外層標籤。
+  for(const c of controls)
+    box.append(inline?control(c):parameterControlRow(
+      ['button','hint'].includes(c.kind)?'':label(c),control(c)
+    ));
 }
 function mathInspector(box,n){
   const apply=fn=>change(fn),params=n.params,count=params.inputCount??3;

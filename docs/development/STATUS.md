@@ -16,6 +16,24 @@
 
 重現：`tools/jobs/install_native_manager.py` 只針對此開發 Shell 接入；`tools/jobs/verify_manager_lifecycle.py` 用已經由瀏覽器建立的 review Family 驗證 Manager 移除／還原與 TOX 重載。私人證據位於 workspace `work/refactor/native-manager/`。不執行舊 `refresh_sources.py` 更新新 Shell，不納入 `.tdmcp/` 與人類新增的其他文件。IconGen → icon 受保護，安裝前後核對不變。
 
+### 下一里程碑：React／React Flow 正式 TOP 切片 — 2026-10-06，B 案已接受
+
+人類已接受 [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)：第一輪就讓正式 React Flow 接入真實 TOP 的開圖、編輯、Undo／Redo、前端產碼、TD 套用及保存重開，核心與應用依真實 caller 的缺口共同完善。只釐清當輪所需能力，其餘可保留 UNKNOWN；面板細節後續討論。[A 案](REFACTOR_UI_UPDATES.md)原文保持不變，保留比較，不再沿 RF-1～RF-4 線性順序執行。核心規則與產碼不依賴框架；產品能力、效能、UX、低待機負擔及可追蹤性不變。
+
+第一輪新增明確驗收：單次 GraphDocument transaction 的多 node／edge 變化聚合為一次 document projection 提交，未變項保持 reference identity；只有 Handle 結構／實際幾何變化才需要額外 RF geometry invalidation。直接使用既有 GraphChanges，不先建立 event bus、diff 或抽象平台。核心聚合檢查已通過；正式 React consumer、引用及幾何驗收仍待第一輪執行，評估版 geometry signature 偏廣不能當已完成證據。具體案例與限制集中於 B 案第 7 節。
+
+下一步核對來源與生成核心／bootstrap 的已知不同步，再完成正式 TOP 切片。評估版留在 workspace `work/refactor/react-flow-evaluation/`，入口 `http://127.0.0.1:56210/`，不直接轉正。本輪更新計畫與既有入口並做核心聚合檢查，正式產品仍為 Refactor.14，尚未換 renderer、版本或 TD；Human Takeover 亦未驗證。第一輪保留舊入口，限定新入口範圍及資料保護；不提前恢復 Uniform live channel 或其他延後能力。
+
+### 待實作：Uniform 即時編輯恢復 — 2026-10-06
+
+人類確認先記錄、延後實作；這是尚未恢復的 Legacy 能力，不立正式 issue，也不表示接受目前行為作為最終驗收。後續回答「還有哪些事情沒做」時須列入此項。
+
+- 觀察：畫布與面板的 Uniform Slider 都在放開時才更新 TD。Refactor.14 明確關閉尚未遷移的 live channel，拖曳中不送值，放開走 HTTP `source-value`；不是已送出的數值在後端延遲。實際前端處理函式的隔離對照符合這條路徑，未對本次觀察做現場 TD 拖曳量測。
+- 現有接入點：共用數值控制保留 Uniform 專用的即時手勢入口；共用 UI 不代表常數與 Uniform 必須共用提交時機或傳輸。Legacy 的 WebSocket 能力仍依賴舊 runtime，不能直接啟用旗標或整包搬回新 Manager。
+- 順序建議：先推進既定宿主／Family 能力與原生參數定位、綁定、單次更新；相關介面穩定後，再完整遷移 Uniform 即時編輯。不必等所有產品功能做完，但必須在宣稱達到 Legacy 編輯體驗前完成。此紀錄不授權立即實作，也不決議所有數值統一改走 WebSocket。
+- 整合範圍：沿用原生參數身分與寫入規則，集中處理即時訂閱、手勢、Manager 啟停，以及 Undo／取消／斷線；避免另建一套綁定權威或牽動節點、圖模型與產碼責任。
+- 完成依據：實際按住拖曳就更新 TD；一個手勢一筆 Undo；取消／外部參數修改／斷線不覆寫錯誤狀態或重播舊值；無編輯者時不持續掃描來源，待機成本需量測；Manager 不在時子 OP 原生執行不受影響。Legacy 參考見 [Uniform 即時數值](../features/UNIFORM_LIVE_VALUES.md)。
+
 ## 新宿主接入進行中 — 2026-10-06
 
 新接入的第二個檢查點：編輯文件 `host_document` 與最後成功套用的產物分開保存；TD 原生修改不冒稱已重新產碼。`host_requests` 以有界佇列把 HTTP 工作交給主執行緒，等待逾時的未執行請求不會事後偷偷套用；已開始但逾時則保留可查的結果。`native_family` 接收真實前端產物、原生 GPU 驗證、套用及回退，沒有載入 Python compiler。原生參數／Undo helper 可集中到 Family 的 GrapeControls，保留舊 adapter 的定位 fallback。
