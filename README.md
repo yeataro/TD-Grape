@@ -12,6 +12,8 @@ Edit node graphs, generate GLSL, preview results from TouchDesigner, and adjust 
 
 ![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/7b5188d3-dbc3-4b25-804b-1a5d128d5580)
 
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/abb15a18-b199-46a9-bf06-c45d25cd7731)
+
 
 ## Project Status
 
