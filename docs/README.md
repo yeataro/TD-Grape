@@ -19,6 +19,7 @@
 - [原生材質功能研究](discussions/MAT_FUNCTIONAL_RESEARCH.md)：從外觀需求向下整理資料、運算、階段與宿主依賴；附原生匯出證據，供重構或新專案參考。
 - [TD 2025.32820 原生函數版本查核](discussions/TD_NATIVE_VERSION_REVIEW_2026-09-23.md)：區分宿主版本差異、指南未涵蓋與專案缺少入口；記錄本次官方發布資料查核界線。
 
+- [網頁／PWA／宿主部署草案（2026-09-29）](discussions/WEB_PWA_HOST_DEPLOYMENT_DRAFT_2026-09-29.md)：下一版的靜態部署、離線內容、圖保存與實例配對候選；WSS／憑證與跨瀏覽器連線待實測，僅記錄討論，未授權啟動重構。
 - [專案用語表](GLOSSARY.md)：跨功能的中英術語與概念界線；不代替行為規格。
 - [值、節點與來源模型](architecture/VALUE_MODEL.md)：已確認的固定／通用入口、穩定名稱、來源引用及能力邊界。
 - [Math 連續四則運算](features/MATH.md)：逐列／單一運算、動態输入及簡單算式註記。
