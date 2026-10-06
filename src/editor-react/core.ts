@@ -23,7 +23,12 @@ export type { PortSpec } from '../core-ts/ports';
 export type Bootstrap = {
   catalogHash: string;
   typeContract: ReturnType<typeof createEditorContract>;
+  defaultDocument: { graph: graph.GraphDocument['document'] };
 };
+
+// The graph is valid but outside this slice; the only startup error that offers a reset.
+// 圖本身有效但超出本輪範圍；只有這種開啟錯誤提供「載入預設圖」。
+export class UnsupportedGraphError extends Error {}
 
 // Slice coverage, not a second node registry. Expand with verified product cases.
 // 集中記錄本輪已接管能力；節點規則／選項仍只由真正的模組提供。
@@ -32,7 +37,7 @@ export function requireSupported(graph: graph.GraphDocument['document']) {
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {
     const shown = reasons.length > 8 ? [...reasons.slice(0, 8), `…另有 ${reasons.length - 8} 項`] : reasons;
-    throw Error('此入口目前支援 Float、Color RGBA、Add 與 Color Output 的常數 TOP 圖。未送出編輯或套用，請使用舊入口。\n' +
+    throw new UnsupportedGraphError('此入口目前支援 Float、Color RGBA、Add 與 Color Output 的常數 TOP 圖。未送出編輯或套用，請使用舊入口。\n' +
       '不支援的內容：\n' + shown.map(reason => '・' + reason).join('\n'));
   }
 }

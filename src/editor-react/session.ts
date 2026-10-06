@@ -4,6 +4,26 @@ import { project, type Projection, type FlowNode, type FlowEdge } from './projec
 import { HostClient, HostError, type StateResponse } from './host';
 
 type Sent = { graph: Graph; revision: number };
+const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compiled: ReturnType<typeof compiler.compile>) => ({
+  graph: sent.graph, revision: sent.revision, frontendArtifact: { protocol: compiler.protocol,
+    targetId: host.target, baseRevision: sent.revision, snapshot: JSON.stringify(sent.graph),
+    catalogHash: bootstrap.catalogHash, compiled } });
+
+// Migration-period convenience: test graphs are disposable, so a graph this entry cannot
+// open may be replaced by the default to restore the test environment. Normal compile and
+// apply; a stale revision still conflicts.
+// 遷移期便利行為：測試圖可丟棄，打不開時換成預設圖以恢復測試環境；照常產碼／套用，版本過期仍擋。
+export async function resetToDefault(host: HostClient, bootstrap: Bootstrap) {
+  const loaded = await host.call<StateResponse>('state');
+  if (loaded.savedStateIssue || loaded.readOnlyReason || loaded.upgradeReview) throw Error(loaded.readOnlyReason || '此文件需要在舊入口處理載入問題。');
+  if (loaded.frontendCompiler?.protocol !== compiler.protocol || loaded.frontendCompiler.catalogHash !== bootstrap.catalogHash)
+    throw Error('前端核心與 TD bootstrap 版本不一致；請重新載入同一建置。');
+  const sent = { graph: bootstrap.defaultDocument.graph, revision: loaded.state.revision };
+  const compiled = compiler.compile(sent.graph, bootstrap.typeContract.glslCode);
+  const result = await host.call<{ state: StateResponse['state'] }>('apply', applyRequest(host, bootstrap, sent, compiled));
+  if (result.state?.revision !== sent.revision + 1 || !same(result.state.graph, sent.graph)) throw new HostError('宿主回覆與送出快照不一致。');
+}
+const conflictMessage = 'TD 文件已由其他操作更新；本地草稿保留。可「用編輯器草稿覆寫 TD」，或重新整理頁面改用 TD 版本（草稿可還原）。';
 export type EditorState = { projection: Projection; version: number; revision: number; dirty: boolean;
   undo: boolean; redo: boolean; phase: 'ready' | 'sending' | 'error' | 'uncertain' | 'conflict';
   message: string; glsl: string; targetPath: string };
@@ -147,10 +167,8 @@ export class EditorSession {
       catch (error) { this.status({ phase: 'error', message: '產碼失敗：' + String(error) }); return; }
       this.status({ phase: 'sending', message: '正在套用至 TD…', glsl: compiled.pixel });
       try {
-        const result = await this.host.call<{ state: StateResponse['state'] }>('apply', {
-          graph: sent.graph, revision: sent.revision, frontendArtifact: { protocol: compiler.protocol,
-            targetId: this.host.target, baseRevision: sent.revision, snapshot: JSON.stringify(sent.graph),
-            catalogHash: this.bootstrap.catalogHash, compiled } });
+        const result = await this.host.call<{ state: StateResponse['state'] }>('apply',
+          applyRequest(this.host, this.bootstrap, sent, compiled));
         if (this.disposed) return;
         if (result.state?.revision !== sent.revision + 1 || !same(result.state.graph, sent.graph)) throw new HostError('宿主回覆與送出快照不一致。');
         this.confirmed = sent.graph;
@@ -162,7 +180,8 @@ export class EditorSession {
         const unknown = !(error instanceof HostError) || error.status === 0 || error.status >= 500;
         this.blocked = conflict || unknown; this.uncertain = this.blocked ? sent : undefined;
         this.status({ phase: conflict ? 'conflict' : unknown ? 'uncertain' : 'error',
-          message: (this.blocked ? '交付未確認，已停止自動送出；請檢查連線。' : 'TD 拒絕套用：') + String(error) });
+          message: conflict ? conflictMessage + ' ' + String(error)
+            : (this.blocked ? '交付未確認，已停止自動送出；請檢查連線。' : 'TD 拒絕套用：') + String(error) });
         return;
       }
     }
@@ -175,11 +194,27 @@ export class EditorSession {
       const state = result.state, sent = this.uncertain;
       if (sent && state.revision === sent.revision + 1 && same(state.graph, sent.graph)) this.confirmed = sent.graph;
       else if (state.revision !== this.state.revision || !same(state.graph, this.confirmed)) {
-        this.blocked = true; this.status({ phase: 'conflict', message: 'TD 文件已由其他操作更新；本地草稿保留。請下載草稿，從舊入口或重新開頁比較，勿直接覆蓋。' }); return;
+        this.blocked = true; this.status({ phase: 'conflict', message: conflictMessage }); return;
       }
       this.blocked = false; this.uncertain = undefined;
       this.status({ revision: state.revision, dirty: !same(this.graph(), this.confirmed), phase: 'ready',
         message: '已確認 TD 版本；若有未送出修改，可按「套用」。' });
+    } catch (error) { this.notice(error); }
+  };
+  // Migration-period convenience (old/new entries coexist), not product behaviour.
+  // Rebase the draft on TD's latest revision and send it through the normal path;
+  // a further change before delivery still returns a conflict.
+  // 遷移期便利行為：以最新 revision 為基準重送草稿，照常產碼／驗證；期間再變仍擋。
+  overwrite = async () => {
+    if (this.pending || this.state.phase !== 'conflict') return;
+    try {
+      const result = await this.host.call<StateResponse>('state');
+      if (result.frontendCompiler.catalogHash !== this.bootstrap.catalogHash) throw Error('宿主版本已變更，請下載草稿後重新開啟。');
+      this.confirmed = result.state.graph; this.blocked = false; this.uncertain = undefined;
+      const dirty = !same(this.graph(), this.confirmed);
+      this.status({ revision: result.state.revision, dirty, phase: 'ready',
+        message: dirty ? '以編輯器草稿覆寫 TD…' : '草稿與 TD 文件相同，已同步。' });
+      await this.flush();
     } catch (error) { this.notice(error); }
   };
   save = async () => {

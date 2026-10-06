@@ -4,9 +4,9 @@ import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBe
   type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './style.css';
-import { core, supportedDefinitions, typeColor, type Bootstrap } from './core';
+import { core, supportedDefinitions, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, type StateResponse } from './host';
-import { EditorSession } from './session';
+import { EditorSession, resetToDefault } from './session';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
@@ -88,6 +88,9 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
     <div role="status" className={`status ${state.phase}`}><span>{state.message}</span>
       <small>{state.phase === 'sending' ? '套用中' : state.dirty ? '本地修改未套用' : '與 TD 圖同步'} · revision {state.revision}</small>
       {['uncertain', 'conflict'].includes(state.phase) && <button onClick={() => void session.check()}>檢查連線與版本</button>}
+      {state.phase === 'conflict' && <button onClick={() => {
+        if (confirm('TD 那邊的修改會被編輯器草稿蓋掉，確定覆寫？')) void session.overwrite();
+      }}>用編輯器草稿覆寫 TD</button>}
     </div>
     {draft && <div className="draft-notice">找到此頁先前的草稿；目前顯示 TD 文件。
       <button onClick={() => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw Error('草稿目標不同'); if (session.restoreDraft(saved.graph)) setDraft(null); } catch (error) { session.notice(error); } }}>還原草稿</button>
@@ -100,19 +103,35 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
   </TextContext.Provider></SessionContext.Provider>;
 }
 
+let host: HostClient | undefined, bootstrap: Bootstrap | undefined;
 async function start() {
   const token = location.hash.slice(1) || sessionStorage.getItem('sgrapeToken') || '';
   sessionStorage.setItem('sgrapeToken', token); history.replaceState(null, '', location.pathname + location.search);
-  const host = new HostClient(target, token);
-  const [loaded, bootstrap, locales, build] = await Promise.all([
-    host.call<StateResponse>('state'), fetch('/editor-bootstrap.json').then(response => response.json()) as Promise<Bootstrap>,
+  const client = host = new HostClient(target, token);
+  const [loaded, files, locales, build] = await Promise.all([
+    client.call<StateResponse>('state'), fetch('/editor-bootstrap.json').then(response => response.json()) as Promise<Bootstrap>,
     fetch('/locales.json').then(response => response.json()),
     fetch('/build-info.json').then(response => response.json()),
   ]);
-  const session = new EditorSession(host, bootstrap, loaded);
+  bootstrap = files; // kept for the startup-error reset
+  const session = new EditorSession(client, files, loaded);
   const text = (key: string) => locales.messages?.[key]?.en ?? key;
   createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider><Editor session={session} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
 }
-void start().catch(error => createRoot(document.getElementById('root')!).render(<div className="startup-error">
-  <h1>無法在此入口開啟</h1><p style={{ whiteSpace: 'pre-line' }}>{String(error)}</p><p>此入口未送出編輯或套用請求。</p><a href={oldURL}>返回舊編輯器</a>
-</div>));
+function StartupError({ error, reset }: { error: unknown; reset?: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  return <div className="startup-error">
+    <h1>無法在此入口開啟</h1><p style={{ whiteSpace: 'pre-line' }}>{String(error)}</p><p>此入口未送出編輯或套用請求。</p>
+    {reset && <p><button disabled={busy} onClick={() => {
+      if (!confirm('TD 這張圖會被換成預設圖，上面列出的內容會被刪除。確定？')) return;
+      setBusy(true); setMessage('正在載入預設圖…');
+      reset().then(() => location.reload(), failure => { setBusy(false); setMessage('載入失敗：' + String(failure)); });
+    }}>載入預設圖</button>{message && ' ' + message}</p>}
+    <a href={oldURL}>返回舊編輯器</a>
+  </div>;
+}
+void start().catch(error => {
+  const client = host, files = bootstrap;
+  const reset = error instanceof UnsupportedGraphError && client && files ? () => resetToDefault(client, files) : undefined;
+  createRoot(document.getElementById('root')!).render(<StartupError error={error} reset={reset} />);
+});

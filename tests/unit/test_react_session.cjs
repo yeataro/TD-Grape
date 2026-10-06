@@ -18,7 +18,8 @@ function load(file) {
     ? load(path.resolve(path.dirname(file), name + '.ts')) : require(name), module, module.exports);
   return module.exports;
 }
-const { EditorSession } = load(path.join(root, 'src/editor-react/session.ts'));
+const { EditorSession, resetToDefault } = load(path.join(root, 'src/editor-react/session.ts'));
+const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts'));
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/editor/editor-bootstrap.json')));
@@ -43,7 +44,7 @@ function open(t, request) {
     const result = request ? await request(action, body, { get: loaded, set: state => { remote = state; } }) :
       action === 'state' ? loaded() : action === 'save' ? { saved: 'test.toe' } :
       { state: (remote = { graph: body.graph, revision: body.revision + 1, targetId: target }) };
-    return new Response(JSON.stringify(result));
+    return result instanceof Response ? result : new Response(JSON.stringify(result));
   };
   const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000);
   t.after(() => session.dispose());
@@ -168,6 +169,56 @@ test('external conflicting state is never adopted over the local document', asyn
   session.transact('edit', net => setValue(net, 'a', 9)); await session.flush();
   const before = clone(session.graph()); await session.check();
   assert.equal(session.snapshot().phase, 'conflict'); assert.deepEqual(clone(session.graph()), before);
+});
+
+// Host that enforces baseRevision like host_api (409 on a stale revision).
+const strictHost = beforeApply => async (action, body, remote) => {
+  if (action === 'state') return remote.get();
+  beforeApply?.(remote);
+  if (body.revision !== remote.get().state.revision) return new Response(JSON.stringify({ error: 'Conflict: stale revision' }), { status: 409 });
+  const state = { graph: body.graph, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+};
+const otherEntryEdits = remote => {
+  const { state } = remote.get(); state.graph.stages.pixel.nodes.find(n => n.id === 'b').params.value = 5;
+  remote.set({ ...state, revision: state.revision + 1 });
+};
+
+test('migration convenience: overwrite rebases the draft on the latest TD revision only after a conflict', async t => {
+  let external = true;
+  const { session, calls, loaded } = open(t, strictHost(remote => { if (external) { external = false; otherEntryEdits(remote); } }));
+  await session.overwrite(); assert.equal(calls.length, 0);
+  session.transact('edit', net => setValue(net, 'a', 9)); await session.flush();
+  assert.equal(session.snapshot().phase, 'conflict'); assert.equal(session.snapshot().dirty, true);
+  const draft = clone(session.graph());
+  await session.overwrite();
+  assert.deepEqual(calls.map(c => c.action), ['apply', 'state', 'apply']); assert.equal(calls[2].body.revision, 5);
+  assert.deepEqual(loaded().state.graph, draft); assert.equal(loaded().state.revision, 6);
+  assert.equal(session.snapshot().phase, 'ready'); assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 6);
+});
+
+test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
+  const { session, calls, loaded } = open(t, strictHost());
+  const unsupported = loaded(); unsupported.state.graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.any', params: {} });
+  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
+  await resetToDefault(session.host, bootstrap);
+  assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
+  assert.deepEqual(calls[1].body.frontendArtifact.compiled, clone(GrapeTopCompiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode)));
+  assert.deepEqual(loaded().state.graph, bootstrap.defaultDocument.graph); assert.equal(loaded().state.revision, 5);
+});
+
+test('migration convenience: reset still conflicts on a stale revision and leaves TD unchanged', async t => {
+  const { session, loaded } = open(t, strictHost(otherEntryEdits));
+  await assert.rejects(resetToDefault(session.host, bootstrap), /Conflict/);
+  assert.notDeepEqual(loaded().state.graph, bootstrap.defaultDocument.graph);
+});
+
+test('migration convenience: overwrite still conflicts if TD changes again before delivery', async t => {
+  const { session, loaded } = open(t, strictHost(otherEntryEdits));
+  session.transact('edit', net => setValue(net, 'a', 9)); await session.flush();
+  const draft = clone(session.graph()), remote = clone(loaded().state);
+  await session.overwrite();
+  assert.equal(session.snapshot().phase, 'conflict'); assert.deepEqual(clone(session.graph()), draft);
+  assert.notDeepEqual(loaded().state.graph, draft); assert.equal(loaded().state.revision, remote.revision + 1);
 });
 
 test('invalid shader stays editable and does not write or save TD', async t => {
