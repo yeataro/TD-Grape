@@ -1,9 +1,9 @@
 import { createContext, memo, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
-import { core, typeColor, type Value, type NodeControl } from './core';
+import { core, typeColor, type Value, type NodeControl, type NodePresentation } from './core';
 import { NumberField } from './NumberField';
 import type { FlowNode } from './projection';
-import type { EditorSession } from './session';
+import { spareHandle, type EditorSession } from './session';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
 
 export const SessionContext = createContext<EditorSession | null>(null);
@@ -63,6 +63,16 @@ function Control({ id, control }: { id: string; control: NodeControl }) {
   </select></label>;
 }
 
+// Drawn from the module's spare declaration only; no node-specific branch here.
+// 只依模組宣告的 spare 繪製；接線後由 session 執行模組命令，renderer 不認節點。
+function SpareInput({ id, spare }: { id: string; spare: NonNullable<NodePresentation['spare']> }) {
+  const text = useContext(TextContext), open = spare.count < spare.limit;
+  return <div className={`port-row input-row spare-row ${open ? '' : 'full'}`} style={{ '--port-color': typeColor(spare.type) } as CSSProperties}>
+    <Handle type="target" position={Position.Left} id={spareHandle} isConnectable={open} aria-label={`${id} ${text(spare.label)}`} />
+    <span>{open ? '＋ ' + text(spare.label) : text(spare.limitLabel)}</span>
+  </div>;
+}
+
 export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps<FlowNode>) {
   const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
@@ -101,6 +111,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
         {!data.connected.includes(port.key) && <ValueFields label={`${id} ${port.key}`} type={port.type}
           value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
       </div>)}
+      {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.note && <div className="hint">{view.note.text}</div>}
       {outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>

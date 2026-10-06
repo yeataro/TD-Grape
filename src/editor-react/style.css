@@ -46,3 +46,7 @@ input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100
 .ladder-readout output { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .draft-blocker { position: absolute; inset: 0; z-index: 20; background: #13121a33; }
+/* Module-declared spare input: dashed handle, muted label; greyed at the limit. */
+.spare-row > span { color: #a59aaf; font-size: 11px; }
+.spare-row .react-flow__handle { border-style: dashed; background: transparent; }
+.spare-row.full { opacity: .5; }

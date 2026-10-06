@@ -15,7 +15,8 @@ function fixture() {
   graph.stages.pixel.nodes[0].ui = { x: 40, y: 40 };
   graph.stages.pixel.nodes[1].ui = { x: 730, y: 40 };
   graph.stages.pixel.nodes.push({ id: 'a', definitionUuid: 'sgrape.builtin.float', params: { value: 2 }, ui: { x: 40, y: 380 } },
-    { id: 'sum', definitionUuid: 'sgrape.builtin.add', params: { type: 'float' }, ui: { x: 390, y: 330 } });
+    { id: 'sum', definitionUuid: 'sgrape.builtin.add', params: { type: 'float' }, ui: { x: 390, y: 330 } },
+    { id: 'mx', definitionUuid: 'sgrape.builtin.math', params: { type: 'float' }, ui: { x: 1050, y: 330 } });
   return graph;
 }
 (async () => {
@@ -79,6 +80,23 @@ function fixture() {
     await wire('sum output out', 'pixel_out input color'); assert.equal(count(), 2); // replacement + scalar expansion
     assert.equal(state.graph.stages.pixel.edges.find(e => e.to[0] === 'pixel_out').from[0], 'sum');
     checks.push('RF hit testing uses Grape rules; replace, scalar expansion, reject vec4 narrowing/cycle, Undo/Redo');
+    // Module-declared spare input: one drop adds the port and the edge; the edge lands on
+    // the new handle's measured position; one Undo removes both.
+    const mathOf = () => state.graph.stages.pixel.nodes.find(n => n.id === 'mx');
+    await wire('a output out', 'mx Add input');
+    assert.equal(mathOf().params.inputCount, 4);
+    assert.ok(state.graph.stages.pixel.edges.some(e => e.from[0] === 'a' && e.to[0] === 'mx' && e.to[1] === 'input3'));
+    const gap = await page.evaluate(() => {
+      const paths = [...document.querySelectorAll('.react-flow__edge path.react-flow__edge-path')];
+      const handle = document.querySelector('[aria-label="mx input input3"]').getBoundingClientRect();
+      const hx = handle.x + handle.width / 2, hy = handle.y + handle.height / 2;
+      return Math.min(...paths.map(path => { const end = path.getPointAtLength(path.getTotalLength()).matrixTransform(path.getScreenCTM()); return Math.hypot(end.x - hx, end.y - hy); }));
+    });
+    assert.ok(gap < 8, 'edge end is ' + gap.toFixed(1) + 'px from the new handle');
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle();
+    assert.equal(mathOf().params.inputCount ?? 3, 3);
+    assert.ok(!state.graph.stages.pixel.edges.some(e => e.to[0] === 'mx'));
+    checks.push('spare input from module declaration: one drop adds port + edge at measured handle; one Undo');
     await field('sum b 0').fill('3'); await field('sum b 0').press('Enter'); await settle();
     assert.equal(state.graph.stages.pixel.nodes.find(n => n.id === 'sum').inputValues.b, 3);
     assert.deepEqual(state.graph.privateMetadata, { retained: true });

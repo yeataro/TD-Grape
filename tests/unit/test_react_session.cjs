@@ -18,7 +18,7 @@ function load(file) {
     ? load(path.resolve(path.dirname(file), name + '.ts')) : require(name), module, module.exports);
   return module.exports;
 }
-const { EditorSession, resetToDefault } = load(path.join(root, 'src/editor-react/session.ts'));
+const { EditorSession, resetToDefault, spareHandle } = load(path.join(root, 'src/editor-react/session.ts'));
 const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts'));
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
@@ -301,4 +301,41 @@ test('invalid restored draft remains rejected without replacing the current docu
 test('a false save response never claims the TD project was saved', async t => {
   const { session } = open(t, async () => ({ saved: false }));
   await session.save(); assert.match(session.snapshot().message, /未確認專案保存成功/);
+});
+
+// Module-declared spare input (Math). The module owns command, key, type and limit.
+const withMath = (t, params = {}) => {
+  const ctx = open(t);
+  ctx.session.transact('math', net => net.insert({ id: 'm', definitionUuid: 'sgrape.builtin.math', params, ui: { x: 0, y: 0 } }));
+  return ctx;
+};
+const toSpare = source => ({ source, sourceHandle: 'out', target: 'm', targetHandle: spareHandle });
+const mathNode = session => session.graph().stages.pixel.nodes.find(n => n.id === 'm');
+
+test('wire onto a spare input adds the port and the edge as one Undo step', t => {
+  const { session } = withMath(t), before = clone(session.graph());
+  assert.equal(session.valid(toSpare('a')), true);
+  assert.deepEqual(clone(session.graph()), before, 'validity check must not change the document');
+  session.connect(toSpare('a'));
+  assert.equal(mathNode(session).params.inputCount, 4);
+  assert.ok(session.graph().stages.pixel.edges.some(e => e.from[0] === 'a' && e.to[0] === 'm' && e.to[1] === 'input3'));
+  assert.equal(session.snapshot().projection.nodes.find(n => n.id === 'm').data.view.spare.key, 'input4');
+  session.history(false); assert.deepEqual(clone(session.graph()), before);
+});
+
+test('spare input refuses incompatible types and the module limit without editing', t => {
+  const { session } = withMath(t), before = clone(session.graph());
+  const colorOut = session.snapshot().projection.nodes.find(n => n.id === 'color').data.outputs[0].key;
+  const wrongType = { source: 'color', sourceHandle: colorOut, target: 'm', targetHandle: spareHandle };
+  assert.equal(session.valid(wrongType), false);
+  session.connect(wrongType); assert.deepEqual(clone(session.graph()), before);
+  const full = withMath(t, { inputCount: 32 }).session;
+  assert.equal(full.valid(toSpare('a')), false);
+});
+
+test('React layer has no node-specific branch for spare inputs', () => {
+  const dir = path.join(root, 'src/editor-react');
+  const source = fs.readdirSync(dir).filter(f => /\.tsx?$/.test(f)).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n')
+    .split('\n').filter(line => !line.includes('supportedDefinitions =')).join('\n');
+  assert.doesNotMatch(source, /['"]math['"]|builtin\.math|definitionUuid\s*===?\s*['"]/);
 });

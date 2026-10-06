@@ -32,12 +32,12 @@ export class UnsupportedGraphError extends Error {}
 
 // Slice coverage, not a second node registry. Expand with verified product cases.
 // 集中記錄本輪已接管能力；節點規則／選項仍只由真正的模組提供。
-export const supportedDefinitions = ['float', 'color', 'add', 'pixel_out'].map(key => 'sgrape.builtin.' + key);
+export const supportedDefinitions = ['float', 'color', 'add', 'math', 'pixel_out'].map(key => 'sgrape.builtin.' + key);
 export function requireSupported(graph: graph.GraphDocument['document']) {
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {
     const shown = reasons.length > 8 ? [...reasons.slice(0, 8), `…另有 ${reasons.length - 8} 項`] : reasons;
-    throw new UnsupportedGraphError('此入口目前支援 Float、Color RGBA、Add 與 Color Output 的常數 TOP 圖。未送出編輯或套用，請使用舊入口。\n' +
+    throw new UnsupportedGraphError('此入口目前支援 Float、Color RGBA、Add、Math 與 Color Output 的常數 TOP 圖。未送出編輯或套用，請使用舊入口。\n' +
       '不支援的內容：\n' + shown.map(reason => '・' + reason).join('\n'));
   }
 }

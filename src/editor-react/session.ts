@@ -4,6 +4,22 @@ import { project, type Projection, type FlowNode, type FlowEdge } from './projec
 import { HostClient, HostError, type StateResponse } from './host';
 
 type Sent = { graph: Graph; revision: number };
+
+// Handle id of a module-declared spare input. The module owns the command, port key,
+// type and limit; this layer only runs that command and wires the declared port.
+// 模組宣告的待新增輸入；命令、接孔、型別與上限都屬模組，這裡只執行並接到宣告的接孔。
+export const spareHandle = '__spare__';
+function wire(net: Network, c: Connection | FlowEdge) {
+  if (!c.sourceHandle || !c.targetHandle) throw Error('Missing port');
+  let port = c.targetHandle;
+  if (port === spareHandle) {
+    const node = net.node(c.target), spare = node.definition!.presentation?.(node.data!, net.context)?.spare;
+    if (spare?.direction !== 'input' || spare.count >= spare.limit) throw Error('No spare input');
+    node.edit(spare.command, {});
+    port = spare.key;
+  }
+  net.connect(net.node(c.source).port('output', c.sourceHandle), net.node(c.target).port('input', port), core.values.policy);
+}
 const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compiled: ReturnType<typeof compiler.compile>) => ({
   graph: sent.graph, revision: sent.revision, frontendArtifact: { protocol: compiler.protocol,
     targetId: host.target, baseRevision: sent.revision, snapshot: JSON.stringify(sent.graph),
@@ -92,14 +108,15 @@ export class EditorSession {
     net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), definitionUuid: uuid, params: {}, ui: { ...position } }));
   valid = (c: Connection | FlowEdge) => {
     if (!c.sourceHandle || !c.targetHandle) return false;
-    try { return this.document.networks.get('pixel')!.plan(core.values.policy, { kind: 'wire',
-      from: { node: c.source, port: c.sourceHandle }, to: { node: c.target, port: c.targetHandle } }).ok; }
-    catch { return false; }
+    try {
+      // A spare port does not exist yet: rehearse the real edit on a discarded candidate.
+      // 待新增接孔尚不存在：在丟棄的候選文件上走與提交相同的路徑。
+      if (c.targetHandle === spareHandle) { this.document.change(candidate => wire(candidate.networks.get('pixel')!, c)); return true; }
+      return this.document.networks.get('pixel')!.plan(core.values.policy, { kind: 'wire',
+        from: { node: c.source, port: c.sourceHandle }, to: { node: c.target, port: c.targetHandle } }).ok;
+    } catch { return false; }
   };
-  connect = (c: Connection) => this.transact('接線已更新', net => {
-    if (!c.sourceHandle || !c.targetHandle) throw Error('Missing port');
-    net.connect(net.node(c.source).port('output', c.sourceHandle), net.node(c.target).port('input', c.targetHandle), core.values.policy);
-  });
+  connect = (c: Connection) => this.transact('接線已更新', net => wire(net, c));
   remove = ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => this.transact('選取項目已刪除', net => {
     const ids = new Set(edges.map(edge => edge.id));
     net.disconnectAll(net.edges.filter(edge => ids.has(edge.id)));
