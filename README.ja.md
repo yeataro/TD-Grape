@@ -6,7 +6,11 @@ TouchDesigner の GLSL TOP／MAT 向けノードベースのシェーダーエ�
 
 ブラウザー上でノードグラフの編集、GLSL の生成、TouchDesigner の実行結果のプレビュー、パラメーターの調整ができ、画像処理やマテリアル制作に利用できます。
 
-![TD-Grape のノードベースのシェーダー編集画面](https://github.com/user-attachments/assets/95fcf86b-d066-4cdf-8b25-ea2c9e91bf74)
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/dd59025e-adc9-4db4-85d0-ceb6bf8c5b76)
+
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/ad814080-98b9-4a5b-b371-744ad936ae3f)
+
+![TD-Grape node-based shader editor](https://github.com/user-attachments/assets/7b5188d3-dbc3-4b25-804b-1a5d128d5580)
 
 ## プロジェクトの状況
 
@@ -39,7 +43,7 @@ TD-Grape は静的な GLSL コードを生成します。生成・適用済み�
 3. `.tox` を TouchDesigner の **Network Editor（ノードを配置する画面）** にドラッグして、TD-Grape の管理コンポーネントを追加します。
 4. Network Editor で **Tab** キーを押し、**OP Create Dialog** を開きます。
 
-   ![TouchDesigner の Grape コンポーネント作成メニュー](https://github.com/user-attachments/assets/b837b4f6-215b-4fee-a301-e3b730b77243)
+   ![TouchDesigner's Grape operator creation menu](https://github.com/user-attachments/assets/3d2a3727-2f6c-4634-851c-0871496b3618)
 
 5. **Grape** カテゴリーから、テクスチャー・画像処理用の **Grape TOP**、またはマテリアル用の **Grape MAT** を作成します。
 6. 作成したコンポーネントを選択し、パラメーターページの **Open Editor** をクリックして、ブラウザーの編集画面を開きます。
