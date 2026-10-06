@@ -50,3 +50,11 @@ input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100
 .spare-row > span { color: #a59aaf; font-size: 11px; }
 .spare-row .react-flow__handle { border-style: dashed; background: transparent; }
 .spare-row.full { opacity: .5; }
+/* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
+.status.offline { color: #f2cf86; }
+.recovery-help { font-size: 12px; max-width: 520px; } .recovery-help summary { cursor: pointer; }
+main { position: relative; }
+.conflict-float { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10;
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px;
+  background: #2c2533; border: 1px solid #8d6fb0; box-shadow: 0 6px 24px #0008; }
+.conflict-float .primary { background: #6a4f8f; }

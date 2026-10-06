@@ -39,10 +39,27 @@ export async function resetToDefault(host: HostClient, bootstrap: Bootstrap) {
   const result = await host.call<{ state: StateResponse['state'] }>('apply', applyRequest(host, bootstrap, sent, compiled));
   if (result.state?.revision !== sent.revision + 1 || !same(result.state.graph, sent.graph)) throw new HostError('宿主回覆與送出快照不一致。');
 }
-const conflictMessage = 'TD 文件已由其他操作更新；本地草稿保留。可「用編輯器草稿覆寫 TD」，或重新整理頁面改用 TD 版本（草稿可還原）。';
+const conflictMessage = 'TD 端的圖似乎有被修改，請選擇要使用的版本。';
+const offlineMessage = {
+  busy: 'TD 沒有回應（可能最小化）。修改保留在瀏覽器，TD 回來後自動送出。',
+  unreachable: '連不到 TD（可能卡住、已關閉或網路中斷）。修改保留在瀏覽器，連上後自動送出。',
+};
+// What a failed host call means for the document (design-interview Q28, measured 2026-10-07):
+// TD's queue answers manager_not_responding / manager_busy / manager_unavailable only when it
+// made NO change; a transport failure or other 5xx may still have landed and must be checked.
+// 依實測分類：TD 明確回覆「未處理」＝確定沒改；連線失敗或其他 5xx 可能已執行，須查版本、不重送。
+type Failure = { phase: 'offline'; link: 'busy' | 'unreachable'; landed: boolean } | { phase: 'uncertain' | 'conflict' | 'error' };
+function classify(error: unknown): Failure {
+  if (!(error instanceof HostError)) return { phase: 'uncertain' };
+  if (error.status === 409) return { phase: 'conflict' };
+  if (error.status === 503 && ['manager_not_responding', 'manager_busy'].includes(error.code)) return { phase: 'offline', link: 'busy', landed: false };
+  if (error.status === 503 && error.code === 'manager_unavailable') return { phase: 'offline', link: 'unreachable', landed: false };
+  if (error.status === 0) return { phase: 'offline', link: 'unreachable', landed: true };
+  return { phase: error.status >= 500 ? 'uncertain' : 'error' };
+}
 export type EditorState = { projection: Projection; version: number; revision: number; dirty: boolean;
-  undo: boolean; redo: boolean; phase: 'ready' | 'sending' | 'error' | 'uncertain' | 'conflict';
-  message: string; glsl: string; targetPath: string };
+  undo: boolean; redo: boolean; phase: 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
+  link?: 'busy' | 'unreachable'; message: string; glsl: string; targetPath: string };
 
 // One authored document; drafts, selection and RF measurements are transient.
 // 本輪真正的 UI caller 共用交易、圖歷史與交付；沒有通用命令／事件框架。
@@ -53,13 +70,14 @@ export class EditorSession {
   private past: Graph[] = [];
   private future: Graph[] = [];
   private timer?: ReturnType<typeof setTimeout>;
+  private recovery?: ReturnType<typeof setTimeout>;
   private pending?: Promise<void>;
   private disposed = false;
   private blocked = false;
   private confirmed: Graph;
   private uncertain?: Sent;
   constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse,
-    private readonly delay = 650) {
+    private readonly delay = 650, private readonly retry = 5000) {
     if (loaded.savedStateIssue || loaded.readOnlyReason || loaded.upgradeReview) throw Error(loaded.readOnlyReason || '此文件需要在舊入口處理載入問題。');
     if (loaded.frontendCompiler?.protocol !== compiler.protocol || loaded.frontendCompiler.catalogHash !== bootstrap.catalogHash)
       throw Error('前端核心與 TD bootstrap 版本不一致；請重新載入同一建置。');
@@ -193,35 +211,81 @@ export class EditorSession {
           phase: 'ready', message: '已套用 TD；專案尚需保存' });
       } catch (error) {
         if (this.disposed) return;
-        const conflict = error instanceof HostError && error.status === 409;
-        const unknown = !(error instanceof HostError) || error.status === 0 || error.status >= 500;
-        this.blocked = conflict || unknown; this.uncertain = this.blocked ? sent : undefined;
-        this.status({ phase: conflict ? 'conflict' : unknown ? 'uncertain' : 'error',
-          message: conflict ? conflictMessage + ' ' + String(error)
-            : (this.blocked ? '交付未確認，已停止自動送出；請檢查連線。' : 'TD 拒絕套用：') + String(error) });
+        this.fail(classify(error), error, sent);
         return;
       }
     }
   }
+  // Editing never waits for this: sending stops, the document stays editable (Q28).
+  // 編輯不等 TD：只停止送出，文件照常可編輯；未連線／結果不明時才排程重試。
+  private fail(failure: Failure, error: unknown, sent?: Sent) {
+    this.blocked = failure.phase !== 'error';
+    if (sent && (failure.phase === 'uncertain' || (failure.phase === 'offline' && failure.landed))) this.uncertain = sent;
+    this.status(failure.phase === 'offline' ? { phase: 'offline', link: failure.link, message: offlineMessage[failure.link] }
+      : { phase: failure.phase, link: undefined, message: failure.phase === 'conflict' ? conflictMessage
+        : failure.phase === 'uncertain' ? '交付結果不明，已停止自動送出；正在向 TD 確認版本。' + String(error) : 'TD 拒絕套用：' + String(error) });
+    this.recover();
+  }
+  // Only while disconnected or unsure, only when the page is visible, never overlapping.
+  // 只在未連線或結果不明期間、頁面可見時重試，且不重疊；平常不輪詢，TD 端不增加工作。
+  private recover() {
+    clearTimeout(this.recovery);
+    if (this.disposed || !['offline', 'uncertain'].includes(this.state.phase)) return;
+    this.recovery = setTimeout(async () => {
+      if (typeof document === 'undefined' || !document.hidden) await this.check();
+      this.recover();
+    }, this.retry);
+  }
+  // Read-only: never resends a write by itself. A matching TD document resumes delivery (Q6).
+  // 只讀 TD 狀態；確認 TD 未被他處修改後才續送未送出的修改。
   check = async () => {
     if (this.pending) return;
+    let result: StateResponse;
+    try { result = await this.host.call<StateResponse>('state'); }
+    catch (error) {
+      if (this.disposed) return;
+      const failure = classify(error);
+      if (failure.phase === 'offline') this.status({ phase: 'offline', link: failure.link, message: offlineMessage[failure.link] });
+      else this.notice(error);
+      return;
+    }
+    if (this.disposed) return;
+    if (result.frontendCompiler.catalogHash !== this.bootstrap.catalogHash) {
+      this.blocked = true; this.status({ phase: 'error', link: undefined, message: '宿主版本已變更，請下載草稿後重新開啟。' }); return;
+    }
+    const state = result.state, sent = this.uncertain;
+    if (sent && state.revision === sent.revision + 1 && same(state.graph, sent.graph)) this.confirmed = sent.graph;
+    else if (state.revision !== this.state.revision || !same(state.graph, this.confirmed)) {
+      this.blocked = true; this.status({ phase: 'conflict', link: undefined, message: conflictMessage }); return;
+    }
+    this.blocked = false; this.uncertain = undefined;
+    const dirty = !same(this.graph(), this.confirmed);
+    this.status({ revision: state.revision, dirty, phase: 'ready', link: undefined,
+      message: dirty ? '已恢復連線，正在送出修改。' : '已恢復連線。' });
+    if (dirty) await this.flush();
+  };
+  // Conflict choice "TD 端" (Q28, 2026-10-07 human chose A): adopt TD's document as an
+  // ordinary history step, so one Undo recalls the editor's version without blocking anything.
+  // 衝突時選「TD 端」：把 TD 版本當成一般編輯步驟採用；按一次 Undo 即叫回編輯端的修改（重新整理後失效）。
+  useRemote = async () => {
+    if (this.pending || this.state.phase !== 'conflict') return;
     try {
       const result = await this.host.call<StateResponse>('state');
       if (result.frontendCompiler.catalogHash !== this.bootstrap.catalogHash) throw Error('宿主版本已變更，請下載草稿後重新開啟。');
-      const state = result.state, sent = this.uncertain;
-      if (sent && state.revision === sent.revision + 1 && same(state.graph, sent.graph)) this.confirmed = sent.graph;
-      else if (state.revision !== this.state.revision || !same(state.graph, this.confirmed)) {
-        this.blocked = true; this.status({ phase: 'conflict', message: conflictMessage }); return;
-      }
-      this.blocked = false; this.uncertain = undefined;
-      this.status({ revision: state.revision, dirty: !same(this.graph(), this.confirmed), phase: 'ready',
-        message: '已確認 TD 版本；若有未送出修改，可按「套用」。' });
+      const remote = result.state.graph;
+      requireSupported(remote);
+      const before = this.graph(), next = new core.GraphDocument(remote, core.registry);
+      const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, remote, core.registry));
+      this.confirmed = next.snapshot(); this.blocked = false; this.uncertain = undefined;
+      this.past.push(before); this.future = []; this.document = next;
+      this.state = { ...this.state, revision: result.state.revision, phase: 'ready', link: undefined };
+      this.commit(projection, '已改用 TD 版本；按 Undo 可叫回編輯端的修改');
+      clearTimeout(this.timer); this.status({ dirty: false }); // identical to TD: nothing to send
     } catch (error) { this.notice(error); }
   };
-  // Migration-period convenience (old/new entries coexist), not product behaviour.
-  // Rebase the draft on TD's latest revision and send it through the normal path;
-  // a further change before delivery still returns a conflict.
-  // 遷移期便利行為：以最新 revision 為基準重送草稿，照常產碼／驗證；期間再變仍擋。
+  // Conflict choice "編輯端" (Q7/Q28): rebase the draft on TD's latest revision and send it
+  // through the normal path; a further change before delivery still returns a conflict.
+  // 衝突時選「編輯端」：以最新 revision 為基準重送草稿，照常產碼／驗證；期間再變仍擋。
   overwrite = async () => {
     if (this.pending || this.state.phase !== 'conflict') return;
     try {
@@ -244,5 +308,5 @@ export class EditorSession {
         (this.state.dirty ? '（仍有新修改待套用）' : ''));
     } catch (error) { this.notice(error); }
   };
-  dispose() { this.disposed = true; clearTimeout(this.timer); this.listeners.clear(); }
+  dispose() { this.disposed = true; clearTimeout(this.timer); clearTimeout(this.recovery); this.listeners.clear(); }
 }

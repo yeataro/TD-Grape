@@ -14,6 +14,7 @@ const nodeTypes: NodeTypes = { grape: NodeCard };
 const target = new URLSearchParams(location.search).get('target') ?? '';
 const oldURL = '/shader/' + encodeURIComponent(target) + '/';
 const draftKey = 'grape-react-draft:' + target;
+const recoveryHelp = '請在執行 TD 的電腦上確認：TD 仍開著，若已最小化請還原視窗；全域 Cooking 已開啟；TD 若正在處理耗時工作請稍候；遠端裝置的區網連線正常。TD 重開後，請從 Grape 元件重新開啟編輯器。';
 function download(value: unknown, name = 'grape-draft.json') {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
@@ -80,24 +81,29 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
       <label><input type="checkbox" checked={bodyDrag} onChange={event => setBodyDrag(event.target.checked)} />Body 拖曳</label>
       <label><input type="checkbox" checked={snap} onChange={event => setSnap(event.target.checked)} />Snap</label>
       <span className="spacer" />
-      <button disabled={!state.dirty || state.phase === 'sending' || ['uncertain', 'conflict'].includes(state.phase)} onClick={() => void session.flush()}>套用</button>
+      <button disabled={!state.dirty || ['sending', 'offline', 'uncertain', 'conflict'].includes(state.phase)} onClick={() => void session.flush()}>套用</button>
       <button disabled={state.phase === 'sending'} onClick={() => void session.save()}>保存 TD 專案</button>
       <button onClick={() => setShowCode(!showCode)}>GLSL</button>
       <button onClick={() => download({ target, graph: session.graph() })}>下載草稿</button>
     </nav>
     <div role="status" className={`status ${state.phase}`}><span>{state.message}</span>
-      <small>{state.phase === 'sending' ? '套用中' : state.dirty ? '本地修改未套用' : '與 TD 圖同步'} · revision {state.revision}</small>
-      {['uncertain', 'conflict'].includes(state.phase) && <button onClick={() => void session.check()}>檢查連線與版本</button>}
-      {state.phase === 'conflict' && <button onClick={() => {
-        if (confirm('TD 那邊的修改會被編輯器草稿蓋掉，確定覆寫？')) void session.overwrite();
-      }}>用編輯器草稿覆寫 TD</button>}
+      <small>{state.phase === 'sending' ? '正在送到 TD' : state.dirty ? '有修改尚未送到 TD' : '已同步到 TD'} · revision {state.revision}</small>
+      {['offline', 'uncertain'].includes(state.phase) && <button onClick={() => void session.check()}>重試連線</button>}
+      {state.phase === 'offline' && <details className="recovery-help"><summary>如何恢復</summary>{recoveryHelp}</details>}
     </div>
     {draft && <div className="draft-notice">找到此頁先前的草稿；目前顯示 TD 文件。
       <button onClick={() => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw Error('草稿目標不同'); if (session.restoreDraft(saved.graph)) setDraft(null); } catch (error) { session.notice(error); } }}>還原草稿</button>
       <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>下載先前草稿</button>
       <button onClick={() => { setDraft(null); }}>使用 TD 文件</button>
     </div>}
-    <main><div className="canvas" inert={!!draft}><Canvas session={session} projection={state.projection} bodyDrag={bodyDrag} snap={snap} />{draft && <div className="draft-blocker" />}</div>
+    <main>
+      {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
+      {state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label="版本選擇">
+        <span>TD 端的圖似乎有被修改，請選擇要使用的版本。</span>
+        <button className="primary" onClick={() => void session.overwrite()}>編輯端（建議）</button>
+        <button onClick={() => void session.useRemote()}>TD 端</button>
+      </div>}
+      <div className="canvas" inert={!!draft}><Canvas session={session} projection={state.projection} bodyDrag={bodyDrag} snap={snap} />{draft && <div className="draft-blocker" />}</div>
       {showCode && <pre aria-label="Generated GLSL">{state.glsl || '首次套用後顯示產碼。'}</pre>}</main>
     <footer>本輪：常數 TOP · Float／Color RGBA／Add／Math／Color Output · 放開／提交數值後自動套用 · Ctrl/Cmd＋Z 撤銷</footer>
   </TextContext.Provider></SessionContext.Provider>;

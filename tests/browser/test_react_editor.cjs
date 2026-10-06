@@ -21,19 +21,21 @@ function fixture() {
 }
 (async () => {
   fs.mkdirSync(reportFolder, { recursive: true });
-  let state = { graph: fixture(), revision: 1, targetId: target }, fail = false;
+  let state = { graph: fixture(), revision: 1, targetId: target }, fail = false, down = false;
   const writes = [], checks = [], errors = [];
   const server = http.createServer(async (req, res) => {
     try {
       if (req.url.startsWith('/api/')) {
         const action = req.url.split('/').at(-1); let raw = ''; for await (const chunk of req) raw += chunk;
         const body = raw && JSON.parse(raw); res.setHeader('Content-Type', 'application/json');
+        // As measured on live TD while minimized: the queue answers, nothing is processed.
+        if (down) { res.statusCode = 503; return res.end(JSON.stringify({ code: 'manager_not_responding', error: 'TD did not process this request.' })); }
         if (action === 'state') return res.end(JSON.stringify({ state, target: '/test/formal_top', shaderKind: 'top',
           frontendCompiler: { protocol: 'grape.top.ts.1', catalogHash: bootstrap.catalogHash, required: true } }));
         if (action === 'save') return res.end(JSON.stringify({ saved: 'fixture.toe' }));
         writes.push(body);
         if (fail) { res.statusCode = 422; return res.end(JSON.stringify({ error: 'fixture GPU refused', layer: 'gpu', code: 'shader_compile' })); }
-        assert.equal(body.revision, state.revision);
+        if (body.revision !== state.revision) { res.statusCode = 409; return res.end(JSON.stringify({ error: 'Conflict: document revision conflict' })); }
         assert.deepEqual(JSON.parse(body.frontendArtifact.snapshot), body.graph);
         state = { graph: body.graph, revision: state.revision + 1, targetId: target };
         return res.end(JSON.stringify({ state }));
@@ -149,6 +151,30 @@ function fixture() {
     await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle();
     assert.equal(state.graph.stages.pixel.nodes.at(-1).id, newId);
     checks.push('add, delete selection and Undo preserve stable node identity');
+    // TD away (Q28): editing continues, recovery resends; a conflict floats without blocking.
+    const aValue = () => state.graph.stages.pixel.nodes.find(n => n.id === 'a').params.value;
+    const statusText = () => page.getByRole('status').innerText();
+    down = true; await field('a value 0').fill('7'); await field('a value 0').press('Enter'); await settle();
+    assert.match(await statusText(), /TD 沒有回應（可能最小化）/);
+    await page.getByText('如何恢復', { exact: true }).waitFor();
+    await field('a value 0').fill('8'); await field('a value 0').press('Enter'); await settle();
+    assert.equal(await field('a value 0').inputValue(), '8'); assert.equal(aValue(), 4);
+    down = false;
+    for (let i = 0; i < 40 && aValue() !== 8; i++) await page.waitForTimeout(250);
+    assert.equal(aValue(), 8); assert.match(await statusText(), /已同步到 TD/);
+    checks.push('TD not responding: hint + recovery help, editing continues, automatic resend on return');
+    const theirs = clone(state.graph); theirs.stages.pixel.nodes.find(n => n.id === 'a').params.value = 1;
+    state = { graph: theirs, revision: state.revision + 1, targetId: target };
+    await field('a value 0').fill('9'); await field('a value 0').press('Enter'); await settle();
+    await page.getByText('TD 端的圖似乎有被修改', { exact: false }).first().waitFor();
+    assert.equal(await page.locator('.canvas').getAttribute('inert'), null);
+    await field('a value 0').fill('10'); await field('a value 0').press('Enter'); await settle();
+    assert.equal(await field('a value 0').inputValue(), '10');
+    await page.getByRole('button', { name: 'TD 端', exact: true }).click(); await settle();
+    assert.equal(await field('a value 0').inputValue(), '1'); assert.equal(aValue(), 1);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle();
+    assert.equal(await field('a value 0').inputValue(), '10'); assert.equal(aValue(), 10);
+    checks.push('conflict floats without blocking; TD side adopted; one Undo recalls and resends the editor version');
     await page.screenshot({ path: path.join(reportFolder, 'browser.png') });
     assert.deepEqual(errors, []); checks.push('save and reopen use host document; runtime fields excluded');
     fs.writeFileSync(path.join(reportFolder, 'browser.json'), JSON.stringify({ passed: true, browser: browser.version(), checks, writes: writes.length }, null, 2));

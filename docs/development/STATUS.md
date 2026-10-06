@@ -2,6 +2,18 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.16 — TD 不在時的編輯、Math 動態輸入 — 2026-10-07
+
+Claude 接手後第一輪（承接 Refactor.15 人類 UX 驗收結論與 design-interview Q28／Q29）。**待人類實機確認；Human Takeover 仍未執行。**
+
+- **TD 不在時的編輯（產品功能，Q28）：** 依實測（workspace `work/in-place-refactor-design/td-unresponsive-facts-2026-10-07.md`）分類宿主回覆：`manager_not_responding`／`manager_busy` 視為「TD 沒有回應（可能最小化）」且確定未修改；`manager_unavailable` 與連線失敗為「連不到 TD」，後者寫入可能已落地，保留結果不明保護、不自動重送。未連線期間只在頁面可見時每 5 秒唯讀查詢，不重疊；平常不輪詢。TD 回來且圖未變即自動續送（Q6）；圖已變則浮動提示「TD 端的圖似乎有被修改」，「編輯端（建議）／TD 端」，不擋編輯。「TD 端」把 TD 版本當成一般歷史步驟採用，一次 Undo 叫回編輯端版本（人類選 A；重新整理後失效，列「已發現、尚未處理」）。狀態列改為「已同步到 TD／有修改尚未送到 TD」，並附舊產品的「如何恢復」指引。原遷移期「用編輯器草稿覆寫 TD」轉為產品的「編輯端」。
+- **Math 動態輸入（Q29 約束）：** 新入口支援 Math；拖線到模組宣告的「＋ 新增輸入」執行模組自己的 append 命令並接到宣告的接孔，同一筆交易、一次 Undo。可接性在丟棄的候選文件上走與提交相同的路徑。React 只認 `spare` 契約，無節點專用分支（session 測試以原始碼檢查守住）。
+- **真實 TD：** 以同一生成核心與 compiler 套用 Float→Math（((0.25+0.25)×2)+0.1）到 `/project1/Grape_TOP_React`，revision 196→197，GLSL TOP 無錯誤，rgba16float 抽樣 1.0996（預期 1.1）；之後還原原圖（198）。最小化／忙碌／卡住的宿主回覆見上述實測文件。新編輯器 UI 在真實 TD 最小化下的操作尚待人類確認。
+- **自動驗證：** 核心 97、session 24、browser 11 組（新增：spare 一次放開新增接孔與線且線端貼齊實際 Handle、一次 Undo；TD 無回應時提示／可編輯／自動續送；衝突浮動不鎖畫布、TD 端採用、一次 Undo 叫回並送出）。Browser 的宿主回覆為替身。
+- 同日其他（另有 commit）：開圖拒絕列出不支援內容與「載入預設圖」（遷移期便利行為）、GrapeManager Legacy 分組標注與 [LEGACY-PYTHON](LEGACY-PYTHON.md)、AGENTS.md 權威範圍／框架耦合／理解衝突同步規則。
+
+退回：兩項分屬兩個 commit，可單獨 revert。TD 端網頁資產目前為 `Use External Folder` 開啟（開發模式），交付 TOE 前須依 AGENTS.md 打包進 VFS。IconGen → icon 未操作。
+
 ## Refactor.15 — B 案首條正式 React TOP 路徑 — 2026-10-06
 
 B 案已開始實作；本段為最新狀態，以下 Refactor.14 等段落保留歷史。第一條常數 TOP 的真實開圖、編輯、歷史、前端產碼、TD 套用、保存／重開已可供 review。**Human Takeover 與人類 UX 審閱尚未執行；不是整個 React 遷移完成。** A 案及評估版來源保持不變。

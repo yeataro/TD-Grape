@@ -33,7 +33,7 @@ function fixture() {
   graph.privateMetadata = { keep: 'roundtrip' };
   return graph;
 }
-function open(t, request) {
+function open(t, request, retry = 60000) {
   let remote = { graph: fixture(), revision: 4, targetId: target };
   const calls = [];
   const loaded = () => ({ state: clone(remote), shaderKind: 'top', target: '/test/family',
@@ -46,7 +46,7 @@ function open(t, request) {
       { state: (remote = { graph: body.graph, revision: body.revision + 1, targetId: target }) };
     return result instanceof Response ? result : new Response(JSON.stringify(result));
   };
-  const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000);
+  const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000, retry);
   t.after(() => session.dispose());
   return { session, calls, loaded };
 }
@@ -155,7 +155,9 @@ test('lost response blocks replay; read-only check can confirm the previously ac
     throw Error('response lost');
   });
   session.transact('edit', net => setValue(net, 'a', 7)); await session.flush();
-  assert.equal(session.snapshot().phase, 'uncertain'); assert.equal(session.snapshot().dirty, true);
+  // A transport failure reads as "can't reach TD", but the write may have landed: no replay.
+  assert.equal(session.snapshot().phase, 'offline'); assert.equal(session.snapshot().link, 'unreachable');
+  assert.equal(session.snapshot().dirty, true);
   await session.flush(); assert.equal(calls.length, 1);
   await session.check(); assert.equal(calls.length, 2); assert.equal(calls[1].action, 'state');
   assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 5);
@@ -338,4 +340,53 @@ test('React layer has no node-specific branch for spare inputs', () => {
   const source = fs.readdirSync(dir).filter(f => /\.tsx?$/.test(f)).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n')
     .split('\n').filter(line => !line.includes('supportedDefinitions =')).join('\n');
   assert.doesNotMatch(source, /['"]math['"]|builtin\.math|definitionUuid\s*===?\s*['"]/);
+});
+
+// TD away (design-interview Q28; responses as measured on live TD 2026-10-07).
+const notResponding = () => new Response(JSON.stringify({ code: 'manager_not_responding', error: 'TD did not process this request.' }), { status: 503 });
+const until = async (ok, ms = 2000) => { const end = Date.now() + ms; while (!ok()) { if (Date.now() > end) throw Error('timed out'); await new Promise(r => setTimeout(r, 5)); } };
+const valueOf = (session, id) => session.graph().stages.pixel.nodes.find(n => n.id === id).params.value;
+
+test('TD not responding: editing continues, nothing replays, recovery resends automatically', async t => {
+  let down = true; const applies = [];
+  const { session, loaded } = open(t, async (action, body, remote) => {
+    if (down) return notResponding();
+    if (action === 'state') return remote.get();
+    applies.push(body); const state = { graph: body.graph, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+  }, 20);
+  session.transact('edit', net => setValue(net, 'a', 5)); await session.flush();
+  assert.equal(session.snapshot().phase, 'offline'); assert.equal(session.snapshot().link, 'busy');
+  assert.match(session.snapshot().message, /TD 沒有回應（可能最小化）/);
+  session.transact('more', net => setValue(net, 'b', 6));
+  assert.equal(valueOf(session, 'b'), 6, 'editing is not blocked while TD is away');
+  await session.flush(); assert.equal(applies.length, 0, 'no write while offline');
+  down = false;
+  await until(() => session.snapshot().phase === 'ready' && !session.snapshot().dirty);
+  assert.equal(applies.length, 1); assert.equal(applies[0].revision, 4);
+  assert.equal(loaded().state.revision, 5);
+  assert.deepEqual(loaded().state.graph, clone(session.graph()));
+});
+
+test('TD changed while away: conflict; TD side is adopted and one Undo recalls the editor version', async t => {
+  let down = true, changed = false;
+  const { session, loaded } = open(t, async (action, body, remote) => {
+    if (down) return notResponding();
+    if (action === 'state') { if (!changed) { changed = true; otherEntryEdits(remote); } return remote.get(); }
+    if (body.revision !== remote.get().state.revision) return new Response(JSON.stringify({ error: 'Conflict: stale revision' }), { status: 409 });
+    const state = { graph: body.graph, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+  }, 20);
+  session.transact('edit', net => setValue(net, 'a', 5)); await session.flush();
+  const draft = clone(session.graph());
+  down = false;
+  await until(() => session.snapshot().phase === 'conflict');
+  assert.match(session.snapshot().message, /似乎有被修改/);
+  assert.deepEqual(clone(session.graph()), draft, 'conflict never replaces the editor document');
+  await session.useRemote();
+  assert.deepEqual(clone(session.graph()), loaded().state.graph);
+  assert.equal(session.snapshot().phase, 'ready'); assert.equal(session.snapshot().dirty, false);
+  assert.equal(session.snapshot().revision, 5);
+  session.history(false);
+  assert.deepEqual(clone(session.graph()), draft, 'one Undo recalls the editor version');
+  await session.flush();
+  assert.deepEqual(loaded().state.graph, draft); assert.equal(loaded().state.revision, 6);
 });
