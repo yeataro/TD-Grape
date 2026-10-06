@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.17.2 — 補開放 Vector 等 5 個節點、新增選單不再提供已淘汰定義 — 2026-10-07
+
+人類以舊編輯器截圖發現：新編輯器建出舊產品已淘汰的 `vec2`（舊產品標為「Vector 2 · Constant」），卻打不開舊產品現行的 Vector 與固定入口「vec2」。
+
+- **事實（舊產品）**：2026-09-18 起新增清單提供 Scalar／Vector 與 16 個固定型別入口（同一模組、`fixedType` 鎖型別）；舊 `float`／`vec2`／`vec3`／`vec4` 定義只為打開舊圖，新增清單明確排除（`src/editor/functions_ui.js` availableEntries），標題加「· Constant」以示區別。兩者都是常數，本質相同。人類決定新產品「建立 vec2 常數」只留一種做法：Vector 鎖定型別。
+- **能打開**：加入 Vector、Combine、Replace、Swizzle、Convert（共 52）。17 紀錄「需先設定參數」更正見下段。
+- **能新增**：以「能打開」為主，扣掉已淘汰的 `float`／`vec2`／`vec3`／`vec4`（`creatableDefinitions`，人類同意的新能力：不另維護第二份清單）。固定入口（新增清單直接出現「vec2」等）待討論；目前以 Vector 再選型別建立同一結果。
+- **驗證**：session 27（新增：新增選單排除已淘汰定義；舊產品鎖型別 Vector 可打開、改型別被核心拒絕且圖不變）、browser 14 組（新增：Combine 接 vec3 一次涵蓋 X／Y／Z 並可 Undo、Swizzle 控制項改 mask、新增選單內容）。真實 TD 逐一套用 51 個可開節點 51／51 GPU 通過，測試圖已還原、無錯誤。
+- **已知顯示差異（不影響運算）**：舊產品鎖型別的 Vector 在新編輯器標題顯示「Vector」並出現型別選單（改選被拒）；節點自訂名稱未顯示；Combine／Replace 拖線時不標示涵蓋範圍。
+
 ## Refactor.17.1 — 測試便利的小修正 — 2026-10-07
 
 17 完成後人類提出的小修正（AGENTS.md 版本號規則：N.1 不代表 17 沒過）。
@@ -17,7 +27,7 @@
 依人類選擇「新編輯器開放更多節點」。**待人類實機確認。**
 
 - `supportedDefinitions` 由 5 個擴為 47 個：數值與輸出、四則與 Math、abs／sign／floor／ceil／round／trunc／fract／sqrt／sin／cos／min／max／clamp／mix／smoothstep／dot／length／normalize、Compare 與 equal／notEqual／大小比較、any／all／not／If／isnan／isinf、Split RGBA／Split／Compose RGBA／Router。只改覆蓋清單；React 未加任何節點專用程式（原始碼檢查測試仍通過）。開圖拒絕與頁尾文字改為「TOP 常用節點（不含 Uniform、子圖、Frame）」。
-- 盤點：53 個 TOP 模組中 47 個不需新 UI 即可開放；Combine／Convert／Replace／Swizzle／Vector 以預設參數無法建立，Uniform 待決策（CURRENT 待處理 1）。
+- 盤點：53 個 TOP 模組中 47 個不需新 UI 即可開放；**（17.2 更正）**原寫「Combine／Convert／Replace／Swizzle／Vector 以預設參數無法建立」是錯的：盤點程式直接組圖、繞過了核心 `Network.insert` 會補入模組預設參數的路徑；走實際新增路徑五者皆可建立、產碼，已於 17.2 開放。Uniform 待決策（CURRENT 待處理 1）。
 - 自動驗證：session 新增「每個開放節點都能新增、接到 Color Output（必要時經 length／length:vec2／If／any→If）、以前端 compiler 產碼且確實輸出」，25 項全過；核心 97、browser 11 組。
 - 真實 TD：同一路由逐一套用 46 張圖到 `/project1/Grape_TOP_React`，46／46 HTTP 200（宿主 GPU 驗證通過），之後還原原圖（revision 272，GLSL TOP 無錯誤）。只驗證 GPU 編譯，數值正確性除 Math／Float／Add 外未逐一抽樣。私人證據 `work/refactor/react-node-batch1/live.json`。
 - TD 以 `/dev_tools/grape_editor` `DevMode()` 切回開發模式服務 Refactor.17；未保存 TOE。

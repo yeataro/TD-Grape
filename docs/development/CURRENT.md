@@ -6,7 +6,9 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.17.1**（2026-10-07）——測試便利小修正：右鍵拖曳框選（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)）、右鍵拖曳後不跳瀏覽器選單、Body 拖曳預設開啟。
+**最新交付：Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
+
+**Refactor.17.1**——測試便利小修正：右鍵拖曳框選（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)）、右鍵拖曳後不跳瀏覽器選單、Body 拖曳預設開啟。
 
 **Refactor.17**——新入口開放 47 個常用節點（原 5 個），每個都經自動測試接到輸出並產碼、真實 TD GPU 編譯通過；**待人類實機確認**。外觀未整理（同 Math，Q22 後續處理）。
 
@@ -20,7 +22,7 @@
 - 開不了圖時列出不支援的具體內容（`f803dca`）。
 - 開不了圖時可「載入預設圖」恢復測試環境；編輯器內衝突時可「用編輯器草稿覆寫 TD」（`4017f53`）。
 
-自動測試：core 97 + session 25 項通過；13 組 browser 情境通過 ✅（2026-10-07）。
+自動測試：core 97 + session 27 項通過；14 組 browser 情境通過 ✅（2026-10-07）。
 
 **同日其他：** `GrapeManager` 依去向分組並加 Legacy 標注，新增 [舊 Python 現況清單](LEGACY-PYTHON.md)（`5a08665`）；重構歷史已查證，寫在該文件。
 
@@ -37,8 +39,9 @@
    - **仍在舊 Python（新 Manager 使用中，GrapeManager 黃框）**：宣告新增／改名／刪除（`sgrape_sources.edit`）、建立與同步 TD 原生參數（`configure`）、改值（`write_value`）、原生值 Undo（`sgrape_history`）、原生參數遺失偵測。
    - **完全沒有**：React 的 Values 面板與 Uniform 節點選擇宣告的 UI；時間等預設驅動、陣列、矩陣、Attribute、POP Buffer、Spec Constant；拖曳即時更新。
    - **待決策**：(1) 宣告管理放哪——依 Q29「誰需要」，宣告屬作品→核心，建立原生參數只有 TD 能做→宿主，目前兩者混在 `sgrape_sources.py`；(2) 新入口的 Values 面板與節點選單；(3) 支援範圍先做數值／顏色，或一次對齊舊產品。
-2. **下一切片候選：** 需先設定參數的 Combine／Convert／Replace／Swizzle／Vector（建立時沒有可用預設，需查舊產品如何建立）；或其他舊產品功能（Q29：舊產品是功能基準，不是模仿對象）。
-3. **Legacy 盤點續作：** `src/core/` 其餘 6 檔與 TOE 內其他 Python（見 [LEGACY-PYTHON](LEGACY-PYTHON.md)「尚未整理」）。
+2. **固定入口（討論中，未實作）**：新增清單直接提供「vec2」等 16 個固定型別（同 Vector／Scalar 模組 + `fixedType`），卡片顯示固定名稱、鎖定時不顯示型別選單。入口清單該放哪裡（舊產品寫在畫面程式）待定。
+3. **下一切片候選：** 其他舊產品功能（Q29：舊產品是功能基準，不是模仿對象）。
+4. **Legacy 盤點續作：** `src/core/` 其餘 6 檔與 TOE 內其他 Python（見 [LEGACY-PYTHON](LEGACY-PYTHON.md)「尚未整理」）。
 
 ## 已發現、尚未處理
 
@@ -50,6 +53,7 @@
 | 2026-10-07 | 沒有對應 Grape OP 時也能先寫草稿——屬之後部署到網路（可能另開倉庫）的議題，先不做。 |
 | 2026-10-07 | 舊編輯器匯入草稿用的 `POST inspect` 新 Manager 未提供（已斷）。 |
 | 2026-10-07 | **改型別後變不合法的線怎麼處理（待人類想清楚，不實作）**：舊產品自動拔線（同一次 Undo，開發設定可關）；新編輯器目前留紅線、產碼失敗、TD 保留上次成功結果；人類構想「留紅線當參考、產碼時當作斷開」——類似已確認意圖「缺失節點與線保留可見但不參與運算」，但斷開後輸入用什麼值、使用者是否察覺結果改變等邏輯未想通。紅線由核心 `edge.connection().valid` 判斷、projection 決定顏色，RF 只負責畫。 |
+| 2026-10-07 | **教訓**：開放節點前要先查舊產品新增清單是否刻意排除（17 曾放出已淘汰定義）；調查要走產品實際路徑（17 盤點繞過 `insert` 補預設而誤判）。 |
 | 2026-10-07 | 最終產品不顯露瀏覽器特徵（原生右鍵選單等，可留一處允許）——**移植大致完成後才做**（design-interview Q30）。選單用 JS 攔截，其他痕跡多為 CSS。 |
 | 2026-10-07 | 新入口的 Math 卡片樣式很亂（人類實機觀察）。不是本階段重點；面板／外觀統一處理時一併整理（Q22：UI 美觀是產品品質，不可省略）。 |
 

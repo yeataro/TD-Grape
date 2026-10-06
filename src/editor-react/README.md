@@ -1,6 +1,6 @@
 # 正式 React TOP 入口
 
-這是 B 案第一條產品路徑，已接真實 TD 文件與保存；不是 `work/` 的評估版。目前開放 TOP／pixel 的 47 個常用節點（清單見 [core.ts](core.ts) 的 `supportedDefinitions`，Refactor.17）；不含 Uniform、子圖、Frame，以及需先設定參數的 Combine／Convert／Replace／Swizzle／Vector。其他能力仍由舊入口服務。
+這是 B 案第一條產品路徑，已接真實 TD 文件與保存；不是 `work/` 的評估版。目前能打開 TOP／pixel 的 52 個常用節點（`supportedDefinitions`）；新增選單為其中扣掉已淘汰 `float`／`vec2`／`vec3`／`vec4` 的 `creatableDefinitions`（同舊產品）。不含 Uniform、子圖、Frame。其他能力仍由舊入口服務。
 
 從 Family 的舊編輯器按 **React TOP**，或開啟同 origin 的 `/react-editor.html?target=<Family UUID>`。新頁可回到舊入口；不同頁同時寫同一份圖會受宿主 revision 保護，不會合併兩張活動圖。
 

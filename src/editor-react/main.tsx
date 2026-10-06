@@ -4,7 +4,7 @@ import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBe
   type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './style.css';
-import { core, supportedDefinitions, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
+import { core, creatableDefinitions, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, type StateResponse } from './host';
 import { EditorSession, resetToDefault } from './session';
 import { RightDragSelect } from './RightDragSelect';
@@ -75,7 +75,7 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
       <select aria-label="新增節點" value="" onChange={event => {
         const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
         session.add(event.target.value, flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 }));
-      }}><option value="" disabled>＋ 新增節點</option>{supportedDefinitions.map(uuid => <option key={uuid} value={uuid}>
+      }}><option value="" disabled>＋ 新增節點</option>{creatableDefinitions.map(uuid => <option key={uuid} value={uuid}>
         {text(core.registry.get(uuid)!.catalog.definition.label)}</option>)}</select>
       <button disabled={!state.undo} onClick={() => session.history(false)}>Undo</button>
       <button disabled={!state.redo} onClick={() => session.history(true)}>Redo</button>

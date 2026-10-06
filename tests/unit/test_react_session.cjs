@@ -200,7 +200,7 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, calls, loaded } = open(t, strictHost());
-  const unsupported = loaded(); unsupported.state.graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.convert', params: {} });
+  const unsupported = loaded(); unsupported.state.graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.uniform', params: {} });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap);
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
@@ -425,4 +425,25 @@ test('every offered node can be added, wired to the output and compiled', t => {
     } catch (error) { failures.push(uuid + ': ' + error.message); }
   }
   assert.deepEqual(failures, []);
+});
+
+// Retired value definitions open old graphs but are never offered for new nodes (legacy creator).
+test('add menu offers every supported node except retired float/vec2/vec3/vec4', () => {
+  const { supportedDefinitions, creatableDefinitions } = load(path.join(root, 'src/editor-react/core.ts'));
+  const retired = ['float', 'vec2', 'vec3', 'vec4'].map(k => 'sgrape.builtin.' + k);
+  assert.ok(retired.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
+  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid)));
+  for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
+});
+
+// A legacy fixed entry (Vector locked to vec2) opens; changing its type is refused by the core.
+test('legacy fixed-type Vector opens and keeps its locked type', t => {
+  const { session } = open(t);
+  session.transact('add', net => net.insert({ id: 'fv', definitionUuid: 'sgrape.builtin.vector', name: 'Vec2',
+    params: { type: 'vec2', fixedType: 'vec2', components: [0, 0, 0, 0] }, ui: { x: 0, y: 0 } }));
+  const before = clone(session.graph());
+  assert.ok(before.stages.pixel.nodes.some(n => n.id === 'fv'));
+  session.configure('fv', 'vec3');
+  assert.deepEqual(clone(session.graph()), before, 'locked type is not changed');
+  assert.match(session.snapshot().message, /Fixed node type|Invalid manual type/);
 });

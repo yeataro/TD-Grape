@@ -34,7 +34,7 @@ export class UnsupportedGraphError extends Error {}
 // 集中記錄本輪已接管能力；節點規則／選項仍只由真正的模組提供。
 export const supportedDefinitions = [
   // values and output
-  'float', 'scalar', 'color', 'vec2', 'vec3', 'vec4', 'pixel_out',
+  'float', 'scalar', 'vector', 'color', 'vec2', 'vec3', 'vec4', 'pixel_out',
   // arithmetic and functions
   'add', 'subtract', 'multiply', 'divide', 'math', 'abs', 'sign', 'floor', 'ceil', 'round', 'trunc', 'fract',
   'sqrt', 'sin', 'cos', 'min', 'max', 'clamp', 'mix', 'smoothstep', 'dot', 'length', 'normalize',
@@ -42,8 +42,14 @@ export const supportedDefinitions = [
   'compare', 'equal', 'notEqual', 'lessThan', 'lessThanEqual', 'greaterThan', 'greaterThanEqual',
   'any', 'all', 'not', 'if', 'isnan', 'isinf',
   // vector and colour structure
-  'split', 'vector_split', 'rgba', 'router',
+  'split', 'vector_split', 'rgba', 'router', 'combine', 'replace', 'swizzle', 'convert',
 ].map(key => 'sgrape.builtin.' + key);
+// Retired definitions still open old graphs but are not offered for new nodes, as in the
+// legacy creator (TD-Grape-legacy src/editor/functions_ui.js availableEntries). The same
+// value is made with Scalar／Vector (fixed entries to be discussed).
+// 已淘汰的舊定義：能打開舊圖、不再新增（同舊產品新增清單）；同樣的值改用 Scalar／Vector 建立。
+const retired = new Set(['float', 'vec2', 'vec3', 'vec4'].map(key => 'sgrape.builtin.' + key));
+export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid));
 export function requireSupported(graph: graph.GraphDocument['document']) {
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {

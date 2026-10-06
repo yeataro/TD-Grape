@@ -16,7 +16,10 @@ function fixture() {
   graph.stages.pixel.nodes[1].ui = { x: 730, y: 40 };
   graph.stages.pixel.nodes.push({ id: 'a', definitionUuid: 'sgrape.builtin.float', params: { value: 2 }, ui: { x: 40, y: 380 } },
     { id: 'sum', definitionUuid: 'sgrape.builtin.add', params: { type: 'float' }, ui: { x: 390, y: 330 } },
-    { id: 'mx', definitionUuid: 'sgrape.builtin.math', params: { type: 'float' }, ui: { x: 1050, y: 330 } });
+    { id: 'mx', definitionUuid: 'sgrape.builtin.math', params: { type: 'float' }, ui: { x: 1050, y: 330 } },
+    { id: 'v3', definitionUuid: 'sgrape.builtin.vector', params: { type: 'vec3', components: [0, 0, 0, 0] }, ui: { x: 40, y: 760 } },
+    { id: 'cb', definitionUuid: 'sgrape.builtin.combine', params: { type: 'vec4', groups: {}, components: [0, 0, 0, 0] }, ui: { x: 390, y: 760 } },
+    { id: 'sw', definitionUuid: 'sgrape.builtin.swizzle', params: { type: 'vec2', mask: 'xy' }, ui: { x: 760, y: 760 } });
   return graph;
 }
 (async () => {
@@ -121,6 +124,22 @@ function fixture() {
     assert.ok(menus.length >= 1, 'the browser raised a context menu event'); assert.ok(menus.every(m => m.prevented), JSON.stringify(menus));
     await page.mouse.click(x0, y0); await settle();
     checks.push('right-drag released outside the canvas does not open the browser menu');
+    // 17.2: Combine groups a wired vec3 over X/Y/Z (core planner); Swizzle's module controls edit it.
+    const nodeOf = id => state.graph.stages.pixel.nodes.find(n => n.id === id);
+    await page.locator('.react-flow__node[data-id="cb"]').scrollIntoViewIfNeeded();
+    await wire('v3 output out', 'cb input x');
+    assert.deepEqual(nodeOf('cb').params.groups, { x: 'vec3' });
+    assert.equal(await page.getByLabel('cb input y', { exact: true }).count(), 0);
+    assert.equal(await page.getByLabel('cb input w', { exact: true }).count(), 1);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle();
+    assert.deepEqual(nodeOf('cb').params.groups ?? {}, {});
+    await page.getByLabel('sw component0', { exact: true }).selectOption('y'); await settle();
+    assert.equal(nodeOf('sw').params.mask, 'yy');
+    await page.locator('.react-flow__node[data-id="sw"] button', { hasText: '+' }).click(); await settle();
+    assert.equal(nodeOf('sw').params.mask.length, 3);
+    const menuOptions = await page.getByLabel('新增節點', { exact: true }).locator('option').evaluateAll(list => list.map(o => o.value));
+    assert.ok(menuOptions.includes('sgrape.builtin.vector') && !menuOptions.includes('sgrape.builtin.vec2') && !menuOptions.includes('sgrape.builtin.float'));
+    checks.push('Combine groups a vec3 over X/Y/Z with one Undo; Swizzle controls edit the mask; add menu omits retired definitions');
     await field('sum b 0').fill('3'); await field('sum b 0').press('Enter'); await settle();
     assert.equal(state.graph.stages.pixel.nodes.find(n => n.id === 'sum').inputValues.b, 3);
     assert.deepEqual(state.graph.privateMetadata, { retained: true });
@@ -164,7 +183,7 @@ function fixture() {
     await settle(); assert.equal(writes.length, beforeColor + 1);
     checks.push('native colour preview remains local until change commits');
     const beforeAdd = state.graph.stages.pixel.nodes.length;
-    await page.getByLabel('新增節點', { exact: true }).selectOption('sgrape.builtin.float'); await settle();
+    await page.getByLabel('新增節點', { exact: true }).selectOption('sgrape.builtin.scalar'); await settle();
     assert.equal(state.graph.stages.pixel.nodes.length, beforeAdd + 1);
     const newId = state.graph.stages.pixel.nodes.at(-1).id;
     await page.locator(`.react-flow__node[data-id="${newId}"] .node-title`).click();
