@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.17.1 — 測試便利的小修正 — 2026-10-07
+
+17 完成後人類提出的小修正（AGENTS.md 版本號規則：N.1 不代表 17 沒過）。
+
+- **右鍵拖曳框選**（舊產品同等，docs/ui/UI_NAVIGATION.md、docs/features/CLIPBOARD_AND_EXPOSED.md）：React Flow 的框選寫死只接受主按鍵，無設定可改，故新增 [RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx) 自行處理（Q29「自己泡茶」）。超過 4px 才算拖曳；放開時以 RF `getIntersectingNodes`（整個節點在框內，同 Shift 拖曳）選取，按 Shift／Ctrl 為加選，並取消已選的線。只改 RF 選取暫態，不寫作品（測試確認無寫入）。
+- **右鍵選單**：右鍵拖曳後不論在哪放開（含工具列），只擋緊接的一次瀏覽器選單；畫布空白處不顯示瀏覽器選單（macOS 於按下即開）。人類實測回報「放開在功能列會跳出選單」後修正。
+- **Body 拖曳預設開啟。**
+- 實際改動：新檔 RightDragSelect.tsx、main.tsx 3 行、style.css 3 行；未動核心、session 與 TD。README 責任表新增「RF 沒提供、自己補的畫布互動」一列。
+- 驗證：session 25、browser 13 組（新增右鍵框選、放開在畫布外不跳選單）。TD 以 Reload 載入 Refactor.17.1。
+
 ## Refactor.17 — 新入口開放 47 個常用節點 — 2026-10-07
 
 依人類選擇「新編輯器開放更多節點」。**待人類實機確認。**

@@ -99,6 +99,28 @@ function fixture() {
     assert.equal(mathOf().params.inputCount ?? 3, 3);
     assert.ok(!state.graph.stages.pixel.edges.some(e => e.to[0] === 'mx'));
     checks.push('spare input from module declaration: one drop adds port + edge at measured handle; one Undo');
+    // Right-drag on blank canvas box-selects (legacy parity, 17.1); selection is runtime only.
+    const boxOf = id => page.locator(`.react-flow__node[data-id="${id}"]`).boundingBox();
+    const [ba, bs] = [await boxOf('a'), await boxOf('sum')], beforeBox = writes.length;
+    const x0 = Math.min(ba.x, bs.x) - 25, y0 = Math.min(ba.y, bs.y) - 25;
+    const x1 = Math.max(ba.x + ba.width, bs.x + bs.width) + 25, y1 = Math.max(ba.y + ba.height, bs.y + bs.height) + 25;
+    await page.mouse.click(x0, y0); // plain click on blank canvas clears selection
+    await page.mouse.move(x0, y0); await page.mouse.down({ button: 'right' });
+    await page.mouse.move(x1, y1, { steps: 12 }); await page.mouse.up({ button: 'right' }); await settle();
+    const selected = await page.locator('.react-flow__node.selected').evaluateAll(nodes => nodes.map(n => n.dataset.id).sort());
+    assert.deepEqual(selected, ['a', 'sum']); assert.equal(writes.length, beforeBox, 'selection never writes the document');
+    await page.mouse.click(x0, y0); await settle();
+    assert.equal(await page.locator('.react-flow__node.selected').count(), 0);
+    checks.push('right-drag on blank canvas box-selects nodes without writing the document');
+    // Released over the toolbar: the browser menu after a right-drag is still suppressed.
+    await page.evaluate(() => { window.menus = []; window.addEventListener('contextmenu', e => window.menus.push({ prevented: e.defaultPrevented, inPane: !!e.target.closest('.react-flow__pane') })); });
+    const nav = await page.locator('nav').boundingBox();
+    await page.mouse.move(x0, y0); await page.mouse.down({ button: 'right' });
+    await page.mouse.move(nav.x + nav.width / 2, nav.y + nav.height / 2, { steps: 12 }); await page.mouse.up({ button: 'right' }); await settle();
+    const menus = await page.evaluate(() => window.menus);
+    assert.ok(menus.length >= 1, 'the browser raised a context menu event'); assert.ok(menus.every(m => m.prevented), JSON.stringify(menus));
+    await page.mouse.click(x0, y0); await settle();
+    checks.push('right-drag released outside the canvas does not open the browser menu');
     await field('sum b 0').fill('3'); await field('sum b 0').press('Enter'); await settle();
     assert.equal(state.graph.stages.pixel.nodes.find(n => n.id === 'sum').inputValues.b, 3);
     assert.deepEqual(state.graph.privateMetadata, { retained: true });

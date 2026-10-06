@@ -13,6 +13,7 @@
 | 把一筆 GraphChanges 轉成 RF nodes／edges | [projection.ts](projection.ts) 的 `project` |
 | 模組描述如何畫成卡片／值欄位、模組宣告的 spare 接孔 | [NodeCard.tsx](NodeCard.tsx)、[NumberField.tsx](NumberField.tsx) |
 | 額外 Handle 量測通知 | [geometry.ts](geometry.ts)；外框尺寸／拖曳沿用 RF |
+| React Flow 沒提供、自己補的畫布互動（Q29「自己泡茶」；一功能一檔，滿 3 個再收進資料夾；RF 日後提供即可換回） | [RightDragSelect.tsx](RightDragSelect.tsx)（右鍵拖曳框選） |
 | 開圖、最小工具列、草稿恢復提示、TD 不在時的提示與衝突選擇 | [main.tsx](main.tsx)；分類與重試在 [session.ts](session.ts) 的 `classify`／`recover` |
 | 現有 HTTP 協定及失敗層 | [host.ts](host.ts)；TD 契約在 [host_api.py](../td/runtime/host_api.py) |
 | 首輪已接管範圍、既有生成核心的型別入口 | [core.ts](core.ts) |

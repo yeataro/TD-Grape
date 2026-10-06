@@ -7,6 +7,7 @@ import './style.css';
 import { core, supportedDefinitions, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, type StateResponse } from './host';
 import { EditorSession, resetToDefault } from './session';
+import { RightDragSelect } from './RightDragSelect';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
@@ -29,7 +30,7 @@ function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
 const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean;
 }) {
-  return <BodyDragContext.Provider value={bodyDrag}>
+  return <BodyDragContext.Provider value={bodyDrag}><RightDragSelect session={session}>
     <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={projection.edges} nodeTypes={nodeTypes}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
@@ -39,11 +40,11 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
       minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}>
       <Background gap={22} color="#393543" /><Controls showInteractive={false} />
     </ReactFlow>
-  </BodyDragContext.Provider>;
+  </RightDragSelect></BodyDragContext.Provider>;
 });
 function Editor({ session, text, version }: { session: EditorSession; text: (key: string) => string; version: string }) {
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
-  const flow = useReactFlow(), [bodyDrag, setBodyDrag] = useState(false), [snap, setSnap] = useState(false);
+  const flow = useReactFlow(), [bodyDrag, setBodyDrag] = useState(true), [snap, setSnap] = useState(false);
   const [showCode, setShowCode] = useState(false), [draft, setDraft] = useState(() => {
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
   });
