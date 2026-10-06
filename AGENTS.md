@@ -57,6 +57,7 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
 ## 必守規則
 
 - **TD 現場**：操作前用 TD MCP 確認進程、TOE、目標、資產版本與服務，不假定舊 port／路徑有效。`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴禁止修改。更新運行中的 TD 時保留使用者的圖、參數關聯、Shader ID 與連線；更新來源、保存 TOE、升級 Shader 是不同操作。
+- **網頁資產（`/TD_Grape/GrapeEditor`）**：開發期間 `Use External Folder` 開啟，`build:editor` 輸出到 Rootfolder 後按 **Reload Assets**（TD 在 Reload 當下讀入整包快照，不即時監看資料夾）。交付或提交 TOE 前：按 **Update Embedded VFS** → 關閉 `Use External Folder` → 存 TOE；否則 TOE 帶的是舊副本，且開關狀態會一起存檔。
 - **Family 對 Manager 只有編輯依賴**：Manager 缺席時原生參數、Bind、texture、Shader 執行照常；不輪詢、不重試；子 OP 不設 Global Shortcut。
 - **核心不依賴 DOM、React Flow、舊 Python compiler**。GraphDocument 是唯一權威；新路徑出錯不得靜默改用舊 compiler 或另一個 writer。
 - **新抽象必須有當輪真實 caller**；不建 event bus、diff 系統或治理平台。
