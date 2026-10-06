@@ -114,5 +114,5 @@ async function start() {
   createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider><Editor session={session} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
 }
 void start().catch(error => createRoot(document.getElementById('root')!).render(<div className="startup-error">
-  <h1>無法在此入口開啟</h1><p>{String(error)}</p><p>此入口未送出編輯或套用請求。</p><a href={oldURL}>返回舊編輯器</a>
+  <h1>無法在此入口開啟</h1><p style={{ whiteSpace: 'pre-line' }}>{String(error)}</p><p>此入口未送出編輯或套用請求。</p><a href={oldURL}>返回舊編輯器</a>
 </div>));

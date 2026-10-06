@@ -16,14 +16,14 @@
 
 ## 待處理
 
-1. **完成人類 UX 驗收**（Refactor.15）。
+1. **人類 UX 驗收（Refactor.15）——2026-10-06 人類回饋：** 遷移期間不要求外觀／行為與舊入口一致。MVP 是開不了圖時至少說出**什麼不支援**——已做：拒絕畫面列出具體宣告／節點／子圖等（`src/editor-react/core.ts` `unsupportedReasons`），已更新 Embedded VFS，待人類看過確認。Uniform 支援牽涉宣告、TD 原生參數與綁定，不只節點本身，**不可當成小切片直接做**，需另行規劃。
 2. **版本衝突恢復 UX（人類要求，近期切片須納入）：** 兩入口同時編輯同一 UUID 時，新入口目前只有保護（停寫、留草稿、查版本），缺三個操作——
    - 使用 TD 版本：載入最新 TD 圖，先讓使用者明確處理本地未保存修改
    - 用編輯器版本覆寫 TD：明確確認後核對最新 revision，以正常產碼／資料／GPU 驗證重新提交；期間再有更新仍回報衝突
    - 暫不處理：保留草稿與衝突狀態
 
    按鈕命名由實作者決定；下載草稿／重開頁只能當備援。
-3. **首輪覆蓋限制：** 從舊入口加過 Uniform 再刪節點，殘留 `uValue` 宣告使新入口拒絕開圖。不能靠刪使用者資料或繞過驗證當修正。
+3. **首輪覆蓋限制：** 從舊入口加過 Uniform 再刪節點，殘留 `uValue` 宣告使新入口拒絕開圖。不能靠刪使用者資料或繞過驗證當修正。（2026-10-06 `Grape_TOP_React` 現場即此狀態：`uValue` 宣告＋Uniform 節點 `n416684d63ca1`。）
 4. **下一切片（HANDOFF 建議）：** 從「動態 Math／Split 接孔與多輸出」挑一個小而真實的操作；先讀實際 NodeModule 與正式 UI 確認缺口。之後建議順序：Uniform 單次編輯與原生歷史 → 真正 Subgraph 編輯。
 
 ## 未完成／未驗證
@@ -47,5 +47,6 @@
 
 - 主組件 `/TD_Grape`；最後測試 Family `/project1/Grape_TOP_React`
 - 新入口 `http://127.0.0.1:65465/react-editor.html?target=3ffb8d81896943c8bf90bec56791a33b`
-- 開發 TOE：標準入口 `src/td/TD-Grape-dev.toe`；接手時與 `.23.toe` 同內容且未提交，須保留
+- 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態，存檔仍回原檔）；未提交的修改是人類的，須保留
+- 2026-10-06 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820；`Grape_TOP_React` 對應上方 target、Editor Service 65465 有回應、無 error
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴

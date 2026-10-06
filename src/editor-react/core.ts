@@ -29,13 +29,33 @@ export type Bootstrap = {
 // 集中記錄本輪已接管能力；節點規則／選項仍只由真正的模組提供。
 export const supportedDefinitions = ['float', 'color', 'add', 'pixel_out'].map(key => 'sgrape.builtin.' + key);
 export function requireSupported(graph: graph.GraphDocument['document']) {
-  const frames = graph.stages.pixel?.ui?.frames;
-  if (graph.schemaVersion !== 1 || graph.target !== 'top' ||
-      !Array.isArray(graph.declarations) || graph.declarations.length || graph.functions?.length || graph.topInputs?.length ||
-      Object.keys(graph.stages).join() !== 'pixel' || (Array.isArray(frames) && frames.length > 0) || !compiler.supports(graph) ||
-      graph.stages.pixel.nodes.some(node => !supportedDefinitions.includes(node.definitionUuid))) {
-    throw Error('此入口目前支援 Float、Color RGBA、Add 與 Color Output 的常數 TOP 圖。未送出編輯或套用，請使用舊入口。');
+  const reasons = unsupportedReasons(graph);
+  if (reasons.length) {
+    const shown = reasons.length > 8 ? [...reasons.slice(0, 8), `…另有 ${reasons.length - 8} 項`] : reasons;
+    throw Error('此入口目前支援 Float、Color RGBA、Add 與 Color Output 的常數 TOP 圖。未送出編輯或套用，請使用舊入口。\n' +
+      '不支援的內容：\n' + shown.map(reason => '・' + reason).join('\n'));
   }
+}
+
+// Name what blocks the slice so the user knows where to look; never edits the graph.
+// 列出擋下的具體項目（節點／宣告／子圖…），只描述、不修改圖。
+function unsupportedReasons(graph: graph.GraphDocument['document']): string[] {
+  if (graph.schemaVersion !== 1 || graph.target !== 'top') return [`圖格式：schema ${graph.schemaVersion}／target ${graph.target}`];
+  const reasons: string[] = [];
+  if (!Array.isArray(graph.declarations)) reasons.push('宣告清單格式不正確');
+  else for (const declaration of graph.declarations) reasons.push(`${declaration.kind === 'uniform' ? 'Uniform' : declaration.kind} 宣告「${declaration.name}」`);
+  if (graph.functions?.length) reasons.push(`子圖 ${graph.functions.length} 個`);
+  if (graph.topInputs?.length) reasons.push(`TOP 輸入 ${graph.topInputs.length} 個`);
+  for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(`${stage} 階段`);
+  const pixel = graph.stages.pixel;
+  if (!pixel) return [...reasons, '缺少 pixel 階段'];
+  const frames = pixel.ui?.frames;
+  if (Array.isArray(frames) && frames.length > 0) reasons.push(`框架（Frame）${frames.length} 個`);
+  for (const node of pixel.nodes) if (!supportedDefinitions.includes(node.definitionUuid)) {
+    reasons.push(`${node.definitionUuid.replace(/^sgrape\.builtin\./, '')} 節點${node.name ? `「${node.name}」` : ''}（${node.id}）`);
+  }
+  if (!reasons.length && !compiler.supports(graph)) reasons.push('前端 compiler 無法處理這張圖');
+  return reasons;
 }
 
 export const same = (a: unknown, b: unknown): boolean => {

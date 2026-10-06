@@ -182,7 +182,12 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   state.frontendCompiler.catalogHash = 'other';
   assert.throws(() => new EditorSession(session.host, bootstrap, state), /版本不一致/);
   const unsupported = loaded(); unsupported.state.graph.functions = [{ id: 'unknown' }];
-  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), /常數 TOP/);
+  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), /常數 TOP[\s\S]*子圖 1 個/);
+  // Leftover Uniform from the legacy entry: the message names both the declaration and the node.
+  const uniform = loaded(), pixel = uniform.state.graph.stages.pixel;
+  uniform.state.graph.declarations = [{ id: 'u1', kind: 'uniform', name: 'uValue', type: 'float', value: 0 }];
+  pixel.nodes = [...pixel.nodes, { id: 'nu', definitionUuid: 'sgrape.builtin.uniform', params: { declarationId: 'u1' } }];
+  assert.throws(() => new EditorSession(session.host, bootstrap, uniform), /Uniform 宣告「uValue」[\s\S]*uniform 節點（nu）/);
   assert.equal(calls.length, 0);
 });
 
