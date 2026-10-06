@@ -19,7 +19,7 @@ workspace 的其他位置可自由讀取。驗證輸出、私人證據、截圖�
 ## 開始工作前
 
 1. 讀 [目前現況](docs/development/CURRENT.md)：做到哪、下一步、未完成與未驗證項目。
-2. `git status`、`git log -5`。未提交的 `src/td/TD-Grape-dev.toe` 可能是人類的工作，保留；`src/td/.tdmcp/` 是本機認證狀態，不提交。
+2. `git status`、`git log -5`。未提交的 `src/td/TD-Grape-dev.toe` 可能是人類的工作，保留；`src/td/.tdmcp/` 是本機認證狀態，不提交。TD 顯示開啟 `TD-Grape-dev.<N>.toe`（如 `.23`）是遞增存檔的正常狀態，存檔仍回 `TD-Grape-dev.toe`，不要當成開錯檔。
 3. 依任務查 [文件地圖](docs/development/DOC-MAP.md)，只讀需要的部分。歷史文件只在查舊行為時翻。
 
 ## 權威文件
