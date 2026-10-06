@@ -71,7 +71,7 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
   - **編輯不等 TD：** 同步在背景進行；TD 慢、最小化或不在，都不能讓編輯變慢或被鎖住，只有開圖時需先讀一次。衝突提示必須浮動、不擋編輯。
   - 比喻：Google 文件——分頁裡正在打的文件＝GraphDocument，已儲存到雲端＝TD，離線照樣能打字、連上後自動同步。
 - **核心不依賴 DOM、React Flow、舊 Python compiler**；新路徑出錯不得靜默改用舊 compiler 或另一個 writer。
-- **框架耦合（design-interview Q29）**：要的是需求，不是框架的某個功能——React Flow 合用就用、不合用就自己做，它不在了我們仍能自己做；作品、規則、節點永遠在 Grape。判斷問「這是誰需要的？」只有畫面需要的留畫面。RF 掛勾只問核心不自己判斷；不用 `useNodesState`、`addEdge`、`toObject` 存檔。mapping 保持單向、薄，需要大量特例就先檢查設計。
+- **框架耦合（design-interview Q29）**：要的是需求，不是框架的某個功能——React Flow 合用就用、不合用就自己做，它不在了我們仍能自己做；作品、規則、節點永遠在 Grape。判斷問「這是誰需要的？」只有畫面需要的留畫面。RF 掛勾只問核心不自己判斷；不用 `useNodesState`、`addEdge`、`toObject` 存檔。mapping 保持單向、薄，需要大量特例就先檢查設計。**舊產品是功能基準，不是模仿對象**：參照它「需要什麼」，不照抄「怎麼做」；所需概念核心未定義時，屬核心的先在核心定義，不在畫面將就。
 - **新抽象必須有當輪真實 caller**；不建 event bus、diff 系統或治理平台。
 - **產品程式只在 `src/`**；來源與 TD DAT 的對應由 `src/td/source_files.json`、`src/td/embedded_sources.json` 定義。
 - **註解**：新寫或改到的程式碼用精簡「英文摘要＋繁中說明」，範例 `src/core-ts/values.ts`；不全面追補舊程式。
