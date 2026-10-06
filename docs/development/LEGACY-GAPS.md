@@ -28,3 +28,28 @@
 
 - 第 1 項與今天發現的 Router「不觸發產碼」是同一原則（[CURRENT](CURRENT.md) 已記）。
 - 第 9 項顯示漏接不只在效能：舊產品的編輯操作（拉線開選單、Home／Frame、複製貼上等）可列為下一批「畫布操作」。
+
+## 第二批：畫布操作（2026-10-07）
+
+全部屬 UI/UX，依排程原則為「核心完成後」；例外標在判定欄。出處：舊產品 [UI_NAVIGATION](../../../TD-Grape-legacy/docs/ui/UI_NAVIGATION.md)、[CLIPBOARD_AND_EXPOSED](../../../TD-Grape-legacy/docs/features/CLIPBOARD_AND_EXPOSED.md)、[WIRE_LINK](../../../TD-Grape-legacy/docs/ui/WIRE_LINK.md)、[GRAPH_TRASH](../../../TD-Grape-legacy/docs/ui/GRAPH_TRASH.md)、[TOUCH_EDITING](../../../TD-Grape-legacy/docs/ui/TOUCH_EDITING.md)、[VECTOR_NODES](../../../TD-Grape-legacy/docs/features/VECTOR_NODES.md)「節點寬度」。
+
+| # | 主題 | 舊產品最終狀態 | 新架構 | 判定 |
+| --- | --- | --- | --- | --- |
+| 1 | **右鍵選單＋複製／貼上／Duplicate** | 短按右鍵：Add／Copy／Paste／Duplicate／Create Graph Function／Delete（右鍵拖曳仍框選）；Shift+F10 叫出。Ctrl+C／V 與工具列共用實作；跨 Shader 貼上會帶入宣告與子圖快照並避開名稱衝突；系統剪貼簿不可讀時用本地備援；貼上與刪除各一次 Undo | 都沒有（畫布空白處右鍵目前只擋掉瀏覽器選單） | ❌ 核心完成後。剪貼內容是跨 Shader 的交換格式，屆時先定格式 |
+| 2 | **新增節點對話框** | Tab 開啟；搜尋、來源與接孔型別篩選、分類欄、說明與別名 | 只有一個下拉選單（[CURRENT](CURRENT.md)：現行選單非最終形） | ❌ 核心完成後 |
+| 3 | **選取** | 一般點擊取代選取；Ctrl／Cmd 點與 Shift 點都切換加選（Shift 點為專案決定）；Shift 拖曳框選；右鍵拖曳框選 | Ctrl 點加選、Shift 拖曳框選（React Flow 預設）；右鍵拖曳框選（17.1）；**Shift 點不是加選** | ❌ 只差 Shift 點，核心完成後 |
+| 4 | **點擊接線** | 點輸出再點輸入即接線，Esc 取消 | React Flow 預設開啟 `connectOnClick`，**未實測** | ❓ 待實測 |
+| 5 | **線的選取與 Wire／Link** | 線可多選；右鍵改 Wire／Link、批次斷開；選線時 Delete＝斷開；Link 顯示為細灰虛線加箭頭；X 切換顯示 Link 線 | 線可選取、Delete 可刪；Wire／Link 顯示與操作都沒有。**資料不會丟**：實測新核心在無關編輯後保留線上的 `link` 欄位 | ❌ 顯示與操作，核心完成後 |
+| 6 | **方向鍵導航、連通選取、自動排列、選取工具列** | 方向鍵依位置移動選取；Ctrl+方向鍵選上下游／連通；L／Shift+L 自動排列；多選時浮動工具列（Arrange、對齊、等距） | 都沒有 | ❌ 核心完成後 |
+| 7 | **節點調寬** | 拖右下角水平調寬，存在 `node.ui.width`，一次 Undo | 沒有（`ui` 欄位會保留） | ❌ 核心完成後 |
+| 8 | **Group Frame（群組框）** | 框住多個節點的群組框，存在網路的 `ui.frames`；點群組框可整組加選 | **新入口拒絕開啟含 Frame 的圖** | ❌ **建議提前「至少打得開」**：真實舊圖常有 Frame，打不開就無法拿來測試（同 17.2 的理由）；編輯功能仍核心完成後 |
+| 9 | **Notes 節點與 GLSL 顯示節點** | Notes（comment）節點不參與產碼；GLSL 顯示節點為檢視用 | **新入口拒絕開啟** | ❌ 同 #8：建議提前「至少打得開」 |
+| 10 | **建立子圖（Ctrl+G）** | 選取節點建立 Subgraph，有來源邊界規則 | 子圖整個未支援 | ❌ 屬子圖能力（B 案順序：Uniform → Subgraph），不是單純 UI |
+| 11 | **垃圾桶（實驗功能）** | 右下角拖放刪除，**預設關閉** | 沒有 | ❓ 實驗功能，要不要搬 |
+| 12 | **觸控編輯** | 手勢、數值欄觸控、手勢歸屬與取消、窄螢幕；iPad／手機實機仍待驗 | React Flow 有基本觸控；未驗證 | ❓ 待驗證 |
+
+### 本批觀察
+
+- #8、#9 和 17.2 的 Vector 同性質：新入口打不開，就無法用真實舊圖測試。「打得開」與「能編輯」可以分開做。
+- #5 的 Wire／Link 屬存檔資料，已確認新核心不會丟；畫面之後再做。
+- #1 的剪貼內容是交換格式，做的時候先定格式（越晚越貴）。
