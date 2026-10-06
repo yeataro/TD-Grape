@@ -1,0 +1,48 @@
+:root { font-family: Arial, sans-serif; color: #d7d1df; background: #13121a; font-size: 13px; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+#root { height: 100vh; display: flex; flex-direction: column; }
+button, select, input { font: inherit; color: inherit; border: 1px solid #51465f; border-radius: 5px; background: #302c3b; }
+button, select { padding: 6px 9px; }
+button { cursor: pointer; } button:hover { background: #443b53; } button:disabled { opacity: .45; cursor: default; }
+a { color: #bca4e4; }
+header, nav, .status, footer, .draft-notice { display: flex; align-items: center; gap: 10px; padding: 9px 16px; flex-shrink: 0; }
+header { background: #211c2c; } header strong { color: #e1d4f5; font-size: 17px; }
+header small { font-size: 12px; color: #a198b2; } .target { flex: 1; color: #a098ad; }
+nav { border-bottom: 1px solid #342c40; flex-wrap: wrap; } nav label { display: flex; gap: 5px; align-items: center; }
+.spacer { flex: 1; } .status { background: #1b1923; } .status small { margin-left: auto; color: #a69aae; }
+.status.error, .status.conflict, .status.uncertain { color: #fda1a8; } .draft-notice { background: #473c24; }
+main { display: flex; min-height: 0; flex: 1; } .canvas { position: relative; flex: 1; min-width: 0; }
+pre { width: 35%; margin: 0; overflow: auto; padding: 18px; font-size: 12px; border-left: 1px solid #43394e; }
+footer { color: #958b9f; font-size: 11px; }
+.grape-node { position: relative; width: 250px; border: 1px solid #4e445c; border-radius: 12px; background: #272530; box-shadow: 0 5px 16px #0004; }
+.grape-node.selected { outline: 2px solid #b3dc80; }
+.node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: #362d47; border-radius: 11px 11px 0 0; }
+.node-title strong { flex: 1; } .node-title small, .node-title select { color: #ada2bb; font-size: 11px; }
+.node-title select { max-width: 78px; padding: 3px; } .node-drag-surface { cursor: grab; }
+.node-body { padding: 12px 0; display: flex; flex-direction: column; gap: 9px; }
+.node-body > .value-group, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
+.port-row { position: relative; padding: 5px 14px; display: flex; gap: 8px; align-items: center; min-height: 30px; }
+.port-row small { color: #a59aaf; font-size: 10px; } .input-row > span { flex-shrink: 0; font-size: 12px; }
+.input-row > .value-group { flex: 1; min-width: 0; } .output-row { justify-content: flex-end; }
+.react-flow__handle { width: 10px; height: 10px; min-width: 10px; min-height: 10px; background: var(--port-color); border: 0; }
+.react-flow__handle.target { background: #272530; border: 2px solid var(--port-color); }
+.value-group { min-width: 0; } .value-fields { display: grid; grid-template-columns: 1fr; gap: 5px; }
+.vector-fields { grid-template-columns: 1fr 1fr; } .value-fields label { min-width: 0; display: flex; align-items: center; gap: 5px; cursor: default; }
+.value-fields label span { width: 10px; font-size: 11px; } .value-fields input, .value-fields select { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
+input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; cursor: pointer; }
+.control-field { display: flex; gap: 8px; align-items: center; } .control-field select { flex: 1; min-width: 0; }
+.control-row { display: flex; gap: 5px; } .hint { font-size: 11px; color: #a59aad; }
+.react-flow__controls button { color: #e2d9ed; background: #302a3b; border-color: #53485e; }
+.startup-error { margin: auto; max-width: 620px; padding: 35px; }
+
+.value-ladder { position: fixed; z-index: 100; border: 1px solid #6a577f; border-radius: 6px; background: #26212f; box-shadow: 0 8px 24px #0005; pointer-events: none; user-select: none; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ladder-steps > div { padding: 0 4px; border-radius: 3px; text-align: right; }
+.ladder-steps .active { background: #695384; color: #f2e9ff; }
+/* Readouts keep stable columns; their content cannot resize the selection list.
+   調值讀數使用固定欄位；長數字不撐寬，也不影響初始級距列表的尺寸。 */
+.ladder-readout { display: flex; align-items: center; gap: 12px; height: 32px; padding: 8px; }
+.ladder-readout span { flex: 0 0 8ch; color: #b5a7c6; font-size: 11px; white-space: nowrap; text-align: right; }
+.ladder-readout output { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.draft-blocker { position: absolute; inset: 0; z-index: 20; background: #13121a33; }

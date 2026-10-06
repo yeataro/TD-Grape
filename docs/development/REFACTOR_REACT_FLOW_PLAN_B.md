@@ -1,6 +1,6 @@
 # React／React Flow 遷移 B 案：以正式產品切片帶動核心演進
 
-2026-10-06。**人類已接受 B 案，作為後續正式遷移路線；正式切片尚未開始實作。**
+2026-10-06。**人類已接受 B 案；Refactor.15 已實作第一條正式 TOP 路徑，待人類 UX review 與 Human Takeover。** 最新執行／驗證狀態见 [STATUS](STATUS.md)，開發入口見 [React README](../../src/editor-react/README.md)。下文第 2 節是規劃當時的起點，不代表現在仍有 stale 產物。
 
 [A 案](REFACTOR_UI_UPDATES.md)原文保留供比較，評估版原地保留。既有正式流程、STATUS 與目標架構改指向 B；沿用原有工作紀錄，不同時維護兩份活動路線圖。人類另確認交易聚合、未變項引用及 RF 幾何更新的效能驗收，詳見第 7 節；不因此新增 event bus、diff 系統或治理機制。
 
@@ -227,7 +227,7 @@ Texture／Sampler、MAT／Vertex、ISF、Library 等既有產品目標仍在原�
 
 **目前證據與未完成項：** 原始碼查核顯示 GraphChanges 已一次回傳整個交易的 node／port／edge 變化；評估版 model.ts 也先 project 再 publish，並留用部分未變項引用。以目前生成的核心 bundle 執行單次交易，已驗到 2 個 node 變更及 4 個 edge 變更（兩次替換），complete=true、無 PortChange；no-op 與失敗交易保留原文件亦通過。這只是核心聚合檢查，產物仍有第 2 節記載的來源同步限制。
 
-正式 React 的聚合發布／引用 identity／幾何驗收**尚未通過，也尚未執行**。評估版 NodeCard 的 geometry signature 包含完整 controls 等描述，觸發條件可能超出實際幾何變化；不能原樣搬入後便宣稱符合。第一輪優先直接使用 GraphChanges，在真實 caller 補必要處理與上述測試；目前沒有證據需要新增 event bus、第二套 diff 或通用 abstraction。這個要求不授權改寫核心成增量引擎，也不要求繼續修改評估版。
+**規劃時的未完成項（後續 Refactor.15 的正式 session／browser 驗證見 STATUS）：** 當時正式 React 的聚合發布／引用 identity／幾何驗收尚未執行。評估版 NodeCard 的 geometry signature 包含完整 controls 等描述，觸發條件可能超出實際幾何變化；不能原樣搬入後便宣稱符合。第一輪優先直接使用 GraphChanges，在真實 caller 補必要處理與上述測試；目前沒有證據需要新增 event bus、第二套 diff 或通用 abstraction。這個要求不授權改寫核心成增量引擎，也不要求繼續修改評估版。
 
 | 操作 | 首輪量測／接受方式 |
 | --- | --- |

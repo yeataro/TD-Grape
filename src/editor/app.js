@@ -1683,6 +1683,13 @@ installAppliedGraphReload();
 $('.toolbar').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||!graph.stages?.[b.dataset.stage])return;stage=b.dataset.stage;graphTrail=[];selection.clear();selected=null;selectedEdge=null;cancelConnection();document.querySelectorAll('.stage').forEach(x=>x.classList.toggle('active',x===b));$('#stagecaption').textContent=t(stage==='vertex'?'stage.vertex':'stage.pixel');render();fit();});
 $('#undo').onclick=()=>undo();$('#redo').onclick=()=>undo(true);$('#fit').onclick=()=>fit();$('#search').oninput=library;
 $('#export').onclick=openExport;
+// The formal TOP slice is opt-in; the existing entry still serves other abilities.
+// 明確切換整頁，不讓兩套 UI 同時編輯；既有未送出草稿先留在原入口。
+$('#react-entry').hidden=!shaderId;
+$('#react-entry').onclick=()=>{
+  if(dirty){status('Please apply or export your current edits before opening React TOP.',true);return;}
+  location.assign('/react-editor.html?target='+encodeURIComponent(shaderId));
+};
 installImportUI();
 installSavedStateUI();
 $('#code').onclick=async()=>{try{const code=await generateGLSL(clone(graph));renderGLSL((code.vertex?'// VERTEX\n'+code.vertex+'\n':'')+'// PIXEL\n'+code.pixel);$('#source').showModal();}catch(e){status(e.message,true);}};$('#closecode').onclick=()=>$('#source').close();

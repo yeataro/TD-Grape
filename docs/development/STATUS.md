@@ -1,5 +1,29 @@
 # 開發狀態
 
+## Refactor.15 — B 案首條正式 React TOP 路徑 — 2026-10-06
+
+B 案已開始實作；本段為最新狀態，以下 Refactor.14 等段落保留歷史。第一條常數 TOP 的真實開圖、編輯、歷史、前端產碼、TD 套用、保存／重開已可供 review。**Human Takeover 與人類 UX 審閱尚未執行；不是整個 React 遷移完成。** A 案及評估版來源保持不變。
+
+- 來源入口：[src/editor-react/README.md](../../src/editor-react/README.md)。`build:editor` 把正式 React、原入口、同一生成核心、bootstrap 和 Remote Panel 前端組合成同一包（47 份含 build-info）；沒有新增正式伺服器、event bus、diff 系統或核心模型。React／RF 控制項、命中與幾何使用框架，Port／型別／驗證／產碼／文件仍屬 Grape。
+- 正式網址：`http://127.0.0.1:65465/react-editor.html?target=3ffb8d81896943c8bf90bec56791a33b`。也可從任一 Family 舊入口按 **React TOP**；首輪只開 TOP／pixel、無宣告／子圖／frame 的 Float、Color RGBA、Add、Color Output 圖。範圍外明示拒絕，不刪資料強行開圖。主入口暫不切換。
+- 現場目標：`/project1/Grape_TOP_React`，Manager `/TD_Grape/GrapeManager`，Editor `/TD_Grape/GrapeEditor`，VFS 來源 Refactor.15；原 review Family `/project1/Grape_TOP_Refactor` 的圖保留。新測試副本繼承的 Uniform 列與失效 Bind 已清理；這是隔離測試資產清理，沒有改原生來源政策或 Python 宿主程式。
+- 開發 TOE 已保存為 `TD-Grape-dev.21.toe`，標準入口 `src/td/TD-Grape-dev.toe` 同內容；1,801,496 bytes，SHA-256 `8ef3fa3594223109e803dc86bfb3ecec4e2f1d75ed230c266d14ce9182d11758`。47 份內嵌資產與本次 build 逐份對齊。
+- 一筆 GraphDocument transaction 先聚合 nodes／edges 再發布一次；未變 node／data／edge `===`、多項變更、批次刪除／Undo／Redo、失敗／no-op 均有正式 session 測試。值不等於 geometry；只在卡片提交後讀實際 Handle，外框尺寸由 RF 觀察，只有同尺寸接孔變化補 explicit invalidation。沒有逐幀量整張畫布。
+- 正式 UI 覆蓋建立／刪除、手填值與 Value Ladder、型別、接線／替換／拒絕／取消、拖曳／Snap、Undo／Redo、GLSL 顯示、自動及手動 Apply、保存與草稿下載。數值草稿和 RF runtime 不入序列化；無關更新保留焦點與 DOM。原型梯尺的小型控制項已採用，評估版 model／場景／整套 style 未搬入。
+- HTTP 沿用既有目標／revision／snapshot／catalogHash；串行送出固定快照，晚回覆不覆蓋之後的編輯。結果不明停止重送、明確查版本；外部衝突保留本地作品。失敗層與原因可見。首次接入沒有把新的 transport、Uniform live 或離線 Sketch 混進來。
+- 真實 TD：瀏覽器建立 Float／Add 並接到 Output，0.2＋0.1 的 TOP 抽樣為 rgba16float 約 0.2998047；GPU 編譯無錯誤。Save 後重開頁讀回相同圖；TOX 重載比較圖／GLSL 相同且 GPU 正常。故意注入無效 GLSL 的隔離 apply 得到 422／native-family，原宿主文件和已套用內容保留，瀏覽器草稿保留並可恢復。未重啟整個 TD 程序。
+- 建置邊界：新增 React Flow 依賴後曾使 @types/d3 自動進入純核心檢查；核心 tsconfig 明確 types=[]，維持無 DOM，而非把 DOM lib 加入核心壓過錯誤。`build:editor` 也先檢查生成核心是否與來源相符。
+- 自動驗證：核心 97 項、正式 session 15 項、正式 browser 8 組操作；型別及核心生成一致性檢查。Browser 測試的網路故障回覆是替身，與上述真實 TD 證據分開。
+- 同機 production ABBA 比較：102 節點／101 線，每輪 30 個正式樣本；未變卡片 DOM 與全部線路徑保留、無新 >50ms 長任務。平移／縮放 frame interval p95 約 8.4ms，與評估版相同；數值 blur 至下一 RAF p95 約 8.4–9.6ms，含 scheduler 等待，不能稱為純 React commit。ScriptDuration 全 35 次約 68–83ms，Layout 全 35 次約 10–12ms；前端與 compiler／網路分開，不用 FPS 推定零成本。
+- 純 session 的 30 樣本 p95：交易與呈現準備合計約 2.37ms，其中核心約 1.48ms、projection 約 0.51ms；獨立 compiler 約 1.22ms。它仍有全圖遍歷與 snapshot，沒有聲稱 O(1)。30 秒靜止沒有 Apply 或 DOM mutation，ScriptDuration 約 0–0.01ms；這不是 TD 整個程序的待機成本。
+- 同一真實 4-node TOP、同一生成核心另比較 Refactor.14 UI／React.15 各 30 暖樣本的手動 Apply：HTTP p95 約 154／86ms（含 TD queue／GPU，順序測試，不能當因果加速承諾）。自動套用的等待時間、純 React commit／Paint 的獨立細分及跨裝置結果尚未完整量測。
+
+私人原始證據：workspace `work/refactor/react-first-slice/` 的 browser.json、session-perf.json、browser-perf.json、live.json、delivery-perf.json、gpu-reject.json、roundtrip.json 與 screenshots。第一份 TOX 測試曾抓到複製殘留 Bind，修正後再測通過，失敗證據亦保留。
+
+**下一步是實際 review 與 Human Takeover。** 請人類在隔離副本、無 AI 提示下選「新增普通節點／修改接線政策／修陌生 bug」之一，記找入口時間、改動責任區、無關閱讀量、TS 指引及測試信心；目前不能標通過。技術上接著才以真實動態接孔／多輸出場景擴大，面板後續討論。阻尼未納入正式頁、完整動態接孔與所有樣式政策仍未接管；其他能力沿 B 案保留 UNKNOWN，不先建 Interface。
+
+退回使用遷移前 checkpoint `04b0f58` 或保留舊入口；先保存／下載未送出的圖，不能以切頁丟棄草稿。舊入口仍服務其餘已遷移節點和原生來源，不讓此小切片冒充完整產品。IconGen → icon 未操作，main／固定 Legacy 未改動。
+
 ## Refactor.14 — 新 Manager 與原生 TOP 接通 — 2026-10-06
 
 本段為最新狀態；以下各節保留歷史。正式接入點為 `/TD_Grape/GrapeManager`、`/TD_Grape/GrapeEditor` 與 `/Grape_TOP_Refactor`。已可從實際網頁開圖、操作已遷移的 TOP 節點，由 TypeScript 產碼，再由原生 TD 套用、預覽和保存；新路徑沒有 Python compiler fallback。這是**限定範圍的 TOP 接入檢查點，並非完整產品遷移完成**。

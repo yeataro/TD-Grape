@@ -1,0 +1,112 @@
+import { createContext, memo, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
+import { core, typeColor, type Value, type NodeControl } from './core';
+import { NumberField } from './NumberField';
+import type { FlowNode } from './projection';
+import type { EditorSession } from './session';
+import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
+
+export const SessionContext = createContext<EditorSession | null>(null);
+export const TextContext = createContext<(key: string) => string>(key => key);
+export const BodyDragContext = createContext(false);
+export const useSession = () => useContext(SessionContext)!;
+
+// Native input previews are local; native change commits the chosen colour.
+// React 的 onChange 也會接到連續 input；改以原生 change 作提交，避免每次預覽一筆 Undo。
+function ColorField({ value, label, commit }: { value: string; label: string; commit: (value: string) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  useEffect(() => {
+    const element = input.current!;
+    const accept = () => { if (element.value !== value) commit(element.value); };
+    element.addEventListener('change', accept);
+    return () => element.removeEventListener('change', accept);
+  }, [value, commit]);
+  return <input ref={input} className="color-swatch nodrag" type="color" aria-label={label}
+    value={draft} onInput={event => setDraft(event.currentTarget.value)} onChange={() => {}} />;
+}
+
+function ValueFields({ value, type, label, names = 'XYZW', color = false, commit }: {
+  value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
+}) {
+  const count = core.values.count(type), family = core.values.family(type);
+  const list = Array.from({ length: count }, (_, i) => Array.isArray(value) ? value[i] ?? 0 : value);
+  const hex = '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
+  return <div className="value-group nodrag nopan">
+    {color && count >= 3 && <ColorField label={`${label} color`} value={hex}
+      commit={next => commit([...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)])} />}
+    <div className={`value-fields ${count > 1 ? 'vector-fields' : ''}`}>
+      {list.map((item, i) => {
+        const change = (next: Value) => { const values = [...list]; values[i] = next; commit(count === 1 ? next : values); };
+        return <label key={i}>
+          {count > 1 && <span style={color ? { color: ['#ef8990', '#98d393', '#85bafa', '#ddd9e5'][i] } : undefined}>{names[i]}</span>}
+          {family === 'bool' ? <select className="nodrag" aria-label={`${label} ${i}`} value={String(!!item)}
+            onChange={event => change(event.target.value === 'true')}><option>false</option><option>true</option></select> :
+            <NumberField label={`${label} ${i}`} value={Number(item)} integer={family === 'int' || family === 'uint'} unsigned={family === 'uint'} commit={change} />}
+        </label>;
+      })}
+    </div>
+  </div>;
+}
+function Control({ id, control }: { id: string; control: NodeControl }) {
+  const session = useSession(), text = useContext(TextContext);
+  const label = control.literal ? control.label : text(control.label);
+  if (control.kind === 'row') return <div className="control-row">{control.children?.map(child => <Control key={child.key} id={id} control={child} />)}</div>;
+  if (control.kind === 'hint') return <div className="hint">{label}</div>;
+  if (control.kind === 'button') return <button className="nodrag" disabled={control.disabled}
+    onClick={() => session.edit(id, control.command!, control.args ?? {})}>{label}</button>;
+  return <label className="control-field nodrag"><span>{label}</span><select aria-label={`${id} ${control.key}`}
+    value={control.value} disabled={control.disabled} onChange={event => session.edit(id, control.command!, {
+      ...control.args, value: control.numeric ? Number(event.target.value) : event.target.value })}>
+    {control.options?.map(option => <option key={option.value} value={option.value}>{option.literal ? option.label : text(option.label)}</option>)}
+  </select></label>;
+}
+
+export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps<FlowNode>) {
+  const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
+  const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
+  const updateInternals = useUpdateNodeInternals();
+  const { authored, view, inputs, outputs } = data;
+  const inspect = () => {
+    if (!card.current) return;
+    const next = measureHandles(card.current);
+    if (needsHandleUpdate(measured.current, next)) updateInternals(id);
+    measured.current = next;
+  };
+  // Read actual committed layout, never serialize control values as a geometry key.
+  // 僅在該卡片 commit 後檢查實際接孔；非逐幀掃描，外框變大由 RF 量測。
+  useLayoutEffect(inspect);
+  useEffect(() => {
+    if (!card.current) return;
+    const observer = new ResizeObserver(inspect);
+    observer.observe(card.current);
+    return () => observer.disconnect();
+  }, [id, updateInternals]);
+  return <article ref={card} className={`grape-node ${selected ? 'selected' : ''}`}>
+    <div className="node-title node-drag-surface"><strong>{text(view.label ?? data.label)}</strong>
+      {view.selector ? <select className="nodrag" aria-label={`${id} type`} value={view.selector.value}
+        onChange={event => session.edit(id, view.selector!.command, { value: event.target.value })}>
+        {view.selector.options.map(type => <option key={type}>{type}</option>)}</select> :
+        data.types.length > 1 ? <select className="nodrag" aria-label={`${id} type`} value={String(authored.params.type)}
+          onChange={event => session.configure(id, event.target.value)}>{data.types.map(type => <option key={type}>{type}</option>)}</select> :
+          <small>{outputs[0]?.type}</small>}
+    </div>
+    <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
+      {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} />)}
+      {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
+      {inputs.map(port => <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
+        <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} />
+        <span>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
+        {!data.connected.includes(port.key) && <ValueFields label={`${id} ${port.key}`} type={port.type}
+          value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
+      </div>)}
+      {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
+      {view.note && <div className="hint">{view.note.text}</div>}
+      {outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
+        <span>{view.portLabels?.outputs?.[port.key] ?? port.key}</span><small>{port.type}</small>
+        <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} />
+      </div>)}
+    </div>
+  </article>;
+});

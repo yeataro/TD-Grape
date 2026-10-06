@@ -2,10 +2,23 @@
   "name": "grape-refactor",
   "private": true,
   "scripts": {
-    "build:editor": "node tools/build_editor.cjs",
+    "build:editor": "npm run check:core && tsc -p tsconfig.editor.json && node tools/build_editor.cjs",
+    "check:editor": "tsc -p tsconfig.editor.json",
+    "test:editor": "node --test tests/unit/test_react_session.cjs",
     "build:core": "node tools/build_core.cjs",
     "check:core": "node tools/build_core.cjs --check",
     "test:core": "node --test tests/unit/test_wire_planning.cjs tests/unit/test_top_compiler.cjs tests/unit/test_graph_objects.cjs tests/unit/test_model_operations.cjs tests/unit/test_shared_subgraphs.cjs tests/unit/test_subgraph_operations.cjs tests/unit/test_subgraph_deletion.cjs tests/unit/test_subgraph_copies.cjs tests/unit/test_range_nodes.cjs tests/unit/test_logic_nodes.cjs tests/unit/test_vector_nodes.cjs tests/unit/test_editor_contract.cjs"
   },
-  "devDependencies": { "typescript": "5.9.3" }
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
+    "playwright": "1.63.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.3"
+  },
+  "dependencies": {
+    "@xyflow/react": "12.12.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
 }

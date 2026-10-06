@@ -1,0 +1,118 @@
+import { StrictMode, useEffect, useState, useSyncExternalStore, memo } from 'react';
+import { createRoot } from 'react-dom/client';
+import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBezierPath,
+  type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import './style.css';
+import { core, supportedDefinitions, typeColor, type Bootstrap } from './core';
+import { HostClient, type StateResponse } from './host';
+import { EditorSession } from './session';
+import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
+import type { Projection, FlowNode, FlowEdge } from './projection';
+
+const nodeTypes: NodeTypes = { grape: NodeCard };
+const target = new URLSearchParams(location.search).get('target') ?? '';
+const oldURL = '/shader/' + encodeURIComponent(target) + '/';
+const draftKey = 'grape-react-draft:' + target;
+function download(value: unknown, name = 'grape-draft.json') {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
+}
+function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
+  const port = (props.fromHandle.type === 'source' ? props.fromNode.data.outputs : props.fromNode.data.inputs)
+    .find(port => port.key === props.fromHandle.id);
+  const [path] = getBezierPath({ sourceX: props.fromX, sourceY: props.fromY, targetX: props.toX, targetY: props.toY,
+    sourcePosition: props.fromPosition, targetPosition: props.toPosition });
+  return <path d={path} fill="none" stroke={typeColor(port?.type ?? '')} strokeWidth={1.3} strokeDasharray="5 4" />;
+}
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
+  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean;
+}) {
+  return <BodyDragContext.Provider value={bodyDrag}>
+    <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={projection.edges} nodeTypes={nodeTypes}
+      onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onDelete={session.remove}
+      onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
+      onConnectEnd={(_event, state) => { if (state.toHandle && !state.isValid) session.notice('接線被核心拒絕：型別或圖結構不相容'); }}
+      onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
+      edgesReconnectable={false} snapToGrid={snap} snapGrid={[22, 22]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
+      minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}>
+      <Background gap={22} color="#393543" /><Controls showInteractive={false} />
+    </ReactFlow>
+  </BodyDragContext.Provider>;
+});
+function Editor({ session, text, version }: { session: EditorSession; text: (key: string) => string; version: string }) {
+  const state = useSyncExternalStore(session.subscribe, session.snapshot);
+  const flow = useReactFlow(), [bodyDrag, setBodyDrag] = useState(false), [snap, setSnap] = useState(false);
+  const [showCode, setShowCode] = useState(false), [draft, setDraft] = useState(() => {
+    try { return sessionStorage.getItem(draftKey); } catch { return null; }
+  });
+  useEffect(() => {
+    // Never overwrite a recovered draft before its owner chooses what to keep.
+    // 尚未選擇時保留原草稿；快取失敗不能中止編輯或假裝已保存。
+    if (draft) return;
+    try {
+      if (state.dirty) sessionStorage.setItem(draftKey, JSON.stringify({ target, graph: session.graph() }));
+      else sessionStorage.removeItem(draftKey);
+    } catch { session.notice('瀏覽器無法暫存草稿；請使用下載草稿保存未送出的修改。'); }
+  }, [state.version, state.dirty, session, draft]);
+  useEffect(() => {
+    const leave = (event: BeforeUnloadEvent) => { if (session.snapshot().dirty) { event.preventDefault(); event.returnValue = ''; } };
+    const keys = (event: KeyboardEvent) => {
+      const element = event.target as HTMLElement;
+      if (element.closest('input,select,textarea,[contenteditable="true"]')) return;
+      if (!draft && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); session.history(event.shiftKey); }
+    };
+    addEventListener('beforeunload', leave); addEventListener('keydown', keys);
+    return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
+  }, [session, draft]);
+  return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
+    <header><strong>TD-Grape <small>React · TOP · {version}</small></strong><span className="target">{state.targetPath}</span>
+      <a href={oldURL} onClick={event => { if (state.dirty && !confirm('仍有本地修改。草稿會保留在此頁；確定離開？')) event.preventDefault(); }}>舊入口</a>
+    </header>
+    <nav aria-label="編輯工具列" inert={!!draft}>
+      <select aria-label="新增節點" value="" onChange={event => {
+        const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
+        session.add(event.target.value, flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 }));
+      }}><option value="" disabled>＋ 新增節點</option>{supportedDefinitions.map(uuid => <option key={uuid} value={uuid}>
+        {text(core.registry.get(uuid)!.catalog.definition.label)}</option>)}</select>
+      <button disabled={!state.undo} onClick={() => session.history(false)}>Undo</button>
+      <button disabled={!state.redo} onClick={() => session.history(true)}>Redo</button>
+      <label><input type="checkbox" checked={bodyDrag} onChange={event => setBodyDrag(event.target.checked)} />Body 拖曳</label>
+      <label><input type="checkbox" checked={snap} onChange={event => setSnap(event.target.checked)} />Snap</label>
+      <span className="spacer" />
+      <button disabled={!state.dirty || state.phase === 'sending' || ['uncertain', 'conflict'].includes(state.phase)} onClick={() => void session.flush()}>套用</button>
+      <button disabled={state.phase === 'sending'} onClick={() => void session.save()}>保存 TD 專案</button>
+      <button onClick={() => setShowCode(!showCode)}>GLSL</button>
+      <button onClick={() => download({ target, graph: session.graph() })}>下載草稿</button>
+    </nav>
+    <div role="status" className={`status ${state.phase}`}><span>{state.message}</span>
+      <small>{state.phase === 'sending' ? '套用中' : state.dirty ? '本地修改未套用' : '與 TD 圖同步'} · revision {state.revision}</small>
+      {['uncertain', 'conflict'].includes(state.phase) && <button onClick={() => void session.check()}>檢查連線與版本</button>}
+    </div>
+    {draft && <div className="draft-notice">找到此頁先前的草稿；目前顯示 TD 文件。
+      <button onClick={() => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw Error('草稿目標不同'); if (session.restoreDraft(saved.graph)) setDraft(null); } catch (error) { session.notice(error); } }}>還原草稿</button>
+      <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>下載先前草稿</button>
+      <button onClick={() => { setDraft(null); }}>使用 TD 文件</button>
+    </div>}
+    <main><div className="canvas" inert={!!draft}><Canvas session={session} projection={state.projection} bodyDrag={bodyDrag} snap={snap} />{draft && <div className="draft-blocker" />}</div>
+      {showCode && <pre aria-label="Generated GLSL">{state.glsl || '首次套用後顯示產碼。'}</pre>}</main>
+    <footer>本輪：常數 TOP · Float／Color RGBA／Add／Color Output · 放開／提交數值後自動套用 · Ctrl/Cmd＋Z 撤銷</footer>
+  </TextContext.Provider></SessionContext.Provider>;
+}
+
+async function start() {
+  const token = location.hash.slice(1) || sessionStorage.getItem('sgrapeToken') || '';
+  sessionStorage.setItem('sgrapeToken', token); history.replaceState(null, '', location.pathname + location.search);
+  const host = new HostClient(target, token);
+  const [loaded, bootstrap, locales, build] = await Promise.all([
+    host.call<StateResponse>('state'), fetch('/editor-bootstrap.json').then(response => response.json()) as Promise<Bootstrap>,
+    fetch('/locales.json').then(response => response.json()),
+    fetch('/build-info.json').then(response => response.json()),
+  ]);
+  const session = new EditorSession(host, bootstrap, loaded);
+  const text = (key: string) => locales.messages?.[key]?.en ?? key;
+  createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider><Editor session={session} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
+}
+void start().catch(error => createRoot(document.getElementById('root')!).render(<div className="startup-error">
+  <h1>無法在此入口開啟</h1><p>{String(error)}</p><p>此入口未送出編輯或套用請求。</p><a href={oldURL}>返回舊編輯器</a>
+</div>));

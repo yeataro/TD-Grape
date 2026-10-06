@@ -1,0 +1,143 @@
+/* Production bundle + real browser. HTTP responses here are controlled fault fixtures,
+ * not evidence of TD/GPU execution. Live verification uses the same UI separately.
+ * 正式建置與真實 RF；此檔的宿主回覆是故障測試替身，不冒充 TD 驗證。
+ * node tests/browser/test_react_editor.cjs BUILD_FOLDER REPORT_FOLDER
+ */
+const fs = require('node:fs'), path = require('node:path'), http = require('node:http');
+const assert = require('node:assert/strict');
+const { chromium } = require('playwright');
+const [buildFolder, reportFolder] = process.argv.slice(2).map(x => path.resolve(x));
+const bootstrap = JSON.parse(fs.readFileSync(path.join(buildFolder, 'editor-bootstrap.json')));
+const target = '1'.repeat(32), clone = x => JSON.parse(JSON.stringify(x));
+function fixture() {
+  const graph = clone(bootstrap.defaultDocument.graph);
+  graph.privateMetadata = { retained: true };
+  graph.stages.pixel.nodes[0].ui = { x: 40, y: 40 };
+  graph.stages.pixel.nodes[1].ui = { x: 730, y: 40 };
+  graph.stages.pixel.nodes.push({ id: 'a', definitionUuid: 'sgrape.builtin.float', params: { value: 2 }, ui: { x: 40, y: 380 } },
+    { id: 'sum', definitionUuid: 'sgrape.builtin.add', params: { type: 'float' }, ui: { x: 390, y: 330 } });
+  return graph;
+}
+(async () => {
+  fs.mkdirSync(reportFolder, { recursive: true });
+  let state = { graph: fixture(), revision: 1, targetId: target }, fail = false;
+  const writes = [], checks = [], errors = [];
+  const server = http.createServer(async (req, res) => {
+    try {
+      if (req.url.startsWith('/api/')) {
+        const action = req.url.split('/').at(-1); let raw = ''; for await (const chunk of req) raw += chunk;
+        const body = raw && JSON.parse(raw); res.setHeader('Content-Type', 'application/json');
+        if (action === 'state') return res.end(JSON.stringify({ state, target: '/test/formal_top', shaderKind: 'top',
+          frontendCompiler: { protocol: 'grape.top.ts.1', catalogHash: bootstrap.catalogHash, required: true } }));
+        if (action === 'save') return res.end(JSON.stringify({ saved: 'fixture.toe' }));
+        writes.push(body);
+        if (fail) { res.statusCode = 422; return res.end(JSON.stringify({ error: 'fixture GPU refused', layer: 'gpu', code: 'shader_compile' })); }
+        assert.equal(body.revision, state.revision);
+        assert.deepEqual(JSON.parse(body.frontendArtifact.snapshot), body.graph);
+        state = { graph: body.graph, revision: state.revision + 1, targetId: target };
+        return res.end(JSON.stringify({ state }));
+      }
+      const name = decodeURIComponent(req.url.split('?')[0]);
+      const file = path.resolve(buildFolder, '.' + name);
+      assert.ok(file.startsWith(buildFolder + path.sep));
+      res.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' })[path.extname(file)] || 'application/octet-stream');
+      res.end(fs.readFileSync(file));
+    } catch (e) { res.statusCode = 500; res.end(String(e)); }
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
+  const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
+  page.on('pageerror', e => errors.push(e.message));
+  const url = `http://127.0.0.1:${server.address().port}/react-editor.html?target=${target}`;
+  const field = label => page.getByRole('textbox', { name: label, exact: true });
+  const settle = () => page.waitForTimeout(1100);
+  const count = () => state.graph.stages.pixel.edges.length;
+  async function wire(from, to) {
+    const a = await page.getByLabel(from, { exact: true }).boundingBox(), b = await page.getByLabel(to, { exact: true }).boundingBox();
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2); await page.mouse.down();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 10 }); await page.mouse.up(); await settle();
+  }
+  try {
+    await page.goto(url); await field('a value 0').waitFor(); await settle();
+    await page.evaluate(() => { window.keptInput = document.querySelector('[aria-label="a value 0"]'); window.keptCard = window.keptInput.closest('.grape-node'); });
+    await field('a value 0').fill('2.');
+    await page.evaluate(() => { const select = document.querySelector('[aria-label="sum type"]'); select.value = 'vec4'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+    assert.equal(await field('a value 0').inputValue(), '2.');
+    assert.equal(await page.evaluate(() => document.activeElement === window.keptInput && window.keptCard === window.keptInput.closest('.grape-node')), true);
+    await field('a value 0').press('Escape'); await settle();
+    assert.equal(state.graph.stages.pixel.nodes.find(n => n.id === 'a').params.value, 2);
+    checks.push('unrelated type update retains focused DOM and unfinished number; Escape cancels');
+    await page.getByLabel('sum type', { exact: true }).selectOption('float'); await settle();
+    await wire('a output out', 'sum input a'); assert.equal(count(), 2);
+    assert.equal(await field('sum a 0').count(), 0);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(); assert.equal(count(), 1);
+    assert.equal(await field('sum a 0').count(), 1);
+    await page.getByRole('button', { name: 'Redo', exact: true }).click(); await settle(); assert.equal(count(), 2);
+    await wire('color output out', 'sum input a'); assert.equal(count(), 2); // vec4 -> float is refused
+    assert.equal(state.graph.stages.pixel.edges.find(e => e.to[0] === 'sum').from[0], 'a');
+    await wire('sum output out', 'sum input b'); assert.equal(count(), 2); // cycle refused
+    await wire('sum output out', 'pixel_out input color'); assert.equal(count(), 2); // replacement + scalar expansion
+    assert.equal(state.graph.stages.pixel.edges.find(e => e.to[0] === 'pixel_out').from[0], 'sum');
+    checks.push('RF hit testing uses Grape rules; replace, scalar expansion, reject vec4 narrowing/cycle, Undo/Redo');
+    await field('sum b 0').fill('3'); await field('sum b 0').press('Enter'); await settle();
+    assert.equal(state.graph.stages.pixel.nodes.find(n => n.id === 'sum').inputValues.b, 3);
+    assert.deepEqual(state.graph.privateMetadata, { retained: true });
+    const beforeLadder = writes.length;
+    await field('a value 0').focus(); await field('a value 0').press('Alt+l');
+    await page.getByRole('tooltip').waitFor(); const box = await page.getByRole('tooltip').boundingBox();
+    await page.keyboard.press('ArrowDown'); assert.equal((await page.getByRole('tooltip').boundingBox()).width, box.width);
+    await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+    assert.equal(writes.length, beforeLadder); await page.keyboard.press('Escape'); await settle();
+    assert.equal(writes.length, beforeLadder);
+    await field('a value 0').press('Alt+l'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter'); await settle();
+    assert.equal(writes.length, beforeLadder + 1);
+    checks.push('Value Ladder fixed width, transient draft, cancel and one gesture/commit');
+    // Drag in small steps; no graph write until release, no unrelated card replacement.
+    const card = page.locator('.react-flow__node[data-id="a"]'), title = card.locator('.node-title');
+    const pos = await title.boundingBox(), prior = clone(state.graph.stages.pixel.nodes.find(n => n.id === 'a').ui), beforeDrag = writes.length;
+    await page.mouse.move(pos.x + 45, pos.y + 15); await page.mouse.down(); await page.mouse.move(pos.x + 110, pos.y + 80, { steps: 20 });
+    await settle(); assert.equal(writes.length, beforeDrag); await page.mouse.up(); await settle();
+    assert.equal(writes.length, beforeDrag + 1); assert.notDeepEqual(state.graph.stages.pixel.nodes.find(n => n.id === 'a').ui, prior);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(); assert.deepEqual(state.graph.stages.pixel.nodes.find(n => n.id === 'a').ui, prior);
+    checks.push('drag remains RF runtime until release; one history transaction; undo restores position');
+    await field('a value 0').fill('bad'); await field('a value 0').press('Enter');
+    assert.equal(await field('a value 0').getAttribute('aria-invalid'), 'true');
+    fail = true; await field('a value 0').fill('4'); await field('a value 0').press('Enter'); await settle();
+    assert.match(await page.getByRole('status').innerText(), /gpu.*shader_compile/);
+    await page.reload(); await page.getByText('找到此頁先前的草稿', { exact: false }).waitFor();
+    assert.ok(await page.locator('nav').getAttribute('inert') !== null);
+    fail = false; await page.getByRole('button', { name: '還原草稿', exact: true }).click(); await settle();
+    assert.equal(state.graph.stages.pixel.nodes.find(n => n.id === 'a').params.value, 4);
+    checks.push('invalid numeric input rejected; GPU fault keeps draft; reload requires explicit recovery');
+    await page.getByRole('button', { name: '保存 TD 專案', exact: true }).click(); await settle();
+    assert.match(await page.getByRole('status').innerText(), /fixture.toe/);
+    await page.reload(); await field('a value 0').waitFor(); assert.equal(await field('a value 0').inputValue(), '4');
+    const beforeColor = writes.length;
+    await page.getByLabel('color value color', { exact: true }).evaluate(input => {
+      input.value = '#778899'; input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.value = '#224466'; input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await settle(); assert.equal(writes.length, beforeColor);
+    await page.getByLabel('color value color', { exact: true }).evaluate(input => input.dispatchEvent(new Event('change', { bubbles: true })));
+    await settle(); assert.equal(writes.length, beforeColor + 1);
+    checks.push('native colour preview remains local until change commits');
+    const beforeAdd = state.graph.stages.pixel.nodes.length;
+    await page.getByLabel('新增節點', { exact: true }).selectOption('sgrape.builtin.float'); await settle();
+    assert.equal(state.graph.stages.pixel.nodes.length, beforeAdd + 1);
+    const newId = state.graph.stages.pixel.nodes.at(-1).id;
+    await page.locator(`.react-flow__node[data-id="${newId}"] .node-title`).click();
+    await page.keyboard.press('Delete'); await settle();
+    assert.equal(state.graph.stages.pixel.nodes.length, beforeAdd);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle();
+    assert.equal(state.graph.stages.pixel.nodes.at(-1).id, newId);
+    checks.push('add, delete selection and Undo preserve stable node identity');
+    await page.screenshot({ path: path.join(reportFolder, 'browser.png') });
+    assert.deepEqual(errors, []); checks.push('save and reopen use host document; runtime fields excluded');
+    fs.writeFileSync(path.join(reportFolder, 'browser.json'), JSON.stringify({ passed: true, browser: browser.version(), checks, writes: writes.length }, null, 2));
+    console.log(JSON.stringify({ passed: true, checks }));
+  } catch (error) {
+    await page.screenshot({ path: path.join(reportFolder, 'failure.png') });
+    fs.writeFileSync(path.join(reportFolder, 'browser.json'), JSON.stringify({ passed: false, checks, errors, error: error.stack }, null, 2));
+    throw error;
+  } finally { await browser.close(); await new Promise(r => server.close(r)); }
+})().catch(e => { console.error(e); process.exitCode = 1; });
