@@ -8,11 +8,13 @@
 
 **排程原則（人類 2026-10-07）：** 重構的目標不是一次做出完整產品，而是**先把核心功能全部做完，再處理 UI/UX**。清查出的 UI/UX 漏接照樣記在本頁，標「核心完成後」，不排進目前各輪。
 
+**例外：越晚越貴的要早做（人類同意的判斷標準）：** 會被依賴的東西改起來越來越貴——**寫進作品的存檔格式**（改了要處理所有已存的圖）、**編輯器與 TD 之間的協定**（越多功能建立在上面越難改）。這類即使不是 UI/UX 也應提前。純畫面（外觀、快捷鍵、樣式、預覽）不存進作品、無人依賴，可以晚做。目前據此提前的：第一批 #1（版面修改不產碼：需把送出分成「只存版面／套用 Shader」，現在只有三個呼叫點；且版本號每次移動都加 1，會讓衝突判斷誤報）、Uniform 歸屬決策、Router 定義。
+
 ## 第一批：效能（2026-10-07）
 
 | # | 主題 | 舊產品最終狀態（演進） | 新架構 | 判定 |
 | --- | --- | --- | --- | --- |
-| 1 | **純版面修改不產碼** | 移動／大小／收合／分量展開／Notes 修改不產碼、不 cook：前端以 `graphContent()` 排除 `ui` 與 Notes／GLSL 顯示節點判定；TD 端重用已通過的產碼結果，版面欄位不進產碼鍵（0.8.115 A 前端略過檢查 → 0.8.116 B／C 產碼快取，6→0 次）。後續 TD 端 JSON 暫存等階段在 [GRAPH_SYNC_SAVE_PLAN](../../../TD-Grape-legacy/docs/discussions/GRAPH_SYNC_SAVE_PLAN.md) 為「後續待審」，未實作 | 任何修改（含純移動）都前端產碼＋TD `_validate_candidate` GPU 驗證＋`_verify_gpu`；GLSL 相同只略過改寫 Shader。重構文件未列此要求 | ❌（已入 CURRENT） |
+| 1 | **純版面修改不產碼** | 移動／大小／收合／分量展開／Notes 修改不產碼、不 cook：前端以 `graphContent()` 排除 `ui` 與 Notes／GLSL 顯示節點判定；TD 端重用已通過的產碼結果，版面欄位不進產碼鍵（0.8.115 A 前端略過檢查 → 0.8.116 B／C 產碼快取，6→0 次）。後續 TD 端 JSON 暫存等階段在 [GRAPH_SYNC_SAVE_PLAN](../../../TD-Grape-legacy/docs/discussions/GRAPH_SYNC_SAVE_PLAN.md) 為「後續待審」，未實作 | 任何修改（含純移動）都前端產碼＋TD `_validate_candidate` GPU 驗證＋`_verify_gpu`；GLSL 相同只略過改寫 Shader。重構文件未列此要求 | ❌（已入 CURRENT）——屬協定，**提前做**（越晚越貴） |
 | 2 | **編輯本身的前端成本** | 0.8.115 A：純版面修改不再做 Auto／常數檢查、不重建無關節點庫與來源側欄 | 無 Auto；交易與 projection 只重算變動部分，未變卡片／線保持引用（Refactor.15 session 與 browser ABBA 測試） | ✅ |
 | 3 | **空白畫布放開不重繪** | 0.8.111：空白處 pointerup 原本無條件全重建（101 節點 124–139 ms）；改為無選取變化直接返回，只更新選取樣式 | React Flow 只處理選取變化；Refactor.15 實測 30 秒靜止無 DOM mutation、未變卡片保留 | ✅ |
 | 4 | **待機成本（沒有人在編輯時）** | 舊產品以 650 ms 排程與 runtime 主執行緒每輪處理有限 job；無獨立「零待機」驗收 | 新 Manager 空佇列不掃描、子 OP 無 frame callback（Refactor.14）；TD 不在時的重試只在未連線期間（Refactor.16）。完整 Performance Mode 尚未量測 | ✅（量測仍缺，見 CURRENT 未驗證） |
