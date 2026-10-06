@@ -26,7 +26,8 @@
 | 舊入口專用・待遷移 | 只有舊編輯器在用，但功能要保留，關閉舊入口前要搬到新入口 | 橘框 `Legacy · 舊入口專用・待遷移` |
 | 只給舊入口 | 舊入口關掉時一起刪 | 待定（尚未出現） |
 | 沒人用 | 沒有任何呼叫，人類確認後刪 | 待定（尚未出現） |
-| 已斷 | 舊版有、新版沒接上（例：舊編輯器匯入時的 `POST inspect`） | 無 OP，只記在本頁 |
+| 只剩測試／工具 | 不在 TOE 執行，只被測試（如以舊 Python compiler 當對照基準）或建置工具引用 | 無 OP，只記在本頁 |
+| 已斷 | 舊版有、新版沒接上（例：舊編輯器匯入時的 `POST inspect`）；或 TOE 裡的 OP 依賴已移除的舊程式 | 有 OP 時暗紅框 `Legacy · 已斷：…`；無 OP 只記在本頁 |
 
 ## `/TD_Grape/GrapeManager`（已整理 ✅）
 
@@ -63,7 +64,32 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 | --- | --- | --- |
 | parameters | 元件自訂參數頁編輯；新入口目前只呼叫 state／apply／save | `src/core/sgrape_parameters.py` |
 
-## 尚未整理
+## `/TD_Grape` 其他部分與 repo 其餘 Python（2026-10-07 盤點 ✅）
 
-- `src/core/` 其餘 6 檔（`sgrape_core.py`、`sgrape_composites.py`、`sgrape_document.py`、`sgrape_library.py`、`sgrape_legacy_nodes.py`、`sgrape_voronoi.py`）：不在 GrapeManager，誰在用待查。
-- TOE 內其他 Python DAT：`remote_panel`（91）、`masters`（6）、每個 Grape Family 內約 15 個、`GrapeEditor`（已確認與 repo 一致，屬常駐）。`tdfam`（162）為外部套件，不納入。
+方法：以 TD MCP 將 TOE 內每個 DAT 與 repo 檔案逐字比對（忽略換行差異），再以 `git grep` 查 repo 內引用。
+
+**TOE 內（`/TD_Grape` 這一層）**
+
+| OP | 內容 | 判定 |
+| --- | --- | --- |
+| `GrapeEditor` | `editor_service*.py`、`editor_folder_callbacks.py` 5 份，皆與 repo 一致 | 常駐 |
+| `GrapeManager` | 見上節 | 已整理 |
+| `remote_panel` | 13 份與 [src/remote_panel](../../src/remote_panel) 一致；另 107 個 DAT 為 TD 內建元件（annotation、cameraViewport 等）的內部程式，非本專案 | 常駐 |
+| `masters`（`grape_mat`、`grape_top`） | 舊式 Grape OP 範本；`controls` 是 [shader_controls.py](../../src/td/runtime/shader_controls.py)，Open Editor 要呼叫舊的 `runtime`（`sgrape_runtime`），TOE 中已不存在 | **已斷**（TD 暗紅框） |
+| `family_callbacks` | [family_callbacks.py](../../src/td/runtime/family_callbacks.py)：TD 選單建立 Grape OP 後的 `onPostPlaceOp` 呼叫舊 `runtime` | **已斷**（TD 暗紅框）：依程式判斷，從選單建立 Grape OP 會失敗，**未實測** |
+| `tdfam` | TDFam 外部套件 | 不納入 |
+| `IconGen`、`icon`、`licenses` | 保護區／授權 | 不動 |
+
+各 Grape OP 內：`GrapeControls/editor_control` 為新式 [native_family_controls.py](../../src/td/runtime/native_family_controls.py)（常駐）；`GrapeControls/parameter_links` 為 `sgrape_parameter_links.py` 副本（共用・待更新，同 GrapeManager）。
+
+**repo 裡、但不在 TOE 執行的 Python**
+
+| 檔案 | 誰還在用 | 判定 |
+| --- | --- | --- |
+| `src/core/sgrape_core.py`、`sgrape_composites.py`、`sgrape_document.py`、`sgrape_library.py`、`sgrape_legacy_nodes.py`、`sgrape_voronoi.py` | 只有 Python 單元測試、TD 測試、部分 integration 測試（以舊 Python compiler 當對照基準，例如 `tests/unit/top_compiler_oracle.py`），以及建置工具 `tools/build/build_textured_material_presets.py`、`sync_node_browser.py`、`tools/dev/check_locales.py` | 只剩測試／工具 |
+| `src/td/runtime/sgrape_runtime.py`（舊編輯器宿主） | 測試；`tools/dev/prepare_cold_start.py` 讀它的 `PRODUCT_VERSION`；被 `masters`／`family_callbacks` 依賴但已不在 TOE | 只剩測試／工具（其依賴者已斷） |
+| `frontend_artifact.py`、`pixel_preview_recovery.py`、`sgrape_live.py` | 只被 `sgrape_runtime.py` 或測試引用 | 只剩測試／工具 |
+| `editor_launch.py` | 被 `shader_controls.py`、`manager_controls.py` 引用（皆舊式路徑） | 只剩舊式路徑 |
+| `manager_controls.py`、`tdfam_menu_colors.py`、`controls.py` | 只在對應表（`src/td/embedded_sources.json`、`source_files.json`） | 沒人用（待人類確認） |
+
+**要人類決定的**：(1) 從 TD 選單建立 Grape OP 是否真的壞了、要不要先實測；(2)「只剩測試／工具」的舊 Python，是保留當對照基準，還是等 TS 測試涵蓋後移除；(3) 「沒人用」三檔是否刪除。
