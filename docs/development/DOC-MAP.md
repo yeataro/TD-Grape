@@ -33,6 +33,7 @@
 | `../GLOSSARY.md` | 重構討論用語表（與上一份不同） |
 | `docs/architecture/`（7 份） | 值模型、型別契約、升級政策、Shader 發布保護等（重構前） |
 | `docs/features/`（46 份）、`docs/ui/`（27 份） | **Legacy 功能與 UI 行為說明**——查舊行為的主要來源 |
+| `../work/legacy-reference/ux-ui-design-handoff/` | **舊產品外觀與互動手冊**（Legacy Codex 製作，2026-10-07 人類提供；含 atlas 網頁圖鑑、design、research）。**用法**：只取「看起來／操作起來怎樣」當驗收參考，不照抄其實作方式；先用我們自己的方式定義概念，再拿它對照外觀；agent 所寫，重要處對照舊產品程式或實際畫面；不併入 repo 規格。內含腳本不執行。 |
 | `docs/specs/shader-graph-handoff-v2.md` | 原始實作規格（2026-09-14） |
 | `../work/in-place-refactor-design/` 其他檔 | 個別技術查證（WebRTC、Safari、VFS、TD history、物件模型研究等） |
 | `../work/in-place-refactor-design/refactor-workflow-draft.md` | 操作索引與切入點理由（流程建議已被 REFACTOR-WORKFLOW 取代） |
