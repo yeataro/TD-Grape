@@ -58,8 +58,13 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
 
 - **TD 現場**：操作前用 TD MCP 確認進程、TOE、目標、資產版本與服務，不假定舊 port／路徑有效。`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴禁止修改。更新運行中的 TD 時保留使用者的圖、參數關聯、Shader ID 與連線；更新來源、保存 TOE、升級 Shader 是不同操作。
 - **網頁資產（`/TD_Grape/GrapeEditor`）**：開發期間 `Use External Folder` 開啟，`build:editor` 輸出到 Rootfolder 後按 **Reload Assets**（TD 在 Reload 當下讀入整包快照，不即時監看資料夾）。交付或提交 TOE 前：按 **Update Embedded VFS** → 關閉 `Use External Folder` → 存 TOE；否則 TOE 帶的是舊副本，且開關狀態會一起存檔。
-- **Family 對 Manager 只有編輯依賴**：Manager 缺席時原生參數、Bind、texture、Shader 執行照常；不輪詢、不重試；子 OP 不設 Global Shortcut。
-- **核心不依賴 DOM、React Flow、舊 Python compiler**。GraphDocument 是唯一權威；新路徑出錯不得靜默改用舊 compiler 或另一個 writer。
+- **Grape OP 對 Manager 只有編輯依賴**：Manager 缺席時原生參數、Bind、texture、Shader 執行照常；不輪詢、不重試；子 OP 不設 Global Shortcut。（用語：使用者建立的 Grape TOP／Grape MAT 總稱 **Grape OP**，人類也稱「子 OP」；程式裡的「Family」是舊稱，「Family」一詞只保留給 TDFam 的 OP Family。）
+- **權威（依範圍，2026-10-07 定案，見 design-interview Q28）**：
+  - **編輯器內部：GraphDocument 是唯一權威。** React Flow、畫面、面板只是投影；拖曳中、輸入中的暫態可以存在，提交時一律寫回 GraphDocument。
+  - **編輯器與 TD 之間：** TD 的 Grape OP 保存已送達的圖與 Shader，重開時讀這一份。送出以版本號核對；對不上即衝突，由使用者選「編輯端／TD 端」，不自動合併。
+  - **編輯不等 TD：** 同步在背景進行；TD 慢、最小化或不在，都不能讓編輯變慢或被鎖住，只有開圖時需先讀一次。衝突提示必須浮動、不擋編輯。
+  - 比喻：Google 文件——分頁裡正在打的文件＝GraphDocument，已儲存到雲端＝TD，離線照樣能打字、連上後自動同步。
+- **核心不依賴 DOM、React Flow、舊 Python compiler**；新路徑出錯不得靜默改用舊 compiler 或另一個 writer。
 - **新抽象必須有當輪真實 caller**；不建 event bus、diff 系統或治理平台。
 - **產品程式只在 `src/`**；來源與 TD DAT 的對應由 `src/td/source_files.json`、`src/td/embedded_sources.json` 定義。
 - **註解**：新寫或改到的程式碼用精簡「英文摘要＋繁中說明」，範例 `src/core-ts/values.ts`；不全面追補舊程式。
