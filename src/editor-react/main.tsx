@@ -105,7 +105,7 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
       </div>}
       <div className="canvas" inert={!!draft}><Canvas session={session} projection={state.projection} bodyDrag={bodyDrag} snap={snap} />{draft && <div className="draft-blocker" />}</div>
       {showCode && <pre aria-label="Generated GLSL">{state.glsl || '首次套用後顯示產碼。'}</pre>}</main>
-    <footer>本輪：常數 TOP · Float／Color RGBA／Add／Math／Color Output · 放開／提交數值後自動套用 · Ctrl/Cmd＋Z 撤銷</footer>
+    <footer>本輪：TOP 常用節點（不含 Uniform／子圖）· 放開／提交數值後自動套用 · Ctrl/Cmd＋Z 撤銷</footer>
   </TextContext.Provider></SessionContext.Provider>;
 }
 

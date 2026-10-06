@@ -1,6 +1,6 @@
 # 正式 React TOP 入口
 
-這是 B 案第一條產品路徑，已接真實 TD 文件與保存；不是 `work/` 的評估版。首輪限定 TOP／pixel 常數圖：Float、Color RGBA、Add、Color Output。其他能力仍由舊入口服務。
+這是 B 案第一條產品路徑，已接真實 TD 文件與保存；不是 `work/` 的評估版。目前開放 TOP／pixel 的 47 個常用節點（清單見 [core.ts](core.ts) 的 `supportedDefinitions`，Refactor.17）；不含 Uniform、子圖、Frame，以及需先設定參數的 Combine／Convert／Replace／Swizzle／Vector。其他能力仍由舊入口服務。
 
 從 Family 的舊編輯器按 **React TOP**，或開啟同 origin 的 `/react-editor.html?target=<Family UUID>`。新頁可回到舊入口；不同頁同時寫同一份圖會受宿主 revision 保護，不會合併兩張活動圖。
 
@@ -11,9 +11,9 @@
 | 節點規則、接孔、型別、GLSL | [core-ts/nodes](../core-ts/nodes)、[node_module.ts](../core-ts/node_module.ts)、[values.ts](../core-ts/values.ts) |
 | 文件操作、Undo、排程、晚回覆、失敗保留 | [session.ts](session.ts) 的 `EditorSession` |
 | 把一筆 GraphChanges 轉成 RF nodes／edges | [projection.ts](projection.ts) 的 `project` |
-| 模組描述如何畫成卡片／值欄位 | [NodeCard.tsx](NodeCard.tsx)、[NumberField.tsx](NumberField.tsx) |
+| 模組描述如何畫成卡片／值欄位、模組宣告的 spare 接孔 | [NodeCard.tsx](NodeCard.tsx)、[NumberField.tsx](NumberField.tsx) |
 | 額外 Handle 量測通知 | [geometry.ts](geometry.ts)；外框尺寸／拖曳沿用 RF |
-| 開圖、最小工具列、草稿恢復提示 | [main.tsx](main.tsx) |
+| 開圖、最小工具列、草稿恢復提示、TD 不在時的提示與衝突選擇 | [main.tsx](main.tsx)；分類與重試在 [session.ts](session.ts) 的 `classify`／`recover` |
 | 現有 HTTP 協定及失敗層 | [host.ts](host.ts)；TD 契約在 [host_api.py](../td/runtime/host_api.py) |
 | 首輪已接管範圍、既有生成核心的型別入口 | [core.ts](core.ts) |
 

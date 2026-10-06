@@ -6,17 +6,19 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.16**（2026-10-07，見 [STATUS](STATUS.md) 頂段）——**人類實機確認通過**（TD 最小化編輯／自動續送、Math 新增輸入）：
+**最新交付：Refactor.17**（2026-10-07）——新入口開放 47 個常用節點（原 5 個），每個都經自動測試接到輸出並產碼、真實 TD GPU 編譯通過；**待人類實機確認**。外觀未整理（同 Math，Q22 後續處理）。
+
+**前一輪：Refactor.16**——**人類實機確認通過**（TD 最小化編輯／自動續送、Math 新增輸入）：
 - TD 不在時的編輯（Q28）：TD 無回應／連不到時照常編輯、只在未連線期間重試、回來自動續送；衝突浮動提示「編輯端（建議）／TD 端」，TD 端可一次 Undo 叫回。
 - Math 動態輸入：拖線到「＋ 新增輸入」新增接孔並接線，一次 Undo（React 只認模組 `spare` 契約，Q29）。
 
-**前一輪：Refactor.15 / `7b52579`** ✅——第一條正式 React TOP 路徑（Float、Color RGBA、Add、Color Output）。入口與責任表見 [React 入口](../../src/editor-react/README.md)。
+**更早：Refactor.15 / `7b52579`** ✅——第一條正式 React TOP 路徑（Float、Color RGBA、Add、Color Output）。入口與責任表見 [React 入口](../../src/editor-react/README.md)。
 
 **Refactor.15 人類 UX 驗收：已有結論（2026-10-07）。** 遷移期間不要求外觀／行為與舊入口一致。補上的遷移期便利行為：
 - 開不了圖時列出不支援的具體內容（`f803dca`）。
 - 開不了圖時可「載入預設圖」恢復測試環境；編輯器內衝突時可「用編輯器草稿覆寫 TD」（`4017f53`）。
 
-自動測試：core 97 + session 24 項通過；11 組 browser 情境通過 ✅（2026-10-07）。
+自動測試：core 97 + session 25 項通過；11 組 browser 情境通過 ✅（2026-10-07）。
 
 **同日其他：** `GrapeManager` 依去向分組並加 Legacy 標注，新增 [舊 Python 現況清單](LEGACY-PYTHON.md)（`5a08665`）；重構歷史已查證，寫在該文件。
 
@@ -33,7 +35,7 @@
    - **仍在舊 Python（新 Manager 使用中，GrapeManager 黃框）**：宣告新增／改名／刪除（`sgrape_sources.edit`）、建立與同步 TD 原生參數（`configure`）、改值（`write_value`）、原生值 Undo（`sgrape_history`）、原生參數遺失偵測。
    - **完全沒有**：React 的 Values 面板與 Uniform 節點選擇宣告的 UI；時間等預設驅動、陣列、矩陣、Attribute、POP Buffer、Spec Constant；拖曳即時更新。
    - **待決策**：(1) 宣告管理放哪——依 Q29「誰需要」，宣告屬作品→核心，建立原生參數只有 TD 能做→宿主，目前兩者混在 `sgrape_sources.py`；(2) 新入口的 Values 面板與節點選單；(3) 支援範圍先做數值／顏色，或一次對齊舊產品。
-2. **下一切片候選：** 未定；依 B 案從舊產品功能中挑下一個小而真實的操作（Q29：舊產品是功能基準，不是模仿對象）。
+2. **下一切片候選：** 需先設定參數的 Combine／Convert／Replace／Swizzle／Vector（建立時沒有可用預設，需查舊產品如何建立）；或其他舊產品功能（Q29：舊產品是功能基準，不是模仿對象）。
 3. **Legacy 盤點續作：** `src/core/` 其餘 6 檔與 TOE 內其他 Python（見 [LEGACY-PYTHON](LEGACY-PYTHON.md)「尚未整理」）。
 
 ## 已發現、尚未處理
@@ -68,7 +70,7 @@
 
 - 主組件 `/TD_Grape`；測試用 Grape TOP `/project1/Grape_TOP_React`（2026-10-07 已換成預設圖）
 - 新入口 `http://127.0.0.1:65465/react-editor.html?target=3ffb8d81896943c8bf90bec56791a33b`
-- `GrapeEditor` 的 `Use External Folder` **關閉**（2026-10-07 以 `Deliver()` 交付 Refactor.16 並存 TOE）；繼續開發前先執行 `DevMode()`，見 AGENTS.md
+- `GrapeEditor` 的 `Use External Folder` **開啟**（2026-10-07 `DevMode()`，服務 Refactor.17）；提交 TOE 前先執行 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴

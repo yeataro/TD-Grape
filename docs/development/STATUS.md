@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.17 — 新入口開放 47 個常用節點 — 2026-10-07
+
+依人類選擇「新編輯器開放更多節點」。**待人類實機確認。**
+
+- `supportedDefinitions` 由 5 個擴為 47 個：數值與輸出、四則與 Math、abs／sign／floor／ceil／round／trunc／fract／sqrt／sin／cos／min／max／clamp／mix／smoothstep／dot／length／normalize、Compare 與 equal／notEqual／大小比較、any／all／not／If／isnan／isinf、Split RGBA／Split／Compose RGBA／Router。只改覆蓋清單；React 未加任何節點專用程式（原始碼檢查測試仍通過）。開圖拒絕與頁尾文字改為「TOP 常用節點（不含 Uniform、子圖、Frame）」。
+- 盤點：53 個 TOP 模組中 47 個不需新 UI 即可開放；Combine／Convert／Replace／Swizzle／Vector 以預設參數無法建立，Uniform 待決策（CURRENT 待處理 1）。
+- 自動驗證：session 新增「每個開放節點都能新增、接到 Color Output（必要時經 length／length:vec2／If／any→If）、以前端 compiler 產碼且確實輸出」，25 項全過；核心 97、browser 11 組。
+- 真實 TD：同一路由逐一套用 46 張圖到 `/project1/Grape_TOP_React`，46／46 HTTP 200（宿主 GPU 驗證通過），之後還原原圖（revision 272，GLSL TOP 無錯誤）。只驗證 GPU 編譯，數值正確性除 Math／Float／Add 外未逐一抽樣。私人證據 `work/refactor/react-node-batch1/live.json`。
+- TD 以 `/dev_tools/grape_editor` `DevMode()` 切回開發模式服務 Refactor.17；未保存 TOE。
+
 ## Refactor.16 — TD 不在時的編輯、Math 動態輸入 — 2026-10-07
 
 Claude 接手後第一輪（承接 Refactor.15 人類 UX 驗收結論與 design-interview Q28／Q29）。**人類實機確認通過**（同日：TD 最小化時可編輯、還原後自動送出；Math 新增輸入）；觀察到 Math 卡片樣式凌亂，列入 CURRENT「已發現、尚未處理」。Human Takeover 仍未執行。

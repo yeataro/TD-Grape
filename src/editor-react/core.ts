@@ -32,12 +32,23 @@ export class UnsupportedGraphError extends Error {}
 
 // Slice coverage, not a second node registry. Expand with verified product cases.
 // 集中記錄本輪已接管能力；節點規則／選項仍只由真正的模組提供。
-export const supportedDefinitions = ['float', 'color', 'add', 'math', 'pixel_out'].map(key => 'sgrape.builtin.' + key);
+export const supportedDefinitions = [
+  // values and output
+  'float', 'scalar', 'color', 'vec2', 'vec3', 'vec4', 'pixel_out',
+  // arithmetic and functions
+  'add', 'subtract', 'multiply', 'divide', 'math', 'abs', 'sign', 'floor', 'ceil', 'round', 'trunc', 'fract',
+  'sqrt', 'sin', 'cos', 'min', 'max', 'clamp', 'mix', 'smoothstep', 'dot', 'length', 'normalize',
+  // comparison and logic
+  'compare', 'equal', 'notEqual', 'lessThan', 'lessThanEqual', 'greaterThan', 'greaterThanEqual',
+  'any', 'all', 'not', 'if', 'isnan', 'isinf',
+  // vector and colour structure
+  'split', 'vector_split', 'rgba', 'router',
+].map(key => 'sgrape.builtin.' + key);
 export function requireSupported(graph: graph.GraphDocument['document']) {
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {
     const shown = reasons.length > 8 ? [...reasons.slice(0, 8), `…另有 ${reasons.length - 8} 項`] : reasons;
-    throw new UnsupportedGraphError('此入口目前支援 Float、Color RGBA、Add、Math 與 Color Output 的常數 TOP 圖。未送出編輯或套用，請使用舊入口。\n' +
+    throw new UnsupportedGraphError('此入口目前支援 TOP 的常用節點（不含 Uniform、子圖、Frame 等）。未送出編輯或套用，請使用舊入口。\n' +
       '不支援的內容：\n' + shown.map(reason => '・' + reason).join('\n'));
   }
 }

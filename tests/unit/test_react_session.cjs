@@ -200,7 +200,7 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, calls, loaded } = open(t, strictHost());
-  const unsupported = loaded(); unsupported.state.graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.any', params: {} });
+  const unsupported = loaded(); unsupported.state.graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.convert', params: {} });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap);
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
@@ -235,7 +235,7 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   state.frontendCompiler.catalogHash = 'other';
   assert.throws(() => new EditorSession(session.host, bootstrap, state), /版本不一致/);
   const unsupported = loaded(); unsupported.state.graph.functions = [{ id: 'unknown' }];
-  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), /常數 TOP[\s\S]*子圖 1 個/);
+  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), /此入口目前支援[\s\S]*子圖 1 個/);
   // Leftover Uniform from the legacy entry: the message names both the declaration and the node.
   const uniform = loaded(), pixel = uniform.state.graph.stages.pixel;
   uniform.state.graph.declarations = [{ id: 'u1', kind: 'uniform', name: 'uValue', type: 'float', value: 0 }];
@@ -338,7 +338,7 @@ test('spare input refuses incompatible types and the module limit without editin
 test('React layer has no node-specific branch for spare inputs', () => {
   const dir = path.join(root, 'src/editor-react');
   const source = fs.readdirSync(dir).filter(f => /\.tsx?$/.test(f)).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n')
-    .split('\n').filter(line => !line.includes('supportedDefinitions =')).join('\n');
+    .replace(/export const supportedDefinitions = \[[\s\S]*?\]\.map/, ''); // the slice coverage list names keys by design
   assert.doesNotMatch(source, /['"]math['"]|builtin\.math|definitionUuid\s*===?\s*['"]/);
 });
 
@@ -389,4 +389,40 @@ test('TD changed while away: conflict; TD side is adopted and one Undo recalls t
   assert.deepEqual(clone(session.graph()), draft, 'one Undo recalls the editor version');
   await session.flush();
   assert.deepEqual(loaded().state.graph, draft); assert.equal(loaded().state.revision, 6);
+});
+
+// Every node the React entry offers: add it, reach Color Output through a short chain of other
+// offered nodes when its type needs one (vector -> length, bool vector -> any -> If), and compile
+// with the same frontend compiler used for TD delivery.
+test('every offered node can be added, wired to the output and compiled', t => {
+  const { supportedDefinitions } = load(path.join(root, 'src/editor-react/core.ts'));
+  const chains = [[], ['length'], ['length:vec2'], ['if'], ['any', 'if'], ['length', 'if']]; // key:type = card's type selector
+  const attempt = (uuid, output, chain) => {
+    const { session } = open(t), ids = ['x', ...chain.map((_, i) => 'c' + i)];
+    session.transact('add', net => [[uuid], ...chain.map(k => k.split(':'))].forEach(([d, type], i) =>
+      net.insert({ id: ids[i], definitionUuid: i ? 'sgrape.builtin.' + d : d, params: type ? { type } : {}, ui: { x: 0, y: 0 } })));
+    const view = id => session.snapshot().projection.nodes.find(n => n.id === id).data;
+    let from = { source: 'x', sourceHandle: output };
+    for (const id of [...ids.slice(1), 'pixel_out']) {
+      const port = view(id).inputs.find(p => session.valid({ ...from, target: id, targetHandle: p.key }));
+      if (!port) return null;
+      session.connect({ ...from, target: id, targetHandle: port.key });
+      if (id !== 'pixel_out') from = { source: id, sourceHandle: view(id).outputs[0].key };
+    }
+    return session.graph();
+  };
+  const failures = [];
+  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out'))) {
+    const { session } = open(t);
+    session.transact('add', net => net.insert({ id: 'x', definitionUuid: uuid, params: {}, ui: { x: 0, y: 0 } }));
+    const outputs = session.snapshot().projection.nodes.find(n => n.id === 'x').data.outputs.map(p => p.key);
+    let graph = null;
+    for (const output of outputs) { for (const chain of chains) if ((graph = attempt(uuid, output, chain))) break; if (graph) break; }
+    if (!graph) { failures.push(uuid + ': no route to Color Output'); continue; }
+    try {
+      const compiled = GrapeTopCompiler.compile(graph, bootstrap.typeContract.glslCode);
+      if (!/sg_n_x(?![A-Za-z0-9])/.test(compiled.pixel)) failures.push(uuid + ': not emitted');
+    } catch (error) { failures.push(uuid + ': ' + error.message); }
+  }
+  assert.deepEqual(failures, []);
 });
