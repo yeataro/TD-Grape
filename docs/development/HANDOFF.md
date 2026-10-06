@@ -5,12 +5,12 @@
 ## 先確認現在在哪裡
 
 - 起開目錄：`C:\Users\user\Dropbox\Codex\TD-Grape-workspace`。先讀根目錄 `REFACTOR-WORKFLOW.md`；產品開發限定 `TD-Grape-refactor` worktree，分支 `refactor`。
-- 接手先看 Git 現況。已交付基準是 **Refactor.15 / `7b52579`**；交接時 `src/td/TD-Grape-dev.toe` 有後續未提交修改，須保留。`docs/Goose_City_Revelation/`、`src/td/.tdmcp/` 是既有未追蹤內容，勿清除或順手納入提交。
+- 接手先看 Git 現況。已交付基準是 **Refactor.15 / `7b52579`**；交接時 `src/td/TD-Grape-dev.toe` 有後續未提交修改，須保留。`src/td/.tdmcp/` 是既有未追蹤內容，勿清除或順手納入提交。`docs/Goose_City_Revelation/` 已提交（`d204b93`），與專案無關。
 - 再讀 [STATUS](STATUS.md)、[正式 React 入口說明](../../src/editor-react/README.md)、[B 案](REFACTOR_REACT_FLOW_PLAN_B.md)。其他文件按當輪問題讀；Legacy / main 只在必要時作唯讀參照。
 
 ## 最新結果與接手時的判斷
 
-首個正式常數 TOP slice 已完成：Float、Color RGBA、Add、Color Output 的編輯、接線、Undo / Redo、前端 GLSL 產碼、真實 TD 套用與保存。112 項核心 / session 測試、8 組瀏覽器情境，以及真實 GPU 拒絕、TOX 重載已有證據。**人類剛確認首輪操作驗收沒問題**；STATUS 較早的「人類 UX 審閱尚未執行」已被此結論更新。Human Takeover Test、完整 TOE 程序冷啟動仍未驗證，不能宣稱通過。
+首個正式常數 TOP slice 已完成：Float、Color RGBA、Add、Color Output 的編輯、接線、Undo / Redo、前端 GLSL 產碼、真實 TD 套用與保存。112 項核心 / session 測試、8 組瀏覽器情境，以及真實 GPU 拒絕、TOX 重載已有證據。**人類 UX 驗收進行中，尚無結論**（2026-10-06 更正：原句「人類剛確認首輪操作驗收沒問題」不正確，人類尚未完成回應）；以下觀察與要求來自驗收過程。Human Takeover Test、完整 TOE 程序冷啟動仍未驗證，不能宣稱通過。
 
 新舊網頁同包內嵌在 `GrapeEditor` 的 VFS，由同一服務提供；既有開啟按鈕仍可能走舊入口。最後使用的測試 Family 是 `/project1/Grape_TOP_React`，主組件是 `/TD_Grape`，新入口：
 

@@ -1,6 +1,6 @@
 # 文件索引
 
-目前狀態以 [STATUS.md](development/STATUS.md) 為準。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
+目前現況見 [CURRENT.md](development/CURRENT.md)，完整交付紀錄見 [STATUS.md](development/STATUS.md)，文件分類見 [DOC-MAP.md](development/DOC-MAP.md)。既有文件保留歷史設計與驗證背景，提案出現在文件中不代表已經實作。
 
 - [正式 React TOP 開發入口](../src/editor-react/README.md)：B 案第一條實際 caller、責任位置、建置與驗證。
 - [Refactor：React／React Flow 遷移 B 案](development/REFACTOR_REACT_FLOW_PLAN_B.md)：2026-10-06 人類已接受的執行路線；第一個正式 TOP 切片讓核心、應用與 React 共同迭代，包含交易聚合／引用穩定／幾何更新及 Human Takeover 驗收。Refactor.15 首條正式 TOP 路徑已接通，待人類 review／Human Takeover；評估版原地保留。[A 案](development/REFACTOR_UI_UPDATES.md)原文保留比較，不作並行執行計畫。

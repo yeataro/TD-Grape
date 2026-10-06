@@ -20,3 +20,7 @@ Backup/
 *.zip
 dist/*
 !dist/README.md
+
+# Local agent/tool state.
+.claude/settings.local.json
+src/td/.tdmcp/
