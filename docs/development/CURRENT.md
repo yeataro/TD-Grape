@@ -64,7 +64,7 @@
 
 - 主組件 `/TD_Grape`；測試用 Grape TOP `/project1/Grape_TOP_React`（2026-10-07 已換成預設圖）
 - 新入口 `http://127.0.0.1:65465/react-editor.html?target=3ffb8d81896943c8bf90bec56791a33b`
-- `GrapeEditor` 的 `Use External Folder` **開啟中**（開發模式）；交付前依 AGENTS.md 打包進 VFS 並關閉
-- 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 在 TD 內的 GrapeManager 整理需人類存 TOE 才保留
+- `GrapeEditor` 的 `Use External Folder` **關閉**（2026-10-07 以 `Deliver()` 交付 Refactor.16 並存 TOE）；繼續開發前先執行 `DevMode()`，見 AGENTS.md
+- 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴

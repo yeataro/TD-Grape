@@ -63,7 +63,9 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
 ## 必守規則
 
 - **TD 現場**：操作前用 TD MCP 確認進程、TOE、目標、資產版本與服務，不假定舊 port／路徑有效。`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴禁止修改。更新運行中的 TD 時保留使用者的圖、參數關聯、Shader ID 與連線；更新來源、保存 TOE、升級 Shader 是不同操作。
-- **網頁資產（`/TD_Grape/GrapeEditor`）**：開發期間 `Use External Folder` 開啟，`build:editor` 輸出到 Rootfolder 後按 **Reload Assets**（TD 在 Reload 當下讀入整包快照，不即時監看資料夾）。交付或提交 TOE 前：按 **Update Embedded VFS** → 關閉 `Use External Folder` → 存 TOE；否則 TOE 帶的是舊副本，且開關狀態會一起存檔。
+- **網頁資產（`/TD_Grape/GrapeEditor`）**：用 TD 內的開發腳本 `/dev_tools/grape_editor`（原始碼 `tools/td/grape_editor_dev.py`，改了要重新貼入 DAT），不手動按參數：
+  - 開發：`op('/dev_tools/grape_editor').module.DevMode()`——改用外部資料夾；之後每次 `build:editor` 輸出到 Rootfolder 再按 **Reload Assets**（TD 在 Reload 當下讀入整包快照，不即時監看資料夾）。
+  - 交付或提交 TOE 前：`op('/dev_tools/grape_editor').module.Deliver()`——打包進 VFS、關閉外部資料夾、核對版本後存 TOE；任一步失敗即停止、不存檔。
 - **Grape OP 對 Manager 只有編輯依賴**：Manager 缺席時原生參數、Bind、texture、Shader 執行照常；不輪詢、不重試；子 OP 不設 Global Shortcut。（用語：使用者建立的 Grape TOP／Grape MAT 總稱 **Grape OP**，人類也稱「子 OP」；程式裡的「Family」是舊稱，「Family」一詞只保留給 TDFam 的 OP Family。）
 - **權威（依範圍，2026-10-07 定案，見 design-interview Q28）**：
   - **編輯器內部：GraphDocument 是唯一權威。** React Flow、畫面、面板只是投影；拖曳中、輸入中的暫態可以存在，提交時一律寫回 GraphDocument。
