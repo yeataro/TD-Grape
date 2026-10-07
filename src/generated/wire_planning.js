@@ -15,6 +15,7 @@ const top_compiler_1 = require("./top_compiler");
 const capacity_1 = require("./capacity");
 const structure_1 = require("./structure");
 const editor_contract_1 = require("./editor_contract");
+const model_1 = require("./model");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -74,7 +75,7 @@ const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable };
+exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem };
 
 },
 "capacity":function(require,module,exports){
@@ -87,12 +88,12 @@ exports.requireCapacity = requireCapacity;
 const config_1 = require("./config");
 function networks(g) {
     return [...Object.entries(g.stages || {}).map(([id, data]) => [id, data]),
-        ...(g.functions || []).map(f => ['function:' + f.id, f.graph])];
+        ...(g.subgraphs || []).map(f => ['function:' + f.id, f.graph])];
 }
 /** Every measure of the graph, with its limit. Expanded size counts a subgraph instance as the
  * expanded size of its definition (an estimate of what the subgraph compiler builds). */
 function measure(g, registry, config = config_1.CORE_CONFIG) {
-    const definitions = new Map((g.functions || []).map(f => [f.id, f.graph]));
+    const definitions = new Map((g.subgraphs || []).map(f => [f.id, f.graph]));
     const expanded = new Map(), visiting = new Set();
     const size = (data, key) => {
         var _a, _b;
@@ -103,7 +104,7 @@ function measure(g, registry, config = config_1.CORE_CONFIG) {
         visiting.add(key);
         let total = 0;
         for (const n of data.nodes) {
-            const ref = (_b = (_a = registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n), inner = ref ? definitions.get(ref) : undefined;
+            const ref = (_b = (_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n), inner = ref ? definitions.get(ref) : undefined;
             total += inner ? size(inner, 'function:' + ref) : 1;
         }
         visiting.delete(key);
@@ -160,18 +161,18 @@ function equal(a, b) {
 }
 const keys = (a, b) => [...new Set([...Object.keys(record(a)), ...Object.keys(record(b))])].filter(k => !equal(record(a)[k], record(b)[k]));
 function networks(g) {
-    return new Map([...Object.entries(g.stages), ...(g.functions || []).map(raw => { const f = raw; return ['function:' + f.id, f.graph]; })]);
+    return new Map([...Object.entries(g.stages), ...(g.subgraphs || []).map(raw => { const f = raw; return ['function:' + f.id, f.graph]; })]);
 }
 function metadata(g) {
-    const { stages, functions, catalogSnapshot, ...rest } = g;
-    return { ...rest, functions: (functions || []).map(raw => { const { graph, ...definition } = raw; return definition; }) };
+    const { stages, subgraphs, catalogSnapshot, ...rest } = g;
+    return { ...rest, subgraphs: (subgraphs || []).map(raw => { const { graph, ...definition } = raw; return definition; }) };
 }
-const networkMetadata = (data) => { const { nodes, edges, edgeSequence, ...rest } = data || {}; return rest; };
+const networkMetadata = (data) => { const { nodes, edges, ...rest } = data || {}; return rest; };
 function portTypes(g, node, registry, networkId) {
     var _a;
     if (!node)
         return { inputs: {}, outputs: {} };
-    const module = registry.get(node.definitionUuid), context = (0, node_module_1.contextFor)(g, (_a = g.functions) === null || _a === void 0 ? void 0 : _a.find(f => 'function:' + f.id === networkId));
+    const module = registry.get(node.nodeType), context = (0, node_module_1.contextFor)(g, (_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => 'function:' + f.id === networkId));
     if (!(module === null || module === void 0 ? void 0 : module.supports(node, context)))
         return undefined;
     try {
@@ -186,11 +187,11 @@ function portTypes(g, node, registry, networkId) {
  * inputs. Unknown/dynamic legacy contexts explicitly request fallback. */
 function changesBetween(before, after, registry) {
     var _a, _b;
-    const global = keys(metadata(before), metadata(after)).filter(k => k !== 'functions'), old = networks(before), next = networks(after), changes = [];
-    const defs = (g) => new Map((g.functions || []).map(({ graph, ...f }) => [f.id, f]));
+    const global = keys(metadata(before), metadata(after)).filter(k => k !== 'subgraphs'), old = networks(before), next = networks(after), changes = [];
+    const defs = (g) => new Map((g.subgraphs || []).map(({ graph, ...f }) => [f.id, f]));
     const oldDefs = defs(before), newDefs = defs(after), definitions = [...new Set([...oldDefs.keys(), ...newDefs.keys()])].filter(id => !equal(oldDefs.get(id), newDefs.get(id)));
     const affected = (n, network) => { var _a; if (!n)
-        return false; const m = registry.get(n.definitionUuid); return definitions.includes(((_a = m === null || m === void 0 ? void 0 : m.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(m, n)) || '') || !!(m === null || m === void 0 ? void 0 : m.structural) && definitions.some(id => network === 'function:' + id); };
+        return false; const m = registry.get(n.nodeType); return definitions.includes(((_a = m === null || m === void 0 ? void 0 : m.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(m, n)) || '') || !!(m === null || m === void 0 ? void 0 : m.structural) && definitions.some(id => network === 'function:' + id); };
     for (const id of new Set([...old.keys(), ...next.keys()])) {
         const a = old.get(id), b = next.get(id);
         if (equal(a, b) && !global.length && ![...((a === null || a === void 0 ? void 0 : a.nodes) || []), ...((b === null || b === void 0 ? void 0 : b.nodes) || [])].some(n => affected(n, id)))
@@ -202,7 +203,7 @@ function changesBetween(before, after, registry) {
             // Legacy modules may depend on other nodes/definitions; until migrated,
             // an affected mixed network keeps its conservative projection path.
             for (const [g, n] of [[before, x], [after, y]])
-                if (n && !((_a = registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.supports(n, (0, node_module_1.contextFor)(g, (_b = g.functions) === null || _b === void 0 ? void 0 : _b.find(f => 'function:' + f.id === id)))))
+                if (n && !((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.supports(n, (0, node_module_1.contextFor)(g, (_b = g.subgraphs) === null || _b === void 0 ? void 0 : _b.find(f => 'function:' + f.id === id)))))
                     change.complete = false;
             if (!x)
                 change.added.push(nodeId);
@@ -257,17 +258,10 @@ function commentLines(text, kind) {
         return '    // ' + (kind && i === 0 ? kind + ': ' : '') + line;
     });
 }
-function appendNodeComments(lines, start, note) {
-    const labels = commentLines(note.label);
-    if (labels.length) {
-        if (lines.length > start) {
-            lines[start] += ' ' + labels[0].trimStart();
-            lines.splice(start + 1, 0, ...labels.slice(1));
-        }
-        else
-            lines.push(...labels);
-    }
-    lines.push(...commentLines(note.comment, 'Comment'));
+/** A node's `comment` (moved out of `ui`, Q44) becomes inert lines below its code; `ui.label` is gone.
+ * 節點的 comment（已搬出 ui）產成程式下方的註解行；ui.label 已刪除。 */
+function appendNodeComments(lines, _start, comment) {
+    lines.push(...commentLines(comment, 'Comment'));
 }
 
 },
@@ -303,7 +297,7 @@ const identifier_rules_1 = require("./identifier_rules");
 function variants(module, target) {
     var _a;
     const definition = module.catalog.definition;
-    const base = { id: 'projection', definitionUuid: definition.definitionUuid, params: (0, model_1.copy)(definition.defaults) };
+    const base = { id: 'projection', nodeType: definition.definitionUuid, params: (0, model_1.copy)(definition.defaults) };
     const tokens = [...Object.values(definition.inputs), ...Object.values(definition.outputs)];
     const selector = tokens.includes('D') ? 'declaration' :
         tokens.includes('T') || typeof definition.defaults.type === 'string' ? 'parameter' : 'fixed';
@@ -443,7 +437,7 @@ class Node {
         return this.stored; const value = this.network.nodeData(this.id); if (!this.network.graph.editable)
         this.stored = value; return value; }
     get definition() { if (this.module)
-        return this.module; const data = this.data, value = data && this.network.graph.registry.get(data.definitionUuid); if (!this.network.graph.editable)
+        return this.module; const data = this.data, value = data && this.network.graph.registry.get(data.nodeType); if (!this.network.graph.editable)
         this.module = value; return value; }
     get interface() {
         var _a, _b;
@@ -482,7 +476,7 @@ class Node {
         const node = this.data;
         if (!node)
             throw Error('Node no longer exists');
-        if (Object.keys(patch).some(k => !['params', 'inputValues', 'ui', 'name'].includes(k)))
+        if (Object.keys(patch).some(k => !['params', 'inputValues', 'ui', 'name', 'comment'].includes(k)))
             throw Error('Node update cannot change identity');
         const candidate = { ...(0, model_1.copy)(node), ...(0, model_1.copy)(patch) };
         if (this.definition) {
@@ -503,7 +497,7 @@ class Node {
             return;
         }
         const candidate = module.editInput((0, model_1.copy)(node), key, (0, model_1.copy)(value), this.network.context);
-        if (candidate.id !== node.id || candidate.definitionUuid !== node.definitionUuid)
+        if (candidate.id !== node.id || candidate.nodeType !== node.nodeType)
             throw Error('Input edit changed identity');
         module.validate(candidate, this.network.context);
         (0, node_module_1.resolvePorts)(module, candidate, this.network.context);
@@ -603,7 +597,7 @@ class Network {
         const f = (0, subgraph_copies_1.independentSubgraph)(this, node.id, next);
         return f ? this.graph.subgraph(f.id) : null;
     }
-    get context() { var _a; return (0, node_module_1.contextFor)(this.graph.document, (_a = this.graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.graph === this.data)); }
+    get context() { var _a; return (0, node_module_1.contextFor)(this.graph.document, (_a = this.graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.graph === this.data)); }
     node(id) { let n = this.nodeHandles.get(id); if (!n) {
         n = new Node(this, id);
         this.nodeHandles.set(id, n);
@@ -624,16 +618,16 @@ class Network {
         return this.nodeIndex.get(id);
     }
     get nodes() { return this.data.nodes.map(n => this.node(n.id)); }
-    create(id, definitionUuid, params = {}) {
-        return this.insert({ id, definitionUuid, params });
+    create(id, nodeType, params = {}) {
+        return this.insert({ id, nodeType, params });
     }
     /** Insert authored node data through the same validation/ownership seam. */
     insert(authored) {
-        const { id, definitionUuid } = authored;
+        const { id, nodeType } = authored;
         this.assertEditable();
         if (!id || this.nodeData(id) || this.removedNodes.has(id))
             throw Error('Invalid, duplicate or retired node ID');
-        const module = this.graph.registry.get(definitionUuid);
+        const module = this.graph.registry.get(nodeType);
         if (!module)
             throw Error('Node module is unavailable');
         const node = { ...(0, model_1.copy)(authored), params: { ...(0, model_1.copy)(module.catalog.definition.defaults), ...(0, model_1.copy)(authored.params) } };
@@ -655,9 +649,9 @@ class Network {
             if (!n || typeof n.id !== 'string' || !n.id || ids.has(n.id) || this.removedNodes.has(n.id))
                 throw Error('Invalid, duplicate or retired node ID');
             ids.add(n.id);
-            if (typeof n.definitionUuid !== 'string' || !n.definitionUuid || !n.params || typeof n.params !== 'object' || Array.isArray(n.params))
+            if (typeof n.nodeType !== 'string' || !n.nodeType || !n.params || typeof n.params !== 'object' || Array.isArray(n.params))
                 throw Error('Invalid fragment node');
-            const module = this.graph.registry.get(n.definitionUuid);
+            const module = this.graph.registry.get(n.nodeType);
             if (module === null || module === void 0 ? void 0 : module.supports(n, this.context)) {
                 module.validate(n, this.context);
                 (0, node_module_1.resolvePorts)(module, n, this.context);
@@ -665,7 +659,7 @@ class Network {
             else if (options.unavailable !== 'preserve')
                 throw Error('Node module or configuration is unavailable');
         }
-        let sequence = edgeSequence(this.data);
+        const edgeIds = new Set(this.data.edges.map(e => e.id));
         for (const e of edges) {
             for (const end of [e.from, e.to])
                 if (!Array.isArray(end) || end.length !== 2 || end.some(v => typeof v !== 'string' || !v) || !ids.has(end[0]))
@@ -674,14 +668,11 @@ class Network {
             if (ports.has(input))
                 throw Error('Fragment input already connected');
             ports.add(input);
-            if (!Number.isSafeInteger(sequence + 1))
-                throw Error('Edge sequence exhausted');
-            e.id = 'edge_' + ++sequence;
+            e.id = newEdgeId(edgeIds);
+            edgeIds.add(e.id);
         }
         this.data.nodes.push(...nodes);
         this.data.edges.push(...edges);
-        if (edges.length)
-            this.data.edgeSequence = sequence;
         return nodes.map(n => this.node(n.id));
     }
     remove(node) {
@@ -694,10 +685,7 @@ class Network {
         const ids = new Set(nodes.filter(n => this.nodeData(n.id)).map(n => n.id));
         if (!ids.size)
             return;
-        const roots = this.data.nodes.filter(n => ids.has(n.id)).map(n => { var _a, _b; return (_b = (_a = this.graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); }).filter((id) => !!id);
-        const sequence = edgeSequence(this.data);
-        if (sequence)
-            this.data.edgeSequence = sequence;
+        const roots = this.data.nodes.filter(n => ids.has(n.id)).map(n => { var _a, _b; return (_b = (_a = this.graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); }).filter((id) => !!id);
         ids.forEach(id => this.removedNodes.add(id));
         this.data.nodes = this.data.nodes.filter(n => !ids.has(n.id));
         this.data.edges = this.data.edges.filter(e => !ids.has(e.from[0]) && !ids.has(e.to[0]));
@@ -717,7 +705,7 @@ class Network {
         }
         const nodes = this.nodes.map(n => {
             const module = n.definition, data = n.data;
-            return { id: n.id, definition: data.definitionUuid, stored: overrides.get(n.id) || (prepared.has(n.id) ? (0, node_module_1.resolvePorts)(module, prepared.get(n.id), this.context).types() : n.interface.types()),
+            return { id: n.id, definition: data.nodeType, stored: overrides.get(n.id) || (prepared.has(n.id) ? (0, node_module_1.resolvePorts)(module, prepared.get(n.id), this.context).types() : n.interface.types()),
                 ...((module === null || module === void 0 ? void 0 : module.supports(data, this.context)) && module.signatures ? { variants: module.signatures(data, this.context) } : {}) };
         });
         const result = (0, wire_planning_1.plan)({ nodes, edges: this.data.edges.filter(e => !removed.includes(e)) }, policy, intent);
@@ -846,7 +834,7 @@ class Network {
             to.node.configure({ signature });
         if (retained && result.displaced.length === 1)
             return retained;
-        const before = this.data.edges, sequence = this.data.edgeSequence;
+        const before = this.data.edges;
         try {
             const id = this.graph.nextEdgeId(this.data);
             this.data.edges = before.filter(e => !result.displaced.includes(e));
@@ -858,10 +846,6 @@ class Network {
             for (const key of Object.keys(target))
                 delete target[key];
             Object.assign(target, original);
-            if (sequence === undefined)
-                delete this.data.edgeSequence;
-            else
-                this.data.edgeSequence = sequence;
             throw e;
         }
     }
@@ -876,24 +860,21 @@ class Network {
         const targets = new Set(edges.map(e => this.edgeIndex.get(e.id)).filter(e => !!e));
         if (!targets.size)
             return;
-        const sequence = edgeSequence(this.data);
-        if (sequence)
-            this.data.edgeSequence = sequence;
         this.data.edges = this.data.edges.filter(e => !targets.has(e));
     }
 }
 exports.Network = Network;
-function edgeSequence(data) {
-    var _a;
-    let sequence = data.edgeSequence || 0;
-    if (!Number.isSafeInteger(sequence) || sequence < 0)
-        throw Error('Invalid edge sequence');
-    for (const e of data.edges) {
-        const match = (_a = e.id) === null || _a === void 0 ? void 0 : _a.match(/^edge_(\d+)$/);
-        if (match)
-            sequence = Math.max(sequence, Number(match[1]));
+/** Edge identity is a random, unique string like node IDs; order carries no meaning (Q44).
+ * Only language built-ins, so the core runs in any host; uniqueness is checked, not assumed.
+ * 接線 id 跟節點一樣隨機產生，只要不重複；先後沒有意義。只用語言內建功能，不重複由檢查保證。 */
+function newEdgeId(taken) {
+    for (;;) {
+        let id = 'e';
+        for (let i = 0; i < 4; i++)
+            id += Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0');
+        if (!taken.has(id))
+            return id;
     }
-    return sequence;
 }
 class GraphError extends Error {
     constructor(message, node) {
@@ -935,11 +916,7 @@ class GraphDocument {
     close() { this.active = false; }
     nextEdgeId(data) {
         this.assertEditable();
-        const index = edgeSequence(data);
-        if (!Number.isSafeInteger(index + 1))
-            throw Error('Edge sequence exhausted');
-        data.edgeSequence = index + 1;
-        return 'edge_' + data.edgeSequence;
+        return newEdgeId(new Set(data.edges.map(e => e.id)));
     }
     snapshot() { return clone(this.document); }
     /** One candidate, one publication. History stores this before/after pair;
@@ -949,7 +926,7 @@ class GraphDocument {
         try {
             edit(candidate);
             if (!(0, changes_1.equal)(before, candidate.document))
-                complete(candidate.document, before);
+                complete(candidate.document);
             const after = candidate.snapshot();
             // The one gate every edit passes: refuse growth beyond the core limits (capacity.ts) and
             // edits that break the graph's structure rules (structure.ts).
@@ -965,36 +942,32 @@ class GraphDocument {
 }
 exports.GraphDocument = GraphDocument;
 function networkEntries(document) {
-    return [...Object.entries(document.stages), ...(document.functions || []).map(raw => { const f = raw; return ['function:' + f.id, f.graph]; })];
+    return [...Object.entries(document.stages), ...(document.subgraphs || []).map(raw => { const f = raw; return ['function:' + f.id, f.graph]; })];
 }
-function complete(document, previous) {
-    const prior = new Map(previous ? networkEntries(previous) : []);
-    const snapshots = new Set((document.functions || []).filter(f => f.scope !== 'local').map(f => f.graph));
-    for (const [id, data] of networkEntries(document)) {
-        const old = prior.get(id);
-        let sequence = Math.max(edgeSequence(data), old ? edgeSequence(old) : 0);
-        const nodes = new Set(), edges = new Set();
+function complete(document) {
+    const snapshots = new Set((document.subgraphs || []).filter(f => f.scope !== 'local').map(f => f.graph));
+    for (const [, data] of networkEntries(document)) {
+        const nodes = new Set(), edges = new Set(), taken = new Set();
         for (const n of data.nodes) {
             if (!n.id || nodes.has(n.id))
                 throw Error('Invalid or duplicate node ID');
             nodes.add(n.id);
         }
+        for (const e of data.edges)
+            taken.add(e.id);
         for (const e of data.edges) {
             // Source snapshots keep their authored bytes. Their read-only Edge
             // handles already have temporary identities; only local data gets IDs.
             if (!e.id && snapshots.has(data))
                 continue;
             if (!e.id) {
-                if (!Number.isSafeInteger(sequence + 1))
-                    throw Error('Edge sequence exhausted');
-                e.id = 'edge_' + ++sequence;
+                e.id = newEdgeId(taken);
+                taken.add(e.id);
             }
             if (edges.has(e.id))
                 throw Error('Duplicate edge ID');
             edges.add(e.id);
         }
-        if (sequence && !snapshots.has(data))
-            data.edgeSequence = sequence;
     }
 }
 /** Transitional editor transaction: existing widgets mutate the one active
@@ -1007,7 +980,7 @@ function transact(document, registry, edit) {
     try {
         const after = edit(before, model);
         if (!(0, changes_1.equal)(before, after))
-            complete(after, before);
+            complete(after);
         return { before, after, changes: (0, changes_1.changesBetween)(before, after, registry) };
     }
     catch (error) {
@@ -1162,11 +1135,39 @@ exports.identifierRules = {
 "model":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.GRAPH_VERSION = exports.GRAPH_FORMAT = void 0;
 exports.object = object;
 exports.copy = copy;
+exports.formatProblem = formatProblem;
+exports.GRAPH_FORMAT = 'grape-graph';
+exports.GRAPH_VERSION = 1;
 function object(v) { return v !== null && typeof v === 'object' && !Array.isArray(v) ? v : undefined; }
 /** Own JSON values at mutation boundaries; callers never retain editable state. */
 function copy(value) { return JSON.parse(JSON.stringify(value)); }
+function formatProblem(value) {
+    const g = value;
+    if (!g || typeof g !== 'object' || Array.isArray(g))
+        return { code: 'invalid', message: 'The graph is not a JSON object.' };
+    if (g.format !== exports.GRAPH_FORMAT)
+        return { code: 'not-grape-graph', message: 'This is not a grape-graph document (older graphs are opened by the importer).' };
+    if (!Number.isSafeInteger(g.version) || g.version < 1)
+        return { code: 'invalid', message: 'The graph format version is missing or invalid.' };
+    if (g.version > exports.GRAPH_VERSION)
+        return { code: 'newer-version', message: `This graph was saved by a newer Grape (format version ${g.version}); update Grape to edit it.` };
+    if (typeof g.target !== 'string' || !Array.isArray(g.declarations) || !g.stages || typeof g.stages !== 'object')
+        return { code: 'invalid', message: 'The graph is missing target, declarations or stages.' };
+    const networks = [...Object.values(g.stages), ...(Array.isArray(g.subgraphs) ? g.subgraphs.map(f => f && f.graph) : [])];
+    for (const n of networks) {
+        const data = n;
+        if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges))
+            return { code: 'invalid', message: 'A network is missing nodes or edges.' };
+        if (data.nodes.some(node => !node || typeof node.id !== 'string' || typeof node.nodeType !== 'string'))
+            return { code: 'invalid', message: 'A node is missing id or nodeType.' };
+        if (data.edges.some(edge => !edge || typeof edge.id !== 'string' || !edge.id))
+            return { code: 'invalid', message: 'An edge is missing its id.' };
+    }
+    return null;
+}
 
 },
 "node_module":function(require,module,exports){
@@ -1181,7 +1182,7 @@ exports.resolvePorts = resolvePorts;
 const model_1 = require("./model");
 const ports_1 = require("./ports");
 function contextFor(graph, owner) {
-    return { target: graph.target, owner, declaration: id => graph.declarations.find(d => d.id === id), subgraph: id => { var _a; return (_a = graph.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id); } };
+    return { target: graph.target, owner, declaration: id => graph.declarations.find(d => d.id === id), subgraph: id => { var _a; return (_a = graph.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id); } };
 }
 function createRegistry(modules) {
     const table = new Map();
@@ -1218,7 +1219,7 @@ function configureNode(module, node, selection, context) {
         selection = { signature: declared };
     }
     const candidate = module.configure((0, model_1.copy)(node), (0, model_1.copy)(selection), context);
-    if (candidate.id !== node.id || candidate.definitionUuid !== node.definitionUuid)
+    if (candidate.id !== node.id || candidate.nodeType !== node.nodeType)
         throw Error('Configuration cannot change node identity');
     if (!module.supports(candidate, context))
         throw Error('Unsupported node configuration');
@@ -1232,7 +1233,7 @@ function editNode(module, node, command, value, context) {
     if (!module.edit)
         throw Error('Node command is unavailable');
     const candidate = module.edit((0, model_1.copy)(node), command, value === undefined ? undefined : (0, model_1.copy)(value), context);
-    if (candidate.id !== node.id || candidate.definitionUuid !== node.definitionUuid)
+    if (candidate.id !== node.id || candidate.nodeType !== node.nodeType)
         throw Error('Command cannot change node identity');
     if (!module.supports(candidate, context))
         throw Error('Unsupported node configuration');
@@ -1244,7 +1245,7 @@ function prepareNodeWire(module, node, key, source, context) {
     if (!module.wire)
         throw Error('Node has no wire preparation');
     const before = resolvePorts(module, node, context).types(), edit = module.wire((0, model_1.copy)(node), key, source, context);
-    if (edit.node.id !== node.id || edit.node.definitionUuid !== node.definitionUuid || !module.supports(edit.node, context))
+    if (edit.node.id !== node.id || edit.node.nodeType !== node.nodeType || !module.supports(edit.node, context))
         throw Error('Wire preparation changed identity/capability');
     module.validate(edit.node, context);
     const after = resolvePorts(module, edit.node, context).types();
@@ -4539,7 +4540,7 @@ function compatible(source, target, types, conversions) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScopeReferences = void 0;
 const identifier = /^[A-Za-z][A-Za-z0-9_]{0,70}$/;
-const opaque = new Set(['code', 'ui', 'source', 'origin', 'catalogSnapshot']);
+const opaque = new Set(['code', 'ui', 'source', 'origin', 'catalogSnapshot', 'comment', 'description', 'extensions']);
 const fields = new Set(['type', 'elementType', 'fromType', 'toType', 'fixedType', 'length']);
 function token(scope, source) {
     const parts = [scope, ...source];
@@ -4594,10 +4595,10 @@ exports.offered = offered;
 const removable = (module) => !stageOutput(module);
 exports.removable = removable;
 function counts(g, registry) {
-    const count = (data) => data.nodes.filter(n => stageOutput(registry.get(n.definitionUuid))).length;
+    const count = (data) => data.nodes.filter(n => stageOutput(registry.get(n.nodeType))).length;
     return [
         ...Object.entries(g.stages || {}).map(([id, data]) => ({ key: 'stageOutputs', network: id, value: count(data), expected: 1 })),
-        ...(g.functions || []).map(f => ({ key: 'stageOutputs', network: 'function:' + f.id, value: count(f.graph), expected: 0 })),
+        ...(g.subgraphs || []).map(f => ({ key: 'stageOutputs', network: 'function:' + f.id, value: count(f.graph), expected: 0 })),
     ];
 }
 const distance = (p) => Math.abs(p.value - p.expected);
@@ -4651,15 +4652,15 @@ const relay = {
 function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_CONFIG) {
     const engine = engineFactory((0, node_module_1.createRegistry)([...registry.modules, relay]));
     const identity = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
-    const moduleOf = (node) => registry.get(node.definitionUuid);
+    const moduleOf = (node) => registry.get(node.nodeType);
     function supports(g) {
-        var _a, _b;
-        if (g.schemaVersion !== 1 || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' ||
-            ((_a = g.topInputs) === null || _a === void 0 ? void 0 : _a.length) || ((_b = g.typeDefinitions) === null || _b === void 0 ? void 0 : _b.length) || !Array.isArray(g.functions) || g.functions.length > config.subgraphDefinitions)
+        var _a;
+        if ((0, model_1.formatProblem)(g) || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' ||
+            ((_a = g.structDefinitions) === null || _a === void 0 ? void 0 : _a.length) || !Array.isArray(g.subgraphs) || g.subgraphs.length > config.subgraphDefinitions)
             return false;
-        if (!g.declarations.every(d => d.kind === 'uniform' && numeric_1.types.includes(d.type) && !d.initialDriver && !d.sourceMissing && !['array', 'matrix'].includes(String(d.nativeSequence))))
+        if (!g.declarations.every(d => d.kind === 'uniform' && numeric_1.types.includes(d.type)))
             return false;
-        const scopes = [[g.stages.pixel, undefined], ...g.functions.map(f => [f.graph, f])];
+        const scopes = [[g.stages.pixel, undefined], ...g.subgraphs.map(f => [f.graph, f])];
         return scopes.every(([data, owner]) => {
             var _a;
             if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length > config.nodesPerNetwork || data.edges.length > config.edgesPerNetwork || ((_a = data.ui) === null || _a === void 0 ? void 0 : _a.frames))
@@ -4679,7 +4680,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
         if (JSON.stringify(g).length > config.documentBytes)
             throw Error('Graph is too large');
         const definitions = new Map();
-        for (const f of g.functions) {
+        for (const f of g.subgraphs) {
             if (!identity.test(f.id) || definitions.has(f.id))
                 throw Error('Invalid or duplicate Subgraph ID');
             if (!['local', 'library', 'personal'].includes(f.scope) || typeof f.name !== 'string' || !f.name.length || f.name.length > 80)
@@ -4723,7 +4724,7 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 origins.set(n.id, origin);
             };
             function expand(data, path, owner, boundary) {
-                var _a, _b, _c, _d, _e, _f;
+                var _a, _b, _c, _d, _e;
                 const context = (0, node_module_1.contextFor)(g, owner), maps = new Map(), names = new Set();
                 let inputCount = 0, outputCount = 0;
                 for (const node of data.nodes) {
@@ -4746,13 +4747,10 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                             const endpoints = module.role === 'subgraph-input' ? boundary.inputs : boundary.outputs;
                             for (const endpoint of Object.values(endpoints)) {
                                 const target = flat.nodes.find(n => n.id === endpoint[0]);
-                                for (const key of ['label', 'comment']) {
-                                    const value = (_b = node.ui) === null || _b === void 0 ? void 0 : _b[key];
-                                    if (typeof value === 'string' && value.trim()) {
-                                        target.ui || (target.ui = {});
-                                        target.ui[key] = [target.ui[key], value].filter(Boolean).join('\n');
-                                    }
-                                }
+                                // A boundary's comment follows its relay so the note stays at the boundary in GLSL.
+                                // 邊界節點的 comment 跟著中繼節點，GLSL 裡註解仍在邊界的位置。
+                                if (typeof node.comment === 'string' && node.comment.trim())
+                                    target.comment = [target.comment, node.comment].filter(Boolean).join('\n');
                             }
                             if (module.role === 'subgraph-input' && Object.keys(node.inputValues || {}).length)
                                 throw Error('Invalid Subgraph port defaults');
@@ -4783,9 +4781,9 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                             for (const direction of ['inputs', 'outputs'])
                                 for (const p of fn[direction]) {
                                     const id = allocate();
-                                    add({ id, definitionUuid: relay.catalog.definition.definitionUuid, params: { type: p.type },
-                                        inputValues: { value: (0, model_1.copy)(direction === 'inputs' ? (_d = (_c = node.inputValues) === null || _c === void 0 ? void 0 : _c[p.id]) !== null && _d !== void 0 ? _d : p.default : p.default) },
-                                        ...(node.ui ? { ui: (0, model_1.copy)(node.ui) } : {}) }, origin);
+                                    add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type },
+                                        inputValues: { value: (0, model_1.copy)(direction === 'inputs' ? (_c = (_b = node.inputValues) === null || _b === void 0 ? void 0 : _b[p.id]) !== null && _c !== void 0 ? _c : p.default : p.default) },
+                                        ...(node.ui ? { ui: (0, model_1.copy)(node.ui) } : {}), ...(node.comment ? { comment: node.comment } : {}) }, origin);
                                     mapped[direction][p.id] = [id, direction === 'inputs' ? 'value' : 'out'];
                                     inside[direction][p.id] = [id, direction === 'inputs' ? 'out' : 'value'];
                                 }
@@ -4811,10 +4809,10 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 if (owner && (inputCount !== 1 || outputCount !== 1))
                     throw Object.assign(Error('Exactly one Subgraph Input and Output are required'), { stage: 'pixel', trail: path, functionId: owner.id });
                 for (const edge of data.edges) {
-                    const from = (_e = maps.get(edge.from[0])) === null || _e === void 0 ? void 0 : _e.outputs[edge.from[1]], to = (_f = maps.get(edge.to[0])) === null || _f === void 0 ? void 0 : _f.inputs[edge.to[1]];
+                    const from = (_d = maps.get(edge.from[0])) === null || _d === void 0 ? void 0 : _d.outputs[edge.from[1]], to = (_e = maps.get(edge.to[0])) === null || _e === void 0 ? void 0 : _e.inputs[edge.to[1]];
                     if (!from || !to)
                         throw Object.assign(Error('Connection endpoint no longer exists'), { node: edge.to[0], stage: 'pixel', trail: path, ...(owner ? { functionId: owner.id } : {}) });
-                    flat.edges.push({ from, to });
+                    flat.edges.push({ id: 'x' + flat.edges.length, from, to });
                 }
             }
             if (probe) {
@@ -4822,16 +4820,16 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
                 for (const direction of ['inputs', 'outputs'])
                     for (const p of probe[direction]) {
                         const id = allocate();
-                        add({ id, definitionUuid: relay.catalog.definition.definitionUuid, params: { type: p.type }, inputValues: { value: (0, model_1.copy)(p.default) } }, { node: '', stage: 'pixel', trail: [probe.id], functionId: probe.id });
+                        add({ id, nodeType: relay.catalog.definition.definitionUuid, params: { type: p.type }, inputValues: { value: (0, model_1.copy)(p.default) } }, { node: '', stage: 'pixel', trail: [probe.id], functionId: probe.id });
                         inside[direction][p.id] = [id, direction === 'inputs' ? 'out' : 'value'];
                     }
                 expand(probe.graph, [probe.id], probe, inside);
                 const output = registry.modules.find(m => m.role === 'output');
-                add({ id: allocate(), definitionUuid: output.catalog.definition.definitionUuid, params: (0, model_1.copy)(output.catalog.definition.defaults) }, { node: '', stage: 'pixel', trail: [] });
+                add({ id: allocate(), nodeType: output.catalog.definition.definitionUuid, params: (0, model_1.copy)(output.catalog.definition.defaults) }, { node: '', stage: 'pixel', trail: [] });
             }
             else
                 expand(g.stages.pixel, []);
-            const { functions, ...rest } = g;
+            const { subgraphs, ...rest } = g;
             const document = { ...rest, stages: { pixel: flat } };
             try {
                 const result = engine.compile(document, identifiers);
@@ -4866,10 +4864,10 @@ const model_1 = require("./model");
 const subgraph_operations_1 = require("./subgraph_operations");
 const scope_references_1 = require("./scope_references");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
-const reference = (graph, n) => { var _a, _b; return (_b = (_a = graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); };
+const reference = (graph, n) => { var _a, _b; return (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); };
 function parameters(graph, n, id) {
     var _a;
-    const module = graph.registry.get(n.definitionUuid);
+    const module = graph.registry.get(n.nodeType);
     if (!(module === null || module === void 0 ? void 0 : module.reference))
         throw Error('Subgraph module cannot redirect its reference');
     const params = { ...(0, model_1.copy)(n.params), ...(0, model_1.copy)(module.reference(id)) };
@@ -4896,7 +4894,7 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
     var _a;
     graph.assertEditable();
     (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, definitions.length);
-    const pending = definitions.map(f => (0, model_1.copy)(f)), used = new Set((graph.document.functions || []).map(f => f.id));
+    const pending = definitions.map(f => (0, model_1.copy)(f)), used = new Set((graph.document.subgraphs || []).map(f => f.id));
     const originalIds = new Set();
     for (const f of pending) {
         if (originalIds.has(f.id))
@@ -4914,7 +4912,7 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
         remapScopes(f, ids);
         (0, subgraph_operations_1.validateSubgraphData)(f);
     }
-    const all = new Map([...(graph.document.functions || []), ...pending].map(f => [f.id, f]));
+    const all = new Map([...(graph.document.subgraphs || []), ...pending].map(f => [f.id, f]));
     const active = new Set(), done = new Set();
     const visit = (id) => {
         if (active.has(id))
@@ -4935,14 +4933,14 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
     };
     pending.forEach(f => visit(f.id));
     if (pending.length)
-        ((_a = graph.document).functions || (_a.functions = [])).push(...pending);
+        ((_a = graph.document).subgraphs || (_a.subgraphs = [])).push(...pending);
     return pending;
 }
 /** Turn a source-owned definition and its source callers into editable local
  * copies. Stored source snapshots remain byte-for-byte authored data. */
 function localizeSubgraph(graph, id, next) {
     graph.assertEditable();
-    const definitions = graph.document.functions || [], target = definitions.find(f => f.id === id);
+    const definitions = graph.document.subgraphs || [], target = definitions.find(f => f.id === id);
     if (!target || target.scope === 'local')
         return new Map();
     const affected = new Set([id]);
@@ -4978,15 +4976,14 @@ function localizeSubgraph(graph, id, next) {
     // Prepare all IDs, snapshots and module commands before the first write.
     // Keep node/data objects alive for current editor callbacks during migration.
     for (const f of changed) {
+        // `origin` already records where a snapshot came from; `scope` tells whether it is still one (Q44).
+        // origin 已記錄來源；是否仍是唯讀副本由 scope 看出。
         f.id = ids.get(f.id);
         f.scope = 'local';
-        if (f.source || f.origin)
-            f.origin = (0, model_1.copy)(f.source || f.origin);
-        delete f.source;
     }
     for (const p of patches)
         p.node.params = p.params;
-    remapScopes([...Object.values(graph.document.stages), ...writable, graph.document.typeDefinitions || []], ids);
+    remapScopes([...Object.values(graph.document.stages), ...writable, graph.document.structDefinitions || []], ids);
     definitions.push(...snapshots);
     return ids;
 }
@@ -4998,18 +4995,15 @@ function independentSubgraph(network, nodeId, next) {
     const graph = network.graph, n = network.nodeData(nodeId);
     if (!n)
         throw Error('Subgraph instance no longer exists');
-    const id = reference(graph, n), source = (_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id);
+    const id = reference(graph, n), source = (_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id);
     if (!source)
         return null;
     (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, 1);
-    const newId = allocate(new Set(graph.document.functions.map(f => f.id)), next);
+    const newId = allocate(new Set(graph.document.subgraphs.map(f => f.id)), next);
     const f = (0, model_1.copy)(source);
     f.id = newId;
     f.name = f.name.slice(0, 75) + ' Copy';
     f.scope = 'local';
-    if (f.source || f.origin)
-        f.origin = (0, model_1.copy)(f.source || f.origin);
-    delete f.source;
     remapScopes(f, new Map([[source.id, newId]]));
     const params = parameters(graph, n, newId);
     const owned = appendSubgraphs(graph, [f])[0];
@@ -5095,13 +5089,13 @@ function structural(graph, role) {
 }
 function authored(module, id, ui, params = {}) {
     const d = module.catalog.definition;
-    return { id, definitionUuid: d.definitionUuid, params: { ...(0, model_1.copy)(d.defaults), ...params }, ui };
+    return { id, nodeType: d.definitionUuid, params: { ...(0, model_1.copy)(d.defaults), ...params }, ui };
 }
 function ensureSubgraphCapacity(graph, additional = 0) {
     var _a;
     if (!Number.isInteger(additional) || additional < 0)
         throw Error('Invalid definition count');
-    if ((((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.length) || 0) + additional > config_1.CORE_CONFIG.subgraphDefinitions)
+    if ((((_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.length) || 0) + additional > config_1.CORE_CONFIG.subgraphDefinitions)
         throw Object.assign(Error('At most ' + config_1.CORE_CONFIG.subgraphDefinitions + ' Subgraph definitions are supported'), { code: 'function.limit' });
 }
 function validateSubgraphData(f) {
@@ -5128,7 +5122,7 @@ function validate(graph, f) {
     var _a;
     graph.assertEditable();
     ensureSubgraphCapacity(graph, 1);
-    if (f.scope !== 'local' || ((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.some(d => d.id === f.id)))
+    if (f.scope !== 'local' || ((_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.some(d => d.id === f.id)))
         throw Error('Invalid or duplicate local Subgraph identity');
     validateSubgraphData(f);
 }
@@ -5136,7 +5130,7 @@ function insertSubgraph(graph, f) {
     var _a;
     validate(graph, f);
     const owned = (0, model_1.copy)(f);
-    ((_a = graph.document).functions || (_a.functions = [])).push(owned);
+    ((_a = graph.document).subgraphs || (_a.subgraphs = [])).push(owned);
     return owned;
 }
 function createSubgraph(graph, options) {
@@ -5146,13 +5140,13 @@ function createSubgraph(graph, options) {
         inputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [1, 1, 1, 1] }],
         outputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [0, 0, 0, 1] }],
         graph: { nodes: [{ ...authored(input, 'input', { x: 48, y: 144 }), name: 'Input' }, { ...authored(output, 'output', { x: 624, y: 144 }), name: 'Output' }],
-            edges: [{ from: ['input', 'value'], to: ['output', 'value'] }] }
+            edges: [{ id: graph.nextEdgeId({ nodes: [], edges: [] }), from: ['input', 'value'], to: ['output', 'value'] }] }
     });
 }
 function instantiateSubgraph(network, definitionId, id, ui = {}) {
     var _a;
     network.assertEditable();
-    const graph = network.graph, f = (_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.id === definitionId);
+    const graph = network.graph, f = (_a = graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === definitionId);
     if (!f)
         throw Error('Subgraph definition no longer exists');
     const module = structural(graph, 'call');
@@ -5181,7 +5175,7 @@ function groupSubgraph(network, selection, options) {
         throw Error('Invalid or duplicate instance identity');
     if (chosen.some(n => {
         var _a;
-        const role = (_a = graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.role;
+        const role = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.role;
         return role && role !== 'value';
     }))
         throw Error('Stage outputs and Subgraph boundaries cannot be grouped');
@@ -5252,7 +5246,7 @@ function groupSubgraph(network, selection, options) {
     validate(graph, f);
     const callModule = structural(graph, 'call');
     const call = authored(callModule, options.callId, { x, y }, callModule.reference(f.id));
-    const owner = (_e = graph.document.functions) === null || _e === void 0 ? void 0 : _e.find(f => f.graph === data), oldScope = owner ? 'fn_' + owner.id : network.id;
+    const owner = (_e = graph.document.subgraphs) === null || _e === void 0 ? void 0 : _e.find(f => f.graph === data), oldScope = owner ? 'fn_' + owner.id : network.id;
     insertSubgraph(graph, f);
     // A move must not collect definitions used by the nodes it is moving.
     data.nodes = data.nodes.filter(n => !selected.has(n.id));
@@ -5267,7 +5261,7 @@ function groupSubgraph(network, selection, options) {
 function collectSubgraphs(graph, roots, active) {
     if (!roots.length)
         return;
-    const definitions = new Map((graph.document.functions || []).map(f => [f.id, f]));
+    const definitions = new Map((graph.document.subgraphs || []).map(f => [f.id, f]));
     const references = (value) => {
         const result = new Set();
         function scan(item) {
@@ -5279,8 +5273,8 @@ function collectSubgraphs(graph, roots, active) {
             if (!item || typeof item !== 'object')
                 return;
             const n = item;
-            if (n.definitionUuid && n.params) {
-                const ref = (_b = (_a = graph.registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
+            if (n.nodeType && n.params) {
+                const ref = (_b = (_a = graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n);
                 if (ref)
                     result.add(ref);
             }
@@ -5305,12 +5299,12 @@ function collectSubgraphs(graph, roots, active) {
         }
         return seen;
     };
-    const candidates = closure(roots), retained = references({ ...graph.document, functions: [], catalogSnapshot: undefined });
+    const candidates = closure(roots), retained = references({ ...graph.document, subgraphs: [], catalogSnapshot: undefined });
     for (const [id, f] of definitions)
         if (!candidates.has(id) || f.graph === active)
             retained.add(id);
     const keep = closure(retained);
-    graph.document.functions = (graph.document.functions || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
+    graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
 }
 
 },
@@ -5329,7 +5323,7 @@ class Subgraph {
     }
     get data() {
         var _a;
-        return (_a = this.graph.document.functions) === null || _a === void 0 ? void 0 : _a.find(f => f.id === this.id);
+        return (_a = this.graph.document.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === this.id);
     }
     rename(name) {
         this.graph.assertEditable();
@@ -5385,11 +5379,11 @@ class Subgraph {
         const changed = edit.kind === 'update' && next[index].type !== list[index].type ? next[index] : null;
         const networks = [
             ...Object.values(this.graph.document.stages),
-            ...(this.graph.document.functions || []).map(d => d.graph)
+            ...(this.graph.document.subgraphs || []).map(d => d.graph)
         ];
         const affected = (node, data) => {
             var _a;
-            const module = this.graph.registry.get(node.definitionUuid);
+            const module = this.graph.registry.get(node.nodeType);
             if (((_a = module === null || module === void 0 ? void 0 : module.referencedGraph) === null || _a === void 0 ? void 0 : _a.call(module, node)) === f.id)
                 return direction === 'inputs' ? 'input' : 'output';
             if (data === f.graph && (module === null || module === void 0 ? void 0 : module.role) === (direction === 'inputs' ? 'subgraph-input' : 'subgraph-output'))
@@ -5448,22 +5442,22 @@ exports.CompilationError = CompilationError;
 exports.protocol = 'grape.top.ts.1';
 function createFlatCompiler(registry, limits) {
     function supports(g) {
-        var _a, _b, _c, _d, _e, _f, _g;
-        if (g.schemaVersion !== 1 || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' || ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) || ((_b = g.topInputs) === null || _b === void 0 ? void 0 : _b.length) || ((_c = g.typeDefinitions) === null || _c === void 0 ? void 0 : _c.length))
+        var _a, _b, _c, _d, _e, _f;
+        if ((0, model_1.formatProblem)(g) || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' || ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) || ((_b = g.structDefinitions) === null || _b === void 0 ? void 0 : _b.length))
             return false;
         if (!g.stages.pixel || g.stages.pixel.nodes.length > limits.nodes || g.stages.pixel.edges.length > limits.edges)
             return false;
-        if ((_e = (_d = g.stages.pixel) === null || _d === void 0 ? void 0 : _d.ui) === null || _e === void 0 ? void 0 : _e.frames)
+        if ((_d = (_c = g.stages.pixel) === null || _c === void 0 ? void 0 : _c.ui) === null || _d === void 0 ? void 0 : _d.frames)
             return false;
-        if (!g.declarations.every(d => d.kind === 'uniform' && numeric_1.types.includes(d.type) && !d.initialDriver && !d.sourceMissing && !['array', 'matrix'].includes(String(d.nativeSequence))))
+        if (!g.declarations.every(d => d.kind === 'uniform' && numeric_1.types.includes(d.type)))
             return false;
         // Legacy allocates collision suffixes for implicit IDs versus explicit
         // names. Keep those whole graphs on its path until symbol allocation moves.
-        const symbols = ((_f = g.stages.pixel) === null || _f === void 0 ? void 0 : _f.nodes.filter(n => { var _a; return ((_a = registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.role) !== 'output'; }).map(n => n.name || n.id)) || [];
+        const symbols = ((_e = g.stages.pixel) === null || _e === void 0 ? void 0 : _e.nodes.filter(n => { var _a; return ((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.role) !== 'output'; }).map(n => n.name || n.id)) || [];
         if (new Set(symbols).size !== symbols.length)
             return false;
-        return !!((_g = g.stages.pixel) === null || _g === void 0 ? void 0 : _g.nodes.every(n => {
-            const d = registry.get(n.definitionUuid);
+        return !!((_f = g.stages.pixel) === null || _f === void 0 ? void 0 : _f.nodes.every(n => {
+            const d = registry.get(n.nodeType);
             if (!d)
                 return false;
             if (n.params.requireConstant)
@@ -5487,12 +5481,10 @@ function createFlatCompiler(registry, limits) {
             for (const d of g.declarations) {
                 if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id) || declarations.has(d.id) || !/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name) || /^(gl_|TD|sg_|sTD)/.test(d.name) || names.has(d.name))
                     throw Error('Invalid declaration identity/name');
-                if (d.id === 'grapeFallbackSampler' || d.nativeSequence !== undefined && !['vec', 'color'].includes(String(d.nativeSequence)) || d.initialDriver !== undefined)
-                    throw Error('Unsupported native Uniform source');
+                // Old-product fields (initialDriver, nativeSequence, exposeName, sourceMissing) are not read (Q44).
+                // 舊產品欄位不讀；去留由匯入器的對照表處理。
                 if (d.expose !== undefined && typeof d.expose !== 'boolean')
                     throw Error('Expose must be a boolean');
-                if (d.exposeName !== undefined && (typeof d.exposeName !== 'string' || d.exposeName.length > 80 || /[\x00-\x1f]/.test(d.exposeName)))
-                    throw Error('Invalid public Uniform label');
                 (0, values_1.literal)(d.value, (0, values_1.type)(d.type));
                 declarations.set(d.id, d);
                 names.add(d.name);
@@ -5507,7 +5499,7 @@ function createFlatCompiler(registry, limits) {
                         throw Error('Invalid or duplicate node name');
                     authoredNames.add(n.name);
                 }
-                const d = registry.get(n.definitionUuid), symbol = n.name || n.id;
+                const d = registry.get(n.nodeType), symbol = n.name || n.id;
                 if (d.role !== 'output') {
                     if (symbols.has(symbol))
                         throw Error('Duplicate output symbol');
@@ -5594,7 +5586,7 @@ function createFlatCompiler(registry, limits) {
                 }
                 if (lines.length === start)
                     throw Error('Node emitted no expression');
-                (0, comments_1.appendNodeComments)(lines, start, n.ui || {});
+                (0, comments_1.appendNodeComments)(lines, start, n.comment);
                 while (lineNodes.length < lines.length)
                     lineNodes.push(id);
             }
@@ -5612,25 +5604,27 @@ function createFlatCompiler(registry, limits) {
     return Object.freeze({ protocol: exports.protocol, supports, compile });
 }
 /** Code-generation fingerprint (design-interview Q38 2-1): everything the generated program
- * depends on, minus authored layout and notes. Node `ui` only adds GLSL comment lines and
- * labels (comments.ts), so by the human's rule B it is outside the chain; edge ids and the
- * edge sequence never reach GLSL. Equal keys must mean the same program apart from comment
- * lines; tests/unit/test_codegen_key.cjs checks this on random edit sequences.
- * 產碼指紋：產出的程式所依賴的一切，扣掉版面與註記。節點 ui 只帶來 GLSL 註解與標籤（規則 B，不在鏈路）；
- * 線的 id 與序號不進 GLSL。指紋相同＝除註解行外程式相同，由隨機編輯的性質測試把關。 */
+ * depends on, minus authored layout and notes. Node `ui` and `comment` only add layout and GLSL
+ * comment lines (comments.ts), so by the human's rule B they are outside the chain; edge ids and
+ * edge `ui` (Link／Wire style) never reach GLSL, nor do description／comment／userVersion (Q44).
+ * Equal keys must mean the same program apart from comment lines; tests/unit/test_codegen_key.cjs
+ * checks this on random edit sequences.
+ * 產碼指紋：產出的程式所依賴的一切，扣掉版面與註記。節點 ui、comment 只帶來版面與 GLSL 註解（規則 B，不在鏈路）；
+ * 線的 id 與樣式、作品說明不進 GLSL。指紋相同＝除註解行外程式相同，由隨機編輯的性質測試把關。 */
 function codegenKey(g) {
-    const network = (data) => data && { ...data, edgeSequence: undefined,
-        nodes: (data.nodes || []).map(n => ({ ...n, ui: undefined })),
-        edges: (data.edges || []).map(e => ({ ...e, id: undefined })) };
-    return JSON.stringify({ ...g, stages: Object.fromEntries(Object.entries(g.stages || {}).map(([k, v]) => [k, network(v)])),
-        functions: (g.functions || []).map(f => ({ ...f, graph: network(f.graph) })) });
+    const network = (data) => data && { ...data,
+        nodes: (data.nodes || []).map(n => ({ ...n, ui: undefined, comment: undefined })),
+        edges: (data.edges || []).map(e => ({ ...e, id: undefined, ui: undefined })) };
+    return JSON.stringify({ ...g, description: undefined, comment: undefined, userVersion: undefined,
+        stages: Object.fromEntries(Object.entries(g.stages || {}).map(([k, v]) => [k, network(v)])),
+        subgraphs: (g.subgraphs || []).map(f => ({ ...f, description: undefined, comment: undefined, userVersion: undefined, graph: network(f.graph) })) });
 }
 function createCompiler(registry, config = config_1.CORE_CONFIG) {
     const flat = createFlatCompiler(registry, { nodes: config.nodesPerNetwork, edges: config.edgesPerNetwork, bytes: config.documentBytes });
     const subgraphs = (0, subgraph_compiler_1.createSubgraphCompiler)(registry, r => createFlatCompiler(r, { nodes: config.expandedNodes, edges: config.expandedEdges, bytes: config.documentBytes }), config);
     return Object.freeze({ protocol: exports.protocol, key: codegenKey,
-        supports: (g) => { var _a; return ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.supports(g) : flat.supports(g); },
-        compile: (g, identifiers) => { var _a; return ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
+        supports: (g) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.supports(g) : flat.supports(g); },
+        compile: (g, identifiers) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
     });
 }
 

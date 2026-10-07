@@ -14,12 +14,12 @@ function fixture() {
   graph.privateMetadata = { retained: true };
   graph.stages.pixel.nodes[0].ui = { x: 40, y: 40 };
   graph.stages.pixel.nodes[1].ui = { x: 730, y: 40 };
-  graph.stages.pixel.nodes.push({ id: 'a', definitionUuid: 'sgrape.builtin.float', params: { value: 2 }, ui: { x: 40, y: 380 } },
-    { id: 'sum', definitionUuid: 'sgrape.builtin.add', params: { type: 'float' }, ui: { x: 390, y: 330 } },
-    { id: 'mx', definitionUuid: 'sgrape.builtin.math', params: { type: 'float' }, ui: { x: 1050, y: 330 } },
-    { id: 'v3', definitionUuid: 'sgrape.builtin.vector', params: { type: 'vec3', components: [0, 0, 0, 0] }, ui: { x: 40, y: 760 } },
-    { id: 'cb', definitionUuid: 'sgrape.builtin.combine', params: { type: 'vec4', groups: {}, components: [0, 0, 0, 0] }, ui: { x: 390, y: 760 } },
-    { id: 'sw', definitionUuid: 'sgrape.builtin.swizzle', params: { type: 'vec2', mask: 'xy' }, ui: { x: 760, y: 760 } });
+  graph.stages.pixel.nodes.push({ id: 'a', nodeType: 'sgrape.builtin.float', params: { value: 2 }, ui: { x: 40, y: 380 } },
+    { id: 'sum', nodeType: 'sgrape.builtin.add', params: { type: 'float' }, ui: { x: 390, y: 330 } },
+    { id: 'mx', nodeType: 'sgrape.builtin.math', params: { type: 'float' }, ui: { x: 1050, y: 330 } },
+    { id: 'v3', nodeType: 'sgrape.builtin.vector', params: { type: 'vec3', components: [0, 0, 0, 0] }, ui: { x: 40, y: 760 } },
+    { id: 'cb', nodeType: 'sgrape.builtin.combine', params: { type: 'vec4', groups: {}, components: [0, 0, 0, 0] }, ui: { x: 390, y: 760 } },
+    { id: 'sw', nodeType: 'sgrape.builtin.swizzle', params: { type: 'vec2', mask: 'xy' }, ui: { x: 760, y: 760 } });
   return graph;
 }
 (async () => {
@@ -167,7 +167,7 @@ function fixture() {
     assert.notEqual(outColor, sumColor, outColor);
     checks.push('Color Output title uses the output colour group: ' + outColor);
     // Refactor.23: Color Output cannot be deleted or added (Q42); the reason is shown.
-    const outputs = () => state.graph.stages.pixel.nodes.filter(n => n.definitionUuid === 'sgrape.builtin.pixel_out').length;
+    const outputs = () => state.graph.stages.pixel.nodes.filter(n => n.nodeType === 'sgrape.builtin.pixel_out').length;
     const beforeDelete = writes.length;
     await page.locator('.react-flow__node[data-id="pixel_out"] .node-title').click(); await page.keyboard.press('Delete'); await settle();
     assert.equal(outputs(), 1); assert.equal(writes.length, beforeDelete, 'nothing is written');

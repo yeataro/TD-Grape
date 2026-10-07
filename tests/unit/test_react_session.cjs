@@ -26,7 +26,7 @@ const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));
 const target = '1'.repeat(32);
-const makeNode = (id, key) => ({ id, definitionUuid: 'sgrape.builtin.' + key,
+const makeNode = (id, key) => ({ id, nodeType: 'sgrape.builtin.' + key,
   params: clone(GrapeGraph.registry.get('sgrape.builtin.' + key).catalog.definition.defaults), ui: { x: 10, y: 10 } });
 function fixture() {
   const graph = clone(bootstrap.defaultDocument.graph);
@@ -204,7 +204,7 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, calls, loaded } = open(t, strictHost());
-  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.uniform', params: {} }));
+  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', nodeType: 'sgrape.builtin.uniform', params: {} }));
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap);
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
@@ -248,14 +248,19 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   const { session, calls, loaded } = open(t), state = loaded();
   state.frontendCompiler.catalogHash = 'other';
   assert.throws(() => new EditorSession(session.host, bootstrap, state), /版本不一致/);
-  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.functions = [{ id: 'unknown' }]; });
+  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'unknown', graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), /此入口目前支援[\s\S]*子圖 1 個/);
   // Leftover Uniform from the legacy entry: the message names both the declaration and the node.
   const uniform = loaded(); withDoc(uniform.state, graph => {
     graph.declarations = [{ id: 'u1', kind: 'uniform', name: 'uValue', type: 'float', value: 0 }];
-    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', definitionUuid: 'sgrape.builtin.uniform', params: { declarationId: 'u1' } }];
+    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.builtin.uniform', params: { declarationId: 'u1' } }];
   });
   assert.throws(() => new EditorSession(session.host, bootstrap, uniform), /Uniform 宣告「uValue」[\s\S]*uniform 節點（nu）/);
+  // Format (Q44): an old document offers the reset; a newer one never does, so nothing is written back.
+  const old = loaded(); withDoc(old.state, graph => { delete graph.format; graph.schemaVersion = 1; });
+  assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(error.message));
+  const newer = loaded(); withDoc(newer.state, graph => { graph.version = 2; });
+  assert.throws(() => new EditorSession(session.host, bootstrap, newer), error => !(error instanceof UnsupportedGraphError) && /較新版的 Grape/.test(error.message));
   assert.equal(calls.length, 0);
 });
 
@@ -271,7 +276,7 @@ test('explicit geometry notification is limited to internal handle changes; size
 
 test('value change over 101 wires preserves every unrelated card and wire; record separated costs', t => {
   const { session } = open(t);
-  const graph = { schemaVersion: 1, target: 'top', declarations: [], functions: [], stages: { pixel: { nodes: [], edges: [] } } };
+  const graph = { format:'grape-graph',version:1, target: 'top', declarations: [], subgraphs: [], stages: { pixel: { nodes: [], edges: [] } } };
   const net = graph.stages.pixel;
   net.nodes.push({ ...makeNode('start', 'float'), ui: { x: 0, y: 0 } });
   for (let i = 0; i < 100; i++) {
@@ -323,7 +328,7 @@ test('a false save response never claims the TD project was saved', async t => {
 // Module-declared spare input (Math). The module owns command, key, type and limit.
 const withMath = (t, params = {}) => {
   const ctx = open(t);
-  ctx.session.transact('math', net => net.insert({ id: 'm', definitionUuid: 'sgrape.builtin.math', params, ui: { x: 0, y: 0 } }));
+  ctx.session.transact('math', net => net.insert({ id: 'm', nodeType: 'sgrape.builtin.math', params, ui: { x: 0, y: 0 } }));
   return ctx;
 };
 const toSpare = source => ({ source, sourceHandle: 'out', target: 'm', targetHandle: spareHandle });
@@ -363,7 +368,7 @@ test('React layer has no node-specific branch for spare inputs', () => {
   const dir = path.join(root, 'src/editor-react');
   const source = fs.readdirSync(dir).filter(f => /\.tsx?$/.test(f)).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n')
     .replace(/export const supportedDefinitions = \[[\s\S]*?\]\.map/, ''); // the slice coverage list names keys by design
-  assert.doesNotMatch(source, /['"]math['"]|builtin\.math|definitionUuid\s*===?\s*['"]/);
+  assert.doesNotMatch(source, /['"]math['"]|builtin\.math|nodeType\s*===?\s*['"]/);
 });
 
 // TD away (design-interview Q28; responses as measured on live TD 2026-10-07).
@@ -424,7 +429,7 @@ test('every offered node can be added, wired to the output and compiled', t => {
   const attempt = (uuid, output, chain) => {
     const { session } = open(t), ids = ['x', ...chain.map((_, i) => 'c' + i)];
     session.transact('add', net => [[uuid], ...chain.map(k => k.split(':'))].forEach(([d, type], i) =>
-      net.insert({ id: ids[i], definitionUuid: i ? 'sgrape.builtin.' + d : d, params: type ? { type } : {}, ui: { x: 0, y: 0 } })));
+      net.insert({ id: ids[i], nodeType: i ? 'sgrape.builtin.' + d : d, params: type ? { type } : {}, ui: { x: 0, y: 0 } })));
     const view = id => session.snapshot().projection.nodes.find(n => n.id === id).data;
     let from = { source: 'x', sourceHandle: output };
     for (const id of [...ids.slice(1), 'pixel_out']) {
@@ -438,7 +443,7 @@ test('every offered node can be added, wired to the output and compiled', t => {
   const failures = [];
   for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out'))) {
     const { session } = open(t);
-    session.transact('add', net => net.insert({ id: 'x', definitionUuid: uuid, params: {}, ui: { x: 0, y: 0 } }));
+    session.transact('add', net => net.insert({ id: 'x', nodeType: uuid, params: {}, ui: { x: 0, y: 0 } }));
     const outputs = session.snapshot().projection.nodes.find(n => n.id === 'x').data.outputs.map(p => p.key);
     let graph = null;
     for (const output of outputs) { for (const chain of chains) if ((graph = attempt(uuid, output, chain))) break; if (graph) break; }
@@ -465,7 +470,7 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
 // A legacy fixed entry (Vector locked to vec2) opens; changing its type is refused by the core.
 test('legacy fixed-type Vector opens and keeps its locked type', t => {
   const { session } = open(t);
-  session.transact('add', net => net.insert({ id: 'fv', definitionUuid: 'sgrape.builtin.vector', name: 'Vec2',
+  session.transact('add', net => net.insert({ id: 'fv', nodeType: 'sgrape.builtin.vector', name: 'Vec2',
     params: { type: 'vec2', fixedType: 'vec2', components: [0, 0, 0, 0] }, ui: { x: 0, y: 0 } }));
   const before = clone(session.graph());
   assert.ok(before.stages.pixel.nodes.some(n => n.id === 'fv'));
@@ -522,7 +527,7 @@ test('a note refreshes the GLSL shown in the editor but is not sent as a program
   const { session, calls } = open(t, undefined, 60000);
   session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
   await session.flush();
-  session.transact('note', net => { const node = net.node('a'); node.update({ ui: { ...node.data.ui, comment: 'hello note' } }); });
+  session.transact('note', net => { net.node('a').update({ comment: 'hello note' }); });
   assert.match(session.snapshot().glsl, /hello note/);
   await session.flush();
   assert.equal(calls.at(-1).body.runtime, null);
@@ -572,12 +577,12 @@ test('deleting only Color Output changes nothing and says why; the core refuses 
 
 test('a graph with two Color Outputs opens with a warning; a third is refused; removing one repairs it', t => {
   const { session: probe, loaded } = open(t), broken = loaded();
-  withDoc(broken.state, graph => graph.stages.pixel.nodes.push({ id: 'second', definitionUuid: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
+  withDoc(broken.state, graph => graph.stages.pixel.nodes.push({ id: 'second', nodeType: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
   const session = new EditorSession(probe.host, bootstrap, broken, 60000, 60000); t.after(() => session.dispose());
   assert.match(session.snapshot().message, /^警告：這張圖不符合結構規則.*Color Output 只能有一個（目前 2 個）/);
   const before = clone(session.graph());
-  session.transact('third', net => net.insert({ id: 'third', definitionUuid: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
+  session.transact('third', net => net.insert({ id: 'third', nodeType: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
   assert.deepEqual(clone(session.graph()), before); assert.match(session.snapshot().message, /目前 3 個/);
   session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'second'), edges: [] });
-  assert.equal(session.graph().stages.pixel.nodes.filter(n => n.definitionUuid === 'sgrape.builtin.pixel_out').length, 1);
+  assert.equal(session.graph().stages.pixel.nodes.filter(n => n.nodeType === 'sgrape.builtin.pixel_out').length, 1);
 });

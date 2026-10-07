@@ -25,11 +25,11 @@ function structural(graph:GraphDocument,role:'call'|'input'|'output'):NodeModule
 }
 function authored(module:NodeModule,id:string,ui:ObjectValue,params:ObjectValue={}):Node {
   const d = module.catalog.definition;
-  return {id,definitionUuid:d.definitionUuid!,params:{...copy(d.defaults),...params},ui};
+  return {id,nodeType:d.definitionUuid!,params:{...copy(d.defaults),...params},ui};
 }
 export function ensureSubgraphCapacity(graph:GraphDocument,additional=0):void {
   if (!Number.isInteger(additional) || additional < 0) throw Error('Invalid definition count');
-  if ((graph.document.functions?.length || 0) + additional > CORE_CONFIG.subgraphDefinitions)
+  if ((graph.document.subgraphs?.length || 0) + additional > CORE_CONFIG.subgraphDefinitions)
     throw Object.assign(Error('At most '+CORE_CONFIG.subgraphDefinitions+' Subgraph definitions are supported'),{code:'function.limit'});
 }
 export function validateSubgraphData(f:SubgraphData):void {
@@ -51,7 +51,7 @@ export function validateSubgraphData(f:SubgraphData):void {
 }
 function validate(graph:GraphDocument,f:SubgraphData):void {
   graph.assertEditable();ensureSubgraphCapacity(graph,1);
-  if (f.scope !== 'local' || graph.document.functions?.some(d => d.id === f.id))
+  if (f.scope !== 'local' || graph.document.subgraphs?.some(d => d.id === f.id))
     throw Error('Invalid or duplicate local Subgraph identity');
   validateSubgraphData(f);
 }
@@ -59,7 +59,7 @@ function validate(graph:GraphDocument,f:SubgraphData):void {
 export function insertSubgraph(graph:GraphDocument,f:SubgraphData):SubgraphData {
   validate(graph,f);
   const owned = copy(f);
-  (graph.document.functions ||= []).push(owned);
+  (graph.document.subgraphs ||= []).push(owned);
   return owned;
 }
 
@@ -70,13 +70,13 @@ export function createSubgraph(graph:GraphDocument,options:SubgraphOptions):Subg
     inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],
     outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],
     graph:{nodes:[{...authored(input,'input',{x:48,y:144}),name:'Input'},{...authored(output,'output',{x:624,y:144}),name:'Output'}],
-      edges:[{from:['input','value'],to:['output','value']}]}
+      edges:[{id:graph.nextEdgeId({nodes:[],edges:[]}),from:['input','value'],to:['output','value']}]}
   });
 }
 
 export function instantiateSubgraph(network:Network,definitionId:string,id:string,ui:ObjectValue={}):Node {
   network.assertEditable();
-  const graph = network.graph,f = graph.document.functions?.find(f => f.id === definitionId);
+  const graph = network.graph,f = graph.document.subgraphs?.find(f => f.id === definitionId);
   if (!f) throw Error('Subgraph definition no longer exists');
   const module = structural(graph,'call');
   const n = authored(module,id,copy(ui),module.reference!(definitionId));
@@ -101,7 +101,7 @@ export function groupSubgraph(network:Network,selection:ReadonlySet<string>,opti
   if (!validId(options.callId) || data.nodes.some(n => n.id === options.callId))
     throw Error('Invalid or duplicate instance identity');
   if (chosen.some(n => {
-    const role = graph.registry.get(n.definitionUuid)?.role;
+    const role = graph.registry.get(n.nodeType)?.role;
     return role && role !== 'value';
   })) throw Error('Stage outputs and Subgraph boundaries cannot be grouped');
   const unique = (base:string) => {let id=base,i=0;while(ids.has(id))id=base+'_'+ ++i;ids.add(id);return id;};
@@ -156,7 +156,7 @@ export function groupSubgraph(network:Network,selection:ReadonlySet<string>,opti
   validate(graph,f);
   const callModule = structural(graph,'call');
   const call = authored(callModule,options.callId,{x,y},callModule.reference!(f.id));
-  const owner = graph.document.functions?.find(f => f.graph === data),oldScope = owner ? 'fn_'+owner.id : network.id;
+  const owner = graph.document.subgraphs?.find(f => f.graph === data),oldScope = owner ? 'fn_'+owner.id : network.id;
   insertSubgraph(graph,f);
   // A move must not collect definitions used by the nodes it is moving.
   data.nodes = data.nodes.filter(n => !selected.has(n.id));data.nodes.push(call);data.edges = outside;
@@ -169,15 +169,15 @@ export function groupSubgraph(network:Network,selection:ReadonlySet<string>,opti
  * definitions and the active scope remain independent graph documents. */
 export function collectSubgraphs(graph:GraphDocument,roots:readonly string[],active:NetworkData):void {
   if (!roots.length) return;
-  const definitions = new Map((graph.document.functions || []).map(f => [f.id,f]));
+  const definitions = new Map((graph.document.subgraphs || []).map(f => [f.id,f]));
   const references = (value:unknown):Set<string> => {
     const result = new Set<string>();
     function scan(item:unknown):void {
       if (Array.isArray(item)) {item.forEach(scan);return;}
       if (!item || typeof item !== 'object') return;
       const n = item as Node;
-      if (n.definitionUuid && n.params) {
-        const ref = graph.registry.get(n.definitionUuid)?.referencedGraph?.(n);
+      if (n.nodeType && n.params) {
+        const ref = graph.registry.get(n.nodeType)?.referencedGraph?.(n);
         if (ref) result.add(ref);
       }
       for (const [key,child] of Object.entries(item))
@@ -193,8 +193,8 @@ export function collectSubgraphs(graph:GraphDocument,roots:readonly string[],act
     while (pending.length) {const id=pending.pop()!;if(seen.has(id))continue;seen.add(id);pending.push(...(dependencies.get(id)||[]));}
     return seen;
   };
-  const candidates = closure(roots),retained = references({...graph.document,functions:[],catalogSnapshot:undefined});
+  const candidates = closure(roots),retained = references({...graph.document,subgraphs:[],catalogSnapshot:undefined});
   for (const [id,f] of definitions) if (!candidates.has(id) || f.graph === active) retained.add(id);
   const keep = closure(retained);
-  graph.document.functions = (graph.document.functions || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
+  graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
 }

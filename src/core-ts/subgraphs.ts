@@ -15,7 +15,7 @@ export class Subgraph {
   constructor(readonly graph:GraphDocument,readonly id:string) {}
 
   get data():SubgraphData|undefined {
-    return this.graph.document.functions?.find(f => f.id === this.id);
+    return this.graph.document.subgraphs?.find(f => f.id === this.id);
   }
 
   rename(name:string):void {
@@ -63,10 +63,10 @@ export class Subgraph {
     const changed = edit.kind === 'update' && next[index]!.type !== list[index]!.type ? next[index]! : null;
     const networks = [
       ...Object.values(this.graph.document.stages),
-      ...(this.graph.document.functions || []).map(d => d.graph)
+      ...(this.graph.document.subgraphs || []).map(d => d.graph)
     ];
     const affected = (node:Node,data:typeof f.graph) => {
-      const module = this.graph.registry.get(node.definitionUuid);
+      const module = this.graph.registry.get(node.nodeType);
       if (module?.referencedGraph?.(node) === f.id) return direction === 'inputs' ? 'input' : 'output';
       if (data === f.graph && module?.role === (direction === 'inputs' ? 'subgraph-input' : 'subgraph-output'))
         return direction === 'inputs' ? 'output' : 'input';

@@ -11,7 +11,7 @@ vm.runInContext(fs.readFileSync(path.join(root, 'src/generated/wire_planning.js'
 const { GrapeGraph: G, GrapeTopCompiler: C } = producer;
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));
-const make = (id, key) => ({ id, definitionUuid: 'sgrape.builtin.' + key,
+const make = (id, key) => ({ id, nodeType: 'sgrape.builtin.' + key,
   params: clone(G.registry.get('sgrape.builtin.' + key).catalog.definition.defaults), ui: { x: 0, y: 0 } });
 
 // Deterministic generator so a failure can be replayed. 固定亂數種子，失敗可重現。
@@ -34,8 +34,7 @@ const edits = [
   ['value', (net, rand) => { const node = net.node(pick(rand, ['a', 'b']));
     const view = node.definition.presentation(node.data, net.context).value; node.edit(view.valueCommand, { value: Math.round(rand() * 8) / 4 }); }],
   ['move', (net, rand) => { const node = pick(rand, net.nodes); node.update({ ui: { ...node.data.ui, x: Math.round(rand() * 900), y: Math.round(rand() * 600) } }); }],
-  ['comment', (net, rand) => { const node = pick(rand, net.nodes); node.update({ ui: { ...node.data.ui, comment: pick(rand, ['', 'note', 'line\\', 'two\nlines']) } }); }],
-  ['label', (net, rand) => { const node = pick(rand, net.nodes); node.update({ ui: { ...node.data.ui, label: pick(rand, ['', 'Tint', 'x']) } }); }],
+  ['comment', (net, rand) => { const node = pick(rand, net.nodes); node.update({ comment: pick(rand, ['', 'note', 'line' + String.fromCharCode(92), 'two' + String.fromCharCode(10) + 'lines']) }); }],
   ['add isolated', (net, rand) => { net.insert(make('iso' + Math.floor(rand() * 1e9), 'float')); }],
   ['remove isolated', (net) => { const iso = net.nodes.filter(n => n.id.startsWith('iso')); if (iso.length) net.removeAll([iso[0]]); }],
   ['rename', (net, rand) => { const node = net.node(pick(rand, ['a', 'b', 'sum'])); node.update({ name: pick(rand, [undefined, 'Alpha', 'Beta', 'Alpha']) }); }],
@@ -69,8 +68,9 @@ test('an unchanged code-generation key never hides a changed program (random edi
 test('layout and notes do not change the key; names, values and wires do', () => {
   const graph = start(), key = C.key(graph), node = id => graph.stages.pixel.nodes.find(n => n.id === id);
   const variant = edit => { const g = clone(graph); edit(g, id => g.stages.pixel.nodes.find(n => n.id === id)); return C.key(g); };
-  assert.equal(variant((g, n) => { n('a').ui = { x: 500, y: 9, comment: 'note', label: 'L' }; }), key);
-  assert.equal(variant(g => { g.stages.pixel.edgeSequence = 99; }), key);
+  assert.equal(variant((g, n) => { n('a').ui = { x: 500, y: 9 }; n('a').comment = 'note'; }), key);
+  assert.equal(variant(g => { g.stages.pixel.edges.forEach(e => { e.id = 'other_' + e.id; e.ui = { style: 'link' }; }); }), key);
+  assert.equal(variant(g => { g.description = 'About'; g.comment = 'Notes'; g.userVersion = '2'; }), key);
   assert.notEqual(variant((g, n) => { n('a').name = 'Alpha'; }), key, 'names become GLSL identifiers and can collide');
   assert.notEqual(variant((g, n) => { n('a').params.value = 7; }), key);
   assert.notEqual(variant(g => { g.stages.pixel.edges.push({ id: 'x', from: ['a', 'out'], to: ['sum', 'a'] }); }), key);

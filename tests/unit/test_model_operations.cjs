@@ -4,7 +4,7 @@ const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resol
 const {GraphDocument,registry,createRegistry,createCompiler,changesBetween,transact}=context.GrapeGraph;
 const plain=x=>JSON.parse(JSON.stringify(x));
 const policy={components:{float:1,vec2:2,vec3:3,vec4:4},conversions:[{from:'float',to:'vec3'},{from:'float',to:'vec4'}]};
-const document=()=>({schemaVersion:1,target:'top',declarations:[],functions:[],stages:{pixel:{nodes:[],edges:[]}}});
+const document=()=>({format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes:[],edges:[]}}});
 function seeded(){return new GraphDocument(document(),registry).change(g=>{
   const n=g.networks.get('pixel');n.create('f','sgrape.builtin.float',{value:2});n.create('m','sgrape.builtin.multiply',{type:'vec3'});n.create('out','sgrape.builtin.pixel_out');
 }).after;}
@@ -56,7 +56,7 @@ test('no-op and position-only updates describe exactly what changed without touc
 });
 
 test('remove owns incident edges while unknown nodes and payloads survive unrelated operations',()=>{
-  const g=seeded();g.stages.pixel.nodes.push({id:'ghost',definitionUuid:'missing.module',params:{opaque:[1,2,3]}});
+  const g=seeded();g.stages.pixel.nodes.push({id:'ghost',nodeType:'missing.module',params:{opaque:[1,2,3]}});
   const wired=new GraphDocument(g,registry).change(c=>{const n=c.networks.get('pixel');n.connect(n.node('f').outputs[0],n.node('m').inputs[0],policy);});
   const removed=new GraphDocument(wired.after,registry).change(c=>{const n=c.networks.get('pixel');n.remove(n.node('m'));});
   assert.equal(removed.after.stages.pixel.edges.length,0);assert.deepEqual(plain(removed.after.stages.pixel.nodes.at(-1).params),{opaque:[1,2,3]});
@@ -64,7 +64,7 @@ test('remove owns incident edges while unknown nodes and payloads survive unrela
 });
 
 test('network identities and declaration invalidation cannot be mistaken for a local card edit',()=>{
-  const g=seeded();g.functions=[{id:'nested',graph:plain(g.stages.pixel)}];
+  const g=seeded();g.subgraphs=[{id:'nested',graph:plain(g.stages.pixel)}];
   const local=new GraphDocument(g,registry).change(c=>c.networks.get('function:nested').node('m').update({name:'inside'}));
   assert.deepEqual(plain(local.changes.networks.map(n=>n.id)),['function:nested']);
   const after=plain(g);after.declarations.push({id:'u',kind:'uniform',name:'value',type:'float',value:1});
@@ -139,13 +139,13 @@ test('module configuration preserves fixed presets and planner reconciliation do
 });
 
 test('insertion owns authored metadata and initializes only through the registered module',()=>{
-  const authored={id:'new',definitionUuid:'sgrape.builtin.abs',params:{},ui:{x:30},revisionHash:'saved-revision'};
+  const authored={id:'new',nodeType:'sgrape.builtin.abs',params:{},ui:{x:30},revisionHash:'saved-revision'};
   const step=new GraphDocument(document(),registry).change(g=>{
     const n=g.networks.get('pixel').insert(authored);authored.ui.x=900;
     assert.equal(n.data.ui.x,30);assert.equal(n.data.params.type,'float');assert.equal(n.data.revisionHash,'saved-revision');
   });
   assert.deepEqual(plain(step.changes.networks[0].added),['new']);
-  assert.throws(()=>new GraphDocument(document(),registry).change(g=>g.networks.get('pixel').insert({...authored,definitionUuid:'unknown'})),/unavailable/);
+  assert.throws(()=>new GraphDocument(document(),registry).change(g=>g.networks.get('pixel').insert({...authored,nodeType:'unknown'})),/unavailable/);
 });
 
 test('bulk removal and disconnect validate foreign handles before mutation and retain identity sequence',()=>{
@@ -167,7 +167,7 @@ test('bulk removal and disconnect validate foreign handles before mutation and r
 });
 
 test('fragment insertion is independent of import formats, atomic and owns copied node/edge metadata',()=>{
-  const authored={nodes:[{id:'copy',definitionUuid:'sgrape.builtin.abs',params:{type:'float'},ui:{x:4}}],edges:[{id:'copied-edge',from:['f','out'],to:['copy','value'],ui:{style:'link'}}]};
+  const authored={nodes:[{id:'copy',nodeType:'sgrape.builtin.abs',params:{type:'float'},ui:{x:4}}],edges:[{id:'copied-edge',from:['f','out'],to:['copy','value'],ui:{style:'link'}}]};
   const step=new GraphDocument(seeded(),registry).change(g=>{
     const network=g.networks.get('pixel'),before=JSON.stringify(g.document);
     assert.throws(()=>network.insertFragment({...authored,nodes:[...authored.nodes,{...authored.nodes[0],id:'m'}]}),/duplicate/);
@@ -175,7 +175,7 @@ test('fragment insertion is independent of import formats, atomic and owns copie
     assert.equal(JSON.stringify(g.document),before);
     network.insertFragment(authored);authored.nodes[0].ui.x=99;authored.edges[0].ui.style='curve';
     assert.equal(network.node('copy').data.ui.x,4);assert.equal(network.edges[0].data.ui.style,'link');assert.notEqual(network.edges[0].id,'copied-edge');
-    const unavailable={nodes:[{id:'ghost',definitionUuid:'unavailable',params:{opaque:[1,2]}}],edges:[{from:['ghost','out'],to:['m','a']}]};
+    const unavailable={nodes:[{id:'ghost',nodeType:'unavailable',params:{opaque:[1,2]}}],edges:[{from:['ghost','out'],to:['m','a']}]};
     assert.throws(()=>network.insertFragment(unavailable),/unavailable/);
     network.insertFragment(unavailable,{unavailable:'preserve'});assert.deepEqual(plain(network.node('ghost').data.params),{opaque:[1,2]});
     assert.equal(network.node('ghost').outputs.length,0);

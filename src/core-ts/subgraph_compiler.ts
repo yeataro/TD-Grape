@@ -1,6 +1,6 @@
 /** Compile graph-owned subgraphs through a bounded, disposable expansion.
  * Node modules own interfaces; no imported library or DOM state is consulted. */
-import { copy, type Graph, type Node, type NetworkData, type SubgraphData } from './model';
+import { copy, formatProblem, type Graph, type Node, type NetworkData, type SubgraphData } from './model';
 import { CORE_CONFIG, type CoreConfig } from './config';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
 import { numericInterface, requireSubgraph } from './subgraph_interface';
@@ -34,12 +34,12 @@ const relay:NodeModule = {
 export function createSubgraphCompiler(registry:Registry,engineFactory:(registry:Registry)=>Engine,config:CoreConfig=CORE_CONFIG) {
   const engine = engineFactory(createRegistry([...registry.modules,relay]));
   const identity = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
-  const moduleOf = (node:Node) => registry.get(node.definitionUuid);
+  const moduleOf = (node:Node) => registry.get(node.nodeType);
   function supports(g:Graph):boolean {
-    if (g.schemaVersion!==1 || g.target!=='top' || Object.keys(g.stages).join()!=='pixel' ||
-        g.topInputs?.length || g.typeDefinitions?.length || !Array.isArray(g.functions) || g.functions.length>config.subgraphDefinitions) return false;
-    if (!g.declarations.every(d=>d.kind==='uniform'&&bindingTypes.includes(d.type)&&!d.initialDriver&&!d.sourceMissing&&!['array','matrix'].includes(String(d.nativeSequence)))) return false;
-    const scopes:[NetworkData,SubgraphData|undefined][] = [[g.stages.pixel!,undefined],...g.functions.map(f=>[f.graph,f] as [NetworkData,SubgraphData])];
+    if (formatProblem(g) || g.target!=='top' || Object.keys(g.stages).join()!=='pixel' ||
+        g.structDefinitions?.length || !Array.isArray(g.subgraphs) || g.subgraphs.length>config.subgraphDefinitions) return false;
+    if (!g.declarations.every(d=>d.kind==='uniform'&&bindingTypes.includes(d.type))) return false;
+    const scopes:[NetworkData,SubgraphData|undefined][] = [[g.stages.pixel!,undefined],...g.subgraphs.map(f=>[f.graph,f] as [NetworkData,SubgraphData])];
     return scopes.every(([data,owner])=>{
       if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>config.nodesPerNetwork || data.edges.length>config.edgesPerNetwork || data.ui?.frames) return false;
       if (owner && (!numericInterface(owner) || !Array.isArray(owner.stages) || !owner.stages.includes('pixel') || owner.targets&&!owner.targets.includes('top'))) return false;
@@ -55,7 +55,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     if (!supports(g)) throw Error('Graph is outside the selected frontend compiler capability');
     if (JSON.stringify(g).length>config.documentBytes) throw Error('Graph is too large');
     const definitions=new Map<string,SubgraphData>();
-    for (const f of g.functions!) {
+    for (const f of g.subgraphs!) {
       if (!identity.test(f.id)||definitions.has(f.id)) throw Error('Invalid or duplicate Subgraph ID');
       if (!['local','library','personal'].includes(f.scope)||typeof f.name!=='string'||!f.name.length||f.name.length>80) throw Error('Invalid Subgraph definition');
       requireSubgraph(contextFor(g),f.id);definitions.set(f.id,f);
@@ -102,13 +102,10 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
               const endpoints=module.role==='subgraph-input'?boundary.inputs:boundary.outputs;
               for(const endpoint of Object.values(endpoints)){
                 const target=flat.nodes.find(n=>n.id===endpoint[0])!;
-                for(const key of ['label','comment']){
-                  const value=node.ui?.[key];
-                  if(typeof value==='string'&&value.trim()){
-                    target.ui||={};
-                    target.ui[key]=[target.ui[key],value].filter(Boolean).join('\n');
-                  }
-                }
+                // A boundary's comment follows its relay so the note stays at the boundary in GLSL.
+                // 邊界節點的 comment 跟著中繼節點，GLSL 裡註解仍在邊界的位置。
+                if(typeof node.comment==='string'&&node.comment.trim())
+                  target.comment=[target.comment,node.comment].filter(Boolean).join('\n');
               }
               if(module.role==='subgraph-input'&&Object.keys(node.inputValues||{}).length)
                 throw Error('Invalid Subgraph port defaults');
@@ -127,9 +124,9 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
               for(const key of Object.keys(node.inputValues||{}))if(!ports.inputs[key])throw Error('Invalid Subgraph input values');
               for(const direction of ['inputs','outputs'] as const)for(const p of fn[direction]){
                 const id=allocate();
-                add({id,definitionUuid:relay.catalog.definition.definitionUuid!,params:{type:p.type},
+                add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},
                   inputValues:{value:copy(direction==='inputs'?node.inputValues?.[p.id]??p.default:p.default)},
-                  ...(node.ui?{ui:copy(node.ui)}:{})},origin);
+                  ...(node.ui?{ui:copy(node.ui)}:{}),...(node.comment?{comment:node.comment}:{})},origin);
                 mapped[direction][p.id]=[id,direction==='inputs'?'value':'out'];
                 inside[direction][p.id]=[id,direction==='inputs'?'out':'value'];
               }
@@ -148,20 +145,20 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
         for(const edge of data.edges){
           const from=maps.get(edge.from[0])?.outputs[edge.from[1]],to=maps.get(edge.to[0])?.inputs[edge.to[1]];
           if(!from||!to)throw Object.assign(Error('Connection endpoint no longer exists'),{node:edge.to[0],stage:'pixel',trail:path,...(owner?{functionId:owner.id}:{})});
-          flat.edges.push({from,to});
+          flat.edges.push({id:'x'+flat.edges.length,from,to});
         }
       }
       if(probe){
         const inside:Endpoints={inputs:{},outputs:{}};
         for(const direction of ['inputs','outputs'] as const)for(const p of probe[direction]){
-          const id=allocate();add({id,definitionUuid:relay.catalog.definition.definitionUuid!,params:{type:p.type},inputValues:{value:copy(p.default)}},{node:'',stage:'pixel',trail:[probe.id],functionId:probe.id});
+          const id=allocate();add({id,nodeType:relay.catalog.definition.definitionUuid!,params:{type:p.type},inputValues:{value:copy(p.default)}},{node:'',stage:'pixel',trail:[probe.id],functionId:probe.id});
           inside[direction][p.id]=[id,direction==='inputs'?'out':'value'];
         }
         expand(probe.graph,[probe.id],probe,inside);
         const output=registry.modules.find(m=>m.role==='output')!;
-        add({id:allocate(),definitionUuid:output.catalog.definition.definitionUuid!,params:copy(output.catalog.definition.defaults)},{node:'',stage:'pixel',trail:[]});
+        add({id:allocate(),nodeType:output.catalog.definition.definitionUuid!,params:copy(output.catalog.definition.defaults)},{node:'',stage:'pixel',trail:[]});
       } else expand(g.stages.pixel!,[]);
-      const {functions,...rest}=g;
+      const {subgraphs,...rest}=g;
       const document:Graph={...rest,stages:{pixel:flat}};
       try {
         const result=engine.compile(document,identifiers);

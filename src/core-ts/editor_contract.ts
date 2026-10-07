@@ -10,7 +10,7 @@ type Variant={type:string|null;inputs:Record<string,string>;outputs:Record<strin
 
 function variants(module:NodeModule,target:string){
   const definition=module.catalog.definition;
-  const base:Node={id:'projection',definitionUuid:definition.definitionUuid!,params:copy(definition.defaults)};
+  const base:Node={id:'projection',nodeType:definition.definitionUuid!,params:copy(definition.defaults)};
   const tokens=[...Object.values(definition.inputs),...Object.values(definition.outputs)];
   const selector=tokens.includes('D')?'declaration':
     tokens.includes('T')||typeof definition.defaults.type==='string'?'parameter':'fixed';

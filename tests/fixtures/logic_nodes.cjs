@@ -10,7 +10,7 @@ function finish(nodes,edges,result,t){
   nodes.push({...node('test_color','if',{type:'float'}),inputValues:{true:.75,false:.25}});edges.push(edge(result,'test_color','out','condition'));result='test_color';
  }
  nodes.push(node('output','pixel_out'));edges.push(edge(result,'output','out','color'));
- return {schemaVersion:1,target:'top',declarations:[],topInputs:[],functions:[],stages:{pixel:{nodes,edges}}};
+ return {format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes,edges}}};
 }
 function logicCases(){
  const rows=[],add=(key,type,nodes,edges,result='operation',output=type)=>rows.push({key,type,graph:finish(nodes,edges,result,output)});

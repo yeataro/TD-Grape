@@ -7,8 +7,8 @@ export function commentLines(text:unknown,kind?:string):string[] {
     return '    // '+(kind&&i===0?kind+': ':'')+line;
   });
 }
-export function appendNodeComments(lines:string[],start:number,note:{label?:unknown;comment?:unknown}):void {
-  const labels=commentLines(note.label);
-  if(labels.length){if(lines.length>start){lines[start]+=' '+labels[0]!.trimStart();lines.splice(start+1,0,...labels.slice(1));}else lines.push(...labels);}
-  lines.push(...commentLines(note.comment,'Comment'));
+/** A node's `comment` (moved out of `ui`, Q44) becomes inert lines below its code; `ui.label` is gone.
+ * 節點的 comment（已搬出 ui）產成程式下方的註解行；ui.label 已刪除。 */
+export function appendNodeComments(lines:string[],_start:number,comment:unknown):void {
+  lines.push(...commentLines(comment,'Comment'));
 }

@@ -16,13 +16,13 @@ export type Measure = { key:CapacityKey; network?:string; value:number; limit:nu
 
 function networks(g:Graph):[string,NetworkData][] {
   return [...Object.entries(g.stages||{}).map(([id,data])=>[id,data] as [string,NetworkData]),
-    ...(g.functions||[]).map(f=>['function:'+f.id,f.graph] as [string,NetworkData])];
+    ...(g.subgraphs||[]).map(f=>['function:'+f.id,f.graph] as [string,NetworkData])];
 }
 
 /** Every measure of the graph, with its limit. Expanded size counts a subgraph instance as the
  * expanded size of its definition (an estimate of what the subgraph compiler builds). */
 export function measure(g:Graph,registry:Registry,config:CoreConfig=CORE_CONFIG):Measure[] {
-  const definitions=new Map((g.functions||[]).map(f=>[f.id,f.graph] as [string,NetworkData]));
+  const definitions=new Map((g.subgraphs||[]).map(f=>[f.id,f.graph] as [string,NetworkData]));
   const expanded=new Map<string,number>(),visiting=new Set<string>();
   const size=(data:NetworkData,key:string):number=>{
     if(expanded.has(key))return expanded.get(key)!;
@@ -30,7 +30,7 @@ export function measure(g:Graph,registry:Registry,config:CoreConfig=CORE_CONFIG)
     visiting.add(key);
     let total=0;
     for(const n of data.nodes){
-      const ref=registry.get(n.definitionUuid)?.referencedGraph?.(n),inner=ref?definitions.get(ref):undefined;
+      const ref=registry.get(n.nodeType)?.referencedGraph?.(n),inner=ref?definitions.get(ref):undefined;
       total+=inner?size(inner,'function:'+ref):1;
     }
     visiting.delete(key);expanded.set(key,total);return total;

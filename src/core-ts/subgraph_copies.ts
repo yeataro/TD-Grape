@@ -5,10 +5,10 @@ import { ScopeReferences } from './scope_references';
 
 export type AllocateSubgraphId = () => string;
 const validId = (id:string) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
-const reference = (graph:GraphDocument,n:Node) => graph.registry.get(n.definitionUuid)?.referencedGraph?.(n);
+const reference = (graph:GraphDocument,n:Node) => graph.registry.get(n.nodeType)?.referencedGraph?.(n);
 
 function parameters(graph:GraphDocument,n:Node,id:string):ObjectValue {
-  const module = graph.registry.get(n.definitionUuid);
+  const module = graph.registry.get(n.nodeType);
   if (!module?.reference) throw Error('Subgraph module cannot redirect its reference');
   const params = {...copy(n.params),...copy(module.reference(id))};
   if (module.referencedGraph?.({...n,params}) !== id) throw Error('Subgraph reference operation disagrees with its module');
@@ -32,7 +32,7 @@ function allocate(used:Set<string>,next:AllocateSubgraphId):string {
  * versions to reuse and supplies any ID mapping. All mutation stays here. */
 export function appendSubgraphs(graph:GraphDocument,definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):SubgraphData[] {
   graph.assertEditable();ensureSubgraphCapacity(graph,definitions.length);
-  const pending = definitions.map(f => copy(f)),used = new Set((graph.document.functions || []).map(f => f.id));
+  const pending = definitions.map(f => copy(f)),used = new Set((graph.document.subgraphs || []).map(f => f.id));
   const originalIds = new Set<string>();
   for (const f of pending) {
     if (originalIds.has(f.id)) throw Error('Duplicate Subgraph identity');
@@ -44,7 +44,7 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
     }
     remapScopes(f,ids);validateSubgraphData(f);
   }
-  const all = new Map([...(graph.document.functions || []),...pending].map(f => [f.id,f]));
+  const all = new Map([...(graph.document.subgraphs || []),...pending].map(f => [f.id,f]));
   const active = new Set<string>(),done = new Set<string>();
   const visit = (id:string):void => {
     if (active.has(id)) throw Error('Subgraph reference cycle');
@@ -55,7 +55,7 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
     active.delete(id);done.add(id);
   };
   pending.forEach(f=>visit(f.id));
-  if (pending.length) (graph.document.functions ||= []).push(...pending);
+  if (pending.length) (graph.document.subgraphs ||= []).push(...pending);
   return pending;
 }
 
@@ -63,7 +63,7 @@ export function appendSubgraphs(graph:GraphDocument,definitions:readonly Subgrap
  * copies. Stored source snapshots remain byte-for-byte authored data. */
 export function localizeSubgraph(graph:GraphDocument,id:string,next:AllocateSubgraphId):Map<string,string> {
   graph.assertEditable();
-  const definitions=graph.document.functions || [],target=definitions.find(f=>f.id===id);
+  const definitions=graph.document.subgraphs || [],target=definitions.find(f=>f.id===id);
   if (!target || target.scope==='local') return new Map();
   const affected=new Set([id]);let added=true;
   while (added) {
@@ -89,12 +89,12 @@ export function localizeSubgraph(graph:GraphDocument,id:string,next:AllocateSubg
   // Prepare all IDs, snapshots and module commands before the first write.
   // Keep node/data objects alive for current editor callbacks during migration.
   for (const f of changed) {
+    // `origin` already records where a snapshot came from; `scope` tells whether it is still one (Q44).
+    // origin 已記錄來源；是否仍是唯讀副本由 scope 看出。
     f.id=ids.get(f.id)!;f.scope='local';
-    if(f.source || f.origin)f.origin=copy(f.source || f.origin!);
-    delete f.source;
   }
   for (const p of patches) p.node.params=p.params;
-  remapScopes([...Object.values(graph.document.stages),...writable,graph.document.typeDefinitions || []],ids);
+  remapScopes([...Object.values(graph.document.stages),...writable,graph.document.structDefinitions || []],ids);
   definitions.push(...snapshots);
   return ids;
 }
@@ -105,13 +105,12 @@ export function independentSubgraph(network:Network,nodeId:string,next:AllocateS
   network.assertEditable();
   const graph=network.graph,n=network.nodeData(nodeId);
   if(!n)throw Error('Subgraph instance no longer exists');
-  const id=reference(graph,n),source=graph.document.functions?.find(f=>f.id===id);
+  const id=reference(graph,n),source=graph.document.subgraphs?.find(f=>f.id===id);
   if(!source)return null;
   ensureSubgraphCapacity(graph,1);
-  const newId=allocate(new Set(graph.document.functions!.map(f=>f.id)),next);
+  const newId=allocate(new Set(graph.document.subgraphs!.map(f=>f.id)),next);
   const f=copy(source);f.id=newId;f.name=f.name.slice(0,75)+' Copy';f.scope='local';
-  if(f.source || f.origin)f.origin=copy(f.source || f.origin!);
-  delete f.source;remapScopes(f,new Map([[source.id,newId]]));
+  remapScopes(f,new Map([[source.id,newId]]));
   const params=parameters(graph,n,newId);
   const owned=appendSubgraphs(graph,[f])[0]!;
   n.params=params;return owned;

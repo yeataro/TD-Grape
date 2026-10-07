@@ -38,8 +38,8 @@ const structureMessage = (error: unknown) => {
   return problems ? '這次修改沒有套用：' + structureText(problems) : undefined;
 };
 
-const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).concat((graph.functions || []).map(f => f.graph))
-  .map(net => net?.nodes.map(n => [n.ui?.comment, n.ui?.label])));
+const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).concat((graph.subgraphs || []).map(f => f.graph))
+  .map(net => net?.nodes.map(n => n.comment)));
 
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
   message: string; glsl: string; targetPath: string };
@@ -129,7 +129,7 @@ export class Editor {
   });
   configure = (id: string, type: string) => this.transact('型別已更新', net => net.node(id).configure({ type }));
   add = (uuid: string, position: XYPosition) => this.transact('節點已新增', net =>
-    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), definitionUuid: uuid, params: {}, ui: { ...position } }));
+    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: uuid, params: {}, ui: { ...position } }));
   valid = (c: Connection | FlowEdge) => {
     if (!c.sourceHandle || !c.targetHandle) return false;
     try {
@@ -150,7 +150,7 @@ export class Editor {
   // Delete skips nodes the core keeps (Color Output) and those nodes' unselected wires; the rest goes.
   // 刪除時跳過核心不准刪的節點（Color Output）及其未被選取的接線，其餘照刪。
   beforeDelete = async ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => {
-    const kept = new Set(nodes.filter(node => !core.removable(core.registry.get(node.data.authored.definitionUuid))).map(node => node.id));
+    const kept = new Set(nodes.filter(node => !core.removable(core.registry.get(node.data.authored.nodeType))).map(node => node.id));
     this.keptNote = kept.size ? 'Color Output 不能刪除；其他選取項目已刪除' : undefined;
     if (!kept.size) return true;
     if (kept.size === nodes.length && edges.every(edge => !edge.selected)) this.status({ message: 'Color Output 不能刪除' });

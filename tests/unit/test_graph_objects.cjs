@@ -3,8 +3,8 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'),'utf8'),context);
 const {GraphDocument,createRegistry,registry,transact}=context.GrapeGraph;
 const plain=x=>JSON.parse(JSON.stringify(x));
-const node=(id,key,params={})=>({id,definitionUuid:'sgrape.builtin.'+key,params});
-const document=()=>({schemaVersion:1,target:'top',declarations:[],functions:[],stages:{pixel:{nodes:[node('source','float',{value:.5}),node('operation','abs',{type:'float'}),node('out','pixel_out')],edges:[]}}});
+const node=(id,key,params={})=>({id,nodeType:'sgrape.builtin.'+key,params});
+const document=()=>({format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes:[node('source','float',{value:.5}),node('operation','abs',{type:'float'}),node('out','pixel_out')],edges:[]}}});
 const policy={components:{float:1,vec2:2,vec3:3,vec4:4},conversions:[{from:'float',to:'vec4'}]};
 const open=(d=document(),r=registry)=>new GraphDocument(d,r);
 
@@ -14,7 +14,7 @@ test('node/port handles are stable, scoped and read-only; caller state stays ind
   assert.equal(p.type,'float');assert.equal(Object.isFrozen(n.data),true);
   d.stages.pixel.nodes[0].params.value=9;assert.equal(n.data.params.value,.5);
   assert.throws(()=>g.networks.get('pixel').connect(p,g.networks.get('pixel').node('out').inputs[0],policy),/transaction/);
-  const d2=document();d2.functions=[{id:'nested',graph:plain(d2.stages.pixel)}];const nested=open(d2);
+  const d2=document();d2.subgraphs=[{id:'nested',graph:plain(d2.stages.pixel)}];const nested=open(d2);
   assert.notEqual(nested.networks.get('pixel').node('source'),nested.networks.get('function:nested').node('source'));
 });
 test('connect/replacement is one graph edit; snapshot Undo/Redo and reopen preserve edge IDs and values',()=>{
@@ -58,7 +58,7 @@ test('dynamic port changes keep port handles and edge data; unsupported endpoint
   assert.deepEqual(plain(edit.after),d);
 });
 test('unknown nodes and wires roundtrip without active ports or loss',()=>{
-  const d=document();d.stages.pixel.nodes[0].definitionUuid='missing.module';d.stages.pixel.nodes[0].opaque={privatePayload:[1,2,3]};
+  const d=document();d.stages.pixel.nodes[0].nodeType='missing.module';d.stages.pixel.nodes[0].opaque={privatePayload:[1,2,3]};
   d.stages.pixel.edges=[{id:'ghost',from:['source','out'],to:['operation','value'],ui:{style:'curve'}}];
   const g=open(d);assert.equal(g.networks.get('pixel').edges[0].connection(policy).reason,'missing-port');
   assert.deepEqual(plain(g.snapshot()),d);
@@ -96,7 +96,8 @@ test('deleted edge handles never attach to new connections, including after save
   });
   const next=open(edit.after).change(g=>{
     const n=g.networks.get('pixel'),third=n.connect(n.node('source').outputs[0],n.node('operation').inputs[0],policy);
-    assert.equal(third.id,'edge_3');
+    // Random identities never reuse a deleted edge's id (Q44). 隨機 id 不會重用已刪接線的 id。
+    assert.match(third.id,/^e[0-9a-f]{32}$/);assert.ok(![...edit.before.stages.pixel.edges,...edit.after.stages.pixel.edges].some(e=>e.id===third.id));
   });
   assert.equal(next.after.stages.pixel.edges.length,1);
 });
@@ -138,24 +139,22 @@ test('editor transaction supplies its one before snapshot to validation and hist
   assert.deepEqual(plain(d.unknown),{keep:['content']});
 });
 
-test('a bulk edit allocates stable edge IDs in one pass and preserves the high-water mark',()=>{
+test('a bulk edit allocates stable edge IDs in one pass',()=>{
   const d=document(),raw=Array.from({length:300},(_,i)=>({from:['source','out'],to:['operation'+i,'value']}));
-  raw[0].id='edge_400';let visits=0;
+  raw[0].id='kept';let visits=0;
   d.stages.pixel.edges=new Proxy(raw,{get(target,key,receiver){if(typeof key==='string'&&/^\d+$/.test(key))visits++;return Reflect.get(target,key,receiver);}});
   transact(d,registry,()=>{d.stages.pixel.nodes[0].params.value=2;return d;});
   assert.ok(visits<=raw.length*10,`bulk ID allocation visited ${visits} edge rows`);
-  assert.equal(new Set(raw.map(e=>e.id)).size,300);assert.equal(raw[1].id,'edge_401');assert.equal(raw.at(-1).id,'edge_699');
-  assert.equal(d.stages.pixel.edgeSequence,699);
+  assert.equal(new Set(raw.map(e=>e.id)).size,300);assert.equal(raw[0].id,'kept');assert.ok(raw.slice(1).every(e=>/^e[0-9a-f]{32}$/.test(e.id)));
+  assert.equal('edgeSequence' in d.stages.pixel,false);
   const saved=plain(d);transact(d,registry,()=>{d.stages.pixel.edges=[];return d;});
-  assert.equal(d.stages.pixel.edgeSequence,699);
   assert.throws(()=>transact(d,registry,()=>{d.stages.pixel.edges=[{...saved.stages.pixel.edges[0]},{...saved.stages.pixel.edges[0]}];return d;}),/Duplicate edge ID/);
-  assert.equal(d.stages.pixel.edges.length,0);assert.equal(d.stages.pixel.edgeSequence,699);
+  assert.equal(d.stages.pixel.edges.length,0);
 });
 
-test('a raw draft deletion cannot reset identity allocation for the next graph version',()=>{
+test('a raw draft deletion cannot make the next connection reuse the deleted id',()=>{
   const d=document();d.stages.pixel.edges=[{id:'edge_80',from:['source','out'],to:['operation','value']}];
   const removed=open(d).change(g=>{g.networks.get('pixel').data.edges=[];});
-  assert.equal(removed.after.stages.pixel.edgeSequence,80);
-  const next=open(removed.after).change(g=>{const n=g.networks.get('pixel');assert.equal(n.connect(n.node('source').outputs[0],n.node('operation').inputs[0],policy).id,'edge_81');});
+  const next=open(removed.after).change(g=>{const n=g.networks.get('pixel');assert.notEqual(n.connect(n.node('source').outputs[0],n.node('operation').inputs[0],policy).id,'edge_80');});
   assert.equal(next.after.stages.pixel.edges.length,1);
 });

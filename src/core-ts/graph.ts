@@ -45,7 +45,7 @@ export class Node {
   private module?:ReturnType<Registry['get']>;
   constructor(readonly network:Network,readonly id:string){}
   get data(){if(this.stored)return this.stored;const value=this.network.nodeData(this.id);if(!this.network.graph.editable)this.stored=value;return value;}
-  get definition(){if(this.module)return this.module;const data=this.data,value=data&&this.network.graph.registry.get(data.definitionUuid);if(!this.network.graph.editable)this.module=value;return value;}
+  get definition(){if(this.module)return this.module;const data=this.data,value=data&&this.network.graph.registry.get(data.nodeType);if(!this.network.graph.editable)this.module=value;return value;}
   get interface():NodePorts {
     if(this.resolved)return this.resolved;
     const n=this.data;if(!n)return new NodePorts([]);
@@ -65,9 +65,9 @@ export class Node {
     const candidate=configureNode(module,node,selection,this.network.context);
     this.replace(candidate);
   }
-  update(patch:{params?:ObjectValue;inputValues?:ObjectValue;ui?:ObjectValue;name?:string}):void {
+  update(patch:{params?:ObjectValue;inputValues?:ObjectValue;ui?:ObjectValue;name?:string;comment?:string}):void {
     this.network.assertEditable();const node=this.data;if(!node)throw Error('Node no longer exists');
-    if(Object.keys(patch).some(k=>!['params','inputValues','ui','name'].includes(k)))throw Error('Node update cannot change identity');
+    if(Object.keys(patch).some(k=>!['params','inputValues','ui','name','comment'].includes(k)))throw Error('Node update cannot change identity');
     const candidate={...copy(node),...copy(patch)};
     if(this.definition){
       if(!this.definition.supports(candidate,this.network.context))throw Error('Unsupported node configuration');
@@ -80,7 +80,7 @@ export class Node {
     if(!node||!this.interface.inputs[key])throw Error('Unknown node input');
     if(!module?.editInput){this.update({inputValues:{...node.inputValues,[key]:copy(value)}});return;}
     const candidate=module.editInput(copy(node),key,copy(value),this.network.context);
-    if(candidate.id!==node.id||candidate.definitionUuid!==node.definitionUuid)throw Error('Input edit changed identity');
+    if(candidate.id!==node.id||candidate.nodeType!==node.nodeType)throw Error('Input edit changed identity');
     module.validate(candidate,this.network.context);resolvePorts(module,candidate,this.network.context);this.replace(candidate);
   }
   edit(command:string,value?:Value):void {
@@ -154,7 +154,7 @@ export class Network {
     if(node.network!==this)throw Error('Node belongs to another network');
     const f=independentSubgraph(this,node.id,next);return f?this.graph.subgraph(f.id):null;
   }
-  get context():NodeContext {return contextFor(this.graph.document,this.graph.document.functions?.find(f=>f.graph===this.data));}
+  get context():NodeContext {return contextFor(this.graph.document,this.graph.document.subgraphs?.find(f=>f.graph===this.data));}
   node(id:string):Node {let n=this.nodeHandles.get(id);if(!n){n=new Node(this,id);this.nodeHandles.set(id,n);}return n;}
   nodeData(id:string){
     const slot=this.nodeSlots.get(id),current=slot===undefined?undefined:this.data.nodes[slot];
@@ -168,14 +168,14 @@ export class Network {
     return this.nodeIndex.get(id);
   }
   get nodes(){return this.data.nodes.map(n=>this.node(n.id));}
-  create(id:string,definitionUuid:string,params:ObjectValue={}):Node {
-    return this.insert({id,definitionUuid,params});
+  create(id:string,nodeType:string,params:ObjectValue={}):Node {
+    return this.insert({id,nodeType,params});
   }
   /** Insert authored node data through the same validation/ownership seam. */
   insert(authored:NodeData):Node {
-    const {id,definitionUuid}=authored;
+    const {id,nodeType}=authored;
     this.assertEditable();if(!id||this.nodeData(id)||this.removedNodes.has(id))throw Error('Invalid, duplicate or retired node ID');
-    const module=this.graph.registry.get(definitionUuid);if(!module)throw Error('Node module is unavailable');
+    const module=this.graph.registry.get(nodeType);if(!module)throw Error('Node module is unavailable');
     const node:NodeData={...copy(authored),params:{...copy(module.catalog.definition.defaults),...copy(authored.params)}};
     if(!module.supports(node,this.context))throw Error('Unsupported node configuration');
     module.validate(node,this.context);resolvePorts(module,node,this.context);
@@ -190,18 +190,18 @@ export class Network {
     const ids=new Set(this.data.nodes.map(n=>n.id)),ports=new Set(this.data.edges.map(e=>JSON.stringify(e.to)));
     for(const n of nodes){
       if(!n||typeof n.id!=='string'||!n.id||ids.has(n.id)||this.removedNodes.has(n.id))throw Error('Invalid, duplicate or retired node ID');ids.add(n.id);
-      if(typeof n.definitionUuid!=='string'||!n.definitionUuid||!n.params||typeof n.params!=='object'||Array.isArray(n.params))throw Error('Invalid fragment node');
-      const module=this.graph.registry.get(n.definitionUuid);
+      if(typeof n.nodeType!=='string'||!n.nodeType||!n.params||typeof n.params!=='object'||Array.isArray(n.params))throw Error('Invalid fragment node');
+      const module=this.graph.registry.get(n.nodeType);
       if(module?.supports(n,this.context)){module.validate(n,this.context);resolvePorts(module,n,this.context);}
       else if(options.unavailable!=='preserve')throw Error('Node module or configuration is unavailable');
     }
-    let sequence=edgeSequence(this.data);
+    const edgeIds=new Set(this.data.edges.map(e=>e.id));
     for(const e of edges){
       for(const end of [e.from,e.to])if(!Array.isArray(end)||end.length!==2||end.some(v=>typeof v!=='string'||!v)||!ids.has(end[0]))throw Error('Invalid fragment endpoint');
       const input=JSON.stringify(e.to);if(ports.has(input))throw Error('Fragment input already connected');ports.add(input);
-      if(!Number.isSafeInteger(sequence+1))throw Error('Edge sequence exhausted');e.id='edge_'+ ++sequence;
+      e.id=newEdgeId(edgeIds);edgeIds.add(e.id);
     }
-    this.data.nodes.push(...nodes);this.data.edges.push(...edges);if(edges.length)this.data.edgeSequence=sequence;
+    this.data.nodes.push(...nodes);this.data.edges.push(...edges);
     return nodes.map(n=>this.node(n.id));
   }
   remove(node:Node):void {
@@ -210,8 +210,7 @@ export class Network {
   removeAll(nodes:readonly Node[]):void {
     this.assertEditable();if(nodes.some(n=>n.network!==this))throw Error('Node belongs to another network');
     const ids=new Set(nodes.filter(n=>this.nodeData(n.id)).map(n=>n.id));if(!ids.size)return;
-    const roots=this.data.nodes.filter(n=>ids.has(n.id)).map(n=>this.graph.registry.get(n.definitionUuid)?.referencedGraph?.(n)).filter((id):id is string=>!!id);
-    const sequence=edgeSequence(this.data);if(sequence)this.data.edgeSequence=sequence;
+    const roots=this.data.nodes.filter(n=>ids.has(n.id)).map(n=>this.graph.registry.get(n.nodeType)?.referencedGraph?.(n)).filter((id):id is string=>!!id);
     ids.forEach(id=>this.removedNodes.add(id));
     this.data.nodes=this.data.nodes.filter(n=>!ids.has(n.id));
     this.data.edges=this.data.edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));
@@ -229,7 +228,7 @@ export class Network {
       }
     }
     const nodes=this.nodes.map(n=>{const module=n.definition,data=n.data!;
-      return {id:n.id,definition:data.definitionUuid,stored:overrides.get(n.id)||(prepared.has(n.id)?resolvePorts(module!,prepared.get(n.id)!,this.context).types():n.interface.types()),
+      return {id:n.id,definition:data.nodeType,stored:overrides.get(n.id)||(prepared.has(n.id)?resolvePorts(module!,prepared.get(n.id)!,this.context).types():n.interface.types()),
         ...(module?.supports(data,this.context)&&module.signatures?{variants:module.signatures(data,this.context)}:{})};});
     const result=plan({nodes,edges:this.data.edges.filter(e=>!removed.includes(e))},policy,intent);
     return result.ok?{...result,prepared,displaced:[...removed,...result.displaced]}:{...result,prepared};
@@ -302,14 +301,13 @@ export class Network {
     const prepared=result.prepared.get(to.node.id);if(prepared)Object.assign(target,copy(prepared));
     if(signature)to.node.configure({signature});
     if(retained&&result.displaced.length===1)return retained;
-    const before=this.data.edges,sequence=this.data.edgeSequence;
+    const before=this.data.edges;
     try{
       const id=this.graph.nextEdgeId(this.data);
       this.data.edges=before.filter(e=>!result.displaced.includes(e));
       this.data.edges.push({id,from:from.endpoint,to:to.endpoint});return this.edges.find(e=>e.id===id)!;
     }catch(e){
-      this.data.edges=before;for(const key of Object.keys(target))delete (target as unknown as Record<string,unknown>)[key];Object.assign(target,original);
-      if(sequence===undefined)delete this.data.edgeSequence;else this.data.edgeSequence=sequence;throw e;
+      this.data.edges=before;for(const key of Object.keys(target))delete (target as unknown as Record<string,unknown>)[key];Object.assign(target,original);throw e;
     }
   }
   disconnect(edge:Edge):void {
@@ -318,15 +316,18 @@ export class Network {
   disconnectAll(edges:readonly Edge[]):void {
     this.assertEditable();if(edges.some(e=>e.network!==this))throw Error('Edge belongs to another network');
     this.indexEdges();const targets=new Set(edges.map(e=>this.edgeIndex.get(e.id)).filter(e=>!!e));
-    if(!targets.size)return;const sequence=edgeSequence(this.data);if(sequence)this.data.edgeSequence=sequence;
+    if(!targets.size)return;
     this.data.edges=this.data.edges.filter(e=>!targets.has(e));
   }
 }
-function edgeSequence(data:NetworkData):number {
-  let sequence=data.edgeSequence||0;
-  if(!Number.isSafeInteger(sequence)||sequence<0)throw Error('Invalid edge sequence');
-  for(const e of data.edges){const match=e.id?.match(/^edge_(\d+)$/);if(match)sequence=Math.max(sequence,Number(match[1]));}
-  return sequence;
+/** Edge identity is a random, unique string like node IDs; order carries no meaning (Q44).
+ * Only language built-ins, so the core runs in any host; uniqueness is checked, not assumed.
+ * 接線 id 跟節點一樣隨機產生，只要不重複；先後沒有意義。只用語言內建功能，不重複由檢查保證。 */
+function newEdgeId(taken:ReadonlySet<string|undefined>):string {
+  for(;;){
+    let id='e';for(let i=0;i<4;i++)id+=Math.floor(Math.random()*0x100000000).toString(16).padStart(8,'0');
+    if(!taken.has(id))return id;
+  }
 }
 export class GraphError extends Error {constructor(message:string,readonly node?:string){super(message);}}
 export class GraphDocument {
@@ -354,9 +355,7 @@ export class GraphDocument {
   assertEditable(){if(!this.editable||!this.active)throw Error('Graph changes require an active transaction');}
   close(){this.active=false;}
   nextEdgeId(data:NetworkData){
-    this.assertEditable();const index=edgeSequence(data);
-    if(!Number.isSafeInteger(index+1))throw Error('Edge sequence exhausted');
-    data.edgeSequence=index+1;return 'edge_'+data.edgeSequence;
+    this.assertEditable();return newEdgeId(new Set(data.edges.map(e=>e.id)));
   }
   snapshot():Graph{return clone(this.document);}
   /** One candidate, one publication. History stores this before/after pair;
@@ -364,7 +363,7 @@ export class GraphDocument {
   change(edit:(candidate:GraphDocument)=>void):{before:Graph;after:Graph;changes:GraphChanges} {
     const before=this.snapshot(),candidate=new GraphDocument(clone(before),this.registry,this.fallback,true);
     try{
-      edit(candidate);if(!equal(before,candidate.document))complete(candidate.document,before);
+      edit(candidate);if(!equal(before,candidate.document))complete(candidate.document);
       const after=candidate.snapshot();
       // The one gate every edit passes: refuse growth beyond the core limits (capacity.ts) and
       // edits that break the graph's structure rules (structure.ts).
@@ -376,23 +375,21 @@ export class GraphDocument {
   }
 }
 function networkEntries(document:Graph):[string,NetworkData][] {
-  return [...Object.entries(document.stages),...(document.functions||[]).map(raw=>{const f=raw as {id:string;graph:NetworkData};return ['function:'+f.id,f.graph] as [string,NetworkData];})];
+  return [...Object.entries(document.stages),...(document.subgraphs||[]).map(raw=>{const f=raw as {id:string;graph:NetworkData};return ['function:'+f.id,f.graph] as [string,NetworkData];})];
 }
-function complete(document:Graph,previous?:Graph):void {
-  const prior=new Map(previous?networkEntries(previous):[]);
-  const snapshots=new Set((document.functions||[]).filter(f=>f.scope!=='local').map(f=>f.graph));
-  for(const [id,data] of networkEntries(document)){
-    const old=prior.get(id);let sequence=Math.max(edgeSequence(data),old?edgeSequence(old):0);
-    const nodes=new Set<string>(),edges=new Set<string>();
+function complete(document:Graph):void {
+  const snapshots=new Set((document.subgraphs||[]).filter(f=>f.scope!=='local').map(f=>f.graph));
+  for(const [,data] of networkEntries(document)){
+    const nodes=new Set<string>(),edges=new Set<string>(),taken=new Set<string|undefined>();
     for(const n of data.nodes){if(!n.id||nodes.has(n.id))throw Error('Invalid or duplicate node ID');nodes.add(n.id);}
+    for(const e of data.edges)taken.add(e.id);
     for(const e of data.edges){
       // Source snapshots keep their authored bytes. Their read-only Edge
       // handles already have temporary identities; only local data gets IDs.
       if(!e.id&&snapshots.has(data))continue;
-      if(!e.id){if(!Number.isSafeInteger(sequence+1))throw Error('Edge sequence exhausted');e.id='edge_'+ ++sequence;}
+      if(!e.id){e.id=newEdgeId(taken);taken.add(e.id);}
       if(edges.has(e.id))throw Error('Duplicate edge ID');edges.add(e.id);
     }
-    if(sequence&&!snapshots.has(data))data.edgeSequence=sequence;
   }
 }
 /** Transitional editor transaction: existing widgets mutate the one active
@@ -404,7 +401,7 @@ export function transact(document:Graph,registry:Registry,edit:(before:Graph,mod
   const model=new GraphDocument(document,registry,undefined,true);
   try{
     const after=edit(before,model);
-    if(!equal(before,after))complete(after,before);
+    if(!equal(before,after))complete(after);
     return {before,after,changes:changesBetween(before,after,registry)};
   }catch(error){
     for(const key of Object.keys(document))delete (document as unknown as Record<string,unknown>)[key];

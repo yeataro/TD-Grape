@@ -14,7 +14,7 @@ export interface NodeContext {
   subgraph?(id:string):SubgraphData|undefined;
 }
 export function contextFor(graph:Graph,owner?:SubgraphData):NodeContext {
-  return {target:graph.target,owner,declaration:id=>graph.declarations.find(d=>d.id===id),subgraph:id=>graph.functions?.find(f=>f.id===id)};
+  return {target:graph.target,owner,declaration:id=>graph.declarations.find(d=>d.id===id),subgraph:id=>graph.subgraphs?.find(f=>f.id===id)};
 }
 export interface EmitContext extends NodeContext {
   readonly ports:NodePorts;
@@ -98,7 +98,7 @@ export function configureNode(module:NodeModule,node:Node,selection:Configuratio
     selection={signature:declared};
   }
   const candidate=module.configure(copy(node),copy(selection),context);
-  if(candidate.id!==node.id||candidate.definitionUuid!==node.definitionUuid)throw Error('Configuration cannot change node identity');
+  if(candidate.id!==node.id||candidate.nodeType!==node.nodeType)throw Error('Configuration cannot change node identity');
   if(!module.supports(candidate,context))throw Error('Unsupported node configuration');
   module.validate(candidate,context);
   const after=resolvePorts(module,candidate,context).types();
@@ -108,14 +108,14 @@ export function configureNode(module:NodeModule,node:Node,selection:Configuratio
 export function editNode(module:NodeModule,node:Node,command:string,value:Value|undefined,context:NodeContext):Node {
   if(!module.edit)throw Error('Node command is unavailable');
   const candidate=module.edit(copy(node),command,value===undefined?undefined:copy(value),context);
-  if(candidate.id!==node.id||candidate.definitionUuid!==node.definitionUuid)throw Error('Command cannot change node identity');
+  if(candidate.id!==node.id||candidate.nodeType!==node.nodeType)throw Error('Command cannot change node identity');
   if(!module.supports(candidate,context))throw Error('Unsupported node configuration');
   module.validate(candidate,context);resolvePorts(module,candidate,context);return copy(candidate);
 }
 export function prepareNodeWire(module:NodeModule,node:Node,key:string,source:string,context:NodeContext){
   if(!module.wire)throw Error('Node has no wire preparation');
   const before=resolvePorts(module,node,context).types(),edit=module.wire(copy(node),key,source,context);
-  if(edit.node.id!==node.id||edit.node.definitionUuid!==node.definitionUuid||!module.supports(edit.node,context))throw Error('Wire preparation changed identity/capability');
+  if(edit.node.id!==node.id||edit.node.nodeType!==node.nodeType||!module.supports(edit.node,context))throw Error('Wire preparation changed identity/capability');
   module.validate(edit.node,context);const after=resolvePorts(module,edit.node,context).types();
   if(!sameTypes(before.outputs,after.outputs)||edit.replaceInputs.some(p=>!before.inputs[p]))throw Error('Wire preparation changed outputs or unknown ports');
   return edit;

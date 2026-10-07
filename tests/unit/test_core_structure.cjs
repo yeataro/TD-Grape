@@ -11,8 +11,8 @@ const { GrapeGraph: G } = producer;
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));
 const OUT = 'sgrape.builtin.pixel_out';
-const outputNode = id => ({ id, definitionUuid: OUT, params: {}, ui: { x: 0, y: 0 } });
-const outputs = graph => graph.stages.pixel.nodes.filter(n => n.definitionUuid === OUT).length;
+const outputNode = id => ({ id, nodeType: OUT, params: {}, ui: { x: 0, y: 0 } });
+const outputs = graph => graph.stages.pixel.nodes.filter(n => n.nodeType === OUT).length;
 const open = graph => new G.GraphDocument(graph || clone(bootstrap.defaultDocument.graph), G.registry);
 const pixel = c => c.networks.get('pixel');
 const refused = (doc, edit, pattern) => {
@@ -28,9 +28,9 @@ test('the default graph has exactly one Color Output and no problems', () => {
 });
 
 test('deleting the only Color Output is refused as a whole, even inside a larger edit', () => {
-  const doc = open(), id = doc.snapshot().stages.pixel.nodes.find(n => n.definitionUuid === OUT).id;
+  const doc = open(), id = doc.snapshot().stages.pixel.nodes.find(n => n.nodeType === OUT).id;
   refused(doc, c => pixel(c).removeAll([pixel(c).node(id)]), /pixel\) 0, expected 1/);
-  refused(doc, c => { pixel(c).insert({ id: 'f', definitionUuid: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } });
+  refused(doc, c => { pixel(c).insert({ id: 'f', nodeType: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } });
     pixel(c).removeAll([pixel(c).node(id)]); }, /expected 1/);
 });
 
@@ -40,7 +40,7 @@ test('a second Color Output is refused', () => {
 
 test('a Color Output inside a subgraph is refused', () => {
   const graph = clone(bootstrap.defaultDocument.graph);
-  graph.functions = [{ id: 'g', name: 'g', graph: { nodes: [], edges: [] } }];
+  graph.subgraphs = [{ id: 'g', name: 'g', graph: { nodes: [], edges: [] } }];
   const doc = open(graph);
   refused(doc, c => c.networks.get('function:g').insert(outputNode('inner')), /function:g\) 1, expected 0/);
 });

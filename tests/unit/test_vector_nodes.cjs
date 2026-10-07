@@ -15,7 +15,7 @@ test('vector, routing and constructor graphs compile through actual node modules
  for(const row of vectorCases()){assert.equal(compiler.supports(row.graph),true,row.key+' '+row.type);assert.match(compiler.compile(row.graph).pixel,/void main/);}
 });
 test('component drop displaces only overlapping wires, keeps output and has identical query/commit results',()=>{
- const graph={schemaVersion:1,target:'top',declarations:[],stages:{pixel:{nodes:[node('wide','vec2',{value:[.2,.3]}),node('a','float',{value:.4}),node('b','float',{value:.5}),node('c','float',{value:.6}),node('join','combine',{type:'vec4',groups:{},components:[0,0,0,0]})],edges:[edge('a','join','out','x'),edge('b','join','out','y'),edge('c','join','out','w')]}}};
+ const graph={format:'grape-graph',version:1,target:'top',declarations:[],stages:{pixel:{nodes:[node('wide','vec2',{value:[.2,.3]}),node('a','float',{value:.4}),node('b','float',{value:.5}),node('c','float',{value:.6}),node('join','combine',{type:'vec4',groups:{},components:[0,0,0,0]})],edges:[edge('a','join','out','x'),edge('b','join','out','y'),edge('c','join','out','w')]}}};
  const query=new GraphDocument(graph,registry),n=query.networks.get('pixel'),before=query.snapshot();
  const planned=n.plan(values.policy,{kind:'wire',from:{node:'wide',port:'out'},to:{node:'join',port:'x'}});
  assert.equal(planned.ok,true);assert.equal(planned.displaced.length,2);assert.deepEqual(query.snapshot(),before);
@@ -25,7 +25,7 @@ test('component drop displaces only overlapping wires, keeps output and has iden
  assert.deepEqual(disconnected.after.stages.pixel.nodes.find(n=>n.id==='join').params.groups,{x:'vec2'});
 });
 test('failed component drop is atomic and component edits live in the node data used by fallback',()=>{
- const graph={schemaVersion:1,target:'top',declarations:[],stages:{pixel:{nodes:[node('wide','vec4',{value:[0,0,0,0]}),node('join','combine',{type:'vec3',groups:{},components:[0,0,0,0]})],edges:[]}}};
+ const graph={format:'grape-graph',version:1,target:'top',declarations:[],stages:{pixel:{nodes:[node('wide','vec4',{value:[0,0,0,0]}),node('join','combine',{type:'vec3',groups:{},components:[0,0,0,0]})],edges:[]}}};
  const q=new GraphDocument(graph,registry);assert.throws(()=>q.change(d=>{const n=d.networks.get('pixel');n.connect(n.node('wide').port('output','out'),n.node('join').port('input','x'),values.policy);}),/exceeds/);assert.deepEqual(q.snapshot(),graph);
  const step=q.change(d=>d.networks.get('pixel').node('join').setInput('y',.7));assert.equal(step.after.stages.pixel.nodes[1].params.components[1],.7);assert.equal(step.after.stages.pixel.nodes[1].inputValues,undefined);
 });

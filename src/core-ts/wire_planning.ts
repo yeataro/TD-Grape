@@ -1,8 +1,10 @@
-import type {Edge} from './model';
+import type {Edge as StoredEdge} from './model';
 import {compatible} from './ports';
 import type {Signature} from './node_module';
 export type {Signature} from './node_module';
-export type {Edge} from './model';
+/** Planning sees hypothetical wires that have no identity yet; stored edges always do (Q44).
+ * 規劃時的假想接線還沒有 id；存進圖的接線一定有。 */
+export type Edge=Omit<StoredEdge,'id'>&{id?:string};
 export interface Ports {inputs:Readonly<Record<string,string>>;outputs:Readonly<Record<string,string>>}
 export interface Node {id:string;definition:string;stored:Ports;variants?:readonly Signature[]}
 export interface Graph {nodes:readonly Node[];edges:readonly Edge[]}

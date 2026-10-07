@@ -38,7 +38,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
     let data = old?.data;
     if (!data || all || dirty.has(node.id)) {
       const module = node.definition!;
-      const described = contract.definitions[authored.definitionUuid];
+      const described = contract.definitions[authored.nodeType];
       const types: string[] = described?.selector === 'parameter'
         ? [...new Set<string>(described.variants.map((row: { type: string | null }) => row.type)
           .filter((type: string | null): type is string => !!type))] : [];

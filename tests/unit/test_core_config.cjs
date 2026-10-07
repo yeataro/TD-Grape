@@ -12,7 +12,7 @@ const clone = value => JSON.parse(JSON.stringify(value));
 
 test('a compiler created with its own configuration enforces it; the default one is unaffected', () => {
   const graph = clone(bootstrap.defaultDocument.graph);
-  for (let i = 0; i < 4; i++) graph.stages.pixel.nodes.push({ id: 'f' + i, definitionUuid: 'sgrape.builtin.float',
+  for (let i = 0; i < 4; i++) graph.stages.pixel.nodes.push({ id: 'f' + i, nodeType: 'sgrape.builtin.float',
     params: clone(G.registry.get('sgrape.builtin.float').catalog.definition.defaults), ui: { x: 0, y: 0 } });
   const config = { nodesPerNetwork: 4, edgesPerNetwork: 16, expandedNodes: 32, expandedEdges: 128, documentBytes: 512000, subgraphDefinitions: 64 };
   const small = G.createCompiler(G.registry, config);
@@ -32,11 +32,11 @@ test('no core module repeats a limit number outside config.ts', () => {
 // 編輯時的上限：每次修改結束時的唯一關卡；開圖不擋，只擋變大。
 const withFloats = count => {
   const graph = clone(bootstrap.defaultDocument.graph);
-  for (let i = 0; i < count; i++) graph.stages.pixel.nodes.push({ id: 'f' + i, definitionUuid: 'sgrape.builtin.float',
+  for (let i = 0; i < count; i++) graph.stages.pixel.nodes.push({ id: 'f' + i, nodeType: 'sgrape.builtin.float',
     params: clone(G.registry.get('sgrape.builtin.float').catalog.definition.defaults), ui: { x: 0, y: 0 } });
   return graph;
 };
-const addFloat = (doc, id) => doc.change(c => c.networks.get('pixel').insert({ id, definitionUuid: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } }));
+const addFloat = (doc, id) => doc.change(c => c.networks.get('pixel').insert({ id, nodeType: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } }));
 
 test('an edit that grows a network past the limit is refused as a whole', () => {
   const doc = new G.GraphDocument(withFloats(256 - 2), G.registry); // default graph has 2 nodes: exactly at 256

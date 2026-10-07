@@ -15,11 +15,12 @@ import {createCompiler} from './top_compiler';
 import {overLimit} from './capacity';
 import {structureProblems,offered,removable} from './structure';
 import {createEditorContract} from './editor_contract';
+import {formatProblem} from './model';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeWirePlanning=wire;
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable};
+export const GrapeGraph={...graph,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -55,8 +56,8 @@ catalog.definitions=catalog.definitions.filter(row=>!removed.has(row.definition.
 const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>canonical(k)+':'+canonical(value[k])).join(',')+'}':JSON.stringify(value).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
 // Callback semantics, not just port metadata, invalidate saved artifacts.
 const implementationHash=createHash('sha256').update(bundled).digest('hex');
-const defaultGraph={schemaVersion:1,target:'top',declarations:[],functions:[],stages:{pixel:{
-  nodes:['color','pixel_out'].map((key,i)=>{const d=context.GrapeGraph.registry.get('sgrape.builtin.'+key).catalog.definition;return {id:key,definitionUuid:d.definitionUuid,params:JSON.parse(JSON.stringify(d.defaults)),ui:{x:80+i*360,y:120}};}),
+const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],structDefinitions:[],stages:{pixel:{
+  nodes:['color','pixel_out'].map((key,i)=>{const d=context.GrapeGraph.registry.get('sgrape.builtin.'+key).catalog.definition;return {id:key,nodeType:d.definitionUuid,params:JSON.parse(JSON.stringify(d.defaults)),ui:{x:80+i*360,y:120}};}),
   edges:[{id:'color_output',from:['color','out'],to:['pixel_out','color']}]}}};
 const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.compile(defaultGraph)};
 // Native source labels are cold host metadata, independent of Python graph compilation.

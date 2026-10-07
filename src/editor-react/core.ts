@@ -3,7 +3,7 @@ import type * as modules from '../core-ts/node_module';
 import type * as values from '../core-ts/values';
 import type { createCompiler } from '../core-ts/top_compiler';
 import type { createEditorContract } from '../core-ts/editor_contract';
-import type { Graph as GraphData } from '../core-ts/model';
+import type { Graph as GraphData, formatProblem } from '../core-ts/model';
 import type * as capacity from '../core-ts/capacity';
 import type * as structure from '../core-ts/structure';
 
@@ -12,6 +12,7 @@ import type * as structure from '../core-ts/structure';
 export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   registry: modules.Registry; values: typeof values; overLimit: typeof capacity.overLimit;
   structureProblems: typeof structure.structureProblems; offered: typeof structure.offered; removable: typeof structure.removable;
+  formatProblem: typeof formatProblem;
 };
 export type { Measure } from '../core-ts/capacity';
 export type { StructureProblem } from '../core-ts/structure';
@@ -59,6 +60,12 @@ const retired = new Set(['float', 'vec2', 'vec3', 'vec4'].map(key => 'sgrape.bui
 // 能不能新增由核心決定（Color Output 這類 stage 出口不提供）。
 export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid) && core.offered(core.registry.get(uuid)!));
 export function requireSupported(graph: graph.GraphDocument['document']) {
+  // Format first (Q44): a newer version is never written back, so no reset is offered for it.
+  // 先看格式：比目前新的版本不寫回，所以不提供換成預設圖。
+  const problem = core.formatProblem(graph);
+  if (problem?.code === 'newer-version') throw Error('這張圖由較新版的 Grape 存檔，請更新 Grape 後再編輯。為了不弄丟新版的資料，這裡不會寫回。\n' + problem.message);
+  if (problem?.code === 'not-grape-graph') throw new UnsupportedGraphError('這張圖不是新格式（grape-graph）。舊格式的圖之後由匯入器處理，新編輯器不直接打開。\n' + problem.message);
+  if (problem) throw new UnsupportedGraphError('圖的資料不完整或格式錯誤，沒有打開。\n' + problem.message);
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {
     const shown = reasons.length > 8 ? [...reasons.slice(0, 8), `…另有 ${reasons.length - 8} 項`] : reasons;
@@ -70,19 +77,18 @@ export function requireSupported(graph: graph.GraphDocument['document']) {
 // Name what blocks the slice so the user knows where to look; never edits the graph.
 // 列出擋下的具體項目（節點／宣告／子圖…），只描述、不修改圖。
 function unsupportedReasons(graph: graph.GraphDocument['document']): string[] {
-  if (graph.schemaVersion !== 1 || graph.target !== 'top') return [`圖格式：schema ${graph.schemaVersion}／target ${graph.target}`];
+  if (graph.target !== 'top') return [`target ${graph.target}`];
   const reasons: string[] = [];
   if (!Array.isArray(graph.declarations)) reasons.push('宣告清單格式不正確');
   else for (const declaration of graph.declarations) reasons.push(`${declaration.kind === 'uniform' ? 'Uniform' : declaration.kind} 宣告「${declaration.name}」`);
-  if (graph.functions?.length) reasons.push(`子圖 ${graph.functions.length} 個`);
-  if (graph.topInputs?.length) reasons.push(`TOP 輸入 ${graph.topInputs.length} 個`);
+  if (graph.subgraphs?.length) reasons.push(`子圖 ${graph.subgraphs.length} 個`);
   for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(`${stage} 階段`);
   const pixel = graph.stages.pixel;
   if (!pixel) return [...reasons, '缺少 pixel 階段'];
   const frames = pixel.ui?.frames;
   if (Array.isArray(frames) && frames.length > 0) reasons.push(`框架（Frame）${frames.length} 個`);
-  for (const node of pixel.nodes) if (!supportedDefinitions.includes(node.definitionUuid)) {
-    reasons.push(`${node.definitionUuid.replace(/^sgrape\.builtin\./, '')} 節點${node.name ? `「${node.name}」` : ''}（${node.id}）`);
+  for (const node of pixel.nodes) if (!supportedDefinitions.includes(node.nodeType)) {
+    reasons.push(`${node.nodeType.replace(/^sgrape\.builtin\./, '')} 節點${node.name ? `「${node.name}」` : ''}（${node.id}）`);
   }
   // Size is not "unsupported": an over-limit graph opens with a warning and only growth is blocked.
   // 大小不算「不支援」：超過上限的圖照樣打開並警告，只擋變大。

@@ -19,7 +19,7 @@ test('editor bootstrap comes from registered modules and identifies its actual b
 test('default and native tuple ports retain the real module interfaces',()=>{
   for(const module of graph.registry.modules.filter(m=>!m.structural)){
     const d=module.catalog.definition,decl={id:'source',kind:'uniform',name:'uSource',type:'float',value:0};
-    const node={id:'node',definitionUuid:d.definitionUuid,params:{...structuredClone(d.defaults)}};
+    const node={id:'node',nodeType:d.definitionUuid,params:{...structuredClone(d.defaults)}};
     if(Object.values(d.outputs).includes('D'))node.params.declarationId=decl.id;
     const context={target:'top',declaration:()=>decl};
     assert.equal(module.supports(node,context),true,d.key);

@@ -2,7 +2,7 @@
  * They name graph data, not evaluated values or a Library/importer object. */
 export interface ScopeReference {scope:string;source:readonly [string,string]}
 const identifier = /^[A-Za-z][A-Za-z0-9_]{0,70}$/;
-const opaque = new Set(['code','ui','source','origin','catalogSnapshot']);
+const opaque = new Set(['code','ui','source','origin','catalogSnapshot','comment','description','extensions']);
 const fields = new Set(['type','elementType','fromType','toType','fixedType','length']);
 
 function token(scope:string,source:readonly string[]):string {
