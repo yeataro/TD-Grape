@@ -24,18 +24,20 @@
 | 待新增接孔（暫稱） | Spare Port | 尾端灰色的預留新增入口；尚不是正式輸入或輸出，接線時建立正式接孔。2026-09-23 在連續四則運算的未來功能筆記中暫定，參考既有 Input／Output 行為；不代表新節點已實作或現有 UI 已改名。 |
 | 函數簽名／節點簽名 | Function signature／Node signature | 一組輸入與輸出型別。相同功能可有多個合法簽名；支援哪些簽名由功能決定。 |
 | 運算型別 | Operation type | 節點選用的運算配置型別，不保證等於輸出型別。例如 Length 可對 vec3 運算而輸出 float。 |
-| 來源型別／接孔型別／輸出型別 | Source type／Input port type／Output type | 分別指上游提供的型別、輸入接孔要求的型別及結果型別。介面上的 `int → float` 表示來源與接孔之間有轉換。 |
+| 上游型別／接孔型別／輸出型別 | Upstream type（舊稱 Source type／來源型別，2026-10-07 改名以免與「來源」撞名）／Input port type／Output type | 分別指上游提供的型別、輸入接孔要求的型別及結果型別。介面上的 `int → float` 表示來源與接孔之間有轉換。 |
 | 自動型別推導 | Type inference／Auto | 編輯器依來源及合法簽名選擇實際運算型別。它決定使用哪個型別，不等於自動轉換值。推導方向、優先順序及無接線時的預設另由規則文件定義。 |
 | 指定型別／鎖定型別 | Explicit type／Locked type | 使用者明確指定運算型別，Auto 不再為該配置選型別。這不等於禁止輸入接線轉換；兩者需分開判斷。 |
 
-## Graph Globals（2026-10-07 定名，尚未實作）
+## 來源與常數（2026-10-07 定名，尚未實作）
 
 | 建議用語 | 英文／識別碼 | 定義與區分 |
 | --- | --- | --- |
-| Graph Globals（面板） | Graph Globals | 列出整份圖文件層級所有 Global 的面板。 |
-| 全域項 | Global；程式 `document.globals`、型別 `Global`（`globals.ts`）；新格式存檔欄位 `globals` | **不是節點**，與各 stage 網路、子圖定義同屬圖文件、同一層；在圖文件層級宣告一次、讓節點引用的東西（舊稱 declaration／宣告，舊圖欄位 `declarations` 交匯入器）。**只在各 stage 最外層被引用；子圖不直接引用任何 Global**（含 TD 內建 Uniform 與全域常數），需要的值經子圖輸入傳入，使子圖可攜帶。同一份作品內名稱不得重複。分參數類（值從 Shader 外面來：Uniform、Spec 常數、貼圖／Sampler、Attribute、POP Buffer、TD 內建 Uniform）與常數類（全域常數：值在作品內）。程式中由容器說明層級（`document.globals`），項目不加 Graph 前綴（`GraphGlobal` 會被讀成「某張網路底下的」，已否決）。見 design-interview Q41。 |
-| 全域常數 | Global constant | GLSL 最外層 `const`；值在作品內，改值即產碼。不是來源。 |
-| Spec 常數 | Specialization constant | 宣告在作品（`layout(constant_id = N) const …`），目前值在 TD 參數頁；改值不產碼，TD 自行重建管線。 |
+| 來源 | Source；程式 `document.sources`；存檔 `sources` | 值從 Shader 外面來、在圖文件層級宣告一次讓節點引用的東西：Uniform（含預設好的，如時間）、Spec 常數、貼圖／Sampler、Attribute、POP Buffer、TD 內建 GLSL Uniform。**不是節點**，與各 stage 網路、子圖定義同屬圖文件、同一層。核心中「source」只有此義（線的兩端用 `from`／`to`；React Flow 的 source／sourceHandle 只在畫面轉換層）。舊稱 declaration（舊圖欄位 `declarations` 交匯入器）。 |
+| 全域常數 | Constant；程式 `document.constants`；存檔 `constants` | GLSL 最外層 `const`；值在作品內，改值即產碼。不是來源，但與來源共用規則：名稱互不重複、只在各 stage 最外層引用、**子圖不直接引用**（需要的值經子圖輸入傳入，含 TD 內建 Uniform，使子圖可攜帶）、複製貼上帶走。 |
+| Spec 常數 | Specialization constant | 屬來源。宣告在作品（`layout(constant_id = N) const …`），目前值在 TD 參數頁；改值不產碼，TD 自行重建管線。 |
+| Sources 面板 | Sources | 同時列出來源與全域常數的面板（便利做法）；面板內分區屬畫面，可調整，與程式分類無關。 |
+
+已否決的名稱：Graph Globals／Global／`GraphGlobal`／`ShaderGlobal`（global 在程式裡像整個編輯器或所有 Shader 共用）。見 design-interview Q41。
 
 ## 群組與導覽
 
