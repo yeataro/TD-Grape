@@ -14,15 +14,17 @@ spec.loader.exec_module(service)
 
 
 def bundle(version='Test.1'):
-    return {'index.html': ('<span class="brand-version">' + version + '</span>'
-        '<script src="/nested/app.js"></script><img src="/icons/test.png">').encode(),
+    # The version comes from build-info.json (src/version.json at build time). 版本來自建置資料。
+    return {'index.html': b'<script src="/nested/app.js"></script><img src="/icons/test.png">',
         'nested/app.js': b'/* static */', 'icons/test.png': b'\x89PNG\r\n\x1a\n',
-        'manifest.webmanifest': b'{"name":"test"}'}
+        'manifest.webmanifest': b'{"name":"test"}',
+        'build-info.json': json.dumps({'schemaVersion': 1, 'version': version, 'assets': {}}).encode()}
 
 
 class AssetsTest(unittest.TestCase):
     def test_build_metadata_identifies_edits_and_rejects_missing_files(self):
         files = bundle()
+        del files['build-info.json']
         metadata = {'schemaVersion': 1, 'version': 'Test.1',
             'assets': {name: sha256(data).hexdigest() for name, data in files.items()}}
         files['build-info.json'] = json.dumps(metadata).encode()
@@ -95,12 +97,11 @@ class HTTPTest(unittest.TestCase):
     def test_root_and_edit_address_serve_the_new_editor(self):
         # Refactor.24: the new editor is the only entry. 新編輯器是唯一入口。
         page = b'<!doctype html><title>new editor</title>'
-        self.server.replace(service.AssetSnapshot({**bundle(), 'react-editor.html': page}, 'embedded'))
+        self.server.replace(service.AssetSnapshot({**bundle(), 'index.html': page}, 'embedded'))
         for path in ['/', '/shader/' + 'a' * 32 + '/', '/shader/' + 'a' * 32 + '/?x=1']:
             status, headers, data = self.request(path)
             self.assertEqual((status, data), (200, page), path)
             self.assertTrue(headers['Content-Type'].startswith('text/html'))
-        self.assertEqual(self.request('/index.html')[2], bundle()['index.html'])
         self.assertEqual(self.request('/shader/not-an-id/')[0], 404)
 
     def test_reload_on_same_origin_and_no_filesystem_dependency(self):

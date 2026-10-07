@@ -1,8 +1,8 @@
-# 正式 React TOP 入口
+# 新編輯器（唯一入口）
 
-這是 B 案第一條產品路徑，已接真實 TD 文件與保存；不是 `work/` 的評估版。目前能打開 TOP／pixel 的 52 個常用節點（`supportedDefinitions`）；新增選單為其中扣掉已淘汰 `float`／`vec2`／`vec3`／`vec4` 的 `creatableDefinitions`（同舊產品）。不含 Uniform、子圖、Frame。其他能力仍由舊入口服務。
+自 Refactor.24 起是唯一的編輯器入口；舊入口已移除（Refactor.25）。目前能打開 TOP／pixel 的 52 個常用節點（`supportedDefinitions`）；新增選單由核心決定（`creatableDefinitions`：扣掉已淘汰 `float`／`vec2`／`vec3`／`vec4` 與 Color Output）。不含 Uniform、子圖、Frame。
 
-從 Family 的舊編輯器按 **React TOP**，或開啟同 origin 的 `/react-editor.html?target=<Family UUID>`。新頁可回到舊入口；不同頁同時寫同一份圖會受宿主 revision 保護，不會合併兩張活動圖。
+Grape OP 的 Edit 打開 `/shader/<Grape OP id>/`（`/?target=<id>` 亦可）。頁面是 [index.html](index.html)；靜態檔（文字 `locales.json`、圖示、manifest）在 [static/](static)；核心產物在 [src/generated/](../generated)；產品版本在 [src/version.json](../version.json)。建置把三者都放在網址根目錄。不同頁同時寫同一份圖會受宿主 revision 保護，不會合併兩張活動圖。
 
 ## 找責任入口
 
@@ -42,7 +42,7 @@ node tests/browser/test_react_editor.cjs ../work/refactor/editor-service/web ../
 
 Browser 測試使用 production bundle、真正 RF 與可控制故障的 HTTP 替身；預設本機 Chrome 路徑可用 `CHROME_PATH` 覆寫。它不等於 TD/GPU 證據。正式 TD 上選擇此輸出資料夾並使用 Editor Service 的 **Update Embedded** 或外部來源 **Reload**。不要把 TypeScript 源碼直接匯入 TD。
 
-核心組裝器從 `core-ts/nodes/` 讀模組，產生同一份 `wire_planning.js`／bootstrap。React 只以 type import 接型別、執行同一生成核心；不能只改 TS 卻用舊 bundle/hash。建置把兩個入口、Remote Panel 前端及第三方授權放入同一資產包，沒有第二個正式 web server。
+核心組裝器從 `core-ts/nodes/` 讀模組，產生 `src/generated/` 的 `wire_planning.js`／bootstrap。React 只以 type import 接型別、執行同一生成核心；不能只改 TS 卻用舊 bundle/hash。建置把編輯器、Remote Panel 前端及第三方授權放入同一資產包，沒有第二個正式 web server。
 
 `test_react_session.cjs` 可用 `REACT_PERF_REPORT` 環境變數保存 102 節點／101 線樣本；`benchmark_react_editor.cjs BUILD PROTOTYPE_BUILD REPORT` 使用該報告中的同圖，對照已另建置的評估版，並量 30 秒待機。這些測試工具不進產品 bundle。
 

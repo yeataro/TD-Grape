@@ -18,7 +18,7 @@ class HostArtifactTests(unittest.TestCase):
         # Use actual built node modules and the actual TypeScript compiler.
         script = r'''
 const fs=require('node:fs'),vm=require('node:vm');
-const context={};vm.runInNewContext(fs.readFileSync('src/editor/wire_planning.js','utf8'),context);
+const context={};vm.runInNewContext(fs.readFileSync('src/generated/wire_planning.js','utf8'),context);
 const node=(key,id,params)=>({id,definitionUuid:'sgrape.builtin.'+key,params,ui:{x:0,y:0}});
 const graph={schemaVersion:1,target:'top',declarations:[{id:'gain',kind:'uniform',name:'uGain',type:'float',value:0.25,expose:false}],functions:[],stages:{pixel:{nodes:[node('uniform','gain',{declarationId:'gain'}),node('pixel_out','out',{})],edges:[{id:'wire',from:['gain','out'],to:['out','color']}]}}};
 const compiled=context.GrapeTopCompiler.compile(graph);

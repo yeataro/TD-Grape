@@ -76,16 +76,14 @@ for(const row of rows){
   const module=context.GrapeGraph.registry.get(d.definitionUuid);
   if(module.signatures)nativeSignatures[d.key]=module.signatures({id:'projection',definitionUuid:d.definitionUuid,params:d.defaults},{declaration:()=>undefined});
 }
-const htmlPath=path.join(root,'src/editor/index.html'),html=fs.readFileSync(htmlPath,'utf8');
-const pattern=/(<script id="node-browser-data" type="application\/json">)(.*?)(<\/script>)/s;
-const match=html.match(pattern);if(!match)throw Error('Missing editor node-browser projection');
-const navigation={...JSON.parse(match[2]),...catalog.browser,nodes:Object.fromEntries(catalog.definitions.map(row=>[row.definition.definitionUuid,row.browser]))};
+// Generated files live in src/generated/ (Refactor.25): the new editor, TD's Manager and tests read
+// them; never edit them by hand. 產生的檔案放 src/generated/，新編輯器、TD Manager、測試共用；不要手改。
+const generated=path.join(root,'src/generated');
 const outputs=new Map([
-  [path.join(root,'src/editor/editor-library.json'),fs.readFileSync(path.join(root,'src/library/builtin_subgraphs.json'),'utf8')],
-  [path.join(root,'src/editor/wire_planning.js'),bundled],
+  [path.join(generated,'editor-library.json'),fs.readFileSync(path.join(root,'src/library/builtin_subgraphs.json'),'utf8')],
+  [path.join(generated,'wire_planning.js'),bundled],
   [catalogPath,JSON.stringify(catalog,null,2)+'\n'],
-  [htmlPath,html.replace(pattern,(_all,open,_json,close)=>open+JSON.stringify(navigation)+close)],
-  [path.join(root,'src/editor/editor-bootstrap.json'),JSON.stringify({version:1,producer:'frontend-modules',
+  [path.join(generated,'editor-bootstrap.json'),JSON.stringify({version:1,producer:'frontend-modules',
     catalogHash:implementationHash,defaultDocument,catalog:rows.map(row=>row.definition),
     typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract}},null,2)+'\n'],
   [path.join(root,'src/core/frontend_capabilities.json'),JSON.stringify({protocol:context.GrapeTopCompiler.protocol,valueTypes:context.GrapeGraph.values.types,definitions:context.GrapeGraph.registry.modules.map(m=>m.catalog.definition.definitionUuid).sort(),ordinary,nativeSignatures},null,2)+'\n']

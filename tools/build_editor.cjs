@@ -13,12 +13,13 @@ if (out === sources || out.startsWith(sources + path.sep) || sources.startsWith(
 const files = new Map();
 const notices = new Map();
 async function main() {
-  // Build the formal React entry into the SAME deployable static package.
-  // 新舊入口共用來源核心與資產清單；沒有另一個部署 server 或 catalog producer。
+  // The new editor is the only entry (Refactor.25): its page is index.html; static files come from
+  // src/editor-react/static/ and the core's generated files from src/generated/, all published at the root.
+  // 新編輯器是唯一入口：頁面為 index.html；靜態檔來自 static/，核心產物來自 src/generated/，都放在網址根目錄。
   const { build } = await import('vite');
-  const react = await build({ configFile: false, root: path.join(root, 'src/editor-react'), base: '/',
+  const react = await build({ configFile: false, root: path.join(root, 'src/editor-react'), base: '/', publicDir: false,
     logLevel: 'error', build: { write: false, minify: true, rolldownOptions: {
-      input: path.join(root, 'src/editor-react/react-editor.html') } } });
+      input: path.join(root, 'src/editor-react/index.html') } } });
   for (const output of (Array.isArray(react) ? react : [react])) {
     for (const asset of output.output) {
       files.set(asset.fileName, Buffer.from(asset.type === 'chunk' ? asset.code : asset.source));
@@ -37,19 +38,21 @@ async function main() {
   }
   function collect(folder, prefix = '') {
     for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
-      if (entry.name.startsWith('.') || entry.name === '__pycache__') continue;
+      if (entry.name.startsWith('.') || entry.name === '__pycache__' || entry.name === 'README.md') continue;
       const source = path.join(folder, entry.name), name = prefix + entry.name;
       if (entry.isDirectory()) collect(source, name + '/');
       else if (entry.isFile()) files.set(name, fs.readFileSync(source));
     }
   }
   files.set('react-third-party-notices.txt', Buffer.from([...notices.values()].sort().join('\n\n-----\n\n')));
-  collect(path.join(root, 'src/editor'));
+  collect(path.join(root, 'src/editor-react/static'));
+  collect(path.join(root, 'src/generated'));
   for (const name of ['remote-panel.js', 'touch-gestures.js', 'panel-size.js']) {
     files.set(name, fs.readFileSync(path.join(root, 'src/remote_panel', name)));
   }
-  const version = files.get('index.html').toString('utf8').match(/class="brand-version"[^>]*>([^<]+)/)?.[1].trim();
-  if (!version) throw Error('Editor version not found');
+  // One product version, in src/version.json (Refactor.25). 產品版本只有一處：src/version.json。
+  const version = JSON.parse(fs.readFileSync(path.join(root, 'src/version.json'), 'utf8')).version;
+  if (!version || !files.has('index.html')) throw Error('Editor version or page not found');
   const assets = Object.fromEntries([...files].sort(([a], [b]) => a.localeCompare(b)).map(([name, data]) =>
     [name, createHash('sha256').update(data).digest('hex')]));
   const metadata = { schemaVersion: 1, version, assets };

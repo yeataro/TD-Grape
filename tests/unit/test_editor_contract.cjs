@@ -1,8 +1,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const {createHash}=require('node:crypto');
-const graph=require('../../src/editor/wire_planning.js');
-const bootstrap=require('../../src/editor/editor-bootstrap.json');
+const graph=require('../../src/generated/wire_planning.js');
+const bootstrap=require('../../src/generated/editor-bootstrap.json');
 
 test('editor bootstrap comes from registered modules and identifies its actual bundle',()=>{
   const ordinary=graph.registry.modules.filter(m=>!m.structural);
@@ -11,18 +11,9 @@ test('editor bootstrap comes from registered modules and identifies its actual b
   assert.deepEqual(nodeContract,graph.createEditorContract(graph.registry));
   const sourceCatalog=require('../../src/library/source_catalog.json');
   assert.deepEqual(sources,Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]])));
-  const source=fs.readFileSync(path.join(__dirname,'../../src/editor/wire_planning.js'));
+  const source=fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'));
   assert.equal(bootstrap.catalogHash,createHash('sha256').update(source).digest('hex'));
   assert.equal(bootstrap.producer,'frontend-modules');
-});
-
-test('real editor accepts the projected contract without a Python producer',()=>{
-  const source=fs.readFileSync(path.join(__dirname,'../../src/editor/graph_ui.js'),'utf8');
-  const start=source.indexOf('function setTypeContract('),end=source.indexOf('const numericTypes=',start);
-  assert.ok(start>=0&&end>start);
-  const context=vm.createContext({contract:structuredClone(bootstrap.typeContract),t:key=>key});
-  vm.runInContext('let typeContract=null;\n'+source.slice(start,end)+'\nsetTypeContract(contract);',context);
-  assert.equal(vm.runInContext('typeContract.version',context),1);
 });
 
 test('default and native tuple ports retain the real module interfaces',()=>{

@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process');
 const {sharedGraph,node,edge}=require('../fixtures/shared_subgraphs.cjs');
 const [legacyRoot,folder]=process.argv.slice(2);assert.ok(legacyRoot&&folder);fs.mkdirSync(folder,{recursive:true});
-const c={};vm.runInNewContext(fs.readFileSync(require.resolve('../../src/editor/wire_planning.js'),'utf8'),c);
+const c={};vm.runInNewContext(fs.readFileSync(require.resolve('../../src/generated/wire_planning.js'),'utf8'),c);
 const cases=[];
 for(const type of ['float','vec2','vec3','vec4'])for(const unconnected of [false,true]){
  const g=sharedGraph(),value=t=>t==='float'?.75:Array(Number(t.slice(-1))).fill(.75);

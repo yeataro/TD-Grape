@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {GraphDocument,registry,createRegistry,ScopeReferences}=require('../../src/editor/wire_planning.js');
+const {GraphDocument,registry,createRegistry,ScopeReferences}=require('../../src/generated/wire_planning.js');
 const {sharedGraph,node}=require('../fixtures/shared_subgraphs.cjs');
 const copy=structuredClone;
 const empty=()=>({schemaVersion:1,target:'top',declarations:[],functions:[],stages:{pixel:{nodes:[],edges:[]}}});

@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),{spawnSync}=require('node:child_process');
-const source=fs.readFileSync(path.join(__dirname,'../../src/editor/wire_planning.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'),'utf8');
 const context=vm.createContext({});vm.runInContext(source,context);
 const compiler=context.GrapeTopCompiler;
 const oracle=spawnSync(process.env.PYTHON||'python',[path.join(__dirname,'top_compiler_oracle.py')],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});

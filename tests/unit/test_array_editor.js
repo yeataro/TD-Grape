@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const payload=JSON.parse(fs.readFileSync(process.argv[2]||0,'utf8').replace(/^\uFEFF/,''));
 const context=vm.createContext({assert,payload,console,crypto:globalThis.crypto,t:key=>key,clone:value=>JSON.parse(JSON.stringify(value)),FunctionModel:{CALL:'sgrape.function.call',INPUT:'sgrape.function.input',OUTPUT:'sgrape.function.output'}});
-vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/editor/wire_planning.js'),'utf8'),context);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'),'utf8'),context);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/editor/graph_ui.js'),'utf8'),context);
 vm.runInContext(`
 setTypeContract(payload.typeContract||payload.contract);

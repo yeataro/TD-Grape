@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/editor/wire_planning.js'),'utf8'),context);
+const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/wire_planning.js'),'utf8'),context);
 const {plan}=context.GrapeWirePlanning,{registry}=context.GrapeGraph;
 const c={components:{float:1,vec2:2,vec3:3,vec4:4,bool:1,bvec3:3,mat3:9,mat2x3:6},conversions:[{from:'float',to:'vec3'}]};
 const source=(id,type)=>({id,definition:'constant',stored:{inputs:{},outputs:{out:type}}});

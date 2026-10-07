@@ -24,7 +24,7 @@ print(json.dumps({'graph':g,'compiled':result,'contract':c.type_contract(),'defi
 `;
 function runPython(code){return JSON.parse(execFileSync(process.env.PYTHON||'python',['-c',code],{cwd:scratch,encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}}));}
 const oracle=runPython(python);
-const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(scratch,'src/editor/wire_planning.js'),'utf8'),context);
+const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(scratch,'src/generated/wire_planning.js'),'utf8'),context);
 assert.equal(context.GrapeTopCompiler.supports(oracle.graph),true);
 assert.deepEqual(JSON.parse(JSON.stringify(context.GrapeTopCompiler.compile(oracle.graph,oracle.contract.glslCode))),oracle.compiled);
 assert.ok(oracle.contract.definitions['sgrape.builtin.abs_probe'].variants.some(v=>v.type==='vec4'&&v.inputs.incoming==='vec4'));
@@ -40,7 +40,7 @@ const absPython=python.replaceAll('abs_probe','abs').replaceAll('incoming','valu
 const before=runPython(absPython);
 fs.writeFileSync(absFile,text.replace("operator:'abs'","operator:'floor'"));build();
 const after=runPython(absPython),changed=vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(scratch,'src/editor/wire_planning.js'),'utf8'),changed);
+vm.runInContext(fs.readFileSync(path.join(scratch,'src/generated/wire_planning.js'),'utf8'),changed);
 assert.notEqual(after.catalogHash,before.catalogHash);
 assert.match(after.compiled.pixel,/floor\(/);
 assert.deepEqual(JSON.parse(JSON.stringify(changed.GrapeTopCompiler.compile(after.graph,after.contract.glslCode))),after.compiled);
@@ -57,7 +57,7 @@ fs.unlinkSync(file);build();
 const callFile=path.join(scratch,'src/core-ts/nodes/mix_probe.ts');
 const callText=fs.readFileSync(path.join(scratch,'src/core-ts/nodes/mix.ts'),'utf8').replace('"key": "mix"','"key": "mix_probe"').replace('"id": "mix"','"id": "mix_probe"').replace('sgrape.builtin.mix','sgrape.builtin.mix_probe').replaceAll('factor','weight').replace('0.5','0.25');
 const callPython=python.replace("c.node('abs_probe','probe',type='float')","c.node('mix_probe','probe',type='float')").replace("c.edge('source','probe','incoming')","c.edge('source','probe','a')").replace("c.CATALOG['abs_probe']","c.CATALOG['mix_probe']");
-function verifyCall(){const result=runPython(callPython),scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(scratch,'src/editor/wire_planning.js'),'utf8'),scope);assert.deepEqual(JSON.parse(JSON.stringify(scope.GrapeTopCompiler.compile(result.graph,result.contract.glslCode))),result.compiled);return result;}
+function verifyCall(){const result=runPython(callPython),scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(scratch,'src/generated/wire_planning.js'),'utf8'),scope);assert.deepEqual(JSON.parse(JSON.stringify(scope.GrapeTopCompiler.compile(result.graph,result.contract.glslCode))),result.compiled);return result;}
 fs.writeFileSync(callFile,callText);build();const firstCall=verifyCall();assert.match(firstCall.compiled.pixel,/mix\(sg_n_source, 0\.0, 0\.25\)/);
 fs.writeFileSync(callFile,callText.replace('0.25','0.75'));build();const nextCall=verifyCall();assert.match(nextCall.compiled.pixel,/mix\(sg_n_source, 0\.0, 0\.75\)/);assert.notEqual(firstCall.catalogHash,nextCall.catalogHash);
 fs.unlinkSync(callFile);build();runPython(absPython);

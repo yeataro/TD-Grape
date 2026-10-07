@@ -46,7 +46,7 @@ npm run check:editor && npm run test:editor
 npm run build:editor -- --out ../work/refactor/editor-service/web
 ```
 
-`build:core` 由 `src/core-ts/` 產生 `src/editor/` 的 `wire_planning.js`、`editor-bootstrap.json`、`editor-library.json`，不要手改。瀏覽器測試與 TD 部署見 [React 入口](src/editor-react/README.md)；TD 內嵌程式與保存 TOE 見 [DEVELOPMENT](docs/development/DEVELOPMENT.md)；驗證方法見 [TESTING](docs/development/TESTING.md)。
+`build:core` 由 `src/core-ts/` 產生 `src/generated/` 的 `wire_planning.js`、`editor-bootstrap.json`、`editor-library.json`，不要手改。產品版本只寫在 `src/version.json`（每輪 `Refactor.N` 改這裡）。瀏覽器測試與 TD 部署見 [React 入口](src/editor-react/README.md)；TD 內嵌程式與保存 TOE 見 [DEVELOPMENT](docs/development/DEVELOPMENT.md)；驗證方法見 [TESTING](docs/development/TESTING.md)。
 
 ## 每輪工作
 

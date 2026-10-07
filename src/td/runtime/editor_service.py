@@ -33,15 +33,15 @@ class AssetSnapshot:
                 raise ValueError('Referenced asset is missing: ' + name)
         self.files = MappingProxyType(normalized)
         self.source = source
-        # Legacy bundles have no build metadata yet. Read the actual displayed
-        # version rather than inventing a second authoritative version field.
-        version = re.search(r'class=["\'][^"\']*\bbrand-version\b[^"\']*["\'][^>]*>([^<]+)', html)
-        self.version = version.group(1).strip() if version else 'Unknown'
+        # The version comes from the build metadata, written from src/version.json (Refactor.25).
+        # 版本來自建置資料（由 src/version.json 寫入）。
+        self.version = 'Unknown'
         self.modified = False
         if 'build-info.json' in normalized:
             metadata = json.loads(normalized['build-info.json'])
-            if metadata.get('schemaVersion') != 1 or metadata.get('version') != self.version:
-                raise ValueError('Build metadata does not match the editor version')
+            if metadata.get('schemaVersion') != 1 or not metadata.get('version'):
+                raise ValueError('Build metadata is incomplete')
+            self.version = metadata['version']
             for name, expected in metadata.get('assets', {}).items():
                 if name not in normalized:
                     raise ValueError('Build asset is missing: ' + name)
@@ -181,11 +181,11 @@ class EditorHTTP:
                     return self.reply(200, {'service': 'grape-editor-assets', 'source': snapshot.source,
                         'version': snapshot.version, 'digest': snapshot.digest,
                         'files': len(snapshot.files), 'managerConnected': host_requests is not None}, head=head)
-                # The new editor is the only entry (Refactor.24): the root and a Grape OP's Edit
-                # address both serve it. 新編輯器是唯一入口：首頁與 Grape OP 的 Edit 網址都給它。
+                # The new editor (index.html) is the only entry: the root and a Grape OP's Edit
+                # address both serve it. 新編輯器（index.html）是唯一入口：首頁與 Edit 網址都給它。
                 name = path.lstrip('/')
                 if not name or re.fullmatch(r'shader/[a-f0-9]{32}/', name):
-                    name = 'react-editor.html' if 'react-editor.html' in snapshot.files else 'index.html'
+                    name = 'index.html'
                 data = snapshot.files.get(name)
                 if data is None:
                     return self.reply(404, {'error': 'Asset not found'}, head=head)

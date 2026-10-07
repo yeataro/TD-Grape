@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const context=vm.createContext({crypto:require('node:crypto').webcrypto,TextEncoder});
-vm.runInContext(fs.readFileSync('src/editor/wire_planning.js','utf8'),context);
+vm.runInContext(fs.readFileSync('src/generated/wire_planning.js','utf8'),context);
 vm.runInContext(fs.readFileSync('src/editor/functions_model.js','utf8')+'\nthis.clip=GraphClipboard;',context);
 const clip=context.clip,catalog=JSON.parse(fs.readFileSync('src/library/node_catalog.json','utf8')).definitions.map(d=>d.definition);
 const blank=()=>({target:'top',topSourceVersion:1,topInputs:[],declarations:[],functions:[],stages:{pixel:{nodes:[],edges:[]}}});

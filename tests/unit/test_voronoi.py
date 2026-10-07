@@ -95,7 +95,7 @@ class Voronoi(unittest.TestCase):
         self.assertEqual(definition['revisionHash'],c.digest({k:v for k,v in definition.items() if k!='revisionHash'}))
         projection=json.loads(re.search(r'<script id="node-browser-data" type="application/json">(.*?)</script>',(root/'src/editor/index.html').read_text('utf-8'),re.S)[1])
         self.assertEqual(projection['nodes'][definition['definitionUuid']]['categoryPath'],['math','noise'])
-        locales=json.loads((root/'src/editor/locales.json').read_text('utf-8'))
+        locales=json.loads((root/'src/editor-react/static/locales.json').read_text('utf-8'))
         keys=set(v.DEFAULTS)|set(v.INPUT_DEFAULTS)|set(v.FEATURES)|set(v.METRICS)|{'distance','color','position','radius','hint'}
         for key in keys:
             for language in locales['languages']:self.assertTrue(locales['messages']['voronoi.'+key][language])

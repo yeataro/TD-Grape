@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {GraphDocument,registry,createCompiler}=require('../../src/editor/wire_planning.js');
+const {GraphDocument,registry,createCompiler}=require('../../src/generated/wire_planning.js');
 const {rangeCases}=require('../fixtures/range_nodes.cjs');
 const {node}=require('../fixtures/shared_subgraphs.cjs');
 const compiler=createCompiler(registry),policy={components:{float:1,vec2:2,vec3:3,vec4:4},conversions:[{from:'float',to:'vec3'}]};

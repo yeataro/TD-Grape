@@ -1,6 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const m=require('../../src/editor/functions_model.js');
-const {GraphDocument,registry}=require('../../src/editor/wire_planning.js');
+// The subgraph-call definition id (formerly read from the retired old entry). 子圖呼叫的定義 id。
+const m={CALL:'sgrape.function.call'};
+const {GraphDocument,registry,ScopeReferences}=require('../../src/generated/wire_planning.js');
 function removeNodes(g,data,ids){const model=new GraphDocument(g,registry,undefined,true);try{const network=[...model.networks.values()].find(n=>n.data===data);network.removeAll(data.nodes.filter(n=>ids.has(n.id)).map(n=>network.node(n.id)));}finally{model.close();}}
 const call=(id,fn)=>({id,definitionUuid:m.CALL,params:{functionId:fn}});
 const scope=nodes=>({nodes,edges:[]});
@@ -30,7 +31,7 @@ test('deleting an ordinary node never collects dormant subgraph data',()=>{
 });
 test('document type expressions preserve referenced function scope',()=>{
  const g=document([call('root','child')],[definition('child')]);
- g.typeDefinitions=[{id:'arrayHolder',fields:[{type:'float['+m.GraphArrayLengths.token('fn_child',['length','out'])+']'}]}];
+ g.typeDefinitions=[{id:'arrayHolder',fields:[{type:'float['+ScopeReferences.token('fn_child',['length','out'])+']'}]}];
  removeNodes(g,g.stages.pixel,new Set(['root']));assert.equal(g.functions.length,1);
 });
 test('catalog snapshots are not live subgraph references',()=>{

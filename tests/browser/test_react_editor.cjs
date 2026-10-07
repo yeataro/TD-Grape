@@ -45,7 +45,10 @@ function fixture() {
         state = { graph: JSON.parse(body.document), revision: state.revision + 1, targetId: target };
         return res.end(JSON.stringify({ state: { document: body.document, revision: state.revision, targetId: target } }));
       }
-      const name = decodeURIComponent(req.url.split('?')[0]);
+      // Same entry rule as the Editor Service: the root and /shader/<id>/ serve the editor page.
+      // 與編輯服務相同：首頁與 /shader/<id>/ 都給編輯器頁面。
+      const asked = decodeURIComponent(req.url.split('?')[0]);
+      const name = asked === '/' || /^\/shader\/[a-f0-9]{32}\/$/.test(asked) ? '/index.html' : asked;
       const file = path.resolve(buildFolder, '.' + name);
       assert.ok(file.startsWith(buildFolder + path.sep));
       res.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' })[path.extname(file)] || 'application/octet-stream');
@@ -56,7 +59,7 @@ function fixture() {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } });
   page.on('pageerror', e => errors.push(e.message));
-  const url = `http://127.0.0.1:${server.address().port}/react-editor.html?target=${target}`;
+  const url = `http://127.0.0.1:${server.address().port}/shader/${target}/`;
   const field = label => page.getByRole('textbox', { name: label, exact: true });
   const settle = () => page.waitForTimeout(1100);
   const count = () => state.graph.stages.pixel.edges.length;

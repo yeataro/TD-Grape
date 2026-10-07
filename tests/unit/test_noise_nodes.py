@@ -84,7 +84,7 @@ class NoiseNodes(unittest.TestCase):
         catalog = json.loads((ROOT / 'src/library/node_catalog.json').read_text('utf-8'))
         html = (ROOT / 'src/editor/index.html').read_text('utf-8')
         metadata = json.loads(re.search(r'<script id="node-browser-data" type="application/json">(.*?)</script>', html, re.S)[1])
-        locale = json.loads((ROOT / 'src/editor/locales.json').read_text('utf-8'))
+        locale = json.loads((ROOT / 'src/editor-react/static/locales.json').read_text('utf-8'))
         for key in HELPERS:
             row = next(row for row in catalog['definitions'] if row['definition']['key'] == key)
             definition = row['definition']

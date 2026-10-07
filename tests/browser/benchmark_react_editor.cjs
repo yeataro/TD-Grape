@@ -23,7 +23,7 @@ const target='1'.repeat(32);
   });await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const page=await browser.newPage({viewport:{width:1600,height:1100}}), errors=[]; page.on('pageerror',e=>errors.push(e.message));
   const client=await page.context().newCDPSession(page); await client.send('Performance.enable');
-  await page.goto(`http://127.0.0.1:${server.address().port}/`+(mode==='formal'?`react-editor.html?target=${target}`:''));
+  await page.goto(`http://127.0.0.1:${server.address().port}/`+(mode==='formal'?`?target=${target}`:''));
   if(mode==='prototype')await page.getByLabel('測試場景',{exact:true}).selectOption('large');
   await page.getByLabel('start value 0',{exact:true}).waitFor();await page.waitForTimeout(1000);
   assert.equal(await page.locator('.react-flow__node').count(),102);assert.equal(await page.locator('.react-flow__edge').count(),101);

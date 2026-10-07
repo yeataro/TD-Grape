@@ -12,7 +12,7 @@ import host_artifact
 import host_document
 from native_family import NativeFamily
 
-BOOTSTRAP = json.loads((Path(__file__).resolve().parents[2] / 'src/editor/editor-bootstrap.json').read_text(encoding='utf-8'))
+BOOTSTRAP = json.loads((Path(__file__).resolve().parents[2] / 'src/generated/editor-bootstrap.json').read_text(encoding='utf-8'))
 TARGET = 'a' * 32
 
 

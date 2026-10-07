@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
 const root = path.resolve(__dirname, '../..');
 const producer = vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(root, 'src/editor/wire_planning.js'), 'utf8'), producer);
+vm.runInContext(fs.readFileSync(path.join(root, 'src/generated/wire_planning.js'), 'utf8'), producer);
 global.GrapeGraph = producer.GrapeGraph; global.GrapeTopCompiler = producer.GrapeTopCompiler;
 // Load the actual typed application, not a test reimplementation or a renderer mock.
 // 測試真正 session／projection；只替換 HTTP 回覆，不複製交易與產碼邏輯。
@@ -23,7 +23,7 @@ const { resetToDefault } = load(path.join(root, 'src/editor-react/host_sync.ts')
 const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts'));
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
-const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/editor/editor-bootstrap.json')));
+const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));
 const target = '1'.repeat(32);
 const makeNode = (id, key) => ({ id, definitionUuid: 'sgrape.builtin.' + key,

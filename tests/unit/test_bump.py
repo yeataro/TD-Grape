@@ -94,7 +94,7 @@ class BumpTests(unittest.TestCase):
         fn=next(f for f in c.function_library(with_browser=True) if f['name']=='Bump')
         browser=fn.pop('browser');source=fn.pop('source')
         self.assertEqual(c.digest(fn),source['version']);self.assertEqual(browser['category'],'texture')
-        locale=json.loads((Path(__file__).resolve().parents[2]/'src/editor/locales.json').read_text('utf-8'))
+        locale=json.loads((Path(__file__).resolve().parents[2]/'src/editor-react/static/locales.json').read_text('utf-8'))
         self.assertEqual(set(locale['messages']['help.subgraph.bump']),set(locale['languages']))
 
 

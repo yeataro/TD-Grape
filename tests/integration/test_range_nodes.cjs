@@ -1,7 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process');
 const {rangeCases}=require('../fixtures/range_nodes.cjs');
 const [legacyRoot,folder]=process.argv.slice(2);assert.ok(legacyRoot&&folder);fs.mkdirSync(folder,{recursive:true});
-const c={};vm.runInNewContext(fs.readFileSync(require.resolve('../../src/editor/wire_planning.js'),'utf8'),c);
+const c={};vm.runInNewContext(fs.readFileSync(require.resolve('../../src/generated/wire_planning.js'),'utf8'),c);
 const cases=rangeCases();
 const python=`import json,sys\nsys.path.insert(0,sys.argv[1])\nimport sgrape_core as c\nprint(json.dumps([c.compile_graph(g) for g in json.load(sys.stdin)],allow_nan=False))`;
 const legacy=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',python,path.resolve(legacyRoot,'src/core')],{input:JSON.stringify(cases.map(c=>c.graph)),encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}}));
