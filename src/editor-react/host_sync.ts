@@ -5,7 +5,8 @@ import { HostClient, HostError, type StateResponse } from './host';
 // It never edits the document and never compiles; the Editor hands it what to send (design-interview Q38 2-4).
 // 與宿主（TD）交換作品：讀取、送出、離線重試、衝突、保存。不改作品、不產碼；送什麼由 Editor 交給它。
 export type Compiled = ReturnType<typeof compiler.compile>;
-export type Delivery = { graph: Graph; compiled?: Compiled; error?: string };
+// `key` is the code-generation fingerprint (compiler.key): equal keys mean the same program.
+export type Delivery = { graph: Graph; key: string; compiled?: Compiled; error?: string };
 export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
 export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable'; message?: string };
 type Sent = { document: string; revision: number };
@@ -67,6 +68,7 @@ export class HostSync {
   private pending?: Promise<void>;
   private disposed = false;
   private confirmed: string; // document text TD has acknowledged
+  private runtimeKey: string | null; // fingerprint of the program TD runs; null when unknown
   private uncertain?: Sent;
   blocked = false;
   status: SyncStatus;
@@ -74,6 +76,7 @@ export class HostSync {
     private readonly source: () => Delivery, private readonly report: (status: SyncStatus) => void,
     private readonly delay = 0, private readonly retry = 5000) {
     this.confirmed = loaded.state.document;
+    this.runtimeKey = loaded.state.runtimeRevision === loaded.state.revision ? source().key : null;
     this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready' };
   }
   get busy() { return !!this.pending; }
@@ -97,14 +100,18 @@ export class HostSync {
   };
   private async deliver() {
     while (this.status.dirty && !this.disposed && !this.blocked) {
-      const { graph, compiled } = this.source(), sent = { document: serializeDocument(graph), revision: this.status.revision };
+      const { graph, key, compiled } = this.source(), sent = { document: serializeDocument(graph), revision: this.status.revision };
+      // Same fingerprint as the running program: send the document only, so TD skips GPU work
+      // (layout-only edits, design-interview Q31/Q38). 指紋與 TD 正在跑的相同：只送圖，TD 不做 GPU 驗證。
+      const runtime = compiled && key !== this.runtimeKey ? compiled : undefined;
       this.set({ phase: 'sending', message: compiled ? '正在套用至 TD…' : '產碼失敗；只把圖存到 TD，TD 繼續執行上次成功的 Shader…' });
       try {
         const result = await this.host.call<{ state: StateResponse['state'] }>('apply',
-          applyRequest(this.host, this.bootstrap, sent, compiled));
+          applyRequest(this.host, this.bootstrap, sent, runtime));
         if (this.disposed) return;
         if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
         this.confirmed = sent.document;
+        if (runtime) this.runtimeKey = key;
         this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready',
           message: compiled ? '已套用 TD；專案尚需保存' : '圖已存到 TD；產碼失敗，TD 仍執行上次成功的 Shader' });
       } catch (error) {
@@ -174,6 +181,7 @@ export class HostSync {
   adopt(state: StateResponse['state']) {
     clearTimeout(this.timer);
     this.confirmed = state.document; this.blocked = false; this.uncertain = undefined;
+    this.runtimeKey = state.runtimeRevision === state.revision ? this.source().key : null;
     this.set({ revision: state.revision, dirty: false, phase: 'ready', link: undefined });
   }
   // Conflict choice "編輯端" (Q7/Q28): rebase the draft on TD's latest revision and send it
@@ -182,6 +190,7 @@ export class HostSync {
   overwrite = async () => {
     const result = await this.read();
     this.confirmed = result.state.document; this.blocked = false; this.uncertain = undefined;
+    this.runtimeKey = null; // TD's program was written elsewhere; send ours
     const dirty = this.dirtyNow();
     this.set({ revision: result.state.revision, dirty, phase: 'ready',
       message: dirty ? '以編輯器草稿覆寫 TD…' : '草稿與 TD 文件相同，已同步。' });

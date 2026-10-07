@@ -6,7 +6,7 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.19**（2026-10-08）——路徑重建 A2a：新編輯器協定（TD 把圖當不透明文字、執行用部分成對套用、產碼失敗只送圖、Last Known Good、拿掉送出等待）；新舊 OP 以 TD tag `grapeNextEditor` 分流，測試 OP 已轉換。下一步 A2b（新編輯器唯讀打開舊圖），再 A3（指紋、Worker）。前一版 Refactor.18（A1：Editor／HostSync 拆分、產碼不等送出）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
+**最新交付：Refactor.20**（2026-10-08）——路徑重建 A3：產碼指紋＋必跑的性質測試；純版面修改不產碼、TD 不做 GPU。待人類決定：Worker、結構共享（見 STATUS 數據）。A2b（唯讀打開舊圖）延到 ghost 完成後。前一版 **Refactor.19**（2026-10-08）——路徑重建 A2a：新編輯器協定（TD 把圖當不透明文字、執行用部分成對套用、產碼失敗只送圖、Last Known Good、拿掉送出等待）；新舊 OP 以 TD tag `grapeNextEditor` 分流，測試 OP 已轉換。下一步 A2b（新編輯器唯讀打開舊圖），再 A3（指紋、Worker）。前一版 Refactor.18（A1：Editor／HostSync 拆分、產碼不等送出）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
 
 **Refactor.17.1**——測試便利小修正：右鍵拖曳框選（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)）、右鍵拖曳後不跳瀏覽器選單、Body 拖曳預設開啟。
 
@@ -57,6 +57,7 @@
 
 | 發現日 | 情況 |
 | --- | --- |
+| 2026-10-08 | **前端產碼器每 stage 上限 256 節點**（`top_compiler.ts` `createFlatCompiler(limit=256)`；子圖展開用 2048），超過即「Graph is outside the selected frontend compiler capability」。Q31 擔心的 300／1000 節點目前根本無法產碼；是否放寬、與效能盤點一併決定。 |
 | 2026-10-07 | **程式中「graph」一字多義（命名整理待辦）**：`core-ts/model.ts` 型別 `Graph` 指整份圖文件，子圖資料的 `graph` 欄位與各處 graph 又指單一網路；應以不同字區分（如 `document`／`network`）。違反 GLOSSARY 命名對齊原則；連同 `groupSubgraph`（意為包成子圖，與 Group 撞名）等一起整理。 |
 | 2026-10-07 | **決策文件的存放位置（人類暫不決定）**：design-interview、target-architecture 等在 workspace（不在 git，Q17 定到重構收尾再整理），今天新增 Q33–Q40 後風險變大：無版本紀錄、不與 commit 連結、別的環境（換電腦、雲端 agent）讀不到、單檔近千行難讀。曾提：僅在 `work/in-place-refactor-design/`（492 KB、18 檔）做本機 git、不設遠端不 push；精簡決策寫進 repo（repo 公開，原始討論一律不進）。人類顧慮：Dropbox 同步 `.git`、日後想轉雲端會有問題——先不動。 |
 | 2026-10-07 | **新入口沒有 Shader 選單（舊能力漏接）**：舊產品標題列 `#shaderpicker` 列出 TD 內所有 Grape OP，選取後 `location.assign('/shader/<id>/')` 整頁換網址，有未送出修改先確認（legacy `app.js:679-705`）。換網址＝重新向 TD 讀圖、Undo／選取消失，TD 最小化時打不開；替代為多開分頁，或日後同頁多 session。可與 Q32 的 Grape OP 清單一起考慮。 |

@@ -155,6 +155,6 @@ class NextFamily:
             view.text = text  # human-readable copy, written as received
         self.status('applied' if runtime_text is not None else 'document-only',
                     'Shader and document applied' if runtime_text is not None
-                    else 'Code generation failed in the editor; document saved, Shader unchanged',
+                    else 'Document saved; Shader unchanged (no program change, or code generation failed in the editor)',
                     revision=next_revision, runtimeRevision=value['runtime']['revision'])
         return {'ok': True, 'state': self.state(), 'target': self.comp.path, 'shaderUpdated': shader_updated}

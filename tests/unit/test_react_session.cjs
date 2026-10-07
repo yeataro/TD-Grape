@@ -486,3 +486,29 @@ test('a code generation failure is reported at edit time; the last good GLSL sta
   assert.equal(session.snapshot().glsl, good);
   assert.equal(calls.length, 0);
 });
+
+// Path rebuild A3 (design-interview Q38 2-1, Q31): the code-generation fingerprint decides.
+// 產碼指紋決定：純版面不產碼、TD 不做 GPU；註記只更新這裡的 GLSL；程式改變才送執行用部分。
+test('moving a node sends the document only; a value edit sends the program', async t => {
+  const { session, calls } = open(t, undefined, 60000);
+  session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
+  assert.notEqual(calls.at(-1).body.runtime, null, 'first delivery carries the program');
+  const glsl = session.snapshot().glsl;
+  session.nodeChanges([{ type: 'position', id: 'a', position: { x: 400, y: 90 }, dragging: false }]); await session.flush();
+  assert.equal(calls.at(-1).body.runtime, null, 'layout only: no program, so TD skips GPU work');
+  assert.equal(JSON.parse(calls.at(-1).body.document).stages.pixel.nodes.find(n => n.id === 'a').ui.x, 400);
+  assert.equal(session.snapshot().glsl, glsl);
+  session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
+  await session.flush();
+  assert.notEqual(calls.at(-1).body.runtime, null, 'a program change is sent');
+});
+
+test('a note refreshes the GLSL shown in the editor but is not sent as a program change (rule B)', async t => {
+  const { session, calls } = open(t, undefined, 60000);
+  session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
+  await session.flush();
+  session.transact('note', net => { const node = net.node('a'); node.update({ ui: { ...node.data.ui, comment: 'hello note' } }); });
+  assert.match(session.snapshot().glsl, /hello note/);
+  await session.flush();
+  assert.equal(calls.at(-1).body.runtime, null);
+});

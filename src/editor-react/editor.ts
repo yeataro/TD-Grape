@@ -20,6 +20,9 @@ function wire(net: Network, c: Connection | FlowEdge) {
   net.connect(net.node(c.source).port('output', c.sourceHandle), net.node(c.target).port('input', port), core.values.policy);
 }
 
+const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).concat((graph.functions || []).map(f => f.graph))
+  .map(net => net?.nodes.map(n => [n.ui?.comment, n.ui?.label])));
+
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
   message: string; glsl: string; targetPath: string };
 
@@ -53,10 +56,16 @@ export class Editor {
   private publish() { if (!this.disposed) this.listeners.forEach(listener => listener()); }
   private status(patch: Partial<EditorState>) { this.state = { ...this.state, ...patch }; this.publish(); }
   notice = (error: unknown) => this.status({ message: error instanceof Error ? error.message : String(error) });
+  // Skips code generation when neither the fingerprint nor the notes changed (e.g. moving a node).
+  // Notes only add GLSL comment lines: they refresh the GLSL shown here, never TD's program (rule B).
+  // 指紋與註記都沒變（例如移動節點）就不產碼；註記只影響這裡顯示的 GLSL 註解，不讓 TD 重編（規則 B）。
+  private notes = '';
   private compile(): Delivery {
-    const graph = this.document.snapshot();
-    try { return { graph, compiled: compiler.compile(graph, this.bootstrap.typeContract.glslCode) as Compiled }; }
-    catch (error) { return { graph, error: String(error) }; }
+    const graph = this.document.snapshot(), key = compiler.key(graph), notes = noteKey(graph);
+    if (this.codegen && key === this.codegen.key && notes === this.notes) return { ...this.codegen, graph };
+    this.notes = notes;
+    try { return { graph, key, compiled: compiler.compile(graph, this.bootstrap.typeContract.glslCode) as Compiled }; }
+    catch (error) { return { graph, key, error: String(error) }; }
   }
 
   // Build the entire candidate before committing history or notifying React.

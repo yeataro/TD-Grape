@@ -5290,6 +5290,7 @@ exports.Subgraph = Subgraph;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.protocol = exports.CompilationError = void 0;
+exports.codegenKey = codegenKey;
 exports.createCompiler = createCompiler;
 const subgraph_compiler_1 = require("./subgraph_compiler");
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
@@ -5474,10 +5475,24 @@ function createFlatCompiler(registry, limit = 256) {
     }
     return Object.freeze({ protocol: exports.protocol, supports, compile });
 }
+/** Code-generation fingerprint (design-interview Q38 2-1): everything the generated program
+ * depends on, minus authored layout and notes. Node `ui` only adds GLSL comment lines and
+ * labels (comments.ts), so by the human's rule B it is outside the chain; edge ids and the
+ * edge sequence never reach GLSL. Equal keys must mean the same program apart from comment
+ * lines; tests/unit/test_codegen_key.cjs checks this on random edit sequences.
+ * 產碼指紋：產出的程式所依賴的一切，扣掉版面與註記。節點 ui 只帶來 GLSL 註解與標籤（規則 B，不在鏈路）；
+ * 線的 id 與序號不進 GLSL。指紋相同＝除註解行外程式相同，由隨機編輯的性質測試把關。 */
+function codegenKey(g) {
+    const network = (data) => data && { ...data, edgeSequence: undefined,
+        nodes: (data.nodes || []).map(n => ({ ...n, ui: undefined })),
+        edges: (data.edges || []).map(e => ({ ...e, id: undefined })) };
+    return JSON.stringify({ ...g, stages: Object.fromEntries(Object.entries(g.stages || {}).map(([k, v]) => [k, network(v)])),
+        functions: (g.functions || []).map(f => ({ ...f, graph: network(f.graph) })) });
+}
 function createCompiler(registry) {
     const flat = createFlatCompiler(registry);
     const subgraphs = (0, subgraph_compiler_1.createSubgraphCompiler)(registry, r => createFlatCompiler(r, 2048));
-    return Object.freeze({ protocol: exports.protocol,
+    return Object.freeze({ protocol: exports.protocol, key: codegenKey,
         supports: (g) => { var _a; return ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.supports(g) : flat.supports(g); },
         compile: (g, identifiers) => { var _a; return ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
     });
