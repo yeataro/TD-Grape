@@ -1,12 +1,12 @@
 # 目前現況
 
-最後更新：2026-10-07。每輪收尾時覆寫本頁；完整交付紀錄見 [STATUS](STATUS.md)。標 ✅ 者已用 git／測試核對。
+最後更新：2026-10-08。每輪收尾時覆寫本頁；完整交付紀錄見 [STATUS](STATUS.md)。標 ✅ 者已用 git／測試核對。
 
 ## 做到哪裡
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.25**（2026-10-08）——解除對舊入口的依賴並移除舊入口：核心產物在 `src/generated/`、新編輯器頁面為 `src/editor-react/index.html`（靜態檔在 `static/`）、產品版本只在 `src/version.json`；`src/editor/` 與只測舊入口的測試已刪。尚未處理：`tests/browser/` 約 210 個舊入口瀏覽器測試、舊 Python 核心與其測試、TD 端舊入口程式。前一版 **Refactor.24**（2026-10-08）——新編輯器成為唯一入口（Edit 與首頁都打開它）；舊入口停用，檔案先標記不刪（`src/editor/README.md` 列出仍在使用、要先搬走的共用檔案）。前一版 **Refactor.23**（2026-10-08）——Color Output 身分固定：核心結構規則（頂層剛好一個、子圖內不准有；刪除、複製、放進子圖都整筆拒絕；開圖不擋只警告），新增選單不提供、Delete 跳過並提示。refactor 裡的舊入口不再保證能用（看舊行為改開另一個 TD）。前一版 **Refactor.22**（2026-10-08）——Color Output 標題改綠（顏色系統第一步：`theme/dark.css`＋`colorGroup`）、框選碰到即選（右鍵拖／Shift＋左鍵拖、Shift 加選、RF 內建框選關閉）、從輸入拉到空白處斷線。前一版 **Refactor.21**（2026-10-08）——編輯時就檢查上限（核心單一關卡、開圖不擋只擋變大、狀態列警告）。前一版 **Refactor.20.1**（2026-10-08）——核心設定 `config.ts`（上限集中、約定寫在開頭，數值不變）。前一版 **Refactor.20**——路徑重建 A3：產碼指紋＋必跑的性質測試；純版面修改不產碼、TD 不做 GPU。待人類決定：Worker、結構共享、節點上限（需先實測子圖展開的大圖）。A2b（唯讀打開舊圖）延到 ghost 完成後。前一版 **Refactor.19**（2026-10-08）——路徑重建 A2a：新編輯器協定（TD 把圖當不透明文字、執行用部分成對套用、產碼失敗只送圖、Last Known Good、拿掉送出等待）；新舊 OP 以 TD tag `grapeNextEditor` 分流，測試 OP 已轉換。下一步 A2b（新編輯器唯讀打開舊圖），再 A3（指紋、Worker）。前一版 Refactor.18（A1：Editor／HostSync 拆分、產碼不等送出）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
+**最新交付：Refactor.25**（2026-10-08）——解除對舊入口的依賴並移除舊入口：核心產物在 `src/generated/`、新編輯器頁面為 `src/editor-react/index.html`（靜態檔在 `static/`）、產品版本只在 `src/version.json`；`src/editor/` 與只測舊入口的測試已刪。其後 `e50e656` 已刪 `tests/browser/` 的舊入口測試（212＋匯出工具）。尚未處理：舊 Python 核心與其測試、TD 端舊入口程式（見下方「進行中」）。前一版 **Refactor.24**（2026-10-08）——新編輯器成為唯一入口（Edit 與首頁都打開它）；舊入口停用，檔案先標記不刪（`src/editor/README.md` 列出仍在使用、要先搬走的共用檔案）。前一版 **Refactor.23**（2026-10-08）——Color Output 身分固定：核心結構規則（頂層剛好一個、子圖內不准有；刪除、複製、放進子圖都整筆拒絕；開圖不擋只警告），新增選單不提供、Delete 跳過並提示。refactor 裡的舊入口不再保證能用（看舊行為改開另一個 TD）。前一版 **Refactor.22**（2026-10-08）——Color Output 標題改綠（顏色系統第一步：`theme/dark.css`＋`colorGroup`）、框選碰到即選（右鍵拖／Shift＋左鍵拖、Shift 加選、RF 內建框選關閉）、從輸入拉到空白處斷線。前一版 **Refactor.21**（2026-10-08）——編輯時就檢查上限（核心單一關卡、開圖不擋只擋變大、狀態列警告）。前一版 **Refactor.20.1**（2026-10-08）——核心設定 `config.ts`（上限集中、約定寫在開頭，數值不變）。前一版 **Refactor.20**——路徑重建 A3：產碼指紋＋必跑的性質測試；純版面修改不產碼、TD 不做 GPU。待人類決定：Worker、結構共享、節點上限（需先實測子圖展開的大圖）。A2b（唯讀打開舊圖）延到 ghost 完成後。前一版 **Refactor.19**（2026-10-08）——路徑重建 A2a：新編輯器協定（TD 把圖當不透明文字、執行用部分成對套用、產碼失敗只送圖、Last Known Good、拿掉送出等待）；新舊 OP 以 TD tag `grapeNextEditor` 分流，測試 OP 已轉換。下一步 A2b（新編輯器唯讀打開舊圖），再 A3（指紋、Worker）。前一版 Refactor.18（A1：Editor／HostSync 拆分、產碼不等送出）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
 
 **Refactor.17.1**——測試便利小修正：右鍵拖曳框選（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)）、右鍵拖曳後不跳瀏覽器選單、Body 拖曳預設開啟。
 
@@ -29,6 +29,24 @@
 **權威與 TD 不在時的編輯：2026-10-07 定案**（[訪談 Q28](../../../work/in-place-refactor-design/design-interview.md)、[target-architecture](../../../work/in-place-refactor-design/target-architecture.md)「權威的範圍與 TD 不在時的編輯」）。規則摘要已寫入 AGENTS.md 必守規則。
 
 **更早完成（Refactor.1–14）：** TS 接線規劃、TOP 前端 compiler、56 個節點模組、Editor Service（VFS 資產服務，port 65465）、新 Manager `/TD_Grape/GrapeManager` 與原生 Grape TOP、Grape OP 對 Manager 只有編輯依賴。
+
+## 進行中（2026-10-08 交接；換 session 從這裡接）
+
+**主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
+- 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
+- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——決議 1–10（`format: 'grape-graph'`、`subgraphs` 一張清單、TOP 貼圖輸入改為宣告的一種 kind、接線 id 必填且隨機、刪 `edgeSequence`、`definitionUuid`→`nodeType`、接線補 `ui`…），**待決 A–E 等人類在文件裡回覆**。定案後寫回 design-interview 新題號，再排實作輪。
+
+**盤查最重要的發現：**
+1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 由上面的議事錄處理。
+2. **沒有方法建立新格式的 Grape OP**：`GrapeManagerExt.InitializeFamily` 仍經 NativeFamily 寫 v1、只標 `grapeNativeFamily`；全 repo 沒有程式加 `grapeNextEditor`（測試 OP 是一次性腳本轉的）；選單建立（family_callbacks／masters）已斷。
+3. **自訂參數頁（GrapeManager `parameters`）**：LEGACY-PYTHON 標「關閉舊入口前要先搬」，Refactor.24／25 關閉時漏看——目前無處可編輯 Grape OP 自訂參數。人類傾向：屬舊架構，之後照 Q41 重做，不搬舊的。
+4. TD Manager 啟動仍強制載入舊 Python 模組（history、parameters）與 `editor-library.json`；`test:core` 以舊 Python 編譯器當對照組；`build:core` 仍替舊 Python 寫 `node_catalog.json`／`frontend_capabilities.json`，且擋住刪 `float`／`vec2`…。
+5. 新測試 OP 內仍有舊 `GrapeControls/parameter_links` 在跑、存著 `grapeV1DocumentBackup`。
+6. 17 個長期失敗的 Python 測試全屬舊架構。約 20 份現行文件有已不正確的敘述（清單見盤查檔）。
+
+**提給人類、尚未確認的處理原則**（四類）：甲 舊架構帶來且新架構沒用到→刪；乙 新架構建好但還沒用到→留；丙 新舊共用→留並標「共用」；丁 舊行為撐著新架構運作→暫留並標「不帶到之後」。邊界判斷：被當對照組的舊 Python 測試→甲；自訂參數頁→甲（照 Q41 重做）；「用到」以產品程式呼叫為準。另提議在程式註解加固定字樣（如 `LEGACY(共用)`／`LEGACY(暫留)`）並把 LEGACY-PYTHON.md 擴成殘留地圖——人類未確認。人類的問題是問題、不是指示（記憶 questions-are-questions）。
+
+**已排的清理清單**（第 1 條已做 `e50e656`，其餘暫停，等上面原則與圖結構定案）：2 TD 舊協定（`_action`、native_family）、3 新舊區分機制（`?editor=next`、409）、4 舊產品 TD 執行程式、5 舊 Python 核心與其測試、6 GraphDocument 直接改原物件模式、7 子圖操作（乙類，留）、8 舊名 `wire_planning`／`GrapeWirePlanning`。
 
 ## 待處理
 
