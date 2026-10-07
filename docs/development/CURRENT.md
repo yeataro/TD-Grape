@@ -34,12 +34,12 @@
 
 **主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
 - 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
-- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——決議 1–10（`format: 'grape-graph'`、`subgraphs` 一張清單、TOP 貼圖輸入改為宣告的一種 kind、接線 id 必填且隨機、刪 `edgeSequence`、`definitionUuid`→`nodeType`、接線補 `ui`…），**待決 A–E 等人類在文件裡回覆**。定案後寫回 design-interview 新題號，再排實作輪。
+- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。要點：`format: 'grape-graph'`、一張 `declarations` 以 `kind` 區分（含內建值 `builtin`、TOP 貼圖輸入）、Ghost 原則處理未知資料＋`extensions`、舊殘留只照對照表轉換（一次性工具轉測試 OP，最後做舊圖匯入器）、`description`／`comment`／`userVersion`、`defaultTexture`。**下一步：排「改圖格式」實作輪**（核心格式、預設圖、測試資料、測試 OP 轉換＋舊→新對照表）；暫定欄位名由助手在該輪提案、人類一次看過。
 
 **盤查最重要的發現：**
-1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 由上面的議事錄處理。
+1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 已由議事錄定案（Q44），待實作。
 2. **沒有方法建立新格式的 Grape OP**：`GrapeManagerExt.InitializeFamily` 仍經 NativeFamily 寫 v1、只標 `grapeNativeFamily`；全 repo 沒有程式加 `grapeNextEditor`（測試 OP 是一次性腳本轉的）；選單建立（family_callbacks／masters）已斷。
-3. **自訂參數頁（GrapeManager `parameters`）**：LEGACY-PYTHON 標「關閉舊入口前要先搬」，Refactor.24／25 關閉時漏看——目前無處可編輯 Grape OP 自訂參數。人類傾向：屬舊架構，之後照 Q41 重做，不搬舊的。
+3. **自訂參數頁（GrapeManager `parameters`）**：LEGACY-PYTHON 標「關閉舊入口前要先搬」，Refactor.24／25 關閉時漏看——目前無處可編輯 Grape OP 自訂參數。人類傾向：屬舊架構，之後照 Q41 重做，不搬舊的。重做時要守（Q44）：Grape 自動產生的參數（所有公開來源，含 MAT 貼圖）在這個頁面不能編輯或不能刪除。
 4. TD Manager 啟動仍強制載入舊 Python 模組（history、parameters）與 `editor-library.json`；`test:core` 以舊 Python 編譯器當對照組；`build:core` 仍替舊 Python 寫 `node_catalog.json`／`frontend_capabilities.json`，且擋住刪 `float`／`vec2`…。
 5. 新測試 OP 內仍有舊 `GrapeControls/parameter_links` 在跑、存著 `grapeV1DocumentBackup`。
 6. 17 個長期失敗的 Python 測試全屬舊架構。約 20 份現行文件有已不正確的敘述（清單見盤查檔）。

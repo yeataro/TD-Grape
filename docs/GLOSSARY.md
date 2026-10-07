@@ -32,8 +32,8 @@
 
 | 建議用語 | 英文／識別碼 | 定義與區分 |
 | --- | --- | --- |
-| 來源 | Source；程式 `document.sources`；存檔 `sources` | 值從 Shader 外面來、在圖文件層級宣告一次讓節點引用的東西：Uniform（含預設好的，如時間）、Spec 常數、貼圖／Sampler、Attribute、POP Buffer、TD 內建 GLSL Uniform。**不是節點**，與各 stage 網路、子圖定義同屬圖文件、同一層。核心中「source」只有此義（線的兩端用 `from`／`to`；React Flow 的 source／sourceHandle 只在畫面轉換層）。舊稱 declaration（舊圖欄位 `declarations` 交匯入器）。 |
-| 全域常數 | Constant；程式 `document.constants`；存檔 `constants` | GLSL 最外層 `const`；值在作品內，改值即產碼。不是來源，但與來源共用規則：名稱互不重複、只在各 stage 最外層引用、**子圖不直接引用**（需要的值經子圖輸入傳入，含 TD 內建 Uniform，使子圖可攜帶）、複製貼上帶走。 |
+| 來源 | Source；存於 `declarations`，以 `kind` 區分（Q44 取代 Q41 的 `document.sources`） | 值從 Shader 外面來、在圖文件層級宣告一次讓節點引用的東西：Uniform（含預設好的，如時間）、Spec 常數、貼圖／Sampler、Attribute、POP Buffer、TD 內建 GLSL Uniform。**不是節點**，與各 stage 網路、子圖定義同屬圖文件、同一層。核心中「source」只有此義（線的兩端用 `from`／`to`；React Flow 的 source／sourceHandle 只在畫面轉換層）。圖裡與全域常數同放一張 `declarations`（design-interview Q44）。 |
+| 全域常數 | Constant；存於 `declarations`，以 `kind` 區分（Q44） | GLSL 最外層 `const`；值在作品內，改值即產碼。不是來源，但與來源共用規則：名稱互不重複、只在各 stage 最外層引用、**子圖不直接引用**（需要的值經子圖輸入傳入，含 TD 內建 Uniform，使子圖可攜帶）、複製貼上帶走。 |
 | Spec 常數 | Specialization constant | 屬來源。宣告在作品（`layout(constant_id = N) const …`），目前值在 TD 參數頁；改值不產碼，TD 自行重建管線。 |
 | 共用來源面板 | 中文「共用來源」；英文暫用 Sources | 同時列出來源與全域常數的面板（便利做法）；面板內分區屬畫面，可調整，與程式分類無關。英文名做面板時再定（候選：Sources、Sources & Constants、Properties、比喻名稱如 Unity 的 Blackboard）。 |
 | Grape OP Custom Parameters | Grape OP Custom Parameters | 使用者標記**公開**的來源，在 Grape OP 上對應的 TD 自訂參數（TD 本身稱 Custom Parameters）。使用者的 Export／Expression／Bind 只接這裡；值的權威在 TD。**不用「外層」一詞**（人類 2026-10-07）。 |
@@ -94,7 +94,7 @@
 | 節點實例 | Node instance | 畫布上某一個具體節點，有自己的位置、配置及 UI 狀態。 |
 | 顯示名稱／身分識別碼 | Display name／ID | 顯示名稱供人辨識，ID 供資料穩定引用；顯示名稱也不必是合法 GLSL 識別字。具體命名與更名行為另由設計規則決定。 |
 | 共用來源 | Shared source／Source | 可被多個畫布引用使用的具名來源，例如 Uniform。談接線上的「來源」時需說明是上游輸出，避免和來源物件混淆。 |
-| 宣告 | Declaration | 圖內記錄來源種類、名稱、型別等資料的定義；談產生的 GLSL 宣告時明說「GLSL 宣告」。兩者不是一段一對一跨 Stage 共用的程式文字。 |
+| 宣告 | Declaration；圖欄位 `declarations` | 圖內記錄來源與全域常數（種類 `kind`、名稱、型別等）的一張清單；每種 `kind` 的欄位由其模組規定（Q44）。另有內建值（暫稱 `kind: builtin`，語意由 Grape 保證）。談產生的 GLSL 宣告時明說「GLSL 宣告」。兩者不是一段一對一跨 Stage 共用的程式文字。 |
 | 來源引用 | Source reference | 指向既有來源的畫布節點。它與其他引用共用來源定義，位置與註記等節點 UI 狀態可以獨立；不以「實體／克隆」表示來源與引用的關係。 |
 | 本地值／字面值 | Local value／Literal | 本地值描述資料由某個節點或輸入持有；字面值描述程式中的直接值表示，例如 `1.0`。資料歸屬和程式表示是不同問題。 |
 | 預設值／目前值 | Default value／Current value | 建立、初始化或回復時採用的值，與當下實際使用的值。來源預設值、TD 原生目前值、未接線輸入值需明確標出歸屬。 |
