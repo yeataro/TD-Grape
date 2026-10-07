@@ -70,16 +70,4 @@ class TypeContract(unittest.TestCase):
    self.assertEqual(c.digest(legacy_single_buffer_result(actual)),expected);self.assertEqual(graph,before)
   self.assertEqual(len(graphs),138)
 
- def test_javascript_ports_and_creator_match_core(self):
-  # Browser code consumes the core's resolved variants, including declaration-selected Uniforms.
-  rows=[]
-  for d in c.CATALOG.values():
-   for ty in (c.VECTOR_TYPES if d['key'] in c.VECTOR_KEYS else c.node_parameter_types(d)):
-    node=c.node(d['key'],'probe',type=ty)
-    for decltype in (c.SPEC_TYPES if d['key']=='spec_constant' else c.node_parameter_types(d) if d['key'] in ('pop_buffer','attribute','tex_attribute') else c.TYPES):
-     decl={'type':decltype};rows.append({'definition':d,'params':node['params'],'declaration':decl,'expected':c.resolved_ports(d,node['params'],decl)})
-  payload={'contract':c.type_contract(),'rows':rows,'catalog':list(c.CATALOG.values())}
-  result=subprocess.check_output(['node',str(root/'test_types_ui.js'),str(root.parents[1]/'src/editor/graph_ui.js')],input=json.dumps(payload),text=True)
-  self.assertIn(str(len(payload['rows']))+' port rows',result)
-
 if __name__=='__main__':unittest.main(verbosity=2)

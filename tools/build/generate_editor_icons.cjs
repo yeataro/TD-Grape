@@ -2,7 +2,7 @@
 // node tools/generate_editor_icons.cjs [SOURCE_SVG] [OUTPUT_SRC]
 const fs=require('node:fs'),path=require('node:path');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const root=path.resolve(__dirname,'../..'),source=process.argv[2]||path.join(root,'src/assets/brand/app-icon.svg'),out=process.argv[3]||path.join(root,'src/editor');
+const root=path.resolve(__dirname,'../..'),source=process.argv[2]||path.join(root,'src/assets/brand/app-icon.svg'),out=process.argv[3]||path.join(root,'src/editor-react/static');
 const sizes=[16,32,48,64,128,180,192,256,512,1024],icoSizes=[16,32,48,64,128,256];
 (async()=>{
   fs.mkdirSync(path.join(out,'icons'),{recursive:true});

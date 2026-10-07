@@ -118,12 +118,5 @@ class ControlNodes(unittest.TestCase):
                        edges=[c.edge('input','branch','condition','condition'),c.edge('branch','output','out')]))]
         self.assertIn(' ? 1.0 : 0.0)',c.compile_graph(graph)['pixel'])
 
-    def test_javascript_type_plans_defaults_and_transaction_roundtrips(self):
-        root=Path(__file__).resolve().parents[2]
-        payload={'catalog':list(c.CATALOG.values()),'contract':c.type_contract()}
-        result=subprocess.run(['node',str(root/'tests/unit/test_control_nodes.js')],input=json.dumps(payload),text=True,capture_output=True)
-        self.assertEqual(result.returncode,0,result.stderr)
-        for graph in json.loads(result.stdout)['graphs']:c.compile_graph(graph)
-
 
 if __name__=='__main__':unittest.main()

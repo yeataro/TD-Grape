@@ -119,12 +119,5 @@ class GLSLCodeTests(unittest.TestCase):
             for row in compiled['sourceMap'][stage]:
                 if 'codeLine' in row:self.assertIn('c = ',compiled[stage].splitlines()[row['line']-1])
 
-    def test_editor_model_contract_and_connection_policy(self):
-        root=Path(__file__).resolve().parents[2]
-        graph,n=fixture()
-        payload={'contract':c.type_contract(),'catalog':list(c.CATALOG.values()),'graph':graph}
-        result=subprocess.check_output(['node',str(root/'tests/unit/test_glsl_code_ui.js'),str(root/'src/editor/graph_ui.js')],input=json.dumps(payload),text=True)
-        self.assertIn('GLSL Code model passed',result)
-
 
 if __name__=='__main__':unittest.main()

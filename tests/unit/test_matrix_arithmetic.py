@@ -56,13 +56,3 @@ class MatrixArithmetic(unittest.TestCase):
             for key in ('add','subtract'):self.assertEqual(c.input_default(key,'b',ty),[0]*c.type_components(ty))
             self.assertEqual(c.input_default('divide','b',ty),[1]*c.type_components(ty))
             self.assertEqual(c.input_default('multiply','b',ty),c.matrix_identity(ty))
-
-    def test_editor_signatures_wiring_history_and_local_creator(self):
-        payload={'catalog':list(c.CATALOG.values()),'contract':c.type_contract()}
-        output=subprocess.check_output(['node',str(Path(__file__).with_name('test_matrix_arithmetic.js'))],input=json.dumps(payload),text=True)
-        self.assertIn('matrix arithmetic editor passed',output)
-
-    def test_editor_auto_operand_defaults(self):
-        payload={'catalog':list(c.CATALOG.values()),'contract':c.type_contract()}
-        output=subprocess.check_output(['node',str(Path(__file__).with_name('test_auto_operand_defaults.js'))],input=json.dumps(payload),text=True)
-        self.assertIn('auto operand defaults passed',output.lower())

@@ -85,34 +85,5 @@ class TDMathHelpers(unittest.TestCase):
                         with self.assertRaisesRegex(c.GraphError, 'Require Constant'):
                             c.compile_graph(graph)
 
-    def test_frontend_defaults_and_browser_projection_match_core(self):
-        root = Path(__file__).resolve().parents[2]
-        document = json.loads((root / 'src/library/node_catalog.json').read_text('utf-8'))
-        rows = []
-        for key in KEYS:
-            for ty in (('vec3',) if key in KEYS[:2] else c.FLOAT_TYPES):
-                for port, token in c.CATALOG[key]['inputs'].items():
-                    port_type = ty if token == 'T' else token
-                    rows.append({'node': c.node(key, 'probe', **({'type': ty} if key not in KEYS[:2] else {})),
-                                 'port': port, 'type': port_type, 'expected': c.input_default(key, port, port_type)})
-        script = """
-const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const data=JSON.parse(fs.readFileSync(0,'utf8'));
-const html=fs.readFileSync(process.argv[1]+'/index.html','utf8');
-const metadata=JSON.parse(html.match(/<script id="node-browser-data" type="application\\/json">(.*?)<\\/script>/s)[1]);
-const context={t:x=>x,document:{getElementById:()=>({textContent:JSON.stringify(metadata)}),addEventListener(){}},clone:x=>JSON.parse(JSON.stringify(x)),definition:n=>data.catalog.find(d=>d.definitionUuid===n.definitionUuid),FunctionModel:{CALL:'sgrape.function.call'}};
-vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[1]+'/graph_ui.js','utf8'),context);context.setTypeContract(data.contract);
-vm.runInContext(fs.readFileSync(process.argv[1]+'/inspector.js','utf8'),context);
-for(const row of data.entries){assert.deepEqual(metadata.nodes[row.definition.definitionUuid],row.browser);const entry={d:row.definition,meta:context.browserMeta(row.definition)};for(const query of row.browser.aliases)assert.equal(context.browseEntries([entry],query,{source:'all'}).length,1,query);}
-process.stdout.write(JSON.stringify(data.rows.map(r=>context.defaultInput(r.node,r.port,r.type))));
-"""
-        result = subprocess.run(['node', '-e', script, str(root / 'src/editor')], input=json.dumps({
-            'contract': c.type_contract(), 'catalog': list(c.CATALOG.values()), 'rows': rows,
-            'entries': [row for row in document['definitions'] if row['definition']['key'] in KEYS]}),
-            capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout), [row['expected'] for row in rows])
-
-
 if __name__ == '__main__':
     unittest.main()

@@ -80,31 +80,6 @@ class NoiseNodes(unittest.TestCase):
                 c.compile_graph(graph)
             self.assertNotIn(key, c.type_contract()['constantExpressions'])
 
-    def test_catalog_and_shipped_browser_projection(self):
-        catalog = json.loads((ROOT / 'src/library/node_catalog.json').read_text('utf-8'))
-        html = (ROOT / 'src/editor/index.html').read_text('utf-8')
-        metadata = json.loads(re.search(r'<script id="node-browser-data" type="application/json">(.*?)</script>', html, re.S)[1])
-        locale = json.loads((ROOT / 'src/editor-react/static/locales.json').read_text('utf-8'))
-        for key in HELPERS:
-            row = next(row for row in catalog['definitions'] if row['definition']['key'] == key)
-            definition = row['definition']
-            self.assertEqual(definition['revisionHash'], c.digest({k: v for k, v in definition.items() if k != 'revisionHash'}))
-            self.assertEqual(metadata['nodes'][definition['definitionUuid']], row['browser'])
-            self.assertEqual(row['browser']['source'], 'td')
-            self.assertIn(HELPERS[key], row['browser']['aliases'])
-            variants = c.type_contract()['definitions'][definition['definitionUuid']]['variants']
-            self.assertEqual([v['type'] for v in variants], ['vec2', 'vec3', 'vec4'])
-            for language in locale['languages']:
-                self.assertTrue(locale['messages']['help.' + key][language])
-                self.assertTrue(locale['messages']['noise.position'][language])
-
-    def test_javascript_auto_type_transactions(self):
-        payload = {'catalog': list(c.CATALOG.values()), 'contract': c.type_contract()}
-        result = subprocess.run(['node', str(ROOT / 'tests/unit/test_noise_nodes.js')], input=json.dumps(payload), text=True, capture_output=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        for graph in json.loads(result.stdout)['graphs']:
-            c.compile_graph(graph)
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

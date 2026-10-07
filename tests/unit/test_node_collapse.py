@@ -20,16 +20,6 @@ def fixture():
 
 
 class NodeCollapse(unittest.TestCase):
-    def test_editor_history_copy_and_source_localization(self):
-        root = Path(__file__).resolve().parents[2]
-        payload = dict(catalog=list(c.CATALOG.values()), contract=c.type_contract(), graph=fixture(), function=c.function_library()[0])
-        result = subprocess.run(['node', str(root / 'tests/unit/test_node_collapse.js')], input=json.dumps(payload), text=True, capture_output=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        output = json.loads(result.stdout)
-        self.assertTrue(output['passed']); self.assertEqual(len(output['checks']), 5)
-        for pair in output['pairs']:
-            self.assertEqual(c.clean_semantic(pair['before']), c.clean_semantic(pair['after']))
-            self.assertEqual(c.compile_graph(pair['before'])['pixel'], c.compile_graph(pair['after'])['pixel'])
 
     def test_import_export_retains_layout_metadata(self):
         graph = fixture()

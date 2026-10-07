@@ -79,12 +79,5 @@ class BuiltinSubgraphNames(unittest.TestCase):
                 self.assertEqual(restored['graph'],function['graph'])
                 self.assertEqual(graph,before)
 
-    def test_editor_import_isolates_old_versions_and_preserves_names_on_localize(self):
-        root=Path(__file__).resolve().parents[2]
-        payload={'library':c.function_library()[:4],'legacy':legacy_function_library(),'graph':c.demo_graph('color','top'),'contract':c.type_contract()}
-        process=subprocess.run(['node',str(root/'tests/unit/test_builtin_subgraph_names.js')],input=json.dumps(payload),capture_output=True,text=True)
-        self.assertEqual(process.returncode,0,process.stderr)
-        self.assertIn('20 default node names',process.stdout)
-
 
 if __name__=='__main__':unittest.main()

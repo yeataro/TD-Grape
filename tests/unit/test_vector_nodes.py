@@ -92,13 +92,5 @@ class VectorNodes(unittest.TestCase):
                        edges=[c.edge('in','scale','a','value'),c.edge('scale','out','out')]))]
         self.assertIn('const vec4 sg_n_join',c.compile_graph(graph)['pixel'])
 
-    def test_editor_uses_same_layouts_and_preserves_edits(self):
-        root=Path(__file__).resolve().parents[2]
-        payload={'catalog':list(c.CATALOG.values()),'contract':c.type_contract()}
-        result=subprocess.run(['node',str(root/'tests/unit/test_vector_nodes.js')],input=json.dumps(payload),
-                              text=True,capture_output=True)
-        self.assertEqual(result.returncode,0,result.stderr)
-        for graph in json.loads(result.stdout)['graphs']:c.compile_graph(graph)
-
 
 if __name__=='__main__':unittest.main()

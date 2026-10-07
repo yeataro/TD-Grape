@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.25 — 解除對舊入口的依賴並移除舊入口 — 2026-10-08
+
+人類決定（2026-10-08）：趁現在解除依賴，legacy 只當參照；先提交一次再刪，測試通過再提交。約定：人類看舊行為開 main 的 TD，agent 查舊行為讀 legacy（兩者程式相同）。
+
+- **搬移（`ec065fd`）**：核心產物 → [src/generated/](../../src/generated)（`build:core` 改寫到這裡，內容不變）；新編輯器頁面改名 [index.html](../../src/editor-react/index.html)，靜態檔（`locales.json`、圖示、favicon、manifest）→ [src/editor-react/static/](../../src/editor-react/static)；產品版本只在 [src/version.json](../../src/version.json)，建置寫進 `build-info.json`，編輯服務從那裡讀。網址、Manager、TD 打包方式不變；打包檔案 48 → 25。
+- **刪除（人類看過清單後同意）**：`src/editor/` 整個（23 檔）；只測舊入口的 JS 測試 27 檔、`test_wire_validation.py`、`test_array_editor.py`、整合測試 2 檔；只改舊 `index.html` 的工具 3 個與 `check_locales.py`；其餘 14 個 Python 測試檔只拿掉呼叫舊入口的 16 個項目。`source_files.json`／`embedded_sources.json` 拿掉已刪檔案（各 20 筆；這些 DAT 在 TD 中本來就不存在）。兩個仍在用的核心測試改用核心本身（不再借舊入口的小工具）。
+- **未動（之後再談）**：`tests/browser/` 約 210 個舊入口瀏覽器測試（不在現行測試指令中，留著不會壞東西；本輪盤點時漏掉，未列入給人類的清單，故不刪）；舊 Python 核心 `src/core/` 及其測試；TD 端服務舊入口的程式；`tests/td/cold_start_probe.py`（舊 runtime 探測）。
+- 驗證：core 108（少 1：測舊入口畫面的項目已刪）、session 37、TD 端 Python 29、Remote Panel 27、browser 18 組。舊 Python 全套刪除前後比對：746 → 727 項，失敗 29 → 17，**沒有新增失敗**（17 個皆刪除前已存在）。真實 TD（Refactor.25，證據 `work/refactor/react-25/`）：服務 Refactor.25、打包指紋刪除前後相同；Edit 網址開新編輯器、舊格式 OP 說明、首頁說明；改圖 566 TD 收到 Shader、Undo 567 與原圖相同；無錯誤；TOE 已交付（TD-Grape-dev.42）。
+
 ## Refactor.24 — 新編輯器成為唯一入口；舊入口停用（標記、不刪） — 2026-10-08
 
 人類決定（2026-10-08）：放棄舊入口；入口換到新編輯器；舊入口檔案**先標記、不刪**，整個遷移完成時再處理；看舊行為開 main／legacy 的 TD。

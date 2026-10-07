@@ -30,22 +30,6 @@ class MathCatalog(unittest.TestCase):
                     self.assertEqual(compiled['stages']['pixel']['ports']['operation']['out']['out'],expected)
                     self.assertIn('sg_n_operation',compiled['pixel'])
 
-    def test_defaults_match_parameter_panel_for_every_type(self):
-        rows=[]
-        for key in NEW:
-            for ty in c.FLOAT_TYPES:
-                for port,t in c.CATALOG[key]['inputs'].items():
-                    t=ty if t=='T' else t
-                    rows.append({'node':c.node(key,'probe',type=ty),'port':port,'type':t,'expected':c.input_default(key,port,t)})
-        script="""const fs=require('fs'),vm=require('vm');const data=JSON.parse(fs.readFileSync(0,'utf8'));
-const context={t:x=>x,document:{addEventListener(){}},clone:x=>JSON.parse(JSON.stringify(x)),definition:n=>data.catalog.find(d=>d.definitionUuid===n.definitionUuid)};
-vm.createContext(context);vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),context);context.setTypeContract(data.contract);
-vm.runInContext(fs.readFileSync(process.argv[1],'utf8'),context);
-process.stdout.write(JSON.stringify(data.rows.map(r=>context.defaultInput(r.node,r.port,r.type))));"""
-        root=Path(__file__).resolve().parents[2]/'src/editor'
-        result=subprocess.check_output(['node','-e',script,str(root/'inspector.js'),str(root/'graph_ui.js')],input=json.dumps({'contract':c.type_contract(),'catalog':list(c.CATALOG.values()),'rows':rows}),text=True)
-        self.assertEqual(json.loads(result),[row['expected'] for row in rows])
-
     def test_wire_value_precedence_and_saved_divisor(self):
         g=math_graph('divide','float');p=g['stages']['pixel'];op=p['nodes'][0]
         self.assertIn('0.0 / 1.0',c.compile_graph(g)['pixel'])

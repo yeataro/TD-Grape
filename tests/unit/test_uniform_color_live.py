@@ -149,9 +149,5 @@ class UniformColorLive(unittest.TestCase):
         self.source.pars[2].bindExpr='parent().par.Replaced'
         before=self.values();self.assertIn('error',self.send('update',sequence=0,value=[.1,.2,.3,.4]));self.assertEqual(self.values(),before)
 
-    def test_browser_client_session_contract(self):
-        result=subprocess.run(['node',str(Path(__file__).with_suffix('.js'))],text=True,encoding='utf-8',capture_output=True)
-        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-
 
 if __name__=='__main__':unittest.main()

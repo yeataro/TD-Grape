@@ -73,15 +73,6 @@ class BasicMathNodes(unittest.TestCase):
                     with self.subTest(key=key, type=ty), self.assertRaises(c.GraphError):
                         c.compile_graph(graph_for(key, ty))
 
-    def test_ui_defaults_type_plans_undo_and_export_compile(self):
-        root = Path(__file__).resolve().parents[2]
-        payload = dict(catalog=list(c.CATALOG.values()), contract=c.type_contract(), keys=KEYS)
-        run = subprocess.run(['node', str(root/'tests/unit/test_basic_math_nodes.js')],
-                             input=json.dumps(payload), text=True, capture_output=True)
-        self.assertEqual(run.returncode, 0, run.stderr)
-        for graph in json.loads(run.stdout)['graphs']:
-            c.compile_graph(graph)
-
 
 if __name__ == '__main__':
     unittest.main()

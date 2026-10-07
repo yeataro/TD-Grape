@@ -89,16 +89,5 @@ class Voronoi(unittest.TestCase):
             zero=reference(dim,scale=0)
             self.assertTrue(all(x==0 for x in zero.get('position',[])));self.assertEqual(zero.get('w',0),0)
 
-    def test_catalog_projection_and_five_languages(self):
-        root=Path(__file__).resolve().parents[2]
-        definition=c.CATALOG['voronoi']
-        self.assertEqual(definition['revisionHash'],c.digest({k:v for k,v in definition.items() if k!='revisionHash'}))
-        projection=json.loads(re.search(r'<script id="node-browser-data" type="application/json">(.*?)</script>',(root/'src/editor/index.html').read_text('utf-8'),re.S)[1])
-        self.assertEqual(projection['nodes'][definition['definitionUuid']]['categoryPath'],['math','noise'])
-        locales=json.loads((root/'src/editor-react/static/locales.json').read_text('utf-8'))
-        keys=set(v.DEFAULTS)|set(v.INPUT_DEFAULTS)|set(v.FEATURES)|set(v.METRICS)|{'distance','color','position','radius','hint'}
-        for key in keys:
-            for language in locales['languages']:self.assertTrue(locales['messages']['voronoi.'+key][language])
-
 
 if __name__=='__main__': unittest.main(verbosity=2)
