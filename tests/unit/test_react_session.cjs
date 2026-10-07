@@ -37,7 +37,7 @@ function fixture() {
 // New-editor protocol (design-interview Q38, Q40): TD holds the document as opaque text.
 const doc = state => JSON.parse(state.document);
 const withDoc = (state, edit) => { const graph = doc(state); edit(graph); state.document = JSON.stringify(graph); return state; };
-function open(t, request, retry = 60000) {
+function open(t, request, retry = 60000, generator) {
   let remote = { document: JSON.stringify(fixture()), revision: 4, targetId: target };
   const calls = [];
   const loaded = () => ({ state: clone(remote), format: 'grape-next-1', shaderKind: 'top', target: '/test/family',
@@ -50,7 +50,7 @@ function open(t, request, retry = 60000) {
       { state: (remote = { document: body.document, revision: body.revision + 1, targetId: target }) };
     return result instanceof Response ? result : new Response(JSON.stringify(result));
   };
-  const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000, retry);
+  const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000, retry, generator);
   t.after(() => session.dispose());
   return { session, calls, loaded };
 }
@@ -229,14 +229,18 @@ test('migration convenience: overwrite still conflicts if TD changes again befor
 
 // Code generation failed (design-interview Q38 2-5): the document is still saved to TD so no work is
 // lost; the execution part is not sent, so TD keeps running the last known good Shader.
+// Code generation cannot be made to fail through the UI any more (Color Output is protected), so
+// these tests give the editor a generator that fails on request. 產碼失敗改由測試傳入會失敗的產碼器模擬。
+const flaky = () => { const g = { fail: false, key: graph => GrapeTopCompiler.key(graph),
+  compile: (...args) => { if (g.fail) throw Error('forced failure'); return GrapeTopCompiler.compile(...args); } }; return g; };
 test('failed code generation still saves the document; TD keeps the last known good Shader', async t => {
-  const { session, calls } = open(t);
-  session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'pixel_out'), edges: [] });
+  const generator = flaky(), { session, calls } = open(t, undefined, 60000, generator);
+  generator.fail = true; session.transact('value', net => setValue(net, 'a', 7));
   await session.flush();
   assert.equal(calls.length, 1); assert.equal(calls[0].body.runtime, null);
   assert.deepEqual(JSON.parse(calls[0].body.document), clone(session.graph()));
   assert.equal(session.snapshot().dirty, false); assert.match(session.snapshot().message, /產碼失敗/);
-  session.history(false); await session.flush();
+  generator.fail = false; session.history(false); await session.flush();
   assert.equal(calls.length, 2); assert.notEqual(calls[1].body.runtime, null);
 });
 
@@ -448,11 +452,13 @@ test('every offered node can be added, wired to the output and compiled', t => {
 });
 
 // Retired value definitions open old graphs but are never offered for new nodes (legacy creator).
-test('add menu offers every supported node except retired float/vec2/vec3/vec4', () => {
+test('add menu offers every supported node except retired float/vec2/vec3/vec4 and Color Output', () => {
   const { supportedDefinitions, creatableDefinitions } = load(path.join(root, 'src/editor-react/core.ts'));
   const retired = ['float', 'vec2', 'vec3', 'vec4'].map(k => 'sgrape.builtin.' + k);
   assert.ok(retired.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
-  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid)));
+  const fixed = ['sgrape.builtin.pixel_out']; // stage outputs are never offered (Q42)
+  assert.ok(fixed.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
+  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
 });
 
@@ -489,8 +495,8 @@ test('TD away: GLSL and code generation errors still update while sending is sto
 });
 
 test('a code generation failure is reported at edit time; the last good GLSL stays visible', t => {
-  const { session, calls } = open(t), good = session.snapshot().glsl;
-  session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'pixel_out'), edges: [] });
+  const generator = flaky(), { session, calls } = open(t, undefined, 60000, generator), good = session.snapshot().glsl;
+  generator.fail = true; session.transact('value', net => setValue(net, 'a', 7));
   assert.match(session.snapshot().message, /產碼失敗/);
   assert.equal(session.snapshot().glsl, good);
   assert.equal(calls.length, 0);
@@ -534,4 +540,44 @@ test('an over-limit graph opens with a warning; growth is refused with a message
   assert.deepEqual(clone(session.graph()), before);
   session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'f0'), edges: [] });
   assert.equal(session.graph().stages.pixel.nodes.length, before.stages.pixel.nodes.length - 1);
+});
+
+// Color Output identity (Q42): the core refuses; this layer skips it on Delete and words the reason.
+// Color Output 身分：核心拒絕；畫面在 Delete 時跳過它並說明原因。
+test('Delete skips Color Output and its unselected wires; the rest is deleted in one step', async t => {
+  const { session } = open(t);
+  session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
+  const flow = session.snapshot().projection, before = clone(session.graph());
+  const nodes = flow.nodes.filter(n => n.id === 'pixel_out' || n.id === 'b').map(n => ({ ...n, selected: true }));
+  const edges = flow.edges.filter(e => e.target === 'pixel_out').map(e => ({ ...e, selected: false }));
+  const allowed = await session.beforeDelete({ nodes, edges });
+  assert.deepEqual(clone(allowed.nodes.map(n => n.id)), ['b']); assert.equal(allowed.edges.length, 0);
+  session.remove(allowed);
+  const ids = session.graph().stages.pixel.nodes.map(n => n.id);
+  assert.ok(ids.includes('pixel_out') && !ids.includes('b'));
+  assert.ok(session.graph().stages.pixel.edges.some(e => e.to[0] === 'pixel_out'), 'its wire stays');
+  assert.match(session.snapshot().message, /Color Output 不能刪除/);
+  session.history(false); assert.deepEqual(clone(session.graph()), before);
+});
+
+test('deleting only Color Output changes nothing and says why; the core refuses it anyway', async t => {
+  const { session } = open(t), before = clone(session.graph());
+  const out = session.snapshot().projection.nodes.filter(n => n.id === 'pixel_out');
+  const allowed = await session.beforeDelete({ nodes: out, edges: [] });
+  assert.equal(allowed.nodes.length, 0); assert.match(session.snapshot().message, /^Color Output 不能刪除$/);
+  session.remove({ nodes: out, edges: [] }); // bypassing the UI filter: the core gate refuses
+  assert.deepEqual(clone(session.graph()), before);
+  assert.match(session.snapshot().message, /沒有套用：圖裡必須有一個 Color Output/);
+});
+
+test('a graph with two Color Outputs opens with a warning; a third is refused; removing one repairs it', t => {
+  const { session: probe, loaded } = open(t), broken = loaded();
+  withDoc(broken.state, graph => graph.stages.pixel.nodes.push({ id: 'second', definitionUuid: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
+  const session = new EditorSession(probe.host, bootstrap, broken, 60000, 60000); t.after(() => session.dispose());
+  assert.match(session.snapshot().message, /^警告：這張圖不符合結構規則.*Color Output 只能有一個（目前 2 個）/);
+  const before = clone(session.graph());
+  session.transact('third', net => net.insert({ id: 'third', definitionUuid: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
+  assert.deepEqual(clone(session.graph()), before); assert.match(session.snapshot().message, /目前 3 個/);
+  session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'second'), edges: [] });
+  assert.equal(session.graph().stages.pixel.nodes.filter(n => n.definitionUuid === 'sgrape.builtin.pixel_out').length, 1);
 });

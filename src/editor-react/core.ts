@@ -5,13 +5,16 @@ import type { createCompiler } from '../core-ts/top_compiler';
 import type { createEditorContract } from '../core-ts/editor_contract';
 import type { Graph as GraphData } from '../core-ts/model';
 import type * as capacity from '../core-ts/capacity';
+import type * as structure from '../core-ts/structure';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
 // 只接入既有生成核心；型別引用不把另一份 registry／compiler 打進 React bundle。
 export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   registry: modules.Registry; values: typeof values; overLimit: typeof capacity.overLimit;
+  structureProblems: typeof structure.structureProblems; offered: typeof structure.offered; removable: typeof structure.removable;
 };
 export type { Measure } from '../core-ts/capacity';
+export type { StructureProblem } from '../core-ts/structure';
 declare global {
   var GrapeGraph: Core;
   var GrapeTopCompiler: ReturnType<typeof createCompiler>;
@@ -52,7 +55,9 @@ export const supportedDefinitions = [
 // value is made with Scalar／Vector (fixed entries to be discussed).
 // 已淘汰的舊定義：能打開舊圖、不再新增（同舊產品新增清單）；同樣的值改用 Scalar／Vector 建立。
 const retired = new Set(['float', 'vec2', 'vec3', 'vec4'].map(key => 'sgrape.builtin.' + key));
-export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid));
+// The core decides what may be added (a stage output such as Color Output never is, Q42).
+// 能不能新增由核心決定（Color Output 這類 stage 出口不提供）。
+export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid) && core.offered(core.registry.get(uuid)!));
 export function requireSupported(graph: graph.GraphDocument['document']) {
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {
@@ -81,7 +86,8 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): string[] {
   }
   // Size is not "unsupported": an over-limit graph opens with a warning and only growth is blocked.
   // 大小不算「不支援」：超過上限的圖照樣打開並警告，只擋變大。
-  if (!reasons.length && !compiler.supports(graph) && !core.overLimit(graph, core.registry).length) reasons.push('前端 compiler 無法處理這張圖');
+  if (!reasons.length && !compiler.supports(graph) && !core.overLimit(graph, core.registry).length
+    && !core.structureProblems(graph, core.registry).length) reasons.push('前端 compiler 無法處理這張圖');
   return reasons;
 }
 

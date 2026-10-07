@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.23 — Color Output 身分固定（結構規則） — 2026-10-08
+
+人類要求（Q42）：Color Output 一定在頂層、只有一個、不能刪、不在新增選單。人類同意做法（2026-10-08），並決定：看舊行為改開另一個 TD（main 或 legacy），refactor 裡的舊入口**不再保證能用**，新核心不為它妥協。
+
+- **核心結構規則**：[structure.ts](../../src/core-ts/structure.ts)，與上限同一關卡（`GraphDocument.change()` 結束前）。每個 stage 最外層的 stage 出口（role `output`）必須剛好一個、子圖內為零；讓圖違規或更違規的修改整筆拒絕（`StructureError`，帶資料），修正方向一律允許；開圖不擋，狀態列警告。`offered`／`removable` 由核心回答。
+- **畫面**：新增選單只列核心 `offered` 的定義（Color Output 不在其中）；Delete 經 `onBeforeDelete` 跳過核心不准刪的節點及其未選取的接線，其餘照刪，狀態列「Color Output 不能刪除」。用語在 [editor.ts](../../src/editor-react/editor.ts)。
+- **Editor 建立時接收產碼器**（config 約定 4，沒給就用共用的）：原本兩個「產碼失敗」測試靠刪 Color Output 製造失敗，現改由測試傳入會失敗的產碼器。
+- 驗證：core 109（新增 6：刪除／複製／放進子圖被拒且圖不變、違規圖可開可修不可更糟、核心不提供不可刪）、session 37（新增 3）、browser 18 組（新增：Delete 跳過並提示、選單沒有 Color Output）。真實 TD（Refactor.23，證據 `work/refactor/react-23/`）：開圖 505 無警告；選單無 Color Output；選取後按 Delete → 提示、revision 仍 505、文件不變；Operator Viewer 正確、無錯誤；TOE 已交付。
+
 ## Refactor.22 — Color Output 顏色；框選碰到就選；拉到空白斷線 — 2026-10-08
 
 人類要求（2026-10-08）：先做兩件事——Color Output 改色、框選碰到就選＋從輸入拉到空白處斷線。顏色組名稱由 agent 取：`colorGroup`。

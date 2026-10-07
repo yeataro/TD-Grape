@@ -13,6 +13,7 @@ const values = require("./values");
 const node_module_1 = require("./node_module");
 const top_compiler_1 = require("./top_compiler");
 const capacity_1 = require("./capacity");
+const structure_1 = require("./structure");
 const editor_contract_1 = require("./editor_contract");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
@@ -73,7 +74,7 @@ const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit };
+exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable };
 
 },
 "capacity":function(require,module,exports){
@@ -390,6 +391,7 @@ const ports_1 = require("./ports");
 const wire_planning_1 = require("./wire_planning");
 const changes_1 = require("./changes");
 const capacity_1 = require("./capacity");
+const structure_1 = require("./structure");
 var changes_2 = require("./changes");
 Object.defineProperty(exports, "changesBetween", { enumerable: true, get: function () { return changes_2.changesBetween; } });
 var node_module_2 = require("./node_module");
@@ -949,9 +951,11 @@ class GraphDocument {
             if (!(0, changes_1.equal)(before, candidate.document))
                 complete(candidate.document, before);
             const after = candidate.snapshot();
-            // The one gate every edit passes: refuse growth beyond the core limits (capacity.ts).
-            // 每次修改都經過的唯一關卡：超過核心上限的「變大」整筆拒絕。
+            // The one gate every edit passes: refuse growth beyond the core limits (capacity.ts) and
+            // edits that break the graph's structure rules (structure.ts).
+            // 每次修改都經過的唯一關卡：超過核心上限的「變大」、破壞結構規則的修改，整筆拒絕。
             (0, capacity_1.requireCapacity)(before, after, this.registry);
+            (0, structure_1.requireStructure)(before, after, this.registry);
             return { before, after, changes: (0, changes_1.changesBetween)(before, after, this.registry) };
         }
         finally {
@@ -4574,6 +4578,48 @@ function walk(value, replace, mutate = true) {
     }
 }
 exports.ScopeReferences = { token, reference, walk };
+
+},
+"structure":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.StructureError = exports.removable = exports.offered = void 0;
+exports.structureProblems = structureProblems;
+exports.requireStructure = requireStructure;
+const stageOutput = (module) => (module === null || module === void 0 ? void 0 : module.role) === 'output';
+/** Whether a module may be offered for adding a new node. 新增選單只提供這些。 */
+const offered = (module) => !stageOutput(module);
+exports.offered = offered;
+/** Whether the user may delete this node. 能不能刪。 */
+const removable = (module) => !stageOutput(module);
+exports.removable = removable;
+function counts(g, registry) {
+    const count = (data) => data.nodes.filter(n => stageOutput(registry.get(n.definitionUuid))).length;
+    return [
+        ...Object.entries(g.stages || {}).map(([id, data]) => ({ key: 'stageOutputs', network: id, value: count(data), expected: 1 })),
+        ...(g.functions || []).map(f => ({ key: 'stageOutputs', network: 'function:' + f.id, value: count(f.graph), expected: 0 })),
+    ];
+}
+const distance = (p) => Math.abs(p.value - p.expected);
+/** Rules the graph currently breaks; used to report a graph when it is opened. */
+function structureProblems(g, registry) {
+    return counts(g, registry).filter(p => distance(p) > 0);
+}
+class StructureError extends Error {
+    constructor(problems) {
+        super('Graph structure rule: ' + problems.map(p => `${p.key} (${p.network}) ${p.value}, expected ${p.expected}`).join(', '));
+        this.problems = problems;
+        this.name = 'StructureError';
+    }
+}
+exports.StructureError = StructureError;
+/** Refuses edits that move a network further from the rule; repairs are always allowed. */
+function requireStructure(before, after, registry) {
+    const previous = new Map(counts(before, registry).map(p => [p.network, distance(p)]));
+    const worse = counts(after, registry).filter(p => { var _a; return distance(p) > ((_a = previous.get(p.network)) !== null && _a !== void 0 ? _a : 0); });
+    if (worse.length)
+        throw new StructureError(worse);
+}
 
 },
 "subgraph_compiler":function(require,module,exports){

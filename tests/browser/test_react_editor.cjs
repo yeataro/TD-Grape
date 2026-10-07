@@ -163,6 +163,15 @@ function fixture() {
     const [outColor, sumColor] = [await titleColor('pixel_out'), await titleColor('sum')];
     assert.notEqual(outColor, sumColor, outColor);
     checks.push('Color Output title uses the output colour group: ' + outColor);
+    // Refactor.23: Color Output cannot be deleted or added (Q42); the reason is shown.
+    const outputs = () => state.graph.stages.pixel.nodes.filter(n => n.definitionUuid === 'sgrape.builtin.pixel_out').length;
+    const beforeDelete = writes.length;
+    await page.locator('.react-flow__node[data-id="pixel_out"] .node-title').click(); await page.keyboard.press('Delete'); await settle();
+    assert.equal(outputs(), 1); assert.equal(writes.length, beforeDelete, 'nothing is written');
+    assert.match(await page.locator('body').innerText(), /Color Output 不能刪除/);
+    assert.equal(await page.locator('option', { hasText: 'Color Output' }).count(), 0, 'not offered in the add menu');
+    await page.mouse.click(x0, y0); await settle();
+    checks.push('Color Output: Delete skips it with a message; not in the add menu');
     // 17.2: Combine groups a wired vec3 over X/Y/Z (core planner); Swizzle's module controls edit it.
     const nodeOf = id => state.graph.stages.pixel.nodes.find(n => n.id === id);
     await page.locator('.react-flow__node[data-id="cb"]').scrollIntoViewIfNeeded();

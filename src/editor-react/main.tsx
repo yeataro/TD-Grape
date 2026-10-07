@@ -34,7 +34,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
 }) {
   return <BodyDragContext.Provider value={bodyDrag}><RightDragSelect session={session}>
     <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={projection.edges} nodeTypes={nodeTypes}
-      onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onDelete={session.remove}
+      onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
       onConnectEnd={(_event, state) => {
         if (state.toHandle && !state.isValid) session.notice('接線被核心拒絕：型別或圖結構不相容');

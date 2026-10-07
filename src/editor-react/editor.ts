@@ -1,5 +1,5 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
-import { core, compiler, requireSupported, parseDocument, type Measure, type Graph, type GraphDocument, type Network, type Value, type Bootstrap } from './core';
+import { core, compiler, requireSupported, parseDocument, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse } from './host';
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
@@ -30,6 +30,13 @@ const capacityMessage = (error: unknown) => {
   const measures = (error as { name?: string; measures?: Measure[] } | null)?.name === 'CapacityError' ? (error as { measures?: Measure[] }).measures : undefined;
   return measures ? '已達上限，這次修改沒有套用：' + limitText(measures) : undefined;
 };
+// Structure rules (Q42) arrive as data as well. 結構規則同樣以資料回報。
+const structureText = (problems: readonly StructureProblem[]) => problems.map(p => p.expected === 0
+  ? '子圖內不能放 Color Output' : p.value === 0 ? '圖裡必須有一個 Color Output' : `Color Output 只能有一個（目前 ${p.value} 個）`).join('、');
+const structureMessage = (error: unknown) => {
+  const problems = (error as { name?: string; problems?: StructureProblem[] } | null)?.name === 'StructureError' ? (error as { problems?: StructureProblem[] }).problems : undefined;
+  return problems ? '這次修改沒有套用：' + structureText(problems) : undefined;
+};
 
 const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).concat((graph.functions || []).map(f => f.graph))
   .map(net => net?.nodes.map(n => [n.ui?.comment, n.ui?.label])));
@@ -51,7 +58,10 @@ export class Editor {
   private codegen: Delivery;
   private disposed = false;
   private readonly sync: HostSync;
-  constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse, delay = 0, retry = 5000) {
+  // The code generator is received when created (config convention 4); omitted means the shared one.
+  // 產碼器在建立時傳入（config 約定 4）；沒給就用共用的那個。測試用它模擬產碼失敗。
+  constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse, delay = 0, retry = 5000,
+    private readonly generator: Pick<typeof compiler, 'key' | 'compile'> = compiler) {
     checkLoaded(host, bootstrap, loaded);
     const graph = parseDocument(loaded.state.document);
     requireSupported(graph);
@@ -64,22 +74,24 @@ export class Editor {
     // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
     const over = core.overLimit(graph, core.registry);
     if (over.length) this.state.message = '警告：這張圖超過上限，目前無法產碼；可以刪減後再繼續——' + limitText(over);
+    const broken = core.structureProblems(graph, core.registry);
+    if (broken.length) this.state.message = '警告：這張圖不符合結構規則，可以修正後再繼續——' + structureText(broken);
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   snapshot = () => this.state;
   graph = () => this.document.snapshot();
   private publish() { if (!this.disposed) this.listeners.forEach(listener => listener()); }
   private status(patch: Partial<EditorState>) { this.state = { ...this.state, ...patch }; this.publish(); }
-  notice = (error: unknown) => this.status({ message: capacityMessage(error) ?? (error instanceof Error ? error.message : String(error)) });
+  notice = (error: unknown) => this.status({ message: capacityMessage(error) ?? structureMessage(error) ?? (error instanceof Error ? error.message : String(error)) });
   // Skips code generation when neither the fingerprint nor the notes changed (e.g. moving a node).
   // Notes only add GLSL comment lines: they refresh the GLSL shown here, never TD's program (rule B).
   // 指紋與註記都沒變（例如移動節點）就不產碼；註記只影響這裡顯示的 GLSL 註解，不讓 TD 重編（規則 B）。
   private notes = '';
   private compile(): Delivery {
-    const graph = this.document.snapshot(), key = compiler.key(graph), notes = noteKey(graph);
+    const graph = this.document.snapshot(), key = this.generator.key(graph), notes = noteKey(graph);
     if (this.codegen && key === this.codegen.key && notes === this.notes) return { ...this.codegen, graph };
     this.notes = notes;
-    try { return { graph, key, compiled: compiler.compile(graph, this.bootstrap.typeContract.glslCode) as Compiled }; }
+    try { return { graph, key, compiled: this.generator.compile(graph, this.bootstrap.typeContract.glslCode) as Compiled }; }
     catch (error) { return { graph, key, error: String(error) }; }
   }
 
@@ -135,7 +147,19 @@ export class Editor {
     const edges = net.node(node).port('input', port).edges;
     if (edges.length) net.disconnectAll(edges);
   });
-  remove = ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => this.transact('選取項目已刪除', net => {
+  // Delete skips nodes the core keeps (Color Output) and those nodes' unselected wires; the rest goes.
+  // 刪除時跳過核心不准刪的節點（Color Output）及其未被選取的接線，其餘照刪。
+  beforeDelete = async ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => {
+    const kept = new Set(nodes.filter(node => !core.removable(core.registry.get(node.data.authored.definitionUuid))).map(node => node.id));
+    this.keptNote = kept.size ? 'Color Output 不能刪除；其他選取項目已刪除' : undefined;
+    if (!kept.size) return true;
+    if (kept.size === nodes.length && edges.every(edge => !edge.selected)) this.status({ message: 'Color Output 不能刪除' });
+    return { nodes: nodes.filter(node => !kept.has(node.id)),
+      edges: edges.filter(edge => edge.selected || !(kept.has(edge.source) || kept.has(edge.target))) };
+  };
+  private keptNote?: string;
+  remove = ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => this.transact(this.keptNote ?? '選取項目已刪除', net => {
+    this.keptNote = undefined;
     const ids = new Set(edges.map(edge => edge.id));
     net.disconnectAll(net.edges.filter(edge => ids.has(edge.id)));
     net.removeAll(nodes.map(node => net.node(node.id)));
