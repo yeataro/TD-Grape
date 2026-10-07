@@ -6,7 +6,7 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.25**（2026-10-08）——解除對舊入口的依賴並移除舊入口：核心產物在 `src/generated/`、新編輯器頁面為 `src/editor-react/index.html`（靜態檔在 `static/`）、產品版本只在 `src/version.json`；`src/editor/` 與只測舊入口的測試已刪。其後 `e50e656` 已刪 `tests/browser/` 的舊入口測試（212＋匯出工具）。尚未處理：舊 Python 核心與其測試、TD 端舊入口程式（見下方「進行中」）。前一版 **Refactor.24**（2026-10-08）——新編輯器成為唯一入口（Edit 與首頁都打開它）；舊入口停用，檔案先標記不刪（`src/editor/README.md` 列出仍在使用、要先搬走的共用檔案）。前一版 **Refactor.23**（2026-10-08）——Color Output 身分固定：核心結構規則（頂層剛好一個、子圖內不准有；刪除、複製、放進子圖都整筆拒絕；開圖不擋只警告），新增選單不提供、Delete 跳過並提示。refactor 裡的舊入口不再保證能用（看舊行為改開另一個 TD）。前一版 **Refactor.22**（2026-10-08）——Color Output 標題改綠（顏色系統第一步：`theme/dark.css`＋`colorGroup`）、框選碰到即選（右鍵拖／Shift＋左鍵拖、Shift 加選、RF 內建框選關閉）、從輸入拉到空白處斷線。前一版 **Refactor.21**（2026-10-08）——編輯時就檢查上限（核心單一關卡、開圖不擋只擋變大、狀態列警告）。前一版 **Refactor.20.1**（2026-10-08）——核心設定 `config.ts`（上限集中、約定寫在開頭，數值不變）。前一版 **Refactor.20**——路徑重建 A3：產碼指紋＋必跑的性質測試；純版面修改不產碼、TD 不做 GPU。待人類決定：Worker、結構共享、節點上限（需先實測子圖展開的大圖）。A2b（唯讀打開舊圖）延到 ghost 完成後。前一版 **Refactor.19**（2026-10-08）——路徑重建 A2a：新編輯器協定（TD 把圖當不透明文字、執行用部分成對套用、產碼失敗只送圖、Last Known Good、拿掉送出等待）；新舊 OP 以 TD tag `grapeNextEditor` 分流，測試 OP 已轉換。下一步 A2b（新編輯器唯讀打開舊圖），再 A3（指紋、Worker）。前一版 Refactor.18（A1：Editor／HostSync 拆分、產碼不等送出）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
+**最新交付：Refactor.26**（2026-10-08）——圖格式 grape-graph 1（Q44）：`format`＋`version` 識別、`subgraphs`／`structDefinitions`／`nodeType`、筆記搬到節點 `comment`、接線 id 必填且隨機、未知欄位與 `extensions` 原樣保留；編輯器不開舊格式與較新版本；測試 OP 已轉成新格式（舊→新對照表見 [GRAPH_FORMAT](../architecture/GRAPH_FORMAT.md)，轉換工具 `tools/dev/old_graph.cjs`）。前一版 **Refactor.25**（2026-10-08）——解除對舊入口的依賴並移除舊入口：核心產物在 `src/generated/`、新編輯器頁面為 `src/editor-react/index.html`（靜態檔在 `static/`）、產品版本只在 `src/version.json`；`src/editor/` 與只測舊入口的測試已刪。其後 `e50e656` 已刪 `tests/browser/` 的舊入口測試（212＋匯出工具）。尚未處理：舊 Python 核心與其測試、TD 端舊入口程式（見下方「進行中」）。前一版 **Refactor.24**（2026-10-08）——新編輯器成為唯一入口（Edit 與首頁都打開它）；舊入口停用，檔案先標記不刪（`src/editor/README.md` 列出仍在使用、要先搬走的共用檔案）。前一版 **Refactor.23**（2026-10-08）——Color Output 身分固定：核心結構規則（頂層剛好一個、子圖內不准有；刪除、複製、放進子圖都整筆拒絕；開圖不擋只警告），新增選單不提供、Delete 跳過並提示。refactor 裡的舊入口不再保證能用（看舊行為改開另一個 TD）。前一版 **Refactor.22**（2026-10-08）——Color Output 標題改綠（顏色系統第一步：`theme/dark.css`＋`colorGroup`）、框選碰到即選（右鍵拖／Shift＋左鍵拖、Shift 加選、RF 內建框選關閉）、從輸入拉到空白處斷線。前一版 **Refactor.21**（2026-10-08）——編輯時就檢查上限（核心單一關卡、開圖不擋只擋變大、狀態列警告）。前一版 **Refactor.20.1**（2026-10-08）——核心設定 `config.ts`（上限集中、約定寫在開頭，數值不變）。前一版 **Refactor.20**——路徑重建 A3：產碼指紋＋必跑的性質測試；純版面修改不產碼、TD 不做 GPU。待人類決定：Worker、結構共享、節點上限（需先實測子圖展開的大圖）。A2b（唯讀打開舊圖）延到 ghost 完成後。前一版 **Refactor.19**（2026-10-08）——路徑重建 A2a：新編輯器協定（TD 把圖當不透明文字、執行用部分成對套用、產碼失敗只送圖、Last Known Good、拿掉送出等待）；新舊 OP 以 TD tag `grapeNextEditor` 分流，測試 OP 已轉換。下一步 A2b（新編輯器唯讀打開舊圖），再 A3（指紋、Worker）。前一版 Refactor.18（A1：Editor／HostSync 拆分、產碼不等送出）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
 
 **Refactor.17.1**——測試便利小修正：右鍵拖曳框選（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)）、右鍵拖曳後不跳瀏覽器選單、Body 拖曳預設開啟。
 
@@ -34,7 +34,7 @@
 
 **主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
 - 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
-- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。要點：`format: 'grape-graph'`、一張 `declarations` 以 `kind` 區分（含內建值 `builtin`、TOP 貼圖輸入）、Ghost 原則處理未知資料＋`extensions`、舊殘留只照對照表轉換（一次性工具轉測試 OP，最後做舊圖匯入器）、`description`／`comment`／`userVersion`、`defaultTexture`。**下一步：排「改圖格式」實作輪**（核心格式、預設圖、測試資料、測試 OP 轉換＋舊→新對照表）；暫定欄位名由助手在該輪提案、人類一次看過。
+- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**下一步：回到清殘留**——先請人類確認「甲乙丙丁四類」處理原則，再處理清理清單 2–8。
 
 **盤查最重要的發現：**
 1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 已由議事錄定案（Q44），待實作。
@@ -75,6 +75,7 @@
 
 | 發現日 | 情況 |
 | --- | --- |
+| 2026-10-08 | **Refactor.26 收尾時記下、未處理（不在 Q44 範圍，需人類決定或屬清殘留）**：(1) 節點目錄（catalog）的 `definitionUuid` 欄位名未改——`build:core` 仍替舊 Python 寫 `node_catalog.json`，與清理清單第 5 條一起處理；(2) 核心內部的網路 id 仍叫 `'function:'+id`（不存檔），而陣列長度引用的 `sg_extent_` 代號內含 `fn_` 前綴**會存進圖**——要不要改名需人類決定；(3) 編輯器「不支援」訊息仍寫「請使用舊入口」，舊入口已移除，文字過時；(4) `GrapeManagerExt.InitializeFamily` 走舊 NativeFamily 路徑並使用 bootstrap 預設圖的產碼結果（屬清理清單第 2 條）；(5) TD MCP 的 `view_operator` 在 `src/td/.claude/cache/` 留下快取圖檔（未追蹤、未提交）；(6) 「節點實作改版時舊圖產碼會悄悄改變」（舊產品靠每節點的 `revisionHash`）——新架構較自然的做法是節點模組自帶版本並轉換自己的舊參數，之後議題。 |
 | 2026-10-08 | **產碼器的節點上限（繼承自舊產品，不是產品最終上限）**：上限源自舊 Python 核心（`sgrape_core.py:2156`，每張網路 >256 節點或 >1024 線即「Graph is too large」），Refactor.7 照搬到 TS。**每張網路分開算**：各 stage、各子圖內部各 256；子圖在外層只算 1 個節點；有子圖時先展開再產碼，展開後上限 2048（`createCompiler` 的子圖路徑）。**更正**：Refactor.20 記錄寫「1000 節點無法產碼」是調查不完整（只量了無子圖的路徑），有子圖時可達 2048。產碼成本隨**展開後**大小成長（攤平產碼約每 100 節點 1 ms，2048 節點推估 16 ms 以上；展開本身未量），故畫面上的小圖可能是大圖成本。**人類方向**：現在的上限不是產品最後要的；可以設上限，但不會是這樣子——上限與 Worker、結構共享待「子圖展開的大圖」實測後一起決定。粗估（2026-10-08）：一般節點約 280～350 bytes，512 KB 約 1500～1800 節點，256 節點約 70～90 KB——先撞到的是節點數；長 Notes、GLSL Code 節點會讓單節點變大；子圖重度展開時較可能先撞 GLSL 的 512 KB。**人類：目前先維持 256。** 人類指出：若 256 是為了 TD 而避開，它就是沒有意義的值——256 節點遠小於 512 KB；推測原因是舊產品由 TD 端 Python 核心處理整張圖，新架構 TD 已不讀懂圖（Refactor.19），此理由不存在。**256 目前沒有依據，只是暫時的安全網**；真正上限應依新架構下真實存在的限制（編輯手感、GPU 編譯時間、GLSL 大小）實測後訂。**config 整理（人類）：等以後真的用得到再說**，做著做著可能就會用到。〔同日人類改定：數字散落不能接受，現在就做——已建 `src/core-ts/config.ts`（Refactor.20.1），開頭寫明約定；數字仍為 256 等舊值。〕 上限散落 5～6 處（top_compiler、subgraph_compiler、subgraph_operations、舊 Python；2048 寫兩次；512 KB 核心與 TD 各寫），整理方向：核心 `config.ts` 只放核心內至少兩處共用、開發者定死的值；元件建立時接收設定（測試可傳自己的、不改檔案）；跨編輯器↔TD 的值（512 KB）由 TD 告知編輯器、不兩邊各寫；只有一處用的值留原地（如 Math 的 32）。config（開發者定死）與 settings（使用者可改）分開。 |
 | 2026-10-08 | **【已處理 Refactor.21】** **編輯時不檢查節點上限**：GraphDocument 新增節點時不看上限，使用者可一直加到超過，直到產碼才失敗（「outside the selected frontend compiler capability」），事先沒有提醒——編輯與產碼對上限的認知沒對齊。方向：一個數字（`core-ts/config.ts`）、多個檢查點，編輯時就能提早告知「快到上限」。屬新行為，做之前與人類確認。 |
 | 2026-10-08 | **子圖定義數上限（64）沒有依據**：舊產品文件自承「這些是現有程式的限制，不是 GLSL 或 GPU 的標準上限」（LOOPS_DISCUSSION.md:100）；它想擋的（產碼成本、文件大小）已被展開後節點數與 512 KB 擋住。助手建議拿掉；人類：先留著，之後再說（改 config 一處即可）。 |
@@ -119,8 +120,8 @@
 ## 現場 TD（使用前以 TD MCP 重新確認）
 
 - 主組件 `/TD_Grape`；測試用 Grape TOP `/project1/Grape_TOP_React`（2026-10-07 已換成預設圖）
-- 新入口 `http://127.0.0.1:65465/react-editor.html?target=3ffb8d81896943c8bf90bec56791a33b`
-- `GrapeEditor` 的 `Use External Folder` **開啟**（2026-10-07 `DevMode()`，服務 Refactor.17）；提交 TOE 前先執行 `Deliver()`，見 AGENTS.md
+- 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
+- `GrapeEditor` 為**內嵌**（2026-10-08 `Deliver()`，服務 Refactor.26，存 TD-Grape-dev.43）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴

@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.26 — 圖格式 grape-graph 1 — 2026-10-08
+
+依 design-interview Q44（圖結構議事錄決議 1–17、A–E）實作「改圖格式」這一輪；人類授權自動進行（只做 Q44 寫到的事，沒寫到的停下來記成問題）。格式說明與舊→新對照表：[GRAPH_FORMAT.md](../architecture/GRAPH_FORMAT.md)。
+
+- **核心（`3f3f993`）**：`format: 'grape-graph'`＋`version: 1` 識別圖（`formatProblem`：不是新格式／比目前新／資料不完整）；`functions`→`subgraphs`、`typeDefinitions`→`structDefinitions`、節點 `definitionUuid`→`nodeType`；筆記從 `ui.comment` 搬到節點的 `comment`，`ui.label` 刪除；接線 `id` 必填，新接線由核心隨機產生（只用語言內建，不依賴宿主），刪 `edgeSequence`；子圖 `source` 併入 `origin`；產碼器不再讀舊產品的宣告欄位（`initialDriver`、`nativeSequence`、`exposeName`、`sourceMissing`、保留 id `grapeFallbackSampler`）；產碼指紋排除 `comment`、接線樣式、作品說明。不認得的欄位與 `extensions` 經過編輯原樣保留。節點目錄（catalog）裡的 `definitionUuid` 名稱未改（見 CURRENT「已發現」）。
+- **編輯器**：舊格式的圖不打開（仍提供換成預設圖）；比目前新的版本不打開也不提供重設，不會寫回；資料不完整另有說明。
+- **轉換工具** [tools/dev/old_graph.cjs](../../tools/dev/old_graph.cjs)（開發工具，不是產品）：照對照表轉換，新位置未定的欄位原樣保留並列出。用於測試 OP 的一次性轉換，以及舊 Python 對照組的測試案例（`test_top_compiler.cjs`）。日後的舊圖匯入器實作同一張表。
+- **測試 OP 轉換**：備份 `work/refactor/graph-format-round/`（TD 狀態、`GrapeControls/document` 全文、轉換前後的圖）。確認 TD 的圖與備份相同（revision 568）後，以 API 只送新格式的圖（569，Shader 不動）；轉換無待處理欄位。
+- 驗證：core 112（新增 `test_graph_format.cjs` 4 項；序號式接線 id 的 3 項改寫為隨機 id 的性質）、editor 37（加入舊格式／新版本的開圖斷言）、browser 測試通過；產碼對照（舊 Python）全部一致。真實 TD：Refactor.26 外部資料夾與內嵌皆正常、Manager Ready；新編輯器打開 569 的圖（17 節點、11 接線）；改 Convert 數值 → 570 TD 編譯並套用 Shader，Undo → 571 與轉換後的圖完全相同；`/project1/Grape_TOP_React` 無錯誤、輸出畫面正常；`Deliver()` 已存 TOE（TD-Grape-dev.43）。
+- 依「新抽象要有當輪真實 caller」延後：每種宣告 `kind` 由模組規定欄位與 `extensions` 外的警告（等 Uniform／貼圖那一輪）、子圖「攤平／函式」屬性（功能未存在）、作者與分類欄位（等分享功能）。
+
 ## Refactor.25 — 解除對舊入口的依賴並移除舊入口 — 2026-10-08
 
 人類決定（2026-10-08）：趁現在解除依賴，legacy 只當參照；先提交一次再刪，測試通過再提交。約定：人類看舊行為開 main 的 TD，agent 查舊行為讀 legacy（兩者程式相同）。
