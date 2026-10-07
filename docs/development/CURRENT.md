@@ -44,7 +44,7 @@
 - **D. 設定來源（Q36，討論中）**：個人偏好／這次開啟的環境／專案屬性三種；判斷標準已入 AGENTS.md；TD 內嵌開啟時先帶「在 TD 裡」這個事實參數。
 
 1. **【重中之重，但暫不實作】純版面修改不觸發產碼（人類 2026-10-07）**：可節省大量 TD 效能，屬協定、越晚越貴。是待實現的一大塊功能：規模變大（300／1000 節點、子圖攤平）時，整張圖產碼、打包傳送、TD 主執行緒解包核對都隨圖成長，需分層攔截（瀏覽器依 `GraphChanges` 只改 `ui` 即不產碼並只送改了的部分／TD 比對產碼結果跳過 GPU 驗證／完整流程）。**人類決定先把其他功能做完，再做真實狀況的效能盤點後才設計實作**（design-interview Q31 及補充）。現況與舊產品做法見 [LEGACY-GAPS](LEGACY-GAPS.md) 第一批 #1；Router「不觸發產碼」建立在此之上。
-2. **Uniform 支援（需人類決策，下次以 grilling 互相拷問後才動工）：** 牽涉宣告、TD 原生參數與綁定，不只節點本身，**不可當成小切片直接做**。2026-10-07 盤點：
+2. **Uniform 支援（決策已完成 2026-10-07，見 design-interview Q41；以下為當時盤點）：** 要點——來源（Source）與全域常數（Constant）歸作品（`document.sources`／`document.constants`，面板「共用來源」）；結構只在編輯器改；編輯器送 JSON，TD 寫入 Grape OP 內只被寫入的綁定表，以 DAT Export 驅動 GLSL OP Uniform 參數（已實測）；公開的才有 Grape OP Custom Parameters（名稱與 GLSL 名分開），值的權威在 TD；拖數值走即時通道、放開才記；一條共同歷史、一個 Ctrl+Z 只退編輯器做的；第一階段 float／vec／color＋預設 Uniform＋公開＋全域常數。舊盤點： 牽涉宣告、TD 原生參數與綁定，不只節點本身，**不可當成小切片直接做**。2026-10-07 盤點：
    - **TS 新核心已有**：Uniform 節點模組（引用宣告、輸出其值）、compiler 產生 `uniform` 宣告與綁定清單、宣告名稱／型別／值檢查；只支援一般數值與顏色（`nativeSequence` vec／color）。
    - **仍在舊 Python（新 Manager 使用中，GrapeManager 黃框）**：宣告新增／改名／刪除（`sgrape_sources.edit`）、建立與同步 TD 原生參數（`configure`）、改值（`write_value`）、原生值 Undo（`sgrape_history`）、原生參數遺失偵測。
    - **完全沒有**：React 的 Values 面板與 Uniform 節點選擇宣告的 UI；時間等預設驅動、陣列、矩陣、Attribute、POP Buffer、Spec Constant；拖曳即時更新。
