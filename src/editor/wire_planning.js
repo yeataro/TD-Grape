@@ -205,6 +205,24 @@ function appendNodeComments(lines, start, note) {
 }
 
 },
+"config":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CORE_CONFIG = void 0;
+exports.CORE_CONFIG = Object.freeze({
+    // No basis in the new architecture: inherited from the legacy Python core, which processed the
+    // whole graph on TD's main thread. TD no longer reads the graph (Refactor.19). Temporary safety
+    // net until measured limits exist (editing feel, GPU compile time, GLSL size); see CURRENT.
+    // 新架構下沒有依據：繼承自舊 Python 核心（TD 主執行緒處理整張圖）。暫時的安全網，待實測後再訂。
+    nodesPerNetwork: 256,
+    edgesPerNetwork: 1024, // same legacy origin; four edges per node
+    expandedNodes: 2048, // legacy-era choice for flattened subgraphs; same status as above
+    expandedEdges: 8192, // four edges per expanded node, as before
+    documentBytes: 512000, // TD's own limit (host); see convention 5
+    subgraphDefinitions: 64, // legacy-era choice
+});
+
+},
 "editor_contract":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -4496,6 +4514,7 @@ exports.createSubgraphCompiler = createSubgraphCompiler;
 /** Compile graph-owned subgraphs through a bounded, disposable expansion.
  * Node modules own interfaces; no imported library or DOM state is consulted. */
 const model_1 = require("./model");
+const config_1 = require("./config");
 const node_module_1 = require("./node_module");
 const subgraph_interface_1 = require("./subgraph_interface");
 const values_1 = require("./values");
@@ -4514,21 +4533,21 @@ const relay = {
     validate: n => { (0, values_1.type)(n.params.type); },
     emit: (_n, c) => ({ outputs: { out: c.input('value') } })
 };
-function createSubgraphCompiler(registry, engineFactory) {
+function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_CONFIG) {
     const engine = engineFactory((0, node_module_1.createRegistry)([...registry.modules, relay]));
     const identity = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
     const moduleOf = (node) => registry.get(node.definitionUuid);
     function supports(g) {
         var _a, _b;
         if (g.schemaVersion !== 1 || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' ||
-            ((_a = g.topInputs) === null || _a === void 0 ? void 0 : _a.length) || ((_b = g.typeDefinitions) === null || _b === void 0 ? void 0 : _b.length) || !Array.isArray(g.functions) || g.functions.length > 64)
+            ((_a = g.topInputs) === null || _a === void 0 ? void 0 : _a.length) || ((_b = g.typeDefinitions) === null || _b === void 0 ? void 0 : _b.length) || !Array.isArray(g.functions) || g.functions.length > config.subgraphDefinitions)
             return false;
         if (!g.declarations.every(d => d.kind === 'uniform' && numeric_1.types.includes(d.type) && !d.initialDriver && !d.sourceMissing && !['array', 'matrix'].includes(String(d.nativeSequence))))
             return false;
         const scopes = [[g.stages.pixel, undefined], ...g.functions.map(f => [f.graph, f])];
         return scopes.every(([data, owner]) => {
             var _a;
-            if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length > 256 || data.edges.length > 1024 || ((_a = data.ui) === null || _a === void 0 ? void 0 : _a.frames))
+            if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length > config.nodesPerNetwork || data.edges.length > config.edgesPerNetwork || ((_a = data.ui) === null || _a === void 0 ? void 0 : _a.frames))
                 return false;
             if (owner && (!(0, subgraph_interface_1.numericInterface)(owner) || !Array.isArray(owner.stages) || !owner.stages.includes('pixel') || owner.targets && !owner.targets.includes('top')))
                 return false;
@@ -4542,7 +4561,7 @@ function createSubgraphCompiler(registry, engineFactory) {
     function compile(g, identifiers) {
         if (!supports(g))
             throw Error('Graph is outside the selected frontend compiler capability');
-        if (JSON.stringify(g).length > 512000)
+        if (JSON.stringify(g).length > config.documentBytes)
             throw Error('Graph is too large');
         const definitions = new Map();
         for (const f of g.functions) {
@@ -4583,8 +4602,8 @@ function createSubgraphCompiler(registry, engineFactory) {
             } while (used.has(id)); used.add(id); return id; };
             const location = (n, path) => ({ node: n.id, stage: 'pixel', trail: [...path], ...(path.length ? { functionId: path[path.length - 1] } : {}) });
             const add = (n, origin) => {
-                if (flat.nodes.length >= 2048)
-                    throw Error('Expanded Subgraph graph exceeds 2048 nodes');
+                if (flat.nodes.length >= config.expandedNodes)
+                    throw Error('Expanded Subgraph graph exceeds ' + config.expandedNodes + ' nodes');
                 flat.nodes.push(n);
                 origins.set(n.id, origin);
             };
@@ -4948,6 +4967,7 @@ exports.instantiateSubgraph = instantiateSubgraph;
 exports.groupSubgraph = groupSubgraph;
 exports.collectSubgraphs = collectSubgraphs;
 const model_1 = require("./model");
+const config_1 = require("./config");
 const scope_references_1 = require("./scope_references");
 const values_1 = require("./values");
 const validId = (id) => /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(id);
@@ -4966,8 +4986,8 @@ function ensureSubgraphCapacity(graph, additional = 0) {
     var _a;
     if (!Number.isInteger(additional) || additional < 0)
         throw Error('Invalid definition count');
-    if ((((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.length) || 0) + additional > 64)
-        throw Object.assign(Error('At most 64 Subgraph definitions are supported'), { code: 'function.limit' });
+    if ((((_a = graph.document.functions) === null || _a === void 0 ? void 0 : _a.length) || 0) + additional > config_1.CORE_CONFIG.subgraphDefinitions)
+        throw Object.assign(Error('At most ' + config_1.CORE_CONFIG.subgraphDefinitions + ' Subgraph definitions are supported'), { code: 'function.limit' });
 }
 function validateSubgraphData(f) {
     if (!validId(f.id))
@@ -4982,7 +5002,7 @@ function validateSubgraphData(f) {
             throw Error('Invalid Subgraph interface');
     }
     const ids = new Set(f.graph.nodes.map(n => n.id));
-    if (ids.size !== f.graph.nodes.length || f.graph.nodes.length > 256 || f.graph.edges.length > 1024 ||
+    if (ids.size !== f.graph.nodes.length || f.graph.nodes.length > config_1.CORE_CONFIG.nodesPerNetwork || f.graph.edges.length > config_1.CORE_CONFIG.edgesPerNetwork ||
         [...ids].some(id => !validId(id)))
         throw Error('Invalid Subgraph network');
     for (const e of f.graph.edges)
@@ -5292,6 +5312,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.protocol = exports.CompilationError = void 0;
 exports.codegenKey = codegenKey;
 exports.createCompiler = createCompiler;
+const config_1 = require("./config");
 const subgraph_compiler_1 = require("./subgraph_compiler");
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
 const graph_1 = require("./graph");
@@ -5310,12 +5331,12 @@ class CompilationError extends Error {
 }
 exports.CompilationError = CompilationError;
 exports.protocol = 'grape.top.ts.1';
-function createFlatCompiler(registry, limit = 256) {
+function createFlatCompiler(registry, limits) {
     function supports(g) {
         var _a, _b, _c, _d, _e, _f, _g;
         if (g.schemaVersion !== 1 || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' || ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) || ((_b = g.topInputs) === null || _b === void 0 ? void 0 : _b.length) || ((_c = g.typeDefinitions) === null || _c === void 0 ? void 0 : _c.length))
             return false;
-        if (!g.stages.pixel || g.stages.pixel.nodes.length > limit || g.stages.pixel.edges.length > limit * 4)
+        if (!g.stages.pixel || g.stages.pixel.nodes.length > limits.nodes || g.stages.pixel.edges.length > limits.edges)
             return false;
         if ((_e = (_d = g.stages.pixel) === null || _d === void 0 ? void 0 : _d.ui) === null || _e === void 0 ? void 0 : _e.frames)
             return false;
@@ -5344,7 +5365,7 @@ function createFlatCompiler(registry, limit = 256) {
             const { catalogSnapshot, ...document } = g;
             const model = new graph_1.GraphDocument(document, registry), network = model.networks.get('pixel');
             const data = model.document.stages.pixel;
-            if (data.nodes.length > limit || data.edges.length > limit * 4 || JSON.stringify(g).length > 512000)
+            if (data.nodes.length > limits.nodes || data.edges.length > limits.edges || JSON.stringify(g).length > limits.bytes)
                 throw Error('Graph is too large');
             const nodes = new Map(), ports = Object.create(null);
             const declarations = new Map(), names = new Set();
@@ -5489,9 +5510,9 @@ function codegenKey(g) {
     return JSON.stringify({ ...g, stages: Object.fromEntries(Object.entries(g.stages || {}).map(([k, v]) => [k, network(v)])),
         functions: (g.functions || []).map(f => ({ ...f, graph: network(f.graph) })) });
 }
-function createCompiler(registry) {
-    const flat = createFlatCompiler(registry);
-    const subgraphs = (0, subgraph_compiler_1.createSubgraphCompiler)(registry, r => createFlatCompiler(r, 2048));
+function createCompiler(registry, config = config_1.CORE_CONFIG) {
+    const flat = createFlatCompiler(registry, { nodes: config.nodesPerNetwork, edges: config.edgesPerNetwork, bytes: config.documentBytes });
+    const subgraphs = (0, subgraph_compiler_1.createSubgraphCompiler)(registry, r => createFlatCompiler(r, { nodes: config.expandedNodes, edges: config.expandedEdges, bytes: config.documentBytes }), config);
     return Object.freeze({ protocol: exports.protocol, key: codegenKey,
         supports: (g) => { var _a; return ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.supports(g) : flat.supports(g); },
         compile: (g, identifiers) => { var _a; return ((_a = g.functions) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }

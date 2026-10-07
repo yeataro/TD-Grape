@@ -1,3 +1,4 @@
+import {CORE_CONFIG,type CoreConfig} from './config';
 import { createSubgraphCompiler } from './subgraph_compiler';
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
 import {GraphDocument,GraphError,type Port,type Edge} from './graph';
@@ -13,10 +14,11 @@ export class CompilationError extends Error {
   constructor(message:string,readonly node?:string){super(message);this.name='CompilationError';}
 }
 export const protocol='grape.top.ts.1';
-function createFlatCompiler(registry:Registry,limit=256){
+type FlatLimits={nodes:number;edges:number;bytes:number};
+function createFlatCompiler(registry:Registry,limits:FlatLimits){
   function supports(g:Graph):boolean {
     if(g.schemaVersion!==1||g.target!=='top'||Object.keys(g.stages).join()!=='pixel'||g.functions?.length||g.topInputs?.length||g.typeDefinitions?.length)return false;
-    if(!g.stages.pixel||g.stages.pixel.nodes.length>limit||g.stages.pixel.edges.length>limit*4)return false;
+    if(!g.stages.pixel||g.stages.pixel.nodes.length>limits.nodes||g.stages.pixel.edges.length>limits.edges)return false;
     if(g.stages.pixel?.ui?.frames)return false;
     if(!g.declarations.every(d=>d.kind==='uniform'&&types.includes(d.type)&&!d.initialDriver&&!d.sourceMissing&&!['array','matrix'].includes(String(d.nativeSequence))))return false;
     // Legacy allocates collision suffixes for implicit IDs versus explicit
@@ -36,7 +38,7 @@ function createFlatCompiler(registry:Registry,limit=256){
     // Catalog provenance is checked by the delivery adapter, not graph traversal.
     const {catalogSnapshot,...document}=g as Graph&{catalogSnapshot?:unknown};
     const model=new GraphDocument(document,registry),network=model.networks.get('pixel')!;
-    const data=model.document.stages.pixel!;if(data.nodes.length>limit||data.edges.length>limit*4||JSON.stringify(g).length>512000)throw Error('Graph is too large');
+    const data=model.document.stages.pixel!;if(data.nodes.length>limits.nodes||data.edges.length>limits.edges||JSON.stringify(g).length>limits.bytes)throw Error('Graph is too large');
     const nodes=new Map<string,Node>(),ports:Record<string,{in:Record<string,string>;out:Record<string,string>}>=Object.create(null);
     const declarations=new Map<string,Declaration>(),names=new Set<string>();
     for(const d of g.declarations){
@@ -129,9 +131,9 @@ export function codegenKey(g:Graph):string {
     functions:(g.functions||[]).map(f=>({...f,graph:network(f.graph as never)}))});
 }
 
-export function createCompiler(registry:Registry){
-  const flat=createFlatCompiler(registry);
-  const subgraphs=createSubgraphCompiler(registry,r=>createFlatCompiler(r,2048));
+export function createCompiler(registry:Registry,config:CoreConfig=CORE_CONFIG){
+  const flat=createFlatCompiler(registry,{nodes:config.nodesPerNetwork,edges:config.edgesPerNetwork,bytes:config.documentBytes});
+  const subgraphs=createSubgraphCompiler(registry,r=>createFlatCompiler(r,{nodes:config.expandedNodes,edges:config.expandedEdges,bytes:config.documentBytes}),config);
   return Object.freeze({protocol,key:codegenKey,
     supports:(g:Graph)=>g.functions?.length?subgraphs.supports(g):flat.supports(g),
     compile:(g:Graph,identifiers?:IdentifierRules)=>g.functions?.length?subgraphs.compile(g,identifiers):flat.compile(g,identifiers)

@@ -1,5 +1,6 @@
 import { copy, type Node, type SubgraphData, type InterfacePort, type ObjectValue, type Value, type NetworkData } from './model';
 import type { GraphDocument, Network } from './graph';
+import { CORE_CONFIG } from './config';
 import type { NodeModule } from './node_module';
 import type { PortSpec } from './ports';
 import { ScopeReferences } from './scope_references';
@@ -28,8 +29,8 @@ function authored(module:NodeModule,id:string,ui:ObjectValue,params:ObjectValue=
 }
 export function ensureSubgraphCapacity(graph:GraphDocument,additional=0):void {
   if (!Number.isInteger(additional) || additional < 0) throw Error('Invalid definition count');
-  if ((graph.document.functions?.length || 0) + additional > 64)
-    throw Object.assign(Error('At most 64 Subgraph definitions are supported'),{code:'function.limit'});
+  if ((graph.document.functions?.length || 0) + additional > CORE_CONFIG.subgraphDefinitions)
+    throw Object.assign(Error('At most '+CORE_CONFIG.subgraphDefinitions+' Subgraph definitions are supported'),{code:'function.limit'});
 }
 export function validateSubgraphData(f:SubgraphData):void {
   if (!validId(f.id)) throw Error('Invalid Subgraph identity');
@@ -43,7 +44,7 @@ export function validateSubgraphData(f:SubgraphData):void {
       throw Error('Invalid Subgraph interface');
   }
   const ids = new Set(f.graph.nodes.map(n => n.id));
-  if (ids.size !== f.graph.nodes.length || f.graph.nodes.length > 256 || f.graph.edges.length > 1024 ||
+  if (ids.size !== f.graph.nodes.length || f.graph.nodes.length > CORE_CONFIG.nodesPerNetwork || f.graph.edges.length > CORE_CONFIG.edgesPerNetwork ||
       [...ids].some(id => !validId(id))) throw Error('Invalid Subgraph network');
   for (const e of f.graph.edges) if (!ids.has(e.from[0]) || !ids.has(e.to[0]))
     throw Error('Invalid Subgraph edge endpoint');

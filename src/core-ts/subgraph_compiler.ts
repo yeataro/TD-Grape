@@ -1,6 +1,7 @@
 /** Compile graph-owned subgraphs through a bounded, disposable expansion.
  * Node modules own interfaces; no imported library or DOM state is consulted. */
 import { copy, type Graph, type Node, type NetworkData, type SubgraphData } from './model';
+import { CORE_CONFIG, type CoreConfig } from './config';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
 import { numericInterface, requireSubgraph } from './subgraph_interface';
 import { types, type } from './values';
@@ -30,17 +31,17 @@ const relay:NodeModule = {
   emit:(_n,c)=>({outputs:{out:c.input('value')}})
 };
 
-export function createSubgraphCompiler(registry:Registry,engineFactory:(registry:Registry)=>Engine) {
+export function createSubgraphCompiler(registry:Registry,engineFactory:(registry:Registry)=>Engine,config:CoreConfig=CORE_CONFIG) {
   const engine = engineFactory(createRegistry([...registry.modules,relay]));
   const identity = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
   const moduleOf = (node:Node) => registry.get(node.definitionUuid);
   function supports(g:Graph):boolean {
     if (g.schemaVersion!==1 || g.target!=='top' || Object.keys(g.stages).join()!=='pixel' ||
-        g.topInputs?.length || g.typeDefinitions?.length || !Array.isArray(g.functions) || g.functions.length>64) return false;
+        g.topInputs?.length || g.typeDefinitions?.length || !Array.isArray(g.functions) || g.functions.length>config.subgraphDefinitions) return false;
     if (!g.declarations.every(d=>d.kind==='uniform'&&bindingTypes.includes(d.type)&&!d.initialDriver&&!d.sourceMissing&&!['array','matrix'].includes(String(d.nativeSequence)))) return false;
     const scopes:[NetworkData,SubgraphData|undefined][] = [[g.stages.pixel!,undefined],...g.functions.map(f=>[f.graph,f] as [NetworkData,SubgraphData])];
     return scopes.every(([data,owner])=>{
-      if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>256 || data.edges.length>1024 || data.ui?.frames) return false;
+      if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>config.nodesPerNetwork || data.edges.length>config.edgesPerNetwork || data.ui?.frames) return false;
       if (owner && (!numericInterface(owner) || !Array.isArray(owner.stages) || !owner.stages.includes('pixel') || owner.targets&&!owner.targets.includes('top'))) return false;
       const context = contextFor(g,owner);
       return data.nodes.every(n=>{
@@ -52,7 +53,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
 
   function compile(g:Graph,identifiers?:{reservedNames:readonly string[]}):Compiled {
     if (!supports(g)) throw Error('Graph is outside the selected frontend compiler capability');
-    if (JSON.stringify(g).length>512000) throw Error('Graph is too large');
+    if (JSON.stringify(g).length>config.documentBytes) throw Error('Graph is too large');
     const definitions=new Map<string,SubgraphData>();
     for (const f of g.functions!) {
       if (!identity.test(f.id)||definitions.has(f.id)) throw Error('Invalid or duplicate Subgraph ID');
@@ -76,7 +77,7 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
       const allocate=()=>{let id;do{id='sgf'+ ++sequence;}while(used.has(id));used.add(id);return id;};
       const location=(n:Node,path:string[]):Location=>({node:n.id,stage:'pixel',trail:[...path],...(path.length?{functionId:path[path.length-1]}:{})});
       const add=(n:Node,origin:Location)=>{
-        if(flat.nodes.length>=2048)throw Error('Expanded Subgraph graph exceeds 2048 nodes');
+        if(flat.nodes.length>=config.expandedNodes)throw Error('Expanded Subgraph graph exceeds '+config.expandedNodes+' nodes');
         flat.nodes.push(n);origins.set(n.id,origin);
       };
       type End=readonly [string,string];
