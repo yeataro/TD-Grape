@@ -512,3 +512,17 @@ test('a note refreshes the GLSL shown in the editor but is not sent as a program
   await session.flush();
   assert.equal(calls.at(-1).body.runtime, null);
 });
+
+// Editing-time limit (capacity.ts): warnings on the status line. 編輯時的上限：狀態列警告。
+test('an over-limit graph opens with a warning; growth is refused with a message, shrinking works', t => {
+  const { session: probe, loaded } = open(t), big = loaded();
+  withDoc(big.state, graph => { for (let i = 0; i < 260; i++) graph.stages.pixel.nodes.push(makeNode('f' + i, 'float')); });
+  const session = new EditorSession(probe.host, bootstrap, big, 60000, 60000); t.after(() => session.dispose());
+  assert.match(session.snapshot().message, /^警告：這張圖超過上限/);
+  const before = clone(session.graph());
+  session.add('sgrape.builtin.float', { x: 0, y: 0 });
+  assert.match(session.snapshot().message, /已達上限，這次修改沒有套用：每層節點 \d+／256/);
+  assert.deepEqual(clone(session.graph()), before);
+  session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'f0'), edges: [] });
+  assert.equal(session.graph().stages.pixel.nodes.length, before.stages.pixel.nodes.length - 1);
+});

@@ -3,6 +3,7 @@ import { contextFor, resolvePorts, configureNode, editNode, prepareNodeWire, typ
 import { NodePorts, compatible, type PortSpec } from './ports';
 import { plan, type Intent, type Ports } from './wire_planning';
 import { changesBetween, equal, type GraphChanges } from './changes';
+import { requireCapacity } from './capacity';
 export { changesBetween } from './changes';
 export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
@@ -363,7 +364,11 @@ export class GraphDocument {
     const before=this.snapshot(),candidate=new GraphDocument(clone(before),this.registry,this.fallback,true);
     try{
       edit(candidate);if(!equal(before,candidate.document))complete(candidate.document,before);
-      const after=candidate.snapshot();return {before,after,changes:changesBetween(before,after,this.registry)};
+      const after=candidate.snapshot();
+      // The one gate every edit passes: refuse growth beyond the core limits (capacity.ts).
+      // 每次修改都經過的唯一關卡：超過核心上限的「變大」整筆拒絕。
+      requireCapacity(before,after,this.registry);
+      return {before,after,changes:changesBetween(before,after,this.registry)};
     }finally{candidate.close();}
   }
 }

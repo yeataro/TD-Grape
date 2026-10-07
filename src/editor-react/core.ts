@@ -4,12 +4,14 @@ import type * as values from '../core-ts/values';
 import type { createCompiler } from '../core-ts/top_compiler';
 import type { createEditorContract } from '../core-ts/editor_contract';
 import type { Graph as GraphData } from '../core-ts/model';
+import type * as capacity from '../core-ts/capacity';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
 // 只接入既有生成核心；型別引用不把另一份 registry／compiler 打進 React bundle。
 export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
-  registry: modules.Registry; values: typeof values;
+  registry: modules.Registry; values: typeof values; overLimit: typeof capacity.overLimit;
 };
+export type { Measure } from '../core-ts/capacity';
 declare global {
   var GrapeGraph: Core;
   var GrapeTopCompiler: ReturnType<typeof createCompiler>;
@@ -77,7 +79,9 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): string[] {
   for (const node of pixel.nodes) if (!supportedDefinitions.includes(node.definitionUuid)) {
     reasons.push(`${node.definitionUuid.replace(/^sgrape\.builtin\./, '')} 節點${node.name ? `「${node.name}」` : ''}（${node.id}）`);
   }
-  if (!reasons.length && !compiler.supports(graph)) reasons.push('前端 compiler 無法處理這張圖');
+  // Size is not "unsupported": an over-limit graph opens with a warning and only growth is blocked.
+  // 大小不算「不支援」：超過上限的圖照樣打開並警告，只擋變大。
+  if (!reasons.length && !compiler.supports(graph) && !core.overLimit(graph, core.registry).length) reasons.push('前端 compiler 無法處理這張圖');
   return reasons;
 }
 

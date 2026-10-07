@@ -1,5 +1,5 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
-import { core, compiler, requireSupported, parseDocument, type Graph, type GraphDocument, type Network, type Value, type Bootstrap } from './core';
+import { core, compiler, requireSupported, parseDocument, type Measure, type Graph, type GraphDocument, type Network, type Value, type Bootstrap } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse } from './host';
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
@@ -19,6 +19,17 @@ function wire(net: Network, c: Connection | FlowEdge) {
   }
   net.connect(net.node(c.source).port('output', c.sourceHandle), net.node(c.target).port('input', port), core.values.policy);
 }
+
+// The core reports limits as data (CapacityError.measures); this layer words them (Q34: core sends data, the UI words it).
+// 核心以資料回報上限；用語由這一層決定。
+const limitName: Record<Measure['key'], string> = { nodesPerNetwork: '每層節點', edgesPerNetwork: '每層接線',
+  expandedNodes: '子圖展開後的節點', subgraphDefinitions: '子圖定義' };
+const limitText = (measures: readonly Measure[]) => measures.map(m => `${limitName[m.key]} ${m.value}／${m.limit}`).join('、');
+// Identified by name and data, not instanceof: the core may come from another script realm.
+const capacityMessage = (error: unknown) => {
+  const measures = (error as { name?: string; measures?: Measure[] } | null)?.name === 'CapacityError' ? (error as { measures?: Measure[] }).measures : undefined;
+  return measures ? '已達上限，這次修改沒有套用：' + limitText(measures) : undefined;
+};
 
 const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).concat((graph.functions || []).map(f => f.graph))
   .map(net => net?.nodes.map(n => [n.ui?.comment, n.ui?.label])));
@@ -49,13 +60,17 @@ export class Editor {
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen, status => this.status(status), delay, retry);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '已載入 TD 文件', glsl: this.codegen.compiled?.pixel ?? '', targetPath: loaded.target };
+    // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
+    // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
+    const over = core.overLimit(graph, core.registry);
+    if (over.length) this.state.message = '警告：這張圖超過上限，目前無法產碼；可以刪減後再繼續——' + limitText(over);
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   snapshot = () => this.state;
   graph = () => this.document.snapshot();
   private publish() { if (!this.disposed) this.listeners.forEach(listener => listener()); }
   private status(patch: Partial<EditorState>) { this.state = { ...this.state, ...patch }; this.publish(); }
-  notice = (error: unknown) => this.status({ message: error instanceof Error ? error.message : String(error) });
+  notice = (error: unknown) => this.status({ message: capacityMessage(error) ?? (error instanceof Error ? error.message : String(error)) });
   // Skips code generation when neither the fingerprint nor the notes changed (e.g. moving a node).
   // Notes only add GLSL comment lines: they refresh the GLSL shown here, never TD's program (rule B).
   // 指紋與註記都沒變（例如移動節點）就不產碼；註記只影響這裡顯示的 GLSL 註解，不讓 TD 重編（規則 B）。

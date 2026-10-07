@@ -27,3 +27,29 @@ test('no core module repeats a limit number outside config.ts', () => {
     assert.doesNotMatch(source, /\b(256|1024|2048|8192|512000)\b|(?:>|>=)\s*64\b/, file);
   }
 });
+
+// Editing-time limit (capacity.ts): one gate at the end of every change; opening never refuses.
+// 編輯時的上限：每次修改結束時的唯一關卡；開圖不擋，只擋變大。
+const withFloats = count => {
+  const graph = clone(bootstrap.defaultDocument.graph);
+  for (let i = 0; i < count; i++) graph.stages.pixel.nodes.push({ id: 'f' + i, definitionUuid: 'sgrape.builtin.float',
+    params: clone(G.registry.get('sgrape.builtin.float').catalog.definition.defaults), ui: { x: 0, y: 0 } });
+  return graph;
+};
+const addFloat = (doc, id) => doc.change(c => c.networks.get('pixel').insert({ id, definitionUuid: 'sgrape.builtin.float', params: {}, ui: { x: 0, y: 0 } }));
+
+test('an edit that grows a network past the limit is refused as a whole', () => {
+  const doc = new G.GraphDocument(withFloats(256 - 2), G.registry); // default graph has 2 nodes: exactly at 256
+  assert.equal(G.overLimit(doc.document, G.registry).length, 0);
+  assert.throws(() => addFloat(doc, 'extra'), error => error.name === 'CapacityError' &&
+    error.measures.some(m => m.key === 'nodesPerNetwork' && m.value === 257 && m.limit === 256));
+  assert.equal(doc.document.stages.pixel.nodes.length, 256, 'document unchanged');
+});
+
+test('an over-limit graph still opens; shrinking is allowed, growing is not', () => {
+  const doc = new G.GraphDocument(withFloats(300), G.registry);
+  assert.ok(G.overLimit(doc.document, G.registry).some(m => m.key === 'nodesPerNetwork' && m.value === 302));
+  const smaller = doc.change(c => { const net = c.networks.get('pixel'); net.removeAll([net.node('f0')]); });
+  assert.equal(smaller.after.stages.pixel.nodes.length, 301);
+  assert.throws(() => addFloat(doc, 'more'), error => error.name === 'CapacityError');
+});

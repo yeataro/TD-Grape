@@ -12,6 +12,7 @@ const graph = require("./graph");
 const values = require("./values");
 const node_module_1 = require("./node_module");
 const top_compiler_1 = require("./top_compiler");
+const capacity_1 = require("./capacity");
 const editor_contract_1 = require("./editor_contract");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
@@ -72,7 +73,71 @@ const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract };
+exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit };
+
+},
+"capacity":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CapacityError = void 0;
+exports.measure = measure;
+exports.overLimit = overLimit;
+exports.requireCapacity = requireCapacity;
+const config_1 = require("./config");
+function networks(g) {
+    return [...Object.entries(g.stages || {}).map(([id, data]) => [id, data]),
+        ...(g.functions || []).map(f => ['function:' + f.id, f.graph])];
+}
+/** Every measure of the graph, with its limit. Expanded size counts a subgraph instance as the
+ * expanded size of its definition (an estimate of what the subgraph compiler builds). */
+function measure(g, registry, config = config_1.CORE_CONFIG) {
+    const definitions = new Map((g.functions || []).map(f => [f.id, f.graph]));
+    const expanded = new Map(), visiting = new Set();
+    const size = (data, key) => {
+        var _a, _b;
+        if (expanded.has(key))
+            return expanded.get(key);
+        if (visiting.has(key))
+            return 0; // cycles are refused elsewhere; do not loop here
+        visiting.add(key);
+        let total = 0;
+        for (const n of data.nodes) {
+            const ref = (_b = (_a = registry.get(n.definitionUuid)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n), inner = ref ? definitions.get(ref) : undefined;
+            total += inner ? size(inner, 'function:' + ref) : 1;
+        }
+        visiting.delete(key);
+        expanded.set(key, total);
+        return total;
+    };
+    const result = [{ key: 'subgraphDefinitions', value: definitions.size, limit: config.subgraphDefinitions }];
+    for (const [id, data] of networks(g)) {
+        result.push({ key: 'nodesPerNetwork', network: id, value: data.nodes.length, limit: config.nodesPerNetwork });
+        result.push({ key: 'edgesPerNetwork', network: id, value: data.edges.length, limit: config.edgesPerNetwork });
+    }
+    for (const [id, data] of Object.entries(g.stages || {}))
+        result.push({ key: 'expandedNodes', network: id, value: size(data, id), limit: config.expandedNodes });
+    return result;
+}
+/** Measures over their limit; used to report an over-limit graph when it is opened. */
+function overLimit(g, registry, config = config_1.CORE_CONFIG) {
+    return measure(g, registry, config).filter(m => m.value > m.limit);
+}
+class CapacityError extends Error {
+    constructor(measures) {
+        super('Graph limit reached: ' + measures.map(m => `${m.key}${m.network ? ' (' + m.network + ')' : ''} ${m.value}/${m.limit}`).join(', '));
+        this.measures = measures;
+        this.name = 'CapacityError';
+    }
+}
+exports.CapacityError = CapacityError;
+/** Refuses growth beyond a limit; shrinking an over-limit graph is always allowed. */
+function requireCapacity(before, after, registry, config = config_1.CORE_CONFIG) {
+    const id = (m) => { var _a; return m.key + '|' + ((_a = m.network) !== null && _a !== void 0 ? _a : ''); };
+    const previous = new Map(measure(before, registry, config).map(m => [id(m), m.value]));
+    const grown = measure(after, registry, config).filter(m => { var _a; return m.value > m.limit && m.value > ((_a = previous.get(id(m))) !== null && _a !== void 0 ? _a : 0); });
+    if (grown.length)
+        throw new CapacityError(grown);
+}
 
 },
 "changes":function(require,module,exports){
@@ -324,6 +389,7 @@ const node_module_1 = require("./node_module");
 const ports_1 = require("./ports");
 const wire_planning_1 = require("./wire_planning");
 const changes_1 = require("./changes");
+const capacity_1 = require("./capacity");
 var changes_2 = require("./changes");
 Object.defineProperty(exports, "changesBetween", { enumerable: true, get: function () { return changes_2.changesBetween; } });
 var node_module_2 = require("./node_module");
@@ -883,6 +949,9 @@ class GraphDocument {
             if (!(0, changes_1.equal)(before, candidate.document))
                 complete(candidate.document, before);
             const after = candidate.snapshot();
+            // The one gate every edit passes: refuse growth beyond the core limits (capacity.ts).
+            // 每次修改都經過的唯一關卡：超過核心上限的「變大」整筆拒絕。
+            (0, capacity_1.requireCapacity)(before, after, this.registry);
             return { before, after, changes: (0, changes_1.changesBetween)(before, after, this.registry) };
         }
         finally {
