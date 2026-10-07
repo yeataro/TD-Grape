@@ -154,7 +154,8 @@ if family is None:
     info.par.op = 'shader'
     output = node(family, outTOP, 'output', 460, 0)
     output.inputConnectors[0].connect(shader)
-    family.par.opviewer = 'output'
+    # Relative to the COMP itself: a bare name would resolve next to the COMP, not inside it.
+    family.par.opviewer = './output'
     graph = node(family, textDAT, 'graph', 0, 140)
     graph.par.language = 'json'
     controls = node(family, baseCOMP, 'GrapeControls', 0, -160)
