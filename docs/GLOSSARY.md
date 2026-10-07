@@ -28,6 +28,15 @@
 | 自動型別推導 | Type inference／Auto | 編輯器依來源及合法簽名選擇實際運算型別。它決定使用哪個型別，不等於自動轉換值。推導方向、優先順序及無接線時的預設另由規則文件定義。 |
 | 指定型別／鎖定型別 | Explicit type／Locked type | 使用者明確指定運算型別，Auto 不再為該配置選型別。這不等於禁止輸入接線轉換；兩者需分開判斷。 |
 
+## Graph Globals（2026-10-07 定名，尚未實作）
+
+| 建議用語 | 英文／識別碼 | 定義與區分 |
+| --- | --- | --- |
+| Graph Globals（面板） | Graph Globals | 列出整份圖文件層級所有 Global 的面板。 |
+| 全域項 | Global；程式 `GraphGlobal`；新格式存檔欄位 `globals` | 在圖文件層級宣告一次、讓節點引用的東西（舊稱 declaration／宣告，舊圖欄位 `declarations` 交匯入器）。**只在各 stage 最外層被引用；子圖不直接引用任何 Global**（含 TD 內建 Uniform 與全域常數），需要的值經子圖輸入傳入，使子圖可攜帶。同一份作品內名稱不得重複。分參數類（值從 Shader 外面來：Uniform、Spec 常數、貼圖／Sampler、Attribute、POP Buffer、TD 內建 Uniform）與常數類（全域常數：值在作品內）。程式中不單用 `Global`，避免與 GLSL 全域變數混說。見 design-interview Q41。 |
+| 全域常數 | Global constant | GLSL 最外層 `const`；值在作品內，改值即產碼。不是來源。 |
+| Spec 常數 | Specialization constant | 宣告在作品（`layout(constant_id = N) const …`），目前值在 TD 參數頁；改值不產碼，TD 自行重建管線。 |
+
 ## 群組與導覽
 
 **命名對齊原則（人類 2026-10-07）：** 同一個概念在畫面、資料、程式用同一個名字；同一個字只有一個意思。舊產品「顯示層語意與內容語意沒對齊」（例如畫面叫 Group、資料叫 frames、而 Frame 又是導覽指令），功能上看不出問題，維護上會出問題。新程式一律對齊；只有相容性逼不得已時才暫時不同，且須在此註明並排定改名時機。
