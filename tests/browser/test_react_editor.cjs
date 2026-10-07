@@ -126,6 +126,43 @@ function fixture() {
     assert.ok(menus.length >= 1, 'the browser raised a context menu event'); assert.ok(menus.every(m => m.prevented), JSON.stringify(menus));
     await page.mouse.click(x0, y0); await settle();
     checks.push('right-drag released outside the canvas does not open the browser menu');
+    // Refactor.22: the box selects what it touches; Shift keeps the previous selection; Shift+left
+    // drag boxes instead of panning; React Flow's own box is off (Q33/Q39, aligned with TD).
+    const selectedIds = () => page.locator('.react-flow__node.selected').evaluateAll(nodes => nodes.map(n => n.dataset.id).sort());
+    const viewport = () => page.locator('.react-flow__viewport').evaluate(el => el.style.transform);
+    const boxDrag = async (from, to, { button = 'right', shift = false } = {}) => {
+      if (shift) await page.keyboard.down('Shift');
+      await page.mouse.move(from.x, from.y); await page.mouse.down({ button });
+      await page.mouse.move(to.x, to.y, { steps: 10 }); await page.mouse.up({ button });
+      if (shift) await page.keyboard.up('Shift');
+      await settle();
+    };
+    const [ta, ts] = [await boxOf('a'), await boxOf('sum')];
+    const corner = b => ({ x: b.x - 20, y: b.y - 20 }), inside = b => ({ x: b.x + 12, y: b.y + 12 });
+    await boxDrag(corner(ta), inside(ta)); assert.deepEqual(await selectedIds(), ['a'], 'touching a corner selects');
+    await boxDrag(corner(ts), inside(ts)); assert.deepEqual(await selectedIds(), ['sum'], 'plain box replaces');
+    await boxDrag(corner(ta), inside(ta), { shift: true }); assert.deepEqual(await selectedIds(), ['a', 'sum'], 'Shift adds');
+    await page.mouse.click(x0, y0); await settle();
+    const panned = await viewport();
+    await boxDrag(corner(ts), inside(ts), { button: 'left', shift: true });
+    assert.deepEqual(await selectedIds(), ['sum']); assert.equal(await viewport(), panned, 'Shift+left drag must not pan');
+    assert.equal(await page.locator('.react-flow__nodesselection-rect, .react-flow__selection').count(), 0, 'React Flow box stays off');
+    await page.mouse.click(x0, y0); await settle();
+    checks.push('box selection: touching counts, Shift adds, Shift+left drag boxes without panning, RF box off');
+    // Dragging from a connected input onto blank canvas pulls the wire, as one Undo step.
+    const wired = () => state.graph.stages.pixel.edges.some(e => e.to[0] === 'sum' && e.to[1] === 'a');
+    assert.ok(wired());
+    const pin = await page.getByLabel('sum input a', { exact: true }).boundingBox();
+    await page.mouse.move(pin.x + pin.width / 2, pin.y + pin.height / 2); await page.mouse.down();
+    await page.mouse.move(x0, y0, { steps: 12 }); await page.mouse.up(); await settle();
+    assert.ok(!wired(), 'drag to blank removes the input wire');
+    await page.getByRole('button', { name: 'Undo', exact: true }).click(); await settle(); assert.ok(wired());
+    checks.push('dragging a connected input onto blank canvas disconnects it; one Undo restores');
+    // Color Output takes the output colour group, other nodes the function group (theme tokens).
+    const titleColor = id => page.locator(`.react-flow__node[data-id="${id}"] .node-title`).evaluate(el => getComputedStyle(el).backgroundColor);
+    const [outColor, sumColor] = [await titleColor('pixel_out'), await titleColor('sum')];
+    assert.notEqual(outColor, sumColor, outColor);
+    checks.push('Color Output title uses the output colour group: ' + outColor);
     // 17.2: Combine groups a wired vec3 over X/Y/Z (core planner); Swizzle's module controls edit it.
     const nodeOf = id => state.graph.stages.pixel.nodes.find(n => n.id === id);
     await page.locator('.react-flow__node[data-id="cb"]').scrollIntoViewIfNeeded();

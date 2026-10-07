@@ -15,9 +15,10 @@ nav { border-bottom: 1px solid #342c40; flex-wrap: wrap; } nav label { display: 
 main { display: flex; min-height: 0; flex: 1; } .canvas { position: relative; flex: 1; min-width: 0; }
 pre { width: 35%; margin: 0; overflow: auto; padding: 18px; font-size: 12px; border-left: 1px solid #43394e; }
 footer { color: #958b9f; font-size: 11px; }
-.grape-node { position: relative; width: 250px; border: 1px solid #4e445c; border-radius: 12px; background: #272530; box-shadow: 0 5px 16px #0004; }
+.grape-node { position: relative; width: 250px; border: 1px solid #4e445c; border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px #0004; }
 .grape-node.selected { outline: 2px solid #b3dc80; }
-.node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: #362d47; border-radius: 11px 11px 0 0; }
+/* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
+.node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
 .node-title strong { flex: 1; } .node-title small, .node-title select { color: #ada2bb; font-size: 11px; }
 .node-title select { max-width: 78px; padding: 3px; } .node-drag-surface { cursor: grab; }
 .node-body { padding: 12px 0; display: flex; flex-direction: column; gap: 9px; }

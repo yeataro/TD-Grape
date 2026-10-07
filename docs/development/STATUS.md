@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.22 — Color Output 顏色；框選碰到就選；拉到空白斷線 — 2026-10-08
+
+人類要求（2026-10-08）：先做兩件事——Color Output 改色、框選碰到就選＋從輸入拉到空白處斷線。顏色組名稱由 agent 取：`colorGroup`。
+
+- **顏色（照 [COLOR_SYSTEM](../ui/COLOR_SYSTEM.md) 的第一步）**：新增 [theme/dark.css](../../src/editor-react/theme/dark.css)：調色盤主色（反推成「80% 疊在卡片底色 #2e2c3a 上」正好等於舊產品實測標題色）、`--title-alpha: 80%`、用途名字 `--group-function/output/uniform/sampler/constant/attribute/runtime`。標題列 `color-mix(…主色 80%, transparent)` 由 DOM 疊在卡片上。[projection.ts](../../src/editor-react/projection.ts) 依角色推出 `colorGroup`（目前只有 output／function 兩種），[NodeCard.tsx](../../src/editor-react/NodeCard.tsx) 只把它接到 `--group-color`。核心與存檔不碰顏色。
+- **框選**（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)，對齊 TD，Q33／Q39）：右鍵拖或 Shift＋左鍵拖（不平移畫面）；拖曳中即時選取、**碰到即算**；按 Shift 保留原選取，否則取代（Ctrl 同無修飾鍵）；React Flow 內建框選關閉（`selectionKeyCode={null}`），只剩這一套。
+- **拉到空白斷線**：從有接線的輸入拉到空白處放開＝拔掉那條線（`Editor.disconnectInput`，一步 Undo）；拉到不相容的接孔仍顯示拒絕訊息。
+- 尚未做（C 佇列其餘）：主要選取、Shift＋單擊只加選、Color Output 結構規則（唯一、頂層、不可刪、不在新增選單）。
+- 驗證：session 34（新增：拔線一步 Undo、空輸入無動作）、browser 17 組（新增：碰到即選、Shift 加選、Shift＋左鍵框選不平移、RF 框選已關、拉到空白斷線＋Undo、Color Output 標題色）。真實 TD（Refactor.22，證據 `work/refactor/react-22/`）：Color Output 標題 = 綠 #3a5c4e／80%（疊出舊產品 #38524A）；框選碰到即選且不寫圖（revision 485 不變）；拉線拔除 486（GLSL 同步更新）、Undo 487 與原圖完全相同；Operator Viewer 指向 `/project1/Grape_TOP_React/output`、無錯誤；TOE 已交付（TD-Grape-dev.38）。
+
 ## Refactor.21 — 編輯時就檢查上限；狀態列警告 — 2026-10-08
 
 人類定（2026-10-08）：誰來檢查→核心 GraphDocument，只在一個關卡；用 config 的設定值；狀態列要有警告。

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBezierPath,
   type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './theme/dark.css';
 import './style.css';
 import { core, creatableDefinitions, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, type StateResponse } from './host';
@@ -35,10 +36,16 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
     <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={projection.edges} nodeTypes={nodeTypes}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
-      onConnectEnd={(_event, state) => { if (state.toHandle && !state.isValid) session.notice('接線被核心拒絕：型別或圖結構不相容'); }}
+      onConnectEnd={(_event, state) => {
+        if (state.toHandle && !state.isValid) session.notice('接線被核心拒絕：型別或圖結構不相容');
+        // Released on empty canvas from an input: pull that input's wire (Q33). 從輸入拉到空白處：拔線。
+        else if (!state.toHandle && state.fromHandle?.type === 'target' && state.fromNode && state.fromHandle.id)
+          session.disconnectInput(state.fromNode.id, state.fromHandle.id);
+      }}
       onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
       edgesReconnectable={false} snapToGrid={snap} snapGrid={[22, 22]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
-      minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}>
+      minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}
+      selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <Background gap={22} color="#393543" /><Controls showInteractive={false} />
     </ReactFlow>
   </RightDragSelect></BodyDragContext.Provider>;

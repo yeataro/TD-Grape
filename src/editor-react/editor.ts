@@ -129,6 +129,12 @@ export class Editor {
     } catch { return false; }
   };
   connect = (c: Connection) => this.transact('接線已更新', net => wire(net, c));
+  // Dragging from a connected input onto empty canvas pulls its wire (legacy behaviour, Q33).
+  // 從有接線的輸入拉到空白處＝拔線（舊產品行為）。
+  disconnectInput = (node: string, port: string) => this.transact('接線已拔除', net => {
+    const edges = net.node(node).port('input', port).edges;
+    if (edges.length) net.disconnectAll(edges);
+  });
   remove = ({ nodes, edges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => this.transact('選取項目已刪除', net => {
     const ids = new Set(edges.map(edge => edge.id));
     net.disconnectAll(net.edges.filter(edge => ids.has(edge.id)));

@@ -336,6 +336,15 @@ test('wire onto a spare input adds the port and the edge as one Undo step', t =>
   session.history(false); assert.deepEqual(clone(session.graph()), before);
 });
 
+test('pulling a connected input removes its wire as one Undo step; an empty input is a no-op', t => {
+  const { session } = open(t);
+  session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
+  const wired = clone(session.graph()), into = () => session.graph().stages.pixel.edges.filter(e => e.to[0] === 'sum' && e.to[1] === 'a');
+  session.disconnectInput('sum', 'b'); assert.deepEqual(clone(session.graph()), wired, 'empty input changes nothing');
+  session.disconnectInput('sum', 'a'); assert.equal(into().length, 0);
+  session.history(false); assert.deepEqual(clone(session.graph()), wired);
+});
+
 test('spare input refuses incompatible types and the module limit without editing', t => {
   const { session } = withMath(t), before = clone(session.graph());
   const colorOut = session.snapshot().projection.nodes.find(n => n.id === 'color').data.outputs[0].key;

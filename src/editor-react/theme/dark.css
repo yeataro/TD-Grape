@@ -1,0 +1,29 @@
+/* Product default theme (docs/ui/COLOR_SYSTEM.md). Only layer 1 (palette) holds colour codes.
+ * Palette primaries are derived from the legacy measured titles (UX handoff, dark/Cool) so that
+ * a primary at --title-alpha over the node body composes to the legacy colour.
+ * 產品預設主題。只有調色盤有色碼；主色由舊產品實測標題色反推，使「主色以 --title-alpha 疊在卡片底色上」
+ * 疊出的顏色等於舊產品。 */
+:root {
+  /* 1. palette */
+  --palette-node: #2e2c3a;
+  --palette-violet: #483664;
+  --palette-green: #3a5c4e;
+  --palette-teal: #296a77;
+  --palette-umber: #7e542b;
+  --palette-blue: #3a5581;
+  --palette-olive: #605a43;
+  --palette-rose: #6f4654;
+
+  /* strengths */
+  --title-alpha: 80%;
+
+  /* 2. purposes */
+  --surface-node: var(--palette-node);
+  --group-function: var(--palette-violet);
+  --group-output: var(--palette-green);
+  --group-uniform: var(--palette-teal);
+  --group-sampler: var(--palette-umber);
+  --group-constant: var(--palette-blue);
+  --group-attribute: var(--palette-olive);
+  --group-runtime: var(--palette-rose);
+}

@@ -93,7 +93,8 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
     observer.observe(card.current);
     return () => observer.disconnect();
   }, [id, updateInternals]);
-  return <article ref={card} className={`grape-node ${selected ? 'selected' : ''}`}>
+  return <article ref={card} className={`grape-node ${selected ? 'selected' : ''}`}
+    style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{text(view.label ?? data.label)}</strong>
       {view.selector ? <select className="nodrag" aria-label={`${id} type`} value={view.selector.value}
         onChange={event => session.edit(id, view.selector!.command, { value: event.target.value })}>

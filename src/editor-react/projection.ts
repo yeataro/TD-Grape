@@ -3,7 +3,7 @@ import { core, same, typeColor, type GraphDocument, type GraphChanges, type Node
   type NodePresentation, type PortSpec, type Bootstrap } from './core';
 
 export type FlowNode = RFNode<{
-  authored: Node; label: string; view: NodePresentation; types: string[];
+  authored: Node; label: string; colorGroup: string; view: NodePresentation; types: string[];
   inputs: PortSpec[]; outputs: PortSpec[]; connected: string[];
 }, 'grape'>;
 export type FlowEdge = RFEdge;
@@ -13,6 +13,10 @@ const retainArray = <T,>(next: T[], old: T[]) =>
 
 // A transaction prepares BOTH collections before the session publishes anything.
 // GraphChanges 提供候選範圍，RF 外殼留用未變引用；不建立第二份可寫作品。
+// Colour group: a display-only tag (COLOR_SYSTEM.md, design-interview Q42). Derived from behaviour where
+// possible; the core never reads it. 顏色組：只給畫面的 tag；能從行為推的就推，核心永遠不讀。
+const colorGroupOf = (module: { role: string }) => module.role === 'output' ? 'output' : 'function';
+
 export function project(document: GraphDocument, previous: Projection, contract: Bootstrap['typeContract'], changes?: GraphChanges): Projection {
   const network = document.networks.get('pixel')!;
   const delta = changes?.networks.find(item => item.id === 'pixel');
@@ -38,7 +42,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
       const types: string[] = described?.selector === 'parameter'
         ? [...new Set<string>(described.variants.map((row: { type: string | null }) => row.type)
           .filter((type: string | null): type is string => !!type))] : [];
-      const next = { authored, label: module.catalog.definition.label,
+      const next = { authored, label: module.catalog.definition.label, colorGroup: colorGroupOf(module),
         view: module.presentation?.(authored, network.context) ?? {}, types,
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
         connected: connected.get(node.id) ?? [] };
