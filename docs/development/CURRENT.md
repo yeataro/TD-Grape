@@ -57,6 +57,7 @@
 
 | 發現日 | 情況 |
 | --- | --- |
+| 2026-10-07 | **決策文件的存放位置（人類暫不決定）**：design-interview、target-architecture 等在 workspace（不在 git，Q17 定到重構收尾再整理），今天新增 Q33–Q40 後風險變大：無版本紀錄、不與 commit 連結、別的環境（換電腦、雲端 agent）讀不到、單檔近千行難讀。曾提：僅在 `work/in-place-refactor-design/`（492 KB、18 檔）做本機 git、不設遠端不 push；精簡決策寫進 repo（repo 公開，原始討論一律不進）。人類顧慮：Dropbox 同步 `.git`、日後想轉雲端會有問題——先不動。 |
 | 2026-10-07 | **新入口沒有 Shader 選單（舊能力漏接）**：舊產品標題列 `#shaderpicker` 列出 TD 內所有 Grape OP，選取後 `location.assign('/shader/<id>/')` 整頁換網址，有未送出修改先確認（legacy `app.js:679-705`）。換網址＝重新向 TD 讀圖、Undo／選取消失，TD 最小化時打不開；替代為多開分頁，或日後同頁多 session。可與 Q32 的 Grape OP 清單一起考慮。 |
 | 2026-10-07 | **新入口介面文字寫死（越晚越貴）**：`src/editor-react/`（`session.ts`、`main.tsx` 等）的提示與按鈕文字直接寫中文。舊產品已有 `src/editor/locales.json`（預設 `en`；繁中／英／日／法／韓；1,617 則訊息、`technicalTerms`）與 `t()`。人類要求 localization 做得越乾淨越好，文字應放在 JSON 之類的資料檔，不寫死在程式。**人類定：英文為首選；缺翻譯一律回退英文**（舊 `t()` 已是「所選語言 → 預設 en → 訊息代號」；但 `languages` 清單順序是繁中在前，要改成英文在前）。**方向已定（design-interview Q34）**：代號式、格式對齊 React 慣例（一語言一 JSON）、核心只送代號；現在起以最小規模維護。最小骨架已提案，人類要求先記下、之後一起動手。 |
 | 2026-10-07 | 衝突時選「TD 端」後的編輯端版本，目前只能以 Undo 叫回（人類選 A），重新整理頁面即失；持久保存需多版本快照，人類判斷目前太大。 |
