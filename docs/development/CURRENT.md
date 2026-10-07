@@ -85,7 +85,7 @@
 
 - **Human Takeover Test**：人類不靠 AI 完成一項維護（如新增 unary 節點），未執行。見 [B 案](REFACTOR_REACT_FLOW_PLAN_B.md#human-takeover-test)。
 - **完整 TOE 冷啟動**：未驗證。
-- **未遷移**：MAT／ISF、TOP texture／array／進階來源、舊 `expose` 旗標、Uniform 拖曳即時更新（目前放開才送值）、pixel preview session、Personal Library、離線 Sketch、阻尼、面板（待人類討論）。
+- **未遷移**：MAT／ISF、TOP texture／array／進階來源、舊 `expose` 旗標、Uniform 拖曳即時更新（目前放開才送值——**這是遷移中的妥協，不是新產品行為**（人類 2026-10-08）；目標是拖著 TD 就跟著變，同舊產品，做法見 Q41 即時通道）、pixel preview session、Personal Library、離線 Sketch、阻尼、面板（待人類討論）。
 
 ## 程式目錄現況 ✅
 
