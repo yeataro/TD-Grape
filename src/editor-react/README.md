@@ -9,18 +9,19 @@
 | 要處理的事情 | 入口 |
 | --- | --- |
 | 節點規則、接孔、型別、GLSL | [core-ts/nodes](../core-ts/nodes)、[node_module.ts](../core-ts/node_module.ts)、[values.ts](../core-ts/values.ts) |
-| 文件操作、Undo、排程、晚回覆、失敗保留 | [session.ts](session.ts) 的 `EditorSession` |
+| 編輯協調：文件操作、Undo、每次修改完成即產碼、保管編輯狀態 | [editor.ts](editor.ts) 的 `Editor` |
+| 與 TD 交換作品：讀取、送出排程、晚回覆、失敗分類與重試、衝突、保存 | [host_sync.ts](host_sync.ts) 的 `HostSync` |
 | 把一筆 GraphChanges 轉成 RF nodes／edges | [projection.ts](projection.ts) 的 `project` |
 | 模組描述如何畫成卡片／值欄位、模組宣告的 spare 接孔 | [NodeCard.tsx](NodeCard.tsx)、[NumberField.tsx](NumberField.tsx) |
 | 額外 Handle 量測通知 | [geometry.ts](geometry.ts)；外框尺寸／拖曳沿用 RF |
 | React Flow 沒提供、自己補的畫布互動（Q29「自己泡茶」；一功能一檔，滿 3 個再收進資料夾；RF 日後提供即可換回） | [RightDragSelect.tsx](RightDragSelect.tsx)（右鍵拖曳框選） |
-| 開圖、最小工具列、草稿恢復提示、TD 不在時的提示與衝突選擇 | [main.tsx](main.tsx)；分類與重試在 [session.ts](session.ts) 的 `classify`／`recover` |
+| 開圖、最小工具列、草稿恢復提示、TD 不在時的提示與衝突選擇 | [main.tsx](main.tsx)；分類與重試在 [host_sync.ts](host_sync.ts) 的 `classify`／`recover` |
 | 現有 HTTP 協定及失敗層 | [host.ts](host.ts)；TD 契約在 [host_api.py](../td/runtime/host_api.py) |
 | 首輪已接管範圍、既有生成核心的型別入口 | [core.ts](core.ts) |
 
-值與接線只呼叫 session → GraphDocument／Network。卡片與 RF 不持有第二張可獨立改寫的作品。RF selection、measured、viewport、拖曳和輸入草稿是暫態；拖曳放開／欄位提交才記錄一筆圖歷史。
+值與接線只呼叫 Editor → GraphDocument／Network。卡片與 RF 不持有第二張可獨立改寫的作品。RF selection、measured、viewport、拖曳和輸入草稿是暫態；拖曳放開／欄位提交才記錄一筆圖歷史。
 
-`project` 先準備完整 nodes 與 edges，再由 session 發布一次。`GraphChanges` 提供候選範圍；無關項目保持引用。它仍有有限的全圖遍歷與快照成本，並非增量計算引擎。改值不等於接孔幾何改變；額外 invalidation 只補同尺寸下接孔增刪或位移，RF 自己處理尺寸觀察。
+`project` 先準備完整 nodes 與 edges，再由 Editor 發布一次。`GraphChanges` 提供候選範圍；無關項目保持引用。它仍有有限的全圖遍歷與快照成本，並非增量計算引擎。改值不等於接孔幾何改變；額外 invalidation 只補同尺寸下接孔增刪或位移，RF 自己處理尺寸觀察。
 
 型別選單暫時重用既有 `editor_contract` variants；規則來自真正 NodeModule。`supportedDefinitions` 只是本轮覆盖清單，不是另一套 registry。通用模型和 compiler 本輪沒有改動。新入口的同源 HTTP／歷史協調只覆蓋當前 caller，沒有抽象尚未接入的面板、Uniform live 或 Library。
 

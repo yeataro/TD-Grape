@@ -3,7 +3,7 @@ import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflo
 import { core, typeColor, type Value, type NodeControl, type NodePresentation } from './core';
 import { NumberField } from './NumberField';
 import type { FlowNode } from './projection';
-import { spareHandle, type EditorSession } from './session';
+import { spareHandle, type Editor as EditorSession } from './editor';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
 
 export const SessionContext = createContext<EditorSession | null>(null);

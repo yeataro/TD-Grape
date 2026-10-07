@@ -18,7 +18,8 @@ function load(file) {
     ? load(path.resolve(path.dirname(file), name + '.ts')) : require(name), module, module.exports);
   return module.exports;
 }
-const { EditorSession, resetToDefault, spareHandle } = load(path.join(root, 'src/editor-react/session.ts'));
+const { Editor: EditorSession, spareHandle } = load(path.join(root, 'src/editor-react/editor.ts'));
+const { resetToDefault } = load(path.join(root, 'src/editor-react/host_sync.ts'));
 const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts'));
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
@@ -446,4 +447,32 @@ test('legacy fixed-type Vector opens and keeps its locked type', t => {
   session.configure('fv', 'vec3');
   assert.deepEqual(clone(session.graph()), before, 'locked type is not changed');
   assert.match(session.snapshot().message, /Fixed node type|Invalid manual type/);
+});
+
+// Path rebuild A1 (design-interview Q38): code generation follows each finished edit, not delivery.
+// 產碼跟著每次修改完成，不再等送出；TD 不在時 GLSL 與錯誤照樣更新。
+test('GLSL is generated on open and after every edit, before anything is sent', t => {
+  const { session, calls } = open(t);
+  assert.equal(session.snapshot().glsl, GrapeTopCompiler.compile(session.graph(), bootstrap.typeContract.glslCode).pixel);
+  session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
+  assert.equal(calls.length, 0, 'nothing sent yet');
+  assert.equal(session.snapshot().glsl, GrapeTopCompiler.compile(session.graph(), bootstrap.typeContract.glslCode).pixel);
+});
+
+test('TD away: GLSL and code generation errors still update while sending is stopped', async t => {
+  const { session } = open(t, async () => notResponding(), 60000);
+  session.transact('edit', net => setValue(net, 'a', 5)); await session.flush();
+  assert.equal(session.snapshot().phase, 'offline');
+  const before = session.snapshot().glsl;
+  session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'color'), edges: [] }); // feeds the output
+  assert.notEqual(session.snapshot().glsl, before, 'GLSL follows the edit while TD is away');
+  assert.equal(session.snapshot().glsl, GrapeTopCompiler.compile(session.graph(), bootstrap.typeContract.glslCode).pixel);
+});
+
+test('a code generation failure is reported at edit time; the last good GLSL stays visible', t => {
+  const { session, calls } = open(t), good = session.snapshot().glsl;
+  session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'pixel_out'), edges: [] });
+  assert.match(session.snapshot().message, /產碼失敗/);
+  assert.equal(session.snapshot().glsl, good);
+  assert.equal(calls.length, 0);
 });

@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.18 — 路徑重建 A1：Editor／HostSync 拆分、產碼不再等送出 — 2026-10-07
+
+依 design-interview Q38（路徑重建，人類 2026-10-07 定案）的第一輪。
+
+- **拆分**：原 `session.ts`（`EditorSession`）拆成 [editor.ts](../../src/editor-react/editor.ts) 的 `Editor`（編輯協調：交核心、保管作品／Undo／編輯狀態、產碼）與 [host_sync.ts](../../src/editor-react/host_sync.ts) 的 `HostSync`（與 TD 交換作品：讀取、送出、離線分類與重試、衝突、保存；不改作品、不產碼）。名稱依 Q38 2-6。
+- **產碼移出送出**：以前 `deliver()` 送出時才 `compiler.compile`，TD 不在（送出被擋）時 GLSL 與產碼錯誤停在舊結果。現在每次修改完成（含開圖、Undo／Redo、還原草稿、採用 TD 端）即產碼；GLSL 立即更新，失敗時在編輯當下顯示「產碼失敗」並保留上次成功的 GLSL。HostSync 送出時取 Editor 已產好的結果。
+- **協定不變**：送往 TD 的請求格式、0.65 秒送出延遲、版本核對與衝突行為照舊（延遲拿掉與新協定屬 A2）。
+- **驗證**：session 30（新增：開圖與每次修改即有 GLSL、送出前不需 TD；TD 不在時 GLSL 照樣跟著修改；產碼失敗於編輯當下回報並保留上次 GLSL）、browser 14 組全過。**真實 TD**：TD 以 Reload 載入 Refactor.18；以真正的 `Editor` 對 `/project1/Grape_TOP_React` 開圖（開圖 GLSL＝同圖產碼）、改 Color 值（送出前 GLSL 已變）、送出（revision 450→451、已同步）；TD `pixel_shader` 與編輯器送出前產的 GLSL 完全相同，GLSL TOP 無錯誤；再還原原圖（revision 452，與原圖相同）。私人證據 `work/refactor/react-a1/live.json`。
+- 限制：每次修改都產碼（含純移動），尚未有指紋判斷（A3）；`main.tsx` 內有同名 React 元件 `Editor`，暫以別名 `EditorSession` 匯入，命名整理時處理。
+
 ## Refactor.17.2 — 補開放 Vector 等 5 個節點、新增選單不再提供已淘汰定義 — 2026-10-07
 
 人類以舊編輯器截圖發現：新編輯器建出舊產品已淘汰的 `vec2`（舊產品標為「Vector 2 · Constant」），卻打不開舊產品現行的 Vector 與固定入口「vec2」。

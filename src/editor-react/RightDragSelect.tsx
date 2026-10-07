@@ -1,6 +1,6 @@
 import { useRef, useState, type PointerEvent, type MouseEvent, type ReactNode } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import type { EditorSession } from './session';
+import type { Editor as EditorSession } from './editor';
 import type { FlowNode, FlowEdge } from './projection';
 
 // Right-drag box selection, as in the legacy editor (docs/ui/UI_NAVIGATION.md,
