@@ -55,3 +55,4 @@
 ## 排除
 
 - `docs/Goose_City_Revelation/`：與專案無關。
+- [顏色系統](../ui/COLOR_SYSTEM.md)：新編輯器的顏色規範（主色、color-mix、主題、禁止事項）；寫任何介面前先讀。
