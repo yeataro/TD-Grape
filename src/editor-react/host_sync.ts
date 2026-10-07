@@ -1,4 +1,4 @@
-import { compiler, same, type Graph, type Bootstrap } from './core';
+import { compiler, serializeDocument, type Graph, type Bootstrap } from './core';
 import { HostClient, HostError, type StateResponse } from './host';
 
 // Exchanging the authored document with the host (TD): open, deliver, recover, conflicts, save.
@@ -8,16 +8,21 @@ export type Compiled = ReturnType<typeof compiler.compile>;
 export type Delivery = { graph: Graph; compiled?: Compiled; error?: string };
 export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
 export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable'; message?: string };
-type Sent = { graph: Graph; revision: number };
+type Sent = { document: string; revision: number };
+export const FORMAT = 'grape-next-1';
 
-const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compiled: Compiled) => ({
-  graph: sent.graph, revision: sent.revision, frontendArtifact: { protocol: compiler.protocol,
-    targetId: host.target, baseRevision: sent.revision, snapshot: JSON.stringify(sent.graph),
-    catalogHash: bootstrap.catalogHash, compiled } });
+// Two parts (design-interview Q38 2-2): the execution part (GLSL + bindings) is applied by TD as a
+// pair; the document is opaque text TD stores as received. A failed code generation sends the
+// document only, so the work is kept while TD keeps running the last known good Shader.
+// 兩部分：執行用（GLSL＋綁定）由 TD 成對套用；圖是 TD 原樣保存的文字。產碼失敗時只送圖。
+const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compiled?: Compiled) => ({
+  format: FORMAT, revision: sent.revision, targetId: host.target, catalogHash: bootstrap.catalogHash,
+  document: sent.document, runtime: compiled ? JSON.stringify(compiled) : null });
 
 // Opening reads TD's copy: TD is the only source before an editor document exists (Q28, Q38 2-4).
 // 開圖讀 TD 的那一份：編輯器還沒有作品時，唯一的來源是 TD。
 export function checkLoaded(host: HostClient, bootstrap: Bootstrap, loaded: StateResponse) {
+  if (loaded.format !== FORMAT) throw Error('此 Grape OP 不是新編輯器的格式。');
   if (loaded.savedStateIssue || loaded.readOnlyReason || loaded.upgradeReview) throw Error(loaded.readOnlyReason || '此文件需要在舊入口處理載入問題。');
   if (loaded.frontendCompiler?.protocol !== compiler.protocol || loaded.frontendCompiler.catalogHash !== bootstrap.catalogHash)
     throw Error('前端核心與 TD bootstrap 版本不一致；請重新載入同一建置。');
@@ -31,10 +36,10 @@ export function checkLoaded(host: HostClient, bootstrap: Bootstrap, loaded: Stat
 export async function resetToDefault(host: HostClient, bootstrap: Bootstrap) {
   const loaded = await host.call<StateResponse>('state');
   checkLoaded(host, bootstrap, { ...loaded, state: { ...loaded.state, targetId: undefined } });
-  const sent = { graph: bootstrap.defaultDocument.graph, revision: loaded.state.revision };
-  const compiled = compiler.compile(sent.graph, bootstrap.typeContract.glslCode);
+  const sent = { document: serializeDocument(bootstrap.defaultDocument.graph), revision: loaded.state.revision };
+  const compiled = compiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode);
   const result = await host.call<{ state: StateResponse['state'] }>('apply', applyRequest(host, bootstrap, sent, compiled));
-  if (result.state?.revision !== sent.revision + 1 || !same(result.state.graph, sent.graph)) throw new HostError('宿主回覆與送出快照不一致。');
+  if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
 }
 
 const conflictMessage = 'TD 端的圖似乎有被修改，請選擇要使用的版本。';
@@ -61,19 +66,19 @@ export class HostSync {
   private recovery?: ReturnType<typeof setTimeout>;
   private pending?: Promise<void>;
   private disposed = false;
-  private confirmed: Graph;
+  private confirmed: string; // document text TD has acknowledged
   private uncertain?: Sent;
   blocked = false;
   status: SyncStatus;
   constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse,
     private readonly source: () => Delivery, private readonly report: (status: SyncStatus) => void,
-    private readonly delay = 650, private readonly retry = 5000) {
-    this.confirmed = loaded.state.graph;
+    private readonly delay = 0, private readonly retry = 5000) {
+    this.confirmed = loaded.state.document;
     this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready' };
   }
   get busy() { return !!this.pending; }
   private set(patch: Partial<SyncStatus>) { this.status = { ...this.status, ...patch }; if (!this.disposed) this.report(this.status); }
-  private dirtyNow = () => !same(this.source().graph, this.confirmed);
+  private dirtyNow = () => serializeDocument(this.source().graph) !== this.confirmed;
 
   // The Editor has a newer document. Sending is serialized; a late acknowledgement only advances
   // the revision and the newest document is sent next (latest wins, design-interview Q38 2-1-a).
@@ -92,16 +97,16 @@ export class HostSync {
   };
   private async deliver() {
     while (this.status.dirty && !this.disposed && !this.blocked) {
-      const { graph, compiled, error } = this.source(), sent = { graph, revision: this.status.revision };
-      if (!compiled) { this.set({ phase: 'error', message: '產碼失敗：' + error }); return; }
-      this.set({ phase: 'sending', message: '正在套用至 TD…' });
+      const { graph, compiled } = this.source(), sent = { document: serializeDocument(graph), revision: this.status.revision };
+      this.set({ phase: 'sending', message: compiled ? '正在套用至 TD…' : '產碼失敗；只把圖存到 TD，TD 繼續執行上次成功的 Shader…' });
       try {
         const result = await this.host.call<{ state: StateResponse['state'] }>('apply',
           applyRequest(this.host, this.bootstrap, sent, compiled));
         if (this.disposed) return;
-        if (result.state?.revision !== sent.revision + 1 || !same(result.state.graph, sent.graph)) throw new HostError('宿主回覆與送出快照不一致。');
-        this.confirmed = sent.graph;
-        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message: '已套用 TD；專案尚需保存' });
+        if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
+        this.confirmed = sent.document;
+        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready',
+          message: compiled ? '已套用 TD；專案尚需保存' : '圖已存到 TD；產碼失敗，TD 仍執行上次成功的 Shader' });
       } catch (error) {
         if (this.disposed) return;
         this.fail(classify(error), error, sent);
@@ -154,8 +159,8 @@ export class HostSync {
       this.blocked = true; this.set({ phase: 'error', link: undefined, message: '宿主版本已變更，請下載草稿後重新開啟。' }); return;
     }
     const state = result.state, sent = this.uncertain;
-    if (sent && state.revision === sent.revision + 1 && same(state.graph, sent.graph)) this.confirmed = sent.graph;
-    else if (state.revision !== this.status.revision || !same(state.graph, this.confirmed)) {
+    if (sent && state.revision === sent.revision + 1 && state.document === sent.document) this.confirmed = sent.document;
+    else if (state.revision !== this.status.revision || state.document !== this.confirmed) {
       this.blocked = true; this.set({ phase: 'conflict', link: undefined, message: conflictMessage }); return;
     }
     this.blocked = false; this.uncertain = undefined;
@@ -168,7 +173,7 @@ export class HostSync {
   // 衝突時選「TD 端」：Editor 已採用 TD 的版本，與 TD 相同、不需送出。
   adopt(state: StateResponse['state']) {
     clearTimeout(this.timer);
-    this.confirmed = state.graph; this.blocked = false; this.uncertain = undefined;
+    this.confirmed = state.document; this.blocked = false; this.uncertain = undefined;
     this.set({ revision: state.revision, dirty: false, phase: 'ready', link: undefined });
   }
   // Conflict choice "編輯端" (Q7/Q28): rebase the draft on TD's latest revision and send it
@@ -176,7 +181,7 @@ export class HostSync {
   // 衝突時選「編輯端」：以最新 revision 為基準重送草稿，照常產碼／驗證；期間再變仍擋。
   overwrite = async () => {
     const result = await this.read();
-    this.confirmed = result.state.graph; this.blocked = false; this.uncertain = undefined;
+    this.confirmed = result.state.document; this.blocked = false; this.uncertain = undefined;
     const dirty = this.dirtyNow();
     this.set({ revision: result.state.revision, dirty, phase: 'ready',
       message: dirty ? '以編輯器草稿覆寫 TD…' : '草稿與 TD 文件相同，已同步。' });

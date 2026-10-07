@@ -53,6 +53,7 @@ modules = {
     'host_api': 'src/td/runtime/host_api.py',
     'host_requests': 'src/td/runtime/host_requests.py',
     'native_family': 'src/td/runtime/native_family.py',
+    'next_family': 'src/td/runtime/next_family.py',
     'host_artifact': 'src/td/runtime/host_artifact.py',
     'host_document': 'src/td/runtime/host_document.py',
     'native_values': 'src/td/runtime/native_values.py',
@@ -67,7 +68,7 @@ modules = {
 # 依去向分組：常駐宿主／Legacy 共用待更新／Legacy 舊入口專用待遷移（見 annotate 框）。
 positions = {
     'GrapeManagerExt': (0, 0), 'host_api': (240, 0), 'host_requests': (485, 0), 'native_family': (700, 0),
-    'host_artifact': (0, -160), 'host_document': (240, -160), 'native_values': (485, -160),
+    'host_artifact': (0, -160), 'host_document': (240, -160), 'native_values': (485, -160), 'next_family': (700, -160),
     'sources': (0, -449), 'sgrape_source_catalog': (250, -449), 'source_catalog': (475, -449), 'history': (700, -449),
     'parameter_links_source': (0, -599),
     'parameters': (0, -875),

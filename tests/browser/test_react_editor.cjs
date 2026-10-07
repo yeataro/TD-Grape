@@ -29,19 +29,21 @@ function fixture() {
   const server = http.createServer(async (req, res) => {
     try {
       if (req.url.startsWith('/api/')) {
-        const action = req.url.split('/').at(-1); let raw = ''; for await (const chunk of req) raw += chunk;
+        const action = req.url.split('?')[0].split('/').at(-1); let raw = ''; for await (const chunk of req) raw += chunk;
         const body = raw && JSON.parse(raw); res.setHeader('Content-Type', 'application/json');
         // As measured on live TD while minimized: the queue answers, nothing is processed.
         if (down) { res.statusCode = 503; return res.end(JSON.stringify({ code: 'manager_not_responding', error: 'TD did not process this request.' })); }
-        if (action === 'state') return res.end(JSON.stringify({ state, target: '/test/formal_top', shaderKind: 'top',
+        // New-editor protocol (Q38, Q40): TD sees the document only as text; the fixture keeps a parsed copy for assertions.
+        const wire = { document: JSON.stringify(state.graph), revision: state.revision, targetId: target };
+        if (action === 'state') return res.end(JSON.stringify({ state: wire, format: 'grape-next-1', target: '/test/formal_top', shaderKind: 'top',
           frontendCompiler: { protocol: 'grape.top.ts.1', catalogHash: bootstrap.catalogHash, required: true } }));
         if (action === 'save') return res.end(JSON.stringify({ saved: 'fixture.toe' }));
         writes.push(body);
         if (fail) { res.statusCode = 422; return res.end(JSON.stringify({ error: 'fixture GPU refused', layer: 'gpu', code: 'shader_compile' })); }
         if (body.revision !== state.revision) { res.statusCode = 409; return res.end(JSON.stringify({ error: 'Conflict: document revision conflict' })); }
-        assert.deepEqual(JSON.parse(body.frontendArtifact.snapshot), body.graph);
-        state = { graph: body.graph, revision: state.revision + 1, targetId: target };
-        return res.end(JSON.stringify({ state }));
+        assert.equal(body.format, 'grape-next-1');
+        state = { graph: JSON.parse(body.document), revision: state.revision + 1, targetId: target };
+        return res.end(JSON.stringify({ state: { document: body.document, revision: state.revision, targetId: target } }));
       }
       const name = decodeURIComponent(req.url.split('?')[0]);
       const file = path.resolve(buildFolder, '.' + name);

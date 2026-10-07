@@ -6,7 +6,7 @@ explicit until their actual adapters are migrated.
 """
 from copy import deepcopy
 import re
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 
 class UnsupportedOperation(RuntimeError):
@@ -29,7 +29,8 @@ class HostAPI:
         self.save_project = save_project
 
     def dispatch(self, method, path, body=None):
-        path = urlsplit(path).path
+        url = urlsplit(path)
+        path, next_editor = url.path, parse_qs(url.query).get('editor') == ['next']
         match = re.fullmatch(r'/api/([a-f0-9]{32})/([a-z-]+)', path)
         if method == 'GET' and path == '/api/shaders':
             return 200, self.choices()
@@ -42,6 +43,13 @@ class HostAPI:
                 return 404, {'error': 'This Family is not available to the Manager.', 'code': 'target_unavailable'}
             if method == 'POST' and not isinstance(body, dict):
                 raise ValueError('Host actions require a JSON object.')
+            # Old and new editors never share a Grape OP (design-interview Q40): a TD tag decides.
+            # 新舊編輯器不共用 Grape OP，由 TD tag 決定。
+            if getattr(family, 'next', False) != next_editor:
+                return 409, ({'error': 'This Grape OP is managed by the new editor; open it there.', 'code': 'managed_by_new_editor'}
+                    if not next_editor else {'error': 'This Grape OP holds an old-editor graph; open it in the old editor.', 'code': 'old_editor_graph'})
+            if next_editor:
+                return 200, self._next_action(family, method, action, body)
             return 200, self._action(family, method, action, body)
         except UnsupportedOperation as error:
             return 501, {'error': str(error), 'code': 'capability_not_migrated', 'layer': 'manager', 'operation': action}
@@ -49,6 +57,18 @@ class HostAPI:
             conflict = 'conflict' in str(error).lower()
             return 409 if conflict else 422, {'error': ('Conflict: ' if conflict and not str(error).startswith('Conflict:') else '') + str(error),
                 'code': 'revision_conflict' if conflict else 'host_rejected', 'layer': 'native-family', 'operation': action}
+
+    def _next_action(self, family, method, action, body):
+        # TD only checks the envelope and what it executes; no history, sources or graph reads.
+        # TD 只核對信封與自己要執行的東西；不碰歷史、來源或圖的內容。
+        if method == 'GET' and action == 'state':
+            return {'state': family.state(), 'format': family.FORMAT, 'shaderKind': 'top', 'target': family.target().path,
+                'frontendCompiler': {'protocol': family.PROTOCOL, 'catalogHash': self.bootstrap['catalogHash'], 'required': True}}
+        if method == 'POST' and action == 'apply':
+            return family.apply(body, catalog_hash=self.bootstrap['catalogHash'])
+        if method == 'POST' and action == 'save':
+            return {'saved': self.save_project()}
+        raise UnsupportedOperation('The new editor path does not provide this operation yet: ' + method + ' ' + action)
 
     def _operation(self, family, operation, source_edit=None):
         family.sources.sync(family)

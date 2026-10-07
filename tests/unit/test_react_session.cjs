@@ -34,17 +34,20 @@ function fixture() {
   graph.privateMetadata = { keep: 'roundtrip' };
   return graph;
 }
+// New-editor protocol (design-interview Q38, Q40): TD holds the document as opaque text.
+const doc = state => JSON.parse(state.document);
+const withDoc = (state, edit) => { const graph = doc(state); edit(graph); state.document = JSON.stringify(graph); return state; };
 function open(t, request, retry = 60000) {
-  let remote = { graph: fixture(), revision: 4, targetId: target };
+  let remote = { document: JSON.stringify(fixture()), revision: 4, targetId: target };
   const calls = [];
-  const loaded = () => ({ state: clone(remote), shaderKind: 'top', target: '/test/family',
+  const loaded = () => ({ state: clone(remote), format: 'grape-next-1', shaderKind: 'top', target: '/test/family',
     frontendCompiler: { protocol: GrapeTopCompiler.protocol, catalogHash: bootstrap.catalogHash, required: true } });
   const fetcher = async (url, options) => {
-    const action = url.split('/').at(-1), body = options.body && JSON.parse(options.body);
+    const action = url.split('?')[0].split('/').at(-1), body = options.body && JSON.parse(options.body);
     calls.push({ action, body });
     const result = request ? await request(action, body, { get: loaded, set: state => { remote = state; } }) :
       action === 'state' ? loaded() : action === 'save' ? { saved: 'test.toe' } :
-      { state: (remote = { graph: body.graph, revision: body.revision + 1, targetId: target }) };
+      { state: (remote = { document: body.document, revision: body.revision + 1, targetId: target }) };
     return result instanceof Response ? result : new Response(JSON.stringify(result));
   };
   const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000, retry);
@@ -121,7 +124,7 @@ test('late apply acknowledges its snapshot then sends latest edits, never overwr
   const { session, calls } = open(t, async (action, body, remote) => {
     if (action === 'state') return remote.get();
     if (++count === 1) await gate.promise;
-    const state = { graph: body.graph, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+    const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
   });
   session.transact('first', net => setValue(net, 'a', 2));
   const pending = session.flush();
@@ -131,9 +134,9 @@ test('late apply acknowledges its snapshot then sends latest edits, never overwr
   assert.equal(session.graph().stages.pixel.nodes.find(n => n.id === 'a').params.value, 8);
   assert.equal(session.snapshot().dirty, false);
   for (const { body } of calls) {
-    assert.deepEqual(JSON.parse(body.frontendArtifact.snapshot), body.graph);
-    assert.deepEqual(clone(GrapeTopCompiler.compile(body.graph, bootstrap.typeContract.glslCode)), body.frontendArtifact.compiled);
-    assert.equal(body.frontendArtifact.catalogHash, bootstrap.catalogHash);
+    assert.equal(body.format, 'grape-next-1');
+    assert.deepEqual(clone(GrapeTopCompiler.compile(JSON.parse(body.document), bootstrap.typeContract.glslCode)), JSON.parse(body.runtime));
+    assert.equal(body.catalogHash, bootstrap.catalogHash);
   }
 });
 
@@ -141,7 +144,7 @@ test('undo during apply is delivered after the acknowledgement and keeps graph m
   const gate = deferred(); let count = 0;
   const { session, calls } = open(t, async (_action, body) => {
     if (++count === 1) await gate.promise;
-    return { state: { graph: body.graph, revision: body.revision + 1 } };
+    return { state: { document: body.document, revision: body.revision + 1 } };
   });
   const before = clone(session.graph()); session.transact('edit', net => setValue(net, 'a', 20));
   const pending = session.flush(); session.history(false); gate.resolve(); await pending;
@@ -152,7 +155,7 @@ test('undo during apply is delivered after the acknowledgement and keeps graph m
 test('lost response blocks replay; read-only check can confirm the previously accepted snapshot', async t => {
   const { session, calls } = open(t, async (action, body, remote) => {
     if (action === 'state') return remote.get();
-    remote.set({ graph: body.graph, revision: body.revision + 1, targetId: target });
+    remote.set({ document: body.document, revision: body.revision + 1, targetId: target });
     throw Error('response lost');
   });
   session.transact('edit', net => setValue(net, 'a', 7)); await session.flush();
@@ -179,10 +182,10 @@ const strictHost = beforeApply => async (action, body, remote) => {
   if (action === 'state') return remote.get();
   beforeApply?.(remote);
   if (body.revision !== remote.get().state.revision) return new Response(JSON.stringify({ error: 'Conflict: stale revision' }), { status: 409 });
-  const state = { graph: body.graph, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+  const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
 };
 const otherEntryEdits = remote => {
-  const { state } = remote.get(); state.graph.stages.pixel.nodes.find(n => n.id === 'b').params.value = 5;
+  const { state } = remote.get(); withDoc(state, graph => { graph.stages.pixel.nodes.find(n => n.id === 'b').params.value = 5; });
   remote.set({ ...state, revision: state.revision + 1 });
 };
 
@@ -195,24 +198,24 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
   const draft = clone(session.graph());
   await session.overwrite();
   assert.deepEqual(calls.map(c => c.action), ['apply', 'state', 'apply']); assert.equal(calls[2].body.revision, 5);
-  assert.deepEqual(loaded().state.graph, draft); assert.equal(loaded().state.revision, 6);
+  assert.deepEqual(doc(loaded().state), draft); assert.equal(loaded().state.revision, 6);
   assert.equal(session.snapshot().phase, 'ready'); assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 6);
 });
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, calls, loaded } = open(t, strictHost());
-  const unsupported = loaded(); unsupported.state.graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.uniform', params: {} });
+  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', definitionUuid: 'sgrape.builtin.uniform', params: {} }));
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap);
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
-  assert.deepEqual(calls[1].body.frontendArtifact.compiled, clone(GrapeTopCompiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode)));
-  assert.deepEqual(loaded().state.graph, bootstrap.defaultDocument.graph); assert.equal(loaded().state.revision, 5);
+  assert.deepEqual(JSON.parse(calls[1].body.runtime), clone(GrapeTopCompiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode)));
+  assert.deepEqual(doc(loaded().state), bootstrap.defaultDocument.graph); assert.equal(loaded().state.revision, 5);
 });
 
 test('migration convenience: reset still conflicts on a stale revision and leaves TD unchanged', async t => {
   const { session, loaded } = open(t, strictHost(otherEntryEdits));
   await assert.rejects(resetToDefault(session.host, bootstrap), /Conflict/);
-  assert.notDeepEqual(loaded().state.graph, bootstrap.defaultDocument.graph);
+  assert.notDeepEqual(doc(loaded().state), bootstrap.defaultDocument.graph);
 });
 
 test('migration convenience: overwrite still conflicts if TD changes again before delivery', async t => {
@@ -221,26 +224,33 @@ test('migration convenience: overwrite still conflicts if TD changes again befor
   const draft = clone(session.graph()), remote = clone(loaded().state);
   await session.overwrite();
   assert.equal(session.snapshot().phase, 'conflict'); assert.deepEqual(clone(session.graph()), draft);
-  assert.notDeepEqual(loaded().state.graph, draft); assert.equal(loaded().state.revision, remote.revision + 1);
+  assert.notDeepEqual(doc(loaded().state), draft); assert.equal(loaded().state.revision, remote.revision + 1);
 });
 
-test('invalid shader stays editable and does not write or save TD', async t => {
+// Code generation failed (design-interview Q38 2-5): the document is still saved to TD so no work is
+// lost; the execution part is not sent, so TD keeps running the last known good Shader.
+test('failed code generation still saves the document; TD keeps the last known good Shader', async t => {
   const { session, calls } = open(t);
   session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'pixel_out'), edges: [] });
-  await session.save(); assert.equal(calls.length, 0); assert.equal(session.snapshot().dirty, true);
-  session.history(false); await session.flush(); assert.equal(session.snapshot().dirty, false);
+  await session.flush();
+  assert.equal(calls.length, 1); assert.equal(calls[0].body.runtime, null);
+  assert.deepEqual(JSON.parse(calls[0].body.document), clone(session.graph()));
+  assert.equal(session.snapshot().dirty, false); assert.match(session.snapshot().message, /產碼失敗/);
+  session.history(false); await session.flush();
+  assert.equal(calls.length, 2); assert.notEqual(calls[1].body.runtime, null);
 });
 
 test('wrong producer and out-of-slice graphs reject without changing the host', t => {
   const { session, calls, loaded } = open(t), state = loaded();
   state.frontendCompiler.catalogHash = 'other';
   assert.throws(() => new EditorSession(session.host, bootstrap, state), /版本不一致/);
-  const unsupported = loaded(); unsupported.state.graph.functions = [{ id: 'unknown' }];
+  const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.functions = [{ id: 'unknown' }]; });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), /此入口目前支援[\s\S]*子圖 1 個/);
   // Leftover Uniform from the legacy entry: the message names both the declaration and the node.
-  const uniform = loaded(), pixel = uniform.state.graph.stages.pixel;
-  uniform.state.graph.declarations = [{ id: 'u1', kind: 'uniform', name: 'uValue', type: 'float', value: 0 }];
-  pixel.nodes = [...pixel.nodes, { id: 'nu', definitionUuid: 'sgrape.builtin.uniform', params: { declarationId: 'u1' } }];
+  const uniform = loaded(); withDoc(uniform.state, graph => {
+    graph.declarations = [{ id: 'u1', kind: 'uniform', name: 'uValue', type: 'float', value: 0 }];
+    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', definitionUuid: 'sgrape.builtin.uniform', params: { declarationId: 'u1' } }];
+  });
   assert.throws(() => new EditorSession(session.host, bootstrap, uniform), /Uniform 宣告「uValue」[\s\S]*uniform 節點（nu）/);
   assert.equal(calls.length, 0);
 });
@@ -353,7 +363,7 @@ test('TD not responding: editing continues, nothing replays, recovery resends au
   const { session, loaded } = open(t, async (action, body, remote) => {
     if (down) return notResponding();
     if (action === 'state') return remote.get();
-    applies.push(body); const state = { graph: body.graph, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+    applies.push(body); const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
   }, 20);
   session.transact('edit', net => setValue(net, 'a', 5)); await session.flush();
   assert.equal(session.snapshot().phase, 'offline'); assert.equal(session.snapshot().link, 'busy');
@@ -365,7 +375,7 @@ test('TD not responding: editing continues, nothing replays, recovery resends au
   await until(() => session.snapshot().phase === 'ready' && !session.snapshot().dirty);
   assert.equal(applies.length, 1); assert.equal(applies[0].revision, 4);
   assert.equal(loaded().state.revision, 5);
-  assert.deepEqual(loaded().state.graph, clone(session.graph()));
+  assert.deepEqual(doc(loaded().state), clone(session.graph()));
 });
 
 test('TD changed while away: conflict; TD side is adopted and one Undo recalls the editor version', async t => {
@@ -374,7 +384,7 @@ test('TD changed while away: conflict; TD side is adopted and one Undo recalls t
     if (down) return notResponding();
     if (action === 'state') { if (!changed) { changed = true; otherEntryEdits(remote); } return remote.get(); }
     if (body.revision !== remote.get().state.revision) return new Response(JSON.stringify({ error: 'Conflict: stale revision' }), { status: 409 });
-    const state = { graph: body.graph, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+    const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
   }, 20);
   session.transact('edit', net => setValue(net, 'a', 5)); await session.flush();
   const draft = clone(session.graph());
@@ -383,13 +393,13 @@ test('TD changed while away: conflict; TD side is adopted and one Undo recalls t
   assert.match(session.snapshot().message, /似乎有被修改/);
   assert.deepEqual(clone(session.graph()), draft, 'conflict never replaces the editor document');
   await session.useRemote();
-  assert.deepEqual(clone(session.graph()), loaded().state.graph);
+  assert.deepEqual(clone(session.graph()), doc(loaded().state));
   assert.equal(session.snapshot().phase, 'ready'); assert.equal(session.snapshot().dirty, false);
   assert.equal(session.snapshot().revision, 5);
   session.history(false);
   assert.deepEqual(clone(session.graph()), draft, 'one Undo recalls the editor version');
   await session.flush();
-  assert.deepEqual(loaded().state.graph, draft); assert.equal(loaded().state.revision, 6);
+  assert.deepEqual(doc(loaded().state), draft); assert.equal(loaded().state.revision, 6);
 });
 
 // Every node the React entry offers: add it, reach Color Output through a short chain of other

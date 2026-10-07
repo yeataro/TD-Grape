@@ -3,6 +3,7 @@ import type * as modules from '../core-ts/node_module';
 import type * as values from '../core-ts/values';
 import type { createCompiler } from '../core-ts/top_compiler';
 import type { createEditorContract } from '../core-ts/editor_contract';
+import type { Graph as GraphData } from '../core-ts/model';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
 // 只接入既有生成核心；型別引用不把另一份 registry／compiler 打進 React bundle。
@@ -80,6 +81,10 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): string[] {
   return reasons;
 }
 
+// The graph's text form exists only in the editor: TD stores and returns it unchanged (Q38 2-1-b).
+// 圖的文字形式只存在於編輯器；TD 原樣保存、原樣交回。
+export const serializeDocument = (graph: GraphData) => JSON.stringify(graph);
+export const parseDocument = (text: string): GraphData => JSON.parse(text);
 export const same = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;

@@ -72,6 +72,12 @@ class GrapeManagerExt:
         return result
 
     def Adapter(self, comp):
+        # Old and new editors never share a Grape OP; the TD tag decides (design-interview Q40).
+        # 新舊編輯器不共用 Grape OP，由 TD tag 決定。
+        nxt = self._module('next_family')
+        if nxt.is_next(comp):
+            return nxt.NextFamily(comp, protocol=self._module('host_artifact').PROTOCOL,
+                validation_area=self.ownerComp.op('validation'))
         return self._module('native_family').NativeFamily(comp,
             artifact=self._module('host_artifact'), document=self._module('host_document'),
             sources=self._module('sources'), values=self._module('native_values'),

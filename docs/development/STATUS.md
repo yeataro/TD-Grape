@@ -2,6 +2,19 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.19 — 路徑重建 A2a：新編輯器協定、TD 不看懂圖、Last Known Good — 2026-10-08
+
+依 design-interview Q38（2-1-a、2-1-b、2-2、2-5）與 Q40。
+
+- **新舊 OP 分流（Q40）**：Grape OP 帶 TD tag `grapeNextEditor` 者由新編輯器管理。Manager `Adapter` 依 tag 選 [next_family.py](../../src/td/runtime/next_family.py) 的 `NextFamily`，否則照舊 `NativeFamily`。新編輯器的請求帶 `?editor=next`；[host_api.py](../../src/td/runtime/host_api.py) 拒絕跨用：舊入口開新 OP 回 409 `managed_by_new_editor`（修好舊入口開錯圖的回退），新編輯器開舊 OP 回 409 `old_editor_graph`（唯讀對照屬 A2b）。
+- **TD 不看懂圖（2-1-b）**：`NextFamily` 不解析、不檢查、不重新序列化圖；圖是不透明文字，只核對長度（512 KB）與 sha256，原樣保存、原樣交回（`graph` DAT 也寫原文）。TD 只核對信封（格式、版本號、目標、建置）與自己要執行的東西。圖的文字形式只在編輯器（[core.ts](../../src/editor-react/core.ts) `serializeDocument`／`parseDocument`）。
+- **兩部分（2-2）**：請求 `{format:'grape-next-1', revision, targetId, catalogHash, document, runtime}`；`runtime`（GLSL＋綁定的 JSON 文字）由 TD 讀取、GPU 驗證後成對套用，失敗即還原 Shader、不改存檔。保存格式記 `document`、`runtime` 各自的版本與 sha256，以及 **Last Known Good**（上次成功的圖＋執行用部分）。綁定非空時明確拒絕（Uniform 屬後續，綁定表 Q41）。
+- **產碼失敗只送圖（2-5）**：`runtime: null`，TD 存圖、Shader 不變；編輯器提示「圖已存到 TD；產碼失敗，TD 仍執行上次成功的 Shader」。
+- **最新優先（2-1-a）**：拿掉 0.65 秒送出等待；一次只送一份，送途中的修改合併成下一份。
+- **測試 OP 轉換**：`/project1/Grape_TOP_React` 由開發腳本一次性轉換（舊格式由編輯器端讀出並序列化，TD 只寫入結果文字；舊文件備份存在 OP storage `grapeV1DocumentBackup` 與 `work/refactor/react-a2a/v1-backup.json`），加 tag。真的舊圖一律不動、不提供轉換功能。
+- **驗證**：TD 端 Python 32（新增 10：原文保存、損毀拒絕、成對套用、只送圖保留 LKG、GPU 失敗還原、信封檢查、綁定拒絕、新舊分流與路由）；session 30（「產碼失敗不寫 TD」改為新規則「仍存圖、不送執行用部分」）；browser 14 組。**真實 TD**：舊入口被拒（409）；新編輯器開圖（格式 grape-next-1、rev 452）→改值（文件／Shader 453／453）→刪輸出致產碼失敗（454／453，Shader 不變）→Undo（455／455）→還原原圖（456，與原圖文字完全相同）；`pixel_shader` 與執行用部分一致、GLSL TOP 無錯誤、驗證區無殘留。私人證據 `work/refactor/react-a2a/live.json`。
+- 限制：新編輯器唯讀打開舊圖（A2b）；舊編輯器的 Shader 選單仍列出新 OP（開啟時被拒並說明）；指紋與 Worker 屬 A3。
+
 ## Refactor.18 — 路徑重建 A1：Editor／HostSync 拆分、產碼不再等送出 — 2026-10-07
 
 依 design-interview Q38（路徑重建，人類 2026-10-07 定案）的第一輪。

@@ -1,6 +1,7 @@
-import type { Graph } from './core';
-export type HostState = { graph: Graph; revision: number; targetId?: string };
-export type StateResponse = { state: HostState; target: string; shaderKind: string;
+// New-editor Grape OPs (design-interview Q40): the document is opaque text to TD.
+// 新編輯器的 Grape OP：圖對 TD 是不透明文字。
+export type HostState = { document: string; revision: number; runtimeRevision?: number; targetId?: string };
+export type StateResponse = { state: HostState; format: string; target: string; shaderKind: string;
   frontendCompiler: { protocol: string; catalogHash: string; required: boolean };
   savedStateIssue?: unknown; readOnlyReason?: string; upgradeReview?: unknown };
 export class HostError extends Error {
@@ -19,7 +20,7 @@ export class HostClient {
   async call<T>(action: 'state' | 'apply' | 'save', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);
     try {
-      const response = await this.request(this.root + action, { method: body === undefined ? 'GET' : 'POST',
+      const response = await this.request(this.root + action + '?editor=next', { method: body === undefined ? 'GET' : 'POST',
         signal: controller.signal, headers: { 'X-Sgrape-Token': this.token,
           ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         body: body === undefined ? undefined : JSON.stringify(body) });

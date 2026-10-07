@@ -6,7 +6,7 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.18**（2026-10-07）——路徑重建 A1：session 拆成 `Editor`＋`HostSync`，產碼改為每次修改完成即做（TD 不在時 GLSL 照樣更新）；協定不變。下一步 A2（新協定）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
+**最新交付：Refactor.19**（2026-10-08）——路徑重建 A2a：新編輯器協定（TD 把圖當不透明文字、執行用部分成對套用、產碼失敗只送圖、Last Known Good、拿掉送出等待）；新舊 OP 以 TD tag `grapeNextEditor` 分流，測試 OP 已轉換。下一步 A2b（新編輯器唯讀打開舊圖），再 A3（指紋、Worker）。前一版 Refactor.18（A1：Editor／HostSync 拆分、產碼不等送出）。前一版 **Refactor.17.2**（2026-10-07）——補開放 Vector／Combine／Replace／Swizzle／Convert（舊圖最常見的節點），新增選單不再提供已淘汰的 `float`／`vec2`／`vec3`／`vec4`（仍能打開舊圖）。固定入口待討論。
 
 **Refactor.17.1**——測試便利小修正：右鍵拖曳框選（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)）、右鍵拖曳後不跳瀏覽器選單、Body 拖曳預設開啟。
 

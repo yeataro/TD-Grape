@@ -1,5 +1,5 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
-import { core, compiler, requireSupported, type Graph, type GraphDocument, type Network, type Value, type Bootstrap } from './core';
+import { core, compiler, requireSupported, parseDocument, type Graph, type GraphDocument, type Network, type Value, type Bootstrap } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse } from './host';
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
@@ -37,10 +37,11 @@ export class Editor {
   private codegen: Delivery;
   private disposed = false;
   private readonly sync: HostSync;
-  constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse, delay = 650, retry = 5000) {
+  constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse, delay = 0, retry = 5000) {
     checkLoaded(host, bootstrap, loaded);
-    requireSupported(loaded.state.graph);
-    this.document = new core.GraphDocument(loaded.state.graph, core.registry);
+    const graph = parseDocument(loaded.state.document);
+    requireSupported(graph);
+    this.document = new core.GraphDocument(graph, core.registry);
     this.codegen = this.compile();
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen, status => this.status(status), delay, retry);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
@@ -159,7 +160,7 @@ export class Editor {
     if (this.sync.busy || this.state.phase !== 'conflict') return;
     try {
       const result = await this.sync.read();
-      const remote = result.state.graph;
+      const remote = parseDocument(result.state.document);
       requireSupported(remote);
       const before = this.graph(), next = new core.GraphDocument(remote, core.registry);
       const projection = project(next, this.state.projection, this.bootstrap.typeContract, core.changesBetween(before, remote, core.registry));
