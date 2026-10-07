@@ -35,7 +35,7 @@
 | 來源 | Source；程式 `document.sources`；存檔 `sources` | 值從 Shader 外面來、在圖文件層級宣告一次讓節點引用的東西：Uniform（含預設好的，如時間）、Spec 常數、貼圖／Sampler、Attribute、POP Buffer、TD 內建 GLSL Uniform。**不是節點**，與各 stage 網路、子圖定義同屬圖文件、同一層。核心中「source」只有此義（線的兩端用 `from`／`to`；React Flow 的 source／sourceHandle 只在畫面轉換層）。舊稱 declaration（舊圖欄位 `declarations` 交匯入器）。 |
 | 全域常數 | Constant；程式 `document.constants`；存檔 `constants` | GLSL 最外層 `const`；值在作品內，改值即產碼。不是來源，但與來源共用規則：名稱互不重複、只在各 stage 最外層引用、**子圖不直接引用**（需要的值經子圖輸入傳入，含 TD 內建 Uniform，使子圖可攜帶）、複製貼上帶走。 |
 | Spec 常數 | Specialization constant | 屬來源。宣告在作品（`layout(constant_id = N) const …`），目前值在 TD 參數頁；改值不產碼，TD 自行重建管線。 |
-| Sources 面板 | Sources | 同時列出來源與全域常數的面板（便利做法）；面板內分區屬畫面，可調整，與程式分類無關。 |
+| 共用來源面板 | 中文「共用來源」；英文暫用 Sources | 同時列出來源與全域常數的面板（便利做法）；面板內分區屬畫面，可調整，與程式分類無關。英文名做面板時再定（候選：Sources、Sources & Constants、Properties、比喻名稱如 Unity 的 Blackboard）。 |
 
 已否決的名稱：Graph Globals／Global／`GraphGlobal`／`ShaderGlobal`（global 在程式裡像整個編輯器或所有 Shader 共用）。見 design-interview Q41。
 
