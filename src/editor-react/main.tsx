@@ -14,8 +14,9 @@ import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCa
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
-const target = new URLSearchParams(location.search).get('target') ?? '';
-const oldURL = '/shader/' + encodeURIComponent(target) + '/';
+// The only editor entry (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also works.
+// 唯一的編輯器入口：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。
+const target = new URLSearchParams(location.search).get('target') ?? location.pathname.match(/^\/shader\/([a-f0-9]{32})\/$/)?.[1] ?? '';
 const draftKey = 'grape-react-draft:' + target;
 const recoveryHelp = '請在執行 TD 的電腦上確認：TD 仍開著，若已最小化請還原視窗；全域 Cooking 已開啟；TD 若正在處理耗時工作請稍候；遠端裝置的區網連線正常。TD 重開後，請從 Grape 元件重新開啟編輯器。';
 function download(value: unknown, name = 'grape-draft.json') {
@@ -77,7 +78,6 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
   }, [session, draft]);
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
     <header><strong>TD-Grape <small>React · TOP · {version}</small></strong><span className="target">{state.targetPath}</span>
-      <a href={oldURL} onClick={event => { if (state.dirty && !confirm('仍有本地修改。草稿會保留在此頁；確定離開？')) event.preventDefault(); }}>舊入口</a>
     </header>
     <nav aria-label="編輯工具列" inert={!!draft}>
       <select aria-label="新增節點" value="" onChange={event => {
@@ -122,6 +122,7 @@ let host: HostClient | undefined, bootstrap: Bootstrap | undefined;
 async function start() {
   const token = location.hash.slice(1) || sessionStorage.getItem('sgrapeToken') || '';
   sessionStorage.setItem('sgrapeToken', token); history.replaceState(null, '', location.pathname + location.search);
+  if (!target) throw Error('沒有指定要編輯的 Grape OP。請在 TD 裡按 Grape OP 的 Edit 開啟編輯器。');
   const client = host = new HostClient(target, token);
   const [loaded, files, locales, build] = await Promise.all([
     client.call<StateResponse>('state'), fetch('/editor-bootstrap.json').then(response => response.json()) as Promise<Bootstrap>,
@@ -142,7 +143,6 @@ function StartupError({ error, reset }: { error: unknown; reset?: () => Promise<
       setBusy(true); setMessage('正在載入預設圖…');
       reset().then(() => location.reload(), failure => { setBusy(false); setMessage('載入失敗：' + String(failure)); });
     }}>載入預設圖</button>{message && ' ' + message}</p>}
-    <a href={oldURL}>返回舊編輯器</a>
   </div>;
 }
 void start().catch(error => {

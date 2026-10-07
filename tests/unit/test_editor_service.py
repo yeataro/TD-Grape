@@ -92,6 +92,17 @@ class HTTPTest(unittest.TestCase):
         self.assertEqual(int(headers['Content-Length']), len(bundle()['nested/app.js']))
         self.assertEqual(self.request('/manifest.webmanifest')[1]['Content-Type'], 'application/manifest+json; charset=utf-8')
 
+    def test_root_and_edit_address_serve_the_new_editor(self):
+        # Refactor.24: the new editor is the only entry. 新編輯器是唯一入口。
+        page = b'<!doctype html><title>new editor</title>'
+        self.server.replace(service.AssetSnapshot({**bundle(), 'react-editor.html': page}, 'embedded'))
+        for path in ['/', '/shader/' + 'a' * 32 + '/', '/shader/' + 'a' * 32 + '/?x=1']:
+            status, headers, data = self.request(path)
+            self.assertEqual((status, data), (200, page), path)
+            self.assertTrue(headers['Content-Type'].startswith('text/html'))
+        self.assertEqual(self.request('/index.html')[2], bundle()['index.html'])
+        self.assertEqual(self.request('/shader/not-an-id/')[0], 404)
+
     def test_reload_on_same_origin_and_no_filesystem_dependency(self):
         port = self.server.port
         self.server.replace(service.AssetSnapshot(bundle('Test.2'), 'external'))

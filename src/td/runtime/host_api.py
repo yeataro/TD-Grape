@@ -47,7 +47,7 @@ class HostAPI:
             # 新舊編輯器不共用 Grape OP，由 TD tag 決定。
             if getattr(family, 'next', False) != next_editor:
                 return 409, ({'error': 'This Grape OP is managed by the new editor; open it there.', 'code': 'managed_by_new_editor'}
-                    if not next_editor else {'error': 'This Grape OP holds an old-editor graph; open it in the old editor.', 'code': 'old_editor_graph'})
+                    if not next_editor else {'error': 'This Grape OP holds an old-format graph. The new editor does not open or convert old graphs; view them in the main or legacy TD.', 'code': 'old_editor_graph'})
             if next_editor:
                 return 200, self._next_action(family, method, action, body)
             return 200, self._action(family, method, action, body)

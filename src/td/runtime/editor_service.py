@@ -181,9 +181,11 @@ class EditorHTTP:
                     return self.reply(200, {'service': 'grape-editor-assets', 'source': snapshot.source,
                         'version': snapshot.version, 'digest': snapshot.digest,
                         'files': len(snapshot.files), 'managerConnected': host_requests is not None}, head=head)
-                name = path.lstrip('/') or 'index.html'
-                if re.fullmatch(r'shader/[a-f0-9]{32}/', name):
-                    name = 'index.html'
+                # The new editor is the only entry (Refactor.24): the root and a Grape OP's Edit
+                # address both serve it. 新編輯器是唯一入口：首頁與 Grape OP 的 Edit 網址都給它。
+                name = path.lstrip('/')
+                if not name or re.fullmatch(r'shader/[a-f0-9]{32}/', name):
+                    name = 'react-editor.html' if 'react-editor.html' in snapshot.files else 'index.html'
                 data = snapshot.files.get(name)
                 if data is None:
                     return self.reply(404, {'error': 'Asset not found'}, head=head)

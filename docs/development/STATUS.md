@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.24 — 新編輯器成為唯一入口；舊入口停用（標記、不刪） — 2026-10-08
+
+人類決定（2026-10-08）：放棄舊入口；入口換到新編輯器；舊入口檔案**先標記、不刪**，整個遷移完成時再處理；看舊行為開 main／legacy 的 TD。
+
+- **入口**：[editor_service.py](../../src/td/runtime/editor_service.py) 的首頁 `/` 與 Grape OP Edit 的網址 `/shader/<id>/` 都提供新編輯器（`react-editor.html`）；[main.tsx](../../src/editor-react/main.tsx) 從 `?target=` 或 `/shader/<id>/` 取目標，沒有目標時說明「請在 TD 裡按 Grape OP 的 Edit」。Manager 的 Edit 網址不變。
+- **拿掉互通**：新編輯器的「舊入口」「返回舊編輯器」連結移除。舊格式的 OP（如 `Grape_TOP_Refactor`）用 Edit 打開時說明「新編輯器不打開也不轉換舊圖，請在 main 或 legacy 的 TD 查看」（[host_api.py](../../src/td/runtime/host_api.py)）。
+- **標記**：[src/editor/README.md](../../src/editor/README.md) 分兩類——仍在使用、整理時要先搬走的（`wire_planning.js`、`editor-bootstrap.json`、`editor-library.json`、`locales.json`、版本號所在的 `index.html`、圖示）；只屬舊入口、最後清理時移除的。舊入口不再維護、不再測試。
+- 驗證：Python 29（新增：首頁與 Edit 網址給新編輯器、壞網址 404）、session 37、browser 18 組。真實 TD（Refactor.24，證據 `work/refactor/react-24/`）：服務 Refactor.24；`/shader/<測試 OP>/` 開出新編輯器（17 個節點、沒有舊入口連結）；`/shader/<Grape_TOP_Refactor>/` 顯示舊格式說明；`/` 顯示請從 Edit 開啟；GrapeEditor／GrapeManager／測試 OP 無錯誤；TOE 已交付（TD-Grape-dev.40）。
+
 ## Refactor.23 — Color Output 身分固定（結構規則） — 2026-10-08
 
 人類要求（Q42）：Color Output 一定在頂層、只有一個、不能刪、不在新增選單。人類同意做法（2026-10-08），並決定：看舊行為改開另一個 TD（main 或 legacy），refactor 裡的舊入口**不再保證能用**，新核心不為它妥協。
