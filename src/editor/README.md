@@ -19,4 +19,8 @@ Since **Refactor.24 (2026-10-08)** the new editor (`src/editor-react/`) is the o
 
 `app.js`, `canvas_ui.js`, `color_picker.css`, `color_picker.js`, `frames_ui.js`, `functions_model.js`, `functions_ui.js`, `graph_ui.js`, `import_ui.js`, `inspector.js`, `qrcode.js`, `select_ui.js`, `selection_ui.js`, `share_ui.js`, `shortcuts_ui.js`, `structures_ui.js`, `style.css`, `uniform_live.js`, `vendor/`.
 
+## At final cleanup 最後清理時
+
+- Rename the new editor page `react-editor.html` to `index.html` (the usual default page) once the old `index.html` is gone, and move the product version out of it into its own place; then the Editor Service no longer needs to name a page for `/`. 新編輯器改名為 `index.html`（一般慣例的預設頁），版本號搬到獨立位置；服務就不必再特別指定 `/` 給哪個檔案。
+
 They stay readable as a reference for how the refactor-era old entry worked; the behaviour baseline is still the legacy product (`../TD-Grape-legacy`).
