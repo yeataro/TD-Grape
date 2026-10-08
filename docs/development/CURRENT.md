@@ -34,7 +34,7 @@
 
 **主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
 - 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
-- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**下一步：回到清殘留**——先請人類確認「甲乙丙丁四類」處理原則，再處理清理清單 2–8。
+- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條：定 80、做到時再定 37）**，決議已寫回 design-interview **Q45**（推翻 Q21 的 port 行為、補 Q38 2-5 的 GPU 失敗空白、新能力：獨立分享小網頁）。**下一步：編輯器各區的盤點**；全部盤完再請人類確認四類原則，然後處理清理清單 2–8。
 
 **盤查最重要的發現：**
 1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 已由議事錄定案（Q44），待實作。
