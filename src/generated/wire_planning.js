@@ -378,7 +378,6 @@ function createEditorContract(registry, target = 'top') {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GraphDocument = exports.GraphError = exports.Network = exports.Edge = exports.Node = exports.Port = exports.ScopeReferences = exports.prepareNodeWire = exports.contextFor = exports.changesBetween = void 0;
-exports.transact = transact;
 const model_1 = require("./model");
 const node_module_1 = require("./node_module");
 const ports_1 = require("./ports");
@@ -604,8 +603,9 @@ class Network {
     } return n; }
     nodeData(id) {
         const slot = this.nodeSlots.get(id), current = slot === undefined ? undefined : this.data.nodes[slot];
-        // The transitional editor can replace array entries without changing their
-        // count. Validate the indexed slot, never just the array's length.
+        // A change() candidate is editable: its operations may replace array entries
+        // without changing their count. Validate the indexed slot, never just the length.
+        // change() 的候選圖可編輯，操作可能換掉陣列項目而長度不變，所以要核對索引位置。
         if (this.indexedNodes !== this.data.nodes || this.nodeCount !== this.data.nodes.length || this.graph.editable && (!current || current.id !== id || this.nodeIndex.get(id) !== current)) {
             const index = new Map(), slots = new Map();
             this.data.nodes.forEach((n, i) => { if (!n.id || index.has(n.id))
@@ -722,8 +722,9 @@ class Network {
         return id;
     }
     indexEdges() {
-        // Editable views permit legacy in-place mutation. Immutable compiler views
-        // build this index once; they never pay the rescan on each getter.
+        // A change() candidate's operations edit its private copy in place, so it rescans.
+        // Immutable compiler views build this index once and never pay the rescan.
+        // change() 候選圖會就地修改自己的私有複本，所以重掃；唯讀的產碼視圖只建一次索引。
         if (this.graph.editable || this.indexedEdges !== this.data.edges || this.edgeCount !== this.data.edges.length) {
             const index = new Map();
             this.data.edges.forEach((e, i) => { const id = this.identity(e, i); if (index.has(id))
@@ -742,7 +743,7 @@ class Network {
     get edges() { this.indexEdges(); return [...this.edgeIndex.keys()].map(id => this.edge(id)); }
     /** Query raw endpoints from one validated index, never through E getters that
      * would each reindex an externally editable network. Snapshot views retain
-     * the adjacency index; transitional editable views refresh it for raw edits. */
+     * the adjacency index; editable change() candidates refresh it for in-place edits. */
     edgesAt(port) {
         var _a;
         if (port.node.network !== this)
@@ -968,29 +969,6 @@ function complete(document) {
                 throw Error('Duplicate edge ID');
             edges.add(e.id);
         }
-    }
-}
-/** Transitional editor transaction: existing widgets mutate the one active
- * candidate (including their captured node references). The core publishes and
- * identifies its edges; the application restores `before` on a failed callback.
- * This adapter can disappear as widgets adopt Network operations directly. */
-function transact(document, registry, edit) {
-    const before = clone(document);
-    const model = new GraphDocument(document, registry, undefined, true);
-    try {
-        const after = edit(before, model);
-        if (!(0, changes_1.equal)(before, after))
-            complete(after);
-        return { before, after, changes: (0, changes_1.changesBetween)(before, after, registry) };
-    }
-    catch (error) {
-        for (const key of Object.keys(document))
-            delete document[key];
-        Object.assign(document, clone(before));
-        throw error;
-    }
-    finally {
-        model.close();
     }
 }
 

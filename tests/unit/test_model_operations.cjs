@@ -1,7 +1,7 @@
 // Exercise the public model: no DOM, TD, legacy inference or node-name dispatch.
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/wire_planning.js'),'utf8'),context);
-const {GraphDocument,registry,createRegistry,createCompiler,changesBetween,transact}=context.GrapeGraph;
+const {GraphDocument,registry,createRegistry,createCompiler,changesBetween}=context.GrapeGraph;
 const plain=x=>JSON.parse(JSON.stringify(x));
 const policy={components:{float:1,vec2:2,vec3:3,vec4:4},conversions:[{from:'float',to:'vec3'},{from:'float',to:'vec4'}]};
 const document=()=>({format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes:[],edges:[]}}});
@@ -111,9 +111,9 @@ test('lying module configuration fails atomically instead of accepting a differe
   assert.equal(base.networks.get('pixel').edges.length,0);assert.equal(base.networks.get('pixel').node('m').outputs[0].type,'vec3');
 });
 
-test('transitional editor publication and snapshot replay share the same model change contract',()=>{
+test('a published change and snapshot replay share the same model change contract',()=>{
   const graph=seeded();let handle;
-  const step=transact(graph,registry,(_before,model)=>{handle=model.networks.get('pixel').node('m');handle.update({name:'named'});return graph;});
+  const step=new GraphDocument(graph,registry).change(model=>{handle=model.networks.get('pixel').node('m');handle.update({name:'named'});});
   assert.deepEqual(plain(step.changes),plain(changesBetween(step.before,step.after,registry)));
   assert.throws(()=>handle.update({name:'stale'}),/active transaction/);
   const reverse=changesBetween(step.after,step.before,registry);assert.deepEqual(plain(reverse.networks[0].nodes[0].fields),['name']);
@@ -121,14 +121,14 @@ test('transitional editor publication and snapshot replay share the same model c
 
 test('publication payloads and caller patches cannot mutate graph-owned state or identities',()=>{
   const graph=seeded(),patch={ui:{x:20}};
-  const step=transact(graph,registry,(_before,g)=>{
+  const step=new GraphDocument(graph,registry).change(g=>{
     const n=g.networks.get('pixel');n.node('m').update(patch);patch.ui.x=900;
     assert.throws(()=>n.node('m').update({id:'other'}),/identity/);
-    n.connect(n.node('f').outputs[0],n.node('m').inputs[0],policy);return graph;
+    n.connect(n.node('f').outputs[0],n.node('m').inputs[0],policy);
   });
   step.changes.networks[0].edges[0].after.from[0]='foreign';
-  assert.equal(graph.stages.pixel.nodes[1].ui.x,20);assert.equal(graph.stages.pixel.edges[0].from[0],'f');
-  new GraphDocument(graph,registry).change(g=>{const n=g.networks.get('pixel'),old=n.node('m');n.remove(old);assert.throws(()=>n.create('m','sgrape.builtin.add'),/retired/);assert.equal(old.data,undefined);});
+  assert.equal(step.after.stages.pixel.nodes[1].ui.x,20);assert.equal(step.after.stages.pixel.edges[0].from[0],'f');
+  new GraphDocument(step.after,registry).change(g=>{const n=g.networks.get('pixel'),old=n.node('m');n.remove(old);assert.throws(()=>n.create('m','sgrape.builtin.add'),/retired/);assert.equal(old.data,undefined);});
 });
 
 test('module configuration preserves fixed presets and planner reconciliation does not touch unrelated signatures',()=>{

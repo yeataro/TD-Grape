@@ -1,7 +1,7 @@
 // Isolated public-interface tests: no editor, host, DOM or Python.
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'),'utf8'),context);
-const {GraphDocument,createRegistry,registry,transact}=context.GrapeGraph;
+const {GraphDocument,createRegistry,registry}=context.GrapeGraph;
 const plain=x=>JSON.parse(JSON.stringify(x));
 const node=(id,key,params={})=>({id,nodeType:'sgrape.builtin.'+key,params});
 const document=()=>({format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes:[node('source','float',{value:.5}),node('operation','abs',{type:'float'}),node('out','pixel_out')],edges:[]}}});
@@ -63,13 +63,6 @@ test('unknown nodes and wires roundtrip without active ports or loss',()=>{
   const g=open(d);assert.equal(g.networks.get('pixel').edges[0].connection(policy).reason,'missing-port');
   assert.deepEqual(plain(g.snapshot()),d);
 });
-test('editor transaction preserves captured node references; failures restore the document',()=>{
-  const d=document(),captured=d.stages.pixel.nodes[0];
-  const step=transact(d,registry,()=>{captured.params.value=.75;return d;});
-  assert.equal(d.stages.pixel.nodes[0],captured);assert.equal(step.before.stages.pixel.nodes[0].params.value,.5);
-  const saved=plain(d);assert.throws(()=>transact(d,registry,()=>{captured.params.value=99;throw Error('Rejected candidate');}),/Rejected/);
-  assert.deepEqual(plain(d),saved);
-});
 test('duplicate definitions or port keys reject before compilation',()=>{
   const abs=registry.get('sgrape.builtin.abs');assert.throws(()=>createRegistry([abs,abs]),/duplicate/);
   const broken={...abs,ports:()=>[{key:'out',direction:'output',type:'float'},{key:'out',direction:'output',type:'float'}]};
@@ -129,27 +122,21 @@ test('querying a port visits editable edge data once, and follows raw replacemen
   assert.deepEqual(Array.from(network.node('operation0').port('input','value').edges,e=>e.id),['e0','replacement']);
 });
 
-test('editor transaction supplies its one before snapshot to validation and history',()=>{
-  const d=document();d.unknown={keep:['content']};let previous;
-  const step=transact(d,registry,before=>{previous=before;assert.equal(before.stages.pixel.nodes[0].params.value,.5);d.stages.pixel.nodes[0].params.value=7;return d;});
-  assert.equal(previous,step.before);assert.equal(step.after,d);
-  assert.equal(step.before.stages.pixel.nodes[0].params.value,.5);
-  assert.deepEqual(plain(step.before.unknown),{keep:['content']});
-  assert.throws(()=>transact(d,registry,before=>{assert.equal(before.stages.pixel.nodes[0].params.value,7);d.unknown.keep.push('bad');throw Error('rejected');}),/rejected/);
-  assert.deepEqual(plain(d.unknown),{keep:['content']});
-});
 
 test('a bulk edit allocates stable edge IDs in one pass',()=>{
-  const d=document(),raw=Array.from({length:300},(_,i)=>({from:['source','out'],to:['operation'+i,'value']}));
+  const raw=Array.from({length:300},(_,i)=>({from:['source','out'],to:['operation'+i,'value']}));
   raw[0].id='kept';let visits=0;
-  d.stages.pixel.edges=new Proxy(raw,{get(target,key,receiver){if(typeof key==='string'&&/^\d+$/.test(key))visits++;return Reflect.get(target,key,receiver);}});
-  transact(d,registry,()=>{d.stages.pixel.nodes[0].params.value=2;return d;});
+  const step=new GraphDocument(document(),registry).change(c=>{
+    c.document.stages.pixel.edges=new Proxy(raw,{get(target,key,receiver){if(typeof key==='string'&&/^\d+$/.test(key))visits++;return Reflect.get(target,key,receiver);}});
+    c.document.stages.pixel.nodes[0].params.value=2;
+  });
   assert.ok(visits<=raw.length*10,`bulk ID allocation visited ${visits} edge rows`);
-  assert.equal(new Set(raw.map(e=>e.id)).size,300);assert.equal(raw[0].id,'kept');assert.ok(raw.slice(1).every(e=>/^e[0-9a-f]{32}$/.test(e.id)));
-  assert.equal('edgeSequence' in d.stages.pixel,false);
-  const saved=plain(d);transact(d,registry,()=>{d.stages.pixel.edges=[];return d;});
-  assert.throws(()=>transact(d,registry,()=>{d.stages.pixel.edges=[{...saved.stages.pixel.edges[0]},{...saved.stages.pixel.edges[0]}];return d;}),/Duplicate edge ID/);
-  assert.equal(d.stages.pixel.edges.length,0);
+  const edges=step.after.stages.pixel.edges;
+  assert.equal(new Set(edges.map(e=>e.id)).size,300);assert.equal(edges[0].id,'kept');assert.ok(edges.slice(1).every(e=>/^e[0-9a-f]{32}$/.test(e.id)));
+  assert.equal('edgeSequence' in step.after.stages.pixel,false);
+  const cleared=new GraphDocument(step.after,registry).change(c=>{c.document.stages.pixel.edges=[];});
+  assert.throws(()=>new GraphDocument(cleared.after,registry).change(c=>{c.document.stages.pixel.edges=[{...edges[0]},{...edges[0]}];}),/Duplicate edge ID/);
+  assert.equal(cleared.after.stages.pixel.edges.length,0);
 });
 
 test('a raw draft deletion cannot make the next connection reuse the deleted id',()=>{
