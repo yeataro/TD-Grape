@@ -141,7 +141,7 @@
 
 ## 現場 TD（使用前以 TD MCP 重新確認）
 
-- 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP 只剩兩個（2026-10-09 人類同意清理）：`/project1/Grape_TOP_test`（rev 596，以新範本重建、圖／Shader／Grape ID 照搬）、人類的樣板 `Grape_TOP_REF`。`Grape_TOP2`、`Grape_TOP3`（預設圖）與舊格式樣本已刪；舊樣本的圖、舊信封與 `.tox` 留在 workspace `work/refactor/grape-op-round/cleanup-33/`，給日後匯入器用；舊格式樣本已移到 workspace（見上）
+- 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP 只剩兩個（2026-10-09 人類同意清理）：`/project1/Grape_TOP_test`（rev 596，以新範本重建、圖／Shader／Grape ID 照搬）、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類 2026-10-09 用 Tab 選單從 Refactor.33 範本建立——「人類實際用 Tab 選單建立」這項已有人做過；Refactor.34 時隨其他 OP 轉成 `grape-meta-2`）。`Grape_TOP2`、`Grape_TOP3`（預設圖）與舊格式樣本已刪；舊樣本的圖、舊信封與 `.tox` 留在 workspace `work/refactor/grape-op-round/cleanup-33/`，給日後匯入器用；舊格式樣本已移到 workspace（見上）
 - 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
 - `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.34，存 TD-Grape-dev.62；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
