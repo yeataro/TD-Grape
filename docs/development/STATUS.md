@@ -13,7 +13,7 @@
 - **既有 Grape OP**：`Grape_TOP_test`、`Grape_TOP_REF` 換成新的 Grape 頁（Grape ID 不變；備份 workspace `work/refactor/grape-op-round/backup-37/`、腳本 `migrate_grape_page_37.py`）。
 - **測試補強**：`run_tests.py` 先編譯檢查所有會貼進 TD 的 Python（`src/td/runtime`、`src/remote_panel`、`tools`）——本輪 `grape_op_controls.py` 一行字串被寫壞（換行），所有測試都過，在 TD 才發現。
 - **驗證**：core 110、editor 39、Python 52（新增：`editorVersion` 必帶、成功才記、GPU 失敗不改）；真實 TD：範本與新建的 Grape TOP 有 7 項、Generated TOP 指向 `output`；瀏覽器（助手自己組網址、不按 Open）移動節點 → 版本不變；改值 → Grape Editor Version 變成 `0.8.276 Refactor.37`；暫時拿掉主組件捷徑 → Open Editor 說明原因、Shader 照跑（已還原）；全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.66`。
-- **人類驗收通過（2026-10-09）**：Open Editor 開出 App 視窗、Open in Browser、服務關掉時的對話框（取消／啟動）、GLSL Parameters——「沒有什麼問題」。人類希望彈出的視窗在畫面正中央，但很麻煩就算了（記在 CURRENT）。
+- **人類驗收通過（2026-10-09）**：Open Editor 開出 App 視窗、Open in Browser、服務關掉時的對話框（取消／啟動）、GLSL Parameters——「沒有什麼問題」。人類希望**警告對話框**在畫面正中央（記在 CURRENT，評估中）。
 
 ## Refactor.36 — 編輯服務的 port 被佔用時往後找空的，並顯示實際使用的 port — 2026-10-09
 
