@@ -219,6 +219,7 @@
   "uniform.exportFrom": "Driven by an Export from {origin}",
   "uniform.exportRemains": "{uniform} was deleted, but {parameter} of the GLSL OP is still driven by an Export from {origin}; TD-Grape cannot remove that from here.",
   "uniform.expression": "Expression: {text}",
+  "uniform.rowAdopted": "{uniform} uses the row already on the GLSL OP; its values and what drives them are kept.",
   "uniform.rowRecreated": "The GLSL OP row of {uniform} was missing (changed or deleted in TD); TD-Grape added it again.",
   "uniformPreset.absFrame": "Frames since TouchDesigner started; keeps running.",
   "uniformPreset.absTime": "Seconds since TouchDesigner started; keeps running.",

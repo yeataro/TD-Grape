@@ -207,7 +207,63 @@ class UniformWriterTests(unittest.TestCase):
         self.assertEqual((row['valuex'].mode, shader.names('vec')), ('EXPRESSION', ['uLevel']))
         row['name'].set_expr("'uLevel'", 'uLevel')
         with self.assertRaisesRegex(ValueError, 'driven in TD'):
-            uw.check_renames(shader, [uniform('u1', 'uOther')], [renamed])
+            uw.check_rows(shader, [uniform('u1', 'uOther')], [renamed])
+
+    def test_a_row_made_in_td_with_the_name_is_taken_over_keeping_its_drivers(self):
+        # Refactor.48.2 (human 2026-10-09: take it over; legacy refused the name). 接手 TD 上已有的同名列。
+        shader = FakeShader()
+        shader.rows['vec'][0]['name'].val = 'uFoo'  # made by the person in TD 使用者在 TD 加的
+        shader.rows['vec'][0]['valuex'].set_expr('absTime.seconds', 3.0)
+        shader.rows['vec'][0]['valuey'].val = 0.7
+        foo = uniform('u1', 'uFoo', 'vec2', [0.0, 0.0])
+        uw.check_rows(shader, [foo], [])
+        notices = apply(shader, [foo])
+        self.assertEqual([n['code'] for n in notices], ['uniform.rowAdopted'])
+        row = shader.row('vec', 'uFoo')
+        self.assertEqual((row['valuex'].mode, row['valuey'].val, shader.names('vec')), ('EXPRESSION', 0.7, ['uFoo']))
+        self.assertEqual(apply(shader, [foo], [foo]), [], 'said once')
+        self.assertEqual(apply(shader, [], [foo]), [])
+        self.assertEqual(shader.names('vec'), [''], 'deleted in the editor: the row goes like any other')
+
+    def test_a_name_on_the_other_page_is_refused(self):
+        shader = FakeShader()
+        shader.rows['vec'][0]['name'].val = 'uFoo'
+        tint = uniform('u1', 'uFoo', 'vec4', [1.0, 1.0, 1.0, 1.0], color=True)
+        with self.assertRaisesRegex(ValueError, 'Vectors page of the GLSL OP already has a row named uFoo'):
+            uw.check_rows(shader, [tint], [])
+        other = uniform('u1', 'uBar', 'vec4', [1.0, 1.0, 1.0, 1.0], color=True)
+        apply(shader, [other])
+        with self.assertRaisesRegex(ValueError, 'Vectors page'):
+            uw.check_rows(shader, [dict(other, name='uFoo')], [other])
+        uw.check_rows(shader, [other], [other])  # unchanged Uniforms are not checked again 沒變的不再檢查
+
+    def test_renaming_into_a_row_made_in_td_takes_it_over(self):
+        # A new Uniform has its own row at once (uniform1), so a person reaches a TD row's name by renaming.
+        # 新 Uniform 立刻有自己的列，所以要用 TD 上那列的名字只能改名。
+        shader = FakeShader()
+        made = uniform('u1', 'uniform1', 'vec2', [0.0, 0.0])
+        apply(shader, [made])
+        shader.seq.vec.numBlocks = 2
+        shader.rows['vec'][1]['name'].val = 'uFoo'  # made by the person in TD
+        shader.rows['vec'][1]['valuex'].set_expr('absTime.seconds', 3.0)
+        renamed = dict(made, name='uFoo')
+        uw.check_rows(shader, [renamed], [made])
+        notices = apply(shader, [renamed], [made])
+        self.assertEqual([n['code'] for n in notices], ['uniform.rowAdopted'])
+        self.assertEqual(shader.names('vec'), ['uFoo'], "the Uniform's own row went")
+        self.assertEqual(shader.row('vec', 'uFoo')['valuex'].expr, 'absTime.seconds')
+        self.assertEqual(apply(shader, [renamed], [renamed]), [], 'said once')
+
+    def test_names_can_be_swapped_in_one_step(self):
+        shader = FakeShader()
+        a, b = uniform('u1', 'uA'), uniform('u2', 'uB')
+        apply(shader, [a, b])
+        shader.rows['vec'][0]['valuex'].set_expr('1.5', 1.5)  # uA's driver goes with its row 驅動跟著列走
+        swapped = [dict(a, name='uB'), dict(b, name='uA')]
+        uw.check_rows(shader, swapped, [a, b])
+        self.assertEqual(apply(shader, swapped, [a, b]), [])
+        self.assertEqual(shader.names('vec'), ['uB', 'uA'])
+        self.assertEqual(shader.row('vec', 'uB')['valuex'].expr, '1.5')
 
     def test_removed_rows_take_their_drivers_and_later_rows_move_up(self):
         shader = FakeShader()

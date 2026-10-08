@@ -414,7 +414,7 @@ class NextFamily:
             # Refactor.45–46 built-in values count too, so their rows are removed. R.45～46 的內建值也算，好拿掉它們的列。
             previous_uniforms = [entry for entry in json.loads(meta['runtime']['text']).get('bindings') or []
                                  if entry.get('kind') in ('uniform', 'builtin')]
-            uniform_writer.check_renames(self._shader(self.comp), uniforms, previous_uniforms)
+            uniform_writer.check_rows(self._shader(self.comp), uniforms, previous_uniforms)
             pixel = self.comp.op('pixel_shader')
             previous = pixel.text
             placed = None

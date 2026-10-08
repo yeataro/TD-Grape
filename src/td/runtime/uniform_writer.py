@@ -18,6 +18,7 @@ from td_text import tr
 
 COUNTS = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
 PAGES = {'vec': ('valuex', 'valuey', 'valuez', 'valuew'), 'color': ('rgbr', 'rgbg', 'rgbb', 'alpha')}
+PAGE_NAMES = {'vec': 'Vectors', 'color': 'Colors'}
 
 
 def page_of(uniform):
@@ -111,18 +112,46 @@ def states(shader, uniforms):
     return result
 
 
-def check_renames(shader, uniforms, previous):
-    """Refuse before anything changes when a row to rename has its name driven in TD (legacy did the
-    same). 要改名的那一列，名字被 TD 驅動時先拒絕（舊產品同）。"""
-    before = {u['id']: u for u in previous}
+def _leaving(uniforms, previous):
+    """(page, name) of rows Grape is about to remove or rename: they are not in the way.
+    即將拿掉或改名的列（頁、名字）：不算擋路。"""
+    now = {u['id']: u for u in uniforms}
+    return {(page_of(old), old['name']) for old in previous
+            if old['id'] not in now or now[old['id']]['name'] != old['name'] or page_of(now[old['id']]) != page_of(old)}
+
+
+def _taken_over(shader, uniforms, previous):
+    """IDs of renamed Uniforms whose new name is a row someone made in TD on the same page: that row
+    is taken over and the Uniform's own row goes (human 2026-10-09). 改名成同頁 TD 上已有的列：接手它，原本的列拿掉。"""
+    before, leaving = {u['id']: u for u in previous}, _leaving(uniforms, previous)
+    return {u['id'] for u in uniforms if u['id'] in before and before[u['id']]['name'] != u['name']
+            and page_of(before[u['id']]) == page_of(u) and (page_of(u), u['name']) not in leaving
+            and find_row(shader, page_of(u), u['name']) is not None}
+
+
+def check_rows(shader, uniforms, previous):
+    """Refuse before anything changes (Refactor.47, 48.2):
+    - a row to rename has its name driven in TD (legacy did the same);
+    - a Uniform taking a name for the first time finds that name on the other page (Colors vs Vectors:
+      two rows of one name would fight over one uniform; human 2026-10-09).
+    A row of that name on its own page is taken over instead (see apply).
+    動手前先拒絕：要改名的列名字被 TD 驅動；第一次用這個名字、卻在另一頁已有同名的列。同一頁有同名的列則接手（見 apply）。"""
+    before, leaving = {u['id']: u for u in previous}, _leaving(uniforms, previous)
+    taken = _taken_over(shader, uniforms, previous)
     for uniform in uniforms:
-        old = before.get(uniform['id'])
-        if not old or old['name'] == uniform['name'] or page_of(old) != page_of(uniform):
-            continue
-        row = find_row(shader, page_of(old), old['name'])
-        if row is not None and mode_name(par(shader, page_of(old), row, 'name')) != 'CONSTANT':
-            raise ValueError('The name of Uniform ' + old['name'] + ' is driven in TD, so TD-Grape cannot rename it to '
-                             + uniform['name'] + '. Set the name back to a constant in the GLSL OP first.')
+        page, old, name = page_of(uniform), before.get(uniform['id']), uniform['name']
+        renamed = old is not None and old['name'] != name and page_of(old) == page
+        if renamed and uniform['id'] not in taken:
+            row = find_row(shader, page, old['name'])
+            if row is not None and mode_name(par(shader, page, row, 'name')) != 'CONSTANT':
+                raise ValueError('The name of Uniform ' + old['name'] + ' is driven in TD, so TD-Grape cannot rename it to '
+                                 + name + '. Set the name back to a constant in the GLSL OP first.')
+        if old is None or renamed:
+            other = 'vec' if page == 'color' else 'color'
+            if find_row(shader, other, name) is not None and (other, name) not in leaving:
+                raise ValueError('The ' + PAGE_NAMES[other] + ' page of the GLSL OP already has a row named ' + name
+                                 + ', but this Uniform belongs on the ' + PAGE_NAMES[page] + ' page. Choose another name, '
+                                 'or rename or remove that row in TD.')
 
 
 def _pristine_only_row(shader, page):
@@ -173,19 +202,25 @@ def apply(shader, uniforms, previous, expressions, constant_mode):
     notices = []
     before = {u['id']: u for u in previous}
     now = {u['id']: u for u in uniforms}
+    taken = _taken_over(shader, uniforms, previous)
     for page in PAGES:
         gone = [old for ident, old in before.items() if page_of(old) == page
-                and (ident not in now or page_of(now[ident]) != page)]
+                and (ident not in now or page_of(now[ident]) != page or ident in taken)]
         found = [(find_row(shader, page, old['name']), old['name']) for old in gone]
         # Highest row first, so the rows still to remove keep their positions. 由下往上刪，其餘的位置不變。
         for row, name in sorted((f for f in found if f[0] is not None), key=lambda f: f[0], reverse=True):
             _remove_row(shader, page, row, name, notices, constant_mode)
+    # Rows to rename are all found before any name changes, so names can be swapped in one step.
+    # 先找齊所有要改名的列再改，名字互換也行。
+    renames = []
     for uniform in uniforms:
         page, old = page_of(uniform), before.get(uniform['id'])
-        if old and page_of(old) == page and old['name'] != uniform['name']:
+        if old and page_of(old) == page and old['name'] != uniform['name'] and uniform['id'] not in taken:
             row = find_row(shader, page, old['name'])
             if row is not None:
-                par(shader, page, row, 'name').val = uniform['name']
+                renames.append((page, row, uniform['name']))
+    for page, row, name in renames:
+        par(shader, page, row, 'name').val = name
     for uniform in uniforms:
         page, old = page_of(uniform), before.get(uniform['id'])
         suffixes = PAGES[page][:COUNTS[uniform['type']]]
@@ -203,8 +238,16 @@ def apply(shader, uniforms, previous, expressions, constant_mode):
                                   'The GLSL OP row of {uniform} was missing (changed or deleted in TD); TD-Grape added it again.',
                                   uniform=uniform['name']))
             continue
-        if old is None or page_of(old) != page or json.dumps(values_of(old)) == json.dumps(values_of(uniform)):
-            continue  # a row Grape did not make, or a value not changed in the editor: TD keeps its own
+        if old is None or uniform['id'] in taken:
+            # A row someone made in TD with this name: taken over, keeping its values and what drives
+            # them (new behaviour, human 2026-10-09; legacy refused the name). Said once.
+            # TD 上已有同名的列：接手，保留它的值與驅動（新行為；舊產品拒絕這個名字）。說一次。
+            notices.append(tr('uniform.rowAdopted',
+                              '{uniform} uses the row already on the GLSL OP; its values and what drives them are kept.',
+                              uniform=uniform['name']))
+            continue
+        if page_of(old) != page or json.dumps(values_of(old)) == json.dumps(values_of(uniform)):
+            continue  # a value not changed in the editor: TD keeps its own 不是在編輯器改的值：TD 留著自己的
         for suffix, value, was in zip(suffixes, values_of(uniform), values_of(old) + [None] * 4):
             if value != was:
                 write(par(shader, page, row, suffix), value)

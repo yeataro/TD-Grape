@@ -219,6 +219,7 @@
   "uniform.exportFrom": "由 {origin} 的 Export 驅動",
   "uniform.exportRemains": "{uniform} 已刪除，但 GLSL OP 的 {parameter} 仍由 {origin} 的 Export 驅動；TD-Grape 無法從這裡拿掉它。",
   "uniform.expression": "Expression：{text}",
+  "uniform.rowAdopted": "{uniform} 使用了 GLSL OP 上已有的那一列，它的值和驅動都保留。",
   "uniform.rowRecreated": "GLSL OP 上 {uniform} 那一列不見了（在 TD 被改掉或刪掉）；TD-Grape 已重新加上。",
   "uniformPreset.absFrame": "TouchDesigner 啟動後的影格數；一直往前走。",
   "uniformPreset.absTime": "TouchDesigner 啟動後的秒數；一直往前走。",
