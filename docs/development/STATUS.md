@@ -2,6 +2,13 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.48.1 — 共用來源面板加寬 — 2026-10-09
+
+人類 10-09 試用 D1／D2 時：面板太窄、很多東西看不清楚。
+
+- [style.css](../../src/editor-react/style.css)：面板寬度 300px → 420px，視窗太窄時最多佔一半（`min(420px, 50vw)`）。
+- **驗證**：editor 測試不受影響；內建瀏覽器 1400px 寬時面板量得 420px、版本顯示 Refactor.48.1。TD 已用 `DevMode()` 載入新版網頁資產；**TOE 這次沒存**（人類正在 TD 裡測試，不想把測試中的狀態存進去），下次 Deliver 時一起打包。
+
 ## Refactor.48 — Uniform D2：即時值走 WebSocket、TD 的變化即時回到編輯器 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/uniform-d.md` 第二節 B（design-interview Q53：兩個方向都走 WebSocket；Q58、Q60）。

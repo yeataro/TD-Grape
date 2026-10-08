@@ -19,8 +19,9 @@ footer { color: #958b9f; font-size: 11px; }
 .grape-node.selected { outline: 2px solid #b3dc80; }
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
 .grape-node.ghost { opacity: .62; border-style: dashed; }
-/* Panels (Refactor.40): fixed to the right for now; the floating frame replaces PanelShell only. */
-.panel { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; border-left: 1px solid #43394e; background: #1b1923; min-height: 0; }
+/* Panels (Refactor.40): fixed to the right for now; the floating frame replaces PanelShell only.
+   420px (human 10-09: 300px was too narrow to read); at most half a narrow window. 人類：300px 太窄看不清楚。 */
+.panel { width: min(420px, 50vw); flex-shrink: 0; display: flex; flex-direction: column; border-left: 1px solid #43394e; background: #1b1923; min-height: 0; }
 .panel-title { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #43394e; }
 .panel-close { background: none; border: 0; color: inherit; font-size: 16px; cursor: pointer; }
 .panel-body { overflow: auto; padding: 8px 12px; min-height: 0; }
