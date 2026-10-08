@@ -91,6 +91,7 @@
 
 | 發現日 | 情況 |
 | --- | --- |
+| 2026-10-09 | **【後續版本／發布後】TD 從網頁資產讀共用表（Uniform D 起，人類要求標記）**：預設 Uniform 的表（`uniform_presets.json`→`editor-bootstrap.json`）只在 GrapeEditor 的 VFS 放一份，Manager 從那裡讀 expression 對照（先例：Manager 已從同一份讀 `catalogHash`，`grape_manager_ext.py` 第 37～41 行）。**以後若把網頁託管從 TD 徹底剝離（例如部署到網路），TD 會失去這個來源**，要先決定共用表改放哪裡。凡是「TD 從網頁資產讀東西」的地方，都要在讀取處註解標明這個依賴。 |
 | 2026-10-09 | **「TD-Grape 拒絕」的用語要再想（人類 10-09 截圖，之後再處理）**：狀態列顯示「TD-Grape 拒絕：[apply / grape-op / host_rejected] …」。人類：這裡實際上是 **TD 端的部分**（Grape OP 接收送出的程式，`next_family.py`／`host_api.py` 回 422）拒絕，「TD-Grape」說得不夠精確，要想更精確的說法。另外括號裡的技術代號（`apply / grape-op / host_rejected`，來自 `host.ts` 的 HostError）直接露給使用者。屬「訊息要說出真正的行為者」（記憶 messages-name-the-real-actor），併到錯誤回報／連線那一輪一起整理。截圖只看得到開頭，這次被拒的原因未知（Grape_TOP1 的 status 沒有 refused 紀錄：讀綁定時的檢查失敗不寫 status）。 |
 | 2026-10-09 | **貼圖邊緣 alpha 偏低（Refactor.43 實測，TD 原生行為）**：GLSL TOP 的 Input Extend UV 預設 Zero，輸入貼圖解析度比輸出小時，最外一圈像素混到透明的外框（256 的黑圖放到 512：邊緣 alpha 0.56／0.75）。舊產品的 TOP 也是預設 Zero（只有 MAT 有 `Extenduv` 參數）。使用者可從 GLSL Parameters 改。要不要改預設值，做 Grape OP 參數或貼圖輸入後續時再問。 |
 | 2026-10-09 | **TD 裡 In TOP 的名稱（Refactor.43 的做法，人類可改）**：In TOP 照位置命名 `input1、input2…`（對應 Grape OP 的第幾個輸入接口），輸入在編輯器裡的名稱放在 In TOP 的 Label（滑鼠移到接口上看得到）。所以刪掉第一個輸入後，TD 裡叫 `input1` 的可能是編輯器裡叫 input2 的那一個。也可以改成 In TOP 直接用輸入名稱命名（要處理與 shader、graph 等撞名）。 |
