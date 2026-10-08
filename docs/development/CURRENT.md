@@ -93,7 +93,7 @@
 | --- | --- |
 | 2026-10-09 | **貼圖邊緣 alpha 偏低（Refactor.43 實測，TD 原生行為）**：GLSL TOP 的 Input Extend UV 預設 Zero，輸入貼圖解析度比輸出小時，最外一圈像素混到透明的外框（256 的黑圖放到 512：邊緣 alpha 0.56／0.75）。舊產品的 TOP 也是預設 Zero（只有 MAT 有 `Extenduv` 參數）。使用者可從 GLSL Parameters 改。要不要改預設值，做 Grape OP 參數或貼圖輸入後續時再問。 |
 | 2026-10-09 | **TD 裡 In TOP 的名稱（Refactor.43 的做法，人類可改）**：In TOP 照位置命名 `input1、input2…`（對應 Grape OP 的第幾個輸入接口），輸入在編輯器裡的名稱放在 In TOP 的 Label（滑鼠移到接口上看得到）。所以刪掉第一個輸入後，TD 裡叫 `input1` 的可能是編輯器裡叫 input2 的那一個。也可以改成 In TOP 直接用輸入名稱命名（要處理與 shader、graph 等撞名）。 |
-| 2026-10-09 | **本輪之前建的 Grape OP 裡的 `input1`（Refactor.43）**：`Grape_TOP_REF`、`Grape_TOP_test`、`Grape_TOP1`、`tmp_constant_test` 的 `input1` 是範本當時放的，沒有記「屬於哪個輸入」。TD 只管理 Grape 自己建的 In TOP，所以不會刪它；但用編輯器編輯這些 OP 時，它不在 TOPs 清單裡，會變成一個沒有作用的輸入接口。不需要的話可以手動刪掉，或用 Tab 選單重建。**`/project1/tmp_constant_test`**（有 constant1、constant2 兩個常數）不確定是誰建的，等人類說要不要留。 |
+| 2026-10-09 | **本輪之前建的 Grape OP 裡的 `input1`（Refactor.43）**：`Grape_TOP_REF`、`Grape_TOP_test`、`Grape_TOP1` 的 `input1` 是範本當時放的，沒有記「屬於哪個輸入」。TD 只管理 Grape 自己建的 In TOP，所以不會刪它；但用編輯器編輯這些 OP 時，它不在 TOPs 清單裡，會變成一個沒有作用的輸入接口。不需要的話可以手動刪掉，或用 Tab 選單重建。`/project1/tmp_constant_test` 是之前測試留下的，人類 10-09 同意後已刪（存 TD-Grape-dev.76）。 |
 | 2026-10-09 | **貼圖輸入數量沒有上限（Refactor.43）**：TD 照清單建立 In TOP，目前沒有數量上限（需求盤點 7.17 待定）；執行部分 1 MB 的大小上限間接擋住極端情況。貼圖輸入後續那一輪定。 |
 | 2026-10-09 | **【已處理 Refactor.34】GPU 編譯失敗時圖也沒存（與 Q38 原意不符）**：`next_family.apply` 在 TD 編譯失敗時整筆拒絕，Shader 停在最後成功版，但這次的圖也沒寫進 `graph`。Q38 原意是圖照存、只有 Shader 停在最後成功版。要改需編輯器配合（收到「GPU 失敗」後改送只含圖的請求，或 TD 回覆時已存圖），屬協定，做 Grape 頁或錯誤回報那一輪一起處理。機制：`apply` 先換 Shader、最後才存圖，GPU 失敗時 `raise` 跳出，存圖那步沒走到；原作者把整筆當成全有或全無，Q38 只要求執行部分成對。**訊息也要如實（人類 10-09）**：編輯器現在對所有 422 都顯示「TD 拒絕套用：…」——但 GPU 失敗時 TD 沒有拒絕，是 GLSL 編譯失敗；真正拒絕的是我們的宿主程式（格式、版本、ID、手改的圖）。修正後分開說：「GLSL 在 TD 編譯失敗：<原因>。圖已存到 TD，TD 繼續執行上次成功的 Shader」；宿主的拒絕寫「TD-Grape 拒絕：<原因>」，不說成 TD。 |
 | 2026-10-09 | **警告對話框置中（人類：希望在畫面正中央；評估中）**：指「編輯服務沒有啟動，要啟動嗎？」那個對話框（`ui.messageBox`），不是 App 視窗——助手一開始誤解成 App 視窗，已更正。`ui.messageBox` 沒有位置參數。TD 官方的對話框元件 `op.TDResources.PopDialog` 預設也是開在滑鼠位置（其視窗 `justifyh`／`justifyv` = `mouse`，2025.33230 查得）。**人類 10-09 定：先不做。** 理由（人類）：要指定位置得先抓到焦點在哪個視窗／螢幕，抓錯就會開到錯的地方（「有時候會有錯誤」指的就是這個）；這也是 TD 原生開在滑鼠位置的原因。 |
@@ -151,7 +151,7 @@
 
 - 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP 只剩兩個（2026-10-09 人類同意清理）：`/project1/Grape_TOP_test`（rev 596，以新範本重建、圖／Shader／Grape ID 照搬）、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類 2026-10-09 用 Tab 選單從 Refactor.33 範本建立——「人類實際用 Tab 選單建立」這項已有人做過；Refactor.34 時隨其他 OP 轉成 `grape-meta-2`）。`Grape_TOP2`、`Grape_TOP3`（預設圖）與舊格式樣本已刪；舊樣本的圖、舊信封與 `.tox` 留在 workspace `work/refactor/grape-op-round/cleanup-33/`，給日後匯入器用；舊格式樣本已移到 workspace（見上）
 - 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
-- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.43，存 TD-Grape-dev.75；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
+- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.43，存 TD-Grape-dev.76；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴
