@@ -2,6 +2,14 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.46.1 — 共用來源面板記住開關、第一次預設打開 — 2026-10-09
+
+人類 10-09：面板關了不知道從哪裡開、而且預設是關的；選「記住開關，第一次預設打開」。
+
+- [main.tsx](../../src/editor-react/main.tsx)：開關存在這個瀏覽器的 `localStorage`（鍵 `sgrapeSourcesPanel`，值 `open`／`closed`），沒有紀錄時打開。屬個人偏好、不進圖（AGENTS「新設定存哪裡」；和語言設定 `sgrapeLanguage` 同一個地方）。儲存被擋時照樣運作、預設打開。
+- 注意：瀏覽器儲存依網址＋port 分開，換 port 或換瀏覽器等於第一次，會是打開的。
+- **驗證**：editor 51 通過；內建瀏覽器實測：清掉紀錄後打開編輯器 → 面板是開的；關掉、重新整理 → 關著；打開、重新整理 → 開著。Deliver 存 `TD-Grape-dev.81`。
+
 ## Refactor.46 — Uniform C：Uniform 的值一改就送到 TD — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/uniform-c-live.md`（人類 10-09：動 Uniform 的值一律要即時；選 A 先用現有 HTTP，D 那一輪整條搬到 WebSocket，design-interview Q53）。依 Q41 3-4。

@@ -64,7 +64,15 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
 function Editor({ session, text, version }: { session: EditorSession; text: (key: string) => string; version: string }) {
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
   const flow = useReactFlow(), [bodyDrag, setBodyDrag] = useState(true), [snap, setSnap] = useState(false);
-  const [showSources, setShowSources] = useState(false);
+  // Personal preference (human 2026-10-09): the Shared Sources panel remembers open/closed in this browser;
+  // the first time it is open. 個人偏好：共用來源面板記住開關（存在這個瀏覽器）；第一次預設打開。
+  const [showSources, setShowSourcesState] = useState(() => {
+    try { return localStorage.getItem('sgrapeSourcesPanel') !== 'closed'; } catch { return true; }
+  });
+  const setShowSources = (open: boolean) => {
+    setShowSourcesState(open);
+    try { localStorage.setItem('sgrapeSourcesPanel', open ? 'open' : 'closed'); } catch { /* storage may be blocked */ }
+  };
   const [showCode, setShowCode] = useState(false), [draft, setDraft] = useState(() => {
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
   });
