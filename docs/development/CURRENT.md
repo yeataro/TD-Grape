@@ -134,7 +134,7 @@
 
 ## 現場 TD（使用前以 TD MCP 重新確認）
 
-- 主組件 `/TD_Grape`；測試用 Grape TOP `/project1/Grape_TOP_React`（2026-10-07 已換成預設圖）
+- 主組件 `/TD_Grape`；測試用 Grape TOP `/project1/Grape_TOP_test`（原名 `Grape_TOP_React`，人類 2026-10-08 改名）；舊格式樣本 `/project1/Grape_TOP_old_sample`（原名 `Grape_TOP_Refactor`，留作日後匯入器樣本）
 - 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
 - `GrapeEditor` 為**內嵌**（2026-10-08 `Deliver()`，服務 Refactor.26，存 TD-Grape-dev.43）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁

@@ -103,8 +103,8 @@ assert manager.ext.GrapeManagerExt.queue is not None, editor.par.Serviceerror.ev
 # The review Grape OP outside the Manager. Creating Grape OPs returns with the new
 # creation path (design-interview Q6, Q16); this tool never builds one.
 # 審查用 Grape OP；建立 Grape OP 等新的建立功能（Q6、Q16），這支工具不建立。
-family = host.parent().op('Grape_TOP_React')
-assert family is not None, 'The review Grape OP Grape_TOP_React is missing.'
+family = host.parent().op('Grape_TOP_test')
+assert family is not None, 'The review Grape OP Grape_TOP_test is missing.'
 manager.ext.GrapeManagerExt.Register(family)
 family.op('GrapeControls/editor_control').text = (root / 'src/td/runtime/grape_op_controls.py').read_text(encoding='utf-8')
 assert protected() == before_icon, 'Protected icon changed'

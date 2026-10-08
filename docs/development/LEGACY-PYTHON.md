@@ -69,7 +69,7 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 | `tdfam` | TDFam 外部套件 | 不納入 |
 | `IconGen`、`icon`、`licenses` | 保護區／授權 | 不動 |
 
-各 Grape OP 內：`GrapeControls/editor_control`（[grape_op_controls.py](../../src/td/runtime/grape_op_controls.py)）與 `GrapeControls/identity`（[grape_op_identity.py](../../src/td/runtime/grape_op_identity.py)，Q32 身分與撞號），常駐。舊格式的 `Grape_TOP_Refactor` 未動（舊圖樣本）。
+各 Grape OP 內：`GrapeControls/editor_control`（[grape_op_controls.py](../../src/td/runtime/grape_op_controls.py)）與 `GrapeControls/identity`（[grape_op_identity.py](../../src/td/runtime/grape_op_identity.py)，Q32 身分與撞號），常駐。舊格式的 `Grape_TOP_old_sample`（原名 `Grape_TOP_Refactor`）未動，留作日後匯入器的舊圖樣本。
 
 **repo 裡、但不在 TOE 執行的 Python**
 
