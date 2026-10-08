@@ -25,10 +25,6 @@ const legacy=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',pyt
 cases.forEach((row,i)=>{assert.equal(c.GrapeTopCompiler.supports(row.graph),true);row.compiled=JSON.parse(JSON.stringify(c.GrapeTopCompiler.compile(row.graph)));row.legacy=legacy[i];assert.deepEqual(row.compiled.bindings,row.legacy.bindings);});
 assert.equal(cases.at(-1).compiled.bindings.length,1);
 fs.writeFileSync(path.join(folder,'cases.json'),JSON.stringify(cases,null,2));
-// The receiver is the real TD adapter with only the TD process itself absent.
-const receiver=`import json,sys,copy\nfrom unittest.mock import patch\nsys.path[:0]=sys.argv[1:3]\nimport sgrape_core as c,frontend_artifact as r\nfor row in json.load(sys.stdin):\n g=row['graph'];p=dict(protocol=r.PROTOCOL,targetId='test',baseRevision=1,snapshot=json.dumps(g),catalogHash=c.catalog_contract()['hash'],compiled=row['compiled'])\n with patch.object(c,'compile_graph',side_effect=AssertionError('Python emitter used')):\n  a=r.receive(g,p,'test',1,c);s=r.remember(dict(graph=g),r.checked_artifact(g,a,c));assert r.checked_artifact(s['graph'],s['frontendArtifact'],c)['pixel']==row['compiled']['pixel']\n  moved=copy.deepcopy(g);moved['functions'][0]['graph']['nodes'][0]['ui']['x']=100;assert r.checked_artifact(moved,a,c)['pixel']==row['compiled']['pixel']\n  bad=copy.deepcopy(p);bad['compiled']['sourceMap']['pixel'][0]['trail']=['wrapper','missing'];\n  try:r.receive(g,bad,'test',1,c)\n  except ValueError:pass\n  else:raise AssertionError('Invalid source location accepted')\nprint(json.dumps(dict(passed=True,cases=9,pythonEmissionCalls=0)))`;
-const root=path.resolve(__dirname,'../..');
-const receiverResult=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',receiver,path.join(root,'src/core'),path.join(root,'src/td/runtime')],{input:JSON.stringify(cases),encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}}));
 (async()=>{
  const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const browser=await chromium.launch({executablePath:process.env.CHROME_EXECUTABLE,headless:true});
  let pixels;
@@ -49,6 +45,6 @@ const receiverResult=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B',
   for(let i=0;i<pixels.length;i++)pixels[i].frontend.forEach((v,k)=>assert.ok(Math.abs(v-pixels[i].legacy[k])<=1,JSON.stringify({i,...pixels[i]})));
   pixels.at(-1).frontend.forEach(v=>assert.ok(Math.abs(v-25.5)<=1));
  }finally{await browser.close();}
- const report={passed:true,cases:cases.length,receiver:receiverResult,pixels,comparison:'Actual WebGL2 GPU pixels and exact uniform bindings against the fixed Legacy compiler; generated temporary names intentionally differ',limits:'Numeric TOP subgraphs only. WebGL2 shader harness substitutes the TD wrapper, not proof of a delivered WebGL mode or native TD execution.'};
- fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({passed:true,cases:cases.length,receiver:receiverResult}));
+ const report={passed:true,cases:cases.length,pixels,comparison:'Actual WebGL2 GPU pixels and exact uniform bindings against the fixed Legacy compiler; generated temporary names intentionally differ',limits:'Numeric TOP subgraphs only. WebGL2 shader harness substitutes the TD wrapper, not proof of a delivered WebGL mode or native TD execution.'};
+ fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({passed:true,cases:cases.length}));
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

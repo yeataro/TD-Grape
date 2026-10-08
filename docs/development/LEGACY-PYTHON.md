@@ -1,6 +1,6 @@
 # 舊 Python 現況清單
 
-最後更新：2026-10-07。給人類看的盤點：重構中還剩哪些 Python、在哪裡、誰在用、去向為何。舊核心會在重構中**逐步**退場，不是一次性移除；TD 網路裡用 annotate 框標示同一套分類，兩邊須一致。
+最後更新：2026-10-08（清殘留第 4 條，判斷規則見 design-interview Q48）。給人類看的盤點：重構中還剩哪些 Python、在哪裡、誰在用、去向為何。舊核心會在重構中**逐步**退場，不是一次性移除；TD 網路裡用 annotate 框標示同一套分類，兩邊須一致。
 
 ## 歷史
 
@@ -45,21 +45,13 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 | validation | GPU 驗證空間 | — |
 | status | 狀態顯示 | — |
 
-**共用・待更新**
+**待人類刪除**
 
-| OP | 做什麼 | repo | 去向 |
-| --- | --- | --- | --- |
-| sources | Uniform 來源管理（含「有節點引用就不准刪」） | `src/core/sgrape_sources.py` | 留在 TD，重寫 |
-| sgrape_source_catalog | 讀取來源定義 | `src/core/sgrape_source_catalog.py` | 留在 TD，重寫 |
-| source_catalog | 來源定義資料，TS 核心也讀同一份 | `src/library/source_catalog.json` | 前後端共用資料 |
-| history | 原生參數 Undo 紀錄 | `src/core/sgrape_history.py` | Manager 已不載入（2026-10-08，Q48 清理第 2 條）；DAT 待清理第 4、5 條 |
-| parameter_links_source | Uniform 與元件參數綁定 | `src/core/sgrape_parameter_links.py` | 留在 TD，重寫 |
+| OP | 說明 |
+| --- | --- |
+| sources | 舊 Uniform 來源管理（`src/core/sgrape_sources.py` 的副本）。2026-10-08 起沒有任何程式載入；刪除時被權限檢查擋下，留給人類在 TD 手動刪。需求照 Q41 重做 |
 
-**舊入口專用・待遷移**
-
-| OP | 做什麼 | repo |
-| --- | --- | --- |
-| parameters | 元件自訂參數頁編輯；Manager 已不載入（2026-10-08，Q48 清理第 2 條），DAT 待清理第 4、5 條；需求照 Q41 重做 | `src/core/sgrape_parameters.py` |
+2026-10-08 已刪（Q48 清理第 2、4 條）：native_family、host_artifact、host_document、native_values、history、parameters、sgrape_source_catalog、source_catalog（資料檔 `src/library/source_catalog.json` 仍由 TS 核心使用）、parameter_links_source，以及兩個 Legacy 框。
 
 ## `/TD_Grape` 其他部分與 repo 其餘 Python（2026-10-07 盤點 ✅）
 
@@ -72,21 +64,20 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 | `GrapeEditor` | `editor_service*.py`、`editor_folder_callbacks.py` 5 份，皆與 repo 一致 | 常駐 |
 | `GrapeManager` | 見上節 | 已整理 |
 | `remote_panel` | 13 份與 [src/remote_panel](../../src/remote_panel) 一致；另 107 個 DAT 為 TD 內建元件（annotation、cameraViewport 等）的內部程式，非本專案 | 常駐 |
-| `masters`（`grape_mat`、`grape_top`） | 舊式 Grape OP 範本；`controls` 是 [shader_controls.py](../../src/td/runtime/shader_controls.py)，Open Editor 要呼叫舊的 `runtime`（`sgrape_runtime`），TOE 中已不存在 | **已斷**（TD 暗紅框） |
-| `family_callbacks` | [family_callbacks.py](../../src/td/runtime/family_callbacks.py)：TD 選單建立 Grape OP 後的 `onPostPlaceOp` 呼叫舊 `runtime` | **已斷**（TD 暗紅框）：依程式判斷，從選單建立 Grape OP 會失敗，**未實測** |
+| `masters`（`grape_mat`、`grape_top`） | 舊式 Grape OP 範本；`controls` 是 [shader_controls.py](../../src/td/runtime/shader_controls.py)，Open Editor 要呼叫舊的 `runtime`，已不存在 | **暫留**（Q48）：TDFam 的 `Opcomp` 指向這裡。出口：「建立 Grape OP」那一輪（Q6、Q16）換成新格式範本 |
+| `family_callbacks` | [family_callbacks.py](../../src/td/runtime/family_callbacks.py)：TD 選單建立 Grape OP 後的 `onPostPlaceOp` 呼叫舊 `runtime` | **暫留**（Q48）：TDFam 的 `Callbackdat` 指向這裡；從選單建立會失敗（依程式判斷，未實測）。出口同上 |
 | `tdfam` | TDFam 外部套件 | 不納入 |
 | `IconGen`、`icon`、`licenses` | 保護區／授權 | 不動 |
 
-各 Grape OP 內：`GrapeControls/editor_control` 為新式 [native_family_controls.py](../../src/td/runtime/native_family_controls.py)（常駐）；`GrapeControls/parameter_links` 為 `sgrape_parameter_links.py` 副本（共用・待更新，同 GrapeManager）。
+各 Grape OP 內：`GrapeControls/editor_control` 為新式 [native_family_controls.py](../../src/td/runtime/native_family_controls.py)（常駐）。測試 OP `Grape_TOP_React` 的舊 `parameter_links`／`parameter_lifecycle` 與舊 storage 已於 2026-10-08 刪除（內容備份在 workspace `work/refactor/cleanup-4/`）；舊格式的 `Grape_TOP_Refactor` 未動（舊圖樣本）。
 
 **repo 裡、但不在 TOE 執行的 Python**
 
 | 檔案 | 誰還在用 | 判定 |
 | --- | --- | --- |
 | `src/core/sgrape_core.py`、`sgrape_composites.py`、`sgrape_document.py`、`sgrape_library.py`、`sgrape_legacy_nodes.py`、`sgrape_voronoi.py` | 只有 Python 單元測試、TD 測試、部分 integration 測試（以舊 Python compiler 當對照基準，例如 `tests/unit/top_compiler_oracle.py`），以及建置工具 `tools/build/build_textured_material_presets.py`、`sync_node_browser.py`、`tools/dev/check_locales.py` | 只剩測試／工具 |
-| `src/td/runtime/sgrape_runtime.py`（舊編輯器宿主） | 測試；`tools/dev/prepare_cold_start.py` 讀它的 `PRODUCT_VERSION`；被 `masters`／`family_callbacks` 依賴但已不在 TOE | 只剩測試／工具（其依賴者已斷） |
-| `frontend_artifact.py`、`pixel_preview_recovery.py`、`sgrape_live.py` | 只被 `sgrape_runtime.py` 或測試引用 | 只剩測試／工具 |
-| `editor_launch.py` | 被 `shader_controls.py`、`manager_controls.py` 引用（皆舊式路徑） | 只剩舊式路徑 |
-| `manager_controls.py`、`tdfam_menu_colors.py`、`controls.py` | 只在對應表（`src/td/embedded_sources.json`、`source_files.json`） | 沒人用（待人類確認） |
+| `src/td/runtime/editor_launch.py` | 目前沒有呼叫者 | **留**（Q48：符合新架構，Q45 決議 App 視窗與偵測預設瀏覽器會用到） |
 
-**要人類決定的**：(1) 從 TD 選單建立 Grape OP 是否真的壞了、要不要先實測；(2)「只剩測試／工具」的舊 Python，是保留當對照基準，還是等 TS 測試涵蓋後移除；(3) 「沒人用」三檔是否刪除。
+2026-10-08 已刪（Q48 清理第 4 條）：`sgrape_runtime.py`、`sgrape_live.py`、`pixel_preview_recovery.py`、`frontend_artifact.py`、`manager_controls.py`、`tdfam_menu_colors.py`、`controls.py`，以及只測它們的單元測試 13 檔、TD 測試 8 檔、`tools/dev/prepare_cold_start.py` 與 `tests/td/cold_start_probe.py`；4 個 integration 測試拿掉「舊 TD 接收端」那段（與 legacy 編譯器比對的部分保留）。需求（選單顏色、建立按鈕、個人資料夾等）已記在需求盤點與 Q45。
+
+**仍待處理**：舊 Python 核心（`src/core`）與用它的測試、對照表 `embedded_sources.json`／`source_files.json`（描述舊 Manager 配置）屬清理第 5 條。

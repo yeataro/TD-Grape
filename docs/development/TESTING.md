@@ -597,15 +597,7 @@ python tools/dev/submit_job.py tests/td/test_sampler_split.py --timeout 60
 
 ## 獨立重開 TOE（Windows）
 
-先保存已更新內嵌來源的開發 TOE，再準備一個 repository 外、尚不存在的測試資料夾：
-
-```text
-python tools/dev/prepare_cold_start.py <new-test-directory> --td-bin <TouchDesigner-bin-directory> --original-pid <current-TD-process-id>
-```
-
-以新的 TouchDesigner 程序開啟工具輸出的 TOE 路徑。探針會比對保存狀態、GLSL、24 份內嵌來源、各 Shader 的 state／shaders／preview API 與 Editor 資源。成功後寫入 `cold-result.json` 並關閉測試程序；原程序 ID 是避免關錯工程的保護。
-
-沒有報告不能視為成功：先確認 `started.json`、TD 的 Textport 與實際開啟的副本。全域 Cooking 或其他阻塞也可能讓探針無法完成；不要僅憑無回報判定原因。`.toc` 必須使用 LF，且需檢查 `toecollapse` 的缺檔警告，不能只看回傳碼。
+原本的工具 `prepare_cold_start.py` 與探針 `cold_start_probe.py` 檢查的是舊式 Grape OP（`state` DAT、舊 runtime 的 API），已於 2026-10-08 清殘留第 4 條刪除（design-interview Q48）。新式 Grape OP 的冷啟動驗證要重寫時再補；需求不變：在 repository 外的乾淨位置重新啟動 TD，確認內嵌來源、圖、產碼結果與 Editor API。
 
 ## MAT 原生預覽
 

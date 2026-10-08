@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.28 — 清殘留第 4 條：舊產品留在 TD 的執行程式 — 2026-10-08
+
+照 design-interview Q48 判斷；人類授權第 4–8 條自行判斷、逐條提交、技術問題不等審（2026-10-08）。
+
+- **刪除（repo）**：`sgrape_runtime.py`（舊編輯器的 TD 端主程式）、`sgrape_live.py`、`pixel_preview_recovery.py`、`frontend_artifact.py`、`manager_controls.py`、`tdfam_menu_colors.py`、`controls.py`；只測它們的單元測試 13 檔、TD 測試 8 檔；舊式冷啟動工具 `prepare_cold_start.py` 與 `cold_start_probe.py`。對照表 `embedded_sources.json`／`source_files.json` 拿掉對應項目。4 個 integration 測試拿掉「舊 TD 接收端」那段，與 legacy 編譯器比對的部分保留。安裝工具不再安裝舊 Python 模組與 Legacy 框。
+- **刪除（TD）**：Manager 內 history、parameters、sgrape_source_catalog、source_catalog、parameter_links_source 與兩個 Legacy 框；測試 OP `Grape_TOP_React` 的舊 `parameter_links`／`parameter_lifecycle` 與舊 storage（`grapeNativeUniformsV1`、`grapeSourceIssues`、`grapeV1DocumentBackup`；先匯出到 workspace `work/refactor/cleanup-4/` 並讀回核對一致）。
+- **留**：`editor_launch.py`（符合新架構；Q45 決議 App 視窗與偵測預設瀏覽器會用到）。**暫留**：`masters`、`family_callbacks`（含 `shader_controls.py`、`family_callbacks.py`）——TDFam 的 `Opcomp`／`Callbackdat` 指向它們；出口是「建立 Grape OP」那一輪（Q6、Q16），TD 說明框已註明。
+- **未完成**：Manager 的 `sources` DAT 刪除時被 Claude Code 權限檢查擋下，未重試；已無程式載入，留給人類在 TD 手動刪。
+- **驗證**：core 112、editor 37；Python 全套 582 項（少 131＝刪掉的測試），失敗 17＝原本已知的舊架構失敗；integration 4 檔語法檢查通過（需要瀏覽器與 legacy 的完整執行未跑）。真實 TD：測試 OP state／apply（GPU 驗證）通過（revision 580→581），Operator Viewer 指向 `./output`、無錯誤；瀏覽器重開編輯器載入正常（Refactor.28）。Deliver 存 `TD-Grape-dev.45`。
+
 ## Refactor.27 — 清殘留第 2、3 條：TD 舊協定與新舊區分 — 2026-10-08
 
 照 design-interview Q48（每段殘留問「符合新架構嗎？產品現在需要嗎？」）判斷；人類看過清單後同意刪除。

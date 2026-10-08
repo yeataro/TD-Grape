@@ -1,7 +1,6 @@
 {
   "sgrape_voronoi.py": "src/core/sgrape_voronoi.py",
   "sgrape_legacy_nodes.py": "src/core/sgrape_legacy_nodes.py",
-  "controls.py": "src/td/runtime/controls.py",
   "editor_launch.py": "src/td/runtime/editor_launch.py",
   "editor_folder_callbacks.py": "src/td/runtime/editor_folder_callbacks.py",
   "editor_service.py": "src/td/runtime/editor_service.py",
@@ -22,7 +21,6 @@
   "icon-512.png": "src/editor-react/static/icons/icon-512.png",
   "icon-64.png": "src/editor-react/static/icons/icon-64.png",
   "locales.json": "src/editor-react/static/locales.json",
-  "manager_controls.py": "src/td/runtime/manager_controls.py",
   "manifest.webmanifest": "src/editor-react/static/manifest.webmanifest",
   "node_catalog.json": "src/library/node_catalog.json",
   "sgrape_core.py": "src/core/sgrape_core.py",
@@ -32,17 +30,12 @@
   "sgrape_history.py": "src/core/sgrape_history.py",
   "sgrape_parameter_links.py": "src/core/sgrape_parameter_links.py",
   "sgrape_parameters.py": "src/core/sgrape_parameters.py",
-  "sgrape_runtime.py": "src/td/runtime/sgrape_runtime.py",
-  "pixel_preview_recovery.py": "src/td/runtime/pixel_preview_recovery.py",
   "sgrape_sources.py": "src/core/sgrape_sources.py",
   "shader_controls.py": "src/td/runtime/shader_controls.py",
-  "tdfam_menu_colors.py": "src/td/runtime/tdfam_menu_colors.py",
-  "sgrape_live.py": "src/td/runtime/sgrape_live.py",
   "source_catalog.json": "src/library/source_catalog.json",
   "sgrape_source_catalog.py": "src/core/sgrape_source_catalog.py",
   "material_presets.json": "src/library/material_presets.json",
   "wire_planning.js": "src/generated/wire_planning.js",
-  "frontend_artifact.py": "src/td/runtime/frontend_artifact.py",
   "frontend_capabilities.json": "src/core/frontend_capabilities.json",
   "builtin_subgraphs.json": "src/library/builtin_subgraphs.json"
 }

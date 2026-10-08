@@ -8,18 +8,6 @@ const legacy=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',pyt
 cases.forEach((row,i)=>{assert.equal(c.GrapeTopCompiler.supports(row.graph),true);row.compiled=JSON.parse(JSON.stringify(c.GrapeTopCompiler.compile(row.graph)));row.legacy=legacy[i];assert.deepEqual(row.compiled.bindings,row.legacy.bindings);});
 
 fs.writeFileSync(path.join(folder,'cases.json'),JSON.stringify(cases,null,2));
-const receiver=`import json,sys
-from unittest.mock import patch
-sys.path[:0]=sys.argv[1:3]
-import sgrape_core as c,frontend_artifact as r
-rows=json.load(sys.stdin)
-for row in rows:
- g=row['graph'];p=dict(protocol=r.PROTOCOL,targetId='test',baseRevision=1,snapshot=json.dumps(g),catalogHash=c.catalog_contract()['hash'],compiled=row['compiled'])
- with patch.object(c,'compile_graph',side_effect=AssertionError('Python emitter used')):
-  a=r.receive(g,p,'test',1,c);assert r.checked_artifact(g,a,c)['pixel']==row['compiled']['pixel']
-print(json.dumps(dict(passed=True,cases=len(rows),pythonEmissionCalls=0)))`;
-const root=path.resolve(__dirname,'../..');
-const receiverResult=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',receiver,path.join(root,'src/core'),path.join(root,'src/td/runtime')],{input:JSON.stringify(cases),encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}}));
 (async()=>{
  const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');const browser=await chromium.launch({executablePath:process.env.CHROME_EXECUTABLE,headless:true});
  let pixels;
@@ -40,6 +28,6 @@ const receiverResult=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B',
   for(let i=0;i<pixels.length;i++)pixels[i].frontend.forEach((v,k)=>assert.ok(Math.abs(v-pixels[i].legacy[k])<=1,JSON.stringify({i,...pixels[i]})));
 
  }finally{await browser.close();}
- const report={passed:true,cases:cases.length,receiver:receiverResult,pixels,comparison:'Actual WebGL2 GPU pixels and exact uniform bindings against the fixed Legacy compiler; generated temporary names intentionally differ',limits:'TOP scalar/vector logic only; native bindings remain floating-point. WebGL2 shader harness substitutes the TD wrapper, not proof of a delivered WebGL mode or native TD execution.'};
- fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({passed:true,cases:cases.length,receiver:receiverResult}));
+ const report={passed:true,cases:cases.length,pixels,comparison:'Actual WebGL2 GPU pixels and exact uniform bindings against the fixed Legacy compiler; generated temporary names intentionally differ',limits:'TOP scalar/vector logic only; native bindings remain floating-point. WebGL2 shader harness substitutes the TD wrapper, not proof of a delivered WebGL mode or native TD execution.'};
+ fs.writeFileSync(path.join(folder,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({passed:true,cases:cases.length}));
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});
