@@ -11,9 +11,29 @@ import json
 import uuid
 
 FORMAT = 'grape-next-1'  # the editor <-> TD request format
-META_FORMAT = 'grape-meta-1'  # what graph_meta stores (Refactor.33)
+META_FORMAT = 'grape-meta-2'  # what graph_meta stores (Refactor.34)
 PROTOCOL = 'grape.top.ts.1'  # the frontend compiler protocol this build speaks
-MAX_TEXT = 512000
+# Size limits, in UTF-8 bytes. All are ours, not TD's, and none has a measured basis yet: temporary
+# safety nets until real limits are measured (CURRENT). They are separate things that happen to
+# share a number: the graph limit comes from the legacy product; the GLSL limit copied it when the
+# first TD-side receiver was written (2026-10-04); legacy had no GLSL limit (TD generated the GLSL).
+# 大小上限（UTF-8 位元組）：都是我們自己的、不是 TD 的，也都還沒有實測依據。圖與 GLSL 是兩件事，
+# 數字相同只因為當初 GLSL 照抄了圖的上限（舊產品沒有 GLSL 上限）。
+# Why the graph has a limit (measured 2026-10-09, TD 2025.33230): TD handles every edit on its main
+# thread, and reading the request, the checksum and writing the graph DAT cost about 3.3 ms per MB
+# per pass (about 2 ms at 512 KB, about one 60 fps frame at 5 MB). 512,000 keeps an edit to a few ms.
+# The number itself is inherited, not derived; kept because it is hard to reach (human 2026-10-09).
+# 為什麼要有圖的上限（10-09 實測）：TD 在主執行緒處理每次編輯，讀請求、校驗、寫 DAT 約每 MB 3.3 ms；
+# 512 KB 約 2 ms。數字本身是沿用的；很難碰到，先維持（人類 10-09）。
+MAX_GRAPH_BYTES = 512000     # the graph text; the core keeps a copy until we report it (config.ts documentBytes, convention 5)
+# Why GLSL has a limit (measured 2026-10-09, TD 2025.33230): TD has none (it compiled a 2 MB source),
+# but compiling real code blocks TD's main thread about 2.2 ms per KB (50 KB 104 ms, 150 KB 340 ms),
+# and an apply compiles twice (validation, then the Grape OP). 512,000 still allows a stall of
+# seconds; the number is inherited and should be revisited with the subgraph-expansion measurements.
+# GLSL 上限的理由（10-09 實測）：TD 本身沒有上限（2 MB 也能編）；但實際程式碼編譯時 TD 主執行緒
+# 約每 KB 卡 2.2 ms，送出一次編兩次。512 KB 仍可能卡數秒，數字是沿用的，待子圖展開實測時重訂。
+MAX_GLSL_BYTES = 512000      # the pixel shader source
+MAX_RUNTIME_BYTES = 1024 * 1024  # the whole execution part (GLSL + bindings)
 
 
 def require(condition, message):
@@ -42,11 +62,11 @@ def identity(comp):
 
 def read_runtime(text, *, catalog_hash):
     """The execution part (GLSL + bindings) is TD's own input, so TD reads it."""
-    require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= 1024 * 1024, 'invalid runtime part')
+    require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_RUNTIME_BYTES, 'invalid runtime part')
     compiled = json.loads(text)
     require(isinstance(compiled, dict) and compiled.get('vertex') == ''
             and isinstance(compiled.get('pixel'), str), 'invalid TOP source')
-    require(0 < len(compiled['pixel'].encode('utf-8')) <= MAX_TEXT, 'invalid source size')
+    require(0 < len(compiled['pixel'].encode('utf-8')) <= MAX_GLSL_BYTES, 'GLSL is empty or over 512,000 bytes')
     bindings = compiled.get('bindings')
     require(isinstance(bindings, list), 'invalid binding table')
     # Uniform bindings arrive with the Uniform round (binding table, design-interview Q41).
@@ -57,9 +77,13 @@ def read_runtime(text, *, catalog_hash):
 class NextFamily:
     """A Grape OP's stored work (design-interview Q38; grape-op-structure #4, #13):
     `graph` holds the graph text, the one copy, readable in TD; `graph_meta` holds what proves and
-    runs it (revisions, checksums, ID, execution part, last known good) without the graph text;
-    `status` is this Grape OP's state for people. TD never parses the graph.
-    圖的正本在 graph（唯一一份，TD 裡看得到）；graph_meta 放證明與執行用的資料，不放圖的文字。"""
+    runs it (revisions, checksums, ID, execution part) without the graph text; `status` is this
+    Grape OP's state for people. TD never parses the graph.
+    The execution part only changes when TD compiles it, so it is always the last known good.
+    While the graph has moved past it (code generation or TD compilation failed), runtime.document
+    keeps the graph that produced it; otherwise None (Refactor.34: no second copy of GLSL or graph).
+    圖的正本在 graph（唯一一份）；graph_meta 放證明與執行用的資料，不放圖的文字。執行部分只在 TD
+    編譯成功時才換，所以它就是最後成功版；圖往前走而執行部分停住時，runtime.document 才留那時的圖。"""
     FORMAT = FORMAT
     PROTOCOL = PROTOCOL
 
@@ -89,6 +113,8 @@ class NextFamily:
             meta = json.loads(meta_dat.text)
         except ValueError:
             meta = None
+        if isinstance(meta, dict) and meta.get('format') == 'grape-meta-1':
+            self._refuse('This Grape OP uses the previous Grape storage and needs migration.')
         if not (isinstance(meta, dict) and meta.get('format') == META_FORMAT):
             self._refuse('graph_meta is damaged or not in the current format.')
         text = graph_dat.text
@@ -99,7 +125,8 @@ class NextFamily:
                          'Undo the change in TD to open it again.')
         runtime = meta.get('runtime')
         if not (isinstance(runtime, dict) and isinstance(runtime.get('text'), str)
-                and digest(runtime['text']) == runtime.get('sha256')):
+                and digest(runtime['text']) == runtime.get('sha256')
+                and (runtime.get('document') is None) == (runtime.get('revision') == document.get('revision'))):
             self._refuse('The stored execution part is changed or damaged.')
         ident = identity(self.comp)
         if len(ident) != 32:
@@ -172,12 +199,12 @@ class NextFamily:
         if body.get('catalogHash') != catalog_hash:
             raise RuntimeError('Conflict: catalog changed; reload the editor')
         text = body.get('document')
-        require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_TEXT, 'document exceeds 512 KB or is empty')
+        require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_GRAPH_BYTES, 'graph text is empty or over 512,000 bytes')
         runtime_text = body.get('runtime')
         next_revision = revision + 1
         meta = dict(meta)
         meta['document'] = {'revision': next_revision, 'sha256': digest(text)}
-        shader_updated = False
+        shader_updated, shader_error = False, None
         if runtime_text is not None:
             compiled = read_runtime(runtime_text, catalog_hash=catalog_hash)
             pixel = self.comp.op('pixel_shader')
@@ -189,20 +216,18 @@ class NextFamily:
                     shader_updated = True
                 self._verify_gpu(self.comp)
             except Exception as error:
+                # The GLSL did not compile in TD: the Shader stays the last known good, and the
+                # graph is still saved below (Q38: only the execution part is all-or-nothing).
+                # GLSL 在 TD 編譯失敗：Shader 停在最後成功版，圖照樣在下面存起來。
                 pixel.text = previous
-                self.status('gpu-validation', str(error), exception=type(error).__name__)
-                notify(self.comp, 'TD could not compile this Shader; the last known good keeps running.')
-                raise RuntimeError('TD could not compile this Shader; the last known good keeps running. ' + str(error))
-            meta['runtime'] = {'revision': next_revision, 'text': runtime_text, 'sha256': digest(runtime_text)}
-            # The last known good is this graph: no second copy of its text. 最後成功版就是這份圖，不重存文字。
-            meta['lastKnownGood'] = {'revision': next_revision, 'runtime': runtime_text, 'document': None}
-        else:
-            # The graph moves past the last known good: keep that graph's text once.
-            # 圖往前走、Shader 停在最後成功版時，才留一份那時的圖。
-            last = dict(meta.get('lastKnownGood') or {})
-            if last and last.get('document') is None:
-                last['document'] = previous_text
-            meta['lastKnownGood'] = last
+                shader_updated, shader_error = False, str(error)
+            else:
+                meta['runtime'] = {'revision': next_revision, 'text': runtime_text,
+                                   'sha256': digest(runtime_text), 'document': None}
+        if meta['runtime']['revision'] != next_revision and meta['runtime'].get('document') is None:
+            # The graph moves past the running program: keep that program's graph once.
+            # 圖往前走、執行部分停住時，才留一份那時的圖。
+            meta['runtime'] = dict(meta['runtime'], document=previous_text)
         graph_dat, meta_dat = self.comp.op('graph'), self.comp.op('graph_meta')
         before = graph_dat.text, meta_dat.text
         try:
@@ -214,8 +239,16 @@ class NextFamily:
         # Every edit is not shown on the status bar: too much (human 2026-10-09). Uncomment to watch edits.
         # 每一步編輯不顯示在狀態列（資訊量太大）；要觀察時取消下一行的註解。
         # notify(self.comp, 'applied revision ' + str(next_revision))
-        self.status('applied' if runtime_text is not None else 'document-only',
-                    'Shader and document applied' if runtime_text is not None
-                    else 'Document saved; Shader unchanged (no program change, or code generation failed in the editor)',
-                    revision=next_revision, runtimeRevision=meta['runtime']['revision'])
-        return {'ok': True, 'state': self.state(), 'target': self.comp.path, 'shaderUpdated': shader_updated}
+        if shader_error is not None:
+            message = 'GLSL failed to compile in TD; the graph is saved and the last good Shader keeps running.'
+            self.status('glsl-compile-failed', message, revision=next_revision,
+                        runtimeRevision=meta['runtime']['revision'], error=shader_error)
+            notify(self.comp, message)
+        else:
+            self.status('applied' if runtime_text is not None else 'document-only',
+                        'Shader and graph applied' if runtime_text is not None
+                        else 'Graph saved; Shader unchanged (no program change, or code generation failed in the editor)',
+                        revision=next_revision, runtimeRevision=meta['runtime']['revision'])
+        # shaderError: TD's compile log when the GLSL did not compile (the graph was saved anyway).
+        return {'ok': True, 'state': self.state(), 'target': self.comp.path, 'shaderUpdated': shader_updated,
+                'shaderError': shader_error}

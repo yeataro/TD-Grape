@@ -43,6 +43,10 @@ export const CORE_CONFIG:CoreConfig = Object.freeze({
   edgesPerNetwork:1024, // same legacy origin; four edges per node
   expandedNodes:2048,   // legacy-era choice for flattened subgraphs; same status as above
   expandedEdges:8192,   // four edges per expanded node, as before
-  documentBytes:512000, // TD's own limit (host); see convention 5
+  // UTF-8 bytes of the graph text. The host's limit (our TD-side code, next_family.MAX_GRAPH_BYTES), not
+  // TD's: TD itself has none. The number is inherited; the reason to keep a limit is TD main-thread
+  // time per edit (about 3.3 ms per MB, measured 2026-10-09; see next_family.py). See convention 5.
+  // 圖文字的 UTF-8 位元組數。是宿主（我們在 TD 裡的程式）的上限，不是 TD 的；同樣沒有實測依據。
+  documentBytes:512000,
   subgraphDefinitions:64, // legacy-era choice
 });

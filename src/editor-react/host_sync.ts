@@ -10,6 +10,9 @@ export type Delivery = { graph: Graph; key: string; compiled?: Compiled; error?:
 export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
 export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable'; message?: string };
 type Sent = { document: string; revision: number };
+// shaderError: the GLSL did not compile in TD. The graph was still saved; TD keeps running the
+// last good Shader (Refactor.34). 圖照樣存了，只是 GLSL 在 TD 編譯失敗、Shader 停在上次成功版。
+type Applied = { state: StateResponse['state']; shaderError?: string | null };
 export const FORMAT = 'grape-next-1';
 
 // Two parts (design-interview Q38 2-2): the execution part (GLSL + bindings) is applied by TD as a
@@ -68,6 +71,7 @@ export class HostSync {
   private disposed = false;
   private confirmed: string; // document text TD has acknowledged
   private runtimeKey: string | null; // fingerprint of the program TD runs; null when unknown
+  private failedKey: string | null = null; // fingerprint of a program TD could not compile
   private uncertain?: Sent;
   blocked = false;
   status: SyncStatus;
@@ -102,17 +106,24 @@ export class HostSync {
       const { graph, key, compiled } = this.source(), sent = { document: serializeDocument(graph), revision: this.status.revision };
       // Same fingerprint as the running program: send the document only, so TD skips GPU work
       // (layout-only edits, design-interview Q31/Q38). 指紋與 TD 正在跑的相同：只送圖，TD 不做 GPU 驗證。
-      const runtime = compiled && key !== this.runtimeKey ? compiled : undefined;
+      // A program TD already failed to compile is not sent again until it changes.
+      // TD 已編譯失敗的程式，沒改之前不再送。
+      const runtime = compiled && key !== this.runtimeKey && key !== this.failedKey ? compiled : undefined;
       this.set({ phase: 'sending', message: compiled ? '正在套用至 TD…' : '產碼失敗；只把圖存到 TD，TD 繼續執行上次成功的 Shader…' });
       try {
-        const result = await this.host.call<{ state: StateResponse['state'] }>('apply',
-          applyRequest(this.host, this.bootstrap, sent, runtime));
+        const result = await this.host.call<Applied>('apply', applyRequest(this.host, this.bootstrap, sent, runtime));
         if (this.disposed) return;
         if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
         this.confirmed = sent.document;
-        if (runtime) this.runtimeKey = key;
-        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready',
-          message: compiled ? '已套用 TD；專案尚需保存' : '圖已存到 TD；產碼失敗，TD 仍執行上次成功的 Shader' });
+        let message = '已套用 TD；專案尚需保存';
+        if (runtime && result.shaderError) {
+          this.failedKey = key;
+          message = 'GLSL 在 TD 編譯失敗：' + result.shaderError + '\n圖已存到 TD，TD 繼續執行上次成功的 Shader。';
+        } else if (runtime) {
+          this.runtimeKey = key; this.failedKey = null;
+        } else if (!compiled) message = '圖已存到 TD；產碼失敗，TD 仍執行上次成功的 Shader';
+        else if (key === this.failedKey) message = '圖已存到 TD；這個程式先前在 TD 編譯失敗，TD 仍執行上次成功的 Shader。';
+        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message });
       } catch (error) {
         if (this.disposed) return;
         this.fail(classify(error), error, sent);
@@ -127,7 +138,7 @@ export class HostSync {
     if (sent && (failure.phase === 'uncertain' || (failure.phase === 'offline' && failure.landed))) this.uncertain = sent;
     this.set(failure.phase === 'offline' ? { phase: 'offline', link: failure.link, message: offlineMessage[failure.link] }
       : { phase: failure.phase, link: undefined, message: failure.phase === 'conflict' ? conflictMessage
-        : failure.phase === 'uncertain' ? '交付結果不明，已停止自動送出；正在向 TD 確認版本。' + String(error) : 'TD 拒絕套用：' + String(error) });
+        : failure.phase === 'uncertain' ? '交付結果不明，已停止自動送出；正在向 TD 確認版本。' + String(error) : 'TD-Grape 拒絕：' + String(error) });
     this.recover();
   }
   // Only while disconnected or unsure, only when the page is visible, never overlapping.
@@ -179,7 +190,7 @@ export class HostSync {
   // 衝突時選「TD 端」：Editor 已採用 TD 的版本，與 TD 相同、不需送出。
   adopt(state: StateResponse['state']) {
     clearTimeout(this.timer);
-    this.confirmed = state.document; this.blocked = false; this.uncertain = undefined;
+    this.confirmed = state.document; this.blocked = false; this.uncertain = undefined; this.failedKey = null;
     this.runtimeKey = state.runtimeRevision === state.revision ? this.source().key : null;
     this.set({ revision: state.revision, dirty: false, phase: 'ready', link: undefined });
   }
@@ -189,7 +200,7 @@ export class HostSync {
   overwrite = async () => {
     const result = await this.read();
     this.confirmed = result.state.document; this.blocked = false; this.uncertain = undefined;
-    this.runtimeKey = null; // TD's program was written elsewhere; send ours
+    this.runtimeKey = null; this.failedKey = null; // TD's program was written elsewhere; send ours
     const dirty = this.dirtyNow();
     this.set({ revision: result.state.revision, dirty, phase: 'ready',
       message: dirty ? '以編輯器草稿覆寫 TD…' : '草稿與 TD 文件相同，已同步。' });

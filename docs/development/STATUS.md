@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.34 — GLSL 在 TD 編譯失敗時圖照存；訊息如實；`graph_meta` 不再存兩份 GLSL — 2026-10-09
+
+人類同意（「先這樣做，先試過再說」）。依 design-interview Q38（只有執行部分全有或全無，圖收到就存）。
+
+- **TD**（[next_family.py](../../src/td/runtime/next_family.py)）：GLSL 在 TD 編譯失敗時，Shader 換回上次成功版，**圖照樣存**（原本 `raise` 提早跳出、存圖那步沒走到——程式與 Q38 不一致）；回覆成功並附 `shaderError`（TD 的編譯紀錄）；`status` 記 `glsl-compile-failed`、狀態列如實說明。
+- **`graph_meta` 改為 `grape-meta-2`**：舊的 `runtime.text` 與 `lastKnownGood.runtime` 永遠相同（GLSL 存兩份，Refactor.33 沿用舊信封形狀沒檢查）。現在執行部分只存一次，它本身就是最後成功版；圖往前走而執行部分停住時，`runtime.document` 才留那時的圖，下次成功清回 `null`。`grape-meta-1` 讀到會要求搬遷。既有 Grape OP 已搬（`Grape_TOP_test` 的 `graph_meta` 8,582 → 4,426 bytes；備份 workspace `work/refactor/grape-op-round/backup-34/`、腳本 `migrate_meta_34.py`）。
+- **編輯器**（[host_sync.ts](../../src/editor-react/host_sync.ts)）：收到 `shaderError` 時版號照走（修改已送達）、不把這個程式記成 TD 在跑的、記住它編譯失敗——之後只動版面不重送同一個失敗的程式，程式改了才再送。訊息如實：「GLSL 在 TD 編譯失敗：<TD 的紀錄>。圖已存到 TD，TD 繼續執行上次成功的 Shader」；真正的拒絕改說「TD-Grape 拒絕：」，不再說成「TD 拒絕套用」。
+- **大小上限**：拆成圖、GLSL、執行部分三個名字；註解寫明都是我們的、不是 TD 的，以及實測的理由（TD 主執行緒處理每次編輯約每 MB 3.3 ms；GLSL 編譯約每 KB 2.2 ms，TD 本身能編 2 MB）；數字不變（人類：很難碰到，先這樣，但要有理由）。`config.ts` 原註解「TD's own limit」更正；design-interview 第 960 行「TD 端 GLSL 512 KB 上限」補更正。
+- **驗證**：core 110、editor 39（新增：TD 編譯失敗時圖送達、不重送失敗程式、程式改了再送；拒絕訊息寫 TD-Grape）、Python 52（GPU 失敗存圖並保留舊圖一份、下次成功清掉；`grape-meta-1` 要求搬遷；GLSL 上限訊息）。真實 TD 2025.33230＋瀏覽器：暫時讓試編譯附加 `#error`（TD 自己的編譯錯誤，測完還原）→ 改值：編輯器顯示 TD 的編譯紀錄與「圖已存到 TD」、revision 往前、TD 的圖已更新、Shader 像素仍是舊值、`runtime.document` 是舊圖、狀態列與 `status` 正確；移動節點 → 只送圖、不重試；還原後改值 → 套用成功、`runtime.document` 清回 `null`。測試 OP 已刪；全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.62`。
+- **發現**：TD 的編譯紀錄很長時，編輯器狀態列變成三行、把畫布往下推（記在 CURRENT）。
+
 ## Refactor.33.1 — 預設圖「平面法線」改為 (0.5, 0.5, 1.0) — 2026-10-09
 
 人類確認樣板裡的 (0.5, 0.6, 1.0) 是手誤。[install_grape_templates.py](../../tools/jobs/install_grape_templates.py) 改正並重建範本；`Grape_TOP_REF/Samples/sample_flatNormal` 在 TD 內直接改。全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.60`。

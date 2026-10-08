@@ -72,10 +72,9 @@ def annotation(container, name, title, body, x, y, w, h):
 graph_text = json.dumps(bootstrap['defaultDocument']['graph'], ensure_ascii=False, separators=(',', ':'))
 compiled = bootstrap['defaultDocument']['compiled']
 runtime_text = json.dumps(compiled, ensure_ascii=False, separators=(',', ':'))
-meta = {'format': 'grape-meta-1', 'targetId': '',
+meta = {'format': 'grape-meta-2', 'targetId': '',
         'document': {'revision': 0, 'sha256': digest(graph_text)},
-        'runtime': {'revision': 0, 'text': runtime_text, 'sha256': digest(runtime_text)},
-        'lastKnownGood': {'revision': 0, 'runtime': runtime_text, 'document': None}}
+        'runtime': {'revision': 0, 'text': runtime_text, 'sha256': digest(runtime_text), 'document': None}}
 
 top = node(masters, baseCOMP, 'grape_top', 0, 0)
 top.tags.add(GRAPE_OP_TAG)

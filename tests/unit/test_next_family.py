@@ -52,8 +52,7 @@ def envelope(revision=3, document='{"a":1}', run=None, target=TARGET):
     run = run or runtime('old glsl')
     return document, json.dumps({'format': META_FORMAT, 'targetId': target,
         'document': {'revision': revision, 'sha256': digest(document)},
-        'runtime': {'revision': revision, 'text': run, 'sha256': digest(run)},
-        'lastKnownGood': {'revision': revision, 'runtime': run, 'document': None}})
+        'runtime': {'revision': revision, 'text': run, 'sha256': digest(run), 'document': None}})
 
 
 def meta(comp):
@@ -112,6 +111,10 @@ class NextFamilyTests(unittest.TestCase):
         fam, _ = family('{"format": "grape-next-1", "targetId": ""}')
         with self.assertRaisesRegex(ValueError, 'needs migration'):
             fam.state()
+        graph, stored = envelope()
+        fam, _ = family((graph, json.dumps(dict(json.loads(stored), format='grape-meta-1'))))
+        with self.assertRaisesRegex(ValueError, 'needs migration'):
+            fam.state()
 
     def test_apply_pairs_glsl_and_bindings_and_stores_the_document_as_received(self):
         fam, comp = family()
@@ -121,28 +124,37 @@ class NextFamilyTests(unittest.TestCase):
         self.assertEqual(comp.op('graph').text, '{ "odd" :  [1, 2] }')  # the one copy, as received
         self.assertNotIn('{ "odd"', comp.op('graph_meta').text)  # graph_meta never repeats the graph text
         self.assertEqual((stored['document']['revision'], stored['runtime']['revision']), (4, 4))
-        self.assertEqual((stored['lastKnownGood']['revision'], stored['lastKnownGood']['document']), (4, None))
-        self.assertEqual(result['state']['revision'], 4)
+        self.assertIsNone(stored['runtime']['document'])  # the graph is the running program's graph
+        self.assertNotIn('lastKnownGood', stored)  # the running program is the last known good; no second GLSL copy
+        self.assertEqual((result['state']['revision'], result['shaderError']), (4, None))
 
     def test_failed_code_generation_sends_document_only_and_keeps_the_last_known_good(self):
         fam, comp = family()
         fam.apply(request(run=None), catalog_hash=CATALOG)
         stored = meta(comp)
         self.assertEqual((stored['document']['revision'], stored['runtime']['revision']), (4, 3))
-        # The graph moved past the last known good, so that graph's text is kept once.
-        self.assertEqual((stored['lastKnownGood']['revision'], stored['lastKnownGood']['document']), (3, '{"a":1}'))
+        # The graph moved past the running program, so that program's graph is kept once.
+        self.assertEqual(stored['runtime']['document'], '{"a":1}')
         fam.apply(request(revision=4, run=None, document='{"b":2}'), catalog_hash=CATALOG)
-        self.assertEqual(meta(comp)['lastKnownGood']['document'], '{"a":1}')  # still the last good one
+        self.assertEqual(meta(comp)['runtime']['document'], '{"a":1}')  # still the last good one, not accumulated
         self.assertEqual(comp.op('pixel_shader').text, 'old glsl')
         fam._validate.assert_not_called()
 
-    def test_gpu_failure_restores_the_shader_and_changes_nothing(self):
+    def test_glsl_that_fails_in_td_keeps_the_shader_but_saves_the_graph(self):
         fam, comp = family(gpu_ok=False)
-        before = comp.op('graph').text, comp.op('graph_meta').text
-        with self.assertRaisesRegex(RuntimeError, 'last known good'):
-            fam.apply(request(run=runtime('bad glsl')), catalog_hash=CATALOG)
-        self.assertEqual(comp.op('pixel_shader').text, 'old glsl')
-        self.assertEqual((comp.op('graph').text, comp.op('graph_meta').text), before)
+        result = fam.apply(request(run=runtime('bad glsl')), catalog_hash=CATALOG)
+        self.assertEqual(comp.op('pixel_shader').text, 'old glsl')  # last known good keeps running
+        self.assertEqual(comp.op('graph').text, '{ "odd" :  [1, 2] }')  # the edit is not lost
+        stored = meta(comp)
+        self.assertEqual((stored['document']['revision'], stored['runtime']['revision']), (4, 3))
+        self.assertEqual((stored['runtime']['text'], stored['runtime']['document']), (runtime('old glsl'), '{"a":1}'))
+        self.assertEqual((result['state']['revision'], result['shaderUpdated'], result['shaderError']), (4, False, 'GPU says no'))
+        status = json.loads(comp.op('status').text)
+        self.assertEqual((status['phase'], status['error']), ('glsl-compile-failed', 'GPU says no'))
+        # A later success clears the kept graph: one copy again.
+        fam._validate.side_effect = None
+        fam.apply(request(revision=4, run=runtime('good glsl')), catalog_hash=CATALOG)
+        self.assertEqual((meta(comp)['runtime']['revision'], meta(comp)['runtime']['document']), (5, None))
 
     def test_envelope_checks(self):
         fam, _ = family()
@@ -152,8 +164,10 @@ class NextFamilyTests(unittest.TestCase):
             fam.apply({**request(run=runtime()), 'targetId': 'd' * 32}, catalog_hash=CATALOG)
         with self.assertRaisesRegex(RuntimeError, 'catalog'):
             fam.apply(request(run=runtime()), catalog_hash='e' * 64)
-        with self.assertRaisesRegex(ValueError, '512 KB'):
+        with self.assertRaisesRegex(ValueError, '512,000 bytes'):
             fam.apply(request(document='x' * 512001, run=runtime()), catalog_hash=CATALOG)
+        with self.assertRaisesRegex(ValueError, 'GLSL is empty or over'):
+            fam.apply(request(run=runtime('x' * 512001)), catalog_hash=CATALOG)
 
     def test_uniform_bindings_are_refused_until_migrated(self):
         fam, _ = family()

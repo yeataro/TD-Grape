@@ -244,6 +244,40 @@ test('failed code generation still saves the document; TD keeps the last known g
   assert.equal(calls.length, 2); assert.notEqual(calls[1].body.runtime, null);
 });
 
+// GLSL that does not compile in TD (Refactor.34): TD still saves the graph and keeps the last good
+// Shader; the editor counts the edit as delivered, says what happened, and does not resend the same
+// failing program. TD 編譯失敗：圖照存、Shader 停在上次成功版；編輯器如實顯示、不重送同一個失敗的程式。
+test('GLSL that fails in TD: the graph is delivered, the failing program is not resent until it changes', async t => {
+  let failing = true;
+  const { session, calls } = open(t, async (action, body, remote) => {
+    if (action === 'state') return remote.get();
+    const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state);
+    return { state, shaderError: body.runtime && failing ? 'ERROR: 0:12: syntax error' : null };
+  });
+  session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
+  assert.notEqual(calls.at(-1).body.runtime, null);
+  assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 5);
+  assert.match(session.snapshot().message, /GLSL 在 TD 編譯失敗：ERROR: 0:12: syntax error[\s\S]*圖已存到 TD/);
+  assert.doesNotMatch(session.snapshot().message, /拒絕/);
+  session.nodeChanges([{ type: 'position', id: 'a', position: { x: 300, y: 90 }, dragging: false }]); await session.flush();
+  assert.equal(calls.at(-1).body.runtime, null, 'same failing program: graph only');
+  assert.match(session.snapshot().message, /先前在 TD 編譯失敗/);
+  failing = false;
+  session.transact('value', net => setValue(net, 'a', 4)); await session.flush();
+  assert.notEqual(calls.at(-1).body.runtime, null, 'a changed program is sent again');
+  assert.equal(session.snapshot().message, '已套用 TD；專案尚需保存');
+  session.nodeChanges([{ type: 'position', id: 'a', position: { x: 320, y: 90 }, dragging: false }]); await session.flush();
+  assert.equal(calls.at(-1).body.runtime, null, 'now running: layout only again');
+});
+
+test('a host refusal names TD-Grape, not TD', async t => {
+  const { session } = open(t, async action => action === 'state' ? undefined
+    : new Response(JSON.stringify({ error: 'target mismatch' }), { status: 422 }));
+  session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
+  assert.equal(session.snapshot().phase, 'error');
+  assert.match(session.snapshot().message, /^TD-Grape 拒絕：/);
+});
+
 test('wrong producer and out-of-slice graphs reject without changing the host', t => {
   const { session, calls, loaded } = open(t), state = loaded();
   state.frontendCompiler.catalogHash = 'other';
