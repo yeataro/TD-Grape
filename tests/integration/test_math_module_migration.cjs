@@ -28,6 +28,41 @@ const {convertOldGraph}=require('../../tools/dev/old_graph.cjs');
 for(const row of rows)row.graph=convertOldGraph(row.graph).graph;
 fs.writeFileSync(path.join(folder,'legacy-cases.json'),JSON.stringify(rows,null,2));
 const api=vm.createContext({});vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../../src/generated/grape_core.js'),'utf8'),api);
-for(const row of rows){assert.equal(api.GrapeTopCompiler.supports(row.graph),true);assert.deepEqual(JSON.parse(JSON.stringify(api.GrapeTopCompiler.compile(row.graph))),row.compiled,JSON.stringify(row.case));}
-const report={passed:true,cases:rows.length,comparison:['GLSL','bindings','sourceMap','ports','diagnostics'],types:['float','vec4'],counts:[2,3,32],modes:['steps','shared'],annotations:'multiline labels, Unicode separators, control bytes, backslash line joins',legacyRoot:path.resolve(legacyRoot),actualTD:false};
+// Comment layout differs from Legacy by decision (human 2026-10-08: keep the current style, where a
+// node's notes go on their own lines). Compare the code and its source map with comments removed,
+// and separately require every comment to stay a harmless one-line comment.
+// 註解排版與舊產品不同是人類決定保留的；比對時去掉註解再比程式與 source map，另外檢查註解不會漏成程式。
+function withoutComments(compiled){
+  const result=JSON.parse(JSON.stringify(compiled));
+  for(const stage of ['vertex','pixel']){
+    const kept=[],lineMap=new Map();
+    (result[stage]||'').split('\n').forEach((line,i)=>{
+      const code=line.replace(/\s*\/\/.*$/,'');
+      if(code.trim()===''&&line.trim()!=='')return;
+      lineMap.set(i+1,kept.length+1);kept.push(code);
+    });
+    result[stage]=kept.join('\n');
+    if(result.sourceMap&&result.sourceMap[stage])
+      result.sourceMap[stage]=result.sourceMap[stage].filter(e=>lineMap.has(e.line)).map(e=>({...e,line:lineMap.get(e.line)}));
+  }
+  // Per-stage line lists quote the generated code; strip their comments the same way.
+  const strip=lines=>lines.map(l=>[l,l.replace(/\s*\/\/.*$/,'')]).filter(([l,c])=>c.trim()!==''||l.trim()==='').map(([,c])=>c);
+  const walk=v=>{if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==='object')for(const k of Object.keys(v)){
+    if(k==='lines'&&Array.isArray(v[k])&&v[k].every(x=>typeof x==='string'))v[k]=strip(v[k]);else walk(v[k]);}};
+  walk(result);
+  return result;
+}
+function assertHarmlessComments(compiled,label){
+  for(const stage of ['vertex','pixel'])for(const line of (compiled[stage]||'').split('\n')){
+    assert.ok(!/[\u0000-\u0008\u000b-\u001f\u007f\u2028\u2029]/.test(line),label+' control character in '+stage);
+    assert.ok(!/\\s*$/.test(line),label+' line continuation in '+stage);
+  }
+}
+for(const row of rows){
+  assert.equal(api.GrapeTopCompiler.supports(row.graph),true);
+  const compiled=JSON.parse(JSON.stringify(api.GrapeTopCompiler.compile(row.graph)));
+  assertHarmlessComments(compiled,JSON.stringify(row.case));
+  assert.deepEqual(withoutComments(compiled),withoutComments(row.compiled),JSON.stringify(row.case));
+}
+const report={passed:true,cases:rows.length,comparison:['GLSL without comments','bindings','sourceMap without comment lines','ports','diagnostics'],commentLayout:'current style kept by human decision 2026-10-08; comments checked to stay one-line and inert',types:['float','vec4'],counts:[2,3,32],modes:['steps','shared'],annotations:'multiline labels, Unicode separators, control bytes, backslash line joins',legacyRoot:path.resolve(legacyRoot),actualTD:false};
 fs.writeFileSync(path.join(folder,'result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
