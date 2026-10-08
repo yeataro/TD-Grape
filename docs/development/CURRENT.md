@@ -42,7 +42,7 @@
 
 **主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
 - 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
-- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條）**，寫回 design-interview **Q45**；**核心四區 03 節點與型別（92）、04 編輯指令（88）、05 子圖（54）、06 Stage（49）**，寫回 **Q46**（修改 Q41 子圖可放不用宣告的、Q44 子圖 Stage／target 改推算；子圖存檔名稱改 `subgraphId`／`sgrape.builtin.subgraph_*`；沒用的子圖定義刪掉；Math 與 Add 等都留；自動轉換只做不遺失資料的；Color Output 什麼都能接）。**畫面五區 07 節點外觀（48）、08 面板與版面（56）、09 新增選單與 Library（33）、10 匯入匯出（31）、11 設定語系圖示（42）也已完成**，寫回 **Q47**（低牽連的介面細節擱置到加回來時再定；Log 的「怎麼來」要早做；畫布暫不做成面板但狀態要能支援多份、編輯器同時持有多張圖；浮動面板自由擺放吸附邊緣；參數面板通用化）。03–11 的 C 類人類已逐條確認，補充寫在 Q47 後的「C 類確認時的修正」。**需求盤點全部 11 區完成；清殘留判斷規則已定（Q48）。清理清單第 2、3 條已做（Refactor.27）、第 4 條已做（Refactor.28）、第 5 條已做（Refactor.29）、第 6 條已做（Refactor.30）。下一步：第 7、8 條（人類授權自行判斷、逐條提交）。**
+- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條）**，寫回 design-interview **Q45**；**核心四區 03 節點與型別（92）、04 編輯指令（88）、05 子圖（54）、06 Stage（49）**，寫回 **Q46**（修改 Q41 子圖可放不用宣告的、Q44 子圖 Stage／target 改推算；子圖存檔名稱改 `subgraphId`／`sgrape.builtin.subgraph_*`；沒用的子圖定義刪掉；Math 與 Add 等都留；自動轉換只做不遺失資料的；Color Output 什麼都能接）。**畫面五區 07 節點外觀（48）、08 面板與版面（56）、09 新增選單與 Library（33）、10 匯入匯出（31）、11 設定語系圖示（42）也已完成**，寫回 **Q47**（低牽連的介面細節擱置到加回來時再定；Log 的「怎麼來」要早做；畫布暫不做成面板但狀態要能支援多份、編輯器同時持有多張圖；浮動面板自由擺放吸附邊緣；參數面板通用化）。03–11 的 C 類人類已逐條確認，補充寫在 Q47 後的「C 類確認時的修正」。**需求盤點全部 11 區完成；清殘留判斷規則已定（Q48）。清理清單第 2、3 條已做（Refactor.27）、第 4 條已做（Refactor.28）、第 5 條已做（Refactor.29）、第 6 條已做（Refactor.30）、第 7 條判為留。下一步：第 8 條（人類授權自行判斷、逐條提交）。**
 
 **盤查最重要的發現：**
 1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 已由議事錄定案（Q44），待實作。
@@ -54,9 +54,11 @@
 
 **清殘留的判斷規則（人類 2026-10-08 定，design-interview Q48；取代原「甲乙丙丁四類」）**：每段殘留程式問兩題——形狀符合新架構嗎？產品現在需要嗎（從產品入口走得到才算）？符合＋需要→留不標；符合＋不需要→有決議或下一輪會用才留，否則刪；不符合＋需要→暫留，必須寫明「換成什麼、哪一輪換」；不符合＋不需要→刪。判斷不了放「待問」；以函式為單位；刪除前列清單等人類同意。另提議在暫留程式的註解加固定字樣（如 `LEGACY(暫留: 換成…, …輪)`）並把 LEGACY-PYTHON.md 擴成殘留地圖——人類未確認。人類的問題是問題、不是指示（記憶 questions-are-questions）。
 
-**已排的清理清單**（第 1 條已做 `e50e656`；第 2 TD 舊協定、3 新舊區分機制已做 Refactor.27；4 舊產品 TD 執行程式已做 Refactor.28；5 舊 Python 核心與其測試已做 Refactor.29；6 GraphDocument 直接改原物件已做 Refactor.30；其餘照 Q48 逐條判斷，一張表、只問一題，刪除前列清單）：4 舊產品 TD 執行程式、5 舊 Python 核心與其測試、6 GraphDocument 直接改原物件模式、7 子圖操作（原判乙類，留；照 Q48 重判）、8 舊名 `wire_planning`／`GrapeWirePlanning`。
+**已排的清理清單**（第 1 條已做 `e50e656`；第 2 TD 舊協定、3 新舊區分機制已做 Refactor.27；4 舊產品 TD 執行程式已做 Refactor.28；5 舊 Python 核心與其測試已做 Refactor.29；6 GraphDocument 直接改原物件已做 Refactor.30；7 子圖操作照 Q48 重判為「留」（2026-10-08，不改程式；與 Q46 不一致的形狀列在下方「待處理」，出口：子圖那一輪）；其餘照 Q48 逐條判斷，一張表、只問一題，刪除前列清單）：4 舊產品 TD 執行程式、5 舊 Python 核心與其測試、6 GraphDocument 直接改原物件模式、7 子圖操作（原判乙類，留；照 Q48 重判）、8 舊名 `wire_planning`／`GrapeWirePlanning`。
 
 ## 待處理
+
+> **子圖那一輪開工時先改形狀（清理第 7 條，照 Q48 判「留」但形狀未對齊 Q46，2026-10-08）：** (1) 節點類型 `sgrape.function.call／input／output` → `sgrape.builtin.subgraph_call／input／output`，參數 `functionId` → `subgraphId`（Q46 7.7；目前沒有任何存檔含子圖，改名不需轉換）；(2) `SubgraphData.stages` 目前必填、`targets` 可存——Q46 定為由內容推算，只在存成定義時寫入；(3) 核心內部網路代號前綴 `function:`（不存檔）改名；(4) 每邊 16 個介面的上限寫在 `subgraph_interface.ts`、`subgraph_operations.ts`、`subgraphs.ts` 三處，搬進 `config.ts`（Q47 補充 8）。子圖程式本身（建立、群組、實例化、在地化、複製、刪除、產碼）都有呼叫者與測試，保留。
 
 > **新舊框架的圖不共通（design-interview Q40）：** 不做轉換功能，舊圖之後由匯入器處理。tag 區分已於 Refactor.27 拿掉（TD 讀到舊格式即拒絕）；遷移期便利行為（下段）仍待移除。
 
