@@ -6,6 +6,7 @@ import { type HostClient, type StateResponse } from './host';
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
+import { LiveValues } from './live_values';
 
 // Handle id of a module-declared spare input. The module owns the command, port key,
 // type and limit; this layer only runs that command and wires the declared port.
@@ -79,6 +80,9 @@ export class Editor {
   private codegen: Delivery;
   private disposed = false;
   private readonly sync: HostSync;
+  // Uniform values go to TD the moment they change (Uniform C, Q53). Uniform 的值一改就送到 TD。
+  private readonly live: LiveValues;
+  private uniformValues = new Map<string, string>();
   // The code generator is received when created (config convention 4); omitted means the shared one.
   // 產碼器在建立時傳入（config 約定 4）；沒給就用共用的那個。測試用它模擬產碼失敗。
   // Every message also goes to the report log (Q35: the page makes one log and shares it).
@@ -90,6 +94,8 @@ export class Editor {
     const graph = parseDocument(loaded.state.document);
     requireSupported(graph);
     this.document = new core.GraphDocument(graph, core.registry);
+    this.live = new LiveValues(host);
+    this.uniformValues = this.readUniformValues();
     this.codegen = this.compile();
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
       (status, said) => this.status({ ...status, ...said }, 'sync'), delay, retry, editorVersion);
@@ -173,6 +179,7 @@ export class Editor {
   // Every finished edit is compiled here, then offered to HostSync.
   // 每次修改完成都在這裡產碼，再交給 HostSync。
   private commit(projection: Projection, label: Message) {
+    this.sendChangedUniforms();
     this.codegen = this.compile();
     const failed = this.codegen.error === undefined ? undefined : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
     if (!this.sync.blocked) this.log.add(failed ? 'warning' : 'info', failed ?? label, 'editor');
@@ -185,6 +192,27 @@ export class Editor {
     this.state = { ...this.state, dirty: this.sync.status.dirty };
     this.publish();
   }
+  // Any finished edit that changes a Uniform's value (typing, a pick, Undo, a restored draft…) sends it
+  // at once; the normal save follows. 任何讓 Uniform 值改變的修改（輸入、點選、Undo…）都立刻送，一般送出跟上。
+  private readUniformValues() {
+    return new Map(this.document.document.declarations.filter(d => d.kind === 'uniform').map(d => [d.id, JSON.stringify(d.value)]));
+  }
+  private sendChangedUniforms() {
+    const now = this.readUniformValues();
+    // A new Uniform is not in TD's program yet; the normal save brings it. 新的 Uniform 還不在 TD 的程式裡，由一般送出帶過去。
+    for (const [id, value] of now) {
+      const old = this.uniformValues.get(id);
+      if (old !== undefined && old !== value) this.live.send(id, JSON.parse(value) as Value);
+    }
+    this.uniformValues = now;
+  }
+  /** While a value is being dragged: TD only, never the graph or Undo (Q41 3-4). 拖曳中：只送 TD，不改圖、不進 Undo。 */
+  previewDeclarationValue = (id: string, value: Value) => {
+    const declaration = this.document.document.declarations.find(d => d.id === id);
+    if (declaration?.kind !== 'uniform') return;
+    try { core.values.literal(value, declaration.type); } catch { return; }
+    this.live.send(id, value);
+  };
   edit = (id: string, command: string, value: Value) => this.transact(tr('edit.valueChanged', 'Value updated; waiting to apply'),
     net => net.node(id).edit(command, value));
   setInput = (id: string, key: string, value: Value) => this.transact(tr('edit.inputChanged', 'Input value updated; waiting to apply'), net => {

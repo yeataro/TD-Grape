@@ -2,6 +2,32 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.46 — Uniform C：Uniform 的值一改就送到 TD — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/uniform-c-live.md`（人類 10-09：動 Uniform 的值一律要即時；選 A 先用現有 HTTP，D 那一輪整條搬到 WebSocket，design-interview Q53）。依 Q41 3-4。
+
+- **編輯器**：
+  - [live_values.ts](../../src/editor-react/live_values.ts)：送即時值的唯一地方（D 只換這裡）。一次只有一個請求在路上；還沒送的會被更新的值取代；送不到就算了，一般送出會跟上。
+  - 共用來源面板的 Uniform 值：數值梯尺（Value Ladder）拖曳中每一步、顏色選取器拖動中都送；取消（Esc）時送回原值。不改圖、不產碼、不進 Undo。`NumberField`／`ValueFields`／`ColorField` 多一個 `preview`。
+  - 任何讓已存在的 Uniform 值改變的修改（Enter、點選、Undo、Redo、還原草稿）也立刻送。新的 Uniform 不送，它還不在 TD 的程式裡。
+  - 常數與時間不走即時。
+- **TD**：
+  - `POST …/live`（[host_api.py](../../src/td/runtime/host_api.py) → [next_family.py](../../src/td/runtime/next_family.py) `live`）：只在**目前正在跑的程式**（graph_meta 的 runtime）裡有這個 Uniform 時，改它在綁定表的那幾格。
+  - 程式每換一次才解析一次。序號依編輯頁、依 Uniform 記，程式換了也保留，舊的丟掉。
+  - 不編譯、不存圖、不動 graph_meta。
+- **驗證**：
+  - 自動測試：editor 51（新增：拖曳中只送最新的、不改圖不進 Undo；Enter 與 Undo 立刻送；常數不送）、Python 59（新增：只改那幾格、舊序號與不在跑的 Uniform 略過、時間沒有值、不存圖不編譯）、core 139。
+  - 真實 TD＋瀏覽器（照使用者操作，鍵盤操作梯尺）：
+    1. 新增 Uniform → 放到圖上 → 接到輸出。
+    2. 點值 → Alt+L → →×3：還沒放開時 TD 畫面已是 0.3，圖仍是 0（revision 3）。
+    3. Enter → 整個手勢只多一次存圖（revision 4），圖裡 0.3。
+    4. 打 0.7 Enter：TD 先收到即時值，1 ms 後收到存圖。Undo 也是先收到即時值。
+    5. 全程 TD 試編譯 0 次（暫時在記憶體計數／記時，測完還原）。
+    6. 停掉編輯服務：梯尺照常調到 0.8、Enter 照常寫進圖、編輯器不卡。重新啟動後自動補送，TD 為 0.8。
+  - 測試 OP 已刪。Deliver 存 `TD-Grape-dev.80`。
+- **更正**：議題檔與 Q53 說「一般送出要等約 0.65 秒」是錯的（送出延遲是 0，Refactor.19 已拿掉等待；助手引用舊紀錄沒查程式），已在兩處更正。即時通道真正有差的是拖曳中。
+- **之後**：D 公開（WebSocket、TD 回報值與模式）、E TD 值的 Undo、兩個編輯頁同時拖同一個值。
+
 ## Refactor.45 — Uniform B：時間（內建值 `builtin`） — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/uniform-b-time.md`（人類 10-09 照建議：kind `builtin`、欄位 `entry`、名稱照舊產品，design-interview Q52）。依決議 17、Q45。

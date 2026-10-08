@@ -24,7 +24,7 @@ export class HostClient {
     if (!/^[a-f0-9]{32}$/.test(target)) throw new TextError(tr('open.badTarget', 'This address does not name a valid Grape OP. Open the editor from a Grape OP in TD.'));
     this.root = '/api/' + target + '/';
   }
-  async call<T>(action: 'state' | 'apply' | 'save', body?: unknown): Promise<T> {
+  async call<T>(action: 'state' | 'apply' | 'save' | 'live', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);
     try {
       const response = await this.request(this.root + action, { method: body === undefined ? 'GET' : 'POST',

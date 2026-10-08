@@ -120,16 +120,26 @@ def read_runtime(text, *, catalog_hash):
                     and entry.get('type') == 'float' and entry.get('entry') in BUILTIN_EXPRESSIONS, 'invalid built-in value')
             names.add(name)
             continue
-        count = UNIFORM_TYPES.get(entry.get('type'))
-        value = entry.get('value')
-        values = [value] if count == 1 else value
         require(isinstance(name, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,47}', name) and name not in names
-                and count is not None and isinstance(values, list) and len(values) == count
-                and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in values)
+                and uniform_value_ok(entry.get('type'), entry.get('value'))
                 and entry.get('color', False) in (True, False) and (entry.get('color') is not True or entry['type'] in COLOR_TYPES),
                 'invalid Uniform')
         names.add(name)
     return compiled
+
+
+def uniform_value_ok(kind_type, value):
+    """A finite number (float) or a list of them (vec2-4). 有限數字（float）或其清單（vec2～4）。"""
+    count = UNIFORM_TYPES.get(kind_type)
+    values = [value] if count == 1 else value
+    return (count is not None and isinstance(values, list) and len(values) == count
+            and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in values))
+
+
+# Live values (Uniform C, Refactor.46; design-interview Q53), per Grape OP: the running program's
+# Uniforms (parsed once per program) and the last sequence number per editor page and Uniform.
+# 即時值：每個 Grape OP 記住目前程式的 Uniform（每個程式只解析一次）與每個編輯頁、每個 Uniform 的最後序號。
+LIVE = {}
 
 
 def texture_inputs(compiled):
@@ -241,6 +251,39 @@ class NextFamily:
         if shader is None or shader.type != 'glsl':
             raise RuntimeError('This Grape OP does not contain a native GLSL TOP.')
         return shader
+
+    def live(self, body):
+        """A Uniform value while it changes (Uniform C; Q41 3-4, Q53): only the binding table cells of a
+        Uniform in the running program change, so the GLSL OP follows at once. Nothing is compiled or
+        saved; the graph arrives later by apply. An old sequence number, or a Uniform the running
+        program does not have yet (it arrives with the next apply), is skipped.
+        改變中的 Uniform 值：只改正在跑的程式裡那個 Uniform 在綁定表的幾格，GLSL OP 立即更新；
+        不編譯、不存圖，圖之後由 apply 帶來。舊序號、或程式裡還沒有的 Uniform，略過。"""
+        require(isinstance(body, dict) and body.get('format') == FORMAT, 'unsupported request format')
+        ident, session, seq, value = body.get('id'), body.get('session'), body.get('seq'), body.get('value')
+        require(isinstance(ident, str) and isinstance(session, str) and 0 < len(session) <= 64
+                and isinstance(seq, int) and not isinstance(seq, bool) and seq >= 0, 'invalid live value')
+        runtime = json.loads(self.comp.op('graph_meta').text).get('runtime') or {}
+        known = LIVE.get(self.comp.path)
+        if known is None or known['sha256'] != runtime.get('sha256'):
+            bindings = json.loads(runtime.get('text') or '{}').get('bindings') or []
+            # Sequence numbers outlive a program change: a late old value never wins. 序號跨程式保留：晚到的舊值不會蓋掉新的。
+            known = {'sha256': runtime.get('sha256'), 'seq': known['seq'] if known else {},
+                     'uniforms': [entry for entry in bindings if entry.get('kind') in ('uniform', 'builtin')]}
+            LIVE[self.comp.path] = known
+        if seq <= known['seq'].get((session, ident), -1):
+            return {'ok': True, 'applied': False, 'reason': 'stale'}
+        known['seq'][(session, ident)] = seq
+        target = next((u for u in known['uniforms'] if u.get('kind') == 'uniform' and u.get('id') == ident), None)
+        if target is None:
+            return {'ok': True, 'applied': False, 'reason': 'not-running'}
+        require(uniform_value_ok(target.get('type'), value), 'invalid live value')
+        rows, _, _ = uniform_rows([dict(u, value=value) if u is target else u for u in known['uniforms']])
+        table = self.comp.op('uniforms')
+        for r, row in enumerate(rows):
+            if r < table.numRows and table[r, 1].val == row[1] and table[r, 2].val != row[2]:
+                table[r, 2] = row[2]
+        return {'ok': True, 'applied': True}
 
     def _input_ids(self):
         """The input IDs the TOPs list holds now, in order. TOPs 清單現在的輸入 ID，照順序。"""

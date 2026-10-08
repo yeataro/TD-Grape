@@ -52,6 +52,9 @@ class HostAPI:
                 'frontendCompiler': {'protocol': family.PROTOCOL, 'catalogHash': self.catalog_hash, 'required': True}}
         if method == 'POST' and action == 'apply':
             return family.apply(body, catalog_hash=self.catalog_hash)
+        if method == 'POST' and action == 'live':
+            # Uniform values while they change (Uniform C, Q53). 改變中的 Uniform 值。
+            return family.live(body)
         if method == 'POST' and action == 'save':
             return {'saved': self.save_project()}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

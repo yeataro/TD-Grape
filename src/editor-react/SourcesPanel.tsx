@@ -71,7 +71,8 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
         {say(tr('sources.color', 'Colour'))}</label>}
       <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
         color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'}
-        commit={value => session.setDeclarationValue(declaration.id, value)} />
+        commit={value => session.setDeclarationValue(declaration.id, value)}
+        preview={value => session.previewDeclarationValue(declaration.id, value)} />
       {actions(declaration)}
     </div>)}
     {/* Time (built-in values, Q52): all six listed; placing one creates it the first time.

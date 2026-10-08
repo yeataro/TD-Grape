@@ -14,7 +14,7 @@ export const useSession = () => useContext(SessionContext)!;
 
 // Native input previews are local; native change commits the chosen colour.
 // React 的 onChange 也會接到連續 input；改以原生 change 作提交，避免每次預覽一筆 Undo。
-function ColorField({ value, label, commit }: { value: string; label: string; commit: (value: string) => void }) {
+function ColorField({ value, label, commit, preview }: { value: string; label: string; commit: (value: string) => void; preview?: (value: string) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
@@ -25,26 +25,31 @@ function ColorField({ value, label, commit }: { value: string; label: string; co
     return () => element.removeEventListener('change', accept);
   }, [value, commit]);
   return <input ref={input} className="color-swatch nodrag" type="color" aria-label={label}
-    value={draft} onInput={event => setDraft(event.currentTarget.value)} onChange={() => {}} />;
+    value={draft} onInput={event => { setDraft(event.currentTarget.value); preview?.(event.currentTarget.value); }} onChange={() => {}} />;
 }
 
-export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit }: {
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
+  /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
+  preview?: (value: Value) => void;
 }) {
   const count = core.values.count(type), family = core.values.family(type);
   const list = Array.from({ length: count }, (_, i) => Array.isArray(value) ? value[i] ?? 0 : value);
   const hex = '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
+  const fromHex = (next: string): Value => [...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)];
   return <div className="value-group nodrag nopan">
     {color && count >= 3 && <ColorField label={`${label} color`} value={hex}
-      commit={next => commit([...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)])} />}
+      commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} />}
     <div className={`value-fields ${count > 1 ? 'vector-fields' : ''}`}>
       {list.map((item, i) => {
-        const change = (next: Value) => { const values = [...list]; values[i] = next; commit(count === 1 ? next : values); };
+        const withComponent = (next: Value) => { const values = [...list]; values[i] = next; return count === 1 ? next : values; };
+        const change = (next: Value) => commit(withComponent(next));
         return <label key={i}>
           {count > 1 && <span style={color ? { color: ['#ef8990', '#98d393', '#85bafa', '#ddd9e5'][i] } : undefined}>{names[i]}</span>}
           {family === 'bool' ? <select className="nodrag" aria-label={`${label} ${i}`} value={String(!!item)}
             onChange={event => change(event.target.value === 'true')}><option>false</option><option>true</option></select> :
-            <NumberField label={`${label} ${i}`} value={Number(item)} integer={family === 'int' || family === 'uint'} unsigned={family === 'uint'} commit={change} />}
+            <NumberField label={`${label} ${i}`} value={Number(item)} integer={family === 'int' || family === 'uint'} unsigned={family === 'uint'} commit={change}
+              preview={preview && (next => preview(withComponent(next)))} />}
         </label>;
       })}
     </div>

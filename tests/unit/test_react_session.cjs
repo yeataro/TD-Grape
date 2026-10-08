@@ -50,7 +50,7 @@ function open(t, request, retry = 60000, generator) {
     const action = url.split('?')[0].split('/').at(-1), body = options.body && JSON.parse(options.body);
     calls.push({ action, body });
     const result = request ? await request(action, body, { get: loaded, set: state => { remote = state; } }) :
-      action === 'state' ? loaded() : action === 'save' ? { saved: 'test.toe' } :
+      action === 'state' ? loaded() : action === 'save' ? { saved: 'test.toe' } : action === 'live' ? { ok: true, applied: true } :
       { state: (remote = { document: body.document, revision: body.revision + 1, targetId: target }) };
     return result instanceof Response ? result : new Response(JSON.stringify(result));
   };
@@ -809,12 +809,12 @@ test('a Uniform: add, vec4 colour, value, place, wire; a value change only chang
   assert.equal(ref.data.colorGroup, 'uniform');
   session.connect({ source: ref.id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
   await session.flush();
-  const first = JSON.parse(calls.at(-1).body.runtime);
+  const first = JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime);
   assert.match(first.pixel, /^uniform vec4 uniform1;$/m);
   assert.deepEqual(first.bindings.filter(b => b.kind === 'uniform').map(b => [b.name, b.type, b.value, b.color]), [['uniform1', 'vec4', [1, 0.5, 0, 1], true]]);
   session.setDeclarationValue(uniform().id, [0, 1, 0, 1]);
   await session.flush();
-  const second = JSON.parse(calls.at(-1).body.runtime);
+  const second = JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime);
   assert.equal(second.pixel, first.pixel, 'the GLSL is the same');
   assert.deepEqual(second.bindings.find(b => b.kind === 'uniform').value, [0, 1, 0, 1]);
 });
@@ -837,4 +837,39 @@ test('a time value placed twice is one declaration with two reference nodes; it 
   assert.deepEqual(runtime.bindings.filter(b => b.kind === 'builtin').map(b => [b.name, b.entry]), [['uAbsTime', 'absTime']]);
   session.history(false); session.history(false); session.history(false);
   assert.equal(session.snapshot().declarations.filter(d => d.kind === 'builtin').length, 0, 'Undo removes what placing created');
+});
+
+// Uniform C (Refactor.46; Q53): a Uniform's value goes to TD the moment it changes; dragging never
+// touches the graph or Undo. Uniform C：值一改就送到 TD；拖曳中不改圖、不進 Undo。
+test('Uniform values go live: dragging sends only the latest, never the graph; typing and Undo send at once', async t => {
+  let release;
+  const gate = () => new Promise(resolve => { release = resolve; });
+  let waiting;
+  const { session, calls } = open(t, async (action, body, remote) => {
+    if (action === 'live') { await waiting; return { ok: true, applied: true }; }
+    if (action === 'state') return remote.get();
+    const next = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(next); return { state: next };
+  });
+  session.addUniform();
+  const id = session.snapshot().declarations.find(d => d.kind === 'uniform').id;
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const live = () => calls.filter(c => c.action === 'live').map(c => [c.body.id, c.body.value]);
+  const before = { version: session.snapshot().version, graph: JSON.stringify(session.graph()) };
+  waiting = gate();
+  for (const value of [0.1, 0.2, 0.3, 0.4]) session.previewDeclarationValue(id, value);
+  release(); await new Promise(resolve => setTimeout(resolve, 0)); await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(live(), [[id, 0.1], [id, 0.4]], 'one on the way, then only the latest');
+  assert.equal(session.snapshot().version, before.version, 'dragging is not an edit');
+  assert.equal(JSON.stringify(session.graph()), before.graph);
+  waiting = undefined;
+  session.setDeclarationValue(id, 0.5);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(live().at(-1), [id, 0.5], 'a committed value is sent at once, before the normal save');
+  session.history(false);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(live().at(-1), [id, 0], 'Undo sends the value it brings back');
+  session.addConstant();
+  const constant = session.snapshot().declarations.find(d => d.kind === 'constant').id, count = live().length;
+  session.previewDeclarationValue(constant, 1);
+  assert.equal(live().length, count, 'a constant is never live: changing it changes the program');
 });

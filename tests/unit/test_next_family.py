@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import Mock
 
 import host_api
+import next_family
 from next_family import NextFamily, FORMAT, META_FORMAT, digest, uniform_rows
 
 TARGET = 'c' * 32
@@ -24,6 +25,26 @@ class Par:
 
     def eval(self):
         return self.value
+
+
+class Table:
+    """Just enough of a table DAT for the binding table. 綁定表用的最小替身。"""
+    def __init__(self, rows):
+        self.rows = [list(r) for r in rows]
+
+    @property
+    def numRows(self):
+        return len(self.rows)
+
+    def __getitem__(self, at):
+        return SimpleNamespace(val=self.rows[at[0]][at[1]])
+
+    def __setitem__(self, at, value):
+        self.rows[at[0]][at[1]] = value
+
+    def cell(self, parameter):
+        return next(r[2] for r in self.rows if r[1] == parameter)
+
 
 
 class Comp:
@@ -222,6 +243,29 @@ class NextFamilyTests(unittest.TestCase):
             fam, _ = family()
             with self.assertRaisesRegex(ValueError, 'invalid built-in value'):
                 fam.apply(request(run=runtime(bindings=[bad])), catalog_hash=CATALOG)
+
+    def test_live_values_change_only_the_table_cells_of_a_running_uniform(self):
+        # Refactor.46 (Q53): no compile, no save; old numbers and unknown Uniforms are skipped.
+        # 不編譯、不存圖；舊序號與還沒在跑的 Uniform 略過。
+        gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'vec2', 'value': [1, 2]}
+        clock = {'id': 'b1', 'kind': 'builtin', 'name': 'uAbsTime', 'type': 'float', 'entry': 'absTime'}
+        fam, comp = family(envelope(run=runtime('old glsl', bindings=[clock, gain])))
+        rows, _, _ = uniform_rows([clock, gain])
+        table = Table(rows)
+        comp.ops['uniforms'] = table
+        before = comp.op('graph_meta').text
+        live = lambda **extra: fam.live({'format': FORMAT, 'id': 'u2', 'value': [3, 4], 'session': 's', 'seq': 1, **extra})
+        self.assertEqual(live()['applied'], True)
+        self.assertEqual([r[2] for r in table.rows if r[1].startswith('vec1value')], ['3.0', '4.0'])
+        self.assertEqual(table.cell('vec0valuex'), 'absTime.seconds')  # other rows untouched
+        self.assertEqual(live(seq=1, value=[9, 9])['reason'], 'stale')
+        self.assertEqual(live(id='nope', seq=2)['reason'], 'not-running')
+        self.assertEqual(live(id='b1', seq=3)['reason'], 'not-running')  # a built-in value has no value
+        with self.assertRaisesRegex(ValueError, 'invalid live value'):
+            live(seq=4, value=[1, 2, 3])
+        self.assertEqual(comp.op('graph_meta').text, before)  # nothing saved
+        fam._validate.assert_not_called()
+        next_family.LIVE.clear()
 
     def test_uniform_rows_follow_the_pages(self):
         rows, vectors, colors = uniform_rows([

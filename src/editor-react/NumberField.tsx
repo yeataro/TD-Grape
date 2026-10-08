@@ -11,9 +11,11 @@ type Ladder = LadderMotion & {
 
 // Draft/gesture state stays in this React control. Only release commits to the graph.
 // 草稿與手勢由此 React 控制項持有；放開才提交圖，因此一個手勢只有一次 Undo。
-export function NumberField({ value, label, integer = false, unsigned = false, commit }: {
+// `preview`: called while the ladder drags and with the old value when it is cancelled (Uniform C).
+// preview：梯尺拖曳中呼叫；取消時以原值呼叫。
+export function NumberField({ value, label, integer = false, unsigned = false, commit, preview }: {
   value: number; label: string; integer?: boolean; unsigned?: boolean;
-  commit: (value: number) => void;
+  commit: (value: number) => void; preview?: (value: number) => void;
 }) {
   const [draft, setDraft] = useState(String(value));
   const [ladder, setLadder] = useState<Ladder | null>(null);
@@ -56,9 +58,11 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
     if (!active || !state) return;
     const controller = new AbortController();
     const options = { capture: true, signal: controller.signal };
+    let shown = state.value;
     const paint = () => {
       setDraft(String(state.value));
       setLadder({ ...state });
+      if (state.value !== shown) { shown = state.value; preview?.(state.value); }
     };
     const finish = (accept: boolean) => {
       if (gesture.current !== state) return;
@@ -71,6 +75,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
         input.current.releasePointerCapture(state.pointer.id);
       }
       if (accept && state.value !== value) commit(state.value);
+      else if (!accept && shown !== value) preview?.(value); // cancelled: TD goes back 取消：TD 回到原值
     };
     cancelGesture.current = () => finish(false);
     const move = (event: globalThis.PointerEvent) => {
