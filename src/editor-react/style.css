@@ -17,6 +17,9 @@ pre { width: 35%; margin: 0; overflow: auto; padding: 18px; font-size: 12px; bor
 footer { color: #958b9f; font-size: 11px; }
 .grape-node { position: relative; width: 250px; border: 1px solid #4e445c; border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px #0004; }
 .grape-node.selected { outline: 2px solid #b3dc80; }
+/* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
+.grape-node.ghost { opacity: .62; border-style: dashed; }
+.grape-node.ghost .ghost-note { font-size: 11px; color: #ffffffa0; padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
 .node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
 .node-title strong { flex: 1; } .node-title small, .node-title select { color: #ada2bb; font-size: 11px; }

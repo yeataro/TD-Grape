@@ -5,6 +5,7 @@ import { NumberField } from './NumberField';
 import type { FlowNode } from './projection';
 import { spareHandle, type Editor as EditorSession } from './editor';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
+import { tr, say } from './text';
 
 export const SessionContext = createContext<EditorSession | null>(null);
 export const TextContext = createContext<(key: string) => string>(key => key);
@@ -93,6 +94,24 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
     observer.observe(card.current);
     return () => observer.disconnect();
   }, [id, updateInternals]);
+  // Ghost (Q37 1-1): kept as stored, shown with the ports its wires use, no controls, not compiled.
+  // Ghost：原樣保留，只畫它的線用到的接孔，沒有控制項，不參與產碼。
+  if (data.ghost) return <article ref={card} className={`grape-node ghost ${selected ? 'selected' : ''}`}
+    style={{ '--group-color': 'var(--group-ghost)' } as CSSProperties}>
+    <div className="node-title node-drag-surface"><strong>{authored.name || text(data.label)}</strong><small>Ghost</small></div>
+    <div className="node-body node-drag-surface">
+      <div className="ghost-note">{say(data.ghost === 'misplaced'
+        ? tr('ghost.misplaced', '{type} cannot be used here. Kept as it is, left out of the shader.', { type: authored.nodeType })
+        : tr('ghost.unknown', 'This version does not understand {type}. Kept as it is, left out of the shader.', { type: authored.nodeType }))}</div>
+      {inputs.map(port => <div className="port-row input-row" key={port.key}>
+        <Handle type="target" position={Position.Left} id={port.key} isConnectable={false} aria-label={`${id} input ${port.key}`} />
+        <span>{port.key}</span></div>)}
+      {outputs.map(port => <div className="port-row output-row" key={port.key}>
+        <span>{port.key}</span>
+        <Handle type="source" position={Position.Right} id={port.key} isConnectable={false} aria-label={`${id} output ${port.key}`} />
+      </div>)}
+    </div>
+  </article>;
   return <article ref={card} className={`grape-node ${selected ? 'selected' : ''}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{text(view.label ?? data.label)}</strong>

@@ -16,6 +16,7 @@ const capacity_1 = require("./capacity");
 const structure_1 = require("./structure");
 const editor_contract_1 = require("./editor_contract");
 const model_1 = require("./model");
+const ghosts_1 = require("./ghosts");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -74,7 +75,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf };
 
 },
 "capacity":function(require,module,exports){
@@ -374,6 +375,46 @@ function createEditorContract(registry, target = 'top') {
             scalarTypes: Object.fromEntries(values.vectors.map(t => [t, values.family(t)])),
             layouts: Object.fromEntries(values.vectors.map(t => [t, vectorLayouts(t)])) }
     };
+}
+
+},
+"ghosts":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ghostsOf = ghostsOf;
+function ghostsOf(network, policy) {
+    const nodes = new Map();
+    // Subgraph networks have no stage of their own; their nodes follow the calling stage.
+    const stage = network.id.startsWith('function:') ? undefined : network.id;
+    for (const node of network.nodes) {
+        const data = node.data, module = node.definition;
+        if (!module)
+            nodes.set(node.id, 'unknown');
+        else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage))
+            nodes.set(node.id, 'misplaced');
+        else if (!module.supports(data, network.context))
+            nodes.set(node.id, 'unknown');
+        else {
+            // Ports that cannot be worked out (e.g. a reference to a declaration that is gone, Q45)
+            // make it a ghost too; the declarations round will name that case on its own.
+            // 算不出接孔（例如引用的宣告不見了）也是 Ghost；宣告那一輪再單獨標示這種情況。
+            try {
+                void node.interface;
+            }
+            catch (_a) {
+                nodes.set(node.id, 'unknown');
+            }
+        }
+    }
+    const edges = new Set(), edgeData = new Set();
+    for (const edge of network.edges) {
+        const data = edge.data;
+        if (nodes.has(data.from[0]) || nodes.has(data.to[0]) || !edge.connection(policy).valid) {
+            edges.add(edge.id);
+            edgeData.add(data);
+        }
+    }
+    return { nodes, edges, edgeData };
 }
 
 },
@@ -5420,6 +5461,7 @@ const model_1 = require("./model");
 const values_1 = require("./values");
 const numeric_1 = require("./numeric");
 const comments_1 = require("./comments");
+const ghosts_1 = require("./ghosts");
 class CompilationError extends Error {
     constructor(message, node) {
         super(message);
@@ -5433,7 +5475,7 @@ exports.CompilationError = CompilationError;
 exports.protocol = 'grape.top.ts.1';
 function createFlatCompiler(registry, limits) {
     function supports(g) {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e;
         if ((0, model_1.formatProblem)(g) || g.target !== 'top' || Object.keys(g.stages).join() !== 'pixel' || ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) || ((_b = g.structDefinitions) === null || _b === void 0 ? void 0 : _b.length))
             return false;
         if (!g.stages.pixel || g.stages.pixel.nodes.length > limits.nodes || g.stages.pixel.edges.length > limits.edges)
@@ -5444,17 +5486,18 @@ function createFlatCompiler(registry, limits) {
             return false;
         // Legacy allocates collision suffixes for implicit IDs versus explicit
         // names. Keep those whole graphs on its path until symbol allocation moves.
-        const symbols = ((_e = g.stages.pixel) === null || _e === void 0 ? void 0 : _e.nodes.filter(n => { var _a; return ((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.role) !== 'output'; }).map(n => n.name || n.id)) || [];
+        // Ghost nodes (ghosts.ts) are kept but never emitted, so they neither block this path nor
+        // take a symbol. Ghost 節點不產碼：不擋這條路，也不佔名稱。
+        const context = { declaration: (id) => g.declarations.find(d => d.id === id) };
+        const ghost = (n) => {
+            const d = registry.get(n.nodeType);
+            return !d || !!d.catalog.definition.stages && !d.catalog.definition.stages.includes('pixel') || !d.supports(n, context);
+        };
+        const live = ((_e = g.stages.pixel) === null || _e === void 0 ? void 0 : _e.nodes.filter(n => !ghost(n))) || [];
+        const symbols = live.filter(n => { var _a; return ((_a = registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.role) !== 'output'; }).map(n => n.name || n.id);
         if (new Set(symbols).size !== symbols.length)
             return false;
-        return !!((_f = g.stages.pixel) === null || _f === void 0 ? void 0 : _f.nodes.every(n => {
-            const d = registry.get(n.nodeType);
-            if (!d)
-                return false;
-            if (n.params.requireConstant)
-                return false;
-            return d.supports(n, { declaration: id => g.declarations.find(d => d.id === id) });
-        }));
+        return live.every(n => !n.params.requireConstant);
     }
     function compile(g, identifiers) {
         let errorNode;
@@ -5468,6 +5511,7 @@ function createFlatCompiler(registry, limits) {
             if (data.nodes.length > limits.nodes || data.edges.length > limits.edges || JSON.stringify(g).length > limits.bytes)
                 throw Error('Graph is too large');
             const nodes = new Map(), ports = Object.create(null);
+            const ghosts = (0, ghosts_1.ghostsOf)(network, values_1.policy);
             const declarations = new Map(), names = new Set();
             for (const d of g.declarations) {
                 if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id) || declarations.has(d.id) || !/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name) || /^(gl_|TD|sg_|sTD)/.test(d.name) || names.has(d.name))
@@ -5485,6 +5529,8 @@ function createFlatCompiler(registry, limits) {
                 errorNode = n.id;
                 if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(n.id) || nodes.has(n.id))
                     throw Error('Invalid or duplicate node ID');
+                if (ghosts.nodes.has(n.id))
+                    continue;
                 if (n.name !== undefined) {
                     if (!identifiers || !/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(n.name) || n.name.includes('__') || /^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(n.name) || identifiers.reservedNames.includes(n.name) || authoredNames.has(n.name))
                         throw Error('Invalid or duplicate node name');
@@ -5512,11 +5558,14 @@ function createFlatCompiler(registry, limits) {
                 }
             }
             errorNode = undefined;
-            const outputs = network.nodes.filter(n => n.definition.role === 'output');
+            const outputs = network.nodes.filter(n => !ghosts.nodes.has(n.id) && n.definition.role === 'output');
             if (outputs.length !== 1)
                 throw Error('Exactly one Pixel Output is required');
             const links = new Map();
             for (const edge of network.edges) {
+                // A ghost wire counts as not connected: the input keeps its own value (Q37 1-3).
+                if (ghosts.edges.has(edge.id))
+                    continue;
                 const target = edge.to, source = edge.from;
                 errorNode = target.node.id;
                 const checked = edge.connection(values_1.policy), k = target;
@@ -5528,6 +5577,8 @@ function createFlatCompiler(registry, limits) {
             }
             const inputsUsed = new Map();
             for (const node of network.nodes) {
+                if (ghosts.nodes.has(node.id))
+                    continue;
                 const module = node.definition;
                 if (module.inputsUsed) {
                     const connected = new Set(node.inputs.filter(p => links.has(p)).map(p => p.key));
@@ -5537,7 +5588,7 @@ function createFlatCompiler(registry, limits) {
                     inputsUsed.set(node.id, new Set(used));
                 }
             }
-            const order = network.order(outputs[0].id, e => !inputsUsed.has(e.to[0]) || inputsUsed.get(e.to[0]).has(e.to[1])), visited = new Set(order.map(n => n.id));
+            const order = network.order(outputs[0].id, e => !ghosts.edgeData.has(e) && (!inputsUsed.has(e.to[0]) || inputsUsed.get(e.to[0]).has(e.to[1]))), visited = new Set(order.map(n => n.id));
             const used = new Set(), lines = [], lineNodes = [], expressions = new Map();
             for (const node of order) {
                 const n = node.data, id = node.id, d = node.definition, p = node.interface;
@@ -5584,7 +5635,11 @@ function createFlatCompiler(registry, limits) {
             const bindings = [...used].sort().map(id => JSON.parse(JSON.stringify(declarations.get(id))));
             const headers = bindings.map(d => 'uniform ' + d.type + ' ' + d.name + ';');
             const pixel = [...headers, 'layout(location=0) out vec4 fragColor;', 'void main() {', '    vec2 sg_uv = vUV.st;', ...lines, '}', ''].join('\n');
-            const diagnostics = data.nodes.filter(n => !visited.has(n.id)).sort((a, b) => a.id < b.id ? -1 : 1).map(n => ({ node: n.id, stage: 'pixel', message: 'Disconnected node is not emitted' }));
+            const diagnostics = [
+                ...data.nodes.filter(n => !visited.has(n.id) && !ghosts.nodes.has(n.id)).sort((a, b) => a.id < b.id ? -1 : 1).map(n => ({ node: n.id, stage: 'pixel', message: 'Disconnected node is not emitted' })),
+                ...[...ghosts.nodes].sort(([a], [b]) => a < b ? -1 : 1).map(([node, kind]) => ({ node, stage: 'pixel', message: 'Ghost node (' + kind + ') is kept but not emitted' })),
+                ...data.edges.filter(e => ghosts.edgeData.has(e)).map(e => ({ node: e.to[0], stage: 'pixel', message: 'Ghost wire to ' + e.to[1] + ' is treated as not connected' }))
+            ];
             const sourceMap = { pixel: lineNodes.map((node, i) => ({ node, stage: 'pixel', trail: [], line: headers.length + 4 + i })) };
             return { vertex: '', pixel, bindings, sourceMap, stages: { pixel: { lines, ports, live: [...visited].sort() } }, diagnostics };
         }

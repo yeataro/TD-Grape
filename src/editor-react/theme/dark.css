@@ -26,4 +26,6 @@
   --group-constant: var(--palette-blue);
   --group-attribute: var(--palette-olive);
   --group-runtime: var(--palette-rose);
+  /* Ghost (Q37): no colour of its own; the card is shown faded and dashed. Ghost 沒有自己的顏色，卡片淡化加虛線。 */
+  --group-ghost: var(--palette-node);
 }

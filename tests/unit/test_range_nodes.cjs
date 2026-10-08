@@ -4,12 +4,14 @@ const {rangeCases}=require('../fixtures/range_nodes.cjs');
 const {node}=require('../fixtures/shared_subgraphs.cjs');
 const compiler=createCompiler(registry),policy={components:{float:1,vec2:2,vec3:3,vec4:4},conversions:[{from:'float',to:'vec3'}]};
 
-test('every scalar/vector range signature compiles while integer configurations retain the explicit old route',()=>{
+// An integer configuration is not understood by these modules: it is an unknown ghost, kept and not
+// emitted (Q37 1-1), no longer a reason to refuse the graph. 整數設定這些模組看不懂：是 Ghost，不再拒絕整張圖。
+test('every scalar/vector range signature compiles while integer configurations are ghosts',()=>{
  for(const {key,type,graph}of rangeCases()){
   assert.equal(compiler.supports(graph),true,key+' '+type);assert.ok(compiler.compile(graph).pixel.includes(key+'('));
   const handle=new GraphDocument(graph,registry).networks.get('pixel').node('operation');assert.equal(handle.outputs[0].type,type);
   const other=structuredClone(graph);other.stages.pixel.nodes.find(n=>n.id==='operation').params.type='int';
-  assert.equal(compiler.supports(other),false);
+  assert.ok(compiler.compile(other).diagnostics.some(d=>d.node==='operation'&&/Ghost node \(unknown\)/.test(d.message)));
  }
 });
 

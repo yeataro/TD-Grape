@@ -662,3 +662,46 @@ test('each report is logged once, with its source; status updates without news a
   assert.deepEqual(added, ['editor:edit.valueChanged', 'sync:sync.sending', 'sync:sync.applied']);
   assert.ok(session.log.entries().every(report => typeof report.time === 'number'));
 });
+
+// Ghosts (Refactor.39; design-interview Q37 1-1, 1-3): an unknown node and a bad wire no longer
+// refuse the graph; they are kept byte for byte, shown, and left out of the program.
+// Ghost：不認得的節點與不合法的線不再讓整張圖打不開；原樣保留、顯示出來、不進程式。
+test('a graph with an unknown node and a bad wire opens; ghosts survive edits and delivery unchanged', async t => {
+  const future = { id: 'future', nodeType: 'vendor.pack.future', params: { knob: 3, nested: { keep: [1, 2] } }, ui: { x: 400, y: 40 } };
+  let sent;
+  const { session, calls } = open(t, async (action, body, remote) => {
+    if (action === 'state') {
+      const state = remote.get();
+      withDoc(state.state, graph => {
+        graph.stages.pixel.nodes.push(future);
+        graph.stages.pixel.edges.push({ id: 'eFuture', from: ['future', 'out'], to: ['sum', 'b'] });
+      });
+      return state;
+    }
+    sent = body; const state = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(state); return { state };
+  });
+  // open() builds the session from loaded(): rebuild with the ghost graph through the fetcher's state.
+  const loadedState = await session.host.call('state');
+  const ghostSession = new EditorSession(session.host, bootstrap, loadedState, 60000, 60000, undefined, '9.9.9 Test');
+  t.after(() => ghostSession.dispose());
+  const view = ghostSession.snapshot().projection;
+  const ghostNode = view.nodes.find(node => node.id === 'future');
+  assert.equal(ghostNode.data.ghost, 'unknown');
+  assert.deepEqual(ghostNode.data.outputs.map(port => port.key), ['out']);
+  assert.equal(view.edges.find(edge => edge.id === 'eFuture').style.strokeDasharray, '6 4');
+  assert.match(zh(ghostSession.snapshot().message), /1 個 Ghost 節點、1 條 Ghost 線/);
+  ghostSession.transact(tr('edit.valueChanged', 'Value updated; waiting to apply'), net => setValue(net, 'a', 6));
+  await ghostSession.flush();
+  assert.notEqual(sent.runtime, null, 'the rest of the graph still compiles and is sent');
+  assert.ok(!JSON.parse(sent.runtime).pixel.includes('future'));
+  const stored = JSON.parse(sent.document).stages.pixel;
+  assert.deepEqual(stored.nodes.find(node => node.id === 'future'), future, 'the ghost is stored byte for byte');
+  assert.ok(stored.edges.some(edge => edge.id === 'eFuture'));
+  assert.ok(calls.length >= 2);
+});
+
+test('a known node outside this entry still refuses: as a ghost it would silently leave TD', t => {
+  const { loaded } = open(t), state = loaded();
+  withDoc(state.state, graph => { graph.subgraphs = [{ id: 'unknown', graph: { nodes: [], edges: [] } }]; });
+  assert.throws(() => new EditorSession(new HostClient(target, '', async () => new Response('{}')), bootstrap, state), error => error instanceof UnsupportedGraphError);
+});

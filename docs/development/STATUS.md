@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.39 — Ghost：看不懂的節點與接不上的線保留、標示、不參與產碼（Q37 1-1、1-3） — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/sources-foundation.md` 第一輪（人類 10-09「照這樣拆，先做 Ghost」）。
+
+- **核心** [ghosts.ts](../../src/core-ts/ghosts.ts) `ghostsOf(network, policy)`：unknown（沒有定義、定義看不懂它的設定、或算不出接孔——例如引用的宣告不見了）、misplaced（有定義但不屬於這個 stage）、Ghost 線（一端是 Ghost 節點、接孔不存在、型別接不上）。
+- **產碼器**（[top_compiler.ts](../../src/core-ts/top_compiler.ts)）：Ghost 節點不產碼、不佔名稱；Ghost 線當作沒接，那個輸入用它沒接線時本來的值；診斷列出每個 Ghost。原本這些都會讓整張圖產碼失敗。
+- **編輯器**：開圖不再因為**完全不認得的節點**整張拒絕；認得但本入口還沒接管的節點（子圖、Uniform…）仍拒絕——當成 Ghost 會悄悄從 TD 的程式消失。Ghost 節點淡化、虛線框、標 Ghost、只畫它的線用到的接孔、沒有控制項、不能接新線，可以移動與刪除；Ghost 線紅色虛線。開圖時有 Ghost、或修改讓 Ghost 變多時，狀態列黃色提示數量（訊息走 `tr()`，中英都有）。顏色只加用途名字 `--group-ghost`（指向既有的節點底色），沒有新色碼。
+- **行為改變（照 Q37，測試已更新）**：接到不存在接孔的線（舊產品報錯）、整數設定的範圍節點、引用不存在宣告的 Uniform 節點，現在都是 Ghost、不再讓整張圖失敗。
+- **驗證**：core 113（新增：未知節點與它的線保留不產碼、型別接不上的線當作沒接、misplaced 判定）、editor 44（新增：含未知節點與壞線的圖照常開、編輯後送出、Ghost 一字不差存回；認得但未接管的仍拒絕）、Python 52。真實 TD＋瀏覽器：經編輯器同一個 API 寫入一個未知節點與一條接到它的線 → 編輯器照常打開、看得到 Ghost 與紅色虛線、狀態列提示 1／1；改值 → TD 圖第 2 版、Ghost 節點與線一字不差、Shader 像素跟著變、GLSL 沒有 Ghost。測試 OP 已刪。Deliver 存 `TD-Grape-dev.70`。
+- **留到之後**：引用不存在宣告目前標成 unknown，宣告那一輪（Refactor.40）再單獨標示；Ghost 圖示（問號幽靈、被拒絕的幽靈）與 Ghost 線的警告符號屬外觀，之後定；子圖產碼器的 Ghost 處理在子圖那一輪。
+
 ## Refactor.38 — 在地化骨架＋回報（Q34、Q35） — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/localization-skeleton.md`（人類 10-09 同意；沒設定語言時選 A）。

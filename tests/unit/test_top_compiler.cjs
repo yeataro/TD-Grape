@@ -11,10 +11,15 @@ const {cases,identifiers}=JSON.parse(fs.readFileSync(path.join(__dirname,'../fix
 for(const row of cases)row.graph=convertOldGraph(row.graph).graph;
 function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;}
 
+// Legacy refused a wire to a port that no longer exists; it is now a ghost wire, treated as not
+// connected (design-interview Q37 1-3). 舊產品對「接到不存在接孔的線」整張報錯；現在是 Ghost 線、當作沒接。
+const nowGhost=new Set(['missing port']);
 test('frontend compilation matches legacy GLSL, bindings, ports, source map and diagnostics',()=>{
   for(const row of cases){
     assert.equal(compiler.supports(row.graph),true,row.name);
-    if(row.error)assert.throws(()=>compiler.compile(freeze(row.graph),identifiers),undefined,row.name);
+    if(nowGhost.has(row.name)){const result=compiler.compile(freeze(row.graph),identifiers);
+      assert.ok(result.diagnostics.some(d=>/Ghost wire/.test(d.message)),row.name);}
+    else if(row.error)assert.throws(()=>compiler.compile(freeze(row.graph),identifiers),undefined,row.name);
     else assert.deepEqual(plain(compiler.compile(freeze(row.graph),identifiers)),row.compiled,row.name);
   }
 });
@@ -22,8 +27,6 @@ test('capability selection excludes whole graphs before execution',()=>{
   const base=cases[0].graph;
   const variants=[
     g=>g.target='mat',g=>g.subgraphs=[{}],g=>g.structDefinitions=[{}],g=>delete g.format,g=>g.version=2,
-    g=>g.stages.pixel.nodes.push({id:'dynamic',nodeType:'sgrape.builtin.glsl_code',params:{inputs:[],outputs:[]}}),
-    g=>g.stages.pixel.nodes.push({id:'matrix',nodeType:'sgrape.builtin.multiply',params:{type:'mat4'}}),
     g=>g.stages.pixel.nodes=Array.from({length:257},(_,i)=>({...g.stages.pixel.nodes[0],id:'n'+i})),
     g=>g.stages.pixel.edges=Array.from({length:1025},()=>g.stages.pixel.edges[0]),
     g=>g.declarations.push({id:'texture',kind:'sampler',type:'sampler2D',name:'uTexture',value:null}),
@@ -36,8 +39,51 @@ test('result and graph do not share mutable binding data',()=>{
   assert.equal(JSON.stringify(g),before);
 });
 test('invalid supported edits retain node locations for existing diagnostic UI',()=>{
+  // A reference to a declaration that is gone is a ghost now (Q45), named in the diagnostics.
+  // 引用的宣告不見了＝Ghost（Q45），在診斷裡指出是哪個節點。
   const g=plain(cases.find(c=>c.name==='uniform abs float').graph);g.declarations=[];
-  assert.throws(()=>compiler.compile(g),error=>error.node==='gainNode'&&error.stage==='pixel'&&error.message.includes('declaration'));
+  assert.ok(compiler.compile(g).diagnostics.some(d=>d.node==='gainNode'&&/Ghost node/.test(d.message)));
   const bad=cases.find(c=>c.name==='disconnected cycle').graph;
   assert.throws(()=>compiler.compile(bad),error=>error.node==='dead'&&error.stage==='pixel');
+});
+
+// Ghosts (design-interview Q37 1-1, 1-3; Refactor.39): kept, never emitted, never fatal.
+// Ghost：保留、不產碼、不讓整張圖失敗。
+const color=g=>g.stages.pixel.nodes.find(n=>n.nodeType==='sgrape.builtin.color');
+function defaultGraph(){
+  const graph=plain(JSON.parse(fs.readFileSync(path.join(__dirname,'../../src/generated/editor-bootstrap.json'),'utf8')).defaultDocument.graph);
+  const add={id:'sum',nodeType:'sgrape.builtin.add',params:{type:'vec4'},inputValues:{a:[0.1,0.2,0.3,1],b:[0,0,0,0]},ui:{}};
+  graph.stages.pixel.nodes.push(add);
+  const out=graph.stages.pixel.edges.find(e=>e.to[0]==='pixel_out');out.from=['sum','out'];
+  graph.stages.pixel.edges.push({id:'eColorToSum',from:[color(graph).id,'out'],to:['sum','a']});
+  return graph;
+}
+test('an unknown node and its wires are kept but not emitted; the rest compiles',()=>{
+  const g=defaultGraph(),reference=compiler.compile(plain(g));
+  g.stages.pixel.nodes.push({id:'future',nodeType:'vendor.pack.future',params:{knob:3},ui:{x:5}});
+  g.stages.pixel.edges.push({id:'eFuture',from:['future','out'],to:['sum','b']});
+  const before=JSON.stringify(g),result=compiler.compile(g);
+  assert.equal(JSON.stringify(g),before,'the graph is not changed');
+  assert.ok(!result.pixel.includes('future'));
+  assert.ok(result.diagnostics.some(d=>d.node==='future'&&/Ghost node \(unknown\)/.test(d.message)));
+  assert.ok(result.diagnostics.some(d=>d.node==='sum'&&/Ghost wire to b/.test(d.message)));
+  assert.equal(result.pixel,reference.pixel,'b keeps its own value, as if not connected');
+});
+test('a wire whose types no longer fit is a ghost wire, not a failure',()=>{
+  const g=defaultGraph();
+  g.stages.pixel.nodes.push({id:'logic',nodeType:'sgrape.builtin.not',params:{type:'bvec2'},ui:{}});
+  g.stages.pixel.edges.push({id:'eBad',from:[color(g).id,'out'],to:['logic','value']}); // vec4 into bvec2
+  const result=compiler.compile(g);
+  assert.ok(result.diagnostics.some(d=>d.node==='logic'&&/Ghost wire to value/.test(d.message)));
+  assert.equal(result.pixel,compiler.compile(defaultGraph()).pixel);
+});
+test('a node outside its stage is a misplaced ghost (ghostsOf)',()=>{
+  const graph=context.GrapeGraph,registry=graph.registry;
+  const add=registry.get('sgrape.builtin.add');
+  const vertexOnly={...add,catalog:{...add.catalog,definition:{...add.catalog.definition,definitionUuid:'test.vertex.only',key:'vertexOnly',stages:['vertex']}}};
+  const custom=graph.createRegistry([...registry.modules,vertexOnly]);
+  const g=defaultGraph();g.stages.pixel.nodes.push({id:'v',nodeType:'test.vertex.only',params:{type:'vec4'},ui:{}});
+  const doc=new graph.GraphDocument(g,custom),ghosts=graph.ghostsOf(doc.networks.get('pixel'),graph.values.policy);
+  assert.equal(ghosts.nodes.get('v'),'misplaced');
+  assert.equal(ghosts.nodes.get('sum'),undefined);
 });

@@ -1,10 +1,10 @@
 import type { Node as RFNode, Edge as RFEdge } from '@xyflow/react';
 import { core, same, typeColor, type GraphDocument, type GraphChanges, type Node,
-  type NodePresentation, type PortSpec, type Bootstrap } from './core';
+  type NodePresentation, type PortSpec, type Bootstrap, type GhostKind } from './core';
 
 export type FlowNode = RFNode<{
   authored: Node; label: string; colorGroup: string; view: NodePresentation; types: string[];
-  inputs: PortSpec[]; outputs: PortSpec[]; connected: string[];
+  inputs: PortSpec[]; outputs: PortSpec[]; connected: string[]; ghost?: GhostKind;
 }, 'grape'>;
 export type FlowEdge = RFEdge;
 export type Projection = { nodes: FlowNode[]; edges: FlowEdge[] };
@@ -26,17 +26,31 @@ export function project(document: GraphDocument, previous: Projection, contract:
     if (edge.before) dirty.add(edge.before.to[0]);
     if (edge.after) dirty.add(edge.after.to[0]);
   }
-  const connected = new Map<string, string[]>();
+  const connected = new Map<string, string[]>(), outgoing = new Map<string, string[]>();
   for (const edge of network.data.edges) {
     const list = connected.get(edge.to[0]) ?? [];
     list.push(edge.to[1]); connected.set(edge.to[0], list);
+    const out = outgoing.get(edge.from[0]) ?? [];
+    if (!out.includes(edge.from[1])) out.push(edge.from[1]); outgoing.set(edge.from[0], out);
   }
+  // Ghosts are judged by the core (ghosts.ts); a ghost's ports are the ones its stored wires use.
+  // Ghost 由核心判斷；Ghost 節點的接孔就是它存著的線用到的那些。
+  const ghosts = core.ghostsOf(network, core.values.policy);
+  const ghostPorts = (keys: string[] | undefined, direction: 'input' | 'output'): PortSpec[] =>
+    [...new Set(keys ?? [])].map(key => ({ key, direction, type: '' }));
   const priorNodes = new Map(previous.nodes.map(node => [node.id, node]));
   const nodes = network.nodes.map(node => {
     const authored = node.data!, old = priorNodes.get(node.id);
     const position = { x: Number(authored.ui?.x ?? 0), y: Number(authored.ui?.y ?? 0) };
     let data = old?.data;
-    if (!data || all || dirty.has(node.id)) {
+    const ghost = ghosts.nodes.get(node.id);
+    if (ghost) {
+      // Recomputed every time: a node can turn ghost without being edited (e.g. its declaration is gone).
+      const next = { authored, label: node.definition?.catalog.definition.label ?? authored.nodeType, colorGroup: 'ghost',
+        view: {}, types: [], inputs: ghostPorts(connected.get(node.id), 'input'), outputs: ghostPorts(outgoing.get(node.id), 'output'),
+        connected: connected.get(node.id) ?? [], ghost };
+      data = data && same(data, next) ? data : next;
+    } else if (!data || all || dirty.has(node.id) || data.ghost) {
       const module = node.definition!;
       const described = contract.definitions[authored.nodeType];
       const types: string[] = described?.selector === 'parameter'
@@ -55,10 +69,12 @@ export function project(document: GraphDocument, previous: Projection, contract:
   const priorEdges = new Map(previous.edges.map(edge => [edge.id, edge]));
   const edges = network.edges.map(edge => {
     const saved = edge.data!, old = priorEdges.get(edge.id);
-    const sourceType = edge.from?.type ?? '', targetType = edge.to?.type ?? '';
-    const valid = edge.connection(core.values.policy).valid;
-    const style = { stroke: valid ? typeColor(sourceType) : '#f17b88', strokeWidth: 2 };
-    const label = sourceType !== targetType ? `${sourceType} → ${targetType}` : undefined;
+    // A ghost wire (Q37 1-3) is kept and drawn dashed; code generation treats it as not connected.
+    // Ghost 線保留、畫成虛線；產碼時當作沒接。
+    const ghost = ghosts.edges.has(edge.id);
+    const sourceType = ghost ? '' : edge.from?.type ?? '', targetType = ghost ? '' : edge.to?.type ?? '';
+    const style = ghost ? { stroke: '#f17b88', strokeWidth: 2, strokeDasharray: '6 4' } : { stroke: typeColor(sourceType), strokeWidth: 2 };
+    const label = !ghost && sourceType !== targetType ? `${sourceType} → ${targetType}` : undefined;
     if (old && old.source === saved.from[0] && old.sourceHandle === saved.from[1] &&
         old.target === saved.to[0] && old.targetHandle === saved.to[1] && old.label === label && same(old.style, style)) return old;
     return { ...old, id: edge.id, source: saved.from[0], sourceHandle: saved.from[1],

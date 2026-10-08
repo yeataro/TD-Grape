@@ -7,6 +7,7 @@ import {type,literal,policy} from './values';
 import {types} from './numeric';
 import type {Registry} from './node_module';
 import {appendNodeComments} from './comments';
+import {ghostsOf} from './ghosts';
 export type {Graph,Node,Declaration} from './model';
 export interface IdentifierRules {reservedNames:readonly string[]}
 export class CompilationError extends Error {
@@ -23,13 +24,15 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     if(!g.declarations.every(d=>d.kind==='uniform'&&types.includes(d.type)))return false;
     // Legacy allocates collision suffixes for implicit IDs versus explicit
     // names. Keep those whole graphs on its path until symbol allocation moves.
-    const symbols=g.stages.pixel?.nodes.filter(n=>registry.get(n.nodeType)?.role!=='output').map(n=>n.name||n.id)||[];
+    // Ghost nodes (ghosts.ts) are kept but never emitted, so they neither block this path nor
+    // take a symbol. Ghost 節點不產碼：不擋這條路，也不佔名稱。
+    const context={declaration:(id:string)=>g.declarations.find(d=>d.id===id)};
+    const ghost=(n:Node)=>{const d=registry.get(n.nodeType);
+      return !d||!!d.catalog.definition.stages&&!d.catalog.definition.stages.includes('pixel')||!d.supports(n,context as never);};
+    const live=g.stages.pixel?.nodes.filter(n=>!ghost(n))||[];
+    const symbols=live.filter(n=>registry.get(n.nodeType)?.role!=='output').map(n=>n.name||n.id);
     if(new Set(symbols).size!==symbols.length)return false;
-    return !!g.stages.pixel?.nodes.every(n=>{
-      const d=registry.get(n.nodeType);if(!d)return false;
-      if(n.params.requireConstant)return false;
-      return d.supports(n,{declaration:id=>g.declarations.find(d=>d.id===id)});
-    });
+    return live.every(n=>!n.params.requireConstant);
   }
   function compile(g:Graph,identifiers?:IdentifierRules){
     let errorNode:string|undefined;
@@ -40,6 +43,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     const model=new GraphDocument(document,registry),network=model.networks.get('pixel')!;
     const data=model.document.stages.pixel!;if(data.nodes.length>limits.nodes||data.edges.length>limits.edges||JSON.stringify(g).length>limits.bytes)throw Error('Graph is too large');
     const nodes=new Map<string,Node>(),ports:Record<string,{in:Record<string,string>;out:Record<string,string>}>=Object.create(null);
+    const ghosts=ghostsOf(network,policy);
     const declarations=new Map<string,Declaration>(),names=new Set<string>();
     for(const d of g.declarations){
       if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id)||declarations.has(d.id)||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name)||/^(gl_|TD|sg_|sTD)/.test(d.name)||names.has(d.name))throw Error('Invalid declaration identity/name');
@@ -52,6 +56,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     for(const n of data.nodes){
       errorNode=n.id;
       if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(n.id)||nodes.has(n.id))throw Error('Invalid or duplicate node ID');
+      if(ghosts.nodes.has(n.id))continue;
       if(n.name!==undefined){if(!identifiers||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(n.name)||n.name.includes('__')||/^(gl_|TD|sTD|uTD|sg_|[iu]?sampler|[iu]?image|d?mat[234])/.test(n.name)||identifiers.reservedNames.includes(n.name)||authoredNames.has(n.name))throw Error('Invalid or duplicate node name');authoredNames.add(n.name);}
       const d=registry.get(n.nodeType)!,symbol=n.name||n.id;
       if(d.role!=='output'){if(symbols.has(symbol))throw Error('Duplicate output symbol');symbols.add(symbol);}nodes.set(n.id,n);
@@ -64,9 +69,11 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
       for(const [p,v]of Object.entries(n.inputValues||{})){if(!resolved.inputs[p])throw Error('Unknown input default');literal(v,type(resolved.inputs[p]!.type));}
     }
     errorNode=undefined;
-    const outputs=network.nodes.filter(n=>n.definition!.role==='output');if(outputs.length!==1)throw Error('Exactly one Pixel Output is required');
+    const outputs=network.nodes.filter(n=>!ghosts.nodes.has(n.id)&&n.definition!.role==='output');if(outputs.length!==1)throw Error('Exactly one Pixel Output is required');
     const links=new Map<Port,Edge>();
     for(const edge of network.edges){
+      // A ghost wire counts as not connected: the input keeps its own value (Q37 1-3).
+      if(ghosts.edges.has(edge.id))continue;
       const target=edge.to!,source=edge.from!;errorNode=target.node.id;
       const checked=edge.connection(policy),k=target;
       if(!checked.valid)throw Error(checked.reason==='missing-port'?'Connection endpoint no longer exists':source.type+' cannot connect to '+target.type);
@@ -74,6 +81,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     }
     const inputsUsed=new Map<string,Set<string>>();
     for(const node of network.nodes){
+      if(ghosts.nodes.has(node.id))continue;
       const module=node.definition!;
       if(module.inputsUsed){
         const connected=new Set(node.inputs.filter(p=>links.has(p)).map(p=>p.key));
@@ -82,7 +90,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
         inputsUsed.set(node.id,new Set(used));
       }
     }
-    const order=network.order(outputs[0]!.id,e=>!inputsUsed.has(e.to[0])||inputsUsed.get(e.to[0])!.has(e.to[1])),visited=new Set(order.map(n=>n.id));
+    const order=network.order(outputs[0]!.id,e=>!ghosts.edgeData.has(e)&&(!inputsUsed.has(e.to[0])||inputsUsed.get(e.to[0])!.has(e.to[1]))),visited=new Set(order.map(n=>n.id));
     const used=new Set<string>(),lines:string[]=[],lineNodes:string[]=[],expressions=new Map<Port,string>();
     for(const node of order){const n=node.data!,id=node.id,d=node.definition!,p=node.interface;const start=lines.length;
       errorNode=id;
@@ -108,7 +116,10 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     const bindings:Declaration[]=[...used].sort().map(id=>JSON.parse(JSON.stringify(declarations.get(id)!)) as Declaration);
     const headers=bindings.map(d=>'uniform '+d.type+' '+d.name+';');
     const pixel=[...headers,'layout(location=0) out vec4 fragColor;','void main() {','    vec2 sg_uv = vUV.st;',...lines,'}',''].join('\n');
-    const diagnostics=data.nodes.filter(n=>!visited.has(n.id)).sort((a,b)=>a.id<b.id?-1:1).map(n=>({node:n.id,stage:'pixel',message:'Disconnected node is not emitted'}));
+    const diagnostics=[
+      ...data.nodes.filter(n=>!visited.has(n.id)&&!ghosts.nodes.has(n.id)).sort((a,b)=>a.id<b.id?-1:1).map(n=>({node:n.id,stage:'pixel',message:'Disconnected node is not emitted'})),
+      ...[...ghosts.nodes].sort(([a],[b])=>a<b?-1:1).map(([node,kind])=>({node,stage:'pixel',message:'Ghost node ('+kind+') is kept but not emitted'})),
+      ...data.edges.filter(e=>ghosts.edgeData.has(e)).map(e=>({node:e.to[0],stage:'pixel',message:'Ghost wire to '+e.to[1]+' is treated as not connected'}))];
     const sourceMap={pixel:lineNodes.map((node,i)=>({node,stage:'pixel',trail:[],line:headers.length+4+i}))};
     return {vertex:'',pixel,bindings,sourceMap,stages:{pixel:{lines,ports,live:[...visited].sort()}},diagnostics};
     } catch(error) {throw new CompilationError(error instanceof Error?error.message:String(error),error instanceof GraphError?error.node:errorNode);}

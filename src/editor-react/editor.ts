@@ -90,6 +90,18 @@ export class Editor {
     const broken = core.structureProblems(graph, core.registry);
     if (broken.length) this.tell('warning', tr('structure.openWarning',
       'Warning: this graph breaks the structure rules; you can fix it and continue: {problems}', { problems: structureText(broken) }));
+    this.ghostTotal = this.reportGhosts(0);
+  }
+  // Ghosts (Q37): said when the graph opens with some, and whenever an edit adds more.
+  // Ghost：開圖時有就說；修改讓 Ghost 變多時也說。
+  private ghostTotal = 0;
+  private reportGhosts(previous: number) {
+    const ghosts = core.ghostsOf(this.document.networks.get('pixel')!, core.values.policy);
+    const total = ghosts.nodes.size + ghosts.edges.size;
+    if (total > previous) this.tell('warning', tr('ghost.found',
+      'This graph has {nodes} ghost nodes and {wires} ghost wires: kept as they are and left out of the shader; a ghost wire counts as not connected.',
+      { nodes: ghosts.nodes.size, wires: ghosts.edges.size }));
+    return total;
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   snapshot = () => this.state;
@@ -140,6 +152,7 @@ export class Editor {
       undo: !!this.past.length, redo: !!this.future.length,
       glsl: this.codegen.compiled?.pixel ?? this.state.glsl,
       ...(this.sync.blocked ? {} : { message: failed ?? label, level: failed ? 'warning' as const : 'info' as const }) };
+    if (!this.sync.blocked) this.ghostTotal = this.reportGhosts(this.ghostTotal);
     this.sync.changed();
     this.state = { ...this.state, dirty: this.sync.status.dirty };
     this.publish();

@@ -6,6 +6,7 @@ import type { createEditorContract } from '../core-ts/editor_contract';
 import type { Graph as GraphData, formatProblem } from '../core-ts/model';
 import type * as capacity from '../core-ts/capacity';
 import type * as structure from '../core-ts/structure';
+import type * as ghosts from '../core-ts/ghosts';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -13,8 +14,9 @@ import { tr, TextError, type Message } from './text';
 export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   registry: modules.Registry; values: typeof values; overLimit: typeof capacity.overLimit;
   structureProblems: typeof structure.structureProblems; offered: typeof structure.offered; removable: typeof structure.removable;
-  formatProblem: typeof formatProblem;
+  formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf;
 };
+export type { GhostKind } from '../core-ts/ghosts';
 export type { Measure } from '../core-ts/capacity';
 export type { StructureProblem } from '../core-ts/structure';
 declare global {
@@ -95,7 +97,10 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): Message[] {
   if (!pixel) return [...reasons, tr('open.reasonNoPixel', 'no pixel stage')];
   const frames = pixel.ui?.frames;
   if (Array.isArray(frames) && frames.length > 0) reasons.push(tr('open.reasonFrames', '{count} Frames', { count: frames.length }));
-  for (const node of pixel.nodes) if (!supportedDefinitions.includes(node.nodeType)) {
+  // A node type this build does not know at all is a ghost, not a reason to refuse (Q37 1-1). Known
+  // types outside this entry's slice still refuse: as ghosts they would silently leave TD's program.
+  // 完全不認得的節點是 Ghost，不拒絕；認得但本入口還沒接管的仍拒絕——當成 Ghost 會悄悄從 TD 的程式消失。
+  for (const node of pixel.nodes) if (core.registry.get(node.nodeType) && !supportedDefinitions.includes(node.nodeType)) {
     const type = node.nodeType.replace(/^sgrape\.builtin\./, '');
     reasons.push(node.name ? tr('open.reasonNamedNode', '{type} node “{name}” ({id})', { type, name: node.name, id: node.id })
       : tr('open.reasonNode', '{type} node ({id})', { type, id: node.id }));
