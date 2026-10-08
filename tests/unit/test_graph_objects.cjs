@@ -21,7 +21,8 @@ test('connect/replacement is one graph edit; snapshot Undo/Redo and reopen prese
   const base=open(),edit=base.change(g=>{
     const n=g.networks.get('pixel');n.connect(n.node('source').outputs[0],n.node('operation').inputs[0],policy);
     const e=n.connect(n.node('operation').outputs[0],n.node('out').inputs[0],policy);
-    assert.equal(e.connection(policy).conversion,'convert');
+    // Color Output follows what is wired in (Q46), so no conversion is needed. Color Output 跟著接進來的型別。
+    assert.equal(e.connection(policy).conversion,'identity');
   });
   assert.deepEqual(plain(base.snapshot()),document());
   const first=open(edit.after),ids=first.networks.get('pixel').edges.map(e=>e.id);

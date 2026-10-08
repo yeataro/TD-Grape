@@ -1428,6 +1428,7 @@ function resolvePorts(module, node, context) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
 exports.reshapeDefaults = reshapeDefaults;
+exports.fixedPorts = fixedPorts;
 exports.literalNode = literalNode;
 exports.vectorNode = vectorNode;
 exports.binaryNode = binaryNode;
@@ -1713,9 +1714,13 @@ function uniformNode(catalog) {
 /** Terminal family with a shared, immutable port layout. The owning node
  * supplies target capabilities, controls, validation and shader statements. */
 function outputNode(catalog, spec) {
-    if (spec.ports.some(p => p.direction !== 'input'))
-        throw Error('Terminal nodes only have input ports');
-    const { ports, ...implementation } = spec, layout = fixedPorts([...ports]);
+    const { ports, ...implementation } = spec;
+    const inputsOnly = (specs) => { if (specs.some(p => p.direction !== 'input'))
+        throw Error('Terminal nodes only have input ports'); return specs; };
+    // Fixed layout, or one chosen per node (e.g. Color Output follows what is wired in, Q46).
+    if (typeof ports === 'function')
+        return { ...implementation, catalog, role: 'output', ports: (n, c) => inputsOnly(ports(n, c)) };
+    const layout = fixedPorts([...inputsOnly(ports)]);
     return { ...implementation, catalog, role: 'output', ports: () => layout };
 }
 var value_nodes_1 = require("./value_nodes");
@@ -3715,17 +3720,37 @@ const flags = [
     'dither',
     'alphaTest'
 ];
+// Color Output takes any value and fills it to a colour (design-interview Q46): a single value
+// (v, v, v, 1), vec2 (x, y, 0.5, 1), vec3 (r, g, b, 1), vec4 as it is; int and bool alike. The input
+// follows what is wired in (`params.type`, set by `wire`); unset means vec4, as stored graphs were.
+// Color Output 什麼都能接、自動補齊：輸入跟著接進來的型別；沒設定＝vec4（既有的圖照舊）。
+const inputType = (n) => { var _a; return String((_a = n.params.type) !== null && _a !== void 0 ? _a : 'vec4'); };
+const layouts = new Map();
+const layout = (type) => {
+    let ports = layouts.get(type);
+    if (!ports) {
+        const empty = node_sdk_1.values.family(type) === 'bool' ? node_sdk_1.values.fill(false, type) : node_sdk_1.values.fill(0, type);
+        ports = (0, node_sdk_1.fixedPorts)([{ key: 'color', direction: 'input', type, default: type === 'vec4' ? [0, 0, 0, 1] : empty }]);
+        layouts.set(type, ports);
+    }
+    return ports;
+};
+const fillToColor = (type, value) => {
+    const count = node_sdk_1.values.count(type);
+    if (type === 'vec4')
+        return value; // exactly as before 與以前完全相同
+    if (count === 1)
+        return 'vec4(vec3(float(' + value + ')), 1.0)';
+    if (count === 2)
+        return 'vec4(vec2(' + value + '), 0.5, 1.0)';
+    if (count === 3)
+        return 'vec4(vec3(' + value + '), 1.0)';
+    return 'vec4(' + value + ')';
+};
 exports.default = (0, node_sdk_1.outputNode)(catalog, {
-    ports: [
-        {
-            key: 'color',
-            direction: 'input',
-            type: 'vec4',
-            default: [0, 0, 0, 1]
-        }
-    ],
+    ports: n => layout(inputType(n)),
     supports: (n, c) => (!c.target || c.target === 'top') &&
-        (n.params.type === undefined || node_sdk_1.numericTypes.includes(String(n.params.type))) &&
+        node_sdk_1.values.types.includes(inputType(n)) &&
         !flags.some(k => n.params[k]) &&
         !(n.params.bufferCount && n.params.bufferCount !== 1),
     validate: n => {
@@ -3735,10 +3760,16 @@ exports.default = (0, node_sdk_1.outputNode)(catalog, {
             if (n.params[k] !== undefined && typeof n.params[k] !== 'boolean')
                 throw Error('Output finishing must be a boolean');
     },
-    emit: (_n, c) => ({
+    wire: (n, key, source) => {
+        if (key !== 'color' || !node_sdk_1.values.types.includes(source))
+            throw Error('Color Output takes a value');
+        n.params.type = source;
+        return { node: n, replaceInputs: ['color'] };
+    },
+    emit: (n, c) => ({
         outputs: {},
         statements: [
-            '    vec4 sg_color = ' + c.input('color') + ';',
+            '    vec4 sg_color = ' + fillToColor(inputType(n), c.input('color')) + ';',
             '    fragColor = TDOutputSwizzle(sg_color);'
         ]
     })

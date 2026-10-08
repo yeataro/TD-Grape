@@ -16,7 +16,7 @@ export { selectedType, reshapeDefaults };
 
 const numeric=(n:Node)=>n.params.type===undefined||types.includes(String(n.params.type));
 const out=(t:string)=>({key:'out',direction:'output' as const,type:t});
-function fixedPorts(specs:PortSpec[]):readonly PortSpec[]{
+export function fixedPorts(specs:PortSpec[]):readonly PortSpec[]{
   const freeze=(v:unknown):void=>{if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}};freeze(specs);return specs;
 }
 const outputPorts=Object.fromEntries(types.map(t=>[t,fixedPorts([out(t)])]));
@@ -188,9 +188,12 @@ export function uniformNode(catalog:CatalogRow):NodeModule {
 }
 /** Terminal family with a shared, immutable port layout. The owning node
  * supplies target capabilities, controls, validation and shader statements. */
-export function outputNode(catalog:CatalogRow,spec:Omit<NodeModule,'catalog'|'role'|'ports'> & {ports:readonly PortSpec[]}):NodeModule {
-  if(spec.ports.some(p=>p.direction!=='input'))throw Error('Terminal nodes only have input ports');
-  const {ports,...implementation}=spec,layout=fixedPorts([...ports]);
+export function outputNode(catalog:CatalogRow,spec:Omit<NodeModule,'catalog'|'role'|'ports'> & {ports:readonly PortSpec[]|NodeModule['ports']}):NodeModule {
+  const {ports,...implementation}=spec;
+  const inputsOnly=(specs:readonly PortSpec[])=>{if(specs.some(p=>p.direction!=='input'))throw Error('Terminal nodes only have input ports');return specs;};
+  // Fixed layout, or one chosen per node (e.g. Color Output follows what is wired in, Q46).
+  if(typeof ports==='function')return {...implementation,catalog,role:'output',ports:(n,c)=>inputsOnly(ports(n,c))};
+  const layout=fixedPorts([...inputsOnly(ports)]);
   return {...implementation,catalog,role:'output',ports:()=>layout};
 }
 

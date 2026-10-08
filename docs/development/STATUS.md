@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.42 — Color Output 什麼都能接、自動補齊（Q46） — 2026-10-09
+
+人類 10-09「先補 Color Output 自動補齊」。依 design-interview Q46。
+
+- [pixel_out.ts](../../src/core-ts/nodes/pixel_out.ts)：輸入跟著接進來的型別（`wire` 在接線時寫 `params.type`；沒設定＝vec4，既有的圖照舊）；產碼補成顏色：單一數值（int、bool 一樣）→ `vec4(vec3(float(v)), 1.0)`、vec2 → `vec4(vec2(v), 0.5, 1.0)`、vec3 → `vec4(vec3(v), 1.0)`、vec4 原樣。`node_sdk.outputNode` 允許依節點決定接孔。
+- **既有的圖產碼完全不變**：vec4 原樣；之前存下的 float 接線（接孔仍是 vec4）照舊 `vec4(v)`，只有新拉的線照 Q46 補。舊產品對照組全過。
+- **驗證**：core 128（新增 `test_color_output.cjs` 4 項；`test_graph_objects` 一處原本拿 Color Output 當「自動轉型」例子，改為「不需轉型」）、editor 47（新增：vUV.st 直接拉到 Color Output）、Python 52。真實 TD＋瀏覽器：面板 → vUV.st 放到圖上 → 直接拉線到 Color Output（接孔顯示 vec2）→ 角落 (0.001, 0.001, 0.5, 1)、中心 (0.5, 0.5, 0.5, 1)、對角 (0.999, 0.999, 0.5, 1)。測試 OP 已刪。Deliver 存 `TD-Grape-dev.74`。
+- **留意**：接好之後上游改型別，那條線會變 Ghost 線（同其他節點，Q37 1-3），重拉一次即可。MAT 的 Color Output 那一輪再確認（Q46）。
+
 ## Refactor.41 — TD 內建值 `td_value`：一個節點類型選表裡一筆；共用來源面板加一區 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/sources-foundation.md` 第三輪（人類 10-09「開始做 TD 內建值」）；依 design-interview Q45 01 區、Q46、discuss-4.14 第 10–11 節。
