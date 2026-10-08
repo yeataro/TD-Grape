@@ -48,7 +48,7 @@ npm run check:editor && npm run test:editor
 npm run build:editor -- --out ../work/refactor/editor-service/web
 ```
 
-`build:core` 由 `src/core-ts/` 產生 `src/generated/` 的 `wire_planning.js`、`editor-bootstrap.json`、`editor-library.json`，不要手改。產品版本只寫在 `src/version.json`（每輪 `Refactor.N` 改這裡）。瀏覽器測試與 TD 部署見 [React 入口](src/editor-react/README.md)；TD 內嵌程式與保存 TOE 見 [DEVELOPMENT](docs/development/DEVELOPMENT.md)；驗證方法見 [TESTING](docs/development/TESTING.md)。
+`build:core` 由 `src/core-ts/` 產生 `src/generated/` 的 `wire_planning.js`、`editor-bootstrap.json`，不要手改。產品版本只寫在 `src/version.json`（每輪 `Refactor.N` 改這裡）。瀏覽器測試與 TD 部署見 [React 入口](src/editor-react/README.md)；TD 內嵌程式與保存 TOE 見 [DEVELOPMENT](docs/development/DEVELOPMENT.md)；驗證方法見 [TESTING](docs/development/TESTING.md)。
 
 ## 每輪工作
 
@@ -88,7 +88,7 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
 - **核心不依賴 DOM、React Flow、舊 Python compiler**；新路徑出錯不得靜默改用舊 compiler 或另一個 writer。
 - **框架耦合（design-interview Q29）**：要的是需求，不是框架的某個功能——React Flow 合用就用、不合用就自己做，它不在了我們仍能自己做；作品、規則、節點永遠在 Grape。判斷問「這是誰需要的？」只有畫面需要的留畫面。RF 掛勾只問核心不自己判斷；不用 `useNodesState`、`addEdge`、`toObject` 存檔。mapping 保持單向、薄，需要大量特例就先檢查設計。**舊產品是功能基準，不是模仿對象**：參照它「需要什麼」，不照抄「怎麼做」；所需概念核心未定義時，屬核心的先在核心定義，不在畫面將就。
 - **新抽象必須有當輪真實 caller**；不建 event bus、diff 系統或治理平台。
-- **產品程式只在 `src/`**；來源與 TD DAT 的對應由 `src/td/source_files.json`、`src/td/embedded_sources.json` 定義。
+- **產品程式只在 `src/`**；檔案位置記在 `src/td/source_files.json`；Manager 的 DAT 由 `tools/jobs/install_native_manager.py` 從 repo 寫入。
 - **註解**：新寫或改到的程式碼用精簡「英文摘要＋繁中說明」，範例 `src/core-ts/values.ts`；不全面追補舊程式。
 - **證據**：自動測試或網路替身不能當真實 TD 證據；未驗證就寫未驗證；區分已證實與推測。
 - **根目錄 Markdown** 只放 README、AGENTS.md、CLAUDE.md。產品版本只能向前。

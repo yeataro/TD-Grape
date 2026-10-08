@@ -6,7 +6,7 @@ import sys
 
 root = Path(__file__).resolve().parents[2]
 env = dict(os.environ)
-env['PYTHONPATH'] = os.pathsep.join(str(root / p) for p in ('src/core', 'src/td/runtime', 'tests/unit'))
+env['PYTHONPATH'] = os.pathsep.join(str(root / p) for p in ('src/td/runtime', 'tests/unit'))
 env['PYTHONDONTWRITEBYTECODE'] = '1'
 commands = [
     ['node', 'tools/build_core.cjs', '--check'],

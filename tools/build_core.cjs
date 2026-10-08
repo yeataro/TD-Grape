@@ -46,14 +46,7 @@ function load(id){
 const api=load('__composition');GrapeWirePlanning=api.GrapeWirePlanning;GrapeTopCompiler=api.GrapeTopCompiler;GrapeGraph=api.GrapeGraph;
 })();\nif(typeof module!=='undefined'&&module.exports)module.exports=GrapeGraph;\n`;
 const context={};vm.runInNewContext(bundled,context);
-const ordinary={},nativeSignatures={},catalogPath=path.join(root,'src/library/node_catalog.json');
-const catalog=JSON.parse(fs.readFileSync(catalogPath,'utf8'));
 const rows=context.GrapeGraph.registry.modules.filter(m=>!m.structural).map(m=>JSON.parse(JSON.stringify(m.catalog)));
-const keys=rows.map(row=>row.definition.key);
-const removed=new Set((catalog.frontendGenerated||[]).filter(key=>!keys.includes(key)));
-if(catalog.history.some(row=>removed.has(row.definition.key)))throw Error('Removing a generated node with catalog history requires an explicit migration');
-catalog.definitions=catalog.definitions.filter(row=>!removed.has(row.definition.key));catalog.frontendGenerated=keys;
-const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(k=>canonical(k)+':'+canonical(value[k])).join(',')+'}':JSON.stringify(value).replace(/[\u007f-\uffff]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
 // Callback semantics, not just port metadata, invalidate saved artifacts.
 const implementationHash=createHash('sha256').update(bundled).digest('hex');
 const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],structDefinitions:[],stages:{pixel:{
@@ -63,31 +56,15 @@ const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.comp
 // Native source labels are cold host metadata, independent of Python graph compilation.
 const sourceCatalog=JSON.parse(fs.readFileSync(path.join(root,'src/library/source_catalog.json'),'utf8'));
 const sourceContract=Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]]));
-catalog.frontendHash=implementationHash;
-for(const row of rows){
-  const d=row.definition;delete d.revisionHash;d.definitionUuid||='sgrape.builtin.'+d.key;
-  d.revisionHash=createHash('sha256').update(canonical(d)).digest('hex');
-  // Execution descriptors belong to the generated capability projection.
-  // Keep the catalog emitter identity comparable with historical metadata;
-  // the implementation hash above separately invalidates generated artifacts.
-  if(row.emitter.primitive){ordinary[d.key]=row.emitter.primitive;delete row.emitter.primitive;}
-  if(row.emitter.call){ordinary[d.key]=row.emitter.call;delete row.emitter.call;}
-  const index=catalog.definitions.findIndex(r=>r.definition.key===d.key);
-  if(index<0)catalog.definitions.push(row);else catalog.definitions[index]=row;
-  const module=context.GrapeGraph.registry.get(d.definitionUuid);
-  if(module.signatures)nativeSignatures[d.key]=module.signatures({id:'projection',definitionUuid:d.definitionUuid,params:d.defaults},{declaration:()=>undefined});
-}
+for(const row of rows)row.definition.definitionUuid||='sgrape.builtin.'+row.definition.key;
 // Generated files live in src/generated/ (Refactor.25): the new editor, TD's Manager and tests read
 // them; never edit them by hand. 產生的檔案放 src/generated/，新編輯器、TD Manager、測試共用；不要手改。
 const generated=path.join(root,'src/generated');
 const outputs=new Map([
-  [path.join(generated,'editor-library.json'),fs.readFileSync(path.join(root,'src/library/builtin_subgraphs.json'),'utf8')],
   [path.join(generated,'wire_planning.js'),bundled],
-  [catalogPath,JSON.stringify(catalog,null,2)+'\n'],
   [path.join(generated,'editor-bootstrap.json'),JSON.stringify({version:1,producer:'frontend-modules',
     catalogHash:implementationHash,defaultDocument,catalog:rows.map(row=>row.definition),
-    typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract}},null,2)+'\n'],
-  [path.join(root,'src/core/frontend_capabilities.json'),JSON.stringify({protocol:context.GrapeTopCompiler.protocol,valueTypes:context.GrapeGraph.values.types,definitions:context.GrapeGraph.registry.modules.map(m=>m.catalog.definition.definitionUuid).sort(),ordinary,nativeSignatures},null,2)+'\n']
+    typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract}},null,2)+'\n']
 ]);
 // Publish only after all checks and projections have succeeded.
 for(const [file,output] of outputs){

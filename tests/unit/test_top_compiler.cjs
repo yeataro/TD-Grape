@@ -1,15 +1,13 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),{spawnSync}=require('node:child_process');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'),'utf8');
 const context=vm.createContext({});vm.runInContext(source,context);
 const compiler=context.GrapeTopCompiler;
-const oracle=spawnSync(process.env.PYTHON||'python',[path.join(__dirname,'top_compiler_oracle.py')],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
-assert.equal(oracle.status,0,oracle.stderr||String(oracle.error));
-// The oracle is the old Python compiler and emits old-format graphs; convert them with the same
-// developer tool that converts real old graphs (tools/dev/old_graph.cjs, Q44).
-// 對照組是舊 Python 產碼器、產出舊格式的圖；用轉換真實舊圖的同一支工具轉成新格式。
+// The legacy oracle is a frozen snapshot of the old Python compiler's results (removed in cleanup 5,
+// Q48); the old graphs are converted with the tool that converts real old graphs (tools/dev/old_graph.cjs, Q44).
+// 對照組是舊 Python 產碼器的結果快照（第 5 條清理時移除）；舊格式的圖用轉換真實舊圖的同一支工具轉成新格式。
 const {convertOldGraph}=require('../../tools/dev/old_graph.cjs');
-const {cases,identifiers}=JSON.parse(oracle.stdout),plain=v=>JSON.parse(JSON.stringify(v));
+const {cases,identifiers}=JSON.parse(fs.readFileSync(path.join(__dirname,'../fixtures/top_compiler_legacy.json'),'utf8')),plain=v=>JSON.parse(JSON.stringify(v));
 for(const row of cases)row.graph=convertOldGraph(row.graph).graph;
 function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;}
 

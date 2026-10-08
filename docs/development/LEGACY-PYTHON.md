@@ -1,6 +1,6 @@
 # 舊 Python 現況清單
 
-最後更新：2026-10-08（清殘留第 4 條，判斷規則見 design-interview Q48）。給人類看的盤點：重構中還剩哪些 Python、在哪裡、誰在用、去向為何。舊核心會在重構中**逐步**退場，不是一次性移除；TD 網路裡用 annotate 框標示同一套分類，兩邊須一致。
+最後更新：2026-10-08（清殘留第 4、5 條，判斷規則見 design-interview Q48）。給人類看的盤點：重構中還剩哪些 Python、在哪裡、誰在用、去向為何。舊核心會在重構中**逐步**退場，不是一次性移除；TD 網路裡用 annotate 框標示同一套分類，兩邊須一致。
 
 ## 歷史
 
@@ -75,9 +75,12 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 
 | 檔案 | 誰還在用 | 判定 |
 | --- | --- | --- |
-| `src/core/sgrape_core.py`、`sgrape_composites.py`、`sgrape_document.py`、`sgrape_library.py`、`sgrape_legacy_nodes.py`、`sgrape_voronoi.py` | 只有 Python 單元測試、TD 測試、部分 integration 測試（以舊 Python compiler 當對照基準，例如 `tests/unit/top_compiler_oracle.py`），以及建置工具 `tools/build/build_textured_material_presets.py`、`sync_node_browser.py`、`tools/dev/check_locales.py` | 只剩測試／工具 |
 | `src/td/runtime/editor_launch.py` | 目前沒有呼叫者 | **留**（Q48：符合新架構，Q45 決議 App 視窗與偵測預設瀏覽器會用到） |
 
 2026-10-08 已刪（Q48 清理第 4 條）：`sgrape_runtime.py`、`sgrape_live.py`、`pixel_preview_recovery.py`、`frontend_artifact.py`、`manager_controls.py`、`tdfam_menu_colors.py`、`controls.py`，以及只測它們的單元測試 13 檔、TD 測試 8 檔、`tools/dev/prepare_cold_start.py` 與 `tests/td/cold_start_probe.py`；4 個 integration 測試拿掉「舊 TD 接收端」那段（與 legacy 編譯器比對的部分保留）。需求（選單顏色、建立按鈕、個人資料夾等）已記在需求盤點與 Q45。
 
-**仍待處理**：舊 Python 核心（`src/core`）與用它的測試、對照表 `embedded_sources.json`／`source_files.json`（描述舊 Manager 配置）屬清理第 5 條。
+2026-10-08 已刪（Q48 清理第 5 條）：舊 Python 核心 `src/core/` 全部（11 個 `.py` 與 `frontend_capabilities.json`）、`src/library/node_catalog.json`、`src/generated/editor-library.json`、`src/td/embedded_sources.json`；只測舊核心的 Python 單元測試約 80 檔與其 fixture、舊 TD 測試約 70 檔、舊開發工具 9 支。`test:core` 的新舊產碼對照改讀凍結快照 `tests/fixtures/top_compiler_legacy.json`（暫留的鷹架，出口：308 個節點補完）；4 個 integration 測試的對照改由參數指定 legacy 工作樹。
+
+**留下的資料**（之後那一輪會用到）：`src/library/builtin_subgraphs.json`（內建子圖庫，子圖那一輪）、`material_presets.json`（MAT 預設，MAT 那一輪）、`source_catalog.json`（TS 核心在用）。
+
+**現在 repo 裡的 Python 只剩**：`src/td/runtime/` 的新 TD 宿主程式、`src/remote_panel/`、開發工具（`tools/dev/` 的 runner／bootstrap／paths 等、`tools/jobs/install_native_manager.py`、`tools/td/grape_editor_dev.py`）及其測試；暫留的 `shader_controls.py`、`family_callbacks.py`（隨 `masters`）。

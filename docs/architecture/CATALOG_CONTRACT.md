@@ -1,5 +1,7 @@
 # 節點 Catalog 與版本來源（0.6.3）
 
+> **已過時（2026-10-08）**：本文描述的 `src/library/node_catalog.json` 與讀它的 Python 核心已於清理第 5 條刪除（design-interview Q48）。現在節點定義只來自 TS 核心的模組（`build:core` 產生 `editor-bootstrap.json`）；「節點實作改版時舊圖怎麼辦」是之後的議題（CURRENT「已發現」）。以下僅作歷史。
+
 `src/library/node_catalog.json` 是隨產品提供的節點資料表，TD 主元件內嵌為 `node_catalog` Text DAT。Python 核心與 TD 讀取相同內容；TOX 可獨立攜帶它，不依賴開發電腦上的來源路徑。既有 31 個節點的 UUID、revisionHash、介面與預設值保持一致，4 個 Function 庫快照亦未改寫。
 
 ## 已建立的資料契約

@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.29 — 清殘留第 5 條：舊 Python 核心與其測試 — 2026-10-08
+
+照 design-interview Q48 判斷（人類授權第 4–8 條自行進行）。
+
+- **刪除**：舊 Python 核心 `src/core/` 全部（11 個 `.py`、`frontend_capabilities.json`）；`src/library/node_catalog.json`；`src/generated/editor-library.json`（第 2 條後已無人讀）；`src/td/embedded_sources.json`（描述舊 Manager 配置）；只測舊核心的 Python 單元測試與 fixture 約 80 檔、舊 TD 測試約 70 檔、舊開發工具 9 支、`tests/fixtures` 中只給舊測試的 4 份資料；integration 中已壞的 6 支（4 支像素對照的測資已是新格式、舊 Python 讀不懂；2 支舊宿主探針）。`source_files.json` 拿掉已刪檔案。
+- **`build:core`**：不再替舊 Python 寫 `node_catalog.json`／`frontend_capabilities.json`／`editor-library.json`；bootstrap 的節點定義不再帶 `revisionHash`（舊產品的節點版本；新做法之後再談）。原本「刪除有歷史紀錄的節點需要遷移」的限制隨之消失。
+- **新舊產碼對照（暫留的鷹架）**：`test:core` 的對照改讀凍結快照 `tests/fixtures/top_compiler_legacy.json`（183 例，由刪除前的 oracle 產生），不再執行 Python；`numeric_call_migration`、`unary_module_migration`、`math_module_migration` 三支 integration 改以參數指定的 legacy 工作樹為對照並加上舊圖轉換（Refactor.26 改格式後它們就壞了）。前兩支通過；`math_module_migration` 有差異：產生的 GLSL 註解位置與 legacy 不同（同一行 `// Fold` vs 下一行 `// Comment: Fold`），屬產品行為，記入 CURRENT 待人類判斷。出口：節點補完。
+- **留下的資料**：`builtin_subgraphs.json`（子圖那一輪）、`material_presets.json`（MAT 那一輪）、`source_catalog.json`（TS 核心在用）。
+- **文件**：DEVELOPMENT 拿掉舊 Manager 時代的工具段落（指向 git 歷史）；TESTING、CATALOG_CONTRACT 標為歷史；AGENTS、LEGACY-PYTHON、`src/generated/README.md` 更新。
+- **驗證**：core 112、editor 37；Python 48 項全過（原本 17 個長期失敗全屬舊架構，已隨之刪除）；Remote Panel 27、editor launch 14；瀏覽器測試通過；integration 2／3 通過（見上）。真實 TD：測試 OP state／apply（GPU 驗證）通過（revision 581→582），瀏覽器載入 Refactor.29 正常。Deliver 存 `TD-Grape-dev.46`。
+
 ## Refactor.28 — 清殘留第 4 條：舊產品留在 TD 的執行程式 — 2026-10-08
 
 照 design-interview Q48 判斷；人類授權第 4–8 條自行判斷、逐條提交、技術問題不等審（2026-10-08）。

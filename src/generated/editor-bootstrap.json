@@ -129,8 +129,7 @@
         "type": "float"
       },
       "descriptionKey": "help.abs",
-      "definitionUuid": "sgrape.builtin.abs",
-      "revisionHash": "85df7ec01966ac06cf87685c8c93d8369744f133bdcbe18684b35397f3f141aa"
+      "definitionUuid": "sgrape.builtin.abs"
     },
     {
       "key": "add",
@@ -150,8 +149,7 @@
         "type": "float"
       },
       "descriptionKey": "help.add",
-      "definitionUuid": "sgrape.builtin.add",
-      "revisionHash": "7eb4a9f0d469a6a5ab8a3bab48572d12844fcd4f6aaf2df6f5958a28583af2cf"
+      "definitionUuid": "sgrape.builtin.add"
     },
     {
       "key": "all",
@@ -175,8 +173,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "03eda15d01932bd1d23348a4329ec87b3bd79c305a675c96728d06069e820a82"
+      ]
     },
     {
       "key": "any",
@@ -200,8 +197,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "dbd6841db92dc9a7971b1e8e9ffd02a19ddc7c5ee5e5e4deb7e9b6f50396fb22"
+      ]
     },
     {
       "key": "ceil",
@@ -220,8 +216,7 @@
         "type": "float"
       },
       "descriptionKey": "help.ceil",
-      "definitionUuid": "sgrape.builtin.ceil",
-      "revisionHash": "f14dfc171d179d9d4037965c879b689fb710cda2faabffb768bb7163ee1ca1dd"
+      "definitionUuid": "sgrape.builtin.ceil"
     },
     {
       "key": "clamp",
@@ -245,8 +240,7 @@
         "max": 1
       },
       "descriptionKey": "help.clamp",
-      "definitionUuid": "sgrape.builtin.clamp",
-      "revisionHash": "598b68018a1975663345d5c23c3b6912ac8ec4619a28af72e55e581409c813b9"
+      "definitionUuid": "sgrape.builtin.clamp"
     },
     {
       "key": "color",
@@ -268,8 +262,7 @@
         ]
       },
       "descriptionKey": "help.color",
-      "definitionUuid": "sgrape.builtin.color",
-      "revisionHash": "248cb1f0646af23e93597f4cb941fccd9fdc65cfb36ce816467635766ccddedc"
+      "definitionUuid": "sgrape.builtin.color"
     },
     {
       "key": "combine",
@@ -296,8 +289,7 @@
         ]
       },
       "descriptionKey": "help.combine",
-      "definitionUuid": "sgrape.builtin.combine",
-      "revisionHash": "dba438cc9cfb485d8afe97087417eab1e53ede62c1228e4a5b009feee909d93a"
+      "definitionUuid": "sgrape.builtin.combine"
     },
     {
       "key": "compare",
@@ -322,8 +314,7 @@
         "b": 0
       },
       "descriptionKey": "help.compare",
-      "definitionUuid": "sgrape.builtin.compare",
-      "revisionHash": "d2010eb23d404212e4ff254b22d71d0259600226604e8cdcbaae93e68e52779f"
+      "definitionUuid": "sgrape.builtin.compare"
     },
     {
       "key": "convert",
@@ -343,8 +334,7 @@
         "toType": "int"
       },
       "descriptionKey": "help.convert",
-      "definitionUuid": "sgrape.builtin.convert",
-      "revisionHash": "20ad09c1683272888d3991e9e7dc91d6ed741be089aa6bbe73d2cfd50e34d7dc"
+      "definitionUuid": "sgrape.builtin.convert"
     },
     {
       "key": "cos",
@@ -363,8 +353,7 @@
         "type": "float"
       },
       "descriptionKey": "help.cos",
-      "definitionUuid": "sgrape.builtin.cos",
-      "revisionHash": "f105ae3d41c1b1399827394d808a6d878cff66de850968b789cb51773f927366"
+      "definitionUuid": "sgrape.builtin.cos"
     },
     {
       "key": "divide",
@@ -387,8 +376,7 @@
         "b": 1
       },
       "descriptionKey": "help.divide",
-      "definitionUuid": "sgrape.builtin.divide",
-      "revisionHash": "9597e5740ab457da2e1fb47322253b984355bf57b6af67a5ba96e6ffbd74fa81"
+      "definitionUuid": "sgrape.builtin.divide"
     },
     {
       "key": "dot",
@@ -408,8 +396,7 @@
         "type": "vec3"
       },
       "descriptionKey": "help.dot",
-      "definitionUuid": "sgrape.builtin.dot",
-      "revisionHash": "4714661b5a43b580faa8a7cdc75e08a8e1621532ec8f0bdc78ce4fe13eedd1ef"
+      "definitionUuid": "sgrape.builtin.dot"
     },
     {
       "key": "equal",
@@ -434,8 +421,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "b3e2b380091c5916f7777550d2792c233cd6822a18930ec30a3aac41237eef8c"
+      ]
     },
     {
       "key": "float",
@@ -452,8 +438,7 @@
         "value": 0.5
       },
       "descriptionKey": "help.float",
-      "definitionUuid": "sgrape.builtin.float",
-      "revisionHash": "61df883534354ac44a35997e42d30db702f339fefe0767ea77ac6330431a553b"
+      "definitionUuid": "sgrape.builtin.float"
     },
     {
       "key": "floor",
@@ -472,8 +457,7 @@
         "type": "float"
       },
       "descriptionKey": "help.floor",
-      "definitionUuid": "sgrape.builtin.floor",
-      "revisionHash": "26fdcfbb4c290d0e46a521fb6c1154dff209f159c9b9bde6ff490ddc3e4fac86"
+      "definitionUuid": "sgrape.builtin.floor"
     },
     {
       "key": "fract",
@@ -492,8 +476,7 @@
         "type": "float"
       },
       "descriptionKey": "help.fract",
-      "definitionUuid": "sgrape.builtin.fract",
-      "revisionHash": "f2065cc5ddb317d3f47a2e0cd3f8815e25c05a6175001dd78ac70b746694b302"
+      "definitionUuid": "sgrape.builtin.fract"
     },
     {
       "key": "greaterThan",
@@ -518,8 +501,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "8472cda16304d978adc1f20811f81a892453b350ecf51438abf8dde9ca50d31f"
+      ]
     },
     {
       "key": "greaterThanEqual",
@@ -544,8 +526,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "d8014bcd8ee2af480efe93b374aa1acddce238f37024d6f2697ad8d9a80077ab"
+      ]
     },
     {
       "key": "if",
@@ -571,8 +552,7 @@
         "false": 0
       },
       "descriptionKey": "help.if",
-      "definitionUuid": "sgrape.builtin.if",
-      "revisionHash": "f82d8417bd78020b62ec838245e20a0e7a464a1808b316064d1db8cffff5be54"
+      "definitionUuid": "sgrape.builtin.if"
     },
     {
       "key": "isinf",
@@ -596,8 +576,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "94077c41f28233d451fb25d4a35b5e324d4a86c4b2bbebeaefef1efcd9cbdf92"
+      ]
     },
     {
       "key": "isnan",
@@ -621,8 +600,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "baeed4132d74bf0c5107d5a853728f47cad1b775d668ad6d9fce7746b525e7b6"
+      ]
     },
     {
       "key": "length",
@@ -641,8 +619,7 @@
         "type": "vec3"
       },
       "descriptionKey": "help.length",
-      "definitionUuid": "sgrape.builtin.length",
-      "revisionHash": "fbf3940f68e152a960896d6b69c48f7d81bb5e9ba81c4934e16316e370c145d4"
+      "definitionUuid": "sgrape.builtin.length"
     },
     {
       "key": "lessThan",
@@ -667,8 +644,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "eb9aa419d2b37496226dfe7b50aae281763cb3732bb94c01ff7a1660c2089907"
+      ]
     },
     {
       "key": "lessThanEqual",
@@ -693,8 +669,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "71f57a6921fd395143cc0d59174a3e4b465aa4b8df73145754cfdde82d67ac77"
+      ]
     },
     {
       "key": "math",
@@ -718,8 +693,7 @@
         "operation": "add"
       },
       "descriptionKey": "help.math",
-      "definitionUuid": "sgrape.builtin.math",
-      "revisionHash": "04cdba0192bf36c63eb8c4ee22fe62f19d3b86098346405b98fc004d35bd85c4"
+      "definitionUuid": "sgrape.builtin.math"
     },
     {
       "key": "max",
@@ -739,8 +713,7 @@
         "type": "float"
       },
       "descriptionKey": "help.max",
-      "definitionUuid": "sgrape.builtin.max",
-      "revisionHash": "8b5916554fa1a4a99194850fb5006702908a752925de456f18fdcfeec4e3098b"
+      "definitionUuid": "sgrape.builtin.max"
     },
     {
       "key": "min",
@@ -760,8 +733,7 @@
         "type": "float"
       },
       "descriptionKey": "help.min",
-      "definitionUuid": "sgrape.builtin.min",
-      "revisionHash": "ddf41b8ddddb86359a40b88f1215062b9b2d2d4c7cc1124f76db009e89ba6511"
+      "definitionUuid": "sgrape.builtin.min"
     },
     {
       "key": "mix",
@@ -782,8 +754,7 @@
         "type": "vec4"
       },
       "descriptionKey": "help.mix",
-      "definitionUuid": "sgrape.builtin.mix",
-      "revisionHash": "33e0787d3178b0d0c1b9aec86f8b4be0de679eaaace04caeb81392dcfe41589c"
+      "definitionUuid": "sgrape.builtin.mix"
     },
     {
       "key": "multiply",
@@ -803,8 +774,7 @@
         "type": "vec4"
       },
       "descriptionKey": "help.multiply",
-      "definitionUuid": "sgrape.builtin.multiply",
-      "revisionHash": "6665167574b35ffc1bb7f141723d8719d421b532a650c00fb9cd2719f9b86763"
+      "definitionUuid": "sgrape.builtin.multiply"
     },
     {
       "key": "normalize",
@@ -826,8 +796,7 @@
         "value": 1
       },
       "descriptionKey": "help.normalize",
-      "definitionUuid": "sgrape.builtin.normalize",
-      "revisionHash": "16159343a6a03e3f5833888e96f49a72b1deb6c6e20d4f6d3f9c400dc7a2c11d"
+      "definitionUuid": "sgrape.builtin.normalize"
     },
     {
       "key": "not",
@@ -851,8 +820,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "8abeab61179dfcc65a52fdab9f0d18dd659c3256314a18d2e077123bd112f31f"
+      ]
     },
     {
       "key": "notEqual",
@@ -877,8 +845,7 @@
       "targets": [
         "top",
         "mat"
-      ],
-      "revisionHash": "2cdbeac2313e7adf44cce1838ab7947dd6f49052310ee41b4c6051c54c44e32c"
+      ]
     },
     {
       "key": "pixel_out",
@@ -892,8 +859,7 @@
       ],
       "defaults": {},
       "descriptionKey": "help.pixel_out",
-      "definitionUuid": "sgrape.builtin.pixel_out",
-      "revisionHash": "b37335e4e2462dfa4c0e1cf4c3308f9d64d317ce0d916c5c596a1884a44e4f65"
+      "definitionUuid": "sgrape.builtin.pixel_out"
     },
     {
       "key": "replace",
@@ -921,8 +887,7 @@
         ]
       },
       "descriptionKey": "help.replace",
-      "definitionUuid": "sgrape.builtin.replace",
-      "revisionHash": "7f8301823f0c70bb4e745d3cc12f3d860f82b48dbb227a6e095bff2ab55d75d8"
+      "definitionUuid": "sgrape.builtin.replace"
     },
     {
       "key": "rgba",
@@ -940,8 +905,7 @@
       ],
       "defaults": {},
       "descriptionKey": "help.rgba",
-      "definitionUuid": "sgrape.builtin.rgba",
-      "revisionHash": "0514299936663fa533dcc531be299ccd3a8707b2e32fd139225180056613932b"
+      "definitionUuid": "sgrape.builtin.rgba"
     },
     {
       "key": "round",
@@ -960,8 +924,7 @@
         "type": "float"
       },
       "descriptionKey": "help.round",
-      "definitionUuid": "sgrape.builtin.round",
-      "revisionHash": "4de9f33198e11998397b3d35c87b3bbb11fc63325b8bda0a7b2e44f7326911c1"
+      "definitionUuid": "sgrape.builtin.round"
     },
     {
       "key": "router",
@@ -980,8 +943,7 @@
         "type": "float"
       },
       "descriptionKey": "help.router",
-      "definitionUuid": "sgrape.builtin.router",
-      "revisionHash": "460411fb0c04ea7d492aa79541fa1ad6447a738fdea9e9c1fe289ff26e6fc1d3"
+      "definitionUuid": "sgrape.builtin.router"
     },
     {
       "key": "scalar",
@@ -999,8 +961,7 @@
         "value": 0
       },
       "descriptionKey": "help.scalar",
-      "definitionUuid": "sgrape.builtin.scalar",
-      "revisionHash": "5349f6d53a10051ed36a17d049c8830642f2c1c5ae76939c741f1cc85aa952b9"
+      "definitionUuid": "sgrape.builtin.scalar"
     },
     {
       "key": "sign",
@@ -1019,8 +980,7 @@
         "type": "float"
       },
       "descriptionKey": "help.sign",
-      "definitionUuid": "sgrape.builtin.sign",
-      "revisionHash": "a99638202e9ffce9f6a1bc925ee7052f8092973ff92d85d5a56edddb9dcc2b4d"
+      "definitionUuid": "sgrape.builtin.sign"
     },
     {
       "key": "sin",
@@ -1039,8 +999,7 @@
         "type": "float"
       },
       "descriptionKey": "help.sin",
-      "definitionUuid": "sgrape.builtin.sin",
-      "revisionHash": "265f711fce8e25ba2a3b0839fc4fb24ea98c6a458ee80b189d7efc417f75513c"
+      "definitionUuid": "sgrape.builtin.sin"
     },
     {
       "key": "smoothstep",
@@ -1064,8 +1023,7 @@
         "edge1": 1
       },
       "descriptionKey": "help.smoothstep",
-      "definitionUuid": "sgrape.builtin.smoothstep",
-      "revisionHash": "fea7bf812453b0b4b0bdacddd389843ddfd8a55ed3f17c2b76341bc5a89d8518"
+      "definitionUuid": "sgrape.builtin.smoothstep"
     },
     {
       "key": "split",
@@ -1086,8 +1044,7 @@
       ],
       "defaults": {},
       "descriptionKey": "help.split",
-      "definitionUuid": "sgrape.builtin.split",
-      "revisionHash": "d7814765c45269fe55b74659af5d55e41843a1ed87c8c3719aca4156bbe00d1a"
+      "definitionUuid": "sgrape.builtin.split"
     },
     {
       "key": "sqrt",
@@ -1106,8 +1063,7 @@
         "type": "float"
       },
       "descriptionKey": "help.sqrt",
-      "definitionUuid": "sgrape.builtin.sqrt",
-      "revisionHash": "e9122782be606085d9ac0a6871299b4cce3874e279dee8f665fd8acd30049e29"
+      "definitionUuid": "sgrape.builtin.sqrt"
     },
     {
       "key": "subtract",
@@ -1127,8 +1083,7 @@
         "type": "float"
       },
       "descriptionKey": "help.subtract",
-      "definitionUuid": "sgrape.builtin.subtract",
-      "revisionHash": "5423bfc37c74cd85cccf3aa3b5b8177b464de646b74e43fe6ca02eb26ad6b405"
+      "definitionUuid": "sgrape.builtin.subtract"
     },
     {
       "key": "swizzle",
@@ -1148,8 +1103,7 @@
         "mask": "xy"
       },
       "descriptionKey": "help.swizzle",
-      "definitionUuid": "sgrape.builtin.swizzle",
-      "revisionHash": "3c3441af0cb6b0b53fe63fa1dc077f3c56326c3485d7d5c5de7fde493f431442"
+      "definitionUuid": "sgrape.builtin.swizzle"
     },
     {
       "key": "trunc",
@@ -1168,8 +1122,7 @@
         "type": "float"
       },
       "descriptionKey": "help.trunc",
-      "definitionUuid": "sgrape.builtin.trunc",
-      "revisionHash": "3edeff6f538eba1c7c796d6c683e907abb4746c8034310e33ee9c5d34faa8302"
+      "definitionUuid": "sgrape.builtin.trunc"
     },
     {
       "key": "uniform",
@@ -1186,8 +1139,7 @@
         "declarationId": ""
       },
       "descriptionKey": "help.uniform",
-      "definitionUuid": "sgrape.builtin.uniform",
-      "revisionHash": "0bf1f9ecbb3c91c69160f42f6bb11ab56e37dea21d7a74f952d8248c895d36f5"
+      "definitionUuid": "sgrape.builtin.uniform"
     },
     {
       "key": "vec2",
@@ -1207,8 +1159,7 @@
         ]
       },
       "descriptionKey": "help.vec2",
-      "definitionUuid": "sgrape.builtin.vec2",
-      "revisionHash": "3626d76bfc9b576e593300589c2dcd2c00bdfc79706bedad57f98d530a84cb37"
+      "definitionUuid": "sgrape.builtin.vec2"
     },
     {
       "key": "vec3",
@@ -1229,8 +1180,7 @@
         ]
       },
       "descriptionKey": "help.vec3",
-      "definitionUuid": "sgrape.builtin.vec3",
-      "revisionHash": "f576162450abafdc51d9ff84531c9689c21236291f9ba65ad8d477366eb1372b"
+      "definitionUuid": "sgrape.builtin.vec3"
     },
     {
       "key": "vec4",
@@ -1252,8 +1202,7 @@
         ]
       },
       "descriptionKey": "help.vec4",
-      "definitionUuid": "sgrape.builtin.vec4",
-      "revisionHash": "200c2cd0c628bb254d1a0a4e6b584d42435d6344ff5c1a7b63fcddb452d59656"
+      "definitionUuid": "sgrape.builtin.vec4"
     },
     {
       "key": "vector",
@@ -1276,8 +1225,7 @@
         ]
       },
       "descriptionKey": "help.vector",
-      "definitionUuid": "sgrape.builtin.vector",
-      "revisionHash": "d4afc585f94d526bf61a7cf77fcf91ea92136adc0d614f4ef23016b437b0ae67"
+      "definitionUuid": "sgrape.builtin.vector"
     },
     {
       "key": "vector_split",
@@ -1297,8 +1245,7 @@
         "type": "vec2"
       },
       "descriptionKey": "help.vector_split",
-      "definitionUuid": "sgrape.builtin.vector_split",
-      "revisionHash": "364abce677961b275edf97cd163dd9ada7a778ac92d369bb19ba39d688a61927"
+      "definitionUuid": "sgrape.builtin.vector_split"
     }
   ],
   "typeContract": {

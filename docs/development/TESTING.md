@@ -1,5 +1,7 @@
 # 測試
 
+> **現行做法（2026-10-08）**：自動測試用 `npm run test:core`、`npm run test:editor` 與 `python tools/dev/run_tests.py`。舊 Python 核心與只測它的測試已於清理第 5 條刪除（design-interview Q48），以下各段中引用 `src/core`、`sgrape_*` 或已刪測試的指令只作歷史紀錄。
+
 ## 單輸入乘積預設與 Preview 外觀（2026-10-03，0.8.276）
 
 以 `PYTHONPATH=src/core;src/td/runtime;tests/unit` 執行 `python -m unittest test_wire_validation test_matrix_foundation test_matrix_arithmetic test_matrix_double_operations test_pixel_preview test_pixel_preview_lifecycle test_pixel_preview_recovery`，83 項通過。新 `test_auto_operand_defaults.js` 由 arithmetic Python wrapper 執行：44 組直接預設、44 組 Creator 局部／完整試算，另驗證兩線矩陣乘法、非方陣 Outer Product、Locked、If／Boolean Mix、保存／重載、Undo／Redo，以及巢狀 local Function。測試先抓到無關拓樸編輯會改寫舊 Auto 簽名／手填值的反例，修正後確認旧 Multiply／Outer Product 與其 Auto／Locked 下游完整保留；重新接線、上游改型別及 Locked → Auto 仍採新預設。沒有新增序列化 metadata。

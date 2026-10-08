@@ -22,6 +22,10 @@ for key in json.loads(sys.argv[2]):
 print(json.dumps(rows,allow_nan=False))
 `;
 const rows=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',python,path.resolve(legacyRoot,'src/core'),JSON.stringify(keys)],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}}));
+// Legacy cases are old-format graphs; convert them with the tool that converts real old graphs (Q44).
+// 舊產碼器產出舊格式的圖，用轉換真實舊圖的同一支工具轉成新格式。
+const {convertOldGraph}=require('../../tools/dev/old_graph.cjs');
+for(const row of rows)row.graph=convertOldGraph(row.graph).graph;
 fs.writeFileSync(path.join(folder,'legacy-cases.json'),JSON.stringify(rows,null,2));
 const root=path.resolve(__dirname,'../..'),scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(root,'src/generated/wire_planning.js'),'utf8'),scope);
 for(const row of rows){
