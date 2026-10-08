@@ -17,7 +17,7 @@ def verify_service():
     (assets / 'index.html').write_text('<span class="brand-version">Fixture.1</span><img src="icons/test.png">', encoding='utf-8')
     (assets / 'icons/test.png').write_bytes(b'\x89PNG fixture A')
     (assets / 'stale.txt').write_text('removed in the next snapshot')
-    source = op('/TD_Grape/GrapeEditor')
+    source = op.TDGrape.op('GrapeEditor')
     probe = op('/project1').copy(source, name='editor_service_probe_' + uuid.uuid4().hex[:8])
     holder = None
     results = []

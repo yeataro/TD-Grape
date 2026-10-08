@@ -2,8 +2,10 @@
 
 Existing source/network preferences are preserved. A new component starts inactive.
 """
-owners = [n for n in op('/').findChildren() if n.storage.get('sgrapeManager', False)]
-assert len(owners) == 1, 'Expected one Grape manager.'
+# The main component is found by its global OP shortcut only (design-interview Q49). The old
+# lookup (a 'sgrapeManager' storage key) found nothing after the 2026-10-08 cleanup.
+assert hasattr(op, 'TDGrape'), 'The TD-Grape main component (global OP shortcut TDGrape) is not in this project.'
+owners = [op.TDGrape]
 source = GRAPE_ROOT / 'src/remote_panel/build.py'
 scope = dict(globals(), __file__=str(source))
 exec(compile(source.read_text(encoding='utf-8'), str(source), 'exec'), scope, scope)

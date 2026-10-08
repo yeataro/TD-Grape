@@ -73,7 +73,7 @@ def check_editor_vfs_paths(source, output):
 
 
 if globals().get('GRAPE_VFS_VERIFY_LIVE', False):
-    editor = op('/TD_Grape/GrapeEditor')
+    editor = op.TDGrape.op('GrapeEditor')
     folder = editor.op('folder1')
     expected = {
         folder[row, 'relpath'].val: Path(folder[row, 'path'].val).read_bytes()
@@ -84,7 +84,7 @@ if globals().get('GRAPE_VFS_VERIFY_LIVE', False):
     assert actual == expected, 'Live button result differs from source paths or bytes'
     print(json.dumps({'liveButtonResultPassed': True, 'fileCount': len(actual)}))
 else:
-    result = check_editor_vfs_paths(op('/TD_Grape/GrapeEditor'), GRAPE_VFS_TEST_OUTPUT)
+    result = check_editor_vfs_paths(op.TDGrape.op('GrapeEditor'), GRAPE_VFS_TEST_OUTPUT)
     print(json.dumps(result, ensure_ascii=False))
     Path(GRAPE_VFS_TEST_OUTPUT, 'latest-result.json').write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8'

@@ -8,7 +8,9 @@ import json
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
-host = op('/TD_Grape')
+# The main component is found by its global OP shortcut only (design-interview Q49), wherever it is.
+assert hasattr(op, 'TDGrape'), 'The TD-Grape main component (global OP shortcut TDGrape) is not in this project.'
+host = op.TDGrape
 manager = host.op('GrapeManager')
 editor = host.op('GrapeEditor')
 checkpoint = Path(CHECKPOINT_DIR)
@@ -100,13 +102,9 @@ assert service.Start(), 'Editor HTTP startup failed'
 service._connect_manager()
 assert manager.ext.GrapeManagerExt.queue is not None, editor.par.Serviceerror.eval()
 
-# The review Grape OP outside the Manager. Creating Grape OPs returns with the new
-# creation path (design-interview Q6, Q16); this tool never builds one.
-# 審查用 Grape OP；建立 Grape OP 等新的建立功能（Q6、Q16），這支工具不建立。
-family = host.parent().op('Grape_TOP_test')
-assert family is not None, 'The review Grape OP Grape_TOP_test is missing.'
-manager.ext.GrapeManagerExt.Register(family)
-family.op('GrapeControls/editor_control').text = (root / 'src/td/runtime/grape_op_controls.py').read_text(encoding='utf-8')
+# Grape OPs are not touched here: the Manager finds them by tag when it connects, and their
+# program comes from the template (install_grape_templates.py; updating existing ones is the
+# update mechanism, grape-op-structure #10). 這支工具不碰任何 Grape OP（不再寫死某個測試 OP）。
 assert protected() == before_icon, 'Protected icon changed'
-print(json.dumps({'url': 'http://127.0.0.1:' + str(service.http.port) + '/shader/' + family.par.Grapeid.eval() + '/',
-                  'family': family.path, 'manager': manager.path, 'protectedIconUnchanged': True}))
+print(json.dumps({'manager': manager.path, 'port': service.http.port,
+                  'grapeOPs': len(manager.ext.GrapeManagerExt.families), 'protectedIconUnchanged': True}))

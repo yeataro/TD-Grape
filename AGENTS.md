@@ -76,7 +76,7 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
 
 - **TD 現場**：操作前用 TD MCP 確認進程、TOE、目標、資產版本與服務，不假定舊 port／路徑有效。`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴禁止修改。更新運行中的 TD 時保留使用者的圖、參數關聯、Shader ID 與連線；更新來源、保存 TOE、升級 Shader 是不同操作。
 - **TD 參照與畫面檢查（人類 2026-10-08）**：建立、轉換、安裝或修改 TD OP 後，所有指向 OP 的參數（Operator Viewer、`op`、`pixeldat`、內部 OP 捷徑、Export、引用 OP 的 expression）都要確認 `par.eval()` 不是 None **且**指向預期的那個 OP；COMP 參數上的裸名稱是從 COMP 旁邊找，指自己裡面要寫 `./名稱` 或 `me.op(...)`。驗證要包含人看得到的狀態（縮圖、旗標、參數頁），不只 GLSL 與錯誤；並掃同類 OP 是否有同樣的錯。起因：安裝程式把 Grape OP 的 Operator Viewer 設成 `'output'`，功能檢查全過、人一看就發現。
-- **網頁資產（`/TD_Grape/GrapeEditor`）**：用 TD 內的開發腳本 `/dev_tools/grape_editor`（原始碼 `tools/td/grape_editor_dev.py`，改了要重新貼入 DAT），不手動按參數：
+- **網頁資產（主組件內的 `GrapeEditor`）**：用 TD 內的開發腳本 `/dev_tools/grape_editor`（原始碼 `tools/td/grape_editor_dev.py`，改了要重新貼入 DAT），不手動按參數：
   - 開發：`op('/dev_tools/grape_editor').module.DevMode()`——改用外部資料夾；之後每次 `build:editor` 輸出到 Rootfolder 再按 **Reload Assets**（TD 在 Reload 當下讀入整包快照，不即時監看資料夾）。
   - 交付或提交 TOE 前：`op('/dev_tools/grape_editor').module.Deliver()`——打包進 VFS、關閉外部資料夾、核對版本後存 TOE；任一步失敗即停止、不存檔。
 - **Grape OP 對 Manager 只有編輯依賴**：Manager 缺席時原生參數、Bind、texture、Shader 執行照常；不輪詢、不重試；子 OP 不設 Global Shortcut。（用語：使用者建立的 Grape TOP／Grape MAT 總稱 **Grape OP**，人類也稱「子 OP」；程式裡的「Family」是舊稱，「Family」一詞只保留給 TDFam 的 OP Family。）

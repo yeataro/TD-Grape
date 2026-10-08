@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.35 — 排查舊的笨行為（一）：主組件一律用全域捷徑找 — 2026-10-09
+
+人類：「開始排查舊的笨行為」。盤點與分類寫在 workspace `work/refactor/dumb-behavior-audit.md`。規則補充（人類 10-09）：TD 內建的位置（`/ui`、`/sys`、`/local`…）可以用絕對路徑，除非 TD 有其他首選方法。
+
+- **改用 `op.TDGrape`**：[install_native_manager.py](../../tools/jobs/install_native_manager.py)（並拿掉「寫死去改 `Grape_TOP_test` 的控制程式」——安裝 Manager 不碰任何 Grape OP）、[grape_editor_dev.py](../../tools/td/grape_editor_dev.py)（TD 內 `/dev_tools/grape_editor` 已更新）、[build_remote_panel.py](../../tools/dev/jobs/build_remote_panel.py)（原本找 storage `sgrapeManager`，10-08 清理後已找不到、工具其實壞了）、`tests/td/test_editor_service.py`、`tests/td/test_editor_vfs_paths.py`。註解與 AGENTS.md 不再寫死 `/TD_Grape/...`。
+- **照規則留著**：Grape OP 以 tag 從根目錄找（Q32）、TDFam 內部的 TD 內建路徑、TD 自動產生的資訊表、開發 TOE 專用的 `/dev_tools`、測試的暫時區域。
+- **驗證**：Python 52、portable checks 通過；真實 TD：修正後的 `install_native_manager.py` 實跑成功（Manager 重裝、服務重啟、保護區未動）；`grape_editor_dev` 的 `DevMode()`／`Deliver()` 照常；全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.63`。
+- **未做**：主組件 `sgrapeManager` 舊 tag、`remote_panel` 指向不存在 OP 的 `Targetop`——待人類決定；把主組件放到非根目錄的驗收——做法待討論。`build_remote_panel.py` 只改了找主組件的方式，沒有實跑。
+
 ## Refactor.34 — GLSL 在 TD 編譯失敗時圖照存；訊息如實；`graph_meta` 不再存兩份 GLSL — 2026-10-09
 
 人類同意（「先這樣做，先試過再說」）。依 design-interview Q38（只有執行部分全有或全無，圖收到就存）。

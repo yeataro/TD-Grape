@@ -1,6 +1,7 @@
 """Grape Editor delivery / development mode for the dev TOE. Not product code.
 
-Embedded as the DAT /dev_tools/grape_editor (outside /TD_Grape so it never ships).
+Embedded as the DAT /dev_tools/grape_editor, a dev-TOE-only location outside the main component
+so it never ships (an absolute path to the dev TOE's own tool is intended).
 Run from the Textport or TD MCP:
 
     op('/dev_tools/grape_editor').module.Deliver()   # pack web assets into VFS, external off, save TOE
@@ -11,13 +12,13 @@ AGENTS.md 網頁資產規則的可執行版本：交付前打包進 VFS → 關�
 """
 import json
 
-EDITOR = '/TD_Grape/GrapeEditor'
-
-
 def _editor():
-    editor = op(EDITOR)
+    # The main component is found by its global OP shortcut only (design-interview Q49).
+    if not hasattr(op, 'TDGrape'):
+        raise RuntimeError('The TD-Grape main component (global OP shortcut TDGrape) is not in this project.')
+    editor = op.TDGrape.op('GrapeEditor')
     if editor is None:
-        raise RuntimeError('GrapeEditor not found at ' + EDITOR)
+        raise RuntimeError('GrapeEditor not found in ' + op.TDGrape.path)
     return editor
 
 

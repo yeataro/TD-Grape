@@ -1,6 +1,6 @@
 """Preserve asset paths below GrapeEditor's Rootfolder when packing into VFS.
 
-Embedded at /TD_Grape/GrapeEditor/folder1_callbacks. The Palette virtualFile
+Embedded as GrapeEditor/folder1_callbacks in the main component. The Palette virtualFile
 component consumes the overrideName column; path remains the disk read source.
 """
 from pathlib import Path
