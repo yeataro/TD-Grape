@@ -42,6 +42,7 @@
 | 內建值 | Built-in value；`kind` 暫稱 `builtin` | 語意由 Grape 保證的宣告，例如 6 個時間預設（`absTime.seconds` 等）。名稱固定、不能改名、不能公開、不能改驅動；一張圖同一個只建一筆（Q44、Q45）。 |
 | TD 內建值（節點） | TD built-in；`nodeType` `sgrape.builtin.td_value`、參數 `entry` | 引用 TD 準備好的一段 GLSL（如 `vUV.st`、`TDPos()`、`uTDOutputInfo.res.xy`）的節點：一個節點類型，表放在它旁邊，參數選一筆；不需要宣告。刻意不用 `builtin` 當 key（已用於節點前綴與內建值 kind）（Q45）。 |
 | 引用宣告（節點） | Declaration reference；`nodeType` `sgrape.builtin.declaration`、參數 `declarationId` | 指向一筆宣告的節點；接口、能否當常數、產碼由該 `kind` 的模組決定。固定標籤暫定「共用來源／Shared Source」，畫布標題顯示被指向那一筆的名字（Q45；新能力，做來源那一輪再確認）。 |
+| Grape ID | Grape ID | Grape OP 的身分：Grape 頁上的唯讀參數 `Grapeid`（32 位小寫十六進位）。編輯器網址 `/shader/<Grape ID>/` 與存檔信封都用它；複製出來的 Grape OP 建立時自動換號（Q32）。不再存在 storage。 |
 | Grape Editor Version | Grape Editor Version | Grape OP 的 Grape 頁上的唯讀欄位：產生目前執行中 GLSL 的編輯器版本。不叫 Version，以免被當成圖的版本（Q45）。 |
 
 已否決的名稱：Graph Globals／Global／`GraphGlobal`／`ShaderGlobal`（global 在程式裡像整個編輯器或所有 Shader 共用）。見 design-interview Q41。

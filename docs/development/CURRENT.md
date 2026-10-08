@@ -6,7 +6,9 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.31**（2026-10-08）——清殘留第 8 條：核心套件 `wire_planning.js` 改名 `grape_core.js`、拿掉 `GrapeWirePlanning`。**清理清單第 1–8 條全部完成。**
+**最新交付：Refactor.32**（2026-10-08）——從 TD 選單（Tab）建立新格式的 Grape TOP：範本自帶預設圖與 GLSL，不需編輯服務；身分改成 Grape 頁唯讀參數 Grape ID，複製時自動換號（Q32 實作與量測）；Grape MAT 先從選單拿掉。**待人類實機驗收**。下一輪：完整 Grape 頁（Q45）。
+
+**Refactor.31**（2026-10-08）——清殘留第 8 條：核心套件 `wire_planning.js` 改名 `grape_core.js`、拿掉 `GrapeWirePlanning`。**清理清單第 1–8 條全部完成。**
 
 **Refactor.30**（2026-10-08）——清殘留第 6 條：刪核心的 `transact()`（直接改呼叫者的圖、繞過容量與結構關卡）；所有修改只剩 `GraphDocument.change()` 一條路。
 
@@ -44,11 +46,11 @@
 
 **主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
 - 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
-- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條）**，寫回 design-interview **Q45**；**核心四區 03 節點與型別（92）、04 編輯指令（88）、05 子圖（54）、06 Stage（49）**，寫回 **Q46**（修改 Q41 子圖可放不用宣告的、Q44 子圖 Stage／target 改推算；子圖存檔名稱改 `subgraphId`／`sgrape.builtin.subgraph_*`；沒用的子圖定義刪掉；Math 與 Add 等都留；自動轉換只做不遺失資料的；Color Output 什麼都能接）。**畫面五區 07 節點外觀（48）、08 面板與版面（56）、09 新增選單與 Library（33）、10 匯入匯出（31）、11 設定語系圖示（42）也已完成**，寫回 **Q47**（低牽連的介面細節擱置到加回來時再定；Log 的「怎麼來」要早做；畫布暫不做成面板但狀態要能支援多份、編輯器同時持有多張圖；浮動面板自由擺放吸附邊緣；參數面板通用化）。03–11 的 C 類人類已逐條確認，補充寫在 Q47 後的「C 類確認時的修正」。**需求盤點全部 11 區完成；清殘留判斷規則已定（Q48）。清理清單第 2、3 條已做（Refactor.27）、第 4 條已做（Refactor.28）、第 5 條已做（Refactor.29）、第 6 條已做（Refactor.30）、第 7 條判為留、第 8 條已做（Refactor.31）。**清理清單全部完成**；下一步待人類決定（見報告 `../work/refactor/cleanup-report-2026-10-08.md`）。**
+- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條）**，寫回 design-interview **Q45**；**核心四區 03 節點與型別（92）、04 編輯指令（88）、05 子圖（54）、06 Stage（49）**，寫回 **Q46**（修改 Q41 子圖可放不用宣告的、Q44 子圖 Stage／target 改推算；子圖存檔名稱改 `subgraphId`／`sgrape.builtin.subgraph_*`；沒用的子圖定義刪掉；Math 與 Add 等都留；自動轉換只做不遺失資料的；Color Output 什麼都能接）。**畫面五區 07 節點外觀（48）、08 面板與版面（56）、09 新增選單與 Library（33）、10 匯入匯出（31）、11 設定語系圖示（42）也已完成**，寫回 **Q47**（低牽連的介面細節擱置到加回來時再定；Log 的「怎麼來」要早做；畫布暫不做成面板但狀態要能支援多份、編輯器同時持有多張圖；浮動面板自由擺放吸附邊緣；參數面板通用化）。03–11 的 C 類人類已逐條確認，補充寫在 Q47 後的「C 類確認時的修正」。**需求盤點全部 11 區完成；清殘留判斷規則已定（Q48）。清理清單第 2、3 條已做（Refactor.27）、第 4 條已做（Refactor.28）、第 5 條已做（Refactor.29）、第 6 條已做（Refactor.30）、第 7 條判為留、第 8 條已做（Refactor.31）。**清理清單全部完成。** Refactor.32 做了「建立 Grape OP＋身分」；下一輪：完整 Grape 頁（Q45：Open Editor 用 App 視窗、服務沒開時問、Open in Browser、GLSL Parameters、Grape Editor Version、Generated TOP）。**
 
 **盤查最重要的發現：**
 1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 已由議事錄定案（Q44），待實作。
-2. **沒有方法建立新格式的 Grape OP**：舊的 `InitializeFamily`（經 NativeFamily 寫 v1）已於 Refactor.27 刪除；選單建立（family_callbacks／masters）已斷。要做新的建立功能（Q6、Q16）。
+2. ~~沒有方法建立新格式的 Grape OP~~（Refactor.32 已做：從 TD 選單建立）。
 3. **自訂參數頁（GrapeManager `parameters`）**：LEGACY-PYTHON 標「關閉舊入口前要先搬」，Refactor.24／25 關閉時漏看——目前無處可編輯 Grape OP 自訂參數。人類傾向：屬舊架構，之後照 Q41 重做，不搬舊的。重做時要守（Q44）：Grape 自動產生的參數（所有公開來源，含 MAT 貼圖）在這個頁面不能編輯或不能刪除。
 4. ~~TD Manager 啟動仍強制載入舊 Python 模組…~~（Refactor.27–29 已處理）原記錄：TD Manager 啟動仍強制載入舊 Python 模組（history、parameters）與 `editor-library.json`；`test:core` 以舊 Python 編譯器當對照組；`build:core` 仍替舊 Python 寫 `node_catalog.json`／`frontend_capabilities.json`，且擋住刪 `float`／`vec2`…。
 5. 新測試 OP 內仍有舊 `GrapeControls/parameter_links` 在跑、存著 `grapeV1DocumentBackup`。

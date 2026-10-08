@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.32 — 從 TD 選單建立新格式的 Grape TOP；Grape OP 身分改用參數 — 2026-10-08
+
+依 design-interview Q32（方向＋本輪實作與量測，見 Q32 末段）、Q45。人類定：Grape 頁完整內容下一輪；Grape MAT 先從選單拿掉；`Regenerateid` 照放、隱藏與排版人類最後整理。
+
+- **建立**：新工具 [install_grape_templates.py](../../tools/jobs/install_grape_templates.py) 產生 `/TD_Grape/masters/grape_top`：Shader、預設圖與其 GLSL（取自 `editor-bootstrap.json` 的 `defaultDocument`）、`GrapeControls`（document／status／identity／editor_control）、TDFam `FamManifest`、說明框。舊範本 `grape_top`、`grape_mat` 刪除；TDFam `Compatibletypes`＝`TOP`；[family_callbacks.py](../../src/td/runtime/family_callbacks.py) 放置時不做事。從選單建立不需編輯服務或 Manager。
+- **身分**：[grape_op_identity.py](../../src/td/runtime/grape_op_identity.py)（每個 Grape OP 內 `GrapeControls/identity`，`onCreate` 延後一幀、撞號才換）；[grape_op_controls.py](../../src/td/runtime/grape_op_controls.py)（原 `native_family_controls.py`：Edit、Regenerate ID、`Grapeid` 被程式改壞時改回）；[next_family.py](../../src/td/runtime/next_family.py) 從 `Grapeid` 讀身分、信封 ID 不同時改寫信封；[grape_manager_ext.py](../../src/td/runtime/grape_manager_ext.py) 每次請求用 tag 搜尋、排除範本。tag：`grapeOP`、`grapeManager`；捷徑 `GrapeOP`。舊範本專用的 `shader_controls.py` 刪除。
+- **測試 OP**：`Grape_TOP_React` 的 ID 從 storage 搬到參數（備份 workspace `work/refactor/grape-op-round/`，搬遷腳本同處），圖與 Shader 未動。
+- **驗證**：core 110、editor 37、Python 50（新增：複本採用自己的 ID、沒有 ID 不開）、瀏覽器測試通過。真實 TD：範本建立→取號；複製換號、剪下貼上保留、.tox 載入、兩個同號一起載入恰一個換號；程式寫入壞 ID 被改回；兩個由範本建出的 OP 各自讀寫互不影響；**TDFam `PlaceOp`（與 Tab 選單同一流程）放出 `Grape_TOP1`**，瀏覽器開編輯器顯示預設圖，改顏色後 GLSL 與輸出像素跟著變；測試 OP 搬遷後 state／apply 正常（595→596）。效能見 Q32（15,600 OP：50 個同時建立的檢查共 13.9 ms）。Deliver 存 `TD-Grape-dev.50`。
+- **未驗證**：人類實際用 Tab 選單建立（本輪用 TDFam 的 `PlaceOp` 代替）；真正重開 TD 專案時的 onCreate 行為（以同時載入 .tox 模擬）。
+
 ## Refactor.31 — 清殘留第 8 條：舊名 `wire_planning.js`／`GrapeWirePlanning` — 2026-10-08
 
 照 design-interview Q48（人類授權第 4–8 條自行進行）。

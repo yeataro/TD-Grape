@@ -64,12 +64,12 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 | `GrapeEditor` | `editor_service*.py`、`editor_folder_callbacks.py` 5 份，皆與 repo 一致 | 常駐 |
 | `GrapeManager` | 見上節 | 已整理 |
 | `remote_panel` | 13 份與 [src/remote_panel](../../src/remote_panel) 一致；另 107 個 DAT 為 TD 內建元件（annotation、cameraViewport 等）的內部程式，非本專案 | 常駐 |
-| `masters`（`grape_mat`、`grape_top`） | 舊式 Grape OP 範本；`controls` 是 [shader_controls.py](../../src/td/runtime/shader_controls.py)，Open Editor 要呼叫舊的 `runtime`，已不存在 | **暫留**（Q48）：TDFam 的 `Opcomp` 指向這裡。出口：「建立 Grape OP」那一輪（Q6、Q16）換成新格式範本 |
-| `family_callbacks` | [family_callbacks.py](../../src/td/runtime/family_callbacks.py)：TD 選單建立 Grape OP 後的 `onPostPlaceOp` 呼叫舊 `runtime` | **暫留**（Q48）：TDFam 的 `Callbackdat` 指向這裡；從選單建立會失敗（依程式判斷，未實測）。出口同上 |
+| `masters`（`grape_top`） | Grape OP 範本，TD 選單（TDFam）複製的來源；帶預設圖與 GLSL，由 [install_grape_templates.py](../../tools/jobs/install_grape_templates.py) 產生 | 常駐（Refactor.32 換成新格式；Grape MAT 等 MAT 那一輪） |
+| `family_callbacks` | [family_callbacks.py](../../src/td/runtime/family_callbacks.py)：TDFam 回呼，放置時不做事 | 常駐（Refactor.32） |
 | `tdfam` | TDFam 外部套件 | 不納入 |
 | `IconGen`、`icon`、`licenses` | 保護區／授權 | 不動 |
 
-各 Grape OP 內：`GrapeControls/editor_control` 為新式 [native_family_controls.py](../../src/td/runtime/native_family_controls.py)（常駐）。測試 OP `Grape_TOP_React` 的舊 `parameter_links`／`parameter_lifecycle` 與舊 storage 已於 2026-10-08 刪除（內容備份在 workspace `work/refactor/cleanup-4/`）；舊格式的 `Grape_TOP_Refactor` 未動（舊圖樣本）。
+各 Grape OP 內：`GrapeControls/editor_control`（[grape_op_controls.py](../../src/td/runtime/grape_op_controls.py)）與 `GrapeControls/identity`（[grape_op_identity.py](../../src/td/runtime/grape_op_identity.py)，Q32 身分與撞號），常駐。舊格式的 `Grape_TOP_Refactor` 未動（舊圖樣本）。
 
 **repo 裡、但不在 TOE 執行的 Python**
 
@@ -83,4 +83,4 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 
 **留下的資料**（之後那一輪會用到）：`src/library/builtin_subgraphs.json`（內建子圖庫，子圖那一輪）、`material_presets.json`（MAT 預設，MAT 那一輪）、`source_catalog.json`（TS 核心在用）。
 
-**現在 repo 裡的 Python 只剩**：`src/td/runtime/` 的新 TD 宿主程式、`src/remote_panel/`、開發工具（`tools/dev/` 的 runner／bootstrap／paths 等、`tools/jobs/install_native_manager.py`、`tools/td/grape_editor_dev.py`）及其測試；暫留的 `shader_controls.py`、`family_callbacks.py`（隨 `masters`）。
+**現在 repo 裡的 Python 只剩**：`src/td/runtime/` 的新 TD 宿主程式、`src/remote_panel/`、開發工具（`tools/dev/` 的 runner／bootstrap／paths 等、`tools/jobs/install_native_manager.py`、`tools/td/grape_editor_dev.py`）及其測試；`family_callbacks.py`（TDFam 回呼）。舊範本專用的 `shader_controls.py` 已於 Refactor.32 刪除。

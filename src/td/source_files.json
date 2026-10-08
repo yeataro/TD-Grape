@@ -20,9 +20,10 @@
   "icon-64.png": "src/editor-react/static/icons/icon-64.png",
   "locales.json": "src/editor-react/static/locales.json",
   "manifest.webmanifest": "src/editor-react/static/manifest.webmanifest",
-  "shader_controls.py": "src/td/runtime/shader_controls.py",
   "source_catalog.json": "src/library/source_catalog.json",
   "material_presets.json": "src/library/material_presets.json",
   "grape_core.js": "src/generated/grape_core.js",
-  "builtin_subgraphs.json": "src/library/builtin_subgraphs.json"
+  "builtin_subgraphs.json": "src/library/builtin_subgraphs.json",
+  "grape_op_controls.py": "src/td/runtime/grape_op_controls.py",
+  "grape_op_identity.py": "src/td/runtime/grape_op_identity.py"
 }

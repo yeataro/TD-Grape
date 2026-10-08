@@ -3,6 +3,10 @@ import json
 from hashlib import sha256
 
 
+GRAPE_OP_TAG = 'grapeOP'
+TEMPLATES_TAG = 'grapeTemplates'
+
+
 class GrapeManagerExt:
     def __init__(self, ownerComp):
         self.ownerComp = ownerComp
@@ -11,6 +15,15 @@ class GrapeManagerExt:
         self.editor = None
         self.families = {}
         self.bootstrap = None
+
+    @staticmethod
+    def _template(comp):
+        node = comp.parent()
+        while node is not None:
+            if TEMPLATES_TAG in node.tags:
+                return True
+            node = node.parent()
+        return False
 
     def _module(self, name):
         return self.ownerComp.op(name).module
@@ -34,7 +47,7 @@ class GrapeManagerExt:
         panel = self.ownerComp.par.Remotepanel.eval()
         editor.http.preview_port = int(panel.par.Port.eval()) if panel else None
         # Discovery happens on connection, never on an idle frame or child cook.
-        self.families = {comp.id: comp for comp in op('/').findChildren(tags=['grapeNativeFamily'])}
+        self.families = {comp.id: comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)}
         for comp in self.families.values():
             self._clear_absence(comp)
         self._status('Ready', registered=len(self.families), version=editor.snapshot.version)
@@ -72,22 +85,25 @@ class GrapeManagerExt:
         return nxt.NextFamily(comp, validation_area=self.ownerComp.op('validation'))
 
     def Resolve(self, target_id):
-        matches = [comp for comp in self.families.values() if comp.valid and comp.fetch('sgrapeShaderId', None) == target_id]
+        # TD is the registry (Q32): search by tag on demand, so new copies are found without registering.
+        # TD 本身就是名冊：需要時用 tag 搜尋，新複本不必先登記也找得到。
+        matches = [comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG])
+                   if not self._template(comp) and self._module('next_family').identity(comp) == target_id]
         if len(matches) > 1:
             raise RuntimeError('Duplicate Family identity detected; no copy was selected or changed. Review the copies before editing.')
         return self.Adapter(matches[0]) if matches else None
 
     def Register(self, comp):
-        if 'grapeNativeFamily' not in comp.tags:
-            raise RuntimeError('This is not a migrated native Family.')
+        if GRAPE_OP_TAG not in comp.tags or self._template(comp):
+            raise RuntimeError('This is not a Grape OP.')
         self.Adapter(comp).state()
         self.families[comp.id] = comp
         self._clear_absence(comp)
-        return comp.fetch('sgrapeShaderId')
+        return self._module('next_family').identity(comp)
 
     def Choices(self):
-        rows = [{'id': comp.fetch('sgrapeShaderId'), 'path': comp.path, 'kind': 'top'}
-                for comp in self.families.values() if comp.valid]
+        rows = [{'id': self._module('next_family').identity(comp), 'path': comp.path, 'kind': 'top'}
+                for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)]
         return {'shaders': rows, 'projectFile': project.name}
 
     def Open(self, comp):

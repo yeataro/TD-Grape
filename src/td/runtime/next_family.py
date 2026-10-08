@@ -24,6 +24,12 @@ def digest(text):
     return sha256(text.encode('utf-8')).hexdigest()
 
 
+def identity(comp):
+    """The Grape OP's ID: its read-only Grapeid parameter (Q32)."""
+    par = getattr(comp.par, 'Grapeid', None)
+    return par.eval() if par is not None else ''
+
+
 def read_runtime(text, *, catalog_hash):
     """The execution part (GLSL + bindings) is TD's own input, so TD reads it."""
     require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= 1024 * 1024, 'invalid runtime part')
@@ -63,11 +69,20 @@ class NextFamily:
         # 舊格式的圖不在這裡開啟或寫入，之後由匯入器處理。
         require(isinstance(value, dict) and value.get('format') == FORMAT,
                 'This Grape OP holds an old-format graph. The editor does not open or change it; an importer will handle old graphs later.')
-        require(value.get('targetId') == self.comp.fetch('sgrapeShaderId', None), 'stored target mismatch')
         for part in ('document', 'runtime'):
             entry = value.get(part)
             require(isinstance(entry, dict) and isinstance(entry.get('text'), str)
                     and digest(entry['text']) == entry.get('sha256'), 'stored ' + part + ' changed or damaged')
+        ident = identity(self.comp)
+        require(len(ident) == 32, 'This Grape OP has no Grape ID yet.')
+        if value.get('targetId') != ident:
+            # A new copy, a fresh template or a regenerated ID: the stored ID follows the parameter
+            # (Q32). Only the envelope changes; the document and Shader are untouched.
+            # 新複本、剛建立的範本或換過號：存檔裡的 ID 跟著參數走；只改信封，圖與 Shader 不動。
+            previous = value.get('targetId')
+            value['targetId'] = ident
+            self._data().text = json.dumps(value, ensure_ascii=False)
+            self.status('identity-adopted', 'The stored document now follows this Grape ID.', previousTargetId=previous)
         return value
 
     def state(self):
@@ -79,7 +94,7 @@ class NextFamily:
         data = self.comp.op('GrapeControls/status')
         if data:
             data.text = json.dumps({'phase': phase, 'message': message,
-                'targetId': self.comp.fetch('sgrapeShaderId', None), **details}, ensure_ascii=False, indent=2)
+                'targetId': identity(self.comp), **details}, ensure_ascii=False, indent=2)
 
     def _shader(self, comp):
         shader = comp.op('shader')
@@ -124,7 +139,7 @@ class NextFamily:
         require(body.get('format') == FORMAT, 'unsupported request format')
         if body.get('revision') != revision:
             raise RuntimeError('Conflict: stale revision')
-        require(body.get('targetId') == self.comp.fetch('sgrapeShaderId', None), 'target mismatch')
+        require(body.get('targetId') == identity(self.comp), 'target mismatch')
         if body.get('catalogHash') != catalog_hash:
             raise RuntimeError('Conflict: catalog changed; reload the editor')
         text = body.get('document')

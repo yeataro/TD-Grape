@@ -16,9 +16,18 @@ class Text:
         self.text = text
 
 
+class Par:
+    def __init__(self, value):
+        self.value = value
+
+    def eval(self):
+        return self.value
+
+
 class Comp:
-    def __init__(self, stored):
-        self.tags = {'grapeNativeFamily'}
+    def __init__(self, stored, grape_id=TARGET):
+        self.tags = {'grapeOP'}
+        self.par = SimpleNamespace(Grapeid=Par(grape_id))
         self.path = '/project1/next_test'
         self.ops = {'GrapeControls/document': Text(stored), 'GrapeControls/status': Text(),
                     'pixel_shader': Text('old glsl'), 'graph': Text()}
@@ -26,8 +35,6 @@ class Comp:
     def op(self, name):
         return self.ops.get(name)
 
-    def fetch(self, key, default=None):
-        return TARGET if key == 'sgrapeShaderId' else default
 
 
 def runtime(pixel='void main(){}', bindings=()):
@@ -59,6 +66,19 @@ class NextFamilyTests(unittest.TestCase):
     def test_state_returns_the_document_text_verbatim(self):
         fam, _ = family(envelope(document='{ "kept" : "as is" }'))
         self.assertEqual(fam.state()['document'], '{ "kept" : "as is" }')
+
+    def test_a_copy_adopts_its_own_grape_id_without_touching_document_or_shader(self):
+        stored = json.loads(envelope(document='{"copied":true}')); stored['targetId'] = 'd' * 32
+        fam, comp = family(json.dumps(stored))
+        self.assertEqual(fam.state()['targetId'], TARGET)
+        saved = json.loads(comp.ops['GrapeControls/document'].text)
+        self.assertEqual((saved['targetId'], saved['document']['text'], comp.ops['pixel_shader'].text), (TARGET, '{"copied":true}', 'old glsl'))
+        self.assertEqual(json.loads(comp.ops['GrapeControls/status'].text)['previousTargetId'], 'd' * 32)
+
+    def test_a_grape_op_without_an_id_is_not_opened(self):
+        comp = Comp(envelope(), grape_id='')
+        with self.assertRaisesRegex(ValueError, 'no Grape ID'):
+            NextFamily(comp).state()
 
     def test_damaged_document_is_refused(self):
         stored = json.loads(envelope()); stored['document']['text'] = '{"a":2}'

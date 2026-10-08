@@ -47,7 +47,9 @@ except AttributeError:
     pass
 host.par.parentshortcut = 'GrapeHost'
 manager.par.parentshortcut = 'GrapeManager'
-manager.tags.add('grapeNativeManager')
+if 'grapeNativeManager' in manager.tags:  # old tag name (Refactor.32)
+    manager.tags.remove('grapeNativeManager')
+manager.tags.add('grapeManager')
 modules = {
     'GrapeManagerExt': 'src/td/runtime/grape_manager_ext.py',
     'host_api': 'src/td/runtime/host_api.py',
@@ -104,7 +106,7 @@ assert manager.ext.GrapeManagerExt.queue is not None, editor.par.Serviceerror.ev
 family = host.parent().op('Grape_TOP_React')
 assert family is not None, 'The review Grape OP Grape_TOP_React is missing.'
 manager.ext.GrapeManagerExt.Register(family)
-family.op('GrapeControls/editor_control').text = (root / 'src/td/runtime/native_family_controls.py').read_text(encoding='utf-8')
+family.op('GrapeControls/editor_control').text = (root / 'src/td/runtime/grape_op_controls.py').read_text(encoding='utf-8')
 assert protected() == before_icon, 'Protected icon changed'
-print(json.dumps({'url': 'http://127.0.0.1:' + str(service.http.port) + '/shader/' + family.fetch('sgrapeShaderId') + '/',
+print(json.dumps({'url': 'http://127.0.0.1:' + str(service.http.port) + '/shader/' + family.par.Grapeid.eval() + '/',
                   'family': family.path, 'manager': manager.path, 'protectedIconUnchanged': True}))
