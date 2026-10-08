@@ -91,7 +91,8 @@
 
 | 發現日 | 情況 |
 | --- | --- |
-| 2026-10-09 | **GPU 編譯失敗時圖也沒存（與 Q38 原意不符）**：`next_family.apply` 在 TD 編譯失敗時整筆拒絕，Shader 停在最後成功版，但這次的圖也沒寫進 `graph`。Q38 原意是圖照存、只有 Shader 停在最後成功版。要改需編輯器配合（收到「GPU 失敗」後改送只含圖的請求，或 TD 回覆時已存圖），屬協定，做 Grape 頁或錯誤回報那一輪一起處理。 |
+| 2026-10-09 | **GPU 編譯失敗時圖也沒存（與 Q38 原意不符）**：`next_family.apply` 在 TD 編譯失敗時整筆拒絕，Shader 停在最後成功版，但這次的圖也沒寫進 `graph`。Q38 原意是圖照存、只有 Shader 停在最後成功版。要改需編輯器配合（收到「GPU 失敗」後改送只含圖的請求，或 TD 回覆時已存圖），屬協定，做 Grape 頁或錯誤回報那一輪一起處理。機制：`apply` 先換 Shader、最後才存圖，GPU 失敗時 `raise` 跳出，存圖那步沒走到；原作者把整筆當成全有或全無，Q38 只要求執行部分成對。**訊息也要如實（人類 10-09）**：編輯器現在對所有 422 都顯示「TD 拒絕套用：…」——但 GPU 失敗時 TD 沒有拒絕，是 GLSL 編譯失敗；真正拒絕的是我們的宿主程式（格式、版本、ID、手改的圖）。修正後分開說：「GLSL 在 TD 編譯失敗：<原因>。圖已存到 TD，TD 繼續執行上次成功的 Shader」；宿主的拒絕寫「TD-Grape 拒絕：<原因>」，不說成 TD。 |
+| 2026-10-09 | **TD 編譯錯誤指回節點（先記下，人類 10-09）**：GLSL 在 TD 編譯失敗時，原因取自試編譯用 GLSL TOP 的 Info DAT（行號是產生出來的 GLSL 的行號，使用者不知道是哪個節點）。要指回節點需要「GLSL 行號 → 節點」對照。**人類方向：只在編譯失敗時才觸發**，不要每次產碼都做（平常執行會耗額外效能）。可能做法（未定）：TD 只回行號與訊息（TD 不懂圖，Q38）；編輯器手上有圖與產碼器，失敗時才重產一次帶對照的版本來查。新架構目前有沒有對照、做到哪裡，未查。錯誤回報那一輪處理。 |
 | 2026-10-09 | **驗證注意**：TD 2025.33230 的 `TOP.sample()` 在浮點格式（16／32-bit float）把 R 當 alpha 回傳；讀 Grape OP 輸出像素改用 `numpyArray()`。TD 的 bug，記在 workspace `work/refactor/td-issues/top-sample-float-alpha.md`，人類決定何時回報。 |
 | 2026-10-08 | **【後續版本／發布後】節點實作改版時，舊圖的產碼會悄悄改變（現在不處理；人類 10-08 概念 review）。** 出處：最早規格 legacy `docs/specs/shader-graph-handoff-v2.md`（09-12）節點身分分兩層 uuid／revisionHash；人類 09-10 決定（legacy `docs/architecture/UPGRADE_POLICY.md`）「先提示差異，確認後才升級；確認前保留上次成功輸出」；舊實作（bootstrap 的 `revisionHash`、`node_catalog.json`）已於 Refactor.29 拿掉，需求還在、要在新架構重做。已談方向：概念身分沿用 `nodeType`；每個節點模組自帶整數版本號、手動 +1；輸出變動由**測試**偵測（不放建置期；目前沒有涵蓋全部節點的輸出指紋，屆時新做）；圖頂層記「用到的節點類型→版本」；參數轉換由節點模組自己提供；圖比編輯器新的節點版本→Ghost、不寫回；確認前 TD 跑 Last Known Good（Q38）。**未定**：尚未確認升級時編輯其他節點，會讓舊節點跟著用新實作產碼——保留舊實作（舊規格做法）還是先擋住，做的時候再談。參考：Houdini HDA（大改版版本進名字、小改版就地同步）、Unity `FormerlySerializedAs`（只管改名、漏寫悄悄丟、沒有資料版本號）。 |
 | 2026-10-08 | ~~**清理第 5 條發現、待人類判斷**~~ **人類 2026-10-08 定：保留現在的樣式，不回舊樣式**（現在的才是正確行為，且暫不影響體驗）。原記錄：integration `test_math_module_migration` 與 legacy 對照時，產生的 GLSL 註解不同——legacy 把節點註解寫在同一行（`float sg_n_fold = (1.0 + 2.0); // Fold`），現在寫成下一行 `// Comment: Fold`，另一個註解反而少了 `Comment:` 前綴。自 Refactor.26（筆記搬到節點 `comment`）起；是否要回到舊樣式由人類決定。 |
@@ -139,9 +140,9 @@
 
 ## 現場 TD（使用前以 TD MCP 重新確認）
 
-- 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP：`/project1/Grape_TOP_test`（原名 `Grape_TOP_React`，rev 596）、`Grape_TOP2`、`Grape_TOP3`、人類的樣板 `Grape_TOP_REF`——皆為 Refactor.33 新存法；舊格式樣本 `/project1/Grape_TOP_old_sample`（原名 `Grape_TOP_Refactor`，留作日後匯入器樣本）
+- 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP 只剩兩個（2026-10-09 人類同意清理）：`/project1/Grape_TOP_test`（rev 596，以新範本重建、圖／Shader／Grape ID 照搬）、人類的樣板 `Grape_TOP_REF`。`Grape_TOP2`、`Grape_TOP3`（預設圖）與舊格式樣本已刪；舊樣本的圖、舊信封與 `.tox` 留在 workspace `work/refactor/grape-op-round/cleanup-33/`，給日後匯入器用；舊格式樣本已移到 workspace（見上）
 - 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
-- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.33，存 TD-Grape-dev.60；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
+- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.33，存 TD-Grape-dev.61；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴
