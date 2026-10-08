@@ -135,7 +135,7 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
       </div>}
       <div className="canvas" inert={!!draft}><Canvas session={session} projection={state.projection} bodyDrag={bodyDrag} snap={snap} />{draft && <div className="draft-blocker" />}</div>
       {showSources && <PanelShell title={tr('sources.title', 'Shared Sources')} onClose={() => setShowSources(false)}>
-        <SourcesPanel declarations={state.declarations} references={state.references} td={state.tdUniforms} /></PanelShell>}
+        <SourcesPanel declarations={state.declarations} references={state.references} /></PanelShell>}
       {showCode && <pre aria-label={say(tr('glsl.label', 'Generated GLSL'))}>{state.glsl || say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre>}</main>
     <footer>{say(tr('footer.scope', 'This round: common TOP nodes (no Uniforms or subgraphs) · changes apply when you release or commit a value · Ctrl/Cmd+Z to undo'))}</footer>
   </TextContext.Provider></SessionContext.Provider>;

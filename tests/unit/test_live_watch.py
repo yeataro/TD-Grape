@@ -1,0 +1,129 @@
+"""Live Uniform values between TD and connected editors (Uniform D2, Refactor.48; uniform-d.md B).
+FakeShader copies TD behaviour measured on 2026-10-09; not a TD proof. 不是 TD 證據。"""
+import json
+from collections import namedtuple
+import unittest
+
+import live_watch
+import next_family
+from test_uniform_writer import FakeShader, FakePar, uniform
+
+Change = namedtuple('Change', 'par prev')
+
+
+class Connection:
+    def __init__(self, target='t' * 32, session='live1'):
+        self.target, self.session, self.sent, self.closed = target, session, [], False
+
+    def send(self, text, replaceable=False):
+        self.sent.append(json.loads(text))
+
+    def close(self):
+        self.closed = True
+
+
+class Owner:
+    def __init__(self, path):
+        self.path = path
+
+
+class Family:
+    FORMAT = next_family.FORMAT
+
+    def __init__(self, uniforms):
+        self.comp = Owner('/project1/grape1')
+        self.shader = FakeShader()
+        self.shader.path = self.comp.path + '/shader'
+        self.uniforms, self.live_calls = uniforms, []
+        for p in self.pars():
+            p.owner = self.shader
+        self.shader.parent = lambda: self.comp
+
+    def pars(self):
+        return [p for rows in self.shader.rows.values() for row in rows for p in row.values()]
+
+    def _shader(self, comp):
+        return self.shader
+
+    def running_uniforms(self):
+        return self.uniforms
+
+    def live(self, body):
+        self.live_calls.append(body)
+        return {'ok': True}
+
+
+def owned(family):
+    for p in family.pars():
+        p.owner = family.shader
+
+
+def setup(uniforms):
+    family = Family(uniforms)
+    import uniform_writer
+    uniform_writer.apply(family.shader, uniforms, [], {}, 'CONSTANT')
+    owned(family)
+    watched = []
+    watch = live_watch.LiveWatch(resolve=lambda target: family if target == 't' * 32 else None,
+                                 watcher=lambda paths: watched.append(list(paths)), frame=lambda: 120)
+    return family, watch, watched
+
+
+class LiveWatchTests(unittest.TestCase):
+    def test_a_connection_watches_its_grape_op_and_gets_the_state_first(self):
+        mix = uniform('u1', 'uMix', 'vec2', [0.0, 0.0])
+        family, watch, watched = setup([mix])
+        connection = Connection()
+        watch.drain([('open', connection, None)])
+        self.assertEqual(watched, [['/project1/grape1/shader']])
+        self.assertEqual(connection.sent, [{'type': 'state', 'frame': 120, 'uniforms': {
+            'u1': [{'mode': 'constant', 'value': 0.0}, {'mode': 'constant', 'value': 0.0}]}}])
+        watch.drain([('close', connection, None)])
+        self.assertEqual(watched[-1], [], 'nobody connected: nothing watched')
+        unknown = Connection(target='x' * 32)
+        watch.drain([('open', unknown, None)])
+        self.assertTrue(unknown.closed)
+
+    def test_editor_values_are_written_once_per_frame_latest_only(self):
+        family, watch, _ = setup([uniform('u1', 'uGain')])
+        connection = Connection()
+        messages = [('message', connection, json.dumps({'type': 'value', 'id': 'u1', 'value': v, 'seq': i}))
+                    for i, v in enumerate((0.1, 0.2, 0.3))]
+        watch.drain([('open', connection, None)] + messages + [('message', connection, 'not json')])
+        self.assertEqual([(c['id'], c['value'], c['session'], c['seq']) for c in family.live_calls], [('u1', 0.3, 'live1', 2)])
+
+    def test_td_values_go_as_one_bundle_per_frame_and_skip_driven_components(self):
+        mix = uniform('u1', 'uMix', 'vec3', [0.0, 0.0, 0.0])
+        family, watch, _ = setup([mix])
+        connection = Connection()
+        watch.drain([('open', connection, None)])
+        connection.sent.clear()
+        row = family.shader.row('vec', 'uMix')
+        master = FakePar('Gain', 0.0)
+        row['valuey'].bind_to(master)
+        row['valuez'].set_expr('absTime.frame', 9.0)
+        master.val = 0.5
+        row['valuex'].val = 0.25
+        watch.values_changed([Change(row['valuex'], 0.0), Change(row['valuey'], 0.0), Change(row['valuez'], 8.0)])
+        self.assertEqual(connection.sent, [{'type': 'values', 'frame': 120, 'values': {'u1': [0.25, 0.5]}}])
+
+    def test_mode_changes_renames_and_applies_send_a_new_state(self):
+        mix = uniform('u1', 'uMix')
+        family, watch, _ = setup([mix])
+        connection = Connection()
+        watch.drain([('open', connection, None)])
+        row = family.shader.row('vec', 'uMix')
+        row['valuex'].set_expr('absTime.seconds', 1.0)
+        watch.changed(row['valuex'])
+        watch.drain([])
+        self.assertEqual(connection.sent[-1]['uniforms'], {'u1': [{'mode': 'expression', 'text': 'absTime.seconds'}]})
+        row['name'].val = 'uOther'  # renamed in TD: the Uniform has no row now
+        watch.values_changed([Change(row['name'], 'uMix')])
+        self.assertEqual(connection.sent[-1], {'type': 'state', 'frame': 120, 'uniforms': {}})
+        count = len(connection.sent)
+        watch.applied(family)
+        self.assertEqual(len(connection.sent), count + 1)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -23,15 +23,17 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
   const input = useRef<HTMLInputElement>(null);
   const tooltipId = useId();
   const suppressContext = useRef(0);
-  const cancelGesture = useRef<() => void>(() => {});
   const skipBlur = useRef(false);
+  const typing = useRef(false);
   const [error, setError] = useState('');
   const active = ladder !== null;
   const normalize = (number: number) => unsigned ? Math.max(0, Math.trunc(number)) :
     integer ? Math.trunc(number) : number;
 
+  // While the person drags or types here, values from outside (e.g. TD's live values, Uniform D2) wait
+  // until they finish; they never cancel the gesture. 有人正在拖或輸入時，外面來的值（例如 TD 的即時值）等手勢結束，不會打斷它。
   useEffect(() => {
-    cancelGesture.current();
+    if (gesture.current || typing.current) return;
     setDraft(String(value));
   }, [value, integer, unsigned]);
 
@@ -77,7 +79,6 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
       if (accept && state.value !== value) commit(state.value);
       else if (!accept && shown !== value) preview?.(value); // cancelled: TD goes back 取消：TD 回到原值
     };
-    cancelGesture.current = () => finish(false);
     const move = (event: globalThis.PointerEvent) => {
       if (!state.pointer || event.pointerId !== state.pointer.id) return;
       if (!(event.buttons & state.pointer.mask)) { finish(false); return; }
@@ -122,7 +123,6 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
     return () => {
       controller.abort();
       gesture.current = null;
-      cancelGesture.current = () => {};
     };
   }, [active]);
 
@@ -139,7 +139,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
       aria-describedby={active ? tooltipId : undefined}
       title={error || (active ? undefined : say(tr('number.ladderHelp', 'Middle button / Alt+right button: move up and down the list to pick a step, then past its left or right edge to change the value. Release to apply, Esc to cancel. Keyboard: Alt+L, arrow keys, Enter.')))}
       inputMode="decimal"
-      value={draft} onChange={event => setDraft(event.target.value)}
+      value={draft} onChange={event => { typing.current = true; setDraft(event.target.value); }}
       onPointerDown={pointerDown}
       onMouseDown={event => { if (event.button === 1) event.preventDefault(); }}
       onAuxClick={event => event.preventDefault()}
@@ -148,6 +148,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
       }}
       onBlur={() => {
         if (active || gesture.current) return;
+        typing.current = false;
         if (skipBlur.current) { skipBlur.current = false; return; }
         const number = Number(draft);
         if (draft.trim() && Number.isFinite(number)) {
@@ -165,7 +166,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
           begin(rect.right, rect.top + rect.height / 2);
         } else if (event.key === 'Enter') event.currentTarget.blur();
         else if (event.key === 'Escape') {
-          skipBlur.current = true; setError(''); setDraft(String(value)); event.currentTarget.blur();
+          typing.current = false; skipBlur.current = true; setError(''); setDraft(String(value)); event.currentTarget.blur();
         }
       }} />
     {ladder && createPortal(<div id={tooltipId} role="tooltip" aria-label="Value Ladder"

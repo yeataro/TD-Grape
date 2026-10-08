@@ -15,18 +15,32 @@ export const useSession = () => useContext(SessionContext)!;
 
 // Native input previews are local; native change commits the chosen colour.
 // React 的 onChange 也會接到連續 input；改以原生 change 作提交，避免每次預覽一筆 Undo。
+// While picking, the shown value may follow TD (it already got the previews, Uniform D2), so the pick
+// is compared with the value it started from, and outside values wait until it ends.
+// 選取中顯示的值可能跟著 TD 變（TD 已收到預覽），所以和選取開始時的值比較；外面來的值等選完再跟上。
 function ColorField({ value, label, commit, preview }: { value: string; label: string; commit: (value: string) => void; preview?: (value: string) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
+  const started = useRef<string | null>(null);
+  const latest = useRef({ value, commit });
+  latest.current = { value, commit };
+  useEffect(() => { if (started.current === null) setDraft(value); }, [value]);
   useEffect(() => {
     const element = input.current!;
-    const accept = () => { if (element.value !== value) commit(element.value); };
+    const accept = () => {
+      const from = started.current ?? latest.current.value;
+      started.current = null;
+      if (element.value !== from) latest.current.commit(element.value);
+      else setDraft(latest.current.value);
+    };
     element.addEventListener('change', accept);
     return () => element.removeEventListener('change', accept);
-  }, [value, commit]);
+  }, []);
   return <input ref={input} className="color-swatch nodrag" type="color" aria-label={label}
-    value={draft} onInput={event => { setDraft(event.currentTarget.value); preview?.(event.currentTarget.value); }} onChange={() => {}} />;
+    value={draft} onInput={event => {
+      if (started.current === null) started.current = value;
+      setDraft(event.currentTarget.value); preview?.(event.currentTarget.value);
+    }} onChange={() => {}} />;
 }
 
 // A component something else drives in TD (Uniform D1, Q60; TD's mode colours, as the legacy node did):
@@ -46,9 +60,9 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   modes?: readonly (ComponentState | undefined)[];
 }) {
   const count = core.values.count(type), family = core.values.family(type);
-  // A bound component shows the value it is bound to (Q56: Bind shares a constant value with its master).
-  // Bind 的分量顯示綁到的那個值。
-  const list = Array.from({ length: count }, (_, i) => modes?.[i]?.mode === 'bind' && modes[i]!.value !== undefined ? modes[i]!.value!
+  // A component TD reports a value for shows TD's (Q57: TD is the authority; a bound one shows the value
+  // it is bound to); otherwise the graph's. TD 有回報值的分量顯示 TD 的（Bind 顯示綁到的值），否則顯示圖裡的。
+  const list = Array.from({ length: count }, (_, i) => modes?.[i]?.value !== undefined ? modes[i]!.value!
     : Array.isArray(value) ? value[i] ?? 0 : value);
   const hex = '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
   const fromHex = (next: string): Value => [...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)];

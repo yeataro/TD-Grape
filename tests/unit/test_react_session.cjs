@@ -41,7 +41,7 @@ function fixture() {
 // New-editor protocol (design-interview Q38, Q40): TD holds the document as opaque text.
 const doc = state => JSON.parse(state.document);
 const withDoc = (state, edit) => { const graph = doc(state); edit(graph); state.document = JSON.stringify(graph); return state; };
-function open(t, request, retry = 60000, generator) {
+function open(t, request, retry = 60000, generator, live) {
   let remote = { document: JSON.stringify(fixture()), revision: 4, targetId: target };
   const calls = [];
   const loaded = () => ({ state: clone(remote), format: 'grape-next-1', shaderKind: 'top', target: '/test/family',
@@ -54,7 +54,7 @@ function open(t, request, retry = 60000, generator) {
       { state: (remote = { document: body.document, revision: body.revision + 1, targetId: target }) };
     return result instanceof Response ? result : new Response(JSON.stringify(result));
   };
-  const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000, retry, generator, '9.9.9 Test');
+  const session = new EditorSession(new HostClient(target, '', fetcher, 20000, live), bootstrap, loaded(), 60000, retry, generator, '9.9.9 Test');
   t.after(() => session.dispose());
   return { session, calls, loaded };
 }
@@ -856,12 +856,12 @@ test('TD states arrive on open and with each reply; notices go to the log as TD-
     remote.set(state);
     return { state, uniforms: states, notices: [notice] };
   });
-  assert.deepEqual(session.snapshot().tdUniforms, {}, 'this test opens with a reply that has none');
+  assert.deepEqual(session.tdSnapshot(), {}, 'this test opens with a reply that has none');
   await session.check();
-  assert.deepEqual(session.snapshot().tdUniforms, { u: [{ mode: 'constant', value: 1 }] });
+  assert.deepEqual(session.tdSnapshot(), { u: [{ mode: 'constant', value: 1 }] });
   session.addUniform();
   await session.flush();
-  assert.deepEqual(session.snapshot().tdUniforms, states);
+  assert.deepEqual(session.tdSnapshot(), states);
   const said = session.log.entries().at(-1);
   assert.equal(said.source, 'td');
   assert.match(zh(said.message), /uTint.*color0alpha.*lfo1:chan1/);
@@ -869,35 +869,58 @@ test('TD states arrive on open and with each reply; notices go to the log as TD-
 
 // Uniform C (Refactor.46; Q53): a Uniform's value goes to TD the moment it changes; dragging never
 // touches the graph or Undo. Uniform C：值一改就送到 TD；拖曳中不改圖、不進 Undo。
-test('Uniform values go live: dragging sends only the latest, never the graph; typing and Undo send at once', async t => {
-  let release;
-  const gate = () => new Promise(resolve => { release = resolve; });
-  let waiting;
-  const { session, calls } = open(t, async (action, body, remote) => {
-    if (action === 'live') { await waiting; return { ok: true, applied: true }; }
-    if (action === 'state') return remote.get();
-    const next = { document: body.document, revision: body.revision + 1, targetId: target }; remote.set(next); return { state: next };
-  });
+// A stand-in for the browser WebSocket (Uniform D2). 代替瀏覽器 WebSocket。
+function fakeSocket() {
+  return { readyState: 0, sent: [], send(text) { this.sent.push(JSON.parse(text)); },
+    close() { this.readyState = 3; this.onclose?.(); }, onopen: null, onclose: null, onerror: null, onmessage: null };
+}
+const nextFrame = () => new Promise(resolve => setTimeout(resolve, 30));
+test('Uniform values go live over the WebSocket: once per frame, latest only; dragging never edits; dropped while disconnected', async t => {
+  const sockets = [];
+  const { session, calls } = open(t, undefined, 60000, undefined, () => { const socket = fakeSocket(); sockets.push(socket); return socket; });
+  const socket = sockets[0];
   session.addUniform();
   const id = session.snapshot().declarations.find(d => d.kind === 'uniform').id;
-  await new Promise(resolve => setTimeout(resolve, 0));
-  const live = () => calls.filter(c => c.action === 'live').map(c => [c.body.id, c.body.value]);
+  session.previewDeclarationValue(id, 0.05);
+  await nextFrame();
+  assert.deepEqual(socket.sent, [], 'not connected yet: dropped');
+  socket.readyState = 1; socket.onopen();
   const before = { version: session.snapshot().version, graph: JSON.stringify(session.graph()) };
-  waiting = gate();
   for (const value of [0.1, 0.2, 0.3, 0.4]) session.previewDeclarationValue(id, value);
-  release(); await new Promise(resolve => setTimeout(resolve, 0)); await new Promise(resolve => setTimeout(resolve, 0));
-  assert.deepEqual(live(), [[id, 0.1], [id, 0.4]], 'one on the way, then only the latest');
+  await nextFrame();
+  assert.deepEqual(socket.sent, [{ type: 'value', id, value: 0.4, seq: 1 }], 'one per frame, the latest');
   assert.equal(session.snapshot().version, before.version, 'dragging is not an edit');
   assert.equal(JSON.stringify(session.graph()), before.graph);
-  waiting = undefined;
   session.setDeclarationValue(id, 0.5);
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.deepEqual(live().at(-1), [id, 0.5], 'a committed value is sent at once, before the normal save');
+  await nextFrame();
+  assert.deepEqual(socket.sent.at(-1).value, 0.5, 'a committed value goes at once; the normal save follows');
   session.history(false);
-  await new Promise(resolve => setTimeout(resolve, 0));
-  assert.deepEqual(live().at(-1), [id, 0], 'Undo sends the value it brings back');
+  await nextFrame();
+  assert.deepEqual(socket.sent.at(-1).value, 0, 'Undo sends the value it brings back');
+  assert.ok(!calls.some(c => c.action === 'live'), 'never over HTTP any more');
   session.addConstant();
-  const constant = session.snapshot().declarations.find(d => d.kind === 'constant').id, count = live().length;
+  const constant = session.snapshot().declarations.find(d => d.kind === 'constant').id, count = socket.sent.length;
   session.previewDeclarationValue(constant, 1);
-  assert.equal(live().length, count, 'a constant is never live: changing it changes the program');
+  await nextFrame();
+  assert.equal(socket.sent.length, count, 'a constant is never live: changing it changes the program');
+  // TD -> editor: state, then values bundles by TD frame; an older bundle is dropped.
+  // TD → 編輯器：先 state，再依 TD 影格的數值包；比較舊的包丟掉。
+  const seen = [];
+  session.tdSubscribe(() => seen.push(session.tdSnapshot()));
+  const versionBefore = session.snapshot().version;
+  socket.onmessage({ data: JSON.stringify({ type: 'state', frame: 10, uniforms: { [id]: [{ mode: 'constant', value: 0 }] } }) });
+  socket.onmessage({ data: JSON.stringify({ type: 'values', frame: 12, values: { [id]: [0.7] } }) });
+  socket.onmessage({ data: JSON.stringify({ type: 'values', frame: 11, values: { [id]: [0.2] } }) });
+  assert.equal(session.tdSnapshot()[id][0].value, 0.7);
+  assert.equal(seen.length, 2);
+  assert.equal(session.snapshot().version, versionBefore, 'TD values never touch the graph or the status line');
+  session.previewDeclarationValue(id, 0.9);
+  assert.equal(session.tdSnapshot()[id][0].value, 0.9, 'what was just sent shows at once');
+  // Disconnected: fields fall back to the graph's values; values are dropped; it reconnects by itself.
+  socket.readyState = 3; socket.onclose();
+  assert.deepEqual(session.tdSnapshot()[id], [{ mode: 'constant' }]);
+  const sent = socket.sent.length;
+  session.previewDeclarationValue(id, 0.3);
+  await nextFrame();
+  assert.equal(socket.sent.length, sent);
 });

@@ -3,6 +3,8 @@ import http.client
 from hashlib import sha256
 import importlib.util
 import json
+import socket
+import time
 from pathlib import Path
 import tempfile
 import unittest
@@ -115,6 +117,70 @@ class HTTPTest(unittest.TestCase):
         status, _, data = self.request('/api/state')
         self.assertEqual(status, 501)
         self.assertEqual(json.loads(data)['code'], 'manager_not_connected')
+
+    def live_socket(self, origin=None, target='a' * 32):
+        """A raw WebSocket client: handshake, then masked text frames. 最小的 WebSocket 用戶端。"""
+        sock = socket.create_connection(('127.0.0.1', self.server.port), timeout=3)
+        host = '127.0.0.1:' + str(self.server.port)
+        sock.sendall(('GET /api/' + target + '/live HTTP/1.1\r\nHost: ' + host + '\r\nUpgrade: websocket\r\n'
+                      'Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n'
+                      'Origin: ' + (origin or 'http://' + host) + '\r\n\r\n').encode('ascii'))
+        head = b''
+        while b'\r\n\r\n' not in head:
+            head += sock.recv(1)
+        return sock, head.decode('ascii')
+
+    @staticmethod
+    def client_frame(text):
+        payload, mask = text.encode('utf-8'), b'\x01\x02\x03\x04'
+        return bytes([0x81, 0x80 | len(payload)]) + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+
+    def wait_for(self, check):
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            result = check()
+            if result:
+                return result
+            time.sleep(.01)
+        self.fail('timed out')
+
+    def test_live_websocket_carries_text_both_ways_without_td_waiting(self):
+        # Uniform D2 (Refactor.48): same port, same checks; TD's side only queues and drains.
+        # 同一個 port、同樣的檢查；TD 那邊只排隊與取走。
+        sock, head = self.live_socket()
+        self.assertIn('501', head.split('\r\n')[0])  # no Manager yet 還沒有 Manager
+        sock.close()
+        self.server.connect(object())  # stands in for the Manager's request queue 代替 Manager 的佇列
+        sock, head = self.live_socket()
+        self.assertIn('101', head.split('\r\n')[0])
+        self.assertIn('Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=', head)  # RFC 6455 example
+        events = self.wait_for(lambda: self.server.live.drain())
+        self.assertEqual([(kind, connection.target) for kind, connection, _ in events], [('open', 'a' * 32)])
+        connection = events[0][1]
+        sock.sendall(self.client_frame('{"type":"value"}'))
+        events = self.wait_for(lambda: self.server.live.drain())
+        self.assertEqual([(kind, text) for kind, _, text in events], [('message', '{"type":"value"}')])
+        for frame in range(3):
+            connection.send('values ' + str(frame), replaceable=True)
+        connection.send('state')
+        received = b''
+        while received.count(b'\x81') < 4:
+            received += sock.recv(4096)
+        self.assertIn(b'values 2', received)
+        self.assertTrue(received.endswith(b'state'))
+        sock.sendall(bytes([0x88, 0x82]) + b'\x00\x00\x00\x00' + b'\x03\xe8')  # close 1000
+        events = self.wait_for(lambda: self.server.live.drain())
+        self.assertEqual([kind for kind, _, _ in events], ['close'])
+        sock.close()
+        self.server.connect(None)
+
+    def test_live_websocket_keeps_the_http_checks(self):
+        self.server.connect(object())
+        sock, head = self.live_socket(origin='https://unrelated.example')
+        self.assertIn('403', head.split('\r\n')[0])
+        sock.close()
+        self.assertEqual(self.server.live.drain(), [])
+        self.server.connect(None)
 
     def test_rejects_other_origins_hosts_and_traversal(self):
         self.assertEqual(self.request('/', headers={'Origin': 'https://unrelated.example'})[0], 403)

@@ -6,7 +6,7 @@ import { type HostClient, type StateResponse, type UniformStates } from './host'
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
-import { LiveValues } from './live_values';
+import { LiveValues, type LiveMessage } from './live_values';
 
 // Handle id of a module-declared spare input. The module owns the command, port key,
 // type and limit; this layer only runs that command and wires the declared port.
@@ -62,11 +62,11 @@ const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).con
 
 // message is data (a Message), worded only when shown (Q34); level says how serious it is (Q35).
 // declarations: the document's own frozen list (no copy); references: how many nodes use each one.
-// tdUniforms: each Uniform's components as TD reported them last (Uniform D1: on open and with each reply).
-// tdUniforms：TD 最近一次回報的各 Uniform 分量現況（D1：開圖與每次回覆時）。
+// TD's Uniform states are kept apart (tdSnapshot): they change every frame while TD moves a value, and
+// only the fields showing them need to follow. TD 的 Uniform 現況另外存（tdSnapshot）：TD 動值時每格都變，只有顯示它的欄位要跟。
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
   message: Message | string; level: Level; glsl: string; targetPath: string;
-  declarations: readonly Declaration[]; references: Readonly<Record<string, number>>; tdUniforms: UniformStates };
+  declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
 // state, compiles every finished edit, and hands the result to HostSync (design-interview Q38).
@@ -96,19 +96,19 @@ export class Editor {
     const graph = parseDocument(loaded.state.document);
     requireSupported(graph);
     this.document = new core.GraphDocument(graph, core.registry);
-    this.live = new LiveValues(host);
+    this.td = loaded.uniforms ?? {};
+    this.live = new LiveValues(host.live, message => this.liveMessage(message), connected => this.liveLinked(connected));
     this.uniformValues = this.readUniformValues();
     this.codegen = this.compile();
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
       (status, said) => this.status({ ...status, ...said }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '', targetPath: loaded.target,
-      ...this.sources(), tdUniforms: loaded.uniforms ?? {} };
+      ...this.sources() };
     // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
     this.sync.onTd = (uniforms, notices) => {
-      if (uniforms) this.state = { ...this.state, tdUniforms: uniforms };
-      if (notices.length) for (const notice of notices) this.status({ message: notice, level: 'warning' }, 'td');
-      else if (uniforms) this.publish();
+      if (uniforms) this.setTd(uniforms);
+      for (const notice of notices) this.status({ message: notice, level: 'warning' }, 'td');
     };
     this.tell('info', tr('edit.loaded', 'Loaded the graph from TD'));
     // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
@@ -133,6 +133,42 @@ export class Editor {
     return total;
   }
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+  // TD's Uniform states (Uniform D1, D2): from replies, then live from the WebSocket. Values are data:
+  // they never reach the status line or the log. TD 的 Uniform 現況：來自回覆，之後由 WebSocket 即時更新；數值是資料，不進狀態列或 log。
+  private td: UniformStates;
+  private tdListeners = new Set<() => void>();
+  tdSubscribe = (listener: () => void) => { this.tdListeners.add(listener); return () => { this.tdListeners.delete(listener); }; };
+  tdSnapshot = () => this.td;
+  private setTd(td: UniformStates) {
+    this.td = td;
+    if (!this.disposed) this.tdListeners.forEach(listener => listener());
+  }
+  private liveMessage(message: LiveMessage) {
+    if (message.type === 'state') { this.setTd(message.uniforms); return; }
+    const next: Record<string, UniformStates[string]> = { ...this.td };
+    for (const [id, values] of Object.entries(message.values)) {
+      const states = next[id];
+      if (!states) continue;
+      next[id] = states.map((state, i) => values[i] === null || values[i] === undefined ? state : { ...state, value: values[i]! });
+    }
+    this.setTd(next);
+  }
+  // Disconnected: TD's values may go stale, so the fields fall back to the graph's (modes stay).
+  // 斷線：TD 的值可能過時，欄位改回顯示圖裡的值（模式保留）。
+  private liveLinked(connected: boolean) {
+    if (connected) return;
+    const withoutValue = ({ value: _, ...rest }: UniformStates[string][number]) => rest;
+    this.setTd(Object.fromEntries(Object.entries(this.td).map(([id, states]) => [id, states.map(withoutValue)])));
+  }
+  // What the editor just sent is shown at once where TD will take it; TD's echo confirms it.
+  // 剛送出的值先顯示在 TD 會收下的分量；TD 回傳後確認。
+  private sentLive(id: string, value: Value) {
+    const states = this.td[id];
+    if (!states) return;
+    const values = Array.isArray(value) ? value : [value];
+    this.setTd({ ...this.td, [id]: states.map((state, i) => (state.mode === 'constant' || (state.mode === 'bind' && state.editable !== false))
+      && typeof values[i] === 'number' ? { ...state, value: values[i] as number } : state) });
+  }
   snapshot = () => this.state;
   graph = () => this.document.snapshot();
   private publish() { if (!this.disposed) this.listeners.forEach(listener => listener()); }
@@ -210,7 +246,7 @@ export class Editor {
     // A new Uniform is not in TD's program yet; the normal save brings it. 新的 Uniform 還不在 TD 的程式裡，由一般送出帶過去。
     for (const [id, value] of now) {
       const old = this.uniformValues.get(id);
-      if (old !== undefined && old !== value) this.live.send(id, JSON.parse(value) as Value);
+      if (old !== undefined && old !== value) { this.live.send(id, JSON.parse(value) as Value); this.sentLive(id, JSON.parse(value) as Value); }
     }
     this.uniformValues = now;
   }
@@ -220,6 +256,7 @@ export class Editor {
     if (declaration?.kind !== 'uniform') return;
     try { core.values.literal(value, declaration.type); } catch { return; }
     this.live.send(id, value);
+    this.sentLive(id, value);
   };
   edit = (id: string, command: string, value: Value) => this.transact(tr('edit.valueChanged', 'Value updated; waiting to apply'),
     net => net.node(id).edit(command, value));
@@ -386,5 +423,5 @@ export class Editor {
   save = async () => {
     try { this.tell('info', await this.sync.save()); } catch (error) { this.notice(error); }
   };
-  dispose() { this.disposed = true; this.sync.dispose(); this.listeners.clear(); }
+  dispose() { this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear(); }
 }

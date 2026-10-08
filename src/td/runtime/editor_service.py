@@ -3,14 +3,18 @@
 The TD adapter builds snapshots on explicit actions. HTTP workers only read
 ordinary immutable bytes; they never inspect OPs, VFS, or the source folder.
 """
-from hashlib import sha256
+import base64
+from collections import deque
+from hashlib import sha1, sha256
 from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
 from pathlib import Path, PurePosixPath
 import re
+import select
 import socket
+import struct
 import threading
 from types import MappingProxyType
 from urllib.parse import unquote, urlsplit
@@ -97,6 +101,194 @@ def content_type(name):
     }.get(suffix) or mimetypes.guess_type(name)[0] or 'application/octet-stream'
 
 
+# Live Uniform values (Uniform D2, Refactor.48; design-interview Q53, uniform-d.md B): a WebSocket on
+# the same port, /api/<Grape ID>/live, with the same Host and Origin checks as HTTP. Each connection is
+# read and written on its own worker thread; TD's thread only queues text (send) and takes what arrived
+# (LiveHub.drain), so TD never waits on a browser. Text frames only (RFC 6455).
+# 即時 Uniform 值：同一個 port 的 WebSocket，檢查與 HTTP 相同。每條連線在自己的執行緒讀寫；
+# TD 的執行緒只排隊要送的文字、取走收到的，不會等瀏覽器。只收送文字訊框。
+LIVE_PATH = re.compile(r'/api/([a-f0-9]{32})/live')
+WEBSOCKET_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+
+
+def websocket_frame(opcode, payload):
+    """A server frame (never masked). 伺服器送出的訊框（不加遮罩）。"""
+    size = len(payload)
+    if size < 126:
+        head = struct.pack('>BB', 0x80 | opcode, size)
+    elif size < 65536:
+        head = struct.pack('>BBH', 0x80 | opcode, 126, size)
+    else:
+        head = struct.pack('>BBQ', 0x80 | opcode, 127, size)
+    return head + payload
+
+
+def read_websocket_frame(buffer, limit):
+    """(opcode, payload, bytes used) for one whole client frame, or None while incomplete. Raises
+    ValueError for frames this service does not take (unmasked, fragmented, too big).
+    讀一個完整的瀏覽器訊框；不完整時回傳 None；不收的訊框（沒遮罩、分段、太大）丟 ValueError。"""
+    if len(buffer) < 2:
+        return None
+    first, second = buffer[0], buffer[1]
+    size, at = second & 0x7f, 2
+    if size == 126:
+        if len(buffer) < 4:
+            return None
+        size, at = struct.unpack('>H', buffer[2:4])[0], 4
+    elif size == 127:
+        if len(buffer) < 10:
+            return None
+        size, at = struct.unpack('>Q', buffer[2:10])[0], 10
+    if not first & 0x80 or first & 0x70 or not second & 0x80 or size > limit:
+        raise ValueError('Unsupported WebSocket frame')
+    if len(buffer) < at + 4 + size:
+        return None
+    mask = buffer[at:at + 4]
+    payload = bytes(b ^ mask[i % 4] for i, b in enumerate(buffer[at + 4:at + 4 + size]))
+    return first & 0x0f, payload, at + 4 + size
+
+
+class LiveConnection:
+    """One editor page's WebSocket. send() may be called from TD's thread; everything else runs on
+    the connection's worker thread. A newer values bundle may replace older ones still waiting
+    (they are whole values, not changes); other messages are kept in order.
+    一個編輯頁的 WebSocket。TD 的執行緒只呼叫 send()；其餘都在連線自己的執行緒。等待中的舊數值包可被新的取代
+    （包裡是完整的值，不是變化量）；其他訊息照順序保留。"""
+    MAX_MESSAGE = 64 * 1024
+    MAX_WAITING = 64
+
+    def __init__(self, sock, target, hub, serial):
+        self.sock, self.target, self.hub = sock, target, hub
+        self.session = 'live' + str(serial)
+        self.closed = False
+        self._outbox = deque()
+        self._lock = threading.Lock()
+        self._wake_read, self._wake_write = socket.socketpair()
+        self._wake_read.setblocking(False)
+        self._wake_write.setblocking(False)
+
+    def send(self, text, replaceable=False):
+        with self._lock:
+            if self.closed:
+                return
+            if replaceable and len(self._outbox) >= self.MAX_WAITING:
+                for item in list(self._outbox):
+                    if item[0]:
+                        self._outbox.remove(item)
+                        break
+            self._outbox.append((replaceable, text))
+        self._wake()
+
+    def close(self):
+        with self._lock:
+            self.closed = True
+        self._wake()
+
+    def _wake(self):
+        try:
+            self._wake_write.send(b'.')
+        except OSError:
+            pass
+
+    def run(self):
+        buffer = b''
+        try:
+            while True:
+                readable, _, _ = select.select([self.sock, self._wake_read], [], [], 30)
+                if self._wake_read in readable:
+                    try:
+                        while self._wake_read.recv(4096):
+                            pass
+                    except (BlockingIOError, OSError):
+                        pass
+                with self._lock:
+                    waiting = [text for _, text in self._outbox]
+                    self._outbox.clear()
+                    closing = self.closed
+                if waiting:
+                    self.sock.sendall(b''.join(websocket_frame(0x1, text.encode('utf-8')) for text in waiting))
+                if closing:
+                    self.sock.sendall(websocket_frame(0x8, struct.pack('>H', 1000)))
+                    return
+                if self.sock not in readable:
+                    continue
+                data = self.sock.recv(65536)
+                if not data:
+                    return
+                buffer += data
+                while True:
+                    try:
+                        frame = read_websocket_frame(buffer, self.MAX_MESSAGE)
+                    except ValueError:
+                        self.sock.sendall(websocket_frame(0x8, struct.pack('>H', 1003)))
+                        return
+                    if frame is None:
+                        break
+                    opcode, payload, used = frame
+                    buffer = buffer[used:]
+                    if opcode == 0x1:
+                        self.hub.received(self, payload.decode('utf-8', 'replace'))
+                    elif opcode == 0x8:
+                        self.sock.sendall(websocket_frame(0x8, payload[:2]))
+                        return
+                    elif opcode == 0x9:
+                        self.sock.sendall(websocket_frame(0xA, payload))
+                    elif opcode != 0xA:
+                        self.sock.sendall(websocket_frame(0x8, struct.pack('>H', 1003)))
+                        return
+        except (OSError, TimeoutError):
+            return
+        finally:
+            with self._lock:
+                self.closed = True
+            self._wake_read.close()
+            self._wake_write.close()
+
+
+class LiveHub:
+    """Live connections and what arrived from them, for TD's thread to take (drain). Contains no TD
+    objects. 即時連線與收到的訊息，給 TD 的執行緒取走；不含 TD 物件。"""
+    MAX_EVENTS = 4096
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._events = deque()
+        self._serial = 0
+        self.connections = set()
+
+    def serve(self, sock, target):
+        """Runs on the HTTP worker thread for the connection's whole life. 在 HTTP 工作執行緒上跑完整條連線。"""
+        with self._lock:
+            self._serial += 1
+            connection = LiveConnection(sock, target, self, self._serial)
+            self.connections.add(connection)
+            self._events.append(('open', connection, None))
+        try:
+            connection.run()
+        finally:
+            with self._lock:
+                self.connections.discard(connection)
+                self._events.append(('close', connection, None))
+
+    def received(self, connection, text):
+        with self._lock:
+            if len(self._events) >= self.MAX_EVENTS:
+                return  # TD is not taking them (stopped or stuck): values are best effort 只是盡力送
+            self._events.append(('message', connection, text))
+
+    def drain(self):
+        with self._lock:
+            events = list(self._events)
+            self._events.clear()
+        return events
+
+    def close(self):
+        with self._lock:
+            connections = list(self.connections)
+        for connection in connections:
+            connection.close()
+
+
 class EditorHTTP:
     """A replaceable asset snapshot served independently of TD's cook loop."""
     def __init__(self, snapshot, host='127.0.0.1', port=65465):
@@ -104,6 +296,7 @@ class EditorHTTP:
         self.request_count = 0
         self.host_requests = None
         self.preview_port = None
+        self.live = LiveHub()
         self._lock = threading.Lock()
         service = self
 
@@ -153,6 +346,9 @@ class EditorHTTP:
                 length = int(lengths[0]) if lengths else 0
                 if length > 2 * 1024 * 1024:
                     return self.reply(413, {'error': 'Request exceeds 2 MB'}, head=head)
+                live = LIVE_PATH.fullmatch(path)
+                if live and self.headers.get('Upgrade', '').lower() == 'websocket':
+                    return self.upgrade(live.group(1), host_requests, length)
                 if path.startswith('/api/'):
                     if head:
                         return self.reply(405, {'error': 'Use GET for host state'}, head=True)
@@ -190,6 +386,27 @@ class EditorHTTP:
                 if data is None:
                     return self.reply(404, {'error': 'Asset not found'}, head=head)
                 self.reply(200, data, content_type(name), head=head)
+
+            def upgrade(self, target, host_requests, length):
+                """WebSocket handshake, then the connection's life on this thread (Uniform D2).
+                WebSocket 握手，之後整條連線在這個執行緒。"""
+                if self.command != 'GET' or length:
+                    return self.reply(400, {'error': 'A live connection is a GET without a body'})
+                if host_requests is None:
+                    return self.reply(501, {'error': 'Editor assets are ready; the new TD Manager is not connected yet', 'code': 'manager_not_connected'})
+                key = self.headers.get('Sec-WebSocket-Key', '')
+                if self.headers.get('Sec-WebSocket-Version') != '13' or not key:
+                    return self.reply(400, {'error': 'Unsupported WebSocket handshake'})
+                accept = base64.b64encode(sha1((key + WEBSOCKET_GUID).encode('ascii')).digest()).decode('ascii')
+                self.send_response(101)
+                self.send_header('Upgrade', 'websocket')
+                self.send_header('Connection', 'Upgrade')
+                self.send_header('Sec-WebSocket-Accept', accept)
+                self.end_headers()
+                self.wfile.flush()
+                self.close_connection = True
+                self.connection.settimeout(5)
+                service.live.serve(self.connection, target)
 
             def reply(self, status, data, mime=None, head=False):
                 if not isinstance(data, bytes):
@@ -249,6 +466,7 @@ class EditorHTTP:
             self.host_requests = None
         if host_requests:
             host_requests.close()
+        self.live.close()
         self.server.shutdown()
         self.server.server_close()
         self.worker.join(timeout=1)

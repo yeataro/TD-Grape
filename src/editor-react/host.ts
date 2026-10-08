@@ -1,4 +1,5 @@
 import { tr, TextError, type Message } from './text';
+import type { LiveSocket } from './live_values';
 
 // New-editor Grape OPs (design-interview Q40): the document is opaque text to TD.
 // 新編輯器的 Grape OP：圖對 TD 是不透明文字。
@@ -26,12 +27,18 @@ export class HostError extends Error {
 // 只搬本輪會使用的 HTTP 行為；逾時不代表寫入沒有發生，交由 session 查核。
 export class HostClient {
   readonly root: string;
+  /** Opens the live WebSocket (Uniform D2); none outside a page (tests pass their own). 開即時 WebSocket。 */
+  readonly live: (() => LiveSocket) | undefined;
   constructor(readonly target: string, readonly token: string,
-    private readonly request: typeof fetch = (...args) => fetch(...args), private readonly timeout = 20000) {
+    private readonly request: typeof fetch = (...args) => fetch(...args), private readonly timeout = 20000,
+    live?: () => LiveSocket) {
     if (!/^[a-f0-9]{32}$/.test(target)) throw new TextError(tr('open.badTarget', 'This address does not name a valid Grape OP. Open the editor from a Grape OP in TD.'));
     this.root = '/api/' + target + '/';
+    this.live = live ?? (typeof WebSocket === 'function' && typeof location === 'object' && location.host
+      ? () => new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + this.root + 'live') as unknown as LiveSocket
+      : undefined);
   }
-  async call<T>(action: 'state' | 'apply' | 'save' | 'live', body?: unknown): Promise<T> {
+  async call<T>(action: 'state' | 'apply' | 'save', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);
     try {
       const response = await this.request(this.root + action, { method: body === undefined ? 'GET' : 'POST',

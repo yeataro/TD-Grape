@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
@@ -33,10 +33,12 @@ function modesOf(declaration: Declaration, td: UniformStates): readonly (Compone
   return preset ? [{ mode: 'expression', text: preset.expression }] : undefined;
 }
 
-export function SourcesPanel({ declarations, references, td }: {
-  declarations: readonly Declaration[]; references: Readonly<Record<string, number>>; td: UniformStates;
+export function SourcesPanel({ declarations, references }: {
+  declarations: readonly Declaration[]; references: Readonly<Record<string, number>>;
 }) {
   const session = useSession(), flow = useReactFlow();
+  // TD's states follow on their own, without re-rendering the canvas (Uniform D2). TD 的現況自己更新，不重繪畫布。
+  const td = useSyncExternalStore(session.tdSubscribe, session.tdSnapshot);
   const constants = declarations.filter(d => d.kind === 'constant'), inputs = declarations.filter(d => d.kind === 'topInput');
   // Preset Uniforms are listed in the time section. 預設 Uniform 列在時間區。
   const uniforms = declarations.filter(d => d.kind === 'uniform' && d.entry === undefined);

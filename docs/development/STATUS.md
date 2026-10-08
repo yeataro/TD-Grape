@@ -2,6 +2,27 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.48 — Uniform D2：即時值走 WebSocket、TD 的變化即時回到編輯器 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/uniform-d.md` 第二節 B（design-interview Q53：兩個方向都走 WebSocket；Q58、Q60）。
+
+- **傳輸**（[editor_service.py](../../src/td/runtime/editor_service.py)）：編輯服務在同一個 port 接受 WebSocket `/api/<Grape ID>/live`，Host／Origin 檢查與 HTTP 相同；Manager 沒接上時回 501。每條連線在自己的工作執行緒讀寫，TD 的執行緒只排隊要送的文字、取走收到的（`LiveHub`），不會等瀏覽器。只收送文字訊框。等待中的舊數值包可被新的取代。
+- **TD 端**（新 [live_watch.py](../../src/td/runtime/live_watch.py)，Manager 的 `Drain` 與新的 Parameter Execute DAT `uniform_watch`）：
+  - 編輯器→TD：每條連線每格每個 Uniform 只寫最新的值（`NextFamily.live`，只寫 Grape 能寫的、只寫在編輯器變了的分量）。
+  - TD→編輯器：`onValuesChanged` 每格結束時，每個 Grape OP 一包 `values`（帶 TD 影格），只含固定值與 Bind 的分量、用 `eval()` 讀；Expression／Export 的分量略過。連上時、模式／expression／export／名字改變時、套用後送 `state`。
+  - `uniform_watch` 只監看有編輯器連著的 Grape OP 的 GLSL OP（用 `par.owner.parent()` 分出 Grape OP）；沒人連時關閉、不監看任何 OP。
+  - HTTP 的 `live` 拿掉。
+- **編輯器**（[live_values.ts](../../src/editor-react/live_values.ts)）：WebSocket 自己重連；每個 Uniform 每格最多送一次、只送最新；沒連上時拖曳中的值丟掉（一般送出跟上）；比手上舊的數值包丟掉。TD 的現況存在獨立的小 store（`tdSubscribe`／`tdSnapshot`），只有面板的欄位跟著重繪，不進狀態列或 log。欄位顯示 TD 回報的值（固定值也是）；剛送出的值先顯示；斷線時改回顯示圖裡的值。
+- **TD 實測（動工前）**：Parameter Execute DAT 在 Bind 的 master 改變時，被綁的參數會觸發（不必另外監看 master）；Expression 驅動的分量每格都觸發（程式裡略過）；`onModeChange(par, val, prev)`、`onExpressionChange`、`onExportChange` 都會觸發。
+- **驗證**：
+  - 自動測試：core 140、editor 52（WebSocket 替身：每格只送最新、拖曳不改圖、斷線丟值、舊包丟掉、TD 值不碰圖與狀態列）、Python 59（新：真實 socket 的 WebSocket 握手與收送、Origin 檢查；`test_live_watch.py`）。
+  - 真實 TD＋內建瀏覽器（暫時的 Grape OP `grape_d2_probe`＋自訂參數 COMP，測完已刪）：編輯器連上後 `uniform_watch` 只看那個 GLSL OP；不用重新整理——TD 改 X＝0.42、Y Bind 到自訂參數，編輯器即時顯示 0.42 與紫色 0.25；TD 改自訂參數 0.8，編輯器即時跟上；編輯器把 Y 改 0.33，自訂參數變 0.33、X 仍是 0.42；TD 把 X 接上 expression，編輯器即時變成藍色那一行；關掉編輯頁後監看關閉。
+  - **高頻**：自訂參數用 expression 每格變（TD 120 fps）：3 秒 378 包（約 126 包／秒、每包約 97 bytes、約 12 KB／秒）；TD 端 `values_changed` 平均每格 0.07 ms、最多 0.21 ms（每格預算 8.3 ms），`drain` 平均 0.002 ms（暫時在記憶體計時，測完還原）。**瀏覽器端負擔沒量到**：內建瀏覽器面板當時是隱藏狀態，計時器被節流。
+  - **實機時發現並修正**：(1) `NumberField` 在外部值改變時會取消正在拖的梯尺、輸入到一半會被蓋掉——現在欄位顯示 TD 的即時值，改成「有人正在拖或輸入時，外面來的值等手勢結束」。(2) 顏色選取器放開時拿目前顯示的值比較；TD 已經收到預覽，所以判斷成「沒變」、不寫進圖——改成和選取開始時的值比較（實測：選紅色放開後圖與 TD 都是 [1,0,0,1]）。輸入 0.6 Enter → 圖與 TD 都是 0.6。梯尺拖曳在內建瀏覽器面板隱藏時會被頁面的 visibilitychange 取消（設計如此），所以這次沒能在可見的面板實測拖曳。
+  - **port**：WebSocket 不另開 port，和編輯頁同一個網址（瀏覽器用 `location.host`）；編輯服務被佔用時自動換 port（R.36），頁面與 WebSocket 一起換。實測當時：新產品 65465、舊產品的即時 WebSocket 51840（舊產品用系統隨機分配的空 port，legacy `sgrape_live.py` 476–509）、舊產品 Remote Panel 8920，沒有撞 port（人類 10-09 懷疑可能撞，查過不是）。
+  - Manager、GrapeEditor、範本無 scriptErrors。Deliver 存 `TD-Grape-dev.85`。
+- **限制／之後**：要不要再合併（例如降到顯示更新率）等人類在可見的瀏覽器實測後再定（uniform-d.md B3）。連線狀態目前不顯示在畫面上（編輯器內部知道）。拖曳或輸入中的欄位不跟 TD 的值，結束後才跟上。兩邊的 Remote Panel 預設都是 8920，兩個 TD 同時開 Remote Panel 會撞（與本輪無關，記下）。
+
 ## Refactor.47 — Uniform D1：TD 直接寫 Uniform、保留 TD 上的驅動 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/uniform-d.md`（第二版，人類 10-09 選甲：拆兩輪、分開提交、不用等人類）；依 design-interview Q55–Q61。

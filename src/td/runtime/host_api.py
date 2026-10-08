@@ -12,13 +12,15 @@ class UnsupportedOperation(RuntimeError):
 
 
 class HostAPI:
-    def __init__(self, *, bootstrap, resolve, choices, save_project):
+    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None):
         if bootstrap.get('version') != 1 or bootstrap.get('producer') != 'frontend-modules':
             raise ValueError('The editor module bootstrap is unavailable or incompatible.')
         self.catalog_hash = bootstrap['catalogHash']
         self.resolve = resolve
         self.choices = choices
         self.save_project = save_project
+        # Told after a program is applied, so live editors get the new state (Uniform D2). 套用後通知即時通道。
+        self.applied = applied
 
     def dispatch(self, method, path, body=None):
         path = urlsplit(path).path
@@ -51,10 +53,12 @@ class HostAPI:
             return {'state': family.state(), 'uniforms': family.uniform_states(), 'format': family.FORMAT, 'shaderKind': 'top', 'target': family.target().path,
                 'frontendCompiler': {'protocol': family.PROTOCOL, 'catalogHash': self.catalog_hash, 'required': True}}
         if method == 'POST' and action == 'apply':
-            return family.apply(body, catalog_hash=self.catalog_hash)
-        if method == 'POST' and action == 'live':
-            # Uniform values while they change (Uniform C, Q53). 改變中的 Uniform 值。
-            return family.live(body)
+            result = family.apply(body, catalog_hash=self.catalog_hash)
+            if self.applied:
+                self.applied(family)
+            return result
+        # Uniform values while they change go over the WebSocket since Uniform D2 (Q53), not HTTP.
+        # 改變中的 Uniform 值從 D2 起走 WebSocket，不走 HTTP。
         if method == 'POST' and action == 'save':
             return {'saved': self.save_project()}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

@@ -59,12 +59,13 @@ modules = {
     'next_family': 'src/td/runtime/next_family.py',
     'uniform_writer': 'src/td/runtime/uniform_writer.py',  # Uniform rows on the GLSL OP (Refactor.47)
     'td_text': 'src/td/runtime/td_text.py',  # text for people as code + English + parameters (Q58)
+    'live_watch': 'src/td/runtime/live_watch.py',  # live Uniform values over the WebSocket (Refactor.48)
     'editor_launch': 'src/td/runtime/editor_launch.py',  # app-window launch for Open Editor (Q45)
 }
 positions = {
     'GrapeManagerExt': (0, 0), 'host_api': (240, 0), 'host_requests': (485, 0),
     'next_family': (700, -160), 'editor_launch': (700, -320),
-    'uniform_writer': (485, -160), 'td_text': (485, -320),
+    'uniform_writer': (485, -160), 'td_text': (485, -320), 'live_watch': (240, -160),
 }
 for name, source in modules.items():
     text(manager, name, source, *positions[name], 'json' if source.endswith('.json') else 'python')
@@ -100,6 +101,29 @@ drain.par.start = False
 drain.par.create = False
 drain.text = "def onFrameStart(frame):\n    parent().ext.GrapeManagerExt.Drain()\n"
 drain.comment = 'Editing requests only. An empty queue does not inspect any Family or Parameter.'
+
+# Live Uniform values (Uniform D2): watches only the GLSL OPs of Grape OPs with a connected editor; the
+# Manager sets its OP list, and it is off while no editor is connected. 只監看有編輯器連著的 GLSL OP。
+watch = node(manager, parameterexecuteDAT, 'uniform_watch', 1000, -680)
+watch.par.op = ''
+watch.par.active = False
+watch.par.pars = 'vec* color*'
+watch.par.custom = False
+watch.par.builtin = True
+watch.par.valuechange = False
+watch.par.valueschanged = True
+watch.par.modechange = True
+watch.par.expressionchange = True
+watch.par.exportchange = True
+watch.par.onpulse = False
+watch.par.enablechange = False
+watch.text = (
+    "# Live Uniform values (Uniform D2): see live_watch. 即時 Uniform 值，見 live_watch。\n"
+    "def onValuesChanged(changes):\n    parent().ext.GrapeManagerExt.LiveValuesChanged(changes)\n\n"
+    "def onModeChange(par, val, prev):\n    parent().ext.GrapeManagerExt.LiveStateChanged(par)\n\n"
+    "def onExpressionChange(par, val, prev):\n    parent().ext.GrapeManagerExt.LiveStateChanged(par)\n\n"
+    "def onExportChange(par, val, prev):\n    parent().ext.GrapeManagerExt.LiveStateChanged(par)\n")
+watch.comment = 'Live Uniform values. Watches nothing while no editor is connected.'
 
 # Stop only our Editor service before replacing its module; preserve its port.
 editor.ext.EditorServiceExt.Stop()

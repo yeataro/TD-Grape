@@ -15,6 +15,7 @@ class GrapeManagerExt:
         self.editor = None
         self.families = {}
         self.bootstrap = None
+        self.live = None  # LiveWatch while connected (Uniform D2) 連線期間的即時值監看
 
     @staticmethod
     def _template(comp):
@@ -44,8 +45,11 @@ class GrapeManagerExt:
             raise RuntimeError('Editor bootstrap and compiler are from different builds.')
         self.bootstrap = bootstrap
         self.editor = editor
+        # Live Uniform values over the editor service's WebSocket (Uniform D2). 經 WebSocket 的即時值。
+        self.live = self._module('live_watch').LiveWatch(resolve=self.Resolve, watcher=self._watch, frame=lambda: absTime.frame)
         self.api = self._module('host_api').HostAPI(
-            bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save())
+            bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save(),
+            applied=self.live.applied)
         self.queue = self._module('host_requests').HostRequests()
         editor.http.connect(self.queue)
         panel = self.ownerComp.par.Remotepanel.eval()
@@ -55,6 +59,9 @@ class GrapeManagerExt:
         self._status('Ready', registered=len(self.families), version=editor.snapshot.version)
 
     def Disconnect(self):
+        if self.live:
+            self.live.close()
+            self.live = None
         if self.editor and self.editor.http and self.editor.http.host_requests is self.queue:
             self.editor.http.connect(None)
         if self.queue:
@@ -65,6 +72,27 @@ class GrapeManagerExt:
         if self.queue:
             # Empty queue does not read Families, Parameters, Library or state.
             self.queue.drain(self.api.dispatch)
+        if self.live and self.editor and self.editor.http:
+            # Nothing arrived and no editor connected: nothing is read. 沒收到、也沒人連著：什麼都不讀。
+            events = self.editor.http.live.drain()
+            if events or self.live.watched:
+                self.live.drain(events)
+
+    def _watch(self, paths):
+        """What the Parameter Execute DAT `uniform_watch` watches: the GLSL OPs of Grape OPs with a
+        connected editor; nothing when none is connected. 只監看有編輯器連著的 Grape OP 的 GLSL OP。"""
+        watcher = self.ownerComp.op('uniform_watch')
+        if watcher is not None:
+            watcher.par.op = ' '.join(paths)
+            watcher.par.active = bool(paths)
+
+    def LiveValuesChanged(self, changes):
+        if self.live:
+            self.live.values_changed(changes)
+
+    def LiveStateChanged(self, par):
+        if self.live:
+            self.live.changed(par)
 
     def Diagnostics(self):
         result = self.queue.outcomes() if self.queue else []
