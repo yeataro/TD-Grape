@@ -71,7 +71,8 @@
 | 節點 `ui.typeMode: 'locked'` | 刪除 | 等於預設 |
 | 節點 `ui.typeMode: 'auto'` | 待處理（原樣保留） | 自動型別做回來時定正式欄位，不放 `ui` |
 | 宣告 `sourceMissing` | 刪除 | TD 狀態，不屬於圖 |
-| 宣告 `nativeSequence` | 刪除；`'color'` 待處理 | 頁面由 TD 從 `kind`＋`type` 推算；「是不是顏色」改為 Uniform 欄位 |
+| 宣告 `nativeSequence` | 刪除；`'color'` → Uniform 的 `color: true` | 頁面由 TD 從 `kind`＋`type` 推算；「是不是顏色」是 Uniform 欄位（design-interview Q51：只有 vec3、vec4，沒寫＝不是顏色） |
+| 節點 `sgrape.builtin.uniform` | → `sgrape.builtin.declaration`（參數 `declarationId` 不變） | 舊式 Uniform 節點退休，一律用引用宣告節點（Refactor.44） |
 | 宣告 `initialDriver` | 待處理 | 改為內建值 `kind`（暫稱 `builtin`），Uniform 那一輪定 |
 | 宣告 `exposeName` | 待處理 | 拆成參數名稱＋標籤，Uniform 那一輪定 |
 | 宣告 `defaultSource`／MAT 的 `source` | 待處理 | 合併為 `defaultTexture`，貼圖輸入那一輪定 |
@@ -79,7 +80,7 @@
 
 ## 尚未實作（依「新抽象要有當輪真實 caller」延後）
 
-- 每種宣告 `kind` 由模組規定欄位、未知欄位在 `extensions` 外時警告：目前只有 `uniform` 一種宣告，等 Uniform／貼圖那一輪。
+- 每種宣告 `kind` 由模組規定欄位（`constant`：`value`；`uniform`：`value`、選用 `color`；`topInput`：`defaultTexture`）。未知欄位在 `extensions` 外時的警告還沒做。
 - 子圖「攤平／函式」屬性：攤平功能尚未存在。
 - 作者、分類欄位：等分享功能。
 - 節點擴充包 ID 格式、警告的顯示方式。

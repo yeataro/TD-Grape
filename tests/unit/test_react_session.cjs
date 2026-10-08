@@ -209,7 +209,7 @@ test('migration convenience: overwrite rebases the draft on the latest TD revisi
 
 test('migration convenience: an unopenable test graph can be reset to the default through normal apply', async t => {
   const { session, calls, loaded } = open(t, strictHost());
-  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', nodeType: 'sgrape.builtin.uniform', params: {} }));
+  const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', nodeType: 'sgrape.function.input', params: {} }));
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
   await resetToDefault(session.host, bootstrap, '9.9.9 Test');
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
@@ -293,12 +293,11 @@ test('wrong producer and out-of-slice graphs reject without changing the host', 
   assert.throws(() => new EditorSession(session.host, bootstrap, state), error => /版本不一致/.test(zh(errorText(error))));
   const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'unknown', graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => /此入口目前支援[\s\S]*子圖 1 個/.test(zh(errorText(error))));
-  // Leftover Uniform from the legacy entry: the message names both the declaration and the node.
-  const uniform = loaded(); withDoc(uniform.state, graph => {
-    graph.declarations = [{ id: 'u1', kind: 'uniform', name: 'uValue', type: 'float', value: 0 }];
-    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.builtin.uniform', params: { declarationId: 'u1' } }];
+  // A known node this entry has not taken over: the message names it. 本入口還沒接管的節點：訊息指出是哪一個。
+  const known = loaded(); withDoc(known.state, graph => {
+    graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.function.input', params: {} }];
   });
-  assert.throws(() => new EditorSession(session.host, bootstrap, uniform), error => /Uniform 宣告「uValue」[\s\S]*uniform 節點（nu）/.test(zh(errorText(error))));
+  assert.throws(() => new EditorSession(session.host, bootstrap, known), error => /function\.input 節點（nu）/.test(zh(errorText(error))));
   // Format (Q44): an old document offers the reset; a newer one never does, so nothing is written back.
   const old = loaded(); withDoc(old.state, graph => { delete graph.format; graph.schemaVersion = 1; });
   assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(zh(errorText(error))));
@@ -358,7 +357,7 @@ test('zero-distance drag still publishes runtime completion but records no docum
 
 test('invalid restored draft remains rejected without replacing the current document', t => {
   const { session } = open(t), before = clone(session.graph()), graph = clone(before);
-  graph.declarations.push({ id: 'u', kind: 'uniform', name: 'u', type: 'float', value: 1 });
+  graph.declarations.push({ id: 'u', kind: 'uniform', name: 'u', type: 'mat3', value: 1 });
   assert.equal(session.restoreDraft(graph), false); assert.deepEqual(clone(session.graph()), before);
 });
 
@@ -793,4 +792,29 @@ test('a texture input: add, choose its default image, place, sample, wire; the i
   const runtime = JSON.parse(calls.at(-1).body.runtime);
   assert.match(runtime.pixel, /vec4 sg_n_\w+ = texture\(sTD2DInputs\[1\], vUV\.st\);/);
   assert.deepEqual(runtime.bindings.map(d => [d.kind, d.name, d.defaultTexture]), [['topInput', 'input1', 'grape'], ['topInput', 'input2', 'black']]);
+});
+
+// Uniforms, round A (Refactor.44; uniform-round.md, Q51): added in the Sources panel; the value goes
+// to TD as a binding, so changing it leaves the GLSL as it was. Uniform A：值以綁定交給 TD，改值不改 GLSL。
+test('a Uniform: add, vec4 colour, value, place, wire; a value change only changes the binding', async t => {
+  const { session, calls } = open(t);
+  session.addUniform();
+  const uniform = () => JSON.parse(JSON.stringify(session.snapshot().declarations.find(d => d.kind === 'uniform')));
+  assert.deepEqual([uniform().name, uniform().type], ['uniform1', 'float']);
+  session.setDeclarationType(uniform().id, 'vec4');
+  session.setDeclarationColor(uniform().id, true);
+  session.setDeclarationValue(uniform().id, [1, 0.5, 0, 1]);
+  session.placeDeclaration(uniform().id, { x: 0, y: 0 });
+  const ref = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.declaration');
+  assert.equal(ref.data.colorGroup, 'uniform');
+  session.connect({ source: ref.id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
+  await session.flush();
+  const first = JSON.parse(calls.at(-1).body.runtime);
+  assert.match(first.pixel, /^uniform vec4 uniform1;$/m);
+  assert.deepEqual(first.bindings.filter(b => b.kind === 'uniform').map(b => [b.name, b.type, b.value, b.color]), [['uniform1', 'vec4', [1, 0.5, 0, 1], true]]);
+  session.setDeclarationValue(uniform().id, [0, 1, 0, 1]);
+  await session.flush();
+  const second = JSON.parse(calls.at(-1).body.runtime);
+  assert.equal(second.pixel, first.pixel, 'the GLSL is the same');
+  assert.deepEqual(second.bindings.find(b => b.kind === 'uniform').value, [0, 1, 0, 1]);
 });

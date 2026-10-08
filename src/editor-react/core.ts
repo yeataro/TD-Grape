@@ -69,7 +69,7 @@ export const supportedDefinitions = [
 // Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.
 // 本入口已接管的宣告種類；不認得的保留（Ghost），認得但未接管的（Uniform）仍拒絕。
-export const supportedKinds = ['constant', 'topInput'];
+export const supportedKinds = ['constant', 'topInput', 'uniform'];
 // Retired definitions still open old graphs but are not offered for new nodes, as in the
 // legacy creator (TD-Grape-legacy src/editor/functions_ui.js availableEntries). The same
 // value is made with Scalar／Vector (fixed entries to be discussed).

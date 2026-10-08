@@ -23,7 +23,6 @@ export interface EmitContext extends NodeContext {
   readonly ports:NodePorts;
   input(key:string):string;
   connected(key:string):boolean;
-  useUniform(id:string):string;
   /** Marks a declaration as used and returns its GLSL name (any kind, Refactor.40). */
   useDeclaration(id:string):string;
   /** Marks a declaration as used and returns the GLSL of each output a reference gives, as its

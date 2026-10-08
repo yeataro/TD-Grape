@@ -120,7 +120,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
         const declaration=declarations.get(declId),name=useDeclaration(declId),kind=declarationKinds.get(declaration!.kind)!;
         return kind.reference?kind.reference(declaration!,positions.get(declId)!):{out:name};
       };
-      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useUniform:useDeclaration,useDeclaration,referenceDeclaration});
+      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useDeclaration,referenceDeclaration});
       if(Object.keys(emission.outputs).sort().join()!==Object.keys(p.outputs).sort().join())throw Error('Module emitted a different output interface');
       if(emission.statements)lines.push(...emission.statements);
       let passed=false;

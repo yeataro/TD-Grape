@@ -73,13 +73,12 @@ const swizzle_1 = require("./nodes/swizzle");
 const td_value_1 = require("./nodes/td_value");
 const texture_sample_1 = require("./nodes/texture_sample");
 const trunc_1 = require("./nodes/trunc");
-const uniform_1 = require("./nodes/uniform");
 const vec2_1 = require("./nodes/vec2");
 const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
 exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, defaultTextures: declarations_1.defaultTextures, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
 
@@ -318,9 +317,23 @@ const numericFields = {
 // Global constant (Q41): `const` at file scope; changing it changes the program, nothing in TD.
 const constantKind = { kind: 'constant', role: 'constant', colorGroup: 'constant', types: numeric_1.types, constant: true, validate: numericValue,
     ...numericFields, header: (d) => 'const ' + d.type + ' ' + d.name + ' = ' + (0, numeric_1.literal)(d.value, (0, numeric_1.type)(d.type)) + ';' };
-// Uniform (Q41): its value lives in TD; the Uniform round adds exposure and live values.
-const uniformKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types: numeric_1.types, constant: false, validate: numericValue,
-    ...numericFields, header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
+// Uniform (Q41; uniform-round.md): `value` is its value while not exposed (exposure is round D).
+// `color: true` (design-interview Q51) marks a colour: vec3 and vec4 only; left out means not a colour.
+// Uniform：value 是沒公開時的值；color: true 表示是顏色（只有 vec3、vec4；沒寫＝不是顏色）。
+const colorTypes = ['vec3', 'vec4'];
+const uniformKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types: numeric_1.types, constant: false,
+    optional: ['color'],
+    validate: d => {
+        numericValue(d);
+        if (d.color !== undefined && typeof d.color !== 'boolean')
+            throw Error('Color must be true or false');
+        if (d.color === true && !colorTypes.includes(d.type))
+            throw Error('Only vec3 and vec4 can be a colour');
+    },
+    initial: numericFields.initial,
+    // A type that cannot be a colour turns the colour off. 不能當顏色的型別會把顏色關掉。
+    retype: (d, type) => ({ ...numericFields.retype(d, type), ...(d.color === true && !colorTypes.includes(type) ? { color: false } : {}) }),
+    header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
 /** Default images a TOP texture input shows when nothing is connected from outside (graph-structure
  * `defaultTexture`; human 2026-10-09: the Samples outputs, Grape first). `custom` is the TOP chosen
  * on the Grape OP's Samples. How TD provides them is TD's business (Q45).
@@ -378,7 +391,8 @@ function freeDeclarationName(graph, base) {
 }
 // Only the kind's own fields can be set (decision 11). 只能設定 kind 自己的欄位。
 function setOwnFields(module, declaration, fields) {
-    const own = Object.keys(module.initial(declaration.type));
+    var _a;
+    const own = [...Object.keys(module.initial(declaration.type)), ...((_a = module.optional) !== null && _a !== void 0 ? _a : [])];
     for (const [field, value] of Object.entries(fields))
         if (!['id', 'kind', 'name', 'type'].includes(field) && value !== undefined) {
             if (!own.includes(field))
@@ -1475,7 +1489,6 @@ exports.unaryNode = unaryNode;
 exports.numericCall = numericCall;
 exports.declarationNode = declarationNode;
 exports.tdValueNode = tdValueNode;
-exports.uniformNode = uniformNode;
 exports.outputNode = outputNode;
 /** Small developer entry point. Builtins and developer modules share this API. */
 const model_1 = require("./model");
@@ -1747,14 +1760,6 @@ function tdValueNode(catalog) {
             return n;
         },
         emit: n => ({ outputs: { out: entryOf(n).expression } }) };
-}
-function uniformNode(catalog) {
-    return { catalog, role: 'value', supports: (n, c) => numeric(n) && (!c.declaration(String(n.params.declarationId)) || numeric_1.types.includes(c.declaration(String(n.params.declarationId)).type)), ports: (n, c) => {
-            const d = c.declaration(String(n.params.declarationId));
-            if (!d)
-                throw Error('Select a matching declaration');
-            return outputPorts[(0, numeric_1.type)(d.type)];
-        }, validate: () => { }, emit: (n, c) => ({ outputs: { out: c.useUniform(String(n.params.declarationId)) } }) };
 }
 /** Terminal family with a shared, immutable port layout. The owning node
  * supplies target capabilities, controls, validation and shader statements. */
@@ -4573,51 +4578,6 @@ exports.default = (0, node_sdk_1.unaryNode)({
 });
 
 },
-"nodes/uniform":function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_sdk_1 = require("../node_sdk");
-const catalog = {
-    "definition": {
-        "key": "uniform",
-        "label": "Uniform",
-        "inputs": {},
-        "outputs": {
-            "out": "D"
-        },
-        "stages": [
-            "vertex",
-            "pixel"
-        ],
-        "defaults": {
-            "declarationId": ""
-        },
-        "descriptionKey": "help.uniform",
-        "definitionUuid": "sgrape.builtin.uniform"
-    },
-    "emitter": {
-        "id": "uniform",
-        "version": 1
-    },
-    "browser": {
-        "category": "inputs",
-        "source": "editor",
-        "aliases": [
-            "parameter",
-            "參數",
-            "公開"
-        ],
-        "glslName": "uniform",
-        "secondaryCategories": [],
-        "categoryPath": [
-            "inputs",
-            "uniforms"
-        ]
-    }
-};
-exports.default = (0, node_sdk_1.uniformNode)(catalog);
-
-},
 "nodes/vec2":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -6154,7 +6114,7 @@ function createFlatCompiler(registry, limits) {
                     const declaration = declarations.get(declId), name = useDeclaration(declId), kind = declarations_1.declarationKinds.get(declaration.kind);
                     return kind.reference ? kind.reference(declaration, positions.get(declId)) : { out: name };
                 };
-                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useUniform: useDeclaration, useDeclaration, referenceDeclaration });
+                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useDeclaration, referenceDeclaration });
                 if (Object.keys(emission.outputs).sort().join() !== Object.keys(p.outputs).sort().join())
                     throw Error('Module emitted a different output interface');
                 if (emission.statements)

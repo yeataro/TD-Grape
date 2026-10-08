@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import Mock
 
 import host_api
-from next_family import NextFamily, FORMAT, META_FORMAT, digest
+from next_family import NextFamily, FORMAT, META_FORMAT, digest, uniform_rows
 
 TARGET = 'c' * 32
 CATALOG = 'f' * 64
@@ -66,6 +66,8 @@ def family(stored=None, gpu_ok=True):
     fam._verify_gpu = Mock()
     fam.placed = (Mock(name='commit'), Mock(name='rollback'))
     fam._place_inputs = Mock(return_value=fam.placed)
+    fam._input_ids = Mock(return_value=[])
+    fam._write_uniforms = Mock()
     return fam, comp
 
 
@@ -175,10 +177,49 @@ class NextFamilyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'editor version'):
             fam.apply(request(run=runtime(), editorVersion=None), catalog_hash=CATALOG)
 
-    def test_uniform_bindings_are_refused_until_migrated(self):
+    def test_kinds_not_taken_over_yet_are_refused(self):
         fam, _ = family()
-        with self.assertRaisesRegex(ValueError, 'not migrated'):
-            fam.apply(request(run=runtime(bindings=[{'id': 'u', 'kind': 'uniform'}])), catalog_hash=CATALOG)
+        with self.assertRaisesRegex(ValueError, 'not supported by this TD-Grape yet'):
+            fam.apply(request(run=runtime(bindings=[{'id': 'u', 'kind': 'builtin'}])), catalog_hash=CATALOG)
+
+    def test_uniforms_are_checked_and_written_after_the_glsl_compiles(self):
+        # Refactor.44 (Q51). 檢查後、GLSL 編譯成功才寫綁定表。
+        tint = {'id': 'u1', 'kind': 'uniform', 'name': 'uTint', 'type': 'vec4', 'value': [1, 0.5, 0, 1], 'color': True}
+        gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 2}
+        fam, _ = family()
+        fam.apply(request(run=runtime('reads two', bindings=[tint, gain])), catalog_hash=CATALOG)
+        fam._write_uniforms.assert_called_once_with([tint, gain])
+        fam, _ = family(gpu_ok=False)
+        fam.apply(request(run=runtime('bad', bindings=[tint])), catalog_hash=CATALOG)
+        fam._write_uniforms.assert_not_called()  # the last good values stay
+        for bad in ({**gain, 'value': [1, 2]}, {**gain, 'type': 'mat3'}, {**gain, 'color': True}, {**tint, 'color': 'yes'},
+                    {**gain, 'name': '1x'}, {**gain, 'value': float('inf')}, {**gain, 'value': True}):
+            fam, _ = family()
+            with self.assertRaisesRegex(ValueError, 'invalid Uniform'):
+                fam.apply(request(run=runtime(bindings=[bad])), catalog_hash=CATALOG)
+
+    def test_only_a_value_change_does_not_compile(self):
+        fam, comp = family()
+        fam._input_ids.return_value = ['input1']
+        inputs = [{'id': 'input1', 'kind': 'topInput', 'name': 'input1', 'type': 'sampler2D', 'defaultTexture': 'grape'}]
+        gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 3}
+        fam.apply(request(run=runtime('old glsl', bindings=inputs + [gain])), catalog_hash=CATALOG)
+        fam._validate.assert_not_called()
+        fam._verify_gpu.assert_not_called()
+        fam._write_uniforms.assert_called_once_with([gain])
+        self.assertEqual(meta(comp)['runtime']['revision'], 4)
+
+    def test_uniform_rows_follow_the_pages(self):
+        rows, vectors, colors = uniform_rows([
+            {'name': 'uGain', 'type': 'float', 'value': 2},
+            {'name': 'uTint', 'type': 'vec3', 'value': [1, 0, 0.5], 'color': True}])
+        self.assertEqual((vectors, colors), (1, 1))
+        self.assertEqual(rows[0], ['path', 'parameter', 'value', 'enable'])
+        self.assertIn(['shader', 'vec0name', "'uGain'", '1'], rows)
+        self.assertIn(['shader', 'vec0valuex', '2.0', '1'], rows)
+        self.assertIn(['shader', 'color0name', "'uTint'", '1'], rows)
+        self.assertIn(['shader', 'color0rgbb', '0.5', '1'], rows)
+        self.assertNotIn('color0alpha', [r[1] for r in rows])  # a vec3 colour leaves alpha alone
 
     def test_texture_inputs_are_placed_with_their_glsl_and_undone_with_it(self):
         # Refactor.43: the In TOPs change with the GLSL that reads them. 輸入接口與讀它的 GLSL 一起換。
@@ -201,10 +242,10 @@ class NextFamilyTests(unittest.TestCase):
         good = {'id': 'input1', 'kind': 'topInput', 'name': 'input1', 'type': 'sampler2D', 'defaultTexture': 'grape'}
         for bad in ({**good, 'defaultTexture': 'moon'}, {**good, 'id': '1x'}, {**good, 'name': ''}):
             fam, _ = family()
-            with self.assertRaisesRegex(ValueError, 'invalid texture input'):
+            with self.assertRaisesRegex(ValueError, 'invalid (texture input|binding ID)'):
                 fam.apply(request(run=runtime(bindings=[bad])), catalog_hash=CATALOG)
         fam, _ = family()
-        with self.assertRaisesRegex(ValueError, 'invalid texture input'):
+        with self.assertRaisesRegex(ValueError, 'invalid binding ID'):
             fam.apply(request(run=runtime(bindings=[good, good])), catalog_hash=CATALOG)
 
 

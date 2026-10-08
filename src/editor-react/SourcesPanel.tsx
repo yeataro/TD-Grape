@@ -6,8 +6,8 @@ import { ValueFields, useSession } from './NodeCard';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
 // no list of its own, it reads the graph's declarations and the TD built-in value table). For now: TOP
-// texture inputs, global constants and TD built-in values.
-// 共用來源面板的內容：面板只是索引，讀圖的宣告與 TD 內建值表、不另存清單。目前：TOP 貼圖輸入、全域常數、TD 內建值。
+// texture inputs, Uniforms, global constants and TD built-in values.
+// 共用來源面板的內容：面板只是索引，讀圖的宣告與 TD 內建值表、不另存清單。目前：TOP 貼圖輸入、Uniform、全域常數、TD 內建值。
 // Default images (human 2026-10-09: the Samples outputs). 預設圖（Samples 的出口）。
 const textureNames: Record<string, Message> = {
   grape: tr('texture.grape', 'Grape'), banana: tr('texture.banana', 'Banana'), jellybeans: tr('texture.jellybeans', 'Jellybeans'),
@@ -26,6 +26,7 @@ function NameField({ declaration }: { declaration: Declaration }) {
 export function SourcesPanel({ declarations, references }: { declarations: readonly Declaration[]; references: Readonly<Record<string, number>> }) {
   const session = useSession(), flow = useReactFlow();
   const constants = declarations.filter(d => d.kind === 'constant'), inputs = declarations.filter(d => d.kind === 'topInput');
+  const uniforms = declarations.filter(d => d.kind === 'uniform');
   const center = () => {
     const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
     return flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
@@ -50,6 +51,26 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
           value={String(declaration.defaultTexture)} onChange={event => session.setDefaultTexture(declaration.id, event.target.value)}>
           {core.defaultTextures.map(texture => <option key={texture} value={texture}>{say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture }))}</option>)}</select>
       </div>
+      {actions(declaration)}
+    </div>)}
+    <header className="sources-section"><span>{say(tr('sources.uniforms', 'Uniforms'))}</span>
+      <button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Add Uniform'))}</button></header>
+    {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
+    {uniforms.map(declaration => <div className="source-row" key={declaration.id}>
+      <div className="source-head">
+        <NameField declaration={declaration} />
+        <select aria-label={say(tr('sources.type', 'Type'))} value={declaration.type}
+          onChange={event => session.setDeclarationType(declaration.id, event.target.value)}>
+          {types.map(type => <option key={type}>{type}</option>)}</select>
+      </div>
+      {/* Colour: vec3 and vec4 only (Q51). 顏色只有 vec3、vec4。 */}
+      {['vec3', 'vec4'].includes(declaration.type) && <label className="source-flag">
+        <input type="checkbox" checked={declaration.color === true}
+          onChange={event => session.setDeclarationColor(declaration.id, event.target.checked)} />
+        {say(tr('sources.color', 'Colour'))}</label>}
+      <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
+        color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'}
+        commit={value => session.setDeclarationValue(declaration.id, value)} />
       {actions(declaration)}
     </div>)}
     <header className="sources-section"><span>{say(tr('sources.constants', 'Global constants'))}</span>

@@ -26,7 +26,7 @@ function vectorCases(){
  }
  add('rgba','vec4',[valueNode('source','vec3',.4),{...node('operation','rgba'),inputValues:{alpha:.7}}],[edge('source','operation','out','rgb')]);
  for(const full of [false,true]){
-  const nodes=[node('base','uniform',{declarationId:'base'}),valueNode('pair','vec2',.2),node('operation','replace',{type:'vec4',groups:full?{x:'vec2',z:'vec2'}:{x:'vec2'},components:[0,0,0,1]})];
+  const nodes=[node('base','declaration',{declarationId:'base'}),valueNode('pair','vec2',.2),node('operation','replace',{type:'vec4',groups:full?{x:'vec2',z:'vec2'}:{x:'vec2'},components:[0,0,0,1]})];
   const edges=[edge('base','operation','out','value'),edge('pair','operation','out','x'),...(full?[edge('pair','operation','out','z')]:[])];
   add('replace-uniform','vec4:'+full,nodes,edges,'operation','vec4');
   rows.at(-1).graph.declarations=[{id:'base',kind:'uniform',name:'uBase',type:'vec4',value:[.5,.5,.5,.5]}];

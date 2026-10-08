@@ -104,6 +104,10 @@ text(top, 'graph', graph_text, 225, 75, 'json', dock=shader)
 text(top, 'graph_meta', json.dumps(meta, ensure_ascii=False), 375, 75, 'json', dock=shader)
 uniforms = node(top, tableDAT, 'uniforms', 525, 75)
 uniforms.clear()
+# The binding table (Q41 3-2): written whole by the editor's apply, drives the GLSL OP through DAT Export.
+# 綁定表：每次套用整張寫入，以 DAT Export 驅動 GLSL OP。
+uniforms.appendRow(['path', 'parameter', 'value', 'enable'])
+uniforms.export = True
 uniforms.dock = shader
 text(top, 'status', '{}', 675, 75, 'json', dock=shader)
 info = node(top, infoDAT, 'compile_info', 50, -336, 148, 105)

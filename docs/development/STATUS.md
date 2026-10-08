@@ -2,6 +2,38 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.44 — Uniform A：宣告、面板、綁定表驅動 GLSL OP；只改值不重新編譯 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/uniform-round.md` 的 A（人類 10-09 看過：拆五輪 A→E；「是不是顏色」存成 `color: true`，只給 vec3、vec4，design-interview Q51）。依 Q41。
+
+- **核心**：
+  - `uniform` 宣告（float、vec2～vec4），欄位 `value`、選用 `color`。
+  - kind 可以有選用欄位（`optional`），新增時不寫。
+  - 改成 float／vec2 時，顏色自動關掉。
+  - 舊式 `uniform` 節點退休：引用一律用引用宣告節點；舊圖轉換工具把它轉成引用宣告節點，`nativeSequence: 'color'` 轉成 `color: true`（[GRAPH_FORMAT](../architecture/GRAPH_FORMAT.md) 對照表已補）。
+  - `EmitContext.useUniform` 拿掉。
+- **TD**（[next_family.py](../../src/td/runtime/next_family.py)）：
+  - 綁定接受 `uniform`，檢查名稱、型別、值、顏色；其他種類仍拒絕，訊息改成「這個 TD-Grape 還不支援這種綁定」。
+  - GLSL 編譯成功後，綁定表 `uniforms` 整張重寫（path／parameter／value／enable，名稱加引號），開 DAT Export 驅動 GLSL OP。顏色放 Colors 頁、其餘放 Vectors 頁；Vectors／Colors 的列數由 Python 設定。
+  - **程式與輸入都沒變時（例如只改值）跳過兩次 GLSL 試編譯**。
+  - 範本的 `uniforms` 表一開始就有表頭並開 Export。
+- **編輯器**：
+  - 開得了有 Uniform 宣告的圖。
+  - 共用來源面板加「Uniform」區：新增、改名、型別、顏色（vec3／vec4 才出現；開了顯示色塊、欄位標 RGBA）、值、幾個節點使用、放到圖上、刪除。
+  - 改值放開才送（拖曳中即時送是 C）。
+- **驗證**：
+  - 自動測試：core 138（新增 `test_uniforms.cjs` 3 項）、editor 49（新增：新增→vec4→顏色→值→放到圖上→接線；只改值時 GLSL 不變、只有綁定值變）、Python 57（新增：Uniform 檢查、編譯成功才寫綁定表、只改值不編譯、綁定表的列）。
+  - DAT Export 實測（TD 2025.33230）：Vectors、Colors 頁都能驅動；vec3 顏色走 Colors 頁也可以；改一格立即生效。
+  - 真實 TD＋瀏覽器（照使用者操作）：
+    1. 新建 Grape TOP → 面板新增 Uniform → vec4 → 勾顏色 → 值 (1, 0.5, 0, 1) → 放到圖上 → 拉線到 Color Output → TD 的 Colors 頁出現 `uniform1`、畫面 (1, 0.5, 0, 1)。
+    2. 改 G 為 1 → 畫面 (1, 1, 0, 1)，**TD 試編譯 0 次**（暫時在記憶體計數，測完還原）。
+    3. 改名 uTint → 編譯 1 次（GLSL 改了）。
+    4. 取消顏色 → 改放 Vectors 頁、Colors 頁清空、不編譯。
+    5. 刪除 → 綁定表只剩表頭、GLSL 沒有 uTint、畫面變黑。
+    6. Undo → 全部回來。
+  - 測試 OP 已刪。Deliver 存 `TD-Grape-dev.78`。
+- **之後**：B 時間（內建值 kind）、C 拖數值即時送、D 公開、E TD 值的 Undo；矩陣、陣列、int／uint／bool／double、Spec 常數（含負整數在 TD 端的轉換）之後。
+
 ## Refactor.43 — TOP 貼圖輸入：宣告的一種、取樣節點、TD 依清單管理 In TOP — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/texture-inputs.md`（人類 10-09 看過；兩題決定：新建的 Grape TOP 一開始就有一個輸入 `input1`、預設圖 Grape；預設圖可選 Samples 的 7 個出口）。依圖結構決議 5、Q44、Q45。

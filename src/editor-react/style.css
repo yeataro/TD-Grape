@@ -33,6 +33,7 @@ footer { color: #958b9f; font-size: 11px; }
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .builtin-row small { color: #ffffff80; }
 .port-fallback { color: #ffffff80; font-size: 11px; padding-left: 4px; }
+.source-flag { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .grape-node.ghost .ghost-note { font-size: 11px; color: #ffffffa0; padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
 .node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }

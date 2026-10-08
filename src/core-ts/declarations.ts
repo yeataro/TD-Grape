@@ -24,6 +24,9 @@ export interface DeclarationKind {
   /** The kind's own fields (decision 11) with their values for a new declaration; only these may be
    * changed besides name and type. 自己的欄位與新增時的初始值；除了名稱與型別，只有這些能改。 */
   initial(type: string): Record<string, Value>;
+  /** Optional fields of its own that a new declaration leaves out (e.g. a Uniform's `color`).
+   * 自己的、新增時不寫的選用欄位（例如 Uniform 的 color）。 */
+  readonly optional?: readonly string[];
   /** How its own fields follow a new type. 改型別時自己的欄位怎麼跟著調整。 */
   retype?(declaration: Declaration, type: string): Record<string, Value>;
   validate(declaration: Declaration): void;
@@ -50,9 +53,21 @@ const numericFields = {
 // Global constant (Q41): `const` at file scope; changing it changes the program, nothing in TD.
 const constantKind: DeclarationKind = { kind: 'constant', role: 'constant', colorGroup: 'constant', types, constant: true, validate: numericValue,
   ...numericFields, header: (d: Declaration) => 'const ' + d.type + ' ' + d.name + ' = ' + literal(d.value, numericType(d.type)) + ';' };
-// Uniform (Q41): its value lives in TD; the Uniform round adds exposure and live values.
-const uniformKind: DeclarationKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types, constant: false, validate: numericValue,
-  ...numericFields, header: (d: Declaration) => 'uniform ' + d.type + ' ' + d.name + ';' };
+// Uniform (Q41; uniform-round.md): `value` is its value while not exposed (exposure is round D).
+// `color: true` (design-interview Q51) marks a colour: vec3 and vec4 only; left out means not a colour.
+// Uniform：value 是沒公開時的值；color: true 表示是顏色（只有 vec3、vec4；沒寫＝不是顏色）。
+const colorTypes = ['vec3', 'vec4'];
+const uniformKind: DeclarationKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types, constant: false,
+  optional: ['color'],
+  validate: d => {
+    numericValue(d);
+    if (d.color !== undefined && typeof d.color !== 'boolean') throw Error('Color must be true or false');
+    if (d.color === true && !colorTypes.includes(d.type)) throw Error('Only vec3 and vec4 can be a colour');
+  },
+  initial: numericFields.initial,
+  // A type that cannot be a colour turns the colour off. 不能當顏色的型別會把顏色關掉。
+  retype: (d, type) => ({ ...numericFields.retype(d, type), ...(d.color === true && !colorTypes.includes(type) ? { color: false } : {}) }),
+  header: (d: Declaration) => 'uniform ' + d.type + ' ' + d.name + ';' };
 
 /** Default images a TOP texture input shows when nothing is connected from outside (graph-structure
  * `defaultTexture`; human 2026-10-09: the Samples outputs, Grape first). `custom` is the TOP chosen
@@ -106,7 +121,7 @@ export type DeclarationPatch = { name?: string; type?: string; [field: string]: 
 export type DeclarationEntry = { id: string; kind: string; name: string; type: string; [field: string]: Value | undefined };
 // Only the kind's own fields can be set (decision 11). 只能設定 kind 自己的欄位。
 function setOwnFields(module: DeclarationKind, declaration: Declaration, fields: DeclarationPatch) {
-  const own = Object.keys(module.initial(declaration.type));
+  const own = [...Object.keys(module.initial(declaration.type)), ...(module.optional ?? [])];
   for (const [field, value] of Object.entries(fields)) if (!['id', 'kind', 'name', 'type'].includes(field) && value !== undefined) {
     if (!own.includes(field)) throw new DeclarationError('field', field);
     declaration[field] = copy(value);

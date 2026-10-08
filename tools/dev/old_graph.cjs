@@ -13,7 +13,8 @@ const newEdgeId=taken=>{for(;;){const id='e'+randomUUID().replace(/-/g,'');if(!t
 
 function convertNode(node,where,pending){
   const {id,definitionUuid,revisionHash,...rest}=node;
-  const out={id,nodeType:definitionUuid,...rest};
+  // The old Uniform node is the reference node now (Refactor.44). 舊 Uniform 節點改為引用宣告節點。
+  const out={id,nodeType:definitionUuid==='sgrape.builtin.uniform'?'sgrape.builtin.declaration':definitionUuid,...rest};
   const ui=out.ui&&typeof out.ui==='object'&&!Array.isArray(out.ui)?{...out.ui}:undefined;
   if(ui){
     const notes=[];
@@ -41,8 +42,11 @@ function convertNetwork(data,where,pending){
 function convertDeclaration(d,pending){
   const out={...d};
   delete out.sourceMissing;                                   // TD state, never graph data
-  if(out.nativeSequence!=='color')delete out.nativeSequence;  // derivable from kind + type
-  for(const key of ['nativeSequence','initialDriver','exposeName','defaultSource','source'])
+  // Pages are derived from kind + type; the one real content, "is a colour", is `color: true` (Q51).
+  // 頁面由 kind＋type 推算；唯一真正的內容「是不是顏色」改成 color: true。
+  if(out.nativeSequence==='color')out.color=true;
+  delete out.nativeSequence;
+  for(const key of ['initialDriver','exposeName','defaultSource','source'])
     if(out[key]!==undefined)pending.push('declaration '+d.id+'.'+key+' (new field defined in its feature round)');
   return out;
 }

@@ -8,6 +8,7 @@ Grape OP：TD 不解析、不檢查、不重新序列化圖；圖是不透明文
 """
 from hashlib import sha256
 import json
+import math
 import re
 import uuid
 
@@ -48,6 +49,14 @@ DEFAULT_TEXTURES = ('grape', 'banana', 'jellybeans', 'white', 'black', 'normal',
 INPUT_STORE = 'grapeInput'  # storage key on an In TOP: the ID of the input it belongs to
 INPUT_X, INPUT_Y, INPUT_STEP = -200, -125, 100
 
+# Uniforms, round A (Refactor.44; uniform-round.md, design-interview Q41 3-2, Q51). The binding table
+# `uniforms` (only ever written, whole) drives the GLSL OP's Uniform parameters through DAT Export:
+# colours on the Colors page, the rest on the Vectors page (the page follows kind + type + color, Q44).
+# Uniform A：綁定表 uniforms 只被整張寫入，以 DAT Export 驅動 GLSL OP 的 Uniform 參數；
+# 顏色放 Colors 頁，其餘放 Vectors 頁。
+UNIFORM_TYPES = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
+COLOR_TYPES = ('vec3', 'vec4')
+
 
 def require(condition, message):
     if not condition:
@@ -82,22 +91,52 @@ def read_runtime(text, *, catalog_hash):
     require(0 < len(compiled['pixel'].encode('utf-8')) <= MAX_GLSL_BYTES, 'GLSL is empty or over 512,000 bytes')
     bindings = compiled.get('bindings')
     require(isinstance(bindings, list), 'invalid binding table')
-    seen = set()
+    seen, names = set(), set()
     for entry in bindings:
         require(isinstance(entry, dict), 'invalid binding table')
-        # Uniform bindings arrive with the Uniform round (binding table, design-interview Q41).
-        require(entry.get('kind') == 'topInput', 'Uniform bindings are not migrated to the new editor path yet.')
-        ident, name = entry.get('id'), entry.get('name')
-        require(isinstance(ident, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', ident) and ident not in seen
-                and isinstance(name, str) and 0 < len(name) <= 48 and entry.get('defaultTexture') in DEFAULT_TEXTURES,
-                'invalid texture input')
+        kind, ident, name = entry.get('kind'), entry.get('id'), entry.get('name')
+        # Other kinds arrive with their rounds (time, Spec constants…). 其他種類等各自那一輪。
+        require(kind in ('topInput', 'uniform'), 'This kind of binding is not supported by this TD-Grape yet: ' + str(kind))
+        require(isinstance(ident, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', ident) and ident not in seen,
+                'invalid binding ID')
         seen.add(ident)
+        if kind == 'topInput':
+            require(isinstance(name, str) and 0 < len(name) <= 48 and entry.get('defaultTexture') in DEFAULT_TEXTURES,
+                    'invalid texture input')
+            continue
+        count = UNIFORM_TYPES.get(entry.get('type'))
+        value = entry.get('value')
+        values = [value] if count == 1 else value
+        require(isinstance(name, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,47}', name) and name not in names
+                and count is not None and isinstance(values, list) and len(values) == count
+                and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in values)
+                and entry.get('color', False) in (True, False) and (entry.get('color') is not True or entry['type'] in COLOR_TYPES),
+                'invalid Uniform')
+        names.add(name)
     return compiled
 
 
 def texture_inputs(compiled):
     """The TOP texture inputs, in the graph's order. 圖裡的 TOP 貼圖輸入，照圖的順序。"""
     return [entry for entry in compiled['bindings'] if entry['kind'] == 'topInput']
+
+
+def uniform_rows(uniforms):
+    """Binding table rows (DAT Export: path, parameter, value, enable) and the number of Vectors and
+    Colors blocks. Values are Python expressions to DAT Export, so names are quoted (an unquoted
+    name fails silently, 2026-10-07 test). 綁定表的列；DAT Export 把 value 當 expression，名稱要加引號。"""
+    rows = [['path', 'parameter', 'value', 'enable']]
+    vectors = [u for u in uniforms if u.get('color') is not True]
+    colors = [u for u in uniforms if u.get('color') is True]
+    for i, u in enumerate(vectors):
+        values = u['value'] if isinstance(u['value'], list) else [u['value']]
+        rows.append(['shader', 'vec%dname' % i, repr(u['name']), '1'])
+        rows.extend(['shader', 'vec%dvalue%s' % (i, axis), repr(float(v)), '1'] for axis, v in zip('xyzw', values))
+    for i, u in enumerate(colors):
+        rows.append(['shader', 'color%dname' % i, repr(u['name']), '1'])
+        rows.extend(['shader', 'color%d%s' % (i, part), repr(float(v)), '1']
+                    for part, v in zip(('rgbr', 'rgbg', 'rgbb', 'alpha'), u['value']))
+    return rows, len(vectors), len(colors)
 
 
 class NextFamily:
@@ -183,6 +222,30 @@ class NextFamily:
         if shader is None or shader.type != 'glsl':
             raise RuntimeError('This Grape OP does not contain a native GLSL TOP.')
         return shader
+
+    def _input_ids(self):
+        """The input IDs the TOPs list holds now, in order. TOPs 清單現在的輸入 ID，照順序。"""
+        ids = []
+        for name in self._shader(self.comp).par.tops.val.split():
+            target = self.comp.op(name)
+            ids.append(target.fetch(INPUT_STORE, None, search=False) if target is not None else None)
+        return ids
+
+    def _write_uniforms(self, uniforms):
+        """Rewrite the binding table whole; DAT Export drives the GLSL OP's Uniform parameters, so it
+        works without the main component. The Vectors and Colors blocks are sized here (DAT Export
+        cannot add blocks). 整張重寫綁定表；DAT Export 驅動 GLSL OP 的 Uniform 參數，主組件不在也照常。
+        Vectors／Colors 的列數在這裡設定（DAT Export 不能加列）。"""
+        shader, table = self._shader(self.comp), self.comp.op('uniforms')
+        if table is None:
+            table = self.comp.create(tableDAT, 'uniforms')
+            table.dock = shader
+        rows, vectors, colors = uniform_rows(uniforms)
+        shader.seq.vec.numBlocks = max(1, vectors)
+        shader.seq.color.numBlocks = max(1, colors)
+        table.clear()
+        table.appendRows(rows)
+        table.export = True
 
     def _place_inputs(self, inputs):
         """Give every texture input an In TOP and list them in the TOPs list, so the new GLSL can
@@ -300,18 +363,24 @@ class NextFamily:
         if runtime_text is not None:
             compiled = read_runtime(runtime_text, catalog_hash=catalog_hash)
             inputs = texture_inputs(compiled)
+            uniforms = [entry for entry in compiled['bindings'] if entry['kind'] == 'uniform']
             pixel = self.comp.op('pixel_shader')
             previous = pixel.text
             placed = None
+            # The same program with the same inputs (e.g. only a Uniform value or a default image
+            # changed): nothing to compile. 程式與輸入都相同（例如只改 Uniform 的值）：不需要編譯。
+            same_program = pixel.text == compiled['pixel'] and self._input_ids() == [e['id'] for e in inputs]
             try:
-                self._validate(compiled['pixel'], len(inputs))
+                if not same_program:
+                    self._validate(compiled['pixel'], len(inputs))
                 # The inputs and the GLSL that reads them change together (Q38 2-2).
                 # 輸入接口與讀它們的 GLSL 一起換。
                 placed = self._place_inputs(inputs)
                 if pixel.text != compiled['pixel']:
                     pixel.text = compiled['pixel']
                     shader_updated = True
-                self._verify_gpu(self.comp)
+                if not same_program:
+                    self._verify_gpu(self.comp)
             except Exception as error:
                 # The GLSL did not compile in TD: the Shader and its inputs stay the last known good,
                 # and the graph is still saved below (Q38: only the execution part is all-or-nothing).
@@ -322,6 +391,7 @@ class NextFamily:
                 shader_updated, shader_error = False, str(error)
             else:
                 placed[0]()
+                self._write_uniforms(uniforms)
                 meta['runtime'] = {'revision': next_revision, 'text': runtime_text,
                                    'sha256': digest(runtime_text), 'document': None,
                                    'editorVersion': editor_version}

@@ -186,11 +186,6 @@ export function tdValueNode(catalog:CatalogRow):NodeModule {
       n.params.entry=id;return n;},
     emit:n=>({outputs:{out:entryOf(n)!.expression}})};
 }
-export function uniformNode(catalog:CatalogRow):NodeModule {
-  return {catalog,role:'value',supports:(n,c)=>numeric(n)&&(!c.declaration(String(n.params.declarationId))||types.includes(c.declaration(String(n.params.declarationId))!.type)),ports:(n,c)=>{
-    const d=c.declaration(String(n.params.declarationId));if(!d)throw Error('Select a matching declaration');return outputPorts[type(d.type)]!;
-  },validate:()=>{},emit:(n,c)=>({outputs:{out:c.useUniform(String(n.params.declarationId))}})};
-}
 /** Terminal family with a shared, immutable port layout. The owning node
  * supplies target capabilities, controls, validation and shader statements. */
 export function outputNode(catalog:CatalogRow,spec:Omit<NodeModule,'catalog'|'role'|'ports'> & {ports:readonly PortSpec[]|NodeModule['ports']}):NodeModule {

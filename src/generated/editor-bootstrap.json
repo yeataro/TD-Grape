@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "83da79054982f44524016d3612fe19507bddb78a8bc538508cbc954058a5a4dc",
+  "catalogHash": "64dfbdc010aeeb3cb6081d7632cca1923ab283c58dbc7b93fe99a1f1e0af925e",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -1190,23 +1190,6 @@
       },
       "descriptionKey": "help.trunc",
       "definitionUuid": "sgrape.builtin.trunc"
-    },
-    {
-      "key": "uniform",
-      "label": "Uniform",
-      "inputs": {},
-      "outputs": {
-        "out": "D"
-      },
-      "stages": [
-        "vertex",
-        "pixel"
-      ],
-      "defaults": {
-        "declarationId": ""
-      },
-      "descriptionKey": "help.uniform",
-      "definitionUuid": "sgrape.builtin.uniform"
     },
     {
       "key": "vec2",
@@ -5071,39 +5054,6 @@
             "inputs": {
               "value": "vec4"
             },
-            "outputs": {
-              "out": "vec4"
-            }
-          }
-        ]
-      },
-      "sgrape.builtin.uniform": {
-        "selector": "declaration",
-        "variants": [
-          {
-            "type": "float",
-            "inputs": {},
-            "outputs": {
-              "out": "float"
-            }
-          },
-          {
-            "type": "vec2",
-            "inputs": {},
-            "outputs": {
-              "out": "vec2"
-            }
-          },
-          {
-            "type": "vec3",
-            "inputs": {},
-            "outputs": {
-              "out": "vec3"
-            }
-          },
-          {
-            "type": "vec4",
-            "inputs": {},
             "outputs": {
               "out": "vec4"
             }

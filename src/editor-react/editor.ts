@@ -200,6 +200,15 @@ export class Editor {
     this.transactGraph(tr('sources.added', 'Constant {name} added', { name }), document =>
       document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'constant', name, type: 'float' }));
   };
+  // Uniforms, round A (Refactor.44; uniform-round.md): the value lives in the graph until exposed (round D).
+  // Uniform A：在公開（D）之前值存在圖裡。
+  addUniform = () => {
+    const name = core.freeDeclarationName(this.document.document, 'uniform');
+    this.transactGraph(tr('sources.uniformAdded', 'Uniform {name} added', { name }), document =>
+      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'uniform', name, type: 'float' }));
+  };
+  setDeclarationColor = (id: string, color: boolean) =>
+    this.transactGraph(tr('sources.colorChanged', 'Colour setting updated; waiting to apply'), document => { document.changeDeclaration(id, { color }); });
   // TOP texture inputs (Refactor.43): each becomes an input of the Grape OP in TD, in list order.
   // TOP 貼圖輸入：每一筆在 TD 成為 Grape OP 的輸入接口，照清單順序。
   addTopInput = () => {
