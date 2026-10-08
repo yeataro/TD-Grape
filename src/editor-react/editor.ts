@@ -2,7 +2,7 @@ import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, t
 import { core, compiler, requireSupported, parseDocument, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
   type Declaration, type NameProblem } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
-import { type HostClient, type StateResponse } from './host';
+import { type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
 import { tr, errorText, type Message } from './text';
 import { ReportLog, type Level } from './reports';
@@ -62,9 +62,11 @@ const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).con
 
 // message is data (a Message), worded only when shown (Q34); level says how serious it is (Q35).
 // declarations: the document's own frozen list (no copy); references: how many nodes use each one.
+// tdUniforms: each Uniform's components as TD reported them last (Uniform D1: on open and with each reply).
+// tdUniforms：TD 最近一次回報的各 Uniform 分量現況（D1：開圖與每次回覆時）。
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
   message: Message | string; level: Level; glsl: string; targetPath: string;
-  declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
+  declarations: readonly Declaration[]; references: Readonly<Record<string, number>>; tdUniforms: UniformStates };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
 // state, compiles every finished edit, and hands the result to HostSync (design-interview Q38).
@@ -101,7 +103,13 @@ export class Editor {
       (status, said) => this.status({ ...status, ...said }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '', targetPath: loaded.target,
-      ...this.sources() };
+      ...this.sources(), tdUniforms: loaded.uniforms ?? {} };
+    // TD-Grape's notices are said as they are, by TD-Grape (Q58). TD-Grape 的提醒照原樣、以 TD-Grape 的名義說。
+    this.sync.onTd = (uniforms, notices) => {
+      if (uniforms) this.state = { ...this.state, tdUniforms: uniforms };
+      if (notices.length) for (const notice of notices) this.status({ message: notice, level: 'warning' }, 'td');
+      else if (uniforms) this.publish();
+    };
     this.tell('info', tr('edit.loaded', 'Loaded the graph from TD'));
     // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
     // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
@@ -228,23 +236,23 @@ export class Editor {
     this.transactGraph(tr('sources.added', 'Constant {name} added', { name }), document =>
       document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'constant', name, type: 'float' }));
   };
-  // Uniforms, round A (Refactor.44; uniform-round.md): the value lives in the graph until exposed (round D).
-  // Uniform A：在公開（D）之前值存在圖裡。
-  addUniform = () => {
+  // Uniforms (Refactor.44, D1): a colour or not is chosen when it is added and never switched (Q59: the
+  // Colors and Vectors pages differ, switching would drop what drives it in TD). A colour starts white.
+  // Uniform：新增時就決定是不是顏色，之後不能切換（換頁會掉 TD 上的驅動）；顏色從白色開始。
+  addUniform = (color = false) => {
     const name = core.freeDeclarationName(this.document.document, 'uniform');
     this.transactGraph(tr('sources.uniformAdded', 'Uniform {name} added', { name }), document =>
-      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'uniform', name, type: 'float' }));
+      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'uniform', name,
+        ...(color ? { type: 'vec4', color: true, value: [1, 1, 1, 1] } : { type: 'float' }) }));
   };
-  setDeclarationColor = (id: string, color: boolean) =>
-    this.transactGraph(tr('sources.colorChanged', 'Colour setting updated; waiting to apply'), document => { document.changeDeclaration(id, { color }); });
-  // Built-in values (Refactor.45; Q52): placing one creates its declaration the first time and reuses it
-  // after; one step, one Undo. 內建值：第一次放到圖上時建立宣告，之後重用；一步、一次 Undo。
-  placeBuiltin = (entry: string, position: XYPosition) => {
-    const value = core.builtinValues.find(item => item.id === entry)!;
+  // Preset Uniforms (time, Q61): placing one creates its Uniform the first time and reuses it after; one
+  // step, one Undo. The core fills in the name and type. 預設 Uniform：第一次放到圖上時建立，之後重用；名字型別由核心照表填。
+  placePreset = (entry: string, position: XYPosition) => {
+    const preset = core.uniformPresets.find(item => item.entry === entry)!;
     this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => {
-      let declaration = document.document.declarations.find(d => d.kind === 'builtin' && d.entry === entry);
+      let declaration = document.document.declarations.find(d => d.kind === 'uniform' && d.entry === entry);
       if (!declaration) declaration = document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16),
-        kind: 'builtin', name: value.name, type: value.type, entry });
+        kind: 'uniform', name: preset.name, type: preset.type, entry });
       document.networks.get('pixel')!.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.declaration',
         params: { declarationId: declaration.id }, ui: { ...position } });
     });

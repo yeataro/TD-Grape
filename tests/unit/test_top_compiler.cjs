@@ -14,13 +14,18 @@ function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);O
 // Legacy refused a wire to a port that no longer exists; it is now a ghost wire, treated as not
 // connected (design-interview Q37 1-3). 舊產品對「接到不存在接孔的線」整張報錯；現在是 Ghost 線、當作沒接。
 const nowGhost=new Set(['missing port']);
+// Legacy listed only used Uniforms in the compiler result, while its TD side kept a row for every declared
+// one (sgrape_sources.configure). The TD side now reads the compiler result, so unused Uniforms are in it
+// too (Uniform D1); compared here as legacy listed them. 舊產碼結果只列用到的 Uniform，TD 端則替每個宣告留列；
+// 現在 TD 讀產碼結果，所以沒用到的也在裡面。這裡照舊產品的列法比較。
+const asLegacy=r=>({...r,bindings:r.bindings.filter(b=>b.kind!=='uniform'||new RegExp('^uniform \\S+ '+b.name+';$','m').test(r.pixel))});
 test('frontend compilation matches legacy GLSL, bindings, ports, source map and diagnostics',()=>{
   for(const row of cases){
     assert.equal(compiler.supports(row.graph),true,row.name);
     if(nowGhost.has(row.name)){const result=compiler.compile(freeze(row.graph),identifiers);
       assert.ok(result.diagnostics.some(d=>/Ghost wire/.test(d.message)),row.name);}
     else if(row.error)assert.throws(()=>compiler.compile(freeze(row.graph),identifiers),undefined,row.name);
-    else assert.deepEqual(plain(compiler.compile(freeze(row.graph),identifiers)),row.compiled,row.name);
+    else assert.deepEqual(asLegacy(plain(compiler.compile(freeze(row.graph),identifiers))),row.compiled,row.name);
   }
 });
 test('capability selection excludes whole graphs before execution',()=>{

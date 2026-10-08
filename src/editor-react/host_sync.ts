@@ -1,5 +1,5 @@
 import { compiler, serializeDocument, type Graph, type Bootstrap } from './core';
-import { HostClient, HostError, type StateResponse } from './host';
+import { HostClient, HostError, type StateResponse, type UniformStates } from './host';
 import { tr, TextError, errorText, type Message } from './text';
 import type { Level } from './reports';
 
@@ -18,7 +18,9 @@ type Patch = Partial<SyncStatus> & Partial<Said>;
 type Sent = { document: string; revision: number };
 // shaderError: the GLSL did not compile in TD. The graph was still saved; TD keeps running the
 // last good Shader (Refactor.34). 圖照樣存了，只是 GLSL 在 TD 編譯失敗、Shader 停在上次成功版。
-type Applied = { state: StateResponse['state']; shaderError?: string | null };
+// uniforms: each Uniform's components as TD has them now; notices: TD-Grape's messages for people,
+// in the tr() shape (Uniform D1, Q58, Q60). uniforms：各分量的現況；notices：TD-Grape 給人看的訊息。
+type Applied = { state: StateResponse['state']; shaderError?: string | null; uniforms?: UniformStates; notices?: Message[] };
 export const FORMAT = 'grape-next-1';
 
 // Two parts (design-interview Q38 2-2): the execution part (GLSL + bindings) is applied by TD as a
@@ -86,6 +88,8 @@ export class HostSync {
   private uncertain?: Sent;
   blocked = false;
   status: SyncStatus;
+  /** What TD reported along with a reply (Uniform D1). 回覆裡 TD 一起帶回的現況與訊息。 */
+  onTd?: (uniforms: UniformStates | undefined, notices: readonly Message[]) => void;
   constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse,
     private readonly source: () => Delivery, private readonly report: (status: SyncStatus, said?: Said) => void,
     private readonly delay = 0, private readonly retry = 5000, private readonly editorVersion = 'unknown') {
@@ -147,6 +151,7 @@ export class HostSync {
           message = tr('sync.savedKnownFailure', 'Graph saved to TD; this program failed to compile in TD before, so TD still runs the last good Shader.');
         }
         this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message, level });
+        this.onTd?.(result.uniforms, result.notices ?? []);
       } catch (error) {
         if (this.disposed) return;
         this.fail(classify(error), error, sent);
@@ -201,6 +206,7 @@ export class HostSync {
     if (result.frontendCompiler.catalogHash !== this.bootstrap.catalogHash) {
       this.blocked = true; this.set({ phase: 'error', link: undefined, message: hostChanged, level: 'error' }); return;
     }
+    this.onTd?.(result.uniforms, []);
     const state = result.state, sent = this.uncertain;
     if (sent && state.revision === sent.revision + 1 && state.document === sent.document) this.confirmed = sent.document;
     else if (state.revision !== this.status.revision || state.document !== this.confirmed) {

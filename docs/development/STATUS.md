@@ -2,6 +2,26 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.47 — Uniform D1：TD 直接寫 Uniform、保留 TD 上的驅動 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/uniform-d.md`（第二版，人類 10-09 選甲：拆兩輪、分開提交、不用等人類）；依 design-interview Q55–Q61。
+
+- **TD**：
+  - 新 [uniform_writer.py](../../src/td/runtime/uniform_writer.py)：照舊產品用名字找 GLSL OP 的列、只補缺的、加在最後（唯一一列沒被動過就直接用）；改名只改名字欄（名字被驅動時拒絕）；刪除用 `destroyBlock`，一頁只剩一列時清名字並拿掉 Expression／Bind（新行為），Export 動不了就送提醒。值只寫 `val`：固定值寫自己、Bind 寫 `bindMaster`；只寫「這次和上次成功套用不同」的分量（新行為，Q57）。預設 Uniform 建立那一列時寫一次 expression。
+  - R.44～46 的 Grape OP：第一次套用時關掉綁定表的 Export、留下它驅動的內容；範本不再建綁定表。
+  - [next_family.py](../../src/td/runtime/next_family.py)：套用與 `state` 回覆帶 `uniforms`（各分量的模式與值）與 `notices`；`live` 也走 uniform_writer。
+  - 新 [td_text.py](../../src/td/runtime/td_text.py)：TD 給人看的訊息用 `tr()` 形狀（代號＋英文＋參數，Q58）；`locales.cjs` 也掃 TD 程式。
+  - 預設 Uniform 的 expression 由 Manager 從網頁資產的 `editor-bootstrap.json` 讀（Q61）；Manager 網路上加說明框 `annotate_bundle_tables`、讀取處加註解。
+- **核心**：拿掉 `kind: builtin` 與 `builtins.ts`；時間＝`kind: uniform`＋`entry`，表在 [uniform_presets.json](../../src/library/uniform_presets.json)（`build:core` 產生 TS 並放進 bootstrap）；名字、型別、`entry` 網頁端鎖住；顏色建立後不能切換（Q59）；拿掉 `expose` 檢查（Q55）；共同身分小表 [common_sources.json](../../src/library/common_sources.json)、`td_values` 加 `common`。**Uniform 宣告不論有沒有用到都交給 TD**（新旗標 `declared`；GLSL 只宣告用到的）。
+- **編輯器**：面板「＋ Uniform」「＋ 顏色 Uniform」；時間區照表列 6 筆（沒用到的灰色）、放到圖上建立 Uniform＋entry；每個分量照 TD 模式顯示——Expression 藍色唯讀、Bind 紫色（顯示綁到的值、可改）、Export 綠色唯讀（提示寫來源）；TD 還沒回報時預設 Uniform 顯示表上的 expression。TD-Grape 的提醒照原樣進 log（來源 `td`）。
+- **實機驗收時發現並修正**（真實 TD＋內建瀏覽器）：
+  1. 改 Y 時即時值把整個向量寫進 TD，蓋掉 TD 上改過的 X → `live` 也只寫在編輯器變了的分量（加測試）。
+  2. 拔線後該 Uniform 不在產碼結果裡，TD 那一列（和使用者接的 Bind）被刪 → 舊產品是「宣告了就有列」（legacy `sgrape_sources.configure` 處理所有宣告），改成同樣（`declared`）。
+- **驗證**：
+  - 自動測試：core 140、editor 52、Python 53（新 `test_uniform_writer.py` 12 項，FakeShader 照 10-09 實測行為）。
+  - 真實 TD（暫時的 Grape OP `grape_d1_probe`＋自訂參數 COMP，測完已刪）：新增 vec3 Uniform 接到輸出 → 用到原本那一列；在 TD 把 X 接 Expression、Y Bind 到自訂參數、Z 用 CHOP Export → 重新開編輯器顯示藍／紫（0.25）／綠，提示「由 d1_export:shader:vec0valuez 的 Export 驅動」；在編輯器把 Y 改 0.6、0.55 → 自訂參數跟著變，Expression／Export 套用後仍在；在 TD 把 X 改成固定 0.7 後在編輯器改 Y → X 仍是 0.7；uAbsTime 放到圖上 → TD 新列 `absTime.seconds`、面板藍色那一行、沒有名稱欄；刪掉某頁最後一列 → 名字清空、Bind 拿掉、Export 留著並出現提醒；「＋ 顏色 Uniform」→ Colors 頁、白色、型別只有 vec3／vec4。`Grape_TOP_test`（R.44 之後建的）第一次套用後綁定表 Export 關掉。Manager、範本、測試 OP 無 scriptErrors。Deliver 存 `TD-Grape-dev.83`。
+- **限制**：D1 沒有即時回報；TD 上改了固定值，編輯器要到下一次套用或重開才有新模式，數值欄仍顯示圖裡的值（D2 補）。未測：斷線時改值、重新連上後寫入（走既有的送出重試，比對規則同上）。
+
 ## Refactor.46.1 — 共用來源面板記住開關、第一次預設打開 — 2026-10-09
 
 人類 10-09：面板關了不知道從哪裡開、而且預設是關的；選「記住開關，第一次預設打開」。

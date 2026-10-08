@@ -35,6 +35,10 @@ class GrapeManagerExt:
         """An explicit peer entry point; invoked on service start/reload."""
         self.Disconnect()
         files = editor.snapshot.files
+        # TD reads its shared tables from the editor bundle here, one read point (design-interview Q61):
+        # the compiler hash (catalogHash) and the Uniform presets' expressions. If the web assets ever
+        # move out of TD, these move with them (see the annotation in this network).
+        # TD 從網頁資產讀共用表，只有這一處：編譯器雜湊、預設 Uniform 的 expression。網頁資產搬離 TD 時要一起處理。
         bootstrap = json.loads(files['editor-bootstrap.json'])
         if bootstrap['catalogHash'] != sha256(files['grape_core.js']).hexdigest():
             raise RuntimeError('Editor bootstrap and compiler are from different builds.')
@@ -69,7 +73,10 @@ class GrapeManagerExt:
 
     def Adapter(self, comp):
         nxt = self._module('next_family')
-        return nxt.NextFamily(comp, validation_area=self.ownerComp.op('validation'))
+        # Preset Uniform expressions come from the editor bundle (Q61), never from a request.
+        # 預設 Uniform 的 expression 來自網頁資產，不來自請求。
+        presets = {preset['entry']: preset['expression'] for preset in (self.bootstrap or {}).get('uniformPresets', [])}
+        return nxt.NextFamily(comp, validation_area=self.ownerComp.op('validation'), presets=presets)
 
     def Resolve(self, target_id):
         # TD is the registry (Q32): search by tag on demand, so new copies are found without registering.

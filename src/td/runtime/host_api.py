@@ -48,7 +48,7 @@ class HostAPI:
         if method == 'GET' and action == 'shaders':
             return self.choices()
         if method == 'GET' and action == 'state':
-            return {'state': family.state(), 'format': family.FORMAT, 'shaderKind': 'top', 'target': family.target().path,
+            return {'state': family.state(), 'uniforms': family.uniform_states(), 'format': family.FORMAT, 'shaderKind': 'top', 'target': family.target().path,
                 'frontendCompiler': {'protocol': family.PROTOCOL, 'catalogHash': self.catalog_hash, 'required': True}}
         if method == 'POST' and action == 'apply':
             return family.apply(body, catalog_hash=self.catalog_hash)

@@ -54,9 +54,8 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     for(const d of g.declarations){
       if(!declarationKinds.has(d.kind))continue;
       if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id)||declarations.has(d.id)||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name)||/^(gl_|TD|sg_|sTD)/.test(d.name)||names.has(d.name))throw Error('Invalid declaration identity/name');
-      // Old-product fields (initialDriver, nativeSequence, exposeName, sourceMissing) are not read (Q44).
-      // 舊產品欄位不讀；去留由匯入器的對照表處理。
-      if(d.expose!==undefined&&typeof d.expose!=='boolean')throw Error('Expose must be a boolean');
+      // Old-product fields (initialDriver, nativeSequence, expose, exposeName, sourceMissing) are not read
+      // (Q44, Q55: Uniforms have no exposed state). 舊產品欄位不讀；去留由匯入器的對照表處理。
       declarationKinds.get(d.kind)!.validate(d);declarations.set(d.id,d);names.add(d.name);
       if(declarationKinds.get(d.kind)!.ordered){const i=counts.get(d.kind)??0;positions.set(d.id,i);counts.set(d.kind,i+1);}
     }
@@ -137,12 +136,14 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     }
     // File-scope GLSL comes from each used declaration's kind; only sources go to TD as bindings
     // (a global constant lives in the program, Q41). Ordered kinds (TOP texture inputs) go first, all
-    // of them in list order, used or not: each one is an input of the Grape OP (Q44).
+    // of them in list order, used or not: each one is an input of the Grape OP (Q44). Uniforms follow,
+    // all of them too (`declared`: the TD row lives as long as the declaration).
     // 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。有順序的種類（TOP 貼圖輸入）全部照清單順序放前面，
-    // 有沒有用到都算：每一筆都是 Grape OP 的輸入接口。
+    // 有沒有用到都算：每一筆都是 Grape OP 的輸入接口。Uniform 接著放，也是全部（TD 上那一列跟著宣告存在）。
     const usedDeclarations=[...used].sort().map(id=>declarations.get(id)!);
-    const ordered=[...declarations.values()].filter(d=>declarationKinds.get(d.kind)!.ordered);
-    const bindings:Declaration[]=[...ordered,...usedDeclarations.filter(d=>declarationKinds.get(d.kind)!.role==='source'&&!declarationKinds.get(d.kind)!.ordered)]
+    const all=[...declarations.values()],kindOf=(d:Declaration)=>declarationKinds.get(d.kind)!;
+    const ordered=all.filter(d=>kindOf(d).ordered),declared=all.filter(d=>kindOf(d).declared&&!kindOf(d).ordered);
+    const bindings:Declaration[]=[...ordered,...declared,...usedDeclarations.filter(d=>kindOf(d).role==='source'&&!kindOf(d).ordered&&!kindOf(d).declared)]
       .map(d=>JSON.parse(JSON.stringify(d)) as Declaration);
     const headers=usedDeclarations.flatMap(d=>{const kind=declarationKinds.get(d.kind)!;return kind.header?[kind.header(d)]:[];});
     const pixel=[...headers,'layout(location=0) out vec4 fragColor;','void main() {','    vec2 sg_uv = vUV.st;',...lines,'}',''].join('\n');

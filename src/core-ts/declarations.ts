@@ -3,7 +3,7 @@ import { types, literal, fill, type as numericType } from './numeric';
 import { reshape } from './values';
 import { identifierRules } from './identifier_rules';
 import type { PortSpec } from './ports';
-import { builtinValues } from './builtins';
+import { uniformPresets } from './uniform_presets';
 
 /** Declarations (design-interview Q41, Q44, Q45): the graph's shared sources and global constants,
  * one list `declarations`, each entry with a `kind`. A kind module decides its fields, what a
@@ -31,12 +31,24 @@ export interface DeclarationKind {
   /** How its own fields follow a new type. 改型別時自己的欄位怎麼跟著調整。 */
   retype?(declaration: Declaration, type: string): Record<string, Value>;
   validate(declaration: Declaration): void;
+  /** Completes a new declaration from what the caller gave (e.g. a preset's name and type).
+   * 從呼叫者給的內容補齊新宣告（例如預設 Uniform 的名字與型別）。 */
+  prepare?(entry: DeclarationEntry): DeclarationEntry;
+  /** Refuses changes the web editor must not make (Q59): throws when `after` changes a locked field.
+   * 網頁端不能改的欄位：改了就丟錯。 */
+  checkChange?(before: Declaration, after: Declaration): void;
   /** File-scope GLSL for a declaration that is used; none when TD declares it. */
   header?(declaration: Declaration): string;
   /** Every declaration of this kind goes to TD in list order, used or not, and a reference uses its
    * position among them (graph-structure decision 5: order is the list order, the GLSL index is
    * worked out by code generation). 這種宣告不論有沒有用都照清單順序交給 TD；引用時用它在同種宣告裡的位置。 */
   readonly ordered?: boolean;
+  /** Every declaration of this kind goes to TD, used or not, in list order after the ordered kinds: its
+   * TD row lives as long as the declaration (legacy sgrape_sources.configure took every declared
+   * Uniform; found in TD 2026-10-09: unwiring must not delete the row and what drives it). The GLSL
+   * still declares only used ones. 這種宣告不論有沒有用到都交給 TD：TD 上那一列跟著宣告存在（舊產品同；
+   * 拔線不能刪掉那一列和它的驅動）。GLSL 仍只宣告用到的。 */
+  readonly declared?: boolean;
   /** What a reference gives (output ports) and their GLSL; by default one `out` of the declaration's
    * type, written as its name. 引用時給哪些輸出與 GLSL；預設是一個 out，寫成宣告的名字。 */
   readonly outputs?: readonly PortSpec[];
@@ -54,20 +66,37 @@ const numericFields = {
 // Global constant (Q41): `const` at file scope; changing it changes the program, nothing in TD.
 const constantKind: DeclarationKind = { kind: 'constant', role: 'constant', colorGroup: 'constant', types, constant: true, validate: numericValue,
   ...numericFields, header: (d: Declaration) => 'const ' + d.type + ' ' + d.name + ' = ' + literal(d.value, numericType(d.type)) + ';' };
-// Uniform (Q41; uniform-round.md): `value` is its value while not exposed (exposure is round D).
-// `color: true` (design-interview Q51) marks a colour: vec3 and vec4 only; left out means not a colour.
-// Uniform：value 是沒公開時的值；color: true 表示是顏色（只有 vec3、vec4；沒寫＝不是顏色）。
+// Uniform (Q41, Q55–Q61; uniform-d.md). `value` is the value it carries with the graph (Q57); in TD the
+// GLSL OP parameter is the authority. `color: true` (Q51) marks a colour, vec3 and vec4 only, decided
+// when it is created (Q59: switching would move it to another page and drop what drives it).
+// `entry` points to a preset (uniform_presets.json, Q61): its name and type come from the preset and are
+// locked in the web editor; otherwise it is an ordinary Uniform.
+// Uniform：value 是跟著圖走的值；color 建立時決定、之後不能改；entry 指向預設 Uniform，名字與型別照表、網頁端鎖住。
 const colorTypes = ['vec3', 'vec4'];
+const presetTable = new Map(uniformPresets.map(preset => [preset.entry, preset]));
 const uniformKind: DeclarationKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types, constant: false,
-  optional: ['color'],
+  declared: true, optional: ['color', 'entry'],
   validate: d => {
     numericValue(d);
     if (d.color !== undefined && typeof d.color !== 'boolean') throw Error('Color must be true or false');
     if (d.color === true && !colorTypes.includes(d.type)) throw Error('Only vec3 and vec4 can be a colour');
+    if (d.entry === undefined) return;
+    const preset = presetTable.get(String(d.entry));
+    if (!preset) throw Error('Unknown Uniform preset');
+    if (d.name !== preset.name || d.type !== preset.type || d.color === true) throw Error('A preset Uniform keeps its own name and type');
   },
   initial: numericFields.initial,
-  // A type that cannot be a colour turns the colour off. 不能當顏色的型別會把顏色關掉。
-  retype: (d, type) => ({ ...numericFields.retype(d, type), ...(d.color === true && !colorTypes.includes(type) ? { color: false } : {}) }),
+  retype: numericFields.retype,
+  prepare: entry => {
+    if (entry.entry === undefined) return entry;
+    const preset = presetTable.get(String(entry.entry));
+    if (!preset) throw Error('Unknown Uniform preset');
+    return { ...entry, name: preset.name, type: preset.type };
+  },
+  checkChange: (before, after) => {
+    if ((before.color === true) !== (after.color === true)) throw Error('A Uniform is a colour or not from the moment it is created');
+    if (before.entry !== after.entry) throw Error('A preset Uniform keeps its preset');
+  },
   header: (d: Declaration) => 'uniform ' + d.type + ' ' + d.name + ';' };
 
 /** Default images a TOP texture input shows when nothing is connected from outside (graph-structure
@@ -91,20 +120,8 @@ const topInputKind: DeclarationKind = { kind: 'topInput', role: 'source', colorG
     if (!defaultTextures.includes(String(d.defaultTexture))) throw Error('Unknown default texture');
   },
   reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }) };
-// Built-in value (decision 17, Q52; builtins.ts): a Uniform whose meaning Grape guarantees. `entry` picks
-// one; the name is the entry's and fixed (so one per graph: names are unique); no value; never exposed.
-// 內建值：entry 選一筆；名稱照表、固定（名稱不重複，所以一張圖只有一筆）；沒有值、不能公開。
-const builtinTable = new Map(builtinValues.map(entry => [entry.id, entry]));
-const builtinKind: DeclarationKind = { kind: 'builtin', role: 'source', colorGroup: 'uniform', types: ['float'], constant: false,
-  optional: ['entry'], initial: () => ({}),
-  validate: d => {
-    const entry = builtinTable.get(String(d.entry));
-    if (!entry) throw Error('Unknown built-in value');
-    if (d.name !== entry.name || d.type !== entry.type) throw Error('A built-in value keeps its own name and type');
-  },
-  header: (d: Declaration) => 'uniform ' + d.type + ' ' + d.name + ';' };
 export const declarationKinds: ReadonlyMap<string, DeclarationKind> =
-  new Map([constantKind, uniformKind, topInputKind, builtinKind].map(module => [module.kind, Object.freeze(module)]));
+  new Map([constantKind, uniformKind, topInputKind].map(module => [module.kind, Object.freeze(module)]));
 
 /** Why a name cannot be used, or null. GLSL naming, not reserved, unique among declarations.
  * 名稱不能用的原因（沒有問題回傳 null）：GLSL 命名、非保留字、宣告之間不重複。 */
@@ -143,9 +160,9 @@ function setOwnFields(module: DeclarationKind, declaration: Declaration, fields:
 
 /** Commands, used inside GraphDocument.change() on its editable candidate document.
  * 指令：在 GraphDocument.change() 的可編輯候選文件上使用。 */
-export function addDeclaration(graph: Graph, entry: DeclarationEntry): Declaration {
-  if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(entry.id) || graph.declarations.some(d => d.id === entry.id)) throw Error('Invalid or duplicate declaration ID');
-  const module = kindOf(entry.kind);
+export function addDeclaration(graph: Graph, given: DeclarationEntry): Declaration {
+  if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(given.id) || graph.declarations.some(d => d.id === given.id)) throw Error('Invalid or duplicate declaration ID');
+  const module = kindOf(given.kind), entry = module.prepare ? module.prepare(given) : given;
   if (!module.types.includes(entry.type)) throw new DeclarationError('type');
   requireName(graph, entry.name);
   const declaration: Declaration = { id: entry.id, kind: entry.kind, name: entry.name, type: entry.type, ...module.initial(entry.type) };
@@ -167,6 +184,7 @@ export function changeDeclaration(graph: Graph, id: string, patch: DeclarationPa
     next.type = patch.type; Object.assign(next, module.retype?.(declaration, patch.type));
   }
   setOwnFields(module, next, patch);
+  module.checkChange?.(declaration, next);
   module.validate(next);
   Object.assign(declaration, next);
   return declaration;

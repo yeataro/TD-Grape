@@ -19,7 +19,8 @@ const model_1 = require("./model");
 const ghosts_1 = require("./ghosts");
 const declarations_1 = require("./declarations");
 const td_values_1 = require("./td_values");
-const builtins_1 = require("./builtins");
+const uniform_presets_1 = require("./uniform_presets");
+const common_sources_1 = require("./common_sources");
 const node_sdk_1 = require("./node_sdk");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
@@ -81,28 +82,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, defaultTextures: declarations_1.defaultTextures, builtinValues: builtins_1.builtinValues, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
-
-},
-"builtins":function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.builtinValues = void 0;
-const text_1 = require("./text");
-exports.builtinValues = Object.freeze([
-    { id: 'absTime', name: 'uAbsTime', type: 'float', td: 'absTime.seconds', isf: 'TIME',
-        hint: (0, text_1.tr)('builtin.absTime', 'Seconds since TouchDesigner started; keeps running.') },
-    { id: 'absFrame', name: 'uAbsFrame', type: 'float', td: 'absTime.frame', isf: 'FRAMEINDEX',
-        hint: (0, text_1.tr)('builtin.absFrame', 'Frames since TouchDesigner started; keeps running.') },
-    { id: 'time', name: 'uTime', type: 'float', td: 'me.time.seconds', isf: null,
-        hint: (0, text_1.tr)('builtin.time', "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime.") },
-    { id: 'frame', name: 'uFrame', type: 'float', td: 'me.time.frame', isf: null,
-        hint: (0, text_1.tr)('builtin.frame', "Frame on this Grape OP's timeline; stops and loops with the timeline.") },
-    { id: 'deltaTime', name: 'uDeltaTime', type: 'float', td: 'absTime.stepSeconds', isf: 'TIMEDELTA',
-        hint: (0, text_1.tr)('builtin.deltaTime', 'Seconds from the previous frame to this one (all of TouchDesigner).') },
-    { id: 'frameStep', name: 'uFrameStep', type: 'float', td: 'absTime.step', isf: null,
-        hint: (0, text_1.tr)('builtin.frameStep', 'Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames.') },
-].map(entry => Object.freeze(entry)));
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
 
 },
 "capacity":function(require,module,exports){
@@ -292,6 +272,44 @@ function appendNodeComments(lines, _start, comment) {
 }
 
 },
+"common_sources":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.commonSources = void 0;
+exports.commonSources = Object.freeze([
+    {
+        "id": "absTime",
+        "type": "float",
+        "meaning": "Seconds since the host started running; keeps going."
+    },
+    {
+        "id": "deltaTime",
+        "type": "float",
+        "meaning": "Seconds from the previous frame to this one."
+    },
+    {
+        "id": "absFrame",
+        "type": "float",
+        "meaning": "Frames since the host started running."
+    },
+    {
+        "id": "uv",
+        "type": "vec2",
+        "meaning": "Normalized coordinates of this pixel, 0 to 1."
+    },
+    {
+        "id": "fragCoord",
+        "type": "vec4",
+        "meaning": "Pixel coordinates of this pixel."
+    },
+    {
+        "id": "resolution",
+        "type": "vec2",
+        "meaning": "Width and height of the output in pixels."
+    }
+].map(entry => Object.freeze(entry)));
+
+},
 "config":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -327,7 +345,7 @@ const model_1 = require("./model");
 const numeric_1 = require("./numeric");
 const values_1 = require("./values");
 const identifier_rules_1 = require("./identifier_rules");
-const builtins_1 = require("./builtins");
+const uniform_presets_1 = require("./uniform_presets");
 const numericValue = (declaration) => {
     if (!numeric_1.types.includes(declaration.type))
         throw Error('Unsupported declaration type');
@@ -340,22 +358,46 @@ const numericFields = {
 // Global constant (Q41): `const` at file scope; changing it changes the program, nothing in TD.
 const constantKind = { kind: 'constant', role: 'constant', colorGroup: 'constant', types: numeric_1.types, constant: true, validate: numericValue,
     ...numericFields, header: (d) => 'const ' + d.type + ' ' + d.name + ' = ' + (0, numeric_1.literal)(d.value, (0, numeric_1.type)(d.type)) + ';' };
-// Uniform (Q41; uniform-round.md): `value` is its value while not exposed (exposure is round D).
-// `color: true` (design-interview Q51) marks a colour: vec3 and vec4 only; left out means not a colour.
-// Uniform：value 是沒公開時的值；color: true 表示是顏色（只有 vec3、vec4；沒寫＝不是顏色）。
+// Uniform (Q41, Q55–Q61; uniform-d.md). `value` is the value it carries with the graph (Q57); in TD the
+// GLSL OP parameter is the authority. `color: true` (Q51) marks a colour, vec3 and vec4 only, decided
+// when it is created (Q59: switching would move it to another page and drop what drives it).
+// `entry` points to a preset (uniform_presets.json, Q61): its name and type come from the preset and are
+// locked in the web editor; otherwise it is an ordinary Uniform.
+// Uniform：value 是跟著圖走的值；color 建立時決定、之後不能改；entry 指向預設 Uniform，名字與型別照表、網頁端鎖住。
 const colorTypes = ['vec3', 'vec4'];
+const presetTable = new Map(uniform_presets_1.uniformPresets.map(preset => [preset.entry, preset]));
 const uniformKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types: numeric_1.types, constant: false,
-    optional: ['color'],
+    declared: true, optional: ['color', 'entry'],
     validate: d => {
         numericValue(d);
         if (d.color !== undefined && typeof d.color !== 'boolean')
             throw Error('Color must be true or false');
         if (d.color === true && !colorTypes.includes(d.type))
             throw Error('Only vec3 and vec4 can be a colour');
+        if (d.entry === undefined)
+            return;
+        const preset = presetTable.get(String(d.entry));
+        if (!preset)
+            throw Error('Unknown Uniform preset');
+        if (d.name !== preset.name || d.type !== preset.type || d.color === true)
+            throw Error('A preset Uniform keeps its own name and type');
     },
     initial: numericFields.initial,
-    // A type that cannot be a colour turns the colour off. 不能當顏色的型別會把顏色關掉。
-    retype: (d, type) => ({ ...numericFields.retype(d, type), ...(d.color === true && !colorTypes.includes(type) ? { color: false } : {}) }),
+    retype: numericFields.retype,
+    prepare: entry => {
+        if (entry.entry === undefined)
+            return entry;
+        const preset = presetTable.get(String(entry.entry));
+        if (!preset)
+            throw Error('Unknown Uniform preset');
+        return { ...entry, name: preset.name, type: preset.type };
+    },
+    checkChange: (before, after) => {
+        if ((before.color === true) !== (after.color === true))
+            throw Error('A Uniform is a colour or not from the moment it is created');
+        if (before.entry !== after.entry)
+            throw Error('A preset Uniform keeps its preset');
+    },
     header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
 /** Default images a TOP texture input shows when nothing is connected from outside (graph-structure
  * `defaultTexture`; human 2026-10-09: the Samples outputs, Grape first). `custom` is the TOP chosen
@@ -380,21 +422,7 @@ const topInputKind = { kind: 'topInput', role: 'source', colorGroup: 'sampler', 
             throw Error('Unknown default texture');
     },
     reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }) };
-// Built-in value (decision 17, Q52; builtins.ts): a Uniform whose meaning Grape guarantees. `entry` picks
-// one; the name is the entry's and fixed (so one per graph: names are unique); no value; never exposed.
-// 內建值：entry 選一筆；名稱照表、固定（名稱不重複，所以一張圖只有一筆）；沒有值、不能公開。
-const builtinTable = new Map(builtins_1.builtinValues.map(entry => [entry.id, entry]));
-const builtinKind = { kind: 'builtin', role: 'source', colorGroup: 'uniform', types: ['float'], constant: false,
-    optional: ['entry'], initial: () => ({}),
-    validate: d => {
-        const entry = builtinTable.get(String(d.entry));
-        if (!entry)
-            throw Error('Unknown built-in value');
-        if (d.name !== entry.name || d.type !== entry.type)
-            throw Error('A built-in value keeps its own name and type');
-    },
-    header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
-exports.declarationKinds = new Map([constantKind, uniformKind, topInputKind, builtinKind].map(module => [module.kind, Object.freeze(module)]));
+exports.declarationKinds = new Map([constantKind, uniformKind, topInputKind].map(module => [module.kind, Object.freeze(module)]));
 function declarationNameProblem(graph, name, except) {
     if (!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name) || name.includes('__'))
         return 'format';
@@ -439,10 +467,10 @@ function setOwnFields(module, declaration, fields) {
 }
 /** Commands, used inside GraphDocument.change() on its editable candidate document.
  * 指令：在 GraphDocument.change() 的可編輯候選文件上使用。 */
-function addDeclaration(graph, entry) {
-    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(entry.id) || graph.declarations.some(d => d.id === entry.id))
+function addDeclaration(graph, given) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(given.id) || graph.declarations.some(d => d.id === given.id))
         throw Error('Invalid or duplicate declaration ID');
-    const module = kindOf(entry.kind);
+    const module = kindOf(given.kind), entry = module.prepare ? module.prepare(given) : given;
     if (!module.types.includes(entry.type))
         throw new DeclarationError('type');
     requireName(graph, entry.name);
@@ -456,7 +484,7 @@ function addDeclaration(graph, entry) {
  * old value (Q37 1-3: wires that no longer fit become ghost wires, nothing is unplugged).
  * 改名、改型別、改 kind 自己的欄位；改型別時沿用舊值的分量。 */
 function changeDeclaration(graph, id, patch) {
-    var _a;
+    var _a, _b;
     const declaration = graph.declarations.find(d => d.id === id);
     if (!declaration)
         throw new DeclarationError('missing');
@@ -473,6 +501,7 @@ function changeDeclaration(graph, id, patch) {
         Object.assign(next, (_a = module.retype) === null || _a === void 0 ? void 0 : _a.call(module, declaration, patch.type));
     }
     setOwnFields(module, next, patch);
+    (_b = module.checkChange) === null || _b === void 0 ? void 0 : _b.call(module, declaration, next);
     module.validate(next);
     Object.assign(declaration, next);
     return declaration;
@@ -5900,14 +5929,14 @@ exports.tdValues = Object.freeze([
     { "id": "uTDCubeInfos", "name": "uTDCubeInfos", "expression": "uTDCubeInfos", "type": "TDTexInfo[TD_NUM_CUBE_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "cube"], "hint": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "tdNumCubeInputs", "name": "TD_NUM_CUBE_INPUTS", "expression": "TD_NUM_CUBE_INPUTS", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "cube"], "hint": "Compile-time number of cube inputs in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "uTDOutputInfo", "name": "uTDOutputInfo", "expression": "uTDOutputInfo", "type": "TDTexInfo", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Output texture metadata. res.xy contains reciprocal dimensions; res.zw contains width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
-    { "id": "uTDOutputInfoResZw", "name": "uTDOutputInfo.res.zw", "expression": "uTDOutputInfo.res.zw", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Output width and height in pixels.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDOutputInfoResZw", "name": "uTDOutputInfo.res.zw", "expression": "uTDOutputInfo.res.zw", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Output width and height in pixels.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms", "common": "resolution" },
     { "id": "uTDOutputInfoResXy", "name": "uTDOutputInfo.res.xy", "expression": "uTDOutputInfo.res.xy", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Reciprocal output width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "vUV", "name": "vUV", "expression": "vUV", "type": "vec3", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "The original three-component TOP texture coordinates.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "uTDPass", "name": "uTDPass", "expression": "uTDPass", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Zero-based GLSL TOP pass index for multipass rendering.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "uTDCurrentDepth", "name": "uTDCurrentDepth", "expression": "uTDCurrentDepth", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Current output depth index when producing a layered or 3D TOP texture.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "sTDNoiseMap", "name": "sTDNoiseMap", "expression": "sTDNoiseMap", "type": "sampler2D", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "resources"], "hint": "TD-provided noise lookup texture; connect it to a compatible texture sampling input.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
     { "id": "sTDSineLookup", "name": "sTDSineLookup", "expression": "sTDSineLookup", "type": "sampler1D", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "resources"], "hint": "TD-provided one-dimensional sine lookup texture. TDSineLookup provides a direct lookup function.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
-    { "id": "glFragCoord", "name": "gl_FragCoord", "expression": "gl_FragCoord", "type": "vec4", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "The current fragment position in window coordinates.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
+    { "id": "glFragCoord", "name": "gl_FragCoord", "expression": "gl_FragCoord", "type": "vec4", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "The current fragment position in window coordinates.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf", "common": "fragCoord" },
     { "id": "glFrontFacing", "name": "gl_FrontFacing", "expression": "gl_FrontFacing", "type": "bool", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "shaderInfo"], "hint": "Whether this fragment belongs to a front-facing primitive.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
     { "id": "glSampleID", "name": "gl_SampleID", "expression": "gl_SampleID", "type": "int", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "shaderInfo"], "hint": "Index of the current multisample sample.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
     { "id": "glSamplePosition", "name": "gl_SamplePosition", "expression": "gl_SamplePosition", "type": "vec2", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "shaderInfo"], "hint": "The current sample position within its pixel.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
@@ -5942,7 +5971,7 @@ exports.tdValues = Object.freeze([
     { "id": "tdScreenSpaceCoord", "name": "TDScreenSpaceCoord", "expression": "TDScreenSpaceCoord().st", "type": "vec2", "targets": ["mat"], "stages": ["pixel"], "category": ["tdBuiltin", "geometry"], "hint": "Screen-space texture coordinates used by native MAT screen-space map sampling. Returns the st components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
     { "id": "tdInstanceIndex", "name": "TDInstanceIndex", "expression": "TDInstanceIndex()", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Current instance index used by native MAT. Pass through a flat Vertex Output to use indexed TDInstanceColor in Pixel Stage.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
     { "id": "tdColor", "name": "TDColor", "expression": "TDColor()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Geometry color used by native Phong/PBR before current-instance color is applied. This is the native TDColor accessor, distinct from TDPointColor.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
-    { "id": "vUVSt", "name": "vUV.st", "expression": "vUV.st", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Texture coordinates of this pixel, from 0 to 1 (the first two components of vUV).", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP" },
+    { "id": "vUVSt", "name": "vUV.st", "expression": "vUV.st", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Texture coordinates of this pixel, from 0 to 1 (the first two components of vUV).", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP", "common": "uv" },
     { "id": "tdPos", "name": "TDPos", "expression": "TDPos()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Position of this vertex in SOP space.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_Material" },
 ].map(entry => Object.freeze(entry)));
 
@@ -6034,10 +6063,8 @@ function createFlatCompiler(registry, limits) {
                     continue;
                 if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id) || declarations.has(d.id) || !/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name) || /^(gl_|TD|sg_|sTD)/.test(d.name) || names.has(d.name))
                     throw Error('Invalid declaration identity/name');
-                // Old-product fields (initialDriver, nativeSequence, exposeName, sourceMissing) are not read (Q44).
-                // 舊產品欄位不讀；去留由匯入器的對照表處理。
-                if (d.expose !== undefined && typeof d.expose !== 'boolean')
-                    throw Error('Expose must be a boolean');
+                // Old-product fields (initialDriver, nativeSequence, expose, exposeName, sourceMissing) are not read
+                // (Q44, Q55: Uniforms have no exposed state). 舊產品欄位不讀；去留由匯入器的對照表處理。
                 declarations_1.declarationKinds.get(d.kind).validate(d);
                 declarations.set(d.id, d);
                 names.add(d.name);
@@ -6177,12 +6204,14 @@ function createFlatCompiler(registry, limits) {
             }
             // File-scope GLSL comes from each used declaration's kind; only sources go to TD as bindings
             // (a global constant lives in the program, Q41). Ordered kinds (TOP texture inputs) go first, all
-            // of them in list order, used or not: each one is an input of the Grape OP (Q44).
+            // of them in list order, used or not: each one is an input of the Grape OP (Q44). Uniforms follow,
+            // all of them too (`declared`: the TD row lives as long as the declaration).
             // 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。有順序的種類（TOP 貼圖輸入）全部照清單順序放前面，
-            // 有沒有用到都算：每一筆都是 Grape OP 的輸入接口。
+            // 有沒有用到都算：每一筆都是 Grape OP 的輸入接口。Uniform 接著放，也是全部（TD 上那一列跟著宣告存在）。
             const usedDeclarations = [...used].sort().map(id => declarations.get(id));
-            const ordered = [...declarations.values()].filter(d => declarations_1.declarationKinds.get(d.kind).ordered);
-            const bindings = [...ordered, ...usedDeclarations.filter(d => declarations_1.declarationKinds.get(d.kind).role === 'source' && !declarations_1.declarationKinds.get(d.kind).ordered)]
+            const all = [...declarations.values()], kindOf = (d) => declarations_1.declarationKinds.get(d.kind);
+            const ordered = all.filter(d => kindOf(d).ordered), declared = all.filter(d => kindOf(d).declared && !kindOf(d).ordered);
+            const bindings = [...ordered, ...declared, ...usedDeclarations.filter(d => kindOf(d).role === 'source' && !kindOf(d).ordered && !kindOf(d).declared)]
                 .map(d => JSON.parse(JSON.stringify(d)));
             const headers = usedDeclarations.flatMap(d => { const kind = declarations_1.declarationKinds.get(d.kind); return kind.header ? [kind.header(d)] : []; });
             const pixel = [...headers, 'layout(location=0) out vec4 fragColor;', 'void main() {', '    vec2 sg_uv = vUV.st;', ...lines, '}', ''].join('\n');
@@ -6224,6 +6253,62 @@ function createCompiler(registry, config = config_1.CORE_CONFIG) {
         compile: (g, identifiers) => { var _a; return ((_a = g.subgraphs) === null || _a === void 0 ? void 0 : _a.length) ? subgraphs.compile(g, identifiers) : flat.compile(g, identifiers); }
     });
 }
+
+},
+"uniform_presets":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.uniformPresets = void 0;
+exports.uniformPresets = Object.freeze([
+    {
+        "entry": "absTime",
+        "name": "uAbsTime",
+        "type": "float",
+        "expression": "absTime.seconds",
+        "common": "absTime",
+        "hint": "Seconds since TouchDesigner started; keeps running."
+    },
+    {
+        "entry": "absFrame",
+        "name": "uAbsFrame",
+        "type": "float",
+        "expression": "absTime.frame",
+        "common": "absFrame",
+        "hint": "Frames since TouchDesigner started; keeps running."
+    },
+    {
+        "entry": "time",
+        "name": "uTime",
+        "type": "float",
+        "expression": "me.time.seconds",
+        "common": null,
+        "hint": "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime."
+    },
+    {
+        "entry": "frame",
+        "name": "uFrame",
+        "type": "float",
+        "expression": "me.time.frame",
+        "common": null,
+        "hint": "Frame on this Grape OP's timeline; stops and loops with the timeline."
+    },
+    {
+        "entry": "deltaTime",
+        "name": "uDeltaTime",
+        "type": "float",
+        "expression": "absTime.stepSeconds",
+        "common": "deltaTime",
+        "hint": "Seconds from the previous frame to this one (all of TouchDesigner)."
+    },
+    {
+        "entry": "frameStep",
+        "name": "uFrameStep",
+        "type": "float",
+        "expression": "absTime.step",
+        "common": null,
+        "hint": "Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames."
+    }
+].map(entry => Object.freeze(entry)));
 
 },
 "value_nodes":function(require,module,exports){

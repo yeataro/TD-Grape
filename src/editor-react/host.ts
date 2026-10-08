@@ -3,8 +3,15 @@ import { tr, TextError, type Message } from './text';
 // New-editor Grape OPs (design-interview Q40): the document is opaque text to TD.
 // 新編輯器的 Grape OP：圖對 TD 是不透明文字。
 export type HostState = { document: string; revision: number; runtimeRevision?: number; targetId?: string };
+// One Uniform component as TD has it (Uniform D1; design-interview Q56, Q60): a value only for constant
+// and bound ones (Grape deals with constant values); Expression, Export and the rest are only a state.
+// 一個 Uniform 分量在 TD 的現況：只有固定值與 Bind 帶數值；Expression、Export 等只是狀態。
+export type ComponentState = { mode: 'constant' | 'bind' | 'expression' | 'export' | 'other';
+  value?: number; editable?: boolean; text?: string; source?: string };
+/** By declaration ID, one entry per component. 依宣告 ID，每個分量一筆。 */
+export type UniformStates = Readonly<Record<string, readonly ComponentState[]>>;
 export type StateResponse = { state: HostState; format: string; target: string; shaderKind: string;
-  frontendCompiler: { protocol: string; catalogHash: string; required: boolean } };
+  frontendCompiler: { protocol: string; catalogHash: string; required: boolean }; uniforms?: UniformStates };
 // A failed host call. `text` is set when the editor itself words the failure (Q34); TD's own
 // replies stay as TD wrote them. 編輯器自己描述的失敗帶 text；TD 回的訊息照原樣。
 export class HostError extends Error {

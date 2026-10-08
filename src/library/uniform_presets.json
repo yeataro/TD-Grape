@@ -1,0 +1,17 @@
+{
+  "about": "Uniform presets (design-interview Q61): Uniforms whose meaning Grape knows. A Uniform declaration points to one by `entry`; its name and type come from here and are locked in the web editor. `expression` is what TD writes on the row when it is created (TD reads it from the editor bundle, never from a request). `common` is the common identity (common_sources.json). Edit this file only; build:core generates src/core-ts/uniform_presets.ts and puts the table in editor-bootstrap.json.",
+  "presets": [
+    { "entry": "absTime", "name": "uAbsTime", "type": "float", "expression": "absTime.seconds", "common": "absTime",
+      "hint": "Seconds since TouchDesigner started; keeps running." },
+    { "entry": "absFrame", "name": "uAbsFrame", "type": "float", "expression": "absTime.frame", "common": "absFrame",
+      "hint": "Frames since TouchDesigner started; keeps running." },
+    { "entry": "time", "name": "uTime", "type": "float", "expression": "me.time.seconds", "common": null,
+      "hint": "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime." },
+    { "entry": "frame", "name": "uFrame", "type": "float", "expression": "me.time.frame", "common": null,
+      "hint": "Frame on this Grape OP's timeline; stops and loops with the timeline." },
+    { "entry": "deltaTime", "name": "uDeltaTime", "type": "float", "expression": "absTime.stepSeconds", "common": "deltaTime",
+      "hint": "Seconds from the previous frame to this one (all of TouchDesigner)." },
+    { "entry": "frameStep", "name": "uFrameStep", "type": "float", "expression": "absTime.step", "common": null,
+      "hint": "Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames." }
+  ]
+}

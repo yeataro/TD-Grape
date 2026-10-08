@@ -8,7 +8,8 @@ from unittest.mock import Mock
 
 import host_api
 import next_family
-from next_family import NextFamily, FORMAT, META_FORMAT, digest, uniform_rows
+from next_family import NextFamily, FORMAT, META_FORMAT, digest
+from test_uniform_writer import FakeShader
 
 TARGET = 'c' * 32
 CATALOG = 'f' * 64
@@ -27,33 +28,13 @@ class Par:
         return self.value
 
 
-class Table:
-    """Just enough of a table DAT for the binding table. 綁定表用的最小替身。"""
-    def __init__(self, rows):
-        self.rows = [list(r) for r in rows]
-
-    @property
-    def numRows(self):
-        return len(self.rows)
-
-    def __getitem__(self, at):
-        return SimpleNamespace(val=self.rows[at[0]][at[1]])
-
-    def __setitem__(self, at, value):
-        self.rows[at[0]][at[1]] = value
-
-    def cell(self, parameter):
-        return next(r[2] for r in self.rows if r[1] == parameter)
-
-
-
 class Comp:
     def __init__(self, stored, grape_id=TARGET):
         self.tags = {'grapeOP'}
         self.name = 'next_test'
         self.par = SimpleNamespace(Grapeid=Par(grape_id))
         self.path = '/project1/next_test'
-        self.ops = {'status': Text(), 'pixel_shader': Text('old glsl')}
+        self.ops = {'status': Text(), 'pixel_shader': Text('old glsl'), 'shader': FakeShader()}
         if isinstance(stored, tuple):
             self.ops['graph'], self.ops['graph_meta'] = Text(stored[0]), Text(stored[1])
         else:  # an older layout kept in GrapeControls/document
@@ -80,15 +61,16 @@ def meta(comp):
     return json.loads(comp.ops['graph_meta'].text)
 
 
-def family(stored=None, gpu_ok=True):
+def family(stored=None, gpu_ok=True, write=False):
     comp = Comp(stored if stored is not None else envelope())
-    fam = NextFamily(comp)
+    fam = NextFamily(comp, presets={'absTime': 'absTime.seconds'})
     fam._validate = Mock(side_effect=None if gpu_ok else RuntimeError('GPU says no'))
     fam._verify_gpu = Mock()
     fam.placed = (Mock(name='commit'), Mock(name='rollback'))
     fam._place_inputs = Mock(return_value=fam.placed)
     fam._input_ids = Mock(return_value=[])
-    fam._write_uniforms = Mock()
+    if not write:
+        fam._write_uniforms = Mock(return_value=[])
     return fam, comp
 
 
@@ -209,7 +191,7 @@ class NextFamilyTests(unittest.TestCase):
         gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 2}
         fam, _ = family()
         fam.apply(request(run=runtime('reads two', bindings=[tint, gain])), catalog_hash=CATALOG)
-        fam._write_uniforms.assert_called_once_with([tint, gain])
+        fam._write_uniforms.assert_called_once_with([tint, gain], [])
         fam, _ = family(gpu_ok=False)
         fam.apply(request(run=runtime('bad', bindings=[tint])), catalog_hash=CATALOG)
         fam._write_uniforms.assert_not_called()  # the last good values stay
@@ -227,57 +209,62 @@ class NextFamilyTests(unittest.TestCase):
         fam.apply(request(run=runtime('old glsl', bindings=inputs + [gain])), catalog_hash=CATALOG)
         fam._validate.assert_not_called()
         fam._verify_gpu.assert_not_called()
-        fam._write_uniforms.assert_called_once_with([gain])
+        fam._write_uniforms.assert_called_once_with([gain], [])
         self.assertEqual(meta(comp)['runtime']['revision'], 4)
 
-    def test_built_in_values_bind_by_entry_with_tds_own_expression(self):
-        # Refactor.45 (Q52): never an expression from the editor. 不寫入編輯器送來的 expression。
-        clock = {'id': 'b1', 'kind': 'builtin', 'name': 'uTime', 'type': 'float', 'entry': 'time'}
+    def test_preset_uniforms_take_their_expression_from_the_manager_table(self):
+        # Uniform D1 (Q61): the editor sends the entry only; an unknown entry is refused, and the old
+        # built-in kind is gone. 編輯器只送代號；未知的代號拒絕；舊的 builtin 種類已移除。
+        clock = {'id': 'b1', 'kind': 'uniform', 'name': 'uAbsTime', 'type': 'float', 'value': 0, 'entry': 'absTime'}
+        fam, comp = family(write=True)
+        result = fam.apply(request(run=runtime('reads time', bindings=[clock])), catalog_hash=CATALOG)
+        par = comp.ops['shader'].row('vec', 'uAbsTime')['valuex']
+        self.assertEqual((par.mode, par.expr), ('EXPRESSION', 'absTime.seconds'))
+        self.assertEqual(result['uniforms'], {'b1': [{'mode': 'expression', 'text': 'absTime.seconds'}]})
         fam, _ = family()
-        fam.apply(request(run=runtime('reads time', bindings=[clock])), catalog_hash=CATALOG)
-        fam._write_uniforms.assert_called_once_with([clock])
-        rows, vectors, _ = uniform_rows([clock])
-        self.assertEqual(vectors, 1)
-        self.assertIn(['shader', 'vec0valuex', 'me.time.seconds', '1'], rows)
-        for bad in ({**clock, 'entry': '__import__("os")'}, {**clock, 'type': 'vec2'}, {**clock, 'name': 'u time'}):
-            fam, _ = family()
-            with self.assertRaisesRegex(ValueError, 'invalid built-in value'):
-                fam.apply(request(run=runtime(bindings=[bad])), catalog_hash=CATALOG)
+        with self.assertRaisesRegex(ValueError, 'invalid Uniform'):
+            fam.apply(request(run=runtime(bindings=[{**clock, 'entry': '__import__("os")'}])), catalog_hash=CATALOG)
+        with self.assertRaisesRegex(ValueError, 'not supported'):
+            fam.apply(request(run=runtime(bindings=[{**clock, 'kind': 'builtin'}])), catalog_hash=CATALOG)
 
-    def test_live_values_change_only_the_table_cells_of_a_running_uniform(self):
-        # Refactor.46 (Q53): no compile, no save; old numbers and unknown Uniforms are skipped.
+    def test_apply_writes_the_glsl_op_and_reports_states_and_notices(self):
+        # Uniform D1 (Q57, Q58, Q60): rows of Uniforms no longer used go; values change only when they
+        # changed in the editor; the reply carries what TD has. 不再用的列拿掉；只寫編輯器改過的值；回覆帶現況。
+        gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 2}
+        old_clock = {'id': 'b1', 'kind': 'builtin', 'name': 'uTime', 'type': 'float', 'entry': 'time'}  # Refactor.45
+        fam, comp = family(envelope(run=runtime('old glsl', bindings=[old_clock, gain])), write=True)
+        shader = comp.ops['shader']
+        shader.seq.vec.numBlocks = 2
+        shader.rows['vec'][0]['name'].val, shader.rows['vec'][1]['name'].val = 'uTime', 'uGain'
+        shader.rows['vec'][1]['valuex'].val = 7.0  # changed in TD 在 TD 改過
+        result = fam.apply(request(run=runtime('old glsl', bindings=[gain])), catalog_hash=CATALOG)
+        self.assertEqual(shader.names('vec'), ['uGain'])
+        self.assertEqual(result['uniforms'], {'u2': [{'mode': 'constant', 'value': 7.0}]})  # not overwritten
+        self.assertEqual(result['notices'], [])
+        result = fam.apply(request(revision=4, run=runtime('old glsl', bindings=[{**gain, 'value': 3}])), catalog_hash=CATALOG)
+        self.assertEqual(result['uniforms']['u2'][0]['value'], 3)
+        shader.rows['vec'][0]['name'].set_expr("'uGain'", 'uGain')
+        with self.assertRaisesRegex(ValueError, 'driven in TD'):
+            fam.apply(request(revision=5, run=runtime('old glsl', bindings=[{**gain, 'name': 'uLevel'}])), catalog_hash=CATALOG)
+
+    def test_live_values_are_written_onto_the_glsl_op(self):
+        # Refactor.46–47 (Q53, Q56): no compile, no save; old numbers and unknown Uniforms are skipped.
         # 不編譯、不存圖；舊序號與還沒在跑的 Uniform 略過。
         gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'vec2', 'value': [1, 2]}
-        clock = {'id': 'b1', 'kind': 'builtin', 'name': 'uAbsTime', 'type': 'float', 'entry': 'absTime'}
-        fam, comp = family(envelope(run=runtime('old glsl', bindings=[clock, gain])))
-        rows, _, _ = uniform_rows([clock, gain])
-        table = Table(rows)
-        comp.ops['uniforms'] = table
+        fam, comp = family(envelope(run=runtime('old glsl', bindings=[gain])))
+        shader = comp.ops['shader']
+        shader.rows['vec'][0]['name'].val = 'uGain'
         before = comp.op('graph_meta').text
         live = lambda **extra: fam.live({'format': FORMAT, 'id': 'u2', 'value': [3, 4], 'session': 's', 'seq': 1, **extra})
         self.assertEqual(live()['applied'], True)
-        self.assertEqual([r[2] for r in table.rows if r[1].startswith('vec1value')], ['3.0', '4.0'])
-        self.assertEqual(table.cell('vec0valuex'), 'absTime.seconds')  # other rows untouched
+        self.assertEqual((shader.rows['vec'][0]['valuex'].val, shader.rows['vec'][0]['valuey'].val), (3, 4))
         self.assertEqual(live(seq=1, value=[9, 9])['reason'], 'stale')
         self.assertEqual(live(id='nope', seq=2)['reason'], 'not-running')
-        self.assertEqual(live(id='b1', seq=3)['reason'], 'not-running')  # a built-in value has no value
         with self.assertRaisesRegex(ValueError, 'invalid live value'):
             live(seq=4, value=[1, 2, 3])
         self.assertEqual(comp.op('graph_meta').text, before)  # nothing saved
         fam._validate.assert_not_called()
         next_family.LIVE.clear()
-
-    def test_uniform_rows_follow_the_pages(self):
-        rows, vectors, colors = uniform_rows([
-            {'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 2},
-            {'kind': 'uniform', 'name': 'uTint', 'type': 'vec3', 'value': [1, 0, 0.5], 'color': True}])
-        self.assertEqual((vectors, colors), (1, 1))
-        self.assertEqual(rows[0], ['path', 'parameter', 'value', 'enable'])
-        self.assertIn(['shader', 'vec0name', "'uGain'", '1'], rows)
-        self.assertIn(['shader', 'vec0valuex', '2.0', '1'], rows)
-        self.assertIn(['shader', 'color0name', "'uTint'", '1'], rows)
-        self.assertIn(['shader', 'color0rgbb', '0.5', '1'], rows)
-        self.assertNotIn('color0alpha', [r[1] for r in rows])  # a vec3 colour leaves alpha alone
 
     def test_texture_inputs_are_placed_with_their_glsl_and_undone_with_it(self):
         # Refactor.43: the In TOPs change with the GLSL that reads them. 輸入接口與讀它的 GLSL 一起換。
@@ -340,7 +327,7 @@ class HostRoutingTests(unittest.TestCase):
         fam, _ = family()
         api = self.api(fam)
         code, result = api.dispatch('GET', '/api/' + TARGET + '/state')
-        self.assertEqual((code, result['format'], result['state']['revision']), (200, FORMAT, 3))
+        self.assertEqual((code, result['format'], result['state']['revision'], result['uniforms']), (200, FORMAT, 3, {}))
         code, result = api.dispatch('POST', '/api/' + TARGET + '/apply', request(run=runtime('g')))
         self.assertEqual((code, result['state']['revision']), (200, 4))
         code, result = api.dispatch('POST', '/api/' + TARGET + '/apply', request(run=runtime('g')))

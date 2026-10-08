@@ -4,9 +4,12 @@ const {vectorCases}=require('../fixtures/vector_nodes.cjs');
 const {node,edge}=require('../fixtures/shared_subgraphs.cjs');
 const compiler=createCompiler(registry);
 
-test('fully overridden inputs are dormant for code/bindings but never for cycle detection',()=>{
+// A dormant Uniform is not declared in the GLSL, but still goes to TD: its row lives as long as the
+// declaration (Uniform D1, `declared`). 沒用到的 Uniform 不在 GLSL 裡，但仍交給 TD（那一列跟著宣告存在）。
+test('fully overridden inputs are dormant for code but never for cycle detection',()=>{
  const row=vectorCases().find(r=>r.key==='replace-uniform'&&r.type==='vec4:true');
- const compiled=compiler.compile(row.graph);assert.deepEqual(compiled.bindings,[]);assert.ok(!compiled.stages.pixel.live.includes('base'));
+ const compiled=compiler.compile(row.graph);assert.ok(!/^uniform /m.test(compiled.pixel));assert.ok(!compiled.stages.pixel.live.includes('base'));
+ assert.deepEqual(compiled.bindings.map(b=>b.kind),['uniform']);
  const cycle=structuredClone(row.graph);cycle.stages.pixel.edges[0].from=['operation','out'];
  assert.throws(()=>compiler.compile(cycle),/Cycle/);
  const partial=vectorCases().find(r=>r.key==='replace-uniform'&&r.type==='vec4:false');assert.equal(compiler.compile(partial.graph).bindings.length,1);

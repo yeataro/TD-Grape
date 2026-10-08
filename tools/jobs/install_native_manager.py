@@ -57,16 +57,32 @@ modules = {
     'host_api': 'src/td/runtime/host_api.py',
     'host_requests': 'src/td/runtime/host_requests.py',
     'next_family': 'src/td/runtime/next_family.py',
+    'uniform_writer': 'src/td/runtime/uniform_writer.py',  # Uniform rows on the GLSL OP (Refactor.47)
+    'td_text': 'src/td/runtime/td_text.py',  # text for people as code + English + parameters (Q58)
     'editor_launch': 'src/td/runtime/editor_launch.py',  # app-window launch for Open Editor (Q45)
 }
 positions = {
     'GrapeManagerExt': (0, 0), 'host_api': (240, 0), 'host_requests': (485, 0),
     'next_family': (700, -160), 'editor_launch': (700, -320),
+    'uniform_writer': (485, -160), 'td_text': (485, -320),
 }
 for name, source in modules.items():
     text(manager, name, source, *positions[name], 'json' if source.endswith('.json') else 'python')
 
 node(manager, baseCOMP, 'validation', 1000, -260)
+
+# What TD reads from the web assets (design-interview Q61), written on the network so it can be found
+# when the web hosting leaves TD. 網頁資產搬離 TD 時要找得到的依賴，寫在網路上。
+bundle_note = manager.op('annotate_bundle_tables')
+if bundle_note is None:
+    bundle_note = manager.create(annotateCOMP)  # TD ignores a name given at creation for annotations
+    bundle_note.name = 'annotate_bundle_tables'
+bundle_note.par.Mode = 'annotate'
+bundle_note.par.Titletext = 'Read from the web assets'
+bundle_note.par.Bodytext = ("GrapeManagerExt.Connect reads editor-bootstrap.json from GrapeEditor's assets: "
+    "catalogHash (must match grape_core.js) and uniformPresets (preset Uniform expressions, used by next_family "
+    "through Adapter). Source tables: src/library/*.json. If the web assets move out of TD, move these reads too.")
+bundle_note.nodeX, bundle_note.nodeY, bundle_note.nodeWidth, bundle_note.nodeHeight = -20, -520, 640, 150
 status = node(manager, textDAT, 'status', 1000, 20)
 status.par.language = 'json'
 page = next((p for p in manager.customPages if p.name == 'Services'), None) or manager.appendCustomPage('Services')

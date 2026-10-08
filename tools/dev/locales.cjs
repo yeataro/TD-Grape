@@ -21,17 +21,24 @@ function files(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) return entry.name === 'locales' || entry.name === 'node_modules' ? [] : files(full);
-    return /\.(ts|tsx)$/.test(entry.name) ? [full] : [];
+    return /\.(ts|tsx|py)$/.test(entry.name) ? [full] : [];
   });
 }
 const problems = [], messages = new Map();
-for (const file of [...files(path.join(root, 'src/editor-react')), ...files(path.join(root, 'src/core-ts'))]) {
+// TD's text for people is scanned too (src/td/runtime, td_text.tr, design-interview Q58): same shape.
+// TD 給人看的文字也掃（td_text.tr）：同一種寫法。
+for (const file of [...files(path.join(root, 'src/editor-react')), ...files(path.join(root, 'src/core-ts')),
+  ...files(path.join(root, 'src/td/runtime'))]) {
+  const python = file.endsWith('.py');
   const text = fs.readFileSync(file, 'utf8'), where = index => path.relative(root, file) + ':' + (text.slice(0, index).split('\n').length);
   for (const match of text.matchAll(/\btr\(/g)) {
     // Mentions in comments are not messages. 註解裡提到 tr() 不算訊息。
     const line = text.slice(text.lastIndexOf('\n', match.index) + 1, match.index);
     if (/^\s*(\*|\/\/|\/\*)/.test(line) || line.includes('//')) continue;
     let at = match.index + match[0].length;
+    // Python: only calls with a literal code are messages (not `def tr(` or mentions in docstrings).
+    // Python 只算以字面代號呼叫的（def tr( 與說明文字裡的提及不算）。
+    if (python && (/^\s*#/.test(line) || !/^\s*['"]/.test(text.slice(at)))) continue;
     const read = () => { LITERAL.lastIndex = at; const found = LITERAL.exec(text); if (!found) return undefined; at = LITERAL.lastIndex; return vm.runInNewContext(found[1]); };
     const code = read();
     if (code === undefined) { problems.push(where(match.index) + ': tr() needs a literal code'); continue; }
@@ -53,6 +60,10 @@ for (const line of fs.readFileSync(tdValueFile, 'utf8').split('\n')) {
   const entry = JSON.parse(line.trim().replace(/,$/, ''));
   if (entry.hint) messages.set('tdValue.' + entry.id, { source: entry.hint, where: 'src/core-ts/td_values.ts' });
 }
+// Uniform presets carry their own English too (Q61): code uniformPreset.<entry>. 預設 Uniform 的說明。
+const presetFile = path.join(root, 'src/library/uniform_presets.json');
+for (const preset of JSON.parse(fs.readFileSync(presetFile, 'utf8')).presets)
+  messages.set('uniformPreset.' + preset.entry, { source: preset.hint, where: 'src/library/uniform_presets.json' });
 const placeholders = text => [...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort().join(',');
 const en = Object.fromEntries([...messages].sort(([a], [b]) => a.localeCompare(b)).map(([code, m]) => [code, m.source]));
 const enFile = path.join(folder, 'en.json'), zhFile = path.join(folder, 'zh-Hant.json');

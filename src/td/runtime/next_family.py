@@ -12,6 +12,9 @@ import math
 import re
 import uuid
 
+import uniform_writer
+from td_text import english
+
 FORMAT = 'grape-next-1'  # the editor <-> TD request format
 META_FORMAT = 'grape-meta-2'  # what graph_meta stores (Refactor.34)
 PROTOCOL = 'grape.top.ts.1'  # the frontend compiler protocol this build speaks
@@ -49,24 +52,12 @@ DEFAULT_TEXTURES = ('grape', 'banana', 'jellybeans', 'white', 'black', 'normal',
 INPUT_STORE = 'grapeInput'  # storage key on an In TOP: the ID of the input it belongs to
 INPUT_X, INPUT_Y, INPUT_STEP = -200, -125, 100
 
-# Uniforms, round A (Refactor.44; uniform-round.md, design-interview Q41 3-2, Q51). The binding table
-# `uniforms` (only ever written, whole) drives the GLSL OP's Uniform parameters through DAT Export:
-# colours on the Colors page, the rest on the Vectors page (the page follows kind + type + color, Q44).
-# Uniform A：綁定表 uniforms 只被整張寫入，以 DAT Export 驅動 GLSL OP 的 Uniform 參數；
-# 顏色放 Colors 頁，其餘放 Vectors 頁。
-UNIFORM_TYPES = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
+# Uniforms (Uniform D1, Refactor.47): written straight onto the GLSL OP by uniform_writer.py, keeping
+# whatever drives each component in TD (design-interview Q55–Q61). A preset Uniform (`entry`) gets its
+# expression from the editor bundle's table, which the Manager reads (Q61) — never from a request.
+# Uniform 直接寫到 GLSL OP（uniform_writer.py），保留 TD 上的驅動；預設 Uniform 的 expression 來自網頁資產的表。
+UNIFORM_TYPES = uniform_writer.COUNTS
 COLOR_TYPES = ('vec3', 'vec4')
-# Built-in values (Uniform B, Refactor.45; design-interview Q52): the editor sends only the entry;
-# TD keeps the expression itself. The binding table's value column is run as Python by DAT Export,
-# so an expression sent by the editor is never written there. `me` is the binding table, so
-# me.time is this Grape OP's timeline.
-# 內建值：編輯器只送代號，expression 由 TD 自己保管（綁定表的 value 欄會被當成 Python 執行，
-# 絕不寫入編輯器送來的字串）。me 是綁定表，所以 me.time 是這個 Grape OP 的時間軸。
-BUILTIN_EXPRESSIONS = {
-    'absTime': 'absTime.seconds', 'absFrame': 'absTime.frame',
-    'time': 'me.time.seconds', 'frame': 'me.time.frame',
-    'deltaTime': 'absTime.stepSeconds', 'frameStep': 'absTime.step',
-}
 
 
 def require(condition, message):
@@ -93,7 +84,7 @@ def identity(comp):
     return par.eval() if par is not None else ''
 
 
-def read_runtime(text, *, catalog_hash):
+def read_runtime(text, *, catalog_hash, presets=()):
     """The execution part (GLSL + bindings) is TD's own input, so TD reads it."""
     require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_RUNTIME_BYTES, 'invalid runtime part')
     compiled = json.loads(text)
@@ -106,8 +97,8 @@ def read_runtime(text, *, catalog_hash):
     for entry in bindings:
         require(isinstance(entry, dict), 'invalid binding table')
         kind, ident, name = entry.get('kind'), entry.get('id'), entry.get('name')
-        # Other kinds arrive with their rounds (time, Spec constants…). 其他種類等各自那一輪。
-        require(kind in ('topInput', 'uniform', 'builtin'), 'This kind of binding is not supported by this TD-Grape yet: ' + str(kind))
+        # Other kinds arrive with their rounds (Spec constants…). 其他種類等各自那一輪。
+        require(kind in ('topInput', 'uniform'), 'This kind of binding is not supported by this TD-Grape yet: ' + str(kind))
         require(isinstance(ident, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', ident) and ident not in seen,
                 'invalid binding ID')
         seen.add(ident)
@@ -115,14 +106,10 @@ def read_runtime(text, *, catalog_hash):
             require(isinstance(name, str) and 0 < len(name) <= 48 and entry.get('defaultTexture') in DEFAULT_TEXTURES,
                     'invalid texture input')
             continue
-        if kind == 'builtin':
-            require(isinstance(name, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,47}', name) and name not in names
-                    and entry.get('type') == 'float' and entry.get('entry') in BUILTIN_EXPRESSIONS, 'invalid built-in value')
-            names.add(name)
-            continue
         require(isinstance(name, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,47}', name) and name not in names
                 and uniform_value_ok(entry.get('type'), entry.get('value'))
-                and entry.get('color', False) in (True, False) and (entry.get('color') is not True or entry['type'] in COLOR_TYPES),
+                and entry.get('color', False) in (True, False) and (entry.get('color') is not True or entry['type'] in COLOR_TYPES)
+                and (entry.get('entry') is None or entry['entry'] in presets),
                 'invalid Uniform')
         names.add(name)
     return compiled
@@ -142,30 +129,21 @@ def uniform_value_ok(kind_type, value):
 LIVE = {}
 
 
+def uniforms_of(compiled):
+    """The Uniforms of a program, in the graph's order. 程式裡的 Uniform。"""
+    return [entry for entry in compiled.get('bindings') or [] if entry.get('kind') == 'uniform']
+
+
 def texture_inputs(compiled):
     """The TOP texture inputs, in the graph's order. 圖裡的 TOP 貼圖輸入，照圖的順序。"""
     return [entry for entry in compiled['bindings'] if entry['kind'] == 'topInput']
 
 
-def uniform_rows(uniforms):
-    """Binding table rows (DAT Export: path, parameter, value, enable) and the number of Vectors and
-    Colors blocks. Values are Python expressions to DAT Export, so names are quoted (an unquoted
-    name fails silently, 2026-10-07 test). 綁定表的列；DAT Export 把 value 當 expression，名稱要加引號。"""
-    rows = [['path', 'parameter', 'value', 'enable']]
-    vectors = [u for u in uniforms if u.get('color') is not True]
-    colors = [u for u in uniforms if u.get('color') is True]
-    for i, u in enumerate(vectors):
-        rows.append(['shader', 'vec%dname' % i, repr(u['name']), '1'])
-        if u['kind'] == 'builtin':  # TD's own expression, evaluated by DAT Export 由 TD 自己的 expression 驅動
-            rows.append(['shader', 'vec%dvaluex' % i, BUILTIN_EXPRESSIONS[u['entry']], '1'])
-            continue
-        values = u['value'] if isinstance(u['value'], list) else [u['value']]
-        rows.extend(['shader', 'vec%dvalue%s' % (i, axis), repr(float(v)), '1'] for axis, v in zip('xyzw', values))
-    for i, u in enumerate(colors):
-        rows.append(['shader', 'color%dname' % i, repr(u['name']), '1'])
-        rows.extend(['shader', 'color%d%s' % (i, part), repr(float(v)), '1']
-                    for part, v in zip(('rgbr', 'rgbg', 'rgbb', 'alpha'), u['value']))
-    return rows, len(vectors), len(colors)
+def constant_mode():
+    try:
+        return ParMode.CONSTANT  # noqa: F821 (a TD global) TD 提供的全域名稱
+    except NameError:
+        return 'CONSTANT'
 
 
 class NextFamily:
@@ -181,9 +159,11 @@ class NextFamily:
     FORMAT = FORMAT
     PROTOCOL = PROTOCOL
 
-    def __init__(self, comp, *, validation_area=None):
+    def __init__(self, comp, *, validation_area=None, presets=None):
         self.comp = comp
         self.validation_area = validation_area
+        # entry -> TD expression, read by the Manager from the editor bundle (Q61). 由 Manager 從網頁資產讀入。
+        self.presets = presets or {}
 
     def target(self):
         return self.comp
@@ -240,6 +220,16 @@ class NextFamily:
         return {'revision': meta['document']['revision'], 'document': text,
                 'runtimeRevision': meta['runtime']['revision'], 'targetId': meta['targetId']}
 
+    def running_uniforms(self):
+        """The Uniforms of the program TD runs now (last known good). 目前在跑的程式裡的 Uniform。"""
+        runtime = json.loads(self.comp.op('graph_meta').text).get('runtime') or {}
+        return uniforms_of(json.loads(runtime.get('text') or '{}'))
+
+    def uniform_states(self):
+        """Each running Uniform's components as TD has them (mode, value or what drives it), for the
+        editor's display (Q56, Q60). 每個 Uniform 各分量在 TD 的現況，給編輯器顯示。"""
+        return uniform_writer.states(self._shader(self.comp), self.running_uniforms())
+
     def status(self, phase, message, **details):
         data = self.comp.op('status')
         if data:
@@ -253,12 +243,12 @@ class NextFamily:
         return shader
 
     def live(self, body):
-        """A Uniform value while it changes (Uniform C; Q41 3-4, Q53): only the binding table cells of a
-        Uniform in the running program change, so the GLSL OP follows at once. Nothing is compiled or
-        saved; the graph arrives later by apply. An old sequence number, or a Uniform the running
-        program does not have yet (it arrives with the next apply), is skipped.
-        改變中的 Uniform 值：只改正在跑的程式裡那個 Uniform 在綁定表的幾格，GLSL OP 立即更新；
-        不編譯、不存圖，圖之後由 apply 帶來。舊序號、或程式裡還沒有的 Uniform，略過。"""
+        """A Uniform value while it changes (Uniform C, D1; Q41 3-4, Q53, Q56): written onto the GLSL OP
+        where Grape may (constant components, or the master of a bound one), so it follows at once.
+        Nothing is compiled or saved; the graph arrives later by apply. An old sequence number, or a
+        Uniform the running program does not have yet (it arrives with the next apply), is skipped.
+        改變中的 Uniform 值：只寫 Grape 能寫的分量（固定值、Bind 的 master），GLSL OP 立即更新；
+        不編譯、不存圖。舊序號、或程式裡還沒有的 Uniform，略過。"""
         require(isinstance(body, dict) and body.get('format') == FORMAT, 'unsupported request format')
         ident, session, seq, value = body.get('id'), body.get('session'), body.get('seq'), body.get('value')
         require(isinstance(ident, str) and isinstance(session, str) and 0 < len(session) <= 64
@@ -269,21 +259,22 @@ class NextFamily:
             bindings = json.loads(runtime.get('text') or '{}').get('bindings') or []
             # Sequence numbers outlive a program change: a late old value never wins. 序號跨程式保留：晚到的舊值不會蓋掉新的。
             known = {'sha256': runtime.get('sha256'), 'seq': known['seq'] if known else {},
-                     'uniforms': [entry for entry in bindings if entry.get('kind') in ('uniform', 'builtin')]}
+                     'uniforms': uniforms_of({'bindings': bindings})}
             LIVE[self.comp.path] = known
         if seq <= known['seq'].get((session, ident), -1):
             return {'ok': True, 'applied': False, 'reason': 'stale'}
         known['seq'][(session, ident)] = seq
-        target = next((u for u in known['uniforms'] if u.get('kind') == 'uniform' and u.get('id') == ident), None)
+        target = next((u for u in known['uniforms'] if u.get('id') == ident), None)
         if target is None:
             return {'ok': True, 'applied': False, 'reason': 'not-running'}
         require(uniform_value_ok(target.get('type'), value), 'invalid live value')
-        rows, _, _ = uniform_rows([dict(u, value=value) if u is target else u for u in known['uniforms']])
-        table = self.comp.op('uniforms')
-        for r, row in enumerate(rows):
-            if r < table.numRows and table[r, 1].val == row[1] and table[r, 2].val != row[2]:
-                table[r, 2] = row[2]
-        return {'ok': True, 'applied': True}
+        # Compared with the editor's previous value (the running program's, then the last live one), so
+        # only what changed in the editor is written. 和編輯器的上一個值比，只寫在編輯器變了的分量。
+        last = known.setdefault('last', {})
+        before = last.get(ident, target['value'])
+        last[ident] = value
+        applied = uniform_writer.live(self._shader(self.comp), target, value, before)
+        return {'ok': True, 'applied': applied}
 
     def _input_ids(self):
         """The input IDs the TOPs list holds now, in order. TOPs 清單現在的輸入 ID，照順序。"""
@@ -293,21 +284,13 @@ class NextFamily:
             ids.append(target.fetch(INPUT_STORE, None, search=False) if target is not None else None)
         return ids
 
-    def _write_uniforms(self, uniforms):
-        """Rewrite the binding table whole; DAT Export drives the GLSL OP's Uniform parameters, so it
-        works without the main component. The Vectors and Colors blocks are sized here (DAT Export
-        cannot add blocks). 整張重寫綁定表；DAT Export 驅動 GLSL OP 的 Uniform 參數，主組件不在也照常。
-        Vectors／Colors 的列數在這裡設定（DAT Export 不能加列）。"""
-        shader, table = self._shader(self.comp), self.comp.op('uniforms')
-        if table is None:
-            table = self.comp.create(tableDAT, 'uniforms')
-            table.dock = shader
-        rows, vectors, colors = uniform_rows(uniforms)
-        shader.seq.vec.numBlocks = max(1, vectors)
-        shader.seq.color.numBlocks = max(1, colors)
-        table.clear()
-        table.appendRows(rows)
-        table.export = True
+    def _write_uniforms(self, uniforms, previous):
+        """Uniform rows on the GLSL OP (uniform_writer.py), after the GLSL compiled. Grape OPs from
+        Refactor.44–46 have their binding table's Export turned off first, keeping what it drove.
+        Returns notices for people. GLSL 編譯成功後寫 Uniform 列；R.44～46 的 Grape OP 先關掉綁定表的 Export。"""
+        shader = self._shader(self.comp)
+        uniform_writer.retire_export_table(self.comp, shader)
+        return uniform_writer.apply(shader, uniforms, previous, self.presets, constant_mode())
 
     def _place_inputs(self, inputs):
         """Give every texture input an In TOP and list them in the TOPs list, so the new GLSL can
@@ -421,11 +404,17 @@ class NextFamily:
         next_revision = revision + 1
         meta = dict(meta)
         meta['document'] = {'revision': next_revision, 'sha256': digest(text)}
-        shader_updated, shader_error = False, None
+        shader_updated, shader_error, notices = False, None, []
         if runtime_text is not None:
-            compiled = read_runtime(runtime_text, catalog_hash=catalog_hash)
+            compiled = read_runtime(runtime_text, catalog_hash=catalog_hash, presets=self.presets)
             inputs = texture_inputs(compiled)
-            uniforms = [entry for entry in compiled['bindings'] if entry['kind'] in ('uniform', 'builtin')]
+            uniforms = uniforms_of(compiled)
+            # What the last successful apply sent: values changed since then were changed in the editor
+            # (Q57). 上次成功套用時送的：之後變的值就是在編輯器改的。
+            # Refactor.45–46 built-in values count too, so their rows are removed. R.45～46 的內建值也算，好拿掉它們的列。
+            previous_uniforms = [entry for entry in json.loads(meta['runtime']['text']).get('bindings') or []
+                                 if entry.get('kind') in ('uniform', 'builtin')]
+            uniform_writer.check_renames(self._shader(self.comp), uniforms, previous_uniforms)
             pixel = self.comp.op('pixel_shader')
             previous = pixel.text
             placed = None
@@ -453,7 +442,7 @@ class NextFamily:
                 shader_updated, shader_error = False, str(error)
             else:
                 placed[0]()
-                self._write_uniforms(uniforms)
+                notices = self._write_uniforms(uniforms, previous_uniforms)
                 meta['runtime'] = {'revision': next_revision, 'text': runtime_text,
                                    'sha256': digest(runtime_text), 'document': None,
                                    'editorVersion': editor_version}
@@ -482,6 +471,10 @@ class NextFamily:
                         'Shader and graph applied' if runtime_text is not None
                         else 'Graph saved; Shader unchanged (no program change, or code generation failed in the editor)',
                         revision=next_revision, runtimeRevision=meta['runtime']['revision'])
+        for notice in notices:
+            notify(self.comp, english(notice))
         # shaderError: TD's compile log when the GLSL did not compile (the graph was saved anyway).
+        # uniforms: each Uniform's components as TD has them now (Q60); notices: things to tell people,
+        # as code + English + parameters (Q58). uniforms：各分量的現況；notices：要告訴人的事。
         return {'ok': True, 'state': self.state(), 'target': self.comp.path, 'shaderUpdated': shader_updated,
-                'shaderError': shader_error}
+                'shaderError': shader_error, 'uniforms': self.uniform_states(), 'notices': notices}

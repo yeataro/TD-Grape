@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "251abd74ee145fbe61f36ef13d6e9665f8348f42bf2a2b7817d1f00cdbf848a1",
+  "catalogHash": "690894281ddcf277ae75c413d60e84ff03de1bfb328c801709da4bca0d2c204b",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -6344,5 +6344,55 @@
         }
       }
     }
-  }
+  },
+  "uniformPresets": [
+    {
+      "entry": "absTime",
+      "name": "uAbsTime",
+      "type": "float",
+      "expression": "absTime.seconds",
+      "common": "absTime",
+      "hint": "Seconds since TouchDesigner started; keeps running."
+    },
+    {
+      "entry": "absFrame",
+      "name": "uAbsFrame",
+      "type": "float",
+      "expression": "absTime.frame",
+      "common": "absFrame",
+      "hint": "Frames since TouchDesigner started; keeps running."
+    },
+    {
+      "entry": "time",
+      "name": "uTime",
+      "type": "float",
+      "expression": "me.time.seconds",
+      "common": null,
+      "hint": "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime."
+    },
+    {
+      "entry": "frame",
+      "name": "uFrame",
+      "type": "float",
+      "expression": "me.time.frame",
+      "common": null,
+      "hint": "Frame on this Grape OP's timeline; stops and loops with the timeline."
+    },
+    {
+      "entry": "deltaTime",
+      "name": "uDeltaTime",
+      "type": "float",
+      "expression": "absTime.stepSeconds",
+      "common": "deltaTime",
+      "hint": "Seconds from the previous frame to this one (all of TouchDesigner)."
+    },
+    {
+      "entry": "frameStep",
+      "name": "uFrameStep",
+      "type": "float",
+      "expression": "absTime.step",
+      "common": null,
+      "hint": "Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames."
+    }
+  ]
 }

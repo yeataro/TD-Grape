@@ -35,6 +35,11 @@ footer { color: #958b9f; font-size: 11px; }
 .port-fallback { color: #ffffff80; font-size: 11px; padding-left: 4px; }
 .source-flag { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .builtin-row.unused code { color: #ffffff80; }
+.section-buttons { display: flex; gap: 4px; }
+/* What drives a Uniform component in TD (Uniform D1), in TD's mode colours. TD 上驅動分量的東西，用 TD 的模式顏色。 */
+.td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: 11px; border-radius: 4px; background: #00000040; }
+.td-expression { color: #7fb2ff; } .td-export { color: #7fd88a; } .td-other { color: #ffffff80; }
+.td-bind input, code.td-bind { color: #c59cff; }
 .grape-node.ghost .ghost-note { font-size: 11px; color: #ffffffa0; padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
 .node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }

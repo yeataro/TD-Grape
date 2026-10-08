@@ -3,6 +3,7 @@ import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflo
 import { core, typeColor, type Value, type NodeControl, type NodePresentation } from './core';
 import { NumberField } from './NumberField';
 import type { FlowNode } from './projection';
+import type { ComponentState } from './host';
 import { spareHandle, type Editor as EditorSession } from './editor';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
 import { tr, say } from './text';
@@ -28,13 +29,27 @@ function ColorField({ value, label, commit, preview }: { value: string; label: s
     value={draft} onInput={event => { setDraft(event.currentTarget.value); preview?.(event.currentTarget.value); }} onChange={() => {}} />;
 }
 
-export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview }: {
+// A component something else drives in TD (Uniform D1, Q60; TD's mode colours, as the legacy node did):
+// only its state is shown, never edited here. 在 TD 被別的東西驅動的分量：只顯示狀態，這裡不能改。
+function DrivenField({ state }: { state: ComponentState }) {
+  const text = state.mode === 'expression' ? say(tr('uniform.expression', 'Expression: {text}', { text: state.text ?? '' }))
+    : state.text ?? state.mode;
+  const title = state.mode === 'export' ? say(tr('uniform.exportFrom', 'Driven by an Export from {origin}', { origin: state.source ?? '' })) : text;
+  return <code className={`td-driven td-${state.mode}`} title={title}>{text}</code>;
+}
+
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
   /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
   preview?: (value: Value) => void;
+  /** Each component's state in TD (Uniform D1); left out means a plain value. 各分量在 TD 的狀態；沒給＝一般數值。 */
+  modes?: readonly (ComponentState | undefined)[];
 }) {
   const count = core.values.count(type), family = core.values.family(type);
-  const list = Array.from({ length: count }, (_, i) => Array.isArray(value) ? value[i] ?? 0 : value);
+  // A bound component shows the value it is bound to (Q56: Bind shares a constant value with its master).
+  // Bind 的分量顯示綁到的那個值。
+  const list = Array.from({ length: count }, (_, i) => modes?.[i]?.mode === 'bind' && modes[i]!.value !== undefined ? modes[i]!.value!
+    : Array.isArray(value) ? value[i] ?? 0 : value);
   const hex = '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
   const fromHex = (next: string): Value => [...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)];
   return <div className="value-group nodrag nopan">
@@ -44,9 +59,12 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
       {list.map((item, i) => {
         const withComponent = (next: Value) => { const values = [...list]; values[i] = next; return count === 1 ? next : values; };
         const change = (next: Value) => commit(withComponent(next));
-        return <label key={i}>
+        const mode = modes?.[i], bound = mode?.mode === 'bind';
+        return <label key={i} className={bound ? 'td-bind' : undefined} title={bound ? mode.text : undefined}>
           {count > 1 && <span style={color ? { color: ['#ef8990', '#98d393', '#85bafa', '#ddd9e5'][i] } : undefined}>{names[i]}</span>}
-          {family === 'bool' ? <select className="nodrag" aria-label={`${label} ${i}`} value={String(!!item)}
+          {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
+            : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
+            : family === 'bool' ? <select className="nodrag" aria-label={`${label} ${i}`} value={String(!!item)}
             onChange={event => change(event.target.value === 'true')}><option>false</option><option>true</option></select> :
             <NumberField label={`${label} ${i}`} value={Number(item)} integer={family === 'int' || family === 'uint'} unsigned={family === 'uint'} commit={change}
               preview={preview && (next => preview(withComponent(next)))} />}

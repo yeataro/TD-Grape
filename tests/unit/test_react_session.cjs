@@ -799,10 +799,12 @@ test('a texture input: add, choose its default image, place, sample, wire; the i
 test('a Uniform: add, vec4 colour, value, place, wire; a value change only changes the binding', async t => {
   const { session, calls } = open(t);
   session.addUniform();
+  assert.deepEqual(['name', 'type'].map(k => session.snapshot().declarations.find(d => d.kind === 'uniform')[k]), ['uniform1', 'float']);
+  session.removeDeclaration(session.snapshot().declarations.find(d => d.kind === 'uniform').id);
+  // A colour is chosen when added (Q59) and starts white. 顏色在新增時決定，從白色開始。
+  session.addUniform(true);
   const uniform = () => JSON.parse(JSON.stringify(session.snapshot().declarations.find(d => d.kind === 'uniform')));
-  assert.deepEqual([uniform().name, uniform().type], ['uniform1', 'float']);
-  session.setDeclarationType(uniform().id, 'vec4');
-  session.setDeclarationColor(uniform().id, true);
+  assert.deepEqual([uniform().type, uniform().color, uniform().value], ['vec4', true, [1, 1, 1, 1]]);
   session.setDeclarationValue(uniform().id, [1, 0.5, 0, 1]);
   session.placeDeclaration(uniform().id, { x: 0, y: 0 });
   const ref = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.declaration');
@@ -819,13 +821,13 @@ test('a Uniform: add, vec4 colour, value, place, wire; a value change only chang
   assert.deepEqual(second.bindings.find(b => b.kind === 'uniform').value, [0, 1, 0, 1]);
 });
 
-// Uniform B (Refactor.45; Q52): placing a time value creates it once and reuses it after.
-// 時間：第一次放到圖上時建立，之後重用。
+// Time (Refactor.45, D1; Q61): a preset Uniform, created once when placed and reused after.
+// 時間：預設 Uniform，第一次放到圖上時建立，之後重用。
 test('a time value placed twice is one declaration with two reference nodes; it goes to TD by its entry', async t => {
   const { session, calls } = open(t);
-  session.placeBuiltin('absTime', { x: 0, y: 0 });
-  session.placeBuiltin('absTime', { x: 0, y: 200 });
-  const builtins = session.snapshot().declarations.filter(d => d.kind === 'builtin');
+  session.placePreset('absTime', { x: 0, y: 0 });
+  session.placePreset('absTime', { x: 0, y: 200 });
+  const builtins = session.snapshot().declarations.filter(d => d.kind === 'uniform' && d.entry === 'absTime');
   assert.equal(builtins.length, 1);
   const refs = session.snapshot().projection.nodes.filter(n => n.data.authored.params.declarationId === builtins[0].id);
   assert.equal(refs.length, 2);
@@ -834,9 +836,35 @@ test('a time value placed twice is one declaration with two reference nodes; it 
   await session.flush();
   const runtime = JSON.parse(calls.at(-1).body.runtime);
   assert.match(runtime.pixel, /^uniform float uAbsTime;$/m);
-  assert.deepEqual(runtime.bindings.filter(b => b.kind === 'builtin').map(b => [b.name, b.entry]), [['uAbsTime', 'absTime']]);
+  assert.deepEqual(runtime.bindings.filter(b => b.kind === 'uniform').map(b => [b.name, b.entry, b.value]), [['uAbsTime', 'absTime', 0]]);
+  session.renameDeclaration(builtins[0].id, 'uClock');
+  assert.equal(session.snapshot().declarations.find(d => d.entry === 'absTime').name, 'uAbsTime', 'the name is locked in the web editor');
   session.history(false); session.history(false); session.history(false);
-  assert.equal(session.snapshot().declarations.filter(d => d.kind === 'builtin').length, 0, 'Undo removes what placing created');
+  assert.equal(session.snapshot().declarations.filter(d => d.entry === 'absTime').length, 0, 'Undo removes what placing created');
+});
+
+// Uniform D1 (Q58, Q60): TD reports each component's state with its replies; TD-Grape's notices are
+// said as TD-Grape wrote them (translated when the editor knows the code).
+// TD 在回覆裡帶回各分量的狀態；TD-Grape 的提醒照原樣說（有翻譯就翻）。
+test('TD states arrive on open and with each reply; notices go to the log as TD-Grape said them', async t => {
+  const states = { u: [{ mode: 'expression', text: 'absTime.seconds' }] };
+  const notice = { code: 'uniform.exportRemains', source: '{uniform} was deleted, but {parameter} of the GLSL OP is still driven by an Export from {origin}; TD-Grape cannot remove that from here.',
+    params: { uniform: 'uTint', parameter: 'color0alpha', origin: 'lfo1:chan1' } };
+  const { session } = open(t, (action, body, remote) => {
+    if (action === 'state') return { ...remote.get(), uniforms: { u: [{ mode: 'constant', value: 1 }] } };
+    const state = { document: body.document, revision: body.revision + 1, targetId: target };
+    remote.set(state);
+    return { state, uniforms: states, notices: [notice] };
+  });
+  assert.deepEqual(session.snapshot().tdUniforms, {}, 'this test opens with a reply that has none');
+  await session.check();
+  assert.deepEqual(session.snapshot().tdUniforms, { u: [{ mode: 'constant', value: 1 }] });
+  session.addUniform();
+  await session.flush();
+  assert.deepEqual(session.snapshot().tdUniforms, states);
+  const said = session.log.entries().at(-1);
+  assert.equal(said.source, 'td');
+  assert.match(zh(said.message), /uTint.*color0alpha.*lfo1:chan1/);
 });
 
 // Uniform C (Refactor.46; Q53): a Uniform's value goes to TD the moment it changes; dragging never

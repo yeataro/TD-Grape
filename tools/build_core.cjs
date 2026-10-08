@@ -2,6 +2,34 @@
 const ts=require('typescript'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {createHash}=require('node:crypto');
 const root=path.resolve(__dirname,'..'),src=path.join(root,'src/core-ts');
+// Shared tables live in one JSON file each (design-interview Q61); the core's TypeScript copy is
+// generated here, before compiling. 共用表各只有一份 JSON；核心的 TypeScript 由這裡產生。
+const library=name=>JSON.parse(fs.readFileSync(path.join(root,'src/library',name),'utf8'));
+const presetTable=library('uniform_presets.json').presets,commonTable=library('common_sources.json').sources;
+const generatedTables=new Map([
+  [path.join(src,'uniform_presets.ts'),`// Generated from src/library/uniform_presets.json by tools/build_core.cjs; edit the JSON, not this file.
+/** Uniform presets (design-interview Q61): Uniforms whose meaning Grape knows. A Uniform declaration
+ * points to one by \`entry\`; name and type come from here and are locked in the web editor.
+ * \`expression\` is shown to people only: TD reads its own copy from the editor bundle and never runs
+ * an expression sent by the editor. \`hint\` is the English original (translations: locales, code
+ * uniformPreset.<entry>, Q34). 預設 Uniform：由 JSON 產生，請改 JSON。 */
+export interface UniformPreset {
+  readonly entry: string; readonly name: string; readonly type: string;
+  readonly expression: string; readonly common: string | null; readonly hint: string;
+}
+export const uniformPresets: readonly UniformPreset[] = Object.freeze(${JSON.stringify(presetTable,null,2)}.map(entry => Object.freeze(entry)));
+`],
+  [path.join(src,'common_sources.ts'),`// Generated from src/library/common_sources.json by tools/build_core.cjs; edit the JSON, not this file.
+/** Common identities (Q61): what almost every shader host provides. Definitions point here with
+ * \`common\`; graphs never store it. 共同身分：由 JSON 產生，請改 JSON。 */
+export interface CommonSource { readonly id: string; readonly type: string; readonly meaning: string }
+export const commonSources: readonly CommonSource[] = Object.freeze(${JSON.stringify(commonTable,null,2)}.map(entry => Object.freeze(entry)));
+`]]);
+for(const [file,text] of generatedTables){
+  if(process.argv.includes('--check')){
+    if(!fs.existsSync(file)||fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n')!==text){console.error('Stale generated table: '+path.relative(root,file));process.exitCode=1;}
+  }else fs.writeFileSync(file,text);
+}
 const config=ts.readConfigFile(path.join(root,'tsconfig.json'),ts.sys.readFile);
 const parsed=ts.parseJsonConfigFileContent(config.config,ts.sys,root);
 function files(dir){return fs.readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name<b.name?-1:1).flatMap(e=>e.isDirectory()?files(path.join(dir,e.name)):e.name.endsWith('.ts')?[path.join(dir,e.name)]:[]);}
@@ -19,12 +47,13 @@ import {formatProblem} from './model';
 import {ghostsOf} from './ghosts';
 import {declarationKinds,declarationNameProblem,freeDeclarationName,defaultTextures} from './declarations';
 import {tdValues} from './td_values';
-import {builtinValues} from './builtins';
+import {uniformPresets} from './uniform_presets';
+import {commonSources} from './common_sources';
 import {usableTdValue} from './node_sdk';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,declarationKinds,declarationNameProblem,freeDeclarationName,defaultTextures,builtinValues,tdValues,usableTdValue};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,declarationKinds,declarationNameProblem,freeDeclarationName,defaultTextures,uniformPresets,commonSources,tdValues,usableTdValue};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -70,7 +99,10 @@ const outputs=new Map([
   [path.join(generated,'grape_core.js'),bundled],
   [path.join(generated,'editor-bootstrap.json'),JSON.stringify({version:1,producer:'frontend-modules',
     catalogHash:implementationHash,defaultDocument,catalog:rows.map(row=>row.definition),
-    typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract}},null,2)+'\n']
+    typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract},
+    // TD reads the preset expressions from here (Q61): one copy at run time, in the editor bundle.
+    // TD 從這裡讀預設 Uniform 的 expression：執行時只有網頁資產裡這一份。
+    uniformPresets:presetTable},null,2)+'\n']
 ]);
 // Publish only after all checks and projections have succeeded.
 for(const [file,output] of outputs){
