@@ -27,7 +27,7 @@ const rows=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',pytho
 const {convertOldGraph}=require('../../tools/dev/old_graph.cjs');
 for(const row of rows)row.graph=convertOldGraph(row.graph).graph;
 fs.writeFileSync(path.join(folder,'legacy-cases.json'),JSON.stringify(rows,null,2));
-const root=path.resolve(__dirname,'../..'),scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(root,'src/generated/wire_planning.js'),'utf8'),scope);
+const root=path.resolve(__dirname,'../..'),scope=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(root,'src/generated/grape_core.js'),'utf8'),scope);
 for(const row of rows){
  assert.equal(scope.GrapeTopCompiler.supports(row.graph),true,row.key);
  assert.deepEqual(JSON.parse(JSON.stringify(scope.GrapeTopCompiler.compile(row.graph))),row.compiled,`${row.key} ${row.type} connected=${row.connected}`);

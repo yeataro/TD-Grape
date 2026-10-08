@@ -1,12 +1,12 @@
 // Generated from src/core-ts; run npm run build:core.
-var GrapeWirePlanning,GrapeTopCompiler,GrapeGraph;
+var GrapeTopCompiler,GrapeGraph;
 (function(){
 'use strict';
 const factories={
 "__composition":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GrapeGraph = exports.GrapeTopCompiler = exports.GrapeWirePlanning = exports.registry = void 0;
+exports.GrapeGraph = exports.GrapeTopCompiler = exports.registry = void 0;
 const wire = require("./wire_planning");
 const graph = require("./graph");
 const values = require("./values");
@@ -73,9 +73,8 @@ const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
-exports.GrapeWirePlanning = wire;
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem };
 
 },
 "capacity":function(require,module,exports){
@@ -5968,6 +5967,6 @@ function load(id){
     return load(parts.join('/'));
   },module,module.exports);return module.exports;
 }
-const api=load('__composition');GrapeWirePlanning=api.GrapeWirePlanning;GrapeTopCompiler=api.GrapeTopCompiler;GrapeGraph=api.GrapeGraph;
+const api=load('__composition');GrapeTopCompiler=api.GrapeTopCompiler;GrapeGraph=api.GrapeGraph;
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=GrapeGraph;

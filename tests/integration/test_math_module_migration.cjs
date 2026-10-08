@@ -27,7 +27,7 @@ const rows=JSON.parse(execFileSync(process.env.PYTHON||'python',['-B','-c',pytho
 const {convertOldGraph}=require('../../tools/dev/old_graph.cjs');
 for(const row of rows)row.graph=convertOldGraph(row.graph).graph;
 fs.writeFileSync(path.join(folder,'legacy-cases.json'),JSON.stringify(rows,null,2));
-const api=vm.createContext({});vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../../src/generated/wire_planning.js'),'utf8'),api);
+const api=vm.createContext({});vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../../src/generated/grape_core.js'),'utf8'),api);
 for(const row of rows){assert.equal(api.GrapeTopCompiler.supports(row.graph),true);assert.deepEqual(JSON.parse(JSON.stringify(api.GrapeTopCompiler.compile(row.graph))),row.compiled,JSON.stringify(row.case));}
 const report={passed:true,cases:rows.length,comparison:['GLSL','bindings','sourceMap','ports','diagnostics'],types:['float','vec4'],counts:[2,3,32],modes:['steps','shared'],annotations:'multiline labels, Unicode separators, control bytes, backslash line joins',legacyRoot:path.resolve(legacyRoot),actualTD:false};
 fs.writeFileSync(path.join(folder,'result.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));

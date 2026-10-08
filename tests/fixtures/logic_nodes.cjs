@@ -1,5 +1,5 @@
 const {node,edge}=require('./shared_subgraphs.cjs');
-const {values}=require('../../src/generated/wire_planning.js');
+const {values}=require('../../src/generated/grape_core.js');
 function finish(nodes,edges,result,t){
  if(t!=='float'&&t!=='vec4'){
   if(values.count(t)>1&&values.family(t)!=='bool'){

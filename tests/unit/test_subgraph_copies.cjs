@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {GraphDocument,registry,createRegistry,ScopeReferences}=require('../../src/generated/wire_planning.js');
+const {GraphDocument,registry,createRegistry,ScopeReferences}=require('../../src/generated/grape_core.js');
 const {sharedGraph,node}=require('../fixtures/shared_subgraphs.cjs');
 const copy=structuredClone;
 const empty=()=>({format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],stages:{pixel:{nodes:[],edges:[]}}});

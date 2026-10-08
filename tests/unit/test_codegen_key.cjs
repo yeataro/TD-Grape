@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const root = path.resolve(__dirname, '../..');
 const producer = vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(root, 'src/generated/wire_planning.js'), 'utf8'), producer);
+vm.runInContext(fs.readFileSync(path.join(root, 'src/generated/grape_core.js'), 'utf8'), producer);
 const { GrapeGraph: G, GrapeTopCompiler: C } = producer;
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));

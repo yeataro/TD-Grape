@@ -23,6 +23,6 @@
   "shader_controls.py": "src/td/runtime/shader_controls.py",
   "source_catalog.json": "src/library/source_catalog.json",
   "material_presets.json": "src/library/material_presets.json",
-  "wire_planning.js": "src/generated/wire_planning.js",
+  "grape_core.js": "src/generated/grape_core.js",
   "builtin_subgraphs.json": "src/library/builtin_subgraphs.json"
 }

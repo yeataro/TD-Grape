@@ -1,6 +1,6 @@
 const {node,edge}=require('./shared_subgraphs.cjs');
 const {finish}=require('./logic_nodes.cjs');
-const {values}=require('../../src/generated/wire_planning.js');
+const {values}=require('../../src/generated/grape_core.js');
 function valueNode(id,type,seed=.4){
  const data=values.reshape([seed,0,1,seed],values.shaped(values.family(type),4));
  return values.count(type)===1?node(id,'scalar',{type,value:data[0]}):node(id,'vector',{type,components:data});

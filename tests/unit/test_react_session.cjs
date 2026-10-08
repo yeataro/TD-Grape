@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), ts = require('typescript');
 const root = path.resolve(__dirname, '../..');
 const producer = vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(root, 'src/generated/wire_planning.js'), 'utf8'), producer);
+vm.runInContext(fs.readFileSync(path.join(root, 'src/generated/grape_core.js'), 'utf8'), producer);
 global.GrapeGraph = producer.GrapeGraph; global.GrapeTopCompiler = producer.GrapeTopCompiler;
 // Load the actual typed application, not a test reimplementation or a renderer mock.
 // 測試真正 session／projection；只替換 HTTP 回覆，不複製交易與產碼邏輯。

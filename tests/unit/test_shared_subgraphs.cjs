@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const c=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/wire_planning.js'),'utf8'),c);
+const c=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/grape_core.js'),'utf8'),c);
 const {GraphDocument,registry,changesBetween}=c.GrapeGraph;
 const {sharedGraph,port,node}=require('../fixtures/shared_subgraphs.cjs');
 const plain=v=>JSON.parse(JSON.stringify(v));

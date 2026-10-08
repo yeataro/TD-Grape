@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {GraphDocument,registry,createCompiler,values}=require('../../src/generated/wire_planning.js');
+const {GraphDocument,registry,createCompiler,values}=require('../../src/generated/grape_core.js');
 const {logicCases}=require('../fixtures/logic_nodes.cjs');
 const {node,edge,port}=require('../fixtures/shared_subgraphs.cjs');
 const compiler=createCompiler(registry);

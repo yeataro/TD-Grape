@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/wire_planning.js'),'utf8'),context);
-const {plan}=context.GrapeWirePlanning,{registry}=context.GrapeGraph;
+const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/grape_core.js'),'utf8'),context);
+const {plan,registry}=context.GrapeGraph;
 const c={components:{float:1,vec2:2,vec3:3,vec4:4,bool:1,bvec3:3,mat3:9,mat2x3:6},conversions:[{from:'float',to:'vec3'}]};
 const source=(id,type)=>({id,definition:'constant',stored:{inputs:{},outputs:{out:type}}});
 const op=(id,type='float')=>({id,definition:'multiply',stored:{inputs:{a:type,b:type},outputs:{out:type}},variants:registry.get('sgrape.builtin.multiply').signatures({params:{type}})});

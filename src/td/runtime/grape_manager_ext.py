@@ -23,7 +23,7 @@ class GrapeManagerExt:
         self.Disconnect()
         files = editor.snapshot.files
         bootstrap = json.loads(files['editor-bootstrap.json'])
-        if bootstrap['catalogHash'] != sha256(files['wire_planning.js']).hexdigest():
+        if bootstrap['catalogHash'] != sha256(files['grape_core.js']).hexdigest():
             raise RuntimeError('Editor bootstrap and compiler are from different builds.')
         self.bootstrap = bootstrap
         self.editor = editor

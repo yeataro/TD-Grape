@@ -2,6 +2,14 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.31 — 清殘留第 8 條：舊名 `wire_planning.js`／`GrapeWirePlanning` — 2026-10-08
+
+照 design-interview Q48（人類授權第 4–8 條自行進行）。
+
+- 核心套件 `src/generated/wire_planning.js` 改名 `grape_core.js`（它是整個核心：`GrapeGraph`、`GrapeTopCompiler`；「接線規劃」是專案早期的名字）。頁面、TD Manager 的版本核對（`GrapeManagerExt.Connect`）、`source_files.json`、測試與文件同步。
+- 拿掉多餘的全域名稱 `GrapeWirePlanning`（只有一個測試在用），它的 `plan` 改由 `GrapeGraph.plan` 提供。核心內真正做接線規劃的模組 `src/core-ts/wire_planning.ts` 名副其實，保留。
+- **驗證**：core 110、editor 37、Python 48、瀏覽器測試通過；integration 對照 legacy 2 支通過。真實 TD：Manager DAT 與 repo 一致，網頁根目錄只剩 `grape_core.js`；瀏覽器開編輯器、拖曳與復原各送出 apply 皆 200。Deliver 存 TOE（Refactor.31）。
+
 ## Refactor.30 — 清殘留第 6 條：GraphDocument「直接改原物件」的入口 — 2026-10-08
 
 照 design-interview Q48 判斷（人類授權第 4–8 條自行進行）。

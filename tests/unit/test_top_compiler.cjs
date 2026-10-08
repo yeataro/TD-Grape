@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const source=fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'),'utf8');
+const source=fs.readFileSync(path.join(__dirname,'../../src/generated/grape_core.js'),'utf8');
 const context=vm.createContext({});vm.runInContext(source,context);
 const compiler=context.GrapeTopCompiler;
 // The legacy oracle is a frozen snapshot of the old Python compiler's results (removed in cleanup 5,

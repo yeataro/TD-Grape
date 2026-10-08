@@ -4,7 +4,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path');
-const { GraphDocument, registry, formatProblem, values } = require('../../src/generated/wire_planning.js');
+const { GraphDocument, registry, formatProblem, values } = require('../../src/generated/grape_core.js');
 const { convertOldGraph } = require('../../tools/dev/old_graph.cjs');
 const root = path.resolve(__dirname, '../..');
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));

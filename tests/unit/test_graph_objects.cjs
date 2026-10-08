@@ -1,6 +1,6 @@
 // Isolated public-interface tests: no editor, host, DOM or Python.
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
-const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'),'utf8'),context);
+const context=vm.createContext({});vm.runInContext(fs.readFileSync(path.join(__dirname,'../../src/generated/grape_core.js'),'utf8'),context);
 const {GraphDocument,createRegistry,registry}=context.GrapeGraph;
 const plain=x=>JSON.parse(JSON.stringify(x));
 const node=(id,key,params={})=>({id,nodeType:'sgrape.builtin.'+key,params});

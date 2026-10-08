@@ -18,9 +18,8 @@ import {createEditorContract} from './editor_contract';
 import {formatProblem} from './model';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
-export const GrapeWirePlanning=wire;
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -30,7 +29,7 @@ const diagnostics=[...(config.error?[config.error]:[]),...parsed.errors,...ts.ge
 if(diagnostics.length){console.error(ts.formatDiagnosticsWithColorAndContext(diagnostics,{getCurrentDirectory:()=>root,getCanonicalFileName:p=>p,getNewLine:()=> '\n'}));process.exit(1);}
 const modules={};
 program.emit(undefined,(file,text)=>{modules[path.relative(parsed.options.outDir,file).replace(/\\/g,'/').replace(/\.js$/,'')]=text;});
-const bundled=`// Generated from src/core-ts; run npm run build:core.\nvar GrapeWirePlanning,GrapeTopCompiler,GrapeGraph;\n(function(){\n'use strict';\nconst factories={\n${Object.entries(modules).sort(([a],[b])=>a<b?-1:1).map(([id,text])=>JSON.stringify(id)+':function(require,module,exports){\n'+text+'\n}').join(',\n')}\n};
+const bundled=`// Generated from src/core-ts; run npm run build:core.\nvar GrapeTopCompiler,GrapeGraph;\n(function(){\n'use strict';\nconst factories={\n${Object.entries(modules).sort(([a],[b])=>a<b?-1:1).map(([id,text])=>JSON.stringify(id)+':function(require,module,exports){\n'+text+'\n}').join(',\n')}\n};
 const cache=Object.create(null);
 function load(id){
   if(cache[id])return cache[id].exports;
@@ -43,7 +42,7 @@ function load(id){
     return load(parts.join('/'));
   },module,module.exports);return module.exports;
 }
-const api=load('__composition');GrapeWirePlanning=api.GrapeWirePlanning;GrapeTopCompiler=api.GrapeTopCompiler;GrapeGraph=api.GrapeGraph;
+const api=load('__composition');GrapeTopCompiler=api.GrapeTopCompiler;GrapeGraph=api.GrapeGraph;
 })();\nif(typeof module!=='undefined'&&module.exports)module.exports=GrapeGraph;\n`;
 const context={};vm.runInNewContext(bundled,context);
 const rows=context.GrapeGraph.registry.modules.filter(m=>!m.structural).map(m=>JSON.parse(JSON.stringify(m.catalog)));
@@ -61,7 +60,7 @@ for(const row of rows)row.definition.definitionUuid||='sgrape.builtin.'+row.defi
 // them; never edit them by hand. 產生的檔案放 src/generated/，新編輯器、TD Manager、測試共用；不要手改。
 const generated=path.join(root,'src/generated');
 const outputs=new Map([
-  [path.join(generated,'wire_planning.js'),bundled],
+  [path.join(generated,'grape_core.js'),bundled],
   [path.join(generated,'editor-bootstrap.json'),JSON.stringify({version:1,producer:'frontend-modules',
     catalogHash:implementationHash,defaultDocument,catalog:rows.map(row=>row.definition),
     typeContract:{...context.GrapeGraph.createEditorContract(context.GrapeGraph.registry,'top'),sources:sourceContract}},null,2)+'\n']

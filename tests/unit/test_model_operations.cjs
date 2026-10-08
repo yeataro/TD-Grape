@@ -1,6 +1,6 @@
 // Exercise the public model: no DOM, TD, legacy inference or node-name dispatch.
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/wire_planning.js'),'utf8'),context);
+const context=vm.createContext({});vm.runInContext(fs.readFileSync(require.resolve('../../src/generated/grape_core.js'),'utf8'),context);
 const {GraphDocument,registry,createRegistry,createCompiler,changesBetween}=context.GrapeGraph;
 const plain=x=>JSON.parse(JSON.stringify(x));
 const policy={components:{float:1,vec2:2,vec3:3,vec4:4},conversions:[{from:'float',to:'vec3'},{from:'float',to:'vec4'}]};

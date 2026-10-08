@@ -42,7 +42,7 @@ node tests/browser/test_react_editor.cjs ../work/refactor/editor-service/web ../
 
 Browser 測試使用 production bundle、真正 RF 與可控制故障的 HTTP 替身；預設本機 Chrome 路徑可用 `CHROME_PATH` 覆寫。它不等於 TD/GPU 證據。正式 TD 上選擇此輸出資料夾並使用 Editor Service 的 **Update Embedded** 或外部來源 **Reload**。不要把 TypeScript 源碼直接匯入 TD。
 
-核心組裝器從 `core-ts/nodes/` 讀模組，產生 `src/generated/` 的 `wire_planning.js`／bootstrap。React 只以 type import 接型別、執行同一生成核心；不能只改 TS 卻用舊 bundle/hash。建置把編輯器、Remote Panel 前端及第三方授權放入同一資產包，沒有第二個正式 web server。
+核心組裝器從 `core-ts/nodes/` 讀模組，產生 `src/generated/` 的 `grape_core.js`／bootstrap。React 只以 type import 接型別、執行同一生成核心；不能只改 TS 卻用舊 bundle/hash。建置把編輯器、Remote Panel 前端及第三方授權放入同一資產包，沒有第二個正式 web server。
 
 `test_react_session.cjs` 可用 `REACT_PERF_REPORT` 環境變數保存 102 節點／101 線樣本；`benchmark_react_editor.cjs BUILD PROTOTYPE_BUILD REPORT` 使用該報告中的同圖，對照已另建置的評估版，並量 30 秒待機。這些測試工具不進產品 bundle。
 

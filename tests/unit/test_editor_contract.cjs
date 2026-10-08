@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const {createHash}=require('node:crypto');
-const graph=require('../../src/generated/wire_planning.js');
+const graph=require('../../src/generated/grape_core.js');
 const bootstrap=require('../../src/generated/editor-bootstrap.json');
 
 test('editor bootstrap comes from registered modules and identifies its actual bundle',()=>{
@@ -11,7 +11,7 @@ test('editor bootstrap comes from registered modules and identifies its actual b
   assert.deepEqual(nodeContract,graph.createEditorContract(graph.registry));
   const sourceCatalog=require('../../src/library/source_catalog.json');
   assert.deepEqual(sources,Object.fromEntries(['version','uniformPresets','menuGroups','nodeSources'].map(key=>[key,sourceCatalog[key]])));
-  const source=fs.readFileSync(path.join(__dirname,'../../src/generated/wire_planning.js'));
+  const source=fs.readFileSync(path.join(__dirname,'../../src/generated/grape_core.js'));
   assert.equal(bootstrap.catalogHash,createHash('sha256').update(source).digest('hex'));
   assert.equal(bootstrap.producer,'frontend-modules');
 });
