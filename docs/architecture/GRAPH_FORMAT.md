@@ -74,7 +74,7 @@
 | 宣告 `nativeSequence` | 刪除；`'color'` → Uniform 的 `color: true` | 頁面由 TD 從 `kind`＋`type` 推算；「是不是顏色」是 Uniform 欄位（design-interview Q51：只有 vec3、vec4，沒寫＝不是顏色） |
 | 節點 `sgrape.builtin.uniform` | → `sgrape.builtin.declaration`（參數 `declarationId` 不變） | 舊式 Uniform 節點退休，一律用引用宣告節點（Refactor.44） |
 | 宣告 `initialDriver` | 待處理 | 改為內建值 `kind`（暫稱 `builtin`），Uniform 那一輪定 |
-| 宣告 `exposeName` | 待處理 | 拆成參數名稱＋標籤，Uniform 那一輪定 |
+| 宣告 `expose`、`exposeName` | 刪除 | Uniform 不做公開／不公開（design-interview Q55）；自訂參數由 TD 管，Grape 只幫忙建立並綁上 |
 | 宣告 `defaultSource`／MAT 的 `source` | 待處理 | 合併為 `defaultTexture`，貼圖輸入那一輪定 |
 | `grapeFallbackSampler` | （不在存檔裡） | 舊產碼器暫時副本裡的保險；新產碼器內部處理 |
 

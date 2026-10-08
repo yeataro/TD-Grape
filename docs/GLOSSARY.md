@@ -36,7 +36,7 @@
 | 全域常數 | Constant；存於 `declarations`，以 `kind` 區分（Q44） | GLSL 最外層 `const`；值在作品內，改值即產碼。不是來源，但與來源共用規則：名稱互不重複、只在各 stage 最外層引用、**子圖不直接引用**（需要的值經子圖輸入傳入，含 TD 內建 Uniform，使子圖可攜帶）、複製貼上帶走。 |
 | Spec 常數 | Specialization constant | 屬來源。宣告在作品（`layout(constant_id = N) const …`），目前值在 TD 參數頁；改值不產碼，TD 自行重建管線。 |
 | 共用來源面板 | 中文「共用來源」；英文暫用 Sources | 同時列出來源與全域常數的面板（便利做法）；面板內分區屬畫面，可調整，與程式分類無關。英文名做面板時再定（候選：Sources、Sources & Constants、Properties、比喻名稱如 Unity 的 Blackboard）。 |
-| Grape OP Custom Parameters | Grape OP Custom Parameters | 使用者標記**公開**的來源，在 Grape OP 上對應的 TD 自訂參數（TD 本身稱 Custom Parameters）。使用者的 Export／Expression／Bind 只接這裡；值的權威在 TD。**不用「外層」一詞**（人類 2026-10-07）。 |
+| Grape OP Custom Parameters | Grape OP Custom Parameters | Grape OP 上的 TD 自訂參數（TD 本身稱 Custom Parameters），不論是不是由 Grape 幫忙建立。Uniform **沒有「公開／不公開」狀態**（design-interview Q55，2026-10-09 撤銷原「使用者標記公開的來源」定義）：Grape 只幫使用者用 TD 的方式建立自訂參數並綁上 Uniform，之後由 TD 管；Grape 讀 TD 的現況來顯示誰在驅動。**不用「外層」一詞**（人類 2026-10-07）。 |
 | GLSL OP Uniform 參數 | GLSL OP uniform parameters | Grape OP 內部 GLSL OP 原生的 Uniform 欄位（Vectors 等頁，參數名依列位置如 `vec0name`／`vec0valuex`；Spec 常數在 Constant 頁 `const0name`／`const0value`）。所有來源都在這裡；由綁定表寫入、順序無意義、使用者不碰。**不用「內層」一詞**。 |
 | 綁定表 | Binding table | Grape OP 內只被寫入的靜態 Table DAT：Manager 依編輯器送來的 JSON 整張覆寫或改單格，開 DAT Export 旗標把名稱與值送進 GLSL OP Uniform 參數（2026-10-07 實測可行）。公開者的 value 欄為讀 Grape OP Custom Parameter 的 expression。 |
 | 內建值 | Built-in value；`kind: 'builtin'`、欄位 `entry` | 語意由 Grape 保證的宣告，目前是 6 個時間（`uAbsTime`＝`absTime.seconds` 等，表在 `src/core-ts/builtins.ts`）。名稱固定、不能改名、不能公開、不能改驅動；一張圖同一個只建一筆；TD 自己保管 expression（Q44、Q45、Q52）。 |
