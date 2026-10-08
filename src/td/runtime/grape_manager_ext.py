@@ -92,13 +92,21 @@ class GrapeManagerExt:
                 for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)]
         return {'shaders': rows, 'projectFile': project.name}
 
-    def Open(self, comp):
+    def Open(self, comp, app=False):
+        """Open the editor for a Grape OP. app=True: an app window when the default browser
+        supports it (editor_launch.py: Chrome or Edge on Windows), else the normal browser (Q45).
+        app=True 時能開 App 視窗就開（Windows 的 Chrome／Edge），否則一般瀏覽器。"""
         if not self.editor or not self.editor.http:
             raise RuntimeError('Editor Service is stopped; native Shader operation is unaffected.')
         target_id = self.Register(comp)
         self.Resolve(target_id)
         address = 'http://127.0.0.1:' + str(self.editor.http.port) + '/shader/' + target_id + '/'
-        ui.viewFile(address)
+        launcher = self.ownerComp.op('editor_launch')
+        if app and launcher is not None:
+            launcher.module.open_editor(address, ui.viewFile,
+                lambda callback, milliseconds: run('args[0]()', callback, delayMilliSeconds=milliseconds))
+        else:
+            ui.viewFile(address)
         return address
 
     def onInitTD(self):

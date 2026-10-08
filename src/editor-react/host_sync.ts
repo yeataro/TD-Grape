@@ -19,9 +19,11 @@ export const FORMAT = 'grape-next-1';
 // pair; the document is opaque text TD stores as received. A failed code generation sends the
 // document only, so the work is kept while TD keeps running the last known good Shader.
 // 兩部分：執行用（GLSL＋綁定）由 TD 成對套用；圖是 TD 原樣保存的文字。產碼失敗時只送圖。
-const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compiled?: Compiled) => ({
+// editorVersion: the editor build that produced the GLSL; TD shows it as "Grape Editor Version"
+// once that GLSL runs (design-interview Q45). 產生這份 GLSL 的編輯器版本，TD 換上時顯示在 Grape 頁。
+const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compiled: Compiled | undefined, editorVersion: string) => ({
   format: FORMAT, revision: sent.revision, targetId: host.target, catalogHash: bootstrap.catalogHash,
-  document: sent.document, runtime: compiled ? JSON.stringify(compiled) : null });
+  document: sent.document, runtime: compiled ? JSON.stringify(compiled) : null, editorVersion });
 
 // Opening reads TD's copy: TD is the only source before an editor document exists (Q28, Q38 2-4).
 // 開圖讀 TD 的那一份：編輯器還沒有作品時，唯一的來源是 TD。
@@ -36,12 +38,12 @@ export function checkLoaded(host: HostClient, bootstrap: Bootstrap, loaded: Stat
 // open may be replaced by the default to restore the test environment. Normal compile and
 // apply; a stale revision still conflicts.
 // 遷移期便利行為：測試圖可丟棄，打不開時換成預設圖以恢復測試環境；照常產碼／套用，版本過期仍擋。
-export async function resetToDefault(host: HostClient, bootstrap: Bootstrap) {
+export async function resetToDefault(host: HostClient, bootstrap: Bootstrap, editorVersion: string) {
   const loaded = await host.call<StateResponse>('state');
   checkLoaded(host, bootstrap, { ...loaded, state: { ...loaded.state, targetId: undefined } });
   const sent = { document: serializeDocument(bootstrap.defaultDocument.graph), revision: loaded.state.revision };
   const compiled = compiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode);
-  const result = await host.call<{ state: StateResponse['state'] }>('apply', applyRequest(host, bootstrap, sent, compiled));
+  const result = await host.call<{ state: StateResponse['state'] }>('apply', applyRequest(host, bootstrap, sent, compiled, editorVersion));
   if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
 }
 
@@ -77,7 +79,7 @@ export class HostSync {
   status: SyncStatus;
   constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse,
     private readonly source: () => Delivery, private readonly report: (status: SyncStatus) => void,
-    private readonly delay = 0, private readonly retry = 5000) {
+    private readonly delay = 0, private readonly retry = 5000, private readonly editorVersion = 'unknown') {
     this.confirmed = loaded.state.document;
     this.runtimeKey = loaded.state.runtimeRevision === loaded.state.revision ? source().key : null;
     this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready' };
@@ -111,7 +113,7 @@ export class HostSync {
       const runtime = compiled && key !== this.runtimeKey && key !== this.failedKey ? compiled : undefined;
       this.set({ phase: 'sending', message: compiled ? '正在套用至 TD…' : '產碼失敗；只把圖存到 TD，TD 繼續執行上次成功的 Shader…' });
       try {
-        const result = await this.host.call<Applied>('apply', applyRequest(this.host, this.bootstrap, sent, runtime));
+        const result = await this.host.call<Applied>('apply', applyRequest(this.host, this.bootstrap, sent, runtime, this.editorVersion));
         if (this.disposed) return;
         if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
         this.confirmed = sent.document;

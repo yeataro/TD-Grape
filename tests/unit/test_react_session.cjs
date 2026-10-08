@@ -50,7 +50,7 @@ function open(t, request, retry = 60000, generator) {
       { state: (remote = { document: body.document, revision: body.revision + 1, targetId: target }) };
     return result instanceof Response ? result : new Response(JSON.stringify(result));
   };
-  const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000, retry, generator);
+  const session = new EditorSession(new HostClient(target, '', fetcher), bootstrap, loaded(), 60000, retry, generator, '9.9.9 Test');
   t.after(() => session.dispose());
   return { session, calls, loaded };
 }
@@ -135,6 +135,7 @@ test('late apply acknowledges its snapshot then sends latest edits, never overwr
   assert.equal(session.snapshot().dirty, false);
   for (const { body } of calls) {
     assert.equal(body.format, 'grape-next-1');
+    assert.equal(body.editorVersion, '9.9.9 Test');
     assert.deepEqual(clone(GrapeTopCompiler.compile(JSON.parse(body.document), bootstrap.typeContract.glslCode)), JSON.parse(body.runtime));
     assert.equal(body.catalogHash, bootstrap.catalogHash);
   }
@@ -206,7 +207,7 @@ test('migration convenience: an unopenable test graph can be reset to the defaul
   const { session, calls, loaded } = open(t, strictHost());
   const unsupported = loaded(); withDoc(unsupported.state, graph => graph.stages.pixel.nodes.push({ id: 'x', nodeType: 'sgrape.builtin.uniform', params: {} }));
   assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => error instanceof UnsupportedGraphError);
-  await resetToDefault(session.host, bootstrap);
+  await resetToDefault(session.host, bootstrap, '9.9.9 Test');
   assert.deepEqual(calls.map(c => c.action), ['state', 'apply']); assert.equal(calls[1].body.revision, 4);
   assert.deepEqual(JSON.parse(calls[1].body.runtime), clone(GrapeTopCompiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode)));
   assert.deepEqual(doc(loaded().state), bootstrap.defaultDocument.graph); assert.equal(loaded().state.revision, 5);
@@ -214,7 +215,7 @@ test('migration convenience: an unopenable test graph can be reset to the defaul
 
 test('migration convenience: reset still conflicts on a stale revision and leaves TD unchanged', async t => {
   const { session, loaded } = open(t, strictHost(otherEntryEdits));
-  await assert.rejects(resetToDefault(session.host, bootstrap), /Conflict/);
+  await assert.rejects(resetToDefault(session.host, bootstrap, '9.9.9 Test'), /Conflict/);
   assert.notDeepEqual(doc(loaded().state), bootstrap.defaultDocument.graph);
 });
 

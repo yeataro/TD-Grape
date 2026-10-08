@@ -201,6 +201,10 @@ class NextFamily:
         text = body.get('document')
         require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_GRAPH_BYTES, 'graph text is empty or over 512,000 bytes')
         runtime_text = body.get('runtime')
+        editor_version = body.get('editorVersion')
+        if runtime_text is not None:
+            # Shown as "Grape Editor Version" once this GLSL runs (Q45). 換上後顯示在 Grape 頁。
+            require(isinstance(editor_version, str) and 0 < len(editor_version) <= 100, 'missing editor version')
         next_revision = revision + 1
         meta = dict(meta)
         meta['document'] = {'revision': next_revision, 'sha256': digest(text)}
@@ -223,7 +227,8 @@ class NextFamily:
                 shader_updated, shader_error = False, str(error)
             else:
                 meta['runtime'] = {'revision': next_revision, 'text': runtime_text,
-                                   'sha256': digest(runtime_text), 'document': None}
+                                   'sha256': digest(runtime_text), 'document': None,
+                                   'editorVersion': editor_version}
         if meta['runtime']['revision'] != next_revision and meta['runtime'].get('document') is None:
             # The graph moves past the running program: keep that program's graph once.
             # 圖往前走、執行部分停住時，才留一份那時的圖。

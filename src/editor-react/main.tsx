@@ -130,7 +130,7 @@ async function start() {
     fetch('/build-info.json').then(response => response.json()),
   ]);
   bootstrap = files; // kept for the startup-error reset
-  const session = new EditorSession(client, files, loaded);
+  const session = new EditorSession(client, files, loaded, undefined, undefined, undefined, build.version);
   const text = (key: string) => locales.messages?.[key]?.en ?? key;
   createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider><Editor session={session} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
 }
@@ -147,6 +147,7 @@ function StartupError({ error, reset }: { error: unknown; reset?: () => Promise<
 }
 void start().catch(error => {
   const client = host, files = bootstrap;
-  const reset = error instanceof UnsupportedGraphError && client && files ? () => resetToDefault(client, files) : undefined;
+  const reset = error instanceof UnsupportedGraphError && client && files ? async () => resetToDefault(client, files,
+    (await fetch('/build-info.json').then(response => response.json())).version) : undefined;
   createRoot(document.getElementById('root')!).render(<StartupError error={error} reset={reset} />);
 });

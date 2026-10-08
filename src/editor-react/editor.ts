@@ -61,13 +61,13 @@ export class Editor {
   // The code generator is received when created (config convention 4); omitted means the shared one.
   // 產碼器在建立時傳入（config 約定 4）；沒給就用共用的那個。測試用它模擬產碼失敗。
   constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse, delay = 0, retry = 5000,
-    private readonly generator: Pick<typeof compiler, 'key' | 'compile'> = compiler) {
+    private readonly generator: Pick<typeof compiler, 'key' | 'compile'> = compiler, editorVersion = 'unknown') {
     checkLoaded(host, bootstrap, loaded);
     const graph = parseDocument(loaded.state.document);
     requireSupported(graph);
     this.document = new core.GraphDocument(graph, core.registry);
     this.codegen = this.compile();
-    this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen, status => this.status(status), delay, retry);
+    this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen, status => this.status(status), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
       version: 0, undo: false, redo: false, message: '已載入 TD 文件', glsl: this.codegen.compiled?.pixel ?? '', targetPath: loaded.target };
     // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).

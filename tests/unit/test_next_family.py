@@ -69,7 +69,7 @@ def family(stored=None, gpu_ok=True):
 
 def request(revision=3, document='{ "odd" :  [1, 2] }', run=None, **extra):
     return {'format': FORMAT, 'revision': revision, 'targetId': TARGET, 'catalogHash': CATALOG,
-            'document': document, 'runtime': run, **extra}
+            'document': document, 'runtime': run, 'editorVersion': '9.9.9 Test', **extra}
 
 
 class NextFamilyTests(unittest.TestCase):
@@ -126,6 +126,7 @@ class NextFamilyTests(unittest.TestCase):
         self.assertEqual((stored['document']['revision'], stored['runtime']['revision']), (4, 4))
         self.assertIsNone(stored['runtime']['document'])  # the graph is the running program's graph
         self.assertNotIn('lastKnownGood', stored)  # the running program is the last known good; no second GLSL copy
+        self.assertEqual(stored['runtime']['editorVersion'], '9.9.9 Test')  # Grape Editor Version (Q45)
         self.assertEqual((result['state']['revision'], result['shaderError']), (4, None))
 
     def test_failed_code_generation_sends_document_only_and_keeps_the_last_known_good(self):
@@ -148,6 +149,7 @@ class NextFamilyTests(unittest.TestCase):
         stored = meta(comp)
         self.assertEqual((stored['document']['revision'], stored['runtime']['revision']), (4, 3))
         self.assertEqual((stored['runtime']['text'], stored['runtime']['document']), (runtime('old glsl'), '{"a":1}'))
+        self.assertNotIn('editorVersion', stored['runtime'])  # still the version of the GLSL that runs
         self.assertEqual((result['state']['revision'], result['shaderUpdated'], result['shaderError']), (4, False, 'GPU says no'))
         status = json.loads(comp.op('status').text)
         self.assertEqual((status['phase'], status['error']), ('glsl-compile-failed', 'GPU says no'))
@@ -168,6 +170,8 @@ class NextFamilyTests(unittest.TestCase):
             fam.apply(request(document='x' * 512001, run=runtime()), catalog_hash=CATALOG)
         with self.assertRaisesRegex(ValueError, 'GLSL is empty or over'):
             fam.apply(request(run=runtime('x' * 512001)), catalog_hash=CATALOG)
+        with self.assertRaisesRegex(ValueError, 'editor version'):
+            fam.apply(request(run=runtime(), editorVersion=None), catalog_hash=CATALOG)
 
     def test_uniform_bindings_are_refused_until_migrated(self):
         fam, _ = family()

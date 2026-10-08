@@ -6,7 +6,7 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.36**（2026-10-09）——編輯服務的 port 被佔用時往後找空的，實際 port 顯示在參數頁與狀態列（為了在第二個 TD 測非根目錄）。**Refactor.35.1**——清掉主組件的舊 tag `sgrapeManager` 與 Remote Panel 失效的 `Targetop`。**Refactor.35**——排查舊的笨行為（一）：工具與測試一律用全域捷徑 `TDGrape` 找主組件，安裝 Manager 不再寫死測試 OP；非根目錄驗收待討論（`../work/refactor/dumb-behavior-audit.md`）。**Refactor.34**（2026-10-09）——GLSL 在 TD 編譯失敗時圖照存、Shader 停在上次成功版；編輯器如實顯示 TD 的編譯紀錄、不重送同一個失敗的程式；「TD 拒絕」改說「TD-Grape 拒絕」；`graph_meta` 改 `grape-meta-2`（GLSL 只存一次）；大小上限寫明理由。**Refactor.33.1**——預設圖「平面法線」改正為 (0.5, 0.5, 1.0)。**Refactor.33**（2026-10-09）——Grape OP 新結構，照人類樣板 `Grape_TOP_REF`：外層 `graph` 是圖的唯一正本、`graph_meta` 放證明與執行部分、`status` 在右上；範本四象限（程式／編輯器產生的內容／輸入與預設圖 `Samples`／Shader 與輸出）、英文說明框；值得注意的狀態與錯誤顯示在 TD 狀態列；Edit 用全域捷徑 `TDGrape` 找主組件；既有 4 個 Grape OP 已搬遷。**待人類看**。下一件：「排查舊的笨行為」案，之後完整 Grape 頁（Q45）。議題檔：workspace `work/in-place-refactor-design/grape-op-structure.md`。
+**最新交付：Refactor.37**（2026-10-09）——Grape 頁（Q45）：Open Editor（App 視窗）、Open in Browser、GLSL Parameters、Grape Editor Version、Generated TOP；服務沒開時先問。**待人類驗收**（App 視窗、對話框、GLSL Parameters）。議題檔：workspace `work/in-place-refactor-design/grape-page.md`。**Refactor.36**——編輯服務的 port 被佔用時往後找空的，實際 port 顯示在參數頁與狀態列（為了在第二個 TD 測非根目錄）。**Refactor.35.1**——清掉主組件的舊 tag `sgrapeManager` 與 Remote Panel 失效的 `Targetop`。**Refactor.35**——排查舊的笨行為（一）：工具與測試一律用全域捷徑 `TDGrape` 找主組件，安裝 Manager 不再寫死測試 OP；非根目錄驗收待討論（`../work/refactor/dumb-behavior-audit.md`）。**Refactor.34**（2026-10-09）——GLSL 在 TD 編譯失敗時圖照存、Shader 停在上次成功版；編輯器如實顯示 TD 的編譯紀錄、不重送同一個失敗的程式；「TD 拒絕」改說「TD-Grape 拒絕」；`graph_meta` 改 `grape-meta-2`（GLSL 只存一次）；大小上限寫明理由。**Refactor.33.1**——預設圖「平面法線」改正為 (0.5, 0.5, 1.0)。**Refactor.33**（2026-10-09）——Grape OP 新結構，照人類樣板 `Grape_TOP_REF`：外層 `graph` 是圖的唯一正本、`graph_meta` 放證明與執行部分、`status` 在右上；範本四象限（程式／編輯器產生的內容／輸入與預設圖 `Samples`／Shader 與輸出）、英文說明框；值得注意的狀態與錯誤顯示在 TD 狀態列；Edit 用全域捷徑 `TDGrape` 找主組件；既有 4 個 Grape OP 已搬遷。**待人類看**。下一件：「排查舊的笨行為」案，之後完整 Grape 頁（Q45）。議題檔：workspace `work/in-place-refactor-design/grape-op-structure.md`。
 
 **Refactor.32**（2026-10-08）——從 TD 選單（Tab）建立新格式的 Grape TOP：範本自帶預設圖與 GLSL，不需編輯服務；身分改成 Grape 頁唯讀參數 Grape ID，複製時自動換號（Q32 實作與量測）；Grape MAT 先從選單拿掉。**待人類實機驗收**。下一輪：完整 Grape 頁（Q45）。
 
@@ -92,6 +92,7 @@
 | 發現日 | 情況 |
 | --- | --- |
 | 2026-10-09 | **【已處理 Refactor.34】GPU 編譯失敗時圖也沒存（與 Q38 原意不符）**：`next_family.apply` 在 TD 編譯失敗時整筆拒絕，Shader 停在最後成功版，但這次的圖也沒寫進 `graph`。Q38 原意是圖照存、只有 Shader 停在最後成功版。要改需編輯器配合（收到「GPU 失敗」後改送只含圖的請求，或 TD 回覆時已存圖），屬協定，做 Grape 頁或錯誤回報那一輪一起處理。機制：`apply` 先換 Shader、最後才存圖，GPU 失敗時 `raise` 跳出，存圖那步沒走到；原作者把整筆當成全有或全無，Q38 只要求執行部分成對。**訊息也要如實（人類 10-09）**：編輯器現在對所有 422 都顯示「TD 拒絕套用：…」——但 GPU 失敗時 TD 沒有拒絕，是 GLSL 編譯失敗；真正拒絕的是我們的宿主程式（格式、版本、ID、手改的圖）。修正後分開說：「GLSL 在 TD 編譯失敗：<原因>。圖已存到 TD，TD 繼續執行上次成功的 Shader」；宿主的拒絕寫「TD-Grape 拒絕：<原因>」，不說成 TD。 |
+| 2026-10-09 | **port 位移的憂慮（人類 10-09 筆記，待談）**：編輯服務 port 會自動往後移（Refactor.36）之後，使用者關掉 TD 再打開，原本開著的編輯器分頁（舊 port）還能不能把圖送到？人類要求先記下，Refactor.37 做完再談。 |
 | 2026-10-09 | **TD 編譯紀錄塞進狀態列太長**：GLSL 在 TD 編譯失敗時，編輯器狀態列顯示整段 TD 編譯紀錄，變成三行、把畫布往下推（Refactor.34 實測）。該放哪裡（錯誤面板、可展開的訊息）跟下一條一起在錯誤回報那一輪定。 |
 | 2026-10-09 | **TD 編譯錯誤指回節點（先記下，人類 10-09）**：GLSL 在 TD 編譯失敗時，原因取自試編譯用 GLSL TOP 的 Info DAT（行號是產生出來的 GLSL 的行號，使用者不知道是哪個節點）。要指回節點需要「GLSL 行號 → 節點」對照。**人類方向：只在編譯失敗時才觸發**，不要每次產碼都做（平常執行會耗額外效能）。可能做法（未定）：TD 只回行號與訊息（TD 不懂圖，Q38）；編輯器手上有圖與產碼器，失敗時才重產一次帶對照的版本來查。新架構目前有沒有對照、做到哪裡，未查。錯誤回報那一輪處理。 |
 | 2026-10-09 | **驗證注意**：TD 2025.33230 的 `TOP.sample()` 在浮點格式（16／32-bit float）把 R 當 alpha 回傳；讀 Grape OP 輸出像素改用 `numpyArray()`。TD 的 bug，記在 workspace `work/refactor/td-issues/top-sample-float-alpha.md`，人類決定何時回報。 |
@@ -143,7 +144,7 @@
 
 - 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP 只剩兩個（2026-10-09 人類同意清理）：`/project1/Grape_TOP_test`（rev 596，以新範本重建、圖／Shader／Grape ID 照搬）、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類 2026-10-09 用 Tab 選單從 Refactor.33 範本建立——「人類實際用 Tab 選單建立」這項已有人做過；Refactor.34 時隨其他 OP 轉成 `grape-meta-2`）。`Grape_TOP2`、`Grape_TOP3`（預設圖）與舊格式樣本已刪；舊樣本的圖、舊信封與 `.tox` 留在 workspace `work/refactor/grape-op-round/cleanup-33/`，給日後匯入器用；舊格式樣本已移到 workspace（見上）
 - 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
-- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.36，存 TD-Grape-dev.65；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
+- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.37，存 TD-Grape-dev.66；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴

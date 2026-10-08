@@ -9,6 +9,9 @@ env = dict(os.environ)
 env['PYTHONPATH'] = os.pathsep.join(str(root / p) for p in ('src/td/runtime', 'tests/unit'))
 env['PYTHONDONTWRITEBYTECODE'] = '1'
 commands = [
+    # Every Python file that is pasted into TD must at least compile: nothing else imports some of
+    # them outside TD (Refactor.37: a broken string in grape_op_controls.py passed every test).
+    [sys.executable, '-m', 'compileall', '-q', 'src/td/runtime', 'src/remote_panel', 'tools'],
     ['node', 'tools/build_core.cjs', '--check'],
     ['node', '--test', 'tests/unit/test_wire_planning.cjs', 'tests/unit/test_top_compiler.cjs'],
     [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/unit', '-p', 'test_*.py'],

@@ -57,10 +57,11 @@ modules = {
     'host_api': 'src/td/runtime/host_api.py',
     'host_requests': 'src/td/runtime/host_requests.py',
     'next_family': 'src/td/runtime/next_family.py',
+    'editor_launch': 'src/td/runtime/editor_launch.py',  # app-window launch for Open Editor (Q45)
 }
 positions = {
     'GrapeManagerExt': (0, 0), 'host_api': (240, 0), 'host_requests': (485, 0),
-    'next_family': (700, -160),
+    'next_family': (700, -160), 'editor_launch': (700, -320),
 }
 for name, source in modules.items():
     text(manager, name, source, *positions[name], 'json' if source.endswith('.json') else 'python')

@@ -2,6 +2,19 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.37 — Grape 頁（Q45）：Open Editor（App 視窗）、Open in Browser、GLSL Parameters、Grape Editor Version、Generated TOP — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/grape-page.md`（人類 10-09「照這份開始做」）。
+
+- **Grape 頁 7 項**（範本 [install_grape_templates.py](../../tools/jobs/install_grape_templates.py)）：Open Editor（原 `Edit`）、Open in Browser、GLSL Parameters、Grape Editor Version（唯讀，expression 從 `graph_meta` 讀）、Generated TOP（唯讀，指向 `./output`）、Grape ID、Regenerate ID。排列與分段由人類最後整理。
+- **控制**（[grape_op_controls.py](../../src/td/runtime/grape_op_controls.py)）：編輯服務沒在跑時，用 TD 內建對話框問「Start / Cancel」，按 Start 才把服務打開（Q45）；GLSL Parameters 打開內部 `shader` 的參數視窗。開編輯器不改 Grape OP 的設定。
+- **App 視窗**：`GrapeManagerExt.Open(comp, app=True)` 用 [editor_launch.py](../../src/td/runtime/editor_launch.py)（Windows 的 Chrome／Edge 用 `--app=`，其他用一般瀏覽器）；`install_native_manager.py` 把它裝進 Manager。
+- **Grape Editor Version**：編輯器送 GLSL 時帶 `editorVersion`（`build-info.json` 的版本）；TD 只在真的換上新 Shader 時記在 `graph_meta.runtime.editorVersion`——只存圖、產碼失敗、TD 編譯失敗都不改。範本記建置時的版本；既有兩個 Grape OP 顯示 `unknown`，下次換 Shader 就有。
+- **既有 Grape OP**：`Grape_TOP_test`、`Grape_TOP_REF` 換成新的 Grape 頁（Grape ID 不變；備份 workspace `work/refactor/grape-op-round/backup-37/`、腳本 `migrate_grape_page_37.py`）。
+- **測試補強**：`run_tests.py` 先編譯檢查所有會貼進 TD 的 Python（`src/td/runtime`、`src/remote_panel`、`tools`）——本輪 `grape_op_controls.py` 一行字串被寫壞（換行），所有測試都過，在 TD 才發現。
+- **驗證**：core 110、editor 39、Python 52（新增：`editorVersion` 必帶、成功才記、GPU 失敗不改）；真實 TD：範本與新建的 Grape TOP 有 7 項、Generated TOP 指向 `output`；瀏覽器（助手自己組網址、不按 Open）移動節點 → 版本不變；改值 → Grape Editor Version 變成 `0.8.276 Refactor.37`；暫時拿掉主組件捷徑 → Open Editor 說明原因、Shader 照跑（已還原）；全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.66`。
+- **待人類驗收**（會在人類電腦上開視窗）：Open Editor 開出 App 視窗、Open in Browser、服務關掉時的對話框（取消／啟動）、GLSL Parameters。
+
 ## Refactor.36 — 編輯服務的 port 被佔用時往後找空的，並顯示實際使用的 port — 2026-10-09
 
 人類：「直接做一個 port 位移的方法…嘗試取得現在的 port 然後位移（要看得到）」。起因：要在空白專案測「主組件不放根目錄」時，開發 TOE 已佔用 65465，另一個 TD 的編輯服務起不來。

@@ -74,7 +74,8 @@ compiled = bootstrap['defaultDocument']['compiled']
 runtime_text = json.dumps(compiled, ensure_ascii=False, separators=(',', ':'))
 meta = {'format': 'grape-meta-2', 'targetId': '',
         'document': {'revision': 0, 'sha256': digest(graph_text)},
-        'runtime': {'revision': 0, 'text': runtime_text, 'sha256': digest(runtime_text), 'document': None}}
+        'runtime': {'revision': 0, 'text': runtime_text, 'sha256': digest(runtime_text), 'document': None,
+                    'editorVersion': version}}  # the default GLSL comes from this build
 
 top = node(masters, baseCOMP, 'grape_top', 0, 0)
 top.tags.add(GRAPE_OP_TAG)
@@ -160,8 +161,20 @@ identity.par.start = False
 identity.par.framestart = False
 identity.par.frameend = False
 identity.par.active = True
+# The Grape page (design-interview Q45; work/in-place-refactor-design/grape-page.md). Order and
+# sections are tidied by the human at the end. Grape 頁；排列與分段最後由人類整理。
 page = top.appendCustomPage('Grape')
-page.appendPulse('Edit', label='Edit Shader')
+page.appendPulse('Openeditor', label='Open Editor')
+page.appendPulse('Openinbrowser', label='Open in Browser')
+page.appendPulse('Glslparameters', label='GLSL Parameters')
+page.appendStr('Grapeeditorversion', label='Grape Editor Version')
+# Read from graph_meta: the editor build that produced the GLSL that runs. 由 graph_meta 讀出。
+top.par.Grapeeditorversion.expr = ("(mod.json.loads(me.op('graph_meta').text).get('runtime') or {})"
+                                   ".get('editorVersion', 'unknown')")
+top.par.Grapeeditorversion.readOnly = True
+page.appendTOP('Generatedtop', label='Generated TOP')
+top.par.Generatedtop.expr = "me.op('output')"
+top.par.Generatedtop.readOnly = True
 page.appendStr('Grapeid', label='Grape ID')
 page.appendPulse('Regenerateid', label='Regenerate ID')
 top.par.Grapeid.val = ''
@@ -170,7 +183,7 @@ edit = node(controls, parameterexecuteDAT, 'editor_control', 0, -160)
 edit.par.language = 'python'
 edit.text = source('grape_op_controls.py')
 edit.par.op.expr = 'parent.GrapeOP'
-edit.par.pars = 'Edit Regenerateid Grapeid'
+edit.par.pars = 'Openeditor Openinbrowser Glslparameters Regenerateid Grapeid'
 edit.par.custom = True
 edit.par.builtin = False
 edit.par.valuechange = True
@@ -179,7 +192,9 @@ annotation(controls, 'annotate_identity', 'Identity & editing (not visible in TD
     'identity: when this Grape OP is created (project start, .tox load, copy, paste), it checks one frame later whether '
     'another Grape OP uses the same Grape ID, and takes a new one only then. Cut and paste keeps the ID; a copy gets a new one. '
     'Templates (masters) never take an ID.\n'
-    'editor_control: Edit Shader opens the editor through the main component (global shortcut TDGrape); Regenerate ID takes a new ID; '
+    'editor_control: Open Editor (an app window when the browser supports it) and Open in Browser open the editor through the main '
+    'component (global shortcut TDGrape), asking first when the editor service is off; GLSL Parameters opens the inner GLSL TOP; '
+    'Regenerate ID takes a new ID; '
     'Grape ID is read-only in the UI, and an invalid or already used ID written by a script is reverted.\n'
     'graph_meta: when the Grape ID changes, the main component rewrites the ID stored there on its next read '
     '(only that record; the graph and the Shader are untouched).',
@@ -187,7 +202,7 @@ annotation(controls, 'annotate_identity', 'Identity & editing (not visible in TD
 manifest = node(top, baseCOMP, 'FamManifest', -500, 75, 160, 130)
 op_info = {'fam_version': tdfam.par.Version.eval(), 'op_version': version, 'op_fam': 'Grape',
            'op_type': 'grape_top', 'op_name': 'Grape_TOP', 'op_label': 'Grape TOP', 'op_group': 'TOP',
-           'summary': 'Visual GLSL TOP editor. Edit Shader opens the editor.',
+           'summary': 'Visual GLSL TOP editor. Open Editor opens the editor.',
            'op_color': [0.47, 0.42, 0.71], 'isFilter': False, 'compatible_types': ['TOP'],
            'search_words': ['shader', 'glsl', 'grape', 'top']}
 for i, (name, content) in enumerate((('OpInfo', op_info), ('ParRetain', {'.': []}), ('Shortcuts', {}),
