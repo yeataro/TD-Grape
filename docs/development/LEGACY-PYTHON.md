@@ -41,10 +41,7 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 | host_api | 接收網頁請求 | `src/td/runtime/host_api.py` |
 | host_requests | 請求排隊、交給 TD 主執行緒 | `src/td/runtime/host_requests.py` |
 | request_pump | 每幀處理排隊請求 | 安裝程式直接寫入 |
-| native_family | 把前端產碼套用到 Family | `src/td/runtime/native_family.py` |
-| host_artifact | 檢查前端產碼結果 | `src/td/runtime/host_artifact.py` |
-| host_document | 保存圖文件 | `src/td/runtime/host_document.py` |
-| native_values | 寫入 TD 數值、Undo | `src/td/runtime/native_values.py` |
+| next_family | 執行編輯器送來的請求：核對信封、GPU 驗證、存圖（圖是不透明文字） | `src/td/runtime/next_family.py` |
 | validation | GPU 驗證空間 | — |
 | status | 狀態顯示 | — |
 
@@ -55,14 +52,14 @@ TOE 內 DAT 與 repo 檔案於 2026-10-07 逐一比對，內容一致。DAT 由 
 | sources | Uniform 來源管理（含「有節點引用就不准刪」） | `src/core/sgrape_sources.py` | 留在 TD，重寫 |
 | sgrape_source_catalog | 讀取來源定義 | `src/core/sgrape_source_catalog.py` | 留在 TD，重寫 |
 | source_catalog | 來源定義資料，TS 核心也讀同一份 | `src/library/source_catalog.json` | 前後端共用資料 |
-| history | 原生參數 Undo 紀錄 | `src/core/sgrape_history.py` | 待討論 |
+| history | 原生參數 Undo 紀錄 | `src/core/sgrape_history.py` | Manager 已不載入（2026-10-08，Q48 清理第 2 條）；DAT 待清理第 4、5 條 |
 | parameter_links_source | Uniform 與元件參數綁定 | `src/core/sgrape_parameter_links.py` | 留在 TD，重寫 |
 
 **舊入口專用・待遷移**
 
 | OP | 做什麼 | repo |
 | --- | --- | --- |
-| parameters | 元件自訂參數頁編輯；新入口目前只呼叫 state／apply／save | `src/core/sgrape_parameters.py` |
+| parameters | 元件自訂參數頁編輯；Manager 已不載入（2026-10-08，Q48 清理第 2 條），DAT 待清理第 4、5 條；需求照 Q41 重做 | `src/core/sgrape_parameters.py` |
 
 ## `/TD_Grape` 其他部分與 repo 其餘 Python（2026-10-07 盤點 ✅）
 

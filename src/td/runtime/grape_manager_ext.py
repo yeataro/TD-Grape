@@ -1,6 +1,5 @@
 """Editing coordinator. Native Families never need this object to render."""
 import json
-import uuid
 from hashlib import sha256
 
 
@@ -29,10 +28,7 @@ class GrapeManagerExt:
         self.bootstrap = bootstrap
         self.editor = editor
         self.api = self._module('host_api').HostAPI(
-            bootstrap=bootstrap, library=json.loads(files['editor-library.json']),
-            resolve=self.Resolve, history=self._module('history'), parameters=self._module('parameters'),
-            validation_area=self.ownerComp.op('validation'), preview=self.Preview,
-            choices=self.Choices, save_project=lambda: project.save())
+            bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save())
         self.queue = self._module('host_requests').HostRequests()
         editor.http.connect(self.queue)
         panel = self.ownerComp.par.Remotepanel.eval()
@@ -72,16 +68,8 @@ class GrapeManagerExt:
         return result
 
     def Adapter(self, comp):
-        # Old and new editors never share a Grape OP; the TD tag decides (design-interview Q40).
-        # 新舊編輯器不共用 Grape OP，由 TD tag 決定。
         nxt = self._module('next_family')
-        if nxt.is_next(comp):
-            return nxt.NextFamily(comp, protocol=self._module('host_artifact').PROTOCOL,
-                validation_area=self.ownerComp.op('validation'))
-        return self._module('native_family').NativeFamily(comp,
-            artifact=self._module('host_artifact'), document=self._module('host_document'),
-            sources=self._module('sources'), values=self._module('native_values'),
-            controls_source=self.ownerComp.op('parameter_links_source').text)
+        return nxt.NextFamily(comp, validation_area=self.ownerComp.op('validation'))
 
     def Resolve(self, target_id):
         matches = [comp for comp in self.families.values() if comp.valid and comp.fetch('sgrapeShaderId', None) == target_id]
@@ -110,33 +98,6 @@ class GrapeManagerExt:
         address = 'http://127.0.0.1:' + str(self.editor.http.port) + '/shader/' + target_id + '/'
         ui.viewFile(address)
         return address
-
-    def Preview(self, comp):
-        panel = self.ownerComp.par.Remotepanel.eval()
-        if panel is None or not panel.par.Active.eval():
-            raise RuntimeError('Remote Panel is unavailable or stopped.')
-        shader = self.Adapter(comp).shader_operator(comp)
-        ticket = panel.op('runtime').module.prepare_viewer(shader)
-        return {'port': int(panel.par.Port.eval()), 'ticket': ticket, 'source': shader.path}
-
-    def InitializeFamily(self, comp):
-        """Use the frontend-built default artifact, never a Python graph builder."""
-        if not self.bootstrap:
-            raise RuntimeError('Load and connect the editor assets before creating a Family.')
-        target_id = comp.fetch('sgrapeShaderId', None)
-        if not target_id:
-            target_id = uuid.uuid4().hex
-            comp.store('sgrapeShaderId', target_id)
-        default = self.bootstrap['defaultDocument']
-        body = {'revision': 0, 'graph': default['graph'], 'frontendArtifact': {
-            'protocol': self._module('host_artifact').PROTOCOL, 'targetId': target_id,
-            'baseRevision': 0, 'snapshot': json.dumps(default['graph']),
-            'catalogHash': self.bootstrap['catalogHash'], 'compiled': default['compiled']}}
-        result = self.Adapter(comp).apply(body, catalog_hash=self.bootstrap['catalogHash'],
-            validation_area=self.ownerComp.op('validation'), initial=True)
-        comp.tags.add('grapeNativeFamily')
-        self.Register(comp)
-        return result
 
     def onInitTD(self):
         editor = self.ownerComp.par.Editorservice.eval()

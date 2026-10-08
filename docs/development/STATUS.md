@@ -2,6 +2,18 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.27 — 清殘留第 2、3 條：TD 舊協定與新舊區分 — 2026-10-08
+
+照 design-interview Q48（每段殘留問「符合新架構嗎？產品現在需要嗎？」）判斷；人類看過清單後同意刪除。
+
+- **判斷依據**：新編輯器每個請求都帶 `?editor=next`，host_api 的舊分支沒有任何畫面走得到；NativeFamily 只剩「打開舊格式 OP 時先讀一次再回 409」與 `InitializeFamily`（建出的是新編輯器打不開的舊格式 OP）。
+- **刪除**：`native_family.py`、`host_document.py`、`native_values.py`、`host_artifact.py`（版本號 `PROTOCOL` 搬進 `next_family.py`）、`tools/jobs/verify_native_family.py`、`test_host_api.py`／`test_host_document.py`／`test_host_artifact.py`（仍有效的 Grape OP 清單測試搬進 `test_next_family.py`）。
+- **改動**：`host_api.py` 只剩 state／apply／save／Grape OP 清單，不再接收 history、parameters、library、preview；`grape_manager_ext.py` 一律用 NextFamily，刪 `InitializeFamily`、`Preview`，連線時不再載入 history、parameters、`editor-library.json`；`next_family.py` 讀到舊格式時說明「舊格式的圖，編輯器不開也不改，之後由匯入器處理」；前端拿掉 `?editor=next` 與舊協定欄位（`savedStateIssue` 等），兩處「請使用舊入口」改寫；`install_native_manager.py` 不再安裝被刪模組、不再建立 Grape OP，審查 OP 改為 `Grape_TOP_React`。
+- **TD**：刪 Manager 內 4 個 DAT、更新 3 個（與 repo 逐字一致）；`Grape_TOP_React` 拿掉 `grapeNextEditor` tag；Deliver 存 `TD-Grape-dev.44`（embedded，Refactor.27）。
+- **驗證**：core 112、editor 37、TD 端 Python 30（含新增「舊格式被拒絕且不寫入」）；Python 全套 713 項，失敗 17 項＝原本已知的舊架構失敗。真實 TD：新測試 OP state／apply（GPU 驗證）通過（revision 577→578）；`Grape_TOP_Refactor`（舊格式）state／apply 皆 422、內容未變；瀏覽器開編輯器載入正常，拖曳節點與復原各送出一次 apply 皆 200。
+- **未動（屬其他條）**：history、parameters 等舊 Python DAT（Manager 已不載入，第 4、5 條）；Remote Panel `preview_port`（第 4 條）；名稱中的 Native／Next／Family（改名那一輪）。
+- **限制**：目前沒有建立 Grape OP 的方法，等新的建立功能（Q6、Q16）。
+
 ## Refactor.26 — 圖格式 grape-graph 1 — 2026-10-08
 
 依 design-interview Q44（圖結構議事錄決議 1–17、A–E）實作「改圖格式」這一輪；人類授權自動進行（只做 Q44 寫到的事，沒寫到的停下來記成問題）。格式說明與舊→新對照表：[GRAPH_FORMAT.md](../architecture/GRAPH_FORMAT.md)。

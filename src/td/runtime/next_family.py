@@ -1,17 +1,17 @@
-"""Grape OPs managed by the new editor (TD tag grapeNextEditor; design-interview Q38, Q40).
+"""Grape OPs and what TD does with the editor's requests (design-interview Q38, Q40, Q48).
 
 TD never parses, validates or re-serializes the graph: the document is opaque text,
 checked only by length and checksum and returned as received. TD checks the envelope
 (revision, target, build) and what it executes itself (GLSL, bindings).
-新編輯器管理的 Grape OP：TD 不解析、不檢查、不重新序列化圖；圖是不透明文字，只核對長度與
+Grape OP：TD 不解析、不檢查、不重新序列化圖；圖是不透明文字，只核對長度與
 校驗值、原樣保存與交回。TD 只核對信封與自己要執行的東西（GLSL、綁定）。
 """
 from hashlib import sha256
 import json
 import uuid
 
-TAG = 'grapeNextEditor'
 FORMAT = 'grape-next-1'
+PROTOCOL = 'grape.top.ts.1'  # the frontend compiler protocol this build speaks
 MAX_TEXT = 512000
 
 
@@ -22,10 +22,6 @@ def require(condition, message):
 
 def digest(text):
     return sha256(text.encode('utf-8')).hexdigest()
-
-
-def is_next(comp):
-    return TAG in comp.tags
 
 
 def read_runtime(text, *, catalog_hash):
@@ -43,12 +39,11 @@ def read_runtime(text, *, catalog_hash):
 
 
 class NextFamily:
-    next = True
     FORMAT = FORMAT
+    PROTOCOL = PROTOCOL
 
-    def __init__(self, comp, *, protocol, validation_area=None):
+    def __init__(self, comp, *, validation_area=None):
         self.comp = comp
-        self.PROTOCOL = protocol  # the frontend compiler protocol this build speaks
         self.validation_area = validation_area
 
     def target(self):
@@ -59,9 +54,15 @@ class NextFamily:
 
     def stored(self):
         text = self._data().text
-        require(text, 'This Grape OP has no new-editor document.')
-        value = json.loads(text)
-        require(isinstance(value, dict) and value.get('format') == FORMAT, 'unsupported stored format')
+        require(text, 'This Grape OP has no saved document.')
+        try:
+            value = json.loads(text)
+        except ValueError:
+            value = None
+        # Old-format graphs are never opened or written here; an importer handles them later (Q40).
+        # 舊格式的圖不在這裡開啟或寫入，之後由匯入器處理。
+        require(isinstance(value, dict) and value.get('format') == FORMAT,
+                'This Grape OP holds an old-format graph. The editor does not open or change it; an importer will handle old graphs later.')
         require(value.get('targetId') == self.comp.fetch('sgrapeShaderId', None), 'stored target mismatch')
         for part in ('document', 'runtime'):
             entry = value.get(part)

@@ -1,11 +1,10 @@
-"""New-editor Grape OP path (design-interview Q38, Q40): TD never reads the graph."""
+"""Grape OP editing path (design-interview Q38, Q40, Q48): TD never reads the graph."""
 import json
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
 
 import host_api
-import next_family
 from next_family import NextFamily, FORMAT, digest
 
 TARGET = 'c' * 32
@@ -19,7 +18,7 @@ class Text:
 
 class Comp:
     def __init__(self, stored):
-        self.tags = {next_family.TAG, 'grapeNativeFamily'}
+        self.tags = {'grapeNativeFamily'}
         self.path = '/project1/next_test'
         self.ops = {'GrapeControls/document': Text(stored), 'GrapeControls/status': Text(),
                     'pixel_shader': Text('old glsl'), 'graph': Text()}
@@ -45,7 +44,7 @@ def envelope(revision=3, document='{"a":1}', run=None):
 
 def family(stored=None, gpu_ok=True):
     comp = Comp(stored if stored is not None else envelope())
-    fam = NextFamily(comp, protocol='grape.top.ts.1')
+    fam = NextFamily(comp)
     fam._validate = Mock(side_effect=None if gpu_ok else RuntimeError('GPU says no'))
     fam._verify_gpu = Mock()
     return fam, comp
@@ -112,30 +111,42 @@ class NextFamilyTests(unittest.TestCase):
             fam.apply(request(run=runtime(bindings=[{'id': 'u'}])), catalog_hash=CATALOG)
 
 
-class EditorSplitRoutingTests(unittest.TestCase):
+class HostRoutingTests(unittest.TestCase):
     def api(self, fam):
         return host_api.HostAPI(bootstrap={'version': 1, 'producer': 'frontend-modules', 'catalogHash': CATALOG},
-            library={}, resolve=lambda ident: fam, history=Mock(), parameters=Mock(), validation_area=None,
-            preview=Mock(), choices=lambda: {}, save_project=Mock(return_value='x.toe'))
+            resolve=lambda ident: fam if ident == TARGET else None,
+            choices=lambda: {'shaders': [{'id': TARGET, 'path': '/nested/target'}], 'projectFile': 'test.toe'},
+            save_project=Mock(return_value='x.toe'))
 
-    def test_old_editor_cannot_open_a_new_editor_grape_op(self):
-        fam, _ = family()
+    def test_scoped_and_unscoped_grape_op_list_are_the_same(self):
+        api = self.api(family()[0])
+        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/shaders'), api.dispatch('GET', '/api/shaders'))
+        self.assertEqual(api.dispatch('GET', '/api/shaders')[1]['projectFile'], 'test.toe')
+
+    def test_unknown_target_and_operation_are_explicit(self):
+        api = self.api(family()[0])
+        self.assertEqual(api.dispatch('GET', '/api/' + 'b' * 32 + '/state')[0], 404)
+        code, result = api.dispatch('POST', '/api/' + TARGET + '/pixel-preview-session', {})
+        self.assertEqual((code, result['code']), (501, 'capability_not_migrated'))
+
+    def test_old_format_graph_is_refused_and_never_written(self):
+        old = '{"schemaVersion": 1, "graph": {}}'
+        fam, comp = family(stored=old)
         code, result = self.api(fam).dispatch('GET', '/api/' + TARGET + '/state')
-        self.assertEqual((code, result['code']), (409, 'managed_by_new_editor'))
+        self.assertEqual((code, result['code']), (422, 'host_rejected'))
+        self.assertIn('old-format graph', result['error'])
+        code, _ = self.api(fam).dispatch('POST', '/api/' + TARGET + '/apply', request(run=runtime('g')))
+        self.assertEqual(code, 422)
+        self.assertEqual((comp.ops['GrapeControls/document'].text, comp.ops['pixel_shader'].text), (old, 'old glsl'))
 
-    def test_new_editor_cannot_write_an_old_editor_grape_op(self):
-        old = SimpleNamespace(sources=Mock())
-        code, result = self.api(old).dispatch('GET', '/api/' + TARGET + '/state?editor=next')
-        self.assertEqual((code, result['code']), (409, 'old_editor_graph'))
-
-    def test_new_editor_state_and_apply(self):
+    def test_state_and_apply(self):
         fam, _ = family()
         api = self.api(fam)
-        code, result = api.dispatch('GET', '/api/' + TARGET + '/state?editor=next')
+        code, result = api.dispatch('GET', '/api/' + TARGET + '/state')
         self.assertEqual((code, result['format'], result['state']['revision']), (200, FORMAT, 3))
-        code, result = api.dispatch('POST', '/api/' + TARGET + '/apply?editor=next', request(run=runtime('g')))
+        code, result = api.dispatch('POST', '/api/' + TARGET + '/apply', request(run=runtime('g')))
         self.assertEqual((code, result['state']['revision']), (200, 4))
-        code, result = api.dispatch('POST', '/api/' + TARGET + '/apply?editor=next', request(run=runtime('g')))
+        code, result = api.dispatch('POST', '/api/' + TARGET + '/apply', request(run=runtime('g')))
         self.assertEqual((code, result['code']), (409, 'revision_conflict'))
 
 

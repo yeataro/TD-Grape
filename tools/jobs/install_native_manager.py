@@ -52,11 +52,7 @@ modules = {
     'GrapeManagerExt': 'src/td/runtime/grape_manager_ext.py',
     'host_api': 'src/td/runtime/host_api.py',
     'host_requests': 'src/td/runtime/host_requests.py',
-    'native_family': 'src/td/runtime/native_family.py',
     'next_family': 'src/td/runtime/next_family.py',
-    'host_artifact': 'src/td/runtime/host_artifact.py',
-    'host_document': 'src/td/runtime/host_document.py',
-    'native_values': 'src/td/runtime/native_values.py',
     'sources': 'src/core/sgrape_sources.py',
     'sgrape_source_catalog': 'src/core/sgrape_source_catalog.py',
     'source_catalog': 'src/library/source_catalog.json',
@@ -67,8 +63,8 @@ modules = {
 # Grouped by fate so the human can see what remains of the legacy Python core.
 # 依去向分組：常駐宿主／Legacy 共用待更新／Legacy 舊入口專用待遷移（見 annotate 框）。
 positions = {
-    'GrapeManagerExt': (0, 0), 'host_api': (240, 0), 'host_requests': (485, 0), 'native_family': (700, 0),
-    'host_artifact': (0, -160), 'host_document': (240, -160), 'native_values': (485, -160), 'next_family': (700, -160),
+    'GrapeManagerExt': (0, 0), 'host_api': (240, 0), 'host_requests': (485, 0),
+    'next_family': (700, -160),
     'sources': (0, -449), 'sgrape_source_catalog': (250, -449), 'source_catalog': (475, -449), 'history': (700, -449),
     'parameter_links_source': (0, -599),
     'parameters': (0, -875),
@@ -131,50 +127,12 @@ assert service.Start(), 'Editor HTTP startup failed'
 service._connect_manager()
 assert manager.ext.GrapeManagerExt.queue is not None, editor.par.Serviceerror.eval()
 
-# A real editable TOP outside the Manager; existing master assets are retained.
-family = host.parent().op('Grape_TOP_Refactor')
-if family is None:
-    family = node(host.parent(), baseCOMP, 'Grape_TOP_Refactor', host.nodeX + 350, host.nodeY)
-    family.par.parentshortcut = 'GrapeFamily'
-    shader = node(family, glslTOP, 'shader', 240, 0)
-    pixel = node(family, textDAT, 'pixel_shader', 240, -140)
-    pixel.par.language = 'glsl'
-    shader.par.pixeldat = 'pixel_shader'
-    # The pixel-only Family owns its explicit DATs; discard TD's unused templates.
-    shader.par.computedat = ''
-    for unused in ('shader_pixel', 'shader_compute', 'shader_info'):
-        if family.op(unused):
-            family.op(unused).destroy()
-    shader.par.glslversion = 'glsl450'
-    shader.par.outputresolution = 'custom'
-    shader.par.resolutionw = 512
-    shader.par.resolutionh = 512
-    shader.par.format = 'rgba16float'
-    info = node(family, infoDAT, 'compile_info', 240, 140)
-    info.par.op = 'shader'
-    output = node(family, outTOP, 'output', 460, 0)
-    output.inputConnectors[0].connect(shader)
-    # Relative to the COMP itself: a bare name would resolve next to the COMP, not inside it.
-    family.par.opviewer = './output'
-    graph = node(family, textDAT, 'graph', 0, 140)
-    graph.par.language = 'json'
-    controls = node(family, baseCOMP, 'GrapeControls', 0, -160)
-    for i, name in enumerate(('document', 'status')):
-        dat = node(controls, textDAT, name, 220 * i, 0)
-        dat.par.language = 'json'
-    page = family.appendCustomPage('Grape')
-    page.appendPulse('Edit', label='Edit Shader')
-    edit = node(controls, parameterexecuteDAT, 'editor_control', 0, -160)
-    edit.par.op.expr = 'parent.GrapeFamily'
-    edit.par.pars = 'Edit'
-    edit.par.custom = True
-    edit.par.builtin = False
-    edit.par.valuechange = False
-    edit.par.onpulse = True
-    edit.text = (root / 'src/td/runtime/native_family_controls.py').read_text(encoding='utf-8')
-    manager.ext.GrapeManagerExt.InitializeFamily(family)
-else:
-    manager.ext.GrapeManagerExt.Register(family)
+# The review Grape OP outside the Manager. Creating Grape OPs returns with the new
+# creation path (design-interview Q6, Q16); this tool never builds one.
+# 審查用 Grape OP；建立 Grape OP 等新的建立功能（Q6、Q16），這支工具不建立。
+family = host.parent().op('Grape_TOP_React')
+assert family is not None, 'The review Grape OP Grape_TOP_React is missing.'
+manager.ext.GrapeManagerExt.Register(family)
 family.op('GrapeControls/editor_control').text = (root / 'src/td/runtime/native_family_controls.py').read_text(encoding='utf-8')
 assert protected() == before_icon, 'Protected icon changed'
 print(json.dumps({'url': 'http://127.0.0.1:' + str(service.http.port) + '/shader/' + family.fetch('sgrapeShaderId') + '/',

@@ -69,7 +69,7 @@ export function requireSupported(graph: graph.GraphDocument['document']) {
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {
     const shown = reasons.length > 8 ? [...reasons.slice(0, 8), `…另有 ${reasons.length - 8} 項`] : reasons;
-    throw new UnsupportedGraphError('此入口目前支援 TOP 的常用節點（不含 Uniform、子圖、Frame 等）。未送出編輯或套用，請使用舊入口。\n' +
+    throw new UnsupportedGraphError('此入口目前支援 TOP 的常用節點（不含 Uniform、子圖、Frame 等）。未送出編輯或套用；這些內容會在之後的進度加回。\n' +
       '不支援的內容：\n' + shown.map(reason => '・' + reason).join('\n'));
   }
 }

@@ -2,8 +2,7 @@
 // 新編輯器的 Grape OP：圖對 TD 是不透明文字。
 export type HostState = { document: string; revision: number; runtimeRevision?: number; targetId?: string };
 export type StateResponse = { state: HostState; format: string; target: string; shaderKind: string;
-  frontendCompiler: { protocol: string; catalogHash: string; required: boolean };
-  savedStateIssue?: unknown; readOnlyReason?: string; upgradeReview?: unknown };
+  frontendCompiler: { protocol: string; catalogHash: string; required: boolean } };
 export class HostError extends Error {
   constructor(message: string, readonly status = 0, readonly code = '', readonly layer = 'transport') { super(message); }
 }
@@ -20,7 +19,7 @@ export class HostClient {
   async call<T>(action: 'state' | 'apply' | 'save', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);
     try {
-      const response = await this.request(this.root + action + '?editor=next', { method: body === undefined ? 'GET' : 'POST',
+      const response = await this.request(this.root + action, { method: body === undefined ? 'GET' : 'POST',
         signal: controller.signal, headers: { 'X-Sgrape-Token': this.token,
           ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         body: body === undefined ? undefined : JSON.stringify(body) });

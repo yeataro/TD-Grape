@@ -24,7 +24,6 @@ const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compil
 // 開圖讀 TD 的那一份：編輯器還沒有作品時，唯一的來源是 TD。
 export function checkLoaded(host: HostClient, bootstrap: Bootstrap, loaded: StateResponse) {
   if (loaded.format !== FORMAT) throw Error('此 Grape OP 不是新編輯器的格式。');
-  if (loaded.savedStateIssue || loaded.readOnlyReason || loaded.upgradeReview) throw Error(loaded.readOnlyReason || '此文件需要在舊入口處理載入問題。');
   if (loaded.frontendCompiler?.protocol !== compiler.protocol || loaded.frontendCompiler.catalogHash !== bootstrap.catalogHash)
     throw Error('前端核心與 TD bootstrap 版本不一致；請重新載入同一建置。');
   if (loaded.state.targetId && loaded.state.targetId !== host.target) throw Error('Host target mismatch');
