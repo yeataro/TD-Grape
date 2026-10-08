@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "da033e712f327bb3f33f7259ea34acd1ceb6d971665528371db0caf22a259201",
+  "catalogHash": "e1629bbe40150bd30463457c34b32e1427833b7d2ba0b9ebf600894727ae537e",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -1121,6 +1121,23 @@
       },
       "descriptionKey": "help.swizzle",
       "definitionUuid": "sgrape.builtin.swizzle"
+    },
+    {
+      "key": "td_value",
+      "label": "TD Built-in",
+      "inputs": {},
+      "outputs": {
+        "out": "D"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "entry": "vUVSt"
+      },
+      "descriptionKey": "help.td_value",
+      "definitionUuid": "sgrape.builtin.td_value"
     },
     {
       "key": "trunc",
@@ -4848,6 +4865,123 @@
             },
             "outputs": {
               "out": "bvec2"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.td_value": {
+        "selector": "declaration",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "int",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "ivec2",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "ivec3",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "ivec4",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "uint",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "uvec2",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "uvec3",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "uvec4",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "bool",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "bvec2",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "bvec3",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "bvec4",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
             }
           }
         ]

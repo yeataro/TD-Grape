@@ -45,6 +45,14 @@ for (const file of [...files(path.join(root, 'src/editor-react')), ...files(path
     messages.set(code, { source, where: where(match.index) });
   }
 }
+// Data that carries its own English (Q34 修訂 4: the code is derived where the text is used): the
+// TD built-in value table's hints, code tdValue.<id>. 自帶英文的資料：TD 內建值表的說明，代號 tdValue.<id>。
+const tdValueFile = path.join(root, 'src/core-ts/td_values.ts');
+for (const line of fs.readFileSync(tdValueFile, 'utf8').split('\n')) {
+  if (!/^\s*\{"id":/.test(line)) continue;
+  const entry = JSON.parse(line.trim().replace(/,$/, ''));
+  if (entry.hint) messages.set('tdValue.' + entry.id, { source: entry.hint, where: 'src/core-ts/td_values.ts' });
+}
 const placeholders = text => [...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort().join(',');
 const en = Object.fromEntries([...messages].sort(([a], [b]) => a.localeCompare(b)).map(([code, m]) => [code, m.source]));
 const enFile = path.join(folder, 'en.json'), zhFile = path.join(folder, 'zh-Hant.json');

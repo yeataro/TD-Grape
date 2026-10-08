@@ -17,7 +17,8 @@ const retainArray = <T,>(next: T[], old: T[]) =>
 // possible; the core never reads it. 顏色組：只給畫面的 tag；能從行為推的就推，核心永遠不讀。
 // A reference node takes its colour from the kind of declaration it points to (Q42).
 // 引用宣告節點的顏色來自它指向的宣告種類。
-const colorGroupOf = (module: { role: string; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
+const colorGroupOf = (module: { role: string; colorGroup?: string; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
+  if (module.colorGroup) return module.colorGroup;
   if (module.referencedDeclaration) {
     const kind = document.document.declarations.find(d => d.id === module.referencedDeclaration!(node))?.kind;
     return (kind && core.declarationKinds.get(kind)?.colorGroup) || 'function';

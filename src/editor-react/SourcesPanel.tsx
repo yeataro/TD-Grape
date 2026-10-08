@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
-import { tr, say } from './text';
+import { tr, say, tdValueHint } from './text';
 import { ValueFields, useSession } from './NodeCard';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
-// no list of its own, it reads the graph's declarations). This round: global constants only.
-// 共用來源面板的內容：面板只是索引，讀圖的宣告、不另存清單。本輪只有全域常數。
+// no list of its own, it reads the graph's declarations and the TD built-in value table). For now: global
+// constants and TD built-in values. 共用來源面板的內容：面板只是索引，讀圖的宣告與 TD 內建值表、不另存清單。
 function NameField({ declaration }: { declaration: Declaration }) {
   const session = useSession(), [draft, setDraft] = useState(declaration.name);
   useEffect(() => setDraft(declaration.name), [declaration.name]);
@@ -24,6 +24,9 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
     return flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
   };
   const types = core.declarationKinds.get('constant')!.types;
+  // The panel is an index of the table beside the td_value node (Q45); TOP for now.
+  // 面板只是 td_value 旁邊那張表的索引；目前是 TOP。
+  const builtins = core.tdValues.filter(entry => core.usableTdValue(entry, 'top'));
   return <section className="sources">
     <header className="sources-section"><span>{say(tr('sources.constants', 'Global constants'))}</span>
       <button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button></header>
@@ -42,6 +45,12 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
         <button onClick={() => session.placeDeclaration(declaration.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
         <button onClick={() => session.removeDeclaration(declaration.id)}>{say(tr('sources.remove', 'Delete'))}</button>
       </div>
+    </div>)}
+    <header className="sources-section"><span>{say(tr('sources.tdValues', 'TD built-in values'))}</span></header>
+    <p className="hint">{say(tr('sources.tdValuesHint', 'Values TouchDesigner already provides to the shader. No setup needed; they also work inside subgraphs.'))}</p>
+    {builtins.map(entry => <div className="builtin-row" key={entry.id} title={say(tdValueHint(entry))}>
+      <code>{entry.name}</code><small>{entry.type}</small>
+      <button onClick={() => session.placeTdValue(entry.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
     </div>)}
   </section>;
 }

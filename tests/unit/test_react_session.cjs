@@ -485,7 +485,7 @@ test('every offered node can be added, wired to the output and compiled', t => {
   };
   const failures = [];
   // The reference node needs a declaration; its own test below covers it. 引用宣告節點需要宣告，另有測試。
-  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration'))) {
+  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration') && !u.endsWith('.td_value'))) {
     const { session } = open(t);
     session.transact('add', net => net.insert({ id: 'x', nodeType: uuid, params: {}, ui: { x: 0, y: 0 } }));
     const outputs = session.snapshot().projection.nodes.find(n => n.id === 'x').data.outputs.map(p => p.key);
@@ -502,11 +502,11 @@ test('every offered node can be added, wired to the output and compiled', t => {
 
 // Retired value definitions open old graphs but are never offered for new nodes (legacy creator).
 test('add menu offers every supported node except retired float/vec2/vec3/vec4 and Color Output', () => {
-  const { supportedDefinitions, creatableDefinitions } = load(path.join(root, 'src/editor-react/core.ts'));
+  const { supportedDefinitions, creatableDefinitions, fromSourcesPanel } = load(path.join(root, 'src/editor-react/core.ts'));
   const retired = ['float', 'vec2', 'vec3', 'vec4'].map(k => 'sgrape.builtin.' + k);
   assert.ok(retired.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
   // Stage outputs are never offered (Q42); the reference node is made from the Sources panel (Q45).
-  const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration'];
+  const fixed = ['sgrape.builtin.pixel_out', ...fromSourcesPanel];
   assert.ok(fixed.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
   assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
@@ -738,4 +738,22 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
   session.history(false);
   assert.equal(session.snapshot().declarations.length, 2, 'one Undo brings both back');
   assert.ok(session.graph().stages.pixel.nodes.some(node => node.id === ref.id));
+});
+
+// TD built-in values (Refactor.41; Q45 01): placed from the Sources panel, read straight from TD.
+// TD 內建值：從共用來源面板放到圖上，直接讀 TD 的值。
+test('a TD built-in value is placed, coloured as runtime info, wired and sent as TD wrote it', async t => {
+  const { session, calls } = open(t);
+  session.placeTdValue('uTDOutputInfoResZw', { x: 0, y: 0 });
+  const node = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.td_value');
+  assert.equal(node.data.colorGroup, 'runtime');
+  assert.equal(node.data.view.label, 'uTDOutputInfo.res.zw');
+  session.transact(tr('edit.wired', 'Wire updated'), net => {
+    net.insert({ id: 'len', nodeType: 'sgrape.builtin.length', params: { type: 'vec2' }, ui: {} });
+    net.connect(net.node(node.id).outputs[0], net.node('len').port('input', 'value'), GrapeGraph.values.policy);
+    net.connect(net.node('len').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy);
+  });
+  await session.flush();
+  assert.match(JSON.parse(calls.at(-1).body.runtime).pixel, /vec2 sg_n_\w+ = uTDOutputInfo\.res\.zw;/);
+  assert.equal(session.snapshot().declarations.length, 0, 'no declaration is needed');
 });

@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.41 — TD 內建值 `td_value`：一個節點類型選表裡一筆；共用來源面板加一區 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/sources-foundation.md` 第三輪（人類 10-09「開始做 TD 內建值」）；依 design-interview Q45 01 區、Q46、discuss-4.14 第 10–11 節。
+
+- **表** [td_values.ts](../../src/core-ts/td_values.ts)：舊來源目錄 `builtins` 的 58 筆搬過來，補 `vUV.st`、`TDPos()`，共 60 筆。每筆 `id`（存進圖、永遠不變，生成一次寫死）、`name`（畫布標題）、GLSL、型別、可用的 target／stage、分類、英文說明、官方連結。中文說明搬進 `zh-Hant.json`（代號 `tdValue.<id>`，Q34 修訂 4）；`tools/dev/locales.cjs` 也檢查這張表。一次性搬移腳本在 workspace `work/refactor/td-value-round/make_td_values.py`。
+- **節點** `sgrape.builtin.td_value`（[nodes/td_value.ts](../../src/core-ts/nodes/td_value.ts)、`node_sdk.tdValueNode`）：參數 `entry`；不需要宣告、子圖裡也能用（Q46）；標題是那一筆的名字、卡片上可換一筆；顏色組 `runtime`（舊產品 runtime info 的玫瑰色）。表裡找不到、或這個版本還接不了（取樣器、結構、陣列、矩陣、帶索引參數的）→ Ghost。本輪 TOP 可用 15 筆（`vUV.st`、`vUV`、`uTDOutputInfo.res.zw／xy`、`gl_FragCoord`、輸入數量等）；MAT 的 24 筆等 MAT 那一輪。
+- **編輯器**：共用來源面板加「TD 內建值」區（列出這個 target 能用的、型別、滑鼠提示看說明、放到圖上）。新增選單不列（由面板建立）。
+- **驗證**：core 124（新增 `test_td_values.cjs` 4 項：表的 id／欄位、vUV.st／vUV／res.zw 產碼不需宣告不成綁定、接不了的與不認得的是 Ghost、換一筆與只提供可用的）、editor 46（新增：放到圖上、顏色組、接線送出原樣）、Python 52、locales 196 則。真實 TD 2025.33230：15 筆 TOP 可用的逐一在暫時 GLSL TOP 編譯通過（表原本以 2025.32820 核對）；瀏覽器照使用者操作：面板→gl_FragCoord 放到圖上→拉線到 Color Output → 中心像素 (256.5, 256.5)、角落 (0.5, 0.5)、沒有宣告、沒有錯誤。測試 OP 已刪。Deliver 存 `TD-Grape-dev.72`。
+- **發現**：`vUV.st`（vec2）接不上 Color Output——Q46 已定「Color Output 什麼都能接、自動補齊」（vec2→(x,y,0.5,1)…），新核心還沒做；現有 float 接 Color Output 是 `vec4(v)`，也和 Q46 的 (v,v,v,1) 不同。記在 CURRENT。
+- **之後**：MAT 的 stage 檢查（NodeContext 還沒有 stage）、帶索引參數的筆（`TDTexCoord({layer})` 等）、相近兩筆的核對（`TDInstanceID`／`TDInstanceIndex`、`TDPointColor`／`TDColor`）都在 MAT 那一輪；面板分區與排序（常用的放前面）做面板整理時再看。
+
 ## Refactor.40 — 宣告＋引用宣告節點，第一個種類：全域常數；共用來源面板 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/sources-foundation.md` 第二輪。人類 10-09 確認：引用宣告節點照提案做（design-interview Q45 已補記）；面板選 A（先固定在一側，內容獨立、外面一層殼，Q47 補 5a）。

@@ -8,6 +8,7 @@ import type * as capacity from '../core-ts/capacity';
 import type * as structure from '../core-ts/structure';
 import type * as ghosts from '../core-ts/ghosts';
 import type * as declarations from '../core-ts/declarations';
+import type * as tdValueTable from '../core-ts/td_values';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -18,7 +19,9 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf;
   declarationKinds: typeof declarations.declarationKinds; declarationNameProblem: typeof declarations.declarationNameProblem;
   freeDeclarationName: typeof declarations.freeDeclarationName;
+  tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;
 };
+export type { TdValue } from '../core-ts/td_values';
 export type { NameProblem } from '../core-ts/declarations';
 export type { Declaration } from '../core-ts/model';
 export type { GhostKind } from '../core-ts/ghosts';
@@ -58,8 +61,8 @@ export const supportedDefinitions = [
   'any', 'all', 'not', 'if', 'isnan', 'isinf',
   // vector and colour structure
   'split', 'vector_split', 'rgba', 'router', 'combine', 'replace', 'swizzle', 'convert',
-  // shared sources (Refactor.40: global constants)
-  'declaration',
+  // shared sources (Refactor.40: global constants; Refactor.41: TD built-in values)
+  'declaration', 'td_value',
 ].map(key => 'sgrape.builtin.' + key);
 // Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.
@@ -74,7 +77,8 @@ const retired = new Set(['float', 'vec2', 'vec3', 'vec4'].map(key => 'sgrape.bui
 // 能不能新增由核心決定（Color Output 這類 stage 出口不提供）。
 // The reference node is made from the Sources panel, which knows what it points to (Q45).
 // 引用宣告節點由共用來源面板建立（面板知道它指向哪一筆），不在新增選單。
-export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid) && uuid !== 'sgrape.builtin.declaration'
+export const fromSourcesPanel = ['sgrape.builtin.declaration', 'sgrape.builtin.td_value'];
+export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid) && !fromSourcesPanel.includes(uuid)
   && core.offered(core.registry.get(uuid)!));
 export function requireSupported(graph: graph.GraphDocument['document']) {
   // Format first (Q44): a newer version is never written back, so no reset is offered for it.

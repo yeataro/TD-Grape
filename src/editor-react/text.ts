@@ -42,6 +42,9 @@ function currentLanguage(): Language {
 export const language: Language = typeof window === 'undefined' ? 'en' : currentLanguage();
 export const say = (message: Message | string) => localize(message, language);
 
+// Data that carries its own English (Q34 修訂 4): the code is derived here, where the text is used.
+// 自帶英文的資料：代號在使用處推導。
+export const tdValueHint = (entry: { id: string; hint: string }): Message => ({ code: 'tdValue.' + entry.id, source: entry.hint });
 // An error that carries a message for people. 帶著「給人看的訊息」的錯誤。
 export class TextError extends Error {
   constructor(readonly text: Message) { super(localize(text, 'en')); }

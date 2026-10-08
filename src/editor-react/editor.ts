@@ -215,6 +215,9 @@ export class Editor {
     this.transactGraph(tr('sources.removed', 'Shared source deleted with the nodes that used it'), document => document.removeDeclaration(id));
   placeDeclaration = (id: string, position: XYPosition) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
     net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.declaration', params: { declarationId: id }, ui: { ...position } }));
+  // TD built-in values (Refactor.41; Q45 01): no declaration, the node picks a table entry.
+  placeTdValue = (entry: string, position: XYPosition) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
+    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.td_value', params: { entry }, ui: { ...position } }));
   valid = (c: Connection | FlowEdge) => {
     if (!c.sourceHandle || !c.targetHandle) return false;
     try {

@@ -18,6 +18,8 @@ const editor_contract_1 = require("./editor_contract");
 const model_1 = require("./model");
 const ghosts_1 = require("./ghosts");
 const declarations_1 = require("./declarations");
+const td_values_1 = require("./td_values");
+const node_sdk_1 = require("./node_sdk");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -68,6 +70,7 @@ const split_1 = require("./nodes/split");
 const sqrt_1 = require("./nodes/sqrt");
 const subtract_1 = require("./nodes/subtract");
 const swizzle_1 = require("./nodes/swizzle");
+const td_value_1 = require("./nodes/td_value");
 const trunc_1 = require("./nodes/trunc");
 const uniform_1 = require("./nodes/uniform");
 const vec2_1 = require("./nodes/vec2");
@@ -75,9 +78,9 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
 
 },
 "capacity":function(require,module,exports){
@@ -1423,7 +1426,7 @@ function resolvePorts(module, node, context) {
 "node_sdk":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
+exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
 exports.reshapeDefaults = reshapeDefaults;
 exports.literalNode = literalNode;
 exports.vectorNode = vectorNode;
@@ -1431,12 +1434,15 @@ exports.binaryNode = binaryNode;
 exports.unaryNode = unaryNode;
 exports.numericCall = numericCall;
 exports.declarationNode = declarationNode;
+exports.tdValueNode = tdValueNode;
 exports.uniformNode = uniformNode;
 exports.outputNode = outputNode;
 /** Small developer entry point. Builtins and developer modules share this API. */
 const model_1 = require("./model");
 const numeric_1 = require("./numeric");
 const declarations_1 = require("./declarations");
+const td_values_1 = require("./td_values");
+const values_1 = require("./values");
 var numeric_2 = require("./numeric");
 Object.defineProperty(exports, "literal", { enumerable: true, get: function () { return numeric_2.literal; } });
 Object.defineProperty(exports, "type", { enumerable: true, get: function () { return numeric_2.type; } });
@@ -1656,6 +1662,45 @@ function declarationNode(catalog) {
             return n;
         },
         emit: (n, c) => { var _a; return ({ outputs: { out: c.useDeclaration(String(n.params.declarationId)) }, constant: !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.constant) }); } };
+}
+/** TD built-in values (Q45 01, discuss-4.14 §10): one node type picks one entry of the table
+ * beside it (td_values.ts) by `entry`; no declaration, so it may be used inside subgraphs (Q46).
+ * This round carries entries of plain value types without parameters; samplers, structs, arrays,
+ * matrices and entries with an index ({layer}…) come with their rounds — until then a graph that
+ * uses one shows a ghost. An unknown entry is a ghost too.
+ * TD 內建值：一個節點類型依 entry 從旁邊的表選一筆；不需要宣告、子圖裡也能用。
+ * 本輪只接一般數值型別、不帶參數的；其他等各自那一輪，之前是 Ghost。 */
+const tdValueTable = new Map(td_values_1.tdValues.map(entry => [entry.id, entry]));
+const tdValuePorts = new Map();
+const tdValuePort = (t) => { let p = tdValuePorts.get(t); if (!p) {
+    p = fixedPorts([out(t)]);
+    tdValuePorts.set(t, p);
+} return p; };
+/** Whether this build can use an entry for a target. 這個版本能不能在這個 target 用這一筆。 */
+const usableTdValue = (entry, target) => !!entry && (!target || entry.targets.includes(target))
+    && values_1.types.includes(entry.type) && !entry.expression.includes('{');
+exports.usableTdValue = usableTdValue;
+function tdValueNode(catalog) {
+    const entryOf = (n) => tdValueTable.get(String(n.params.entry));
+    return { catalog, role: 'value', colorGroup: 'runtime',
+        supports: (n, c) => (0, exports.usableTdValue)(entryOf(n), c.target),
+        ports: n => tdValuePort(entryOf(n).type), validate: () => { },
+        presentation: (n, c) => {
+            var _a;
+            return ({ label: (_a = entryOf(n)) === null || _a === void 0 ? void 0 : _a.name, inlineControls: [{ kind: 'select', key: 'entry', label: 'entry', literal: true, command: 'entry',
+                        value: String(n.params.entry), options: td_values_1.tdValues.filter(e => (0, exports.usableTdValue)(e, c.target)).map(e => ({ value: e.id, label: e.name, literal: true })) }] });
+        },
+        edit: (n, command, value, c) => {
+            var _a, _b;
+            if (command !== 'entry')
+                throw Error('Unknown command');
+            const id = String((_b = (_a = (0, model_1.object)(value)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : value);
+            if (!(0, exports.usableTdValue)(tdValueTable.get(id), c.target))
+                throw Error('Unknown TD built-in value');
+            n.params.entry = id;
+            return n;
+        },
+        emit: n => ({ outputs: { out: entryOf(n).expression } }) };
 }
 function uniformNode(catalog) {
     return { catalog, role: 'value', supports: (n, c) => numeric(n) && (!c.declaration(String(n.params.declarationId)) || numeric_1.types.includes(c.declaration(String(n.params.declarationId)).type)), ports: (n, c) => {
@@ -4308,6 +4353,55 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
 });
 
 },
+"nodes/td_value":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// TD built-in value (design-interview Q45 01, discuss-4.14 §10): the canvas title is the entry's
+// own name (vUV.st, uTDOutputInfo.res.zw…). Created from the Sources panel, not the add menu.
+// TD 內建值：畫布標題是那一筆自己的名字。由共用來源面板建立，不在新增選單。
+const catalog = {
+    "definition": {
+        "key": "td_value",
+        "label": "TD Built-in",
+        "inputs": {},
+        "outputs": {
+            "out": "D"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "entry": "vUVSt"
+        },
+        "descriptionKey": "help.td_value",
+        "definitionUuid": "sgrape.builtin.td_value"
+    },
+    "emitter": {
+        "id": "td_value",
+        "version": 1
+    },
+    "browser": {
+        "category": "inputs",
+        "source": "editor",
+        "aliases": [
+            "builtin",
+            "td",
+            "uv",
+            "resolution"
+        ],
+        "glslName": "td_value",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "inputs",
+            "td"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.tdValueNode)(catalog);
+
+},
 "nodes/trunc":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -5643,6 +5737,74 @@ class Subgraph {
     }
 }
 exports.Subgraph = Subgraph;
+
+},
+"td_values":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.tdValues = void 0;
+exports.tdValues = Object.freeze([
+    { "id": "uTD2DInfos", "name": "uTD2DInfos", "expression": "uTD2DInfos", "type": "TDTexInfo[TD_NUM_2D_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2d"], "hint": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "sTD2DInputs", "name": "sTD2DInputs", "expression": "sTD2DInputs", "type": "sampler2D[TD_NUM_2D_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2d"], "hint": "Array of connected sampler2D resources, grouped by texture dimension. Select an array item before sampling.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDMats", "name": "uTDMats", "expression": "uTDMats", "type": "TDMatrix[TD_NUM_CAMERAS]", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "matrices"], "hint": "Camera-indexed transforms between geometry, world, camera and projection spaces. Select a camera entry, then its matrix field.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "uTDCamInfos", "name": "uTDCamInfos", "expression": "uTDCamInfos", "type": "TDCameraInfo[TD_NUM_CAMERAS]", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "cameras"], "hint": "Per-camera information supplied by the render pass, including camera projection data.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "uTDLights", "name": "uTDLights", "expression": "uTDLights", "type": "TDLight[TD_NUM_LIGHTS]", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "lights"], "hint": "Per-light data for regular lights in the current render pass. Environment lights have a separate array.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "tdNum2dInputs", "name": "TD_NUM_2D_INPUTS", "expression": "TD_NUM_2D_INPUTS", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2d"], "hint": "Compile-time number of 2d inputs in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "sTD3DInputs", "name": "sTD3DInputs", "expression": "sTD3DInputs", "type": "sampler3D[TD_NUM_3D_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "3d"], "hint": "Array of connected sampler3D resources, grouped by texture dimension. Select an array item before sampling.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTD3DInfos", "name": "uTD3DInfos", "expression": "uTD3DInfos", "type": "TDTexInfo[TD_NUM_3D_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "3d"], "hint": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "tdNum3dInputs", "name": "TD_NUM_3D_INPUTS", "expression": "TD_NUM_3D_INPUTS", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "3d"], "hint": "Compile-time number of 3d inputs in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "sTD2DArrayInputs", "name": "sTD2DArrayInputs", "expression": "sTD2DArrayInputs", "type": "sampler2DArray[TD_NUM_2D_ARRAY_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2dArray"], "hint": "Array of connected sampler2DArray resources, grouped by texture dimension. Select an array item before sampling.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTD2DArrayInfos", "name": "uTD2DArrayInfos", "expression": "uTD2DArrayInfos", "type": "TDTexInfo[TD_NUM_2D_ARRAY_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2dArray"], "hint": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "tdNum2dArrayInputs", "name": "TD_NUM_2D_ARRAY_INPUTS", "expression": "TD_NUM_2D_ARRAY_INPUTS", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "2dArray"], "hint": "Compile-time number of 2d array inputs in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "sTDCubeInputs", "name": "sTDCubeInputs", "expression": "sTDCubeInputs", "type": "samplerCube[TD_NUM_CUBE_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "cube"], "hint": "Array of connected samplerCube resources, grouped by texture dimension. Select an array item before sampling.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDCubeInfos", "name": "uTDCubeInfos", "expression": "uTDCubeInfos", "type": "TDTexInfo[TD_NUM_CUBE_INPUTS]", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "cube"], "hint": "Metadata for each input texture of this dimension. res.xy is reciprocal size and res.zw is size.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "tdNumCubeInputs", "name": "TD_NUM_CUBE_INPUTS", "expression": "TD_NUM_CUBE_INPUTS", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["textures", "cube"], "hint": "Compile-time number of cube inputs in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDOutputInfo", "name": "uTDOutputInfo", "expression": "uTDOutputInfo", "type": "TDTexInfo", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Output texture metadata. res.xy contains reciprocal dimensions; res.zw contains width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDOutputInfoResZw", "name": "uTDOutputInfo.res.zw", "expression": "uTDOutputInfo.res.zw", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Output width and height in pixels.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDOutputInfoResXy", "name": "uTDOutputInfo.res.xy", "expression": "uTDOutputInfo.res.xy", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "output"], "hint": "Reciprocal output width and height.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "vUV", "name": "vUV", "expression": "vUV", "type": "vec3", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "The original three-component TOP texture coordinates.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDPass", "name": "uTDPass", "expression": "uTDPass", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Zero-based GLSL TOP pass index for multipass rendering.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "uTDCurrentDepth", "name": "uTDCurrentDepth", "expression": "uTDCurrentDepth", "type": "int", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "render"], "hint": "Current output depth index when producing a layered or 3D TOP texture.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "sTDNoiseMap", "name": "sTDNoiseMap", "expression": "sTDNoiseMap", "type": "sampler2D", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "resources"], "hint": "TD-provided noise lookup texture; connect it to a compatible texture sampling input.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "sTDSineLookup", "name": "sTDSineLookup", "expression": "sTDSineLookup", "type": "sampler1D", "targets": ["top"], "stages": ["pixel"], "category": ["tdBuiltin", "resources"], "hint": "TD-provided one-dimensional sine lookup texture. TDSineLookup provides a direct lookup function.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP#Built-in_Uniforms" },
+    { "id": "glFragCoord", "name": "gl_FragCoord", "expression": "gl_FragCoord", "type": "vec4", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "The current fragment position in window coordinates.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
+    { "id": "glFrontFacing", "name": "gl_FrontFacing", "expression": "gl_FrontFacing", "type": "bool", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "shaderInfo"], "hint": "Whether this fragment belongs to a front-facing primitive.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
+    { "id": "glSampleID", "name": "gl_SampleID", "expression": "gl_SampleID", "type": "int", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "shaderInfo"], "hint": "Index of the current multisample sample.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
+    { "id": "glSamplePosition", "name": "gl_SamplePosition", "expression": "gl_SamplePosition", "type": "vec2", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "shaderInfo"], "hint": "The current sample position within its pixel.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
+    { "id": "glHelperInvocation", "name": "gl_HelperInvocation", "expression": "gl_HelperInvocation", "type": "bool", "targets": ["top", "mat"], "stages": ["pixel"], "category": ["common", "shaderInfo"], "hint": "Whether this is a helper invocation used for derivatives.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
+    { "id": "tdNormal", "name": "TDNormal", "expression": "TDNormal()", "type": "vec3", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Normal of the current vertex before TD geometry deformation. Use TDDeformNorm for a deformed world-space normal.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes" },
+    { "id": "tdPointColor", "name": "TDPointColor", "expression": "TDPointColor()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Color attribute of the current point, including alpha.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes" },
+    { "id": "tduvUnwrapCoord", "name": "TDUVUnwrapCoord", "expression": "TDUVUnwrapCoord()", "type": "vec3", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Coordinates used for the current UV-unwrapping render configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions" },
+    { "id": "tdInstanceID", "name": "TDInstanceID", "expression": "TDInstanceID()", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "instances"], "hint": "Instance index supplied by TD for the geometry being rendered.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdCameraIndex", "name": "TDCameraIndex", "expression": "TDCameraIndex()", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "cameras"], "hint": "Camera index within the current render pass. Pass it flat to Pixel when indexing camera-specific data there.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions" },
+    { "id": "tdTrueCameraIndex", "name": "TDTrueCameraIndex", "expression": "TDTrueCameraIndex()", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "cameras"], "hint": "Camera index in the full camera list, as distinguished from the current pass index.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions" },
+    { "id": "tdTexCoord", "name": "TDTexCoord", "expression": "TDTexCoord({layer})", "type": "vec3", "targets": ["mat"], "stages": ["vertex"], "category": ["common", "coordinates"], "hint": "Texture coordinates from the selected UV layer.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Working_with_Geometry_Attributes" },
+    { "id": "tdBoneMat", "name": "TDBoneMat", "expression": "TDBoneMat({boneIndex})", "type": "mat4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Bone transform matrix for the selected bone index.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions" },
+    { "id": "tdInstanceMat", "name": "TDInstanceMat", "expression": "TDInstanceMat({instanceIndex})", "type": "mat4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "instances"], "hint": "Four-by-four transform matrix for the selected geometry instance.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdInstanceMat3", "name": "TDInstanceMat3", "expression": "TDInstanceMat3({instanceIndex})", "type": "mat3", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "instances"], "hint": "Three-by-three transform matrix for the selected geometry instance.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdInstanceTextureIndex", "name": "TDInstanceTextureIndex", "expression": "TDInstanceTextureIndex({instanceIndex})", "type": "uint", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "instances"], "hint": "Texture index associated with the selected geometry instance.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdInstanceCustomAttrib0", "name": "TDInstanceCustomAttrib0", "expression": "TDInstanceCustomAttrib0({instanceIndex})", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "instances"], "hint": "Custom instance attribute slot 0 as four components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdInstanceCustomAttrib1", "name": "TDInstanceCustomAttrib1", "expression": "TDInstanceCustomAttrib1({instanceIndex})", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "instances"], "hint": "Custom instance attribute slot 1 as four components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdInstanceCustomAttrib2", "name": "TDInstanceCustomAttrib2", "expression": "TDInstanceCustomAttrib2({instanceIndex})", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "instances"], "hint": "Custom instance attribute slot 2 as four components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdInstanceCustomAttrib3", "name": "TDInstanceCustomAttrib3", "expression": "TDInstanceCustomAttrib3({instanceIndex})", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "instances"], "hint": "Custom instance attribute slot 3 as four components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Instancing" },
+    { "id": "tdPointCoord", "name": "TDPointCoord", "expression": "TDPointCoord()", "type": "vec2", "targets": ["mat"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Coordinates within the point being rendered.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#Common_Functions" },
+    { "id": "uTDGeneral", "name": "uTDGeneral", "expression": "uTDGeneral", "type": "TDGeneral", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "render"], "hint": "General render state, including combined ambient-light color and viewport information.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "uTDGeneralAmbientColor", "name": "uTDGeneral.ambientColor", "expression": "uTDGeneral.ambientColor", "type": "vec4", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "lights"], "hint": "Combined ambient-light color from the ambient lights used by this render pass.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "viewportOrigin", "name": "Viewport Origin", "expression": "uTDGeneral.viewport.xy", "type": "vec2", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["common", "output"], "hint": "Origin of the current viewport.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "viewportResolution", "name": "Viewport Resolution", "expression": "(1.0 / uTDGeneral.viewport.zw)", "type": "vec2", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["common", "output"], "hint": "Width and height of the current viewport.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "uTDEnvLights", "name": "uTDEnvLights", "expression": "uTDEnvLights", "type": "TDEnvLight[TD_NUM_ENV_LIGHTS]", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "lights"], "hint": "Environment-light settings for the current render pass.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "tdNumLights", "name": "TD_NUM_LIGHTS", "expression": "TD_NUM_LIGHTS", "type": "int", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "lights"], "hint": "Compile-time number of regular lights in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines" },
+    { "id": "tdNumEnvLights", "name": "TD_NUM_ENV_LIGHTS", "expression": "TD_NUM_ENV_LIGHTS", "type": "int", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "lights"], "hint": "Compile-time number of environment lights in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines" },
+    { "id": "tdNumCameras", "name": "TD_NUM_CAMERAS", "expression": "TD_NUM_CAMERAS", "type": "int", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "cameras"], "hint": "Compile-time number of cameras in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines" },
+    { "id": "tdNumColorBuffers", "name": "TD_NUM_COLOR_BUFFERS", "expression": "TD_NUM_COLOR_BUFFERS", "type": "int", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "render"], "hint": "Compile-time number of color buffers in this shader configuration.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_defines" },
+    { "id": "uTDEnvLightBuffersShCoeffs", "name": "uTDEnvLightBuffers.shCoeffs", "expression": "uTDEnvLightBuffers[{lightIndex}].shCoeffs", "type": "vec3[9]", "targets": ["mat"], "stages": ["vertex", "pixel"], "category": ["tdBuiltin", "lights"], "hint": "Nine RGB spherical-harmonic coefficients for the selected environment light.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT#TouchDesigner_specific_Uniforms" },
+    { "id": "glVertexIndex", "name": "gl_VertexIndex", "expression": "gl_VertexIndex", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Index of the current vertex. This is an identity, not an attribute lookup for another vertex.", "helpUrl": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf" },
+    { "id": "tdScreenSpaceCoord", "name": "TDScreenSpaceCoord", "expression": "TDScreenSpaceCoord().st", "type": "vec2", "targets": ["mat"], "stages": ["pixel"], "category": ["tdBuiltin", "geometry"], "hint": "Screen-space texture coordinates used by native MAT screen-space map sampling. Returns the st components.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
+    { "id": "tdInstanceIndex", "name": "TDInstanceIndex", "expression": "TDInstanceIndex()", "type": "int", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Current instance index used by native MAT. Pass through a flat Vertex Output to use indexed TDInstanceColor in Pixel Stage.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
+    { "id": "tdColor", "name": "TDColor", "expression": "TDColor()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Geometry color used by native Phong/PBR before current-instance color is applied. This is the native TDColor accessor, distinct from TDPointColor.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_MAT" },
+    { "id": "vUVSt", "name": "vUV.st", "expression": "vUV.st", "type": "vec2", "targets": ["top"], "stages": ["pixel"], "category": ["common", "coordinates"], "hint": "Texture coordinates of this pixel, from 0 to 1 (the first two components of vUV).", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_TOP" },
+    { "id": "tdPos", "name": "TDPos", "expression": "TDPos()", "type": "vec4", "targets": ["mat"], "stages": ["vertex"], "category": ["tdBuiltin", "geometry"], "hint": "Position of this vertex in SOP space.", "helpUrl": "https://derivative.ca/UserGuide/Write_a_GLSL_Material" },
+].map(entry => Object.freeze(entry)));
 
 },
 "text":function(require,module,exports){

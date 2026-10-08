@@ -3,6 +3,8 @@ import { object, copy, type Node, type Value } from './model';
 import { types, type, literal, number, fill, count, type Type } from './numeric';
 import type { CatalogRow, NodeModule, NodeContext, Configuration } from './node_module';
 import { declarationKinds } from './declarations';
+import { tdValues, type TdValue } from './td_values';
+import { types as valueTypes } from './values';
 import type { PortSpec } from './ports';
 export type { CatalogRow, NodeModule, NodeContext, EmitContext, Emission, Configuration, Signature, NodeControl } from './node_module';
 export type { Node, Value, ObjectValue } from './model';
@@ -152,6 +154,32 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
       const id=String(object(value)?.value??value);if(!c.declaration(id))throw Error('The declaration no longer exists');
       n.params.declarationId=id;return n;},
     emit:(n,c)=>({outputs:{out:c.useDeclaration(String(n.params.declarationId))},constant:!!kindOf(n,c)?.constant})};
+}
+/** TD built-in values (Q45 01, discuss-4.14 §10): one node type picks one entry of the table
+ * beside it (td_values.ts) by `entry`; no declaration, so it may be used inside subgraphs (Q46).
+ * This round carries entries of plain value types without parameters; samplers, structs, arrays,
+ * matrices and entries with an index ({layer}…) come with their rounds — until then a graph that
+ * uses one shows a ghost. An unknown entry is a ghost too.
+ * TD 內建值：一個節點類型依 entry 從旁邊的表選一筆；不需要宣告、子圖裡也能用。
+ * 本輪只接一般數值型別、不帶參數的；其他等各自那一輪，之前是 Ghost。 */
+const tdValueTable=new Map(tdValues.map(entry=>[entry.id,entry]));
+const tdValuePorts=new Map<string,readonly PortSpec[]>();
+const tdValuePort=(t:string)=>{let p=tdValuePorts.get(t);if(!p){p=fixedPorts([out(t)]);tdValuePorts.set(t,p);}return p;};
+/** Whether this build can use an entry for a target. 這個版本能不能在這個 target 用這一筆。 */
+export const usableTdValue=(entry:TdValue|undefined,target:string|undefined)=>!!entry&&(!target||entry.targets.includes(target))
+  &&valueTypes.includes(entry.type)&&!entry.expression.includes('{');
+export function tdValueNode(catalog:CatalogRow):NodeModule {
+  const entryOf=(n:Node)=>tdValueTable.get(String(n.params.entry));
+  return {catalog,role:'value',colorGroup:'runtime',
+    supports:(n,c)=>usableTdValue(entryOf(n),c.target),
+    ports:n=>tdValuePort(entryOf(n)!.type),validate:()=>{},
+    presentation:(n,c)=>({label:entryOf(n)?.name,inlineControls:[{kind:'select',key:'entry',label:'entry',literal:true,command:'entry',
+      value:String(n.params.entry),options:tdValues.filter(e=>usableTdValue(e,c.target)).map(e=>({value:e.id,label:e.name,literal:true}))}]}),
+    edit:(n,command,value,c)=>{
+      if(command!=='entry')throw Error('Unknown command');
+      const id=String(object(value)?.value??value);if(!usableTdValue(tdValueTable.get(id),c.target))throw Error('Unknown TD built-in value');
+      n.params.entry=id;return n;},
+    emit:n=>({outputs:{out:entryOf(n)!.expression}})};
 }
 export function uniformNode(catalog:CatalogRow):NodeModule {
   return {catalog,role:'value',supports:(n,c)=>numeric(n)&&(!c.declaration(String(n.params.declarationId))||types.includes(c.declaration(String(n.params.declarationId))!.type)),ports:(n,c)=>{

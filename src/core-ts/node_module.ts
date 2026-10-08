@@ -57,6 +57,8 @@ export interface NodeModule {
   referencedGraph?(node:Node):string;
   /** The declaration this node refers to (the reference node, Q45). 引用的宣告。 */
   referencedDeclaration?(node:Node):string;
+  /** Display-only colour group when it cannot be derived from the role (Q42); the core never reads it. */
+  readonly colorGroup?:string;
   /** Initial parameters for a new instance of a graph definition. */
   reference?(graphId:string):ObjectValue;
   supports(node:Node,context:NodeContext):boolean;
