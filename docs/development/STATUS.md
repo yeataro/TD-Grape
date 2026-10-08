@@ -2,6 +2,15 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.36 — 編輯服務的 port 被佔用時往後找空的，並顯示實際使用的 port — 2026-10-09
+
+人類：「直接做一個 port 位移的方法…嘗試取得現在的 port 然後位移（要看得到）」。起因：要在空白專案測「主組件不放根目錄」時，開發 TOE 已佔用 65465，另一個 TD 的編輯服務起不來。
+
+- [editor_service_ext.py](../../src/td/runtime/editor_service_ext.py) `Start`：先試 `Port` 參數設定的 port（同一台 TD 位址不變——瀏覽器儲存依 port 分開），被佔用時依序試後面 9 個。`Port` 參數不改；實際 port 顯示在 `Servicestate`（「Serving on port 65466」）、`Serviceerror` 的說明、`Localurl`，並寫到 TD 狀態列。Edit 開的網址本來就用實際 port（`GrapeManagerExt.Open`）。10 個都被佔才失敗，並寫明範圍。
+- **驗證**：真實 TD：在 TD 裡用 socket 佔住 65465 → 服務改用 65466，參數頁、狀態列、Edit 網址都是 65466，`Port` 參數仍是 65465；放掉後重啟回到 65465。Python 52、portable checks 通過。Deliver 存 `TD-Grape-dev.65`。
+- **限制**：Remote Panel（port 8920，TD 的網頁服務）沒有位移，第二個 TD 裡要先關掉它或改 port。
+- **助手失誤**：測試時呼叫 `GrapeManagerExt.Open`（以及前幾輪按 Edit）會用 `ui.viewFile` 在人類電腦上開瀏覽器分頁；以後測試自己組網址，不呼叫 `Open`。
+
 ## Refactor.35.1 — 清掉主組件的舊 tag 與 Remote Panel 失效的目標 — 2026-10-09
 
 人類同意（「照建議清掉」）。主組件 `/TD_Grape` 拿掉沒人用的舊 tag `sgrapeManager`；`remote_panel` 的 `Targetop` 清空（原本指向早已不存在的 `../project1/Grape_TOP_React/shader`，用時再選）。全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.64`。

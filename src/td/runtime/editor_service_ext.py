@@ -2,6 +2,8 @@
 from pathlib import Path
 import socket
 
+PORT_TRIES = 10  # the requested port and the next nine
+
 
 class EditorServiceExt:
     def __init__(self, ownerComp):
@@ -72,14 +74,33 @@ class EditorServiceExt:
         if self.snapshot is None and not self.Reload():
             return False
         previous_error = self.ownerComp.par.Serviceerror.eval()
-        try:
-            self.http = self.api.EditorHTTP(self.snapshot,
-                '0.0.0.0' if self.ownerComp.par.Allowlan.eval() else '127.0.0.1',
-                int(self.ownerComp.par.Port.eval()))
-        except OSError as error:
-            self._show('Cannot start; requested port unchanged', str(error))
+        host = '0.0.0.0' if self.ownerComp.par.Allowlan.eval() else '127.0.0.1'
+        requested = int(self.ownerComp.par.Port.eval())
+        # The requested port first, so one TD always gets the same address (browser storage is per
+        # port); when another program (e.g. a second TouchDesigner) holds it, the next free one.
+        # The Port parameter is left as set; the port in use is shown (human 2026-10-09).
+        # 先試設定的 port（同一台 TD 位址不變；瀏覽器儲存依 port 分開）；被佔用時往後找空的。
+        # Port 參數不改，實際使用的 port 顯示出來。
+        last_error = None
+        for port in range(requested, min(requested + PORT_TRIES, 65536)):
+            try:
+                self.http = self.api.EditorHTTP(self.snapshot, host, port)
+                break
+            except OSError as error:
+                last_error = error
+        if not self.http:
+            self._show('Cannot start; ports ' + str(requested) + '-' + str(port) + ' are in use', str(last_error))
             return False
-        self._show('Serving', previous_error)
+        if self.http.port != requested:
+            message = ('Port ' + str(requested) + ' is in use (another TouchDesigner?); the editor is served on port '
+                       + str(self.http.port) + '.')
+            self._show('Serving on port ' + str(self.http.port), message)
+            try:
+                ui.status = 'TD-Grape: ' + message
+            except Exception:
+                pass
+        else:
+            self._show('Serving', previous_error)
         self._connect_manager()
         return True
 
