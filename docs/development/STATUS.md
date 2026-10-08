@@ -2,6 +2,21 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.38 — 在地化骨架＋回報（Q34、Q35） — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/localization-skeleton.md`（人類 10-09 同意；沒設定語言時選 A）。
+
+- **`tr('代號', '英文原文', 參數)`**（[src/core-ts/text.ts](../../src/core-ts/text.ts)，核心也能用，只打包不翻譯）與顯示時的 `localize()`／`say()`（[src/editor-react/text.ts](../../src/editor-react/text.ts)）：找不到或空白的翻譯顯示英文原文，永遠不顯示代號；清單參數依語言用「、」或「, 」。
+- **語言**：使用者選過的（`sgrapeLanguage`）優先；沒選過**跟著瀏覽器**（繁中瀏覽器→繁中；簡中與其他→英文）；設計紀錄 Q34 已改。語言選單之後跟設定面板一起做。中、英先做，其他語言最後一次處理（目標至少六種）。
+- **編輯器 87 句寫死的中文全部改成 `tr()`**（共 111 則訊息，含原本寫死的英文介面字）；中文在 [zh-Hant.json](../../src/editor-react/locales/zh-Hant.json)（Undo、Redo、Snap、GLSL 等 6 則刻意留空＝顯示英文，同以前）。錯誤改成帶訊息的 `TextError`；`HostError` 可帶訊息。
+- **檢查腳本** [tools/dev/locales.cjs](../../tools/dev/locales.cjs)：掃出所有 `tr()`，產生 `en.json`（對照用）、更新 `zh-Hant.json` 骨架；檢查代號格式、完整字面、同代號同原文、譯文佔位符一致。`run_tests.py` 跑它。
+- **回報**：[reports.ts](../../src/editor-react/reports.ts) 的 `ReportLog`（只增不減的事件紀錄、自動填來源與時間；程式不准依它判斷）。編輯器與同步的每則訊息都帶等級（info／warning／error）寫進紀錄，同步的狀態更新沒有新訊息就不寫。Log 面板之後做。
+- **狀態列**：只顯示訊息第一行，完整內容在滑鼠提示；等級 warning／error 上色。TD 編譯失敗的訊息改成「摘要在前、TD 紀錄在後」——解決 Refactor.34 發現的「編譯紀錄把狀態列撐成三行」。
+- **核心產物**：`text.ts` 進入核心套件，`catalogHash` 隨之改變（既有 Grape OP 照常開啟，已驗證）。
+- **AGENTS.md**：介面文字一律走 `tr()`。
+- **驗證**：core 110、editor 42（新增：語言選擇、缺翻譯顯示英文、清單分隔、每則回報只記一次且有來源；原本檢查中文訊息的測試改為「用繁中顯示後」比對，順便驗證翻譯有接上）、Python 52、locales 檢查。瀏覽器＋真實 TD：繁中瀏覽器未設定→中文介面；設成英文→全英文（工具列、狀態列、頁尾）；清掉設定→回到中文；暫時讓 TD 編譯失敗（測完還原）→狀態列只有一行紅色摘要，滑鼠提示是完整 TD 紀錄；`Grape_TOP_test` 照常開啟。Deliver 存 `TD-Grape-dev.67`。
+- **不在本輪**：節點文字（名稱、說明、搜尋詞——中文別名之後搬語言檔，Q34 補充）、TD 送回的訊息翻譯、Log 面板、語言選單。
+
 ## Refactor.37 — Grape 頁（Q45）：Open Editor（App 視窗）、Open in Browser、GLSL Parameters、Grape Editor Version、Generated TOP — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/grape-page.md`（人類 10-09「照這份開始做」）。

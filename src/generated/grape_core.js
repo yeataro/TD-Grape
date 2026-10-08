@@ -5396,6 +5396,16 @@ class Subgraph {
 exports.Subgraph = Subgraph;
 
 },
+"text":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.isMessage = exports.tr = void 0;
+const tr = (code, source, params) => Object.freeze(params ? { code, source, params: Object.freeze({ ...params }) } : { code, source });
+exports.tr = tr;
+const isMessage = (value) => !!value && typeof value === 'object' && typeof value.code === 'string' && typeof value.source === 'string';
+exports.isMessage = isMessage;
+
+},
 "top_compiler":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });

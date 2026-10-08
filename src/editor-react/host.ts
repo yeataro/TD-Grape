@@ -1,10 +1,18 @@
+import { tr, TextError, type Message } from './text';
+
 // New-editor Grape OPs (design-interview Q40): the document is opaque text to TD.
 // 新編輯器的 Grape OP：圖對 TD 是不透明文字。
 export type HostState = { document: string; revision: number; runtimeRevision?: number; targetId?: string };
 export type StateResponse = { state: HostState; format: string; target: string; shaderKind: string;
   frontendCompiler: { protocol: string; catalogHash: string; required: boolean } };
+// A failed host call. `text` is set when the editor itself words the failure (Q34); TD's own
+// replies stay as TD wrote them. 編輯器自己描述的失敗帶 text；TD 回的訊息照原樣。
 export class HostError extends Error {
-  constructor(message: string, readonly status = 0, readonly code = '', readonly layer = 'transport') { super(message); }
+  readonly text?: Message;
+  constructor(message: string | Message, readonly status = 0, readonly code = '', readonly layer = 'transport') {
+    super(typeof message === 'string' ? message : message.source);
+    if (typeof message !== 'string') this.text = message;
+  }
 }
 
 // Same-origin requests keep the existing token, timeout and target boundaries.
@@ -13,7 +21,7 @@ export class HostClient {
   readonly root: string;
   constructor(readonly target: string, readonly token: string,
     private readonly request: typeof fetch = (...args) => fetch(...args), private readonly timeout = 20000) {
-    if (!/^[a-f0-9]{32}$/.test(target)) throw Error('缺少有效的 TOP Family UUID。請從 Family 入口開啟。');
+    if (!/^[a-f0-9]{32}$/.test(target)) throw new TextError(tr('open.badTarget', 'This address does not name a valid Grape OP. Open the editor from a Grape OP in TD.'));
     this.root = '/api/' + target + '/';
   }
   async call<T>(action: 'state' | 'apply' | 'save', body?: unknown): Promise<T> {
@@ -29,7 +37,8 @@ export class HostClient {
       return result as T;
     } catch (error) {
       if (error instanceof HostError) throw error;
-      throw new HostError('連線中斷或回覆不完整；本地文件保留。' + (error instanceof Error ? error.message : String(error)));
+      throw new HostError(tr('sync.transportFailed', 'The connection broke or the reply was incomplete; your local document is kept. {reason}',
+        { reason: error instanceof Error ? error.message : String(error) }));
     } finally { clearTimeout(timer); }
   }
 }

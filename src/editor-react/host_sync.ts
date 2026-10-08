@@ -1,5 +1,7 @@
 import { compiler, serializeDocument, type Graph, type Bootstrap } from './core';
 import { HostClient, HostError, type StateResponse } from './host';
+import { tr, TextError, errorText, type Message } from './text';
+import type { Level } from './reports';
 
 // Exchanging the authored document with the host (TD): open, deliver, recover, conflicts, save.
 // It never edits the document and never compiles; the Editor hands it what to send (design-interview Q38 2-4).
@@ -8,7 +10,11 @@ export type Compiled = ReturnType<typeof compiler.compile>;
 // `key` is the code-generation fingerprint (compiler.key): equal keys mean the same program.
 export type Delivery = { graph: Graph; key: string; compiled?: Compiled; error?: string };
 export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
-export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable'; message?: string };
+export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable' };
+// What to tell the person and how serious it is (design-interview Q35); sent once, with the
+// status change it belongs to. 要告訴人的話與嚴重程度；只在發生的那一次隨狀態一起送出。
+export type Said = { message: Message | string; level?: Level };
+type Patch = Partial<SyncStatus> & Partial<Said>;
 type Sent = { document: string; revision: number };
 // shaderError: the GLSL did not compile in TD. The graph was still saved; TD keeps running the
 // last good Shader (Refactor.34). 圖照樣存了，只是 GLSL 在 TD 編譯失敗、Shader 停在上次成功版。
@@ -28,10 +34,11 @@ const applyRequest = (host: HostClient, bootstrap: Bootstrap, sent: Sent, compil
 // Opening reads TD's copy: TD is the only source before an editor document exists (Q28, Q38 2-4).
 // 開圖讀 TD 的那一份：編輯器還沒有作品時，唯一的來源是 TD。
 export function checkLoaded(host: HostClient, bootstrap: Bootstrap, loaded: StateResponse) {
-  if (loaded.format !== FORMAT) throw Error('此 Grape OP 不是新編輯器的格式。');
+  if (loaded.format !== FORMAT) throw new TextError(tr('open.notNewFormat', "This Grape OP is not in the new editor's format."));
   if (loaded.frontendCompiler?.protocol !== compiler.protocol || loaded.frontendCompiler.catalogHash !== bootstrap.catalogHash)
-    throw Error('前端核心與 TD bootstrap 版本不一致；請重新載入同一建置。');
-  if (loaded.state.targetId && loaded.state.targetId !== host.target) throw Error('Host target mismatch');
+    throw new TextError(tr('open.buildMismatch', "The editor core and TD's bootstrap come from different builds; reload the same build."));
+  if (loaded.state.targetId && loaded.state.targetId !== host.target)
+    throw new TextError(tr('open.targetMismatch', 'TD answered for a different Grape OP than this editor.'));
 }
 
 // Migration-period convenience: test graphs are disposable, so a graph this entry cannot
@@ -44,14 +51,16 @@ export async function resetToDefault(host: HostClient, bootstrap: Bootstrap, edi
   const sent = { document: serializeDocument(bootstrap.defaultDocument.graph), revision: loaded.state.revision };
   const compiled = compiler.compile(bootstrap.defaultDocument.graph, bootstrap.typeContract.glslCode);
   const result = await host.call<{ state: StateResponse['state'] }>('apply', applyRequest(host, bootstrap, sent, compiled, editorVersion));
-  if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
+  if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError(replyMismatch);
 }
 
-const conflictMessage = 'TD 端的圖似乎有被修改，請選擇要使用的版本。';
+const replyMismatch = tr('sync.replyMismatch', "TD's reply does not match what was sent.");
+export const conflictMessage = tr('sync.conflict', 'The graph in TD seems to have been changed. Choose which version to use.');
 const offlineMessage = {
-  busy: 'TD 沒有回應（可能最小化）。修改保留在瀏覽器，TD 回來後自動送出。',
-  unreachable: '連不到 TD（可能卡住、已關閉或網路中斷）。修改保留在瀏覽器，連上後自動送出。',
+  busy: tr('sync.offlineBusy', 'TD is not responding (it may be minimized). Your changes stay in the browser and are sent when TD is back.'),
+  unreachable: tr('sync.offlineUnreachable', 'Cannot reach TD (it may be stuck or closed, or the network is down). Your changes stay in the browser and are sent once connected.'),
 };
+const hostChanged = tr('sync.hostChanged', "TD's build has changed; download your draft and reopen the editor.");
 // What a failed host call means for the document (design-interview Q28, measured 2026-10-07):
 // TD's queue answers manager_not_responding / manager_busy / manager_unavailable only when it
 // made NO change; a transport failure or other 5xx may still have landed and must be checked.
@@ -78,14 +87,17 @@ export class HostSync {
   blocked = false;
   status: SyncStatus;
   constructor(readonly host: HostClient, readonly bootstrap: Bootstrap, loaded: StateResponse,
-    private readonly source: () => Delivery, private readonly report: (status: SyncStatus) => void,
+    private readonly source: () => Delivery, private readonly report: (status: SyncStatus, said?: Said) => void,
     private readonly delay = 0, private readonly retry = 5000, private readonly editorVersion = 'unknown') {
     this.confirmed = loaded.state.document;
     this.runtimeKey = loaded.state.runtimeRevision === loaded.state.revision ? source().key : null;
     this.status = { revision: loaded.state.revision, dirty: false, phase: 'ready' };
   }
   get busy() { return !!this.pending; }
-  private set(patch: Partial<SyncStatus>) { this.status = { ...this.status, ...patch }; if (!this.disposed) this.report(this.status); }
+  private set({ message, level, ...patch }: Patch) {
+    this.status = { ...this.status, ...patch };
+    if (!this.disposed) this.report(this.status, message ? { message, level } : undefined);
+  }
   private dirtyNow = () => serializeDocument(this.source().graph) !== this.confirmed;
 
   // The Editor has a newer document. Sending is serialized; a late acknowledgement only advances
@@ -111,21 +123,30 @@ export class HostSync {
       // A program TD already failed to compile is not sent again until it changes.
       // TD 已編譯失敗的程式，沒改之前不再送。
       const runtime = compiled && key !== this.runtimeKey && key !== this.failedKey ? compiled : undefined;
-      this.set({ phase: 'sending', message: compiled ? '正在套用至 TD…' : '產碼失敗；只把圖存到 TD，TD 繼續執行上次成功的 Shader…' });
+      this.set({ phase: 'sending', level: 'info', message: compiled ? tr('sync.sending', 'Applying to TD…')
+        : tr('sync.sendingGraphOnly', 'Code generation failed; saving only the graph to TD. TD keeps running the last good Shader…') });
       try {
         const result = await this.host.call<Applied>('apply', applyRequest(this.host, this.bootstrap, sent, runtime, this.editorVersion));
         if (this.disposed) return;
-        if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError('宿主回覆與送出快照不一致。');
+        if (result.state?.revision !== sent.revision + 1 || result.state.document !== sent.document) throw new HostError(replyMismatch);
         this.confirmed = sent.document;
-        let message = '已套用 TD；專案尚需保存';
+        let message = tr('sync.applied', 'Applied to TD; the project still needs saving'), level: Level = 'info';
         if (runtime && result.shaderError) {
-          this.failedKey = key;
-          message = 'GLSL 在 TD 編譯失敗：' + result.shaderError + '\n圖已存到 TD，TD 繼續執行上次成功的 Shader。';
+          this.failedKey = key; level = 'error';
+          // The summary first: the status line shows one line, the whole TD log on hover (Refactor.38).
+          // 摘要放第一行：狀態列只顯示一行，滑鼠移上去看完整的 TD 紀錄。
+          message = tr('sync.glslFailedInTd', 'GLSL failed to compile in TD. The graph is saved; TD keeps running the last good Shader.\n{log}',
+            { log: result.shaderError });
         } else if (runtime) {
           this.runtimeKey = key; this.failedKey = null;
-        } else if (!compiled) message = '圖已存到 TD；產碼失敗，TD 仍執行上次成功的 Shader';
-        else if (key === this.failedKey) message = '圖已存到 TD；這個程式先前在 TD 編譯失敗，TD 仍執行上次成功的 Shader。';
-        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message });
+        } else if (!compiled) {
+          level = 'warning';
+          message = tr('sync.savedCodegenFailed', 'Graph saved to TD; code generation failed, so TD still runs the last good Shader');
+        } else if (key === this.failedKey) {
+          level = 'warning';
+          message = tr('sync.savedKnownFailure', 'Graph saved to TD; this program failed to compile in TD before, so TD still runs the last good Shader.');
+        }
+        this.set({ revision: result.state.revision, dirty: this.dirtyNow(), phase: 'ready', message, level });
       } catch (error) {
         if (this.disposed) return;
         this.fail(classify(error), error, sent);
@@ -138,9 +159,12 @@ export class HostSync {
   private fail(failure: Failure, error: unknown, sent?: Sent) {
     this.blocked = failure.phase !== 'error';
     if (sent && (failure.phase === 'uncertain' || (failure.phase === 'offline' && failure.landed))) this.uncertain = sent;
-    this.set(failure.phase === 'offline' ? { phase: 'offline', link: failure.link, message: offlineMessage[failure.link] }
-      : { phase: failure.phase, link: undefined, message: failure.phase === 'conflict' ? conflictMessage
-        : failure.phase === 'uncertain' ? '交付結果不明，已停止自動送出；正在向 TD 確認版本。' + String(error) : 'TD-Grape 拒絕：' + String(error) });
+    const reason = errorText(error);
+    this.set(failure.phase === 'offline' ? { phase: 'offline', link: failure.link, message: offlineMessage[failure.link], level: 'warning' }
+      : { phase: failure.phase, link: undefined, level: failure.phase === 'error' ? 'error' : 'warning',
+        message: failure.phase === 'conflict' ? conflictMessage
+          : failure.phase === 'uncertain' ? tr('sync.uncertain', 'Delivery result unknown; automatic sending stopped while checking the version with TD. {reason}', { reason })
+          : tr('sync.rejected', 'TD-Grape refused: {reason}', { reason }) });
     this.recover();
   }
   // Only while disconnected or unsure, only when the page is visible, never overlapping.
@@ -157,7 +181,7 @@ export class HostSync {
   // 只讀 TD 目前的那一份；建置不一致即拒絕。
   read = async () => {
     const result = await this.host.call<StateResponse>('state');
-    if (result.frontendCompiler.catalogHash !== this.bootstrap.catalogHash) throw Error('宿主版本已變更，請下載草稿後重新開啟。');
+    if (result.frontendCompiler.catalogHash !== this.bootstrap.catalogHash) throw new TextError(hostChanged);
     return result;
   };
   // Read-only: never resends a write by itself. A matching TD document resumes delivery (Q6).
@@ -169,23 +193,23 @@ export class HostSync {
     catch (error) {
       if (this.disposed) return;
       const failure = classify(error);
-      if (failure.phase === 'offline') this.set({ phase: 'offline', link: failure.link, message: offlineMessage[failure.link] });
-      else this.set({ message: error instanceof Error ? error.message : String(error) });
+      if (failure.phase === 'offline') this.set({ phase: 'offline', link: failure.link, message: offlineMessage[failure.link], level: 'warning' });
+      else this.set({ level: 'warning', message: tr('sync.checkFailed', 'Could not check TD: {reason}', { reason: errorText(error) }) });
       return;
     }
     if (this.disposed) return;
     if (result.frontendCompiler.catalogHash !== this.bootstrap.catalogHash) {
-      this.blocked = true; this.set({ phase: 'error', link: undefined, message: '宿主版本已變更，請下載草稿後重新開啟。' }); return;
+      this.blocked = true; this.set({ phase: 'error', link: undefined, message: hostChanged, level: 'error' }); return;
     }
     const state = result.state, sent = this.uncertain;
     if (sent && state.revision === sent.revision + 1 && state.document === sent.document) this.confirmed = sent.document;
     else if (state.revision !== this.status.revision || state.document !== this.confirmed) {
-      this.blocked = true; this.set({ phase: 'conflict', link: undefined, message: conflictMessage }); return;
+      this.blocked = true; this.set({ phase: 'conflict', link: undefined, message: conflictMessage, level: 'warning' }); return;
     }
     this.blocked = false; this.uncertain = undefined;
     const dirty = this.dirtyNow();
     this.set({ revision: state.revision, dirty, phase: 'ready', link: undefined,
-      message: dirty ? '已恢復連線，正在送出修改。' : '已恢復連線。' });
+      level: 'info', message: dirty ? tr('sync.reconnectedSending', 'Reconnected; sending your changes.') : tr('sync.reconnected', 'Reconnected.') });
     if (dirty) await this.flush();
   };
   // Conflict choice "TD 端": the Editor adopted TD's document; nothing is left to send.
@@ -205,16 +229,17 @@ export class HostSync {
     this.runtimeKey = null; this.failedKey = null; // TD's program was written elsewhere; send ours
     const dirty = this.dirtyNow();
     this.set({ revision: result.state.revision, dirty, phase: 'ready',
-      message: dirty ? '以編輯器草稿覆寫 TD…' : '草稿與 TD 文件相同，已同步。' });
+      level: 'info', message: dirty ? tr('sync.overwriting', "Overwriting TD with the editor's draft…")
+        : tr('sync.draftMatchesTd', "The draft matches TD's graph; in sync.") });
     await this.flush();
   };
   save = async () => {
     await this.flush();
-    if (this.status.dirty || this.blocked) throw Error('尚有未成功套用的修改；請先處理錯誤。');
+    if (this.status.dirty || this.blocked) throw new TextError(tr('save.pending', 'Some changes have not been applied yet; resolve the errors first.'));
     const result = await this.host.call<{ saved: boolean | string }>('save', {});
-    if (!result.saved) throw Error('TD 未確認專案保存成功；已套用的圖仍在宿主記憶體中。');
-    return 'TD 專案已保存' + (typeof result.saved === 'string' ? '：' + result.saved : '') +
-      (this.status.dirty ? '（仍有新修改待套用）' : '');
+    if (!result.saved) throw new TextError(tr('save.notConfirmed', "TD did not confirm that the project was saved; the applied graph is only in TD's memory."));
+    if (this.status.dirty) return tr('save.donePending', 'TD project saved; new changes are still waiting to be applied.');
+    return typeof result.saved === 'string' ? tr('save.done', 'TD project saved: {file}', { file: result.saved }) : tr('save.doneUnnamed', 'TD project saved');
   };
   dispose() { this.disposed = true; clearTimeout(this.timer); clearTimeout(this.recovery); }
 }

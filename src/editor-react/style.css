@@ -52,7 +52,7 @@ input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100
 .spare-row .react-flow__handle { border-style: dashed; background: transparent; }
 .spare-row.full { opacity: .5; }
 /* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
-.status.offline { color: #f2cf86; }
+.status.offline, .status.warning { color: #f2cf86; }
 .recovery-help { font-size: 12px; max-width: 520px; } .recovery-help summary { cursor: pointer; }
 main { position: relative; }
 .conflict-float { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10;

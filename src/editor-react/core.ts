@@ -6,6 +6,7 @@ import type { createEditorContract } from '../core-ts/editor_contract';
 import type { Graph as GraphData, formatProblem } from '../core-ts/model';
 import type * as capacity from '../core-ts/capacity';
 import type * as structure from '../core-ts/structure';
+import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
 // 只接入既有生成核心；型別引用不把另一份 registry／compiler 打進 React bundle。
@@ -35,7 +36,7 @@ export type Bootstrap = {
 
 // The graph is valid but outside this slice; the only startup error that offers a reset.
 // 圖本身有效但超出本輪範圍；只有這種開啟錯誤提供「載入預設圖」。
-export class UnsupportedGraphError extends Error {}
+export class UnsupportedGraphError extends TextError {}
 
 // Slice coverage, not a second node registry. Expand with verified product cases.
 // 集中記錄本輪已接管能力；節點規則／選項仍只由真正的模組提供。
@@ -63,37 +64,46 @@ export function requireSupported(graph: graph.GraphDocument['document']) {
   // Format first (Q44): a newer version is never written back, so no reset is offered for it.
   // 先看格式：比目前新的版本不寫回，所以不提供換成預設圖。
   const problem = core.formatProblem(graph);
-  if (problem?.code === 'newer-version') throw Error('這張圖由較新版的 Grape 存檔，請更新 Grape 後再編輯。為了不弄丟新版的資料，這裡不會寫回。\n' + problem.message);
-  if (problem?.code === 'not-grape-graph') throw new UnsupportedGraphError('這張圖不是新格式（grape-graph）。舊格式的圖之後由匯入器處理，新編輯器不直接打開。\n' + problem.message);
-  if (problem) throw new UnsupportedGraphError('圖的資料不完整或格式錯誤，沒有打開。\n' + problem.message);
+  if (problem?.code === 'newer-version') throw new TextError(tr('open.newerVersion',
+    'This graph was saved by a newer Grape. Update Grape before editing; to keep the newer data safe, nothing is written back.\n{detail}',
+    { detail: problem.message }));
+  if (problem?.code === 'not-grape-graph') throw new UnsupportedGraphError(tr('open.notGrapeGraph',
+    'This graph is not in the new format (grape-graph). Old graphs will be handled by an importer; the new editor does not open them.\n{detail}',
+    { detail: problem.message }));
+  if (problem) throw new UnsupportedGraphError(tr('open.badGraph', 'The graph data is incomplete or malformed, so it was not opened.\n{detail}',
+    { detail: problem.message }));
   const reasons = unsupportedReasons(graph);
   if (reasons.length) {
-    const shown = reasons.length > 8 ? [...reasons.slice(0, 8), `…另有 ${reasons.length - 8} 項`] : reasons;
-    throw new UnsupportedGraphError('此入口目前支援 TOP 的常用節點（不含 Uniform、子圖、Frame 等）。未送出編輯或套用；這些內容會在之後的進度加回。\n' +
-      '不支援的內容：\n' + shown.map(reason => '・' + reason).join('\n'));
+    const shown = reasons.length > 8 ? [...reasons.slice(0, 8), tr('open.reasonMore', '…and {count} more', { count: reasons.length - 8 })] : reasons;
+    throw new UnsupportedGraphError(tr('open.unsupported',
+      'This entry supports the common TOP nodes (no Uniforms, subgraphs or Frames yet). Nothing was edited or applied; these will come back in later rounds.\nNot supported: {reasons}',
+      { reasons: shown }));
   }
 }
 
 // Name what blocks the slice so the user knows where to look; never edits the graph.
 // 列出擋下的具體項目（節點／宣告／子圖…），只描述、不修改圖。
-function unsupportedReasons(graph: graph.GraphDocument['document']): string[] {
-  if (graph.target !== 'top') return [`target ${graph.target}`];
-  const reasons: string[] = [];
-  if (!Array.isArray(graph.declarations)) reasons.push('宣告清單格式不正確');
-  else for (const declaration of graph.declarations) reasons.push(`${declaration.kind === 'uniform' ? 'Uniform' : declaration.kind} 宣告「${declaration.name}」`);
-  if (graph.subgraphs?.length) reasons.push(`子圖 ${graph.subgraphs.length} 個`);
-  for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(`${stage} 階段`);
+function unsupportedReasons(graph: graph.GraphDocument['document']): Message[] {
+  if (graph.target !== 'top') return [tr('open.reasonTarget', 'target {target}', { target: String(graph.target) })];
+  const reasons: Message[] = [];
+  if (!Array.isArray(graph.declarations)) reasons.push(tr('open.reasonDeclarations', 'the declaration list is malformed'));
+  else for (const declaration of graph.declarations) reasons.push(tr('open.reasonDeclaration', '{kind} declaration “{name}”',
+    { kind: declaration.kind === 'uniform' ? 'Uniform' : String(declaration.kind), name: String(declaration.name) }));
+  if (graph.subgraphs?.length) reasons.push(tr('open.reasonSubgraphs', '{count} subgraphs', { count: graph.subgraphs.length }));
+  for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(tr('open.reasonStage', '{stage} stage', { stage }));
   const pixel = graph.stages.pixel;
-  if (!pixel) return [...reasons, '缺少 pixel 階段'];
+  if (!pixel) return [...reasons, tr('open.reasonNoPixel', 'no pixel stage')];
   const frames = pixel.ui?.frames;
-  if (Array.isArray(frames) && frames.length > 0) reasons.push(`框架（Frame）${frames.length} 個`);
+  if (Array.isArray(frames) && frames.length > 0) reasons.push(tr('open.reasonFrames', '{count} Frames', { count: frames.length }));
   for (const node of pixel.nodes) if (!supportedDefinitions.includes(node.nodeType)) {
-    reasons.push(`${node.nodeType.replace(/^sgrape\.builtin\./, '')} 節點${node.name ? `「${node.name}」` : ''}（${node.id}）`);
+    const type = node.nodeType.replace(/^sgrape\.builtin\./, '');
+    reasons.push(node.name ? tr('open.reasonNamedNode', '{type} node “{name}” ({id})', { type, name: node.name, id: node.id })
+      : tr('open.reasonNode', '{type} node ({id})', { type, id: node.id }));
   }
   // Size is not "unsupported": an over-limit graph opens with a warning and only growth is blocked.
   // 大小不算「不支援」：超過上限的圖照樣打開並警告，只擋變大。
   if (!reasons.length && !compiler.supports(graph) && !core.overLimit(graph, core.registry).length
-    && !core.structureProblems(graph, core.registry).length) reasons.push('前端 compiler 無法處理這張圖');
+    && !core.structureProblems(graph, core.registry).length) reasons.push(tr('open.reasonCompiler', 'the frontend compiler cannot handle this graph'));
   return reasons;
 }
 

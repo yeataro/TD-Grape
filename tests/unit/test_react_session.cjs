@@ -14,8 +14,9 @@ function load(file) {
   const module = { exports: {} }; cache.set(file, module);
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new Function('require', 'module', 'exports', code)(name => name.startsWith('.')
-    ? load(path.resolve(path.dirname(file), name + '.ts')) : require(name), module, module.exports);
+  new Function('require', 'module', 'exports', code)(name => name.endsWith('.json')
+    ? (data => ({ default: data, ...data }))(JSON.parse(fs.readFileSync(path.resolve(path.dirname(file), name), 'utf8'))) // as the bundler gives it
+    : name.startsWith('.') ? load(path.resolve(path.dirname(file), name + '.ts')) : require(name), module, module.exports);
   return module.exports;
 }
 const { Editor: EditorSession, spareHandle } = load(path.join(root, 'src/editor-react/editor.ts'));
@@ -23,6 +24,9 @@ const { resetToDefault } = load(path.join(root, 'src/editor-react/host_sync.ts')
 const { UnsupportedGraphError } = load(path.join(root, 'src/editor-react/core.ts'));
 const { HostClient } = load(path.join(root, 'src/editor-react/host.ts'));
 const { needsHandleUpdate } = load(path.join(root, 'src/editor-react/geometry.ts'));
+// Messages are data worded at display time (Q34); tests read them the way a zh-Hant page shows them.
+const { localize, errorText, chooseLanguage, tr } = load(path.join(root, 'src/editor-react/text.ts'));
+const zh = message => localize(message, 'zh-Hant');
 const bootstrap = JSON.parse(fs.readFileSync(path.join(root, 'src/generated/editor-bootstrap.json')));
 const clone = value => JSON.parse(JSON.stringify(value));
 const target = '1'.repeat(32);
@@ -240,7 +244,7 @@ test('failed code generation still saves the document; TD keeps the last known g
   await session.flush();
   assert.equal(calls.length, 1); assert.equal(calls[0].body.runtime, null);
   assert.deepEqual(JSON.parse(calls[0].body.document), clone(session.graph()));
-  assert.equal(session.snapshot().dirty, false); assert.match(session.snapshot().message, /產碼失敗/);
+  assert.equal(session.snapshot().dirty, false); assert.match(zh(session.snapshot().message), /產碼失敗/);
   generator.fail = false; session.history(false); await session.flush();
   assert.equal(calls.length, 2); assert.notEqual(calls[1].body.runtime, null);
 });
@@ -258,15 +262,19 @@ test('GLSL that fails in TD: the graph is delivered, the failing program is not 
   session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
   assert.notEqual(calls.at(-1).body.runtime, null);
   assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, 5);
-  assert.match(session.snapshot().message, /GLSL 在 TD 編譯失敗：ERROR: 0:12: syntax error[\s\S]*圖已存到 TD/);
-  assert.doesNotMatch(session.snapshot().message, /拒絕/);
+  // The summary is the first line (the status line shows it); TD's log follows. 摘要在第一行，TD 紀錄在後。
+  assert.match(zh(session.snapshot().message), /^GLSL 在 TD 編譯失敗。圖已存到 TD[^\n]*\nERROR: 0:12: syntax error$/);
+  assert.equal(session.snapshot().level, 'error');
+  const failed = session.log.entries().at(-1);
+  assert.deepEqual([failed.level, failed.source, failed.message.code], ['error', 'sync', 'sync.glslFailedInTd']);
+  assert.doesNotMatch(zh(session.snapshot().message), /拒絕/);
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 300, y: 90 }, dragging: false }]); await session.flush();
   assert.equal(calls.at(-1).body.runtime, null, 'same failing program: graph only');
-  assert.match(session.snapshot().message, /先前在 TD 編譯失敗/);
+  assert.match(zh(session.snapshot().message), /先前在 TD 編譯失敗/);
   failing = false;
   session.transact('value', net => setValue(net, 'a', 4)); await session.flush();
   assert.notEqual(calls.at(-1).body.runtime, null, 'a changed program is sent again');
-  assert.equal(session.snapshot().message, '已套用 TD；專案尚需保存');
+  assert.equal(zh(session.snapshot().message), '已套用 TD；專案尚需保存');
   session.nodeChanges([{ type: 'position', id: 'a', position: { x: 320, y: 90 }, dragging: false }]); await session.flush();
   assert.equal(calls.at(-1).body.runtime, null, 'now running: layout only again');
 });
@@ -276,26 +284,26 @@ test('a host refusal names TD-Grape, not TD', async t => {
     : new Response(JSON.stringify({ error: 'target mismatch' }), { status: 422 }));
   session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
   assert.equal(session.snapshot().phase, 'error');
-  assert.match(session.snapshot().message, /^TD-Grape 拒絕：/);
+  assert.match(zh(session.snapshot().message), /^TD-Grape 拒絕：/);
 });
 
 test('wrong producer and out-of-slice graphs reject without changing the host', t => {
   const { session, calls, loaded } = open(t), state = loaded();
   state.frontendCompiler.catalogHash = 'other';
-  assert.throws(() => new EditorSession(session.host, bootstrap, state), /版本不一致/);
+  assert.throws(() => new EditorSession(session.host, bootstrap, state), error => /版本不一致/.test(zh(errorText(error))));
   const unsupported = loaded(); withDoc(unsupported.state, graph => { graph.subgraphs = [{ id: 'unknown', graph: { nodes: [], edges: [] } }]; });
-  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), /此入口目前支援[\s\S]*子圖 1 個/);
+  assert.throws(() => new EditorSession(session.host, bootstrap, unsupported), error => /此入口目前支援[\s\S]*子圖 1 個/.test(zh(errorText(error))));
   // Leftover Uniform from the legacy entry: the message names both the declaration and the node.
   const uniform = loaded(); withDoc(uniform.state, graph => {
     graph.declarations = [{ id: 'u1', kind: 'uniform', name: 'uValue', type: 'float', value: 0 }];
     graph.stages.pixel.nodes = [...graph.stages.pixel.nodes, { id: 'nu', nodeType: 'sgrape.builtin.uniform', params: { declarationId: 'u1' } }];
   });
-  assert.throws(() => new EditorSession(session.host, bootstrap, uniform), /Uniform 宣告「uValue」[\s\S]*uniform 節點（nu）/);
+  assert.throws(() => new EditorSession(session.host, bootstrap, uniform), error => /Uniform 宣告「uValue」[\s\S]*uniform 節點（nu）/.test(zh(errorText(error))));
   // Format (Q44): an old document offers the reset; a newer one never does, so nothing is written back.
   const old = loaded(); withDoc(old.state, graph => { delete graph.format; graph.schemaVersion = 1; });
-  assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(error.message));
+  assert.throws(() => new EditorSession(session.host, bootstrap, old), error => error instanceof UnsupportedGraphError && /不是新格式/.test(zh(errorText(error))));
   const newer = loaded(); withDoc(newer.state, graph => { graph.version = 2; });
-  assert.throws(() => new EditorSession(session.host, bootstrap, newer), error => !(error instanceof UnsupportedGraphError) && /較新版的 Grape/.test(error.message));
+  assert.throws(() => new EditorSession(session.host, bootstrap, newer), error => !(error instanceof UnsupportedGraphError) && /較新版的 Grape/.test(zh(errorText(error))));
   assert.equal(calls.length, 0);
 });
 
@@ -357,7 +365,7 @@ test('invalid restored draft remains rejected without replacing the current docu
 
 test('a false save response never claims the TD project was saved', async t => {
   const { session } = open(t, async () => ({ saved: false }));
-  await session.save(); assert.match(session.snapshot().message, /未確認專案保存成功/);
+  await session.save(); assert.match(zh(session.snapshot().message), /未確認專案保存成功/);
 });
 
 // Module-declared spare input (Math). The module owns command, key, type and limit.
@@ -420,7 +428,7 @@ test('TD not responding: editing continues, nothing replays, recovery resends au
   }, 20);
   session.transact('edit', net => setValue(net, 'a', 5)); await session.flush();
   assert.equal(session.snapshot().phase, 'offline'); assert.equal(session.snapshot().link, 'busy');
-  assert.match(session.snapshot().message, /TD 沒有回應（可能最小化）/);
+  assert.match(zh(session.snapshot().message), /TD 沒有回應（可能最小化）/);
   session.transact('more', net => setValue(net, 'b', 6));
   assert.equal(valueOf(session, 'b'), 6, 'editing is not blocked while TD is away');
   await session.flush(); assert.equal(applies.length, 0, 'no write while offline');
@@ -443,7 +451,7 @@ test('TD changed while away: conflict; TD side is adopted and one Undo recalls t
   const draft = clone(session.graph());
   down = false;
   await until(() => session.snapshot().phase === 'conflict');
-  assert.match(session.snapshot().message, /似乎有被修改/);
+  assert.match(zh(session.snapshot().message), /似乎有被修改/);
   assert.deepEqual(clone(session.graph()), draft, 'conflict never replaces the editor document');
   await session.useRemote();
   assert.deepEqual(clone(session.graph()), doc(loaded().state));
@@ -511,7 +519,7 @@ test('legacy fixed-type Vector opens and keeps its locked type', t => {
   assert.ok(before.stages.pixel.nodes.some(n => n.id === 'fv'));
   session.configure('fv', 'vec3');
   assert.deepEqual(clone(session.graph()), before, 'locked type is not changed');
-  assert.match(session.snapshot().message, /Fixed node type|Invalid manual type/);
+  assert.match(zh(session.snapshot().message), /Fixed node type|Invalid manual type/);
 });
 
 // Path rebuild A1 (design-interview Q38): code generation follows each finished edit, not delivery.
@@ -537,7 +545,7 @@ test('TD away: GLSL and code generation errors still update while sending is sto
 test('a code generation failure is reported at edit time; the last good GLSL stays visible', t => {
   const generator = flaky(), { session, calls } = open(t, undefined, 60000, generator), good = session.snapshot().glsl;
   generator.fail = true; session.transact('value', net => setValue(net, 'a', 7));
-  assert.match(session.snapshot().message, /產碼失敗/);
+  assert.match(zh(session.snapshot().message), /產碼失敗/);
   assert.equal(session.snapshot().glsl, good);
   assert.equal(calls.length, 0);
 });
@@ -573,10 +581,10 @@ test('an over-limit graph opens with a warning; growth is refused with a message
   const { session: probe, loaded } = open(t), big = loaded();
   withDoc(big.state, graph => { for (let i = 0; i < 260; i++) graph.stages.pixel.nodes.push(makeNode('f' + i, 'float')); });
   const session = new EditorSession(probe.host, bootstrap, big, 60000, 60000); t.after(() => session.dispose());
-  assert.match(session.snapshot().message, /^警告：這張圖超過上限/);
+  assert.match(zh(session.snapshot().message), /^警告：這張圖超過上限/);
   const before = clone(session.graph());
   session.add('sgrape.builtin.float', { x: 0, y: 0 });
-  assert.match(session.snapshot().message, /已達上限，這次修改沒有套用：每層節點 \d+／256/);
+  assert.match(zh(session.snapshot().message), /已達上限，這次修改沒有套用：每層節點 \d+／256/);
   assert.deepEqual(clone(session.graph()), before);
   session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'f0'), edges: [] });
   assert.equal(session.graph().stages.pixel.nodes.length, before.stages.pixel.nodes.length - 1);
@@ -596,7 +604,7 @@ test('Delete skips Color Output and its unselected wires; the rest is deleted in
   const ids = session.graph().stages.pixel.nodes.map(n => n.id);
   assert.ok(ids.includes('pixel_out') && !ids.includes('b'));
   assert.ok(session.graph().stages.pixel.edges.some(e => e.to[0] === 'pixel_out'), 'its wire stays');
-  assert.match(session.snapshot().message, /Color Output 不能刪除/);
+  assert.match(zh(session.snapshot().message), /Color Output 不能刪除/);
   session.history(false); assert.deepEqual(clone(session.graph()), before);
 });
 
@@ -604,20 +612,53 @@ test('deleting only Color Output changes nothing and says why; the core refuses 
   const { session } = open(t), before = clone(session.graph());
   const out = session.snapshot().projection.nodes.filter(n => n.id === 'pixel_out');
   const allowed = await session.beforeDelete({ nodes: out, edges: [] });
-  assert.equal(allowed.nodes.length, 0); assert.match(session.snapshot().message, /^Color Output 不能刪除$/);
+  assert.equal(allowed.nodes.length, 0); assert.match(zh(session.snapshot().message), /^Color Output 不能刪除$/);
   session.remove({ nodes: out, edges: [] }); // bypassing the UI filter: the core gate refuses
   assert.deepEqual(clone(session.graph()), before);
-  assert.match(session.snapshot().message, /沒有套用：圖裡必須有一個 Color Output/);
+  assert.match(zh(session.snapshot().message), /沒有套用：圖裡必須有一個 Color Output/);
 });
 
 test('a graph with two Color Outputs opens with a warning; a third is refused; removing one repairs it', t => {
   const { session: probe, loaded } = open(t), broken = loaded();
   withDoc(broken.state, graph => graph.stages.pixel.nodes.push({ id: 'second', nodeType: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
   const session = new EditorSession(probe.host, bootstrap, broken, 60000, 60000); t.after(() => session.dispose());
-  assert.match(session.snapshot().message, /^警告：這張圖不符合結構規則.*Color Output 只能有一個（目前 2 個）/);
+  assert.match(zh(session.snapshot().message), /^警告：這張圖不符合結構規則.*Color Output 只能有一個（目前 2 個）/);
   const before = clone(session.graph());
   session.transact('third', net => net.insert({ id: 'third', nodeType: 'sgrape.builtin.pixel_out', params: {}, ui: { x: 0, y: 0 } }));
-  assert.deepEqual(clone(session.graph()), before); assert.match(session.snapshot().message, /目前 3 個/);
+  assert.deepEqual(clone(session.graph()), before); assert.match(zh(session.snapshot().message), /目前 3 個/);
   session.remove({ nodes: session.snapshot().projection.nodes.filter(n => n.id === 'second'), edges: [] });
   assert.equal(session.graph().stages.pixel.nodes.filter(n => n.nodeType === 'sgrape.builtin.pixel_out').length, 1);
+});
+
+// Localization skeleton and reports (Refactor.38; design-interview Q34, Q35).
+// 在地化骨架與回報：沒設定語言跟著瀏覽器；缺翻譯顯示英文原文、永不顯示代號；紀錄不重複、有來源。
+test('language: a chosen one wins, else the browser language when supported, else English', () => {
+  assert.equal(chooseLanguage('en', ['zh-TW']), 'en');
+  assert.equal(chooseLanguage('zh-Hant', ['en-US']), 'zh-Hant');
+  assert.equal(chooseLanguage(null, ['zh-TW', 'en']), 'zh-Hant');
+  assert.equal(chooseLanguage(null, ['fr-FR', 'zh-HK']), 'zh-Hant');
+  assert.equal(chooseLanguage(null, ['zh-CN']), 'en');
+  assert.equal(chooseLanguage('ja', ['ja-JP']), 'en');
+  assert.equal(chooseLanguage(undefined, []), 'en');
+});
+
+test('a message shows its translation, else its English original, never its code', () => {
+  assert.equal(localize(tr('sync.applied', 'Applied to TD; the project still needs saving'), 'zh-Hant'), '已套用 TD；專案尚需保存');
+  assert.equal(localize(tr('toolbar.undo', 'Undo'), 'zh-Hant'), 'Undo', 'an empty translation shows English');
+  assert.equal(localize(tr('nowhere.unknown', 'Only English'), 'zh-Hant'), 'Only English');
+  const limits = [tr('limit.measure', '{name} {value}/{limit}', { name: tr('limit.nodesPerNetwork', 'nodes per network'), value: 300, limit: 256 }),
+    tr('limit.measure', '{name} {value}/{limit}', { name: tr('limit.edgesPerNetwork', 'wires per network'), value: 2, limit: 1 })];
+  const message = tr('limit.reached', 'Limit reached; this change was not applied: {limits}', { limits });
+  assert.equal(localize(message, 'en'), 'Limit reached; this change was not applied: nodes per network 300/256, wires per network 2/1');
+  assert.equal(localize(message, 'zh-Hant'), '已達上限，這次修改沒有套用：每層節點 300／256、每層接線 2／1');
+});
+
+test('each report is logged once, with its source; status updates without news add nothing', async t => {
+  const { session } = open(t);
+  const before = session.log.entries().length;
+  session.transact(tr('edit.valueChanged', 'Value updated; waiting to apply'), net => setValue(net, 'a', 4));
+  await session.flush();
+  const added = session.log.entries().slice(before).map(report => report.source + ':' + report.message.code);
+  assert.deepEqual(added, ['editor:edit.valueChanged', 'sync:sync.sending', 'sync:sync.applied']);
+  assert.ok(session.log.entries().every(report => typeof report.time === 'number'));
 });

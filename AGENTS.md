@@ -89,6 +89,7 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
 - **框架耦合（design-interview Q29）**：要的是需求，不是框架的某個功能——React Flow 合用就用、不合用就自己做，它不在了我們仍能自己做；作品、規則、節點永遠在 Grape。判斷問「這是誰需要的？」只有畫面需要的留畫面。RF 掛勾只問核心不自己判斷；不用 `useNodesState`、`addEdge`、`toObject` 存檔。mapping 保持單向、薄，需要大量特例就先檢查設計。**舊產品是功能基準，不是模仿對象**：參照它「需要什麼」，不照抄「怎麼做」；所需概念核心未定義時，屬核心的先在核心定義，不在畫面將就。
 - **新抽象必須有當輪真實 caller**；不建 event bus、diff 系統或治理平台。
 - **產品程式只在 `src/`**；檔案位置記在 `src/td/source_files.json`；Manager 的 DAT 由 `tools/jobs/install_native_manager.py` 從 repo 寫入。
+- **介面文字（design-interview Q34）**：編輯器給人看的文字一律寫 `tr('區域.項目', 'English original', 參數)`（`src/core-ts/text.ts`），顯示那一刻才 `say()`；代號與原文完整寫出、不拼接，變動的部分放參數。中文寫在 `src/editor-react/locales/zh-Hant.json`（空白＝顯示英文）；改了訊息跑 `node tools/dev/locales.cjs --write`。要告訴人的事經 `ReportLog`（Q35）。節點文字另排（Q34 補充）。
 - **註解**：新寫或改到的程式碼用精簡「英文摘要＋繁中說明」，範例 `src/core-ts/values.ts`；不全面追補舊程式。
 - **證據**：自動測試或網路替身不能當真實 TD 證據；未驗證就寫未驗證；區分已證實與推測。
 - **根目錄 Markdown** 只放 README、AGENTS.md、CLAUDE.md。產品版本只能向前。

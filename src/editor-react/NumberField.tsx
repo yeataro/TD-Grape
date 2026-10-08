@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ladderLayout, ladderPosition, ladderReadoutPosition, moveLadder, type LadderMotion } from './valueLadder';
+import { tr, say } from './text';
 
 type Ladder = LadderMotion & {
   initialDraft: string;
@@ -131,7 +132,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
   return <>
     <input ref={input} className="number nodrag nowheel nopan" aria-label={label} aria-invalid={!!error}
       aria-describedby={active ? tooltipId : undefined}
-      title={error || (active ? undefined : '中鍵／Alt＋右鍵：列表內上下選級距，移出左右邊界後調值。放開套用，Esc 取消。鍵盤：Alt＋L，方向鍵，Enter。')}
+      title={error || (active ? undefined : say(tr('number.ladderHelp', 'Middle button / Alt+right button: move up and down the list to pick a step, then past its left or right edge to change the value. Release to apply, Esc to cancel. Keyboard: Alt+L, arrow keys, Enter.')))}
       inputMode="decimal"
       value={draft} onChange={event => setDraft(event.target.value)}
       onPointerDown={pointerDown}
@@ -149,7 +150,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
           setError('');
           setDraft(String(next));
           if (next !== value) commit(next);
-        } else { setError('請輸入有限數值'); setDraft(String(value)); }
+        } else { setError(say(tr('number.notFinite', 'Enter a finite number'))); setDraft(String(value)); }
       }}
       onKeyDown={event => {
         event.stopPropagation();
