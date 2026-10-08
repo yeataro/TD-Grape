@@ -11,7 +11,7 @@
   - 同名的列在另一頁（Colors／Vectors）：套用前拒絕並說明（`check_rows`，原 `check_renames`）。
   - 同一步互換兩個名字：先找齊要改名的列再改。
 - **實機時發現**：第一版寫成「改名撞到別的列就拒絕」，但新 Uniform 一建立就有 `uniform1` 那一列，要用 TD 上那列的名字只能靠改名——等於擋掉接手。改成改名也接手。
-- **驗證**：Python 62（新：接手、改名接手、另一頁拒絕、互換名字）、core 140、editor 52。真實 TD＋內建瀏覽器（暫時的 Grape OP，測完已刪）：在 TD 手動加 `uFoo`（X expression、Y 0.7）與 `uBar`；編輯器新增 Uniform 改名 `uFoo` → TD 留下使用者那列（expression 與 0.7 都在）、`uniform1` 那列拿掉，編輯器顯示藍色 Expression 與提醒「uFoo 使用了 GLSL OP 上已有的那一列，它的值和驅動都保留」；顏色 Uniform 改名 `uBar` → 「TD-Grape 拒絕：The Vectors page of the GLSL OP already has a row named uBar…」，TD 不變；改名 `uPaint` → 恢復同步。TD 已載入新版（`DevMode()`、Manager 重裝）；**TOE 沒存**（同 48.1）。
+- **驗證**：Python 62（新：接手、改名接手、另一頁拒絕、互換名字）、core 140、editor 52。真實 TD＋內建瀏覽器（暫時的 Grape OP，測完已刪）：在 TD 手動加 `uFoo`（X expression、Y 0.7）與 `uBar`；編輯器新增 Uniform 改名 `uFoo` → TD 留下使用者那列（expression 與 0.7 都在）、`uniform1` 那列拿掉，編輯器顯示藍色 Expression 與提醒「uFoo 使用了 GLSL OP 上已有的那一列，它的值和驅動都保留」；顏色 Uniform 改名 `uBar` → 「TD-Grape 拒絕：The Vectors page of the GLSL OP already has a row named uBar…」，TD 不變；改名 `uPaint` → 恢復同步。人類測完後 Deliver：網頁資產打包進 VFS（含 48.1 的面板寬度），存 `TD-Grape-dev.86`。
 
 ## Refactor.48.1 — 共用來源面板加寬 — 2026-10-09
 
