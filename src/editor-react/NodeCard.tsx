@@ -28,7 +28,7 @@ function ColorField({ value, label, commit }: { value: string; label: string; co
     value={draft} onInput={event => setDraft(event.currentTarget.value)} onChange={() => {}} />;
 }
 
-function ValueFields({ value, type, label, names = 'XYZW', color = false, commit }: {
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
 }) {
   const count = core.values.count(type), family = core.values.family(type);
@@ -102,6 +102,8 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
     <div className="node-body node-drag-surface">
       <div className="ghost-note">{say(data.ghost === 'misplaced'
         ? tr('ghost.misplaced', '{type} cannot be used here. Kept as it is, left out of the shader.', { type: authored.nodeType })
+        : data.ghost === 'missing'
+        ? tr('ghost.missing', 'The shared source it points to no longer exists. Kept as it is, left out of the shader.')
         : tr('ghost.unknown', 'This version does not understand {type}. Kept as it is, left out of the shader.', { type: authored.nodeType }))}</div>
       {inputs.map(port => <div className="port-row input-row" key={port.key}>
         <Handle type="target" position={Position.Left} id={port.key} isConnectable={false} aria-label={`${id} input ${port.key}`} />

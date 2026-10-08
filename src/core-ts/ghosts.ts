@@ -10,7 +10,8 @@ import type { Edge as EdgeData } from './model';
  *   Code generation treats it as not connected, so that input uses its own value.
  * Ghost：這個版本用不了的東西原樣保留、標示出來、不參與產碼；不刪、不改接、也不因此拒絕整張圖。
  * Ghost 線在產碼時當作沒接，該輸入用它沒接線時本來的值。 */
-export type GhostKind = 'unknown' | 'misplaced';
+// missing: a reference to a declaration that no longer exists (Q45). 引用的宣告已不存在。
+export type GhostKind = 'unknown' | 'misplaced' | 'missing';
 export interface Ghosts {
   readonly nodes: ReadonlyMap<string, GhostKind>;
   readonly edges: ReadonlySet<string>;
@@ -24,13 +25,15 @@ export function ghostsOf(network: Network, policy: ConnectionPolicy): Ghosts {
   const stage = network.id.startsWith('function:') ? undefined : network.id;
   for (const node of network.nodes) {
     const data = node.data!, module = node.definition;
+    const referred = module?.referencedDeclaration?.(data);
     if (!module) nodes.set(node.id, 'unknown');
     else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage)) nodes.set(node.id, 'misplaced');
+    // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
+    else if (referred !== undefined && !stage) nodes.set(node.id, 'misplaced');
+    else if (referred !== undefined && !network.context.declaration(referred)) nodes.set(node.id, 'missing');
     else if (!module.supports(data, network.context)) nodes.set(node.id, 'unknown');
     else {
-      // Ports that cannot be worked out (e.g. a reference to a declaration that is gone, Q45)
-      // make it a ghost too; the declarations round will name that case on its own.
-      // 算不出接孔（例如引用的宣告不見了）也是 Ghost；宣告那一輪再單獨標示這種情況。
+      // Ports that cannot be worked out make it a ghost too. 算不出接孔也是 Ghost。
       try { void node.interface; } catch { nodes.set(node.id, 'unknown'); }
     }
   }

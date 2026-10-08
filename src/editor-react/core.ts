@@ -7,6 +7,7 @@ import type { Graph as GraphData, formatProblem } from '../core-ts/model';
 import type * as capacity from '../core-ts/capacity';
 import type * as structure from '../core-ts/structure';
 import type * as ghosts from '../core-ts/ghosts';
+import type * as declarations from '../core-ts/declarations';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -15,7 +16,11 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   registry: modules.Registry; values: typeof values; overLimit: typeof capacity.overLimit;
   structureProblems: typeof structure.structureProblems; offered: typeof structure.offered; removable: typeof structure.removable;
   formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf;
+  declarationKinds: typeof declarations.declarationKinds; declarationNameProblem: typeof declarations.declarationNameProblem;
+  freeDeclarationName: typeof declarations.freeDeclarationName;
 };
+export type { NameProblem } from '../core-ts/declarations';
+export type { Declaration } from '../core-ts/model';
 export type { GhostKind } from '../core-ts/ghosts';
 export type { Measure } from '../core-ts/capacity';
 export type { StructureProblem } from '../core-ts/structure';
@@ -53,7 +58,13 @@ export const supportedDefinitions = [
   'any', 'all', 'not', 'if', 'isnan', 'isinf',
   // vector and colour structure
   'split', 'vector_split', 'rgba', 'router', 'combine', 'replace', 'swizzle', 'convert',
+  // shared sources (Refactor.40: global constants)
+  'declaration',
 ].map(key => 'sgrape.builtin.' + key);
+// Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
+// not taken over yet (Uniform) still refuse, like known nodes outside the slice.
+// 本入口已接管的宣告種類；不認得的保留（Ghost），認得但未接管的（Uniform）仍拒絕。
+export const supportedKinds = ['constant'];
 // Retired definitions still open old graphs but are not offered for new nodes, as in the
 // legacy creator (TD-Grape-legacy src/editor/functions_ui.js availableEntries). The same
 // value is made with Scalar／Vector (fixed entries to be discussed).
@@ -61,7 +72,10 @@ export const supportedDefinitions = [
 const retired = new Set(['float', 'vec2', 'vec3', 'vec4'].map(key => 'sgrape.builtin.' + key));
 // The core decides what may be added (a stage output such as Color Output never is, Q42).
 // 能不能新增由核心決定（Color Output 這類 stage 出口不提供）。
-export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid) && core.offered(core.registry.get(uuid)!));
+// The reference node is made from the Sources panel, which knows what it points to (Q45).
+// 引用宣告節點由共用來源面板建立（面板知道它指向哪一筆），不在新增選單。
+export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid) && uuid !== 'sgrape.builtin.declaration'
+  && core.offered(core.registry.get(uuid)!));
 export function requireSupported(graph: graph.GraphDocument['document']) {
   // Format first (Q44): a newer version is never written back, so no reset is offered for it.
   // 先看格式：比目前新的版本不寫回，所以不提供換成預設圖。
@@ -89,8 +103,9 @@ function unsupportedReasons(graph: graph.GraphDocument['document']): Message[] {
   if (graph.target !== 'top') return [tr('open.reasonTarget', 'target {target}', { target: String(graph.target) })];
   const reasons: Message[] = [];
   if (!Array.isArray(graph.declarations)) reasons.push(tr('open.reasonDeclarations', 'the declaration list is malformed'));
-  else for (const declaration of graph.declarations) reasons.push(tr('open.reasonDeclaration', '{kind} declaration “{name}”',
-    { kind: declaration.kind === 'uniform' ? 'Uniform' : String(declaration.kind), name: String(declaration.name) }));
+  else for (const declaration of graph.declarations) if (core.declarationKinds.has(declaration.kind) && !supportedKinds.includes(declaration.kind))
+    reasons.push(tr('open.reasonDeclaration', '{kind} declaration “{name}”',
+      { kind: declaration.kind === 'uniform' ? 'Uniform' : String(declaration.kind), name: String(declaration.name) }));
   if (graph.subgraphs?.length) reasons.push(tr('open.reasonSubgraphs', '{count} subgraphs', { count: graph.subgraphs.length }));
   for (const stage of Object.keys(graph.stages)) if (stage !== 'pixel') reasons.push(tr('open.reasonStage', '{stage} stage', { stage }));
   const pixel = graph.stages.pixel;

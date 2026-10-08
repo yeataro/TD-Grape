@@ -15,7 +15,15 @@ const retainArray = <T,>(next: T[], old: T[]) =>
 // GraphChanges 提供候選範圍，RF 外殼留用未變引用；不建立第二份可寫作品。
 // Colour group: a display-only tag (COLOR_SYSTEM.md, design-interview Q42). Derived from behaviour where
 // possible; the core never reads it. 顏色組：只給畫面的 tag；能從行為推的就推，核心永遠不讀。
-const colorGroupOf = (module: { role: string }) => module.role === 'output' ? 'output' : 'function';
+// A reference node takes its colour from the kind of declaration it points to (Q42).
+// 引用宣告節點的顏色來自它指向的宣告種類。
+const colorGroupOf = (module: { role: string; referencedDeclaration?: (node: Node) => string }, node: Node, document: GraphDocument) => {
+  if (module.referencedDeclaration) {
+    const kind = document.document.declarations.find(d => d.id === module.referencedDeclaration!(node))?.kind;
+    return (kind && core.declarationKinds.get(kind)?.colorGroup) || 'function';
+  }
+  return module.role === 'output' ? 'output' : 'function';
+};
 
 export function project(document: GraphDocument, previous: Projection, contract: Bootstrap['typeContract'], changes?: GraphChanges): Projection {
   const network = document.networks.get('pixel')!;
@@ -56,7 +64,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
       const types: string[] = described?.selector === 'parameter'
         ? [...new Set<string>(described.variants.map((row: { type: string | null }) => row.type)
           .filter((type: string | null): type is string => !!type))] : [];
-      const next = { authored, label: module.catalog.definition.label, colorGroup: colorGroupOf(module),
+      const next = { authored, label: module.catalog.definition.label, colorGroup: colorGroupOf(module, authored, document),
         view: module.presentation?.(authored, network.context) ?? {}, types,
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
         connected: connected.get(node.id) ?? [] };

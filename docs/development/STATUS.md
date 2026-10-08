@@ -2,6 +2,17 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.40 — 宣告＋引用宣告節點，第一個種類：全域常數；共用來源面板 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/sources-foundation.md` 第二輪。人類 10-09 確認：引用宣告節點照提案做（design-interview Q45 已補記）；面板選 A（先固定在一側，內容獨立、外面一層殼，Q47 補 5a）。
+
+- **核心** [declarations.ts](../../src/core-ts/declarations.ts)：`kind` 模組（`constant` 全域常數：檔案層級 `const`、不成為綁定；`uniform`：沿用既有路徑），命名規則（GLSL 命名、非保留字、宣告之間不重複）、`addDeclaration`／`changeDeclaration`（改名、改型別時沿用舊值的分量、改值）／`removeDeclaration`（刻意刪除時連同引用它的節點與線一起刪，一次 Undo；Ghost 只給「意外不見」）。`GraphDocument` 上有同名指令，走同一個 `change()` 關卡。
+- **引用宣告節點** `sgrape.builtin.declaration`（[nodes/declaration.ts](../../src/core-ts/nodes/declaration.ts)、`node_sdk.declarationNode`）：輸出型別與「是不是常數」由宣告的 kind 決定；標題顯示宣告名稱；卡片上可換指向；只在 stage 最外層（在子圖裡＝misplaced Ghost）；指向不存在＝新的 Ghost 種類 `missing`。舊式 `uniform` 節點先留著（產碼器改走同一個 `useDeclaration`），Uniform 那一輪退休。
+- **產碼器**：每個用到的宣告由 kind 產生檔案層級 GLSL；只有來源（Uniform）成為綁定交給 TD；不認得的 kind 保留不讀（Q44）。
+- **編輯器**：工具列「共用來源」打開右側面板（[PanelShell](../../src/editor-react/PanelShell.tsx) 殼＋[SourcesPanel](../../src/editor-react/SourcesPanel.tsx) 內容）：新增常數、改名（不能用時狀態列說明原因）、型別（float／vec2／vec3／vec4）、值、幾個節點使用、放到圖上、刪除。引用節點顏色取自宣告種類（常數＝藍）。編輯器接管 `constant` 宣告；Uniform 宣告仍拒絕開圖。新訊息走 `tr()`，中英都有。
+- **驗證**：core 120（新增 `test_declarations.cjs` 6 項：const GLSL 不成綁定、命名規則、改名改型別、刪除連同引用、missing Ghost、換指向；不認得的 kind 保留）、editor 45（新增：新增→放到圖上→接線→送出含 const、改名、撞名與保留字被擋、刪除連同節點、一次 Undo 全回來）、Python 52。真實 TD＋瀏覽器（照使用者操作）：打開共用來源→新增常數→改名 kTint→改 vec4→填 (0.1, 0.8, 0.3, 1)→放到圖上→拉線到 Color Output → TD 的 GLSL 第一行 `const vec4 kTint = vec4(0.1, 0.8, 0.3, 1.0);`、Shader 像素 (0.1, 0.8, 0.3, 1)、沒有錯誤。測試 OP 已刪。Deliver 存 `TD-Grape-dev.71`。
+- **之後**：引用節點卡片上的選單標籤目前是英文 `declaration`（節點文字那一輪處理）；剪貼簿帶宣告（Q37 1-4）等剪貼簿那一輪；拖曳放置、浮動面板之後。
+
 ## Refactor.39 — Ghost：看不懂的節點與接不上的線保留、標示、不參與產碼（Q37 1-1、1-3） — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/sources-foundation.md` 第一輪（人類 10-09「照這樣拆，先做 Ghost」）。

@@ -8,6 +8,7 @@ import {types} from './numeric';
 import type {Registry} from './node_module';
 import {appendNodeComments} from './comments';
 import {ghostsOf} from './ghosts';
+import {declarationKinds} from './declarations';
 export type {Graph,Node,Declaration} from './model';
 export interface IdentifierRules {reservedNames:readonly string[]}
 export class CompilationError extends Error {
@@ -21,7 +22,9 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     if(formatProblem(g)||g.target!=='top'||Object.keys(g.stages).join()!=='pixel'||g.subgraphs?.length||g.structDefinitions?.length)return false;
     if(!g.stages.pixel||g.stages.pixel.nodes.length>limits.nodes||g.stages.pixel.edges.length>limits.edges)return false;
     if(g.stages.pixel?.ui?.frames)return false;
-    if(!g.declarations.every(d=>d.kind==='uniform'&&types.includes(d.type)))return false;
+    // A kind this build does not know is kept and never read (Q44); its references are ghosts.
+    // 不認得的 kind 保留、不讀；引用它的節點是 Ghost。
+    if(!g.declarations.every(d=>!declarationKinds.has(d.kind)||declarationKinds.get(d.kind)!.types.includes(d.type)))return false;
     // Legacy allocates collision suffixes for implicit IDs versus explicit
     // names. Keep those whole graphs on its path until symbol allocation moves.
     // Ghost nodes (ghosts.ts) are kept but never emitted, so they neither block this path nor
@@ -46,11 +49,12 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     const ghosts=ghostsOf(network,policy);
     const declarations=new Map<string,Declaration>(),names=new Set<string>();
     for(const d of g.declarations){
+      if(!declarationKinds.has(d.kind))continue;
       if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id)||declarations.has(d.id)||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name)||/^(gl_|TD|sg_|sTD)/.test(d.name)||names.has(d.name))throw Error('Invalid declaration identity/name');
       // Old-product fields (initialDriver, nativeSequence, exposeName, sourceMissing) are not read (Q44).
       // 舊產品欄位不讀；去留由匯入器的對照表處理。
       if(d.expose!==undefined&&typeof d.expose!=='boolean')throw Error('Expose must be a boolean');
-      literal(d.value,type(d.type));declarations.set(d.id,d);names.add(d.name);
+      declarationKinds.get(d.kind)!.validate(d);declarations.set(d.id,d);names.add(d.name);
     }
     const symbols=new Set<string>(),authoredNames=new Set<string>();
     for(const n of data.nodes){
@@ -100,9 +104,10 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
           return source.type===port.type?value:port.type+'('+value+')';}
         return literal(n.inputValues?.[key]??port.default,type(port.type));};
       if(!d.emit)throw Error('Structural nodes require Subgraph expansion');
-      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useUniform:declId=>{
+      const useDeclaration=(declId:string)=>{
         const declaration=declarations.get(declId);if(!declaration)throw Error('Select a matching declaration');used.add(declId);return declaration.name;
-      }});
+      };
+      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useUniform:useDeclaration,useDeclaration});
       if(Object.keys(emission.outputs).sort().join()!==Object.keys(p.outputs).sort().join())throw Error('Module emitted a different output interface');
       if(emission.statements)lines.push(...emission.statements);
       for(const [port,expression] of Object.entries(emission.outputs)){
@@ -113,8 +118,11 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
       appendNodeComments(lines,start,n.comment);
       while(lineNodes.length<lines.length)lineNodes.push(id);
     }
-    const bindings:Declaration[]=[...used].sort().map(id=>JSON.parse(JSON.stringify(declarations.get(id)!)) as Declaration);
-    const headers=bindings.map(d=>'uniform '+d.type+' '+d.name+';');
+    // File-scope GLSL comes from each used declaration's kind; only sources go to TD as bindings
+    // (a global constant lives in the program, Q41). 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。
+    const usedDeclarations=[...used].sort().map(id=>declarations.get(id)!);
+    const bindings:Declaration[]=usedDeclarations.filter(d=>declarationKinds.get(d.kind)!.role==='source').map(d=>JSON.parse(JSON.stringify(d)) as Declaration);
+    const headers=usedDeclarations.map(d=>declarationKinds.get(d.kind)!.header(d));
     const pixel=[...headers,'layout(location=0) out vec4 fragColor;','void main() {','    vec2 sg_uv = vUV.st;',...lines,'}',''].join('\n');
     const diagnostics=[
       ...data.nodes.filter(n=>!visited.has(n.id)&&!ghosts.nodes.has(n.id)).sort((a,b)=>a.id<b.id?-1:1).map(n=>({node:n.id,stage:'pixel',message:'Disconnected node is not emitted'})),

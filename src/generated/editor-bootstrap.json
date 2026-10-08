@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "da1b12850a9a9d99ceae19688cc36f84c7afa9230259c3e099b7d6f1cb85aa02",
+  "catalogHash": "da033e712f327bb3f33f7259ea34acd1ceb6d971665528371db0caf22a259201",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -354,6 +354,23 @@
       },
       "descriptionKey": "help.cos",
       "definitionUuid": "sgrape.builtin.cos"
+    },
+    {
+      "key": "declaration",
+      "label": "Shared Source",
+      "inputs": {},
+      "outputs": {
+        "out": "D"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "declarationId": ""
+      },
+      "descriptionKey": "help.declaration",
+      "definitionUuid": "sgrape.builtin.declaration"
     },
     {
       "key": "divide",
@@ -2319,6 +2336,39 @@
             "inputs": {
               "value": "vec4"
             },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.declaration": {
+        "selector": "declaration",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {},
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {},
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {},
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {},
             "outputs": {
               "out": "vec4"
             }

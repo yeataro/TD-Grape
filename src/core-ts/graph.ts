@@ -10,6 +10,8 @@ export { contextFor,prepareNodeWire } from './node_module';
 import { Subgraph } from './subgraphs';
 import { createSubgraph, groupSubgraph, instantiateSubgraph, collectSubgraphs, ensureSubgraphCapacity, type SubgraphOptions, type GroupOptions } from './subgraph_operations';
 import { appendSubgraphs, localizeSubgraph, independentSubgraph, type AllocateSubgraphId } from './subgraph_copies';
+import { addDeclaration, changeDeclaration, removeDeclaration } from './declarations';
+import type { Declaration } from './model';
 export { ScopeReferences } from './scope_references';
 
 type NetworkData=Graph['stages'][string];
@@ -354,6 +356,12 @@ export class GraphDocument {
   }
   localizeSubgraph(id:string,next:AllocateSubgraphId):Map<string,string> {return localizeSubgraph(this,id,next);}
   subgraph(id:string):Subgraph {return new Subgraph(this,id);}
+  /** Declarations (declarations.ts): add, rename／retype／revalue, remove with its references. */
+  addDeclaration(entry:{id:string;kind:string;name:string;type:string;value?:Value}):Declaration {this.assertEditable();return addDeclaration(this.document,entry);}
+  changeDeclaration(id:string,patch:{name?:string;type?:string;value?:Value}):Declaration {this.assertEditable();return changeDeclaration(this.document,id,patch);}
+  removeDeclaration(id:string):void {
+    this.assertEditable();removeDeclaration(this.document,id,(nodeType,params)=>this.registry.get(nodeType)?.referencedDeclaration?.({id:'',nodeType,params:params as ObjectValue}));
+  }
   assertEditable(){if(!this.editable||!this.active)throw Error('Graph changes require an active transaction');}
   close(){this.active=false;}
   nextEdgeId(data:NetworkData){

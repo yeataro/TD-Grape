@@ -29,9 +29,13 @@ test('capability selection excludes whole graphs before execution',()=>{
     g=>g.target='mat',g=>g.subgraphs=[{}],g=>g.structDefinitions=[{}],g=>delete g.format,g=>g.version=2,
     g=>g.stages.pixel.nodes=Array.from({length:257},(_,i)=>({...g.stages.pixel.nodes[0],id:'n'+i})),
     g=>g.stages.pixel.edges=Array.from({length:1025},()=>g.stages.pixel.edges[0]),
-    g=>g.declarations.push({id:'texture',kind:'sampler',type:'sampler2D',name:'uTexture',value:null}),
   ];
   for(const change of variants){const g=plain(base);change(g);assert.equal(compiler.supports(g),false);assert.throws(()=>compiler.compile(g),/outside/);}
+});
+test('a declaration of a kind this build does not know is kept and not read (Q44)',()=>{
+  const g=plain(cases[0].graph);g.declarations.push({id:'texture',kind:'sampler',type:'sampler2D',name:'uTexture',value:null});
+  assert.equal(compiler.supports(g),true);
+  const result=compiler.compile(g);assert.ok(!result.pixel.includes('uTexture'));assert.equal(result.bindings.some(b=>b.id==='texture'),false);
 });
 test('result and graph do not share mutable binding data',()=>{
   const g=plain(cases.find(c=>c.name==='uniform abs float').graph),before=JSON.stringify(g);

@@ -17,6 +17,7 @@ const structure_1 = require("./structure");
 const editor_contract_1 = require("./editor_contract");
 const model_1 = require("./model");
 const ghosts_1 = require("./ghosts");
+const declarations_1 = require("./declarations");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -28,6 +29,7 @@ const combine_1 = require("./nodes/combine");
 const compare_1 = require("./nodes/compare");
 const convert_1 = require("./nodes/convert");
 const cos_1 = require("./nodes/cos");
+const declaration_1 = require("./nodes/declaration");
 const divide_1 = require("./nodes/divide");
 const dot_1 = require("./nodes/dot");
 const equal_1 = require("./nodes/equal");
@@ -73,9 +75,9 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName };
 
 },
 "capacity":function(require,module,exports){
@@ -287,6 +289,118 @@ exports.CORE_CONFIG = Object.freeze({
 });
 
 },
+"declarations":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DeclarationError = exports.declarationKinds = void 0;
+exports.declarationNameProblem = declarationNameProblem;
+exports.freeDeclarationName = freeDeclarationName;
+exports.addDeclaration = addDeclaration;
+exports.changeDeclaration = changeDeclaration;
+exports.removeDeclaration = removeDeclaration;
+const model_1 = require("./model");
+const numeric_1 = require("./numeric");
+const values_1 = require("./values");
+const identifier_rules_1 = require("./identifier_rules");
+const numericValue = (declaration) => {
+    if (!numeric_1.types.includes(declaration.type))
+        throw Error('Unsupported declaration type');
+    (0, numeric_1.literal)(declaration.value, (0, numeric_1.type)(declaration.type));
+};
+// Global constant (Q41): `const` at file scope; changing it changes the program, nothing in TD.
+const constantKind = { kind: 'constant', role: 'constant', colorGroup: 'constant', types: numeric_1.types, constant: true, validate: numericValue,
+    header: (d) => 'const ' + d.type + ' ' + d.name + ' = ' + (0, numeric_1.literal)(d.value, (0, numeric_1.type)(d.type)) + ';' };
+// Uniform (Q41): its value lives in TD; the Uniform round adds exposure and live values.
+const uniformKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types: numeric_1.types, constant: false, validate: numericValue,
+    header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
+exports.declarationKinds = new Map([constantKind, uniformKind].map(module => [module.kind, Object.freeze(module)]));
+function declarationNameProblem(graph, name, except) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name) || name.includes('__'))
+        return 'format';
+    if (/^(gl_|TD|sTD|uTD|sg_)/.test(name) || identifier_rules_1.identifierRules.reservedNames.includes(name))
+        return 'reserved';
+    if (graph.declarations.some(d => d.name === name && d.id !== except))
+        return 'taken';
+    return null;
+}
+class DeclarationError extends Error {
+    constructor(problem, subject) {
+        super('Declaration ' + problem + (subject ? ': ' + subject : ''));
+        this.problem = problem;
+        this.subject = subject;
+        this.name = 'DeclarationError';
+    }
+}
+exports.DeclarationError = DeclarationError;
+const kindOf = (kind) => { const module = exports.declarationKinds.get(kind); if (!module)
+    throw new DeclarationError('kind'); return module; };
+const requireName = (graph, name, except) => {
+    const problem = declarationNameProblem(graph, name, except);
+    if (problem)
+        throw new DeclarationError(problem, name);
+};
+/** A free name from a base, e.g. constant1, constant2. 從基底找一個沒被用的名字。 */
+function freeDeclarationName(graph, base) {
+    for (let i = 1;; i++)
+        if (!declarationNameProblem(graph, base + i))
+            return base + i;
+}
+/** Commands, used inside GraphDocument.change() on its editable candidate document.
+ * 指令：在 GraphDocument.change() 的可編輯候選文件上使用。 */
+function addDeclaration(graph, entry) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(entry.id) || graph.declarations.some(d => d.id === entry.id))
+        throw Error('Invalid or duplicate declaration ID');
+    const module = kindOf(entry.kind);
+    if (!module.types.includes(entry.type))
+        throw new DeclarationError('type');
+    requireName(graph, entry.name);
+    const declaration = { id: entry.id, kind: entry.kind, name: entry.name, type: entry.type,
+        value: entry.value === undefined ? (0, numeric_1.fill)(0, (0, numeric_1.type)(entry.type)) : (0, model_1.copy)(entry.value) };
+    module.validate(declaration);
+    graph.declarations.push(declaration);
+    return declaration;
+}
+/** Rename, retype or change the value. A new type reshapes the old value (Q37 1-3: wires that no
+ * longer fit become ghost wires, nothing is unplugged). 改名、改型別、改值；改型別時沿用舊值的分量。 */
+function changeDeclaration(graph, id, patch) {
+    const declaration = graph.declarations.find(d => d.id === id);
+    if (!declaration)
+        throw new DeclarationError('missing');
+    const module = kindOf(declaration.kind);
+    const next = { ...(0, model_1.copy)(declaration) };
+    if (patch.name !== undefined && patch.name !== declaration.name) {
+        requireName(graph, patch.name, id);
+        next.name = patch.name;
+    }
+    if (patch.type !== undefined && patch.type !== declaration.type) {
+        if (!module.types.includes(patch.type))
+            throw new DeclarationError('type');
+        next.type = patch.type;
+        next.value = (0, values_1.reshape)(declaration.value, patch.type);
+    }
+    if (patch.value !== undefined)
+        next.value = (0, model_1.copy)(patch.value);
+    module.validate(next);
+    Object.assign(declaration, next);
+    return declaration;
+}
+/** Removing a declaration on purpose also removes the nodes that refer to it and their wires, in
+ * the same step (one Undo). Ghosts are for what is missing by accident, not for deliberate removals.
+ * 刻意刪除宣告時，引用它的節點與線一起刪（同一步、一次 Undo）；Ghost 是給「意外不見」的，不是給刻意刪除。 */
+function removeDeclaration(graph, id, refersTo) {
+    if (!graph.declarations.some(d => d.id === id))
+        throw new DeclarationError('missing');
+    graph.declarations = graph.declarations.filter(d => d.id !== id);
+    for (const network of Object.values(graph.stages)) {
+        const gone = new Set(network.nodes.filter(n => refersTo(n.nodeType, n.params) === id).map(n => n.id));
+        if (!gone.size)
+            continue;
+        network.nodes = network.nodes.filter(n => !gone.has(n.id));
+        network.edges = network.edges.filter(e => !gone.has(e.from[0]) && !gone.has(e.to[0]));
+    }
+}
+
+},
 "editor_contract":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -383,25 +497,30 @@ function createEditorContract(registry, target = 'top') {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ghostsOf = ghostsOf;
 function ghostsOf(network, policy) {
+    var _a;
     const nodes = new Map();
     // Subgraph networks have no stage of their own; their nodes follow the calling stage.
     const stage = network.id.startsWith('function:') ? undefined : network.id;
     for (const node of network.nodes) {
         const data = node.data, module = node.definition;
+        const referred = (_a = module === null || module === void 0 ? void 0 : module.referencedDeclaration) === null || _a === void 0 ? void 0 : _a.call(module, data);
         if (!module)
             nodes.set(node.id, 'unknown');
         else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage))
             nodes.set(node.id, 'misplaced');
+        // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
+        else if (referred !== undefined && !stage)
+            nodes.set(node.id, 'misplaced');
+        else if (referred !== undefined && !network.context.declaration(referred))
+            nodes.set(node.id, 'missing');
         else if (!module.supports(data, network.context))
             nodes.set(node.id, 'unknown');
         else {
-            // Ports that cannot be worked out (e.g. a reference to a declaration that is gone, Q45)
-            // make it a ghost too; the declarations round will name that case on its own.
-            // 算不出接孔（例如引用的宣告不見了）也是 Ghost；宣告那一輪再單獨標示這種情況。
+            // Ports that cannot be worked out make it a ghost too. 算不出接孔也是 Ghost。
             try {
                 void node.interface;
             }
-            catch (_a) {
+            catch (_b) {
                 nodes.set(node.id, 'unknown');
             }
         }
@@ -437,6 +556,7 @@ Object.defineProperty(exports, "prepareNodeWire", { enumerable: true, get: funct
 const subgraphs_1 = require("./subgraphs");
 const subgraph_operations_1 = require("./subgraph_operations");
 const subgraph_copies_1 = require("./subgraph_copies");
+const declarations_1 = require("./declarations");
 var scope_references_1 = require("./scope_references");
 Object.defineProperty(exports, "ScopeReferences", { enumerable: true, get: function () { return scope_references_1.ScopeReferences; } });
 function clone(value, immutable = false) {
@@ -956,6 +1076,13 @@ class GraphDocument {
     }
     localizeSubgraph(id, next) { return (0, subgraph_copies_1.localizeSubgraph)(this, id, next); }
     subgraph(id) { return new subgraphs_1.Subgraph(this, id); }
+    /** Declarations (declarations.ts): add, rename／retype／revalue, remove with its references. */
+    addDeclaration(entry) { this.assertEditable(); return (0, declarations_1.addDeclaration)(this.document, entry); }
+    changeDeclaration(id, patch) { this.assertEditable(); return (0, declarations_1.changeDeclaration)(this.document, id, patch); }
+    removeDeclaration(id) {
+        this.assertEditable();
+        (0, declarations_1.removeDeclaration)(this.document, id, (nodeType, params) => { var _a, _b; return (_b = (_a = this.registry.get(nodeType)) === null || _a === void 0 ? void 0 : _a.referencedDeclaration) === null || _b === void 0 ? void 0 : _b.call(_a, { id: '', nodeType, params: params }); });
+    }
     assertEditable() { if (!this.editable || !this.active)
         throw Error('Graph changes require an active transaction'); }
     close() { this.active = false; }
@@ -1204,7 +1331,8 @@ exports.resolvePorts = resolvePorts;
 const model_1 = require("./model");
 const ports_1 = require("./ports");
 function contextFor(graph, owner) {
-    return { target: graph.target, owner, declaration: id => graph.declarations.find(d => d.id === id), subgraph: id => { var _a; return (_a = graph.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id); } };
+    return { target: graph.target, owner, declaration: id => graph.declarations.find(d => d.id === id), declarations: () => graph.declarations,
+        subgraph: id => { var _a; return (_a = graph.subgraphs) === null || _a === void 0 ? void 0 : _a.find(f => f.id === id); } };
 }
 function createRegistry(modules) {
     const table = new Map();
@@ -1302,11 +1430,13 @@ exports.vectorNode = vectorNode;
 exports.binaryNode = binaryNode;
 exports.unaryNode = unaryNode;
 exports.numericCall = numericCall;
+exports.declarationNode = declarationNode;
 exports.uniformNode = uniformNode;
 exports.outputNode = outputNode;
 /** Small developer entry point. Builtins and developer modules share this API. */
 const model_1 = require("./model");
 const numeric_1 = require("./numeric");
+const declarations_1 = require("./declarations");
 var numeric_2 = require("./numeric");
 Object.defineProperty(exports, "literal", { enumerable: true, get: function () { return numeric_2.literal; } });
 Object.defineProperty(exports, "type", { enumerable: true, get: function () { return numeric_2.type; } });
@@ -1496,6 +1626,36 @@ function numericCall(catalog, options = {}) {
         },
         presentation: () => ({ selectorLabel: Object.values(catalog.definition.outputs).includes('T') ? 'vector.outputType' : 'vector.inputType' }),
         emit: (_n, c) => ({ outputs: { out: call.operator + '(' + call.ports.map(key => c.input(key)).join(', ') + ')' } }) };
+}
+/** The one node that refers to a declaration (design-interview Q45; human 2026-10-09): what it
+ * gives and whether that is a constant comes from the declaration's kind module. Missing target:
+ * a ghost (ghosts.ts). Only at the top level of a stage (Q41): never inside a subgraph.
+ * 引用宣告的唯一節點：給什麼、是不是常數由那筆宣告的 kind 決定；指向不存在＝Ghost；只在 stage 最外層。 */
+function declarationNode(catalog) {
+    const target = (n, c) => c.declaration(String(n.params.declarationId));
+    const kindOf = (n, c) => { const d = target(n, c); return d && declarations_1.declarationKinds.get(d.kind); };
+    return { catalog, role: 'value', referencedDeclaration: n => String(n.params.declarationId),
+        supports: (n, c) => { var _a; return !c.owner && (!target(n, c) || !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.types.includes(target(n, c).type))); },
+        ports: (n, c) => { const d = target(n, c); if (!d)
+            throw Error('The declaration no longer exists'); return outputPorts[(0, numeric_1.type)(d.type)]; },
+        validate: () => { },
+        presentation: (n, c) => {
+            var _a;
+            const d = target(n, c), choices = (((_a = c.declarations) === null || _a === void 0 ? void 0 : _a.call(c)) || []).filter(x => declarations_1.declarationKinds.has(x.kind));
+            return { label: d === null || d === void 0 ? void 0 : d.name, inlineControls: [{ kind: 'select', key: 'declaration', label: 'declaration', literal: true, command: 'declaration', value: String(n.params.declarationId),
+                        options: choices.map(x => ({ value: x.id, label: x.name, literal: true })) }] };
+        },
+        edit: (n, command, value, c) => {
+            var _a, _b;
+            if (command !== 'declaration')
+                throw Error('Unknown command');
+            const id = String((_b = (_a = (0, model_1.object)(value)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : value);
+            if (!c.declaration(id))
+                throw Error('The declaration no longer exists');
+            n.params.declarationId = id;
+            return n;
+        },
+        emit: (n, c) => { var _a; return ({ outputs: { out: c.useDeclaration(String(n.params.declarationId)) }, constant: !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.constant) }); } };
 }
 function uniformNode(catalog) {
     return { catalog, role: 'value', supports: (n, c) => numeric(n) && (!c.declaration(String(n.params.declarationId)) || numeric_1.types.includes(c.declaration(String(n.params.declarationId)).type)), ports: (n, c) => {
@@ -2091,6 +2251,54 @@ exports.default = (0, node_sdk_1.unaryNode)({
         ]
     }
 });
+
+},
+"nodes/declaration":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// The reference node (design-interview Q45, discuss-4.14 §10): points to one declaration; the
+// canvas title shows that declaration's name. Created from the Sources panel, not the add menu.
+// 引用宣告節點：指向一筆宣告；畫布標題顯示那一筆的名字。由共用來源面板建立，不在新增選單。
+const catalog = {
+    "definition": {
+        "key": "declaration",
+        "label": "Shared Source",
+        "inputs": {},
+        "outputs": {
+            "out": "D"
+        },
+        "stages": [
+            "vertex",
+            "pixel"
+        ],
+        "defaults": {
+            "declarationId": ""
+        },
+        "descriptionKey": "help.declaration",
+        "definitionUuid": "sgrape.builtin.declaration"
+    },
+    "emitter": {
+        "id": "declaration",
+        "version": 1
+    },
+    "browser": {
+        "category": "inputs",
+        "source": "editor",
+        "aliases": [
+            "source",
+            "constant",
+            "declaration"
+        ],
+        "glslName": "declaration",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "inputs",
+            "shared"
+        ]
+    }
+};
+exports.default = (0, node_sdk_1.declarationNode)(catalog);
 
 },
 "nodes/divide":function(require,module,exports){
@@ -5459,9 +5667,9 @@ const subgraph_compiler_1 = require("./subgraph_compiler");
 const graph_1 = require("./graph");
 const model_1 = require("./model");
 const values_1 = require("./values");
-const numeric_1 = require("./numeric");
 const comments_1 = require("./comments");
 const ghosts_1 = require("./ghosts");
+const declarations_1 = require("./declarations");
 class CompilationError extends Error {
     constructor(message, node) {
         super(message);
@@ -5482,7 +5690,9 @@ function createFlatCompiler(registry, limits) {
             return false;
         if ((_d = (_c = g.stages.pixel) === null || _c === void 0 ? void 0 : _c.ui) === null || _d === void 0 ? void 0 : _d.frames)
             return false;
-        if (!g.declarations.every(d => d.kind === 'uniform' && numeric_1.types.includes(d.type)))
+        // A kind this build does not know is kept and never read (Q44); its references are ghosts.
+        // 不認得的 kind 保留、不讀；引用它的節點是 Ghost。
+        if (!g.declarations.every(d => !declarations_1.declarationKinds.has(d.kind) || declarations_1.declarationKinds.get(d.kind).types.includes(d.type)))
             return false;
         // Legacy allocates collision suffixes for implicit IDs versus explicit
         // names. Keep those whole graphs on its path until symbol allocation moves.
@@ -5514,13 +5724,15 @@ function createFlatCompiler(registry, limits) {
             const ghosts = (0, ghosts_1.ghostsOf)(network, values_1.policy);
             const declarations = new Map(), names = new Set();
             for (const d of g.declarations) {
+                if (!declarations_1.declarationKinds.has(d.kind))
+                    continue;
                 if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id) || declarations.has(d.id) || !/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name) || /^(gl_|TD|sg_|sTD)/.test(d.name) || names.has(d.name))
                     throw Error('Invalid declaration identity/name');
                 // Old-product fields (initialDriver, nativeSequence, exposeName, sourceMissing) are not read (Q44).
                 // 舊產品欄位不讀；去留由匯入器的對照表處理。
                 if (d.expose !== undefined && typeof d.expose !== 'boolean')
                     throw Error('Expose must be a boolean');
-                (0, values_1.literal)(d.value, (0, values_1.type)(d.type));
+                declarations_1.declarationKinds.get(d.kind).validate(d);
                 declarations.set(d.id, d);
                 names.add(d.name);
             }
@@ -5610,13 +5822,14 @@ function createFlatCompiler(registry, limits) {
                 };
                 if (!d.emit)
                     throw Error('Structural nodes require Subgraph expansion');
-                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useUniform: declId => {
-                        const declaration = declarations.get(declId);
-                        if (!declaration)
-                            throw Error('Select a matching declaration');
-                        used.add(declId);
-                        return declaration.name;
-                    } });
+                const useDeclaration = (declId) => {
+                    const declaration = declarations.get(declId);
+                    if (!declaration)
+                        throw Error('Select a matching declaration');
+                    used.add(declId);
+                    return declaration.name;
+                };
+                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useUniform: useDeclaration, useDeclaration });
                 if (Object.keys(emission.outputs).sort().join() !== Object.keys(p.outputs).sort().join())
                     throw Error('Module emitted a different output interface');
                 if (emission.statements)
@@ -5632,8 +5845,11 @@ function createFlatCompiler(registry, limits) {
                 while (lineNodes.length < lines.length)
                     lineNodes.push(id);
             }
-            const bindings = [...used].sort().map(id => JSON.parse(JSON.stringify(declarations.get(id))));
-            const headers = bindings.map(d => 'uniform ' + d.type + ' ' + d.name + ';');
+            // File-scope GLSL comes from each used declaration's kind; only sources go to TD as bindings
+            // (a global constant lives in the program, Q41). 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。
+            const usedDeclarations = [...used].sort().map(id => declarations.get(id));
+            const bindings = usedDeclarations.filter(d => declarations_1.declarationKinds.get(d.kind).role === 'source').map(d => JSON.parse(JSON.stringify(d)));
+            const headers = usedDeclarations.map(d => declarations_1.declarationKinds.get(d.kind).header(d));
             const pixel = [...headers, 'layout(location=0) out vec4 fragColor;', 'void main() {', '    vec2 sg_uv = vUV.st;', ...lines, '}', ''].join('\n');
             const diagnostics = [
                 ...data.nodes.filter(n => !visited.has(n.id) && !ghosts.nodes.has(n.id)).sort((a, b) => a.id < b.id ? -1 : 1).map(n => ({ node: n.id, stage: 'pixel', message: 'Disconnected node is not emitted' })),

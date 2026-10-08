@@ -17,10 +17,11 @@ import {structureProblems,offered,removable} from './structure';
 import {createEditorContract} from './editor_contract';
 import {formatProblem} from './model';
 import {ghostsOf} from './ghosts';
+import {declarationKinds,declarationNameProblem,freeDeclarationName} from './declarations';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,declarationKinds,declarationNameProblem,freeDeclarationName};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);

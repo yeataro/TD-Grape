@@ -484,7 +484,8 @@ test('every offered node can be added, wired to the output and compiled', t => {
     return session.graph();
   };
   const failures = [];
-  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out'))) {
+  // The reference node needs a declaration; its own test below covers it. 引用宣告節點需要宣告，另有測試。
+  for (const uuid of supportedDefinitions.filter(u => !u.endsWith('.pixel_out') && !u.endsWith('.declaration'))) {
     const { session } = open(t);
     session.transact('add', net => net.insert({ id: 'x', nodeType: uuid, params: {}, ui: { x: 0, y: 0 } }));
     const outputs = session.snapshot().projection.nodes.find(n => n.id === 'x').data.outputs.map(p => p.key);
@@ -504,7 +505,8 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
   const { supportedDefinitions, creatableDefinitions } = load(path.join(root, 'src/editor-react/core.ts'));
   const retired = ['float', 'vec2', 'vec3', 'vec4'].map(k => 'sgrape.builtin.' + k);
   assert.ok(retired.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
-  const fixed = ['sgrape.builtin.pixel_out']; // stage outputs are never offered (Q42)
+  // Stage outputs are never offered (Q42); the reference node is made from the Sources panel (Q45).
+  const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration'];
   assert.ok(fixed.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
   assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
@@ -704,4 +706,36 @@ test('a known node outside this entry still refuses: as a ghost it would silentl
   const { loaded } = open(t), state = loaded();
   withDoc(state.state, graph => { graph.subgraphs = [{ id: 'unknown', graph: { nodes: [], edges: [] } }]; });
   assert.throws(() => new EditorSession(new HostClient(target, '', async () => new Response('{}')), bootstrap, state), error => error instanceof UnsupportedGraphError);
+});
+
+// Shared sources: global constants (Refactor.40; design-interview Q41, Q45).
+// 共用來源：全域常數——新增、放到圖上、接線、送出、改名、名稱衝突、刪除連同引用、Undo。
+test('a global constant: add, place, wire, apply; rename; refused names; delete with its nodes; undo', async t => {
+  const { session, calls } = open(t);
+  session.addConstant();
+  const declaration = session.snapshot().declarations[0];
+  assert.deepEqual([declaration.kind, declaration.name, declaration.type], ['constant', 'constant1', 'float']);
+  session.setDeclarationValue(declaration.id, 0.25);
+  session.placeDeclaration(declaration.id, { x: 0, y: 0 });
+  const ref = session.snapshot().projection.nodes.find(node => node.data.authored.nodeType === 'sgrape.builtin.declaration');
+  assert.equal(ref.data.colorGroup, 'constant');
+  assert.equal(session.snapshot().references[declaration.id], 1);
+  session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node(ref.id).outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
+  session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node('sum').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
+  await session.flush();
+  const pixel = JSON.parse(calls.at(-1).body.runtime).pixel;
+  assert.match(pixel, /^const float constant1 = 0\.25;$/m);
+  assert.equal(session.renameDeclaration(declaration.id, 'kGain'), true);
+  assert.equal(session.snapshot().declarations[0].name, 'kGain');
+  session.addConstant();
+  const other = session.snapshot().declarations[1];
+  assert.equal(session.renameDeclaration(other.id, 'kGain'), false);
+  assert.match(zh(session.snapshot().message), /名稱 kGain 已經被另一個共用來源使用/);
+  assert.equal(session.renameDeclaration(other.id, 'float'), false);
+  session.removeDeclaration(declaration.id);
+  assert.ok(!session.graph().stages.pixel.nodes.some(node => node.id === ref.id), 'its nodes go with it');
+  assert.equal(session.snapshot().declarations.length, 1);
+  session.history(false);
+  assert.equal(session.snapshot().declarations.length, 2, 'one Undo brings both back');
+  assert.ok(session.graph().stages.pixel.nodes.some(node => node.id === ref.id));
 });

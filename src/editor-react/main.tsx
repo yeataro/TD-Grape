@@ -12,6 +12,8 @@ import { resetToDefault } from './host_sync';
 import { RightDragSelect } from './RightDragSelect';
 import { tr, say, TextError, errorText, type Message } from './text';
 import { conflictMessage } from './host_sync';
+import { PanelShell } from './PanelShell';
+import { SourcesPanel } from './SourcesPanel';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
@@ -62,6 +64,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
 function Editor({ session, text, version }: { session: EditorSession; text: (key: string) => string; version: string }) {
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
   const flow = useReactFlow(), [bodyDrag, setBodyDrag] = useState(true), [snap, setSnap] = useState(false);
+  const [showSources, setShowSources] = useState(false);
   const [showCode, setShowCode] = useState(false), [draft, setDraft] = useState(() => {
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
   });
@@ -100,6 +103,7 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
       <span className="spacer" />
       <button disabled={!state.dirty || ['sending', 'offline', 'uncertain', 'conflict'].includes(state.phase)} onClick={() => void session.flush()}>{say(tr('toolbar.apply', 'Apply'))}</button>
       <button disabled={state.phase === 'sending'} onClick={() => void session.save()}>{say(tr('toolbar.saveProject', 'Save TD project'))}</button>
+      <button aria-pressed={showSources} onClick={() => setShowSources(!showSources)}>{say(tr('toolbar.sources', 'Shared Sources'))}</button>
       <button onClick={() => setShowCode(!showCode)}>{say(tr('toolbar.glsl', 'GLSL'))}</button>
       <button onClick={() => download({ target, graph: session.graph() })}>{say(tr('toolbar.downloadDraft', 'Download draft'))}</button>
     </nav>
@@ -122,6 +126,8 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
         <button onClick={() => void session.useRemote()}>{say(tr('conflict.useTd', 'TD'))}</button>
       </div>}
       <div className="canvas" inert={!!draft}><Canvas session={session} projection={state.projection} bodyDrag={bodyDrag} snap={snap} />{draft && <div className="draft-blocker" />}</div>
+      {showSources && <PanelShell title={tr('sources.title', 'Shared Sources')} onClose={() => setShowSources(false)}>
+        <SourcesPanel declarations={state.declarations} references={state.references} /></PanelShell>}
       {showCode && <pre aria-label={say(tr('glsl.label', 'Generated GLSL'))}>{state.glsl || say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre>}</main>
     <footer>{say(tr('footer.scope', 'This round: common TOP nodes (no Uniforms or subgraphs) · changes apply when you release or commit a value · Ctrl/Cmd+Z to undo'))}</footer>
   </TextContext.Provider></SessionContext.Provider>;

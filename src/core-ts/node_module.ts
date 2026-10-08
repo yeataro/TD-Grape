@@ -11,16 +11,21 @@ export interface NodeContext {
   readonly target?:string;
   readonly owner?:SubgraphData;
   declaration(id:string):Declaration|undefined;
+  /** Every declaration, e.g. for a reference node offering what it can point to. */
+  declarations?():readonly Declaration[];
   subgraph?(id:string):SubgraphData|undefined;
 }
 export function contextFor(graph:Graph,owner?:SubgraphData):NodeContext {
-  return {target:graph.target,owner,declaration:id=>graph.declarations.find(d=>d.id===id),subgraph:id=>graph.subgraphs?.find(f=>f.id===id)};
+  return {target:graph.target,owner,declaration:id=>graph.declarations.find(d=>d.id===id),declarations:()=>graph.declarations,
+    subgraph:id=>graph.subgraphs?.find(f=>f.id===id)};
 }
 export interface EmitContext extends NodeContext {
   readonly ports:NodePorts;
   input(key:string):string;
   connected(key:string):boolean;
   useUniform(id:string):string;
+  /** Marks a declaration as used and returns its GLSL name (any kind, Refactor.40). */
+  useDeclaration(id:string):string;
 }
 export interface Emission {outputs:Record<string,string>;constant?:boolean;statements?:readonly string[]}
 export interface Signature {type:string;inputs:Readonly<Record<string,string>>;outputs:Readonly<Record<string,string>>;operands?:Readonly<Record<string,string>>}
@@ -50,6 +55,8 @@ export interface NodeModule {
   /** Structural modules are instantiated from a graph definition, not the palette. */
   readonly structural?:boolean;
   referencedGraph?(node:Node):string;
+  /** The declaration this node refers to (the reference node, Q45). 引用的宣告。 */
+  referencedDeclaration?(node:Node):string;
   /** Initial parameters for a new instance of a graph definition. */
   reference?(graphId:string):ObjectValue;
   supports(node:Node,context:NodeContext):boolean;

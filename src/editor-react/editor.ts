@@ -1,5 +1,6 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
-import { core, compiler, requireSupported, parseDocument, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap } from './core';
+import { core, compiler, requireSupported, parseDocument, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
+  type Declaration, type NameProblem } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse } from './host';
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
@@ -44,12 +45,25 @@ const structureMessage = (error: unknown) => {
   return problems ? tr('structure.refused', 'This change was not applied: {problems}', { problems: structureText(problems) }) : undefined;
 };
 
+// Declaration problems arrive as data too (declarations.ts). 宣告的問題同樣以資料回報。
+const nameProblem = (problem: NameProblem, name: string) => problem === 'taken'
+  ? tr('sources.nameTaken', 'The name {name} is already used by another shared source.', { name })
+  : problem === 'reserved' ? tr('sources.nameReserved', '{name} is reserved by GLSL or TouchDesigner.', { name })
+  : tr('sources.nameFormat', '{name} is not a valid name: start with a letter, then letters, digits or _ (no __).', { name });
+const declarationMessage = (error: unknown) => {
+  const e = error as { name?: string; problem?: string; subject?: string } | null;
+  if (e?.name !== 'DeclarationError') return undefined;
+  return ['taken', 'reserved', 'format'].includes(e.problem!) ? nameProblem(e.problem as NameProblem, e.subject ?? '')
+    : tr('sources.declarationProblem', 'This change to a shared source was not applied ({problem}).', { problem: String(e.problem) });
+};
 const noteKey = (graph: Graph) => JSON.stringify(Object.values(graph.stages).concat((graph.subgraphs || []).map(f => f.graph))
   .map(net => net?.nodes.map(n => n.comment)));
 
 // message is data (a Message), worded only when shown (Q34); level says how serious it is (Q35).
+// declarations: the document's own frozen list (no copy); references: how many nodes use each one.
 export type EditorState = SyncStatus & { projection: Projection; version: number; undo: boolean; redo: boolean;
-  message: Message | string; level: Level; glsl: string; targetPath: string };
+  message: Message | string; level: Level; glsl: string; targetPath: string;
+  declarations: readonly Declaration[]; references: Readonly<Record<string, number>> };
 
 // Coordinates editing: hands edits to the core, keeps the current document, Undo and editing
 // state, compiles every finished edit, and hands the result to HostSync (design-interview Q38).
@@ -80,7 +94,8 @@ export class Editor {
     this.sync = new HostSync(host, bootstrap, loaded, () => this.codegen,
       (status, said) => this.status({ ...status, ...said }, 'sync'), delay, retry, editorVersion);
     this.state = { ...this.sync.status, projection: project(this.document, { nodes: [], edges: [] }, bootstrap.typeContract),
-      version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '', targetPath: loaded.target };
+      version: 0, undo: false, redo: false, message: '', level: 'info', glsl: this.codegen.compiled?.pixel ?? '', targetPath: loaded.target,
+      ...this.sources() };
     this.tell('info', tr('edit.loaded', 'Loaded the graph from TD'));
     // Opening never refuses an over-limit graph; it warns, and only growth is blocked (capacity.ts).
     // 開圖不拒絕超過上限的圖；只警告，修改時只擋「變大」。
@@ -112,7 +127,17 @@ export class Editor {
     this.state = { ...this.state, ...patch }; this.publish();
   }
   private tell(level: Level, message: Message | string) { this.status({ message, level }); }
+  private sources() {
+    const references: Record<string, number> = {};
+    for (const node of this.document.document.stages.pixel?.nodes ?? []) {
+      const id = core.registry.get(node.nodeType)?.referencedDeclaration?.(node);
+      if (id !== undefined) references[id] = (references[id] ?? 0) + 1;
+    }
+    return { declarations: this.document.document.declarations, references };
+  }
   notice = (error: unknown) => {
+    const declaration = declarationMessage(error);
+    if (declaration) { this.tell('warning', declaration); return; }
     const limit = capacityMessage(error) ?? structureMessage(error);
     this.tell(limit ? 'warning' : 'error', limit ?? errorText(error));
   };
@@ -130,9 +155,12 @@ export class Editor {
 
   // Build the entire candidate before committing history or notifying React.
   // 多個 node／edge 改動共用一次發布；任何例外都不留下半份作品。
-  transact = (label: Message, edit: (network: Network) => void) => {
+  transact = (label: Message, edit: (network: Network) => void) =>
+    this.transactGraph(label, candidate => edit(candidate.networks.get('pixel')!));
+  // Edits at the document level (declarations) go through the same single path. 文件層級的修改走同一條路。
+  transactGraph = (label: Message, edit: (document: GraphDocument) => void) => {
     try {
-      const result = this.document.change(candidate => edit(candidate.networks.get('pixel')!));
+      const result = this.document.change(edit);
       if (!result.changes.changed) return;
       const next = new core.GraphDocument(result.after, core.registry);
       requireSupported(result.after);
@@ -148,7 +176,7 @@ export class Editor {
     this.codegen = this.compile();
     const failed = this.codegen.error === undefined ? undefined : tr('edit.codegenFailed', 'Code generation failed: {reason}', { reason: this.codegen.error });
     if (!this.sync.blocked) this.log.add(failed ? 'warning' : 'info', failed ?? label, 'editor');
-    this.state = { ...this.state, projection, version: this.state.version + 1,
+    this.state = { ...this.state, projection, version: this.state.version + 1, ...this.sources(),
       undo: !!this.past.length, redo: !!this.future.length,
       glsl: this.codegen.compiled?.pixel ?? this.state.glsl,
       ...(this.sync.blocked ? {} : { message: failed ?? label, level: failed ? 'warning' as const : 'info' as const }) };
@@ -166,6 +194,27 @@ export class Editor {
   configure = (id: string, type: string) => this.transact(tr('edit.typeChanged', 'Type updated'), net => net.node(id).configure({ type }));
   add = (uuid: string, position: XYPosition) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
     net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: uuid, params: {}, ui: { ...position } }));
+  // Shared sources (Refactor.40; Q41, Q45): global constants for now. 共用來源：本輪只有全域常數。
+  addConstant = () => {
+    const name = core.freeDeclarationName(this.document.document, 'constant');
+    this.transactGraph(tr('sources.added', 'Constant {name} added', { name }), document =>
+      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'constant', name, type: 'float' }));
+  };
+  /** False when the name cannot be used; the reason is on the status line. 名稱不能用時回傳 false。 */
+  renameDeclaration = (id: string, name: string) => {
+    const problem = core.declarationNameProblem(this.document.document, name, id);
+    if (problem) { this.tell('warning', nameProblem(problem, name)); return false; }
+    this.transactGraph(tr('sources.renamed', 'Renamed to {name}', { name }), document => { document.changeDeclaration(id, { name }); });
+    return true;
+  };
+  setDeclarationType = (id: string, type: string) =>
+    this.transactGraph(tr('sources.typeChanged', 'Shared source type updated'), document => { document.changeDeclaration(id, { type }); });
+  setDeclarationValue = (id: string, value: Value) =>
+    this.transactGraph(tr('sources.valueChanged', 'Shared source value updated; waiting to apply'), document => { document.changeDeclaration(id, { value }); });
+  removeDeclaration = (id: string) =>
+    this.transactGraph(tr('sources.removed', 'Shared source deleted with the nodes that used it'), document => document.removeDeclaration(id));
+  placeDeclaration = (id: string, position: XYPosition) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
+    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.declaration', params: { declarationId: id }, ui: { ...position } }));
   valid = (c: Connection | FlowEdge) => {
     if (!c.sourceHandle || !c.targetHandle) return false;
     try {

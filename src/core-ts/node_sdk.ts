@@ -1,7 +1,8 @@
 /** Small developer entry point. Builtins and developer modules share this API. */
 import { object, copy, type Node, type Value } from './model';
 import { types, type, literal, number, fill, count, type Type } from './numeric';
-import type { CatalogRow, NodeModule, Configuration } from './node_module';
+import type { CatalogRow, NodeModule, NodeContext, Configuration } from './node_module';
+import { declarationKinds } from './declarations';
 import type { PortSpec } from './ports';
 export type { CatalogRow, NodeModule, NodeContext, EmitContext, Emission, Configuration, Signature, NodeControl } from './node_module';
 export type { Node, Value, ObjectValue } from './model';
@@ -131,6 +132,26 @@ export function numericCall(catalog:CatalogRow,options:{alternatives?:Readonly<R
     },
     presentation:()=>({selectorLabel:Object.values(catalog.definition.outputs).includes('T')?'vector.outputType':'vector.inputType'}),
     emit:(_n,c)=>({outputs:{out:call.operator+'('+call.ports.map(key=>c.input(key)).join(', ')+')'}})};
+}
+/** The one node that refers to a declaration (design-interview Q45; human 2026-10-09): what it
+ * gives and whether that is a constant comes from the declaration's kind module. Missing target:
+ * a ghost (ghosts.ts). Only at the top level of a stage (Q41): never inside a subgraph.
+ * 引用宣告的唯一節點：給什麼、是不是常數由那筆宣告的 kind 決定；指向不存在＝Ghost；只在 stage 最外層。 */
+export function declarationNode(catalog:CatalogRow):NodeModule {
+  const target=(n:Node,c:NodeContext)=>c.declaration(String(n.params.declarationId));
+  const kindOf=(n:Node,c:NodeContext)=>{const d=target(n,c);return d&&declarationKinds.get(d.kind);};
+  return {catalog,role:'value',referencedDeclaration:n=>String(n.params.declarationId),
+    supports:(n,c)=>!c.owner&&(!target(n,c)||!!kindOf(n,c)?.types.includes(target(n,c)!.type)),
+    ports:(n,c)=>{const d=target(n,c);if(!d)throw Error('The declaration no longer exists');return outputPorts[type(d.type)]!;},
+    validate:()=>{},
+    presentation:(n,c)=>{const d=target(n,c),choices=(c.declarations?.()||[]).filter(x=>declarationKinds.has(x.kind));
+      return {label:d?.name,inlineControls:[{kind:'select',key:'declaration',label:'declaration',literal:true,command:'declaration',value:String(n.params.declarationId),
+        options:choices.map(x=>({value:x.id,label:x.name,literal:true}))}]};},
+    edit:(n,command,value,c)=>{
+      if(command!=='declaration')throw Error('Unknown command');
+      const id=String(object(value)?.value??value);if(!c.declaration(id))throw Error('The declaration no longer exists');
+      n.params.declarationId=id;return n;},
+    emit:(n,c)=>({outputs:{out:c.useDeclaration(String(n.params.declarationId))},constant:!!kindOf(n,c)?.constant})};
 }
 export function uniformNode(catalog:CatalogRow):NodeModule {
   return {catalog,role:'value',supports:(n,c)=>numeric(n)&&(!c.declaration(String(n.params.declarationId))||types.includes(c.declaration(String(n.params.declarationId))!.type)),ports:(n,c)=>{
