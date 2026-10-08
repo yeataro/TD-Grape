@@ -180,7 +180,7 @@ class NextFamilyTests(unittest.TestCase):
     def test_kinds_not_taken_over_yet_are_refused(self):
         fam, _ = family()
         with self.assertRaisesRegex(ValueError, 'not supported by this TD-Grape yet'):
-            fam.apply(request(run=runtime(bindings=[{'id': 'u', 'kind': 'builtin'}])), catalog_hash=CATALOG)
+            fam.apply(request(run=runtime(bindings=[{'id': 'u', 'kind': 'specConstant'}])), catalog_hash=CATALOG)
 
     def test_uniforms_are_checked_and_written_after_the_glsl_compiles(self):
         # Refactor.44 (Q51). 檢查後、GLSL 編譯成功才寫綁定表。
@@ -209,10 +209,24 @@ class NextFamilyTests(unittest.TestCase):
         fam._write_uniforms.assert_called_once_with([gain])
         self.assertEqual(meta(comp)['runtime']['revision'], 4)
 
+    def test_built_in_values_bind_by_entry_with_tds_own_expression(self):
+        # Refactor.45 (Q52): never an expression from the editor. 不寫入編輯器送來的 expression。
+        clock = {'id': 'b1', 'kind': 'builtin', 'name': 'uTime', 'type': 'float', 'entry': 'time'}
+        fam, _ = family()
+        fam.apply(request(run=runtime('reads time', bindings=[clock])), catalog_hash=CATALOG)
+        fam._write_uniforms.assert_called_once_with([clock])
+        rows, vectors, _ = uniform_rows([clock])
+        self.assertEqual(vectors, 1)
+        self.assertIn(['shader', 'vec0valuex', 'me.time.seconds', '1'], rows)
+        for bad in ({**clock, 'entry': '__import__("os")'}, {**clock, 'type': 'vec2'}, {**clock, 'name': 'u time'}):
+            fam, _ = family()
+            with self.assertRaisesRegex(ValueError, 'invalid built-in value'):
+                fam.apply(request(run=runtime(bindings=[bad])), catalog_hash=CATALOG)
+
     def test_uniform_rows_follow_the_pages(self):
         rows, vectors, colors = uniform_rows([
-            {'name': 'uGain', 'type': 'float', 'value': 2},
-            {'name': 'uTint', 'type': 'vec3', 'value': [1, 0, 0.5], 'color': True}])
+            {'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 2},
+            {'kind': 'uniform', 'name': 'uTint', 'type': 'vec3', 'value': [1, 0, 0.5], 'color': True}])
         self.assertEqual((vectors, colors), (1, 1))
         self.assertEqual(rows[0], ['path', 'parameter', 'value', 'enable'])
         self.assertIn(['shader', 'vec0name', "'uGain'", '1'], rows)

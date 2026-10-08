@@ -56,6 +56,17 @@ INPUT_X, INPUT_Y, INPUT_STEP = -200, -125, 100
 # 顏色放 Colors 頁，其餘放 Vectors 頁。
 UNIFORM_TYPES = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
 COLOR_TYPES = ('vec3', 'vec4')
+# Built-in values (Uniform B, Refactor.45; design-interview Q52): the editor sends only the entry;
+# TD keeps the expression itself. The binding table's value column is run as Python by DAT Export,
+# so an expression sent by the editor is never written there. `me` is the binding table, so
+# me.time is this Grape OP's timeline.
+# 內建值：編輯器只送代號，expression 由 TD 自己保管（綁定表的 value 欄會被當成 Python 執行，
+# 絕不寫入編輯器送來的字串）。me 是綁定表，所以 me.time 是這個 Grape OP 的時間軸。
+BUILTIN_EXPRESSIONS = {
+    'absTime': 'absTime.seconds', 'absFrame': 'absTime.frame',
+    'time': 'me.time.seconds', 'frame': 'me.time.frame',
+    'deltaTime': 'absTime.stepSeconds', 'frameStep': 'absTime.step',
+}
 
 
 def require(condition, message):
@@ -96,13 +107,18 @@ def read_runtime(text, *, catalog_hash):
         require(isinstance(entry, dict), 'invalid binding table')
         kind, ident, name = entry.get('kind'), entry.get('id'), entry.get('name')
         # Other kinds arrive with their rounds (time, Spec constants…). 其他種類等各自那一輪。
-        require(kind in ('topInput', 'uniform'), 'This kind of binding is not supported by this TD-Grape yet: ' + str(kind))
+        require(kind in ('topInput', 'uniform', 'builtin'), 'This kind of binding is not supported by this TD-Grape yet: ' + str(kind))
         require(isinstance(ident, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', ident) and ident not in seen,
                 'invalid binding ID')
         seen.add(ident)
         if kind == 'topInput':
             require(isinstance(name, str) and 0 < len(name) <= 48 and entry.get('defaultTexture') in DEFAULT_TEXTURES,
                     'invalid texture input')
+            continue
+        if kind == 'builtin':
+            require(isinstance(name, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,47}', name) and name not in names
+                    and entry.get('type') == 'float' and entry.get('entry') in BUILTIN_EXPRESSIONS, 'invalid built-in value')
+            names.add(name)
             continue
         count = UNIFORM_TYPES.get(entry.get('type'))
         value = entry.get('value')
@@ -129,8 +145,11 @@ def uniform_rows(uniforms):
     vectors = [u for u in uniforms if u.get('color') is not True]
     colors = [u for u in uniforms if u.get('color') is True]
     for i, u in enumerate(vectors):
-        values = u['value'] if isinstance(u['value'], list) else [u['value']]
         rows.append(['shader', 'vec%dname' % i, repr(u['name']), '1'])
+        if u['kind'] == 'builtin':  # TD's own expression, evaluated by DAT Export 由 TD 自己的 expression 驅動
+            rows.append(['shader', 'vec%dvaluex' % i, BUILTIN_EXPRESSIONS[u['entry']], '1'])
+            continue
+        values = u['value'] if isinstance(u['value'], list) else [u['value']]
         rows.extend(['shader', 'vec%dvalue%s' % (i, axis), repr(float(v)), '1'] for axis, v in zip('xyzw', values))
     for i, u in enumerate(colors):
         rows.append(['shader', 'color%dname' % i, repr(u['name']), '1'])
@@ -363,7 +382,7 @@ class NextFamily:
         if runtime_text is not None:
             compiled = read_runtime(runtime_text, catalog_hash=catalog_hash)
             inputs = texture_inputs(compiled)
-            uniforms = [entry for entry in compiled['bindings'] if entry['kind'] == 'uniform']
+            uniforms = [entry for entry in compiled['bindings'] if entry['kind'] in ('uniform', 'builtin')]
             pixel = self.comp.op('pixel_shader')
             previous = pixel.text
             placed = None

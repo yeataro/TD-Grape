@@ -27,6 +27,7 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
   const session = useSession(), flow = useReactFlow();
   const constants = declarations.filter(d => d.kind === 'constant'), inputs = declarations.filter(d => d.kind === 'topInput');
   const uniforms = declarations.filter(d => d.kind === 'uniform');
+  const builtinOf = (entry: string) => declarations.find(d => d.kind === 'builtin' && d.entry === entry);
   const center = () => {
     const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
     return flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
@@ -73,6 +74,16 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
         commit={value => session.setDeclarationValue(declaration.id, value)} />
       {actions(declaration)}
     </div>)}
+    {/* Time (built-in values, Q52): all six listed; placing one creates it the first time.
+        時間（內建值）：6 筆都列出；第一次放到圖上時建立。 */}
+    <header className="sources-section"><span>{say(tr('sources.time', 'Time'))}</span></header>
+    <p className="hint">{say(tr('sources.timeHint', 'Uniforms that TouchDesigner drives for you. The name is fixed; one of each per graph.'))}</p>
+    {core.builtinValues.map(entry => { const declared = builtinOf(entry.id);
+      return <div className={`builtin-row ${declared ? '' : 'unused'}`} key={entry.id} title={say(entry.hint) + '\n' + entry.td}>
+        <code>{entry.name}</code><small>{declared ? say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declared.id] ?? 0 })) : entry.td}</small>
+        <button onClick={() => session.placeBuiltin(entry.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
+        {declared && <button onClick={() => session.removeDeclaration(declared.id)}>{say(tr('sources.remove', 'Delete'))}</button>}
+      </div>; })}
     <header className="sources-section"><span>{say(tr('sources.constants', 'Global constants'))}</span>
       <button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button></header>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}

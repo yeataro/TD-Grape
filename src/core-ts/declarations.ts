@@ -3,6 +3,7 @@ import { types, literal, fill, type as numericType } from './numeric';
 import { reshape } from './values';
 import { identifierRules } from './identifier_rules';
 import type { PortSpec } from './ports';
+import { builtinValues } from './builtins';
 
 /** Declarations (design-interview Q41, Q44, Q45): the graph's shared sources and global constants,
  * one list `declarations`, each entry with a `kind`. A kind module decides its fields, what a
@@ -24,8 +25,8 @@ export interface DeclarationKind {
   /** The kind's own fields (decision 11) with their values for a new declaration; only these may be
    * changed besides name and type. 自己的欄位與新增時的初始值；除了名稱與型別，只有這些能改。 */
   initial(type: string): Record<string, Value>;
-  /** Optional fields of its own that a new declaration leaves out (e.g. a Uniform's `color`).
-   * 自己的、新增時不寫的選用欄位（例如 Uniform 的 color）。 */
+  /** Fields of its own without a default value: optional ones (a Uniform's `color`) or ones the
+   * caller always gives (a built-in value's `entry`). 自己的、沒有預設值的欄位（選用的，或一定由呼叫者給的）。 */
   readonly optional?: readonly string[];
   /** How its own fields follow a new type. 改型別時自己的欄位怎麼跟著調整。 */
   retype?(declaration: Declaration, type: string): Record<string, Value>;
@@ -90,8 +91,20 @@ const topInputKind: DeclarationKind = { kind: 'topInput', role: 'source', colorG
     if (!defaultTextures.includes(String(d.defaultTexture))) throw Error('Unknown default texture');
   },
   reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }) };
+// Built-in value (decision 17, Q52; builtins.ts): a Uniform whose meaning Grape guarantees. `entry` picks
+// one; the name is the entry's and fixed (so one per graph: names are unique); no value; never exposed.
+// 內建值：entry 選一筆；名稱照表、固定（名稱不重複，所以一張圖只有一筆）；沒有值、不能公開。
+const builtinTable = new Map(builtinValues.map(entry => [entry.id, entry]));
+const builtinKind: DeclarationKind = { kind: 'builtin', role: 'source', colorGroup: 'uniform', types: ['float'], constant: false,
+  optional: ['entry'], initial: () => ({}),
+  validate: d => {
+    const entry = builtinTable.get(String(d.entry));
+    if (!entry) throw Error('Unknown built-in value');
+    if (d.name !== entry.name || d.type !== entry.type) throw Error('A built-in value keeps its own name and type');
+  },
+  header: (d: Declaration) => 'uniform ' + d.type + ' ' + d.name + ';' };
 export const declarationKinds: ReadonlyMap<string, DeclarationKind> =
-  new Map([constantKind, uniformKind, topInputKind].map(module => [module.kind, Object.freeze(module)]));
+  new Map([constantKind, uniformKind, topInputKind, builtinKind].map(module => [module.kind, Object.freeze(module)]));
 
 /** Why a name cannot be used, or null. GLSL naming, not reserved, unique among declarations.
  * 名稱不能用的原因（沒有問題回傳 null）：GLSL 命名、非保留字、宣告之間不重複。 */

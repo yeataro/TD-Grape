@@ -2,6 +2,34 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.45 — Uniform B：時間（內建值 `builtin`） — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/uniform-b-time.md`（人類 10-09 照建議：kind `builtin`、欄位 `entry`、名稱照舊產品，design-interview Q52）。依決議 17、Q45。
+
+- **核心**：
+  - 表 [builtins.ts](../../src/core-ts/builtins.ts)：6 筆（`uAbsTime`、`uAbsFrame`、`uTime`、`uFrame`、`uDeltaTime`、`uFrameStep`），各有 TD expression（只給人看）、ISF 名稱、說明（`tr()`，中文在語言檔）。
+  - 宣告種類 `builtin`：`entry` 選一筆；名稱與型別照表、不能改；沒有值、不能公開。名稱不重複，所以一張圖每一筆只有一個。
+  - 產出 `uniform float uAbsTime;`，用到時成為綁定。
+- **TD**（[next_family.py](../../src/td/runtime/next_family.py)）：
+  - `BUILTIN_EXPRESSIONS` 由 TD 自己保管，綁定只帶 `entry`：綁定表的 value 欄會被 DAT Export 當成 Python 執行，絕不寫入編輯器送來的字串。
+  - 寫進 Vectors 頁，由 DAT Export 每格求值，主組件不在也照走。
+  - `me` 是綁定表，所以 `me.time` 就是這個 Grape OP 的時間軸。
+- **編輯器**：共用來源面板加「時間」區，6 筆都列出（沒用到的灰字、旁邊顯示 TD expression，滑鼠提示看說明）。
+  - 「放到圖上」第一次建立宣告、之後重用，一步一次 Undo。
+  - 已建立的顯示幾個節點使用與「刪除」。
+- **驗證**：
+  - 自動測試：core 139（新增內建值 1 項）、editor 50（新增：放兩次＝一筆宣告兩個引用、送出帶 entry、Undo 收回）、Python 58（新增：照 entry 寫 TD 自己的 expression、拒絕不認得的 entry 與型別、名稱）。
+  - 真實 TD＋瀏覽器（照使用者操作）：
+    1. 面板「時間」→ `uAbsTime` 放到圖上兩次 → 一筆宣告、「2 個節點使用」→ 接到 Color Output → GLSL OP 的 `vec0valuex` 為 EXPORT 模式、值跟著 `absTime.seconds` 走。
+    2. 改接 `uTime` → 值等於這個 Grape OP 的時間軸秒數（`me.time.seconds`）；`uAbsTime` 沒用到就不進綁定表。
+    3. 刪除 `uTime` → 引用一起刪。
+    4. Undo → TD 回來。
+  - 測試 OP 已刪。Deliver 存 `TD-Grape-dev.79`。
+- **之後**：
+  - MAT（vertex）可用、ISF 匯出：各自那一輪。
+  - 「TD 名稱／通用名稱」切換、分類過濾：面板整理時。
+  - 下一輪 Uniform C（拖數值即時送到 TD）。
+
 ## Refactor.44 — Uniform A：宣告、面板、綁定表驅動 GLSL OP；只改值不重新編譯 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/uniform-round.md` 的 A（人類 10-09 看過：拆五輪 A→E；「是不是顏色」存成 `color: true`，只給 vec3、vec4，design-interview Q51）。依 Q41。

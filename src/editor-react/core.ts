@@ -9,6 +9,7 @@ import type * as structure from '../core-ts/structure';
 import type * as ghosts from '../core-ts/ghosts';
 import type * as declarations from '../core-ts/declarations';
 import type * as tdValueTable from '../core-ts/td_values';
+import type * as builtinTable from '../core-ts/builtins';
 import { tr, TextError, type Message } from './text';
 
 // Typed access to the SAME generated producer served to the legacy entry and TD.
@@ -19,6 +20,7 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf;
   declarationKinds: typeof declarations.declarationKinds; declarationNameProblem: typeof declarations.declarationNameProblem;
   freeDeclarationName: typeof declarations.freeDeclarationName; defaultTextures: typeof declarations.defaultTextures;
+  builtinValues: typeof builtinTable.builtinValues;
   tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;
 };
 export type { TdValue } from '../core-ts/td_values';
@@ -69,7 +71,7 @@ export const supportedDefinitions = [
 // Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.
 // 本入口已接管的宣告種類；不認得的保留（Ghost），認得但未接管的（Uniform）仍拒絕。
-export const supportedKinds = ['constant', 'topInput', 'uniform'];
+export const supportedKinds = ['constant', 'topInput', 'uniform', 'builtin'];
 // Retired definitions still open old graphs but are not offered for new nodes, as in the
 // legacy creator (TD-Grape-legacy src/editor/functions_ui.js availableEntries). The same
 // value is made with Scalar／Vector (fixed entries to be discussed).

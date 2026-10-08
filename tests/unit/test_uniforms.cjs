@@ -51,3 +51,24 @@ test('old graphs: the Uniform node becomes the reference node; nativeSequence co
   assert.deepEqual(graph.declarations[0],{id:'u',kind:'uniform',name:'uC',type:'vec3',value:[1,1,1],color:true});
   assert.equal(graph.stages.pixel.nodes[0].nodeType,'sgrape.builtin.declaration');
 });
+
+// Uniform B (Refactor.45; Q52): built-in values. 內建值（時間）。
+test('a built-in value: fixed name and type, no value, one per graph; declared in GLSL and bound by its entry',()=>{
+  const doc=withUniform({},false);
+  const g=doc.change(c=>{
+    c.addDeclaration({id:'b1',kind:'builtin',name:'uAbsTime',type:'float',entry:'absTime'});
+    const net=c.networks.get('pixel'),output=net.nodes.find(n=>n.data.nodeType==='sgrape.builtin.pixel_out');
+    net.insert({id:'t',nodeType:'sgrape.builtin.declaration',params:{declarationId:'b1'},ui:{}});
+    net.connect(net.node('t').outputs[0],output.port('input','color'),G.values.policy);
+  }).after;
+  assert.deepEqual(plain(g.declarations.find(d=>d.id==='b1')),{id:'b1',kind:'builtin',name:'uAbsTime',type:'float',entry:'absTime'});
+  const result=compiler.compile(g);
+  assert.match(result.pixel,/^uniform float uAbsTime;$/m);
+  assert.deepEqual(plain(result.bindings.filter(b=>b.kind==='builtin')),[{id:'b1',kind:'builtin',name:'uAbsTime',type:'float',entry:'absTime'}]);
+  const again=new G.GraphDocument(g,registry);
+  assert.throws(()=>again.change(c=>c.addDeclaration({id:'b2',kind:'builtin',name:'uAbsTime',type:'float',entry:'absTime'})),e=>e.problem==='taken','one per graph');
+  assert.throws(()=>again.change(c=>c.changeDeclaration('b1',{name:'uClock'})),/keeps its own name/);
+  assert.throws(()=>again.change(c=>c.changeDeclaration('b1',{value:1})),e=>e.problem==='field');
+  assert.throws(()=>again.change(c=>c.addDeclaration({id:'b3',kind:'builtin',name:'uMoon',type:'float',entry:'moon'})),/Unknown built-in/);
+  assert.deepEqual(plain(G.builtinValues.map(e=>e.name)),['uAbsTime','uAbsFrame','uTime','uFrame','uDeltaTime','uFrameStep']);
+});

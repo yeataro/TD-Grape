@@ -209,6 +209,18 @@ export class Editor {
   };
   setDeclarationColor = (id: string, color: boolean) =>
     this.transactGraph(tr('sources.colorChanged', 'Colour setting updated; waiting to apply'), document => { document.changeDeclaration(id, { color }); });
+  // Built-in values (Refactor.45; Q52): placing one creates its declaration the first time and reuses it
+  // after; one step, one Undo. 內建值：第一次放到圖上時建立宣告，之後重用；一步、一次 Undo。
+  placeBuiltin = (entry: string, position: XYPosition) => {
+    const value = core.builtinValues.find(item => item.id === entry)!;
+    this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => {
+      let declaration = document.document.declarations.find(d => d.kind === 'builtin' && d.entry === entry);
+      if (!declaration) declaration = document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16),
+        kind: 'builtin', name: value.name, type: value.type, entry });
+      document.networks.get('pixel')!.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.declaration',
+        params: { declarationId: declaration.id }, ui: { ...position } });
+    });
+  };
   // TOP texture inputs (Refactor.43): each becomes an input of the Grape OP in TD, in list order.
   // TOP 貼圖輸入：每一筆在 TD 成為 Grape OP 的輸入接口，照清單順序。
   addTopInput = () => {

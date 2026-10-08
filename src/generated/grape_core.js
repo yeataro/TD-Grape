@@ -19,6 +19,7 @@ const model_1 = require("./model");
 const ghosts_1 = require("./ghosts");
 const declarations_1 = require("./declarations");
 const td_values_1 = require("./td_values");
+const builtins_1 = require("./builtins");
 const node_sdk_1 = require("./node_sdk");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
@@ -80,7 +81,28 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, defaultTextures: declarations_1.defaultTextures, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, defaultTextures: declarations_1.defaultTextures, builtinValues: builtins_1.builtinValues, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
+
+},
+"builtins":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.builtinValues = void 0;
+const text_1 = require("./text");
+exports.builtinValues = Object.freeze([
+    { id: 'absTime', name: 'uAbsTime', type: 'float', td: 'absTime.seconds', isf: 'TIME',
+        hint: (0, text_1.tr)('builtin.absTime', 'Seconds since TouchDesigner started; keeps running.') },
+    { id: 'absFrame', name: 'uAbsFrame', type: 'float', td: 'absTime.frame', isf: 'FRAMEINDEX',
+        hint: (0, text_1.tr)('builtin.absFrame', 'Frames since TouchDesigner started; keeps running.') },
+    { id: 'time', name: 'uTime', type: 'float', td: 'me.time.seconds', isf: null,
+        hint: (0, text_1.tr)('builtin.time', "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime.") },
+    { id: 'frame', name: 'uFrame', type: 'float', td: 'me.time.frame', isf: null,
+        hint: (0, text_1.tr)('builtin.frame', "Frame on this Grape OP's timeline; stops and loops with the timeline.") },
+    { id: 'deltaTime', name: 'uDeltaTime', type: 'float', td: 'absTime.stepSeconds', isf: 'TIMEDELTA',
+        hint: (0, text_1.tr)('builtin.deltaTime', 'Seconds from the previous frame to this one (all of TouchDesigner).') },
+    { id: 'frameStep', name: 'uFrameStep', type: 'float', td: 'absTime.step', isf: null,
+        hint: (0, text_1.tr)('builtin.frameStep', 'Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames.') },
+].map(entry => Object.freeze(entry)));
 
 },
 "capacity":function(require,module,exports){
@@ -305,6 +327,7 @@ const model_1 = require("./model");
 const numeric_1 = require("./numeric");
 const values_1 = require("./values");
 const identifier_rules_1 = require("./identifier_rules");
+const builtins_1 = require("./builtins");
 const numericValue = (declaration) => {
     if (!numeric_1.types.includes(declaration.type))
         throw Error('Unsupported declaration type');
@@ -357,7 +380,21 @@ const topInputKind = { kind: 'topInput', role: 'source', colorGroup: 'sampler', 
             throw Error('Unknown default texture');
     },
     reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }) };
-exports.declarationKinds = new Map([constantKind, uniformKind, topInputKind].map(module => [module.kind, Object.freeze(module)]));
+// Built-in value (decision 17, Q52; builtins.ts): a Uniform whose meaning Grape guarantees. `entry` picks
+// one; the name is the entry's and fixed (so one per graph: names are unique); no value; never exposed.
+// 內建值：entry 選一筆；名稱照表、固定（名稱不重複，所以一張圖只有一筆）；沒有值、不能公開。
+const builtinTable = new Map(builtins_1.builtinValues.map(entry => [entry.id, entry]));
+const builtinKind = { kind: 'builtin', role: 'source', colorGroup: 'uniform', types: ['float'], constant: false,
+    optional: ['entry'], initial: () => ({}),
+    validate: d => {
+        const entry = builtinTable.get(String(d.entry));
+        if (!entry)
+            throw Error('Unknown built-in value');
+        if (d.name !== entry.name || d.type !== entry.type)
+            throw Error('A built-in value keeps its own name and type');
+    },
+    header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
+exports.declarationKinds = new Map([constantKind, uniformKind, topInputKind, builtinKind].map(module => [module.kind, Object.freeze(module)]));
 function declarationNameProblem(graph, name, except) {
     if (!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name) || name.includes('__'))
         return 'format';

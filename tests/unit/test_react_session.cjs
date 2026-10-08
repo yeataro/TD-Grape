@@ -818,3 +818,23 @@ test('a Uniform: add, vec4 colour, value, place, wire; a value change only chang
   assert.equal(second.pixel, first.pixel, 'the GLSL is the same');
   assert.deepEqual(second.bindings.find(b => b.kind === 'uniform').value, [0, 1, 0, 1]);
 });
+
+// Uniform B (Refactor.45; Q52): placing a time value creates it once and reuses it after.
+// 時間：第一次放到圖上時建立，之後重用。
+test('a time value placed twice is one declaration with two reference nodes; it goes to TD by its entry', async t => {
+  const { session, calls } = open(t);
+  session.placeBuiltin('absTime', { x: 0, y: 0 });
+  session.placeBuiltin('absTime', { x: 0, y: 200 });
+  const builtins = session.snapshot().declarations.filter(d => d.kind === 'builtin');
+  assert.equal(builtins.length, 1);
+  const refs = session.snapshot().projection.nodes.filter(n => n.data.authored.params.declarationId === builtins[0].id);
+  assert.equal(refs.length, 2);
+  assert.equal(session.snapshot().references[builtins[0].id], 2);
+  session.connect({ source: refs[0].id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
+  await session.flush();
+  const runtime = JSON.parse(calls.at(-1).body.runtime);
+  assert.match(runtime.pixel, /^uniform float uAbsTime;$/m);
+  assert.deepEqual(runtime.bindings.filter(b => b.kind === 'builtin').map(b => [b.name, b.entry]), [['uAbsTime', 'absTime']]);
+  session.history(false); session.history(false); session.history(false);
+  assert.equal(session.snapshot().declarations.filter(d => d.kind === 'builtin').length, 0, 'Undo removes what placing created');
+});
