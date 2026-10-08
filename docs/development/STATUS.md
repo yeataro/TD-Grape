@@ -2,6 +2,10 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.33.1 — 預設圖「平面法線」改為 (0.5, 0.5, 1.0) — 2026-10-09
+
+人類確認樣板裡的 (0.5, 0.6, 1.0) 是手誤。[install_grape_templates.py](../../tools/jobs/install_grape_templates.py) 改正並重建範本；`Grape_TOP_REF/Samples/sample_flatNormal` 在 TD 內直接改。全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.60`。
+
 ## Refactor.33 — Grape OP 新結構（照人類樣板 `Grape_TOP_REF`）：圖只存一份、內容與程式分開 — 2026-10-09
 
 依 workspace `work/in-place-refactor-design/grape-op-structure.md`（一、已定 1–9、13、15、16）與 design-interview Q49。更新機制（Clone＋TDUpdater）不在本輪。

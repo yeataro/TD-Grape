@@ -128,7 +128,7 @@ white = node(samples, constantTOP, 'sample_white', -178, -492, 130, 90)
 black = node(samples, constantTOP, 'sample_black', -178, -617, 130, 105)
 black.par.colorr, black.par.colorg, black.par.colorb = 0.0, 0.0, 0.0
 flat = node(samples, constantTOP, 'sample_flatNormal', -178, -742, 130, 105)
-flat.par.colorr, flat.par.colorg, flat.par.colorb = 0.5, 0.6, 1.0  # as in the human's layout
+flat.par.colorr, flat.par.colorg, flat.par.colorb = 0.5, 0.5, 1.0  # flat normal (0, 0, 1) encoded
 chosen = node(samples, selectTOP, 'select_top', -178, -867)
 chosen.par.top.expr = 'parent().par.Top'
 for i, (source_op, y) in enumerate([(grape_image, -125), (banana, -250), (jelly, -375), (white, -492),

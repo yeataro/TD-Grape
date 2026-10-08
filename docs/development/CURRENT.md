@@ -6,7 +6,7 @@
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.33**（2026-10-09）——Grape OP 新結構，照人類樣板 `Grape_TOP_REF`：外層 `graph` 是圖的唯一正本、`graph_meta` 放證明與執行部分、`status` 在右上；範本四象限（程式／編輯器產生的內容／輸入與預設圖 `Samples`／Shader 與輸出）、英文說明框；值得注意的狀態與錯誤顯示在 TD 狀態列；Edit 用全域捷徑 `TDGrape` 找主組件；既有 4 個 Grape OP 已搬遷。**待人類看**。下一件：「排查舊的笨行為」案，之後完整 Grape 頁（Q45）。議題檔：workspace `work/in-place-refactor-design/grape-op-structure.md`。
+**最新交付：Refactor.33.1**（2026-10-09）——預設圖「平面法線」改正為 (0.5, 0.5, 1.0)。**Refactor.33**（2026-10-09）——Grape OP 新結構，照人類樣板 `Grape_TOP_REF`：外層 `graph` 是圖的唯一正本、`graph_meta` 放證明與執行部分、`status` 在右上；範本四象限（程式／編輯器產生的內容／輸入與預設圖 `Samples`／Shader 與輸出）、英文說明框；值得注意的狀態與錯誤顯示在 TD 狀態列；Edit 用全域捷徑 `TDGrape` 找主組件；既有 4 個 Grape OP 已搬遷。**待人類看**。下一件：「排查舊的笨行為」案，之後完整 Grape 頁（Q45）。議題檔：workspace `work/in-place-refactor-design/grape-op-structure.md`。
 
 **Refactor.32**（2026-10-08）——從 TD 選單（Tab）建立新格式的 Grape TOP：範本自帶預設圖與 GLSL，不需編輯服務；身分改成 Grape 頁唯讀參數 Grape ID，複製時自動換號（Q32 實作與量測）；Grape MAT 先從選單拿掉。**待人類實機驗收**。下一輪：完整 Grape 頁（Q45）。
 
@@ -93,7 +93,6 @@
 | --- | --- |
 | 2026-10-09 | **GPU 編譯失敗時圖也沒存（與 Q38 原意不符）**：`next_family.apply` 在 TD 編譯失敗時整筆拒絕，Shader 停在最後成功版，但這次的圖也沒寫進 `graph`。Q38 原意是圖照存、只有 Shader 停在最後成功版。要改需編輯器配合（收到「GPU 失敗」後改送只含圖的請求，或 TD 回覆時已存圖），屬協定，做 Grape 頁或錯誤回報那一輪一起處理。 |
 | 2026-10-09 | **驗證注意**：TD 2025.33230 的 `TOP.sample()` 在浮點格式（16／32-bit float）把 R 當 alpha 回傳；讀 Grape OP 輸出像素改用 `numpyArray()`。TD 的 bug，記在 workspace `work/refactor/td-issues/top-sample-float-alpha.md`，人類決定何時回報。 |
-| 2026-10-09 | `Samples/sample_flatNormal` 照樣板是 (0.5, 0.6, 1.0)，平面法線通常是 (0.5, 0.5, 1.0)——可能手誤，待人類確認。 |
 | 2026-10-08 | **【後續版本／發布後】節點實作改版時，舊圖的產碼會悄悄改變（現在不處理；人類 10-08 概念 review）。** 出處：最早規格 legacy `docs/specs/shader-graph-handoff-v2.md`（09-12）節點身分分兩層 uuid／revisionHash；人類 09-10 決定（legacy `docs/architecture/UPGRADE_POLICY.md`）「先提示差異，確認後才升級；確認前保留上次成功輸出」；舊實作（bootstrap 的 `revisionHash`、`node_catalog.json`）已於 Refactor.29 拿掉，需求還在、要在新架構重做。已談方向：概念身分沿用 `nodeType`；每個節點模組自帶整數版本號、手動 +1；輸出變動由**測試**偵測（不放建置期；目前沒有涵蓋全部節點的輸出指紋，屆時新做）；圖頂層記「用到的節點類型→版本」；參數轉換由節點模組自己提供；圖比編輯器新的節點版本→Ghost、不寫回；確認前 TD 跑 Last Known Good（Q38）。**未定**：尚未確認升級時編輯其他節點，會讓舊節點跟著用新實作產碼——保留舊實作（舊規格做法）還是先擋住，做的時候再談。參考：Houdini HDA（大改版版本進名字、小改版就地同步）、Unity `FormerlySerializedAs`（只管改名、漏寫悄悄丟、沒有資料版本號）。 |
 | 2026-10-08 | ~~**清理第 5 條發現、待人類判斷**~~ **人類 2026-10-08 定：保留現在的樣式，不回舊樣式**（現在的才是正確行為，且暫不影響體驗）。原記錄：integration `test_math_module_migration` 與 legacy 對照時，產生的 GLSL 註解不同——legacy 把節點註解寫在同一行（`float sg_n_fold = (1.0 + 2.0); // Fold`），現在寫成下一行 `// Comment: Fold`，另一個註解反而少了 `Comment:` 前綴。自 Refactor.26（筆記搬到節點 `comment`）起；是否要回到舊樣式由人類決定。 |
 | 2026-10-08 | **Refactor.26 收尾時記下、未處理（不在 Q44 範圍，需人類決定或屬清殘留）**：(1) 節點目錄（catalog）的 `definitionUuid` 欄位名未改——`build:core` 仍替舊 Python 寫 `node_catalog.json`，與清理清單第 5 條一起處理；(2) 核心內部的網路 id 仍叫 `'function:'+id`（不存檔），而陣列長度引用的 `sg_extent_` 代號內含 `fn_` 前綴**會存進圖**——已定：做陣列那一輪改成有結構的引用（graph-structure 議事錄；Q46 確認不另問）；~~(3) 編輯器「不支援」訊息仍寫「請使用舊入口」~~（Refactor.27 已改）；~~(4) `InitializeFamily` 走舊 NativeFamily 路徑~~（Refactor.27 已刪）；(5) TD MCP 的 `view_operator` 在 `src/td/.claude/cache/` 留下快取圖檔（未追蹤、未提交）；(6) 「節點實作改版時舊圖產碼會悄悄改變」→ 已獨立成上方「【後續版本／發布後】」一條（10-08 概念 review）。 |
@@ -142,7 +141,7 @@
 
 - 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP：`/project1/Grape_TOP_test`（原名 `Grape_TOP_React`，rev 596）、`Grape_TOP2`、`Grape_TOP3`、人類的樣板 `Grape_TOP_REF`——皆為 Refactor.33 新存法；舊格式樣本 `/project1/Grape_TOP_old_sample`（原名 `Grape_TOP_Refactor`，留作日後匯入器樣本）
 - 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
-- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.33，存 TD-Grape-dev.59；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
+- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.33，存 TD-Grape-dev.60；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴
