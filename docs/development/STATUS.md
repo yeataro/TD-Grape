@@ -2,6 +2,10 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.35.1 — 清掉主組件的舊 tag 與 Remote Panel 失效的目標 — 2026-10-09
+
+人類同意（「照建議清掉」）。主組件 `/TD_Grape` 拿掉沒人用的舊 tag `sgrapeManager`；`remote_panel` 的 `Targetop` 清空（原本指向早已不存在的 `../project1/Grape_TOP_React/shader`，用時再選）。全專案 `scriptErrors()` 為空。Deliver 存 `TD-Grape-dev.64`。
+
 ## Refactor.35 — 排查舊的笨行為（一）：主組件一律用全域捷徑找 — 2026-10-09
 
 人類：「開始排查舊的笨行為」。盤點與分類寫在 workspace `work/refactor/dumb-behavior-audit.md`。規則補充（人類 10-09）：TD 內建的位置（`/ui`、`/sys`、`/local`…）可以用絕對路徑，除非 TD 有其他首選方法。
