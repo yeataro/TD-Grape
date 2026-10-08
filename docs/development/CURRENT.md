@@ -1,12 +1,14 @@
 # 目前現況
 
-最後更新：2026-10-08。每輪收尾時覆寫本頁；完整交付紀錄見 [STATUS](STATUS.md)。標 ✅ 者已用 git／測試核對。
+最後更新：2026-10-09。每輪收尾時覆寫本頁；完整交付紀錄見 [STATUS](STATUS.md)。標 ✅ 者已用 git／測試核對。
 
 ## 做到哪裡
 
 **路線：** [B 案](REFACTOR_REACT_FLOW_PLAN_B.md)——一次一條真實產品能力，正式 React UI、核心與 TD 同輪打通，逐步擴大到接管全產品後關閉舊入口。A 案（[REFACTOR_UI_UPDATES](REFACTOR_UI_UPDATES.md)）只留作比較。
 
-**最新交付：Refactor.32**（2026-10-08）——從 TD 選單（Tab）建立新格式的 Grape TOP：範本自帶預設圖與 GLSL，不需編輯服務；身分改成 Grape 頁唯讀參數 Grape ID，複製時自動換號（Q32 實作與量測）；Grape MAT 先從選單拿掉。**待人類實機驗收**。下一輪：完整 Grape 頁（Q45）。
+**最新交付：Refactor.33**（2026-10-09）——Grape OP 新結構，照人類樣板 `Grape_TOP_REF`：外層 `graph` 是圖的唯一正本、`graph_meta` 放證明與執行部分、`status` 在右上；範本四象限（程式／編輯器產生的內容／輸入與預設圖 `Samples`／Shader 與輸出）、英文說明框；值得注意的狀態與錯誤顯示在 TD 狀態列；Edit 用全域捷徑 `TDGrape` 找主組件；既有 4 個 Grape OP 已搬遷。**待人類看**。下一件：「排查舊的笨行為」案，之後完整 Grape 頁（Q45）。議題檔：workspace `work/in-place-refactor-design/grape-op-structure.md`。
+
+**Refactor.32**（2026-10-08）——從 TD 選單（Tab）建立新格式的 Grape TOP：範本自帶預設圖與 GLSL，不需編輯服務；身分改成 Grape 頁唯讀參數 Grape ID，複製時自動換號（Q32 實作與量測）；Grape MAT 先從選單拿掉。**待人類實機驗收**。下一輪：完整 Grape 頁（Q45）。
 
 **Refactor.31**（2026-10-08）——清殘留第 8 條：核心套件 `wire_planning.js` 改名 `grape_core.js`、拿掉 `GrapeWirePlanning`。**清理清單第 1–8 條全部完成。**
 
@@ -46,7 +48,7 @@
 
 **主題：清除會限制新架構的舊架構殘留（人類的核心價值）。** 兩份工作文件（workspace，不在 git）：
 - 盤查結果：`../work/refactor/legacy-audit-2026-10-08.md`（核心／新編輯器／TD 端／舊 Python 與測試、文件四區，含嚴重度）。
-- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條）**，寫回 design-interview **Q45**；**核心四區 03 節點與型別（92）、04 編輯指令（88）、05 子圖（54）、06 Stage（49）**，寫回 **Q46**（修改 Q41 子圖可放不用宣告的、Q44 子圖 Stage／target 改推算；子圖存檔名稱改 `subgraphId`／`sgrape.builtin.subgraph_*`；沒用的子圖定義刪掉；Math 與 Add 等都留；自動轉換只做不遺失資料的；Color Output 什麼都能接）。**畫面五區 07 節點外觀（48）、08 面板與版面（56）、09 新增選單與 Library（33）、10 匯入匯出（31）、11 設定語系圖示（42）也已完成**，寫回 **Q47**（低牽連的介面細節擱置到加回來時再定；Log 的「怎麼來」要早做；畫布暫不做成面板但狀態要能支援多份、編輯器同時持有多張圖；浮動面板自由擺放吸附邊緣；參數面板通用化）。03–11 的 C 類人類已逐條確認，補充寫在 Q47 後的「C 類確認時的修正」。**需求盤點全部 11 區完成；清殘留判斷規則已定（Q48）。清理清單第 2、3 條已做（Refactor.27）、第 4 條已做（Refactor.28）、第 5 條已做（Refactor.29）、第 6 條已做（Refactor.30）、第 7 條判為留、第 8 條已做（Refactor.31）。**清理清單全部完成。** Refactor.32 做了「建立 Grape OP＋身分」。**人類回來後第一件：「排查舊的笨行為」案子**（`../work/refactor/dumb-behavior-audit.md`：寫死絕對路徑、子 OP 該用全域捷徑卻搜尋全專案；先定全域捷徑名稱，傾向 `TDGrape`）。另有「Grape OP 結構與更新」等人類擺好樣板後整理。之後：完整 Grape 頁（Q45：Open Editor 用 App 視窗、服務沒開時問、Open in Browser、GLSL Parameters、Grape Editor Version、Generated TOP）。**
+- 圖結構議事錄：`../work/in-place-refactor-design/graph-structure.md`——**決議 1–17 與待決 A–E 已全部定案（2026-10-08）**，已寫回 design-interview **Q44**（並更正 Q41 的程式／存檔名、GLOSSARY）。**格式本身已實作（Refactor.26）**；延後到各功能那一輪的：每種宣告 kind 由模組規定欄位與 `extensions` 外的警告（Uniform／貼圖）、內建值 kind、`defaultTexture`、公開參數名稱＋標籤、「是不是顏色」、子圖「攤平／函式」、作者與分類。**插隊（人類 2026-10-08）：先做舊產品需求盤點，再確認四類原則。** 盤點需求不是做法；文件只當索引，舊程式、舊產品操作、人類記憶才是依據，永不假設完整。檔案在 `../work/refactor/requirements-inventory/`（判斷標準 `criteria.md`）。**已完成：01 來源與 Uniform（134 條）、02 TD 宿主（117 條）**，寫回 design-interview **Q45**；**核心四區 03 節點與型別（92）、04 編輯指令（88）、05 子圖（54）、06 Stage（49）**，寫回 **Q46**（修改 Q41 子圖可放不用宣告的、Q44 子圖 Stage／target 改推算；子圖存檔名稱改 `subgraphId`／`sgrape.builtin.subgraph_*`；沒用的子圖定義刪掉；Math 與 Add 等都留；自動轉換只做不遺失資料的；Color Output 什麼都能接）。**畫面五區 07 節點外觀（48）、08 面板與版面（56）、09 新增選單與 Library（33）、10 匯入匯出（31）、11 設定語系圖示（42）也已完成**，寫回 **Q47**（低牽連的介面細節擱置到加回來時再定；Log 的「怎麼來」要早做；畫布暫不做成面板但狀態要能支援多份、編輯器同時持有多張圖；浮動面板自由擺放吸附邊緣；參數面板通用化）。03–11 的 C 類人類已逐條確認，補充寫在 Q47 後的「C 類確認時的修正」。**需求盤點全部 11 區完成；清殘留判斷規則已定（Q48）。清理清單第 2、3 條已做（Refactor.27）、第 4 條已做（Refactor.28）、第 5 條已做（Refactor.29）、第 6 條已做（Refactor.30）、第 7 條判為留、第 8 條已做（Refactor.31）。**清理清單全部完成。** Refactor.32 做了「建立 Grape OP＋身分」，Refactor.33 做了「Grape OP 新結構」（更新機制 Clone＋TDUpdater 方向已談、未實作）。**下一件：「排查舊的笨行為」案子**（`../work/refactor/dumb-behavior-audit.md`：寫死絕對路徑；全域捷徑已定 `TDGrape`（Q49），Grape OP 的 Edit 與範本安裝工具已改，剩 `install_native_manager.py`、`grape_editor_dev.py`、TOE 內 `tdfam` 參數等；驗收要把主組件放到非根目錄試）。之後：完整 Grape 頁（Q45：Open Editor 用 App 視窗、服務沒開時問、Open in Browser、GLSL Parameters、Grape Editor Version、Generated TOP）。**
 
 **盤查最重要的發現：**
 1. 新圖格式＝舊格式（`schemaVersion 1`），與 Q40 衝突 → 已由議事錄定案（Q44），待實作。
@@ -89,6 +91,9 @@
 
 | 發現日 | 情況 |
 | --- | --- |
+| 2026-10-09 | **GPU 編譯失敗時圖也沒存（與 Q38 原意不符）**：`next_family.apply` 在 TD 編譯失敗時整筆拒絕，Shader 停在最後成功版，但這次的圖也沒寫進 `graph`。Q38 原意是圖照存、只有 Shader 停在最後成功版。要改需編輯器配合（收到「GPU 失敗」後改送只含圖的請求，或 TD 回覆時已存圖），屬協定，做 Grape 頁或錯誤回報那一輪一起處理。 |
+| 2026-10-09 | **驗證注意**：TD 2025.33230 的 `TOP.sample()` 在浮點格式（16／32-bit float）把 R 當 alpha 回傳；讀 Grape OP 輸出像素改用 `numpyArray()`。TD 的 bug，記在 workspace `work/refactor/td-issues/top-sample-float-alpha.md`，人類決定何時回報。 |
+| 2026-10-09 | `Samples/sample_flatNormal` 照樣板是 (0.5, 0.6, 1.0)，平面法線通常是 (0.5, 0.5, 1.0)——可能手誤，待人類確認。 |
 | 2026-10-08 | **【後續版本／發布後】節點實作改版時，舊圖的產碼會悄悄改變（現在不處理；人類 10-08 概念 review）。** 出處：最早規格 legacy `docs/specs/shader-graph-handoff-v2.md`（09-12）節點身分分兩層 uuid／revisionHash；人類 09-10 決定（legacy `docs/architecture/UPGRADE_POLICY.md`）「先提示差異，確認後才升級；確認前保留上次成功輸出」；舊實作（bootstrap 的 `revisionHash`、`node_catalog.json`）已於 Refactor.29 拿掉，需求還在、要在新架構重做。已談方向：概念身分沿用 `nodeType`；每個節點模組自帶整數版本號、手動 +1；輸出變動由**測試**偵測（不放建置期；目前沒有涵蓋全部節點的輸出指紋，屆時新做）；圖頂層記「用到的節點類型→版本」；參數轉換由節點模組自己提供；圖比編輯器新的節點版本→Ghost、不寫回；確認前 TD 跑 Last Known Good（Q38）。**未定**：尚未確認升級時編輯其他節點，會讓舊節點跟著用新實作產碼——保留舊實作（舊規格做法）還是先擋住，做的時候再談。參考：Houdini HDA（大改版版本進名字、小改版就地同步）、Unity `FormerlySerializedAs`（只管改名、漏寫悄悄丟、沒有資料版本號）。 |
 | 2026-10-08 | ~~**清理第 5 條發現、待人類判斷**~~ **人類 2026-10-08 定：保留現在的樣式，不回舊樣式**（現在的才是正確行為，且暫不影響體驗）。原記錄：integration `test_math_module_migration` 與 legacy 對照時，產生的 GLSL 註解不同——legacy 把節點註解寫在同一行（`float sg_n_fold = (1.0 + 2.0); // Fold`），現在寫成下一行 `// Comment: Fold`，另一個註解反而少了 `Comment:` 前綴。自 Refactor.26（筆記搬到節點 `comment`）起；是否要回到舊樣式由人類決定。 |
 | 2026-10-08 | **Refactor.26 收尾時記下、未處理（不在 Q44 範圍，需人類決定或屬清殘留）**：(1) 節點目錄（catalog）的 `definitionUuid` 欄位名未改——`build:core` 仍替舊 Python 寫 `node_catalog.json`，與清理清單第 5 條一起處理；(2) 核心內部的網路 id 仍叫 `'function:'+id`（不存檔），而陣列長度引用的 `sg_extent_` 代號內含 `fn_` 前綴**會存進圖**——已定：做陣列那一輪改成有結構的引用（graph-structure 議事錄；Q46 確認不另問）；~~(3) 編輯器「不支援」訊息仍寫「請使用舊入口」~~（Refactor.27 已改）；~~(4) `InitializeFamily` 走舊 NativeFamily 路徑~~（Refactor.27 已刪）；(5) TD MCP 的 `view_operator` 在 `src/td/.claude/cache/` 留下快取圖檔（未追蹤、未提交）；(6) 「節點實作改版時舊圖產碼會悄悄改變」→ 已獨立成上方「【後續版本／發布後】」一條（10-08 概念 review）。 |
@@ -135,9 +140,9 @@
 
 ## 現場 TD（使用前以 TD MCP 重新確認）
 
-- 主組件 `/TD_Grape`；測試用 Grape TOP `/project1/Grape_TOP_test`（原名 `Grape_TOP_React`，人類 2026-10-08 改名）；舊格式樣本 `/project1/Grape_TOP_old_sample`（原名 `Grape_TOP_Refactor`，留作日後匯入器樣本）
+- 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP：`/project1/Grape_TOP_test`（原名 `Grape_TOP_React`，rev 596）、`Grape_TOP2`、`Grape_TOP3`、人類的樣板 `Grape_TOP_REF`——皆為 Refactor.33 新存法；舊格式樣本 `/project1/Grape_TOP_old_sample`（原名 `Grape_TOP_Refactor`，留作日後匯入器樣本）
 - 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
-- `GrapeEditor` 為**內嵌**（2026-10-08 `Deliver()`，服務 Refactor.26，存 TD-Grape-dev.43）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
+- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.33，存 TD-Grape-dev.59；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
 - 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴

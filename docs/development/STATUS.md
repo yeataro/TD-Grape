@@ -2,6 +2,19 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.33 — Grape OP 新結構（照人類樣板 `Grape_TOP_REF`）：圖只存一份、內容與程式分開 — 2026-10-09
+
+依 workspace `work/in-place-refactor-design/grape-op-structure.md`（一、已定 1–9、13、15、16）與 design-interview Q49。更新機制（Clone＋TDUpdater）不在本輪。
+
+- **存檔**（[next_family.py](../../src/td/runtime/next_family.py)）：外層 `graph` 是圖的正本（唯一一份）；新 `graph_meta`（格式 `grape-meta-1`）只放 ID、版本號、校驗值、執行部分、Last Known Good，不重複圖的文字——只有圖往前走而 Shader 停在最後成功版時，才留一份那時的圖。手改 `graph` → 校驗值不符 → 拒絕、不覆寫；前一版存法（`GrapeControls/document`）→ 提示需要搬遷。`status` 搬到外層。編輯器↔TD 的請求格式不變（`grape-next-1`）。
+- **範本**（[install_grape_templates.py](../../tools/jobs/install_grape_templates.py)）：照樣板四象限重建 `masters/grape_top`——左上 `GrapeControls`、`FamManifest`；右上 dock 在 `shader` 的 `pixel_shader`、`graph`、`graph_meta`、`uniforms`（綁定表，Uniform 那一輪接上）、`status`；左下 `input1`（列在 GLSL TOP 的 TOPs 清單、不接線）與 `Samples`（預設圖 out1–7，Grape 圖取自主組件 VFS、主組件不在時退回 Banana）；右下 `shader`、`output`。英文說明框四個（`Samples` 內新增「Default inputs」）。用 `op.TDGrape` 找主組件。
+- **狀態列**（`ui.status`）：找不到主組件、編輯服務沒開、複本換號、Grape ID 被改回、舊格式／前一版存法／手改的圖被拒、GPU 失敗停在 Last Known Good。每次成功編輯不顯示（人類：資訊量太大；`next_family.py` 留一行註解可打開）。
+- **Edit**（[grape_op_controls.py](../../src/td/runtime/grape_op_controls.py)）：改用全域捷徑 `TDGrape` 找主組件（原本 tag 搜尋全專案）。[grape_manager_ext.py](../../src/td/runtime/grape_manager_ext.py) 拿掉 `_clear_absence`（清除一則已沒有人寫的「No active Manager.」訊息，死碼）。
+- **既有 Grape OP 搬遷**：`Grape_TOP_test`（rev 596）、`Grape_TOP2`、`Grape_TOP3`、`Grape_TOP_REF` 轉成新存法，圖、GLSL、Shader、ID、版面不動；備份與一次性腳本在 workspace `work/refactor/grape-op-round/`（`backup-33/*.tox`、`migrate_storage_33.py`）。
+- **驗證**：core 110、editor 37、Python 52 通過（新增：手改的圖被拒且不覆寫、執行部分損壞、前一版存法要求搬遷、Last Known Good 只在需要時留圖、`graph_meta` 不重複圖的文字）。真實 TD 2025.33230：TDFam `PlaceOp` 建立 → 取號、預設圖顯示；瀏覽器開編輯器改 R 值 → revision 1、GPU 像素跟著變、校驗值相符、狀態列不洗版；手改 `graph` → Manager 拒絕、編輯器顯示原因、狀態列提示，復原後可再開；複製 → 換號、只改複本的 `graph_meta`；暫時拿掉主組件捷徑 → Edit 提示「主組件不在」、Shader 照跑、Grape 預設圖退回 Banana，捷徑已還原；4 個搬遷後的 Grape OP 經 Manager 讀取正常；全專案 `scriptErrors()` 為空。Manager 換新程式後服務重新連上（4 個 Grape OP）。測試 OP 已刪。Deliver 存 `TD-Grape-dev.59`。
+- **限制／發現**：(1) GPU 編譯失敗時整筆不存（圖也沒存）——Q38 原意是圖照存、Shader 停在最後成功版，需要編輯器配合，記在 CURRENT；(2) TD 2025.33230 的 `TOP.sample()` 在浮點格式把 R 當 alpha 回傳（`numpyArray()` 正確），不影響產品、只影響驗證，記在 workspace `work/refactor/td-issues/top-sample-float-alpha.md`；(3) `install_native_manager.py` 仍寫死 `/TD_Grape` 與 `Grape_TOP_test`，屬「排查舊的笨行為」案。
+- **未驗證**：人類實際用 Tab 選單建立；重開 TD 專案後的行為。
+
 ## Refactor.32 — 從 TD 選單建立新格式的 Grape TOP；Grape OP 身分改用參數 — 2026-10-08
 
 依 design-interview Q32（方向＋本輪實作與量測，見 Q32 末段）、Q45。人類定：Grape 頁完整內容下一輪；Grape MAT 先從選單拿掉；`Regenerateid` 照放、隱藏與排版人類最後整理。

@@ -10,7 +10,8 @@ from hashlib import sha256
 import json
 import uuid
 
-FORMAT = 'grape-next-1'
+FORMAT = 'grape-next-1'  # the editor <-> TD request format
+META_FORMAT = 'grape-meta-1'  # what graph_meta stores (Refactor.33)
 PROTOCOL = 'grape.top.ts.1'  # the frontend compiler protocol this build speaks
 MAX_TEXT = 512000
 
@@ -22,6 +23,15 @@ def require(condition, message):
 
 def digest(text):
     return sha256(text.encode('utf-8')).hexdigest()
+
+
+def notify(comp, message):
+    """Show a notable state or error on TD's status bar (human: use ui.status in the product);
+    the status DAT keeps the record. 值得注意的狀態與錯誤顯示在 TD 狀態列；status DAT 留紀錄。"""
+    try:
+        ui.status = 'Grape ' + comp.name + ': ' + message
+    except Exception:
+        pass
 
 
 def identity(comp):
@@ -45,6 +55,11 @@ def read_runtime(text, *, catalog_hash):
 
 
 class NextFamily:
+    """A Grape OP's stored work (design-interview Q38; grape-op-structure #4, #13):
+    `graph` holds the graph text, the one copy, readable in TD; `graph_meta` holds what proves and
+    runs it (revisions, checksums, ID, execution part, last known good) without the graph text;
+    `status` is this Grape OP's state for people. TD never parses the graph.
+    圖的正本在 graph（唯一一份，TD 裡看得到）；graph_meta 放證明與執行用的資料，不放圖的文字。"""
     FORMAT = FORMAT
     PROTOCOL = PROTOCOL
 
@@ -55,43 +70,57 @@ class NextFamily:
     def target(self):
         return self.comp
 
-    def _data(self):
-        return self.comp.op('GrapeControls/document')
+    def _refuse(self, message):
+        notify(self.comp, message)
+        self.status('refused', message)
+        raise ValueError(message)
 
     def stored(self):
-        text = self._data().text
-        require(text, 'This Grape OP has no saved document.')
+        meta_dat, graph_dat = self.comp.op('graph_meta'), self.comp.op('graph')
+        if meta_dat is None or graph_dat is None:
+            previous = self.comp.op('GrapeControls/document')
+            if previous is not None and '"grape-next-1"' in previous.text[:40]:
+                self._refuse('This Grape OP uses the previous Grape storage and needs migration.')
+            # Old-format graphs are never opened or written here; an importer handles them later (Q40).
+            # 舊格式的圖不在這裡開啟或寫入，之後由匯入器處理。
+            self._refuse('This Grape OP holds an old-format graph. The editor does not open or change it; '
+                         'an importer will handle old graphs later.')
         try:
-            value = json.loads(text)
+            meta = json.loads(meta_dat.text)
         except ValueError:
-            value = None
-        # Old-format graphs are never opened or written here; an importer handles them later (Q40).
-        # 舊格式的圖不在這裡開啟或寫入，之後由匯入器處理。
-        require(isinstance(value, dict) and value.get('format') == FORMAT,
-                'This Grape OP holds an old-format graph. The editor does not open or change it; an importer will handle old graphs later.')
-        for part in ('document', 'runtime'):
-            entry = value.get(part)
-            require(isinstance(entry, dict) and isinstance(entry.get('text'), str)
-                    and digest(entry['text']) == entry.get('sha256'), 'stored ' + part + ' changed or damaged')
+            meta = None
+        if not (isinstance(meta, dict) and meta.get('format') == META_FORMAT):
+            self._refuse('graph_meta is damaged or not in the current format.')
+        text = graph_dat.text
+        document = meta.get('document')
+        if not (isinstance(document, dict) and text and digest(text) == document.get('sha256')):
+            # A hand edit or damage never takes effect silently. 手改或損壞不會悄悄生效。
+            self._refuse('The graph DAT was changed by hand or is damaged, so the editor does not open it. '
+                         'Undo the change in TD to open it again.')
+        runtime = meta.get('runtime')
+        if not (isinstance(runtime, dict) and isinstance(runtime.get('text'), str)
+                and digest(runtime['text']) == runtime.get('sha256')):
+            self._refuse('The stored execution part is changed or damaged.')
         ident = identity(self.comp)
-        require(len(ident) == 32, 'This Grape OP has no Grape ID yet.')
-        if value.get('targetId') != ident:
+        if len(ident) != 32:
+            self._refuse('This Grape OP has no Grape ID yet.')
+        if meta.get('targetId') != ident:
             # A new copy, a fresh template or a regenerated ID: the stored ID follows the parameter
-            # (Q32). Only the envelope changes; the document and Shader are untouched.
-            # 新複本、剛建立的範本或換過號：存檔裡的 ID 跟著參數走；只改信封，圖與 Shader 不動。
-            previous = value.get('targetId')
-            value['targetId'] = ident
-            self._data().text = json.dumps(value, ensure_ascii=False)
-            self.status('identity-adopted', 'The stored document now follows this Grape ID.', previousTargetId=previous)
-        return value
+            # (Q32). Only graph_meta changes; the graph and Shader are untouched.
+            # 新複本、剛建立的範本或換過號：存的 ID 跟著參數走；只改 graph_meta，圖與 Shader 不動。
+            previous = meta.get('targetId')
+            meta['targetId'] = ident
+            meta_dat.text = json.dumps(meta, ensure_ascii=False)
+            self.status('identity-adopted', 'The stored graph now follows this Grape ID.', previousTargetId=previous)
+        return meta, text
 
     def state(self):
-        value = self.stored()
-        return {'revision': value['document']['revision'], 'document': value['document']['text'],
-                'runtimeRevision': value['runtime']['revision'], 'targetId': value['targetId']}
+        meta, text = self.stored()
+        return {'revision': meta['document']['revision'], 'document': text,
+                'runtimeRevision': meta['runtime']['revision'], 'targetId': meta['targetId']}
 
     def status(self, phase, message, **details):
-        data = self.comp.op('GrapeControls/status')
+        data = self.comp.op('status')
         if data:
             data.text = json.dumps({'phase': phase, 'message': message,
                 'targetId': identity(self.comp), **details}, ensure_ascii=False, indent=2)
@@ -134,8 +163,8 @@ class NextFamily:
         """Two parts (Q38 2-2): the execution part (GLSL + bindings) is applied as a pair and
         rolled back as a pair; the document part is stored as received. A failed code
         generation sends the document only: the running Shader stays the last known good."""
-        current = self.stored()
-        revision = current['document']['revision']
+        meta, previous_text = self.stored()
+        revision = meta['document']['revision']
         require(body.get('format') == FORMAT, 'unsupported request format')
         if body.get('revision') != revision:
             raise RuntimeError('Conflict: stale revision')
@@ -146,8 +175,8 @@ class NextFamily:
         require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_TEXT, 'document exceeds 512 KB or is empty')
         runtime_text = body.get('runtime')
         next_revision = revision + 1
-        value = dict(current)
-        value['document'] = {'revision': next_revision, 'text': text, 'sha256': digest(text)}
+        meta = dict(meta)
+        meta['document'] = {'revision': next_revision, 'sha256': digest(text)}
         shader_updated = False
         if runtime_text is not None:
             compiled = read_runtime(runtime_text, catalog_hash=catalog_hash)
@@ -162,15 +191,31 @@ class NextFamily:
             except Exception as error:
                 pixel.text = previous
                 self.status('gpu-validation', str(error), exception=type(error).__name__)
+                notify(self.comp, 'TD could not compile this Shader; the last known good keeps running.')
                 raise RuntimeError('TD could not compile this Shader; the last known good keeps running. ' + str(error))
-            value['runtime'] = {'revision': next_revision, 'text': runtime_text, 'sha256': digest(runtime_text)}
-            value['lastKnownGood'] = {'revision': next_revision, 'document': text, 'runtime': runtime_text}
-        self._data().text = json.dumps(value, ensure_ascii=False)
-        view = self.comp.op('graph')
-        if view is not None:
-            view.text = text  # human-readable copy, written as received
+            meta['runtime'] = {'revision': next_revision, 'text': runtime_text, 'sha256': digest(runtime_text)}
+            # The last known good is this graph: no second copy of its text. 最後成功版就是這份圖，不重存文字。
+            meta['lastKnownGood'] = {'revision': next_revision, 'runtime': runtime_text, 'document': None}
+        else:
+            # The graph moves past the last known good: keep that graph's text once.
+            # 圖往前走、Shader 停在最後成功版時，才留一份那時的圖。
+            last = dict(meta.get('lastKnownGood') or {})
+            if last and last.get('document') is None:
+                last['document'] = previous_text
+            meta['lastKnownGood'] = last
+        graph_dat, meta_dat = self.comp.op('graph'), self.comp.op('graph_meta')
+        before = graph_dat.text, meta_dat.text
+        try:
+            graph_dat.text = text  # stored as received; TD never re-serializes it
+            meta_dat.text = json.dumps(meta, ensure_ascii=False)
+        except Exception:
+            graph_dat.text, meta_dat.text = before
+            raise
+        # Every edit is not shown on the status bar: too much (human 2026-10-09). Uncomment to watch edits.
+        # 每一步編輯不顯示在狀態列（資訊量太大）；要觀察時取消下一行的註解。
+        # notify(self.comp, 'applied revision ' + str(next_revision))
         self.status('applied' if runtime_text is not None else 'document-only',
                     'Shader and document applied' if runtime_text is not None
                     else 'Document saved; Shader unchanged (no program change, or code generation failed in the editor)',
-                    revision=next_revision, runtimeRevision=value['runtime']['revision'])
+                    revision=next_revision, runtimeRevision=meta['runtime']['revision'])
         return {'ok': True, 'state': self.state(), 'target': self.comp.path, 'shaderUpdated': shader_updated}

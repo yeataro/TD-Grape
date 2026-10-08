@@ -48,20 +48,7 @@ class GrapeManagerExt:
         editor.http.preview_port = int(panel.par.Port.eval()) if panel else None
         # Discovery happens on connection, never on an idle frame or child cook.
         self.families = {comp.id: comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)}
-        for comp in self.families.values():
-            self._clear_absence(comp)
         self._status('Ready', registered=len(self.families), version=editor.snapshot.version)
-
-    def _clear_absence(self, comp):
-        # An explicit Manager start restores availability; no child-side polling.
-        data = comp.op('GrapeControls/status')
-        if data:
-            try:
-                previous = json.loads(data.text)
-            except ValueError:
-                return
-            if isinstance(previous, dict) and previous.get('state') == 'Editing unavailable' and previous.get('message') == 'No active Manager.':
-                data.text = json.dumps({'state': 'Editing available', 'manager': self.ownerComp.path})
 
     def Disconnect(self):
         if self.editor and self.editor.http and self.editor.http.host_requests is self.queue:
@@ -98,7 +85,6 @@ class GrapeManagerExt:
             raise RuntimeError('This is not a Grape OP.')
         self.Adapter(comp).state()
         self.families[comp.id] = comp
-        self._clear_absence(comp)
         return self._module('next_family').identity(comp)
 
     def Choices(self):

@@ -1,11 +1,13 @@
-"""Grape OP editing path (design-interview Q38, Q40, Q48): TD never reads the graph."""
+"""Grape OP editing path (design-interview Q38, Q40, Q48; grape-op-structure #4): TD never reads the graph.
+
+`graph` holds the graph text (the one copy); `graph_meta` proves and runs it; `status` is for people."""
 import json
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
 
 import host_api
-from next_family import NextFamily, FORMAT, digest
+from next_family import NextFamily, FORMAT, META_FORMAT, digest
 
 TARGET = 'c' * 32
 CATALOG = 'f' * 64
@@ -27,10 +29,14 @@ class Par:
 class Comp:
     def __init__(self, stored, grape_id=TARGET):
         self.tags = {'grapeOP'}
+        self.name = 'next_test'
         self.par = SimpleNamespace(Grapeid=Par(grape_id))
         self.path = '/project1/next_test'
-        self.ops = {'GrapeControls/document': Text(stored), 'GrapeControls/status': Text(),
-                    'pixel_shader': Text('old glsl'), 'graph': Text()}
+        self.ops = {'status': Text(), 'pixel_shader': Text('old glsl')}
+        if isinstance(stored, tuple):
+            self.ops['graph'], self.ops['graph_meta'] = Text(stored[0]), Text(stored[1])
+        else:  # an older layout kept in GrapeControls/document
+            self.ops['GrapeControls/document'] = Text(stored)
 
     def op(self, name):
         return self.ops.get(name)
@@ -41,12 +47,17 @@ def runtime(pixel='void main(){}', bindings=()):
     return json.dumps({'vertex': '', 'pixel': pixel, 'bindings': list(bindings), 'sourceMap': {}, 'diagnostics': []})
 
 
-def envelope(revision=3, document='{"a":1}', run=None):
+def envelope(revision=3, document='{"a":1}', run=None, target=TARGET):
+    # The stored pair: (graph text, graph_meta text).
     run = run or runtime('old glsl')
-    return json.dumps({'format': FORMAT, 'targetId': TARGET,
-        'document': {'revision': revision, 'text': document, 'sha256': digest(document)},
+    return document, json.dumps({'format': META_FORMAT, 'targetId': target,
+        'document': {'revision': revision, 'sha256': digest(document)},
         'runtime': {'revision': revision, 'text': run, 'sha256': digest(run)},
-        'lastKnownGood': {'revision': revision, 'document': document, 'runtime': run}})
+        'lastKnownGood': {'revision': revision, 'runtime': run, 'document': None}})
+
+
+def meta(comp):
+    return json.loads(comp.ops['graph_meta'].text)
 
 
 def family(stored=None, gpu_ok=True):
@@ -67,52 +78,71 @@ class NextFamilyTests(unittest.TestCase):
         fam, _ = family(envelope(document='{ "kept" : "as is" }'))
         self.assertEqual(fam.state()['document'], '{ "kept" : "as is" }')
 
-    def test_a_copy_adopts_its_own_grape_id_without_touching_document_or_shader(self):
-        stored = json.loads(envelope(document='{"copied":true}')); stored['targetId'] = 'd' * 32
-        fam, comp = family(json.dumps(stored))
+    def test_a_copy_adopts_its_own_grape_id_without_touching_graph_or_shader(self):
+        fam, comp = family(envelope(document='{"copied":true}', target='d' * 32))
         self.assertEqual(fam.state()['targetId'], TARGET)
-        saved = json.loads(comp.ops['GrapeControls/document'].text)
-        self.assertEqual((saved['targetId'], saved['document']['text'], comp.ops['pixel_shader'].text), (TARGET, '{"copied":true}', 'old glsl'))
-        self.assertEqual(json.loads(comp.ops['GrapeControls/status'].text)['previousTargetId'], 'd' * 32)
+        self.assertEqual((meta(comp)['targetId'], comp.ops['graph'].text, comp.ops['pixel_shader'].text),
+                         (TARGET, '{"copied":true}', 'old glsl'))
+        self.assertEqual(json.loads(comp.ops['status'].text)['previousTargetId'], 'd' * 32)
 
     def test_a_grape_op_without_an_id_is_not_opened(self):
         comp = Comp(envelope(), grape_id='')
         with self.assertRaisesRegex(ValueError, 'no Grape ID'):
             NextFamily(comp).state()
 
-    def test_damaged_document_is_refused(self):
-        stored = json.loads(envelope()); stored['document']['text'] = '{"a":2}'
-        fam, _ = family(json.dumps(stored))
-        with self.assertRaisesRegex(ValueError, 'changed or damaged'):
+    def test_a_hand_edited_graph_is_refused_and_never_overwritten(self):
+        fam, comp = family(envelope())
+        comp.ops['graph'].text = '{"a":2}'  # someone edits the graph DAT in TD
+        with self.assertRaisesRegex(ValueError, 'changed by hand'):
+            fam.state()
+        with self.assertRaisesRegex(ValueError, 'changed by hand'):
+            fam.apply(request(run=runtime('g')), catalog_hash=CATALOG)
+        self.assertEqual((comp.ops['graph'].text, comp.ops['pixel_shader'].text), ('{"a":2}', 'old glsl'))
+        self.assertEqual(json.loads(comp.ops['status'].text)['phase'], 'refused')
+
+    def test_damaged_execution_part_is_refused(self):
+        graph, stored = envelope()
+        stored = json.loads(stored)
+        stored['runtime']['text'] = 'tampered'
+        fam, _ = family((graph, json.dumps(stored)))
+        with self.assertRaisesRegex(ValueError, 'execution part'):
+            fam.state()
+
+    def test_the_previous_storage_asks_for_migration(self):
+        fam, _ = family('{"format": "grape-next-1", "targetId": ""}')
+        with self.assertRaisesRegex(ValueError, 'needs migration'):
             fam.state()
 
     def test_apply_pairs_glsl_and_bindings_and_stores_the_document_as_received(self):
         fam, comp = family()
         result = fam.apply(request(run=runtime('new glsl')), catalog_hash=CATALOG)
         self.assertEqual(comp.op('pixel_shader').text, 'new glsl')
-        stored = json.loads(comp.op('GrapeControls/document').text)
-        self.assertEqual(stored['document']['text'], '{ "odd" :  [1, 2] }')
+        stored = meta(comp)
+        self.assertEqual(comp.op('graph').text, '{ "odd" :  [1, 2] }')  # the one copy, as received
+        self.assertNotIn('{ "odd"', comp.op('graph_meta').text)  # graph_meta never repeats the graph text
         self.assertEqual((stored['document']['revision'], stored['runtime']['revision']), (4, 4))
-        self.assertEqual(stored['lastKnownGood']['document'], '{ "odd" :  [1, 2] }')
+        self.assertEqual((stored['lastKnownGood']['revision'], stored['lastKnownGood']['document']), (4, None))
         self.assertEqual(result['state']['revision'], 4)
-        self.assertEqual(comp.op('graph').text, '{ "odd" :  [1, 2] }')
 
     def test_failed_code_generation_sends_document_only_and_keeps_the_last_known_good(self):
         fam, comp = family()
         fam.apply(request(run=None), catalog_hash=CATALOG)
-        stored = json.loads(comp.op('GrapeControls/document').text)
+        stored = meta(comp)
         self.assertEqual((stored['document']['revision'], stored['runtime']['revision']), (4, 3))
-        self.assertEqual(stored['lastKnownGood']['document'], '{"a":1}')
+        # The graph moved past the last known good, so that graph's text is kept once.
+        self.assertEqual((stored['lastKnownGood']['revision'], stored['lastKnownGood']['document']), (3, '{"a":1}'))
+        fam.apply(request(revision=4, run=None, document='{"b":2}'), catalog_hash=CATALOG)
+        self.assertEqual(meta(comp)['lastKnownGood']['document'], '{"a":1}')  # still the last good one
         self.assertEqual(comp.op('pixel_shader').text, 'old glsl')
         fam._validate.assert_not_called()
 
     def test_gpu_failure_restores_the_shader_and_changes_nothing(self):
         fam, comp = family(gpu_ok=False)
-        before = comp.op('GrapeControls/document').text
+        before = comp.op('graph').text, comp.op('graph_meta').text
         with self.assertRaisesRegex(RuntimeError, 'last known good'):
             fam.apply(request(run=runtime('bad glsl')), catalog_hash=CATALOG)
         self.assertEqual(comp.op('pixel_shader').text, 'old glsl')
-        self.assertEqual(comp.op('GrapeControls/document').text, before)
+        self.assertEqual((comp.op('graph').text, comp.op('graph_meta').text), before)
 
     def test_envelope_checks(self):
         fam, _ = family()
@@ -158,6 +188,7 @@ class HostRoutingTests(unittest.TestCase):
         code, _ = self.api(fam).dispatch('POST', '/api/' + TARGET + '/apply', request(run=runtime('g')))
         self.assertEqual(code, 422)
         self.assertEqual((comp.ops['GrapeControls/document'].text, comp.ops['pixel_shader'].text), (old, 'old glsl'))
+        self.assertNotIn('graph', comp.ops)  # nothing new was written either
 
     def test_state_and_apply(self):
         fam, _ = family()

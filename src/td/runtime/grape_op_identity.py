@@ -50,8 +50,16 @@ def check(comp):
     if comp is None or not comp.valid or in_template(comp):
         return None
     ident = identity(comp)
-    if not VALID.match(ident) or others_using(comp, ident):
-        return assign(comp)
+    if not VALID.match(ident):
+        return assign(comp)  # a fresh Grape OP from the template: nothing to report
+    if others_using(comp, ident):
+        new = assign(comp)
+        # Visible on the status bar: a copy changed its identity. 複本換號，顯示在狀態列。
+        try:
+            ui.status = 'Grape ' + comp.name + ': another Grape OP uses the same Grape ID, so this one took a new ID.'
+        except Exception:
+            pass
+        return new
     return ident
 
 
