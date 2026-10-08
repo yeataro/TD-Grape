@@ -144,16 +144,21 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
   const kindOf=(n:Node,c:NodeContext)=>{const d=target(n,c);return d&&declarationKinds.get(d.kind);};
   return {catalog,role:'value',referencedDeclaration:n=>String(n.params.declarationId),
     supports:(n,c)=>!c.owner&&(!target(n,c)||!!kindOf(n,c)?.types.includes(target(n,c)!.type)),
-    ports:(n,c)=>{const d=target(n,c);if(!d)throw Error('The declaration no longer exists');return outputPorts[type(d.type)]!;},
+    // What a reference gives comes from the kind (a TOP texture input gives three outputs).
+    // 引用時給哪些輸出由 kind 決定（TOP 貼圖輸入給三個）。
+    ports:(n,c)=>{const d=target(n,c);if(!d)throw Error('The declaration no longer exists');return kindOf(n,c)?.outputs??outputPorts[type(d.type)]!;},
     validate:()=>{},
-    presentation:(n,c)=>{const d=target(n,c),choices=(c.declarations?.()||[]).filter(x=>declarationKinds.has(x.kind));
+    // It switches only among declarations of the same kind: another kind gives other outputs.
+    // 只在同一種宣告之間切換：別的種類給的輸出不同。
+    presentation:(n,c)=>{const d=target(n,c),choices=(c.declarations?.()||[]).filter(x=>declarationKinds.has(x.kind)&&(!d||x.kind===d.kind));
       return {label:d?.name,inlineControls:[{kind:'select',key:'declaration',label:'declaration',literal:true,command:'declaration',value:String(n.params.declarationId),
         options:choices.map(x=>({value:x.id,label:x.name,literal:true}))}]};},
     edit:(n,command,value,c)=>{
       if(command!=='declaration')throw Error('Unknown command');
-      const id=String(object(value)?.value??value);if(!c.declaration(id))throw Error('The declaration no longer exists');
+      const id=String(object(value)?.value??value),next=c.declaration(id),current=target(n,c);if(!next)throw Error('The declaration no longer exists');
+      if(current&&current.kind!==next.kind)throw Error('A reference switches only among declarations of the same kind');
       n.params.declarationId=id;return n;},
-    emit:(n,c)=>({outputs:{out:c.useDeclaration(String(n.params.declarationId))},constant:!!kindOf(n,c)?.constant})};
+    emit:(n,c)=>({outputs:c.referenceDeclaration(String(n.params.declarationId)),constant:!!kindOf(n,c)?.constant})};
 }
 /** TD built-in values (Q45 01, discuss-4.14 §10): one node type picks one entry of the table
  * beside it (td_values.ts) by `entry`; no declaration, so it may be used inside subgraphs (Q46).

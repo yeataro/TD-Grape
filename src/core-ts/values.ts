@@ -12,6 +12,13 @@ export const scalars = ['float', 'int', 'uint', 'bool'] as const;
 export type Family = typeof scalars[number];
 export const types: readonly string[] = scalars.flatMap(f => [f, ...[2,3,4].map(n => shaped(f,n))]);
 export const vectors = types.filter(t => count(t)>1);
+/**
+ * Opaque types (Refactor.43): a texture is passed as it is to an input of the same type. It has no
+ * value, no conversion and no literal, and GLSL cannot keep it in a local variable, so code
+ * generation writes its expression where it is used. 不透明型別：貼圖原樣傳給同型別的輸入；
+ * 沒有值、不能轉型、沒有字面值，GLSL 也不能放進區域變數，所以產碼時直接代入使用的地方。
+ */
+export const opaque: readonly string[] = ['sampler2D'];
 
 /** Type from family + width — 用家族與分量數組出名稱，例如 shaped('int', 3) → ivec3。 */
 export function shaped(f:Family,n:number):string {
@@ -73,7 +80,9 @@ export function explicit(source:string,target:string):boolean {return types.incl
  */
 export const policy={
   // Type widths — 列出支援的型別與分量數，供同型直連及其他型別查詢使用。
-  components:Object.fromEntries(types.map(t=>[t,count(t)])),
+  // Opaque types connect only to the same type (0 components: never a conversion).
+  // 不透明型別只能接同型別（0 分量：不參與任何轉換）。
+  components:Object.fromEntries([...types.map(t=>[t,count(t)]),...opaque.map(t=>[t,0])]),
   // Numeric casts/splats and bool splats only; no automatic vector resizing.
   // 數值家族 float／int／uint：同分量數可互轉，純量可展開成任意數值向量。
   // 布林只允許 bool → bvec2／3／4；不自動做布林與數值互轉。

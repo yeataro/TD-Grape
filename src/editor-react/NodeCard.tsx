@@ -130,8 +130,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {inputs.map(port => <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
         <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} />
         <span>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
-        {!data.connected.includes(port.key) && <ValueFields label={`${id} ${port.key}`} type={port.type}
-          value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
+        {/* Unconnected: a fixed expression (e.g. vUV.st) is shown, not edited; a texture has no value.
+            沒接線：固定式子只顯示不編輯；貼圖沒有值。 */}
+        {!data.connected.includes(port.key) && (port.fallback !== undefined ? <code className="port-fallback">{port.fallback}</code>
+          : core.values.types.includes(port.type) && <ValueFields label={`${id} ${port.key}`} type={port.type}
+          value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />)}
       </div>)}
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}

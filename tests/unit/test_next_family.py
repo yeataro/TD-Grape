@@ -64,6 +64,8 @@ def family(stored=None, gpu_ok=True):
     fam = NextFamily(comp)
     fam._validate = Mock(side_effect=None if gpu_ok else RuntimeError('GPU says no'))
     fam._verify_gpu = Mock()
+    fam.placed = (Mock(name='commit'), Mock(name='rollback'))
+    fam._place_inputs = Mock(return_value=fam.placed)
     return fam, comp
 
 
@@ -176,7 +178,34 @@ class NextFamilyTests(unittest.TestCase):
     def test_uniform_bindings_are_refused_until_migrated(self):
         fam, _ = family()
         with self.assertRaisesRegex(ValueError, 'not migrated'):
-            fam.apply(request(run=runtime(bindings=[{'id': 'u'}])), catalog_hash=CATALOG)
+            fam.apply(request(run=runtime(bindings=[{'id': 'u', 'kind': 'uniform'}])), catalog_hash=CATALOG)
+
+    def test_texture_inputs_are_placed_with_their_glsl_and_undone_with_it(self):
+        # Refactor.43: the In TOPs change with the GLSL that reads them. 輸入接口與讀它的 GLSL 一起換。
+        inputs = [{'id': 'input1', 'kind': 'topInput', 'name': 'input1', 'type': 'sampler2D', 'defaultTexture': 'grape'},
+                  {'id': 'dPhoto', 'kind': 'topInput', 'name': 'photo', 'type': 'sampler2D', 'defaultTexture': 'black'}]
+        fam, comp = family()
+        fam.apply(request(run=runtime('reads two', bindings=inputs)), catalog_hash=CATALOG)
+        fam._validate.assert_called_once_with('reads two', 2)
+        fam._place_inputs.assert_called_once_with(inputs)
+        fam.placed[0].assert_called_once_with()
+        fam.placed[1].assert_not_called()
+        fam, comp = family()
+        fam._verify_gpu.side_effect = RuntimeError('GPU says no')
+        fam.apply(request(run=runtime('reads two', bindings=inputs)), catalog_hash=CATALOG)
+        fam.placed[1].assert_called_once_with()  # back to the last known good inputs
+        fam.placed[0].assert_not_called()
+        self.assertEqual(comp.op('pixel_shader').text, 'old glsl')
+
+    def test_texture_inputs_are_checked(self):
+        good = {'id': 'input1', 'kind': 'topInput', 'name': 'input1', 'type': 'sampler2D', 'defaultTexture': 'grape'}
+        for bad in ({**good, 'defaultTexture': 'moon'}, {**good, 'id': '1x'}, {**good, 'name': ''}):
+            fam, _ = family()
+            with self.assertRaisesRegex(ValueError, 'invalid texture input'):
+                fam.apply(request(run=runtime(bindings=[bad])), catalog_hash=CATALOG)
+        fam, _ = family()
+        with self.assertRaisesRegex(ValueError, 'invalid texture input'):
+            fam.apply(request(run=runtime(bindings=[good, good])), catalog_hash=CATALOG)
 
 
 class HostRoutingTests(unittest.TestCase):

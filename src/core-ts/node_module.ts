@@ -26,6 +26,10 @@ export interface EmitContext extends NodeContext {
   useUniform(id:string):string;
   /** Marks a declaration as used and returns its GLSL name (any kind, Refactor.40). */
   useDeclaration(id:string):string;
+  /** Marks a declaration as used and returns the GLSL of each output a reference gives, as its
+   * kind defines (e.g. a TOP texture input: the texture, its size, its pixel size; Refactor.43).
+   * 標記使用並依 kind 回傳引用時每個輸出的 GLSL。 */
+  referenceDeclaration(id:string):Record<string,string>;
 }
 export interface Emission {outputs:Record<string,string>;constant?:boolean;statements?:readonly string[]}
 export interface Signature {type:string;inputs:Readonly<Record<string,string>>;outputs:Readonly<Record<string,string>>;operands?:Readonly<Record<string,string>>}

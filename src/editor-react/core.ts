@@ -18,7 +18,7 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   structureProblems: typeof structure.structureProblems; offered: typeof structure.offered; removable: typeof structure.removable;
   formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf;
   declarationKinds: typeof declarations.declarationKinds; declarationNameProblem: typeof declarations.declarationNameProblem;
-  freeDeclarationName: typeof declarations.freeDeclarationName;
+  freeDeclarationName: typeof declarations.freeDeclarationName; defaultTextures: typeof declarations.defaultTextures;
   tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;
 };
 export type { TdValue } from '../core-ts/td_values';
@@ -63,11 +63,13 @@ export const supportedDefinitions = [
   'split', 'vector_split', 'rgba', 'router', 'combine', 'replace', 'swizzle', 'convert',
   // shared sources (Refactor.40: global constants; Refactor.41: TD built-in values)
   'declaration', 'td_value',
+  // textures (Refactor.43)
+  'texture_sample',
 ].map(key => 'sgrape.builtin.' + key);
 // Declaration kinds this entry has taken over. Unknown kinds are kept as ghosts (Q44); known kinds
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.
 // 本入口已接管的宣告種類；不認得的保留（Ghost），認得但未接管的（Uniform）仍拒絕。
-export const supportedKinds = ['constant'];
+export const supportedKinds = ['constant', 'topInput'];
 // Retired definitions still open old graphs but are not offered for new nodes, as in the
 // legacy creator (TD-Grape-legacy src/editor/functions_ui.js availableEntries). The same
 // value is made with Scalar／Vector (fixed entries to be discussed).
@@ -142,5 +144,6 @@ export const same = (a: unknown, b: unknown): boolean => {
   const keys = Object.keys(x);
   return keys.length === Object.keys(y).length && keys.every(key => Object.hasOwn(y, key) && same(x[key], y[key]));
 };
-export const typeColor = (type: string) =>
+// Textures keep the legacy umber (style.css 0.8.276). 貼圖沿用舊產品的褐色。
+export const typeColor = (type: string) => type === 'sampler2D' ? '#c2a47a' :
   ({ '2': '#79b9eb', '3': '#75c7ac', '4': '#b7a0db' }[type.slice(-1)] ?? '#b8b5ae');

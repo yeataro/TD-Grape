@@ -200,6 +200,15 @@ export class Editor {
     this.transactGraph(tr('sources.added', 'Constant {name} added', { name }), document =>
       document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'constant', name, type: 'float' }));
   };
+  // TOP texture inputs (Refactor.43): each becomes an input of the Grape OP in TD, in list order.
+  // TOP 貼圖輸入：每一筆在 TD 成為 Grape OP 的輸入接口，照清單順序。
+  addTopInput = () => {
+    const name = core.freeDeclarationName(this.document.document, 'input');
+    this.transactGraph(tr('sources.inputAdded', 'Texture input {name} added', { name }), document =>
+      document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'topInput', name, type: 'sampler2D' }));
+  };
+  setDefaultTexture = (id: string, defaultTexture: string) =>
+    this.transactGraph(tr('sources.defaultTextureChanged', 'Default image updated; waiting to apply'), document => { document.changeDeclaration(id, { defaultTexture }); });
   /** False when the name cannot be used; the reason is on the status line. 名稱不能用時回傳 false。 */
   renameDeclaration = (id: string, name: string) => {
     const problem = core.declarationNameProblem(this.document.document, name, id);

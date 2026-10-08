@@ -2,6 +2,47 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.43 — TOP 貼圖輸入：宣告的一種、取樣節點、TD 依清單管理 In TOP — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/texture-inputs.md`（人類 10-09 看過；兩題決定：新建的 Grape TOP 一開始就有一個輸入 `input1`、預設圖 Grape；預設圖可選 Samples 的 7 個出口）。依圖結構決議 5、Q44、Q45。
+
+- **核心**：
+  - 不透明型別 `sampler2D`（`values.opaque`）：只接同型別、不能轉型、沒有值；產碼時不宣告成區域變數，直接代入使用的地方。
+  - 接孔可帶 `fallback`（沒接線時用的 GLSL 式子）。
+  - 宣告種類 `topInput`（[declarations.ts](../../src/core-ts/declarations.ts)）：欄位 `defaultTexture`（grape／banana／jellybeans／white／black／normal／custom），引用時給三個輸出——貼圖 `sTD2DInputs[i]`、尺寸 `uTD2DInfos[i].res.zw`、像素尺寸 `.res.xy`。`i` 是它在貼圖輸入裡的位置（決議 5）。每一筆不論有沒有用到都照清單順序成為綁定交給 TD。
+  - kind 模組自己規定欄位：`initial`／`retype`；`changeDeclaration` 只能改自己的欄位。
+  - 引用節點只在同一種宣告之間切換。
+  - 新節點 **Texture 2D**（[texture_sample.ts](../../src/core-ts/nodes/texture_sample.ts)，沿用舊產品 `texture_sample`）：座標沒接＝`vUV.st`；貼圖沒接＝不透明黑。
+  - 預設圖多一筆 `input1`。
+- **TD**（[next_family.py](../../src/td/runtime/next_family.py)）：
+  - 執行部分的綁定接受 `topInput`（其他仍拒絕）。
+  - 試編譯用的暫時 GLSL TOP 有一樣多的輸入（沒有第 i 個輸入時，讀 `sTD2DInputs[i]` 編不過；實測）。
+  - `_place_inputs`：每個輸入一個 In TOP（storage `grapeInput` 記輸入 ID），先列進 TOPs 清單再換 GLSL；編譯成功才刪掉多的、照順序改名 `input1…`、由上往下排、`label`＝輸入名稱、接上 Samples 對應的出口。失敗時退回。
+  - 不是 Grape 建的 In TOP（沒有記 ID）不動。
+  - 範本的 `input1` 記上預設圖的輸入 ID。
+- **編輯器**：
+  - 共用來源面板加「TOP 貼圖輸入」區：新增、改名、選預設圖、放到圖上、刪除。
+  - 引用節點顏色組 `sampler`（舊產品褐色），貼圖線同色。
+  - 沒接線的座標顯示 `vUV.st`；貼圖接孔不顯示數值欄。
+  - 面板每列改用 `minmax(0, 1fr)`，修正被內容撐寬超出面板。
+- **驗證**：
+  - 自動測試：core 135（新增 `test_texture_inputs.cjs` 7 項）、editor 48（新增：新增輸入→改預設圖→放到圖上→取樣→接線，送出的綁定照順序）、Python 54（新增：輸入與 GLSL 一起換、一起退；輸入欄位檢查）、locales 210 則。
+  - TD 實測：TOPs 清單順序＝`sTD2DInputs` 順序；`uTD2DInfos[i].res`＝(1/w, 1/h, w, h)；外面的線跟著 In TOP 走（改名、刪掉別的都不影響）。
+  - 真實 TD＋瀏覽器（照使用者操作）：
+    1. 新建 Grape TOP（Tab 選單路徑）有 `input1`。
+    2. 新增輸入、預設圖選「黑」、放到圖上、加 Texture 2D、接線 → TD 的 Grape OP 出現兩個輸入接口，畫面為 input2 的黑圖。
+    3. 外面接紅色 TOP 到第二個接口 → 畫面變紅。
+    4. 在編輯器刪掉 input1 → 剩下的 In TOP 改名成 `input1`、紅線還在、GLSL 改讀 `sTD2DInputs[0]`。
+    5. 新增→Undo → TD 跟著加減。
+    6. 直接呼叫 rollback：多建的 In TOP 被刪、TOPs 清單還原。
+    7. 手工加的 In TOP 保留。
+  - 測試 OP 已刪。Deliver 存 `TD-Grape-dev.75`。
+- **留意**（記在 CURRENT）：
+  - GLSL TOP 預設 Input Extend UV＝Zero，貼圖放大時邊緣 alpha 偏低（TD 原生行為，舊產品同）。
+  - TD 裡 In TOP 名稱照位置（`input1…`），輸入名稱放在 `label`。
+  - 本輪之前建的 Grape OP 裡的 `input1` 沒有記 ID，TD 不會動它。
+  - 輸入數量還沒有上限（7.17）。
+
 ## Refactor.42 — Color Output 什麼都能接、自動補齊（Q46） — 2026-10-09
 
 人類 10-09「先補 Color Output 自動補齊」。依 design-interview Q46。

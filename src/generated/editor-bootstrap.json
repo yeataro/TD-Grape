@@ -1,13 +1,21 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "eb231edaedcf09ba654e62c6d560e4809a496e11ac8eda01f372ccf531664efa",
+  "catalogHash": "83da79054982f44524016d3612fe19507bddb78a8bc538508cbc954058a5a4dc",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
       "version": 1,
       "target": "top",
-      "declarations": [],
+      "declarations": [
+        {
+          "id": "input1",
+          "kind": "topInput",
+          "name": "input1",
+          "type": "sampler2D",
+          "defaultTexture": "grape"
+        }
+      ],
       "subgraphs": [],
       "structDefinitions": [],
       "stages": {
@@ -58,7 +66,15 @@
     "compiled": {
       "vertex": "",
       "pixel": "layout(location=0) out vec4 fragColor;\nvoid main() {\n    vec2 sg_uv = vUV.st;\n    vec4 sg_n_color = vec4(0.55, 0.28, 0.9, 1.0);\n    vec4 sg_color = sg_n_color;\n    fragColor = TDOutputSwizzle(sg_color);\n}\n",
-      "bindings": [],
+      "bindings": [
+        {
+          "id": "input1",
+          "kind": "topInput",
+          "name": "input1",
+          "type": "sampler2D",
+          "defaultTexture": "grape"
+        }
+      ],
       "sourceMap": {
         "pixel": [
           {
@@ -1140,6 +1156,23 @@
       "definitionUuid": "sgrape.builtin.td_value"
     },
     {
+      "key": "texture_sample",
+      "label": "Texture 2D",
+      "inputs": {
+        "sampler": "sampler2D",
+        "uv": "vec2"
+      },
+      "outputs": {
+        "out": "vec4"
+      },
+      "stages": [
+        "pixel"
+      ],
+      "defaults": {},
+      "descriptionKey": "help.texture_sample",
+      "definitionUuid": "sgrape.builtin.texture_sample"
+    },
+    {
       "key": "trunc",
       "label": "Truncate",
       "inputs": {
@@ -1446,7 +1479,9 @@
       "uvec3",
       "uvec4"
     ],
-    "resourceTypes": [],
+    "resourceTypes": [
+      "sampler2D"
+    ],
     "specConstantTypes": [],
     "types": {
       "float": {
@@ -4982,6 +5017,21 @@
             "inputs": {},
             "outputs": {
               "out": "vec2"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.texture_sample": {
+        "selector": "fixed",
+        "variants": [
+          {
+            "type": null,
+            "inputs": {
+              "sampler": "sampler2D",
+              "uv": "vec2"
+            },
+            "outputs": {
+              "out": "vec4"
             }
           }
         ]

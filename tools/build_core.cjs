@@ -17,13 +17,13 @@ import {structureProblems,offered,removable} from './structure';
 import {createEditorContract} from './editor_contract';
 import {formatProblem} from './model';
 import {ghostsOf} from './ghosts';
-import {declarationKinds,declarationNameProblem,freeDeclarationName} from './declarations';
+import {declarationKinds,declarationNameProblem,freeDeclarationName,defaultTextures} from './declarations';
 import {tdValues} from './td_values';
 import {usableTdValue} from './node_sdk';
 ${nodeFiles.map((f,i)=>`import n${i} from './${path.relative(src,f).replace(/\\/g,'/').replace(/\.ts$/,'')}';`).join('\n')}
 export const registry=createRegistry([${nodeFiles.map((_,i)=>'n'+i).join(',')}]);
 export const GrapeTopCompiler=createCompiler(registry);
-export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,declarationKinds,declarationNameProblem,freeDeclarationName,tdValues,usableTdValue};
+export const GrapeGraph={...graph,plan:wire.plan,values,registry,createRegistry,createCompiler,resolvePorts,configureNode,createEditorContract,overLimit,structureProblems,offered,removable,formatProblem,ghostsOf,declarationKinds,declarationNameProblem,freeDeclarationName,defaultTextures,tdValues,usableTdValue};
 `;
 const host=ts.createCompilerHost(parsed.options),read=host.readFile,exists=host.fileExists;
 host.readFile=f=>f.replace(/\\/g,'/')===entryPath?entry:read(f);
@@ -52,7 +52,9 @@ const context={};vm.runInNewContext(bundled,context);
 const rows=context.GrapeGraph.registry.modules.filter(m=>!m.structural).map(m=>JSON.parse(JSON.stringify(m.catalog)));
 // Callback semantics, not just port metadata, invalidate saved artifacts.
 const implementationHash=createHash('sha256').update(bundled).digest('hex');
-const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[],subgraphs:[],structDefinitions:[],stages:{pixel:{
+// One TOP texture input from the start (human 2026-10-09, texture-inputs.md): the template's input1.
+// 一開始就有一個 TOP 貼圖輸入（人類 10-09）：對應範本裡的 input1。
+const defaultGraph={format:'grape-graph',version:1,target:'top',declarations:[{id:'input1',kind:'topInput',name:'input1',type:'sampler2D',defaultTexture:'grape'}],subgraphs:[],structDefinitions:[],stages:{pixel:{
   nodes:['color','pixel_out'].map((key,i)=>{const d=context.GrapeGraph.registry.get('sgrape.builtin.'+key).catalog.definition;return {id:key,nodeType:d.definitionUuid,params:JSON.parse(JSON.stringify(d.defaults)),ui:{x:80+i*360,y:120}};}),
   edges:[{id:'color_output',from:['color','out'],to:['pixel_out','color']}]}}};
 const defaultDocument={graph:defaultGraph,compiled:context.GrapeTopCompiler.compile(defaultGraph)};

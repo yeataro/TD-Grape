@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
-import { tr, say, tdValueHint } from './text';
+import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields, useSession } from './NodeCard';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
-// no list of its own, it reads the graph's declarations and the TD built-in value table). For now: global
-// constants and TD built-in values. 共用來源面板的內容：面板只是索引，讀圖的宣告與 TD 內建值表、不另存清單。
+// no list of its own, it reads the graph's declarations and the TD built-in value table). For now: TOP
+// texture inputs, global constants and TD built-in values.
+// 共用來源面板的內容：面板只是索引，讀圖的宣告與 TD 內建值表、不另存清單。目前：TOP 貼圖輸入、全域常數、TD 內建值。
+// Default images (human 2026-10-09: the Samples outputs). 預設圖（Samples 的出口）。
+const textureNames: Record<string, Message> = {
+  grape: tr('texture.grape', 'Grape'), banana: tr('texture.banana', 'Banana'), jellybeans: tr('texture.jellybeans', 'Jellybeans'),
+  white: tr('texture.white', 'White'), black: tr('texture.black', 'Black'), normal: tr('texture.normal', 'Flat normal'),
+  custom: tr('texture.custom', 'TOP chosen on Samples'),
+};
 function NameField({ declaration }: { declaration: Declaration }) {
   const session = useSession(), [draft, setDraft] = useState(declaration.name);
   useEffect(() => setDraft(declaration.name), [declaration.name]);
@@ -18,7 +25,7 @@ function NameField({ declaration }: { declaration: Declaration }) {
 
 export function SourcesPanel({ declarations, references }: { declarations: readonly Declaration[]; references: Readonly<Record<string, number>> }) {
   const session = useSession(), flow = useReactFlow();
-  const constants = declarations.filter(d => d.kind === 'constant');
+  const constants = declarations.filter(d => d.kind === 'constant'), inputs = declarations.filter(d => d.kind === 'topInput');
   const center = () => {
     const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
     return flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
@@ -27,7 +34,24 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
   // The panel is an index of the table beside the td_value node (Q45); TOP for now.
   // 面板只是 td_value 旁邊那張表的索引；目前是 TOP。
   const builtins = core.tdValues.filter(entry => core.usableTdValue(entry, 'top'));
+  const actions = (declaration: Declaration) => <div className="source-actions">
+    <small>{say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declaration.id] ?? 0 }))}</small>
+    <button onClick={() => session.placeDeclaration(declaration.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
+    <button onClick={() => session.removeDeclaration(declaration.id)}>{say(tr('sources.remove', 'Delete'))}</button>
+  </div>;
   return <section className="sources">
+    <header className="sources-section"><span>{say(tr('sources.textureInputs', 'TOP texture inputs'))}</span>
+      <button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button></header>
+    <p className="hint">{say(tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.'))}</p>
+    {inputs.map(declaration => <div className="source-row" key={declaration.id}>
+      <div className="source-head">
+        <NameField declaration={declaration} />
+        <select aria-label={say(tr('sources.defaultTexture', 'Default image'))} title={say(tr('sources.defaultTexture', 'Default image'))}
+          value={String(declaration.defaultTexture)} onChange={event => session.setDefaultTexture(declaration.id, event.target.value)}>
+          {core.defaultTextures.map(texture => <option key={texture} value={texture}>{say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture }))}</option>)}</select>
+      </div>
+      {actions(declaration)}
+    </div>)}
     <header className="sources-section"><span>{say(tr('sources.constants', 'Global constants'))}</span>
       <button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button></header>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
@@ -38,13 +62,9 @@ export function SourcesPanel({ declarations, references }: { declarations: reado
           onChange={event => session.setDeclarationType(declaration.id, event.target.value)}>
           {types.map(type => <option key={type}>{type}</option>)}</select>
       </div>
-      <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value}
+      <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
         commit={value => session.setDeclarationValue(declaration.id, value)} />
-      <div className="source-actions">
-        <small>{say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declaration.id] ?? 0 }))}</small>
-        <button onClick={() => session.placeDeclaration(declaration.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
-        <button onClick={() => session.removeDeclaration(declaration.id)}>{say(tr('sources.remove', 'Delete'))}</button>
-      </div>
+      {actions(declaration)}
     </div>)}
     <header className="sources-section"><span>{say(tr('sources.tdValues', 'TD built-in values'))}</span></header>
     <p className="hint">{say(tr('sources.tdValuesHint', 'Values TouchDesigner already provides to the shader. No setup needed; they also work inside subgraphs.'))}</p>

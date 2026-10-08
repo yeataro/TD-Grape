@@ -71,6 +71,7 @@ const sqrt_1 = require("./nodes/sqrt");
 const subtract_1 = require("./nodes/subtract");
 const swizzle_1 = require("./nodes/swizzle");
 const td_value_1 = require("./nodes/td_value");
+const texture_sample_1 = require("./nodes/texture_sample");
 const trunc_1 = require("./nodes/trunc");
 const uniform_1 = require("./nodes/uniform");
 const vec2_1 = require("./nodes/vec2");
@@ -78,9 +79,9 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, uniform_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, defaultTextures: declarations_1.defaultTextures, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
 
 },
 "capacity":function(require,module,exports){
@@ -295,7 +296,7 @@ exports.CORE_CONFIG = Object.freeze({
 "declarations":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DeclarationError = exports.declarationKinds = void 0;
+exports.DeclarationError = exports.declarationKinds = exports.defaultTextures = void 0;
 exports.declarationNameProblem = declarationNameProblem;
 exports.freeDeclarationName = freeDeclarationName;
 exports.addDeclaration = addDeclaration;
@@ -310,13 +311,40 @@ const numericValue = (declaration) => {
         throw Error('Unsupported declaration type');
     (0, numeric_1.literal)(declaration.value, (0, numeric_1.type)(declaration.type));
 };
+const numericFields = {
+    initial: (type) => ({ value: (0, numeric_1.fill)(0, (0, numeric_1.type)(type)) }),
+    retype: (d, type) => { var _a; return ({ value: (0, values_1.reshape)((_a = d.value) !== null && _a !== void 0 ? _a : 0, type) }); },
+};
 // Global constant (Q41): `const` at file scope; changing it changes the program, nothing in TD.
 const constantKind = { kind: 'constant', role: 'constant', colorGroup: 'constant', types: numeric_1.types, constant: true, validate: numericValue,
-    header: (d) => 'const ' + d.type + ' ' + d.name + ' = ' + (0, numeric_1.literal)(d.value, (0, numeric_1.type)(d.type)) + ';' };
+    ...numericFields, header: (d) => 'const ' + d.type + ' ' + d.name + ' = ' + (0, numeric_1.literal)(d.value, (0, numeric_1.type)(d.type)) + ';' };
 // Uniform (Q41): its value lives in TD; the Uniform round adds exposure and live values.
 const uniformKind = { kind: 'uniform', role: 'source', colorGroup: 'uniform', types: numeric_1.types, constant: false, validate: numericValue,
-    header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
-exports.declarationKinds = new Map([constantKind, uniformKind].map(module => [module.kind, Object.freeze(module)]));
+    ...numericFields, header: (d) => 'uniform ' + d.type + ' ' + d.name + ';' };
+/** Default images a TOP texture input shows when nothing is connected from outside (graph-structure
+ * `defaultTexture`; human 2026-10-09: the Samples outputs, Grape first). `custom` is the TOP chosen
+ * on the Grape OP's Samples. How TD provides them is TD's business (Q45).
+ * 外面沒接東西時用的預設圖（人類 10-09：Samples 的出口，預設 Grape）；custom＝Samples 上自選的 TOP。 */
+exports.defaultTextures = Object.freeze(['grape', 'banana', 'jellybeans', 'white', 'black', 'normal', 'custom']);
+const textureOutputs = Object.freeze([
+    { key: 'out', direction: 'output', type: 'sampler2D' },
+    { key: 'size', direction: 'output', type: 'vec2' },
+    { key: 'pixelSize', direction: 'output', type: 'vec2' },
+].map(port => Object.freeze(port)));
+// TOP texture input (graph-structure decision 5, Q44; texture-inputs.md): every one becomes an input
+// of the Grape OP, in list order; the GLSL index is its position. TD declares sTD2DInputs, so no header.
+// TOP 貼圖輸入：每一筆都成為 Grape OP 的輸入接口、照清單順序；GLSL 索引是它的位置。TD 自己宣告 sTD2DInputs。
+const topInputKind = { kind: 'topInput', role: 'source', colorGroup: 'sampler', types: ['sampler2D'], constant: false,
+    ordered: true, outputs: textureOutputs,
+    initial: () => ({ defaultTexture: 'grape' }),
+    validate: d => {
+        if (d.type !== 'sampler2D')
+            throw Error('Unsupported declaration type');
+        if (!exports.defaultTextures.includes(String(d.defaultTexture)))
+            throw Error('Unknown default texture');
+    },
+    reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }) };
+exports.declarationKinds = new Map([constantKind, uniformKind, topInputKind].map(module => [module.kind, Object.freeze(module)]));
 function declarationNameProblem(graph, name, except) {
     if (!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name) || name.includes('__'))
         return 'format';
@@ -348,6 +376,16 @@ function freeDeclarationName(graph, base) {
         if (!declarationNameProblem(graph, base + i))
             return base + i;
 }
+// Only the kind's own fields can be set (decision 11). 只能設定 kind 自己的欄位。
+function setOwnFields(module, declaration, fields) {
+    const own = Object.keys(module.initial(declaration.type));
+    for (const [field, value] of Object.entries(fields))
+        if (!['id', 'kind', 'name', 'type'].includes(field) && value !== undefined) {
+            if (!own.includes(field))
+                throw new DeclarationError('field', field);
+            declaration[field] = (0, model_1.copy)(value);
+        }
+}
 /** Commands, used inside GraphDocument.change() on its editable candidate document.
  * 指令：在 GraphDocument.change() 的可編輯候選文件上使用。 */
 function addDeclaration(graph, entry) {
@@ -357,15 +395,17 @@ function addDeclaration(graph, entry) {
     if (!module.types.includes(entry.type))
         throw new DeclarationError('type');
     requireName(graph, entry.name);
-    const declaration = { id: entry.id, kind: entry.kind, name: entry.name, type: entry.type,
-        value: entry.value === undefined ? (0, numeric_1.fill)(0, (0, numeric_1.type)(entry.type)) : (0, model_1.copy)(entry.value) };
+    const declaration = { id: entry.id, kind: entry.kind, name: entry.name, type: entry.type, ...module.initial(entry.type) };
+    setOwnFields(module, declaration, entry);
     module.validate(declaration);
     graph.declarations.push(declaration);
     return declaration;
 }
-/** Rename, retype or change the value. A new type reshapes the old value (Q37 1-3: wires that no
- * longer fit become ghost wires, nothing is unplugged). 改名、改型別、改值；改型別時沿用舊值的分量。 */
+/** Rename, retype or change the kind's own fields (value, defaultTexture…). A new type reshapes the
+ * old value (Q37 1-3: wires that no longer fit become ghost wires, nothing is unplugged).
+ * 改名、改型別、改 kind 自己的欄位；改型別時沿用舊值的分量。 */
 function changeDeclaration(graph, id, patch) {
+    var _a;
     const declaration = graph.declarations.find(d => d.id === id);
     if (!declaration)
         throw new DeclarationError('missing');
@@ -379,10 +419,9 @@ function changeDeclaration(graph, id, patch) {
         if (!module.types.includes(patch.type))
             throw new DeclarationError('type');
         next.type = patch.type;
-        next.value = (0, values_1.reshape)(declaration.value, patch.type);
+        Object.assign(next, (_a = module.retype) === null || _a === void 0 ? void 0 : _a.call(module, declaration, patch.type));
     }
-    if (patch.value !== undefined)
-        next.value = (0, model_1.copy)(patch.value);
+    setOwnFields(module, next, patch);
     module.validate(next);
     Object.assign(declaration, next);
     return declaration;
@@ -482,7 +521,7 @@ function createEditorContract(registry, target = 'top') {
     const modules = registry.modules.filter(m => !m.structural && m.catalog.definition.stages.includes('pixel'));
     return {
         version: 1, glslCode: identifier_rules_1.identifierRules, valueTypes: [...values.types], numericTypes: values.types.filter(t => values.family(t) !== 'bool'),
-        resourceTypes: [], specConstantTypes: [],
+        resourceTypes: [...values.opaque], specConstantTypes: [],
         types: Object.fromEntries(values.types.map(t => [t, { family: values.family(t), components: values.count(t) }])),
         conversions: values.policy.conversions.map(row => ({ ...row, kind: values.count(row.from) === 1 && values.count(row.to) > 1 ? 'splat' : 'cast' })),
         definitions: Object.fromEntries(modules.map(m => [m.catalog.definition.definitionUuid, variants(m, target)])),
@@ -1643,12 +1682,16 @@ function declarationNode(catalog) {
     const kindOf = (n, c) => { const d = target(n, c); return d && declarations_1.declarationKinds.get(d.kind); };
     return { catalog, role: 'value', referencedDeclaration: n => String(n.params.declarationId),
         supports: (n, c) => { var _a; return !c.owner && (!target(n, c) || !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.types.includes(target(n, c).type))); },
-        ports: (n, c) => { const d = target(n, c); if (!d)
-            throw Error('The declaration no longer exists'); return outputPorts[(0, numeric_1.type)(d.type)]; },
+        // What a reference gives comes from the kind (a TOP texture input gives three outputs).
+        // 引用時給哪些輸出由 kind 決定（TOP 貼圖輸入給三個）。
+        ports: (n, c) => { var _a, _b; const d = target(n, c); if (!d)
+            throw Error('The declaration no longer exists'); return (_b = (_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.outputs) !== null && _b !== void 0 ? _b : outputPorts[(0, numeric_1.type)(d.type)]; },
         validate: () => { },
+        // It switches only among declarations of the same kind: another kind gives other outputs.
+        // 只在同一種宣告之間切換：別的種類給的輸出不同。
         presentation: (n, c) => {
             var _a;
-            const d = target(n, c), choices = (((_a = c.declarations) === null || _a === void 0 ? void 0 : _a.call(c)) || []).filter(x => declarations_1.declarationKinds.has(x.kind));
+            const d = target(n, c), choices = (((_a = c.declarations) === null || _a === void 0 ? void 0 : _a.call(c)) || []).filter(x => declarations_1.declarationKinds.has(x.kind) && (!d || x.kind === d.kind));
             return { label: d === null || d === void 0 ? void 0 : d.name, inlineControls: [{ kind: 'select', key: 'declaration', label: 'declaration', literal: true, command: 'declaration', value: String(n.params.declarationId),
                         options: choices.map(x => ({ value: x.id, label: x.name, literal: true })) }] };
         },
@@ -1656,13 +1699,15 @@ function declarationNode(catalog) {
             var _a, _b;
             if (command !== 'declaration')
                 throw Error('Unknown command');
-            const id = String((_b = (_a = (0, model_1.object)(value)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : value);
-            if (!c.declaration(id))
+            const id = String((_b = (_a = (0, model_1.object)(value)) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : value), next = c.declaration(id), current = target(n, c);
+            if (!next)
                 throw Error('The declaration no longer exists');
+            if (current && current.kind !== next.kind)
+                throw Error('A reference switches only among declarations of the same kind');
             n.params.declarationId = id;
             return n;
         },
-        emit: (n, c) => { var _a; return ({ outputs: { out: c.useDeclaration(String(n.params.declarationId)) }, constant: !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.constant) }); } };
+        emit: (n, c) => { var _a; return ({ outputs: c.referenceDeclaration(String(n.params.declarationId)), constant: !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.constant) }); } };
 }
 /** TD built-in values (Q45 01, discuss-4.14 §10): one node type picks one entry of the table
  * beside it (td_values.ts) by `entry`; no declaration, so it may be used inside subgraphs (Q46).
@@ -4433,6 +4478,72 @@ const catalog = {
 exports.default = (0, node_sdk_1.tdValueNode)(catalog);
 
 },
+"nodes/texture_sample":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// Texture 2D (Refactor.43; inventory 7.12: sampling is separate from the source): reads a texture
+// at a coordinate. Unconnected coordinate: vUV.st, this pixel. Unconnected texture: opaque black
+// (inventory 7.6), worked out by code generation and never stored in the graph.
+// 取樣：以座標讀貼圖。座標沒接線＝vUV.st（這個像素）；貼圖沒接線＝不透明黑（產碼時決定，不存進圖）。
+const catalog = {
+    "definition": {
+        "key": "texture_sample",
+        "label": "Texture 2D",
+        "inputs": {
+            "sampler": "sampler2D",
+            "uv": "vec2"
+        },
+        "outputs": {
+            "out": "vec4"
+        },
+        "stages": [
+            "pixel"
+        ],
+        "defaults": {},
+        "descriptionKey": "help.texture_sample",
+        "definitionUuid": "sgrape.builtin.texture_sample"
+    },
+    "emitter": {
+        "id": "texture_sample",
+        "version": 1
+    },
+    "browser": {
+        "category": "texture",
+        "source": "glsl",
+        "aliases": [
+            "sample",
+            "texture",
+            "lookup"
+        ],
+        "glslName": "texture",
+        "secondaryCategories": [],
+        "categoryPath": [
+            "texture",
+            "2d"
+        ]
+    }
+};
+const ports = (0, node_sdk_1.fixedPorts)([
+    { key: 'sampler', direction: 'input', type: 'sampler2D' },
+    { key: 'uv', direction: 'input', type: 'vec2', default: [0, 0], fallback: 'vUV.st' },
+    { key: 'out', direction: 'output', type: 'vec4' },
+]);
+const textureSample = {
+    catalog,
+    role: 'value',
+    supports: () => true,
+    ports: () => ports,
+    validate: () => { },
+    emit: (_n, c) => ({
+        outputs: {
+            out: c.connected('sampler') ? 'texture(' + c.input('sampler') + ', ' + c.input('uv') + ')' : 'vec4(0.0, 0.0, 0.0, 1.0)',
+        },
+    }),
+};
+exports.default = textureSample;
+
+},
 "nodes/trunc":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -4871,7 +4982,8 @@ class NodePorts {
                 Object.values(v).forEach(freeze);
                 Object.freeze(v);
             } return v; };
-            target[spec.key] = Object.freeze({ key: spec.key, direction: spec.direction, type: spec.type, default: value === undefined ? undefined : freeze(value) });
+            target[spec.key] = Object.freeze({ key: spec.key, direction: spec.direction, type: spec.type, default: value === undefined ? undefined : freeze(value),
+                ...(spec.fallback === undefined ? {} : { fallback: spec.fallback }) });
             (spec.direction === 'input' ? inputTypes : outputTypes)[spec.key] = spec.type;
         }
         this.inputs = Object.freeze(inputs);
@@ -5903,6 +6015,7 @@ function createFlatCompiler(registry, limits) {
         return live.every(n => !n.params.requireConstant);
     }
     function compile(g, identifiers) {
+        var _a;
         let errorNode;
         try {
             if (!supports(g))
@@ -5916,6 +6029,9 @@ function createFlatCompiler(registry, limits) {
             const nodes = new Map(), ports = Object.create(null);
             const ghosts = (0, ghosts_1.ghostsOf)(network, values_1.policy);
             const declarations = new Map(), names = new Set();
+            // Position among declarations of the same ordered kind: the GLSL index (decision 5).
+            // 在同種（有順序的）宣告裡的位置＝GLSL 索引。
+            const positions = new Map(), counts = new Map();
             for (const d of g.declarations) {
                 if (!declarations_1.declarationKinds.has(d.kind))
                     continue;
@@ -5928,6 +6044,11 @@ function createFlatCompiler(registry, limits) {
                 declarations_1.declarationKinds.get(d.kind).validate(d);
                 declarations.set(d.id, d);
                 names.add(d.name);
+                if (declarations_1.declarationKinds.get(d.kind).ordered) {
+                    const i = (_a = counts.get(d.kind)) !== null && _a !== void 0 ? _a : 0;
+                    positions.set(d.id, i);
+                    counts.set(d.kind, i + 1);
+                }
             }
             const symbols = new Set(), authoredNames = new Set();
             for (const n of data.nodes) {
@@ -6011,6 +6132,13 @@ function createFlatCompiler(registry, limits) {
                             throw Error('Source emitted no output: ' + source.key);
                         return source.type === port.type ? value : port.type + '(' + value + ')';
                     }
+                    // Unconnected: the port's fallback expression, else its value. An opaque input has neither,
+                    // so its module decides what happens without a wire (connected()).
+                    // 沒接線：用接孔的 fallback 式子，否則用它的值；不透明輸入兩者都沒有，由模組先用 connected() 決定。
+                    if (port.fallback !== undefined)
+                        return port.fallback;
+                    if (values_1.opaque.includes(port.type))
+                        throw Error('Nothing is connected to ' + key);
                     return (0, values_1.literal)((_b = (_a = n.inputValues) === null || _a === void 0 ? void 0 : _a[key]) !== null && _b !== void 0 ? _b : port.default, (0, values_1.type)(port.type));
                 };
                 if (!d.emit)
@@ -6022,27 +6150,44 @@ function createFlatCompiler(registry, limits) {
                     used.add(declId);
                     return declaration.name;
                 };
-                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useUniform: useDeclaration, useDeclaration });
+                const referenceDeclaration = (declId) => {
+                    const declaration = declarations.get(declId), name = useDeclaration(declId), kind = declarations_1.declarationKinds.get(declaration.kind);
+                    return kind.reference ? kind.reference(declaration, positions.get(declId)) : { out: name };
+                };
+                const emission = d.emit(n, { ...model.context, ports: p, input, connected: key => links.has(node.port('input', key)), useUniform: useDeclaration, useDeclaration, referenceDeclaration });
                 if (Object.keys(emission.outputs).sort().join() !== Object.keys(p.outputs).sort().join())
                     throw Error('Module emitted a different output interface');
                 if (emission.statements)
                     lines.push(...emission.statements);
+                let passed = false;
                 for (const [port, expression] of Object.entries(emission.outputs)) {
+                    // An opaque value cannot live in a local variable: its expression is written where it is used.
+                    // 不透明的值不能放進區域變數：直接代入使用的地方。
+                    if (values_1.opaque.includes(p.outputs[port].type)) {
+                        expressions.set(node.port('output', port), expression);
+                        passed = true;
+                        continue;
+                    }
                     const symbol = 'sg_n_' + (n.name || id) + (port === 'out' ? '' : '_' + port);
                     lines.push('    ' + (emission.constant ? 'const ' : '') + p.outputs[port].type + ' ' + symbol + ' = ' + expression + ';');
                     expressions.set(node.port('output', port), symbol);
                 }
-                if (lines.length === start)
+                if (lines.length === start && !passed)
                     throw Error('Node emitted no expression');
                 (0, comments_1.appendNodeComments)(lines, start, n.comment);
                 while (lineNodes.length < lines.length)
                     lineNodes.push(id);
             }
             // File-scope GLSL comes from each used declaration's kind; only sources go to TD as bindings
-            // (a global constant lives in the program, Q41). 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。
+            // (a global constant lives in the program, Q41). Ordered kinds (TOP texture inputs) go first, all
+            // of them in list order, used or not: each one is an input of the Grape OP (Q44).
+            // 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。有順序的種類（TOP 貼圖輸入）全部照清單順序放前面，
+            // 有沒有用到都算：每一筆都是 Grape OP 的輸入接口。
             const usedDeclarations = [...used].sort().map(id => declarations.get(id));
-            const bindings = usedDeclarations.filter(d => declarations_1.declarationKinds.get(d.kind).role === 'source').map(d => JSON.parse(JSON.stringify(d)));
-            const headers = usedDeclarations.map(d => declarations_1.declarationKinds.get(d.kind).header(d));
+            const ordered = [...declarations.values()].filter(d => declarations_1.declarationKinds.get(d.kind).ordered);
+            const bindings = [...ordered, ...usedDeclarations.filter(d => declarations_1.declarationKinds.get(d.kind).role === 'source' && !declarations_1.declarationKinds.get(d.kind).ordered)]
+                .map(d => JSON.parse(JSON.stringify(d)));
+            const headers = usedDeclarations.flatMap(d => { const kind = declarations_1.declarationKinds.get(d.kind); return kind.header ? [kind.header(d)] : []; });
             const pixel = [...headers, 'layout(location=0) out vec4 fragColor;', 'void main() {', '    vec2 sg_uv = vUV.st;', ...lines, '}', ''].join('\n');
             const diagnostics = [
                 ...data.nodes.filter(n => !visited.has(n.id) && !ghosts.nodes.has(n.id)).sort((a, b) => a.id < b.id ? -1 : 1).map(n => ({ node: n.id, stage: 'pixel', message: 'Disconnected node is not emitted' })),
@@ -6146,7 +6291,7 @@ function staticNode(catalog, spec) {
 "values":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.copy = exports.policy = exports.fill = exports.vectors = exports.types = exports.scalars = void 0;
+exports.copy = exports.policy = exports.fill = exports.opaque = exports.vectors = exports.types = exports.scalars = void 0;
 exports.shaped = shaped;
 exports.type = type;
 exports.count = count;
@@ -6167,6 +6312,13 @@ const numeric_1 = require("./numeric");
 exports.scalars = ['float', 'int', 'uint', 'bool'];
 exports.types = exports.scalars.flatMap(f => [f, ...[2, 3, 4].map(n => shaped(f, n))]);
 exports.vectors = exports.types.filter(t => count(t) > 1);
+/**
+ * Opaque types (Refactor.43): a texture is passed as it is to an input of the same type. It has no
+ * value, no conversion and no literal, and GLSL cannot keep it in a local variable, so code
+ * generation writes its expression where it is used. 不透明型別：貼圖原樣傳給同型別的輸入；
+ * 沒有值、不能轉型、沒有字面值，GLSL 也不能放進區域變數，所以產碼時直接代入使用的地方。
+ */
+exports.opaque = ['sampler2D'];
 /** Type from family + width — 用家族與分量數組出名稱，例如 shaped('int', 3) → ivec3。 */
 function shaped(f, n) {
     if (!Number.isInteger(n) || n < 1 || n > 4)
@@ -6239,7 +6391,9 @@ function explicit(source, target) { return exports.types.includes(source) && exp
  */
 exports.policy = {
     // Type widths — 列出支援的型別與分量數，供同型直連及其他型別查詢使用。
-    components: Object.fromEntries(exports.types.map(t => [t, count(t)])),
+    // Opaque types connect only to the same type (0 components: never a conversion).
+    // 不透明型別只能接同型別（0 分量：不參與任何轉換）。
+    components: Object.fromEntries([...exports.types.map(t => [t, count(t)]), ...exports.opaque.map(t => [t, 0])]),
     // Numeric casts/splats and bool splats only; no automatic vector resizing.
     // 數值家族 float／int／uint：同分量數可互轉，純量可展開成任意數值向量。
     // 布林只允許 bool → bvec2／3／4；不自動做布林與數值互轉。

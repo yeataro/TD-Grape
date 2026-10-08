@@ -3,7 +3,7 @@ import { createSubgraphCompiler } from './subgraph_compiler';
 /** Whole-graph orchestration. Concrete node modules are injected by composition. */
 import {GraphDocument,GraphError,type Port,type Edge} from './graph';
 import {object,formatProblem,type Node,type Graph,type Declaration} from './model';
-import {type,literal,policy} from './values';
+import {type,literal,policy,opaque} from './values';
 import {types} from './numeric';
 import type {Registry} from './node_module';
 import {appendNodeComments} from './comments';
@@ -48,6 +48,9 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
     const nodes=new Map<string,Node>(),ports:Record<string,{in:Record<string,string>;out:Record<string,string>}>=Object.create(null);
     const ghosts=ghostsOf(network,policy);
     const declarations=new Map<string,Declaration>(),names=new Set<string>();
+    // Position among declarations of the same ordered kind: the GLSL index (decision 5).
+    // 在同種（有順序的）宣告裡的位置＝GLSL 索引。
+    const positions=new Map<string,number>(),counts=new Map<string,number>();
     for(const d of g.declarations){
       if(!declarationKinds.has(d.kind))continue;
       if(!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(d.id)||declarations.has(d.id)||!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(d.name)||/^(gl_|TD|sg_|sTD)/.test(d.name)||names.has(d.name))throw Error('Invalid declaration identity/name');
@@ -55,6 +58,7 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
       // 舊產品欄位不讀；去留由匯入器的對照表處理。
       if(d.expose!==undefined&&typeof d.expose!=='boolean')throw Error('Expose must be a boolean');
       declarationKinds.get(d.kind)!.validate(d);declarations.set(d.id,d);names.add(d.name);
+      if(declarationKinds.get(d.kind)!.ordered){const i=counts.get(d.kind)??0;positions.set(d.id,i);counts.set(d.kind,i+1);}
     }
     const symbols=new Set<string>(),authoredNames=new Set<string>();
     for(const n of data.nodes){
@@ -102,27 +106,45 @@ function createFlatCompiler(registry:Registry,limits:FlatLimits){
         const edge=links.get(node.port('input',key));if(edge){const source=edge.from!,value=expressions.get(source);
           if(value===undefined)throw Error('Source emitted no output: '+source.key);
           return source.type===port.type?value:port.type+'('+value+')';}
+        // Unconnected: the port's fallback expression, else its value. An opaque input has neither,
+        // so its module decides what happens without a wire (connected()).
+        // 沒接線：用接孔的 fallback 式子，否則用它的值；不透明輸入兩者都沒有，由模組先用 connected() 決定。
+        if(port.fallback!==undefined)return port.fallback;
+        if(opaque.includes(port.type))throw Error('Nothing is connected to '+key);
         return literal(n.inputValues?.[key]??port.default,type(port.type));};
       if(!d.emit)throw Error('Structural nodes require Subgraph expansion');
       const useDeclaration=(declId:string)=>{
         const declaration=declarations.get(declId);if(!declaration)throw Error('Select a matching declaration');used.add(declId);return declaration.name;
       };
-      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useUniform:useDeclaration,useDeclaration});
+      const referenceDeclaration=(declId:string)=>{
+        const declaration=declarations.get(declId),name=useDeclaration(declId),kind=declarationKinds.get(declaration!.kind)!;
+        return kind.reference?kind.reference(declaration!,positions.get(declId)!):{out:name};
+      };
+      const emission=d.emit(n,{...model.context,ports:p,input,connected:key=>links.has(node.port('input',key)),useUniform:useDeclaration,useDeclaration,referenceDeclaration});
       if(Object.keys(emission.outputs).sort().join()!==Object.keys(p.outputs).sort().join())throw Error('Module emitted a different output interface');
       if(emission.statements)lines.push(...emission.statements);
+      let passed=false;
       for(const [port,expression] of Object.entries(emission.outputs)){
+        // An opaque value cannot live in a local variable: its expression is written where it is used.
+        // 不透明的值不能放進區域變數：直接代入使用的地方。
+        if(opaque.includes(p.outputs[port]!.type)){expressions.set(node.port('output',port),expression);passed=true;continue;}
         const symbol='sg_n_'+(n.name||id)+(port==='out'?'':'_'+port);
         lines.push('    '+(emission.constant?'const ':'')+p.outputs[port]!.type+' '+symbol+' = '+expression+';');expressions.set(node.port('output',port),symbol);
       }
-      if(lines.length===start)throw Error('Node emitted no expression');
+      if(lines.length===start&&!passed)throw Error('Node emitted no expression');
       appendNodeComments(lines,start,n.comment);
       while(lineNodes.length<lines.length)lineNodes.push(id);
     }
     // File-scope GLSL comes from each used declaration's kind; only sources go to TD as bindings
-    // (a global constant lives in the program, Q41). 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。
+    // (a global constant lives in the program, Q41). Ordered kinds (TOP texture inputs) go first, all
+    // of them in list order, used or not: each one is an input of the Grape OP (Q44).
+    // 檔案層級 GLSL 由 kind 產生；只有來源成為綁定交給 TD。有順序的種類（TOP 貼圖輸入）全部照清單順序放前面，
+    // 有沒有用到都算：每一筆都是 Grape OP 的輸入接口。
     const usedDeclarations=[...used].sort().map(id=>declarations.get(id)!);
-    const bindings:Declaration[]=usedDeclarations.filter(d=>declarationKinds.get(d.kind)!.role==='source').map(d=>JSON.parse(JSON.stringify(d)) as Declaration);
-    const headers=usedDeclarations.map(d=>declarationKinds.get(d.kind)!.header(d));
+    const ordered=[...declarations.values()].filter(d=>declarationKinds.get(d.kind)!.ordered);
+    const bindings:Declaration[]=[...ordered,...usedDeclarations.filter(d=>declarationKinds.get(d.kind)!.role==='source'&&!declarationKinds.get(d.kind)!.ordered)]
+      .map(d=>JSON.parse(JSON.stringify(d)) as Declaration);
+    const headers=usedDeclarations.flatMap(d=>{const kind=declarationKinds.get(d.kind)!;return kind.header?[kind.header(d)]:[];});
     const pixel=[...headers,'layout(location=0) out vec4 fragColor;','void main() {','    vec2 sg_uv = vUV.st;',...lines,'}',''].join('\n');
     const diagnostics=[
       ...data.nodes.filter(n=>!visited.has(n.id)&&!ghosts.nodes.has(n.id)).sort((a,b)=>a.id<b.id?-1:1).map(n=>({node:n.id,stage:'pixel',message:'Disconnected node is not emitted'})),

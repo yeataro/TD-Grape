@@ -139,14 +139,20 @@ annotation(samples, 'annotate_samples', 'Default inputs',
     'Default images for an input when nothing is connected from outside.\n'
     "out1-out6 are fixed samples: Grape (from the main component's VFS; Banana when the main component is missing), "
     'Banana, Jellybeans, white, black, flat normal. out7 is the TOP chosen in the TOP parameter.\n'
-    'Which one an input uses will come from the graph (defaultTexture) and is wired by the editor.',
+    'Which one an input uses comes from the graph (defaultTexture); it is wired when the editor applies.',
     -205, -895, 410, 880)
+# The default graph's texture input (human 2026-10-09): input1, default image Grape. The editor
+# manages the In TOPs from then on (next_family.py _place_inputs). 預設圖的貼圖輸入；之後由編輯器管理。
+default_input = bootstrap['defaultDocument']['graph']['declarations'][0]
+assert default_input['kind'] == 'topInput' and default_input['defaultTexture'] == 'grape'
 input1 = node(top, inTOP, 'input1', -200, -125, 130, 72)
+input1.store('grapeInput', default_input['id'])
+input1.par.label = default_input['name']
 input1.inputConnectors[0].connect(samples.outputConnectors[0])
 shader.par.tops = 'input1'
 annotation(top, 'annotate_inputs', 'Inputs: managed by the TOPs list',
-    'Inputs are managed by the TOPs list on the GLSL TOP; the list order is the input order. '
-    'New inputs line up under input1, top to bottom.\n'
+    'Inputs are made and removed by the editor (TOP texture inputs in Sources) and listed in the TOPs list on the GLSL TOP; '
+    'the list order is the input order. They line up under input1, top to bottom.\n'
     'Do not also wire a TOP into the GLSL TOP: it would be counted as two inputs.\n'
     'When nothing is connected from outside, the default image comes from Samples.',
     -275, -170, 255, 410)

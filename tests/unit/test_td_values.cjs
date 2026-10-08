@@ -33,7 +33,7 @@ test('the table: ids are stable codes, unique, and every entry says where it can
 test('vUV.st and vUV are read straight from TD; no declaration, no binding',()=>{
   const st=compiler.compile(withEntry('vUVSt'));
   assert.match(st.pixel,/vec2 sg_n_td = vUV\.st;/);
-  assert.deepEqual(plain(st.bindings),[]);
+  assert.ok(!plain(st.bindings).some(d=>d.kind!=='topInput'),'only the default texture input is a binding');
   assert.match(compiler.compile(withEntry('vUV')).pixel,/vec3 sg_n_td = vUV;/);
   assert.match(compiler.compile(withEntry('uTDOutputInfoResZw')).pixel,/vec2 sg_n_td = uTDOutputInfo\.res\.zw;/);
 });

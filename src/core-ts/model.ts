@@ -7,7 +7,9 @@ export type ObjectValue = {[key:string]:Value};
 export const GRAPH_FORMAT = 'grape-graph';
 export const GRAPH_VERSION = 1;
 export interface Node {id:string;nodeType:string;params:ObjectValue;name?:string;inputValues?:ObjectValue;comment?:string;ui?:ObjectValue;extensions?:ObjectValue}
-export interface Declaration {id:string;kind:string;name:string;type:string;value:Value;[key:string]:Value}
+/** Fields beyond id/kind/name/type belong to the kind module (graph-structure decision 11), e.g.
+ * `value` for a constant, `defaultTexture` for a TOP texture input. 其餘欄位由 kind 模組規定。 */
+export interface Declaration {id:string;kind:string;name:string;type:string;[key:string]:Value}
 export interface Edge {id:string;from:readonly [string,string];to:readonly [string,string];ui?:ObjectValue;extensions?:ObjectValue}
 export interface NetworkData {nodes:Node[];edges:Edge[];ui?:ObjectValue}
 export interface InterfacePort {id:string;name?:string;type:string;default:Value}

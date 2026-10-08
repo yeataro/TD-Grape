@@ -8,6 +8,7 @@ Grape OP：TD 不解析、不檢查、不重新序列化圖；圖是不透明文
 """
 from hashlib import sha256
 import json
+import re
 import uuid
 
 FORMAT = 'grape-next-1'  # the editor <-> TD request format
@@ -34,6 +35,18 @@ MAX_GRAPH_BYTES = 512000     # the graph text; the core keeps a copy until we re
 # 約每 KB 卡 2.2 ms，送出一次編兩次。512 KB 仍可能卡數秒，數字是沿用的，待子圖展開實測時重訂。
 MAX_GLSL_BYTES = 512000      # the pixel shader source
 MAX_RUNTIME_BYTES = 1024 * 1024  # the whole execution part (GLSL + bindings)
+
+# TOP texture inputs (Refactor.43; texture-inputs.md). Each input of the graph is an In TOP in the
+# Grape OP: listed in the GLSL TOP's TOPs list in the graph's order (that order is sTD2DInputs[i]),
+# lined up under input1, top to bottom (that order is the Grape OP's input connectors). When nothing is
+# connected from outside, the In TOP passes what is wired into it: its default image from Samples.
+# TOP 貼圖輸入：圖裡每個輸入是 Grape OP 裡的一個 In TOP；照圖的順序列在 GLSL TOP 的 TOPs 清單
+# （＝sTD2DInputs[i]），在 input1 下面由上往下排（＝Grape OP 的輸入接口順序）。外面沒接時，
+# In TOP 輸出接在它自己身上的東西：Samples 的預設圖。
+# Samples output order (install_grape_templates.py): out1 Grape ... out7 the TOP chosen on Samples.
+DEFAULT_TEXTURES = ('grape', 'banana', 'jellybeans', 'white', 'black', 'normal', 'custom')
+INPUT_STORE = 'grapeInput'  # storage key on an In TOP: the ID of the input it belongs to
+INPUT_X, INPUT_Y, INPUT_STEP = -200, -125, 100
 
 
 def require(condition, message):
@@ -69,9 +82,22 @@ def read_runtime(text, *, catalog_hash):
     require(0 < len(compiled['pixel'].encode('utf-8')) <= MAX_GLSL_BYTES, 'GLSL is empty or over 512,000 bytes')
     bindings = compiled.get('bindings')
     require(isinstance(bindings, list), 'invalid binding table')
-    # Uniform bindings arrive with the Uniform round (binding table, design-interview Q41).
-    require(not bindings, 'Uniform bindings are not migrated to the new editor path yet.')
+    seen = set()
+    for entry in bindings:
+        require(isinstance(entry, dict), 'invalid binding table')
+        # Uniform bindings arrive with the Uniform round (binding table, design-interview Q41).
+        require(entry.get('kind') == 'topInput', 'Uniform bindings are not migrated to the new editor path yet.')
+        ident, name = entry.get('id'), entry.get('name')
+        require(isinstance(ident, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', ident) and ident not in seen
+                and isinstance(name, str) and 0 < len(name) <= 48 and entry.get('defaultTexture') in DEFAULT_TEXTURES,
+                'invalid texture input')
+        seen.add(ident)
     return compiled
+
+
+def texture_inputs(compiled):
+    """The TOP texture inputs, in the graph's order. 圖裡的 TOP 貼圖輸入，照圖的順序。"""
+    return [entry for entry in compiled['bindings'] if entry['kind'] == 'topInput']
 
 
 class NextFamily:
@@ -158,6 +184,64 @@ class NextFamily:
             raise RuntimeError('This Grape OP does not contain a native GLSL TOP.')
         return shader
 
+    def _place_inputs(self, inputs):
+        """Give every texture input an In TOP and list them in the TOPs list, so the new GLSL can
+        compile. Returns (commit, rollback): commit removes In TOPs no input owns any more, names and
+        lines up the rest and wires their default images; rollback undoes this step. External wires
+        stay with their In TOP (a removed one loses its wire). An In TOP Grape did not make (no
+        stored input ID) is left alone and is not in the TOPs list.
+        讓每個貼圖輸入都有 In TOP、列進 TOPs 清單，新 GLSL 才編得過。回傳（確定、復原）：確定時刪掉
+        沒有輸入擁有的 In TOP、命名排好其餘的並接上預設圖；復原則還原這一步。外面的線跟著 In TOP 走。
+        不是 Grape 建的 In TOP（沒有記輸入 ID）不動，也不列進 TOPs 清單。"""
+        comp, shader = self.comp, self._shader(self.comp)
+        owned, leftovers = {}, []
+        for child in comp.findChildren(type=inTOP, depth=1):
+            ident = child.fetch(INPUT_STORE, None, search=False)
+            if ident is None:
+                continue
+            if ident in owned:  # a copy of one Grape made 複製出來的重複者
+                leftovers.append(child)
+            else:
+                owned[ident] = child
+        chosen, created = [], []
+        for entry in inputs:
+            target = owned.pop(entry['id'], None)
+            if target is None:
+                target = comp.create(inTOP, 'input_new_' + uuid.uuid4().hex[:8])
+                target.store(INPUT_STORE, entry['id'])
+                created.append(target)
+            chosen.append(target)
+        leftovers.extend(owned.values())
+        previous_tops = shader.par.tops.val
+        shader.par.tops = ' '.join(t.name for t in chosen)
+
+        def rollback():
+            shader.par.tops = previous_tops
+            for target in created:
+                target.destroy()
+
+        def commit():
+            for target in leftovers:
+                target.destroy()
+            # Names follow the order: input1, input2… (rename through free names first).
+            # 名稱照順序 input1、input2…（先改成不會撞名的暫名）。
+            for target in chosen:
+                if target.name != 'input' + str(chosen.index(target) + 1):
+                    target.name = 'input_move_' + uuid.uuid4().hex[:8]
+            samples = comp.op('Samples')
+            for i, (target, entry) in enumerate(zip(chosen, inputs)):
+                if target.name != 'input' + str(i + 1) and comp.op('input' + str(i + 1)) is None:
+                    target.name = 'input' + str(i + 1)
+                target.nodeX, target.nodeY = INPUT_X, INPUT_Y - i * INPUT_STEP
+                target.nodeWidth, target.nodeHeight = 130, 72
+                target.par.label = entry['name']
+                connector = DEFAULT_TEXTURES.index(entry['defaultTexture'])
+                if samples is not None and connector < len(samples.outputConnectors):
+                    target.inputConnectors[0].connect(samples.outputConnectors[connector])
+            shader.par.tops = ' '.join(t.name for t in chosen)
+
+        return commit, rollback
+
     def _verify_gpu(self, comp):
         shader = self._shader(comp)
         shader.cook(force=True)
@@ -169,12 +253,16 @@ class NextFamily:
             raise RuntimeError((error + '\n' + message).strip() or 'TD has not confirmed Shader compilation.')
         return message
 
-    def _validate(self, pixel):
-        # A disposable compiler target; never a delivered Grape OP.
+    def _validate(self, pixel, inputs=0):
+        # A disposable compiler target; never a delivered Grape OP. It has as many inputs as the Grape
+        # OP will have: GLSL that reads sTD2DInputs[i] only compiles when input i exists.
+        # 丟棄式的編譯目標；輸入數量與 Grape OP 相同（讀 sTD2DInputs[i] 的 GLSL 要有第 i 個輸入才編得過）。
         comp = self.validation_area.create(baseCOMP, 'candidate_' + uuid.uuid4().hex[:12])
         try:
             comp.create(textDAT, 'pixel_shader').text = pixel
+            stand_ins = [comp.create(constantTOP, 'input' + str(i + 1)).name for i in range(inputs)]
             shader = comp.create(glslTOP, 'shader')
+            shader.par.tops = ' '.join(stand_ins)
             shader.par.pixeldat = 'pixel_shader'
             shader.par.glslversion = self._shader(self.comp).par.glslversion.eval()
             shader.par.outputresolution = 'custom'
@@ -211,21 +299,29 @@ class NextFamily:
         shader_updated, shader_error = False, None
         if runtime_text is not None:
             compiled = read_runtime(runtime_text, catalog_hash=catalog_hash)
+            inputs = texture_inputs(compiled)
             pixel = self.comp.op('pixel_shader')
             previous = pixel.text
+            placed = None
             try:
-                self._validate(compiled['pixel'])
+                self._validate(compiled['pixel'], len(inputs))
+                # The inputs and the GLSL that reads them change together (Q38 2-2).
+                # 輸入接口與讀它們的 GLSL 一起換。
+                placed = self._place_inputs(inputs)
                 if pixel.text != compiled['pixel']:
                     pixel.text = compiled['pixel']
                     shader_updated = True
                 self._verify_gpu(self.comp)
             except Exception as error:
-                # The GLSL did not compile in TD: the Shader stays the last known good, and the
-                # graph is still saved below (Q38: only the execution part is all-or-nothing).
-                # GLSL 在 TD 編譯失敗：Shader 停在最後成功版，圖照樣在下面存起來。
+                # The GLSL did not compile in TD: the Shader and its inputs stay the last known good,
+                # and the graph is still saved below (Q38: only the execution part is all-or-nothing).
+                # GLSL 在 TD 編譯失敗：Shader 與輸入接口停在最後成功版，圖照樣在下面存起來。
                 pixel.text = previous
+                if placed is not None:
+                    placed[1]()
                 shader_updated, shader_error = False, str(error)
             else:
+                placed[0]()
                 meta['runtime'] = {'revision': next_revision, 'text': runtime_text,
                                    'sha256': digest(runtime_text), 'document': None,
                                    'editorVersion': editor_version}

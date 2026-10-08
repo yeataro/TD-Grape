@@ -712,8 +712,11 @@ test('a known node outside this entry still refuses: as a ghost it would silentl
 // 共用來源：全域常數——新增、放到圖上、接線、送出、改名、名稱衝突、刪除連同引用、Undo。
 test('a global constant: add, place, wire, apply; rename; refused names; delete with its nodes; undo', async t => {
   const { session, calls } = open(t);
+  // The default graph already has a texture input (Refactor.43); constants are counted on their own.
+  // 預設圖已經有一個貼圖輸入；常數另外算。
+  const constants = () => session.snapshot().declarations.filter(d => d.kind === 'constant');
   session.addConstant();
-  const declaration = session.snapshot().declarations[0];
+  const declaration = constants()[0];
   assert.deepEqual([declaration.kind, declaration.name, declaration.type], ['constant', 'constant1', 'float']);
   session.setDeclarationValue(declaration.id, 0.25);
   session.placeDeclaration(declaration.id, { x: 0, y: 0 });
@@ -726,17 +729,17 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
   const pixel = JSON.parse(calls.at(-1).body.runtime).pixel;
   assert.match(pixel, /^const float constant1 = 0\.25;$/m);
   assert.equal(session.renameDeclaration(declaration.id, 'kGain'), true);
-  assert.equal(session.snapshot().declarations[0].name, 'kGain');
+  assert.equal(constants()[0].name, 'kGain');
   session.addConstant();
-  const other = session.snapshot().declarations[1];
+  const other = constants()[1];
   assert.equal(session.renameDeclaration(other.id, 'kGain'), false);
   assert.match(zh(session.snapshot().message), /名稱 kGain 已經被另一個共用來源使用/);
   assert.equal(session.renameDeclaration(other.id, 'float'), false);
   session.removeDeclaration(declaration.id);
   assert.ok(!session.graph().stages.pixel.nodes.some(node => node.id === ref.id), 'its nodes go with it');
-  assert.equal(session.snapshot().declarations.length, 1);
+  assert.equal(constants().length, 1);
   session.history(false);
-  assert.equal(session.snapshot().declarations.length, 2, 'one Undo brings both back');
+  assert.equal(constants().length, 2, 'one Undo brings both back');
   assert.ok(session.graph().stages.pixel.nodes.some(node => node.id === ref.id));
 });
 
@@ -755,7 +758,7 @@ test('a TD built-in value is placed, coloured as runtime info, wired and sent as
   });
   await session.flush();
   assert.match(JSON.parse(calls.at(-1).body.runtime).pixel, /vec2 sg_n_\w+ = uTDOutputInfo\.res\.zw;/);
-  assert.equal(session.snapshot().declarations.length, 0, 'no declaration is needed');
+  assert.equal(session.snapshot().declarations.filter(d => d.kind !== 'topInput').length, 0, 'no declaration is needed');
 });
 
 // Color Output takes anything (Refactor.42; Q46): vUV.st wires straight to it.
@@ -767,4 +770,27 @@ test('vUV.st can be wired straight to Color Output and is filled to (x, y, 0.5, 
   assert.equal(session.valid(wire), true);
   session.connect(wire); await session.flush();
   assert.match(JSON.parse(calls.at(-1).body.runtime).pixel, /vec4 sg_color = vec4\(vec2\(sg_n_\w+\), 0\.5, 1\.0\);/);
+});
+
+// TOP texture inputs (Refactor.43; texture-inputs.md): added in the Sources panel, sampled, sent to TD
+// as an ordered binding list. TOP 貼圖輸入：在共用來源面板新增、取樣、照順序當成綁定交給 TD。
+test('a texture input: add, choose its default image, place, sample, wire; the input list goes to TD in order', async t => {
+  const { session, calls } = open(t);
+  session.addTopInput();
+  const inputs = () => JSON.parse(JSON.stringify(session.snapshot().declarations.filter(d => d.kind === 'topInput')));
+  assert.deepEqual(inputs().map(d => [d.name, d.defaultTexture]), [['input1', 'grape'], ['input2', 'grape']]);
+  session.setDefaultTexture(inputs()[1].id, 'black');
+  session.placeDeclaration(inputs()[1].id, { x: 0, y: 0 });
+  const ref = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.declaration');
+  assert.equal(ref.data.colorGroup, 'sampler');
+  assert.deepEqual([...ref.data.outputs.map(p => p.key)], ['out', 'size', 'pixelSize']);
+  session.add('sgrape.builtin.texture_sample', { x: 200, y: 0 });
+  const tex = session.snapshot().projection.nodes.find(n => n.data.authored.nodeType === 'sgrape.builtin.texture_sample');
+  assert.equal(session.valid({ source: ref.id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' }), false, 'a texture is not a colour');
+  session.connect({ source: ref.id, sourceHandle: 'out', target: tex.id, targetHandle: 'sampler' });
+  session.connect({ source: tex.id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
+  await session.flush();
+  const runtime = JSON.parse(calls.at(-1).body.runtime);
+  assert.match(runtime.pixel, /vec4 sg_n_\w+ = texture\(sTD2DInputs\[1\], vUV\.st\);/);
+  assert.deepEqual(runtime.bindings.map(d => [d.kind, d.name, d.defaultTexture]), [['topInput', 'input1', 'grape'], ['topInput', 'input2', 'black']]);
 });

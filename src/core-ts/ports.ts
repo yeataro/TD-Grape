@@ -2,7 +2,9 @@ import type { Value } from './model';
 
 /** Keys survive labels, ordering, type changes, save/load and Undo. Scope is
  * supplied by the owning network; these read-only projections are not state. */
-export interface PortSpec {readonly key:string;readonly direction:'input'|'output';readonly type:string;readonly default?:Value}
+/** `fallback`: a GLSL expression an unconnected input uses instead of an editable value, e.g.
+ * vUV.st for texture coordinates (Refactor.43). 沒接線時用的 GLSL 式子（取代可編輯的值）。 */
+export interface PortSpec {readonly key:string;readonly direction:'input'|'output';readonly type:string;readonly default?:Value;readonly fallback?:string}
 export interface PortTypes {inputs:Record<string,string>;outputs:Record<string,string>}
 export class NodePorts {
   readonly inputs:Readonly<Record<string,PortSpec>>;
@@ -17,7 +19,8 @@ export class NodePorts {
       if(target[spec.key])throw Error('Duplicate port key: '+spec.key);
       const value=spec.default&&typeof spec.default==='object'?JSON.parse(JSON.stringify(spec.default)) as Value:spec.default;
       const freeze=(v:Value):Value=>{if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;};
-      target[spec.key]=Object.freeze({key:spec.key,direction:spec.direction,type:spec.type,default:value===undefined?undefined:freeze(value)});
+      target[spec.key]=Object.freeze({key:spec.key,direction:spec.direction,type:spec.type,default:value===undefined?undefined:freeze(value),
+        ...(spec.fallback===undefined?{}:{fallback:spec.fallback})});
       (spec.direction==='input'?inputTypes:outputTypes)[spec.key]=spec.type;
     }
     this.inputs=Object.freeze(inputs);this.outputs=Object.freeze(outputs);

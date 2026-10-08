@@ -25,11 +25,14 @@ footer { color: #958b9f; font-size: 11px; }
 .panel-close { background: none; border: 0; color: inherit; font-size: 16px; cursor: pointer; }
 .panel-body { overflow: auto; padding: 8px 12px; min-height: 0; }
 .sources-section { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 8px; font-weight: 600; }
-.source-row { border: 1px solid #43394e; border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; gap: 6px; }
+.source-row { border: 1px solid #43394e; border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .source-head { display: flex; gap: 6px; } .source-name { flex: 1; min-width: 0; }
+/* A select is as wide as its longest option; keep it inside the panel. 下拉選單會被最長選項撐寬，限制在面板內。 */
+.source-head select { min-width: 0; max-width: 55%; }
 .source-actions { display: flex; align-items: center; gap: 6px; } .source-actions small { flex: 1; color: #ffffff80; }
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .builtin-row small { color: #ffffff80; }
+.port-fallback { color: #ffffff80; font-size: 11px; padding-left: 4px; }
 .grape-node.ghost .ghost-note { font-size: 11px; color: #ffffffa0; padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
 .node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }

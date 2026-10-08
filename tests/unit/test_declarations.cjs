@@ -27,7 +27,8 @@ test('a global constant becomes file-scope const GLSL; it is not a TD binding',(
   const doc=withConstant(),result=compiler.compile(doc.snapshot());
   assert.match(result.pixel,/^const vec4 kOffset = vec4\(0\.5, 0\.0, 0\.0, 0\.0\);$/m);
   assert.match(result.pixel,/const vec4 sg_n_ref = kOffset;/,'a reference to a constant is a constant expression');
-  assert.deepEqual(plain(result.bindings),[]);
+  // Only the default graph's TOP texture input goes to TD (Refactor.43). 只有預設圖的貼圖輸入交給 TD。
+  assert.deepEqual(plain(result.bindings).map(d=>d.id),['input1']);
 });
 
 test('names follow GLSL, avoid reserved words and stay unique among declarations',()=>{
@@ -49,7 +50,7 @@ test('renaming changes the GLSL; changing type reshapes the value and the refere
   doc=new G.GraphDocument(doc.change(c=>c.changeDeclaration('k1',{name:'kShift'})).after,registry);
   assert.match(compiler.compile(doc.snapshot()).pixel,/const vec4 kShift = /);
   doc=new G.GraphDocument(doc.change(c=>c.changeDeclaration('k1',{type:'vec2'})).after,registry);
-  assert.deepEqual(plain(doc.snapshot().declarations[0].value),[0.5,0]);
+  assert.deepEqual(plain(doc.snapshot().declarations.find(d=>d.id==='k1').value),[0.5,0]);
   const net=doc.networks.get('pixel'),ghosts=G.ghostsOf(net,G.values.policy);
   // vec2 still converts into vec4 here, so check the reference's own output instead.
   assert.equal(net.node('ref').outputs[0].type,'vec2');
@@ -59,14 +60,14 @@ test('renaming changes the GLSL; changing type reshapes the value and the refere
 test('removing a declaration removes its reference nodes and their wires in the same step',()=>{
   const doc=withConstant(),result=doc.change(c=>c.removeDeclaration('k1'));
   const pixel=result.after.stages.pixel;
-  assert.equal(result.after.declarations.length,0);
+  assert.ok(!result.after.declarations.some(d=>d.id==='k1'));
   assert.ok(!pixel.nodes.some(n=>n.id==='ref'));
   assert.ok(!pixel.edges.some(e=>e.from[0]==='ref'||e.to[0]==='ref'));
   compiler.compile(result.after);
 });
 
 test('a reference whose declaration is gone is a missing ghost; the rest still compiles',()=>{
-  const g=withConstant().snapshot();g.declarations=[];
+  const g=withConstant().snapshot();g.declarations=g.declarations.filter(d=>d.id!=='k1');
   const doc=new G.GraphDocument(g,registry),ghosts=G.ghostsOf(doc.networks.get('pixel'),G.values.policy);
   assert.equal(ghosts.nodes.get('ref'),'missing');
   assert.ok(compiler.compile(g).diagnostics.some(d=>d.node==='ref'&&/missing/.test(d.message)));
