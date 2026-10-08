@@ -8,7 +8,7 @@
 
 **Subgraph（子圖）** 是可重用的節點集合。編譯器在各使用位置展開其內容，再產生目前階段的 GLSL；共用定義、雙擊進入及 Make Independent 是編輯器能力，不代表生成 GLSL 函式。0.8.201 起，新建預設名稱、邊界、選單與說明統一使用 Subgraph，資源庫以輸入／輸出列表顯示介面。既有使用者名稱保持原樣。
 
-歷史格式的 `functions`、`functionId` 及 `sgrape.function.*` 識別碼保留相容。GLSL Code 等真正定義或呼叫 GLSL 函式的地方仍使用 Function。
+圖格式裡子圖清單叫 `subgraphs`（Q44）；子圖呼叫節點的參數改為 `subgraphId`，節點種類改為 `sgrape.builtin.subgraph_call`／`subgraph_input`／`subgraph_output`（Q46，尚未實作；現行程式仍是 `functionId`、`sgrape.function.*`）。子圖能用的 Stage 與 target 由內容推算（Q46）。GLSL Code 等真正定義或呼叫 GLSL 函式的地方仍使用 Function。
 
 ## 型別、接孔與運算
 
