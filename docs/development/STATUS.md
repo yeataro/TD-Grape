@@ -51,7 +51,10 @@
     - Uniforms、Global constants 補上說明，五區都一樣。
     - 滑過標題不畫高亮：整列都能點，只畫在字上反而誤導。用鍵盤選到時整列畫聚焦框（人類：要考慮無障礙）。
     - 驗證：五區標題都有說明、標題沒有底色。鍵盤聚焦框未實際按出：Tab 被「Create node」快捷鍵拿走了（見下一條）。
-  - **發現**：焦點在面板按鈕上時按 Tab 也會打開 Create node，面板裡無法用 Tab 移動焦點（無障礙問題）。建議只在焦點於畫布時才開，待人類決定。測試時誤開了一次，已用 Esc 關掉，沒有新增任何東西。
+  - **Tab 補回舊產品的判斷**（人類同意）：焦點在網路區或什麼都沒選到時，Tab 才打開 Create node；在面板、選單裡 Tab 照常移動焦點（legacy `graph_ui.js:2518`）。
+    - 起因：搬 Tab 快捷鍵時漏了這段判斷，測試時在面板按 Tab 誤開了一次 Create node，已用 Esc 關掉，沒有新增任何東西。
+    - 規則寫進 EDITOR_UI_RULES 六（含無障礙的範圍）。
+    - 驗證（實際按鍵）：在面板按 Tab，焦點移到 Uniforms 標題，整列出現聚焦框，Create node 沒開；什麼都沒選到時按 Tab 會開，Esc 關掉後節點數不變（18）。
   - 靜態網站用的 Grape（人類）：`src/static-site/textures/grape.png`，和 TD 預覽同一張（320×240 PNG、52KB）。TD 的建置只收 `src/editor-react/static/`，不帶它；做靜態網站時 `textureUrl` 指向這裡。
   - 顏色 Uniform 的 RGB／RGBA 每個字母用該通道的顏色，同數值框的分量字母（人類）。抽出共用的 `componentColor(i)`（`ValueFields.tsx`），兩處都用它。驗證：選單上的 R／G／B 和數值框的 R／G／B 計算出的顏色相同。
 - 未 Deliver（TOE 未存）；未 push。

@@ -246,8 +246,14 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
       const element = event.target as HTMLElement;
       if (element.closest('input,select,textarea,[contenteditable="true"]')) return;
       if (!draft && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); session.history(event.shiftKey); }
-      // Tab opens Create node in the upper middle of the network (legacy graph_ui.js:2560). Tab 在網路區中間偏上打開新增節點。
-      else if (!draft && event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey) { event.preventDefault(); setCreating({ screen: middle() }); }
+      // Tab opens Create node in the upper middle of the network (legacy graph_ui.js:2560), only while the keyboard focus is
+      // on the network or on nothing, as the legacy editor (graph_ui.js:2518); elsewhere (a panel, a menu) Tab moves the
+      // focus as usual (human 2026-10-09: keyboard use in panels). Tab 在網路區中間偏上打開新增節點；只在鍵盤焦點在網路區或
+      // 什麼都沒選到時，同舊產品；在面板、選單裡 Tab 照常移動焦點（人類：面板要能用鍵盤）。
+      else if (!draft && event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey
+        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
+        event.preventDefault(); setCreating({ screen: middle() });
+      }
     };
     addEventListener('beforeunload', leave); addEventListener('keydown', keys);
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
