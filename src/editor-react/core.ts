@@ -8,6 +8,7 @@ import type * as capacity from '../core-ts/capacity';
 import type * as structure from '../core-ts/structure';
 import type * as ghosts from '../core-ts/ghosts';
 import type * as declarations from '../core-ts/declarations';
+import type * as modelTypes from '../core-ts/model';
 import type * as tdValueTable from '../core-ts/td_values';
 import type * as presetTable from '../core-ts/uniform_presets';
 import type * as commonTable from '../core-ts/common_sources';
@@ -73,18 +74,17 @@ export const supportedDefinitions = [
 // not taken over yet (Uniform) still refuse, like known nodes outside the slice.
 // 本入口已接管的宣告種類；不認得的保留（Ghost），認得但未接管的（Uniform）仍拒絕。
 export const supportedKinds = ['constant', 'topInput', 'uniform'];
-// Retired definitions still open old graphs but are not offered for new nodes, as in the
-// legacy creator (TD-Grape-legacy src/editor/functions_ui.js availableEntries). The same
-// value is made with Scalar／Vector (fixed entries to be discussed).
-// 已淘汰的舊定義：能打開舊圖、不再新增（同舊產品新增清單）；同樣的值改用 Scalar／Vector 建立。
-const retired = new Set(['float', 'vec2', 'vec3', 'vec4'].map(key => 'sgrape.builtin.' + key));
-// The core decides what may be added (a stage output such as Color Output never is, Q42).
-// 能不能新增由核心決定（Color Output 這類 stage 出口不提供）。
-// The reference node is made from the Sources panel, which knows what it points to (Q45).
-// 引用宣告節點由共用來源面板建立（面板知道它指向哪一筆），不在新增選單。
-export const fromSourcesPanel = ['sgrape.builtin.declaration', 'sgrape.builtin.td_value'];
-export const creatableDefinitions = supportedDefinitions.filter(uuid => !retired.has(uuid) && !fromSourcesPanel.includes(uuid)
-  && core.offered(core.registry.get(uuid)!));
+// The add menu (design-interview Q37 1-5, Refactor.50): the entries the node modules declare, for the
+// nodes this entry has taken over; the core decides what may be added at all (a stage output never is,
+// Q42). No node name is special-cased here. 新增選單：已接管的節點模組自己宣告的入口；能不能新增由核心決定。這裡不認任何節點名字。
+export type MenuEntry = { uuid: string; key: string; label: string; literal?: boolean; params: modelTypes.ObjectValue };
+export const creatableEntries: readonly MenuEntry[] = supportedDefinitions.flatMap(uuid => {
+  const module = core.registry.get(uuid)!;
+  if (!core.offered(module)) return [];
+  return (module.entries?.() ?? [{ key: '', label: module.catalog.definition.label, params: {} }])
+    .map(entry => ({ uuid, ...entry }));
+});
+export const creatableDefinitions = [...new Set(creatableEntries.map(entry => entry.uuid))];
 export function requireSupported(graph: graph.GraphDocument['document']) {
   // Format first (Q44): a newer version is never written back, so no reset is offered for it.
   // 先看格式：比目前新的版本不寫回，所以不提供換成預設圖。

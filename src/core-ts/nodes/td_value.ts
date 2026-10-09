@@ -43,4 +43,6 @@ const catalog:CatalogRow={
   }
 };
 
-export default tdValueNode(catalog);
+// Made from the Sources panel, which knows what it points to (Q45): not in the add menu.
+// 由共用來源面板建立（面板知道它指向哪一筆），不在新增選單。
+export default {...tdValueNode(catalog),entries:()=>[]};

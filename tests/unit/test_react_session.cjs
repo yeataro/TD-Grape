@@ -501,14 +501,41 @@ test('every offered node can be added, wired to the output and compiled', t => {
 
 // Retired value definitions open old graphs but are never offered for new nodes (legacy creator).
 test('add menu offers every supported node except retired float/vec2/vec3/vec4 and Color Output', () => {
-  const { supportedDefinitions, creatableDefinitions, fromSourcesPanel } = load(path.join(root, 'src/editor-react/core.ts'));
+  const { supportedDefinitions, creatableDefinitions, creatableEntries } = load(path.join(root, 'src/editor-react/core.ts'));
   const retired = ['float', 'vec2', 'vec3', 'vec4'].map(k => 'sgrape.builtin.' + k);
-  assert.ok(retired.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
-  // Stage outputs are never offered (Q42); the reference node is made from the Sources panel (Q45).
-  const fixed = ['sgrape.builtin.pixel_out', ...fromSourcesPanel];
-  assert.ok(fixed.every(uuid => supportedDefinitions.includes(uuid) && !creatableDefinitions.includes(uuid)));
+  // Stage outputs are never offered (Q42); the reference nodes are made from the Sources panel (Q45).
+  // Both are now declared by the modules themselves (Q37 1-5): no node name is special-cased in the menu.
+  const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value'];
   assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
+  // Fixed-type entries (Refactor.50, legacy functions_ui.js:78-80): Scalar 4 + Vector 12, after each generic one.
+  const of = uuid => creatableEntries.filter(e => e.uuid === uuid).map(e => e.label);
+  assert.deepEqual(of('sgrape.builtin.scalar'), ['Scalar', 'float', 'int', 'uint', 'bool']);
+  assert.deepEqual(of('sgrape.builtin.vector'), ['Vector', 'vec2', 'vec3', 'vec4', 'ivec2', 'ivec3', 'ivec4', 'uvec2', 'uvec3', 'uvec4', 'bvec2', 'bvec3', 'bvec4']);
+  assert.equal(creatableEntries.filter(e => e.literal).length, 16);
+});
+
+// Refactor.50: a fixed entry makes a node locked to its type, titled by it, with no type menu; the
+// graph keeps only type and fixedType (never which entry). 固定入口：鎖型別、以型別為標題、沒有型別選單；圖只存 type 與 fixedType。
+test('a fixed entry makes a locked node that compiles; the graph does not record the entry', async t => {
+  const { creatableEntries } = load(path.join(root, 'src/editor-react/core.ts'));
+  const { session, calls } = open(t);
+  for (const label of ['vec3', 'bvec2', 'int']) {
+    const entry = creatableEntries.find(e => e.label === label);
+    session.add(entry.uuid, { x: 0, y: 0 }, entry.params);
+  }
+  const added = session.graph().stages.pixel.nodes.slice(-3);
+  assert.deepEqual(JSON.parse(JSON.stringify(added.map(n => [n.params.type, n.params.fixedType]))), [['vec3', 'vec3'], ['bvec2', 'bvec2'], ['int', 'int']]);
+  assert.ok(added.every(n => !JSON.stringify(n).includes('entry')), 'no entry recorded');
+  const card = session.snapshot().projection.nodes.find(n => n.id === added[0].id);
+  const module = GrapeGraph.registry.get('sgrape.builtin.vector');
+  const view = module.presentation(card.data.authored, {});
+  assert.deepEqual([view.label, view.typeLocked], ['vec3', true]);
+  session.configure(added[0].id, 'vec4');
+  assert.equal(session.graph().stages.pixel.nodes.find(n => n.id === added[0].id).params.type, 'vec3', 'the core refuses another type');
+  session.connect({ source: added[0].id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
+  await session.flush();
+  assert.match(JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime).pixel, /vec3\(0\.0, 0\.0, 0\.0\)/);
 });
 
 // A legacy fixed entry (Vector locked to vec2) opens; changing its type is refused by the core.

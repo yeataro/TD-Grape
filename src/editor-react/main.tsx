@@ -5,7 +5,7 @@ import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBe
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
 import './style.css';
-import { core, creatableDefinitions, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
+import { creatableEntries, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, type StateResponse } from './host';
 import { Editor as EditorSession } from './editor';
 import { resetToDefault } from './host_sync';
@@ -107,9 +107,10 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
     <nav aria-label={say(tr('toolbar.label', 'Editing toolbar'))} inert={!!draft}>
       <select aria-label={say(tr('toolbar.addNode', 'Add node'))} value="" onChange={event => {
         const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
-        session.add(event.target.value, flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 }));
-      }}><option value="" disabled>{say(tr('toolbar.addNodePrompt', '+ Add node'))}</option>{creatableDefinitions.map(uuid => <option key={uuid} value={uuid}>
-        {text(core.registry.get(uuid)!.catalog.definition.label)}</option>)}</select>
+        const entry = creatableEntries[Number(event.target.value)]!;
+        session.add(entry.uuid, flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 }), entry.params);
+      }}><option value="" disabled>{say(tr('toolbar.addNodePrompt', '+ Add node'))}</option>{creatableEntries.map((entry, i) => <option key={entry.uuid + ':' + entry.key} value={i}>
+        {entry.literal ? entry.label : text(entry.label)}</option>)}</select>
       <button disabled={!state.undo} onClick={() => session.history(false)}>{say(tr('toolbar.undo', 'Undo'))}</button>
       <button disabled={!state.redo} onClick={() => session.history(true)}>{say(tr('toolbar.redo', 'Redo'))}</button>
       <label><input type="checkbox" checked={bodyDrag} onChange={event => setBodyDrag(event.target.checked)} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>

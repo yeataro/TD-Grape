@@ -2464,7 +2464,9 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.declarationNode)(catalog);
+// Made from the Sources panel, which knows what it points to (Q45): not in the add menu.
+// 由共用來源面板建立（面板知道它指向哪一筆），不在新增選單。
+exports.default = { ...(0, node_sdk_1.declarationNode)(catalog), entries: () => [] };
 
 },
 "nodes/divide":function(require,module,exports){
@@ -2668,7 +2670,9 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.literalNode)(catalog, 'float');
+// Retired: opens old graphs, not offered (legacy functions_ui.js:76; Scalar／Vector make the same value).
+// 已淘汰：能開舊圖、不在選單（舊產品同；同樣的值用 Scalar／Vector）。
+exports.default = { ...(0, node_sdk_1.literalNode)(catalog, 'float'), entries: () => [] };
 
 },
 "nodes/floor":function(require,module,exports){
@@ -4130,6 +4134,7 @@ const catalog = {
 };
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.scalars,
+    fixed: t => ({ value: node_sdk_1.values.reshape(0, t) }),
     ports: t => [(0, node_sdk_1.output)('out', t)],
     configure: (n, t) => { var _a; n.params.value = node_sdk_1.values.reshape((_a = n.params.value) !== null && _a !== void 0 ? _a : 0, t); return n; },
     edit: (n, command, data) => {
@@ -4546,7 +4551,9 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.tdValueNode)(catalog);
+// Made from the Sources panel, which knows what it points to (Q45): not in the add menu.
+// 由共用來源面板建立（面板知道它指向哪一筆），不在新增選單。
+exports.default = { ...(0, node_sdk_1.tdValueNode)(catalog), entries: () => [] };
 
 },
 "nodes/texture_sample":function(require,module,exports){
@@ -4689,7 +4696,9 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.literalNode)(catalog, 'vec2');
+// Retired: opens old graphs, not offered (legacy functions_ui.js:76; Scalar／Vector make the same value).
+// 已淘汰：能開舊圖、不在選單（舊產品同；同樣的值用 Scalar／Vector）。
+exports.default = { ...(0, node_sdk_1.literalNode)(catalog, 'vec2'), entries: () => [] };
 
 },
 "nodes/vec3":function(require,module,exports){
@@ -4738,7 +4747,9 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.literalNode)(catalog, 'vec3');
+// Retired: opens old graphs, not offered (legacy functions_ui.js:76; Scalar／Vector make the same value).
+// 已淘汰：能開舊圖、不在選單（舊產品同；同樣的值用 Scalar／Vector）。
+exports.default = { ...(0, node_sdk_1.literalNode)(catalog, 'vec3'), entries: () => [] };
 
 },
 "nodes/vec4":function(require,module,exports){
@@ -4789,7 +4800,9 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.literalNode)(catalog, 'vec4', true);
+// Retired: opens old graphs, not offered (legacy functions_ui.js:76; Scalar／Vector make the same value).
+// 已淘汰：能開舊圖、不在選單（舊產品同；同樣的值用 Scalar／Vector）。
+exports.default = { ...(0, node_sdk_1.literalNode)(catalog, 'vec4', true), entries: () => [] };
 
 },
 "nodes/vector":function(require,module,exports){
@@ -4849,6 +4862,7 @@ const catalog = {
 };
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors,
+    fixed: t => ({ components: node_sdk_1.values.reshape([0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)) }),
     ports: t => [(0, node_sdk_1.output)('out', t)],
     configure: (n, t) => { var _a; n.params.components = node_sdk_1.values.reshape((_a = n.params.components) !== null && _a !== void 0 ? _a : [0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)); return n; },
     validate: n => { node_sdk_1.values.literal(n.params.components, node_sdk_1.values.shaped(node_sdk_1.values.family(String(n.params.type)), 4)); },
@@ -6356,7 +6370,14 @@ function typedNode(catalog, spec) {
         validate: (n, c) => { var _a; if (n.params.fixedType && n.params.fixedType !== selected(n))
             throw Error('Fixed node type'); ports(n); (_a = spec.validate) === null || _a === void 0 ? void 0 : _a.call(spec, n, c); },
         edit: spec.edit, emit: spec.emit, creations: spec.creations,
-        presentation: n => { var _a; return ({ selectorLabel: 'vector.outputType', ...(_a = spec.presentation) === null || _a === void 0 ? void 0 : _a.call(spec, n) }); }
+        ...(spec.fixed ? { entries: () => [{ key: '', label: catalog.definition.label, params: {} },
+                ...spec.types.map(t => ({ key: t, label: t, literal: true, params: { type: t, fixedType: t, ...spec.fixed(t) } }))] } : {}),
+        // A fixed node is titled by its type and has no type menu (Refactor.17.2). 固定型別的節點以型別為標題、沒有型別選單。
+        presentation: n => {
+            var _a;
+            return ({ selectorLabel: 'vector.outputType', ...(_a = spec.presentation) === null || _a === void 0 ? void 0 : _a.call(spec, n),
+                ...(n.params.fixedType ? { label: String(n.params.fixedType), literalLabel: true, typeLocked: true } : {}) });
+        }
     };
 }
 const input = (key, t, value = 0) => ({ key, direction: 'input', type: t, default: values.fill(value, t) });

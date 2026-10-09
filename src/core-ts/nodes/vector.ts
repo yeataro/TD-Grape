@@ -54,6 +54,7 @@ const catalog = {
 
 export default typedNode(catalog, {
   types: values.vectors,
+  fixed: t => ({ components: values.reshape([0, 0, 0, 0], values.shaped(values.family(t), 4)) }),
   ports: t => [output('out', t)],
   configure: (n, t) => { n.params.components = values.reshape(n.params.components ?? [0,0,0,0], values.shaped(values.family(t),4)); return n; },
   validate: n => { values.literal(n.params.components, values.shaped(values.family(String(n.params.type)),4)); },

@@ -1,4 +1,4 @@
-import {object,copy,type Node,type Value} from './model';
+import {object,copy,type Node,type Value,type ObjectValue} from './model';
 import type {CatalogRow,NodeModule,NodePresentation} from './node_module';
 import type {PortSpec} from './ports';
 import * as values from './values';
@@ -25,6 +25,9 @@ export function typedNode(catalog:CatalogRow,spec:{
   validate?:NonNullable<NodeModule['validate']>;
   presentation?:(node:Node)=>NodePresentation;
   creations?:NodeModule['creations'];
+  /** Fixed-type entries (Q37 1-5, Refactor.50): the params a node of that type starts with. Given = the
+   * menu offers the generic node plus one locked entry per type. 固定型別入口：給了就提供通用入口＋每種型別一個鎖定入口。 */
+  fixed?:(type:string)=>ObjectValue;
 }):NodeModule {
   const selected=(n:Node)=>String(n.params.type??catalog.definition.defaults.type);
   const ports=(n:Node)=>{const t=selected(n);if(!spec.types.includes(t))throw Error('Unsupported node type');return spec.ports(t,n);};
@@ -37,7 +40,11 @@ export function typedNode(catalog:CatalogRow,spec:{
     },
     validate:(n,c)=>{if(n.params.fixedType&&n.params.fixedType!==selected(n))throw Error('Fixed node type');ports(n);spec.validate?.(n,c);},
     edit:spec.edit,emit:spec.emit,creations:spec.creations,
-    presentation:n=>({selectorLabel:'vector.outputType',...spec.presentation?.(n)})
+    ...(spec.fixed?{entries:()=>[{key:'',label:catalog.definition.label,params:{}},
+      ...spec.types.map(t=>({key:t,label:t,literal:true,params:{type:t,fixedType:t,...spec.fixed!(t)}}))]}:{}),
+    // A fixed node is titled by its type and has no type menu (Refactor.17.2). 固定型別的節點以型別為標題、沒有型別選單。
+    presentation:n=>({selectorLabel:'vector.outputType',...spec.presentation?.(n),
+      ...(n.params.fixedType?{label:String(n.params.fixedType),literalLabel:true,typeLocked:true}:{})})
   };
 }
 export const input=(key:string,t:string,value:number|boolean=0):PortSpec=>({key,direction:'input',type:t,default:values.fill(value,t)});

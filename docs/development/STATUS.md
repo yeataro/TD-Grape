@@ -2,6 +2,16 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.50 — 固定入口：新增選單由節點模組宣告 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/selection-and-fixed-entries.md`（人類 10-09 同意）；依 design-interview Q37 1-5、Refactor.17.2。
+
+- **核心**（[node_module.ts](../../src/core-ts/node_module.ts)）：節點模組多一個 `entries()`——新增選單的入口（代號、標籤、建立時的參數）。沒寫＝一個入口（模組本身）；空的＝不在選單。圖不記錄節點來自哪個入口。`NodePresentation` 多 `literalLabel`（標籤照原樣、不翻譯）與 `typeLocked`（卡片不顯示型別選單）。
+- **Scalar／Vector**（[value_nodes.ts](../../src/core-ts/value_nodes.ts) `typedNode` 的 `fixed`）：通用入口＋每種型別一個鎖定入口（Scalar：float、int、uint、bool；Vector：vec2～4、ivec2～4、uvec2～4、bvec2～4；共 16 個，照舊產品 `functions_ui.js:78–80`）。鎖定的節點以型別為標題、沒有型別選單（R.17.2）；換型別由核心拒絕（原本就有）。
+- **選單不再認節點名字**：舊的 float／vec2～4（已淘汰、仍能開舊圖）與共用來源面板建立的兩種節點（`declaration`、`td_value`），改由各自的模組宣告「沒有選單入口」；畫面層那份依名字的清單（`retired`、`fromSourcesPanel`）拿掉。[core.ts](../../src/editor-react/core.ts) 的 `creatableEntries` 只讀模組宣告。
+- **驗證**：core 140、editor 55（新：選單有 16 個固定入口並排在通用的後面；固定入口建立的節點鎖型別、以型別為標題、圖裡沒有入口紀錄、接到輸出產碼正確）。真實 TD＋內建瀏覽器（暫時的 Grape OP，測完已刪）：選單在 Scalar、Vector 之後列出 16 個固定入口；選「vec3」→ 卡片標題 vec3、沒有型別選單；接到 Color Output → TD 編譯成功（`const vec3 … = vec3(0.0, 0.0, 0.0)`）；graph 只存 `type`、`fixedType`、`components`；重開編輯器仍是 vec3。Manager、GrapeEditor、範本無 scriptErrors。Deliver 存 `TD-Grape-dev.87`（含 R.49、49.1）。
+- **不在這一輪**：拉線新增（從輸入拉到空白處跳出能接的入口）、Matrix／結構的入口展開。
+
 ## Refactor.49.1 — 接線的多選和節點一致 — 2026-10-09
 
 人類 10-09：「線的多選跟節點的多選行為要一致，這不是框線的問題，是 Shift 跟 Ctrl 的問題。」

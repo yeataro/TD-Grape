@@ -39,8 +39,17 @@ export interface NodeControl {
   options?:readonly {value:string;label:string;literal?:boolean}[];
   children?:readonly NodeControl[];prefix?:string;disabled?:boolean;
 }
+/** One add-menu entry (design-interview Q37 1-5): a shortcut that creates the node with these params.
+ * The graph never records which entry made a node. `literal`: the label is shown as is (a type name),
+ * not translated. 新增選單的一個入口：用這些參數建立節點的捷徑；圖不記錄來自哪個入口。literal＝標籤照原樣顯示。 */
+export interface NodeEntry { readonly key:string; readonly label:string; readonly literal?:boolean; readonly params:ObjectValue }
 export interface NodePresentation {
   label?:string;descriptionKey?:string;
+  /** The label is shown as is, not translated (e.g. a fixed type name). 標籤照原樣顯示、不翻譯。 */
+  literalLabel?:boolean;
+  /** The type cannot be changed here (a fixed entry, Refactor.17.2): no type menu on the card.
+   * 型別不能在這裡改（固定入口）：卡片不顯示型別選單。 */
+  typeLocked?:boolean;
   selectorLabel?:string;
   selector?:{value:string;options:readonly string[];command:string;label:string};
   inlineControls?:readonly NodeControl[];
@@ -57,6 +66,10 @@ export interface NodeModule {
   readonly role:'value'|'output'|'subgraph-input'|'subgraph-output';
   /** Structural modules are instantiated from a graph definition, not the palette. */
   readonly structural?:boolean;
+  /** Add-menu entries (design-interview Q37 1-5); the menu reads only these, never node names. Left
+   * out = one entry, the module itself; an empty list = not in the menu (retired, or made elsewhere such
+   * as the Sources panel). 新增選單的入口；選單只讀這個、不認節點名字。沒寫＝一個入口（模組本身）；空的＝不在選單。 */
+  entries?():readonly NodeEntry[];
   referencedGraph?(node:Node):string;
   /** The declaration this node refers to (the reference node, Q45). 引用的宣告。 */
   referencedDeclaration?(node:Node):string;

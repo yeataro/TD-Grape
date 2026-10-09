@@ -1,6 +1,6 @@
 import { applyNodeChanges, applyEdgeChanges, type NodeChange, type EdgeChange, type Connection, type XYPosition } from '@xyflow/react';
 import { core, compiler, requireSupported, parseDocument, type Measure, type StructureProblem, type Graph, type GraphDocument, type Network, type Value, type Bootstrap,
-  type Declaration, type NameProblem } from './core';
+  type Declaration, type NameProblem, type ObjectValue } from './core';
 import { project, type Projection, type FlowNode, type FlowEdge } from './projection';
 import { type HostClient, type StateResponse, type UniformStates } from './host';
 import { HostSync, checkLoaded, type Compiled, type Delivery, type SyncStatus } from './host_sync';
@@ -265,8 +265,10 @@ export class Editor {
     net.node(id).setInput(key, value);
   });
   configure = (id: string, type: string) => this.transact(tr('edit.typeChanged', 'Type updated'), net => net.node(id).configure({ type }));
-  add = (uuid: string, position: XYPosition) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
-    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: uuid, params: {}, ui: { ...position } }));
+  // `params` come from the menu entry the module declared (Q37 1-5); the graph does not record the entry.
+  // params 來自模組宣告的入口；圖不記錄來自哪個入口。
+  add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
+    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: uuid, params: structuredClone(params), ui: { ...position } }));
   // Shared sources (Refactor.40; Q41, Q45): global constants for now. 共用來源：本輪只有全域常數。
   addConstant = () => {
     const name = core.freeDeclarationName(this.document.document, 'constant');

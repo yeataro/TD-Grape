@@ -48,6 +48,7 @@ const catalog = {
 
 export default typedNode(catalog, {
   types: values.scalars,
+  fixed: t => ({ value: values.reshape(0, t) }),
   ports: t => [output('out', t)],
   configure: (n, t) => { n.params.value = values.reshape(n.params.value ?? 0, t); return n; },
   edit: (n, command, data) => {

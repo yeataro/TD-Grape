@@ -43,4 +43,6 @@ const catalog:CatalogRow={
   }
 };
 
-export default literalNode(catalog,'vec3');
+// Retired: opens old graphs, not offered (legacy functions_ui.js:76; Scalar／Vector make the same value).
+// 已淘汰：能開舊圖、不在選單（舊產品同；同樣的值用 Scalar／Vector）。
+export default {...literalNode(catalog,'vec3'),entries:()=>[]};

@@ -156,8 +156,8 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   </article>;
   return <article ref={card} className={`grape-node ${selection}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
-    <div className="node-title node-drag-surface"><strong>{text(view.label ?? data.label)}</strong>
-      {view.selector ? <select className="nodrag" aria-label={`${id} type`} value={view.selector.value}
+    <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
+      {view.typeLocked ? <small>{outputs[0]?.type}</small> : view.selector ? <select className="nodrag" aria-label={`${id} type`} value={view.selector.value}
         onChange={event => session.edit(id, view.selector!.command, { value: event.target.value })}>
         {view.selector.options.map(type => <option key={type}>{type}</option>)}</select> :
         data.types.length > 1 ? <select className="nodrag" aria-label={`${id} type`} value={String(authored.params.type)}
