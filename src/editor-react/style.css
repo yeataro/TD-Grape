@@ -300,6 +300,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: none; }
 .builtin-row small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
 .builtin-row button { flex: none; }
+/* The Appearance panel: one row per tunable value, label, control, value, back-to-theme. 外觀面板：每個可調數值一列。 */
+.tuning-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(80px, 1.2fr) 3.5em auto; align-items: center; gap: 8px; min-height: var(--row-height); }
+.tuning-row:has(input[type="color"]) { grid-template-columns: minmax(0, 1fr) auto auto; }
+.tuning-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
+.tuning-row output { font-variant-numeric: tabular-nums; text-align: right; color: var(--text-muted); }
+.tuning-row input[type="range"] { width: 100%; accent-color: var(--accent); }
+.tuning-changed { margin: 8px 0 0; padding: 8px; border-radius: var(--radius-field); background: var(--surface-raised); font-size: var(--font-sm); line-height: var(--line-sm); white-space: pre-wrap; user-select: text; }
 /* A card's text when open (a TD value's description), on the IO-row rhythm. 卡片打開後的文字（TD 內建值的說明），照 IO 列的節奏。 */
 .source-text { margin: 0; padding-block: var(--io-inset); color: var(--text-secondary); }
 .port-fallback { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); padding-left: 4px; }

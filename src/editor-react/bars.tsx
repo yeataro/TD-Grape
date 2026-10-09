@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles, setShadow, shadowOn } from './appearance';
+import { appearance, appearanceSubscribe, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import type { Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
@@ -115,7 +115,7 @@ const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, chec
 /** The foot bar: every notice of the editor (human 2026-10-09). The menu, the sync state, the latest message
  * (its history above it), what to do when TD is away, full screen. 底列：編輯器所有的提示（人類）。功能表、同步狀態、
  * 最新訊息（點開往上看歷史）、TD 不在時能做的事、全螢幕。 */
-export function FootBar({ session, waiting, onDownload, prefs }: { session: EditorSession | null; waiting: Message | string; onDownload(): void; prefs: CanvasPrefs }) {
+export function FootBar({ session, waiting, onDownload, prefs, onAppearance }: { session: EditorSession | null; waiting: Message | string; onDownload(): void; prefs: CanvasPrefs; onAppearance?(): void }) {
   const state = useEditorState(session), fullscreen = useFullscreen();
   const log = useSyncExternalStore(session?.log.subscribe ?? noSubscribe, session?.log.entries ?? (() => noLog));
   const [history, setHistory] = useState<HTMLElement | null>(null);
@@ -157,7 +157,7 @@ export function FootBar({ session, waiting, onDownload, prefs }: { session: Edit
       {/* Framing glides or jumps; times are fixed (legacy 150 / 333 ms; human: on/off only). 對準時滑動或直接跳；時間固定（人類：只要開關）。 */}
       <label className="check"><input type="checkbox" checked={prefs.frameGlide} onChange={event => prefs.set({ frameGlide: event.target.checked })} />{say(tr('toolbar.frameGlide', 'Frame transition (F)'))}</label>
     </PopoverButton>
-    <AppearancePanels />
+    <AppearancePanels onPanel={onAppearance} />
     <IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
       onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} />
     {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
@@ -197,7 +197,7 @@ const SliderPlaceholder = ({ label }: { label: Message }) =>
 // 有名稱的一行：名稱在左半邊置中，控制項填滿右半邊（人類）。
 const SettingsRow = ({ label, children }: { label: Message; children: ReactNode }) =>
   <div className="settings-row"><span>{say(label)}</span>{children}</div>;
-function AppearancePanels() {
+function AppearancePanels({ onPanel }: { onPanel?(): void }) {
   useSyncExternalStore(appearanceSubscribe, appearance);
   const style = currentStyle();
   return <>
@@ -211,10 +211,8 @@ function AppearancePanels() {
       <SliderPlaceholder label={tr('appearance.brightness', 'Brightness')} />
       {/* Under A/B test until the tuning phase (Q64). A／B 測試，調整期決定。 */}
       <Segmented label={tr('appearance.ports', 'Port style')} value={currentPorts()} options={portStyles} onChange={setPorts} />
-      {/* Shadow trials (human 2026-10-09 A/B); the switches go once decided. 陰影試驗（人類 A/B）；決定後拿掉開關。 */}
-      {([['layers', tr('appearance.shadowLayers', 'Layered shadows')], ['canvas', tr('appearance.shadowCanvas', 'Canvas inner shadow')],
-        ['cards', tr('appearance.shadowCards', 'Card shadows')], ['glow', tr('appearance.shadowGlow', 'Inner glow')]] as const).map(([key, label]) =>
-        <label key={key} className="check"><input type="checkbox" checked={shadowOn(key)} onChange={event => setShadow(key, event.target.checked)} />{say(label)}</label>)}
+      {/* Looks being tried and values being tuned are in the Appearance panel (Refactor.58.2). 試驗與可調的數值在外觀面板。 */}
+      {onPanel && <button className="link-button" onClick={onPanel}>{say(tr('appearance.openPanel', 'More in the Appearance panel…'))}</button>}
     </PopoverButton>
     <PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
       <SettingsRow label={tr('action.language', 'Language')}>

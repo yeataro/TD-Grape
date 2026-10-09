@@ -342,7 +342,7 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
       </section>
       <PanelZone side="right" layout={layout} panels={panels} />
     </div>
-    <FootBar session={session} waiting={waiting.message} prefs={prefs} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
+    <FootBar session={session} waiting={waiting.message} prefs={prefs} onAppearance={() => layout.show('appearance')} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
   </TextContext.Provider></SessionContext.Provider>;
 }
 

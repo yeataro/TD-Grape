@@ -5,6 +5,7 @@ import type { Side } from './layout';
 import { AddNodePanel } from './AddNodePanel';
 import { SourcesPanel } from './SourcesPanel';
 import { GlslPanel } from './GlslPanel';
+import { AppearancePanel } from './AppearancePanel';
 import { tr, say, type Message } from './text';
 
 // Every panel of the editor, one row each: its name, where it goes by default, what it shows. The layout
@@ -26,5 +27,8 @@ export const PANELS = {
     ? <AddNodePanel choices={choices} onAdd={add} />
     : <p className="hint">{say(tr('addNode.noGraph', 'Open a Grape OP to add nodes.'))}</p> },
   glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ state }) => <GlslPanel glsl={state.glsl} /> },
+  // Appearance (Refactor.58.2): opened from the appearance menu; on the right until floating panels exist.
+  // 外觀：從外觀選單打開；浮動面板做好之前放右邊。
+  appearance: { title: tr('appearance.panel', 'Appearance'), side: 'right', content: () => <AppearancePanel /> },
 } satisfies Record<string, PanelRow>;
 export type PanelId = keyof typeof PANELS;

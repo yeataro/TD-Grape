@@ -63,6 +63,7 @@
   --tint-scroll-hover: 58%; /* under the pointer (legacy --scroll-hover #79638e) */
   --tint-field-fill: 14%;
   --tint-layer-shadow: 25%; /* the small shadow one layer casts on the next (trial) 層疊微陰影的濃度（試驗） */
+  --tint-node-divider: 15%; /* the line under a node's title 節點標題下的線 */
   --tint-layer-glow: 2%;    /* the light seeping in from a layer's edges (trial; human 2026-10-09: 2%) 內發光的濃度（試驗；人類：2%） */
   --tint-wire-ready: 30%;   /* the glow round a port a dragged wire will land on (legacy --wire-ready-glow #aa84d64d) 拖線要接上的接孔外圍光暈 */   /* a value box's slider fill (legacy --numeric-slider-fill #c4c0df24) */
   /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
@@ -152,7 +153,7 @@
   --layer-glow: color-mix(in srgb, var(--palette-lift) var(--tint-layer-glow), transparent);
   /* The line under a node's title, see-through so it suits every title colour (legacy --ui-tone-node-divider,
      #8995a333 on coloured titles; human 2026-10-09). 節點標題下的線，半透明、配得上每種標題色（舊產品）。 */
-  --node-divider: color-mix(in srgb, var(--palette-contrast) 15%, transparent);
+  --node-divider: color-mix(in srgb, var(--palette-contrast) var(--tint-node-divider), transparent);
   --shadow: color-mix(in srgb, var(--palette-shadow) 55%, transparent);
   --grid-dot: color-mix(in srgb, color-mix(in srgb, var(--palette-ink), var(--palette-accent) 8%), var(--palette-contrast) 13%);
   --border: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-line));
