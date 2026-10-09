@@ -43,8 +43,8 @@
   --brand-font: 18px;
   --tab-pad: 7px 12px;
   --row-height: 34px;   /* a row of a list or tree (legacy #nodelibrary .browser-row) */
-  --io-row: 30px;       /* one input or output of a node: the IO row (value-input.md; legacy .port-row 29px) 輸入輸出區塊的高度 */
-  --io-field: 24px;     /* a value box inside it (legacy .node-inline-values input 24px) 其中的數值框 */
+  --io-row: 36px;       /* one input or output of a node: the IO row (value-input.md; legacy 29px, ×1.2 human 2026-10-09) 輸入輸出區塊的高度 */
+  --io-field: 30px;     /* a value box inside it (legacy 24px, ×1.2 human 2026-10-09; 3px above and below) 其中的數值框 */
   --io-field-min: 64px; /* the narrowest a value box gets; nodes widen to fit (value-input.md 五 4) 數值框最窄寬度；節點依內容撐開 */
   --io-field-gap: 4px;  /* between value boxes side by side 並排數值框之間 */
   --node-min-width: 250px; /* one shared minimum; a node grows with its content 節點共用的最小寬度 */
@@ -71,8 +71,8 @@
   --brand-font: 17px;
   --tab-pad: 9px 12px;
   --row-height: 42px;
-  --io-row: 36px;
-  --io-field: 30px;
+  --io-row: 42px;
+  --io-field: 36px;
   --io-field-min: 74px;
   --node-min-width: 280px;
   --row-font: var(--font-md);

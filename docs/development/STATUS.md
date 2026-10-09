@@ -2,6 +2,11 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.55.10 — 節點裡的列與數值框高 1.2 倍 — 2026-10-09
+
+- 人類 10-09：所有小 widget 的高度都偏低，加 1.2 倍看看。Standard：數值框 24→30px、每列 30→36px；Comfortable：30→36px、36→42px（框上下仍各 3px；取整避免半像素）。只改 `theme/sizes.css` 兩個變數。
+- 驗證：editor 74；內建瀏覽器＋真實 TD（只讀）：所有列 36px、所有框（數值、選擇器、TD 驅動）30px、中線偏差 0。人類新增的 constant1 節點在畫面上是輸出在上、選擇器、「Constant」數值行（55.9 實機確認）。
+
 ## Refactor.55.9 — 常數節點也在畫布上改值 — 2026-10-09
 
 - 人類 10-09：常數引用節點也要像 Uniform 一樣在節點上顯示和修改值；開頭文字（數值梯尺的互動區）寫「Constant」（繁中「常數」）。Uniform 仍是 TD 參數頁名稱（Vectors／Colors，不翻譯）。拖曳中只有 Uniform 會送到 TD（常數是編進 Shader 的，`previewDeclarationValue` 本來就只處理 Uniform）。
