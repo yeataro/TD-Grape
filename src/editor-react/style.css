@@ -198,7 +198,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    one component per row. A wired value keeps its place, unseen. Colours only from the --field-* slots.
    數值 widget：各分量並排在一行、分量名稱在框內；展開時一個分量一行。接線的值位置留著、看不到。顏色只用 --field-*。 */
 .value-group { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px; min-width: 0; padding-block: calc((var(--io-row) - var(--io-field)) / 2); }
-.value-group.wired { visibility: hidden; }
+/* A wired value keeps its height but not its width: it is never seen while wired (e.g. Combine's x turned vec3 by its wire),
+   so it must not widen the node (human 2026-10-09). 接線的值保留高度、不保留寬度：接著線時永遠看不到（例如 Combine 的 x 因接線變成 vec3），
+   不該撐寬節點（人類）。 */
+.value-group.wired { visibility: hidden; contain: inline-size; }
 .value-expand { flex: 0 0 auto; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
 .value-expand .icon { width: 12px; height: 12px; transform: rotate(-90deg); } .value-expand[aria-expanded="true"] .icon { transform: none; }
 .value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(var(--io-field-min), 1fr));
