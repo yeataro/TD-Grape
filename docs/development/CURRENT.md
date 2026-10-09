@@ -1,6 +1,6 @@
 # 目前現況
 
-最後更新：2026-10-09。每輪收尾時覆寫本頁；完整交付紀錄見 [STATUS](STATUS.md)。標 ✅ 者已用 git／測試核對。
+最後更新：2026-10-10。每輪收尾時覆寫本頁；完整交付紀錄見 [STATUS](STATUS.md)。標 ✅ 者已用 git／測試核對。
 
 ## 做到哪裡
 
@@ -90,29 +90,29 @@
 ## 未完成／未驗證
 
 - Samples（Refactor.58.9）：In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未在 TD 上看。
-
-- 早期標「待人類實機確認」、之後沒有紀錄的：Refactor.17（開放 47 個常用節點）、Refactor.32（從 TD 選單建立新格式 Grape TOP，Grape ID 複製時換號）。人類若已確認，刪這一條。
-
+- Refactor.17（開放 47 個常用節點）標「待人類實機確認」後沒有紀錄；人類若已確認，刪這一條。（R.32 從 Tab 選單建立：人類 10-09 已用它建出 `Grape_TOP1`。）
 - **Human Takeover Test**：人類不靠 AI 完成一項維護（如新增 unary 節點），未執行。見 [B 案](REFACTOR_REACT_FLOW_PLAN_B.md#human-takeover-test)。
 - **完整 TOE 冷啟動**：未驗證。
-- **未遷移**：MAT／ISF、TOP texture 的後續（3D／Cube、調整順序、輸入狀態）、array／進階來源、舊 `expose` 旗標、Uniform 拖曳即時更新（目前放開才送值——**這是遷移中的妥協，不是新產品行為**（人類 2026-10-08）；目標是拖著 TD 就跟著變，同舊產品，做法見 Q41 即時通道）、pixel preview session、Personal Library、離線 Sketch、阻尼、面板（待人類討論）。
+- **未遷移**：MAT／ISF、TOP 貼圖輸入後續（3D／Cube、調整順序、輸入狀態）、陣列與進階來源、舊 `expose` 旗標、pixel preview、Personal Library。
 
 ## 程式目錄現況 ✅
 
 | 目錄 | 身分 |
 | --- | --- |
-| `src/core-ts/` | **新核心**（TS）：節點模組、型別、接線、TOP compiler |
-| `src/editor-react/` | **新正式 React 入口** |
-| `src/editor/` | **舊前端入口**，仍服務未遷移能力；含 `build:core` 生成的 `wire_planning.js`、`editor-bootstrap.json`、`editor-library.json`（勿手改） |
-| `src/core/` | 舊 Python 核心；部分仍由新 Manager 使用，見 [LEGACY-PYTHON](LEGACY-PYTHON.md)；新路徑不得 fallback 到舊 compiler |
-| `src/td/runtime/` | 新宿主 Python（host_api、native_family、Manager 等） |
-| `src/library/` | 內建子圖 Library 來源 |
+| `src/core-ts/` | 核心（TS）：圖、節點模組、型別、接線、TOP compiler |
+| `src/generated/` | `build:core` 產生的 `grape_core.js`、`editor-bootstrap.json`（勿手改） |
+| `src/editor-react/` | 編輯器（React／React Flow），唯一入口 |
+| `src/td/runtime/` | TD 宿主 Python（Manager、`next_family`、`host_api`、編輯服務等）；檔案位置記在 `src/td/source_files.json` |
+| `src/library/` | 共用表（Uniform 預設等）與內建子圖來源 |
+| `src/static-site/` | 沒有 TD 時的靜態網站素材（Grape 預覽圖） |
+| `src/remote_panel/` | Remote Panel |
+
+舊入口 `src/editor/`（R.25）與舊 Python 核心 `src/core/`（R.29）已刪；`src/core/` 只剩未追蹤的 `__pycache__`。
 
 ## 現場 TD（使用前以 TD MCP 重新確認）
 
-- 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）；Grape OP 只剩兩個（2026-10-09 人類同意清理）：`/project1/Grape_TOP_test`（rev 596，以新範本重建、圖／Shader／Grape ID 照搬）、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類 2026-10-09 用 Tab 選單從 Refactor.33 範本建立——「人類實際用 Tab 選單建立」這項已有人做過；Refactor.34 時隨其他 OP 轉成 `grape-meta-2`）。`Grape_TOP2`、`Grape_TOP3`（預設圖）與舊格式樣本已刪；舊樣本的圖、舊信封與 `.tox` 留在 workspace `work/refactor/grape-op-round/cleanup-33/`，給日後匯入器用；舊格式樣本已移到 workspace（見上）
-- 編輯網址 `http://127.0.0.1:65465/shader/3ffb8d81896943c8bf90bec56791a33b/`；測試 OP 的圖已是 grape-graph 1（Refactor.26，revision 571）
-- `GrapeEditor` 為**內嵌**（2026-10-09 `Deliver()`，服務 Refactor.46.1，存 TD-Grape-dev.81；TD 2025.33230）；開發前先 `DevMode()`，提交 TOE 前 `Deliver()`，見 AGENTS.md
-- 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.23.toe` 是遞增存檔的正常狀態）；未提交的修改是人類的，須保留。2026-10-07 已存 TOE：含 GrapeManager Legacy 分組、`/dev_tools`、Refactor.16 內嵌網頁
-- 2026-10-07 TD MCP 確認 ✅：server 1.1.55／port 13316，TD 2025.32820
-- 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴
+- 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）。Grape OP：`/project1/Grape_TOP_test`、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類用 Tab 選單建立）、測試複本 `r54_probe`（等人類同意刪）；範本 `/TD_Grape/masters/grape_top`。每個 Samples 都 Clone `/TD_Grape/Samples`（R.58.9）。
+- 編輯服務 port 65465（被佔用時往後找，R.36）；例：`http://127.0.0.1:65465/shader/6cb6a90247c140bea7df98a2f11c1858/`（r54_probe）。
+- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.59.4（存 `TD-Grape-dev.94`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 59.5。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
+- 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.94.toe` 這類是遞增存檔的正常狀態）；未提交的修改可能是人類的，須保留。
+- 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴。
