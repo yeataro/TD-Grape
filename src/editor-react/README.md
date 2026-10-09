@@ -13,7 +13,7 @@ Grape OP 的 Edit 打開 `/shader/<Grape OP id>/`（`/?target=<id>` 亦可）。
 | 與 TD 交換作品：讀取、送出排程、晚回覆、失敗分類與重試、衝突、保存 | [host_sync.ts](host_sync.ts) 的 `HostSync` |
 | 把一筆 GraphChanges 轉成 RF nodes／edges | [projection.ts](projection.ts) 的 `project` |
 | 模組描述如何畫成卡片、模組宣告的 spare 接孔 | [NodeCard.tsx](NodeCard.tsx) |
-| 共用部件（widget）：按鈕、下拉選擇、彈出面板、折疊段落、對齊表格；選單；數值框；一組數值 | [controls.tsx](controls.tsx)、[DropdownMenu.tsx](DropdownMenu.tsx)、[NumberField.tsx](NumberField.tsx)、[ValueFields.tsx](ValueFields.tsx) |
+| 共用部件（widget）：按鈕、下拉選擇、彈出面板、折疊段落、對齊表格；選單；數值框；一組數值 | [controls.tsx](controls.tsx)、[DropdownMenu.tsx](DropdownMenu.tsx)、[NumberField.tsx](NumberField.tsx)、[ValueFields.tsx](ValueFields.tsx)；數值梯尺 [useValueLadder.tsx](useValueLadder.tsx)（純數學 [valueLadder.ts](valueLadder.ts)）；拖曳改值的純數學 [valueScrub.ts](valueScrub.ts) |
 | 所有面板一張表（名字、預設位置、內容）；版面（區、分頁、寬度，存在這個瀏覽器） | [panels.tsx](panels.tsx)；[layout.tsx](layout.tsx) |
 | 額外 Handle 量測通知 | [geometry.ts](geometry.ts)；外框尺寸／拖曳沿用 RF |
 | React Flow 沒提供、自己補的畫布互動（Q29「自己泡茶」；一功能一檔，滿 3 個再收進資料夾；RF 日後提供即可換回） | [RightDragSelect.tsx](RightDragSelect.tsx)（右鍵拖曳框選） |
