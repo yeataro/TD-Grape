@@ -66,7 +66,7 @@
 
 ## 待處理
 
-> **Samples（Refactor.58.9 已做 Clone 與 label）：** 剩 Samples 裡 OP 改名（拿掉 `sample_` 前綴），要先列新舊名字給人類看。In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未實機看。決定見 design-interview Q66。
+> **Samples（Refactor.58.9 已做 Clone、label、OP 改名同 label）：**In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未實機看。決定見 design-interview Q66。
 
 > **子圖那一輪開工時先改形狀（清理第 7 條，照 Q48 判「留」但形狀未對齊 Q46，2026-10-08）：** (1) 節點類型 `sgrape.function.call／input／output` → `sgrape.builtin.subgraph_call／input／output`，參數 `functionId` → `subgraphId`（Q46 7.7；目前沒有任何存檔含子圖，改名不需轉換）；(2) `SubgraphData.stages` 目前必填、`targets` 可存——Q46 定為由內容推算，只在存成定義時寫入；(3) 核心內部網路代號前綴 `function:`（不存檔）改名；(4) 每邊 16 個介面的上限寫在 `subgraph_interface.ts`、`subgraph_operations.ts`、`subgraphs.ts` 三處，搬進 `config.ts`（Q47 補充 8）。子圖程式本身（建立、群組、實例化、在地化、複製、刪除、產碼）都有呼叫者與測試，保留。
 

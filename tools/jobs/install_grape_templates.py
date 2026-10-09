@@ -117,19 +117,21 @@ annotation(top, 'annotate_content', 'Made by the Editor: graph, shader, status',
 samples = node(top, baseCOMP, 'Samples', -500, -150, 160, 130)
 select_page = samples.appendCustomPage('Select')
 select_page.appendTOP('Top', label='TOP')
-grape_image = node(samples, moviefileinTOP, 'sample_Grape', -178, -117, 130, 72)
+# Named as their labels (Refactor.58.9, human 2026-10-09); the outs keep out1-out7, whose digits set the connector order.
+# 名字同 label（人類）；出口維持 out1～out7，TD 照名字裡的數字排出口順序。
+grape_image = node(samples, moviefileinTOP, 'grape', -178, -117, 130, 72)
 grape_image.par.file.expr = ("op.TDGrape.op('VFS').vfs['Greap800.png'] if hasattr(op, 'TDGrape') "
                              "else app.samplesFolder+'/Map/Banana.tif'")
-banana = node(samples, moviefileinTOP, 'sample_Banana', -178, -242, 130, 72)
+banana = node(samples, moviefileinTOP, 'banana', -178, -242, 130, 72)
 banana.par.file.expr = "app.samplesFolder+'/Map/Banana.tif'"
-jelly = node(samples, moviefileinTOP, 'sample_Jellybeans', -178, -367, 130, 72)
+jelly = node(samples, moviefileinTOP, 'jellybeans', -178, -367, 130, 72)
 jelly.par.file.expr = "app.samplesFolder + '/Map/Jellybeans.1.jpg'"
-white = node(samples, constantTOP, 'sample_white', -178, -492, 130, 90)
-black = node(samples, constantTOP, 'sample_black', -178, -617, 130, 105)
+white = node(samples, constantTOP, 'white', -178, -492, 130, 90)
+black = node(samples, constantTOP, 'black', -178, -617, 130, 105)
 black.par.colorr, black.par.colorg, black.par.colorb = 0.0, 0.0, 0.0
-flat = node(samples, constantTOP, 'sample_flatNormal', -178, -742, 130, 105)
+flat = node(samples, constantTOP, 'normal', -178, -742, 130, 105)
 flat.par.colorr, flat.par.colorg, flat.par.colorb = 0.5, 0.5, 1.0  # flat normal (0, 0, 1) encoded
-chosen = node(samples, selectTOP, 'select_top', -178, -867)
+chosen = node(samples, selectTOP, 'custom', -178, -867)
 chosen.par.top.expr = 'parent().par.Top'
 # Each out says which image it is by its label, the graph's defaultTexture names (Refactor.58.9).
 # 每個 out 用 label 說明它是哪張圖，名字同圖裡的 defaultTexture。
