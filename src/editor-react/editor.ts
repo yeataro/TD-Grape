@@ -335,7 +335,7 @@ export class Editor {
   };
   // Shared sources (Refactor.40; Q41, Q45): global constants for now. 共用來源：本輪只有全域常數。
   addConstant = () => {
-    const name = core.freeDeclarationName(this.document.document, 'constant');
+    const name = core.freeLegacyName(this.document.document, 'cValue'); // legacy default name 舊產品的預設名
     this.transactGraph(tr('sources.added', 'Constant {name} added', { name }), document =>
       document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'constant', name, type: 'float' }));
   };
@@ -343,7 +343,7 @@ export class Editor {
   // Colors and Vectors pages differ, switching would drop what drives it in TD). A colour starts white.
   // Uniform：新增時就決定是不是顏色，之後不能切換（換頁會掉 TD 上的驅動）；顏色從白色開始。
   addUniform = (color = false) => {
-    const name = core.freeDeclarationName(this.document.document, 'uniform');
+    const name = core.freeLegacyName(this.document.document, color ? 'uColor' : 'uValue'); // legacy default names 舊產品的預設名
     this.transactGraph(tr('sources.uniformAdded', 'Uniform {name} added', { name }), document =>
       document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'uniform', name,
         ...(color ? { type: 'vec4', color: true, value: [1, 1, 1, 1] } : { type: 'float' }) }));

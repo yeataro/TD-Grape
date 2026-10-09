@@ -2,6 +2,13 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.57.24 — 新增來源的預設名稱照舊產品、顏色 Uniform 顯示 RGB／RGBA、打開的卡片加淡分隔線 — 2026-10-09
+
+- 人類：新增的顏色 Uniform 預設名稱不是 uColor（大問題）。照舊產品（legacy `functions_ui.js` `uniqueInputName`、`inspector.js` 預設名）：Uniform `uValue`、顏色 `uColor`、常數 `cValue`，重名時 `uColor2`、`uColor3`。核心新增 `freeLegacyName`（先用基底本身再加 2、3），`freeDeclarationName` 保留給貼圖輸入（`input1` 對齊 TD 輸入編號，R.43）。既有圖裡的名字不改。
+- 人類：面板看不出哪個是顏色 Uniform → 型別選單顯示 RGB／RGBA（只換顯示文字，型別仍是 vec3／vec4）。人類：這是例外，之後想要不要統一顯示規則（workspace `floating-panels.md` 32）。
+- 人類：打開後名稱列和數值之間加一條淡線（卡片邊框色），線上下各 6px。
+- 驗證：core 141、editor 75（測試名稱改成 uValue／uColor／cValue；新增 `freeLegacyName` 測試）；內建瀏覽器：uniform2 顯示 RGB、uniform4／5 顯示 RGBA；分隔線上 6px、下約 6px。過程更正：分隔線那次被擋下的只有建置與 TD Reload，原始碼其實已寫入——助手一開始依擋下的訊息說「沒改」，沒先查檔案，已當面更正。
+
 ## Refactor.57.23 — 區段標題整列都能收合 — 2026-10-09
 
 - 人類：區段標題（Uniforms 等）可點的只有字，旁邊空白點不到。整列標題（含空白、整列高度）都能收合；ⓘ 和右邊按鈕疊在上面、維持自己的功能。版面不動。

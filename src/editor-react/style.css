@@ -187,7 +187,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-card { row-gap: 0; padding-block: calc(var(--source-fade) - var(--io-inset)); }
 .source-card > :is(.expand-toggle, .builtin-row) { height: var(--io-row); }
 .source-head { min-height: var(--io-row); } .source-head :is(.source-name, .select-button) { height: var(--io-field); }
-.source-body { gap: 0; }
+/* Open, a faint line between the head and the value, the same gap on both sides (human 2026-10-09).
+   打開時名稱列和數值之間一條淡線，上下間隙一樣（人類）。 */
+.source-body { gap: 0; margin-top: var(--io-inset); padding-top: var(--io-inset); border-top: 1px solid var(--border-node); }
 /* Whatever runs past the content edge fades out in the card's right gap (human 2026-10-09: a gradient in the gap, as
    some sites do); right-aligned controls end at the content edge and are untouched.
    超出內容區的東西在卡片右邊的空隙裡漸層淡出（人類：在 gap 放漸層）；靠右的控制項停在內容區邊緣，不受影響。 */

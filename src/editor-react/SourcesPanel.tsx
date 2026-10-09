@@ -141,7 +141,9 @@ export function SourcesPanel({ declarations, references }: {
         <NameField declaration={declaration} />
         {/* A colour stays a colour: vec3 or vec4 (Q59). 顏色只在 vec3、vec4 之間換。 */}
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
-          options={(declaration.color === true ? ['vec3', 'vec4'] : types).map(type => ({ value: type, label: type }))} /></>}>
+          options={declaration.color === true
+            // A colour reads as a colour (human 2026-10-09); the type stays vec3/vec4. 顏色看得出是顏色（人類）；型別仍是 vec3／vec4。
+            ? [{ value: 'vec3', label: 'RGB' }, { value: 'vec4', label: 'RGBA' }] : types.map(type => ({ value: type, label: type }))} /></>}>
       {uniformValue(declaration)}
     </SourceCard>)}
     </FoldSection>

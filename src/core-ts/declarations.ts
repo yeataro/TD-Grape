@@ -146,6 +146,12 @@ const requireName = (graph: Graph, name: string, except?: string) => {
 export function freeDeclarationName(graph: Graph, base: string): string {
   for (let i = 1; ; i++) if (!declarationNameProblem(graph, base + i)) return base + i;
 }
+/** A free name as the legacy editor gives one (legacy functions_ui.js uniqueInputName; human 2026-10-09): the base itself,
+ * then base2, base3 — uValue, uColor, cValue. 照舊產品給名字：先用基底本身，再 base2、base3。 */
+export function freeLegacyName(graph: Graph, base: string): string {
+  if (!declarationNameProblem(graph, base)) return base;
+  for (let i = 2; ; i++) if (!declarationNameProblem(graph, base + i)) return base + i;
+}
 
 export type DeclarationPatch = { name?: string; type?: string; [field: string]: Value | undefined };
 export type DeclarationEntry = { id: string; kind: string; name: string; type: string; [field: string]: Value | undefined };

@@ -41,6 +41,7 @@ test('names follow GLSL, avoid reserved words and stay unique among declarations
   assert.equal(G.declarationNameProblem(g,'1abc'),'format');
   assert.equal(G.declarationNameProblem(g,'a__b'),'format');
   assert.equal(G.freeDeclarationName(g,'constant'),'constant1');
+  assert.equal(G.freeLegacyName(g,'cValue'),'cValue'); assert.equal(G.freeLegacyName(g,'kOffset'),'kOffset2');
   assert.throws(()=>doc.change(c=>c.addDeclaration({id:'k2',kind:'constant',name:'kOffset',type:'float'})),e=>e.problem==='taken');
   assert.throws(()=>doc.change(c=>c.addDeclaration({id:'k2',kind:'mystery',name:'kOther',type:'float'})),e=>e.problem==='kind');
 });

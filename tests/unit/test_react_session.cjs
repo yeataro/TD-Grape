@@ -776,7 +776,7 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
   const constants = () => session.snapshot().declarations.filter(d => d.kind === 'constant');
   session.addConstant();
   const declaration = constants()[0];
-  assert.deepEqual([declaration.kind, declaration.name, declaration.type], ['constant', 'constant1', 'float']);
+  assert.deepEqual([declaration.kind, declaration.name, declaration.type], ['constant', 'cValue', 'float']);
   session.setDeclarationValue(declaration.id, 0.25);
   session.placeDeclaration(declaration.id, { x: 0, y: 0 });
   const ref = session.snapshot().projection.nodes.find(node => node.data.authored.nodeType === 'sgrape.builtin.declaration');
@@ -791,7 +791,7 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
   session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node('sum').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));
   await session.flush();
   const pixel = JSON.parse(calls.at(-1).body.runtime).pixel;
-  assert.match(pixel, /^const float constant1 = 0\.25;$/m);
+  assert.match(pixel, /^const float cValue = 0\.25;$/m);
   assert.equal(session.renameDeclaration(declaration.id, 'kGain'), true);
   assert.equal(constants()[0].name, 'kGain');
   session.addConstant();
@@ -864,7 +864,7 @@ test('a texture input: add, choose its default image, place, sample, wire; the i
 test('a Uniform: add, vec4 colour, value, place, wire; a value change only changes the binding', async t => {
   const { session, calls } = open(t);
   session.addUniform();
-  assert.deepEqual(['name', 'type'].map(k => session.snapshot().declarations.find(d => d.kind === 'uniform')[k]), ['uniform1', 'float']);
+  assert.deepEqual(['name', 'type'].map(k => session.snapshot().declarations.find(d => d.kind === 'uniform')[k]), ['uValue', 'float']);
   session.removeDeclaration(session.snapshot().declarations.find(d => d.kind === 'uniform').id);
   // A colour is chosen when added (Q59) and starts white. 顏色在新增時決定，從白色開始。
   session.addUniform(true);
@@ -877,8 +877,8 @@ test('a Uniform: add, vec4 colour, value, place, wire; a value change only chang
   session.connect({ source: ref.id, sourceHandle: 'out', target: 'pixel_out', targetHandle: 'color' });
   await session.flush();
   const first = JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime);
-  assert.match(first.pixel, /^uniform vec4 uniform1;$/m);
-  assert.deepEqual(first.bindings.filter(b => b.kind === 'uniform').map(b => [b.name, b.type, b.value, b.color]), [['uniform1', 'vec4', [1, 0.5, 0, 1], true]]);
+  assert.match(first.pixel, /^uniform vec4 uColor;$/m);
+  assert.deepEqual(first.bindings.filter(b => b.kind === 'uniform').map(b => [b.name, b.type, b.value, b.color]), [['uColor', 'vec4', [1, 0.5, 0, 1], true]]);
   session.setDeclarationValue(uniform().id, [0, 1, 0, 1]);
   await session.flush();
   const second = JSON.parse(calls.filter(c => c.action === 'apply').at(-1).body.runtime);

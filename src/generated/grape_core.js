@@ -82,7 +82,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
 
 },
 "capacity":function(require,module,exports){
@@ -338,6 +338,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeclarationError = exports.declarationKinds = exports.defaultTextures = void 0;
 exports.declarationNameProblem = declarationNameProblem;
 exports.freeDeclarationName = freeDeclarationName;
+exports.freeLegacyName = freeLegacyName;
 exports.addDeclaration = addDeclaration;
 exports.changeDeclaration = changeDeclaration;
 exports.removeDeclaration = removeDeclaration;
@@ -451,6 +452,15 @@ const requireName = (graph, name, except) => {
 /** A free name from a base, e.g. constant1, constant2. 從基底找一個沒被用的名字。 */
 function freeDeclarationName(graph, base) {
     for (let i = 1;; i++)
+        if (!declarationNameProblem(graph, base + i))
+            return base + i;
+}
+/** A free name as the legacy editor gives one (legacy functions_ui.js uniqueInputName; human 2026-10-09): the base itself,
+ * then base2, base3 — uValue, uColor, cValue. 照舊產品給名字：先用基底本身，再 base2、base3。 */
+function freeLegacyName(graph, base) {
+    if (!declarationNameProblem(graph, base))
+        return base;
+    for (let i = 2;; i++)
         if (!declarationNameProblem(graph, base + i))
             return base + i;
 }
