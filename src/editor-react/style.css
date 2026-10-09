@@ -159,7 +159,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* A source card (human 2026-10-09 trial): a strip at its left in its kind's colour (a node title turned on its side, at the
    title's strength), the body as a node body. 來源卡片（人類試驗）：左邊一條是種類的顏色（轉了方向的節點標題、同樣的濃度），本體同節點本體。 */
 .source-row { position: relative; overflow: hidden; border: 1px solid var(--border-node); border-radius: 8px; background: var(--surface-node);
-  padding: 8px 8px 8px calc(8px + var(--source-strip)); margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  padding: 8px var(--source-fade) 8px calc(8px + var(--source-strip)); margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+/* Whatever runs past the content edge fades out in the card's right gap (human 2026-10-09: a gradient in the gap, as
+   some sites do); right-aligned controls end at the content edge and are untouched.
+   超出內容區的東西在卡片右邊的空隙裡漸層淡出（人類：在 gap 放漸層）；靠右的控制項停在內容區邊緣，不受影響。 */
+.source-row::after { content: ""; position: absolute; inset: 0 0 0 auto; width: var(--source-fade); pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface-node)); }
 .source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
   background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
 .source-head { display: flex; gap: 6px; } .source-name { flex: 1; min-width: 0; }
