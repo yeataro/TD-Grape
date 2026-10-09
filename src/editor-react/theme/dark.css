@@ -32,6 +32,7 @@
   --palette-wire-lilac: #ede5ff;
   --palette-warning: #e4bd77;        /* legacy .tag.pending */
   --palette-error: #f78b96;
+  --palette-alarm: #ff2a2a;          /* TD's error mark, a true red (human 2026-10-10: redder) TD 錯誤標記的正紅（人類：紅一點） */
   /* data types (legacy --type-*) and vector components (legacy RGBA component colours). 型別與向量分量色（舊產品）。 */
   --palette-type-scalar: #b8b5ae;
   --palette-type-vec2: #79b9eb;
@@ -156,7 +157,7 @@
   --code-line-error: color-mix(in srgb, var(--palette-error) 22%, transparent);
   /* TD's error mark on a node that wrote a line TD reported (trial, Refactor.63.6.1): the error colour with a dark cross.
      TD 回報的錯誤行由它寫的節點掛的 TD 錯誤標記（試驗）：錯誤色底、深色叉。 */
-  --node-error-badge: var(--palette-error);
+  --node-error-badge: var(--palette-alarm);
   --node-error-mark: var(--palette-shadow);
 
   /* The frame: one ink lifted by the shared strengths. 外框：同一個墨色依共用強度提亮。 */

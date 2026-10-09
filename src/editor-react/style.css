@@ -290,7 +290,7 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .grape-node.selected { --node-select: var(--select); outline: 2px solid var(--node-select); }
 /* Trial (Refactor.63.6.1, human 2026-10-10: as TD, not the legacy red outline): TD's error mark on the node's top-right corner,
    half outside it. 試驗（人類：照 TD，不用舊產品的紅框）：TD 的錯誤標記，掛在節點右上角、一半在外面。 */
-.node-error-badge { position: absolute; z-index: 1; top: 0; right: 0; width: 22px; height: 22px; transform: translate(40%, -40%); }
+.node-error-badge { position: absolute; z-index: 1; top: 0; right: 0; width: 30px; height: 30px; transform: translate(40%, -40%); }
 .node-error-badge .icon { width: 100%; height: 100%; stroke: var(--node-error-mark); stroke-width: 2.5; }
 .node-error-badge .icon-badge { fill: var(--node-error-badge); }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
