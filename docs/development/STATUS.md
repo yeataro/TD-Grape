@@ -2,6 +2,11 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.57.14 — 來源卡片按鈕列：Delete、使用數、Add to graph — 2026-10-09
+
+- 人類：Delete 按鈕放最左邊，「Used by N nodes」在中間，空間不夠時用省略號（人類確認：就是這樣）。按鈕保持完整、不縮。
+- 驗證：editor 75；內建瀏覽器：順序 Delete（49px）、Used by 1 nodes（145px）、Add to graph（82px）。
+
 ## Refactor.57.13 — 來源卡片上的輸入框改淺 — 2026-10-09
 
 - 人類：名稱輸入框的底色太深，不要那麼深呢？卡片上的輸入框改用數值框的顏色（比卡片亮一階，#42404f），照舊產品來源卡片（legacy `.source-card-body` 的輸入用 `--node-value-bg`）；做法是卡片自己定義輸入框色，不改全頁。

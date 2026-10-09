@@ -93,9 +93,10 @@ export function SourcesPanel({ declarations, references }: {
   // 面板只是 td_value 旁邊那張表的索引；目前是 TOP。
   const builtins = core.tdValues.filter(entry => core.usableTdValue(entry, 'top'));
   const actions = (declaration: Declaration) => <div className="source-actions">
-    <small>{say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declaration.id] ?? 0 }))}</small>
-    {/* Add to graph last, where the "+" of a closed card is (human 2026-10-09). 加到圖上放最後，和收起時的「＋」同位置（人類）。 */}
+    {/* Delete at the left, the use count between, shortened when narrow; Add to graph last, where the "+" of a closed
+        card is (human 2026-10-09). Delete 在最左、使用數在中間（窄時省略）；加到圖上放最後，和收起時的「＋」同位置（人類）。 */}
     <button className="danger" onClick={() => session.removeDeclaration(declaration.id)}>{say(tr('sources.remove', 'Delete'))}</button>
+    <small>{say(tr('sources.usedBy', 'Used by {count} nodes', { count: references[declaration.id] ?? 0 }))}</small>
     <button onClick={() => session.placeDeclaration(declaration.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
   </div>;
   // Each section's count, in its colour group (legacy source counts; Refactor.54: the Sources area is coloured).

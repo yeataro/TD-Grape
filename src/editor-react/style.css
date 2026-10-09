@@ -185,7 +185,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-head { display: flex; align-items: center; gap: 6px; } .source-head > .builtin-row { flex: 1; min-width: 0; } .source-name { flex: 1; min-width: 0; }
 /* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
 .source-head .select-button { min-width: 0; max-width: 55%; }
-.source-actions { display: flex; align-items: center; gap: 6px; } .source-actions small { flex: 1; color: var(--text-muted); }
+.source-actions { display: flex; align-items: center; gap: 6px; } .source-actions button { flex: none; }
+.source-actions small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
 /* A one-line source keeps its name and buttons whole; only the description shrinks, shortened with an ellipsis.
    一行的來源：名稱和按鈕保持完整；只有說明會縮，放不下用省略號。 */
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: none; }
