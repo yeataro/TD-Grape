@@ -192,6 +192,7 @@
   "sources.declarationProblem": "共用來源的這次修改沒有套用（{problem}）。",
   "sources.defaultTexture": "預設圖",
   "sources.defaultTextureChanged": "預設圖已更新，等待套用",
+  "sources.details": "顯示詳細內容",
   "sources.inputAdded": "已新增貼圖輸入 {name}",
   "sources.name": "名稱",
   "sources.nameFormat": "{name} 不是有效的名稱：以英文字母開頭，之後用英文字母、數字或 _（不能有 __）。",

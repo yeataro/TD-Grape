@@ -17,7 +17,7 @@ input { border-radius: var(--radius-field); background: var(--surface-field); }
    and swatches keep their own. 所有文字輸入框共用一個舒服的內距（人類：來源名稱貼著左邊）；數值框、色塊用自己的。 */
 input:where(:not([type="checkbox"], [type="radio"], [type="color"])) { padding: var(--field-pad); }
 input:focus-visible { outline: 1px solid var(--accent); }
-button { padding: var(--button-pad); }
+button { padding: var(--button-pad); white-space: nowrap; } /* a button's text never wraps (human 2026-10-09) 按鈕文字不換行（人類） */
 /* Check boxes in the theme's accent (legacy: accent-color purple). 勾選框用主題的強調色（照舊產品）。 */
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent-fill); }
 button { color: var(--text-strong); } button:hover { background: var(--surface-control-hover); border-color: var(--border-hover); }
@@ -164,7 +164,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* Whatever runs past the content edge fades out in the card's right gap (human 2026-10-09: a gradient in the gap, as
    some sites do); right-aligned controls end at the content edge and are untouched.
    超出內容區的東西在卡片右邊的空隙裡漸層淡出（人類：在 gap 放漸層）；靠右的控制項停在內容區邊緣，不受影響。 */
-.source-row::after { content: ""; position: absolute; inset: 0 0 0 auto; width: var(--source-fade); pointer-events: none;
+/* Above the component letters (z-index 1) so they fade too. 在分量字母（z-index 1）之上，字母也一起淡出。 */
+.source-row::after { content: ""; position: absolute; inset: 0 0 0 auto; z-index: 2; width: var(--source-fade); pointer-events: none;
   background: linear-gradient(to right, transparent, var(--surface-node)); }
 .source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
   background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
@@ -174,11 +175,14 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .sources { --io-row: 28px; --io-field: 22px; --io-field-min: 48px; --field-pad: 4px 8px; --button-pad: 3px 8px;
   --font-xs: 10px; --line-xs: 13px; --font-sm: 10px; --line-sm: 14px; --font-md: 10px; --line-md: 14px; --font-base: 11px; --line-base: 15px;
   font-size: var(--font-sm); line-height: var(--line-sm); }
-.source-head { display: flex; gap: 6px; } .source-name { flex: 1; min-width: 0; }
+.source-head { display: flex; align-items: center; gap: 6px; } .source-head > .builtin-row { flex: 1; min-width: 0; } .source-name { flex: 1; min-width: 0; }
 /* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
 .source-head .select-button { min-width: 0; max-width: 55%; }
 .source-actions { display: flex; align-items: center; gap: 6px; } .source-actions small { flex: 1; color: var(--text-muted); }
-.builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+/* A one-line source keeps its name and buttons whole; only the description shrinks, shortened with an ellipsis.
+   一行的來源：名稱和按鈕保持完整；只有說明會縮，放不下用省略號。 */
+.builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: none; }
+.builtin-row small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .builtin-row button { flex: none; }
 .builtin-row small { color: var(--text-muted); }
 .port-fallback { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); padding-left: 4px; }
 .source-flag { display: flex; align-items: center; gap: 6px; font-size: var(--font-md); line-height: var(--line-md); }
@@ -251,8 +255,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    so it must not widen the node (human 2026-10-09). 接線的值保留高度、不保留寬度：接著線時永遠看不到（例如 Combine 的 x 因接線變成 vec3），
    不該撐寬節點（人類）。 */
 .value-group.wired { visibility: hidden; contain: inline-size; }
-.value-expand { flex: 0 0 auto; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
-.value-expand .icon { width: 12px; height: 12px; transform: rotate(-90deg); } .value-expand[aria-expanded="true"] .icon { transform: none; }
+/* One triangle for everything that opens in place: a value, a source card. 原地展開的共用三角形：數值、來源卡片。 */
+:is(.value-expand, .expand-toggle) { flex: 0 0 auto; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
+:is(.value-expand, .expand-toggle) .icon { width: 12px; height: 12px; transform: rotate(-90deg); }
+:is(.value-expand, .expand-toggle)[aria-expanded="true"] .icon { transform: none; }
+.source-head > .expand-toggle { height: auto; align-self: stretch; }
 .value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(var(--io-field-min), 1fr));
   gap: calc(var(--io-row) - var(--io-field)) var(--io-field-gap); }
 /* Expanded keeps the collapsed width, so the node does not narrow (human 2026-10-09): the same numbers as the row of
