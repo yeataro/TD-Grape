@@ -203,6 +203,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    卡片：左邊名稱列與數值，右邊一欄「⋯」在上、使用數在右下角，一個圖示按鈕寬（人類）。 */
 .source-card { grid-template-columns: minmax(0, 1fr) auto; }
 .source-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
+/* The fade gap belongs to the left part only; the right column sits near the card edge (human 2026-10-09: "⋯" was far
+   from the right). Clipped a little outside, so focus rings still show. 淡出空隙只屬於左邊；右欄靠近卡片邊緣（人類：「⋯」離右邊太遠）。
+   裁切留一點外圍，聚焦框還看得到。 */
+.source-card { padding-right: 4px; } .source-card::after { content: none; }
+.source-main { position: relative; padding-right: var(--source-fade); overflow: clip; overflow-clip-margin: 3px; }
+.source-main::after { content: ""; position: absolute; inset: 0 0 0 auto; z-index: 2; width: var(--source-fade); pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface-node)); }
 /* Closed: one line, the count left of "⋯"; open: the count under it, in the corner. 收起：一行，數量在「⋯」左邊；打開：數量在它下面的角落。 */
 .source-side { display: flex; flex-direction: row-reverse; align-items: center; gap: 4px; }
 .source-card.open .source-side { width: var(--icon-button); flex-direction: column; justify-content: space-between; align-items: stretch; }
