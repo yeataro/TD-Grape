@@ -185,8 +185,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    input: --node-value-bg; human 2026-10-09: the name box was too dark). 卡片上的輸入框用數值框的顏色（比卡片亮一階），照舊產品；人類：名稱框太深。 */
 .source-row { --surface-field: var(--field-bg); --surface-control: var(--field-bg); --surface-control-hover: var(--field-bg-hover); }
 /* Buttons and selects on a card use the same colour as its inputs (human 2026-10-09: unify them). 卡片上的按鈕、選擇器和輸入框同色（人類：統一）。 */
-.source-row :is(button:not(.icon-button, .expand-toggle), .select-button) { background: var(--surface-control); border-color: transparent; }
-.source-row :is(button:not(.icon-button, .expand-toggle), .select-button):hover { background: var(--surface-control-hover); }
+/* Triangles stay bare (human 2026-10-09). 三角形不加底色（人類）。 */
+.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand), .select-button) { background: var(--surface-control); border-color: transparent; }
+.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand), .select-button):hover { background: var(--surface-control-hover); }
 /* A source not created yet: a grey card (human 2026-10-09). 還沒建立的來源：灰色卡片（人類）。 */
 .source-row.unused { background: none; color: var(--text-muted); } .source-row.unused::before { background: var(--border-node); }
 .source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
@@ -197,7 +198,16 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .sources { --io-row: 28px; --io-field: 22px; --io-field-min: 48px; --field-pad: 4px 8px; --button-pad: 3px 8px;
   --font-xs: 10px; --line-xs: 13px; --font-sm: 10px; --line-sm: 14px; --font-md: 10px; --line-md: 14px; --font-base: 11px; --line-base: 15px;
   font-size: var(--font-sm); line-height: var(--line-sm); }
-.source-head { display: flex; align-items: center; gap: 6px; } .source-head > .builtin-row { flex: 1; min-width: 0; } .source-name { flex: 1; min-width: 0; }
+.source-head { display: flex; align-items: center; gap: 6px; } .source-head > .builtin-row { flex: 1; min-width: 0; }
+/* A card: the head and the value at the left, "⋯" over the use count at the right, one icon button wide (human 2026-10-09).
+   卡片：左邊名稱列與數值，右邊一欄「⋯」在上、使用數在右下角，一個圖示按鈕寬（人類）。 */
+.source-card { grid-template-columns: minmax(0, 1fr) var(--icon-button); }
+.source-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
+.source-side { display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 4px; }
+.source-side .badge { margin: 0; }
+/* When narrow the name matters most (human 2026-10-09): it keeps a minimum and the type shrinks first.
+   變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。 */
+.source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }
 /* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
 .source-head .select-button { min-width: 0; max-width: 55%; }
 .source-actions { display: flex; align-items: center; gap: 6px; } .source-actions button { flex: none; }

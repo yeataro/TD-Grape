@@ -4,7 +4,7 @@ import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields } from './ValueFields';
 import { useSession } from './contexts';
-import { Badge, ConfirmDialog, FoldSection, IconButton, MenuButton, Select } from './controls';
+import { Badge, ConfirmDialog, FoldSection, MenuButton, Select } from './controls';
 import { Icon } from './icons';
 import { DRAG_TYPE } from './AddNodePanel';
 import { modesOf } from './declaration_modes';
@@ -49,29 +49,33 @@ function useDragToCanvas(choice: string) {
 
 // One source card: a triangle, then the head (name and type); the rest only when open. Closed by default, on this page
 // only (human 2026-10-09). 一張來源卡片：三角形、名稱與型別；其他的打開才顯示。預設收起，只在這一頁記得（人類）。
-// One source card (human 2026-10-09, as the legacy card): a triangle when there is something to open, the head (name and
-// type), then "+" (add to the graph) and "⋯" (add, select references, delete); open, the body shows the value.
-// 一張來源卡片（人類，照舊產品）：有東西可展開才有三角形，名稱與型別，接著「＋」（加到圖上）與「⋯」（加到圖上、選取引用、刪除）；
-// 打開時本體顯示數值。
+// One source card (human 2026-10-09, after the legacy card): a triangle when there is something to open, the head (name
+// and type); open, the body shows the value. A column at the right: "⋯" (add to the graph, select references, delete) on
+// top, and in the bottom corner how many nodes use it, a tag as the section counts (human). No "+": the menu and dragging
+// onto the canvas both add it (human). 一張來源卡片（人類，參考舊產品）：有東西可展開才有三角形，名稱與型別；打開時本體顯示數值。
+// 右邊一欄：上面「⋯」（加到圖上、選取引用、刪除），右下角是幾個節點在用，和區段數量一樣的標籤（人類）。不放「＋」：選單和拖到畫布都能加。
 function SourceCard({ declaration, choice, head, children, uses, onAdd, onRemove }: {
   declaration: Declaration; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove(): void;
 }) {
   const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
-  return <div className="source-row" style={kindColor(declaration)} {...drag}>
-    <div className="source-head">
+  return <div className="source-row source-card" style={kindColor(declaration)} {...drag}>
+    <div className="source-main"><div className="source-head">
       {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
         aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
         : <span className="expand-toggle" aria-hidden="true" />}
       {head}
-      <IconButton icon="plus" label={tr('sources.place', 'Add to graph')} onClick={onAdd} />
+    </div>
+    {open && children}</div>
+    <div className="source-side">
       <MenuButton icon="menu" label={tr('sources.more', 'More')} items={[
         { key: 'add', label: say(tr('sources.place', 'Add to graph')), select: onAdd },
         { key: 'select', label: say(tr('sources.selectReferences', 'Select references ({count})', { count: uses })), disabled: !uses,
           select: () => session.selectReferences(declaration.id) },
         { key: 'delete', label: say(tr('sources.remove', 'Delete')), danger: true, divider: true, select: onRemove },
       ]} />
+      <Badge count={uses} group={core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'runtime'}
+        title={tr('sources.usedBy', 'Used by {count} nodes', { count: uses })} />
     </div>
-    {open && children}
   </div>;
 }
 
