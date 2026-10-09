@@ -15,7 +15,6 @@ button.primary:hover { background: var(--accent-fill-hover); border-color: var(-
 button.primary[aria-disabled="true"]:hover { background: var(--accent-fill); }
 a { color: var(--accent); }
 .spacer { flex: 1; }
-.draft-notice { display: flex; align-items: center; gap: 10px; padding: 9px 16px; flex-shrink: 0; background: var(--surface-notice); }
 
 /* Editor frame (Refactor.53; floating-panels.md). Every bar is a row of the shared controls; colours and sizes
    come from the theme's purpose tokens only. 編輯器外框：每一列都由共用控制項組成；顏色與尺寸只讀主題的用途變數。 */
@@ -76,7 +75,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .network-bar-stages { display: flex; align-items: center; pointer-events: auto; }
 .canvas-caption { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); pointer-events: none; }
 .canvas-caption strong { letter-spacing: .12em; text-transform: uppercase; font-size: var(--font-xs); line-height: var(--line-xs); }
-.zoom-readout { display: grid; place-items: center; min-width: 44px; font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); }
+/* React Flow's zoom controls: separate rounded buttons with the shared gap, lifted clear of React Flow's credit line.
+   React Flow 的縮放控制：分開的圓角按鈕、共用間距，抬高避開它的署名。 */
+.react-flow__controls.horizontal { display: flex; gap: 4px; box-shadow: none; margin: var(--float-gap); margin-bottom: calc(var(--float-gap) + 14px); }
+.react-flow__controls .react-flow__controls-button { width: var(--icon-button); height: var(--icon-button); border: 1px solid var(--border); border-radius: var(--radius-control); }
+.react-flow__attribution { color: var(--text-faint); }
+.zoom-readout { display: grid; place-items: center; min-width: 44px; height: var(--icon-button); padding: 0 6px; border-radius: var(--radius-control); font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); }
 
 /* Panel zones and handles (layout.tsx). 面板區與把手。 */
 .panel-zone { position: relative; display: flex; flex-shrink: 0; min-height: 0; background: var(--surface-zone); }
@@ -116,7 +120,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: 5 !important; }
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
 .grape-node.ghost { opacity: .62; border-style: dashed; }
-.sources-section { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 8px; font-weight: 600; }
+.fold-section { margin-bottom: 8px; }
+.fold-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: var(--row-height); }
+.fold-toggle { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0 2px; border: 0; background: none; font-weight: 600; text-align: left; }
+.fold-toggle .icon { width: 14px; height: 14px; transform: rotate(-90deg); transition: transform .1s; }
+.fold-toggle[aria-expanded="true"] .icon { transform: none; }
+.fold-actions { display: flex; gap: 4px; }
+.fold-body { padding-top: 4px; }
 .source-row { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .source-head { display: flex; gap: 6px; } .source-name { flex: 1; min-width: 0; }
 /* A select is as wide as its longest option; keep it inside the panel. 下拉選單會被最長選項撐寬，限制在面板內。 */
@@ -127,7 +137,6 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .port-fallback { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); padding-left: 4px; }
 .source-flag { display: flex; align-items: center; gap: 6px; font-size: var(--font-md); line-height: var(--line-md); }
 .builtin-row.unused code { color: var(--text-muted); }
-.section-buttons { display: flex; gap: 4px; }
 /* What drives a Uniform component in TD (Uniform D1), in TD's mode colours. TD 上驅動分量的東西，用 TD 的模式顏色。 */
 .td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: var(--font-sm); line-height: var(--line-sm); border-radius: 4px; background: var(--overlay-down); }
 .td-expression { color: var(--td-expression); } .td-export { color: var(--td-export); } .td-other { color: var(--text-muted); }
@@ -175,9 +184,18 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .spare-row .react-flow__handle { border-style: dashed; background: transparent; }
 .spare-row.full { opacity: .5; }
 /* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
-.conflict-float { align-self: center; pointer-events: auto; max-width: 100%;
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-popup);
+.canvas-body { position: absolute; inset: 0; }
+.network-bar-slot { pointer-events: none; }
+/* A notice floating below the toolbar (draft found, conflict): rounded, centred, the overlay's gap (human 2026-10-09).
+   A warning (the found draft) carries the warning colour. 功能列下方的浮動提示；警告（找到草稿）帶警告色。 */
+.floating-notice { align-self: center; pointer-events: auto; width: min(720px, 100%);
+  display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: var(--radius-popup);
   background: var(--surface-raised); border: 1px solid var(--border-hover); box-shadow: 0 6px 24px var(--shadow); }
+.floating-notice.warning { background: var(--surface-notice); border-color: var(--status-warning); }
+/* Message on top, the comparison table in the middle, actions at the bottom (human 2026-10-09: the long table needs a design).
+   上面說明、中間比對表、下面動作（人類：表格較長，要設計）。 */
+.notice-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.notice-actions .renew-id { margin-right: auto; }
 /* Right-drag box selection (legacy parity); the overlay never takes pointer events. */
 .right-select-host { position: relative; width: 100%; height: 100%; }
 .right-select-box { position: absolute; z-index: 5; pointer-events: none; border: 1px dashed var(--accent); background: var(--surface-box); }
@@ -213,7 +231,8 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .location-bar .target { min-width: 0; background: none; border: 1px solid transparent; color: var(--text); line-height: 1.4; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .location-bar .target:hover { border-color: var(--border-control); }
 .location-bar .project-file { color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30%; }
-.identity-compare { display: flex; flex-direction: column; font-size: var(--font-md); line-height: var(--line-md); opacity: .85; }
+.aligned-rows { display: grid; column-gap: 12px; align-items: baseline; }
+.identity-compare { font-size: var(--font-md); line-height: var(--line-md); color: var(--text-secondary); }
 .renew-id { display: flex; align-items: center; gap: 4px; font-size: var(--font-md); line-height: var(--line-md); white-space: nowrap; }
 .empty-canvas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   background: repeating-linear-gradient(45deg, var(--overlay-faint) 0 12px, transparent 12px 24px); color: var(--text-secondary); text-align: center; padding: 24px; }

@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields, useSession } from './NodeCard';
-import { Badge } from './controls';
+import { Badge, FoldSection } from './controls';
 import type { ComponentState, UniformStates } from './host';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
@@ -67,8 +67,8 @@ export function SourcesPanel({ declarations, references }: {
   const count = (n: number, kind: string) => <Badge count={n} group={core.declarationKinds.get(kind)?.colorGroup ?? 'runtime'}
     title={tr('sources.available', '{count} available', { count: n })} />;
   return <section className="sources">
-    <header className="sources-section"><span>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</span>
-      <button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button></header>
+    <FoldSection title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
+      actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
     <p className="hint">{say(tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.'))}</p>
     {inputs.map(declaration => <div className="source-row" key={declaration.id}>
       <div className="source-head">
@@ -79,10 +79,11 @@ export function SourcesPanel({ declarations, references }: {
       </div>
       {actions(declaration)}
     </div>)}
+    </FoldSection>
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}
-    <header className="sources-section"><span>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</span>
-      <span className="section-buttons"><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
-      <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Colour Uniform'))}</button></span></header>
+    <FoldSection title={<>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</>}
+      actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
+      <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Colour Uniform'))}</button></>}>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
     {uniforms.map(declaration => <div className="source-row" key={declaration.id}>
       <div className="source-head">
@@ -95,10 +96,11 @@ export function SourcesPanel({ declarations, references }: {
       {uniformValue(declaration)}
       {actions(declaration)}
     </div>)}
+    </FoldSection>
     {/* Time (preset Uniforms, Q61): all six listed, unused ones grey; placing one creates it the first time.
         Name and type are locked here; in TD it is an ordinary Uniform row with an expression.
         時間（預設 Uniform）：6 筆都列出，沒用到的灰色；第一次放到圖上時建立。名字型別在這裡鎖住；在 TD 是一般的 Uniform 列。 */}
-    <header className="sources-section"><span>{say(tr('sources.time', 'Time'))}{count(core.uniformPresets.filter(preset => presetOf(preset.entry)).length, 'uniform')}</span></header>
+    <FoldSection title={<>{say(tr('sources.time', 'Time'))}{count(core.uniformPresets.filter(preset => presetOf(preset.entry)).length, 'uniform')}</>}>
     <p className="hint">{say(tr('sources.timeHint', 'Uniforms that TouchDesigner drives with an expression. The name is fixed; one of each per graph. Remove the expression in TD to set the value yourself.'))}</p>
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
@@ -109,8 +111,9 @@ export function SourcesPanel({ declarations, references }: {
           {declared && <button onClick={() => session.removeDeclaration(declared.id)}>{say(tr('sources.remove', 'Delete'))}</button>}</div>
         {declared && uniformValue(declared)}
       </div>; })}
-    <header className="sources-section"><span>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</span>
-      <button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button></header>
+    </FoldSection>
+    <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
+      actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
     {constants.map(declaration => <div className="source-row" key={declaration.id}>
       <div className="source-head">
@@ -123,11 +126,13 @@ export function SourcesPanel({ declarations, references }: {
         commit={value => session.setDeclarationValue(declaration.id, value)} />
       {actions(declaration)}
     </div>)}
-    <header className="sources-section"><span>{say(tr('sources.tdValues', 'TD built-in values'))}{count(builtins.length, 'tdValue')}</span></header>
+    </FoldSection>
+    <FoldSection title={<>{say(tr('sources.tdValues', 'TD built-in values'))}{count(builtins.length, 'tdValue')}</>}>
     <p className="hint">{say(tr('sources.tdValuesHint', 'Values TouchDesigner already provides to the shader. No setup needed; they also work inside subgraphs.'))}</p>
     {builtins.map(entry => <div className="builtin-row" key={entry.id} title={say(tdValueHint(entry))}>
       <code>{entry.name}</code><small>{entry.type}</small>
       <button onClick={() => session.placeTdValue(entry.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
     </div>)}
+    </FoldSection>
   </section>;
 }

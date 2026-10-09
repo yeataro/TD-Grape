@@ -109,3 +109,25 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
       aria-disabled={option.disabled || undefined} title={option.title === undefined ? undefined : say(option.title)}
       onClick={() => { if (!option.disabled) onChange(option.value); }}>{say(option.label)}</button>)}</div>;
 }
+
+/** Rows of the same kind of data laid out as a table: each column as wide as its widest cell, so the values line up
+ * however long each label is (human 2026-10-09: "the same things are aligned like a table").
+ * 同一種資料的幾列排成表格：每欄寬度取最寬的那格，標籤長短不同也對齊（人類：同樣的東西要用表格對齊）。 */
+export function AlignedRows({ rows, className }: { rows: readonly (readonly (Message | string)[])[]; className?: string }) {
+  const columns = Math.max(...rows.map(row => row.length), 1);
+  return <div className={'aligned-rows' + (className ? ' ' + className : '')} style={{ gridTemplateColumns: `repeat(${columns}, max-content)` }}>
+    {rows.flatMap((row, r) => Array.from({ length: columns }, (_, c) => <span key={r + ':' + c}>{row[c] === undefined ? '' : say(row[c]!)}</span>))}
+  </div>;
+}
+
+/** A section whose heading folds it away (human 2026-10-09: without folding, the panel is a heap). The heading holds the
+ * title (with its count) and, on the right, the section's own buttons, which do not fold it.
+ * 標題可以折疊的一區（人類：不能折疊東西就一大堆）。標題放名稱（含數量），右邊是這一區自己的按鈕，按它們不會折疊。 */
+export function FoldSection({ title, actions, children }: { title: ReactNode; actions?: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return <section className="fold-section">
+    <header className="fold-heading"><button type="button" className="fold-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <Icon name="chevronDown" />{title}</button>{actions && <span className="fold-actions">{actions}</span>}</header>
+    {open && <div className="fold-body">{children}</div>}
+  </section>;
+}

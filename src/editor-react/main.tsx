@@ -27,7 +27,8 @@ import { CreateNode, type CreateRequest } from './CreateNode';
 import { OptionsContext, defaultOptions, useOptions } from './options';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, useShell, type Shell } from './shell';
 import { listGrapeOps } from './grape_ops';
-import { sourceNow, describeSource, describeNow, buildLabel, tdLine, type TdIdentity, type DraftSource } from './td_identity';
+import { sourceNow, draftRow, nowRow, tdRow, buildLabel, type TdIdentity, type DraftSource } from './td_identity';
+import { AlignedRows } from './controls';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
@@ -237,36 +238,40 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
       <PanelZone side="left" layout={layout} panels={panels} />
       <section className="network" aria-label={say(tr('network.label', 'Network'))}>
         <LocationBar layout={layout} rightEmpty={!layout.right.groups.length}>{editing}</LocationBar>
-        {session && draft && <div className="draft-notice">{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}
-          {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
-          <span className="identity-compare"><span>{say(describeSource(earlier?.source))}</span><span>{say(describeNow(td))}</span></span>
-          {renewBox}
-          <button onClick={() => void decide(async () => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw new TextError(tr('draft.otherTarget', 'This draft belongs to another Grape OP.')); if (session.restoreDraft(saved.graph)) { setDraft(null); await session.flush(); } } catch (error) { session.notice(error); } })}>{say(tr('draft.restore', 'Restore draft'))}</button>
-          <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>{say(tr('draft.downloadEarlier', 'Download earlier draft'))}</button>
-          <button onClick={() => void decide(() => setDraft(null))}>{say(tr('draft.useTd', "Use TD's graph"))}</button>
-        </div>}
-        <div className="canvas" inert={!!draft}>
+        <div className="canvas">
+          {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
+              有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
+          <div className="canvas-body" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect}
             stage={say(tr('stage.pixel', 'Pixel stage'))} onCreate={onCreate} onDropChoice={onDropChoice} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
             }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas>}
-          {/* What floats over the network's top edge, stacked with one gap: the toolbar, then notices such as a
-              conflict (human 2026-10-09: a rounded floating panel below the toolbar, the same gap as to the canvas edge).
-              浮在網路區上緣的東西，用同一個間距往下排：功能列，然後是衝突這類提示（人類：功能列下方的圓角浮板，間距同畫布邊框）。 */}
-          <div className="network-overlay">
-          <NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} />
-          {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
-          {session && state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
-            <span>{say(conflictMessage)}</span>
-            <span className="identity-compare"><span>{say(tr('conflict.opened', 'Opened from: {td}', { td: tdLine(opened) }))}</span>
-              <span>{say(tr('conflict.tdNow', 'TD now: {td}', { td: tdLine(td) }))}</span></span>
-            {renewBox}
-            <button className="primary" onClick={() => void decide(session.overwrite)}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
-            <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button>
-          </div>}
-          </div>
           {draft && <div className="draft-blocker" />}</div>
+          {/* What floats over the network's top edge, stacked with one gap: the toolbar, then notices — the found draft (a
+              warning) and a conflict (human 2026-10-09: rounded floating panels below the toolbar, the same gap as to the
+              canvas edge). 浮在網路區上緣的東西，用同一個間距往下排：功能列，然後是提示（找到草稿是警告、衝突）
+              （人類：功能列下方的圓角浮板，間距同畫布邊框）。 */}
+          <div className="network-overlay">
+          <div className="network-bar-slot" inert={!!draft}><NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} /></div>
+          {session && draft && <div className="floating-notice warning" role="group" aria-label={say(tr('draft.label', 'Earlier draft'))}>
+            <span>{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}</span>
+            {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
+            <AlignedRows className="identity-compare" rows={[draftRow(earlier?.source), nowRow(td)]} />
+            <div className="notice-actions">{renewBox}
+            <button onClick={() => void decide(async () => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw new TextError(tr('draft.otherTarget', 'This draft belongs to another Grape OP.')); if (session.restoreDraft(saved.graph)) { setDraft(null); await session.flush(); } } catch (error) { session.notice(error); } })}>{say(tr('draft.restore', 'Restore draft'))}</button>
+            <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>{say(tr('draft.downloadEarlier', 'Download earlier draft'))}</button>
+            <button onClick={() => void decide(() => setDraft(null))}>{say(tr('draft.useTd', "Use TD's graph"))}</button></div>
+          </div>}
+          {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
+          {session && state.phase === 'conflict' && <div className="floating-notice" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
+            <span>{say(conflictMessage)}</span>
+            <AlignedRows className="identity-compare" rows={[tdRow(tr('conflict.openedLabel', 'Opened from'), opened), tdRow(tr('conflict.tdNowLabel', 'TD now'), td)]} />
+            <div className="notice-actions">{renewBox}
+            <button className="primary" onClick={() => void decide(session.overwrite)}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
+            <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button></div>
+          </div>}
+          </div></div>
         {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
           onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port } : undefined); }} />}
       </section>

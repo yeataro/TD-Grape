@@ -24,15 +24,19 @@ const timeLabel = (time: string) => {
   return Number.isNaN(date.getTime()) ? time : date.toLocaleString(undefined, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-/** "file · TD build" for one TD. 一個 TD 的「檔名 · TD 版本」。 */
-export const tdLine = (td: Partial<TdIdentity> | null | undefined): Message =>
-  tr('identity.line', '{file} · {build}', { file: fileLabel(td), build: buildLabel(td) });
-/** One line for a draft's source; drafts written before Refactor.52 have none. 草稿來源一行；R.52 之前的草稿沒有。 */
-export const describeSource = (source: DraftSource | undefined): Message =>
-  source ? tr('identity.draftFrom', 'Draft: {file} · {build} · {time} · {url}',
-    { file: fileLabel(source), build: buildLabel(source), time: timeLabel(source.time), url: source.url })
-    : tr('identity.draftUnknown', 'Draft: source unknown (written by an older editor)');
-/** One line for the TD this page talks to now. 現在連到的 TD 一行。 */
-export const describeNow = (td: TdIdentity | null): Message =>
-  tr('identity.now', 'Connected now: {file} · {build} · {url}',
-    { file: fileLabel(td), build: buildLabel(td), url: location.origin + location.pathname });
+// Rows for the side-by-side comparisons, one cell per column, shown with controls.tsx AlignedRows so the columns line
+// up (Refactor.54.2). 並排比對用的列，每欄一格，用 AlignedRows 排成對齊的表格。
+type Cells = (Message | string)[];
+// The address is shown as host:port: the rest names the Grape ID, the same on both rows by construction (drafts are kept
+// per Grape ID); the port is what tells two TDs apart. 網址只顯示 主機:port；後段是 Grape ID，兩列必然相同；分辨 TD 看 port。
+const hostOf = (url: string) => { try { return new URL(url).host; } catch { return url; } };
+/** A TD as label, file, build. 一個 TD：標籤、檔名、版本。 */
+export const tdRow = (label: Message, td: Partial<TdIdentity> | null | undefined): Cells => [label, fileLabel(td), buildLabel(td)];
+/** A draft's source: label, file, build, time, address; drafts written before Refactor.52 have none.
+ * 草稿來源：標籤、檔名、版本、時間、網址；R.52 之前的草稿沒有。 */
+export const draftRow = (source: DraftSource | undefined): Cells => source
+  ? [tr('identity.draftLabel', 'Draft'), fileLabel(source), buildLabel(source), timeLabel(source.time), hostOf(source.url)]
+  : [tr('identity.draftLabel', 'Draft'), tr('identity.draftUnknown', 'source unknown (written by an older editor)')];
+/** The TD this page talks to now, in the same columns as a draft. 現在連到的 TD，欄位與草稿相同。 */
+export const nowRow = (td: TdIdentity | null): Cells =>
+  [tr('identity.nowLabel', 'Connected now'), fileLabel(td), buildLabel(td), '', location.host];
