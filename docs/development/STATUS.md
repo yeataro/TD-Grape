@@ -2,6 +2,27 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.53 — 編輯器外框：標題列、網址列、面板區、功能列、底列 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/floating-panels.md` 第五節（人類 10-09 逐區說明、看過範圍後說「開始做」）。人類中途要求：**結構乾淨、顏色與部件都可重用**；下拉選單用我們自己的圓角版本。
+
+- **共用部件與顏色**：
+  - [icons.tsx](../../src/editor-react/icons.tsx)：所有圖示集中一處（取自舊產品 SVG），畫面只寫名稱；產品圖標沿用三顆葡萄。
+  - [controls.tsx](../../src/editor-react/controls.tsx)：`IconButton`、`Placeholder`（佔位：擺在該在的位置、停用、提示「尚未提供」）、`Select`（自己的圓角選單，取代瀏覽器內建）、`MenuButton`、`ToolGroup`。
+  - [theme/dark.css](../../src/editor-react/theme/dark.css)：外框用途色（`--surface-*`、`--border*`、`--text*`、`--accent*`、`--status-*`）與尺寸（列高、圖示、把手粗細與可抓範圍）；外框樣式只讀這些。
+  - [DropdownMenu.tsx](../../src/editor-react/DropdownMenu.tsx)：下面放不下就往上開（底列用）、分段線、停用的項目保留提示。
+- **版面**（[layout.tsx](../../src/editor-react/layout.tsx)、[bars.tsx](../../src/editor-react/bars.tsx)、[main.tsx](../../src/editor-react/main.tsx)）：
+  - 標題列照舊產品：圖標、名稱、副標題、版本、About（佔位）；右邊語言（選了重新整理頁面）、匯入圖／匯出圖（佔位）、保存 TD 專案、套用 Shader。可從網址列收起。
+  - 網址列只在網路區上方（舊產品跨整個寬度）：兩端是左右面板區開關，中間是專案檔名與 Grape OP 選單，右邊收合標題列、Layout（佔位）。右邊目前沒有面板，右側開關是佔位。
+  - 面板區：面板分組顯示成分頁、組可以上下排、寬度與組高可拖（把手畫得細、可抓範圍寬）；版面存在這個瀏覽器（`grape-react-layout`），讀不懂就回到預設。預設照舊產品：左邊「共用來源｜GLSL」。`PanelShell` 退休。
+  - 網路區功能列（浮在上緣）：Stage（只顯示圖裡有的）、＋新增節點（第 2 輪換掉）、Undo／Redo、刪除與置中選取（走 React Flow 的刪除，與 Delete 鍵同規則）、框選開關、Body 拖曳／Snap、GLSL（切到 GLSL 分頁）。
+  - 框選開關（[RightDragSelect.tsx](../../src/editor-react/RightDragSelect.tsx)，照舊產品 `graph_ui.js:2490`）：開著時空白處一般左鍵／單指拖曳＝框選，與 Shift＋左鍵同一條路（攔下平移），選取規則不變；雙指照樣平移縮放。
+  - 底列：⋮ 功能表（往上開；重新載入頁面、下載草稿、保存、套用；其餘佔位）、同步狀態、最新訊息（點開往上看最近 100 筆回報）、重試連線／怎麼恢復、全螢幕。原本的狀態列與頁尾說明拿掉。
+  - 畫布：網格疏密跟著縮放（照舊產品 `app.js:590–598`）、React Flow 縮放控制加百分比、左下 Stage／節點數／提示。
+- **驗證**：editor 58、core 140；`check:editor` 通過。內建瀏覽器＋真實 TD（Grape_TOP1）：版面與預設配置；GLSL 按鈕切到 GLSL 分頁；左區開關、標題列收合並存進瀏覽器；拖寬度 60px＝寬度加 60 並記住；選一個節點→刪除與置中選取可按，置中會移動畫面；刪除後 Undo 還原、TD 同步（revision 117→119）；框選開關開著時左鍵拖曳選到全部 11 個、畫面沒平移；點訊息出現歷史、點外面關掉；⋮ 功能表往上開、兩條分段線、佔位項目說「尚未提供」；語言選單是自己的圓角選單、目前語言打勾；縮到 15% 時網格點距仍約 26px、點縮小，250% 時放大；沒有圖時同一個外框。
+- **限制／未驗證**：真的觸控裝置、TD 內嵌瀏覽器（CEF）裡的樣子沒測；版面數字都是暫定（人類：之後調）；Undo／Redo 的中文本來就留空（顯示英文）。
+- commit：`714f1fc`。
+
 ## Refactor.52 — 連線的身分：並排資訊讓人決定 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/connection-identity.md` 第七節（`next-rounds.md` 第 10 項）。方向（design-interview Q63，人類定）：**不自動判斷是不是同一個 TD**，充實資訊、讓使用者自己比對決定；系統自己只看 Grape ID（草稿本來就依 Grape ID 分開）。
