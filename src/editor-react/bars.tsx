@@ -172,8 +172,11 @@ function LogHistory({ anchor, entries, onClose }: { anchor: HTMLElement; entries
 // CSS (human 2026-10-09). The sliders (brightness, overall scale) are placeholders: they touch more (canvas coordinates,
 // what the brightness leaves alone) and are discussed first.
 // 底列的外觀與大小面板（舊產品的月亮與 AA）；都只換 CSS（人類）。拉桿（亮暗、整體縮放）先佔位：牽涉較多，先討論。
+// As the legacy panels: no title, the slider shows only − and + at its ends (human 2026-10-09: people see what it does);
+// its name is the tooltip. 照舊產品：沒有標題，拉桿兩端只有 − 與 ＋（人類：一看就知道）；名稱放在提示裡。
 const SliderPlaceholder = ({ label }: { label: Message }) =>
-  <div className="slider-placeholder" aria-disabled="true" title={say(notYet)}><span>{say(label)}</span><span className="slider-track" /></div>;
+  <div className="slider-placeholder" role="group" aria-label={say(label)} aria-disabled="true" title={say(label) + ' · ' + say(notYet)}>
+    <span aria-hidden="true">−</span><span className="slider-track" /><span aria-hidden="true">+</span></div>;
 function AppearancePanels() {
   useSyncExternalStore(appearanceSubscribe, () => currentTheme() + currentSize());
   return <>

@@ -190,7 +190,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .settings-panel { display: flex; flex-direction: column; gap: 10px; width: 280px; padding: 12px; }
 .settings-panel .segmented button { flex: 1; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 11px; cursor: default; }
+.slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 16px; cursor: default; padding: 0 4px; }
 .slider-track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-control-hover); }
 .log-entry { display: flex; gap: 10px; padding: 4px 6px; border-radius: 4px; font-size: 12px; white-space: pre-wrap; }
 .log-entry time { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
