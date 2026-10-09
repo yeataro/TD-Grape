@@ -86,7 +86,8 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // Ghost 線保留、畫成虛線；產碼時當作沒接。
     const ghost = ghosts.edges.has(edge.id);
     const sourceType = ghost ? '' : edge.from?.type ?? '', targetType = ghost ? '' : edge.to?.type ?? '';
-    const style = ghost ? { stroke: 'var(--wire-ghost)', strokeWidth: 2, strokeDasharray: '6 4' } : { stroke: typeColor(sourceType), strokeWidth: 2 };
+    // The width is the theme's (--wire-width); only colour and dashes are per wire. 粗細由主題決定；每條線只決定顏色與虛線。
+    const style = ghost ? { stroke: 'var(--wire-ghost)', strokeDasharray: '6 4' } : { stroke: typeColor(sourceType) };
     const label = !ghost && sourceType !== targetType ? `${sourceType} → ${targetType}` : undefined;
     if (old && old.source === saved.from[0] && old.sourceHandle === saved.from[1] &&
         old.target === saved.to[0] && old.targetHandle === saved.to[1] && old.label === label && same(old.style, style)) return old;

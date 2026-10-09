@@ -189,11 +189,20 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* Ports (Refactor.54.2): bigger, grabbed further out than drawn, and styled by direction and whether wired; A and B are
    under test (human 2026-10-09). A = outputs filled, inputs hollow; B = hollow until wired.
    接孔：放大、可抓範圍比畫出來的大；依方向與有沒有接線上樣式；A／B 測試中。A＝輸出實心輸入空心；B＝沒接空心、接了實心。 */
-.react-flow__handle { width: var(--port-size); height: var(--port-size); min-width: var(--port-size); min-height: var(--port-size);
-  background: var(--surface-port); border: 2px solid var(--port-color); }
-.react-flow__handle::before { content: ""; position: absolute; inset: calc(var(--port-grab) * -1); border-radius: 50%; }
-:root:not([data-ports="b"]) .react-flow__handle.source,
-:root[data-ports="b"] .react-flow__handle[data-connected="true"] { background: var(--port-color); }
+/* The handle element itself is a point at the port's centre: React Flow ends a wire at the handle box's outer edge
+   (@xyflow/system getHandlePosition), so a point makes every wire reach the centre, under the ring that covers its end
+   (human 2026-10-09: let the ring overflow the element). The ring (::after) and the grab area (::before) are drawn around
+   it; inputs and outputs are the same size. 接孔元素本身是圓心的一個點：React Flow 把線的端點放在接孔方框的外緣，
+   所以縮成一點後每條線都到圓心、線頭被圓圈蓋住（人類：讓圓框超出 DIV）。圓圈與可抓範圍畫在它周圍；輸入輸出一樣大。 */
+.react-flow__handle { width: var(--port-point); height: var(--port-point); min-width: var(--port-point); min-height: var(--port-point);
+  background: none; border: 0; }
+.react-flow__handle::before, .react-flow__handle::after { content: ""; position: absolute; left: 50%; top: 50%; border-radius: 50%; transform: translate(-50%, -50%); }
+.react-flow__handle::before { width: calc(var(--port-size) + 2 * var(--port-grab)); height: calc(var(--port-size) + 2 * var(--port-grab)); }
+.react-flow__handle::after { width: var(--port-size); height: var(--port-size); background: var(--surface-port); border: 2px solid var(--port-color); pointer-events: none; }
+:root:not([data-ports="b"]) .react-flow__handle.source::after,
+:root[data-ports="b"] .react-flow__handle[data-connected="true"]::after { background: var(--port-color); }
+/* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */
+.react-flow__edge .react-flow__edge-path { stroke-width: var(--wire-width); }
 /* The value widget (ValueFields): fields side by side in one IO row, the component name inside each box; expanded,
    one component per row. A wired value keeps its place, unseen. Colours only from the --field-* slots.
    數值 widget：各分量並排在一行、分量名稱在框內；展開時一個分量一行。接線的值位置留著、看不到。顏色只用 --field-*。 */
@@ -252,7 +261,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .draft-blocker { position: absolute; inset: 0; z-index: 20; background: var(--surface-dim); }
 /* Module-declared spare input: dashed handle, muted label; greyed at the limit. */
 .spare-row > span { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); }
-.spare-row .react-flow__handle { border-style: dashed; background: transparent; }
+.spare-row .react-flow__handle::after { border-style: dashed; background: transparent; }
 .spare-row.full { opacity: .5; }
 /* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
 /* The network's own layer: the lock's dimming stays inside it, so the notices floating above stay clear and usable.
