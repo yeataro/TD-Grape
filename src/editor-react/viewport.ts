@@ -92,7 +92,6 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
     if (event.pointerType !== 'mouse' || event.button > 1 || !on.closest('.react-flow__pane') || on.closest('.nopan')) return;
     event.stopPropagation();
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, from: base(), moved: false };
-    try { element.setPointerCapture(event.pointerId); } catch { /* the pointer is already gone; moves still arrive while over the canvas 指標已離開；在畫布上時仍收得到移動 */ }
     element.querySelector('.react-flow__pane')?.classList.add('dragging');
   };
   // React Flow's pan listens to mousedown: it never starts while ours does. React Flow 的平移聽 mousedown：我們接手時它不會開始。
@@ -101,6 +100,10 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
     if (!drag || event.pointerId !== drag.id) return;
     const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
     if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+    // Hold the pointer only once it really drags: held at the press, clicks and double-clicks would land on our element,
+    // not the background, and double-click to add a node would stop working (fix, human 2026-10-09).
+    // 真的開始拖才鎖定指標：按下就鎖的話，點擊、雙擊會落在我們這一層而不是背景，雙擊新增節點就失效（修正，人類回報）。
+    if (!drag.moved) try { element.setPointerCapture(event.pointerId); } catch { /* already gone 指標已離開 */ }
     drag.moved = true;
     go({ zoom: drag.from.zoom, x: drag.from.x + dx, y: drag.from.y + dy });
   };
