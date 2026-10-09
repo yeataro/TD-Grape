@@ -22,6 +22,7 @@
   - **編輯畫面往下交的東西**（session、文字、Body 拖曳）搬到 [contexts.ts](../../src/editor-react/contexts.ts)；共用來源面板不再依賴節點卡片的檔案。
   - 拿掉原生下拉選單留下的樣式；整理 `IconButton` 重複的註解；[README](../../src/editor-react/README.md) 的責任表補上共用部件與面板表。
   - 順手（人類 10-09）：面板分頁標題照舊產品改小（11px、一般粗細，顯示中的才加粗）。
+  - **畫面規則集中成一份**（人類：清理完就是一個邊界，規則差不多都出現了）：[EDITOR_UI_RULES.md](../ui/EDITOR_UI_RULES.md)——怎麼決定、顏色、尺寸與文字、部件、面板與版面、互動、檢查；文件地圖列為現役（顏色系統一併移到現役，原本誤放在「排除」下）。新增把關測試 [test_ui_rules.cjs](../../tests/unit/test_ui_rules.cjs)：元件不寫原生 `<select>`。
   - 驗證：editor 67、check:editor、語系檔沒變；內建瀏覽器＋真實 TD：三個面板都有內容、8 個節點、沒有錯誤；清掉存的版面時預設是 Sources｜Add Node（顯示中）｜GLSL，之後已還原存的版面。
 
 ## Refactor.54.2 — 人類累積的一批：字級、字型、游標、接孔、Snap、設定、浮動提示 — 2026-10-09

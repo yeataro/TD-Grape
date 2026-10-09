@@ -4,7 +4,7 @@
   "scripts": {
     "build:editor": "npm run check:core && tsc -p tsconfig.editor.json && node tools/build_editor.cjs",
     "check:editor": "tsc -p tsconfig.editor.json",
-    "test:editor": "node --test tests/unit/test_react_session.cjs tests/unit/test_themes.cjs",
+    "test:editor": "node --test tests/unit/test_react_session.cjs tests/unit/test_themes.cjs tests/unit/test_ui_rules.cjs",
     "build:core": "node tools/build_core.cjs",
     "check:core": "node tools/build_core.cjs --check",
     "test:core": "node --test tests/unit/test_wire_planning.cjs tests/unit/test_top_compiler.cjs tests/unit/test_graph_objects.cjs tests/unit/test_model_operations.cjs tests/unit/test_shared_subgraphs.cjs tests/unit/test_subgraph_operations.cjs tests/unit/test_subgraph_deletion.cjs tests/unit/test_subgraph_copies.cjs tests/unit/test_range_nodes.cjs tests/unit/test_logic_nodes.cjs tests/unit/test_vector_nodes.cjs tests/unit/test_editor_contract.cjs tests/unit/test_codegen_key.cjs tests/unit/test_core_config.cjs tests/unit/test_core_structure.cjs tests/unit/test_graph_format.cjs tests/unit/test_declarations.cjs tests/unit/test_td_values.cjs tests/unit/test_color_output.cjs tests/unit/test_texture_inputs.cjs tests/unit/test_uniforms.cjs"

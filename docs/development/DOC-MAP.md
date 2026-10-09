@@ -14,6 +14,8 @@
 | `../REFACTOR-WORKFLOW.md` 第 1–158 行 | 重構正式流程：固定目標、環境、review 節點、退回規則；其後為 Refactor.2–13 歷史 |
 | `docs/development/REFACTOR_REACT_FLOW_PLAN_B.md` | 已接受的執行路線（B 案）、每輪完成條件、Human Takeover Test |
 | `src/editor-react/README.md` | 正式 React 入口：責任入口表、建置測試、保存與恢復 |
+| `docs/ui/EDITOR_UI_RULES.md` | 新編輯器的畫面規則（怎麼決定、部件、面板、互動、檢查）；寫任何介面前先讀 |
+| `docs/ui/COLOR_SYSTEM.md` | 新編輯器的顏色規範（三層、主題、禁止事項）；寫任何介面前先讀 |
 | `docs/development/LEGACY-GAPS.md` | 舊產品漏接清查：以功能為單位只寫最終狀態，分批，人類只審 ❌／❓ |
 | `docs/development/LEGACY-PYTHON.md` | 舊 Python 現況清單：在哪、誰在用、去向；與 TD 內 Legacy annotate 框一致 |
 | `docs/development/STATUS.md` 頂段 | 交付紀錄（每輪新增於頂端）。322KB，「以下為舊主線交付歷史」之後是重構前紀錄 |
@@ -56,4 +58,3 @@
 ## 排除
 
 - `docs/Goose_City_Revelation/`：與專案無關。
-- [顏色系統](../ui/COLOR_SYSTEM.md)：新編輯器的顏色規範（主色、color-mix、主題、禁止事項）；寫任何介面前先讀。
