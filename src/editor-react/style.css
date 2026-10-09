@@ -120,6 +120,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .resize-y { left: 0; right: 0; top: calc(var(--handle-grab) / -2); height: var(--handle-grab); cursor: row-resize; }
 .resize-y::after { left: 0; right: 0; top: calc(50% - var(--handle-line)); height: calc(var(--handle-line) * 2); }
 
+/* React Flow hides the browser's focus outline only on its selectable nodes (its style.css:450); ours are not
+   (selection is the editor's, Refactor.49), so the square outline showed around the round card. Selection has its own frames.
+   React Flow 只在「可選取」節點關掉瀏覽器的聚焦框；我們的不是（選取由編輯器決定），所以圓角卡片外會出現直角框。選取有自己的框。 */
+.react-flow__node:focus, .react-flow__node:focus-visible { outline: none; }
 .grape-node { position: relative; width: 250px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow); }
 /* Selection (Refactor.49, Q33): the primary in TD's green, the others in yellow. 主要＝綠、其他＝黃。 */
 .grape-node.selected { outline: 2px solid var(--select-other); } .grape-node.selected.primary { outline-color: var(--select-primary); }
