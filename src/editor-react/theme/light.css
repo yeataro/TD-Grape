@@ -63,4 +63,5 @@
   --text-active: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 30%);
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 15%);
   --shadow: color-mix(in srgb, var(--palette-shadow) 22%, transparent);
+  --surface-dim: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
 }

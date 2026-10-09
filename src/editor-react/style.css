@@ -184,8 +184,11 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .spare-row .react-flow__handle { border-style: dashed; background: transparent; }
 .spare-row.full { opacity: .5; }
 /* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
-.canvas-body { position: absolute; inset: 0; }
+/* The network's own layer: the lock's dimming stays inside it, so the notices floating above stay clear and usable.
+   網路區自己的一層：鎖住時的變暗只在這層裡，浮在上面的提示照樣清楚、能按。 */
+.canvas-body { position: absolute; inset: 0; z-index: 0; }
 .network-bar-slot { pointer-events: none; }
+.network-bar-slot[inert] { opacity: .45; }
 /* A notice floating below the toolbar (draft found, conflict): rounded, centred, the overlay's gap (human 2026-10-09).
    A warning (the found draft) carries the warning colour. 功能列下方的浮動提示；警告（找到草稿）帶警告色。 */
 .floating-notice { align-self: center; pointer-events: auto; width: min(720px, 100%);

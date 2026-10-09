@@ -110,7 +110,7 @@
   --surface-pressed: color-mix(in srgb, var(--palette-ink), var(--palette-select-green) 14%);
   --surface-floating: color-mix(in srgb, var(--surface-zone) 90%, transparent);
   --surface-notice: color-mix(in srgb, var(--palette-ink), var(--palette-warning) 22%);
-  --surface-dim: color-mix(in srgb, var(--palette-ink) 20%, transparent);
+  --surface-dim: color-mix(in srgb, var(--palette-shadow) 45%, transparent);   /* a locked area, semi-transparent black (human 2026-10-09) 鎖住的區域，半透明黑 */
   --overlay-up: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
   --overlay-faint: color-mix(in srgb, var(--palette-contrast) 2%, transparent);
   --surface-port: color-mix(in srgb, var(--palette-ink), var(--palette-accent) 4%);
