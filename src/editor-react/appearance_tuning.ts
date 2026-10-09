@@ -10,9 +10,9 @@ import { tr, type Message } from './text';
 export type Tunable = { name: string; label: Message } & ({ kind: 'color' } | { kind: 'percent' | 'px'; min: number; max: number; step: number });
 
 export const TUNABLES: readonly Tunable[] = [
-  { name: '--palette-select-green', label: tr('tune.selectPrimary', 'Selection (current)'), kind: 'color' },
-  { name: '--palette-select-yellow', label: tr('tune.selectOther', 'Selection (others)'), kind: 'color' },
-  { name: '--tint-node-divider', label: tr('tune.nodeDivider', 'Line under node titles'), kind: 'percent', min: 0, max: 60, step: 1 },
+  { name: '--palette-select-green', label: tr('tune.select', 'Selection'), kind: 'color' },
+  { name: '--tint-select-primary', label: tr('tune.selectPrimary', 'Current among several, brighter by'), kind: 'percent', min: 0, max: 80, step: 1 },
+  { name: '--tint-node-border', label: tr('tune.nodeBorder', 'Node outline and title line'), kind: 'percent', min: 0, max: 40, step: 1 },
   { name: '--tint-layer-shadow', label: tr('tune.layerShadow', 'Layered shadow strength'), kind: 'percent', min: 0, max: 80, step: 1 },
   { name: '--layer-blur', label: tr('tune.layerBlur', 'Layered shadow softness'), kind: 'px', min: 0, max: 30, step: 1 },
   { name: '--layer-offset', label: tr('tune.layerOffset', 'Layered shadow offset'), kind: 'px', min: 0, max: 10, step: 1 },

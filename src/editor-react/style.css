@@ -196,14 +196,17 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    節點寬度＝最寬那一行，但不小於共用下限：瀏覽器自己量，不依種類寫寬度。說明文字換行，不撐寬節點。 */
 .grape-node { position: relative; width: max-content; min-width: var(--node-min-width); max-width: 640px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow); }
 /* Selection (Refactor.49, Q33): the primary in TD's green, the others in yellow. 主要＝綠、其他＝黃。 */
-.grape-node.selected { outline: 2px solid var(--select-other); } .grape-node.selected.primary { outline-color: var(--select-primary); }
+.grape-node.selected { outline: 2px solid var(--select); }
+/* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
+   多選時目前的那個比較亮；單選時就是一般的綠（人類）。 */
+.react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { outline-color: var(--select-primary); }
 /* Wires: selected and hovered are lighter and thicker, as in the legacy editor (its glow is a look option,
    left for the appearance round). The type colour is inline, hence !important.
    接線：選取與滑鼠移上去時變亮加粗（照舊產品；柔光是外觀選項，留到外觀那輪）。型別色是行內樣式，所以要 !important。 */
 /* Multi-selection frame (Refactor.50.3), as the legacy #selectionbounds. 多選框，照舊產品。 */
 .selection-frame { position: absolute; left: 0; top: 0; border: 1px dashed var(--select-frame); pointer-events: none; }
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
-.grape-node.box-in { outline: 2px dashed var(--select-other); }
+.grape-node.box-in { outline: 2px dashed var(--select); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: 5 !important; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: 5 !important; }
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
@@ -316,7 +319,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .td-bind input, code.td-bind { color: var(--td-bind); }
 .grape-node.ghost .ghost-note { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-secondary); padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
-.node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--node-divider); /* as the legacy title (human 2026-10-09) 同舊產品標題 */ background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
+.node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-node); /* the outline's colour, as legacy (human 2026-10-09) 和外框線同色，同舊產品 */ background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
 .node-title strong { flex: 1; } .node-title small, .node-title .select-button { color: var(--text-secondary); font-size: var(--font-sm); line-height: var(--line-sm); }
 /* A select in a node title: just the value and a chevron on the title colour, as the legacy type menu.
    節點標題裡的選擇器：只有值和箭頭，直接在標題色上，照舊產品的型別選單。 */

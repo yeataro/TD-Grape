@@ -24,10 +24,9 @@
   --palette-blue: #3a5581;
   --palette-olive: #605a43;
   --palette-rose: #6f4654;
-  /* selection (Refactor.49): TD's green current / yellow selected; wires as the legacy editor (style.css:108).
-     選取：TD 的綠框（主要）／黃框（其他）；接線照舊產品。 */
-  --palette-select-green: #b3dc80;
-  --palette-select-yellow: #e8c85a;
+  /* selection: the legacy green (legacy --selection; human 2026-10-09: likes the old green); wires as the legacy editor
+     (style.css:108). 選取：舊產品的綠（人類：喜歡舊產品的綠）；接線照舊產品。 */
+  --palette-select-green: #70dc69;
   --palette-wire-cream: #fff2d2;
   --palette-wire-lilac: #ede5ff;
   --palette-warning: #e4bd77;        /* legacy .tag.pending */
@@ -63,7 +62,8 @@
   --tint-scroll-hover: 58%; /* under the pointer (legacy --scroll-hover #79638e) */
   --tint-field-fill: 14%;
   --tint-layer-shadow: 25%; /* the small shadow one layer casts on the next (trial) 層疊微陰影的濃度（試驗） */
-  --tint-node-divider: 15%; /* the line under a node's title 節點標題下的線 */
+  --tint-node-border: 12%;  /* a node's outline, also the line under its title (legacy: one colour) 節點外框線，也是標題下的線（舊產品同色） */
+  --tint-select-primary: 15%; /* how much brighter the current node is among several selected 多選時目前節點亮多少 */
   --tint-layer-glow: 2%;    /* the light seeping in from a layer's edges (trial; human 2026-10-09: 2%) 內發光的濃度（試驗；人類：2%） */
   --tint-wire-ready: 30%;   /* the glow round a port a dragged wire will land on (legacy --wire-ready-glow #aa84d64d) 拖線要接上的接孔外圍光暈 */   /* a value box's slider fill (legacy --numeric-slider-fill #c4c0df24) */
   /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
@@ -96,9 +96,11 @@
   --group-runtime: var(--palette-rose);
   /* Ghost (Q37): no colour of its own; the card is shown faded and dashed. Ghost 沒有自己的顏色，卡片淡化加虛線。 */
   --group-ghost: var(--palette-node);
-  --select-primary: var(--palette-select-green);
-  --select-other: var(--palette-select-yellow);
-  --select-frame: var(--palette-select-yellow);
+  /* Every selected node is green; when several are, the current one is a little brighter (human 2026-10-09).
+     選到的節點都是綠的；選了好幾個時，目前的那個再亮一點（人類）。 */
+  --select: var(--palette-select-green);
+  --select-primary: color-mix(in srgb, var(--palette-select-green), var(--palette-contrast) var(--tint-select-primary));
+  --select-frame: var(--palette-select-green);
   --wire-selected: var(--palette-wire-cream);
   --wire-hover: var(--palette-wire-lilac);
   /* Where a dragged wire will land (legacy --wire-ready #e5d9f5 and its glow; human 2026-10-09). 拖線要接上的地方（舊產品）。 */
@@ -146,14 +148,11 @@
   --overlay-faint: color-mix(in srgb, var(--palette-contrast) 2%, transparent);
   --surface-port: color-mix(in srgb, var(--palette-ink), var(--palette-accent) 4%);
   --surface-box: color-mix(in srgb, var(--palette-accent) 13%, transparent);
-  --border-node: color-mix(in srgb, var(--palette-node), var(--palette-contrast) 12%);
+  --border-node: color-mix(in srgb, var(--palette-node), var(--palette-contrast) var(--tint-node-border));
   --overlay-down: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
   /* Its own colour, so tuning it moves nothing else (human 2026-10-09). 自己的顏色，調它不會動到別的（人類）。 */
   --layer-shadow: color-mix(in srgb, var(--palette-shadow) var(--tint-layer-shadow), transparent);
   --layer-glow: color-mix(in srgb, var(--palette-lift) var(--tint-layer-glow), transparent);
-  /* The line under a node's title, see-through so it suits every title colour (legacy --ui-tone-node-divider,
-     #8995a333 on coloured titles; human 2026-10-09). 節點標題下的線，半透明、配得上每種標題色（舊產品）。 */
-  --node-divider: color-mix(in srgb, var(--palette-contrast) var(--tint-node-divider), transparent);
   --shadow: color-mix(in srgb, var(--palette-shadow) 55%, transparent);
   --grid-dot: color-mix(in srgb, color-mix(in srgb, var(--palette-ink), var(--palette-accent) 8%), var(--palette-contrast) 13%);
   --border: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-line));

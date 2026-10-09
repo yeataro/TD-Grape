@@ -15,9 +15,11 @@ const before = (name: string) => ({
 } as Record<string, string>)[name] ?? (name.startsWith('fold.') ? 'grape-fold-' + name.slice(5) : undefined);
 
 // Names nothing reads any more, forgotten once so nobody mistakes them for live settings (human 2026-10-09: left to the
-// agent). grape-react-theme was replaced by appearance.mode; sgrapeSourcesPanel by the layout.
-// 已經沒有程式在讀的名字，刪一次，免得被誤當成還有作用的設定（人類：交給助手）。前者被明暗取代、後者被版面取代。
-const retired = ['grape-react-theme', 'sgrapeSourcesPanel'];
+// agent). grape-react-theme was replaced by appearance.mode; sgrapeSourcesPanel by the layout; the two tune.* values by
+// one selection green and the node outline (Refactor.58.3).
+// 已經沒有程式在讀的名字，刪一次，免得被誤當成還有作用的設定（人類：交給助手）。前者被明暗取代、次者被版面取代；
+// 兩個 tune.* 被單一選取綠與節點外框線取代。
+const retired = ['grape-react-theme', 'sgrapeSourcesPanel', 'grape.tune.--palette-select-yellow', 'grape.tune.--tint-node-divider'];
 if (typeof window !== 'undefined') try { retired.forEach(name => localStorage.removeItem(name)); } catch { /* storage may be blocked */ }
 
 /** A preference as stored, or null when there is none (or storage is blocked). 存著的偏好；沒有（或被擋）就是 null。 */

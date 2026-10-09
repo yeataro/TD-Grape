@@ -21,8 +21,7 @@
   --palette-blue: #b5c6e6;
   --palette-olive: #d8d2b8;
   --palette-rose: #e2bfca;
-  --palette-select-green: #4f9a24;
-  --palette-select-yellow: #c08c00;
+  --palette-select-green: #357a4d;
   --palette-wire-cream: #4a3a8a;
   --palette-wire-lilac: #6a5aa8;
   --palette-warning: #9a6a10;
@@ -55,7 +54,8 @@
   --tint-scroll-hover: 40%;
   --tint-field-fill: 12%;
   --tint-layer-shadow: 25%;
-  --tint-node-divider: 15%;
+  --tint-node-border: 12%;
+  --tint-select-primary: 15%;
   --tint-layer-glow: 2%;
   --tint-wire-ready: 13%;   /* legacy light --wire-ready-glow #65488f22 */
   --text-alpha-strong: 78%;
