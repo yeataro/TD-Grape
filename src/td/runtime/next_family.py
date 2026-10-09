@@ -47,7 +47,10 @@ MAX_RUNTIME_BYTES = 1024 * 1024  # the whole execution part (GLSL + bindings)
 # TOP 貼圖輸入：圖裡每個輸入是 Grape OP 裡的一個 In TOP；照圖的順序列在 GLSL TOP 的 TOPs 清單
 # （＝sTD2DInputs[i]），在 input1 下面由上往下排（＝Grape OP 的輸入接口順序）。外面沒接時，
 # In TOP 輸出接在它自己身上的東西：Samples 的預設圖。
-# Samples output order (install_grape_templates.py): out1 Grape ... out7 the TOP chosen on Samples.
+# Which Samples output is which image is told by its out TOP's label, the same names as the graph's defaultTexture
+# (Refactor.58.9, human 2026-10-09, Q66): the OPs inside Samples can change freely. Samples in a Grape OP is a Clone of
+# the main component's. Samples 的哪個出口是哪張圖，由 out TOP 的 label 決定，名字同圖裡的 defaultTexture（人類，Q66）：
+# Samples 裡的 OP 可以隨意換。Grape OP 裡的 Samples 是主組件那份的 Clone。
 DEFAULT_TEXTURES = ('grape', 'banana', 'jellybeans', 'white', 'black', 'normal', 'custom')
 INPUT_STORE = 'grapeInput'  # storage key on an In TOP: the ID of the input it belongs to
 INPUT_X, INPUT_Y, INPUT_STEP = -200, -125, 100
@@ -72,6 +75,16 @@ def require(condition, message):
 
 def digest(text):
     return sha256(text.encode('utf-8')).hexdigest()
+
+
+def sample_output(samples, name):
+    """The index of the Samples output labelled `name`; LookupError when there is none or more than one (Refactor.58.9).
+    Samples 裡 label 是 name 的出口編號；沒有或不只一個時 LookupError。"""
+    found = [i for i, connector in enumerate(samples.outputConnectors)
+             if connector.outOP is not None and connector.outOP.par.label.eval() == name]
+    if len(found) != 1:
+        raise LookupError('{} has {} outputs labelled "{}" (needs exactly one).'.format(samples.path, len(found), name))
+    return found[0]
 
 
 def notify(comp, message):
@@ -179,7 +192,7 @@ class NextFamily:
         samples = self.comp.op('Samples')
         if samples is None or not samples.par.Top.eval():
             raise LookupError('No TOP is chosen on Samples.')
-        return samples.op('out' + str(len(DEFAULT_TEXTURES)))
+        return samples.outputConnectors[sample_output(samples, 'custom')].outOP
 
     def _refuse(self, message):
         notify(self.comp, message)
@@ -367,9 +380,17 @@ class NextFamily:
                 target.nodeWidth, target.nodeHeight = 130, 72
                 # Its position in TD's own array, as the editor shows it (Refactor.58.1). 它在 TD 陣列裡的位置，同編輯器顯示的。
                 target.par.label = 'sTD2DInputs[' + str(i) + ']'
-                connector = DEFAULT_TEXTURES.index(entry['defaultTexture'])
-                if samples is not None and connector < len(samples.outputConnectors):
-                    target.inputConnectors[0].connect(samples.outputConnectors[connector])
+                # Found by label; when Samples cannot say, the input is left without a default and TD's status bar says
+                # so — the shader is applied all the same. 照 label 找；找不到時這個輸入不接預設圖、在狀態列說明，Shader 照常套用。
+                if samples is None:
+                    continue
+                try:
+                    connector = sample_output(samples, entry['defaultTexture'])
+                except LookupError as error:
+                    target.inputConnectors[0].disconnect()
+                    notify(comp, '{} has no default image: {}'.format(target.name, error))
+                    continue
+                target.inputConnectors[0].connect(samples.outputConnectors[connector])
             shader.par.tops = ' '.join(t.name for t in chosen)
 
         return commit, rollback

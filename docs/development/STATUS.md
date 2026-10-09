@@ -58,6 +58,12 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.58.9 Samples Clone 與 label**（58.1 的 TD 端三步，人類 10-09 同意；範圍 workspace `texture-preview.md` 最後一節）：
+  - 主組件 `/TD_Grape/Samples` 的 out1～out7 加 label `grape`、`banana`、`jellybeans`、`white`、`black`、`normal`、`custom`（同圖裡的 `defaultTexture`）；註解改寫。
+  - 每個 Grape OP 的 Samples 改為 Clone 它（`op.TDGrape.op('Samples') if hasattr(op, 'TDGrape') else ''`）：現有 5 個（`Grape_TOP1`、`Grape_TOP_REF`（人類同意）、`Grape_TOP_test`、`r54_probe`、範本）用一次性腳本 `../work/refactor/migrate_samples_clone.py` 搬；範本安裝程式 `install_grape_templates.py` 也建 label 與 Clone。
+  - 接線與預覽照 label 找：`next_family.sample_output()`（剛好一個，否則 LookupError）；In TOP 接線、自選 TOP 快照（`custom`）、Manager 公用預覽圖都用它，順序表拿掉。找不到／重複：該輸入不接預設圖、TD 狀態列說明，Shader 照常。
+  - 驗證（TD 實機）：5 個都 Clone 到 `/TD_Grape/Samples`、15 個子 OP、無錯誤、In TOP 接線不變；改正本 white 的紅色 0.25，子 OP 同格跟著變、改回；某 OP 自選 TOP 只留在自己、清掉；正本 out1／out2 對調（label 跟圖走）後重接，`banana` 輸入從出口 1 換到 0、改回後回 1；label 故意改錯，該輸入不接、狀態列「input1 has no default image: … 0 outputs labelled "banana"」、改回正常；Manager 三張公用圖與 `custom` 快照照常；編輯器 `/api/textures/*.png` 200；範本重建後也帶 label 與 Clone。Python 單元 26 項過（新增 label 查找）。
+  - 未做：Samples 裡 OP 改名（拿掉 `sample_`）——先列新舊名字給人類看。TOE 未存。
 - **Refactor.58.8 修：框選框縮成 0 時所有節點都被預選**（人類 10-09 重現：右鍵按下、或 Shift／框選模式左鍵按下，拖一點點時外面的節點會亮，直到拖遠一點）：React Flow `getIntersectingNodes` 的判斷是「重疊面積 >= 框的面積」，框面積 0（拖出去又回到起點，或只往一個方向動）時 0 >= 0，每個節點都算在框內。人類按住時讀到：框 0×0、21 個節點全是 box-in。改為框的寬高至少一個螢幕像素（`RightDragSelect.tsx`）。人類再重現：沒問題了。React Flow 升級檢查加一條（TESTING）。
 - **Refactor.58.7 接線粗細可調**（人類 10-09：線條粗細的幾種狀態）：原本寫死的滑過 5、選中 5、拖曳中 1.3（`main.tsx` 行內）改成 `sizes.css` 的 `--wire-width-hover`、`--wire-width-selected`、`--wire-width-drag`，連同 `--wire-width`（3.5px）四列放進外觀面板（0.5px 一格）。驗證：滑過的線調 8px，實滑到線上畫成 8px、一般線仍 3.5px；還原後記錄清掉。拖曳中的粗細未在畫面上驗。
 - OKLCH（人類問能否幫主題）：查程式後更正——TD 用 `ui.viewFile` 開系統瀏覽器，沒有 TD 內建瀏覽器跑編輯器（之前說要在 TD 內建瀏覽器測是錯的）。預覽分頁 Chrome 152：`oklch()`、`color-mix(in oklch)`、相對色 `oklch(from …)` 都支援。是否改用尚未決定。

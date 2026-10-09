@@ -65,11 +65,15 @@ class GrapeManagerExt:
         """A shared default image, from the main component's Samples (Refactor.58; the human placed a copy there).
         The host asks once per connection. Only the images; the plain colours are drawn by the editor.
         公用預設圖，來自主組件裡的 Samples（人類放的一份）；宿主每次連線只問一次。只有圖片，純色由編輯器畫。"""
-        index = {'grape': 1, 'banana': 2, 'jellybeans': 3}.get(name)
         samples = self.ownerComp.parent.GrapeHost.op('Samples')
-        if index is None or samples is None:
+        if name not in ('grape', 'banana', 'jellybeans') or samples is None:
             return None
-        return self.Capture(samples.op('out' + str(index)))
+        # Found by the out TOP's label (Refactor.58.9). 照 out TOP 的 label 找。
+        try:
+            index = self._module('next_family').sample_output(samples, name)
+        except LookupError:
+            return None
+        return self.Capture(samples.outputConnectors[index].outOP)
 
     def Capture(self, top):
         """A TOP's pixels, small: the preview TOP scales it on the GPU (no larger than 320 px) and lets go of it

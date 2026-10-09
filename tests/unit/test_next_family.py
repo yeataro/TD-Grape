@@ -344,14 +344,27 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(textures.call_count, 1)
         self.assertEqual(api.dispatch('GET', '/api/textures/white.png')[0], 404)
         self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/texture')[1]['code'], 'texture_unavailable')  # no Samples 沒有 Samples
-        out7 = object()
-        samples = SimpleNamespace(par=SimpleNamespace(Top=Par(None)), op=lambda name: out7 if name == 'out7' else None)
+        # Found by the out TOP's label, wherever it sits (Refactor.58.9). 照 out TOP 的 label 找，不管排在哪。
+        out7 = SimpleNamespace(par=SimpleNamespace(label=Par('custom')))
+        outs = [SimpleNamespace(outOP=SimpleNamespace(par=SimpleNamespace(label=Par(name)))) for name in ('grape', 'banana')]
+        samples = SimpleNamespace(par=SimpleNamespace(Top=Par(None)), outputConnectors=[outs[0], SimpleNamespace(outOP=out7), outs[1]])
         comp.ops['Samples'] = samples
         self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/texture')[0], 404)  # nothing chosen 沒選
         samples.par.Top = Par('/project1/moviefilein1')
         code, image = api.dispatch('GET', '/api/' + TARGET + '/texture')
         self.assertEqual((code, image.keep, image.data[:4]), (200, False, b'\x89PNG'))
         capture.assert_called_once_with(out7)
+
+    def test_sample_output_by_label(self):
+        # Exactly one out with the label, wherever it sits; none or two is a LookupError (Refactor.58.9).
+        # 剛好一個 out 有這個 label，不管排在哪；沒有或兩個都是 LookupError。
+        out = lambda name: SimpleNamespace(outOP=SimpleNamespace(par=SimpleNamespace(label=Par(name))))
+        samples = SimpleNamespace(path='/x/Samples', outputConnectors=[out('banana'), out('grape'), out('grape'), SimpleNamespace(outOP=None)])
+        self.assertEqual(next_family.sample_output(samples, 'banana'), 0)
+        with self.assertRaisesRegex(LookupError, '2 outputs labelled "grape"'):
+            next_family.sample_output(samples, 'grape')
+        with self.assertRaisesRegex(LookupError, '0 outputs labelled "white"'):
+            next_family.sample_output(samples, 'white')
 
     def test_build_changed_is_not_a_conflict(self):
         code, result = self.api(family()[0]).dispatch('POST', '/api/' + TARGET + '/apply', {**request(run=runtime()), 'catalogHash': 'e' * 64})

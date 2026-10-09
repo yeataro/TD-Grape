@@ -131,15 +131,20 @@ flat = node(samples, constantTOP, 'sample_flatNormal', -178, -742, 130, 105)
 flat.par.colorr, flat.par.colorg, flat.par.colorb = 0.5, 0.5, 1.0  # flat normal (0, 0, 1) encoded
 chosen = node(samples, selectTOP, 'select_top', -178, -867)
 chosen.par.top.expr = 'parent().par.Top'
-for i, (source_op, y) in enumerate([(grape_image, -125), (banana, -250), (jelly, -375), (white, -492),
-                                    (black, -609), (flat, -734), (chosen, -867)], start=1):
+# Each out says which image it is by its label, the graph's defaultTexture names (Refactor.58.9).
+# 每個 out 用 label 說明它是哪張圖，名字同圖裡的 defaultTexture。
+for i, (source_op, y, label) in enumerate([(grape_image, -125, 'grape'), (banana, -250, 'banana'), (jelly, -375, 'jellybeans'),
+                                           (white, -492, 'white'), (black, -609, 'black'), (flat, -734, 'normal'),
+                                           (chosen, -867, 'custom')], start=1):
     out = node(samples, outTOP, 'out' + str(i), 50, y)
+    out.par.label = label
     out.inputConnectors[0].connect(source_op)
 annotation(samples, 'annotate_samples', 'Default inputs',
     'Default images for an input when nothing is connected from outside.\n'
-    "out1-out6 are fixed samples: Grape (from the main component's VFS; Banana when the main component is missing), "
-    'Banana, Jellybeans, white, black, flat normal. out7 is the TOP chosen in the TOP parameter.\n'
-    'Which one an input uses comes from the graph (defaultTexture); it is wired when the editor applies.',
+    "A Clone of the main component's Samples: change that one and every Grape OP follows; the content stays when the "
+    'main component is missing. Each out is named by its label: grape, banana, jellybeans, white, black, normal, '
+    'custom (the TOP chosen in the TOP parameter, kept per Grape OP).\n'
+    'Which one an input uses comes from the graph (defaultTexture); it is wired by label when the editor applies.',
     -205, -895, 410, 880)
 # The default graph's texture input (human 2026-10-09): input1, default image Grape. The editor
 # manages the In TOPs from then on (next_family.py _place_inputs). 預設圖的貼圖輸入；之後由編輯器管理。
@@ -149,6 +154,10 @@ input1 = node(top, inTOP, 'input1', -200, -125, 130, 72)
 input1.store('grapeInput', default_input['id'])
 input1.par.label = default_input['name']
 input1.inputConnectors[0].connect(samples.outputConnectors[0])
+# Samples follows the main component's copy (Refactor.58.9; Q66): a Clone, found by the global shortcut, none when the
+# main component is missing (the content stays). Samples 跟著主組件那份：Clone，用全域捷徑找，主組件不在時為空（內容留著）。
+samples.par.clone.expr = "op.TDGrape.op('Samples') if hasattr(op, 'TDGrape') else ''"
+samples.par.enablecloning = True
 shader.par.tops = 'input1'
 annotation(top, 'annotate_inputs', 'Inputs: managed by the TOPs list',
     'Inputs are made and removed by the editor (TOP texture inputs in Sources) and listed in the TOPs list on the GLSL TOP; '
