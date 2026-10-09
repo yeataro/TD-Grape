@@ -100,6 +100,12 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     show: amount => setShift(group.gesture.current ? amount : 0),
     preview: preview && (amount => preview(shifted(amount))), commit: amount => commit(shifted(amount)),
     format: amount => (amount >= 0 ? '+' : '') + amount });
+  // A colour value is a two-row widget: its swatch is a row of its own, the whole width and not indented; expanded, it is
+  // the last row of the component column, as wide as the sliders (human 2026-10-09).
+  // 顏色值是佔兩行的 widget：色塊自己一行、佔整塊寬度、左邊不縮進來；展開時是分量那一欄的最後一行，和 slider 一樣寬（人類）。
+  const swatch = color && count >= 3 && <div className={'value-swatch nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
+    <ColorField label={`${label} color`} value={hex}
+      commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} /></div>;
   const leading = <span ref={head} className="value-caption nodrag nopan"
       title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder.')) : undefined}
       onPointerDown={event => {
@@ -133,13 +139,10 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
               preview={preview && (next => preview(withComponent(next)))} />}
         </label>;
       })}
+      {expanded && swatch}
     </div>
     </div>
-    {/* A colour value is a two-row widget: its swatch is a row of its own, the whole width, not indented (human
-        2026-10-09). 顏色值是佔兩行的 widget：色塊自己一行、佔整塊寬度、左邊不縮進來（人類）。 */}
-    {color && count >= 3 && <div className={'value-swatch nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
-      <ColorField label={`${label} color`} value={hex}
-        commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} /></div>}
+    {!expanded && swatch}
     {group.view}
   </div>;
 }
