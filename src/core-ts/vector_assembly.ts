@@ -45,6 +45,12 @@ export function vectorAssembly(catalog:CatalogRow,inherit:boolean):NodeModule {
       n.params.groups=groups;
       return {node:n,replaceInputs:overlap.map(p=>p.key)};
     },
+    // The wire that made a component group is gone: split it back; the components keep their values (Q65).
+    // 造成分量組的線拿掉了：分回去；各分量的值不變（Q65）。
+    unwire:(n,key)=>{
+      const groups={...object(n.params.groups)};if(!(key in groups))return n;
+      delete groups[key];n.params.groups=groups;return n;
+    },
     editInput:(n,key,value)=>{
       const part=layout(n).find(p=>p.key===key);
       if(!part){if(!inherit||key!=='value')throw Error('Unknown component');n.inputValues={...n.inputValues,value:copy(value)};return n;}

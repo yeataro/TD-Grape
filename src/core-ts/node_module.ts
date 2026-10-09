@@ -88,6 +88,10 @@ export interface NodeModule {
   editInput?(node:Node,key:string,value:Value,context:NodeContext):Node;
   /** Local port-layout change for a wire gesture; the graph owns displaced edges. */
   wire?(node:Node,input:string,sourceType:string,context:NodeContext):{node:Node;replaceInputs:readonly string[]};
+  /** The wire into `input` was removed: undo the input-port change that wire made (Q65), e.g. split a component group
+   * back. Outputs never change; inputs that still have a wire keep their type.
+   * 接進 input 的線被拿掉：還原那條線造成的輸入接孔調整（Q65），例如把分量組分回去。輸出不變；還接著線的輸入型別不變。 */
+  unwire?(node:Node,input:string,context:NodeContext):Node;
   /** Creation-time choices may use a dragged wire, before an output is fixed. */
   creations?(wire:{direction:'input'|'output';type:string}|undefined):readonly ObjectValue[]|undefined;
   /** Effective expression inputs; dormant wires still participate in cycle checks. */
@@ -144,6 +148,14 @@ export function prepareNodeWire(module:NodeModule,node:Node,key:string,source:st
   module.validate(edit.node,context);const after=resolvePorts(module,edit.node,context).types();
   if(!sameTypes(before.outputs,after.outputs)||edit.replaceInputs.some(p=>!before.inputs[p]))throw Error('Wire preparation changed outputs or unknown ports');
   return edit;
+}
+export function prepareNodeUnwire(module:NodeModule,node:Node,key:string,wired:readonly string[],context:NodeContext):Node {
+  if(!module.unwire)throw Error('Node has no unwire preparation');
+  const before=resolvePorts(module,node,context).types(),candidate=module.unwire(copy(node),key,context);
+  if(candidate.id!==node.id||candidate.nodeType!==node.nodeType||!module.supports(candidate,context))throw Error('Unwire changed identity/capability');
+  module.validate(candidate,context);const after=resolvePorts(module,candidate,context).types();
+  if(!sameTypes(before.outputs,after.outputs)||wired.some(p=>after.inputs[p]!==before.inputs[p]))throw Error('Unwire changed outputs or a wired input');
+  return copy(candidate);
 }
 const portTemplates=new WeakMap<readonly PortSpec[],NodePorts>();
 export function resolvePorts(module:NodeModule,node:Node,context:NodeContext):NodePorts {

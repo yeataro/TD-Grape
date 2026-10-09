@@ -801,7 +801,7 @@ class Node {
             const handles = this.network.edges, raw = this.network.data.edges;
             const removed = handles.filter((_, i) => raw[i].to[0] === this.id && removedInputs.has(raw[i].to[1]) || raw[i].from[0] === this.id && removedOutputs.has(raw[i].from[1]));
             if (removed.length)
-                this.network.disconnectAll(removed);
+                this.network.disconnectAll(removed, false);
         }
         this.replace(candidate);
     }
@@ -974,7 +974,9 @@ class Network {
         const roots = this.data.nodes.filter(n => ids.has(n.id)).map(n => { var _a, _b; return (_b = (_a = this.graph.registry.get(n.nodeType)) === null || _a === void 0 ? void 0 : _a.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(_a, n); }).filter((id) => !!id);
         ids.forEach(id => this.removedNodes.add(id));
         this.data.nodes = this.data.nodes.filter(n => !ids.has(n.id));
+        const removed = this.data.edges.filter(e => ids.has(e.from[0]) || ids.has(e.to[0]));
         this.data.edges = this.data.edges.filter(e => !ids.has(e.from[0]) && !ids.has(e.to[0]));
+        this.unwired(removed.filter(e => !ids.has(e.to[0])));
         (0, subgraph_operations_1.collectSubgraphs)(this.graph, roots, this.data);
     }
     plan(policy, intent, overrides = new Map()) {
@@ -1139,7 +1141,7 @@ class Network {
     disconnect(edge) {
         this.disconnectAll([edge]);
     }
-    disconnectAll(edges) {
+    disconnectAll(edges, notify = true) {
         this.assertEditable();
         if (edges.some(e => e.network !== this))
             throw Error('Edge belongs to another network');
@@ -1148,6 +1150,27 @@ class Network {
         if (!targets.size)
             return;
         this.data.edges = this.data.edges.filter(e => !targets.has(e));
+        if (notify)
+            this.unwired([...targets]);
+    }
+    /** After wires are removed, each node that lost the wire into an input may undo the input change it made (Q65:
+     * unwire). 線拿掉之後，失去某個輸入的線的節點，可以還原那條線造成的輸入調整（Q65）。 */
+    unwired(removed) {
+        for (const e of removed) {
+            const node = this.node(e.to[0]), data = node.data, module = node.definition;
+            if (!data || !(module === null || module === void 0 ? void 0 : module.unwire) || !module.supports(data, this.context) || !node.interface.inputs[e.to[1]])
+                continue;
+            const wired = this.data.edges.filter(x => x.to[0] === e.to[0]).map(x => x.to[1]);
+            if (wired.includes(e.to[1]))
+                continue; // still wired 還接著線
+            const next = (0, node_module_1.prepareNodeUnwire)(module, data, e.to[1], wired, this.context);
+            if ((0, changes_1.equal)(data, next))
+                continue;
+            for (const key of Object.keys(data))
+                if (!Object.prototype.hasOwnProperty.call(next, key))
+                    delete data[key];
+            Object.assign(data, next);
+        }
     }
 }
 exports.Network = Network;
@@ -1449,6 +1472,7 @@ exports.createRegistry = createRegistry;
 exports.configureNode = configureNode;
 exports.editNode = editNode;
 exports.prepareNodeWire = prepareNodeWire;
+exports.prepareNodeUnwire = prepareNodeUnwire;
 exports.resolvePorts = resolvePorts;
 const model_1 = require("./model");
 const ports_1 = require("./ports");
@@ -1524,6 +1548,18 @@ function prepareNodeWire(module, node, key, source, context) {
     if (!sameTypes(before.outputs, after.outputs) || edit.replaceInputs.some(p => !before.inputs[p]))
         throw Error('Wire preparation changed outputs or unknown ports');
     return edit;
+}
+function prepareNodeUnwire(module, node, key, wired, context) {
+    if (!module.unwire)
+        throw Error('Node has no unwire preparation');
+    const before = resolvePorts(module, node, context).types(), candidate = module.unwire((0, model_1.copy)(node), key, context);
+    if (candidate.id !== node.id || candidate.nodeType !== node.nodeType || !module.supports(candidate, context))
+        throw Error('Unwire changed identity/capability');
+    module.validate(candidate, context);
+    const after = resolvePorts(module, candidate, context).types();
+    if (!sameTypes(before.outputs, after.outputs) || wired.some(p => after.inputs[p] !== before.inputs[p]))
+        throw Error('Unwire changed outputs or a wired input');
+    return (0, model_1.copy)(candidate);
 }
 const portTemplates = new WeakMap();
 function resolvePorts(module, node, context) {
@@ -6571,6 +6607,16 @@ function vectorAssembly(catalog, inherit) {
                 groups[key] = value_nodes_1.values.shaped(value_nodes_1.values.family(String(n.params.type)), size);
             n.params.groups = groups;
             return { node: n, replaceInputs: overlap.map(p => p.key) };
+        },
+        // The wire that made a component group is gone: split it back; the components keep their values (Q65).
+        // 造成分量組的線拿掉了：分回去；各分量的值不變（Q65）。
+        unwire: (n, key) => {
+            const groups = { ...(0, model_1.object)(n.params.groups) };
+            if (!(key in groups))
+                return n;
+            delete groups[key];
+            n.params.groups = groups;
+            return n;
         },
         editInput: (n, key, value) => {
             const part = layout(n).find(p => p.key === key);

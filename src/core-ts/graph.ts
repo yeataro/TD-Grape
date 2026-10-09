@@ -1,5 +1,5 @@
 import { copy, type Graph, type Node as NodeData, type Edge as EdgeData, type ObjectValue, type Value, type SubgraphData } from './model';
-import { contextFor, resolvePorts, configureNode, editNode, prepareNodeWire, type Configuration, type NodeContext, type Registry } from './node_module';
+import { contextFor, resolvePorts, configureNode, editNode, prepareNodeWire, prepareNodeUnwire, type Configuration, type NodeContext, type Registry } from './node_module';
 import { NodePorts, compatible, type PortSpec } from './ports';
 import { plan, type Intent, type Ports } from './wire_planning';
 import { changesBetween, equal, type GraphChanges } from './changes';
@@ -95,7 +95,7 @@ export class Node {
     if(removedInputs.size||removedOutputs.size){
       const handles=this.network.edges,raw=this.network.data.edges;
       const removed=handles.filter((_,i)=>raw[i]!.to[0]===this.id&&removedInputs.has(raw[i]!.to[1])||raw[i]!.from[0]===this.id&&removedOutputs.has(raw[i]!.from[1]));
-      if(removed.length)this.network.disconnectAll(removed);
+      if(removed.length)this.network.disconnectAll(removed,false);
     }
     this.replace(candidate);
   }
@@ -216,7 +216,9 @@ export class Network {
     const roots=this.data.nodes.filter(n=>ids.has(n.id)).map(n=>this.graph.registry.get(n.nodeType)?.referencedGraph?.(n)).filter((id):id is string=>!!id);
     ids.forEach(id=>this.removedNodes.add(id));
     this.data.nodes=this.data.nodes.filter(n=>!ids.has(n.id));
+    const removed=this.data.edges.filter(e=>ids.has(e.from[0])||ids.has(e.to[0]));
     this.data.edges=this.data.edges.filter(e=>!ids.has(e.from[0])&&!ids.has(e.to[0]));
+    this.unwired(removed.filter(e=>!ids.has(e.to[0])));
     collectSubgraphs(this.graph,roots,this.data);
   }
   plan(policy:ConnectionPolicy,intent:Intent,overrides:ReadonlyMap<string,Ports>=new Map()) {
@@ -317,11 +319,26 @@ export class Network {
   disconnect(edge:Edge):void {
     this.disconnectAll([edge]);
   }
-  disconnectAll(edges:readonly Edge[]):void {
+  disconnectAll(edges:readonly Edge[],notify=true):void {
     this.assertEditable();if(edges.some(e=>e.network!==this))throw Error('Edge belongs to another network');
     this.indexEdges();const targets=new Set(edges.map(e=>this.edgeIndex.get(e.id)).filter(e=>!!e));
     if(!targets.size)return;
     this.data.edges=this.data.edges.filter(e=>!targets.has(e));
+    if(notify)this.unwired([...targets] as EdgeData[]);
+  }
+  /** After wires are removed, each node that lost the wire into an input may undo the input change it made (Q65:
+   * unwire). 線拿掉之後，失去某個輸入的線的節點，可以還原那條線造成的輸入調整（Q65）。 */
+  private unwired(removed:readonly EdgeData[]):void {
+    for(const e of removed){
+      const node=this.node(e.to[0]),data=node.data,module=node.definition;
+      if(!data||!module?.unwire||!module.supports(data,this.context)||!node.interface.inputs[e.to[1]])continue;
+      const wired=this.data.edges.filter(x=>x.to[0]===e.to[0]).map(x=>x.to[1]);
+      if(wired.includes(e.to[1]))continue; // still wired 還接著線
+      const next=prepareNodeUnwire(module,data,e.to[1],wired,this.context);
+      if(equal(data,next))continue;
+      for(const key of Object.keys(data))if(!Object.prototype.hasOwnProperty.call(next,key))delete (data as unknown as Record<string,unknown>)[key];
+      Object.assign(data,next);
+    }
   }
 }
 /** Edge identity is a random, unique string like node IDs; order carries no meaning (Q44).
