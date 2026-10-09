@@ -58,6 +58,8 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.62 TD 服務清理（進行中；排查見 workspace `work/refactor/td-service-audit-2026-10-10.md`，只做「直接處理」，待討論 D1–D10 等人類）**：
+  - 第 1 步 錯誤分類：刻意的拒絕都帶代碼（`uniform_writer.Refused` 為底，`RevisionConflict`、`BuildChanged`、`TextureUnavailable`、host 的 `BadRequest`、`UnsupportedOperation`），`host_api` 只把有代碼的錯回成拒絕、照代碼決定回覆；其他錯誤是失敗，交給請求佇列回 500 並附例外類型與 traceback（原本所有 `ValueError`／`RuntimeError` 都被說成「TD 拒絕」）。版本衝突不再看訊息裡有沒有 "conflict"（Uniform 取名 uConflict 時一般拒絕曾被當成衝突）。即時值、Grape OP 的「打開編輯器」只接拒絕；Samples 壞了照實說；寫狀態列只接 `NameError`（TD 之外）；runtime 不是 JSON 時是拒絕。驗證：Python 88（新增：名字含 Conflict 的拒絕回 422、沒代碼的錯不當拒絕）；重裝 Manager 後 Grape_TOP1 開圖、同步正常。
 - **Refactor.61.6 貼圖輸入一帶清理**（排查見 workspace `work/refactor/texture-input-cleanup-2026-10-10.md`；人類選 A、B、C、D、G2、G1）：
   - A：找不到貼圖輸入改成專用例外 `TextureUnavailable`（同 `BuildChanged` 用 `code` 分辨）；`host_api` 不再把所有 `LookupError` 回成 404「找不到貼圖」——動作裡程式錯誤的 `KeyError` 照實交給請求佇列回 500、附例外類型。
   - B：「哪些 In TOP 是 Grape 建的」只剩一條規則 `input_id(top)`（只讀 In TOP 自己的 storage、`search=False`），`_place_inputs`、`input_sources`、`input_top` 都用它；原本後兩處會往上層 COMP 找 storage。

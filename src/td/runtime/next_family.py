@@ -66,12 +66,23 @@ UNIFORM_TYPES = uniform_writer.COUNTS
 COLOR_TYPES = ('vec3', 'vec4')
 
 
-class BuildChanged(RuntimeError):
+# Refusals carry a code (Refactor.62): the host turns the code into a reply; any other error is a failure, reported as
+# one. 拒絕都帶代碼，宿主照代碼回覆；其他錯誤是失敗，照實回報。
+Refused = uniform_writer.Refused
+
+
+class RevisionConflict(Refused):
+    """The editor sent a revision TD no longer has (Q28). Its own kind, never told by the words of a message (a Uniform
+    named uConflict once made a plain refusal look like a conflict). 編輯器送的版本 TD 已經沒有了；用種類分辨，不看訊息字詞。"""
+    code = 'revision_conflict'
+
+
+class BuildChanged(Refused):
     """The editor page was built for another TD-Grape build (Refactor.52). 編輯頁與 TD-Grape 的建置不同。"""
     code = 'build_changed'
 
 
-class TextureUnavailable(RuntimeError):
+class TextureUnavailable(Refused):
     """No such texture input on this Grape OP (Refactor.61.6). Its own kind, so a KeyError from a bug is never reported
     as a missing picture. 這個 Grape OP 沒有這個貼圖輸入。獨立的種類，程式錯誤的 KeyError 不會被說成找不到圖。"""
     code = 'texture_unavailable'
@@ -88,7 +99,7 @@ def input_id(top):
 
 def require(condition, message):
     if not condition:
-        raise ValueError(message)
+        raise Refused(message)
 
 
 def digest(text):
@@ -110,7 +121,7 @@ def notify(comp, message):
     the status DAT keeps the record. 值得注意的狀態與錯誤顯示在 TD 狀態列；status DAT 留紀錄。"""
     try:
         ui.status = 'Grape ' + comp.name + ': ' + message
-    except Exception:
+    except NameError:  # outside TD (unit tests): no status bar TD 之外（單元測試）沒有狀態列
         pass
 
 
@@ -123,7 +134,10 @@ def identity(comp):
 def read_runtime(text, *, catalog_hash, presets=()):
     """The execution part (GLSL + bindings) is TD's own input, so TD reads it."""
     require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_RUNTIME_BYTES, 'invalid runtime part')
-    compiled = json.loads(text)
+    try:
+        compiled = json.loads(text)
+    except ValueError:
+        raise Refused('The runtime part is not JSON.') from None
     require(isinstance(compiled, dict) and compiled.get('vertex') == ''
             and isinstance(compiled.get('pixel'), str), 'invalid TOP source')
     require(0 < len(compiled['pixel'].encode('utf-8')) <= MAX_GLSL_BYTES, 'GLSL is empty or over 512,000 bytes')
@@ -247,7 +261,7 @@ class NextFamily:
     def _refuse(self, message):
         notify(self.comp, message)
         self.status('refused', message)
-        raise ValueError(message)
+        raise Refused(message)
 
     def stored(self):
         meta_dat, graph_dat = self.comp.op('graph_meta'), self.comp.op('graph')
@@ -325,7 +339,7 @@ class NextFamily:
     def _shader(self, comp):
         shader = comp.op('shader')
         if shader is None or shader.type != 'glsl':
-            raise RuntimeError('This Grape OP does not contain a native GLSL TOP.')
+            raise Refused('This Grape OP does not contain a native GLSL TOP.')
         return shader
 
     def live(self, body):
@@ -488,7 +502,7 @@ class NextFamily:
         revision = meta['document']['revision']
         require(body.get('format') == FORMAT, 'unsupported request format')
         if body.get('revision') != revision:
-            raise RuntimeError('Conflict: stale revision')
+            raise RevisionConflict('Conflict: stale revision')
         require(body.get('targetId') == identity(self.comp), 'target mismatch')
         if body.get('catalogHash') != catalog_hash:
             raise BuildChanged('The editor page and TD-Grape come from different builds; reload the editor page.')

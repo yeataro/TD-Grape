@@ -57,7 +57,7 @@ def check(comp):
         # Visible on the status bar: a copy changed its identity. 複本換號，顯示在狀態列。
         try:
             ui.status = 'Grape ' + comp.name + ': another Grape OP uses the same Grape ID, so this one took a new ID.'
-        except Exception:
+        except NameError:  # outside TD (unit tests) TD 之外（單元測試）
             pass
         return new
     return ident

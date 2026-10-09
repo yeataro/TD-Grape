@@ -10,8 +10,20 @@ import zlib
 from urllib.parse import urlsplit
 
 
+# What each refusal code replies (Refactor.62). An error without one of these codes is a failure: it leaves dispatch and
+# the request queue reports it with its type and traceback. 每種拒絕代碼的回覆；沒有這些代碼的錯誤是失敗，交給請求佇列照實回報。
+REFUSALS = {'host_rejected': 422, 'revision_conflict': 409, 'build_changed': 409, 'texture_unavailable': 404,
+            'capability_not_migrated': 501}
+
+
+class BadRequest(ValueError):
+    """The request itself is not usable. 請求本身不能用。"""
+    code = 'host_rejected'
+
+
 class UnsupportedOperation(RuntimeError):
-    pass
+    """Not migrated to this build yet. 這個版本還沒做。"""
+    code = 'capability_not_migrated'
 
 
 def encode_png(width, height, rgba):
@@ -94,22 +106,18 @@ class HostAPI:
             if family is None:
                 return 404, {'error': 'This Grape OP is not available to the Manager.', 'code': 'target_unavailable'}
             if method == 'POST' and not isinstance(body, dict):
-                raise ValueError('Host actions require a JSON object.')
+                raise BadRequest('Host actions require a JSON object.')
             return 200, self._action(family, method, action, body, argument)
-        except UnsupportedOperation as error:
-            return 501, {'error': str(error), 'code': 'capability_not_migrated', 'layer': 'manager', 'operation': action}
-        except (ValueError, RuntimeError) as error:
-            # A missing texture input is its own error (Refactor.61.6); any other failure, a KeyError from a bug included,
-            # is reported as what it is, never as a missing picture. 找不到貼圖輸入是自己的錯誤；其他失敗照實回報。
-            if getattr(error, 'code', None) == 'texture_unavailable':
-                return 404, {'error': str(error), 'code': 'texture_unavailable', 'layer': 'grape-op', 'operation': action}
-            if getattr(error, 'code', None) == 'build_changed':
-                # Not a conflict: no version choice helps, the page must be reloaded (Refactor.52).
-                # 不是衝突：選哪個版本都沒用，要重新整理頁面。
-                return 409, {'error': str(error), 'code': 'build_changed', 'layer': 'grape-op', 'operation': action}
-            conflict = 'conflict' in str(error).lower()
-            return 409 if conflict else 422, {'error': ('Conflict: ' if conflict and not str(error).startswith('Conflict:') else '') + str(error),
-                'code': 'revision_conflict' if conflict else 'host_rejected', 'layer': 'grape-op', 'operation': action}
+        except Exception as error:
+            # Only refusals are answered here, by their code (build_changed is not a conflict: no version choice helps,
+            # the page must be reloaded). Anything else is a failure and goes on to the request queue, which reports it
+            # with its type, never as "TD refused" (Refactor.62).
+            # 這裡只回覆拒絕，照代碼（build_changed 不是衝突：選哪個版本都沒用，要重新整理）。其他是失敗，交給請求佇列照實回報。
+            code = getattr(error, 'code', None)
+            if code not in REFUSALS:
+                raise
+            return REFUSALS[code], {'error': str(error), 'code': code,
+                'layer': 'manager' if code == 'capability_not_migrated' else 'grape-op', 'operation': action}
 
     def _action(self, family, method, action, body, argument=None):
         # TD only checks the envelope and what it executes; no history, sources or graph reads.

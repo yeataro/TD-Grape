@@ -14,6 +14,12 @@ GLSL OP 上的 Uniform 直接寫入（照舊產品：用名字找列、只補缺
 """
 import json
 
+
+class Refused(ValueError):
+    """TD refuses a request on purpose, with a code the host maps to a reply (Refactor.62). Anything without a code is
+    a failure and is reported as one, never as a refusal. TD 刻意拒絕一個請求，帶代碼讓宿主轉成回覆；沒有代碼的是失敗，照實回報。"""
+    code = 'host_rejected'
+
 from td_text import tr
 
 COUNTS = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4}
@@ -144,12 +150,12 @@ def check_rows(shader, uniforms, previous):
         if renamed and uniform['id'] not in taken:
             row = find_row(shader, page, old['name'])
             if row is not None and mode_name(par(shader, page, row, 'name')) != 'CONSTANT':
-                raise ValueError('The name of Uniform ' + old['name'] + ' is driven in TD, so TD-Grape cannot rename it to '
+                raise Refused('The name of Uniform ' + old['name'] + ' is driven in TD, so TD-Grape cannot rename it to '
                                  + name + '. Set the name back to a constant in the GLSL OP first.')
         if old is None or renamed:
             other = 'vec' if page == 'color' else 'color'
             if find_row(shader, other, name) is not None and (other, name) not in leaving:
-                raise ValueError('The ' + PAGE_NAMES[other] + ' page of the GLSL OP already has a row named ' + name
+                raise Refused('The ' + PAGE_NAMES[other] + ' page of the GLSL OP already has a row named ' + name
                                  + ', but this Uniform belongs on the ' + PAGE_NAMES[page] + ' page. Choose another name, '
                                  'or rename or remove that row in TD.')
 

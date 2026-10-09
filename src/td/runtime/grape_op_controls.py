@@ -23,7 +23,7 @@ def _status(comp, notify=None, **state):
     if notify:
         try:
             ui.status = 'Grape ' + comp.name + ': ' + notify
-        except Exception:
+        except NameError:  # outside TD (unit tests) TD 之外（單元測試）
             pass
 
 
@@ -73,6 +73,8 @@ def onPulse(par):
         url = manager.ext.GrapeManagerExt.Open(comp, app=par.name == 'Openeditor')
         _status(comp, None, state='Editor opened', url=url)
     except Exception as error:
+        if getattr(error, 'code', None) is None:
+            raise  # a failure, shown by TD as an error, not as "editing unavailable" (Refactor.62) 是失敗，由 TD 照實顯示
         _status(comp, str(error), state='Editing unavailable', message=str(error))
 
 

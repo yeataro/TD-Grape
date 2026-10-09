@@ -49,8 +49,10 @@ class LiveWatch:
             try:
                 entry['family'].live({'format': entry['family'].FORMAT, 'id': message.get('id'), 'value': message.get('value'),
                                       'session': connection.session, 'seq': message.get('seq')})
-            except (ValueError, RuntimeError):
-                pass  # a value TD cannot take is dropped; the normal save follows 寫不進的值丟掉，一般送出會跟上
+            except Exception as error:
+                if getattr(error, 'code', None) is None:
+                    raise  # a failure, not a refusal (Refactor.62) 是失敗、不是拒絕
+                # a value TD refuses is dropped; the normal save follows 被拒絕的值丟掉，一般送出會跟上
         self.flush()
 
     def _open(self, connection):

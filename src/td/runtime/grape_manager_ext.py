@@ -70,10 +70,12 @@ class GrapeManagerExt:
         if name not in ('grape', 'banana', 'jellybeans') or samples is None:
             return None
         # Found by the out TOP's label (Refactor.58.9). 照 out TOP 的 label 找。
+        nxt = self._module('next_family')
         try:
-            index = self._module('next_family').sample_output(samples, name)
-        except LookupError:
-            return None
+            index = nxt.sample_output(samples, name)
+        except LookupError as error:
+            # Samples is broken (no or two outs with this label): said as it is (Refactor.62). Samples 壞了：照實說。
+            raise nxt.TextureUnavailable(str(error)) from None
         return self.Capture(samples.outputConnectors[index].outOP)
 
     def Capture(self, top):
@@ -154,12 +156,13 @@ class GrapeManagerExt:
         matches = [comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG])
                    if not self._template(comp) and self._module('next_family').identity(comp) == target_id]
         if len(matches) > 1:
-            raise RuntimeError('Duplicate Family identity detected; no copy was selected or changed. Review the copies before editing.')
+            raise self._module('next_family').Refused('More than one Grape OP has this Grape ID; nothing was selected or changed. '
+                                                      'Review the copies before editing.')
         return self.Adapter(matches[0]) if matches else None
 
     def Register(self, comp):
         if GRAPE_OP_TAG not in comp.tags or self._template(comp):
-            raise RuntimeError('This is not a Grape OP.')
+            raise self._module('next_family').Refused('This is not a Grape OP.')
         self.Adapter(comp).state()
         self.families[comp.id] = comp
         return self._module('next_family').identity(comp)
@@ -174,7 +177,7 @@ class GrapeManagerExt:
         supports it (editor_launch.py: Chrome or Edge on Windows), else the normal browser (Q45).
         app=True 時能開 App 視窗就開（Windows 的 Chrome／Edge），否則一般瀏覽器。"""
         if not self.editor or not self.editor.http:
-            raise RuntimeError('Editor Service is stopped; native Shader operation is unaffected.')
+            raise self._module('next_family').Refused('Editor Service is stopped; native Shader operation is unaffected.')
         target_id = self.Register(comp)
         self.Resolve(target_id)
         address = 'http://127.0.0.1:' + str(self.editor.http.port) + '/shader/' + target_id + '/'

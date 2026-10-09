@@ -168,7 +168,8 @@ class NextFamilyTests(unittest.TestCase):
 
     def test_envelope_checks(self):
         fam, _ = family()
-        with self.assertRaisesRegex(RuntimeError, 'Conflict'):
+        # A conflict is its own kind, not told by the words (Refactor.62). 衝突是自己的種類，不看字詞。
+        with self.assertRaisesRegex(next_family.RevisionConflict, 'Conflict'):
             fam.apply(request(revision=2, run=runtime()), catalog_hash=CATALOG)
         with self.assertRaisesRegex(ValueError, 'target'):
             fam.apply({**request(run=runtime()), 'targetId': 'd' * 32}, catalog_hash=CATALOG)
@@ -417,6 +418,27 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual((code, result['state']['revision']), (200, 4))
         code, result = api.dispatch('POST', '/api/' + TARGET + '/apply', request(run=runtime('g')))
         self.assertEqual((code, result['code']), (409, 'revision_conflict'))
+
+
+class RefusalTests(unittest.TestCase):
+    # Refactor.62: only errors with a refusal code are answered as refusals; the code decides the reply, never the words.
+    # 只有帶拒絕代碼的錯誤才回成拒絕；由代碼決定回覆，不看字詞。
+    def api(self, error):
+        fam = Mock()
+        fam.state.side_effect = error
+        return host_api.HostAPI(bootstrap={'version': 1, 'producer': 'frontend-modules', 'catalogHash': CATALOG},
+            resolve=lambda ident: fam, choices=lambda: {}, save_project=Mock())
+
+    def test_a_plain_refusal_naming_conflict_is_not_a_conflict(self):
+        refusal = next_family.Refused('The name of Uniform uConflict is driven in TD, so TD-Grape cannot rename it.')
+        code, result = self.api(refusal).dispatch('GET', '/api/' + TARGET + '/state')
+        self.assertEqual((code, result['code']), (422, 'host_rejected'))
+        self.assertFalse(result['error'].startswith('Conflict: '))
+
+    def test_a_failure_is_not_a_refusal(self):
+        # A bug's ValueError leaves dispatch; the request queue reports it with its type. 程式錯誤離開 dispatch，由佇列照實回報。
+        with self.assertRaises(ValueError):
+            self.api(ValueError('Expecting value: line 1 column 1')).dispatch('GET', '/api/' + TARGET + '/state')
 
 
 if __name__ == '__main__':
