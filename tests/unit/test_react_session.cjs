@@ -1237,3 +1237,31 @@ test('TD compile errors are read for their lines; a stuck Shader can go back to 
   assert.equal(sent.at(-1).document, JSON.stringify(session.graph()), 'delivered as any edit');
   assert.equal(session.snapshot().stuck, undefined, 'TD runs a program again: no longer stuck');
 });
+
+// Refactor.63.2 (human 2026-10-10): going back to the program TD still runs, in the same tab, clears a stuck Shader. The
+// program is sent although TD already runs it, so TD records it as running and forgets the failure (it compiles nothing).
+// 同一個分頁回到 TD 仍在跑的程式時，卡住要解除：照樣送程式，TD 記成正在跑並忘掉失敗（不重新編譯）。
+test('going back to the running program in the same tab clears a stuck Shader', async t => {
+  let failing = false, failure = null, running = 4;
+  const { session, calls } = open(t, async (action, body, remote) => {
+    if (action === 'state') return remote.get();
+    const revision = body.revision + 1;
+    if (body.runtime && failing) failure = { kind: 'compile', revision, log: 'ERROR: /p/pixel_shader:5: oops', pixel: JSON.parse(body.runtime).pixel };
+    else if (body.runtime) { failure = null; running = revision; }
+    const state = { document: body.document, revision, targetId: target, runtimeRevision: running,
+      ...(failure ? { failure, lastKnownGood: { revision: running, document: '{}' } } : {}) };
+    remote.set(state);
+    return { state, shaderError: body.runtime && failing ? failure.log : null, shaderFailure: body.runtime && failing ? 'compile' : null };
+  });
+  session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
+  assert.equal(session.snapshot().stuck, undefined, 'running');
+  failing = true;
+  session.transact('value', net => setValue(net, 'a', 4)); await session.flush();
+  assert.equal(session.snapshot().stuck.failure.kind, 'compile', 'stuck');
+  failing = false;
+  session.transact('value', net => setValue(net, 'a', 3)); await session.flush();
+  assert.notEqual(calls.at(-1).body.runtime, null, 'the running program is sent again while stuck');
+  assert.equal(session.snapshot().stuck, undefined, 'no longer stuck');
+  session.nodeChanges([{ type: 'position', id: 'a', position: { x: 300, y: 90 }, dragging: false }]); await session.flush();
+  assert.equal(calls.at(-1).body.runtime, null, 'not stuck: a layout edit sends the graph only, as before');
+});

@@ -140,7 +140,10 @@ export class HostSync {
       // (layout-only edits, design-interview Q31/Q38). 指紋與 TD 正在跑的相同：只送圖，TD 不做 GPU 驗證。
       // A program TD already failed to compile is not sent again until it changes.
       // TD 已編譯失敗的程式，沒改之前不再送。
-      const runtime = compiled && key !== this.runtimeKey && key !== this.failedKey ? compiled : undefined;
+      // While the Shader is stuck, the running program is sent too: TD compiles nothing (same program) but records it as
+      // running again and forgets the failure (Refactor.63.2; otherwise going back to it left the notice up).
+      // Shader 卡住時，正在跑的程式也照送：TD 不重新編譯，只記成正在跑並清掉失敗（否則回到它時提示不會消失）。
+      const runtime = compiled && key !== this.failedKey && (key !== this.runtimeKey || this.status.stuck) ? compiled : undefined;
       this.set({ phase: 'sending', level: 'info', message: compiled ? tr('sync.sending', 'Applying to TD…')
         : tr('sync.sendingGraphOnly', 'Code generation failed; saving only the graph to TD. TD keeps running the last good Shader…') });
       try {
