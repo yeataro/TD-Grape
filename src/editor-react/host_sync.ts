@@ -255,5 +255,15 @@ export class HostSync {
     if (this.status.dirty) return tr('save.donePending', 'TD project saved; new changes are still waiting to be applied.');
     return typeof result.saved === 'string' ? tr('save.done', 'TD project saved: {file}', { file: result.saved }) : tr('save.doneUnnamed', 'TD project saved');
   };
+  // "Also give this Grape OP a new Grape ID" (Refactor.52, Q63): only once everything is in TD, so the
+  // new ID never leaves changes behind. Returns the new ID; switching to it is the shell's.
+  // 換新 Grape ID：所有修改都已在 TD 才換，不會留下沒送到的修改。回傳新 ID；換過去由外殼做。
+  renew = async () => {
+    if (this.pending || this.blocked || this.status.dirty)
+      throw new TextError(tr('identity.renewPending', 'The Grape ID was not changed: some changes are not in TD yet.'));
+    const result = await this.host.call<{ targetId?: string }>('identity', {});
+    if (!/^[a-f0-9]{32}$/.test(result.targetId ?? '')) throw new HostError(replyMismatch);
+    return result.targetId!;
+  };
   dispose() { this.disposed = true; clearTimeout(this.timer); clearTimeout(this.recovery); }
 }

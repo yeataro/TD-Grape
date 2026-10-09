@@ -16,7 +16,7 @@ import { conflictMessage } from './host_sync';
 import { PanelShell } from './PanelShell';
 import { SourcesPanel } from './SourcesPanel';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
-import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, type Shell } from './shell';
+import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, useShell, type Shell } from './shell';
 import { listGrapeOps } from './grape_ops';
 import { sourceNow, describeSource, describeNow, buildLabel, tdLine, type TdIdentity, type DraftSource } from './td_identity';
 import type { Projection, FlowNode, FlowEdge } from './projection';
@@ -107,6 +107,20 @@ function Workspace({ session, waiting, prefs, text, td, opened }: {
   const state = useSyncExternalStore(session?.subscribe ?? idleSubscribe, session?.snapshot ?? idleSnapshot);
   const target = session?.host.target ?? '', draftKey = draftKeyOf(target);
   const tdNow = useRef(td); tdNow.current = td;
+  const shell = useShell();
+  // "Also give this Grape OP a new Grape ID" (Refactor.52, Q63): optional, off by default (human 2026-10-09:
+  // the usual case is the same Grape OP, and a new ID cannot be taken back). Done after the choice is in TD;
+  // then the shell switches to the new ID.
+  // 「順便換一個 Grape ID」：可選、預設不勾（人類：通常是同一份，換了收不回）。選擇送到 TD 後才換，再由外殼換過去。
+  const [renew, setRenew] = useState(false);
+  const decide = async (choice: () => unknown) => {
+    await choice();
+    if (!renew || !session) return;
+    const id = await session.renewId();
+    if (id) shell.choose(id);
+  };
+  const renewBox = <label className="renew-id" title={say(tr('identity.renewHelp', 'Changes the ID of the Grape OP in the TD connected now, the same as its Regenerate ID button. Addresses with the old ID no longer open it.'))}>
+    <input type="checkbox" checked={renew} onChange={event => setRenew(event.target.checked)} />{say(tr('identity.renew', 'Also give this Grape OP a new Grape ID'))}</label>;
   const flow = useReactFlow();
   const [draft, setDraft] = useState(() => {
     if (!session) return null;
@@ -165,9 +179,10 @@ function Workspace({ session, waiting, prefs, text, td, opened }: {
     {session && draft && <div className="draft-notice">{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}
       {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
       <span className="identity-compare"><span>{say(describeSource(earlier?.source))}</span><span>{say(describeNow(td))}</span></span>
-      <button onClick={() => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw new TextError(tr('draft.otherTarget', 'This draft belongs to another Grape OP.')); if (session.restoreDraft(saved.graph)) setDraft(null); } catch (error) { session.notice(error); } }}>{say(tr('draft.restore', 'Restore draft'))}</button>
+      {renewBox}
+      <button onClick={() => void decide(async () => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw new TextError(tr('draft.otherTarget', 'This draft belongs to another Grape OP.')); if (session.restoreDraft(saved.graph)) { setDraft(null); await session.flush(); } } catch (error) { session.notice(error); } })}>{say(tr('draft.restore', 'Restore draft'))}</button>
       <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>{say(tr('draft.downloadEarlier', 'Download earlier draft'))}</button>
-      <button onClick={() => { setDraft(null); }}>{say(tr('draft.useTd', "Use TD's graph"))}</button>
+      <button onClick={() => void decide(() => setDraft(null))}>{say(tr('draft.useTd', "Use TD's graph"))}</button>
     </div>}
     <main>
       {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
@@ -175,8 +190,9 @@ function Workspace({ session, waiting, prefs, text, td, opened }: {
         <span>{say(conflictMessage)}</span>
         <span className="identity-compare"><span>{say(tr('conflict.opened', 'Opened from: {td}', { td: tdLine(opened) }))}</span>
           <span>{say(tr('conflict.tdNow', 'TD now: {td}', { td: tdLine(td) }))}</span></span>
-        <button className="primary" onClick={() => void session.overwrite()}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
-        <button onClick={() => void session.useRemote()}>{say(tr('conflict.useTd', 'TD'))}</button>
+        {renewBox}
+        <button className="primary" onClick={() => void decide(session.overwrite)}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
+        <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button>
       </div>}
       <div className="canvas" inert={!!draft}>
         {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} />

@@ -116,6 +116,7 @@ header button.target:hover { border-color: #4e445c; }
 header .project-file { color: #c9bedb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30%; }
 header .project-file + .target { flex: 1; }
 .identity-compare { display: flex; flex-direction: column; font-size: 12px; opacity: .85; }
+.renew-id { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
 .empty-canvas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   background: repeating-linear-gradient(45deg, #ffffff05 0 12px, transparent 12px 24px); color: #c9bfd6; text-align: center; padding: 24px; }
 .switch-dialog { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 40; max-width: 460px; padding: 16px; display: flex; flex-wrap: wrap; gap: 8px;

@@ -486,5 +486,9 @@ export class Editor {
   save = async () => {
     try { this.tell('info', await this.sync.save()); } catch (error) { this.notice(error); }
   };
+  /** A new Grape ID for this Grape OP in TD (Refactor.52); null when it was not changed. 換新 Grape ID。 */
+  renewId = async () => {
+    try { return await this.sync.renew(); } catch (error) { this.notice(error); return null; }
+  };
   dispose() { this.disposed = true; this.sync.dispose(); this.live.dispose(); this.listeners.clear(); this.tdListeners.clear(); this.selectionListeners.clear(); }
 }

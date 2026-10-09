@@ -41,7 +41,7 @@ export class HostClient {
       ? () => new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + this.root + 'live') as unknown as LiveSocket
       : undefined);
   }
-  async call<T>(action: 'state' | 'apply' | 'save', body?: unknown): Promise<T> {
+  async call<T>(action: 'state' | 'apply' | 'save' | 'identity', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);
     try {
       const response = await this.request(this.root + action, { method: body === undefined ? 'GET' : 'POST',

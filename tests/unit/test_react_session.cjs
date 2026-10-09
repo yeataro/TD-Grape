@@ -196,6 +196,25 @@ test('a build change on apply is not a conflict, and replies say which TD answer
   await session.flush(); assert.equal(seen.length, 1, 'nothing is resent after the refusal');
 });
 
+// Refactor.52: "also give this Grape OP a new Grape ID" only once everything is in TD.
+// 換新 Grape ID 只在所有修改都已送到 TD 之後。
+test('a new Grape ID is asked only when nothing is left unsent', async t => {
+  let down = false;
+  const { session, calls } = open(t, async (action, body, remote) => {
+    if (down) return notResponding();
+    if (action === 'identity') return { targetId: 'd'.repeat(32) };
+    return strictHost()(action, body, remote);
+  });
+  down = true; session.transact('edit', net => setValue(net, 'a', 9)); await session.flush();
+  assert.equal(await session.renewId(), null, 'refused while a change is not in TD');
+  assert.equal(session.snapshot().message.code, 'identity.renewPending');
+  assert.ok(!calls.some(c => c.action === 'identity'));
+  down = false; await session.check();
+  await until(() => !session.snapshot().dirty);
+  assert.equal(await session.renewId(), 'd'.repeat(32));
+  assert.equal(calls.filter(c => c.action === 'identity').length, 1);
+});
+
 // Host that enforces baseRevision like host_api (409 on a stale revision).
 const strictHost = beforeApply => async (action, body, remote) => {
   if (action === 'state') return remote.get();

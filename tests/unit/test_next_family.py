@@ -310,6 +310,20 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(api.dispatch('GET', '/api/' + 'b' * 32 + '/state')[1]['td'], td)
         self.assertEqual(api.dispatch('GET', '/api/nothing')[1]['td'], td)
 
+    def test_new_grape_id_on_request(self):
+        # Refactor.52 (Q63): the person chose "also give this Grape OP a new Grape ID". Same as Regenerate ID;
+        # graph_meta follows, the graph stays; a damaged Grape OP is refused before anything changes.
+        fam, comp = family()
+        assign = Mock(side_effect=lambda c: setattr(c.par, 'Grapeid', Par('d' * 32)) or 'd' * 32)
+        comp.ops['GrapeControls/identity'] = SimpleNamespace(module=SimpleNamespace(assign=assign))
+        code, result = self.api(fam).dispatch('POST', '/api/' + TARGET + '/identity', {})
+        self.assertEqual((code, result['targetId']), (200, 'd' * 32))
+        self.assertEqual((meta(comp)['targetId'], comp.ops['graph'].text), ('d' * 32, '{"a":1}'))
+        old, other = family(stored='{"schemaVersion": 1, "graph": {}}')
+        other.ops['GrapeControls/identity'] = SimpleNamespace(module=SimpleNamespace(assign=assign))
+        self.assertEqual(self.api(old).dispatch('POST', '/api/' + TARGET + '/identity', {})[0], 422)
+        self.assertEqual(assign.call_count, 1)
+
     def test_build_changed_is_not_a_conflict(self):
         code, result = self.api(family()[0]).dispatch('POST', '/api/' + TARGET + '/apply', {**request(run=runtime()), 'catalogHash': 'e' * 64})
         self.assertEqual((code, result['code']), (409, 'build_changed'))

@@ -73,6 +73,9 @@ class HostAPI:
             return result
         # Uniform values while they change go over the WebSocket since Uniform D2 (Q53), not HTTP.
         # 改變中的 Uniform 值從 D2 起走 WebSocket，不走 HTTP。
+        # The person chose "also give this Grape OP a new Grape ID" (Refactor.52, Q63). 使用者勾了換新 ID。
+        if method == 'POST' and action == 'identity':
+            return {'targetId': family.regenerate()}
         if method == 'POST' and action == 'save':
             return {'saved': self.save_project()}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

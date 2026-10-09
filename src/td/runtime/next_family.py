@@ -220,6 +220,16 @@ class NextFamily:
             self.status('identity-adopted', 'The stored graph now follows this Grape ID.', previousTargetId=previous)
         return meta, text
 
+    def regenerate(self):
+        """A new Grape ID, the same as the Grape OP's Regenerate ID button, asked by the editor when people
+        decide two copies are different (Refactor.52, design-interview Q63). The graph and Shader stay;
+        graph_meta follows the new ID. 編輯器要求換新 Grape ID（等同 Regenerate ID）；圖與 Shader 不動。"""
+        self.stored()  # a damaged Grape OP is refused before anything changes 壞掉的先拒絕，什麼都不改
+        ident = self.comp.op('GrapeControls/identity').module.assign(self.comp)
+        notify(self.comp, 'took a new Grape ID from the editor.')
+        self.stored()
+        return ident
+
     def state(self):
         meta, text = self.stored()
         return {'revision': meta['document']['revision'], 'document': text,
