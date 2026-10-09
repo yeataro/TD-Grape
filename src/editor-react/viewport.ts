@@ -49,11 +49,30 @@ const wheelStep = (event: WheelEvent) => -event.deltaY * (event.deltaMode === 1 
  * interrupt 忘掉目標（觸控接手），detach 全部還回去。 */
 let damping: { interrupt(): void } | null = null;  // the canvas's damper while one is attached 掛著的阻尼
 export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setViewport'>, element: HTMLElement) {
-  let target: Viewport | null = null, until = 0;
-  const base = () => target && performance.now() < until ? target : flow.getViewport();
-  const glide = (next: Viewport) => {
-    target = next; until = performance.now() + DAMPING_MS;
-    void flow.setViewport(next, { duration: DAMPING_MS, ...glide });
+  // Our own small loop, once a frame and only while moving, as the legacy stepCanvasMotion: each frame the view goes part
+  // of the way to the target, more as the time left runs out, and React Flow is told the result (setViewport, no
+  // re-render). React Flow's transitions cannot be used here: a new one only starts on the next frame, so restarting one
+  // on every mouse move (hundreds a second) kept the view still until the mouse stopped (human 2026-10-09: "it builds up,
+  // then lets go"). 我們自己每格一次的小迴圈，只在移動時跑，同舊產品：每格往目標走一段，剩的時間越少走得越多，結果交給 React Flow
+  // （setViewport，不重新渲染）。這裡不能用 React Flow 的過渡：新的過渡要下一格才開始，每次滑鼠移動（一秒上百次）就重開一次，
+  // 畫面會停著直到滑鼠停下（人類：「累積一個量再釋放」）。
+  let target: Viewport | null = null, frame = 0, last = 0, end = 0;
+  const base = () => target ?? flow.getViewport();
+  const step = (now: number) => {
+    frame = 0;
+    if (!target) return;
+    const v = flow.getViewport(), progress = Math.min(1, Math.max(0, (now - last) / Math.max(1, end - last)));
+    const amount = glide.ease(progress), done = progress >= 1;
+    void flow.setViewport(done ? target : { x: v.x + (target.x - v.x) * amount, y: v.y + (target.y - v.y) * amount,
+      zoom: v.zoom + (target.zoom - v.zoom) * amount });
+    last = Math.max(last, now);
+    if (done) target = null; else frame = requestAnimationFrame(step);
+  };
+  const go = (next: Viewport) => {
+    const now = performance.now();
+    if (!target) last = now;
+    target = next; end = now + DAMPING_MS;
+    if (!frame) frame = requestAnimationFrame(step);
   };
   const wheel = (event: WheelEvent) => {
     if ((event.target as Element).closest('.nowheel')) return;
@@ -61,7 +80,7 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
     const from = base(), zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, from.zoom * 2 ** wheelStep(event)));
     const box = element.getBoundingClientRect(), x = event.clientX - box.left, y = event.clientY - box.top;
     // The point under the pointer stays where it is. 游標下的那一點不動。
-    glide({ zoom, x: x - (x - from.x) * zoom / from.zoom, y: y - (y - from.y) * zoom / from.zoom });
+    go({ zoom, x: x - (x - from.x) * zoom / from.zoom, y: y - (y - from.y) * zoom / from.zoom });
   };
   // A background drag: where the view was when it started plus how far the pointer went. 拖背景：開始時的位置加上游標移動的距離。
   let drag: { id: number; x: number; y: number; from: Viewport; moved: boolean } | null = null;
@@ -83,7 +102,7 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
     const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
     if (!drag.moved && Math.hypot(dx, dy) < 3) return;
     drag.moved = true;
-    glide({ zoom: drag.from.zoom, x: drag.from.x + dx, y: drag.from.y + dy });
+    go({ zoom: drag.from.zoom, x: drag.from.x + dx, y: drag.from.y + dy });
   };
   const up = (event: PointerEvent) => {
     if (!drag || event.pointerId !== drag.id) return;
@@ -100,12 +119,13 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
   element.addEventListener('pointermove', move);
   element.addEventListener('pointerup', up);
   element.addEventListener('pointercancel', up);
-  const interrupt = () => { target = null; };
+  const interrupt = () => { target = null; cancelAnimationFrame(frame); frame = 0; };
   damping = { interrupt };
   return {
     interrupt,
     detach: () => {
       if (damping?.interrupt === interrupt) damping = null;
+      interrupt();
       element.removeEventListener('wheel', wheel, { capture: true });
       element.removeEventListener('pointerdown', down, options);
       element.removeEventListener('mousedown', press, options);
