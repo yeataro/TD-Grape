@@ -171,7 +171,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .node-title .select-button { background: none; border: 0; padding: 2px 0 2px 4px; color: var(--text-secondary); font-weight: 600; }
 .node-title .select-button:hover { color: var(--text-strong); }
 .node-body { padding: 10px 0; display: flex; flex-direction: column; gap: 2px; }
-.node-body > .value-row, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
+/* Everything in a node body keeps the same side inset (human 2026-10-09: Math's rows and button ran past it).
+   節點本體裡的每一種東西左右都留同樣的內距（人類：Math 的控制列與按鈕超出去了）。 */
+.node-body > :is(.value-row, .control-field, .control-row, .hint, button) { margin: 0 14px; }
+.node-body > button { height: var(--io-field); padding: 0 8px; }
 /* Every input and output is one IO row, the same height wired or not, like a table (value-input.md); only an expanded
    value grows, one row per component. The port stays on the first row. 每個輸入輸出一行、有沒有接線都一樣高，像表格；
    只有展開的值會變高（一個分量一行）。接孔永遠在第一行。 */
@@ -253,7 +256,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
    節點裡的控制項也是一個輸入輸出區塊的高度，框和數值框一樣高（同一個節奏，像表格）。 */
 .control-field { display: flex; gap: 8px; align-items: center; min-height: var(--io-row); }
 .control-field .select-button { flex: 1; min-width: 0; height: var(--io-field); padding: 0 8px; }
-.control-row { display: flex; gap: 5px; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
+.control-row { display: flex; gap: 8px; align-items: center; min-height: var(--io-row); } .control-row > .control-field { flex: 1; min-width: 0; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
 .grape-node .hint, .grape-node .ghost-note { contain: inline-size; }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
 .react-flow__controls button:hover { background: var(--surface-control-hover); }
