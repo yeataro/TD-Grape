@@ -7,6 +7,7 @@ import { appearance, appearanceSubscribe, currentMode, currentPorts, currentSize
 import type { Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
+import { frameNodes } from './viewport';
 
 // The editor's bars (Refactor.53; work/in-place-refactor-design/floating-panels.md): the title bar, the location
 // bar over the network, the network's own toolbar and the foot bar. Each is a row of the shared controls
@@ -92,7 +93,7 @@ export function NetworkBar({ session, prefs, onGlsl }: {
         <IconButton icon="delete" danger label={tr('selection.delete', 'Delete selected')} disabled={!nodes.length && !edges.length}
           onClick={() => void flow.deleteElements({ nodes, edges })} />
         <IconButton icon="fitSelection" label={tr('selection.fit', 'Frame selected')} disabled={!nodes.length}
-          onClick={() => void flow.fitView({ nodes: nodes.map(node => ({ id: node.id })), duration: 333, padding: .2, maxZoom: 1 })} />
+          onClick={() => frameNodes(flow, nodes.map(node => node.id))} />
       </ToolGroup>
       <ToolGroup>
         <IconButton icon="boxSelect" label={tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)')} mode

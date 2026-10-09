@@ -33,6 +33,7 @@ import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 import { readPreference, writePreference } from './preferences';
+import { FRAME_MS, frameNodes } from './viewport';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
@@ -78,14 +79,14 @@ function ZoomReadout() {
       aria-label={say(tr('canvas.zoom', 'Zoom'))} title={say(tr('canvas.zoom', 'Zoom'))}
       onClick={event => setAnchor(anchor ? null : event.currentTarget)}>{zoom}%</button>
     {anchor && <DropdownMenu anchor={anchor} label={say(tr('canvas.zoom', 'Zoom'))} fit onClose={() => setAnchor(null)}
-      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100) }))} />}
+      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: FRAME_MS }) }))} />}
   </>;
 }
 const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, stage, onCreate, onDropChoice }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; stage: string;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
 }) {
-  const options = useOptions();
+  const options = useOptions(), flow = useReactFlow();
   // React Flow's own colours follow the theme (COLOR_SYSTEM.md). React Flow 自己的顏色跟著主題。
   const theme = useSyncExternalStore(appearanceSubscribe, currentTheme);
   // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human
@@ -140,6 +141,12 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       onDragOver={event => { if (event.dataTransfer.types.includes(DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }}
       onDrop={event => { const id = event.dataTransfer.getData(DRAG_TYPE); if (id) { event.preventDefault(); onDropChoice(id, { x: event.clientX, y: event.clientY }); } }}
       onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
+      // A double-click on a node's plain area frames it (human 2026-10-09; new, the legacy editor only entered subgraphs);
+      // on its fields, buttons and ports it does what it did. 雙擊節點的非互動區＝對準它（人類；新的）；在欄位、按鈕、接孔上照舊。
+      onNodeDoubleClick={(event, node) => {
+        if (!(event.target as Element).closest('input, textarea, button, select, [contenteditable="true"], .react-flow__handle, .value-row'))
+          frameNodes(flow, [node.id]);
+      }}
       // Selection is decided by the session, not React Flow (Refactor.49; reported to the human as an
       // exception): nodes on press (RightDragSelect), wires on click, blank canvas clears.
       // 選取由 session 決定、不是 RF（R.49，已向人類報告的例外）：節點在按下時、接線在點擊時、點空白清掉。
@@ -254,6 +261,13 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
       else if (!draft && event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey
         && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
         event.preventDefault(); setCreating({ screen: middle() });
+      }
+      // F frames the selection (all when none), H frames all, on the network only (legacy graph_ui.js:2545, selection_ui.js:92).
+      // F 對準選取（沒選就全部）、H 對準全部，只在網路區（同舊產品）。
+      else if (!draft && ['f', 'h'].includes(event.key.toLowerCase()) && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey
+        && (element === document.body || element === document.documentElement || element.closest('.react-flow'))) {
+        event.preventDefault();
+        frameNodes(flow, event.key.toLowerCase() === 'f' ? flow.getNodes().filter(node => node.selected).map(node => node.id) : undefined);
       }
     };
     // While one of our sources or nodes is dragged, the pointer shows "add" everywhere, never "not allowed" (human
