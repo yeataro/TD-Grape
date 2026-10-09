@@ -69,6 +69,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .network-bar { position: absolute; z-index: 6; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
 .network-bar-group { display: flex; align-items: center; gap: 6px; padding: 3px; border-radius: 8px; pointer-events: auto;
   background: var(--surface-floating); border: 1px solid var(--border); }
+.network-bar-stages { display: flex; align-items: center; pointer-events: auto; }
 .canvas-caption { display: flex; flex-direction: column; gap: 2px; color: var(--text-muted); font-size: 11px; pointer-events: none; }
 .canvas-caption strong { letter-spacing: .12em; text-transform: uppercase; font-size: 10px; }
 .zoom-readout { display: grid; place-items: center; min-width: 44px; font-size: 11px; color: var(--text-muted); background: var(--surface-control); }

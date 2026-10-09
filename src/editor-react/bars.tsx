@@ -73,7 +73,9 @@ export function NetworkBar({ session, prefs, onGlsl }: {
   const nodes = state?.projection.nodes.filter(node => node.selected) ?? [], edges = state?.projection.edges.filter(edge => edge.selected) ?? [];
   const stages = session?.stageNames() ?? [];
   return <div className="network-bar">
-    <div className="network-bar-group">
+    {/* The stages float on the canvas by themselves, with no toolbar box (legacy; human 2026-10-09).
+        Stage 切換直接浮在畫布上，沒有工具列外框（照舊產品，人類）。 */}
+    <div className="network-bar-stages">
       {/* Only the stages this graph has (human 2026-10-09); only Pixel can be edited so far.
           只顯示這張圖有的 Stage（人類）；目前只能編輯 Pixel。 */}
       {stages.length > 0 && <Segmented label={tr('stage.label', 'Stage')} value="pixel" onChange={() => {}}
