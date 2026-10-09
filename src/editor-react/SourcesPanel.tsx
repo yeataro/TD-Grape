@@ -69,7 +69,7 @@ export function SourcesPanel({ declarations, references }: {
         { name: core.declarationLabel(declarations, confirming), count: references[confirming.id] ?? 0 })}
       confirmLabel={tr('sources.remove', 'Delete')} onCancel={() => setConfirming(null)}
       onConfirm={() => { session.removeDeclaration(confirming.id); setConfirming(null); }} />}
-    <FoldSection title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
+    <FoldSection remember="sources.textureInputs" open={false} title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
       hint={tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.')}
       actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
     {inputs.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
@@ -84,7 +84,7 @@ export function SourcesPanel({ declarations, references }: {
     </SourceCard>)}
     </FoldSection>
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}
-    <FoldSection title={<>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</>}
+    <FoldSection remember="sources.uniforms" title={<>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</>}
       hint={tr('sources.uniformsHint', 'Values TD reads as parameters of the GLSL OP: colours on its Colors page, the rest on Vectors. Changing a value does not recompile.')}
       actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
       <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Color'))}</button></>}>
@@ -104,7 +104,7 @@ export function SourcesPanel({ declarations, references }: {
     {/* Time (preset Uniforms, Q61): all six listed, unused ones as grey cards (created by Create or by dragging one onto the canvas).
         Name and type are locked here; in TD it is an ordinary Uniform row with an expression.
         時間（預設 Uniform）：6 筆都列出，沒用到的是灰色卡片（Create 或拖到畫布時建立）。名字型別在這裡鎖住；在 TD 是一般的 Uniform 列。 */}
-    <FoldSection title={<>{say(tr('sources.time', 'Time'))}{count(core.uniformPresets.filter(preset => presetOf(preset.entry)).length, 'uniform')}</>}
+    <FoldSection remember="sources.time" open={false} title={<>{say(tr('sources.time', 'Time'))}{count(core.uniformPresets.filter(preset => presetOf(preset.entry)).length, 'uniform')}</>}
       hint={tr('sources.timeHint', 'Uniforms that TouchDesigner drives with an expression. The name is fixed; one of each per graph. Remove the expression in TD to set the value yourself.')}>
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
@@ -117,7 +117,7 @@ export function SourcesPanel({ declarations, references }: {
           <div className="builtin-row"><code>{preset.name}</code><small>{preset.expression}</small>
             <button onClick={() => session.createPreset(preset.entry)}>{say(tr('sources.create', 'Create'))}</button></div></UnusedCard>; })}
     </FoldSection>
-    <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
+    <FoldSection remember="sources.constants" open={false} title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
       hint={tr('sources.constantsHint', 'Fixed values written into the shader. Changing one recompiles it.')}
       actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
@@ -130,12 +130,17 @@ export function SourcesPanel({ declarations, references }: {
         commit={value => session.setDeclarationValue(declaration.id, value)} />
     </SourceCard>)}
     </FoldSection>
-    <FoldSection title={<>{say(tr('sources.tdValues', 'TD built-in values'))}{count(builtins.length, 'tdValue')}</>}
+    <FoldSection remember="sources.tdValues" open={false} title={<>{say(tr('sources.tdValues', 'TD built-in values'))}{count(builtins.length, 'tdValue')}</>}
       hint={tr('sources.tdValuesHint', 'Values TouchDesigner already provides to the shader. No setup needed; they also work inside subgraphs.')}>
-    {/* Cards like the others, nothing to open (human 2026-10-09); the type in plain text as above. 和其他一樣的卡片、沒有可展開的（人類）；型別同上用一般文字。 */}
+    {/* Cards like the others; the type in plain text as above. Open, the description, which is what it is, and TD's page
+        for it (human 2026-10-09; as the legacy cards). 和其他一樣的卡片；型別同上用一般文字。打開是它的說明（這才是它的內容）
+        和 TD 的說明頁（人類；同舊產品卡片）。 */}
     {builtins.map(entry => <SourceCard key={entry.id} group="runtime" refKey={'tdValue:' + entry.id} choice={'tdValue:' + entry.id}
       uses={references['tdValue:' + entry.id] ?? 0} onAdd={() => session.placeTdValue(entry.id, center())}
-      head={<div className="builtin-row" title={say(tdValueHint(entry))}><code>{entry.name}</code><small>{entry.type}</small></div>} />)}
+      head={<div className="builtin-row"><code>{entry.name}</code><small>{entry.type}</small></div>}>
+      <p className="source-text">{say(tdValueHint(entry))}
+        {entry.helpUrl && <> <a href={entry.helpUrl} target="_blank" rel="noreferrer">{say(tr('sources.tdDocs', 'TouchDesigner docs'))}</a></>}</p>
+    </SourceCard>)}
     </FoldSection>
   </section>;
 }

@@ -167,8 +167,20 @@ export function AlignedRows({ rows, className }: { rows: readonly (readonly (Mes
 // `hint`: what the section is for, shown when the pointer rests on its title, not as a paragraph that always takes room
 // (human 2026-10-09: the wrapping hints were annoying; later the ⓘ went too, the title says it). Later the Help panel can
 // take them. hint：這一段是做什麼的，滑過標題時顯示，不常駐佔位（人類：換行的說明很煩；之後 ⓘ 也拿掉，由標題帶）。之後可搬到 Help 面板。
-export function FoldSection({ title, actions, hint, children }: { title: ReactNode; actions?: ReactNode; hint?: Message | string; children: ReactNode }) {
-  const [open, setOpen] = useState(true);
+// `remember`: a name to keep it open or closed by, in this browser (a personal preference; human 2026-10-09: the editor
+// remembers); `open`: how it starts the first time. remember：記住開關用的名字，存在這個瀏覽器（個人偏好；人類：編輯器要記得）；
+// open：第一次是開還是關。
+export function FoldSection({ title, actions, hint, children, remember, open: initial = true }: {
+  title: ReactNode; actions?: ReactNode; hint?: Message | string; children: ReactNode; remember?: string; open?: boolean;
+}) {
+  const key = remember && 'grape-fold-' + remember;
+  const [open, setOpenState] = useState(() => {
+    try { const stored = key ? localStorage.getItem(key) : null; return stored === null ? initial : stored === 'open'; } catch { return initial; }
+  });
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    if (key) try { localStorage.setItem(key, next ? 'open' : 'closed'); } catch { /* storage may be blocked */ }
+  };
   return <section className="fold-section">
     <header className="fold-heading"><span className="fold-title" title={hint && say(hint)}><button type="button" className="fold-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
       aria-description={hint && say(hint)}><Icon name="chevronDown" />{title}</button></span>

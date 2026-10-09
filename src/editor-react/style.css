@@ -256,6 +256,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: none; }
 .builtin-row small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
 .builtin-row button { flex: none; }
+/* A card's text when open (a TD value's description), on the IO-row rhythm. 卡片打開後的文字（TD 內建值的說明），照 IO 列的節奏。 */
+.source-text { margin: 0; padding-block: var(--io-inset); color: var(--text-secondary); }
 .port-fallback { color: var(--text-muted); font-size: var(--font-sm); line-height: var(--line-sm); padding-left: 4px; }
 /* What drives a Uniform component in TD (Uniform D1), in TD's mode colours. TD 上驅動分量的東西，用 TD 的模式顏色。 */
 .td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: var(--font-sm); line-height: var(--line-sm); border-radius: 4px; background: var(--overlay-down); }

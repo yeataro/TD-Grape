@@ -17,6 +17,11 @@
   - 驗證：15 張、高 39px、色條為 runtime 色、名稱與時間區對齊、TD_NUM_2D_INPUTS 顯示 1。
 - 第 3–5 步（子 OP Samples Clone 主組件那份、out label、照 label 找）尚未做。
 - 拖曳來源或節點時不顯示禁止符號（人類）：只有拖我們的東西時，整頁都標成「可以放」、游標顯示新增；只有畫布真的接受，放在別處什麼都不做。驗證：模擬的 dragover 在面板、標題列、畫布都被接受，拖一般文字則不受影響；游標實際長相未驗證（模擬事件讀不到），待人類用滑鼠試。
+- TD 內建值卡片打開是它的說明（這才是它的內容，人類），加「TouchDesigner docs」連結（新分頁開官方說明）；說明和連結都來自既有的 `td_values` 表。
+- 共用來源的區段預設只開 Uniforms，開關記在這個瀏覽器（人類：編輯器要記得）。`FoldSection` 加 `remember`、`open`。
+  - 驗證：第一次只有 Uniforms 展開；開關會存起來、重新整理後照存的狀態顯示。
+  - 測試時人類也在同一分頁操作，助手多點了一次 TD built-in values，已告知人類。
+  - 之後會併進偏好儲存系統。
 - 整理一次（人類同意；畫面不變）：
   - 卡片拆到 `SourceCard.tsx`（卡片、名稱框、拖曳、未建立的卡片 `UnusedCard`，原 `DragRow`），預覽拆到 `TexturePreview.tsx`；`SourcesPanel.tsx` 267→142 行。
   - 樣式：`source-row` 併進 `source-card`（兩個名字指同一個東西、規則互相覆蓋），刪掉沒人用的 `.source-actions`、`.source-flag`；`.source-body` 的間距原本寫了兩次（0 被 6px 蓋掉），統一為垂直節奏的 0（本體只有一個子元素，看不出差別）。

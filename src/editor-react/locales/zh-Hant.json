@@ -218,6 +218,7 @@
   "sources.selectReferences": "選取引用（{count}）",
   "sources.snapshot": "快照・非即時",
   "sources.snapshotHint": "打開這張卡片那一刻拍的；收起再打開會拍新的。",
+  "sources.tdDocs": "TouchDesigner 說明",
   "sources.tdValues": "TD 內建值",
   "sources.tdValuesHint": "TouchDesigner 已經提供給 Shader 的值。不用設定；子圖裡也能用。",
   "sources.textureInputs": "TOP 貼圖輸入",

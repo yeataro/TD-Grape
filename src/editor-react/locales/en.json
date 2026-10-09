@@ -218,6 +218,7 @@
   "sources.selectReferences": "Select references ({count})",
   "sources.snapshot": "Snapshot · not live",
   "sources.snapshotHint": "Taken when this card opened; close and open it again for a new one.",
+  "sources.tdDocs": "TouchDesigner docs",
   "sources.tdValues": "TD built-in values",
   "sources.tdValuesHint": "Values TouchDesigner already provides to the shader. No setup needed; they also work inside subgraphs.",
   "sources.textureInputs": "TOP texture inputs",
