@@ -15,8 +15,12 @@ export const frameMs = () => readPreference('canvas.frameGlide') === 'off' ? 0 :
 export const MIN_ZOOM = .15, MAX_ZOOM = 2.5;
 
 /** Frame these nodes, or all of them when none are given (legacy fitSelection / fit). 對準這些節點；沒給就對準全部。 */
-export const frameNodes = (flow: Pick<ReactFlowInstance, 'fitView'>, ids?: readonly string[]) =>
+export const frameNodes = (flow: Pick<ReactFlowInstance, 'fitView'>, ids?: readonly string[]) => {
+  // A framing move replaces any damped target, so the next wheel tick starts from where framing goes.
+  // 對準取代阻尼的目標，下一下滾輪從對準後的位置開始算。
+  damping?.interrupt();
   void flow.fitView({ ...(ids?.length ? { nodes: ids.map(id => ({ id })) } : {}), duration: frameMs(), padding: .2, maxZoom: 1 });
+};
 
 // Canvas damping (Refactor.58.2 trial; legacy canvasDamping 150 ms, app.js:545–580; human 2026-10-09: clean, fast, and the
 // native handling and ours must never both act). While it is on, the mouse is ours alone and React Flow's own transition
@@ -40,6 +44,7 @@ const wheelStep = (event: WheelEvent) => -event.deltaY * (event.deltaMode === 1 
 /** Take the mouse's wheel and background drag over on this element (React Flow's wrapper); `interrupt` forgets the
  * target (touch took over), `detach` gives everything back. 在這個元素（React Flow 外框）上接管滑鼠滾輪與拖背景；
  * interrupt 忘掉目標（觸控接手），detach 全部還回去。 */
+let damping: { interrupt(): void } | null = null;  // the canvas's damper while one is attached 掛著的阻尼
 export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setViewport'>, element: HTMLElement) {
   let target: Viewport | null = null, until = 0;
   const base = () => target && performance.now() < until ? target : flow.getViewport();
@@ -92,9 +97,12 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
   element.addEventListener('pointermove', move);
   element.addEventListener('pointerup', up);
   element.addEventListener('pointercancel', up);
+  const interrupt = () => { target = null; };
+  damping = { interrupt };
   return {
-    interrupt: () => { target = null; },
+    interrupt,
     detach: () => {
+      if (damping?.interrupt === interrupt) damping = null;
       element.removeEventListener('wheel', wheel, { capture: true });
       element.removeEventListener('pointerdown', down, options);
       element.removeEventListener('mousedown', press, options);
