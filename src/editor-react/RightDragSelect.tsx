@@ -66,8 +66,12 @@ export function RightDragSelect({ session, boxSelect = false, children }: { sess
   const select = (start: Drag, event: PointerEvent) => {
     const a = flow.screenToFlowPosition({ x: Math.min(start.x, event.clientX), y: Math.min(start.y, event.clientY) });
     const b = flow.screenToFlowPosition({ x: Math.max(start.x, event.clientX), y: Math.max(start.y, event.clientY) });
-    // partially = true: touching the box is enough. 碰到即算。
-    const hits = new Set(flow.getIntersectingNodes({ x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y }, true).map(node => node.id));
+    // partially = true: touching the box is enough. At least one screen pixel each way: React Flow counts every node as
+    // inside a box of no area (its "overlap >= box area" test is 0 >= 0), so a box dragged out and back lit up every node
+    // (human 2026-10-09). 碰到即算。寬高至少一個螢幕像素：React Flow 把面積 0 的框當成包住所有節點（重疊 >= 框面積，0 >= 0），
+    // 框拖出去又拖回原點時所有節點都亮了（人類）。
+    const pixel = 1 / flow.getZoom();
+    const hits = new Set(flow.getIntersectingNodes({ x: a.x, y: a.y, width: Math.max(b.x - a.x, pixel), height: Math.max(b.y - a.y, pixel) }, true).map(node => node.id));
     for (const id of hits) if (!start.touched.includes(id)) start.touched.push(id); // in the order touched 依碰到的順序
     const result = new Set([...start.previous, ...hits]);
     // Cards redraw only when a node enters or leaves the box, not on every move (the legacy editor's
