@@ -336,5 +336,6 @@
   "uniformPreset.deltaTime": "Seconds from the previous frame to this one (all of TouchDesigner).",
   "uniformPreset.frame": "Frame on this Grape OP's timeline; stops and loops with the timeline.",
   "uniformPreset.frameStep": "Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames.",
-  "uniformPreset.time": "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime."
+  "uniformPreset.time": "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime.",
+  "value.expand": "Show each component on its own row"
 }
