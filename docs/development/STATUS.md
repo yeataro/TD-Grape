@@ -2,6 +2,22 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.52 — 連線的身分：並排資訊讓人決定 — 2026-10-09
+
+照 workspace `work/in-place-refactor-design/connection-identity.md` 第七節（`next-rounds.md` 第 10 項）。方向（design-interview Q63，人類定）：**不自動判斷是不是同一個 TD**，充實資訊、讓使用者自己比對決定；系統自己只看 Grape ID（草稿本來就依 Grape ID 分開）。
+
+- **TD 每個回覆都帶「哪個 TD 回的」**：[host_api.py](../../src/td/runtime/host_api.py) 在每個回覆（含錯誤、找不到目標）加 `td: {file, build}`，由 [grape_manager_ext.py](../../src/td/runtime/grape_manager_ext.py) 提供 `project.name`（檔名本身就帶增量存檔的版號，例如 `TD-Grape-dev.89.toe`）與 `app.build`。`/api/shaders` 原本的 `projectFile` 改成同一個 `td`。
+- **頁首**（照舊，legacy `src/editor/app.js:54–58`；人類截圖）：專案檔名放在 Grape OP 路徑**前面**，滑鼠停留顯示 TD 版本（新行為，人類：TD 版本要列）。沒開圖時也顯示（開頁時問一次 `/api/shaders`）。
+- **草稿記下來源**（新行為）：[td_identity.ts](../../src/editor-react/td_identity.ts)。瀏覽器草稿、切換時留的草稿、下載的草稿都帶 `source: {file, build, url, time}`（url 含 port；time 是最後寫入的時間）。
+- **並排比對**（新行為，只擺資訊、不判斷不擋）：「找到之前的草稿」顯示「草稿：檔名 · TD 版本 · 時間 · 網址」與「現在連到：…」；衝突浮窗顯示「開圖時：…」與「TD 現在：…」。R.52 之前的草稿顯示「來源不明」。
+- **建置不同不再說成衝突**：[next_family.py](../../src/td/runtime/next_family.py) 的 `BuildChanged`（代號 `build_changed`）；[host_sync.ts](../../src/editor-react/host_sync.ts) 收到後說「這一頁和 TD 裡的 TD-Grape 建置不同（多半是 TD-Grape 更新了）。請重新整理這一頁；還沒送出的修改會留成草稿」，不出版本選擇。開圖與重連本來就說對，只有套用時說錯。
+- **「順便換一個 Grape ID」**（新能力，人類 10-09 同意；**可選、預設不勾**）：草稿提示與衝突浮窗各一個勾選框。勾了之後照常做選的那件事，送到 TD 後，TD 對**現在連到的這個** Grape OP 做和 Regenerate ID 一樣的事（`NextFamily.regenerate`，用 Grape OP 內的 `GrapeControls/identity`；圖與 Shader 不動、`graph_meta` 跟著新 ID），外殼再換到新 ID 的網址（不重新載入）。還有沒送到的修改就不換（`identity.renewPending`）。
+- **驗證**：
+  - 自動測試：Python 58（其中 next_family 24：每個回覆都帶 td、建置不同回 `build_changed` 不是衝突、換 ID 的請求與壞掉的 OP 先拒絕）、editor 58（清單帶 td、套用遇到建置不同不是衝突且回覆的 td 送到頁面、換 ID 只在沒有未送修改時）、core 140。
+  - 真實 TD 2025.33230＋內建瀏覽器：頁首 `TD-Grape-dev.89.toe  /project1/Grape_TOP1`、提示「TD 2025.33230」；沒開圖時頁首也有檔名；放一份「從 port 9980 來的草稿」→ 兩行並排；拖一個節點 → 寫進瀏覽器的草稿帶檔名、版本、網址、時間；用另一個請求先送一版造成衝突 → 浮窗兩行並排，選編輯端解掉、拖曳已復原；對 TD 送建置不同的請求 → 409 `build_changed`、版本號沒動；複製一份暫時的 `r52_probe` → 放草稿、勾「順便換一個 Grape ID」、按「使用 TD 文件」→ 網址換到新 ID、TD 的 Grapeid 與 `graph_meta` 都換了、Grape_TOP1 沒變、舊網址顯示「不在目前的專案裡」；`r52_probe` 已刪。
+- **限制**：版面偏擠（草稿提示、衝突浮窗、頁首），人類 10-09：版面之後再調。換了 port 把草稿帶到新視窗（情境 2）沒做，仍只能下載草稿，另議。
+- commit：`7047721`（TD 身分資訊、頁首、草稿來源、並排、建置不同）、`ebafdb2`（換 Grape ID）。
+
 ## Refactor.51.1 — 載入中版面不跑掉 — 2026-10-09
 
 人類 10-09：切換時「載入中」那一下版面會跑掉（工具列只剩 Undo／Redo、狀態列與共用來源面板消失、畫布寬度改變，載入完又跳回）。
