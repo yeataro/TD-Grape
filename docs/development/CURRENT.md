@@ -8,7 +8,7 @@
 
 **進行方式（人類 2026-10-09）**：先把基本能力定下來；標準功能都做完之後，會有一段多輪測試調整的時期（外觀、手感這類比較不確定的東西在那時一起調）。在那之前，外觀只求可用、結構乾淨，不追細節。
 
-**最新：Refactor.61.1**（2026-10-10，快照只重拍按的那一張、不閃、接了線不選預設；之前 R.61 子圖形狀對齊 Q46）。最近一次 Deliver 是 Refactor.60.6（2026-10-10，`TD-Grape-dev.95`，TOE 已提交；含 R.60 的範本與 Manager 改動，以及人類在 Grape_TOP1 把 In TOP 改成褐色的試驗）；TD 目前在開發模式（外部資料夾）跑 61.1；TOE 存的是 60.6 的內嵌資產，下次存 TOE 前先 `Deliver()`。逐版內容見 [STATUS](STATUS.md)。
+**最新：Refactor.61.2**（2026-10-10，快照提示說明 TD 的 cook；61.1 快照只重拍按的那一張、不閃、接了線不選預設；R.61 子圖形狀對齊 Q46）。最近一次 Deliver 是 Refactor.60.6（2026-10-10，`TD-Grape-dev.95`，TOE 已提交；含 R.60 的範本與 Manager 改動，以及人類在 Grape_TOP1 把 In TOP 改成褐色的試驗）；TD 目前在開發模式（外部資料夾）跑 61.2；TOE 存的是 60.6 的內嵌資產，下次存 TOE 前先 `Deliver()`。逐版內容見 [STATUS](STATUS.md)。
 
 **最近幾輪的大塊（R.53–59）：**
 - 編輯器外框（R.53）、新增節點的入口（R.54）、數值輸入 widget（R.55）、共用來源面板與卡片（R.57）、拖線預告與拔線還原（R.56–57）。
@@ -86,7 +86,7 @@
 
 - **驗證**：TD 2025.33230 的 `TOP.sample()` 在浮點格式把 R 當 alpha；讀像素用 `numpyArray()`（workspace `td-issues/top-sample-float-alpha.md`，人類決定何時回報）。
 - **教訓**：開放節點前先查舊產品新增清單是否刻意排除；調查走產品實際路徑。
-- **快照與 TD 的 cook**（10-10 實測）：拍快照時讀像素本身就會把 In TOP 和上游 cook 到目前這一格，強制 cook 結果相同。但 Play Mode 為 Sequential 的影片沒人預覽時不會前進，快照會停在同一格附近（人類：它沒有連著時間線）；要跟上時間就用 Locked to Timeline。TD 本身的行為，寫使用說明時提。
+- **快照與 TD 的 cook**（10-10 實測）：拍快照時讀像素本身就會把 In TOP 和上游 cook 到目前這一格，強制 cook 結果相同。但 Play Mode 為 Sequential 的影片沒人預覽時不會前進，快照會停在同一格附近（人類：它沒有連著時間線）；要跟上時間就用 Locked to Timeline。TD 本身的行為；快照提示已說明（R.61.2），寫使用說明時也要提。
 - **已定不做**：「啟動編輯服務」對話框置中（TD 的 `ui.messageBox` 開在滑鼠位置，抓錯螢幕更糟）。
 
 ### 六、要人類同意才能動
@@ -118,6 +118,6 @@
 
 - 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）。Grape OP：`/project1/Grape_TOP_test`、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類用 Tab 選單建立）、測試複本 `r54_probe`（等人類同意刪）；範本 `/TD_Grape/masters/grape_top`。每個 Samples 都 Clone `/TD_Grape/Samples`（R.58.9）。
 - 編輯服務 port 65465（被佔用時往後找，R.36）；例：`http://127.0.0.1:65465/shader/6cb6a90247c140bea7df98a2f11c1858/`（r54_probe）。
-- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.60.6（存 `TD-Grape-dev.95`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 61.1。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
+- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.60.6（存 `TD-Grape-dev.95`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 61.2。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.94.toe` 這類是遞增存檔的正常狀態）；未提交的修改可能是人類的，須保留。
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴。

@@ -82,7 +82,9 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
       {shot === 'failed' && unavailable}
       {typeof shot === 'object' && label(<button type="button" className="image-label nodrag"
         onClick={() => setRetake(n => n + 1)}
-        title={say(tr('sources.inputSnapshotHint', '{path}\nSnapshot taken at {time}, not live. Click for a new one.', { path: source,
+        // The last line (human 2026-10-10): TD cooks only what is used, so a Sequential movie stands still while unseen.
+        // 最後一行（人類）：TD 只 cook 有在用的東西，Sequential 的影片沒人看時停住。
+        title={say(tr('sources.inputSnapshotHint', '{path}\nSnapshot taken at {time}, not live. Click for a new one.\nTD only cooks what is in use: a movie set to Sequential does not play on while nothing views it.', { path: source,
           time: shot.time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }))}>
         <Icon name="camera" />{say(tr('sources.snapshot', 'Snapshot'))}</button>)}
     </figure>;
