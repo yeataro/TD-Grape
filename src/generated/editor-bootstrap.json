@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "08420a9298d0e084e9db8c99a8e8ccffdb0056237088de65ea3cb57299daee60",
+  "catalogHash": "9d0d45d78f318e1d097e9b3c4c8a43afb8b243eaa5d8e3383ecb1eb058a629c0",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",
@@ -494,6 +494,25 @@
       },
       "descriptionKey": "help.floor",
       "definitionUuid": "sgrape.builtin.floor"
+    },
+    {
+      "key": "force_compile_error",
+      "label": "Force Compile Error",
+      "inputs": {
+        "value": "T"
+      },
+      "outputs": {
+        "out": "T"
+      },
+      "stages": [
+        "vertex",
+        "pixel"
+      ],
+      "defaults": {
+        "type": "float"
+      },
+      "descriptionKey": "help.force_compile_error",
+      "definitionUuid": "sgrape.builtin.force_compile_error"
     },
     {
       "key": "fract",
@@ -1157,25 +1176,6 @@
       },
       "descriptionKey": "help.td_value",
       "definitionUuid": "sgrape.builtin.td_value"
-    },
-    {
-      "key": "test_compile_error",
-      "label": "Compile Error (test)",
-      "inputs": {
-        "value": "T"
-      },
-      "outputs": {
-        "out": "T"
-      },
-      "stages": [
-        "vertex",
-        "pixel"
-      ],
-      "defaults": {
-        "type": "float"
-      },
-      "descriptionKey": "help.test_compile_error",
-      "definitionUuid": "sgrape.builtin.test_compile_error"
     },
     {
       "key": "texture_sample",
@@ -2720,6 +2720,47 @@
         ]
       },
       "sgrape.builtin.floor": {
+        "selector": "parameter",
+        "variants": [
+          {
+            "type": "float",
+            "inputs": {
+              "value": "float"
+            },
+            "outputs": {
+              "out": "float"
+            }
+          },
+          {
+            "type": "vec2",
+            "inputs": {
+              "value": "vec2"
+            },
+            "outputs": {
+              "out": "vec2"
+            }
+          },
+          {
+            "type": "vec3",
+            "inputs": {
+              "value": "vec3"
+            },
+            "outputs": {
+              "out": "vec3"
+            }
+          },
+          {
+            "type": "vec4",
+            "inputs": {
+              "value": "vec4"
+            },
+            "outputs": {
+              "out": "vec4"
+            }
+          }
+        ]
+      },
+      "sgrape.builtin.force_compile_error": {
         "selector": "parameter",
         "variants": [
           {
@@ -5022,47 +5063,6 @@
             "inputs": {},
             "outputs": {
               "out": "vec2"
-            }
-          }
-        ]
-      },
-      "sgrape.builtin.test_compile_error": {
-        "selector": "parameter",
-        "variants": [
-          {
-            "type": "float",
-            "inputs": {
-              "value": "float"
-            },
-            "outputs": {
-              "out": "float"
-            }
-          },
-          {
-            "type": "vec2",
-            "inputs": {
-              "value": "vec2"
-            },
-            "outputs": {
-              "out": "vec2"
-            }
-          },
-          {
-            "type": "vec3",
-            "inputs": {
-              "value": "vec3"
-            },
-            "outputs": {
-              "out": "vec3"
-            }
-          },
-          {
-            "type": "vec4",
-            "inputs": {
-              "value": "vec4"
-            },
-            "outputs": {
-              "out": "vec4"
             }
           }
         ]

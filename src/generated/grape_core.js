@@ -41,6 +41,7 @@ const dot_1 = require("./nodes/dot");
 const equal_1 = require("./nodes/equal");
 const float_1 = require("./nodes/float");
 const floor_1 = require("./nodes/floor");
+const force_compile_error_1 = require("./nodes/force_compile_error");
 const fract_1 = require("./nodes/fract");
 const greaterThan_1 = require("./nodes/greaterThan");
 const greaterThanEqual_1 = require("./nodes/greaterThanEqual");
@@ -75,7 +76,6 @@ const subgraph_output_1 = require("./nodes/subgraph_output");
 const subtract_1 = require("./nodes/subtract");
 const swizzle_1 = require("./nodes/swizzle");
 const td_value_1 = require("./nodes/td_value");
-const test_compile_error_1 = require("./nodes/test_compile_error");
 const texture_sample_1 = require("./nodes/texture_sample");
 const trunc_1 = require("./nodes/trunc");
 const vec2_1 = require("./nodes/vec2");
@@ -83,7 +83,7 @@ const vec3_1 = require("./nodes/vec3");
 const vec4_1 = require("./nodes/vec4");
 const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
-exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, test_compile_error_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
+exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, force_compile_error_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
 exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle };
 
@@ -2808,6 +2808,23 @@ exports.default = (0, node_sdk_1.unaryNode)({
 });
 
 },
+"nodes/force_compile_error":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const node_sdk_1 = require("../node_sdk");
+// Force Compile Error (Refactor.63.1, human 2026-10-10: a regular node from this cycle): its GLSL calls a function nobody
+// defines, so the core lets it through and TD always refuses to compile it — for trying how a compile failure is shown
+// and how to get back to the last good Shader. In the Editor category, beside Router.
+// 故意讓編譯失敗：產生的 GLSL 呼叫一個沒有人定義的函式，核心放行、TD 一定編不過——用來試編譯失敗怎麼呈現、怎麼回到上一個
+// 能跑的 Shader。放在 Editor 分類，和 Router 一起。
+exports.default = (0, node_sdk_1.unaryNode)({
+    key: 'force_compile_error', label: 'Force Compile Error', descriptionKey: 'help.force_compile_error',
+    operator: 'sg_force_compile_error', port: 'value',
+    browser: { category: 'editor', source: 'editor', aliases: ['error', 'fail', 'compile error', 'test', '編譯錯誤'],
+        glslName: 'sg_force_compile_error', secondaryCategories: [], categoryPath: ['editor'] },
+});
+
+},
 "nodes/fract":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -4668,23 +4685,6 @@ const catalog = {
 // Made from the Sources panel, which knows what it points to (Q45): not in the add menu.
 // 由共用來源面板建立（面板知道它指向哪一筆），不在新增選單。
 exports.default = { ...(0, node_sdk_1.tdValueNode)(catalog), entries: () => [] };
-
-},
-"nodes/test_compile_error":function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const node_sdk_1 = require("../node_sdk");
-// A node whose GLSL never compiles in TD, for testing how a compile failure is shown (Refactor.63, human 2026-10-10:
-// "make a node that is sure to fail"). It calls a function nobody defines. Offered in the add menu only with the
-// grape-test-nodes flag (editor-react/core.ts); remove before release.
-// 測試用：產生的 GLSL 在 TD 一定編譯失敗（呼叫一個沒有人定義的函式），用來測編譯失敗怎麼呈現（人類：做一個必定出錯的節點）。
-// 只有帶 grape-test-nodes 旗標時才出現在新增選單；發布前拿掉。
-exports.default = (0, node_sdk_1.unaryNode)({
-    key: 'test_compile_error', label: 'Compile Error (test)', descriptionKey: 'help.test_compile_error',
-    operator: 'sg_test_undefined_function', port: 'value',
-    browser: { category: 'debug', source: 'editor', aliases: ['test', 'error', 'fail'], glslName: 'sg_test_undefined_function',
-        secondaryCategories: [], categoryPath: ['debug'], testOnly: true },
-});
 
 },
 "nodes/texture_sample":function(require,module,exports){

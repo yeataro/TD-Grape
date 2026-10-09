@@ -539,9 +539,7 @@ test('add menu offers every supported node except retired float/vec2/vec3/vec4 a
   // Stage outputs are never offered (Q42); the reference nodes are made from the Sources panel (Q45).
   // Both are now declared by the modules themselves (Q37 1-5): no node name is special-cased in the menu.
   const fixed = ['sgrape.builtin.pixel_out', 'sgrape.builtin.declaration', 'sgrape.builtin.td_value'];
-  // Test-only nodes are offered only with the grape-test-nodes flag (Refactor.63). 測試用節點只在旗標開著時提供。
-  const testOnly = ['sgrape.builtin.test_compile_error'];
-  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid) && !testOnly.includes(uuid)));
+  assert.deepEqual(creatableDefinitions, supportedDefinitions.filter(uuid => !retired.includes(uuid) && !fixed.includes(uuid)));
   for (const key of ['vector', 'scalar', 'combine', 'replace', 'swizzle', 'convert']) assert.ok(creatableDefinitions.includes('sgrape.builtin.' + key), key);
   // Fixed-type entries (Refactor.50, legacy functions_ui.js:78-80): Scalar 4 + Vector 12, after each generic one.
   const of = uuid => creatableEntries.filter(e => e.uuid === uuid).map(e => e.label);

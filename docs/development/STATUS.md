@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.63.1 Force Compile Error 成為正式節點**（人類 10-10：這個週期的正式節點，名字用助手建議的）：R.63 的測試用節點改名 `force_compile_error`（標題 Force Compile Error），放在新增選單的 Editor 分類（和 Router 一起），不再需要 `?grape-test-nodes` 旗標（旗標程式拿掉）；產生的 GLSL 呼叫 `sg_force_compile_error(...)`，TD 的錯誤訊息一看就知道是它造成的。原理：用一般單一輸入運算的範本，核心不檢查函式存不存在（真正編譯的是 TD），所以核心放行、TD 一定編不過。CURRENT 的「發布前拿掉」刪除。驗證：test:core 144、test:editor 80；Grape_TOP1 的新增節點搜尋 Force 出現在 Editor 分類。
 - **Refactor.63 編譯失敗看得到、回得去**（人類 10-10；決議補進 design-interview Q38 2-5）：
   - TD：套用失敗時在 graph_meta 記一筆失敗（種類 compile／internal、TD 的完整紀錄、版本、失敗的那段 GLSL），程式再次換上就清掉；讀圖時附上這筆失敗與 Last Known Good 的圖（TD 正在跑的那一版）；送圖回覆帶 `shaderFailure`。
   - 編輯器：同步狀態多了 `stuck`（Shader 卡住），開圖就知道；R.62.1 的落差修正——內部錯誤不再被說成「GLSL 編譯失敗」。
