@@ -58,6 +58,10 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.59.1 邏輯節點色組、Compare 一個選單**（人類 10-09 截圖舊產品）：
+  - Compare、If 改用邏輯色組 `--group-logic`（深 `#282430`、淺 `#b8b4be`，legacy `--node-logic-bg`、`graph_ui.js:142`）；原本落到一般函式的紫色。
+  - Compare 的運算選單原本畫兩次（`inlineControls` 與 `controls` 放同一個，Refactor.12 起）；只留本體開頭那個，同舊產品。之後參數面板：同一個控制項只宣告一次、標頭顯不顯示由畫面決定（design-interview Q67 補充）。
+  - 驗證：瀏覽器新增 Compare，標題是邏輯色、本體只有一個運算選單；Undo 後回到 23 個節點。test:core 142、test:editor 77 過。If 未在畫面上看。
 - **Refactor.59 分量樣式與分量染色**（人類 10-09；範圍 workspace `component-style.md`，決定 design-interview Q67）：
   - 核心 `component_names.ts`：樣式 `xyzw`／`rgba`／`stpq`／`uv`，存在節點 `ui.componentNames`（只是外觀、不產碼）；沒存時用模組的 `componentNames()` 預設——Color、顏色 Uniform 引用、Split RGBA、Compose RGBA 是 RGBA，TD 內建值 `vUV`／`vUV.st` 是 UV，其他 XYZW；UV 只在兩個分量時顯示（照舊產品）。
   - 節點模組在 `presentation.components` 宣告每個接孔代表哪些分量；Combine／Replace 的分量輸入顯示涵蓋的字母（分組如「RG」）、Vector Split 每個輸出一個字母、Swizzle 輸出照遮罩（選單字母也跟著）、Vector／Color 數值框的名稱都照樣式；畫面不認節點名字。

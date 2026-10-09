@@ -24,6 +24,7 @@
   --palette-blue: #3a5581;
   --palette-olive: #605a43;
   --palette-rose: #6f4654;
+  --palette-graphite: #282430; /* logic nodes: Compare, If (legacy --node-logic-bg) 邏輯節點（舊產品） */
   /* selection: the legacy green (legacy --selection; human 2026-10-09: likes the old green); wires as the legacy editor
      (style.css:108). 選取：舊產品的綠（人類：喜歡舊產品的綠）；接線照舊產品。 */
   --palette-select-green: #70dc69;
@@ -103,6 +104,7 @@
   --group-constant: var(--palette-blue);
   --group-attribute: var(--palette-olive);
   --group-runtime: var(--palette-rose);
+  --group-logic: var(--palette-graphite);
   /* Ghost (Q37): no colour of its own; the card is shown faded and dashed. Ghost 沒有自己的顏色，卡片淡化加虛線。 */
   --group-ghost: var(--palette-node);
   /* Every selected node is green; when several are, the current one is a little brighter (human 2026-10-09).

@@ -2379,25 +2379,24 @@ const control = (operator) => ({
     kind: 'select', key: 'operator', label: 'compare.operator', command: 'operator', value: operator,
     options: operators.map(value => ({ value, label: 'A ' + value + ' B', literal: true }))
 });
-exports.default = (0, node_sdk_1.typedNode)(catalog, {
-    types: ['float', 'int', 'uint'],
-    ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', 'bool')],
-    validate: n => { var _a; if (!operators.includes(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>')))
-        throw Error('Invalid comparison operator'); },
-    edit: (n, command, data) => {
-        const value = String((0, node_sdk_1.payload)(data));
-        if (command !== 'operator' || !operators.includes(value))
-            throw Error('Invalid comparison operator');
-        n.params.operator = value;
-        return n;
-    },
-    presentation: n => {
-        var _a, _b;
-        return ({ selectorLabel: 'vector.inputType',
-            controls: [control(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>'))], inlineControls: [control(String((_b = n.params.operator) !== null && _b !== void 0 ? _b : '>'))] });
-    },
-    emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('a') + ' ' + String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>') + ' ' + c.input('b') + ')' } }); }
-});
+// A logic node, drawn in the logic group (legacy graph_ui.js:142). 邏輯節點，畫成邏輯色組（照舊產品）。
+exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
+        types: ['float', 'int', 'uint'],
+        ports: t => [(0, node_sdk_1.input)('a', t), (0, node_sdk_1.input)('b', t), (0, node_sdk_1.output)('out', 'bool')],
+        validate: n => { var _a; if (!operators.includes(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>')))
+            throw Error('Invalid comparison operator'); },
+        edit: (n, command, data) => {
+            const value = String((0, node_sdk_1.payload)(data));
+            if (command !== 'operator' || !operators.includes(value))
+                throw Error('Invalid comparison operator');
+            n.params.operator = value;
+            return n;
+        },
+        // One operator menu, at the top of the body as legacy (human 2026-10-09: it was shown twice).
+        // 一個運算選單，放在本體開頭，同舊產品（人類：原本出現兩次）。
+        presentation: n => { var _a; return ({ selectorLabel: 'vector.inputType', inlineControls: [control(String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>'))] }); },
+        emit: (n, c) => { var _a; return ({ outputs: { out: '(' + c.input('a') + ' ' + String((_a = n.params.operator) !== null && _a !== void 0 ? _a : '>') + ' ' + c.input('b') + ')' } }); }
+    }), colorGroup: 'logic' };
 
 },
 "nodes/convert":function(require,module,exports){
@@ -3098,11 +3097,12 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.typedNode)(catalog, {
-    types: node_sdk_1.values.types,
-    ports: t => [(0, node_sdk_1.input)('condition', 'bool', false), (0, node_sdk_1.input)('true', t, 1), (0, node_sdk_1.input)('false', t), (0, node_sdk_1.output)('out', t)],
-    emit: (_n, c) => ({ outputs: { out: '(' + c.input('condition') + ' ? ' + c.input('true') + ' : ' + c.input('false') + ')' } })
-});
+// A logic node, drawn in the logic group (legacy graph_ui.js:142). 邏輯節點，畫成邏輯色組（照舊產品）。
+exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
+        types: node_sdk_1.values.types,
+        ports: t => [(0, node_sdk_1.input)('condition', 'bool', false), (0, node_sdk_1.input)('true', t, 1), (0, node_sdk_1.input)('false', t), (0, node_sdk_1.output)('out', t)],
+        emit: (_n, c) => ({ outputs: { out: '(' + c.input('condition') + ' ? ' + c.input('true') + ' : ' + c.input('false') + ')' } })
+    }), colorGroup: 'logic' };
 
 },
 "nodes/isinf":function(require,module,exports){
