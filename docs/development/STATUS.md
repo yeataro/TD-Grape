@@ -13,6 +13,8 @@
 - [style.css](../../src/editor-react/style.css)：標題列固定高度。原因：載入中顯示「選擇 Grape OP」（中文）、平常顯示路徑（英數），行高不同，下面整排會跟著移 3px。
 - **驗證**：editor 56。內建瀏覽器量切換前、中、後的位置與大小（標題列、工具列、狀態列、畫布、面板、頁尾，每 25 ms 一次）：修標題列高度前，唯一會動的是那 3px；修好後，開關面板兩種情況都完全不動。
 
+- **人類測完（10-09）**：之後 Deliver：網頁資產打包進 VFS（含 R.51、51.1），存 `TD-Grape-dev.89`。
+
 ## Refactor.51 — 沒指目標／錯指目標＋切換 Grape OP — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/no-target-and-switching.md`（人類 10-09 同意；依 Q32 的 Q5、Q47 第 4 點、需求盤點 02 區 4.5）。
