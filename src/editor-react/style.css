@@ -108,7 +108,9 @@ main { position: relative; }
 .dropdown-menu button::before { content: ''; flex: 0 0 1.2em; text-align: center; } .dropdown-menu button[aria-checked="true"]::before { content: '✓'; }
 .dropdown-menu .hint { margin: 4px 8px; }
 .grape-op-kind { font-size: 10px; padding: 1px 5px; border-radius: 3px; background: #ffffff1a; } .grape-op-path { overflow-wrap: anywhere; }
-header button.target { background: none; border: 1px solid transparent; color: inherit; cursor: pointer; }
+/* Fixed height, so the frame below never moves when the header text changes (Refactor.51.1). 固定高度，標題文字變了下面也不動。 */
+header { height: 47px; box-sizing: border-box; }
+header button.target { background: none; border: 1px solid transparent; color: inherit; cursor: pointer; line-height: 1.4; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 header button.target:hover { border-color: #4e445c; }
 .empty-canvas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   background: repeating-linear-gradient(45deg, #ffffff05 0 12px, transparent 12px 24px); color: #c9bfd6; text-align: center; padding: 24px; }
