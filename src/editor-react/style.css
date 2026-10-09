@@ -160,6 +160,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .fold-toggle .icon { width: 14px; height: 14px; transform: rotate(-90deg); transition: transform .1s; }
 .fold-toggle[aria-expanded="true"] .icon { transform: none; }
 .fold-actions { display: flex; gap: 4px; }
+.fold-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fold-hint { display: grid; place-items: center; color: var(--text-faint); } .fold-hint .icon { width: 14px; height: 14px; }
+.fold-hint:hover { color: var(--text-secondary); }
 .fold-body { padding-top: 4px; }
 /* A source card (human 2026-10-09 trial): a strip at its left in its kind's colour (a node title turned on its side, at the
    title's strength), the body as a node body. 來源卡片（人類試驗）：左邊一條是種類的顏色（轉了方向的節點標題、同樣的濃度），本體同節點本體。 */
@@ -380,7 +383,8 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .switch-dialog p { flex-basis: 100%; margin: 0 0 6px; }
 
 /* Count badges (controls.tsx Badge, Refactor.54): plain, or in a colour group. 數量標籤：不上色，或用 colorGroup。 */
-.badge { display: inline-grid; place-items: center; min-width: 1.6em; margin-left: 6px; padding: 1px 5px; border-radius: 4px; font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 600;
+/* As tall as the text beside it (human 2026-10-09): one size down, no padding above or below. 和旁邊的字一樣高（人類）：小一級字、上下不留空。 */
+.badge { display: inline-grid; place-items: center; min-width: 1.6em; margin-left: 6px; padding: 0 4px; border-radius: 3px; font-size: var(--font-xs); line-height: 1.2; font-weight: 600;
   color: var(--text-muted); background: var(--surface-control); }
 .badge-group { color: var(--text-strong); background: color-mix(in srgb, var(--badge-color) 85%, transparent); }
 
