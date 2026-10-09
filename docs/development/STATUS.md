@@ -2,6 +2,22 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.54.1 — 顏色與亮度對齊舊產品；Dark／Light／TD；Standard／Comfortable — 2026-10-09
+
+人類睡前交代（10-09）：這輪做完後自動把顏色和亮度對齊舊產品，可以更好看但色調差不多；顏色集中管理、同一色的深淺加疊層（參考 TD 內部 UI）；色彩風格分亮、暗、TD 色（blend 是後話）；**做到要硬編碼就跳過，外觀功能都不值得讓架構變髒**（除非一定要、有共用能力，先討論）。
+
+- **照 docs/ui/COLOR_SYSTEM.md 三層重寫**（[dark.css](../../src/editor-react/theme/dark.css)）：調色盤只放少數主色；外框是一個墨色（舊產品底色 #121218）依共用強度（`--lift-*`）往 `--palette-lift` 提亮成各層；文字、線、hover 往 `--palette-contrast`；選取與焦點才混強調色（舊產品紫）。文字＝白色加舊產品透明度。按鈕、輸入框、主要按鈕（淺紫底深字）、工具開關（綠，舊產品）、字型（Inter／Segoe UI／微軟正黑）照舊產品。
+- **TD 主題**（[td.css](../../src/editor-react/theme/td.css)）：繼承 Dark，只改調色盤與強度，照 TD 2025.33230 自己的 `ui.colors`（網路 #191a1e、面板 #3f3f3f 灰、沒有色偏）。
+- **Light 主題**（[light.css](../../src/editor-react/theme/light.css)）：獨立寫齊（舊產品淺色的底色與文字透明度）；用來檢查有沒有漏掉的色碼——切過去畫面沒有殘留的深色。
+- **尺寸**（[sizes.css](../../src/editor-react/theme/sizes.css)）：Standard（預設，照舊產品標準大小較窄：32px 列、32px 標題列按鈕）、Comfortable（R.53 的尺寸，人類：把現在的大小設成 Comfortable）。
+- **元件不再寫色碼**：型別色、向量分量色、TD 模式色、Ghost 線、接線標籤都改成主題變數；React Flow 的變數與 `colorMode` 跟著主題。標誌圖是唯一例外（圖，不是主題色）。
+- **底列**：外觀面板（Dark／Light／TD）、語言與大小面板（語言、Standard／Comfortable）——共用部件 `Popover`、`PopoverButton`、`Segmented`（[controls.tsx](../../src/editor-react/controls.tsx)），訊息歷史也改用 `Popover`；亮暗與整體縮放拉桿**先佔位**（牽涉較多，先討論）。底列 ⋮ 改成舊產品的窄按鈕（`--icon-button-narrow`）。網址列的面板區開關改用低調的「展開中」樣子，綠色只給工具開關（舊產品）。
+- **把關**：[test_themes.cjs](../../tests/unit/test_themes.cjs)（加進 `test:editor`）——元件與 TSX 不含色碼、色碼只在調色盤層、Light 寫齊、TD 只覆寫既有名字、用到的用途名都有定義。
+- **跳過**：TD 清單的隔行深淺底色——試做後要逐一列出每種清單、為 hover 與選中加例外、分類樹裡也算不準；人類：有問題就跳過。
+- **驗證**：editor 65（含主題 4）、core 140；內建瀏覽器＋真實 TD：Dark、Light、TD 三種截圖檢查；Standard 底列 32px、Comfortable 40px；⋮ 寬 24px（Comfortable）；最後切回 Dark＋Standard。
+- **記錄**：floating-panels.md 第 31～35 點（右鍵選單、外觀面板、大小面板、分享面板、快捷鍵列表；都排在之後）。
+- commit：`48bde30`、`ad30098`。
+
 ## Refactor.54 — 新增節點的入口：Create node、Add Node 面板、拉線放開、拿起線 — 2026-10-09
 
 照 workspace `work/in-place-refactor-design/add-node-entries.md`（人類 10-09 同意；原本排 54 的浮動面板框架改到之後的版號）。人類回答：拿起的線放到另一個輸入＝搬過去；這些行為之後要能用旗標開關。
