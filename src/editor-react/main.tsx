@@ -255,8 +255,17 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
         event.preventDefault(); setCreating({ screen: middle() });
       }
     };
+    // While one of our sources or nodes is dragged, the pointer shows "add" everywhere, never "not allowed" (human
+    // 2026-10-09); only the canvas takes the drop, elsewhere nothing happens. 拖我們的來源或節點時，到哪裡都顯示「新增」、
+    // 不顯示禁止符號（人類）；只有畫布接受放下，其他地方什麼都不做。
+    const dragging = (event: DragEvent) => {
+      if (!event.dataTransfer?.types.includes(DRAG_TYPE)) return;
+      event.preventDefault(); if (event.type === 'dragover') event.dataTransfer.dropEffect = 'copy';
+    };
     addEventListener('beforeunload', leave); addEventListener('keydown', keys);
-    return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
+    addEventListener('dragover', dragging); addEventListener('drop', dragging);
+    return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys);
+      removeEventListener('dragover', dragging); removeEventListener('drop', dragging); };
   }, [session, draft]);
   // The panels' content, from the graph being edited (Q47 4). 面板內容，來自正在編輯的圖。
   const input: PanelInput = { session, state, choices, add: choice => addAt(choice, middle()) };
