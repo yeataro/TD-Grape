@@ -147,6 +147,15 @@ class UniformWriterTests(unittest.TestCase):
         self.assertEqual(shader.row('vec', 'uOffset')['valuey'].val, 0.75)
         self.assertEqual([shader.row('color', 'uTint')[s].val for s in PAGES['color']], [1.0, 0.0, 0.5, 1.0])  # alpha untouched
 
+    def test_a_first_row_whose_name_is_driven_is_never_taken(self):
+        # Refactor.62: an empty name given by an expression is someone's row; its expression stays.
+        # 名字由 expression 給、算出來是空的，仍是有人用的列；expression 保留。
+        shader = FakeShader()
+        shader.rows['vec'][0]['name'].set_expr("op('ctrl').par.Label", '')
+        apply(shader, [uniform('u1', 'uGain', value=2.0)])
+        self.assertEqual(shader.rows['vec'][0]['name'].mode, 'EXPRESSION')
+        self.assertEqual(len(shader.rows['vec']), 2)
+
     def test_a_used_first_row_is_never_taken(self):
         shader = FakeShader()
         shader.rows['vec'][0]['valuex'].val = 3.0  # someone's own value, no name 有人填了值

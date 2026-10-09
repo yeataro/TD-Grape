@@ -1,6 +1,6 @@
 # Editor Service
 
-目前在 `/TD_Grape/GrapeEditor` 提供真正的 HTTP 靜態資產服務。前端版本維持 **0.8.276 Refactor.13**；Manager API 尚未接通，`/api/*` 回報 `manager_not_connected`，此提交不是完整編輯器或離線 Sketch 的交付。
+`/TD_Grape/GrapeEditor` 提供 HTTP 靜態資產服務與 WebSocket 即時通道；`/api/*` 由 GrapeManager 處理（Manager 沒接上時回 `manager_not_connected`）。版本與現況見 [CURRENT](CURRENT.md)。（2026-10-10 更正：本頁原寫於 Refactor.13，當時 Manager 尚未接通。）
 
 ## 使用與建置
 
@@ -20,7 +20,7 @@ npm run build:editor -- --out ../work/refactor/editor-service/web
 | Useexternal | 開：讀外部資料夾；關：讀此組件專用的 `virtualFile` VFS |
 | Reload | 完整讀取所選來源，再一次替換記憶體快照；不寫入 VFS |
 | Updateembedded | 完整讀取外部資料夾，更新專用 VFS；不切換來源 Toggle。需保存 TOE／TOX 才持久保留 |
-| Active / Port / Allowlan | 控制 HTTP 啟停、固定 port、是否監聽 `0.0.0.0`；port 占用明確報錯，不換網址 |
+| Active / Port / Allowlan | 控制 HTTP 啟停、port、是否監聽 `0.0.0.0`；設定的 port 被佔用時往後找空的（最多試 10 個），Port 參數不改，實際 port 顯示在 Localurl（R.36，人類 2026-10-09） |
 | Openeditor | 開啟顯示的本機網址；現阶段不代表 Manager 已可用 |
 | Servicestate / Serviceerror | 狀態與原因，僅在操作／狀態改變時更新 |
 | Actualsource / Frontendversion / Assetcount | 正在供應的實際來源、版本及檔案數 |

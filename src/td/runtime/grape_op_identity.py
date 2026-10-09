@@ -69,4 +69,5 @@ def onCreate():
         return
     # Other OPs may not exist yet, or not have loaded their parameters, while this one is created.
     # 建立當下其他 OP 可能還沒建立或參數還沒載入，延後一幀再查。
-    run("op(args[0]).op('GrapeControls/identity').module.check(op(args[0]))", comp.id, delayFrames=1)
+    # The function goes along, so an OP deleted in that frame reaches check() as None (Refactor.62). 傳函式：那一格被刪也由 check() 處理。
+    run('args[0](op(args[1]))', check, comp.id, delayFrames=1)

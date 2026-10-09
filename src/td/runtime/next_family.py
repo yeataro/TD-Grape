@@ -131,7 +131,7 @@ def identity(comp):
     return par.eval() if par is not None else ''
 
 
-def read_runtime(text, *, catalog_hash, presets=()):
+def read_runtime(text, *, presets=()):
     """The execution part (GLSL + bindings) is TD's own input, so TD reads it."""
     require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_RUNTIME_BYTES, 'invalid runtime part')
     try:
@@ -140,7 +140,7 @@ def read_runtime(text, *, catalog_hash, presets=()):
         raise Refused('The runtime part is not JSON.') from None
     require(isinstance(compiled, dict) and compiled.get('vertex') == ''
             and isinstance(compiled.get('pixel'), str), 'invalid TOP source')
-    require(0 < len(compiled['pixel'].encode('utf-8')) <= MAX_GLSL_BYTES, 'GLSL is empty or over 512,000 bytes')
+    require(0 < len(compiled['pixel'].encode('utf-8')) <= MAX_GLSL_BYTES, 'GLSL is empty or over {:,} bytes'.format(MAX_GLSL_BYTES))
     bindings = compiled.get('bindings')
     require(isinstance(bindings, list), 'invalid binding table')
     seen, names = set(), set()
@@ -403,8 +403,7 @@ class NextFamily:
         """The input IDs the TOPs list holds now, in order. TOPs 清單現在的輸入 ID，照順序。"""
         ids = []
         for name in self._shader(self.comp).par.tops.val.split():
-            target = self.comp.op(name)
-            ids.append(target.fetch(INPUT_STORE, None, search=False) if target is not None else None)
+            ids.append(input_id(self.comp.op(name)))
         return ids
 
     def _write_uniforms(self, uniforms, previous):
@@ -470,6 +469,7 @@ class NextFamily:
                 # Found by label; when Samples cannot say, the input is left without a default and TD's status bar says
                 # so — the shader is applied all the same. 照 label 找；找不到時這個輸入不接預設圖、在狀態列說明，Shader 照常套用。
                 if samples is None:
+                    notify(comp, '{} has no default image: this Grape OP has no Samples.'.format(target.name))
                     continue
                 if entry['defaultTexture'] == 'none':  # TD's own "nothing connected" TD 自己的「沒接」
                     target.inputConnectors[0].disconnect()
@@ -530,7 +530,7 @@ class NextFamily:
         if body.get('catalogHash') != catalog_hash:
             raise BuildChanged('The editor page and TD-Grape come from different builds; reload the editor page.')
         text = body.get('document')
-        require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_GRAPH_BYTES, 'graph text is empty or over 512,000 bytes')
+        require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_GRAPH_BYTES, 'graph text is empty or over {:,} bytes'.format(MAX_GRAPH_BYTES))
         runtime_text = body.get('runtime')
         editor_version = body.get('editorVersion')
         if runtime_text is not None:
@@ -541,7 +541,7 @@ class NextFamily:
         meta['document'] = {'revision': next_revision, 'sha256': digest(text)}
         shader_updated, shader_error, notices = False, None, []
         if runtime_text is not None:
-            compiled = read_runtime(runtime_text, catalog_hash=catalog_hash, presets=self.presets)
+            compiled = read_runtime(runtime_text, presets=self.presets)
             inputs = texture_inputs(compiled)
             uniforms = uniforms_of(compiled)
             # What the last successful apply sent: values changed since then were changed in the editor
@@ -585,14 +585,10 @@ class NextFamily:
             # The graph moves past the running program: keep that program's graph once.
             # 圖往前走、執行部分停住時，才留一份那時的圖。
             meta['runtime'] = dict(meta['runtime'], document=previous_text)
-        graph_dat, meta_dat = self.comp.op('graph'), self.comp.op('graph_meta')
-        before = graph_dat.text, meta_dat.text
-        try:
-            graph_dat.text = text  # stored as received; TD never re-serializes it
-            meta_dat.text = json.dumps(meta, ensure_ascii=False)
-        except Exception:
-            graph_dat.text, meta_dat.text = before
-            raise
+        # Everything that can fail is done before either DAT is written (Refactor.62). 會失敗的都在寫入前做完。
+        meta_text = json.dumps(meta, ensure_ascii=False)
+        self.comp.op('graph').text = text  # stored as received; TD never re-serializes it
+        self.comp.op('graph_meta').text = meta_text
         # Every edit is not shown on the status bar: too much (human 2026-10-09). Uncomment to watch edits.
         # 每一步編輯不顯示在狀態列（資訊量太大）；要觀察時取消下一行的註解。
         # notify(self.comp, 'applied revision ' + str(next_revision))

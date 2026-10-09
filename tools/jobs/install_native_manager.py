@@ -169,4 +169,4 @@ assert manager.ext.GrapeManagerExt.queue is not None, editor.par.Serviceerror.ev
 # update mechanism, grape-op-structure #10). 這支工具不碰任何 Grape OP（不再寫死某個測試 OP）。
 assert protected() == before_icon, 'Protected icon changed'
 print(json.dumps({'manager': manager.path, 'port': service.http.port,
-                  'grapeOPs': len(manager.ext.GrapeManagerExt.families), 'protectedIconUnchanged': True}))
+                  'grapeOPs': len(manager.ext.GrapeManagerExt.GrapeOps()), 'protectedIconUnchanged': True}))

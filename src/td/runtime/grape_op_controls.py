@@ -5,11 +5,12 @@ Open in Browser always in the normal browser; both go through the main component
 global OP shortcut `TDGrape` (design-interview Q49: the one way, no fallback). When the editor
 service is off, TD's own dialog asks before starting it (Q45). GLSL Parameters opens the inner
 GLSL TOP's parameters. Regenerate ID gives this Grape OP a new identity. Grapeid is read-only in
-the UI; a script that writes an invalid or already used ID is reverted (Q32). Opening never
-changes the Grape OP. Notable states go to TD's status bar and the `status` DAT.
+the UI; a script that writes an invalid or already used ID is reverted (Q32). Opening changes no
+setting; registering the Grape OP may update the Grape ID kept in graph_meta and the `status` DAT (Q32).
+Notable states go to TD's status bar and the `status` DAT.
 Grape 頁的控制：Open Editor（能開 App 視窗就開）／Open in Browser 透過全域捷徑 TDGrape 找主組件；
 服務沒開時用 TD 對話框先問；GLSL Parameters 打開內部 GLSL TOP 的參數；Regenerate ID 換新身分；
-Grape ID 介面上唯讀，被程式改壞時改回。開編輯器不改這個 Grape OP 的任何設定。
+Grape ID 介面上唯讀，被程式改壞時改回。開編輯器不改任何設定；登記時可能更新 graph_meta 存的 Grape ID 與 status DAT。
 """
 import json
 

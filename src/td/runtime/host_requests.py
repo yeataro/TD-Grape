@@ -9,6 +9,10 @@ from time import monotonic
 import traceback
 
 
+# Said both when TD never took the request and when it was too late. TD 沒接手、或太晚時都這樣說。
+NOT_RESPONDING = 'TD did not process this request. No changes were made; it will not run later.'
+
+
 def unavailable(code, message):
     return 503, {'code': code, 'error': message}
 
@@ -42,7 +46,7 @@ class HostRequests:
             if entry['state'] == 'pending':
                 self._pending.remove(entry)
                 entry['state'] = 'cancelled'
-                return unavailable('manager_not_responding', 'TD did not process this request. No changes were made; it will not run later.')
+                return unavailable('manager_not_responding', NOT_RESPONDING)
             # A running TD operation cannot be undone safely by its HTTP worker.
             # Report uncertainty; never repeat a mutation automatically.
             return 503, {'code': 'application_outcome_unknown', 'requestId': entry['id'],
@@ -57,8 +61,7 @@ class HostRequests:
                     break
                 entry = self._pending.popleft()
                 if monotonic() >= entry['deadline']:
-                    entry.update(state='finished', result=unavailable('manager_not_responding',
-                        'TD did not process this request. No changes were made; it will not run later.'))
+                    entry.update(state='finished', result=unavailable('manager_not_responding', NOT_RESPONDING))
                     entry['done'].set()
                     continue
                 entry['state'] = 'running'
@@ -68,7 +71,7 @@ class HostRequests:
             except Exception as error:
                 result = 500, {'code': 'host_operation_failed', 'error': str(error),
                                'operation': entry['method'] + ' ' + entry['path'],
-                               'layer': 'TD Manager', 'exception': type(error).__name__}
+                               'layer': 'manager', 'exception': type(error).__name__}
                 failure_trace = traceback.format_exc(limit=6)
             with self._lock:
                 status, detail = result

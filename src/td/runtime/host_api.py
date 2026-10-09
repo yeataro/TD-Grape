@@ -101,6 +101,10 @@ class HostAPI:
         if not match:
             return 404, {'error': 'Open a registered Grape OP to edit its graph.', 'code': 'target_required'}
         target_id, action, argument = match.groups()
+        # Only `input` names one of its inputs; any other extra part, or `input` without one, is not an address (Refactor.62).
+        # 只有 input 帶輸入 ID；其他多帶的、或 input 沒帶的，都不是有效位址。
+        if (argument is not None) != (action == 'input'):
+            return 404, {'error': 'There is no such host address.', 'code': 'not_found', 'operation': action}
         try:
             family = self.resolve(target_id)
             if family is None:
@@ -122,8 +126,6 @@ class HostAPI:
     def _action(self, family, method, action, body, argument=None):
         # TD only checks the envelope and what it executes; no history, sources or graph reads.
         # TD 只核對信封與自己要執行的東西；不碰歷史、來源或圖的內容。
-        if method == 'GET' and action == 'shaders':
-            return self.choices()
         if method == 'GET' and action == 'state':
             return {'state': family.state(), 'uniforms': family.uniform_states(), 'format': family.FORMAT, 'shaderKind': 'top', 'target': family.target().path,
                 'frontendCompiler': {'protocol': family.PROTOCOL, 'catalogHash': self.catalog_hash, 'required': True}}

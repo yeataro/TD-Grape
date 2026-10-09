@@ -313,9 +313,11 @@ class HostRoutingTests(unittest.TestCase):
             choices=lambda: {'shaders': [{'id': TARGET, 'path': '/nested/target'}]},
             save_project=Mock(return_value='x.toe'), identity=lambda: {'file': 'test.12.toe', 'build': '2025.33230'})
 
-    def test_scoped_and_unscoped_grape_op_list_are_the_same(self):
+    def test_grape_op_list_and_addresses(self):
         api = self.api(family()[0])
-        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/shaders'), api.dispatch('GET', '/api/shaders'))
+        # Only `input` takes an extra part (Refactor.62). 只有 input 帶多一段。
+        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/state/x')[0], 404)
+        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/shaders')[0], 501)
         # Every reply says which TD answered (Refactor.52, Q63): success, refusal and unknown target alike.
         td = {'file': 'test.12.toe', 'build': '2025.33230'}
         self.assertEqual(api.dispatch('GET', '/api/shaders')[1]['td'], td)

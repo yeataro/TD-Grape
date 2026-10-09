@@ -15,7 +15,6 @@ class GrapeManagerExt:
         self.queue = None
         self.api = None
         self.editor = None
-        self.families = {}
         self.bootstrap = None
         self.live = None  # LiveWatch while connected (Uniform D2) 連線期間的即時值監看
 
@@ -59,8 +58,7 @@ class GrapeManagerExt:
         panel = self.ownerComp.par.Remotepanel.eval()
         editor.http.preview_port = int(panel.par.Port.eval()) if panel else None
         # Discovery happens on connection, never on an idle frame or child cook.
-        self.families = {comp.id: comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)}
-        self._status('Ready', registered=len(self.families), version=editor.snapshot.version)
+        self._status('Ready', registered=len(self.GrapeOps()), version=editor.snapshot.version)
 
     def Texture(self, name):
         """A shared default image, from the main component's Samples (Refactor.58; the human placed a copy there).
@@ -153,8 +151,7 @@ class GrapeManagerExt:
     def Resolve(self, target_id):
         # TD is the registry (Q32): search by tag on demand, so new copies are found without registering.
         # TD 本身就是名冊：需要時用 tag 搜尋，新複本不必先登記也找得到。
-        matches = [comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG])
-                   if not self._template(comp) and self._module('next_family').identity(comp) == target_id]
+        matches = [comp for comp in self.GrapeOps() if self._module('next_family').identity(comp) == target_id]
         if len(matches) > 1:
             raise self._module('next_family').Refused('More than one Grape OP has this Grape ID; nothing was selected or changed. '
                                                       'Review the copies before editing.')
@@ -164,12 +161,15 @@ class GrapeManagerExt:
         if GRAPE_OP_TAG not in comp.tags or self._template(comp):
             raise self._module('next_family').Refused('This is not a Grape OP.')
         self.Adapter(comp).state()
-        self.families[comp.id] = comp
         return self._module('next_family').identity(comp)
 
+    def GrapeOps(self):
+        """Every Grape OP in the project now, templates aside: searched when asked, never kept, so copies and deletions are
+        always seen (Q32; Refactor.62 dropped a stale registry). 專案現在所有的 Grape OP（範本除外）：要用時才找、不留名冊。"""
+        return [comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)]
+
     def Choices(self):
-        rows = [{'id': self._module('next_family').identity(comp), 'path': comp.path, 'kind': 'top'}
-                for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)]
+        rows = [{'id': self._module('next_family').identity(comp), 'path': comp.path, 'kind': 'top'} for comp in self.GrapeOps()]
         return {'shaders': rows}
 
     def Open(self, comp, app=False):
@@ -179,7 +179,7 @@ class GrapeManagerExt:
         if not self.editor or not self.editor.http:
             raise self._module('next_family').Refused('Editor Service is stopped; native Shader operation is unaffected.')
         target_id = self.Register(comp)
-        self.Resolve(target_id)
+        self.Resolve(target_id)  # refuses when a copy shares the ID; the result is not needed 有複本共用 ID 時拒絕；結果不需要
         address = 'http://127.0.0.1:' + str(self.editor.http.port) + '/shader/' + target_id + '/'
         launcher = self.ownerComp.op('editor_launch')
         if app and launcher is not None:

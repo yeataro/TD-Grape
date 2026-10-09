@@ -146,7 +146,7 @@ def check_rows(shader, uniforms, previous):
     taken = _taken_over(shader, uniforms, previous)
     for uniform in uniforms:
         page, old, name = page_of(uniform), before.get(uniform['id']), uniform['name']
-        renamed = old is not None and old['name'] != name and page_of(old) == page
+        renamed = _renames(old, uniform)
         if renamed and uniform['id'] not in taken:
             row = find_row(shader, page, old['name'])
             if row is not None and mode_name(par(shader, page, row, 'name')) != 'CONSTANT':
@@ -160,9 +160,17 @@ def check_rows(shader, uniforms, previous):
                                  'or rename or remove that row in TD.')
 
 
+def _renames(old, uniform):
+    """The Uniform keeps its ID and page but has a new name: its row is renamed (unless another row is taken over).
+    The one rule for checking and applying (Refactor.62). 同 ID、同頁、換了名字：改它那一列的名字。檢查與套用共用這一條。"""
+    return old is not None and old['name'] != uniform['name'] and page_of(old) == page_of(uniform)
+
+
 def _pristine_only_row(shader, page):
     seq = sequence(shader, page)
-    if seq.numBlocks != 1 or par(shader, page, 0, 'name').eval():
+    name = par(shader, page, 0, 'name')
+    # An empty name driven by an expression is someone's row, not an untouched one (Refactor.62). 被 expression 驅動的空名字是有人用的列。
+    if seq.numBlocks != 1 or name.eval() or mode_name(name) != 'CONSTANT':
         return False
     parts = [par(shader, page, 0, suffix) for suffix in PAGES[page]]
     return all(mode_name(p) == 'CONSTANT' and p.isDefault for p in parts)
@@ -221,7 +229,7 @@ def apply(shader, uniforms, previous, expressions, constant_mode):
     renames = []
     for uniform in uniforms:
         page, old = page_of(uniform), before.get(uniform['id'])
-        if old and page_of(old) == page and old['name'] != uniform['name'] and uniform['id'] not in taken:
+        if _renames(old, uniform) and uniform['id'] not in taken:
             row = find_row(shader, page, old['name'])
             if row is not None:
                 renames.append((page, row, uniform['name']))
@@ -252,7 +260,7 @@ def apply(shader, uniforms, previous, expressions, constant_mode):
                               '{uniform} uses the row already on the GLSL OP; its values and what drives them are kept.',
                               uniform=uniform['name']))
             continue
-        if page_of(old) != page or json.dumps(values_of(old)) == json.dumps(values_of(uniform)):
+        if page_of(old) != page or values_of(old) == values_of(uniform):
             continue  # a value not changed in the editor: TD keeps its own 不是在編輯器改的值：TD 留著自己的
         for suffix, value, was in zip(suffixes, values_of(uniform), values_of(old) + [None] * 4):
             if value != was:

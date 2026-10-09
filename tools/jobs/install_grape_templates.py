@@ -148,10 +148,12 @@ annotation(samples, 'annotate_samples', 'Default inputs',
 # manages the In TOPs from then on (next_family.py _place_inputs). 預設圖的貼圖輸入；之後由編輯器管理。
 default_input = bootstrap['defaultDocument']['graph']['declarations'][0]
 assert default_input['kind'] == 'topInput' and default_input['defaultTexture'] == 'grape'
+# The same storage key and Samples lookup as the Manager uses on every apply (Refactor.62). 同 Manager 每次送圖用的 key 與找法。
+family_rules = op.TDGrape.op('GrapeManager/next_family').module
 in1 = node(top, inTOP, 'in1', -200, -125, 130, 72)
-in1.store('grapeInput', default_input['id'])
+in1.store(family_rules.INPUT_STORE, default_input['id'])
 in1.par.label = 'sTD2DInputs[0]'  # its place in TD's array, as next_family.py writes on every apply (Refactor.58.1) 它在 TD 陣列裡的位置，同每次送圖時寫的
-in1.inputConnectors[0].connect(samples.outputConnectors[0])
+in1.inputConnectors[0].connect(samples.outputConnectors[family_rules.sample_output(samples, default_input['defaultTexture'])])
 # Samples follows the main component's copy (Refactor.58.9; Q66): a Clone, found by the global shortcut, none when the
 # main component is missing (the content stays). Samples 跟著主組件那份：Clone，用全域捷徑找，主組件不在時為空（內容留著）。
 samples.par.clone.expr = "op.TDGrape.op('Samples') if hasattr(op, 'TDGrape') else ''"
