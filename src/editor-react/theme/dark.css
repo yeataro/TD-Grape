@@ -55,7 +55,6 @@
   --lift-raised: 7%;    /* menus, dialogs, floating things, controls */
   --lift-line: 13%;     /* separators */
   --lift-hover: 15%;    /* a control under the pointer */
-  --lift-stripe: 0%;    /* every other row of a list (TD's alternating rows; off here) */
   --tint-raised: 3%;    /* the accent's faint cast on raised surfaces (legacy dialogs) */
   --tint-active: 20%;   /* the accent behind what is active (stage, chosen row) */
   --tint-border: 55%;   /* the accent on a hovered border */
@@ -112,7 +111,6 @@
   --surface-dim: color-mix(in srgb, var(--palette-ink) 20%, transparent);
   --overlay-up: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
   --overlay-faint: color-mix(in srgb, var(--palette-contrast) 2%, transparent);
-  --surface-row-alt: color-mix(in srgb, var(--palette-contrast) var(--lift-stripe), transparent);
   --surface-port: color-mix(in srgb, var(--palette-ink), var(--palette-accent) 4%);
   --surface-box: color-mix(in srgb, var(--palette-accent) 13%, transparent);
   --border-node: color-mix(in srgb, var(--palette-node), var(--palette-contrast) 12%);

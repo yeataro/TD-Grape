@@ -238,7 +238,5 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .choice-row.chosen { outline: 1px solid var(--accent); }
 .choice-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .choice-add { width: 24px; height: 24px; padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
-/* Lists alternate row backgrounds where the theme says so (TD). 清單隔行底色，由主題決定（TD）。 */
-.choice-row:nth-of-type(even):not(:hover), .create-entry:nth-of-type(even):not(.create-active), .log-entry:nth-of-type(even) { background: var(--surface-row-alt); }
 /* The "+" at a wire's end over blank canvas (Blender). 拉線停在空白處時線頭的「＋」。 */
 .wire-plus { fill: var(--text-strong); font-size: 16px; font-weight: 700; pointer-events: none; }
