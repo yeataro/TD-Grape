@@ -781,6 +781,11 @@ test('a global constant: add, place, wire, apply; rename; refused names; delete 
   session.placeDeclaration(declaration.id, { x: 0, y: 0 });
   const ref = session.snapshot().projection.nodes.find(node => node.data.authored.nodeType === 'sgrape.builtin.declaration');
   assert.equal(ref.data.colorGroup, 'constant');
+  // The card shows the constant's value and follows its edits (Refactor.55.9). 卡片顯示常數的值，改了就跟著更新。
+  assert.equal(ref.data.declaration.value, 0.25);
+  session.setDeclarationValue(declaration.id, 0.5);
+  assert.equal(session.snapshot().projection.nodes.find(node => node.id === ref.id).data.declaration.value, 0.5);
+  session.setDeclarationValue(declaration.id, 0.25);
   assert.equal(session.snapshot().references[declaration.id], 1);
   session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node(ref.id).outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
   session.transact(tr('edit.wired', 'Wire updated'), net => net.connect(net.node('sum').outputs[0], net.node('pixel_out').port('input', 'color'), GrapeGraph.values.policy));

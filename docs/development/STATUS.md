@@ -2,6 +2,11 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.55.9 — 常數節點也在畫布上改值 — 2026-10-09
+
+- 人類 10-09：常數引用節點也要像 Uniform 一樣在節點上顯示和修改值；開頭文字（數值梯尺的互動區）寫「Constant」（繁中「常數」）。Uniform 仍是 TD 參數頁名稱（Vectors／Colors，不翻譯）。拖曳中只有 Uniform 會送到 TD（常數是編進 Shader 的，`previewDeclarationValue` 本來就只處理 Uniform）。
+- 驗證：editor 74（常數測試新增：引用節點的投影資料帶常數的值，改值後跟著更新）；內建瀏覽器＋真實 TD（只讀）：Uniform 開頭文字仍是 Vectors／Colors。人類的測試圖沒有常數節點，畫面上的常數沒有實機看過。
+
 ## Refactor.55.8 — 展開時色塊和 slider 一樣寬 — 2026-10-09
 
 - 人類 10-09：展開之後，顏色去對齊 slider，寬度一樣。展開時色塊是分量那一欄的最後一行；收起時維持整塊寬度、不縮進來。

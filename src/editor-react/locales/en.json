@@ -340,6 +340,7 @@
   "uniformPreset.frameStep": "Frames from the previous frame to this one; more than 1 when TouchDesigner drops frames.",
   "uniformPreset.time": "Seconds on this Grape OP's timeline; stops and loops with the timeline. For time that keeps running, use uAbsTime.",
   "value.color": "Color",
+  "value.constant": "Constant",
   "value.expand": "Show each component on its own row",
   "value.groupHelp": "Middle button or Alt+right button: change every component by the same amount with the value ladder."
 }

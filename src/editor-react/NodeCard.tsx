@@ -32,16 +32,18 @@ function Control({ id, control, bare = false }: { id: string; control: NodeContr
     options={control.options?.map(option => ({ value: String(option.value), label: option.literal ? option.label : text(option.label) })) ?? []} /></label>;
 }
 
-// A Uniform node edits its value on the canvas (legacy uniform node; Refactor.55.2): the same value widget as the Sources
-// panel, below its output. Its leading text, where the middle button changes the whole value, is the TD parameter page the
-// Uniform lives on: Vectors, or Colors for a colour (human 2026-10-09). Shows what drives it in TD.
-// Uniform 節點在畫布上編輯它的值（照舊產品）：和共用來源面板同一個數值 widget，在輸出下面。開頭文字（按中鍵整組調值的地方）
-// 是它在 TD 所屬的參數頁：Vectors，顏色是 Colors（人類）。顯示 TD 上的驅動狀態。
-function UniformValue({ declaration }: { declaration: Declaration }) {
+// A Uniform or constant node edits its value on the canvas (legacy uniform node; Refactor.55.2, 55.9): the same value
+// widget as the Sources panel, below its output. Its leading text, where the middle button changes the whole value: for a
+// Uniform the TD parameter page it lives on (Vectors, or Colors for a colour); for a constant, "Constant" (human 2026-10-09).
+// Shows what drives it in TD; only a Uniform is sent to TD while dragging (a constant is compiled in).
+// Uniform 或常數節點在畫布上編輯它的值（照舊產品）：和共用來源面板同一個數值 widget，在輸出下面。開頭文字（按中鍵整組調值的地方）：
+// Uniform 是它在 TD 所屬的參數頁（Vectors，顏色是 Colors）；常數是「Constant」（人類）。顯示 TD 上的驅動狀態；拖曳中只有
+// Uniform 會送到 TD（常數是編進 Shader 的）。
+function DeclarationValue({ declaration }: { declaration: Declaration }) {
   const session = useSession();
   const td = useSyncExternalStore(session.tdSubscribe, session.tdSnapshot);
   return <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
-    caption={declaration.color === true ? 'Colors' : 'Vectors'}
+    caption={declaration.kind === 'constant' ? say(tr('value.constant', 'Constant')) : declaration.color === true ? 'Colors' : 'Vectors'}
     color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'} modes={modesOf(declaration, td)}
     commit={value => session.setDeclarationValue(declaration.id, value)}
     preview={value => session.previewDeclarationValue(declaration.id, value)} />;
@@ -109,7 +111,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   // 沒有輸入的節點是來源（Uniform、常數、貼圖輸入、TD 內建值、值節點；之後的 Spec 常量）：輸出放最上面，由上往下讀（人類）。
   // 由接孔判斷，不認節點。
   const source = !inputs.length && !view.spare;
-  const uniform = data.declaration?.kind === 'uniform' ? data.declaration : undefined;
+  const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
   const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
     <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
     {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
@@ -128,7 +130,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
       {source && outputRows}
       {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} bare />)}
-      {uniform && <UniformValue declaration={uniform} />}
+      {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => { const wired = data.connected.includes(port.key);
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
