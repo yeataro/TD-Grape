@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useMemo, useState, useSyncExternalStore, memo } from 'react';
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBezierPath,
   type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
@@ -17,6 +17,8 @@ import { PanelShell } from './PanelShell';
 import { SourcesPanel } from './SourcesPanel';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, type Shell } from './shell';
+import { listGrapeOps } from './grape_ops';
+import { sourceNow, describeSource, describeNow, buildLabel, tdLine, type TdIdentity, type DraftSource } from './td_identity';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
@@ -96,22 +98,29 @@ const idleSubscribe = () => () => {}, idleSnapshot = () => idle;
 // edits that one graph; the shell above decides which one.
 // 編輯外框：工具列、狀態列、畫布、面板、頁尾；有圖、載入中、沒有圖都是同一個版面（人類：載入中版面不能跑掉）。
 // 有 session 時編輯那一張圖；換哪一張由外殼決定。
-function Workspace({ session, waiting, prefs, text }: {
+// td: the TD answering now; opened: the TD this graph was opened from (Refactor.52, shown side by side).
+// td：現在回應的 TD；opened：開這張圖時的 TD（並排給人比對）。
+function Workspace({ session, waiting, prefs, text, td, opened }: {
   session: EditorSession | null; waiting: Waiting; prefs: Prefs; text: (key: string) => string;
+  td: TdIdentity | null; opened: TdIdentity | null;
 }) {
   const state = useSyncExternalStore(session?.subscribe ?? idleSubscribe, session?.snapshot ?? idleSnapshot);
   const target = session?.host.target ?? '', draftKey = draftKeyOf(target);
+  const tdNow = useRef(td); tdNow.current = td;
   const flow = useReactFlow();
   const [draft, setDraft] = useState(() => {
     if (!session) return null;
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
   });
+  const earlier = useMemo(() => { try { return draft ? JSON.parse(draft) as { source?: DraftSource } : null; } catch { return null; } }, [draft]);
   useEffect(() => {
     // Never overwrite a recovered draft before its owner chooses what to keep.
     // 尚未選擇時保留原草稿；快取失敗不能中止編輯或假裝已保存。
     if (!session || draft) return;
     try {
-      if (state.dirty) sessionStorage.setItem(draftKey, JSON.stringify({ target, graph: session.graph() }));
+      // The draft says where it came from (Refactor.52): that TD, this page's address, when it was written.
+      // 草稿記下來源：當時的 TD、這一頁的網址、寫入時間。
+      if (state.dirty) sessionStorage.setItem(draftKey, JSON.stringify({ target, graph: session.graph(), source: sourceNow(tdNow.current) }));
       else sessionStorage.removeItem(draftKey);
     } catch { session.notice(new TextError(tr('draft.storageFailed', 'The browser cannot keep a draft; use Download draft to keep unsent changes.'))); }
   }, [state.version, state.dirty, session, draft, draftKey, target]);
@@ -144,7 +153,7 @@ function Workspace({ session, waiting, prefs, text }: {
       <button disabled={off || state.phase === 'sending'} onClick={() => void session!.save()}>{say(tr('toolbar.saveProject', 'Save TD project'))}</button>
       <button aria-pressed={prefs.showSources} onClick={() => prefs.set({ showSources: !prefs.showSources })}>{say(tr('toolbar.sources', 'Shared Sources'))}</button>
       <button onClick={() => prefs.set({ showCode: !prefs.showCode })}>{say(tr('toolbar.glsl', 'GLSL'))}</button>
-      <button disabled={off} onClick={() => download({ target, graph: session!.graph() })}>{say(tr('toolbar.downloadDraft', 'Download draft'))}</button>
+      <button disabled={off} onClick={() => download({ target, graph: session!.graph(), source: sourceNow(td) })}>{say(tr('toolbar.downloadDraft', 'Download draft'))}</button>
     </nav>
     <div role="status" className={`status ${state.phase} ${state.level}`}><StatusText message={session ? state.message : waiting.message} />
       <small>{session ? say(tr('status.line', '{state} · revision {revision}', { revision: state.revision,
@@ -154,6 +163,8 @@ function Workspace({ session, waiting, prefs, text }: {
       {session && state.phase === 'offline' && <details className="recovery-help"><summary>{say(tr('status.howToRecover', 'How to recover'))}</summary>{say(recoveryHelp)}</details>}
     </div>
     {session && draft && <div className="draft-notice">{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}
+      {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
+      <span className="identity-compare"><span>{say(describeSource(earlier?.source))}</span><span>{say(describeNow(td))}</span></span>
       <button onClick={() => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw new TextError(tr('draft.otherTarget', 'This draft belongs to another Grape OP.')); if (session.restoreDraft(saved.graph)) setDraft(null); } catch (error) { session.notice(error); } }}>{say(tr('draft.restore', 'Restore draft'))}</button>
       <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>{say(tr('draft.downloadEarlier', 'Download earlier draft'))}</button>
       <button onClick={() => { setDraft(null); }}>{say(tr('draft.useTd', "Use TD's graph"))}</button>
@@ -162,6 +173,8 @@ function Workspace({ session, waiting, prefs, text }: {
       {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
       {session && state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
         <span>{say(conflictMessage)}</span>
+        <span className="identity-compare"><span>{say(tr('conflict.opened', 'Opened from: {td}', { td: tdLine(opened) }))}</span>
+          <span>{say(tr('conflict.tdNow', 'TD now: {td}', { td: tdLine(td) }))}</span></span>
         <button className="primary" onClick={() => void session.overwrite()}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
         <button onClick={() => void session.useRemote()}>{say(tr('conflict.useTd', 'TD'))}</button>
       </div>}
@@ -188,18 +201,24 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   const [waiting, setWaiting] = useState<Waiting>({ message: '' }), [reload, setReload] = useState(0);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null), [pending, setPending] = useState('');
   const prefs = usePrefs();
+  // Which TD answers (Refactor.52): asked once at start, then updated by every reply that says so.
+  // 哪個 TD 在回應：開頁時問一次，之後每個回覆都更新。
+  const [td, setTd] = useState<TdIdentity | null>(null), [opened, setOpened] = useState<TdIdentity | null>(null);
+  useEffect(() => { listGrapeOps(token).then(found => { if (found.td) setTd(found.td); }, () => { /* shown when the menu opens */ }); }, [token]);
   // Open the Grape OP in the address. 打開網址上的 Grape OP。
   useEffect(() => {
     let live = true, opened: EditorSession | null = null;
-    setSession(null); setPath('');
+    setSession(null); setPath(''); setOpened(null);
     // "No target" and "wrong target" (human 2026-10-09). 「沒指目標」與「錯指目標」。
     if (!target) { setWaiting({ message: tr('picker.noTarget', 'Choose a Grape OP to edit.') }); return; }
     const wrong = { message: tr('picker.wrongTarget', 'This Grape OP is not in the current project. Choose another one.') };
     if (!/^[a-f0-9]{32}$/.test(target)) { setWaiting(wrong); return; }
     setWaiting({ message: tr('picker.opening', 'Opening the Grape OP…') });
     const client = new HostClient(target, token);
+    client.seen = setTd;
     client.call<StateResponse>('state').then(loaded => {
       if (!live) return;
+      setOpened(loaded.td ?? null);
       opened = new EditorSession(client, bootstrap, loaded, undefined, undefined, undefined, version);
       setSession(opened); setPath(loaded.target);
     }, error => {
@@ -224,17 +243,20 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
     openMenu: element => setAnchor(element),
   }), [target, session, go]);
   const keepDraftAndGo = () => {
-    try { sessionStorage.setItem(draftKeyOf(target), JSON.stringify({ target, graph: session!.graph() })); go(pending); }
+    try { sessionStorage.setItem(draftKeyOf(target), JSON.stringify({ target, graph: session!.graph(), source: sourceNow(td) })); go(pending); }
     catch (error) { session?.notice(error); }
   };
   const applyAndGo = async () => { await session!.flush(); if (!session!.snapshot().dirty) go(pending); };
   return <ShellContext.Provider value={shell}><TextContext.Provider value={text}>
     <header><strong>TD-Grape <small>React · TOP · {version}</small></strong>
+      {/* The project file before the Grape OP path, as in the old product (Refactor.52); TD's build on hover.
+          專案檔名放在 Grape OP 路徑前面（照舊）；滑鼠停留顯示 TD 版本。 */}
+      {td && <span className="project-file" title={say(buildLabel(td))}>{td.file}</span>}
       <GrapeOpEntry className="target" label={path || tr('picker.choose', 'Choose a Grape OP')} /></header>
     {/* One frame for every stage; a new session starts its own editing state (drafts are per Grape OP).
         每個階段同一個外框；新的 session 有自己的編輯狀態（草稿依 Grape OP 分開）。 */}
-    <Workspace key={session ? target : ''} session={session} waiting={waiting} prefs={prefs} text={text} />
-    {anchor && <GrapeOpMenu anchor={anchor} token={token} onClose={closeMenu} />}
+    <Workspace key={session ? target : ''} session={session} waiting={waiting} prefs={prefs} text={text} td={td} opened={opened} />
+    {anchor && <GrapeOpMenu anchor={anchor} token={token} onClose={closeMenu} seen={setTd} />}
     {pending && <div className="switch-dialog" role="dialog" aria-label={say(tr('switch.title', 'Switch Grape OP'))}>
       <p>{say(tr('switch.explanation', 'Some changes are not in TD yet. Apply them to TD, or keep a draft in this browser tab before switching (it can be restored when you come back).'))}</p>
       <button className="primary" onClick={() => void applyAndGo()}>{say(tr('switch.apply', 'Apply, then switch'))}</button>

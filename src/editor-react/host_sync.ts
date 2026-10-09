@@ -62,14 +62,18 @@ const offlineMessage = {
   busy: tr('sync.offlineBusy', 'TD is not responding (it may be minimized). Your changes stay in the browser and are sent when TD is back.'),
   unreachable: tr('sync.offlineUnreachable', 'Cannot reach TD (it may be stuck or closed, or the network is down). Your changes stay in the browser and are sent once connected.'),
 };
-const hostChanged = tr('sync.hostChanged', "TD's build has changed; download your draft and reopen the editor.");
+// The page and TD-Grape in TD come from different builds (usually TD-Grape was updated). Not a conflict: no
+// version choice helps; reloading keeps unsent changes as a draft (Refactor.52). 不是衝突：重新整理即可，修改留成草稿。
+const hostChanged = tr('sync.hostChanged', 'This page and TD-Grape in TD come from different builds (TD-Grape was probably updated). Reload this page; unsent changes are kept as a draft.');
 // What a failed host call means for the document (design-interview Q28, measured 2026-10-07):
 // TD's queue answers manager_not_responding / manager_busy / manager_unavailable only when it
 // made NO change; a transport failure or other 5xx may still have landed and must be checked.
 // 依實測分類：TD 明確回覆「未處理」＝確定沒改；連線失敗或其他 5xx 可能已執行，須查版本、不重送。
-type Failure = { phase: 'offline'; link: 'busy' | 'unreachable'; landed: boolean } | { phase: 'uncertain' | 'conflict' | 'error' };
+type Failure = { phase: 'offline'; link: 'busy' | 'unreachable'; landed: boolean } | { phase: 'uncertain' | 'conflict' | 'error' }
+  | { phase: 'changed' };
 function classify(error: unknown): Failure {
   if (!(error instanceof HostError)) return { phase: 'uncertain' };
+  if (error.code === 'build_changed') return { phase: 'changed' };
   if (error.status === 409) return { phase: 'conflict' };
   if (error.status === 503 && ['manager_not_responding', 'manager_busy'].includes(error.code)) return { phase: 'offline', link: 'busy', landed: false };
   if (error.status === 503 && error.code === 'manager_unavailable') return { phase: 'offline', link: 'unreachable', landed: false };
@@ -162,6 +166,9 @@ export class HostSync {
   // Editing never waits for this: sending stops, the document stays editable (Q28).
   // 編輯不等 TD：只停止送出，文件照常可編輯；未連線／結果不明時才排程重試。
   private fail(failure: Failure, error: unknown, sent?: Sent) {
+    if (failure.phase === 'changed') {
+      this.blocked = true; this.set({ phase: 'error', link: undefined, message: hostChanged, level: 'error' }); return;
+    }
     this.blocked = failure.phase !== 'error';
     if (sent && (failure.phase === 'uncertain' || (failure.phase === 'offline' && failure.landed))) this.uncertain = sent;
     const reason = errorText(error);
@@ -198,6 +205,7 @@ export class HostSync {
     catch (error) {
       if (this.disposed) return;
       const failure = classify(error);
+      if (failure.phase === 'changed') { this.blocked = true; this.set({ phase: 'error', link: undefined, message: hostChanged, level: 'error' }); return; }
       if (failure.phase === 'offline') this.set({ phase: 'offline', link: failure.link, message: offlineMessage[failure.link], level: 'warning' });
       else this.set({ level: 'warning', message: tr('sync.checkFailed', 'Could not check TD: {reason}', { reason: errorText(error) }) });
       return;

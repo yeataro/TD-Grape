@@ -1,5 +1,6 @@
 import { tr, TextError, type Message } from './text';
 import type { LiveSocket } from './live_values';
+import type { TdIdentity } from './td_identity';
 
 // New-editor Grape OPs (design-interview Q40): the document is opaque text to TD.
 // 新編輯器的 Grape OP：圖對 TD 是不透明文字。
@@ -12,7 +13,7 @@ export type ComponentState = { mode: 'constant' | 'bind' | 'expression' | 'expor
 /** By declaration ID, one entry per component. 依宣告 ID，每個分量一筆。 */
 export type UniformStates = Readonly<Record<string, readonly ComponentState[]>>;
 export type StateResponse = { state: HostState; format: string; target: string; shaderKind: string;
-  frontendCompiler: { protocol: string; catalogHash: string; required: boolean }; uniforms?: UniformStates };
+  frontendCompiler: { protocol: string; catalogHash: string; required: boolean }; uniforms?: UniformStates; td?: TdIdentity };
 // A failed host call. `text` is set when the editor itself words the failure (Q34); TD's own
 // replies stay as TD wrote them. 編輯器自己描述的失敗帶 text；TD 回的訊息照原樣。
 export class HostError extends Error {
@@ -29,6 +30,8 @@ export class HostClient {
   readonly root: string;
   /** Opens the live WebSocket (Uniform D2); none outside a page (tests pass their own). 開即時 WebSocket。 */
   readonly live: (() => LiveSocket) | undefined;
+  /** Told which TD answered, on every reply that says so (Refactor.52). 每個帶「哪個 TD」的回覆都通知。 */
+  seen?: (td: TdIdentity) => void;
   constructor(readonly target: string, readonly token: string,
     private readonly request: typeof fetch = (...args) => fetch(...args), private readonly timeout = 20000,
     live?: () => LiveSocket) {
@@ -46,6 +49,7 @@ export class HostClient {
           ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         body: body === undefined ? undefined : JSON.stringify(body) });
       const result = await response.json();
+      if (result?.td) this.seen?.(result.td);
       if (!response.ok) throw new HostError(`[${action} / ${result.layer || 'host'} / ${result.code || response.status}] ${result.error || response.statusText}`,
         response.status, result.code, result.layer);
       return result as T;

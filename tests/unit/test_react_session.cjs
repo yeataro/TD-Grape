@@ -182,6 +182,20 @@ test('external conflicting state is never adopted over the local document', asyn
   assert.equal(session.snapshot().phase, 'conflict'); assert.deepEqual(clone(session.graph()), before);
 });
 
+// Refactor.52: a different build is not a conflict (no version choice helps); every reply's "which TD" reaches
+// the page. 建置不同不是衝突；每個回覆的「哪個 TD」都送到頁面。
+test('a build change on apply is not a conflict, and replies say which TD answered', async t => {
+  const td = { file: 'p.7.toe', build: '2025.33230' };
+  const { session } = open(t, async (action, body, remote) => action === 'state' ? remote.get()
+    : new Response(JSON.stringify({ error: 'different builds', code: 'build_changed', td }), { status: 409 }));
+  const seen = []; session.host.seen = found => seen.push(found);
+  session.transact('edit', net => setValue(net, 'a', 9)); await session.flush();
+  assert.equal(session.snapshot().phase, 'error'); assert.equal(session.snapshot().message.code, 'sync.hostChanged');
+  assert.equal(session.snapshot().dirty, true, 'the change stays, to be kept as a draft');
+  assert.deepEqual(JSON.parse(JSON.stringify(seen)), [td]);
+  await session.flush(); assert.equal(seen.length, 1, 'nothing is resent after the refusal');
+});
+
 // Host that enforces baseRevision like host_api (409 on a stale revision).
 const strictHost = beforeApply => async (action, body, remote) => {
   if (action === 'state') return remote.get();
@@ -1020,11 +1034,13 @@ test('wires follow the node rules: Shift adds, Ctrl toggles, a plain click on a 
 test('the Grape OP list comes from /api/shaders only', async () => {
   const { listGrapeOps } = load(path.join(root, 'src/editor-react/grape_ops.ts'));
   const seen = [];
-  const rows = await listGrapeOps('tok', async (url, options) => {
+  const { rows, td } = await listGrapeOps('tok', async (url, options) => {
     seen.push([url, options.headers['X-Sgrape-Token']]);
-    return new Response(JSON.stringify({ shaders: [{ id: 'a'.repeat(32), path: '/project1/one', kind: 'top' }, { id: 'bad', path: '/x' }], projectFile: 'p.toe' }));
+    return new Response(JSON.stringify({ shaders: [{ id: 'a'.repeat(32), path: '/project1/one', kind: 'top' }, { id: 'bad', path: '/x' }],
+      td: { file: 'p.3.toe', build: '2025.33230' } }));
   });
   assert.deepEqual(JSON.parse(JSON.stringify(rows)), [{ id: 'a'.repeat(32), path: '/project1/one', kind: 'top' }]);
+  assert.deepEqual(JSON.parse(JSON.stringify(td)), { file: 'p.3.toe', build: '2025.33230' }, 'the list also says which TD answered');
   assert.deepEqual(seen, [['/api/shaders', 'tok']]);
   await assert.rejects(listGrapeOps('', async () => new Response(JSON.stringify({ error: 'Editor assets are ready; the new TD Manager is not connected yet' }), { status: 501 })),
     error => /not connected/.test(error.message));

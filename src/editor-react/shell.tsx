@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { listGrapeOps, type GrapeOpRow } from './grape_ops';
+import type { TdIdentity } from './td_identity';
 import { tr, say, errorText, type Message } from './text';
 
 // The editor shell (Refactor.51; work/in-place-refactor-design/no-target-and-switching.md). It owns the one
@@ -29,14 +30,16 @@ export function GrapeOpEntry({ label, className }: { label: Message | string; cl
 
 /** The one Grape OP menu: the Grape OPs as items of the dropdown widget; choosing one is the shell's switch.
  * 唯一的 Grape OP 選單：把 Grape OP 變成下拉選單的項目；選了就是外殼的切換。 */
-export function GrapeOpMenu({ anchor, token, onClose }: { anchor: HTMLElement; token: string; onClose: () => void }) {
+export function GrapeOpMenu({ anchor, token, onClose, seen }: { anchor: HTMLElement; token: string; onClose: () => void;
+  seen: (td: TdIdentity) => void }) {
   const shell = useShell();
   const [rows, setRows] = useState<GrapeOpRow[] | null>(null), [error, setError] = useState<Message | string>('');
   useEffect(() => {
     let live = true;
-    listGrapeOps(token).then(found => { if (live) setRows(found); }, failure => { if (live) setError(errorText(failure)); });
+    listGrapeOps(token).then(found => { if (found.td) seen(found.td); if (live) setRows(found.rows); },
+      failure => { if (live) setError(errorText(failure)); });
     return () => { live = false; };
-  }, [token]);
+  }, [token, seen]);
   const items: MenuItem[] = (rows ?? []).map(row => ({ key: row.id, checked: row.id === shell.current, select: () => shell.choose(row.id),
     label: <><span className="grape-op-kind">{row.kind.toUpperCase()}</span><span className="grape-op-path">{row.path}</span></> }));
   const note = error || (rows === null ? tr('picker.loading', 'Listing the Grape OPs…')

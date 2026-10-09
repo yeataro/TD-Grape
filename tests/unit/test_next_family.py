@@ -171,7 +171,7 @@ class NextFamilyTests(unittest.TestCase):
             fam.apply(request(revision=2, run=runtime()), catalog_hash=CATALOG)
         with self.assertRaisesRegex(ValueError, 'target'):
             fam.apply({**request(run=runtime()), 'targetId': 'd' * 32}, catalog_hash=CATALOG)
-        with self.assertRaisesRegex(RuntimeError, 'catalog'):
+        with self.assertRaisesRegex(next_family.BuildChanged, 'different builds'):
             fam.apply(request(run=runtime()), catalog_hash='e' * 64)
         with self.assertRaisesRegex(ValueError, '512,000 bytes'):
             fam.apply(request(document='x' * 512001, run=runtime()), catalog_hash=CATALOG)
@@ -298,13 +298,22 @@ class HostRoutingTests(unittest.TestCase):
     def api(self, fam):
         return host_api.HostAPI(bootstrap={'version': 1, 'producer': 'frontend-modules', 'catalogHash': CATALOG},
             resolve=lambda ident: fam if ident == TARGET else None,
-            choices=lambda: {'shaders': [{'id': TARGET, 'path': '/nested/target'}], 'projectFile': 'test.toe'},
-            save_project=Mock(return_value='x.toe'))
+            choices=lambda: {'shaders': [{'id': TARGET, 'path': '/nested/target'}]},
+            save_project=Mock(return_value='x.toe'), identity=lambda: {'file': 'test.12.toe', 'build': '2025.33230'})
 
     def test_scoped_and_unscoped_grape_op_list_are_the_same(self):
         api = self.api(family()[0])
         self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/shaders'), api.dispatch('GET', '/api/shaders'))
-        self.assertEqual(api.dispatch('GET', '/api/shaders')[1]['projectFile'], 'test.toe')
+        # Every reply says which TD answered (Refactor.52, Q63): success, refusal and unknown target alike.
+        td = {'file': 'test.12.toe', 'build': '2025.33230'}
+        self.assertEqual(api.dispatch('GET', '/api/shaders')[1]['td'], td)
+        self.assertEqual(api.dispatch('GET', '/api/' + 'b' * 32 + '/state')[1]['td'], td)
+        self.assertEqual(api.dispatch('GET', '/api/nothing')[1]['td'], td)
+
+    def test_build_changed_is_not_a_conflict(self):
+        code, result = self.api(family()[0]).dispatch('POST', '/api/' + TARGET + '/apply', {**request(run=runtime()), 'catalogHash': 'e' * 64})
+        self.assertEqual((code, result['code']), (409, 'build_changed'))
+        self.assertNotIn('Conflict', result['error'])
 
     def test_unknown_target_and_operation_are_explicit(self):
         api = self.api(family()[0])

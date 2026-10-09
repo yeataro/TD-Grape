@@ -12,7 +12,7 @@ class UnsupportedOperation(RuntimeError):
 
 
 class HostAPI:
-    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None):
+    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None, identity=None):
         if bootstrap.get('version') != 1 or bootstrap.get('producer') != 'frontend-modules':
             raise ValueError('The editor module bootstrap is unavailable or incompatible.')
         self.catalog_hash = bootstrap['catalogHash']
@@ -21,8 +21,18 @@ class HostAPI:
         self.save_project = save_project
         # Told after a program is applied, so live editors get the new state (Uniform D2). 套用後通知即時通道。
         self.applied = applied
+        # Which TD answered (Refactor.52, design-interview Q63): the project file and TD build, on every
+        # reply, so people can compare; the host itself never judges "same TD". 每個回覆都帶「哪個 TD 回的」
+        # （專案檔名、TD 版本），讓人比對；宿主自己不判斷是不是同一個 TD。
+        self.identity = identity
 
     def dispatch(self, method, path, body=None):
+        status, result = self._dispatch(method, path, body)
+        if self.identity and isinstance(result, dict):
+            result = {**result, 'td': self.identity()}
+        return status, result
+
+    def _dispatch(self, method, path, body):
         path = urlsplit(path).path
         match = re.fullmatch(r'/api/([a-f0-9]{32})/([a-z-]+)', path)
         if method == 'GET' and path == '/api/shaders':
@@ -40,6 +50,10 @@ class HostAPI:
         except UnsupportedOperation as error:
             return 501, {'error': str(error), 'code': 'capability_not_migrated', 'layer': 'manager', 'operation': action}
         except (ValueError, RuntimeError) as error:
+            if getattr(error, 'code', None) == 'build_changed':
+                # Not a conflict: no version choice helps, the page must be reloaded (Refactor.52).
+                # 不是衝突：選哪個版本都沒用，要重新整理頁面。
+                return 409, {'error': str(error), 'code': 'build_changed', 'layer': 'grape-op', 'operation': action}
             conflict = 'conflict' in str(error).lower()
             return 409 if conflict else 422, {'error': ('Conflict: ' if conflict and not str(error).startswith('Conflict:') else '') + str(error),
                 'code': 'revision_conflict' if conflict else 'host_rejected', 'layer': 'grape-op', 'operation': action}

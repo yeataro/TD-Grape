@@ -49,7 +49,7 @@ class GrapeManagerExt:
         self.live = self._module('live_watch').LiveWatch(resolve=self.Resolve, watcher=self._watch, frame=lambda: absTime.frame)
         self.api = self._module('host_api').HostAPI(
             bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save(),
-            applied=self.live.applied)
+            applied=self.live.applied, identity=lambda: {'file': project.name, 'build': app.build})
         self.queue = self._module('host_requests').HostRequests()
         editor.http.connect(self.queue)
         panel = self.ownerComp.par.Remotepanel.eval()
@@ -125,7 +125,7 @@ class GrapeManagerExt:
     def Choices(self):
         rows = [{'id': self._module('next_family').identity(comp), 'path': comp.path, 'kind': 'top'}
                 for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)]
-        return {'shaders': rows, 'projectFile': project.name}
+        return {'shaders': rows}
 
     def Open(self, comp, app=False):
         """Open the editor for a Grape OP. app=True: an app window when the default browser

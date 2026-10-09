@@ -60,6 +60,11 @@ UNIFORM_TYPES = uniform_writer.COUNTS
 COLOR_TYPES = ('vec3', 'vec4')
 
 
+class BuildChanged(RuntimeError):
+    """The editor page was built for another TD-Grape build (Refactor.52). 編輯頁與 TD-Grape 的建置不同。"""
+    code = 'build_changed'
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -393,7 +398,7 @@ class NextFamily:
             raise RuntimeError('Conflict: stale revision')
         require(body.get('targetId') == identity(self.comp), 'target mismatch')
         if body.get('catalogHash') != catalog_hash:
-            raise RuntimeError('Conflict: catalog changed; reload the editor')
+            raise BuildChanged('The editor page and TD-Grape come from different builds; reload the editor page.')
         text = body.get('document')
         require(isinstance(text, str) and 0 < len(text.encode('utf-8')) <= MAX_GRAPH_BYTES, 'graph text is empty or over 512,000 bytes')
         runtime_text = body.get('runtime')
