@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.60.1 來源名稱用省略號**（人類 10-10）：卡片上〔🔌 輸入：名稱〕的名稱原本被直接切掉；文字包成自己的一段（`.input-source-name`），縮短時加省略號，圖示與數量不動。驗證：Grape_TOP1 顯示「輸入：moviefil…」。
 - **Refactor.60 貼圖輸入顯示實際收到的圖**（人類 10-10；範圍與決定 workspace `texture-input-actual.md`）：
   - TD 回報每個貼圖輸入接了什麼（`next_family.input_sources`：Grape OP 輸入接口連到的最近一個 OP，沒接是 null）；`GET /api/<id>/inputs`、`GET /api/<id>/input/<輸入 ID>`（拍那個輸入的 In TOP＝Shader 實際收到的；取代原本拍自選 TOP 的 `texture`）。
   - 接線改變時 TD 主動通知：Manager 新 OP Execute DAT `wire_watch`（`onWireChange`，只監看有編輯器連著的 Grape OP、沒人連就關），經現有 WebSocket 送 `{type:'inputs'}`；編輯器重新問輸入、開著的預覽自動重拍。實測：接上、拔掉、換接都會觸發，同一格內合併成一次。

@@ -82,7 +82,7 @@ export function SourcesPanel({ declarations, references }: {
         {/* Wired from outside: what is wired, read only; the default waits below as "when unwired" (Refactor.60; human 2026-10-10).
             外面接了東西：顯示接了什麼、唯讀；預設圖退到下面「沒接時」（人類）。 */}
         {sources?.[declaration.id] ? <span className="input-source" title={sources[declaration.id]!}><Icon name="plug" />
-          {say(tr('sources.inputSource', 'Input: {name}', { name: sources[declaration.id]!.split('/').pop() ?? '' }))}</span>
+          <span className="input-source-name">{say(tr('sources.inputSource', 'Input: {name}', { name: sources[declaration.id]!.split('/').pop() ?? '' }))}</span></span>
           : defaultSelect(declaration)}</>}>
       {sources?.[declaration.id] && <div className="unwired-default"><span>{say(tr('sources.whenUnwired', 'When unwired'))}</span>{defaultSelect(declaration)}</div>}
       <TexturePreview id={declaration.id} texture={String(declaration.defaultTexture)} />
