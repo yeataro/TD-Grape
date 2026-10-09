@@ -17,12 +17,12 @@ import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
 import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
 import { conflictMessage } from './host_sync';
-import { glslErrors } from './glsl_errors';
+import { glslErrors, errorNodes as findErrorNodes } from './glsl_errors';
 import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
 import { PANELS, type PanelInput } from './panels';
 import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
 import { NodeCard } from './NodeCard';
-import { SessionContext, TextContext, BodyDragContext, MergingContext } from './contexts';
+import { SessionContext, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { addChoices, type AddChoice } from './add_entries';
 import { DRAG_TYPE } from './AddNodePanel';
 import { CreateNode, type CreateRequest } from './CreateNode';
@@ -101,8 +101,9 @@ function ZoomReadout() {
       items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, stage, onCreate, onDropChoice }: {
-  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean; stage: string;
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, errorNodes, stage, onCreate, onDropChoice }: {
+  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean;
+  errorNodes: ReadonlySet<string> | null; stage: string;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
 }) {
   const options = useOptions(), flow = useReactFlow();
@@ -137,7 +138,8 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   // React Flow also reports the end of a reconnect as a connection end; that one is the reconnect's own.
   // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
   const reconnecting = useRef(false);
-  return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={preview}><RightDragSelect session={session} boxSelect={boxSelect}>
+  return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={preview}><ErrorNodesContext.Provider value={errorNodes}>
+    <RightDragSelect session={session} boxSelect={boxSelect}>
     <ReactFlow<FlowNode, FlowEdge> ref={surface} nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes}
       zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
@@ -197,22 +199,23 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
         <span>{say(tr('canvas.hint', 'Build your Shader from left to right.'))}</span></Panel>
       <SelectionFrame nodes={projection.nodes} />
     </ReactFlow>
-  </RightDragSelect></MergingContext.Provider></BodyDragContext.Provider>;
+  </RightDragSelect></ErrorNodesContext.Provider></MergingContext.Provider></BodyDragContext.Provider>;
 });
 // Canvas preferences of this page, kept by the shell so they survive switching Grape OP (Refactor.51.1).
 // Panels and zones are the layout's (layout.tsx, Refactor.53).
 // 畫布偏好，由外殼保管，換 Grape OP 時不重設。面板與面板區歸版面管（layout.tsx）。
 // Body drag and canvas damping are kept in this browser (Q64; preferences.ts); Snap and box select last for the page.
-// Damping starts off while it is a trial. Body 拖曳與畫布阻尼記在這個瀏覽器；試驗期間阻尼預設關。
+// Damping and error-node marks start off while they are trials. Body 拖曳與畫布阻尼記在這個瀏覽器；試驗期間阻尼與錯誤節點標記預設關。
 function usePrefs(): CanvasPrefs {
   const [prefs, setPrefs] = useState(() => ({ snap: false, boxSelect: false,
     bodyDrag: readPreference('canvas.bodyDrag') !== 'off', damping: readPreference('canvas.damping') === 'on',
-    frameGlide: readPreference('canvas.frameGlide') !== 'off' }));
+    frameGlide: readPreference('canvas.frameGlide') !== 'off', errorNodes: readPreference('canvas.errorNodes') === 'on' }));
   return useMemo(() => ({ ...prefs, set: patch => {
     setPrefs(old => ({ ...old, ...patch }));
     if (patch.bodyDrag !== undefined) writePreference('canvas.bodyDrag', patch.bodyDrag ? 'on' : 'off');
     if (patch.damping !== undefined) writePreference('canvas.damping', patch.damping ? 'on' : 'off');
     if (patch.frameGlide !== undefined) writePreference('canvas.frameGlide', patch.frameGlide ? 'on' : 'off');
+    if (patch.errorNodes !== undefined) writePreference('canvas.errorNodes', patch.errorNodes ? 'on' : 'off');
   } }), [prefs]);
 }
 // No graph open: the same frame, nothing to show and nothing to do (Refactor.51.1). Typed in full, no cast: a field
@@ -315,6 +318,12 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys);
       removeEventListener('dragover', dragging); removeEventListener('drop', dragging); };
   }, [session, draft]);
+  // Trial (Refactor.63.6, human 2026-10-10): the nodes that wrote a line TD reported, only while this is the GLSL that failed
+  // (legacy: only exact lines, only before the graph changes). Worked out only with the setting on and a failure.
+  // 試驗：TD 回報的錯誤行是哪些節點寫的；只在目前就是失敗的那份 GLSL 時（舊產品：只認確定的行、圖改過就不標）。設定開著且有失敗才算。
+  const failure = state.stuck?.failure;
+  const errorNodes = useMemo(() => prefs.errorNodes ? findErrorNodes(failure, state.glsl, state.glslMap) : null,
+    [prefs.errorNodes, failure, state.glsl, state.glslMap]);
   // The panels' content, from the graph being edited (Q47 4). 面板內容，來自正在編輯的圖。
   const input: PanelInput = { session, state, choices, add: choice => addAt(choice, middle()) };
   const panels: Record<string, PanelView> = Object.fromEntries(Object.entries(PANELS)
@@ -328,7 +337,7 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
           {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
-          {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping}
+          {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping} errorNodes={errorNodes}
             stage={say(tr('stage.pixel', 'Pixel stage'))} onCreate={onCreate} onDropChoice={onDropChoice} />
             : waiting.loading ? <LoadingCanvas message={waiting.message} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {

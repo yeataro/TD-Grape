@@ -10,4 +10,7 @@ export const BodyDragContext = createContext(false);
 /** While a wire is dragged over an input: the inputs of that node it would merge away (Refactor.57).
  * 拖線停在某個輸入上時：那個節點會被併掉的輸入。 */
 export const MergingContext = createContext<{ node: string; merged: readonly string[] } | null>(null);
+/** Nodes that wrote a line TD reported in the GLSL that failed (Refactor.63.6, a trial: canvas setting, off by default).
+ * TD 回報的錯誤行是哪些節點寫的（試驗：畫布設定，預設關）。 */
+export const ErrorNodesContext = createContext<ReadonlySet<string> | null>(null);
 export const useSession = () => useContext(SessionContext)!;

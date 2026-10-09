@@ -1217,11 +1217,17 @@ test('the inputs are asked again when TD says it was rewired and when the socket
 // A compile failure in TD (Refactor.63): TD's log read for its lines; a stuck Shader known when opening; back to the
 // graph TD runs as one Undo step, then delivered as any edit. TD 編譯失敗：讀出行號；開圖時就知道 Shader 卡住；回到 TD 正在跑的圖。
 test('TD compile errors are read for their lines; a stuck Shader can go back to the last known good graph', async t => {
-  const { glslErrors } = load(path.join(root, 'src/editor-react/glsl_errors.ts'));
+  const { glslErrors, errorNodes } = load(path.join(root, 'src/editor-react/glsl_errors.ts'));
   // TD's own log, as measured 2026-10-10. TD 自己的紀錄（實測）。
   const log = ['Vertex Shader Compile Results:', '', 'Compiled Successfully', '', '=============', 'Pixel Shader Compile Results:',
     "ERROR: /project1/grape/pixel_shader:4: 'undefined_thing' : undeclared identifier ", 'ERROR: 1 compilation errors.  No code generated.', ''].join('\n');
   assert.deepEqual(JSON.parse(JSON.stringify(glslErrors(log))), [{ line: 4, text: "'undefined_thing' : undeclared identifier" }]);
+  // Error-node marks (Refactor.63.6 trial): the exact line's node, only for the GLSL that failed. 錯誤節點標記：確定的行、只對失敗的那份。
+  const lines = [{ line: 3, node: 'a' }, { line: 4, node: 'b' }];
+  assert.deepEqual([...errorNodes({ log, pixel: 'glsl' }, 'glsl', lines)], ['b']);
+  assert.equal(errorNodes({ log, pixel: 'glsl' }, 'edited since', lines), null, 'changed since: nothing marked');
+  assert.equal(errorNodes({ log, pixel: 'glsl' }, 'glsl', [{ line: 3, node: 'a' }]), null, 'no exact line: nothing guessed');
+  assert.equal(errorNodes(undefined, 'glsl', lines), null);
   // TD runs revision 3 (the fixture); the graph moved to 4 with a program that failed. TD 跑第 3 版；圖到第 4 版、程式失敗。
   const good = JSON.stringify(fixture()), edited = fixture();
   edited.stages.pixel.nodes[0].ui = { x: 999, y: 0 };

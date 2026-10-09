@@ -382,6 +382,7 @@
   "toolbar.componentTint": "分量染色",
   "toolbar.damping": "畫布阻尼",
   "toolbar.downloadDraft": "下載草稿",
+  "toolbar.errorNodes": "標出 TD 錯誤行的節點（試驗）",
   "toolbar.frameGlide": "Frame 過渡（F）",
   "toolbar.glsl": "",
   "toolbar.redo": "",

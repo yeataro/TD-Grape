@@ -13,3 +13,14 @@ export function glslErrors(log: string): GlslError[] {
     return match ? [{ line: Number(match[1]), text: match[2]!.trim() }] : [];
   });
 }
+
+/** The nodes that wrote a line TD reported (Refactor.63.6, a trial): only when `glsl` is the GLSL that failed, and only
+ * lines the source map names exactly (legacy native_compile_diagnostics: never a guessed node). None gives null.
+ * TD 回報的錯誤行是哪些節點寫的（試驗）：只在 glsl 就是失敗的那份時，只認 sourceMap 確定的行（舊產品：不猜節點）。沒有就是 null。 */
+export function errorNodes(failure: { log: string; pixel: string } | undefined, glsl: string,
+  lines: readonly { line: number; node: string }[]): ReadonlySet<string> | null {
+  if (!failure || failure.pixel !== glsl) return null;
+  const nodeOf = new Map(lines.map(row => [row.line, row.node]));
+  const nodes = new Set(glslErrors(failure.log).flatMap(error => nodeOf.get(error.line) ?? []));
+  return nodes.size ? nodes : null;
+}

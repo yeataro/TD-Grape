@@ -58,6 +58,12 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.63.6 錯誤節點標記（試驗）**（人類 10-10：可關、低成本）：
+  - 舊行為對照：舊產品 TD 錯誤行→節點只認確定的行（legacy sgrape_core.py `native_compile_diagnostics`），圖改過就不標（app.js `diagnosticGraphMatches`），標法是節點紅框、選取時仍紅（style.css `.node.error`）——照舊；做成畫布設定的試驗開關、預設關——新（人類同意）。
+  - 設定齒輪多一個「標出 TD 錯誤行的節點（試驗）」，記在這個瀏覽器（`canvas.errorNodes`）。開著且 Shader 卡在編譯失敗、目前的 GLSL 就是失敗的那份時，TD 回報的每一行照 sourceMap 找到寫它的節點，外框改錯誤色（用途色 `--border-node-error`）；改過圖就不標（行號會指錯）。只在設定開著時才算，結果不進圖、不進 TD。
+  - 判斷寫在 `glsl_errors.ts` 的 `errorNodes`（純函式），由工作區算好經 context 交給節點卡片。
+  - 驗證：editor 81（加：確定的行標到節點；GLSL 改過不標；行號對不到不猜）。TD 實測（Grape_TOP_test）：加 Force Compile Error 接到輸出 → TD 報第 4 行；設定關時不標；打開後該節點外框為錯誤色（`#f78b96`），選取時外面加綠色選取框；關掉即消失；Undo 兩步後 TD 回到 17 節點、11 線、無失敗紀錄；測試用的設定已清掉。
+  - 人類同時提了其他樣式（紅色斜線紋，或 TD 式紅底黑叉圖示），待定。
 - **Refactor.63.5 GLSL 型別色照舊產品**（人類 10-10：`layout` 和 `vec4` 同色看起來怪）：R.63 換 Prism 時記下的唯一差別——Prism 把型別算進關鍵字，所以型別和關鍵字同紫色。修正：Prism 標成關鍵字的字，若在舊產品的型別清單（legacy app.js:1624，含 `void`、genType、矩陣、sampler／image）就用型別色（青綠），其餘照舊；清單照抄舊產品、不自己訂。驗證：editor 81；TD 實測（Grape_TOP_test）`vec4`、`vec2`、`void`、建構子 `vec4(` 為型別色 `#8dd9c5`，`layout`、`out` 為關鍵字色 `#c5a5f3`；分頁設定還原。原排 63.5 錯誤節點標記順延為 63.6。
 - **Refactor.63.4 GLSL 面板：邊緣漸層與更多可點的名字**（人類 10-10 排定）：
   - 邊緣漸層：新的共用元件 `ScrollFade`（controls.tsx）——哪一邊還有被蓋住的內容，那一邊的邊緣就從後面的底色淡到透明（四邊各自判斷，捲動、區域或內容改變大小時重量，漸層不擋滑鼠）。GLSL 面板的程式碼區改用它捲動，失敗說明留在上方不跟著捲。

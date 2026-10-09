@@ -154,6 +154,8 @@
      滑鼠或鍵盤所在的那一行（亮一點點），以及 TD 回報的錯誤行（人類）。 */
   --code-line-hover: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
   --code-line-error: color-mix(in srgb, var(--palette-error) 22%, transparent);
+  /* A node that wrote a line TD reported (trial, Refactor.63.6). TD 回報的錯誤行由它寫的節點（試驗）。 */
+  --border-node-error: var(--palette-error);
 
   /* The frame: one ink lifted by the shared strengths. 外框：同一個墨色依共用強度提亮。 */
   --surface-app: var(--palette-ink);

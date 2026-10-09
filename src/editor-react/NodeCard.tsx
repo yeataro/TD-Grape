@@ -8,7 +8,7 @@ import { BoxPreviewContext } from './RightDragSelect';
 import { tr, say, type Message } from './text';
 import { Select } from './controls';
 import { ValueFields } from './ValueFields';
-import { useSession, TextContext, BodyDragContext, MergingContext } from './contexts';
+import { useSession, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { modesOf } from './declaration_modes';
 import type { Declaration } from './core';
 
@@ -86,7 +86,9 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   const preview = useContext(BoxPreviewContext);
   // Hooks stay above the ghost return. hook 都放在 ghost 提早返回之前。
   const mergePreview = useContext(MergingContext), merging = mergePreview?.node === id ? mergePreview.merged : [];
-  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '');
+  const errorNodes = useContext(ErrorNodesContext);
+  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '')
+    + (errorNodes?.has(id) ? ' compile-error' : '');
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();
   const { authored, view, inputs, outputs } = data;

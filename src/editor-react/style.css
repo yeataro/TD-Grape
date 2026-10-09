@@ -288,6 +288,9 @@ button.glsl-gutter:hover { color: var(--text); text-decoration: underline; }
 .grape-node { position: relative; width: max-content; min-width: var(--node-min-width); max-width: 640px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow), var(--node-glow, 0 0 transparent); }
 /* Selection (Refactor.58.3): the legacy green. 選取：舊產品的綠。 */
 .grape-node.selected { --node-select: var(--select); outline: 2px solid var(--node-select); }
+/* Trial (Refactor.63.6): a node that wrote a line TD reported; its outline stays in the error colour when selected (legacy .node.error).
+   試驗：TD 回報的錯誤行由這個節點寫的；選取時外框仍是錯誤色（舊產品 .node.error）。 */
+.grape-node.compile-error { border-color: var(--border-node-error); }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
    多選時目前的那個比較亮；單選時就是一般的綠（人類）。 */
 .react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { --node-select: var(--select-primary); }

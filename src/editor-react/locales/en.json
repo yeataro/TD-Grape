@@ -382,6 +382,7 @@
   "toolbar.componentTint": "Component colours",
   "toolbar.damping": "Canvas damping",
   "toolbar.downloadDraft": "Download draft",
+  "toolbar.errorNodes": "Mark nodes on TD error lines (trial)",
   "toolbar.frameGlide": "Frame transition (F)",
   "toolbar.glsl": "GLSL",
   "toolbar.redo": "Redo",
