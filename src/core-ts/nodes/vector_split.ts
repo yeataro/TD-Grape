@@ -1,4 +1,4 @@
-import { typedNode, input, output, values } from '../node_sdk';
+import { typedNode, input, output, values, storedOr, componentLetters } from '../node_sdk';
 
 const catalog = {
   "definition": {
@@ -47,6 +47,13 @@ const catalog = {
 export default typedNode(catalog, {
   types: values.vectors,
   ports: t => [input('value', t), ...'xyzw'.slice(0, values.count(t)).split('').map(p => output(p, values.family(t)))],
-  presentation: () => ({selectorLabel: 'vector.inputType'}),
+  inheritsComponentNames: true,
+  // Each output is one component, named and coloured as the node's names say (legacy graph_ui.js:1297).
+  // 每個輸出是一個分量，名稱與顏色照節點的名稱樣式（照舊產品）。
+  presentation: n => {
+    const t = String(n.params.type), keys = 'xyzw'.slice(0, values.count(t)).split(''), letters = componentLetters(storedOr(n, 'xyzw'), keys.length);
+    return {selectorLabel: 'vector.inputType', portLabels: {outputs: Object.fromEntries(keys.map((k, i) => [k, letters[i]!]))},
+      components: {outputs: Object.fromEntries(keys.map((k, i) => [k, [i]]))}};
+  },
   emit: (n, c) => ({outputs: Object.fromEntries('xyzw'.slice(0, values.count(String(n.params.type))).split('').map(p => [p, '(' + c.input('value') + ').' + p]))})
 });

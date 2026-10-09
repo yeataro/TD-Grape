@@ -1150,3 +1150,19 @@ test('the projection marks wired inputs and outputs, and follows Undo', t => {
   session.history(false);
   assert.deepEqual(clone(node('a').wired), [], 'the source forgets the wire after Undo');
 });
+
+// Refactor.59: a vector node made from a wire takes the other end's component names, in the same step (legacy
+// graph_ui.js:2346). 由拉線新增的向量節點沿用另一端的分量名稱樣式，同一步完成。
+test('a vector node added from a wire takes the component names of the node at the other end', t => {
+  const { session } = open(t);
+  session.addNode({ nodeType: 'sgrape.builtin.color', params: {} }, { x: 0, y: 300 });
+  const color = session.graph().stages.pixel.nodes.at(-1).id, before = clone(session.graph());
+  session.addNode({ nodeType: 'sgrape.builtin.vector_split', params: { type: 'vec4' } }, { x: 300, y: 300 },
+    { end: { node: color, port: 'out', side: 'output' }, port: 'value' });
+  const split = session.graph().stages.pixel.nodes.at(-1);
+  assert.equal(split.ui.componentNames, 'rgba');
+  session.addNode({ nodeType: 'sgrape.builtin.add', params: {} }, { x: 300, y: 500 }, { end: { node: 'a', port: 'out', side: 'output' }, port: 'a' });
+  assert.equal(session.graph().stages.pixel.nodes.at(-1).ui.componentNames, undefined, 'only vector nodes take the names');
+  session.history(false); session.history(false);
+  assert.deepEqual(clone(session.graph()), before, 'Undo removes the node with its names');
+});

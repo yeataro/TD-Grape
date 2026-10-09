@@ -54,7 +54,11 @@ function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
   // Over blank canvas from an output, a "+" says releasing opens Create node (Blender; human 2026-10-09). From an
   // input there is none: releasing there pulls the wire. 從輸出拉、停在空白處時線頭有「＋」：放開會打開新增節點；從輸入拉沒有（放開是拔線）。
   const plus = options.wireEndPlus && options.wireDropCreates && props.fromHandle.type === 'source' && !props.toHandle;
-  return <g><path d={path} fill="none" style={{ stroke: typeColor(port?.type ?? ''), strokeWidth: 'var(--wire-width-drag)' }} strokeDasharray="5 4" />
+  // The dragged wire takes the component of a one-component port too (legacy graph_ui.js:1627). 拖曳中的線也帶單一分量。
+  const view = props.fromNode.data.view.components, components = props.fromHandle.type === 'source'
+    ? view?.outputs?.[props.fromHandle.id ?? ''] : view?.inputs?.[props.fromHandle.id ?? ''];
+  return <g className={components?.length === 1 ? 'component-' + components[0] : undefined}><path d={path} fill="none"
+    style={{ stroke: typeColor(port?.type ?? ''), strokeWidth: 'var(--wire-width-drag)' }} strokeDasharray="5 4" />
     {plus && <text className="wire-plus" x={props.toX + 9} y={props.toY - 7}>+</text>}</g>;
 }
 // The grid thins out when zoomed out, as the legacy editor (legacy app.js:590–598): the spacing doubles until

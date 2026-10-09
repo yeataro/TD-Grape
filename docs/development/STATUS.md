@@ -58,6 +58,14 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.59 分量樣式與分量染色**（人類 10-09；範圍 workspace `component-style.md`，決定 design-interview Q67）：
+  - 核心 `component_names.ts`：樣式 `xyzw`／`rgba`／`stpq`／`uv`，存在節點 `ui.componentNames`（只是外觀、不產碼）；沒存時用模組的 `componentNames()` 預設——Color、顏色 Uniform 引用、Split RGBA、Compose RGBA 是 RGBA，TD 內建值 `vUV`／`vUV.st` 是 UV，其他 XYZW；UV 只在兩個分量時顯示（照舊產品）。
+  - 節點模組在 `presentation.components` 宣告每個接孔代表哪些分量；Combine／Replace 的分量輸入顯示涵蓋的字母（分組如「RG」）、Vector Split 每個輸出一個字母、Swizzle 輸出照遮罩（選單字母也跟著）、Vector／Color 數值框的名稱都照樣式；畫面不認節點名字。
+  - 拉線新增 Vector、Combine、Replace、Vector Split、Swizzle（`inheritsComponentNames`）時，同一步把另一端節點的樣式寫進新節點（`editor.ts addNode`，一次 Undo）。
+  - 分量染色：一個開關（齒輪「分量染色」，偏好 `appearance.componentTint`，預設開）。單一分量的接孔：圓圈、標籤、出發的線（含拖曳中的線）用分量色；多字母標籤每個字母各自上色；型別小字維持 float 色；選中與滑過的線維持自己的顏色；數值框的分量名稱也上色（原本只有顏色值上色）。分量色維持現在主題的（人類：RGB 照現在，做到分量染色再談；接線最後多半用舊產品色）。
+  - 驗證：核心測試 142 過（新增：預設、存的樣式、標籤、分量）；session 測試 77 過（新增：拉線新增 Vector Split 沿用 Color 的 rgba、Add 不沿用、Undo 一次清掉）。瀏覽器實點（r54_probe，測完 Undo）：Split RGBA 的 `r` 接到 Combine 的 `w`，線、圓圈、標籤是 R 色 `rgb(239,137,144)`、型別小字 float 色；滑過的線換成滑過色；關掉開關全回型別色、記住，打開恢復。淺色主題未在畫面上看。
+  - 另發現（不在本輪）：從 vec4 輸出拉線時，新增選單只列 Multiply、Mix、Split RGBA——Vector Split、Combine、Replace、Swizzle 新增時預設 vec2、接不上，被篩掉（舊產品會列）。所以畫面上還無法用拉線新增來看沿用樣式，只有單元測試。
+  - 延後：切換樣式的下拉（參數面板那一輪，Q67）。
 - **Refactor.58.9 Samples Clone 與 label**（58.1 的 TD 端三步，人類 10-09 同意；範圍 workspace `texture-preview.md` 最後一節）：
   - 主組件 `/TD_Grape/Samples` 的 out1～out7 加 label `grape`、`banana`、`jellybeans`、`white`、`black`、`normal`、`custom`（同圖裡的 `defaultTexture`）；註解改寫。
   - 每個 Grape OP 的 Samples 改為 Clone 它（`op.TDGrape.op('Samples') if hasattr(op, 'TDGrape') else ''`）：現有 5 個（`Grape_TOP1`、`Grape_TOP_REF`（人類同意）、`Grape_TOP_test`、`r54_probe`、範本）用一次性腳本 `../work/refactor/migrate_samples_clone.py` 搬；範本安裝程式 `install_grape_templates.py` 也建 label 與 Clone。

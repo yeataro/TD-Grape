@@ -59,3 +59,22 @@ test('explicit constructor input changes cannot silently retarget its output',()
  const d=new GraphDocument(g,registry);assert.throws(()=>d.change(g=>g.networks.get('pixel').node('operation').edit('fromType',{value:'vec2'})),/construct/);
  assert.equal(d.snapshot().stages.pixel.nodes.find(n=>n.id==='operation').params.toType,'vec4');
 });
+// Component names (Refactor.59): the module's default unless the node stores one; ports say which components they are.
+// 分量名稱：節點沒存就用模組預設；接孔宣告自己代表哪些分量。
+test('component names: defaults, stored names, labels and components per port',()=>{
+ const {componentStyle}=require('../../src/generated/grape_core.js');
+ const graph={format:'grape-graph',version:1,target:'top',declarations:[],stages:{pixel:{nodes:[
+  node('col','color',{value:[1,0,0,1]}),node('vec','vector',{type:'vec3',components:[0,0,0,0]}),
+  {...node('join','combine',{type:'vec4',groups:{x:'vec2'},components:[0,0,0,0]}),ui:{componentNames:'rgba'}},
+  {...node('parts','vector_split',{type:'vec2'}),ui:{componentNames:'uv'}},node('rgba','split',{}),
+  {...node('mask','swizzle',{type:'vec4',mask:'wx'}),ui:{componentNames:'stpq'}}],edges:[]}}};
+ const net=new GraphDocument(graph,registry).networks.get('pixel'),view=id=>net.node(id).definition.presentation(net.node(id).data,net.context);
+ const style=id=>componentStyle(net.node(id).definition,net.node(id).data,net.context);
+ assert.deepEqual(['col','vec','join','parts','rgba'].map(style),['rgba','xyzw','rgba','uv','rgba']);
+ assert.equal(view('col').value.names,'RGBA');
+ assert.deepEqual(view('join').portLabels.inputs,{x:'RG',z:'B',w:'A'});
+ assert.deepEqual(view('join').components.inputs,{x:[0,1],z:[2],w:[3]});
+ assert.deepEqual(view('parts').portLabels.outputs,{x:'U',y:'V'});
+ assert.deepEqual(view('rgba').components.outputs,{r:[0],g:[1],b:[2],a:[3]});
+ assert.deepEqual([view('mask').portLabels.outputs.out,view('mask').components.outputs.out],['QS',[3,0]]);
+});

@@ -22,6 +22,7 @@ const td_values_1 = require("./td_values");
 const uniform_presets_1 = require("./uniform_presets");
 const common_sources_1 = require("./common_sources");
 const node_sdk_1 = require("./node_sdk");
+const component_names_1 = require("./component_names");
 const abs_1 = require("./nodes/abs");
 const add_1 = require("./nodes/add");
 const all_1 = require("./nodes/all");
@@ -82,7 +83,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle };
 
 },
 "capacity":function(require,module,exports){
@@ -308,6 +309,29 @@ exports.commonSources = Object.freeze([
         "meaning": "Width and height of the output in pixels."
     }
 ].map(entry => Object.freeze(entry)));
+
+},
+"component_names":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.componentLetters = exports.componentStyle = exports.storedOr = exports.componentStyles = void 0;
+/** Component names (Refactor.59; legacy graph_ui.js:1224-1236): a node shows its vector components as X/Y/Z/W,
+ * R/G/B/A, S/T/P/Q or U/V. Stored on the node as `ui.componentNames` (appearance only, never compiled, design-interview
+ * Q67); when not stored, the node module's default; nothing said, X/Y/Z/W. Switched only in the parameter panel (later).
+ * 分量名稱：節點把向量分量顯示成 X/Y/Z/W、R/G/B/A、S/T/P/Q 或 U/V。存在節點的 ui.componentNames（只是外觀、不產碼）；
+ * 沒存時用節點模組的預設，沒說就是 X/Y/Z/W。只在參數面板切換（之後）。 */
+exports.componentStyles = ['xyzw', 'rgba', 'stpq', 'uv'];
+const isStyle = (value) => exports.componentStyles.includes(value);
+/** A node's names when its module says `fallback` by default. 模組預設為 fallback 時這個節點的名稱樣式。 */
+const storedOr = (node, fallback) => { var _a; return isStyle((_a = node.ui) === null || _a === void 0 ? void 0 : _a.componentNames) ? node.ui.componentNames : fallback; };
+exports.storedOr = storedOr;
+/** A node's names, as it shows them. 節點顯示的名稱樣式。 */
+const componentStyle = (module, node, context) => { var _a, _b; return (0, exports.storedOr)(node, (_b = (_a = module === null || module === void 0 ? void 0 : module.componentNames) === null || _a === void 0 ? void 0 : _a.call(module, node, context)) !== null && _b !== void 0 ? _b : 'xyzw'); };
+exports.componentStyle = componentStyle;
+/** The letters for a style; U/V only with two components, otherwise X/Y/Z/W (legacy vectorNames).
+ * 樣式的字母；U/V 只用在兩個分量，否則 X/Y/Z/W（照舊產品）。 */
+const componentLetters = (style, count) => style === 'uv' ? (count === 2 ? 'UV' : 'XYZW') : style.toUpperCase();
+exports.componentLetters = componentLetters;
 
 },
 "config":function(require,module,exports){
@@ -1603,7 +1627,7 @@ function resolvePorts(module, node, context) {
 "node_sdk":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
+exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.componentLetters = exports.storedOr = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
 exports.reshapeDefaults = reshapeDefaults;
 exports.fixedPorts = fixedPorts;
 exports.literalNode = literalNode;
@@ -1620,6 +1644,7 @@ const numeric_1 = require("./numeric");
 const declarations_1 = require("./declarations");
 const td_values_1 = require("./td_values");
 const values_1 = require("./values");
+const component_names_1 = require("./component_names");
 var numeric_2 = require("./numeric");
 Object.defineProperty(exports, "literal", { enumerable: true, get: function () { return numeric_2.literal; } });
 Object.defineProperty(exports, "type", { enumerable: true, get: function () { return numeric_2.type; } });
@@ -1631,6 +1656,9 @@ Object.defineProperty(exports, "subgraphPorts", { enumerable: true, get: functio
 Object.defineProperty(exports, "subgraphPresentation", { enumerable: true, get: function () { return subgraph_interface_1.subgraphPresentation; } });
 Object.defineProperty(exports, "numericInterface", { enumerable: true, get: function () { return subgraph_interface_1.numericInterface; } });
 Object.defineProperty(exports, "requireSubgraph", { enumerable: true, get: function () { return subgraph_interface_1.requireSubgraph; } });
+var component_names_2 = require("./component_names");
+Object.defineProperty(exports, "storedOr", { enumerable: true, get: function () { return component_names_2.storedOr; } });
+Object.defineProperty(exports, "componentLetters", { enumerable: true, get: function () { return component_names_2.componentLetters; } });
 const numeric = (n) => n.params.type === undefined || numeric_1.types.includes(String(n.params.type));
 const out = (t) => ({ key: 'out', direction: 'output', type: t });
 function fixedPorts(specs) {
@@ -1692,16 +1720,17 @@ function editValue(current, t, command, payload) {
 function literalNode(catalog, fixed, constant = false, appearance = {}) {
     const selected = (n) => fixed || (0, numeric_1.type)(n.params.type || 'float');
     // Value nodes are drawn as constants (legacy graph_ui.js:148). 值節點畫成常數色（照舊產品）。
-    return { catalog, role: 'value', colorGroup: 'constant', supports: n => numeric(n) && (!!fixed || n.params.type === undefined || n.params.type === 'float'),
+    const style = appearance.color ? 'rgba' : 'xyzw';
+    return { catalog, role: 'value', colorGroup: 'constant', componentNames: () => style, supports: n => numeric(n) && (!!fixed || n.params.type === undefined || n.params.type === 'float'),
         configure: (n, s) => { var _a; const t = selectedType(n, s); if (fixed && fixed !== t)
             throw Error('Fixed literal type'); n.params.type = t; n.params.value = shape((_a = n.params.value) !== null && _a !== void 0 ? _a : 0, t); return n; },
         edit: (n, command, value) => { n.params.value = editValue(n.params.value, selected(n), command, value); return n; },
-        presentation: n => ({ value: { value: n.params.value, type: selected(n), componentCommand: 'component', valueCommand: 'value', names: appearance.color ? 'RGBA' : 'XYZW', color: !!appearance.color, expandable: selected(n) !== 'float' } }),
+        presentation: n => ({ value: { value: n.params.value, type: selected(n), componentCommand: 'component', valueCommand: 'value', names: (0, component_names_1.componentLetters)((0, component_names_1.storedOr)(n, style), (0, numeric_1.count)(selected(n))), color: !!appearance.color, expandable: selected(n) !== 'float' } }),
         ports: n => outputPorts[selected(n)], validate: n => { (0, numeric_1.literal)(n.params.value, selected(n)); },
         emit: n => ({ outputs: { out: (0, numeric_1.literal)(n.params.value, selected(n)) }, constant }) };
 }
 function vectorNode(catalog) {
-    return { catalog, role: 'value', supports: n => ['vec2', 'vec3', 'vec4'].includes(String(n.params.type)),
+    return { catalog, role: 'value', inheritsComponentNames: true, supports: n => ['vec2', 'vec3', 'vec4'].includes(String(n.params.type)),
         configure: (n, s) => { n.params.type = selectedType(n, s); return n; },
         edit: (n, command, value) => {
             const t = (0, numeric_1.type)(n.params.type), components = n.params.components;
@@ -1709,7 +1738,7 @@ function vectorNode(catalog) {
             n.params.components = [...next, ...components.slice(next.length)];
             return n;
         },
-        presentation: n => { var _a; return ({ value: { value: n.params.components.slice(0, (0, numeric_1.count)((0, numeric_1.type)(n.params.type))), type: String(n.params.type), componentCommand: 'component', valueCommand: 'value', names: String(((_a = n.ui) === null || _a === void 0 ? void 0 : _a.componentNames) || 'XYZW').toUpperCase(), expandable: true } }); },
+        presentation: n => ({ value: { value: n.params.components.slice(0, (0, numeric_1.count)((0, numeric_1.type)(n.params.type))), type: String(n.params.type), componentCommand: 'component', valueCommand: 'value', names: (0, component_names_1.componentLetters)((0, component_names_1.storedOr)(n, 'xyzw'), (0, numeric_1.count)((0, numeric_1.type)(n.params.type))), expandable: true } }),
         ports: n => outputPorts[(0, numeric_1.type)(n.params.type)], validate: n => {
             if (!Array.isArray(n.params.components) || n.params.components.length !== 4)
                 throw Error('Vector needs four stored components');
@@ -1819,6 +1848,8 @@ function declarationNode(catalog) {
     const target = (n, c) => c.declaration(String(n.params.declarationId));
     const kindOf = (n, c) => { const d = target(n, c); return d && declarations_1.declarationKinds.get(d.kind); };
     return { catalog, role: 'value', referencedDeclaration: n => String(n.params.declarationId),
+        // A colour Uniform names its components R/G/B/A (legacy graph_ui.js:1228). 顏色 Uniform 的分量叫 R/G/B/A（照舊產品）。
+        componentNames: (n, c) => { var _a; return ((_a = target(n, c)) === null || _a === void 0 ? void 0 : _a.color) === true ? 'rgba' : 'xyzw'; },
         supports: (n, c) => { var _a; return !c.owner && (!target(n, c) || !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.types.includes(target(n, c).type))); },
         // What a reference gives comes from the kind (a TOP texture input gives three outputs).
         // 引用時給哪些輸出由 kind 決定（TOP 貼圖輸入給三個）。
@@ -1856,6 +1887,7 @@ function declarationNode(catalog) {
  * TD 內建值：一個節點類型依 entry 從旁邊的表選一筆；不需要宣告、子圖裡也能用。
  * 本輪只接一般數值型別、不帶參數的；其他等各自那一輪，之前是 Ghost。 */
 const tdValueTable = new Map(td_values_1.tdValues.map(entry => [entry.id, entry]));
+const uvEntries = new Set(['vUV', 'vUVSt']);
 const tdValuePorts = new Map();
 const tdValuePort = (t) => { let p = tdValuePorts.get(t); if (!p) {
     p = fixedPorts([out(t)]);
@@ -1868,6 +1900,8 @@ exports.usableTdValue = usableTdValue;
 function tdValueNode(catalog) {
     const entryOf = (n) => tdValueTable.get(String(n.params.entry));
     return { catalog, role: 'value', colorGroup: 'runtime',
+        // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
+        componentNames: n => uvEntries.has(String(n.params.entry)) ? 'uv' : 'xyzw',
         supports: (n, c) => (0, exports.usableTdValue)(entryOf(n), c.target),
         ports: n => tdValuePort(entryOf(n).type), validate: () => { },
         presentation: (n, c) => {
@@ -4056,10 +4090,12 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.staticNode)(catalog, {
-    ports: () => [(0, node_sdk_1.input)('rgb', 'vec3'), (0, node_sdk_1.input)('alpha', 'float', 1), (0, node_sdk_1.output)('out', 'vec4')],
-    emit: (_n, c) => ({ outputs: { out: 'vec4(' + c.input('rgb') + ', ' + c.input('alpha') + ')' } })
-});
+// Its alpha input is the colour's fourth component (legacy graph_ui.js:1238). alpha 輸入是顏色的第四個分量（照舊產品）。
+exports.default = { ...(0, node_sdk_1.staticNode)(catalog, {
+        ports: () => [(0, node_sdk_1.input)('rgb', 'vec3'), (0, node_sdk_1.input)('alpha', 'float', 1), (0, node_sdk_1.output)('out', 'vec4')],
+        emit: (_n, c) => ({ outputs: { out: 'vec4(' + c.input('rgb') + ', ' + c.input('alpha') + ')' } })
+    }), componentNames: () => 'rgba',
+    presentation: () => ({ components: { inputs: { alpha: [3] } } }) };
 
 },
 "nodes/round":function(require,module,exports){
@@ -4389,10 +4425,12 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.staticNode)(catalog, {
-    ports: () => [(0, node_sdk_1.input)('color', 'vec4'), (0, node_sdk_1.output)('rgb', 'vec3'), ...'rgba'.split('').map(p => (0, node_sdk_1.output)(p, 'float'))],
-    emit: (_n, c) => ({ outputs: Object.fromEntries(['rgb', ...'rgba'].map(p => [p, '(' + c.input('color') + ').' + p])) })
-});
+// Its outputs r/g/b/a are colour components (legacy graph_ui.js:1238). 輸出 r/g/b/a 是顏色分量（照舊產品）。
+exports.default = { ...(0, node_sdk_1.staticNode)(catalog, {
+        ports: () => [(0, node_sdk_1.input)('color', 'vec4'), (0, node_sdk_1.output)('rgb', 'vec3'), ...'rgba'.split('').map(p => (0, node_sdk_1.output)(p, 'float'))],
+        emit: (_n, c) => ({ outputs: Object.fromEntries(['rgb', ...'rgba'].map(p => [p, '(' + c.input('color') + ').' + p])) })
+    }), componentNames: () => 'rgba',
+    presentation: () => ({ components: { outputs: { r: [0], g: [1], b: [2], a: [3] } } }) };
 
 },
 "nodes/sqrt":function(require,module,exports){
@@ -4533,13 +4571,19 @@ exports.default = (0, node_sdk_1.typedNode)(catalog, {
         return node_sdk_1.values.vectors.filter(t => node_sdk_1.values.count(t) >= size).map(type => ({ type, mask: axes.slice(0, size) }));
     },
     ports: (t, n) => { var _a; return [(0, node_sdk_1.input)('value', t), (0, node_sdk_1.output)('out', node_sdk_1.values.shaped(node_sdk_1.values.family(t), mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy').length))]; },
+    inheritsComponentNames: true,
     presentation: n => {
         var _a;
         const t = String(n.params.type), selected = mask(t, (_a = n.params.mask) !== null && _a !== void 0 ? _a : 'xy');
-        return { selectorLabel: 'vector.inputType', controls: [{
+        const letters = (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), node_sdk_1.values.count(t)), letter = (axis) => { var _a; return (_a = letters[axes.indexOf(axis)]) !== null && _a !== void 0 ? _a : axis.toUpperCase(); };
+        return { selectorLabel: 'vector.inputType',
+            // The output reads as the mask in the node's letters, e.g. "RG" (legacy graph_ui.js:1299). 輸出照遮罩、用節點的字母。
+            portLabels: { outputs: { out: [...selected].map(letter).join('') } },
+            components: { outputs: { out: [...selected].map(axis => axes.indexOf(axis)) } },
+            controls: [{
                     kind: 'row', key: 'mask', label: 'vector.componentOrder', children: [
                         ...[...selected].map((value, index) => ({ kind: 'select', key: 'component' + index, label: String(index + 1), literal: true, command: 'mask', args: { index }, value,
-                            options: [...axes.slice(0, node_sdk_1.values.count(t))].map(value => ({ value, label: value.toUpperCase(), literal: true })) })),
+                            options: [...axes.slice(0, node_sdk_1.values.count(t))].map(value => ({ value, label: letter(value), literal: true })) })),
                         { kind: 'button', key: 'remove', label: '−', literal: true, command: 'remove', disabled: selected.length === 1 },
                         { kind: 'button', key: 'add', label: '+', literal: true, command: 'add', disabled: selected.length === 4 }
                     ]
@@ -4924,6 +4968,7 @@ const catalog = {
 // Drawn as a constant (legacy graph_ui.js:143). 畫成常數色（照舊產品）。
 exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
         types: node_sdk_1.values.vectors,
+        inheritsComponentNames: true,
         fixed: t => ({ components: node_sdk_1.values.reshape([0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)) }),
         ports: t => [(0, node_sdk_1.output)('out', t)],
         configure: (n, t) => { var _a; n.params.components = node_sdk_1.values.reshape((_a = n.params.components) !== null && _a !== void 0 ? _a : [0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)); return n; },
@@ -4946,14 +4991,11 @@ exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
                 throw Error('Invalid vector command');
             return n;
         },
-        presentation: n => {
-            var _a;
-            return ({ value: {
-                    value: n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))),
-                    type: String(n.params.type), componentCommand: 'component', valueCommand: 'value',
-                    names: String(((_a = n.ui) === null || _a === void 0 ? void 0 : _a.componentNames) || 'XYZW').toUpperCase(), expandable: true
-                } });
-        },
+        presentation: n => ({ value: {
+                value: n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))),
+                type: String(n.params.type), componentCommand: 'component', valueCommand: 'value',
+                names: (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), node_sdk_1.values.count(String(n.params.type))), expandable: true
+            } }),
         emit: n => ({ outputs: { out: node_sdk_1.values.literal(n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))), String(n.params.type)) }, constant: true })
     }), colorGroup: 'constant' };
 
@@ -5008,7 +5050,14 @@ const catalog = {
 exports.default = (0, node_sdk_1.typedNode)(catalog, {
     types: node_sdk_1.values.vectors,
     ports: t => [(0, node_sdk_1.input)('value', t), ...'xyzw'.slice(0, node_sdk_1.values.count(t)).split('').map(p => (0, node_sdk_1.output)(p, node_sdk_1.values.family(t)))],
-    presentation: () => ({ selectorLabel: 'vector.inputType' }),
+    inheritsComponentNames: true,
+    // Each output is one component, named and coloured as the node's names say (legacy graph_ui.js:1297).
+    // 每個輸出是一個分量，名稱與顏色照節點的名稱樣式（照舊產品）。
+    presentation: n => {
+        const t = String(n.params.type), keys = 'xyzw'.slice(0, node_sdk_1.values.count(t)).split(''), letters = (0, node_sdk_1.componentLetters)((0, node_sdk_1.storedOr)(n, 'xyzw'), keys.length);
+        return { selectorLabel: 'vector.inputType', portLabels: { outputs: Object.fromEntries(keys.map((k, i) => [k, letters[i]])) },
+            components: { outputs: Object.fromEntries(keys.map((k, i) => [k, [i]])) } };
+    },
     emit: (n, c) => ({ outputs: Object.fromEntries('xyzw'.slice(0, node_sdk_1.values.count(String(n.params.type))).split('').map(p => [p, '(' + c.input('value') + ').' + p])) })
 });
 
@@ -6431,7 +6480,7 @@ function typedNode(catalog, spec) {
         },
         validate: (n, c) => { var _a; if (n.params.fixedType && n.params.fixedType !== selected(n))
             throw Error('Fixed node type'); ports(n); (_a = spec.validate) === null || _a === void 0 ? void 0 : _a.call(spec, n, c); },
-        edit: spec.edit, emit: spec.emit, creations: spec.creations,
+        edit: spec.edit, emit: spec.emit, creations: spec.creations, componentNames: spec.componentNames, inheritsComponentNames: spec.inheritsComponentNames,
         ...(spec.fixed ? { entries: () => [{ key: '', label: catalog.definition.label, params: {} },
                 ...spec.types.map(t => ({ key: t, label: t, literal: true, params: { type: t, fixedType: t, ...spec.fixed(t) } }))] } : {}),
         // A fixed node is titled by its type and has no type menu (Refactor.17.2). 固定型別的節點以型別為標題、沒有型別選單。
@@ -6575,6 +6624,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.vectorAssembly = vectorAssembly;
 const model_1 = require("./model");
 const value_nodes_1 = require("./value_nodes");
+const component_names_1 = require("./component_names");
 const axes = 'xyzw';
 /** Component partitions are a vector-family concern, never graph-wide inference. */
 function vectorAssembly(catalog, inherit) {
@@ -6605,7 +6655,7 @@ function vectorAssembly(catalog, inherit) {
         ...layout(n).map(p => ({ ...(0, value_nodes_1.input)(p.key, p.type), default: p.size === 1 ? components(n)[p.start] : components(n).slice(p.start, p.start + p.size) })),
         (0, value_nodes_1.output)('out', String(n.params.type))
     ];
-    return { catalog, role: 'value', supports: n => value_nodes_1.values.vectors.includes(String(n.params.type)), ports,
+    return { catalog, role: 'value', inheritsComponentNames: true, supports: n => value_nodes_1.values.vectors.includes(String(n.params.type)), ports,
         validate: n => { layout(n); components(n); },
         configure: (n, s) => {
             if (!('type' in s) || !value_nodes_1.values.vectors.includes(s.type))
@@ -6655,7 +6705,14 @@ function vectorAssembly(catalog, inherit) {
             n.params.components = next;
             return n;
         },
-        presentation: () => ({ selectorLabel: 'vector.outputType' }),
+        // Each component input reads as the letters it covers, e.g. "RG" for a group (legacy graph_ui.js:1293).
+        // 每個分量輸入顯示它涵蓋的字母，例如分組時「RG」（照舊產品）。
+        presentation: n => {
+            const parts = layout(n), letters = (0, component_names_1.componentLetters)((0, component_names_1.storedOr)(n, 'xyzw'), value_nodes_1.values.count(String(n.params.type)));
+            return { selectorLabel: 'vector.outputType',
+                portLabels: { inputs: Object.fromEntries(parts.map(p => [p.key, letters.slice(p.start, p.start + p.size)])) },
+                components: { inputs: Object.fromEntries(parts.map(p => [p.key, Array.from({ length: p.size }, (_, i) => p.start + i)])) } };
+        },
         inputsUsed: (n, connected) => {
             const parts = layout(n), overrides = parts.filter(p => connected.has(p.key)).map(p => p.key);
             return inherit && connected.has('value') && overrides.length < parts.length ? ['value', ...overrides] : overrides;

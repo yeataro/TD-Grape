@@ -25,6 +25,8 @@ export function typedNode(catalog:CatalogRow,spec:{
   validate?:NonNullable<NodeModule['validate']>;
   presentation?:(node:Node)=>NodePresentation;
   creations?:NodeModule['creations'];
+  componentNames?:NodeModule['componentNames'];
+  inheritsComponentNames?:boolean;
   /** Fixed-type entries (Q37 1-5, Refactor.50): the params a node of that type starts with. Given = the
    * menu offers the generic node plus one locked entry per type. 固定型別入口：給了就提供通用入口＋每種型別一個鎖定入口。 */
   fixed?:(type:string)=>ObjectValue;
@@ -39,7 +41,7 @@ export function typedNode(catalog:CatalogRow,spec:{
       return reshapeInputs(n,before,ports(n));
     },
     validate:(n,c)=>{if(n.params.fixedType&&n.params.fixedType!==selected(n))throw Error('Fixed node type');ports(n);spec.validate?.(n,c);},
-    edit:spec.edit,emit:spec.emit,creations:spec.creations,
+    edit:spec.edit,emit:spec.emit,creations:spec.creations,componentNames:spec.componentNames,inheritsComponentNames:spec.inheritsComponentNames,
     ...(spec.fixed?{entries:()=>[{key:'',label:catalog.definition.label,params:{}},
       ...spec.types.map(t=>({key:t,label:t,literal:true,params:{type:t,fixedType:t,...spec.fixed!(t)}}))]}:{}),
     // A fixed node is titled by its type and has no type menu (Refactor.17.2). 固定型別的節點以型別為標題、沒有型別選單。

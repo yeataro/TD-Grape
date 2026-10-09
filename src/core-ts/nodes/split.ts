@@ -44,7 +44,9 @@ const catalog = {
   }
 };
 
-export default staticNode(catalog, {
+// Its outputs r/g/b/a are colour components (legacy graph_ui.js:1238). 輸出 r/g/b/a 是顏色分量（照舊產品）。
+export default {...staticNode(catalog, {
   ports: () => [input('color', 'vec4'), output('rgb', 'vec3'), ...'rgba'.split('').map(p => output(p, 'float'))],
   emit: (_n, c) => ({outputs: Object.fromEntries(['rgb', ...'rgba'].map(p => [p, '(' + c.input('color') + ').' + p]))})
-});
+}), componentNames: () => 'rgba' as const,
+  presentation: () => ({components: {outputs: {r: [0], g: [1], b: [2], a: [3]}}})};

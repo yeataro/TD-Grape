@@ -64,6 +64,18 @@ function SpareInput({ id, spare }: { id: string; spare: NonNullable<NodePresenta
   </div>;
 }
 
+/** The one component a port stands for, if it is one (Refactor.59). 接孔代表的單一分量（若只有一個）。 */
+const single = (components?: readonly number[]) => components?.length === 1 ? components[0] : undefined;
+/** A port's label; when its letters are its components, each letter carries its own (e.g. "RG"); a one-component port
+ * carries it whole (e.g. "alpha"). The colours are the theme's, under the component-tint switch (style.css).
+ * 接孔標籤；字母就是分量時每個字母各帶自己的分量（例如「RG」），單一分量的接孔整個帶（例如「alpha」）。顏色由主題與分量染色開關決定。 */
+function PortLabel({ text, components }: { text: string; components?: readonly number[] }) {
+  if (components?.length === text.length && text.length > 1)
+    return <>{[...text].map((letter, i) => <span key={i} className="component-letter" data-component={components[i]}>{letter}</span>)}</>;
+  const one = single(components);
+  return one === undefined ? <>{text}</> : <span className="component-letter" data-component={one}>{text}</span>;
+}
+
 export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps<FlowNode>) {
   const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
   // The primary selection is told from above, never known by the node module (Q33). 主要選取由上往下得知，節點模組不知道。
@@ -120,8 +132,9 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   const start = !inputs.length && !view.spare;
   const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
   const kind = data.declaration && sourceKinds[data.declaration.kind], sourceTag = kind ? say(kind) + ' · ' : '';
-  const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
-    <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
+  const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
+    data-component={single(view.components?.outputs?.[port.key])}>
+    <span><PortLabel text={view.portLabels?.outputs?.[port.key] ?? port.key} components={view.components?.outputs?.[port.key]} /> <small>{port.type}</small></span>
     {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
         接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
     <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
@@ -141,18 +154,20 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => { const wired = data.connected.includes(port.key);
-        return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
+        const label = <PortLabel text={view.portLabels?.inputs?.[port.key] ?? port.key} components={view.components?.inputs?.[port.key]} />;
+        return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}
+          data-component={single(view.components?.inputs?.[port.key])}>
         <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} data-connected={wired}
           data-merging={merging.includes(port.key) || undefined} />
         {/* An input with a value: its name and type lead the value widget (middle button there changes the whole value).
             有值的輸入：名字與型別是數值 widget 的開頭文字（在上面按中鍵整組調值）。 */}
         {port.fallback === undefined && core.values.types.includes(port.type) ? null
-          : <span>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></span>}
+          : <span>{label} <small>{port.type}</small></span>}
         {/* A fixed expression (e.g. vUV.st) is shown, not edited; a texture has no value. A wire hides the value but keeps
             its place (wiring never changes the height, EDITOR_UI_RULES.md 六). 固定式子只顯示不編輯；貼圖沒有值。接線只藏起值、位置留著。 */}
         {port.fallback !== undefined ? <code className={'port-fallback' + (wired ? ' wired' : '')}>{port.fallback}</code>
           : core.values.types.includes(port.type) && <ValueFields label={`${id} ${port.key}`} type={port.type} wired={wired} defaults={port.default}
-          caption={<>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></>}
+          caption={<>{label} <small>{port.type}</small></>}
           value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
       </div>; })}
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}

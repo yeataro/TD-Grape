@@ -1,4 +1,4 @@
-import { typedNode, input, output, payload, values } from '../node_sdk';
+import { typedNode, input, output, payload, values, storedOr, componentLetters } from '../node_sdk';
 
 const catalog = {
   "definition": {
@@ -58,12 +58,18 @@ export default typedNode(catalog, {
     return values.vectors.filter(t => values.count(t) >= size).map(type => ({type,mask:axes.slice(0,size)}));
   },
   ports: (t, n) => [input('value',t),output('out',values.shaped(values.family(t),mask(t,n.params.mask ?? 'xy').length))],
+  inheritsComponentNames: true,
   presentation: n => {
     const t = String(n.params.type), selected = mask(t,n.params.mask ?? 'xy');
-    return {selectorLabel: 'vector.inputType',controls: [{
+    const letters = componentLetters(storedOr(n, 'xyzw'), values.count(t)), letter = (axis: string) => letters[axes.indexOf(axis)] ?? axis.toUpperCase();
+    return {selectorLabel: 'vector.inputType',
+      // The output reads as the mask in the node's letters, e.g. "RG" (legacy graph_ui.js:1299). 輸出照遮罩、用節點的字母。
+      portLabels: {outputs: {out: [...selected].map(letter).join('')}},
+      components: {outputs: {out: [...selected].map(axis => axes.indexOf(axis))}},
+      controls: [{
       kind: 'row', key: 'mask', label: 'vector.componentOrder', children: [
         ...[...selected].map((value,index) => ({kind:'select' as const,key:'component'+index,label:String(index+1),literal:true,command:'mask',args:{index},value,
-          options:[...axes.slice(0,values.count(t))].map(value=>({value,label:value.toUpperCase(),literal:true}))})),
+          options:[...axes.slice(0,values.count(t))].map(value=>({value,label:letter(value),literal:true}))})),
         {kind:'button',key:'remove',label:'−',literal:true,command:'remove',disabled:selected.length===1},
         {kind:'button',key:'add',label:'+',literal:true,command:'add',disabled:selected.length===4}
       ]

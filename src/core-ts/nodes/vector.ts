@@ -1,4 +1,4 @@
-import { typedNode, output, payload, values } from '../node_sdk';
+import { typedNode, output, payload, values, storedOr, componentLetters } from '../node_sdk';
 
 const catalog = {
   "definition": {
@@ -55,6 +55,7 @@ const catalog = {
 // Drawn as a constant (legacy graph_ui.js:143). 畫成常數色（照舊產品）。
 export default {...typedNode(catalog, {
   types: values.vectors,
+  inheritsComponentNames: true,
   fixed: t => ({ components: values.reshape([0, 0, 0, 0], values.shaped(values.family(t), 4)) }),
   ports: t => [output('out', t)],
   configure: (n, t) => { n.params.components = values.reshape(n.params.components ?? [0,0,0,0], values.shaped(values.family(t),4)); return n; },
@@ -74,7 +75,7 @@ export default {...typedNode(catalog, {
   presentation: n => ({value: {
     value: (n.params.components as (number|boolean)[]).slice(0,values.count(String(n.params.type))),
     type: String(n.params.type), componentCommand: 'component', valueCommand: 'value',
-    names: String(n.ui?.componentNames || 'XYZW').toUpperCase(), expandable: true
+    names: componentLetters(storedOr(n, 'xyzw'), values.count(String(n.params.type))), expandable: true
   }}),
   emit: n => ({outputs: {out: values.literal((n.params.components as (number|boolean)[]).slice(0,values.count(String(n.params.type))),String(n.params.type))},constant:true})
 }), colorGroup: 'constant'};

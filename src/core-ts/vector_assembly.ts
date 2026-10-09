@@ -1,6 +1,7 @@
 import {copy,object,type Node,type Value} from './model';
 import type {CatalogRow,NodeModule} from './node_module';
 import {input,output,reshapeInputs,values} from './value_nodes';
+import {storedOr,componentLetters} from './component_names';
 
 const axes='xyzw';
 /** Component partitions are a vector-family concern, never graph-wide inference. */
@@ -26,7 +27,7 @@ export function vectorAssembly(catalog:CatalogRow,inherit:boolean):NodeModule {
     ...layout(n).map(p=>({...input(p.key,p.type),default:p.size===1?components(n)[p.start]:components(n).slice(p.start,p.start+p.size)})),
     output('out',String(n.params.type))
   ];
-  return {catalog,role:'value',supports:n=>values.vectors.includes(String(n.params.type)),ports,
+  return {catalog,role:'value',inheritsComponentNames:true,supports:n=>values.vectors.includes(String(n.params.type)),ports,
     validate:n=>{layout(n);components(n);},
     configure:(n,s)=>{
       if(!('type'in s)||!values.vectors.includes(s.type))throw Error('Invalid assembly output');
@@ -57,7 +58,14 @@ export function vectorAssembly(catalog:CatalogRow,inherit:boolean):NodeModule {
       values.literal(value,part.type);const next=copy(components(n));
       next.splice(part.start,part.size,...(Array.isArray(value)?value:[value]));n.params.components=next;return n;
     },
-    presentation:()=>({selectorLabel:'vector.outputType'}),
+    // Each component input reads as the letters it covers, e.g. "RG" for a group (legacy graph_ui.js:1293).
+    // 每個分量輸入顯示它涵蓋的字母，例如分組時「RG」（照舊產品）。
+    presentation:n=>{
+      const parts=layout(n),letters=componentLetters(storedOr(n,'xyzw'),values.count(String(n.params.type)));
+      return {selectorLabel:'vector.outputType',
+        portLabels:{inputs:Object.fromEntries(parts.map(p=>[p.key,letters.slice(p.start,p.start+p.size)]))},
+        components:{inputs:Object.fromEntries(parts.map(p=>[p.key,Array.from({length:p.size},(_,i)=>p.start+i)]))}};
+    },
     inputsUsed:(n,connected)=>{
       const parts=layout(n),overrides=parts.filter(p=>connected.has(p.key)).map(p=>p.key);
       return inherit&&connected.has('value')&&overrides.length<parts.length?['value',...overrides]:overrides;

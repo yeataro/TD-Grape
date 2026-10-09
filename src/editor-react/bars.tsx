@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearance, appearanceSubscribe, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
+import { appearance, appearanceSubscribe, componentTintOn, setComponentTint, currentMode, currentPorts, currentSize, currentStyle, hasMode, modes, portStyles, setMode, setPorts, setSize, setStyle, sizes, styles } from './appearance';
 import type { Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
@@ -156,6 +156,7 @@ export function FootBar({ session, waiting, onDownload, prefs, onAppearance }: {
       <label className="check"><input type="checkbox" checked={prefs.damping} onChange={event => prefs.set({ damping: event.target.checked })} />{say(tr('toolbar.damping', 'Canvas damping'))}</label>
       {/* Framing glides or jumps; times are fixed (legacy 150 / 333 ms; human: on/off only). 對準時滑動或直接跳；時間固定（人類：只要開關）。 */}
       <label className="check"><input type="checkbox" checked={prefs.frameGlide} onChange={event => prefs.set({ frameGlide: event.target.checked })} />{say(tr('toolbar.frameGlide', 'Frame transition (F)'))}</label>
+      <ComponentTint />
     </PopoverButton>
     <AppearancePanels onPanel={onAppearance} />
     <IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
@@ -197,6 +198,13 @@ const SliderPlaceholder = ({ label }: { label: Message }) =>
 // 有名稱的一行：名稱在左半邊置中，控制項填滿右半邊（人類）。
 const SettingsRow = ({ label, children }: { label: Message; children: ReactNode }) =>
   <div className="settings-row"><span>{say(label)}</span>{children}</div>;
+// Component tint (Refactor.59; Q67): ports, labels and wires of one component take its colour. 分量染色：單一分量的接孔、標籤、接線用分量色。
+function ComponentTint() {
+  useSyncExternalStore(appearanceSubscribe, appearance);
+  return <label className="check"><input type="checkbox" checked={componentTintOn()} onChange={event => setComponentTint(event.target.checked)} />
+    {say(tr('toolbar.componentTint', 'Component colours'))}</label>;
+}
+
 function AppearancePanels({ onPanel }: { onPanel?(): void }) {
   useSyncExternalStore(appearanceSubscribe, appearance);
   const style = currentStyle();

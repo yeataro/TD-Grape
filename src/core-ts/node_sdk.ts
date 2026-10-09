@@ -6,6 +6,7 @@ import {declarationKinds,declarationLabel} from './declarations';
 import { tdValues, type TdValue } from './td_values';
 import { types as valueTypes } from './values';
 import type { PortSpec } from './ports';
+import { storedOr, componentLetters, type ComponentStyle } from './component_names';
 export type { CatalogRow, NodeModule, NodeContext, EmitContext, Emission, Configuration, Signature, NodeControl } from './node_module';
 export type { Node, Value, ObjectValue } from './model';
 export type { PortSpec } from './ports';
@@ -13,6 +14,7 @@ export { literal, type, fill } from './numeric';
 export { types as numericTypes } from './numeric';
 export { subgraphPorts, subgraphPresentation, numericInterface, requireSubgraph } from './subgraph_interface';
 export { selectedType, reshapeDefaults };
+export { storedOr, componentLetters, type ComponentStyle } from './component_names';
 
 const numeric=(n:Node)=>n.params.type===undefined||types.includes(String(n.params.type));
 const out=(t:string)=>({key:'out',direction:'output' as const,type:t});
@@ -49,22 +51,23 @@ function editValue(current:Value,t:Type,command:string,payload:Value|undefined):
 export function literalNode(catalog:CatalogRow,fixed?:Type,constant=false,appearance:{color?:boolean}={}):NodeModule {
   const selected=(n:Node)=>fixed||type(n.params.type||'float');
   // Value nodes are drawn as constants (legacy graph_ui.js:148). 值節點畫成常數色（照舊產品）。
-  return {catalog,role:'value',colorGroup:'constant',supports:n=>numeric(n)&&(!!fixed||n.params.type===undefined||n.params.type==='float'),
+  const style:ComponentStyle=appearance.color?'rgba':'xyzw';
+  return {catalog,role:'value',colorGroup:'constant',componentNames:()=>style,supports:n=>numeric(n)&&(!!fixed||n.params.type===undefined||n.params.type==='float'),
     configure:(n,s)=>{const t=selectedType(n,s);if(fixed&&fixed!==t)throw Error('Fixed literal type');n.params.type=t;n.params.value=shape(n.params.value??0,t);return n;},
     edit:(n,command,value)=>{n.params.value=editValue(n.params.value!,selected(n),command,value);return n;},
-    presentation:n=>({value:{value:n.params.value!,type:selected(n),componentCommand:'component',valueCommand:'value',names:appearance.color?'RGBA':'XYZW',color:!!appearance.color,expandable:selected(n)!=='float'}}),
+    presentation:n=>({value:{value:n.params.value!,type:selected(n),componentCommand:'component',valueCommand:'value',names:componentLetters(storedOr(n,style),count(selected(n))),color:!!appearance.color,expandable:selected(n)!=='float'}}),
     ports:n=>outputPorts[selected(n)]!,validate:n=>{literal(n.params.value,selected(n));},
     emit:n=>({outputs:{out:literal(n.params.value,selected(n))},constant})};
 }
 export function vectorNode(catalog:CatalogRow):NodeModule {
-  return {catalog,role:'value',supports:n=>['vec2','vec3','vec4'].includes(String(n.params.type)),
+  return {catalog,role:'value',inheritsComponentNames:true,supports:n=>['vec2','vec3','vec4'].includes(String(n.params.type)),
     configure:(n,s)=>{n.params.type=selectedType(n,s);return n;},
     edit:(n,command,value)=>{
       const t=type(n.params.type),components=n.params.components as Value[];
       const next=editValue(components.slice(0,count(t)),t,command,value) as Value[];
       n.params.components=[...next,...components.slice(next.length)];return n;
     },
-    presentation:n=>({value:{value:(n.params.components as Value[]).slice(0,count(type(n.params.type))),type:String(n.params.type),componentCommand:'component',valueCommand:'value',names:String(n.ui?.componentNames||'XYZW').toUpperCase(),expandable:true}}),
+    presentation:n=>({value:{value:(n.params.components as Value[]).slice(0,count(type(n.params.type))),type:String(n.params.type),componentCommand:'component',valueCommand:'value',names:componentLetters(storedOr(n,'xyzw'),count(type(n.params.type))),expandable:true}}),
     ports:n=>outputPorts[type(n.params.type)]!,validate:n=>{
       if(!Array.isArray(n.params.components)||n.params.components.length!==4)throw Error('Vector needs four stored components');
       n.params.components.forEach(number);
@@ -144,6 +147,8 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
   const target=(n:Node,c:NodeContext)=>c.declaration(String(n.params.declarationId));
   const kindOf=(n:Node,c:NodeContext)=>{const d=target(n,c);return d&&declarationKinds.get(d.kind);};
   return {catalog,role:'value',referencedDeclaration:n=>String(n.params.declarationId),
+    // A colour Uniform names its components R/G/B/A (legacy graph_ui.js:1228). 顏色 Uniform 的分量叫 R/G/B/A（照舊產品）。
+    componentNames:(n,c)=>target(n,c)?.color===true?'rgba':'xyzw',
     supports:(n,c)=>!c.owner&&(!target(n,c)||!!kindOf(n,c)?.types.includes(target(n,c)!.type)),
     // What a reference gives comes from the kind (a TOP texture input gives three outputs).
     // 引用時給哪些輸出由 kind 決定（TOP 貼圖輸入給三個）。
@@ -170,6 +175,7 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
  * TD 內建值：一個節點類型依 entry 從旁邊的表選一筆；不需要宣告、子圖裡也能用。
  * 本輪只接一般數值型別、不帶參數的；其他等各自那一輪，之前是 Ghost。 */
 const tdValueTable=new Map(tdValues.map(entry=>[entry.id,entry]));
+const uvEntries=new Set(['vUV','vUVSt']);
 const tdValuePorts=new Map<string,readonly PortSpec[]>();
 const tdValuePort=(t:string)=>{let p=tdValuePorts.get(t);if(!p){p=fixedPorts([out(t)]);tdValuePorts.set(t,p);}return p;};
 /** Whether this build can use an entry for a target. 這個版本能不能在這個 target 用這一筆。 */
@@ -178,6 +184,8 @@ export const usableTdValue=(entry:TdValue|undefined,target:string|undefined)=>!!
 export function tdValueNode(catalog:CatalogRow):NodeModule {
   const entryOf=(n:Node)=>tdValueTable.get(String(n.params.entry));
   return {catalog,role:'value',colorGroup:'runtime',
+    // Texture coordinates name their components U/V (legacy `uv` node, graph_ui.js:1229). 貼圖座標的分量叫 U/V（照舊產品）。
+    componentNames:n=>uvEntries.has(String(n.params.entry))?'uv':'xyzw',
     supports:(n,c)=>usableTdValue(entryOf(n),c.target),
     ports:n=>tdValuePort(entryOf(n)!.type),validate:()=>{},
     presentation:(n,c)=>({label:entryOf(n)?.name,inlineControls:[{kind:'select',key:'entry',label:'entry',literal:true,command:'entry',

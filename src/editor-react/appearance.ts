@@ -31,6 +31,9 @@ let style: Style = browser ? readChoice('appearance.style', ['grape', 'td'], 'gr
 let mode: Mode = browser ? readChoice('appearance.mode', ['dark', 'light'], 'dark') : 'dark';
 let size: Size = browser ? readChoice('appearance.size', ['standard', 'comfortable'], 'standard') : 'standard';
 let ports: Ports = browser ? readChoice('appearance.ports', ['a', 'b'], 'a') : 'a';
+// Component tint (Refactor.59; Q67: one switch for legacy's rgbaComponentTint and vectorComponentTint, on by default).
+// 分量染色（Q67：舊產品兩個開關合成一個，預設開）。
+let componentTint = browser ? readChoice('appearance.componentTint', ['on', 'off'], 'on') === 'on' : true;
 // Trial switches for shadows (human 2026-10-09 A/B): layered small shadows, the canvas's inner shadow, shadows on source
 // cards. Chosen ones stay and the switches go once decided. 陰影的試驗開關（人類 A/B）：層疊微陰影、畫布內陰影、來源卡片陰影；
 // 決定後留下選中的、拿掉開關。
@@ -47,12 +50,17 @@ function apply() {
   document.documentElement.dataset.theme = style === 'td' ? 'td' : mode;
   document.documentElement.dataset.size = size;
   document.documentElement.dataset.ports = ports;
+  document.documentElement.dataset.componentTint = componentTint ? 'on' : 'off';
   for (const [key, on] of Object.entries(shadows)) document.documentElement.dataset['shadow' + key[0]!.toUpperCase() + key.slice(1)] = on ? 'on' : 'off';
 }
 apply();
 const changed = () => { apply(); listeners.forEach(listener => listener()); };
 export const appearanceSubscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
-export const appearance = () => `${style}/${mode}/${size}/${ports}/${Object.values(shadows).map(Number).join('')}`;
+export const appearance = () => `${style}/${mode}/${size}/${ports}/${Number(componentTint)}/${Object.values(shadows).map(Number).join('')}`;
+export const componentTintOn = () => componentTint;
+export function setComponentTint(on: boolean) {
+  if (on !== componentTint) { componentTint = on; writePreference('appearance.componentTint', on ? 'on' : 'off'); changed(); }
+}
 export const shadowOn = (key: ShadowTrial) => shadows[key];
 export function setShadow(key: ShadowTrial, on: boolean) {
   if (shadows[key] !== on) { shadows[key] = on; writePreference('appearance.shadow.' + key, on ? 'on' : 'off'); changed(); }

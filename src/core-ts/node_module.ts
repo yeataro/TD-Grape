@@ -1,5 +1,6 @@
 import { copy, type Node, type Declaration, type ObjectValue, type Value, type Graph, type SubgraphData } from './model';
 import { NodePorts, type PortSpec } from './ports';
+import type { ComponentStyle } from './component_names';
 
 export interface CatalogDefinition {
   key:string;label:string;inputs:Record<string,string>;outputs:Record<string,string>;
@@ -56,6 +57,9 @@ export interface NodePresentation {
   value?:{value:Value;type:string;componentCommand:string;valueCommand:string;names:string;color?:boolean;expandable?:boolean};
   controls?:readonly NodeControl[];
   portLabels?:{inputs?:Record<string,string>;outputs?:Record<string,string>};
+  /** Which components (0-3) each port stands for, in the order of its label's letters (Refactor.59): the screen colours
+   * them by component. 每個接孔代表哪幾個分量（0-3），順序同標籤字母：畫面依分量上色。 */
+  components?:{inputs?:Record<string,readonly number[]>;outputs?:Record<string,readonly number[]>};
   note?:{key:string;text:string};
   spare?:{direction:'input'|'output';key:string;type:string;command:string;count:number;limit:number;label:string;limitLabel:string};
 }
@@ -75,6 +79,12 @@ export interface NodeModule {
   referencedDeclaration?(node:Node):string;
   /** Display-only colour group when it cannot be derived from the role (Q42); the core never reads it. */
   readonly colorGroup?:string;
+  /** The component names it shows when the node stores none (Refactor.59; component_names.ts). Left out: X/Y/Z/W.
+   * 節點沒存時顯示的分量名稱樣式；沒寫＝X/Y/Z/W。 */
+  componentNames?(node:Node,context:NodeContext):ComponentStyle;
+  /** Made by dragging a wire, it takes the component names of the node at the other end (legacy graph_ui.js:2346).
+   * 由拉線新增時，沿用另一端節點的分量名稱樣式。 */
+  readonly inheritsComponentNames?:boolean;
   /** Initial parameters for a new instance of a graph definition. */
   reference?(graphId:string):ObjectValue;
   supports(node:Node,context:NodeContext):boolean;

@@ -317,6 +317,11 @@ export class Editor {
         if (old.length) net.disconnectAll(old);
         net.connect(net.node(id).port('output', port), net.node(end.node).port('input', end.port), core.values.policy);
       }
+      // A vector node made from a wire takes the component names of the node at the other end, in the same step
+      // (Refactor.59; legacy graph_ui.js:2346). 由拉線新增的向量節點沿用另一端節點的分量名稱樣式，同一步完成。
+      const made = net.node(id), peer = net.node(end.node);
+      if (made.definition?.inheritsComponentNames && peer.data)
+        made.update({ ui: { ...made.data!.ui, componentNames: core.componentStyle(peer.definition, peer.data, net.context) } });
     });
   /** Which port of a new node would take this wire, rehearsed on a discarded candidate so the answer follows the
    * same rules as the real edit (Refactor.54; no separate core question). A port of exactly the wire's type comes

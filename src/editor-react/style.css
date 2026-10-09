@@ -408,6 +408,24 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .react-flow__edge.replacing .react-flow__edge-path { opacity: .35; stroke-dasharray: 6 4; }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */
 .react-flow__edge .react-flow__edge-path { stroke-width: var(--wire-width); }
+/* Component tint (Refactor.59; legacy style.css:146-149, 1840-1846; one switch, Q67): a port that stands for one
+   component takes its colour on the ring, the label and the wire leaving it; the type text stays the float colour;
+   selected and hovered wires keep theirs. Inline colours are the type's, hence !important.
+   分量染色（一個開關）：代表單一分量的接孔，圓圈、標籤、出發的線用分量色；型別小字維持 float 色；選中與滑過的線維持自己的顏色。
+   行內顏色是型別色，所以要 !important。 */
+:root[data-component-tint="on"] .port-row[data-component] small { color: var(--type-scalar); }
+:root[data-component-tint="on"] .port-row[data-component="0"] { --port-color: var(--component-x) !important; }
+:root[data-component-tint="on"] .port-row[data-component="1"] { --port-color: var(--component-y) !important; }
+:root[data-component-tint="on"] .port-row[data-component="2"] { --port-color: var(--component-z) !important; }
+:root[data-component-tint="on"] .port-row[data-component="3"] { --port-color: var(--component-w) !important; }
+:root[data-component-tint="on"] .component-letter[data-component="0"] { color: var(--component-x); }
+:root[data-component-tint="on"] .component-letter[data-component="1"] { color: var(--component-y); }
+:root[data-component-tint="on"] .component-letter[data-component="2"] { color: var(--component-z); }
+:root[data-component-tint="on"] .component-letter[data-component="3"] { color: var(--component-w); }
+:root[data-component-tint="on"] :is(.react-flow__edge.component-0:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-0 > path) { stroke: var(--component-x) !important; color: var(--component-x) !important; }
+:root[data-component-tint="on"] :is(.react-flow__edge.component-1:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-1 > path) { stroke: var(--component-y) !important; color: var(--component-y) !important; }
+:root[data-component-tint="on"] :is(.react-flow__edge.component-2:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-2 > path) { stroke: var(--component-z) !important; color: var(--component-z) !important; }
+:root[data-component-tint="on"] :is(.react-flow__edge.component-3:not(:hover, .selected) .react-flow__edge-path, .react-flow__connectionline .component-3 > path) { stroke: var(--component-w) !important; color: var(--component-w) !important; }
 /* The value widget (ValueFields): fields side by side in one IO row, the component name inside each box; expanded,
    one component per row. A wired value keeps its place, unseen. Colours only from the --field-* slots.
    數值 widget：各分量並排在一行、分量名稱在框內；展開時一個分量一行。接線的值位置留著、看不到。顏色只用 --field-*。 */

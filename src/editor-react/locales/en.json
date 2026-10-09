@@ -359,6 +359,7 @@
   "texture.white": "White",
   "toolbar.bodyDrag": "Body drag",
   "toolbar.boxSelect": "Box select (drag selects instead of panning)",
+  "toolbar.componentTint": "Component colours",
   "toolbar.damping": "Canvas damping",
   "toolbar.downloadDraft": "Download draft",
   "toolbar.frameGlide": "Frame transition (F)",

@@ -79,7 +79,7 @@ export function project(document: GraphDocument, previous: Projection, contract:
     return { ...old, id: node.id, type: 'grape' as const, position, data: data!,
       dragHandle: '.node-drag-surface' };
   });
-  const priorEdges = new Map(previous.edges.map(edge => [edge.id, edge]));
+  const priorEdges = new Map(previous.edges.map(edge => [edge.id, edge])), byId = new Map(nodes.map(node => [node.id, node]));
   const edges = network.edges.map(edge => {
     const saved = edge.data!, old = priorEdges.get(edge.id);
     // A ghost wire (Q37 1-3) is kept and drawn dashed; code generation treats it as not connected.
@@ -90,9 +90,13 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // that follow it (the wire glow). 粗細由主題決定；每條線只決定顏色與虛線。顏色也放在 color，給跟著它的外觀用（接線光暈）。
     const style = ghost ? { stroke: 'var(--wire-ghost)', strokeDasharray: '6 4' } : { stroke: typeColor(sourceType), color: typeColor(sourceType) };
     const label = !ghost && sourceType !== targetType ? `${sourceType} → ${targetType}` : undefined;
-    if (old && old.source === saved.from[0] && old.sourceHandle === saved.from[1] &&
+    // A wire leaving a one-component output takes that component's colour under component tint (Refactor.59; legacy
+    // app.js:623). 從單一分量輸出出發的線，在分量染色下用該分量色。
+    const components = byId.get(saved.from[0])?.data.view.components?.outputs?.[saved.from[1]];
+    const className = !ghost && components?.length === 1 ? 'component-' + components[0] : undefined;
+    if (old && old.source === saved.from[0] && old.sourceHandle === saved.from[1] && old.className === className &&
         old.target === saved.to[0] && old.targetHandle === saved.to[1] && old.label === label && same(old.style, style)) return old;
-    return { ...old, id: edge.id, source: saved.from[0], sourceHandle: saved.from[1],
+    return { ...old, id: edge.id, source: saved.from[0], sourceHandle: saved.from[1], className,
       target: saved.to[0], targetHandle: saved.to[1], style, label,
       labelStyle: { fill: 'var(--text-secondary)', fontSize: 'var(--font-xs)' }, labelBgStyle: { fill: 'var(--surface-raised)' } };
   });
