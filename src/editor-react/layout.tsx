@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
 import { say, tr, type Message } from './text';
 import { PANELS } from './panels';
+import { readPreference, writePreference } from './preferences';
 
 // The editor's layout (Refactor.53; work/in-place-refactor-design/floating-panels.md): a title bar, a left and a
 // right panel zone around the network, panels in groups shown as tabs. The layout is a personal preference: kept
@@ -30,14 +31,13 @@ const defaults = (): LayoutData => ({ version: 1, titleBar: true, left: defaultZ
 // A side is at least 300px wide (human 2026-10-09: 220 was too small; legacy: left 180, right 300).
 // 一側至少 300px（人類：220 太小；舊產品左 180、右 300）。
 export const ZONE_MIN = 300, ZONE_MAX = 900;
-const KEY = 'grape-react-layout';
 
 // A stored layout is used only if it reads cleanly; unknown panels are dropped and new ones go to their default
 // side, so a later version never breaks it. Anything unreadable falls back to the defaults (no damage, no loss).
 // 存的版面讀得懂才用：不認得的面板丟掉、新面板放到預設那一側；讀不懂就回到預設，不會壞也不丟資料。
 function readLayout(): LayoutData {
   try {
-    const stored = JSON.parse(localStorage.getItem(KEY) ?? 'null') as LayoutData | null;
+    const stored = JSON.parse(readPreference('layout') ?? 'null') as LayoutData | null;
     if (!stored || stored.version !== 1) return defaults();
     const seen = new Set<string>(), zone = (side: Side): Zone => {
       const value = stored[side];
@@ -67,7 +67,7 @@ export function useLayout(): Layout {
   // Written shortly after the last change, so dragging a handle does not write on every move.
   // 停止變動後才寫入，拖把手時不會每一步都寫。
   useEffect(() => {
-    const timer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* storage may be blocked */ } }, 250);
+    const timer = setTimeout(() => writePreference('layout', JSON.stringify(data)), 250);
     return () => clearTimeout(timer);
   }, [data]);
   return useMemo(() => {

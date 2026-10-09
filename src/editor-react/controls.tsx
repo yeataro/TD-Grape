@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
 import { say, tr, type Message } from './text';
+import { readPreference, writePreference } from './preferences';
 
 // Shared controls of the editor frame (Refactor.53; human 2026-10-09: clean structure, colours and parts all
 // reusable). Bars, zones and panels build from these; their look lives in style.css under the same names and
@@ -173,14 +174,10 @@ export function AlignedRows({ rows, className }: { rows: readonly (readonly (Mes
 export function FoldSection({ title, actions, hint, children, remember, open: initial = true }: {
   title: ReactNode; actions?: ReactNode; hint?: Message | string; children: ReactNode; remember?: string; open?: boolean;
 }) {
-  const key = remember && 'grape-fold-' + remember;
   const [open, setOpenState] = useState(() => {
-    try { const stored = key ? localStorage.getItem(key) : null; return stored === null ? initial : stored === 'open'; } catch { return initial; }
+    const stored = remember ? readPreference('fold.' + remember) : null; return stored === null ? initial : stored === 'open';
   });
-  const setOpen = (next: boolean) => {
-    setOpenState(next);
-    if (key) try { localStorage.setItem(key, next ? 'open' : 'closed'); } catch { /* storage may be blocked */ }
-  };
+  const setOpen = (next: boolean) => { setOpenState(next); if (remember) writePreference('fold.' + remember, next ? 'open' : 'closed'); };
   return <section className="fold-section">
     <header className="fold-heading"><span className="fold-title" title={hint && say(hint)}><button type="button" className="fold-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
       aria-description={hint && say(hint)}><Icon name="chevronDown" />{title}</button></span>

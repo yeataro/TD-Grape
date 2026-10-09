@@ -11,3 +11,11 @@ test('components use our Select, never a native dropdown', () => {
   const found = components.filter(file => /<select[\s>]/.test(fs.readFileSync(path.join(web, file), 'utf8')));
   assert.deepEqual(found, []);
 });
+
+// Personal preferences go through preferences.ts only (human 2026-10-09: one place, layout included); other code never
+// touches localStorage. 個人偏好只經 preferences.ts（人類：一處、排版也是）；其他程式不直接碰 localStorage。
+test('only preferences.ts uses localStorage', () => {
+  const files = fs.readdirSync(web).filter(file => /\.tsx?$/.test(file) && file !== 'preferences.ts');
+  const found = files.filter(file => /localStorage/.test(fs.readFileSync(path.join(web, file), 'utf8')));
+  assert.deepEqual(found, []);
+});

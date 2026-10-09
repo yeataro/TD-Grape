@@ -22,6 +22,13 @@
   - 驗證：第一次只有 Uniforms 展開；開關會存起來、重新整理後照存的狀態顯示。
   - 測試時人類也在同一分頁操作，助手多點了一次 TD built-in values，已告知人類。
   - 之後會併進偏好儲存系統。
+- 偏好儲存系統（人類：偏好全部一處，排版也是）：`preferences.ts`（`readPreference`、`readChoice`、`writePreference`）。
+  - 語言、外觀四項、版面、Body 拖曳、區段開關都改用它，前綴統一為 `grape.`。
+  - 舊名字讀到一次就搬過去（`sgrapeLanguage`、`grape-react-*`、`grape-fold-*`）。
+  - 新增測試：只有 `preferences.ts` 碰 localStorage（editor 76）。規則寫進 AGENTS.md「新設定存哪裡」與 EDITOR_UI_RULES 五。
+  - 驗證：部署前後比對人類瀏覽器裡的設定，語言、外觀、版面（300px、Shared Sources 分頁）、區段開關都原樣搬過去。
+  - 兩個早已沒人讀的舊鍵（`grape-react-theme`、`sgrapeSourcesPanel`）沒動，待人類決定。
+  - 順手拿掉 R.54 留下、沒用到的 `XYPosition` import。
 - 整理一次（人類同意；畫面不變）：
   - 卡片拆到 `SourceCard.tsx`（卡片、名稱框、拖曳、未建立的卡片 `UnusedCard`，原 `DragRow`），預覽拆到 `TexturePreview.tsx`；`SourcesPanel.tsx` 267→142 行。
   - 樣式：`source-row` 併進 `source-card`（兩個名字指同一個東西、規則互相覆蓋），刪掉沒人用的 `.source-actions`、`.source-flag`；`.source-body` 的間距原本寫了兩次（0 被 6px 蓋掉），統一為垂直節奏的 0（本體只有一個子元素，看不出差別）。

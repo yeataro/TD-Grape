@@ -1,4 +1,5 @@
 import { tr, type Message } from './text';
+import { readChoice, writePreference } from './preferences';
 
 // The look of the editor (Refactor.54.1; floating-panels.md 32, 33; COLOR_SYSTEM.md), as the legacy appearance panel:
 // a style (Grape, TD) and a mode (Dark, Light), plus a size (Standard, Comfortable). A personal preference of this
@@ -24,14 +25,12 @@ export const portStyles: readonly { value: Ports; label: Message }[] = [
 /** Whether a style has this mode yet (TD is dark only for now). 這個風格有沒有這種明暗（TD 目前只有深色）。 */
 export const hasMode = (style: Style, mode: Mode) => style !== 'td' || mode === 'dark';
 
-const read = <T extends string>(key: string, allowed: readonly T[], fallback: T): T => {
-  try { const value = localStorage.getItem(key) as T | null; return value && allowed.includes(value) ? value : fallback; } catch { return fallback; }
-};
 const browser = typeof window !== 'undefined';
-let style: Style = browser ? read('grape-react-style', ['grape', 'td'], 'grape') : 'grape';
-let mode: Mode = browser ? read('grape-react-mode', ['dark', 'light'], 'dark') : 'dark';
-let size: Size = browser ? read('grape-react-size', ['standard', 'comfortable'], 'standard') : 'standard';
-let ports: Ports = browser ? read('grape-react-ports', ['a', 'b'], 'a') : 'a';
+// Personal preferences (preferences.ts). 個人偏好。
+let style: Style = browser ? readChoice('appearance.style', ['grape', 'td'], 'grape') : 'grape';
+let mode: Mode = browser ? readChoice('appearance.mode', ['dark', 'light'], 'dark') : 'dark';
+let size: Size = browser ? readChoice('appearance.size', ['standard', 'comfortable'], 'standard') : 'standard';
+let ports: Ports = browser ? readChoice('appearance.ports', ['a', 'b'], 'a') : 'a';
 const listeners = new Set<() => void>();
 function apply() {
   if (typeof document === 'undefined') return;
@@ -40,7 +39,6 @@ function apply() {
   document.documentElement.dataset.ports = ports;
 }
 apply();
-const store = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* storage may be blocked */ } };
 const changed = () => { apply(); listeners.forEach(listener => listener()); };
 export const appearanceSubscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
 export const appearance = () => `${style}/${mode}/${size}/${ports}`;
@@ -50,7 +48,7 @@ export const currentMode = () => hasMode(style, mode) ? mode : 'dark';
 export const currentSize = () => size;
 /** The colour theme in use, for React Flow's colorMode. 目前用的顏色主題（給 React Flow 的 colorMode）。 */
 export const currentTheme = () => document.documentElement.dataset.theme ?? 'dark';
-export function setStyle(next: Style) { if (next !== style) { style = next; store('grape-react-style', next); changed(); } }
-export function setMode(next: Mode) { if (next !== mode) { mode = next; store('grape-react-mode', next); changed(); } }
-export function setSize(next: Size) { if (next !== size) { size = next; store('grape-react-size', next); changed(); } }
-export function setPorts(next: Ports) { if (next !== ports) { ports = next; store('grape-react-ports', next); changed(); } }
+export function setStyle(next: Style) { if (next !== style) { style = next; writePreference('appearance.style', next); changed(); } }
+export function setMode(next: Mode) { if (next !== mode) { mode = next; writePreference('appearance.mode', next); changed(); } }
+export function setSize(next: Size) { if (next !== size) { size = next; writePreference('appearance.size', next); changed(); } }
+export function setPorts(next: Ports) { if (next !== ports) { ports = next; writePreference('appearance.ports', next); changed(); } }

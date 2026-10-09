@@ -1,5 +1,6 @@
 import zhHant from './locales/zh-Hant.json';
 import { tr, isMessage, type Message, type TextParam } from '../core-ts/text';
+import { readPreference, writePreference } from './preferences';
 
 // Showing text (design-interview Q34): a message is translated only when it is shown, so stored
 // state keeps data, not words. A missing or empty translation shows the English original; a code
@@ -35,9 +36,7 @@ export function localize(message: Message | string, language: Language): string 
 }
 
 function storedLanguage(): Language {
-  let stored: string | null = null;
-  try { stored = localStorage.getItem('sgrapeLanguage'); } catch { /* storage may be blocked */ }
-  return chooseLanguage(stored, typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language]);
+  return chooseLanguage(readPreference('language'), typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language]);
 }
 // The language can change while editing, in place, as the legacy editor (legacy app.js:68–72; Refactor.54: the
 // R.53 menu reloaded the page and lost the Undo history). Text is worded when shown, so a re-render is enough.
@@ -52,7 +51,7 @@ export const languageSubscribe = (listener: () => void) => { languageListeners.a
 export function setLanguage(next: Language) {
   if (next === current) return;
   current = next;
-  try { localStorage.setItem('sgrapeLanguage', next); } catch { /* storage may be blocked */ }
+  writePreference('language', next);
   if (typeof document !== 'undefined') document.documentElement.lang = next;
   languageListeners.forEach(listener => listener());
 }

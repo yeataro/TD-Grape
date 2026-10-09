@@ -1,7 +1,7 @@
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, useConnection, getBezierPath,
-  type ConnectionLineComponentProps, type NodeTypes, type XYPosition } from '@xyflow/react';
+  type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
 import './theme/td.css';
@@ -32,6 +32,7 @@ import { sourceNow, draftRow, nowRow, tdRow, buildLabel, type TdIdentity, type D
 import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
+import { readPreference, writePreference } from './preferences';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
@@ -170,10 +171,10 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
 // Body drag is a setting kept in this browser (Q64); Snap and box select last for the page. Body 拖曳記在這個瀏覽器（Q64）。
 function usePrefs(): CanvasPrefs {
   const [prefs, setPrefs] = useState(() => ({ snap: false, boxSelect: false,
-    bodyDrag: (() => { try { return localStorage.getItem('grape-react-body-drag') !== 'off'; } catch { return true; } })() }));
+    bodyDrag: readPreference('canvas.bodyDrag') !== 'off' }));
   return useMemo(() => ({ ...prefs, set: patch => {
     setPrefs(old => ({ ...old, ...patch }));
-    if (patch.bodyDrag !== undefined) try { localStorage.setItem('grape-react-body-drag', patch.bodyDrag ? 'on' : 'off'); } catch { /* storage may be blocked */ }
+    if (patch.bodyDrag !== undefined) writePreference('canvas.bodyDrag', patch.bodyDrag ? 'on' : 'off');
   } }), [prefs]);
 }
 // No graph open: the same frame, nothing to show and nothing to do (Refactor.51.1). 沒有圖時：同一個外框，沒有內容、按鈕停用。
