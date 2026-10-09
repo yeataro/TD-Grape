@@ -25,6 +25,7 @@
   "appearance.title": "外觀",
   "canvas.hint": "由左至右，組合你的 Shader。",
   "canvas.nodeCount": "{count} 個節點",
+  "canvas.zoom": "縮放",
   "category.arithmetic": "Arithmetic",
   "category.color": "Color",
   "category.commonSources": "Common Sources",

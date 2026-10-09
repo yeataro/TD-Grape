@@ -30,6 +30,7 @@ import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, useShell, type Sh
 import { listGrapeOps } from './grape_ops';
 import { sourceNow, draftRow, nowRow, tdRow, buildLabel, type TdIdentity, type DraftSource } from './td_identity';
 import { AlignedRows } from './controls';
+import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
@@ -65,7 +66,20 @@ function AdaptiveGrid() {
   const dot = Math.max(.45, Math.min(1.65, 1.05 * Math.pow(zoom, .65)));
   return <Background gap={gap} size={dot / zoom} color="var(--grid-dot)" />;
 }
-const ZoomReadout = () => <span className="zoom-readout">{Math.round(useStore(state => state.transform[2]) * 100)}%</span>;
+// The zoom as a number; clicked, a list of common zooms opens (upward from the corner), high to low as the common values
+// (human 2026-10-09). 縮放比例；點了打開常用縮放的清單（從角落往上開），和常用值一樣由高到低（人類）。
+const zoomPresets = [200, 150, 100, 75, 50, 25];
+function ZoomReadout() {
+  const zoom = Math.round(useStore(state => state.transform[2]) * 100), flow = useReactFlow();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return <>
+    <button type="button" className="zoom-readout" aria-haspopup="menu" aria-expanded={!!anchor}
+      aria-label={say(tr('canvas.zoom', 'Zoom'))} title={say(tr('canvas.zoom', 'Zoom'))}
+      onClick={event => setAnchor(anchor ? null : event.currentTarget)}>{zoom}%</button>
+    {anchor && <DropdownMenu anchor={anchor} label={say(tr('canvas.zoom', 'Zoom'))} fit onClose={() => setAnchor(null)}
+      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100) }))} />}
+  </>;
+}
 const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, stage, onCreate, onDropChoice }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; stage: string;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;

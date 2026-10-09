@@ -100,7 +100,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .react-flow__controls.horizontal { display: flex; gap: 4px; box-shadow: none; margin: var(--float-gap); margin-bottom: calc(var(--float-gap) + 14px); }
 .react-flow__controls .react-flow__controls-button { width: var(--icon-button); height: var(--icon-button); border: 1px solid var(--border); border-radius: var(--radius-control); }
 .react-flow__attribution { color: var(--text-faint); }
-.zoom-readout { display: grid; place-items: center; min-width: 44px; height: var(--icon-button); padding: 0 6px; border-radius: var(--radius-control); font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); }
+.zoom-readout { display: grid; place-items: center; min-width: 44px; height: var(--icon-button); padding: 0 6px; border: 0; border-radius: var(--radius-control); font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); background: var(--surface-control); font-variant-numeric: tabular-nums; }
+.zoom-readout:hover, .zoom-readout[aria-expanded="true"] { color: var(--text); background: var(--surface-control-hover); }
 
 /* Panel zones and handles (layout.tsx). 面板區與把手。 */
 .panel-zone { position: relative; display: flex; flex-shrink: 0; min-height: 0; background: var(--surface-zone); }

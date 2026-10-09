@@ -25,6 +25,7 @@
   "appearance.title": "Appearance",
   "canvas.hint": "Build your Shader from left to right.",
   "canvas.nodeCount": "{count} nodes",
+  "canvas.zoom": "Zoom",
   "category.arithmetic": "Arithmetic",
   "category.color": "Color",
   "category.commonSources": "Common Sources",
