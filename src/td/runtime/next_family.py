@@ -320,21 +320,45 @@ class NextFamily:
         return {'revision': meta['document']['revision'], 'document': text,
                 'runtimeRevision': meta['runtime']['revision'], 'targetId': meta['targetId']}
 
+    def running(self):
+        """The program TD runs now (last known good) as (sha256, program), read and checked in one place (Refactor.62):
+        damage is a refusal, never quietly "no Uniforms". 目前在跑的程式（sha256, 內容），只在這裡讀與核對；壞了是拒絕，
+        不會悄悄變成「沒有 Uniform」。"""
+        meta_dat = self.comp.op('graph_meta')
+        try:
+            runtime = json.loads(meta_dat.text)['runtime'] if meta_dat is not None else None
+            text = runtime['text']
+            program = json.loads(text)
+        except (ValueError, KeyError, TypeError):
+            runtime = None
+        if not (isinstance(runtime, dict) and digest(text) == runtime.get('sha256') and isinstance(program, dict)):
+            raise Refused('The stored execution part is changed or damaged.')
+        return runtime['sha256'], program
+
     def running_uniforms(self):
         """The Uniforms of the program TD runs now (last known good). 目前在跑的程式裡的 Uniform。"""
-        runtime = json.loads(self.comp.op('graph_meta').text).get('runtime') or {}
-        return uniforms_of(json.loads(runtime.get('text') or '{}'))
+        return uniforms_of(self.running()[1])
 
     def uniform_states(self):
         """Each running Uniform's components as TD has them (mode, value or what drives it), for the
         editor's display (Q56, Q60). 每個 Uniform 各分量在 TD 的現況，給編輯器顯示。"""
-        return uniform_writer.states(self._shader(self.comp), self.running_uniforms())
+        return uniform_writer.states(self.glsl(), self.running_uniforms())
 
     def status(self, phase, message, **details):
         data = self.comp.op('status')
         if data:
             data.text = json.dumps({'phase': phase, 'message': message,
                 'targetId': identity(self.comp), **details}, ensure_ascii=False, indent=2)
+
+    def glsl(self):
+        """This Grape OP's GLSL OP; a refusal when it has none. 這個 Grape OP 的 GLSL OP；沒有就拒絕。"""
+        return self._shader(self.comp)
+
+    def forget(self, session):
+        """An editor connection closed: its live sequence numbers go (Refactor.62). 編輯器連線關了：清掉它的即時序號。"""
+        known = LIVE.get(self.comp.id)
+        if known is not None:
+            known['seq'] = {key: seq for key, seq in known['seq'].items() if key[0] != session}
 
     def _shader(self, comp):
         shader = comp.op('shader')
@@ -353,14 +377,13 @@ class NextFamily:
         ident, session, seq, value = body.get('id'), body.get('session'), body.get('seq'), body.get('value')
         require(isinstance(ident, str) and isinstance(session, str) and 0 < len(session) <= 64
                 and isinstance(seq, int) and not isinstance(seq, bool) and seq >= 0, 'invalid live value')
-        runtime = json.loads(self.comp.op('graph_meta').text).get('runtime') or {}
-        known = LIVE.get(self.comp.path)
-        if known is None or known['sha256'] != runtime.get('sha256'):
-            bindings = json.loads(runtime.get('text') or '{}').get('bindings') or []
+        sha, program = self.running()
+        # Keyed by the OP's id, which a rename keeps and a copy does not share (Refactor.62). 以 OP 的 id 為鍵：改名不變、複本不共用。
+        known = LIVE.get(self.comp.id)
+        if known is None or known['sha256'] != sha:
             # Sequence numbers outlive a program change: a late old value never wins. 序號跨程式保留：晚到的舊值不會蓋掉新的。
-            known = {'sha256': runtime.get('sha256'), 'seq': known['seq'] if known else {},
-                     'uniforms': uniforms_of({'bindings': bindings})}
-            LIVE[self.comp.path] = known
+            known = {'sha256': sha, 'seq': known['seq'] if known else {}, 'uniforms': uniforms_of(program)}
+            LIVE[self.comp.id] = known
         if seq <= known['seq'].get((session, ident), -1):
             return {'ok': True, 'applied': False, 'reason': 'stale'}
         known['seq'][(session, ident)] = seq
@@ -373,7 +396,7 @@ class NextFamily:
         last = known.setdefault('last', {})
         before = last.get(ident, target['value'])
         last[ident] = value
-        applied = uniform_writer.live(self._shader(self.comp), target, value, before)
+        applied = uniform_writer.live(self.glsl(), target, value, before)
         return {'ok': True, 'applied': applied}
 
     def _input_ids(self):

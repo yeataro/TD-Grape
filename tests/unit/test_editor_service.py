@@ -176,6 +176,18 @@ class HTTPTest(unittest.TestCase):
         sock.close()
         self.server.connect(None)
 
+    def test_live_sessions_are_unique_per_run_and_a_closed_hub_takes_no_more(self):
+        # Refactor.62: a restarted service never reuses a session name; stopping refuses a late handshake.
+        # 重啟的服務不重用連線名稱；停止時不收晚到的連線。
+        first, second = service.LiveHub(), service.LiveHub()
+        self.assertNotEqual(first._run, second._run)
+        first.close()
+        a, b = socket.socketpair()
+        first.serve(a, 't' * 32)
+        self.assertEqual((first.connections, first.drain()), (set(), []))
+        self.assertEqual(a.fileno(), -1)  # closed 已關閉
+        b.close()
+
     def test_live_websocket_keeps_the_http_checks(self):
         self.server.connect(object())
         sock, head = self.live_socket(origin='https://unrelated.example')

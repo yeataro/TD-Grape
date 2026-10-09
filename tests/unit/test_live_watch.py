@@ -23,8 +23,9 @@ class Connection:
 
 
 class Owner:
-    def __init__(self, path):
-        self.path = path
+    # Like a TD OP: a path, its own id (kept by a rename), still there or not. 同 TD OP：路徑、自己的 id（改名不變）、還在不在。
+    def __init__(self, path, id=1):
+        self.path, self.id, self.valid = path, id, True
 
 
 class Family:
@@ -42,8 +43,11 @@ class Family:
     def pars(self):
         return [p for rows in self.shader.rows.values() for row in rows for p in row.values()]
 
-    def _shader(self, comp):
+    def glsl(self):
         return self.shader
+
+    def forget(self, session):
+        self.forgotten = session
 
     def running_uniforms(self):
         return self.uniforms
@@ -92,8 +96,31 @@ class LiveWatchTests(unittest.TestCase):
         watch.drain([('open', connection, None)])
         connection.sent.clear()
         watch.wires_changed(family.comp)
-        watch.wires_changed(Owner('/project1/other'))
+        watch.wires_changed(Owner('/project1/other', id=2))
         self.assertEqual(connection.sent, [{'type': 'inputs', 'frame': 120, 'retake': True}])
+
+    def test_a_renamed_or_deleted_grape_op_is_followed(self):
+        # Refactor.62: keyed by the OP's own id; a rename is watched under the new path, a deleted OP is let go.
+        # 以 OP 自己的 id 為鍵：改名照新路徑監看，刪掉的放掉。
+        family, watch, watched = setup([uniform('u1', 'uGain')])
+        connection = Connection()
+        watch.drain([('open', connection, None)])
+        family.comp.path = '/project1/renamed'
+        family.shader.path = '/project1/renamed/shader'
+        watch.drain([])
+        self.assertEqual(watched[-1], (['/project1/renamed/shader'], ['/project1/renamed']))
+        connection.sent.clear()
+        watch.wires_changed(family.comp)
+        self.assertEqual(connection.sent, [{'type': 'inputs', 'frame': 120, 'retake': True}])
+        family.comp.valid = False
+        watch.drain([])
+        self.assertEqual((watched[-1], connection.closed, watch.watched), (([], []), True, {}))
+
+    def test_a_closed_connection_is_forgotten(self):
+        family, watch, _ = setup([uniform('u1', 'uGain')])
+        connection = Connection(session='run.7')
+        watch.drain([('open', connection, None), ('close', connection, None)])
+        self.assertEqual(family.forgotten, 'run.7')
 
     def test_editor_values_are_written_once_per_frame_latest_only(self):
         family, watch, _ = setup([uniform('u1', 'uGain')])

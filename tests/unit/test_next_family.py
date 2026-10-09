@@ -35,6 +35,7 @@ class Comp:
         self.name = 'next_test'
         self.par = SimpleNamespace(Grapeid=Par(grape_id))
         self.path = '/project1/next_test'
+        self.id, self.valid = 101, True  # TD's own OP id 與 TD 的 OP id
         self.ops = {'status': Text(), 'pixel_shader': Text('old glsl'), 'shader': FakeShader()}
         if isinstance(stored, tuple):
             self.ops['graph'], self.ops['graph_meta'] = Text(stored[0]), Text(stored[1])
@@ -266,6 +267,15 @@ class NextFamilyTests(unittest.TestCase):
             live(seq=4, value=[1, 2, 3])
         self.assertEqual(comp.op('graph_meta').text, before)  # nothing saved
         fam._validate.assert_not_called()
+        # A closed session's numbers go, so a later page with that name starts fresh (Refactor.62). 關閉的連線序號清掉。
+        fam.forget('s')
+        self.assertEqual(live(seq=1, value=[5, 6])['applied'], True)
+        # A damaged running program is a refusal, never "no Uniforms" (Refactor.62). 程式壞了是拒絕，不是「沒有 Uniform」。
+        damaged = json.loads(before)
+        damaged['runtime']['sha256'] = '0' * 64
+        comp.op('graph_meta').text = json.dumps(damaged)
+        with self.assertRaisesRegex(next_family.Refused, 'changed or damaged'):
+            fam.running()
         next_family.LIVE.clear()
 
     def test_texture_inputs_are_placed_with_their_glsl_and_undone_with_it(self):

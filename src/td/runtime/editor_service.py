@@ -16,6 +16,7 @@ import select
 import socket
 import struct
 import threading
+import uuid
 from types import MappingProxyType
 from urllib.parse import unquote, urlsplit
 
@@ -159,7 +160,7 @@ class LiveConnection:
 
     def __init__(self, sock, target, hub, serial):
         self.sock, self.target, self.hub = sock, target, hub
-        self.session = 'live' + str(serial)
+        self.session = 'live' + str(serial)  # unique per service run (LiveHub) 每次服務不重複
         self.closed = False
         self._outbox = deque()
         self._lock = threading.Lock()
@@ -254,13 +255,21 @@ class LiveHub:
         self._lock = threading.Lock()
         self._events = deque()
         self._serial = 0
+        # Sessions are named per service run (Refactor.62): a restarted service never reuses a name, so a new page's live
+        # values are not taken for old ones. 每次服務各自命名連線：重啟後不重用，新頁面的即時值不會被當成舊的。
+        self._run = uuid.uuid4().hex[:8]
+        self.closed = False
         self.connections = set()
 
     def serve(self, sock, target):
         """Runs on the HTTP worker thread for the connection's whole life. 在 HTTP 工作執行緒上跑完整條連線。"""
         with self._lock:
+            if self.closed:
+                # Stopping: a handshake that finished just now is not kept (Refactor.62). 停止中：剛完成的連線不留。
+                sock.close()
+                return
             self._serial += 1
-            connection = LiveConnection(sock, target, self, self._serial)
+            connection = LiveConnection(sock, target, self, self._run + '.' + str(self._serial))
             self.connections.add(connection)
             self._events.append(('open', connection, None))
         try:
@@ -284,6 +293,7 @@ class LiveHub:
 
     def close(self):
         with self._lock:
+            self.closed = True
             connections = list(self.connections)
         for connection in connections:
             connection.close()

@@ -24,11 +24,14 @@ class LiveWatch:
         parameters and the Grape OPs' wiring; frame() -> TD's frame. resolve 找 Grape OP；watcher 設定監看的 GLSL OP 參數與
         Grape OP 接線；frame 是 TD 影格。"""
         self.resolve, self.watcher, self.frame = resolve, watcher, frame
-        self.links = {}    # connection -> Grape OP path 連線 → Grape OP
-        self.watched = {}  # Grape OP path -> entry 監看中的 Grape OP
+        # Keyed by the Grape OP's TD id (Refactor.62): a rename keeps it, so live values and states go on while HTTP, which
+        # finds the OP by Grape ID, does too. 以 Grape OP 的 TD id 為鍵：改名不變，即時值與狀態和 HTTP 一樣繼續。
+        self.links = {}    # connection -> Grape OP id 連線 → Grape OP
+        self.watched = {}  # Grape OP id -> entry 監看中的 Grape OP
 
     def drain(self, events):
         """What arrived from the editors since the last frame. 上一格之後收到的。"""
+        self._follow()
         latest = {}
         for kind, connection, text in events:
             if kind == 'open':
@@ -61,23 +64,43 @@ class LiveWatch:
             connection.send(json.dumps({'type': 'error', 'code': 'target_unavailable'}))
             connection.close()
             return
-        path = family.comp.path
-        entry = self.watched.get(path)
+        key = family.comp.id
+        entry = self.watched.get(key)
         if entry is None:
-            entry = self.watched[path] = {'family': family, 'connections': set(), 'index': {}, 'dirty': True}
+            entry = self.watched[key] = {'family': family, 'connections': set(), 'index': {}, 'dirty': True,
+                                         'path': family.comp.path}
             self._watch()
         entry['connections'].add(connection)
-        self.links[connection] = path
+        self.links[connection] = key
         entry['dirty'] = True  # a new connection gets the whole state first 新連線先拿到全部現況
 
     def _close(self, connection):
-        path = self.links.pop(connection, None)
-        entry = self.watched.get(path)
+        key = self.links.pop(connection, None)
+        entry = self.watched.get(key)
         if entry is None:
             return
         entry['connections'].discard(connection)
+        entry['family'].forget(connection.session)
         if not entry['connections']:
-            del self.watched[path]
+            del self.watched[key]
+            self._watch()
+
+    def _follow(self):
+        """Grape OPs deleted while watched are let go; renamed ones are watched under their new path (the watchers hold
+        paths). Once a frame, before anything else. 監看中被刪的 Grape OP 放掉；改名的照新路徑監看（監看 DAT 存的是路徑）。"""
+        changed = False
+        for key, entry in list(self.watched.items()):
+            comp = entry['family'].comp
+            if not comp.valid:
+                for connection in entry['connections']:
+                    self.links.pop(connection, None)
+                    connection.close()
+                del self.watched[key]
+                changed = True
+            elif comp.path != entry['path']:
+                entry['path'] = comp.path
+                changed = True
+        if changed:
             self._watch()
 
     def _watch(self):
@@ -85,20 +108,20 @@ class LiveWatch:
         for entry in self.watched.values():
             comps.append(entry['family'].comp.path)
             try:
-                paths.append(entry['family']._shader(entry['family'].comp).path)
-            except Exception:
-                pass
+                paths.append(entry['family'].glsl().path)
+            except uniform_writer.Refused:
+                pass  # no GLSL OP to watch: only its wiring is 沒有 GLSL OP 可看：只看接線
         self.watcher(paths, comps)
 
     def _entry_of(self, par):
         try:
-            return self.watched.get(par.owner.parent().path)
+            return self.watched.get(par.owner.parent().id)
         except AttributeError:
             return None
 
     def applied(self, family):
         """A program was applied: Uniforms may be new or renamed. 套用了新程式：Uniform 可能新增或改名。"""
-        entry = self.watched.get(family.comp.path)
+        entry = self.watched.get(family.comp.id)
         if entry is not None:
             entry['dirty'] = True
             self.flush()
@@ -121,11 +144,11 @@ class LiveWatch:
             family = entry['family']
             try:
                 uniforms = family.running_uniforms()
-                shader = family._shader(family.comp)
+                shader = family.glsl()
                 entry['index'] = self._index(shader, uniforms)
                 text = json.dumps({'type': 'state', 'frame': self.frame(), 'uniforms': uniform_writer.states(shader, uniforms)})
-            except Exception:
-                continue
+            except uniform_writer.Refused:
+                continue  # no GLSL OP or a damaged program: nothing to tell yet (D3, open) 沒有 GLSL OP 或程式壞了：還沒有可說的
             for connection in entry['connections']:
                 connection.send(text)
 
@@ -185,7 +208,7 @@ class LiveWatch:
     def _inputs(self, comp, retake):
         """Tell a Grape OP's editors to ask about its inputs; `retake` also takes new snapshots.
         通知 Grape OP 的編輯器再問輸入；retake 時也重拍快照。"""
-        entry = self.watched.get(getattr(comp, 'path', None))
+        entry = self.watched.get(comp.id)
         if entry is None:
             return
         text = json.dumps({'type': 'inputs', 'frame': self.frame(), 'retake': retake})

@@ -117,6 +117,12 @@ class EditorServiceExt:
         if self.http:
             self.http.close()
             self.http = None
+        # The Manager lets go too, so nothing is watched while no editor can connect (Refactor.62).
+        # Manager 一起放開：沒有編輯器能連時，什麼都不監看。
+        par = getattr(self.ownerComp.par, 'Manager', None)
+        manager = par.eval() if par else None
+        if manager:
+            manager.ext.GrapeManagerExt.Disconnect()
         self._show('Stopped')
 
     def UpdateEmbedded(self):
