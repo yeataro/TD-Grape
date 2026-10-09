@@ -101,8 +101,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       </div>)}
     </div>
   </article>;
-  // A Uniform node is a source: its output comes first, so it reads from the top down (human 2026-10-09; only Uniform
-  // nodes, to set them apart). Uniform 節點是來源：輸出放最上面，由上往下讀（人類：只有 Uniform 節點，拉出差別）。
+  // A node without inputs is a source (Uniforms, constants, texture inputs, TD values, value nodes; later spec constants):
+  // its outputs come first, so it reads from the top down (human 2026-10-09). Judged from the ports, never from the node.
+  // 沒有輸入的節點是來源（Uniform、常數、貼圖輸入、TD 內建值、值節點；之後的 Spec 常量）：輸出放最上面，由上往下讀（人類）。
+  // 由接孔判斷，不認節點。
+  const source = !inputs.length && !view.spare;
   const uniform = data.declaration?.kind === 'uniform' ? data.declaration : undefined;
   const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
     <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
@@ -120,7 +123,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
           <small>{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
-      {uniform && outputRows}
+      {source && outputRows}
       {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {uniform && <UniformValue declaration={uniform} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
@@ -141,7 +144,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.note && <div className="hint">{view.note.text}</div>}
-      {!uniform && outputRows}
+      {!source && outputRows}
     </div>
   </article>;
 });
