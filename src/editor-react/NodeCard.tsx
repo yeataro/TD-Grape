@@ -7,6 +7,7 @@ import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
 import { BoxPreviewContext } from './RightDragSelect';
 import { tr, say, type Message } from './text';
 import { Select } from './controls';
+import { Icon } from './icons';
 import { ValueFields } from './ValueFields';
 import { useSession, TextContext, BodyDragContext, MergingContext, ErrorNodesContext } from './contexts';
 import { modesOf } from './declaration_modes';
@@ -86,9 +87,8 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   const preview = useContext(BoxPreviewContext);
   // Hooks stay above the ghost return. hook 都放在 ghost 提早返回之前。
   const mergePreview = useContext(MergingContext), merging = mergePreview?.node === id ? mergePreview.merged : [];
-  const errorNodes = useContext(ErrorNodesContext);
-  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '')
-    + (errorNodes?.has(id) ? ' compile-error' : '');
+  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '');
+  const errorLine = useContext(ErrorNodesContext)?.has(id) ?? false;
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();
   const { authored, view, inputs, outputs } = data;
@@ -143,6 +143,9 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   </div>);
   return <article ref={card} className={`grape-node ${selection}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
+    {/* Trial (Refactor.63.6.1): TD's error mark on a node that wrote a line TD reported. 試驗：TD 回報的錯誤行由它寫的節點，掛 TD 的錯誤標記。 */}
+    {errorLine && <span className="node-error-badge" role="img" title={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}
+      aria-label={say(tr('node.errorLine', 'TD reported an error on a line this node wrote'))}><Icon name="errorBadge" /></span>}
     <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
       {view.typeLocked ? <small>{sourceTag}{outputs[0]?.type}</small> : view.selector ? <Select className="nodrag" label={`${id} type`} value={view.selector.value}
         onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} /> :

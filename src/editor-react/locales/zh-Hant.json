@@ -160,6 +160,7 @@
   "limit.reached": "已達上限，這次修改沒有套用：{limits}",
   "limit.subgraphDefinitions": "子圖定義",
   "network.label": "網路",
+  "node.errorLine": "TD 回報的錯誤行是這個節點寫的",
   "number.help": "左右拖曳改值（Shift 較細、Ctrl 較粗）。點一下打字。右鍵：常用值。中鍵、Alt＋右鍵或按住不動：數值梯尺——上下選級距，移出左右邊界後調值。放開套用，Esc 取消。鍵盤：Alt＋L，方向鍵，Enter。",
   "number.notFinite": "請輸入有限數值",
   "number.presetDefault": "{value}（預設值）",

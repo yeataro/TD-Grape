@@ -25,6 +25,9 @@ const paths = {
   settings: <><path d="m9.5 3-.5 2-2 .9-1.8-.6-2 3.4 1.5 1.4v2.8l-1.5 1.4 2 3.4 1.8-.6 2 .9.5 2h4l.5-2 2-.9 1.8.6 2-3.4-1.5-1.4v-2.8l1.5-1.4-2-3.4-1.8.6-2-.9-.5-2Z" /><circle cx="11.5" cy="11.5" r="3" /></>,
   theme: <path d="M20.5 14A8.7 8.7 0 0 1 10 3.5 8.8 8.8 0 1 0 20.5 14Z" />,
   textSize: <path d="M3 17 6.5 8 10 17M4.3 14h4.4M12 19 17 5 22 19M14 14h6" />,
+  // TD's error mark: a filled circle with a cross (Refactor.63.6.1, human 2026-10-10: as TD marks an OP in error).
+  // TD 的錯誤標記：實心圓加叉（人類：照 TD 標出錯 OP 的樣子）。
+  errorBadge: <><circle cx="12" cy="12" r="10" className="icon-badge" /><path d="m8 8 8 8M16 8l-8 8" /></>,
 } satisfies Record<string, ReactNode>;
 export type IconName = keyof typeof paths;
 
