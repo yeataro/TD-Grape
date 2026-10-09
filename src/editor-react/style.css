@@ -71,7 +71,9 @@ a { color: var(--accent); }
    (human 2026-10-09: the whole page had a scrollbar, 1px). 可以點的一行字：上下不留內距，不會把底列（和整頁）撐高（人類：整頁多了捲軸，差 1px）。 */
 .foot-message { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding-block: 0;
   background: none; border-color: transparent; color: var(--message, var(--text)); }
-.foot-bar .recovery-help { position: relative; }
+/* "How to recover" never wraps or shrinks; the message before it shortens instead (Refactor.59.5: it broke into two lines in
+   Chinese). 「如何恢復」不換行也不縮；縮的是它前面的訊息（中文時曾被擠成兩行）。 */
+.foot-bar .recovery-help { position: relative; flex-shrink: 0; } .foot-bar .recovery-help summary { white-space: nowrap; }
 .foot-bar .recovery-help p { position: absolute; bottom: calc(100% + 8px); left: 0; width: 420px; margin: 0;
   padding: 10px; border: 1px solid var(--border-control); border-radius: 8px; background: var(--surface-raised); color: var(--text); }
 .workspace { display: flex; flex: 1; min-height: 0; }
