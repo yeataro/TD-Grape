@@ -53,6 +53,9 @@ export interface DeclarationKind {
    * type, written as its name. 引用時給哪些輸出與 GLSL；預設是一個 out，寫成宣告的名字。 */
   readonly outputs?: readonly PortSpec[];
   reference?(declaration: Declaration, position: number): Record<string, string>;
+  /** The name people see, when it is not the declaration's own (a TOP texture input is named by its position,
+   * as the legacy editor; human 2026-10-09). 給人看的名字，不是宣告自己的名字時才給（TOP 貼圖輸入照位置命名，同舊產品）。 */
+  label?(declaration: Declaration, position: number): string;
 }
 
 const numericValue = (declaration: Declaration) => {
@@ -119,7 +122,10 @@ const topInputKind: DeclarationKind = { kind: 'topInput', role: 'source', colorG
     if (d.type !== 'sampler2D') throw Error('Unsupported declaration type');
     if (!defaultTextures.includes(String(d.defaultTexture))) throw Error('Unknown default texture');
   },
-  reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }) };
+  reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }),
+  // Named by position, its GLSL name, and not renamed (legacy inspector.js:2986; human 2026-10-09): deleting one
+  // before it renumbers it, so the name always matches TD. 照位置命名＝它的 GLSL 名字、不能改（同舊產品）：刪掉前面的就改號，名字永遠對得上 TD。
+  label: (_d, i) => 'sTD2DInputs[' + i + ']' };
 export const declarationKinds: ReadonlyMap<string, DeclarationKind> =
   new Map([constantKind, uniformKind, topInputKind].map(module => [module.kind, Object.freeze(module)]));
 
@@ -142,6 +148,13 @@ const kindOf = (kind: string) => { const module = declarationKinds.get(kind); if
 const requireName = (graph: Graph, name: string, except?: string) => {
   const problem = declarationNameProblem(graph, name, except); if (problem) throw new DeclarationError(problem, name);
 };
+/** The name people see for a declaration: its kind's label from its position among its kind, or its own name.
+ * 宣告給人看的名字：種類有 label 就照它在同種宣告裡的位置給，否則用自己的名字。 */
+export function declarationLabel(all: readonly Declaration[], declaration: Declaration): string {
+  const kind = declarationKinds.get(declaration.kind);
+  if (!kind?.label) return declaration.name;
+  return kind.label(declaration, all.filter(d => d.kind === declaration.kind).findIndex(d => d.id === declaration.id));
+}
 /** A free name from a base, e.g. constant1, constant2. 從基底找一個沒被用的名字。 */
 export function freeDeclarationName(graph: Graph, base: string): string {
   for (let i = 1; ; i++) if (!declarationNameProblem(graph, base + i)) return base + i;

@@ -197,6 +197,7 @@
   "sources.defaultTextureChanged": "預設圖已更新，等待套用",
   "sources.details": "顯示詳細內容",
   "sources.inputAdded": "已新增貼圖輸入 {name}",
+  "sources.inputConnector": "TD 裡 Grape OP 的第 {number} 個輸入",
   "sources.more": "更多",
   "sources.name": "名稱",
   "sources.nameFormat": "{name} 不是有效的名稱：以英文字母開頭，之後用英文字母、數字或 _（不能有 __）。",

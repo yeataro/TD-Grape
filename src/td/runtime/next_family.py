@@ -365,7 +365,8 @@ class NextFamily:
                     target.name = 'input' + str(i + 1)
                 target.nodeX, target.nodeY = INPUT_X, INPUT_Y - i * INPUT_STEP
                 target.nodeWidth, target.nodeHeight = 130, 72
-                target.par.label = entry['name']
+                # Its position in TD's own array, as the editor shows it (Refactor.58.1). 它在 TD 陣列裡的位置，同編輯器顯示的。
+                target.par.label = 'sTD2DInputs[' + str(i) + ']'
                 connector = DEFAULT_TEXTURES.index(entry['defaultTexture'])
                 if samples is not None and connector < len(samples.outputConnectors):
                     target.inputConnectors[0].connect(samples.outputConnectors[connector])

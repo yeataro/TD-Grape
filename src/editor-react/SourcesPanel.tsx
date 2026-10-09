@@ -188,9 +188,9 @@ export function SourcesPanel({ declarations, references }: {
   const count = (n: number, kind: string) => <Badge count={n} group={core.declarationKinds.get(kind)?.colorGroup ?? 'runtime'}
     title={tr('sources.available', '{count} available', { count: n })} />;
   return <section className="sources">
-    {confirming && <ConfirmDialog title={tr('sources.removeTitle', 'Delete {name}?', { name: confirming.name })}
+    {confirming && <ConfirmDialog title={tr('sources.removeTitle', 'Delete {name}?', { name: core.declarationLabel(declarations, confirming) })}
       message={tr('sources.removeConfirm', '{name} is used by {count} nodes on the canvas. Deleting it also deletes those nodes.',
-        { name: confirming.name, count: references[confirming.id] ?? 0 })}
+        { name: core.declarationLabel(declarations, confirming), count: references[confirming.id] ?? 0 })}
       confirmLabel={tr('sources.remove', 'Delete')} onCancel={() => setConfirming(null)}
       onConfirm={() => { session.removeDeclaration(confirming.id); setConfirming(null); }} />}
     <FoldSection title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
@@ -198,7 +198,9 @@ export function SourcesPanel({ declarations, references }: {
       actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
     {inputs.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
-        <NameField declaration={declaration} />
+        {/* Named by its position, not editable (human 2026-10-09). 照位置命名、不能改（人類）。 */}
+        <code className="source-fixed-name" title={say(tr('sources.inputConnector', 'Input {number} of the Grape OP in TD', { number: inputs.indexOf(declaration) + 1 }))}>
+          {core.declarationLabel(declarations, declaration)}</code>
         <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
           value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
           options={textureOptions} sizeTo={textureOptions.map(option => option.label)} /></>}>

@@ -82,7 +82,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
 
 },
 "capacity":function(require,module,exports){
@@ -337,6 +337,7 @@ exports.CORE_CONFIG = Object.freeze({
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeclarationError = exports.declarationKinds = exports.defaultTextures = void 0;
 exports.declarationNameProblem = declarationNameProblem;
+exports.declarationLabel = declarationLabel;
 exports.freeDeclarationName = freeDeclarationName;
 exports.freeLegacyName = freeLegacyName;
 exports.addDeclaration = addDeclaration;
@@ -422,7 +423,10 @@ const topInputKind = { kind: 'topInput', role: 'source', colorGroup: 'sampler', 
         if (!exports.defaultTextures.includes(String(d.defaultTexture)))
             throw Error('Unknown default texture');
     },
-    reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }) };
+    reference: (_d, i) => ({ out: 'sTD2DInputs[' + i + ']', size: 'uTD2DInfos[' + i + '].res.zw', pixelSize: 'uTD2DInfos[' + i + '].res.xy' }),
+    // Named by position, its GLSL name, and not renamed (legacy inspector.js:2986; human 2026-10-09): deleting one
+    // before it renumbers it, so the name always matches TD. 照位置命名＝它的 GLSL 名字、不能改（同舊產品）：刪掉前面的就改號，名字永遠對得上 TD。
+    label: (_d, i) => 'sTD2DInputs[' + i + ']' };
 exports.declarationKinds = new Map([constantKind, uniformKind, topInputKind].map(module => [module.kind, Object.freeze(module)]));
 function declarationNameProblem(graph, name, except) {
     if (!/^[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name) || name.includes('__'))
@@ -449,6 +453,14 @@ const requireName = (graph, name, except) => {
     if (problem)
         throw new DeclarationError(problem, name);
 };
+/** The name people see for a declaration: its kind's label from its position among its kind, or its own name.
+ * 宣告給人看的名字：種類有 label 就照它在同種宣告裡的位置給，否則用自己的名字。 */
+function declarationLabel(all, declaration) {
+    const kind = exports.declarationKinds.get(declaration.kind);
+    if (!(kind === null || kind === void 0 ? void 0 : kind.label))
+        return declaration.name;
+    return kind.label(declaration, all.filter(d => d.kind === declaration.kind).findIndex(d => d.id === declaration.id));
+}
 /** A free name from a base, e.g. constant1, constant2. 從基底找一個沒被用的名字。 */
 function freeDeclarationName(graph, base) {
     for (let i = 1;; i++)
@@ -1816,10 +1828,11 @@ function declarationNode(catalog) {
         // It switches only among declarations of the same kind: another kind gives other outputs.
         // 只在同一種宣告之間切換：別的種類給的輸出不同。
         presentation: (n, c) => {
-            var _a;
+            var _a, _b;
             const d = target(n, c), choices = (((_a = c.declarations) === null || _a === void 0 ? void 0 : _a.call(c)) || []).filter(x => declarations_1.declarationKinds.has(x.kind) && (!d || x.kind === d.kind));
-            return { label: d === null || d === void 0 ? void 0 : d.name, inlineControls: [{ kind: 'select', key: 'declaration', label: 'declaration', literal: true, command: 'declaration', value: String(n.params.declarationId),
-                        options: choices.map(x => ({ value: x.id, label: x.name, literal: true })) }] };
+            const all = ((_b = c.declarations) === null || _b === void 0 ? void 0 : _b.call(c)) || [];
+            return { label: d && (0, declarations_1.declarationLabel)(all, d), inlineControls: [{ kind: 'select', key: 'declaration', label: 'declaration', literal: true, command: 'declaration', value: String(n.params.declarationId),
+                        options: choices.map(x => ({ value: x.id, label: (0, declarations_1.declarationLabel)(all, x), literal: true })) }] };
         },
         edit: (n, command, value, c) => {
             var _a, _b;

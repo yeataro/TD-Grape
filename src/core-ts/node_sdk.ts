@@ -2,7 +2,7 @@
 import { object, copy, type Node, type Value } from './model';
 import { types, type, literal, number, fill, count, type Type } from './numeric';
 import type { CatalogRow, NodeModule, NodeContext, Configuration } from './node_module';
-import { declarationKinds } from './declarations';
+import {declarationKinds,declarationLabel} from './declarations';
 import { tdValues, type TdValue } from './td_values';
 import { types as valueTypes } from './values';
 import type { PortSpec } from './ports';
@@ -152,8 +152,9 @@ export function declarationNode(catalog:CatalogRow):NodeModule {
     // It switches only among declarations of the same kind: another kind gives other outputs.
     // 只在同一種宣告之間切換：別的種類給的輸出不同。
     presentation:(n,c)=>{const d=target(n,c),choices=(c.declarations?.()||[]).filter(x=>declarationKinds.has(x.kind)&&(!d||x.kind===d.kind));
-      return {label:d?.name,inlineControls:[{kind:'select',key:'declaration',label:'declaration',literal:true,command:'declaration',value:String(n.params.declarationId),
-        options:choices.map(x=>({value:x.id,label:x.name,literal:true}))}]};},
+      const all=c.declarations?.()||[];
+      return {label:d&&declarationLabel(all,d),inlineControls:[{kind:'select',key:'declaration',label:'declaration',literal:true,command:'declaration',value:String(n.params.declarationId),
+        options:choices.map(x=>({value:x.id,label:declarationLabel(all,x),literal:true}))}]};},
     edit:(n,command,value,c)=>{
       if(command!=='declaration')throw Error('Unknown command');
       const id=String(object(value)?.value??value),next=c.declaration(id),current=target(n,c);if(!next)throw Error('The declaration no longer exists');

@@ -358,8 +358,10 @@ export class Editor {
   // TOP texture inputs (Refactor.43): each becomes an input of the Grape OP in TD, in list order.
   // TOP 貼圖輸入：每一筆在 TD 成為 Grape OP 的輸入接口，照清單順序。
   addTopInput = () => {
+    // The stored name stays internal; people see the position name (sTD2DInputs[i]). 存的名字只在內部；人看到的是位置名。
     const name = core.freeDeclarationName(this.document.document, 'input');
-    this.transactGraph(tr('sources.inputAdded', 'Texture input {name} added', { name }), document =>
+    const shown = 'sTD2DInputs[' + this.document.document.declarations.filter(d => d.kind === 'topInput').length + ']';
+    this.transactGraph(tr('sources.inputAdded', 'Texture input {name} added', { name: shown }), document =>
       document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16), kind: 'topInput', name, type: 'sampler2D' }));
   };
   setDefaultTexture = (id: string, defaultTexture: string) =>

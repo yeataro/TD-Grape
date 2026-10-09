@@ -197,6 +197,7 @@
   "sources.defaultTextureChanged": "Default image updated; waiting to apply",
   "sources.details": "Show details",
   "sources.inputAdded": "Texture input {name} added",
+  "sources.inputConnector": "Input {number} of the Grape OP in TD",
   "sources.more": "More",
   "sources.name": "Name",
   "sources.nameFormat": "{name} is not a valid name: start with a letter, then letters, digits or _ (no __).",

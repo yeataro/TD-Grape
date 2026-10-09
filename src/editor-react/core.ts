@@ -21,6 +21,7 @@ export type Core = Pick<typeof graph, 'GraphDocument' | 'changesBetween'> & {
   structureProblems: typeof structure.structureProblems; offered: typeof structure.offered; removable: typeof structure.removable;
   formatProblem: typeof formatProblem; ghostsOf: typeof ghosts.ghostsOf;
   declarationKinds: typeof declarations.declarationKinds; declarationNameProblem: typeof declarations.declarationNameProblem;
+  declarationLabel: typeof declarations.declarationLabel;
   freeDeclarationName: typeof declarations.freeDeclarationName; freeLegacyName: typeof declarations.freeLegacyName; defaultTextures: typeof declarations.defaultTextures;
   uniformPresets: typeof presetTable.uniformPresets; commonSources: typeof commonTable.commonSources;
   tdValues: typeof tdValueTable.tdValues; usableTdValue: (entry: tdValueTable.TdValue | undefined, target: string | undefined) => boolean;

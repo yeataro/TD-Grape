@@ -241,6 +241,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* When narrow the name matters most (human 2026-10-09): it keeps a minimum and the type shrinks first.
    變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。 */
 .source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }
+/* A name that cannot be changed (a texture input's position name): plain code, no box. 不能改的名字：純程式字，沒有框。 */
+.source-fixed-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* A select is as wide as its value; keep it inside the panel. 選擇器隨值變寬，限制在面板內。 */
 .source-head .select-button { min-width: 0; max-width: 55%; }
 /* The type and default-image selects without a fill; it comes back under the pointer (human 2026-10-09: tried, kept).

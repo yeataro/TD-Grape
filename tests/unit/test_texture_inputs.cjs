@@ -80,8 +80,13 @@ test('a reference switches only among texture inputs; deleting an input moves th
   const doc=sampling('input2'),view=doc.networks.get('pixel');
   const options=view.node('ref').definition.presentation(view.node('ref').data,view.context).inlineControls[0].options;
   assert.deepEqual(plain(options.map(o=>o.value)),['input1','input2']);
+  // People see each by its position, its GLSL name (Refactor.58.1, as legacy). 人看到的是位置名＝GLSL 名字（同舊產品）。
+  assert.deepEqual(plain(options.map(o=>o.label)),['sTD2DInputs[0]','sTD2DInputs[1]']);
   const removed=doc.change(c=>c.removeDeclaration('input1')).after;
   const result=compiler.compile(removed);
   assert.match(result.pixel,/texture\(sTD2DInputs\[0\], vUV\.st\)/);
   assert.deepEqual(plain(result.bindings).map(d=>d.id),['input2']);
+  // The later one is renumbered, so its name still matches TD. 後面的改號，名字仍對得上 TD。
+  assert.equal(G.declarationLabel(removed.declarations,removed.declarations.find(d=>d.id==='input2')),'sTD2DInputs[0]');
+  assert.equal(G.declarationLabel(removed.declarations,{id:'c',kind:'constant',name:'kOne',type:'float'}),'kOne');
 });
