@@ -2,6 +2,17 @@
 
 > **現行做法（2026-10-08）**：自動測試用 `npm run test:core`、`npm run test:editor` 與 `python tools/dev/run_tests.py`。舊 Python 核心與只測它的測試已於清理第 5 條刪除（design-interview Q48），以下各段中引用 `src/core`、`sgrape_*` 或已刪測試的指令只作歷史紀錄。
 
+## 升級 React Flow（@xyflow/react）後要重測（Refactor.58.2 起）
+
+我們有幾處依賴 React Flow 的內部行為，自動測試抓不到，升級後要在瀏覽器重跑：
+
+- **畫布阻尼**（`viewport.ts` 的 `dampCanvas`）依賴兩件事：React Flow 原生平移聽 `mousedown`，原生縮放公式是 `@xyflow/system` 的 `wheelDelta`。在齒輪裡打開阻尼，然後檢查：
+  - 從同一起點（按 H）連滾 10 下，開與關最後的 scale 與位置要相同（58.2 時是 1.60244）。
+  - 拖背景 200,100，畫面要剛好移動 200,100；變兩倍＝原生平移也動了。
+  - 按在節點、接孔、欄位、線、縮放面板、浮動功能列上，都不能被阻尼接走（畫布不能進入 dragging）。
+  - iPad 的單指平移、雙指縮放仍可用（觸控交給原生）。
+- **React Flow 例外清單**：見 [EDITOR_UI_RULES](../ui/EDITOR_UI_RULES.md)「六之一」，逐條確認還成立。
+
 ## 單輸入乘積預設與 Preview 外觀（2026-10-03，0.8.276）
 
 以 `PYTHONPATH=src/core;src/td/runtime;tests/unit` 執行 `python -m unittest test_wire_validation test_matrix_foundation test_matrix_arithmetic test_matrix_double_operations test_pixel_preview test_pixel_preview_lifecycle test_pixel_preview_recovery`，83 項通過。新 `test_auto_operand_defaults.js` 由 arithmetic Python wrapper 執行：44 組直接預設、44 組 Creator 局部／完整試算，另驗證兩線矩陣乘法、非方陣 Outer Product、Locked、If／Boolean Mix、保存／重載、Undo／Redo，以及巢狀 local Function。測試先抓到無關拓樸編輯會改寫舊 Auto 簽名／手填值的反例，修正後確認旧 Multiply／Outer Product 與其 Auto／Locked 下游完整保留；重新接線、上游改型別及 Locked → Auto 仍採新預設。沒有新增序列化 metadata。
