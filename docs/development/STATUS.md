@@ -64,7 +64,7 @@
   - 拉線新增 Vector、Combine、Replace、Vector Split、Swizzle（`inheritsComponentNames`）時，同一步把另一端節點的樣式寫進新節點（`editor.ts addNode`，一次 Undo）。
   - 分量染色：一個開關（齒輪「分量染色」，偏好 `appearance.componentTint`，預設開）。單一分量的接孔：圓圈、標籤、出發的線（含拖曳中的線）用分量色；多字母標籤每個字母各自上色；型別小字維持 float 色；選中與滑過的線維持自己的顏色；數值框的分量名稱也上色（原本只有顏色值上色）。分量色維持現在主題的（人類：RGB 照現在，做到分量染色再談；接線最後多半用舊產品色）。
   - 驗證：核心測試 142 過（新增：預設、存的樣式、標籤、分量）；session 測試 77 過（新增：拉線新增 Vector Split 沿用 Color 的 rgba、Add 不沿用、Undo 一次清掉）。瀏覽器實點（r54_probe，測完 Undo）：Split RGBA 的 `r` 接到 Combine 的 `w`，線、圓圈、標籤是 R 色 `rgb(239,137,144)`、型別小字 float 色；滑過的線換成滑過色；關掉開關全回型別色、記住，打開恢復。淺色主題未在畫面上看。
-  - 另發現（不在本輪）：從 vec4 輸出拉線時，新增選單只列 Multiply、Mix、Split RGBA——Vector Split、Combine、Replace、Swizzle 新增時預設 vec2、接不上，被篩掉（舊產品會列）。所以畫面上還無法用拉線新增來看沿用樣式，只有單元測試。
+  - 已知問題（R.54 已記在 CURRENT「核心不會自動換型別」；助手回報時誤說成新發現，沒先查舊紀錄）：從 vec4 輸出拉線時，新增選單只列 Multiply、Mix、Split RGBA——Vector Split、Combine、Replace、Swizzle 新增時預設 vec2、接不上，被篩掉（舊產品會列）。所以畫面上還無法用拉線新增來看沿用樣式，只有單元測試。
   - 延後：切換樣式的下拉（參數面板那一輪，Q67）。
 - **Refactor.58.9 Samples Clone 與 label**（58.1 的 TD 端三步，人類 10-09 同意；範圍 workspace `texture-preview.md` 最後一節）：
   - 主組件 `/TD_Grape/Samples` 的 out1～out7 加 label `grape`、`banana`、`jellybeans`、`white`、`black`、`normal`、`custom`（同圖裡的 `defaultTexture`）；註解改寫。
