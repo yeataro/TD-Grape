@@ -6,6 +6,7 @@ import type { FlowNode } from './projection';
 import type { ComponentState } from './host';
 import { spareHandle, type Editor as EditorSession } from './editor';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
+import { BoxPreviewContext } from './RightDragSelect';
 import { tr, say } from './text';
 
 export const SessionContext = createContext<EditorSession | null>(null);
@@ -115,7 +116,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
   // The primary selection is told from above, never known by the node module (Q33). 主要選取由上往下得知，節點模組不知道。
   const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot) === id;
-  const selection = selected ? (primary ? 'selected primary' : 'selected') : '';
+  // While a box is dragged: dashed = will be selected on release, faded = will be let go (Refactor.50.1).
+  // 框選拖曳中：虛線＝放開會被選、淡化＝放開會被取消。
+  const preview = useContext(BoxPreviewContext);
+  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '')
+    + (preview ? preview.has(id) ? selected ? '' : ' box-in' : selected ? ' box-out' : '' : '');
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();
   const { authored, view, inputs, outputs } = data;

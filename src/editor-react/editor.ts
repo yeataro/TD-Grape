@@ -410,12 +410,13 @@ export class Editor {
     this.setPrimary(null);
   };
   clearSelection = () => { this.reselect(new Set(), new Set()); this.setPrimary(null); };
-  /** After a box selection (Q33): the primary stays if still selected, else the first node the box
-   * touched. 框選後：原主要仍被選就不換，否則換成第一個碰到的。 */
-  boxSelected = (touched: readonly string[]) => {
-    const selected = this.selectedNodes();
-    if (this.primary !== null && selected.has(this.primary)) return;
-    this.setPrimary(touched.find(id => selected.has(id)) ?? null);
+  /** A box selection, applied once on release (Refactor.50.1): these nodes, no wires. The primary stays
+   * if still selected, else the first node the box touched (Q33). 框選，放開時套用一次：這些節點、沒有接線；
+   * 原主要仍被選就不換，否則換成第一個碰到的。 */
+  boxSelect = (nodes: ReadonlySet<string>, touched: readonly string[]) => {
+    const primary = this.primary;
+    this.reselect(nodes, new Set());
+    this.setPrimary(primary !== null && nodes.has(primary) ? primary : touched.find(id => nodes.has(id)) ?? null);
   };
   nodeChanges = (changes: NodeChange<FlowNode>[]) => {
     const runtime = changes.filter(change => change.type !== 'remove' && change.type !== 'add' && change.type !== 'replace');

@@ -975,12 +975,15 @@ test('selection follows TD: Ctrl toggles, Shift adds, nodes and wires apart, a p
   assert.deepEqual([selected(), wires(), session.primarySnapshot()], [[], [edge], null], 'a wire clears the nodes');
   session.pressNode('sum', 'toggle');
   assert.deepEqual([selected(), wires()], [['sum'], []], 'a node clears the wires, even with Ctrl');
-  session.nodeChanges([{ type: 'select', id: 'idle', selected: true }]);
-  session.boxSelected(['idle']);
+  // A box is applied once, on release (Refactor.50.1). 框選放開時套用一次。
+  session.clickEdge(edge, 'only');
+  session.boxSelect(new Set(['sum', 'idle']), ['idle']);
+  assert.deepEqual([selected(), wires(), session.primarySnapshot()], [['idle', 'sum'], [], 'idle'], 'a box clears wires; the primary is the first touched');
+  session.pressNode('sum', 'only');
+  session.boxSelect(new Set(['sum', 'a']), ['a']);
   assert.equal(session.primarySnapshot(), 'sum', 'a box keeps the primary when it is still selected');
-  session.nodeChanges([{ type: 'select', id: 'sum', selected: false }]);
-  session.boxSelected(['a', 'idle']);
-  assert.equal(session.primarySnapshot(), 'idle', 'otherwise the first node touched that is selected');
+  session.boxSelect(new Set(['a', 'idle']), ['b', 'idle', 'a']);
+  assert.deepEqual([selected(), session.primarySnapshot()], [['a', 'idle'], 'idle'], 'otherwise the first node touched that is selected');
   session.clearSelection();
   assert.deepEqual([selected(), wires(), session.primarySnapshot()], [[], [], null]);
   await session.flush();
