@@ -8,6 +8,10 @@ import { readPreference } from './preferences';
 /** How long a framing move glides (legacy frameDampingMs default). It can be switched off in the gear, not retimed (human
  * 2026-10-09: keep it simple). 對準時滑動多久（舊產品預設）。齒輪裡可以關掉、不能改時間（人類：別弄複雜）。 */
 export const FRAME_MS = 333;
+/** How every move glides: straight there, slowing as it arrives, as the legacy editor (stepCanvasMotion). React Flow's
+ * default flies out and back in on the way (d3 interpolateZoom; human 2026-10-09: "out, in, out again").
+ * 所有移動怎麼滑：直線過去、越接近越慢，同舊產品。React Flow 預設會先縮小再放大（d3 interpolateZoom；人類：推出、推入再推出）。 */
+export const glide = { ease: (t: number) => 1 - (1 - t) ** 3, interpolate: 'linear' as const };
 /** The glide now: none when switched off (preferences.ts `canvas.frameGlide`). 現在的滑動時間：關掉就是 0。 */
 export const frameMs = () => readPreference('canvas.frameGlide') === 'off' ? 0 : FRAME_MS;
 
@@ -19,7 +23,7 @@ export const frameNodes = (flow: Pick<ReactFlowInstance, 'fitView'>, ids?: reado
   // A framing move replaces any damped target, so the next wheel tick starts from where framing goes.
   // 對準取代阻尼的目標，下一下滾輪從對準後的位置開始算。
   damping?.interrupt();
-  void flow.fitView({ ...(ids?.length ? { nodes: ids.map(id => ({ id })) } : {}), duration: frameMs(), padding: .2, maxZoom: 1 });
+  void flow.fitView({ ...(ids?.length ? { nodes: ids.map(id => ({ id })) } : {}), duration: frameMs(), padding: .2, maxZoom: 1, ...glide });
 };
 
 // Canvas damping (Refactor.58.2 trial; legacy canvasDamping 150 ms, app.js:545–580; human 2026-10-09: clean, fast, and the
@@ -36,7 +40,6 @@ export const frameNodes = (flow: Pick<ReactFlowInstance, 'fitView'>, ids?: reado
 // 觸控仍由 React Flow 處理（單指平移、雙指縮放；人類用 iPad）。每一下滾輪、每一步拖曳都移動我們記的目標，快速連滾的縮放量和沒有阻尼時一樣。
 // 關掉時這裡完全不執行。
 export const DAMPING_MS = 150;
-const easeOut = (t: number) => 1 - (1 - t) ** 3;  // slows as it arrives (legacy stepCanvasMotion) 越接近越慢（同舊產品）
 // One tick's zoom, as React Flow's own (@xyflow/system wheelDelta). 一下滾輪的縮放量，同 React Flow 原生。
 const wheelStep = (event: WheelEvent) => -event.deltaY * (event.deltaMode === 1 ? .05 : event.deltaMode ? 1 : .002)
   * (event.ctrlKey && /Mac/i.test(navigator.platform) ? 10 : 1);
@@ -50,7 +53,7 @@ export function dampCanvas(flow: Pick<ReactFlowInstance, 'getViewport' | 'setVie
   const base = () => target && performance.now() < until ? target : flow.getViewport();
   const glide = (next: Viewport) => {
     target = next; until = performance.now() + DAMPING_MS;
-    void flow.setViewport(next, { duration: DAMPING_MS, ease: easeOut, interpolate: 'linear' });
+    void flow.setViewport(next, { duration: DAMPING_MS, ...glide });
   };
   const wheel = (event: WheelEvent) => {
     if ((event.target as Element).closest('.nowheel')) return;

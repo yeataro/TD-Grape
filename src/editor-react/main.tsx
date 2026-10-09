@@ -33,7 +33,7 @@ import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 import { readPreference, writePreference } from './preferences';
-import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes } from './viewport';
+import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes, glide } from './viewport';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
@@ -79,7 +79,7 @@ function ZoomReadout() {
       aria-label={say(tr('canvas.zoom', 'Zoom'))} title={say(tr('canvas.zoom', 'Zoom'))}
       onClick={event => setAnchor(anchor ? null : event.currentTarget)}>{zoom}%</button>
     {anchor && <DropdownMenu anchor={anchor} label={say(tr('canvas.zoom', 'Zoom'))} fit onClose={() => setAnchor(null)}
-      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs() }) }))} />}
+      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs(), ...glide }) }))} />}
   </>;
 }
 const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, stage, onCreate, onDropChoice }: {
