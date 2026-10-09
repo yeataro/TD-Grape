@@ -34,5 +34,19 @@ export const Icon = ({ name }: { name: IconName }) =>
 /** The TD-Grape mark (three grapes), the same drawing as static/favicon.svg and the legacy header. A logo is artwork,
  * not a theme colour: it keeps its own colours in every theme (the one exception to COLOR_SYSTEM.md's rule).
  * TD-Grape 的三顆葡萄，與 favicon.svg、舊產品標題列同一份圖。標誌是圖，不是主題色：每個主題都不變（顏色規則唯一的例外）。 */
-export const BrandMark = () => <svg className="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-  <circle cx="20" cy="23" r="11" fill="#bfa5f4" /><circle cx="44" cy="23" r="11" fill="#a98be2" /><circle cx="32" cy="44" r="11" fill="#b499ef" /></svg>;
+// Waiting animations of the mark (Refactor.59.6; human 2026-10-10: one small shared piece, called wherever something waits).
+// `wave` (the circles light in turn) is the chosen one; the others stay as options, all compared in workspace
+// work/refactor/loading-animations.html — keep that page in step whenever this piece changes or gains a feature (human 2026-10-10).
+// Motion only in style.css. 標誌的等待動畫（人類：一個共用的小元件，哪裡在等就放哪裡）。
+// wave（輪流亮）是選定的；其他留作選項，九種在 workspace 的預覽頁比較；這個元件改了或加功能，預覽頁要同步（人類）。動作只寫在 style.css。
+export const loadingStyles = ['wave', 'spin', 'orbit', 'breathe', 'fade', 'hop', 'gather', 'glow', 'trace'] as const;
+export type LoadingStyle = typeof loadingStyles[number];
+/** `loading`: animate while something waits — `true` is `wave`, or name one of `loadingStyles`.
+ * `label`: what is being waited for, for assistive tech (a still mark stays hidden from it).
+ * loading：等待時動起來，true＝wave，或指定一種；label：在等什麼，給輔助工具（不動的標誌對它隱藏）。 */
+export const BrandMark = ({ loading, label }: { loading?: boolean | LoadingStyle; label?: string } = {}) => {
+  const style = loading === true ? 'wave' : loading || undefined;
+  return <svg className={'brand-mark' + (style ? ' loading loading-' + style : '')} viewBox="0 0 64 64" focusable="false"
+    {...(style ? { role: 'img', 'aria-label': label, 'aria-busy': true } : { 'aria-hidden': true })}>
+    <g><circle cx="20" cy="23" r="11" fill="#bfa5f4" /><circle cx="44" cy="23" r="11" fill="#a98be2" /><circle cx="32" cy="44" r="11" fill="#b499ef" /></g></svg>;
+};

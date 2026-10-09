@@ -44,6 +44,39 @@ a { color: var(--accent); }
 .title-bar, .location-bar, .foot-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0 12px; background: var(--surface-bar); }
 .title-bar { height: var(--title-bar-height); border-bottom: 1px solid var(--border); }
 .brand-mark { width: var(--brand-mark); height: var(--brand-mark); flex: none; }
+/* The mark's waiting animations (icons.tsx BrandMark `loading`); one cycle is the theme's --loading-cycle. Sized by where it is
+   placed. 標誌的等待動畫；一輪的長度由主題 --loading-cycle 決定；大小看放在哪裡。 */
+.brand-mark.loading { overflow: visible; } .brand-mark.loading circle { transform-box: fill-box; transform-origin: center; }
+.loading-spin > g { transform-origin: 32px 30px; animation: brand-spin calc(var(--loading-cycle) * 1.2) linear infinite; }
+.loading-breathe > g { transform-origin: 32px 30px; animation: brand-breathe calc(var(--loading-cycle) * 1.35) ease-in-out infinite; }
+.loading-wave circle { animation: brand-wave var(--loading-cycle) ease-in-out infinite; }
+.loading-fade circle { animation: brand-fade var(--loading-cycle) linear infinite; }
+.loading-hop circle { animation: brand-hop var(--loading-cycle) ease-in-out infinite; }
+.loading-glow circle { animation: brand-glow calc(var(--loading-cycle) * 1.25) ease-in-out infinite; }
+.loading-trace circle { animation: brand-trace var(--loading-cycle) steps(1) infinite; opacity: .35; }
+.loading-orbit circle { animation: brand-orbit calc(var(--loading-cycle) * 1.35) ease-in-out infinite; }
+.loading-gather circle:nth-child(1) { animation: brand-gather-1 calc(var(--loading-cycle) * 1.35) ease-in-out infinite; }
+.loading-gather circle:nth-child(2) { animation: brand-gather-2 calc(var(--loading-cycle) * 1.35) ease-in-out infinite; }
+.loading-gather circle:nth-child(3) { animation: brand-gather-3 calc(var(--loading-cycle) * 1.35) ease-in-out infinite; }
+:is(.loading-wave, .loading-hop) circle:nth-child(2) { animation-delay: calc(var(--loading-cycle) / 6); }
+:is(.loading-wave, .loading-hop) circle:nth-child(3) { animation-delay: calc(var(--loading-cycle) / 3); }
+:is(.loading-fade, .loading-trace) circle:nth-child(2) { animation-delay: calc(var(--loading-cycle) / 3); }
+:is(.loading-fade, .loading-trace) circle:nth-child(3) { animation-delay: calc(var(--loading-cycle) * 2 / 3); }
+.loading-glow circle:nth-child(2) { animation-delay: calc(var(--loading-cycle) * 1.25 / 3); }
+.loading-glow circle:nth-child(3) { animation-delay: calc(var(--loading-cycle) * 2.5 / 3); }
+.loading-orbit circle:nth-child(2) { animation-delay: calc(var(--loading-cycle) * -1.35 / 3); }
+.loading-orbit circle:nth-child(3) { animation-delay: calc(var(--loading-cycle) * -2.7 / 3); }
+@keyframes brand-spin { to { transform: rotate(360deg); } }
+@keyframes brand-breathe { 0%, 100% { transform: scale(.82); opacity: .6; } 50% { transform: scale(1); opacity: 1; } }
+@keyframes brand-wave { 0%, 60%, 100% { transform: scale(.7); opacity: .45; } 30% { transform: scale(1); opacity: 1; } }
+@keyframes brand-fade { 0%, 100% { opacity: .25; } 33% { opacity: 1; } }
+@keyframes brand-hop { 0%, 50%, 100% { transform: translateY(0); } 25% { transform: translateY(-7px); } }
+@keyframes brand-glow { 0%, 100% { filter: brightness(.55); } 35% { filter: brightness(1.35); } }
+@keyframes brand-trace { 0% { opacity: 1; } 33%, 100% { opacity: .35; } }
+@keyframes brand-orbit { 0%, 100% { transform: translate(0, 0); } 33% { transform: translate(12px, 10px); } 66% { transform: translate(-12px, 10px); } }
+@keyframes brand-gather-1 { 50% { transform: translate(6px, 4px) scale(.8); } }
+@keyframes brand-gather-2 { 50% { transform: translate(-6px, 4px) scale(.8); } }
+@keyframes brand-gather-3 { 50% { transform: translate(0, -7px) scale(.8); } }
 .brand-name { color: var(--text-strong); font-size: var(--brand-font); line-height: var(--title-bar-height); }
 .title-bar button { height: var(--control-height); padding-block: 0; font-size: var(--control-font); }
 /* A text button in the location and foot bars (e.g. Retry connection) has a fill, so it keeps a gap off the bar's edges
