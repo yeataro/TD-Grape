@@ -111,11 +111,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       </div>)}
     </div>
   </article>;
-  // A node without inputs is a source (Uniforms, constants, texture inputs, TD values, value nodes; later spec constants):
-  // its outputs come first, so it reads from the top down (human 2026-10-09). Judged from the ports, never from the node.
-  // 沒有輸入的節點是來源（Uniform、常數、貼圖輸入、TD 內建值、值節點；之後的 Spec 常量）：輸出放最上面，由上往下讀（人類）。
-  // 由接孔判斷，不認節點。
-  const source = !inputs.length && !view.spare;
+  // A start node (GLOSSARY: no inputs at all, e.g. source references, TD values, value nodes; later spec constants) shows
+  // its outputs first, so it reads from the top down (human 2026-10-09). Judged from the ports, never from the node kind.
+  // 起點節點（用語表：沒有任何輸入，例如來源引用、TD 內建值、值節點；之後的 Spec 常量）輸出放最上面，由上往下讀（人類）。
+  // 由接孔判斷，不認節點種類。
+  const start = !inputs.length && !view.spare;
   const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
   const kind = data.declaration && sourceKinds[data.declaration.kind], sourceTag = kind ? say(kind) + ' · ' : '';
   const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
@@ -134,7 +134,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
           <small>{sourceTag}{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
-      {source && outputRows}
+      {start && outputRows}
       {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} bare />)}
       {valued && <DeclarationValue declaration={valued} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
@@ -155,7 +155,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.note && <div className="hint">{view.note.text}</div>}
-      {!source && outputRows}
+      {!start && outputRows}
     </div>
   </article>;
 });
