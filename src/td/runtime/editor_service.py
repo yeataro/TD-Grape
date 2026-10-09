@@ -377,10 +377,11 @@ class EditorHTTP:
                     return self.reply(200, {'service': 'grape-editor-assets', 'source': snapshot.source,
                         'version': snapshot.version, 'digest': snapshot.digest,
                         'files': len(snapshot.files), 'managerConnected': host_requests is not None}, head=head)
-                # The new editor (index.html) is the only entry: the root and a Grape OP's Edit
-                # address both serve it. 新編輯器（index.html）是唯一入口：首頁與 Edit 網址都給它。
+                # The new editor (index.html) is the only entry: the root and any /shader/<…>/ address
+                # serve it; a Grape OP that is missing or malformed is said by the editor itself (Refactor.51).
+                # 新編輯器是唯一入口：首頁與任何 /shader/<…>/ 都給它；找不到或格式不對由編輯器自己說。
                 name = path.lstrip('/')
-                if not name or re.fullmatch(r'shader/[a-f0-9]{32}/', name):
+                if not name or re.fullmatch(r'shader/[^/]{1,64}/', name):
                     name = 'index.html'
                 data = snapshot.files.get(name)
                 if data is None:

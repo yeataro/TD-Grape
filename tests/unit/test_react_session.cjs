@@ -1014,3 +1014,18 @@ test('wires follow the node rules: Shift adds, Ctrl toggles, a plain click on a 
   session.clickEdge(z, 'only');
   assert.deepEqual(wires(), [z], 'a plain click on another wire replaces');
 });
+
+// Refactor.51: the one source of the Grape OP list (TD's /api/shaders); bad rows are dropped, a TD refusal
+// is said in the editor's words. 「專案有哪些 Grape OP」的唯一來源；壞的列丟掉，TD 拒絕時用編輯器自己的話說。
+test('the Grape OP list comes from /api/shaders only', async () => {
+  const { listGrapeOps } = load(path.join(root, 'src/editor-react/grape_ops.ts'));
+  const seen = [];
+  const rows = await listGrapeOps('tok', async (url, options) => {
+    seen.push([url, options.headers['X-Sgrape-Token']]);
+    return new Response(JSON.stringify({ shaders: [{ id: 'a'.repeat(32), path: '/project1/one', kind: 'top' }, { id: 'bad', path: '/x' }], projectFile: 'p.toe' }));
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(rows)), [{ id: 'a'.repeat(32), path: '/project1/one', kind: 'top' }]);
+  assert.deepEqual(seen, [['/api/shaders', 'tok']]);
+  await assert.rejects(listGrapeOps('', async () => new Response(JSON.stringify({ error: 'Editor assets are ready; the new TD Manager is not connected yet' }), { status: 501 })),
+    error => /not connected/.test(error.message));
+});

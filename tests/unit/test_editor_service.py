@@ -100,11 +100,13 @@ class HTTPTest(unittest.TestCase):
         # Refactor.24: the new editor is the only entry. 新編輯器是唯一入口。
         page = b'<!doctype html><title>new editor</title>'
         self.server.replace(service.AssetSnapshot({**bundle(), 'index.html': page}, 'embedded'))
-        for path in ['/', '/shader/' + 'a' * 32 + '/', '/shader/' + 'a' * 32 + '/?x=1']:
+        # Refactor.51: a missing or malformed Grape OP is said by the editor itself ("wrong target", human
+        # 2026-10-09), so any single-level /shader/<…>/ gets the editor. 錯指目標由編輯器自己說。
+        for path in ['/', '/shader/' + 'a' * 32 + '/', '/shader/' + 'a' * 32 + '/?x=1', '/shader/not-an-id/']:
             status, headers, data = self.request(path)
             self.assertEqual((status, data), (200, page), path)
             self.assertTrue(headers['Content-Type'].startswith('text/html'))
-        self.assertEqual(self.request('/shader/not-an-id/')[0], 404)
+        self.assertEqual(self.request('/shader/a/b/')[0], 404)
 
     def test_reload_on_same_origin_and_no_filesystem_dependency(self):
         port = self.server.port

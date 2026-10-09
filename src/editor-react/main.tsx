@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState, useSyncExternalStore, memo } from 'react';
+import { StrictMode, useCallback, useEffect, useMemo, useState, useSyncExternalStore, memo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBezierPath,
   type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
@@ -6,7 +6,7 @@ import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
 import './style.css';
 import { creatableEntries, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
-import { HostClient, type StateResponse } from './host';
+import { HostClient, HostError, type StateResponse } from './host';
 import { Editor as EditorSession } from './editor';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind } from './RightDragSelect';
@@ -16,13 +16,15 @@ import { conflictMessage } from './host_sync';
 import { PanelShell } from './PanelShell';
 import { SourcesPanel } from './SourcesPanel';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
+import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, type Shell } from './shell';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
-// The only editor entry (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also works.
-// 唯一的編輯器入口：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。
-const target = new URLSearchParams(location.search).get('target') ?? location.pathname.match(/^\/shader\/([a-f0-9]{32})\/$/)?.[1] ?? '';
-const draftKey = 'grape-react-draft:' + target;
+// The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
+// works. No target, or one the project does not have, is a normal state of the shell (Refactor.51).
+// 網址上的 Grape OP：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。沒有或找不到都是外殼的一般狀態。
+const addressTarget = () => new URLSearchParams(location.search).get('target') ?? location.pathname.match(/^\/shader\/([^/]+)\/$/)?.[1] ?? '';
+const draftKeyOf = (target: string) => 'grape-react-draft:' + target;
 const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, check that TD is still open (restore its window if minimized), global cooking is on, and TD is not busy with a long task; on a remote device, check the network. After TD restarts, open the editor again from the Grape OP.');
 // The status line shows one line; the whole message (e.g. TD's compile log) is in its tooltip (Refactor.38).
 // 狀態列只顯示一行；完整內容（例如 TD 的編譯紀錄）在滑鼠提示裡。
@@ -69,8 +71,10 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
     </ReactFlow>
   </RightDragSelect></BodyDragContext.Provider>;
 });
-function Editor({ session, text, version }: { session: EditorSession; text: (key: string) => string; version: string }) {
+// The editing of one graph (one Grape OP); the shell above decides which one. 一張圖的編輯；換哪一張由外殼決定。
+function Editor({ session, text }: { session: EditorSession; text: (key: string) => string }) {
   const state = useSyncExternalStore(session.subscribe, session.snapshot);
+  const target = session.host.target, draftKey = draftKeyOf(target);
   const flow = useReactFlow(), [bodyDrag, setBodyDrag] = useState(true), [snap, setSnap] = useState(false);
   // Personal preference (human 2026-10-09): the Shared Sources panel remembers open/closed in this browser;
   // the first time it is open. 個人偏好：共用來源面板記住開關（存在這個瀏覽器）；第一次預設打開。
@@ -92,7 +96,7 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
       if (state.dirty) sessionStorage.setItem(draftKey, JSON.stringify({ target, graph: session.graph() }));
       else sessionStorage.removeItem(draftKey);
     } catch { session.notice(new TextError(tr('draft.storageFailed', 'The browser cannot keep a draft; use Download draft to keep unsent changes.'))); }
-  }, [state.version, state.dirty, session, draft]);
+  }, [state.version, state.dirty, session, draft, draftKey, target]);
   useEffect(() => {
     const leave = (event: BeforeUnloadEvent) => { if (session.snapshot().dirty) { event.preventDefault(); event.returnValue = ''; } };
     const keys = (event: KeyboardEvent) => {
@@ -104,8 +108,6 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
   }, [session, draft]);
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
-    <header><strong>TD-Grape <small>React · TOP · {version}</small></strong><span className="target">{state.targetPath}</span>
-    </header>
     <nav aria-label={say(tr('toolbar.label', 'Editing toolbar'))} inert={!!draft}>
       <select aria-label={say(tr('toolbar.addNode', 'Add node'))} value="" onChange={event => {
         const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
@@ -150,21 +152,86 @@ function Editor({ session, text, version }: { session: EditorSession; text: (key
   </TextContext.Provider></SessionContext.Provider>;
 }
 
-let host: HostClient | undefined, bootstrap: Bootstrap | undefined;
+// What the shell shows while no graph is open: every stage is a normal editor with nothing drawn yet
+// (human 2026-10-09). 還沒有圖時外殼顯示什麼：每個階段都是正常的編輯器、只是畫布上還沒有東西。
+type Waiting = { message: Message | string; reset?: () => Promise<void> };
+function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bootstrap; text: (key: string) => string; version: string }) {
+  const [target, setTarget] = useState(addressTarget);
+  const [session, setSession] = useState<EditorSession | null>(null), [path, setPath] = useState('');
+  const [waiting, setWaiting] = useState<Waiting>({ message: '' }), [reload, setReload] = useState(0);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null), [pending, setPending] = useState('');
+  // Open the Grape OP in the address. 打開網址上的 Grape OP。
+  useEffect(() => {
+    let live = true, opened: EditorSession | null = null;
+    setSession(null); setPath('');
+    // "No target" and "wrong target" (human 2026-10-09). 「沒指目標」與「錯指目標」。
+    if (!target) { setWaiting({ message: tr('picker.noTarget', 'Choose a Grape OP to edit.') }); return; }
+    const wrong = { message: tr('picker.wrongTarget', 'This Grape OP is not in the current project. Choose another one.') };
+    if (!/^[a-f0-9]{32}$/.test(target)) { setWaiting(wrong); return; }
+    setWaiting({ message: tr('picker.opening', 'Opening the Grape OP…') });
+    const client = new HostClient(target, token);
+    client.call<StateResponse>('state').then(loaded => {
+      if (!live) return;
+      opened = new EditorSession(client, bootstrap, loaded, undefined, undefined, undefined, version);
+      setSession(opened); setPath(loaded.target);
+    }, error => {
+      if (!live) return;
+      if (error instanceof HostError && error.status === 404) { setWaiting(wrong); return; }
+      setWaiting({ message: tr('picker.cannotOpen', 'This Grape OP cannot be opened here: {reason}', { reason: errorText(error) }),
+        reset: error instanceof UnsupportedGraphError ? async () => { await resetToDefault(client, bootstrap, version); setReload(n => n + 1); } : undefined });
+    });
+    return () => { live = false; opened?.dispose(); };
+  }, [target, token, bootstrap, version, reload]);
+  useEffect(() => {
+    const back = () => setTarget(addressTarget());
+    addEventListener('popstate', back);
+    return () => removeEventListener('popstate', back);
+  }, []);
+  // The one switching behaviour; entries only call the menu up (Refactor.51). 唯一的切換行為；入口只負責叫出選單。
+  const closeMenu = useCallback(() => setAnchor(null), []);
+  const go = useCallback((id: string) => { history.pushState(null, '', '/shader/' + id + '/'); setTarget(id); setPending(''); }, []);
+  const shell = useMemo<Shell>(() => ({
+    current: target,
+    choose: id => { if (id === target) return; if (session?.snapshot().dirty) setPending(id); else go(id); },
+    openMenu: element => setAnchor(element),
+  }), [target, session, go]);
+  const keepDraftAndGo = () => {
+    try { sessionStorage.setItem(draftKeyOf(target), JSON.stringify({ target, graph: session!.graph() })); go(pending); }
+    catch (error) { session?.notice(error); }
+  };
+  const applyAndGo = async () => { await session!.flush(); if (!session!.snapshot().dirty) go(pending); };
+  return <ShellContext.Provider value={shell}><TextContext.Provider value={text}>
+    <header><strong>TD-Grape <small>React · TOP · {version}</small></strong>
+      <GrapeOpEntry className="target" label={path || tr('picker.choose', 'Choose a Grape OP')} /></header>
+    {session ? <Editor key={target} session={session} text={text} /> : <>
+      <nav aria-label={say(tr('toolbar.label', 'Editing toolbar'))}><button disabled>{say(tr('toolbar.undo', 'Undo'))}</button>
+        <button disabled>{say(tr('toolbar.redo', 'Redo'))}</button></nav>
+      <main><div className="canvas"><EmptyCanvas message={waiting.message}>
+        {waiting.reset && <button onClick={() => {
+          if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
+        }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas></div></main></>}
+    {anchor && <GrapeOpMenu anchor={anchor} token={token} onClose={closeMenu} />}
+    {pending && <div className="switch-dialog" role="dialog" aria-label={say(tr('switch.title', 'Switch Grape OP'))}>
+      <p>{say(tr('switch.explanation', 'Some changes are not in TD yet. Apply them to TD, or keep a draft in this browser tab before switching (it can be restored when you come back).'))}</p>
+      <button className="primary" onClick={() => void applyAndGo()}>{say(tr('switch.apply', 'Apply, then switch'))}</button>
+      <button onClick={keepDraftAndGo}>{say(tr('switch.keep', 'Keep a draft, then switch'))}</button>
+      <button onClick={() => setPending('')}>{say(tr('switch.cancel', 'Cancel'))}</button>
+    </div>}
+  </TextContext.Provider></ShellContext.Provider>;
+}
+
 async function start() {
   const token = location.hash.slice(1) || sessionStorage.getItem('sgrapeToken') || '';
   sessionStorage.setItem('sgrapeToken', token); history.replaceState(null, '', location.pathname + location.search);
-  if (!target) throw new TextError(tr('open.noTarget', 'No Grape OP to edit was given. In TD, press Open Editor on a Grape OP.'));
-  const client = host = new HostClient(target, token);
-  const [loaded, files, locales, build] = await Promise.all([
-    client.call<StateResponse>('state'), fetch('/editor-bootstrap.json').then(response => response.json()) as Promise<Bootstrap>,
+  // The shell needs no Grape OP to start (Refactor.51). 外殼開啟不需要 Grape OP。
+  const [files, locales, build] = await Promise.all([
+    fetch('/editor-bootstrap.json').then(response => response.json()) as Promise<Bootstrap>,
     fetch('/locales.json').then(response => response.json()),
     fetch('/build-info.json').then(response => response.json()),
   ]);
-  bootstrap = files; // kept for the startup-error reset
-  const session = new EditorSession(client, files, loaded, undefined, undefined, undefined, build.version);
   const text = (key: string) => locales.messages?.[key]?.en ?? key;
-  createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider><Editor session={session} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
+  createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider>
+    <App token={token} bootstrap={files} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
 }
 function StartupError({ error, reset }: { error: unknown; reset?: () => Promise<void> }) {
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
@@ -178,9 +245,6 @@ function StartupError({ error, reset }: { error: unknown; reset?: () => Promise<
     }}>{say(tr('open.reset', 'Load the default graph'))}</button>{message && ' ' + message}</p>}
   </div>;
 }
-void start().catch(error => {
-  const client = host, files = bootstrap;
-  const reset = error instanceof UnsupportedGraphError && client && files ? async () => resetToDefault(client, files,
-    (await fetch('/build-info.json').then(response => response.json())).version) : undefined;
-  createRoot(document.getElementById('root')!).render(<StartupError error={error} reset={reset} />);
-});
+// Only when the editor's own files cannot be read; a Grape OP problem is shown inside the shell.
+// 只有編輯器自己的檔案讀不到時才用；Grape OP 的問題在外殼裡顯示。
+void start().catch(error => createRoot(document.getElementById('root')!).render(<StartupError error={error} />));
