@@ -14,6 +14,12 @@ const before = (name: string) => ({
   'appearance.size': 'grape-react-size', 'appearance.ports': 'grape-react-ports',
 } as Record<string, string>)[name] ?? (name.startsWith('fold.') ? 'grape-fold-' + name.slice(5) : undefined);
 
+// Names nothing reads any more, forgotten once so nobody mistakes them for live settings (human 2026-10-09: left to the
+// agent). grape-react-theme was replaced by appearance.mode; sgrapeSourcesPanel by the layout.
+// 已經沒有程式在讀的名字，刪一次，免得被誤當成還有作用的設定（人類：交給助手）。前者被明暗取代、後者被版面取代。
+const retired = ['grape-react-theme', 'sgrapeSourcesPanel'];
+if (typeof window !== 'undefined') try { retired.forEach(name => localStorage.removeItem(name)); } catch { /* storage may be blocked */ }
+
 /** A preference as stored, or null when there is none (or storage is blocked). 存著的偏好；沒有（或被擋）就是 null。 */
 export function readPreference(name: string): string | null {
   try {
