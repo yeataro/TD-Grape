@@ -204,8 +204,10 @@ export class Editor {
   }
   // Disconnected: TD's values may go stale, so the fields fall back to the graph's (modes stay).
   // 斷線：TD 的值可能過時，欄位改回顯示圖裡的值（模式保留）。
+  // Connected again: rewiring while away sent no word, so the inputs are asked once if they were asked before (R.61.1).
+  // 重新連上：斷線期間的接線改變沒有通知，之前問過輸入的話就再問一次。
   private liveLinked(connected: boolean) {
-    if (connected) return;
+    if (connected) { if (this.inputs) void this.refreshInputs(); return; }
     const withoutValue = ({ value: _, ...rest }: UniformStates[string][number]) => rest;
     this.setTd(Object.fromEntries(Object.entries(this.td).map(([id, states]) => [id, states.map(withoutValue)])));
   }

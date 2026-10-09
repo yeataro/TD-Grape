@@ -1168,3 +1168,27 @@ test('a vector node added from a wire takes the component names of the node at t
   session.history(false); session.history(false);
   assert.deepEqual(clone(session.graph()), before, 'Undo removes the node with its names');
 });
+
+// Texture inputs (Refactor.60, 61.1): TD's word about rewiring is only a nudge over the socket; connected again, the
+// inputs are asked once more, since rewiring while away sent no word. 接線通知只是提醒；重新連上時再問一次。
+test('the inputs are asked again when TD says it was rewired and when the socket connects again', async t => {
+  const sockets = [], wired = { inputs: [{ id: 'tex', node: 'in1', source: '/project1/moviefilein1' }] };
+  const { session, calls } = open(t, (action, body, remote) => action === 'inputs' ? wired : action === 'state' ? remote.get() : { saved: 'test.toe' },
+    60000, undefined, () => { const socket = fakeSocket(); sockets.push(socket); return socket; });
+  const asked = () => calls.filter(c => c.action === 'inputs').length;
+  const socket = sockets[0];
+  socket.readyState = 1; socket.onopen();
+  await nextFrame();
+  assert.equal(asked(), 0, 'never asked before: connecting asks nothing');
+  await session.refreshInputs();
+  assert.deepEqual(JSON.parse(JSON.stringify(session.inputsSnapshot())), { tex: { node: 'in1', source: '/project1/moviefilein1' } });
+  const taken = session.inputsTake();
+  socket.onmessage({ data: JSON.stringify({ type: 'inputs', frame: 3 }) });
+  await nextFrame();
+  assert.equal(asked(), 2, 'rewired in TD: asked again');
+  socket.readyState = 3; socket.onclose();
+  socket.readyState = 1; socket.onopen();
+  await nextFrame();
+  assert.equal(asked(), 3, 'connected again: asked once');
+  assert.ok(session.inputsTake() > taken, 'open previews take new snapshots');
+});

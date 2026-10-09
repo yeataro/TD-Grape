@@ -376,8 +376,6 @@ span.image-label:hover { background: var(--image-label); }
    waits on its own row as "when unwired". 外面接了東西的貼圖輸入：顯示接了什麼、唯讀，放在原本預設圖選單的位置；預設圖退到自己一列。 */
 /* Shortens with an ellipsis (human 2026-10-10). 太長用省略號（人類）。 */
 .input-source { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-.unwired-default { display: flex; align-items: center; gap: 6px; min-height: var(--io-row); color: var(--text-muted); font-size: var(--font-xs); white-space: nowrap; }
-.unwired-default .select-button { font-size: var(--font-xs); color: var(--text-secondary); }
 /* As TD's TOP viewer (human 2026-10-10 screenshot): near-black and dark-grey squares; the window around the image is a flat
    dark grey. 同 TD 的 TOP viewer（人類截圖）：近黑與深灰的方格；圖外面是平的深灰。 */
 .checker { background: repeating-conic-gradient(var(--checker-square) 0 25%, var(--checker-base) 0 50%) 0 0 / var(--checker) var(--checker); }

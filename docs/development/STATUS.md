@@ -58,6 +58,13 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.61.1 快照只重拍按的那一張、換圖不閃、接了線不選預設**（人類 10-10：按第一張快照，所有預覽都重跑一次）：
+  - 原因：按快照時呼叫的是「重新問 TD 接了什麼」，它讓所有卡片共用的計數加一，每張打開的預覽都重拍；其他張還會先清空再出現。不是刻意的設計，是按一下接到了接線通知那條路上。
+  - 按快照只重拍那一張（卡片自己的計數）；TD 通知接線改變時才全部重拍。
+  - 不閃：舊圖留到新圖準備好；新圖先在背景解碼完才換上；換快照時不再把圖的比例歸零（原本會先藏起來再出現）。人類：不需要等待動畫，只要不閃。
+  - 重新連上 TD 時，之前問過接線的話再問一次（斷線期間的接線改變沒有通知；HTTP 拿資料是可靠的，WebSocket 只是提醒）。
+  - 接了線的卡片不再有「預設」那一列（人類：接著的就不要再多一列可以選預設；要改預設先拔線）。
+  - 驗證：editor 79（新增：TD 說重新接線與重新連上時都再問一次、從沒問過就不問）。Grape_TOP1：按第二張快照只有第二張換圖，按下後 0.9 秒內每 15ms 取樣三張都沒有空白或隱藏；接線的卡片沒有預設列。重新連上未在現場製造斷線（會動到人類的 TD），以自動測試驗證。
 - **Refactor.61 子圖形狀對齊（完成；清理第 7 條，照 design-interview Q46，人類 10-10 同意在休息時做技術部分）**：只改形狀、不加新能力；現在沒有存檔含子圖，不需要轉換。
   - 第 1 步 改名：子圖節點 `sgrape.function.call／input／output` → `sgrape.builtin.subgraph_call／subgraph_input／subgraph_output`（模組 key 改名後由核心預設規則產生，不再寫死 `definitionUuid`；檔案 `nodes/function_*.ts` → `nodes/subgraph_*.ts`）；參數 `functionId` → `subgraphId`（產碼 sourceMap 與錯誤位置欄位一起改）；核心內部網路代號前綴 `function:` → `subgraph:`（不存檔）。沒改：舊產品格式的內建子圖庫 `builtin_subgraphs.json`（冷資料，子圖那一輪轉換）、介面文字代號 `help.function`、`function.*` 與錯誤碼 `function.limit`（文字代號，不是存檔名稱）。驗證：test:core 142、test:editor 78、check:core、check:editor。
   - 第 2 步 上限搬進設定：子圖每邊 16 個介面原本寫在 `subgraph_interface.ts`、`subgraph_operations.ts`、`subgraphs.ts` 三處，改讀 `config.ts` 的 `subgraphPortsPerSide`（註明是舊產品時代的數字、legacy `sgrape_core.py:2104`、沒有實測依據；Q47 補充 8）。`test_core_config` 的「核心不重複寫上限數字」加掃這兩個檔案和 16。驗證：test:core 142、test:editor 78、check:core。

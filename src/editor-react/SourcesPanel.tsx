@@ -78,14 +78,13 @@ export function SourcesPanel({ declarations, references }: {
         {/* Named by its position, not editable (human 2026-10-09). 照位置命名、不能改（人類）。 */}
         <code className="source-fixed-name" title={say(tr('sources.inputConnector', 'Input {number} of the Grape OP in TD', { number: inputs.indexOf(declaration) + 1 }))}>
           {core.declarationLabel(declarations, declaration)}</code>
-        {/* Wired from outside: what is wired, read only; the default waits below as "when unwired" (Refactor.60; human 2026-10-10).
-            外面接了東西：顯示接了什麼、唯讀；預設圖退到下面「沒接時」（人類）。 */}
+        {/* Wired from outside: what is wired, read only, and no default to choose; unwire it to change the default
+            (Refactor.61.1, human 2026-10-10). 外面接了東西：顯示接了什麼、唯讀，不能選預設圖；要改預設先拔線（人類）。 */}
         {/* Plain text, "in1: moviefilein1": the In TOP as TD names it, then the OP wired in (Refactor.60.6, human 2026-10-10).
             純文字「in1: moviefilein1」：TD 裡的 In TOP 名字，再來是接進來的 OP（人類）。 */}
         {sources?.[declaration.id]?.source ? <span className="input-source" title={sources[declaration.id]!.source!}>
           {say(tr('sources.wiredSource', '{node}: {name}', { node: sources[declaration.id]!.node, name: sources[declaration.id]!.source!.split('/').pop() ?? '' }))}</span>
           : defaultSelect(declaration)}</>}>
-      {sources?.[declaration.id]?.source && <div className="unwired-default"><span>{say(tr('sources.unwiredDefault', 'Default'))}</span>{defaultSelect(declaration)}</div>}
       <TexturePreview id={declaration.id} texture={String(declaration.defaultTexture)} />
     </SourceCard>)}
     </FoldSection>
