@@ -184,7 +184,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .vector-fields { grid-template-columns: 1fr 1fr; } .value-fields label { min-width: 0; display: flex; align-items: center; gap: 5px; cursor: default; }
 .value-fields label span { width: 10px; font-size: var(--font-sm); line-height: var(--line-sm); } .value-fields input, .value-fields .select-button { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
 .value-fields input, .value-fields .select-button, .control-field .select-button { background: var(--surface-node-field); }
-input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; }
+input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; background: none; overflow: hidden; }
+/* The whole rounded box is the colour: no browser frame or inset around the swatch. 整個圓角框就是顏色，沒有瀏覽器的框與內縮。 */
+.color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.color-swatch::-webkit-color-swatch { border: 0; border-radius: var(--radius-field); }
+.color-swatch::-moz-color-swatch { border: 0; border-radius: var(--radius-field); }
 .control-field { display: flex; gap: 8px; align-items: center; } .control-field .select-button { flex: 1; min-width: 0; }
 .control-row { display: flex; gap: 5px; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
