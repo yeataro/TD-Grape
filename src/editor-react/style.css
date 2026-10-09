@@ -89,6 +89,9 @@ a { color: var(--accent); }
 .select-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; }
 .select-button > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .select-button .icon { width: 14px; height: 14px; flex-shrink: 0; }
+/* A select sized to its widest label: the labels stacked in one cell, only the value seen (controls.tsx sizeTo).
+   依最寬的文字定寬：全部疊在同一格，只看得到目前的值。 */
+.select-sized { display: inline-grid; } .select-sized > * { grid-area: 1 / 1; overflow: hidden; text-overflow: ellipsis; } .select-size { visibility: hidden; }
 .tool-group { display: flex; align-items: center; gap: 2px; padding: 0 6px; border-left: 1px solid var(--border); }
 .tool-group:first-child { border-left: 0; }
 label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap; }

@@ -25,6 +25,14 @@ const textureNames: Record<string, Message> = {
 // Constant TOP；這是圖的內容，不是外觀。
 const plainTextures: Record<string, readonly number[]> = { white: [1, 1, 1], black: [0, 0, 0], normal: [.5, .5, 1] };
 
+// A colour Uniform's type reads as its channels, each letter in its channel's colour, as in the value boxes (human
+// 2026-10-09). 顏色 Uniform 的型別寫成通道，每個字母用該通道的顏色，同數值框（人類）。
+const colorTypes = ['vec3', 'vec4'] as const;
+const channelLabel = (type: string) => {
+  const name = type === 'vec3' ? 'RGB' : 'RGBA';
+  return <span aria-label={name}>{[...name].map((letter, i) => <span key={i} style={{ color: componentColor(i) }}>{letter}</span>)}</span>;
+};
+
 type Shot = 'loading' | 'none' | 'failed' | { src: string };
 /** What a default image looks like, open on its card (Refactor.58; human 2026-10-09). The images come from TD once
  * and are shared by every Grape OP. The TOP chosen on Samples is a snapshot taken when the card opens, and says so;
@@ -163,6 +171,9 @@ export function SourcesPanel({ declarations, references }: {
     return flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 });
   };
   const types = core.declarationKinds.get('constant')!.types;
+  // Every Uniform type select as wide as the widest choice any of them has (RGBA, or a longer type name), so the
+  // column lines up (human 2026-10-09). 每個 Uniform 型別選單和所有選項裡最寬的一樣寬（RGBA 或更長的型別名），整欄對齊（人類）。
+  const uniformTypeSizes = [...colorTypes.map(channelLabel), ...types];
   // The panel is an index of the table beside the td_value node (Q45); TOP for now.
   // 面板只是 td_value 旁邊那張表的索引；目前是 TOP。
   const builtins = core.tdValues.filter(entry => core.usableTdValue(entry, 'top'));
@@ -205,10 +216,8 @@ export function SourcesPanel({ declarations, references }: {
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
           options={declaration.color === true
             // A colour reads as a colour (human 2026-10-09); the type stays vec3/vec4. 顏色看得出是顏色（人類）；型別仍是 vec3／vec4。
-            // Each letter in its channel's colour, as in the value boxes (human 2026-10-09). 每個字母用該通道的顏色，同數值框（人類）。
-            ? (['vec3', 'vec4'] as const).map(type => ({ value: type, label: <span aria-label={type === 'vec3' ? 'RGB' : 'RGBA'}>
-              {[...(type === 'vec3' ? 'RGB' : 'RGBA')].map((letter, i) => <span key={i} style={{ color: componentColor(i) }}>{letter}</span>)}</span> }))
-            : types.map(type => ({ value: type, label: type }))} /></>}>
+            ? colorTypes.map(type => ({ value: type, label: channelLabel(type) })) : types.map(type => ({ value: type, label: type }))}
+          sizeTo={uniformTypeSizes} /></>}>
       {uniformValue(declaration)}
     </SourceCard>)}
     </FoldSection>
