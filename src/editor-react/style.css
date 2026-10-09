@@ -171,6 +171,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* Above the component letters (z-index 1) so they fade too. 在分量字母（z-index 1）之上，字母也一起淡出。 */
 .source-row::after { content: ""; position: absolute; inset: 0 0 0 auto; z-index: 2; width: var(--source-fade); pointer-events: none;
   background: linear-gradient(to right, transparent, var(--surface-node)); }
+/* Inputs on a card use the value-box colour, a step above the card, as the legacy source cards (legacy .source-card-body
+   input: --node-value-bg; human 2026-10-09: the name box was too dark). 卡片上的輸入框用數值框的顏色（比卡片亮一階），照舊產品；人類：名稱框太深。 */
+.source-row { --surface-field: var(--field-bg); }
 .source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
   background: color-mix(in srgb, var(--group-color) var(--title-alpha), transparent); }
 /* The Sources panel has its own, smaller set of content sizes, about 75% of a node's (human 2026-10-09); the value widget,
