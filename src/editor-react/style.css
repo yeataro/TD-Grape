@@ -55,7 +55,9 @@ a { color: var(--accent); }
    同步狀態和最長那句一樣寬、再多留一點；副本疊在同一格、看不見。 */
 .foot-sync { display: inline-grid; flex-shrink: 0; white-space: nowrap; padding-right: 1.5em; font-variant-numeric: tabular-nums; }
 .foot-sync > * { grid-area: 1 / 1; } .foot-sync-size { visibility: hidden; }
-.foot-message { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;
+/* A line of text that opens the history: no padding above or below, so it never makes the bar (and the page) taller
+   (human 2026-10-09: the whole page had a scrollbar, 1px). 可以點的一行字：上下不留內距，不會把底列（和整頁）撐高（人類：整頁多了捲軸，差 1px）。 */
+.foot-message { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; padding-block: 0;
   background: none; border-color: transparent; color: var(--message, var(--text)); }
 .foot-bar .recovery-help { position: relative; }
 .foot-bar .recovery-help p { position: absolute; bottom: calc(100% + 8px); left: 0; width: 420px; margin: 0;
@@ -129,7 +131,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .panel-zone-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 .panel-group-slot { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
 .panel-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.panel-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface-canvas); }
+/* As tall as the location bar beside it, so their lower edges meet (human 2026-10-09). 和旁邊網址列一樣高，下緣接得上（人類）。 */
+.panel-tabs { display: flex; flex-shrink: 0; height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-canvas); }
 /* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
    分頁標題照舊產品：小字、一般粗細，顯示中的才加粗。 */
 .panel-tab { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left;
