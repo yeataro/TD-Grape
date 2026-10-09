@@ -166,6 +166,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .fold-toggle { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0 2px; border: 0; background: none; font-weight: 600; text-align: left; }
 .fold-toggle .icon { width: 14px; height: 14px; transform: rotate(-90deg); transition: transform .1s; }
 .fold-toggle[aria-expanded="true"] .icon { transform: none; }
+/* The whole heading row opens and closes, gaps included; the hint and the actions sit above it (human 2026-10-09: the
+   hit area was only the words). 整列標題（含空白）都能收合；說明與動作按鈕疊在上面（人類：可點的只有字）。 */
+.fold-heading { position: relative; } .fold-toggle::after { content: ""; position: absolute; inset: 0; }
+.fold-heading :is(.fold-hint, .fold-actions) { position: relative; z-index: 1; }
 .fold-actions { display: flex; gap: 4px; }
 .fold-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .fold-hint { display: grid; place-items: center; color: var(--text-faint); } .fold-hint .icon { width: 14px; height: 14px; }
