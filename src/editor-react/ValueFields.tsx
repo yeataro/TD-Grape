@@ -5,6 +5,8 @@ import { NumberField } from './NumberField';
 import { useValueLadder } from './useValueLadder';
 import { Select } from './controls';
 import { Icon } from './icons';
+import { DropdownMenu } from './DropdownMenu';
+import { presetValues } from './valueScrub';
 import { tr, say } from './text';
 
 // The value widget, the one every value input uses (node inputs, values in a node's body, the Sources panel; human
@@ -106,8 +108,20 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   const swatch = color && count >= 3 && <div className={'value-swatch nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
     <ColorField label={`${label} color`} value={hex}
       commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} /></div>;
+  // Right button on the leading text: the same common-values menu as one box, setting every component (human 2026-10-09).
+  // The default sets each component to its own default; merged into a common value when all of them share it.
+  // 在開頭文字按右鍵：和單格一樣的常用值選單，設定整組（人類）。預設值是每個分量各回自己的預設；全部相同且是常用值時併入那一項。
+  const [presets, setPresets] = useState(false);
+  const own = defaults === undefined ? undefined : list.map((_, i) => Number(Array.isArray(defaults) ? defaults[i] : defaults));
+  const shared = own && own.every(item => item === own[0]) ? own[0] : undefined;
+  const choices: { key: string; label: string; value: Value; checked: boolean }[] = presetValues(integer, family === 'uint' ? 0 : undefined, shared)
+    .map(choice => ({ key: String(choice.value), value: count === 1 ? choice.value : list.map(() => choice.value),
+      checked: list.every(item => Number(item) === choice.value),
+      label: choice.isDefault ? say(tr('number.presetDefault', '{value} (default)', { value: String(choice.value) })) : String(choice.value) }));
+  if (own && shared === undefined) choices.unshift({ key: 'default', value: own, checked: list.every((item, i) => Number(item) === own[i]),
+    label: say(tr('number.presetDefault', '{value} (default)', { value: `(${own.join(', ')})` })) });
   const leading = <span ref={head} className="value-caption nodrag nopan"
-      title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder.')) : undefined}
+      title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder. Right button: set every component to a common value or the default.')) : undefined}
       onPointerDown={event => {
         if (!groupable || !(event.button === 1 || (event.button === 2 && event.altKey))) return;
         event.preventDefault(); event.stopPropagation();
@@ -115,7 +129,11 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
         if (group.gesture.current) event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onMouseDown={event => { if (event.button === 1) event.preventDefault(); }}
-      onContextMenu={event => { if (event.altKey || group.gesture.current || performance.now() < group.suppressContext.current) event.preventDefault(); }}>
+      onContextMenu={event => {
+        event.preventDefault();
+        if (!groupable || event.altKey || group.gesture.current || performance.now() < group.suppressContext.current) return;
+        setPresets(true);
+      }}>
       {caption ?? (color ? say(tr('value.color', 'Color')) : type)}</span>;
   return <div className="value-row">
     {leading}
@@ -143,6 +161,8 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     </div>
     </div>
     {!expanded && swatch}
+    {presets && head.current && <DropdownMenu anchor={head.current} label={say(tr('number.presets', 'Common values'))} onClose={() => setPresets(false)}
+      items={choices.map(choice => ({ key: choice.key, label: choice.label, checked: choice.checked, select: () => commit(choice.value) }))} />}
     {group.view}
   </div>;
 }

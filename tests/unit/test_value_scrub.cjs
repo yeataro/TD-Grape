@@ -42,9 +42,10 @@ test('a limit stops the drag and turning back moves at once', () => {
   assert.equal(drag(state, [-190]), 0.1);
 });
 
-test('common values with the default merged in', () => {
+test('common values from high to low, with the default merged in', () => {
   assert.deepEqual(presetValues(false, undefined, 0).map(item => [item.value, item.isDefault]),
-    [[0, true], [1, false], [0.5, false], [-0.5, false], [-1, false]]);
-  assert.deepEqual(presetValues(false, undefined, 2).map(item => item.value), [2, 0, 1, 0.5, -0.5, -1]);
-  assert.deepEqual(presetValues(true, 0, undefined).map(item => item.value), [0, 1]);
+    [[1, false], [0.5, false], [0, true], [-0.5, false], [-1, false]]);
+  assert.deepEqual(presetValues(false, undefined, 2).map(item => item.value), [2, 1, 0.5, 0, -0.5, -1]);
+  assert.deepEqual(presetValues(false, undefined, 0.25).map(item => item.value), [1, 0.5, 0.25, 0, -0.5, -1]);
+  assert.deepEqual(presetValues(true, 0, undefined).map(item => item.value), [1, 0]);
 });

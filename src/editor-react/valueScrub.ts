@@ -69,11 +69,11 @@ export function moveScrub(state: Scrub, x: number, keys: { ctrl: boolean; shift:
   return state.value;
 }
 
-/** The right-click common values (legacy), with the value's default merged in when it has one (human 2026-10-09).
- * 右鍵常用值（照舊產品），有預設值就併進來；剛好相同就標在那一項。 */
+/** The right-click common values (legacy), with the value's default merged in when it has one, from high to low (human
+ * 2026-10-09). 右鍵常用值（照舊產品），有預設值就併進來、剛好相同就標在那一項；由高到低排（人類）。 */
 export function presetValues(integer: boolean, min: number | undefined, defaultValue: number | undefined): { value: number; isDefault: boolean }[] {
   const common = (integer ? [0, 1, -1] : [0, 1, 0.5, -0.5, -1]).filter(value => min === undefined || value >= min);
   const list = common.map(value => ({ value, isDefault: value === defaultValue }));
-  if (defaultValue !== undefined && Number.isFinite(defaultValue) && !common.includes(defaultValue)) list.unshift({ value: defaultValue, isDefault: true });
-  return list;
+  if (defaultValue !== undefined && Number.isFinite(defaultValue) && !common.includes(defaultValue)) list.push({ value: defaultValue, isDefault: true });
+  return list.sort((a, b) => b.value - a.value);
 }

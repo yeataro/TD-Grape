@@ -345,5 +345,5 @@
   "value.color": "Color",
   "value.constant": "常數",
   "value.expand": "每個分量各一行",
-  "value.groupHelp": "中鍵或 Alt＋右鍵：用數值梯尺把每個分量一起加減同一個量。"
+  "value.groupHelp": "中鍵或 Alt＋右鍵：用數值梯尺把每個分量一起加減同一個量。右鍵：把每個分量設成常用值或預設值。"
 }

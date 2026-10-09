@@ -345,5 +345,5 @@
   "value.color": "Color",
   "value.constant": "Constant",
   "value.expand": "Show each component on its own row",
-  "value.groupHelp": "Middle button or Alt+right button: change every component by the same amount with the value ladder."
+  "value.groupHelp": "Middle button or Alt+right button: change every component by the same amount with the value ladder. Right button: set every component to a common value or the default."
 }
