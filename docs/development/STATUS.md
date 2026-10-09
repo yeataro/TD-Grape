@@ -2,6 +2,25 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.58.1 — 進行中（貼圖輸入照位置命名、TD 內建值卡片…） — 2026-10-09
+
+- 第 1 步：預設圖選單同寬（`sizeTo`）。
+- 第 2 步：貼圖輸入照位置命名 `sTD2DInputs[i]`、不能改（同舊產品）。
+  - 核心新增 `declarationLabel` 與種類的 `label`；引用節點標題、選單、卡片、刪除確認都用它。
+  - TD 的 In TOP label 由 TD 自己照位置寫。
+  - 驗證：core 141（新增改號測試）、editor 75、Python 84+14；卡片顯示 `sTD2DInputs[0]`／`[1]`，引用節點標題同。
+  - TD 的 In TOP label 要等下一次送圖才更新，尚未實機看。
+- TD 內建值也做成卡片（人類）：
+  - 有色條、名稱、型別（一般文字，同上面；人類撤回型別色）、使用數、「⋯」（Add to graph、Select references；不能刪）。
+  - 沒有三角形，拿掉 15 個 Add to graph 按鈕。
+  - 使用數 key 是 `tdValue:<entry>`；`selectReferences` 也接受它。
+  - 驗證：15 張、高 39px、色條為 runtime 色、名稱與時間區對齊、TD_NUM_2D_INPUTS 顯示 1。
+- 第 3–5 步（子 OP Samples Clone 主組件那份、out label、照 label 找）尚未做。
+- 記下（workspace `floating-panels.md`）：
+  - 37：型別顯示規則（原 32）。
+  - 38：來源卡片上的輸出孔。
+  - 39：拖曳中的預覽。
+
 ## Refactor.58 — 貼圖輸入卡片可展開看預設圖 — 2026-10-09
 
 - 人類要求（design-interview Q66；workspace `texture-preview.md`，含舊行為對照表）：貼圖輸入卡片可展開看預設圖。這是新行為，舊產品只有名字。
@@ -64,7 +83,7 @@
 ## Refactor.57.24 — 新增來源的預設名稱照舊產品、顏色 Uniform 顯示 RGB／RGBA、打開的卡片加淡分隔線 — 2026-10-09
 
 - 人類：新增的顏色 Uniform 預設名稱不是 uColor（大問題）。照舊產品（legacy `functions_ui.js` `uniqueInputName`、`inspector.js` 預設名）：Uniform `uValue`、顏色 `uColor`、常數 `cValue`，重名時 `uColor2`、`uColor3`。核心新增 `freeLegacyName`（先用基底本身再加 2、3），`freeDeclarationName` 保留給貼圖輸入（`input1` 對齊 TD 輸入編號，R.43）。既有圖裡的名字不改。
-- 人類：面板看不出哪個是顏色 Uniform → 型別選單顯示 RGB／RGBA（只換顯示文字，型別仍是 vec3／vec4）。人類：這是例外，之後想要不要統一顯示規則（workspace `floating-panels.md` 32）。
+- 人類：面板看不出哪個是顏色 Uniform → 型別選單顯示 RGB／RGBA（只換顯示文字，型別仍是 vec3／vec4）。人類：這是例外，之後想要不要統一顯示規則（workspace `floating-panels.md` 37）。
 - 人類：打開後名稱列和數值之間加一條淡線（卡片邊框色），線上下各 6px。
 - 驗證：core 141、editor 75（測試名稱改成 uValue／uColor／cValue；新增 `freeLegacyName` 測試）；內建瀏覽器：uniform2 顯示 RGB、uniform4／5 顯示 RGBA；分隔線上 6px、下約 6px。過程更正：分隔線那次被擋下的只有建置與 TD Reload，原始碼其實已寫入——助手一開始依擋下的訊息說「沒改」，沒先查檔案，已當面更正。
 

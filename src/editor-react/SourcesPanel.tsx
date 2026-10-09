@@ -96,8 +96,8 @@ function NameField({ declaration }: { declaration: Declaration }) {
 
 // A source card shows its kind's colour on a strip at its left, as a node title turned on its side (human 2026-10-09
 // trial; a handle for reordering may come later). 來源卡片左邊一條是它種類的顏色，像轉了方向的節點標題（人類試驗；之後可能當排序把手）。
-const kindColor = (declaration: Declaration) =>
-  ({ '--group-color': `var(--group-${core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'function'})` }) as CSSProperties;
+const groupColor = (group: string) => ({ '--group-color': `var(--group-${group})` }) as CSSProperties;
+const kindGroup = (declaration: Declaration) => core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'function';
 
 // Dragged onto the canvas, a source is added there, the same way as from the Add Node panel (its add-list id; human
 // 2026-10-09). Only from the card itself, never from its fields and buttons, so text can still be selected.
@@ -120,11 +120,13 @@ function useDragToCanvas(choice: string) {
 // and dragging onto the canvas both add it (human).
 // 一張來源卡片（人類，參考舊產品）。兩欄：左欄只有三角形；右欄是名稱列（名稱、型別、使用數、「⋯」）和打開後的數值，左右緣都對齊。
 // 使用數是和區段數量一樣的標籤，位置不動；「⋯」加到圖上、選取引用、刪除。不放「＋」：選單和拖到畫布都能加（人類）。
-function SourceCard({ declaration, choice, head, children, uses, onAdd, onRemove }: {
-  declaration: Declaration; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove(): void;
+// `group`: its colour group; `refKey`: what counts as a use (a declaration ID, or `tdValue:` and an entry); without
+// `onRemove` it cannot be deleted (a TD value). group：顏色組；refKey：算使用數的依據；沒有 onRemove 就不能刪（TD 內建值）。
+function SourceCard({ group, refKey, choice, head, children, uses, onAdd, onRemove }: {
+  group: string; refKey: string; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove?(): void;
 }) {
   const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
-  return <div className="source-row source-card" style={kindColor(declaration)} {...drag}>
+  return <div className="source-row source-card" style={groupColor(group)} {...drag}>
     {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
       aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
       : <span className="expand-toggle" aria-hidden="true" />}
@@ -132,14 +134,14 @@ function SourceCard({ declaration, choice, head, children, uses, onAdd, onRemove
       {head}
       {/* Unused: a plain grey tag; in use: the kind's colour, and a click selects those nodes, as the menu's Select
           references (human 2026-10-09). 沒在用：灰色標籤；有在用：種類色，點了選取那些節點，同選單的選取引用（人類）。 */}
-      <Badge count={uses} group={uses ? core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'runtime' : undefined}
+      <Badge count={uses} group={uses ? group : undefined}
         title={tr('sources.usedBySelect', 'Used by {count} nodes · click to select them', { count: uses })}
-        onClick={() => session.selectReferences(declaration.id)} />
+        onClick={() => session.selectReferences(refKey)} />
       <MenuButton icon="menu" narrow label={tr('sources.more', 'More')} items={[
         { key: 'add', label: say(tr('sources.place', 'Add to graph')), select: onAdd },
         { key: 'select', label: say(tr('sources.selectReferences', 'Select references ({count})', { count: uses })), disabled: !uses,
-          select: () => session.selectReferences(declaration.id) },
-        { key: 'delete', label: say(tr('sources.remove', 'Delete')), danger: true, divider: true, select: onRemove },
+          select: () => session.selectReferences(refKey) },
+        ...(onRemove ? [{ key: 'delete', label: say(tr('sources.remove', 'Delete')), danger: true, divider: true, select: onRemove }] : []),
       ]} />
     </div>
     {open && <div className="source-body">{children}</div>}
@@ -196,7 +198,7 @@ export function SourcesPanel({ declarations, references }: {
     <FoldSection title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
       hint={tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.')}
       actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
-    {inputs.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+    {inputs.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         {/* Named by its position, not editable (human 2026-10-09). 照位置命名、不能改（人類）。 */}
         <code className="source-fixed-name" title={say(tr('sources.inputConnector', 'Input {number} of the Grape OP in TD', { number: inputs.indexOf(declaration) + 1 }))}>
@@ -213,7 +215,7 @@ export function SourcesPanel({ declarations, references }: {
       actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
       <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Color'))}</button></>}>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
-    {uniforms.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+    {uniforms.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         <NameField declaration={declaration} />
         {/* A colour stays a colour: vec3 or vec4 (Q59). 顏色只在 vec3、vec4 之間換。 */}
@@ -232,7 +234,7 @@ export function SourcesPanel({ declarations, references }: {
       hint={tr('sources.timeHint', 'Uniforms that TouchDesigner drives with an expression. The name is fixed; one of each per graph. Remove the expression in TD to set the value yourself.')}>
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
-      return declared ? <SourceCard key={preset.entry} declaration={declared} choice={'preset:' + preset.entry} uses={references[declared.id] ?? 0}
+      return declared ? <SourceCard key={preset.entry} group={kindGroup(declared)} refKey={declared.id} choice={'preset:' + preset.entry} uses={references[declared.id] ?? 0}
           onAdd={() => session.placePreset(preset.entry, center())} onRemove={() => remove(declared)}
           head={<div className="builtin-row" title={hint}><code>{preset.name}</code><small>{preset.expression}</small></div>}>{uniformValue(declared)}</SourceCard>
         // Not created yet: a grey card with one button, Create; dragged onto the canvas it is created and placed.
@@ -245,7 +247,7 @@ export function SourcesPanel({ declarations, references }: {
       hint={tr('sources.constantsHint', 'Fixed values written into the shader. Changing one recompiles it.')}
       actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
-    {constants.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+    {constants.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         <NameField declaration={declaration} />
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
@@ -256,10 +258,10 @@ export function SourcesPanel({ declarations, references }: {
     </FoldSection>
     <FoldSection title={<>{say(tr('sources.tdValues', 'TD built-in values'))}{count(builtins.length, 'tdValue')}</>}
       hint={tr('sources.tdValuesHint', 'Values TouchDesigner already provides to the shader. No setup needed; they also work inside subgraphs.')}>
-    {builtins.map(entry => <DragRow key={entry.id} className="builtin-row" choice={'tdValue:' + entry.id} title={say(tdValueHint(entry))}>
-      <code>{entry.name}</code><small>{entry.type}</small>
-      <button onClick={() => session.placeTdValue(entry.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
-    </DragRow>)}
+    {/* Cards like the others, nothing to open (human 2026-10-09); the type in plain text as above. 和其他一樣的卡片、沒有可展開的（人類）；型別同上用一般文字。 */}
+    {builtins.map(entry => <SourceCard key={entry.id} group="runtime" refKey={'tdValue:' + entry.id} choice={'tdValue:' + entry.id}
+      uses={references['tdValue:' + entry.id] ?? 0} onAdd={() => session.placeTdValue(entry.id, center())}
+      head={<div className="builtin-row" title={say(tdValueHint(entry))}><code>{entry.name}</code><small>{entry.type}</small></div>} />)}
     </FoldSection>
   </section>;
 }

@@ -11,6 +11,9 @@ import { LiveValues, type LiveMessage } from './live_values';
 // Handle id of a module-declared spare input. The module owns the command, port key,
 // type and limit; this layer only runs that command and wires the declared port.
 // 模組宣告的待新增輸入；命令、接孔、型別與上限都屬模組，這裡只執行並接到宣告的接孔。
+/** The node type of a TD built-in value (Refactor.41). TD 內建值的節點類型。 */
+const TD_VALUE = 'sgrape.builtin.td_value';
+
 export const spareHandle = '__spare__';
 /** A node to add (Refactor.54): a node type with its entry's params, or a preset Uniform (its declaration is
  * created the first time, Q61). 要新增的節點：節點種類加入口參數，或預設 Uniform（第一次放時建立宣告）。 */
@@ -209,7 +212,10 @@ export class Editor {
   private sources() {
     const references: Record<string, number> = {};
     for (const node of this.document.document.stages.pixel?.nodes ?? []) {
-      const id = core.registry.get(node.nodeType)?.referencedDeclaration?.(node);
+      // A declaration by its ID; a TD value by `tdValue:` and its entry (Refactor.58.1: TD value cards count too).
+      // 宣告用 ID；TD 內建值用「tdValue:」加 entry（TD 內建值卡片也有數量）。
+      const id = core.registry.get(node.nodeType)?.referencedDeclaration?.(node)
+        ?? (node.nodeType === TD_VALUE ? 'tdValue:' + String(node.params.entry) : undefined);
       if (id !== undefined) references[id] = (references[id] ?? 0) + 1;
     }
     return { declarations: this.document.document.declarations, references };
@@ -381,7 +387,7 @@ export class Editor {
     this.transactGraph(tr('sources.removed', 'Shared source deleted with the nodes that used it'), document => document.removeDeclaration(id));
   placeDeclaration = (id: string, position: XYPosition) => this.addNode({ nodeType: 'sgrape.builtin.declaration', params: { declarationId: id } }, position);
   // TD built-in values (Refactor.41; Q45 01): no declaration, the node picks a table entry.
-  placeTdValue = (entry: string, position: XYPosition) => this.addNode({ nodeType: 'sgrape.builtin.td_value', params: { entry } }, position);
+  placeTdValue = (entry: string, position: XYPosition) => this.addNode({ nodeType: TD_VALUE, params: { entry } }, position);
   valid = (c: Connection | FlowEdge) => {
     if (!c.sourceHandle || !c.targetHandle) return false;
     try {
@@ -502,7 +508,9 @@ export class Editor {
   };
   /** Select every node that uses a source (legacy Select references; human 2026-10-09). 選取所有用到這個來源的節點（照舊產品）。 */
   selectReferences = (id: string) => {
-    const nodes = this.state.projection.nodes.filter(node => node.data.declaration?.id === id).map(node => node.id);
+    const entry = id.startsWith('tdValue:') ? id.slice(8) : undefined;
+    const nodes = this.state.projection.nodes.filter(node => entry === undefined ? node.data.declaration?.id === id
+      : node.data.authored.nodeType === TD_VALUE && node.data.authored.params.entry === entry).map(node => node.id);
     this.boxSelect(new Set(nodes), nodes);
   };
   clearSelection = () => { this.reselect(new Set(), new Set()); this.setPrimary(null); };
