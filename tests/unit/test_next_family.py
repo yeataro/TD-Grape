@@ -345,7 +345,8 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(api.dispatch('GET', '/api/textures/white.png')[0], 404)
         # Refactor.60: what each input has wired in, and one input's In TOP as a snapshot (not kept).
         # 每個輸入接了什麼；某個輸入的 In TOP 快照（不留）。
-        tops = [SimpleNamespace(OPType='inTOP', name='in' + str(n), fetch=lambda key, default=None, i=i: i) for n, i in enumerate(('input1', 'dPhoto'), 1)]
+        tops = [SimpleNamespace(OPType='inTOP', name='in' + str(n), width=640, height=360, pixelFormat='8-bit fixed (RGBA)',
+                                fetch=lambda key, default=None, i=i: i) for n, i in enumerate(('input1', 'dPhoto'), 1)]
         wired = SimpleNamespace(owner=SimpleNamespace(path='/project1/moviefilein1'))
         comp.inputConnectors = [SimpleNamespace(inOP=tops[0], connections=[]), SimpleNamespace(inOP=tops[1], connections=[wired])]
         code, result = api.dispatch('GET', '/api/' + TARGET + '/inputs')
@@ -358,6 +359,8 @@ class HostRoutingTests(unittest.TestCase):
         code, image = api.dispatch('GET', '/api/' + TARGET + '/input/dPhoto')
         self.assertEqual((code, image.keep, image.data[:4]), (200, False, b'\x89PNG'))
         capture.assert_called_once_with(tops[1])
+        # The In TOP's own size and format ride along (Refactor.61.3). 附上 In TOP 原本的尺寸與格式。
+        self.assertEqual(image.info, {'width': 640, 'height': 360, 'format': '8-bit fixed (RGBA)'})
         self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/input/nope')[1]['code'], 'texture_unavailable')
 
     def test_sample_output_by_label(self):

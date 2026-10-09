@@ -371,7 +371,7 @@ class EditorHTTP:
                             return self.reply(400, {'error': str(error)})
                     status, result = host_requests.request(self.command, self.path, body)
                     if getattr(result, 'mime', None):  # an image (host_api.Image) 圖片
-                        return self.reply(status, result.data, result.mime, keep=result.keep)
+                        return self.reply(status, result.data, result.mime, keep=result.keep, info=getattr(result, 'info', None))
                     return self.reply(status, result)
                 if length or self.command == 'POST':
                     return self.reply(405, {'error': 'Static assets do not accept actions or bodies'}, head=head)
@@ -411,7 +411,7 @@ class EditorHTTP:
                 self.connection.settimeout(5)
                 service.live.serve(self.connection, target)
 
-            def reply(self, status, data, mime=None, head=False, keep=False):
+            def reply(self, status, data, mime=None, head=False, keep=False, info=None):
                 if not isinstance(data, bytes):
                     data = json.dumps(data, ensure_ascii=False).encode('utf-8')
                 if status >= 400:
@@ -424,6 +424,9 @@ class EditorHTTP:
                     self.send_header('Cache-Control', 'private, max-age=3600' if keep and status == 200 else 'no-store')
                     self.send_header('X-Content-Type-Options', 'nosniff')
                     self.send_header('Referrer-Policy', 'no-referrer')
+                    # An image's own facts, beside it (Refactor.61.3). 圖片自己的資訊，跟著圖一起。
+                    if info:
+                        self.send_header('X-Sgrape-Image', json.dumps(info, ensure_ascii=True))
                     peer = ''
                     hostname = urlsplit('http://' + self.headers.get('Host', '')).hostname
                     if service.preview_port is not None and hostname:

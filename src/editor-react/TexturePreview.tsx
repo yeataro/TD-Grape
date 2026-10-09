@@ -14,7 +14,9 @@ export const textureNames: Record<string, Message> = {
   white: tr('texture.white', 'White'), black: tr('texture.black', 'Black'), normal: tr('texture.normal', 'Flat normal'),
 };
 
-type Shot = 'loading' | 'failed' | { src: string; time: Date };
+// `info`: the In TOP's own size and format, as TD shows them (Refactor.61.3). In TOP 原本的尺寸與格式。
+type ImageInfo = { width: number; height: number; format: string };
+type Shot = 'loading' | 'failed' | { src: string; time: Date; info: ImageInfo | null };
 /** What a texture input gives the shader, open on its card (Refactor.58, 60; human 2026-10-10): with a TOP wired in from
  * outside, a snapshot of its In TOP — what the shader actually receives — marked with a camera and the source, pressed for
  * a new one (only this one, Refactor.61.1), all retaken when TD says a Grape OP was rewired; the old one stays until the
@@ -42,10 +44,12 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
     fetch(session.host.inputUrl(id), { headers: { 'X-Sgrape-Token': session.host.token }, cache: 'no-store' })
       .then(async response => {
         if (!response.ok) return 'failed' as const;
+        let info: ImageInfo | null = null;
+        try { info = JSON.parse(response.headers.get('X-Sgrape-Image') ?? 'null') as ImageInfo | null; } catch { /* none 沒有 */ }
         const src = URL.createObjectURL(await response.blob());
         // Decoded before it is shown, so the swap is instant. 先解碼好再換上，換的那一刻不空白。
         const probe = new Image(); probe.src = src; await probe.decode().catch(() => undefined);
-        return { src, time: new Date() } as Shot;
+        return { src, time: new Date(), info } as Shot;
       }, () => 'failed' as const)
       .then(next => {
         if (!live) { if (typeof next === 'object') URL.revokeObjectURL(next.src); return; }
@@ -69,23 +73,29 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
     const [width, height] = r > 16 / 9 ? [100, 16 / 9 / r * 100] : [r / (16 / 9) * 100, 100];
     return <div className={className} style={{ width: width + '%', height: height + '%', ...style }}>{content}</div>;
   };
-  const image = (src: string, onError?: () => void) => <img src={src} alt="" draggable={false} onError={onError}
+  const image = (src: string, onError?: () => void, title?: string) => <img src={src} alt="" title={title} draggable={false} onError={onError}
     onLoad={event => setRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight || 1)} />;
   // Hidden until the image says its size, so the frame never jumps. 圖說出尺寸前先藏著，圖框不會跳。
-  const picture = (src: string, onError?: () => void) => frame(ratio || 16 / 9, image(src, onError), ratio ? undefined : { visibility: 'hidden' });
+  const picture = (src: string, onError?: () => void, title?: string) =>
+    frame(ratio || 16 / 9, image(src, onError, title), ratio ? undefined : { visibility: 'hidden' });
   const unavailable = <span>{say(tr('sources.noPreview', 'No preview'))}</span>;
   // Labels over the image (human 2026-10-10): bottom right, dark see-through. 圖上的標籤：右下角、深色半透明。
   const label = (content: ReactNode) => <figcaption className="image-label-slot">{content}</figcaption>;
   if (source) {
     return <figure className="texture-preview">
-      {typeof shot === 'object' && picture(shot.src)}
+      {/* Two hints (human 2026-10-10): the picture tells what the image is (size, format, as TD's info); the label tells
+          about the snapshot. 兩個提示（人類）：圖片說圖是什麼（尺寸、格式，同 TD 的資訊）；標籤說快照的事。 */}
+      {typeof shot === 'object' && picture(shot.src, undefined, shot.info ? say(tr('sources.imageInfo', '{width} × {height}, {format}',
+        { width: shot.info.width, height: shot.info.height, format: shot.info.format })) : undefined)}
       {shot === 'failed' && unavailable}
       {typeof shot === 'object' && label(<button type="button" className="image-label nodrag"
         onClick={() => setRetake(n => n + 1)}
-        // The last line (human 2026-10-10): TD cooks only what is used, so a Sequential movie stands still while unseen.
-        // 最後一行（人類）：TD 只 cook 有在用的東西，Sequential 的影片沒人看時停住。
-        title={say(tr('sources.inputSnapshotHint', '{path}\nSnapshot taken at {time}, not live. Click for a new one.\nTD only cooks what is in use: a movie set to Sequential does not play on while nothing views it.', { path: source,
-          time: shot.time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }))}>
+        // When it was taken and how to take another; in brackets, why a Sequential movie stands still while unseen.
+        // 何時拍的、怎麼重拍；括號裡說明 Sequential 的影片沒人看時停住。
+        title={[say(tr('sources.snapshotTaken', 'Snapshot taken at {time}, not live. Click for a new one.', {
+            time: shot.time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) })),
+          say(tr('sources.snapshotCook', '(TD only cooks what is in use: a movie set to Sequential does not play on while nothing views it.)'))]
+          .join('\n')}>
         <Icon name="camera" />{say(tr('sources.snapshot', 'Snapshot'))}</button>)}
     </figure>;
   }
