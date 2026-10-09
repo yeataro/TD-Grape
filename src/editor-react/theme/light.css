@@ -47,6 +47,7 @@
   --lift-raised: 75%;
   --lift-line: 16%;
   --lift-hover: 9%;
+  --lift-node-field: 9%;
   --tint-raised: 2%;
   --tint-active: 18%;
   --tint-border: 55%;
@@ -66,6 +67,8 @@
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 15%);
   --shadow: color-mix(in srgb, var(--palette-shadow) 22%, transparent);
   --surface-dim: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
+  /* Darker than the card on a light ground (legacy #e0e5eb). 淺色底上比卡片暗（照舊產品）。 */
+  --surface-node-field: color-mix(in srgb, var(--palette-node), var(--palette-contrast) var(--lift-node-field));
   /* Grey scrollbars as the legacy light theme (track #e7eaee, thumb #abb4c0, hover #8591a2). 灰色捲軸照舊產品淺色。 */
   --scroll-track: color-mix(in srgb, var(--palette-ink), var(--palette-lift) 30%);
   --scroll-thumb: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--tint-scroll));

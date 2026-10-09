@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { say, type Message } from './text';
 
@@ -13,8 +14,12 @@ export type MenuItem = { key: string; label: ReactNode; checked?: boolean; disab
   /** A line before this item, starting a new section. 在這一項前面畫一條線，開始新的一段。 */
   divider?: boolean; select(): void };
 
-export function DropdownMenu({ anchor, items, note, onClose, label }: {
+// Drawn at the page level, so a menu called up inside a zoomed node still lands under its anchor (a fixed
+// position inside a transformed element would follow the transform). 畫在頁面層，從縮放中的節點叫出也落在正確位置。
+export function DropdownMenu({ anchor, items, note, onClose, label, fit }: {
   anchor: HTMLElement; items: readonly MenuItem[]; onClose: () => void; label?: string;
+  /** At least as wide as the anchor instead of the menu width (a select's choices). 至少和叫它的元素一樣寬（選擇器）。 */
+  fit?: boolean;
   /** One line instead of, or above, the items (loading, empty, error). 項目之外的一行（載入中、空的、錯誤）。 */
   note?: Message | string;
 }) {
@@ -44,11 +49,12 @@ export function DropdownMenu({ anchor, items, note, onClose, label }: {
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
     buttons[(at + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
   };
-  return <div ref={menu} className="dropdown-menu" role="menu" aria-label={label} style={place} onKeyDown={move}>
+  return createPortal(<div ref={menu} className={'dropdown-menu' + (fit ? ' fit' : '')} role="menu" aria-label={label}
+    style={fit ? { ...place, minWidth: anchor.offsetWidth } : place} onKeyDown={move}>
     {note && <p className="hint">{say(note)}</p>}
     {items.map(item => <Fragment key={item.key}>{item.divider && <hr />}
       <button role={item.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={item.checked === undefined ? undefined : item.checked}
         aria-disabled={item.disabled || undefined} title={item.title}
         onClick={() => { if (item.disabled) return; onClose(); item.select(); }}>{item.label}</button></Fragment>)}
-  </div>;
+  </div>, document.body);
 }

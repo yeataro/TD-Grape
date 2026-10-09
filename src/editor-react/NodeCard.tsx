@@ -8,6 +8,11 @@ import { spareHandle, type Editor as EditorSession } from './editor';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
 import { BoxPreviewContext } from './RightDragSelect';
 import { tr, say } from './text';
+import { Select } from './controls';
+
+const booleans = [{ value: 'false', label: 'false' }, { value: 'true', label: 'true' }];
+/** Choices shown as they are written (type names). 照原樣顯示的選項（型別名）。 */
+const listed = (values: readonly string[]) => values.map(value => ({ value, label: value }));
 
 export const SessionContext = createContext<EditorSession | null>(null);
 export const TextContext = createContext<(key: string) => string>(key => key);
@@ -79,8 +84,8 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
           {count > 1 && <span style={color ? { color: `var(--component-${'xyzw'[i]})` } : undefined}>{names[i]}</span>}
           {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
             : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
-            : family === 'bool' ? <select className="nodrag" aria-label={`${label} ${i}`} value={String(!!item)}
-            onChange={event => change(event.target.value === 'true')}><option>false</option><option>true</option></select> :
+            : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}
+            onChange={next => change(next === 'true')} /> :
             <NumberField label={`${label} ${i}`} value={Number(item)} integer={family === 'int' || family === 'uint'} unsigned={family === 'uint'} commit={change}
               preview={preview && (next => preview(withComponent(next)))} />}
         </label>;
@@ -95,11 +100,10 @@ function Control({ id, control }: { id: string; control: NodeControl }) {
   if (control.kind === 'hint') return <div className="hint">{label}</div>;
   if (control.kind === 'button') return <button className="nodrag" disabled={control.disabled}
     onClick={() => session.edit(id, control.command!, control.args ?? {})}>{label}</button>;
-  return <label className="control-field nodrag"><span>{label}</span><select aria-label={`${id} ${control.key}`}
-    value={control.value} disabled={control.disabled} onChange={event => session.edit(id, control.command!, {
-      ...control.args, value: control.numeric ? Number(event.target.value) : event.target.value })}>
-    {control.options?.map(option => <option key={option.value} value={option.value}>{option.literal ? option.label : text(option.label)}</option>)}
-  </select></label>;
+  return <label className="control-field nodrag"><span>{label}</span><Select label={`${id} ${control.key}`}
+    value={String(control.value)} disabled={control.disabled} onChange={value => session.edit(id, control.command!, {
+      ...control.args, value: control.numeric ? Number(value) : value })}
+    options={control.options?.map(option => ({ value: String(option.value), label: option.literal ? option.label : text(option.label) })) ?? []} /></label>;
 }
 
 // Drawn from the module's spare declaration only; no node-specific branch here.
@@ -162,11 +166,10 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   return <article ref={card} className={`grape-node ${selection}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
-      {view.typeLocked ? <small>{outputs[0]?.type}</small> : view.selector ? <select className="nodrag" aria-label={`${id} type`} value={view.selector.value}
-        onChange={event => session.edit(id, view.selector!.command, { value: event.target.value })}>
-        {view.selector.options.map(type => <option key={type}>{type}</option>)}</select> :
-        data.types.length > 1 ? <select className="nodrag" aria-label={`${id} type`} value={String(authored.params.type)}
-          onChange={event => session.configure(id, event.target.value)}>{data.types.map(type => <option key={type}>{type}</option>)}</select> :
+      {view.typeLocked ? <small>{outputs[0]?.type}</small> : view.selector ? <Select className="nodrag" label={`${id} type`} value={view.selector.value}
+        onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} /> :
+        data.types.length > 1 ? <Select className="nodrag" label={`${id} type`} value={String(authored.params.type)}
+          onChange={value => session.configure(id, value)} options={listed(data.types)} /> :
           <small>{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>

@@ -35,18 +35,20 @@ export const Placeholder = ({ label, className }: { label: Message; className?: 
 
 /** A choice drawn with the editor's own rounded menu instead of the browser's (human 2026-10-09: never the
  * built-in one). The button shows the current value. 用編輯器自己的圓角選單做的選擇（人類：不用瀏覽器內建的）。 */
-export function Select<T extends string>({ label, value, options, onChange, disabled, children }: {
+export function Select<T extends string>({ label, value, options, onChange, disabled, children, className, title }: {
   label: Message | string; value: T; options: readonly { value: T; label: ReactNode }[]; onChange(value: T): void;
   disabled?: boolean; children?: ReactNode;
+  /** Extra classes on the button (e.g. nodrag inside a node). 按鈕的額外 class（例如節點裡的 nodrag）。 */
+  className?: string; title?: Message | string;
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const items: MenuItem[] = options.map(option => ({ key: option.value, label: option.label, checked: option.value === value,
     select: () => onChange(option.value) }));
   return <>
-    <button type="button" className="select-button" aria-label={say(label)} aria-haspopup="menu" aria-expanded={!!anchor}
+    <button type="button" className={'select-button' + (className ? ' ' + className : '')} aria-label={say(label)} title={title && say(title)} aria-haspopup="menu" aria-expanded={!!anchor}
       aria-disabled={disabled || undefined} onClick={event => { if (!disabled) setAnchor(anchor ? null : event.currentTarget); }}>
       <span>{children ?? options.find(option => option.value === value)?.label}</span><Icon name="chevronDown" /></button>
-    {anchor && <DropdownMenu anchor={anchor} items={items} label={say(label)} onClose={() => setAnchor(null)} />}
+    {anchor && <DropdownMenu anchor={anchor} items={items} label={say(label)} fit onClose={() => setAnchor(null)} />}
   </>;
 }
 

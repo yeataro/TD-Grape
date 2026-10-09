@@ -55,6 +55,7 @@
   --lift-raised: 7%;    /* menus, dialogs, floating things, controls */
   --lift-line: 13%;     /* separators */
   --lift-hover: 15%;    /* a control under the pointer */
+  --lift-node-field: 10%; /* a value field on a node card (legacy --node-value-bg #42404f) */
   --tint-raised: 3%;    /* the accent's faint cast on raised surfaces (legacy dialogs) */
   --tint-active: 20%;   /* the accent behind what is active (stage, chosen row) */
   --tint-border: 55%;   /* the accent on a hovered border */
@@ -71,6 +72,9 @@
 
   /* ── 2. purposes ── */
   --surface-node: var(--palette-node);
+  /* An editable value on a node or a source, a step above the card; a locked one (driven by TD) stays dark.
+     節點與來源上可編輯的值，比卡片亮一階；被鎖定（由 TD 驅動）的保持深色。 */
+  --surface-node-field: color-mix(in srgb, var(--palette-node), var(--palette-lift) var(--lift-node-field));
   --group-function: var(--palette-violet);
   --group-output: var(--palette-green);
   --group-uniform: var(--palette-teal);

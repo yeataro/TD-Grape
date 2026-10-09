@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields, useSession } from './NodeCard';
-import { Badge, FoldSection } from './controls';
+import { Badge, FoldSection, Select } from './controls';
 import type { ComponentState, UniformStates } from './host';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
@@ -73,9 +73,9 @@ export function SourcesPanel({ declarations, references }: {
     {inputs.map(declaration => <div className="source-row" key={declaration.id}>
       <div className="source-head">
         <NameField declaration={declaration} />
-        <select aria-label={say(tr('sources.defaultTexture', 'Default image'))} title={say(tr('sources.defaultTexture', 'Default image'))}
-          value={String(declaration.defaultTexture)} onChange={event => session.setDefaultTexture(declaration.id, event.target.value)}>
-          {core.defaultTextures.map(texture => <option key={texture} value={texture}>{say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture }))}</option>)}</select>
+        <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
+          value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
+          options={core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))} />
       </div>
       {actions(declaration)}
     </div>)}
@@ -89,9 +89,8 @@ export function SourcesPanel({ declarations, references }: {
       <div className="source-head">
         <NameField declaration={declaration} />
         {/* A colour stays a colour: vec3 or vec4 (Q59). 顏色只在 vec3、vec4 之間換。 */}
-        <select aria-label={say(tr('sources.type', 'Type'))} value={declaration.type}
-          onChange={event => session.setDeclarationType(declaration.id, event.target.value)}>
-          {(declaration.color === true ? ['vec3', 'vec4'] : types).map(type => <option key={type}>{type}</option>)}</select>
+        <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
+          options={(declaration.color === true ? ['vec3', 'vec4'] : types).map(type => ({ value: type, label: type }))} />
       </div>
       {uniformValue(declaration)}
       {actions(declaration)}
@@ -118,9 +117,8 @@ export function SourcesPanel({ declarations, references }: {
     {constants.map(declaration => <div className="source-row" key={declaration.id}>
       <div className="source-head">
         <NameField declaration={declaration} />
-        <select aria-label={say(tr('sources.type', 'Type'))} value={declaration.type}
-          onChange={event => session.setDeclarationType(declaration.id, event.target.value)}>
-          {types.map(type => <option key={type}>{type}</option>)}</select>
+        <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
+          options={types.map(type => ({ value: type, label: type }))} />
       </div>
       <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0}
         commit={value => session.setDeclarationValue(declaration.id, value)} />
