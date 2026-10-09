@@ -1,6 +1,6 @@
 import { copy, type Node, type SubgraphData, type ObjectValue } from './model';
 import type { GraphDocument, Network } from './graph';
-import { ensureSubgraphCapacity, validateSubgraphData } from './subgraph_operations';
+import { ensureSubgraphCapacity, validateSubgraphData, withoutStoredUse } from './subgraph_operations';
 import { ScopeReferences } from './scope_references';
 
 export type AllocateSubgraphId = () => string;
@@ -32,7 +32,7 @@ function allocate(used:Set<string>,next:AllocateSubgraphId):string {
  * versions to reuse and supplies any ID mapping. All mutation stays here. */
 export function appendSubgraphs(graph:GraphDocument,definitions:readonly SubgraphData[],ids:ReadonlyMap<string,string>=new Map()):SubgraphData[] {
   graph.assertEditable();ensureSubgraphCapacity(graph,definitions.length);
-  const pending = definitions.map(f => copy(f)),used = new Set((graph.document.subgraphs || []).map(f => f.id));
+  const pending = definitions.map(f => withoutStoredUse(copy(f))),used = new Set((graph.document.subgraphs || []).map(f => f.id));
   const originalIds = new Set<string>();
   for (const f of pending) {
     if (originalIds.has(f.id)) throw Error('Duplicate Subgraph identity');

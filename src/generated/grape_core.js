@@ -17,6 +17,7 @@ const structure_1 = require("./structure");
 const editor_contract_1 = require("./editor_contract");
 const model_1 = require("./model");
 const ghosts_1 = require("./ghosts");
+const subgraph_stages_1 = require("./subgraph_stages");
 const declarations_1 = require("./declarations");
 const td_values_1 = require("./td_values");
 const uniform_presets_1 = require("./uniform_presets");
@@ -83,7 +84,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subgraph_call_1.default, subgraph_input_1.default, subgraph_output_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, subgraphStages: subgraph_stages_1.subgraphStages, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, componentStyle: component_names_1.componentStyle };
 
 },
 "capacity":function(require,module,exports){
@@ -669,6 +670,7 @@ function createEditorContract(registry, target = 'top') {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ghostsOf = ghostsOf;
+const subgraph_stages_1 = require("./subgraph_stages");
 function ghostsOf(network, policy) {
     var _a;
     const nodes = new Map();
@@ -680,6 +682,10 @@ function ghostsOf(network, policy) {
         if (!module)
             nodes.set(node.id, 'unknown');
         else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage))
+            nodes.set(node.id, 'misplaced');
+        // A subgraph call whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
+        // 子圖內容不能在這個 Stage 用的呼叫：保留、標示，內容改回能用就恢復。
+        else if (stage && module.referencedGraph && !(0, subgraph_stages_1.subgraphStages)(network.graph.document, module.referencedGraph(data), network.graph.registry).includes(stage))
             nodes.set(node.id, 'misplaced');
         // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
         else if (referred !== undefined && !stage)
@@ -5253,6 +5259,7 @@ const model_1 = require("./model");
 const config_1 = require("./config");
 const node_module_1 = require("./node_module");
 const subgraph_interface_1 = require("./subgraph_interface");
+const subgraph_stages_1 = require("./subgraph_stages");
 const values_1 = require("./values");
 const numeric_1 = require("./numeric");
 const relay = {
@@ -5285,7 +5292,9 @@ function createSubgraphCompiler(registry, engineFactory, config = config_1.CORE_
             var _a;
             if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length > config.nodesPerNetwork || data.edges.length > config.edgesPerNetwork || ((_a = data.ui) === null || _a === void 0 ? void 0 : _a.frames))
                 return false;
-            if (owner && (!(0, subgraph_interface_1.numericInterface)(owner) || !Array.isArray(owner.stages) || !owner.stages.includes('pixel') || owner.targets && !owner.targets.includes('top')))
+            // Where a subgraph can run comes from its content (Q46); the target is each node's own check below.
+            // 子圖能用的 Stage 由內容推算；target 由下面每個節點自己檢查。
+            if (owner && (!(0, subgraph_interface_1.numericInterface)(owner) || !(0, subgraph_stages_1.subgraphStages)(g, owner.id, registry).includes('pixel')))
                 return false;
             const context = (0, node_module_1.contextFor)(g, owner);
             return data.nodes.every(n => {
@@ -5514,7 +5523,7 @@ function appendSubgraphs(graph, definitions, ids = new Map()) {
     var _a;
     graph.assertEditable();
     (0, subgraph_operations_1.ensureSubgraphCapacity)(graph, definitions.length);
-    const pending = definitions.map(f => (0, model_1.copy)(f)), used = new Set((graph.document.subgraphs || []).map(f => f.id));
+    const pending = definitions.map(f => (0, subgraph_operations_1.withoutStoredUse)((0, model_1.copy)(f))), used = new Set((graph.document.subgraphs || []).map(f => f.id));
     const originalIds = new Set();
     for (const f of pending) {
         if (originalIds.has(f.id))
@@ -5691,6 +5700,7 @@ function subgraphPresentation(f, kind) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureSubgraphCapacity = ensureSubgraphCapacity;
 exports.validateSubgraphData = validateSubgraphData;
+exports.withoutStoredUse = withoutStoredUse;
 exports.insertSubgraph = insertSubgraph;
 exports.createSubgraph = createSubgraph;
 exports.instantiateSubgraph = instantiateSubgraph;
@@ -5724,8 +5734,10 @@ function validateSubgraphData(f) {
         throw Error('Invalid Subgraph identity');
     if (!f.name.trim() || f.name.length > 80 || /[\x00-\x1f\x7f]/.test(f.name))
         throw Error('Invalid Subgraph name');
-    if (!['local', 'library', 'personal'].includes(f.scope) || !f.stages.length || f.stages.some(s => !['vertex', 'pixel'].includes(s)))
-        throw Error('Invalid Subgraph scope or stage');
+    // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
+    // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
+    if (!['local', 'library', 'personal'].includes(f.scope))
+        throw Error('Invalid Subgraph scope');
     for (const ports of [f.inputs, f.outputs]) {
         if (ports.length > config_1.CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length ||
             ports.some(p => !validId(p.id) || typeof p.type !== 'string' || !p.type || p.default === undefined))
@@ -5747,17 +5759,20 @@ function validate(graph, f) {
         throw Error('Invalid or duplicate local Subgraph identity');
     validateSubgraphData(f);
 }
+/** A definition as the graph keeps it: what it can be used in is worked out from its content, not stored (Q46).
+ * 圖裡保存的定義：能用在哪裡由內容推算，不存。 */
+function withoutStoredUse(f) { delete f.stages; delete f.targets; return f; }
 function insertSubgraph(graph, f) {
     var _a;
-    validate(graph, f);
-    const owned = (0, model_1.copy)(f);
+    const owned = withoutStoredUse((0, model_1.copy)(f));
+    validate(graph, owned);
     ((_a = graph.document).subgraphs || (_a.subgraphs = [])).push(owned);
     return owned;
 }
 function createSubgraph(graph, options) {
     const input = structural(graph, 'input'), output = structural(graph, 'output');
     return insertSubgraph(graph, {
-        id: options.id, name: options.name, scope: 'local', stages: [options.stage],
+        id: options.id, name: options.name, scope: 'local',
         inputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [1, 1, 1, 1] }],
         outputs: [{ id: 'value', name: 'Value', type: 'vec4', default: [0, 0, 0, 1] }],
         graph: { nodes: [{ ...authored(input, 'input', { x: 48, y: 144 }), name: 'Input' }, { ...authored(output, 'output', { x: 624, y: 144 }), name: 'Output' }],
@@ -5862,7 +5877,7 @@ function groupSubgraph(network, selection, options) {
     };
     boundary('input', inputId, { x: 24, y: 144 });
     boundary('output', outputId, { x: Math.max(...nodes.map(n => Number(n.ui.x))) + 288, y: 144 });
-    const f = { id: options.id, name: options.name, scope: 'local', stages: [options.stage], inputs, outputs,
+    const f = { id: options.id, name: options.name, scope: 'local', inputs, outputs,
         graph: { nodes, edges, ...(options.ui ? { ui: (0, model_1.copy)(options.ui) } : {}) } };
     validate(graph, f);
     const callModule = structural(graph, 'call');
@@ -5926,6 +5941,45 @@ function collectSubgraphs(graph, roots, active) {
             retained.add(id);
     const keep = closure(retained);
     graph.document.subgraphs = (graph.document.subgraphs || []).filter(f => !candidates.has(f.id) || keep.has(f.id));
+}
+
+},
+"subgraph_stages":function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SUBGRAPH_STAGES = void 0;
+exports.subgraphStages = subgraphStages;
+/** The stages a subgraph can be used in, worked out from what is inside it (design-interview Q46): the stages every
+ * node inside allows, nested subgraphs followed. Nothing is stored in the graph; a saved definition (library, export,
+ * clipboard) writes the result and is recomputed on load. Nodes this build does not know add no limit: they are ghosts
+ * and left out of code generation anyway. A cycle is not followed again (cycles are refused where subgraphs change).
+ * The target needs no such rule: every node inside is checked against the graph's own target.
+ * 子圖能用在哪些 Stage，由內容推算（Q46）：裡面每個節點都允許的 Stage，巢狀子圖一路跟進。圖裡不存；存成定義（個人庫、
+ * 匯出、剪貼簿）時才寫出結果、載入時重算。不認得的節點不加限制（它是 Ghost、本來就不產碼）。循環不重複走。
+ * target 不需要這條：裡面每個節點本來就照圖的 target 檢查。 */
+exports.SUBGRAPH_STAGES = ['vertex', 'pixel'];
+function subgraphStages(graph, id, registry, active = new Set()) {
+    var _a, _b;
+    let stages = [...exports.SUBGRAPH_STAGES];
+    const subgraph = (_a = graph.subgraphs) === null || _a === void 0 ? void 0 : _a.find(item => item.id === id);
+    if (!subgraph || active.has(id))
+        return stages;
+    active.add(id);
+    for (const node of subgraph.graph.nodes) {
+        const module = registry.get(node.nodeType);
+        if (!module)
+            continue;
+        const own = module.catalog.definition.stages;
+        if (own)
+            stages = stages.filter(stage => own.includes(stage));
+        const child = (_b = module.referencedGraph) === null || _b === void 0 ? void 0 : _b.call(module, node);
+        if (child !== undefined) {
+            const inner = subgraphStages(graph, child, registry, active);
+            stages = stages.filter(stage => inner.includes(stage));
+        }
+    }
+    active.delete(id);
+    return stages;
 }
 
 },

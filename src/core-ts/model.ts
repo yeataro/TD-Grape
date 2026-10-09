@@ -13,7 +13,10 @@ export interface Declaration {id:string;kind:string;name:string;type:string;[key
 export interface Edge {id:string;from:readonly [string,string];to:readonly [string,string];ui?:ObjectValue;extensions?:ObjectValue}
 export interface NetworkData {nodes:Node[];edges:Edge[];ui?:ObjectValue}
 export interface InterfacePort {id:string;name?:string;type:string;default:Value}
-export interface SubgraphData {id:string;name:string;scope:string;origin?:ObjectValue;descriptionKey?:string;stages:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData;
+export interface SubgraphData {id:string;name:string;scope:string;origin?:ObjectValue;descriptionKey?:string;
+  /** Only on a saved definition (library, export, clipboard), recomputed on load; never in a graph, where they are
+   * worked out from the content (Q46, subgraph_stages.ts). 只在存成的定義裡、載入時重算；圖裡不存，由內容推算。 */
+  stages?:string[];targets?:string[];inputs:InterfacePort[];outputs:InterfacePort[];graph:NetworkData;
   description?:string;comment?:string;userVersion?:string;extensions?:ObjectValue}
 export interface Graph {format:string;version:number;target:string;declarations:Declaration[];subgraphs?:SubgraphData[];structDefinitions?:unknown[];stages:Record<string,NetworkData>;
   description?:string;comment?:string;userVersion?:string;extensions?:ObjectValue}

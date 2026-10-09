@@ -4,6 +4,7 @@ import { copy, formatProblem, type Graph, type Node, type NetworkData, type Subg
 import { CORE_CONFIG, type CoreConfig } from './config';
 import { createRegistry, contextFor, resolvePorts, type Registry, type NodeModule } from './node_module';
 import { numericInterface, requireSubgraph } from './subgraph_interface';
+import { subgraphStages } from './subgraph_stages';
 import { types, type } from './values';
 import { types as bindingTypes } from './numeric';
 
@@ -42,7 +43,9 @@ export function createSubgraphCompiler(registry:Registry,engineFactory:(registry
     const scopes:[NetworkData,SubgraphData|undefined][] = [[g.stages.pixel!,undefined],...g.subgraphs.map(f=>[f.graph,f] as [NetworkData,SubgraphData])];
     return scopes.every(([data,owner])=>{
       if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges) || data.nodes.length>config.nodesPerNetwork || data.edges.length>config.edgesPerNetwork || data.ui?.frames) return false;
-      if (owner && (!numericInterface(owner) || !Array.isArray(owner.stages) || !owner.stages.includes('pixel') || owner.targets&&!owner.targets.includes('top'))) return false;
+      // Where a subgraph can run comes from its content (Q46); the target is each node's own check below.
+      // 子圖能用的 Stage 由內容推算；target 由下面每個節點自己檢查。
+      if (owner && (!numericInterface(owner) || !subgraphStages(g,owner.id,registry).includes('pixel'))) return false;
       const context = contextFor(g,owner);
       return data.nodes.every(n=>{
         const module=moduleOf(n);

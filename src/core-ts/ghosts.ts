@@ -1,5 +1,6 @@
 import type { Network, ConnectionPolicy } from './graph';
 import type { Edge as EdgeData } from './model';
+import { subgraphStages } from './subgraph_stages';
 
 /** Ghosts (design-interview Q37 1-1, 1-3): what this build cannot use is kept exactly as stored,
  * shown, and left out of code generation — never deleted, never rewired, never a reason to refuse
@@ -28,6 +29,9 @@ export function ghostsOf(network: Network, policy: ConnectionPolicy): Ghosts {
     const referred = module?.referencedDeclaration?.(data);
     if (!module) nodes.set(node.id, 'unknown');
     else if (stage && module.catalog.definition.stages && !module.catalog.definition.stages.includes(stage)) nodes.set(node.id, 'misplaced');
+    // A subgraph call whose content cannot run in this stage (Q46, Q37 1-4): kept, marked, back once the content fits.
+    // 子圖內容不能在這個 Stage 用的呼叫：保留、標示，內容改回能用就恢復。
+    else if (stage && module.referencedGraph && !subgraphStages(network.graph.document, module.referencedGraph(data), network.graph.registry).includes(stage)) nodes.set(node.id, 'misplaced');
     // Declarations are referred to only at the top level of a stage (Q41). 宣告只在 stage 最外層引用。
     else if (referred !== undefined && !stage) nodes.set(node.id, 'misplaced');
     else if (referred !== undefined && !network.context.declaration(referred)) nodes.set(node.id, 'missing');

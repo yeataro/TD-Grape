@@ -101,3 +101,32 @@ test('scope references preserve canonical tokens and skip snapshots, source meta
  ScopeReferences.walk(data,()=> 'replaced');assert.equal(data.type,'float[replaced]');
  assert.equal(data.source.type,token);assert.equal(data.catalogSnapshot.type,token);assert.equal(data.code,token);
 });
+
+// Q46 (Refactor.61): where a subgraph can be used comes from its content; the graph never stores it.
+// 子圖能用在哪裡由內容推算，圖裡不存。
+test('a subgraph keeps no stages or targets; definitions brought in lose them',()=>{
+ const g=empty();
+ const step=new GraphDocument(g,registry).change(m=>{m.createSubgraph({id:'made',name:'Made'});});
+ assert.equal('stages' in step.after.subgraphs[0],false);assert.equal('targets' in step.after.subgraphs[0],false);
+ const definition={...plain(step.after.subgraphs[0]),id:'brought',stages:['pixel'],targets:['top']};
+ const next=new GraphDocument(step.after,registry).change(m=>m.appendSubgraphs([definition]));
+ const brought=next.after.subgraphs.find(f=>f.id==='brought');
+ assert.equal('stages' in brought,false);assert.equal('targets' in brought,false);
+ // Stored values are never taken, even odd ones: the content decides (Q46). 存著的值一律不採用，怪的也一樣：由內容決定。
+ const odd=new GraphDocument(step.after,registry).change(m=>m.appendSubgraphs([{...definition,id:'odd',stages:['geometry'],targets:7}]));
+ assert.equal('stages' in odd.after.subgraphs.find(f=>f.id==='odd'),false);
+});
+
+test('a call whose subgraph content cannot run in this stage is a misplaced ghost and back once it fits',()=>{
+ const G=require('../../src/generated/grape_core.js');
+ // The same modules, with Multiply allowed only in Vertex. 同一組模組，Multiply 只允許 Vertex。
+ const custom=createRegistry(registry.modules.map(m=>m.catalog.definition.key!=='multiply'?m:{...m,catalog:{...m.catalog,definition:{...m.catalog.definition,stages:['vertex']}}}));
+ const g=sharedGraph(),doc=new GraphDocument(g,custom);
+ assert.deepEqual(plain(G.subgraphStages(g,'gain',custom)),['vertex']);
+ assert.deepEqual(plain(G.subgraphStages(g,'wrapper',custom)),['vertex'],'nested subgraphs are followed');
+ const ghosts=G.ghostsOf(doc.networks.get('pixel'),G.values.policy);
+ assert.equal(ghosts.nodes.get('first'),'misplaced');assert.equal(ghosts.nodes.get('second'),'misplaced');
+ assert.equal(createCompiler(custom).supports(g),false,'code generation does not take it');
+ assert.deepEqual(plain(G.subgraphStages(g,'gain',registry)),['vertex','pixel']);
+ assert.equal(G.ghostsOf(new GraphDocument(g,registry).networks.get('pixel'),G.values.policy).nodes.size,0,'with the content fitting again, nothing is a ghost');
+});

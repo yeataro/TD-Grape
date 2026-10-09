@@ -6,7 +6,7 @@ import type { PortSpec } from './ports';
 import { ScopeReferences } from './scope_references';
 import {types as valueTypes,fill} from './values';
 
-export interface SubgraphOptions {id:string;name:string;stage:string}
+export interface SubgraphOptions {id:string;name:string}
 export interface GroupOptions extends SubgraphOptions {
   callId:string;
   /** Transitional descriptions only for types/nodes without a migrated module. */
@@ -36,8 +36,9 @@ export function validateSubgraphData(f:SubgraphData):void {
   if (!validId(f.id)) throw Error('Invalid Subgraph identity');
   if (!f.name.trim() || f.name.length > 80 || /[\x00-\x1f\x7f]/.test(f.name))
     throw Error('Invalid Subgraph name');
-  if (!['local','library','personal'].includes(f.scope) || !f.stages.length || f.stages.some(s => !['vertex','pixel'].includes(s)))
-    throw Error('Invalid Subgraph scope or stage');
+  // Stored stages and targets are not read: the graph works them out from the content and drops them (Q46).
+  // 存著的 stages／targets 不讀：圖由內容推算，並把它們拿掉。
+  if (!['local','library','personal'].includes(f.scope)) throw Error('Invalid Subgraph scope');
   for (const ports of [f.inputs,f.outputs]) {
     if (ports.length > CORE_CONFIG.subgraphPortsPerSide || new Set(ports.map(p => p.id)).size !== ports.length ||
         ports.some(p => !validId(p.id) || typeof p.type !== 'string' || !p.type || p.default === undefined))
@@ -56,9 +57,12 @@ function validate(graph:GraphDocument,f:SubgraphData):void {
   validateSubgraphData(f);
 }
 
+/** A definition as the graph keeps it: what it can be used in is worked out from its content, not stored (Q46).
+ * 圖裡保存的定義：能用在哪裡由內容推算，不存。 */
+export function withoutStoredUse(f:SubgraphData):SubgraphData {delete f.stages;delete f.targets;return f;}
 export function insertSubgraph(graph:GraphDocument,f:SubgraphData):SubgraphData {
-  validate(graph,f);
-  const owned = copy(f);
+  const owned = withoutStoredUse(copy(f));
+  validate(graph,owned);
   (graph.document.subgraphs ||= []).push(owned);
   return owned;
 }
@@ -66,7 +70,7 @@ export function insertSubgraph(graph:GraphDocument,f:SubgraphData):SubgraphData 
 export function createSubgraph(graph:GraphDocument,options:SubgraphOptions):SubgraphData {
   const input = structural(graph,'input'),output = structural(graph,'output');
   return insertSubgraph(graph,{
-    id:options.id,name:options.name,scope:'local',stages:[options.stage],
+    id:options.id,name:options.name,scope:'local',
     inputs:[{id:'value',name:'Value',type:'vec4',default:[1,1,1,1]}],
     outputs:[{id:'value',name:'Value',type:'vec4',default:[0,0,0,1]}],
     graph:{nodes:[{...authored(input,'input',{x:48,y:144}),name:'Input'},{...authored(output,'output',{x:624,y:144}),name:'Output'}],
@@ -151,7 +155,7 @@ export function groupSubgraph(network:Network,selection:ReadonlySet<string>,opti
   };
   boundary('input',inputId,{x:24,y:144});
   boundary('output',outputId,{x:Math.max(...nodes.map(n => Number(n.ui!.x)))+288,y:144});
-  const f:SubgraphData = {id:options.id,name:options.name,scope:'local',stages:[options.stage],inputs,outputs,
+  const f:SubgraphData = {id:options.id,name:options.name,scope:'local',inputs,outputs,
     graph:{nodes,edges,...(options.ui ? {ui:copy(options.ui)} : {})}};
   validate(graph,f);
   const callModule = structural(graph,'call');
