@@ -34,8 +34,8 @@ let ports: Ports = browser ? readChoice('appearance.ports', ['a', 'b'], 'a') : '
 // Trial switches for shadows (human 2026-10-09 A/B): layered small shadows, the canvas's inner shadow, shadows on source
 // cards. Chosen ones stay and the switches go once decided. 陰影的試驗開關（人類 A/B）：層疊微陰影、畫布內陰影、來源卡片陰影；
 // 決定後留下選中的、拿掉開關。
-export type ShadowTrial = 'layers' | 'canvas' | 'cards';
-const shadowDefaults: Record<ShadowTrial, boolean> = { layers: false, canvas: true, cards: false };
+export type ShadowTrial = 'layers' | 'canvas' | 'cards' | 'glow';
+const shadowDefaults: Record<ShadowTrial, boolean> = { layers: false, canvas: true, cards: false, glow: false };
 const shadows = Object.fromEntries((Object.keys(shadowDefaults) as ShadowTrial[]).map(key => [key,
   browser ? readChoice('appearance.shadow.' + key, ['on', 'off'], shadowDefaults[key] ? 'on' : 'off') === 'on' : shadowDefaults[key]])) as Record<ShadowTrial, boolean>;
 const listeners = new Set<() => void>();

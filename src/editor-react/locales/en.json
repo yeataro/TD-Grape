@@ -21,6 +21,7 @@
   "appearance.scale": "Interface scale",
   "appearance.shadowCanvas": "Canvas inner shadow",
   "appearance.shadowCards": "Card shadows",
+  "appearance.shadowGlow": "Inner glow",
   "appearance.shadowLayers": "Layered shadows",
   "appearance.sizeTitle": "Language and size",
   "appearance.standard": "Standard",

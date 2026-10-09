@@ -213,7 +213,7 @@ function AppearancePanels() {
       <Segmented label={tr('appearance.ports', 'Port style')} value={currentPorts()} options={portStyles} onChange={setPorts} />
       {/* Shadow trials (human 2026-10-09 A/B); the switches go once decided. 陰影試驗（人類 A/B）；決定後拿掉開關。 */}
       {([['layers', tr('appearance.shadowLayers', 'Layered shadows')], ['canvas', tr('appearance.shadowCanvas', 'Canvas inner shadow')],
-        ['cards', tr('appearance.shadowCards', 'Card shadows')]] as const).map(([key, label]) =>
+        ['cards', tr('appearance.shadowCards', 'Card shadows')], ['glow', tr('appearance.shadowGlow', 'Inner glow')]] as const).map(([key, label]) =>
         <label key={key} className="check"><input type="checkbox" checked={shadowOn(key)} onChange={event => setShadow(key, event.target.checked)} />{say(label)}</label>)}
     </PopoverButton>
     <PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">

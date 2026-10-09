@@ -68,8 +68,9 @@
   --handle-grab: 9px;
   --float-gap: 8px;
   --canvas-shadow: 18px;   /* how far the network's inner shadow reaches 網路區內陰影的範圍 */
-  --layer-offset: 1px;     /* a layer's small shadow: how far it falls 層疊微陰影的偏移 */
-  --layer-blur: 6px;       /* and how soft it is 以及模糊程度 */     /* between floating things over the canvas, and to its edge 畫布上浮動物之間、到畫布邊的間距 */
+  --layer-offset: 2px;     /* a layer's small shadow: how far it falls (human 2026-10-09: 2px) 層疊微陰影的偏移（人類：2px） */
+  --layer-blur: 6px;       /* and how soft it is 以及模糊程度 */
+  --layer-glow-blur: 8px;  /* how far the inner glow seeps in 內發光往內滲的範圍 */     /* between floating things over the canvas, and to its edge 畫布上浮動物之間、到畫布邊的間距 */
 }
 :root[data-size="comfortable"] {
   --title-bar-height: 44px;

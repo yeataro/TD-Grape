@@ -63,6 +63,7 @@
   --tint-scroll-hover: 58%; /* under the pointer (legacy --scroll-hover #79638e) */
   --tint-field-fill: 14%;
   --tint-layer-shadow: 25%; /* the small shadow one layer casts on the next (trial) 層疊微陰影的濃度（試驗） */
+  --tint-layer-glow: 6%;    /* the light seeping in from a layer's edges (trial) 內發光的濃度（試驗） */
   --tint-wire-ready: 30%;   /* the glow round a port a dragged wire will land on (legacy --wire-ready-glow #aa84d64d) 拖線要接上的接孔外圍光暈 */   /* a value box's slider fill (legacy --numeric-slider-fill #c4c0df24) */
   /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
   /* Toned down from the legacy .88/.85/.72/.54/.32 (human 2026-10-09: all white text was frighteningly bright).
@@ -148,6 +149,7 @@
   --overlay-down: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
   /* Its own colour, so tuning it moves nothing else (human 2026-10-09). 自己的顏色，調它不會動到別的（人類）。 */
   --layer-shadow: color-mix(in srgb, var(--palette-shadow) var(--tint-layer-shadow), transparent);
+  --layer-glow: color-mix(in srgb, var(--palette-lift) var(--tint-layer-glow), transparent);
   --shadow: color-mix(in srgb, var(--palette-shadow) 55%, transparent);
   --grid-dot: color-mix(in srgb, color-mix(in srgb, var(--palette-ink), var(--palette-accent) 8%), var(--palette-contrast) 13%);
   --border: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-line));

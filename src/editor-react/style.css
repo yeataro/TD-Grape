@@ -70,22 +70,31 @@ a { color: var(--accent); }
    pointer. 網路區像嵌進去，邊緣一圈內陰影（人類筆記；新的，舊產品沒有）。在節點之上、React Flow 面板（縮放比例）之下，浮動控制保持清楚；不擋滑鼠。 */
 :root:not([data-shadow-canvas="off"]) .canvas .react-flow::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
   box-shadow: inset 0 0 var(--canvas-shadow) var(--shadow); }
-/* Trial (human 2026-10-09): what lies on what, told by a small shadow each layer casts on the ones below. From the top:
-   things floating on the canvas, the foot bar (up onto the panels and canvas), the side panels (sideways onto the location
-   bar and canvas), the location bar (up onto the title bar; it belongs to the network, human 2026-10-09), the title bar,
-   the canvas. Switched in Appearance; the colour is the theme's --layer-shadow.
-   試驗（人類）：用每一層投到下層的小陰影表示誰疊在誰上面。由上到下：畫布上的浮動物、底列（往上蓋到面板與畫布）、
-   左右面板（往側邊蓋到網址列與畫布）、網址列（往上蓋到標題列；屬於網路區，人類）、標題列、畫布。在外觀面板切換；顏色用主題的。 */
+/* Trials (human 2026-10-09), switched in Appearance. Each frame layer has two shadows that the switches fill in: one cast
+   outward on the layers below, one glowing in from its edges. 試驗（人類），在外觀面板切換。外框的每一層有兩道陰影由開關填入：
+   一道往外投到下層，一道從邊緣往內滲。 */
+:is(.title-bar, .location-bar, .foot-bar, .panel-zone, .network-bar-group) {
+  box-shadow: var(--layer-cast, 0 0 transparent), var(--layer-inner, 0 0 transparent); }
+/* Layered shadows: what lies on what. From the top: the location bar (up onto the title bar; human: on top of all), things
+   floating on the canvas, the foot bar (up onto the panels and canvas), the side panels (sideways and up onto the title bar
+   and canvas), the title bar, the canvas. The colour is the theme's --layer-shadow.
+   層疊微陰影：誰疊在誰上面。由上到下：網址列（往上蓋到標題列；人類：放最上面）、畫布上的浮動物、底列（往上蓋到面板與畫布）、
+   左右面板（往側邊與往上蓋到標題列與畫布）、標題列、畫布。顏色用主題的 --layer-shadow。 */
 :root[data-shadow-layers="on"] :is(.foot-bar, .location-bar, .panel-zone) { position: relative; }
-:root[data-shadow-layers="on"] .foot-bar { z-index: 5; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
-:root[data-shadow-layers="on"] .location-bar { z-index: 3; box-shadow: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
-/* Panels cast sideways and up, so they read as lying on the title bar too (human 2026-10-09: make it visible).
+:root[data-shadow-layers="on"] .location-bar { z-index: 6; --layer-cast: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
+:root[data-shadow-layers="on"] .foot-bar { z-index: 5; --layer-cast: 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
+/* Panels cast sideways and up, so they read as lying on the title bar too (human: make it visible).
    面板往側邊和往上都投陰影，看得出它也疊在標題列上（人類：讓它看得出來）。 */
 :root[data-shadow-layers="on"] .panel-zone-left { z-index: 4;
-  box-shadow: var(--layer-offset) 0 var(--layer-blur) var(--layer-shadow), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
+  --layer-cast: var(--layer-offset) 0 var(--layer-blur) var(--layer-shadow), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
 :root[data-shadow-layers="on"] .panel-zone-right { z-index: 4;
-  box-shadow: calc(-1 * var(--layer-offset)) 0 var(--layer-blur) var(--layer-shadow), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
-:root[data-shadow-layers="on"] :is(.network-bar-group, .react-flow__panel) { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
+  --layer-cast: calc(-1 * var(--layer-offset)) 0 var(--layer-blur) var(--layer-shadow), 0 calc(-1 * var(--layer-offset)) var(--layer-blur) var(--layer-shadow); }
+:root[data-shadow-layers="on"] .network-bar-group { --layer-cast: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
+:root[data-shadow-layers="on"] .react-flow__panel:not(.react-flow__controls) { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
+/* Inner glow: a little light seeping in from each layer's edges (human: "as if the edges let some in"). The colour is the
+   theme's --layer-glow. 內發光：每一層的邊緣往內滲一點光（人類：「好像邊緣有點滲進來」）。顏色用主題的 --layer-glow。 */
+:root[data-shadow-glow="on"] :is(.title-bar, .location-bar, .foot-bar, .panel-zone, .network-bar-group) {
+  --layer-inner: inset 0 0 var(--layer-glow-blur) var(--layer-glow); }
 /* Trial: source cards lift a little off the panel. 試驗：來源卡片從面板上浮起一點。 */
 :root[data-shadow-cards="on"] .source-card { box-shadow: 0 var(--layer-offset) var(--layer-blur) var(--layer-shadow); }
 /* React Flow's own variables, pointed at our purposes (COLOR_SYSTEM.md). RF 自己的變數接到我們的用途名。 */
