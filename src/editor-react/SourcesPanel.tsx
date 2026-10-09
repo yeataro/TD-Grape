@@ -61,14 +61,16 @@ function TexturePreview({ texture }: { texture: string }) {
     onLoad={event => setRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight || 1)} />;
   // Hidden until the image says its size, so the frame never jumps. 圖說出尺寸前先藏著，圖框不會跳。
   const picture = (src: string, onError?: () => void) => frame(ratio || 16 / 9, image(src, onError), ratio ? undefined : { visibility: 'hidden' });
-  const note = (text: Message, hint?: Message) => <figcaption className="badge" title={hint ? say(hint) : undefined}>{say(text)}</figcaption>;
+  const note = (text: Message, hint?: Message, centred = false) =>
+    <figcaption className={'badge' + (centred ? ' centred' : '')} title={hint ? say(hint) : undefined}>{say(text)}</figcaption>;
   const unavailable = <span>{say(tr('sources.noPreview', 'No preview'))}</span>;
   if (plain) return <figure className="texture-preview">{frame(1, null, { background: colorHex(plain) }, 'texture-frame')}</figure>;
   if (custom) return <figure className="texture-preview">
     {typeof shot === 'object' && picture(shot.src)}
     {shot === 'none' && frame(1, null)}
     {shot === 'failed' && unavailable}
-    {shot === 'none' && note(tr('sources.noChosenTop', 'No TOP chosen · the input is transparent'))}
+    {/* Nothing to cover, so in the middle (human 2026-10-09). 沒有圖可擋，放正中央（人類）。 */}
+    {shot === 'none' && note(tr('sources.noChosenTop', 'No TOP chosen · the input is transparent'), undefined, true)}
     {typeof shot === 'object' && note(tr('sources.snapshot', 'Snapshot · not live'),
       tr('sources.snapshotHint', 'Taken when this card opened; close and open it again for a new one.'))}
   </figure>;
