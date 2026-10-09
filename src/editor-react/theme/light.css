@@ -54,6 +54,12 @@
   --tint-scroll-hover: 40%;
   --tint-field-fill: 12%;
   --tint-layer-shadow: 25%;
+  --tint-glow-select: 33%;
+  --tint-glow-title: 33%;
+  --tint-glow-highlight: 33%;
+  --tint-glow-wires: 33%;
+  --tint-glow-ports: 33%;
+  --tint-glow-logo: 33%;
   --tint-node-border: 12%;
   --tint-select-primary: 15%;
   --tint-layer-glow: 2%;

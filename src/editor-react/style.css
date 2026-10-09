@@ -194,12 +194,23 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* A node is as wide as its widest row, never under the shared minimum (value-input.md 五 4, human 2026-10-09): the
    browser measures, nothing is written per node type. Notes and hints wrap instead of widening it.
    節點寬度＝最寬那一行，但不小於共用下限：瀏覽器自己量，不依種類寫寬度。說明文字換行，不撐寬節點。 */
-.grape-node { position: relative; width: max-content; min-width: var(--node-min-width); max-width: 640px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow); }
-/* Selection (Refactor.49, Q33): the primary in TD's green, the others in yellow. 主要＝綠、其他＝黃。 */
-.grape-node.selected { outline: 2px solid var(--select); }
+.grape-node { position: relative; width: max-content; min-width: var(--node-min-width); max-width: 640px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow), var(--node-glow, 0 0 transparent); }
+/* Selection (Refactor.58.3): the legacy green. 選取：舊產品的綠。 */
+.grape-node.selected { --node-select: var(--select); outline: 2px solid var(--node-select); }
 /* Among several selected, the current one is brighter; alone it stays the plain green (human 2026-10-09).
    多選時目前的那個比較亮；單選時就是一般的綠（人類）。 */
-.react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { outline-color: var(--select-primary); }
+.react-flow__nodes:has(.grape-node.selected:not(.primary)) .grape-node.selected.primary { --node-select: var(--select-primary); }
+/* Outer glow trials (human 2026-10-09; legacy cool styles, without the moving glow), switched in Appearance; each in the
+   thing's own colour, its strength --tint-glow-* and reach --glow-*.
+   外光暈試驗（人類；舊產品 cool 風格，不含光暈動畫），在外觀面板切換；各用自己的顏色，濃度 --tint-glow-*、範圍 --glow-*。 */
+:root[data-shadow-select-glow="on"] .grape-node.selected { --node-glow: 0 0 var(--glow-select) color-mix(in srgb, var(--node-select) var(--tint-glow-select), transparent); }
+:root[data-shadow-select-glow="on"] .react-flow__edge.selected .react-flow__edge-path { filter: drop-shadow(0 0 var(--glow-select) color-mix(in srgb, var(--wire-selected) var(--tint-glow-select), transparent)); }
+:root[data-shadow-title-glow="on"] .node-title strong { text-shadow: 0 0 var(--glow-title) color-mix(in srgb, currentColor var(--tint-glow-title), transparent); }
+:root[data-shadow-wire-glow="on"] .react-flow__edge-path { filter: drop-shadow(0 0 var(--glow-wires) color-mix(in srgb, currentColor var(--tint-glow-wires), transparent)); }
+:root[data-shadow-highlight-glow="on"] .react-flow__edge:hover .react-flow__edge-path { filter: drop-shadow(0 0 var(--glow-highlight) color-mix(in srgb, var(--wire-hover) var(--tint-glow-highlight), transparent)); }
+:root[data-shadow-highlight-glow="on"] .icon-button[aria-pressed="true"] { box-shadow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--pressed) var(--tint-glow-highlight), transparent); }
+:root[data-shadow-highlight-glow="on"] .icon-button.mode-toggle[aria-pressed="true"] { box-shadow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--pressed-mode) var(--tint-glow-highlight), transparent); }
+:root[data-shadow-logo-glow="on"] .brand-mark { filter: drop-shadow(0 0 var(--glow-logo) color-mix(in srgb, var(--accent) var(--tint-glow-logo), transparent)); }
 /* Wires: selected and hovered are lighter and thicker, as in the legacy editor (its glow is a look option,
    left for the appearance round). The type colour is inline, hence !important.
    接線：選取與滑鼠移上去時變亮加粗（照舊產品；柔光是外觀選項，留到外觀那輪）。型別色是行內樣式，所以要 !important。 */
@@ -373,6 +384,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* A wired port is filled and glows a little: its type colour lifted towards --port-glow, opaque so the wire's end never
    shows through it (human 2026-10-09). 接上線的接孔：填滿、微微發亮（型別色往 --port-glow 提亮）；不透明，線頭不會透出來（人類）。 */
 .react-flow__handle[data-connected="true"]::after { background: color-mix(in srgb, var(--port-color), var(--port-glow) 55%); }
+/* Trial: wired ports glow in their type colour; the highlights below replace it while they show. 試驗：接上線的接孔發型別色的光；下面的高亮出現時取代它。 */
+:where(:root[data-shadow-port-glow="on"]) .react-flow__handle[data-connected="true"]::after { box-shadow: 0 0 var(--glow-ports) color-mix(in srgb, var(--port-color) var(--tint-glow-ports), transparent); }
 /* An input a dragged wire would merge away turns solid in its type colour (Refactor.57). 拖線會併掉的輸入：型別色實心。 */
 .react-flow__handle[data-merging="true"]::after { background: var(--port-color); }
 /* Highlights, a separate thing from the wired state above (human 2026-10-09: 55.20's "solid" was about being wired; the
@@ -382,9 +395,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    高亮，和上面「接上線」是兩件事（人類：55.20 的「實心」是指接上線後；高亮要）。滑過、以及拖線時拿著的那個接孔：淡紫中心加一圈淡圈，
    同舊產品滑過；拖線要接上的接孔：型別色填滿、「可接」外框與光暈，同舊產品 .wire-target。 */
 .react-flow__handle:is(:hover, .connectingfrom)::after {
-  background: var(--wire-hover); box-shadow: 0 0 0 var(--port-halo) color-mix(in srgb, var(--accent) 25%, transparent); }
+  background: var(--wire-hover); box-shadow: 0 0 0 var(--port-halo) color-mix(in srgb, var(--accent) 25%, transparent), var(--port-highlight-glow, 0 0 transparent); }
 .react-flow__handle.connectingto.valid::after { background: var(--port-color);
-  box-shadow: 0 0 0 var(--port-ready-ring) var(--wire-ready), 0 0 0 calc(var(--port-ready-ring) + var(--port-ready-glow)) var(--wire-ready-glow); }
+  box-shadow: 0 0 0 var(--port-ready-ring) var(--wire-ready), 0 0 0 calc(var(--port-ready-ring) + var(--port-ready-glow)) var(--wire-ready-glow), var(--port-highlight-glow, 0 0 transparent); }
+/* Trial: the highlights glow too, each in its own colour. 試驗：高亮也發光，各用自己的顏色。 */
+:root[data-shadow-highlight-glow="on"] .react-flow__handle:is(:hover, .connectingfrom)::after { --port-highlight-glow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--wire-hover) var(--tint-glow-highlight), transparent); }
+:root[data-shadow-highlight-glow="on"] .react-flow__handle.connectingto.valid::after { --port-highlight-glow: 0 0 var(--glow-highlight) color-mix(in srgb, var(--wire-ready) var(--tint-glow-highlight), transparent); }
 /* A wire that dropping here would replace fades, dashed (Refactor.57). 放開後會被換掉的線：變淡、虛線。 */
 .react-flow__edge.replacing .react-flow__edge-path { opacity: .35; stroke-dasharray: 6 4; }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */

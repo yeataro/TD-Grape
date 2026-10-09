@@ -62,6 +62,13 @@
   --tint-scroll-hover: 58%; /* under the pointer (legacy --scroll-hover #79638e) */
   --tint-field-fill: 14%;
   --tint-layer-shadow: 25%; /* the small shadow one layer casts on the next (trial) 層疊微陰影的濃度（試驗） */
+  /* outer glows (trials; legacy cool styles 33%) 外光暈的濃度（試驗；舊產品 cool 風格 33%） */
+  --tint-glow-select: 33%;
+  --tint-glow-title: 33%;
+  --tint-glow-highlight: 33%;
+  --tint-glow-wires: 33%;
+  --tint-glow-ports: 33%;
+  --tint-glow-logo: 33%;
   --tint-node-border: 12%;  /* a node's outline, also the line under its title (legacy: one colour) 節點外框線，也是標題下的線（舊產品同色） */
   --tint-select-primary: 15%; /* how much brighter the current node is among several selected 多選時目前節點亮多少 */
   --tint-layer-glow: 2%;    /* the light seeping in from a layer's edges (trial; human 2026-10-09: 2%) 內發光的濃度（試驗；人類：2%） */

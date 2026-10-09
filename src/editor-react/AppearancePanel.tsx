@@ -11,6 +11,12 @@ import { TUNABLES, currentValue, setTuning, tunedValue, tuningSubscribe, tuningV
 const trials = [
   ['layers', tr('appearance.shadowLayers', 'Layered shadows')], ['canvas', tr('appearance.shadowCanvas', 'Canvas inner shadow')],
   ['cards', tr('appearance.shadowCards', 'Card shadows')], ['glow', tr('appearance.shadowGlow', 'Inner glow')],
+  ['selectGlow', tr('appearance.selectGlow', 'Glow: selection')],
+  ['titleGlow', tr('appearance.titleGlow', 'Glow: node titles')],
+  ['highlightGlow', tr('appearance.highlightGlow', 'Glow: highlights')],
+  ['wireGlow', tr('appearance.wireGlow', 'Glow: wires')],
+  ['portGlow', tr('appearance.portGlow', 'Glow: wired ports')],
+  ['logoGlow', tr('appearance.logoGlow', 'Glow: logo')],
 ] as const;
 
 function TuningRow({ tunable }: { tunable: Tunable }) {
