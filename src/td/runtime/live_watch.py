@@ -20,8 +20,9 @@ import uniform_writer
 
 class LiveWatch:
     def __init__(self, *, resolve, watcher, frame):
-        """resolve(target_id) -> NextFamily or None; watcher(paths): set what the Parameter Execute DAT
-        watches; frame() -> TD's frame. resolve 找 Grape OP；watcher 設定監看的 OP；frame 是 TD 影格。"""
+        """resolve(target_id) -> NextFamily or None; watcher(paths, comps): set what the watchers watch, the GLSL OPs'
+        parameters and the Grape OPs' wiring; frame() -> TD's frame. resolve 找 Grape OP；watcher 設定監看的 GLSL OP 參數與
+        Grape OP 接線；frame 是 TD 影格。"""
         self.resolve, self.watcher, self.frame = resolve, watcher, frame
         self.links = {}    # connection -> Grape OP path 連線 → Grape OP
         self.watched = {}  # Grape OP path -> entry 監看中的 Grape OP

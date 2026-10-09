@@ -21,7 +21,9 @@ export type NewNode = { nodeType: string; params: ObjectValue } | { preset: stri
 /** The end of a wire being dragged: from an output (a new node's input takes it) or from an input (a new node's
  * output feeds it). 正在拉的線的這一端：從輸出（新節點的輸入接它）或從輸入（新節點的輸出接上它）。 */
 /** What an In TOP receives now, as TD tells it (R.61.5). In TOP 現在收到的，TD 說的。 */
-export type InputInfo = { path: string | null; width: number; height: number; format: string };
+// `default`: the default image TD gives an unwired input now (Samples label, `none`), null when wired (61.6).
+// default：TD 現在給沒接線輸入的預設圖（Samples 的 label 或 none），接了線是 null。
+export type InputInfo = { path: string | null; width: number; height: number; format: string; default?: string | null };
 export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
 const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
 // Puts a new node into a document: the one path for adding, also used to rehearse on a discarded candidate.

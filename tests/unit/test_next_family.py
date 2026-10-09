@@ -347,28 +347,33 @@ class HostRoutingTests(unittest.TestCase):
         # 每個輸入接了什麼；某個輸入的 In TOP 快照（不留）。
         # in1 passes its default from Samples (behind an out TOP); in2 has a TOP wired in. in1 送 Samples 的預設圖；in2 外面接了 TOP。
         grape = SimpleNamespace(OPType='moviefileinTOP', path='/project1/fam/Samples/grape', inputs=[])
-        sample_out = SimpleNamespace(OPType='outTOP', path='/project1/fam/Samples/out1', inputs=[grape])
+        sample_out = SimpleNamespace(OPType='outTOP', path='/project1/fam/Samples/out1', inputs=[grape],
+                                     par=SimpleNamespace(label=Par('grape')))
+        # Storage is read from the In TOP itself only (search=False, Refactor.61.6). 只讀 In TOP 自己的 storage。
         tops = [SimpleNamespace(OPType='inTOP', name='in' + str(n), width=640, height=360, pixelFormat='8-bit fixed (RGBA)',
-                                inputs=feeds, fetch=lambda key, default=None, i=i: i)
+                                inputs=feeds, fetch=lambda key, default=None, search=True, i=i: i if search is False else 'from a parent')
                 for n, i, feeds in ((1, 'input1', [sample_out]), (2, 'dPhoto', []))]
         wired = SimpleNamespace(owner=SimpleNamespace(path='/project1/moviefilein1'))
         comp.inputConnectors = [SimpleNamespace(inOP=tops[0], connections=[]), SimpleNamespace(inOP=tops[1], connections=[wired])]
         code, result = api.dispatch('GET', '/api/' + TARGET + '/inputs')
         info = {'width': 640, 'height': 360, 'format': '8-bit fixed (RGBA)'}
         self.assertEqual((code, result['inputs']), (200, [
-            {'id': 'input1', 'node': 'in1', 'source': None, 'info': {'path': '/project1/fam/Samples/grape', **info}},
-            {'id': 'dPhoto', 'node': 'in2', 'source': '/project1/moviefilein1', 'info': {'path': '/project1/moviefilein1', **info}}]))
+            {'id': 'input1', 'node': 'in1', 'source': None, 'info': {'path': '/project1/fam/Samples/grape', 'default': 'grape', **info}},
+            {'id': 'dPhoto', 'node': 'in2', 'source': '/project1/moviefilein1', 'info': {'path': '/project1/moviefilein1', 'default': None, **info}}]))
         def input_top(ident):
             if ident not in ('input1', 'dPhoto'):
-                raise LookupError('This Grape OP has no texture input with this ID.')
+                raise next_family.TextureUnavailable('This Grape OP has no texture input with this ID.')
             return tops[('input1', 'dPhoto').index(ident)]
         fam.input_top = input_top
         code, image = api.dispatch('GET', '/api/' + TARGET + '/input/dPhoto')
         self.assertEqual((code, image.keep, image.data[:4]), (200, False, b'\x89PNG'))
         capture.assert_called_once_with(tops[1])
-        # The In TOP's own size and format ride along (Refactor.61.3). 附上 In TOP 原本的尺寸與格式。
-        self.assertEqual(image.info, {'width': 640, 'height': 360, 'format': '8-bit fixed (RGBA)'})
         self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/input/nope')[1]['code'], 'texture_unavailable')
+        # Any other failure is what it is (Refactor.61.6): a KeyError from a bug is never a missing picture; it reaches the
+        # request queue, which reports it as a failure with its type. 其他失敗照實回報：程式錯誤的 KeyError 不會被說成找不到圖。
+        fam.input_sources = Mock(side_effect=KeyError('defaultTexture'))
+        with self.assertRaises(KeyError):
+            api.dispatch('GET', '/api/' + TARGET + '/inputs')
 
     def test_sample_output_by_label(self):
         # Exactly one out with the label, wherever it sits; none or two is a LookupError (Refactor.58.9).

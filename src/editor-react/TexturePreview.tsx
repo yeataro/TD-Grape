@@ -3,6 +3,7 @@ import { tr, say, type Message } from './text';
 import { colorHex } from './ValueFields';
 import { useSession } from './contexts';
 import { Icon } from './icons';
+import type { InputInfo } from './editor';
 
 // The plain ones are drawn here from their values, the same as the constant TOPs in Samples
 // (install_grape_templates.py); they are the images' content, not a look. 純色的照數值直接畫，數值同 Samples 裡的
@@ -14,12 +15,12 @@ export const textureNames: Record<string, Message> = {
   white: tr('texture.white', 'White'), black: tr('texture.black', 'Black'), normal: tr('texture.normal', 'Flat normal'),
 };
 
-// `info`: the In TOP's own size and format, as TD shows them (Refactor.61.3). In TOP 原本的尺寸與格式。
-type ImageInfo = { width: number; height: number; format: string };
-/** A picture's hint: where it is in TD's network, then size and format (human 2026-10-10). 圖片提示：在 TD 網路裡的位置、尺寸與格式。 */
-const imageHint = (path: string | null | undefined, info: ImageInfo | null | undefined) => [path, info && say(tr('sources.imageInfo',
-  '{width} × {height}, {format}', { width: info.width, height: info.height, format: info.format }))].filter(Boolean).join('\n') || undefined;
-type Shot = 'loading' | 'failed' | { src: string; time: Date; info: ImageInfo | null };
+/** A picture's hint, from one answer of TD (inputs): where it is in TD's network, then size and format (human 2026-10-10;
+ * one source since R.61.6, so path and size never come from different moments). 圖片提示，來自 TD 的同一次回答：
+ * 在 TD 網路裡的位置、尺寸與格式（R.61.6 起只有一個來源，路徑和尺寸不會來自不同時間）。 */
+const imageHint = (info: InputInfo | null | undefined) => info ? [info.path, say(tr('sources.imageInfo', '{width} × {height}, {format}',
+  { width: info.width, height: info.height, format: info.format }))].filter(Boolean).join('\n') : undefined;
+type Shot = 'loading' | 'failed' | { src: string; time: Date };
 /** What a texture input gives the shader, open on its card (Refactor.58, 60; human 2026-10-10): with a TOP wired in from
  * outside, a snapshot of its In TOP — what the shader actually receives — marked with a camera and the source, pressed for
  * a new one (only this one, Refactor.61.1), all retaken when TD says a Grape OP was rewired; the old one stays until the
@@ -47,12 +48,10 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
     fetch(session.host.inputUrl(id), { headers: { 'X-Sgrape-Token': session.host.token }, cache: 'no-store' })
       .then(async response => {
         if (!response.ok) return 'failed' as const;
-        let info: ImageInfo | null = null;
-        try { info = JSON.parse(response.headers.get('X-Sgrape-Image') ?? 'null') as ImageInfo | null; } catch { /* none 沒有 */ }
         const src = URL.createObjectURL(await response.blob());
         // Decoded before it is shown, so the swap is instant. 先解碼好再換上，換的那一刻不空白。
         const probe = new Image(); probe.src = src; await probe.decode().catch(() => undefined);
-        return { src, time: new Date(), info } as Shot;
+        return { src, time: new Date() } as Shot;
       }, () => 'failed' as const)
       .then(next => {
         if (!live) { if (typeof next === 'object') URL.revokeObjectURL(next.src); return; }
@@ -89,10 +88,11 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
       {/* Two hints (human 2026-10-10): the picture tells what the image is (where it is in TD's network, then size and
           format, as TD's info); the label tells about the snapshot. 兩個提示（人類）：圖片說圖是什麼（在 TD 網路裡的位置，
           再來是尺寸、格式，同 TD 的資訊）；標籤說快照的事。 */}
-      {typeof shot === 'object' && picture(shot.src, undefined, imageHint(source, shot.info))}
+      {typeof shot === 'object' && picture(shot.src, undefined, imageHint(inputs?.[id]?.info))}
       {shot === 'failed' && unavailable}
       {typeof shot === 'object' && label(<button type="button" className="image-label nodrag"
-        onClick={() => setRetake(n => n + 1)}
+        // This one again, and its size asked anew without retaking the others (61.6). 重拍這一張，並重問尺寸、不重拍別張。
+        onClick={() => { setRetake(n => n + 1); void session.refreshInputs(false); }}
         // When it was taken and how to take another; in brackets, why a Sequential movie stands still while unseen.
         // 何時拍的、怎麼重拍；括號裡說明 Sequential 的影片沒人看時停住。
         title={[say(tr('sources.snapshotTaken', 'Snapshot taken at {time}, not live. Click for a new one.', {
@@ -102,9 +102,12 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
         <Icon name="camera" />{say(tr('sources.snapshot', 'Snapshot'))}</button>)}
     </figure>;
   }
-  // The default image tells the same (human 2026-10-10): what the In TOP receives, as TD says (R.61.5).
-  // 預設圖也一樣（人類）：In TOP 收到的，照 TD 說的。
-  const defaultHint = inputs?.[id]?.info ? imageHint(inputs[id]!.info!.path, inputs[id]!.info) : undefined;
+  // The default image tells the same (human 2026-10-10): what the In TOP receives, as TD says (R.61.5) — only once TD
+  // gives the default chosen here; before it has it (not applied yet, or another editor changed it) there is no hint
+  // rather than a wrong one (61.6). 預設圖也一樣（人類）：In TOP 收到的，照 TD 說的——只在 TD 給的就是這裡選的那張時才顯示；
+  // TD 還沒照做（還沒送到、或別的編輯器改了）時不顯示，不給錯的。
+  const info = inputs?.[id]?.info;
+  const defaultHint = info?.default === texture ? imageHint(info) : undefined;
   const defaultLabel = label(<span className="image-label">{say(tr('sources.defaultLabel', 'Default: {name}',
     { name: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))}</span>);
   if (texture === 'none') return <figure className="texture-preview">{frame(1, null, undefined, undefined, defaultHint)}{defaultLabel}</figure>;

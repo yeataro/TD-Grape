@@ -71,6 +71,21 @@ class BuildChanged(RuntimeError):
     code = 'build_changed'
 
 
+class TextureUnavailable(RuntimeError):
+    """No such texture input on this Grape OP (Refactor.61.6). Its own kind, so a KeyError from a bug is never reported
+    as a missing picture. 這個 Grape OP 沒有這個貼圖輸入。獨立的種類，程式錯誤的 KeyError 不會被說成找不到圖。"""
+    code = 'texture_unavailable'
+
+
+def input_id(top):
+    """The texture input an In TOP belongs to, None when Grape did not make it (Refactor.43). Read from the In TOP
+    itself, never from a parent (search=False). The one rule for every place that looks for Grape's In TOPs (61.6).
+    In TOP 屬於哪個貼圖輸入；不是 Grape 建的就是 None。只讀它自己、不往上層找。所有找 Grape 的 In TOP 的地方都用這一條。"""
+    if top is None or top.OPType != 'inTOP':
+        return None
+    return top.fetch(INPUT_STORE, None, search=False)
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -199,31 +214,35 @@ class NextFamily:
         TOP inside this Grape OP's Samples (behind its out), none when nothing is — and its size and format as TD writes them.
         Read from TD, not guessed: Samples may hold other images later (human: 2D and 3D samples).
         附上 In TOP 現在收到的：來自哪個 TOP（外面接的；沒接就是這個 Grape OP 的 Samples 裡那張預設圖，在 out 後面；什麼都沒接
-        就沒有），以及 TD 寫的尺寸與格式。問 TD、不猜：Samples 之後可能放別的圖（人類：2D、3D 的 Sample）。"""
+        就沒有），以及 TD 寫的尺寸與格式。問 TD、不猜：Samples 之後可能放別的圖（人類：2D、3D 的 Sample）。
+        `default` (61.6): which default image TD gives it now — the Samples out's label, `none` with nothing wired in —
+        so the editor can tell whether TD has its choice yet. `default`：TD 現在給它哪張預設圖（Samples 出口的 label；
+        什麼都沒接是 none），編輯器據此知道 TD 是否已照它的選擇。"""
         result = []
         for connector in self.comp.inputConnectors:
             top = connector.inOP
-            ident = top.fetch(INPUT_STORE, None) if top is not None else None
+            ident = input_id(top)
             if ident is None:
                 continue
             source = connector.connections[0].owner if connector.connections else None
-            feed = source
-            if feed is None and top.inputs:
-                feed = top.inputs[0]
-                if feed.OPType == 'outTOP' and feed.inputs:
-                    feed = feed.inputs[0]
+            feed, default = source, None
+            if source is None:
+                feed, default = (top.inputs[0], None) if top.inputs else (None, 'none')
+                if feed is not None and feed.OPType == 'outTOP':
+                    default = feed.par.label.eval()
+                    feed = feed.inputs[0] if feed.inputs else None
             info = {'path': feed.path if feed is not None else None, 'width': top.width, 'height': top.height,
-                    'format': str(top.pixelFormat)}
+                    'format': str(top.pixelFormat), 'default': default}
             result.append({'id': ident, 'node': top.name, 'source': source.path if source is not None else None, 'info': info})
         return result
 
     def input_top(self, ident):
         """The In TOP of one texture input: what the shader actually receives, for a snapshot (Refactor.60).
         一個貼圖輸入的 In TOP：Shader 實際收到的，給快照用。"""
-        for top in self.comp.ops('*'):
-            if top.OPType == 'inTOP' and top.fetch(INPUT_STORE, None) == ident:
+        for top in self.comp.findChildren(type=inTOP, depth=1):
+            if input_id(top) == ident:
                 return top
-        raise LookupError('This Grape OP has no texture input with this ID.')
+        raise TextureUnavailable('This Grape OP has no texture input with this ID.')
 
     def _refuse(self, message):
         notify(self.comp, message)
@@ -371,7 +390,7 @@ class NextFamily:
         comp, shader = self.comp, self._shader(self.comp)
         owned, leftovers = {}, []
         for child in comp.findChildren(type=inTOP, depth=1):
-            ident = child.fetch(INPUT_STORE, None, search=False)
+            ident = input_id(child)
             if ident is None:
                 continue
             if ident in owned:  # a copy of one Grape made 複製出來的重複者

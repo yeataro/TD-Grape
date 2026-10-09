@@ -31,9 +31,8 @@ class Image:
     不佔 TD 的執行緒（人類：TD 裡 24 ms 太多）；以及瀏覽器能不能留著用。"""
     mime = 'image/png'
 
-    def __init__(self, pixels, *, keep, info=None):
-        # `info`: what the picture is before it was made small, sent beside it (Refactor.61.3). 縮小前的原圖資訊，隨圖附上。
-        self.pixels, self.keep, self.info = pixels, keep, info
+    def __init__(self, pixels, *, keep):
+        self.pixels, self.keep = pixels, keep
         self._png, self._lock = None, threading.Lock()
 
     @property
@@ -97,11 +96,13 @@ class HostAPI:
             if method == 'POST' and not isinstance(body, dict):
                 raise ValueError('Host actions require a JSON object.')
             return 200, self._action(family, method, action, body, argument)
-        except LookupError as error:
-            return 404, {'error': str(error), 'code': 'texture_unavailable', 'layer': 'grape-op', 'operation': action}
         except UnsupportedOperation as error:
             return 501, {'error': str(error), 'code': 'capability_not_migrated', 'layer': 'manager', 'operation': action}
         except (ValueError, RuntimeError) as error:
+            # A missing texture input is its own error (Refactor.61.6); any other failure, a KeyError from a bug included,
+            # is reported as what it is, never as a missing picture. 找不到貼圖輸入是自己的錯誤；其他失敗照實回報。
+            if getattr(error, 'code', None) == 'texture_unavailable':
+                return 404, {'error': str(error), 'code': 'texture_unavailable', 'layer': 'grape-op', 'operation': action}
             if getattr(error, 'code', None) == 'build_changed':
                 # Not a conflict: no version choice helps, the page must be reloaded (Refactor.52).
                 # 不是衝突：選哪個版本都沒用，要重新整理頁面。
@@ -135,12 +136,9 @@ class HostAPI:
         if method == 'GET' and action == 'input' and argument:
             if not self.capture:
                 raise UnsupportedOperation('The editor host cannot take previews.')
-            # With the In TOP's own size and format, as TD's info shows them (human 2026-10-10: size, bits, channels).
-            # 附上 In TOP 原本的尺寸與格式，寫法同 TD 的資訊（人類：幾乘幾、幾 bits、通道）。
-            top = family.input_top(argument)
-            info = {'width': getattr(top, 'width', None), 'height': getattr(top, 'height', None),
-                    'format': str(getattr(top, 'pixelFormat', '') or '')}
-            return Image(self.capture(top), keep=False, info=info)
+            # Its size and format come with the inputs (input_sources), one place for them (Refactor.61.6).
+            # 尺寸與格式隨輸入回報（input_sources），只有一處。
+            return Image(self.capture(family.input_top(argument)), keep=False)
         if method == 'POST' and action == 'save':
             return {'saved': self.save_project()}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

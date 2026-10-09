@@ -58,6 +58,15 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.61.6 貼圖輸入一帶清理**（排查見 workspace `work/refactor/texture-input-cleanup-2026-10-10.md`；人類選 A、B、C、D、G2、G1）：
+  - A：找不到貼圖輸入改成專用例外 `TextureUnavailable`（同 `BuildChanged` 用 `code` 分辨）；`host_api` 不再把所有 `LookupError` 回成 404「找不到貼圖」——動作裡程式錯誤的 `KeyError` 照實交給請求佇列回 500、附例外類型。
+  - B：「哪些 In TOP 是 Grape 建的」只剩一條規則 `input_id(top)`（只讀 In TOP 自己的 storage、`search=False`），`_place_inputs`、`input_sources`、`input_top` 都用它；原本後兩處會往上層 COMP 找 storage。
+  - C：尺寸與格式只從 `input_sources` 來；拿掉 R.61.3 快照回覆的 `X-Sgrape-Image` 標頭與 `Image.info`、`reply(info=)`。按快照時順便重問輸入（不重拍別張），尺寸跟著更新。
+  - D：`LiveWatch.__init__` 說明改成 `watcher(paths, comps)`。
+  - G2：共用來源面板打開或輸入數量改變時，問輸入但不重拍（接的東西變了才重拍）。
+  - G1：圖片提示的路徑與尺寸來自 TD 的同一次回答；TD 也回報沒接線的輸入現在給的是哪張預設圖（Samples 出口的 label，什麼都沒接是 none），和這裡選的一致才顯示預設圖提示，TD 還沒照做（還沒送到、別的編輯器改了）就不顯示。
+  - 留著的防護（理由寫在排查文件）：監看 DAT 不在就跳過、狀態列寫失敗不擋動作、Samples 同名出口必須剛好一個、使用者自己加的 In TOP 不碰。
+  - 驗證：Python 52（新增：只讀 In TOP 自己的 storage、回報預設圖 label、動作裡的 KeyError 不再變成 404）、editor 79；重裝 Manager 後 Grape_TOP1 三張提示都在（第三張預設圖 grape）、按第一張快照只有它換圖。
 - **Refactor.61.5 預設圖也有同樣的提示**（人類 10-10；之後 Samples 可能有 2D、3D 的圖，所以問 TD、不猜）：
   - TD：`input_sources` 每個輸入多帶 In TOP 現在收到的——來源 TOP（外面接的；沒接就是這個 Grape OP 的 Samples 裡那張預設圖，在 out 後面；選透明就沒有）與 In TOP 的尺寸、格式。
   - 送圖成功後，TD 除了送 Uniform 狀態，也提醒編輯器再問輸入（`{type:'inputs', retake:false}`，預設圖換了、輸入增減時跟著更新；同一個 Grape OP 開在別的瀏覽器也收到）；TD 重新接線的提醒是 `retake:true`。編輯器只有在要求重拍、或接的東西變了時才重拍快照，不會每次送圖都重拍。

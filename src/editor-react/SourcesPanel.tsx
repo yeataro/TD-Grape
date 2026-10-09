@@ -48,7 +48,8 @@ export function SourcesPanel({ declarations, references }: {
   // The default-image selects line up the same way (human 2026-10-09). 預設圖選單一樣對齊（人類）。
   // What each texture input has wired in TD, asked when inputs are shown (Refactor.60). 每個輸入在 TD 接了什麼，有輸入要顯示時才問。
   const sources = useSyncExternalStore(session.inputsSubscribe, session.inputsSnapshot);
-  useEffect(() => { if (inputs.length) void session.refreshInputs(); }, [session, inputs.length]);
+  // Asking is not retaking: snapshots are new only when what is wired in changed (Refactor.61.6). 問不等於重拍：接的東西變了才重拍。
+  useEffect(() => { if (inputs.length) void session.refreshInputs(false); }, [session, inputs.length]);
   const defaultSelect = (declaration: Declaration) => <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
     value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
     options={textureOptions} sizeTo={textureOptions.map(option => option.label)} />;
