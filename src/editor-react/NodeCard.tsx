@@ -16,14 +16,17 @@ import type { Declaration } from './core';
 const listed = (values: readonly string[]) => values.map(value => ({ value, label: value }));
 
 
-function Control({ id, control }: { id: string; control: NodeControl }) {
+// `bare`: a control at the head of the body (what the node points to, e.g. its declaration) shows only its choice, as the
+// legacy editor (human 2026-10-09: the label wasted space and lined up with nothing). The name stays for assistive tech.
+// bare：本體開頭的控制項（節點指向什麼，例如宣告）只顯示選到的值，照舊產品（人類：標籤浪費空間、也對不齊）。名稱仍給輔助工具。
+function Control({ id, control, bare = false }: { id: string; control: NodeControl; bare?: boolean }) {
   const session = useSession(), text = useContext(TextContext);
   const label = control.literal ? control.label : text(control.label);
   if (control.kind === 'row') return <div className="control-row">{control.children?.map(child => <Control key={child.key} id={id} control={child} />)}</div>;
   if (control.kind === 'hint') return <div className="hint">{label}</div>;
   if (control.kind === 'button') return <button className="nodrag" disabled={control.disabled}
     onClick={() => session.edit(id, control.command!, control.args ?? {})}>{label}</button>;
-  return <label className="control-field nodrag"><span>{label}</span><Select label={`${id} ${control.key}`}
+  return <label className="control-field nodrag">{!bare && <span>{label}</span>}<Select label={bare ? label : `${id} ${control.key}`}
     value={String(control.value)} disabled={control.disabled} onChange={value => session.edit(id, control.command!, {
       ...control.args, value: control.numeric ? Number(value) : value })}
     options={control.options?.map(option => ({ value: String(option.value), label: option.literal ? option.label : text(option.label) })) ?? []} /></label>;
@@ -124,7 +127,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
       {source && outputRows}
-      {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} />)}
+      {view.inlineControls?.map(control => <Control key={control.key} id={id} control={control} bare />)}
       {uniform && <UniformValue declaration={uniform} />}
       {view.value && <ValueFields {...view.value} label={`${id} value`} commit={value => session.edit(id, view.value!.valueCommand, { value })} />}
       {inputs.map(port => { const wired = data.connected.includes(port.key);
