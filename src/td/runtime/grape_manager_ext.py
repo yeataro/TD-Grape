@@ -146,7 +146,7 @@ class GrapeManagerExt:
         # Preset Uniform expressions come from the editor bundle (Q61), never from a request.
         # 預設 Uniform 的 expression 來自網頁資產，不來自請求。
         presets = {preset['entry']: preset['expression'] for preset in (self.bootstrap or {}).get('uniformPresets', [])}
-        return nxt.NextFamily(comp, validation_area=self.ownerComp.op('validation'), presets=presets)
+        return nxt.NextFamily(comp, presets=presets)
 
     def Resolve(self, target_id):
         # TD is the registry (Q32): search by tag on demand, so new copies are found without registering.

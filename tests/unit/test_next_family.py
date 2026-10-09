@@ -66,8 +66,8 @@ def meta(comp):
 def family(stored=None, gpu_ok=True, write=False):
     comp = Comp(stored if stored is not None else envelope())
     fam = NextFamily(comp, presets={'absTime': 'absTime.seconds'})
-    fam._validate = Mock(side_effect=None if gpu_ok else RuntimeError('GPU says no'))
-    fam._verify_gpu = Mock()
+    # Compiled on the Grape OP's own GLSL TOP (Refactor.62.1): a failure is TD's compile log. 在 Grape OP 自己的 GLSL TOP 上編譯。
+    fam._verify_gpu = Mock(side_effect=None if gpu_ok else next_family.CompileFailed('GPU says no'))
     fam.placed = (Mock(name='commit'), Mock(name='rollback'))
     fam._place_inputs = Mock(return_value=fam.placed)
     fam._input_ids = Mock(return_value=[])
@@ -148,7 +148,7 @@ class NextFamilyTests(unittest.TestCase):
         fam.apply(request(revision=4, run=None, document='{"b":2}'), catalog_hash=CATALOG)
         self.assertEqual(meta(comp)['runtime']['document'], '{"a":1}')  # still the last good one, not accumulated
         self.assertEqual(comp.op('pixel_shader').text, 'old glsl')
-        fam._validate.assert_not_called()
+        fam._verify_gpu.assert_not_called()
 
     def test_glsl_that_fails_in_td_keeps_the_shader_but_saves_the_graph(self):
         fam, comp = family(gpu_ok=False)
@@ -163,9 +163,22 @@ class NextFamilyTests(unittest.TestCase):
         status = json.loads(comp.op('status').text)
         self.assertEqual((status['phase'], status['error']), ('glsl-compile-failed', 'GPU says no'))
         # A later success clears the kept graph: one copy again.
-        fam._validate.side_effect = None
+        fam._verify_gpu.side_effect = None
         fam.apply(request(revision=4, run=runtime('good glsl')), catalog_hash=CATALOG)
         self.assertEqual((meta(comp)['runtime']['revision'], meta(comp)['runtime']['document']), (5, None))
+
+    def test_our_own_error_while_applying_is_said_as_such_and_the_graph_is_saved(self):
+        # D1 (Q38 2-5, Refactor.62.1): the work is never lost; an error of ours is not called a compile failure, and its
+        # traceback is kept. 工作不能丟；我們自己的錯不說成編譯失敗，並留下 traceback。
+        fam, comp = family()
+        fam._place_inputs.side_effect = AttributeError("'NoneType' object has no attribute 'par'")
+        result = fam.apply(request(run=runtime('new glsl')), catalog_hash=CATALOG)
+        self.assertEqual((comp.op('pixel_shader').text, comp.op('graph').text), ('old glsl', '{ "odd" :  [1, 2] }'))
+        self.assertEqual((meta(comp)['document']['revision'], meta(comp)['runtime']['revision']), (4, 3))
+        self.assertFalse(result['shaderUpdated'])
+        status = json.loads(comp.op('status').text)
+        self.assertEqual(status['phase'], 'apply-internal-error')
+        self.assertIn('AttributeError', status['traceback'])
 
     def test_envelope_checks(self):
         fam, _ = family()
@@ -210,7 +223,6 @@ class NextFamilyTests(unittest.TestCase):
         inputs = [{'id': 'input1', 'kind': 'topInput', 'name': 'input1', 'type': 'sampler2D', 'defaultTexture': 'grape'}]
         gain = {'id': 'u2', 'kind': 'uniform', 'name': 'uGain', 'type': 'float', 'value': 3}
         fam.apply(request(run=runtime('old glsl', bindings=inputs + [gain])), catalog_hash=CATALOG)
-        fam._validate.assert_not_called()
         fam._verify_gpu.assert_not_called()
         fam._write_uniforms.assert_called_once_with([gain], [])
         self.assertEqual(meta(comp)['runtime']['revision'], 4)
@@ -266,7 +278,7 @@ class NextFamilyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'invalid live value'):
             live(seq=4, value=[1, 2, 3])
         self.assertEqual(comp.op('graph_meta').text, before)  # nothing saved
-        fam._validate.assert_not_called()
+        fam._verify_gpu.assert_not_called()
         # A closed session's numbers go, so a later page with that name starts fresh (Refactor.62). 關閉的連線序號清掉。
         fam.forget('s')
         self.assertEqual(live(seq=1, value=[5, 6])['applied'], True)
@@ -284,12 +296,12 @@ class NextFamilyTests(unittest.TestCase):
                   {'id': 'dPhoto', 'kind': 'topInput', 'name': 'photo', 'type': 'sampler2D', 'defaultTexture': 'black'}]
         fam, comp = family()
         fam.apply(request(run=runtime('reads two', bindings=inputs)), catalog_hash=CATALOG)
-        fam._validate.assert_called_once_with('reads two', 2)
+        fam._verify_gpu.assert_called_once_with(comp)  # once, on the Grape OP itself 只編一次，在 Grape OP 本身
         fam._place_inputs.assert_called_once_with(inputs)
         fam.placed[0].assert_called_once_with()
         fam.placed[1].assert_not_called()
         fam, comp = family()
-        fam._verify_gpu.side_effect = RuntimeError('GPU says no')
+        fam._verify_gpu.side_effect = next_family.CompileFailed('GPU says no')
         fam.apply(request(run=runtime('reads two', bindings=inputs)), catalog_hash=CATALOG)
         fam.placed[1].assert_called_once_with()  # back to the last known good inputs
         fam.placed[0].assert_not_called()

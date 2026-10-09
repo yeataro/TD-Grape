@@ -58,6 +58,11 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.62.1 在 Grape OP 自己的 GLSL TOP 上編譯；內部錯誤照實說**（人類 10-10）：
+  - 拿掉 Manager 裡每次建、刪的暫時 COMP（`validation`／`candidate_…`）：它是真 GLSL TOP 的仿製品，只同步了 GLSL 版本與輸入數量，輸入維度、passes、輸出數量都沒同步（人類指出 sampler 維度對不上這類錯誤；以後 3D 輸入會誤擋、誤放），而且成功時編譯兩次。改成直接在 Grape OP 的 GLSL TOP 上編譯，失敗立刻還原；人類：失敗那一下可能出現藍紅棋盤圖可以接受，之後搭配錯誤指回節點。
+  - D1 照 design-interview Q38 2-5「圖照送（工作不能丟）」：一律存圖。真的編譯失敗（`CompileFailed`，讀 Info DAT）照原本的說法；我們自己的程式錯誤改說「TD-Grape 套用 Shader 時發生內部錯誤；圖已存，上一個能跑的 Shader 繼續跑」，status 為 `apply-internal-error` 並附 traceback（原本被說成 GLSL 編譯失敗）。
+  - D2 沒做：In TOP 的「確定」會刪掉不用的 In TOP、改名、重接線，做完退不回；Uniform 列也沒有還原。真正成對要先設計「全部準備好、最後一次確定」的順序，留在待討論。
+  - 驗證：Python 94（新增：我們的錯照實說、圖照存、留 traceback）。TD：在丟棄式 COMP 複製 Grape OP 實測——好的 GLSL 一次編譯 60.7 ms 換上；壞的 GLSL 編譯失敗、文字還原、status glsl-compile-failed、圖照存，共 392 ms，還原後 GLSL TOP 沒有錯誤；測完刪掉該 COMP。安裝腳本不再建 `validation`；現場那個空的 `validation` COMP 還在，要人類同意才刪。
 - **Refactor.62 TD 服務清理（完成；排查見 workspace `work/refactor/td-service-audit-2026-10-10.md`，只做「直接處理」，待討論 D1–D10 等人類）**：
   - 第 1 步 錯誤分類：刻意的拒絕都帶代碼（`uniform_writer.Refused` 為底，`RevisionConflict`、`BuildChanged`、`TextureUnavailable`、host 的 `BadRequest`、`UnsupportedOperation`），`host_api` 只把有代碼的錯回成拒絕、照代碼決定回覆；其他錯誤是失敗，交給請求佇列回 500 並附例外類型與 traceback（原本所有 `ValueError`／`RuntimeError` 都被說成「TD 拒絕」）。版本衝突不再看訊息裡有沒有 "conflict"（Uniform 取名 uConflict 時一般拒絕曾被當成衝突）。即時值、Grape OP 的「打開編輯器」只接拒絕；Samples 壞了照實說；寫狀態列只接 `NameError`（TD 之外）；runtime 不是 JSON 時是拒絕。驗證：Python 88（新增：名字含 Conflict 的拒絕回 422、沒代碼的錯不當拒絕）；重裝 Manager 後 Grape_TOP1 開圖、同步正常。
   - 第 2 步 即時通道：`LiveWatch` 與即時值序號改以 Grape OP 的 TD id 為鍵（原本用路徑：連著編輯器時改名，即時值與狀態默默停了），每格先跟上改名（照新路徑重設監看）、放掉已刪的 Grape OP；連線關閉時清掉它的序號；每次服務啟動的連線名稱不重複（原本重啟後從 live1 重算，新頁面的值會被當成舊的丟掉）；服務停止時不再收晚到的連線；停止編輯服務時 Manager 一起放開，監看全部關掉（原本繼續開著）；正在跑的程式只由 `running()` 讀與核對 sha，壞了是拒絕、不再默默變成「沒有 Uniform」；`_watch`、`flush` 只略過拒絕（沒有 GLSL OP、程式壞了），程式錯誤照實出錯；`glsl()` 取代外部呼叫私有的 `_shader`。驗證：Python 91（新增：改名照新路徑、刪掉放掉連線、關閉連線清序號、程式壞了是拒絕、服務每次的連線名稱不同、停止後不收新連線）；TD：重裝後三個 Grape OP 照 id 監看；停止服務時監看全關、Manager 放開，啟動後所有頁面自己重連、監看恢復。

@@ -10,6 +10,7 @@ from hashlib import sha256
 import json
 import math
 import re
+import traceback
 import uuid
 
 import uniform_writer
@@ -33,7 +34,7 @@ PROTOCOL = 'grape.top.ts.1'  # the frontend compiler protocol this build speaks
 MAX_GRAPH_BYTES = 512000     # the graph text; the core keeps a copy until we report it (config.ts documentBytes, convention 5)
 # Why GLSL has a limit (measured 2026-10-09, TD 2025.33230): TD has none (it compiled a 2 MB source),
 # but compiling real code blocks TD's main thread about 2.2 ms per KB (50 KB 104 ms, 150 KB 340 ms),
-# and an apply compiles twice (validation, then the Grape OP). 512,000 still allows a stall of
+# and an apply compiles once, on the Grape OP itself (Refactor.62.1). 512,000 still allows a stall of
 # seconds; the number is inherited and should be revisited with the subgraph-expansion measurements.
 # GLSL 上限的理由（10-09 實測）：TD 本身沒有上限（2 MB 也能編）；但實際程式碼編譯時 TD 主執行緒
 # 約每 KB 卡 2.2 ms，送出一次編兩次。512 KB 仍可能卡數秒，數字是沿用的，待子圖展開實測時重訂。
@@ -80,6 +81,11 @@ class RevisionConflict(Refused):
 class BuildChanged(Refused):
     """The editor page was built for another TD-Grape build (Refactor.52). 編輯頁與 TD-Grape 的建置不同。"""
     code = 'build_changed'
+
+
+class CompileFailed(RuntimeError):
+    """TD did not compile the GLSL (its Info DAT says so). Not a refusal: the graph is still saved and the last good
+    Shader keeps running (Q38 2-5). TD 沒編過這段 GLSL；不是拒絕：圖照存、上一個能跑的 Shader 繼續跑。"""
 
 
 class TextureUnavailable(Refused):
@@ -209,9 +215,8 @@ class NextFamily:
     FORMAT = FORMAT
     PROTOCOL = PROTOCOL
 
-    def __init__(self, comp, *, validation_area=None, presets=None):
+    def __init__(self, comp, *, presets=None):
         self.comp = comp
-        self.validation_area = validation_area
         # entry -> TD expression, read by the Manager from the editor bundle (Q61). 由 Manager 從網頁資產讀入。
         self.presets = presets or {}
 
@@ -493,29 +498,8 @@ class NextFamily:
         message = info.text
         error = shader.errors()
         if error or 'ERROR:' in message or message.count('Compiled Successfully') < 2:
-            raise RuntimeError((error + '\n' + message).strip() or 'TD has not confirmed Shader compilation.')
+            raise CompileFailed((error + '\n' + message).strip() or 'TD has not confirmed Shader compilation.')
         return message
-
-    def _validate(self, pixel, inputs=0):
-        # A disposable compiler target; never a delivered Grape OP. It has as many inputs as the Grape
-        # OP will have: GLSL that reads sTD2DInputs[i] only compiles when input i exists.
-        # 丟棄式的編譯目標；輸入數量與 Grape OP 相同（讀 sTD2DInputs[i] 的 GLSL 要有第 i 個輸入才編得過）。
-        comp = self.validation_area.create(baseCOMP, 'candidate_' + uuid.uuid4().hex[:12])
-        try:
-            comp.create(textDAT, 'pixel_shader').text = pixel
-            stand_ins = [comp.create(constantTOP, 'in' + str(i + 1)).name for i in range(inputs)]
-            shader = comp.create(glslTOP, 'shader')
-            shader.par.tops = ' '.join(stand_ins)
-            shader.par.pixeldat = 'pixel_shader'
-            shader.par.glslversion = self._shader(self.comp).par.glslversion.eval()
-            shader.par.outputresolution = 'custom'
-            shader.par.resolutionw = 16
-            shader.par.resolutionh = 16
-            shader.par.format = 'rgba32float'
-            comp.create(infoDAT, 'compile_info').par.op = 'shader'
-            return self._verify_gpu(comp)
-        finally:
-            comp.destroy()
 
     def apply(self, body, *, catalog_hash):
         """Two parts (Q38 2-2): the execution part (GLSL + bindings) is applied as a pair and
@@ -539,7 +523,7 @@ class NextFamily:
         next_revision = revision + 1
         meta = dict(meta)
         meta['document'] = {'revision': next_revision, 'sha256': digest(text)}
-        shader_updated, shader_error, notices = False, None, []
+        shader_updated, shader_error, notices, internal_error = False, None, [], None
         if runtime_text is not None:
             compiled = read_runtime(runtime_text, presets=self.presets)
             inputs = texture_inputs(compiled)
@@ -556,9 +540,12 @@ class NextFamily:
             # The same program with the same inputs (e.g. only a Uniform value or a default image
             # changed): nothing to compile. 程式與輸入都相同（例如只改 Uniform 的值）：不需要編譯。
             same_program = pixel.text == compiled['pixel'] and self._input_ids() == [e['id'] for e in inputs]
+            # Compiled on the Grape OP's own GLSL TOP, with its real inputs, passes and outputs (Refactor.62.1, human
+            # 2026-10-10): no stand-in to keep in step, one compile when it works. A failure is put back at once; the
+            # error image may show for that moment (human: acceptable, the node will be pointed at).
+            # 在 Grape OP 自己的 GLSL TOP 上編譯（真的輸入、passes、輸出），沒有替身要同步，成功只編一次；失敗立刻還原，
+            # 那一下可能出現錯誤圖（人類：可以接受，之後會指回節點）。
             try:
-                if not same_program:
-                    self._validate(compiled['pixel'], len(inputs))
                 # The inputs and the GLSL that reads them change together (Q38 2-2).
                 # 輸入接口與讀它們的 GLSL 一起換。
                 placed = self._place_inputs(inputs)
@@ -568,13 +555,17 @@ class NextFamily:
                 if not same_program:
                     self._verify_gpu(self.comp)
             except Exception as error:
-                # The GLSL did not compile in TD: the Shader and its inputs stay the last known good,
-                # and the graph is still saved below (Q38: only the execution part is all-or-nothing).
-                # GLSL 在 TD 編譯失敗：Shader 與輸入接口停在最後成功版，圖照樣在下面存起來。
+                # The Shader and its inputs go back to the last known good, and the graph is still saved below (Q38 2-5:
+                # the work is never lost). A compile failure is said as one; anything else is our own error, said as that,
+                # with its traceback in the status DAT (Refactor.62.1, D1).
+                # Shader 與輸入回到最後成功版，圖照樣在下面存（Q38 2-5：工作不能丟）。編譯失敗照實說；其他是我們自己的錯，
+                # 照實說並把 traceback 記在 status DAT。
                 pixel.text = previous
                 if placed is not None:
                     placed[1]()
                 shader_updated, shader_error = False, str(error)
+                if not isinstance(error, CompileFailed):
+                    internal_error = traceback.format_exc(limit=8)
             else:
                 placed[0]()
                 notices = self._write_uniforms(uniforms, previous_uniforms)
@@ -592,7 +583,13 @@ class NextFamily:
         # Every edit is not shown on the status bar: too much (human 2026-10-09). Uncomment to watch edits.
         # 每一步編輯不顯示在狀態列（資訊量太大）；要觀察時取消下一行的註解。
         # notify(self.comp, 'applied revision ' + str(next_revision))
-        if shader_error is not None:
+        if internal_error is not None:
+            message = ('TD-Grape ran into an internal error while applying the Shader; the graph is saved and the last good '
+                       'Shader keeps running.')
+            self.status('apply-internal-error', message, revision=next_revision,
+                        runtimeRevision=meta['runtime']['revision'], error=shader_error, traceback=internal_error)
+            notify(self.comp, message)
+        elif shader_error is not None:
             message = 'GLSL failed to compile in TD; the graph is saved and the last good Shader keeps running.'
             self.status('glsl-compile-failed', message, revision=next_revision,
                         runtimeRevision=meta['runtime']['revision'], error=shader_error)

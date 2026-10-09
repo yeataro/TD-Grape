@@ -70,7 +70,6 @@ positions = {
 for name, source in modules.items():
     text(manager, name, source, *positions[name], 'json' if source.endswith('.json') else 'python')
 
-node(manager, baseCOMP, 'validation', 1000, -260)
 
 # What TD reads from the web assets (design-interview Q61), written on the network so it can be found
 # when the web hosting leaves TD. 網頁資產搬離 TD 時要找得到的依賴，寫在網路上。
