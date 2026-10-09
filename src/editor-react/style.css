@@ -204,7 +204,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    left for the appearance round). The type colour is inline, hence !important.
    接線：選取與滑鼠移上去時變亮加粗（照舊產品；柔光是外觀選項，留到外觀那輪）。型別色是行內樣式，所以要 !important。 */
 /* Multi-selection frame (Refactor.50.3), as the legacy #selectionbounds. 多選框，照舊產品。 */
-.selection-frame { position: absolute; left: 0; top: 0; border: 1px dashed var(--select-frame); pointer-events: none; }
+/* Sized to the nodes; the gap and the dashed line grow outward, so the line sits --selection-gap from the nodes.
+   大小等於節點範圍；間距與虛線往外長，虛線離節點 --selection-gap。 */
+.selection-frame { position: absolute; left: 0; top: 0; box-sizing: content-box; padding: var(--selection-gap);
+  margin: calc(-1 * var(--selection-gap) - 1px); border: 1px dashed var(--select-frame); pointer-events: none; }
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
 .grape-node.box-in { outline: 2px dashed var(--select); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: 5 !important; }

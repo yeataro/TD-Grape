@@ -8,14 +8,14 @@ import type { FlowNode } from './projection';
 // Flow's public tools, so it follows moves and zoom; it is worked out again only when the nodes change.
 // 多選框：選兩個以上節點就顯示（人類；舊產品因為疊了好幾條規則，會出現未預期的表現）。樣子照舊產品（1px 虛線、四周 6px）。
 // 目前只有外觀：沒有把手（調大小另一輪）、不吃滑鼠。用 React Flow 的公開工具畫在畫布座標上，跟著移動與縮放；只在節點變了才重算。
-const gap = 6;
+// The distance to the nodes is the theme's --selection-gap (style.css); here only the nodes' own bounds.
+// 框和節點的距離是主題的 --selection-gap（style.css）；這裡只給節點本身的範圍。
 
 export function SelectionFrame({ nodes }: { nodes: readonly FlowNode[] }) {
   const selected = nodes.filter(node => node.selected);
   if (selected.length < 2) return null;
   const bounds = getNodesBounds(selected);
   return <ViewportPortal>
-    <div className="selection-frame" style={{ transform: `translate(${bounds.x - gap}px, ${bounds.y - gap}px)`,
-      width: bounds.width + gap * 2, height: bounds.height + gap * 2 }} />
+    <div className="selection-frame" style={{ transform: `translate(${bounds.x}px, ${bounds.y}px)`, width: bounds.width, height: bounds.height }} />
   </ViewportPortal>;
 }

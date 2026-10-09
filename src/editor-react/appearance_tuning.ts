@@ -12,6 +12,7 @@ export type Tunable = { name: string; label: Message } & ({ kind: 'color' } | { 
 export const TUNABLES: readonly Tunable[] = [
   { name: '--palette-select-green', label: tr('tune.select', 'Selection'), kind: 'color' },
   { name: '--tint-select-primary', label: tr('tune.selectPrimary', 'Current among several, brighter by'), kind: 'percent', min: 0, max: 80, step: 1 },
+  { name: '--selection-gap', label: tr('tune.selectionGap', 'Multi-selection frame distance'), kind: 'px', min: 0, max: 30, step: 1 },
   { name: '--tint-node-border', label: tr('tune.nodeBorder', 'Node outline and title line'), kind: 'percent', min: 0, max: 40, step: 1 },
   { name: '--tint-layer-shadow', label: tr('tune.layerShadow', 'Layered shadow strength'), kind: 'percent', min: 0, max: 80, step: 1 },
   { name: '--layer-blur', label: tr('tune.layerBlur', 'Layered shadow softness'), kind: 'px', min: 0, max: 30, step: 1 },
@@ -19,6 +20,11 @@ export const TUNABLES: readonly Tunable[] = [
   { name: '--tint-layer-glow', label: tr('tune.layerGlow', 'Inner glow strength'), kind: 'percent', min: 0, max: 20, step: 1 },
   { name: '--layer-glow-blur', label: tr('tune.layerGlowBlur', 'Inner glow reach'), kind: 'px', min: 0, max: 30, step: 1 },
   { name: '--canvas-shadow', label: tr('tune.canvasShadow', 'Canvas inner shadow reach'), kind: 'px', min: 0, max: 60, step: 1 },
+  { name: '--font-xs', label: tr('tune.fontXs', 'Text size: smallest'), kind: 'px', min: 8, max: 24, step: 1 },
+  { name: '--font-sm', label: tr('tune.fontSm', 'Text size: small'), kind: 'px', min: 8, max: 24, step: 1 },
+  { name: '--font-md', label: tr('tune.fontMd', 'Text size: medium'), kind: 'px', min: 8, max: 24, step: 1 },
+  { name: '--font-base', label: tr('tune.fontBase', 'Text size: body'), kind: 'px', min: 8, max: 24, step: 1 },
+  { name: '--font-lg', label: tr('tune.fontLg', 'Text size: large'), kind: 'px', min: 8, max: 24, step: 1 },
 ];
 
 const key = (name: string) => 'tune.' + name;

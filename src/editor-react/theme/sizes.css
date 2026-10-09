@@ -58,6 +58,7 @@
   --expand-width: 16px; /* an open/close triangle 展開三角形的寬 */
   --checker: 12px;      /* one tile (2x2 squares) of a transparency checkerboard 透明棋盤格一個單元（2x2 格） */
   --source-name-min: 8em; /* the narrowest a source's name gets; its type shrinks first 來源名稱最窄寬度；型別先縮 */
+  --selection-gap: 10px;   /* the multi-selection frame's distance to the nodes (legacy 6px on 190px nodes; human 2026-10-09: too close) 多選框離節點的距離（舊產品 6px、節點 190px；人類：太近） */
   --node-min-width: 250px; /* one shared minimum; a node grows with its content 節點共用的最小寬度 */
   --row-font: var(--font-md);
   /* shapes and handles (shared by both sizes) 形狀與把手（兩種大小共用） */
