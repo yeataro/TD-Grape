@@ -1,13 +1,13 @@
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, getBezierPath,
-  type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, useReactFlow, getBezierPath,
+  type ConnectionLineComponentProps, type NodeTypes, type XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
 import './style.css';
 import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, HostError, type StateResponse } from './host';
-import { Editor as EditorSession, type EditorState } from './editor';
+import { Editor as EditorSession, type EditorState, type WireEnd } from './editor';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
@@ -17,6 +17,10 @@ import { SourcesPanel } from './SourcesPanel';
 import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
 import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
+import { addChoices, type AddChoice } from './add_entries';
+import { AddNodePanel, DRAG_TYPE } from './AddNodePanel';
+import { CreateNode, type CreateRequest } from './CreateNode';
+import { OptionsContext, defaultOptions, useOptions } from './options';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, useShell, type Shell } from './shell';
 import { listGrapeOps } from './grape_ops';
 import { sourceNow, describeSource, describeNow, buildLabel, tdLine, type TdIdentity, type DraftSource } from './td_identity';
@@ -33,11 +37,16 @@ function download(value: unknown, name = 'grape-draft.json') {
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
 }
 function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
+  const options = useOptions();
   const port = (props.fromHandle.type === 'source' ? props.fromNode.data.outputs : props.fromNode.data.inputs)
     .find(port => port.key === props.fromHandle.id);
   const [path] = getBezierPath({ sourceX: props.fromX, sourceY: props.fromY, targetX: props.toX, targetY: props.toY,
     sourcePosition: props.fromPosition, targetPosition: props.toPosition });
-  return <path d={path} fill="none" stroke={typeColor(port?.type ?? '')} strokeWidth={1.3} strokeDasharray="5 4" />;
+  // Over blank canvas from an output, a "+" says releasing opens Create node (Blender; human 2026-10-09). From an
+  // input there is none: releasing there pulls the wire. 從輸出拉、停在空白處時線頭有「＋」：放開會打開新增節點；從輸入拉沒有（放開是拔線）。
+  const plus = options.wireEndPlus && options.wireDropCreates && props.fromHandle.type === 'source' && !props.toHandle;
+  return <g><path d={path} fill="none" stroke={typeColor(port?.type ?? '')} strokeWidth={1.3} strokeDasharray="5 4" />
+    {plus && <text className="wire-plus" x={props.toX + 9} y={props.toY - 7}>+</text>}</g>;
 }
 // The grid thins out when zoomed out, as the legacy editor (legacy app.js:590–598): the spacing doubles until
 // dots are at least 14px apart on screen and the dots shrink with the zoom; Snap keeps the 22-unit grid.
@@ -51,19 +60,47 @@ function AdaptiveGrid() {
   return <Background gap={gap} size={dot / zoom} color="var(--grid-dot)" />;
 }
 const ZoomReadout = () => <span className="zoom-readout">{Math.round(useStore(state => state.transform[2]) * 100)}%</span>;
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, stage }: {
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, stage, onCreate, onDropChoice }: {
   session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; stage: string;
+  onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
 }) {
+  const options = useOptions();
+  // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human
+  // 2026-10-09). Only the input end moves. 從輸入端拿起線用 React Flow 自己的重接線（像 Blender）；只有輸入端能動。
+  const edges = useMemo(() => options.wirePickUp ? projection.edges.map(edge => ({ ...edge, reconnectable: 'target' as const })) : projection.edges,
+    [projection.edges, options.wirePickUp]);
+  // React Flow also reports the end of a reconnect as a connection end; that one is the reconnect's own.
+  // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
+  const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><RightDragSelect session={session} boxSelect={boxSelect}>
-    <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={projection.edges} nodeTypes={nodeTypes}
+    <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
-      onConnectEnd={(_event, state) => {
-        if (state.toHandle && !state.isValid) session.notice(new TextError(tr('edit.wireRefused', 'The core refused this wire: the types or the graph structure do not fit.')));
-        // Released on empty canvas from an input: pull that input's wire (Q33). 從輸入拉到空白處：拔線。
-        else if (!state.toHandle && state.fromHandle?.type === 'target' && state.fromNode && state.fromHandle.id)
-          session.disconnectInput(state.fromNode.id, state.fromHandle.id);
+      onConnectEnd={(event, state) => {
+        if (reconnecting.current) return;
+        if (state.toHandle && !state.isValid) { session.notice(new TextError(tr('edit.wireRefused', 'The core refused this wire: the types or the graph structure do not fit.'))); return; }
+        if (state.toHandle || !state.fromNode || !state.fromHandle?.id) return;
+        const node = state.fromNode.id, port = state.fromHandle.id, side = state.fromHandle.type === 'source' ? 'output' : 'input';
+        // Released on empty canvas from a connected input: pull that input's wire (Q33). 從接了線的輸入拉到空白處：拔線。
+        if (side === 'input' && projection.edges.some(edge => edge.target === node && edge.targetHandle === port)) { session.disconnectInput(node, port); return; }
+        // Otherwise Create node opens there with what fits (legacy graph_ui.js:15–20). 其他情況：在那裡打開新增節點，只列接得上的。
+        if (!options.wireDropCreates) return;
+        const data = state.fromNode.data as FlowNode['data'], point = 'changedTouches' in event ? event.changedTouches[0]! : event;
+        const type = (side === 'output' ? data.outputs : data.inputs).find(item => item.key === port)?.type ?? '';
+        onCreate({ screen: { x: point.clientX, y: point.clientY }, wire: { end: { node, port, side } as WireEnd, type } });
       }}
+      edgesReconnectable={options.wirePickUp}
+      onReconnectStart={() => { reconnecting.current = true; }}
+      onReconnect={(edge, connection) => { if (connection.target && connection.targetHandle && (connection.target !== edge.target || connection.targetHandle !== edge.targetHandle))
+        session.moveWire(edge.id, { node: connection.target, port: connection.targetHandle }); }}
+      // Dropped where no input takes it: the wire is pulled, as from the input itself (Q33). 放到沒有輸入的地方：拔線。
+      onReconnectEnd={(_event, edge, _type, state) => {
+        setTimeout(() => { reconnecting.current = false; });
+        if (!state.toHandle && edge.targetHandle) session.disconnectInput(edge.target, edge.targetHandle);
+      }}
+      onDoubleClick={event => { if ((event.target as Element).classList.contains('react-flow__pane')) onCreate({ screen: { x: event.clientX, y: event.clientY } }); }}
+      onDragOver={event => { if (event.dataTransfer.types.includes(DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }}
+      onDrop={event => { const id = event.dataTransfer.getData(DRAG_TYPE); if (id) { event.preventDefault(); onDropChoice(id, { x: event.clientX, y: event.clientY }); } }}
       onNodeDragStart={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
       // Selection is decided by the session, not React Flow (Refactor.49; reported to the human as an
       // exception): nodes on press (RightDragSelect), wires on click, blank canvas clears.
@@ -71,7 +108,10 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       elementsSelectable={false} multiSelectionKeyCode={null}
       onEdgeClick={(event, edge) => session.clickEdge(edge.id, pressKind(event))}
       onPaneClick={() => session.clearSelection()}
-      edgesReconnectable={false} snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
+      // Double-click on blank canvas opens Create node (legacy), so React Flow's double-click zoom is off
+      // (reported to the human as an exception, Refactor.54). 雙擊空白處打開新增節點（照舊），所以關掉 RF 的雙擊放大（已報告的例外）。
+      zoomOnDoubleClick={false}
+      snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
       minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <AdaptiveGrid />
@@ -126,6 +166,19 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
   };
   const renewBox = <label className="check renew-id" title={say(tr('identity.renewHelp', 'Changes the ID of the Grape OP in the TD connected now, the same as its Regenerate ID button. Addresses with the old ID no longer open it.'))}>
     <input type="checkbox" checked={renew} onChange={event => setRenew(event.target.checked)} />{say(tr('identity.renew', 'Also give this Grape OP a new Grape ID'))}</label>;
+  const flow = useReactFlow();
+  // What can be added, shared by the Add Node panel and Create node (Refactor.54). 可新增的東西，兩個入口共用。
+  const choices = useMemo(() => addChoices(state.declarations ?? [], text), [state.declarations, text]);
+  const [creating, setCreating] = useState<CreateRequest | null>(null);
+  const middle = () => { const box = document.querySelector('.canvas')!.getBoundingClientRect(); return { x: box.x + box.width / 2, y: box.y + box.height / 3 }; };
+  const addAt = (choice: AddChoice, at: { x: number; y: number }, wire?: { end: WireEnd; port: string }) =>
+    session?.addNode(choice.spec, flow.screenToFlowPosition(at), wire);
+  const onCreate = useCallback((request: CreateRequest) => setCreating(request), []);
+  const choicesRef = useRef(choices); choicesRef.current = choices;
+  const onDropChoice = useCallback((id: string, at: { x: number; y: number }) => {
+    const choice = choicesRef.current.find(item => item.id === id);
+    if (choice) session?.addNode(choice.spec, flow.screenToFlowPosition(at));
+  }, [session, flow]);
   const [draft, setDraft] = useState(() => {
     if (!session) return null;
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
@@ -149,12 +202,17 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
       const element = event.target as HTMLElement;
       if (element.closest('input,select,textarea,[contenteditable="true"]')) return;
       if (!draft && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); session.history(event.shiftKey); }
+      // Tab opens Create node in the upper middle of the network (legacy graph_ui.js:2560). Tab 在網路區中間偏上打開新增節點。
+      else if (!draft && event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey) { event.preventDefault(); setCreating({ screen: middle() }); }
     };
     addEventListener('beforeunload', leave); addEventListener('keydown', keys);
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
   }, [session, draft]);
   // The panels' content, from the graph being edited (Q47 4). 面板內容，來自正在編輯的圖。
   const panels: Record<string, PanelView> = {
+    addNode: { title: tr('addNode.title', 'Add Node'), content: session
+      ? <AddNodePanel choices={choices} onAdd={choice => addAt(choice, middle())} />
+      : <p className="hint">{say(tr('addNode.noGraph', 'Open a Grape OP to add nodes.'))}</p> },
     sources: { title: tr('sources.title', 'Shared Sources'), content: session
       ? <SourcesPanel declarations={state.declarations} references={state.references} />
       : <p className="hint">{say(tr('sources.noGraph', 'Open a Grape OP to see its shared sources.'))}</p> },
@@ -176,11 +234,11 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
         </div>}
         <div className="canvas" inert={!!draft}>
           {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect}
-            stage={say(tr('stage.pixel', 'Pixel stage'))} />
+            stage={say(tr('stage.pixel', 'Pixel stage'))} onCreate={onCreate} onDropChoice={onDropChoice} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
             }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas>}
-          <NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} text={text} />
+          <NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} onCreate={() => setCreating({ screen: middle() })} />
           {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
           {session && state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
             <span>{say(conflictMessage)}</span>
@@ -191,6 +249,8 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
             <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button>
           </div>}
           {draft && <div className="draft-blocker" />}</div>
+        {session && creating && <CreateNode request={creating} choices={choices} session={session} onClose={() => setCreating(null)}
+          onPick={(choice, port) => { setCreating(null); addAt(choice, creating.screen, creating.wire && port ? { end: creating.wire.end, port } : undefined); }} />}
       </section>
       <PanelZone side="right" layout={layout} panels={panels} />
     </div>
@@ -279,7 +339,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
 function Root(props: { token: string; bootstrap: Bootstrap; text: (key: string) => string; version: string }) {
   const current = useSyncExternalStore(languageSubscribe, language);
   const text = useMemo(() => (key: string) => props.text(key), [props.text, current]);
-  return <App {...props} text={text} />;
+  return <OptionsContext.Provider value={defaultOptions}><App {...props} text={text} /></OptionsContext.Provider>;
 }
 async function start() {
   const token = location.hash.slice(1) || sessionStorage.getItem('sgrapeToken') || '';

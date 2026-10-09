@@ -17,12 +17,12 @@ export type LayoutData = { version: 1; titleBar: boolean; left: Zone; right: Zon
 /** What a zone shows for one panel. 一個面板在區裡顯示什麼。 */
 export type PanelView = { title: Message; content: ReactNode };
 
-// Default arrangement, as the legacy editor (Sources and GLSL as tabs on the left). The right zone has no panel
+// Default arrangement, as the legacy editor (Sources, Add Node and GLSL as tabs on the left). The right zone has no panel
 // until the Parameter panel exists. These numbers are tentative (human 2026-10-09: to be tuned).
-// 預設配置照舊產品：左邊 Sources｜GLSL 分頁；右邊等參數面板做了才有。數字是暫定的。
-const PANELS: Record<string, Side> = { sources: 'left', glsl: 'left' };
+// 預設配置照舊產品：左邊 Sources｜Add Node｜GLSL 分頁；右邊等參數面板做了才有。數字是暫定的。
+const PANELS: Record<string, Side> = { sources: 'left', addNode: 'left', glsl: 'left' };
 const defaults = (): LayoutData => ({ version: 1, titleBar: true,
-  left: { open: true, width: 380, groups: [{ panels: ['sources', 'glsl'], active: 'sources', size: 1 }] },
+  left: { open: true, width: 380, groups: [{ panels: ['sources', 'addNode', 'glsl'], active: 'addNode', size: 1 }] },
   right: { open: false, width: 380, groups: [] } });
 export const ZONE_MIN = 220, ZONE_MAX = 900;
 const KEY = 'grape-react-layout';

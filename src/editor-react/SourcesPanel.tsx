@@ -3,6 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields, useSession } from './NodeCard';
+import { Badge } from './controls';
 import type { ComponentState, UniformStates } from './host';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
@@ -61,8 +62,12 @@ export function SourcesPanel({ declarations, references }: {
     <button onClick={() => session.placeDeclaration(declaration.id, center())}>{say(tr('sources.place', 'Add to graph'))}</button>
     <button onClick={() => session.removeDeclaration(declaration.id)}>{say(tr('sources.remove', 'Delete'))}</button>
   </div>;
+  // Each section's count, in its colour group (legacy source counts; Refactor.54: the Sources area is coloured).
+  // 每一區的數量，用該區的 colorGroup 上色（照舊產品；來源區上色）。
+  const count = (n: number, kind: string) => <Badge count={n} group={core.declarationKinds.get(kind)?.colorGroup ?? 'runtime'}
+    title={tr('sources.available', '{count} available', { count: n })} />;
   return <section className="sources">
-    <header className="sources-section"><span>{say(tr('sources.textureInputs', 'TOP texture inputs'))}</span>
+    <header className="sources-section"><span>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</span>
       <button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button></header>
     <p className="hint">{say(tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.'))}</p>
     {inputs.map(declaration => <div className="source-row" key={declaration.id}>
@@ -75,7 +80,7 @@ export function SourcesPanel({ declarations, references }: {
       {actions(declaration)}
     </div>)}
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}
-    <header className="sources-section"><span>{say(tr('sources.uniforms', 'Uniforms'))}</span>
+    <header className="sources-section"><span>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</span>
       <span className="section-buttons"><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
       <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Colour Uniform'))}</button></span></header>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
@@ -93,7 +98,7 @@ export function SourcesPanel({ declarations, references }: {
     {/* Time (preset Uniforms, Q61): all six listed, unused ones grey; placing one creates it the first time.
         Name and type are locked here; in TD it is an ordinary Uniform row with an expression.
         時間（預設 Uniform）：6 筆都列出，沒用到的灰色；第一次放到圖上時建立。名字型別在這裡鎖住；在 TD 是一般的 Uniform 列。 */}
-    <header className="sources-section"><span>{say(tr('sources.time', 'Time'))}</span></header>
+    <header className="sources-section"><span>{say(tr('sources.time', 'Time'))}{count(core.uniformPresets.filter(preset => presetOf(preset.entry)).length, 'uniform')}</span></header>
     <p className="hint">{say(tr('sources.timeHint', 'Uniforms that TouchDesigner drives with an expression. The name is fixed; one of each per graph. Remove the expression in TD to set the value yourself.'))}</p>
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
@@ -104,7 +109,7 @@ export function SourcesPanel({ declarations, references }: {
           {declared && <button onClick={() => session.removeDeclaration(declared.id)}>{say(tr('sources.remove', 'Delete'))}</button>}</div>
         {declared && uniformValue(declared)}
       </div>; })}
-    <header className="sources-section"><span>{say(tr('sources.constants', 'Global constants'))}</span>
+    <header className="sources-section"><span>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</span>
       <button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button></header>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
     {constants.map(declaration => <div className="source-row" key={declaration.id}>
@@ -118,7 +123,7 @@ export function SourcesPanel({ declarations, references }: {
         commit={value => session.setDeclarationValue(declaration.id, value)} />
       {actions(declaration)}
     </div>)}
-    <header className="sources-section"><span>{say(tr('sources.tdValues', 'TD built-in values'))}</span></header>
+    <header className="sources-section"><span>{say(tr('sources.tdValues', 'TD built-in values'))}{count(builtins.length, 'tdValue')}</span></header>
     <p className="hint">{say(tr('sources.tdValuesHint', 'Values TouchDesigner already provides to the shader. No setup needed; they also work inside subgraphs.'))}</p>
     {builtins.map(entry => <div className="builtin-row" key={entry.id} title={say(tdValueHint(entry))}>
       <code>{entry.name}</code><small>{entry.type}</small>

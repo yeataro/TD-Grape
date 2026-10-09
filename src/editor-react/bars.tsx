@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { creatableEntries } from './core';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Select, ToolGroup, notYet } from './controls';
@@ -66,8 +65,8 @@ export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean
  * history, the selection's actions (until the floating selection toolbar exists), box select, canvas
  * preferences and the GLSL panel. Only what exists is shown. 網路區自己的功能列，浮在上緣：左邊 Stage；右邊歷史、
  * 選取的動作（浮動選取工具列做好之前放這裡）、框選、畫布偏好、GLSL 面板。只放現在有的。 */
-export function NetworkBar({ session, prefs, onGlsl, text }: {
-  session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void; text: (key: string) => string;
+export function NetworkBar({ session, prefs, onGlsl, onCreate }: {
+  session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void; onCreate(): void;
 }) {
   const state = useEditorState(session), flow = useReactFlow();
   const nodes = state?.projection.nodes.filter(node => node.selected) ?? [], edges = state?.projection.edges.filter(edge => edge.selected) ?? [];
@@ -80,12 +79,8 @@ export function NetworkBar({ session, prefs, onGlsl, text }: {
         {stages.map(stage => <button key={stage} type="button" role="tab" aria-selected={stage === 'pixel'}
           aria-disabled={stage !== 'pixel' || undefined} title={stage === 'pixel' ? undefined : say(notYet)}>
           {stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage}</button>)}</div>}
-      {/* The browser's native list until the Add Node panels (round 2). 新增節點的面板做好前（第 2 輪）暫用。 */}
-      <Select label={tr('toolbar.addNode', 'Add node')} value="" disabled={!session} onChange={index => {
-        const box = document.querySelector('.canvas')!.getBoundingClientRect(), entry = creatableEntries[Number(index)]!;
-        session!.add(entry.uuid, flow.screenToFlowPosition({ x: box.x + box.width / 2, y: box.y + box.height / 2 }), entry.params);
-      }} options={creatableEntries.map((entry, i) => ({ value: String(i), label: entry.literal ? entry.label : text(entry.label) }))}>
-        {say(tr('toolbar.addNodePrompt', '+ Add node'))}</Select>
+      {/* Opens Create node (Refactor.54). 打開新增節點。 */}
+      <button type="button" aria-disabled={!session || undefined} onClick={() => { if (session) onCreate(); }}>{say(tr('toolbar.addNodePrompt', '+ Add node'))}</button>
     </div>
     <div className="network-bar-group">
       <ToolGroup>

@@ -12,6 +12,27 @@ import { LiveValues, type LiveMessage } from './live_values';
 // type and limit; this layer only runs that command and wires the declared port.
 // 模組宣告的待新增輸入；命令、接孔、型別與上限都屬模組，這裡只執行並接到宣告的接孔。
 export const spareHandle = '__spare__';
+/** A node to add (Refactor.54): a node type with its entry's params, or a preset Uniform (its declaration is
+ * created the first time, Q61). 要新增的節點：節點種類加入口參數，或預設 Uniform（第一次放時建立宣告）。 */
+export type NewNode = { nodeType: string; params: ObjectValue } | { preset: string };
+/** The end of a wire being dragged: from an output (a new node's input takes it) or from an input (a new node's
+ * output feeds it). 正在拉的線的這一端：從輸出（新節點的輸入接它）或從輸入（新節點的輸出接上它）。 */
+export type WireEnd = { node: string; port: string; side: 'output' | 'input' };
+const newId = () => 'n' + crypto.randomUUID().replaceAll('-', '');
+// Puts a new node into a document: the one path for adding, also used to rehearse on a discarded candidate.
+// 把新節點放進文件：新增的唯一路徑，也用在丟棄的候選文件上預演。
+function insertNew(document: GraphDocument, spec: NewNode, position: XYPosition) {
+  const net = document.networks.get('pixel')!, id = newId();
+  if ('preset' in spec) {
+    const preset = core.uniformPresets.find(item => item.entry === spec.preset)!;
+    let declaration = document.document.declarations.find(d => d.kind === 'uniform' && d.entry === spec.preset);
+    if (!declaration) declaration = document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16),
+      kind: 'uniform', name: preset.name, type: preset.type, entry: spec.preset });
+    net.insert({ id, nodeType: 'sgrape.builtin.declaration', params: { declarationId: declaration.id }, ui: { ...position } });
+  } else net.insert({ id, nodeType: spec.nodeType, params: structuredClone(spec.params), ui: { ...position } });
+  return id;
+}
+class Rehearsed extends Error {}
 function wire(net: Network, c: Connection | FlowEdge) {
   if (!c.sourceHandle || !c.targetHandle) throw Error('Missing port');
   let port = c.targetHandle;
@@ -270,8 +291,43 @@ export class Editor {
   configure = (id: string, type: string) => this.transact(tr('edit.typeChanged', 'Type updated'), net => net.node(id).configure({ type }));
   // `params` come from the menu entry the module declared (Q37 1-5); the graph does not record the entry.
   // params 來自模組宣告的入口；圖不記錄來自哪個入口。
-  add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
-    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: uuid, params: structuredClone(params), ui: { ...position } }));
+  add = (uuid: string, position: XYPosition, params: ObjectValue = {}) => this.addNode({ nodeType: uuid, params }, position);
+  /** Adds a node, and wires it to the dragged wire's end when given (one step, one Undo; Refactor.54).
+   * 新增節點；有給拉線的那一端就順便接上（一步、一次 Undo）。 */
+  addNode = (spec: NewNode, position: XYPosition, wire?: { end: WireEnd; port: string }) =>
+    this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => {
+      const id = insertNew(document, spec, position), net = document.networks.get('pixel')!;
+      if (!wire) return;
+      const { end, port } = wire;
+      if (end.side === 'output') net.connect(net.node(end.node).port('output', end.port), net.node(id).port('input', port), core.values.policy);
+      else {
+        // An input takes one wire: the new one replaces whatever was there. 輸入只接一條：新線取代原本的。
+        const old = net.node(end.node).port('input', end.port).edges;
+        if (old.length) net.disconnectAll(old);
+        net.connect(net.node(id).port('output', port), net.node(end.node).port('input', end.port), core.values.policy);
+      }
+    });
+  /** Which port of a new node would take this wire, rehearsed on a discarded candidate so the answer follows the
+   * same rules as the real edit (Refactor.54; no separate core question). A port of exactly the wire's type comes
+   * first. null: it does not fit. 新節點的哪個接孔能接這條線：在丟棄的候選文件上預演，答案與真正的修改同一套規則；
+   * 型別完全相同的優先。null＝接不上。 */
+  portFor = (spec: NewNode, end: WireEnd): { port: string; type: string } | null => {
+    let found: { port: string; type: string } | null = null;
+    try {
+      this.document.change(document => {
+        const id = insertNew(document, spec, { x: 0, y: 0 }), net = document.networks.get('pixel')!;
+        const there = net.node(end.node).interface[end.side === 'output' ? 'outputs' : 'inputs'][end.port]?.type;
+        const ports = Object.entries(net.node(id).interface[end.side === 'output' ? 'inputs' : 'outputs']);
+        const fits = ports.filter(([key]) => net.plan(core.values.policy, { kind: 'wire',
+          ...(end.side === 'output' ? { from: { node: end.node, port: end.port }, to: { node: id, port: key } }
+            : { from: { node: id, port: key }, to: { node: end.node, port: end.port } }) }).ok);
+        const best = fits.find(([, port]) => port.type === there) ?? fits[0];
+        if (best) found = { port: best[0], type: best[1].type };
+        throw new Rehearsed();
+      });
+    } catch (error) { if (!(error instanceof Rehearsed)) return null; }
+    return found;
+  };
   // Shared sources (Refactor.40; Q41, Q45): global constants for now. 共用來源：本輪只有全域常數。
   addConstant = () => {
     const name = core.freeDeclarationName(this.document.document, 'constant');
@@ -289,16 +345,7 @@ export class Editor {
   };
   // Preset Uniforms (time, Q61): placing one creates its Uniform the first time and reuses it after; one
   // step, one Undo. The core fills in the name and type. 預設 Uniform：第一次放到圖上時建立，之後重用；名字型別由核心照表填。
-  placePreset = (entry: string, position: XYPosition) => {
-    const preset = core.uniformPresets.find(item => item.entry === entry)!;
-    this.transactGraph(tr('edit.nodeAdded', 'Node added'), document => {
-      let declaration = document.document.declarations.find(d => d.kind === 'uniform' && d.entry === entry);
-      if (!declaration) declaration = document.addDeclaration({ id: 'd' + crypto.randomUUID().replaceAll('-', '').slice(0, 16),
-        kind: 'uniform', name: preset.name, type: preset.type, entry });
-      document.networks.get('pixel')!.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.declaration',
-        params: { declarationId: declaration.id }, ui: { ...position } });
-    });
-  };
+  placePreset = (entry: string, position: XYPosition) => this.addNode({ preset: entry }, position);
   // TOP texture inputs (Refactor.43): each becomes an input of the Grape OP in TD, in list order.
   // TOP 貼圖輸入：每一筆在 TD 成為 Grape OP 的輸入接口，照清單順序。
   addTopInput = () => {
@@ -321,11 +368,9 @@ export class Editor {
     this.transactGraph(tr('sources.valueChanged', 'Shared source value updated; waiting to apply'), document => { document.changeDeclaration(id, { value }); });
   removeDeclaration = (id: string) =>
     this.transactGraph(tr('sources.removed', 'Shared source deleted with the nodes that used it'), document => document.removeDeclaration(id));
-  placeDeclaration = (id: string, position: XYPosition) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
-    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.declaration', params: { declarationId: id }, ui: { ...position } }));
+  placeDeclaration = (id: string, position: XYPosition) => this.addNode({ nodeType: 'sgrape.builtin.declaration', params: { declarationId: id } }, position);
   // TD built-in values (Refactor.41; Q45 01): no declaration, the node picks a table entry.
-  placeTdValue = (entry: string, position: XYPosition) => this.transact(tr('edit.nodeAdded', 'Node added'), net =>
-    net.insert({ id: 'n' + crypto.randomUUID().replaceAll('-', ''), nodeType: 'sgrape.builtin.td_value', params: { entry }, ui: { ...position } }));
+  placeTdValue = (entry: string, position: XYPosition) => this.addNode({ nodeType: 'sgrape.builtin.td_value', params: { entry } }, position);
   valid = (c: Connection | FlowEdge) => {
     if (!c.sourceHandle || !c.targetHandle) return false;
     try {
@@ -337,6 +382,16 @@ export class Editor {
     } catch { return false; }
   };
   connect = (c: Connection) => this.transact(tr('edit.wired', 'Wire updated'), net => wire(net, c));
+  /** A wire picked up from an input and dropped on another input moves there (Refactor.54; human 2026-10-09:
+   * yes, move it, as Blender). One step, one Undo. 從輸入拿起的線放到另一個輸入：搬過去（人類：要，像 Blender）。 */
+  moveWire = (edgeId: string, to: { node: string; port: string }) => this.transact(tr('edit.wireMoved', 'Wire moved'), net => {
+    const edge = net.edges.find(item => item.id === edgeId), from = edge?.from;
+    if (!edge || !from) throw Error('The wire is gone');
+    net.disconnectAll([edge]);
+    const old = net.node(to.node).port('input', to.port).edges;
+    if (old.length) net.disconnectAll(old);
+    net.connect(from, net.node(to.node).port('input', to.port), core.values.policy);
+  });
   // Dragging from a connected input onto empty canvas pulls its wire (legacy behaviour, Q33).
   // 從有接線的輸入拉到空白處＝拔線（舊產品行為）。
   disconnectInput = (node: string, port: string) => this.transact(tr('edit.unwired', 'Wire removed'), net => {

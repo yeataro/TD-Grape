@@ -1064,3 +1064,46 @@ test('the Grape OP list comes from /api/shaders only', async () => {
   await assert.rejects(listGrapeOps('', async () => new Response(JSON.stringify({ error: 'Editor assets are ready; the new TD Manager is not connected yet' }), { status: 501 })),
     error => /not connected/.test(error.message));
 });
+
+// Refactor.54: adding from the two entries. One list (add_entries.ts); a dropped wire lists what fits, rehearsed on
+// a discarded candidate so it follows the real rules; adding + wiring is one step; a picked-up wire moves.
+// 新增節點的兩個入口：同一份清單；放開的線只列接得上的（在丟棄的候選上預演，規則同真正的修改）；新增＋接線是一步；拿起的線可搬。
+test('a dropped wire lists only what fits, and adding wires it in one step', t => {
+  const { session } = open(t);
+  const { addChoices, wireOrder } = load(path.join(root, 'src/editor-react/add_entries.ts'));
+  const choices = addChoices(session.snapshot().declarations, key => key), before = clone(session.graph());
+  const end = { node: 'a', port: 'out', side: 'output' };
+  const fits = choices.map(choice => [choice, session.portFor(choice.spec, end)]).filter(([, port]) => port);
+  assert.ok(fits.length > 10 && fits.length < choices.length, 'some fit a float output, not all');
+  assert.deepEqual(clone(session.graph()), before, 'rehearsals never change the graph');
+  const add = fits.find(([choice]) => choice.key === 'add');
+  assert.equal(add[1].port, 'a');
+  session.addNode(add[0].spec, { x: 5, y: 5 }, { end, port: add[1].port });
+  const graph = session.graph(), added = graph.stages.pixel.nodes.at(-1);
+  assert.equal(added.nodeType, 'sgrape.builtin.add');
+  assert.ok(graph.stages.pixel.edges.some(edge => edge.from[0] === 'a' && edge.to[0] === added.id && edge.to[1] === 'a'));
+  session.history(false);
+  assert.deepEqual(clone(session.graph()), before, 'one Undo removes the node and its wire');
+  assert.deepEqual([...wireOrder('vec3', 'output')].slice(0, 2), ['vector_split', 'split'], 'the legacy order for a vector output');
+});
+
+test('a picked-up wire moves to another input in one step', t => {
+  const { session } = open(t);
+  session.transact('wire', net => net.connect(net.node('a').outputs[0], net.node('sum').port('input', 'a'), GrapeGraph.values.policy));
+  const edge = session.graph().stages.pixel.edges.find(item => item.from[0] === 'a' && item.to[0] === 'sum');
+  session.moveWire(edge.id, { node: 'sum', port: 'b' });
+  const edges = session.graph().stages.pixel.edges.filter(item => item.from[0] === 'a' && item.to[0] === 'sum');
+  assert.deepEqual(clone(edges.map(item => item.to[1])), ['b']);
+  session.history(false);
+  assert.deepEqual(clone(session.graph().stages.pixel.edges.filter(item => item.from[0] === 'a' && item.to[0] === 'sum').map(item => item.to[1])), ['a']);
+});
+
+test('the add list carries categories, sources and search', t => {
+  const { session } = open(t);
+  const { addChoices, searchChoices, topCategories } = load(path.join(root, 'src/editor-react/add_entries.ts'));
+  const choices = addChoices(session.snapshot().declarations, key => key);
+  assert.equal(topCategories(choices)[0], 'source', 'Source first, as the legacy browser');
+  assert.ok(choices.some(choice => choice.path[0] === 'source' && choice.path[1] === 'tdBuiltIn'));
+  assert.ok(searchChoices(choices, 'sub').some(choice => choice.key === 'subtract'));
+  assert.equal(searchChoices(choices, '').length, choices.length);
+});

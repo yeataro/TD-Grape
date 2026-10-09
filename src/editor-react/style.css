@@ -187,3 +187,36 @@ input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100
 .switch-dialog { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 40; max-width: 460px; padding: 16px; display: flex; flex-wrap: wrap; gap: 8px;
   border: 1px solid #6d5b89; border-radius: 10px; background: #241f2e; box-shadow: 0 10px 30px #000a; }
 .switch-dialog p { flex-basis: 100%; margin: 0 0 6px; }
+
+/* Count badges (controls.tsx Badge, Refactor.54): plain, or in a colour group. 數量標籤：不上色，或用 colorGroup。 */
+.badge { display: inline-grid; place-items: center; min-width: 1.6em; margin-left: 6px; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  color: var(--text-muted); background: var(--surface-control); }
+.badge-group { color: var(--text-strong); background: color-mix(in srgb, var(--badge-color) 85%, transparent); }
+
+/* Create node (CreateNode.tsx) and the Add Node panel (AddNodePanel.tsx), Refactor.54. 新增節點的兩個入口。 */
+.create-node { position: fixed; z-index: 35; width: min(620px, calc(100vw - 16px)); height: min(440px, calc(100vh - 16px)); display: flex; flex-direction: column; gap: 8px;
+  padding: 10px; border: 1px solid var(--border-control); border-radius: 10px; background: var(--surface-raised); box-shadow: 0 10px 30px #000a; }
+.create-head { display: flex; align-items: center; justify-content: space-between; }
+.create-search, .add-node-search { width: 100%; padding: 7px 9px; }
+.create-columns { display: flex; flex: 1; min-height: 0; gap: 8px; }
+.create-list { flex: 3; min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.create-entry { display: flex; align-items: center; gap: 8px; text-align: left; border: 0; background: none; padding: 6px 8px; }
+.create-entry.create-active { background: var(--surface-control-hover); }
+.create-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.create-port, .create-source, .choice-source { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.create-details { flex: 2; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-left: 1px solid var(--border); }
+.add-node { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
+.add-node-list { flex: 1 1 0; min-height: 0; overflow: auto; }
+.add-node-details { position: relative; flex: 1 1 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+.add-node-details header { display: flex; align-items: center; justify-content: space-between; }
+.choice-heading { display: flex; align-items: center; gap: 4px; width: 100%; border: 0; background: none; padding: 5px 4px; text-align: left; font-weight: 600; }
+.choice-heading .icon { width: 14px; height: 14px; transform: rotate(-90deg); transition: transform .1s; }
+.choice-heading[aria-expanded="true"] .icon { transform: none; }
+.choice-children { padding-left: 14px; }
+.choice-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: grab; }
+.choice-row:hover { background: var(--surface-control); }
+.choice-row.chosen { outline: 1px solid var(--accent); }
+.choice-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choice-add { width: 24px; height: 24px; padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
+/* The "+" at a wire's end over blank canvas (Blender). 拉線停在空白處時線頭的「＋」。 */
+.wire-plus { fill: var(--text-strong); font-size: 16px; font-weight: 700; pointer-events: none; }

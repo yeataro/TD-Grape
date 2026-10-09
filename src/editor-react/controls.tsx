@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
 import { say, tr, type Message } from './text';
@@ -57,3 +57,10 @@ export function MenuButton({ icon, label, items }: { icon: IconName; label: Mess
 
 /** Controls that belong together, separated from the next group by a thin line. 一組相關的控制項，和下一組之間有細線。 */
 export const ToolGroup = ({ children }: { children: ReactNode }) => <div className="tool-group">{children}</div>;
+
+/** A count on a heading (legacy source counts). `group` colours it by a colour group; without it, it is plain
+ * (human 2026-10-09: the Sources area is coloured by group, the Add Node area is not). The tooltip says what it counts.
+ * 標題上的數量（舊產品的來源數量）。給 group 就用該 colorGroup 上色，否則不上色（人類：來源區上色、新增節點區不上色）。 */
+export const Badge = ({ count, group, title }: { count: number; group?: string; title?: Message | string }) =>
+  <span className={'badge' + (group ? ' badge-group' : '')} title={title === undefined ? undefined : say(title)}
+    style={group ? { '--badge-color': `var(--group-${group})` } as CSSProperties : undefined}>{count}</span>;
