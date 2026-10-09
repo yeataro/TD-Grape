@@ -66,8 +66,8 @@ export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean
  * history, the selection's actions (until the floating selection toolbar exists), box select, canvas
  * preferences and the GLSL panel. Only what exists is shown. 網路區自己的功能列，浮在上緣：左邊 Stage；右邊歷史、
  * 選取的動作（浮動選取工具列做好之前放這裡）、框選、畫布偏好、GLSL 面板。只放現在有的。 */
-export function NetworkBar({ session, prefs, onGlsl, onCreate }: {
-  session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void; onCreate(): void;
+export function NetworkBar({ session, prefs, onGlsl }: {
+  session: EditorSession | null; prefs: CanvasPrefs; onGlsl(): void;
 }) {
   const state = useEditorState(session), flow = useReactFlow();
   const nodes = state?.projection.nodes.filter(node => node.selected) ?? [], edges = state?.projection.edges.filter(edge => edge.selected) ?? [];
@@ -79,8 +79,6 @@ export function NetworkBar({ session, prefs, onGlsl, onCreate }: {
       {stages.length > 0 && <Segmented label={tr('stage.label', 'Stage')} value="pixel" onChange={() => {}}
         options={stages.map(stage => ({ value: stage, label: stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage,
           disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
-      {/* Opens Create node (Refactor.54). 打開新增節點。 */}
-      <button type="button" aria-disabled={!session || undefined} onClick={() => { if (session) onCreate(); }}>{say(tr('toolbar.addNodePrompt', '+ Add node'))}</button>
     </div>
     <div className="network-bar-group">
       <ToolGroup>

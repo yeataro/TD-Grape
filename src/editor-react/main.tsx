@@ -244,7 +244,7 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
             }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas>}
-          <NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} onCreate={() => setCreating({ screen: middle() })} />
+          <NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} />
           {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
           {session && state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
             <span>{say(conflictMessage)}</span>

@@ -314,7 +314,6 @@
   "texture.normal": "Flat normal",
   "texture.other": "{name}",
   "texture.white": "White",
-  "toolbar.addNodePrompt": "+ Add node",
   "toolbar.bodyDrag": "Body drag",
   "toolbar.boxSelect": "Box select (drag selects instead of panning)",
   "toolbar.downloadDraft": "Download draft",
