@@ -198,7 +198,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   background: none; border: 0; }
 .react-flow__handle::before, .react-flow__handle::after { content: ""; position: absolute; left: 50%; top: 50%; border-radius: 50%; transform: translate(-50%, -50%); }
 .react-flow__handle::before { width: calc(var(--port-size) + 2 * var(--port-grab)); height: calc(var(--port-size) + 2 * var(--port-grab)); }
-.react-flow__handle::after { width: var(--port-size); height: var(--port-size); background: var(--surface-port); border: 2px solid var(--port-color); pointer-events: none; }
+.react-flow__handle::after { width: var(--port-size); height: var(--port-size); background: var(--surface-port); border: var(--port-ring) solid var(--port-color); pointer-events: none; }
 :root:not([data-ports="b"]) .react-flow__handle.source::after,
 :root[data-ports="b"] .react-flow__handle[data-connected="true"]::after { background: var(--port-color); }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */
