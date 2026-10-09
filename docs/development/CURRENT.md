@@ -24,30 +24,13 @@
 
 > **清殘留的判斷規則**（design-interview Q48）：每段殘留問「形狀符合新架構嗎？產品現在需要嗎？」再決定留、刪或暫留；10-08 清理清單第 1–8 條已全部完成（Refactor.27–31），盤查紀錄 workspace `../work/refactor/legacy-audit-2026-10-08.md`。
 
-> **Samples（Refactor.58.9 已做 Clone、label、OP 改名同 label）：**In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未實機看。決定見 design-interview Q66。
-
 > **子圖那一輪開工時先改形狀（清理第 7 條，照 Q48 判「留」但形狀未對齊 Q46，2026-10-08）：** (1) 節點類型 `sgrape.function.call／input／output` → `sgrape.builtin.subgraph_call／input／output`，參數 `functionId` → `subgraphId`（Q46 7.7；目前沒有任何存檔含子圖，改名不需轉換）；(2) `SubgraphData.stages` 目前必填、`targets` 可存——Q46 定為由內容推算，只在存成定義時寫入；(3) 核心內部網路代號前綴 `function:`（不存檔）改名；(4) 每邊 16 個介面的上限寫在 `subgraph_interface.ts`、`subgraph_operations.ts`、`subgraphs.ts` 三處，搬進 `config.ts`（Q47 補充 8）。子圖程式本身（建立、群組、實例化、在地化、複製、刪除、產碼）都有呼叫者與測試，保留。
 
 > **新舊框架的圖不共通（design-interview Q40）：** 不做轉換功能，舊圖之後由匯入器處理。tag 區分已於 Refactor.27 拿掉（TD 讀到舊格式即拒絕）；遷移期便利行為（下段）仍待移除。
 
 > **遷移期便利行為，非產品行為（人類 2026-10-07）：** 新舊入口並存才有的功能——版本衝突覆寫、拒絕開圖的不支援說明與載入預設圖、返回舊入口——只是遷移途中方便測試，做最小可用即可，不寫進產品規格；安全底線（版本核對、不靜默丟資料）照守。舊入口關閉時移除。
 
-**2026-10-07 晚的討論排出的隊（皆未動工；決策在 workspace `work/in-place-refactor-design/design-interview.md`）：**
-
-- **A. 路徑重建（人類定：路徑需重新構建；設計見 design-interview Q38，2-1～2-5 已定）**：要點——修改完成即由圖判斷分流、不加停手等待；產碼指紋（分支鏈路）＋必跑性質測試；結果分兩包、送 TD 分「執行用（GLSL＋綁定，成對）／保存用（圖，可晚到）」；TD 不擁有圖的知識（圖為不透明字串，只做不看內容的校驗）；產碼搬進 Worker；同步器負責讀寫 TD；TD 保存最新圖＋Last Known Good 一組。原記錄：**產碼目前綁在送出裡**——`deliver()` 才呼叫 `compiler.compile`（session.ts:188-217），所以 TD 離線（送出被擋）時不產碼，GLSL 顯示與錯誤停在舊結果，產碼錯誤要等送出才看到，違反 Q28「編輯不等 TD」。成因：舊產品時代產碼在 TD（送出時顯示 material.compiling），新架構把產碼移到前端卻沿用「送出時產碼」的路徑。新路徑：修改完成（停手後）即產碼，結果（GLSL、目前問題＝狀態；回報＝事件）由編輯協調者分送；同步器只拿已產好的結果送 TD、送不出就排隊。現行完整路徑：transact→document.change（不產碼）→等 0.65 秒→flush/deliver→compile→state.glsl→applyRequest→host.call(apply, HTTP 20 秒逾時)→Editor Service 佇列→HostAPI.dispatch→NativeFamily.apply（核對版本與校驗→GPU 試編→設參數寫 pixel_shader→再驗 GPU→存圖；失敗全還原）→回覆→確認版本。`session.ts` 有七項權責，「與 TD 同步」約佔一半且改變理由不同（連線方式），建議拆成獨立單位（暫名 `HostSync`），其餘依角色改名（「session」聽起來像臨時狀態）。行為不變、測試照舊。建議排在 B 之前。
-- **B. 在地化骨架＋回報（Q34、Q35）**：全專案「原文＋代號」`tr('代號','原文',參數)`、只打包不翻譯，顯示時才翻；節點文字只寫原文、代號由 `nodeText()` 推導；卡片預設全英文；翻譯檔跟著原文擁有者分開存放。回報 `report(等級, tr(...))`，來源等自動填，回報紀錄獨立模組，事件（紀錄）與狀態（目前錯誤）分開、程式不准依紀錄判斷。**回報紀錄要有畫面**：舊入口下方的浮動 Log 面板（狀態歷史，Q13）是遷移後要放回新編輯器的能力（人類 2026-10-08），由這個回報紀錄提供。
-- **C. 互動小修補（Q33；修飾鍵最終定案見 Q39：完全對齊 TD 實測——Ctrl＋點擊切換、Shift＋點擊只加選、Shift＋框選加選、右鍵＋Ctrl 同右鍵；關掉 RF 內建框選，左右鍵框選都走自己的）**：**已做（Refactor.22）**：框選碰到即算、Shift 加選、Shift＋左鍵框選、RF 內建框選關閉、有接線的 input 拉到空白處斷線。**未做**：主要選取（Editor 記一個 ID、主次不同色、點空白全清、框選後不換人、需換時取第一個碰到的）、Shift＋單擊只加選、節點與接線不混選的其餘情況。
-- **D. 設定來源（Q36，討論中）**：個人偏好／這次開啟的環境／專案屬性三種；判斷標準已入 AGENTS.md；TD 內嵌開啟時先帶「在 TD 裡」這個事實參數。
-
-1. **【重中之重，但暫不實作】純版面修改不觸發產碼（人類 2026-10-07）**：可節省大量 TD 效能，屬協定、越晚越貴。是待實現的一大塊功能：規模變大（300／1000 節點、子圖攤平）時，整張圖產碼、打包傳送、TD 主執行緒解包核對都隨圖成長，需分層攔截（瀏覽器依 `GraphChanges` 只改 `ui` 即不產碼並只送改了的部分／TD 比對產碼結果跳過 GPU 驗證／完整流程）。**人類決定先把其他功能做完，再做真實狀況的效能盤點後才設計實作**（design-interview Q31 及補充）。現況與舊產品做法見 [LEGACY-GAPS](LEGACY-GAPS.md) 第一批 #1；Router「不觸發產碼」建立在此之上。
-2. **Uniform 支援（決策已完成 2026-10-07，見 design-interview Q41；2026-10-09 拆成 A～E 五輪，Q51；A 已做 Refactor.44、B 已做 Refactor.45、C 已做 Refactor.46，以下為 10-07 當時盤點）：** 要點——來源（Source）與全域常數（Constant）歸作品（`document.sources`／`document.constants`，面板「共用來源」）；結構只在編輯器改；編輯器送 JSON，TD 寫入 Grape OP 內只被寫入的綁定表，以 DAT Export 驅動 GLSL OP Uniform 參數（已實測）；公開的才有 Grape OP Custom Parameters（名稱與 GLSL 名分開），值的權威在 TD；拖數值走即時通道、放開才記；一條共同歷史、一個 Ctrl+Z 只退編輯器做的；第一階段 float／vec／color＋預設 Uniform＋公開＋全域常數。舊盤點： 牽涉宣告、TD 原生參數與綁定，不只節點本身，**不可當成小切片直接做**。2026-10-07 盤點：
-   - **TS 新核心已有**：Uniform 節點模組（引用宣告、輸出其值）、compiler 產生 `uniform` 宣告與綁定清單、宣告名稱／型別／值檢查；只支援一般數值與顏色（`nativeSequence` vec／color）。
-   - **仍在舊 Python（新 Manager 使用中，GrapeManager 黃框）**：宣告新增／改名／刪除（`sgrape_sources.edit`）、建立與同步 TD 原生參數（`configure`）、改值（`write_value`）、原生值 Undo（`sgrape_history`）、原生參數遺失偵測。
-   - **完全沒有**：React 的 Values 面板與 Uniform 節點選擇宣告的 UI；時間等預設驅動、陣列、矩陣、Attribute、POP Buffer、Spec Constant；拖曳即時更新。
-   - **待決策**：(1) 宣告管理放哪——依 Q29「誰需要」，宣告屬作品→核心，建立原生參數只有 TD 能做→宿主，目前兩者混在 `sgrape_sources.py`；(2) 新入口的 Values 面板與節點選單；(3) 支援範圍先做數值／顏色，或一次對齊舊產品。
-3. **固定入口（方向已定 2026-10-07：入口由模組宣告，design-interview Q37 1-5；未實作）**：新增清單直接提供「vec2」等 16 個固定型別（同 Vector／Scalar 模組 + `fixedType`），卡片顯示固定名稱、鎖定時不顯示型別選單。入口清單該放哪裡（舊產品寫在畫面程式）待定。
-4. **下一切片候選：** 其他舊產品功能（Q29：舊產品是功能基準，不是模仿對象）。
-5. **Legacy 盤點續作：** `src/core/` 其餘 6 檔與 TOE 內其他 Python（見 [LEGACY-PYTHON](LEGACY-PYTHON.md)「尚未整理」）。
+> **Uniform 剩下的（design-interview Q51）**：A–D 已做（Refactor.44–48）；剩 E（TD 值的 Undo）、幫手（自訂參數）、預設值欄位等，見 workspace `uniform-d.md` 第三節。陣列、矩陣、Attribute、POP Buffer、Spec Constant 等進階來源未做。
 
 ## 已發現、尚未處理
 
@@ -117,6 +100,8 @@
 | 2026-10-07 | 新入口的 Math 卡片樣式很亂（人類實機觀察）。不是本階段重點；面板／外觀統一處理時一併整理（Q22：UI 美觀是產品品質，不可省略）。 |
 
 ## 未完成／未驗證
+
+- Samples（Refactor.58.9）：In TOP 的 label（`sTD2DInputs[i]`）要等下一次送圖才會更新，尚未在 TD 上看。
 
 - 早期標「待人類實機確認」、之後沒有紀錄的：Refactor.17（開放 47 個常用節點）、Refactor.32（從 TD 選單建立新格式 Grape TOP，Grape ID 複製時換號）。人類若已確認，刪這一條。
 
