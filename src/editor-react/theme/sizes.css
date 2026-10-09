@@ -29,12 +29,13 @@
   --bar-height: 28px;
   --control-height: 24px;
   --control-font: var(--font-sm);
-  --icon-size: 14px;
-  --icon-button: 24px;
+  --icon-size: 15px;
+  --icon-button: 26px;  /* human 2026-10-09: 24px looked too small in the 28px bars 24px 在 28px 列裡顯得太小 */
   --icon-button-narrow: 16px;
   --brand-mark: 22px;
   --brand-font: 16px;
   --tab-pad: 5px 10px;
+  --bar-font: var(--font-sm); --bar-line: var(--line-sm); /* text in the location and foot bars 網址列與底列的字 */
   /* content (one set) 內容（只有一組） */
   /* ports: drawn 13px (1.3x the old 10px), grabbed 8px further out (human 2026-10-09). 接孔畫 13px、可抓範圍再往外 8px。 */
   --port-size: 13px;    /* outer diameter, ring included 外徑（含圓框） */
@@ -70,4 +71,5 @@
   --brand-mark: 26px;
   --brand-font: 18px;
   --tab-pad: 7px 12px;
+  --bar-font: var(--font-md); --bar-line: var(--line-md);
 }

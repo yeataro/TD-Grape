@@ -36,8 +36,8 @@ a { color: var(--accent); }
 .brand-name { color: var(--text-strong); font-size: var(--brand-font); line-height: var(--title-bar-height); }
 .title-bar button { height: var(--control-height); padding-block: 0; font-size: var(--control-font); }
 .brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--font-md); line-height: var(--line-md); }
-.location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); }
-.foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--font-md); line-height: var(--line-md); color: var(--text-muted); }
+.location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); font-size: var(--bar-font); line-height: var(--bar-line); }
+.foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--bar-font); line-height: var(--bar-line); color: var(--text-muted); }
 .foot-bar.error, .foot-bar.conflict, .foot-bar.uncertain { --message: var(--status-error); }
 .foot-bar.warning, .foot-bar.offline { --message: var(--status-warning); }
 .foot-sync { white-space: nowrap; }
@@ -337,7 +337,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .log-entry.warning span { color: var(--status-warning); } .log-entry.error span { color: var(--status-error); }
 .grape-op-kind { font-size: var(--font-xs); line-height: var(--line-xs); padding: 1px 5px; border-radius: 3px; background: var(--overlay-up); } .grape-op-path { overflow-wrap: anywhere; }
 /* The location bar's middle: project file, then the Grape OP (Refactor.52). 網址列中間：專案檔名，接著 Grape OP。 */
-.location-bar .target { min-width: 0; background: none; border: 1px solid transparent; color: var(--text); line-height: 1.4; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.location-bar .target { min-width: 0; background: none; border: 1px solid transparent; color: var(--text); line-height: var(--bar-line); text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .location-bar .target:hover { border-color: var(--border-control); }
 .location-bar .project-file { color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30%; }
 .aligned-rows { display: grid; column-gap: 12px; align-items: baseline; }
