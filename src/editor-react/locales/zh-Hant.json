@@ -342,6 +342,7 @@
   "texture.white": "白",
   "toolbar.bodyDrag": "Body 拖曳",
   "toolbar.boxSelect": "框選（拖曳改為框選，不移動畫面）",
+  "toolbar.damping": "畫布阻尼",
   "toolbar.downloadDraft": "下載草稿",
   "toolbar.glsl": "",
   "toolbar.redo": "",

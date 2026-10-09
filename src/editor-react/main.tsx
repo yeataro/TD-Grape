@@ -33,7 +33,7 @@ import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 import { readPreference, writePreference } from './preferences';
-import { FRAME_MS, frameNodes } from './viewport';
+import { FRAME_MS, MIN_ZOOM, MAX_ZOOM, dampedWheel, frameNodes } from './viewport';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
@@ -82,11 +82,18 @@ function ZoomReadout() {
       items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: FRAME_MS }) }))} />}
   </>;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, stage, onCreate, onDropChoice }: {
-  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; stage: string;
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, stage, onCreate, onDropChoice }: {
+  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean; stage: string;
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
 }) {
   const options = useOptions(), flow = useReactFlow();
+  // Canvas damping takes the wheel over only while on (viewport.ts). 畫布阻尼只在開著時接管滾輪。
+  const surface = useRef<HTMLDivElement>(null), damper = useRef<ReturnType<typeof dampedWheel> | null>(null);
+  useEffect(() => {
+    if (!damping || !surface.current) return;
+    const taken = damper.current = dampedWheel(flow, surface.current);
+    return () => { taken.detach(); damper.current = null; };
+  }, [damping, flow]);
   // React Flow's own colours follow the theme (COLOR_SYSTEM.md). React Flow 自己的顏色跟著主題。
   const theme = useSyncExternalStore(appearanceSubscribe, currentTheme);
   // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human
@@ -112,7 +119,8 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   // RF 會把重接線的結束也當成一般拉線結束回報一次；那一次屬於重接線，不另外處理。
   const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={preview}><RightDragSelect session={session} boxSelect={boxSelect}>
-    <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes}
+    <ReactFlow<FlowNode, FlowEdge> ref={surface} nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes}
+      zoomOnScroll={!damping} zoomOnPinch={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
       onConnectEnd={(event, state) => {
@@ -159,7 +167,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       // A wire snaps to a port within 28px (React Flow's own setting; 20 by default). 拉線放開時 28px 內吸附到接孔。
       connectionRadius={28}
       snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
-      minZoom={.15} maxZoom={2.5} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={['Backspace', 'Delete']}
+      minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <AdaptiveGrid />
       {/* React Flow's own zoom controls, with the zoom as a number (human 2026-10-09: its default is fine).
@@ -175,13 +183,15 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
 // Canvas preferences of this page, kept by the shell so they survive switching Grape OP (Refactor.51.1).
 // Panels and zones are the layout's (layout.tsx, Refactor.53).
 // 畫布偏好，由外殼保管，換 Grape OP 時不重設。面板與面板區歸版面管（layout.tsx）。
-// Body drag is a setting kept in this browser (Q64); Snap and box select last for the page. Body 拖曳記在這個瀏覽器（Q64）。
+// Body drag and canvas damping are kept in this browser (Q64; preferences.ts); Snap and box select last for the page.
+// Damping starts off while it is a trial. Body 拖曳與畫布阻尼記在這個瀏覽器；試驗期間阻尼預設關。
 function usePrefs(): CanvasPrefs {
   const [prefs, setPrefs] = useState(() => ({ snap: false, boxSelect: false,
-    bodyDrag: readPreference('canvas.bodyDrag') !== 'off' }));
+    bodyDrag: readPreference('canvas.bodyDrag') !== 'off', damping: readPreference('canvas.damping') === 'on' }));
   return useMemo(() => ({ ...prefs, set: patch => {
     setPrefs(old => ({ ...old, ...patch }));
     if (patch.bodyDrag !== undefined) writePreference('canvas.bodyDrag', patch.bodyDrag ? 'on' : 'off');
+    if (patch.damping !== undefined) writePreference('canvas.damping', patch.damping ? 'on' : 'off');
   } }), [prefs]);
 }
 // No graph open: the same frame, nothing to show and nothing to do (Refactor.51.1). 沒有圖時：同一個外框，沒有內容、按鈕停用。
@@ -295,7 +305,7 @@ function Workspace({ session, waiting, prefs, layout, editing, text, td, opened 
           {/* While an earlier draft waits for a choice, only the network and its toolbar are locked; the notices stay usable.
               有草稿等待選擇時，只鎖住網路區與功能列；提示照樣能按。 */}
           <div className="canvas-body" inert={!!draft}>
-          {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect}
+          {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect} damping={prefs.damping}
             stage={say(tr('stage.pixel', 'Pixel stage'))} onCreate={onCreate} onDropChoice={onDropChoice} />
             : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
               if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();

@@ -61,7 +61,7 @@ export function LocationBar({ layout, rightEmpty, children }: { layout: Layout; 
   </div>;
 }
 
-export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean; set(patch: Partial<Omit<CanvasPrefs, 'set'>>): void };
+export type CanvasPrefs = { bodyDrag: boolean; snap: boolean; boxSelect: boolean; damping: boolean; set(patch: Partial<Omit<CanvasPrefs, 'set'>>): void };
 
 /** The network's own toolbar, floating over its top edge (human 2026-10-09): stages on the left; on the right
  * history, the selection's actions (until the floating selection toolbar exists), box select, canvas
@@ -152,6 +152,8 @@ export function FootBar({ session, waiting, onDownload, prefs }: { session: Edit
     {/* Settings of how editing behaves (legacy gear). Body drag is a real setting here (Q64). 編輯行為的設定（舊產品齒輪）。 */}
     <PopoverButton icon="settings" label={tr('foot.settings', 'Settings')} className="settings-panel">
       <label className="check"><input type="checkbox" checked={prefs.bodyDrag} onChange={event => prefs.set({ bodyDrag: event.target.checked })} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>
+      {/* Trial (Refactor.58.2): the wheel glides; off gives the wheel back to React Flow. 試驗：滾輪平滑；關掉就還給 React Flow。 */}
+      <label className="check"><input type="checkbox" checked={prefs.damping} onChange={event => prefs.set({ damping: event.target.checked })} />{say(tr('toolbar.damping', 'Canvas damping'))}</label>
     </PopoverButton>
     <AppearancePanels />
     <IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}

@@ -71,6 +71,17 @@
 - **套用設定不重新整理頁面**，否則會洗掉 Undo 紀錄和訊息紀錄（R.53 語言選單的教訓）。
 - **行為開關都是暫時的**（[options.ts](../../src/editor-react/options.ts)，Q64）。調整期逐一決定：要嘛變成正式設定，要嘛攤平，不留永遠藏著的開關。
 
+## 六之一、React Flow 例外（停用或覆蓋它的內建功能）
+
+規則：要停用或覆蓋 React Flow 的內建功能，先向人類報告，記在這裡並寫理由（design-interview Q29：要的是需求，不是框架的某個功能）。
+
+| 內建功能 | 怎麼處理 | 理由 | 出處 |
+| --- | --- | --- | --- |
+| 選取（`elementsSelectable`、`multiSelectionKeyCode`） | 關掉，選取由編輯協調者決定 | 對齊 TD 的選取規則（Ctrl 切換、Shift 加選、節點與線不混選） | Refactor.49 |
+| 框選（`selectionKeyCode`） | 關掉，用自己的 RightDragSelect | 人類：內建框選「看著煩」；碰到就算、Shift 加選 | Q33、Q39 |
+| 雙擊縮放（`zoomOnDoubleClick`） | 關掉 | 雙擊空白＝新增節點、雙擊節點＝對準 | Refactor.54、58.2 |
+| 滾輪與雙指縮放（`zoomOnScroll`、`zoomOnPinch`） | **只在「畫布阻尼」開著時**關掉，滾輪改由 `viewport.ts` 處理；動畫仍用 React Flow 的 `setViewport` 過渡；阻尼關掉就還給原生 | 原生沒有阻尼；受控視角會讓 React Flow 內部位置與滑動中的畫面互相拉扯（`syncViewport`），快速連滾會被吃掉縮放量。一種操作只由一方處理就不會撞（人類 10-09） | Refactor.58.2 |
+
 ## 七、檢查
 
 - 每次改介面都要跑 `npm run check:editor` 和 `npm run test:editor`。

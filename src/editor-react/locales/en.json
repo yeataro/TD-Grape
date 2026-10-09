@@ -342,6 +342,7 @@
   "texture.white": "White",
   "toolbar.bodyDrag": "Body drag",
   "toolbar.boxSelect": "Box select (drag selects instead of panning)",
+  "toolbar.damping": "Canvas damping",
   "toolbar.downloadDraft": "Download draft",
   "toolbar.glsl": "GLSL",
   "toolbar.redo": "Redo",
