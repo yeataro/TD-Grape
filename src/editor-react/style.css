@@ -224,8 +224,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
   margin: calc(-1 * var(--selection-gap) - 1px); border: 1px dashed var(--select-frame); pointer-events: none; }
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
 .grape-node.box-in { outline: 2px dashed var(--select); }
-.react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: 5 !important; }
-.react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: 5 !important; }
+.react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: var(--wire-width-hover) !important; }
+.react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: var(--wire-width-selected) !important; }
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
 .grape-node.ghost { opacity: .62; border-style: dashed; }
 .fold-section { margin-bottom: 8px; }

@@ -45,7 +45,10 @@
   --port-halo: 4px;        /* the soft ring round a port under the pointer, or held while dragging (legacy hover) 滑過或拖線時拿著的接孔外圍淡圈 */
   --port-ready-ring: 3px;  /* the ring round where a dragged wire will land (legacy .wire-target) 拖線要接上的接孔外框 */
   --port-ready-glow: 7px;  /* and its glow beyond that ring 外框再往外的光暈 */    /* the handle element: a point at the port's centre, where wires end 接孔元素：圓心的一點，線的端點 */
-  --wire-width: 3.5px;  /* a wire (selected and hovered: 5px) 接線粗細（選中與滑過 5px） */
+  --wire-width: 3.5px;  /* a wire 接線粗細 */
+  --wire-width-hover: 5px;    /* under the pointer 滑過時 */
+  --wire-width-selected: 5px; /* selected 選中時 */
+  --wire-width-drag: 1.3px;   /* the dashed wire being dragged 拖曳中的虛線 */
   --row-height: 34px;   /* a row of a list or tree (legacy #nodelibrary .browser-row) */
   --io-row: 36px;       /* one input or output of a node: the IO row (value-input.md; legacy 29px, ×1.2 human 2026-10-09) 輸入輸出區塊的高度 */
   --io-field: 30px;     /* a value box inside it (legacy 24px, ×1.2 human 2026-10-09; 3px above and below) 其中的數值框 */
