@@ -86,6 +86,7 @@
 
 - **驗證**：TD 2025.33230 的 `TOP.sample()` 在浮點格式把 R 當 alpha；讀像素用 `numpyArray()`（workspace `td-issues/top-sample-float-alpha.md`，人類決定何時回報）。
 - **教訓**：開放節點前先查舊產品新增清單是否刻意排除；調查走產品實際路徑。
+- **快照與 TD 的 cook**（10-10 實測）：拍快照時讀像素本身就會把 In TOP 和上游 cook 到目前這一格，強制 cook 結果相同。但 Play Mode 為 Sequential 的影片沒人預覽時不會前進，快照會停在同一格附近（人類：它沒有連著時間線）；要跟上時間就用 Locked to Timeline。TD 本身的行為，寫使用說明時提。
 - **已定不做**：「啟動編輯服務」對話框置中（TD 的 `ui.messageBox` 開在滑鼠位置，抓錯螢幕更糟）。
 
 ### 六、要人類同意才能動
