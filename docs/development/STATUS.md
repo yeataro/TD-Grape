@@ -2,6 +2,11 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.55.11 — 引用節點的標題寫出來源種類 — 2026-10-09
+
+- 人類 10-09（舊產品有這個標註）：引用節點標題右邊寫「種類 · 型別」：Uniform · vec3（含預設 Uniform）、Global · float（常數，繁中「全域」）、TOP Input · sampler2D（繁中「TOP 輸入」）。其他節點不變。
+- 驗證：editor 74；內建瀏覽器＋真實 TD（只讀）：4 個 Uniform、2 個 uAbsTime、input1、constant1 的標題如上；Color RGBA、Subtract、Math、vec3 不變。
+
 ## Refactor.55.10 — 節點裡的列與數值框高 1.2 倍 — 2026-10-09
 
 - 人類 10-09：所有小 widget 的高度都偏低，加 1.2 倍看看。Standard：數值框 24→30px、每列 30→36px；Comfortable：30→36px、36→42px（框上下仍各 3px；取整避免半像素）。只改 `theme/sizes.css` 兩個變數。

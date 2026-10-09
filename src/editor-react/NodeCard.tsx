@@ -5,7 +5,7 @@ import type { FlowNode } from './projection';
 import { spareHandle } from './editor';
 import { measureHandles, needsHandleUpdate, type Geometry } from './geometry';
 import { BoxPreviewContext } from './RightDragSelect';
-import { tr, say } from './text';
+import { tr, say, type Message } from './text';
 import { Select } from './controls';
 import { ValueFields } from './ValueFields';
 import { useSession, TextContext, BodyDragContext } from './contexts';
@@ -48,6 +48,11 @@ function DeclarationValue({ declaration }: { declaration: Declaration }) {
     commit={value => session.setDeclarationValue(declaration.id, value)}
     preview={value => session.previewDeclarationValue(declaration.id, value)} />;
 }
+
+// What kind of shared source a reference node is, shown before its type in the title (legacy "Uniform · vec3"; human
+// 2026-10-09: "Global · float" for a constant). 引用節點是哪一種共用來源，標題裡寫在型別前（照舊產品；人類：常數寫 Global）。
+const sourceKinds: Record<string, Message> = {
+  uniform: tr('sourceKind.uniform', 'Uniform'), constant: tr('sourceKind.constant', 'Global'), topInput: tr('sourceKind.topInput', 'TOP Input') };
 
 // Drawn from the module's spare declaration only; no node-specific branch here.
 // 只依模組宣告的 spare 繪製；接線後由 session 執行模組命令，renderer 不認節點。
@@ -112,6 +117,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   // 由接孔判斷，不認節點。
   const source = !inputs.length && !view.spare;
   const valued = data.declaration?.kind === 'uniform' || data.declaration?.kind === 'constant' ? data.declaration : undefined;
+  const kind = data.declaration && sourceKinds[data.declaration.kind], sourceTag = kind ? say(kind) + ' · ' : '';
   const outputRows = outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
     <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
     {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
@@ -121,11 +127,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   return <article ref={card} className={`grape-node ${selection}`}
     style={{ '--group-color': `var(--group-${data.colorGroup})` } as CSSProperties}>
     <div className="node-title node-drag-surface"><strong>{view.literalLabel ? view.label : text(view.label ?? data.label)}</strong>
-      {view.typeLocked ? <small>{outputs[0]?.type}</small> : view.selector ? <Select className="nodrag" label={`${id} type`} value={view.selector.value}
+      {view.typeLocked ? <small>{sourceTag}{outputs[0]?.type}</small> : view.selector ? <Select className="nodrag" label={`${id} type`} value={view.selector.value}
         onChange={value => session.edit(id, view.selector!.command, { value })} options={listed(view.selector.options)} /> :
         data.types.length > 1 ? <Select className="nodrag" label={`${id} type`} value={String(authored.params.type)}
           onChange={value => session.configure(id, value)} options={listed(data.types)} /> :
-          <small>{outputs[0]?.type}</small>}
+          <small>{sourceTag}{outputs[0]?.type}</small>}
     </div>
     <div className={`node-body ${bodyDrag ? 'node-drag-surface' : ''}`}>
       {source && outputRows}
