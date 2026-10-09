@@ -13,6 +13,17 @@
   - iPad 的單指平移、雙指縮放仍可用（觸控交給原生）。
 - **React Flow 例外清單**：見 [EDITOR_UI_RULES](../ui/EDITOR_UI_RULES.md)「六之一」，逐條確認還成立。
 
+## 改動畫布輸入（滾輪、拖曳、點擊、鍵盤）後要逐項試的操作（Refactor.58.2 起）
+
+畫布阻尼兩次弄壞旁邊的操作：拖節點、雙擊新增。原因都是只測了改的那一項，沒測共用同一塊畫布的操作。改到畫布輸入時，阻尼開與關各跑一次；能用真的滑鼠就用真的，模擬事件抓不到指標鎖定、事件密度這類問題：
+
+- 拖節點；點節點選取、Ctrl／Shift 加選；點背景取消選取。
+- 雙擊空白＝Create node；雙擊節點＝對準；Tab（焦點在網路區）＝Create node；F／H 對準。
+- 從接孔拉線到另一個接孔（接上）、拉到空白（Create node）；拿起既有的線改接。
+- 框選：右鍵拖、Shift＋左鍵拖、框選開關打開時左鍵拖。
+- 滾輪縮放、觸控板雙指縮放、拖背景平移；iPad 單指平移、雙指縮放。
+- 從面板拖卡片到畫布；數值框上拖曳調值、雙擊輸入。
+
 ## 單輸入乘積預設與 Preview 外觀（2026-10-03，0.8.276）
 
 以 `PYTHONPATH=src/core;src/td/runtime;tests/unit` 執行 `python -m unittest test_wire_validation test_matrix_foundation test_matrix_arithmetic test_matrix_double_operations test_pixel_preview test_pixel_preview_lifecycle test_pixel_preview_recovery`，83 項通過。新 `test_auto_operand_defaults.js` 由 arithmetic Python wrapper 執行：44 組直接預設、44 組 Creator 局部／完整試算，另驗證兩線矩陣乘法、非方陣 Outer Product、Locked、If／Boolean Mix、保存／重載、Undo／Redo，以及巢狀 local Function。測試先抓到無關拓樸編輯會改寫舊 Auto 簽名／手填值的反例，修正後確認旧 Multiply／Outer Product 與其 Auto／Locked 下游完整保留；重新接線、上游改型別及 Locked → Auto 仍採新預設。沒有新增序列化 metadata。
