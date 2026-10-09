@@ -133,10 +133,12 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
         </label>;
       })}
     </div>
-    {/* A colour's swatch on its own row below the fields (legacy). 顏色的色塊在數值下面自己一行（照舊產品）。 */}
-    {color && count >= 3 && <ColorField label={`${label} color`} value={hex}
-      commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} />}
     </div>
+    {/* A colour value is a two-row widget: its swatch is a row of its own, the whole width, not indented (human
+        2026-10-09). 顏色值是佔兩行的 widget：色塊自己一行、佔整塊寬度、左邊不縮進來（人類）。 */}
+    {color && count >= 3 && <div className={'value-swatch nodrag nopan' + (wired ? ' wired' : '')} inert={wired || undefined}>
+      <ColorField label={`${label} color`} value={hex}
+        commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} /></div>}
     {group.view}
   </div>;
 }

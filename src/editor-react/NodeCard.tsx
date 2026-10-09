@@ -114,7 +114,7 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.note && <div className="hint">{view.note.text}</div>}
       {outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
-        <span>{view.portLabels?.outputs?.[port.key] ?? port.key}</span><small>{port.type}</small>
+        <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
         {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
             接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
         <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />

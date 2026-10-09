@@ -124,7 +124,10 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    (selection is the editor's, Refactor.49), so the square outline showed around the round card. Selection has its own frames.
    React Flow 只在「可選取」節點關掉瀏覽器的聚焦框；我們的不是（選取由編輯器決定），所以圓角卡片外會出現直角框。選取有自己的框。 */
 .react-flow__node:focus, .react-flow__node:focus-visible { outline: none; }
-.grape-node { position: relative; width: 250px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow); }
+/* A node is as wide as its widest row, never under the shared minimum (value-input.md 五 4, human 2026-10-09): the
+   browser measures, nothing is written per node type. Notes and hints wrap instead of widening it.
+   節點寬度＝最寬那一行，但不小於共用下限：瀏覽器自己量，不依種類寫寬度。說明文字換行，不撐寬節點。 */
+.grape-node { position: relative; width: max-content; min-width: var(--node-min-width); max-width: 640px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow); }
 /* Selection (Refactor.49, Q33): the primary in TD's green, the others in yellow. 主要＝綠、其他＝黃。 */
 .grape-node.selected { outline: 2px solid var(--select-other); } .grape-node.selected.primary { outline-color: var(--select-primary); }
 /* Wires: selected and hovered are lighter and thicker, as in the legacy editor (its glow is a look option,
@@ -175,9 +178,12 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .port-row { position: relative; padding: 0 14px; display: flex; gap: 8px; align-items: flex-start; min-height: var(--io-row); }
 .port-row > span, .port-row > .port-fallback, .value-caption { display: flex; align-items: center; gap: 4px; height: var(--io-row); flex-shrink: 0; }
 .port-row > .react-flow__handle { top: calc(var(--io-row) / 2); }
+/* Name and type sit together on the row's centre line, inputs and outputs alike (human 2026-10-09: centre lines, not
+   baselines). 名稱與型別在同一個框裡、對齊這一行的中線，輸入輸出都一樣（人類：中線對齊，不是基線）。 */
 .port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); }
-.input-row > span, .value-caption { font-size: var(--font-md); line-height: var(--line-md); } .output-row { justify-content: flex-end; }
-.value-row { flex: 1; display: flex; gap: 8px; align-items: flex-start; min-width: 0; } .value-row > .value-group { flex: 1; }
+.port-row > span, .value-caption { font-size: var(--font-md); line-height: var(--line-md); } .output-row { justify-content: flex-end; }
+.value-row { flex: 1; display: flex; flex-wrap: wrap; column-gap: 8px; align-items: flex-start; min-width: 0; } .value-row > .value-group { flex: 1; }
+.value-swatch { flex-basis: 100%; padding-bottom: calc((var(--io-row) - var(--io-field)) / 2); } .value-swatch.wired { visibility: hidden; }
 .value-caption { color: var(--text-secondary); }
 .port-fallback.wired { visibility: hidden; }
 /* Ports (Refactor.54.2): bigger, grabbed further out than drawn, and styled by direction and whether wired; A and B are
@@ -195,9 +201,11 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .value-group.wired { visibility: hidden; }
 .value-expand { flex: 0 0 auto; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
 .value-expand .icon { width: 12px; height: 12px; transform: rotate(-90deg); } .value-expand[aria-expanded="true"] .icon { transform: none; }
-.value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(0, 1fr)); gap: calc(var(--io-row) - var(--io-field)) 4px; }
-.value-group.expanded .value-fields { grid-template-columns: minmax(0, 1fr); }
-.value-field { position: relative; display: block; min-width: 0; }
+.value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(var(--io-field-min), 1fr)); gap: calc(var(--io-row) - var(--io-field)) 4px; }
+.value-group.expanded .value-fields { grid-template-columns: minmax(var(--io-field-min), 1fr); }
+/* A box's own default width (about 20 characters for a browser input) never widens the node; only --io-field-min does.
+   框自己的預設寬度（瀏覽器輸入框約 20 字）不撐寬節點；只有 --io-field-min 算數。 */
+.value-field { position: relative; display: block; min-width: 0; contain: inline-size; }
 .value-field > .component { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;
   font-size: var(--font-xs); line-height: var(--line-xs); color: var(--field-label); }
 .value-field input, .value-field .select-button, .value-field .td-driven { width: 100%; min-width: 0; height: var(--io-field); padding: 0 6px; border: 0;
@@ -206,13 +214,14 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* The slider fill (legacy numeric slider): how far the value is through its decade. 填色：值在它那一段走到哪裡。 */
 input.number { background-image: linear-gradient(to right, var(--field-fill) 0 var(--fill), transparent var(--fill) 100%); }
 .control-field .select-button { background: var(--field-bg); }
-input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { flex-basis: 100%; height: var(--io-field); padding: 0; border: 0; background: none; overflow: hidden; }
+input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { display: block; width: 100%; height: var(--io-field); padding: 0; border: 0; background: none; overflow: hidden; }
 /* The whole rounded box is the colour: no browser frame or inset around the swatch. 整個圓角框就是顏色，沒有瀏覽器的框與內縮。 */
 .color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
 .color-swatch::-webkit-color-swatch { border: 0; border-radius: var(--radius-field); }
 .color-swatch::-moz-color-swatch { border: 0; border-radius: var(--radius-field); }
 .control-field { display: flex; gap: 8px; align-items: center; } .control-field .select-button { flex: 1; min-width: 0; }
 .control-row { display: flex; gap: 5px; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
+.grape-node .hint, .grape-node .ghost-note { contain: inline-size; }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
 .react-flow__controls button:hover { background: var(--surface-control-hover); }
 .startup-error { margin: auto; max-width: 620px; padding: 35px; }
