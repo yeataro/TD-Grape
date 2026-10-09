@@ -162,6 +162,9 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    和內容同色，連成一塊；兩旁的線（前一個分頁的分隔線與它自己的）就是外框。其他分頁下面有線、彼此之間有分隔線。 */
 .panel-tab { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .panel-tab[aria-selected="true"] { border-bottom-color: transparent; }
+/* The shown tab takes half the strip so its name fits; the others share the rest (human 2026-10-09: "Shared Sources" never
+   showed whole). Alone, it takes all. 顯示中的分頁佔一半，名字放得下；其他平分剩下的（人類：「共用來源」永遠顯示不完整）。只有一個就佔滿。 */
+.panel-tab[aria-selected="true"]:not(:only-child) { flex: 0 0 50%; }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
 .code-view { margin: 0; font-size: var(--font-md); line-height: var(--line-md); white-space: pre; }
 /* A handle is drawn thin and grabbed wide (human 2026-10-09). 把手畫得細、抓的範圍寬。 */
