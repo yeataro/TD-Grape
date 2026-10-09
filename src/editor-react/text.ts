@@ -34,13 +34,26 @@ export function localize(message: Message | string, language: Language): string 
   });
 }
 
-function currentLanguage(): Language {
+function storedLanguage(): Language {
   let stored: string | null = null;
   try { stored = localStorage.getItem('sgrapeLanguage'); } catch { /* storage may be blocked */ }
   return chooseLanguage(stored, typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language]);
 }
-export const language: Language = typeof window === 'undefined' ? 'en' : currentLanguage();
-export const say = (message: Message | string) => localize(message, language);
+// The language can change while editing, in place, as the legacy editor (legacy app.js:68–72; Refactor.54: the
+// R.53 menu reloaded the page and lost the Undo history). Text is worded when shown, so a re-render is enough.
+// 語言可以在編輯中當場切換（照舊產品；R.53 的選單重新整理頁面，Undo 歷史因此不見）。文字在顯示時才翻，重畫即可。
+let current: Language = typeof window === 'undefined' ? 'en' : storedLanguage();
+const languageListeners = new Set<() => void>();
+export const language = () => current;
+export const languageSubscribe = (listener: () => void) => { languageListeners.add(listener); return () => { languageListeners.delete(listener); }; };
+export function setLanguage(next: Language) {
+  if (next === current) return;
+  current = next;
+  try { localStorage.setItem('sgrapeLanguage', next); } catch { /* storage may be blocked */ }
+  if (typeof document !== 'undefined') document.documentElement.lang = next;
+  languageListeners.forEach(listener => listener());
+}
+export const say = (message: Message | string) => localize(message, current);
 
 // Data that carries its own English (Q34 修訂 4): the code is derived here, where the text is used.
 // 自帶英文的資料：代號在使用處推導。

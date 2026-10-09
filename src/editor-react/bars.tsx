@@ -6,7 +6,7 @@ import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Select, ToolGroup, notYet } from './controls';
 import type { Layout } from './layout';
 import type { Report } from './reports';
-import { language, say, tr, type Message } from './text';
+import { language, setLanguage, say, tr, type Message } from './text';
 
 // The editor's bars (Refactor.53; work/in-place-refactor-design/floating-panels.md): the title bar, the location
 // bar over the network, the network's own toolbar and the foot bar. Each is a row of the shared controls
@@ -30,12 +30,10 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
     <small className="brand-line">{say(tr('editor.tagline', 'A Shader Editor for TouchDesigner'))}<span aria-hidden="true">·</span>{version}
       <span aria-hidden="true">·</span><Placeholder label={tr('action.about', 'About')} className="link-button" /></small>
     <span className="spacer" />
-    {/* The language is read once when the page opens, so choosing one reloads the page (unsent changes stay as a
-        draft). Same key as the legacy editor. 語言只在開頁時讀，所以選了就重新整理（沒送出的修改留成草稿）。鍵與舊產品相同。 */}
-    <Select label={tr('action.language', 'Language')} value={language} onChange={value => {
-      try { localStorage.setItem('sgrapeLanguage', value); } catch { /* storage may be blocked */ }
-      location.reload();
-    }} options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} />
+    {/* Switches in place, keeping the work and its history (legacy). Same key as the legacy editor.
+        當場切換，作品與歷史都保留（照舊產品）。鍵與舊產品相同。 */}
+    <Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
+      options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} />
     <Placeholder label={tr('action.importGraph', 'Import graph')} />
     <Placeholder label={tr('action.exportGraph', 'Export graph')} />
     <button type="button" aria-disabled={!session || state?.phase === 'sending' || undefined}

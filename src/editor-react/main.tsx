@@ -11,7 +11,7 @@ import { Editor as EditorSession, type EditorState } from './editor';
 import { resetToDefault } from './host_sync';
 import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
-import { tr, say, TextError, errorText, type Message } from './text';
+import { tr, say, TextError, errorText, language, languageSubscribe, type Message } from './text';
 import { conflictMessage } from './host_sync';
 import { SourcesPanel } from './SourcesPanel';
 import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
@@ -273,6 +273,14 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   </TextContext.Provider></ShellContext.Provider>;
 }
 
+// The whole editor follows the language: a change re-renders it and gives the text context a new identity, so
+// memoised cards re-word too; nothing is reloaded (Refactor.54). 整個編輯器跟著語言：切換時重畫，
+// 文字 context 換一個新的，連記憶化的卡片也重新翻；不重新載入。
+function Root(props: { token: string; bootstrap: Bootstrap; text: (key: string) => string; version: string }) {
+  const current = useSyncExternalStore(languageSubscribe, language);
+  const text = useMemo(() => (key: string) => props.text(key), [props.text, current]);
+  return <App {...props} text={text} />;
+}
 async function start() {
   const token = location.hash.slice(1) || sessionStorage.getItem('sgrapeToken') || '';
   sessionStorage.setItem('sgrapeToken', token); history.replaceState(null, '', location.pathname + location.search);
@@ -284,7 +292,7 @@ async function start() {
   ]);
   const text = (key: string) => locales.messages?.[key]?.en ?? key;
   createRoot(document.getElementById('root')!).render(<StrictMode><ReactFlowProvider>
-    <App token={token} bootstrap={files} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
+    <Root token={token} bootstrap={files} text={text} version={build.version} /></ReactFlowProvider></StrictMode>);
 }
 function StartupError({ error, reset }: { error: unknown; reset?: () => Promise<void> }) {
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
