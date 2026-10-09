@@ -1,12 +1,14 @@
 /* Sizes, separate from colours (docs/ui/COLOR_SYSTEM.md: shape themes and colour themes switch independently).
- * Standard is the default, narrower, as the legacy editor's standard size (legacy style.css: 32px location and foot
- * bars, 32px title-bar buttons with 11px text, a 28px mark); Comfortable is the R.53 layout (human 2026-10-09:
- * "set the current size as Comfortable"). The overall scale slider comes later. Values are tentative.
- * 尺寸與顏色分開。預設 Standard（較窄，照舊產品的標準大小）；Comfortable＝R.53 的版面（人類：把現在的大小設成
- * Comfortable）。整體縮放拉桿之後再做。數字暫定。 */
+ * The size switch changes only the frame: title bar, location bar, toolbars, foot bar, panel tabs and their buttons,
+ * icons and text (human 2026-10-09). Content (nodes, value boxes, ports, lists, panel contents) has one set of sizes.
+ * Comfortable is the frame as it was until R.57 (human: "today's Standard is really Comfortable"); Standard is a smaller
+ * baseline. Values are a first baseline, balanced later.
+ * 尺寸與顏色分開。大小切換只改外框：標題列、網址列、功能表列、底列、面板分頁和它們的按鈕、圖示、字（人類）。內容（節點、
+ * 數值框、接孔、清單、面板內容）只有一組尺寸。Comfortable＝R.57 以前的外框（人類：現在的 Standard 其實是 Comfortable）；
+ * Standard＝更小的基準。數字是第一版基準，最後再抓平衡。 */
 /* Type scale (Refactor.54.2; human 2026-10-09): a few named levels, each a size with a fixed line height, so Chinese and
  * English lines are the same height whatever the font (the browser's `line-height: normal` follows each font's own
- * spacing). Components name a level, never a pixel size. Comfortable is one step larger.
+ * spacing). Components name a level, never a pixel size. The same for both sizes.
  * 字級：幾個有名字的級，每級是字的大小加固定行高，中英文一行一樣高（瀏覽器預設行高依字型而定）。元件只寫級，不寫像素。 */
 :root {
   --font-xs: 10px;   --line-xs: 14px;
@@ -15,13 +17,6 @@
   --font-base: 13px; --line-base: 19px;
   --font-lg: 16px;   --line-lg: 22px;
 }
-:root[data-size="comfortable"] {
-  --font-xs: 11px;   --line-xs: 15px;
-  --font-sm: 12px;   --line-sm: 17px;
-  --font-md: 13px;   --line-md: 19px;
-  --font-base: 14px; --line-base: 20px;
-  --font-lg: 17px;   --line-lg: 24px;
-}
 /* Fonts follow the language (human 2026-10-09): English in Verdana (as TD's UI), Traditional Chinese in PingFang or
  * Microsoft JhengHei (one font for both scripts on a line), any other language the system font first.
  * 字型跟著語言：英文 Verdana（同 TD 介面）、繁中蘋方或微軟正黑（一行中英文同一個字型）、其他語言系統字型優先。 */
@@ -29,22 +24,24 @@
 :root:lang(en) { --font-family: Verdana, system-ui, sans-serif; }
 :root:lang(zh-Hant) { --font-family: "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif; }
 :root {
-  --title-bar-height: 44px;
-  --bar-height: 32px;
-  --control-height: 28px;
+  /* the frame (changes with the size) 外框（隨大小改變） */
+  --title-bar-height: 38px;
+  --bar-height: 28px;
+  --control-height: 24px;
   --control-font: var(--font-sm);
-  --icon-size: 16px;
-  --icon-button: 28px;
-  --icon-button-narrow: 18px;
+  --icon-size: 14px;
+  --icon-button: 24px;
+  --icon-button-narrow: 16px;
+  --brand-mark: 22px;
+  --brand-font: 16px;
+  --tab-pad: 5px 10px;
+  /* content (one set) 內容（只有一組） */
   /* ports: drawn 13px (1.3x the old 10px), grabbed 8px further out (human 2026-10-09). 接孔畫 13px、可抓範圍再往外 8px。 */
   --port-size: 13px;    /* outer diameter, ring included 外徑（含圓框） */
   --port-grab: 8px;     /* the grab area is 29px across 可抓範圍 29px */
   --port-ring: 2.5px;   /* about a fifth of the diameter, as the legacy 11px port with its 2px ring (human 2026-10-09: balanced) 約外徑五分之一，照舊產品比例（人類：很均衡） */
   --port-point: 2px;    /* the handle element: a point at the port's centre, where wires end 接孔元素：圓心的一點，線的端點 */
   --wire-width: 3.5px;  /* a wire (selected and hovered: 5px) 接線粗細（選中與滑過 5px） */
-  --brand-mark: 26px;
-  --brand-font: 18px;
-  --tab-pad: 7px 12px;
   --row-height: 34px;   /* a row of a list or tree (legacy #nodelibrary .browser-row) */
   --io-row: 36px;       /* one input or output of a node: the IO row (value-input.md; legacy 29px, ×1.2 human 2026-10-09) 輸入輸出區塊的高度 */
   --io-field: 30px;     /* a value box inside it (legacy 24px, ×1.2 human 2026-10-09; 3px above and below) 其中的數值框 */
@@ -63,24 +60,14 @@
   --float-gap: 8px;     /* between floating things over the canvas, and to its edge 畫布上浮動物之間、到畫布邊的間距 */
 }
 :root[data-size="comfortable"] {
-  --title-bar-height: 47px;
-  --bar-height: 40px;
-  --control-height: 32px;
-  --control-font: var(--font-base);
-  --icon-size: 18px;
-  --icon-button: 30px;
-  --icon-button-narrow: 24px;
-  --port-size: 14px;
-  --port-grab: 9px;
-  --port-ring: 2.75px;
+  --title-bar-height: 44px;
+  --bar-height: 32px;
+  --control-height: 28px;
+  --control-font: var(--font-sm);
+  --icon-size: 16px;
+  --icon-button: 28px;
+  --icon-button-narrow: 18px;
   --brand-mark: 26px;
-  --brand-font: 17px;
-  --tab-pad: 9px 12px;
-  --row-height: 42px;
-  --io-row: 42px;
-  --io-field: 36px;
-  --io-field-min: 74px;
-  --field-pad: 8px 12px;
-  --node-min-width: 280px;
-  --row-font: var(--font-md);
+  --brand-font: 18px;
+  --tab-pad: 7px 12px;
 }
