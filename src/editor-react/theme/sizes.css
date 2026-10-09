@@ -66,7 +66,8 @@
   --radius-popup: 10px;
   --handle-line: 1px;
   --handle-grab: 9px;
-  --float-gap: 8px;     /* between floating things over the canvas, and to its edge 畫布上浮動物之間、到畫布邊的間距 */
+  --float-gap: 8px;
+  --canvas-shadow: 18px;   /* how far the network's inner shadow reaches 網路區內陰影的範圍 */     /* between floating things over the canvas, and to its edge 畫布上浮動物之間、到畫布邊的間距 */
 }
 :root[data-size="comfortable"] {
   --title-bar-height: 44px;

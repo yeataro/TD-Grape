@@ -13,6 +13,10 @@
   - 不新增色碼：新用途色 `--wire-ready`、`--wire-ready-glow` 由既有的 `--palette-wire-lilac`、`--palette-accent` 組成；新增強度 `--tint-wire-ready`（深 30%、淺 13%，同舊產品）；寬度進 `sizes.css`（`--port-halo`、`--port-ready-ring`、`--port-ready-glow`）。
   - 驗證：editor 76；在一個接孔上暫加 React Flow 的拖線 class 讀樣式（不改圖、讀完拿掉）：來源是 #ede5ff＋4px 25% 淡圈；命中是型別色＋3px #ede5ff 外框＋光暈到 10px。
   - 真的滑鼠滑過沒對準（接孔元素只有 2px），未實測；滑過與來源共用同一條規則。
+- **網路區畫布內陰影**（workspace `floating-panels.md` 27；人類筆記，新的：舊產品沒有）：
+  - 邊緣一圈 18px 內陰影（`--canvas-shadow`，顏色用既有的 `--shadow`）。
+  - 疊在節點之上（z 4 > viewport 2）、React Flow 面板之下（縮放比例 z 5 仍在上面），不擋滑鼠。
+  - 驗證：計算後的樣式與層次如上；實際深淺待人類看（可調 `--canvas-shadow`）。
 
 ## Refactor.58.1 — 進行中（貼圖輸入照位置命名、TD 內建值卡片…） — 2026-10-09
 

@@ -63,6 +63,11 @@ a { color: var(--accent); }
 .workspace { display: flex; flex: 1; min-height: 0; }
 .network { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .canvas { position: relative; flex: 1; min-height: 0; }
+/* The network sits sunk in, an inner shadow round its edge (human 2026-10-09 note; new, the legacy editor had none). Above
+   the nodes (React Flow's viewport) and below its panels (zoom readout), so floating controls stay crisp; never takes the
+   pointer. 網路區像嵌進去，邊緣一圈內陰影（人類筆記；新的，舊產品沒有）。在節點之上、React Flow 面板（縮放比例）之下，浮動控制保持清楚；不擋滑鼠。 */
+.canvas .react-flow::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  box-shadow: inset 0 0 var(--canvas-shadow) var(--shadow); }
 /* React Flow's own variables, pointed at our purposes (COLOR_SYSTEM.md). RF 自己的變數接到我們的用途名。 */
 .react-flow { --xy-background-color: var(--surface-canvas); --xy-edge-label-color: var(--text-secondary);
   --xy-edge-label-background-color: var(--surface-raised); --xy-controls-button-background-color: var(--surface-control);
