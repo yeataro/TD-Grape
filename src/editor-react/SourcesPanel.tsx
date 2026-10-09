@@ -194,6 +194,7 @@ export function SourcesPanel({ declarations, references }: {
     </FoldSection>
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}
     <FoldSection title={<>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</>}
+      hint={tr('sources.uniformsHint', 'Values TD reads as parameters of the GLSL OP: colours on its Colors page, the rest on Vectors. Changing a value does not recompile.')}
       actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
       <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Color'))}</button></>}>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
@@ -228,6 +229,7 @@ export function SourcesPanel({ declarations, references }: {
             <button onClick={() => session.createPreset(preset.entry)}>{say(tr('sources.create', 'Create'))}</button></div></DragRow>; })}
     </FoldSection>
     <FoldSection title={<>{say(tr('sources.constants', 'Global constants'))}{count(constants.length, 'constant')}</>}
+      hint={tr('sources.constantsHint', 'Fixed values written into the shader. Changing one recompiles it.')}
       actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
     {constants.map(declaration => <SourceCard key={declaration.id} declaration={declaration} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}

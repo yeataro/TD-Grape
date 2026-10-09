@@ -169,11 +169,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* The whole heading row opens and closes, gaps included; the hint and the actions sit above it (human 2026-10-09: the
    hit area was only the words). 整列標題（含空白）都能收合；說明與動作按鈕疊在上面（人類：可點的只有字）。 */
 .fold-heading { position: relative; } .fold-toggle::after { content: ""; position: absolute; inset: 0; }
-.fold-heading :is(.fold-hint, .fold-actions) { position: relative; z-index: 1; }
+.fold-heading .fold-actions { position: relative; z-index: 1; }
+/* No highlight under the pointer: the whole row works, so a highlight on the words only misled (human 2026-10-09).
+   From the keyboard, the whole row is outlined. 滑過不畫高亮：整列都能點，只畫在字上反而誤導（人類）。鍵盤選到時整列畫框。 */
+.fold-toggle:is(:hover, :focus-visible) { background: none; outline: none; }
+.fold-heading:has(.fold-toggle:focus-visible) { outline: 1px solid var(--accent); outline-offset: -1px; border-radius: var(--radius-control); }
 .fold-actions { display: flex; gap: 4px; }
 .fold-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.fold-hint { display: grid; place-items: center; color: var(--text-faint); } .fold-hint .icon { width: 14px; height: 14px; }
-.fold-hint:hover { color: var(--text-secondary); }
 .fold-body { padding-top: 4px; }
 /* A source card (human 2026-10-09 trial): a strip at its left in its kind's colour (a node title turned on its side, at the
    title's strength), the body as a node body. 來源卡片（人類試驗）：左邊一條是種類的顏色（轉了方向的節點標題、同樣的濃度），本體同節點本體。 */

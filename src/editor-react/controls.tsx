@@ -159,15 +159,14 @@ export function AlignedRows({ rows, className }: { rows: readonly (readonly (Mes
 /** A section whose heading folds it away (human 2026-10-09: without folding, the panel is a heap). The heading holds the
  * title (with its count) and, on the right, the section's own buttons, which do not fold it.
  * 標題可以折疊的一區（人類：不能折疊東西就一大堆）。標題放名稱（含數量），右邊是這一區自己的按鈕，按它們不會折疊。 */
-// `hint`: what the section is for, behind an ⓘ beside its title instead of a paragraph that always takes room (human
-// 2026-10-09: the wrapping hints were annoying; later the Help panel can take them). Only sections that have one show it.
-// hint：這一段是做什麼的，放在標題旁的 ⓘ 後面，不常駐佔位（人類：換行的說明很煩；之後可搬到 Help 面板）。有說明才出現。
+// `hint`: what the section is for, shown when the pointer rests on its title, not as a paragraph that always takes room
+// (human 2026-10-09: the wrapping hints were annoying; later the ⓘ went too, the title says it). Later the Help panel can
+// take them. hint：這一段是做什麼的，滑過標題時顯示，不常駐佔位（人類：換行的說明很煩；之後 ⓘ 也拿掉，由標題帶）。之後可搬到 Help 面板。
 export function FoldSection({ title, actions, hint, children }: { title: ReactNode; actions?: ReactNode; hint?: Message | string; children: ReactNode }) {
   const [open, setOpen] = useState(true);
   return <section className="fold-section">
-    <header className="fold-heading"><span className="fold-title"><button type="button" className="fold-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-      <Icon name="chevronDown" />{title}</button>
-      {hint && <span className="fold-hint" role="img" aria-label={say(hint)} title={say(hint)}><Icon name="info" /></span>}</span>
+    <header className="fold-heading"><span className="fold-title" title={hint && say(hint)}><button type="button" className="fold-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
+      aria-description={hint && say(hint)}><Icon name="chevronDown" />{title}</button></span>
       {actions && <span className="fold-actions">{actions}</span>}</header>
     {open && <div className="fold-body">{children}</div>}
   </section>;
