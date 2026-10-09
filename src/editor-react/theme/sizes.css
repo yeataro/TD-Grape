@@ -50,6 +50,7 @@
   --io-field: 30px;     /* a value box inside it (legacy 24px, ×1.2 human 2026-10-09; 3px above and below) 其中的數值框 */
   --io-field-min: 64px; /* the narrowest a value box gets; nodes widen to fit (value-input.md 五 4) 數值框最窄寬度；節點依內容撐開 */
   --io-field-gap: 4px;  /* between value boxes side by side 並排數值框之間 */
+  --field-pad: 6px 10px; /* inside a text input 文字輸入框的內距 */
   --node-min-width: 250px; /* one shared minimum; a node grows with its content 節點共用的最小寬度 */
   --row-font: var(--font-md);
   /* shapes and handles (shared by both sizes) 形狀與把手（兩種大小共用） */
@@ -78,6 +79,7 @@
   --io-row: 42px;
   --io-field: 36px;
   --io-field-min: 74px;
+  --field-pad: 8px 12px;
   --node-min-width: 280px;
   --row-font: var(--font-md);
 }

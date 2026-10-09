@@ -13,6 +13,9 @@ body { margin: 0; }
    表單控制項也用頁面的行高（瀏覽器預設給它們 normal，是中英文不齊最常見的原因）。 */
 button, input { font: inherit; line-height: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-control); }
 input { border-radius: var(--radius-field); background: var(--surface-field); }
+/* One comfortable inset for every text input (human 2026-10-09: the source name sat against its left edge); value boxes
+   and swatches keep their own. 所有文字輸入框共用一個舒服的內距（人類：來源名稱貼著左邊）；數值框、色塊用自己的。 */
+input:where(:not([type="checkbox"], [type="radio"], [type="color"])) { padding: var(--field-pad); }
 input:focus-visible { outline: 1px solid var(--accent); }
 button { padding: 6px 9px; }
 /* Check boxes in the theme's accent (legacy: accent-color purple). 勾選框用主題的強調色（照舊產品）。 */
@@ -348,7 +351,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .create-node { position: fixed; z-index: 35; width: min(620px, calc(100vw - 16px)); height: min(440px, calc(100vh - 16px)); display: flex; flex-direction: column; gap: 8px;
   padding: 10px; border: 1px solid var(--border-control); border-radius: var(--radius-popup); background: var(--surface-raised); box-shadow: 0 10px 30px var(--shadow); }
 .create-head { display: flex; align-items: center; justify-content: space-between; }
-.create-search, .add-node-search { width: 100%; padding: 7px 9px; }
+.create-search, .add-node-search { width: 100%; }
 .create-columns { display: flex; flex: 1; min-height: 0; gap: 8px; }
 .create-list { flex: 3; min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
 .create-entry { display: flex; align-items: center; gap: 8px; min-height: var(--row-height); text-align: left; border: 0; background: none; padding: 0 8px; font-size: var(--row-font); }
