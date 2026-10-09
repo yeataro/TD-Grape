@@ -43,6 +43,8 @@
   --brand-font: 18px;
   --tab-pad: 7px 12px;
   --row-height: 34px;   /* a row of a list or tree (legacy #nodelibrary .browser-row) */
+  --io-row: 30px;       /* one input or output of a node: the IO row (value-input.md; legacy .port-row 29px) 輸入輸出區塊的高度 */
+  --io-field: 24px;     /* a value box inside it (legacy .node-inline-values input 24px) 其中的數值框 */
   --row-font: var(--font-md);
   /* shapes and handles (shared by both sizes) 形狀與把手（兩種大小共用） */
   --radius-control: 7px;
@@ -66,5 +68,7 @@
   --brand-font: 17px;
   --tab-pad: 9px 12px;
   --row-height: 42px;
+  --io-row: 36px;
+  --io-field: 30px;
   --row-font: var(--font-md);
 }

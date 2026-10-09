@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { core, type Value } from './core';
 import type { ComponentState } from './host';
 import { NumberField } from './NumberField';
 import { Select } from './controls';
+import { Icon } from './icons';
 import { tr, say } from './text';
 
-// The value widget (one field per component, a colour swatch, TD's driven states), shared by node cards and the
-// Sources panel. To be redesigned with the node value input (floating-panels.md 18).
-// 數值 widget（每個分量一格、色塊、TD 驅動狀態），節點卡片與共用來源面板共用。之後數值輸入大改時重新設計。
+// The value widget, the one every value input uses (node inputs, values in a node's body, the Sources panel; human
+// 2026-10-09). One row (the IO row) whether wired or not; a vector's fields side by side with the component names
+// inside the boxes; a triangle shows one component per row, the only thing that changes the height (value-input.md).
+// Its colours come from outside: it reads --field-bg, --field-fill, --field-text and --field-label, which a theme gives
+// and any container may set (human 2026-10-09: a few colour sets defined from outside).
+// 數值 widget，所有數值輸入共用（節點輸入、節點本體裡的值、共用來源面板）。不論有沒有接線都一行；向量各分量並排、
+// 分量名稱寫在框內；三角形展開成一個分量一行，只有它會改變高度。顏色由外部給：只讀 --field-* 變數，主題給預設、容器可以換。
 const booleans = [{ value: 'false', label: 'false' }, { value: 'true', label: 'true' }];
 
 // Native input previews are local; native change commits the chosen colour.
@@ -49,30 +54,36 @@ function DrivenField({ state }: { state: ComponentState }) {
   return <code className={`td-driven td-${state.mode}`} title={title}>{text}</code>;
 }
 
-export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes }: {
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
   /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
   preview?: (value: Value) => void;
   /** Each component's state in TD (Uniform D1); left out means a plain value. 各分量在 TD 的狀態；沒給＝一般數值。 */
   modes?: readonly (ComponentState | undefined)[];
+  /** A wire gives this value: it keeps its place but is not shown (wiring never changes the height). 接線提供這個值：位置留著、不顯示。 */
+  wired?: boolean;
 }) {
   const count = core.values.count(type), family = core.values.family(type);
+  // Shown expanded on this page only, not saved (value-input.md 四: whether to keep it in the graph is open).
+  // 展開只在這一頁、不存檔（要不要存進圖待人類決定）。
+  const [expanded, setExpanded] = useState(false);
   // A component TD reports a value for shows TD's (Q57: TD is the authority; a bound one shows the value
   // it is bound to); otherwise the graph's. TD 有回報值的分量顯示 TD 的（Bind 顯示綁到的值），否則顯示圖裡的。
   const list = Array.from({ length: count }, (_, i) => modes?.[i]?.value !== undefined ? modes[i]!.value!
     : Array.isArray(value) ? value[i] ?? 0 : value);
   const hex = '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
   const fromHex = (next: string): Value => [...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)];
-  return <div className="value-group nodrag nopan">
-    {color && count >= 3 && <ColorField label={`${label} color`} value={hex}
-      commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} />}
-    <div className={`value-fields ${count > 1 ? 'vector-fields' : ''}`}>
+  return <div className={'value-group nodrag nopan' + (expanded ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
+    {count > 1 && <button type="button" className="value-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
+      aria-label={say(tr('value.expand', 'Show each component on its own row'))} title={say(tr('value.expand', 'Show each component on its own row'))}>
+      <Icon name="chevronDown" /></button>}
+    <div className="value-fields" style={{ '--components': count } as CSSProperties}>
       {list.map((item, i) => {
         const withComponent = (next: Value) => { const values = [...list]; values[i] = next; return count === 1 ? next : values; };
         const change = (next: Value) => commit(withComponent(next));
         const mode = modes?.[i], bound = mode?.mode === 'bind';
-        return <label key={i} className={bound ? 'td-bind' : undefined} title={bound ? mode.text : undefined}>
-          {count > 1 && <span style={color ? { color: `var(--component-${'xyzw'[i]})` } : undefined}>{names[i]}</span>}
+        return <label key={i} className={'value-field' + (bound ? ' td-bind' : '')} title={bound ? mode.text : undefined}>
+          {count > 1 && <span className="component" style={color ? { color: `var(--component-${'xyzw'[i]})` } : undefined}>{names[i]}</span>}
           {mode && (mode.mode === 'expression' || mode.mode === 'export' || mode.mode === 'other') ? <DrivenField state={mode} />
             : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
             : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}
@@ -82,5 +93,8 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
         </label>;
       })}
     </div>
+    {/* A colour's swatch on its own row below the fields (legacy). 顏色的色塊在數值下面自己一行（照舊產品）。 */}
+    {color && count >= 3 && <ColorField label={`${label} color`} value={hex}
+      commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} />}
   </div>;
 }

@@ -61,6 +61,7 @@
   --tint-border: 55%;   /* the accent on a hovered border */
   --tint-scroll: 36%;   /* a scrollbar thumb (legacy --scroll-thumb #51465f) */
   --tint-scroll-hover: 58%; /* under the pointer (legacy --scroll-hover #79638e) */
+  --tint-field-fill: 14%;   /* a value box's slider fill (legacy --numeric-slider-fill #c4c0df24) */
   /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
   /* Toned down from the legacy .88/.85/.72/.54/.32 (human 2026-10-09: all white text was frighteningly bright).
      比舊產品調暗（人類：白字亮到可怕）。 */
@@ -75,6 +76,12 @@
   /* An editable value on a node or a source, a step above the card; a locked one (driven by TD) stays dark.
      節點與來源上可編輯的值，比卡片亮一階；被鎖定（由 TD 驅動）的保持深色。 */
   --surface-node-field: color-mix(in srgb, var(--palette-node), var(--palette-lift) var(--lift-node-field));
+  /* The value widget's colour slots (ValueFields): defaults here; a container may set its own set.
+     數值 widget 的顏色欄位：預設在這裡；放它的容器可以給自己的一組。 */
+  --field-bg: var(--surface-node-field);
+  --field-fill: color-mix(in srgb, var(--palette-accent) var(--tint-field-fill), transparent);
+  --field-text: var(--text-strong);
+  --field-label: var(--text-muted);
   --group-function: var(--palette-violet);
   --group-output: var(--palette-green);
   --group-uniform: var(--palette-teal);

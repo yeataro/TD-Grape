@@ -167,11 +167,17 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    節點標題裡的選擇器：只有值和箭頭，直接在標題色上，照舊產品的型別選單。 */
 .node-title .select-button { background: none; border: 0; padding: 2px 0 2px 4px; color: var(--text-secondary); font-weight: 600; }
 .node-title .select-button:hover { color: var(--text-strong); }
-.node-body { padding: 12px 0; display: flex; flex-direction: column; gap: 9px; }
+.node-body { padding: 10px 0; display: flex; flex-direction: column; gap: 2px; }
 .node-body > .value-group, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
-.port-row { position: relative; padding: 5px 14px; display: flex; gap: 8px; align-items: center; min-height: 30px; }
-.port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); } .input-row > span { flex-shrink: 0; font-size: var(--font-md); line-height: var(--line-md); }
+/* Every input and output is one IO row, the same height wired or not, like a table (value-input.md); only an expanded
+   value grows, one row per component. The port stays on the first row. 每個輸入輸出一行、有沒有接線都一樣高，像表格；
+   只有展開的值會變高（一個分量一行）。接孔永遠在第一行。 */
+.port-row { position: relative; padding: 0 14px; display: flex; gap: 8px; align-items: flex-start; min-height: var(--io-row); }
+.port-row > span, .port-row > .port-fallback { display: flex; align-items: center; gap: 4px; height: var(--io-row); flex-shrink: 0; }
+.port-row > .react-flow__handle { top: calc(var(--io-row) / 2); }
+.port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); } .input-row > span { font-size: var(--font-md); line-height: var(--line-md); }
 .input-row > .value-group { flex: 1; min-width: 0; } .output-row { justify-content: flex-end; }
+.port-fallback.wired { visibility: hidden; }
 /* Ports (Refactor.54.2): bigger, grabbed further out than drawn, and styled by direction and whether wired; A and B are
    under test (human 2026-10-09). A = outputs filled, inputs hollow; B = hollow until wired.
    接孔：放大、可抓範圍比畫出來的大；依方向與有沒有接線上樣式；A／B 測試中。A＝輸出實心輸入空心；B＝沒接空心、接了實心。 */
@@ -180,11 +186,23 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .react-flow__handle::before { content: ""; position: absolute; inset: calc(var(--port-grab) * -1); border-radius: 50%; }
 :root:not([data-ports="b"]) .react-flow__handle.source,
 :root[data-ports="b"] .react-flow__handle[data-connected="true"] { background: var(--port-color); }
-.value-group { min-width: 0; } .value-fields { display: grid; grid-template-columns: 1fr; gap: 5px; }
-.vector-fields { grid-template-columns: 1fr 1fr; } .value-fields label { min-width: 0; display: flex; align-items: center; gap: 5px; cursor: default; }
-.value-fields label span { width: 10px; font-size: var(--font-sm); line-height: var(--line-sm); } .value-fields input, .value-fields .select-button { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
-.value-fields input, .value-fields .select-button, .control-field .select-button { background: var(--surface-node-field); }
-input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; background: none; overflow: hidden; }
+/* The value widget (ValueFields): fields side by side in one IO row, the component name inside each box; expanded,
+   one component per row. A wired value keeps its place, unseen. Colours only from the --field-* slots.
+   數值 widget：各分量並排在一行、分量名稱在框內；展開時一個分量一行。接線的值位置留著、看不到。顏色只用 --field-*。 */
+.value-group { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px; min-width: 0; padding-block: calc((var(--io-row) - var(--io-field)) / 2); }
+.value-group.wired { visibility: hidden; }
+.value-expand { flex: 0 0 auto; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
+.value-expand .icon { width: 12px; height: 12px; transform: rotate(-90deg); } .value-expand[aria-expanded="true"] .icon { transform: none; }
+.value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(0, 1fr)); gap: calc(var(--io-row) - var(--io-field)) 4px; }
+.value-group.expanded .value-fields { grid-template-columns: minmax(0, 1fr); }
+.value-field { position: relative; display: block; min-width: 0; }
+.value-field > .component { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;
+  font-size: var(--font-xs); line-height: var(--line-xs); color: var(--field-label); }
+.value-field input, .value-field .select-button, .value-field .td-driven { width: 100%; min-width: 0; height: var(--io-field); padding: 0 6px; border: 0;
+  font-variant-numeric: tabular-nums; color: var(--field-text); background-color: var(--field-bg); }
+.value-field > .component ~ * { padding-left: 18px; }
+.control-field .select-button { background: var(--field-bg); }
+input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { flex-basis: 100%; height: var(--io-field); padding: 0; border: 0; background: none; overflow: hidden; }
 /* The whole rounded box is the colour: no browser frame or inset around the swatch. 整個圓角框就是顏色，沒有瀏覽器的框與內縮。 */
 .color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
 .color-swatch::-webkit-color-swatch { border: 0; border-radius: var(--radius-field); }
