@@ -33,7 +33,7 @@ import { AlignedRows } from './controls';
 import { DropdownMenu } from './DropdownMenu';
 import type { Projection, FlowNode, FlowEdge } from './projection';
 import { readPreference, writePreference } from './preferences';
-import { FRAME_MS, MIN_ZOOM, MAX_ZOOM, dampedWheel, frameNodes } from './viewport';
+import { MIN_ZOOM, MAX_ZOOM, dampCanvas, frameMs, frameNodes } from './viewport';
 
 const nodeTypes: NodeTypes = { grape: NodeCard };
 // The Grape OP in the address (Refactor.24): the Grape OP's Edit opens /shader/<id>/; ?target=<id> also
@@ -79,7 +79,7 @@ function ZoomReadout() {
       aria-label={say(tr('canvas.zoom', 'Zoom'))} title={say(tr('canvas.zoom', 'Zoom'))}
       onClick={event => setAnchor(anchor ? null : event.currentTarget)}>{zoom}%</button>
     {anchor && <DropdownMenu anchor={anchor} label={say(tr('canvas.zoom', 'Zoom'))} fit onClose={() => setAnchor(null)}
-      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: FRAME_MS }) }))} />}
+      items={zoomPresets.map(value => ({ key: String(value), label: `${value}%`, checked: zoom === value, select: () => void flow.zoomTo(value / 100, { duration: frameMs() }) }))} />}
   </>;
 }
 const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, damping, stage, onCreate, onDropChoice }: {
@@ -87,11 +87,11 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
 }) {
   const options = useOptions(), flow = useReactFlow();
-  // Canvas damping takes the wheel over only while on (viewport.ts). 畫布阻尼只在開著時接管滾輪。
-  const surface = useRef<HTMLDivElement>(null), damper = useRef<ReturnType<typeof dampedWheel> | null>(null);
+  // Canvas damping takes the mouse's wheel and background drag over only while on (viewport.ts). 畫布阻尼只在開著時接管滑鼠。
+  const surface = useRef<HTMLDivElement>(null), damper = useRef<ReturnType<typeof dampCanvas> | null>(null);
   useEffect(() => {
     if (!damping || !surface.current) return;
-    const taken = damper.current = dampedWheel(flow, surface.current);
+    const taken = damper.current = dampCanvas(flow, surface.current);
     return () => { taken.detach(); damper.current = null; };
   }, [damping, flow]);
   // React Flow's own colours follow the theme (COLOR_SYSTEM.md). React Flow 自己的顏色跟著主題。
@@ -120,7 +120,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   const reconnecting = useRef(false);
   return <BodyDragContext.Provider value={bodyDrag}><MergingContext.Provider value={preview}><RightDragSelect session={session} boxSelect={boxSelect}>
     <ReactFlow<FlowNode, FlowEdge> ref={surface} nodes={projection.nodes} edges={edges} nodeTypes={nodeTypes}
-      zoomOnScroll={!damping} zoomOnPinch={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
+      zoomOnScroll={!damping} onMoveStart={event => { if (event) damper.current?.interrupt(); }}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
       onConnectEnd={(event, state) => {
@@ -187,11 +187,13 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
 // Damping starts off while it is a trial. Body 拖曳與畫布阻尼記在這個瀏覽器；試驗期間阻尼預設關。
 function usePrefs(): CanvasPrefs {
   const [prefs, setPrefs] = useState(() => ({ snap: false, boxSelect: false,
-    bodyDrag: readPreference('canvas.bodyDrag') !== 'off', damping: readPreference('canvas.damping') === 'on' }));
+    bodyDrag: readPreference('canvas.bodyDrag') !== 'off', damping: readPreference('canvas.damping') === 'on',
+    frameGlide: readPreference('canvas.frameGlide') !== 'off' }));
   return useMemo(() => ({ ...prefs, set: patch => {
     setPrefs(old => ({ ...old, ...patch }));
     if (patch.bodyDrag !== undefined) writePreference('canvas.bodyDrag', patch.bodyDrag ? 'on' : 'off');
     if (patch.damping !== undefined) writePreference('canvas.damping', patch.damping ? 'on' : 'off');
+    if (patch.frameGlide !== undefined) writePreference('canvas.frameGlide', patch.frameGlide ? 'on' : 'off');
   } }), [prefs]);
 }
 // No graph open: the same frame, nothing to show and nothing to do (Refactor.51.1). 沒有圖時：同一個外框，沒有內容、按鈕停用。

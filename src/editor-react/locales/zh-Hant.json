@@ -344,6 +344,7 @@
   "toolbar.boxSelect": "框選（拖曳改為框選，不移動畫面）",
   "toolbar.damping": "畫布阻尼",
   "toolbar.downloadDraft": "下載草稿",
+  "toolbar.frameGlide": "Frame 過渡（F）",
   "toolbar.glsl": "",
   "toolbar.redo": "",
   "toolbar.saveProject": "保存 TD 專案",

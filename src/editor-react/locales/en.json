@@ -344,6 +344,7 @@
   "toolbar.boxSelect": "Box select (drag selects instead of panning)",
   "toolbar.damping": "Canvas damping",
   "toolbar.downloadDraft": "Download draft",
+  "toolbar.frameGlide": "Frame transition (F)",
   "toolbar.glsl": "GLSL",
   "toolbar.redo": "Redo",
   "toolbar.saveProject": "Save TD project",
