@@ -16,6 +16,7 @@ class GrapeManagerExt:
         self.families = {}
         self.bootstrap = None
         self.live = None  # LiveWatch while connected (Uniform D2) 連線期間的即時值監看
+        self.textures = {}  # shared default images made this connection (Refactor.58) 這次連線做好的公用預設圖
 
     @staticmethod
     def _template(comp):
@@ -49,7 +50,8 @@ class GrapeManagerExt:
         self.live = self._module('live_watch').LiveWatch(resolve=self.Resolve, watcher=self._watch, frame=lambda: absTime.frame)
         self.api = self._module('host_api').HostAPI(
             bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save(),
-            applied=self.live.applied, identity=lambda: {'file': project.name, 'build': app.build})
+            applied=self.live.applied, identity=lambda: {'file': project.name, 'build': app.build}, textures=self.Texture)
+        self.textures = {}
         self.queue = self._module('host_requests').HostRequests()
         editor.http.connect(self.queue)
         panel = self.ownerComp.par.Remotepanel.eval()
@@ -57,6 +59,18 @@ class GrapeManagerExt:
         # Discovery happens on connection, never on an idle frame or child cook.
         self.families = {comp.id: comp for comp in op('/').findChildren(tags=[GRAPE_OP_TAG]) if not self._template(comp)}
         self._status('Ready', registered=len(self.families), version=editor.snapshot.version)
+
+    def Texture(self, name):
+        """A shared default image as a JPEG, from the main component's Samples (Refactor.58; the human placed a
+        copy there): made once per connection. Only the images; the plain colours are drawn by the editor.
+        公用預設圖（JPEG），來自主組件裡的 Samples（人類放的一份）；每次連線只做一次。只有圖片，純色由編輯器畫。"""
+        index = {'grape': 1, 'banana': 2, 'jellybeans': 3}.get(name)
+        samples = self.ownerComp.parent.GrapeHost.op('Samples')
+        if index is None or samples is None:
+            return None
+        if name not in self.textures:
+            self.textures[name] = bytes(samples.op('out' + str(index)).saveByteArray('.jpg', quality=.8))
+        return self.textures[name]
 
     def Disconnect(self):
         if self.live:

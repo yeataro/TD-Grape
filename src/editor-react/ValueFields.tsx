@@ -62,6 +62,11 @@ function DrivenField({ state }: { state: ComponentState }) {
 // group at their limit). An input's caption is its name and type; a value without a port shows "Color" or its type
 // (tentative, value-input.md 四). 值的開頭文字：在上面按中鍵（或 Alt＋右鍵）打開整組的數值梯尺，每個分量加上同一個量
 // （照 TouchDesigner；舊產品整列調值：整數碰到界限整組停）。輸入的開頭文字是名字與型別；沒有接孔的值顯示 Color 或型別（暫定）。
+/** The colour of a value's first three components (0–1), as the browser's colour input writes it: what a swatch or
+ * a plain default image shows. 數值前三個分量（0–1）的顏色，寫成瀏覽器顏色輸入的格式：色塊、純色預設圖用。 */
+export const colorHex = (list: readonly unknown[]) =>
+  '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
+
 export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults, caption }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
   /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
@@ -83,7 +88,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   // it is bound to); otherwise the graph's. TD 有回報值的分量顯示 TD 的（Bind 顯示綁到的值），否則顯示圖裡的。
   const list = Array.from({ length: count }, (_, i) => modes?.[i]?.value !== undefined ? modes[i]!.value!
     : Array.isArray(value) ? value[i] ?? 0 : value);
-  const hex = '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
+  const hex = colorHex(list);
   const fromHex = (next: string): Value => [...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)];
   // A component is edited here unless TD drives it (Uniform D1). 分量除非由 TD 驅動，否則在這裡編輯。
   const editable = (i: number) => { const mode = modes?.[i];

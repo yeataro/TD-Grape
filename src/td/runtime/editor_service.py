@@ -370,6 +370,8 @@ class EditorHTTP:
                         except (ValueError, UnicodeDecodeError, TimeoutError) as error:
                             return self.reply(400, {'error': str(error)})
                     status, result = host_requests.request(self.command, self.path, body)
+                    if getattr(result, 'mime', None):  # an image (host_api.Image) 圖片
+                        return self.reply(status, result.data, result.mime, keep=result.keep)
                     return self.reply(status, result)
                 if length or self.command == 'POST':
                     return self.reply(405, {'error': 'Static assets do not accept actions or bodies'}, head=head)
@@ -409,7 +411,7 @@ class EditorHTTP:
                 self.connection.settimeout(5)
                 service.live.serve(self.connection, target)
 
-            def reply(self, status, data, mime=None, head=False):
+            def reply(self, status, data, mime=None, head=False, keep=False):
                 if not isinstance(data, bytes):
                     data = json.dumps(data, ensure_ascii=False).encode('utf-8')
                 if status >= 400:
@@ -418,7 +420,8 @@ class EditorHTTP:
                     self.send_response(status)
                     self.send_header('Content-Type', mime or 'application/json; charset=utf-8')
                     self.send_header('Content-Length', str(len(data)))
-                    self.send_header('Cache-Control', 'no-store')
+                    # Only the shared default images may be kept, for an hour (Refactor.58). 只有公用預設圖能留一小時。
+                    self.send_header('Cache-Control', 'private, max-age=3600' if keep and status == 200 else 'no-store')
                     self.send_header('X-Content-Type-Options', 'nosniff')
                     self.send_header('Referrer-Policy', 'no-referrer')
                     peer = ''

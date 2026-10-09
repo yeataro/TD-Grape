@@ -324,6 +324,26 @@ class HostRoutingTests(unittest.TestCase):
         self.assertEqual(self.api(old).dispatch('POST', '/api/' + TARGET + '/identity', {})[0], 422)
         self.assertEqual(assign.call_count, 1)
 
+    def test_default_image_previews(self):
+        # Refactor.58: a shared default image by name (kept by the browser); the TOP chosen on this Grape OP's
+        # Samples as a snapshot (not kept); none chosen or an unknown name is a 404, not a failure.
+        # 公用預設圖照名字給（瀏覽器可留）；Samples 上選的 TOP 給快照（不留）；沒選或沒有這張是 404。
+        fam, comp = family()
+        api = host_api.HostAPI(bootstrap={'version': 1, 'producer': 'frontend-modules', 'catalogHash': CATALOG},
+            resolve=lambda ident: fam if ident == TARGET else None, choices=lambda: {}, save_project=Mock(),
+            textures=lambda name: b'jpg-banana' if name == 'banana' else None)
+        code, image = api.dispatch('GET', '/api/textures/banana.jpg')
+        self.assertEqual((code, image.data, image.mime, image.keep), (200, b'jpg-banana', 'image/jpeg', True))
+        self.assertEqual(api.dispatch('GET', '/api/textures/white.jpg')[0], 404)
+        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/texture')[1]['code'], 'texture_unavailable')  # no Samples 沒有 Samples
+        out7 = SimpleNamespace(saveByteArray=Mock(return_value=bytearray(b'jpg-chosen')))
+        samples = SimpleNamespace(par=SimpleNamespace(Top=Par(None)), op=lambda name: out7 if name == 'out7' else None)
+        comp.ops['Samples'] = samples
+        self.assertEqual(api.dispatch('GET', '/api/' + TARGET + '/texture')[0], 404)  # nothing chosen 沒選
+        samples.par.Top = Par('/project1/moviefilein1')
+        code, image = api.dispatch('GET', '/api/' + TARGET + '/texture')
+        self.assertEqual((code, image.data, image.keep), (200, b'jpg-chosen', False))
+
     def test_build_changed_is_not_a_conflict(self):
         code, result = self.api(family()[0]).dispatch('POST', '/api/' + TARGET + '/apply', {**request(run=runtime()), 'catalogHash': 'e' * 64})
         self.assertEqual((code, result['code']), (409, 'build_changed'))

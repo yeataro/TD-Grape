@@ -223,6 +223,13 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-card > :is(.source-head, .source-body, .builtin-row) { grid-column: 2; min-width: 0; }
 .source-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .source-head > .badge { margin: 0; flex: none; }
+/* A default image's preview: four rows tall, the image whole inside (Refactor.58). 預設圖預覽：四列高，整張圖放進去。 */
+.texture-preview { position: relative; height: calc(var(--io-row) * 4 - 2 * var(--io-inset)); margin: var(--io-inset) 0;
+  display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-field); background: var(--field-bg); color: var(--text-muted); }
+.texture-preview img { width: 100%; height: 100%; object-fit: contain; }
+.texture-preview figcaption { position: absolute; left: 4px; bottom: 4px; margin: 0; }
+/* Nothing chosen: transparent, shown as a checkerboard (human 2026-10-09). 沒選：透明，用棋盤格表示（人類）。 */
+.texture-preview.checker { background: repeating-conic-gradient(var(--overlay-up) 0 25%, transparent 0 50%) 0 0 / var(--checker) var(--checker), var(--field-bg); }
 /* When narrow the name matters most (human 2026-10-09): it keeps a minimum and the type shrinks first.
    變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。 */
 .source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }

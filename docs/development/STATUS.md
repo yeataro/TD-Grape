@@ -2,6 +2,33 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.58 — 貼圖輸入卡片可展開看預設圖 — 2026-10-09
+
+- 人類要求（design-interview Q66；workspace `texture-preview.md`，含舊行為對照表）：貼圖輸入卡片可展開看預設圖。這是新行為，舊產品只有名字。
+- 純色：White、Black、Flat normal 由編輯器照數值畫，和 Samples 的 Constant TOP 一樣。色塊和純色共用 `colorHex`，元件裡不寫色碼。
+- 公用圖：Grape、Banana、Jellybeans 走 `GET /api/textures/<名字>.jpg`。
+  - 來源是主組件裡人類放的一份 `/TD_Grape/Samples`，Manager 以 `parent.GrapeHost` 找到它。
+  - TD 每次連線各存一次 JPG（品質 0.8，28–70KB、5–13ms），之後從記憶體給。
+  - 瀏覽器留一小時；所有子 OP 共用。
+- 自選的 TOP：`GET /api/<Grape ID>/texture` 拍那個子 OP 的 Samples out7，不快取。
+  - 打開卡片時拍一張，標「快照・非即時」。
+  - 沒選 TOP 時回 404，編輯器顯示棋盤格加「沒選 TOP・輸入是透明的」（人類）。
+  - 其他失敗（例如 TD 不在）顯示「沒有預覽」。
+- TD 端：
+  - `host_api.Image` 回覆、`textures` 注入、`LookupError`→404。
+  - `editor_service` 回圖片；只有公用圖可快取，其他仍是 `no-store`。
+  - `next_family.chosen_texture()`；`GrapeManagerExt.Texture()`。
+  - 用 `install_native_manager.py` 裝進 TD（檢查點 `work/refactor/checkpoints/r58-texture-preview`）。
+- 驗證：
+  - 自動測試：Python 84+14（新增預覽入口測試）、editor 75。
+  - 真實 TD：三張公用圖 200 `image/jpeg` 可快取；white 404；這個子 OP 沒選 TOP，回 404 `texture_unavailable`；全專案 `scriptErrors()` 為空；安裝後 port 不變、保護區未動。
+  - 內建瀏覽器：input1（Grape）圖載入 800×600；input2（Samples 上選的 TOP、沒選）顯示棋盤格加說明。
+  - 自選 TOP 有選時的快照畫面未實機看過（API 路徑以測試驗證）。
+- 待人類：
+  - 靜態網站用的 Grape 放哪個資料夾（A 只給靜態網站／B 現有 static）。
+  - 58.1 改用 out 的 label 定義表、統一 Samples 命名（待同意）。
+- 未 Deliver（TOE 未存）；未 push。
+
 ## Refactor.57.24 — 新增來源的預設名稱照舊產品、顏色 Uniform 顯示 RGB／RGBA、打開的卡片加淡分隔線 — 2026-10-09
 
 - 人類：新增的顏色 Uniform 預設名稱不是 uColor（大問題）。照舊產品（legacy `functions_ui.js` `uniqueInputName`、`inspector.js` 預設名）：Uniform `uValue`、顏色 `uColor`、常數 `cValue`，重名時 `uColor2`、`uColor3`。核心新增 `freeLegacyName`（先用基底本身再加 2、3），`freeDeclarationName` 保留給貼圖輸入（`input1` 對齊 TD 輸入編號，R.43）。既有圖裡的名字不改。

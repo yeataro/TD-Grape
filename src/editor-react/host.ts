@@ -41,6 +41,12 @@ export class HostClient {
       ? () => new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + this.root + 'live') as unknown as LiveSocket
       : undefined);
   }
+  /** Where a default image's preview is (Refactor.58): the shared ones by name, the same for every Grape OP;
+   * the TOP chosen on this Grape OP's Samples ("custom") as a snapshot. 預設圖預覽的位址：公用的照名字、
+   * 每個 Grape OP 都一樣；這個 Grape OP 在 Samples 上選的 TOP（custom）是快照。 */
+  textureUrl(texture: string): string {
+    return texture === 'custom' ? this.root + 'texture' : '/api/textures/' + encodeURIComponent(texture) + '.jpg';
+  }
   async call<T>(action: 'state' | 'apply' | 'save' | 'identity', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);
     try {

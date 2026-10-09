@@ -11,8 +11,17 @@ class UnsupportedOperation(RuntimeError):
     pass
 
 
+class Image:
+    """An image reply (Refactor.58, default-image previews): JPEG bytes, and whether the browser may keep it.
+    圖片回覆：JPEG，以及瀏覽器能不能留著用。"""
+    mime = 'image/jpeg'
+
+    def __init__(self, data, *, keep):
+        self.data, self.keep = bytes(data), keep
+
+
 class HostAPI:
-    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None, identity=None):
+    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None, identity=None, textures=None):
         if bootstrap.get('version') != 1 or bootstrap.get('producer') != 'frontend-modules':
             raise ValueError('The editor module bootstrap is unavailable or incompatible.')
         self.catalog_hash = bootstrap['catalogHash']
@@ -25,6 +34,10 @@ class HostAPI:
         # reply, so people can compare; the host itself never judges "same TD". 每個回覆都帶「哪個 TD 回的」
         # （專案檔名、TD 版本），讓人比對；宿主自己不判斷是不是同一個 TD。
         self.identity = identity
+        # The shared default images, by name, for previews while editing (Refactor.58): the same for every
+        # Grape OP, so one address each and the browser keeps them. 編輯時預覽用的公用預設圖：每個 Grape OP
+        # 都一樣，所以一張圖一個網址，瀏覽器留著用。
+        self.textures = textures
 
     def dispatch(self, method, path, body=None):
         status, result = self._dispatch(method, path, body)
@@ -37,6 +50,12 @@ class HostAPI:
         match = re.fullmatch(r'/api/([a-f0-9]{32})/([a-z-]+)', path)
         if method == 'GET' and path == '/api/shaders':
             return 200, self.choices()
+        shared = re.fullmatch(r'/api/textures/([a-z]+)\.jpg', path)
+        if method == 'GET' and shared:
+            data = self.textures(shared.group(1)) if self.textures else None
+            if not data:
+                return 404, {'error': 'There is no shared default image with this name.', 'code': 'texture_unavailable'}
+            return 200, Image(data, keep=True)
         if not match:
             return 404, {'error': 'Open a registered Grape OP to edit its graph.', 'code': 'target_required'}
         target_id, action = match.groups()
@@ -47,6 +66,8 @@ class HostAPI:
             if method == 'POST' and not isinstance(body, dict):
                 raise ValueError('Host actions require a JSON object.')
             return 200, self._action(family, method, action, body)
+        except LookupError as error:
+            return 404, {'error': str(error), 'code': 'texture_unavailable', 'layer': 'grape-op', 'operation': action}
         except UnsupportedOperation as error:
             return 501, {'error': str(error), 'code': 'capability_not_migrated', 'layer': 'manager', 'operation': action}
         except (ValueError, RuntimeError) as error:
@@ -76,6 +97,10 @@ class HostAPI:
         # The person chose "also give this Grape OP a new Grape ID" (Refactor.52, Q63). 使用者勾了換新 ID。
         if method == 'POST' and action == 'identity':
             return {'targetId': family.regenerate()}
+        # The TOP chosen on this Grape OP's Samples, as it looks now: a snapshot, not live (Refactor.58).
+        # 這個 Grape OP 在 Samples 上選的 TOP 現在的樣子：快照，不是即時。
+        if method == 'GET' and action == 'texture':
+            return Image(family.chosen_texture(), keep=False)
         if method == 'POST' and action == 'save':
             return {'saved': self.save_project()}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

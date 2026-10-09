@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, 
 import { useReactFlow } from '@xyflow/react';
 import { core, type Declaration } from './core';
 import { tr, say, tdValueHint, type Message } from './text';
-import { ValueFields } from './ValueFields';
+import { ValueFields, colorHex } from './ValueFields';
 import { useSession } from './contexts';
 import { Badge, ConfirmDialog, FoldSection, MenuButton, Select } from './controls';
 import { Icon } from './icons';
@@ -20,6 +20,47 @@ const textureNames: Record<string, Message> = {
   white: tr('texture.white', 'White'), black: tr('texture.black', 'Black'), normal: tr('texture.normal', 'Flat normal'),
   custom: tr('texture.custom', 'TOP chosen on Samples'),
 };
+// The plain ones are drawn here from their values, the same as the constant TOPs in Samples
+// (install_grape_templates.py); they are the images' content, not a look. 純色的照數值直接畫，數值同 Samples 裡的
+// Constant TOP；這是圖的內容，不是外觀。
+const plainTextures: Record<string, readonly number[]> = { white: [1, 1, 1], black: [0, 0, 0], normal: [.5, .5, 1] };
+
+type Shot = 'loading' | 'none' | 'failed' | { src: string };
+/** What a default image looks like, open on its card (Refactor.58; human 2026-10-09). The images come from TD once
+ * and are shared by every Grape OP. The TOP chosen on Samples is a snapshot taken when the card opens, and says so;
+ * with none chosen the input is transparent, so a checkerboard says that (human).
+ * 預設圖的樣子（打開卡片時）。圖片從 TD 拿一次、所有 Grape OP 共用。Samples 上選的 TOP 是打開卡片那一刻的快照，並標明；
+ * 沒選時輸入是透明的，用棋盤格表示（人類）。 */
+function TexturePreview({ texture }: { texture: string }) {
+  const session = useSession(), custom = texture === 'custom', plain = plainTextures[texture];
+  const [failed, setFailed] = useState(false), [shot, setShot] = useState<Shot>('loading');
+  useEffect(() => setFailed(false), [texture]);
+  // Asked, not just shown, so "none chosen" and "no TD" read differently. 用問的，才分得出「沒選」和「TD 不在」。
+  useEffect(() => {
+    if (!custom) return;
+    let live = true, url = '';
+    setShot('loading');
+    fetch(session.host.textureUrl(texture), { headers: { 'X-Sgrape-Token': session.host.token } })
+      .then(async response => response.ok ? { src: url = URL.createObjectURL(await response.blob()) } as Shot
+        : response.status === 404 ? 'none' as const : 'failed' as const, () => 'failed' as const)
+      .then(next => { if (live) setShot(next); else if (url) URL.revokeObjectURL(url); });
+    return () => { live = false; if (url) URL.revokeObjectURL(url); };
+  }, [custom, texture, session]);
+  const note = (text: Message, hint?: Message) => <figcaption className="badge" title={hint ? say(hint) : undefined}>{say(text)}</figcaption>;
+  if (plain) return <figure className="texture-preview" style={{ background: colorHex(plain) }} />;
+  if (custom) return <figure className={'texture-preview' + (shot === 'none' ? ' checker' : '')}>
+    {typeof shot === 'object' && <img src={shot.src} alt="" draggable={false} />}
+    {shot === 'failed' && <span>{say(tr('sources.noPreview', 'No preview'))}</span>}
+    {shot === 'none' && note(tr('sources.noChosenTop', 'No TOP chosen · the input is transparent'))}
+    {typeof shot === 'object' && note(tr('sources.snapshot', 'Snapshot · not live'),
+      tr('sources.snapshotHint', 'Taken when this card opened; close and open it again for a new one.'))}
+  </figure>;
+  return <figure className="texture-preview">
+    {failed ? <span>{say(tr('sources.noPreview', 'No preview'))}</span>
+      : <img src={session.host.textureUrl(texture)} alt="" draggable={false} onError={() => setFailed(true)} />}
+  </figure>;
+}
+
 function NameField({ declaration }: { declaration: Declaration }) {
   const session = useSession(), [draft, setDraft] = useState(declaration.name);
   useEffect(() => setDraft(declaration.name), [declaration.name]);
@@ -129,7 +170,9 @@ export function SourcesPanel({ declarations, references }: {
         <NameField declaration={declaration} />
         <Select label={tr('sources.defaultTexture', 'Default image')} title={tr('sources.defaultTexture', 'Default image')}
           value={String(declaration.defaultTexture)} onChange={value => session.setDefaultTexture(declaration.id, value)}
-          options={core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))} /></>} />)}
+          options={core.defaultTextures.map(texture => ({ value: texture, label: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))} /></>}>
+      <TexturePreview texture={String(declaration.defaultTexture)} />
+    </SourceCard>)}
     </FoldSection>
     {/* A colour or not is chosen when added (Q59). 是不是顏色在新增時決定。 */}
     <FoldSection title={<>{say(tr('sources.uniforms', 'Uniforms'))}{count(uniforms.length, 'uniform')}</>}
