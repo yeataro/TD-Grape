@@ -40,7 +40,10 @@ a { color: var(--accent); }
 .foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--bar-font); line-height: var(--bar-line); color: var(--text-muted); }
 .foot-bar.error, .foot-bar.conflict, .foot-bar.uncertain { --message: var(--status-error); }
 .foot-bar.warning, .foot-bar.offline { --message: var(--status-warning); }
-.foot-sync { white-space: nowrap; }
+/* The sync state is as wide as its longest wording, with some room (bars.tsx); copies stack in one cell, unseen.
+   同步狀態和最長那句一樣寬、再多留一點；副本疊在同一格、看不見。 */
+.foot-sync { display: inline-grid; flex-shrink: 0; white-space: nowrap; padding-right: 1.5em; font-variant-numeric: tabular-nums; }
+.foot-sync > * { grid-area: 1 / 1; } .foot-sync-size { visibility: hidden; }
 .foot-message { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;
   background: none; border-color: transparent; color: var(--message, var(--text)); }
 .foot-bar .recovery-help { position: relative; }

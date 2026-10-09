@@ -118,8 +118,14 @@ export function FootBar({ session, waiting, onDownload, prefs }: { session: Edit
   const state = useEditorState(session), fullscreen = useFullscreen();
   const log = useSyncExternalStore(session?.log.subscribe ?? noSubscribe, session?.log.entries ?? (() => noLog));
   const [history, setHistory] = useState<HTMLElement | null>(null);
-  const sync = !state ? tr('status.noGraph', 'No graph open') : state.phase === 'sending' ? tr('status.sending', 'Sending to TD')
-    : state.dirty ? tr('status.unsent', 'Changes not yet sent to TD') : tr('status.synced', 'Synced with TD');
+  const states = [tr('status.sending', 'Sending to TD'), tr('status.unsent', 'Changes not yet sent to TD'), tr('status.synced', 'Synced with TD')];
+  const sync = !state ? tr('status.noGraph', 'No graph open') : state.phase === 'sending' ? states[0]! : state.dirty ? states[1]! : states[2]!;
+  const line = (text: typeof sync, revision: number | string) => say(tr('status.line', '{state} · revision {revision}', { state: text, revision }));
+  // The sync state keeps the width of its longest wording (every state, at least five revision digits, plus some room), so the message
+  // after it never jumps (human 2026-10-09). Invisible copies size the box; it follows the language by itself.
+  // 同步狀態保持最長那句的寬度（每一種狀態、至少五位數版本號，再多留一點空間），後面的訊息就不會跳（人類）。看不見的副本撐出寬度，換語言也自動跟上。
+  const digits = '0'.repeat(Math.max(5, String(state?.revision ?? '').length));
+  const sizes = [say(tr('status.noGraph', 'No graph open')), ...states.map(text => line(text, digits))];
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
   return <footer className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
     <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
@@ -132,7 +138,8 @@ export function FootBar({ session, waiting, onDownload, prefs }: { session: Edit
       { key: 'save', label: say(tr('toolbar.saveProject', 'Save TD project')), disabled: !session || state?.phase === 'sending', divider: true, select: () => void session?.save() },
       { key: 'apply', label: say(tr('action.applyShader', 'Apply Shader')), disabled: !canApply(state), select: () => void session?.flush() },
     ]} />
-    <span className="foot-sync">{say(state ? tr('status.line', '{state} · revision {revision}', { state: sync, revision: state.revision }) : sync)}</span>
+    <span className="foot-sync">{sizes.map(text => <span key={text} className="foot-sync-size" aria-hidden="true">{text}</span>)}
+      <span>{state ? line(sync, state.revision) : say(sync)}</span></span>
     {/* The latest message; its whole text (e.g. TD's compile log) on hover, the history on click (Q35).
         最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看歷史。 */}
     <button type="button" className="foot-message" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}
