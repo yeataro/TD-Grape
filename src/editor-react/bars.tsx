@@ -3,7 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
 import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
-import { appearanceSubscribe, currentSize, currentTheme, setSize, setTheme, sizes, themes } from './appearance';
+import { appearance, appearanceSubscribe, currentMode, currentSize, currentStyle, hasMode, modes, setMode, setSize, setStyle, sizes, styles } from './appearance';
 import type { Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
@@ -177,17 +177,27 @@ function LogHistory({ anchor, entries, onClose }: { anchor: HTMLElement; entries
 const SliderPlaceholder = ({ label }: { label: Message }) =>
   <div className="slider-placeholder" role="group" aria-label={say(label)} aria-disabled="true" title={say(label) + ' · ' + say(notYet)}>
     <span aria-hidden="true">−</span><span className="slider-track" /><span aria-hidden="true">+</span></div>;
+// A titled row: the name centred in the left half, its control filling the right half (human 2026-10-09).
+// 有名稱的一行：名稱在左半邊置中，控制項填滿右半邊（人類）。
+const SettingsRow = ({ label, children }: { label: Message; children: ReactNode }) =>
+  <div className="settings-row"><span>{say(label)}</span>{children}</div>;
 function AppearancePanels() {
-  useSyncExternalStore(appearanceSubscribe, () => currentTheme() + currentSize());
+  useSyncExternalStore(appearanceSubscribe, appearance);
+  const style = currentStyle();
   return <>
     <PopoverButton icon="theme" label={tr('appearance.title', 'Appearance')} className="settings-panel">
-      <Segmented label={tr('appearance.title', 'Appearance')} value={currentTheme()} options={themes} onChange={setTheme} />
+      <SettingsRow label={tr('appearance.title', 'Appearance')}>
+        <Select label={tr('appearance.title', 'Appearance')} value={style} onChange={setStyle}
+          options={styles.map(item => ({ value: item.value, label: say(item.label) }))} /></SettingsRow>
+      {/* TD has no light version yet. TD 還沒有淺色版。 */}
+      <Segmented label={tr('appearance.mode', 'Dark or light')} value={currentMode()} onChange={setMode}
+        options={modes.map(item => ({ ...item, disabled: !hasMode(style, item.value), title: hasMode(style, item.value) ? undefined : notYet }))} />
       <SliderPlaceholder label={tr('appearance.brightness', 'Brightness')} />
     </PopoverButton>
     <PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
-      <label className="settings-row"><span>{say(tr('action.language', 'Language'))}</span>
+      <SettingsRow label={tr('action.language', 'Language')}>
         <Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
-          options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></label>
+          options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></SettingsRow>
       <Segmented label={tr('appearance.sizeTitle', 'Language and size')} value={currentSize()} options={sizes} onChange={setSize} />
       <SliderPlaceholder label={tr('appearance.scale', 'Interface scale')} />
     </PopoverButton>

@@ -189,7 +189,9 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .log-list { max-height: 50vh; overflow: auto; }
 .settings-panel { display: flex; flex-direction: column; gap: 10px; width: 280px; padding: 12px; }
 .settings-panel .segmented button { flex: 1; }
-.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.settings-row { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 10px; }
+.settings-row > span { text-align: center; }
+.settings-row .select-button { width: 100%; justify-content: space-between; }
 .slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 16px; cursor: default; padding: 0 4px; }
 .slider-track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-control-hover); }
 .log-entry { display: flex; gap: 10px; padding: 4px 6px; border-radius: 4px; font-size: 12px; white-space: pre-wrap; }

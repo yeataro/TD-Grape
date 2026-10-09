@@ -16,7 +16,8 @@
 - **跳過**：TD 清單的隔行深淺底色——試做後要逐一列出每種清單、為 hover 與選中加例外、分類樹裡也算不準；人類：有問題就跳過。
 - **驗證**：editor 65（含主題 4）、core 140；內建瀏覽器＋真實 TD：Dark、Light、TD 三種截圖檢查；Standard 底列 32px、Comfortable 40px；⋮ 寬 24px（Comfortable）；最後切回 Dark＋Standard。
 - **記錄**：floating-panels.md 第 31～35 點（右鍵選單、外觀面板、大小面板、分享面板、快捷鍵列表；都排在之後）。
-- commit：`48bde30`、`ad30098`。
+- **人類看了面板之後（10-09）**：拉桿照舊產品不放文字、兩端是 − 與 ＋（`c6c18bd`）；語言與外觀那一行是「名稱在左半邊置中、控制項填滿右半邊」，外觀面板照舊產品改成「外觀〔Grape／TD〕＋ Dark／Light」兩個選擇（TD 還沒有淺色版，選 TD 時 Light 停用並說明）。人類：最後還會再調整。
+- commit：`48bde30`、`ad30098`、`c6c18bd`，以及本段之後的一筆。
 
 ## Refactor.54 — 新增節點的入口：Create node、Add Node 面板、拉線放開、拿起線 — 2026-10-09
 
