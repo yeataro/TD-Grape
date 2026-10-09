@@ -58,6 +58,7 @@
     - 每約 1ms 一次、共 200 次的密集拖曳：拖曳途中畫面每格都跟上（0→14→30→50→73px），停住 60ms 已到 172，最後剛好 200；節點 DOM 變化 0。
     - 滾輪連 10 下：縮放 ×4 與原生相同，分 37 格、最長 9ms，停下即停。
 - 面板分頁（人類試）：顯示中的分頁佔分頁列的一半，名字放得下；其他平分剩下的一半；只有一個分頁就佔滿。驗證：左欄 299px 時，Shared Sources 150px 完整；Add Node、GLSL 各 75px，Add Node 被截短。
+- **Refactor.61.4 圖片提示加上網路位置**（人類 10-10）：滑到快照圖片上，第一行是接進來的 OP 在 TD 網路裡的路徑，第二行是尺寸與格式。驗證：editor 79；Grape_TOP1「/project1/moviefilein3 ↵ 640 × 360, 8-bit fixed (RGBA)」「/project1/moviefilein2 ↵ 1920 × 1920, 8-bit fixed (RGBA)」。
 - **Refactor.61.3 快照的圖顯示尺寸與格式**（人類 10-10：拍的時候取得幾乘幾、幾 bits、通道，放在提示裡；指向圖片是圖的資訊，快照按鈕是快照的事）：
   - TD：拍快照時附上 In TOP 原本的 `width`、`height`、`pixelFormat`（TD 自己的寫法，例如 `8-bit fixed (RGBA)`，不翻譯），隨圖片回覆放在 `X-Sgrape-Image` 標頭，不多一次請求（`host_api.Image.info`、`editor_service.reply`）。
   - 編輯器：滑到圖片上＝「640 × 360, 8-bit fixed (RGBA)」；滑到快照按鈕＝拍攝時間與重拍，最後一行加括號的 cook 說明（R.61.2 那行）。來源路徑留在標頭「in1: …」的提示，兩邊不重複。

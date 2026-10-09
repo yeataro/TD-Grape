@@ -83,10 +83,11 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
   const label = (content: ReactNode) => <figcaption className="image-label-slot">{content}</figcaption>;
   if (source) {
     return <figure className="texture-preview">
-      {/* Two hints (human 2026-10-10): the picture tells what the image is (size, format, as TD's info); the label tells
-          about the snapshot. 兩個提示（人類）：圖片說圖是什麼（尺寸、格式，同 TD 的資訊）；標籤說快照的事。 */}
-      {typeof shot === 'object' && picture(shot.src, undefined, shot.info ? say(tr('sources.imageInfo', '{width} × {height}, {format}',
-        { width: shot.info.width, height: shot.info.height, format: shot.info.format })) : undefined)}
+      {/* Two hints (human 2026-10-10): the picture tells what the image is (where it is in TD's network, then size and
+          format, as TD's info); the label tells about the snapshot. 兩個提示（人類）：圖片說圖是什麼（在 TD 網路裡的位置，
+          再來是尺寸、格式，同 TD 的資訊）；標籤說快照的事。 */}
+      {typeof shot === 'object' && picture(shot.src, undefined, [source, shot.info && say(tr('sources.imageInfo', '{width} × {height}, {format}',
+        { width: shot.info.width, height: shot.info.height, format: shot.info.format }))].filter(Boolean).join('\n'))}
       {shot === 'failed' && unavailable}
       {typeof shot === 'object' && label(<button type="button" className="image-label nodrag"
         onClick={() => setRetake(n => n + 1)}
