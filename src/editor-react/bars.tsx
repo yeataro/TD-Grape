@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type CSSProperties } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
@@ -145,7 +145,7 @@ export function FootBar({ session, waiting, onDownload, prefs, onAppearance }: {
         最新訊息；完整內容（例如 TD 的編譯紀錄）在提示裡，點開看歷史。 */}
     <button type="button" className="foot-message" title={full === first ? undefined : full} aria-haspopup="dialog" aria-expanded={!!history}
       disabled={!session} onClick={event => setHistory(history ? null : event.currentTarget)}>{first}{full === first ? '' : ' …'}</button>
-    {session && state && offline.includes(state.phase) && <button type="button" onClick={() => void session.check()}>{say(tr('status.retry', 'Retry connection'))}</button>}
+    {session && state && offline.includes(state.phase) && <RetryPie checking={!!state.checking} retryAt={state.retryAt} retryMs={state.retryMs} onRetry={() => void session.check()} />}
     {session && state?.phase === 'offline' && <details className="recovery-help"><summary>{say(tr('status.howToRecover', 'How to recover'))}</summary>
       <p>{say(recoveryHelp)}</p></details>}
     <span className="spacer" />
@@ -199,6 +199,19 @@ const SliderPlaceholder = ({ label }: { label: Message }) =>
 const SettingsRow = ({ label, children }: { label: Message; children: ReactNode }) =>
   <div className="settings-row"><span>{say(label)}</span>{children}</div>;
 // Component tint (Refactor.59; Q67): ports, labels and wires of one component take its colour. 分量染色：單一分量的接孔、標籤、接線用分量色。
+// The automatic retry as a countdown pie (Refactor.59.3; human 2026-10-09): it empties over the wait, then the editor checks;
+// pressing it checks at once and starts over. While a check is on its way it waits, full and faint.
+// 自動重試的倒數圓餅（人類）：等待期間逐漸變空，空了就檢查；按下去馬上檢查、從頭開始。檢查中保持全滿、變淡、不能按。
+function RetryPie({ checking, retryAt, retryMs, onRetry }: { checking: boolean; retryAt?: number; retryMs?: number; onRetry(): void }) {
+  const left = retryAt === undefined ? 0 : Math.max(0, retryAt - Date.now());
+  const label = say(checking ? tr('status.checking', 'Checking the connection…') : tr('status.retryNow', 'Retrying automatically; click to retry now'));
+  return <button type="button" className={'icon-button retry-pie' + (checking ? ' checking' : '')} disabled={checking} aria-label={label} title={label} onClick={onRetry}>
+    <svg viewBox="0 0 20 20" aria-hidden="true"><circle className="retry-track" cx="10" cy="10" r="8" />
+      <circle key={retryAt ?? 'checking'} className="retry-sweep" cx="10" cy="10" r="4"
+        style={{ animationDuration: left + 'ms', animationDelay: (left - (retryMs ?? left)) + 'ms' } as CSSProperties} /></svg>
+  </button>;
+}
+
 function ComponentTint() {
   useSyncExternalStore(appearanceSubscribe, appearance);
   return <label className="check"><input type="checkbox" checked={componentTintOn()} onChange={event => setComponentTint(event.target.checked)} />

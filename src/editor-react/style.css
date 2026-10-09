@@ -46,6 +46,18 @@ a { color: var(--accent); }
 .brand-mark { width: var(--brand-mark); height: var(--brand-mark); flex: none; }
 .brand-name { color: var(--text-strong); font-size: var(--brand-font); line-height: var(--title-bar-height); }
 .title-bar button { height: var(--control-height); padding-block: 0; font-size: var(--control-font); }
+/* A text button in the location and foot bars (e.g. Retry connection) has a fill, so it keeps a gap off the bar's edges
+   like the title bar's; icon buttons have no fill and keep their size (human 2026-10-09).
+   網址列與底列的文字按鈕（例如 Retry connection）有底色，所以和標題列一樣離列的上下邊緣留空隙；圖示按鈕沒有底色，大小不變（人類）。 */
+:is(.location-bar, .foot-bar) button:not(.icon-button) { height: var(--control-height); padding-block: 0; }
+/* The countdown pie (Refactor.59.3): a wedge in the accent that empties over the wait; checking keeps it full and faint.
+   The pie is a circle stroked as wide as itself (r 4, stroke 8), its dash shrinking. 倒數圓餅：強調色扇形在等待中變空；檢查中全滿、變淡。 */
+.retry-pie svg { width: var(--icon-size); height: var(--icon-size); transform: rotate(-90deg); }
+.retry-pie .retry-track { fill: none; stroke: var(--border-control); stroke-width: 1.5; }
+.retry-pie .retry-sweep { fill: none; stroke: var(--accent); stroke-width: 8; stroke-dasharray: 25.13; stroke-dashoffset: 0;
+  animation-name: retry-countdown; animation-timing-function: linear; animation-fill-mode: both; }
+.retry-pie.checking .retry-sweep { animation: none; opacity: .4; }
+@keyframes retry-countdown { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 25.13; } }
 .brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: var(--font-md); line-height: var(--line-md); }
 .location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); font-size: var(--bar-font); line-height: var(--bar-line); }
 .foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: var(--bar-font); line-height: var(--bar-line); color: var(--text-muted); }

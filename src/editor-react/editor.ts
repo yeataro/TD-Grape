@@ -570,7 +570,7 @@ export class Editor {
     } catch (error) { this.notice(error); return false; }
   };
   flush = () => this.sync.flush();
-  check = () => this.sync.check();
+  check = () => this.sync.checkNow();
   // Conflict choice "TD 端" (Q28, 2026-10-07 human chose A): adopt TD's document as an
   // ordinary history step, so one Undo recalls the editor's version without blocking anything.
   // 衝突時選「TD 端」：把 TD 版本當成一般編輯步驟採用；按一次 Undo 即叫回編輯端的修改（重新整理後失效）。

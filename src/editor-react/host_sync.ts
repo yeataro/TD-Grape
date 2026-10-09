@@ -10,7 +10,10 @@ export type Compiled = ReturnType<typeof compiler.compile>;
 // `key` is the code-generation fingerprint (compiler.key): equal keys mean the same program.
 export type Delivery = { graph: Graph; key: string; compiled?: Compiled; error?: string };
 export type SyncPhase = 'ready' | 'sending' | 'error' | 'offline' | 'uncertain' | 'conflict';
-export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable' };
+// retryAt / retryMs: when the next automatic check runs and how long the wait is (Refactor.59.3: the countdown pie);
+// checking: a check is on its way. retryAt／retryMs：下一次自動檢查的時間與等待長度（倒數圓餅）；checking：檢查中。
+export type SyncStatus = { revision: number; dirty: boolean; phase: SyncPhase; link?: 'busy' | 'unreachable';
+  retryAt?: number; retryMs?: number; checking?: boolean };
 // What to tell the person and how serious it is (design-interview Q35); sent once, with the
 // status change it belongs to. 要告訴人的話與嚴重程度；只在發生的那一次隨狀態一起送出。
 export type Said = { message: Message | string; level?: Level };
@@ -183,12 +186,23 @@ export class HostSync {
   // 只在未連線或結果不明期間、頁面可見時重試，且不重疊；平常不輪詢，TD 端不增加工作。
   private recover() {
     clearTimeout(this.recovery);
-    if (this.disposed || !['offline', 'uncertain'].includes(this.status.phase)) return;
-    this.recovery = setTimeout(async () => {
-      if (typeof document === 'undefined' || !document.hidden) await this.check();
-      this.recover();
+    if (this.disposed || !['offline', 'uncertain'].includes(this.status.phase)) {
+      if (this.status.retryAt !== undefined) this.set({ retryAt: undefined });
+      return;
+    }
+    this.set({ retryAt: Date.now() + this.retry, retryMs: this.retry });
+    this.recovery = setTimeout(() => {
+      if (typeof document === 'undefined' || !document.hidden) void this.checkNow(); else this.recover();
     }, this.retry);
   }
+  /** Check at once, then wait again (Refactor.59.3: pressing the countdown starts it over; human 2026-10-09).
+   * Never two at a time. 馬上檢查，然後重新等待（按倒數圓餅＝從頭開始）；不會同時兩個。 */
+  checkNow = async () => {
+    if (this.status.checking) return;
+    clearTimeout(this.recovery);
+    this.set({ checking: true, retryAt: undefined });
+    try { await this.check(); } finally { if (!this.disposed) { this.set({ checking: false }); this.recover(); } }
+  };
   // Reads TD's current copy and refuses a different build; never writes.
   // 只讀 TD 目前的那一份；建置不一致即拒絕。
   read = async () => {
