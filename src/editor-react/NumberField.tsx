@@ -1,15 +1,8 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
-import { createPortal } from 'react-dom';
-import { ladderLayout, ladderPosition, ladderReadoutPosition, moveLadder, type LadderMotion } from './valueLadder';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { fillFraction, moveScrub, presetValues, startScrub, type Scrub } from './valueScrub';
+import { useValueLadder, type LadderPointer } from './useValueLadder';
 import { DropdownMenu } from './DropdownMenu';
 import { tr, say } from './text';
-
-type Ladder = LadderMotion & {
-  initialDraft: string;
-  readout: { left: number; top: number };
-  pointer?: { id: number; button: number; mask: number };
-};
 
 // Draft/gesture state stays in this React control. Only release commits to the graph.
 // 草稿與手勢由此 React 控制項持有；放開才提交圖，因此一個手勢只有一次 Undo。
@@ -26,11 +19,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
   defaultValue?: number;
 }) {
   const [draft, setDraft] = useState(String(value));
-  const [ladder, setLadder] = useState<Ladder | null>(null);
-  const gesture = useRef<Ladder | null>(null);
   const input = useRef<HTMLInputElement>(null);
-  const tooltipId = useId();
-  const suppressContext = useRef(0);
   const skipBlur = useRef(false);
   const typing = useRef(false);
   const [error, setError] = useState('');
@@ -40,112 +29,28 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
   const [scrubbing, setScrubbing] = useState(false);
   const lastClick = useRef<{ time: number; x: number; y: number } | null>(null);
   const [presets, setPresets] = useState(false);
-  const active = ladder !== null;
   const normalize = (number: number) => unsigned ? Math.max(0, Math.trunc(number)) :
     integer ? Math.trunc(number) : number;
+  const ladder = useValueLadder({ anchor: input, integer, normalize, show: next => setDraft(String(next)), preview, commit });
 
   // While the person drags or types here, values from outside (e.g. TD's live values, Uniform D2) wait
   // until they finish; they never cancel the gesture. 有人正在拖或輸入時，外面來的值（例如 TD 的即時值）等手勢結束，不會打斷它。
   useEffect(() => {
-    if (gesture.current || typing.current || scrub.current) return;
+    if (ladder.gesture.current || typing.current || scrub.current) return;
     setDraft(String(value));
   }, [value, integer, unsigned]);
 
-  function begin(x: number, y: number, pointer?: Ladder['pointer']) {
-    const number = Number(draft);
-    if (!draft.trim() || !Number.isFinite(number) || gesture.current) return;
+  function openLadder(x: number, y: number, pointer?: LadderPointer) {
+    if (!draft.trim() || !Number.isFinite(Number(draft))) return;
     input.current?.focus({ preventScroll: true });
-    const steps = integer ? [100, 10, 1] : [10, 1, 0.1, 0.01, 0.001];
-    const state: Ladder = {
-      ...ladderPosition(x, y, steps.length, 2, innerWidth, innerHeight),
-      readout: ladderReadoutPosition(input.current?.getBoundingClientRect() ??
-        { left: x, top: y, bottom: y }, innerWidth, innerHeight),
-      index: 2, steps, value: normalize(number), initialDraft: draft, pointer,
-    };
-    gesture.current = state;
-    setDraft(String(state.value));
-    setLadder({ ...state });
+    ladder.begin(x, y, Number(draft), pointer);
   }
-
-  // Listeners exist only while the ladder is active, and are removed on teardown.
-  // 只有梯尺開啟期間訂閱事件；取消、卸載或失焦即釋放，不做常駐輪詢。
-  useEffect(() => {
-    const state = gesture.current;
-    if (!active || !state) return;
-    const controller = new AbortController();
-    const options = { capture: true, signal: controller.signal };
-    let shown = state.value;
-    const paint = () => {
-      setDraft(String(state.value));
-      setLadder({ ...state });
-      if (state.value !== shown) { shown = state.value; preview?.(state.value); }
-    };
-    const finish = (accept: boolean) => {
-      if (gesture.current !== state) return;
-      gesture.current = null;
-      controller.abort();
-      setLadder(null);
-      setDraft(accept ? String(state.value) : state.initialDraft);
-      suppressContext.current = performance.now() + 400;
-      if (state.pointer && input.current?.hasPointerCapture(state.pointer.id)) {
-        input.current.releasePointerCapture(state.pointer.id);
-      }
-      if (accept && state.value !== value) commit(state.value);
-      else if (!accept && shown !== value) preview?.(value); // cancelled: TD goes back 取消：TD 回到原值
-    };
-    const move = (event: globalThis.PointerEvent) => {
-      if (!state.pointer || event.pointerId !== state.pointer.id) return;
-      if (!(event.buttons & state.pointer.mask)) { finish(false); return; }
-      event.preventDefault(); event.stopPropagation();
-      const previousValue = state.value;
-      const previousIndex = state.index;
-      const wasOutside = !!state.drag;
-      moveLadder(state, event.clientX, event.clientY, normalize);
-      if (state.value !== previousValue || state.index !== previousIndex || wasOutside !== !!state.drag) paint();
-    };
-    const key = (event: KeyboardEvent) => {
-      event.preventDefault(); event.stopImmediatePropagation();
-      if (event.key === 'Escape' || event.key === 'Tab') { finish(false); return; }
-      if (event.key === 'Enter' && !state.pointer) { finish(true); return; }
-      if (state.pointer) return;
-      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        state.index = Math.max(0, Math.min(state.steps.length - 1,
-          state.index + (event.key === 'ArrowUp' ? -1 : 1)));
-      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        const candidate = state.value + state.steps[state.index] * (event.key === 'ArrowRight' ? 1 : -1);
-        if (Number.isFinite(candidate)) state.value = normalize(Number(candidate.toPrecision(15)));
-      }
-      paint();
-    };
-    window.addEventListener('pointermove', move, options);
-    window.addEventListener('pointerup', event => {
-      if (event.pointerId === state.pointer?.id && event.button === state.pointer.button) {
-        event.preventDefault(); event.stopPropagation(); finish(true);
-      }
-    }, options);
-    window.addEventListener('pointercancel', () => finish(false), options);
-    window.addEventListener('pointerdown', () => finish(false), options);
-    window.addEventListener('keydown', key, options);
-    window.addEventListener('blur', () => finish(false), { signal: controller.signal });
-    window.addEventListener('resize', () => finish(false), options);
-    window.addEventListener('wheel', () => finish(false), options);
-    input.current?.addEventListener('blur', () => finish(false), options);
-    input.current?.addEventListener('lostpointercapture', () => finish(false), options);
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) finish(false);
-    }, options);
-    return () => {
-      controller.abort();
-      gesture.current = null;
-    };
-  }, [active]);
 
   function pointerDown(event: PointerEvent<HTMLInputElement>) {
     if (event.button === 1 || (event.button === 2 && event.altKey)) {
       event.preventDefault(); event.stopPropagation();
-      begin(event.clientX, event.clientY, { id: event.pointerId, button: event.button,
-        mask: event.button === 1 ? 4 : 2 });
-      if (gesture.current) event.currentTarget.setPointerCapture(event.pointerId);
+      openLadder(event.clientX, event.clientY, { id: event.pointerId, button: event.button, mask: event.button === 1 ? 4 : 2 });
+      if (ladder.gesture.current) event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
     // While typing, the press is the browser's (caret, selection). 打字中的按下交給瀏覽器（游標、選取）。
@@ -157,7 +62,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
     press.current = { x, y, id, canScrub, timer: window.setTimeout(() => {
       // Held still: the value ladder, steered with the same button. 按住不動：數值梯尺，用同一個鍵操作。
       press.current = null;
-      if (canScrub) { begin(x, y, { id, button: 0, mask: 1 }); if (gesture.current) target.setPointerCapture(id); }
+      if (canScrub) { openLadder(x, y, { id, button: 0, mask: 1 }); if (ladder.gesture.current) target.setPointerCapture(id); }
     }, 450) };
   }
 
@@ -214,8 +119,8 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
   return <>
     <input ref={input} className={'number nodrag nowheel nopan' + (scrubbing ? ' scrubbing' : '')} aria-label={label} aria-invalid={!!error}
       style={{ '--fill': `${(fillFraction(Number(draft)) * 100).toFixed(4)}%` } as CSSProperties}
-      aria-describedby={active ? tooltipId : undefined}
-      title={error || (active ? undefined : say(tr('number.help', 'Drag sideways to change (Shift finer, Ctrl coarser). Click to type. Right button: common values. Middle button, Alt+right button or holding still: the value ladder — move up and down to pick a step, then past its left or right edge to change the value. Release to apply, Esc to cancel. Keyboard: Alt+L, arrow keys, Enter.')))}
+      aria-describedby={ladder.active ? ladder.id : undefined}
+      title={error || (ladder.active ? undefined : say(tr('number.help', 'Drag sideways to change (Shift finer, Ctrl coarser). Click to type. Right button: common values. Middle button, Alt+right button or holding still: the value ladder — move up and down to pick a step, then past its left or right edge to change the value. Release to apply, Esc to cancel. Keyboard: Alt+L, arrow keys, Enter.')))}
       inputMode="decimal"
       value={draft} onChange={event => { typing.current = true; setDraft(event.target.value); }}
       onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp}
@@ -224,11 +129,11 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
       onAuxClick={event => event.preventDefault()}
       onContextMenu={event => {
         event.preventDefault();
-        if (event.altKey || gesture.current || performance.now() < suppressContext.current) return;
+        if (event.altKey || ladder.gesture.current || performance.now() < ladder.suppressContext.current) return;
         if (choices.length) setPresets(true);
       }}
       onBlur={() => {
-        if (active || gesture.current) return;
+        if (ladder.gesture.current) return;
         typing.current = false;
         if (skipBlur.current) { skipBlur.current = false; return; }
         const number = Number(draft);
@@ -244,7 +149,7 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
         if (event.altKey && event.key.toLowerCase() === 'l') {
           event.preventDefault();
           const rect = event.currentTarget.getBoundingClientRect();
-          begin(rect.right, rect.top + rect.height / 2);
+          openLadder(rect.right, rect.top + rect.height / 2);
         } else if (event.key === 'Enter') event.currentTarget.blur();
         else if (event.key === 'Escape') {
           typing.current = false; skipBlur.current = true; setError(''); setDraft(String(value)); event.currentTarget.blur();
@@ -254,20 +159,6 @@ export function NumberField({ value, label, integer = false, unsigned = false, c
       items={choices.map(choice => ({ key: String(choice.value), checked: Number(draft) === choice.value,
         label: choice.isDefault ? say(tr('number.presetDefault', '{value} (default)', { value: String(choice.value) })) : String(choice.value),
         select: () => { const next = normalize(choice.value); setDraft(String(next)); if (next !== value) commit(next); } }))} />}
-    {ladder && createPortal(<div id={tooltipId} role="tooltip" aria-label="Value Ladder"
-      className="value-ladder"
-      // Replace the initial list with a readout, without changing its selection bounds.
-      // 水平調值時換成不遮住輸入框的讀數；原列表的選擇區域保持不變。
-      style={{ ...(ladder.drag ? ladder.readout : { left: ladder.left, top: ladder.top }),
-        width: ladder.drag ? ladderLayout.readoutWidth : ladderLayout.width,
-        padding: ladderLayout.inset - 1 }}>
-      {ladder.drag ? <div className="ladder-readout">
-        <output>{draft}</output><span>Δ {ladder.steps[ladder.index]}</span>
-      </div> : <div className="ladder-steps">
-        {ladder.steps.map((step, index) => <div key={step}
-          style={{ height: ladderLayout.rowHeight, lineHeight: `${ladderLayout.rowHeight}px` }}
-          className={index === ladder.index ? 'active' : ''}>{String(step).replace(/^0\./, '.')}</div>)}
-      </div>}
-    </div>, document.body)}
+    {ladder.view}
   </>;
 }

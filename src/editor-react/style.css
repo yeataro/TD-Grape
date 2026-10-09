@@ -168,15 +168,17 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .node-title .select-button { background: none; border: 0; padding: 2px 0 2px 4px; color: var(--text-secondary); font-weight: 600; }
 .node-title .select-button:hover { color: var(--text-strong); }
 .node-body { padding: 10px 0; display: flex; flex-direction: column; gap: 2px; }
-.node-body > .value-group, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
+.node-body > .value-row, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
 /* Every input and output is one IO row, the same height wired or not, like a table (value-input.md); only an expanded
    value grows, one row per component. The port stays on the first row. 每個輸入輸出一行、有沒有接線都一樣高，像表格；
    只有展開的值會變高（一個分量一行）。接孔永遠在第一行。 */
 .port-row { position: relative; padding: 0 14px; display: flex; gap: 8px; align-items: flex-start; min-height: var(--io-row); }
-.port-row > span, .port-row > .port-fallback { display: flex; align-items: center; gap: 4px; height: var(--io-row); flex-shrink: 0; }
+.port-row > span, .port-row > .port-fallback, .value-caption { display: flex; align-items: center; gap: 4px; height: var(--io-row); flex-shrink: 0; }
 .port-row > .react-flow__handle { top: calc(var(--io-row) / 2); }
-.port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); } .input-row > span { font-size: var(--font-md); line-height: var(--line-md); }
-.input-row > .value-group { flex: 1; min-width: 0; } .output-row { justify-content: flex-end; }
+.port-row small { color: var(--text-muted); font-size: var(--font-xs); line-height: var(--line-xs); }
+.input-row > span, .value-caption { font-size: var(--font-md); line-height: var(--line-md); } .output-row { justify-content: flex-end; }
+.value-row { flex: 1; display: flex; gap: 8px; align-items: flex-start; min-width: 0; } .value-row > .value-group { flex: 1; }
+.value-caption { color: var(--text-secondary); }
 .port-fallback.wired { visibility: hidden; }
 /* Ports (Refactor.54.2): bigger, grabbed further out than drawn, and styled by direction and whether wired; A and B are
    under test (human 2026-10-09). A = outputs filled, inputs hollow; B = hollow until wired.

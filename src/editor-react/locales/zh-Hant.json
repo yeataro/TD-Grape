@@ -339,5 +339,7 @@
   "uniformPreset.frame": "這個 Grape OP 所在時間軸的影格；跟著時間軸停止與循環。",
   "uniformPreset.frameStep": "上一格到這一格跨了幾格；TouchDesigner 掉格時會大於 1。",
   "uniformPreset.time": "這個 Grape OP 所在時間軸的秒數；跟著時間軸停止與循環。要一直往前走的時間請用 uAbsTime。",
-  "value.expand": "每個分量各一行"
+  "value.color": "Color",
+  "value.expand": "每個分量各一行",
+  "value.groupHelp": "中鍵或 Alt＋右鍵：用數值梯尺把每個分量一起加減同一個量。"
 }

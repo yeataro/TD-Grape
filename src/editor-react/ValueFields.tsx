@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { core, type Value } from './core';
 import type { ComponentState } from './host';
 import { NumberField } from './NumberField';
+import { useValueLadder } from './useValueLadder';
 import { Select } from './controls';
 import { Icon } from './icons';
 import { tr, say } from './text';
@@ -54,7 +55,12 @@ function DrivenField({ state }: { state: ComponentState }) {
   return <code className={`td-driven td-${state.mode}`} title={title}>{text}</code>;
 }
 
-export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults }: {
+// The leading text of a value (value-input.md 5): middle button (or Alt+right) on it opens the value ladder for the
+// whole value, adding the same amount to every component (TouchDesigner; legacy VALUE_LADDER.md: integers stop as a
+// group at their limit). An input's caption is its name and type; a value without a port shows "Color" or its type
+// (tentative, value-input.md 四). 值的開頭文字：在上面按中鍵（或 Alt＋右鍵）打開整組的數值梯尺，每個分量加上同一個量
+// （照 TouchDesigner；舊產品整列調值：整數碰到界限整組停）。輸入的開頭文字是名字與型別；沒有接孔的值顯示 Color 或型別（暫定）。
+export function ValueFields({ value, type, label, names = 'XYZW', color = false, commit, preview, modes, wired = false, defaults, caption }: {
   value: Value; type: string; label: string; names?: string; color?: boolean; commit: (value: Value) => void;
   /** While dragging or picking, before the value is committed (Uniform C). 拖曳或點選中、提交之前。 */
   preview?: (value: Value) => void;
@@ -64,6 +70,8 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
   wired?: boolean;
   /** The value's default, per component (offered on the right-click list). 預設值（逐分量，列在右鍵選單）。 */
   defaults?: Value;
+  /** The leading text; left out, "Color" or the type. 開頭文字；沒給就是 Color 或型別。 */
+  caption?: ReactNode;
 }) {
   const count = core.values.count(type), family = core.values.family(type);
   // Shown expanded on this page only, not saved (value-input.md 四: whether to keep it in the graph is open).
@@ -75,7 +83,36 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     : Array.isArray(value) ? value[i] ?? 0 : value);
   const hex = '#' + list.slice(0, 3).map(item => Math.round(Math.max(0, Math.min(1, Number(item))) * 255).toString(16).padStart(2, '0')).join('');
   const fromHex = (next: string): Value => [...([1, 3, 5].map(i => parseInt(next.slice(i, i + 2), 16) / 255)), ...list.slice(3)];
-  return <div className={'value-group nodrag nopan' + (expanded ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
+  // A component is edited here unless TD drives it (Uniform D1). 分量除非由 TD 驅動，否則在這裡編輯。
+  const editable = (i: number) => { const mode = modes?.[i];
+    return !mode || (mode.mode !== 'expression' && mode.mode !== 'export' && mode.mode !== 'other' && !(mode.mode === 'bind' && mode.editable === false)); };
+  const integer = family === 'int' || family === 'uint';
+  const groupable = !wired && family !== 'bool' && list.every((_, i) => editable(i));
+  // The amount added to every component while the whole-value ladder moves; shown in the fields, committed once.
+  // 整組梯尺移動中每個分量加上的量；顯示在各格，放開時提交一次。
+  const [shift, setShift] = useState(0);
+  const lowest = Math.min(...list.map(Number));
+  const shifted = (amount: number): Value => count === 1 ? Number((Number(list[0]) + amount).toPrecision(15))
+    : list.map(item => Number((Number(item) + amount).toPrecision(15)));
+  const head = useRef<HTMLSpanElement>(null);
+  const group = useValueLadder({ anchor: head, integer,
+    normalize: amount => { const step = integer ? Math.trunc(amount) : amount; return family === 'uint' ? Math.max(step, -lowest) : step; },
+    show: amount => setShift(group.gesture.current ? amount : 0),
+    preview: preview && (amount => preview(shifted(amount))), commit: amount => commit(shifted(amount)),
+    format: amount => (amount >= 0 ? '+' : '') + amount });
+  return <div className="value-row">
+    <span ref={head} className="value-caption nodrag nopan"
+      title={groupable ? say(tr('value.groupHelp', 'Middle button or Alt+right button: change every component by the same amount with the value ladder.')) : undefined}
+      onPointerDown={event => {
+        if (!groupable || !(event.button === 1 || (event.button === 2 && event.altKey))) return;
+        event.preventDefault(); event.stopPropagation();
+        group.begin(event.clientX, event.clientY, 0, { id: event.pointerId, button: event.button, mask: event.button === 1 ? 4 : 2 });
+        if (group.gesture.current) event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onMouseDown={event => { if (event.button === 1) event.preventDefault(); }}
+      onContextMenu={event => { if (event.altKey || group.gesture.current || performance.now() < group.suppressContext.current) event.preventDefault(); }}>
+      {caption ?? (color ? say(tr('value.color', 'Color')) : type)}</span>
+    <div className={'value-group nodrag nopan' + (expanded ? ' expanded' : '') + (wired ? ' wired' : '')} inert={wired || undefined}>
     {count > 1 && <button type="button" className="value-expand" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
       aria-label={say(tr('value.expand', 'Show each component on its own row'))} title={say(tr('value.expand', 'Show each component on its own row'))}>
       <Icon name="chevronDown" /></button>}
@@ -90,7 +127,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
             : bound && mode.editable === false ? <code className="td-driven td-bind">{String(mode.value ?? '')}</code>
             : family === 'bool' ? <Select className="nodrag" label={`${label} ${i}`} value={String(!!item)} options={booleans}
             onChange={next => change(next === 'true')} /> :
-            <NumberField label={`${label} ${i}`} value={Number(item)} integer={family === 'int' || family === 'uint'} unsigned={family === 'uint'} commit={change}
+            <NumberField label={`${label} ${i}`} value={Number(item) + shift} integer={integer} unsigned={family === 'uint'} commit={change}
               defaultValue={defaults === undefined ? undefined : Number(Array.isArray(defaults) ? defaults[i] : defaults)}
               preview={preview && (next => preview(withComponent(next)))} />}
         </label>;
@@ -99,5 +136,7 @@ export function ValueFields({ value, type, label, names = 'XYZW', color = false,
     {/* A colour's swatch on its own row below the fields (legacy). 顏色的色塊在數值下面自己一行（照舊產品）。 */}
     {color && count >= 3 && <ColorField label={`${label} color`} value={hex}
       commit={next => commit(fromHex(next))} preview={preview && (next => preview(fromHex(next)))} />}
+    </div>
+    {group.view}
   </div>;
 }

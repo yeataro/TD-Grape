@@ -99,11 +99,15 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {inputs.map(port => { const wired = data.connected.includes(port.key);
         return <div className="port-row input-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
         <Handle type="target" position={Position.Left} id={port.key} aria-label={`${id} input ${port.key}`} data-connected={wired} />
-        <span>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
+        {/* An input with a value: its name and type lead the value widget (middle button there changes the whole value).
+            有值的輸入：名字與型別是數值 widget 的開頭文字（在上面按中鍵整組調值）。 */}
+        {port.fallback === undefined && core.values.types.includes(port.type) ? null
+          : <span>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></span>}
         {/* A fixed expression (e.g. vUV.st) is shown, not edited; a texture has no value. A wire hides the value but keeps
             its place (wiring never changes the height, EDITOR_UI_RULES.md 六). 固定式子只顯示不編輯；貼圖沒有值。接線只藏起值、位置留著。 */}
         {port.fallback !== undefined ? <code className={'port-fallback' + (wired ? ' wired' : '')}>{port.fallback}</code>
           : core.values.types.includes(port.type) && <ValueFields label={`${id} ${port.key}`} type={port.type} wired={wired} defaults={port.default}
+          caption={<>{view.portLabels?.inputs?.[port.key] ?? port.key} <small>{port.type}</small></>}
           value={authored.inputValues?.[port.key] ?? port.default ?? core.values.fill(0, port.type)} commit={value => session.setInput(id, port.key, value)} />}
       </div>; })}
       {view.spare?.direction === 'input' && <SpareInput id={id} spare={view.spare} />}
