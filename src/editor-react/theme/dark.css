@@ -46,6 +46,9 @@
   --palette-td-expression: #7fb2ff;
   --palette-td-export: #7fd88a;
   --palette-td-bind: #c59cff;
+  /* TD's TOP family colour, ui.colors['TOP'] (0.41, 0.36, 0.575), measured 2026-10-10 (R.60.4: an input's 🔌 tag).
+     TD 的 TOP 家族色（實測）。 */
+  --palette-td-top: #695c93;
 
   /* ── strengths: the steps of the ladder, shared by every purpose ── */
   --title-alpha: 80%;
@@ -131,6 +134,7 @@
   --td-expression: var(--palette-td-expression);
   --td-export: var(--palette-td-export);
   --td-bind: var(--palette-td-bind);
+  --td-top: var(--palette-td-top);
 
   /* The frame: one ink lifted by the shared strengths. 外框：同一個墨色依共用強度提亮。 */
   --surface-app: var(--palette-ink);

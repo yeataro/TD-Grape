@@ -81,13 +81,15 @@ export function SourcesPanel({ declarations, references }: {
           {core.declarationLabel(declarations, declaration)}</code>
         {/* Wired from outside: what is wired, read only; the default waits below as "when unwired" (Refactor.60; human 2026-10-10).
             外面接了東西：顯示接了什麼、唯讀；預設圖退到下面「沒接時」（人類）。 */}
-        {sources?.[declaration.id] ? <span className="input-source" title={sources[declaration.id]!}><Icon name="plug" />
-          {/* The Grape OP's input number (as TD's input1, input2…), then the OP wired in (human 2026-10-10: 🔌1 name).
-              Grape OP 的第幾個輸入（同 TD 的 input1、input2…），再來是接進來的 OP（人類：🔌1 名稱）。 */}
-          <span className="input-source-number">{inputs.indexOf(declaration) + 1}</span>
+        {sources?.[declaration.id] ? <span className="input-source" title={sources[declaration.id]!}>
+          {/* The Grape OP's input number (as TD's input1, input2…) on a rounded tag in TD's TOP family colour, sized as
+              the count; then the OP wired in (human 2026-10-10). Grape OP 的第幾個輸入（同 TD 的 input1、input2…），放在
+              TD TOP 家族色的圓角標籤上，大小同數量標籤；再來是接進來的 OP（人類）。 */}
+          <span className="input-source-tag">
+            <Icon name="plug" />{inputs.indexOf(declaration) + 1}</span>
           <span className="input-source-name">{sources[declaration.id]!.split('/').pop()}</span></span>
           : defaultSelect(declaration)}</>}>
-      {sources?.[declaration.id] && <div className="unwired-default"><span>{say(tr('sources.whenUnwired', 'When unwired'))}</span>{defaultSelect(declaration)}</div>}
+      {sources?.[declaration.id] && <div className="unwired-default"><span>{say(tr('sources.unwiredDefault', 'Default'))}</span>{defaultSelect(declaration)}</div>}
       <TexturePreview id={declaration.id} texture={String(declaration.defaultTexture)} />
     </SourceCard>)}
     </FoldSection>

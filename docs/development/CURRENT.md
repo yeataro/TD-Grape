@@ -8,7 +8,7 @@
 
 **進行方式（人類 2026-10-09）**：先把基本能力定下來；標準功能都做完之後，會有一段多輪測試調整的時期（外觀、手感這類比較不確定的東西在那時一起調）。在那之前，外觀只求可用、結構乾淨，不追細節。
 
-**最新：Refactor.60.3**（2026-10-10）。最近一次 Deliver 是 Refactor.59.4（`TD-Grape-dev.94`，TOE 已提交）；TD 目前在開發模式（外部資料夾）跑 60.3。逐版內容見 [STATUS](STATUS.md)。
+**最新：Refactor.60.4**（2026-10-10）。最近一次 Deliver 是 Refactor.59.4（`TD-Grape-dev.94`，TOE 已提交）；TD 目前在開發模式（外部資料夾）跑 60.4。逐版內容見 [STATUS](STATUS.md)。
 
 **最近幾輪的大塊（R.53–59）：**
 - 編輯器外框（R.53）、新增節點的入口（R.54）、數值輸入 widget（R.55）、共用來源面板與卡片（R.57）、拖線預告與拔線還原（R.56–57）。
@@ -112,6 +112,6 @@
 
 - 主組件 `/TD_Grape`（全域捷徑 `TDGrape`，程式一律用捷徑找）。Grape OP：`/project1/Grape_TOP_test`、人類的樣板 `Grape_TOP_REF`、`Grape_TOP1`（人類用 Tab 選單建立）、測試複本 `r54_probe`（等人類同意刪）；範本 `/TD_Grape/masters/grape_top`。每個 Samples 都 Clone `/TD_Grape/Samples`（R.58.9）。
 - 編輯服務 port 65465（被佔用時往後找，R.36）；例：`http://127.0.0.1:65465/shader/6cb6a90247c140bea7df98a2f11c1858/`（r54_probe）。
-- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.59.4（存 `TD-Grape-dev.94`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 60.3。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
+- `GrapeEditor`：最近一次 `Deliver()` 是 Refactor.59.4（存 `TD-Grape-dev.94`，TOE 已提交）；之後切回 `DevMode()`，目前從外部資料夾跑 60.4。提交 TOE 前 `Deliver()`，見 AGENTS.md。TD 2025.33230。
 - 開發 TOE：`src/td/TD-Grape-dev.toe`（TD 顯示 `.94.toe` 這類是遞增存檔的正常狀態）；未提交的修改可能是人類的，須保留。
 - 保護區：`/TD_Grape/IconGen → /TD_Grape/icon` 及其依賴。

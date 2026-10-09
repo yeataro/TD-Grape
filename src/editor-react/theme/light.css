@@ -39,6 +39,7 @@
   --palette-td-expression: #2f6fd0;
   --palette-td-export: #2e8f50;
   --palette-td-bind: #7a4fd0;
+  --palette-td-top: #695c93;         /* TD has one theme; the same TOP colour 同一個 TOP 色 */
 
   --title-alpha: 80%;
   --lift-canvas: 0%;
