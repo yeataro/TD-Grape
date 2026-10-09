@@ -1,6 +1,12 @@
 # 新編輯器的顏色系統
 
-適用：`src/editor-react/` 的所有介面。決策來源：design-interview Q43（人類 2026-10-08）。人類把細節交給 agent，以通用的設計系統原則（design tokens）自我約束；本文件就是那份約束。**尚未實作**，實作時照此執行。
+適用：`src/editor-react/` 的所有介面。決策來源：design-interview Q43（人類 2026-10-08）。人類把細節交給 agent，以通用的設計系統原則（design tokens）自我約束；本文件就是那份約束。
+
+**已實作（Refactor.54.1，2026-10-09）**：
+- 主題檔：`theme/dark.css`（預設）、`theme/light.css`（獨立寫齊）、`theme/td.css`（繼承 dark，照 TD 2025.33230 的 `ui.colors`）；尺寸：`theme/sizes.css`（Standard 預設、Comfortable）；切換存在這個瀏覽器（`appearance.ts`，底列的外觀與大小面板）。
+- 做法照 TD 自己的介面：一個墨色（`--palette-ink`）依共用強度（`--lift-*`）往 `--palette-lift` 提亮成各層表面；文字、線、hover 往 `--palette-contrast`（深色主題白、淺色主題黑）；選取與焦點才混入強調色（`--tint-*`）。TD 主題清單隔行底色用 `--lift-stripe`。
+- 把關：`tests/unit/test_themes.cjs`（在 `test:editor` 裡）——元件與 TSX 不含色碼（標誌圖例外）、色碼只在調色盤層、Light 寫齊 Dark 的調色盤與強度、TD 只覆寫 Dark 有的名字、元件用到的用途名都有定義。
+- 人類 10-09：外觀做到要硬編碼就跳過、記下；外觀功能都不值得讓架構變髒（除非是一定要、有共用能力的功能，先討論）。
 
 ## 最高原則
 

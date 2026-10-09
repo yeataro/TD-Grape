@@ -1,10 +1,21 @@
-/* Product default theme (docs/ui/COLOR_SYSTEM.md). Only layer 1 (palette) holds colour codes.
- * Palette primaries are derived from the legacy measured titles (UX handoff, dark/Cool) so that
- * a primary at --title-alpha over the node body composes to the legacy colour.
- * 產品預設主題。只有調色盤有色碼；主色由舊產品實測標題色反推，使「主色以 --title-alpha 疊在卡片底色上」
- * 疊出的顏色等於舊產品。 */
+/* Product default theme (docs/ui/COLOR_SYSTEM.md). Only layer 1 (palette) holds colour codes; layer 2 (purposes)
+ * only mixes the palette with the shared strengths; components (style.css, TSX) only name purposes.
+ * The frame follows the legacy tone (legacy style.css :root --ui-tone-*, measured 2026-10-09) the way TD builds its
+ * own UI (ui.colors: one grey ladder, every surface a step on it): one ink, lifted towards white by a few fixed
+ * strengths, with the accent mixed in for selected and focused things (Refactor.54.1, human 2026-10-09: colours and
+ * brightness as the legacy editor, kept in one place, shades of one colour plus layering).
+ * Node title primaries are derived from the legacy measured titles (UX handoff, dark/Cool) so that a primary at
+ * --title-alpha over the node body composes to the legacy colour.
+ * 產品預設主題。只有調色盤有色碼；用途只用調色盤與共用強度組出；元件只寫用途名。外框照舊產品的色調，做法照 TD
+ * 自己的介面（一條灰階，每個面都是其中一階）：一個墨色往白色提亮幾個固定強度，選取與焦點才混入強調色
+ * （R.54.1，人類：顏色亮度對齊舊產品、集中管理、同一色的深淺加疊層）。節點標題主色由舊產品實測反推。 */
 :root {
-  /* 1. palette */
+  /* ── 1. palette: the only colour codes ── */
+  --palette-ink: #121218;            /* legacy --ui-tone-app-bg */
+  --palette-lift: #ffffff;           /* where raised surfaces go (elevation) */
+  --palette-contrast: #ffffff;       /* text, lines and hover go towards it; black in the light theme */
+  --palette-shadow: #000000;
+  --palette-accent: #b39cfb;         /* legacy --purple */
   --palette-node: #2e2c3a;
   --palette-violet: #483664;
   --palette-green: #3a5c4e;
@@ -14,35 +25,48 @@
   --palette-olive: #605a43;
   --palette-rose: #6f4654;
   /* selection (Refactor.49): TD's green current / yellow selected; wires as the legacy editor (style.css:108).
-     選取：TD 的綠框（主要）／黃框（其他）；接線照舊產品。外觀最後再統一調。 */
+     選取：TD 的綠框（主要）／黃框（其他）；接線照舊產品。 */
   --palette-select-green: #b3dc80;
   --palette-select-yellow: #e8c85a;
   --palette-wire-cream: #fff2d2;
   --palette-wire-lilac: #ede5ff;
-  /* editor frame (Refactor.53): the shades of the legacy chrome (legacy style.css :root), named once here.
-     編輯器外框：舊產品外框的色階，只在這裡寫色碼。 */
-  --palette-ink-0: #13121a;
-  --palette-ink-1: #1b1923;
-  --palette-ink-2: #211c2c;
-  --palette-ink-3: #2a2533;
-  --palette-ink-4: #302c3b;
-  --palette-ink-5: #443b53;
-  --palette-line: #342c40;
-  --palette-line-strong: #51465f;
-  --palette-text: #d7d1df;
-  --palette-text-strong: #e1d4f5;
-  --palette-text-muted: #a198b2;
-  --palette-accent: #bca4e4;
-  --palette-accent-fill: #6a4f8f;
-  --palette-warning: #f2cf86;
-  --palette-error: #fda1a8;
-  --palette-notice: #473c24;
-  --palette-grid: #393543;
+  --palette-warning: #e4bd77;        /* legacy .tag.pending */
+  --palette-error: #f78b96;
+  /* data types (legacy --type-*) and vector components (legacy RGBA component colours). 型別與向量分量色（舊產品）。 */
+  --palette-type-scalar: #b8b5ae;
+  --palette-type-vec2: #79b9eb;
+  --palette-type-vec3: #75c7ac;
+  --palette-type-vec4: #b7a0db;
+  --palette-type-sampler: #c2a47a;
+  --palette-component-x: #ef8990;
+  --palette-component-y: #98d393;
+  --palette-component-z: #85bafa;
+  --palette-component-w: #ddd9e5;
+  /* TD's own mode colours (Uniform D1: what drives a component in TD). TD 自己的模式色。 */
+  --palette-td-expression: #7fb2ff;
+  --palette-td-export: #7fd88a;
+  --palette-td-bind: #c59cff;
 
-  /* strengths */
+  /* ── strengths: the steps of the ladder, shared by every purpose ── */
   --title-alpha: 80%;
+  --lift-canvas: 1%;    /* the network: just above the app background */
+  --lift-bar: 3%;       /* title bar, foot bar */
+  --lift-zone: 4%;      /* panel zones, the location bar */
+  --lift-raised: 7%;    /* menus, dialogs, floating things, controls */
+  --lift-line: 13%;     /* separators */
+  --lift-hover: 15%;    /* a control under the pointer */
+  --lift-stripe: 0%;    /* every other row of a list (TD's alternating rows; off here) */
+  --tint-raised: 3%;    /* the accent's faint cast on raised surfaces (legacy dialogs) */
+  --tint-active: 20%;   /* the accent behind what is active (stage, chosen row) */
+  --tint-border: 55%;   /* the accent on a hovered border */
+  /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
+  --text-alpha-strong: 88%;
+  --text-alpha-title: 85%;
+  --text-alpha-secondary: 72%;
+  --text-alpha-muted: 54%;
+  --text-alpha-faint: 32%;
 
-  /* 2. purposes */
+  /* ── 2. purposes ── */
   --surface-node: var(--palette-node);
   --group-function: var(--palette-violet);
   --group-output: var(--palette-green);
@@ -58,31 +82,57 @@
   --select-frame: var(--palette-select-yellow);
   --wire-selected: var(--palette-wire-cream);
   --wire-hover: var(--palette-wire-lilac);
+  --wire-ghost: var(--palette-error);
+  --type-scalar: var(--palette-type-scalar);
+  --type-vec2: var(--palette-type-vec2);
+  --type-vec3: var(--palette-type-vec3);
+  --type-vec4: var(--palette-type-vec4);
+  --type-sampler: var(--palette-type-sampler);
+  --component-x: var(--palette-component-x);
+  --component-y: var(--palette-component-y);
+  --component-z: var(--palette-component-z);
+  --component-w: var(--palette-component-w);
+  --td-expression: var(--palette-td-expression);
+  --td-export: var(--palette-td-export);
+  --td-bind: var(--palette-td-bind);
 
-  /* editor frame: every bar, zone, panel, menu and button reads these (Refactor.53). 外框各處都讀這些。 */
-  --surface-app: var(--palette-ink-0);
-  --surface-bar: var(--palette-ink-2);
-  --surface-zone: var(--palette-ink-1);
-  --surface-raised: var(--palette-ink-3);
-  --surface-control: var(--palette-ink-4);
-  --surface-control-hover: var(--palette-ink-5);
-  --surface-pressed: color-mix(in srgb, var(--palette-accent) 18%, transparent);
-  --surface-floating: color-mix(in srgb, var(--palette-ink-1) 88%, transparent);
-  --surface-notice: var(--palette-notice);
-  --grid-dot: var(--palette-grid);
-  --border: var(--palette-line);
-  --border-control: var(--palette-line-strong);
-  --text: var(--palette-text);
-  --text-strong: var(--palette-text-strong);
-  --text-muted: var(--palette-text-muted);
+  /* The frame: one ink lifted by the shared strengths. 外框：同一個墨色依共用強度提亮。 */
+  --surface-app: var(--palette-ink);
+  --surface-canvas: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-canvas));
+  --surface-bar: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-bar));
+  --surface-zone: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-zone));
+  --surface-raised: color-mix(in srgb, color-mix(in srgb, var(--palette-ink), var(--palette-accent) var(--tint-raised)), var(--palette-lift) var(--lift-raised));
+  --surface-control: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-raised));
+  --surface-control-hover: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-hover));
+  --surface-field: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-bar));
+  --surface-active: color-mix(in srgb, var(--palette-ink), var(--palette-accent) var(--tint-active));
+  --surface-pressed: color-mix(in srgb, var(--palette-ink), var(--palette-select-green) 14%);
+  --surface-floating: color-mix(in srgb, var(--surface-zone) 90%, transparent);
+  --surface-notice: color-mix(in srgb, var(--palette-ink), var(--palette-warning) 22%);
+  --surface-dim: color-mix(in srgb, var(--palette-ink) 20%, transparent);
+  --overlay-up: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
+  --overlay-faint: color-mix(in srgb, var(--palette-contrast) 2%, transparent);
+  --surface-row-alt: color-mix(in srgb, var(--palette-contrast) var(--lift-stripe), transparent);
+  --surface-port: color-mix(in srgb, var(--palette-ink), var(--palette-accent) 4%);
+  --surface-box: color-mix(in srgb, var(--palette-accent) 13%, transparent);
+  --border-node: color-mix(in srgb, var(--palette-node), var(--palette-contrast) 12%);
+  --overlay-down: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
+  --shadow: color-mix(in srgb, var(--palette-shadow) 55%, transparent);
+  --grid-dot: color-mix(in srgb, color-mix(in srgb, var(--palette-ink), var(--palette-accent) 8%), var(--palette-contrast) 13%);
+  --border: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-line));
+  --border-control: var(--border);
+  --border-hover: color-mix(in srgb, var(--palette-ink), var(--palette-accent) var(--tint-border));
+  --text: color-mix(in srgb, var(--palette-contrast) var(--text-alpha-strong), transparent);
+  --text-strong: color-mix(in srgb, var(--palette-contrast) var(--text-alpha-title), transparent);
+  --text-secondary: color-mix(in srgb, var(--palette-contrast) var(--text-alpha-secondary), transparent);
+  --text-muted: color-mix(in srgb, var(--palette-contrast) var(--text-alpha-muted), transparent);
+  --text-faint: color-mix(in srgb, var(--palette-contrast) var(--text-alpha-faint), transparent);
+  --text-on-accent: color-mix(in srgb, var(--palette-shadow) 85%, transparent);
+  --text-active: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 55%);
   --accent: var(--palette-accent);
-  --accent-fill: var(--palette-accent-fill);
+  --accent-fill: var(--palette-accent);
+  --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 20%);
+  --pressed: var(--palette-select-green);
   --status-warning: var(--palette-warning);
   --status-error: var(--palette-error);
-  /* sizes (tentative, human 2026-10-09: to be tuned). 尺寸暫定，之後調。 */
-  --bar-height: 40px;
-  --title-bar-height: 47px;
-  --icon-size: 18px;
-  --handle-line: 1px;
-  --handle-grab: 9px;
 }

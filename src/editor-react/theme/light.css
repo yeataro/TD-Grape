@@ -1,0 +1,67 @@
+/* The Light theme (docs/ui/COLOR_SYSTEM.md): an independent theme, so it writes the whole palette and every strength
+ * (a theme test checks it names everything Dark names). Same structure as Dark: one ink lifted towards white for raised
+ * surfaces; text, lines and hover go towards black (--palette-contrast). Base and text opacities follow the legacy light
+ * theme (legacy style.css :root[data-ui-theme="light"]: app #e1e4e8, chrome #e7e9ed, surface #f1f3f5, field #fafbfc;
+ * text black at .78/.66/.54/.38). Colours for nodes, types and selection are darker versions of Dark's, for contrast
+ * on a light ground (tentative).
+ * 淺色主題：獨立主題，所以寫齊整個調色盤與每個強度（有測試檢查它涵蓋 Dark 的所有名字）。結構同 Dark：同一個墨色往白提亮；
+ * 文字、線、hover 往黑走。底色與文字透明度照舊產品的淺色主題；節點、型別、選取色是 Dark 的深色版（暫定）。 */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --palette-ink: #dfe2e6;
+  --palette-lift: #ffffff;
+  --palette-contrast: #000000;
+  --palette-shadow: #2a2433;
+  --palette-accent: #7a5cc4;
+  --palette-node: #f6f7f9;
+  --palette-violet: #c9b8ea;
+  --palette-green: #b7dcc9;
+  --palette-teal: #a9d6df;
+  --palette-umber: #e6c49e;
+  --palette-blue: #b5c6e6;
+  --palette-olive: #d8d2b8;
+  --palette-rose: #e2bfca;
+  --palette-select-green: #4f9a24;
+  --palette-select-yellow: #c08c00;
+  --palette-wire-cream: #4a3a8a;
+  --palette-wire-lilac: #6a5aa8;
+  --palette-warning: #9a6a10;
+  --palette-error: #c43a4a;
+  --palette-type-scalar: #6f6b63;
+  --palette-type-vec2: #2f7fbf;
+  --palette-type-vec3: #2e9a76;
+  --palette-type-vec4: #7a5cc4;
+  --palette-type-sampler: #9a7240;
+  --palette-component-x: #c43a4a;
+  --palette-component-y: #3a8f3a;
+  --palette-component-z: #2f6fc4;
+  --palette-component-w: #6f6b7a;
+  --palette-td-expression: #2f6fd0;
+  --palette-td-export: #2e8f50;
+  --palette-td-bind: #7a4fd0;
+
+  --title-alpha: 80%;
+  --lift-canvas: 0%;
+  --lift-bar: 30%;
+  --lift-zone: 45%;
+  --lift-raised: 75%;
+  --lift-line: 16%;
+  --lift-hover: 9%;
+  --lift-stripe: 0%;
+  --tint-raised: 2%;
+  --tint-active: 18%;
+  --tint-border: 55%;
+  --text-alpha-strong: 78%;
+  --text-alpha-title: 78%;
+  --text-alpha-secondary: 66%;
+  --text-alpha-muted: 54%;
+  --text-alpha-faint: 38%;
+
+  /* Purposes whose direction differs on a light ground. 在淺色底上方向不同的用途。 */
+  --surface-field: color-mix(in srgb, var(--palette-ink), var(--palette-lift) 85%);
+  --surface-floating: color-mix(in srgb, var(--surface-zone) 92%, transparent);
+  --text-on-accent: color-mix(in srgb, var(--palette-lift) 95%, transparent);
+  --text-active: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 30%);
+  --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 15%);
+  --shadow: color-mix(in srgb, var(--palette-shadow) 22%, transparent);
+}

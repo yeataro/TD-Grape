@@ -19,6 +19,8 @@ const paths = {
   fullscreen: <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />,
   chevronDown: <path d="m7 10 5 5 5-5" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
+  theme: <path d="M20.5 14A8.7 8.7 0 0 1 10 3.5 8.8 8.8 0 1 0 20.5 14Z" />,
+  textSize: <path d="M3 17 6.5 8 10 17M4.3 14h4.4M12 19 17 5 22 19M14 14h6" />,
 } satisfies Record<string, ReactNode>;
 export type IconName = keyof typeof paths;
 
@@ -26,7 +28,8 @@ export type IconName = keyof typeof paths;
 export const Icon = ({ name }: { name: IconName }) =>
   <svg className={'icon icon-' + name} viewBox="0 0 24 24" aria-hidden="true" focusable="false">{paths[name]}</svg>;
 
-/** The TD-Grape mark (three grapes), the same drawing as static/favicon.svg and the legacy header.
- * TD-Grape 的三顆葡萄，與 favicon.svg、舊產品標題列同一份圖。 */
+/** The TD-Grape mark (three grapes), the same drawing as static/favicon.svg and the legacy header. A logo is artwork,
+ * not a theme colour: it keeps its own colours in every theme (the one exception to COLOR_SYSTEM.md's rule).
+ * TD-Grape 的三顆葡萄，與 favicon.svg、舊產品標題列同一份圖。標誌是圖，不是主題色：每個主題都不變（顏色規則唯一的例外）。 */
 export const BrandMark = () => <svg className="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
   <circle cx="20" cy="23" r="11" fill="#bfa5f4" /><circle cx="44" cy="23" r="11" fill="#a98be2" /><circle cx="32" cy="44" r="11" fill="#b499ef" /></svg>;

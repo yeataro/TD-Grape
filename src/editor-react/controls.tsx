@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { DropdownMenu, type MenuItem } from './DropdownMenu';
 import { Icon, type IconName } from './icons';
 import { say, tr, type Message } from './text';
@@ -13,13 +13,15 @@ import { say, tr, type Message } from './text';
  * 控制項擺著但還不能用的原因（人類：佔位要看得出不能用）。 */
 export const notYet = tr('placeholder.notYet', 'Not available yet');
 
-/** A button showing one icon; its label is the tooltip and the accessible name. `pressed` makes it a toggle.
+/** A button showing one icon; its label is the tooltip and the accessible name. `pressed` makes it a tool toggle
+ * (green, legacy toolbar); `expanded` says a region it opens is shown (quiet, legacy sidebar toggles).
+ * 一個圖示按鈕。pressed＝工具開關（綠色，舊產品工具列）；expanded＝它打開的區域正顯示著（低調，舊產品側欄開關）。
  * A disabled one stays hoverable so its tooltip can say why. 一個圖示按鈕；label 是提示與無障礙名稱；pressed 使它成為開關。
  * 停用時仍可滑過，好讓提示說明原因。 */
-export function IconButton({ icon, label, onClick, pressed, disabled, title }: {
-  icon: IconName; label: Message | string; onClick?: () => void; pressed?: boolean; disabled?: boolean; title?: Message | string;
+export function IconButton({ icon, label, onClick, pressed, expanded, disabled, title }: {
+  icon: IconName; label: Message | string; onClick?: () => void; pressed?: boolean; expanded?: boolean; disabled?: boolean; title?: Message | string;
 }) {
-  return <button type="button" className="icon-button" aria-label={say(label)} title={say(title ?? label)} aria-pressed={pressed}
+  return <button type="button" className="icon-button" aria-label={say(label)} title={say(title ?? label)} aria-pressed={pressed} aria-expanded={expanded}
     aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}><Icon name={icon} /></button>;
 }
 
@@ -45,11 +47,12 @@ export function Select<T extends string>({ label, value, options, onChange, disa
   </>;
 }
 
-/** A button that opens a menu of actions (no current value). 打開一串動作的按鈕（沒有「目前值」）。 */
-export function MenuButton({ icon, label, items }: { icon: IconName; label: Message | string; items: readonly MenuItem[] }) {
+/** A button that opens a menu of actions (no current value). `narrow` for an icon that is only a few dots wide
+ * (the legacy foot-bar ⋮). 打開一串動作的按鈕。narrow：給只有幾個點寬的圖示（舊產品底列的 ⋮）。 */
+export function MenuButton({ icon, label, items, narrow }: { icon: IconName; label: Message | string; items: readonly MenuItem[]; narrow?: boolean }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return <>
-    <button type="button" className="icon-button" aria-label={say(label)} title={say(label)} aria-haspopup="menu" aria-expanded={!!anchor}
+    <button type="button" className={'icon-button' + (narrow ? ' narrow' : '')} aria-label={say(label)} title={say(label)} aria-haspopup="menu" aria-expanded={!!anchor}
       onClick={event => setAnchor(anchor ? null : event.currentTarget)}><Icon name={icon} /></button>
     {anchor && <DropdownMenu anchor={anchor} items={items} label={say(label)} onClose={() => setAnchor(null)} />}
   </>;
@@ -64,3 +67,45 @@ export const ToolGroup = ({ children }: { children: ReactNode }) => <div classNa
 export const Badge = ({ count, group, title }: { count: number; group?: string; title?: Message | string }) =>
   <span className={'badge' + (group ? ' badge-group' : '')} title={title === undefined ? undefined : say(title)}
     style={group ? { '--badge-color': `var(--group-${group})` } as CSSProperties : undefined}>{count}</span>;
+
+/** A small panel called up from a button, drawn above or below it (whichever has room), closed by a click outside or
+ * Esc (Refactor.54.1: the appearance and size panels, the message history). 從按鈕叫出的小面板：畫在按鈕上方或下方
+ * （哪邊放得下就哪邊），點外面或 Esc 關閉（外觀、大小面板、訊息歷史）。 */
+export function Popover({ anchor, label, onClose, className, children }: {
+  anchor: HTMLElement; label: Message | string; onClose(): void; className?: string; children: ReactNode;
+}) {
+  const box = useRef<HTMLDivElement>(null), [place, setPlace] = useState<CSSProperties>({ visibility: 'hidden' });
+  useLayoutEffect(() => {
+    const rect = anchor.getBoundingClientRect(), width = box.current?.offsetWidth ?? 0, height = box.current?.offsetHeight ?? 0;
+    const left = Math.max(8, Math.min(rect.left, innerWidth - width - 8));
+    setPlace(rect.bottom + 4 + height <= innerHeight - 8 ? { left, top: rect.bottom + 4 } : { left, bottom: innerHeight - rect.top + 4 });
+  }, [anchor]);
+  useEffect(() => {
+    const away = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node) && !anchor.contains(event.target as Node)) onClose(); };
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    addEventListener('pointerdown', away, true); addEventListener('keydown', key);
+    return () => { removeEventListener('pointerdown', away, true); removeEventListener('keydown', key); };
+  }, [anchor, onClose]);
+  return <div ref={box} className={'popover' + (className ? ' ' + className : '')} role="dialog" aria-label={say(label)} style={place}>{children}</div>;
+}
+
+/** An icon button that opens a Popover. 打開小面板的圖示按鈕。 */
+export function PopoverButton({ icon, label, className, children }: { icon: IconName; label: Message | string; className?: string; children: ReactNode }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return <>
+    <button type="button" className="icon-button" aria-label={say(label)} title={say(label)} aria-haspopup="dialog" aria-expanded={!!anchor}
+      onClick={event => setAnchor(anchor ? null : event.currentTarget)}><Icon name={icon} /></button>
+    {anchor && <Popover anchor={anchor} label={label} className={className} onClose={() => setAnchor(null)}>{children}</Popover>}
+  </>;
+}
+
+/** Two or more choices side by side, one active (legacy Dark/Light, Standard/Comfortable, the stages).
+ * 並排的幾個選項，一次一個（舊產品的 Dark／Light、Standard／Comfortable、Stage）。 */
+export function Segmented<T extends string>({ label, value, options, onChange }: {
+  label: Message | string; value: T; options: readonly { value: T; label: Message | string; disabled?: boolean; title?: Message | string }[]; onChange(value: T): void;
+}) {
+  return <div className="segmented" role="radiogroup" aria-label={say(label)}>
+    {options.map(option => <button key={option.value} type="button" role="radio" aria-checked={option.value === value}
+      aria-disabled={option.disabled || undefined} title={option.title === undefined ? undefined : say(option.title)}
+      onClick={() => { if (!option.disabled) onChange(option.value); }}>{say(option.label)}</button>)}</div>;
+}

@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession, EditorState } from './editor';
 import { BrandMark } from './icons';
-import { IconButton, MenuButton, Placeholder, Select, ToolGroup, notYet } from './controls';
+import { IconButton, MenuButton, Placeholder, Popover, PopoverButton, Segmented, Select, ToolGroup, notYet } from './controls';
+import { appearanceSubscribe, currentSize, currentTheme, setSize, setTheme, sizes, themes } from './appearance';
 import type { Layout } from './layout';
 import type { Report } from './reports';
 import { language, setLanguage, say, tr, type Message } from './text';
@@ -47,14 +48,14 @@ export function TitleBar({ session, version }: { session: EditorSession | null; 
  * 中間是正在編輯的東西。 */
 export function LocationBar({ layout, rightEmpty, children }: { layout: Layout; rightEmpty: boolean; children: ReactNode }) {
   return <div className="location-bar">
-    <IconButton icon="leftPanel" label={tr('layout.leftZone', 'Left panels')} pressed={layout.left.open} onClick={() => layout.toggleZone('left')} />
+    <IconButton icon="leftPanel" label={tr('layout.leftZone', 'Left panels')} expanded={layout.left.open} onClick={() => layout.toggleZone('left')} />
     {children}
     <span className="spacer" />
-    <IconButton icon="titleBar" label={tr('layout.titleBar', 'Title bar')} pressed={layout.titleBar} onClick={layout.toggleTitleBar} />
+    <IconButton icon="titleBar" label={tr('layout.titleBar', 'Title bar')} expanded={layout.titleBar} onClick={layout.toggleTitleBar} />
     <Placeholder label={tr('layout.menu', 'Layout')} />
     {/* No panel lives on the right yet (the Parameter panel comes later): a placeholder until then.
         右邊還沒有面板（參數面板之後才有），先是佔位。 */}
-    <IconButton icon="rightPanel" label={tr('layout.rightZone', 'Right panels')} pressed={!rightEmpty && layout.right.open}
+    <IconButton icon="rightPanel" label={tr('layout.rightZone', 'Right panels')} expanded={!rightEmpty && layout.right.open}
       disabled={rightEmpty} title={rightEmpty ? tr('layout.rightEmpty', 'No panels here yet') : undefined} onClick={() => layout.toggleZone('right')} />
   </div>;
 }
@@ -75,10 +76,9 @@ export function NetworkBar({ session, prefs, onGlsl, onCreate }: {
     <div className="network-bar-group">
       {/* Only the stages this graph has (human 2026-10-09); only Pixel can be edited so far.
           只顯示這張圖有的 Stage（人類）；目前只能編輯 Pixel。 */}
-      {stages.length > 0 && <div className="segmented" role="tablist" aria-label={say(tr('stage.label', 'Stage'))}>
-        {stages.map(stage => <button key={stage} type="button" role="tab" aria-selected={stage === 'pixel'}
-          aria-disabled={stage !== 'pixel' || undefined} title={stage === 'pixel' ? undefined : say(notYet)}>
-          {stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage}</button>)}</div>}
+      {stages.length > 0 && <Segmented label={tr('stage.label', 'Stage')} value="pixel" onChange={() => {}}
+        options={stages.map(stage => ({ value: stage, label: stage === 'pixel' ? 'Pixel' : stage === 'vertex' ? 'Vertex' : stage,
+          disabled: stage !== 'pixel', title: stage === 'pixel' ? undefined : notYet }))} />}
       {/* Opens Create node (Refactor.54). 打開新增節點。 */}
       <button type="button" aria-disabled={!session || undefined} onClick={() => { if (session) onCreate(); }}>{say(tr('toolbar.addNodePrompt', '+ Add node'))}</button>
     </div>
@@ -122,7 +122,7 @@ export function FootBar({ session, waiting, onDownload }: { session: EditorSessi
     : state.dirty ? tr('status.unsent', 'Changes not yet sent to TD') : tr('status.synced', 'Synced with TD');
   const message = state ? state.message : waiting, full = say(message), first = full.split('\n')[0];
   return <footer className={'foot-bar' + (state ? ` ${state.phase} ${state.level}` : '')} role="status">
-    <MenuButton icon="menu" label={tr('foot.menu', 'Editor menu')} items={[
+    <MenuButton icon="menu" narrow label={tr('foot.menu', 'Editor menu')} items={[
       { key: 'reload', label: say(tr('foot.reloadPage', 'Reload editor page')), select: () => location.reload() },
       { key: 'reloadTd', label: say(tr('foot.reloadApplied', 'Reload applied graph')), disabled: true, title: say(notYet), select: () => {} },
       { key: 'reset', label: say(tr('foot.resetSettings', 'Reset browser settings…')), disabled: true, title: say(notYet), select: () => {} },
@@ -141,6 +141,7 @@ export function FootBar({ session, waiting, onDownload }: { session: EditorSessi
     {session && state?.phase === 'offline' && <details className="recovery-help"><summary>{say(tr('status.howToRecover', 'How to recover'))}</summary>
       <p>{say(recoveryHelp)}</p></details>}
     <span className="spacer" />
+    <AppearancePanels />
     <IconButton icon="fullscreen" label={tr('foot.fullscreen', 'Full screen')} pressed={fullscreen}
       onClick={() => void (fullscreen ? document.exitFullscreen() : document.documentElement.requestFullscreen())} />
     {history && <LogHistory anchor={history} entries={log} onClose={() => setHistory(null)} />}
@@ -157,23 +158,36 @@ const HISTORY = 100; // tentative (human 2026-10-09: "within some number of past
 /** The recent reports, opening upward from the foot bar, newest at the bottom, scrollable (human 2026-10-09).
  * 最近的回報紀錄，從底列往上開，最新的在最下面，可捲動（人類）。 */
 function LogHistory({ anchor, entries, onClose }: { anchor: HTMLElement; entries: readonly Report[]; onClose(): void }) {
-  const box = useRef<HTMLDivElement>(null), [place, setPlace] = useState({ left: 0, bottom: 0 });
-  useLayoutEffect(() => {
-    const rect = anchor.getBoundingClientRect();
-    setPlace({ left: Math.max(8, Math.min(rect.left, innerWidth - (box.current?.offsetWidth ?? 0) - 8)), bottom: innerHeight - rect.top + 4 });
-  }, [anchor]);
-  useLayoutEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [entries]);
-  useEffect(() => {
-    const away = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node) && !anchor.contains(event.target as Node)) onClose(); };
-    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    addEventListener('pointerdown', away, true); addEventListener('keydown', key);
-    return () => { removeEventListener('pointerdown', away, true); removeEventListener('keydown', key); };
-  }, [anchor, onClose]);
+  const list = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [entries]);
   const shown = entries.slice(-HISTORY);
-  return <div ref={box} className="log-history" role="dialog" aria-label={say(tr('foot.history', 'Message history'))} style={place}>
-    {shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
+  return <Popover anchor={anchor} label={tr('foot.history', 'Message history')} className="log-history" onClose={onClose}>
+    <div ref={list} className="log-list">{shown.length ? shown.map((entry, i) => <div key={i} className={'log-entry ' + entry.level}>
       <time>{new Date(entry.time).toLocaleTimeString()}</time><span>{say(entry.message)}</span></div>)
-      : <p className="hint">{say(tr('foot.historyEmpty', 'No messages yet.'))}</p>}
-  </div>;
+      : <p className="hint">{say(tr('foot.historyEmpty', 'No messages yet.'))}</p>}</div>
+  </Popover>;
+}
+
+// The appearance and size panels of the foot bar (legacy moon and "AA"; floating-panels.md 32, 33). Both only change
+// CSS (human 2026-10-09). The sliders (brightness, overall scale) are placeholders: they touch more (canvas coordinates,
+// what the brightness leaves alone) and are discussed first.
+// 底列的外觀與大小面板（舊產品的月亮與 AA）；都只換 CSS（人類）。拉桿（亮暗、整體縮放）先佔位：牽涉較多，先討論。
+const SliderPlaceholder = ({ label }: { label: Message }) =>
+  <div className="slider-placeholder" aria-disabled="true" title={say(notYet)}><span>{say(label)}</span><span className="slider-track" /></div>;
+function AppearancePanels() {
+  useSyncExternalStore(appearanceSubscribe, () => currentTheme() + currentSize());
+  return <>
+    <PopoverButton icon="theme" label={tr('appearance.title', 'Appearance')} className="settings-panel">
+      <Segmented label={tr('appearance.title', 'Appearance')} value={currentTheme()} options={themes} onChange={setTheme} />
+      <SliderPlaceholder label={tr('appearance.brightness', 'Brightness')} />
+    </PopoverButton>
+    <PopoverButton icon="textSize" label={tr('appearance.sizeTitle', 'Language and size')} className="settings-panel">
+      <label className="settings-row"><span>{say(tr('action.language', 'Language'))}</span>
+        <Select label={tr('action.language', 'Language')} value={language()} onChange={setLanguage}
+          options={[{ value: 'en', label: 'English' }, { value: 'zh-Hant', label: '繁體中文' }]} /></label>
+      <Segmented label={tr('appearance.sizeTitle', 'Language and size')} value={currentSize()} options={sizes} onChange={setSize} />
+      <SliderPlaceholder label={tr('appearance.scale', 'Interface scale')} />
+    </PopoverButton>
+  </>;
 }
 

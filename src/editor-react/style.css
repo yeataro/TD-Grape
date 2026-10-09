@@ -1,12 +1,16 @@
-:root { font-family: Arial, sans-serif; color: var(--text); background: var(--surface-app); font-size: 13px; color-scheme: dark; }
+:root { font-family: Inter, "Segoe UI", "Microsoft JhengHei", sans-serif; color: var(--text); background: var(--surface-app); font-size: 13px; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; }
 #root { height: 100vh; display: flex; flex-direction: column; }
-button, select, input { font: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: 5px; background: var(--surface-control); }
+button, select, input { font: inherit; color: inherit; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface-control); }
+input, select { border-radius: var(--radius-field); background: var(--surface-field); }
+input:focus-visible, select:focus-visible { outline: 1px solid var(--accent); }
 button, select { padding: 6px 9px; }
-button { cursor: pointer; } button:hover { background: var(--surface-control-hover); }
+button { cursor: pointer; color: var(--text-strong); } button:hover { background: var(--surface-control-hover); border-color: var(--border-hover); }
 button:disabled, button[aria-disabled="true"] { opacity: .45; cursor: default; } button[aria-disabled="true"]:hover { background: var(--surface-control); }
-button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--text-strong); }
+button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--text-on-accent); font-weight: 650; }
+button.primary:hover { background: var(--accent-fill-hover); border-color: var(--accent-fill-hover); }
+button.primary[aria-disabled="true"]:hover { background: var(--accent-fill); }
 a { color: var(--accent); }
 .spacer { flex: 1; }
 .draft-notice { display: flex; align-items: center; gap: 10px; padding: 9px 16px; flex-shrink: 0; background: var(--surface-notice); }
@@ -15,8 +19,9 @@ a { color: var(--accent); }
    come from the theme's purpose tokens only. 編輯器外框：每一列都由共用控制項組成；顏色與尺寸只讀主題的用途變數。 */
 .title-bar, .location-bar, .foot-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0 12px; background: var(--surface-bar); }
 .title-bar { height: var(--title-bar-height); border-bottom: 1px solid var(--border); }
-.brand-mark { width: 26px; height: 26px; flex: none; }
-.brand-name { color: var(--text-strong); font-size: 17px; }
+.brand-mark { width: var(--brand-mark); height: var(--brand-mark); flex: none; }
+.brand-name { color: var(--text-strong); font-size: var(--brand-font); }
+.title-bar button { height: var(--control-height); padding-block: 0; font-size: var(--control-font); }
 .brand-line { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 12px; }
 .location-bar { height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-zone); }
 .foot-bar { height: var(--bar-height); border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
@@ -31,16 +36,23 @@ a { color: var(--accent); }
 .workspace { display: flex; flex: 1; min-height: 0; }
 .network { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .canvas { position: relative; flex: 1; min-height: 0; }
+/* React Flow's own variables, pointed at our purposes (COLOR_SYSTEM.md). RF 自己的變數接到我們的用途名。 */
+.react-flow { --xy-background-color: var(--surface-canvas); --xy-edge-label-color: var(--text-secondary);
+  --xy-edge-label-background-color: var(--surface-raised); --xy-controls-button-background-color: var(--surface-control);
+  --xy-controls-button-background-color-hover: var(--surface-control-hover); --xy-controls-button-color: var(--text-strong);
+  --xy-controls-button-border-color: var(--border); --xy-attribution-background-color: transparent; }
 
 /* Shared controls (controls.tsx, icons.tsx). 共用控制項。 */
 .icon { display: block; width: var(--icon-size); height: var(--icon-size); flex: none; fill: none; stroke: currentColor;
   stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .icon .icon-fill { fill: currentColor; stroke: none; opacity: 0; }
 .icon .icon-dot { fill: currentColor; stroke: none; }
-.icon-button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
+.icon-button { display: grid; place-items: center; width: var(--icon-button); height: var(--icon-button); padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
 .icon-button:hover { background: var(--surface-control); color: var(--text); }
-.icon-button[aria-pressed="true"] { color: var(--accent); background: var(--surface-pressed); }
-.icon-button[aria-pressed="true"] .icon-fill { opacity: .17; }
+.icon-button.narrow { width: var(--icon-button-narrow); }
+.icon-button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
+.icon-button[aria-expanded="true"] { color: var(--text-secondary); background: var(--overlay-up); }
+.icon-button:is([aria-pressed="true"], [aria-expanded="true"]) .icon-fill { opacity: .17; }
 .placeholder { color: var(--text-muted); }
 .link-button { padding: 0; border: 0; background: none; font-size: inherit; }
 .select-button { display: inline-flex; align-items: center; gap: 6px; }
@@ -48,9 +60,9 @@ a { color: var(--accent); }
 .tool-group { display: flex; align-items: center; gap: 2px; padding: 0 6px; border-left: 1px solid var(--border); }
 .tool-group:first-child { border-left: 0; }
 label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-.segmented { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--surface-raised); }
-.segmented button { border: 0; background: none; padding: 4px 10px; color: var(--text-muted); }
-.segmented button[aria-selected="true"] { background: var(--surface-control-hover); color: var(--text-strong); }
+.segmented { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--surface-zone); }
+.segmented button { border: 0; background: none; padding: 4px 10px; color: var(--text-muted); height: auto; }
+.segmented button[aria-checked="true"] { background: var(--surface-active); color: var(--text-active); }
 
 /* The network's toolbar floats over its top edge and never blocks the canvas between its groups.
    網路區功能列浮在上緣，兩組之間不擋畫布。 */
@@ -68,8 +80,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .panel-zone-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 .panel-group-slot { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
 .panel-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.panel-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface-bar); }
-.panel-tab { flex: 1; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: 9px 12px; text-align: left; font-weight: 600; }
+.panel-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface-canvas); }
+.panel-tab { flex: 1; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left; font-weight: 600; }
 .panel-tab[aria-selected="true"] { color: var(--text-strong); background: var(--surface-zone); }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
 .code-view { margin: 0; font-size: 12px; white-space: pre; }
@@ -84,7 +96,7 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .resize-y { left: 0; right: 0; top: calc(var(--handle-grab) / -2); height: var(--handle-grab); cursor: row-resize; }
 .resize-y::after { left: 0; right: 0; top: calc(50% - var(--handle-line)); height: calc(var(--handle-line) * 2); }
 
-.grape-node { position: relative; width: 250px; border: 1px solid #4e445c; border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px #0004; }
+.grape-node { position: relative; width: 250px; border: 1px solid var(--border-node); border-radius: 12px; background: var(--surface-node); box-shadow: 0 5px 16px var(--shadow); }
 /* Selection (Refactor.49, Q33): the primary in TD's green, the others in yellow. 主要＝綠、其他＝黃。 */
 .grape-node.selected { outline: 2px solid var(--select-other); } .grape-node.selected.primary { outline-color: var(--select-primary); }
 /* Wires: selected and hovered are lighter and thicker, as in the legacy editor (its glow is a look option,
@@ -99,83 +111,91 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */
 .grape-node.ghost { opacity: .62; border-style: dashed; }
 .sources-section { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 8px; font-weight: 600; }
-.source-row { border: 1px solid #43394e; border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.source-row { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin-bottom: 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .source-head { display: flex; gap: 6px; } .source-name { flex: 1; min-width: 0; }
 /* A select is as wide as its longest option; keep it inside the panel. 下拉選單會被最長選項撐寬，限制在面板內。 */
 .source-head select { min-width: 0; max-width: 55%; }
-.source-actions { display: flex; align-items: center; gap: 6px; } .source-actions small { flex: 1; color: #ffffff80; }
+.source-actions { display: flex; align-items: center; gap: 6px; } .source-actions small { flex: 1; color: var(--text-muted); }
 .builtin-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; } .builtin-row code { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.builtin-row small { color: #ffffff80; }
-.port-fallback { color: #ffffff80; font-size: 11px; padding-left: 4px; }
+.builtin-row small { color: var(--text-muted); }
+.port-fallback { color: var(--text-muted); font-size: 11px; padding-left: 4px; }
 .source-flag { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-.builtin-row.unused code { color: #ffffff80; }
+.builtin-row.unused code { color: var(--text-muted); }
 .section-buttons { display: flex; gap: 4px; }
 /* What drives a Uniform component in TD (Uniform D1), in TD's mode colours. TD 上驅動分量的東西，用 TD 的模式顏色。 */
-.td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: 11px; border-radius: 4px; background: #00000040; }
-.td-expression { color: #7fb2ff; } .td-export { color: #7fd88a; } .td-other { color: #ffffff80; }
-.td-bind input, code.td-bind { color: #c59cff; }
-.grape-node.ghost .ghost-note { font-size: 11px; color: #ffffffa0; padding: 4px 0; }
+.td-driven { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 5px 7px; font-size: 11px; border-radius: 4px; background: var(--overlay-down); }
+.td-expression { color: var(--td-expression); } .td-export { color: var(--td-export); } .td-other { color: var(--text-muted); }
+.td-bind input, code.td-bind { color: var(--td-bind); }
+.grape-node.ghost .ghost-note { font-size: 11px; color: var(--text-secondary); padding: 4px 0; }
 /* Colour group primary at --title-alpha, composed by the DOM over the node body (COLOR_SYSTEM.md). */
 .node-title { padding: 12px 14px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--group-color, var(--group-function)) var(--title-alpha), transparent); border-radius: 11px 11px 0 0; }
-.node-title strong { flex: 1; } .node-title small, .node-title select { color: #ada2bb; font-size: 11px; }
+.node-title strong { flex: 1; } .node-title small, .node-title select { color: var(--text-secondary); font-size: 11px; }
 .node-title select { max-width: 78px; padding: 3px; } .node-drag-surface { cursor: grab; }
 .node-body { padding: 12px 0; display: flex; flex-direction: column; gap: 9px; }
 .node-body > .value-group, .node-body > .control-field, .node-body > .hint { margin: 0 14px; }
 .port-row { position: relative; padding: 5px 14px; display: flex; gap: 8px; align-items: center; min-height: 30px; }
-.port-row small { color: #a59aaf; font-size: 10px; } .input-row > span { flex-shrink: 0; font-size: 12px; }
+.port-row small { color: var(--text-muted); font-size: 10px; } .input-row > span { flex-shrink: 0; font-size: 12px; }
 .input-row > .value-group { flex: 1; min-width: 0; } .output-row { justify-content: flex-end; }
 .react-flow__handle { width: 10px; height: 10px; min-width: 10px; min-height: 10px; background: var(--port-color); border: 0; }
-.react-flow__handle.target { background: #272530; border: 2px solid var(--port-color); }
+.react-flow__handle.target { background: var(--surface-port); border: 2px solid var(--port-color); }
 .value-group { min-width: 0; } .value-fields { display: grid; grid-template-columns: 1fr; gap: 5px; }
 .vector-fields { grid-template-columns: 1fr 1fr; } .value-fields label { min-width: 0; display: flex; align-items: center; gap: 5px; cursor: default; }
 .value-fields label span { width: 10px; font-size: 11px; } .value-fields input, .value-fields select { width: 100%; min-width: 0; padding: 5px 7px; font-variant-numeric: tabular-nums; }
-input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; cursor: pointer; }
+input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch { width: 100%; height: 26px; padding: 0; margin-bottom: 7px; border: 0; cursor: pointer; }
 .control-field { display: flex; gap: 8px; align-items: center; } .control-field select { flex: 1; min-width: 0; }
-.control-row { display: flex; gap: 5px; } .hint { font-size: 11px; color: #a59aad; }
-.react-flow__controls button { color: #e2d9ed; background: #302a3b; border-color: #53485e; }
+.control-row { display: flex; gap: 5px; } .hint { font-size: 11px; color: var(--text-muted); }
+.react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }
+.react-flow__controls button:hover { background: var(--surface-control-hover); }
 .startup-error { margin: auto; max-width: 620px; padding: 35px; }
 
-.value-ladder { position: fixed; z-index: 100; border: 1px solid #6a577f; border-radius: 6px; background: #26212f; box-shadow: 0 8px 24px #0005; pointer-events: none; user-select: none; font-size: 13px; font-variant-numeric: tabular-nums; }
+.value-ladder { position: fixed; z-index: 100; border: 1px solid var(--border-hover); border-radius: 6px; background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); pointer-events: none; user-select: none; font-size: 13px; font-variant-numeric: tabular-nums; }
 .ladder-steps > div { padding: 0 4px; border-radius: 3px; text-align: right; }
-.ladder-steps .active { background: #695384; color: #f2e9ff; }
+.ladder-steps .active { background: var(--surface-active); color: var(--text-active); }
 /* Readouts keep stable columns; their content cannot resize the selection list.
    調值讀數使用固定欄位；長數字不撐寬，也不影響初始級距列表的尺寸。 */
 .ladder-readout { display: flex; align-items: center; gap: 12px; height: 32px; padding: 8px; }
-.ladder-readout span { flex: 0 0 8ch; color: #b5a7c6; font-size: 11px; white-space: nowrap; text-align: right; }
+.ladder-readout span { flex: 0 0 8ch; color: var(--text-muted); font-size: 11px; white-space: nowrap; text-align: right; }
 .ladder-readout output { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.draft-blocker { position: absolute; inset: 0; z-index: 20; background: #13121a33; }
+.draft-blocker { position: absolute; inset: 0; z-index: 20; background: var(--surface-dim); }
 /* Module-declared spare input: dashed handle, muted label; greyed at the limit. */
-.spare-row > span { color: #a59aaf; font-size: 11px; }
+.spare-row > span { color: var(--text-muted); font-size: 11px; }
 .spare-row .react-flow__handle { border-style: dashed; background: transparent; }
 .spare-row.full { opacity: .5; }
 /* TD offline / conflict (design-interview Q28). Offline is informative, not an error. */
 .recovery-help summary { cursor: pointer; }
 .conflict-float { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 10;
   display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px;
-  background: #2c2533; border: 1px solid #8d6fb0; box-shadow: 0 6px 24px #0008; }
-.conflict-float .primary { background: #6a4f8f; }
+  background: var(--surface-raised); border: 1px solid var(--border-hover); box-shadow: 0 6px 24px var(--shadow); }
 /* Right-drag box selection (legacy parity); the overlay never takes pointer events. */
 .right-select-host { position: relative; width: 100%; height: 100%; }
-.right-select-box { position: absolute; z-index: 5; pointer-events: none; border: 1px dashed #b7a0db; background: #b7a0db22; }
+.right-select-box { position: absolute; z-index: 5; pointer-events: none; border: 1px dashed var(--accent); background: var(--surface-box); }
 
 /* Dropdown menu widget and the shell's Grape OP menu (Refactor.51). 下拉選單元件與外殼的 Grape OP 選單。 */
 .dropdown-menu { position: fixed; z-index: 30; min-width: 260px; max-width: min(600px, calc(100vw - 16px)); max-height: 60vh; overflow: auto;
-  display: flex; flex-direction: column; gap: 2px; padding: 6px; border: 1px solid var(--border-control); border-radius: 8px; background: var(--surface-raised); box-shadow: 0 8px 24px #0008; }
+  display: flex; flex-direction: column; gap: 2px; padding: 6px; border: 1px solid var(--border-control); border-radius: 8px; background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); }
 .dropdown-menu button { display: flex; gap: 8px; align-items: center; text-align: left; background: none; border: 0; padding: 6px 8px; border-radius: 5px; color: inherit; }
-.dropdown-menu button:hover, .dropdown-menu button:focus-visible { background: #ffffff14; }
+.dropdown-menu button:hover, .dropdown-menu button:focus-visible { background: var(--surface-control-hover); }
 /* The check sits in its own fixed column, like a table, so the text always lines up (human 2026-10-09).
    勾勾放在固定寬度的一欄，像表格一樣，文字一定對齊。 */
 .dropdown-menu button[role="menuitemradio"]::before { content: ''; flex: 0 0 1.2em; text-align: center; } .dropdown-menu button[aria-checked="true"]::before { content: '✓'; }
 .dropdown-menu .hint { margin: 4px 8px; }
 .dropdown-menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
 /* Message history, opening upward from the foot bar (Refactor.53). 訊息歷史，從底列往上開。 */
-.log-history { position: fixed; z-index: 30; width: min(640px, calc(100vw - 16px)); max-height: 50vh; overflow: auto; padding: 6px;
-  border: 1px solid var(--border-control); border-radius: 8px; background: var(--surface-raised); box-shadow: 0 8px 24px #0008; }
+/* Small panels called up from a button (controls.tsx Popover). 從按鈕叫出的小面板。 */
+.popover { position: fixed; z-index: 30; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-popup);
+  background: var(--surface-raised); box-shadow: 0 8px 24px var(--shadow); }
+.log-history { width: min(640px, calc(100vw - 16px)); }
+.log-list { max-height: 50vh; overflow: auto; }
+.settings-panel { display: flex; flex-direction: column; gap: 10px; width: 280px; padding: 12px; }
+.settings-panel .segmented button { flex: 1; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 11px; cursor: default; }
+.slider-track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-control-hover); }
 .log-entry { display: flex; gap: 10px; padding: 4px 6px; border-radius: 4px; font-size: 12px; white-space: pre-wrap; }
 .log-entry time { flex: none; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .log-entry.warning span { color: var(--status-warning); } .log-entry.error span { color: var(--status-error); }
-.grape-op-kind { font-size: 10px; padding: 1px 5px; border-radius: 3px; background: #ffffff1a; } .grape-op-path { overflow-wrap: anywhere; }
+.grape-op-kind { font-size: 10px; padding: 1px 5px; border-radius: 3px; background: var(--overlay-up); } .grape-op-path { overflow-wrap: anywhere; }
 /* The location bar's middle: project file, then the Grape OP (Refactor.52). 網址列中間：專案檔名，接著 Grape OP。 */
 .location-bar .target { min-width: 0; background: none; border: 1px solid transparent; color: var(--text); line-height: 1.4; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .location-bar .target:hover { border-color: var(--border-control); }
@@ -183,9 +203,9 @@ input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100
 .identity-compare { display: flex; flex-direction: column; font-size: 12px; opacity: .85; }
 .renew-id { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
 .empty-canvas { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  background: repeating-linear-gradient(45deg, #ffffff05 0 12px, transparent 12px 24px); color: #c9bfd6; text-align: center; padding: 24px; }
+  background: repeating-linear-gradient(45deg, var(--overlay-faint) 0 12px, transparent 12px 24px); color: var(--text-secondary); text-align: center; padding: 24px; }
 .switch-dialog { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 40; max-width: 460px; padding: 16px; display: flex; flex-wrap: wrap; gap: 8px;
-  border: 1px solid #6d5b89; border-radius: 10px; background: #241f2e; box-shadow: 0 10px 30px #000a; }
+  border: 1px solid var(--border-hover); border-radius: var(--radius-popup); background: var(--surface-raised); box-shadow: 0 10px 30px var(--shadow); }
 .switch-dialog p { flex-basis: 100%; margin: 0 0 6px; }
 
 /* Count badges (controls.tsx Badge, Refactor.54): plain, or in a colour group. 數量標籤：不上色，或用 colorGroup。 */
@@ -195,13 +215,13 @@ input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100
 
 /* Create node (CreateNode.tsx) and the Add Node panel (AddNodePanel.tsx), Refactor.54. 新增節點的兩個入口。 */
 .create-node { position: fixed; z-index: 35; width: min(620px, calc(100vw - 16px)); height: min(440px, calc(100vh - 16px)); display: flex; flex-direction: column; gap: 8px;
-  padding: 10px; border: 1px solid var(--border-control); border-radius: 10px; background: var(--surface-raised); box-shadow: 0 10px 30px #000a; }
+  padding: 10px; border: 1px solid var(--border-control); border-radius: var(--radius-popup); background: var(--surface-raised); box-shadow: 0 10px 30px var(--shadow); }
 .create-head { display: flex; align-items: center; justify-content: space-between; }
 .create-search, .add-node-search { width: 100%; padding: 7px 9px; }
 .create-columns { display: flex; flex: 1; min-height: 0; gap: 8px; }
 .create-list { flex: 3; min-width: 0; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
 .create-entry { display: flex; align-items: center; gap: 8px; text-align: left; border: 0; background: none; padding: 6px 8px; }
-.create-entry.create-active { background: var(--surface-control-hover); }
+.create-entry.create-active { background: var(--surface-active); color: var(--text); }
 .create-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .create-port, .create-source, .choice-source { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
 .create-details { flex: 2; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-left: 1px solid var(--border); }
@@ -214,9 +234,11 @@ input[aria-invalid="true"] { border-color: #f78b96; } .color-swatch { width: 100
 .choice-heading[aria-expanded="true"] .icon { transform: none; }
 .choice-children { padding-left: 14px; }
 .choice-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: grab; }
-.choice-row:hover { background: var(--surface-control); }
+.choice-row:hover { background: var(--surface-control-hover); }
 .choice-row.chosen { outline: 1px solid var(--accent); }
 .choice-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .choice-add { width: 24px; height: 24px; padding: 0; border-color: transparent; background: none; color: var(--text-muted); }
+/* Lists alternate row backgrounds where the theme says so (TD). 清單隔行底色，由主題決定（TD）。 */
+.choice-row:nth-of-type(even):not(:hover), .create-entry:nth-of-type(even):not(.create-active), .log-entry:nth-of-type(even) { background: var(--surface-row-alt); }
 /* The "+" at a wire's end over blank canvas (Blender). 拉線停在空白處時線頭的「＋」。 */
 .wire-plus { fill: var(--text-strong); font-size: 16px; font-weight: 700; pointer-events: none; }

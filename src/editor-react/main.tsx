@@ -4,6 +4,10 @@ import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, us
   type ConnectionLineComponentProps, type NodeTypes, type XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
+import './theme/td.css';
+import './theme/light.css';
+import './theme/sizes.css';
+import { appearanceSubscribe, currentTheme } from './appearance';
 import './style.css';
 import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, HostError, type StateResponse } from './host';
@@ -45,7 +49,7 @@ function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
   // Over blank canvas from an output, a "+" says releasing opens Create node (Blender; human 2026-10-09). From an
   // input there is none: releasing there pulls the wire. 從輸出拉、停在空白處時線頭有「＋」：放開會打開新增節點；從輸入拉沒有（放開是拔線）。
   const plus = options.wireEndPlus && options.wireDropCreates && props.fromHandle.type === 'source' && !props.toHandle;
-  return <g><path d={path} fill="none" stroke={typeColor(port?.type ?? '')} strokeWidth={1.3} strokeDasharray="5 4" />
+  return <g><path d={path} fill="none" style={{ stroke: typeColor(port?.type ?? '') }} strokeWidth={1.3} strokeDasharray="5 4" />
     {plus && <text className="wire-plus" x={props.toX + 9} y={props.toY - 7}>+</text>}</g>;
 }
 // The grid thins out when zoomed out, as the legacy editor (legacy app.js:590–598): the spacing doubles until
@@ -65,6 +69,8 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
   onCreate(request: CreateRequest): void; onDropChoice(id: string, at: { x: number; y: number }): void;
 }) {
   const options = useOptions();
+  // React Flow's own colours follow the theme (COLOR_SYSTEM.md). React Flow 自己的顏色跟著主題。
+  const theme = useSyncExternalStore(appearanceSubscribe, currentTheme);
   // Picking a wire up from its input end is React Flow's own reconnecting (Refactor.54, Blender-like; human
   // 2026-10-09). Only the input end moves. 從輸入端拿起線用 React Flow 自己的重接線（像 Blender）；只有輸入端能動。
   const edges = useMemo(() => options.wirePickUp ? projection.edges.map(edge => ({ ...edge, reconnectable: 'target' as const })) : projection.edges,
@@ -112,7 +118,7 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSe
       // (reported to the human as an exception, Refactor.54). 雙擊空白處打開新增節點（照舊），所以關掉 RF 的雙擊放大（已報告的例外）。
       zoomOnDoubleClick={false}
       snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
-      minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}
+      minZoom={.15} maxZoom={2.5} colorMode={theme === 'light' ? 'light' : 'dark'} deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
       <AdaptiveGrid />
       {/* React Flow's own zoom controls, with the zoom as a number (human 2026-10-09: its default is fine).

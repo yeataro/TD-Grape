@@ -148,5 +148,7 @@ export const same = (a: unknown, b: unknown): boolean => {
   return keys.length === Object.keys(y).length && keys.every(key => Object.hasOwn(y, key) && same(x[key], y[key]));
 };
 // Textures keep the legacy umber (style.css 0.8.276). 貼圖沿用舊產品的褐色。
-export const typeColor = (type: string) => type === 'sampler2D' ? '#c2a47a' :
-  ({ '2': '#79b9eb', '3': '#75c7ac', '4': '#b7a0db' }[type.slice(-1)] ?? '#b8b5ae');
+// A type's colour as the theme names it (COLOR_SYSTEM.md: code returns a variable, never a colour code).
+// 型別的顏色：回傳主題的變數名，不回傳色碼。
+export const typeColor = (type: string) => type === 'sampler2D' ? 'var(--type-sampler)' :
+  ({ '2': 'var(--type-vec2)', '3': 'var(--type-vec3)', '4': 'var(--type-vec4)' }[type.slice(-1)] ?? 'var(--type-scalar)');

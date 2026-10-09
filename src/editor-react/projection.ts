@@ -82,13 +82,13 @@ export function project(document: GraphDocument, previous: Projection, contract:
     // Ghost 線保留、畫成虛線；產碼時當作沒接。
     const ghost = ghosts.edges.has(edge.id);
     const sourceType = ghost ? '' : edge.from?.type ?? '', targetType = ghost ? '' : edge.to?.type ?? '';
-    const style = ghost ? { stroke: '#f17b88', strokeWidth: 2, strokeDasharray: '6 4' } : { stroke: typeColor(sourceType), strokeWidth: 2 };
+    const style = ghost ? { stroke: 'var(--wire-ghost)', strokeWidth: 2, strokeDasharray: '6 4' } : { stroke: typeColor(sourceType), strokeWidth: 2 };
     const label = !ghost && sourceType !== targetType ? `${sourceType} → ${targetType}` : undefined;
     if (old && old.source === saved.from[0] && old.sourceHandle === saved.from[1] &&
         old.target === saved.to[0] && old.targetHandle === saved.to[1] && old.label === label && same(old.style, style)) return old;
     return { ...old, id: edge.id, source: saved.from[0], sourceHandle: saved.from[1],
       target: saved.to[0], targetHandle: saved.to[1], style, label,
-      labelStyle: { fill: '#c5c0d0', fontSize: 10 }, labelBgStyle: { fill: '#24232d' } };
+      labelStyle: { fill: 'var(--text-secondary)', fontSize: 10 }, labelBgStyle: { fill: 'var(--surface-raised)' } };
   });
   const next = { nodes: retainArray(nodes, previous.nodes), edges: retainArray(edges, previous.edges) };
   return next.nodes === previous.nodes && next.edges === previous.edges ? previous : next;

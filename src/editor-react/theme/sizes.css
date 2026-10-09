@@ -1,0 +1,36 @@
+/* Sizes, separate from colours (docs/ui/COLOR_SYSTEM.md: shape themes and colour themes switch independently).
+ * Standard is the default, narrower, as the legacy editor's standard size (legacy style.css: 32px location and foot
+ * bars, 32px title-bar buttons with 11px text, a 28px mark); Comfortable is the R.53 layout (human 2026-10-09:
+ * "set the current size as Comfortable"). The overall scale slider comes later. Values are tentative.
+ * 尺寸與顏色分開。預設 Standard（較窄，照舊產品的標準大小）；Comfortable＝R.53 的版面（人類：把現在的大小設成
+ * Comfortable）。整體縮放拉桿之後再做。數字暫定。 */
+:root {
+  --title-bar-height: 44px;
+  --bar-height: 32px;
+  --control-height: 28px;
+  --control-font: 11px;
+  --icon-size: 16px;
+  --icon-button: 28px;
+  --icon-button-narrow: 18px;
+  --brand-mark: 26px;
+  --brand-font: 18px;
+  --tab-pad: 7px 12px;
+  /* shapes and handles (shared by both sizes) 形狀與把手（兩種大小共用） */
+  --radius-control: 7px;
+  --radius-field: 5px;
+  --radius-popup: 10px;
+  --handle-line: 1px;
+  --handle-grab: 9px;
+}
+:root[data-size="comfortable"] {
+  --title-bar-height: 47px;
+  --bar-height: 40px;
+  --control-height: 32px;
+  --control-font: 13px;
+  --icon-size: 18px;
+  --icon-button: 30px;
+  --icon-button-narrow: 24px;
+  --brand-mark: 26px;
+  --brand-font: 17px;
+  --tab-pad: 9px 12px;
+}

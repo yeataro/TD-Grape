@@ -1,0 +1,22 @@
+/* The TD theme (docs/ui/COLOR_SYSTEM.md): inherits Dark and changes only what differs, so it looks like TouchDesigner's
+ * own UI (TD 2025.33230 ui.colors, read 2026-10-09): the network on #191a1e (worksheet.bg), panels on the #3f3f3f grey
+ * (default.bg), menus #4c4c4c, list entries #5b5b5b, light grey text (#a5a5a5), no colour cast. The same ladder as Dark
+ * with bigger steps. Node colours, types and selection stay as Dark.
+ * TD 主題：繼承 Dark，只改不同的地方，看起來像 TD 自己的介面：網路底 #191a1e、面板 #3f3f3f 灰、選單 #4c4c4c、
+ * 清單 #5b5b5b、淺灰文字、沒有色偏。和 Dark 同一條階梯，只是每階比較大。節點、型別、選取色同 Dark。 */
+:root[data-theme="td"] {
+  --palette-ink: #191a1e;
+  --palette-accent: #c4b2ff;        /* TD parms.bind.fg */
+  --lift-canvas: 0%;
+  --lift-bar: 14%;
+  --lift-zone: 16%;
+  --lift-raised: 22%;
+  --lift-line: 27%;
+  --lift-hover: 30%;
+  --tint-raised: 0%;
+  --lift-stripe: 4%;    /* TD lists alternate light and dark rows (human 2026-10-09, Palette screenshot) */
+  --text-alpha-strong: 80%;
+  --text-alpha-title: 78%;
+  --text-alpha-secondary: 66%;
+  --text-alpha-muted: 52%;
+}
