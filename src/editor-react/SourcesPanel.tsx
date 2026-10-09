@@ -72,7 +72,7 @@ export function SourcesPanel({ declarations, references }: {
     <FoldSection remember="sources.textureInputs" open={false} title={<>{say(tr('sources.textureInputs', 'TOP texture inputs'))}{count(inputs.length, 'topInput')}</>}
       hint={tr('sources.textureInputsHint', 'Each one is an input of the Grape OP in TD, in this order. When no TOP is connected there, it shows its default image.')}
       actions={<button onClick={() => session.addTopInput()}>{say(tr('sources.addInput', '+ Add input'))}</button>}>
-    {inputs.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+    {inputs.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} outputs={core.declarationOutputs(declaration)} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         {/* Named by its position, not editable (human 2026-10-09). 照位置命名、不能改（人類）。 */}
         <code className="source-fixed-name" title={say(tr('sources.inputConnector', 'Input {number} of the Grape OP in TD', { number: inputs.indexOf(declaration) + 1 }))}>
@@ -89,7 +89,7 @@ export function SourcesPanel({ declarations, references }: {
       actions={<><button onClick={() => session.addUniform()}>{say(tr('sources.addUniform', '+ Uniform'))}</button>
       <button onClick={() => session.addUniform(true)}>{say(tr('sources.addColorUniform', '+ Color'))}</button></>}>
     {!uniforms.length && <p className="hint">{say(tr('sources.noUniforms', 'No Uniforms yet. A Uniform becomes a Uniform parameter of the GLSL OP in TD; changing its value does not recompile the shader.'))}</p>}
-    {uniforms.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+    {uniforms.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} outputs={core.declarationOutputs(declaration)} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         <NameField declaration={declaration} />
         {/* A colour stays a colour: vec3 or vec4 (Q59). 顏色只在 vec3、vec4 之間換。 */}
@@ -108,7 +108,7 @@ export function SourcesPanel({ declarations, references }: {
       hint={tr('sources.timeHint', 'Uniforms that TouchDesigner drives with an expression. The name is fixed; one of each per graph. Remove the expression in TD to set the value yourself.')}>
     {core.uniformPresets.map(preset => { const declared = presetOf(preset.entry);
       const hint = say({ code: 'uniformPreset.' + preset.entry, source: preset.hint }) + '\n' + preset.expression;
-      return declared ? <SourceCard key={preset.entry} group={kindGroup(declared)} refKey={declared.id} choice={'preset:' + preset.entry} uses={references[declared.id] ?? 0}
+      return declared ? <SourceCard key={preset.entry} group={kindGroup(declared)} refKey={declared.id} outputs={core.declarationOutputs(declared)} choice={'preset:' + preset.entry} uses={references[declared.id] ?? 0}
           onAdd={() => session.placePreset(preset.entry, center())} onRemove={() => remove(declared)}
           head={<div className="builtin-row" title={hint}><code>{preset.name}</code><small>{preset.expression}</small></div>}>{uniformValue(declared)}</SourceCard>
         // Not created yet: a grey card with one button, Create; dragged onto the canvas it is created and placed.
@@ -121,7 +121,7 @@ export function SourcesPanel({ declarations, references }: {
       hint={tr('sources.constantsHint', 'Fixed values written into the shader. Changing one recompiles it.')}
       actions={<button onClick={() => session.addConstant()}>{say(tr('sources.addConstant', '+ Add constant'))}</button>}>
     {!constants.length && <p className="hint">{say(tr('sources.noConstants', 'No global constants yet. A constant is written into the shader as const and can be used by many nodes.'))}</p>}
-    {constants.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
+    {constants.map(declaration => <SourceCard key={declaration.id} group={kindGroup(declaration)} refKey={declaration.id} outputs={core.declarationOutputs(declaration)} choice={'declaration:' + declaration.id} uses={references[declaration.id] ?? 0}
       onAdd={() => session.placeDeclaration(declaration.id, center())} onRemove={() => remove(declaration)} head={<>
         <NameField declaration={declaration} />
         <Select label={tr('sources.type', 'Type')} value={declaration.type} onChange={value => session.setDeclarationType(declaration.id, value)}
@@ -135,7 +135,7 @@ export function SourcesPanel({ declarations, references }: {
     {/* Cards like the others; the type in plain text as above. Open, the description, which is what it is, and TD's page
         for it (human 2026-10-09; as the legacy cards). 和其他一樣的卡片；型別同上用一般文字。打開是它的說明（這才是它的內容）
         和 TD 的說明頁（人類；同舊產品卡片）。 */}
-    {builtins.map(entry => <SourceCard key={entry.id} group="runtime" refKey={'tdValue:' + entry.id} choice={'tdValue:' + entry.id}
+    {builtins.map(entry => <SourceCard key={entry.id} group="runtime" refKey={'tdValue:' + entry.id} outputs={core.tdValueOutputs(entry)} choice={'tdValue:' + entry.id}
       uses={references['tdValue:' + entry.id] ?? 0} onAdd={() => session.placeTdValue(entry.id, center())}
       head={<div className="builtin-row"><code>{entry.name}</code><small>{entry.type}</small></div>}>
       <p className="source-text">{say(tdValueHint(entry))}

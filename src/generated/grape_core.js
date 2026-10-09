@@ -82,7 +82,7 @@ const vector_1 = require("./nodes/vector");
 const vector_split_1 = require("./nodes/vector_split");
 exports.registry = (0, node_module_1.createRegistry)([abs_1.default, add_1.default, all_1.default, any_1.default, ceil_1.default, clamp_1.default, color_1.default, combine_1.default, compare_1.default, convert_1.default, cos_1.default, declaration_1.default, divide_1.default, dot_1.default, equal_1.default, float_1.default, floor_1.default, fract_1.default, function_call_1.default, function_input_1.default, function_output_1.default, greaterThan_1.default, greaterThanEqual_1.default, if_1.default, isinf_1.default, isnan_1.default, length_1.default, lessThan_1.default, lessThanEqual_1.default, math_1.default, max_1.default, min_1.default, mix_1.default, multiply_1.default, normalize_1.default, not_1.default, notEqual_1.default, pixel_out_1.default, replace_1.default, rgba_1.default, round_1.default, router_1.default, scalar_1.default, sign_1.default, sin_1.default, smoothstep_1.default, split_1.default, sqrt_1.default, subtract_1.default, swizzle_1.default, td_value_1.default, texture_sample_1.default, trunc_1.default, vec2_1.default, vec3_1.default, vec4_1.default, vector_1.default, vector_split_1.default]);
 exports.GrapeTopCompiler = (0, top_compiler_1.createCompiler)(exports.registry);
-exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue };
+exports.GrapeGraph = { ...graph, plan: wire.plan, values, registry: exports.registry, createRegistry: node_module_1.createRegistry, createCompiler: top_compiler_1.createCompiler, resolvePorts: node_module_1.resolvePorts, configureNode: node_module_1.configureNode, createEditorContract: editor_contract_1.createEditorContract, overLimit: capacity_1.overLimit, structureProblems: structure_1.structureProblems, offered: structure_1.offered, removable: structure_1.removable, formatProblem: model_1.formatProblem, ghostsOf: ghosts_1.ghostsOf, declarationKinds: declarations_1.declarationKinds, declarationNameProblem: declarations_1.declarationNameProblem, declarationLabel: declarations_1.declarationLabel, freeDeclarationName: declarations_1.freeDeclarationName, freeLegacyName: declarations_1.freeLegacyName, defaultTextures: declarations_1.defaultTextures, uniformPresets: uniform_presets_1.uniformPresets, commonSources: common_sources_1.commonSources, tdValues: td_values_1.tdValues, usableTdValue: node_sdk_1.usableTdValue, declarationOutputs: node_sdk_1.declarationOutputs, tdValueOutputs: node_sdk_1.tdValueOutputs };
 
 },
 "capacity":function(require,module,exports){
@@ -1603,7 +1603,7 @@ function resolvePorts(module, node, context) {
 "node_sdk":function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
+exports.vectorAssembly = exports.values = exports.payload = exports.output = exports.input = exports.reshapeInputs = exports.typedNode = exports.staticNode = exports.usableTdValue = exports.tdValueOutputs = exports.declarationOutputs = exports.selectedType = exports.requireSubgraph = exports.numericInterface = exports.subgraphPresentation = exports.subgraphPorts = exports.numericTypes = exports.fill = exports.type = exports.literal = void 0;
 exports.reshapeDefaults = reshapeDefaults;
 exports.fixedPorts = fixedPorts;
 exports.literalNode = literalNode;
@@ -1642,6 +1642,10 @@ function fixedPorts(specs) {
     return specs;
 }
 const outputPorts = Object.fromEntries(numeric_1.types.map(t => [t, fixedPorts([out(t)])]));
+/** What a reference to a declaration gives: its kind's outputs, or one `out` of its type. The reference node and the
+ * Sources card both ask here (Refactor.58.1). 引用宣告時給哪些輸出：種類定的，或一個同型別的 out。引用節點與來源卡片都問這裡。 */
+const declarationOutputs = (d) => { var _a, _b; return (_b = (_a = declarations_1.declarationKinds.get(d.kind)) === null || _a === void 0 ? void 0 : _a.outputs) !== null && _b !== void 0 ? _b : outputPorts[(0, numeric_1.type)(d.type)]; };
+exports.declarationOutputs = declarationOutputs;
 const selectedType = (node, selection) => {
     const selected = (0, numeric_1.type)('type' in selection ? selection.type : selection.signature.type);
     if (node.params.fixedType && node.params.fixedType !== selected)
@@ -1822,8 +1826,8 @@ function declarationNode(catalog) {
         supports: (n, c) => { var _a; return !c.owner && (!target(n, c) || !!((_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.types.includes(target(n, c).type))); },
         // What a reference gives comes from the kind (a TOP texture input gives three outputs).
         // 引用時給哪些輸出由 kind 決定（TOP 貼圖輸入給三個）。
-        ports: (n, c) => { var _a, _b; const d = target(n, c); if (!d)
-            throw Error('The declaration no longer exists'); return (_b = (_a = kindOf(n, c)) === null || _a === void 0 ? void 0 : _a.outputs) !== null && _b !== void 0 ? _b : outputPorts[(0, numeric_1.type)(d.type)]; },
+        ports: (n, c) => { const d = target(n, c); if (!d)
+            throw Error('The declaration no longer exists'); return (0, exports.declarationOutputs)(d); },
         validate: () => { },
         // It switches only among declarations of the same kind: another kind gives other outputs.
         // 只在同一種宣告之間切換：別的種類給的輸出不同。
@@ -1861,6 +1865,9 @@ const tdValuePort = (t) => { let p = tdValuePorts.get(t); if (!p) {
     p = fixedPorts([out(t)]);
     tdValuePorts.set(t, p);
 } return p; };
+/** What a TD built-in value gives: one `out` of its type (its node and its Sources card). TD 內建值給的輸出：一個同型別的 out。 */
+const tdValueOutputs = (entry) => tdValuePort(entry.type);
+exports.tdValueOutputs = tdValueOutputs;
 /** Whether this build can use an entry for a target. 這個版本能不能在這個 target 用這一筆。 */
 const usableTdValue = (entry, target) => !!entry && (!target || entry.targets.includes(target))
     && values_1.types.includes(entry.type) && !entry.expression.includes('{');
@@ -1869,7 +1876,7 @@ function tdValueNode(catalog) {
     const entryOf = (n) => tdValueTable.get(String(n.params.entry));
     return { catalog, role: 'value', colorGroup: 'runtime',
         supports: (n, c) => (0, exports.usableTdValue)(entryOf(n), c.target),
-        ports: n => tdValuePort(entryOf(n).type), validate: () => { },
+        ports: n => (0, exports.tdValueOutputs)(entryOf(n)), validate: () => { },
         presentation: (n, c) => {
             var _a;
             return ({ label: (_a = entryOf(n)) === null || _a === void 0 ? void 0 : _a.name, inlineControls: [{ kind: 'select', key: 'entry', label: 'entry', literal: true, command: 'entry',

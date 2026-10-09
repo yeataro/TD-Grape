@@ -305,10 +305,14 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
    頁面的 border-box 規則管不到偽元素；少了這行，圓圈會再多出框線的寬度。 */
 .react-flow__handle::before, .react-flow__handle::after { content: ""; position: absolute; left: 50%; top: 50%; box-sizing: border-box; border-radius: 50%; transform: translate(-50%, -50%); }
 .react-flow__handle::before { width: calc(var(--port-size) + 2 * var(--port-grab)); height: calc(var(--port-size) + 2 * var(--port-grab)); }
-.react-flow__handle::after { width: var(--port-size); height: var(--port-size); background: var(--surface-port); border: var(--port-ring) solid var(--port-color); pointer-events: none; }
+.react-flow__handle::after, .port-dot { width: var(--port-size); height: var(--port-size); background: var(--surface-port); border: var(--port-ring) solid var(--port-color); pointer-events: none; }
+/* A card's output is a dot drawn as an unwired output port (PortRow.tsx). 卡片上的輸出是一個點，畫法同沒接線的輸出接孔。 */
+/* Its own size wins over the row's text spans (`.port-row > span`). 自己的大小蓋過列裡文字 span 的高度。 */
+.port-row > .port-dot { display: block; flex: none; align-self: center; height: var(--port-size); box-sizing: border-box; border-radius: 50%; }
+.source-body > .port-row { padding: 0; }
 /* Port states, in order, all equally specific so a later one wins (the A/B switch adds none: :where).
    接孔狀態依序寫、具體程度相同，後面的蓋過前面的（A／B 切換用 :where 不加具體程度）。 */
-:where(:root:not([data-ports="b"])) .react-flow__handle.source::after,
+:where(:root:not([data-ports="b"])) .react-flow__handle.source::after, :where(:root:not([data-ports="b"])) .port-dot,
 :where(:root[data-ports="b"]) .react-flow__handle[data-connected="true"]::after { background: var(--port-color); }
 /* A wired port is filled and glows a little: its type colour lifted towards --port-glow, opaque so the wire's end never
    shows through it (human 2026-10-09). 接上線的接孔：填滿、微微發亮（型別色往 --port-glow 提亮）；不透明，線頭不會透出來（人類）。 */

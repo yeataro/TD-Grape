@@ -5,6 +5,8 @@ import { useSession } from './contexts';
 import { Badge, MenuButton } from './controls';
 import { Icon } from './icons';
 import { DRAG_TYPE } from './AddNodePanel';
+import { OutputRow } from './PortRow';
+import type { PortSpec } from '../core-ts/ports';
 
 // The parts of a card in the Shared Sources panel (Refactor.57–58; split out of SourcesPanel.tsx). Styles: style.css,
 // "A source card". 共用來源面板裡卡片的零件（從 SourcesPanel.tsx 拆出）。樣式在 style.css「A source card」。
@@ -45,12 +47,13 @@ function useDragToCanvas(choice: string) {
 // 使用數是和區段數量一樣的標籤，位置不動；「⋯」加到圖上、選取引用、刪除。不放「＋」：選單和拖到畫布都能加（人類）。
 // `group`: its colour group; `refKey`: what counts as a use (a declaration ID, or `tdValue:` and an entry); without
 // `onRemove` it cannot be deleted (a TD value). group：顏色組；refKey：算使用數的依據；沒有 onRemove 就不能刪（TD 內建值）。
-export function SourceCard({ group, refKey, choice, head, children, uses, onAdd, onRemove }: {
-  group: string; refKey: string; choice: string; head: ReactNode; children?: ReactNode; uses: number; onAdd(): void; onRemove?(): void;
+export function SourceCard({ group, refKey, choice, head, outputs, children, uses, onAdd, onRemove }: {
+  group: string; refKey: string; choice: string; head: ReactNode; outputs: readonly PortSpec[]; children?: ReactNode; uses: number;
+  onAdd(): void; onRemove?(): void;
 }) {
   const session = useSession(), [open, setOpen] = useState(false), drag = useDragToCanvas(choice);
   return <div className="source-card" style={groupColor(group)} {...drag}>
-    {children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
+    {outputs.length || children ? <button type="button" className="expand-toggle" aria-expanded={open} onClick={() => setOpen(!open)}
       aria-label={say(tr('sources.details', 'Show details'))} title={say(tr('sources.details', 'Show details'))}><Icon name="chevronDown" /></button>
       : <span className="expand-toggle" aria-hidden="true" />}
     <div className="source-head">
@@ -67,7 +70,11 @@ export function SourceCard({ group, refKey, choice, head, children, uses, onAdd,
         ...(onRemove ? [{ key: 'delete', label: say(tr('sources.remove', 'Delete')), danger: true, divider: true, select: onRemove }] : []),
       ]} />
     </div>
-    {open && <div className="source-body">{children}</div>}
+    {/* Open: its outputs first, as a start node (glossary), then what it is (human 2026-10-09: as the legacy cards).
+        打開：先是輸出（同起點節點），再是它的內容（人類：同舊產品卡片）。 */}
+    {open && <div className="source-body">
+      {outputs.map(port => <OutputRow key={port.key} label={port.key} type={port.type}><span className="port-dot" aria-hidden="true" /></OutputRow>)}
+      {children}</div>}
   </div>;
 }
 
