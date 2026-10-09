@@ -14,14 +14,17 @@ import { say, tr, type Message } from './text';
 export const notYet = tr('placeholder.notYet', 'Not available yet');
 
 /** A button showing one icon; its label is the tooltip and the accessible name. `pressed` makes it a tool toggle
- * (green, legacy toolbar); `expanded` says a region it opens is shown (quiet, legacy sidebar toggles).
- * 一個圖示按鈕。pressed＝工具開關（綠色，舊產品工具列）；expanded＝它打開的區域正顯示著（低調，舊產品側欄開關）。
+ * (lavender); `mode` marks a toggle that changes how dragging or selecting works (green when pressed); `expanded` says
+ * a region it opens is shown (quiet, legacy sidebar toggles).
+ * 一個圖示按鈕。pressed＝工具開關（淡紫）；mode＝會改變拖曳、選取等互動的模式開關（按下為綠）；expanded＝它打開的區域
+ * 正顯示著（低調，舊產品側欄開關）。
  * A disabled one stays hoverable so its tooltip can say why. 一個圖示按鈕；label 是提示與無障礙名稱；pressed 使它成為開關。
  * 停用時仍可滑過，好讓提示說明原因。 */
-export function IconButton({ icon, label, onClick, pressed, expanded, disabled, title }: {
+export function IconButton({ icon, label, onClick, pressed, expanded, disabled, title, mode }: {
   icon: IconName; label: Message | string; onClick?: () => void; pressed?: boolean; expanded?: boolean; disabled?: boolean; title?: Message | string;
+  mode?: boolean;
 }) {
-  return <button type="button" className="icon-button" aria-label={say(label)} title={say(title ?? label)} aria-pressed={pressed} aria-expanded={expanded}
+  return <button type="button" className={'icon-button' + (mode ? ' mode-toggle' : '')} aria-label={say(label)} title={say(title ?? label)} aria-pressed={pressed} aria-expanded={expanded}
     aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}><Icon name={icon} /></button>;
 }
 

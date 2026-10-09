@@ -50,6 +50,8 @@
   --tint-raised: 2%;
   --tint-active: 18%;
   --tint-border: 55%;
+  --tint-scroll: 23%;
+  --tint-scroll-hover: 40%;
   --text-alpha-strong: 78%;
   --text-alpha-title: 78%;
   --text-alpha-secondary: 66%;
@@ -64,4 +66,8 @@
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 15%);
   --shadow: color-mix(in srgb, var(--palette-shadow) 22%, transparent);
   --surface-dim: color-mix(in srgb, var(--palette-shadow) 25%, transparent);
+  /* Grey scrollbars as the legacy light theme (track #e7eaee, thumb #abb4c0, hover #8591a2). 灰色捲軸照舊產品淺色。 */
+  --scroll-track: color-mix(in srgb, var(--palette-ink), var(--palette-lift) 30%);
+  --scroll-thumb: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--tint-scroll));
+  --scroll-thumb-hover: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--tint-scroll-hover));
 }

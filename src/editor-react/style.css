@@ -1,5 +1,12 @@
 :root { font-family: var(--font-family); color: var(--text); background: var(--surface-app); font-size: var(--font-base); line-height: var(--line-base); color-scheme: dark; }
 * { box-sizing: border-box; }
+/* Scrollbars everywhere as the legacy editor (style.css:300-304): thin, a rounded thumb inset from the track.
+   所有捲軸照舊產品：細、圓角滑塊內縮於軌道。 */
+* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) var(--scroll-track); }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: var(--scroll-track); }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border: 2px solid var(--scroll-track); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
 body { margin: 0; }
 #root { height: 100vh; display: flex; flex-direction: column; }
 /* Form controls take the page's line height too (browsers give them `normal`, the usual cause of uneven CJK/Latin rows).
@@ -52,6 +59,7 @@ a { color: var(--accent); }
 .icon-button:hover { background: var(--surface-control); color: var(--text); }
 .icon-button.narrow { width: var(--icon-button-narrow); }
 .icon-button[aria-pressed="true"] { color: var(--pressed); background: var(--surface-pressed); border-color: var(--pressed); }
+.icon-button.mode-toggle[aria-pressed="true"] { color: var(--pressed-mode); background: var(--surface-pressed-mode); border-color: var(--pressed-mode); }
 .icon-button[aria-expanded="true"] { color: var(--text-secondary); background: var(--overlay-up); }
 .icon-button:is([aria-pressed="true"], [aria-expanded="true"]) .icon-fill { opacity: .17; }
 .placeholder { color: var(--text-muted); }

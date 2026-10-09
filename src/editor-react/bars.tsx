@@ -95,7 +95,7 @@ export function NetworkBar({ session, prefs, onGlsl }: {
           onClick={() => void flow.fitView({ nodes: nodes.map(node => ({ id: node.id })), duration: 333, padding: .2, maxZoom: 1 })} />
       </ToolGroup>
       <ToolGroup>
-        <IconButton icon="boxSelect" label={tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)')}
+        <IconButton icon="boxSelect" label={tr('toolbar.boxSelect', 'Box select (drag selects instead of panning)')} mode
           pressed={prefs.boxSelect} onClick={() => prefs.set({ boxSelect: !prefs.boxSelect })} />
       </ToolGroup>
       {/* Snap is a tool toggle with a magnet icon (Blender; human 2026-10-09). Body drag moved to the settings panel (Q64).

@@ -58,6 +58,8 @@
   --tint-raised: 3%;    /* the accent's faint cast on raised surfaces (legacy dialogs) */
   --tint-active: 20%;   /* the accent behind what is active (stage, chosen row) */
   --tint-border: 55%;   /* the accent on a hovered border */
+  --tint-scroll: 36%;   /* a scrollbar thumb (legacy --scroll-thumb #51465f) */
+  --tint-scroll-hover: 58%; /* under the pointer (legacy --scroll-hover #79638e) */
   /* text: white at the legacy opacities (COLOR_SYSTEM.md). 文字：白色加舊產品的透明度。 */
   /* Toned down from the legacy .88/.85/.72/.54/.32 (human 2026-10-09: all white text was frighteningly bright).
      比舊產品調暗（人類：白字亮到可怕）。 */
@@ -107,8 +109,17 @@
   --surface-control-hover: color-mix(in srgb, var(--palette-ink), var(--palette-contrast) var(--lift-hover));
   --surface-field: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-bar));
   --surface-active: color-mix(in srgb, var(--palette-ink), var(--palette-accent) var(--tint-active));
-  --surface-pressed: color-mix(in srgb, var(--palette-ink), var(--palette-select-green) 14%);
+  /* A pressed tool toggle: the UI's low-chroma lavender. A mode toggle, one that changes what dragging or selecting
+     does (box select), in the selection green so the changed interaction stands out (human 2026-10-09).
+     按下的工具開關：介面的低彩度淡紫。模式開關（會改變拖曳、選取等互動的，如框選）用選取綠，提醒互動變了（人類）。 */
+  --surface-pressed: color-mix(in srgb, var(--palette-ink), var(--palette-accent) 14%);
+  --surface-pressed-mode: color-mix(in srgb, var(--palette-ink), var(--palette-select-green) 14%);
   --surface-floating: color-mix(in srgb, var(--surface-zone) 90%, transparent);
+  /* Scrollbars as the legacy dark theme (style.css:299), on every scroll area (human 2026-10-09).
+     捲軸照舊產品深色主題，套到所有捲動區（人類）。 */
+  --scroll-track: color-mix(in srgb, var(--palette-ink), var(--palette-lift) var(--lift-zone));
+  --scroll-thumb: color-mix(in srgb, var(--palette-ink), var(--palette-accent) var(--tint-scroll));
+  --scroll-thumb-hover: color-mix(in srgb, var(--palette-ink), var(--palette-accent) var(--tint-scroll-hover));
   --surface-notice: color-mix(in srgb, var(--palette-ink), var(--palette-warning) 22%);
   --surface-dim: color-mix(in srgb, var(--palette-shadow) 45%, transparent);   /* a locked area, semi-transparent black (human 2026-10-09) 鎖住的區域，半透明黑 */
   --overlay-up: color-mix(in srgb, var(--palette-contrast) 6%, transparent);
@@ -132,7 +143,8 @@
   --accent: var(--palette-accent);
   --accent-fill: var(--palette-accent);
   --accent-fill-hover: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 20%);
-  --pressed: var(--palette-select-green);
+  --pressed: color-mix(in srgb, var(--palette-accent), var(--palette-contrast) 20%);
+  --pressed-mode: var(--palette-select-green);
   --status-warning: var(--palette-warning);
   --status-error: var(--palette-error);
 }
