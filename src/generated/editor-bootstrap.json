@@ -1,7 +1,7 @@
 {
   "version": 1,
   "producer": "frontend-modules",
-  "catalogHash": "c4e87f2528e8ea38810c7dc58b4c92466d39d45d2ecde36dedcec316cfda29cf",
+  "catalogHash": "efcdc3c6c37886212a635e456cde7fefc5218db3583fcc70b67f4e0b7837e881",
   "defaultDocument": {
     "graph": {
       "format": "grape-graph",

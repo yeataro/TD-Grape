@@ -1633,7 +1633,8 @@ function editValue(current, t, command, payload) {
 }
 function literalNode(catalog, fixed, constant = false, appearance = {}) {
     const selected = (n) => fixed || (0, numeric_1.type)(n.params.type || 'float');
-    return { catalog, role: 'value', supports: n => numeric(n) && (!!fixed || n.params.type === undefined || n.params.type === 'float'),
+    // Value nodes are drawn as constants (legacy graph_ui.js:148). 值節點畫成常數色（照舊產品）。
+    return { catalog, role: 'value', colorGroup: 'constant', supports: n => numeric(n) && (!!fixed || n.params.type === undefined || n.params.type === 'float'),
         configure: (n, s) => { var _a; const t = selectedType(n, s); if (fixed && fixed !== t)
             throw Error('Fixed literal type'); n.params.type = t; n.params.value = shape((_a = n.params.value) !== null && _a !== void 0 ? _a : 0, t); return n; },
         edit: (n, command, value) => { n.params.value = editValue(n.params.value, selected(n), command, value); return n; },
@@ -4132,26 +4133,27 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.typedNode)(catalog, {
-    types: node_sdk_1.values.scalars,
-    fixed: t => ({ value: node_sdk_1.values.reshape(0, t) }),
-    ports: t => [(0, node_sdk_1.output)('out', t)],
-    configure: (n, t) => { var _a; n.params.value = node_sdk_1.values.reshape((_a = n.params.value) !== null && _a !== void 0 ? _a : 0, t); return n; },
-    edit: (n, command, data) => {
-        if (!['component', 'value'].includes(command))
-            throw Error('Unknown scalar command');
-        const value = (0, node_sdk_1.payload)(data);
-        node_sdk_1.values.literal(value, String(n.params.type));
-        n.params.value = value;
-        return n;
-    },
-    validate: n => { node_sdk_1.values.literal(n.params.value, String(n.params.type)); },
-    presentation: n => ({ value: {
-            value: n.params.value, type: String(n.params.type),
-            componentCommand: 'component', valueCommand: 'value', names: 'X'
-        } }),
-    emit: n => ({ outputs: { out: node_sdk_1.values.literal(n.params.value, String(n.params.type)) } })
-});
+// Drawn as a constant (legacy graph_ui.js:143). 畫成常數色（照舊產品）。
+exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
+        types: node_sdk_1.values.scalars,
+        fixed: t => ({ value: node_sdk_1.values.reshape(0, t) }),
+        ports: t => [(0, node_sdk_1.output)('out', t)],
+        configure: (n, t) => { var _a; n.params.value = node_sdk_1.values.reshape((_a = n.params.value) !== null && _a !== void 0 ? _a : 0, t); return n; },
+        edit: (n, command, data) => {
+            if (!['component', 'value'].includes(command))
+                throw Error('Unknown scalar command');
+            const value = (0, node_sdk_1.payload)(data);
+            node_sdk_1.values.literal(value, String(n.params.type));
+            n.params.value = value;
+            return n;
+        },
+        validate: n => { node_sdk_1.values.literal(n.params.value, String(n.params.type)); },
+        presentation: n => ({ value: {
+                value: n.params.value, type: String(n.params.type),
+                componentCommand: 'component', valueCommand: 'value', names: 'X'
+            } }),
+        emit: n => ({ outputs: { out: node_sdk_1.values.literal(n.params.value, String(n.params.type)) } })
+    }), colorGroup: 'constant' };
 
 },
 "nodes/sign":function(require,module,exports){
@@ -4860,40 +4862,41 @@ const catalog = {
         ]
     }
 };
-exports.default = (0, node_sdk_1.typedNode)(catalog, {
-    types: node_sdk_1.values.vectors,
-    fixed: t => ({ components: node_sdk_1.values.reshape([0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)) }),
-    ports: t => [(0, node_sdk_1.output)('out', t)],
-    configure: (n, t) => { var _a; n.params.components = node_sdk_1.values.reshape((_a = n.params.components) !== null && _a !== void 0 ? _a : [0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)); return n; },
-    validate: n => { node_sdk_1.values.literal(n.params.components, node_sdk_1.values.shaped(node_sdk_1.values.family(String(n.params.type)), 4)); },
-    edit: (n, command, data) => {
-        const t = String(n.params.type), old = n.params.components;
-        if (command === 'value') {
-            const value = (0, node_sdk_1.payload)(data);
-            node_sdk_1.values.literal(value, t);
-            n.params.components = [...value, ...old.slice(node_sdk_1.values.count(t))];
-        }
-        else if (command === 'component' && data && typeof data === 'object' && !Array.isArray(data)) {
-            const index = Number(data.index), value = (0, node_sdk_1.payload)(data);
-            if (!Number.isInteger(index) || index < 0 || index >= node_sdk_1.values.count(t))
-                throw Error('Invalid component');
-            node_sdk_1.values.literal(value, node_sdk_1.values.family(t));
-            old[index] = value;
-        }
-        else
-            throw Error('Invalid vector command');
-        return n;
-    },
-    presentation: n => {
-        var _a;
-        return ({ value: {
-                value: n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))),
-                type: String(n.params.type), componentCommand: 'component', valueCommand: 'value',
-                names: String(((_a = n.ui) === null || _a === void 0 ? void 0 : _a.componentNames) || 'XYZW').toUpperCase(), expandable: true
-            } });
-    },
-    emit: n => ({ outputs: { out: node_sdk_1.values.literal(n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))), String(n.params.type)) }, constant: true })
-});
+// Drawn as a constant (legacy graph_ui.js:143). 畫成常數色（照舊產品）。
+exports.default = { ...(0, node_sdk_1.typedNode)(catalog, {
+        types: node_sdk_1.values.vectors,
+        fixed: t => ({ components: node_sdk_1.values.reshape([0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)) }),
+        ports: t => [(0, node_sdk_1.output)('out', t)],
+        configure: (n, t) => { var _a; n.params.components = node_sdk_1.values.reshape((_a = n.params.components) !== null && _a !== void 0 ? _a : [0, 0, 0, 0], node_sdk_1.values.shaped(node_sdk_1.values.family(t), 4)); return n; },
+        validate: n => { node_sdk_1.values.literal(n.params.components, node_sdk_1.values.shaped(node_sdk_1.values.family(String(n.params.type)), 4)); },
+        edit: (n, command, data) => {
+            const t = String(n.params.type), old = n.params.components;
+            if (command === 'value') {
+                const value = (0, node_sdk_1.payload)(data);
+                node_sdk_1.values.literal(value, t);
+                n.params.components = [...value, ...old.slice(node_sdk_1.values.count(t))];
+            }
+            else if (command === 'component' && data && typeof data === 'object' && !Array.isArray(data)) {
+                const index = Number(data.index), value = (0, node_sdk_1.payload)(data);
+                if (!Number.isInteger(index) || index < 0 || index >= node_sdk_1.values.count(t))
+                    throw Error('Invalid component');
+                node_sdk_1.values.literal(value, node_sdk_1.values.family(t));
+                old[index] = value;
+            }
+            else
+                throw Error('Invalid vector command');
+            return n;
+        },
+        presentation: n => {
+            var _a;
+            return ({ value: {
+                    value: n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))),
+                    type: String(n.params.type), componentCommand: 'component', valueCommand: 'value',
+                    names: String(((_a = n.ui) === null || _a === void 0 ? void 0 : _a.componentNames) || 'XYZW').toUpperCase(), expandable: true
+                } });
+        },
+        emit: n => ({ outputs: { out: node_sdk_1.values.literal(n.params.components.slice(0, node_sdk_1.values.count(String(n.params.type))), String(n.params.type)) }, constant: true })
+    }), colorGroup: 'constant' };
 
 },
 "nodes/vector_split":function(require,module,exports){

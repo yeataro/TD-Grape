@@ -46,6 +46,7 @@
   --io-row: 30px;       /* one input or output of a node: the IO row (value-input.md; legacy .port-row 29px) 輸入輸出區塊的高度 */
   --io-field: 24px;     /* a value box inside it (legacy .node-inline-values input 24px) 其中的數值框 */
   --io-field-min: 64px; /* the narrowest a value box gets; nodes widen to fit (value-input.md 五 4) 數值框最窄寬度；節點依內容撐開 */
+  --io-field-gap: 4px;  /* between value boxes side by side 並排數值框之間 */
   --node-min-width: 250px; /* one shared minimum; a node grows with its content 節點共用的最小寬度 */
   --row-font: var(--font-md);
   /* shapes and handles (shared by both sizes) 形狀與把手（兩種大小共用） */

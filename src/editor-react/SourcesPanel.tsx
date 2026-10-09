@@ -5,6 +5,7 @@ import { tr, say, tdValueHint, type Message } from './text';
 import { ValueFields } from './ValueFields';
 import { useSession } from './contexts';
 import { Badge, FoldSection, Select } from './controls';
+import { modesOf } from './declaration_modes';
 import type { ComponentState, UniformStates } from './host';
 
 // Shared Sources panel content (design-interview Q41 naming, Q45: the panel is an index — it keeps
@@ -24,15 +25,6 @@ function NameField({ declaration }: { declaration: Declaration }) {
   return <input className="source-name" aria-label={say(tr('sources.name', 'Name'))} value={draft}
     onChange={event => setDraft(event.target.value)} onBlur={commit}
     onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') { setDraft(declaration.name); event.currentTarget.blur(); } }} />;
-}
-
-// Each component's state in TD (Uniform D1, Q60). Before TD has reported, a preset Uniform shows its
-// table's expression (the row TD makes gets it). 各分量在 TD 的狀態；TD 還沒回報時，預設 Uniform 顯示表上的 expression。
-function modesOf(declaration: Declaration, td: UniformStates): readonly (ComponentState | undefined)[] | undefined {
-  const reported = td[declaration.id];
-  if (reported) return reported;
-  const preset = core.uniformPresets.find(item => item.entry === declaration.entry);
-  return preset ? [{ mode: 'expression', text: preset.expression }] : undefined;
 }
 
 export function SourcesPanel({ declarations, references }: {

@@ -48,7 +48,8 @@ function editValue(current:Value,t:Type,command:string,payload:Value|undefined):
 }
 export function literalNode(catalog:CatalogRow,fixed?:Type,constant=false,appearance:{color?:boolean}={}):NodeModule {
   const selected=(n:Node)=>fixed||type(n.params.type||'float');
-  return {catalog,role:'value',supports:n=>numeric(n)&&(!!fixed||n.params.type===undefined||n.params.type==='float'),
+  // Value nodes are drawn as constants (legacy graph_ui.js:148). 值節點畫成常數色（照舊產品）。
+  return {catalog,role:'value',colorGroup:'constant',supports:n=>numeric(n)&&(!!fixed||n.params.type===undefined||n.params.type==='float'),
     configure:(n,s)=>{const t=selectedType(n,s);if(fixed&&fixed!==t)throw Error('Fixed literal type');n.params.type=t;n.params.value=shape(n.params.value??0,t);return n;},
     edit:(n,command,value)=>{n.params.value=editValue(n.params.value!,selected(n),command,value);return n;},
     presentation:n=>({value:{value:n.params.value!,type:selected(n),componentCommand:'component',valueCommand:'value',names:appearance.color?'RGBA':'XYZW',color:!!appearance.color,expandable:selected(n)!=='float'}}),

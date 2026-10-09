@@ -46,7 +46,8 @@ const catalog = {
   }
 };
 
-export default typedNode(catalog, {
+// Drawn as a constant (legacy graph_ui.js:143). 畫成常數色（照舊產品）。
+export default {...typedNode(catalog, {
   types: values.scalars,
   fixed: t => ({ value: values.reshape(0, t) }),
   ports: t => [output('out', t)],
@@ -64,4 +65,4 @@ export default typedNode(catalog, {
     componentCommand: 'component', valueCommand: 'value', names: 'X'
   }}),
   emit: n => ({ outputs: {out: values.literal(n.params.value, String(n.params.type))} })
-});
+}), colorGroup: 'constant'};

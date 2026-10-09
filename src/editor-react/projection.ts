@@ -1,11 +1,13 @@
 import type { Node as RFNode, Edge as RFEdge } from '@xyflow/react';
 import { core, same, typeColor, type GraphDocument, type GraphChanges, type Node,
-  type NodePresentation, type PortSpec, type Bootstrap, type GhostKind } from './core';
+  type NodePresentation, type PortSpec, type Bootstrap, type GhostKind, type Declaration } from './core';
 
 export type FlowNode = RFNode<{
   authored: Node; label: string; colorGroup: string; view: NodePresentation; types: string[];
   /** connected: inputs with a wire; wired: outputs with at least one (port styles, Refactor.54.2). 接了線的輸入／輸出。 */
   inputs: PortSpec[]; outputs: PortSpec[]; connected: string[]; wired: string[]; ghost?: GhostKind;
+  /** The declaration a reference node points to (its value is shown on the card, Refactor.55.2). 引用宣告節點指向的宣告。 */
+  declaration?: Declaration;
 }, 'grape'>;
 export type FlowEdge = RFEdge;
 export type Projection = { nodes: FlowNode[]; edges: FlowEdge[] };
@@ -69,7 +71,8 @@ export function project(document: GraphDocument, previous: Projection, contract:
       const next = { authored, label: module.catalog.definition.label, colorGroup: colorGroupOf(module, authored, document),
         view: module.presentation?.(authored, network.context) ?? {}, types,
         inputs: Object.values(node.interface.inputs), outputs: Object.values(node.interface.outputs),
-        connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [] };
+        connected: connected.get(node.id) ?? [], wired: outgoing.get(node.id) ?? [],
+        declaration: module.referencedDeclaration ? document.document.declarations.find(d => d.id === module.referencedDeclaration!(authored)) : undefined };
       data = data && same(data, next) ? data : next;
     }
     if (old && old.data === data && same(old.position, position)) return old;

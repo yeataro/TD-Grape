@@ -201,15 +201,23 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .value-group.wired { visibility: hidden; }
 .value-expand { flex: 0 0 auto; width: 16px; height: var(--io-field); padding: 0; border: 0; background: none; color: var(--field-label); }
 .value-expand .icon { width: 12px; height: 12px; transform: rotate(-90deg); } .value-expand[aria-expanded="true"] .icon { transform: none; }
-.value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(var(--io-field-min), 1fr)); gap: calc(var(--io-row) - var(--io-field)) 4px; }
-.value-group.expanded .value-fields { grid-template-columns: minmax(var(--io-field-min), 1fr); }
+.value-fields { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--components, 1), minmax(var(--io-field-min), 1fr));
+  gap: calc(var(--io-row) - var(--io-field)) var(--io-field-gap); }
+/* Expanded keeps the collapsed width, so the node does not narrow (human 2026-10-09): the same numbers as the row of
+   boxes side by side. 展開時保持收起時的寬度，節點不會變窄（人類）：和並排時用同一組數字。 */
+.value-group.expanded .value-fields { grid-template-columns: minmax(0, 1fr);
+  min-width: calc(var(--components, 1) * var(--io-field-min) + (var(--components, 1) - 1) * var(--io-field-gap)); }
 /* A box's own default width (about 20 characters for a browser input) never widens the node; only --io-field-min does.
    框自己的預設寬度（瀏覽器輸入框約 20 字）不撐寬節點；只有 --io-field-min 算數。 */
 .value-field { position: relative; display: block; min-width: 0; contain: inline-size; }
 .value-field > .component { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;
   font-size: var(--font-xs); line-height: var(--line-xs); color: var(--field-label); }
 .value-field input, .value-field .select-button, .value-field .td-driven { width: 100%; min-width: 0; height: var(--io-field); padding: 0 6px; border: 0;
-  font-variant-numeric: tabular-nums; color: var(--field-text); background-color: var(--field-bg); }
+  font-variant-numeric: tabular-nums; }
+.value-field input, .value-field .select-button { color: var(--field-text); background-color: var(--field-bg); }
+/* What TD drives keeps its own look: TD's mode colour on the dark locked ground, centred in the box.
+   TD 驅動的值保持自己的樣子：TD 的模式色、深色的鎖定底，在框裡垂直置中。 */
+.value-field .td-driven { display: flex; align-items: center; }
 .value-field > .component ~ * { padding-left: 18px; }
 /* The slider fill (legacy numeric slider): how far the value is through its decade. 填色：值在它那一段走到哪裡。 */
 input.number { background-image: linear-gradient(to right, var(--field-fill) 0 var(--fill), transparent var(--fill) 100%); }
@@ -219,7 +227,10 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
 .color-swatch::-webkit-color-swatch { border: 0; border-radius: var(--radius-field); }
 .color-swatch::-moz-color-swatch { border: 0; border-radius: var(--radius-field); }
-.control-field { display: flex; gap: 8px; align-items: center; } .control-field .select-button { flex: 1; min-width: 0; }
+/* A control in a node is one IO row too, its box as tall as a value box (one rhythm, like a table).
+   節點裡的控制項也是一個輸入輸出區塊的高度，框和數值框一樣高（同一個節奏，像表格）。 */
+.control-field { display: flex; gap: 8px; align-items: center; min-height: var(--io-row); }
+.control-field .select-button { flex: 1; min-width: 0; height: var(--io-field); padding: 0 8px; }
 .control-row { display: flex; gap: 5px; } .hint { font-size: var(--font-sm); line-height: var(--line-sm); color: var(--text-muted); }
 .grape-node .hint, .grape-node .ghost-note { contain: inline-size; }
 .react-flow__controls button { color: var(--text-strong); background: var(--surface-control); border-color: var(--border); }

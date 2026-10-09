@@ -1,4 +1,4 @@
-import { memo, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, type ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { core, typeColor, type NodeControl, type NodePresentation } from './core';
 import type { FlowNode } from './projection';
@@ -9,6 +9,8 @@ import { tr, say } from './text';
 import { Select } from './controls';
 import { ValueFields } from './ValueFields';
 import { useSession, TextContext, BodyDragContext } from './contexts';
+import { modesOf } from './declaration_modes';
+import type { Declaration } from './core';
 
 /** Choices shown as they are written (type names). 照原樣顯示的選項（型別名）。 */
 const listed = (values: readonly string[]) => values.map(value => ({ value, label: value }));
@@ -25,6 +27,20 @@ function Control({ id, control }: { id: string; control: NodeControl }) {
     value={String(control.value)} disabled={control.disabled} onChange={value => session.edit(id, control.command!, {
       ...control.args, value: control.numeric ? Number(value) : value })}
     options={control.options?.map(option => ({ value: String(option.value), label: option.literal ? option.label : text(option.label) })) ?? []} /></label>;
+}
+
+// A Uniform node edits its value on the canvas (legacy uniform node; Refactor.55.2): the same value widget as the Sources
+// panel, on the output's row (human 2026-10-09): the triangle at the far left, the output's name at the end is where the
+// middle button changes the whole value. Shows what drives it in TD.
+// Uniform 節點在畫布上編輯它的值（照舊產品）：和共用來源面板同一個數值 widget，放在輸出那一行（人類）：三角形在最左邊，
+// 最後的輸出名就是按中鍵整組調值的地方。顯示 TD 上的驅動狀態。
+function UniformValue({ declaration, caption }: { declaration: Declaration; caption: ReactNode }) {
+  const session = useSession();
+  const td = useSyncExternalStore(session.tdSubscribe, session.tdSnapshot);
+  return <ValueFields label={`${declaration.name} value`} type={declaration.type} value={declaration.value ?? 0} caption={caption} captionAtEnd
+    color={declaration.color === true} names={declaration.color === true ? 'RGBA' : 'XYZW'} modes={modesOf(declaration, td)}
+    commit={value => session.setDeclarationValue(declaration.id, value)}
+    preview={value => session.previewDeclarationValue(declaration.id, value)} />;
 }
 
 // Drawn from the module's spare declaration only; no node-specific branch here.
@@ -114,7 +130,9 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
       {view.controls?.map(control => <Control key={control.key} id={id} control={control} />)}
       {view.note && <div className="hint">{view.note.text}</div>}
       {outputs.map(port => <div className="port-row output-row" key={port.key} style={{ '--port-color': typeColor(port.type) } as CSSProperties}>
-        <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>
+        {data.declaration?.kind === 'uniform' ? <UniformValue declaration={data.declaration}
+          caption={<>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></>} />
+          : <span>{view.portLabels?.outputs?.[port.key] ?? port.key} <small>{port.type}</small></span>}
         {/* Whether a port has a wire is data; how it looks is the theme's (port styles A/B, Refactor.54.2).
             接孔有沒有接線是資料；長什麼樣子由主題決定（接孔樣式 A／B）。 */}
         <Handle type="source" position={Position.Right} id={port.key} aria-label={`${id} output ${port.key}`} data-connected={data.wired.includes(port.key)} />
