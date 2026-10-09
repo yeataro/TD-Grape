@@ -2,6 +2,18 @@
 
 精簡現況見 [CURRENT](CURRENT.md)；本頁為完整交付紀錄，每輪收尾於頂端新增一段。
 
+## Refactor.58.2 — 外觀一批（不碰節點定義的）：拖線高亮… — 2026-10-09
+
+- 人類：外觀項目一起做；動到定義的（分量樣式與染色、分量定義隱藏）排後面。這一批：拖線高亮、畫布內陰影、雙擊節點對準＋平滑過渡、清掉兩個舊設定。
+- **拖線時的來源高亮與命中高亮**（workspace `floating-panels.md` 41）：
+  - **更正 R.55.20**：人類說的「命中只變實心」是指接上線後的狀態；高亮要。當時助手連高亮也拿掉了，這次補回。接上線的樣子不動（人類：已經很好）。
+  - 滑過、拖線時拿著的接孔（React Flow 的 `connectingfrom`）：淡紫中心＋4px 淡圈，同舊產品滑過（legacy `style.css:88`）。
+  - 拖線要接上的接孔（`connectingto.valid`）：型別色填滿＋3px「可接」外框＋7px 光暈，同舊產品 `.wire-target`（legacy `style.css:305`）。
+  - 舊產品沒有獨立的來源高亮，這裡用和滑過相同的樣子。
+  - 不新增色碼：新用途色 `--wire-ready`、`--wire-ready-glow` 由既有的 `--palette-wire-lilac`、`--palette-accent` 組成；新增強度 `--tint-wire-ready`（深 30%、淺 13%，同舊產品）；寬度進 `sizes.css`（`--port-halo`、`--port-ready-ring`、`--port-ready-glow`）。
+  - 驗證：editor 76；在一個接孔上暫加 React Flow 的拖線 class 讀樣式（不改圖、讀完拿掉）：來源是 #ede5ff＋4px 25% 淡圈；命中是型別色＋3px #ede5ff 外框＋光暈到 10px。
+  - 真的滑鼠滑過沒對準（接孔元素只有 2px），未實測；滑過與來源共用同一條規則。
+
 ## Refactor.58.1 — 進行中（貼圖輸入照位置命名、TD 內建值卡片…） — 2026-10-09
 
 - 第 1 步：預設圖選單同寬（`sizeTo`）。

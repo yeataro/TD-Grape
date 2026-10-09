@@ -316,9 +316,18 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 /* A wired port is filled and glows a little: its type colour lifted towards --port-glow, opaque so the wire's end never
    shows through it (human 2026-10-09). 接上線的接孔：填滿、微微發亮（型別色往 --port-glow 提亮）；不透明，線頭不會透出來（人類）。 */
 .react-flow__handle[data-connected="true"]::after { background: color-mix(in srgb, var(--port-color), var(--port-glow) 55%); }
-/* A hit (under the pointer, or where a dragged wire will land; React Flow marks it connectingto, valid) just turns solid
-   in its type colour (human 2026-10-09: keep it simple). 命中（滑過、或拖曳中的線要接上的接孔）就只變成型別色的實心（人類：簡單就好）。 */
-.react-flow__handle:is(:hover, .connectingto.valid, [data-merging="true"])::after { background: var(--port-color); }
+/* An input a dragged wire would merge away turns solid in its type colour (Refactor.57). 拖線會併掉的輸入：型別色實心。 */
+.react-flow__handle[data-merging="true"]::after { background: var(--port-color); }
+/* Highlights, a separate thing from the wired state above (human 2026-10-09: 55.20's "solid" was about being wired; the
+   highlights are wanted). Under the pointer, and the port a wire is being dragged from (React Flow marks it connectingfrom):
+   a light lilac centre and a soft ring, as the legacy hover (style.css:88). Where the dragged wire will land (connectingto,
+   valid): filled in its type colour, a "ready" ring and a glow, as the legacy .wire-target (style.css:305).
+   高亮，和上面「接上線」是兩件事（人類：55.20 的「實心」是指接上線後；高亮要）。滑過、以及拖線時拿著的那個接孔：淡紫中心加一圈淡圈，
+   同舊產品滑過；拖線要接上的接孔：型別色填滿、「可接」外框與光暈，同舊產品 .wire-target。 */
+.react-flow__handle:is(:hover, .connectingfrom)::after {
+  background: var(--wire-hover); box-shadow: 0 0 0 var(--port-halo) color-mix(in srgb, var(--accent) 25%, transparent); }
+.react-flow__handle.connectingto.valid::after { background: var(--port-color);
+  box-shadow: 0 0 0 var(--port-ready-ring) var(--wire-ready), 0 0 0 calc(var(--port-ready-ring) + var(--port-ready-glow)) var(--wire-ready-glow); }
 /* A wire that dropping here would replace fades, dashed (Refactor.57). 放開後會被換掉的線：變淡、虛線。 */
 .react-flow__edge.replacing .react-flow__edge-path { opacity: .35; stroke-dasharray: 6 4; }
 /* Wires (human 2026-10-09: 1.5 to 2 times the old 2px, never thicker than a selected wire). 接線：比原本粗 1.5～2 倍，不比選中的粗。 */

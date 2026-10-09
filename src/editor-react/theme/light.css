@@ -54,6 +54,7 @@
   --tint-scroll: 23%;
   --tint-scroll-hover: 40%;
   --tint-field-fill: 12%;
+  --tint-wire-ready: 13%;   /* legacy light --wire-ready-glow #65488f22 */
   --text-alpha-strong: 78%;
   --text-alpha-title: 78%;
   --text-alpha-secondary: 66%;
