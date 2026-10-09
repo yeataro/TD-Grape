@@ -48,6 +48,12 @@ class AssetsTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             snapshot.files['extra'] = b'bad'
 
+    def test_bad_build_metadata_names_the_file(self):
+        # Refactor.62: a broken build-info.json says so, not just "Expecting value". 壞掉的 build-info.json 說出檔名。
+        for broken in (b'not json', b'[1, 2]'):
+            with self.assertRaisesRegex(ValueError, 'build-info.json|Build metadata'):
+                service.AssetSnapshot({**bundle(), 'build-info.json': broken}, 'test')
+
     def test_incomplete_source_is_rejected(self):
         files = bundle()
         del files['nested/app.js']

@@ -43,8 +43,11 @@ class AssetSnapshot:
         self.version = 'Unknown'
         self.modified = False
         if 'build-info.json' in normalized:
-            metadata = json.loads(normalized['build-info.json'])
-            if metadata.get('schemaVersion') != 1 or not metadata.get('version'):
+            try:
+                metadata = json.loads(normalized['build-info.json'])
+            except ValueError as error:
+                raise ValueError('build-info.json is not valid JSON: ' + str(error)) from None
+            if not isinstance(metadata, dict) or metadata.get('schemaVersion') != 1 or not metadata.get('version'):
                 raise ValueError('Build metadata is incomplete')
             self.version = metadata['version']
             for name, expected in metadata.get('assets', {}).items():
@@ -57,8 +60,13 @@ class AssetSnapshot:
         for name, data in sorted(normalized.items()):
             digest.update(name.encode('utf-8') + b'\0' + sha256(data).digest())
         self.digest = digest.hexdigest()
-        self.byte_count = sum(map(len, normalized.values()))
 
+
+# The reply to host requests while no Manager is connected. 沒有 Manager 連著時對宿主請求的回覆。
+MANAGER_NOT_CONNECTED = {
+    'error': 'Editor assets are ready; the new TD Manager is not connected yet',
+    'code': 'manager_not_connected'
+}
 
 class _PageReferences(HTMLParser):
     def __init__(self):
@@ -303,7 +311,6 @@ class EditorHTTP:
     """A replaceable asset snapshot served independently of TD's cook loop."""
     def __init__(self, snapshot, host='127.0.0.1', port=65465):
         self.snapshot = snapshot
-        self.request_count = 0
         self.host_requests = None
         self.preview_port = None
         self.live = LiveHub()
@@ -331,7 +338,6 @@ class EditorHTTP:
 
             def respond(self, head=False):
                 with service._lock:
-                    service.request_count += 1
                     snapshot = service.snapshot
                     host_requests = service.host_requests
                 address = self.connection.getsockname()[0]
@@ -363,7 +369,7 @@ class EditorHTTP:
                     if head:
                         return self.reply(405, {'error': 'Use GET for host state'}, head=True)
                     if host_requests is None:
-                        return self.reply(501, {'error': 'Editor assets are ready; the new TD Manager is not connected yet', 'code': 'manager_not_connected'})
+                        return self.reply(501, MANAGER_NOT_CONNECTED)
                     if self.command == 'GET' and length:
                         return self.reply(400, {'error': 'GET must not carry a body'})
                     body = None
@@ -377,7 +383,9 @@ class EditorHTTP:
                             body = json.loads(data)
                             if not isinstance(body, dict):
                                 raise ValueError('Expected a JSON object')
-                        except (ValueError, UnicodeDecodeError, TimeoutError) as error:
+                        except ConnectionError:
+                            return  # the page went away while sending 頁面送到一半離開了
+                        except (ValueError, TimeoutError) as error:
                             return self.reply(400, {'error': str(error)})
                     status, result = host_requests.request(self.command, self.path, body)
                     if getattr(result, 'mime', None):  # an image (host_api.Image) 圖片
@@ -406,7 +414,7 @@ class EditorHTTP:
                 if self.command != 'GET' or length:
                     return self.reply(400, {'error': 'A live connection is a GET without a body'})
                 if host_requests is None:
-                    return self.reply(501, {'error': 'Editor assets are ready; the new TD Manager is not connected yet', 'code': 'manager_not_connected'})
+                    return self.reply(501, MANAGER_NOT_CONNECTED)
                 key = self.headers.get('Sec-WebSocket-Key', '')
                 if self.headers.get('Sec-WebSocket-Version') != '13' or not key:
                     return self.reply(400, {'error': 'Unsupported WebSocket handshake'})
@@ -417,8 +425,7 @@ class EditorHTTP:
                 self.send_header('Sec-WebSocket-Accept', accept)
                 self.end_headers()
                 self.wfile.flush()
-                self.close_connection = True
-                self.connection.settimeout(5)
+                self.close_connection = True  # the 5 s timeout from setup() stays 沿用 setup() 的 5 秒逾時
                 service.live.serve(self.connection, target)
 
             def reply(self, status, data, mime=None, head=False, keep=False):
@@ -446,7 +453,7 @@ class EditorHTTP:
                     self.end_headers()
                     if not head:
                         self.wfile.write(data)
-                except (BrokenPipeError, ConnectionResetError, TimeoutError):
+                except (ConnectionError, TimeoutError):  # the page went away (aborted, reset, broken pipe) 頁面離開了
                     pass
 
         class Server(ThreadingHTTPServer):

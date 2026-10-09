@@ -10,6 +10,7 @@ class EditorServiceExt:
         self.ownerComp = ownerComp
         self.http = None
         self.snapshot = None
+        self._message = ''
         self.api = ownerComp.op('editor_service').module
         self._show('Stopped')
 
@@ -17,9 +18,12 @@ class EditorServiceExt:
         value = tdu.expandPath(self.ownerComp.par.Rootfolder.eval())
         return (Path(project.folder) / value).resolve()
 
+    def _vfs_files(self):
+        """The embedded files as {name: bytes}. 內嵌的檔案。"""
+        return {f.name: bytes(f.byteArray) for f in self.ownerComp.op('virtualFile').vfs.find()}
+
     def _embedded(self):
-        return self.api.AssetSnapshot({f.name: bytes(f.byteArray)
-            for f in self.ownerComp.op('virtualFile').vfs.find()}, 'embedded')
+        return self.api.AssetSnapshot(self._vfs_files(), 'embedded')
 
     def _show(self, state, error=''):
         p = self.ownerComp.par
@@ -40,9 +44,12 @@ class EditorServiceExt:
         p.Lanurls = '\n'.join('http://' + address + ':' + str(self.http.port) + '/' for address in sorted(addresses))
 
     def Reload(self):
+        """Read the assets and serve them. The message it ends with is kept for Start (Refactor.62), never passed through a
+        parameter. 讀資產並送出；結尾的訊息留給 Start，不借參數傳。"""
+        self._message = ''
         try:
             candidate = self.api.folder_snapshot(self._root()) if self.ownerComp.par.Useexternal.eval() else self._embedded()
-        except Exception as error:
+        except Exception as error:  # an asset problem of any kind keeps the service up 任何資產問題都不讓服務停
             if self.snapshot is not None:
                 self._show('Serving previous snapshot' if self.http else 'Previous snapshot retained', str(error))
                 return False
@@ -51,8 +58,9 @@ class EditorServiceExt:
             if self.ownerComp.par.Useexternal.eval():
                 try:
                     candidate = self._embedded()
-                except Exception:
-                    self._show('No valid assets', str(error))
+                except Exception as embedded_error:
+                    # Both reasons, the folder's and the embedded copy's (Refactor.62). 兩個原因都說。
+                    self._show('No valid assets', 'External: ' + str(error) + ' | Embedded: ' + str(embedded_error))
                     return False
                 message = 'External source failed; using embedded VFS: ' + str(error)
             else:
@@ -61,11 +69,12 @@ class EditorServiceExt:
         else:
             message = ''
         self.snapshot = candidate
+        self._message = message
         if self.http:
             self.http.replace(candidate)
         self._show('Serving' if self.http else 'Assets ready', message)
-        if self.http:
-            self._connect_manager()
+        if self.http and not self._connect_manager():
+            return False
         return True
 
     def Start(self):
@@ -73,7 +82,7 @@ class EditorServiceExt:
             return True
         if self.snapshot is None and not self.Reload():
             return False
-        previous_error = self.ownerComp.par.Serviceerror.eval()
+        previous = getattr(self, '_message', '')  # what Reload had to say 重新載入留下的話
         host = '0.0.0.0' if self.ownerComp.par.Allowlan.eval() else '127.0.0.1'
         requested = int(self.ownerComp.par.Port.eval())
         # The requested port first, so one TD always gets the same address (browser storage is per
@@ -94,24 +103,29 @@ class EditorServiceExt:
         if self.http.port != requested:
             message = ('Port ' + str(requested) + ' is in use (another TouchDesigner?); the editor is served on port '
                        + str(self.http.port) + '.')
-            self._show('Serving on port ' + str(self.http.port), message)
+            self._show('Serving on port ' + str(self.http.port), ' | '.join(m for m in (message, previous) if m))
             try:
                 ui.status = 'TD-Grape: ' + message
             except Exception:
                 pass
         else:
-            self._show('Serving', previous_error)
+            self._show('Serving', previous)
         self._connect_manager()
         return True
 
     def _connect_manager(self):
+        """Returns False when the Manager could not connect; the state says why, with the error's kind (Refactor.62):
+        most often the assets (another build, a missing file), not the Manager. 連不上時回 False；狀態寫原因與錯誤種類
+        （多半是資產：建置不同、少檔案，不是 Manager 本身）。"""
         par = getattr(self.ownerComp.par, 'Manager', None)
         manager = par.eval() if par else None
         if manager:
             try:
                 manager.ext.GrapeManagerExt.Connect(self)
-            except Exception as error:
-                self._show('Serving assets; Manager unavailable', str(error))
+            except Exception as error:  # the service stays up; the reason is shown 服務照常；顯示原因
+                self._show('Serving assets; Manager not connected', type(error).__name__ + ': ' + str(error))
+                return False
+        return True
 
     def Stop(self):
         if self.http:
@@ -133,7 +147,7 @@ class EditorServiceExt:
             self._show('Pack failed; embedded assets retained', str(error))
             return False
         vfs = self.ownerComp.op('virtualFile').vfs
-        previous = {f.name: bytes(f.byteArray) for f in vfs.find()}
+        previous = self._vfs_files()
         def replace(files):
             for file in vfs.find():
                 file.destroy()
@@ -145,9 +159,10 @@ class EditorServiceExt:
             replace(previous)
             self._show('Pack failed; embedded assets restored', str(error))
             return False
-        if not self.ownerComp.par.Useexternal.eval():
-            self.Reload()
-        self._show('Embedded updated; save TOE/TOX to keep it')
+        # A reload that went wrong keeps its own state, never covered by "updated" (Refactor.62). 重新載入出錯時保留它的狀態。
+        if not self.ownerComp.par.Useexternal.eval() and not self.Reload():
+            return True
+        self._show('Embedded updated; save TOE/TOX to keep it', getattr(self, '_message', ''))
         return True
 
     def onParValueChange(self, par, prev):
