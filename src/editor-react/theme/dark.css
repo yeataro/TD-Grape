@@ -19,6 +19,25 @@
   --palette-select-yellow: #e8c85a;
   --palette-wire-cream: #fff2d2;
   --palette-wire-lilac: #ede5ff;
+  /* editor frame (Refactor.53): the shades of the legacy chrome (legacy style.css :root), named once here.
+     編輯器外框：舊產品外框的色階，只在這裡寫色碼。 */
+  --palette-ink-0: #13121a;
+  --palette-ink-1: #1b1923;
+  --palette-ink-2: #211c2c;
+  --palette-ink-3: #2a2533;
+  --palette-ink-4: #302c3b;
+  --palette-ink-5: #443b53;
+  --palette-line: #342c40;
+  --palette-line-strong: #51465f;
+  --palette-text: #d7d1df;
+  --palette-text-strong: #e1d4f5;
+  --palette-text-muted: #a198b2;
+  --palette-accent: #bca4e4;
+  --palette-accent-fill: #6a4f8f;
+  --palette-warning: #f2cf86;
+  --palette-error: #fda1a8;
+  --palette-notice: #473c24;
+  --palette-grid: #393543;
 
   /* strengths */
   --title-alpha: 80%;
@@ -39,4 +58,31 @@
   --select-frame: var(--palette-select-yellow);
   --wire-selected: var(--palette-wire-cream);
   --wire-hover: var(--palette-wire-lilac);
+
+  /* editor frame: every bar, zone, panel, menu and button reads these (Refactor.53). 外框各處都讀這些。 */
+  --surface-app: var(--palette-ink-0);
+  --surface-bar: var(--palette-ink-2);
+  --surface-zone: var(--palette-ink-1);
+  --surface-raised: var(--palette-ink-3);
+  --surface-control: var(--palette-ink-4);
+  --surface-control-hover: var(--palette-ink-5);
+  --surface-pressed: color-mix(in srgb, var(--palette-accent) 18%, transparent);
+  --surface-floating: color-mix(in srgb, var(--palette-ink-1) 88%, transparent);
+  --surface-notice: var(--palette-notice);
+  --grid-dot: var(--palette-grid);
+  --border: var(--palette-line);
+  --border-control: var(--palette-line-strong);
+  --text: var(--palette-text);
+  --text-strong: var(--palette-text-strong);
+  --text-muted: var(--palette-text-muted);
+  --accent: var(--palette-accent);
+  --accent-fill: var(--palette-accent-fill);
+  --status-warning: var(--palette-warning);
+  --status-error: var(--palette-error);
+  /* sizes (tentative, human 2026-10-09: to be tuned). 尺寸暫定，之後調。 */
+  --bar-height: 40px;
+  --title-bar-height: 47px;
+  --icon-size: 18px;
+  --handle-line: 1px;
+  --handle-grab: 9px;
 }

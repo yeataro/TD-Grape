@@ -171,6 +171,9 @@ export class Editor {
   }
   snapshot = () => this.state;
   graph = () => this.document.snapshot();
+  /** The graph's stages, in the order the editor shows them (Refactor.53: only the ones the graph has).
+   * 這張圖有的 Stage，照編輯器顯示的順序（只列圖裡有的）。 */
+  stageNames = () => ['vertex', 'pixel'].filter(name => name in this.document.document.stages);
   private publish() { this.keepPrimary(); if (!this.disposed) this.listeners.forEach(listener => listener()); }
   private status(patch: Partial<EditorState>, source = 'editor') {
     if (patch.message) this.log.add(patch.level ?? 'info', patch.message, source);

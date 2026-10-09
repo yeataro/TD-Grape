@@ -1,11 +1,11 @@
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo } from 'react';
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, memo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlow, ReactFlowProvider, Background, Controls, useReactFlow, getBezierPath,
+import { ReactFlow, ReactFlowProvider, Background, Controls, Panel, useStore, getBezierPath,
   type ConnectionLineComponentProps, type NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './theme/dark.css';
 import './style.css';
-import { creatableEntries, typeColor, UnsupportedGraphError, type Bootstrap } from './core';
+import { typeColor, UnsupportedGraphError, type Bootstrap } from './core';
 import { HostClient, HostError, type StateResponse } from './host';
 import { Editor as EditorSession, type EditorState } from './editor';
 import { resetToDefault } from './host_sync';
@@ -13,8 +13,9 @@ import { RightDragSelect, pressKind } from './RightDragSelect';
 import { SelectionFrame } from './SelectionFrame';
 import { tr, say, TextError, errorText, type Message } from './text';
 import { conflictMessage } from './host_sync';
-import { PanelShell } from './PanelShell';
 import { SourcesPanel } from './SourcesPanel';
+import { PanelZone, useLayout, type Layout, type PanelView } from './layout';
+import { TitleBar, LocationBar, NetworkBar, FootBar, type CanvasPrefs } from './bars';
 import { NodeCard, SessionContext, TextContext, BodyDragContext } from './NodeCard';
 import { ShellContext, GrapeOpEntry, GrapeOpMenu, EmptyCanvas, useShell, type Shell } from './shell';
 import { listGrapeOps } from './grape_ops';
@@ -27,13 +28,6 @@ const nodeTypes: NodeTypes = { grape: NodeCard };
 // 網址上的 Grape OP：Grape OP 的 Edit 打開 /shader/<id>/；?target=<id> 亦可。沒有或找不到都是外殼的一般狀態。
 const addressTarget = () => new URLSearchParams(location.search).get('target') ?? location.pathname.match(/^\/shader\/([^/]+)\/$/)?.[1] ?? '';
 const draftKeyOf = (target: string) => 'grape-react-draft:' + target;
-const recoveryHelp = tr('status.recoveryHelp', 'On the computer running TD, check that TD is still open (restore its window if minimized), global cooking is on, and TD is not busy with a long task; on a remote device, check the network. After TD restarts, open the editor again from the Grape OP.');
-// The status line shows one line; the whole message (e.g. TD's compile log) is in its tooltip (Refactor.38).
-// 狀態列只顯示一行；完整內容（例如 TD 的編譯紀錄）在滑鼠提示裡。
-function StatusText({ message }: { message: Message | string }) {
-  const full = say(message), first = full.split('\n')[0];
-  return <span title={full === first ? undefined : full}>{first}{full === first ? '' : ' …'}</span>;
-}
 function download(value: unknown, name = 'grape-draft.json') {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url);
@@ -45,10 +39,22 @@ function ConnectionPreview(props: ConnectionLineComponentProps<FlowNode>) {
     sourcePosition: props.fromPosition, targetPosition: props.toPosition });
   return <path d={path} fill="none" stroke={typeColor(port?.type ?? '')} strokeWidth={1.3} strokeDasharray="5 4" />;
 }
-const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
-  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean;
+// The grid thins out when zoomed out, as the legacy editor (legacy app.js:590–598): the spacing doubles until
+// dots are at least 14px apart on screen and the dots shrink with the zoom; Snap keeps the 22-unit grid.
+// 拉遠時網格變疏（照舊產品）：螢幕上點距小於 14px 就把間距加倍，點跟著縮小；Snap 仍對齊 22 單位的網格。
+const GRID = 22;
+function AdaptiveGrid() {
+  const zoom = useStore(state => state.transform[2]);
+  let gap = GRID;
+  while (gap * zoom < 14) gap *= 2;
+  const dot = Math.max(.45, Math.min(1.65, 1.05 * Math.pow(zoom, .65)));
+  return <Background gap={gap} size={dot / zoom} color="var(--grid-dot)" />;
+}
+const ZoomReadout = () => <span className="zoom-readout">{Math.round(useStore(state => state.transform[2]) * 100)}%</span>;
+const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap, boxSelect, stage }: {
+  session: EditorSession; projection: Projection; bodyDrag: boolean; snap: boolean; boxSelect: boolean; stage: string;
 }) {
-  return <BodyDragContext.Provider value={bodyDrag}><RightDragSelect session={session}>
+  return <BodyDragContext.Provider value={bodyDrag}><RightDragSelect session={session} boxSelect={boxSelect}>
     <ReactFlow<FlowNode, FlowEdge> nodes={projection.nodes} edges={projection.edges} nodeTypes={nodeTypes}
       onNodesChange={session.nodeChanges} onEdgesChange={session.edgeChanges} onBeforeDelete={session.beforeDelete} onDelete={session.remove}
       onConnect={session.connect} isValidConnection={session.valid} connectionLineComponent={ConnectionPreview}
@@ -65,44 +71,43 @@ const Canvas = memo(function Canvas({ session, projection, bodyDrag, snap }: {
       elementsSelectable={false} multiSelectionKeyCode={null}
       onEdgeClick={(event, edge) => session.clickEdge(edge.id, pressKind(event))}
       onPaneClick={() => session.clearSelection()}
-      edgesReconnectable={false} snapToGrid={snap} snapGrid={[22, 22]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
+      edgesReconnectable={false} snapToGrid={snap} snapGrid={[GRID, GRID]} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }}
       minZoom={.15} maxZoom={2.5} colorMode="dark" deleteKeyCode={['Backspace', 'Delete']}
       selectionKeyCode={null}>{/* box selection is RightDragSelect's (touching counts, Shift adds; Q33/Q39) */}
-      <Background gap={22} color="#393543" /><Controls showInteractive={false} />
+      <AdaptiveGrid />
+      {/* React Flow's own zoom controls, with the zoom as a number (human 2026-10-09: its default is fine).
+          React Flow 自己的縮放控制，加上目前縮放百分比（人類：用它的預設即可）。 */}
+      <Controls position="bottom-right" orientation="horizontal" showInteractive={false}><ZoomReadout /></Controls>
+      <Panel position="bottom-left" className="canvas-caption"><strong>{stage}</strong>
+        <span>{say(tr('canvas.nodeCount', '{count} nodes', { count: projection.nodes.length }))}</span>
+        <span>{say(tr('canvas.hint', 'Build your Shader from left to right.'))}</span></Panel>
       <SelectionFrame nodes={projection.nodes} />
     </ReactFlow>
   </RightDragSelect></BodyDragContext.Provider>;
 });
-// Personal preferences of the editing frame (this browser): kept by the shell so they survive switching
-// Grape OP (Refactor.51.1). The Shared Sources panel remembers open/closed; the first time it is open.
-// 編輯外框的個人偏好（這個瀏覽器）：由外殼保管，換 Grape OP 時不重設。共用來源面板記住開關，第一次預設打開。
-type Prefs = { bodyDrag: boolean; snap: boolean; showSources: boolean; showCode: boolean;
-  set(patch: Partial<Omit<Prefs, 'set'>>): void };
-function usePrefs(): Prefs {
-  const [prefs, setPrefs] = useState(() => ({ bodyDrag: true, snap: false, showCode: false,
-    showSources: (() => { try { return localStorage.getItem('sgrapeSourcesPanel') !== 'closed'; } catch { return true; } })() }));
-  return useMemo(() => ({ ...prefs, set: patch => {
-    setPrefs(old => ({ ...old, ...patch }));
-    if (patch.showSources !== undefined) {
-      try { localStorage.setItem('sgrapeSourcesPanel', patch.showSources ? 'open' : 'closed'); } catch { /* storage may be blocked */ }
-    }
-  } }), [prefs]);
+// Canvas preferences of this page, kept by the shell so they survive switching Grape OP (Refactor.51.1).
+// Panels and zones are the layout's (layout.tsx, Refactor.53).
+// 畫布偏好，由外殼保管，換 Grape OP 時不重設。面板與面板區歸版面管（layout.tsx）。
+function usePrefs(): CanvasPrefs {
+  const [prefs, setPrefs] = useState({ bodyDrag: true, snap: false, boxSelect: false });
+  return useMemo(() => ({ ...prefs, set: patch => setPrefs(old => ({ ...old, ...patch })) }), [prefs]);
 }
 // No graph open: the same frame, nothing to show and nothing to do (Refactor.51.1). 沒有圖時：同一個外框，沒有內容、按鈕停用。
 const idle = { undo: false, redo: false, dirty: false, phase: 'ready', level: 'info', message: '', revision: 0, version: 0,
   projection: { nodes: [], edges: [] }, declarations: [], references: {}, glsl: '', targetPath: '' } as unknown as EditorState;
 const idleSubscribe = () => () => {}, idleSnapshot = () => idle;
 
-// The editing frame: toolbar, status line, canvas, panels and footer, always the same layout whether a graph
-// is open, loading or missing (human 2026-10-09: the layout must not jump while loading). With a session it
-// edits that one graph; the shell above decides which one.
-// 編輯外框：工具列、狀態列、畫布、面板、頁尾；有圖、載入中、沒有圖都是同一個版面（人類：載入中版面不能跑掉）。
-// 有 session 時編輯那一張圖；換哪一張由外殼決定。
+// The editing frame below the title bar: the left zone, the network (location bar, its toolbar, the canvas),
+// the right zone and the foot bar; the same layout whether a graph is open, loading or missing (human
+// 2026-10-09: the layout must not jump while loading). With a session it edits that one graph and gives the
+// panels their content (Q47 4: from the view being edited); the shell above decides which graph.
+// 標題列以下的編輯外框：左區、網路區（網址列、功能列、畫布）、右區、底列；有圖、載入中、沒有圖都同一個版面。
+// 有 session 時編輯那一張圖，並提供面板內容（Q47 4：從正在編輯的畫面來）；換哪一張由外殼決定。
 // td: the TD answering now; opened: the TD this graph was opened from (Refactor.52, shown side by side).
 // td：現在回應的 TD；opened：開這張圖時的 TD（並排給人比對）。
-function Workspace({ session, waiting, prefs, text, td, opened }: {
-  session: EditorSession | null; waiting: Waiting; prefs: Prefs; text: (key: string) => string;
-  td: TdIdentity | null; opened: TdIdentity | null;
+function Workspace({ session, waiting, prefs, layout, editing, text, td, opened }: {
+  session: EditorSession | null; waiting: Waiting; prefs: CanvasPrefs; layout: Layout; editing: ReactNode;
+  text: (key: string) => string; td: TdIdentity | null; opened: TdIdentity | null;
 }) {
   const state = useSyncExternalStore(session?.subscribe ?? idleSubscribe, session?.snapshot ?? idleSnapshot);
   const target = session?.host.target ?? '', draftKey = draftKeyOf(target);
@@ -119,9 +124,8 @@ function Workspace({ session, waiting, prefs, text, td, opened }: {
     const id = await session.renewId();
     if (id) shell.choose(id);
   };
-  const renewBox = <label className="renew-id" title={say(tr('identity.renewHelp', 'Changes the ID of the Grape OP in the TD connected now, the same as its Regenerate ID button. Addresses with the old ID no longer open it.'))}>
+  const renewBox = <label className="check renew-id" title={say(tr('identity.renewHelp', 'Changes the ID of the Grape OP in the TD connected now, the same as its Regenerate ID button. Addresses with the old ID no longer open it.'))}>
     <input type="checkbox" checked={renew} onChange={event => setRenew(event.target.checked)} />{say(tr('identity.renew', 'Also give this Grape OP a new Grape ID'))}</label>;
-  const flow = useReactFlow();
   const [draft, setDraft] = useState(() => {
     if (!session) return null;
     try { return sessionStorage.getItem(draftKey); } catch { return null; }
@@ -149,62 +153,48 @@ function Workspace({ session, waiting, prefs, text, td, opened }: {
     addEventListener('beforeunload', leave); addEventListener('keydown', keys);
     return () => { removeEventListener('beforeunload', leave); removeEventListener('keydown', keys); };
   }, [session, draft]);
-  const off = !session;
+  // The panels' content, from the graph being edited (Q47 4). 面板內容，來自正在編輯的圖。
+  const panels: Record<string, PanelView> = {
+    sources: { title: tr('sources.title', 'Shared Sources'), content: session
+      ? <SourcesPanel declarations={state.declarations} references={state.references} />
+      : <p className="hint">{say(tr('sources.noGraph', 'Open a Grape OP to see its shared sources.'))}</p> },
+    glsl: { title: tr('glsl.title', 'GLSL'), content: <pre className="code-view" aria-label={say(tr('glsl.label', 'Generated GLSL'))}>
+      {state.glsl || say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre> },
+  };
   return <SessionContext.Provider value={session}><TextContext.Provider value={text}>
-    <nav aria-label={say(tr('toolbar.label', 'Editing toolbar'))} inert={!!draft}>
-      <select aria-label={say(tr('toolbar.addNode', 'Add node'))} value="" disabled={off} onChange={event => {
-        const canvas = document.querySelector('.canvas')!.getBoundingClientRect();
-        const entry = creatableEntries[Number(event.target.value)]!;
-        session!.add(entry.uuid, flow.screenToFlowPosition({ x: canvas.x + canvas.width / 2, y: canvas.y + canvas.height / 2 }), entry.params);
-      }}><option value="" disabled>{say(tr('toolbar.addNodePrompt', '+ Add node'))}</option>{creatableEntries.map((entry, i) => <option key={entry.uuid + ':' + entry.key} value={i}>
-        {entry.literal ? entry.label : text(entry.label)}</option>)}</select>
-      <button disabled={!state.undo} onClick={() => session!.history(false)}>{say(tr('toolbar.undo', 'Undo'))}</button>
-      <button disabled={!state.redo} onClick={() => session!.history(true)}>{say(tr('toolbar.redo', 'Redo'))}</button>
-      <label><input type="checkbox" checked={prefs.bodyDrag} onChange={event => prefs.set({ bodyDrag: event.target.checked })} />{say(tr('toolbar.bodyDrag', 'Body drag'))}</label>
-      <label><input type="checkbox" checked={prefs.snap} onChange={event => prefs.set({ snap: event.target.checked })} />{say(tr('toolbar.snap', 'Snap'))}</label>
-      <span className="spacer" />
-      <button disabled={off || !state.dirty || ['sending', 'offline', 'uncertain', 'conflict'].includes(state.phase)} onClick={() => void session!.flush()}>{say(tr('toolbar.apply', 'Apply'))}</button>
-      <button disabled={off || state.phase === 'sending'} onClick={() => void session!.save()}>{say(tr('toolbar.saveProject', 'Save TD project'))}</button>
-      <button aria-pressed={prefs.showSources} onClick={() => prefs.set({ showSources: !prefs.showSources })}>{say(tr('toolbar.sources', 'Shared Sources'))}</button>
-      <button onClick={() => prefs.set({ showCode: !prefs.showCode })}>{say(tr('toolbar.glsl', 'GLSL'))}</button>
-      <button disabled={off} onClick={() => download({ target, graph: session!.graph(), source: sourceNow(td) })}>{say(tr('toolbar.downloadDraft', 'Download draft'))}</button>
-    </nav>
-    <div role="status" className={`status ${state.phase} ${state.level}`}><StatusText message={session ? state.message : waiting.message} />
-      <small>{session ? say(tr('status.line', '{state} · revision {revision}', { revision: state.revision,
-        state: state.phase === 'sending' ? tr('status.sending', 'Sending to TD') : state.dirty ? tr('status.unsent', 'Changes not yet sent to TD') : tr('status.synced', 'Synced with TD') }))
-        : say(tr('status.noGraph', 'No graph open'))}</small>
-      {session && ['offline', 'uncertain'].includes(state.phase) && <button onClick={() => void session.check()}>{say(tr('status.retry', 'Retry connection'))}</button>}
-      {session && state.phase === 'offline' && <details className="recovery-help"><summary>{say(tr('status.howToRecover', 'How to recover'))}</summary>{say(recoveryHelp)}</details>}
+    <div className="workspace">
+      <PanelZone side="left" layout={layout} panels={panels} />
+      <section className="network" aria-label={say(tr('network.label', 'Network'))}>
+        <LocationBar layout={layout} rightEmpty={!layout.right.groups.length}>{editing}</LocationBar>
+        {session && draft && <div className="draft-notice">{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}
+          {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
+          <span className="identity-compare"><span>{say(describeSource(earlier?.source))}</span><span>{say(describeNow(td))}</span></span>
+          {renewBox}
+          <button onClick={() => void decide(async () => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw new TextError(tr('draft.otherTarget', 'This draft belongs to another Grape OP.')); if (session.restoreDraft(saved.graph)) { setDraft(null); await session.flush(); } } catch (error) { session.notice(error); } })}>{say(tr('draft.restore', 'Restore draft'))}</button>
+          <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>{say(tr('draft.downloadEarlier', 'Download earlier draft'))}</button>
+          <button onClick={() => void decide(() => setDraft(null))}>{say(tr('draft.useTd', "Use TD's graph"))}</button>
+        </div>}
+        <div className="canvas" inert={!!draft}>
+          {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} boxSelect={prefs.boxSelect}
+            stage={say(tr('stage.pixel', 'Pixel stage'))} />
+            : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
+              if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
+            }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas>}
+          <NetworkBar session={session} prefs={prefs} onGlsl={() => layout.show('glsl')} text={text} />
+          {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
+          {session && state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
+            <span>{say(conflictMessage)}</span>
+            <span className="identity-compare"><span>{say(tr('conflict.opened', 'Opened from: {td}', { td: tdLine(opened) }))}</span>
+              <span>{say(tr('conflict.tdNow', 'TD now: {td}', { td: tdLine(td) }))}</span></span>
+            {renewBox}
+            <button className="primary" onClick={() => void decide(session.overwrite)}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
+            <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button>
+          </div>}
+          {draft && <div className="draft-blocker" />}</div>
+      </section>
+      <PanelZone side="right" layout={layout} panels={panels} />
     </div>
-    {session && draft && <div className="draft-notice">{say(tr('draft.found', "Found an earlier draft for this page; showing TD's graph."))}
-      {/* Side by side for people to compare; nothing is judged (Q63). 並排給人比對，不做判斷。 */}
-      <span className="identity-compare"><span>{say(describeSource(earlier?.source))}</span><span>{say(describeNow(td))}</span></span>
-      {renewBox}
-      <button onClick={() => void decide(async () => { try { const saved = JSON.parse(draft); if (saved.target !== target) throw new TextError(tr('draft.otherTarget', 'This draft belongs to another Grape OP.')); if (session.restoreDraft(saved.graph)) { setDraft(null); await session.flush(); } } catch (error) { session.notice(error); } })}>{say(tr('draft.restore', 'Restore draft'))}</button>
-      <button onClick={() => { try { download(JSON.parse(draft)); } catch (error) { session.notice(error); } }}>{say(tr('draft.downloadEarlier', 'Download earlier draft'))}</button>
-      <button onClick={() => void decide(() => setDraft(null))}>{say(tr('draft.useTd', "Use TD's graph"))}</button>
-    </div>}
-    <main>
-      {/* Floating and non-modal: editing continues while the choice is pending (Q7/Q28). */}
-      {session && state.phase === 'conflict' && <div className="conflict-float" role="group" aria-label={say(tr('conflict.label', 'Choose a version'))}>
-        <span>{say(conflictMessage)}</span>
-        <span className="identity-compare"><span>{say(tr('conflict.opened', 'Opened from: {td}', { td: tdLine(opened) }))}</span>
-          <span>{say(tr('conflict.tdNow', 'TD now: {td}', { td: tdLine(td) }))}</span></span>
-        {renewBox}
-        <button className="primary" onClick={() => void decide(session.overwrite)}>{say(tr('conflict.useEditor', 'Editor (recommended)'))}</button>
-        <button onClick={() => void decide(session.useRemote)}>{say(tr('conflict.useTd', 'TD'))}</button>
-      </div>}
-      <div className="canvas" inert={!!draft}>
-        {session ? <Canvas session={session} projection={state.projection} bodyDrag={prefs.bodyDrag} snap={prefs.snap} />
-          : <EmptyCanvas message={waiting.message}>{waiting.reset && <button onClick={() => {
-            if (confirm(say(tr('open.resetConfirm', "TD's graph will be replaced by the default graph, and the content listed above will be deleted. Continue?")))) void waiting.reset!();
-          }}>{say(tr('open.reset', 'Load the default graph'))}</button>}</EmptyCanvas>}
-        {draft && <div className="draft-blocker" />}</div>
-      {prefs.showSources && <PanelShell title={tr('sources.title', 'Shared Sources')} onClose={() => prefs.set({ showSources: false })}>
-        {session ? <SourcesPanel declarations={state.declarations} references={state.references} />
-          : <p className="hint">{say(tr('sources.noGraph', 'Open a Grape OP to see its shared sources.'))}</p>}</PanelShell>}
-      {prefs.showCode && <pre aria-label={say(tr('glsl.label', 'Generated GLSL'))}>{state.glsl || say(tr('glsl.empty', 'The generated GLSL appears after the first apply.'))}</pre>}</main>
-    <footer>{say(tr('footer.scope', 'This round: common TOP nodes (no Uniforms or subgraphs) · changes apply when you release or commit a value · Ctrl/Cmd+Z to undo'))}</footer>
+    <FootBar session={session} waiting={waiting.message} onDownload={() => download({ target, graph: session!.graph(), source: sourceNow(td) })} />
   </TextContext.Provider></SessionContext.Provider>;
 }
 
@@ -216,7 +206,7 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   const [session, setSession] = useState<EditorSession | null>(null), [path, setPath] = useState('');
   const [waiting, setWaiting] = useState<Waiting>({ message: '' }), [reload, setReload] = useState(0);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null), [pending, setPending] = useState('');
-  const prefs = usePrefs();
+  const prefs = usePrefs(), layout = useLayout();
   // Which TD answers (Refactor.52): asked once at start, then updated by every reply that says so.
   // 哪個 TD 在回應：開頁時問一次，之後每個回覆都更新。
   const [td, setTd] = useState<TdIdentity | null>(null), [opened, setOpened] = useState<TdIdentity | null>(null);
@@ -264,14 +254,15 @@ function App({ token, bootstrap, text, version }: { token: string; bootstrap: Bo
   };
   const applyAndGo = async () => { await session!.flush(); if (!session!.snapshot().dirty) go(pending); };
   return <ShellContext.Provider value={shell}><TextContext.Provider value={text}>
-    <header><strong>TD-Grape <small>React · TOP · {version}</small></strong>
-      {/* The project file before the Grape OP path, as in the old product (Refactor.52); TD's build on hover.
-          專案檔名放在 Grape OP 路徑前面（照舊）；滑鼠停留顯示 TD 版本。 */}
-      {td && <span className="project-file" title={say(buildLabel(td))}>{td.file}</span>}
-      <GrapeOpEntry className="target" label={path || tr('picker.choose', 'Choose a Grape OP')} /></header>
+    {layout.titleBar && <TitleBar session={session} version={version} />}
     {/* One frame for every stage; a new session starts its own editing state (drafts are per Grape OP).
         每個階段同一個外框；新的 session 有自己的編輯狀態（草稿依 Grape OP 分開）。 */}
-    <Workspace key={session ? target : ''} session={session} waiting={waiting} prefs={prefs} text={text} td={td} opened={opened} />
+    <Workspace key={session ? target : ''} session={session} waiting={waiting} prefs={prefs} layout={layout} text={text} td={td} opened={opened}
+      editing={<>
+        {/* The project file before the Grape OP path, as in the old product (Refactor.52); TD's build on hover.
+            專案檔名放在 Grape OP 路徑前面（照舊）；滑鼠停留顯示 TD 版本。 */}
+        {td && <span className="project-file" title={say(buildLabel(td))}>{td.file}</span>}
+        <GrapeOpEntry className="target" label={path || tr('picker.choose', 'Choose a Grape OP')} /></>} />
     {anchor && <GrapeOpMenu anchor={anchor} token={token} onClose={closeMenu} seen={setTd} />}
     {pending && <div className="switch-dialog" role="dialog" aria-label={say(tr('switch.title', 'Switch Grape OP'))}>
       <p>{say(tr('switch.explanation', 'Some changes are not in TD yet. Apply them to TD, or keep a draft in this browser tab before switching (it can be restored when you come back).'))}</p>

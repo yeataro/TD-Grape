@@ -1,4 +1,4 @@
-import { createContext, useRef, useState, type PointerEvent, type MouseEvent, type ReactNode } from 'react';
+import { createContext, useRef, useState, type PointerEvent, type MouseEvent, type TouchEvent, type ReactNode } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import type { Editor as EditorSession } from './editor';
 import type { FlowNode, FlowEdge } from './projection';
@@ -30,7 +30,10 @@ function blockNextMenu() {
   setTimeout(() => window.removeEventListener('contextmenu', block, true), 400);
 }
 
-export function RightDragSelect({ session, children }: { session: EditorSession; children: ReactNode }) {
+// boxSelect: the toolbar's box-select switch, for touch and for people without modifier keys or a right button
+// (legacy graph_ui.js:2490, 2572): then a plain left (one-finger) drag on blank canvas selects instead of panning.
+// boxSelect：功能列的框選開關，給觸控、沒有修飾鍵或右鍵的人用（照舊產品）：開著時空白處一般左鍵（單指）拖曳＝框選、不平移。
+export function RightDragSelect({ session, boxSelect = false, children }: { session: EditorSession; boxSelect?: boolean; children: ReactNode }) {
   const flow = useReactFlow<FlowNode, FlowEdge>(), host = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
   const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
@@ -38,7 +41,7 @@ export function RightDragSelect({ session, children }: { session: EditorSession;
   // Only on blank canvas: wires and nodes sit inside the pane too, and a Shift press on a wire is a click
   // that adds it (Refactor.49.1, human 2026-10-09). 只在空白處：接線與節點也在 pane 裡，在接線上 Shift＋按下是加選它。
   const starts = (event: { button: number; shiftKey: boolean; target: EventTarget }) =>
-    (event.button === 2 || (event.button === 0 && event.shiftKey)) && !!(event.target as Element).closest('.react-flow__pane')
+    (event.button === 2 || (event.button === 0 && (event.shiftKey || boxSelect))) && !!(event.target as Element).closest('.react-flow__pane')
     && !(event.target as Element).closest('.react-flow__edge, .react-flow__node');
   const begin = (event: PointerEvent) => {
     const target = event.target as Element;
@@ -48,13 +51,18 @@ export function RightDragSelect({ session, children }: { session: EditorSession;
     const id = card?.getAttribute('data-id');
     if (id) { session.pressNode(id, pressKind(event)); return; }
     if (!starts(event)) return;
-    if (event.button === 0) event.stopPropagation(); // Shift+left drag selects instead of panning
+    if (event.button === 0) event.stopPropagation(); // Shift+left (or box-select) drag selects instead of panning
     const previous = new Set(event.shiftKey ? flow.getNodes().filter(node => node.selected).map(node => node.id) : []);
     drag.current = { x: event.clientX, y: event.clientY, previous, moved: false, right: event.button === 2, touched: [], result: previous, shown: false };
     host.current!.setPointerCapture(event.pointerId);
   };
   // The pane pans on mousedown (d3-zoom), so a Shift+left press must stop there too. 平移由 mousedown 觸發，一併攔下。
   const press = (event: MouseEvent) => { if (event.button === 0 && starts(event)) event.stopPropagation(); };
+  // Touch pans on touchstart; with box select on, one finger selects (two fingers still pan and zoom).
+  // 觸控由 touchstart 平移；框選開著時單指框選（雙指照樣平移縮放）。
+  const touch = (event: TouchEvent) => {
+    if (boxSelect && event.touches.length === 1 && starts({ button: 0, shiftKey: false, target: event.target })) event.stopPropagation();
+  };
   const select = (start: Drag, event: PointerEvent) => {
     const a = flow.screenToFlowPosition({ x: Math.min(start.x, event.clientX), y: Math.min(start.y, event.clientY) });
     const b = flow.screenToFlowPosition({ x: Math.max(start.x, event.clientX), y: Math.max(start.y, event.clientY) });
@@ -90,7 +98,7 @@ export function RightDragSelect({ session, children }: { session: EditorSession;
   // Blank canvas never shows the browser menu (macOS opens it on press, not release).
   // 畫布空白處不跳瀏覽器選單（macOS 在按下時就開）；舊產品此處是自己的選單。
   const menu = (event: MouseEvent) => { if ((event.target as Element).closest('.react-flow__pane')) event.preventDefault(); };
-  return <div ref={host} className="right-select-host" onPointerDownCapture={begin} onMouseDownCapture={press} onPointerMove={move}
+  return <div ref={host} className="right-select-host" onPointerDownCapture={begin} onMouseDownCapture={press} onTouchStartCapture={touch} onPointerMove={move}
     onPointerUp={end} onPointerCancel={() => { drag.current = null; setBox(null); setPreview(null); }} onContextMenuCapture={menu}>
     <BoxPreviewContext.Provider value={preview}>{children}</BoxPreviewContext.Provider>
     {box && <div className="right-select-box" style={box} />}
