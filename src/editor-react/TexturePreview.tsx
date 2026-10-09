@@ -9,11 +9,10 @@ import { Icon } from './icons';
 // Constant TOP；這是圖的內容，不是外觀。
 const plainTextures: Record<string, readonly number[]> = { white: [1, 1, 1], black: [0, 0, 0], normal: [.5, .5, 1] };
 export const textureNames: Record<string, Message> = {
-  none: tr('texture.none', 'Transparent (as TD with nothing connected)'), grape: tr('texture.grape', 'Grape'),
+  none: tr('texture.none', 'Transparent'), grape: tr('texture.grape', 'Grape'),
   banana: tr('texture.banana', 'Banana'), jellybeans: tr('texture.jellybeans', 'Jellybeans'),
   white: tr('texture.white', 'White'), black: tr('texture.black', 'Black'), normal: tr('texture.normal', 'Flat normal'),
 };
-const shortNames: Record<string, Message> = { none: tr('texture.noneShort', 'Transparent') };
 
 type Shot = 'loading' | 'failed' | { src: string; time: Date };
 /** What a texture input gives the shader, open on its card (Refactor.58, 60; human 2026-10-10): with a TOP wired in from
@@ -61,7 +60,6 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
   // Labels over the image (human 2026-10-10): bottom right, dark see-through. 圖上的標籤：右下角、深色半透明。
   const label = (content: ReactNode) => <figcaption className="image-label-slot">{content}</figcaption>;
   if (source) {
-    const name = source.split('/').pop() || source;
     return <figure className="texture-preview">
       {typeof shot === 'object' && picture(shot.src)}
       {shot === 'failed' && unavailable}
@@ -69,11 +67,11 @@ export function TexturePreview({ id, texture }: { id: string; texture: string })
         onClick={() => { retaking.current = true; void session.refreshInputs(); }}
         title={say(tr('sources.inputSnapshotHint', '{path}\nSnapshot taken at {time}, not live. Click for a new one.', { path: source,
           time: shot.time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) }))}>
-        <Icon name="camera" />{say(tr('sources.inputSnapshot', 'Input: {name}', { name }))}</button>)}
+        <Icon name="camera" />{say(tr('sources.snapshot', 'Snapshot'))}</button>)}
     </figure>;
   }
   const defaultLabel = label(<span className="image-label">{say(tr('sources.defaultLabel', 'Default: {name}',
-    { name: say(shortNames[texture] ?? textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))}</span>);
+    { name: say(textureNames[texture] ?? tr('texture.other', '{name}', { name: texture })) }))}</span>);
   if (texture === 'none') return <figure className="texture-preview">{frame(1, null)}{defaultLabel}</figure>;
   if (plain) return <figure className="texture-preview">{frame(1, null, { background: colorHex(plain) }, 'texture-frame')}{defaultLabel}</figure>;
   return <figure className="texture-preview">
