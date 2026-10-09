@@ -227,7 +227,7 @@
   "sources.typeChanged": "共用來源的型別已更新",
   "sources.uniformAdded": "已新增 Uniform {name}",
   "sources.uniforms": "Uniform",
-  "sources.usedBy": "{count} 個節點在用",
+  "sources.usedBySelect": "{count} 個節點在用・點一下選取它們",
   "sources.valueChanged": "共用來源的值已更新，等待套用",
   "stage.label": "Stage",
   "stage.pixel": "PIXEL STAGE",

@@ -4,6 +4,9 @@ Resolution and the Grape OP list are injected by the TD Manager. This module
 never discovers OPs or reads graphs. Unsupported actions stay explicit.
 """
 import re
+import struct
+import threading
+import zlib
 from urllib.parse import urlsplit
 
 
@@ -11,17 +14,37 @@ class UnsupportedOperation(RuntimeError):
     pass
 
 
-class Image:
-    """An image reply (Refactor.58, default-image previews): JPEG bytes, and whether the browser may keep it.
-    圖片回覆：JPEG，以及瀏覽器能不能留著用。"""
-    mime = 'image/jpeg'
+def encode_png(width, height, rgba):
+    """Straight RGBA, top row first, as a PNG. 直接的 RGBA（第一列在上）壓成 PNG。"""
+    stride = width * 4
+    rows = b''.join(b'\x00' + rgba[y * stride:(y + 1) * stride] for y in range(height))
+    def chunk(tag, body):
+        return struct.pack('>I', len(body)) + tag + body + struct.pack('>I', zlib.crc32(tag + body) & 0xffffffff)
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0))
+        + chunk(b'IDAT', zlib.compress(rows, 6)) + chunk(b'IEND', b''))
 
-    def __init__(self, data, *, keep):
-        self.data, self.keep = bytes(data), keep
+
+class Image:
+    """An image reply (Refactor.58, default-image previews): pixels TD read, made a PNG (alpha kept) only when the
+    reply is written, on the editor service's thread, never TD's (human 2026-10-09: 24 ms in TD was too much); and
+    whether the browser may keep it. 圖片回覆：TD 讀出的像素，到寫回覆時才在編輯服務的執行緒壓成 PNG（保留透明度），
+    不佔 TD 的執行緒（人類：TD 裡 24 ms 太多）；以及瀏覽器能不能留著用。"""
+    mime = 'image/png'
+
+    def __init__(self, pixels, *, keep):
+        self.pixels, self.keep = pixels, keep
+        self._png, self._lock = None, threading.Lock()
+
+    @property
+    def data(self):
+        with self._lock:
+            if self._png is None:
+                self._png = encode_png(*self.pixels)
+            return self._png
 
 
 class HostAPI:
-    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None, identity=None, textures=None):
+    def __init__(self, *, bootstrap, resolve, choices, save_project, applied=None, identity=None, textures=None, capture=None):
         if bootstrap.get('version') != 1 or bootstrap.get('producer') != 'frontend-modules':
             raise ValueError('The editor module bootstrap is unavailable or incompatible.')
         self.catalog_hash = bootstrap['catalogHash']
@@ -38,6 +61,10 @@ class HostAPI:
         # Grape OP, so one address each and the browser keeps them. 編輯時預覽用的公用預設圖：每個 Grape OP
         # 都一樣，所以一張圖一個網址，瀏覽器留著用。
         self.textures = textures
+        # Reads a TOP small, as (width, height, straight RGBA bytes) (the Manager's preview TOP).
+        # 把一個 TOP 縮小讀出像素：(寬, 高, RGBA)（Manager 的預覽 TOP）。
+        self.capture = capture
+        self.shared = {}  # shared images read this connection; each made a PNG once 這次連線讀過的公用圖，各只壓一次
 
     def dispatch(self, method, path, body=None):
         status, result = self._dispatch(method, path, body)
@@ -50,12 +77,15 @@ class HostAPI:
         match = re.fullmatch(r'/api/([a-f0-9]{32})/([a-z-]+)', path)
         if method == 'GET' and path == '/api/shaders':
             return 200, self.choices()
-        shared = re.fullmatch(r'/api/textures/([a-z]+)\.jpg', path)
+        shared = re.fullmatch(r'/api/textures/([a-z]+)\.png', path)
         if method == 'GET' and shared:
-            data = self.textures(shared.group(1)) if self.textures else None
-            if not data:
-                return 404, {'error': 'There is no shared default image with this name.', 'code': 'texture_unavailable'}
-            return 200, Image(data, keep=True)
+            name = shared.group(1)
+            if name not in self.shared:
+                pixels = self.textures(name) if self.textures else None
+                if not pixels:
+                    return 404, {'error': 'There is no shared default image with this name.', 'code': 'texture_unavailable'}
+                self.shared[name] = Image(pixels, keep=True)
+            return 200, self.shared[name]
         if not match:
             return 404, {'error': 'Open a registered Grape OP to edit its graph.', 'code': 'target_required'}
         target_id, action = match.groups()
@@ -100,7 +130,9 @@ class HostAPI:
         # The TOP chosen on this Grape OP's Samples, as it looks now: a snapshot, not live (Refactor.58).
         # 這個 Grape OP 在 Samples 上選的 TOP 現在的樣子：快照，不是即時。
         if method == 'GET' and action == 'texture':
-            return Image(family.chosen_texture(), keep=False)
+            if not self.capture:
+                raise UnsupportedOperation('The editor host cannot take previews.')
+            return Image(self.capture(family.chosen_output()), keep=False)
         if method == 'POST' and action == 'save':
             return {'saved': self.save_project()}
         raise UnsupportedOperation('The editor host does not provide this operation yet: ' + method + ' ' + action)

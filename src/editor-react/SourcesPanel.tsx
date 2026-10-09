@@ -46,19 +46,29 @@ function TexturePreview({ texture }: { texture: string }) {
       .then(next => { if (live) setShot(next); else if (url) URL.revokeObjectURL(url); });
     return () => { live = false; if (url) URL.revokeObjectURL(url); };
   }, [custom, texture, session]);
+  // The window is 16:9; the image fits inside with its own ratio, as TD's TOP viewer (human 2026-10-09): wider than
+  // the window fills its width, otherwise its height. Plain colours and "none chosen" are square.
+  // 預覽窗 16:9；圖照自己的比例 fit 進去，同 TD 的 TOP viewer（人類）：比窗寬就撐滿寬，否則撐滿高。純色與「沒選」是正方形。
+  const [ratio, setRatio] = useState(0);
+  useEffect(() => setRatio(0), [texture, shot]);
+  const frame = (r: number, content: ReactNode, style?: CSSProperties, className = 'texture-frame checker') =>
+    <div className={className} style={{ aspectRatio: String(r), ...(r > 16 / 9 ? { width: '100%' } : { height: '100%' }), ...style }}>{content}</div>;
+  const image = (src: string, onError?: () => void) => <img src={src} alt="" draggable={false} onError={onError}
+    onLoad={event => setRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight || 1)} />;
+  // Hidden until the image says its size, so the frame never jumps. 圖說出尺寸前先藏著，圖框不會跳。
+  const picture = (src: string, onError?: () => void) => frame(ratio || 16 / 9, image(src, onError), ratio ? undefined : { visibility: 'hidden' });
   const note = (text: Message, hint?: Message) => <figcaption className="badge" title={hint ? say(hint) : undefined}>{say(text)}</figcaption>;
-  if (plain) return <figure className="texture-preview" style={{ background: colorHex(plain) }} />;
-  if (custom) return <figure className={'texture-preview' + (shot === 'none' ? ' checker' : '')}>
-    {typeof shot === 'object' && <img src={shot.src} alt="" draggable={false} />}
-    {shot === 'failed' && <span>{say(tr('sources.noPreview', 'No preview'))}</span>}
+  const unavailable = <span>{say(tr('sources.noPreview', 'No preview'))}</span>;
+  if (plain) return <figure className="texture-preview">{frame(1, null, { background: colorHex(plain) }, 'texture-frame')}</figure>;
+  if (custom) return <figure className="texture-preview">
+    {typeof shot === 'object' && picture(shot.src)}
+    {shot === 'none' && frame(1, null)}
+    {shot === 'failed' && unavailable}
     {shot === 'none' && note(tr('sources.noChosenTop', 'No TOP chosen · the input is transparent'))}
     {typeof shot === 'object' && note(tr('sources.snapshot', 'Snapshot · not live'),
       tr('sources.snapshotHint', 'Taken when this card opened; close and open it again for a new one.'))}
   </figure>;
-  return <figure className="texture-preview">
-    {failed ? <span>{say(tr('sources.noPreview', 'No preview'))}</span>
-      : <img src={session.host.textureUrl(texture)} alt="" draggable={false} onError={() => setFailed(true)} />}
-  </figure>;
+  return <figure className="texture-preview">{failed ? unavailable : picture(session.host.textureUrl(texture), () => setFailed(true))}</figure>;
 }
 
 function NameField({ declaration }: { declaration: Declaration }) {
@@ -106,9 +116,11 @@ function SourceCard({ declaration, choice, head, children, uses, onAdd, onRemove
       : <span className="expand-toggle" aria-hidden="true" />}
     <div className="source-head">
       {head}
-      {/* Unused: a plain grey tag; in use: the kind's colour. 沒在用：灰色標籤；有在用：種類色。 */}
+      {/* Unused: a plain grey tag; in use: the kind's colour, and a click selects those nodes, as the menu's Select
+          references (human 2026-10-09). 沒在用：灰色標籤；有在用：種類色，點了選取那些節點，同選單的選取引用（人類）。 */}
       <Badge count={uses} group={uses ? core.declarationKinds.get(declaration.kind)?.colorGroup ?? 'runtime' : undefined}
-        title={tr('sources.usedBy', 'Used by {count} nodes', { count: uses })} />
+        title={tr('sources.usedBySelect', 'Used by {count} nodes · click to select them', { count: uses })}
+        onClick={() => session.selectReferences(declaration.id)} />
       <MenuButton icon="menu" narrow label={tr('sources.more', 'More')} items={[
         { key: 'add', label: say(tr('sources.place', 'Add to graph')), select: onAdd },
         { key: 'select', label: say(tr('sources.selectReferences', 'Select references ({count})', { count: uses })), disabled: !uses,

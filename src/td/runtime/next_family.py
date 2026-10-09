@@ -173,13 +173,13 @@ class NextFamily:
     def target(self):
         return self.comp
 
-    def chosen_texture(self):
-        """The TOP chosen on Samples (its last output) as a JPEG, as it looks now (Refactor.58).
-        Samples 上選的 TOP（最後一個輸出）現在的樣子，存成 JPEG。"""
+    def chosen_output(self):
+        """The output of Samples that passes the TOP chosen there (its last one), for a preview (Refactor.58).
+        Samples 上選的 TOP 從哪個出口出來（最後一個），給預覽用。"""
         samples = self.comp.op('Samples')
         if samples is None or not samples.par.Top.eval():
             raise LookupError('No TOP is chosen on Samples.')
-        return samples.op('out' + str(len(DEFAULT_TEXTURES))).saveByteArray('.jpg', quality=.8)
+        return samples.op('out' + str(len(DEFAULT_TEXTURES)))
 
     def _refuse(self, message):
         notify(self.comp, message)

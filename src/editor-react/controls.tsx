@@ -71,9 +71,13 @@ export const ToolGroup = ({ children }: { children: ReactNode }) => <div classNa
 /** A count on a heading (legacy source counts). `group` colours it by a colour group; without it, it is plain
  * (human 2026-10-09: the Sources area is coloured by group, the Add Node area is not). The tooltip says what it counts.
  * 標題上的數量（舊產品的來源數量）。給 group 就用該 colorGroup 上色，否則不上色（人類：來源區上色、新增節點區不上色）。 */
-export const Badge = ({ count, group, title }: { count: number; group?: string; title?: Message | string }) =>
-  <span className={'badge' + (group ? ' badge-group' : '')} title={title === undefined ? undefined : say(title)}
-    style={group ? { '--badge-color': `var(--group-${group})` } as CSSProperties : undefined}>{count}</span>;
+// With `onClick` it is a button (human 2026-10-09: a source card's count selects what uses it).
+// 給 onClick 就是按鈕（人類：來源卡片的數量點了選取用到它的節點）。
+export const Badge = ({ count, group, title, onClick }: { count: number; group?: string; title?: Message | string; onClick?(): void }) => {
+  const props = { className: 'badge' + (group ? ' badge-group' : '') + (onClick ? ' badge-button' : ''), title: title === undefined ? undefined : say(title),
+    style: group ? { '--badge-color': `var(--group-${group})` } as CSSProperties : undefined };
+  return onClick ? <button type="button" {...props} onClick={onClick} disabled={!count}>{count}</button> : <span {...props}>{count}</span>;
+};
 
 /** A small panel called up from a button, drawn above or below it (whichever has room), closed by a click outside or
  * Esc (Refactor.54.1: the appearance and size panels, the message history). 從按鈕叫出的小面板：畫在按鈕上方或下方

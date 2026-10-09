@@ -201,8 +201,8 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-row { --surface-field: var(--field-bg); --surface-control: var(--field-bg); --surface-control-hover: var(--field-bg-hover); }
 /* Buttons and selects on a card use the same colour as its inputs (human 2026-10-09: unify them). 卡片上的按鈕、選擇器和輸入框同色（人類：統一）。 */
 /* Triangles stay bare (human 2026-10-09). 三角形不加底色（人類）。 */
-.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand), .select-button) { background: var(--surface-control); border-color: transparent; }
-.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand), .select-button):hover { background: var(--surface-control-hover); }
+.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button) { background: var(--surface-control); border-color: transparent; }
+.source-row :is(button:not(.icon-button, .expand-toggle, .value-expand, .badge), .select-button):hover { background: var(--surface-control-hover); }
 /* A source not created yet: a grey card (human 2026-10-09). 還沒建立的來源：灰色卡片（人類）。 */
 .source-row.unused { background: none; color: var(--text-muted); } .source-row.unused::before { background: var(--border-node); }
 .source-row::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--source-strip);
@@ -223,13 +223,15 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .source-card > :is(.source-head, .source-body, .builtin-row) { grid-column: 2; min-width: 0; }
 .source-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .source-head > .badge { margin: 0; flex: none; }
-/* A default image's preview: four rows tall, the image whole inside (Refactor.58). 預設圖預覽：四列高，整張圖放進去。 */
-.texture-preview { position: relative; height: calc(var(--io-row) * 4 - 2 * var(--io-inset)); margin: var(--io-inset) 0;
+/* A default image's preview: a 16:9 window, the image fitted inside with its own ratio over a checkerboard, so alpha
+   shows (Refactor.58; human 2026-10-09: as TD's TOP viewer). 預設圖預覽：16:9 的窗，圖照自己的比例 fit 進去、底下墊
+   棋盤格，透明度看得出來（人類：同 TD 的 TOP viewer）。 */
+.texture-preview { position: relative; aspect-ratio: 16 / 9; margin: var(--io-inset) 0;
   display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-field); background: var(--field-bg); color: var(--text-muted); }
-.texture-preview img { width: 100%; height: 100%; object-fit: contain; }
+.texture-frame { max-width: 100%; max-height: 100%; }
+.texture-frame img { display: block; width: 100%; height: 100%; }
 .texture-preview figcaption { position: absolute; left: 4px; bottom: 4px; margin: 0; }
-/* Nothing chosen: transparent, shown as a checkerboard (human 2026-10-09). 沒選：透明，用棋盤格表示（人類）。 */
-.texture-preview.checker { background: repeating-conic-gradient(var(--overlay-up) 0 25%, transparent 0 50%) 0 0 / var(--checker) var(--checker), var(--field-bg); }
+.checker { background: repeating-conic-gradient(var(--overlay-up) 0 25%, transparent 0 50%) 0 0 / var(--checker) var(--checker); }
 /* When narrow the name matters most (human 2026-10-09): it keeps a minimum and the type shrinks first.
    變窄時名稱最重要（人類）：名稱保留最小寬度，型別先縮。 */
 .source-name { flex: 1 0 auto; width: 0; min-width: min(var(--source-name-min), 100%); }
@@ -436,6 +438,9 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .badge { display: inline-grid; place-items: center; min-width: 1.3em; margin-left: 6px; padding: 0 3px; border-radius: 3px; font-size: calc(var(--font-xs) * .9); line-height: 1.25; font-weight: 600;
   color: var(--text-muted); background: var(--overlay-up); } /* a touch above whatever it sits on (human 2026-10-09) 比底下亮一點點（人類） */
 .badge-group { color: var(--text-strong); background: color-mix(in srgb, var(--badge-color) 85%, transparent); }
+/* A count that does something: no button frame; lighter under the pointer. 能點的數量：沒有按鈕框，滑過變亮。 */
+button.badge { border: 0; height: auto; min-height: 0; } button.badge:disabled { cursor: default; }
+button.badge-group:not(:disabled):hover { background: var(--badge-color); }
 
 /* Create node (CreateNode.tsx) and the Add Node panel (AddNodePanel.tsx), Refactor.54. 新增節點的兩個入口。 */
 .create-node { position: fixed; z-index: 35; width: min(620px, calc(100vw - 16px)); height: min(440px, calc(100vh - 16px)); display: flex; flex-direction: column; gap: 8px;

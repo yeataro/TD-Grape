@@ -27,6 +27,21 @@
 - 待人類：
   - 靜態網站用的 Grape 放哪個資料夾（A 只給靜態網站／B 現有 static）。
   - 58.1 改用 out 的 label 定義表、統一 Samples 命名（待同意）。
+- **同輪人類看過後的修正**（仍是 Refactor.58）：
+  - Alpha 如實呈現（人類）：改 PNG。圖片後面墊棋盤格。
+    - TD 的貼圖是預乘 Alpha（實測 Grape 半透明邊緣的顏色值從不超過 Alpha），讀出後除回去。
+    - numpy 的列由下往上，要翻轉。
+  - 不讓 TD 卡（人類：24ms 太可怕）：
+    - Manager 的 `texture_preview`（Select TOP，`limit` 320px、mipmap）在 GPU 上縮小；TD 主執行緒只讀像素，每張 1.9–2.8ms。
+    - PNG 由編輯服務原本處理該請求的執行緒在寫回覆時才壓（`host_api.encode_png`），沒有新增執行緒。
+    - 公用圖每次連線只讀一次、只壓一次。
+    - 原尺寸 PNG 要 25–400ms，壓縮程度對 PNG 沒影響，所以不用。
+  - 預覽窗固定 16:9，圖照自己的比例 fit 進去（同 TD 的 TOP viewer，人類）；純色與「沒選」是 1:1。
+  - 點來源卡片的數量標籤，選取所有引用它的節點，和選單同一個方法（人類）；0 不能點。區段標題的數量不動。
+  - 驗證：
+    - Python 84+14、editor 75。
+    - 真實 TD：三張公用圖 PNG 200，瀏覽器解碼後透明度保留（Banana 有透明背景、Grape 外圍全透明、Jellybeans 不透明）；`texture_preview` 讀完放開。
+    - 內建瀏覽器：16:9 窗 235×132；Jellybeans 填滿；沒選 TOP 的棋盤格 132×132；點 input1 的「1」選到 input1 節點。
 - 未 Deliver（TOE 未存）；未 push。
 
 ## Refactor.57.24 — 新增來源的預設名稱照舊產品、顏色 Uniform 顯示 RGB／RGBA、打開的卡片加淡分隔線 — 2026-10-09

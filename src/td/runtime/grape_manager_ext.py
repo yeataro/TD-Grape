@@ -2,6 +2,8 @@
 import json
 from hashlib import sha256
 
+import numpy as np
+
 
 GRAPE_OP_TAG = 'grapeOP'
 TEMPLATES_TAG = 'grapeTemplates'
@@ -16,7 +18,6 @@ class GrapeManagerExt:
         self.families = {}
         self.bootstrap = None
         self.live = None  # LiveWatch while connected (Uniform D2) 連線期間的即時值監看
-        self.textures = {}  # shared default images made this connection (Refactor.58) 這次連線做好的公用預設圖
 
     @staticmethod
     def _template(comp):
@@ -50,8 +51,8 @@ class GrapeManagerExt:
         self.live = self._module('live_watch').LiveWatch(resolve=self.Resolve, watcher=self._watch, frame=lambda: absTime.frame)
         self.api = self._module('host_api').HostAPI(
             bootstrap=bootstrap, resolve=self.Resolve, choices=self.Choices, save_project=lambda: project.save(),
-            applied=self.live.applied, identity=lambda: {'file': project.name, 'build': app.build}, textures=self.Texture)
-        self.textures = {}
+            applied=self.live.applied, identity=lambda: {'file': project.name, 'build': app.build}, textures=self.Texture,
+            capture=self.Capture)
         self.queue = self._module('host_requests').HostRequests()
         editor.http.connect(self.queue)
         panel = self.ownerComp.par.Remotepanel.eval()
@@ -61,16 +62,32 @@ class GrapeManagerExt:
         self._status('Ready', registered=len(self.families), version=editor.snapshot.version)
 
     def Texture(self, name):
-        """A shared default image as a JPEG, from the main component's Samples (Refactor.58; the human placed a
-        copy there): made once per connection. Only the images; the plain colours are drawn by the editor.
-        公用預設圖（JPEG），來自主組件裡的 Samples（人類放的一份）；每次連線只做一次。只有圖片，純色由編輯器畫。"""
+        """A shared default image, from the main component's Samples (Refactor.58; the human placed a copy there).
+        The host asks once per connection. Only the images; the plain colours are drawn by the editor.
+        公用預設圖，來自主組件裡的 Samples（人類放的一份）；宿主每次連線只問一次。只有圖片，純色由編輯器畫。"""
         index = {'grape': 1, 'banana': 2, 'jellybeans': 3}.get(name)
         samples = self.ownerComp.parent.GrapeHost.op('Samples')
         if index is None or samples is None:
             return None
-        if name not in self.textures:
-            self.textures[name] = bytes(samples.op('out' + str(index)).saveByteArray('.jpg', quality=.8))
-        return self.textures[name]
+        return self.Capture(samples.op('out' + str(index)))
+
+    def Capture(self, top):
+        """A TOP's pixels, small: the preview TOP scales it on the GPU (no larger than 320 px) and lets go of it
+        again. Only reading here (about 2 ms); the PNG is made on the editor service's thread (Refactor.58).
+        TD textures are premultiplied, so the colour is divided back for the browser; numpy rows run bottom up.
+        一個 TOP 縮小後的像素：預覽 TOP 在 GPU 上縮到 320 px 以內、讀完就放開。這裡只讀（約 2 ms），PNG 在編輯服務的
+        執行緒壓。TD 的貼圖是預乘 Alpha，所以顏色除回去給瀏覽器；numpy 的列由下往上。"""
+        preview = self.ownerComp.op('texture_preview')
+        preview.par.top = top
+        try:
+            pixels = preview.numpyArray()
+        finally:
+            preview.par.top = ''
+        alpha = pixels[..., 3:4]
+        rgb = np.divide(pixels[..., :3], alpha, out=np.zeros_like(pixels[..., :3]), where=alpha > 0)
+        image = np.concatenate([rgb, alpha], axis=2)[::-1]
+        height, width = image.shape[:2]
+        return width, height, (np.clip(image, 0, 1) * 255 + .5).astype(np.uint8).tobytes()
 
     def Disconnect(self):
         if self.live:

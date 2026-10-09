@@ -125,6 +125,17 @@ watch.text = (
     "def onExportChange(par, val, prev):\n    parent().ext.GrapeManagerExt.LiveStateChanged(par)\n")
 watch.comment = 'Live Uniform values. Watches nothing while no editor is connected.'
 
+# Default-image previews (Refactor.58): one Select TOP that is pointed at an image only while it is read, made no
+# larger than 320 px on its long side on the GPU. 預設圖預覽：一個 Select TOP，只在讀的時候指向那張圖，在 GPU 上把長邊
+# 縮到 320 px 以內。
+preview = node(manager, selectTOP, 'texture_preview', 1000, -860)
+preview.par.top = ''
+preview.par.outputresolution = 'limit'
+preview.par.resolutionw, preview.par.resolutionh = 320, 320
+preview.par.inputfiltertype = 'mipmap'
+preview.par.format = 'rgba8fixed'
+preview.comment = 'Default-image previews for the editor. Points at an image only while capturing it.'
+
 # Stop only our Editor service before replacing its module; preserve its port.
 editor.ext.EditorServiceExt.Stop()
 text(editor, 'editor_service', 'src/td/runtime/editor_service.py', editor.op('editor_service').nodeX, editor.op('editor_service').nodeY)

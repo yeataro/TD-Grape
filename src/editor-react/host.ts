@@ -45,7 +45,7 @@ export class HostClient {
    * the TOP chosen on this Grape OP's Samples ("custom") as a snapshot. 預設圖預覽的位址：公用的照名字、
    * 每個 Grape OP 都一樣；這個 Grape OP 在 Samples 上選的 TOP（custom）是快照。 */
   textureUrl(texture: string): string {
-    return texture === 'custom' ? this.root + 'texture' : '/api/textures/' + encodeURIComponent(texture) + '.jpg';
+    return texture === 'custom' ? this.root + 'texture' : '/api/textures/' + encodeURIComponent(texture) + '.png';
   }
   async call<T>(action: 'state' | 'apply' | 'save' | 'identity', body?: unknown): Promise<T> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), this.timeout);

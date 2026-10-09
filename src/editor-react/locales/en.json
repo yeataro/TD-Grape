@@ -227,7 +227,7 @@
   "sources.typeChanged": "Shared source type updated",
   "sources.uniformAdded": "Uniform {name} added",
   "sources.uniforms": "Uniforms",
-  "sources.usedBy": "Used by {count} nodes",
+  "sources.usedBySelect": "Used by {count} nodes · click to select them",
   "sources.valueChanged": "Shared source value updated; waiting to apply",
   "stage.label": "Stage",
   "stage.pixel": "Pixel stage",
