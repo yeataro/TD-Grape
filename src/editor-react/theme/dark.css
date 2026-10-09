@@ -96,6 +96,7 @@
   --select-frame: var(--palette-select-yellow);
   --wire-selected: var(--palette-wire-cream);
   --wire-hover: var(--palette-wire-lilac);
+  --port-glow: var(--palette-lift);   /* what a wired port's colour is lifted towards (it glows a little) 接上線的接孔往這個顏色提亮（微微發亮） */
   --wire-ghost: var(--palette-error);
   --type-scalar: var(--palette-type-scalar);
   --type-vec2: var(--palette-type-vec2);
