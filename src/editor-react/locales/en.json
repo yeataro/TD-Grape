@@ -132,6 +132,7 @@
   "glsl.internalError": "TD-Grape ran into an internal error while applying this Shader; TD keeps running revision {revision}.",
   "glsl.label": "Generated GLSL",
   "glsl.lineError": "Line {line}: {message}",
+  "glsl.noGraph": "Open a Grape OP to see its GLSL.",
   "glsl.title": "GLSL",
   "identity.build": "TD {build}",
   "identity.detail": "TouchDesigner {build}: {path}\nat {host}\nTD-Grape in TD: {served}\nThis page: {page}",

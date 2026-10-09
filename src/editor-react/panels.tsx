@@ -26,7 +26,11 @@ export const PANELS = {
   addNode: { title: tr('addNode.title', 'Add Node'), side: 'left', first: true, content: ({ session, choices, add }) => session
     ? <AddNodePanel choices={choices} onAdd={add} />
     : <p className="hint">{say(tr('addNode.noGraph', 'Open a Grape OP to add nodes.'))}</p> },
-  glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ state }) => <GlslPanel state={state} /> },
+  // The GLSL panel links lines and names to nodes, so it needs the graph being edited (Refactor.63.3: without one it broke the page).
+  // GLSL 面板把行與名字連到節點，需要正在編輯的圖（63.3：沒有圖時曾讓整頁壞掉）。
+  glsl: { title: tr('glsl.title', 'GLSL'), side: 'left', content: ({ session, state }) => session
+    ? <GlslPanel state={state} />
+    : <p className="hint">{say(tr('glsl.noGraph', 'Open a Grape OP to see its GLSL.'))}</p> },
   // Appearance (Refactor.58.2): opened from the appearance menu; on the right until floating panels exist.
   // 外觀：從外觀選單打開；浮動面板做好之前放右邊。
   appearance: { title: tr('appearance.panel', 'Appearance'), side: 'right', content: () => <AppearancePanel /> },
