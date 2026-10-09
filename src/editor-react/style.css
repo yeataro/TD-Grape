@@ -132,12 +132,18 @@ label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap;
 .panel-group-slot { position: relative; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
 .panel-group { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 /* As tall as the location bar beside it, so their lower edges meet (human 2026-10-09). 和旁邊網址列一樣高，下緣接得上（人類）。 */
-.panel-tabs { display: flex; flex-shrink: 0; height: var(--bar-height); border-bottom: 1px solid var(--border); background: var(--surface-canvas); }
+.panel-tabs { display: flex; flex-shrink: 0; height: var(--bar-height); background: var(--surface-canvas); }
 /* Tab titles as the legacy panel headings (style.css:814-815): small, regular, bold only when shown.
    分頁標題照舊產品：小字、一般粗細，顯示中的才加粗。 */
 .panel-tab { flex: 1; min-width: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); padding: var(--tab-pad); text-align: left;
   font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 400; letter-spacing: .4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .panel-tab[aria-selected="true"] { color: var(--text-strong); background: var(--surface-zone); font-weight: 600; }
+/* As Adobe's panels (human 2026-10-09): each tab draws its own lines. The shown tab is open below, the same colour
+   as its content, so the two are one piece; the lines beside it (the previous tab's divider and its own) outline it. The
+   others are closed below and divided from each other. 參考 Adobe 的面板（人類）：每個分頁自己畫線。顯示中的分頁下面開口、
+   和內容同色，連成一塊；兩旁的線（前一個分頁的分隔線與它自己的）就是外框。其他分頁下面有線、彼此之間有分隔線。 */
+.panel-tab { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.panel-tab[aria-selected="true"] { border-bottom-color: transparent; }
 .panel-content { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px; }
 .code-view { margin: 0; font-size: var(--font-md); line-height: var(--line-md); white-space: pre; }
 /* A handle is drawn thin and grabbed wide (human 2026-10-09). 把手畫得細、抓的範圍寬。 */
