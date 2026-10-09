@@ -66,8 +66,10 @@ a { color: var(--accent); }
 .icon-button:is([aria-pressed="true"], [aria-expanded="true"]) .icon-fill { opacity: .17; }
 .placeholder { color: var(--text-muted); }
 .link-button { padding: 0; border: 0; background: none; font-size: inherit; }
-.select-button { display: inline-flex; align-items: center; gap: 6px; }
-.select-button .icon { width: 14px; height: 14px; }
+/* The chevron stays at the right end whatever the value's width (legacy select). 箭頭固定在右端，不跟著字寬跑（照舊產品）。 */
+.select-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; }
+.select-button > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select-button .icon { width: 14px; height: 14px; flex-shrink: 0; }
 .tool-group { display: flex; align-items: center; gap: 2px; padding: 0 6px; border-left: 1px solid var(--border); }
 .tool-group:first-child { border-left: 0; }
 label.check { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -240,7 +242,7 @@ input[aria-invalid="true"] { border-color: var(--status-error); } .color-swatch 
 .settings-panel .segmented button { flex: 1; }
 .settings-row { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .settings-row > span { text-align: center; }
-.settings-row .select-button { width: 100%; justify-content: space-between; }
+.settings-row .select-button { width: 100%; }
 .slider-placeholder { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: var(--font-lg); line-height: var(--line-lg); padding: 0 4px; }
 .slider-track { flex: 1; height: 4px; border-radius: 2px; background: var(--surface-control-hover); }
 .log-entry { display: flex; gap: 10px; padding: 4px 6px; border-radius: 4px; font-size: var(--font-md); line-height: var(--line-md); white-space: pre-wrap; }
