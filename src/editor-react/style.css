@@ -22,7 +22,7 @@ footer { color: #958b9f; font-size: 11px; }
    left for the appearance round). The type colour is inline, hence !important.
    接線：選取與滑鼠移上去時變亮加粗（照舊產品；柔光是外觀選項，留到外觀那輪）。型別色是行內樣式，所以要 !important。 */
 /* Box selection preview (Refactor.50.1): only a look until release. 框選預覽：放開前只是外觀。 */
-.grape-node.box-in { outline: 2px dashed var(--select-other); } .grape-node.box-out { outline-color: transparent; opacity: .75; }
+.grape-node.box-in { outline: 2px dashed var(--select-other); }
 .react-flow__edge:hover .react-flow__edge-path { stroke: var(--wire-hover) !important; stroke-width: 5 !important; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: var(--wire-selected) !important; stroke-width: 5 !important; }
 /* Ghost (Q37 1-1): kept and shown, never compiled. Ghost：保留、顯示、不參與產碼。 */

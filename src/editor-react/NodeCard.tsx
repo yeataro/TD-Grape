@@ -116,11 +116,11 @@ export const NodeCard = memo(function NodeCard({ id, data, selected }: NodeProps
   const session = useSession(), text = useContext(TextContext), bodyDrag = useContext(BodyDragContext);
   // The primary selection is told from above, never known by the node module (Q33). 主要選取由上往下得知，節點模組不知道。
   const primary = useSyncExternalStore(session.selectionSubscribe, session.primarySnapshot) === id;
-  // While a box is dragged: dashed = will be selected on release, faded = will be let go (Refactor.50.1).
-  // 框選拖曳中：虛線＝放開會被選、淡化＝放開會被取消。
+  // While a box is dragged: dashed = will be selected on release (Refactor.50.1). The current selection
+  // stays as it is until release (50.2, human: no fading; the legacy editor kept it, with a frame around it).
+  // 框選拖曳中：虛線＝放開會被選。目前的選取維持原樣到放開（50.2，人類：不淡化；舊產品保留它，外面還有多選框）。
   const preview = useContext(BoxPreviewContext);
-  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '')
-    + (preview ? preview.has(id) ? selected ? '' : ' box-in' : selected ? ' box-out' : '' : '');
+  const selection = (selected ? (primary ? 'selected primary' : 'selected') : '') + (preview?.has(id) && !selected ? ' box-in' : '');
   const card = useRef<HTMLElement>(null), measured = useRef<Geometry>(undefined);
   const updateInternals = useUpdateNodeInternals();
   const { authored, view, inputs, outputs } = data;
